@@ -1,0 +1,75 @@
+QToolBar {
+  border: 0;
+}
+
+QToolTip {
+  background-color: rgb(42, 42, 42);
+  color: rgb(238, 238, 238);
+  border: 1px solid rgb(66, 66, 66);
+  padding: 2px;
+  border-radius: 4px; 
+}
+
+QMenu::item:disabled {
+  background: #2d2d2d;
+  color: #808080;
+}
+
+QTabBar {
+  qproperty-drawBase:0;
+}
+
+QDockWidget::float-button, QDockWidget::close-button {
+  border: transparent;
+  background: transparent; 
+  padding: 0;
+  icon-size: 9px;
+}
+
+QDockWidget {
+  titlebar-normal-icon: url(:/dark/undock.svg);
+  titlebar-close-icon: url(':/dark/dock-close.svg');
+}
+
+QDockWidget::float-button:hover {
+  image: url(:/dark/undock-hover.svg);
+}
+
+QDockWidget::float-button:hover {
+  border: none;
+}
+
+QDockWidget::close-button:hover {
+  image: url(:/dark/dock-close-hover.svg);
+}
+
+QDockWidget::close-button:hover {
+  border: none;
+}
+
+QTabBar::close-button {
+  border: 0;
+  margin: 2px;
+  padding: 0;
+  image: url(:/dark/closetab-mini.svg);
+}
+
+QTabBar::close-button:hover {
+  image: url(:/dark/closetab-hover.svg);
+}
+
+QTabBar::close-button:pressed {
+  image: url(:/dark/closetab-pressed.svg);
+}
+
+QToolBar::handle:horizontal {
+  image: url(:/dark/toolbar-handle-horizontal.svg);
+}
+
+QToolBar::handle:vertical {
+  image: url(:/dark/toolbar-handle-vertical.svg);
+}
+
+QLabel#logo {
+  qproperty-pixmap: url(:/dark/sigil_logo_blue.png);
+}

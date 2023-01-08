@@ -1,0 +1,75 @@
+/************************************************************************
+**
+**  Copyright (C) 2009, 2010, 2011  Strahinja Markovic  <strahinja.markovic@gmail.com>
+**
+**  This file is part of Sigil.
+**
+**  Sigil is free software: you can redistribute it and/or modify
+**  it under the terms of the GNU General Public License as published by
+**  the Free Software Foundation, either version 3 of the License, or
+**  (at your option) any later version.
+**
+**  Sigil is distributed in the hope that it will be useful,
+**  but WITHOUT ANY WARRANTY; without even the implied warranty of
+**  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+**  GNU General Public License for more details.
+**
+**  You should have received a copy of the GNU General Public License
+**  along with Sigil.  If not, see <http://www.gnu.org/licenses/>.
+**
+*************************************************************************/
+
+#pragma once
+#ifndef UPDATECHECKER_H
+#define UPDATECHECKER_H
+
+#include <QtCore/QObject>
+
+/**
+ * Responsible for checking the current online version of
+ * Sigil against the running one. If a newer version
+ * exists, then a dialog is displayed informing the user
+ * about it.
+ *
+ * Objects of this class should ALWAYS be created on the heap
+ * and never explicitly deleted. The reason is that these objects
+ * receive replies asynchronously from the web and need to persist.
+ * Upon receiving and processing the network reply, the object
+ * schedules its own deletion.
+ */
+class UpdateChecker : QObject
+{
+    Q_OBJECT
+
+public:
+
+    /**
+     * Constructor.
+     *
+     * @param parent The object's parent.
+     */
+    UpdateChecker(QObject *parent);
+
+    /**
+     * Sends a request for the online version
+     * if the last check was performed
+     * a SECONDS_BETWEEN_CHECKS amount of time ago.
+     */
+    void CheckForUpdate();
+
+private:
+
+    /**
+     * Compares the two provided version strings.
+     *
+     * @param current_version_string The version of the running program.
+     * @param online_version_string The newest version.
+     * @return \c true if the online string specifies
+     *         that the online version is newer.
+     */
+    static bool IsOnlineVersionNewer(const QString &current_version_string,
+                                     const QString &online_version_string);
+
+};
+
+#endif // UPDATECHECKER_H
