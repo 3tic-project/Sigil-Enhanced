@@ -1,0 +1,18 @@
+<RCC>
+  <qresource prefix="dark">
+    <file>closetab-hover.svg</file>
+    <file>closetab-mini.svg</file>
+    <file>closetab-pressed.svg</file>
+    <file>dock-close.svg</file>
+    <file>dock-close-hover.svg</file>
+    <file>undock.svg</file>
+    <file>undock-hover.svg</file>
+    <file>toolbar-handle-horizontal.svg</file>
+    <file>toolbar-handle-vertical.svg</file>
+    <file>win-dark-style.qss</file>
+    <file>lin_dark_scrollbar.css</file>
+    <file>win_dark_scrollbar.css</file>
+    <file>mac_dark_scrollbar.css</file>
+    <file>sigil_logo_blue.png</file>
+  </qresource>
+</RCC>
