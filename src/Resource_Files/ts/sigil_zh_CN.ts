@@ -9622,6 +9622,11 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>教程</translation>
     </message>
     <message>
+        <location filename="../../Form_Files/main.ui" line="0"/>
+        <source>Normalized OPF</source>
+        <translation>OPF规范化</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/main.ui" line="1789"/>
         <source>Well-Formed Check &amp;EPUB</source>
         <translation>EPUB格式良好性检查(&amp;E)</translation>

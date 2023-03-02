@@ -896,6 +896,7 @@ private:
     TagLister m_TagList;
     bool m_regen_taglist;
 	pair<int, int> StringTrimmedIndex(const QString &text); // ÐÞ¸Ä£º×Ö·û´®Ç°ºó¶Ë·Ç¿Õ×Ö·ûÎ»ÖÃ¡£
+    void insertFromMimeData(const QMimeData* source); // modified: paste event
 };
 
 #endif // CODEVIEWEDITOR_H

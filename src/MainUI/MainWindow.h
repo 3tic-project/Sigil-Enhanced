@@ -480,6 +480,7 @@ private slots:
     /**
      * Implements Validate Epub action functionality.
      */
+    bool NormalizedOPF(); //modified: NormalizedOPF
     bool WellFormedCheckEpub();
 
     bool ValidateStylesheetsWithW3C();

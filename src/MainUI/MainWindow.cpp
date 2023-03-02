@@ -813,7 +813,6 @@ bool MainWindow::StandardizeEpub()
 //-----modified: Epub3ToEpub2------
 void MainWindow::Epub3ToEpub2() {
 	QString epubversion = m_Book->GetConstOPF()->GetEpubVersion();
-	QString cabc = m_Book->GetOPF()->p.convert_to_xml();
 	if (epubversion.startsWith("2")) {
 		QMessageBox::warning(this, tr("Sigil"),
 			tr("This Epub is already the version 2.0 !"), QMessageBox::Ok);
@@ -4130,6 +4129,13 @@ void MainWindow::updateToolTipsOnPluginIcons()
     }
 }
 
+//modified: NormalizedOPF;
+bool MainWindow::NormalizedOPF()
+{
+    m_ValidationResultsView->correctOPF();
+    return true;
+}
+
 bool MainWindow::WellFormedCheckEpub()
 {
     m_ValidationResultsView->ValidateCurrentBook();
@@ -5145,6 +5151,7 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
     m_BookBrowser->SetBook(m_Book);
     m_TableOfContents->SetBook(m_Book);
     m_ValidationResultsView->SetBook(m_Book);
+    m_ValidationResultsView->SetBookBrowser(m_BookBrowser); // modified: correctOPF;
     m_IndexEditor->SetBook(m_Book);
     m_ClipEditor->SetBook(m_Book);
     m_SpellcheckEditor->SetBook(m_Book);
@@ -6093,6 +6100,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionEditTOC, "MainWindow.EditTOC");
     sm->registerAction(this, ui.actionGenerateTOC, "MainWindow.GenerateTOC");
     sm->registerAction(this, ui.actionCreateHTMLTOC, "MainWindow.CreateHTMLTOC");
+    sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
     sm->registerAction(this, ui.actionWellFormedCheckEpub, "MainWindow.WellFormedCheckEpub");
     sm->registerAction(this, ui.actionValidateStylesheetsWithW3C, "MainWindow.ValidateStylesheetsWithW3C");
     sm->registerAction(this, ui.actionAutoSpellCheck, "MainWindow.AutoSpellCheck");
@@ -6433,6 +6441,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionCustomLayout,  SIGNAL(triggered()), this, SLOT(CreateEpubLayout()));
     connect(ui.actionAddCover,      SIGNAL(triggered()), this, SLOT(AddCover()));
     connect(ui.actionMetaEditor,    SIGNAL(triggered()), this, SLOT(MetaEditorDialog()));
+    connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(ui.actionWellFormedCheckEpub,  SIGNAL(triggered()), this, SLOT(WellFormedCheckEpub()));
     connect(ui.actionValidateStylesheetsWithW3C,  SIGNAL(triggered()), this, SLOT(ValidateStylesheetsWithW3C()));
     connect(ui.actionSpellcheckEditor,   SIGNAL(triggered()), this, SLOT(SpellcheckEditorDialog()));

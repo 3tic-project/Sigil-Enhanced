@@ -1455,7 +1455,7 @@ QString Utility::format_xhtml_text(QString text) {
 
 	text = trimmed(RegExpSub("\\n[ \\t]+", "\n", text), " \n\t");
 	text = RegExpSub("[ \\t]+", " ", text);
-	text = RegExpSub("\\n{3,}", "\n\n", text);
+	text = RegExpSub("\\n{2,}", "\n", text);
 	
 	QString new_text = "";
 	TagLister taglist(text);
@@ -1486,14 +1486,12 @@ QString Utility::format_xhtml_text(QString text) {
 		}
 		if (ti.ttype == "begin" || ti.ttype == "single") {
 
-			if (ti.tname != "html") ++lvl;
+            ++lvl;
+            if (ti.tname == "html" || ti.tname == "body") --lvl;// Decrease the indent by one when elements in these tags.
 
 			before_text = offset == ti.pos ? "" : text.mid(offset, ti.pos - offset);
 
-			// Remove blank line between <p> element.
-			if (ti.tname == "p" && last_ti.tname == "p" && last_ti.ttype == "end") {
-				before_text = "";
-			}
+            if (ti.tname == "body") before_text.prepend("\n");
 
 			if (before_text == "" || before_text.indexOf(full_space) > -1) {
 				if (ElementsBlockLevelDict.value(ti.tname, false)) {
@@ -1519,7 +1517,8 @@ QString Utility::format_xhtml_text(QString text) {
 				if (before_text != "") {
 					CSSInfo css_info(before_text);
 					QString reformat_css = css_info.getReformattedCSSText(true);
-					before_text = "\n  " + reformat_css.split('\n').join("\n  ") + '\n';
+					//before_text = "\n  " + reformat_css.split('\n').join("\n  ") + '\n';
+                    before_text = "\n" + reformat_css + "\n";
 				}
 			}
 
@@ -1607,3 +1606,79 @@ QString Utility::trimmed(const QString &text, const QString &chars) {
 	return text.mid(i, j - i);
 }
 //----------------------------------------------------------------------------
+
+//------------modified: used by correctOPF¡¢walk direct files----------------------------------
+QStringList Utility::walkDirs(QString root) {
+    QDir* dirinfo = new QDir(root);
+    if (!dirinfo->exists()) {
+        return QStringList();
+    }
+    QStringList fileList, dirStack;
+    dirStack.append(root);
+    while (!dirStack.isEmpty()) {
+        QString curDir = dirStack.takeLast();
+        dirinfo = new QDir(curDir);
+        foreach(QString filepath, dirinfo->entryList(QDir::Files)) {
+            fileList.append(dirinfo->absoluteFilePath(filepath));
+        }
+        foreach(QString dir, dirinfo->entryList(QDir::Dirs, QDir::Reversed)) {
+            if (dir == "." || dir == "..") continue;
+            dirStack.append(dirinfo->absoluteFilePath(dir));
+        }
+    }
+    return fileList;
+}
+//--------------------------------------------------------------------------------------------
+
+//---------modified: getMtypeFromExt----------------------------------------------------------
+QString Utility::ExtToMTypeMap(QString &ext)
+{
+    QHash<QString, QString> ExtToMType;
+    // default to using the preferred media-types ffrom the epub 3.2 spec
+    // https://www.w3.org/publishing/epub3/epub-spec.html#sec-cmt-supported
+    ExtToMType["bm"] = "image/bmp";
+    ExtToMType["bmp"] = "image/bmp";
+    ExtToMType["css"] = "text/css";
+    ExtToMType["epub"] = "application/epub+zip";
+    ExtToMType["gif"] = "image/gif";
+    ExtToMType["htm"] = "application/xhtml+xml";
+    ExtToMType["html"] = "application/xhtml+xml";
+    ExtToMType["jpeg"] = "image/jpeg";
+    ExtToMType["jpg"] = "image/jpeg";
+    ExtToMType["js"] = "application/javascript";
+    ExtToMType["m4a"] = "audio/mp4";
+    ExtToMType["m4v"] = "video/mp4";
+    ExtToMType["mp3"] = "audio/mpeg";
+    ExtToMType["mp4"] = "video/mp4";
+    ExtToMType["ncx"] = "application/x-dtbncx+xml";
+    ExtToMType["oga"] = "audio/ogg";
+    ExtToMType["ogg"] = "audio/ogg";
+    ExtToMType["ogv"] = "video/ogg";
+    ExtToMType["opf"] = "application/oebps-package+xml";
+    ExtToMType["opus"] = "audio/opus";
+    ExtToMType["otf"] = "font/otf";
+    ExtToMType["pls"] = "application/pls+xml";
+    ExtToMType["png"] = "image/png";
+    ExtToMType["smil"] = "application/smil+xml";
+    ExtToMType["svg"] = "image/svg+xml";
+    ExtToMType["tif"] = "image/tiff";
+    ExtToMType["tiff"] = "image/tiff";
+    ExtToMType["ttc"] = "font/collection";
+    ExtToMType["ttf"] = "font/ttf";
+    ExtToMType["ttml"] = "application/ttml+xml";
+    ExtToMType["txt"] = "text/plain";
+    ExtToMType["vtt"] = "text/vtt";
+    ExtToMType["webm"] = "video/webm";
+    ExtToMType["webp"] = "image/webp";
+    ExtToMType["woff"] = "font/woff";
+    ExtToMType["woff2"] = "font/woff2";
+    ExtToMType["xhtml"] = "application/xhtml+xml";
+    ExtToMType["xml"] = "application/oebps-page-map+xml";
+    ExtToMType["xpgt"] = "application/vnd.adobe-page-template+xml";
+
+    if (!ExtToMType.contains(ext)) {
+        return "";
+    }
+    return ExtToMType[ext];
+}
+//--------------------------------------------------------------------------------------------

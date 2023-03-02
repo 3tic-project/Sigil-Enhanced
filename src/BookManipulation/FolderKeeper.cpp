@@ -453,7 +453,7 @@ OPFResource*FolderKeeper::AddOPFToFolder(const QString &version, const QString &
     if (!m_FileIconCache.contains("application/oebps-package+xml")) {
         m_FileIconCache["application/oebps-package+xml"] = QFileIconProvider().icon(fi);
     }
-
+    
     connect(m_OPF, SIGNAL(Deleted(const Resource *)), this, SLOT(RemoveResource(const Resource *)));
     // For ResourceAdded, the connection has to be DirectConnection,
     // otherwise the default of AutoConnection screws us when
@@ -467,6 +467,7 @@ OPFResource*FolderKeeper::AddOPFToFolder(const QString &version, const QString &
     connect(m_OPF, SIGNAL(Moved(const Resource *, QString)),
             this,     SLOT(ResourceMoved(const Resource *, QString)), Qt::DirectConnection);
     UpdateContainerXML(m_FullPathToMainFolder, OPFBookPath);
+    m_OPF->p.parse(m_OPF->GetText()); // modified: opfparser update
     return m_OPF;
 }
 

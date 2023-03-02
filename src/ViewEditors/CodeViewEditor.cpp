@@ -3048,7 +3048,7 @@ pair<int, int> CodeViewEditor::StringTrimmedIndex(const QString &text) {
 	return pair<int, int> (s_index, e_index);
 }
 
-// 修改：多行添加块元素标签
+// 修改：多行添加块元素标签 (ctrl + 7 / ctrl + 8)
 void CodeViewEditor::FormatBlock_multiline(const QString &element_name, bool preserve_attributes)
 {
 	if (element_name.isEmpty()) {
@@ -4331,6 +4331,11 @@ void CodeViewEditor::keyPressEvent(QKeyEvent *event)
 	}
 	else if (event->key() == Qt::Key_Backspace) { //侦测到退格键，判断是否退缩进（判断退2个空白符还是退1个字符）
 		QTextCursor cursor = textCursor();
+        if (cursor.hasSelection()) {
+            QPlainTextEdit::keyPressEvent(event);
+            return;
+        }
+
 		int ori_pos = cursor.position();
 		int offset = 0;
 		cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
@@ -4388,4 +4393,29 @@ void CodeViewEditor::keyPressEvent(QKeyEvent *event)
 	else {
 		QPlainTextEdit::keyPressEvent(event);
 	}
+}
+// modified: paste event:  when you do a actionPaste in the codeview editor, this function will be called.
+void CodeViewEditor::insertFromMimeData(const QMimeData* source) {
+    if (!source->hasText())
+        return;
+    QString src_txt = toPlainText();
+    QTextCursor cursor = textCursor();
+
+    int insert_pos = cursor.hasSelection() ? cursor.selectionStart() : cursor.position();
+    int i = insert_pos;
+    // Skipping the space chars, when the indicator i point a non-space char which is '\n', it means that i has reached the start of line, if not '\n', it is not the start of line.
+    // If indicator i could skip all space chars to reach the start of line, it means the cursor is preceded by an indentation.
+    while (i >= 1 && src_txt.at(i - 1) == QChar(' ')) --i;
+    if (i > 0 && src_txt.at(i - 1) == QChar('\n')) {
+        QString indentation = src_txt.mid(i, insert_pos - i);
+        QString paste_txt = source->text();
+        pair<int, int> trimmed_pos = StringTrimmedIndex(paste_txt);
+        QString paste_indent = paste_txt.left(trimmed_pos.first);
+        if (indentation == paste_indent) {
+            paste_txt = paste_txt.mid(trimmed_pos.first);
+            textCursor().insertText(paste_txt);
+            return;
+        }
+    }
+    QPlainTextEdit::insertFromMimeData(source);
 }

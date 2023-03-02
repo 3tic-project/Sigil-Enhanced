@@ -375,6 +375,7 @@
     <addaction name="menuSpellCheckMenu"/>
     <addaction name="menuReformatHTML"/>
     <addaction name="menuEPUB3Tools"/>
+	<addaction name="actionNormalizedOPF"/>
     <addaction name="actionWellFormedCheckEpub"/>
     <addaction name="actionValidateStylesheetsWithW3C"/>
     <addaction name="actionReports"/>
@@ -1796,6 +1797,14 @@
    <property name="toolTip">
     <string>Tutorials</string>
    </property>
+  </action>
+  <action name="actionNormalizedOPF">
+	<property name="text">
+		<string>Normalized OPF</string>
+	</property>
+	<property name="toolTip">
+		<string>Well formed check and normalized the OPF.</string>
+	</property>
   </action>
   <action name="actionWellFormedCheckEpub">
    <property name="text">
