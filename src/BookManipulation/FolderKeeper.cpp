@@ -784,11 +784,9 @@ QString FolderKeeper::buildShortName(const QString &bookpath, int lvl)
     return pieces.join('/');
 }
 
-
 void FolderKeeper::updateShortPathNames()
 {
     QStringList bookpaths = GetAllBookPaths();
-
     QHash<QString,QString>BookToSPN;
     QHash<QString, QStringList> NameToBooks;
     QSet<QString> DupSet;

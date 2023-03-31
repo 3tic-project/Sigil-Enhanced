@@ -1138,7 +1138,7 @@ void OPFResource::UpdateSpineOrder(const QList<::HTMLResource *> html_files)
     UpdateText(p);
 }
 
-// 修改：批量重命名：添加BulkResourceRenamed函数
+//---------------------------------------- 修改：批量重命名 ---------------------------------------------------
 void OPFResource::BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths)
 {
     QWriteLocker locker(&GetLock());
@@ -1184,6 +1184,13 @@ void OPFResource::BulkResourceRenamed(const QList<Resource*>resources, const QLi
                 p.m_manifest.replace(i, me);
                 id_maps.insert(old_id, new_id);
                 match = true;
+                if (resource->Type() == Resource::NCXResourceType) {
+                    // handle updating the ncx id on the spine if ncx renamed
+                    QString ncx_id = p.m_spineattr.m_atts.value(QString("toc"), "");
+                    if (new_id != ncx_id) {
+                        p.m_spineattr.m_atts[QString("toc")] = new_id;
+                    }
+                }
                 if (resource->Type() == Resource::ImageResourceType) {
                     if (IsCoverImageCheck(old_id, p)) {
                         AddCoverMetaForImage(resource, p);
@@ -1210,6 +1217,8 @@ void OPFResource::BulkResourceRenamed(const QList<Resource*>resources, const QLi
     }
     UpdateText(p);
 }
+//-------------------------------------------------------------------------------------------------------------
+
 
 void OPFResource::ResourceRenamed(const Resource *resource, QString old_full_path)
 {

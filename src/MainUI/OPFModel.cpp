@@ -409,6 +409,7 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
         // -------- 修改：批量重命名 ---------
         valid_resources << resource;
         old_full_paths << old_full_path; 
+        connect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); //恢复Renamed信号，保证 ResourceRenamed 调用正常。
         // -----------------------------------
         update[ old_bookpath ] = resource->GetRelativePath();
     }

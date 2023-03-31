@@ -73,7 +73,6 @@ public:
      */
     ~FolderKeeper();
 
-
     QString DetermineFileGroup(const QString &filepath, const QString &mimetype);
 
 

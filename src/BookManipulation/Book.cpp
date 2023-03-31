@@ -566,6 +566,7 @@ HTMLResource *Book::CreateSectionBreakOriginalResource(const QString &content, H
     Q_ASSERT(reading_order >= 0);
     QList<HTMLResource *> html_resources = m_Mainfolder->GetResourceTypeList<HTMLResource>(true);
     QString old_extension = originating_filename.right(originating_filename.length() - originating_filename.lastIndexOf("."));
+    QString ttttt = GetFirstUniqueSectionName(old_extension);
     originating_resource->RenameTo(GetFirstUniqueSectionName(old_extension));
     HTMLResource *new_resource = CreateNewHTMLFile(folder_path);
     QString version = GetOPF()->GetEpubVersion();
