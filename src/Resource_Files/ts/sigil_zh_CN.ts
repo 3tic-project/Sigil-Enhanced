@@ -3026,7 +3026,7 @@ Valid only when searching HTML files.</source>
         <location filename="../../MainUI/FindReplace.cpp" line="731"/>
         <location filename="../../MainUI/FindReplace.cpp" line="1935"/>
         <source>Replacements made: %n</source>
-        <translation><numerusform>已完成替换：％n</numerusform></translation>
+        <translation><numerusform>已完成替换：%n</numerusform></translation>
     </message>
     <message>
         <location filename="../../MainUI/FindReplace.cpp" line="857"/>
@@ -9539,6 +9539,11 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>F6</translation>
     </message>
     <message>
+        <location filename="../../Form_Files/main.ui" line="0"/>
+        <source>Split Block or Add Break</source>
+        <translation>分割段落或插入br空行</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/main.ui" line="1753"/>
         <source>Split &amp;Marker</source>
         <translation>拆分标记(&amp;M)</translation>
@@ -9602,6 +9607,11 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <location filename="../../Form_Files/main.ui" line="1797"/>
         <source>F7</source>
         <translation>F7</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="0"/>
+        <source>Normalized OPF</source>
+        <translation>OPF规范化</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1802"/>
