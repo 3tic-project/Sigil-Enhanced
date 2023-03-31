@@ -175,7 +175,7 @@
      <addaction name="actionClip39"/>
      <addaction name="actionClip40"/>
     </widget>
-    <addaction name="actionSplitBlockOrAddBreak"/>
+	<addaction name="actionSplitBlockOrAddBreak"/>
     <addaction name="actionInsertSGFSectionMarker"/>
     <addaction name="separator"/>
     <addaction name="actionInsertFile"/>
@@ -214,7 +214,7 @@
      <addaction name="actionHeading5"/>
      <addaction name="actionHeading6"/>
      <addaction name="actionHeadingNormal"/>
-      <addaction name="actionHeadingDivision"/>
+     <addaction name="actionHeadingDivision"/>
      <addaction name="separator"/>
      <addaction name="actionHeadingPreserveAttributes"/>
     </widget>
@@ -362,8 +362,8 @@
      <addaction name="actionUpdateManifestProperties"/>
      <addaction name="actionNCXGuideFromNav"/>
      <addaction name="actionRemoveNCXGuide"/>
-     <addaction name="actionEpub3To2"/>
-     <addaction name="actionEpub2To3"/>
+	 <addaction name="actionEpub3To2"/>
+	 <addaction name="actionEpub2To3"/>
     </widget>
     <addaction name="actionAddCover"/>
     <addaction name="actionMetaEditor"/>
@@ -375,8 +375,8 @@
     <addaction name="menuSpellCheckMenu"/>
     <addaction name="menuReformatHTML"/>
     <addaction name="menuEPUB3Tools"/>
-	<addaction name="actionNormalizedOPF"/>
     <addaction name="actionWellFormedCheckEpub"/>
+	<addaction name="actionNormalizedOPF"/>
     <addaction name="actionValidateStylesheetsWithW3C"/>
     <addaction name="actionReports"/>
     <addaction name="separator"/>
@@ -400,6 +400,8 @@
     <addaction name="actionCheckout"/>
     <addaction name="actionDiff"/>
     <addaction name="actionManageRepo"/>
+    <addaction name="actionEditCheckpointDesc"/>
+    <addaction name="actionLog"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -702,7 +704,7 @@
     <addaction name="actionHeading5"/>
     <addaction name="actionHeading6"/>
     <addaction name="actionHeadingNormal"/>
-    <addaction name="actionHeadingDivision"/>
+	<addaction name="actionHeadingDivision"/>
   </widget>
   </widget>
   <widget class="QToolBar" name="toolBarTextFormats">
@@ -1292,6 +1294,9 @@
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Split the current file into two files using your cursor location as the dividing point.&lt;/p&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Return</string>
+   </property>
   </action>
   <action name="actionInsertFile">
    <property name="icon">
@@ -1761,15 +1766,15 @@
    </property>
   </action>
   <action name="actionSplitBlockOrAddBreak">
-    <property name="text">
-      <string>Split Block or Add Break</string>
-    </property>
-    <property name="toolTip">
-      <string>Split at block level element or add a new blank line according where the cursor positon at.</string>
-    </property>
-    <property name="shortcut">
-      <string>Ctrl+Return</string>
-    </property>
+	<property name="text">
+		<string>Split Block or Add Break</string>
+	</property>
+	<property name="toolTip">
+		<string>Split at block level element or add a new blank line according where the cursor positon at.</string>
+	</property>
+	<property name="shortcut">
+		<string>Ctrl+Return</string>
+	</property>
   </action>
   <action name="actionUserGuide">
    <property name="text">
@@ -1799,12 +1804,12 @@
    </property>
   </action>
   <action name="actionNormalizedOPF">
-	<property name="text">
-		<string>Normalized OPF</string>
-	</property>
-	<property name="toolTip">
-		<string>Well formed check and normalized the OPF.</string>
-	</property>
+    <property name="text">
+	    <string>Normalized OPF</string>
+    </property>
+    <property name="toolTip">
+	    <string>Well formed check and normalized the OPF.</string>
+    </property>
   </action>
   <action name="actionWellFormedCheckEpub">
    <property name="text">
@@ -2585,24 +2590,24 @@
     <string>Ctrl+7</string>
    </property>
   </action>
-   <action name="actionHeadingDivision">
-     <property name="checkable">
-       <bool>true</bool>
-     </property>
-     <property name="text">
-       <string>&amp;Division</string>
-     </property>
-     <property name="toolTip">
-       <string>
-         &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Division&lt;/b&gt;&lt;/p&gt;
+  <action name="actionHeadingDivision">
+	<property name="checkable">
+		<bool>true</bool>
+	</property>
+	<property name="text">
+		<string>&amp;Division</string>
+	</property>
+	<property name="toolTip">
+		<string>
+			&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Division&lt;/b&gt;&lt;/p&gt;
 
-         &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a division element.&lt;/p&gt;
-       </string>
-     </property>
-     <property name="shortcut">
-       <string>Ctrl+8</string>
-     </property>
-   </action>
+			&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a division element.&lt;/p&gt;
+		</string>
+	</property>
+	<property name="shortcut">
+		<string>Ctrl+8</string>
+	</property>
+  </action>
   <action name="actionHeadingPreserveAttributes">
    <property name="checkable">
     <bool>true</bool>
@@ -2930,7 +2935,7 @@
   </action>
   <action name="actionMendPrettifyHTML">
    <property name="text">
-    <string>Prettify All HTML Files</string>
+    <string>Mend and &amp;Prettify All HTML Files</string>
    </property>
   </action>
   <action name="actionMendHTML">
@@ -2959,14 +2964,14 @@
    </property>
   </action>
   <action name="actionEpub3To2">
-    <property name="text">
-      <string>Epub3 to Epub2</string>
-    </property>
+	<property name="text">
+		<string>Epub3 to Epub2</string>
+	</property>
   </action>
   <action name="actionEpub2To3">
-    <property name="text">
-      <string>Epub2 to Epub3</string>
-    </property>
+	<property name="text">
+		<string>Epub2 to Epub3</string>
+	</property>
   </action>
   <action name="actionCommit">
    <property name="icon">
@@ -3002,6 +3007,16 @@
    </property>
    <property name="text">
     <string>Manage Checkpoint Repositories</string>
+   </property>
+  </action>
+  <action name="actionEditCheckpointDesc">
+   <property name="text">
+    <string>Edit Checkpoint Descriptions</string>
+   </property>
+  </action>
+  <action name="actionLog">
+   <property name="text">
+    <string>Show Log of Checkpoints</string>
    </property>
   </action>
  </widget>

@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 # vim:ts=4:sw=4:softtabstop=4:smarttab:expandtab
 
-# Copyright (c) 2020 Kevin B. Hendricks, Stratford Ontario Canada
+# Copyright (c) 2022 Kevin B. Hendricks, Stratford Ontario Canada
+# Copyright (c) 2022 Doug Massay
 # All rights reserved.
 #
 # This file is part of Sigil.
@@ -43,7 +44,7 @@ if (sys.hexversion < 0x03080000) and not hasattr(sys, 'argv'):
 import dulwich
 from dulwich import porcelain
 from dulwich.repo import Repo
-from dulwich.porcelain import open_repo_closing, show_object, print_commit, commit_decode
+from dulwich.porcelain import open_repo_closing, show_object, print_commit, commit_decode, _make_tag_ref
 from dulwich.objects import Tag, Commit, Blob, check_hexsha, ShaFile, Tree, format_timezone
 from dulwich.refs import ANNOTATED_TAG_SUFFIX
 from dulwich.patch import write_tree_diff
@@ -53,6 +54,7 @@ import zipfile
 from zipfile import ZipFile
 
 from contextlib import contextmanager
+
 
 @contextmanager
 def make_temp_directory():
@@ -329,7 +331,7 @@ def clone_repo_and_checkout_tag(localRepo, bookid, tagname, filename, dest_path)
     if os.path.exists(repo_path):
         if not os.path.exists(dest_path): return ""
         os.chdir(repo_path)
-        tags = porcelain.list_tags(repo='.')
+        tags = porcelain.tag_list(repo='.')
         for atag in tags:
             taglst.append(unicode_str(atag))
         # use dest_path to clone into
@@ -365,6 +367,24 @@ def logsummary(repo=".", paths=None, outstream=sys.stdout, max_entries=None, rev
       stats: Print diff stats
     """
     with open_repo_closing(repo) as r:
+        # first print a list of checkpoint tags
+        tags = sorted(r.refs.as_dict(b"refs/tags"), reverse=True)
+        for atag in tags:
+            tagkey = b"refs/tags/" + atag
+            tag_obj = r[tagkey]
+            tag_name = unicode_str(atag)
+            tag_message = ""
+            tag_date = ""
+            if isinstance(tag_obj,Tag):
+                time_tuple = time.gmtime(tag_obj.tag_time + tag_obj.tag_timezone)
+                time_str = time.strftime("%a %b %d %Y %H:%M:%S",time_tuple)
+                timezone_str = format_timezone(tag_obj.tag_timezone).decode('ascii')
+                tag_date = time_str + " " + timezone_str
+                tag_message = unicode_str(tag_obj.message)
+            outstream.write(tag_name + " " + tag_date + "\n")
+            outstream.write("    " + tag_message + "\n")
+        outstream.write("\n\n")
+        # then walk the commits in reverse order (going back in time)
         walker = r.get_walker(max_entries=max_entries, paths=paths, reverse=reverse)
         for entry in walker:
             def decode(x):
@@ -402,7 +422,7 @@ def generate_epub_from_tag(localRepo, bookid, tagname, filename, dest_path):
     taglst = []
     if os.path.exists(repo_path):
         os.chdir(repo_path)
-        tags = porcelain.list_tags(repo='.')
+        tags = porcelain.tag_list(repo='.')
         os.chdir(cdir)
         for atag in tags:
             taglst.append(unicode_str(atag))
@@ -490,7 +510,7 @@ def performCommit(localRepo, bookid, bookinfo, bookroot, bookfiles):
         # current tag, etc
         os.chdir(repo_path)
         # determine the new tag
-        tags = porcelain.list_tags(repo='.')
+        tags = porcelain.tag_list(repo='.')
         tagname = "V%04d" % (len(tags) + 1)
         tagmessage = "Tag: " + tagname
         message = "updating to " + tagname
@@ -714,6 +734,44 @@ def get_current_status_vs_destdir(bookroot, bookfiles, destdir):
     for i in range(len(modified)):
         modified[i] = modified[i].replace(os.sep,"/")
     return (deleted, added, modified)
+
+
+def update_annotated_tag_message(localRepo, bookid, tagname, newmessage):
+    repo_home = pathof(localRepo)
+    repo_home = repo_home.replace("/", os.sep)
+    repo_path = os.path.join(repo_home, "epub_" + bookid)
+    cdir = os.getcwd()
+    success = 0
+    if os.path.exists(repo_path):
+        os.chdir(repo_path)
+        with open_repo_closing(".") as r:
+            tag_name = utf8_str(tagname)
+            tags = sorted(r.refs.as_dict(b"refs/tags"))
+            tagkey = b"refs/tags/" + tag_name
+            if tag_name in tags:
+                obj = r[tagkey]
+                if isinstance(obj,Tag):
+                    # create a duplicate Tag with updated message
+                    nobj = Tag()
+                    nobj.tag_time = obj.tag_time
+                    nobj.tag_timezone = obj.tag_timezone
+                    nobj.message = utf8_str(newmessage + "\n")
+                    nobj.name = obj.name
+                    nobj.tagger = obj.tagger
+                    nobj.object = obj.object
+                    old_id = obj.id
+                    # delete the old tag from the object store refs dictionary
+                    del r.refs[_make_tag_ref(tag_name)]
+                    # remove the old annotated object itself from the object store
+                    r.object_store._remove_loose_object(old_id)
+                    # add in the updated tag to the object store
+                    r.object_store.add_object(nobj)
+                    # create a ref in the refs dictionary for the updated tag
+                    tag_id = nobj.id
+                    r.refs[_make_tag_ref(tag_name)] = tag_id
+                    success = 1
+        os.chdir(cdir)
+        return success
 
 
 def main():

@@ -384,7 +384,6 @@ private:
     QAction* m_MinimalMatchCheckAction;
     QAction* m_AutoTokeniseCheckAction;
     QMenu*   m_menu;
-	bool m_CF_RestartFlag; // 修改：当前页面查找的重开始标志
 };
 
 

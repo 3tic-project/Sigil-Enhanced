@@ -28,8 +28,6 @@
 #include <QtCore/QReadWriteLock>
 #include <QtCore/QUrl>
 #include <QtGui/QIcon>
-#include <QtGui/QIcon>
-#include "Parsers/OPFParser.h"
 
 /**
  * Represents a resource file on disk.
@@ -68,7 +66,7 @@ public:
         AudioResourceType    = 1 <<  11, /**< Used for Audio resources. */
         VideoResourceType    = 1 <<  12  /**< Used for Video resources. */
     };
-    
+
     /**
      * Constructor.
      *
@@ -244,6 +242,7 @@ signals:
      * @param resource The resource's that was renamed.
      */
     void Renamed(const Resource *resource, QString old_full_path);
+
     /**
      * Emitted whenever the resource changes location.
      *
@@ -257,6 +256,7 @@ signals:
      * @param resource The resource's that was deleted.
      */
     void Deleted(const Resource *resource);
+
     /**
      * Emitted when the resource has been updated on disk.
      */

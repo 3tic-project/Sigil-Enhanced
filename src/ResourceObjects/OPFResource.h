@@ -143,8 +143,6 @@ public:
     void UpdateGuideAfterMerge(QList<Resource*> &merged_resources, QHash<QString,QString> &section_id_map);
     void UpdateGuideFragments(QHash<QString,QString> &idupdates);
 
-    OPFParser p;//修改：
-
  signals:
     void TextChanging();
     void LoadedFromDisk();
@@ -171,7 +169,7 @@ public slots:
     void UpdateSpineOrder(const QList<HTMLResource *> html_files);
 
     void ResourceRenamed(const Resource *resource, QString old_full_path);
-    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //修改：重命名耗时长
+    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //修改：批量重命名
 
     void ResourceMoved(const Resource *resource, QString old_full_path);
 
@@ -270,7 +268,6 @@ private:
 
     HTMLResource * m_NavResource;
     bool m_WarnedAboutVersion;
-    
 };
 
 #endif // OPFRESOURCE_H

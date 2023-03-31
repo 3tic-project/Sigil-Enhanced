@@ -380,12 +380,6 @@ void OPFParser::parse(const QString& source)
     bool get_content = false;
     m_idpos.clear();
     m_hrefpos.clear();
-    // ÐÞ¸Ä£º
-    m_metadata.clear();
-    m_manifest.clear();
-    m_spine.clear();
-    m_guide.clear();
-    m_bindings.clear();
     while(true) {
 
         BaseParser::MarkupInfo mi;

@@ -43,6 +43,7 @@
 #include <QString>
 #include <QStringRef>
 #include <QPointer>
+#include <QPrinter>
 #include <QApplication>
 #include <QInputDialog>
 #include <QTimer>
@@ -546,106 +547,106 @@ QString CodeViewEditor::SplitSection()
     return new_section;
 }
 
-// 修改：SplitBlockOrAddBreak
+// ---------------------------------- 修改：SplitBlockOrAddBreak ---------------------------------
 // 该函数的作用是，根据光标在行中的位置插入空行或者分割段落（块元素）。
 // 如果光标处于行尾，则向下插入空行，如果光标处于行头缩进位置，则向前插入空行。
 // 如果光标处于标签内部，则自动判断该补充多少闭合标签并从该处分割段落。
-void CodeViewEditor::SplitBlockOrAddBreak() 
+void CodeViewEditor::SplitBlockOrAddBreak()
 {
-	QTextCursor cursor = textCursor();
-	QString text = toPlainText();
-	int ori_pos = cursor.position();
-	MaybeRegenerateTagList();
-	if (!IsPositionInBody(ori_pos)) return;
+    QTextCursor cursor = textCursor();
+    QString text = toPlainText();
+    int ori_pos = cursor.position();
+    MaybeRegenerateTagList();
+    if (!IsPositionInBody(ori_pos)) return;
 
-	cursor.select(QTextCursor::LineUnderCursor);
-	QString insert_text = "";
-	QString selected_text = cursor.selectedText();
-	int line_start = cursor.selectionStart();
-	int line_end = cursor.selectionEnd();
-	cursor.setPosition(ori_pos);
+    cursor.select(QTextCursor::LineUnderCursor);
+    QString insert_text = "";
+    QString selected_text = cursor.selectedText();
+    int line_start = cursor.selectionStart();
+    int line_end = cursor.selectionEnd();
+    cursor.setPosition(ori_pos);
 
-	pair<int, int> trimmed_pos = StringTrimmedIndex(selected_text);
-	int indent_length = trimmed_pos.first, 
-		nonblank_end = trimmed_pos.second;
-	// 光标位于行末端或行尾空白字符处
-	if (cursor.atBlockEnd() || ori_pos >= line_start + nonblank_end) {
-		if (!cursor.atBlockEnd()) cursor.movePosition(QTextCursor::EndOfLine);
-		if (selected_text.trimmed().isEmpty()) { // trimmed()可除去字符串首尾端的空格和制表符等空白字符。
-			insert_text = "<p><br/></p>";
-		}
-		else {
-			QString indent = selected_text.left(indent_length);
-			insert_text = QChar(0x2029) % indent %"<p><br/></p>";
-		}
-	}
-	// 光标位于缩进空白字符处
-	else if (ori_pos <= line_start+indent_length) {
-		QString indent = selected_text.left(indent_length);
-		cursor.setPosition(line_start);
-		insert_text = indent % "<p><br/></p>" % QChar(0x2029);
-	}
-	// 其他情况，光标位于内容上
-	else {
-		QStringList openTags_foundList, // 储存查找过程中不被闭合元素匹配的元素；
-					closeTags_foundList; // 储存查找过程中的闭合元素；
-		// i 是标签在页面中的序号
-		int i = m_TagList.findLastTagOnOrBefore(ori_pos);
-		TagLister::TagInfo ti = m_TagList.at(i);
-		// 光标恰好处于标签尖括号内部
-		if (ori_pos > ti.pos && ori_pos < ti.pos + ti.len) {
-			return; 
-		}
-		else if (ti.ttype == "end" && ori_pos == ti.pos) {
-			--i;
-		}
-		// 向前查找标签，直到找到第一个不被闭合节点匹配的块元素标签。
-		// （不被闭合节点匹配的意思是，标签在前向查找的时候，如果前方有成对的标签，必然是先找到闭合标签，
-		//   如果找不到闭合标签说明闭合标签在光标后方，那么分割时应该对该类标签进行补偿。）
-		while (i > 0) {
-			ti = m_TagList.at(i);
+    pair<int, int> trimmed_pos = StringTrimmedIndex(selected_text);
+    int indent_length = trimmed_pos.first,
+        nonblank_end = trimmed_pos.second;
+    // 光标位于行末端或行尾空白字符处
+    if (cursor.atBlockEnd() || ori_pos >= line_start + nonblank_end) {
+        if (!cursor.atBlockEnd()) cursor.movePosition(QTextCursor::EndOfLine);
+        if (selected_text.trimmed().isEmpty()) { // trimmed()可除去字符串首尾端的空格和制表符等空白字符。
+            insert_text = "<p><br/></p>";
+        }
+        else {
+            QString indent = selected_text.left(indent_length);
+            insert_text = QChar(0x2029) % indent % "<p><br/></p>";
+        }
+    }
+    // 光标位于缩进空白字符处
+    else if (ori_pos <= line_start + indent_length) {
+        QString indent = selected_text.left(indent_length);
+        cursor.setPosition(line_start);
+        insert_text = indent % "<p><br/></p>" % QChar(0x2029);
+    }
+    // 其他情况，光标位于内容上
+    else {
+        QStringList openTags_foundList, // 储存查找过程中不被闭合元素匹配的元素；
+            closeTags_foundList; // 储存查找过程中的闭合元素；
+        // i 是标签在页面中的序号
+        int i = m_TagList.findLastTagOnOrBefore(ori_pos);
+        TagLister::TagInfo ti = m_TagList.at(i);
+        // 光标恰好处于标签尖括号内部
+        if (ori_pos > ti.pos && ori_pos < ti.pos + ti.len) {
+            return;
+        }
+        else if (ti.ttype == "end" && ori_pos == ti.pos) {
+            --i;
+        }
+        // 向前查找标签，直到找到第一个不被闭合节点匹配的块元素标签。
+        // （不被闭合节点匹配的意思是，标签在前向查找的时候，如果前方有成对的标签，必然是先找到闭合标签，
+        //   如果找不到闭合标签说明闭合标签在光标后方，那么分割时应该对该类标签进行补偿。）
+        while (i > 0) {
+            ti = m_TagList.at(i);
 
-			if (ti.tname == "body") {
-				break;
-			}
+            if (ti.tname == "body") {
+                break;
+            }
 
-			if (ti.ttype == "end") {
-				closeTags_foundList.append(ti.tname);
-			}
-			else if (ti.ttype == "begin") {
-				if (closeTags_foundList.contains(ti.tname)) {
-					closeTags_foundList.removeOne(ti.tname);
-				}
-				else {
-					QString tagStr = text.mid(ti.pos+1, ti.len-2);
-					openTags_foundList.append(tagStr);
-				}
-			}
-			//找到目标块元素
-			if (!openTags_foundList.isEmpty() && BLOCK_LEVEL_TAGS.contains(openTags_foundList.last())) {
-				break;
-			}
-			--i;
-		}
-		if (openTags_foundList.size() > 0) {
-			QString last_para_text = "",
-					next_para_text = "";
-			QString indent = selected_text.left(indent_length);
-			foreach(QString tag, openTags_foundList) {
-				QString tagname = tag.split(" ").first();
-				last_para_text.append("</" + tagname + ">");
-				next_para_text.prepend("<"+tag+">");
-			}
-			insert_text = last_para_text + QChar(0x2029) + indent + next_para_text;
-		}
-	}
-	if (!insert_text.isEmpty()) {
-		cursor.beginEditBlock();
-		cursor.insertText(insert_text);
-		cursor.endEditBlock();
-	}
+            if (ti.ttype == "end") {
+                closeTags_foundList.append(ti.tname);
+            }
+            else if (ti.ttype == "begin") {
+                if (closeTags_foundList.contains(ti.tname)) {
+                    closeTags_foundList.removeOne(ti.tname);
+                }
+                else {
+                    QString tagStr = text.mid(ti.pos + 1, ti.len - 2);
+                    openTags_foundList.append(tagStr);
+                }
+            }
+            //找到目标块元素
+            if (!openTags_foundList.isEmpty() && BLOCK_LEVEL_TAGS.contains(openTags_foundList.last())) {
+                break;
+            }
+            --i;
+        }
+        if (openTags_foundList.size() > 0) {
+            QString last_para_text = "",
+                next_para_text = "";
+            QString indent = selected_text.left(indent_length);
+            foreach(QString tag, openTags_foundList) {
+                QString tagname = tag.split(" ").first();
+                last_para_text.append("</" + tagname + ">");
+                next_para_text.prepend("<" + tag + ">");
+            }
+            insert_text = last_para_text + QChar(0x2029) + indent + next_para_text;
+        }
+    }
+    if (!insert_text.isEmpty()) {
+        cursor.beginEditBlock();
+        cursor.insertText(insert_text);
+        cursor.endEditBlock();
+    }
 }
-
+// -------------------------------------------------------------------------------------------------------------
 
 void CodeViewEditor::InsertSGFSectionMarker()
 {
@@ -996,6 +997,8 @@ bool CodeViewEditor::FindNext(const QString &search_regex,
     int start_offset = 0;
     int start = 0;
     int end = txt.length();
+    bool moved_to_split = false;
+    int original_pos = -1;
 
     if (marked_text) {
         if (!MoveToMarkedText(search_direction, wrap)) {
@@ -1010,6 +1013,7 @@ bool CodeViewEditor::FindNext(const QString &search_regex,
     // the impact of wrap around, split will always be -1 if
     // marked text is being used and in all Current File Mode searches
     if (split_at != -1) {
+        original_pos = textCursor().position(); 
         if (search_direction == Searchable::Direction_Up) {
             start = split_at;
         } else {
@@ -1019,6 +1023,7 @@ bool CodeViewEditor::FindNext(const QString &search_regex,
         if (!MoveToSplitText(search_direction, start, end)) {
             return false;
         }
+        moved_to_split = true;
     }
 
     int selection_offset = GetSelectionOffset(search_direction, ignore_selection_offset, marked_text);
@@ -1071,7 +1076,13 @@ bool CodeViewEditor::FindNext(const QString &search_regex,
             return true;
         }
     }
-
+    // nothing found
+    if (moved_to_split) {
+        // restore original pos since nothing found
+        QTextCursor cursor = textCursor();
+        cursor.setPosition(original_pos);
+        setTextCursor(cursor);
+    }
     return false;
 }
 
@@ -1301,7 +1312,7 @@ void CodeViewEditor::SetUpFindForSelectedText(const QString &search_regex)
 // method is not a slot, and we need it as a slot
 // for print preview support; so this is just
 // a slot wrapper around that function
-void CodeViewEditor::print(QPagedPaintDevice *printer)
+void CodeViewEditor::print(QPrinter *printer)
 {
     QPlainTextEdit::print(printer);
 }
@@ -2945,202 +2956,201 @@ void CodeViewEditor::FormatBlock(const QString &element_name, bool preserve_attr
         newcursor.setPosition(startpos);
         newcursor.setPosition(startpos + cleantxt.length(), QTextCursor::KeepAnchor); 
         setTextCursor(newcursor);
-	}
-	// Emit a selection changed event, so we can make sure the style buttons are updated
-	// to uncheck any heading buttons check states.
-	emit selectionChanged();
+    }
 
-	// Going to assume that the user is allowed to click anywhere within or just after the block
-	// Also makes assumptions about being well formed, or else crazy things may happen...
-	int pos = textCursor().selectionStart();
-	MaybeRegenerateTagList();
-	QString text = m_TagList.getSource();
+    // Emit a selection changed event, so we can make sure the style buttons are updated
+    // to uncheck any heading buttons check states.
+    emit selectionChanged();
+
+    // Going to assume that the user is allowed to click anywhere within or just after the block
+    // Also makes assumptions about being well formed, or else crazy things may happen...
+    int pos = textCursor().selectionStart();
+    MaybeRegenerateTagList();
+    QString text = m_TagList.getSource();
 
 
-	if (!IsPositionInBody(pos)) return;
+    if (!IsPositionInBody(pos)) return;
 
-	// find that tag that starts immediately **after** pos and then
-	// then use its predecessor when working backwards
-	// 
-	int i = m_TagList.findLastTagOnOrBefore(pos);
-	TagLister::TagInfo ti = m_TagList.at(i);
-	while (i >= 0) {
-		ti = m_TagList.at(i);
+    // find that tag that starts immediately **after** pos and then
+    // then use its predecessor when working backwards
+    int i = m_TagList.findLastTagOnOrBefore(pos);
+    TagLister::TagInfo ti = m_TagList.at(i);
+    while(i >= 0) {
+        ti = m_TagList.at(i);
 
-		if (BLOCK_LEVEL_TAGS.contains(ti.tname)) {
+        if (BLOCK_LEVEL_TAGS.contains(ti.tname)) {
 
-			// we do not want a closing block tag if that is where the cursor is now, look earlier
-			if ((ti.ttype == "end") && ((pos >= ti.pos) && (pos < ti.pos + ti.len))) {
-				i--;
-				continue;
-			}
+            // we do not want a closing block tag if that is where the cursor is now, look earlier
+            if ((ti.ttype == "end") && ((pos >= ti.pos) && (pos < ti.pos + ti.len))) {
+                i--;
+                continue;
+            }
 
-			// special case for body tag or closing tag that we did not start in
-			// just insert the element around the current selection
-			// 直接套元素的情况：当选中的文本为body直系子代或者文本前面存在兄弟节点。
-			// 改这里：
-			if ((ti.tname == "body") || (ti.ttype == "end") || (ti.ttype == "single")) {
-				InsertHTMLTagAroundSelection(element_name, "/" % element_name);
-				return;
-			}
+            // special case for body tag or closing tag that we did not start in
+            // just insert the element around the current selection
+            if ((ti.tname == "body") || (ti.ttype == "end") || (ti.ttype == "single")) {
+                InsertHTMLTagAroundSelection(element_name, "/" % element_name);
+                return;
+            }
 
-			// if we reached here we have an opening block tag we need to replace
-			QStringRef opening_tag_text(&text, ti.pos, ti.len);
-			QString all_attributes = TagLister::extractAllAttributes(opening_tag_text);
+            // if we reached here we have an opening block tag we need to replace
+            QStringRef opening_tag_text(&text, ti.pos, ti.len);
+            QString all_attributes = TagLister::extractAllAttributes(opening_tag_text);
+            
+            // look for matching closing tag from here to the end
+            int j = i+1;
+            TagLister::TagInfo et = m_TagList.at(j);
+            while((et.len != -1) && (et.open_pos != ti.pos)) {
+                j++;
+                et = m_TagList.at(j);
+            }
+            if (et.len == -1) return; // no matching closing tag found
 
-			// look for matching closing tag from here to the end
-			int j = i + 1;
-			TagLister::TagInfo et = m_TagList.at(j);
-			while ((et.len != -1) && (et.open_pos != ti.pos)) {
-				j++;
-				et = m_TagList.at(j);
-			}
-			if (et.len == -1) return; // no matching closing tag found
+            // ready to now format this block
+            QString new_opening_tag_text;
+            if (preserve_attributes && (all_attributes.length() > 0)) {
+                new_opening_tag_text = "<" + element_name + " " + all_attributes + ">";
+            } else {
+                new_opening_tag_text = "<" + element_name + ">";
+            }
 
-										// ready to now format this block
-			QString new_opening_tag_text;
-			if (preserve_attributes && (all_attributes.length() > 0)) {
-				new_opening_tag_text = "<" + element_name + " " + all_attributes + ">";
-			}
-			else {
-				new_opening_tag_text = "<" + element_name + ">";
-			}
-
-			QString new_closing_tag_text = "</" + element_name + ">";
-			ReplaceTags(ti.pos, ti.pos + ti.len, new_opening_tag_text,
-				et.pos, et.pos + et.len, new_closing_tag_text);
-			return;
-		}
-		i--;
-	}
+            QString new_closing_tag_text = "</" + element_name + ">";
+            ReplaceTags(ti.pos, ti.pos + ti.len, new_opening_tag_text,
+                        et.pos, et.pos + et.len, new_closing_tag_text);
+            return;
+        }
+        i--;
+    }
     return;
 }
 
+//------------------------修改：工具：字符串前后端非空字符位置-----------------------------------
 // 该函数用于截取字符串前后两端非空白字符的位置，空白字符指空格符和制表符。
 // 它返回的是一对位置数字，代表前端非空白字符的起始位置和后端非空白字符的截止位置。
-pair<int, int> CodeViewEditor::StringTrimmedIndex(const QString &text) {
+pair<int, int> CodeViewEditor::StringTrimmedIndex(const QString& text) {
 
-	if (text.size() == 0) {
-		return pair<int, int>(0, 0);
-	}
-	// s_index 代表前端非空白字符起始位置，e_index代表后端非空白字符截止位置。
-	// 如果 返回时 s_index 和 e_index 都为 0 ，说明该字符串为空。如果s_index 等于 e_index 说明该字符串由纯空白字符组成。
-	int s_index = 0, e_index = text.size();
-	for (int i = 0; i < text.size(); i++) {
-		// 0x20 空格 0x9 制表符\t
-		if (text[i] == QChar(0x20) || text[i] == QChar(0x9)) {
-			++s_index;
-			continue;
-		}
-		break;
-	}
-	for (int i = text.size(); i >= s_index; i--) {
-		if (i == s_index) {
-			e_index = s_index;
-			break;
-		}
-		if (text[i-1] == QChar(0x20) || text[i-1] == QChar(0x9)) {
-			--e_index;
-			continue;
-		}
-		break;
-	}
-	return pair<int, int> (s_index, e_index);
+    if (text.size() == 0) {
+        return pair<int, int>(0, 0);
+    }
+    // s_index 代表前端非空白字符起始位置，e_index代表后端非空白字符截止位置。
+    // 如果 返回时 s_index 和 e_index 都为 0 ，说明该字符串为空。如果s_index 等于 e_index 说明该字符串由纯空白字符组成。
+    int s_index = 0, e_index = text.size();
+    for (int i = 0; i < text.size(); i++) {
+        // 0x20 空格 0x9 制表符\t
+        if (text[i] == QChar(0x20) || text[i] == QChar(0x9)) {
+            ++s_index;
+            continue;
+        }
+        break;
+    }
+    for (int i = text.size(); i >= s_index; i--) {
+        if (i == s_index) {
+            e_index = s_index;
+            break;
+        }
+        if (text[i - 1] == QChar(0x20) || text[i - 1] == QChar(0x9)) {
+            --e_index;
+            continue;
+        }
+        break;
+    }
+    return pair<int, int>(s_index, e_index);
 }
+//---------------------------------------------------------------------------------------------
 
-// 修改：多行添加块元素标签 (ctrl + 7 / ctrl + 8)
-void CodeViewEditor::FormatBlock_multiline(const QString &element_name, bool preserve_attributes)
+//------------------------------------------------修改：多行添加块元素标签 (ctrl + 7 / ctrl + 8)------------------------------------------------
+void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool preserve_attributes)
 {
-	if (element_name.isEmpty()) {
-		return;
-	}
+    if (element_name.isEmpty()) {
+        return;
+    }
 
-	QTextCursor cursor = textCursor();
-	if (!textCursor().hasSelection()) {
-		cursor.select(QTextCursor::LineUnderCursor);
-	}
-	else {
-		cursor.setPosition(textCursor().selectionStart());
-		cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::MoveAnchor);
-		cursor.setPosition(textCursor().selectionEnd(), QTextCursor::KeepAnchor);
-		cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
-	}
+    QTextCursor cursor = textCursor();
+    if (!textCursor().hasSelection()) {
+        cursor.select(QTextCursor::LineUnderCursor);
+    }
+    else {
+        cursor.setPosition(textCursor().selectionStart());
+        cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::MoveAnchor);
+        cursor.setPosition(textCursor().selectionEnd(), QTextCursor::KeepAnchor);
+        cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
+    }
 
-	// Emit a selection changed event, so we can make sure the style buttons are updated
-	// to uncheck any heading buttons check states.
-	emit selectionChanged();
+    // Emit a selection changed event, so we can make sure the style buttons are updated
+    // to uncheck any heading buttons check states.
+    emit selectionChanged();
 
-	MaybeRegenerateTagList();
-	QString text = m_TagList.getSource();
+    MaybeRegenerateTagList();
+    QString text = m_TagList.getSource();
 
-	TagLister::TagInfo bodyOpenTag = m_TagList.at(m_TagList.findBodyOpenTag()),
-		               bodyCloseTag = m_TagList.at(m_TagList.findBodyCloseTag());
-	int body_inner_start = text[bodyOpenTag.pos + bodyOpenTag.len] == QChar(0xA) ? bodyOpenTag.pos + bodyOpenTag.len + 1: bodyOpenTag.pos + bodyOpenTag.len;
-	int body_inner_end = text[bodyCloseTag.pos - 1] == QChar(0xA) ? bodyCloseTag.pos - 1 : bodyCloseTag.pos;
+    TagLister::TagInfo bodyOpenTag = m_TagList.at(m_TagList.findBodyOpenTag()),
+        bodyCloseTag = m_TagList.at(m_TagList.findBodyCloseTag());
+    int body_inner_start = text[bodyOpenTag.pos + bodyOpenTag.len] == QChar(0xA) ? bodyOpenTag.pos + bodyOpenTag.len + 1 : bodyOpenTag.pos + bodyOpenTag.len;
+    int body_inner_end = text[bodyCloseTag.pos - 1] == QChar(0xA) ? bodyCloseTag.pos - 1 : bodyCloseTag.pos;
 
-	// 选择范围限制在body节点内部
-	int start_pos = cursor.selectionStart() > body_inner_start ? cursor.selectionStart(): body_inner_start;
-	int end_pos = cursor.selectionEnd() < body_inner_end ? cursor.selectionEnd() : body_inner_end;
-	cursor.setPosition(start_pos, QTextCursor::MoveAnchor);
-	cursor.setPosition(end_pos, QTextCursor::KeepAnchor);
+    // 选择范围限制在body节点内部
+    int start_pos = cursor.selectionStart() > body_inner_start ? cursor.selectionStart() : body_inner_start;
+    int end_pos = cursor.selectionEnd() < body_inner_end ? cursor.selectionEnd() : body_inner_end;
+    cursor.setPosition(start_pos, QTextCursor::MoveAnchor);
+    cursor.setPosition(end_pos, QTextCursor::KeepAnchor);
 
-	QString selected_text = cursor.selectedText();
-	QStringList splited_list = selected_text.split(QChar(0x2029)); // 被光标选中后的文本，换行符(0xA)会转化为段落分隔符(0x2029)
-	
-	QStringList newText_list = QStringList();
-	foreach(QString line_text, splited_list) {
-		pair<int, int> trimmed_pos;
-		trimmed_pos = StringTrimmedIndex(line_text); // trimmed_pos 储存字符串前端非空白字符起点和后端非空白字符截止点。
-		if (trimmed_pos.first == trimmed_pos.second) {
-			QString pre_blank = line_text.left(trimmed_pos.first);
-			QString open_element = "<" % element_name % ">",
-					close_element = "</" % element_name %">",
-					inner_content = "";
-			if (splited_list.size() > 1 && element_name == "p") {
-				inner_content = "<br/>";
-			}
-			newText_list.append(pre_blank % open_element % inner_content %close_element);
-		}
-		else {
-			QString pre_blank = line_text.left(trimmed_pos.first);
-			QString post_blank = line_text.right(line_text.size() - trimmed_pos.second);
-			QString trimmed_text = line_text.mid(trimmed_pos.first, trimmed_pos.second-trimmed_pos.first);
-			//
-			bool wrapIt = true;
-			// 接下来是侦测它的是否节点以及节点类型。
-			QRegExp re("^<([a-z0-9]+)( +[^>]*)?>(.*)</\\1>$",Qt::CaseInsensitive); // 该表达式用于匹配字符串首位是否节点特征，同属捕获标签，属性和内容。
-			int index = re.indexIn(trimmed_text);
-			if (index > -1) {
-				QString tag = re.cap(1),
-						attr = re.cap(2),
-						inner = re.cap(3);
-				if (BLOCK_LEVEL_TAGS.contains(tag, Qt::CaseInsensitive)) {
-					wrapIt = false;
-					QString open_element = "<" % element_name % attr % ">",
-							close_element = "</" % element_name %">";
-					newText_list.append(pre_blank % open_element % inner % close_element % post_blank);
-				}
-			}
-			if (wrapIt) {
-				QString open_element = "<" % element_name % ">",
-						close_element = "</" % element_name %">";
-				newText_list.append(pre_blank % open_element % trimmed_text % close_element % post_blank);
-			}
-		}
-	}
-	QString replace_text = newText_list.join(QChar(0x2029));
-	cursor.beginEditBlock();
-	cursor.insertText(replace_text);
-	cursor.endEditBlock();
-	// 如果为空节点，则光标移动到节点内部。
-	if (replace_text.trimmed() == "<" % element_name % ">" + "</" % element_name %">") {
-		int new_pos = start_pos + replace_text.indexOf(QRegExp("</"));
-		cursor.setPosition(new_pos);
-		setTextCursor(cursor);
-	}
-	return;
+    QString selected_text = cursor.selectedText();
+    QStringList splited_list = selected_text.split(QChar(0x2029)); // 被光标选中后的文本，换行符(0xA)会转化为段落分隔符(0x2029)
+
+    QStringList newText_list = QStringList();
+    foreach(QString line_text, splited_list) {
+        pair<int, int> trimmed_pos;
+        trimmed_pos = StringTrimmedIndex(line_text); // trimmed_pos 储存字符串前端非空白字符起点和后端非空白字符截止点。
+        if (trimmed_pos.first == trimmed_pos.second) {
+            QString pre_blank = line_text.left(trimmed_pos.first);
+            QString open_element = "<" % element_name % ">",
+                close_element = "</" % element_name % ">",
+                inner_content = "";
+            if (splited_list.size() > 1 && element_name == "p") {
+                inner_content = "<br/>";
+            }
+            newText_list.append(pre_blank % open_element % inner_content % close_element);
+        }
+        else {
+            QString pre_blank = line_text.left(trimmed_pos.first);
+            QString post_blank = line_text.right(line_text.size() - trimmed_pos.second);
+            QString trimmed_text = line_text.mid(trimmed_pos.first, trimmed_pos.second - trimmed_pos.first);
+            //
+            bool wrapIt = true;
+            // 接下来是侦测它的是否节点以及节点类型。
+            QRegExp re("^<([a-z0-9]+)( +[^>]*)?>(.*)</\\1>$", Qt::CaseInsensitive); // 该表达式用于匹配字符串首位是否节点特征，同属捕获标签，属性和内容。
+            int index = re.indexIn(trimmed_text);
+            if (index > -1) {
+                QString tag = re.cap(1),
+                    attr = re.cap(2),
+                    inner = re.cap(3);
+                if (BLOCK_LEVEL_TAGS.contains(tag, Qt::CaseInsensitive)) {
+                    wrapIt = false;
+                    QString open_element = "<" % element_name % attr % ">",
+                        close_element = "</" % element_name % ">";
+                    newText_list.append(pre_blank % open_element % inner % close_element % post_blank);
+                }
+            }
+            if (wrapIt) {
+                QString open_element = "<" % element_name % ">",
+                    close_element = "</" % element_name % ">";
+                newText_list.append(pre_blank % open_element % trimmed_text % close_element % post_blank);
+            }
+        }
+    }
+    QString replace_text = newText_list.join(QChar(0x2029));
+    cursor.beginEditBlock();
+    cursor.insertText(replace_text);
+    cursor.endEditBlock();
+    // 如果为空节点，则光标移动到节点内部。
+    if (replace_text.trimmed() == "<" % element_name % ">" + "</" % element_name % ">") {
+        int new_pos = start_pos + replace_text.indexOf(QRegExp("</"));
+        cursor.setPosition(new_pos);
+        setTextCursor(cursor);
+    }
+    return;
 }
-
+//-------------------------------------------------------------------------------------------------------------------------------------------
 
 void CodeViewEditor::InsertHTMLTagAroundText(const QString &left_element_name,
                                              const QString &right_element_name,
@@ -4203,198 +4213,201 @@ void CodeViewEditor::ConnectSignalsToSlots()
     connect(m_clipMapper, SIGNAL(mappedString(const QString &)), this, SLOT(PasteClipEntryFromName(const QString &)));
 #endif
 }
-//修改：添加键盘事件处理函数
-void CodeViewEditor::keyPressEvent(QKeyEvent *event)
-{
-	if (event->key() == Qt::Key_Tab || event->key() == Qt::Key_Backtab) { // 单按Tab键，键码为Key_Tab；按下Shift键后按Tab键，键码改为Key_Backtab
-		//在光标选择文本的条件下
-		if (textCursor().hasSelection()) {  // 侦测到文本选择下按 Tab 键或 Shift + Tab 键，进行多行缩进（退缩进）
-			long ori_Start = textCursor().selectionStart();
-			long ori_End = textCursor().selectionEnd();
-			QTextCursor cursor = textCursor();
-			cursor.setPosition(textCursor().selectionStart());
-			cursor.select(QTextCursor::LineUnderCursor);
-			
-			if (ori_Start >= cursor.selectionStart() && ori_End >= cursor.selectionEnd()) {
-				if (textCursor().selectionEnd() > cursor.selectionEnd()) {
-					// KeepAnchor表示光标保持起点不变，移动终点，用于改变选择范围。与之相对的是MoveAnchor，起点与终点相同，失去选择范围。
-					cursor.setPosition(ori_End, QTextCursor::KeepAnchor);
-				}
-				QStringList text_splited = cursor.selectedText().split(QChar(0x2029)); // 0x2029 段落分隔符;
-				QRegExp re = QRegExp("^[ \t]+");
-				QString new_text = "";
-				int e_offset = 0;
-				if (event->key() == Qt::Key_Tab) { // Tab
-					foreach(QString fragment, text_splited) {
-						int indent_index = re.indexIn(fragment);
-						int add_num = 0;
-						if (indent_index > -1) {
-							QString indent = re.cap(0);
-							add_num = indent.length() % 2 == 0 ? 2 : 1;
-						}
-						else {
-							add_num = 2;
-						}
-						e_offset += add_num;
-						new_text += QString(add_num,' ') + fragment + QChar(0x2029);
-					}
-				}
-				else { // Shift + Tab
-					foreach(QString fragment, text_splited) {
-						int indent_index = re.indexIn(fragment);
-						int sub_num = 0;
-						if (indent_index > -1) {
-							QString indent = re.cap(0);
-							sub_num = indent.length() % 2 == 0 ? 2 : 1;
-						}
-						e_offset -= sub_num;
-						new_text += fragment.right(fragment.length() - sub_num) + QChar(0x2029);
-					}
-				}
-				ori_Start = cursor.selectionStart();
-				//修改文档
-				cursor.beginEditBlock();
-				cursor.insertText(new_text.left(new_text.length()-1));
-				cursor.endEditBlock();
-				//复原光标及选择范围
-				cursor.setPosition(ori_Start);
-				cursor.setPosition(ori_End + e_offset,QTextCursor::KeepAnchor);
-				setTextCursor(cursor);
-			}
-		}
-		else if (event->key() == Qt::Key_Tab) {
-			textCursor().beginEditBlock();
-			textCursor().insertText("  ");
-			textCursor().endEditBlock();
-		}
-		else if (event->key() == Qt::Key_Backtab) { //侦测到Shift + tab键（非文本选择状态），进行单行缩进。
-			QTextCursor cursor = textCursor();
-			int ori_pos = cursor.position();
-			int offset = 0;
-			cursor.select(QTextCursor::LineUnderCursor);
-			QString selected_text = cursor.selectedText();
-			
-			if (selected_text.length() >0 ) {
-				bool strip_blank = false;
-				QString new_text = "";
-				QRegExp re = QRegExp("^[ \t]+");
-				int index = re.indexIn(selected_text);
-				if (index > -1) {
-					QString indent = re.cap(0);
-					if (indent.length() % 2 == 0) {
-						offset -= 2;
-						new_text = selected_text.right(selected_text.length() - 2);
-						strip_blank = true;
-					}
-					else {
-						offset -= 1;
-						new_text = selected_text.right(selected_text.length() - 1);
-						strip_blank = true;
-					}
-				}
-				if (strip_blank) {
-					cursor.beginEditBlock();
-					cursor.insertText(new_text);
-					cursor.endEditBlock();
-					cursor.setPosition(ori_pos + offset);
-					setTextCursor(cursor);
-				}
-			}
-		}
-	}
-	else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //侦测到回车键或Enter键，判断是否补偿缩进。
-		QTextCursor cursor = textCursor();
-		int ori_pos = cursor.position();
-		cursor.select(QTextCursor::LineUnderCursor);
-		int line_start = cursor.selectionStart();
-		QString current_line = cursor.selectedText();
-		int indent_len = StringTrimmedIndex(current_line).first;
-		QString indent = current_line.left(indent_len);
-		QString insert_text = "";
-		if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
-			insert_text = indent.left(ori_pos - line_start) + QChar(0x2029);
-			insert_text += indent + current_line.right(current_line.size() - indent_len);
-			cursor.beginEditBlock();
-			cursor.insertText(insert_text);
-			cursor.endEditBlock();
-			cursor.setPosition(ori_pos * 2 - line_start + 1);
-			setTextCursor(cursor);
-		}
-		else {
-			cursor.setPosition(ori_pos);
-			insert_text = QChar(0x2029) + indent;
-			cursor.beginEditBlock();
-			cursor.insertText(insert_text);
-			cursor.endEditBlock();
-		}
 
-	}
-	else if (event->key() == Qt::Key_Backspace) { //侦测到退格键，判断是否退缩进（判断退2个空白符还是退1个字符）
-		QTextCursor cursor = textCursor();
+//--------------------------------------------------------------修改：键盘事件：添加键盘事件处理函数--------------------------------------------------------------
+void CodeViewEditor::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Tab || event->key() == Qt::Key_Backtab) { // 单按Tab键，键码为Key_Tab；按下Shift键后按Tab键，键码改为Key_Backtab
+        //在光标选择文本的条件下
+        if (textCursor().hasSelection()) {  // 侦测到文本选择下按 Tab 键或 Shift + Tab 键，进行多行缩进（退缩进）
+            long ori_Start = textCursor().selectionStart();
+            long ori_End = textCursor().selectionEnd();
+            QTextCursor cursor = textCursor();
+            cursor.setPosition(textCursor().selectionStart());
+            cursor.select(QTextCursor::LineUnderCursor);
+
+            if (ori_Start >= cursor.selectionStart() && ori_End >= cursor.selectionEnd()) {
+                if (textCursor().selectionEnd() > cursor.selectionEnd()) {
+                    // KeepAnchor表示光标保持起点不变，移动终点，用于改变选择范围。与之相对的是MoveAnchor，起点与终点相同，失去选择范围。
+                    cursor.setPosition(ori_End, QTextCursor::KeepAnchor);
+                }
+                QStringList text_splited = cursor.selectedText().split(QChar(0x2029)); // 0x2029 段落分隔符;
+                QRegExp re = QRegExp("^[ \t]+");
+                QString new_text = "";
+                int e_offset = 0;
+                if (event->key() == Qt::Key_Tab) { // Tab
+                    foreach(QString fragment, text_splited) {
+                        int indent_index = re.indexIn(fragment);
+                        int add_num = 0;
+                        if (indent_index > -1) {
+                            QString indent = re.cap(0);
+                            add_num = indent.length() % 2 == 0 ? 2 : 1;
+                        }
+                        else {
+                            add_num = 2;
+                        }
+                        e_offset += add_num;
+                        new_text += QString(add_num, ' ') + fragment + QChar(0x2029);
+                    }
+                }
+                else { // Shift + Tab
+                    foreach(QString fragment, text_splited) {
+                        int indent_index = re.indexIn(fragment);
+                        int sub_num = 0;
+                        if (indent_index > -1) {
+                            QString indent = re.cap(0);
+                            sub_num = indent.length() % 2 == 0 ? 2 : 1;
+                        }
+                        e_offset -= sub_num;
+                        new_text += fragment.right(fragment.length() - sub_num) + QChar(0x2029);
+                    }
+                }
+                ori_Start = cursor.selectionStart();
+                //修改文档
+                cursor.beginEditBlock();
+                cursor.insertText(new_text.left(new_text.length() - 1));
+                cursor.endEditBlock();
+                //复原光标及选择范围
+                cursor.setPosition(ori_Start);
+                cursor.setPosition(ori_End + e_offset, QTextCursor::KeepAnchor);
+                setTextCursor(cursor);
+            }
+        }
+        else if (event->key() == Qt::Key_Tab) {
+            textCursor().beginEditBlock();
+            textCursor().insertText("  ");
+            textCursor().endEditBlock();
+        }
+        else if (event->key() == Qt::Key_Backtab) { //侦测到Shift + tab键（非文本选择状态），进行单行缩进。
+            QTextCursor cursor = textCursor();
+            int ori_pos = cursor.position();
+            int offset = 0;
+            cursor.select(QTextCursor::LineUnderCursor);
+            QString selected_text = cursor.selectedText();
+
+            if (selected_text.length() > 0) {
+                bool strip_blank = false;
+                QString new_text = "";
+                QRegExp re = QRegExp("^[ \t]+");
+                int index = re.indexIn(selected_text);
+                if (index > -1) {
+                    QString indent = re.cap(0);
+                    if (indent.length() % 2 == 0) {
+                        offset -= 2;
+                        new_text = selected_text.right(selected_text.length() - 2);
+                        strip_blank = true;
+                    }
+                    else {
+                        offset -= 1;
+                        new_text = selected_text.right(selected_text.length() - 1);
+                        strip_blank = true;
+                    }
+                }
+                if (strip_blank) {
+                    cursor.beginEditBlock();
+                    cursor.insertText(new_text);
+                    cursor.endEditBlock();
+                    cursor.setPosition(ori_pos + offset);
+                    setTextCursor(cursor);
+                }
+            }
+        }
+    }
+    else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //侦测到回车键或Enter键，判断是否补偿缩进。
+        QTextCursor cursor = textCursor();
+        int ori_pos = cursor.position();
+        cursor.select(QTextCursor::LineUnderCursor);
+        int line_start = cursor.selectionStart();
+        QString current_line = cursor.selectedText();
+        int indent_len = StringTrimmedIndex(current_line).first;
+        QString indent = current_line.left(indent_len);
+        QString insert_text = "";
+        if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
+            insert_text = indent.left(ori_pos - line_start) + QChar(0x2029);
+            insert_text += indent + current_line.right(current_line.size() - indent_len);
+            cursor.beginEditBlock();
+            cursor.insertText(insert_text);
+            cursor.endEditBlock();
+            cursor.setPosition(ori_pos * 2 - line_start + 1);
+            setTextCursor(cursor);
+        }
+        else {
+            cursor.setPosition(ori_pos);
+            insert_text = QChar(0x2029) + indent;
+            cursor.beginEditBlock();
+            cursor.insertText(insert_text);
+            cursor.endEditBlock();
+        }
+
+    }
+    else if (event->key() == Qt::Key_Backspace) { //侦测到退格键，判断是否退缩进（判断退2个空白符还是退1个字符）
+        QTextCursor cursor = textCursor();
         if (cursor.hasSelection()) {
             QPlainTextEdit::keyPressEvent(event);
             return;
         }
 
-		int ori_pos = cursor.position();
-		int offset = 0;
-		cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
-		QString selected_text = cursor.selectedText();
-		QRegExp re = QRegExp("^[ \t]+");
-		int index = re.indexIn(selected_text);
-		if (index > -1 && re.cap(0) == selected_text) {
-			QString indent = re.cap(0);
-			if (indent.length() % 2 == 0) {
-				offset -= 2;
-				indent = indent.left(indent.length() - 2);
-			}
-			else {
-				offset -= 1;
-				indent = indent.left(indent.length() - 1);
-			}
-			cursor.beginEditBlock();
-			cursor.insertText(indent);
-			cursor.endEditBlock();
-			cursor.setPosition(ori_pos + offset);
-		}
-		else {
-			QPlainTextEdit::keyPressEvent(event);
-		}		
-	}
-	else if (event->key() == Qt::Key_Slash) { //侦测到正斜杆，判断是否自动闭合标签。
-		QTextCursor cursor = textCursor();
-		int ori_pos = cursor.position();
-		
-		cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor);
-		if (cursor.selectedText() == QString('<')){
-			if (!IsInsertClosingTagAllowed()) {
-				cursor.insertText("</"); // 闭合失败，偿还符号。
-				return;
-			}
-			const QStringList unmatched_tags = GetUnmatchedTagsForBlock(ori_pos);
-			if (unmatched_tags.isEmpty()) {
-				cursor.insertText("</"); // 闭合失败，偿还符号。
-				return;
-			}
-			QString tag = unmatched_tags.last();
-			QRegularExpression tag_name_search(TAG_NAME_SEARCH);
-			QRegularExpressionMatch mo = tag_name_search.match(tag);
-			int tag_name_index = mo.capturedStart();
+        int ori_pos = cursor.position();
+        int offset = 0;
+        cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
+        QString selected_text = cursor.selectedText();
+        QRegExp re = QRegExp("^[ \t]+");
+        int index = re.indexIn(selected_text);
+        if (index > -1 && re.cap(0) == selected_text) {
+            QString indent = re.cap(0);
+            if (indent.length() % 2 == 0) {
+                offset -= 2;
+                indent = indent.left(indent.length() - 2);
+            }
+            else {
+                offset -= 1;
+                indent = indent.left(indent.length() - 1);
+            }
+            cursor.beginEditBlock();
+            cursor.insertText(indent);
+            cursor.endEditBlock();
+            cursor.setPosition(ori_pos + offset);
+        }
+        else {
+            QPlainTextEdit::keyPressEvent(event);
+        }
+    }
+    else if (event->key() == Qt::Key_Slash) { //侦测到正斜杆，判断是否自动闭合标签。
+        QTextCursor cursor = textCursor();
+        int ori_pos = cursor.position();
 
-			if (tag_name_index >= 0) {
-				const QString closing_tag = "/" %  mo.captured(1) % ">";
-				textCursor().insertText(closing_tag);
-			}
-		}
-		else {
-			QPlainTextEdit::keyPressEvent(event);
-		}
-	}
-	else {
-		QPlainTextEdit::keyPressEvent(event);
-	}
+        cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor);
+        if (cursor.selectedText() == QString('<')) {
+            if (!IsInsertClosingTagAllowed()) {
+                cursor.insertText("</"); // 闭合失败，偿还符号。
+                return;
+            }
+            const QStringList unmatched_tags = GetUnmatchedTagsForBlock(ori_pos);
+            if (unmatched_tags.isEmpty()) {
+                cursor.insertText("</"); // 闭合失败，偿还符号。
+                return;
+            }
+            QString tag = unmatched_tags.last();
+            QRegularExpression tag_name_search(TAG_NAME_SEARCH);
+            QRegularExpressionMatch mo = tag_name_search.match(tag);
+            int tag_name_index = mo.capturedStart();
+
+            if (tag_name_index >= 0) {
+                const QString closing_tag = "/" % mo.captured(1) % ">";
+                textCursor().insertText(closing_tag);
+            }
+        }
+        else {
+            QPlainTextEdit::keyPressEvent(event);
+        }
+    }
+    else {
+        QPlainTextEdit::keyPressEvent(event);
+    }
 }
-// modified: paste event:  when you do a actionPaste in the codeview editor, this function will be called.
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//---------------------------------------- modified: paste event:  when you do a actionPaste in the codeview editor, this function will be called.-----------------------------------------------------
 void CodeViewEditor::insertFromMimeData(const QMimeData* source) {
     if (!source->hasText())
         return;
@@ -4419,3 +4432,4 @@ void CodeViewEditor::insertFromMimeData(const QMimeData* source) {
     }
     QPlainTextEdit::insertFromMimeData(source);
 }
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

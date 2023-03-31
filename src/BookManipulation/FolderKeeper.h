@@ -264,7 +264,7 @@ public slots:
 
     void BulkRemoveResources(const QList<Resource *> resources);
 
-    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //修改：重命名耗时长
+    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //修改：批量重命名
 
 private slots:
 

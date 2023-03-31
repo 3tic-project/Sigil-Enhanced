@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2016-2020 Doug Massay
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2016-2023 Doug Massay
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -81,7 +81,7 @@
 static const QString URL_SAFE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-/~";
 
 static const QString DARK_STYLE =
-    "<style>:root { background-color: %1; color: %2; } ::-webkit-scrollbar { display: none; }</style>"
+    "<style id=\"Sigil_Injected\">:root { background-color: %1; color: %2; } ::-webkit-scrollbar { display: none; }</style>"
     "<link rel=\"stylesheet\" type=\"text/css\" href=\"%3\" />";
 
 #ifndef MAX_PATH
@@ -497,7 +497,10 @@ QString Utility::GetTemporaryFileNameWithExtension(const QString &extension)
     SettingsStore ss;
     QString temp_path = ss.tempFolderHome();
     if (temp_path == "<SIGIL_DEFAULT_TEMP_HOME>") {
-        temp_path = QDir::tempPath();
+        temp_path = DefinePrefsDir() + "/workspace";
+    }
+    if (!QDir(temp_path).exists()) {
+        temp_path = DefinePrefsDir() + "/workspace";
     }
     return temp_path +  "/sigil_" + Utility::CreateUUID() + extension;
 }
@@ -1039,7 +1042,7 @@ QStringList Utility::ZipInspect(const QString &zippath)
 QString Utility::longestCommonPath(const QStringList& filepaths, const QString& sep)
 {
     if (filepaths.isEmpty()) return QString();
-    if (filepaths.length() == 1) return QFileInfo(filepaths.at(0)).absolutePath() + sep;
+    if (filepaths.length() == 1) return QFileInfo(filepaths.at(0)).filePath() + sep;
     QStringList fpaths(filepaths);
     fpaths.sort();
     const QStringList segs1 = fpaths.first().split(sep);
@@ -1437,173 +1440,174 @@ QString Utility::FileCRC32(const QString& filePath)
 	return QString("%1").arg(crc32, 8, 16, QLatin1Char('0'));
 }
 
+
 // --------------- modified: Prettify xhtml ---------------------------
 // Thinking : While reading the block tag, curlvl plus 1,
 //			  every tag only control the indent blank before the tag, and judge whether the line should be broke.
 //			  If there are no characters "\n" before the tag and the tag is block level element, it should be added "\n" and indent blank before.
 QString Utility::format_xhtml_text(QString text) {
-	const QStringList BlockElements = QStringList() << "html" << "body" << "head" << "meta" << "link" << "title" << "style" << "script" << "p" << "div" << "h1" << "h2" << "h3" << "h4" << "h5" << "h6" << "ol" << "ul" << "li" << "address" << "blockquote" <<
-		"dd" << "dl" << "fieldset" << "form" << "hr" << "nav" << "isindex" << "menu" << "noframes" << "noscript"  << "pre" << "table" << "tr" << "td" << "th" << "article";
-	QHash<QString, bool> ElementsBlockLevelDict;
-	foreach(QString key, BlockElements) {
-		ElementsBlockLevelDict[key] = true;
-	}
+    const QStringList BlockElements = QStringList() << "html" << "body" << "head" << "meta" << "link" << "title" << "style" << "script" << "p" << "div" << "h1" << "h2" << "h3" << "h4" << "h5" << "h6" << "ol" << "ul" << "li" << "address" << "blockquote" <<
+        "dd" << "dl" << "fieldset" << "form" << "hr" << "nav" << "isindex" << "menu" << "noframes" << "noscript" << "pre" << "table" << "tr" << "td" << "th" << "article";
+    QHash<QString, bool> ElementsBlockLevelDict;
+    foreach(QString key, BlockElements) {
+        ElementsBlockLevelDict[key] = true;
+    }
 
-	QRegExp skip_space("[^ \\n\\r\\t]");
-	QRegExp next_tag("<");
-	QRegExp full_space("^[ \\t]+$");
+    QRegExp skip_space("[^ \\n\\r\\t]");
+    QRegExp next_tag("<");
+    QRegExp full_space("^[ \\t]+$");
 
-	text = trimmed(RegExpSub("\\n[ \\t]+", "\n", text), " \n\t");
-	text = RegExpSub("[ \\t]+", " ", text);
-	text = RegExpSub("\\n{2,}", "\n", text);
-	
-	QString new_text = "";
-	TagLister taglist(text);
-	QString tag_txt, before_text, tmp_txt;
-	int offset = 0;
-	int lvl = -1;
-	TagLister::TagInfo last_ti = taglist.at(0);
-	for (int i = 0; i<taglist.size(); i++) {
-		TagLister::TagInfo ti = taglist.at(i);
-		if (i > 0) last_ti = taglist.at(i - 1);
-		if (ti.tname == "?xml") {
-			new_text += text.mid(ti.pos, ti.len) % "\n";
-			offset = ti.pos + ti.len;
-			offset = text.indexOf(next_tag, offset);
-			continue;
-		}
-		if (ti.tname == "!DOCTYPE") {
-			tag_txt = text.mid(ti.pos, ti.len);
-			if (tag_txt.contains("xhtml11.dtd")) {
-				new_text += "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\n  \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n";
-			}
-			else {
-				new_text += "<!DOCTYPE html>\n";
-			}
-			offset = ti.pos + ti.len;
-			offset = text.indexOf(next_tag, offset);
-			continue;
-		}
-		if (ti.ttype == "begin" || ti.ttype == "single") {
+    text = trimmed(RegExpSub("\\n[ \\t]+", "\n", text), " \n\t");
+    text = RegExpSub("[ \\t]+", " ", text);
+    text = RegExpSub("\\n{2,}", "\n", text);
+
+    QString new_text = "";
+    TagLister taglist(text);
+    QString tag_txt, before_text, tmp_txt;
+    int offset = 0;
+    int lvl = -1;
+    TagLister::TagInfo last_ti = taglist.at(0);
+    for (int i = 0; i < taglist.size(); i++) {
+        TagLister::TagInfo ti = taglist.at(i);
+        if (i > 0) last_ti = taglist.at(i - 1);
+        if (ti.tname == "?xml") {
+            new_text += text.mid(ti.pos, ti.len) % "\n";
+            offset = ti.pos + ti.len;
+            offset = text.indexOf(next_tag, offset);
+            continue;
+        }
+        if (ti.tname == "!DOCTYPE") {
+            tag_txt = text.mid(ti.pos, ti.len);
+            if (tag_txt.contains("xhtml11.dtd")) {
+                new_text += "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\n  \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n";
+            }
+            else {
+                new_text += "<!DOCTYPE html>\n";
+            }
+            offset = ti.pos + ti.len;
+            offset = text.indexOf(next_tag, offset);
+            continue;
+        }
+        if (ti.ttype == "begin" || ti.ttype == "single") {
 
             ++lvl;
             if (ti.tname == "html" || ti.tname == "body") --lvl;// Decrease the indent by one when elements in these tags.
 
-			before_text = offset == ti.pos ? "" : text.mid(offset, ti.pos - offset);
+            before_text = offset == ti.pos ? "" : text.mid(offset, ti.pos - offset);
 
             if (ti.tname == "body") before_text.prepend("\n");
 
-			if (before_text == "" || before_text.indexOf(full_space) > -1) {
-				if (ElementsBlockLevelDict.value(ti.tname, false)) {
-					new_text += '\n' + QString(2* (lvl>=0?lvl:0),' ');
-				}
-				tag_txt = text.mid(ti.pos, ti.len);
-				new_text += RegExpSub("[ \\n\\t]+", " ",tag_txt);
-				offset = ti.pos + ti.len;
-				if (ti.ttype == "single" && lvl > -1) --lvl;
-				continue;
-			}
-			before_text = RegExpSub("\\n", "\n"%QString(2 * (lvl>=0?lvl:0), ' '),before_text);
-			tag_txt = text.mid(ti.pos, ti.len);
-			new_text += before_text + RegExpSub("[ \\n\\t]+", " ", tag_txt);
-			offset = ti.pos + ti.len;
-			if (ti.ttype == "single" && lvl > -1) --lvl;
-			continue;
-		}
-		if (ti.ttype == "end") {
-			before_text = offset == ti.pos ? "" : text.mid(offset, ti.pos - offset);
+            if (before_text == "" || before_text.indexOf(full_space) > -1) {
+                if (ElementsBlockLevelDict.value(ti.tname, false)) {
+                    new_text += '\n' + QString(2 * (lvl >= 0 ? lvl : 0), ' ');
+                }
+                tag_txt = text.mid(ti.pos, ti.len);
+                new_text += RegExpSub("[ \\n\\t]+", " ", tag_txt);
+                offset = ti.pos + ti.len;
+                if (ti.ttype == "single" && lvl > -1) --lvl;
+                continue;
+            }
+            before_text = RegExpSub("\\n", "\n" % QString(2 * (lvl >= 0 ? lvl : 0), ' '), before_text);
+            tag_txt = text.mid(ti.pos, ti.len);
+            new_text += before_text + RegExpSub("[ \\n\\t]+", " ", tag_txt);
+            offset = ti.pos + ti.len;
+            if (ti.ttype == "single" && lvl > -1) --lvl;
+            continue;
+        }
+        if (ti.ttype == "end") {
+            before_text = offset == ti.pos ? "" : text.mid(offset, ti.pos - offset);
 
-			if (ti.tname == "style") {
-				if (before_text != "") {
-					CSSInfo css_info(before_text);
-					QString reformat_css = css_info.getReformattedCSSText(true);
-					//before_text = "\n  " + reformat_css.split('\n').join("\n  ") + '\n';
+            if (ti.tname == "style") {
+                if (before_text != "") {
+                    CSSInfo css_info(before_text);
+                    QString reformat_css = css_info.getReformattedCSSText(true);
+                    //before_text = "\n  " + reformat_css.split('\n').join("\n  ") + '\n';
                     before_text = "\n" + reformat_css + "\n";
-				}
-			}
+                }
+            }
 
-			if (before_text == "" || before_text.indexOf(full_space) > -1) {
-				if (ElementsBlockLevelDict.value(last_ti.tname, false)) {
-					if (ti.open_pos != last_ti.pos)
-						new_text += '\n' + QString(2 * (lvl>=0?lvl:0), ' ');
-				}
-				tag_txt = text.mid(ti.pos, ti.len);
-				new_text += tag_txt;
-				offset = ti.pos + ti.len;
-				if (lvl > -1) --lvl;
-				continue;
-			}
-			before_text = RegExpSub("\\n", "\n"%QString(2 * (lvl>=0?lvl:0), ' '), before_text);
-			tag_txt = text.mid(ti.pos, ti.len);
-			new_text += before_text + tag_txt;
-			offset = ti.pos + ti.len;
-			if (lvl > -1) --lvl;
-			continue;
-		}
-	}
-	return new_text;
+            if (before_text == "" || before_text.indexOf(full_space) > -1) {
+                if (ElementsBlockLevelDict.value(last_ti.tname, false)) {
+                    if (ti.open_pos != last_ti.pos)
+                        new_text += '\n' + QString(2 * (lvl >= 0 ? lvl : 0), ' ');
+                }
+                tag_txt = text.mid(ti.pos, ti.len);
+                new_text += tag_txt;
+                offset = ti.pos + ti.len;
+                if (lvl > -1) --lvl;
+                continue;
+            }
+            before_text = RegExpSub("\\n", "\n" % QString(2 * (lvl >= 0 ? lvl : 0), ' '), before_text);
+            tag_txt = text.mid(ti.pos, ti.len);
+            new_text += before_text + tag_txt;
+            offset = ti.pos + ti.len;
+            if (lvl > -1) --lvl;
+            continue;
+        }
+    }
+    return new_text;
 }
 //---------------------------------------------------------------------
 
 // --------------- modified: Prettify xhtml,Regexp, re_sub ---------------------------
-QString Utility::RegExpSub(const QString &regexp, const QString &alt_pattern, const QString &text, int max_count) {
+QString Utility::RegExpSub(const QString& regexp, const QString& alt_pattern, const QString& text, int max_count) {
 
-	QRegExp re(regexp);
-	QString new_text = "";
-	int index = re.indexIn(text);
-	int count = 0;
-	int offset = 0;
-	while (index > -1) {
-		if (max_count > 0 && count == max_count) {
-			break;
-		}
-		++count;
-		new_text += text.mid(offset, index - offset);
-		offset = index + re.cap(0).size();
+    QRegExp re(regexp);
+    QString new_text = "";
+    int index = re.indexIn(text);
+    int count = 0;
+    int offset = 0;
+    while (index > -1) {
+        if (max_count > 0 && count == max_count) {
+            break;
+        }
+        ++count;
+        new_text += text.mid(offset, index - offset);
+        offset = index + re.cap(0).size();
 
-		QString alt_text = "";
-		bool backslash = false;
-		foreach(QChar ch, alt_pattern) {
-			if (ch == '\\') {
-				backslash = true;
-				continue;
-			}
-			if (backslash) {
-				backslash = false;
-				if (48 <= ch.unicode() && 57 >= ch.unicode()) {
-					int group_num = ch.unicode() - 48;
-					if (group_num <= re.captureCount()) {
-						alt_text += re.cap(group_num);
-						continue;
-					}
-				}
-				alt_text.append("\\");
-			}
-			alt_text.append(ch);
-		}
-		new_text += alt_text;
-		index = re.indexIn(text, offset);
-	}
-	new_text += text.mid(offset);
-	return new_text;
+        QString alt_text = "";
+        bool backslash = false;
+        foreach(QChar ch, alt_pattern) {
+            if (ch == '\\') {
+                backslash = true;
+                continue;
+            }
+            if (backslash) {
+                backslash = false;
+                if (48 <= ch.unicode() && 57 >= ch.unicode()) {
+                    int group_num = ch.unicode() - 48;
+                    if (group_num <= re.captureCount()) {
+                        alt_text += re.cap(group_num);
+                        continue;
+                    }
+                }
+                alt_text.append("\\");
+            }
+            alt_text.append(ch);
+        }
+        new_text += alt_text;
+        index = re.indexIn(text, offset);
+    }
+    new_text += text.mid(offset);
+    return new_text;
 }
 //-------------------------------------------------------------------------
 
 //---------modified: trimmed: trim the specific chars on text's head and tail----------
-QString Utility::trimmed(const QString &text, const QString &chars) {
-	int i, j = 0;
-	QChar ch;
-	for (i = 0; i < text.size(); ++i) {
-		ch = text.at(i);
-		if (!chars.contains(ch)) break;
-	}
-	for (j = text.size() - 1; j >= 0; --j) {
-		ch = text.at(j);
-		if (!chars.contains(ch)) {
-			++j; break;
-		}
-	}
-	return text.mid(i, j - i);
+QString Utility::trimmed(const QString& text, const QString& chars) {
+    int i, j = 0;
+    QChar ch;
+    for (i = 0; i < text.size(); ++i) {
+        ch = text.at(i);
+        if (!chars.contains(ch)) break;
+    }
+    for (j = text.size() - 1; j >= 0; --j) {
+        ch = text.at(j);
+        if (!chars.contains(ch)) {
+            ++j; break;
+        }
+    }
+    return text.mid(i, j - i);
 }
 //----------------------------------------------------------------------------
 
@@ -1631,7 +1635,7 @@ QStringList Utility::walkDirs(QString root) {
 //--------------------------------------------------------------------------------------------
 
 //---------modified: getMtypeFromExt----------------------------------------------------------
-QString Utility::ExtToMTypeMap(QString &ext)
+QString Utility::ExtToMTypeMap(QString& ext)
 {
     QHash<QString, QString> ExtToMType;
     // default to using the preferred media-types ffrom the epub 3.2 spec

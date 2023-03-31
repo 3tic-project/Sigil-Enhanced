@@ -13,7 +13,9 @@ EpubVersionConv::EpubVersionConv(QSharedPointer<Book> book) :
 {
 	init_members();
 	OPFResource *opf = m_Book->GetOPF();
-	foreach(ManifestEntry entry, opf->p.m_manifest) {
+	OPFParser p;
+	p.parse(opf->GetText());
+	foreach(ManifestEntry entry, p.m_manifest) {
 		QString opf_href = entry.m_href;
 		opfhref_to_id[opf_href] = entry.m_id;
 	}
@@ -146,7 +148,7 @@ void EpubVersionConv::convert_opf_to3() {
 	OPFParser p;
 	p.parse(m_Book->GetOPF()->GetText());
 	//-----------package---------------
-	QString bookid = m_Book->GetOPF()->p.m_package.m_uniqueid;
+	QString bookid = p.m_package.m_uniqueid;
 	// clear m_atts
 	p.m_package.m_atts = TagAtts();
 	// fill the package node's attributes
@@ -349,7 +351,7 @@ void EpubVersionConv::convert_opf_to3() {
 	OPFResource * opf = m_Book->GetOPF();
 	opf->SetEpubVersion("3.0");
 	QString new_text = p.convert_to_xml();
-	opf->p.parse(new_text);
+	//opf->p.parse(new_text);
 	opf->SetText(new_text);
 }
 
@@ -709,7 +711,7 @@ void EpubVersionConv::convert_opf_to2() {
 	OPFParser p;
 	p.parse(m_Book->GetOPF()->GetText());
 	//-----------package---------------
-	QString bookid = m_Book->GetOPF()->p.m_package.m_uniqueid;
+	QString bookid = p.m_package.m_uniqueid;
 	// clear m_atts
 	p.m_package.m_atts = TagAtts();
 	// fill the package node's attributes
@@ -867,7 +869,7 @@ void EpubVersionConv::convert_opf_to2() {
 	OPFResource * opf = m_Book->GetOPF();
 	opf->SetEpubVersion("2.0");
 	QString new_text = p.convert_to_xml();
-	opf->p.parse(new_text);
+	//opf->p.parse(new_text);
 	opf->SetText(new_text);
 }
 void EpubVersionConv::build_toc() {

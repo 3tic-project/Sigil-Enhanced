@@ -1,6 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2021 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2022 Doug Massay
 **  Copyright (C) 2012-2015 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Dave Heiland
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -229,9 +230,6 @@ public:
 
 public slots:
 
-	//ÐÞ¸Ä£ºÌí¼ÓUpdateOPF()º¯Êý
-	void UpdateOPF();
-
     bool Automate(const QStringList &commands);
 
     void OpenUrl(const QUrl &url);
@@ -273,6 +271,8 @@ public slots:
     void RepoCheckout(QString bookid="", QString destpath="", QString filename="", bool loadnow=true);
     void RepoDiff(QString bookid="");
     void RepoManage();
+    void RepoEditTagDescription();
+    void RepoShowLog();
 
     void RunAutomate1();
     void RunAutomate2();
@@ -285,8 +285,8 @@ public slots:
     void EditAutomate(const QString &automatefile);
     
     bool StandardizeEpub();
-	void Epub3ToEpub2(); //modified: Epub3ToEpub2
-	void Epub2ToEpub3(); //modified: Epub2ToEpub3
+    void Epub3ToEpub2(); //modified: Epub3ToEpub2
+    void Epub2ToEpub3(); //modified: Epub2ToEpub3
     void CreateEpubLayout();
 
 signals:

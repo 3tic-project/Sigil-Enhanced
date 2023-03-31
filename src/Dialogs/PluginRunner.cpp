@@ -458,18 +458,18 @@ void PluginRunner::pluginFinished(int exitcode, QProcess::ExitStatus exitstatus)
         ui.statusLbl->setText(tr("Status: failed"));
         return;
     }
-    /*  修改：插件：取消xhtml格式检测
+
     // before modifying xhtml files make sure they are well formed
     if (!checkIsWellFormed()) {
         ui.statusLbl->setText(tr("Status: No Changes Made"));
         m_result = "failed";
         return;
     }
-    */
+
     // don't allow changes to proceed if they will remove the very last xhtml/html file
     if (m_xhtml_net_change < 0) {
         QList<Resource *> htmlresources = m_book->GetFolderKeeper()->GetResourceListByType(Resource::HTMLResourceType);
-        if (htmlresources.count() + m_xhtml_net_change < 0) {
+        if (htmlresources.count() + m_xhtml_net_change <= 0) {
             Utility::DisplayStdErrorDialog(tr("Error: Plugin Tried to Remove the Last XHTML file .. aborting changes"));
             ui.statusLbl->setText(tr("Status: No Changes Made"));
             m_result = "failed";
@@ -510,8 +510,6 @@ void PluginRunner::pluginFinished(int exitcode, QProcess::ExitStatus exitstatus)
     }
     if (!m_filesToModify.isEmpty()) {
         if (modifyFiles(m_filesToModify)) {
-            // 修改：
-            m_book->GetOPF()->p.parse(m_book->GetOPF()->GetText());
             book_modified = true;
         }
     }
@@ -803,7 +801,7 @@ bool PluginRunner::checkIsWellFormed()
 bool PluginRunner::deleteFiles(const QStringList &files)
 {
     QList <Resource *> tabResources=m_tabManager->GetTabResources();
-    QList <Resource*> resourcesToBeDeleted;   //修改：删除文件
+    QList <Resource*> resourcesToBeDeleted;   //修改：批量删除
     bool changes_made = false;
     ui.statusLbl->setText(tr("Status: cleaning up - deleting files"));
     foreach (QString fileinfo, files) {
@@ -843,9 +841,11 @@ bool PluginRunner::deleteFiles(const QStringList &files)
             if (tabResources.contains(resource)) {
                 m_tabManager->CloseTabForResource(resource);
             }
-            //m_book->GetFolderKeeper()->RemoveResource(resource);  //修改：取消逐个删除文件
-            //resource->Delete();  //修改：取消逐个删除文件
-			resourcesToBeDeleted << resource;    //修改：将文件添加到待删除组
+            // -------------------------- 修改：批量删除 --------------------------
+            //m_book->GetFolderKeeper()->RemoveResource(resource); 
+            //resource->Delete(); 
+            resourcesToBeDeleted << resource;    // 将文件添加到待删除组
+            // -------------------------------------------------------------------
             changes_made = true;
         } else {
            // try to remove non-manifested, non-resource files inside book folder
@@ -858,7 +858,7 @@ bool PluginRunner::deleteFiles(const QStringList &files)
            }
         }
     }
-    m_book->GetFolderKeeper()->BulkRemoveResources(resourcesToBeDeleted); //修改：批量删除文件
+    m_book->GetFolderKeeper()->BulkRemoveResources(resourcesToBeDeleted); //修改：批量删除
     if (changes_made) {
         m_bookBrowser->ResourcesDeleted();
     }
@@ -975,7 +975,6 @@ bool PluginRunner::addFiles(const QStringList &files)
             xml_resource->SetText(Utility::ReadUnicodeTextFile(inpath));
         }
     }
-
     return true;
 }
 

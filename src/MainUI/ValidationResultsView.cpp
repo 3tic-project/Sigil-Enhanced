@@ -191,7 +191,8 @@ QStringList ValidationResultsView::ValidateFile(QString &apath)
     return res.toStringList();
 }
 
-//modified: correctOPF
+
+//----------------------------------------------------modified: correctOPF-------------------------------------------------
 void ValidationResultsView::correctOPF()
 {
     ClearResults();
@@ -290,12 +291,12 @@ void ValidationResultsView::correctOPF()
         QString href = me.m_href;
         QString id = me.m_id;
         // nonunique_id : More than one hrefs have bound with the same id;
-        if (href != id_to_href[id]) { 
-            log.append({"non unique id", id});
+        if (href != id_to_href[id]) {
+            log.append({ "non unique id", id });
             continue; // continue for avioding the new_mainifest to append this item, which would delete the item indirectly.
         }
         // unnecessary_id : More than one ids have bound with the same href;
-        if (id != href_to_id[href]) { 
+        if (id != href_to_id[href]) {
             log.append({ "unnecessary id", id });
             continue;
         }
@@ -327,7 +328,7 @@ void ValidationResultsView::correctOPF()
         QString bkpath = filepath.mid(tempfolder.size() + 1);
         QFileInfo bkpath_info = QFileInfo(bkpath);
 
-        if (bkpathOnManifest.contains(bkpath)) 
+        if (bkpathOnManifest.contains(bkpath))
             continue;
         QString ext = bkpath_info.suffix().toLower();
         if (ext == "xml" || ext == "opf" || Utility::ExtToMTypeMap(ext) == "")
@@ -358,9 +359,9 @@ void ValidationResultsView::correctOPF()
             se.m_idref = me.m_id;
             p.m_spine << se;
         }
-        log.append({ "new item",bkpath});
+        log.append({ "new item",bkpath });
     }
-    
+
 
     // 检查引用
     // 检查 cover 的id引用
@@ -386,28 +387,30 @@ void ValidationResultsView::correctOPF()
         p.m_manifest = new_manifest;
         QString new_opf = p.convert_to_xml();
         DisplayCorrectOPFResults(log);
-        opf->p.parse(new_opf);
+        //opf->p.parse(new_opf);
         opf->SetText(new_opf);
         if (RefreshBookBrowser)
             m_BookBrowser->Refresh();
-        }
-        
+    }
+
     show();
     raise();
 }
+//-------------------------------------------------------------------------------------------------------------------------
 
-//modified: correctOPF
+
+//------------------------------------------------------modified: correctOPF---------------------------------------------------------
 void ValidationResultsView::DisplayCorrectOPFResults(QList<pair<QString, QString>> log)
 {
 
     m_ResultTable->setRowCount(log.count());
     m_ResultTable->setColumnCount(3);
-    m_ResultTable->setHorizontalHeaderLabels(  QStringList() << "Type" << "Content" << "Operation" );
+    m_ResultTable->setHorizontalHeaderLabels(QStringList() << "Type" << "Content" << "Operation");
 
     QTableWidgetItem* item;
     for (int i = 0; i < log.count(); i++) {
         QString type = log[i].first,
-                cont = log[i].second;
+            cont = log[i].second;
 
         item = new QTableWidgetItem(type.toUpper());
         item->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
@@ -427,7 +430,7 @@ void ValidationResultsView::DisplayCorrectOPFResults(QList<pair<QString, QString
             row_brush = Utility::ValidationResultBrush(Utility::ERROR_BRUSH);
             m_ResultTable->item(i, 0)->setText(codec->toUnicode("非唯一ID"));
             m_ResultTable->item(i, 1)->setText("ID: " + cont);
-            m_ResultTable->item(i,2)->setText(QString(codec->toUnicode(" 在manifest项发现非唯一ID【%1】，已进行删除对应项的处理。")).arg(cont));
+            m_ResultTable->item(i, 2)->setText(QString(codec->toUnicode(" 在manifest项发现非唯一ID【%1】，已进行删除对应项的处理。")).arg(cont));
         }
         else if (type == "unnecessary id") {
             row_brush = Utility::ValidationResultBrush(Utility::ERROR_BRUSH);
@@ -492,7 +495,7 @@ void ValidationResultsView::DisplayCorrectOPFResults(QList<pair<QString, QString
         else if (type == "new item") {
             row_brush = Utility::ValidationResultBrush(Utility::WARNING_BRUSH);
             m_ResultTable->item(i, 0)->setText(codec->toUnicode("发现文件"));
-            m_ResultTable->item(i, 1)->setText("PATH: "+cont);
+            m_ResultTable->item(i, 1)->setText("PATH: " + cont);
             m_ResultTable->item(i, 2)->setText(QString(codec->toUnicode(" 发现文件【%1】未登记到Manifest，已自动登记。")).arg(cont));
         }
 
@@ -501,9 +504,10 @@ void ValidationResultsView::DisplayCorrectOPFResults(QList<pair<QString, QString
             SetItemPalette(item, row_brush);
             m_ResultTable->resizeColumnToContents(j);
         }
-        
+
     }
 }
+//-----------------------------------------------------------------------------------------------------------------------------------
 
 
 void ValidationResultsView::ValidateCurrentBook()
@@ -571,12 +575,13 @@ void ValidationResultsView::SetBook(QSharedPointer<Book> book)
     ClearResults();
 }
 
+//------------------------modified: correctOPF-------------------------
 void ValidationResultsView::SetBookBrowser(BookBrowser* bookbrowser)
 {
     m_BookBrowser = bookbrowser;
     ClearResults();
 }
-
+//---------------------------------------------------------------------
 
 void ValidationResultsView::ResultDoubleClicked(QTableWidgetItem *item)
 {
@@ -738,3 +743,4 @@ void ValidationResultsView::SetItemPalette(QTableWidgetItem * item, QBrush &row_
         item->setBackground(row_brush);
     }   
 }
+

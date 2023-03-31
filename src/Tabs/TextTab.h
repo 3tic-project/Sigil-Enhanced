@@ -125,8 +125,6 @@ signals:
 
     void OpenClipEditorRequest(ClipEditorModel::clipEntry *clip);
 
-	void UpdateParsedOPF(); // ÐÞ¸Ä£º
-
 protected slots:
 
     void SaveTabContent();
@@ -162,6 +160,7 @@ private:
 
     int m_LineToScrollTo;
     int m_PositionToScrollTo;
+
 };
 
 #endif // TEXTTAB_H

@@ -1,6 +1,6 @@
 /************************************************************************
  **
- **  Copyright (C) 2021-2022 Kevin B. Hendricks, Stratford, Ontario, Canada
+ **  Copyright (C) 2021-2023 Kevin B. Hendricks, Stratford, Ontario, Canada
  **
  **  This file is part of Sigil.
  **
@@ -322,16 +322,16 @@ QString CSSParser::serialize_css(bool tostdout, bool multiline)
         switch (csstokens[i].type)
         {
             case CHARSET:
-                output << "@charset " << csstemplate[5] << csstokens[i].data << csstemplate[6];
+                output << "@charset " << csstokens[i].data << csstemplate[6];
                 break;
 
             case IMPORT:
                 indent = CSSUtils::indent(lvl, csstemplate[0]);
-                output << indent << "@import " << csstemplate[5] << csstokens[i].data << csstemplate[6];
+                output << indent << "@import " << csstokens[i].data << csstemplate[6];
                 break;
 
             case NAMESP:
-                output << "@namespace " << csstemplate[5] << csstokens[i].data << csstemplate[6];
+                output << "@namespace " << csstokens[i].data << csstemplate[6];
                 break;
 
             case AT_START:
@@ -687,7 +687,12 @@ void CSSParser::parseInValue(QString& css_input, int& i, parse_status& astatus, 
         }
         else if (css_input[i] == '!') 
         {
-            cur_sub_value_arr.push_back(CSSUtils::trim(cur_sub_value));
+            // Only push cur_sub_value back if the cur_sub_value is non-empty after trimming
+            // Otherwise it will inject an extra space before the ! when assembling
+            // the value from the cur_sub_value_arr
+            if(CSSUtils::trim(cur_sub_value) != "") {
+                cur_sub_value_arr.push_back(CSSUtils::trim(cur_sub_value));
+            }
             cur_sub_value = "!";
         }
         else if (css_input[i] == ',' || css_input[i] == ')') 

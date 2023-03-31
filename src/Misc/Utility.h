@@ -251,15 +251,16 @@ public:
     // Generate a CRC32 checksum on a file
     static QString FileCRC32(const QString& filepath);
 
-	static QString format_xhtml_text(QString text); // modified: Prettify xhtml
+    static QString format_xhtml_text(QString text); // modified: Prettify xhtml
 
-	static QString RegExpSub(const QString &regexp, const QString &alt_pattern, const QString &text, int max_count=0); // modified: Prettify xhtml, Regexp, re_sub
+    static QString RegExpSub(const QString& regexp, const QString& alt_pattern, const QString& text, int max_count = 0); // modified: Prettify xhtml, Regexp, re_sub
 
-	static QString trimmed(const QString &text, const QString &chars);
+    static QString trimmed(const QString& text, const QString& chars);
 
     static QStringList walkDirs(QString root);//modified: used by correctOPF¡¢walk direct files;
 
     static QString ExtToMTypeMap(QString& ext);
+
 };
 #endif // UTILITY_H
 

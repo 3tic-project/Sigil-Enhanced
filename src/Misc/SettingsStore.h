@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2020 Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2020      Doug Massay
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2020-2023 Doug Massay
 **  Copyright (C) 2011-2013 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013 Dave Heiland
 **
@@ -257,6 +257,8 @@ public:
 
     bool enableAltGr();
 
+    bool skipPrintPreview();
+
 public slots:
 
     /**
@@ -408,6 +410,8 @@ public slots:
     void setClipboardHistoryLimit(int limit);
 
     void setEnableAltGr(bool enabled);
+    
+    void setSkipPrintPreview(bool skip);
 
 private:
     /**

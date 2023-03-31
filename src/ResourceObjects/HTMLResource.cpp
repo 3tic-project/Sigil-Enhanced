@@ -80,11 +80,12 @@ bool HTMLResource::LoadFromDisk()
 void HTMLResource::SetText(const QString &text)
 {
     emit TextChanging();
+
     XMLResource::SetText(text);
 
     // Track resources whose change will necessitate an update of the BV and PV.
     // At present this only applies to css files and images.
-    //TrackNewResources();  //修改：这个也不知道干啥的，似乎跟 m_LinkedBookPaths 有关，管理href？注释掉也没影响。
+    TrackNewResources();
 }
 
 QString HTMLResource::GetTOCCache()

@@ -236,9 +236,7 @@ void TextTab::SaveTabContent()
     // such as CSS, svg, and etc are only ever read from Disk,
     // so any time focus is lost and the contents of the TextTab 
     // have changed, we should save them to disk
-    
     m_TextResource->SaveToDisk();
-	emit UpdateParsedOPF(); // ÐÞ¸Ä£º
 
     // Some systems (Linux/Windows) may lose text highlighting when
     // ScrollToPosition is called unnecessarily. Only reposition

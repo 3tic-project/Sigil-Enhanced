@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2019-2021 Kevin B. Hendricks Stratford, Ontario, Canada
-**  Copyright (C) 2021 Doug Massay
+**  Copyright (C) 2019-2023 Kevin B. Hendricks Stratford, Ontario, Canada
+**  Copyright (C) 2021-2023 Doug Massay
 **
 **  This file is part of Sigil.
 **
@@ -44,7 +44,7 @@ public:
      *
      * @param parent The object's parent.
      */
-    ViewPreview(QWidget *parent = 0);
+    ViewPreview(QWidget *parent = 0, bool setbackground = true);
     ~ViewPreview();
 
     QSize sizeHint() const;
@@ -114,6 +114,7 @@ public slots:
 
     void ShowOverlay();
     void HideOverlay();
+    QString GetHTML() const;
 
 
 signals:

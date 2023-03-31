@@ -36,6 +36,8 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/Index.h
     BookManipulation/CleanSource.cpp
     BookManipulation/CleanSource.h
+    BookManipulation/EpubVersionConv.cpp
+    BookManipulation/EpubVersionConv.h
     BookManipulation/FolderKeeper.cpp
     BookManipulation/FolderKeeper.h
     BookManipulation/Headings.cpp
@@ -44,8 +46,6 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/HTMLMetadata.h
     BookManipulation/XhtmlDoc.cpp
     BookManipulation/XhtmlDoc.h
-    BookManipulation/EpubVersionConv.cpp
-    BookManipulation/EpubVersionConv.h
     )
 
 set( RESOURCE_OBJECT_FILES
@@ -394,6 +394,8 @@ set( MISC_FILES
     Misc/XMLEntities.h
     Misc/MediaTypes.cpp
     Misc/MediaTypes.h
+    Misc/webviewprinter.cpp
+    Misc/webviewprinter.h
     )
 
 set( MISC_EDITORS_FILES

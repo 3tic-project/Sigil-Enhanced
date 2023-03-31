@@ -86,9 +86,7 @@ ExportEPUB::~ExportEPUB()
 // Writes the book to the path
 // specified in the constructor
 void ExportEPUB::WriteBook()
-{	
-	//修改：保存之前解析一遍OPF
-	m_Book->GetOPF()->p.parse(m_Book->GetOPF()->GetText());
+{
     // Obfuscating fonts needs an UUID ident
     if (m_Book->HasObfuscatedFonts()) {
         m_Book->GetOPF()->EnsureUUIDIdentifierPresent();
@@ -180,24 +178,19 @@ void ExportEPUB::SaveFolderAsEpubToLocation(const QString &fullfolderpath, const
         // Set the proper zip file info if possible
         QString amodified = modified_now;
         size_t afilesize = tfile.size();
-		//----修改：取消CRC校验，加快保存速度--------------------------
-        //QString afilecrc = Utility::FileCRC32(it.filePath());
-		QString afilecrc = "00000000";
-		//-----------------------------------------------------------
+        QString afilecrc = Utility::FileCRC32(it.filePath());
         Resource* resource = m_Book->GetFolderKeeper()->GetResourceByBookPathNoThrow(relpath);
         if (resource) {
             QString savedcrc  = resource->GetSavedCRC32();
             QString saveddate = resource->GetSavedDate();
             size_t savedsize = resource->GetSavedSize();
-			//-------修改：取消CRC校验，加快保存速度--------------------------
-            //if ( (savedsize == afilesize) && (savedcrc == afilecrc) ) {
-            //    amodified = saveddate;
-            //} else {
+            if ( (savedsize == afilesize) && (savedcrc == afilecrc) ) {
+                amodified = saveddate;
+            } else {
                 resource->SetSavedDate(amodified);
                 resource->SetSavedSize(afilesize);
                 resource->SetSavedCRC32(afilecrc);
-            //}
-			//-------------------------------------------------------------
+            }
         }
         QDateTime moddate = QDateTime::fromString(amodified, "yyyy-MM-dd hh:mm:ss");
         memset(&fileInfo, 0, sizeof(fileInfo));

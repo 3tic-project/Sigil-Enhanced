@@ -62,14 +62,11 @@ QString CleanSource::Mend(const QString &source, const QString &version)
 // Mend and Prettify XHTML
 QString CleanSource::MendPrettify(const QString &source, const QString &version)
 {
-	/*
     QString newsource = PreprocessSpecialCases(source);
     GumboInterface gi = GumboInterface(newsource, version);
     newsource = gi.prettyprint();
     newsource = CharToEntity(newsource, version);
     newsource = PrettifyDOCTYPEHeader(newsource);
-	*/
-	QString newsource = Utility::format_xhtml_text(source); // modified: format_xhtml_text
     return newsource;
 }
 

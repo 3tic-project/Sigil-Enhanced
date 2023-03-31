@@ -632,7 +632,7 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
                               position_to_scroll_to,
                               caret_location_to_scroll_to,
                               grab_focus,
-                              this); 
+                              this);
             connect(tab,  SIGNAL(LinkClicked(const QUrl &)), this, SLOT(LinkClicked(const QUrl &)));
             connect(tab,  SIGNAL(OldTabRequest(QString, HTMLResource *)),
                     this, SIGNAL(OldTabRequest(QString, HTMLResource *)));
@@ -676,7 +676,7 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
 
         case Resource::TextResourceType: {
             tab = new TextTab(qobject_cast<TextResource *>(resource), CodeViewEditor::Highlight_NONE, 
-                              line_to_scroll_to, position_to_scroll_to , this);
+                              line_to_scroll_to, position_to_scroll_to, this);
             break;
         }
 
@@ -702,12 +702,8 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
         // In case of well-formed errors we want the tab to be focused.
         connect(tab,  SIGNAL(CentralTabRequest(ContentTab *)),
                 this, SLOT(MakeCentralTab(ContentTab *)));    //, Qt::QueuedConnection );
-
     }
-	if (resource->Type() == Resource::OPFResourceType) {
-		connect(tab,  SIGNAL(UpdateParsedOPF()), // ÐÞ¸Ä£º
-			    this, SIGNAL(UpdateParsedOPF()));
-	}
+
     return tab;
 }
 

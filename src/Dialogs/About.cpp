@@ -43,11 +43,11 @@ About::About(QWidget *parent)
     ui.lbLoadedQtDisplay->setText(QString(qVersion()));
     QRegularExpression version_number(VERSION_NUMBERS);
     QRegularExpressionMatch mo = version_number.match(SIGIL_VERSION);
-    QString version_text = QString("%1.%2.%3.%4")
+    QString version_text = QString("%1.%2.%3.%4") // modified: version
                            .arg(mo.captured(1).toInt())
                            .arg(mo.captured(2).toInt())
                            .arg(mo.captured(3).toInt())
-		                   .arg(mo.captured(4)); // modified: version
+                           .arg(mo.captured(4));
     ui.lbVersionDisplay->setText(version_text);
     QString credits = "<h4>" + tr("Maintainer(s)") + "</h4>" +
                       "<ul>" +

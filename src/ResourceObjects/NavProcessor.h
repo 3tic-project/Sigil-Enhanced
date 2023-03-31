@@ -101,6 +101,6 @@ private:
     
     HTMLResource * m_NavResource;
     QString m_language;
-	QString format_nav_text(QString text); // modified: format_nav_text
+    QString format_nav_text(QString text); // modified: format_nav_text
 };
 #endif  // NAVPROCESSORH

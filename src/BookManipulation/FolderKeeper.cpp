@@ -453,7 +453,7 @@ OPFResource*FolderKeeper::AddOPFToFolder(const QString &version, const QString &
     if (!m_FileIconCache.contains("application/oebps-package+xml")) {
         m_FileIconCache["application/oebps-package+xml"] = QFileIconProvider().icon(fi);
     }
-    
+
     connect(m_OPF, SIGNAL(Deleted(const Resource *)), this, SLOT(RemoveResource(const Resource *)));
     // For ResourceAdded, the connection has to be DirectConnection,
     // otherwise the default of AutoConnection screws us when
@@ -467,7 +467,6 @@ OPFResource*FolderKeeper::AddOPFToFolder(const QString &version, const QString &
     connect(m_OPF, SIGNAL(Moved(const Resource *, QString)),
             this,     SLOT(ResourceMoved(const Resource *, QString)), Qt::DirectConnection);
     UpdateContainerXML(m_FullPathToMainFolder, OPFBookPath);
-    m_OPF->p.parse(m_OPF->GetText()); // modified: opfparser update
     return m_OPF;
 }
 
@@ -483,8 +482,8 @@ void FolderKeeper::UpdateContainerXML(const QString& FullPathToMainFolder, const
 NCXResource*FolderKeeper::AddNCXToFolder(const QString &version, 
                                          const QString &bookpath, 
                                          const QString &first_textdir)
-{	
-    QString ncxdir = GetDefaultFolderForGroup("ncx"); 
+{
+    QString ncxdir = GetDefaultFolderForGroup("ncx");
     QString NCXBookPath = "toc.ncx";
     if (!ncxdir.isEmpty()) {
         NCXBookPath = ncxdir + "/" + "toc.ncx";
@@ -576,7 +575,7 @@ void FolderKeeper::BulkRemoveResources(const QList<Resource *>resources)
 
         m_SuspendedWatchedFiles.removeAll(resource->GetFullPath());
         disconnect(resource, SIGNAL(Deleted(const Resource *)), this, SLOT(RemoveResource(const Resource *)));
-		resource->Delete();
+        resource->Delete();
     }
 }
 
@@ -597,12 +596,12 @@ void FolderKeeper::RemoveResource(const Resource *resource)
 void FolderKeeper::BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths)
 {
     for (int i = 0; i < resources.size(); i++) {
-		Resource* resource = resources.at(i);
-		QString old_full_path = old_full_paths.at(i);
-		QString book_path = old_full_path.right(old_full_path.length() - m_FullPathToMainFolder.length() - 1);
-		Resource* res = m_Path2Resource[book_path];
-		m_Path2Resource.remove(book_path);
-		m_Path2Resource[resource->GetRelativePath()] = res;
+        Resource* resource = resources.at(i);
+        QString old_full_path = old_full_paths.at(i);
+        QString book_path = old_full_path.right(old_full_path.length() - m_FullPathToMainFolder.length() - 1);
+        Resource* res = m_Path2Resource[book_path];
+        m_Path2Resource.remove(book_path);
+        m_Path2Resource[resource->GetRelativePath()] = res;
     }
     m_OPF->BulkResourceRenamed(resources, old_full_paths);
     updateShortPathNames();
@@ -724,16 +723,16 @@ QString FolderKeeper::GetStdFolderForGroup(const QString &group)
 void FolderKeeper::CreateGroupToFoldersMap()
 {
     if (!m_GrpToFold.isEmpty()) return;
-	m_GrpToFold["Text"] = QStringList() << "OEBPS/Text";
-	m_GrpToFold["Styles"] = QStringList() << "OEBPS/Styles";
-	m_GrpToFold["Images"] = QStringList() << "OEBPS/Images";
-	m_GrpToFold["Fonts"] = QStringList() << "OEBPS/Fonts";
-	m_GrpToFold["Audio"] = QStringList() << "OEBPS/Audio";
-	m_GrpToFold["Video"] = QStringList() << "OEBPS/Video";
-	m_GrpToFold["Misc"] = QStringList() << "OEBPS/Misc";
-	m_GrpToFold["ncx"] = QStringList() << "OEBPS";
-	m_GrpToFold["opf"] = QStringList() << "OEBPS";
-	m_GrpToFold["other"] = QStringList() << "";
+    m_GrpToFold[ "Text"   ] = QStringList() << "OEBPS/Text";
+    m_GrpToFold[ "Styles" ] = QStringList() << "OEBPS/Styles";
+    m_GrpToFold[ "Images" ] = QStringList() << "OEBPS/Images";
+    m_GrpToFold[ "Fonts"  ] = QStringList() << "OEBPS/Fonts";
+    m_GrpToFold[ "Audio"  ] = QStringList() << "OEBPS/Audio";
+    m_GrpToFold[ "Video"  ] = QStringList() << "OEBPS/Video";
+    m_GrpToFold[ "Misc"   ] = QStringList() << "OEBPS/Misc";
+    m_GrpToFold[ "ncx"    ] = QStringList() << "OEBPS";
+    m_GrpToFold[ "opf"    ] = QStringList() << "OEBPS";
+    m_GrpToFold[ "other"  ] = QStringList() << "";
 }
 
 
@@ -909,18 +908,21 @@ void FolderKeeper::SetGroupFolders(const QStringList &bookpaths, const QStringLi
             QString gname = group;
             if (use_lower_case) gname = gname.toLower();
             if (folderlst.isEmpty()) {
-				// modified: files group: change the assignment of default group of opf or ncx
-				if (group == "opf" || group == "ncx") {
-					if (commonbase.endsWith("/")) commonbase = commonbase.left(commonbase.size()-1);
-					folderlst << commonbase;
-				}
-				else {
-					folderlst << commonbase + gname;
-				}
+                // ------------------modified: files group: change the assignment of default group of opf or ncx-----------------------
+                //folderlst << commonbase + gname;
+                if (group == "opf" || group == "ncx") {
+                    if (commonbase.endsWith("/")) commonbase = commonbase.left(commonbase.size() - 1);
+                    folderlst << commonbase;
+                }
+                else {
+                    folderlst << commonbase + gname;
+                }
+                // --------------------------------------------------------------------------------------------------------------------
                 group_folder[group] = folderlst;
             }
         }
     }
+
     // update m_GrpToFold with result
     m_GrpToFold.clear();
     m_GrpToFold = group_folder;

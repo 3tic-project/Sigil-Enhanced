@@ -184,8 +184,7 @@ signals:
     void OldTabRequest(QString content, HTMLResource *originating_resource);
 
     void ShowStatusMessageRequest(const QString &message, int duration = 5000);
-	// 修改：添加信号，用于联系MainWindow的UpdateOPF();
-	void UpdateParsedOPF();
+
 protected:
     virtual void tabInserted(int index);
 

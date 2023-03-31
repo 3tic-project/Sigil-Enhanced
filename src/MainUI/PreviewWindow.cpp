@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2022  Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2019-2022  Doug Massay
+**  Copyright (C) 2015-2023  Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2019-2023  Doug Massay
 **  Copyright (C) 2012       Dave Heiland, John Schember
 **
 **  This file is part of Sigil.
@@ -44,6 +44,7 @@
 #include "Misc/SleepFunctions.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
+#include "Misc/webviewprinter.h"
 #include "ViewEditors/ViewPreview.h"
 #include "ViewEditors/Overlay.h"
 #include "sigil_constants.h"
@@ -78,7 +79,9 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     m_titleText(QString()),
     m_updatingPage(false),
     m_usingMathML(false),
-    m_cycleCSSLevel(0)
+    m_cycleCSSLevel(0),
+    m_skipPrintPreview(false),
+    m_WebViewPrinter(new WebViewPrinter(this))
 {
     m_progress->reset();
     m_progress->setMinimum(0);
@@ -254,6 +257,10 @@ void PreviewWindow::SetupView()
     m_cycleCSSAction = new QAction(QIcon(":/main/cycle-css.svg"),"", this);
     m_cycleCSSAction ->setEnabled(false);
     m_cycleCSSAction->setToolTip(tr("Cycle Custom CSS Files"));
+
+    m_webviewPrint = new QAction(QIcon(":/main/document-print.svg"), "", this);
+    m_webviewPrint ->setEnabled(true);
+    m_webviewPrint->setToolTip(tr("Print Preview View"));
     
     QToolBar * tb = new QToolBar();
     tb->addAction(m_inspectAction);
@@ -261,6 +268,7 @@ void PreviewWindow::SetupView()
     tb->addAction(m_copyAction);
     tb->addAction(m_reloadAction);
     tb->addAction(m_cycleCSSAction);
+    tb->addAction(m_webviewPrint);
     tb->addWidget(m_progress);
 
     m_buttons->addWidget(tb);
@@ -616,6 +624,28 @@ void PreviewWindow::InspectPreviewPage()
     m_Inspector->close();
 }
 
+
+void PreviewWindow::PrintRendered()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+    // Refresh skipflags from Prefs
+    SettingsStore settings;
+    m_skipPrintPreview = settings.skipPrintPreview();
+    m_WebViewPrinter->setContent(m_Filepath, m_Preview->GetHTML(), m_skipPrintPreview);
+#else
+    QMessageBox msgbox;
+    QString text = tr("Feature not available before Qt5.12.x");
+    msgbox.setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+    msgbox.setModal(true);
+    msgbox.setWindowTitle("Sigil");
+    msgbox.setText("<h3>" + text + "</h3><br/>");
+    msgbox.setIcon(QMessageBox::Icon::Warning);
+    msgbox.setStandardButtons(QMessageBox::Close);
+    msgbox.exec();
+#endif
+
+}
+
 void PreviewWindow::SelectAllPreview()
 {
     m_Preview->triggerPageAction(QWebEnginePage::SelectAll);
@@ -664,7 +694,8 @@ void PreviewWindow::ConnectSignalsToSlots()
     connect(m_selectAction,  SIGNAL(triggered()),           this, SLOT(SelectAllPreview()));
     connect(m_copyAction,    SIGNAL(triggered()),           this, SLOT(CopyPreview()));
     connect(m_reloadAction,  SIGNAL(triggered()),           this, SLOT(ReloadPreview()));
-    connect(m_cycleCSSAction, SIGNAL(triggered()),          this, SLOT(CycleCustomCSS())); 
+    connect(m_cycleCSSAction, SIGNAL(triggered()),          this, SLOT(CycleCustomCSS()));
+    connect(m_webviewPrint, SIGNAL(triggered()),            this, SLOT(PrintRendered()));
     connect(m_Inspector,     SIGNAL(finished(int)),         this, SLOT(InspectorClosed(int)));
     connect(this,     SIGNAL(topLevelChanged(bool)),        this, SLOT(previewFloated(bool)));
 }

@@ -160,7 +160,8 @@ public:
     * section, but there is still some render time left...
     */
     QString SplitSection();
-	void SplitBlockOrAddBreak(); //修改：SplitBlockOrAddBreak
+    void SplitBlockOrAddBreak(); //修改：SplitBlockOrAddBreak
+
     /**
      * Inserts the SGF section marker code at the current caret location.
      */
@@ -297,7 +298,7 @@ public:
      * @param preserve_attributes Whether to keep any existing attributes on the previous block tag.
      */
     void FormatBlock(const QString &element_name, bool preserve_attributes);
-	void FormatBlock_multiline(const QString &element_name, bool preserve_attributes); // 修改：多行添加块元素标签
+    void FormatBlock_multiline(const QString& element_name, bool preserve_attributes); // 修改：多行添加块元素标签
 
     /**
      * Given the current cursor position/selection, look to toggle a format style tag
@@ -447,7 +448,7 @@ public slots:
      *
      * @param printer The printer interface to use for printing.
      */
-    void print(QPagedPaintDevice *printer);
+    void print(QPrinter *printer);
 
     void RenameClassClicked();
     void RenameClass();
@@ -515,9 +516,8 @@ protected:
      * @param event The event to process.
      */
     void focusOutEvent(QFocusEvent *event);
+    void keyPressEvent(QKeyEvent* event); //修改：键盘事件：添加键盘事件处理函数
 
-	//修改：添加键盘事件处理函数
-	void keyPressEvent(QKeyEvent *event);
 private slots:
     void ResetLastFindMatch();
 
@@ -895,7 +895,7 @@ private:
 
     TagLister m_TagList;
     bool m_regen_taglist;
-	pair<int, int> StringTrimmedIndex(const QString &text); // 修改：字符串前后端非空字符位置。
+    pair<int, int> StringTrimmedIndex(const QString& text); // 修改：工具：字符串前后端非空字符位置
     void insertFromMimeData(const QMimeData* source); // modified: paste event
 };
 

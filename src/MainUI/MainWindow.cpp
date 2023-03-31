@@ -803,49 +803,45 @@ bool MainWindow::StandardizeEpub()
     } else {
         setWindowTitle(tr("%1[*] - epub%2 - %3").arg(m_CurrentFileName).arg(epubversion).arg(tr("Sigil")));
     }
-
-	// modified: fix bug: opf parser update
-	m_Book->GetOPF()->p.parse(m_Book->GetOPF()->GetText());
-
     ShowMessageOnStatusBar(tr("Restructure completed."));
     return true;
 }
+
 //-----modified: Epub3ToEpub2------
 void MainWindow::Epub3ToEpub2() {
-	QString epubversion = m_Book->GetConstOPF()->GetEpubVersion();
-	if (epubversion.startsWith("2")) {
-		QMessageBox::warning(this, tr("Sigil"),
-			tr("This Epub is already the version 2.0 !"), QMessageBox::Ok);
-		return;
-	}
-	if (!StandardizeEpub()) return;
-	GenerateNCXGuideFromNav();
-	EpubVersionConv *evc = new EpubVersionConv(m_Book);
-	evc->convert_to_epub2();
-	m_TableOfContents->SetBook(m_Book); // set the TOCModel's m_EpubVersion to 2.0
-	ResourcesAddedOrDeletedOrMoved(); // Change the main window's title to show 2.0 version
-	m_BookBrowser->Refresh();
+    QString epubversion = m_Book->GetConstOPF()->GetEpubVersion();
+    if (epubversion.startsWith("2")) {
+        QMessageBox::warning(this, tr("Sigil"),
+            tr("This Epub is already the version 2.0 !"), QMessageBox::Ok);
+        return;
+    }
+    if (!StandardizeEpub()) return;
+    GenerateNCXGuideFromNav();
+    EpubVersionConv* evc = new EpubVersionConv(m_Book);
+    evc->convert_to_epub2();
+    m_TableOfContents->SetBook(m_Book); // set the TOCModel's m_EpubVersion to 2.0
+    ResourcesAddedOrDeletedOrMoved(); // Change the main window's title to show 2.0 version
+    m_BookBrowser->Refresh();
 }
 //---------------------------------
 
 //-----modified: Epub2ToEpub3------
 void MainWindow::Epub2ToEpub3() {
-	QString epubversion = m_Book->GetConstOPF()->GetEpubVersion();
-	if (epubversion.startsWith("3")) { 
-		QMessageBox::warning(this, tr("Sigil"),
-			tr("This Epub is already the version 3.0 !"),QMessageBox::Ok);
-		return;
-	}
-	if (!StandardizeEpub()) return;
-	EpubVersionConv *evc = new EpubVersionConv(m_Book);
-	evc->convert_to_epub3();
-	RemoveNCXGuideFromEpub3();
-	m_TableOfContents->SetBook(m_Book); // set the TOCModel's m_EpubVersion to 3.0
-	ResourcesAddedOrDeletedOrMoved(); // Change the main window's title to show 3.0 version
-	m_BookBrowser->Refresh();
+    QString epubversion = m_Book->GetConstOPF()->GetEpubVersion();
+    if (epubversion.startsWith("3")) {
+        QMessageBox::warning(this, tr("Sigil"),
+            tr("This Epub is already the version 3.0 !"), QMessageBox::Ok);
+        return;
+    }
+    if (!StandardizeEpub()) return;
+    EpubVersionConv* evc = new EpubVersionConv(m_Book);
+    evc->convert_to_epub3();
+    RemoveNCXGuideFromEpub3();
+    m_TableOfContents->SetBook(m_Book); // set the TOCModel's m_EpubVersion to 3.0
+    ResourcesAddedOrDeletedOrMoved(); // Change the main window's title to show 3.0 version
+    m_BookBrowser->Refresh();
 }
 //---------------------------------
-
 
 void MainWindow::FixDuplicateFilenames()
 {
@@ -1195,6 +1191,128 @@ void MainWindow::RepoManage()
     ManageRepos mr(this);
     mr.exec();
 }
+
+void MainWindow::RepoEditTagDescription()
+{
+    QString localRepo = Utility::DefinePrefsDir() + "/repo";
+    QDir repoDir(localRepo);
+    if (!repoDir.exists()) {
+        // No repo folder, no checkpoints
+        ShowMessageOnStatusBar(tr("Description Edit Failed. No checkpoints found"));
+        return;
+    }
+    QString bookid;
+    bookid = m_Book->GetOPF()->GetUUIDIdentifierValue();
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    // Get tags using python in a separate thread since this
+    // may take a while depending on the speed of the filesystem
+    PythonRoutines pr;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)    
+    QFuture<QStringList> future = QtConcurrent::run(&pr, &PythonRoutines::GetRepoTagsInPython, 
+                                                          localRepo, bookid);
+#else
+    QFuture<QStringList> future = QtConcurrent::run(&PythonRoutines::GetRepoTagsInPython, &pr,
+                                                          localRepo, bookid);
+#endif
+    future.waitForFinished();
+    QStringList tag_results = future.result();
+    if (tag_results.isEmpty()) {
+        ShowMessageOnStatusBar(tr("Description Edit Failed. No checkpoints found"));
+        QApplication::restoreOverrideCursor();
+        return;
+    }
+    QApplication::restoreOverrideCursor();
+
+    // Now use a Dialog to allow the user to select the tag to edit
+    QString tagname;
+    QStringList taglst;
+    SelectCheckpoint gettag(tag_results, this);
+    if (gettag.exec() == QDialog::Accepted) {
+        taglst  = gettag.GetSelectedEntries();
+        if (!taglst.isEmpty()) {
+            tagname = taglst.at(0);
+        }
+    }
+    if (tagname.isEmpty()) {
+        ShowMessageOnStatusBar(tr("Description Edit Failed. No checkpoint selected to edit"));
+        return;
+    }
+
+    // Get current tag message of selected tag
+    QString currmsg;
+    foreach(QString atag, tag_results) {
+        QStringList fields = atag.split("|");
+        if (fields.length() == 3) {
+            if (fields.at(0) == tagname)
+            currmsg = fields.at(2);
+        }
+    }
+
+    // Use QInputDialog to get new tag message
+    // Is multi line necessary here?
+    bool ok;
+    QString newmessage = QInputDialog::getMultiLineText(this, tr("Edit checkpoint Description"),
+                                                        tr("New Checkpoint Description:"), currmsg.trimmed(), &ok);
+
+    // Update Tag message with new message
+    if (ok && !newmessage.isEmpty()) {
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        PythonRoutines pr;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QFuture<bool> afuture = QtConcurrent::run(&pr, &PythonRoutines::ChangeRepoTagMsgInPython, 
+                                                 localRepo, bookid, tagname, newmessage);
+#else
+        QFuture<bool> afuture = QtConcurrent::run(&PythonRoutines::ChangeRepoTagMsgInPython, &pr,
+                                                 localRepo, bookid, tagname, newmessage);
+#endif
+        afuture.waitForFinished();
+        bool res = afuture.result();
+        if (!res) {
+            ShowMessageOnStatusBar(tr("Description Edit Failed for unknown reason"));
+            QApplication::restoreOverrideCursor();
+            return;
+        }
+        QApplication::restoreOverrideCursor();
+    } else {
+        ShowMessageOnStatusBar(tr("Description edit cancelled or empty"));
+        return;
+    }
+    ShowMessageOnStatusBar(tr("Description successfully updated"));
+}
+
+
+void MainWindow::RepoShowLog()
+{
+    QString bookid = m_Book->GetOPF()->GetUUIDIdentifierValue();
+    QString localRepo = Utility::DefinePrefsDir() + "/repo/";
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    // generate the repo log using python in a separate thread since this
+    // may take a while depending on the speed of the filesystem
+    PythonRoutines pr;
+    QFuture<QString> future =
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QtConcurrent::run(&pr,
+                          &PythonRoutines::GenerateRepoLogSummaryInPython,
+                          localRepo,
+                          bookid);
+#else
+        QtConcurrent::run(&PythonRoutines::GenerateRepoLogSummaryInPython,
+                          &pr,
+                          localRepo,
+                          bookid);
+#endif
+    future.waitForFinished();
+    QString logData = future.result();
+
+    QApplication::restoreOverrideCursor();
+
+    RepoLog log(tr("Repository Log"), logData, this);
+    log.exec();
+}
+
 
 void MainWindow::launchExternalXEditor()
 {
@@ -2278,6 +2396,7 @@ bool MainWindow::AddCover()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
+    // -------------------------- 修改：优化Cover页设置效率 -----------------------------------
     /*
     // Find existing cover HTML file if there is one.
     HTMLResource *html_cover_resource = NULL;
@@ -2306,32 +2425,33 @@ bool MainWindow::AddCover()
     }
     */
 
-    // 修改：-------------------------------------------------
-    // Find existing cover HTML file if there is one.
+    // 寻找第一个已存在的封面HTML文件
     OPFResource* m_OPF = m_Book->GetOPF();
-    QList<GuideEntry> guides = m_OPF->p.m_guide;
-    
+    OPFParser p;
+    p.parse(m_OPF->GetText());
+    QList<GuideEntry> guides = p.m_guide;
+
     QString cover_href = "";
     if (version.startsWith('2') && !guides.isEmpty()) {
-        for (unsigned short i=0; i < guides.count(); ++i) {
+        for (unsigned short i = 0; i < guides.count(); ++i) {
             GuideEntry ref = guides.at(i);
             if (ref.m_type == QString("cover")) {
                 cover_href = ref.m_href;
-				break;
+                break;
             }
         }
     }
     else if (version.startsWith('3')) {
         NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
-		QList<NavLandmarkEntry> landmarks = navproc.GetLandmarks();
-		foreach(NavLandmarkEntry landmark, landmarks) {
-			if (landmark.etype == QString("cover")) {
-				cover_href = landmark.href;
-				break;
-			}
-		}
+        QList<NavLandmarkEntry> landmarks = navproc.GetLandmarks();
+        foreach(NavLandmarkEntry landmark, landmarks) {
+            if (landmark.etype == QString("cover")) {
+                cover_href = landmark.href;
+                break;
+            }
+        }
     }
-    
+
     if (cover_href == QString("") && HTML_COVER_FILENAME != QString("")) {
         cover_href = HTML_COVER_FILENAME;
     }
@@ -2339,7 +2459,7 @@ bool MainWindow::AddCover()
     QList<Resource*> resources = GetAllHTMLResources();
     HTMLResource* html_cover_resource = NULL;
     if (cover_href != QString("")) {
-        foreach(Resource* resource, resources) {
+        foreach(Resource * resource, resources) {
             HTMLResource* html_resource = qobject_cast<HTMLResource*>(resource);
             if (html_resource->GetRelativePathFromResource(m_Book->GetOPF()) == cover_href) {
                 html_cover_resource = html_resource;
@@ -2347,7 +2467,7 @@ bool MainWindow::AddCover()
             }
         }
     }
-	//----------------------------------------------------
+    //-------------------------------------------------------------------------------------------
 
     if (html_cover_resource != NULL) {
         QString msg = tr("An existing Cover file has been found.");
@@ -2414,6 +2534,7 @@ bool MainWindow::AddCover()
         return false;
         //
     }
+
     m_BookBrowser->Refresh();
     m_Book->SetModified();
     MainWindow::clearMemoryCaches();
@@ -4129,12 +4250,13 @@ void MainWindow::updateToolTipsOnPluginIcons()
     }
 }
 
-//modified: NormalizedOPF;
+//----------modified: NormalizedOPF--------------
 bool MainWindow::NormalizedOPF()
 {
     m_ValidationResultsView->correctOPF();
     return true;
 }
+//-----------------------------------------------
 
 bool MainWindow::WellFormedCheckEpub()
 {
@@ -4311,7 +4433,7 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionPrintPreview->setEnabled(true);
     ui.actionPrint->setEnabled(true);
     ui.actionSplitSection->setEnabled(true);
-	ui.actionSplitBlockOrAddBreak->setEnabled(true);//修改：SplitBlockOrAddBreak
+    ui.actionSplitBlockOrAddBreak->setEnabled(true);//修改：SplitBlockOrAddBreak
     ui.actionInsertSGFSectionMarker->setEnabled(true);
     ui.actionInsertFile->setEnabled(true);
     ui.actionInsertSpecialCharacter->setEnabled(true);
@@ -4348,7 +4470,7 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionHeading5->setEnabled(true);
     ui.actionHeading6->setEnabled(true);
     ui.actionHeadingNormal->setEnabled(true);
-	ui.actionHeadingDivision->setEnabled(true); //modified: actionHeadingDivision
+    ui.actionHeadingDivision->setEnabled(true); //modified: actionHeadingDivision
     ui.actionInsertBulletedList ->setEnabled(true);
     ui.actionInsertNumberedList ->setEnabled(true);
     ui.actionCasingLowercase  ->setEnabled(true);
@@ -4438,7 +4560,7 @@ void MainWindow::SetStateActionsRawView()
     ui.actionHeading5->setEnabled(false);
     ui.actionHeading6->setEnabled(false);
     ui.actionHeadingNormal->setEnabled(false);
-	ui.actionHeadingDivision->setEnabled(false); // modified: actionHeadingDivision
+    ui.actionHeadingDivision->setEnabled(false); // modified: actionHeadingDivision
     ui.actionCasingLowercase  ->setEnabled(true);
     ui.actionCasingUppercase  ->setEnabled(true);
     ui.actionCasingTitlecase ->setEnabled(true);
@@ -4509,7 +4631,6 @@ void MainWindow::SetStateActionsStaticView()
     ui.actionHeading5->setEnabled(false);
     ui.actionHeading6->setEnabled(false);
     ui.actionHeadingNormal->setEnabled(false);
-	ui.actionHeadingDivision->setEnabled(false); // modified: actionHeadingDivision
     ui.actionCasingLowercase  ->setEnabled(false);
     ui.actionCasingUppercase  ->setEnabled(false);
     ui.actionCasingTitlecase ->setEnabled(false);
@@ -5281,8 +5402,7 @@ void MainWindow::CreateNewBook(const QString version, const QStringList &book_pa
 
     // Set Group Folders from bookpaths
     new_book->GetFolderKeeper()->SetGroupFolders(finalpaths, mtypes);
-    // 修改：
-    new_book->GetOPF()->p.parse(new_book->GetOPF()->GetText());
+
     // create a single text file in each location
     foreach(QString textfolder, textdirs) {
         new_book->CreateEmptyHTMLFile(textfolder);
@@ -5306,7 +5426,6 @@ void MainWindow::CreateNewBook(const QString version, const QStringList &book_pa
         QString NCXId = new_book->GetOPF()->AddNCXItem(ncxresource->GetFullPath(),"ncx");
         new_book->GetOPF()->UpdateNCXOnSpine(NCXId);
     }
-
     SetNewBook(new_book);
     new_book->SetModified(false);
     m_SaveACopyFilename = "";
@@ -5692,7 +5811,7 @@ void MainWindow::SelectEntryOnHeadingToolbar(const QString &element_name)
     ui.actionHeading5->setChecked(false);
     ui.actionHeading6->setChecked(false);
     ui.actionHeadingNormal->setChecked(false);
-	ui.actionHeadingDivision->setChecked(false); // modified: actionHeadingDivision
+    ui.actionHeadingDivision->setChecked(false); // modified: actionHeadingDivision
 
     if (!element_name.isEmpty()) {
         if ((element_name[ 0 ].toLower() == QChar('h')) && (element_name[ 1 ].isDigit())) {
@@ -5713,7 +5832,7 @@ void MainWindow::SelectEntryOnHeadingToolbar(const QString &element_name)
             }
         } else {
             ui.actionHeadingNormal->setChecked(true);
-			ui.actionHeadingDivision->setChecked(true); // modified: actionHeadingDivision
+            ui.actionHeadingDivision->setChecked(true); // modified: actionHeadingDivision
         }
     }
 }
@@ -5726,15 +5845,15 @@ void MainWindow::ApplyHeadingStyleToTab(QAction* act)
     QString name = act->objectName();
     if (name == "actionHeadingNormal") {
         heading_type = "Normal";
-	}
-	// ------- modified: actionHeadingDivision----
-	else if (name == "actionHeadingDivision") {
-		heading_type = "Division";
-	}
-	//--------------------------------------------
-	else {
-		heading_type = name[name.count() - 1];
-	}
+    } 
+    // ------- modified: actionHeadingDivision----
+    else if (name == "actionHeadingDivision") {
+        heading_type = "Division";
+    }
+    //--------------------------------------------
+    else {
+        heading_type = name[ name.count() - 1 ];
+    }
 
     if (flow_tab) {
         flow_tab->HeadingStyle(heading_type, m_preserveHeadingAttributes);
@@ -6037,7 +6156,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionInsertSGFSectionMarker, "MainWindow.InsertSGFSectionMarker");
     sm->registerAction(this, ui.actionSplitOnSGFSectionMarkers, "MainWindow.SplitOnSGFSectionMarkers");
     sm->registerAction(this, ui.actionInsertClosingTag, "MainWindow.InsertClosingTag");
-	sm->registerAction(this, ui.actionSplitBlockOrAddBreak, "MainWindow.SplitBlockOrAddBreak"); // 修改：SplitBlockOrAddBreak注册到快捷键管理器。
+    sm->registerAction(this, ui.actionSplitBlockOrAddBreak, "MainWindow.SplitBlockOrAddBreak"); // 修改：SplitBlockOrAddBreak注册到快捷键管理器。
 #ifndef Q_OS_MAC
     sm->registerAction(this, ui.actionPreferences, "MainWindow.Preferences");
 #endif
@@ -6088,7 +6207,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionHeading5, "MainWindow.Heading5");
     sm->registerAction(this, ui.actionHeading6, "MainWindow.Heading6");
     sm->registerAction(this, ui.actionHeadingNormal, "MainWindow.HeadingNormal");
-	sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
+    sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     sm->registerAction(this, ui.actionHeadingPreserveAttributes, "MainWindow.HeadingPreserveAttributes");
     sm->registerAction(this, ui.actionCasingLowercase, "MainWindow.CasingLowercase");
     sm->registerAction(this, ui.actionCasingUppercase, "MainWindow.CasingUppercase");
@@ -6109,8 +6228,8 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionUpdateManifestProperties, "MainWindow.UpdateManifestProperties");
     sm->registerAction(this, ui.actionNCXGuideFromNav, "MainWindow.NCXGuideFromNav");
     sm->registerAction(this, ui.actionRemoveNCXGuide, "MainWindow.RemoveNCXGuide");
-	sm->registerAction(this, ui.actionEpub3To2, "MainWindow.Epub3To2"); // modified: Epub3ToEpub2
-	sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
+    sm->registerAction(this, ui.actionEpub3To2, "MainWindow.Epub3To2"); // modified: Epub3ToEpub2
+    sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
     sm->registerAction(this, ui.actionSpellcheckEditor, "MainWindow.SpellcheckEditor");
     sm->registerAction(this, ui.actionSpellcheck, "MainWindow.Spellcheck");
     sm->registerAction(this, ui.actionAddMisspelledWord, "MainWindow.AddMispelledWord");
@@ -6139,10 +6258,13 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionPreviousResource, "MainWindow.PreviousResource");
     sm->registerAction(this, ui.actionNextResource, "MainWindow.NextResource");
     // Checkpoints
-    sm->registerAction(this, ui.actionCommit,     "MainWindow.CreateCheckpoint");
-    sm->registerAction(this, ui.actionCheckout,   "MainWindow.RestoreFromCheckpoint");
-    sm->registerAction(this, ui.actionDiff,       "MainWindow.CompareToCheckpoint");
-    sm->registerAction(this, ui.actionManageRepo, "MainWindow.ManageCheckpointRepository");
+    sm->registerAction(this, ui.actionCommit,             "MainWindow.CreateCheckpoint");
+    sm->registerAction(this, ui.actionCheckout,           "MainWindow.RestoreFromCheckpoint");
+    sm->registerAction(this, ui.actionDiff,               "MainWindow.CompareToCheckpoint");
+    sm->registerAction(this, ui.actionManageRepo,         "MainWindow.ManageCheckpointRepository");
+    sm->registerAction(this, ui.actionEditCheckpointDesc, "MainWindow.EditCheckpointDescription");
+    sm->registerAction(this, ui.actionLog,                "MainWindow.ShowCheckpointLog");
+
     // Automation Lists
     sm->registerAction(this, ui.actionAutomate1,   "MainWindow.RunAutomate1");
     sm->registerAction(this, ui.actionAutomate2,   "MainWindow.RunAutomate2");
@@ -6392,10 +6514,12 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionExit,          SIGNAL(triggered()), this, SLOT(Exit()));
 
     // Checkpoint Repo functions
-    connect(ui.actionCommit,        SIGNAL(triggered()), this, SLOT(RepoCommit()));
-    connect(ui.actionCheckout,      SIGNAL(triggered()), this, SLOT(RepoCheckout()));
-    connect(ui.actionDiff,          SIGNAL(triggered()), this, SLOT(RepoDiff()));
-    connect(ui.actionManageRepo,    SIGNAL(triggered()), this, SLOT(RepoManage()));
+    connect(ui.actionCommit,              SIGNAL(triggered()), this, SLOT(RepoCommit()));
+    connect(ui.actionCheckout,            SIGNAL(triggered()), this, SLOT(RepoCheckout()));
+    connect(ui.actionDiff,                SIGNAL(triggered()), this, SLOT(RepoDiff()));
+    connect(ui.actionManageRepo,          SIGNAL(triggered()), this, SLOT(RepoManage()));
+    connect(ui.actionEditCheckpointDesc,  SIGNAL(triggered()), this, SLOT(RepoEditTagDescription()));
+    connect(ui.actionLog,                 SIGNAL(triggered()), this, SLOT(RepoShowLog()));
 
     // Automation
     connect(ui.actionAutomate1,        SIGNAL(triggered()), this, SLOT(RunAutomate1()));
@@ -6452,8 +6576,8 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionUpdateManifestProperties,      SIGNAL(triggered()), this, SLOT(UpdateManifestProperties()));
     connect(ui.actionNCXGuideFromNav, SIGNAL(triggered()), this, SLOT(GenerateNCXGuideFromNav()));
     connect(ui.actionRemoveNCXGuide,  SIGNAL(triggered()), this, SLOT(RemoveNCXGuideFromEpub3()));
-	connect(ui.actionEpub3To2, SIGNAL(triggered()), this, SLOT(Epub3ToEpub2())); // modified: Epub3ToEpub2
-	connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
+    connect(ui.actionEpub3To2, SIGNAL(triggered()), this, SLOT(Epub3ToEpub2())); // modified: Epub3ToEpub2
+    connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
     connect(ui.actionClearIgnoredWords, SIGNAL(triggered()), this, SLOT(ClearIgnoredWords()));
     connect(ui.actionGenerateTOC,   SIGNAL(triggered()), this, SLOT(GenerateTOC()));
     connect(ui.actionEditTOC,       SIGNAL(triggered()), this, SLOT(EditTOCDialog()));
@@ -6512,9 +6636,6 @@ void MainWindow::ConnectSignalsToSlots()
             this,                    SLOT(UpdateBrowserSelectionToTab()));
     connect(m_TabManager,          SIGNAL(UpdatePreviewAfterExistingTabSwitch()),
             this,                    SLOT(UpdatePreview()));
-	// 修改：添加一个信号，更新OPF解析对象。
-	connect(m_TabManager,          SIGNAL(UpdateParsedOPF()),
-			this,                    SLOT(UpdateOPF()));
     connect(m_BookBrowser,          SIGNAL(UpdateBrowserSelection()),
             this,                    SLOT(UpdateBrowserSelectionToTab()));
     connect(m_BookBrowser, SIGNAL(RenumberTOCContentsRequest()),
@@ -6671,7 +6792,7 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(ui.actionAddMisspelledWord,        SIGNAL(triggered()),  tab,   SLOT(AddMisspelledWord()));
         connect(ui.actionIgnoreMisspelledWord,     SIGNAL(triggered()),  tab,   SLOT(IgnoreMisspelledWord()));
         connect(this,                              SIGNAL(SettingsChanged()), tab, SLOT(LoadSettings()));
-		connect(ui.actionSplitBlockOrAddBreak, SIGNAL(triggered()), tab, SLOT(SplitBlockOrAddBreak())); // 修改：SplitBlockOrAddBreak
+        connect(ui.actionSplitBlockOrAddBreak, SIGNAL(triggered()), tab, SLOT(SplitBlockOrAddBreak())); // 修改：SplitBlockOrAddBreak
         connect(tab,   SIGNAL(OpenIndexEditorRequest(IndexEditorModel::indexEntry *)),
                 this,  SLOT(IndexEditorDialog(IndexEditorModel::indexEntry *)));
         connect(tab,   SIGNAL(ViewImageRequest(const QUrl &)),
@@ -6754,7 +6875,7 @@ void MainWindow::BreakTabConnections(ContentTab *tab)
     disconnect(ui.actionPrint,                     0, tab, 0);
     disconnect(ui.actionAddToIndex,                0, tab, 0);
     disconnect(ui.actionMarkForIndex,              0, tab, 0);
-	disconnect(ui.actionSplitBlockOrAddBreak,			   0, tab, 0);//修改：SplitBlockOrAddBreak
+    disconnect(ui.actionSplitBlockOrAddBreak, 0, tab, 0);//修改：SplitBlockOrAddBreak
 }
 
 
@@ -6768,10 +6889,4 @@ QList<SearchEditorModel::searchEntry*> MainWindow::SearchEditorGetCurrentEntries
 void MainWindow::SearchEditorRecordEntryAsCompleted(SearchEditorModel::searchEntry* entry)
 {
     m_SearchEditor->RecordEntryAsCompleted(entry);
-}
-
-// 修改：添加函数UpdateOPF(),用于更新OPF解析对象。
-void MainWindow::UpdateOPF() {
-	QString source = m_Book->GetOPF()->GetText();
-	m_Book->GetOPF()->p.parse(source);
 }

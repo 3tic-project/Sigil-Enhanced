@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2015-2022 Doug Massay
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2023 Doug Massay
 **  Copyright (C) 2012      Dave Heiland, John Schember
 **
 **  This file is part of Sigil.
@@ -43,6 +43,7 @@ class QVBoxLayout;
 class QHBoxLayout;
 class QProgressBar;
 class OverlayHelperWidget;
+class WebViewPrinter;
 
 class PreviewWindow : public QDockWidget
 {
@@ -83,6 +84,7 @@ public slots:
     void setTitleText(const QString &text);
     void previewFloated(bool wasFloated);
     void CycleCustomCSS();
+    void PrintRendered();
 
 signals:
     void Shown();
@@ -145,6 +147,7 @@ private:
     QAction * m_copyAction;
     QAction * m_reloadAction;
     QAction * m_cycleCSSAction;
+    QAction * m_webviewPrint;
 
     QList<ElementIndex> m_location;
     
@@ -152,6 +155,9 @@ private:
     bool m_updatingPage;
     bool m_usingMathML;
     int m_cycleCSSLevel;
+
+    bool m_skipPrintPreview;
+    WebViewPrinter *m_WebViewPrinter;
 };
 
 #endif // PREVIEWWINDOW_H

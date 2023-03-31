@@ -322,7 +322,7 @@ QString NavProcessor::BuildTOC(const QList<NavTOCEntry> & toclist)
         --curlvl;
     }
     res << step + "</nav>\n";
-    return res.join(""); 
+    return res.join("");
 }
 
 
@@ -493,8 +493,8 @@ void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)
     if (mo.hasMatch()) {
         nav_data.replace(mo.capturedStart(), mo.capturedLength(), toc_xml);
     }
-	nav_data = format_nav_text(nav_data); // modified: format_nav_text
-	nav_data = Utility::format_xhtml_text(nav_data); // modified: format_xhtml_text
+    nav_data = format_nav_text(nav_data); // modified: format_nav_text
+    nav_data = Utility::format_xhtml_text(nav_data); // modified: format_xhtml_text
     m_NavResource->SetText(nav_data);
 }
 
@@ -809,8 +809,8 @@ QString NavProcessor::ConvertBookPathToNavRelative(const QString & bookpath)
 
 //-------------modified: format_nav_text ----------------
 QString NavProcessor::format_nav_text(QString text) {
-	text = Utility::RegExpSub("(<li ?[^>]*>)[ \\n\\t]*<a", "\\1<a", text);
-	text = Utility::RegExpSub("(<a ?[^>]*>)[ \\n\\t]*</li>", "\\1</li>", text);
-	return text;
+    text = Utility::RegExpSub("(<li ?[^>]*>)[ \\n\\t]*<a", "\\1<a", text);
+    text = Utility::RegExpSub("(<a ?[^>]*>)[ \\n\\t]*</li>", "\\1</li>", text);
+    return text;
 }
 //-------------------------------------------------------

@@ -171,9 +171,9 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
             }
         }
     }
-    
+
     bool checkit = ((ss.cleanOn() & CLEANON_OPEN) == CLEANON_OPEN);
-    
+
     QFuture<std::pair<HTMLResource*, bool> > html_future;
     html_future = QtConcurrent::mapped(hresources, std::bind(InitialLoadAndCheckOneHTMLFile, std::placeholders::_1, checkit));
     for (int i = 0; i < html_future.results().count(); i++) {
@@ -201,7 +201,7 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
         }
         QApplication::setOverrideCursor(Qt::WaitCursor);
     }
-    
+
     ProcessFontFiles(resources, encrypted_files);
 
     if (m_PackageVersion.startsWith('3')) {
@@ -405,13 +405,12 @@ void ImportEPUB::ExtractContainer()
 {
     int res = 0;
     if (!cp437) {
-        // CodePage437 IBM电脑最初的所用的字符集。MS-DOS系统默认字符集。
         cp437 = new QCodePage437Codec();
     }
 #ifdef Q_OS_WIN32
-    zlib_filefunc64_def ffunc; //win_x64平台一些函数结构体
-    fill_win32_filefunc64W(&ffunc); //初始化一些为win平台函数
-    unzFile zfile = unzOpen2_64(Utility::QStringToStdWString(QDir::toNativeSeparators(m_FullFilePath)).c_str(), &ffunc); //创建一个zlib对象
+    zlib_filefunc64_def ffunc;
+    fill_win32_filefunc64W(&ffunc);
+    unzFile zfile = unzOpen2_64(Utility::QStringToStdWString(QDir::toNativeSeparators(m_FullFilePath)).c_str(), &ffunc);
 #else
     unzFile zfile = unzOpen64(QDir::toNativeSeparators(m_FullFilePath).toUtf8().constData());
 #endif
@@ -420,33 +419,33 @@ void ImportEPUB::ExtractContainer()
         throw (EPUBLoadParseError(QString(QObject::tr("Cannot unzip EPUB: %1")).arg(QDir::toNativeSeparators(m_FullFilePath)).toStdString()));
     }
 
-    res = unzGoToFirstFile(zfile); //设置当前文件为第一个zipfile文件，成功则返回UNZ_OK
+    res = unzGoToFirstFile(zfile);
 
     if (res == UNZ_OK) {
         do {
             // Get the name of the file in the archive.
-            char file_name[MAX_PATH] = { 0 };
-            unz_file_info64 file_info; 
-            unzGetCurrentFileInfo64(zfile, &file_info, file_name, MAX_PATH, NULL, 0, NULL, 0); // 把 zipfile 的全局信息写进 file_info，需要一个未初始化的 unz_file_info64 结构体
+            char file_name[MAX_PATH] = {0};
+            unz_file_info64 file_info;
+            unzGetCurrentFileInfo64(zfile, &file_info, file_name, MAX_PATH, NULL, 0, NULL, 0);
             QString qfile_name;
             QString cp437_file_name;
             qfile_name = QString::fromUtf8(file_name);
-            if (!(file_info.flag & (1 << 11))) {
+            if (!(file_info.flag & (1<<11))) {
                 // General purpose bit 11 says the filename is utf-8 encoded. If not set then
                 // IBM 437 encoding might be used.
                 cp437_file_name = cp437->toUnicode(file_name);
             }
             QDate moddate = QDate(file_info.tmu_date.tm_year,
-                file_info.tmu_date.tm_mon + 1,
-                file_info.tmu_date.tm_mday);
+                                  file_info.tmu_date.tm_mon + 1,
+                                  file_info.tmu_date.tm_mday);
             QTime modtime = QTime(file_info.tmu_date.tm_hour,
-                file_info.tmu_date.tm_min,
-                file_info.tmu_date.tm_sec);
+                                  file_info.tmu_date.tm_min,
+                                  file_info.tmu_date.tm_sec);
             QDateTime modinfo = QDateTime(moddate, modtime);
-            QString modified = modinfo.toString("yyyy-MM-dd hh:mm:ss"); //修改时间
+            QString modified = modinfo.toString("yyyy-MM-dd hh:mm:ss");
             size_t afilesize = file_info.uncompressed_size;
             QString afilecrc = QString("%1").arg(file_info.crc, 8, 16, QLatin1Char('0'));
-
+            
             // qDebug() << "File:      " << qfile_name;
             // qDebug() << "  Size:    " << file_info.uncompressed_size;
             // qDebug() << "  ModDate: " << modified;
@@ -454,35 +453,33 @@ void ImportEPUB::ExtractContainer()
             // If there is no file name then we can't do anything with it.
             if (!qfile_name.isEmpty()) {
 
-                // for security reasons against maliciously 
-                // zip archives
+                // for security reasons against maliciously crafted zip archives
                 // we need the file path to always be inside the target folder 
                 // and not outside, so we will remove all illegal backslashes
                 // and all relative upward paths segments "/../" from the zip's local 
                 // file name/path before prepending the target folder to create 
                 // the final path
-                /*  修改：导入EPUB：取消路径合法性检测
-                QString original_path = qfile_name;
-                bool evil_or_corrupt_epub = false; //该变量主要检测文件名是否含有非法字符（路径字符），检测到则抛出错误。
 
-                // QString::contains 判断字符串变量是否包含某些字符串，返回Bool值
-                if (qfile_name.contains("\\")) evil_or_corrupt_epub = true;
+                QString original_path = qfile_name;
+                bool evil_or_corrupt_epub = false;
+
+                if (qfile_name.contains("\\")) evil_or_corrupt_epub = true; 
                 qfile_name = "/" + qfile_name.replace("\\","");
 
                 if (qfile_name.contains("/../")) evil_or_corrupt_epub = true;
                 qfile_name = qfile_name.replace("/../","/");
 
-                while(qfile_name.startsWith("/")) {
+                while(qfile_name.startsWith("/")) { 
                     qfile_name = qfile_name.remove(0,1);
                 }
 
-                if (cp437_file_name.contains("\\")) evil_or_corrupt_epub = true;
+                if (cp437_file_name.contains("\\")) evil_or_corrupt_epub = true; 
                 cp437_file_name = "/" + cp437_file_name.replace("\\","");
 
                 if (cp437_file_name.contains("/../")) evil_or_corrupt_epub = true;
                 cp437_file_name = cp437_file_name.replace("/../","/");
 
-                while(cp437_file_name.startsWith("/")) {
+                while(cp437_file_name.startsWith("/")) { 
                     cp437_file_name = cp437_file_name.remove(0,1);
                 }
 
@@ -491,61 +488,58 @@ void ImportEPUB::ExtractContainer()
                     unzClose(zfile);
                     throw (EPUBLoadParseError(QString(QObject::tr("Possible evil or corrupt epub file name: %1")).arg(original_path).toStdString()));
                 }
-                */
+
                 // We use the dir object to create the path in the temporary directory.
                 // Unfortunately, we need a dir ojbect to do this as it's not a static function.
-                QDir dir(m_ExtractedFolderPath);    //初始化路径对象
+                QDir dir(m_ExtractedFolderPath);
                 // Full file path in the temporary directory.
                 QString file_path = m_ExtractedFolderPath + "/" + qfile_name;
-                QFileInfo qfile_info(file_path);    //初始化文件信息
+                QFileInfo qfile_info(file_path);
 
                 QString bookpath;
 
                 // Is this entry a directory?
                 if (file_info.uncompressed_size == 0 && qfile_name.endsWith('/')) {
-                    dir.mkpath(qfile_name); //当前路径为目录
+                    dir.mkpath(qfile_name);
                     continue;
-                }
-                else {
+                } else {
                     if (!qfile_info.path().isEmpty()) dir.mkpath(qfile_info.path());
                     // add it to the list of files found inside the zip
                     if (cp437_file_name.isEmpty()) {
                         m_ZipFilePaths << qfile_name;
                         bookpath = qfile_name;
-                    }
-                    else {
+                    } else {
                         m_ZipFilePaths << cp437_file_name;
                         bookpath = cp437_file_name;
                     }
                 }
-                
+
                 // Open the file entry in the archive for reading.
                 if (unzOpenCurrentFile(zfile) != UNZ_OK) {
                     unzClose(zfile);
                     throw (EPUBLoadParseError(QString(QObject::tr("Cannot extract file: %1")).arg(qfile_name).toStdString()));
                 }
-                
+
                 // Open the file on disk to write the entry in the archive to.
                 QFile entry(file_path);
-                
+
                 if (!entry.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
                     unzCloseCurrentFile(zfile);
                     unzClose(zfile);
                     throw (EPUBLoadParseError(QString(QObject::tr("Cannot extract file: %1")).arg(qfile_name).toStdString()));
                 }
-                
+
                 // Buffered reading and writing.
-                char buff[BUFF_SIZE] = { 0 };
+                char buff[BUFF_SIZE] = {0};
                 int read = 0;
 
                 while ((read = unzReadCurrentFile(zfile, buff, BUFF_SIZE)) > 0) {
                     entry.write(buff, read);
                 }
-                
+
                 entry.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner |
-                    QFileDevice::ReadUser | QFileDevice::WriteUser |
-                    QFileDevice::ReadOther);
-                
+                                     QFileDevice::ReadUser  | QFileDevice::WriteUser  |
+                                     QFileDevice::ReadOther);
                 entry.close();
 
                 // Read errors are marked by a negative read amount.
@@ -555,7 +549,6 @@ void ImportEPUB::ExtractContainer()
                     throw (EPUBLoadParseError(QString(QObject::tr("Cannot extract file: %1")).arg(qfile_name).toStdString()));
                 }
 
-                /* 修改：取消CRC校验
                 // The file was read but the CRC did not match.
                 // We don't check the read file size vs the uncompressed file size
                 // because if they're different there should be a CRC error.
@@ -563,13 +556,10 @@ void ImportEPUB::ExtractContainer()
                     unzClose(zfile);
                     throw (EPUBLoadParseError(QString(QObject::tr("Cannot extract file: %1")).arg(qfile_name).toStdString()));
                 }
-                */
-                /* 修改：导入EPUB：取消这个不知道干啥的文件名检测
                 if (!cp437_file_name.isEmpty() && cp437_file_name != qfile_name) {
                     QString cp437_file_path = m_ExtractedFolderPath + "/" + cp437_file_name;
                     QFile::copy(file_path, cp437_file_path);
                 }
-                */
                 m_FileInfoFromZip[bookpath] = std::make_tuple(afilesize, afilecrc, modified);
             }
         } while ((res = unzGoToNextFile(zfile)) == UNZ_OK);
@@ -655,10 +645,10 @@ void ImportEPUB::ReadOPF()
 
     QXmlStreamReader opf_reader(opf_text);
     QString ncx_id_on_spine;
-    
+
     while (!opf_reader.atEnd()) {
         opf_reader.readNext();
-        
+
         if (!opf_reader.isStartElement()) {
             continue;
         }
@@ -710,7 +700,6 @@ void ImportEPUB::ReadOPF()
     m_Book->GetOPF()->SetCurrentBookRelPath(OPFBookRelPath);
     oresource->SetText(opf_text);
     oresource->SaveToDisk(false);
-    oresource->p.parse(opf_text);
     if (m_FileInfoFromZip.contains(bookpath)) {
         std::tuple<size_t, QString, QString> ainfo = m_FileInfoFromZip[bookpath];
         oresource->SetSavedSize(std::get<0>(ainfo));
@@ -797,7 +786,6 @@ void ImportEPUB::ReadManifestItemElement(QXmlStreamReader *opf_reader)
     // qDebug() << "ImportEpub with Manifest item: " << href << apath;
     QString extension = QFileInfo(apath).suffix().toLower();
 
-    /*  修改：取消对不识别媒体文件的检测
     // validate the media type if we can, and warn otherwise
     QString group = MediaTypes::instance()->GetGroupFromMediaType(type,"");
     QString ext_mtype = MediaTypes::instance()->GetMediaTypeFromExtension(extension, "");
@@ -806,7 +794,6 @@ void ImportEPUB::ReadManifestItemElement(QXmlStreamReader *opf_reader)
             " - " + QObject::tr("A temporary media type of \"%1\" has been assigned. You should edit your OPF file to fix this problem.").arg(ext_mtype);
         AddLoadWarning(load_warning);
     }
-    */
 
     if (!apath.isEmpty()) {
         
@@ -814,8 +801,7 @@ void ImportEPUB::ReadManifestItemElement(QXmlStreamReader *opf_reader)
         QString file_path = m_opfDir.absolutePath() + "/" + apath;
         file_path = Utility::resolveRelativeSegmentsInFilePath(file_path,"/");
         file_path = file_path.remove(0, m_ExtractedFolderPath.length() + 1); 
-
-        /*  修改：取消对META-INF和mimetype文件错误添加到OPF manifest的检测
+    
         // Manifest Items may *NOT* live in the META-INF and the mimetype file should NOT be manifested
         if (file_path.startsWith("META-INF/") || (file_path == "mimetype")) {
             const QString load_warning = QObject::tr("The OPF has an illegal Manifest entry for a file inside the META-INF folder for file \"%1\"").arg(QFileInfo(file_path).fileName()) +
@@ -823,8 +809,7 @@ void ImportEPUB::ReadManifestItemElement(QXmlStreamReader *opf_reader)
             AddLoadWarning(load_warning);
             return;
         }
-        */
-
+        
         if (type != NCX_MIMETYPE && extension != NCX_EXTENSION) {
             if (!m_ManifestFilePaths.contains(file_path)) {
                 if (m_Files.contains(id)) {
@@ -985,21 +970,16 @@ void ImportEPUB::LoadInfrastructureFiles()
 {
     // always SetEpubVersion before SetText in OPF as SetText will validate with it
     m_Book->GetOPF()->SetEpubVersion(m_PackageVersion);
-    /* 
-    // 修改：优化EPUB导入效率：去掉CleanSource::ProcessXML
-    QString opf_text = PrepareOPFForReading(Utility::ReadUnicodeTextFile(m_OPFFilePath));
+    QString opf_text = CleanSource::ProcessXML(PrepareOPFForReading(Utility::ReadUnicodeTextFile(m_OPFFilePath))
+                                               ,OEBPS_MIMETYPE);
     m_Book->GetOPF()->SetText(opf_text);
-    // 修改：优化EPUB导入效率：设置OPF解析对象，以供后面使用
-    m_Book->GetOPF()->p.parse(opf_text);
-    */
     QString OPFBookRelPath = m_OPFFilePath;
     OPFBookRelPath = OPFBookRelPath.remove(0,m_ExtractedFolderPath.length()+1);
     m_Book->GetOPF()->SetCurrentBookRelPath(OPFBookRelPath);
     NCXResource * ncxresource = m_Book->GetNCX();
     if (ncxresource) {
         ncxresource->SetEpubVersion(m_PackageVersion);
-        //修改：取消再一次读取文件
-        //ncxresource->SetText(CleanSource::ProcessXML(Utility::ReadUnicodeTextFile(m_NCXFilePath),"application/x-dtbncx+xml"));
+        ncxresource->SetText(CleanSource::ProcessXML(Utility::ReadUnicodeTextFile(m_NCXFilePath),"application/x-dtbncx+xml"));
         QString NCXBookRelPath = m_NCXFilePath;
         NCXBookRelPath = NCXBookRelPath.remove(0,m_ExtractedFolderPath.length()+1);
         ncxresource->SetCurrentBookRelPath(NCXBookRelPath);

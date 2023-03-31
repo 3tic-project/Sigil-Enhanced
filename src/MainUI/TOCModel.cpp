@@ -121,8 +121,7 @@ QString TOCModel::GetNCXText()
     NCXResource *ncx = m_Book->GetNCX();
     if (!ncx) return QString();
     QReadLocker locker(&(ncx->GetLock()));
-    // 修改：取消NCX文本的格式清洗
-    return ncx->GetText();
+    return CleanSource::ProcessXML(ncx->GetText(), "application/x-dtbncx+xml");
 }
 
 

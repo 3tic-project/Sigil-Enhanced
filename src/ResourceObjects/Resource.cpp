@@ -190,22 +190,22 @@ QIcon Resource::Icon() const
 
 bool Resource::RenameTo(const QString &new_filename)
 {
-	QString new_path;
-	bool successful = false;
-	{
-		QWriteLocker locker(&m_ReadWriteLock);
-		new_path = QFileInfo(m_FullFilePath).absolutePath() + "/" + new_filename;
-		successful = Utility::RenameFile(m_FullFilePath, new_path);
-	}
+    QString new_path;
+    bool successful = false;
+    {
+        QWriteLocker locker(&m_ReadWriteLock);
+        new_path = QFileInfo(m_FullFilePath).absolutePath() + "/" + new_filename;
+        successful = Utility::RenameFile(m_FullFilePath, new_path);
+    }
 
-	if (successful) {
-		QString old_path = m_FullFilePath;
-		m_FullFilePath = new_path;
-		SetShortPathName(new_filename);
-		emit Renamed(this, old_path);
-	}
+    if (successful) {
+        QString old_path = m_FullFilePath;
+        m_FullFilePath = new_path;
+        SetShortPathName(new_filename);
+        emit Renamed(this, old_path);
+    }
 
-	return successful;
+    return successful;
 }
 
 bool Resource::MoveTo(const QString &new_bookpath)
@@ -229,22 +229,23 @@ bool Resource::MoveTo(const QString &new_bookpath)
 
 bool Resource::Delete()
 {
-	bool successful = false;
-	{
-		QWriteLocker locker(&m_ReadWriteLock);
-		successful = Utility::SDeleteFile(m_FullFilePath);
-	}
+    bool successful = false;
+    {
+        QWriteLocker locker(&m_ReadWriteLock);
+        successful = Utility::SDeleteFile(m_FullFilePath);
+    }
 
-	if (successful) {
-		emit Deleted(this);
-		// try to prevent any resource modified signals from going out
-		// while we wait for delete to actually happen
-		disconnect(this, 0, 0, 0);
-		deleteLater();
-	}
+    if (successful) {
+        emit Deleted(this);
+        // try to prevent any resource modified signals from going out
+        // while we wait for delete to actually happen
+        disconnect(this, 0, 0, 0);
+        deleteLater();
+    }
 
-	return successful;
+    return successful;
 }
+
 
 Resource::ResourceType Resource::Type() const
 {

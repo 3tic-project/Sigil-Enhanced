@@ -189,7 +189,7 @@ public slots:
 
     void SplitSection();
 
-	void SplitBlockOrAddBreak();//ÐÞ¸Ä£ºSplitBlockOrAddBreak
+    void SplitBlockOrAddBreak();//ÐÞ¸Ä£ºSplitBlockOrAddBreak
 
     void InsertSGFSectionMarker();
 
@@ -409,8 +409,6 @@ private:
     bool m_defaultCaretLocationToTop;
 
     int m_LastPosition;
-
-    QSharedPointer<Book> m_Book;
 };
 
 #endif // FLOWTAB_H

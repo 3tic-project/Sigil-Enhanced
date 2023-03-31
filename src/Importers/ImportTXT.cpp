@@ -60,9 +60,11 @@ QSharedPointer<Book> ImportTXT::GetBook(bool extract_metadata)
     if (!m_Book->GetConstOPF()) {
         m_Book->GetFolderKeeper()->AddOPFToFolder(m_EpubVersion);
     } 
+
     QString source = LoadSource();
     HTMLResource * new_resource = CreateHTMLResource(source);
     InitializeHTMLResource(source, new_resource);
+
     // Before returning the new book, if it is epub3, make sure it has a nav
     if (m_EpubVersion.startsWith('3')) {
         HTMLResource* nav_resource = m_Book->GetConstOPF()->GetNavResource();
@@ -72,6 +74,7 @@ QSharedPointer<Book> ImportTXT::GetBook(bool extract_metadata)
             m_Book->GetOPF()->SetItemRefLinear(nav_resource, false);
         }
     }
+
     // Before returning the new book, if it is epub2, make sure it has an ncx
     if (m_EpubVersion.startsWith('2')) {
         NCXResource* ncx_resource = m_Book->GetNCX();
@@ -85,8 +88,6 @@ QSharedPointer<Book> ImportTXT::GetBook(bool extract_metadata)
             ncx_resource->FillWithDefaultTextToBookPath(m_EpubVersion, first_xhtml_bookpath);
         }
     }
-    QString bbb = m_Book->GetConstOPF()->GetText();
-    QString ccc = m_Book->GetConstOPF()->p.convert_to_xml();
     return m_Book;
 }
 
@@ -119,17 +120,38 @@ void ImportTXT::InitializeHTMLResource(const QString &source, HTMLResource *reso
 // a string with paragraphs wrapped into <p> tags
 QString ImportTXT::CreateParagraphs(const QStringList &lines) const
 {
-    // modified: modified the format logic of txt importing.
     QString text = "";
+    //--------------------- -modified: modified the format logic of txt importing ------------------------
+    /*
+    QString paragraph = "<p>";
+    int num_lines = lines.count();
+
+    for (int i = 0; i < num_lines; ++i) {
+        QString line = lines.at(i);
+
+        if (line.isEmpty() || line[ 0 ].isSpace()) {
+            text.append(paragraph.append("</p>\n"));
+            paragraph = "<p>";
+        }
+
+        // We prepend a space so words on
+        // line breaks don't get merged
+        paragraph.append(QString(line.prepend(" ")).toHtmlEscaped());
+    }
+    text.append(paragraph.append("</p>\n"));*/
 
     int num_lines = lines.count();
     for (int i = 0; i < num_lines; ++i) {
         QString line = lines.at(i);
         if (line.isEmpty()) {
             text.append("<p><br/></p>\n");
-        } else {
+        }
+        else {
             text.append("<p>" + line + "</p>\n");
         }
     }
+    //----------------------------------------------------------------------------------------------------
     return text;
 }
+
+

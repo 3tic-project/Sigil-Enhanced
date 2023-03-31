@@ -1413,7 +1413,7 @@ void Book::SetModified(bool modified)
 {
     bool old_modified_state = m_IsModified;
     m_IsModified = modified;
-    
+
     if (modified != old_modified_state) {
         emit ModifiedStateChanged(m_IsModified);
     }

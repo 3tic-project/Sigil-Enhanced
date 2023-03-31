@@ -72,7 +72,7 @@ public:
 
     /**
      * Splits the content of the resource into multiple section.
-     * The SGF section markers are used as the break points.LinkedResourceUpdated
+     * The SGF section markers are used as the break points.
      * The first section is set as the content of the resource,
      * and the others are returned.
      *

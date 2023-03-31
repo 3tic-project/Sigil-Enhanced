@@ -345,10 +345,10 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
     QStringList not_renamed;
     QHash<QString, QString> update;
     SettingsStore ss;
-	//----修改：添加两个列表储存待修改资源----
-	QList<QString> old_full_paths;
-	QList<Resource *> valid_resources;
-	//-------------------------------------
+    //--------- 修改：批量重命名 ----------
+    QList<QString> old_full_paths;
+    QList<Resource*> valid_resources;
+    //-------------------------------------
     int i = 0;
     foreach(Resource * resource, resources) {
         QString old_bookpath = resource->GetRelativePath();
@@ -380,11 +380,10 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
         }
 
         bool rename_success = false;
-		//这部分的修改是优化批量重命名的效率
-        //修改：取消资源文件对FolderKeeper发送Renamed信号
-		disconnect(resource, SIGNAL(Renamed(const Resource *, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource *, QString)));
-		//修改：提前通过GetFullPath()保存旧路径。在RenameTo()之后，GetFullPath()的值会更改为新值，必须提前保存旧值。
-		QString old_full_path = resource->GetFullPath();
+        //------------------------------------ 修改：批量重命名 ---------------------------------
+        disconnect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); // 取消资源文件对FolderKeeper发送Renamed信号
+        QString old_full_path = resource->GetFullPath();  // 提前通过GetFullPath()保存旧路径。在RenameTo()之后，GetFullPath()的值会更改为新值，必须提前保存旧值。
+        //---------------------------------------------------------------------------------------
         // special case the OPFResource and the NCXResource
         if (resource->Type() == Resource::OPFResourceType) {
             OPFResource* opfres = qobject_cast<OPFResource*>(resource);
@@ -402,19 +401,20 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
         if (!rename_success) {
             if (ss.showFullPathOn()) {
                 not_renamed.append(resource->GetRelativePath());
-            }
-            else {
+            } else {
                 not_renamed.append(resource->ShortPathName());
             }
             continue;
         }
-		valid_resources << resource;
-		old_full_paths << old_full_path; //修改：储存重命名之前的旧路径
+        // -------- 修改：批量重命名 ---------
+        valid_resources << resource;
+        old_full_paths << old_full_path; 
+        // -----------------------------------
         update[ old_bookpath ] = resource->GetRelativePath();
     }
 
-    m_Book->GetFolderKeeper()->BulkResourceRenamed(valid_resources, old_full_paths);//修改：批量重命名
-	
+    m_Book->GetFolderKeeper()->BulkResourceRenamed(valid_resources, old_full_paths); //修改：批量重命名
+
     if (update.count() > 0) {
         //UniversalUpdates::PerformUniversalUpdates 更新文件中关联的链接。
         UniversalUpdates::PerformUniversalUpdates(true, m_Book->GetFolderKeeper()->GetResourceList(), update);

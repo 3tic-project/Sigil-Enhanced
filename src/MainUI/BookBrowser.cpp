@@ -1497,15 +1497,15 @@ void BookBrowser::RemoveResources(QList<Resource *> tab_resources, QList<Resourc
     }
 
     // Delete the resources
-    int count = 0;
 
-	/*修改：取消逐个删除文件，改用批量删除
+    // ------ 修改：批量删除 ------------------
+    /* 
     foreach(Resource * resource, resources) {
         resource->Delete();
     }
-	*/
-	//修改：删除文件耗时长：调用 FolderKeeper 类的 BulkRemoveResources 函数，该函数可以批量删除文件在文件管理器的信息和OPF的信息。
+    */
     m_Book->GetFolderKeeper()->BulkRemoveResources(resources);
+    // ----------------------------------------
 
     emit ResourcesDeleted();
     emit BookContentModified();

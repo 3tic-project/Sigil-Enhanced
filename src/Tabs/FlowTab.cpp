@@ -129,7 +129,6 @@ void FlowTab::CreateCodeViewIfRequired(bool is_delayed_load)
     QApplication::setOverrideCursor(Qt::WaitCursor);
     m_wCodeView = new CodeViewEditor(CodeViewEditor::Highlight_XHTML, true, this);
     m_wCodeView->SetReformatHTMLEnabled(true);
-    
     // m_views->addWidget(m_wCodeView);
 
     if (is_delayed_load) {
@@ -247,6 +246,7 @@ void FlowTab::ResourceModified()
         m_wCodeView->ScrollToPosition(m_LastPosition);
         m_LastPosition = -1;
     }
+
     if (IsLoadingFinished()) {
         DBG qDebug() << "FlowTab in ResourceModified";
         EmitUpdatePreview();
@@ -732,12 +732,15 @@ void FlowTab::SplitSection()
         emit OldTabRequest(m_wCodeView->SplitSection(), m_HTMLResource);
     }
 }
-// 修改：SplitBlockOrAddBreak
+
+// -------------- 修改：SplitBlockOrAddBreak ----------------
 void FlowTab::SplitBlockOrAddBreak()
 {
-	if (!IsDataWellFormed()) return;
-	m_wCodeView->SplitBlockOrAddBreak();
+    if (!IsDataWellFormed()) return;
+    m_wCodeView->SplitBlockOrAddBreak();
 }
+// ----------------------------------------------------------
+
 void FlowTab::InsertSGFSectionMarker()
 {
     if (!IsDataWellFormed()) {
@@ -1037,14 +1040,23 @@ void FlowTab::HeadingStyle(const QString &heading_type, bool preserve_attributes
         QChar last_char = heading_type[ heading_type.count() - 1 ];
 
         // For heading_type == "Heading #"
+        // --------------------------修改：多行添加块元素标签---------------------------
+        /*
         if (last_char.isDigit()) {
             m_wCodeView->FormatBlock("h" % QString(last_char), preserve_attributes);
         } else if (heading_type == "Normal") {
+            m_wCodeView->FormatBlock("p", preserve_attributes);
+        }*/
+        if (last_char.isDigit()) {
+            m_wCodeView->FormatBlock("h" % QString(last_char), preserve_attributes);
+        }
+        else if (heading_type == "Normal") {
             m_wCodeView->FormatBlock_multiline("p", preserve_attributes);
-		}
-		else if (heading_type == "Division") {
-			m_wCodeView->FormatBlock_multiline("div", preserve_attributes);
-		}
+        }
+        else if (heading_type == "Division") {
+            m_wCodeView->FormatBlock_multiline("div", preserve_attributes);
+        }
+        // -----------------------------------------------------------------------------
     }
 }
 
