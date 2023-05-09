@@ -833,7 +833,7 @@ if a sans-serif font-family specified in your CSS</string>
   <customwidget>
    <class>XhtmlFormatEditor</class>
    <extends>QTextEdit</extends>
-   <header>ViewEditors\XhtmlFormatEditor.h</header>
+   <header>ViewEditors/XhtmlFormatEditor.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

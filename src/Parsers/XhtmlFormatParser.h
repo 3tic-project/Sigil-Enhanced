@@ -12,8 +12,8 @@ class XhtmlFormatParser
 public:
 	XhtmlFormatParser(QString conf_text);
 
-	static enum state { UNDEFINED_PROP = -100 };
-	static enum sort_mode { ORI, ASCEND, DESCEND };
+	enum state { UNDEFINED_PROP = -100 };
+	enum sort_mode { ORI, ASCEND, DESCEND };
 
 	struct globalprops {
 		short indent = UNDEFINED_PROP;
