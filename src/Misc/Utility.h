@@ -251,7 +251,7 @@ public:
     // Generate a CRC32 checksum on a file
     static QString FileCRC32(const QString& filepath);
 
-    static QString format_xhtml_text(QString text); // modified: Prettify xhtml
+    // -------------------------- modified: my additions ----------------------------------
 
     static QString RegExpSub(const QString& regexp, const QString& alt_pattern, const QString& text, int max_count = 0); // modified: Prettify xhtml, Regexp, re_sub
 
@@ -261,6 +261,11 @@ public:
 
     static QString ExtToMTypeMap(QString& ext);
 
+    struct TrimmedIndex {
+        int before;
+        int after;
+    };
+    static TrimmedIndex StringTrimmedIndex(const QString& text);
 };
 #endif // UTILITY_H
 

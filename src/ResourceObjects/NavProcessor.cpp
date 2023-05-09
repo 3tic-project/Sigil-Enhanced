@@ -494,7 +494,6 @@ void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)
         nav_data.replace(mo.capturedStart(), mo.capturedLength(), toc_xml);
     }
     nav_data = format_nav_text(nav_data); // modified: format_nav_text
-    nav_data = Utility::format_xhtml_text(nav_data); // modified: format_xhtml_text
     m_NavResource->SetText(nav_data);
 }
 

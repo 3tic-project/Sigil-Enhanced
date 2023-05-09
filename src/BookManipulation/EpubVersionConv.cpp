@@ -57,7 +57,7 @@ void EpubVersionConv::convert_xhtml_to3() {
 			if (ti.tname == "html" && ti.ttype == "begin") {
 				QString tagstring = text.mid(ti.pos, ti.len);
 				OpenTagInfo opentaginfo = parseAttribute(tagstring);
-				opentaginfo.atts["xmlns:epub"] = "http://www.idpf.org/2007/opf";
+				opentaginfo.atts["xmlns:epub"] = "http://www.idpf.org/2007/ops";
 				new_text += text.mid(offset, ti.pos - offset);
 				new_text += opentaginfo_to_string(opentaginfo);
 				offset = ti.pos + ti.len;
@@ -364,7 +364,7 @@ void EpubVersionConv::build_nav() {
 	QString new_text = "";
 	new_text += "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
 	new_text += "<!DOCTYPE html>\n";
-	new_text += "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/opf\"";
+	new_text += "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\"";
 	new_text += QString(" lang=\"%1\" xml:lang=\"%2\">\n\n").arg(lang).arg(lang);
 	new_text += "<head>\n";
 	new_text += indent % "<meta charset=\"utf-8\"/>\n";
@@ -439,6 +439,8 @@ void EpubVersionConv::build_nav() {
 	foreach (GuideEntry ge, guide_res) {
 		QString href = ge.m_href;
 		QString etype = "";
+		if (href.length() > 5) 
+			href = href.mid(5);
 		if (_guide_epubtype_map.contains(ge.m_type))
 			etype = _guide_epubtype_map.value(ge.m_type);
 		if (etype != "") {

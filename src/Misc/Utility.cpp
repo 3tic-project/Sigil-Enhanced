@@ -67,8 +67,6 @@
 #include "Misc/SettingsStore.h"
 #include "Misc/SleepFunctions.h"
 #include "MainUI/MainApplication.h"
-#include "Parsers/TagLister.h" // modified: Prettify xhtml
-#include "Parsers/CSSInfo.h" // modified: format_xhtml_text
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     #define QT_ENUM_SKIPEMPTYPARTS Qt::SkipEmptyParts
@@ -1441,114 +1439,6 @@ QString Utility::FileCRC32(const QString& filePath)
 }
 
 
-// --------------- modified: Prettify xhtml ---------------------------
-// Thinking : While reading the block tag, curlvl plus 1,
-//			  every tag only control the indent blank before the tag, and judge whether the line should be broke.
-//			  If there are no characters "\n" before the tag and the tag is block level element, it should be added "\n" and indent blank before.
-QString Utility::format_xhtml_text(QString text) {
-    const QStringList BlockElements = QStringList() << "html" << "body" << "head" << "meta" << "link" << "title" << "style" << "script" << "p" << "div" << "h1" << "h2" << "h3" << "h4" << "h5" << "h6" << "ol" << "ul" << "li" << "address" << "blockquote" <<
-        "dd" << "dl" << "fieldset" << "form" << "hr" << "nav" << "isindex" << "menu" << "noframes" << "noscript" << "pre" << "table" << "tr" << "td" << "th" << "article";
-    QHash<QString, bool> ElementsBlockLevelDict;
-    foreach(QString key, BlockElements) {
-        ElementsBlockLevelDict[key] = true;
-    }
-
-    QRegExp skip_space("[^ \\n\\r\\t]");
-    QRegExp next_tag("<");
-    QRegExp full_space("^[ \\t]+$");
-
-    text = trimmed(RegExpSub("\\n[ \\t]+", "\n", text), " \n\t");
-    text = RegExpSub("[ \\t]+", " ", text);
-    text = RegExpSub("\\n{2,}", "\n", text);
-
-    QString new_text = "";
-    TagLister taglist(text);
-    QString tag_txt, before_text, tmp_txt;
-    int offset = 0;
-    int lvl = -1;
-    TagLister::TagInfo last_ti = taglist.at(0);
-    for (int i = 0; i < taglist.size(); i++) {
-        TagLister::TagInfo ti = taglist.at(i);
-        if (i > 0) last_ti = taglist.at(i - 1);
-        if (ti.tname == "?xml") {
-            new_text += text.mid(ti.pos, ti.len) % "\n";
-            offset = ti.pos + ti.len;
-            offset = text.indexOf(next_tag, offset);
-            continue;
-        }
-        if (ti.tname == "!DOCTYPE") {
-            tag_txt = text.mid(ti.pos, ti.len);
-            if (tag_txt.contains("xhtml11.dtd")) {
-                new_text += "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\n  \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n";
-            }
-            else {
-                new_text += "<!DOCTYPE html>\n";
-            }
-            offset = ti.pos + ti.len;
-            offset = text.indexOf(next_tag, offset);
-            continue;
-        }
-        if (ti.ttype == "begin" || ti.ttype == "single") {
-
-            ++lvl;
-            if (ti.tname == "html" || ti.tname == "body") --lvl;// Decrease the indent by one when elements in these tags.
-
-            before_text = offset == ti.pos ? "" : text.mid(offset, ti.pos - offset);
-
-            if (ti.tname == "body") before_text.prepend("\n");
-
-            if (before_text == "" || before_text.indexOf(full_space) > -1) {
-                if (ElementsBlockLevelDict.value(ti.tname, false)) {
-                    new_text += '\n' + QString(2 * (lvl >= 0 ? lvl : 0), ' ');
-                }
-                tag_txt = text.mid(ti.pos, ti.len);
-                new_text += RegExpSub("[ \\n\\t]+", " ", tag_txt);
-                offset = ti.pos + ti.len;
-                if (ti.ttype == "single" && lvl > -1) --lvl;
-                continue;
-            }
-            before_text = RegExpSub("\\n", "\n" % QString(2 * (lvl >= 0 ? lvl : 0), ' '), before_text);
-            tag_txt = text.mid(ti.pos, ti.len);
-            new_text += before_text + RegExpSub("[ \\n\\t]+", " ", tag_txt);
-            offset = ti.pos + ti.len;
-            if (ti.ttype == "single" && lvl > -1) --lvl;
-            continue;
-        }
-        if (ti.ttype == "end") {
-            before_text = offset == ti.pos ? "" : text.mid(offset, ti.pos - offset);
-
-            if (ti.tname == "style") {
-                if (before_text != "") {
-                    CSSInfo css_info(before_text);
-                    QString reformat_css = css_info.getReformattedCSSText(true);
-                    //before_text = "\n  " + reformat_css.split('\n').join("\n  ") + '\n';
-                    before_text = "\n" + reformat_css + "\n";
-                }
-            }
-
-            if (before_text == "" || before_text.indexOf(full_space) > -1) {
-                if (ElementsBlockLevelDict.value(last_ti.tname, false)) {
-                    if (ti.open_pos != last_ti.pos)
-                        new_text += '\n' + QString(2 * (lvl >= 0 ? lvl : 0), ' ');
-                }
-                tag_txt = text.mid(ti.pos, ti.len);
-                new_text += tag_txt;
-                offset = ti.pos + ti.len;
-                if (lvl > -1) --lvl;
-                continue;
-            }
-            before_text = RegExpSub("\\n", "\n" % QString(2 * (lvl >= 0 ? lvl : 0), ' '), before_text);
-            tag_txt = text.mid(ti.pos, ti.len);
-            new_text += before_text + tag_txt;
-            offset = ti.pos + ti.len;
-            if (lvl > -1) --lvl;
-            continue;
-        }
-    }
-    return new_text;
-}
-//---------------------------------------------------------------------
-
 // --------------- modified: Prettify xhtml,Regexp, re_sub ---------------------------
 QString Utility::RegExpSub(const QString& regexp, const QString& alt_pattern, const QString& text, int max_count) {
 
@@ -1686,3 +1576,36 @@ QString Utility::ExtToMTypeMap(QString& ext)
     return ExtToMType[ext];
 }
 //--------------------------------------------------------------------------------------------
+
+//------------------------修改：工具：字符串前后端非空字符位置-----------------------------------
+// 该函数用于截取字符串前后两端非空白字符的位置，空白字符指空格符和制表符。
+// 它返回的是一对位置数字，代表前端非空白字符的起始位置和后端非空白字符的截止位置。
+Utility::TrimmedIndex Utility::StringTrimmedIndex(const QString& text) {
+
+    if (text.size() == 0) {
+        return {0,0};
+    }
+    // s_index 代表前端非空白字符起始位置，e_index代表后端非空白字符截止位置。
+    // 如果 返回时 s_index 和 e_index 都为 0 ，说明该字符串为空。如果s_index 等于 e_index 说明该字符串由纯空白字符组成。
+    int s_index = 0, e_index = text.size();
+    for (int i = 0; i < text.size(); i++) {
+        // 0x20 空格 0x9 制表符\t
+        if (text[i] == QChar(0x20) || text[i] == QChar(0x9)) {
+            ++s_index;
+            continue;
+        }
+        break;
+    }
+    for (int i = text.size(); i >= s_index; i--) {
+        if (i == s_index) {
+            e_index = s_index;
+            break;
+        }
+        if (text[i - 1] == QChar(0x20) || text[i - 1] == QChar(0x9)) {
+            --e_index;
+            continue;
+        }
+        break;
+    }
+    return { s_index, e_index };
+}

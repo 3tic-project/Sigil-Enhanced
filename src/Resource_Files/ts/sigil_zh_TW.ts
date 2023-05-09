@@ -234,6 +234,17 @@
 </context>
 <context>
     <name>AppearanceWidget</name>
+    <name>AppearanceWidget</name>
+    <message><!--modified-->
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="0"/>
+        <source>XHTML Format</source>
+        <translation>XHTML格式化</translation>
+    </message>
+    <message><!--modified-->
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="0"/>
+        <source>Reset</source>
+        <translation>重置</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="14"/>
         <source>Appearance</source>

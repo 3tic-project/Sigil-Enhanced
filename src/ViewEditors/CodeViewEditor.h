@@ -895,8 +895,14 @@ private:
 
     TagLister m_TagList;
     bool m_regen_taglist;
-    pair<int, int> StringTrimmedIndex(const QString& text); // 修改：工具：字符串前后端非空字符位置
     void insertFromMimeData(const QMimeData* source); // modified: paste event
+    // --------------- modified: keyborad event -------------
+    HighlighterType m_hightype;
+    bool HtmlViewKeyPressEvent(QKeyEvent* event);
+    bool CssViewKeyPressEvent(QKeyEvent* event);
+    bool CommonKeyPressEvent(QKeyEvent* event);
+    int lastNonBlankCharInLine();
+    // ------------------------------------------------------
 };
 
 #endif // CODEVIEWEDITOR_H

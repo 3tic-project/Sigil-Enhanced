@@ -36,7 +36,6 @@
 #define INDEX_V6_SETTINGS_FILE    "sigil_index_v6.ini"
 #define SEARCHES_V6_SETTINGS_FILE "sigil_searches_v6.ini"
 #define SIGIL_V6_SETTINGS_FILE    "sigil_v6.ini"
-
 #include <QStringList>
 
 class QString;

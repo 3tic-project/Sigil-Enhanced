@@ -30,7 +30,6 @@
 #include "Misc/SettingsStore.h"
 #include "PreferencesWidget.h"
 #include "ui_PAppearanceWidget.h"
-
 /**
  * Preferences widget for font/appearance related preferences.
  */
@@ -47,6 +46,7 @@ private slots:
     void changeUIFontButtonClicked();
     void resetAllButtonClicked();
     void newSliderValue(int value);
+    void resetXhtmlFormat(); //modified: XHTML Fomat Configure
 
 private:
     SettingsStore::CodeViewAppearance readSettings();

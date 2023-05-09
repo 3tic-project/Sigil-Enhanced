@@ -67,6 +67,8 @@
 #include "ViewEditors/CodeViewEditor.h"
 #include "ViewEditors/LineNumberArea.h"
 #include "sigil_constants.h"
+#include "Parsers/XhtmlFormatParser.h" // modified: XHTML Fomat Configure
+#include "Misc/SettingsStoreExtend.h" // modified: XHTML Fomat Configure
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     #define QT_ENUM_SKIPEMPTYPARTS Qt::SkipEmptyParts
@@ -120,7 +122,8 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     m_MarkedTextStart(-1),
     m_MarkedTextEnd(-1),
     m_ReplacingInMarkedText(false),
-    m_regen_taglist(true)
+    m_regen_taglist(true),
+    m_hightype(high_type) //modified: keyboard_event
 {
     if (high_type == CodeViewEditor::Highlight_XHTML) {
         // m_Highlighter = new XHTMLHighlighter(check_spelling, this);
@@ -566,9 +569,9 @@ void CodeViewEditor::SplitBlockOrAddBreak()
     int line_end = cursor.selectionEnd();
     cursor.setPosition(ori_pos);
 
-    pair<int, int> trimmed_pos = StringTrimmedIndex(selected_text);
-    int indent_length = trimmed_pos.first,
-        nonblank_end = trimmed_pos.second;
+    Utility::TrimmedIndex trimmed_pos = Utility::StringTrimmedIndex(selected_text);
+    int indent_length = trimmed_pos.before,
+        nonblank_end = trimmed_pos.after;
     // 光标位于行末端或行尾空白字符处
     if (cursor.atBlockEnd() || ori_pos >= line_start + nonblank_end) {
         if (!cursor.atBlockEnd()) cursor.movePosition(QTextCursor::EndOfLine);
@@ -3024,40 +3027,6 @@ void CodeViewEditor::FormatBlock(const QString &element_name, bool preserve_attr
     return;
 }
 
-//------------------------修改：工具：字符串前后端非空字符位置-----------------------------------
-// 该函数用于截取字符串前后两端非空白字符的位置，空白字符指空格符和制表符。
-// 它返回的是一对位置数字，代表前端非空白字符的起始位置和后端非空白字符的截止位置。
-pair<int, int> CodeViewEditor::StringTrimmedIndex(const QString& text) {
-
-    if (text.size() == 0) {
-        return pair<int, int>(0, 0);
-    }
-    // s_index 代表前端非空白字符起始位置，e_index代表后端非空白字符截止位置。
-    // 如果 返回时 s_index 和 e_index 都为 0 ，说明该字符串为空。如果s_index 等于 e_index 说明该字符串由纯空白字符组成。
-    int s_index = 0, e_index = text.size();
-    for (int i = 0; i < text.size(); i++) {
-        // 0x20 空格 0x9 制表符\t
-        if (text[i] == QChar(0x20) || text[i] == QChar(0x9)) {
-            ++s_index;
-            continue;
-        }
-        break;
-    }
-    for (int i = text.size(); i >= s_index; i--) {
-        if (i == s_index) {
-            e_index = s_index;
-            break;
-        }
-        if (text[i - 1] == QChar(0x20) || text[i - 1] == QChar(0x9)) {
-            --e_index;
-            continue;
-        }
-        break;
-    }
-    return pair<int, int>(s_index, e_index);
-}
-//---------------------------------------------------------------------------------------------
-
 //------------------------------------------------修改：多行添加块元素标签 (ctrl + 7 / ctrl + 8)------------------------------------------------
 void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool preserve_attributes)
 {
@@ -3099,10 +3068,9 @@ void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool pre
 
     QStringList newText_list = QStringList();
     foreach(QString line_text, splited_list) {
-        pair<int, int> trimmed_pos;
-        trimmed_pos = StringTrimmedIndex(line_text); // trimmed_pos 储存字符串前端非空白字符起点和后端非空白字符截止点。
-        if (trimmed_pos.first == trimmed_pos.second) {
-            QString pre_blank = line_text.left(trimmed_pos.first);
+        Utility::TrimmedIndex trimmed_pos = Utility::StringTrimmedIndex(line_text); // trimmed_pos 储存字符串前端非空白字符起点和后端非空白字符截止点。
+        if (trimmed_pos.before == trimmed_pos.after) {
+            QString pre_blank = line_text.left(trimmed_pos.before);
             QString open_element = "<" % element_name % ">",
                 close_element = "</" % element_name % ">",
                 inner_content = "";
@@ -3112,9 +3080,9 @@ void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool pre
             newText_list.append(pre_blank % open_element % inner_content % close_element);
         }
         else {
-            QString pre_blank = line_text.left(trimmed_pos.first);
-            QString post_blank = line_text.right(line_text.size() - trimmed_pos.second);
-            QString trimmed_text = line_text.mid(trimmed_pos.first, trimmed_pos.second - trimmed_pos.first);
+            QString pre_blank = line_text.left(trimmed_pos.before);
+            QString post_blank = line_text.right(line_text.size() - trimmed_pos.after);
+            QString trimmed_text = line_text.mid(trimmed_pos.before, trimmed_pos.after - trimmed_pos.before);
             //
             bool wrapIt = true;
             // 接下来是侦测它的是否节点以及节点类型。
@@ -3835,14 +3803,18 @@ void CodeViewEditor::ReformatHTML(bool all, bool to_valid)
 
     if (all) {
         mainWindow->GetCurrentBook()->ReformatAllHTML(to_valid);
-
     } else {
         original_text = toPlainText();
 
         if (to_valid) {
             new_text = CleanSource::Mend(original_text, version);
         } else {
-            new_text = CleanSource::MendPrettify(original_text, version);
+            //------------------ modified: Prettify xhtml----------------
+            //new_text = CleanSource::MendPrettify(original_text, version);
+            SettingsStoreExtend settings_ext;
+            XhtmlFormatParser xfparser(settings_ext.getXhtmlFormat());
+            new_text = CleanSource::XhtmlPrettify(original_text, xfparser);
+            //------------------------------------------------------------
         }
 
         if (original_text != new_text) {
@@ -3856,6 +3828,7 @@ void CodeViewEditor::ReformatHTML(bool all, bool to_valid)
         }
     }
 }
+
 
 QString CodeViewEditor::RemoveFirstTag(const QString &text, const QString &tagname)
 {
@@ -4214,9 +4187,21 @@ void CodeViewEditor::ConnectSignalsToSlots()
 #endif
 }
 
-//--------------------------------------------------------------修改：键盘事件：添加键盘事件处理函数--------------------------------------------------------------
+//-------------------------------------------------------------- modified: keyborad event --------------------------------------------------------------
 void CodeViewEditor::keyPressEvent(QKeyEvent* event)
 {
+    if (m_hightype == CodeViewEditor::Highlight_XHTML) {
+        if (HtmlViewKeyPressEvent(event)) return;
+    }
+    else if (m_hightype == CodeViewEditor::Highlight_CSS) {
+        if (CssViewKeyPressEvent(event)) return;
+    }
+    else {
+        if (CommonKeyPressEvent(event)) return;
+    }
+    QPlainTextEdit::keyPressEvent(event);
+}
+bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
     if (event->key() == Qt::Key_Tab || event->key() == Qt::Key_Backtab) { // 单按Tab键，键码为Key_Tab；按下Shift键后按Tab键，键码改为Key_Backtab
         //在光标选择文本的条件下
         if (textCursor().hasSelection()) {  // 侦测到文本选择下按 Tab 键或 Shift + Tab 键，进行多行缩进（退缩进）
@@ -4272,13 +4257,15 @@ void CodeViewEditor::keyPressEvent(QKeyEvent* event)
                 cursor.setPosition(ori_End + e_offset, QTextCursor::KeepAnchor);
                 setTextCursor(cursor);
             }
+            return true;
         }
-        else if (event->key() == Qt::Key_Tab) {
+        else if (event->key() == Qt::Key_Tab) { // 单行（光标非选择状态）tab 键
             textCursor().beginEditBlock();
             textCursor().insertText("  ");
             textCursor().endEditBlock();
+            return true;
         }
-        else if (event->key() == Qt::Key_Backtab) { //侦测到Shift + tab键（非文本选择状态），进行单行缩进。
+        else if (event->key() == Qt::Key_Backtab) { // 单行（光标非选择状态） Shift + Tab 键
             QTextCursor cursor = textCursor();
             int ori_pos = cursor.position();
             int offset = 0;
@@ -4311,40 +4298,14 @@ void CodeViewEditor::keyPressEvent(QKeyEvent* event)
                     setTextCursor(cursor);
                 }
             }
+            return true;
         }
-    }
-    else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //侦测到回车键或Enter键，判断是否补偿缩进。
-        QTextCursor cursor = textCursor();
-        int ori_pos = cursor.position();
-        cursor.select(QTextCursor::LineUnderCursor);
-        int line_start = cursor.selectionStart();
-        QString current_line = cursor.selectedText();
-        int indent_len = StringTrimmedIndex(current_line).first;
-        QString indent = current_line.left(indent_len);
-        QString insert_text = "";
-        if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
-            insert_text = indent.left(ori_pos - line_start) + QChar(0x2029);
-            insert_text += indent + current_line.right(current_line.size() - indent_len);
-            cursor.beginEditBlock();
-            cursor.insertText(insert_text);
-            cursor.endEditBlock();
-            cursor.setPosition(ori_pos * 2 - line_start + 1);
-            setTextCursor(cursor);
-        }
-        else {
-            cursor.setPosition(ori_pos);
-            insert_text = QChar(0x2029) + indent;
-            cursor.beginEditBlock();
-            cursor.insertText(insert_text);
-            cursor.endEditBlock();
-        }
-
     }
     else if (event->key() == Qt::Key_Backspace) { //侦测到退格键，判断是否退缩进（判断退2个空白符还是退1个字符）
         QTextCursor cursor = textCursor();
         if (cursor.hasSelection()) {
             QPlainTextEdit::keyPressEvent(event);
-            return;
+            return true;
         }
 
         int ori_pos = cursor.position();
@@ -4371,7 +4332,44 @@ void CodeViewEditor::keyPressEvent(QKeyEvent* event)
         else {
             QPlainTextEdit::keyPressEvent(event);
         }
+        return true;
     }
+    return false;
+}
+
+bool CodeViewEditor::HtmlViewKeyPressEvent(QKeyEvent* event)
+{
+    if (CommonKeyPressEvent(event)) return true;
+
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //侦测到回车键或Enter键，判断是否补偿缩进。
+        QTextCursor cursor = textCursor();
+        int ori_pos = cursor.position();
+        cursor.select(QTextCursor::LineUnderCursor);
+        int line_start = cursor.selectionStart();
+        QString current_line = cursor.selectedText();
+        int indent_len = Utility::StringTrimmedIndex(current_line).before;
+        QString indent = current_line.left(indent_len);
+        QString insert_text = "";
+        if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
+            insert_text = indent.left(ori_pos - line_start) + QChar(0x2029);
+            insert_text += indent + current_line.right(current_line.size() - indent_len);
+            cursor.beginEditBlock();
+            cursor.insertText(insert_text);
+            cursor.endEditBlock();
+            cursor.setPosition(ori_pos * 2 - line_start + 1);
+            setTextCursor(cursor);
+        }
+        else {
+            cursor.setPosition(ori_pos);
+            insert_text = QChar(0x2029) + indent;
+            cursor.beginEditBlock();
+            cursor.insertText(insert_text);
+            cursor.endEditBlock();
+        }
+        return true;
+
+    }
+
     else if (event->key() == Qt::Key_Slash) { //侦测到正斜杆，判断是否自动闭合标签。
         QTextCursor cursor = textCursor();
         int ori_pos = cursor.position();
@@ -4380,12 +4378,12 @@ void CodeViewEditor::keyPressEvent(QKeyEvent* event)
         if (cursor.selectedText() == QString('<')) {
             if (!IsInsertClosingTagAllowed()) {
                 cursor.insertText("</"); // 闭合失败，偿还符号。
-                return;
+                return true;
             }
             const QStringList unmatched_tags = GetUnmatchedTagsForBlock(ori_pos);
             if (unmatched_tags.isEmpty()) {
                 cursor.insertText("</"); // 闭合失败，偿还符号。
-                return;
+                return true;
             }
             QString tag = unmatched_tags.last();
             QRegularExpression tag_name_search(TAG_NAME_SEARCH);
@@ -4396,15 +4394,138 @@ void CodeViewEditor::keyPressEvent(QKeyEvent* event)
                 const QString closing_tag = "/" % mo.captured(1) % ">";
                 textCursor().insertText(closing_tag);
             }
+            return true;
         }
         else {
-            QPlainTextEdit::keyPressEvent(event);
+            return false;
         }
     }
     else {
-        QPlainTextEdit::keyPressEvent(event);
+        return false;
     }
+    return false;
 }
+bool CodeViewEditor::CssViewKeyPressEvent(QKeyEvent* event)
+{
+    if (CommonKeyPressEvent(event)) return true;
+
+    auto getIndexOfLineWithRBrace = [](const QString& source, int start_pos, bool enterkey = false)->int {
+        int indexOfLineWithRBrace = 0;
+        int brace = 1;
+        bool get_break = false;
+        for (int i = start_pos - 1; i >= 0; --i) {
+            QChar ch = source.at(i);
+            if (!enterkey && !get_break) {
+                if (ch != QChar(0x20) && ch != QChar(0x2029) && ch != QChar(0x9)) {
+                    return -1;
+                }
+            }
+            if (ch == '{') {
+                if (!get_break) {
+                    return -1;
+                }
+                --brace;
+            }
+            else if (ch == '}') {
+                ++brace;
+            }
+            else if (ch == QChar(0x2029)) {
+                if (!get_break) get_break = true;
+                if (brace == 0) {
+                    indexOfLineWithRBrace = i + 1;
+                    break;
+                }
+            }
+        }
+        if (brace != 0) return -1;
+        return indexOfLineWithRBrace;
+    };
+
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //侦测到回车键或Enter键，判断是否补偿缩进。
+        QTextCursor cursor = textCursor();
+        int ori_pos = cursor.position();
+        cursor.select(QTextCursor::LineUnderCursor);
+        int line_start = cursor.selectionStart();
+        QString current_line = cursor.selectedText();
+        Utility::TrimmedIndex trimmedIndex = Utility::StringTrimmedIndex(current_line);
+        int indent_len = trimmedIndex.before;
+        QString indent = current_line.left(indent_len);
+        QString trim_before_cursor = Utility::trimmed(current_line.left(ori_pos)," ");
+
+        QString insert_text = "";
+        if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
+            insert_text = indent.left(ori_pos - line_start) + QChar(0x2029);
+            insert_text += indent + current_line.right(current_line.size() - indent_len);
+            cursor.beginEditBlock();
+            cursor.insertText(insert_text);
+            cursor.endEditBlock();
+            cursor.setPosition(ori_pos * 2 - line_start + 1);
+            setTextCursor(cursor);
+        }
+        else if (trim_before_cursor.endsWith('{') || trim_before_cursor.endsWith('}')) {
+            if (trim_before_cursor.endsWith("{")) {
+                indent += "  ";
+                insert_text = current_line.left(ori_pos - line_start) + QChar(0x2029);
+                insert_text += indent + Utility::trimmed(current_line.right(line_start + current_line.size() - ori_pos)," ");
+                cursor.beginEditBlock();
+                cursor.insertText(insert_text);
+                cursor.endEditBlock();
+                cursor.setPosition(ori_pos + indent.size() + 1);
+                setTextCursor(cursor);
+            }
+            else if (trim_before_cursor.endsWith("}")) {
+                cursor.select(QTextCursor::Document);
+                const QString& source = cursor.selectedText();
+                int indexOfLineWithRBrace = getIndexOfLineWithRBrace(source, line_start + indent_len + trim_before_cursor.size()- 1, true);
+                if (indexOfLineWithRBrace < 0) {
+                    return false;
+                }
+                cursor.setPosition(indexOfLineWithRBrace);
+                cursor.select(QTextCursor::LineUnderCursor);
+                QString current_line = cursor.selectedText();
+                int indent_len = Utility::StringTrimmedIndex(current_line).before;
+                QString indent = current_line.left(indent_len);
+                cursor.setPosition(ori_pos);
+                QString insert_text = QChar(0x2029)+indent;
+                cursor.beginEditBlock();
+                cursor.insertText(insert_text);
+                cursor.endEditBlock();
+            }
+        }
+        else {
+            cursor.setPosition(ori_pos);
+            insert_text = QChar(0x2029) + indent;
+            cursor.beginEditBlock();
+            cursor.insertText(insert_text);
+            cursor.endEditBlock();
+        }
+        return true;
+    }
+    else if (event->key() == Qt::Key_BraceRight) { // 检测到右花括号 "}" 输入
+        QTextCursor cursor = textCursor();
+        int ori_pos = cursor.position();
+        cursor.select(QTextCursor::Document);
+        const QString& source = cursor.selectedText();
+        int indexOfLineWithRBrace = getIndexOfLineWithRBrace(source, ori_pos);
+        if (indexOfLineWithRBrace < 0) {
+            return false;
+        }
+        cursor.setPosition(indexOfLineWithRBrace);
+        cursor.select(QTextCursor::LineUnderCursor);
+        QString current_line = cursor.selectedText();
+        int indent_len = Utility::StringTrimmedIndex(current_line).before;
+        QString indent = current_line.left(indent_len);
+        cursor.setPosition(ori_pos);
+        cursor.select(QTextCursor::LineUnderCursor);
+        QString insert_text = indent + "}";
+        cursor.beginEditBlock();
+        cursor.insertText(insert_text);
+        cursor.endEditBlock();
+        return true;
+    }
+    return false;
+}
+
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 //---------------------------------------- modified: paste event:  when you do a actionPaste in the codeview editor, this function will be called.-----------------------------------------------------
@@ -4422,10 +4543,10 @@ void CodeViewEditor::insertFromMimeData(const QMimeData* source) {
     if (i > 0 && src_txt.at(i - 1) == QChar('\n')) {
         QString indentation = src_txt.mid(i, insert_pos - i);
         QString paste_txt = source->text();
-        pair<int, int> trimmed_pos = StringTrimmedIndex(paste_txt);
-        QString paste_indent = paste_txt.left(trimmed_pos.first);
+        Utility::TrimmedIndex trimmed_pos = Utility::StringTrimmedIndex(paste_txt);
+        QString paste_indent = paste_txt.left(trimmed_pos.before);
         if (indentation == paste_indent) {
-            paste_txt = paste_txt.mid(trimmed_pos.first);
+            paste_txt = paste_txt.mid(trimmed_pos.before);
             textCursor().insertText(paste_txt);
             return;
         }

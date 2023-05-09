@@ -46,6 +46,8 @@
 #include "SourceUpdates/PerformHTMLUpdates.h"
 #include "SourceUpdates/UniversalUpdates.h"
 #include "Misc/SettingsStore.h"
+#include "Parsers/XhtmlFormatParser.h" // modified: XHTML Fomat Configure
+#include "Misc/SettingsStoreExtend.h" // modified: XHTML Fomat Configure
 
 static const QString FIRST_CSS_NAME   = "Style0001.css";
 static const QString FIRST_JS_NAME    = "Script0001.js";
@@ -757,7 +759,18 @@ void Book::ReformatAllHTML(bool to_valid)
 
     SaveAllResourcesToDisk();
     QList<HTMLResource *> html_resources = m_Mainfolder->GetResourceTypeList<HTMLResource>(true);
-    bool book_modified = CleanSource::ReformatAll(html_resources, to_valid ? CleanSource::Mend : CleanSource::MendPrettify);
+    //--------------------------------------------------modified: Prettify xhtml----------------------------------------------
+    //bool book_modified = CleanSource::ReformatAll(html_resources, to_valid ? CleanSource::Mend : CleanSource::MendPrettify);
+    bool book_modified;
+    if (to_valid) {
+        book_modified = CleanSource::ReformatAll(html_resources, CleanSource::Mend);
+    }
+    else {
+        SettingsStoreExtend settings_ext;
+        XhtmlFormatParser xfparser(settings_ext.getXhtmlFormat());
+        book_modified = CleanSource::ReformatAllWithParser(html_resources, xfparser);
+    }
+    //------------------------------------------------------------------------------------------------------------------------
     if (book_modified) {
         SetModified();
     }

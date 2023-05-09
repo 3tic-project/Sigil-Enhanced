@@ -384,6 +384,7 @@ private:
     QAction* m_MinimalMatchCheckAction;
     QAction* m_AutoTokeniseCheckAction;
     QMenu*   m_menu;
+    bool m_CF_RestartFlag;  //ÐÞ¸Ä£ºÑ­»·²éÕÒBUG
 };
 
 

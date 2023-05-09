@@ -300,6 +300,8 @@ set( PARSERS_FILES
     Parsers/TagLister.h
     Parsers/OPFParser.cpp
     Parsers/OPFParser.h
+    Parsers/XhtmlFormatParser.cpp
+    Parsers/XhtmlFormatParser.h
    )
 
 set( EMBEDPYTHON_FILES
@@ -396,6 +398,8 @@ set( MISC_FILES
     Misc/MediaTypes.h
     Misc/webviewprinter.cpp
     Misc/webviewprinter.h
+    Misc/SettingsStoreExtend.cpp
+    Misc/SettingsStoreExtend.h
     )
 
 set( MISC_EDITORS_FILES
@@ -446,6 +450,8 @@ set( VIEW_EDITOR_FILES
     ViewEditors/ViewEditor.h
     ViewEditors/Viewer.h
     ViewEditors/Overlay.h
+    ViewEditors/XhtmlFormatEditor.CPP
+    ViewEditors/XhtmlFormatEditor.h
      )
 
 set( MAINUI_FILES

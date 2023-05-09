@@ -37,7 +37,8 @@
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
-
+#include "Misc/SettingsStoreExtend.h" // modified: XHTML Fomat Configure
+#include "qtextcodec.h" // modified: XHTML Fomat Configure
 class ColorSwatchDelegate : public QStyledItemDelegate
 {
 public:
@@ -137,6 +138,10 @@ AppearanceWidget::AppearanceWidget()
     loadCodeViewColorsList(m_codeViewAppearance);
     m_uiFontResetFlag = false;
     connectSignalsToSlots();
+    //------------------------ modified:  XHTML Fomat Configure ---------------------------
+    QFont font(m_codeViewAppearance.font_family, m_codeViewAppearance.font_size); // monospace font
+    ui.editXHTMLFormat->setFont(font);
+    //-------------------------------------------------------------------------------------
 }
 
 PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
@@ -264,6 +269,10 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
     }
     m_uiFontResetFlag = false;
     results = results & PreferencesWidget::ResultAction_Mask;
+    //------------------- modified: XHTML Fomat Configure ------------------------
+    SettingsStoreExtend settings_ext; // modified: XHTML Fomat Configure
+    settings_ext.setXhtmlFormat(ui.editXHTMLFormat->toPlainText());
+    //---------------------------------------------------------------------------
     return results;
 }
 
@@ -325,6 +334,15 @@ SettingsStore::CodeViewAppearance AppearanceWidget::readSettings()
     ui.specialCharacterFontSizeSpin->setValue(specialCharacterAppearance.font_size);
     codeViewAppearance.font_family = ui.cbCodeViewFont->currentText();
     ui.iconSizeSlider->setValue(int(settings.mainMenuIconSize()*10));
+    //------------------- modified: XHTML Fomat Configure ------------------------
+    SettingsStoreExtend settings_ext; // modified: XHTML Fomat Con figure
+    if (settings_ext.getXhtmlFormat() == NULL) {
+        resetXhtmlFormat();
+    }
+    else {
+        ui.editXHTMLFormat->setPlainText(settings_ext.getXhtmlFormat());
+    }
+    //---------------------------------------------------------------------------
     return codeViewAppearance;
 }
 
@@ -431,6 +449,37 @@ void AppearanceWidget::resetAllButtonClicked()
     }
 }
 
+//------------------- modified: XHTML Fomat Configure ------------------------
+void AppearanceWidget::resetXhtmlFormat() {
+    QTextCodec* codec = QTextCodec::codecForName("GBK"); // turn the GBK chars to unicode codec.
+    QString new_format;
+    new_format += codec->toUnicode("/* global indent */\n@indent 2;\n@css-fold 0;\n\n/* block-level elements */\nhtml, body, p, div, h1,");
+    new_format += codec->toUnicode(" h2, h3, h4, h5, h6, ol, ul, li, address, blockquote, dd, dl, fieldset, form, hr, nav, menu, pre, ta");
+    new_format += codec->toUnicode("ble, tr, td, th, article\n{ \n  opentag-br: 1 0;\n closetag-br: 0 1;\n}\n\n/* head elements */\nhead");
+    new_format += codec->toUnicode(", meta, link, title, style, script \n{\n  opentag-br: 1 0;\n closetag-br: 0 1;\n}\n\n/* xml header *");
+    new_format += codec->toUnicode("/\n?xml { \n  opentag-br: 0 1;\n}\n\n/* doctype */\n!DOCTYPE { \n  opentag-br: 1 2;\n  attr-fm-resv:");
+    new_format += codec->toUnicode(" 1;\n}\n\n/* xhtml element */\nhtml { \n  inner-ind-adj:-1;\n}\n\nbody{ \n  opentag-br: 2 1;\n close");
+    new_format += codec->toUnicode("tag-br: 1 1;\n}\n\nh1,h2,h3,h4,h5,h6 { \n  opentag-br: 2 0;\n closetag-br: 0 2;\n}\n\n/* 配置说明：\n");
+    new_format += codec->toUnicode("1. HTML代码格式化的配置语言类似CSS，通过选择器筛选具体节点，并由特定的属性指定该类节点的前后换行符数量和缩进级别。(仅)支持元素选择器、通配符选择器，除此以外的选择器类型都不支持。\n   ");
+    new_format += codec->toUnicode(" 选择器写法示例：\n    div { ... }\n    div * p { ... }\n    h1,h2,h3 { ... }\n选择器仅支持通过“后代”(A B)，“并集”(A,B)两种");
+    new_format += codec->toUnicode("方式进行组合。\n需要注意的是，“后代选择器”的空格后面衔接的【只能是子代，不能隔代】，这点与标准CSS不同。\n\n2. 支持的属性包括：\n   opentag-br: 指定节点的【开始标签】前后的");
+    new_format += codec->toUnicode("换行符个数。\n               值输入两个整数，格式为 【 opentag-br: n1 n2 ;】\n               n1 代表标签前面换行符个数，n2 代表标签后面换行");
+    new_format += codec->toUnicode("符个数。\n               n1、n2 范围 0 ~ 9，默认值0。\n  closetag-br: 指定节点的【结束标签】前后的换行符个数。\n               范围 0 ");
+    new_format += codec->toUnicode("~ 9，默认值 0。\n               格式同上。\n      ind-adj: 调整节点的缩进级别。\n               正数进级，负数退级，例如-2代表缩进退二级。\n");
+    new_format += codec->toUnicode("               范围 -9 ~ 9，默认值 0。\ninner-ind-adj: 调整节点内部的缩进级别(不带上节点本身)。\n               范围 -9 ~ 9，默认值 ");
+    new_format += codec->toUnicode("0。\n attr-fm-resv: 指定开口标签内部是否保留非必需的空格和换行符。\n               范围 0 或 1，默认值 0，即不保留。\n    @css-fold: 指定St");
+    new_format += codec->toUnicode("yle节点的CSS是否折叠。\n               特殊属性，不需要写在花括号内部。\n               范围 0 或 1，默认值 0。\n      @indent: 指定每级");
+    new_format += codec->toUnicode("缩进符的空格个数。\n               特殊属性，不需要写在花括号内部。\n               范围 0 ~ 4，默认值 2。\n注意：对于单标签（开口和闭合在同一标签，如 <i");
+    new_format += codec->toUnicode("mg/>），开始标签和结束标签换行属性会叠加。\n     注释 <!-- comment --> 同样视为单标签，标签名为“!--”。\n以上所有属性，除了 opentag-br 和 endtag-");
+    new_format += codec->toUnicode("br 的值需要输入两个整数，其他属性的值均为一个整数。\n\n3. 换行符合并\n类似于相邻元素的上下margin会合并，在两个相邻节点之间，通过 opentag-br、endtag-br 指定的换行");
+    new_format += codec->toUnicode("符数量取决于更大的那个，而非叠加。这种情况称为“换行符合并”。例如有CSS规则如下： \n    p { open-pre-br:2; close-post-br:2; }\n那么两个相邻 p 元素之");
+    new_format += codec->toUnicode("间的换行符数是 2，而非 2+2=4，因为节点之间换行符数量不会叠加。*/");
+    SettingsStoreExtend settings_ext;
+    settings_ext.setXhtmlFormat(new_format);
+    ui.editXHTMLFormat->setPlainText(new_format);
+}
+//----------------------------------------------------------------------------
+
 void AppearanceWidget::newSliderValue(int value) {
     SettingsStore settings;
     settings.setMainMenuIconSize(double(ui.iconSizeSlider->value())/10);
@@ -446,4 +495,5 @@ void AppearanceWidget::connectSignalsToSlots()
     connect(ui.changeUIFontButton, SIGNAL(clicked()), this, SLOT(changeUIFontButtonClicked()));
     connect(ui.resetAllButton,    SIGNAL(clicked()), this, SLOT(resetAllButtonClicked()));
     connect(ui.iconSizeSlider,    SIGNAL(valueChanged(int)), this, SLOT(newSliderValue(int)));
+    connect(ui.htmlFormatResetButton, SIGNAL(clicked()), this, SLOT(resetXhtmlFormat())); // modified: XHTML Fomat Configure
 }

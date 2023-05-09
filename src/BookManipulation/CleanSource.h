@@ -28,6 +28,7 @@
 
 #include "ResourceObjects/HTMLResource.h"
 #include "BookManipulation/XhtmlDoc.h"
+#include "Parsers/XhtmlFormatParser.h" // modified: XHTML Fomat Configure
 
 class CleanSource
 {
@@ -46,6 +47,7 @@ public:
     static bool IsWellFormedXML(const QString &source, const QString mtype="");
 
     static QString MendPrettify(const QString &source, const QString &version);
+    static QString XhtmlPrettify(const QString& source, XhtmlFormatParser& xfparser);// modified: Prettify xhtml
 
     static QString XMLPrettyPrintBS4(const QString &source, const QString mtype="");
 
@@ -54,6 +56,8 @@ public:
     static QString CharToEntity(const QString &source, const QString &version);
 
     static bool ReformatAll(QList <HTMLResource *> resources, QString(clean_fun)(const QString &source, const QString &version));
+
+    static bool ReformatAllWithParser(QList <HTMLResource*> resources, XhtmlFormatParser& xfparser);// modified: Prettify xhtml
 
     /** 
      * neither svg nor math tags need a namespace prefix defined
@@ -75,7 +79,7 @@ private:
      * so this meta tag is useless anyway.
      */
     static QString RemoveMetaCharset(const QString &source);
-
+    static QString PrettifyXhtml(const QString &source, XhtmlFormatParser &xfparser); // modified: PrettifyXhtml
 };
 
 
