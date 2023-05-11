@@ -905,7 +905,7 @@ private:
     bool CssViewKeyPressEvent(QKeyEvent* event);
     bool CommonKeyPressEvent(QKeyEvent* event);
     int lastNonBlankCharInLine();
-    inline void insertTextAtCursor(QString &text,QTextCursor &cursor);
+    inline void insertTextAtCursor(QString text,QTextCursor cursor);
     // ------------------------------------------------------
 };
 

@@ -17,7 +17,7 @@ void XhtmlFormatEditor::keyPressEvent(QKeyEvent* event)
     QPlainTextEdit::keyPressEvent(event);
 }
 
-inline void XhtmlFormatEditor::insertTextAtCursor(QString& text, QTextCursor& cursor) {
+inline void XhtmlFormatEditor::insertTextAtCursor(QString text, QTextCursor cursor) {
     cursor.beginEditBlock();
     cursor.insertText(text);
     cursor.endEditBlock();
@@ -100,12 +100,12 @@ bool XhtmlFormatEditor::CommonKeyPressEvent(QKeyEvent* event) {
                 setTextCursor(cursor);
             }
             else if (ori_end < cursor.selectionEnd()) {
-                insertTextAtCursor(QString("  "), textCursor());
+                insertTextAtCursor("  ", textCursor());
             }
             return true;
         }
         else if (event->key() == Qt::Key_Tab) { // Key_Tab, cursor has no selection
-            insertTextAtCursor(QString("  "), cursor);
+            insertTextAtCursor("  ", cursor);
             return true;
         }
         else if (event->key() == Qt::Key_Backtab) { //// Key_BackTab, cursor has no selection
@@ -240,7 +240,7 @@ bool XhtmlFormatEditor::CssViewKeyPressEvent(QKeyEvent* event)
         else if (event->key() == Qt::Key_BraceLeft) { // ºÏ≤‚µΩ◊Ûª®¿®∫≈ "{"  ‰»Î
             cursor.movePosition(QTextCursor::EndOfWord);
             if (cursor.position() == ori_pos) {
-                insertTextAtCursor(QString("{}"), cursor);
+                insertTextAtCursor("{}", cursor);
                 cursor.setPosition(ori_pos + 1);
                 setTextCursor(cursor);
                 return true;
