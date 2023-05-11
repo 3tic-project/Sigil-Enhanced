@@ -123,7 +123,13 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     m_MarkedTextEnd(-1),
     m_ReplacingInMarkedText(false),
     m_regen_taglist(true),
-    m_hightype(high_type) //modified: keyboard_event
+    // --- modified: keyboard_event ---
+    // \x1 Key_Tab  \x2 Key_BackTab  \x3 Key_Backspace  \x4 Key_Return  \x5 Key_Enter
+    m_hightype(high_type),
+    m_symbolsToDetectInAll("\x1\x2\x3"),
+    m_symbolsToDetectInCSSView("\x4\x5{}"),
+    m_symbolsToDetectInHTMLView("\x4\x5/")
+    // --------------------------------
 {
     if (high_type == CodeViewEditor::Highlight_XHTML) {
         // m_Highlighter = new XHTMLHighlighter(check_spelling, this);
@@ -4188,6 +4194,12 @@ void CodeViewEditor::ConnectSignalsToSlots()
 }
 
 //-------------------------------------------------------------- modified: keyborad event --------------------------------------------------------------
+inline void CodeViewEditor::insertTextAtCursor(QString &text,QTextCursor& cursor) {
+    cursor.beginEditBlock();
+    cursor.insertText(text);
+    cursor.endEditBlock();
+}
+
 void CodeViewEditor::keyPressEvent(QKeyEvent* event)
 {
     if (m_hightype == CodeViewEditor::Highlight_XHTML) {
@@ -4202,71 +4214,91 @@ void CodeViewEditor::keyPressEvent(QKeyEvent* event)
     QPlainTextEdit::keyPressEvent(event);
 }
 bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
-    if (event->key() == Qt::Key_Tab || event->key() == Qt::Key_Backtab) { // 单按Tab键，键码为Key_Tab；按下Shift键后按Tab键，键码改为Key_Backtab
-        //在光标选择文本的条件下
-        if (textCursor().hasSelection()) {  // 侦测到文本选择下按 Tab 键或 Shift + Tab 键，进行多行缩进（退缩进）
-            long ori_Start = textCursor().selectionStart();
-            long ori_End = textCursor().selectionEnd();
-            QTextCursor cursor = textCursor();
-            cursor.setPosition(textCursor().selectionStart());
-            cursor.select(QTextCursor::LineUnderCursor);
 
-            if (ori_Start >= cursor.selectionStart() && ori_End >= cursor.selectionEnd()) {
-                if (textCursor().selectionEnd() > cursor.selectionEnd()) {
-                    // KeepAnchor表示光标保持起点不变，移动终点，用于改变选择范围。与之相对的是MoveAnchor，起点与终点相同，失去选择范围。
-                    cursor.setPosition(ori_End, QTextCursor::KeepAnchor);
+    if (m_symbolsToDetectInAll.contains(QChar(event->key()))) {
+
+        QTextCursor cursor = textCursor();
+
+        if (event->key() == Qt::Key_Backspace) { // Key_Backspace
+            if (cursor.hasSelection()) {
+                return false;
+            }
+            int ori_pos = cursor.position();
+            int offset = 0;
+            cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
+            QString selected_text = cursor.selectedText();
+
+            int indent_index = Utility::StringTrimmedIndex(selected_text).before;
+            QString indent = "";
+            if (indent_index > 0 && indent_index == selected_text.size()) { // The String is entirely composed of blank characters.
+                if (indent_index % 2 == 0) {
+                    offset -= 2;
+                    indent = selected_text.left(indent_index - 2);
                 }
-                QStringList text_splited = cursor.selectedText().split(QChar(0x2029)); // 0x2029 段落分隔符;
-                QRegExp re = QRegExp("^[ \t]+");
+                else {
+                    offset -= 1;
+                    indent = selected_text.left(indent_index - 1);
+                }
+                cursor.beginEditBlock();
+                cursor.insertText(indent);
+                cursor.endEditBlock();
+                cursor.setPosition(ori_pos + offset);
+                return true;
+            }
+            return false;
+        }
+
+        if (cursor.hasSelection()) { // Key_Tab or Key_BackTab, cursor has selection
+            int ori_start = cursor.selectionStart();
+            int ori_end = cursor.selectionEnd();
+            cursor.setPosition(cursor.selectionStart()); // Make sure the position on the first selected line as the selection range may span multiple lines.
+            cursor.select(QTextCursor::LineUnderCursor);
+            int selection_start = cursor.selectionStart();
+
+            if (ori_start >= cursor.selectionStart() && ori_end >= cursor.selectionEnd()) {
+                if (ori_end > cursor.selectionEnd()) {
+                    cursor.setPosition(ori_end, QTextCursor::KeepAnchor);
+                }
+                QStringList text_splited = cursor.selectedText().split(QChar(0x2029)); // 0x2029 paragraph separator;
                 QString new_text = "";
                 int e_offset = 0;
                 if (event->key() == Qt::Key_Tab) { // Tab
                     foreach(QString fragment, text_splited) {
-                        int indent_index = re.indexIn(fragment);
+                        int indent_index = Utility::StringTrimmedIndex(fragment).before;
                         int add_num = 0;
-                        if (indent_index > -1) {
-                            QString indent = re.cap(0);
-                            add_num = indent.length() % 2 == 0 ? 2 : 1;
-                        }
-                        else {
-                            add_num = 2;
-                        }
+                        add_num = indent_index % 2 == 0 ? 2 : 1;
                         e_offset += add_num;
                         new_text += QString(add_num, ' ') + fragment + QChar(0x2029);
                     }
                 }
                 else { // Shift + Tab
                     foreach(QString fragment, text_splited) {
-                        int indent_index = re.indexIn(fragment);
+                        int indent_index = Utility::StringTrimmedIndex(fragment).before;
                         int sub_num = 0;
-                        if (indent_index > -1) {
-                            QString indent = re.cap(0);
-                            sub_num = indent.length() % 2 == 0 ? 2 : 1;
+                        if (indent_index > 0) {
+                            sub_num = indent_index % 2 == 0 ? 2 : 1;
                         }
                         e_offset -= sub_num;
                         new_text += fragment.right(fragment.length() - sub_num) + QChar(0x2029);
                     }
                 }
-                ori_Start = cursor.selectionStart();
                 //修改文档
-                cursor.beginEditBlock();
-                cursor.insertText(new_text.left(new_text.length() - 1));
-                cursor.endEditBlock();
+                insertTextAtCursor(new_text.left(new_text.length() - 1),cursor);
                 //复原光标及选择范围
-                cursor.setPosition(ori_Start);
-                cursor.setPosition(ori_End + e_offset, QTextCursor::KeepAnchor);
+                cursor.setPosition(selection_start);
+                cursor.setPosition(ori_end + e_offset, QTextCursor::KeepAnchor);
                 setTextCursor(cursor);
+            }
+            else if (ori_end < cursor.selectionEnd()) {
+                insertTextAtCursor(QString("  "), textCursor());
             }
             return true;
         }
-        else if (event->key() == Qt::Key_Tab) { // 单行（光标非选择状态）tab 键
-            textCursor().beginEditBlock();
-            textCursor().insertText("  ");
-            textCursor().endEditBlock();
+        else if (event->key() == Qt::Key_Tab){ // Key_Tab, cursor has no selection
+            insertTextAtCursor(QString("  "), cursor);
             return true;
         }
-        else if (event->key() == Qt::Key_Backtab) { // 单行（光标非选择状态） Shift + Tab 键
-            QTextCursor cursor = textCursor();
+        else if (event->key() == Qt::Key_Backtab) { //// Key_BackTab, cursor has no selection
             int ori_pos = cursor.position();
             int offset = 0;
             cursor.select(QTextCursor::LineUnderCursor);
@@ -4275,11 +4307,10 @@ bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
             if (selected_text.length() > 0) {
                 bool strip_blank = false;
                 QString new_text = "";
-                QRegExp re = QRegExp("^[ \t]+");
-                int index = re.indexIn(selected_text);
-                if (index > -1) {
-                    QString indent = re.cap(0);
-                    if (indent.length() % 2 == 0) {
+
+                int indent_index = Utility::StringTrimmedIndex(selected_text).before;
+                if (indent_index > 0) {
+                    if (indent_index % 2 == 0) {
                         offset -= 2;
                         new_text = selected_text.right(selected_text.length() - 2);
                         strip_blank = true;
@@ -4291,48 +4322,13 @@ bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
                     }
                 }
                 if (strip_blank) {
-                    cursor.beginEditBlock();
-                    cursor.insertText(new_text);
-                    cursor.endEditBlock();
+                    insertTextAtCursor(new_text, cursor);
                     cursor.setPosition(ori_pos + offset);
                     setTextCursor(cursor);
                 }
             }
             return true;
         }
-    }
-    else if (event->key() == Qt::Key_Backspace) { //侦测到退格键，判断是否退缩进（判断退2个空白符还是退1个字符）
-        QTextCursor cursor = textCursor();
-        if (cursor.hasSelection()) {
-            QPlainTextEdit::keyPressEvent(event);
-            return true;
-        }
-
-        int ori_pos = cursor.position();
-        int offset = 0;
-        cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
-        QString selected_text = cursor.selectedText();
-        QRegExp re = QRegExp("^[ \t]+");
-        int index = re.indexIn(selected_text);
-        if (index > -1 && re.cap(0) == selected_text) {
-            QString indent = re.cap(0);
-            if (indent.length() % 2 == 0) {
-                offset -= 2;
-                indent = indent.left(indent.length() - 2);
-            }
-            else {
-                offset -= 1;
-                indent = indent.left(indent.length() - 1);
-            }
-            cursor.beginEditBlock();
-            cursor.insertText(indent);
-            cursor.endEditBlock();
-            cursor.setPosition(ori_pos + offset);
-        }
-        else {
-            QPlainTextEdit::keyPressEvent(event);
-        }
-        return true;
     }
     return false;
 }
@@ -4341,67 +4337,55 @@ bool CodeViewEditor::HtmlViewKeyPressEvent(QKeyEvent* event)
 {
     if (CommonKeyPressEvent(event)) return true;
 
-    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //侦测到回车键或Enter键，判断是否补偿缩进。
+    if (m_symbolsToDetectInHTMLView.contains(QChar(event->key()))) {
         QTextCursor cursor = textCursor();
         int ori_pos = cursor.position();
-        cursor.select(QTextCursor::LineUnderCursor);
-        int line_start = cursor.selectionStart();
-        QString current_line = cursor.selectedText();
-        int indent_len = Utility::StringTrimmedIndex(current_line).before;
-        QString indent = current_line.left(indent_len);
-        QString insert_text = "";
-        if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
-            insert_text = indent.left(ori_pos - line_start) + QChar(0x2029);
-            insert_text += indent + current_line.right(current_line.size() - indent_len);
-            cursor.beginEditBlock();
-            cursor.insertText(insert_text);
-            cursor.endEditBlock();
-            cursor.setPosition(ori_pos * 2 - line_start + 1);
-            setTextCursor(cursor);
-        }
-        else {
-            cursor.setPosition(ori_pos);
-            insert_text = QChar(0x2029) + indent;
-            cursor.beginEditBlock();
-            cursor.insertText(insert_text);
-            cursor.endEditBlock();
-        }
-        return true;
+        if (event->key() == Qt::Key_Slash) {  //Detect the Key_Slash
+            cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor);
+            if (cursor.selectedText() == QString('<')) {
+                if (!IsInsertClosingTagAllowed()) {
+                    cursor.setPosition(ori_pos);
+                    return false; // close tag failed
+                }
+                const QStringList unmatched_tags = GetUnmatchedTagsForBlock(ori_pos);
+                if (unmatched_tags.isEmpty()) {
+                    cursor.setPosition(ori_pos);
+                    return false; // close tag failed
+                }
+                QString tag = unmatched_tags.last();
+                QRegularExpression tag_name_search(TAG_NAME_SEARCH);
+                QRegularExpressionMatch mo = tag_name_search.match(tag);
+                int tag_name_index = mo.capturedStart();
 
-    }
-
-    else if (event->key() == Qt::Key_Slash) { //侦测到正斜杆，判断是否自动闭合标签。
-        QTextCursor cursor = textCursor();
-        int ori_pos = cursor.position();
-
-        cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor);
-        if (cursor.selectedText() == QString('<')) {
-            if (!IsInsertClosingTagAllowed()) {
-                cursor.insertText("</"); // 闭合失败，偿还符号。
+                if (tag_name_index >= 0) {
+                    QString closing_tag = "</" % mo.captured(1) % ">";
+                    insertTextAtCursor(closing_tag, cursor); // close tag
+                }
                 return true;
             }
-            const QStringList unmatched_tags = GetUnmatchedTagsForBlock(ori_pos);
-            if (unmatched_tags.isEmpty()) {
-                cursor.insertText("</"); // 闭合失败，偿还符号。
-                return true;
+            return false;
+        }
+        else { // Detect Key_Return or Key_Enter
+            cursor.select(QTextCursor::LineUnderCursor);
+            int line_start = cursor.selectionStart();
+            QString current_line = cursor.selectedText();
+            int indent_len = Utility::StringTrimmedIndex(current_line).before;
+            QString indent = current_line.left(indent_len);
+            QString insert_text = "";
+            if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
+                insert_text = indent.left(ori_pos - line_start) + QChar(0x2029);
+                insert_text += indent + current_line.right(current_line.size() - indent_len);
+                insertTextAtCursor(insert_text,cursor);
+                cursor.setPosition(ori_pos * 2 - line_start + 1);
+                setTextCursor(cursor);
             }
-            QString tag = unmatched_tags.last();
-            QRegularExpression tag_name_search(TAG_NAME_SEARCH);
-            QRegularExpressionMatch mo = tag_name_search.match(tag);
-            int tag_name_index = mo.capturedStart();
-
-            if (tag_name_index >= 0) {
-                const QString closing_tag = "/" % mo.captured(1) % ">";
-                textCursor().insertText(closing_tag);
+            else {
+                cursor.setPosition(ori_pos);
+                insert_text = QChar(0x2029) + indent;
+                insertTextAtCursor(insert_text, cursor);
             }
             return true;
         }
-        else {
-            return false;
-        }
-    }
-    else {
-        return false;
     }
     return false;
 }
@@ -4441,87 +4425,92 @@ bool CodeViewEditor::CssViewKeyPressEvent(QKeyEvent* event)
         return indexOfLineWithRBrace;
     };
 
-    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //侦测到回车键或Enter键，判断是否补偿缩进。
+    if (m_symbolsToDetectInCSSView.contains(QChar(event->key()))) {
         QTextCursor cursor = textCursor();
         int ori_pos = cursor.position();
-        cursor.select(QTextCursor::LineUnderCursor);
-        int line_start = cursor.selectionStart();
-        QString current_line = cursor.selectedText();
-        Utility::TrimmedIndex trimmedIndex = Utility::StringTrimmedIndex(current_line);
-        int indent_len = trimmedIndex.before;
-        QString indent = current_line.left(indent_len);
-        QString trim_before_cursor = Utility::trimmed(current_line.left(ori_pos)," ");
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //Detect Key_Return or Key_Enter
 
-        QString insert_text = "";
-        if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
-            insert_text = indent.left(ori_pos - line_start) + QChar(0x2029);
-            insert_text += indent + current_line.right(current_line.size() - indent_len);
-            cursor.beginEditBlock();
-            cursor.insertText(insert_text);
-            cursor.endEditBlock();
-            cursor.setPosition(ori_pos * 2 - line_start + 1);
-            setTextCursor(cursor);
-        }
-        else if (trim_before_cursor.endsWith('{') || trim_before_cursor.endsWith('}')) {
-            if (trim_before_cursor.endsWith("{")) {
-                indent += "  ";
-                insert_text = current_line.left(ori_pos - line_start) + QChar(0x2029);
-                insert_text += indent + Utility::trimmed(current_line.right(line_start + current_line.size() - ori_pos)," ");
-                cursor.beginEditBlock();
-                cursor.insertText(insert_text);
-                cursor.endEditBlock();
-                cursor.setPosition(ori_pos + indent.size() + 1);
-                setTextCursor(cursor);
+            cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
+            int line_start = cursor.selectionStart();
+            QString textLeftOfCursor = cursor.selectedText();
+            QString trimmed_text = Utility::trimmed(textLeftOfCursor, " \t");
+            int indent_len = Utility::StringTrimmedIndex(textLeftOfCursor).before;
+
+            QString insert_text = "";
+            if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
+                insert_text = textLeftOfCursor + QChar(0x2029) + textLeftOfCursor;
+                insertTextAtCursor(insert_text, cursor);
             }
-            else if (trim_before_cursor.endsWith("}")) {
-                cursor.select(QTextCursor::Document);
-                const QString& source = cursor.selectedText();
-                int indexOfLineWithRBrace = getIndexOfLineWithRBrace(source, line_start + indent_len + trim_before_cursor.size()- 1, true);
-                if (indexOfLineWithRBrace < 0) {
-                    return false;
+
+            else if (trimmed_text.endsWith('{') || trimmed_text.endsWith('}')) {
+                if (trimmed_text.endsWith("{")) {
+                    cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
+                    QString textRightOfCursor = cursor.selectedText();
+                    QString indent = textLeftOfCursor.left(indent_len);
+                    QString inner_indent = indent + "  ";
+                    if (Utility::trimmed(textRightOfCursor, " \t").startsWith("}")) {
+                        insert_text = QChar(0x2029) + inner_indent + QChar(0x2029) + indent + textRightOfCursor;
+                    }
+                    else {
+                        insert_text = QChar(0x2029) + inner_indent + textRightOfCursor;
+                    }
+                    insertTextAtCursor(insert_text, cursor);
+                    cursor.setPosition(ori_pos + inner_indent.size() + 1);
+                    setTextCursor(cursor);
                 }
-                cursor.setPosition(indexOfLineWithRBrace);
-                cursor.select(QTextCursor::LineUnderCursor);
-                QString current_line = cursor.selectedText();
-                int indent_len = Utility::StringTrimmedIndex(current_line).before;
-                QString indent = current_line.left(indent_len);
-                cursor.setPosition(ori_pos);
-                QString insert_text = QChar(0x2029)+indent;
-                cursor.beginEditBlock();
-                cursor.insertText(insert_text);
-                cursor.endEditBlock();
+                else { // trimmed_text.endsWith('}')
+                    cursor.select(QTextCursor::Document);
+                    const QString& source = cursor.selectedText();
+                    int indexOfLineWithRBrace = getIndexOfLineWithRBrace(source, line_start + indent_len + trimmed_text.size() - 1, true);
+                    if (indexOfLineWithRBrace < 0) {
+                        return false;
+                    }
+                    cursor.setPosition(indexOfLineWithRBrace);
+                    cursor.select(QTextCursor::LineUnderCursor);
+                    QString matched_line = cursor.selectedText();
+                    indent_len = Utility::StringTrimmedIndex(matched_line).before;
+                    QString indent = matched_line.left(indent_len);
+                    cursor.setPosition(ori_pos);
+                    QString insert_text = QChar(0x2029) + indent;
+                    insertTextAtCursor(insert_text, cursor);
+                }
             }
+            else {
+                cursor.setPosition(ori_pos);
+                QString indent = textLeftOfCursor.left(indent_len);
+                insert_text = QChar(0x2029) + indent;
+                insertTextAtCursor(insert_text, cursor);
+            }
+            return true;
         }
-        else {
-            cursor.setPosition(ori_pos);
-            insert_text = QChar(0x2029) + indent;
-            cursor.beginEditBlock();
-            cursor.insertText(insert_text);
-            cursor.endEditBlock();
-        }
-        return true;
-    }
-    else if (event->key() == Qt::Key_BraceRight) { // 检测到右花括号 "}" 输入
-        QTextCursor cursor = textCursor();
-        int ori_pos = cursor.position();
-        cursor.select(QTextCursor::Document);
-        const QString& source = cursor.selectedText();
-        int indexOfLineWithRBrace = getIndexOfLineWithRBrace(source, ori_pos);
-        if (indexOfLineWithRBrace < 0) {
+        else if (event->key() == Qt::Key_BraceLeft) { // 检测到左花括号 "{" 输入
+            cursor.movePosition(QTextCursor::EndOfWord);
+            if (cursor.position() == ori_pos) {
+                insertTextAtCursor(QString("{}"), cursor);
+                cursor.setPosition(ori_pos + 1);
+                setTextCursor(cursor);
+                return true;
+            }
             return false;
         }
-        cursor.setPosition(indexOfLineWithRBrace);
-        cursor.select(QTextCursor::LineUnderCursor);
-        QString current_line = cursor.selectedText();
-        int indent_len = Utility::StringTrimmedIndex(current_line).before;
-        QString indent = current_line.left(indent_len);
-        cursor.setPosition(ori_pos);
-        cursor.select(QTextCursor::LineUnderCursor);
-        QString insert_text = indent + "}";
-        cursor.beginEditBlock();
-        cursor.insertText(insert_text);
-        cursor.endEditBlock();
-        return true;
+        else if (event->key() == Qt::Key_BraceRight) { // 检测到右花括号 "}" 输入
+            cursor.select(QTextCursor::Document);
+            const QString& source = cursor.selectedText();
+            int indexOfLineWithRBrace = getIndexOfLineWithRBrace(source, ori_pos);
+            if (indexOfLineWithRBrace < 0) {
+                return false;
+            }
+            cursor.setPosition(indexOfLineWithRBrace);
+            cursor.select(QTextCursor::LineUnderCursor);
+            QString current_line = cursor.selectedText();
+            int indent_len = Utility::StringTrimmedIndex(current_line).before;
+            QString indent = current_line.left(indent_len);
+            cursor.setPosition(ori_pos);
+            cursor.select(QTextCursor::LineUnderCursor);
+            QString insert_text = indent + "}";
+            insertTextAtCursor(insert_text, cursor);
+            return true;
+        }
     }
     return false;
 }

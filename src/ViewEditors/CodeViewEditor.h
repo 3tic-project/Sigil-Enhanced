@@ -898,10 +898,14 @@ private:
     void insertFromMimeData(const QMimeData* source); // modified: paste event
     // --------------- modified: keyborad event -------------
     HighlighterType m_hightype;
+    const QString m_symbolsToDetectInCSSView;
+    const QString m_symbolsToDetectInHTMLView ;
+    const QString m_symbolsToDetectInAll;
     bool HtmlViewKeyPressEvent(QKeyEvent* event);
     bool CssViewKeyPressEvent(QKeyEvent* event);
     bool CommonKeyPressEvent(QKeyEvent* event);
     int lastNonBlankCharInLine();
+    inline void insertTextAtCursor(QString &text,QTextCursor &cursor);
     // ------------------------------------------------------
 };
 

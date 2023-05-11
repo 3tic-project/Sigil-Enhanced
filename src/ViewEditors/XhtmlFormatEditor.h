@@ -14,6 +14,7 @@ protected:
     void keyPressEvent(QKeyEvent* event);
 private:
     CSSHighlighter* m_Highlighter;
+    inline void insertTextAtCursor(QString& text, QTextCursor& cursor);
     bool CommonKeyPressEvent(QKeyEvent* event);
     bool CssViewKeyPressEvent(QKeyEvent* event);
 };

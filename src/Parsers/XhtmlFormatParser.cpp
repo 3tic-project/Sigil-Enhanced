@@ -15,6 +15,7 @@ void XhtmlFormatParser::parse()
 
 	QRegExp test_int("^-?\\d+$");
 	QRegExp test_int_int("^\\d+ \\d+$");
+	QRegExp test_bool("true|false");
 	//QRegExp test_invalid_pseudo_class(":$|::|: |:,");
 	QRegExp test_invalid_wildcard("[^ ]\\*|\\*[^ :]");
 	QRegularExpression re;
@@ -25,11 +26,11 @@ void XhtmlFormatParser::parse()
 		int indent_size = m.captured(1).toInt();
 		m_gobal_props.indent = indent_size;
 	}
-	re.setPattern("@css-fold (\\d+);");
+	re.setPattern("@css-fold (true|false);");
 	m = re.match(clean_text);
 	if (m.hasMatch()) {
-		int indent_size = m.captured(1).toInt();
-		m_gobal_props.cssfold = indent_size;
+		int cssfold_value = m.captured(1) == "true" ? 1 : 0;
+		m_gobal_props.cssfold = cssfold_value;
 	}
 
 	re.setPattern("([a-zA-Z?!_\\-\\*][a-zA-Z\\d_,\\- \\*]*?)\\{(.*?)\\}");
@@ -69,8 +70,8 @@ void XhtmlFormatParser::parse()
 					m_propertiesMap[sel].inner_ind_adj = prop_value[1].toShort();
 				}
 				else if (prop_value[0] == "attr-fm-resv") {
-					if (test_int.indexIn(prop_value[1]) < 0) continue;
-					m_propertiesMap[sel].attr_fm_resv = prop_value[1].toShort();
+					if (test_bool.indexIn(prop_value[1]) < 0) continue;
+					m_propertiesMap[sel].attr_fm_resv = prop_value[1] == "true" ? 1 : 0;
 				}
 			}
 		}
