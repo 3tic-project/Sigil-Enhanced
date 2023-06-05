@@ -400,6 +400,16 @@ bool FlowTab::PasteEnabled()
     return false;
 }
 
+//------------- modified: AddPasteRichText ---------------
+bool FlowTab::PasteRichTextEnabled()
+{
+    if (m_wCodeView) {
+        return m_wCodeView->canPaste();
+    }
+    return false;
+}
+//--------------------------------------------------------
+
 bool FlowTab::DeleteLineEnabled()
 {
     if (m_wCodeView) {
@@ -681,6 +691,15 @@ void FlowTab::Paste()
         m_wCodeView->paste();
     }
 }
+
+//------------------- modified: AddPasteRichText ------------------------------
+void FlowTab::PasteRichText()
+{
+    if (m_wCodeView) {
+        m_wCodeView->PasteRichText();
+    }
+}
+//-----------------------------------------------------------------------------
 
 void FlowTab::DeleteLine()
 {

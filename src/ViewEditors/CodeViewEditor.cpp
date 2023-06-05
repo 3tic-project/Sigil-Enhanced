@@ -1477,6 +1477,7 @@ void CodeViewEditor::contextMenuEvent(QContextMenuEvent *event)
 
     if (m_reformatHTMLEnabled) {
         AddReformatHTMLContextMenu(menu);
+        AddPasteRichText(menu); // modified: AddPasteRichText
     }
 
     AddMarkSelectionMenu(menu);
@@ -4543,3 +4544,82 @@ void CodeViewEditor::insertFromMimeData(const QMimeData* source) {
     QPlainTextEdit::insertFromMimeData(source);
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+//---------------- modified: AddPasteRichText: add an action of pasting rich text to right click menu within codeview editor.------------------
+void CodeViewEditor::AddPasteRichText(QMenu *menu)
+{
+    bool sucess = false;
+
+    QObject* mw = Utility::GetMainWindow();
+    QAction* action = mw->findChild<QAction*>("actionPasteRichText");
+    if (action == NULL) {
+        action = new QAction(tr("Paste Rich Text"), menu);
+    }
+    #ifdef Q_OS_MAC
+    action = new QAction(tr("Paste Rich Text"), menu);
+    #endif
+    for (int i = 0; i < menu->actions().size(); ++i) {
+        QAction* locatorAction = menu->actions().at(i);
+        if (locatorAction->objectName() == "edit-paste" && i+1 < menu->actions().size()) {
+            menu->insertAction(menu->actions().at(i+1), action);
+            sucess = true;
+        }
+    }
+    if (!sucess) {
+        if (menu->actions().isEmpty()) {
+            menu->addAction(action);
+            sucess = true;
+        }
+        else {
+            QAction* topAction = 0;
+            if (topAction) {
+                menu->insertAction(topAction, action);
+                menu->insertSeparator(topAction);
+            }
+        }
+    }
+    #ifdef Q_OS_MAC
+    if (sucess) {
+        connect(action, SIGNAL(triggered()), this, SLOT(PasteRichText()));
+    }
+    #endif
+}
+void CodeViewEditor::PasteRichText() {
+    // This function is to clean entities "&quot;" inside opentag,
+    // which might make the Rich Text Engine of QTextDocument work error.
+
+    auto cleanRichText = [](const QString &source)->QString {
+        QString new_text("");
+        QRegularExpression insideOfTag("<[^>]*>");
+        QRegularExpressionMatchIterator miter = insideOfTag.globalMatch(source);
+        int lastIndex = 0;
+        while (miter.hasNext()) {
+            QRegularExpressionMatch mo = miter.next();
+            int start = mo.capturedStart(),
+                end   = mo.capturedEnd();
+            QString cap = mo.captured();
+            new_text += source.mid(lastIndex, start - lastIndex);
+            new_text += cap.replace("&quot;", "\""); 
+            lastIndex = end;
+        }
+        return new_text;
+    };
+
+    QClipboard *cb = QGuiApplication::clipboard();
+    const QMimeData *mimedata = cb->mimeData();
+    QString text;
+
+    if (mimedata->hasHtml()) {
+        QTextDocument* qdoc = new QTextDocument();
+        QString html = cleanRichText(mimedata->html());
+        qdoc->setHtml(html); // This step is to organize the source code to reduce redundancy. 
+        text = Utility::RegExpSub("[\\s\\S]*<body[^>]*>([\\s\\S]*)</body>[\\s\\S]*", "\\1", qdoc->toHtml());
+        text = Utility::trimmed(text, " \n\r\t");
+    }
+    else if (mimedata->hasText()) {
+        text = mimedata->text();
+    }
+    InsertText(text);
+}
+//--------------------------------------------------------------------------------------------------------------------------------------------------------

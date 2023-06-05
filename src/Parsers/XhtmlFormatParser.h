@@ -27,6 +27,7 @@ public:
 		short ind_adj = UNDEFINED_PROP;
 		short inner_ind_adj = UNDEFINED_PROP;
 		short attr_fm_resv = UNDEFINED_PROP;
+		short text_fm_resv = UNDEFINED_PROP;
 	};
 	globalprops m_gobal_props;
 	QHash<QString, properties> m_pathPropsCache; // Temporarily store the path properties to avoid duplicate caculations for the same path.

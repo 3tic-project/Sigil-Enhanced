@@ -73,6 +73,10 @@ void XhtmlFormatParser::parse()
 					if (test_bool.indexIn(prop_value[1]) < 0) continue;
 					m_propertiesMap[sel].attr_fm_resv = prop_value[1] == "true" ? 1 : 0;
 				}
+				else if (prop_value[0] == "text-fm-resv") {
+					if (test_bool.indexIn(prop_value[1]) < 0) continue;
+					m_propertiesMap[sel].text_fm_resv = prop_value[1] == "true" ? 1 : 0;
+				}
 			}
 		}
 	}

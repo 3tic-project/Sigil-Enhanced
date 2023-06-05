@@ -440,6 +440,7 @@ signals:
 
     void MarkSelectionRequest();
     void ClearMarkedTextRequest();
+    void PasteRichTextRequest(); // modified: AddPasteRichText
 
 public slots:
 
@@ -468,6 +469,8 @@ public slots:
     bool ClearMarkedText();
 
     void RehighlightDocument();
+
+    void PasteRichText(); // modified: AddPasteRichText
 
 protected:
 
@@ -907,6 +910,7 @@ private:
     int lastNonBlankCharInLine();
     inline void insertTextAtCursor(QString text,QTextCursor cursor);
     // ------------------------------------------------------
+    void AddPasteRichText(QMenu* menu); // modified: AddPasteRichText
 };
 
 #endif // CODEVIEWEDITOR_H

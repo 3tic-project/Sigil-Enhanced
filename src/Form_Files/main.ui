@@ -111,6 +111,7 @@
     <addaction name="actionCut"/>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
+    <addaction name="actionPasteRichText"/>
     <addaction name="actionPasteClipboardHistory"/>
     <addaction name="actionDeleteLine"/>
     <addaction name="separator"/>
@@ -517,6 +518,7 @@
    <addaction name="actionCut"/>
    <addaction name="actionCopy"/>
    <addaction name="actionPaste"/>
+   <addaction name="actionPasteRichText"/>
    <addaction name="actionRemoveTagPair"/>
   </widget>
   
@@ -978,6 +980,23 @@
     <string>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Paste&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Pastes the content from the clipboard into the book.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="actionPasteRichText">
+   <property name="icon">
+    <iconset resource="../Resource_Files/main/main.qrc">
+     <normaloff>:/main/edit-paste-rich.svg</normaloff>:/main/edit-paste-rich.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Paste Rich Text</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Paste Rich Text&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Pastes the rich text from the clipboard into the book.&lt;/p&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+V</string>
    </property>
   </action>
   <action name="actionInsertClosingTag">

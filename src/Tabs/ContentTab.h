@@ -115,6 +115,11 @@ public:
     virtual bool PasteEnabled()         {
         return false;
     }
+    //------------- modified: AddPasteRichText ------------
+    virtual bool PasteRichTextEnabled() {
+        return false;
+    }
+    //-----------------------------------------------------
 
     virtual bool DeleteLineEnabled()         {
         return false;

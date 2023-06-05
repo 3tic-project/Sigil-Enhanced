@@ -3347,7 +3347,6 @@ void MainWindow::PasteTextIntoCurrentTarget(const QString &text)
     m_LastPasteTarget->PasteText(text);
 }
 
-
 void MainWindow::PasteClipIntoCurrentTarget(int clip_number)
 {
     if (m_LastPasteTarget == NULL) {
@@ -4378,6 +4377,7 @@ void MainWindow::UpdateUIOnTabChanges()
     ui.actionCut                ->setEnabled(tab->CutEnabled());
     ui.actionCopy               ->setEnabled(tab->CopyEnabled());
     ui.actionPaste              ->setEnabled(tab->PasteEnabled());
+    ui.actionPasteRichText      ->setEnabled(tab->PasteRichTextEnabled());// modified: AddPasteRichText
     ui.actionDeleteLine         ->setEnabled(tab->DeleteLineEnabled());
     ui.actionAddToIndex         ->setEnabled(tab->AddToIndexEnabled());
     ui.actionMarkForIndex       ->setEnabled(tab->MarkForIndexEnabled());
@@ -5683,7 +5683,6 @@ float MainWindow::GetZoomFactor()
     return 1;
 }
 
-
 int MainWindow::ZoomFactorToSliderRange(float zoom_factor)
 {
     // We want a precise value for the 100% zoom,
@@ -6145,6 +6144,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionCut, "MainWindow.Cut");
     sm->registerAction(this, ui.actionCopy, "MainWindow.Copy");
     sm->registerAction(this, ui.actionPaste, "MainWindow.Paste");
+    sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     sm->registerAction(this, ui.actionPasteClipboardHistory, "MainWindow.PasteClipboardHistory");
     sm->registerAction(this, ui.actionDeleteLine, "MainWindow.DeleteLine");
     sm->registerAction(this, ui.actionInsertFile, "MainWindow.InsertFile");
@@ -6733,6 +6733,7 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(ui.actionCut,                      SIGNAL(triggered()),  tab,   SLOT(Cut()));
         connect(ui.actionCopy,                     SIGNAL(triggered()),  tab,   SLOT(Copy()));
         connect(ui.actionPaste,                    SIGNAL(triggered()),  tab,   SLOT(Paste()));
+        connect(ui.actionPasteRichText,            SIGNAL(triggered()),  tab,   SLOT(PasteRichText()));
         connect(ui.actionDeleteLine,               SIGNAL(triggered()),  tab,   SLOT(DeleteLine()));
         connect(tab,   SIGNAL(OpenClipEditorRequest(ClipEditorModel::clipEntry *)),
                 this,  SLOT(ClipEditorDialog(ClipEditorModel::clipEntry *)));

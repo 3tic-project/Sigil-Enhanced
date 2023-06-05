@@ -8,8 +8,10 @@
 
 class SettingsStoreExtend : public QSettings
 {
-
+private:
+    void initXhtmlFormat();
 public:
+    QString m_defaultXhtmlFormat;
     SettingsStoreExtend();
     void setXhtmlFormat(QString conf);
     QString getXhtmlFormat();

@@ -77,7 +77,7 @@ public:
     bool CutEnabled();
     bool CopyEnabled();
     bool PasteEnabled();
-
+    bool PasteRichTextEnabled(); // modified: AddPasteRichText
     bool DeleteLineEnabled();
 
     bool RemoveFormattingEnabled();
@@ -181,6 +181,7 @@ public slots:
     void Cut();
     void Copy();
     void Paste();
+    void PasteRichText(); // modified: AddPasteRichText
 
     void DeleteLine();
 

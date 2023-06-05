@@ -1796,6 +1796,12 @@ Do you want to save your changes?</source>
 </context>
 <context>
     <name>CodeViewEditor</name>
+    <!-- modified -->
+    <message>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="0"/>
+        <source>Paste Rich Text</source>
+        <translation>粘贴带格式文本</translation>
+    </message>
     <message>
         <location filename="../../ViewEditors/CodeViewEditor.cpp" line="560"/>
         <source>Cannot insert closing tag at this position.</source>
@@ -8349,6 +8355,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 </context>
 <context>
     <name>MainWindow</name>
+    <!-- modified -->
+    <message>
+        <location filename="../../Form_Files/main.ui" line="0"/>
+        <source>Paste Rich Text</source>
+        <translation>粘贴带格式文本</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="14"/>
         <source>untitled.epub[*] - Sigil</source>

@@ -100,5 +100,6 @@
         <file>replace-find.svg</file>
         <file>replace.svg</file>
         <file>restart.svg</file>
-   </qresource>
+        <file>edit-paste-rich.svg</file>
+    </qresource>
 </RCC>

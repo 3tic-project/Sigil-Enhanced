@@ -347,7 +347,6 @@ QString CleanSource::PrettifyXhtml(const QString &source,XhtmlFormatParser &xfpa
 
     QString new_text = "";
 
-    // TODO: 算法完成后把 XhtmlFormatParser 这个对象移到外面去，避免每页重新初始化一次。
     QStringList ascendSelectors = xfparser.getAllSelectors(XhtmlFormatParser::ASCEND);
     QStringList nodePath;
 
@@ -370,7 +369,6 @@ QString CleanSource::PrettifyXhtml(const QString &source,XhtmlFormatParser &xfpa
     ushort cssfold = xfparser.m_gobal_props.cssfold > 1 ? 0 : xfparser.m_gobal_props.cssfold < 0 ? 0 : xfparser.m_gobal_props.cssfold;
 
     auto calcFinalProps = [&ascendSelectors, &xfparser, &isSelectorMatchNode](QStringList& nodePath)->XhtmlFormatParser::properties {
-        // TODO:还得做个避免完全一致的路径过量重复计算的最终属性缓冲区，全局的，一样放到外面去，或者放到 XhtmlFormatParser 对象里。
         XhtmlFormatParser::properties finalProps;
         QString featurePath = nodePath.join(' ');
 
@@ -387,6 +385,7 @@ QString CleanSource::PrettifyXhtml(const QString &source,XhtmlFormatParser &xfpa
                 if (props.ind_adj       != XhtmlFormatParser::UNDEFINED_PROP) finalProps.ind_adj       = props.ind_adj;
                 if (props.inner_ind_adj != XhtmlFormatParser::UNDEFINED_PROP) finalProps.inner_ind_adj = props.inner_ind_adj;
                 if (props.attr_fm_resv  != XhtmlFormatParser::UNDEFINED_PROP) finalProps.attr_fm_resv  = props.attr_fm_resv;
+                if (props.text_fm_resv  != XhtmlFormatParser::UNDEFINED_PROP) finalProps.text_fm_resv  = props.text_fm_resv;
             }
         }
         // Set default value
@@ -397,6 +396,7 @@ QString CleanSource::PrettifyXhtml(const QString &source,XhtmlFormatParser &xfpa
         finalProps.ind_adj       = finalProps.ind_adj       > 9 ? 0 : finalProps.ind_adj       <-9 ? 0 : finalProps.ind_adj;
         finalProps.inner_ind_adj = finalProps.inner_ind_adj > 9 ? 0 : finalProps.inner_ind_adj <-9 ? 0 : finalProps.inner_ind_adj;
         finalProps.attr_fm_resv  = finalProps.attr_fm_resv  > 1 ? 0 : finalProps.attr_fm_resv  < 0 ? 0 : finalProps.attr_fm_resv;
+        finalProps.text_fm_resv  = finalProps.text_fm_resv  > 1 ? 0 : finalProps.text_fm_resv  < 0 ? 0 : finalProps.text_fm_resv;
 
         xfparser.m_pathPropsCache[featurePath] = finalProps;
         return finalProps;
@@ -434,7 +434,6 @@ QString CleanSource::PrettifyXhtml(const QString &source,XhtmlFormatParser &xfpa
             nodePath << ti.tname;
             XhtmlFormatParser::properties props = calcFinalProps(nodePath);
             lvl += 1 + props.ind_adj;
-
             QString pre_br = previousText.size() > 0 ? QString(props.open_pre_br, '\n') : props.open_pre_br > lastPostBr ? QString(props.open_pre_br - lastPostBr, '\n') : "";
             QString post_br = props.open_post_br > 0 ? QString(props.open_post_br, '\n') : "";
             QString indent = props.open_pre_br + lastPostBr == 0 ? "" : indentPara * lvl > 0 ? QString(indentPara * lvl, ' ') : "";
@@ -442,8 +441,11 @@ QString CleanSource::PrettifyXhtml(const QString &source,XhtmlFormatParser &xfpa
             if (!props.attr_fm_resv) {
                 tag = cleanOpenTagText(tag);
             }
+            if (props.text_fm_resv) {
+                post_br = "";
+                i = taglist.findCloseTagForOpen(i) - 1; // The next index jump to closing tag directly
+            }
             new_text += previousText + pre_br + indent + tag + post_br;
-
             lastPostBr = post_br.size();
             lvl += props.inner_ind_adj;
 
@@ -464,7 +466,10 @@ QString CleanSource::PrettifyXhtml(const QString &source,XhtmlFormatParser &xfpa
                     previousText = Utility::RegExpSub("\n", "\n" + indent, reformatCss);
                 }
             }
-
+            if (props.text_fm_resv) {
+                previousText = source.mid(lastTagEndPos, ti.pos - lastTagEndPos);
+                pre_br = "";
+            }
             new_text += previousText + pre_br + indent + tag + post_br;
 
             nodePath.pop_back();
@@ -472,7 +477,7 @@ QString CleanSource::PrettifyXhtml(const QString &source,XhtmlFormatParser &xfpa
             lvl -= 1 + props.ind_adj;
             //--lvl;
         }
-        else {
+        else { // ti.ttype = "single" | "xmlheader" | "doctype" | "comment"
             nodePath << ti.tname;
             XhtmlFormatParser::properties props = calcFinalProps(nodePath);
             lvl += 1 + props.ind_adj;

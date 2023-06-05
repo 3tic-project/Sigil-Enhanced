@@ -61,7 +61,6 @@ TabManager::TabManager(QWidget *parent)
     connect(this, SIGNAL(currentChanged(int)),           this, SLOT(EmitTabChanged(int)));
     connect(this, SIGNAL(tabCloseRequested(int)),        this, SLOT(CloseTab(int)));
     setDocumentMode(true);
-
     // re-enable tab drag and drop as a test to see if last commit helped
     setMovable(true);
     setTabsClosable(true);
