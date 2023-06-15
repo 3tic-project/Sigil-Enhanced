@@ -696,6 +696,7 @@ void FlowTab::Paste()
 void FlowTab::PasteRichText()
 {
     if (m_wCodeView) {
+
         m_wCodeView->PasteRichText();
     }
 }

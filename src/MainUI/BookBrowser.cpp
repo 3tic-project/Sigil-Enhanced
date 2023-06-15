@@ -558,6 +558,12 @@ void BookBrowser::CopyHTML()
         return;
     }
 
+    // -------------------- modified: fix bug of Add Copy ------------------
+    // fix the bug which make sigil crash with using "Add Cover" shortcut when selecting a none HTML file on bookbrowser.
+    if (current_resource->GetMediaType() != "application/xhtml+xml") {
+        return;
+    }
+    // ---------------------------------------------------------------------
     QString destfolder = Utility::startingDir(current_resource->GetRelativePath());
 
     HTMLResource *current_html_resource = qobject_cast<HTMLResource *>(current_resource);

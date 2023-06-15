@@ -1313,9 +1313,6 @@
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Split the current file into two files using your cursor location as the dividing point.&lt;/p&gt;</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+Return</string>
-   </property>
   </action>
   <action name="actionInsertFile">
    <property name="icon">

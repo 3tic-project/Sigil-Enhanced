@@ -6876,7 +6876,8 @@ void MainWindow::BreakTabConnections(ContentTab *tab)
     disconnect(ui.actionPrint,                     0, tab, 0);
     disconnect(ui.actionAddToIndex,                0, tab, 0);
     disconnect(ui.actionMarkForIndex,              0, tab, 0);
-    disconnect(ui.actionSplitBlockOrAddBreak, 0, tab, 0);//ÐÞ¸Ä£ºSplitBlockOrAddBreak
+    disconnect(ui.actionSplitBlockOrAddBreak,      0, tab, 0);//ÐÞ¸Ä£ºSplitBlockOrAddBreak
+    disconnect(ui.actionPasteRichText,             0, tab, 0);//modified: AddPasteRichText
 }
 
 

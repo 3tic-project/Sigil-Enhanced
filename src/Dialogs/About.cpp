@@ -27,7 +27,7 @@
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
 
-const QString VERSION_NUMBERS = "(\\d+)\\.(\\d+)\\.(\\d+)\\.(X\\d+)"; // modified: version
+const QString VERSION_NUMBERS = "(\\d+)\\.(\\d+)\\.(\\d+)\\.(X\\d+[A-Z]?)"; // modified: version
 const QString SIGIL_VERSION   = QString(SIGIL_FULL_VERSION);
 const QString SIGIL_HOMEPAGE  = "https://sigil-ebook.com/sigil";
 const QString GNU_LICENSE     = "http://www.gnu.org/licenses/gpl-3.0-standalone.html";
