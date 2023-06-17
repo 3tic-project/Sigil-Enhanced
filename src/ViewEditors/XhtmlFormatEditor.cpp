@@ -147,8 +147,8 @@ bool XhtmlFormatEditor::CssViewKeyPressEvent(QKeyEvent* event)
 {
     if (CommonKeyPressEvent(event)) return true;
 
-    auto getIndexOfLineWithRBrace = [](const QString& source, int start_pos, bool enterkey = false)->int {
-        int indexOfLineWithRBrace = 0;
+    auto getIndexOfLineWithLBrace = [](const QString& source, int start_pos, bool enterkey = false)->int {
+        int indexOfLineWithLBrace = 0;
         int brace = 1;
         bool get_break = false;
         for (int i = start_pos - 1; i >= 0; --i) {
@@ -170,13 +170,13 @@ bool XhtmlFormatEditor::CssViewKeyPressEvent(QKeyEvent* event)
             else if (ch == QChar(0x2029)) {
                 if (!get_break) get_break = true;
                 if (brace == 0) {
-                    indexOfLineWithRBrace = i + 1;
+                    indexOfLineWithLBrace = i + 1;
                     break;
                 }
             }
         }
         if (brace != 0) return -1;
-        return indexOfLineWithRBrace;
+        return indexOfLineWithLBrace;
     };
 
     if (QString("\x4\x5{}").contains(QChar(event->key()))) { // \x4 Key_Return  \x5 Key_Enter
@@ -184,21 +184,23 @@ bool XhtmlFormatEditor::CssViewKeyPressEvent(QKeyEvent* event)
         int ori_pos = cursor.position();
         if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) { //Detect Key_Return or Key_Enter
 
-            cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
+            //cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
+            cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
             int line_start = cursor.selectionStart();
             QString textLeftOfCursor = cursor.selectedText();
             QString trimmed_text = Utility::trimmed(textLeftOfCursor, " \t");
             int indent_len = Utility::StringTrimmedIndex(textLeftOfCursor).before;
-
             QString insert_text = "";
             if (ori_pos <= line_start + indent_len) { // 光标位于缩进空白符位置
+                //cursor.setPosition(ori_pos);
                 insert_text = textLeftOfCursor + QChar(0x2029) + textLeftOfCursor;
                 insertTextAtCursor(insert_text, cursor);
             }
 
             else if (trimmed_text.endsWith('{') || trimmed_text.endsWith('}')) {
                 if (trimmed_text.endsWith("{")) {
-                    cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
+                    //cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
+                    cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
                     QString textRightOfCursor = cursor.selectedText();
                     QString indent = textLeftOfCursor.left(indent_len);
                     QString inner_indent = indent + "  ";
@@ -215,13 +217,14 @@ bool XhtmlFormatEditor::CssViewKeyPressEvent(QKeyEvent* event)
                 else { // trimmed_text.endsWith('}')
                     cursor.select(QTextCursor::Document);
                     const QString& source = cursor.selectedText();
-                    int indexOfLineWithRBrace = getIndexOfLineWithRBrace(source, line_start + indent_len + trimmed_text.size() - 1, true);
-                    if (indexOfLineWithRBrace < 0) {
-                        return false;
+                    int indexOfLineWithLBrace = getIndexOfLineWithLBrace(source, line_start + indent_len + trimmed_text.size() - 1, true);
+                    if (indexOfLineWithLBrace < 0) {
+                        indexOfLineWithLBrace = ori_pos;
                     }
-                    cursor.setPosition(indexOfLineWithRBrace);
-                    cursor.select(QTextCursor::LineUnderCursor);
-                    QString matched_line = cursor.selectedText();
+                    cursor.setPosition(indexOfLineWithLBrace);
+                    //cursor.select(QTextCursor::LineUnderCursor);
+                    cursor.select(QTextCursor::BlockUnderCursor);
+                    QString matched_line = cursor.selectionStart() > 0 && cursor.hasSelection() ? cursor.selectedText().mid(1) : cursor.selectedText();
                     indent_len = Utility::StringTrimmedIndex(matched_line).before;
                     QString indent = matched_line.left(indent_len);
                     cursor.setPosition(ori_pos);
@@ -250,13 +253,14 @@ bool XhtmlFormatEditor::CssViewKeyPressEvent(QKeyEvent* event)
         else if (event->key() == Qt::Key_BraceRight) { // 检测到右花括号 "}" 输入
             cursor.select(QTextCursor::Document);
             const QString& source = cursor.selectedText();
-            int indexOfLineWithRBrace = getIndexOfLineWithRBrace(source, ori_pos);
-            if (indexOfLineWithRBrace < 0) {
+            int indexOfLineWithLBrace = getIndexOfLineWithLBrace(source, ori_pos);
+            if (indexOfLineWithLBrace < 0) {
                 return false;
             }
-            cursor.setPosition(indexOfLineWithRBrace);
-            cursor.select(QTextCursor::LineUnderCursor);
-            QString current_line = cursor.selectedText();
+            cursor.setPosition(indexOfLineWithLBrace);
+            //cursor.select(QTextCursor::LineUnderCursor);
+            cursor.select(QTextCursor::BlockUnderCursor);
+            QString current_line = cursor.selectionStart() > 0 && cursor.hasSelection() ? cursor.selectedText().mid(1) : cursor.selectedText();
             int indent_len = Utility::StringTrimmedIndex(current_line).before;
             QString indent = current_line.left(indent_len);
             cursor.setPosition(ori_pos);
