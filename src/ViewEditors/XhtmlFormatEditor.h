@@ -10,6 +10,7 @@ class XhtmlFormatEditor : public QPlainTextEdit
 {
 public:
     XhtmlFormatEditor(QWidget* parent = 0);
+    void setDefaultText();
 protected:
     void keyPressEvent(QKeyEvent* event);
 private:

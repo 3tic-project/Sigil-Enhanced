@@ -753,7 +753,7 @@ void FlowTab::SplitSection()
     }
 }
 
-// -------------- ÐÞ¸Ä£ºSplitBlockOrAddBreak ----------------
+// -------------- modified: SplitBlockOrAddBreak ----------------
 void FlowTab::SplitBlockOrAddBreak()
 {
     if (!IsDataWellFormed()) return;

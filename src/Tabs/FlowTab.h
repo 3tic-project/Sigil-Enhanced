@@ -190,7 +190,7 @@ public slots:
 
     void SplitSection();
 
-    void SplitBlockOrAddBreak();//ÐÞ¸Ä£ºSplitBlockOrAddBreak
+    void SplitBlockOrAddBreak();//modified: SplitBlockOrAddBreak
 
     void InsertSGFSectionMarker();
 

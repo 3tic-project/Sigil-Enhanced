@@ -40,6 +40,7 @@
 #include "MiscEditors/ClipEditorModel.h"
 #include "MiscEditors/IndexEditorModel.h"
 #include "ViewEditors/ViewEditor.h"
+#include "Parsers/CodeCompleterParser.h" // modified: CodeCompleterParser
 
 class QResizeEvent;
 class QSize;
@@ -160,7 +161,7 @@ public:
     * section, but there is still some render time left...
     */
     QString SplitSection();
-    void SplitBlockOrAddBreak(); //ÐÞ¸Ä£ºSplitBlockOrAddBreak
+    void SplitBlockOrAddBreak(); // modified: SplitBlockOrAddBreak
 
     /**
      * Inserts the SGF section marker code at the current caret location.
@@ -900,14 +901,17 @@ private:
     bool m_regen_taglist;
     void insertFromMimeData(const QMimeData* source); // modified: paste event
     // --------------- modified: keyborad event -------------
+    CodeCompleterParser* m_completeParser; // modified: CodeCompleterParser
     HighlighterType m_hightype;
     const QString m_symbolsToDetectInCSSView;
-    const QString m_symbolsToDetectInHTMLView ;
+    const QString m_symbolsToDetectInHTMLView;
     const QString m_symbolsToDetectInAll;
     bool HtmlViewKeyPressEvent(QKeyEvent* event);
     bool CssViewKeyPressEvent(QKeyEvent* event);
     bool CommonKeyPressEvent(QKeyEvent* event);
-    int lastNonBlankCharInLine();
+    bool VisibleCompleterEvent(QKeyEvent* event); // modified: CodeCompleterParser
+    bool CodeCompleterEvent(QKeyEvent* event); // modified: CodeCompleterParser
+    bool quickSwitchOfCursor(QKeyEvent* event);
     inline void insertTextAtCursor(QString text,QTextCursor cursor);
     // ------------------------------------------------------
     void AddPasteRichText(QMenu* menu); // modified: AddPasteRichText

@@ -3353,6 +3353,18 @@ Valid only when searching HTML files.</source>
 </context>
 <context>
     <name>GeneralSettingsWidget</name>
+    <!-- modified -->
+    <message>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="0"/>
+        <source>Enable Code Completer for CodeViewEditor:</source>
+        <translation>啟用代碼編輯器自動填充功能：</translation>
+    </message>
+    <!-- modified -->
+    <message>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="0"/>
+        <source>Completion</source>
+        <translation>自動補全</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="14"/>
         <source>General Settings</source>

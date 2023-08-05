@@ -4433,7 +4433,7 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionPrintPreview->setEnabled(true);
     ui.actionPrint->setEnabled(true);
     ui.actionSplitSection->setEnabled(true);
-    ui.actionSplitBlockOrAddBreak->setEnabled(true);//修改：SplitBlockOrAddBreak
+    ui.actionSplitBlockOrAddBreak->setEnabled(true);//modified: SplitBlockOrAddBreak
     ui.actionInsertSGFSectionMarker->setEnabled(true);
     ui.actionInsertFile->setEnabled(true);
     ui.actionInsertSpecialCharacter->setEnabled(true);
@@ -6156,7 +6156,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionInsertSGFSectionMarker, "MainWindow.InsertSGFSectionMarker");
     sm->registerAction(this, ui.actionSplitOnSGFSectionMarkers, "MainWindow.SplitOnSGFSectionMarkers");
     sm->registerAction(this, ui.actionInsertClosingTag, "MainWindow.InsertClosingTag");
-    sm->registerAction(this, ui.actionSplitBlockOrAddBreak, "MainWindow.SplitBlockOrAddBreak"); // 修改：SplitBlockOrAddBreak注册到快捷键管理器。
+    sm->registerAction(this, ui.actionSplitBlockOrAddBreak, "MainWindow.SplitBlockOrAddBreak"); // modified: SplitBlockOrAddBreak
 #ifndef Q_OS_MAC
     sm->registerAction(this, ui.actionPreferences, "MainWindow.Preferences");
 #endif
@@ -6793,7 +6793,7 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(ui.actionAddMisspelledWord,        SIGNAL(triggered()),  tab,   SLOT(AddMisspelledWord()));
         connect(ui.actionIgnoreMisspelledWord,     SIGNAL(triggered()),  tab,   SLOT(IgnoreMisspelledWord()));
         connect(this,                              SIGNAL(SettingsChanged()), tab, SLOT(LoadSettings()));
-        connect(ui.actionSplitBlockOrAddBreak, SIGNAL(triggered()), tab, SLOT(SplitBlockOrAddBreak())); // 修改：SplitBlockOrAddBreak
+        connect(ui.actionSplitBlockOrAddBreak, SIGNAL(triggered()), tab, SLOT(SplitBlockOrAddBreak())); // modified: SplitBlockOrAddBreak
         connect(tab,   SIGNAL(OpenIndexEditorRequest(IndexEditorModel::indexEntry *)),
                 this,  SLOT(IndexEditorDialog(IndexEditorModel::indexEntry *)));
         connect(tab,   SIGNAL(ViewImageRequest(const QUrl &)),
@@ -6876,7 +6876,7 @@ void MainWindow::BreakTabConnections(ContentTab *tab)
     disconnect(ui.actionPrint,                     0, tab, 0);
     disconnect(ui.actionAddToIndex,                0, tab, 0);
     disconnect(ui.actionMarkForIndex,              0, tab, 0);
-    disconnect(ui.actionSplitBlockOrAddBreak,      0, tab, 0);//修改：SplitBlockOrAddBreak
+    disconnect(ui.actionSplitBlockOrAddBreak,      0, tab, 0);//modified: SplitBlockOrAddBreak
     disconnect(ui.actionPasteRichText,             0, tab, 0);//modified: AddPasteRichText
 }
 

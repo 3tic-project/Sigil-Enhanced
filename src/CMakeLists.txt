@@ -302,6 +302,12 @@ set( PARSERS_FILES
     Parsers/OPFParser.h
     Parsers/XhtmlFormatParser.cpp
     Parsers/XhtmlFormatParser.h
+    Parsers/CodeCompleterParser.cpp
+    Parsers/CodeCompleterParser.h
+    Parsers/CompletionWords.cpp
+    Parsers/CompletionWords.h
+    Parsers/Emmet.cpp
+    Parsers/Emmet.h
    )
 
 set( EMBEDPYTHON_FILES
@@ -435,6 +441,7 @@ set( SPCRE_FILES
 set( VIEW_EDITOR_FILES
     ViewEditors/CodeViewEditor.cpp
     ViewEditors/CodeViewEditor.h
+    ViewEditors/CVEditorKeyPressEvent.cpp
     ViewEditors/WebEngPage.cpp
     ViewEditors/WebEngPage.h
     ViewEditors/SimplePage.cpp

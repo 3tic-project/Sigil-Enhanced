@@ -335,8 +335,8 @@ SettingsStore::CodeViewAppearance AppearanceWidget::readSettings()
     ui.iconSizeSlider->setValue(int(settings.mainMenuIconSize()*10));
     //------------------- modified: XHTML Fomat Configure ------------------------
     SettingsStoreExtend settings_ext; // modified: XHTML Fomat Con figure
-    if (settings_ext.getXhtmlFormat() == NULL) {
-        resetXhtmlFormat();
+    if (settings_ext.getXhtmlFormat().isNull()) {
+        ui.editXHTMLFormat->setDefaultText();
     }
     else {
         ui.editXHTMLFormat->setPlainText(settings_ext.getXhtmlFormat());
@@ -450,9 +450,7 @@ void AppearanceWidget::resetAllButtonClicked()
 
 //------------------- modified: XHTML Fomat Configure ------------------------
 void AppearanceWidget::resetXhtmlFormat() {
-    SettingsStoreExtend settings_ext;
-    QString new_format = settings_ext.m_defaultXhtmlFormat;
-    ui.editXHTMLFormat->setPlainText(new_format);
+    ui.editXHTMLFormat->setDefaultText();
 }
 //----------------------------------------------------------------------------
 

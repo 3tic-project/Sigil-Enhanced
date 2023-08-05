@@ -2,19 +2,25 @@
 #ifndef SETTINGSSTOREEXTEND_H
 #define SETTINGSSTOREEXTEND_H
 
-#include <QtCore/QSettings>
+#include <QMap>
+#include <QSettings>
+#include <QJsonObject>
 
 /*------------------ modified: XHTML Fomat Configure ----------------------*/
 
-class SettingsStoreExtend : public QSettings
+class SettingsStoreExtend
 {
-private:
-    void initXhtmlFormat();
 public:
-    QString m_defaultXhtmlFormat;
     SettingsStoreExtend();
     void setXhtmlFormat(QString conf);
     QString getXhtmlFormat();
+    void setHTMLCompleterWordsJson(const QJsonObject &json);
+    void setCSSCompleterWordsJson(const QJsonObject& json);
+    QJsonObject getHTMLCompleterWordsJson();
+    QJsonObject getCSSCompleterWordsJson();
+    void setCodeCompleterSettings(bool completerEnabled, bool emmetEnabled);
+    QByteArray formatJson(const QByteArray& json_data);
+    std::pair<bool,bool> getCodeCompleterSettings();
 };
 
 #endif // SETTINGSSTOREEXTEND_H

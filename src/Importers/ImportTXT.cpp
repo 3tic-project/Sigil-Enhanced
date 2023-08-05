@@ -147,7 +147,7 @@ QString ImportTXT::CreateParagraphs(const QStringList &lines) const
             text.append("<p><br/></p>\n");
         }
         else {
-            text.append("<p>" + line + "</p>\n");
+            text.append("<p>" + line.toHtmlEscaped() + "</p>\n");
         }
     }
     //----------------------------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 
 #include "ViewEditors/XhtmlFormatEditor.h"
 #include "Misc/Utility.h"
-
+#include "Parsers/XhtmlFormatParser.h"
 //---------------------- modified: XHTML Fomat Configure ---------------------
 
 XhtmlFormatEditor::XhtmlFormatEditor(QWidget* parent)
@@ -271,4 +271,8 @@ bool XhtmlFormatEditor::CssViewKeyPressEvent(QKeyEvent* event)
         }
     }
     return false;
+}
+
+void XhtmlFormatEditor::setDefaultText() {
+    setPlainText(XhtmlFormatParser::getDefaultConfigure());
 }

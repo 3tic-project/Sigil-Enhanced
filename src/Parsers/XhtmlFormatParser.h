@@ -10,7 +10,7 @@
 class XhtmlFormatParser 
 {
 public:
-	XhtmlFormatParser(QString conf_text);
+	XhtmlFormatParser(QString conf_text = "");
 
 	enum state { UNDEFINED_PROP = -100 };
 	enum sort_mode { ORI, ASCEND, DESCEND };
@@ -35,6 +35,7 @@ public:
 	properties getSelectorProperties(QString selector);
 	QString getCleanConfText();
 	QString getConfText();
+	static QString getDefaultConfigure();
 private:
 	void parse();
 	QStringList m_selectors;

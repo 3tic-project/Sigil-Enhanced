@@ -66,7 +66,7 @@ public:
      * processing them with gumbo
      **/
      static QString PreprocessSpecialCases(const QString &source);
-
+     static QString PrettifyXhtml(const QString& source, XhtmlFormatParser& xfparser); // modified: PrettifyXhtml
 
 private:
 
@@ -79,7 +79,6 @@ private:
      * so this meta tag is useless anyway.
      */
     static QString RemoveMetaCharset(const QString &source);
-    static QString PrettifyXhtml(const QString &source, XhtmlFormatParser &xfparser); // modified: PrettifyXhtml
 };
 
 

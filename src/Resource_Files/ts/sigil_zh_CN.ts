@@ -3377,6 +3377,18 @@ Valid only when searching HTML files.</source>
 </context>
 <context>
     <name>GeneralSettingsWidget</name>
+    <!-- modified -->
+    <message>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="0"/>
+        <source>Enable Code Completer for CodeViewEditor:</source>
+        <translation>启用代码编辑器自动填充功能：</translation>
+    </message>
+    <!-- modified -->
+    <message>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="0"/>
+        <source>Completion</source>
+        <translation>自动补全</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="14"/>
         <source>General Settings</source>
