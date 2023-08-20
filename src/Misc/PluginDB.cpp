@@ -167,13 +167,22 @@ PluginDB::AddResult PluginDB::add_plugin(const QString &path, bool force)
     }
 
     ret = add_plugin_int(name, force);
+    //------------ modified: fix bug ------------------
+    // Fixed the bug that when adding a plugin with the same name exists, the plugin directory will be accidentally deleted.
+    /*
     if (ret != PluginDB::AR_SUCCESS) {
         // Couldn't load the plugin so remove it.
         Utility::removeDir(pluginsPath() + "/" + name);
     } else {
         emit plugins_changed();
+    }*/
+    if (ret != PluginDB::AR_SUCCESS && ret != PluginDB::AR_EXISTS) {
+        Utility::removeDir(pluginsPath() + "/" + name);
     }
-
+    if (ret == PluginDB::AR_SUCCESS) {
+        emit plugins_changed();
+    }
+    //------------------------------------------------
     return ret;
 }
 

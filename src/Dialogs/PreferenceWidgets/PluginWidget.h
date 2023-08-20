@@ -71,6 +71,11 @@ private:
     QString m_LastFolderOpen;
     bool m_useBundledInterp;
     QList<QComboBox*> m_qlcbxs;
+    //---------------- modified: PluginWidget ---------------
+    void reInstallPlugin(QString zippath); // modified: reInstallPlugin
+    void removeSelectedPlugins(); // modified: removeSelectedPlugins
+    void addNewPluginAssignment(QString pluginname); // modified: addNewPluginAssignment
+    //----------------------------------------------------------
 };
 
 #endif // PLUGINWIDGET_H

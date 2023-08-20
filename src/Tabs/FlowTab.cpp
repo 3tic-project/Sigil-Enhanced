@@ -1068,7 +1068,7 @@ void FlowTab::HeadingStyle(const QString &heading_type, bool preserve_attributes
             m_wCodeView->FormatBlock("p", preserve_attributes);
         }*/
         if (last_char.isDigit()) {
-            m_wCodeView->FormatBlock("h" % QString(last_char), preserve_attributes);
+            m_wCodeView->FormatBlock_multiline("h" % QString(last_char), preserve_attributes);
         }
         else if (heading_type == "Normal") {
             m_wCodeView->FormatBlock_multiline("p", preserve_attributes);

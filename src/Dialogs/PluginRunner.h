@@ -143,7 +143,9 @@ private:
     static const QStringList CHANGESTAGS;
 
     Ui::PluginRunner ui;
-
+    //---------------- modified: reInstallPlugin ---------------
+    void reInstallPlugin();
+    //----------------------------------------------------------
 };
 
 #endif

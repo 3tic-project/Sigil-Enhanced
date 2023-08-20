@@ -16540,6 +16540,18 @@ Are you Sure You Want to Continue?</source>
         <source>Plugin 10:</source>
         <translation>插件10：</translation>
     </message>
+    <!-- modified -->
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="0"/>
+        <source>A plugin by that name already exists, are you sure to overwrite this plugin?</source>
+        <translation>已存在同名插件，您是否确定要覆盖安装？</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="0"/>
+        <source>Are you sure to remove these selected plugins?</source>
+        <translation>是否确定移除被选择的插件？</translation>
+    </message>
+
     <message>
         <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="209"/>
         <source>Select Plugin Zip Archive</source>

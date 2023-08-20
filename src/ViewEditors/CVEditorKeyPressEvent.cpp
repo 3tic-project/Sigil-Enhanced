@@ -839,3 +839,99 @@ void CodeViewEditor::SplitBlockOrAddBreak()
     }
 }
 // -------------------------------------------------------------------------------------------------------------
+
+//------------------------------------------------ modified: Add labels for block elements ( ctrl + 1 ~ ctrl + 8 )------------------------------------------------
+void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool preserve_attributes)
+{
+    if (element_name.isEmpty()) {
+        return;
+    }
+
+    MaybeRegenerateTagList();
+    QString text = m_TagList.getSource();
+    TagLister::TagInfo bodyOpenTag = m_TagList.at(m_TagList.findBodyOpenTag());
+    TagLister::TagInfo bodyCloseTag = m_TagList.at(m_TagList.findBodyCloseTag());
+    // 找不到body节点
+    if (bodyOpenTag.pos == -1 || bodyCloseTag.pos == -1) {
+        return;
+    }
+    // 选择范围不在body节点内部
+    if (textCursor().selectionEnd() <= bodyOpenTag.pos + bodyOpenTag.len || textCursor().selectionStart() >= bodyCloseTag.pos) {
+        return;
+    }
+    
+    QTextCursor cursor = textCursor();
+    cursor.setPosition(textCursor().selectionEnd(), QTextCursor::MoveAnchor);
+    cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::MoveAnchor);
+    cursor.setPosition(textCursor().selectionStart(),QTextCursor::KeepAnchor);
+    cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
+    if (!textCursor().selectedText().startsWith(QChar(0x2029)) && cursor.selectedText().startsWith(QChar(0x2029))) {
+        cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, 1);
+    }
+
+    // 选择范围限制在body节点内部
+    int body_inner_start = text[bodyOpenTag.pos + bodyOpenTag.len] == QChar(0xA) ? bodyOpenTag.pos + bodyOpenTag.len + 1 : bodyOpenTag.pos + bodyOpenTag.len;
+    int body_inner_end = text[bodyCloseTag.pos - 1] == QChar(0xA) ? bodyCloseTag.pos - 1 : bodyCloseTag.pos;
+    int start_pos = cursor.selectionStart() > body_inner_start ? cursor.selectionStart() : body_inner_start;
+    int end_pos = cursor.selectionEnd() < body_inner_end ? cursor.selectionEnd() : body_inner_end;
+    if (start_pos != cursor.selectionStart() || end_pos != cursor.selectionEnd()) {
+        cursor.setPosition(start_pos, QTextCursor::MoveAnchor);
+        cursor.setPosition(end_pos, QTextCursor::KeepAnchor);
+    }
+
+    QString selected_text = cursor.selectedText();
+    QStringList splited_list = selected_text.split(QChar(0x2029)); // 被光标选中后的文本，换行符(0xA)会转化为段落分隔符(0x2029)
+
+    QStringList newText_list = QStringList();
+    foreach(QString line_text, splited_list) {
+        Utility::TrimmedIndex trimmed_pos = Utility::StringTrimmedIndex(line_text); // trimmed_pos 储存字符串前端非空白字符起点和后端非空白字符截止点。
+        if (trimmed_pos.before == trimmed_pos.after) {
+            QString pre_blank = line_text.left(trimmed_pos.before);
+            QString open_element = "<" % element_name % ">",
+                close_element = "</" % element_name % ">",
+                inner_content = "";
+            if (splited_list.size() > 1 && element_name == "p") {
+                inner_content = "<br/>";
+            }
+            newText_list.append(pre_blank % open_element % inner_content % close_element);
+        }
+        else {
+            QString pre_blank = line_text.left(trimmed_pos.before);
+            QString post_blank = line_text.right(line_text.size() - trimmed_pos.after);
+            QString trimmed_text = line_text.mid(trimmed_pos.before, trimmed_pos.after - trimmed_pos.before);
+            //
+            bool wrapIt = true;
+            // 接下来是侦测它的是否节点以及节点类型。
+            QRegExp re("^<([a-z0-9]+)( +[^>]*)?>(.*)</\\1>$", Qt::CaseInsensitive); // 该表达式用于匹配字符串首位是否节点特征，同属捕获标签，属性和内容。
+            int index = re.indexIn(trimmed_text);
+            if (index > -1) {
+                QString tag = re.cap(1),
+                    attr = re.cap(2),
+                    inner = re.cap(3);
+                if (BLOCK_LEVEL_TAGS.contains(tag, Qt::CaseInsensitive)) {
+                    wrapIt = false;
+                    QString open_element = "<" % element_name % attr % ">",
+                        close_element = "</" % element_name % ">";
+                    newText_list.append(pre_blank % open_element % inner % close_element % post_blank);
+                }
+            }
+            if (wrapIt) {
+                QString open_element = "<" % element_name % ">",
+                    close_element = "</" % element_name % ">";
+                newText_list.append(pre_blank % open_element % trimmed_text % close_element % post_blank);
+            }
+        }
+    }
+    QString replace_text = newText_list.join(QChar(0x2029));
+    cursor.beginEditBlock();
+    cursor.insertText(replace_text);
+    cursor.endEditBlock();
+    // 如果为空节点，则光标移动到节点内部。
+    if (replace_text.trimmed() == "<" % element_name % ">" + "</" % element_name % ">") {
+        int new_pos = start_pos + replace_text.indexOf(QRegExp("</"));
+        cursor.setPosition(new_pos);
+        setTextCursor(cursor);
+    }
+    return;
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------
