@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2018-2022  Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2018-2023  Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2019-2022  Doug Massay
 **  Copyright (C) 2009-2011  Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
@@ -41,7 +41,6 @@
 #include <QFontMetrics>
 #include <QtWebEngineWidgets>
 #include <QtWebEngineCore>
-#include <QWebEngineProfile>
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
 #include <QWebEngineUrlScheme>
@@ -57,8 +56,7 @@
 #include "Misc/TempFolder.h"
 #include "Misc/UpdateChecker.h"
 #include "Misc/Utility.h"
-#include "Misc/URLInterceptor.h"
-#include "Misc/URLSchemeHandler.h"
+#include "Misc/WebProfileMgr.h"
 #include "sigil_constants.h"
 #include "sigil_exception.h"
 
@@ -77,6 +75,14 @@ static const int RETRY_DELAY_MS = 5;
 #include "Dialogs/Preferences.h"
 extern void disableWindowTabbing();
 extern void removeMacosSpecificMenuItems();
+#endif
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    #define QT_ENUM_SKIPEMPTYPARTS Qt::SkipEmptyParts
+    #define QT_ENUM_KEEPEMPTYPARTS Qt::KeepEmptyParts
+#else
+    #define QT_ENUM_SKIPEMPTYPARTS QString::SkipEmptyParts
+    #define QT_ENUM_KEEPEMPTYPARTS QString::KeepEmptyParts
 #endif
 
 // Creates a MainWindow instance depending
@@ -406,9 +412,49 @@ int main(int argc, char *argv[])
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 
 #if defined(Q_OS_WIN32)
+    // Insert altgr and/or darkmode window decorations as needed
+    QString current_env_str = Utility::GetEnvironmentVar("QT_QPA_PLATFORM");
+    QStringList current_platform_args;
+    QString platform_prefix = "windows:";
+
+    // Take into account current system QT_QPA_PLATFORM values
+    if (!current_env_str.isEmpty()) {
+        if (current_env_str.startsWith(platform_prefix, Qt::CaseInsensitive)) {
+            current_platform_args = current_env_str.mid(platform_prefix.length()).split(':', QT_ENUM_SKIPEMPTYPARTS);
+            qDebug() << "Current windows platform args: " << current_platform_args;
+        }
+    }
+
+    // if altgr is not already in the list of windows platform options, add it
     SettingsStore ss;
     if (ss.enableAltGr()) {
-        qputenv("QT_QPA_PLATFORM", "windows:altgr");
+        if (!current_platform_args.contains("altgr", Qt::CaseInsensitive)) {
+            current_platform_args.append("altgr");
+        }
+    }
+
+    // if darkmode options are not already in the list of windows platform options,
+    // Set it to 1 so that sigil title bars will be dark in Windows darkmode.
+    // This is setting is assumed with a dark palette starting with Qt6.5.
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) && QT_VERSION <= QT_VERSION_CHECK(6, 5, 0)
+    if (Utility::WindowsShouldUseDarkMode()) {
+        bool darkmode_arg_exists = false;
+        foreach(QString arg, current_platform_args) {
+            if (arg.startsWith("darkmode", Qt::CaseInsensitive)) {
+                darkmode_arg_exists = true;
+            }
+        }
+        if (!darkmode_arg_exists) {
+            current_platform_args.append("darkmode=1");
+        }
+    }
+#endif
+
+    // Rewrite the new (if any) windows platform options to QT_QPA_PLATFORM
+    if (!current_platform_args.isEmpty()) {
+        QString new_args = platform_prefix + current_platform_args.join(':');
+        qDebug() << "New windows platform args: " << new_args;
+        qputenv("QT_QPA_PLATFORM", new_args.toUtf8());
     }
 #endif
 
@@ -502,7 +548,10 @@ int main(int argc, char *argv[])
         if (Utility::WindowsShouldUseDarkMode()) {
             // Apply custom dark style
             app.setStyle(new SigilDarkStyle);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION <= QT_VERSION_CHECK(5, 15, 0) || QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+            // At this point, I have no idea where along the 5.15.x series this
+            // being present will break dark mode. I only know the first official
+            // official windows version that uses 5.15.9 needs it to be gone.
             app.setPalette(QApplication::style()->standardPalette());
 #endif
         }
@@ -595,28 +644,21 @@ int main(int argc, char *argv[])
         app.setDesktopFileName(QStringLiteral("sigil.desktop"));
 #endif
 #endif
-
-        // Install our own URLSchemeHandler for QtWebEngine to bypass 2mb url limit
-        URLSchemeHandler handlescheme; 
-        QWebEngineProfile::defaultProfile()->installUrlSchemeHandler("sigil", &handlescheme);
-
-        // Install our own URLInterceptor for QtWebEngine to protect
-        // against bad file:: urls
-        URLInterceptor* urlint = new URLInterceptor();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
-        QWebEngineProfile::defaultProfile()->setUrlRequestInterceptor(urlint);
-#else
-        QWebEngineProfile::defaultProfile()->setRequestInterceptor(urlint);
-#endif
-
+        // Create the required QWebEngineProfiles, Initialize the settings
+        // just once, installing both URLInterceptor and URLSchemeHandler as needed
+        // to bypass 2mb url limit
+        WebProfileMgr* profile_mgr = WebProfileMgr::instance();
+        
         // Needs to be created on the heap so that
         // the reply has time to return.
         // Skip if compile-time define or runtime env var is set.
+        //---------------------------- modified: Disable UpdateChecker ---------------------------------
+        /*
         if ((!DONT_CHECK_FOR_UPDATES) && (!qEnvironmentVariableIsSet("SKIP_SIGIL_UPDATE_CHECK"))) {
             UpdateChecker *checker = new UpdateChecker(&app);
             checker->CheckForUpdate();
-        }
-
+        }*/
+        //-----------------------------------------------------------------------------------------------
         // select the icon theme to use
         QString RCCResourcePath;
 #ifdef Q_OS_MAC
@@ -697,7 +739,6 @@ int main(int argc, char *argv[])
             // Create a viable Global MacOS QMenuBar
             QMenuBar *mac_bar = new QMenuBar(0);
 
-
             // Create the Application Menu
             QMenu *app_menu = new QMenu("Sigil");
             QIcon icon;
@@ -763,7 +804,7 @@ int main(int argc, char *argv[])
             VerifyPlugins();
             MainWindow *widget = GetMainWindow(arguments);
             widget->show();
-            QApplication::setActiveWindow(widget);
+            widget->activateWindow();
             return app.exec();
         }
     } catch (std::exception &e) {

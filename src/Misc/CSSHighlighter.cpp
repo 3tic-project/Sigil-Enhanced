@@ -64,7 +64,7 @@ static const int transitions[ 10 ][ 9 ] = {
     { Quote,    Quote,    Quote,    Quote,   Quote,    Quote,    -1,      Quote,        Quote           }, // Quote
     { -1,       -1,       -1,       -1,     -1,        -1,       -1,      -1,           Comment         }, // MaybeComment
     { Comment,  Comment,  Comment,  Comment, Comment,  Comment,  Comment, Comment,      MaybeCommentEnd }, // Comment
-    { Comment,  Comment,  Comment,  Comment, Comment,  Comment,  Comment, -1,           MaybeCommentEnd }, // MaybeCommentEnd
+    { Comment,  Comment,  Comment,  Comment, Comment,  Comment,  Comment, -1,           MaybeCommentEnd }  // MaybeCommentEnd
 };
 
 

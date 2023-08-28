@@ -183,6 +183,7 @@ PluginDB::AddResult PluginDB::add_plugin(const QString &path, bool force)
         emit plugins_changed();
     }
     //------------------------------------------------
+
     return ret;
 }
 

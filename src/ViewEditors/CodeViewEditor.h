@@ -1,4 +1,4 @@
-/************************************************************************
+ï»¿/************************************************************************
 **
 **  Copyright (C) 2015-2021 Kevin B. Hendricks Stratford, ON Canada 
 **  Copyright (C) 2009-2011  Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -161,7 +161,6 @@ public:
     * section, but there is still some render time left...
     */
     QString SplitSection();
-    void SplitBlockOrAddBreak(); // modified: SplitBlockOrAddBreak
 
     /**
      * Inserts the SGF section marker code at the current caret location.
@@ -299,7 +298,6 @@ public:
      * @param preserve_attributes Whether to keep any existing attributes on the previous block tag.
      */
     void FormatBlock(const QString &element_name, bool preserve_attributes);
-    void FormatBlock_multiline(const QString& element_name, bool preserve_attributes); // ÐÞ¸Ä£º¶àÐÐÌí¼Ó¿éÔªËØ±êÇ©
 
     /**
      * Given the current cursor position/selection, look to toggle a format style tag
@@ -441,7 +439,6 @@ signals:
 
     void MarkSelectionRequest();
     void ClearMarkedTextRequest();
-    void PasteRichTextRequest(); // modified: AddPasteRichText
 
 public slots:
 
@@ -470,8 +467,6 @@ public slots:
     bool ClearMarkedText();
 
     void RehighlightDocument();
-
-    void PasteRichText(); // modified: AddPasteRichText
 
 protected:
 
@@ -520,7 +515,6 @@ protected:
      * @param event The event to process.
      */
     void focusOutEvent(QFocusEvent *event);
-    void keyPressEvent(QKeyEvent* event); //ÐÞ¸Ä£º¼üÅÌÊÂ¼þ£ºÌí¼Ó¼üÅÌÊÂ¼þ´¦Àíº¯Êý
 
 private slots:
     void ResetLastFindMatch();
@@ -899,8 +893,23 @@ private:
 
     TagLister m_TagList;
     bool m_regen_taglist;
-    void insertFromMimeData(const QMimeData* source); // modified: paste event
-    // --------------- modified: keyborad event -------------
+
+/*-------------------- - modified: CodeViewEditorExt--------------------------------*/
+signals:
+    void PasteRichTextRequest(); // modified: AddPasteRichText
+
+public:
+    void SplitBlockOrAddBreak(); // modified: SplitBlockOrAddBreak
+    void FormatBlock_multiline(const QString& element_name, bool preserve_attributes); // modified: Add Lables On Multiple Lines
+
+public slots:
+    void PasteRichText(); // modified: AddPasteRichText
+
+protected:
+    void keyPressEvent(QKeyEvent* event); //modified: keyPressEvent
+
+private:
+    // relate to keyborad event
     CodeCompleterParser* m_completeParser; // modified: CodeCompleterParser
     HighlighterType m_hightype;
     const QString m_symbolsToDetectInCSSView;
@@ -913,7 +922,14 @@ private:
     bool CodeCompleterEvent(QKeyEvent* event); // modified: CodeCompleterParser
     bool quickSwitchOfCursor(QKeyEvent* event);
     inline void insertTextAtCursor(QString text,QTextCursor cursor);
-    // ------------------------------------------------------
+
+    // relate to paste event
+    void insertFromMimeData(const QMimeData* source); // modified: paste event
+    bool insertImagesFromUrls(const QList<QUrl>& urls,bool insert_on_css = false);
+    bool insertImageFromByteData(const QByteArray& data, bool insert_on_css = false);
+    void CommonPasteEvent(const QMimeData* source);
+    bool CssViewPasteEvent(const QMimeData* source);
+    bool HtmlViewPasteEvent(const QMimeData* source);
     void AddPasteRichText(QMenu* menu); // modified: AddPasteRichText
 };
 

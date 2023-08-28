@@ -58,7 +58,6 @@ public:
     static bool ReformatAll(QList <HTMLResource *> resources, QString(clean_fun)(const QString &source, const QString &version));
 
     static bool ReformatAllWithParser(QList <HTMLResource*> resources, XhtmlFormatParser& xfparser);// modified: Prettify xhtml
-
     /** 
      * neither svg nor math tags need a namespace prefix defined
      * especially as epub3 now includes them into the html5 spec
@@ -79,6 +78,7 @@ private:
      * so this meta tag is useless anyway.
      */
     static QString RemoveMetaCharset(const QString &source);
+
 };
 
 

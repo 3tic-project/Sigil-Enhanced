@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks  Stratford, ON Canada
+**  Copyright (C) 2015-2023 Kevin B. Hendricks  Stratford, ON Canada
 **  Copyright (C) 2013      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
@@ -49,7 +49,7 @@
 #include "sigil_constants.h"
 #include "sigil_exception.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     #define QT_ENUM_SKIPEMPTYPARTS Qt::SkipEmptyParts
     #define QT_ENUM_KEEPEMPTYPARTS Qt::KeepEmptyParts
 #else
@@ -531,7 +531,7 @@ void OPFResource::AutoFixWellFormedErrors()
             }
         }
         std::sort(txts.begin(), txts.end(), Utility::sort_string_pairs_by_first);
-        for (int j=0; j < txts.size(); j++) {
+        for (unsigned int j=0; j < txts.size(); j++) {
             QString idref = txts.at(j).second;
             SpineEntry sp;
             sp.m_idref = idref;
@@ -1137,87 +1137,6 @@ void OPFResource::UpdateSpineOrder(const QList<::HTMLResource *> html_files)
     p.m_spine = new_spine;
     UpdateText(p);
 }
-
-//---------------------------------------- 修改：批量重命名 ---------------------------------------------------
-void OPFResource::BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths)
-{
-    QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(), "application/oebps-package+xml");
-    OPFParser p;
-    p.parse(source);
-    if (p.m_manifest.isEmpty()) return;
-
-    QString old_id, new_id, old_bkpath, old_href, old_full_path;
-    QList<QString> old_bkpaths, old_hrefs;
-    QHash<QString, QString> id_maps;
-
-    // first convert old_full_path to old_bkpath
-    foreach(QString old_full_path, old_full_paths) {
-        old_bkpath = old_full_path.right(old_full_path.length() - GetFullPathToBookFolder().length() - 1);
-        old_href = Utility::URLEncodePath(Utility::buildRelativePath(GetRelativePath(), old_bkpath));
-        old_bkpaths << old_bkpath;
-        old_hrefs << old_href;
-    }
-    // convert resources to a none const type
-    QList<Resource*>_resources;
-    foreach(Resource * resource, resources) {
-        _resources << resource;
-    }
-
-    for (int i = 0; i < p.m_manifest.count(); ++i) {
-        QString href = p.m_manifest.at(i).m_href;
-        int j = 0;
-        bool match = false;
-        foreach(Resource * resource, _resources) {
-            old_href = old_hrefs.at(j);
-            if (href == old_href) {
-                ManifestEntry me = p.m_manifest.at(i);
-                QString old_me_href = me.m_href;
-                me.m_href = Utility::URLEncodePath(GetRelativePathToResource(resource));
-                old_id = me.m_id;
-                p.m_idpos.remove(old_id);
-                new_id = GetUniqueID(GetValidID(resource->Filename()), p);
-                me.m_id = new_id;
-                p.m_idpos[new_id] = i;
-                p.m_hrefpos.remove(old_me_href);
-                p.m_hrefpos[me.m_href] = i;
-                p.m_manifest.replace(i, me);
-                id_maps.insert(old_id, new_id);
-                match = true;
-                if (resource->Type() == Resource::NCXResourceType) {
-                    // handle updating the ncx id on the spine if ncx renamed
-                    QString ncx_id = p.m_spineattr.m_atts.value(QString("toc"), "");
-                    if (new_id != ncx_id) {
-                        p.m_spineattr.m_atts[QString("toc")] = new_id;
-                    }
-                }
-                if (resource->Type() == Resource::ImageResourceType) {
-                    if (IsCoverImageCheck(old_id, p)) {
-                        AddCoverMetaForImage(resource, p);
-                    }
-                }
-                break;
-            }
-            ++j;
-        }
-        if (match == true) {
-            old_bkpaths.removeAt(j);
-            old_hrefs.removeAt(j);
-            _resources.removeAt(j);
-        }
-    }
-    for (int i = 0; i < p.m_spine.count(); ++i) {
-        QString idref = p.m_spine.at(i).m_idref;
-        if (id_maps.value(idref) != "") {
-            SpineEntry se = p.m_spine.at(i);
-            new_id = id_maps.value(idref);
-            se.m_idref = new_id;
-            p.m_spine.replace(i, se);
-        }
-    }
-    UpdateText(p);
-}
-//-------------------------------------------------------------------------------------------------------------
 
 
 void OPFResource::ResourceRenamed(const Resource *resource, QString old_full_path)

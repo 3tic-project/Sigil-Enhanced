@@ -1,7 +1,7 @@
 /************************************************************************
  **
- **  Copyright (C) 2014-2022 Kevin B. Hendricks, Stratford Ontario Canada
- **  Copyright (C) 2020-2022 Doug Massay
+ **  Copyright (C) 2014-2023 Kevin B. Hendricks, Stratford Ontario Canada
+ **  Copyright (C) 2020-2023 Doug Massay
  **
  **  This file is part of Sigil.
  **
@@ -801,7 +801,7 @@ bool PluginRunner::checkIsWellFormed()
 bool PluginRunner::deleteFiles(const QStringList &files)
 {
     QList <Resource *> tabResources=m_tabManager->GetTabResources();
-    QList <Resource*> resourcesToBeDeleted;   //修改：批量删除
+    QList <Resource*> resourcesToBeDeleted;   //modified: BulkRemoveResources
     bool changes_made = false;
     ui.statusLbl->setText(tr("Status: cleaning up - deleting files"));
     foreach (QString fileinfo, files) {
@@ -841,10 +841,10 @@ bool PluginRunner::deleteFiles(const QStringList &files)
             if (tabResources.contains(resource)) {
                 m_tabManager->CloseTabForResource(resource);
             }
-            // -------------------------- 修改：批量删除 --------------------------
+            // -------------------------- modified: BulkRemoveResources --------------------------
             //m_book->GetFolderKeeper()->RemoveResource(resource); 
             //resource->Delete(); 
-            resourcesToBeDeleted << resource;    // 将文件添加到待删除组
+            resourcesToBeDeleted << resource;    // Add resouces to the group to be deleted
             // -------------------------------------------------------------------
             changes_made = true;
         } else {
@@ -858,7 +858,7 @@ bool PluginRunner::deleteFiles(const QStringList &files)
            }
         }
     }
-    m_book->GetFolderKeeper()->BulkRemoveResources(resourcesToBeDeleted); //修改：批量删除
+    m_book->GetFolderKeeper()->BulkRemoveResources(resourcesToBeDeleted); //modified: BulkRemoveResources
     if (changes_made) {
         m_bookBrowser->ResourcesDeleted();
     }
@@ -947,7 +947,7 @@ bool PluginRunner::addFiles(const QStringList &files)
 
         Resource *resource = m_book->GetFolderKeeper()->AddContentFileToFolder(inpath,false, mime, href);
 
-        // AudioResource, VideoResource, FontResource, ImageResource do not appear to be cached
+        // AudioResource, VideoResource, FontResource, ImageResource, PdfResource do not appear to be cached
         // For new Editable Resources must do the equivalent of the InitialLoad
         // Order is important as some resource types inherit from other resource types
 
@@ -1023,7 +1023,7 @@ bool PluginRunner::modifyFiles(const QStringList &files)
         Resource *resource = m_hrefToRes.value(href);
         if (resource) {
 
-            // AudioResource, VideoResource, FontResource, ImageResource do not appear to be editable
+            // AudioResource, VideoResource, FontResource, ImageResource, PdfResource do not appear to be editable
 
             // For Editable Resources must relaod them from modified file
             // Order below is important as some resouirce types inherit from other resource types

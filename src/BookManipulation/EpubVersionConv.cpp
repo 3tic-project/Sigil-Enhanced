@@ -1,4 +1,6 @@
 
+#include <QRegExp>
+
 #include "BookManipulation/EpubVersionConv.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/HTMLResource.h"
@@ -943,7 +945,7 @@ EpubVersionConv::OpenTagInfo EpubVersionConv::parseAttribute(QString tagstring) 
 	OpenTagInfo taginfo;
 	taginfo.tagname = "";
 	taginfo.atts = TagAtts();
-	if (!(tagstring.startsWith("<") && tagstring.endsWith(">") || tagstring.at(tagstring.size() - 2) == "/")) {
+	if (!(tagstring.startsWith("<") && tagstring.endsWith(">") || tagstring.at(tagstring.size() - 2) == '/')) {
 		return taginfo;
 	}
 	QRegExp tagname_re("<([a-zA-Z0-9:]+)");
@@ -1077,7 +1079,7 @@ void EpubVersionConv::init_members() {
 	{ "toc", "toc" },
 	{ "other.volume", "volume" },
 	{ "other.warning", "warning" }
-	}.unite(_guide_epubtype_map);
+	};
 
 	_ncx_tagname_map = QHash<QString, QString>{
 		{ "doctitle", "docTitle" },
@@ -1088,12 +1090,12 @@ void EpubVersionConv::init_members() {
 	{ "navlabel", "navLabel" },
 	{ "pagelist", "pageList" },
 	{ "pagetarget", "pageTarget" }
-	}.unite(_ncx_tagname_map);
+	};
 
 	_namespace_map = QHash<QString, QString>{
 		{ "smil", "http://www.w3.org/ns/SMIL" },
 	{ "epub", "http://www.idpf.org/2007/opf" }
-	}.unite(_namespace_map);
+	};
 
 	named_entities = QHash<QString, QString>{
 		{ "AElig", QChar(0xc6) },
@@ -3327,5 +3329,5 @@ void EpubVersionConv::init_members() {
 	{ "zscr;", QChar(0x0001d4cf) },
 	{ "zwj;", QChar(0x200d) },
 	{ "zwnj;", QChar(0x200c) },
-	}.unite(named_entities);
+	};
 }

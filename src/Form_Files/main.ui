@@ -2951,7 +2951,9 @@
   </action>
   <action name="actionMendPrettifyHTML">
    <property name="text">
-    <string>Mend and &amp;Prettify All HTML Files</string>
+    <!--modified-->
+    <!--<string>Mend and &amp;Prettify All HTML Files</string>-->
+    <string>Prettify All HTML Files</string>
    </property>
   </action>
   <action name="actionMendHTML">

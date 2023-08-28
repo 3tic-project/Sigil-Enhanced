@@ -16,19 +16,19 @@ public:
 		CSS
 	};
 	enum PosType {
-		HTML_TEXT = 1,
-		HTML_TAG = 2,
-		HTML_CLOSE_TAG = 4,
-		HTML_ATTR = 8,
-		HTML_VALUE = 16,
-		HTML_STYLEATTR = 32,
-		HTML_STYLEVAL = 64,
-		HTML_TEXT_FOR_STYLE = 128,
-		HTML_COMMENT = 256,
-		CSS_SELECTOR = 256 * 2,
-		CSS_ATTR = 256 * 4,
-		CSS_VALUE = 256 * 8,
-		CSS_COMMENT = 256 * 16
+		HTML_TEXT			= 1 << 0,
+		HTML_TAG			= 1 << 1,
+		HTML_CLOSE_TAG		= 1 << 2,
+		HTML_ATTR			= 1 << 3,
+		HTML_VALUE			= 1 << 4,
+		HTML_STYLEATTR		= 1 << 5,
+		HTML_STYLEVAL		= 1 << 6,
+		HTML_TEXT_FOR_STYLE = 1 << 7,
+		HTML_COMMENT		= 1 << 8,
+		CSS_SELECTOR		= 1 << 9,
+		CSS_ATTR			= 1 << 10,
+		CSS_VALUE			= 1 << 11,
+		CSS_COMMENT			= 1 << 12
 	};
 	struct PosState {
 		PosType postype;

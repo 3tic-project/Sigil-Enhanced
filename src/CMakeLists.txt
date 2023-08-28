@@ -35,10 +35,12 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/Index.cpp
     BookManipulation/Index.h
     BookManipulation/CleanSource.cpp
+    BookManipulation/CleanSourceExt.cpp
     BookManipulation/CleanSource.h
     BookManipulation/EpubVersionConv.cpp
     BookManipulation/EpubVersionConv.h
     BookManipulation/FolderKeeper.cpp
+    BookManipulation/FolderKeeperExt.cpp
     BookManipulation/FolderKeeper.h
     BookManipulation/Headings.cpp
     BookManipulation/Headings.h
@@ -63,6 +65,8 @@ set( RESOURCE_OBJECT_FILES
     ResourceObjects/AudioResource.h
     ResourceObjects/VideoResource.cpp
     ResourceObjects/VideoResource.h
+    ResourceObjects/PdfResource.cpp
+    ResourceObjects/PdfResource.h
     ResourceObjects/MiscTextResource.cpp
     ResourceObjects/MiscTextResource.h
     ResourceObjects/SVGResource.cpp
@@ -70,6 +74,7 @@ set( RESOURCE_OBJECT_FILES
     ResourceObjects/FontResource.cpp
     ResourceObjects/FontResource.h
     ResourceObjects/OPFResource.cpp
+    ResourceObjects/OPFResourceExt.cpp
     ResourceObjects/OPFResource.h
     ResourceObjects/NavProcessor.cpp
     ResourceObjects/NavProcessor.h
@@ -161,6 +166,7 @@ set( DIALOG_FILES
     Dialogs/PreferenceWidgets/PreserveEntitiesWidget.cpp
     Dialogs/PreferenceWidgets/PreserveEntitiesWidget.h
     Dialogs/PreferenceWidgets/PluginWidget.cpp
+    Dialogs/PreferenceWidgets/PluginWidgetExt.cpp
     Dialogs/PreferenceWidgets/PluginWidget.h
     Dialogs/RenameTemplate.cpp
     Dialogs/RenameTemplate.h
@@ -222,6 +228,8 @@ set( WIDGET_FILES
     Widgets/ImageView.h
     Widgets/AVView.cpp
     Widgets/AVView.h
+    Widgets/PdfView.cpp
+    Widgets/PdfView.h
     Widgets/FontView.cpp
     Widgets/FontView.h
     Widgets/Navigator.h
@@ -332,6 +340,7 @@ set( MISC_FILES
     Misc/URLSchemeHandler.cpp
     Misc/URLSchemeHandler.h
     Misc/Utility.cpp
+    Misc/UtilityExt.cpp
     Misc/Utility.h
     Misc/SleepFunctions.h
     Misc/FindReplaceQLineEdit.cpp
@@ -402,6 +411,8 @@ set( MISC_FILES
     Misc/XMLEntities.h
     Misc/MediaTypes.cpp
     Misc/MediaTypes.h
+    Misc/WebProfileMgr.cpp
+    Misc/WebProfileMgr.h
     Misc/webviewprinter.cpp
     Misc/webviewprinter.h
     Misc/SettingsStoreExtend.cpp
@@ -440,8 +451,8 @@ set( SPCRE_FILES
 
 set( VIEW_EDITOR_FILES
     ViewEditors/CodeViewEditor.cpp
+    ViewEditors/CodeViewEditorExt.cpp
     ViewEditors/CodeViewEditor.h
-    ViewEditors/CVEditorKeyPressEvent.cpp
     ViewEditors/WebEngPage.cpp
     ViewEditors/WebEngPage.h
     ViewEditors/SimplePage.cpp
@@ -465,10 +476,12 @@ set( MAINUI_FILES
     MainUI/MainApplication.cpp
     MainUI/MainApplication.h
     MainUI/MainWindow.cpp
+    MainUI/MainWindowExt.cpp
     MainUI/MainWindow.h
     MainUI/FindReplace.cpp
     MainUI/FindReplace.h
     MainUI/BookBrowser.cpp
+    MainUI/BookBrowserExt.cpp
     MainUI/BookBrowser.h
     MainUI/ClipsWindow.cpp
     MainUI/ClipsWindow.h
@@ -483,6 +496,7 @@ set( MAINUI_FILES
     MainUI/TOCModel.cpp
     MainUI/TOCModel.h
     MainUI/ValidationResultsView.cpp
+    MainUI/ValidationResultsViewExt.cpp
     MainUI/ValidationResultsView.h
     )
 
@@ -492,6 +506,7 @@ set( TAB_FILES
     Tabs/TabManager.cpp
     Tabs/TabManager.h
     Tabs/FlowTab.cpp
+    Tabs/FlowTabExt.cpp
     Tabs/FlowTab.h
     Tabs/ContentTab.cpp
     Tabs/ContentTab.h
@@ -501,6 +516,8 @@ set( TAB_FILES
     Tabs/CSSTab.h
     Tabs/AVTab.cpp
     Tabs/AVTab.h
+    Tabs/PdfTab.cpp
+    Tabs/PdfTab.h
     Tabs/FontTab.cpp
     Tabs/FontTab.h
     Tabs/ImageTab.cpp
@@ -609,13 +626,6 @@ set( QRC_FILES
     Resource_Files/icon/icon.qrc
     Resource_Files/dark/dark.qrc
     )
-if( UNIX AND NOT APPLE )
-    if ( USE_ALT_ICONS )
-        LIST( APPEND QRC_FILES Resource_Files/icon/app_icons_alt/app_icons.qrc )
-    else()
-        LIST( APPEND QRC_FILES Resource_Files/icon/app_icons_orig/app_icons.qrc )
-    endif()
-endif()
 
 set( MAIN_BINARY_QRC_FILES
     Resource_Files/main/main.qrc

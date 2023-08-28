@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2021 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2009-2011  Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -32,6 +32,8 @@
 #include "ResourceObjects/ImageResource.h"
 #include "ResourceObjects/MiscTextResource.h"
 #include "ResourceObjects/SVGResource.h"
+#include "ResourceObjects/PdfResource.h"
+#include "Tabs/PdfTab.h"
 #include "Tabs/AVTab.h"
 #include "Tabs/FontTab.h"
 #include "Tabs/CSSTab.h"
@@ -61,6 +63,7 @@ TabManager::TabManager(QWidget *parent)
     connect(this, SIGNAL(currentChanged(int)),           this, SLOT(EmitTabChanged(int)));
     connect(this, SIGNAL(tabCloseRequested(int)),        this, SLOT(CloseTab(int)));
     setDocumentMode(true);
+
     // re-enable tab drag and drop as a test to see if last commit helped
     setMovable(true);
     setTabsClosable(true);
@@ -77,6 +80,21 @@ ContentTab *TabManager::GetCurrentContentTab()
     //Q_ASSERT( widget != NULL );
     return qobject_cast<ContentTab *>(widget);
 }
+
+
+#if 0
+// keep this as it is useful for debuggin why preview will not update on some tabs
+ContentTab* TabManager::GetContentTabForResource(Resource* resource)
+{
+    int index = ResourceTabIndex(resource);
+
+    if (index != -1) {
+        ContentTab* tab = qobject_cast<ContentTab *>(widget(index));
+        return tab;
+    }
+    return NULL;
+}
+#endif
 
 QList<ContentTab *> TabManager::GetContentTabs()
 {
@@ -258,7 +276,12 @@ void TabManager::OpenResource(Resource *resource,
                           caret_location_to_scroll_to, fragment, grab_focus);
 
     if (new_tab) {
-        m_newTab = new_tab;
+        // only set m_newTab if going to be current tab (ie focus was grabbed)
+        // otherwise after injection of new tab preceding_current_tab will prevent
+        // proper updating of preview
+        if (grab_focus) {
+            m_newTab = new_tab;
+        }
         AddNewContentTab(new_tab, precede_current_tab);
         emit ShowStatusMessageRequest("");
     } else {
@@ -597,6 +620,12 @@ bool TabManager::SwitchedToExistingTab(const Resource *resource,
             return true;
         }
 
+        PdfTab *pdf_tab = qobject_cast<PdfTab *>(tab);
+
+        if (pdf_tab != NULL) {
+            return true;
+        }
+
         FontTab *font_tab = qobject_cast<FontTab *>(tab);
 
         if (font_tab != NULL) {
@@ -682,6 +711,11 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
         case Resource::AudioResourceType:
         case Resource::VideoResourceType: {
             tab = new AVTab(qobject_cast<Resource *>(resource), this);
+            break;
+        }
+
+        case Resource::PdfResourceType: {
+            tab = new PdfTab(qobject_cast<Resource *>(resource), this);
             break;
         }
 

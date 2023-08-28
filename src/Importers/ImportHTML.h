@@ -52,7 +52,9 @@ public:
     virtual QSharedPointer<Book> GetBook(bool extract_metadata=true);
 
     const QStringList& GetAddedBookPaths();
-
+    //-------------- modified: BulkAddResource ----------------
+    void setDoNotUpdateOPF(bool notUpdate);
+    //---------------------------------------------------------
 private:
 
     // Loads the source code into the Book
@@ -90,6 +92,9 @@ private:
     QString m_EpubVersion;
 
     QStringList m_AddedBookPaths;
+    //-------------- modified: BulkAddResource ----------------
+    bool m_doNotUpdateOPF;
+    //---------------------------------------------------------
 };
 
 #endif // IMPORTHTML_H

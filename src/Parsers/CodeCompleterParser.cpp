@@ -3,6 +3,7 @@
 #include <QtWidgets/QAbstractItemView>
 #include <QtCore/QStringListModel>
 #include <QtWidgets/QScrollBar>
+
 #include "Parsers/CodeCompleterParser.h"
 #include "Misc/Utility.h"
 #include "Misc/SettingsStoreExtend.h"
@@ -375,7 +376,7 @@ CodeCompleterParser::PosState CodeCompleterParser::parseHtmlPosType()
 	};
 	
 	auto find_tag = [&text](int index) -> QString {
-		if (index - 1 >= 0 && text.at(index - 1) != "<") {
+		if (index - 1 >= 0 && text.at(index - 1) != '<') {
 			return "";
 		}
 
@@ -439,16 +440,16 @@ CodeCompleterParser::PosState CodeCompleterParser::parseHtmlPosType()
 
 	while (i > 0) {
 		QChar pre_ch = text.at(i - 1);
-		if (pre_ch == "<") {
+		if (pre_ch == '<') {
 			if (closingAngleBracketFound) {
-				if (text.at(textStartPos-2)!="/" && i+5<Len && text.mid(i, 5) == "style" && QString(">\n ").contains(text.at(i + 5))) {
+				if (text.at(textStartPos - 2) != '/' && i + 5 < Len && text.mid(i, 5) == "style" && QString(">\n ").contains(text.at(i + 5))) {
 					state.postype = PosType::HTML_TEXT_FOR_STYLE;
 				}
 				else {
 					state.postype = PosType::HTML_TEXT;
 				}
 			}
-			else if (i < Len && text.at(i) == "/") {
+			else if (i < Len && text.at(i) == '/') {
 				state.postype = PosType::HTML_CLOSE_TAG;
 			}
 			else if (text.at(pos - 1) == '/') {
@@ -458,7 +459,7 @@ CodeCompleterParser::PosState CodeCompleterParser::parseHtmlPosType()
 				if (maybeInStyleAttr) {
 					state.postype = PosType::HTML_STYLEATTR;
 				}
-				else if (maybeInStyleAttr) {
+				else if (maybeInStyleValue) {
 					state.postype = PosType::HTML_STYLEVAL;
 				}
 				else {
@@ -525,12 +526,12 @@ CodeCompleterParser::PosState CodeCompleterParser::parseHtmlPosType()
 			}
 			quote_count = 0;
 		}
-		else if (pre_ch == ":") {
+		else if (pre_ch == ':') {
 			if (quote_count == 0 && !(maybeInStyleAttr || colonFound || semicolonFound)) {
 				colonFound = true;
 			}
 		}
-		else if (pre_ch == ";") {
+		else if (pre_ch == ';') {
 			if (quote_count == 0 && !(maybeInStyleAttr || colonFound || semicolonFound)) {
 				semicolonFound = true;
 			}
@@ -631,11 +632,13 @@ CodeCompleterParser::PosState CodeCompleterParser::parseCssPosType(uint startPos
 
 	while (i > startPosOfDoc) {
 		QChar pre_ch = text.at(i - 1);
-		if (i - 2 >= startPosOfDoc) {
-			if (pre_ch == "/" && text.at(i - 2) == "*") {
+		// Variable with uint type can not make subtractions to obtain the number less than 0,
+		// so here we set the limit condition "i>=2" to avoid to make a subtraction while i < 2.
+		if (i >= 2 && i-2 >= startPosOfDoc) { 
+			if (pre_ch == '/' && text.at(i - 2) == '*') {
 				endOfConment = true;
 			}
-			else if (pre_ch == "*" && text.at(i - 2) == "/") {
+			else if (pre_ch == '*' && text.at(i - 2) == '/') {
 				if (endOfConment) {
 					i -= 2;
 					endOfConment = false;
@@ -665,8 +668,7 @@ CodeCompleterParser::PosState CodeCompleterParser::parseCssPosType(uint startPos
 				maybeInAttr = true;
 			}
 			QString selector = find_selector(i);
-
-			if (selector.indexOf(QRegExp("^@media|^@supports|^@layer|^@keyframes")) >= 0) {
+			if (selector.indexOf(QRegularExpression("^@media|^@supports|^@layer|^@keyframes")) >= 0) {
 				state.postype = PosType::CSS_SELECTOR;
 			}
 			else {

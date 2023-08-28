@@ -1,6 +1,6 @@
-/************************************************************************
+ï»¿/************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford, Ontario Canada
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford, Ontario Canada
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -152,6 +152,8 @@ QList <Resource *> OPFModel::GetResourceListInFolder(Resource::ResourceType reso
         folder = m_AudioFolderItem;
     } else if (resource_type == Resource::VideoResourceType) {
         folder = m_VideoFolderItem;
+    } else if (resource_type == Resource::PdfResourceType) {
+        folder = m_MiscFolderItem;
     } else if (resource_type != Resource::OPFResourceType && resource_type != Resource::NCXResourceType) {
         folder = m_MiscFolderItem;
     }
@@ -188,7 +190,7 @@ QModelIndex OPFModel::GetModelItemIndex(Resource *resource, IndexChoice indexCho
                  (resourceType == Resource::CSSResourceType)) ||
                 (child == m_FontsFolderItem && resourceType == Resource::FontResourceType) ||
                 (child == m_MiscFolderItem &&
-                 (resourceType == Resource::GenericResourceType || resourceType == Resource::XMLResourceType)) ||
+                 (resourceType == Resource::PdfResourceType || resourceType == Resource::GenericResourceType || resourceType == Resource::XMLResourceType)) ||
                 (child == m_AudioFolderItem && resourceType == Resource::AudioResourceType) ||
                 (child == m_VideoFolderItem && resourceType == Resource::VideoResourceType)
                ) {
@@ -250,6 +252,8 @@ Resource::ResourceType OPFModel::GetResourceType(QStandardItem const *item)
     }
 
     if (item == m_MiscFolderItem) {
+        // filler lines to keep
+        // line numbers in sync with translation ts files
         return Resource::GenericResourceType;
     }
 
@@ -345,7 +349,7 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
     QStringList not_renamed;
     QHash<QString, QString> update;
     SettingsStore ss;
-    //--------- ÐÞ¸Ä£ºÅúÁ¿ÖØÃüÃû ----------
+    //--------- modified: BulkResourceRenamed ----------
     QList<QString> old_full_paths;
     QList<Resource*> valid_resources;
     //-------------------------------------
@@ -380,9 +384,9 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
         }
 
         bool rename_success = false;
-        //------------------------------------ ÐÞ¸Ä£ºÅúÁ¿ÖØÃüÃû ---------------------------------
-        disconnect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); // È¡Ïû×ÊÔ´ÎÄ¼þ¶ÔFolderKeeper·¢ËÍRenamedÐÅºÅ
-        QString old_full_path = resource->GetFullPath();  // ÌáÇ°Í¨¹ýGetFullPath()±£´æ¾ÉÂ·¾¶¡£ÔÚRenameTo()Ö®ºó£¬GetFullPath()µÄÖµ»á¸ü¸ÄÎªÐÂÖµ£¬±ØÐëÌáÇ°±£´æ¾ÉÖµ¡£
+        //------------------------------------ modified: BulkResourceRenamed ---------------------------------
+        disconnect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); // å–æ¶ˆèµ„æºæ–‡ä»¶å¯¹FolderKeeperå‘é€Renamedä¿¡å·
+        QString old_full_path = resource->GetFullPath();  // æå‰é€šè¿‡GetFullPath()ä¿å­˜æ—§è·¯å¾„ã€‚åœ¨RenameTo()ä¹‹åŽï¼ŒGetFullPath()çš„å€¼ä¼šæ›´æ”¹ä¸ºæ–°å€¼ï¼Œå¿…é¡»æå‰ä¿å­˜æ—§å€¼ã€‚
         //---------------------------------------------------------------------------------------
         // special case the OPFResource and the NCXResource
         if (resource->Type() == Resource::OPFResourceType) {
@@ -406,18 +410,18 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
             }
             continue;
         }
-        // -------- ÐÞ¸Ä£ºÅúÁ¿ÖØÃüÃû ---------
+        // -------- modified: BulkResourceRenamed ---------
         valid_resources << resource;
         old_full_paths << old_full_path; 
-        connect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); //»Ö¸´RenamedÐÅºÅ£¬±£Ö¤ ResourceRenamed µ÷ÓÃÕý³£¡£
+        connect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); //æ¢å¤Renamedä¿¡å·ï¼Œä¿è¯ ResourceRenamed è°ƒç”¨æ­£å¸¸ã€‚
         // -----------------------------------
         update[ old_bookpath ] = resource->GetRelativePath();
     }
 
-    m_Book->GetFolderKeeper()->BulkResourceRenamed(valid_resources, old_full_paths); //ÐÞ¸Ä£ºÅúÁ¿ÖØÃüÃû
+    m_Book->GetFolderKeeper()->BulkResourceRenamed(valid_resources, old_full_paths); //modified: BulkResourceRenamed
 
     if (update.count() > 0) {
-        //UniversalUpdates::PerformUniversalUpdates ¸üÐÂÎÄ¼þÖÐ¹ØÁªµÄÁ´½Ó¡£
+        //UniversalUpdates::PerformUniversalUpdates æ›´æ–°æ–‡ä»¶ä¸­å…³è”çš„é“¾æŽ¥ã€‚
         UniversalUpdates::PerformUniversalUpdates(true, m_Book->GetFolderKeeper()->GetResourceList(), update);
         emit BookContentModified();
     }
@@ -573,6 +577,9 @@ void OPFModel::InitializeModel()
         } else if (resource->Type() == Resource::VideoResourceType) {
             item->setDragEnabled(false);
             m_VideoFolderItem->appendRow(item);
+        } else if (resource->Type() == Resource::PdfResourceType) {
+            item->setDragEnabled(false);
+            m_MiscFolderItem->appendRow(item);
         } else if (resource->Type() == Resource::OPFResourceType ||
                    resource->Type() == Resource::NCXResourceType) {
             item->setEditable(true);

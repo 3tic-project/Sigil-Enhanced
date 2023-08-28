@@ -55,6 +55,7 @@
 ImportHTML::ImportHTML(const QString &fullfilepath)
     :
     Importer(fullfilepath),
+    m_doNotUpdateOPF(false), //modified: BulkAddResource
     m_IgnoreDuplicates(false),
     m_CachedSource(QString())
 {
@@ -174,7 +175,13 @@ HTMLResource *ImportHTML::CreateHTMLResource()
     TempFolder tempfolder;
     QString fullfilepath = tempfolder.GetPath() + "/" + QFileInfo(m_FullFilePath).fileName();
     Utility::WriteUnicodeTextFile("TEMP_SOURCE", fullfilepath);
-    HTMLResource *resource = qobject_cast<HTMLResource *>(m_Book->GetFolderKeeper()->AddContentFileToFolder(fullfilepath));
+    //-------------- modified: BulkAddResource ----------------
+    //HTMLResource* resource = qobject_cast<HTMLResource*>(m_Book->GetFolderKeeper()->AddContentFileToFolder(fullfilepath));
+    bool update_opf = true;
+    if (m_doNotUpdateOPF)
+        update_opf = false;
+    HTMLResource* resource = qobject_cast<HTMLResource*>(m_Book->GetFolderKeeper()->AddContentFileToFolder(fullfilepath, update_opf));
+    //---------------------------------------------------------
     resource->SetCurrentBookRelPath(m_FullFilePath);
     m_AddedBookPaths << resource->GetRelativePath();
     return resource;
@@ -354,3 +361,8 @@ QHash<QString, QString> ImportHTML::LoadStyleFiles(const QStringList & file_path
 
     return updates;
 }
+//-------------- modified: BulkAddResource ----------------
+void ImportHTML::setDoNotUpdateOPF(bool notUpdate) {
+    m_doNotUpdateOPF = notUpdate;
+}
+//---------------------------------------------------------

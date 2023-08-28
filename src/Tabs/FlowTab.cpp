@@ -1,6 +1,6 @@
-/************************************************************************
+ï»¿/************************************************************************
 **
-**  Copyright (C) 2016-2021  Kevin B Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2016-2023  Kevin B Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2012       John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012       Dave Heiland
 **  Copyright (C) 2012       Grant Drake
@@ -129,7 +129,6 @@ void FlowTab::CreateCodeViewIfRequired(bool is_delayed_load)
     QApplication::setOverrideCursor(Qt::WaitCursor);
     m_wCodeView = new CodeViewEditor(CodeViewEditor::Highlight_XHTML, true, this);
     m_wCodeView->SetReformatHTMLEnabled(true);
-    // m_views->addWidget(m_wCodeView);
 
     if (is_delayed_load) {
         ConnectCodeViewSignalsToSlots();
@@ -399,16 +398,6 @@ bool FlowTab::PasteEnabled()
     }
     return false;
 }
-
-//------------- modified: AddPasteRichText ---------------
-bool FlowTab::PasteRichTextEnabled()
-{
-    if (m_wCodeView) {
-        return m_wCodeView->canPaste();
-    }
-    return false;
-}
-//--------------------------------------------------------
 
 bool FlowTab::DeleteLineEnabled()
 {
@@ -692,16 +681,6 @@ void FlowTab::Paste()
     }
 }
 
-//------------------- modified: AddPasteRichText ------------------------------
-void FlowTab::PasteRichText()
-{
-    if (m_wCodeView) {
-
-        m_wCodeView->PasteRichText();
-    }
-}
-//-----------------------------------------------------------------------------
-
 void FlowTab::DeleteLine()
 {
     if (m_wCodeView) {
@@ -752,14 +731,6 @@ void FlowTab::SplitSection()
         emit OldTabRequest(m_wCodeView->SplitSection(), m_HTMLResource);
     }
 }
-
-// -------------- modified: SplitBlockOrAddBreak ----------------
-void FlowTab::SplitBlockOrAddBreak()
-{
-    if (!IsDataWellFormed()) return;
-    m_wCodeView->SplitBlockOrAddBreak();
-}
-// ----------------------------------------------------------
 
 void FlowTab::InsertSGFSectionMarker()
 {
@@ -1057,26 +1028,14 @@ void FlowTab::ChangeCasing(const Utility::Casing casing)
 void FlowTab::HeadingStyle(const QString &heading_type, bool preserve_attributes)
 {
     if (m_wCodeView) {
-        QChar last_char = heading_type[ heading_type.count() - 1 ];
+        QChar last_char = heading_type[ heading_type.length() - 1 ];
 
         // For heading_type == "Heading #"
-        // --------------------------ÐÞ¸Ä£º¶àÐÐÌí¼Ó¿éÔªËØ±êÇ©---------------------------
-        /*
         if (last_char.isDigit()) {
             m_wCodeView->FormatBlock("h" % QString(last_char), preserve_attributes);
         } else if (heading_type == "Normal") {
             m_wCodeView->FormatBlock("p", preserve_attributes);
-        }*/
-        if (last_char.isDigit()) {
-            m_wCodeView->FormatBlock_multiline("h" % QString(last_char), preserve_attributes);
         }
-        else if (heading_type == "Normal") {
-            m_wCodeView->FormatBlock_multiline("p", preserve_attributes);
-        }
-        else if (heading_type == "Division") {
-            m_wCodeView->FormatBlock_multiline("div", preserve_attributes);
-        }
-        // -----------------------------------------------------------------------------
     }
 }
 

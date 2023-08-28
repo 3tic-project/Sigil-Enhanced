@@ -372,6 +372,8 @@ private slots:
 
     void ValidateStylesheetWithW3C();
 
+    void insertFileToEditor();
+
 protected:
     virtual void showEvent(QShowEvent *event);
 
@@ -557,6 +559,26 @@ private:
 
     Resource *m_RenamedResource;
     Resource *m_MovedResource;
+
+/* ------------------------------ modified: BookBrowserExt --------------------------------*/
+signals:
+    void InsertFileRequest(); // insertFileToEditor
+
+public slots:
+    QStringList AddFiles(QStringList& filepaths); // modified: AddFiles
+    QStringList AddImagesFromFilePaths(QStringList& filepaths);// modified: AddImages
+    QString AddImageFromClipboard(const QByteArray& data, QString defaultFilename); // modified: AddImages
+
+protected:
+
+    void dragEnterEvent(QDragEnterEvent* e); //modified: dropEvent
+    void dropEvent(QDropEvent* e); //modified: dropEvent
+
+private:
+    // modified: insertFileToEditor
+    QAction* m_InsertFileToDocument1;
+    QAction* m_InsertFileToDocument2;
+    QAction* m_InsertFileToDocument3;
 };
 
 #endif // BOOKBROWSER_H

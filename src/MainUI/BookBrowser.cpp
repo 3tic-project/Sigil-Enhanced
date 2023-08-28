@@ -1,6 +1,6 @@
-/************************************************************************
+ï»¿/************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford, Ontario Canada
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford, Ontario Canada
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -105,6 +105,7 @@ BookBrowser::BookBrowser(QWidget *parent)
     m_OpenWithContextMenu->addAction(m_OpenWithEditor3);
     m_OpenWithContextMenu->addAction(m_OpenWithEditor4);
     m_OpenWithContextMenu->addAction(m_OpenWith);
+    setAcceptDrops(true); // modified: dropEvent
 }
 
 
@@ -635,9 +636,8 @@ void BookBrowser::AddNewJS()
 {
     QString version = m_Book->GetConstOPF()->GetEpubVersion();
     if (version.startsWith('2')) {
-        QMessageBox::StandardButton button_pressed;
-        button_pressed = QMessageBox::warning(this, tr("Sigil"),tr("Javascript is not supported on epub2.")
-                                              ,QMessageBox::Ok);
+        QMessageBox::warning(this, tr("Sigil"),tr("Javascript is not supported on epub2.")
+                                 ,QMessageBox::Ok);
         return;
     }
 
@@ -726,6 +726,7 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
     }
     bool yes_to_all = false;
     bool no_to_all = false;
+    QList<Resource*> resToBeAdded; //modified: BulkAddResources
     foreach(QString filepath, filepaths) {
         if (file_count > 1) {
             // Set progress value and ensure dialog has time to display when doing extensive updates
@@ -758,9 +759,10 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
         // try to see if an existing file has this filename and allow overwriting
         QString existing_book_path = m_Book->GetFolderKeeper()->GetBookPathByPathEnd(filename);
 
+        bool needUpdatingOPF = true; // modified: RemoveWithoutUpdatingOPF
         if (!existing_book_path.isEmpty()) {
             // If this is an image prompt to replace it.
-            // ÐÞ¸Ä£ºÌí¼ÓFONT_EXTENSIONS£¨×ÖÌåÎÄ¼þ£©Îª¿É¸²¸ÇÀàÐÍ¡£
+            // ä¿®æ”¹ï¼šæ·»åŠ FONT_EXTENSIONSï¼ˆå­—ä½“æ–‡ä»¶ï¼‰ä¸ºå¯è¦†ç›–ç±»åž‹ã€‚
             if (IMAGE_EXTENSIONS.contains(QFileInfo(filepath).suffix().toLower()) ||
                 SVG_EXTENSIONS.contains(QFileInfo(filepath).suffix().toLower()) ||
                 VIDEO_EXTENSIONS.contains(QFileInfo(filepath).suffix().toLower()) ||
@@ -795,7 +797,11 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
                     if (image_resource) {
                         CoverImageSemanticsSet = m_Book->GetOPF()->IsCoverImage(image_resource);
                     }
-                    old_resource->Delete();
+                    //---- modified: RemoveWithoutUpdatingOPF---
+                    //old_resource->Delete();
+                    m_Book->GetFolderKeeper()->RemoveWithoutUpdatingOPF(old_resource);
+                    needUpdatingOPF = false;
+                    //------------------------------------------
                     replacements_made = true;
                 } catch (ResourceDoesNotExist&) {
                     Utility::DisplayStdErrorDialog(tr("Unable to delete or replace file \"%1\".").arg(filename)
@@ -824,10 +830,12 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
             // Since we set the Book manually,
             // this call merely mutates our Book.
             bool extract_metadata = false;
+            html_import.setDoNotUpdateOPF(true); // modified: BulkAddResources
             html_import.GetBook(extract_metadata);
             QStringList importedbookpaths = html_import.GetAddedBookPaths();
             DBG qDebug() << "In BookBrowser Add Existing adding bookpaths: " << importedbookpaths;
             Resource *added_resource = m_Book->GetFolderKeeper()->GetResourceByBookPath(importedbookpaths.at(0));
+            if (needUpdatingOPF) resToBeAdded << added_resource; // modified: BulkAddResources
             HTMLResource *added_html_resource = qobject_cast<HTMLResource *>(added_resource);
             added_book_paths.append(importedbookpaths);
             if (current_html_resource && added_html_resource) {
@@ -842,7 +850,12 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
                 }
             }
         } else {
-            Resource *resource = m_Book->GetFolderKeeper()->AddContentFileToFolder(filepath);
+            //------------------------- modified: BulkAddResources --------------------------
+            //Resource* resource = m_Book->GetFolderKeeper()->AddContentFileToFolder(filepath);
+            Resource* resource = m_Book->GetFolderKeeper()->AddContentFileToFolder(filepath, false);
+            if (needUpdatingOPF) 
+                resToBeAdded << resource;
+            //-------------------------------------------------------------------------------
             added_book_paths << resource->GetRelativePath();
             // if replacing a cover image, set the cover image semantics
             if (CoverImageSemanticsSet) {
@@ -859,6 +872,7 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
         }
 
     }
+    m_Book->GetFolderKeeper()->BulkAddResourcesToOPF(resToBeAdded); //modified: BulkAddResources
     // turn off the QProgress Dialog by setting it as reaching its target
     progress.setValue(file_count);
 
@@ -1504,7 +1518,7 @@ void BookBrowser::RemoveResources(QList<Resource *> tab_resources, QList<Resourc
 
     // Delete the resources
 
-    // ------ ÐÞ¸Ä£ºÅúÁ¿É¾³ý ------------------
+    // ------ modified: BulkRemoveResources ------------------
     /* 
     foreach(Resource * resource, resources) {
         resource->Delete();
@@ -1831,6 +1845,11 @@ void BookBrowser::CreateContextMenuActions()
     m_OpenWithEditor2          = new QAction("",                            this);
     m_OpenWithEditor3          = new QAction("",                            this);
     m_OpenWithEditor4          = new QAction("",                            this);
+    //-------------- modified: modified: insertFileToEditor ----------------------------
+    m_InsertFileToDocument1    = new QAction(tr("Insert Into HTML/CSS File"),this);
+    m_InsertFileToDocument2    = new QAction(tr("Insert Into HTML File"),    this);
+    m_InsertFileToDocument3    = new QAction(tr("Insert Into CSS File"),     this);
+    //----------------------------------------------------------------------------------
     m_CoverImage             ->setCheckable(true);
     m_NoObfuscationMethod    ->setCheckable(true);
     m_AdobesObfuscationMethod->setCheckable(true);
@@ -1940,6 +1959,26 @@ bool BookBrowser::SuccessfullySetupContextMenu(const QPoint &point)
         }
 
         m_ContextMenu->addSeparator();
+        // --------------------- modified: insertFileToEditor ------------------
+        if (resource->Type() & (Resource::ImageResourceType |
+                                Resource::SVGResourceType |
+                                Resource::FontResourceType |
+                                Resource::VideoResourceType |
+                                Resource::AudioResourceType))
+        {
+            if (resource->Type() & (Resource::ImageResourceType | Resource::SVGResourceType)) {
+                m_ContextMenu->addAction(m_InsertFileToDocument1);
+            }
+            else if (resource->Type() & (Resource::VideoResourceType | Resource::AudioResourceType)) {
+                m_ContextMenu->addAction(m_InsertFileToDocument2);
+            }
+            else if (resource->Type() & Resource::FontResourceType) {
+                m_ContextMenu->addAction(m_InsertFileToDocument3);
+            }
+            
+            m_ContextMenu->addSeparator();
+        }
+        //----------------------------------------------------------------------
 
         // Open With
         if (OpenExternally::mayOpen(resource->Type())) {
@@ -2134,7 +2173,11 @@ void BookBrowser::ConnectSignalsToSlots()
     connect(m_AdobesObfuscationMethod, SIGNAL(triggered()), this, SLOT(AdobesObfuscationMethod()));
     connect(m_IdpfsObfuscationMethod,  SIGNAL(triggered()), this, SLOT(IdpfsObfuscationMethod()));
     connect(m_NoObfuscationMethod,     SIGNAL(triggered()), this, SLOT(NoObfuscationMethod()));
-
+    //-------------------------- modified: insertFileToEditor ---------------------------------
+    connect(m_InsertFileToDocument1,   SIGNAL(triggered()), this, SLOT(insertFileToEditor())); 
+    connect(m_InsertFileToDocument2,   SIGNAL(triggered()), this, SLOT(insertFileToEditor()));
+    connect(m_InsertFileToDocument3,   SIGNAL(triggered()), this, SLOT(insertFileToEditor()));
+    //-----------------------------------------------------------------------------------------
 }
 
 

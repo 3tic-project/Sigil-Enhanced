@@ -1,7 +1,7 @@
-/************************************************************************
+ï»¿/************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2015-2022 Doug Massay
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2023 Doug Massay
 **  Copyright (C) 2012-2015 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013 Dave Heiland
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -39,7 +39,6 @@
 #include <QToolBar>
 #include <QtWebEngineWidgets>
 #include <QtWebEngineCore>
-#include <QWebEngineSettings>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -64,7 +63,6 @@
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/Index.h"
 #include "BookManipulation/FolderKeeper.h"
-#include "BookManipulation/EpubVersionConv.h" // modified: Epub3ToEpub2 Epub2ToEpub3
 #include "Dialogs/About.h"
 #include "Dialogs/ClipEditor.h"
 #include "Dialogs/ClipboardHistorySelector.h"
@@ -527,7 +525,7 @@ bool MainWindow::Automate(const QStringList &commands)
                 QMessageBox msgBox;
                 msgBox.setModal(false);
                 msgBox.setText(tr("Validation tool found errors - Abort or Ignore?"));
-                QPushButton * abortButton = msgBox.addButton(QMessageBox::Abort);
+                msgBox.addButton(QMessageBox::Abort);
                 QPushButton * ignoreButton = msgBox.addButton(QMessageBox::Ignore);
                 bool button_clicked = false;
                 connect(&msgBox, &QMessageBox::buttonClicked, this, [this, &button_clicked]() { button_clicked = true; });
@@ -807,41 +805,6 @@ bool MainWindow::StandardizeEpub()
     return true;
 }
 
-//-----modified: Epub3ToEpub2------
-void MainWindow::Epub3ToEpub2() {
-    QString epubversion = m_Book->GetConstOPF()->GetEpubVersion();
-    if (epubversion.startsWith("2")) {
-        QMessageBox::warning(this, tr("Sigil"),
-            tr("This Epub is already the version 2.0 !"), QMessageBox::Ok);
-        return;
-    }
-    if (!StandardizeEpub()) return;
-    GenerateNCXGuideFromNav();
-    EpubVersionConv* evc = new EpubVersionConv(m_Book);
-    evc->convert_to_epub2();
-    m_TableOfContents->SetBook(m_Book); // set the TOCModel's m_EpubVersion to 2.0
-    ResourcesAddedOrDeletedOrMoved(); // Change the main window's title to show 2.0 version
-    m_BookBrowser->Refresh();
-}
-//---------------------------------
-
-//-----modified: Epub2ToEpub3------
-void MainWindow::Epub2ToEpub3() {
-    QString epubversion = m_Book->GetConstOPF()->GetEpubVersion();
-    if (epubversion.startsWith("3")) {
-        QMessageBox::warning(this, tr("Sigil"),
-            tr("This Epub is already the version 3.0 !"), QMessageBox::Ok);
-        return;
-    }
-    if (!StandardizeEpub()) return;
-    EpubVersionConv* evc = new EpubVersionConv(m_Book);
-    evc->convert_to_epub3();
-    RemoveNCXGuideFromEpub3();
-    m_TableOfContents->SetBook(m_Book); // set the TOCModel's m_EpubVersion to 3.0
-    ResourcesAddedOrDeletedOrMoved(); // Change the main window's title to show 3.0 version
-    m_BookBrowser->Refresh();
-}
-//---------------------------------
 
 void MainWindow::FixDuplicateFilenames()
 {
@@ -2396,7 +2359,7 @@ bool MainWindow::AddCover()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
-    // -------------------------- ÐÞ¸Ä£ºÓÅ»¯CoverÒ³ÉèÖÃÐ§ÂÊ -----------------------------------
+    // -------------------------- modified: Optimize the efficency of setting Cover Page -------------------------------
     /*
     // Find existing cover HTML file if there is one.
     HTMLResource *html_cover_resource = NULL;
@@ -2425,7 +2388,7 @@ bool MainWindow::AddCover()
     }
     */
 
-    // Ñ°ÕÒµÚÒ»¸öÒÑ´æÔÚµÄ·âÃæHTMLÎÄ¼þ
+    // Find the first HTML file that is setted the semantic "cover"
     OPFResource* m_OPF = m_Book->GetOPF();
     OPFParser p;
     p.parse(m_OPF->GetText());
@@ -2478,9 +2441,15 @@ bool MainWindow::AddCover()
 
     // Populate the HTML cover file with the necessary text.
     // If a template file exists, use its text for the cover source.
-    QString text = HTML_COVER_SOURCE;
-    if (version.startsWith('3')) text = HTML5_COVER_SOURCE;
-    QString cover_path = Utility::DefinePrefsDir() + "/" + HTML_COVER_FILENAME;
+    QString text;
+    QString cover_path;
+    if (version.startsWith('3')) {
+        text = HTML5_COVER_SOURCE;
+        cover_path = Utility::DefinePrefsDir() + "/cover-template3.xhtml";
+    } else {
+        text = HTML_COVER_SOURCE;
+        cover_path = Utility::DefinePrefsDir() + "/cover-template2.xhtml";
+    }
     if (QFile::exists(cover_path)) {
         text = Utility::ReadUnicodeTextFile(cover_path);
     }
@@ -3347,6 +3316,7 @@ void MainWindow::PasteTextIntoCurrentTarget(const QString &text)
     m_LastPasteTarget->PasteText(text);
 }
 
+
 void MainWindow::PasteClipIntoCurrentTarget(int clip_number)
 {
     if (m_LastPasteTarget == NULL) {
@@ -4193,7 +4163,11 @@ void MainWindow::PreferencesDialog()
             UpdatePreview();
         }
     }
-
+    //----------------- modified: RefreshToolBarPlugins ---------------
+    if (prefers.isRefreshToolBarPluginsRequired()) {
+        loadPluginsMenu();
+    }
+    //-----------------------------------------------------------------
     if (m_SelectCharacter->isVisible()) {
         // To ensure any font size changes are immediately applied.
         m_SelectCharacter->show();
@@ -4433,7 +4407,6 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionPrintPreview->setEnabled(true);
     ui.actionPrint->setEnabled(true);
     ui.actionSplitSection->setEnabled(true);
-    ui.actionSplitBlockOrAddBreak->setEnabled(true);//modified: SplitBlockOrAddBreak
     ui.actionInsertSGFSectionMarker->setEnabled(true);
     ui.actionInsertFile->setEnabled(true);
     ui.actionInsertSpecialCharacter->setEnabled(true);
@@ -4470,7 +4443,6 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionHeading5->setEnabled(true);
     ui.actionHeading6->setEnabled(true);
     ui.actionHeadingNormal->setEnabled(true);
-    ui.actionHeadingDivision->setEnabled(true); //modified: actionHeadingDivision
     ui.actionInsertBulletedList ->setEnabled(true);
     ui.actionInsertNumberedList ->setEnabled(true);
     ui.actionCasingLowercase  ->setEnabled(true);
@@ -4498,6 +4470,8 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionAddMisspelledWord->setEnabled(true);
     ui.actionIgnoreMisspelledWord->setEnabled(true);
     ui.actionAutoSpellCheck->setEnabled(true);
+    ui.actionHeadingDivision->setEnabled(true); //modified: actionHeadingDivision
+    ui.actionSplitBlockOrAddBreak->setEnabled(true);//modified: SplitBlockOrAddBreak
     UpdateUIOnTabChanges();
     m_FindReplace->ShowHide();
 }
@@ -4560,7 +4534,6 @@ void MainWindow::SetStateActionsRawView()
     ui.actionHeading5->setEnabled(false);
     ui.actionHeading6->setEnabled(false);
     ui.actionHeadingNormal->setEnabled(false);
-    ui.actionHeadingDivision->setEnabled(false); // modified: actionHeadingDivision
     ui.actionCasingLowercase  ->setEnabled(true);
     ui.actionCasingUppercase  ->setEnabled(true);
     ui.actionCasingTitlecase ->setEnabled(true);
@@ -4586,6 +4559,7 @@ void MainWindow::SetStateActionsRawView()
     ui.actionAddMisspelledWord->setEnabled(false);
     ui.actionIgnoreMisspelledWord->setEnabled(false);
     ui.actionAutoSpellCheck->setEnabled(false);
+    ui.actionHeadingDivision->setEnabled(false); // modified: actionHeadingDivision
     UpdateUIOnTabChanges();
     m_FindReplace->ShowHide();
 }
@@ -4895,14 +4869,14 @@ void MainWindow::CreateSectionBreakOldTab(QString content, HTMLResource *origina
 
     HTMLResource *html_resource = m_Book->CreateSectionBreakOriginalResource(content, originating_resource);
     m_BookBrowser->Refresh();
-    // Open the old shortened content in a new tab preceding the current one.
-    // without grabbing focus
-    OpenResource(html_resource, -1, -1, QString(), QUrl(), true);
-    FlowTab *flow_tab = GetCurrentFlowTab();
 
-    // We will reload the reduced content tab to ensure reflects updated resource.
+    // Open the split off piece of content in a new tab preceding the current one.
+    // * without grabbing focus 
+    OpenResource(html_resource, -1, -1, QString(), QUrl(), true);
+
+    // scroll current tab (bottom of split) to split point which is now top of file
+    FlowTab *flow_tab = GetCurrentFlowTab();
     if (flow_tab) {
-        flow_tab->LoadTabContent();
         flow_tab->ScrollToTop();
     }
 
@@ -5070,49 +5044,6 @@ void MainWindow::ReadSettings()
     m_ClipboardHistorySelector->LoadClipboardHistory(clipboardHistory);
     settings.endGroup();
     m_ClipboardHistoryLimit = settings.clipboardHistoryLimit();
-
-    // Our default fonts for Preview
-    SettingsStore::PreviewAppearance PVAppearance = settings.previewAppearance();
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QWebEngineSettings *web_settings = QWebEngineSettings::defaultSettings();
-#else
-    QWebEngineSettings *web_settings = QWebEngineProfile::defaultProfile()->settings();
-#endif
-
-    // Default QWebEngine security settings to help prevent rogue epub3 javascripts
-    // User preferences control if javascript is allowed (on) or not for Preview
-    web_settings->setAttribute(QWebEngineSettings::AutoLoadImages, true);
-    web_settings->setAttribute(QWebEngineSettings::JavascriptEnabled, false);
-    web_settings->setAttribute(QWebEngineSettings::JavascriptCanOpenWindows, false);
-    web_settings->setAttribute(QWebEngineSettings::JavascriptCanAccessClipboard, false);
-    web_settings->setAttribute(QWebEngineSettings::LocalContentCanAccessRemoteUrls, false);
-    web_settings->setAttribute(QWebEngineSettings::LocalContentCanAccessFileUrls, true);
-    web_settings->setAttribute(QWebEngineSettings::PluginsEnabled, false);
-    web_settings->setAttribute(QWebEngineSettings::AutoLoadIconsForPage, false);
-    web_settings->setAttribute(QWebEngineSettings::FocusOnNavigationEnabled, true);
-    web_settings->setAttribute(QWebEngineSettings::AllowRunningInsecureContent, false);
-    web_settings->setAttribute(QWebEngineSettings::XSSAuditingEnabled, true);
-    web_settings->setAttribute(QWebEngineSettings::AllowGeolocationOnInsecureOrigins, false);
-    web_settings->setAttribute(QWebEngineSettings::ScreenCaptureEnabled, false);
-    web_settings->setAttribute(QWebEngineSettings::LocalStorageEnabled, false);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-    web_settings->setAttribute(QWebEngineSettings::AllowWindowActivationFromJavaScript, false);
-#endif
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
-    web_settings->setUnknownUrlSchemePolicy(QWebEngineSettings::DisallowUnknownUrlSchemes);
-    web_settings->setAttribute(QWebEngineSettings::PlaybackRequiresUserGesture, true);
-    web_settings->setAttribute(QWebEngineSettings::JavascriptCanPaste, false);
-#endif
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-    web_settings->setAttribute(QWebEngineSettings::DnsPrefetchEnabled, false);
-#endif
-
-    web_settings->setFontSize(QWebEngineSettings::DefaultFontSize, PVAppearance.font_size);
-    web_settings->setFontFamily(QWebEngineSettings::StandardFont, PVAppearance.font_family_standard);
-    web_settings->setFontFamily(QWebEngineSettings::SerifFont, PVAppearance.font_family_serif);
-    web_settings->setFontFamily(QWebEngineSettings::SansSerifFont, PVAppearance.font_family_sans_serif);
 
     // Check for existing custom Preview stylesheets in Prefs dir and tell Preview about them
     QStringList usercssurls;
@@ -5683,6 +5614,7 @@ float MainWindow::GetZoomFactor()
     return 1;
 }
 
+
 int MainWindow::ZoomFactorToSliderRange(float zoom_factor)
 {
     // We want a precise value for the 100% zoom,
@@ -5845,13 +5777,8 @@ void MainWindow::ApplyHeadingStyleToTab(QAction* act)
     if (name == "actionHeadingNormal") {
         heading_type = "Normal";
     } 
-    // ------- modified: actionHeadingDivision----
-    else if (name == "actionHeadingDivision") {
-        heading_type = "Division";
-    }
-    //--------------------------------------------
     else {
-        heading_type = name[ name.count() - 1 ];
+        heading_type = name[ name.length() - 1 ];
     }
 
     if (flow_tab) {
@@ -6144,7 +6071,6 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionCut, "MainWindow.Cut");
     sm->registerAction(this, ui.actionCopy, "MainWindow.Copy");
     sm->registerAction(this, ui.actionPaste, "MainWindow.Paste");
-    sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     sm->registerAction(this, ui.actionPasteClipboardHistory, "MainWindow.PasteClipboardHistory");
     sm->registerAction(this, ui.actionDeleteLine, "MainWindow.DeleteLine");
     sm->registerAction(this, ui.actionInsertFile, "MainWindow.InsertFile");
@@ -6156,7 +6082,6 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionInsertSGFSectionMarker, "MainWindow.InsertSGFSectionMarker");
     sm->registerAction(this, ui.actionSplitOnSGFSectionMarkers, "MainWindow.SplitOnSGFSectionMarkers");
     sm->registerAction(this, ui.actionInsertClosingTag, "MainWindow.InsertClosingTag");
-    sm->registerAction(this, ui.actionSplitBlockOrAddBreak, "MainWindow.SplitBlockOrAddBreak"); // modified: SplitBlockOrAddBreak
 #ifndef Q_OS_MAC
     sm->registerAction(this, ui.actionPreferences, "MainWindow.Preferences");
 #endif
@@ -6207,7 +6132,6 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionHeading5, "MainWindow.Heading5");
     sm->registerAction(this, ui.actionHeading6, "MainWindow.Heading6");
     sm->registerAction(this, ui.actionHeadingNormal, "MainWindow.HeadingNormal");
-    sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     sm->registerAction(this, ui.actionHeadingPreserveAttributes, "MainWindow.HeadingPreserveAttributes");
     sm->registerAction(this, ui.actionCasingLowercase, "MainWindow.CasingLowercase");
     sm->registerAction(this, ui.actionCasingUppercase, "MainWindow.CasingUppercase");
@@ -6219,7 +6143,6 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionEditTOC, "MainWindow.EditTOC");
     sm->registerAction(this, ui.actionGenerateTOC, "MainWindow.GenerateTOC");
     sm->registerAction(this, ui.actionCreateHTMLTOC, "MainWindow.CreateHTMLTOC");
-    sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
     sm->registerAction(this, ui.actionWellFormedCheckEpub, "MainWindow.WellFormedCheckEpub");
     sm->registerAction(this, ui.actionValidateStylesheetsWithW3C, "MainWindow.ValidateStylesheetsWithW3C");
     sm->registerAction(this, ui.actionAutoSpellCheck, "MainWindow.AutoSpellCheck");
@@ -6228,8 +6151,6 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionUpdateManifestProperties, "MainWindow.UpdateManifestProperties");
     sm->registerAction(this, ui.actionNCXGuideFromNav, "MainWindow.NCXGuideFromNav");
     sm->registerAction(this, ui.actionRemoveNCXGuide, "MainWindow.RemoveNCXGuide");
-    sm->registerAction(this, ui.actionEpub3To2, "MainWindow.Epub3To2"); // modified: Epub3ToEpub2
-    sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
     sm->registerAction(this, ui.actionSpellcheckEditor, "MainWindow.SpellcheckEditor");
     sm->registerAction(this, ui.actionSpellcheck, "MainWindow.Spellcheck");
     sm->registerAction(this, ui.actionAddMisspelledWord, "MainWindow.AddMispelledWord");
@@ -6297,6 +6218,15 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionPlugin8,  "MainWindow.Plugins.RunPlugin8");
     sm->registerAction(this, ui.actionPlugin9,  "MainWindow.Plugins.RunPlugin9");
     sm->registerAction(this, ui.actionPlugin10, "MainWindow.Plugins.RunPlugin10");
+
+    //---------------------------------- modified: MainWindowExt ---------------------------------------
+    sm->registerAction(this, ui.actionEpub3To2, "MainWindow.Epub3To2"); // modified: Epub3ToEpub2
+    sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
+    sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
+    sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
+    sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
+    sm->registerAction(this, ui.actionSplitBlockOrAddBreak, "MainWindow.SplitBlockOrAddBreak"); // modified: SplitBlockOrAddBreak
+    //--------------------------------------------------------------------------------------------------
 
     // Headings QToolButton
     ui.tbHeadings->setPopupMode(QToolButton::InstantPopup);
@@ -6565,7 +6495,6 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionCustomLayout,  SIGNAL(triggered()), this, SLOT(CreateEpubLayout()));
     connect(ui.actionAddCover,      SIGNAL(triggered()), this, SLOT(AddCover()));
     connect(ui.actionMetaEditor,    SIGNAL(triggered()), this, SLOT(MetaEditorDialog()));
-    connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(ui.actionWellFormedCheckEpub,  SIGNAL(triggered()), this, SLOT(WellFormedCheckEpub()));
     connect(ui.actionValidateStylesheetsWithW3C,  SIGNAL(triggered()), this, SLOT(ValidateStylesheetsWithW3C()));
     connect(ui.actionSpellcheckEditor,   SIGNAL(triggered()), this, SLOT(SpellcheckEditorDialog()));
@@ -6576,8 +6505,6 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionUpdateManifestProperties,      SIGNAL(triggered()), this, SLOT(UpdateManifestProperties()));
     connect(ui.actionNCXGuideFromNav, SIGNAL(triggered()), this, SLOT(GenerateNCXGuideFromNav()));
     connect(ui.actionRemoveNCXGuide,  SIGNAL(triggered()), this, SLOT(RemoveNCXGuideFromEpub3()));
-    connect(ui.actionEpub3To2, SIGNAL(triggered()), this, SLOT(Epub3ToEpub2())); // modified: Epub3ToEpub2
-    connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
     connect(ui.actionClearIgnoredWords, SIGNAL(triggered()), this, SLOT(ClearIgnoredWords()));
     connect(ui.actionGenerateTOC,   SIGNAL(triggered()), this, SLOT(GenerateTOC()));
     connect(ui.actionEditTOC,       SIGNAL(triggered()), this, SLOT(EditTOCDialog()));
@@ -6597,7 +6524,8 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionZoomOut,       SIGNAL(triggered()), this, SLOT(ZoomOut()));
     connect(ui.actionZoomReset,     SIGNAL(triggered()), this, SLOT(ZoomReset()));
     connect(ui.actionHeadingPreserveAttributes, SIGNAL(triggered(bool)), this, SLOT(SetPreserveHeadingAttributes(bool)));
-    connect(m_headingActionGroup,   SIGNAL(triggered(QAction*)), this, SLOT(ApplyHeadingStyleToTab(QAction*)));
+    //connect(m_headingActionGroup,   SIGNAL(triggered(QAction*)), this, SLOT(ApplyHeadingStyleToTab(QAction*)));
+    connect(m_headingActionGroup,   SIGNAL(triggered(QAction*)), this, SLOT(ApplyHeadingStyleToTab_Plus(QAction*))); // modified: Add Lables On Multiple Lines
     // Window
     connect(ui.actionNextTab,       SIGNAL(triggered()), m_TabManager, SLOT(NextTab()));
     connect(ui.actionPreviousTab,   SIGNAL(triggered()), m_TabManager, SLOT(PreviousTab()));
@@ -6708,6 +6636,13 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_Reports,       SIGNAL(RPFindText(QString)), m_FindReplace, SLOT(FindAnyText(QString)));
     connect(m_Reports,       SIGNAL(RPFindTextInTags(QString)), m_FindReplace, SLOT(FindAnyTextInTags(QString)));
 
+    //------------------------------------ modified: MainWindowExt --------------------------------
+    connect(ui.actionEpub3To2, SIGNAL(triggered()), this, SLOT(Epub3ToEpub2())); // modified: Epub3ToEpub2
+    connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
+    connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
+    connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
+    //---------------------------------------------------------------------------------------------
+
     // Plugins
     PluginDB *pdb = PluginDB::instance();
     connect(pdb, SIGNAL(plugins_changed()), this, SLOT(loadPluginsMenu()));
@@ -6727,13 +6662,14 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
     if (rType != Resource::ImageResourceType && 
         rType != Resource::AudioResourceType && 
         rType != Resource::VideoResourceType && 
+        rType != Resource::PdfResourceType && 
         rType != Resource::FontResourceType) {
         connect(ui.actionUndo,                     SIGNAL(triggered()),  tab,   SLOT(Undo()));
         connect(ui.actionRedo,                     SIGNAL(triggered()),  tab,   SLOT(Redo()));
         connect(ui.actionCut,                      SIGNAL(triggered()),  tab,   SLOT(Cut()));
         connect(ui.actionCopy,                     SIGNAL(triggered()),  tab,   SLOT(Copy()));
         connect(ui.actionPaste,                    SIGNAL(triggered()),  tab,   SLOT(Paste()));
-        connect(ui.actionPasteRichText,            SIGNAL(triggered()),  tab,   SLOT(PasteRichText()));
+        connect(ui.actionPasteRichText,            SIGNAL(triggered()),  tab,   SLOT(PasteRichText())); //modified: PasteRichText
         connect(ui.actionDeleteLine,               SIGNAL(triggered()),  tab,   SLOT(DeleteLine()));
         connect(tab,   SIGNAL(OpenClipEditorRequest(ClipEditorModel::clipEntry *)),
                 this,  SLOT(ClipEditorDialog(ClipEditorModel::clipEntry *)));
@@ -6813,6 +6749,7 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
 
     if (rType != Resource::AudioResourceType && 
         rType != Resource::VideoResourceType &&
+        rType != Resource::PdfResourceType &&
         rType != Resource::FontResourceType) {
         connect(ui.actionPrintPreview,             SIGNAL(triggered()),  tab,   SLOT(PrintPreview()));
         connect(ui.actionPrint,                    SIGNAL(triggered()),  tab,   SLOT(Print()));

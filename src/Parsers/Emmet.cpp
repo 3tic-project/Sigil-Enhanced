@@ -4,49 +4,51 @@
 #include "Misc/Utility.h"
 
 enum State {
-    End = 0,
-    Undefined = 1,
-    Tag = 2,
-    ClassBegin = 4,
-    ClassVal = 8,
-    IdBegin = 16,
-    IdVal = 32,
-    AttrBegin = 64,
-    AttrEnd = 128,
-    AttrName = 256,
-    AttrVal = 512,
-    QuoteBegin = 1024,
-    QuoteEnd = 2048,
-    TextBegin = 4096,
-    TextEnd = 4096 * 2,
-    Assign = 4096 * 4,
-    GroupBegin = 4096 * 8,
-    GroupEnd = 4096 * 16,
-    AddBrother = 4096 * 32,
-    AddChild = 4096 * 64,
-    AddParent = 4096 * 128,
-    Copy = 4096 * 256,
-    CopyNum = 4096 * 512,
+    End         = 0,
+    Undefined   = 1 << 0,
+    Tag         = 1 << 1,
+    ClassBegin  = 1 << 2,
+    ClassVal    = 1 << 3,
+    IdBegin     = 1 << 4,
+    IdVal       = 1 << 5,
+    AttrBegin   = 1 << 6,
+    AttrEnd     = 1 << 7,
+    AttrName    = 1 << 8,
+    AttrVal     = 1 << 9,
+    QuoteBegin  = 1 << 10,
+    QuoteEnd    = 1 << 11,
+    TextBegin   = 1 << 12,
+    TextEnd     = 1 << 13,
+    Assign      = 1 << 14,
+    GroupBegin  = 1 << 15,
+    GroupEnd    = 1 << 16,
+    AddBrother  = 1 << 17,
+    AddChild    = 1 << 18,
+    AddParent   = 1 << 19,
+    Copy        = 1 << 20,
+    CopyNum     = 1 << 21,
+
 };
 enum CheckState {
-    CkInvalid = 1,
-    CkUndefined = 2,
-    CkValied = 4,
-    CkNameStr = 6,
-    CkNameStrNum = 8,
-    CkUndefinedNum = 16,
-    CkMaybeAttr = 32,
-    CkMaybeText = 64,
-    CkQuote = 128,
-    CkQuoteEnd = 256,
-    CkProperty = 512,
-    CkConnect = 1024,
-    CkCaret = 2048,
-    CkMultiplier = 4096,
-    CkNumSerieAt = 8192,
-    CkAssign = 16384,
-    CkGroupR = 16384 * 2,
-    CkGroupL = 16384 * 4,
+    CkInvalid       = 1 << 0,
+    CkUndefined     = 1 << 1,
+    CkValied        = 1 << 2,
+    CkNameStr       = 1 << 3,
+    CkNameStrNum    = 1 << 4,
+    CkUndefinedNum  = 1 << 5,
+    CkMaybeAttr     = 1 << 6,
+    CkMaybeText     = 1 << 7,
+    CkQuote         = 1 << 8,
+    CkQuoteEnd      = 1 << 9,
+    CkProperty      = 1 << 10,
+    CkConnect       = 1 << 11,
+    CkCaret         = 1 << 12,
+    CkMultiplier    = 1 << 13,
+    CkNumSerieAt    = 1 << 14,
+    CkAssign        = 1 << 15,
+    CkGroupR        = 1 << 16,
+    CkGroupL        = 1 << 17,
+
 };
 enum Token {
     OHTER,
@@ -71,7 +73,7 @@ enum Token {
     WHITESPACE,
 };
 
-QHash<uint, QHash<ushort, uint>> CheckStateTable {
+QHash<uint, QHash<ushort, uint>> CheckStateTable{
     {CheckState::CkUndefined , {
         {Token::LETTER    , CheckState::CkNameStr},
         {Token::NUM       , CheckState::CkUndefinedNum},
@@ -496,7 +498,7 @@ QHash<uint, QHash<ushort, uint>> StateTable{
         {Token::CARET        , State::AddParent},
         {Token::RPAREN       , State::GroupEnd},
         {Token::WHITESPACE   , State::End},
-        }}, 
+        }},
 };
 
 QStringList HTML_TAG_LIST = { "a","abbr","address","area","article","aside","audio","b","base","bdi","bdo","blockquote","body","br","button","canvas","caption",
@@ -509,25 +511,25 @@ QStringList HTML_TAG_LIST = { "a","abbr","address","area","article","aside","aud
 
 Emmet::Emmet(QString unverified_text)
     : abbrev(""),
-      xmlFormatParser(SettingsStoreExtend().getXhtmlFormat())
+    xmlFormatParser(SettingsStoreExtend().getXhtmlFormat())
 {
 }
-QString Emmet::get_abbreviation() 
+QString Emmet::get_abbreviation()
 {
     return abbrev;
 }
-void Emmet::set_abbreviation(QString unverified_text) 
+void Emmet::set_abbreviation(QString unverified_text)
 {
     abbrev = getValidAbbrev(unverified_text);
 }
-QString Emmet::get_parsedText() 
+QString Emmet::get_parsedText()
 {
     return parse_abbrev();
 }
 
 ushort Emmet::getTokenType(QChar ch)
 {
-    if (('a' <= ch && 'z' >= ch) || ('a' <= ch && 'z' >= ch) || ch == "_" || ch == "-") {
+    if (('a' <= ch && 'z' >= ch) || ('A' <= ch && 'Z' >= ch) || ch == '_' || ch == '-') {
         return Token::LETTER;
     }
     else if ('0' <= ch && '9' >= ch) {
@@ -586,17 +588,17 @@ ushort Emmet::getTokenType(QChar ch)
     }
 
 }
-QString Emmet::getValidAbbrev(QString unverified_text) 
+QString Emmet::getValidAbbrev(QString unverified_text)
 {
     if (unverified_text.isEmpty())
-        return "";
+        return QString();
     QString abbr;
     curent_indent = getCurrentIndent(unverified_text);
     unverified_text = Utility::RegExpSub("<[^>]*>", "", unverified_text);
     unverified_text.prepend(" ");
     short paren_offset = 0;
     uint Len = unverified_text.size(),
-         i = Len;
+        i = Len;
     uint state = CheckState::CkUndefined;
     uint all_states = 0;
     while (i > 0) {
@@ -614,20 +616,25 @@ QString Emmet::getValidAbbrev(QString unverified_text)
         else {
             state = CheckState::CkInvalid;
         }
-        all_states = all_states | state;
         if (state == CheckState::CkInvalid || state == CheckState::CkValied) {
             break;
         }
+        all_states = all_states | state;
         --i;
     }
-    if (state == CheckState::CkValied) {
+    if (state & CheckState::CkInvalid) {
+        return QString();
+    }
+    if (state & CheckState::CkValied) {
         abbr = unverified_text.mid(i, Len - i);
     }
-    if (!abbr.isEmpty() && (all_states == CheckState::CkNameStr || all_states == (CheckState::CkNameStr | CheckState::CkUndefinedNum))) {
+    if (!abbr.isEmpty() && (all_states == CheckState::CkNameStr ||
+                            all_states == (CheckState::CkNameStr|CheckState::CkUndefinedNum)))
+    {
         if (!HTML_TAG_LIST.contains(abbr))
             abbr = QString();
     }
-    if (!abbr.isEmpty() && ((CheckState::CkGroupL & all_states) != 0 || (CheckState::CkGroupR & all_states) != 0)) {
+    if (!abbr.isEmpty() && (all_states & (CheckState::CkGroupL|CheckState::CkGroupR)) ) {
         if (paren_offset != 0)
             abbr = QString();
     }
@@ -637,10 +644,10 @@ QString Emmet::parse_abbrev()
 {
     QString abbr = abbrev + " ";
     uint state = State::Undefined,
-         pre_state = state;
+        pre_state = state;
     ushort i = 0, pre_i = 0;
     Element* root = new Element();
-    Element *temp_ele = new Element("p");
+    Element* temp_ele = new Element("p");
     ushort temp_eleCopyNum = 0;
     QHash<QString, QString> tempAttrDict;
     QList<QList<Element*>> parentStack = { {root} };
@@ -660,7 +667,7 @@ QString Emmet::parse_abbrev()
         }
 
         if (state == State::GroupBegin) {
-            groupStack.append({{new Element()}});
+            groupStack.append({ {new Element()} });
             parentStack_p = &groupStack.last();
         }
 
@@ -675,7 +682,7 @@ QString Emmet::parse_abbrev()
             case State::IdVal:
                 temp_ele->id = abbr.mid(pre_i, i - pre_i);
                 break;
-            case State::AttrName: 
+            case State::AttrName:
                 tempAttrName = abbr.mid(pre_i, i - pre_i);
                 if (tempAttrName == "id") {
                     temp_ele->id = "";
@@ -718,10 +725,10 @@ QString Emmet::parse_abbrev()
             }
             case State::CopyNum:
             {
-                temp_eleCopyNum = abbr.mid(pre_i,i-pre_i).toInt();
-                break; 
+                temp_eleCopyNum = abbr.mid(pre_i, i - pre_i).toInt();
+                break;
             }
-                
+
             }
             switch (state) {
             case State::AttrEnd:
@@ -782,7 +789,7 @@ QString Emmet::parse_abbrev()
         if (state == State::End || state == State::GroupEnd) {
             QList<Element*> pnodes = parentStack_p->last();
             QList<Element*> temp_elements = multipleCopyElement(temp_ele, temp_eleCopyNum);
-            foreach(Element* pnode, pnodes) {
+            foreach(Element * pnode, pnodes) {
                 pnode->children += temp_elements;
             }
 
@@ -875,7 +882,7 @@ QString Emmet::convertDollarSymbols(QString text, short num)
         ++i;
     }
 
-    return text_.left(Len-1);
+    return text_.left(Len - 1);
 }
 QString Emmet::elementToString(Element* em) {
     QString text = "";
@@ -889,61 +896,61 @@ QString Emmet::elementToString(Element* em) {
     }
     return text;
 }
-QString Emmet::elementToTagString(Element* em,bool closed) {
+QString Emmet::elementToTagString(Element* em, bool closed) {
     if (em->tagName.isEmpty()) {
         return "";
     }
     QString tagstr;
-tagstr = QString("<%1").arg(em->tagName);
-if (!em->classlist.isEmpty()) {
-    QStringList clslist = filter(em->classlist);
-    tagstr += " class=\"";
-    for (ushort i = 0; i < clslist.size(); ++i) {
-        QString item = clslist.at(i);
-        if (i < clslist.size() - 1) {
-            tagstr += item + " ";
+    tagstr = QString("<%1").arg(em->tagName);
+    if (!em->classlist.isEmpty()) {
+        QStringList clslist = filter(em->classlist);
+        tagstr += " class=\"";
+        for (ushort i = 0; i < clslist.size(); ++i) {
+            QString item = clslist.at(i);
+            if (i < clslist.size() - 1) {
+                tagstr += item + " ";
+            }
+            else if (i == clslist.size() - 1) {
+                tagstr += item;
+            }
         }
-        else if (i == clslist.size() - 1) {
-            tagstr += item;
-        }
+        if (clslist.isEmpty())
+            tagstr += "\v";
+        tagstr += "\"";
     }
-    if (clslist.isEmpty())
-        tagstr += "\v";
-    tagstr += "\"";
-}
-if (em->id != "\x12") {
-    if (em->id.isEmpty()) {
-        tagstr += " id=\"\v\"";
-    }
-    else {
-        tagstr += QString(" id=\"%1\"").arg(em->id);
-    }
-}
-QHash<QString, QString>::iterator i;
-for (i = em->attrdict.begin(); i != em->attrdict.end(); ++i) {
-    QString key = i.key(),
-        val = i.value();
-    if (val == "")
-        val = "\v";
-    tagstr += QString(" %1=\"%2\"").arg(key).arg(val);
-}
-if (closed) {
-    if (em->text.isEmpty() && QStringList({ "br","img","hr","link","meta","input","base" }).contains(em->tagName)) {
-        tagstr += "/>";
-    }
-    else {
-        if (em->text.isEmpty()) {
-            tagstr += QString(">\v</%1>").arg(em->tagName);
+    if (em->id != "\x12") {
+        if (em->id.isEmpty()) {
+            tagstr += " id=\"\v\"";
         }
         else {
-            tagstr += QString(">%1</%2>").arg(em->text).arg(em->tagName);
+            tagstr += QString(" id=\"%1\"").arg(em->id);
         }
     }
-}
-else {
-    tagstr += ">" + em->text;
-}
-return tagstr;
+    QHash<QString, QString>::iterator i;
+    for (i = em->attrdict.begin(); i != em->attrdict.end(); ++i) {
+        QString key = i.key(),
+            val = i.value();
+        if (val == "")
+            val = "\v";
+        tagstr += QString(" %1=\"%2\"").arg(key).arg(val);
+    }
+    if (closed) {
+        if (em->text.isEmpty() && QStringList({ "br","img","hr","link","meta","input","base" }).contains(em->tagName)) {
+            tagstr += "/>";
+        }
+        else {
+            if (em->text.isEmpty()) {
+                tagstr += QString(">\v</%1>").arg(em->tagName);
+            }
+            else {
+                tagstr += QString(">%1</%2>").arg(em->text).arg(em->tagName);
+            }
+        }
+    }
+    else {
+        tagstr += ">" + em->text;
+    }
+    return tagstr;
 }
 QString Emmet::getCurrentIndent(QString line_text) {
     QChar ch = line_text.at(0);
@@ -992,11 +999,11 @@ Emmet::Element* Emmet::copyElement(Element* e, short dollar_num) {
     return  ele;
 }
 QList<Emmet::Element*> Emmet::multipleCopyElement(Element* e, short times) {
-    if (times <= 0){
+    if (times <= 0) {
         return { copyElement(e, 0) };
     }
     ushort i = 1;
-    QList<Element *> elements;
+    QList<Element*> elements;
     while (i <= times) {
         elements << copyElement(e, i);
         ++i;

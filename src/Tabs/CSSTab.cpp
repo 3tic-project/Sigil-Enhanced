@@ -100,3 +100,12 @@ void CSSTab::TextDirectionDefault()
 {
     m_wCodeView->FormatCSSStyle("direction", "inherit");
 }
+
+//-------------------- modified: InsertFile -----------------------
+void CSSTab::InsertFile(QString css)
+{
+    if (m_wCodeView) {
+        m_wCodeView->insertPlainText(css);
+    }
+}
+//-----------------------------------------------------------------

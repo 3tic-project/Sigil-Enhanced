@@ -73,6 +73,7 @@ public:
      */
     ~FolderKeeper();
 
+
     QString DetermineFileGroup(const QString &filepath, const QString &mimetype);
 
 
@@ -262,9 +263,17 @@ public slots:
     void RemoveResource(const Resource *resource);
 
     void BulkRemoveResources(const QList<Resource *> resources);
-
-    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //修改：批量重命名
-
+    //------------------------------------------ modified: FolderKeeperExt ------------------------------------------
+    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //modified: BulkResourceRenamed
+    void BulkAddResourcesToOPF(const QList<Resource*>resources); //modified: BulkAddResources
+    void RemoveWithoutUpdatingOPF(Resource* resource); //modified: RemoveWithoutUpdatingOPF
+    Resource* AddContentFromQByteArray(const QByteArray& data, 
+                                    QString filename, 
+                                    bool update_opf = true, 
+                                    const QString& mimetype = QString(),
+                                    const QString& folderpath = QString("\\")); //modified: AddContentFromQByteArray
+    //---------------------------------------------------------------------------------------------------------------
+    
 private slots:
 
     /**

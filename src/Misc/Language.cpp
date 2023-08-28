@@ -128,7 +128,7 @@ void Language::SetLanguageMap()
          "km"    << tr("Central Khmer") <<
          "ch"    << tr("Chamorro") <<
          "ce"    << tr("Chechen") <<
-         //"zh"    << tr("Chinese") <<
+         "zh"    << tr("Chinese") <<
          "zh-CN" << tr("Chinese") + QString(" - ") + tr("China") <<
          "zh-HK" << tr("Chinese") + QString(" - ") + tr("Hong Kong") <<
          "zh-MO" << tr("Chinese") + QString(" - ") + tr("Macau") <<

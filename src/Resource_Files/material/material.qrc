@@ -8,6 +8,7 @@
         <file>automate_2.svg</file>
         <file>automate_3.svg</file>
         <file>back-to-link-style.svg</file>
+        <file>busy-working.svg</file>
         <file>case-change.svg</file>
         <file>chevron-down.svg</file>
         <file>chevron-up.svg</file>
@@ -100,6 +101,6 @@
         <file>replace-find.svg</file>
         <file>replace.svg</file>
         <file>restart.svg</file>
-        <file>edit-paste-rich.svg</file>
-    </qresource>
+        <file>edit-paste-rich.svg</file>        
+   </qresource>
 </RCC>

@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2021  Kevin B. Hendricks, Stratford Ontario
+**  Copyright (C) 2015-2023  Kevin B. Hendricks, Stratford Ontario
 **
 **  This file is part of Sigil.
 **
@@ -35,7 +35,7 @@
 #include "string_buffer.h"
 #include "error.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     #define QT_ENUM_SKIPEMPTYPARTS Qt::SkipEmptyParts
     #define QT_ENUM_KEEPEMPTYPARTS Qt::KeepEmptyParts
 #else
@@ -106,6 +106,7 @@ static const std::string aSRC = std::string("src");
 static const std::string aHREF = std::string("href");
 static const std::string aPOSTER = std::string("poster");
 static const std::string aDATA = std::string("data");
+static const std::string aSRCSET = std::string("srcset");
 QHash<QString,QString> EmptyHash = QHash<QString,QString>();
 
 // These need to match the GumboAttributeNamespaceEnum sequence
@@ -1184,7 +1185,8 @@ std::string GumboInterface::build_attributes(GumboAttribute * at, bool no_entiti
     std::string attvalue = at->value;
 
     if (run_src_updates && (local_name == aHREF || local_name == aSRC || 
-                            local_name == aPOSTER || local_name == aDATA)) {
+                            local_name == aPOSTER || local_name == aDATA ||
+                            local_name == aSRCSET )) {
         attvalue = update_attribute_value(attvalue);
     }
 
@@ -1449,7 +1451,7 @@ std::string GumboInterface::prettyprint_contents(GumboNode* node, int lvl, const
     bool is_structural          = in_set(structural_tags, tagname);
     // bool is_other               = in_set(other_text_holders, tagname);
     char c                      = indent_chars.at(0);
-    int  n                      = indent_chars.length(); 
+    unsigned int n              = (unsigned int) indent_chars.length(); 
     std::string indent_space    = std::string((lvl-1)*n,c);
     char last_char              = 'x';
     bool contains_block_tags    = false;
@@ -1616,7 +1618,7 @@ std::string GumboInterface::prettyprint(GumboNode* node, int lvl, const std::str
     bool single = is_void_tag || (in_xml_ns && testcontents.empty());
 
     char c = indent_chars.at(0);
-    int  n = indent_chars.length(); 
+    unsigned int  n = (unsigned int) indent_chars.length(); 
     std::string indent_space = std::string((lvl-1)*n,c);
 
     // handle self-closed tags with no contents first

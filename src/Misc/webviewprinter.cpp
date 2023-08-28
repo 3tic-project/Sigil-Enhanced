@@ -32,6 +32,7 @@
 #include <QStandardPaths>
 #include <QDebug>
 
+#include "Misc/SettingsStore.h"
 #include "ViewEditors/ViewPreview.h"
 #include "Parsers/GumboInterface.h"
 
@@ -59,6 +60,7 @@ WebViewPrinter::~WebViewPrinter()
 
 void WebViewPrinter::setContent(QString filepath, QString text, bool skipPrev)
 {
+    emit printStarted();
     // destroy previous QWebEngineView to avoid leaking
     if (m_viewprev){
         delete m_viewprev;
@@ -84,7 +86,10 @@ QString WebViewPrinter::getPrintToFilePath(QFileInfo &fi) {
 void WebViewPrinter::print()
 {
     DBG qDebug() << "Skipping Print Preview.";
+    SettingsStore ss;
     QPrinter printer(QPrinter::HighResolution);
+    printer.setResolution(ss.printDPI());
+    DBG qDebug() << "Print DPI = " << printer.resolution();
 #if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
     QFileInfo fi = QFileInfo(m_viewprev->page()->url().fileName());
     QString path = getPrintToFilePath(fi);
@@ -95,8 +100,10 @@ void WebViewPrinter::print()
     //m_viewprev->show();
     QPrintDialog dialog(&printer);
     if (dialog.exec() != QDialog::Accepted)
+        emit printEnded();
         return;
     printDocument(&printer);
+    emit printEnded();
 }
 
 void WebViewPrinter::printDocument(QPrinter *printer)
@@ -134,7 +141,11 @@ void WebViewPrinter::printPreview()
     if (m_inPrintPreview)
         return;
     m_inPrintPreview = true;
+
+    SettingsStore ss;
     QPrinter printer(QPrinter::HighResolution);
+    printer.setResolution(ss.printDPI());
+    DBG qDebug() << "Print Preview DPI = " << printer.resolution();
 #if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
     QFileInfo fi = QFileInfo(m_viewprev->page()->url().fileName());
     QString path = getPrintToFilePath(fi);
@@ -145,6 +156,7 @@ void WebViewPrinter::printPreview()
     connect(&preview, &QPrintPreviewDialog::paintRequested,
             this, &WebViewPrinter::printDocument);
     preview.exec();
+    emit printEnded();
     m_inPrintPreview = false;
 }
 

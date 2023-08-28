@@ -1,3 +1,33 @@
+Sigil-2.0.1
+    Bug Fixes
+      - fix crash when right click on Misc folder in BookBrowser
+      - Allow user to revert CodeView drag_and_drop change via environment variable: SIGIL_ALLOW_CODEVIEW_DROP=1
+        Note: Using DragnDrop in CodeView is still NOT officially supported.
+      - add inadvertantly missed updated serbian translation (ts) file
+
+Sigil-2.0.0
+    Bug Fixes
+      - fix incorrect assert in sigil-gumbo
+      - recognize application/pdf mediatype on epub import
+      - remove compiler build warnings to clean up the build output
+      - recognize source tag attribute srcset for xhtml source updates
+      - fix Preview disconnect bug after split at cursor
+      - fixed sigil-gumbo interface for plugins
+      - added workaround for ADE epub3 bug with scaled cover images
+      - fix encoding for named entities in opf metadata
+      - fix drag/drop crash by disabling drop inside CodeViewEditor
+      - fix CodeView to Preview syncing on text after an inline xhtml comment
+
+    New Features
+      - updated to Qt 6.5.2 which is now used for official releases
+      - updated to Python 3.11.3 and uses the latest EmbededPython interface
+      - updated to the latest jquery version 3.6.4
+      - supports use of embedded pdfs ala ADE
+      - added dark window titlebars for Windows platforms
+      - add support for a user's cover-template2.xhtml and cover-template3.xhtml
+      - add user preference to control printing dpi and add busy indicator icon 
+
+
 Sigil-1.9.30
     Bug Fixes
       - fix Checkpointing to work with dulwich version 0.20.46+

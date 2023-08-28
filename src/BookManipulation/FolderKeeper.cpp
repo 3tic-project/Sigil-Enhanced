@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -40,6 +40,7 @@
 #include "ResourceObjects/NCXResource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/VideoResource.h"
+#include "ResourceObjects/PdfResource.h"
 #include "Misc/Utility.h"
 #include "Misc/OpenExternally.h"
 #include "Misc/SettingsStore.h"
@@ -209,6 +210,8 @@ Resource *FolderKeeper::AddContentFileToFolder(const QString &fullfilepath,
             resource = new AudioResource(m_FullPathToMainFolder, new_file_path);
         } else if (resdesc == "VideoResource") {
             resource = new VideoResource(m_FullPathToMainFolder, new_file_path);
+        } else if (resdesc == "PdfResource") {
+            resource = new PdfResource(m_FullPathToMainFolder, new_file_path);
         } else if (resdesc == "ImageResource") {
             resource = new ImageResource(m_FullPathToMainFolder, new_file_path);
         } else if (resdesc == "SVGResource") {
@@ -592,21 +595,6 @@ void FolderKeeper::RemoveResource(const Resource *resource)
     emit ResourceRemoved(resource);
 }
 
-//ÐÞ¸Ä£ºÌí¼ÓBulkResourceRenamedº¯Êý
-void FolderKeeper::BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths)
-{
-    for (int i = 0; i < resources.size(); i++) {
-        Resource* resource = resources.at(i);
-        QString old_full_path = old_full_paths.at(i);
-        QString book_path = old_full_path.right(old_full_path.length() - m_FullPathToMainFolder.length() - 1);
-        Resource* res = m_Path2Resource[book_path];
-        m_Path2Resource.remove(book_path);
-        m_Path2Resource[resource->GetRelativePath()] = res;
-    }
-    m_OPF->BulkResourceRenamed(resources, old_full_paths);
-    updateShortPathNames();
-}
-
 void FolderKeeper::ResourceRenamed(const Resource *resource, const QString &old_full_path)
 {
     // Renaming means the resource book path has changed and so we need to update it
@@ -784,9 +772,11 @@ QString FolderKeeper::buildShortName(const QString &bookpath, int lvl)
     return pieces.join('/');
 }
 
+
 void FolderKeeper::updateShortPathNames()
 {
     QStringList bookpaths = GetAllBookPaths();
+
     QHash<QString,QString>BookToSPN;
     QHash<QString, QStringList> NameToBooks;
     QSet<QString> DupSet;

@@ -229,7 +229,7 @@ void PreviewWindow::SetupView()
     // QWebEngineView events are routed to their parent
     m_Preview->installEventFilter(this);
 
-#if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
+#if 1 //!defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
     // this may be needed by all platforms in the future
     QWidget * fp = m_Preview->focusProxy();
     if (fp) fp->installEventFilter(this);
@@ -258,7 +258,10 @@ void PreviewWindow::SetupView()
     m_cycleCSSAction ->setEnabled(false);
     m_cycleCSSAction->setToolTip(tr("Cycle Custom CSS Files"));
 
-    m_webviewPrint = new QAction(QIcon(":/main/document-print.svg"), "", this);
+    QIcon pricon;
+    pricon.addFile(":/main/document-print.svg", QSize(), QIcon::Normal);
+    pricon.addFile(":/main/busy-working.svg", QSize(), QIcon::Disabled);
+    m_webviewPrint = new QAction(pricon, "", this);
     m_webviewPrint ->setEnabled(true);
     m_webviewPrint->setToolTip(tr("Print Preview View"));
     
@@ -283,6 +286,17 @@ void PreviewWindow::SetupView()
 }
 
 
+void PreviewWindow::PrintStarted()
+{
+    m_webviewPrint ->setEnabled(false);
+}
+
+void PreviewWindow::PrintEnded()
+{
+    m_webviewPrint ->setEnabled(true);
+}
+
+
 void PreviewWindow::CycleCustomCSS()
 {
     if (m_usercssurls.isEmpty()) return;
@@ -297,7 +311,6 @@ void PreviewWindow::CycleCustomCSS()
 // you must delay before trying to update Preview to a specific location
 bool PreviewWindow::UpdatePage(QString filename_url, QString text, QList<ElementIndex> location)
 {
-
     DBG qDebug() << "Entered PV UpdatePage with filename: " << filename_url;
 
     if (!m_Preview->isVisible()) {
@@ -360,6 +373,9 @@ bool PreviewWindow::UpdatePage(QString filename_url, QString text, QList<Element
         }
     }
 
+
+#if QT_VERSION <= QT_VERSION_CHECK(5, 12, 5)
+    // This workaround to a QtWebEngine bug is no longer needed after Qt 5.12.5
     if (fixup_fullscreen_svg_images(text)) {
         QRegularExpression svg_height("<\\s*svg\\s[^>]*height\\s*=\\s*[\"'](100%)[\"'][^>]*>",
                                      QRegularExpression::CaseInsensitiveOption |
@@ -383,7 +399,8 @@ bool PreviewWindow::UpdatePage(QString filename_url, QString text, QList<Element
             text = text.replace(bp, n, "100vw"); 
         }
     }
-
+#endif
+    
     m_Filepath = filename_url;
     m_Preview->CustomSetDocument(filename_url, text);
 
@@ -393,6 +410,9 @@ bool PreviewWindow::UpdatePage(QString filename_url, QString text, QList<Element
 
 void PreviewWindow::UpdatePageDone()
 {
+    // ignore spurious page DocumentLoaded signals from ViewPreview
+    if (!m_updatingPage) return;
+
     if (!m_Preview->WasLoadOkay()) qDebug() << "PV loadFinished with okay set to false!";
  
     DBG qDebug() << "PreviewWindow UpdatePage load is Finished";
@@ -690,13 +710,15 @@ void PreviewWindow::ConnectSignalsToSlots()
     connect(m_Preview,   SIGNAL(LinkClicked(const QUrl &)), this, SLOT(LinkClicked(const QUrl &)));
     connect(m_Preview,   SIGNAL(DocumentLoaded()),          this, SLOT(UpdatePageDone()));
     connect(m_Preview,   SIGNAL(ViewProgress(int)),         this, SLOT(setProgress(int)));
-    connect(m_inspectAction, SIGNAL(triggered()),           this, SLOT(InspectPreviewPage()));
-    connect(m_selectAction,  SIGNAL(triggered()),           this, SLOT(SelectAllPreview()));
-    connect(m_copyAction,    SIGNAL(triggered()),           this, SLOT(CopyPreview()));
-    connect(m_reloadAction,  SIGNAL(triggered()),           this, SLOT(ReloadPreview()));
+    connect(m_inspectAction,  SIGNAL(triggered()),          this, SLOT(InspectPreviewPage()));
+    connect(m_selectAction,   SIGNAL(triggered()),          this, SLOT(SelectAllPreview()));
+    connect(m_copyAction,     SIGNAL(triggered()),          this, SLOT(CopyPreview()));
+    connect(m_reloadAction,   SIGNAL(triggered()),          this, SLOT(ReloadPreview()));
     connect(m_cycleCSSAction, SIGNAL(triggered()),          this, SLOT(CycleCustomCSS()));
-    connect(m_webviewPrint, SIGNAL(triggered()),            this, SLOT(PrintRendered()));
-    connect(m_Inspector,     SIGNAL(finished(int)),         this, SLOT(InspectorClosed(int)));
+    connect(m_webviewPrint,   SIGNAL(triggered()),          this, SLOT(PrintRendered()));
+    connect(m_WebViewPrinter, SIGNAL(printStarted()),       this, SLOT(PrintStarted()));
+    connect(m_WebViewPrinter, SIGNAL(printEnded()),         this, SLOT(PrintEnded()));
+    connect(m_Inspector,      SIGNAL(finished(int)),        this, SLOT(InspectorClosed(int)));
     connect(this,     SIGNAL(topLevelChanged(bool)),        this, SLOT(previewFloated(bool)));
 }
 

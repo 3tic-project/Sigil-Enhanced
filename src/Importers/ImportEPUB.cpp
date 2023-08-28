@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2016-2022 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2016-2023 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
@@ -653,32 +653,35 @@ void ImportEPUB::ReadOPF()
             continue;
         }
 
-        // 修改：调整 if else 顺序，常用的提到前面，提高效率
-
-        // Get the list of content files that
-        // make up the publication
-        if (opf_reader.name().compare(QLatin1String("item")) == 0) {
-            ReadManifestItemElement(&opf_reader);
-        }
-        else if (opf_reader.name().compare(QLatin1String("itemref")) == 0) {
-            m_HasSpineItems = true;
-        }
-        else if (opf_reader.name().compare(QLatin1String("package")) == 0) {
+        if (opf_reader.name().compare(QLatin1String("package")) == 0) {
             m_UniqueIdentifierId = opf_reader.attributes().value("", "unique-identifier").toString();
             m_PackageVersion = opf_reader.attributes().value("", "version").toString();
             if (m_PackageVersion == "1.0") m_PackageVersion = "2.0";
         }
+
         else if (opf_reader.name().compare(QLatin1String("identifier")) == 0) {
             ReadIdentifierElement(&opf_reader);
         }
-        // We read this just to get the NCX id
-        else if (opf_reader.name().compare(QLatin1String("spine")) == 0) {
-            ncx_id_on_spine = opf_reader.attributes().value("", "toc").toString();
-        }
+
         // epub3 look for linked metadata resources that are included inside the epub 
         // but that are not and must not be included in the manifest
         else if (opf_reader.name().compare(QLatin1String("link")) == 0) {
             ReadMetadataLinkElement(&opf_reader);
+        }
+
+        // Get the list of content files that
+        // make up the publication
+        else if (opf_reader.name().compare(QLatin1String("item")) == 0) {
+            ReadManifestItemElement(&opf_reader);
+        }
+
+        // We read this just to get the NCX id
+        else if (opf_reader.name().compare(QLatin1String("spine")) == 0) {
+            ncx_id_on_spine = opf_reader.attributes().value("", "toc").toString();
+        } 
+
+        else if (opf_reader.name().compare(QLatin1String("itemref")) == 0) {
+            m_HasSpineItems = true;
         }
     }
 
@@ -788,11 +791,12 @@ void ImportEPUB::ReadManifestItemElement(QXmlStreamReader *opf_reader)
 
     // validate the media type if we can, and warn otherwise
     QString group = MediaTypes::instance()->GetGroupFromMediaType(type,"");
-    QString ext_mtype = MediaTypes::instance()->GetMediaTypeFromExtension(extension, "");
+    QString ext_mtype = MediaTypes::instance()->GetMediaTypeFromExtension(extension,"");
     if (type.isEmpty() || group.isEmpty()) {
         const QString load_warning = QObject::tr("The OPF uses an unrecognized media type \"%1\" for file \"%2\"").arg(type).arg(QFileInfo(apath).fileName()) +
             " - " + QObject::tr("A temporary media type of \"%1\" has been assigned. You should edit your OPF file to fix this problem.").arg(ext_mtype);
         AddLoadWarning(load_warning);
+        if (!ext_mtype.isEmpty()) type = ext_mtype;
     }
 
     if (!apath.isEmpty()) {
@@ -960,6 +964,7 @@ void ImportEPUB::LocateOrCreateNCX(const QString &ncx_id_on_spine)
     // now add the NCX to our folder
     QString bookpath = m_NCXFilePath.right(m_NCXFilePath.length() - m_ExtractedFolderPath.length() - 1);
     NCXResource* nresource = m_Book->GetFolderKeeper()->AddNCXToFolder(m_PackageVersion, bookpath);
+    Q_UNUSED(nresource);
     if (!load_warning.isEmpty()) {
         AddLoadWarning(load_warning);
     }

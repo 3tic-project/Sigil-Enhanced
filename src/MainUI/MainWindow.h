@@ -285,8 +285,6 @@ public slots:
     void EditAutomate(const QString &automatefile);
     
     bool StandardizeEpub();
-    void Epub3ToEpub2(); //modified: Epub3ToEpub2
-    void Epub2ToEpub3(); //modified: Epub2ToEpub3
     void CreateEpubLayout();
 
 signals:
@@ -480,7 +478,6 @@ private slots:
     /**
      * Implements Validate Epub action functionality.
      */
-    bool NormalizedOPF(); //modified: NormalizedOPF
     bool WellFormedCheckEpub();
 
     bool ValidateStylesheetsWithW3C();
@@ -1076,11 +1073,18 @@ private:
     bool m_UsingAutomate;
     QStringList m_AutomateLog;
     QString m_AutomatePluginParameter;
-    
     /**
      * Holds all the widgets Qt Designer created for us.
      */
     Ui::MainWindow ui;
+/*-------------------------------- modified: MainWindowExt -------------------------------------------*/
+public slots:
+    void Epub3ToEpub2(); //modified: Epub3ToEpub2
+    void Epub2ToEpub3(); //modified: Epub2ToEpub3
+    bool NormalizedOPF(); //modified: NormalizedOPF
+    void InsertFileFromBookBrowser(); //modified: insertFileToEditor
+private slots:
+    void ApplyHeadingStyleToTab_Plus(QAction* act); // modified: Add Lables On Multiple Lines
 };
 
 #endif // SIGIL_H

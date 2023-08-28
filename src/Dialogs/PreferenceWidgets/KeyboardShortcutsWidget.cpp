@@ -1,4 +1,4 @@
-/************************************************************************
+ï»¿/************************************************************************
 **
 **  Copyright (C) 2015-2021 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2011      John Schember <john@nachtimwald.com>
@@ -321,7 +321,8 @@ void KeyboardShortcutsWidget::handleKeyEvent(QKeyEvent *event)
     if (result != 0) {
         // Dead keys (ie. diacritics should not be used in Keyboard Shortcuts
         if (isDeadKey) return;
-        //----------------------------ĞŞ¸Ä£º¿ì½İ¼üÉèÖÃBUG£ºÎŞ·¨ÕıÈ·ÉèÖÃReturn¼üµÄBUG-------------------------
+        //ui.targetEdit->setText(QKeySequence(result | state).toString(QKeySequence::PortableText));
+        //----------------------------ä¿®æ”¹ï¼šå¿«æ·é”®è®¾ç½®BUGï¼šæ— æ³•æ­£ç¡®è®¾ç½®Returné”®çš„BUG-------------------------
         QString PortableText = QKeySequence(result | state).toString(QKeySequence::PortableText);
         if (result == 13) {
             PortableText = PortableText.replace(QChar(13), "Return");

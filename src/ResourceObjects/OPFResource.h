@@ -169,7 +169,6 @@ public slots:
     void UpdateSpineOrder(const QList<HTMLResource *> html_files);
 
     void ResourceRenamed(const Resource *resource, QString old_full_path);
-    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //修改：批量重命名
 
     void ResourceMoved(const Resource *resource, QString old_full_path);
 
@@ -178,6 +177,11 @@ public slots:
     QString GetManifestPropertiesForResource(const Resource * resource);
 
     QHash <QString, QString> GetManifestPropertiesForPaths();
+
+    //-------------------------------- modified: OPFResourceExt -------------------------------
+    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //modified: BulkResourceRenamed
+    void BulkAddResource(const QList<Resource*>resources); //modified: BulkAddResource
+    //----------------------------------------------------------------------------------------------
 
 private:
 

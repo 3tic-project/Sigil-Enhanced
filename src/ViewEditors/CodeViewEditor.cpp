@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2019-2022 Doug Massay
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2019-2023 Doug Massay
+**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013 Dave Heiland
 **  Copyright (C) 2012      Grant Drake
@@ -70,7 +70,7 @@
 #include "Parsers/XhtmlFormatParser.h" // modified: XHTML Fomat Configure
 #include "Misc/SettingsStoreExtend.h" // modified: XHTML Fomat Configure
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     #define QT_ENUM_SKIPEMPTYPARTS Qt::SkipEmptyParts
     #define QT_ENUM_KEEPEMPTYPARTS Qt::KeepEmptyParts
 #else
@@ -127,6 +127,7 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     m_hightype(high_type)
     // --------------------------------
 {
+    if (!qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP")) setAcceptDrops(false);
     if (high_type == CodeViewEditor::Highlight_XHTML) {
         // m_Highlighter = new XHTMLHighlighter(check_spelling, this);
         m_Highlighter = new XHTMLHighlighter2(check_spelling, this);
@@ -362,7 +363,7 @@ void CodeViewEditor::CutCodeTags()
     cursor.insertText(new_text);
     cursor.endEditBlock();
     cursor.setPosition(start);
-    cursor.setPosition(start + new_text.count(), QTextCursor::KeepAnchor);
+    cursor.setPosition(start + new_text.length(), QTextCursor::KeepAnchor);
     setTextCursor(cursor);
 }
 
@@ -476,7 +477,7 @@ QString CodeViewEditor::StripCodeTags(QString text)
     bool in_tag = false;
 
     // Remove anything between and including < and >
-    for (int i = 0; i < text.count(); i++) {
+    for (int i = 0; i < text.length(); i++) {
         QChar c = text.at(i);
 
         if (!in_tag && c != QChar('<')) {
@@ -558,6 +559,7 @@ QString CodeViewEditor::SplitSection()
     QString new_section = head + text_segment + "\n</body>\n</html>";
     return new_section;
 }
+
 
 void CodeViewEditor::InsertSGFSectionMarker()
 {
@@ -947,7 +949,7 @@ bool CodeViewEditor::FindNext(const QString &search_regex,
         }
     } else {
         if (misspelled_words) {
-            match_info = GetMisspelledWord(txt, selection_offset, txt.count(), search_regex, search_direction);
+            match_info = GetMisspelledWord(txt, selection_offset, txt.length(), search_regex, search_direction);
         } else {
             match_info = spcre->getFirstMatchInfo(Utility::Substring(selection_offset, end, txt));
         }
@@ -1444,7 +1446,7 @@ bool CodeViewEditor::AddSpellCheckContextMenu(QMenu *menu)
 
             // We want to limit the number of suggestions so we don't
             // get a huge context menu.
-            for (int i = 0; i < std::min(static_cast<uint>(suggestions.length()), MAX_SPELLING_SUGGESTIONS); ++i) {
+            for (unsigned int i = 0; i < std::min(static_cast<uint>(suggestions.length()), MAX_SPELLING_SUGGESTIONS); ++i) {
                 suggestAction = new QAction(suggestions.at(i), menu);
                 connect(suggestAction, SIGNAL(triggered()), m_spellingMapper, SLOT(map()));
                 m_spellingMapper->setMapping(suggestAction, suggestions.at(i));
@@ -1608,9 +1610,10 @@ void CodeViewEditor::AddReformatHTMLContextMenu(QMenu *menu)
     }
 
     QMenu *reformatMenu = new QMenu(tr("Reformat HTML"), menu);
-
-    QAction *cleanAction = new QAction(tr("Mend and Prettify Code"), reformatMenu);
-    QAction *cleanAllAction = new QAction(tr("Mend and Prettify Code - All HTML Files"), reformatMenu);
+    //QAction *cleanAction = new QAction(tr("Mend and Prettify Code"), reformatMenu);
+    QAction *cleanAction = new QAction(tr("Prettify Code"), reformatMenu); // modified: Prettify xhtml
+    //QAction *cleanAllAction = new QAction(tr("Mend and Prettify Code - All HTML Files"), reformatMenu);
+    QAction* cleanAllAction = new QAction(tr("Prettify Code - All HTML Files"), reformatMenu); // modified: Prettify xhtml
     QAction *toValidAction = new QAction(tr("Mend Code"), reformatMenu);
     QAction *toValidAllAction = new QAction(tr("Mend Code - All HTML Files"), reformatMenu);
     connect(cleanAction, SIGNAL(triggered()), this, SLOT(ReformatHTMLCleanAction()));
@@ -2694,7 +2697,7 @@ QList<ElementIndex> CodeViewEditor::GetCaretLocation()
     QString element_name;
     foreach(ElementIndex ei, hierarchy) {
         if (BLOCK_LEVEL_TAGS.contains(ei.name)) {
-        element_name = ei.name;
+            element_name = ei.name;
         }
     }
     m_element_name = element_name;
@@ -2718,7 +2721,11 @@ QStack<CodeViewEditor::StackElement> CodeViewEditor::GetCaretLocationStack(int o
     while (!reader.atEnd()) {
         reader.readNext();
 
-        if (reader.isStartElement()) {
+        if (reader.isComment()) {
+            if (reader.characterOffset() == offset) {
+                break;
+            }
+        } else if (reader.isStartElement()) {
             // If we detected the start of a new element, then
             // the element currently on the top of the stack
             // has one more child element
@@ -2727,7 +2734,7 @@ QStack<CodeViewEditor::StackElement> CodeViewEditor::GetCaretLocationStack(int o
             }
 
             StackElement new_element;
-            new_element.name         = reader.name().toString();
+            new_element.name = reader.name().toString();
             new_element.num_children = 0;
             stack.push(new_element);
 
@@ -2935,6 +2942,7 @@ void CodeViewEditor::FormatBlock(const QString &element_name, bool preserve_attr
     }
     return;
 }
+
 
 void CodeViewEditor::InsertHTMLTagAroundText(const QString &left_element_name,
                                              const QString &right_element_name,
@@ -3619,6 +3627,7 @@ void CodeViewEditor::ReformatHTML(bool all, bool to_valid)
 
     if (all) {
         mainWindow->GetCurrentBook()->ReformatAllHTML(to_valid);
+
     } else {
         original_text = toPlainText();
 
@@ -3644,7 +3653,6 @@ void CodeViewEditor::ReformatHTML(bool all, bool to_valid)
         }
     }
 }
-
 
 QString CodeViewEditor::RemoveFirstTag(const QString &text, const QString &tagname)
 {

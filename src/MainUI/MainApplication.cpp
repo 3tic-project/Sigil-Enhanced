@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2019-2021 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2019-2023 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Grant Drake
 **  Copyright (C) 2012      Dave Heiland
@@ -54,11 +54,27 @@ MainApplication::MainApplication(int &argc, char **argv)
 
 void MainApplication::saveInPreviewCache(const QString &key, const QString& xhtml)
 {
+#if 0
+    if (m_CacheKeys.size() > 10) {
+        QString oldest_key = m_CacheKeys.takeFirst();
+        m_PreviewCache.remove(oldest_key);
+    }
+    m_CacheKeys.append(key);
+#endif
     m_PreviewCache[key] = xhtml;
 }
 
 QString MainApplication::loadFromPreviewCache(const QString &key)
 {
+#if 0
+    if (m_CacheKeys.contains(key)) {
+        // move to end of list as newest accessed key
+        m_CacheKeys.removeOne(key);
+        m_CacheKeys.append(key);
+        return m_PreviewCache[key];
+    }
+    return QString();
+#endif
     return m_PreviewCache.take(key);
 }
 

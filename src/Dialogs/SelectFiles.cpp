@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2021 Kevin B, Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2023 Kevin B, Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2012-2013 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013 Dave Heiland
 **
@@ -32,9 +32,11 @@
 #include <QtWebEngineCore>
 #include <QWebEngineView>
 #include <QWebEngineSettings>
+#include <QWebEngineProfile>
 
 #include "MainUI/MainWindow.h"
 #include "Misc/SettingsStore.h"
+#include "Misc/WebProfileMgr.h"
 #include "sigil_constants.h"
 #include "ViewEditors/SimplePage.h"
 #include "Dialogs/SelectFiles.h"
@@ -100,7 +102,8 @@ SelectFiles::SelectFiles(QString title, QList<Resource *> media_resources, QStri
 {
     ui.setupUi(this);
     setWindowTitle(title);
-    m_WebView->setPage(new SimplePage(m_WebView));
+    QWebEngineProfile* profile = WebProfileMgr::instance()->GetOneTimeProfile();
+    m_WebView->setPage(new SimplePage(profile, m_WebView));
     m_WebView->setContextMenuPolicy(Qt::NoContextMenu);
     m_WebView->setFocusPolicy(Qt::NoFocus);
     m_WebView->setAcceptDrops(false);

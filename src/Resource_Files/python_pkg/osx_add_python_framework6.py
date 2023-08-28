@@ -33,7 +33,7 @@ fwk_struct = ['Python.framework/Versions/' + pversion + '/lib/' + stdlib_name + 
 ]
 
 # minimal set of PySide modules to support the plugin gui need *.so and *.pyi
-PYSIDE6_MODULES = ['QtCore', 'QtDBus', 'QtGui', 'QtNetwork', 'QtPrintSupport',
+PYSIDE6_MODULES = ['QtCore', 'QtDBus', 'QtGui', 'QtNetwork', 'QtPdf', 'QtPrintSupport',
                   'QtSvg', 'QtWidgets', 'QtWebEngine', 'QtWebEngineCore',
                    'QtWebEngineWidgets', 'QtWebChannel', 'QtUiTools',
                    'QtOpenGL', 'QtOpenGLWidgets']
@@ -57,6 +57,9 @@ site_packages = [ ('lxml', 'd'),
                   ('PySide6', 'd')]
 
 
+# config darwin folder
+CONFIG_DARWIN = "config-" + pversion + "-darwin"
+
 def copy_python_tcltk(src_dir, dest_dir):
     for x in os.listdir(src_dir):
         y = os.path.join(src_dir, x)
@@ -69,12 +72,13 @@ def copy_python_tcltk(src_dir, dest_dir):
                 shutil.copy2(y, dest_dir)
 
 
+
 def copy_python_stdlibrary(src_dir, dest_dir):
     for x in os.listdir(src_dir):
         y = os.path.join(src_dir, x)
         ext = os.path.splitext(x)[1]
-        if os.path.isdir(y) and x not in ('test', 'hotshot', 'site-packages', 
-                                          'idlelib', 'lib2to3', 'dist-packages', '__pycache__'):
+        if os.path.isdir(y) and x not in ('test', 'tests', 'hotshot', 'site-packages', CONFIG_DARWIN,
+                                          'turtledemo', 'idlelib', 'lib2to3', 'dist-packages', '__pycache__'):
             shutil.copytree(y, os.path.join(dest_dir, x),
                     ignore=ignore_in_dirs)
         if os.path.isfile(y) and ext in ('.py', '.so'):
@@ -110,7 +114,7 @@ def copy_site_packages(packages, site_dest):
 def ignore_in_dirs(base, items, ignored_dirs=None):
     ans = []
     if ignored_dirs is None:
-        ignored_dirs = {'.svn', '.bzr', '.git', 'test', 'tests', 'testing', '__pycache__'}
+        ignored_dirs = ['.svn', '.bzr', '.git', 'test', 'tests', 'testing', 'demos', '__pycache__']
     for name in items:
         path = os.path.join(base, name)
         if os.path.isdir(path):
@@ -122,8 +126,8 @@ def ignore_in_dirs(base, items, ignored_dirs=None):
 def ignore_in_pyside6_dirs(base, items, ignored_dirs=None):
     ans = []
     if ignored_dirs is None:
-        ignored_dirs = {'.git', 'glue', 'include', 'typesystems', 'examples', 'Linguist.app',
-                        'Assistant.app', 'Designer.app', '__pycache__'}
+        ignored_dirs = ['.git', 'glue', 'include', 'typesystems', 'examples', 'Linguist.app',
+                        'Assistant.app', 'Designer.app', '__pycache__']
     for name in items:
         path = os.path.join(base, name)
         if os.path.isdir(path):
@@ -144,7 +148,7 @@ def ignore_in_tcltk_dirs(base, items, ignored_dirs=None):
     ans = []
     dylibname = 'libpython' + pversion + '.dylib'
     if ignored_dirs is None:
-        ignored_dirs = {'tcl8', 'python' + pversion, 'pkgconfig', 'demos', 'tzdata'}
+        ignored_dirs = ['tcl8', 'python' + pversion, 'pkgconfig', 'demos', 'tzdata']
     for name in items:
         path = os.path.join(base, name)
         if os.path.isdir(path):
@@ -225,7 +229,7 @@ def main():
     # Note: for copytree to work, the destination must NOT already exist
     src_dir = os.path.join(build_fwk, 'Resources')
     dest_dir = os.path.join(app_dir,  'Python.framework','Versions', pversion, 'Resources')
-    shutil.copytree(src_dir, dest_dir)
+    shutil.copytree(src_dir, dest_dir,  ignore=ignore_in_dirs)
 
     # now create proper symlinks to make everything work
     src_dir = os.path.join(app_dir, 'Python.framework/Versions')
@@ -248,6 +252,20 @@ def main():
         if 'Python.framework' in rpath:
             new_rpath = '@executable_path/../Frameworks/Python.framework/Versions/' + pversion
             subprocess.check_call(['install_name_tool', '-rpath', rpath, new_rpath, sigil_executable_path])
+
+    # Add rpath to all PySide6 modules so that they can find the apps local Qt Frameworks
+    pyside6_path = os.path.abspath(os.path.join(app_dir,'Python.framework','Versions', pversion,'lib',
+                                                stdlib_name,'site-packages','PySide6'))
+    for module_name in PYSIDE6_MODULES:
+        module_full_name = module_name + ".so"
+        if not os.path.exists(os.path.join(pyside6_path, module_full_name)):
+            module_full_name = module_name + ".abi3.so"
+        module_path = os.path.join(pyside6_path, module_full_name)
+        new_rpath = '@loader_path/../../../../../../..'
+        if os.path.exists(module_path):
+            rpaths = get_rpaths(module_path)
+            if new_rpath not in rpaths: 
+                subprocess.check_call(['install_name_tool', '-add_rpath', new_rpath, module_path])
 
 if __name__ == '__main__':
     sys.exit(main())

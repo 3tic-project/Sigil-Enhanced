@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2021  Kevin Hendricks
+**  Copyright (C) 2015-2023  Kevin Hendricks
 **  Copyright (C) 2015       John Schember <john@nachtimwald.com>
 **
 **  This file is part of Sigil.
@@ -29,6 +29,8 @@
 #include <QMetaType>
 #include <QStandardPaths>
 #include <QDir>
+#include <QDebug>
+
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
 
@@ -179,63 +181,175 @@ EmbeddedPython* EmbeddedPython::instance()
 
 EmbeddedPython::EmbeddedPython()
 {
-    // Build string list of paths that will
-    // comprise the embedded Python's sys.path
 #if defined(BUNDLING_PYTHON)
-    // Apple for Python 3.8 does need to set these now
+    // This is for Mac and Windows official builds
+
+#if PY_VERSION_HEX >= 0x03090000
+    // Use new Python PyConfig and init routines
+    PyStatus status;
+    PyConfig config;
+    // initialize to be embedded
+    PyConfig_InitIsolatedConfig(&config);
+
+    //From https://github.com/python/cpython/blob/main/Python/initconfig.c
+    // Isolated Config is equivalent to
+    //    config->_config_init = (int)_PyConfig_INIT_ISOLATED;
+    //    config->isolated = 1;
+    //    config->use_environment = 0;
+    //    config->user_site_directory = 0;
+    //    config->dev_mode = 0;
+    //    config->install_signal_handlers = 0;
+    //    config->use_hash_seed = 0;
+    //    config->faulthandler = 0;
+    //    config->tracemalloc = 0;
+    //    config->perf_profiling = 0;
+    //    config->int_max_str_digits = _PY_LONG_DEFAULT_MAX_STR_DIGITS;
+    //    config->safe_path = 1;
+    //    config->pathconfig_warnings = 0;
+    // #ifdef MS_WINDOWS
+    //    config->legacy_windows_stdio = 0;
+    // #endif
+
+    status = PyConfig_Read(&config);
+    if (PyStatus_Exception(status)) {
+        qDebug() << "EmbeddedPython constructor error: could not read the config";
+        qDebug() << QString(status.err_msg);
+        PyConfig_Clear(&config);
+        return;
+    }
+    
+    config.write_bytecode = 0;
+    config.optimization_level = 2;
+    config.module_search_paths_set = 1;
+
 #if defined(__APPLE__)
     QDir exedir(QCoreApplication::applicationDirPath());
     exedir.cdUp();
     QString pyhomepath = exedir.absolutePath() + PYTHON_MAIN_PREFIX;
-    QString pylibpath = pyhomepath + PYTHON_LIB_PATH;
-    wchar_t *hpath = new wchar_t[pyhomepath.size()+1];
-    pyhomepath.toWCharArray(hpath);
-    hpath[pyhomepath.size()]=L'\0';
-    QString pysyspath = pylibpath;
     foreach (const QString &src_path, PYTHON_SYS_PATHS) {
-        pysyspath = pysyspath + PATH_LIST_DELIM + pylibpath + src_path;
+        QString pysyspath = pyhomepath + PYTHON_LIB_PATH + src_path;
+        status = PyWideStringList_Append(&config.module_search_paths, pysyspath.toStdWString().c_str());
+        if (PyStatus_Exception(status)) {
+            qDebug() << "EmbeddedPython constructor error: Could not set sys.path";
+            qDebug() << QString(status.err_msg);
+        }
     }
-    wchar_t *mpath = new wchar_t[pysyspath.size()+1];
-    pysyspath.toWCharArray(mpath);
-    mpath[pysyspath.size()]=L'\0';
-    delete[] hpath;
-
-    // Py_OptimizeFlag = 2;
-    // Py_NoSiteFlag = 1;
-    
-#else // Windows
+#else // Windows since Linux does not use a Bundled Python
     QString pyhomepath = QCoreApplication::applicationDirPath();
-    wchar_t *hpath = new wchar_t[pyhomepath.size()+1];
-    pyhomepath.toWCharArray(hpath);
-    hpath[pyhomepath.size()]=L'\0';
-
-    QString pysyspath = pyhomepath + PYTHON_MAIN_PATH;
     foreach (const QString &src_path, PYTHON_SYS_PATHS) {
-        pysyspath = pysyspath + PATH_LIST_DELIM + pyhomepath + PYTHON_MAIN_PATH + src_path;
+        QString pysyspath = pyhomepath + PYTHON_MAIN_PATH + src_path;
+        status = PyWideStringList_Append(&config.module_search_paths, pysyspath.toStdWString().c_str());
+        if (PyStatus_Exception(status)) {
+            qDebug() << "EmbeddedPython constructor error: Could not set sys.path";
+            qDebug() << QString(status.err_msg);
+        }
     }
+#endif
+    
+    // Use new Python PyConfig and init routines
+    status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status)) {
+        qDebug() << "EmbeddedPython constructor error: Could not initialize from config";
+        qDebug() << QString(status.err_msg);
+        PyConfig_Clear(&config);
+        return;
+    }
+    PyConfig_Clear(&config);
+
+
+#else // PY_VERSION_HEX >= 0x03090000
+    
+    // Using Older technique to initialize Python
+    // Build platform specific delimited string of paths that will
+    // comprise the embedded Python's sys.path
+    QString pysyspath;
+    
+#if defined(__APPLE__)
+    QDir exedir(QCoreApplication::applicationDirPath());
+    exedir.cdUp();
+    QString pyhomepath = exedir.absolutePath() + PYTHON_MAIN_PREFIX;
+    foreach (const QString &src_path, PYTHON_SYS_PATHS) {
+        QString segment = pyhomepath + PYTHON_LIB_PATH + src_path;
+        if (pysyspath.isEmpty()) {
+            pysyspath = segment;
+        } else {
+            pysyspath = pysyspath + PATH_LIST_DELIM + segment;
+        }
+    }
+#else // Windows since Linux does not use a Bundled Python
+    QString pyhomepath = QCoreApplication::applicationDirPath();
+    foreach (const QString &src_path, PYTHON_SYS_PATHS) {
+        QString segment = pyhomepath + PYTHON_MAIN_PATH + src_path;
+        if (pysyspath.isEmpty()) {
+            pysyspath = segment;
+        } else {
+            pysyspath = pysyspath + PATH_LIST_DELIM + segment;
+        }
+    }
+#endif
+
     wchar_t *mpath = new wchar_t[pysyspath.size()+1];
     pysyspath.toWCharArray(mpath);
     mpath[pysyspath.size()]=L'\0';
-    delete[] hpath;
 
-    Py_OptimizeFlag = 2;
-    Py_NoSiteFlag = 1;
-#endif // defined(__APPLE__)
+    // Set before Py_Initialize to ensure isolation from system python
+    Py_SetPath(mpath);
+    delete[] mpath;
+    
     // Everyone uses these flags when python is bundled.
     Py_DontWriteBytecodeFlag = 1;
     Py_IgnoreEnvironmentFlag = 1;
     Py_NoUserSiteDirectory = 1;
     //Py_DebugFlag = 0;
     //Py_VerboseFlag = 0;
-    // Set before Py_Initialize to ensure isolation from system python
-    Py_SetPath(mpath);
-    delete[] mpath;
-#endif // defined(BUNDLING_PYTHON)
 
     Py_Initialize();
+
 #if PY_VERSION_HEX < 0x03070000
     PyEval_InitThreads();
 #endif
+
+#endif // PY_VERSION_HEX >= 0x03090000 
+
+
+#else // BUNDLING_PYTHON - NO BUNDLING
+
+    // For Linux, NetBSD, and everbody else
+
+#if PY_VERSION_HEX >= 0x03090000
+    // Use new Python PyConfig and init routines (but not embedded/isolated)
+    PyStatus status;
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+    status = PyConfig_Read(&config);
+    if (PyStatus_Exception(status)) {
+        qDebug() << "EmbeddedPython constructor error: could not read the config";
+        qDebug() << QString(status.err_msg);
+        PyConfig_Clear(&config);
+        return;
+    }
+    status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status)) {
+        qDebug() << "EmbeddedPython constructor error: Could not initialize from config";
+        qDebug() << QString(status.err_msg);
+        PyConfig_Clear(&config);
+        return;
+    }
+    PyConfig_Clear(&config);
+    
+#else // NOT PY_VERSION_HEX >= 0x03090000
+
+    // Use old Python init routines
+    Py_Initialize();
+
+#if PY_VERSION_HEX < 0x03070000
+    PyEval_InitThreads();
+#endif
+
+#endif // PY_VERSION_HEX >= 0x03090000
+
+#endif // BUNDLING_PYTHON
+
     m_threadstate = PyEval_SaveThread();
     m_pyobjmetaid = qMetaTypeId<PyObjectPtr>();
     m_listintmetaid = qMetaTypeId<QList<int> >();
