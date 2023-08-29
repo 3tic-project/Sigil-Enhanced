@@ -413,6 +413,7 @@ public slots:
     void HeadingStylePlus(const QString& heading_type, bool preserve_attributes); // modified: Add Lables On Multiple Lines
     void PasteRichText(); // modified: AddPasteRichText
     void SplitBlockOrAddBreak();//modified: SplitBlockOrAddBreak
+    void MergeNextElement();//modified: MergeNextElement
 };
 
 #endif // FLOWTAB_H

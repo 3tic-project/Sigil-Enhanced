@@ -9588,6 +9588,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <source>Split Block or Add Break</source>
         <translation>分割段落或插入br空行</translation>
     </message>
+    <!--modified-->
+    <message>
+        <location filename="../../Form_Files/main.ui" line="0"/>
+        <source>Merge with Next Element</source>
+        <translation>合并下一节点</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1753"/>
         <source>Split &amp;Marker</source>

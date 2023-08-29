@@ -4472,6 +4472,7 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionAutoSpellCheck->setEnabled(true);
     ui.actionHeadingDivision->setEnabled(true); //modified: actionHeadingDivision
     ui.actionSplitBlockOrAddBreak->setEnabled(true);//modified: SplitBlockOrAddBreak
+    ui.actionMergeNextElement->setEnabled(true);//modified: MergeNextElement
     UpdateUIOnTabChanges();
     m_FindReplace->ShowHide();
 }
@@ -6226,6 +6227,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     sm->registerAction(this, ui.actionSplitBlockOrAddBreak, "MainWindow.SplitBlockOrAddBreak"); // modified: SplitBlockOrAddBreak
+    sm->registerAction(this, ui.actionMergeNextElement, "MainWindow.MergeNextElement");//modified: MergeNextElement
     //--------------------------------------------------------------------------------------------------
 
     // Headings QToolButton
@@ -6729,7 +6731,8 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(ui.actionAddMisspelledWord,        SIGNAL(triggered()),  tab,   SLOT(AddMisspelledWord()));
         connect(ui.actionIgnoreMisspelledWord,     SIGNAL(triggered()),  tab,   SLOT(IgnoreMisspelledWord()));
         connect(this,                              SIGNAL(SettingsChanged()), tab, SLOT(LoadSettings()));
-        connect(ui.actionSplitBlockOrAddBreak, SIGNAL(triggered()), tab, SLOT(SplitBlockOrAddBreak())); // modified: SplitBlockOrAddBreak
+        connect(ui.actionSplitBlockOrAddBreak,     SIGNAL(triggered()),  tab,   SLOT(SplitBlockOrAddBreak())); // modified: SplitBlockOrAddBreak
+        connect(ui.actionMergeNextElement,         SIGNAL(triggered()),  tab,   SLOT(MergeNextElement())); // modified: MergeNextElement
         connect(tab,   SIGNAL(OpenIndexEditorRequest(IndexEditorModel::indexEntry *)),
                 this,  SLOT(IndexEditorDialog(IndexEditorModel::indexEntry *)));
         connect(tab,   SIGNAL(ViewImageRequest(const QUrl &)),
@@ -6814,6 +6817,7 @@ void MainWindow::BreakTabConnections(ContentTab *tab)
     disconnect(ui.actionAddToIndex,                0, tab, 0);
     disconnect(ui.actionMarkForIndex,              0, tab, 0);
     disconnect(ui.actionSplitBlockOrAddBreak,      0, tab, 0);//modified: SplitBlockOrAddBreak
+    disconnect(ui.actionMergeNextElement,          0, tab, 0);//modified: MergeNextElement
     disconnect(ui.actionPasteRichText,             0, tab, 0);//modified: AddPasteRichText
 }
 

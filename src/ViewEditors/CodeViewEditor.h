@@ -900,6 +900,7 @@ signals:
 
 public:
     void SplitBlockOrAddBreak(); // modified: SplitBlockOrAddBreak
+    void MergeNextElement(); // modified: MergeNextElement
     void FormatBlock_multiline(const QString& element_name, bool preserve_attributes); // modified: Add Lables On Multiple Lines
 
 public slots:

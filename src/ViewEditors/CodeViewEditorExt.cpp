@@ -14,6 +14,8 @@
 #include "Tabs/ContentTab.h"
 #include "BookManipulation/FolderKeeper.h"
 
+#define TagInfo TagLister::TagInfo
+
 static const QString TAG_NAME_SEARCH = "<\\s*([^\\s>]+)";
 static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_ALL({ Qt::Key_Tab,Qt::Key_Backtab,Qt::Key_Backspace,Qt::Key_Home,Qt::Key_End,Qt::Key_Left,Qt::Key_Up,Qt::Key_Right,Qt::Key_Down });
 static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_CSSVIEW({ Qt::Key_Return,Qt::Key_Enter,Qt::Key_BraceLeft,Qt::Key_BraceRight });
@@ -685,7 +687,7 @@ void CodeViewEditor::SplitBlockOrAddBreak()
             closeTags_foundList; // 储存查找过程中的闭合元素；
         // i 是标签在页面中的序号
         int i = m_TagList.findLastTagOnOrBefore(ori_pos);
-        TagLister::TagInfo ti = m_TagList.at(i);
+        TagInfo ti = m_TagList.at(i);
         // 光标恰好处于标签尖括号内部
         if (ori_pos > ti.pos && ori_pos < ti.pos + ti.len) {
             return;
@@ -749,8 +751,8 @@ void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool pre
 
     MaybeRegenerateTagList();
     QString text = m_TagList.getSource();
-    TagLister::TagInfo bodyOpenTag = m_TagList.at(m_TagList.findBodyOpenTag());
-    TagLister::TagInfo bodyCloseTag = m_TagList.at(m_TagList.findBodyCloseTag());
+    TagInfo bodyOpenTag = m_TagList.at(m_TagList.findBodyOpenTag());
+    TagInfo bodyCloseTag = m_TagList.at(m_TagList.findBodyCloseTag());
     // 找不到body节点
     if (bodyOpenTag.pos == -1 || bodyCloseTag.pos == -1) {
         return;
@@ -1055,3 +1057,74 @@ void CodeViewEditor::PasteRichText() {
     InsertText(text);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//----------------------------- modified: MergeNextElement --------------------------------------
+void CodeViewEditor::MergeNextElement() {
+    QTextCursor cursor = textCursor();
+    QString text = toPlainText();
+    int ori_pos = cursor.position();
+    MaybeRegenerateTagList();
+    if (!IsPositionInBody(ori_pos)) 
+        return;
+
+    int i = m_TagList.findLastTagOnOrBefore(ori_pos);
+
+    TagInfo cur_ti, next_ti, next_two_ti, end_ti;
+
+    cur_ti = m_TagList.at(i);
+    while (cur_ti.ttype != "begin" && cur_ti.ttype != "end") {
+        cur_ti = m_TagList.at(--i);
+    }
+    if (ori_pos == cur_ti.pos)
+        cur_ti = m_TagList.at(--i);
+    else if (ori_pos > cur_ti.pos && ori_pos < cur_ti.pos + cur_ti.len)
+        return;
+
+    QString source = m_TagList.getSource();
+    if (cur_ti.ttype == "begin") { // The tag before TextCursor is a Openning Tag;
+        while (QStringList({ "single","comment","cdata" }).contains(m_TagList.at(i + 1).ttype))
+            ++i;
+        next_ti = m_TagList.at(++i);
+        next_two_ti = m_TagList.at(++i);
+        if (next_ti.ttype == "end" && next_two_ti.ttype == "begin") {
+            QString interval_text = source.mid(next_ti.pos + next_ti.len, next_two_ti.pos - next_ti.pos - next_ti.len);
+            if (!interval_text.trimmed().isEmpty())
+                return;
+            while (true) {
+                if (m_TagList.at(++i).open_pos == next_two_ti.pos) {
+                    end_ti = m_TagList.at(i);
+                    break;
+                }
+                else if (i == m_TagList.size())
+                    return;
+            }
+            cursor.setPosition(next_ti.pos);
+            cursor.setPosition(end_ti.pos + end_ti.len, QTextCursor::KeepAnchor);
+            QString insert_text = source.mid(next_two_ti.pos + next_two_ti.len, end_ti.pos - next_two_ti.pos - next_two_ti.len);
+            insert_text += "</" + next_ti.tname + ">";
+            insertTextAtCursor(insert_text, cursor);
+        }
+    }
+    else if (cur_ti.ttype == "end") { // The tag before TextCursor is a Closing Tag;
+        while (m_TagList.at(i + 1).ttype == "comment")
+            ++i;
+        next_ti = m_TagList.at(++i);
+        if (next_ti.ttype == "begin") {
+            while (true) {
+                if (m_TagList.at(++i).open_pos == next_ti.pos) {
+                    end_ti = m_TagList.at(i);
+                    break;
+                }
+                else if (i == m_TagList.size())
+                    return;
+            }
+            cursor.setPosition(cur_ti.pos);
+            cursor.setPosition(end_ti.pos + end_ti.len, QTextCursor::KeepAnchor);
+            QString insert_text = source.mid(next_ti.pos + next_ti.len, end_ti.pos - next_ti.pos - next_ti.len);
+            insert_text += "</" + cur_ti.tname + ">";
+            insertTextAtCursor(insert_text, cursor);
+        }
+    }
+
+}
+//-----------------------------------------------------------------------------------------------

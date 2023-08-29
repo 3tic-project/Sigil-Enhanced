@@ -176,7 +176,8 @@
      <addaction name="actionClip39"/>
      <addaction name="actionClip40"/>
     </widget>
-	<addaction name="actionSplitBlockOrAddBreak"/>
+	  <addaction name="actionSplitBlockOrAddBreak"/><!--modified-->
+    <addaction name="actionMergeNextElement"/><!--modified-->
     <addaction name="actionInsertSGFSectionMarker"/>
     <addaction name="separator"/>
     <addaction name="actionInsertFile"/>
@@ -1781,6 +1782,7 @@
     <string>Ctrl+Shift+Return</string>
    </property>
   </action>
+  <!--modified-->
   <action name="actionSplitBlockOrAddBreak">
 	<property name="text">
 		<string>Split Block or Add Break</string>
@@ -1790,6 +1792,18 @@
 	</property>
 	<property name="shortcut">
 		<string>Ctrl+Return</string>
+	</property>
+  </action>
+  <!--modified-->
+  <action name="actionMergeNextElement">
+	<property name="text">
+		<string>Merge with Next Element</string>
+	</property>
+	<property name="toolTip">
+		<string>Merge the current element which the next element.</string>
+	</property>
+	<property name="shortcut">
+		<string>Ctrl+Alt+Return</string>
 	</property>
   </action>
   <action name="actionUserGuide">

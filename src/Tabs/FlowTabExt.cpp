@@ -46,3 +46,10 @@ void FlowTab::HeadingStylePlus(const QString& heading_type, bool preserve_attrib
     }
 }
 //-------------------------------------------------------------------------
+
+//---------------------- modified: MergeNextElement ------------------------
+void FlowTab::MergeNextElement() {
+    if (!IsDataWellFormed()) return;
+    m_wCodeView->MergeNextElement();
+}
+//--------------------------------------------------------------------------

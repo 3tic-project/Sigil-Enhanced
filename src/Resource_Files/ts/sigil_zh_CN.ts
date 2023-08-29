@@ -9613,11 +9613,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <source>F6</source>
         <translation>F6</translation>
     </message>
-    <!-- modified -->
+    <!--modified-->
     <message>
         <location filename="../../Form_Files/main.ui" line="0"/>
         <source>Split Block or Add Break</source>
         <translation>分割段落或插入br空行</translation>
+    </message>
+    <!--modified-->
+    <message>
+        <location filename="../../Form_Files/main.ui" line="0"/>
+        <source>Merge with Next Element</source>
+        <translation>合并下一节点</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1753"/>
@@ -10885,7 +10891,7 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <!--modified-->
         <!--<source>Mend and &amp;Prettify All HTML Files</source>-->
         <source>Prettify All HTML Files</source>
-        <translation>美化所有所有HTML文件(&amp;P)</translation>
+        <translation>美化所有HTML文件(&amp;P)</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2900"/>
