@@ -135,7 +135,7 @@ QString ImportTXT::CreateParagraphs(const QStringList &lines) const
     for (int i = 0; i < num_lines; ++i) {
         QString line = lines.at(i);
 
-        if (line.isEmpty() || line[ 0 ].isSpace()) {
+        if (line.isEmpty() || line[0].isSpace()) {
             text.append(paragraph.append("</p>\n"));
             paragraph = "<p>";
         }
