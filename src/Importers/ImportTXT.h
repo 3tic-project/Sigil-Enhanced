@@ -54,7 +54,18 @@ private:
     // a string with paragraphs wrapped into <p> tags
     QString CreateParagraphs(const QStringList &lines) const;
 
+    QString CreateParagraphs_M(const QStringList& lines) const; // modified: importing text
+
+    HTMLResource* CreateHTMLResource_M(const QString& source); // modified: importing text
+
     QString m_EpubVersion;
+
+//--------------------- modified: importing txt ----------------------
+public:
+    void SetBook(QSharedPointer<Book> book);
+    QString GetAddedBookPath();
+private:
+    QString m_AddedBookPath;
 };
 
 #endif // IMPORTTXT_H

@@ -1,6 +1,13 @@
-﻿#include <QDir>
+﻿
+#include "EmbedPython/EmbeddedPython.h"
+#include <QDir>
 #include <QRegExp>
+#include <QFile>
+#include <QTextCodec>
+
 #include "Misc/Utility.h"
+#include "sigil_exception.h"
+
 
 // --------------- modified: Prettify xhtml,Regexp, re_sub ---------------------------
 QString Utility::RegExpSub(const QString& regexp, const QString& alt_pattern, const QString& text, int max_count) {
@@ -140,19 +147,26 @@ QString Utility::ExtToMTypeMap(QString& ext)
 }
 //--------------------------------------------------------------------------------------------
 
-//------------------------修改：工具：字符串前后端非空字符位置-----------------------------------
-// 该函数用于截取字符串前后两端非空白字符的位置，空白字符指空格符和制表符。
-// 它返回的是一对位置数字，代表前端非空白字符的起始位置和后端非空白字符的截止位置。
+//------------------------modified：StringTrimmedIndex-----------------------------------
+/*
+ * This function is used to obtain the indexes of non whitespace characters 
+ * at the begining and the end of a string. It returnsa pair of int indexes.
+ */
 Utility::TrimmedIndex Utility::StringTrimmedIndex(const QString& text) {
 
     if (text.size() == 0) {
         return { 0,0 };
     }
-    // s_index 代表前端非空白字符起始位置，e_index代表后端非空白字符截止位置。
-    // 如果 返回时 s_index 和 e_index 都为 0 ，说明该字符串为空。如果s_index 等于 e_index 说明该字符串由纯空白字符组成。
+    /**
+     * s_index : Starting position of the non whitespace characters at front end of the string.
+     * e_index : Cutoff position of the non whitespace characters at back end of the string.
+     * If the return values s_index and e_index are both 0, it means the string is empt.
+     * If s_index is equal to e_index when returned, it means the string is filled with pure 
+     * whitespace characters.
+     */
     int s_index = 0, e_index = text.size();
     for (int i = 0; i < text.size(); i++) {
-        // 0x20 空格 0x9 制表符\t
+        // 0x20 WhiteSpace     0x9 Tab\t
         if (text[i] == QChar(0x20) || text[i] == QChar(0x9)) {
             ++s_index;
             continue;
@@ -173,3 +187,35 @@ Utility::TrimmedIndex Utility::StringTrimmedIndex(const QString& text) {
     return { s_index, e_index };
 }
 //----------------------------------------------------------------------------------------
+
+//------------------------------ modified: importing txt ---------------------------
+QString Utility::ReadUnicodeTextFile_M(const QString& fullfilepath)
+{
+    QFile file(fullfilepath);
+
+    // Check if we can open the file
+    if (!file.open(QFile::ReadOnly)) {
+        std::string msg = fullfilepath.toStdString() + ": " + file.errorString().toStdString();
+        throw(CannotOpenFile(msg));
+    }
+
+    int rv = 0;
+    QString error_traceback;
+    QList<QVariant> args;
+    args.append(QVariant(fullfilepath));
+    EmbeddedPython* epython = EmbeddedPython::instance();
+
+    QVariant res = epython->runInPython(QString("importtxt"),
+                                        QString("read_unicode"),
+                                        args,
+                                        &rv,
+                                        error_traceback);
+    if (rv != 0) {
+        Utility::DisplayStdWarningDialog(QString("error in importtxt read_unicode: ") + QString::number(rv),
+            error_traceback);
+        // an error happened - make no changes
+        return QString();
+    }
+    return ConvertLineEndings(res.toString());
+}
+//----------------------------------------------------------------------------------

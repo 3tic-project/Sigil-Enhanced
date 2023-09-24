@@ -266,6 +266,8 @@ public:
         int after;
     };
     static TrimmedIndex StringTrimmedIndex(const QString& text);
+
+    static QString ReadUnicodeTextFile_M(const QString& fullfilepath);
 };
 #endif // UTILITY_H
 

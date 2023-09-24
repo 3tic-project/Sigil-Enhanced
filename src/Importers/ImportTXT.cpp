@@ -20,6 +20,7 @@
 **
 *************************************************************************/
 
+#include <QTextCodec> // modified: Encoding Conversion
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/XhtmlDoc.h"
@@ -62,8 +63,10 @@ QSharedPointer<Book> ImportTXT::GetBook(bool extract_metadata)
     } 
 
     QString source = LoadSource();
-    HTMLResource * new_resource = CreateHTMLResource(source);
+    //HTMLResource * new_resource = CreateHTMLResource(source);
+    HTMLResource* new_resource = CreateHTMLResource_M(source); // modified: importing txt
     InitializeHTMLResource(source, new_resource);
+    m_AddedBookPath = new_resource->GetRelativePath(); // modified: importing txt
 
     // Before returning the new book, if it is epub3, make sure it has a nav
     if (m_EpubVersion.startsWith('3')) {
@@ -94,8 +97,12 @@ QSharedPointer<Book> ImportTXT::GetBook(bool extract_metadata)
 
 QString ImportTXT::LoadSource() const
 {
-    QString source = Utility::ReadUnicodeTextFile(m_FullFilePath);
-    source = CreateParagraphs(source.split(QChar('\n')));
+    //------------ modified: importing text ----------------
+    //QString source = Utility::ReadUnicodeTextFile(m_FullFilePath);
+    //source = CreateParagraphs(source.split(QChar('\n')));
+    QString source = Utility::ReadUnicodeTextFile_M(m_FullFilePath);
+    source = CreateParagraphs_M(source.split(QChar('\n')));
+    //------------------------------------------------------
     return CleanSource::Mend(source, m_EpubVersion);
 }
 
@@ -121,15 +128,13 @@ void ImportTXT::InitializeHTMLResource(const QString &source, HTMLResource *reso
 QString ImportTXT::CreateParagraphs(const QStringList &lines) const
 {
     QString text = "";
-    //--------------------- -modified: modified the format logic of txt importing ------------------------
-    /*
     QString paragraph = "<p>";
     int num_lines = lines.count();
 
     for (int i = 0; i < num_lines; ++i) {
         QString line = lines.at(i);
 
-        if (line.isEmpty() || line[ 0 ].isSpace()) {
+        if (line.isEmpty() || line[0].isSpace()) {
             text.append(paragraph.append("</p>\n"));
             paragraph = "<p>";
         }
@@ -138,8 +143,15 @@ QString ImportTXT::CreateParagraphs(const QStringList &lines) const
         // line breaks don't get merged
         paragraph.append(QString(line.prepend(" ")).toHtmlEscaped());
     }
-    text.append(paragraph.append("</p>\n"));*/
 
+    text.append(paragraph.append("</p>\n"));
+    return text;
+}
+
+//--------- modified: importing text: modified the format logic of txt importing --------
+QString ImportTXT::CreateParagraphs_M(const QStringList& lines) const
+{
+    QString text = "";
     int num_lines = lines.count();
     for (int i = 0; i < num_lines; ++i) {
         QString line = lines.at(i);
@@ -150,8 +162,27 @@ QString ImportTXT::CreateParagraphs(const QStringList &lines) const
             text.append("<p>" + line.toHtmlEscaped() + "</p>\n");
         }
     }
-    //----------------------------------------------------------------------------------------------------
     return text;
 }
 
+HTMLResource* ImportTXT::CreateHTMLResource_M(const QString& source)
+{
+    TempFolder tempfolder;
+    QString sction_name = m_Book->GetFolderKeeper()->GetUniqueFilenameVersion(FIRST_SECTION_NAME);
+    QString fullfilepath = tempfolder.GetPath() + "/" + sction_name;
+    Utility::WriteUnicodeTextFile(source, fullfilepath);
+    Resource* res = m_Book->GetFolderKeeper()->AddContentFileToFolder(fullfilepath);
+    return qobject_cast<HTMLResource*>(res);
+}
 
+void ImportTXT::SetBook(QSharedPointer<Book> book)
+{
+    m_Book = book;
+    m_EpubVersion = m_Book->GetConstOPF()->GetEpubVersion();
+}
+
+QString ImportTXT::GetAddedBookPath()
+{
+    return m_AddedBookPath;
+}
+//---------------------------------------------------------------------------------------

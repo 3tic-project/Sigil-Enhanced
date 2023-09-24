@@ -762,6 +762,7 @@ void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool pre
         return;
     }
     QTextCursor cursor = textCursor();
+    int ori_pos = cursor.position();
     bool hasSelection = cursor.hasSelection();
     cursor.setPosition(textCursor().selectionEnd(), QTextCursor::MoveAnchor);
     cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::MoveAnchor);
@@ -830,8 +831,14 @@ void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool pre
     cursor.endEditBlock();
     // 如果光标没有选择范围，则光标移动到节点内部。
     if (!hasSelection) {
-        int indent_length = Utility::StringTrimmedIndex(replace_text).before;
-        int new_pos = start_pos + indent_length + QString("<" % element_name % ">").length();
+        int new_pos;
+        TagInfo ti = m_TagList.at(m_TagList.findLastTagOnOrBefore(ori_pos));
+        if (ti.ttype == "begin" && ori_pos >= ti.pos + ti.len) {
+            new_pos = ori_pos + element_name.length() - ti.tname.length();
+        }
+        else {
+            new_pos = start_pos + replace_text.length() - QString("</" % element_name % ">").length();
+        }
         cursor.setPosition(new_pos);
         setTextCursor(cursor);
     }
@@ -1103,6 +1110,8 @@ void CodeViewEditor::MergeNextElement() {
             QString insert_text = source.mid(next_two_ti.pos + next_two_ti.len, end_ti.pos - next_two_ti.pos - next_two_ti.len);
             insert_text += "</" + next_ti.tname + ">";
             insertTextAtCursor(insert_text, cursor);
+            cursor.setPosition(ori_pos);
+            setTextCursor(cursor);
         }
     }
     else if (cur_ti.ttype == "end") { // The tag before TextCursor is a Closing Tag;
@@ -1123,6 +1132,8 @@ void CodeViewEditor::MergeNextElement() {
             QString insert_text = source.mid(next_ti.pos + next_ti.len, end_ti.pos - next_ti.pos - next_ti.len);
             insert_text += "</" + cur_ti.tname + ">";
             insertTextAtCursor(insert_text, cursor);
+            cursor.setPosition(cur_ti.pos);
+            setTextCursor(cursor);
         }
     }
 

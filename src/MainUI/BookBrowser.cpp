@@ -81,7 +81,8 @@ BookBrowser::BookBrowser(QWidget *parent)
     :
     QDockWidget(tr("Book Browser"), parent),
     m_Book(NULL),
-    m_TreeView(new QTreeView(this)),
+    //m_TreeView(new QTreeView(this)),
+    m_TreeView(new BookBrowserTreeView(this)), // modified: BookBrowserTreeView
     m_OPFModel(new OPFModel(this)),
     m_ContextMenu(new QMenu(this)),
     m_FontObfuscationContextMenu(new QMenu(this)),
@@ -105,7 +106,6 @@ BookBrowser::BookBrowser(QWidget *parent)
     m_OpenWithContextMenu->addAction(m_OpenWithEditor3);
     m_OpenWithContextMenu->addAction(m_OpenWithEditor4);
     m_OpenWithContextMenu->addAction(m_OpenWith);
-    setAcceptDrops(true); // modified: dropEvent
 }
 
 
@@ -2178,6 +2178,11 @@ void BookBrowser::ConnectSignalsToSlots()
     connect(m_InsertFileToDocument2,   SIGNAL(triggered()), this, SLOT(insertFileToEditor()));
     connect(m_InsertFileToDocument3,   SIGNAL(triggered()), this, SLOT(insertFileToEditor()));
     //-----------------------------------------------------------------------------------------
+    //-------------------------- modified: BookBrowserTreeView -------------------------------
+    connect(m_TreeView, SIGNAL(addFilesRequest(QStringList&)), this, SLOT(AddFiles(QStringList&)));
+    connect(m_TreeView, SIGNAL(insertHtmlRequest(QString&,const QPoint&)), this, SLOT(InsertHtmlToTextGroup(QString&,const QPoint&)));
+    connect(m_TreeView, SIGNAL(insertTXTRequest(QString&, const QPoint&)), this, SLOT(InsertTxtToTextGroup(QString&, const QPoint&)));
+    //----------------------------------------------------------------------------------------
 }
 
 

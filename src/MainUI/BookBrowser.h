@@ -31,6 +31,7 @@
 
 #include "BookManipulation/Book.h"
 #include "ResourceObjects/Resource.h"
+#include "MainUI/BookBrowserTreeView.h" // modified: BookBrowserTreeView
 
 class MainWindow;
 class HTMLResource;
@@ -485,7 +486,8 @@ private:
     /**
      * The tree view used to represent the book's files.
      */
-    QTreeView *m_TreeView;
+    //QTreeView *m_TreeView;
+    BookBrowserTreeView* m_TreeView;
 
     /**
      * The data model used to feed the tree view.
@@ -565,20 +567,20 @@ signals:
     void InsertFileRequest(); // insertFileToEditor
 
 public slots:
-    QStringList AddFiles(QStringList& filepaths); // modified: AddFiles
-    QStringList AddImagesFromFilePaths(QStringList& filepaths);// modified: AddImages
-    QString AddImageFromClipboard(const QByteArray& data, QString defaultFilename); // modified: AddImages
-
-protected:
-
-    void dragEnterEvent(QDragEnterEvent* e); //modified: dropEvent
-    void dropEvent(QDropEvent* e); //modified: dropEvent
+    QStringList AddFiles(QStringList& filepaths);
+    QStringList AddImagesFromFilePaths(QStringList& filepaths);
+    QString AddImageFromClipboard(const QByteArray& data, QString defaultFilename);
+    // modified: BookBrowserTreeView
+    void InsertTxtToTextGroup(QString& filepath,const QPoint& event_pos);
+    void InsertHtmlToTextGroup(QString& filepath,const QPoint& event_pos);
 
 private:
     // modified: insertFileToEditor
     QAction* m_InsertFileToDocument1;
     QAction* m_InsertFileToDocument2;
     QAction* m_InsertFileToDocument3;
+
+    void InsertHTMLResource(HTMLResource* res,const QPoint& event_pos, QList<HTMLResource*>& spine);
 };
 
 #endif // BOOKBROWSER_H

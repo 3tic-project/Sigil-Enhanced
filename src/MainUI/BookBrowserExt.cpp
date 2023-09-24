@@ -14,7 +14,7 @@
 #include "BookManipulation/FolderKeeper.h"
 #include "sigil_exception.h"
 #include "Importers/ImportHTML.h"
-
+#include "Importers/ImportTXT.h" // modified: BookBrowserTreeView
 //------------------------ modified: AddFiles ------------------------------
 QStringList BookBrowser::AddFiles(QStringList &filepaths)
 {
@@ -198,35 +198,6 @@ QStringList BookBrowser::AddFiles(QStringList &filepaths)
 }
 //--------------------------------------------------------------------------
 
-//------------------------ modified: dropEvent ------------------------------
-void BookBrowser::dragEnterEvent(QDragEnterEvent* e) {
-    if (e->mimeData()->hasUrls()) {
-        QList<QUrl> urls = e->mimeData()->urls();
-        bool no_directory = true;
-        foreach(QUrl url, urls) {
-            QString filepath = url.toLocalFile();
-            if (QFileInfo(filepath).isDir()) {
-                no_directory = false;
-                break;
-            }
-        }
-        if (no_directory) {
-            e->accept();
-        }
-        else {
-            e->ignore();
-        }
-    }
-}
-void BookBrowser::dropEvent(QDropEvent *e) {
-    QList<QUrl> urls = e->mimeData()->urls();
-    QStringList filepaths;
-    foreach(QUrl url, urls) {
-        filepaths << url.toLocalFile();
-    }
-    AddFiles(filepaths);
-}
-//---------------------------------------------------------------------------
 
 //--------------------- modified: AddImages ----------------------
 QStringList BookBrowser::AddImagesFromFilePaths(QStringList& filepaths) {
@@ -272,7 +243,6 @@ QString BookBrowser::AddImageFromClipboard(const QByteArray& data, QString defau
     QApplication::restoreOverrideCursor();
     return bookpath;
 }
-
 //-----------------------------------------------------------------------------
 
 //------------------------ modified: insertFileToEditor -------------------------
@@ -280,3 +250,96 @@ void BookBrowser::insertFileToEditor() {
     emit InsertFileRequest();
 }
 //-------------------------------------------------------------------------------
+
+//--------------------------------------------- modified: BookBrowserTreeView -----------------------------------------
+void BookBrowser::InsertTxtToTextGroup(QString& filepath,const QPoint& pos)
+{
+    QModelIndex mindex = m_TreeView->indexAt(pos);
+    if (mindex.parent().data(0) != "Text")
+        return;
+    if (QFileInfo(filepath).suffix().toLower() != "txt")
+        return;
+
+    FolderKeeper* folderkeeper = m_Book->GetFolderKeeper();
+
+    QList<HTMLResource*> SpineOrderResources;
+    foreach(Resource * res, m_Book->GetOPF()->GetSpineOrderResources(m_Book->GetAllResources())) {
+        SpineOrderResources << qobject_cast<HTMLResource*>(res);
+    }
+
+    ImportTXT txt_import(filepath);
+    txt_import.SetBook(m_Book);
+    txt_import.GetBook(false);
+    
+    QString importedbookpath = txt_import.GetAddedBookPath();
+    Resource* added_resource = folderkeeper->GetResourceByBookPath(importedbookpath);
+    HTMLResource* added_html_resource = qobject_cast<HTMLResource*>(added_resource);
+    InsertHTMLResource(added_html_resource, pos,SpineOrderResources);
+}
+
+
+void BookBrowser::InsertHtmlToTextGroup(QString& filepath,const QPoint& pos)
+{
+    QModelIndex mindex = m_TreeView->indexAt(pos);
+    if (mindex.parent().data(0) != "Text")
+        return;
+    if (!QStringList({ "xhtml","html","htm","txt" }).contains(QFileInfo(filepath).suffix().toLower()))
+        return;
+
+    QString filename = QFileInfo(filepath).fileName();
+    FolderKeeper* folderkeeper = m_Book->GetFolderKeeper();
+    QString existing_book_path = folderkeeper->GetBookPathByPathEnd(filename);
+
+    if (!existing_book_path.isEmpty()) {
+        QMessageBox::warning(this, tr("Sigil"), tr("Unable to add \"%1\"\nA file with this name already exists in the book.").arg(filename));
+        return;
+    }
+
+    ImportHTML html_import(filepath);
+    XhtmlDoc::WellFormedError error = html_import.CheckValidToLoad();
+
+    if (error.line != -1) {
+        QString invalid_filename = QString("%1 (line %2: %3)").arg(QDir::toNativeSeparators(filepath)).arg(error.line).arg(error.message);
+        QMessageBox::warning(this, tr("Sigil"), invalid_filename);
+        return;
+    }
+
+    QList<HTMLResource*> SpineOrderResources;
+    foreach(Resource * res, m_Book->GetOPF()->GetSpineOrderResources(m_Book->GetAllResources())) {
+        SpineOrderResources << qobject_cast<HTMLResource*>(res);
+    }
+
+    html_import.SetBook(m_Book, true);
+    html_import.GetBook(false);
+    QStringList importedbookpaths = html_import.GetAddedBookPaths();
+    Resource* added_resource = folderkeeper->GetResourceByBookPath(importedbookpaths.at(0));
+    HTMLResource* added_html_resource = qobject_cast<HTMLResource*>(added_resource);
+    InsertHTMLResource(added_html_resource, pos, SpineOrderResources);
+}
+
+
+void BookBrowser::InsertHTMLResource(HTMLResource* res,const QPoint& pos, QList<HTMLResource*>& spine)
+{
+    QModelIndex mindex = m_TreeView->indexAt(pos);
+
+
+    QRect rect = m_TreeView->visualRect(mindex);
+    QAbstractItemModel* model = m_TreeView->model();
+    if (pos.y() <= rect.center().y()) { // Above of Item
+        spine.insert(mindex.row(), res);
+    }
+    else { // Below of Item
+        spine.insert(mindex.row() + 1, res);
+    }
+
+    m_Book->GetOPF()->UpdateSpineOrder(spine);
+
+    emit ResourcesAdded();
+    emit BookContentModified();
+    Refresh();
+    emit ResourceActivated(res);
+    emit ShowStatusMessageRequest(tr("File(s) added or replaced."));
+
+    m_LastFolderOpen = res->GetFullFolderPath();
+}
+//---------------------------------------------------------------------------------------------------------------------

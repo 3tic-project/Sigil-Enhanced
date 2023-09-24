@@ -482,6 +482,8 @@ set( MAINUI_FILES
     MainUI/FindReplace.h
     MainUI/BookBrowser.cpp
     MainUI/BookBrowserExt.cpp
+    MainUI/BookBrowserTreeView.cpp
+    MainUI/BookBrowserTreeView.h
     MainUI/BookBrowser.h
     MainUI/ClipsWindow.cpp
     MainUI/ClipsWindow.h

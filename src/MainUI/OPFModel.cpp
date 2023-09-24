@@ -352,7 +352,7 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
     //--------- modified: BulkResourceRenamed ----------
     QList<QString> old_full_paths;
     QList<Resource*> valid_resources;
-    //-------------------------------------
+    //--------------------------------------------------
     int i = 0;
     foreach(Resource * resource, resources) {
         QString old_bookpath = resource->GetRelativePath();
@@ -387,7 +387,7 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
         //------------------------------------ modified: BulkResourceRenamed ---------------------------------
         disconnect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); // 取消资源文件对FolderKeeper发送Renamed信号
         QString old_full_path = resource->GetFullPath();  // 提前通过GetFullPath()保存旧路径。在RenameTo()之后，GetFullPath()的值会更改为新值，必须提前保存旧值。
-        //---------------------------------------------------------------------------------------
+        //----------------------------------------------------------------------------------------------------
         // special case the OPFResource and the NCXResource
         if (resource->Type() == Resource::OPFResourceType) {
             OPFResource* opfres = qobject_cast<OPFResource*>(resource);
@@ -414,7 +414,7 @@ bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QSt
         valid_resources << resource;
         old_full_paths << old_full_path; 
         connect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); //恢复Renamed信号，保证 ResourceRenamed 调用正常。
-        // -----------------------------------
+        // ------------------------------------------------
         update[ old_bookpath ] = resource->GetRelativePath();
     }
 
