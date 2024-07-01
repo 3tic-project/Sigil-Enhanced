@@ -18,9 +18,18 @@ public:
     void setCSSCompleterWordsJson(const QJsonObject& json);
     QJsonObject getHTMLCompleterWordsJson();
     QJsonObject getCSSCompleterWordsJson();
-    void setCodeCompleterSettings(bool completerEnabled, bool emmetEnabled);
+    void setCompleterEnabled(bool completerEnabled);
+    void setEmmetEnabled(bool emmetEnabled);
+    void setTxtImportingSettings(bool ignoreBlankLine);
     QByteArray formatJson(const QByteArray& json_data);
-    std::pair<bool,bool> getCodeCompleterSettings();
+    bool getCompleterEnabled();
+    bool getEmmetEnabled();
+    void setIgnoreBlankLine(bool ignore);
+    bool getIgnoreBlankLine();
+private:
+    bool isSettingsInitialized;
+    QSettings settings;
+    void initSettings();
 };
 
 #endif // SETTINGSSTOREEXTEND_H

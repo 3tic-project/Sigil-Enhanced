@@ -1,6 +1,6 @@
 /************************************************************************
  **
- **  Copyright (C) 2015-2021 Kevin B. Hendricks, Stratford Ontario Canada
+ **  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
  **
  **  This file is part of Sigil.
  **
@@ -57,6 +57,7 @@ PluginWidget::PluginWidget()
     m_qlcbxs.append(ui.comboBox_9);
     m_qlcbxs.append(ui.comboBox_10);
 
+    ui.pluginTable->setTabKeyNavigation(false);
     readSettings();
     connectSignalsToSlots();
 
@@ -351,6 +352,7 @@ void PluginWidget::removePlugin()
     ui.pluginTable->setSortingEnabled(true);
 }
 
+
 void PluginWidget::removeAllPlugins()
 {
     PluginDB *pdb = PluginDB::instance();
@@ -379,9 +381,11 @@ void PluginWidget::removeAllPlugins()
     }
 }
 
+
 void PluginWidget::pluginMapChanged(int i) {
     m_isDirty = true;
 }
+
 
 bool PluginWidget::bundledInterpReady()
 {

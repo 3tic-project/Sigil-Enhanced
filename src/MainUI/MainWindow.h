@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2015-2022 Doug Massay
 **  Copyright (C) 2012-2015 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Dave Heiland
@@ -27,8 +27,8 @@
 #ifndef SIGIL_H
 #define SIGIL_H
 
-#include <QtCore/QSharedPointer>
-#include <QtWidgets/QMainWindow>
+#include <QSharedPointer>
+#include <QMainWindow>
 
 #include "ui_main.h"
 #include "BookManipulation/Book.h"
@@ -72,6 +72,7 @@ class ClipsWindow;
 class SelectCharacter;
 class ViewImage;
 class FlowTab;
+class QWidget;
 
 
 /**
@@ -154,6 +155,9 @@ public:
     QList <Resource *> GetBookBrowserSelectedResources();
     QList <Resource *> GetValidSelectedHTMLResources();
     QList <Resource *> GetValidSelectedCSSResources();
+    QList <Resource *> GetValidSelectedSVGResources();
+    QList <Resource *> GetValidSelectedJSResources();
+    QList <Resource *> GetValidSelectedMiscXMLResources();
 
     QList <Resource *> GetTabbedHTMLResources();
     QList <Resource *> GetTabbedCSSResources();
@@ -285,7 +289,14 @@ public slots:
     void EditAutomate(const QString &automatefile);
     
     bool StandardizeEpub();
+
     void CreateEpubLayout();
+
+    void FocusOnCodeView();
+    void FocusOnBookBrowser();
+    void FocusOnPreview();
+    void FocusOnTOC();
+    void FocusOnClips();
 
 signals:
     void SettingsChanged();
@@ -444,6 +455,11 @@ private slots:
 
     void ClipEditorDialog(ClipEditorModel::clipEntry *clip_entry = NULL);
 
+    /**
+     * Allow Keyboard Focus Navigation to main QDockWidgets
+     */
+    void FocusOn(QWidget* dw=nullptr);
+  
     /**
      * Implements User Guide action functionality.
      */
@@ -1073,6 +1089,7 @@ private:
     bool m_UsingAutomate;
     QStringList m_AutomateLog;
     QString m_AutomatePluginParameter;
+    
     /**
      * Holds all the widgets Qt Designer created for us.
      */

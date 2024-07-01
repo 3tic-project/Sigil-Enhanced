@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2023 Kevin B, Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2024 Kevin B, Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2012-2013 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013 Dave Heiland
 **
@@ -111,7 +111,9 @@ SelectFiles::SelectFiles(QString title, QList<Resource *> media_resources, QStri
     m_WebView->page()->settings()->setAttribute(QWebEngineSettings::ShowScrollBars,false);
 #endif
     ui.avLayout->addWidget(m_WebView);
-
+    m_WebView->setFocusPolicy(Qt::NoFocus);
+    ui.Details->setFocusPolicy(Qt::NoFocus);
+    
     ReadSettings();
 
     m_AllItem = new QListWidgetItem(tr("All"), ui.FileTypes);
@@ -163,6 +165,8 @@ void SelectFiles::SetImages()
     }
     m_WebView->setHtml(html, QUrl());
 
+    ui.imageTree->reset();
+    ui.imageTree->setTabKeyNavigation(true);
     m_SelectFilesModel->clear();
     QStringList header;
     header.append(tr("Files In the Book"));
@@ -200,13 +204,18 @@ void SelectFiles::SetImages()
 
         // Do not show thumbnail if file is not an image
         if ((type == Resource::ImageResourceType || type == Resource::SVGResourceType) && m_ThumbnailSize) {
-              QPixmap pixmap(resource->GetFullPath());
-
+            QImage image;
+            if (type == Resource::ImageResourceType) {
+                image.load(resource->GetFullPath());
+            } else {
+                image = Utility::RenderSvgToImage(resource->GetFullPath());
+            }
+            QPixmap pixmap = QPixmap::fromImage(image);
             if (pixmap.height() > m_ThumbnailSize || pixmap.width() > m_ThumbnailSize) {
                 pixmap = pixmap.scaled(QSize(m_ThumbnailSize, m_ThumbnailSize), Qt::KeepAspectRatio);
             }
             QStandardItem *icon_item = new QStandardItem();
-            icon_item->setIcon(QIcon(pixmap));
+            icon_item->setData(QVariant(pixmap), Qt::DecorationRole);
             icon_item->setEditable(false);
             rowItems << icon_item;
         }

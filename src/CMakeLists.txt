@@ -160,6 +160,8 @@ set( DIALOG_FILES
     Dialogs/PreferenceWidgets/KeyboardShortcutsWidget.h
     Dialogs/PreferenceWidgets/LanguageWidget.cpp
     Dialogs/PreferenceWidgets/LanguageWidget.h
+    Dialogs/PreferenceWidgets/ModifiedVerPrefsWidget.cpp
+    Dialogs/PreferenceWidgets/ModifiedVerPrefsWidget.h
     Dialogs/PreferenceWidgets/PreferencesWidget.h
     Dialogs/PreferenceWidgets/SpellCheckWidget.cpp
     Dialogs/PreferenceWidgets/SpellCheckWidget.h
@@ -240,6 +242,8 @@ set( WIDGET_FILES
     Widgets/TextDocument.cpp
     Widgets/TVLineNumberArea.cpp
     Widgets/TVLineNumberArea.h
+    Widgets/CaretStyle.cpp
+    Widgets/CaretStyle.h
     )
 
 set( EXPORTER_FILES
@@ -570,6 +574,7 @@ set( UI_FILES
     Form_Files/PKeyboardShortcutsWidget.ui
     Form_Files/PGeneralSettingsWidget.ui
     Form_Files/PLanguageWidget.ui
+    Form_Files/PModifiedVerPrefs.ui
     Form_Files/PSpellCheckWidget.ui
     Form_Files/PPreserveEntitiesWidget.ui
     Form_Files/PPluginWidget.ui
@@ -674,20 +679,9 @@ else()
     project( sigil )
 endif()
 
-# Building Sigil with Qt6 requires cmake 3.16+
-# and a C++17 standards compatible compiler
-if (${USE_QT6})
-    cmake_minimum_required( VERSION 3.16 )
-
-    set(CMAKE_CXX_STANDARD 17)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-
-    include(qt6sigil.cmake)
-
+if (${USE_QT5})
 # Building Sigil with Qt5 requires cmake 3.0+
 # and a C++11 standards compatible compiler
-else()
     cmake_minimum_required( VERSION 3.0.0 )
 
     if (NOT MSVC)
@@ -709,4 +703,16 @@ else()
     endif()
 
     include(qt5sigil.cmake)
+
+# Building Sigil with Qt6 requires cmake 3.16+
+# and a C++17 standards compatible compiler
+else()
+    cmake_minimum_required( VERSION 3.16 )
+
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+
+    include(qt6sigil.cmake)
+
 endif()

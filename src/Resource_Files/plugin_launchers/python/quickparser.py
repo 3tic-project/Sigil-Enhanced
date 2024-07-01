@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim:ts=4:sw=4:softtabstop=4:smarttab:expandtab
 
-# Copyright (c) 2014-2021 Kevin B. Hendricks, and Doug Massay
+# Copyright (c) 2014-2023 Kevin B. Hendricks, and Doug Massay
 # Copyright (c) 2014      John Schember
 # All rights reserved.
 #
@@ -38,6 +38,59 @@ SPECIAL_HANDLING_TAGS = OrderedDict([
 ])
 
 SPECIAL_HANDLING_TYPES = ['xmlheader', 'doctype', 'comment', 'cdata', 'pi']
+
+WHITESPACE_CHARS = (' ', '\n', '\r', '\t')
+
+SVG_TAG_NAME_FIXUPS = {
+    'altglyph' : 'altGlyph',
+    'altglyphdef' : 'altGlyphDef',
+    'altglyphitem' : 'altGlyphItem',
+    'animatecolor' : 'animateColor',
+    'animatemotion' : 'animateMotion',
+    'animatetransform' : 'animateTransform',
+    'clippath' : 'clipPath',
+    'feblend' : 'feBlend',
+    'fecolormatrix' : 'feColorMatrix',
+    'fecomponenttransfer' : 'feComponentTransfer',
+    'fecomposite' : 'feComposite',
+    'feconvolvematrix' : 'feConvolveMatrix',
+    'fediffuselighting' : 'feDiffuseLighting',
+    'fedisplacementmap' : 'feDisplacementMap',
+    'fedistantlight' : 'feDistantLight',
+    'fedropshadow' : 'feDropShadow',
+    'feflood' : 'feFlood',
+    'fefunca' : 'feFuncA',
+    'fefuncb' : 'feFuncB',
+    'fefuncg' : 'feFuncG',
+    'fefuncr' : 'feFuncR',
+    'fegaussianblur' : 'feGaussianBlur',
+    'feimage' : 'feImage',
+    'femerge' : 'feMerge',
+    'femergenode' : 'feMergeNode',
+    'femorphology' : 'feMorphology',
+    'feoffset' : 'feOffset',
+    'fepointlight' : 'fePointLight',
+    'fespecularlighting' : 'feSpecularLighting',
+    'fespotlight' : 'feSpotLight',
+    'fetile' : 'feTile',
+    'feturbulence' : 'feTurbulence',
+    'flowdiv' : 'flowDiv', #                     obsolete, do not use
+    'flowimage' : 'flowImage', #                 obsolete, do not use
+    'flowline' : 'flowLine', #                   obsolete, do not use
+    'flowregion' : 'flowRegion', #               obsolete, do not use
+    'flowregionbreak' : 'flowRegionBreak', #     obsolete, do not use
+    'flowregionexclude' : 'flowRegionExclude', # obsolete, do not use
+    'flowref' : 'flowRef', #                     obsolete, do not use
+    'flowroot' : 'flowRoot', #                   obsolete, do not use
+    'flowpara' : 'flowPara', #                   obsolete, do not use
+    'flowspan' : 'flowSpan', #                   obsolete, do not use
+    'flowtref' : 'flowTref', #                   obsolete, do not use
+    'foreignobject' : 'foreignObject',
+    'glyphref' :  'glyphRef',
+    'lineargradient' : 'linearGradient',
+    'radialgradient' : 'radialGradient',
+    'textpath' : 'textPath'
+    }
 
 class QuickXHTMLParser(object):
 
@@ -91,7 +144,14 @@ class QuickXHTMLParser(object):
             tattr['special'] = s[p:backstep]
             return tname, ttype, tattr
         while p < n and s[p:p + 1] not in ('>', '/', ' ', '"', "'", "\r", "\n") : p += 1
+        # In xhtml tag name case matters especially for svg
+        # but in html they are not case senstive and lots of bad case html
+        # tags exist in the wild.
+        # try to deal with that by lowercasing all tag names
+        # and then fixing up the case senstive ones
         tname = s[b:p].lower()
+        if tname in SVG_TAG_NAME_FIXUPS:
+            tname = SVG_TAG_NAME_FIXUPS[tname]
         # deal with other remaining special cases
         # generic xml processing instruction (pi)
         if tname != "?xml" and s[b:b+1] == "?":
@@ -109,14 +169,14 @@ class QuickXHTMLParser(object):
         if ttype is None:
             # parse any attributes
             while s.find('=', p) != -1 :
-                while p < n and s[p:p + 1] == ' ' : p += 1
+                while p < n and s[p:p + 1] in WHITESPACE_CHARS : p += 1
                 b = p
                 while p < n and s[p:p + 1] != '=' : p += 1
                 # attribute names can be mixed case and are in SVG
                 aname = s[b:p]
-                aname = aname.rstrip(' ')
+                aname = aname.rstrip(' \n\r\t')
                 p += 1
-                while p < n and s[p:p + 1] == ' ' : p += 1
+                while p < n and s[p:p + 1] in WHITESPACE_CHARS : p += 1
                 if s[p:p + 1] in ('"', "'") :
                     qt = s[p:p + 1]
                     p = p + 1

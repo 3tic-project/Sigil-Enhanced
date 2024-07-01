@@ -7,7 +7,8 @@
 #
 #########################################################
 
-cmake_minimum_required( VERSION 3.0 ) 
+# Hard minimum version of cmake for all sub projects and Sigil
+cmake_minimum_required( VERSION 3.5 ) 
 
 project( Sigil )
 
@@ -28,10 +29,10 @@ else()
     set ( WIN_MIN_VERSION 6.1.7601 )
 endif()
 
-# Default to using Qt5 for builds
-# Enable Qt6 with -DUSEQT6=1 in cmake config command
-if ( NOT DEFINED USE_QT6 )
-    set( USE_QT6 0 )
+# Default to using Qt6 for builds
+# Enable Qt5 with -DUSE_QT5=1 in cmake config command
+if ( NOT DEFINED USE_QT5 )
+    set( USE_QT5 0 )
 endif()
 
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL ${RECENT_CMAKE_VER} AND ${TRY_NEWER_FINDPYTHON3})
@@ -57,9 +58,9 @@ set( PACKAGE_DIRECTORY ${PROJECT_BINARY_DIR}/package )
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake_extras" )
 
 set( SIGIL_MAJOR_VERSION 2 )
-set( SIGIL_MINOR_VERSION 0 )
+set( SIGIL_MINOR_VERSION 2 )
 set( SIGIL_REVISION_VERSION 1 )
-set( SIGIL_ADDTION_VERSION X1B )
+set( SIGIL_ADDTION_VERSION X1 )
 set( SIGIL_FULL_VERSION ${SIGIL_MAJOR_VERSION}.${SIGIL_MINOR_VERSION}.${SIGIL_REVISION_VERSION}.${SIGIL_ADDTION_VERSION} )
 
 if( UNIX AND NOT APPLE )

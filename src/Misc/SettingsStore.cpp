@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2016-2023  Kevin B. Hendricks, Stratford, ON
-**  Copyright (C) 2016-2023  Doug Massay
+**  Copyright (C) 2016-2024  Kevin B. Hendricks, Stratford, ON
+**  Copyright (C) 2016-2024  Doug Massay
 **  Copyright (C) 2011-2013  John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013  Dave Heiland
 **
@@ -46,7 +46,10 @@ static QString KEY_UI_LANGUAGE = SETTINGS_GROUP + "/" + "ui_language";
 static QString KEY_UI_FONT = SETTINGS_GROUP + "/" + "ui_font";
 static QString KEY_ORIGINAL_UI_FONT = SETTINGS_GROUP + "/" + "original_ui_font";
 static QString KEY_UI_ICON_THEME = SETTINGS_GROUP + "/" + "ui_icon_theme";
-static QString KEY_DRAG_DISTANCE_TWEAK = SETTINGS_GROUP + "/" + "drag_distance_tweak";
+static QString KEY_UI_PREVIEW_TIMEOUT = SETTINGS_GROUP + "/" + "ui_preview_timeout";
+static QString KEY_UI_HIGHLIGHT_FOCUS_WIDGET = SETTINGS_GROUP + "/" + "ui_highlight_focus_widget";
+static QString KEY_UI_DOUBLEWIDTH_TEXTCURSOR = SETTINGS_GROUP + "/" + "ui_doublewidth_textcursor";
+static QString KEY_UI_CUSTOM_SIGIL_DARK_THEME = SETTINGS_GROUP + "/" + "ui_custom_sigil_dark_theme";
 static QString KEY_ZOOM_IMAGE = SETTINGS_GROUP + "/" + "zoom_image";
 static QString KEY_ZOOM_TEXT = SETTINGS_GROUP + "/" + "zoom_text";
 static QString KEY_ZOOM_WEB = SETTINGS_GROUP + "/" + "zoom_web";
@@ -64,7 +67,6 @@ static QString KEY_CLEAN_ON = SETTINGS_GROUP + "/" + "clean_on";
 static QString KEY_REMOTE_ON = SETTINGS_GROUP + "/" + "remote_on";
 static QString KEY_JAVASCRIPT_ON = SETTINGS_GROUP + "/" + "javascript_on";
 static QString KEY_SHOWFULLPATH_ON = SETTINGS_GROUP + "/" + "showfullpath_on";
-static QString KEY_HIGHDPI_SETTING = SETTINGS_GROUP + "/" + "high_dpi";
 static QString KEY_DISABLEGPU_SETTING = SETTINGS_GROUP + "/" + "disable_gpu";
 static QString KEY_PRINT_PREVIEW_DPI_SETTING = SETTINGS_GROUP + "/" + "print_preview_dpi";
 static QString KEY_PRINT_DPI_SETTING = SETTINGS_GROUP + "/" + "print_dpi";
@@ -179,12 +181,33 @@ QString SettingsStore::uiIconTheme()
     return value(KEY_UI_ICON_THEME, "main").toString();
 }
 
-int SettingsStore::uiDragDistanceTweak()
+
+int SettingsStore::uiPreviewTimeout()
 {
     clearSettingsGroup();
-    return value(KEY_DRAG_DISTANCE_TWEAK, 0).toInt();
+    return value(KEY_UI_PREVIEW_TIMEOUT, 1000).toInt();
 }
 
+bool SettingsStore::uiHighlightFocusWidgetEnabled()
+{
+    clearSettingsGroup();
+    return value(KEY_UI_HIGHLIGHT_FOCUS_WIDGET, false).toBool();
+   
+}
+
+bool SettingsStore::uiDoubleWidthTextCursor()
+{
+    clearSettingsGroup();
+    return value(KEY_UI_DOUBLEWIDTH_TEXTCURSOR, false).toBool();
+}
+
+bool SettingsStore::uiUseCustomSigilDarkTheme()
+{
+    clearSettingsGroup();
+    return value(KEY_UI_CUSTOM_SIGIL_DARK_THEME, true).toBool();
+}
+
+    
 QString SettingsStore::defaultMetadataLang()
 {
     clearSettingsGroup();
@@ -285,12 +308,6 @@ int SettingsStore::showFullPathOn()
 {
     clearSettingsGroup();
     return value(KEY_SHOWFULLPATH_ON, 1).toInt();
-}
-
-int SettingsStore::highDPI()
-{
-    clearSettingsGroup();
-    return value(KEY_HIGHDPI_SETTING, 0).toInt();
 }
 
 bool SettingsStore::disableGPU()
@@ -549,10 +566,28 @@ void SettingsStore::setUIIconTheme(const QString &iconthemename)
     setValue(KEY_UI_ICON_THEME, iconthemename);
 }
 
-void SettingsStore::setUiDragDistanceTweak(int tweak)
+void SettingsStore::setUIPreviewTimeout(int timeout)
 {
     clearSettingsGroup();
-    setValue(KEY_DRAG_DISTANCE_TWEAK, tweak);
+    setValue(KEY_UI_PREVIEW_TIMEOUT, timeout);
+}
+
+void SettingsStore::setUIHighlightFocusWidget(bool enable)
+{
+    clearSettingsGroup();
+    setValue(KEY_UI_HIGHLIGHT_FOCUS_WIDGET, enable);
+}
+
+void SettingsStore::setUiDoubleWidthTextCursor(bool enable)
+{
+    clearSettingsGroup();
+    setValue(KEY_UI_DOUBLEWIDTH_TEXTCURSOR, enable);
+}
+
+void SettingsStore::setUiUseCustomSigilDarkTheme(bool enable)
+{
+    clearSettingsGroup();
+    setValue(KEY_UI_CUSTOM_SIGIL_DARK_THEME, enable);
 }
 
 void SettingsStore::setExternalXEditorPath(const QString &path)
@@ -649,12 +684,6 @@ void SettingsStore::setShowFullPathOn(int on)
 {
     clearSettingsGroup();
     setValue(KEY_SHOWFULLPATH_ON, on);
-}
-
-void SettingsStore::setHighDPI(int value)
-{
-    clearSettingsGroup();
-    setValue(KEY_HIGHDPI_SETTING, value);
 }
 
 void SettingsStore::setDisableGPU(bool value)
@@ -913,11 +942,12 @@ void SettingsStore::clearAppearanceSettings()
     remove(KEY_SPECIAL_CHARACTER_FONT_SIZE);
     remove(KEY_MAIN_MENU_ICON_SIZE);
     remove(KEY_SHOWFULLPATH_ON);
-    remove(KEY_HIGHDPI_SETTING);
     remove(KEY_UI_FONT);
     remove(KEY_UI_ICON_THEME);
-    remove(KEY_DRAG_DISTANCE_TWEAK);
     remove(KEY_PREVIEW_DARK_IN_DM);
+    remove(KEY_UI_HIGHLIGHT_FOCUS_WIDGET);
+    remove(KEY_UI_DOUBLEWIDTH_TEXTCURSOR);
+    remove(KEY_UI_CUSTOM_SIGIL_DARK_THEME);
     ;
 }
 

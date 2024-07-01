@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
 **
 **  Copyright (C) 2015-2021 Kevin B. Hendricks Stratford, ON Canada 
 **  Copyright (C) 2009-2011  Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -466,6 +466,8 @@ public slots:
 
     bool ClearMarkedText();
 
+    void SetAppearanceColors();
+
     void RehighlightDocument();
 
 protected:
@@ -610,8 +612,6 @@ private:
      * @param font The new font to use.
      */
     void UpdateLineNumberAreaFont(const QFont &font);
-
-    void SetAppearanceColors();
 
     /**
      * Executes a centerCursor() call if requested
@@ -899,7 +899,7 @@ signals:
     void PasteRichTextRequest(); // modified: AddPasteRichText
 
 public:
-    void SplitBlockOrAddBreak(); // modified: SplitBlockOrAddBreak
+    void SplitTagOrAddBreak(); // modified: SplitTagOrAddBreak
     void MergeNextElement(); // modified: MergeNextElement
     void FormatBlock_multiline(const QString& element_name, bool preserve_attributes); // modified: Add Lables On Multiple Lines
 

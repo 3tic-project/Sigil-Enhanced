@@ -263,6 +263,11 @@ public slots:
     void RemoveResource(const Resource *resource);
 
     void BulkRemoveResources(const QList<Resource *> resources);
+
+    void BulkMoveResources(const QList<Resource *>resources, const QStringList &newpaths);
+
+    void BulkRenameResources(const QList<Resource *> resources, const QStringList &newnames);
+                                                                                         
     //------------------------------------------ modified: FolderKeeperExt ------------------------------------------
     void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //modified: BulkResourceRenamed
     void BulkAddResourcesToOPF(const QList<Resource*>resources); //modified: BulkAddResources
@@ -273,7 +278,6 @@ public slots:
                                     const QString& mimetype = QString(),
                                     const QString& folderpath = QString("\\")); //modified: AddContentFromQByteArray
     //---------------------------------------------------------------------------------------------------------------
-    
 private slots:
 
     /**

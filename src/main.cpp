@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2018-2023  Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2019-2022  Doug Massay
+**  Copyright (C) 2018-2024  Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2019-2024  Doug Massay
 **  Copyright (C) 2009-2011  Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -27,7 +27,6 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QLibraryInfo>
-#include <QStyleFactory>
 #include <QTextCodec>
 #include <QThreadPool>
 #include <QTranslator>
@@ -39,6 +38,8 @@
 #include <QFileInfo>
 #include <QTextStream>
 #include <QFontMetrics>
+#include <QStyle>
+#include <QStyleFactory>
 #include <QtWebEngineWidgets>
 #include <QtWebEngineCore>
 
@@ -57,6 +58,7 @@
 #include "Misc/UpdateChecker.h"
 #include "Misc/Utility.h"
 #include "Misc/WebProfileMgr.h"
+#include "Widgets/CaretStyle.h"
 #include "sigil_constants.h"
 #include "sigil_exception.h"
 
@@ -84,6 +86,74 @@ extern void removeMacosSpecificMenuItems();
     #define QT_ENUM_SKIPEMPTYPARTS QString::SkipEmptyParts
     #define QT_ENUM_KEEPEMPTYPARTS QString::KeepEmptyParts
 #endif
+
+const QString MAC_DOCK_TITLEBAR_FIX =
+    "QDockWidget { "
+    "    titlebar-close-icon: url(:/dark/closedock-macstyle.svg);"
+    "    titlebar-normal-icon: url(:/dark/dockdock-macstyle.svg);"
+    "}";
+
+const QString LINWIN_DOCK_TITLEBAR_FIX =
+    "QDockWidget { "
+    "    titlebar-close-icon: url(:/dark/dock-close.svg);"
+    "    titlebar-normal-icon: url(:/dark/undock.svg);"
+    "}";
+
+// Allow Focus Highlight qss to be platform dependent
+#if defined(Q_OS_MAC)
+// Need to add padding for primary QDockWidget contents.
+// Need to explicitly add all buttons.
+// Need to include QLineEdit but special case it
+// when used inside comboboxes to prevent font clipping
+// Native size appears to be 2 or 3 pixesl not 1px
+const QString FOCUS_HIGHLIGHT_QSS =
+    "QTableWidget:focus, QTreeWidget:focus, QPlainTextEdit:focus, "
+    "QTextEdit:focus, QTreeView::focus, QTabWidget:focus, "
+    "QListView:focus, QScrollArea:focus, QTabBar:focus, "
+    ".QLineEdit:focus, QToolButton:focus, QPushButton:focus { "
+    "    border: 3px solid HIGHLIGHT_COLOR;"
+    "}"
+    "QComboWidget > QLineEdit:focus { "
+    "    border: 1px solid HIGHLIGHT_COLOR;"
+    "}"
+    "QPlainTextEdit, QTableWidget, QTreeView { "
+    "    padding-left:3px; padding-right:3px; padding-top:3px; padding-bottom:3px;"
+    "}";
+#elif defined(Q_OS_WIN32)
+// Not sure about which widgets Windows natively highlights
+// versus the ones we have to add. So be generic right now.
+// But - we must not add a QComboBox as styling that widget causes issues.
+// And add 1 px pad for dockwidget borders
+const QString FOCUS_HIGHLIGHT_QSS =
+    "QTableWidget:focus, QTreeWidget:focus, QPlainTextEdit:focus, "
+    "QTextEdit:focus, QTreeView::focus, QTabWidget:focus, "
+    "QListView:focus, QScrollArea:focus, QTabBar:focus, "
+    "QLineEdit:focus, QToolButton:focus, QPushButton:focus { "
+    "    border: 1px solid HIGHLIGHT_COLOR;"
+    "}"
+    "QPlainTextEdit, QTableWidget, QTreeView { "
+    "    padding-left:1px; padding-right:1px; padding-top:1px; padding-bottom:1px;"
+    "}";
+#else // Linux
+// On Linux all buttons, lineedits and combo boxes already have native
+// focus rectangeles. So we only need to add major widgets to
+// cover Dialog and QDockWidget contents. And 1 px pad for dockwidget borders.
+const QString FOCUS_HIGHLIGHT_QSS =
+    "QTableWidget:focus, QTreeWidget:focus, QPlainTextEdit:focus, "
+    "QTextEdit:focus, QTreeView::focus, QTabWidget:focus, "
+    "QListView:focus, QScrollArea:focus, QTabBar:focus, "
+    "QLineEdit:focus, QToolButton:focus, QPushButton:focus { "
+    "    border: 1px solid HIGHLIGHT_COLOR;"
+    "}"
+    "QPlainTextEdit, QTableWidget, QTreeView { "
+    "    padding-left:1px; padding-right:1px; padding-top:1px; padding-bottom:1px;"
+    "}";
+#endif
+
+// Accumulate qss added after MainApplication so it
+// can be added back on Windows theme changes.
+QString accumulatedQss = "";
+
 
 // Creates a MainWindow instance depending
 // on command line arguments
@@ -267,37 +337,6 @@ void VerifyPlugins()
     pdb->load_plugins_from_disk();
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-void setupHighDPI()
-{
-    bool has_env_setting = false;
-    QStringList env_vars;
-    env_vars << "QT_ENABLE_HIGHDPI_SCALING" << "QT_SCALE_FACTOR_ROUNDING_POLICY"
-             << "QT_AUTO_SCREEN_SCALE_FACTOR" << "QT_SCALE_FACTOR"
-             << "QT_SCREEN_SCALE_FACTORS" << "QT_DEVICE_PIXEL_RATIO";
-    foreach(QString v, env_vars) {
-        if (!Utility::GetEnvironmentVar(v).isEmpty()) {
-            has_env_setting = true;
-            break;
-        }
-    }
-
-    SettingsStore ss;
-    int highdpi = ss.highDPI();
-    if (highdpi == 1 || (highdpi == 0 && !has_env_setting)) {
-        // Turning on Automatic High DPI scaling
-        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
-    } else if (highdpi == 2) {
-        // Turning off Automatic High DPI scaling
-        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, false);
-        foreach(QString v, env_vars) {
-            bool irrel = qunsetenv(v.toUtf8().constData());
-        Q_UNUSED(irrel);
-        }
-    }
-}
-#endif
-
 
 // utility routine for performing centralized ini versioning based on Qt version
 void update_ini_file_if_needed(const QString oldfile, const QString newfile)
@@ -319,19 +358,7 @@ int main(int argc, char *argv[])
   #else
     QT_REQUIRE_VERSION(argc, argv, "5.12.3");
   #endif
-#endif
-
-#if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
-    // Unset platform theme plugins/styles environment variables immediately
-    // when forcing Sigil's own darkmode palette on Linux
-    if (!force_sigil_darkmode_palette.isEmpty()) {
-        QStringList env_vars = {"QT_QPA_PLATFORMTHEME", "QT_STYLE_OVERRIDE"};
-        foreach(QString v, env_vars) {
-            bool irrel = qunsetenv(v.toUtf8().constData());
-        Q_UNUSED(irrel);
-        }
-    }
-#endif
+#endif // version
 
 
 #ifndef QT_DEBUG
@@ -369,8 +396,7 @@ int main(int argc, char *argv[])
 
     update_ini_file_if_needed(Utility::DefinePrefsDir() + "/" + SEARCHES_V2_SETTINGS_FILE,
                               Utility::DefinePrefsDir() + "/" + SEARCHES_V6_SETTINGS_FILE);
-#endif
-
+#endif // version
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
     // register the our own url scheme (this is required since Qt 5.12)
@@ -382,14 +408,7 @@ int main(int argc, char *argv[])
     // sigilScheme.setSyntax(QWebEngineUrlScheme::Syntax::Host);
     sigilScheme.setSyntax(QWebEngineUrlScheme::Syntax::Path);
     QWebEngineUrlScheme::registerScheme(sigilScheme);
-#endif
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#ifndef Q_OS_MAC
-    setupHighDPI();
-#endif
-    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
+#endif // version
 
     // many qtbugs related to mixing 32 and 64 bit qt apps when shader disk cache is used
     // Only use if using Qt5.9.0 or higher
@@ -411,6 +430,10 @@ int main(int argc, char *argv[])
     // QtWebEngine may need this
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 
+    // handle other startup based on current settings and environment variables
+    SettingsStore settings;
+
+
 #if defined(Q_OS_WIN32)
     // Insert altgr and/or darkmode window decorations as needed
     QString current_env_str = Utility::GetEnvironmentVar("QT_QPA_PLATFORM");
@@ -425,9 +448,26 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Woff/woff2 fonts can be more fully supported by setting SIGIL_USE_FREETYPE_FONTENGINE to anything.
+    // See https://www.mobileread.com/forums/showthread.php?t=356351 for discussion.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QString font_backend_override = Utility::GetEnvironmentVar("SIGIL_USE_FREETYPE_FONTENGINE");
+    // Don't change any global fontengine parameters a user may have set in QT_QPA_PLATFORM
+    bool fontengine_arg_exists = false;
+    foreach(QString arg, current_platform_args) {
+        if (arg.startsWith("fontengine=", Qt::CaseInsensitive)) {
+            fontengine_arg_exists = true;
+        }
+    }
+    if (!fontengine_arg_exists) {
+        if (!font_backend_override.isEmpty()) {
+            current_platform_args.append("fontengine=freetype");
+        }
+    }
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+
     // if altgr is not already in the list of windows platform options, add it
-    SettingsStore ss;
-    if (ss.enableAltGr()) {
+    if (settings.enableAltGr()) {
         if (!current_platform_args.contains("altgr", Qt::CaseInsensitive)) {
             current_platform_args.append("altgr");
         }
@@ -436,7 +476,7 @@ int main(int argc, char *argv[])
     // if darkmode options are not already in the list of windows platform options,
     // Set it to 1 so that sigil title bars will be dark in Windows darkmode.
     // This is setting is assumed with a dark palette starting with Qt6.5.
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) && QT_VERSION <= QT_VERSION_CHECK(6, 5, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) && QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
     if (Utility::WindowsShouldUseDarkMode()) {
         bool darkmode_arg_exists = false;
         foreach(QString arg, current_platform_args) {
@@ -448,7 +488,7 @@ int main(int argc, char *argv[])
             current_platform_args.append("darkmode=1");
         }
     }
-#endif
+#endif // version
 
     // Rewrite the new (if any) windows platform options to QT_QPA_PLATFORM
     if (!current_platform_args.isEmpty()) {
@@ -456,13 +496,26 @@ int main(int argc, char *argv[])
         qDebug() << "New windows platform args: " << new_args;
         qputenv("QT_QPA_PLATFORM", new_args.toUtf8());
     }
-#endif
+#endif // Q_OS_WIN32)
+
+    // allow user to override the default Preview Timeout (integer in milliseconds)
+    QString new_timeout = Utility::GetEnvironmentVar("SIGIL_PREVIEW_TIMEOUT");
+    if (!new_timeout.isEmpty()) {
+        bool okay;
+        int timeout = new_timeout.toInt(&okay, 10);
+        if (!okay) {
+            timeout = 1000;
+        } else {
+            if (timeout < 1000) timeout = 1000;
+            if (timeout > 10000)timeout = 1000;
+        }
+        settings.setUIPreviewTimeout(timeout);
+    }
 
     // enable disabling of gpu acceleration for QtWebEngine.
     // append to current environment variable contents as numerous chromium 
     // switches exist that may be useful
-    SettingsStore nss;
-    if (nss.disableGPU()) {
+    if (settings.disableGPU()) {
         QString current_flags = Utility::GetEnvironmentVar("QTWEBENGINE_CHROMIUM_FLAGS");
         if (current_flags.isEmpty()) {
             current_flags = "--disable-gpu";
@@ -478,7 +531,6 @@ int main(int argc, char *argv[])
     disableWindowTabbing();
     removeMacosSpecificMenuItems();
 #endif
-
 
     // Install an event filter for the application
     // so we can catch OS X's file open events
@@ -501,7 +553,6 @@ int main(int argc, char *argv[])
         app.addLibraryPath("imageformats");
 
         QTextCodec::setCodecForLocale(QTextCodec::codecForName("utf8"));
-        SettingsStore settings;
 
         // Setup the qtbase_ translator and load the translation for the selected language
         QTranslator qtbaseTranslator;
@@ -531,66 +582,58 @@ int main(int argc, char *argv[])
         }
         app.installTranslator(&sigilTranslator);
 
-#ifndef Q_OS_MAC
-        // Custom dark style/palette for Windows and Linux
-#ifndef Q_OS_WIN32
-        // Use platform themes/styles on Linux unless FORCE_SIGIL_DARKMODE_PALETTE is set
-        if (!force_sigil_darkmode_palette.isEmpty()) {
-            // Apply custom dark style
-            app.setStyle(new SigilDarkStyle);
-#if QT_VERSION == QT_VERSION_CHECK(5, 15, 0)
-            // Qt keeps breaking my custom dark theme.
-            // This was apparently only necessary for Qt5.15.0!!
-            app.setPalette(QApplication::style()->standardPalette());
-#endif
+#ifdef Q_OS_MAC
+        // QApplication::setStyle("macOS");
+        QStyle* astyle = QStyleFactory::create("macOS");
+        app.setStyle(astyle);
+#endif // Q_OS_MAC
+
+#ifdef Q_OS_WIN32
+        QStyle* astyle = QStyleFactory::create("fusion");
+        app.setStyle(astyle);
+#endif // Q_OS_WIN32
+
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN32) // *nix
+        // QStyle* astyle = QStyleFactory::create("fusion");
+        QStyle* astyle = app.style();
+        app.setStyle(astyle);
+#endif // *nix
+
+#ifndef Q_OS_WIN32 //macOS and *nix
+        // Handle the new CaretStyle (double width cursor)
+        QStyle* bstyle;
+        if (settings.uiDoubleWidthTextCursor()) {
+            bstyle = new CaretStyle(astyle);
+            app.setStyle(bstyle);
         }
-#else
-        if (Utility::WindowsShouldUseDarkMode()) {
-            // Apply custom dark style
-            app.setStyle(new SigilDarkStyle);
+#else // Win might or might not have an extra darkstyle to layer
+        // Handle the new CaretStyle (double width cursor)
+        bool isbstyle = false;
+        QStyle* bstyle;
+        if (settings.uiDoubleWidthTextCursor()) {
+            bstyle = new CaretStyle(astyle);
+            app.setStyle(bstyle);
+            isbstyle = true;
+        }
+
+        // Use our custom Windows dark theme unless user opts-in with SIGIL_USE_QT65_DARKMODE
+        if (Utility::WindowsShouldUseDarkMode() && settings.uiUseCustomSigilDarkTheme()) {
+            // Apply custom dark style last on Windows
+            QStyle* cstyle;
+            if (isbstyle) {
+                cstyle = new SigilDarkStyle(bstyle);
+            } else {
+                cstyle = new SigilDarkStyle(astyle);
+            }
+            app.setStyle(cstyle);
 #if QT_VERSION <= QT_VERSION_CHECK(5, 15, 0) || QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
             // At this point, I have no idea where along the 5.15.x series this
             // being present will break dark mode. I only know the first official
             // official windows version that uses 5.15.9 needs it to be gone.
             app.setPalette(QApplication::style()->standardPalette());
-#endif
+#endif // version
         }
-#endif
-#endif
-
-        // Set ui font from preferences after dark theming
-        QFont f = QFont(QApplication::font());
-#ifdef Q_OS_WIN32
-        if (f.family() == "MS Shell Dlg 2" && f.pointSize() == 8) {
-            // Microsoft's recommended UI defaults
-            f.setFamily("Segoe UI");
-            f.setPointSize(9);
-            QApplication::setFont(f);
-        }
-#elif defined(Q_OS_MAC)
-        // Just in case
-#else
-        if (f.family() == "Sans Serif" && f.pointSize() == 9) {
-            f.setPointSize(10);
-            QApplication::setFont(f);
-        }
-#endif
-        settings.setOriginalUIFont(f.toString());
-        if (!settings.uiFont().isEmpty()) {
-            QFont font;
-            if (font.fromString(settings.uiFont())) QApplication::setFont(font);
-        }
-#ifndef Q_OS_MAC
-        // redo on a timer to ensure in all cases
-        if (!settings.uiFont().isEmpty()) {
-            QFont font;
-            if (font.fromString(settings.uiFont())) {
-                QTimer::singleShot(0, [=]() {
-                    QApplication::setFont(font);
-                } );
-            }
-        }
-#endif
+#endif // Win
 
         // drag and drop in main tab bar is too touchy and that can cause problems.
         // default drag distance limit is much too small especially for hpi displays
@@ -600,7 +643,11 @@ int main(int argc, char *argv[])
 #else
         QFontMetrics fm(app.font());
         int dragbase = fm.xHeight() * 2;
-        int dragtweak = settings.uiDragDistanceTweak();
+        bool ok;
+        int dragtweak = qEnvironmentVariableIntValue("SIGIL_DRAG_DISTANCE_TWEAK", &ok);
+        if (!ok) {
+            dragtweak = 0;
+        }
         // Use calculated base distance if tweak value not between -20 and 20px
         if (dragtweak >= -20 && dragtweak <= 20) {
             int newdrag = dragbase + dragtweak;
@@ -615,16 +662,68 @@ int main(int argc, char *argv[])
             // Tweak value outside range. Use calculated distance.
             app.setStartDragDistance(dragbase);
         }
-#endif
-        // End of UI font stuff
+#endif  // End of drag distance tweaking
 
+#ifdef Q_OS_MAC
+        // macOS need to fix broken QDockWidgets under dark mode
+        app.setStyleSheet(app.styleSheet().append(MAC_DOCK_TITLEBAR_FIX));
+#endif
+
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN32) // *nix
+        // Linux likes these dockwidget icons for light/dark
+        app.setStyleSheet(app.styleSheet().append(LINWIN_DOCK_TITLEBAR_FIX));
+#endif // end *nix
+
+#ifdef Q_OS_WIN32 
+        // Windows likes these dockwidget icons for light/dark too,
+        // but only when using Qt's inherent fusion light/dark modes.
+        if (!Utility::WindowsShouldUseDarkMode() || !settings.uiUseCustomSigilDarkTheme()) {
+            app.setStyleSheet(app.styleSheet().append(LINWIN_DOCK_TITLEBAR_FIX));
+	    accumulatedQss.append(LINWIN_DOCK_TITLEBAR_FIX);
+        }
+#endif // Q_OS_WIN32
+      	// allow user to highlight the focus widget
+        if (settings.uiHighlightFocusWidgetEnabled()) {
+            QString focus_qss = FOCUS_HIGHLIGHT_QSS;
+            QString hcolor = app.palette().color(QPalette::Highlight).name();
+            QString user_color = Utility::GetEnvironmentVar("SIGIL_FOCUS_HIGHLIGHT_COLOR");
+            if (!user_color.isEmpty() && user_color.startsWith("#") && user_color.length() == 7) {
+#if QT_VERSION >= QT_VERSION_CHECK(6,4,0)
+		if (QColor::isValidColorName(user_color)) {
+#else
+                if (QColor::isValidColor(user_color)) {
+#endif
+                    hcolor = user_color;
+                }
+            }
+            focus_qss.replace("HIGHLIGHT_COLOR", hcolor);
+            app.setStyleSheet(app.styleSheet().append(focus_qss));
+            // Accumulate qss added after MainApplication so it
+            // can be added back on theme changes.
+            accumulatedQss.append(focus_qss);
+        }
+        
         // Check for existing qt_styles.qss in Prefs dir and load it if present
         QString qt_stylesheet_path = Utility::DefinePrefsDir() + "/qt_styles.qss";
         QFileInfo QtStylesheetInfo(qt_stylesheet_path);
         if (QtStylesheetInfo.exists() && QtStylesheetInfo.isFile() && QtStylesheetInfo.isReadable()) {
             QString qtstyles = Utility::ReadUnicodeTextFile(qt_stylesheet_path);
             app.setStyleSheet(app.styleSheet().append(qtstyles));
+            // Accumulate qss added after MainApplication so it
+            // can be added back on theme changes.
+            accumulatedQss.append(qtstyles);
         }
+        // Pass accumulatedQss to MainApplication for themeing changes
+        app.updateAccumulatedQss(accumulatedQss);
+
+        // it seems that any time there is stylesheet used, system dark-light palette
+        // changes are not propagated to widgets with stylesheets (See QTBUG-124268).
+        // This in turn prevents some widgets from properly geting repainted with the new
+        // dark or light theme palette (See paintEvent in BookBrowser.cpp for example.)
+        // Because our style changes are not palette dependent they should be
+        // properly propagated to all widgets including those with stylesheets
+        // This is how to tell Qt to do that.  Perhaps any platforms need this as well.
+        app.setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles);
 
         // Qt's setCursorFlashTime(msecs) (or the docs) are broken
         // According to the docs, setting a negative value should disable cursor blinking 
@@ -641,13 +740,15 @@ int main(int argc, char *argv[])
         app.setWindowIcon(GetApplicationIcon());
 #if QT_VERSION >= 0x050700
         // Wayland needs this clarified in order to propery assign the icon 
-        app.setDesktopFileName(QStringLiteral("sigil.desktop"));
-#endif
-#endif
+        app.setDesktopFileName(QStringLiteral("sigil"));
+#endif // version
+#endif //!defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
+
         // Create the required QWebEngineProfiles, Initialize the settings
         // just once, installing both URLInterceptor and URLSchemeHandler as needed
-        // to bypass 2mb url limit
+        // to bypass 2mb url limit (singleton)
         WebProfileMgr* profile_mgr = WebProfileMgr::instance();
+        Q_UNUSED(profile_mgr);
         
         // Needs to be created on the heap so that
         // the reply has time to return.
@@ -674,7 +775,8 @@ int main(int argc, char *argv[])
         } else {
             RCCResourcePath = sigil_share_root + "/iconthemes";
         }
-#endif
+#endif // OS switch
+
         QString icon_theme = settings.uiIconTheme();
         // First check if user wants the Custom Icon Theme
         if (icon_theme == "custom") {
@@ -721,7 +823,7 @@ int main(int argc, char *argv[])
         if (filepath.isEmpty()) {
             filter->setInitialFilePath(QString("placeholder"));
         }
-#endif
+#endif // Q_OS_MAC
 
         if (arguments.contains("-t")) {
             std::cout  << TempFolder::GetPathToSigilScratchpad().toStdString() << std::endl;
@@ -799,7 +901,45 @@ int main(int argc, char *argv[])
             file_menu->addAction(quit_action);
 
             mac_bar->addMenu(file_menu);
-#endif
+#endif // Q_OS_MAC
+
+            // Set ui font from preferences
+            // This needs to happen as late as possible (before
+            // MainWindow) on Linux to work consistently.
+            QFont f = QFont(QApplication::font());
+#ifdef Q_OS_WIN32
+            if (f.family() == "MS Shell Dlg 2" && f.pointSize() == 8) {
+                // Microsoft's recommended UI defaults
+                f.setFamily("Segoe UI");
+                f.setPointSize(9);
+                QApplication::setFont(f);
+            }
+#elif defined(Q_OS_MAC)
+            // Just in case
+#else
+            if (f.family() == "Sans Serif" && f.pointSize() == 9) {
+                f.setPointSize(10);
+                QApplication::setFont(f);
+            }
+#endif // end of os switch
+
+            settings.setOriginalUIFont(f.toString());
+            if (!settings.uiFont().isEmpty()) {
+                QFont font;
+                if (font.fromString(settings.uiFont())) QApplication::setFont(font);
+            }
+#ifndef Q_OS_MAC
+            // redo on a timer to ensure in all cases
+            // Linux can reset fonts otherwise.
+            if (!settings.uiFont().isEmpty()) {
+                QFont font;
+                if (font.fromString(settings.uiFont())) {
+                    QTimer::singleShot(0, [=]() {
+                        QApplication::setFont(font);
+                    } );
+                }
+            }
+#endif // Linux and Win
 
             VerifyPlugins();
             MainWindow *widget = GetMainWindow(arguments);

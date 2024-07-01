@@ -30,6 +30,7 @@
 
 class QTreeView;
 class QVBoxLayout;
+class QPaintEvent;
 
 /**
  * Represents the pane in which the book's NCX TOC is rendered.
@@ -48,6 +49,9 @@ public:
      */
     ClipsWindow(QWidget *parent = 0);
 
+public slots:
+    void SetFocusOnClips();
+
 private slots:
 
     /**
@@ -62,6 +66,7 @@ protected:
 
     void contextMenuEvent(QContextMenuEvent *event);
     virtual void showEvent(QShowEvent *event);
+    virtual void paintEvent(QPaintEvent* event);
 
 signals:
     void PasteClips(QList<ClipEditorModel::clipEntry *> clips);

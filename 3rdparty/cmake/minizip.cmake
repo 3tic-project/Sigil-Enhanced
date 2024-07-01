@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.0)
-
 project(minizip C)
 
 set( MINIZIP_LIBRARIES ${PROJECT_NAME} CACHE INTERNAL "" )

@@ -1,6 +1,6 @@
 ﻿/************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2011-2012 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Dave Heiland
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -60,7 +60,10 @@ public:
         LookWhere_SelectedCSSFiles,
         LookWhere_TabbedCSSFiles,
         LookWhere_OPFFile,
-        LookWhere_NCXFile
+        LookWhere_NCXFile,
+        LookWhere_SelectedSVGFiles,
+        LookWhere_SelectedJSFiles,
+        LookWhere_SelectedMiscXMLFiles
     };
 
     enum SearchMode {
@@ -87,6 +90,9 @@ public:
      */
     bool isWhereHTML();
     bool isWhereCSS();
+    bool isWhereSVG();
+    bool isWhereJS();
+    bool isWhereMiscXML();
     bool isWhereSelected();
     bool isWhereAll();
     bool isWhereOPF() { return GetLookWhere() == LookWhere_OPFFile; };
@@ -123,6 +129,7 @@ public slots:
     void SetRegexOptionDotAll(bool new_state);
     void SetRegexOptionMinimalMatch(bool new_state);
     void SetRegexOptionAutoTokenise(bool new_state);
+    void SetRegexOptionUnicodeProperty(bool new_state);
     void SetOptionWrap(bool new_state);
     void SetRegexOptionTextOnly(bool new_state);
 
@@ -336,8 +343,10 @@ private:
      */
     void ConnectSignalsToSlots();
 
-    void SetFocus();
-    bool HasFocus();
+    void SetFocusFind();
+    void SetFocusReplace();
+    bool HasFocusFind();
+    bool HasFocusReplace();
 
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES
@@ -354,6 +363,7 @@ private:
     bool m_RegexOptionDotAll;
     bool m_RegexOptionMinimalMatch;
     bool m_RegexOptionAutoTokenise;
+    bool m_RegexOptionUnicodeProperty;
     bool m_OptionWrap;
     bool m_RegexOptionTextOnly;
     bool m_SpellCheck;
@@ -383,6 +393,7 @@ private:
     QAction* m_DotAllCheckAction;
     QAction* m_MinimalMatchCheckAction;
     QAction* m_AutoTokeniseCheckAction;
+    QAction* m_UnicodePropertyCheckAction;
     QMenu*   m_menu;
     bool m_CF_RestartFlag;  //修改：循环查找BUG
 };

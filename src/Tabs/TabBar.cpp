@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2020 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2020      Doug Massay
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Dave Heiland
@@ -35,18 +35,16 @@ TabBar::TabBar(QWidget *parent)
       m_TabIndex(-1)
 {
 #if defined(Q_OS_MAC)
-    // work around Qt MacOSX bug missing tab close icons
-    // see:  https://bugreports.qt.io/browse/QTBUG-61092
-    // still broken in document mode in Qt.5.12.2 !!!!
+    // Qt MacOSX missing tab close icon - https://bugreports.qt.io/browse/QTBUG-61092
+    // and prevent the silly show only when cursor is near it that came after
+    // having a gui control that only appears if cursor is near is sheer stupidity
     const QString FORCE_TAB_CLOSE_BUTTON = 
         "QTabBar::close-button { "
-            "background-image: url(:/qt-project.org/styles/commonstyle/images/standardbutton-closetab-16.png);"
-        "}"
-        "QTabBar::close-button:hover { "
-            "background-image: url(:/qt-project.org/styles/commonstyle/images/standardbutton-closetab-hover-16.png);"
+            "background-image: url(:/dark/closedock-macstyle.svg);"
         "}";
     setStyleSheet(FORCE_TAB_CLOSE_BUTTON);
 #endif
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 void TabBar::mouseDoubleClickEvent(QMouseEvent *event)

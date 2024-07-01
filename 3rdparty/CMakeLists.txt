@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.0)
-
 project(3rdparty)
 
 # Note: All files in the cmake dir will be included as if they were in this file.

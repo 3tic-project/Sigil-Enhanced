@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2022 Kevin Hendricks, Statford, ON 
+**  Copyright (C) 2015-2023 Kevin Hendricks, Statford, ON 
 **  Copyright (C) 2012      Dave Heiland
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **
@@ -26,6 +26,8 @@
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
+#include <QImage>
+#include <QPixmap>
 
 #include "sigil_exception.h"
 #include "BookManipulation/FolderKeeper.h"
@@ -109,7 +111,12 @@ void ImageFilesWidget::SetupTable(int sort_column, Qt::SortOrder sort_order)
     foreach(Resource * resource, m_AllImageResources) {
         QString filepath = resource->GetRelativePath();
         QString path = resource->GetFullPath();
-        QImage image(path);
+        QImage image;
+        if (resource->Type() == Resource::SVGResourceType) {
+            image = Utility::RenderSvgToImage(path);
+        } else {
+            image.load(path);
+        }
         QList<QStandardItem *> rowItems;
         // Filename
         QStandardItem *name_item = new QStandardItem();
@@ -157,15 +164,13 @@ void ImageFilesWidget::SetupTable(int sort_column, Qt::SortOrder sort_order)
         rowItems << color_item;
 
         // Thumbnail
+        QPixmap pixmap = QPixmap::fromImage(image);
         if (m_ThumbnailSize) {
-            QPixmap pixmap(resource->GetFullPath());
-
             if (pixmap.height() > m_ThumbnailSize || pixmap.width() > m_ThumbnailSize) {
                 pixmap = pixmap.scaled(QSize(m_ThumbnailSize, m_ThumbnailSize), Qt::KeepAspectRatio);
             }
-
             QStandardItem *icon_item = new QStandardItem();
-            icon_item->setIcon(QIcon(pixmap));
+            icon_item->setData(QVariant(pixmap), Qt::DecorationRole);
             rowItems << icon_item;
         }
 
@@ -341,7 +346,7 @@ void ImageFilesWidget::Save()
     try {
         Utility::WriteUnicodeTextFile(data, destination);
     } catch (CannotOpenFile&) {
-        QMessageBox::warning(this, tr("Sigil"), tr("Cannot save report file."));
+        Utility::warning(this, tr("Sigil"), tr("Cannot save report file."));
     }
 
     m_LastDirSaved = QFileInfo(destination).absolutePath();

@@ -150,11 +150,6 @@
      <addaction name="actionClip18"/>
      <addaction name="actionClip19"/>
      <addaction name="actionClip20"/>
-    </widget>
-    <widget class="QMenu" name="menuClip2">
-     <property name="title">
-      <string>Cli&amp;p2</string>
-     </property>
      <addaction name="actionClip21"/>
      <addaction name="actionClip22"/>
      <addaction name="actionClip23"/>
@@ -165,6 +160,11 @@
      <addaction name="actionClip28"/>
      <addaction name="actionClip29"/>
      <addaction name="actionClip30"/>
+    </widget>
+    <widget class="QMenu" name="menuClip2">
+     <property name="title">
+      <string>Cli&amp;p2</string>
+     </property>
      <addaction name="actionClip31"/>
      <addaction name="actionClip32"/>
      <addaction name="actionClip33"/>
@@ -175,8 +175,28 @@
      <addaction name="actionClip38"/>
      <addaction name="actionClip39"/>
      <addaction name="actionClip40"/>
+     <addaction name="actionClip41"/>
+     <addaction name="actionClip42"/>
+     <addaction name="actionClip43"/>
+     <addaction name="actionClip44"/>
+     <addaction name="actionClip45"/>
+     <addaction name="actionClip46"/>
+     <addaction name="actionClip47"/>
+     <addaction name="actionClip48"/>
+     <addaction name="actionClip49"/>
+     <addaction name="actionClip50"/>
+     <addaction name="actionClip51"/>
+     <addaction name="actionClip52"/>
+     <addaction name="actionClip53"/>
+     <addaction name="actionClip54"/>
+     <addaction name="actionClip55"/>
+     <addaction name="actionClip56"/>
+     <addaction name="actionClip57"/>
+     <addaction name="actionClip58"/>
+     <addaction name="actionClip59"/>
+     <addaction name="actionClip60"/>
     </widget>
-	  <addaction name="actionSplitBlockOrAddBreak"/><!--modified-->
+	<addaction name="actionSplitTagOrAddBreak"/><!--modified-->
     <addaction name="actionMergeNextElement"/><!--modified-->
     <addaction name="actionInsertSGFSectionMarker"/>
     <addaction name="separator"/>
@@ -390,13 +410,13 @@
    </widget>
    <widget class="QMenu" name="menuPlugins">
     <property name="title">
-     <string>Plugins</string>
+     <string>&amp;Plugins</string>
     </property>
     <addaction name="actionManage_Plugins"/>
    </widget>
    <widget class="QMenu" name="menuCheckpoints">
     <property name="title">
-     <string>Checkpoints</string>
+     <string>Chec&amp;kpoints</string>
     </property>
     <addaction name="actionCommit"/>
     <addaction name="actionCheckout"/>
@@ -836,6 +856,16 @@
    <addaction name="actionClip18"/>
    <addaction name="actionClip19"/>
    <addaction name="actionClip20"/>
+   <addaction name="actionClip21"/>
+   <addaction name="actionClip22"/>
+   <addaction name="actionClip23"/>
+   <addaction name="actionClip24"/>
+   <addaction name="actionClip25"/>
+   <addaction name="actionClip26"/>
+   <addaction name="actionClip27"/>
+   <addaction name="actionClip28"/>
+   <addaction name="actionClip29"/>
+   <addaction name="actionClip30"/>
   </widget>
   <widget class="QToolBar" name="toolBarClips2">
    <property name="windowTitle">
@@ -847,16 +877,6 @@
    <attribute name="toolBarBreak">
     <bool>true</bool>
    </attribute>
-   <addaction name="actionClip21"/>
-   <addaction name="actionClip22"/>
-   <addaction name="actionClip23"/>
-   <addaction name="actionClip24"/>
-   <addaction name="actionClip25"/>
-   <addaction name="actionClip26"/>
-   <addaction name="actionClip27"/>
-   <addaction name="actionClip28"/>
-   <addaction name="actionClip29"/>
-   <addaction name="actionClip30"/>
    <addaction name="actionClip31"/>
    <addaction name="actionClip32"/>
    <addaction name="actionClip33"/>
@@ -867,6 +887,26 @@
    <addaction name="actionClip38"/>
    <addaction name="actionClip39"/>
    <addaction name="actionClip40"/>
+   <addaction name="actionClip41"/>
+   <addaction name="actionClip42"/>
+   <addaction name="actionClip43"/>
+   <addaction name="actionClip44"/>
+   <addaction name="actionClip45"/>
+   <addaction name="actionClip46"/>
+   <addaction name="actionClip47"/>
+   <addaction name="actionClip48"/>
+   <addaction name="actionClip49"/>
+   <addaction name="actionClip50"/>
+   <addaction name="actionClip51"/>
+   <addaction name="actionClip52"/>
+   <addaction name="actionClip53"/>
+   <addaction name="actionClip54"/>
+   <addaction name="actionClip55"/>
+   <addaction name="actionClip56"/>
+   <addaction name="actionClip57"/>
+   <addaction name="actionClip58"/>
+   <addaction name="actionClip59"/>
+   <addaction name="actionClip60"/>
   </widget>
 
   <action name="actionNew">
@@ -1783,12 +1823,12 @@
    </property>
   </action>
   <!--modified-->
-  <action name="actionSplitBlockOrAddBreak">
+  <action name="actionSplitTagOrAddBreak">
 	<property name="text">
-		<string>Split Block or Add Break</string>
+		<string>Split Tag or Add Break</string>
 	</property>
 	<property name="toolTip">
-		<string>Split at block level element or add a new blank line according where the cursor positon at.</string>
+		<string>Split at tag or add a new blank line according where the cursor positon at.</string>
 	</property>
 	<property name="shortcut">
 		<string>Ctrl+Return</string>
@@ -2457,7 +2497,166 @@
     <string>Insert Clip 40</string>
    </property>
   </action>
-
+  <action name="actionClip41">
+   <property name="text">
+    <string>Clip 41</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 41</string>
+   </property>
+  </action>
+  <action name="actionClip42">
+   <property name="text">
+    <string>Clip 42</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 42</string>
+   </property>
+  </action>
+  <action name="actionClip43">
+   <property name="text">
+    <string>Clip 43</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 43</string>
+   </property>
+  </action>
+  <action name="actionClip44">
+   <property name="text">
+    <string>Clip 44</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 44</string>
+   </property>
+  </action>
+  <action name="actionClip45">
+   <property name="text">
+    <string>Clip 45</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 45</string>
+   </property>
+  </action>
+  <action name="actionClip46">
+   <property name="text">
+    <string>Clip 46</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 46</string>
+   </property>
+  </action>
+  <action name="actionClip47">
+   <property name="text">
+    <string>Clip 47</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 47</string>
+   </property>
+  </action>
+  <action name="actionClip48">
+   <property name="text">
+    <string>Clip 48</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 48</string>
+   </property>
+  </action>
+  <action name="actionClip49">
+   <property name="text">
+    <string>Clip 49</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 49</string>
+   </property>
+  </action>
+  <action name="actionClip50">
+   <property name="text">
+    <string>Clip 50</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 50</string>
+   </property>
+  </action>
+  <action name="actionClip51">
+   <property name="text">
+    <string>Clip 51</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 51</string>
+   </property>
+  </action>
+  <action name="actionClip52">
+   <property name="text">
+    <string>Clip 52</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 52</string>
+   </property>
+  </action>
+  <action name="actionClip53">
+   <property name="text">
+    <string>Clip 53</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 53</string>
+   </property>
+  </action>
+  <action name="actionClip54">
+   <property name="text">
+    <string>Clip 54</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 54</string>
+   </property>
+  </action>
+  <action name="actionClip55">
+   <property name="text">
+    <string>Clip 55</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 55</string>
+   </property>
+  </action>
+  <action name="actionClip56">
+   <property name="text">
+    <string>Clip 56</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 56</string>
+   </property>
+  </action>
+  <action name="actionClip57">
+   <property name="text">
+    <string>Clip 57</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 57</string>
+   </property>
+  </action>
+  <action name="actionClip58">
+   <property name="text">
+    <string>Clip 58</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 58</string>
+   </property>
+  </action>
+  <action name="actionClip59">
+   <property name="text">
+    <string>Clip 59</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 59</string>
+   </property>
+  </action>
+  <action name="actionClip60">
+   <property name="text">
+    <string>Clip 60</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert Clip 60</string>
+   </property>
+  </action>
   <action name="actionPreferences">
    <property name="menuRole">
     <enum>QAction::PreferencesRole</enum>
@@ -3049,6 +3248,31 @@
   <action name="actionLog">
    <property name="text">
     <string>Show Log of Checkpoints</string>
+   </property>
+  </action>
+  <action name="actionFocusCodeView">
+   <property name="text">
+    <string>Focus on CodeView</string>
+   </property>
+  </action>
+  <action name="actionFocusBookBrowser">
+   <property name="text">
+    <string>Focus on BookBrowser</string>
+   </property>
+  </action>
+  <action name="actionFocusPreview">
+   <property name="text">
+    <string>Focus on Preview</string>
+   </property>
+  </action>
+  <action name="actionFocusTOC">
+   <property name="text">
+    <string>Focus on Table of Contents</string>
+   </property>
+  </action>
+  <action name="actionFocusClips">
+   <property name="text">
+    <string>Focus on Clips Window</string>
    </property>
   </action>
  </widget>

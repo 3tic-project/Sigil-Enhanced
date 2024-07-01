@@ -9,11 +9,19 @@
 /*------------------ modified: XHTML Fomat Configure ----------------------*/
 
 SettingsStoreExtend::SettingsStoreExtend()
+   :isSettingsInitialized(false)
 {
 }
 
+void SettingsStoreExtend::initSettings() 
+{
+    QString ini_path = Utility::DefinePrefsDir() + "/" + "sigil_extend.ini";
+    settings.setPath(QSettings::IniFormat, QSettings::UserScope, ini_path);
+    isSettingsInitialized = true;
+}
+
 QString SettingsStoreExtend::getXhtmlFormat() {
-    QSettings settings(Utility::DefinePrefsDir() + "/" + "sigil_extend.ini", QSettings::IniFormat);
+    if (!isSettingsInitialized) initSettings();
     if (!settings.contains("user_preferences/xhtml_format")) {
         return QString();
     }
@@ -21,7 +29,7 @@ QString SettingsStoreExtend::getXhtmlFormat() {
 }
 
 void SettingsStoreExtend::setXhtmlFormat(QString conf) {
-    QSettings settings(Utility::DefinePrefsDir() + "/" + "sigil_extend.ini", QSettings::IniFormat);
+    if (!isSettingsInitialized) initSettings();
     settings.setValue("user_preferences/xhtml_format", conf);
 }
 
@@ -33,6 +41,12 @@ void SettingsStoreExtend::setHTMLCompleterWordsJson(const QJsonObject& json) {
     }
     saveFile.write(formatJson(QJsonDocument(json).toJson()));
 }
+
+void SettingsStoreExtend::setTxtImportingSettings(bool ignoreBlankLine) {
+    if (!isSettingsInitialized) initSettings();
+    settings.setValue("user_preferences/ignore_blankline", ignoreBlankLine);
+}
+
 void SettingsStoreExtend::setCSSCompleterWordsJson(const QJsonObject& json) {
     QFile saveFile(Utility::DefinePrefsDir() + "/" + "css_completion_words.json");
     if (!saveFile.open(QIODevice::WriteOnly)) {
@@ -65,22 +79,35 @@ QJsonObject SettingsStoreExtend::getCSSCompleterWordsJson() {
     json = doc.object();
     return json;
 }
-void SettingsStoreExtend::setCodeCompleterSettings(bool completerEnabled, bool emmetEnabled){
-    QSettings settings(Utility::DefinePrefsDir() + "/" + "sigil_extend.ini", QSettings::IniFormat);
+
+void SettingsStoreExtend::setCompleterEnabled(bool completerEnabled) {
+    if (!isSettingsInitialized) initSettings();
     settings.setValue("user_preferences/completer_enabled", completerEnabled);
+}
+
+void SettingsStoreExtend::setEmmetEnabled(bool emmetEnabled) {
+    if (!isSettingsInitialized) initSettings();
     settings.setValue("user_preferences/emmet_enabled", emmetEnabled);
 }
-std::pair<bool, bool> SettingsStoreExtend::getCodeCompleterSettings(){
-    QSettings settings(Utility::DefinePrefsDir() + "/" + "sigil_extend.ini", QSettings::IniFormat);
-    bool completerEnabled = true, emmetEnabled = true;
+
+bool SettingsStoreExtend::getCompleterEnabled(){
+    if (!isSettingsInitialized) initSettings();
+    bool completerEnabled = true;
     if (settings.contains("user_preferences/completer_enabled")) {
         completerEnabled = settings.value("user_preferences/completer_enabled").toBool();
     }
+    return completerEnabled;
+}
+
+bool SettingsStoreExtend::getEmmetEnabled(){
+    if (!isSettingsInitialized) initSettings();
+    bool emmetEnabled = true;
     if (settings.contains("user_preferences/emmet_enabled")) {
         emmetEnabled = settings.value("user_preferences/emmet_enabled").toBool();
     }
-    return {completerEnabled, emmetEnabled};
+    return emmetEnabled;
 }
+
 QByteArray SettingsStoreExtend::formatJson(const QByteArray &json_data) {
     QByteArray new_data;
     bool inQuotation = false;
@@ -103,4 +130,19 @@ QByteArray SettingsStoreExtend::formatJson(const QByteArray &json_data) {
         new_data.append(ch);
     }
     return new_data;
+}
+
+// Ignore blank line while converting txt file to xhtml file.
+void SettingsStoreExtend::setIgnoreBlankLine(bool ignore) {
+    if (!isSettingsInitialized) initSettings();
+    settings.setValue("user_preferences/txt_ignore_blankline", ignore);
+}
+
+bool SettingsStoreExtend::getIgnoreBlankLine() {
+    if (!isSettingsInitialized) initSettings();
+    bool ignore = false;
+    if (settings.contains("user_preferences/txt_ignore_blankline")) {
+        ignore = settings.value("user_preferences/txt_ignore_blankline").toBool();
+    }
+    return ignore;
 }

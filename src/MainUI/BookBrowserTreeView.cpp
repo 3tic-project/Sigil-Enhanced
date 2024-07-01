@@ -47,13 +47,13 @@ void BookBrowserTreeView::drawOtherDropIndicator(QPoint& pos)
 
 void BookBrowserTreeView::paintEvent(QPaintEvent* e)
 {
+	QTreeView::paintEvent(e);
 	if (dropIndicatorEnabled) {
 		QPainter painter = QPainter(viewport());
 		QPoint startPt = dropIndicatorLine.startPoint,
 			endPt = dropIndicatorLine.endPoint;
 		painter.drawLine(startPt, endPt);
 	}
-	QTreeView::paintEvent(e);
 }
 
 

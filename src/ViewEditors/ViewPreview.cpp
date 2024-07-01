@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2019-2023 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2019-2024 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2019-2023 Doug Massay
 **
 **  This file is part of Sigil.
@@ -121,6 +121,7 @@ ViewPreview::ViewPreview(QWidget *parent, bool setbackground)
     QWebEngineProfile* profile = WebProfileMgr::instance()->GetPreviewProfile();
     m_ViewWebPage = new WebEngPage(profile, this, setbackground);
     setPage(m_ViewWebPage);
+    
     setContextMenuPolicy(Qt::CustomContextMenu);
     // Set the Zoom factor but be sure no signals are set because of this.
     SettingsStore ss;
@@ -173,7 +174,7 @@ void ViewPreview::CustomSetDocument(const QString &path, const QString &html)
  
         // keep memory footprint small clear any caches when a new page loads
         if (url().toLocalFile() != path) {
-            page()->profile()->clearHttpCache();
+	    page()->profile()->clearHttpCache();
         } 
     }
 
@@ -294,6 +295,7 @@ void ViewPreview::LoadingStarted()
     DBG qDebug() << "Loading a page started";
     m_isLoadFinished = false;
     m_LoadOkay = false;
+    ShowOverlay();
 }
 
 
@@ -327,6 +329,7 @@ void ViewPreview::UpdateFinishedState(bool okay)
     DBG qDebug() << "UpdateFinishedState with okay " << okay;
     // m_isLoadFinished = true;
     m_LoadOkay = okay;
+    HideOverlay();
 }
 
 void ViewPreview::HideOverlay()
@@ -354,7 +357,7 @@ QString ViewPreview::GetHTML() const
 
 QVariant ViewPreview::EvaluateJavascript(const QString &javascript)
 {
-    DBG qDebug() << "EvaluateJavascript: " << m_isLoadFinished;
+    // DBG qDebug() << "EvaluateJavascript: " << m_isLoadFinished;
 
     // do not try to evaluate javascripts with the page not loaded yet
     if (!m_isLoadFinished) return QVariant();
@@ -362,7 +365,7 @@ QVariant ViewPreview::EvaluateJavascript(const QString &javascript)
     JSResult * pres = new JSResult();
     QDeadlineTimer deadline(10000);  // in milliseconds
 
-    // DBG qDebug() << "evaluate javascript" << javascript;
+    DBG qDebug() << "evaluate javascript" << javascript;
 
     page()->runJavaScript(javascript,QWebEngineScript::ApplicationWorld, SetJavascriptResultFunctor(pres));
     while(!pres->isFinished() && (!deadline.hasExpired())) {

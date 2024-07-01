@@ -218,7 +218,7 @@ for (;;)
 
   $showrest = ($mod =~ s/aftertext,?//);
 
-  # The "subject_literal" modifer disables escapes in subjects.
+  # The "subject_literal" modifier disables escapes in subjects.
 
   $subject_literal = ($mod =~ s/subject_literal,?//);
 
@@ -255,12 +255,14 @@ for (;;)
   # also encounter -no_start_optimize from a #pattern setting.
 
   $mod =~ s/-no_start_optimize,?//;
+
   if ($mod =~ s/no_start_optimize,?//) { $pat =~ s/$del/$del(??{""})/; }
 
   # Add back retained modifiers and check that the pattern is valid.
 
   $mod =~ s/,//g;
   $pattern = "$pat$mod";
+
   eval "\$_ =~ ${pattern}";
   if ($@)
     {
@@ -279,7 +281,7 @@ for (;;)
   # If the /g modifier is present, we want to put a loop round the matching;
   # otherwise just a single "if".
 
-  $cmd = ($pattern =~ /g[a-z]*$/)? "while" : "if";
+  $cmd = ($pattern =~ /g[a-z]*\s*$/)? "while" : "if";
 
   # If the pattern is actually the null string, Perl uses the most recently
   # executed (and successfully compiled) regex is used instead. This is a

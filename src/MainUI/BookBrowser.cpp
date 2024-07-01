@@ -1,6 +1,6 @@
 ﻿/************************************************************************
 **
-**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford, Ontario Canada
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford, Ontario Canada
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -30,6 +30,8 @@
 #include <QScrollBar>
 #include <QVariant>
 #include <QTimer>
+#include <QPaintEvent>
+#include <QStylePainter>
 #include <QDebug>
 
 #include "BookManipulation/Book.h"
@@ -106,6 +108,8 @@ BookBrowser::BookBrowser(QWidget *parent)
     m_OpenWithContextMenu->addAction(m_OpenWithEditor3);
     m_OpenWithContextMenu->addAction(m_OpenWithEditor4);
     m_OpenWithContextMenu->addAction(m_OpenWith);
+    setFocusPolicy(Qt::StrongFocus);
+    setWindowTitle(tr("Book Browser"));
 }
 
 
@@ -114,6 +118,35 @@ BookBrowser::~BookBrowser()
     WriteSettings();
     KeyboardShortcutManager *sm = KeyboardShortcutManager::instance();
     sm->removeActionsOf(this);
+}
+
+void BookBrowser::paintEvent(QPaintEvent *event)
+{
+    // Allow title text to be set independently of tab text
+    // (when QDockWidget is tabified).
+    QStylePainter painter(this);
+
+    if (isFloating()) {
+        QStyleOptionFrame options;
+        options.initFrom(this);
+
+#ifdef Q_OS_MAC
+        // This is needed for Qt6 but works on Qt5 as well
+        options.palette = QApplication::palette();
+#endif
+
+        painter.drawPrimitive(QStyle::PE_FrameDockWidget, options);
+    }
+    QStyleOptionDockWidget options;
+    initStyleOption(&options);
+    options.title = windowTitle();
+
+#ifdef Q_OS_MAC
+    // This is needed for Qt6 but works on Qt5 as well
+    options.palette = QApplication::palette();
+#endif
+
+    painter.drawControl(QStyle::CE_DockWidgetTitle, options);
 }
 
 void BookBrowser::showEvent(QShowEvent *event)
@@ -263,7 +296,7 @@ void BookBrowser::SortHTML()
 {
     QList <Resource *> resources = ValidSelectedResources();
     QMessageBox::StandardButton button_pressed;
-    button_pressed = QMessageBox::warning(this,
+    button_pressed = Utility::warning(this,
                                           tr("Sigil"),
                                           tr("Are you sure you want to sort the selected files alphanumerically?") % "\n" 
                                               % tr("This action cannot be reversed."),
@@ -355,6 +388,36 @@ QList <Resource *> BookBrowser::ValidSelectedCSSResources()
     return ValidSelectedResources(Resource::CSSResourceType);
 }
 
+QList <Resource *> BookBrowser::ValidSelectedSVGResources()
+{
+    return ValidSelectedResources(Resource::SVGResourceType);
+}
+
+QList <Resource *> BookBrowser::ValidSelectedJSResources()
+{
+    QStringList mts = QStringList() << "application/javscript" <<
+                                       "text/javascript" <<
+                                       "application/x-javscript" <<
+                                       "application/ecmacript";
+    return ValidSelectedResourcesByMT(mts);
+}
+
+QList <Resource *> BookBrowser::ValidSelectedMiscXMLResources()
+{
+    QStringList mts = QStringList() << "application/ttml+xml" <<
+                                       "application/smil+xml" <<
+                                       "application/smil" <<
+                                       "application/pls+xml" <<
+                                       "application/oebps-page-map+xml" <<
+                                       "application/vnd.adobe-page-map+xml" <<
+                                       "application/adobe-page-template+xml" <<
+                                       "application/vnd.adobe-page-template+xml" <<
+                                       "application/xml" <<
+                                       "text/xml";
+    return ValidSelectedResourcesByMT(mts);
+}
+
+
 QList <Resource *> BookBrowser::AllHTMLResources()
 {
     return m_OPFModel->GetResourceListInFolder(Resource::HTMLResourceType);
@@ -391,6 +454,18 @@ QList <Resource *> BookBrowser::ValidSelectedResources(Resource::ResourceType re
     foreach(Resource *resource, resources) {
         if (resource->Type() != resource_type) {
             resources.clear();
+        }
+    }
+    return resources;
+}
+
+QList <Resource *> BookBrowser::ValidSelectedResourcesByMT(QStringList &mts)
+{
+    QList <Resource *> resources = ValidSelectedResources();
+    foreach(Resource *resource, resources) {
+
+        if (!mts.contains(resource->GetMediaType())) {
+            resources.removeOne(resource);
         }
     }
     return resources;
@@ -559,7 +634,7 @@ void BookBrowser::CopyHTML()
         return;
     }
 
-    // -------------------- modified: fix bug of Add Copy ------------------
+    // -------------------- modified: fix bug of Add Cover ------------------
     // fix the bug which make sigil crash with using "Add Cover" shortcut when selecting a none HTML file on bookbrowser.
     if (current_resource->GetMediaType() != "application/xhtml+xml") {
         return;
@@ -636,7 +711,7 @@ void BookBrowser::AddNewJS()
 {
     QString version = m_Book->GetConstOPF()->GetEpubVersion();
     if (version.startsWith('2')) {
-        QMessageBox::warning(this, tr("Sigil"),tr("Javascript is not supported on epub2.")
+        Utility::warning(this, tr("Sigil"),tr("Javascript is not supported on epub2.")
                                  ,QMessageBox::Ok);
         return;
     }
@@ -773,7 +848,7 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
                 if (no_to_all) do_replacement = false;
                 if (!yes_to_all && !no_to_all) {
                    QMessageBox::StandardButton button_pressed;
-                   button_pressed = QMessageBox::warning(this, tr("Sigil"), 
+                   button_pressed = Utility::warning(this, tr("Sigil"), 
                         tr("The multimedia file \"%1\" already exists in the book.\n\nOK to replace?").arg(filename),
                                   QMessageBox::Yes | QMessageBox::YesToAll | QMessageBox::No | QMessageBox::NoToAll);
 
@@ -809,7 +884,7 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
                     continue;
                 }
             } else {
-                QMessageBox::warning(this, tr("Sigil"), tr("Unable to load \"%1\"\n\nA file with this name already exists in the book.").arg(filename));
+                Utility::warning(this, tr("Sigil"), tr("Unable to load \"%1\"\n\nA file with this name already exists in the book.").arg(filename));
                 continue;
             }
         }
@@ -877,7 +952,7 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images)
     progress.setValue(file_count);
 
     if (!invalid_filenames.isEmpty()) {
-        QMessageBox::warning(this, tr("Sigil"),
+        Utility::warning(this, tr("Sigil"),
                              tr("The following file(s) were not loaded due to invalid content or not well formed XML:\n\n%1")
                              .arg(invalid_filenames.join("\n")));
     }
@@ -989,7 +1064,7 @@ void BookBrowser::SaveAsFiles()
     QMessageBox::StandardButton button_pressed;
 
     if (files_exist) {
-        button_pressed = QMessageBox::warning(this,
+        button_pressed = Utility::warning(this,
                                               tr("Sigil"), tr("One or more files already exists.  OK to overwrite?"),
                                               QMessageBox::Ok | QMessageBox::Cancel);
 
@@ -1276,7 +1351,7 @@ void BookBrowser::RenameSelected()
 
         // Stop if the new name is already used or will be used by a different entry
         if ((book_filenames.contains(name) && resources[i]->Filename() != name) || new_filenames.contains(name)) {
-            QMessageBox::critical(this, tr("Sigil"), tr("Cannot rename files since this would result in duplicate filenames."));
+            Utility::critical(this, tr("Sigil"), tr("Cannot rename files since this would result in duplicate filenames."));
             return;
         }
 
@@ -1381,7 +1456,7 @@ void BookBrowser::MoveSelected()
 
         // Stop if the new bookpath already exists or will be used by a different entry
         if (existing_bookpaths.contains(newbookpath) || new_bookpaths.contains(newbookpath)) {
-            QMessageBox::critical(this, tr("Sigil"), tr("Cannot move files since this would result in duplicate filenames."));
+            Utility::critical(this, tr("Sigil"), tr("Cannot move files since this would result in duplicate filenames."));
             return;
         }
 
@@ -1516,14 +1591,10 @@ void BookBrowser::RemoveResources(QList<Resource *> tab_resources, QList<Resourc
         emit ResourceActivated(next_resource);
     }
 
+
     // Delete the resources
 
     // ------ modified: BulkRemoveResources ------------------
-    /* 
-    foreach(Resource * resource, resources) {
-        resource->Delete();
-    }
-    */
     m_Book->GetFolderKeeper()->BulkRemoveResources(resources);
     // ----------------------------------------
 

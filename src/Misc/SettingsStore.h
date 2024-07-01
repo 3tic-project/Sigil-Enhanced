@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2020-2023 Doug Massay
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2020-2024 Doug Massay
 **  Copyright (C) 2011-2013 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013 Dave Heiland
 **
@@ -61,8 +61,10 @@ public:
     QString uiFont();
     QString originalUIFont();
     QString uiIconTheme();
-
-    int uiDragDistanceTweak();
+    int uiPreviewTimeout();
+    bool uiHighlightFocusWidgetEnabled();
+    bool uiDoubleWidthTextCursor();
+    bool uiUseCustomSigilDarkTheme();
 
     /**
      * The default langauge to use when creating new books.
@@ -148,8 +150,6 @@ public:
     int javascriptOn();
 
     int showFullPathOn();
-
-    int highDPI();
 
     bool disableGPU();
 
@@ -284,8 +284,14 @@ public slots:
 
     void setUIIconTheme(const QString &iconthemename);
 
-    void setUiDragDistanceTweak(int tweak);
+    void setUIPreviewTimeout(int timeout);
 
+    void setUIHighlightFocusWidget(bool enable);
+
+    void setUiDoubleWidthTextCursor(bool enable);
+
+    void setUiUseCustomSigilDarkTheme(bool enable);
+    
     /**
      * Set the default language to use when creating new books.
      *
@@ -371,8 +377,6 @@ public slots:
     void setJavascriptOn(int on);
 
     void setShowFullPathOn(int on);
-
-    void setHighDPI(int value);
 
     void setDisableGPU(bool value);
 

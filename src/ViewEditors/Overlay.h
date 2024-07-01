@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2021 Doug Massay
+**  Copyright (C) 2021-2024 Doug Massay
 **
 **  This file is part of Sigil.
 **
@@ -24,6 +24,7 @@
 
 #include <QtGui>
 #include <QtWidgets>
+#include "Misc/Utility.h"
 
 class OverlayWidget : public QWidget {
    void newParent() {
@@ -33,7 +34,6 @@ class OverlayWidget : public QWidget {
    }
 public:
    explicit OverlayWidget(QWidget *parent = {}) : QWidget(parent) {
-      setAttribute(Qt::WA_NoSystemBackground);
       setAttribute(Qt::WA_TransparentForMouseEvents);
       newParent();
    }
@@ -86,15 +86,12 @@ class LoadingOverlay : public OverlayWidget
 
 public:
    LoadingOverlay(QWidget *parent = {}) : OverlayWidget{parent} {
-      setAttribute(Qt::WA_TranslucentBackground);
    }
 protected:
    void paintEvent(QPaintEvent *) override {
       QPainter p{this};
-      p.fillRect(rect(), {100, 100, 100, 128});
-      p.setPen({200, 200, 255});
-      p.setFont({"arial,helvetica", 48});
-      p.drawText(rect(), tr("Loading..."), Qt::AlignHCenter | Qt::AlignVCenter);
+      QColor bg = Utility::WebViewBackgroundColor(true);
+      p.fillRect(rect(), bg);
    }
 };
 

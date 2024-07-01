@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2021 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -42,6 +42,7 @@ class CSSResource;
 class QAction;
 class QMenu;
 class QModelIndex;
+class QPaintEvent;
 class QPoint;
 class QToolButton;
 class QTreeView;
@@ -89,6 +90,9 @@ public:
      */
     QList <Resource *> ValidSelectedCSSResources();
 
+    QList <Resource *> ValidSelectedSVGResources();
+    QList <Resource *> ValidSelectedJSResources();
+    QList <Resource *> ValidSelectedMiscXMLResources();
 
     /**
      * All HTML resources in the Book Browser in order
@@ -377,6 +381,7 @@ private slots:
 
 protected:
     virtual void showEvent(QShowEvent *event);
+    virtual void paintEvent(QPaintEvent* event);
 
 private:
     /**
@@ -470,6 +475,8 @@ private:
      * List of selected resources after validating selected resources are of the given type
      */
     QList <Resource *> ValidSelectedResources(Resource::ResourceType resource_type);
+
+    QList <Resource *> ValidSelectedResourcesByMT(QStringList &mts);
 
     void RefreshCounts();
 

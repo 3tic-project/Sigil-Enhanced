@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2019-2023 Doug Massay
-**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2019-2024 Doug Massay
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013 Dave Heiland
 **  Copyright (C) 2012      Grant Drake
@@ -144,7 +144,13 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
         m_completeParser = new CodeCompleterParser(this,CodeCompleterParser::FileType::CSS);
     }
     //----------------------------------------------------
-    setFocusPolicy(Qt::StrongFocus);
+
+    // if we use the following we can get instances
+    // of accidental insertion of tabs into CodeView
+    // when simply trying to shift focus
+    // setFocusPolicy(Qt::StrongFocus);
+    setFocusPolicy(Qt::ClickFocus);
+
     ConnectSignalsToSlots();
     SetAppearance();
 }
@@ -169,7 +175,10 @@ void CodeViewEditor::SetAppearance()
     SetAppearanceColors();
     UpdateLineNumberAreaMargin();
     HighlightCurrentLine(false);
-    setFrameStyle(QFrame::NoFrame);
+    // if we allow the default frame that matches style then focus highlight works
+    if (!settings.uiHighlightFocusWidgetEnabled()) {
+        setFrameStyle(QFrame::NoFrame);
+    }
     // Set the Zoom factor but be sure no signals are set because of this.
     m_CurrentZoomFactor = settings.zoomText();
     Zoom();
@@ -184,6 +193,7 @@ QSize CodeViewEditor::sizeHint() const
 
 void CodeViewEditor::CustomSetDocument(TextDocument &ndocument)
 {
+    SettingsStore settings;
     setDocument(&ndocument);
     ndocument.setModified(false);
     if (m_Highlighter) {
@@ -200,6 +210,7 @@ void CodeViewEditor::CustomSetDocument(TextDocument &ndocument)
     ResetFont();
     m_isLoadFinished = true;
     m_regen_taglist = true;
+    if (settings.uiDoubleWidthTextCursor()) setCursorWidth(2);
     emit DocumentSet();
 }
 
@@ -2207,11 +2218,11 @@ bool CodeViewEditor::MarkForIndex(const QString &title)
 // Overridden so we can emit the FocusGained() signal.
 void CodeViewEditor::focusInEvent(QFocusEvent *event)
 {
-    // Why is this needed?
-    // RehighlightDocument();
     emit FocusGained(this);
     QPlainTextEdit::focusInEvent(event);
     HighlightCurrentLine(false);
+    SettingsStore settings;
+    if (settings.uiDoubleWidthTextCursor()) setCursorWidth(2);
 }
 
 
@@ -2252,11 +2263,13 @@ void CodeViewEditor::TextChangedFilter()
 
 void CodeViewEditor::RehighlightDocument()
 {
-    if (!isVisible()) {
-        return;
-    }
+    // need to be able to rehighlight the document
+    // even if it is not visibile (ie not in the active tab in TabManager)
+    // to handle theme changes
+    // if (!isVisible()) {
+    //     return;
+    // }
 
-    // Is this needed,  Why not let it work asynchronously
     if (m_Highlighter) {
         // We block signals from the document while highlighting takes place,
         // because we do not want the contentsChanged() signal to be fired
@@ -2588,6 +2601,7 @@ void CodeViewEditor::UpdateLineNumberAreaFont(const QFont &font)
 
 void CodeViewEditor::SetAppearanceColors()
 {
+    // This is required for times when F&R steals focus temporarily from CodeView
     QPalette our_pal = qApp->palette();
     QColor active_highlight = our_pal.color(QPalette::Active, QPalette::Highlight);
     QColor active_highlightedtext = our_pal.color(QPalette::Active, QPalette::HighlightedText);
@@ -3351,6 +3365,8 @@ QString CodeViewEditor::ProcessAttribute(const QString &attribute_name,
         while (pos > 0 && text[pos] != QChar('<')) {
             pos--;
         }
+        // special case: cursor just before closing < so move back by 1 to be in text.
+        if (pos > 0) pos--; 
     }
     if (pos < 0) return QString();
 

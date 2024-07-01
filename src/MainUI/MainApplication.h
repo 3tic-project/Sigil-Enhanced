@@ -1,6 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2019-2020 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2019-2024 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2024      Doug Massay
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Grant Drake
 **  Copyright (C) 2012      Dave Heiland
@@ -30,8 +31,7 @@
 #include <QtWidgets/QApplication>
 #include <QString>
 #include <QHash>
-
-class QStyle;
+#include <QTimer>
 
 class MainApplication : public QApplication
 {
@@ -41,10 +41,10 @@ public:
     MainApplication(int &argc, char **argv);
 
     bool isDarkMode() { return m_isDark; }
-    void fixMacDarkModePalette(QPalette &pal);
 
     void saveInPreviewCache(const QString &key, const QString& xhtml);
     QString loadFromPreviewCache(const QString &key);
+    void updateAccumulatedQss(QString &qss) const;
     
 signals:
     void applicationActivated();
@@ -53,17 +53,18 @@ signals:
 
 public slots:
     void EmitPaletteChanged();
+    void systemColorChanged();
 
 protected:
     bool event(QEvent *pEvent);
 
 private:
-    QStyle * m_Style;
+    void windowsDarkThemeChange();
+    void windowsLightThemeChange();
     bool m_isDark;
     QHash<QString, QString> m_PreviewCache;
-    // QStringList m_CacheKeys;
+    mutable QString m_accumulatedQss;
+    QTimer * m_PaletteChangeTimer;
 };
 
 #endif // MAINAPPLICATION_H
-
-

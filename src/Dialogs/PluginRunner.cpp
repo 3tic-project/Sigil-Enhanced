@@ -1,7 +1,7 @@
 /************************************************************************
  **
- **  Copyright (C) 2014-2023 Kevin B. Hendricks, Stratford Ontario Canada
- **  Copyright (C) 2020-2023 Doug Massay
+ **  Copyright (C) 2014-2024 Kevin B. Hendricks, Stratford Ontario Canada
+ **  Copyright (C) 2020-2024 Doug Massay
  **
  **  This file is part of Sigil.
  **
@@ -51,6 +51,7 @@
 //const QString IDPF_FONT_ALGO_ID          = "http://www.idpf.org/2008/embedding";
 
 const QString PluginRunner::SEP = QString(QChar(31));
+const QString PluginRunner::_RS = QString(QChar(30));
 const QStringList PluginRunner::CHANGESTAGS = QStringList() << "deleted" << "added" << "modified";
 
 
@@ -62,7 +63,8 @@ PluginRunner::PluginRunner(TabManager *tabMgr, QWidget *parent)
       m_pluginName(""),
       m_pluginOutput(""),
       m_algorithm(""),
-      m_result("failed"),
+      m_fontMangling(""),
+      m_result(""),
       m_xhtml_net_change(0),
       m_ready(false)
 
@@ -75,14 +77,16 @@ PluginRunner::PluginRunner(TabManager *tabMgr, QWidget *parent)
     // set default font obfuscation algorithm to use
     // ADOBE_FONT_ALGO_ID or IDPF_FONT_ALGO_ID ??
     QList<Resource *> fonts = m_book->GetFolderKeeper()->GetResourceListByType(Resource::FontResourceType);
+    QStringList font_extra_info;
     foreach (Resource * resource, fonts) {
         FontResource *font_resource = qobject_cast<FontResource *> (resource);
         QString algorithm = font_resource->GetObfuscationAlgorithm();
         if (!algorithm.isEmpty()) {
-            m_algorithm = algorithm;
-            break;
+            if (m_algorithm.isEmpty()) m_algorithm = algorithm;
+            font_extra_info << font_resource->GetRelativePath() + SEP + algorithm;
         }
     }
+    m_fontMangling = font_extra_info.join(_RS);
 
     // build hashes of href (book root relative path) to resources
     QList<Resource *> resources = m_book->GetFolderKeeper()->GetResourceList();
@@ -243,18 +247,8 @@ void PluginRunner::writeSigilCFG()
     colors << pal.color(QPalette::Highlight).name();
     colors << pal.color(QPalette::HighlightedText).name();
     cfg << colors.join(",");
-    switch (settings.highDPI())
-    {
-        case 0:
-            cfg << "detect";
-            break;
-        case 1:
-            cfg << "on";
-            break;
-        case 2:
-            cfg << "off";
-            break;
-    }
+    // Leave removed highdpi setting as a dummy for now
+    cfg << "detect";
     // handle automate and automate plugin parameter
     cfg << qApp->font().toString();
     if (m_mainWindow->UsingAutomate()) {
@@ -263,6 +257,7 @@ void PluginRunner::writeSigilCFG()
         cfg << "NoAutomate";
     }
     cfg << m_mainWindow->AutomatePluginParameter();
+    cfg << m_fontMangling;
     QList <Resource *> selected_resources = m_bookBrowser->AllSelectedResources();
     foreach(Resource * resource, selected_resources) {
         cfg << resource->GetRelativePath();
@@ -434,10 +429,12 @@ void PluginRunner::processOutput()
     m_pluginOutput = m_pluginOutput + newbytedata;
 }
 
+
 void PluginRunner::pluginFinished(int exitcode, QProcess::ExitStatus exitstatus)
 {
     if (exitstatus == QProcess::CrashExit) {
         ui.textEdit->append(tr("Launcher process crashed"));
+        m_result = "crashed";
     }
     // launcher exiting properly does not mean target plugin succeeded or failed
     // we need to parse the response xml to find the true result of target plugin
@@ -448,6 +445,10 @@ void PluginRunner::pluginFinished(int exitcode, QProcess::ExitStatus exitstatus)
     ui.progressBar->setRange(0,100);
     ui.progressBar->setValue(100);
 
+    if (m_result == "crashed" ||
+        m_result == "failed" ||
+        m_result == "cancelled") return;
+                           
     ui.statusLbl->setText(tr("Status: finished"));
 
     if (!processResultXML()) {
@@ -584,6 +585,8 @@ void PluginRunner::reject()
 void PluginRunner::cancelPlugin()
 {
     // qDebug() << "in cancelPlugin()";
+    m_result = "cancelled";
+
     if (m_process.state() == QProcess::Running) {
         m_process.terminate();
     }
@@ -602,7 +605,7 @@ void PluginRunner::cancelPlugin()
     ui.textEdit->append(tr("Plugin cancelled"));
     ui.statusLbl->setText(tr("Status: cancelled"));
     ui.cancelButton->setEnabled(false);
-    m_result = "failed";
+    m_result = "cancelled";
 }
 
 bool PluginRunner::processResultXML()

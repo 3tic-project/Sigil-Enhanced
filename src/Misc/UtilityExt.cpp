@@ -216,6 +216,6 @@ QString Utility::ReadUnicodeTextFile_M(const QString& fullfilepath)
         // an error happened - make no changes
         return QString();
     }
-    return ConvertLineEndings(res.toString());
+    return ConvertLineEndingsAndNormalize(res.toString());
 }
 //----------------------------------------------------------------------------------

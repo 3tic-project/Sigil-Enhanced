@@ -33,7 +33,6 @@
 
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
-#include "Misc/SettingsStoreExtend.h" // modified: CodeCompleterParser
 
 GeneralSettingsWidget::GeneralSettingsWidget()
     :
@@ -129,18 +128,6 @@ PreferencesWidget::ResultActions GeneralSettingsWidget::saveSettings()
     if (m_refreshClipboardHistoryLimit) {
         results = results | PreferencesWidget::ResultAction_RefreshClipHistoryLimit;
     }
-    //------------------- modified: CodeCompleterParser ----------------------
-    SettingsStoreExtend sse;
-    bool needToReset = false;
-    bool completer_enabled = ui.EnableCompleter->isChecked();
-    bool emmet_enabled = ui.EnableEmmet->isChecked();
-    std::pair<bool, bool> old_sets = sse.getCodeCompleterSettings();
-    needToReset = completer_enabled != old_sets.first || emmet_enabled != old_sets.second;
-    if (needToReset) {
-        sse.setCodeCompleterSettings(completer_enabled, emmet_enabled);
-        results = results | PreferencesWidget::ResultAction_ReloadTabs;
-    }
-    //------------------------------------------------------------------------
     results = results & PreferencesWidget::ResultAction_Mask;
     return results;
 }
@@ -183,12 +170,6 @@ void GeneralSettingsWidget::readSettings()
     ui.cboPrintDPI->setCurrentIndex(index);
     QString xeditor_path = settings.externalXEditorPath();
     ui.lineEdit7->setText(xeditor_path);
-    //------------------- modified: CodeCompleterParser ----------------------
-    SettingsStoreExtend sse;
-    std::pair<bool, bool> completer_sets = sse.getCodeCompleterSettings();
-    ui.EnableCompleter->setChecked(completer_sets.first);
-    ui.EnableEmmet->setChecked(completer_sets.second);
-    //------------------------------------------------------------------------
 }
 
 void GeneralSettingsWidget::clearXEditorPath()

@@ -188,7 +188,7 @@ QIcon Resource::Icon() const
 }
 
 
-bool Resource::RenameTo(const QString &new_filename)
+bool Resource::RenameTo(const QString &new_filename, bool in_bulk)
 {
     QString new_path;
     bool successful = false;
@@ -202,13 +202,17 @@ bool Resource::RenameTo(const QString &new_filename)
         QString old_path = m_FullFilePath;
         m_FullFilePath = new_path;
         SetShortPathName(new_filename);
-        emit Renamed(this, old_path);
+        if (!in_bulk) {
+            emit Renamed(this, old_path);
+        } else {
+            emit TellTabUpdateName(this, old_path);
+        }
     }
 
     return successful;
 }
 
-bool Resource::MoveTo(const QString &new_bookpath)
+bool Resource::MoveTo(const QString &new_bookpath, bool in_bulk)
 {
     QString new_path;
     bool successful = false;
@@ -221,7 +225,11 @@ bool Resource::MoveTo(const QString &new_bookpath)
     if (successful) {
         QString old_path = m_FullFilePath;
         m_FullFilePath = new_path;
-        emit Moved(this, old_path);
+        if (!in_bulk) {
+            emit Moved(this, old_path);
+        } else {
+            emit TellTabUpdateName(this, old_path);
+        }
     }
 
     return successful;

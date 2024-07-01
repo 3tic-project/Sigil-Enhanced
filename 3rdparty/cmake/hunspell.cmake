@@ -1,5 +1,3 @@
-cmake_minimum_required( VERSION 3.0 )
-
 PROJECT(hunspell CXX)
 
 set( HUNSPELL_LIBRARIES ${PROJECT_NAME} CACHE INTERNAL "" )

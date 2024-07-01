@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2016-2023 Doug Massay
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2016-2024 Doug Massay
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -58,7 +58,13 @@
 #include <QCollator>
 #include <QMenu>
 #include <QSet>
+#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
+    #include <QStyleHints>
+#endif
 #include <QVector>
+#include <QImage>
+#include <QPainter>
+#include <QtSvg/QSvgRenderer>
 #include <QDebug>
 
 #include "sigil_constants.h"
@@ -67,6 +73,7 @@
 #include "Misc/SettingsStore.h"
 #include "Misc/SleepFunctions.h"
 #include "MainUI/MainApplication.h"
+#include "Parsers/QuickParser.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     #define QT_ENUM_SKIPEMPTYPARTS Qt::SkipEmptyParts
@@ -130,15 +137,8 @@ QString Utility::DefinePrefsDir()
 
 bool Utility::IsDarkMode()
 {
-#ifdef Q_OS_MAC
     MainApplication *mainApplication = qobject_cast<MainApplication *>(qApp);
     return mainApplication->isDarkMode();
-#else
-    // Windows, Linux and Other platforms
-    QPalette app_palette = qApp->palette();
-    bool isdark = app_palette.color(QPalette::Active,QPalette::WindowText).lightness() > 128;
-    return isdark;
-#endif
 }
 
 bool Utility::IsWindowsSysDarkMode()
@@ -153,6 +153,9 @@ bool Utility::IsWindowsSysDarkMode()
 
 bool Utility::WindowsShouldUseDarkMode()
 {
+    return IsWindowsSysDarkMode();
+    // No more forcing of light/dark on Windows: use Windows settings.
+#if 0
     QString override(GetEnvironmentVar("SIGIL_USES_DARK_MODE"));
     if (override.isEmpty()) {
         //Env var unset - use system registry setting.
@@ -160,6 +163,7 @@ bool Utility::WindowsShouldUseDarkMode()
     }
     // Otherwise use the env var: anything other than "0" is true.
     return (override == "0" ? false : true);
+#endif
 }
 
 #if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
@@ -554,7 +558,7 @@ QString Utility::ReadUnicodeTextFile(const QString &fullfilepath)
     // This will automatically switch reading from
     // UTF-8 to UTF-16 if a BOM is detected
     in.setAutoDetectUnicode(true);
-    return ConvertLineEndings(in.readAll());
+    return ConvertLineEndingsAndNormalize(in.readAll());
 }
 
 
@@ -584,9 +588,10 @@ void Utility::WriteUnicodeTextFile(const QString &text, const QString &fullfilep
 
 // Converts Mac and Windows style line endings to Unix style
 // line endings that are expected throughout the Qt framework
-QString Utility::ConvertLineEndings(const QString &text)
+QString Utility::ConvertLineEndingsAndNormalize(const QString &text)
 {
     QString newtext(text);
+    newtext = newtext.normalized(QString::NormalizationForm_C);
     return newtext.replace("\x0D\x0A", "\x0A").replace("\x0D", "\x0A");
 }
 
@@ -703,7 +708,8 @@ QString Utility::URLDecodePath(const QString &path)
 
 void Utility::DisplayExceptionErrorDialog(const QString &error_info)
 {
-    QMessageBox message_box(QApplication::activeWindow());
+    QWidget * parent = QApplication::activeWindow();
+    QMessageBox message_box(parent);
     message_box.setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
     message_box.setModal(true);
     message_box.setIcon(QMessageBox::Critical);
@@ -722,12 +728,16 @@ void Utility::DisplayExceptionErrorDialog(const QString &error_info)
 
     message_box.setDetailedText(detailed_text.join("\n"));
     message_box.exec();
+#ifdef Q_OS_MAC    
+    if (parent) parent->activateWindow();
+#endif
 }
 
 
 void Utility::DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text)
 {
-    QMessageBox message_box(QApplication::activeWindow());
+    QWidget * parent = QApplication::activeWindow();
+    QMessageBox message_box(parent);
     message_box.setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
     message_box.setModal(true);
     message_box.setIcon(QMessageBox::Critical);
@@ -740,12 +750,16 @@ void Utility::DisplayStdErrorDialog(const QString &error_message, const QString 
 
     message_box.setStandardButtons(QMessageBox::Close);
     message_box.exec();
+#ifdef Q_OS_MAC    
+    if (parent) parent->activateWindow();
+#endif
 }
 
 
 void Utility::DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text)
 {
-    SigilMessageBox message_box(QApplication::activeWindow());
+    QWidget * parent = QApplication::activeWindow();
+    SigilMessageBox message_box(parent);
     message_box.setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
     message_box.setModal(true);
     message_box.setIcon(QMessageBox::Warning);
@@ -758,6 +772,9 @@ void Utility::DisplayStdWarningDialog(const QString &warning_message, const QStr
     }
     message_box.setStandardButtons(QMessageBox::Ok);
     message_box.exec();
+#ifdef Q_OS_MAC    
+    if (parent) parent->activateWindow();
+#endif    
 }
 
 // Returns a value for the environment variable name passed;
@@ -816,7 +833,7 @@ bool Utility::has_non_ascii_chars(const QString &str)
 bool Utility::use_filename_warning(const QString &filename)
 {
     if (has_non_ascii_chars(filename)) {
-        return QMessageBox::Apply == QMessageBox::warning(QApplication::activeWindow(),
+        return QMessageBox::Apply == Utility::warning(QApplication::activeWindow(),
                 tr("Sigil"),
                 tr("The requested file name contains non-ASCII characters. "
                    "You should only use ASCII characters in filenames. "
@@ -833,13 +850,7 @@ std::wstring Utility::QStringToStdWString(const QString &str)
 {
     return std::wstring((const wchar_t *)str.utf16());
 }
-
-QString Utility::stdWStringToQString(const std::wstring &str)
-{
-    return QString::fromUtf16((const ushort *)str.c_str());
-}
 #endif
-
 
 bool Utility::UnZip(const QString &zippath, const QString &destpath)
 {
@@ -871,10 +882,12 @@ bool Utility::UnZip(const QString &zippath, const QString &destpath)
             QString qfile_name;
             QString cp437_file_name;
             qfile_name = QString::fromUtf8(file_name);
+            qfile_name = qfile_name.normalized(QString::NormalizationForm_C);
             if (!(file_info.flag & (1<<11))) {
                 // General purpose bit 11 says the filename is utf-8 encoded. If not set then
                 // IBM 437 encoding might be used.
                 cp437_file_name = cp437->toUnicode(file_name);
+                cp437_file_name = cp437_file_name.normalized(QString::NormalizationForm_C);
             }
 
             // If there is no file name then we can't do anything with it.
@@ -1017,8 +1030,10 @@ QStringList Utility::ZipInspect(const QString &zippath)
             QString qfile_name;
             QString cp437_file_name;
             qfile_name = QString::fromUtf8(file_name);
+            qfile_name = qfile_name.normalized(QString::NormalizationForm_C);
             if (!(file_info.flag & (1<<11))) {
                 cp437_file_name = cp437->toUnicode(file_name);
+                cp437_file_name = cp437_file_name.normalized(QString::NormalizationForm_C);
             }
 
             // If there is no file name then we can't do anything with it.
@@ -1436,4 +1451,107 @@ QString Utility::FileCRC32(const QString& filePath)
 
 	file.close();
 	return QString("%1").arg(crc32, 8, 16, QLatin1Char('0'));
+}
+
+
+QMessageBox::StandardButton Utility::warning(QWidget* parent, const QString &title, const QString &text,
+                                             QMessageBox::StandardButtons buttons,
+                                             QMessageBox::StandardButton defaultButton)
+{
+  QMessageBox::StandardButton result = QMessageBox::warning(parent, title, text, buttons, defaultButton);
+#ifdef Q_OS_MAC
+  if (parent) parent->activateWindow();
+#endif
+  return result;
+}
+
+
+QMessageBox::StandardButton Utility::question(QWidget* parent, const QString &title, const QString &text,
+                                              QMessageBox::StandardButtons buttons,
+                                              QMessageBox::StandardButton defaultButton)
+{
+  QMessageBox::StandardButton result = QMessageBox::question(parent, title, text, buttons, defaultButton);
+#ifdef Q_OS_MAC
+  if (parent) parent->activateWindow();
+#endif
+  return result;
+}
+
+
+QMessageBox::StandardButton Utility::information(QWidget* parent, const QString &title, const QString &text,
+                                                 QMessageBox::StandardButtons buttons,
+                                                 QMessageBox::StandardButton defaultButton)
+{
+  QMessageBox::StandardButton result = QMessageBox::information(parent, title, text, buttons, defaultButton);
+#ifdef Q_OS_MAC
+  if (parent) parent->activateWindow();
+#endif
+  return result;
+}
+
+
+QMessageBox::StandardButton Utility::critical(QWidget* parent, const QString &title, const QString &text,
+                                              QMessageBox::StandardButtons buttons,
+                                              QMessageBox::StandardButton defaultButton)
+{
+  QMessageBox::StandardButton result = QMessageBox::critical(parent, title, text, buttons, defaultButton);
+#ifdef Q_OS_MAC
+  if (parent) parent->activateWindow();
+#endif
+  return result;
+}
+
+
+// QtSvg is broken with respect to desc and title tags used
+// inside text tags and does not support flowRoot and its children
+// so strip them all out before trying to render using QSvgRenderer
+QString Utility::FixupSvgForRendering(const QString& data)
+{
+    QStringList svgdata;
+    QuickParser qp(data);
+    bool skip = false;
+    bool in_svg = false;
+    while(true) {
+        QuickParser::MarkupInfo mi = qp.parse_next();
+        if (mi.pos < 0) break;
+	if (mi.tname == "svg" && mi.ttype == "begin") {
+	    in_svg = true;
+        }
+	if (mi.tname == "svg" && mi.ttype == "end") {
+	    in_svg = false;
+	    skip = false;
+	}
+	if (in_svg) {
+            if (mi.tname == "desc" || mi.tname == "title" || mi.tname == "flowRoot") {
+	        if (mi.ttype == "single") continue; // no need to update skip since open self-closing
+	        // allow for arbitrary nesting of these tags which is not explicitly ruled out by the spec
+	        QStringList tagpath = mi.tpath.split(".");
+	        skip = tagpath.contains("desc")  || tagpath.contains("title") || tagpath.contains( "flowRoot");
+		if (mi.ttype == "end") continue; // do not output end tags after updating skip
+	    }
+	}
+        if (!skip) {
+            svgdata << qp.serialize_markup(mi);
+        }
+    }
+    return svgdata.join("");
+}
+
+QImage Utility::RenderSvgToImage(const QString& filepath)
+{
+    QString svgdata = Utility::ReadUnicodeTextFile(filepath);
+    // QtSvg has many issues with desc, title, and flowRoot tags
+    svgdata = Utility::FixupSvgForRendering(svgdata);
+    QSvgRenderer renderer;
+    renderer.load(svgdata.toUtf8());
+    QSize sz = renderer.defaultSize();
+    QImage svgimage(sz, QImage::Format_ARGB32);
+    // **must** fill it with pixels BEFORE trying to render anything
+    // transparent fill will not work with light and dark modes: svgimage.fill(qRgba(0,0,0,0));
+    svgimage.fill(QColor("white"));
+    // was svgimage.fill(qRgba(0,0,0,0));
+    QPainter painter(&svgimage);
+    renderer.render(&painter);
+    return svgimage;
+
 }

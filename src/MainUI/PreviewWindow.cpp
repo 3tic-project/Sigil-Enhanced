@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2023  Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2024  Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2019-2023  Doug Massay
 **  Copyright (C) 2012       Dave Heiland, John Schember
 **
@@ -36,7 +36,10 @@
 #include <QTimer>
 #include <QProgressBar>
 #include <QApplication>
+#include <QToolButton>
 #include <QDebug>
+#include <QFrame>
+#include <QWidget>
 
 #include "MainUI/PreviewWindow.h"
 #include "Dialogs/Inspector.h"
@@ -69,7 +72,14 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     :
     QDockWidget(tr("Preview"), parent),
     m_MainWidget(new QWidget(this)),
-    m_Layout(new QVBoxLayout(m_MainWidget)),
+    m_binspect(new QToolButton(m_MainWidget)),
+    m_bselect(new QToolButton(m_MainWidget)),
+    m_bcopy(new QToolButton(m_MainWidget)),
+    m_breload(new QToolButton(m_MainWidget)),
+    m_bcycle(new QToolButton(m_MainWidget)),
+    m_bprint(new QToolButton(m_MainWidget)),
+    m_wrapper(new QFrame(m_MainWidget)),
+    m_Layout(new QVBoxLayout()),
     m_buttons(new QHBoxLayout()),
     m_overlayBase(new OverlayHelperWidget(this)),
     m_Preview(new ViewPreview(m_overlayBase)),
@@ -88,9 +98,34 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     m_progress->setMaximum(100);
     setWindowTitle(tr("Preview"));
     SetupView();
-    SetupOverlayTimer();
     LoadSettings();
     ConnectSignalsToSlots();
+    setFocusPolicy(Qt::NoFocus);
+    setFocusProxy(m_MainWidget);
+    m_MainWidget->setObjectName("pwmain");
+    m_MainWidget->setFocusPolicy(Qt::NoFocus);
+    m_MainWidget->setFocusProxy(m_binspect);
+
+    m_wrapper->setObjectName("previewframe");
+    m_wrapper->setFocusPolicy(Qt::NoFocus);
+    m_wrapper->setFocusProxy(m_Preview);
+
+    m_Preview->setObjectName("webpreview");
+    m_Preview->setFocusPolicy(Qt::StrongFocus);
+
+    m_binspect->setFocusPolicy(Qt::StrongFocus);
+    m_bselect->setFocusPolicy(Qt::StrongFocus);
+    m_bcopy->setFocusPolicy(Qt::StrongFocus);
+    m_breload->setFocusPolicy(Qt::StrongFocus);
+    m_bcycle->setFocusPolicy(Qt::StrongFocus);
+    m_bprint->setFocusPolicy(Qt::StrongFocus);
+
+    setTabOrder(m_binspect, m_bselect);
+    setTabOrder(m_bselect, m_bcopy);
+    setTabOrder(m_bcopy, m_breload);
+    setTabOrder(m_breload, m_bcycle);
+    setTabOrder(m_bcycle, m_bprint);
+    setTabOrder(m_bprint, m_Preview);
 }
 
 PreviewWindow::~PreviewWindow()
@@ -129,19 +164,6 @@ void PreviewWindow::setUserCSSURLs(const QStringList& usercssurls)
     if (!m_usercssurls.isEmpty()) m_cycleCSSLevel = 1;
 }
 
-void PreviewWindow::SetupOverlayTimer()
-{
-    m_OverlayTimer.setSingleShot(true);
-    m_OverlayTimer.setInterval(2000);
-    connect(&m_OverlayTimer, SIGNAL(timeout()), this, SLOT(ShowOverlay()));
-    m_OverlayTimer.stop();
-}
-
-void PreviewWindow::ShowOverlay()
-{
-    m_OverlayTimer.stop();
-    m_Preview->ShowOverlay();
-}
 
 void PreviewWindow::resizeEvent(QResizeEvent *event)
 {
@@ -163,6 +185,7 @@ void PreviewWindow::hideEvent(QHideEvent * event)
     }
 }
 
+
 void PreviewWindow::showEvent(QShowEvent * event)
 {
     // perform the show for all children of this widget
@@ -174,6 +197,7 @@ void PreviewWindow::showEvent(QShowEvent * event)
     raise();
     emit Shown();
 }
+
 
 void PreviewWindow::paintEvent(QPaintEvent *event)
 {
@@ -217,6 +241,11 @@ bool PreviewWindow::HasFocus()
     return m_Preview->hasFocus();
 }
 
+void PreviewWindow::SetFocusOnPreview()
+{
+    if (m_Preview) m_Preview->setFocus();
+}
+
 float PreviewWindow::GetZoomFactor()
 {
     return m_Preview->GetZoomFactor();
@@ -229,34 +258,47 @@ void PreviewWindow::SetupView()
     // QWebEngineView events are routed to their parent
     m_Preview->installEventFilter(this);
 
-#if 1 //!defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
-    // this may be needed by all platforms in the future
     QWidget * fp = m_Preview->focusProxy();
     if (fp) fp->installEventFilter(this);
-#endif
 
     m_Layout->setContentsMargins(0, 0, 0, 0);
-    m_Layout->addWidget(m_Preview);
+
+    // use a QWidget wrapper around the QWebEnginePreview
+    // with a single pixel margin to use as focus indicator
+    QVBoxLayout * wl = new QVBoxLayout(m_wrapper);
+    wl->setContentsMargins(0,0,0,0);
+    wl->addWidget(m_Preview);
+    m_Layout->addWidget(m_wrapper);
 
     m_inspectAction = new QAction(QIcon(":/main/inspect.svg"),"", this);
     m_inspectAction ->setEnabled(true);
     m_inspectAction->setToolTip(tr("Inspect Page"));
+    m_binspect->setDefaultAction(m_inspectAction);
+    m_binspect->setAutoRaise(true);
 
     m_selectAction  = new QAction(QIcon(":/main/edit-select-all.svg"),"", this);
     m_selectAction ->setEnabled(true);
     m_selectAction->setToolTip(tr("Select-All"));
+    m_bselect->setDefaultAction(m_selectAction);
+    m_bselect->setAutoRaise(true);
 
     m_copyAction    = new QAction(QIcon(":/main/edit-copy.svg"),"", this);
     m_copyAction ->setEnabled(true);
     m_copyAction->setToolTip(tr("Copy Selection To ClipBoard"));
+    m_bcopy->setDefaultAction(m_copyAction);
+    m_bcopy->setAutoRaise(true);
 
     m_reloadAction  = new QAction(QIcon(":/main/reload-page.svg"),"", this);
     m_reloadAction ->setEnabled(true);
     m_reloadAction->setToolTip(tr("Update Preview Window"));
+    m_breload->setDefaultAction(m_reloadAction);
+    m_breload->setAutoRaise(true);
 
     m_cycleCSSAction = new QAction(QIcon(":/main/cycle-css.svg"),"", this);
     m_cycleCSSAction ->setEnabled(false);
     m_cycleCSSAction->setToolTip(tr("Cycle Custom CSS Files"));
+    m_bcycle->setDefaultAction(m_cycleCSSAction);
+    m_bcycle->setAutoRaise(true);
 
     QIcon pricon;
     pricon.addFile(":/main/document-print.svg", QSize(), QIcon::Normal);
@@ -264,24 +306,23 @@ void PreviewWindow::SetupView()
     m_webviewPrint = new QAction(pricon, "", this);
     m_webviewPrint ->setEnabled(true);
     m_webviewPrint->setToolTip(tr("Print Preview View"));
-    
-    QToolBar * tb = new QToolBar();
-    tb->addAction(m_inspectAction);
-    tb->addAction(m_selectAction);
-    tb->addAction(m_copyAction);
-    tb->addAction(m_reloadAction);
-    tb->addAction(m_cycleCSSAction);
-    tb->addAction(m_webviewPrint);
-    tb->addWidget(m_progress);
+    m_bprint->setDefaultAction(m_webviewPrint);
+    m_bprint->setAutoRaise(true);
 
-    m_buttons->addWidget(tb);
+    m_buttons->setContentsMargins(1,1,1,1);
+    m_buttons->addWidget(m_binspect);
+    m_buttons->addWidget(m_bselect);
+    m_buttons->addWidget(m_bcopy);
+    m_buttons->addWidget(m_breload);
+    m_buttons->addWidget(m_bcycle);
+    m_buttons->addWidget(m_bprint);
+    m_buttons->addWidget(m_progress);
+
     m_Layout->addLayout(m_buttons);
 
     m_MainWidget->setLayout(m_Layout);
+
     setWidget(m_MainWidget);
-
-    m_Preview->Zoom();
-
     QApplication::restoreOverrideCursor();
 }
 
@@ -327,7 +368,6 @@ bool PreviewWindow::UpdatePage(QString filename_url, QString text, QList<Element
     SetCaretLocation(location);
     m_progress->setRange(0,100);
     m_progress->setValue(0);
-    m_OverlayTimer.start();
 
     QRegularExpression mathused("<\\s*math [^>]*>");
     QRegularExpressionMatch mo = mathused.match(text);
@@ -420,9 +460,9 @@ void PreviewWindow::UpdatePageDone()
 
     // Zoom is handled internally to mPreview just before this is called
     UpdateWindowTitle();
-    m_OverlayTimer.stop();
     m_progress->setValue(100);
     m_progress->reset();
+    // keep this hear in case things get out of sync
     m_Preview->HideOverlay();
     // need to delay long enough for Zoom changes to be reflected in View widget
     // before trying to center it on a location.
@@ -535,12 +575,56 @@ void PreviewWindow::EmitGoToPreviewLocationRequest()
 bool PreviewWindow::eventFilter(QObject *object, QEvent *event)
 {
   switch (event->type()) {
+    case QEvent::FocusIn:
+      // track focus in change events of m_Preview (or one of its child focus proxies)
+      if (m_use_focus_highlight) {
+
+#if defined(Q_OS_MAC)
+          QString focus_qss = "border: 3px solid HIGHLIGHT_COLOR;";
+#elif defined(Q_OS_WIN32)
+          QString focus_qss = "border: 1px solid HIGHLIGHT_COLOR;";
+#else // Linux
+          QString focus_qss = "border: 1px solid HIGHLIGHT_COLOR;";
+#endif
+          QString hcolor = palette().color(QPalette::Highlight).name();
+          QString user_color = Utility::GetEnvironmentVar("SIGIL_FOCUS_HIGHLIGHT_COLOR");
+          if (!user_color.isEmpty() && user_color.startsWith("#") && user_color.length() == 7) {
+
+#if QT_VERSION >= QT_VERSION_CHECK(6,4,0)
+              if (QColor::isValidColorName(user_color)) {
+#else
+              if (QColor::isValidColor(user_color)) {
+#endif
+                  hcolor = user_color;
+              }
+          }
+	  focus_qss.replace("HIGHLIGHT_COLOR", hcolor);
+	  m_wrapper->setStyleSheet(focus_qss);
+      }
+      DBG qDebug() << "focus in event: " << object;
+      break;
+    case QEvent::FocusOut:
+      // track focus out change events of m_Preview (or one of its child focus proxies)
+      if (m_use_focus_highlight) {
+          m_wrapper->setStyleSheet("border: hidden;");
+      }
+      DBG qDebug() << "focus out event: " << object;
+      break;
     case QEvent::ChildAdded:
       if (object == m_Preview) {
-          DBG qDebug() << "child add event";
           const QChildEvent *childEvent(static_cast<QChildEvent*>(event));
           if (childEvent->child()) {
+              DBG qDebug() << "added child: " << childEvent->child(); 
               childEvent->child()->installEventFilter(this);
+          }
+      }
+      break;
+    case QEvent::ChildRemoved:
+      if (object == m_Preview) {
+          const QChildEvent *childEvent(static_cast<QChildEvent*>(event));
+          if (childEvent->child()) {
+              DBG qDebug() << "removed child: " << childEvent->child(); 
+              childEvent->child()->removeEventFilter(this);
           }
       }
       break;
@@ -683,8 +767,6 @@ void PreviewWindow::ReloadPreview()
 
     //force reset m_updatingPage in case a signal is lost
     m_progress->reset();
-    m_OverlayTimer.stop();
-    m_Preview->HideOverlay();
     m_updatingPage = false;
     emit RequestPreviewReload();
 }
@@ -699,9 +781,10 @@ void PreviewWindow::setProgress(int val)
 void PreviewWindow::LoadSettings()
 {
     SettingsStore settings;
-    settings.beginGroup(SETTINGS_GROUP);
+    m_use_focus_highlight = settings.uiHighlightFocusWidgetEnabled();
+    // settings.beginGroup(SETTINGS_GROUP);
     // m_Layout->restoreState(settings.value("layout").toByteArray());
-    settings.endGroup();
+    // settings.endGroup();
 }
 
 void PreviewWindow::ConnectSignalsToSlots()

@@ -29,12 +29,15 @@
 #include <QCoreApplication>
 #include <QtCore/QString>
 #include <QColor>
+#include <QMessageBox>
 #include <QSet>
 #include <QStringList>
+#include <QImage>
 
 class QStringRef;
 class QWidget;
 class QMenu;
+
 
 struct ExceptionBase;
 
@@ -141,7 +144,11 @@ public:
 
     // Converts Mac and Windows style line endings to Unix style
     // line endings that are expected throughout the Qt framework
-    static QString ConvertLineEndings(const QString &text);
+    // while converting to Unicode Normalization Form C
+    // Note the mac did and does use a modified NFD form for its HFS+ file system
+    // so manifest and other urls can have the wrong form on a mac depending
+    // on filesystem in use.
+    static QString ConvertLineEndingsAndNormalize(const QString &text);
 
     // Decodes XML escaped string to normal text
     // &amp; -> &    &apos; -> '  &quot; -> "   &lt; -> <  &gt; -> >
@@ -192,7 +199,6 @@ public:
 
 #if defined(Q_OS_WIN32)
     static std::wstring QStringToStdWString(const QString &str);
-    static QString stdWStringToQString(const std::wstring &str);
 #endif
 
     static bool UnZip(const QString &zippath, const QString &destdir);
@@ -251,13 +257,33 @@ public:
     // Generate a CRC32 checksum on a file
     static QString FileCRC32(const QString& filepath);
 
+    // Added to work around macOS specific QMessageBox issues with reactivating proper window upon return
+    static QMessageBox::StandardButton warning(QWidget *parent, const QString &title, const QString &text,
+                                               QMessageBox::StandardButtons buttons = QMessageBox::Ok,
+                                               QMessageBox::StandardButton defaultButton = QMessageBox::NoButton);
+
+    static QMessageBox::StandardButton question(QWidget *parent, const QString &title, const QString &text,
+                                                QMessageBox::StandardButtons buttons = QMessageBox::Yes | QMessageBox::No,
+                                                QMessageBox::StandardButton defaultButton = QMessageBox::NoButton);
+
+    static QMessageBox::StandardButton information(QWidget *parent, const QString &title, const QString &text,
+                                                   QMessageBox::StandardButtons buttons = QMessageBox::Ok,
+                                                   QMessageBox::StandardButton defaultButton = QMessageBox::NoButton);
+
+    static QMessageBox::StandardButton critical(QWidget *parent, const QString &title, const QString &text,
+                                                QMessageBox::StandardButtons buttons = QMessageBox::Ok,
+                                                QMessageBox::StandardButton defaultButton = QMessageBox::NoButton);
+
+    static QString FixupSvgForRendering(const QString& data);
+    static QImage  RenderSvgToImage(const QString& filepath);
+
     // -------------------------- modified: my additions ----------------------------------
 
     static QString RegExpSub(const QString& regexp, const QString& alt_pattern, const QString& text, int max_count = 0); // modified: Prettify xhtml, Regexp, re_sub
 
     static QString trimmed(const QString& text, const QString& chars);
 
-    static QStringList walkDirs(QString root);//modified: used by correctOPF、walk direct files;
+    static QStringList walkDirs(QString root);//modified: used by correctOPF, walk direct files;
 
     static QString ExtToMTypeMap(QString& ext);
 

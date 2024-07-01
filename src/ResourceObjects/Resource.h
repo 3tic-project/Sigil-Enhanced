@@ -194,7 +194,7 @@ public:
      * @param new_filename The new name.
      * @return \c true if the operation was successful.
      */
-    virtual bool RenameTo(const QString &new_filename);
+    virtual bool RenameTo(const QString &new_filename, bool in_bulk=false);
 
 
     /**
@@ -203,7 +203,7 @@ public:
      * @param new_bookpath The new bookpath.
      * @return \c true if the operation was successful.
      */
-    virtual bool MoveTo(const QString &new_bookpath);
+    virtual bool MoveTo(const QString &new_bookpath, bool in_bulk=false);
 
     /**
      * Deletes the resource.
@@ -245,12 +245,18 @@ signals:
     void Renamed(const Resource *resource, QString old_full_path);
 
     /**
+     * Emitted whena resource is renamed or moved under builk mode
+     *
+     */
+    void TellTabUpdateName(const Resource *resource, QString old_full_path);
+
+    /**
      * Emitted whenever the resource changes location.
      *
      * @param resource The resource's that was moved.
      */
     void Moved(const Resource *resource, QString old_full_path);
-
+        
     /**
      * Emitted when the resource has been scheduled for deletion.
      *

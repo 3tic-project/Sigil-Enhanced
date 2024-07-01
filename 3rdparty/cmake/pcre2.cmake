@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.0)
-
 project(pcre2 C)
 
 INCLUDE(CheckIncludeFile)
@@ -100,6 +98,7 @@ SET(PCRE2_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/pcre2.h)
 SET(SOURCES
     ${PROJECT_NAME}/src/pcre2_auto_possess.c
     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/pcre2_chartables.c
+    ${PROJECT_NAME}/src/pcre2_chkdint.c
     ${PROJECT_NAME}/src/pcre2_compile.c
     ${PROJECT_NAME}/src/pcre2_config.c
     ${PROJECT_NAME}/src/pcre2_context.c
@@ -126,7 +125,7 @@ SET(SOURCES
     ${PROJECT_NAME}/src/pcre2_valid_utf.c
     ${PROJECT_NAME}/src/pcre2_xclass.c
 )
-
+    
 add_library(${PROJECT_NAME}-16 ${SOURCES})
 target_include_directories(${PROJECT_NAME}-16 PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}

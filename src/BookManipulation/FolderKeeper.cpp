@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -595,6 +595,28 @@ void FolderKeeper::RemoveResource(const Resource *resource)
     emit ResourceRemoved(resource);
 }
 
+
+void FolderKeeper::BulkRenameResources(const QList<Resource *> resources, const QStringList &newnames)
+{
+    bool in_bulk = true;
+    QHash<QString, Resource*> renamedDict;
+    for (int i=0; i < resources.size(); i++) {
+        Resource * rsc = resources.at(i);
+        QString newnm = newnames.at(i);
+        QString oldbookpath = rsc->GetRelativePath();
+        bool success = rsc->RenameTo(newnm, in_bulk);
+        if (success) {
+            renamedDict[oldbookpath] = rsc;
+            QString newbookpath = rsc->GetRelativePath();
+            m_Path2Resource.remove(oldbookpath);
+            m_Path2Resource[newbookpath] = rsc;
+        }
+    }
+    m_OPF->BulkResourcesRenamed(renamedDict);
+    updateShortPathNames();
+}
+
+
 void FolderKeeper::ResourceRenamed(const Resource *resource, const QString &old_full_path)
 {
     // Renaming means the resource book path has changed and so we need to update it
@@ -606,6 +628,26 @@ void FolderKeeper::ResourceRenamed(const Resource *resource, const QString &old_
     if (resource != m_OPF) {
         m_OPF->ResourceRenamed(resource, old_full_path);
     }
+    updateShortPathNames();
+}
+
+
+void FolderKeeper::BulkMoveResources(const QList<Resource *>resources, const QStringList &newpaths)
+{
+    bool in_bulk = true;
+    QHash<QString, Resource*> movedDict;
+    for (int i=0; i < resources.size(); i++) {
+        Resource * rsc = resources.at(i);
+        QString pnew = newpaths.at(i);
+        QString pold = rsc->GetRelativePath();
+        bool success = rsc->MoveTo(pnew, in_bulk);
+        if (success) {
+            movedDict[pold] = rsc;
+            m_Path2Resource.remove(pold);
+            m_Path2Resource[pnew] = rsc;
+        }
+    }
+    m_OPF->BulkResourcesMoved(movedDict);
     updateShortPathNames();
 }
 

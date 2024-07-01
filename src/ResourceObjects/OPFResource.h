@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2020 Kevin B. Hendricks, Stratford ON
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford ON
 **  Copyright (C) 2013      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
@@ -131,6 +131,11 @@ public:
     QList<MetaEntry> GetDCMetadata() const;
 
     /**
+     * Returns list of any Media Overlay Active Class Selctors if defined in OPF metadata
+     */
+    QStringList GetMediaOverlayActiveClassSelectors() const;
+    
+    /**
      * Returns the values for a specific dc: metadata name.
      *
      * @return A list of values
@@ -169,8 +174,10 @@ public slots:
     void UpdateSpineOrder(const QList<HTMLResource *> html_files);
 
     void ResourceRenamed(const Resource *resource, QString old_full_path);
+    void BulkResourcesRenamed(const QHash<QString, Resource *> renamedDict);
 
     void ResourceMoved(const Resource *resource, QString old_full_path);
+    void BulkResourcesMoved(const QHash<QString, Resource *> movedDict);
 
     void UpdateManifestProperties(const QList<Resource *> resources);
 

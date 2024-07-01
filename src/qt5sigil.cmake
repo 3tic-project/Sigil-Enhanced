@@ -5,6 +5,10 @@
 # quiet Qt 5.15 deprecat4ed warnings for now as we must support Qt 5.12.X and even earlier
 add_definitions(-DQT_NO_DEPRECATED_WARNINGS)
 
+if (CMAKE_VERSION VERSION_GREATER "3.27.9")
+    cmake_policy(SET CMP0153 OLD)
+endif()
+
 if( UNIX AND NOT APPLE )
     # Qt5 packages minimum version 5.9 for Linux
     set(QT5_NEEDED 5.10)
@@ -22,7 +26,7 @@ if( UNIX AND NOT APPLE )
     endif()
 endif()
 
-set( PKGS_TO_FIND Core Network WebEngine WebEngineWidgets Widgets Xml Concurrent PrintSupport LinguistTools )
+set( PKGS_TO_FIND Core Network WebEngine WebEngineWidgets Svg Widgets Xml Concurrent PrintSupport LinguistTools )
 if ( WIN32 )
     list( APPEND PKGS_TO_FIND WinExtras )
     if ( USE_ALT_ICONS )
@@ -229,7 +233,7 @@ endif()
 # No need to explicity link Qt5::WinMain or to use the qt5_use_modules macro since CMAKE 2.8.11. We require CMAKE 3.0.0
 set( LIBS_TO_LINK ${HUNSPELL_LIBRARIES} ${PCRE2_LIBRARIES} ${GUMBO_LIBRARIES} ${MINIZIP_LIBRARIES}
                   Qt5::Widgets  Qt5::Xml  Qt5::PrintSupport  Qt5::WebEngine  
-                  Qt5::WebEngineWidgets  Qt5::Network  Qt5::Concurrent )
+                  Qt5::WebEngineWidgets  Qt5::Svg Qt5::Network  Qt5::Concurrent )
 if (${USE_NEWER_FINDPYTHON3})
     set( _BUNDLED_PYVER "${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}" )
     message(STATUS "Using newer Python3::Python target to link to Python")

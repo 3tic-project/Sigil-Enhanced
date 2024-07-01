@@ -187,6 +187,11 @@ void ImageTab::UpdateDisplay()
     }
 }
 
+void ImageTab::ThemeChangeRefresh()
+{
+    RefreshContent();
+}
+
 void ImageTab::RefreshContent()
 {
     m_WebView->page()->profile()->clearHttpCache();
@@ -304,7 +309,7 @@ void ImageTab::OpenContextMenu(const QPoint &point)
 
 bool ImageTab::SuccessfullySetupContextMenu(const QPoint &point)
 {
-    QUrl imageUrl("file:///" % m_Resource->GetFullPath());
+    QUrl imageUrl = QUrl::fromLocalFile(m_Resource->GetFullPath());
 
     if (imageUrl.isValid() && imageUrl.isLocalFile()) {
         // Open With

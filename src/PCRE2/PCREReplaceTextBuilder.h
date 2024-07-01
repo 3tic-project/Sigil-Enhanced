@@ -1,5 +1,6 @@
 /************************************************************************
 **
+**  Copyright (C) 2020-2024 Kevin B. Hendricks, Stratford ON Canada
 **  Copyright (C) 2011  John Schember <john@nachtimwald.com>
 **
 **  This file is part of Sigil.
@@ -76,7 +77,9 @@ private:
      * Reset the state of the replacement process.
      */
     void resetState();
-
+    
+    bool IsValidHex6(QString& hv);
+    
     /**
      * Add to the final replacement text we are building.
      *

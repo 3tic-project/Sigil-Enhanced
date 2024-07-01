@@ -33,6 +33,7 @@
 #include "ResourceObjects/NCXResource.h"
 #include "sigil_constants.h"
 #include "sigil_exception.h"
+#include "Misc/SettingsStoreExtend.h" // modified: importing text
 
 const QString FIRST_SECTION_PREFIX = "Section0001";
 const QString FIRST_SECTION_NAME   = FIRST_SECTION_PREFIX + ".xhtml";
@@ -134,7 +135,7 @@ QString ImportTXT::CreateParagraphs(const QStringList &lines) const
     for (int i = 0; i < num_lines; ++i) {
         QString line = lines.at(i);
 
-        if (line.isEmpty() || line[0].isSpace()) {
+        if (line.isEmpty() || line[ 0 ].isSpace()) {
             text.append(paragraph.append("</p>\n"));
             paragraph = "<p>";
         }
@@ -151,12 +152,16 @@ QString ImportTXT::CreateParagraphs(const QStringList &lines) const
 //--------- modified: importing text: modified the format logic of txt importing --------
 QString ImportTXT::CreateParagraphs_M(const QStringList& lines) const
 {
+    SettingsStoreExtend sse;
+    bool ignore_blankline = sse.getIgnoreBlankLine();
+
     QString text = "";
     int num_lines = lines.count();
     for (int i = 0; i < num_lines; ++i) {
         QString line = lines.at(i);
         if (line.isEmpty()) {
-            text.append("<p><br/></p>\n");
+            if (!ignore_blankline)
+                text.append("<p><br/></p>\n");
         }
         else {
             text.append("<p>" + line.toHtmlEscaped() + "</p>\n");

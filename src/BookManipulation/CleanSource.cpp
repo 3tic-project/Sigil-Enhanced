@@ -39,7 +39,6 @@
 #include "Misc/Utility.h"
 #include <utility>
 
-
 static const QString HEAD_END = "</\\s*head\\s*>";
 const QString SVG_NAMESPACE_PREFIX = "<\\s*[^>]*(xmlns\\s*:\\s*svg\\s*=\\s*(?:\"|')[^\"']+(?:\"|'))[^>]*>";
 
@@ -70,6 +69,7 @@ QString CleanSource::MendPrettify(const QString &source, const QString &version)
     newsource = PrettifyDOCTYPEHeader(newsource);
     return newsource;
 }
+
 
 // Repair XML if needed and PrettyPrint using BeautifulSoup4
 QString CleanSource::XMLPrettyPrintBS4(const QString &source, const QString mtype)
@@ -158,6 +158,12 @@ bool CleanSource::IsWellFormedXML(const QString &source, const QString mtype)
 
 QString CleanSource::ProcessXML(const QString &source, const QString mtype)
 {
+    if (mtype == "application/x-dtbncx+xml") {
+        // test for and handle case of user deleting ncx tag to prevent crash 
+        if (source.indexOf("<ncx") == -1) {
+            return source;
+        }
+    }
     return XMLPrettyPrintBS4(source, mtype);
 }
 

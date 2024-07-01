@@ -642,15 +642,16 @@ bool CodeViewEditor::quickSwitchOfCursor(QKeyEvent* e) {
     return true;
 }
 
-// ---------------------------------- modified: SplitBlockOrAddBreak ---------------------------------
-// 该函数的作用是，根据光标在行中的位置插入空行或者分割段落（块元素）。
+// ---------------------------------- modified: SplitTagOrAddBreak ---------------------------------
+// 该函数的作用是，根据光标在行中的位置插入空行或者分割标签。
 // 如果光标处于行尾，则向下插入空行，如果光标处于行头缩进位置，则向前插入空行。
-// 如果光标处于标签内部，则自动判断该补充多少闭合标签并从该处分割段落。
-void CodeViewEditor::SplitBlockOrAddBreak()
+// 如果光标处于标签内部，则从该处分割段落。
+void CodeViewEditor::SplitTagOrAddBreak()
 {
     QTextCursor cursor = textCursor();
     QString text = toPlainText();
     int ori_pos = cursor.position();
+    int cursor_offset = 0;
     MaybeRegenerateTagList();
     if (!IsPositionInBody(ori_pos)) return;
 
@@ -683,8 +684,7 @@ void CodeViewEditor::SplitBlockOrAddBreak()
     }
     // 其他情况，光标位于内容上
     else {
-        QStringList openTags_foundList, // 储存查找过程中不被闭合元素匹配的元素；
-            closeTags_foundList; // 储存查找过程中的闭合元素；
+        QStringList closeTags_foundList; // 储存查找过程中的闭合元素
         // i 是标签在页面中的序号
         int i = m_TagList.findLastTagOnOrBefore(ori_pos);
         TagInfo ti = m_TagList.at(i);
@@ -692,12 +692,13 @@ void CodeViewEditor::SplitBlockOrAddBreak()
         if (ori_pos > ti.pos && ori_pos < ti.pos + ti.len) {
             return;
         }
-        else if (ti.ttype == "end" && ori_pos == ti.pos) {
+        else if (ori_pos == ti.pos) {
             --i;
         }
         // 向前查找标签，直到找到第一个不被闭合节点匹配的块元素标签。
         //（不被闭合节点匹配的意思是，标签在前向查找的时候，如果前方有成对的标签，必然是先找到闭合标签，
         //  如果找不到闭合标签说明闭合标签在光标后方，那么分割时应该对该类标签进行补偿。）
+        bool openTagFound = false;
         while (i > 0) {
             ti = m_TagList.at(i);
 
@@ -712,32 +713,40 @@ void CodeViewEditor::SplitBlockOrAddBreak()
                     closeTags_foundList.removeOne(ti.tname);
                 }
                 else {
-                    QString tagStr = text.mid(ti.pos + 1, ti.len - 2);
-                    openTags_foundList.append(tagStr);
+                    openTagFound = true;
+                    break; // 找到目标元素
                 }
-            }
-            //找到目标块元素
-            if (!openTags_foundList.isEmpty() && BLOCK_LEVEL_TAGS.contains(openTags_foundList.last())) {
-                break;
             }
             --i;
         }
-        if (openTags_foundList.size() > 0) {
+        if (openTagFound) {
             QString last_para_text = "",
                 next_para_text = "";
             QString indent = selected_text.left(indent_length);
-            foreach(QString tag, openTags_foundList) {
-                QString tagname = tag.split(" ").first();
-                last_para_text.append("</" + tagname + ">");
-                next_para_text.prepend("<" + tag + ">");
+            QString tag = text.mid(ti.pos + 1, ti.len - 2);
+            QString tagname = tag.split(" ").first();
+            last_para_text.append("</" + tagname + ">");
+            next_para_text.prepend("<" + tag + ">");
+            int block_startpos = ti.pos - indent.size() - 1;
+            if (block_startpos > 0 && text.mid(block_startpos, ti.pos - block_startpos) == "\n" % indent) {
+                insert_text = last_para_text + QChar(0x2029) + indent + next_para_text;
             }
-            insert_text = last_para_text + QChar(0x2029) + indent + next_para_text;
+            else {
+                insert_text = last_para_text + next_para_text;
+                cursor_offset = -next_para_text.size();
+            }
         }
     }
     if (!insert_text.isEmpty()) {
         cursor.beginEditBlock();
         cursor.insertText(insert_text);
         cursor.endEditBlock();
+        if (cursor_offset != 0) {
+            QTextCursor::MoveOperation move_op = cursor_offset > 0 ? QTextCursor::Right : QTextCursor::Left;
+            if (cursor_offset < 0) cursor_offset = -cursor_offset;
+            cursor.movePosition(move_op, QTextCursor::MoveAnchor, cursor_offset);
+            setTextCursor(cursor);
+        }
     }
 }
 // -------------------------------------------------------------------------------------------------------------

@@ -26,6 +26,8 @@ QStringList BookBrowser::AddFiles(QStringList &filepaths)
         return added_book_paths;
     }
 
+    filepaths.sort(); // Sort the filepath list in ascending order.
+
     QStringList invalid_filenames;
     HTMLResource* current_html_resource = qobject_cast<HTMLResource*>(GetCurrentResource());
     Resource* open_resource = NULL;

@@ -21,11 +21,11 @@ void FlowTab::PasteRichText()
 }
 //---------------------------------------------------------------
 
-// -------------- modified: SplitBlockOrAddBreak ----------------
-void FlowTab::SplitBlockOrAddBreak()
+// -------------- modified: SplitTagOrAddBreak ----------------
+void FlowTab::SplitTagOrAddBreak()
 {
     if (!IsDataWellFormed()) return;
-    m_wCodeView->SplitBlockOrAddBreak();
+    m_wCodeView->SplitTagOrAddBreak();
 }
 // --------------------------------------------------------------
 

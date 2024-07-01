@@ -22,9 +22,8 @@ CodeCompleterParser::CodeCompleterParser(QPlainTextEdit* editor, FileType filety
 
 void CodeCompleterParser::initSettings() {
 	SettingsStoreExtend sse;
-	std::pair<bool, bool> sets = sse.getCodeCompleterSettings();
-	SnippetEabled = sets.first;
-	EmmetEnabled = sets.second;
+	SnippetEabled = sse.getCompleterEnabled();
+	EmmetEnabled = sse.getEmmetEnabled();
 }
 
 QString CodeCompleterParser::completionPrefix() 

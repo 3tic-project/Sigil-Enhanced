@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2016-2020 Kevin B Hendricks, Stratford, Ontario Canada 
+**  Copyright (C) 2016-2024 Kevin B Hendricks, Stratford, Ontario Canada 
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -20,14 +20,17 @@
 **
 *************************************************************************/
 
-#include <QtCore/QFileInfo>
-#include <QtCore/QTimer>
-#include <QtWidgets/QTreeView>
-#include <QtWidgets/QVBoxLayout>
-#include <QtGui/QContextMenuEvent>
+#include <QFileInfo>
+#include <QTimer>
+#include <QTreeView>
+#include <QVBoxLayout>
+#include <QContextMenuEvent>
 #include <QAction>
 #include <QtWidgets/QMenu>
 #include <QPointer>
+#include <QPaintEvent>
+#include <QStylePainter>
+#include <QApplication>
 
 #include "BookManipulation/FolderKeeper.h"
 #include "MainUI/TableOfContents.h"
@@ -66,6 +69,7 @@ TableOfContents::TableOfContents(QWidget *parent)
     m_RefreshTimer.setSingleShot(true);
     SetupTreeView();
     connect(m_TreeView, SIGNAL(clicked(const QModelIndex &)), this, SLOT(ItemClickedHandler(const QModelIndex &)));
+    connect(m_TreeView, SIGNAL(activated(const QModelIndex &)), this, SLOT(ItemClickedHandler(const QModelIndex &)));
     connect(&m_RefreshTimer, SIGNAL(timeout()), this, SLOT(Refresh()));
     connect(m_TOCModel, SIGNAL(RefreshDone()), m_TreeView, SLOT(expandAll()));
 }
@@ -74,6 +78,41 @@ void TableOfContents::showEvent(QShowEvent *event)
 {
     QDockWidget::showEvent(event);
     raise();
+}
+
+void TableOfContents::paintEvent(QPaintEvent *event)
+{
+    // Allow title text to be set independently of tab text
+    // (when QDockWidget is tabified).
+    QStylePainter painter(this);
+
+    if (isFloating()) {
+        QStyleOptionFrame options;
+        options.initFrom(this);
+
+#ifdef Q_OS_MAC
+        // This is needed for Qt6 but works on Qt5 as well
+        options.palette = QApplication::palette();
+#endif
+
+        painter.drawPrimitive(QStyle::PE_FrameDockWidget, options);
+    }
+    QStyleOptionDockWidget options;
+    initStyleOption(&options);
+    options.title = windowTitle();
+
+#ifdef Q_OS_MAC
+    // This is needed for Qt6 but works on Qt5 as well
+    options.palette = QApplication::palette();
+#endif
+
+    painter.drawControl(QStyle::CE_DockWidgetTitle, options);
+}
+
+
+void TableOfContents::SetFocusOnTOC()
+{
+  if (m_TreeView) m_TreeView->setFocus();
 }
 
 void TableOfContents::SetBook(QSharedPointer<Book> book)

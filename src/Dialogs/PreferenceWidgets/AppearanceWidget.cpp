@@ -1,7 +1,7 @@
 /************************************************************************
 **
-**  Copyright (C) 2016-2021  Kevin B. Hendricks, Stratford, ON
-**  Copyright (C) 2016-2020  Doug Massay
+**  Copyright (C) 2016-2024  Kevin B. Hendricks, Stratford, ON
+**  Copyright (C) 2016-2024  Doug Massay
 **  Copyright (C) 2011-2013  John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013  Grant Drake
 **
@@ -37,7 +37,7 @@
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
-#include "Misc/SettingsStoreExtend.h" // modified: XHTML Fomat Configure
+
 class ColorSwatchDelegate : public QStyledItemDelegate
 {
 public:
@@ -80,18 +80,14 @@ public:
 
 AppearanceWidget::AppearanceWidget()
     :
-    m_currentColor(QColor()),
-    m_isHighDPIComboEnabled(true)
+    m_currentColor(QColor())
 {
 
-#if defined(Q_OS_MAC) || QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    // Disable the HighDPI combobox on Mac
-    // Effectively an isMacOS runtime check
-    // Also needed if Qt >= 6.0.0
-    m_isHighDPIComboEnabled = false;
-#endif
-
     ui.setupUi(this);
+// Hide the Windows only preference from all other OSes
+#ifndef Q_OS_WIN32
+    ui.grpCustomDarkStyle->setVisible(false);
+#endif
 #ifdef Q_OS_MAC
     // according to macos user interface guidelines native apps would use TicksBelow
     ui.iconSizeSlider->setTickPosition(QSlider::TicksBelow);
@@ -115,32 +111,11 @@ AppearanceWidget::AppearanceWidget()
     
     // Custom delegate for painting the color swatches
     ui.codeViewColorsList->setItemDelegate(new ColorSwatchDelegate(ui.codeViewColorsList));
-    ui.comboHighDPI->addItems({tr("Detect"), tr("On"), tr("Off")});
-    QString highdpi_tooltip = "<p><dt><b>" + tr("Detect") + "</b><dd>" + tr("Detect whether any high dpi scaling should take place.");
-    highdpi_tooltip += " " + tr("Defers to any Qt environment variables that are set to control high dpi behavior.") + "</dd>";
-    highdpi_tooltip += "<dt><b>" + tr("On") + "</b><dd>" + tr("Turns on high dpi scaling and ignores any Qt environment variables");
-    highdpi_tooltip += " " + tr("that are set controlling high dpi behavior.") + "</dd>";
-    highdpi_tooltip += "<dt><b>" + tr("Off") + "</b><dd>" + tr("Turns off high dpi scaling regardless if any Qt environment");
-    highdpi_tooltip += " " + tr("variables controlling high dpi behavior are set.") + "</dd>";
-    ui.comboHighDPI->setToolTip(highdpi_tooltip);
-    // The HighDPI setting is unused/unnecessary on Mac
-    ui.comboHighDPI->setEnabled(m_isHighDPIComboEnabled);
-    QString drag_tweak_tooltip = "<p>" + tr("Adjust the distance necessary to drag an item before a move event is triggered.");
-    drag_tweak_tooltip += "<p>" + tr("-20 to +20 pixel range");
-    ui.dragTweakSpinBox->setToolTip(drag_tweak_tooltip);
-    ui.dragTweakSpinBox->setMinimum(-20);
-    ui.dragTweakSpinBox->setMaximum(20);
-    // The Drag start-distance setting is unused/unnecessary on Mac
-    ui.dragTweakSpinBox->setEnabled(m_isHighDPIComboEnabled);
     ui.chkHightlightTags->setToolTip("<p>" + tr("Highlight matching tags in Code View when cursor is inside tags."));
     m_codeViewAppearance = readSettings();
     loadCodeViewColorsList(m_codeViewAppearance);
     m_uiFontResetFlag = false;
     connectSignalsToSlots();
-    //------------------------ modified:  XHTML Fomat Configure ---------------------------
-    QFont font(m_codeViewAppearance.font_family, m_codeViewAppearance.font_size); // monospace font
-    ui.editXHTMLFormat->setFont(font);
-    //-------------------------------------------------------------------------------------
 }
 
 PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
@@ -149,6 +124,10 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
     settings.setAppearancePrefsTabIndex(ui.tabAppearance->currentIndex());
     settings.setShowFullPathOn(ui.ShowFullPath->isChecked() ? 1 : 0);
     settings.setPreviewDark(ui.PreviewDarkInDM->isChecked() ? 1 : 0);
+    settings.setUIHighlightFocusWidget(ui.chkFocusDec->isChecked() ? 1 : 0);
+    settings.setUiDoubleWidthTextCursor(ui.chkDoubleWidthCursor->isChecked() ? 1 : 0);
+    // This setting has no effect on other OSes, but it won't hurt to set it.
+    settings.setUiUseCustomSigilDarkTheme(ui.chkDarkStyle->isChecked() ? 1 : 0);
     // handle icon theme
     QString icon_theme = "main";
     if (ui.Fluent->isChecked()) {
@@ -159,11 +138,6 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
         icon_theme = "custom";
     }
     settings.setUIIconTheme(icon_theme);
-    // Don't try to get the index of a disabled combobox
-    if (m_isHighDPIComboEnabled) {
-        settings.setHighDPI(ui.comboHighDPI->currentIndex());
-        settings.setUiDragDistanceTweak(ui.dragTweakSpinBox->value());
-    }
     settings.setUIFont(m_currentUIFont);
     SettingsStore::PreviewAppearance PVAppearance;
     PVAppearance.font_family_standard     = ui.cbPreviewFontStandard->currentText();
@@ -254,24 +228,26 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
     if (m_currentIconTheme != icon_theme) {
         results = results | PreferencesWidget::ResultAction_RestartSigil;
     }
-    // Don't try to get the index of a disabled combobox
-    if (m_isHighDPIComboEnabled) {
-        if (m_HighDPI != (ui.comboHighDPI->currentIndex())) {
-            results = results | PreferencesWidget::ResultAction_RestartSigil;
-        }
-        if (m_DragTweak != (ui.dragTweakSpinBox->value())) {
-            results = results | PreferencesWidget::ResultAction_RestartSigil;
-        }
-    }
     if ((m_currentUIFont != m_initUIFont) || m_uiFontResetFlag) {
         results = results | PreferencesWidget::ResultAction_RestartSigil;
     }
+    // if show widget focus highlight pref changed, set need for restart
+    if (m_ShowWidgetFocus != (ui.chkFocusDec->isChecked() ? 1 : 0)) {
+        results = results | PreferencesWidget::ResultAction_RestartSigil;
+    }
+    // if double width text cursor pref changed, set need for restart
+    if (m_DoubleWidthCursor != (ui.chkDoubleWidthCursor->isChecked() ? 1 : 0)) {
+        results = results | PreferencesWidget::ResultAction_RestartSigil;
+    }
+    // if dark style changed on Windows, set need for restart.
+    // This setting has no effect on other OSes so no need to prompt for a restart.
+#ifdef Q_OS_WIN32
+    if (m_UseCustomSigilDarkTheme != (ui.chkDarkStyle->isChecked() ? 1 : 0)) {
+        results = results | PreferencesWidget::ResultAction_RestartSigil;
+    }
+#endif
     m_uiFontResetFlag = false;
     results = results & PreferencesWidget::ResultAction_Mask;
-    //------------------- modified: XHTML Fomat Configure ------------------------
-    SettingsStoreExtend settings_ext; // modified: XHTML Fomat Configure
-    settings_ext.setXhtmlFormat(ui.editXHTMLFormat->toPlainText());
-    //---------------------------------------------------------------------------
     return results;
 }
 
@@ -281,6 +257,13 @@ SettingsStore::CodeViewAppearance AppearanceWidget::readSettings()
     ui.tabAppearance->setCurrentIndex(settings.appearancePrefsTabIndex());
     m_ShowFullPathOn = settings.showFullPathOn();
     ui.ShowFullPath->setChecked(settings.showFullPathOn());
+    m_ShowWidgetFocus = settings.uiHighlightFocusWidgetEnabled();
+    ui.chkFocusDec->setChecked(settings.uiHighlightFocusWidgetEnabled());
+    m_DoubleWidthCursor = settings.uiDoubleWidthTextCursor();
+    ui.chkDoubleWidthCursor->setChecked(settings.uiDoubleWidthTextCursor());
+    // This setting has no effect on other OSes, but it won't hurt to read it.
+    m_UseCustomSigilDarkTheme = settings.uiUseCustomSigilDarkTheme();
+    ui.chkDarkStyle->setChecked(settings.uiUseCustomSigilDarkTheme());
 
     // Handle Icon Theme
     QString icon_theme = settings.uiIconTheme();
@@ -296,13 +279,6 @@ SettingsStore::CodeViewAppearance AppearanceWidget::readSettings()
     ui.Default->setChecked(icon_theme == "main");
     ui.Fluent->setChecked(icon_theme == "fluent");
     ui.Material->setChecked(icon_theme == "material");
-    // Don't try to set the index of disabled widgets
-    if (m_isHighDPIComboEnabled) {
-        m_HighDPI = settings.highDPI();
-        ui.comboHighDPI->setCurrentIndex(m_HighDPI);
-        m_DragTweak = settings.uiDragDistanceTweak();
-        ui.dragTweakSpinBox->setValue(m_DragTweak);
-    }
     if (!settings.uiFont().isEmpty()) {
         m_initUIFont = settings.uiFont();
     } else {
@@ -333,15 +309,6 @@ SettingsStore::CodeViewAppearance AppearanceWidget::readSettings()
     ui.specialCharacterFontSizeSpin->setValue(specialCharacterAppearance.font_size);
     codeViewAppearance.font_family = ui.cbCodeViewFont->currentText();
     ui.iconSizeSlider->setValue(int(settings.mainMenuIconSize()*10));
-    //------------------- modified: XHTML Fomat Configure ------------------------
-    SettingsStoreExtend settings_ext; // modified: XHTML Fomat Con figure
-    if (settings_ext.getXhtmlFormat().isNull()) {
-        ui.editXHTMLFormat->setDefaultText();
-    }
-    else {
-        ui.editXHTMLFormat->setPlainText(settings_ext.getXhtmlFormat());
-    }
-    //---------------------------------------------------------------------------
     return codeViewAppearance;
 }
 
@@ -448,12 +415,6 @@ void AppearanceWidget::resetAllButtonClicked()
     }
 }
 
-//------------------- modified: XHTML Fomat Configure ------------------------
-void AppearanceWidget::resetXhtmlFormat() {
-    ui.editXHTMLFormat->setDefaultText();
-}
-//----------------------------------------------------------------------------
-
 void AppearanceWidget::newSliderValue(int value) {
     SettingsStore settings;
     settings.setMainMenuIconSize(double(ui.iconSizeSlider->value())/10);
@@ -469,5 +430,4 @@ void AppearanceWidget::connectSignalsToSlots()
     connect(ui.changeUIFontButton, SIGNAL(clicked()), this, SLOT(changeUIFontButtonClicked()));
     connect(ui.resetAllButton,    SIGNAL(clicked()), this, SLOT(resetAllButtonClicked()));
     connect(ui.iconSizeSlider,    SIGNAL(valueChanged(int)), this, SLOT(newSliderValue(int)));
-    connect(ui.htmlFormatResetButton, SIGNAL(clicked()), this, SLOT(resetXhtmlFormat())); // modified: XHTML Fomat Configure
 }

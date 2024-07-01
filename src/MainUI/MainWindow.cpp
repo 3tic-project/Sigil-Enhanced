@@ -1,7 +1,7 @@
-﻿/************************************************************************
+/************************************************************************
 **
-**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
-**  Copyright (C) 2015-2023 Doug Massay
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2024 Doug Massay
 **  Copyright (C) 2012-2015 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012-2013 Dave Heiland
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -157,10 +157,6 @@ static const QString TABLE_OF_CONTENTS_NAME       = "tableofcontents";
 static const QString PREVIEW_WINDOW_NAME          = "previewwindow";
 static const QString CLIPS_WINDOW_NAME            = "clipswindow";
 static const QString FRAME_NAME                   = "managerframe";
-static const QString TAB_STYLE_SHEET              = "#managerframe {border-top: 0px solid white;"
-        "border-left: 1px solid grey;"
-        "border-right: 1px solid grey;"
-        "border-bottom: 1px solid grey;} ";
 static const QString HTML_TOC_FILE = "TOC.xhtml";
 static const QString HTML_INDEX_FILE = "Index.xhtml";
 const QString HTML_COVER_FILENAME = "cover.xhtml";
@@ -692,7 +688,7 @@ bool MainWindow::StandardizeEpub()
 
     // ask to be sure
     QMessageBox::StandardButton button_pressed;
-    button_pressed = QMessageBox::warning(this, tr("Sigil"), 
+    button_pressed = Utility::warning(this, tr("Sigil"), 
                                       tr("Are you sure you want to restructure this epub?\nThis action cannot be reversed."), 
                                       QMessageBox::Ok | QMessageBox::Cancel);
     if (button_pressed != QMessageBox::Ok) {
@@ -705,7 +701,7 @@ bool MainWindow::StandardizeEpub()
     QList<HTMLResource *> htmlresources = m_Book->GetHTMLResources();
     foreach (HTMLResource * hresource, htmlresources) {
         if (!hresource->FileIsWellFormed()) {
-            QMessageBox::warning(this, tr("Sigil"), 
+            Utility::warning(this, tr("Sigil"), 
                                  tr("Restructure cancelled: %1, XML not well formed.").arg(hresource->ShortPathName()));
             QApplication::restoreOverrideCursor();
             return false;
@@ -714,7 +710,7 @@ bool MainWindow::StandardizeEpub()
     // make sure opf is in good shape as well
     OPFResource* opfresource = m_Book->GetOPF();
     if (!opfresource->FileIsWellFormed()) {
-        QMessageBox::warning(this, tr("Sigil"),
+        Utility::warning(this, tr("Sigil"),
                              tr("Restructure cancelled: %1, XML not well formed.").arg(opfresource->ShortPathName()));
         QApplication::restoreOverrideCursor();
         return false;
@@ -722,7 +718,7 @@ bool MainWindow::StandardizeEpub()
     // ditto for ncx if one exists
     NCXResource* ncxresource = m_Book->GetNCX();
     if (ncxresource && !ncxresource->FileIsWellFormed()) {
-        QMessageBox::warning(this, tr("Sigil"),
+        Utility::warning(this, tr("Sigil"),
                              tr("Restructure cancelled: %1, XML not well formed.").arg(ncxresource->ShortPathName()));
         QApplication::restoreOverrideCursor();
         return false;
@@ -804,7 +800,6 @@ bool MainWindow::StandardizeEpub()
     ShowMessageOnStatusBar(tr("Restructure completed."));
     return true;
 }
-
 
 void MainWindow::FixDuplicateFilenames()
 {
@@ -1140,7 +1135,7 @@ void MainWindow::RepoDiff(QString bookid)
     QStringList mlist(sres.at(2));
 
     if (dlist.isEmpty() && alist.isEmpty() && mlist.isEmpty()) {
-        QMessageBox::information(this, tr("Results of Comparison"), tr("No differences were found."));
+        Utility::information(this, tr("Results of Comparison"), tr("No differences were found."));
         return;
     } 
 
@@ -1375,7 +1370,7 @@ void MainWindow::launchExternalXEditor()
         m_Book->GetFolderKeeper()->ResumeWatchingResources();
 
         if (OpenExternally::openFile(resource->GetFullPath(), XEditorPath)) {
-	        m_Book->GetFolderKeeper()->WatchResourceFile(resource);
+            m_Book->GetFolderKeeper()->WatchResourceFile(resource);
             ShowMessageOnStatusBar(tr("Executing External Xhtml Editor"));
             return;
         }
@@ -1422,6 +1417,24 @@ QList <Resource *> MainWindow::GetValidSelectedHTMLResources()
 QList <Resource *> MainWindow::GetValidSelectedCSSResources()
 {
     return m_BookBrowser->ValidSelectedCSSResources();
+}
+
+
+QList <Resource *> MainWindow::GetValidSelectedSVGResources()
+{
+    return m_BookBrowser->ValidSelectedSVGResources();
+}
+
+
+QList <Resource *> MainWindow::GetValidSelectedJSResources()
+{
+    return m_BookBrowser->ValidSelectedJSResources();
+}
+
+
+QList <Resource *> MainWindow::GetValidSelectedMiscXMLResources()
+{
+    return m_BookBrowser->ValidSelectedMiscXMLResources();
 }
 
 
@@ -1606,7 +1619,7 @@ void MainWindow::OpenUrl(const QUrl &url)
         OpenResource(resource, line, -1, QString(), url.fragment());
     } else {
         QMessageBox::StandardButton button_pressed;
-        button_pressed = QMessageBox::warning(this, tr("Sigil"), tr("Are you sure you want to open this external link?\n\n%1").arg(url.toString()), QMessageBox::Ok | QMessageBox::Cancel);
+        button_pressed = Utility::warning(this, tr("Sigil"), tr("Are you sure you want to open this external link?\n\n%1").arg(url.toString()), QMessageBox::Ok | QMessageBox::Cancel);
 
         if (button_pressed == QMessageBox::Ok) {
             QDesktopServices::openUrl(url);
@@ -1937,7 +1950,7 @@ void MainWindow::OpenRecentFile()
             if (!QFile::exists(filename)) {
                 QMessageBox::StandardButton button_pressed;
                 const QString &msg = tr("This file no longer exists. Click OK to remove it from the menu.\n%1");
-                button_pressed = QMessageBox::warning(this, tr("Sigil"),
+                button_pressed = Utility::warning(this, tr("Sigil"),
                                                       msg.arg(filename), QMessageBox::Ok | QMessageBox::Cancel);
 
                 if (button_pressed == QMessageBox::Ok) {
@@ -2172,7 +2185,7 @@ void MainWindow::ViewImageDialog(const QUrl &url)
             m_ViewImage->ShowImage(resource->GetFullPath());
         }
     } catch (ResourceDoesNotExist&) {
-        QMessageBox::warning(this, tr("Sigil"), tr("Image does not exist: ") + image_bookpath);
+        Utility::warning(this, tr("Sigil"), tr("Image does not exist: ") + image_bookpath);
     }
 }
 
@@ -2225,7 +2238,27 @@ void MainWindow::GoToLinkedStyleDefinition(const QString &element_name, const QS
                 }
             }
         }
-
+        // if nothing found try one last time looking in selectors with combinators for a close match
+        if (!found_match) {
+            QString sel1 = element_name + "." + style_class_name + " ";
+            QString sel2 = "." + style_class_name + " ";
+            foreach(QString bookpath, stylesheets) {
+                Resource * resource = m_Book->GetFolderKeeper()->GetResourceByBookPath(bookpath);
+                CSSResource *css_resource = qobject_cast<CSSResource*>( resource );
+                if (css_resource) {
+                    CSSInfo css_info(css_resource->GetText());
+                    QList<CSSInfo::CSSSelector*> combinators = css_info.getAllSelectorsWithCombinators();
+                    foreach(CSSInfo::CSSSelector* selector, combinators) {
+                        QString asel = selector->text;
+                        if (asel.startsWith(sel1) || asel.startsWith(sel2)) {
+                            m_TabManager->OpenResource(css_resource, -1, selector->pos);
+                            found_match = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         if (!found_match) {
             QString display_name;
 
@@ -2317,7 +2350,7 @@ bool MainWindow::ProceedWithUndefinedUrlFragments()
                                 " Splitting or merging under these conditions can result in broken links.</p>"
                                 "<p>Do you still wish to continue?</p></html>");
 
-        button_pressed = QMessageBox::warning(this, tr("Sigil"),
+        button_pressed = Utility::warning(this, tr("Sigil"),
                                 msg.arg(std::get<1>(result), std::get<2>(result)),
                                 QMessageBox::Yes | QMessageBox::No);
         if (button_pressed != QMessageBox::Yes) {
@@ -2864,7 +2897,7 @@ void MainWindow::ReportsDialog()
     m_Book->GetFolderKeeper()->ResumeWatchingResources();
 
     if (!m_Book.data()->GetNonWellFormedHTMLFiles().isEmpty()) {
-        QMessageBox::warning(this, tr("Sigil"), tr("Reports cancelled due to XML not well formed."));
+        Utility::warning(this, tr("Sigil"), tr("Reports cancelled due to XML not well formed."));
         QApplication::restoreOverrideCursor();
         return;
     }
@@ -2960,7 +2993,7 @@ bool MainWindow::DeleteUnusedMedia(bool in_automate)
 {
     SaveTabData();
     if (!m_Book.data()->GetNonWellFormedHTMLFiles().isEmpty()) {
-        QMessageBox::warning(this, tr("Sigil"), tr("Delete Unused Media Files cancelled due to XML not well formed."));
+        Utility::warning(this, tr("Sigil"), tr("Delete Unused Media Files cancelled due to XML not well formed."));
         return false;
     }
 
@@ -3013,7 +3046,8 @@ bool MainWindow::DeleteUnusedMedia(bool in_automate)
         if (in_automate) {
             ShowMessageOnStatusBar(tr("There are no unused image, video or audio files to delete."));
         } else {
-            QMessageBox::information(this, tr("Sigil"), tr("There are no unused image, video or audio files to delete."));
+            // Utility::information(this, tr("Sigil"), tr("There are no unused image, video or audio files to delete."));
+            Utility::information(this, tr("Sigil"), tr("There are no unused image, video or audio files to delete."));
         }
     }
     return true;
@@ -3023,16 +3057,21 @@ bool MainWindow::DeleteUnusedStyles(bool in_automate)
 {
     SaveTabData();
     if (!m_Book.data()->GetNonWellFormedHTMLFiles().isEmpty()) {
-        QMessageBox::warning(this, tr("Sigil"), tr("Delete Unused Styles cancelled due to XML not well formed."));
+        Utility::warning(this, tr("Sigil"), tr("Delete Unused Styles cancelled due to XML not well formed."));
         return false;
     }
 
+    // get list of any media overlay active class selectors from the opf
+    QStringList activeclassselectors = m_Book->GetOPF()->GetMediaOverlayActiveClassSelectors();
+    
     // This one handles all selector types
     QList<BookReports::StyleData *> css_selector_usage = BookReports::GetAllCSSSelectorsUsed(m_Book, true);
     QList<BookReports::StyleData *> css_selectors_to_delete;
     foreach(BookReports::StyleData *selector, css_selector_usage) {
         if (selector->html_filename.isEmpty()) {
-            css_selectors_to_delete.append(selector);
+            if (!activeclassselectors.contains(selector->css_selector_text)) {
+                css_selectors_to_delete.append(selector);
+            }
         }
     }
 
@@ -3042,7 +3081,7 @@ bool MainWindow::DeleteUnusedStyles(bool in_automate)
         if (in_automate) {
             ShowMessageOnStatusBar(tr("There are no unused stylesheet selectors to delete."));
         } else {
-            QMessageBox::information(this, tr("Sigil"), tr("There are no unused stylesheet selectors to delete."));
+            Utility::information(this, tr("Sigil"), tr("There are no unused stylesheet selectors to delete."));
         }
     }
     qDeleteAll(css_selector_usage);
@@ -3056,7 +3095,7 @@ void MainWindow::InsertFileDialog()
 
     FlowTab *flow_tab = GetCurrentFlowTab();
     if (!flow_tab || !flow_tab->InsertFileEnabled()) {
-        QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert a file at this position."));
+        Utility::warning(this, tr("Sigil"), tr("You cannot insert a file at this position."));
         return;
     }
 
@@ -3162,7 +3201,7 @@ void MainWindow::InsertId()
 
     FlowTab *flow_tab = GetCurrentFlowTab();
     if (!flow_tab || !flow_tab->InsertIdEnabled()) {
-        QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert an id at this position."));
+        Utility::warning(this, tr("Sigil"), tr("You cannot insert an id at this position."));
         return;
     }
 
@@ -3178,12 +3217,12 @@ void MainWindow::InsertId()
         QRegularExpressionMatch mo = invalid_id.match(selected_id);
 
         if (mo.hasMatch()) {
-            QMessageBox::warning(this, tr("Sigil"), tr("ID is invalid - must start with a letter, followed by letter number _ : - or ."));
+            Utility::warning(this, tr("Sigil"), tr("ID is invalid - must start with a letter, followed by letter number _ : - or ."));
             return;
         };
 
         if (!flow_tab->InsertId(select_id.GetId())) {
-            QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert an id at this position."));
+            Utility::warning(this, tr("Sigil"), tr("You cannot insert an id at this position."));
         }
     }
 }
@@ -3196,7 +3235,7 @@ void MainWindow::InsertHyperlink()
 
     FlowTab *flow_tab = GetCurrentFlowTab();
     if (!flow_tab || !flow_tab->InsertHyperlinkEnabled()) {
-        QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert a link at this position."));
+        Utility::warning(this, tr("Sigil"), tr("You cannot insert a link at this position."));
         return;
     }
 
@@ -3209,12 +3248,12 @@ void MainWindow::InsertHyperlink()
     if (select_hyperlink.exec() == QDialog::Accepted) {
         QString target = select_hyperlink.GetTarget();
         if (target.contains("<") || target.contains(">")) {
-            QMessageBox::warning(this, tr("Sigil"), tr("Link is invalid - cannot contain '<' or '>'"));
+            Utility::warning(this, tr("Sigil"), tr("Link is invalid - cannot contain '<' or '>'"));
             return;
         };
 
         if (!flow_tab->InsertHyperlink(target)) {
-            QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert a link at this position."));
+            Utility::warning(this, tr("Sigil"), tr("You cannot insert a link at this position."));
         }
     }
 }
@@ -3226,7 +3265,7 @@ void MainWindow::MarkForIndex()
 
     FlowTab *flow_tab = GetCurrentFlowTab();
     if (!flow_tab || !flow_tab->MarkForIndexEnabled()) {
-        QMessageBox::warning(this, tr("Sigil"), tr("You cannot mark an index at this position or without selecting text."));
+        Utility::warning(this, tr("Sigil"), tr("You cannot mark an index at this position or without selecting text."));
         return;
     }
 
@@ -3236,28 +3275,43 @@ void MainWindow::MarkForIndex()
     if (select_index_title.exec() == QDialog::Accepted) {
         QString entry = select_index_title.GetTitle();
         if (entry.contains("<") || entry.contains(">")) {
-            QMessageBox::warning(this, tr("Sigil"), tr("Entry is invalid - cannot contain '<' or '>'"));
+            Utility::warning(this, tr("Sigil"), tr("Entry is invalid - cannot contain '<' or '>'"));
             return;
         };
 
         if (!flow_tab->MarkForIndex(entry)) {
-            QMessageBox::warning(this, tr("Sigil"), tr("You cannot mark an index at this position."));
+            Utility::warning(this, tr("Sigil"), tr("You cannot mark an index at this position."));
         }
     }
 }
 
 void MainWindow::ApplicationPaletteChanged()
 {
-    // we need to force a full reload of all Tabs and Preview Window
-    // qDebug() << "ApplicationPaletteChanged";
-    m_TabManager->ReopenTabs();
+    // CodeView documents use hard coded syntax highlighting and line
+    // numbering colours (one set for light and one for dark).
+    // So we need to tell each CodeView in the TabManager to do a Refresh
+    // Same goes with AV, Image, Font, and Pdf tabs that inject dark
+    // css.  Same for our Preview Window.
+    DBG qDebug() << "ApplicationPaletteChanged";
+    m_TabManager->PerformThemeChangeRefresh();
     UpdatePreview();
 }
 
 void MainWindow::ApplicationFocusChanged(QWidget *old, QWidget *now)
 {
+    DBG qDebug() << "focus changed: " << old << now;
     QWidget *window = QApplication::activeWindow();
 
+    // sometimes QApplication::activeWindow() returns nullptr but
+    // the destination for focus (now) exists.  What we really
+    // need to know is the QMainWindow whose descendent is now
+    if (!window) {
+        window = now;
+        while(window && !(qobject_cast<QMainWindow *>(window))) {
+            window = window->parentWidget();
+        }
+    }
+    
     if (!window || !now) {
         // Nothing to do - application is exiting
         return;
@@ -3390,14 +3444,14 @@ void MainWindow::MergeResources(QList <Resource *> resources)
         Resource *resource = m_Book->PreviousResource(resources.first());
 
         if (!resource || resource == resources.first()) {
-            QMessageBox::warning(this, tr("Sigil"), tr("One resource selected and there is no previous resource to merge into."));
+            Utility::warning(this, tr("Sigil"), tr("One resource selected and there is no previous resource to merge into."));
             return;
         }
 
         resources.prepend(resource);
     } else {
         QMessageBox::StandardButton button_pressed;
-        button_pressed = QMessageBox::warning(this, tr("Sigil"),
+        button_pressed = Utility::warning(this, tr("Sigil"),
                                               tr("Are you sure you want to merge the selected files?\nThis action cannot be reversed."),
                                               QMessageBox::Ok | QMessageBox::Cancel);
 
@@ -3413,7 +3467,7 @@ void MainWindow::MergeResources(QList <Resource *> resources)
         if (htmlresource) html_resources << htmlresource;
     }
     if (!m_Book->CheckHTMLFilesForWellFormedness(html_resources)) {
-        QMessageBox::warning(this, tr("Sigil"), tr("Merge cancelled: XHTML files involved in merge are not well formed."));
+        Utility::warning(this, tr("Sigil"), tr("Merge cancelled: XHTML files involved in merge are not well formed."));
             return;
     }
 
@@ -3472,7 +3526,7 @@ void MainWindow::MergeResources(QList <Resource *> resources)
 
     if (failed_resource != NULL) {
         QApplication::restoreOverrideCursor();
-        QMessageBox::critical(this, tr("Sigil"), tr("Cannot merge file %1").arg(failed_resource->ShortPathName()));
+        Utility::critical(this, tr("Sigil"), tr("Cannot merge file %1").arg(failed_resource->ShortPathName()));
         QApplication::setOverrideCursor(Qt::WaitCursor);
         resource_to_open = failed_resource;
     } else {
@@ -3504,7 +3558,7 @@ void MainWindow::LinkStylesheetsToResources(QList <Resource *> resources)
             continue;
         }
         if (!h->FileIsWellFormed()) {
-            QMessageBox::warning(this, tr("Sigil"), tr("Link Stylesheets cancelled: %1, XML not well formed.").arg(h->ShortPathName()));
+            Utility::warning(this, tr("Sigil"), tr("Link Stylesheets cancelled: %1, XML not well formed.").arg(h->ShortPathName()));
             return;
         }
     }
@@ -3703,7 +3757,7 @@ void MainWindow::LinkJavascriptsToResources(QList <Resource *> resources)
             continue;
         }
         if (!h->FileIsWellFormed()) {
-            QMessageBox::warning(this, tr("Sigil"), tr("Link Javascripts cancelled: %1, XML not well formed.").arg(\
+            Utility::warning(this, tr("Sigil"), tr("Link Javascripts cancelled: %1, XML not well formed.").arg(\
 h->ShortPathName()));
             return;
         }
@@ -3757,7 +3811,7 @@ QList<std::pair<QString, bool>> MainWindow::GetJavascriptsMap(QList<Resource *> 
         QStringList linked_bookpaths = GetJavascriptsAlreadyLinked(valid_resource);
         foreach(QString bookpath, checked_linked_bookpaths) {
             if (!linked_bookpaths.contains(bookpath)) {
-		        checked_linked_bookpaths.removeOne(bookpath);
+                checked_linked_bookpaths.removeOne(bookpath);
             }
         }
     }
@@ -3767,11 +3821,11 @@ QList<std::pair<QString, bool>> MainWindow::GetJavascriptsMap(QList<Resource *> 
     }
     // Save all the remaining paths and mark them not included                                                      
     foreach(Resource * resource, js_resources) {
-	    QString abookpath = resource->GetRelativePath();
+        QString abookpath = resource->GetRelativePath();
 
         if (!checked_linked_bookpaths.contains(abookpath)) {
             javascript_map.append(std::make_pair(abookpath, false));
-	    }
+        }
     }
     return javascript_map;
 }
@@ -4471,7 +4525,7 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionIgnoreMisspelledWord->setEnabled(true);
     ui.actionAutoSpellCheck->setEnabled(true);
     ui.actionHeadingDivision->setEnabled(true); //modified: actionHeadingDivision
-    ui.actionSplitBlockOrAddBreak->setEnabled(true);//modified: SplitBlockOrAddBreak
+    ui.actionSplitTagOrAddBreak->setEnabled(true);//modified: SplitTagOrAddBreak
     ui.actionMergeNextElement->setEnabled(true);//modified: MergeNextElement
     UpdateUIOnTabChanges();
     m_FindReplace->ShowHide();
@@ -4638,8 +4692,10 @@ void MainWindow::SetStateActionsStaticView()
 
 void MainWindow::SetupPreviewTimer()
 {
+    SettingsStore ss;
+    int tv = ss.uiPreviewTimeout();
     m_PreviewTimer.setSingleShot(true);
-    m_PreviewTimer.setInterval(1000);
+    m_PreviewTimer.setInterval(tv);
     connect(&m_PreviewTimer, SIGNAL(timeout()), this, SLOT(UpdatePreview()));
     m_PreviewTimer.stop();
 }
@@ -4858,7 +4914,7 @@ void MainWindow::UpdateZoomLabel(float new_zoom_factor)
 void MainWindow::CreateSectionBreakOldTab(QString content, HTMLResource *originating_resource)
 {
     if (content.isEmpty()) {
-        QMessageBox::warning(this, tr("Sigil"), tr("File cannot be split at this position."));
+        Utility::warning(this, tr("Sigil"), tr("File cannot be split at this position."));
         return;
     }
 
@@ -4899,19 +4955,19 @@ bool MainWindow::SplitOnSGFSectionMarkers()
     foreach(Resource * resource, html_resources) {
         HTMLResource *html_resource = qobject_cast<HTMLResource *>(resource);
         if (!html_resource) {
-            QMessageBox::warning(this, tr("Sigil"), tr("Cannot split since at least one file is not an HTML file."));
+            Utility::warning(this, tr("Sigil"), tr("Cannot split since at least one file is not an HTML file."));
             return false;
         }
 
         // Check if data is well formed before splitting.
         if (!html_resource->FileIsWellFormed()) {
-            QMessageBox::warning(this, tr("Sigil"), tr("Cannot split: %1 XML is not well formed").arg(html_resource->ShortPathName()));
+            Utility::warning(this, tr("Sigil"), tr("Cannot split: %1 XML is not well formed").arg(html_resource->ShortPathName()));
             return false;
         }
 
         // XXX: This should be using the mime type not the extension.
         if (!TEXT_EXTENSIONS.contains(QFileInfo(html_resource->Filename()).suffix().toLower())) {
-            QMessageBox::warning(this, tr("Sigil"), tr("Cannot split since at least one file may not be an HTML file."));
+            Utility::warning(this, tr("Sigil"), tr("Cannot split since at least one file may not be an HTML file."));
             return false;
         }
 
@@ -4999,6 +5055,7 @@ void MainWindow::ReadSettings()
 
     if (MaximizedState) {
 
+#ifndef Q_OS_MAC
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         QRect maxsize = settings.value("max_mw_geometry", QApplication::desktop()->availableGeometry(this)).toRect();
 #else
@@ -5006,9 +5063,12 @@ void MainWindow::ReadSettings()
 #endif
         setGeometry(maxsize);
         setWindowState(windowState() | Qt::WindowMaximized);
+#else
+        showMaximized();
+#endif
 
     } else if (FullScreenState) {
-
+#ifndef Q_OS_MAC
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         QRect maxsize = settings.value("max_mw_geometry", QApplication::desktop()->screenGeometry(this)).toRect();
 #else
@@ -5016,6 +5076,9 @@ void MainWindow::ReadSettings()
 #endif
         setGeometry(maxsize);
         setWindowState(windowState() | Qt::WindowFullScreen);
+#else
+        showFullScreen();
+#endif
     }
 
     DWINGEO qDebug() << "------";
@@ -5167,7 +5230,7 @@ bool MainWindow::MaybeSaveDialogSaysProceed()
 
     if (isWindowModified()) {
         QMessageBox::StandardButton button_pressed;
-        button_pressed = QMessageBox::warning(this,
+        button_pressed = Utility::warning(this,
                                               tr("Sigil"),
                                               tr("The document has been modified.\n"
                                                       "Do you want to save your changes?"),
@@ -5187,7 +5250,7 @@ bool MainWindow::MaybeSaveDialogSaysProceed()
 bool MainWindow::ProceedToOverwrite(const QString& msg, const QString &filename)
 {
     QMessageBox::StandardButton button_pressed;
-    button_pressed = QMessageBox::warning(this,
+    button_pressed = Utility::warning(this,
                                           tr("Sigil"),
                                           msg + "\n" + filename + "\n\n" +
                                           tr("Should Sigil overwrite this file?"),
@@ -5204,7 +5267,6 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
     m_BookBrowser->SetBook(m_Book);
     m_TableOfContents->SetBook(m_Book);
     m_ValidationResultsView->SetBook(m_Book);
-    m_ValidationResultsView->SetBookBrowser(m_BookBrowser); // modified: correctOPF;
     m_IndexEditor->SetBook(m_Book);
     m_ClipEditor->SetBook(m_Book);
     m_SpellcheckEditor->SetBook(m_Book);
@@ -5505,16 +5567,17 @@ bool MainWindow::SaveFile(const QString &fullfilepath, bool update_current_filen
         if (ss.cleanOn() & CLEANON_SAVE) {
             if (not_well_formed) {
                 QApplication::restoreOverrideCursor();
-                bool auto_fix = QMessageBox::Yes == QMessageBox::warning(this,
-                                tr("Sigil"),
-                                tr("This EPUB has HTML files that are not well formed and "
-                                   "your current Clean Source preferences are set to automatically mend on Save. "
-                                   "Saving a file that is not well formed will cause it to be automatically "
-                                   "fixed, which very rarely may result in some data loss.\n\n"
-                                   "Do you want to automatically mend the files before saving?"),
-                                QMessageBox::Yes|QMessageBox::No);
+                QMessageBox::StandardButton button_pressed = Utility::warning(this, tr("Sigil"),
+                            tr("This EPUB has HTML files that are not well formed and "
+                               "your current Clean Source preferences are set to mend on Save.\n\n"
+                               "Do you want to automatically mend the files before saving? Or cancel the Save?"),
+                               QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel);
+                if (button_pressed == QMessageBox::Cancel) {
+                    ShowMessageOnStatusBar(tr("Saving EPUB... cancelled"), 0);
+                    return false;
+                }
                 QApplication::setOverrideCursor(Qt::WaitCursor);
-                if (auto_fix) {
+                if (button_pressed == QMessageBox::Yes) {
                     CleanSource::ReformatAll(broken_resources, CleanSource::Mend);
                     not_well_formed = false;
                 }
@@ -5777,8 +5840,7 @@ void MainWindow::ApplyHeadingStyleToTab(QAction* act)
     QString name = act->objectName();
     if (name == "actionHeadingNormal") {
         heading_type = "Normal";
-    } 
-    else {
+    } else {
         heading_type = name[ name.length() - 1 ];
     }
 
@@ -5938,7 +6000,6 @@ void MainWindow::ExtendUI()
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(1);
     frame->setObjectName(FRAME_NAME);
-    //frame->setStyleSheet(TAB_STYLE_SHEET);
     setCentralWidget(frame);
     m_BookBrowser = new BookBrowser(this);
     m_BookBrowser->setObjectName(BOOK_BROWSER_NAME);
@@ -5958,7 +6019,6 @@ void MainWindow::ExtendUI()
 
     m_PreviewWindow = new PreviewWindow(this);
     m_PreviewWindow->setObjectName(PREVIEW_WINDOW_NAME);
-    m_PreviewWindow->setStyleSheet("QDockWidget {border: none;}");
     addDockWidget(Qt::RightDockWidgetArea, m_PreviewWindow);
     // Now that Book View is gone, show Preview by default on new installations
     // tabified with the TOC widget in the RightDockWidgetArea
@@ -5979,7 +6039,12 @@ void MainWindow::ExtendUI()
     m_TableOfContents->toggleViewAction()->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F3));
     ui.menuView->addAction(m_ValidationResultsView->toggleViewAction());
     m_ValidationResultsView->toggleViewAction()->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F2));
-
+    ui.menuView->addAction(ui.actionFocusBookBrowser);
+    ui.menuView->addAction(ui.actionFocusCodeView);
+    ui.menuView->addAction(ui.actionFocusPreview);
+    ui.menuView->addAction(ui.actionFocusTOC);
+    ui.menuView->addAction(ui.actionFocusClips);
+    
     // Create the view menu to hide and show toolbars.
     ui.menuToolbars->addAction(ui.toolBarNewActions->toggleViewAction());
     ui.menuToolbars->addAction(ui.toolBarFileActions->toggleViewAction());
@@ -6029,18 +6094,6 @@ void MainWindow::ExtendUI()
     statusBar()->addPermanentWidget(zoom_out);
     statusBar()->addPermanentWidget(m_slZoomSlider);
     statusBar()->addPermanentWidget(zoom_in);
-#if 0
-    // This was only needed for Bookview which is now gone
-
-    // We override the default color for highlighted text
-    // so we can actually *see* the text that the FindReplace
-    // dialog finds in Book View... sadly, QWebView ignores a custom
-    // palette set on it directly, so we have to do this globally.
-    QPalette palette;
-    palette.setColor(QPalette::Inactive, QPalette::Highlight, Qt::darkGreen);
-    palette.setColor(QPalette::Inactive, QPalette::HighlightedText, Qt::white);
-    qApp->setPalette(palette);
-#endif
     // Setup userdefined keyboard shortcuts for actions.
     KeyboardShortcutManager *sm = KeyboardShortcutManager::instance();
     // Note: shortcut action Ids should not be translated.
@@ -6170,8 +6223,10 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionZoomOut, "MainWindow.ZoomOut");
     sm->registerAction(this, ui.actionZoomReset, "MainWindow.ZoomReset");
     sm->registerAction(this, m_BookBrowser->toggleViewAction(), "MainWindow.BookBrowser");
-    sm->registerAction(this, m_ValidationResultsView->toggleViewAction(), "MainWindow.ValidationResults");
+    sm->registerAction(this, m_Clips->toggleViewAction(), "MainWindow.ClipsWindow");
+    sm->registerAction(this, m_PreviewWindow->toggleViewAction(), "MainWindow.PreviewWindow");
     sm->registerAction(this, m_TableOfContents->toggleViewAction(), "MainWindow.TableOfContents");
+    sm->registerAction(this, m_ValidationResultsView->toggleViewAction(), "MainWindow.ValidationResults");
     // Window
     sm->registerAction(this, ui.actionNextTab, "MainWindow.NextTab");
     sm->registerAction(this, ui.actionPreviousTab, "MainWindow.PreviousTab");
@@ -6220,13 +6275,20 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionPlugin9,  "MainWindow.Plugins.RunPlugin9");
     sm->registerAction(this, ui.actionPlugin10, "MainWindow.Plugins.RunPlugin10");
 
+    // for keyboard focus navigation
+    sm->registerAction(this, ui.actionFocusCodeView,    "MainWindow.FocusOnCodeView");
+    sm->registerAction(this, ui.actionFocusBookBrowser, "MainWindow.FocusOnBookBrowser");
+    sm->registerAction(this, ui.actionFocusPreview,     "MainWindow.FocusOnPreview");
+    sm->registerAction(this, ui.actionFocusTOC,         "MainWindow.FocusOnTOC");
+    sm->registerAction(this, ui.actionFocusClips,       "MainWindow.FocusOnClips");
+    
     //---------------------------------- modified: MainWindowExt ---------------------------------------
     sm->registerAction(this, ui.actionEpub3To2, "MainWindow.Epub3To2"); // modified: Epub3ToEpub2
     sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
     sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
     sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
-    sm->registerAction(this, ui.actionSplitBlockOrAddBreak, "MainWindow.SplitBlockOrAddBreak"); // modified: SplitBlockOrAddBreak
+    sm->registerAction(this, ui.actionSplitTagOrAddBreak, "MainWindow.SplitTagOrAddBreak"); // modified: SplitTagOrAddBreak
     sm->registerAction(this, ui.actionMergeNextElement, "MainWindow.MergeNextElement");//modified: MergeNextElement
     //--------------------------------------------------------------------------------------------------
 
@@ -6243,6 +6305,16 @@ void MainWindow::ExtendUI()
     ui.tbAutomate1->setDefaultAction(ui.actionAutomate1);
     ui.tbAutomate2->setDefaultAction(ui.actionAutomate2);
     ui.tbAutomate3->setDefaultAction(ui.actionAutomate3);
+
+#if 1
+    // use this code to disable any QToolButtons with pull down menus
+    // from inadvertantly being on the tab to shift focus chain
+    ui.tbHeadings->setFocusPolicy(Qt::NoFocus);
+    ui.tbCase->setFocusPolicy(Qt::NoFocus);
+    ui.tbAutomate1->setFocusPolicy(Qt::NoFocus);
+    ui.tbAutomate2->setFocusPolicy(Qt::NoFocus);
+    ui.tbAutomate3->setFocusPolicy(Qt::NoFocus);
+#endif
 
     UpdateClipsUI();
 }
@@ -6312,6 +6384,7 @@ void MainWindow::UpdateLastSizes() {
 // so keep the code
 void MainWindow::RestoreLastNormalGeometry()
 {
+#ifndef Q_OS_MAC
     // record the current sizes before changing then as they
     // are updated in the resize event
     QByteArray WindowSize = m_LastWindowSize;
@@ -6322,8 +6395,8 @@ void MainWindow::RestoreLastNormalGeometry()
     m_SaveLastEnabled = false;
     if (!WindowSize.isEmpty()) restoreGeometry(WindowSize);
     m_SaveLastEnabled=true;
-
     DWINGEO DebugCurrentWidgetSizes();
+#endif
 }
 
 void MainWindow::changeEvent(QEvent *e) 
@@ -6368,7 +6441,7 @@ void MainWindow::changeEvent(QEvent *e)
 
                 DWINGEO {
                     QScreen * srn = qApp->primaryScreen();
-                    qDebug() << "Primary Screen";
+                    qDebug() << "Primary Screen: " << srn->name() << srn->manufacturer() << srn->serialNumber();
                     qDebug() << "    geo        : " << srn->geometry();
                     qDebug() << "    avail   geo: " << srn->availableGeometry();
                     qDebug() << "    devideRatio: " << srn->devicePixelRatio();
@@ -6379,8 +6452,8 @@ void MainWindow::changeEvent(QEvent *e)
                     QList<QScreen*>screenlist = QGuiApplication::screens();
                     int numscreens = screenlist.count();
                     for (int i = 0; i < numscreens; i++) {
-                        qDebug() << "Screen: " << i;
                         QScreen *asrn = screenlist.at(i);
+                        qDebug() << "Screen: " << i << asrn->name() << asrn->manufacturer() << asrn->serialNumber();
                         qDebug() << "    geo        : " << asrn->geometry();
                         qDebug() << "    avail   geo: " << asrn->availableGeometry();
                         qDebug() << "    devideRatio: " << asrn->devicePixelRatio();
@@ -6539,6 +6612,12 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionGoBackFromLinkOrStyle,  SIGNAL(triggered()), this,   SLOT(GoBackFromLinkOrStyle()));
     connect(ui.actionSplitOnSGFSectionMarkers, SIGNAL(triggered()),  this,   SLOT(SplitOnSGFSectionMarkers()));
     connect(ui.actionPasteClipboardHistory,    SIGNAL(triggered()),  this,   SLOT(ShowPasteClipboardHistoryDialog()));
+    // Keyboard Focus Navigation
+    connect(ui.actionFocusCodeView,    SIGNAL(triggered()), this, SLOT(FocusOnCodeView()));
+    connect(ui.actionFocusBookBrowser, SIGNAL(triggered()), this, SLOT(FocusOnBookBrowser()));
+    connect(ui.actionFocusPreview,     SIGNAL(triggered()), this, SLOT(FocusOnPreview()));
+    connect(ui.actionFocusTOC,         SIGNAL(triggered()), this, SLOT(FocusOnTOC()));
+    connect(ui.actionFocusClips,       SIGNAL(triggered()), this, SLOT(FocusOnClips()));
 
     // Clips
     foreach(QAction* clipaction, m_clactions) {
@@ -6648,6 +6727,7 @@ void MainWindow::ConnectSignalsToSlots()
     // Plugins
     PluginDB *pdb = PluginDB::instance();
     connect(pdb, SIGNAL(plugins_changed()), this, SLOT(loadPluginsMenu()));
+
 }
 
 void MainWindow::MakeTabConnections(ContentTab *tab)
@@ -6731,7 +6811,7 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(ui.actionAddMisspelledWord,        SIGNAL(triggered()),  tab,   SLOT(AddMisspelledWord()));
         connect(ui.actionIgnoreMisspelledWord,     SIGNAL(triggered()),  tab,   SLOT(IgnoreMisspelledWord()));
         connect(this,                              SIGNAL(SettingsChanged()), tab, SLOT(LoadSettings()));
-        connect(ui.actionSplitBlockOrAddBreak,     SIGNAL(triggered()),  tab,   SLOT(SplitBlockOrAddBreak())); // modified: SplitBlockOrAddBreak
+        connect(ui.actionSplitTagOrAddBreak,     SIGNAL(triggered()),  tab,   SLOT(SplitTagOrAddBreak())); // modified: SplitTagOrAddBreak
         connect(ui.actionMergeNextElement,         SIGNAL(triggered()),  tab,   SLOT(MergeNextElement())); // modified: MergeNextElement
         connect(tab,   SIGNAL(OpenIndexEditorRequest(IndexEditorModel::indexEntry *)),
                 this,  SLOT(IndexEditorDialog(IndexEditorModel::indexEntry *)));
@@ -6816,7 +6896,7 @@ void MainWindow::BreakTabConnections(ContentTab *tab)
     disconnect(ui.actionPrint,                     0, tab, 0);
     disconnect(ui.actionAddToIndex,                0, tab, 0);
     disconnect(ui.actionMarkForIndex,              0, tab, 0);
-    disconnect(ui.actionSplitBlockOrAddBreak,      0, tab, 0);//modified: SplitBlockOrAddBreak
+    disconnect(ui.actionSplitTagOrAddBreak,        0, tab, 0);//modified: SplitTagOrAddBreak
     disconnect(ui.actionMergeNextElement,          0, tab, 0);//modified: MergeNextElement
     disconnect(ui.actionPasteRichText,             0, tab, 0);//modified: AddPasteRichText
 }
@@ -6832,4 +6912,61 @@ QList<SearchEditorModel::searchEntry*> MainWindow::SearchEditorGetCurrentEntries
 void MainWindow::SearchEditorRecordEntryAsCompleted(SearchEditorModel::searchEntry* entry)
 {
     m_SearchEditor->RecordEntryAsCompleted(entry);
+}
+
+void MainWindow::FocusOnCodeView()
+{
+    if (!m_TabManager) return;
+    FocusOn(m_TabManager);
+    ContentTab * tab = GetCurrentContentTab();
+    if (tab) {
+        tab->raise();
+        tab->setFocus();
+    }
+    ShowMessageOnStatusBar(tr("Focus changed to CodeView window."));
+}
+
+void MainWindow::FocusOnBookBrowser()
+{
+    if (!m_BookBrowser) return;
+    FocusOn(m_BookBrowser);
+    m_BookBrowser->raise();
+    m_BookBrowser->FocusOnBookBrowser();
+    ShowMessageOnStatusBar(tr("Focus changed to BookBrowser window."));
+}
+
+void MainWindow::FocusOnPreview()
+{
+    if (!m_PreviewWindow) return;
+    FocusOn(m_PreviewWindow);
+    m_PreviewWindow->raise();
+    m_PreviewWindow->SetFocusOnPreview();
+    ShowMessageOnStatusBar(tr("Focus changed to Preview window."));
+}
+
+void MainWindow::FocusOnTOC()
+{
+    if (!m_TableOfContents) return;
+    FocusOn(m_TableOfContents);
+    m_TableOfContents->raise();
+    m_TableOfContents->SetFocusOnTOC();
+    ShowMessageOnStatusBar(tr("Focus changed to Table Of Contents window."));
+}
+
+void MainWindow::FocusOnClips()
+{
+    if (!m_Clips) return;
+    FocusOn(m_Clips);
+    m_Clips->raise();
+    m_Clips->SetFocusOnClips();
+    ShowMessageOnStatusBar(tr("Focus changed to Clips window."));
+}
+
+void MainWindow::FocusOn(QWidget* dw)
+{
+    if (dw) {
+        dw->show();
+        dw->activateWindow();
+        dw->setFocus(Qt::ShortcutFocusReason);
+    }
 }

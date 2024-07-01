@@ -1,9 +1,98 @@
+Sigil-2.2.1
+   Bug Fixes
+     - fix bug introduced by using ClickFocus policy on QToolButtons with menus instead of NoFocus
+     - update base.ts for late Preferences tranaslation change missed in the last release
+     - update Translations from Transifex
+     - fix incorrect std button icon under Fusion for Sigil Preferences Open Preference Folder
+     - set default button in the fix doctype/headers dialog on epub load to Yes to match earlier behaviour
+
+     
+Sigil-2.2.0
+    New Features
+      - add support for Windows live switching from dark to light and light to dark modes
+      - add support for Linux kde and gtk3 live switching from dark to light and light to dark modes
+      - add new environment variable: SIGIL_PREVIEW_TIMEOUT
+           (in milliseconds) to allow user control of the Preview updating intervals,
+           valid range 100 - 10000.  default value: 1000.  Set only once at Sigil startup.
+      - add new Find and Replace targets: Selected SVG files, Selected Javascript Files, and Selected Misc XML
+      - add new Find and Replace Regular Expression menu option: Unicode Property (*UCP)
+      - add ability to rename files when new name is just a case variant on case insensitive filesystems
+      - extended the number of clips that can be assigned to toolbars (total now of 60 clips supported)
+      - Accessibility improvements:
+          - add abiity to highlight the widget with current focus (Thanks BeckyEbook)
+          - add ability to double text insertion point width throughout Sigil
+      - Extend Python Plugin Interface with info on preferred font mangling information
+      - There will be no more built-in HighDPI diddling in Sigil's prefs. If you have special needs in that regard, set your own Qt environment variables.
+      - replacement strings in F&R can now use \x{hhhh} hex escape codes to represent unicode characters numerically
+
+    Bug Fixes
+      - reformating css with multiline now adds space after selector comma
+      - add in bulk resource move and use bulk delete to handle epubs with thousands of files
+      - add in bulk resource rename to handle epubs with thousands of files
+      - if Replace has focus and Find done, CodeView should get focus (Thanks BeckyEbook)
+      - fix dark mode Toolbar continuation symbols for Windows (Thank you BeckyEbook)
+      - fixed bug in Save-As context menu action in ImageTabs
+      - fix dark mode live switching on macOS issues qith QTreeView and QStandardItemModels
+      - fix bug in missing CharToEntity in the Create TOC process
+      - fix TabManager tab close symbol on macOS to match that used in dockwidgets
+      - use Unciode NormalizationForm C inside Sigil and for io
+      - fix macOS stuck at Maximized size issue
+
+
+Sigil-2.1.0
+    New Features
+      - assign menu accelerators P - &Plugins, and K - Chec&kpoints (thank you BeckyEbook)
+      - add ability to change keyboard focus using keyboard shortcuts or menus
+          to BookBrowser, Preview, CodeView, ClipsWindow, and TableOfContents Windows
+      - preserve Media Overlay Active Classes when deleting unused classes
+      - Goto Link Or Style (or Ctrl-Clicking on a class will now search selectors
+          with combinators if nothing found in normal css classes
+      - update to a newer Spanish hunspell dictionary
+      - overhaul of Building on Linux documentation
+      - update 3rdparty zlib to version 1.3.1 for security and other bug fixes
+      - update 3rdparty pcre2 to version 10.43 for security and other bug fixes
+      - update to Qt 6.6.2 for security fixes, accessibility improvements
+      - allow cancelling of Save if mend on save set and not well formed
+      - Windows users can now set the SIGIL_USE_FREETYPE_FONTENGINE environment variable
+           to more fully support woff and woff2 fonts
+      
+    Bug Fixes
+      - multiple bug fixes from Qt 6.6.2 such as the transient child window resize bug on Windows, etc
+      - fix QuickParser bug when parsing attribute names not properly ignoring all legal whitespace
+      - make OPF parsing robust to alternative whitespace usage as well
+      - fix creation of thumbnails of svg images in SelectFiles and Image Report for macOS
+      - fix svg rendering in QtSvg by filtering out desc and title tags inside text tags pre-rendering
+      - fix Python plugin quickparser.py to better handle svg mixed case tag names
+      - better handle cancelling out of plugins prior to their completion
+      - better handle Guide/Landmark title translations (thank you BeckyEbook)
+      - clean up cmake and build warnings
+      - fix crash on Windows when using woff/woff2 fonts
+
+
+Sigil-2.0.2
+    Bug Fixes
+      - fix incorrect clip tool button insertion point due to null activeWindow value
+      - fix Windows multiple screen issues when not properly identified (Qt6.5.2 patch fix)
+      - fix Mac Accessibility related crashes when using non-native QFileDialog (Qt 6.5.2 patch fix)
+      - workaround MacOS QMessageBox loss of focus Qt 6.5.X bug without hurting other platforms
+      - fix pretty print mend not formatting mathml
+      - fix Accessibility related crashes in QFontComboBox (Qt 6.5.2 patch fix)
+      - prevent crashing if user mistakenly tries to delete entire ncx in CodeView
+      - harden delete unused styles to trailing whitespace in class names
+      - fix unrecognized media-types application/xml and text/xml
+      - fix cursor just before end tag bug in align justiry, centre, right
+      - fix crash when all metadata removed by user in MetaEditor
+      - fix macOS min in Info.plist to be the actual 11.0
+      - update build docs to Qt 6.5.3
+
+
 Sigil-2.0.1
     Bug Fixes
       - fix crash when right click on Misc folder in BookBrowser
       - Allow user to revert CodeView drag_and_drop change via environment variable: SIGIL_ALLOW_CODEVIEW_DROP=1
         Note: Using DragnDrop in CodeView is still NOT officially supported.
       - add inadvertantly missed updated serbian translation (ts) file
+
 
 Sigil-2.0.0
     Bug Fixes

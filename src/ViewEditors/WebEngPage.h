@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2019-2023 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2019-2024 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2023- Doug Massay
 **
 **  This file is part of Sigil.
@@ -48,10 +48,12 @@ signals:
 
 private slots:
     void EmitLinkClicked();    
-
+    // void render_new_pid(qint64 pid);
+    // void render_died(QWebEnginePage::RenderProcessTerminationStatus terminationStatus, int exitCode);
+    // void lifecyclechange(QWebEnginePage::LifecycleState state);
+  
 private:
     QUrl m_url;
 };
 
 #endif // WEBENGPAGE_H
-

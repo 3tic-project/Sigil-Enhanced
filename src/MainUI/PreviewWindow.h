@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2015-2023 Doug Massay
 **  Copyright (C) 2012      Dave Heiland, John Schember
 **
@@ -25,13 +25,11 @@
 #ifndef PREVIEWWINDOW_H
 #define PREVIEWWINDOW_H
 
-#include <QPushButton>
 #include <QAction>
 #include <QtWebEngineWidgets>
 #include <QtWebEngineCore>
 #include <QWebEngineView>
 #include <QtWidgets/QDockWidget>
-#include <QTimer>
 #include <QStringList>
 #include <ViewEditors/Viewer.h>
 #include <Dialogs/Inspector.h>
@@ -44,6 +42,9 @@ class QHBoxLayout;
 class QProgressBar;
 class OverlayHelperWidget;
 class WebViewPrinter;
+class QToolButton;
+class QWidget;
+class QFocusFrame;
 
 class PreviewWindow : public QDockWidget
 {
@@ -75,7 +76,6 @@ public slots:
     void ReloadPreview();
     void InspectorClosed(int);
     void setProgress(int);
-    void ShowOverlay();
     
     /**
      * Set DockWidget titlebar text independently of tab text (when tabbed)
@@ -87,6 +87,7 @@ public slots:
     void PrintRendered();
     void PrintStarted();
     void PrintEnded();
+    void SetFocusOnPreview();
     
 signals:
     void Shown();
@@ -111,8 +112,9 @@ signals:
 protected:
     virtual void hideEvent(QHideEvent* event);
     virtual void showEvent(QShowEvent* event);
-    void resizeEvent(QResizeEvent * event);
+    virtual void resizeEvent(QResizeEvent * event);
 
+    
     /**
      * Reimplemented from QDockWidget to enable setTitleText()
      * @param event The underlying QPaintEvent.
@@ -125,11 +127,17 @@ private:
     void ConnectSignalsToSlots();
     void UpdateWindowTitle();
     bool fixup_fullscreen_svg_images(const QString &text);
-    void SetupOverlayTimer();
     
     const QString titleText();
 
     QWidget *m_MainWidget;
+    QToolButton * m_binspect;
+    QToolButton * m_bselect;
+    QToolButton * m_bcopy;
+    QToolButton * m_breload;
+    QToolButton * m_bcycle;
+    QToolButton * m_bprint;
+    QFrame *m_wrapper;
     QVBoxLayout *m_Layout;
     QHBoxLayout *m_buttons;
     OverlayHelperWidget *m_overlayBase;
@@ -153,13 +161,14 @@ private:
 
     QList<ElementIndex> m_location;
     
-    QTimer m_OverlayTimer;
     bool m_updatingPage;
     bool m_usingMathML;
     int m_cycleCSSLevel;
 
     bool m_skipPrintPreview;
     WebViewPrinter *m_WebViewPrinter;
+    bool m_use_focus_highlight;
+
 };
 
 #endif // PREVIEWWINDOW_H

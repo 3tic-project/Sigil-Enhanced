@@ -1,6 +1,6 @@
 ﻿/***************************************************************************
 **
-**  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2011-2012 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Dave Heiland
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -28,7 +28,6 @@
 #include <QString>
 #include <QAction>
 #include <QMenu>
-// #include <QToolButton>
 #include <QToolButton>
 #include <QKeyEvent>
 #include <QLineEdit>
@@ -43,6 +42,7 @@
 #include "Tabs/FlowTab.h"
 #include "MainUI/FindReplace.h"
 #include "Misc/SettingsStore.h"
+#include "Misc/Utility.h"
 #include "Misc/FindReplaceQLineEdit.h"
 #include "PCRE2/PCREErrors.h"
 #include "ResourceObjects/Resource.h"
@@ -61,7 +61,8 @@ static const int SHOW_FIND_RESULTS_MESSAGE_DELAY_MS = 20000;
 
 // mappings from LookWhere, Search, and Direction enums to Controls code
 // Must be kept in sync with those enums
-static const QStringList TGTS = QStringList() << "CF" << "AH" << "SH" << "TH" << "AC" << "SC" << "TC" << "OP" << "NX";
+static const QStringList TGTS = QStringList() << "CF" << "AH" << "SH" << "TH" << "AC" << "SC" <<
+                                                 "TC" << "OP" << "NX" << "SV" << "SJ" << "SX";
 static const QStringList MDS = QStringList() << "NL" << "CS" << "RX";
 static const QStringList DRS = QStringList() << "DN" << "UP";
 
@@ -83,13 +84,14 @@ FindReplace::FindReplace(MainWindow *main_window)
       m_StartingResource(nullptr),
       m_StartingPos(-1),
       m_InRemainder(false),
-      m_RestartPerformed(false),
+
       m_SearchRunning(false),
       m_DryRunRunning(false),
       m_ShiftUsed(false),
       m_DotAllCheckAction(nullptr),
       m_MinimalMatchCheckAction(nullptr),
       m_AutoTokeniseCheckAction(nullptr),
+      m_UnicodePropertyCheckAction(nullptr),
       m_menu(nullptr),
       m_CF_RestartFlag(false) //修改：循环查找BUG
 {
@@ -131,6 +133,10 @@ FindReplace::~FindReplace()
     if (m_AutoTokeniseCheckAction) {
         delete m_AutoTokeniseCheckAction;
         m_AutoTokeniseCheckAction = nullptr;
+    }
+    if (m_UnicodePropertyCheckAction) {
+        delete m_UnicodePropertyCheckAction;
+        m_UnicodePropertyCheckAction = nullptr;
     }
     if (m_menu) {
         delete m_menu;
@@ -176,19 +182,31 @@ void FindReplace::SetUpFindText()
 
     // Find text should be selected by default
     ui.cbFind->lineEdit()->selectAll();
-    SetFocus();
+    SetFocusFind();
 }
 
 
-void FindReplace::SetFocus()
+void FindReplace::SetFocusFind()
 {
     ui.cbFind->lineEdit()->setFocus(Qt::ShortcutFocusReason);
 }
 
 
-bool FindReplace::HasFocus()
+void FindReplace::SetFocusReplace()
+{
+    ui.cbReplace->lineEdit()->setFocus(Qt::ShortcutFocusReason);
+}
+
+
+bool FindReplace::HasFocusFind()
 {
     return ui.cbFind->lineEdit()->hasFocus();
+}
+
+
+bool FindReplace::HasFocusReplace()
+{
+    return ui.cbReplace->lineEdit()->hasFocus();
 }
 
 
@@ -199,6 +217,7 @@ QString FindReplace::GetControls()
     if (m_RegexOptionDotAll) controls << "DA";
     if (m_RegexOptionMinimalMatch) controls << "MM";
     if (m_RegexOptionAutoTokenise) controls << "AT";
+    if (m_RegexOptionUnicodeProperty) controls << "UN";
     if (m_OptionWrap) controls << "WR";
     if (m_RegexOptionTextOnly) controls << "TO";
     controls << DRS.at(GetSearchDirection());
@@ -210,13 +229,32 @@ QString FindReplace::GetControls()
 bool FindReplace::isSearchXML()
 {
     if (isWhereHTML() || isWhereOPF() || isWhereNCX()) return true;
-    if (isWhereCSS()) return false;
+    if (isWhereSVG() || isWhereMiscXML()) return true;
+    if (isWhereCSS() || isWhereJS()) return false;
     if (isWhereCF() || m_LookWhereCurrentFile) {
         Resource * current_resource = GetCurrentResource();
         QString mt = current_resource->GetMediaType();
-        if (mt.endsWith("+xml")) return true;
+        if (mt.endsWith("+xml") || mt == "application/xml" || mt == "text/xml") return true;
     }
     return false;
+}
+
+
+bool FindReplace::isWhereSVG()
+{
+    return GetLookWhere() == FindReplace::LookWhere_SelectedSVGFiles;
+}
+
+
+bool FindReplace::isWhereJS()
+{
+    return GetLookWhere() == FindReplace::LookWhere_SelectedJSFiles;
+}
+
+
+bool FindReplace::isWhereMiscXML()
+{
+    return GetLookWhere() == FindReplace::LookWhere_SelectedMiscXMLFiles;
 }
 
 
@@ -244,6 +282,9 @@ bool FindReplace::isWhereSelected()
         (GetLookWhere() == FindReplace::LookWhere_TabbedHTMLFiles) ||
         (GetLookWhere() == FindReplace::LookWhere_SelectedCSSFiles) ||
         (GetLookWhere() == FindReplace::LookWhere_TabbedCSSFiles) ||
+        (GetLookWhere() == FindReplace::LookWhere_SelectedSVGFiles) ||
+        (GetLookWhere() == FindReplace::LookWhere_SelectedJSFiles) ||
+        (GetLookWhere() == FindReplace::LookWhere_SelectedMiscXMLFiles) ||
         (GetLookWhere() == FindReplace::LookWhere_OPFFile) ||
         (GetLookWhere() == FindReplace::LookWhere_NCXFile)) return true;
     return false;
@@ -403,6 +444,7 @@ bool FindReplace::FindAnyText(QString text, bool escape)
     SetRegexOptionDotAll(true);
     SetRegexOptionTextOnly(false);
     SetRegexOptionMinimalMatch(true);
+    SetRegexOptionUnicodeProperty(false);
     // SetOptionWrap(true);
 
     QString search_text;
@@ -431,6 +473,7 @@ void FindReplace::FindAnyTextInTags(QString text)
     SetSearchDirection(FindReplace::SearchDirection_Down);
     SetRegexOptionDotAll(true);
     SetRegexOptionMinimalMatch(true);
+    SetRegexOptionUnicodeProperty(false);
     // SetOptionWrap(true);
     SetRegexOptionTextOnly(false);
     text = text + "(?=[^<]*>)(?!(?:[^<\"]*\"[^<\"]*\")+\\s*/?>)";
@@ -917,10 +960,16 @@ bool FindReplace::ReplaceText(Searchable::Direction direction, bool replace_curr
 
 void FindReplace::SetCodeViewIfNeeded()
 {
-    bool has_focus = HasFocus();
-    if (has_focus) {
+    if (HasFocusFind()) {
         // give the current tab CodeView Tab the focus
         ui.cbFind->lineEdit()->clearFocus();
+        ContentTab * current_tab = m_MainWindow->GetCurrentContentTab();
+        if (current_tab) current_tab->setFocus();
+        return;
+    }
+    if (HasFocusReplace()) {
+        // give the current tab CodeView Tab the focus
+        ui.cbReplace->lineEdit()->clearFocus();
         ContentTab * current_tab = m_MainWindow->GetCurrentContentTab();
         if (current_tab) current_tab->setFocus();
     }
@@ -987,6 +1036,9 @@ QString FindReplace::GetSearchRegex()
         if (m_RegexOptionMinimalMatch) {
             search = PrependRegexOptionToSearch(REGEX_OPTION_MINIMAL_MATCH, search);
         }
+        if (m_RegexOptionUnicodeProperty) {
+            search = PrependRegexOptionToSearch(REGEX_OPTION_UCP, search);
+        }
     }
     // qDebug() << "GetSearchRegex returns: " << search;
     return search;
@@ -995,10 +1047,14 @@ QString FindReplace::GetSearchRegex()
 QString FindReplace::PrependRegexOptionToSearch(const QString &option, const QString &search)
 {
     if (search.startsWith(REGEX_OPTION_UCP)) {
-        // Special case scenario - this directive must *always* be before any others
-        return REGEX_OPTION_UCP % option % search.mid(REGEX_OPTION_UCP.length());
+        if (option != REGEX_OPTION_UCP) {
+            // Special case scenario - this directive must *always* be before any others
+            return REGEX_OPTION_UCP % option % search.mid(REGEX_OPTION_UCP.length());
+        } else {
+            // already there so no change
+            return search;
+        }
     }
-
     return option % search;
 }
 
@@ -1040,7 +1096,7 @@ bool FindReplace::IsCurrentFileInSelection()
             }
         }
     }
-    DBG qDebug() << "IsCurrentFileInSection: " << found;
+    DBG qDebug() << "IsCurrentFileInSelection: " << found;
 
     return found;
 }
@@ -1075,6 +1131,15 @@ QList <Resource *> FindReplace::GetFilesToSearch(bool force_all)
 
     } else if (GetLookWhere() == FindReplace::LookWhere_NCXFile) {
         all_resources = m_MainWindow->GetNCXResource();
+
+    } else if (GetLookWhere() == FindReplace::LookWhere_SelectedSVGFiles) {
+        all_resources = m_MainWindow->GetValidSelectedSVGResources();
+
+    } else if (GetLookWhere() == FindReplace::LookWhere_SelectedJSFiles) {
+        all_resources = m_MainWindow->GetValidSelectedJSResources();
+
+    } else if (GetLookWhere() == FindReplace::LookWhere_SelectedMiscXMLFiles) {
+        all_resources = m_MainWindow->GetValidSelectedMiscXMLResources();
     }
 
     // special case an empty list or force all
@@ -1223,7 +1288,9 @@ bool FindReplace::FindInAllFiles(Searchable::Direction direction)
             }
         // ---------------------------------------------------------------------------------------------------------------------
             // Save if editor or F&R has focus
-            bool has_focus = HasFocus();
+            bool has_focus_find = HasFocusFind();
+            bool has_focus_replace = HasFocusReplace();
+            
             // Save selected resources since opening tabs changes selection
             QList<Resource *>selected_resources = m_MainWindow->GetBookBrowserSelectedResources();
 
@@ -1238,9 +1305,8 @@ bool FindReplace::FindInAllFiles(Searchable::Direction direction)
             }
 
             // Reset focus to F&R if it had it
-            if (has_focus) {
-                SetFocus();
-            }
+            if (has_focus_find) SetFocusFind();
+            if (has_focus_replace) SetFocusReplace();
 
             searchable = GetAvailableSearchable();
 
@@ -1278,6 +1344,12 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
         starting_resource = current_resource;
     } else if (isWhereCSS() && (current_resource->Type() == Resource::CSSResourceType)) {
         starting_resource = current_resource;
+    } else if (isWhereSVG() && (current_resource->Type() == Resource::SVGResourceType)) {
+        starting_resource = current_resource;
+    } else if (isWhereMiscXML() && (current_resource->Type() == Resource::XMLResourceType)) {
+        starting_resource = current_resource;
+    } else if (isWhereJS() && (current_resource->Type() == Resource::MiscTextResourceType)) {
+        starting_resource = current_resource;
     } else if (isWhereOPF() && (current_resource->Type() == Resource::OPFResourceType)) {
         starting_resource = current_resource;
     } else if (isWhereNCX() && (current_resource->Type() == Resource::NCXResourceType)) {
@@ -1293,7 +1365,7 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
 
     if (!starting_resource || (isWhereSelected() && !IsCurrentFileInSelection())) {
         need_to_check_assigned_starting_resource = true;
-        if (direction == Searchable::Direction_Up) {
+        if (direction == Searchable::Direction_Down) {
             starting_resource = resources.first();
         } else {
             starting_resource = resources.last();
@@ -1304,7 +1376,7 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
     //------------------------------------ 修改：循环查找BUG ----------------------------------------
     /*
     if (need_to_check_assigned_starting_resource) {
-        DBG qDebug() << "Trying newly assigned first eesource: " << next_resource->GetRelativePath();
+        DBG qDebug() << "Trying newly assigned first resource: " << next_resource->GetRelativePath();
         if (next_resource) {
             if (ResourceContainsCurrentRegex(next_resource)) {
                 DBG qDebug() << "Found it";
@@ -1411,7 +1483,7 @@ Resource *FindReplace::GetNextResource(Resource *current_resource, Searchable::D
     } else {
         next_reading_order = current_reading_order + 1 <= max_reading_order ? current_reading_order + 1 : 0;
     }
-
+    DBG qDebug() << "GetNextResource next_reading_order: " << next_reading_order << max_reading_order;
     if (next_reading_order > max_reading_order || next_reading_order < 0) {
         DBG qDebug() << "GetNextResource returns NULL";
         return NULL;
@@ -1533,6 +1605,12 @@ void FindReplace::UpdateSearchControls(const QString &text)
         SetLookWhere(FindReplace::LookWhere_OPFFile);
     } else if (text.contains("NX")) {
         SetLookWhere(FindReplace::LookWhere_NCXFile);
+    } else if (text.contains("SV")) {
+        SetLookWhere(FindReplace::LookWhere_SelectedSVGFiles);
+    } else if (text.contains("SJ")) {
+        SetLookWhere(FindReplace::LookWhere_SelectedJSFiles);
+    } else if (text.contains("SX")) {
+        SetLookWhere(FindReplace::LookWhere_SelectedMiscXMLFiles);
     }
 
     // Search Direction
@@ -1548,6 +1626,7 @@ void FindReplace::UpdateSearchControls(const QString &text)
     SetRegexOptionDotAll(text.contains("DA"));
     SetRegexOptionMinimalMatch(text.contains("MM"));
     SetRegexOptionAutoTokenise(text.contains("AT"));
+    SetRegexOptionUnicodeProperty(text.contains("UN"));
 }
 
 
@@ -1583,6 +1662,9 @@ FindReplace::LookWhere FindReplace::GetLookWhere()
         case FindReplace::LookWhere_TabbedCSSFiles:
         case FindReplace::LookWhere_OPFFile:
         case FindReplace::LookWhere_NCXFile:
+        case FindReplace::LookWhere_SelectedSVGFiles:
+        case FindReplace::LookWhere_SelectedJSFiles:
+        case FindReplace::LookWhere_SelectedMiscXMLFiles:
             return static_cast<FindReplace::LookWhere>(look);
             break;
 
@@ -1641,6 +1723,8 @@ void FindReplace::ReadSettings()
     SetRegexOptionMinimalMatch(regexOptionMinimalMatch);
     bool regexOptionAutoTokenise = settings.value("regexoptionautotokenise", false).toBool();
     SetRegexOptionAutoTokenise(regexOptionAutoTokenise);
+    bool regexOptionUnicodeProperty = settings.value("regexoptionunicodeproperty", false).toBool();
+    SetRegexOptionUnicodeProperty(regexOptionUnicodeProperty);
     bool optionWrap = settings.value("optionwrap", true).toBool();
     SetOptionWrap(optionWrap);
     bool regexOptionTextOnly = settings.value("regexoptiontextonly", false).toBool();
@@ -1722,6 +1806,7 @@ void FindReplace::WriteSettings()
     settings.setValue("regexoptiondotall", m_DotAllCheckAction->isChecked());
     settings.setValue("regexoptionminimalmatch", m_MinimalMatchCheckAction->isChecked());
     settings.setValue("regexoptionautotokenise", m_AutoTokeniseCheckAction->isChecked());
+    settings.setValue("regexoptionunicodeproperty", m_UnicodePropertyCheckAction->isChecked());
     settings.setValue("optionwrap", ui.chkOptionWrap->isChecked());
     settings.setValue("regexoptiontextonly", ui.chkOptionTextOnly->isChecked());
     settings.endGroup();
@@ -2038,7 +2123,7 @@ void FindReplace::SetSearchDirection(int search_direction)
 void FindReplace::ClearHistory()
 {
     QMessageBox::StandardButton button_pressed;
-    button_pressed = QMessageBox::warning(this,
+    button_pressed = Utility::warning(this,
             tr("Sigil"),
             tr("Are you sure you want to clear your Find and Replace current values and history?"),
             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel
@@ -2139,6 +2224,12 @@ void FindReplace::SetRegexOptionAutoTokenise(bool new_state)
     m_AutoTokeniseCheckAction->setChecked(new_state);
 }
 
+void FindReplace::SetRegexOptionUnicodeProperty(bool new_state)
+{
+    m_RegexOptionUnicodeProperty = new_state;
+    m_UnicodePropertyCheckAction->setChecked(new_state);
+}
+
 void FindReplace::SetOptionWrap(bool new_state)
 {
     m_OptionWrap = new_state;
@@ -2207,6 +2298,15 @@ void FindReplace::ExtendUI()
     ui.cbLookWhere->addItem(tr("NCX File"), FindReplace::LookWhere_NCXFile);
     look_tooltip += "<dt><b>" + tr("NCX File") + "</b><dd>" + tr("Restrict the find or replace to the NCX file.") + "</dd>";
 
+    ui.cbLookWhere->addItem(tr("Selected SVG Files"), FindReplace::LookWhere_SelectedSVGFiles);
+    look_tooltip += "<dt><b>" + tr("Selected SVG Files") + "</b><dd>" + tr("Restrict the find or replace to the SVG files selected in the Book Browser in Code View.") + "</dd>";
+
+    ui.cbLookWhere->addItem(tr("Selected Javascript Files"), FindReplace::LookWhere_SelectedJSFiles);
+    look_tooltip += "<dt><b>" + tr("Selected JS Files") + "</b><dd>" + tr("Restrict the find or replace to the JS files selected in the Book Browser in Code View.") + "</dd>";
+
+    ui.cbLookWhere->addItem(tr("Selected Misc XML Files"), FindReplace::LookWhere_SelectedMiscXMLFiles);
+    look_tooltip += "<dt><b>" + tr("Selected Misc XML Files") + "</b><dd>" + tr("Restrict the find or replace to the XML files selected in the Misc folder of the Book Browser in Code View.") + "</dd>";
+
     look_tooltip += "</dl>";
     look_tooltip += "<p>" + tr("To restrict search to selected text, use Search&rarr;Mark Selected Text.") + "</p>";
     ui.cbLookWhere->setToolTip(look_tooltip);
@@ -2249,6 +2349,13 @@ void FindReplace::ExtendUI()
     m_AutoTokeniseCheckAction->setToolTip(tr("For Regex searches, tokenise/escape selection when opening Find."));
     m_AutoTokeniseCheckAction->setChecked(m_RegexOptionAutoTokenise);
     m_menu->addAction(m_AutoTokeniseCheckAction);
+
+    m_UnicodePropertyCheckAction = new QAction(tr("Unicode Property"), m_menu);
+    m_UnicodePropertyCheckAction->setCheckable(true);
+    m_UnicodePropertyCheckAction->setEnabled(true);
+    m_UnicodePropertyCheckAction->setToolTip(tr("For Regex searches, set the Unicode Property flag."));
+    m_UnicodePropertyCheckAction->setChecked(m_RegexOptionUnicodeProperty);
+    m_menu->addAction(m_UnicodePropertyCheckAction);
 
     // the toolbutton will NOT take ownership of the menu as per the Qt docs
     // so clean up manually
@@ -2305,6 +2412,7 @@ void FindReplace::ConnectSignalsToSlots()
     connect(m_DotAllCheckAction, SIGNAL(triggered(bool)), this, SLOT(SetRegexOptionDotAll(bool)));
     connect(m_MinimalMatchCheckAction, SIGNAL(triggered(bool)), this, SLOT(SetRegexOptionMinimalMatch(bool)));
     connect(m_AutoTokeniseCheckAction, SIGNAL(triggered(bool)), this, SLOT(SetRegexOptionAutoTokenise(bool)));
+    connect(m_UnicodePropertyCheckAction, SIGNAL(triggered(bool)), this, SLOT(SetRegexOptionUnicodeProperty(bool)));
     connect(ui.chkOptionWrap, SIGNAL(clicked(bool)), this, SLOT(SetOptionWrap(bool)));
     connect(ui.chkOptionTextOnly, SIGNAL(clicked(bool)), this, SLOT(SetRegexOptionTextOnly(bool)));
     connect(ui.cbFind, SIGNAL(editTextChanged(const QString&)), this, SLOT(ValidateRegex()));
@@ -2313,4 +2421,5 @@ void FindReplace::ConnectSignalsToSlots()
     connect(m_DotAllCheckAction, SIGNAL(triggered(bool)), this, SLOT(ValidateRegex()));
     connect(m_MinimalMatchCheckAction, SIGNAL(triggered(bool)), this, SLOT(ValidateRegex()));
     connect(m_AutoTokeniseCheckAction, SIGNAL(triggered(bool)), this, SLOT(ValidateRegex()));
+    connect(m_UnicodePropertyCheckAction, SIGNAL(triggered(bool)), this, SLOT(ValidateRegex()));
 }
