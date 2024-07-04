@@ -1098,7 +1098,6 @@ private:
 public slots:
     void Epub3ToEpub2(); //modified: Epub3ToEpub2
     void Epub2ToEpub3(); //modified: Epub2ToEpub3
-    bool NormalizedOPF(); //modified: NormalizedOPF
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private slots:
     void ApplyHeadingStyleToTab_Plus(QAction* act); // modified: Add Lables On Multiple Lines

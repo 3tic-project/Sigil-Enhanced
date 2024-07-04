@@ -398,7 +398,6 @@
     <addaction name="menuReformatHTML"/>
     <addaction name="menuEPUB3Tools"/>
     <addaction name="actionWellFormedCheckEpub"/>
-	<addaction name="actionNormalizedOPF"/>
     <addaction name="actionValidateStylesheetsWithW3C"/>
     <addaction name="actionReports"/>
     <addaction name="separator"/>
@@ -1872,14 +1871,6 @@
    <property name="toolTip">
     <string>Tutorials</string>
    </property>
-  </action>
-  <action name="actionNormalizedOPF">
-    <property name="text">
-	    <string>Normalized OPF</string>
-    </property>
-    <property name="toolTip">
-	    <string>Well formed check and normalized the OPF.</string>
-    </property>
   </action>
   <action name="actionWellFormedCheckEpub">
    <property name="text">

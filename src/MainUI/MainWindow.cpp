@@ -4277,17 +4277,10 @@ void MainWindow::updateToolTipsOnPluginIcons()
     }
 }
 
-//----------modified: NormalizedOPF--------------
-bool MainWindow::NormalizedOPF()
-{
-    m_ValidationResultsView->correctOPF();
-    return true;
-}
-//-----------------------------------------------
-
 bool MainWindow::WellFormedCheckEpub()
 {
-    m_ValidationResultsView->ValidateCurrentBook();
+    //m_ValidationResultsView->ValidateCurrentBook();
+    m_ValidationResultsView->ValidateCurrentBook_M(); // modified: well formed check
     return true;
 }
 
@@ -5267,6 +5260,7 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
     m_BookBrowser->SetBook(m_Book);
     m_TableOfContents->SetBook(m_Book);
     m_ValidationResultsView->SetBook(m_Book);
+    m_ValidationResultsView->SetBookBrowser(m_BookBrowser); // modified: correctOPF;
     m_IndexEditor->SetBook(m_Book);
     m_ClipEditor->SetBook(m_Book);
     m_SpellcheckEditor->SetBook(m_Book);
@@ -6285,7 +6279,6 @@ void MainWindow::ExtendUI()
     //---------------------------------- modified: MainWindowExt ---------------------------------------
     sm->registerAction(this, ui.actionEpub3To2, "MainWindow.Epub3To2"); // modified: Epub3ToEpub2
     sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
-    sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
     sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     sm->registerAction(this, ui.actionSplitTagOrAddBreak, "MainWindow.SplitTagOrAddBreak"); // modified: SplitTagOrAddBreak
@@ -6720,7 +6713,6 @@ void MainWindow::ConnectSignalsToSlots()
     //------------------------------------ modified: MainWindowExt --------------------------------
     connect(ui.actionEpub3To2, SIGNAL(triggered()), this, SLOT(Epub3ToEpub2())); // modified: Epub3ToEpub2
     connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
-    connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
     //---------------------------------------------------------------------------------------------
 

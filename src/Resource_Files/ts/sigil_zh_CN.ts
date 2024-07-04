@@ -9798,12 +9798,6 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <source>F7</source>
         <translation>F7</translation>
     </message>
-    <!-- modified -->
-    <message>
-        <location filename="../../Form_Files/main.ui" line="0"/>
-        <source>Normalized OPF</source>
-        <translation>OPF规范化</translation>
-    </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1842"/>
         <source>Validate Stylesheets With &amp;W3C</source>
