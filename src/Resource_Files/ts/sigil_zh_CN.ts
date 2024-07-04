@@ -3092,7 +3092,7 @@ Valid only when searching HTML files.</source>
         <location filename="../../MainUI/FindReplace.cpp" line="774"/>
         <location filename="../../MainUI/FindReplace.cpp" line="2022"/>
         <source>Replacements made: %n</source>
-        <translation><numerusform>已完成替换：％n</numerusform></translation>
+        <translation><numerusform>已完成替换：%n</numerusform></translation><!--modified-->
     </message>
     <message>
         <location filename="../../MainUI/FindReplace.cpp" line="900"/>
