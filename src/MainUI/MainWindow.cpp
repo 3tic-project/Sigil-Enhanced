@@ -4652,14 +4652,14 @@ void MainWindow::updateToolTipsOnAutomateIcons()
 //----------modified: NormalizedOPF--------------
 bool MainWindow::NormalizedOPF()
 {
-    m_ValidationResultsView->correctOPF();
+    m_ValidationResultsView->LoadResults(m_ValidationResultsView->correctOPF());
     return true;
 }
 //-----------------------------------------------
 
 bool MainWindow::WellFormedCheckEpub()
 {
-    m_ValidationResultsView->ValidateCurrentBook();
+    m_ValidationResultsView->ValidateCurrentBook_M();
     return true;
 }
 

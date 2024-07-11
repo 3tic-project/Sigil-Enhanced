@@ -62,7 +62,9 @@ public:
      */
     void ValidateCurrentBook();
 
-    void correctOPF(); //modified: correctOPF
+    QList<ValidationResult> validateXhtml(); // modified: validateXhtml
+    QList<ValidationResult> correctOPF(); // modified: correctOPF
+    void ValidateCurrentBook_M(); // modified: well formed check
 
     QStringList ValidateFile(QString &apath);
 
@@ -123,7 +125,6 @@ private:
 
     void ReadSettings();
     void WriteSettings();
-    void DisplayCorrectOPFResults(QList<pair<QString, QString>> log);//modified: correctOPF
 
     /**
      * Sets up the table widget to our liking.
@@ -184,5 +185,3 @@ private:
 };
 
 #endif // VALIDATIONRESULTSVIEW_H
-
-
