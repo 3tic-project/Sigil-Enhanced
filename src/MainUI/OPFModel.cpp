@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
 **
 **  Copyright (C) 2015-2023 Kevin B. Hendricks, Stratford, Ontario Canada
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -343,94 +343,89 @@ bool OPFModel:: RenameResource(Resource *resource, const QString &new_filename)
     return RenameResourceList(resources, filenames);
 }
 
-bool OPFModel:: RenameResourceList(const QList<Resource *> &resources, const QStringList &new_filenames)
+bool OPFModel::RenameResourceList(const QList<Resource*>& resources, const QStringList& new_filenames)
 {
     QApplication::setOverrideCursor(Qt::WaitCursor);
     QStringList not_renamed;
     QHash<QString, QString> update;
-    QList<Resource*> bulk_rename;
-    QStringList newnames;
-    QStringList oldpaths;
     SettingsStore ss;
+    //--------- modified: BulkResourceRenamed ----------
+    QList<QString> old_full_paths;
+    QList<Resource*> valid_resources;
+    //--------------------------------------------------
     int i = 0;
     foreach(Resource * resource, resources) {
-        QString oldbookpath = resource->GetRelativePath();
-        QString oldfilename = resource->Filename();
-        QString extension = oldfilename.right(oldfilename.length() - oldfilename.lastIndexOf('.'));
-        QString newfilename = new_filenames.at(i++);
-        QString newfilename_with_extension = newfilename;
+        QString old_bookpath = resource->GetRelativePath();
+        QString old_filename = resource->Filename();
+        QString extension = old_filename.right(old_filename.length() - old_filename.lastIndexOf('.'));
+
+        QString new_filename = new_filenames.at(i++);
+        QString new_filename_with_extension = new_filename;
 
         // do not rename files in META-INF
-        if (oldbookpath.startsWith("META-INF/")) continue;
+        if (old_bookpath.startsWith("META-INF/")) continue;
 
-        if (!newfilename.contains('.')) {
-            newfilename_with_extension.append(extension);
+        if (!new_filename.contains('.')) {
+            new_filename_with_extension.append(extension);
         }
 
-        if (oldfilename == newfilename_with_extension) {
+        if (old_filename == new_filename_with_extension) {
             continue;
         }
 
-        if (!FilenameIsValid(oldbookpath, newfilename_with_extension)) {
+        if (!FilenameIsValid(old_bookpath, new_filename_with_extension)) {
             if (ss.showFullPathOn()) {
                 not_renamed.append(resource->GetRelativePath());
-            } else {
+            }
+            else {
                 not_renamed.append(resource->ShortPathName());
             }
+
             continue;
         }
 
+        bool rename_success = false;
+        //------------------------------------ modified: BulkResourceRenamed ---------------------------------
+        disconnect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); // 取消资源文件对FolderKeeper发送Renamed信号
+        QString old_full_path = resource->GetFullPath();  // 提前通过GetFullPath()保存旧路径。在RenameTo()之后，GetFullPath()的值会更改为新值，必须提前保存旧值。
+        //----------------------------------------------------------------------------------------------------
         // special case the OPFResource and the NCXResource
         if (resource->Type() == Resource::OPFResourceType) {
             OPFResource* opfres = qobject_cast<OPFResource*>(resource);
             if (opfres) {
-                if (opfres->RenameTo(newfilename_with_extension)) {
-                    QString newbookpath = opfres->GetRelativePath();
-                    resource->SetCurrentBookRelPath(oldbookpath);
-                    update[ oldbookpath ] = newbookpath;
-                } else {
-                    not_renamed.append(oldbookpath);
-                }
+                rename_success = opfres->RenameTo(new_filename_with_extension);
             }
-            continue;
         }
-
-        if (resource->Type() == Resource::NCXResourceType) {
+        else if (resource->Type() == Resource::NCXResourceType) {
             NCXResource* ncxres = qobject_cast<NCXResource*>(resource);
             if (ncxres) {
-                if (ncxres->RenameTo(newfilename_with_extension)) {
-                    QString newbookpath = ncxres->GetRelativePath();
-                    resource->SetCurrentBookRelPath(oldbookpath);
-                    update[ oldbookpath ] = newbookpath;
-                } else {
-                    not_renamed.append(oldbookpath);
-                }
+                rename_success = ncxres->RenameTo(new_filename_with_extension);
+            }
+        }
+        else {
+            rename_success = resource->RenameTo(new_filename_with_extension);
+        }
+        if (!rename_success) {
+            if (ss.showFullPathOn()) {
+                not_renamed.append(resource->GetRelativePath());
+            }
+            else {
+                not_renamed.append(resource->ShortPathName());
             }
             continue;
         }
-
-        // otherwise add it to the bulk rename list
-        bulk_rename << resource;
-        newnames << newfilename_with_extension;
-        oldpaths << oldbookpath;
+        // -------- modified: BulkResourceRenamed ---------
+        valid_resources << resource;
+        old_full_paths << old_full_path;
+        connect(resource, SIGNAL(Renamed(const Resource*, QString)), m_Book->GetFolderKeeper(), SLOT(ResourceRenamed(const Resource*, QString))); //恢复Renamed信号，保证 ResourceRenamed 调用正常。
+        // ------------------------------------------------
+        update[old_bookpath] = resource->GetRelativePath();
     }
 
-    if (bulk_rename.size() > 0) {
-         m_Book->GetFolderKeeper()->BulkRenameResources(bulk_rename, newnames);
-        // add these resources to the update map if successfully renamed
-        for (int i=0; i < bulk_rename.size(); i++) {
-            Resource* rsc = bulk_rename.at(i);
-            if (rsc->GetRelativePath() != oldpaths.at(i)) {
-                // it was renamed successfully
-                rsc->SetCurrentBookRelPath(oldpaths.at(i));
-                update[ oldpaths.at(i) ] = rsc->GetRelativePath();
-            } else {
-                not_renamed.append(oldpaths.at(i));
-            }
-        }
-    }
+    m_Book->GetFolderKeeper()->BulkResourceRenamed(valid_resources, old_full_paths); //modified: BulkResourceRenamed
 
     if (update.count() > 0) {
+        //UniversalUpdates::PerformUniversalUpdates 更新文件中关联的链接。
         UniversalUpdates::PerformUniversalUpdates(true, m_Book->GetFolderKeeper()->GetResourceList(), update);
         emit BookContentModified();
     }

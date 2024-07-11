@@ -177,6 +177,7 @@ private:
 
 // ------------------ modified: -----------------------
 public:
+    QList<ValidationResult> validateXhtml();// modified: validateXhtml
     QList<ValidationResult> correctOPF(); //modified: correctOPF
     void ValidateCurrentBook_M(); //modified: well formed check
 public slots:

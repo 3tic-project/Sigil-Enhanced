@@ -10,10 +10,20 @@
 void ValidationResultsView::ValidateCurrentBook_M()
 {
     ClearResults();
-    QList<ValidationResult> results;
     QApplication::setOverrideCursor(Qt::WaitCursor);
     m_Book->SaveAllResourcesToDisk();
+    QList<ValidationResult> results = validateXhtml() + correctOPF();
+    QApplication::restoreOverrideCursor();
+    DisplayResults(results);
+    show();
+    raise();
+}
+//-------------------------------------------------------------------
 
+//------------------------modified: validateXhtml--------------------------
+QList<ValidationResult> ValidationResultsView::validateXhtml()
+{
+    QList<ValidationResult> results;
     QList<Resource*> resources = m_Book->GetFolderKeeper()->GetResourceList();
     foreach(Resource * resource, resources) {
         if (resource->Type() == Resource::HTMLResourceType) {
@@ -29,15 +39,9 @@ void ValidationResultsView::ValidateCurrentBook_M()
             }
         }
     }
-    QList<ValidationResult> results_ = correctOPF();
-    results = results + results_;
-    QApplication::restoreOverrideCursor();
-    DisplayResults(results);
-    show();
-    raise();
+    return results;
 }
-//-------------------------------------------------------------------
-
+//-------------------------------------------------------------------------
 
 //------------------------modified: correctOPF-------------------------
 void ValidationResultsView::SetBookBrowser(BookBrowser* bookbrowser)

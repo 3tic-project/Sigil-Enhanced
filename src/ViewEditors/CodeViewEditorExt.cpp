@@ -89,7 +89,9 @@ bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
         if (key == Qt::Key_Home || key == Qt::Key_End || key == Qt::Key_Left || key == Qt::Key_Right) {
             if (((Qt::AltModifier | Qt::GroupSwitchModifier | Qt::MetaModifier | Qt::KeypadModifier) & kmod) != 0)
                 return false;
-            if (key == Qt::Key_End || ((kmod & Qt::ControlModifier) != 0 && key == Qt::Key_Right)) {
+            if (((kmod & Qt::ControlModifier) == 0 && key == Qt::Key_End) ||
+                ((kmod & Qt::ControlModifier) != 0 && key == Qt::Key_Right)
+               ) {
                 if ((kmod == Qt::NoModifier && key == Qt::Key_End) || (kmod == Qt::ControlModifier && key == Qt::Key_Right)) {
                     cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
                 }
@@ -101,7 +103,9 @@ bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
                 return true;
             }
 
-            if (key == Qt::Key_Home || ((kmod & Qt::ControlModifier) != 0 && key == Qt::Key_Left)) {
+            if (((kmod & Qt::ControlModifier) == 0 && key == Qt::Key_Home) ||
+                ((kmod & Qt::ControlModifier) != 0 && key == Qt::Key_Left)
+               ) {
                 int ori_pos = cursor.position(),
                     ori_selecionBegin = -1;
                 bool hasSelection = false;
@@ -199,7 +203,7 @@ bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
             insertTextAtCursor("  ", cursor);
             return true;
         }
-        else if (key == Qt::Key_Backtab) { //// Key_BackTab, cursor has no selection
+        else if (key == Qt::Key_Backtab) { // Key_BackTab, cursor has no selection
             int ori_pos = cursor.position();
             int offset = 0;
             cursor.select(QTextCursor::LineUnderCursor);
