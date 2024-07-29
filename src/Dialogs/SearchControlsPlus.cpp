@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
 **
 **  Copyright (C) 2024 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2021 Doug Massay
@@ -26,20 +26,14 @@
 #include <QCloseEvent>
 #include <QShowEvent>
 
-#include "Misc/SettingsStore.h"
-#include "Dialogs/Controls.h"
+#include "Misc/SettingsStoreExtend.h"
+#include "Dialogs/SearchControlsPlus.h"
 
 
 static const QString SETTINGS_GROUP = "search_controls";
 
-Controls::Controls(QWidget* parent)
+SearchControlsPlus::SearchControlsPlus(QWidget* parent)
     : QDialog(parent),
-      m_RegexOptionDotAll(false),
-      m_RegexOptionMinimalMatch(false),
-      m_RegexOptionAutoTokenise(false),
-      m_RegexOptionUnicodeProperty(false),
-      m_OptionWrap(false),
-      m_RegexOptionTextOnly(false),
       m_ClearAll(false)
 {
     ui.setupUi(this);
@@ -49,38 +43,38 @@ Controls::Controls(QWidget* parent)
 }
 
 
-Controls::~Controls()
+SearchControlsPlus::~SearchControlsPlus()
 {
 }
 
 
-void Controls::showEvent(QShowEvent *e)
+void SearchControlsPlus::showEvent(QShowEvent *e)
 {
     ReadSettings();
     QDialog::showEvent(e);
 }
 
 
-void Controls::closeEvent(QCloseEvent *e)
+void SearchControlsPlus::closeEvent(QCloseEvent *e)
 {
     WriteSettings();
     QDialog::closeEvent(e);
 }
 
 
-void Controls::show()
+void SearchControlsPlus::show()
 {
     QDialog::show();
 }
 
 
-void Controls::hide()
+void SearchControlsPlus::hide()
 {
     QDialog::hide();
 }
 
 
-void Controls::UpdateSearchControls(const QString &text)
+void SearchControlsPlus::UpdateSearchControls(const QString &text)
 {
     if (text.isEmpty()) DoClearAll();
 
@@ -89,55 +83,33 @@ void Controls::UpdateSearchControls(const QString &text)
         SetSearchMode("NL");
     } else if (text.contains("RX")) {
         SetSearchMode("RX");
-    } else if (text.contains("CS")) {
-        SetSearchMode("CS");
+    } else if (text.contains("PS")) {
+        SetSearchMode("PS");
     }
-
     // Search LookWhere
     if (text.contains("CF")) {
         SetLookWhere("CF");
     } else if (text.contains("AH")) {
         SetLookWhere("AH");
-    } else if (text.contains("SH")) {
-        SetLookWhere("SH");
-    } else if (text.contains("TH")) {
-        SetLookWhere("TH");
     } else if (text.contains("AC")) {
         SetLookWhere("AC");
-    } else if (text.contains("SC")) {
-        SetLookWhere("SC");
-    } else if (text.contains("TC")) {
-        SetLookWhere("TC");
+    } else if (text.contains("SF")) {
+        SetLookWhere("SF");
     } else if (text.contains("OP")) {
         SetLookWhere("OP");
     } else if (text.contains("NX")) {
         SetLookWhere("NX");
-    } else if (text.contains("SV")) {
-        SetLookWhere("SV");
-    } else if (text.contains("SJ")) {
-        SetLookWhere("SJ");
-    } else if (text.contains("SX")) {
-        SetLookWhere("SX");
     }
-
     // Search Direction
     if (text.contains("UP")) {
         SetSearchDirection("UP");
     } else if (text.contains("DN")) {
         SetSearchDirection("DN");
     }
-
-    // Search Flags
-    SetOptionWrap(text.contains("WR"));
-    SetRegexOptionDotAll(text.contains("DA"));
-    SetRegexOptionMinimalMatch(text.contains("MM"));
-    SetRegexOptionAutoTokenise(text.contains("AT"));
-    SetRegexOptionUnicodeProperty(text.contains("UN"));
-    SetRegexOptionTextOnly(text.contains("TO"));
 }
 
 
-QString Controls::GetControlsCode()
+QString SearchControlsPlus::GetControlsCode()
 {
     // if any cb left with placeholder clear entire entry
     // to prevent impossible search controls from being generated
@@ -148,37 +120,31 @@ QString Controls::GetControlsCode()
     }
     QStringList codes;
     codes.append(GetSearchMode());
-    if (m_RegexOptionDotAll) codes.append("DA");
-    if (m_RegexOptionMinimalMatch) codes.append("MM");
-    if (m_RegexOptionAutoTokenise) codes.append("AT");
-    if (m_RegexOptionUnicodeProperty) codes.append("UN");
-    if (m_OptionWrap) codes.append("WR");
-    if (m_RegexOptionTextOnly) codes.append("TO");
     codes.append(GetSearchDirection());
     codes.append(GetLookWhere());
     return codes.join(" ");
 }
 
 
-QString Controls::GetSearchMode()
+QString SearchControlsPlus::GetSearchMode()
 {
     return ui.cbSearchMode->itemData(ui.cbSearchMode->currentIndex()).toString();
 }
 
-QString Controls::GetLookWhere()
+QString SearchControlsPlus::GetLookWhere()
 {
     return ui.cbLookWhere->itemData(ui.cbLookWhere->currentIndex()).toString();
 }
 
-QString Controls::GetSearchDirection()
+QString SearchControlsPlus::GetSearchDirection()
 {
     return ui.cbSearchDirection->itemData(ui.cbSearchDirection->currentIndex()).toString();
 }
 
 
-void Controls::ReadSettings()
+void SearchControlsPlus::ReadSettings()
 {
-    SettingsStore settings;
+    SettingsStoreExtend settings;
     settings.beginGroup(SETTINGS_GROUP);
     QByteArray geometry = settings.value("geometry").toByteArray();
     if (!geometry.isNull()) {
@@ -186,15 +152,15 @@ void Controls::ReadSettings()
     }
 }
 
-void Controls::WriteSettings()
+void SearchControlsPlus::WriteSettings()
 {
-    SettingsStore settings;
+    SettingsStoreExtend settings;
     settings.beginGroup(SETTINGS_GROUP);
     settings.setValue("geometry", saveGeometry());
 }
 
 
-void Controls::SetSearchMode(QString code)
+void SearchControlsPlus::SetSearchMode(QString code)
 {
     ui.cbSearchMode->setCurrentIndex(0);
     for (int i = 0; i < ui.cbSearchMode->count(); ++i) {
@@ -206,7 +172,7 @@ void Controls::SetSearchMode(QString code)
 }
 
 
-void Controls::SetLookWhere(QString code)
+void SearchControlsPlus::SetLookWhere(QString code)
 {
     ui.cbLookWhere->setCurrentIndex(0);
     for (int i = 0; i < ui.cbLookWhere->count(); ++i) {
@@ -218,7 +184,7 @@ void Controls::SetLookWhere(QString code)
 }
 
 
-void Controls::SetSearchDirection(QString code)
+void SearchControlsPlus::SetSearchDirection(QString code)
 {
     ui.cbSearchDirection->setCurrentIndex(0);
 
@@ -231,134 +197,54 @@ void Controls::SetSearchDirection(QString code)
 }
 
 
-void Controls::SetRegexOptionTextOnly(bool new_state)
+void SearchControlsPlus::DoClearAll()
 {
-    m_RegexOptionTextOnly = new_state;
-    ui.chkOptionTextOnly->setChecked(new_state);
-}
-
-
-void Controls::SetRegexOptionDotAll(bool new_state)
-{
-    m_RegexOptionDotAll = new_state;
-    ui.chkRegexOptionDotAll->setChecked(new_state);
-}
-
-
-void Controls::SetRegexOptionMinimalMatch(bool new_state)
-{
-    m_RegexOptionMinimalMatch = new_state;
-    ui.chkRegexOptionMinimalMatch->setChecked(new_state);
-}
-
-void Controls::SetRegexOptionAutoTokenise(bool new_state)
-{
-    m_RegexOptionAutoTokenise = new_state;
-    ui.chkRegexOptionAutoTokenise->setChecked(new_state);
-}
-
-void Controls::SetRegexOptionUnicodeProperty(bool new_state)
-{
-    m_RegexOptionUnicodeProperty = new_state;
-    ui.chkRegexOptionUnicodeProperty->setChecked(new_state);
-}
-
-void Controls::SetOptionWrap(bool new_state)
-{
-    m_OptionWrap = new_state;
-    ui.chkOptionWrap->setChecked(new_state);
-}
-
-void Controls::DoClearAll()
-{
-    SetRegexOptionTextOnly(false);
-    SetOptionWrap(false);
-    SetRegexOptionUnicodeProperty(false);
-    SetRegexOptionAutoTokenise(false);
-    SetRegexOptionMinimalMatch(false);
-    SetRegexOptionDotAll(false);
     ui.cbSearchMode->setCurrentIndex(0);
     ui.cbLookWhere->setCurrentIndex(0);
     ui.cbSearchDirection->setCurrentIndex(0);
 }
 
 // The UI is setup based on the capabilities.
-void Controls::ExtendUI()
+void SearchControlsPlus::ExtendUI()
 {
     ui.btClearAll->setDefault(false);
     ui.btClearAll->setAutoDefault(false);
 
-    SetRegexOptionTextOnly(false);
-    SetOptionWrap(false);
-    SetRegexOptionUnicodeProperty(false);
-    SetRegexOptionAutoTokenise(false);
-    SetRegexOptionMinimalMatch(false);
-    SetRegexOptionDotAll(false);
-    
     // Clear these because we want to add their items based on the
     // capabilities.
     ui.cbSearchMode->clear();
     ui.cbLookWhere->clear();
     ui.cbSearchDirection->clear();
-
     QString mode_tooltip = "<p>" + tr("What to search for") + ":</p><dl>";
     ui.cbSearchMode->addItem("-- " + tr("Select Mode") + " --", "");
     ui.cbSearchMode->addItem(tr("Normal"), "NL");
     mode_tooltip += "<dt><b>" + tr("Normal") + "</b><dd>" + tr("Case in-sensitive search of exactly what you type.") + "</dd>";
-
-    ui.cbSearchMode->addItem(tr("Case Sensitive"), "CS");
-    mode_tooltip += "<dt><b>" + tr("Case Sensitive") + "</b><dd>" + tr("Case sensitive search of exactly what you type.") + "</dd>";
-
     ui.cbSearchMode->addItem(tr("Regex"), "RX");
     mode_tooltip += "<dt><b>" + tr("Regex") + "</b><dd>" + tr("Search for a pattern using Regular Expression syntax.") + "</dd>";
-
+    ui.cbSearchMode->addItem(tr("PreSearch Regex"), "PS");
+    mode_tooltip += "<dt><b>" + tr("Regex With PreSearch") + "</b><dd>" + tr("Search and replace based on the content which searched by Pre Search Regex Expression.") + "</dd>";
     ui.cbSearchMode->setToolTip(mode_tooltip);
     ui.cbSearchMode->setCurrentIndex(0);
 
     QString look_tooltip = "<p>" + tr("Where to search") + ":</p><dl>";
-
     ui.cbLookWhere->addItem("-- " + tr("Select Target") + " --", "");
     ui.cbLookWhere->addItem(tr("Current File"), "CF");
     look_tooltip += "<dt><b>" + tr("Current File") + "</b><dd>" + tr("Restrict the find or replace to the opened file.  Hold the Ctrl key down while clicking any search buttons to temporarily restrict the search to the Current File.") + "</dd>";
-
     ui.cbLookWhere->addItem(tr("All HTML Files"), "AH");
     look_tooltip += "<dt><b>" + tr("All HTML Files") + "</b><dd>" + tr("Find or replace in all HTML files in Code View.") + "</dd>";
-
-    ui.cbLookWhere->addItem(tr("Selected HTML Files"), "SH");
-    look_tooltip += "<dt><b>" + tr("Selected HTML Files") + "</b><dd>" + tr("Restrict the find or replace to the HTML files selected in the Book Browser in Code View.") + "</dd>";
-
-    ui.cbLookWhere->addItem(tr("Tabbed HTML Files"), "TH");
-    look_tooltip += "<dt><b>" + tr("Current File") + "</b><dd>" + tr("Restrict the find or replace to the HTML files open in Tabs.") + "</dd>";
-
     ui.cbLookWhere->addItem(tr("All CSS Files"), "AC");
     look_tooltip += "<dt><b>" + tr("All CSS Files") + "</b><dd>" + tr("Find or replace in all CSS files in Code View.") + "</dd>";
-
-    ui.cbLookWhere->addItem(tr("Selected CSS Files"), "SC");
-    look_tooltip += "<dt><b>" + tr("Selected CSS Files") + "</b><dd>" + tr("Restrict the find or replace to the CSS files selected in the Book Browser in Code View.") + "</dd>";
-
-    ui.cbLookWhere->addItem(tr("Tabbed CSS Files"), "TC");
-    look_tooltip += "<dt><b>" + tr("Tabbed CSS Files") + "</b><dd>" + tr("Restrict the find or replace to the CSS files open in Tabs.") + "</dd>";
-
+    ui.cbLookWhere->addItem(tr("Selected Files"), "SF");
+    look_tooltip += "<dt><b>" + tr("Selected Files") + "</b><dd>" + tr("Restrict the find or replace to the files selected in the Book Browser in Code View.") + "</dd>";
     ui.cbLookWhere->addItem(tr("OPF File"), "OP");
     look_tooltip += "<dt><b>" + tr("OPF File") + "</b><dd>" + tr("Restrict the find or replace to the OPF file.") + "</dd>";
-
     ui.cbLookWhere->addItem(tr("NCX File"), "NX");
     look_tooltip += "<dt><b>" + tr("NCX File") + "</b><dd>" + tr("Restrict the find or replace to the NCX file.") + "</dd>";
-
-    ui.cbLookWhere->addItem(tr("Selected SVG Files"), "SV");
-    look_tooltip += "<dt><b>" + tr("Selected SVG Files") + "</b><dd>" + tr("Restrict the find or replace to the SVG files selected in the Book Browser in Code View.") + "</dd>";
-
-    ui.cbLookWhere->addItem(tr("Selected Javascript Files"), "SJ");
-    look_tooltip += "<dt><b>" + tr("Selected JS Files") + "</b><dd>" + tr("Restrict the find or replace to the JS files selected in the Book Browser in Code View.") + "</dd>";
-
-    ui.cbLookWhere->addItem(tr("Selected Misc XML Files"), "SX");
-    look_tooltip += "<dt><b>" + tr("Selected Misc XML Files") + "</b><dd>" + tr("Restrict the find or replace to other XML files selected in the Book Browser under the Misc Folder in Code View.") + "</dd>";
-
     look_tooltip += "</dl>";
     ui.cbLookWhere->setToolTip(look_tooltip);
     ui.cbLookWhere->setCurrentIndex(0);
 
-    ui.cbSearchDirection->addItem("-- " + tr("Select Direction") + " --", ""); 
+    ui.cbSearchDirection->addItem("-- " + tr("Select Direction") + " --", "");
     ui.cbSearchDirection->addItem(tr("Up"), "UP");
     ui.cbSearchDirection->addItem(tr("Down"), "DN");
     ui.cbSearchDirection->setToolTip("<p>" + tr("Direction to search") + ":</p>"
@@ -372,13 +258,7 @@ void Controls::ExtendUI()
     setFocusProxy(ui.frame);
 }
 
-void Controls::ConnectSignalsToSlots()
+void SearchControlsPlus::ConnectSignalsToSlots()
 {
-    connect(ui.chkRegexOptionDotAll, SIGNAL(clicked(bool)), this, SLOT(SetRegexOptionDotAll(bool)));
-    connect(ui.chkRegexOptionMinimalMatch, SIGNAL(clicked(bool)), this, SLOT(SetRegexOptionMinimalMatch(bool)));
-    connect(ui.chkRegexOptionAutoTokenise, SIGNAL(clicked(bool)), this, SLOT(SetRegexOptionAutoTokenise(bool)));
-    connect(ui.chkRegexOptionUnicodeProperty, SIGNAL(clicked(bool)), this, SLOT(SetRegexOptionUnicodeProperty(bool)));
-    connect(ui.chkOptionWrap, SIGNAL(clicked(bool)), this, SLOT(SetOptionWrap(bool)));
-    connect(ui.chkOptionTextOnly, SIGNAL(clicked(bool)), this, SLOT(SetRegexOptionTextOnly(bool)));
     connect(ui.btClearAll, SIGNAL(clicked()), this, SLOT(DoClearAll()));
 }

@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2022-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2022 Kevin B. Hendricks, Stratford, Ontario, Canada
 **
 **  This file is part of Sigil.
 **
@@ -20,8 +20,8 @@
 *************************************************************************/
 
 #pragma once
-#ifndef REPLACEMENTCHOOSER_H
-#define REPLACEMENTCHOOSER_H
+#ifndef REPLACEMENTPREVIEWPLUS_H
+#define REPLACEMENTPREVIEWPLUS_H
 
 #include <QAction>
 #include <QMenu>
@@ -29,22 +29,31 @@
 #include <QDialog>
 #include <QHash>
 #include <QStandardItemModel>
-#include "Dialogs/StyledTextDelegate.h"
-#include "ui_ReplacementChooser.h"
+#include <QStyledItemDelegate>
+#include "ui_ReplacementPreviewPlus.h"
 
-class QString;
-class QCloseEvent;
-class Resource;
-class FindReplace;
-class FindReplacePlus; //modified: FindReplacePlus
 
-class ReplacementChooser: public QDialog
+class StyledTextDelegatePlus : public QStyledItemDelegate
 {
     Q_OBJECT
 
 public:
-    ReplacementChooser(QWidget* parent=NULL);
-    ~ReplacementChooser();
+    StyledTextDelegatePlus(QObject* parent = 0) :QStyledItemDelegate(parent) {};
+    virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+};
+
+
+class QString;
+class QCloseEvent;
+class Resource;
+class FindReplacePlus;
+class ReplacementPreviewPlus: public QDialog
+{
+    Q_OBJECT
+
+public:
+    ReplacementPreviewPlus(QWidget* parent=NULL);
+    ~ReplacementPreviewPlus();
 
     int GetReplacementCount() { return m_replacement_count; };
 
@@ -56,48 +65,46 @@ public slots:
 
 private slots:
     void ChangeContext();
-    void ChangeSelectedRows();
+    //void FilterEditTextChangedSlot(const QString &text);
+    void DeleteSelectedRows();
     void ApplyReplacements();
-    void SelectUnselectAll(bool value);
-    void doActivated(const QModelIndex& index);
+    void CreateContextMenuActions();
+    void SetupContextMenu(const QPoint &point);
+    void OpenContextMenu(const QPoint &point);
 
-protected:
-    void keyPressEvent(QKeyEvent* evemy) override;    
-    
 private:
+
     QString GetPriorContext(int start, const QString &text, int amt);
     QString GetPostContext(int end, const QString &text, int amt);
+
+    void InitItemsProperties();
 
     void ReadSettings();
     void WriteSettings();
 
     void SetContextCB(int val);
-    
     void connectSignalsSlots();
 
     QStandardItemModel *m_ItemModel;
 
-    StyledTextDelegate* m_TextDelegate;
+    StyledTextDelegatePlus* m_TextDelegate;
 
-    FindReplace * m_FindReplace;
+    FindReplacePlus* m_FindReplacePlus;
 
     int m_context_amt;
+
+    QAction *m_Delete;
+
+    QPointer<QMenu> m_ContextMenu;
 
     QHash<QString, Resource*> m_Resources;
 
     int m_replacement_count;
 
     int m_current_count;
-    
-    Ui::ReplacementChooser ui;
 
-//--------- modified: FindReplacePlus -----------
-public:
-    ReplacementChooser(bool plus_mode, QWidget* parent = NULL);
+    Ui::ReplacementPreviewPlus ui;
 
-private:
-    FindReplacePlus* m_FindReplacePlus;
-    bool m_PlusMode = false;
 };
 
-#endif // REPLACEMENTCHOOSER_H
+#endif // REPLACEMENTPREVIEWPLUS_H

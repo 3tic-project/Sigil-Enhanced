@@ -303,6 +303,20 @@ public:
     static TrimmedIndex StringTrimmedIndex(const QString& text);
 
     static QString ReadUnicodeTextFile_M(const QString& fullfilepath);
+
+    //modified: FindPeplacePlus
+    static QList<std::pair<int, int>> GetPreSearchMatchInfos(const QString& presearch, const QString& text);
+
+    struct MatchInfo {
+        std::pair<int, int> offset;
+        QList<std::pair<int, int>> capture_groups_offsets;
+        MatchInfo() { offset.first = -1; offset.second = -1; }
+    };
+    static QList<MatchInfo> GetSearchInfoWithPreSearch(const QString& presearch, const QString& search, const QString& text);
+
+    //modified: PCREReplace
+    static QString FullWidthChars2HalfWidthChars(const QString &text);
+    static QString HalfWidthChars2FullWidthChars(const QString& text);
 };
 #endif // UTILITY_H
 

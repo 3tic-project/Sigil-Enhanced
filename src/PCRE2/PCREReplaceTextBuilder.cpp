@@ -36,12 +36,12 @@ PCREReplaceTextBuilder::PCREReplaceTextBuilder()
 bool PCREReplaceTextBuilder::IsValidHex6(QString& hv)
 {
     int hl = hv.length();
-    if (hl < 2 || hl == 3 || hl == 5 || hl > 6) return false; 
+    if (hl < 2 || hl == 3 || hl == 5 || hl > 6) return false;
     for (int i=0; i < hl; i++) {
         if (!is_hex(hv.at(i))) return false;
     }
     if (hl == 2 || hl == 4) return true;
-    if (hv.left(1) == "0" || hv.left(2) == "10") return true;    
+    if (hv.left(1) == "0" || hv.left(2) == "10") return true;
     return false;
 }
 
@@ -113,6 +113,10 @@ bool PCREReplaceTextBuilder::BuildReplacementText(SPCRE &sre,
     // * Note: case changes cannot stop within a segment. Meaning
     // a \L within a \U will be ignored and the \U will be honored until
     // \E is encountered.
+    //
+    //modified: PCREReplace
+    // \H Full-width to half-width.
+    // \F Half-width to full-width.
     for (int i = 0; i < replacement_pattern.length(); i++) {
         c = replacement_pattern.at(i);
 
@@ -170,7 +174,8 @@ bool PCREReplaceTextBuilder::BuildReplacementText(SPCRE &sre,
                 }
                 // End case change.
                 else if (c == 'E') {
-                    m_caseChangeState = CaseChange_None;
+                    //m_caseChangeState = CaseChange_None;
+                    m_CharsConvertState = CharsConvert_None; //modified: PCREReplace
                     in_control = false;
                 }
                 // Backreference.
@@ -179,24 +184,38 @@ bool PCREReplaceTextBuilder::BuildReplacementText(SPCRE &sre,
                 }
                 // Lower case next character.
                 else if (c == 'l') {
-                    trySetCaseChange(CaseChange_LowerNext);
+                    //trySetCaseChange(CaseChange_LowerNext);
+                    trySetCharsConvert(CharsConvert_CaseLowerNext); //modified: PCREReplace
                     in_control = false;
                 }
                 // Lower case until \E.
                 else if (c == 'L') {
-                    trySetCaseChange(CaseChange_Lower);
+                    //trySetCaseChange(CaseChange_Lower);
+                    trySetCharsConvert(CharsConvert_CaseLower);//modified: PCREReplace
                     in_control = false;
                 }
                 // Upper case next character.
                 else if (c == 'u') {
-                    trySetCaseChange(CaseChange_UpperNext);
+                    //trySetCaseChange(CaseChange_UpperNext);
+                    trySetCharsConvert(CharsConvert_CaseUpperNext);//modified: PCREReplace
                     in_control = false;
                 }
                 // Upper case until \E.
                 else if (c == 'U') {
-                    trySetCaseChange(CaseChange_Upper);
+                    //trySetCaseChange(CaseChange_Upper);
+                    trySetCharsConvert(CharsConvert_CaseUpper);//modified: PCREReplace
                     in_control = false;
                 }
+                //modified: PCREReplace
+                else if (c == 'H') {
+                    trySetCharsConvert(CharsConvert_Full2Half);
+                    in_control = false;
+                }
+                else if (c == 'F') {
+                    trySetCharsConvert(CharsConvert_Half2Full);
+                    in_control = false;
+                }
+                //---------------------
             }
             // We know the control character.
             else {
@@ -334,7 +353,36 @@ QString PCREReplaceTextBuilder::processTextSegement(const QString &text)
     if (text.length() == 0) {
         return processedText;
     }
-
+    //modified: PCREReplace
+    switch (m_CharsConvertState) {
+        case CharsConvert_Full2Half:
+            processedText += Utility::FullWidthChars2HalfWidthChars(text);
+            break;
+        case CharsConvert_Half2Full:
+            processedText += Utility::HalfWidthChars2FullWidthChars(text);
+            break;
+        case CharsConvert_CaseLowerNext:
+            processedText += text.at(0).toLower();
+            processedText += text.mid(1);
+            m_CharsConvertState = CharsConvert_None;
+            break;
+        case CharsConvert_CaseLower:
+            processedText += text.toLower();
+            break;
+        case CharsConvert_CaseUpperNext:
+            processedText += text.at(0).toUpper();
+            processedText += text.mid(1);
+            m_CharsConvertState = CharsConvert_None;
+            break;
+        case CharsConvert_CaseUpper:
+            processedText += text.toUpper();
+            break;
+        default:
+            processedText += text;
+            break;
+    }
+    return processedText;
+    //---------------------
     switch (m_caseChangeState) {
         case CaseChange_LowerNext:
             processedText += text.at(0).toLower();
@@ -374,5 +422,14 @@ void PCREReplaceTextBuilder::trySetCaseChange(CaseChange state)
 void PCREReplaceTextBuilder::resetState()
 {
     m_finalText.clear();
-    m_caseChangeState = CaseChange_None;
+    //m_caseChangeState = CaseChange_None;
+    m_CharsConvertState = CharsConvert_None; //modified: PCREReplace
+}
+
+//modified: PCREReplace
+void PCREReplaceTextBuilder::trySetCharsConvert(CharsConvert state)
+{
+    if (m_CharsConvertState == CharsConvert_None) {
+        m_CharsConvertState = state;
+    }
 }

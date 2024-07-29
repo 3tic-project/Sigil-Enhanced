@@ -98,8 +98,7 @@ FindReplace::FindReplace(MainWindow *main_window)
       m_MinimalMatchCheckAction(nullptr),
       m_AutoTokeniseCheckAction(nullptr),
       m_UnicodePropertyCheckAction(nullptr),
-      m_menu(nullptr),
-      m_CF_RestartFlag(false) //修改：循环查找BUG
+      m_menu(nullptr)
 {
     ui.setupUi(this);
     FindReplaceQLineEdit *find_ledit = new FindReplaceQLineEdit(this);
@@ -353,7 +352,6 @@ void FindReplace::RestartClicked()
 {
     m_PreviousSearch.clear();
     m_RestartPerformed = true;
-    m_CF_RestartFlag = true;  // 修改：循环查找BUG：当前页面查找的重开始标志
     ShowMessage(tr("Search will restart"));
 }
 
@@ -882,13 +880,6 @@ bool FindReplace::FindText(Searchable::Direction direction)
     // bool had_focus = HasFocus();
     SetCodeViewIfNeeded();
 
-    // 修改：循环查找BUG：点“重新查找”时忽略查找偏移值
-    bool ignore_offset = false;
-    if (m_CF_RestartFlag) {
-        ignore_offset = true;
-        m_CF_RestartFlag = false;
-    }
-
     if (isWhereCF() || m_LookWhereCurrentFile || IsMarkedText()) {
         Searchable *searchable = GetAvailableSearchable();
 
@@ -1290,20 +1281,10 @@ bool FindReplace::FindInAllFiles(Searchable::Direction direction)
     if (!found) {
         Resource *containing_resource = GetNextContainingResource(direction);
         DBG qDebug() << " .. FindInAllFiles GetNextContainingResource" << containing_resource;
-        // --------------------------------------------- 修改：循环查找BUG -----------------------------------------------------
-        /*
-        if (containing_resource) {
-            DBG qDebug() << " .. which is " << containing_resource->GetRelativePath();*/
 
-        // 改变 GetNextContainingResource 功能，当筛选资源存在能匹配到的资源，则循环返回那些资源，匹配一周后不再返回nullptr。
-        if (containing_resource && current_resource != containing_resource) {
+        if (containing_resource) {
             DBG qDebug() << " .. which is " << containing_resource->GetRelativePath();
 
-            if (containing_resource == m_StartingResource) { // 搜索抵达起始页，当 Wrap 开启时进入下个循环，否则结束搜索。
-                if (m_OptionWrap) { m_InRemainder = false; }
-                else { return false; }
-            }
-        // ---------------------------------------------------------------------------------------------------------------------
             // Save if editor or F&R has focus
             bool has_focus_find = HasFocusFind();
             bool has_focus_replace = HasFocusReplace();
@@ -1331,12 +1312,6 @@ bool FindReplace::FindInAllFiles(Searchable::Direction direction)
                 found = searchable->FindNext(GetSearchRegex(), direction, m_SpellCheck, true, false);
             }
         }
-        // ---------------------------修改：循环查找BUG：多文件搜索时的循环匹配----------------------------
-        else if (m_OptionWrap && containing_resource == current_resource) {
-            m_InRemainder = false;
-            found = searchable->FindNext(GetSearchRegex(), direction, m_SpellCheck, true, false);
-        }
-        // ------------------------------------------------------------------------------------------------
 
         // } else {
         //     if (searchable) {
@@ -1390,8 +1365,7 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
     }
 
     Resource *next_resource = starting_resource;
-    //------------------------------------ 修改：循环查找BUG ----------------------------------------
-    /*
+
     if (need_to_check_assigned_starting_resource) {
         DBG qDebug() << "Trying newly assigned first resource: " << next_resource->GetRelativePath();
         if (next_resource) {
@@ -1403,7 +1377,7 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
 
     // handle list of resources to search of size 1 as special case
     if (resources.count() == 1) {
-            // already searched it so done
+            /* already searched it so done */
             return NULL;
         }
     }
@@ -1412,45 +1386,15 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
     // as it relies on list order to know if already searched or not
     // since it keeps no state itself
     bool passed_starting_resource = false;
-    */
-    bool passed_starting_resource = false;
-    if (need_to_check_assigned_starting_resource) {
-        DBG qDebug() << "Trying newly assigned first eesource: " << next_resource->GetRelativePath();
-        if (next_resource) {
-            if (ResourceContainsCurrentRegex(next_resource)) {
-                DBG qDebug() << "Found it";
-                return next_resource;
-            }
-        }
-        // handle list of resources to search of size 1 as special case
-        if (resources.count() == 1) {
-            /* already searched it so done */
-            return NULL;
-        }
-        passed_starting_resource = true;
-    }
-    //---------------------------------------------------------------------------------------------------
-    //-----------------------------------修改：循环查找BUG----------------------------------------------
-    /*
+
     while (!passed_starting_resource || (next_resource != starting_resource)) {
 
         next_resource = GetNextResource(next_resource, direction);
 
         if (next_resource == starting_resource) {
             return NULL;
-        }*/
-    while (true) {
-        next_resource = GetNextResource(next_resource, direction);
-        //修改：改变 GetNextContainingResource 功能，可返回搜索起始页面
-        if (next_resource == starting_resource) {
-            if (!passed_starting_resource && ResourceContainsCurrentRegex(next_resource)) {
-                return next_resource;
-            }
-            else {
-                return NULL;
-            }
         }
-    //---------------------------------------------------------------------------------------------------
+
         if (next_resource) {
             DBG qDebug() << "Trying Next Resource: " << next_resource->GetRelativePath();
             if (ResourceContainsCurrentRegex(next_resource)) {
@@ -1473,8 +1417,7 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
 
 Resource *FindReplace::GetNextResource(Resource *current_resource, Searchable::Direction direction)
 {
-    //QList <Resource *> resources = GetFilesToSearch();
-    QList <Resource*> resources = GetFilesToSearch(true); // 修改：循环查找BUG：GetFilesToSearch强制返回所有筛选到的资源。
+    QList <Resource *> resources = GetFilesToSearch();
     int max_reading_order       = resources.count() - 1;
     int current_reading_order   = 0;
     int next_reading_order      = 0;
@@ -1750,6 +1693,13 @@ void FindReplace::ReadSettings()
 
 void FindReplace::ShowHide()
 {
+    //--- modified: FindReplacePlus ---
+    if (m_MainWindow->GetFindReplaceMode() != MainWindow::FindReplaceMode::OriginalMode) {
+        hide();
+        return;
+    }
+    //---------------------------------
+
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     QVariant show_find_replace = settings.value("visible");

@@ -85,3 +85,57 @@ QModelIndex SearchEditorTreeView::moveCursor(CursorAction cursorAction, Qt::Keyb
 
     return QTreeView::moveCursor(cursorAction, modifiers);
 }
+
+
+//-------------- modified: SavedSearchPlus ------------------
+void SearchEditorTreeView::setGroupsSpan(const QModelIndex& top)
+{
+    int IsGroupRole = Qt::UserRole + 1;
+    QModelIndexList index_stack = { top };
+    while (!index_stack.isEmpty()) {
+        QModelIndex index = index_stack.takeFirst();
+        if (index.data(IsGroupRole).toBool()) { // Is a group
+            this->setFirstColumnSpanned(index.row(), index.parent(), true);
+        }
+        for (int i = 0; i < model()->rowCount(index); i++) {
+            index_stack << model()->index(i, 0, index);
+        }
+    }
+}
+
+void SearchEditorTreeView::setModel(QAbstractItemModel* model)
+{
+    QTreeView::setModel(model);
+    setGroupsSpan(this->rootIndex());
+}
+
+void SearchEditorTreeView::rowsInserted(const QModelIndex& parent, int start, int end)
+{
+    QTreeView::rowsInserted(parent, start, end);
+
+    m_InsertedRowsToBeHandled.clear();
+
+    for (int i = start; i <= end; i++) {
+        QModelIndex index = model()->index(i, 0, parent);
+        if (index.data(Qt::UserRole + 1) == QVariant(QVariant::Invalid)) {
+            m_InsertedRowsToBeHandled << index;
+        }
+        else if (index.data(Qt::UserRole + 1).toBool()) {
+            setGroupsSpan(index);
+        }
+    }
+}
+void SearchEditorTreeView::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end)
+{
+    QTreeView::rowsAboutToBeRemoved(parent, start, end);
+
+    if (m_InsertedRowsToBeHandled.count() == end - start + 1) {
+        for (int i = start, j = 0; i <= end; i++, j++) {
+            if (model()->index(i, 0, parent).data(Qt::UserRole + 1).toBool()) {
+                setGroupsSpan(m_InsertedRowsToBeHandled.at(j));
+            }
+        }
+    }
+    if (!m_InsertedRowsToBeHandled.isEmpty())
+        m_InsertedRowsToBeHandled.clear();
+}

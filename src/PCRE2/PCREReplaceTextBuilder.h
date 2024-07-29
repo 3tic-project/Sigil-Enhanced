@@ -130,6 +130,20 @@ private:
     CaseChange m_caseChangeState;
     // The final replacement text.
     QString m_finalText;
+
+//-------- modified: PCREReplace --------
+    enum CharsConvert {
+        CharsConvert_None,
+        CharsConvert_CaseLowerNext,
+        CharsConvert_CaseLower,
+        CharsConvert_CaseUpperNext,
+        CharsConvert_CaseUpper,
+        CharsConvert_Full2Half,
+        CharsConvert_Half2Full
+    };
+    void trySetCharsConvert(CharsConvert state);
+
+    CharsConvert m_CharsConvertState;
 };
 
 #endif // PCREREPLACETEXTBUILDER_H

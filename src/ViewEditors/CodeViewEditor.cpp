@@ -115,10 +115,18 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     m_MarkedTextStart(-1),
     m_MarkedTextEnd(-1),
     m_ReplacingInMarkedText(false),
-    m_regen_taglist(true),
-    // --- modified: keyboard_event ---
-    m_hightype(high_type)
-    // --------------------------------
+    // ------------ modified: -------------
+    // modified: CodeCompleterParser
+    m_hasCodeCompleter(false),
+    // modified: keyboard_event
+    m_hightype(high_type),
+    // modified: FindReplacePlus
+    m_InSearchingState(false),
+    m_ReplacingInSearch(false),
+    m_CountSplitOffset(false),
+    m_SplitOffset(0),
+    // ------------------------------------
+    m_regen_taglist(true)
 {
     if (!qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP")) setAcceptDrops(false);
     if (high_type == CodeViewEditor::Highlight_XHTML) {
@@ -131,14 +139,6 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     } else {
         m_Highlighter = NULL;
     }
-    //--------- modified: CodeCompleterParser ------------
-    if (high_type == CodeViewEditor::Highlight_XHTML) {
-        m_completeParser = new CodeCompleterParser(this,CodeCompleterParser::FileType::HTML);
-    }
-    else if (high_type == CodeViewEditor::Highlight_CSS) {
-        m_completeParser = new CodeCompleterParser(this,CodeCompleterParser::FileType::CSS);
-    }
-    //----------------------------------------------------
 
     // if we use the following we can get instances
     // of accidental insertion of tabs into CodeView
@@ -1247,7 +1247,18 @@ int CodeViewEditor::ReplaceAll(const QString &search_regex,
 
 void CodeViewEditor::ResetLastFindMatch()
 {
-    m_lastMatch.offset.first = -1;
+    // ---- modified: FindReplacePlus ----
+    //m_lastMatch.offset.first = -1;
+    if (m_InSearchingState && !m_ReplacingInSearch) {
+        m_lastMatch = SPCRE::MatchInfo();
+        m_preSearchInfo = PreSearchInfo();
+        m_InSearchingState = false;
+        m_CountSplitOffset = false;
+        m_SplitOffset = 0;
+        MainWindow* mainwin = qobject_cast<MainWindow*>(Utility::GetMainWindow());
+        emit mainwin->UpdateSearchStateRequest();
+    }
+    //------------------------------------
 }
 
 QString CodeViewEditor::GetSelectedText()
@@ -2366,8 +2377,12 @@ void CodeViewEditor::TextChangedFilter()
     if (!m_ReplacingInMarkedText && IsMarkedText()) {
         emit ClearMarkedTextRequest();
     }
-
-    ResetLastFindMatch();
+    //-------- modified: FindReplacePlus -------
+    //ResetLastFindMatch();
+    if (!m_ReplacingInSearch) {
+        ResetLastFindMatch();
+    }
+    //------------------------------------------
 
     if (m_isUndoAvailable) {
         emit FilteredTextChanged();
@@ -2464,6 +2479,13 @@ void CodeViewEditor::HighlightCurrentLine(bool highlight_tags)
     selection_line.cursor.clearSelection();
     extraSelections.append(selection_line);
 
+    //----------- modified: FindReplacePlus ------------
+    if (m_preSearchInfo.presearch_has_executed) {
+        highlight_tags = false;
+        extraSelections.clear();
+    }
+    //--------------------------------------------------
+
     if (highlight_tags && settings.highlightOpenCloseTags()) {
 
         // If and only if cursor is inside a tag, highlight open and matching close
@@ -2551,6 +2573,17 @@ void CodeViewEditor::HighlightCurrentLine(bool highlight_tags)
         selection.cursor.setPosition(m_MarkedTextEnd, QTextCursor::KeepAnchor);
         extraSelections.append(selection);
     }
+
+    //----------- modified: FindReplacePlus ------------
+    if (m_preSearchInfo.presearch_has_executed) {
+        QTextEdit::ExtraSelection selection;
+        selection.cursor = textCursor();
+        selection.format.setBackground(m_codeViewAppearance.presearch_selection_color);
+        selection.cursor.setPosition(m_preSearchInfo.matched_start);
+        selection.cursor.setPosition(m_preSearchInfo.matched_end, QTextCursor::KeepAnchor);
+        extraSelections << selection;
+    }
+    //--------------------------------------------------
 
     setExtraSelections(extraSelections);
     // still want to force a UI update in mainWindow but do not want to reset
@@ -4025,7 +4058,12 @@ void CodeViewEditor::SelectAndScrollIntoView(int start_position, int end_positio
         cursor.setPosition(end_position, QTextCursor::KeepAnchor);
     }
 
+    //-- modified: FindReplacePlus --
+    //setTextCursor(cursor);
+    disconnect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
     setTextCursor(cursor);
+    connect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
+    //-------------------------------
 
     if (scroll_to_center) {
         centerCursor();

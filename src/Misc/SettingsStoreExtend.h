@@ -8,10 +8,11 @@
 
 /*------------------ modified: XHTML Fomat Configure ----------------------*/
 
-class SettingsStoreExtend
+class SettingsStoreExtend : public QSettings
 {
 public:
     SettingsStoreExtend();
+
     void setXhtmlFormat(QString conf);
     QString getXhtmlFormat();
     void setHTMLCompleterWordsJson(const QJsonObject &json);
@@ -26,10 +27,8 @@ public:
     bool getEmmetEnabled();
     void setIgnoreBlankLine(bool ignore);
     bool getIgnoreBlankLine();
-private:
-    bool isSettingsInitialized;
-    QSettings settings;
-    void initSettings();
+    void setFindReplaceEnhancedMode(bool isEnhancedMode);
+    bool getFindReplaceEnhancedMode();
 };
 
 #endif // SETTINGSSTOREEXTEND_H

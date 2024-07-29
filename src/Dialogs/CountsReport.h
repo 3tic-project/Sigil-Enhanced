@@ -36,7 +36,8 @@ class CountsReport: public QDialog
     Q_OBJECT
 
 public:
-    CountsReport(QWidget* parent=NULL);
+    //CountsReport(QWidget* parent=NULL);
+    CountsReport(QWidget* parent = NULL,bool plus_mode = false); //modified: SavedSearchPlus
     ~CountsReport();
 
     // entries are created with new and we take ownership of them and therefore
@@ -71,6 +72,8 @@ private:
 
     QList<SearchEditorModel::searchEntry*> m_entries;
     Ui::CountsReport ui;
+
+    bool m_PlusMode; //modified: SavedSearchPlus
 };
 
 #endif // COUNTSREPORT_H

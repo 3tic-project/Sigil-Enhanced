@@ -258,7 +258,7 @@ void TextTab::SaveTabContent()
     }
 
     // Losing focus will invoke SaveTabContent
-    // which may run SaveToDisk on the underlying resource 
+    // which may run SaveToDisk on the underlying resource
     // that will reset the cursor to the end of file
     // so save the cursor position and then put it
     // back after the SaveToDisk
@@ -268,7 +268,7 @@ void TextTab::SaveTabContent()
     // QTextEdit is tied directly to the QtQPlainTextDocument.
     // Webkit is passed in an xhtml file but all supporting files
     // such as CSS, svg, and etc are only ever read from Disk,
-    // so any time focus is lost and the contents of the TextTab 
+    // so any time focus is lost and the contents of the TextTab
     // have changed, we should save them to disk
     m_TextResource->SaveToDisk();
 
@@ -352,4 +352,3 @@ void TextTab::Print()
         m_wCodeView->print(&printer);
     }
 }
-

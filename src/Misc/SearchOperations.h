@@ -52,6 +52,31 @@ public:
                                          const QString &function_name,
                                          QList<Resource *> resources);
 
+    //------------- modified: FindPeplacePlus ---------------
+    static int CountInFilesPlus(const QString& presearch_regex,
+                                const QString& search_regex,
+                                QList<Resource*> resources);
+
+    static int CountInFilePlus(const QString& presearch_regex,
+                               const QString& search_regex,
+                               Resource* resource);
+
+    static bool TestInFilePlus(const QString& presearch_regex,
+                               const QString& search_regex,
+                               Resource* resource);
+
+    static int ReplaceInAllFIlesPlus(const QString& presearch_regex,
+                                     const QString& search_regex,
+                                     const QString& replacement,
+                                     QList<Resource*> resources);
+
+    static int GetSuitableStartPos(const QString& presearch_regex,
+                                   const QString& search_regex,
+                                   Resource* resource,
+                                   int origin_pos,
+                                   bool reverse_direction = false);
+    //-------------------------------------------------------
+
 private:
 
     static int CountInFile(const QString &search_regex,
@@ -89,6 +114,17 @@ private:
 
     static void Accumulate(int &first, const int &second);
 
+    //------------- modified: FindPeplacePlus ---------------
+    static int ReplaceInFilePlus(const QString& presearch_regex,
+                                 const QString& search_regex,
+                                 const QString& replacement,
+                                 Resource* resource);
+
+    static std::tuple<QString, int> PerformGlobalReplacePlus(const QString& presearch_regex,
+                                                             const QString& search_regex,
+                                                             const QString& replacement,
+                                                             const QString& text);
+    //-------------------------------------------------------
 };
 
 #endif // SEARCHOPERATIONS_H

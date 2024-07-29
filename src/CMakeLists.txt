@@ -217,6 +217,8 @@ set( DIALOG_FILES
     Dialogs/SearchEditor.h
     Dialogs/Controls.cpp
     Dialogs/Controls.h
+    Dialogs/SearchControlsPlus.cpp
+    Dialogs/SearchControlsPlus.h
     Dialogs/SearchEditorItemDelegate.cpp
     Dialogs/SearchEditorItemDelegate.h
     Dialogs/CountsReport.cpp
@@ -225,6 +227,8 @@ set( DIALOG_FILES
     Dialogs/DryRunReplace.h
     Dialogs/ReplacementChooser.cpp
     Dialogs/ReplacementChooser.h
+    Dialogs/ReplacementPreviewPlus.cpp
+    Dialogs/ReplacementPreviewPlus.h
     Dialogs/StyledTextDelegate.cpp
     Dialogs/StyledTextDelegate.h
     Dialogs/ClipEditor.cpp
@@ -517,7 +521,7 @@ set( VIEW_EDITOR_FILES
     ViewEditors/ViewEditor.h
     ViewEditors/Viewer.h
     ViewEditors/Overlay.h
-    ViewEditors/XhtmlFormatEditor.CPP
+    ViewEditors/XhtmlFormatEditor.cpp
     ViewEditors/XhtmlFormatEditor.h
      )
 
@@ -529,6 +533,8 @@ set( MAINUI_FILES
     MainUI/MainWindow.h
     MainUI/FindReplace.cpp
     MainUI/FindReplace.h
+    MainUI/FindReplacePlus.cpp
+    MainUI/FindReplacePlus.h
     MainUI/BookBrowser.cpp
     MainUI/BookBrowserExt.cpp
     MainUI/BookBrowserTreeView.cpp
@@ -621,6 +627,7 @@ set( UI_FILES
     Form_Files/EditTOC.ui
     Form_Files/HeadingSelector.ui
     Form_Files/FindReplace.ui
+    Form_Files/FindReplacePlus.ui
     Form_Files/PAppearanceWidget.ui
     Form_Files/Preferences.ui
     Form_Files/PKeyboardShortcutsWidget.ui
@@ -649,9 +656,11 @@ set( UI_FILES
     Form_Files/SpellcheckEditor.ui
     Form_Files/PluginRunner.ui
     Form_Files/Controls.ui
+    Form_Files/SearchControlsPlus.ui
     Form_Files/CountsReport.ui
     Form_Files/DryRunReplace.ui
     Form_Files/ReplacementChooser.ui
+    Form_Files/ReplacementPreviewPlus.ui
     )
 
 set( SOURCEUPDATE_FILES

@@ -489,9 +489,9 @@ protected:
 
 /*--------------------- modified: ContentTabExt -------------------------*/
 public:
-    virtual bool PasteRichTextEnabled() { return false; } //modified: AddPasteRichText
+    //modified: AddPasteRichText
+    virtual bool PasteRichTextEnabled() { return false; }
 };
 
 #endif // CONTENTTAB_H
-
 

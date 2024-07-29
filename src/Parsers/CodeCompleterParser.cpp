@@ -19,6 +19,9 @@ CodeCompleterParser::CodeCompleterParser(QPlainTextEdit* editor, FileType filety
 	initSettings();
 	initCompleter();
 }
+CodeCompleterParser::~CodeCompleterParser()
+{
+}
 
 void CodeCompleterParser::initSettings() {
 	SettingsStoreExtend sse;

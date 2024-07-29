@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2020-2024 Kevin Hendricks, Stratford, ON Canada
+**  Copyright (C) 2015-2021 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Dave Heiland
 **  Copyright (C) 2012      Grant Drake
@@ -23,40 +23,31 @@
 *************************************************************************/
 
 #pragma once
-#ifndef FINDREPLACEQLINEEDIT_H
-#define FINDREPLACEQLINEEDIT_H
+#ifndef SEARCHEDITORTREEVIEW_H
+#define SEARCHEDITORTREEVIEW_H
 
-#include <QtWidgets/QLineEdit>
-#include <QtGui/QStandardItem>
+#include <QtWidgets/QTreeView>
 
-class QContextMenuEvent;
-class QSignalMapper;
-
-class FindReplaceQLineEdit : public QLineEdit
+class SearchEditorTreeView : public QTreeView
 {
-    Q_OBJECT
-
 public:
-    //FindReplaceQLineEdit(QWidget *parent = 0);
-    FindReplaceQLineEdit(QWidget* parent = 0,bool plus_mode = false); //modified: FindReplacePlus
-    ~FindReplaceQLineEdit();
-
-    virtual void contextMenuEvent(QContextMenuEvent *event);
-
-    bool isTokeniseEnabled();
-    void setTokeniseEnabled(bool value);
+    SearchEditorTreeView(QWidget *parent = 0);
+    ~SearchEditorTreeView();
 
 protected:
-    bool event(QEvent *e);
+    QModelIndex moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers);
+
+//-------- modified: SavedSearchPlus -----------
+public:
+    void setModel(QAbstractItemModel* model);
+
+protected:
+    void rowsInserted(const QModelIndex& parent, int start, int end);
+    void rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end);
 
 private:
-    bool CreateMenuEntries(QMenu *parent_menu, QAction *topAction, QStandardItem *entry);
-
-    QWidget *m_FindReplace;
-    QSignalMapper *m_searchMapper;
-    bool m_tokeniseEnabled;
-    //modified: FindReplacePlus
-    bool m_PlusMode;
+    void setGroupsSpan(const QModelIndex& top);
+    QModelIndexList m_InsertedRowsToBeHandled;
 };
 
-#endif // FINDREPLACEQLINEEDIT_H
+#endif // SEARCHEDITORTREEVIEW_H

@@ -63,7 +63,7 @@
        <item>
         <widget class="QGroupBox" name="Group_txtimport">
          <property name="title">
-          <string>TXT import Settings</string>
+          <string>TXT import Settings:</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
@@ -71,6 +71,41 @@
             <property name="text">
              <string>Ignore blank lines when importing TXT as XHTML</string>
             </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="Group_findreplace">
+         <property name="title">
+          <string>Find and Replace Mode:</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QRadioButton" name="rbEnhancedMode">
+            <property name="text">
+             <string>Enhanced Mode</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">FindReplaceRbtnGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="rbOriginalMode">
+            <property name="text">
+             <string>Original Mode</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">FindReplaceRbtnGroup</string>
+            </attribute>
            </widget>
           </item>
          </layout>
@@ -150,4 +185,7 @@
  </customwidgets>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="FindReplaceRbtnGroup"/>
+ </buttongroups>
 </ui>

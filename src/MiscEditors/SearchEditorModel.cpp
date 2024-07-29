@@ -43,6 +43,7 @@ static const QString ENTRY_NAME             = "Name";
 static const QString ENTRY_FIND             = "Find";
 static const QString ENTRY_REPLACE          = "Replace";
 static const QString ENTRY_CONTROLS         = "Controls";
+static const QString ENTRY_PREFIND          = "PreFind"; //modified: SavedSearchPlus
 
 const int COLUMNS = 4;
 
@@ -57,8 +58,12 @@ SearchEditorModel *SearchEditorModel::instance()
 {
     if (m_instance == 0) {
         m_instance = new SearchEditorModel();
+        //modified: SavedSearchPlus
+        if (m_instance_plus) {
+            delete m_instance_plus;
+            m_instance_plus = 0;
+        }
     }
-
     return m_instance;
 }
 
@@ -92,10 +97,12 @@ SearchEditorModel::SearchEditorModel(QObject *parent)
 
 SearchEditorModel::~SearchEditorModel()
 {
+    //modified: SavedSearchPlus
+    /*
     if (m_instance) {
         delete m_instance;
         m_instance = 0;
-    }
+    }*/
 }
 
 void SearchEditorModel::SetDataModified(bool modified)
@@ -158,11 +165,19 @@ void SearchEditorModel::RowsRemovedHandler(const QModelIndex &parent, int start,
 void SearchEditorModel::ItemChangedHandler(QStandardItem *item)
 {
     Q_ASSERT(item);
-
+    //modified: SavedSearchPlus
+    /*
     if (item->column() == 3) {
         QString controls = item->text();
         item->setToolTip(BuildControlsToolTip(controls));
     }
+    */
+    if ((m_PlusMode && item->column() == 4) ||
+        (!m_PlusMode && item->column() == 3)) {
+        QString controls = item->text();
+        item->setToolTip(BuildControlsToolTip(controls));
+    }
+    //--------------------------
 
     if (item->column() != 0) {
         SetDataModified(true);
@@ -324,6 +339,7 @@ void SearchEditorModel::LoadData(const QString &filename, QStandardItem *item)
         // Name is set to fullname only while looping through parent groups when adding
         entry->name = fullname;
         entry->fullname = fullname;
+        entry->prefind = ss.value(ENTRY_PREFIND,QString()).toString(); //modified: SavedSearchPlus
         entry->find = ss.value(ENTRY_FIND).toString();
         entry->replace = ss.value(ENTRY_REPLACE).toString();
         entry->controls = ss.value(ENTRY_CONTROLS, "").toString();
@@ -369,10 +385,25 @@ void SearchEditorModel::LoadTextData(const QString &filename, QStandardItem *ite
                 // Name is set to fullname only while looping through parent groups when adding
                 entry->name = fullname;
                 entry->fullname = fullname;
+                //modified: SavedSearchPlus
+                /*
                 entry->find = findreplace.at(1);
                 entry->replace = findreplace.at(2);
                 entry->controls = findreplace.at(3);
-                
+                */
+                if (m_PlusMode) {
+                    entry->prefind = findreplace.at(1);
+                    entry->find = findreplace.at(2);
+                    entry->replace = findreplace.at(3);
+                    entry->controls = findreplace.at(4);
+                }
+                else {
+                    entry->find = findreplace.at(1);
+                    entry->replace = findreplace.at(2);
+                    entry->controls = findreplace.at(3);
+                }
+                //-------------------------
+
                 AddFullNameEntry(entry, item);
                 // done with the temporary entry so remove it
                 delete entry;
@@ -441,13 +472,20 @@ void SearchEditorModel::FillControls(const QList<QStandardItem*> &items)
 {
     if (items.isEmpty()) return;
     
+    //modified: SavedSearchPlus
+    int controls_culumn = m_PlusMode ? 4 : 3;
+    //---------------------
+
     QStandardItem *source_item = items.at(0);
     
     QStandardItem *parent_item = invisibleRootItem();
     if (source_item->parent()) {
         parent_item = source_item->parent();
     }
-    QString controls = parent_item->child(source_item->row(), 3)->text();
+    //modified: SavedSearchPlus
+    //QString controls = parent_item->child(source_item->row(), 3)->text();
+    QString controls = parent_item->child(source_item->row(), controls_culumn)->text();
+    //------------------------
 
     for (int i = 1; i < items.size(); i++) {
         QStandardItem* aitem = items.at(i);
@@ -455,7 +493,10 @@ void SearchEditorModel::FillControls(const QList<QStandardItem*> &items)
         if (aitem->parent()) {
             parent_item = aitem->parent();
         }
-        parent_item->child(aitem->row(), 3)->setText(controls);
+        //modified: SavedSearchPlus
+        //parent_item->child(aitem->row(), 3)->setText(controls);
+        parent_item->child(aitem->row(), controls_culumn)->setText(controls);
+        //-------------------------
     }
     SetDataModified(true);
 }
@@ -531,6 +572,11 @@ QString SearchEditorModel::BuildControlsToolTip(const QString & controls)
         if (controls.contains("TO")) {
             tooltip_controls.append("TO - " + tr("Option: Text Only") + "\n");
         }
+        //------------------------ modified: SavedSearchPlus ----------------------
+        if (controls.contains("PS")) {
+            tooltip_controls.append("PS - " + tr("Mode: Regex With PreSearch") + "\n");
+        }
+        //---------------------------------------------------------------------
     }
     return tooltip_controls;
 }
@@ -551,6 +597,7 @@ QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry
 
         if (!is_group) {
             entry->name = "Search";
+            entry->prefind = ""; //modified: SavedSearchPlus
             entry->find = "";
             entry->replace = "";
             entry->controls = "";
@@ -580,13 +627,18 @@ QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry
         group_item->setFont(font);
         rowItems << group_item;
 
-        for (int col = 1; col < COLUMNS ; col++) {
+        ////modified: SavedSearchPlus
+        //for (int col = 1; col < COLUMNS ; col++) {
+        int columns = m_PlusMode ? 5 : 4;
+        for (int col = 1; col < columns; col++) {
+        //---------------------------
             QStandardItem *item = new QStandardItem("");
             item->setEditable(false);
             rowItems << item;
         }
     } else {
         rowItems << new QStandardItem(entry->name);
+        if (m_PlusMode) rowItems << new QStandardItem(entry->prefind); //modified: SavedSearchPlus
         rowItems << new QStandardItem(entry->find);
         rowItems << new QStandardItem(entry->replace);
         rowItems << new QStandardItem(entry->controls);
@@ -595,8 +647,16 @@ QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry
     rowItems[0]->setData(entry->is_group, IS_GROUP_ROLE);
     rowItems[0]->setData(entry->fullname, FULLNAME_ROLE);
     rowItems[0]->setToolTip(entry->fullname);
-    rowItems[3]->setToolTip(BuildControlsToolTip(entry->controls));
-    
+    //modified: SavedSearchPlus
+    //rowItems[3]->setToolTip(BuildControlsToolTip(entry->controls));
+    if (m_PlusMode) {
+        rowItems[4]->setToolTip(BuildControlsToolTip(entry->controls));
+    }
+    else {
+        rowItems[3]->setToolTip(BuildControlsToolTip(entry->controls));
+    }
+    //------------------------
+
     // Add the new item to the model at the specified row
     QStandardItem *new_item;
 
@@ -705,9 +765,24 @@ SearchEditorModel::searchEntry *SearchEditorModel::GetEntry(QStandardItem *item)
     entry->is_group =    parent_item->child(item->row(), 0)->data(IS_GROUP_ROLE).toBool();
     entry->fullname =    parent_item->child(item->row(), 0)->data(FULLNAME_ROLE).toString();
     entry->name =        parent_item->child(item->row(), 0)->text();
+    //modified: SavedSearchPlus
+    /*
     entry->find =        parent_item->child(item->row(), 1)->text();
     entry->replace =     parent_item->child(item->row(), 2)->text();
     entry->controls =    parent_item->child(item->row(), 3)->text();
+    */
+    if (m_PlusMode) {
+        entry->prefind = parent_item->child(item->row(), 1)->text();
+        entry->find = parent_item->child(item->row(), 2)->text();
+        entry->replace = parent_item->child(item->row(), 3)->text();
+        entry->controls = parent_item->child(item->row(), 4)->text();
+    }
+    else {
+        entry->find = parent_item->child(item->row(), 1)->text();
+        entry->replace = parent_item->child(item->row(), 2)->text();
+        entry->controls = parent_item->child(item->row(), 3)->text();
+    }
+    //--------------------------
     return entry;
 }
 
@@ -767,6 +842,7 @@ QString SearchEditorModel::SaveTextData(QList<SearchEditorModel::searchEntry *> 
         QStringList data;
         data << entry->fullname;
         if (!entry->is_group) {
+           if (m_PlusMode) data << entry->prefind; //modified: SavedSearchPlus
            data << entry->find;
            data << entry->replace;
            data << entry->controls;
@@ -845,6 +921,7 @@ QString SearchEditorModel::SaveData(QList<SearchEditorModel::searchEntry *> entr
             ss.setValue(ENTRY_NAME, entry->fullname);
 
             if (!entry->is_group) {
+                if (m_PlusMode) ss.setValue(ENTRY_PREFIND, entry->prefind); //modified: SavedSearchPlus
                 ss.setValue(ENTRY_FIND, entry->find);
                 ss.setValue(ENTRY_REPLACE, entry->replace);
                 ss.setValue(ENTRY_CONTROLS, entry->controls);
@@ -878,4 +955,52 @@ QVariant SearchEditorModel::data(const QModelIndex &index, int role) const
     }
 
     return QStandardItemModel::data(index, role);
+}
+
+//------------------ modified: SavedSearchPlus --------------------
+static const QString SETTINGSEXTEND_FILE = "saved_searches_plus_m.ini";
+
+SearchEditorModel::SearchEditorModel(bool plus_mode, QObject* parent)
+    :
+    QStandardItemModel(parent),
+    m_FSWatcher(new QFileSystemWatcher()),
+    m_IsDataModified(false),
+    m_PlusMode(true)
+{
+    m_SettingsPath = Utility::DefinePrefsDir() + "/" + SETTINGSEXTEND_FILE;
+    QStringList header;
+    header.append(tr("Name"));
+    header.append(tr("PreFind"));
+    header.append(tr("Find"));
+    header.append(tr("Replace"));
+    header.append(tr("Controls"));
+    setHorizontalHeaderLabels(header);
+    LoadInitialData();
+    // Save it to make sure we have a file in case it was loaded from examples
+    SaveData();
+
+    if (!m_FSWatcher->files().contains(m_SettingsPath)) {
+        m_FSWatcher->addPath(m_SettingsPath);
+    }
+
+    connect(m_FSWatcher, SIGNAL(fileChanged(const QString&)),
+        this, SLOT(SettingsFileChanged(const QString&)), Qt::DirectConnection);
+    connect(this, SIGNAL(itemChanged(QStandardItem*)),
+        this, SLOT(ItemChangedHandler(QStandardItem*)));
+    connect(this, SIGNAL(rowsRemoved(const QModelIndex&, int, int)),
+        this, SLOT(RowsRemovedHandler(const QModelIndex&, int, int)));
+}
+
+SearchEditorModel* SearchEditorModel::m_instance_plus = 0;
+SearchEditorModel* SearchEditorModel::instance(bool plus_mode)
+{
+    if (m_instance_plus == 0) {
+        bool plus_mode = true;
+        m_instance_plus = new SearchEditorModel(plus_mode);
+        if (m_instance) {
+            delete m_instance;
+            m_instance = 0;
+        }
+    }
+    return m_instance_plus;
 }

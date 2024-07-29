@@ -137,6 +137,12 @@ static QString KEY_CV_DARK_XHTML_HTML_COLOR = SETTINGS_GROUP + "/" + "cv_dark_xh
 static QString KEY_CV_DARK_XHTML_HTML_COMMENT_COLOR = SETTINGS_GROUP + "/" + "cv_dark_xhtml_html_comment_color";
 // End Dark appearance
 
+//modified: PreSelectionColor
+static QString KEY_CODE_VIEW_PRESELECTION_COLOR = SETTINGS_GROUP + "/" + "code_view_presearch_selection_color_m";
+static QString KEY_CV_DARK_PRESELECTION_COLOR = SETTINGS_GROUP + "/" + "cv_dark_presearch_selection_color_m";
+// Dark Appearance
+//---------------------------
+
 static QString KEY_SPECIAL_CHARACTER_FONT_FAMILY = SETTINGS_GROUP + "/" + "special_character_font_family";
 static QString KEY_SPECIAL_CHARACTER_FONT_SIZE = SETTINGS_GROUP + "/" + "special_character_font_size";
 static QString KEY_MAIN_MENU_ICON_SIZE = SETTINGS_GROUP + "/" + "main_menu_icon_size";
@@ -486,6 +492,9 @@ SettingsStore::CodeViewAppearance SettingsStore::codeViewAppearance()
     appearance.xhtml_entity_color = value(KEY_CODE_VIEW_XHTML_ENTITY_COLOR, QColor(Qt::darkMagenta)).value<QColor>();
     appearance.xhtml_html_color = value(KEY_CODE_VIEW_XHTML_HTML_COLOR, QColor(Qt::blue)).value<QColor>();
     appearance.xhtml_html_comment_color = value(KEY_CODE_VIEW_XHTML_HTML_COMMENT_COLOR, QColor(Qt::darkGreen)).value<QColor>();
+    //modified: PreSelectionColor
+    appearance.presearch_selection_color = value(KEY_CODE_VIEW_PRESELECTION_COLOR, QColor(230, 251, 255)).value<QColor>();
+    //---------------------------
     return appearance;
 }
 
@@ -518,6 +527,9 @@ SettingsStore::CodeViewAppearance SettingsStore::codeViewDarkAppearance()
     appearance.xhtml_entity_color = value(KEY_CV_DARK_XHTML_ENTITY_COLOR, QColor(235, 255, 196)).value<QColor>();
     appearance.xhtml_html_color = value(KEY_CV_DARK_XHTML_HTML_COLOR, QColor(239, 239, 143)).value<QColor>();
     appearance.xhtml_html_comment_color = value(KEY_CV_DARK_XHTML_HTML_COMMENT_COLOR, QColor(112, 109, 91)).value<QColor>();
+    //modified: PreSelectionColor
+    appearance.presearch_selection_color = value(KEY_CV_DARK_PRESELECTION_COLOR, QColor(81, 81, 81)).value<QColor>();
+    //---------------------------
     return appearance;
 }
 
@@ -863,6 +875,9 @@ void SettingsStore::setCodeViewAppearance(const SettingsStore::CodeViewAppearanc
     setValue(KEY_CODE_VIEW_XHTML_ENTITY_COLOR, code_view_appearance.xhtml_entity_color);
     setValue(KEY_CODE_VIEW_XHTML_HTML_COLOR, code_view_appearance.xhtml_html_color);
     setValue(KEY_CODE_VIEW_XHTML_HTML_COMMENT_COLOR, code_view_appearance.xhtml_html_comment_color);
+    //modified: PreSelectionColor
+    setValue(KEY_CODE_VIEW_PRESELECTION_COLOR, code_view_appearance.presearch_selection_color);
+    //--------------------------
 }
 
 void SettingsStore::setHighlightOpenCloseTags(bool enabled)
@@ -893,6 +908,9 @@ void SettingsStore::setCodeViewDarkAppearance(const SettingsStore::CodeViewAppea
     setValue(KEY_CV_DARK_XHTML_ENTITY_COLOR, code_view_appearance.xhtml_entity_color);
     setValue(KEY_CV_DARK_XHTML_HTML_COLOR, code_view_appearance.xhtml_html_color);
     setValue(KEY_CV_DARK_XHTML_HTML_COMMENT_COLOR, code_view_appearance.xhtml_html_comment_color);
+    //modified: PreSelectionColor
+    setValue(KEY_CV_DARK_PRESELECTION_COLOR, code_view_appearance.presearch_selection_color);
+    //---------------------------
 }
 
 void SettingsStore::setSpecialCharacterAppearance(const SettingsStore::SpecialCharacterAppearance &special_character_appearance)
@@ -988,6 +1006,14 @@ void SettingsStore::clearAppearanceSettings()
     remove(KEY_UI_DOUBLEWIDTH_TEXTCURSOR);
     remove(KEY_UI_CUSTOM_SIGIL_DARK_THEME);
     ;
+    //modified: PreSelectionColor
+    if (!Utility::IsDarkMode()) {
+        remove(KEY_CODE_VIEW_PRESELECTION_COLOR);
+    }
+    else {
+        remove(KEY_CV_DARK_PRESELECTION_COLOR);
+    }
+    //---------------------------
 }
 
 void SettingsStore::clearSettingsGroup()

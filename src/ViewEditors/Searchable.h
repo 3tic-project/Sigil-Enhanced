@@ -106,6 +106,31 @@ public:
     virtual void SetUpFindForSelectedText(const QString &search_regex) = 0;
 
     static void ShowWrapIndicator(QWidget *parent);
+
+    //------------- modified: FindReplacePlus ---------------------
+    virtual bool FindNextPlus(const QString& presearch_regex,
+                              const QString& search_regex,
+                              bool marked_text = false,
+                              int split_at = -1,
+                              bool inRemainder = false) = 0;
+
+    virtual bool FindPrevPlus(const QString& presearch_regex,
+                              const QString& search_regex,
+                              bool marked_text = false,
+                              int split_at = -1,
+                              bool inRemainder = false) = 0;
+
+    virtual bool ReplaceSelectedPlus(const QString& search_regex,
+                                     const QString& replacement,
+                                     Searchable::Direction direction = Searchable::Direction_Down,
+                                     bool replace_current = false) = 0;
+
+    virtual int ReplaceAllPlus(const QString& presearch_regex,
+                               const QString& search_regex,
+                               const QString& replacement,
+                               bool marked_text = false) = 0;
+
+    virtual int CountPlus(const QString& presearch_regex, const QString& search_regex, bool marked_text = false) = 0;
 };
 
 #endif // SEARCHABLE_H

@@ -878,22 +878,58 @@ private:
 
 /*-------------------- - modified: CodeViewEditorExt--------------------------------*/
 signals:
-    void PasteRichTextRequest(); // modified: AddPasteRichText
+    // modified: AddPasteRichText
+    void PasteRichTextRequest();
 
 public:
-    void SplitTagOrAddBreak(); // modified: SplitTagOrAddBreak
-    void MergeNextElement(); // modified: MergeNextElement
-    void FormatBlock_multiline(const QString& element_name, bool preserve_attributes); // modified: Add Lables On Multiple Lines
+    // modified: SplitTagOrAddBreak
+    void SplitTagOrAddBreak();
+
+    // modified: MergeNextElement
+    void MergeNextElement();
+
+    // modified: Add Lables On Multiple Lines
+    void FormatBlock_multiline(const QString& element_name, bool preserve_attributes);
+
+    //modified: FindReplacePlus
+    bool FindNextPlus(const QString& presearch_regex,
+                      const QString& search_regex,
+                      bool marked_text = false,
+                      int split_at = -1,
+                      bool inRemainder = false);
+
+    bool FindPrevPlus(const QString& presearch_regex,
+        const QString& search_regex,
+        bool marked_text = false,
+        int split_at = -1,
+        bool inRemainder = false);
+
+    bool ReplaceSelectedPlus(const QString& search_regex,
+                             const QString& replacement,
+                             Searchable::Direction direction = Searchable::Direction_Down,
+                             bool replace_current = false);
+
+    int CountPlus(const QString& presearch_regex, const QString& search_regex, bool marked_text = false);
+
+    int ReplaceAllPlus(const QString& presearch_regex,
+                       const QString& search_regex,
+                       const QString& replacement,
+                       bool marked_text);
+
+    // modified: CodeCompleterParser
+    void setHTMLCodeCompleter();
+    void setCSSCodeCompleter();
 
 public slots:
-    void PasteRichText(); // modified: AddPasteRichText
+    // modified: AddPasteRichText
+    void PasteRichText();
 
 protected:
-    void keyPressEvent(QKeyEvent* event); //modified: keyPressEvent
+    //modified: keyPressEvent
+    void keyPressEvent(QKeyEvent* event);
 
 private:
-    // relate to keyborad event
-    CodeCompleterParser* m_completeParser; // modified: CodeCompleterParser
+    //modified: keyPressEvent
     HighlighterType m_hightype;
     const QString m_symbolsToDetectInCSSView;
     const QString m_symbolsToDetectInHTMLView;
@@ -901,18 +937,53 @@ private:
     bool HtmlViewKeyPressEvent(QKeyEvent* event);
     bool CssViewKeyPressEvent(QKeyEvent* event);
     bool CommonKeyPressEvent(QKeyEvent* event);
-    bool VisibleCompleterEvent(QKeyEvent* event); // modified: CodeCompleterParser
-    bool CodeCompleterEvent(QKeyEvent* event); // modified: CodeCompleterParser
     bool quickSwitchOfCursor(QKeyEvent* event);
     inline void insertTextAtCursor(QString text,QTextCursor cursor);
 
-    // relate to paste event
+    // modified: CodeCompleterParser
+    bool m_hasCodeCompleter;
+    CodeCompleterParser* m_completeParser;
+    bool VisibleCompleterEvent(QKeyEvent* event);
+    bool CodeCompleterEvent(QKeyEvent* event);
+
+    // modified: paste event
     bool insertImagesFromUrls(const QList<QUrl>& urls,bool insert_on_css = false);
     bool insertImageFromByteData(const QByteArray& data, bool insert_on_css = false);
     void CommonPasteEvent(const QMimeData* source);
     bool CssViewPasteEvent(const QMimeData* source);
     bool HtmlViewPasteEvent(const QMimeData* source);
-    void AddPasteRichText(QMenu* menu); // modified: AddPasteRichText
+
+    // modified: AddPasteRichText
+    void AddPasteRichText(QMenu* menu);
+
+    // modified: FindReplacePlus
+    struct PreSearchInfo {
+        bool presearch_has_executed;
+        QString lastPreFindRegex;
+        int matched_start, matched_end;
+        PreSearchInfo() :
+            presearch_has_executed(false),
+            lastPreFindRegex(QString()),
+            matched_start(-1),
+            matched_end(-1){}
+    } m_preSearchInfo;
+
+
+    bool FindNextPreSearch(const QString& presearch_regex,
+        bool marked_text = false,
+        int split_at = -1,
+        bool inRemainder = false);
+
+    bool FindPrevPreSearch(const QString& presearch_regex,
+        bool marked_text = false,
+        int split_at = -1,
+        bool inRemainder = false);
+
+    // modified: FindReplacePlus
+    bool m_InSearchingState;
+    bool m_ReplacingInSearch;
+    bool m_CountSplitOffset;
+    int m_SplitOffset;
 };
 
 #endif // CODEVIEWEDITOR_H

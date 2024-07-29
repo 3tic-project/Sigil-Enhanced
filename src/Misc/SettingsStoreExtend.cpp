@@ -9,28 +9,19 @@
 /*------------------ modified: XHTML Fomat Configure ----------------------*/
 
 SettingsStoreExtend::SettingsStoreExtend()
-   :isSettingsInitialized(false)
+   :QSettings(Utility::DefinePrefsDir() + "/" + "sigil_extend.ini",QSettings::IniFormat)
 {
-}
-
-void SettingsStoreExtend::initSettings()
-{
-    QString ini_path = Utility::DefinePrefsDir() + "/" + "sigil_extend.ini";
-    settings.setPath(QSettings::IniFormat, QSettings::UserScope, ini_path);
-    isSettingsInitialized = true;
 }
 
 QString SettingsStoreExtend::getXhtmlFormat() {
-    if (!isSettingsInitialized) initSettings();
-    if (!settings.contains("user_preferences/xhtml_format")) {
+    if (!contains("user_preferences/xhtml_format")) {
         return QString();
     }
-    return settings.value("user_preferences/xhtml_format").toString();
+    return value("user_preferences/xhtml_format").toString();
 }
 
 void SettingsStoreExtend::setXhtmlFormat(QString conf) {
-    if (!isSettingsInitialized) initSettings();
-    settings.setValue("user_preferences/xhtml_format", conf);
+    setValue("user_preferences/xhtml_format", conf);
 }
 
 void SettingsStoreExtend::setHTMLCompleterWordsJson(const QJsonObject& json) {
@@ -43,8 +34,7 @@ void SettingsStoreExtend::setHTMLCompleterWordsJson(const QJsonObject& json) {
 }
 
 void SettingsStoreExtend::setTxtImportingSettings(bool ignoreBlankLine) {
-    if (!isSettingsInitialized) initSettings();
-    settings.setValue("user_preferences/ignore_blankline", ignoreBlankLine);
+    setValue("user_preferences/ignore_blankline", ignoreBlankLine);
 }
 
 void SettingsStoreExtend::setCSSCompleterWordsJson(const QJsonObject& json) {
@@ -81,29 +71,25 @@ QJsonObject SettingsStoreExtend::getCSSCompleterWordsJson() {
 }
 
 void SettingsStoreExtend::setCompleterEnabled(bool completerEnabled) {
-    if (!isSettingsInitialized) initSettings();
-    settings.setValue("user_preferences/completer_enabled", completerEnabled);
+    setValue("user_preferences/completer_enabled", completerEnabled);
 }
 
 void SettingsStoreExtend::setEmmetEnabled(bool emmetEnabled) {
-    if (!isSettingsInitialized) initSettings();
-    settings.setValue("user_preferences/emmet_enabled", emmetEnabled);
+    setValue("user_preferences/emmet_enabled", emmetEnabled);
 }
 
 bool SettingsStoreExtend::getCompleterEnabled(){
-    if (!isSettingsInitialized) initSettings();
     bool completerEnabled = true;
-    if (settings.contains("user_preferences/completer_enabled")) {
-        completerEnabled = settings.value("user_preferences/completer_enabled").toBool();
+    if (contains("user_preferences/completer_enabled")) {
+        completerEnabled = value("user_preferences/completer_enabled").toBool();
     }
     return completerEnabled;
 }
 
 bool SettingsStoreExtend::getEmmetEnabled(){
-    if (!isSettingsInitialized) initSettings();
     bool emmetEnabled = true;
-    if (settings.contains("user_preferences/emmet_enabled")) {
-        emmetEnabled = settings.value("user_preferences/emmet_enabled").toBool();
+    if (contains("user_preferences/emmet_enabled")) {
+        emmetEnabled = value("user_preferences/emmet_enabled").toBool();
     }
     return emmetEnabled;
 }
@@ -134,15 +120,25 @@ QByteArray SettingsStoreExtend::formatJson(const QByteArray &json_data) {
 
 // Ignore blank line while converting txt file to xhtml file.
 void SettingsStoreExtend::setIgnoreBlankLine(bool ignore) {
-    if (!isSettingsInitialized) initSettings();
-    settings.setValue("user_preferences/txt_ignore_blankline", ignore);
+    setValue("user_preferences/txt_ignore_blankline", ignore);
 }
 
 bool SettingsStoreExtend::getIgnoreBlankLine() {
-    if (!isSettingsInitialized) initSettings();
+
     bool ignore = false;
-    if (settings.contains("user_preferences/txt_ignore_blankline")) {
-        ignore = settings.value("user_preferences/txt_ignore_blankline").toBool();
+    if (contains("user_preferences/txt_ignore_blankline")) {
+        ignore = value("user_preferences/txt_ignore_blankline").toBool();
     }
     return ignore;
+}
+
+void SettingsStoreExtend::setFindReplaceEnhancedMode(bool isEnhancedMode) {
+    setValue("user_preferences/find_replace_enhaced", isEnhancedMode);
+}
+bool SettingsStoreExtend::getFindReplaceEnhancedMode() {
+    bool isEnhancedMode = true;
+    if (contains("user_preferences/find_replace_enhaced")) {
+        isEnhancedMode = value("user_preferences/find_replace_enhaced").toBool();
+    }
+    return isEnhancedMode;
 }

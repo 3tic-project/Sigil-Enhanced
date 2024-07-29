@@ -49,6 +49,7 @@ public:
         QString find;
         QString replace;
         QString controls;
+        QString prefind; //modified: FindReplacePlus
     };
 
     bool IsDataModified();
@@ -122,6 +123,14 @@ private:
     QFileSystemWatcher *m_FSWatcher;
 
     bool m_IsDataModified;
+
+//--------------------- modified: SavedSearchPlus -----------------------
+public:
+    SearchEditorModel(bool plus_mode, QObject* parent = 0);
+    static SearchEditorModel* instance(bool plus_mode);
+private:
+    bool m_PlusMode = false;
+    static SearchEditorModel* m_instance_plus;
 };
 
 #endif // SEARCHEDITORMODEL_H

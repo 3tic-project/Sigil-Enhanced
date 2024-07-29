@@ -167,6 +167,9 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
     codeViewAppearance.xhtml_entity_color           = getListItemColor(i++);
     codeViewAppearance.xhtml_html_color             = getListItemColor(i++);
     codeViewAppearance.xhtml_html_comment_color     = getListItemColor(i++);
+    //modified: PreSelectionColor
+    codeViewAppearance.presearch_selection_color    = getListItemColor(i++);
+    //---------------------------
     // only save CV Appearance if mode was not changed since preference was open
     if (m_wasDark == Utility::IsDarkMode()) {
         if (Utility::IsDarkMode()) {
@@ -212,6 +215,9 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
         (m_codeViewAppearance.xhtml_doctype_color          != codeViewAppearance.xhtml_doctype_color) ||
         (m_codeViewAppearance.xhtml_entity_color           != codeViewAppearance.xhtml_entity_color) ||
         (m_codeViewAppearance.xhtml_html_color             != codeViewAppearance.xhtml_html_color) ||
+        //modified: PreSelectionColor
+        (m_codeViewAppearance.presearch_selection_color    != codeViewAppearance.presearch_selection_color)||
+        //---------------------------
         (m_codeViewAppearance.xhtml_html_comment_color     != codeViewAppearance.xhtml_html_comment_color)) {
         results = results | PreferencesWidget::ResultAction_ReloadTabs;
     }
@@ -345,6 +351,9 @@ void AppearanceWidget::loadCodeViewColorsList(SettingsStore::CodeViewAppearance 
     addColorItem(tr("XHTML Entity"),          codeViewAppearance.xhtml_entity_color);
     addColorItem(tr("XHTML HTML Tag"),        codeViewAppearance.xhtml_html_color);
     addColorItem(tr("XHTML HTML Comment"),    codeViewAppearance.xhtml_html_comment_color);
+    //modified: PreSelectionColor
+    addColorItem(tr("PreFind Selection"), codeViewAppearance.presearch_selection_color);
+    //---------------------------
     ui.codeViewColorsList->setCurrentRow(0);
 }
 

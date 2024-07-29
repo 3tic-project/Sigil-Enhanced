@@ -1,7 +1,7 @@
 #include "Tabs/FlowTab.h"
 #include "ViewEditors/CodeViewEditor.h"
 
-//------------- modified: AddPasteRichText ---------------
+//modified: AddPasteRichText
 bool FlowTab::PasteRichTextEnabled()
 {
     if (m_wCodeView) {
@@ -9,9 +9,8 @@ bool FlowTab::PasteRichTextEnabled()
     }
     return false;
 }
-//--------------------------------------------------------
 
-//------------------- modified: AddPasteRichText ----------------
+//modified: AddPasteRichText
 void FlowTab::PasteRichText()
 {
     if (m_wCodeView) {
@@ -19,17 +18,15 @@ void FlowTab::PasteRichText()
         m_wCodeView->PasteRichText();
     }
 }
-//---------------------------------------------------------------
 
-// -------------- modified: SplitTagOrAddBreak ----------------
+//modified: SplitTagOrAddBreak
 void FlowTab::SplitTagOrAddBreak()
 {
     if (!IsDataWellFormed()) return;
     m_wCodeView->SplitTagOrAddBreak();
 }
-// --------------------------------------------------------------
 
-//-------------- modified: Add Lables On Multiple Lines -------------------
+//modified: Add Lables On Multiple Lines
 void FlowTab::HeadingStylePlus(const QString& heading_type, bool preserve_attributes)
 {
     if (m_wCodeView) {
@@ -45,11 +42,9 @@ void FlowTab::HeadingStylePlus(const QString& heading_type, bool preserve_attrib
         }
     }
 }
-//-------------------------------------------------------------------------
 
-//---------------------- modified: MergeNextElement ------------------------
+//modified: MergeNextElement
 void FlowTab::MergeNextElement() {
     if (!IsDataWellFormed()) return;
     m_wCodeView->MergeNextElement();
 }
-//--------------------------------------------------------------------------

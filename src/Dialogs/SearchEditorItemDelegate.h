@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
 **
 **  Copyright (C) 2021      Kevin B. Hendricks, Stratford Ontario Canada
 **
@@ -41,7 +41,9 @@ public:
     virtual void setEditorData(QWidget *editor, const QModelIndex &index) const;
     virtual void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const;
 
+    void setPlusMode(bool plus_mode = true); //modified: SavedSearchPlus
 private:
+    bool m_PlusMode = false; //modified: SavedSearchPlus
 };
 
 #endif // SEARCHEDITORITEMDELEGATE_H

@@ -113,5 +113,6 @@
         <file>zoom-out.svg</file>
         <file>zoom-to-window.svg</file>
         <file>edit-paste-rich.svg</file>
+        <file>misc-symbol-no-entry.svg</file>
    </qresource>
 </RCC>

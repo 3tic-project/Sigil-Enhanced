@@ -38,6 +38,17 @@ public:
 protected:
     QModelIndex moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers);
 
+//-------- modified: SavedSearchPlus -----------
+public:
+    void setModel(QAbstractItemModel* model);
+
+protected:
+    void rowsInserted(const QModelIndex& parent, int start, int end);
+    void rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end);
+
+private:
+    void setGroupsSpan(const QModelIndex& top);
+    QModelIndexList m_InsertedRowsToBeHandled;
 };
 
 #endif // SEARCHEDITORTREEVIEW_H

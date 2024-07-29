@@ -214,6 +214,8 @@ public:
         QColor xhtml_entity_color;
         QColor xhtml_html_color;
         QColor xhtml_html_comment_color;
+        //modified: PreSelectionColor
+        QColor presearch_selection_color;
     };
 
     /**

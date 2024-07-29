@@ -80,8 +80,6 @@ public:
      */
     bool isReloadPreviewRequired();
 
-    bool isRefreshToolBarPluginsRequired(); // modified: RefreshToolBarPlugins
-
     void makeActive(int);
 
 private slots:
@@ -129,8 +127,16 @@ private:
     bool m_refreshClipHistoryLimit;
     bool m_refreshBookBrowser;
     bool m_reloadPreview;
-    bool m_refreshToolBarPlugins; // modified: RefreshToolBarPlugins
     Ui::Preferences ui;
+
+//--------------- modified: Preferences -----------------
+public:
+    bool isRefreshToolBarPluginsRequired(); // modified: RefreshToolBarPlugins
+    bool isRefreshFindRepWidgetRequired(); // modified: FindReplacePlus
+private:
+    bool m_refreshToolBarPlugins; // modified: RefreshToolBarPlugins
+    bool m_refreshFindRepWdiget; // modified: FindReplacePlus
+
 };
 
 #endif // PREFERENCES_H

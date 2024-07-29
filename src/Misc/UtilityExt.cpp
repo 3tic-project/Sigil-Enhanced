@@ -7,9 +7,9 @@
 
 #include "Misc/Utility.h"
 #include "sigil_exception.h"
+#include "PCRE2/PCRECache.h"
 
-
-// --------------- modified: Prettify xhtml,Regexp, re_sub ---------------------------
+//modified: Prettify xhtml,Regexp, re_sub
 QString Utility::RegExpSub(const QString& regexp, const QString& alt_pattern, const QString& text, int max_count) {
 
     QRegExp re(regexp);
@@ -51,9 +51,8 @@ QString Utility::RegExpSub(const QString& regexp, const QString& alt_pattern, co
     new_text += text.mid(offset);
     return new_text;
 }
-//-------------------------------------------------------------------------
 
-//---------modified: trimmed: trim the specific chars on text's head and tail----------
+//modified: trimmed: trim the specific chars on text's head and tail
 QString Utility::trimmed(const QString& text, const QString& chars) {
     int i, j = 0;
     QChar ch;
@@ -69,9 +68,8 @@ QString Utility::trimmed(const QString& text, const QString& chars) {
     }
     return text.mid(i, j - i);
 }
-//----------------------------------------------------------------------------
 
-//------------modified: used by correctOPF、walk direct files----------------------------------
+//modified: used by correctOPF、walk direct files
 QStringList Utility::walkDirs(QString root) {
     QDir* dirinfo = new QDir(root);
     if (!dirinfo->exists()) {
@@ -92,9 +90,8 @@ QStringList Utility::walkDirs(QString root) {
     }
     return fileList;
 }
-//--------------------------------------------------------------------------------------------
 
-//---------modified: getMtypeFromExt----------------------------------------------------------
+//modified: getMtypeFromExt
 QString Utility::ExtToMTypeMap(QString& ext)
 {
     QHash<QString, QString> ExtToMType;
@@ -145,9 +142,8 @@ QString Utility::ExtToMTypeMap(QString& ext)
     }
     return ExtToMType[ext];
 }
-//--------------------------------------------------------------------------------------------
 
-//------------------------modified：StringTrimmedIndex-----------------------------------
+//modified：StringTrimmedIndex
 /*
  * This function is used to obtain the indexes of non whitespace characters
  * at the begining and the end of a string. It returnsa pair of int indexes.
@@ -186,9 +182,8 @@ Utility::TrimmedIndex Utility::StringTrimmedIndex(const QString& text) {
     }
     return { s_index, e_index };
 }
-//----------------------------------------------------------------------------------------
 
-//------------------------------ modified: importing txt ---------------------------
+//modified: importing txt
 QString Utility::ReadUnicodeTextFile_M(const QString& fullfilepath)
 {
     QFile file(fullfilepath);
@@ -219,3 +214,120 @@ QString Utility::ReadUnicodeTextFile_M(const QString& fullfilepath)
     return ConvertLineEndingsAndNormalize(res.toString());
 }
 //----------------------------------------------------------------------------------
+
+//modified: FindReplacePlus
+QList<std::pair<int, int>> Utility::GetPreSearchMatchInfos(const QString& presearch_regex, const QString& text)
+{
+    if (presearch_regex.isEmpty()) return QList<std::pair<int, int>>();
+
+    SPCRE* spcre_pre = PCRECache::instance()->getObject(presearch_regex);
+    SPCRE::MatchInfo pre_m_info;
+    QList<std::pair<int, int>> match_infos;
+
+    int pre_start = 0,
+        pre_end = text.length();
+
+    while (pre_start < pre_end) {
+        QString pre_text = text.mid(pre_start, pre_end - pre_start);
+        pre_m_info = spcre_pre->getFirstMatchInfo(pre_text);
+
+        if (pre_m_info.offset.first == -1) break;
+
+        int _start,_end;
+        int match_start = pre_start,
+            match_end = pre_start;
+        if (pre_m_info.capture_groups_offsets.count() >= 2) {
+            std::pair<int, int> g_offset = pre_m_info.capture_groups_offsets.at(1);
+            _start = pre_m_info.offset.first + g_offset.first;
+            _end = pre_m_info.offset.first + g_offset.second;
+        }
+        else {
+            _start = pre_m_info.offset.first;
+            _end = pre_m_info.offset.second;
+        }
+        match_start += _start;
+        match_end += _end;
+        pre_start = match_end;
+        match_infos << std::pair<int, int>{match_start, match_end};
+    }
+    return match_infos;
+}
+
+//modified: FindReplacePlus
+QList<Utility::MatchInfo> Utility::GetSearchInfoWithPreSearch(const QString& presearch, const QString& search, const QString& text)
+{
+    if (search.isEmpty()) return QList<Utility::MatchInfo>();
+
+    if (presearch.isEmpty()) {
+        SPCRE* spcre = PCRECache::instance()->getObject(search);
+        QList<Utility::MatchInfo> match_infos;
+        Utility::MatchInfo alt_info;
+        foreach(SPCRE::MatchInfo info, spcre->getEveryMatchInfo(text)) {
+            alt_info.offset = info.offset;
+            alt_info.capture_groups_offsets = info.capture_groups_offsets;
+            match_infos << alt_info;
+        }
+        return match_infos;
+    }
+    else {
+        QList<std::pair<int, int>> pre_offset_infos = Utility::GetPreSearchMatchInfos(presearch, text);
+        if (pre_offset_infos.isEmpty()) return QList<Utility::MatchInfo>();
+
+        SPCRE* spcre = PCRECache::instance()->getObject(search);
+        QList<Utility::MatchInfo> match_infos;
+        for (int i = 0; i < pre_offset_infos.count(); i++) {
+            std::pair<int, int> offset_info = pre_offset_infos.at(i);
+            int sub_start = offset_info.first,
+                sub_end = offset_info.second;
+            QString sub_text = text.mid(sub_start, sub_end - sub_start);
+            Utility::MatchInfo sub_info;
+            foreach(SPCRE::MatchInfo info, spcre->getEveryMatchInfo(sub_text)) {
+                sub_info.offset.first = info.offset.first + sub_start;
+                sub_info.offset.second = info.offset.second + sub_start;
+                sub_info.capture_groups_offsets = info.capture_groups_offsets;
+                match_infos << sub_info;
+            }
+        }
+        return match_infos;
+    }
+}
+
+//modified: PCREReplace
+QString Utility::HalfWidthChars2FullWidthChars(const QString& text)
+{
+    if (text.isEmpty()) return QString();
+    QString converted_text;
+    for (int i = 0; i < text.length(); i++) {
+        QChar c = text.at(i);
+        if (c.unicode() == 0x20) { // space
+            converted_text += QChar(0x3000);
+        }
+        else if (c.unicode() < 0x7F) { // ascii
+            converted_text += QChar(c.unicode() + 0xFEE0);
+        }
+        else {
+            converted_text += c;
+        }
+    }
+    return converted_text;
+}
+
+//modified: PCREReplace
+QString Utility::FullWidthChars2HalfWidthChars(const QString& text)
+{
+    if (text.isEmpty()) return QString();
+    QString converted_text;
+    for (int i = 0; i < text.length(); i++) {
+        QChar c = text.at(i);
+        if (c.unicode() >= 0xFF01 && c.unicode() <= 0xFF5D) {
+            converted_text += QChar(c.unicode() - 0xFEE0);
+        }
+        else if (c.unicode() == 0x3000) {
+            converted_text += QChar(0x20);
+        }
+        else {
+            converted_text += c;
+        }
+    }
+    return converted_text;
+}

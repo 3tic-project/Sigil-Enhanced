@@ -50,6 +50,7 @@
 #include "Tabs/ContentTab.h"
 #include "ViewEditors/ElementIndex.h"
 #include "Dialogs/SearchEditor.h"
+#include "MainUI/FindReplacePlus.h" //modified: FindReplacePlus
 
 const int MAX_RECENT_FILES = 9;
 const int STATUSBAR_MSG_DISPLAY_TIME = 7000;
@@ -1116,15 +1117,32 @@ private:
      */
     Ui::MainWindow ui;
 /*-------------------------------- modified: MainWindowExt -------------------------------------------*/
+public:
+    //modified: FindReplacePlus
+    enum FindReplaceMode {
+        EnhancedMode,
+        OriginalMode
+    };
+    FindReplaceMode GetFindReplaceMode();
 public slots:
     void Epub3ToEpub2(); //modified: Epub3ToEpub2
     void Epub2ToEpub3(); //modified: Epub2ToEpub3
     bool NormalizedOPF(); //modified: NormalizedOPF
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
+private:
+    //modified: FindReplacePlus
+    FindReplaceMode m_findReplaceMode;
+    FindReplacePlus* m_FindReplacePlus;
+    void changeFindReplaceMode();
+    void ConnectSignalsToSearchEditor();
+    void ConnectActionSignalsToFindReplace();
 private slots:
-    void ApplyHeadingStyleToTab_Plus(QAction* act); // modified: Add Lables On Multiple Lines
+    //modified: Add Lables On Multiple Lines
+    void ApplyHeadingStyleToTab_Plus(QAction* act);
+signals:
+    //modified: FindReplacePlus
+    void UpdateSearchStateRequest();
 };
 
 #endif // SIGIL_H
-
 

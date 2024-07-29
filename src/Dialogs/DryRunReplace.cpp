@@ -42,7 +42,7 @@
 #include "Dialogs/StyledTextDelegate.h"
 #include "MainUI/FindReplace.h"
 #include "Dialogs/DryRunReplace.h"
-
+#include "MainUI/FindReplacePlus.h" //modified: FindReplacePlus
 
 static const QString SETTINGS_GROUP = "dryrun_report";
 
@@ -122,7 +122,7 @@ void DryRunReplace::reject()
 
 void DryRunReplace::CreateTable()
 {
-    m_FindReplace->ShowMessage(tr("... Creating Table"));
+    //m_FindReplace->ShowMessage(tr("... Creating Table")); //modified: FindReplacePlus
     QApplication::setOverrideCursor(Qt::WaitCursor);
     ui.leFilter->clear();
     m_ItemModel->clear();
@@ -135,15 +135,34 @@ void DryRunReplace::CreateTable()
     ui.dryrunTree->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui.dryrunTree->setModel(m_ItemModel);
 
+    //------------------ modified: FindReplacePlus ----------------
+    /*
     QList<Resource*> resources = m_FindReplace->GetAllResourcesToSearch();
     QString search_regex = m_FindReplace->GetSearchRegex();
     QString replace_text = m_FindReplace->GetReplace();
+    */
+    QList<Resource*> resources;
+    QString presearch_regex, search_regex, replace_text;
+    if (m_PlusMode) {
+        m_FindReplacePlus->clearMessage();
+        resources = m_FindReplacePlus->GetAllResourcesToSearch();
+        presearch_regex = m_FindReplacePlus->GetPreSearchRegex();
+        search_regex = m_FindReplacePlus->GetSearchRegex();
+        replace_text = m_FindReplacePlus->GetReplace();
+    }
+    else {
+        m_FindReplace->clearMessage();
+        resources = m_FindReplace->GetAllResourcesToSearch();
+        search_regex = m_FindReplace->GetSearchRegex();
+        replace_text = m_FindReplace->GetReplace();
+    }
+    //-------------------------------------------------------------
 
     // handle possible python function replacements
     QString functionname;
     QString rname = replace_text.trimmed();
     if (rname.startsWith("\\F<") && rname.endsWith(">")) {
-    rname = rname.mid(3,-1);
+        rname = rname.mid(3,-1);
         rname.chop(1);
         functionname = rname;
     }
@@ -153,7 +172,7 @@ void DryRunReplace::CreateTable()
         fsp = pr.SetupInitialFunctionSearchEnvInPython(functionname);
     }
     SPCRE *spcre = PCRECache::instance()->getObject(search_regex);
-    
+
     int count = 0;
     foreach(Resource* resource, resources ) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
@@ -170,7 +189,11 @@ void DryRunReplace::CreateTable()
         } 
         if (!text.isEmpty()) {
 
-            QList<SPCRE::MatchInfo> match_info = spcre->getEveryMatchInfo(text);
+            // search the text using the search_regex and get all matches
+            //------------------ modified: FindReplacePlus ----------------
+            //QList<SPCRE::MatchInfo> match_info = spcre->getEveryMatchInfo(text);
+            QList<Utility::MatchInfo> match_info = Utility::GetSearchInfoWithPreSearch(presearch_regex, search_regex, text);
+            //-------------------------------------------------------------
 
             // loop through matches to build up before and after snippets for table
             // and build table in backwards order in case ever hand applied
@@ -258,7 +281,7 @@ void DryRunReplace::CreateTable()
     }
     ui.dryrunTree->setSelectionBehavior(QAbstractItemView::SelectRows);
     QApplication::restoreOverrideCursor();
-    m_FindReplace->ShowMessage(tr("Dry Run Replace-All"));
+    //m_FindReplace->ShowMessage(tr("Dry Run Replace-All")); //modified: FindReplacePlus
 }
 
 
@@ -329,7 +352,15 @@ void DryRunReplace::DoubleClick()
     QModelIndex index = ui.dryrunTree->selectionModel()->selectedRows(0).first();
     QString bookpath = m_ItemModel->itemFromIndex(index)->text();
     int pos = m_ItemModel->itemFromIndex(index.sibling(index.row(), 1))->text().toInt();
-    m_FindReplace->EmitOpenFileRequest(bookpath, -1, pos);
+    //------------------ modified: FindReplacePlus ----------------
+    //m_FindReplace->EmitOpenFileRequest(bookpath, -1, pos);
+    if (m_PlusMode) {
+        m_FindReplacePlus->EmitOpenFileRequest(bookpath, -1, pos);
+    }
+    else {
+        m_FindReplace->EmitOpenFileRequest(bookpath, -1, pos);
+    }
+    //-------------------------------------------------------------
 }
 
 void DryRunReplace::ReadSettings()
@@ -381,4 +412,36 @@ void DryRunReplace::connectSignalsSlots()
     connect(ui.closeButton, SIGNAL(clicked()), this, SLOT(close()));
     connect(ui.dryrunTree, SIGNAL(doubleClicked(const QModelIndex &)), this, SLOT(DoubleClick()));
     connect(ui.amtcb, SIGNAL(currentIndexChanged(int)), this, SLOT(ChangeContext()));
+}
+
+//------------------- modified: FindReplacePlus -----------------------
+DryRunReplace::DryRunReplace(bool plus_mode, QWidget* parent)
+    :
+    QDialog(parent),
+    m_ItemModel(new QStandardItemModel),
+    m_TextDelegate(new StyledTextDelegate()),
+    m_PlusMode(true)
+{
+    m_FindReplacePlus = qobject_cast<FindReplacePlus*>(parent);
+    ui.setupUi(this);
+    setAttribute(Qt::WA_DeleteOnClose, true);
+    ui.amtcb->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    ui.amtcb->addItem("10", 10);
+    ui.amtcb->addItem("20", 20);
+    ui.amtcb->addItem("30", 30);
+    ui.amtcb->addItem("40", 40);
+    ui.amtcb->addItem("50", 50);
+    ui.amtcb->setEditable(false);
+    ui.leFilter->installEventFilter(this);
+    ReadSettings();
+    connectSignalsSlots();
+    ui.dryrunTree->setSortingEnabled(true);
+    // only impacts non-delegated columns
+    ui.dryrunTree->setTextElideMode(Qt::ElideLeft);
+    ui.Refresh->setAutoDefault(false);
+    ui.Refresh->setDefault(false);
+    ui.Refresh->setFocusPolicy(Qt::TabFocus);
+    ui.closeButton->setAutoDefault(false);
+    ui.closeButton->setDefault(false);
+    ui.closeButton->setFocusPolicy(Qt::TabFocus);
 }

@@ -111,7 +111,7 @@
     <addaction name="actionCut"/>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
-    <addaction name="actionPasteRichText"/>
+    <addaction name="actionPasteRichText"/><!--modified-->
     <addaction name="actionPasteClipboardHistory"/>
     <addaction name="actionDeleteLine"/>
     <addaction name="separator"/>
@@ -238,7 +238,7 @@
      <addaction name="actionHeading5"/>
      <addaction name="actionHeading6"/>
      <addaction name="actionHeadingNormal"/>
-     <addaction name="actionHeadingDivision"/>
+     <addaction name="actionHeadingDivision"/><!--modified-->
      <addaction name="separator"/>
      <addaction name="actionHeadingPreserveAttributes"/>
     </widget>
@@ -556,7 +556,7 @@
    <addaction name="actionCut"/>
    <addaction name="actionCopy"/>
    <addaction name="actionPaste"/>
-   <addaction name="actionPasteRichText"/>
+   <addaction name="actionPasteRichText"/><!--modified-->
    <addaction name="actionRemoveTagPair"/>
   </widget>
 
@@ -717,7 +717,7 @@
     <addaction name="actionHeading5"/>
     <addaction name="actionHeading6"/>
     <addaction name="actionHeadingNormal"/>
-	<addaction name="actionHeadingDivision"/>
+	<addaction name="actionHeadingDivision"/><!--modified-->
   </widget>
   </widget>
   <widget class="QToolBar" name="toolBarTextFormats">
@@ -1013,6 +1013,7 @@
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Pastes the content from the clipboard into the book.&lt;/p&gt;</string>
    </property>
   </action>
+  <!--modified-->
   <action name="actionPasteRichText">
    <property name="icon">
     <iconset resource="../Resource_Files/main/main.qrc">
@@ -1344,6 +1345,8 @@
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Split the current file into two files using your cursor location as the dividing point.&lt;/p&gt;</string>
    </property>
+   <!--modified-->
+   <!--delete a short cut-->
   </action>
   <action name="actionInsertFile">
    <property name="icon">
@@ -2868,6 +2871,7 @@
     <string>Ctrl+7</string>
    </property>
   </action>
+  <!--modified-->
   <action name="actionHeadingDivision">
 	<property name="checkable">
 		<bool>true</bool>
@@ -3213,7 +3217,6 @@
   <action name="actionMendPrettifyHTML">
    <property name="text">
     <!--modified-->
-    <!--<string>Mend and &amp;Prettify All HTML Files</string>-->
     <string>Prettify All HTML Files</string>
    </property>
   </action>
@@ -3267,6 +3270,7 @@
     <string>Epub3 to Epub2</string>
    </property>
   </action>
+  <!--modified-->
   <action name="actionEpub2To3">
    <property name="text">
     <string>Epub2 to Epub3</string>

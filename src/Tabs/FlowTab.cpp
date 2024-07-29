@@ -82,6 +82,9 @@ FlowTab::FlowTab(HTMLResource *resource,
     // We perform delayed initialization after the widget is on
     // the screen. This way, the user perceives less load time.
     QTimer::singleShot(0, this, SLOT(DelayedInitialization()));
+
+    // modified: CodeCompleterParser
+    m_wCodeView->setHTMLCodeCompleter();
 }
 
 FlowTab::~FlowTab()

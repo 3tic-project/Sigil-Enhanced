@@ -1,34 +1,10 @@
-﻿/************************************************************************
-**
-**  Copyright (C) 2015-2025 Kevin B. Hendricks, Stratford, Ontario, Canada
-**  Copyright (C) 2011-2012 John Schember <john@nachtimwald.com>
-**  Copyright (C) 2012      Dave Heiland
-**  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
-**
-**  This file is part of Sigil.
-**
-**  Sigil is free software: you can redistribute it and/or modify
-**  it under the terms of the GNU General Public License as published by
-**  the Free Software Foundation, either version 3 of the License, or
-**  (at your option) any later version.
-**
-**  Sigil is distributed in the hope that it will be useful,
-**  but WITHOUT ANY WARRANTY; without even the implied warranty of
-**  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-**  GNU General Public License for more details.
-**
-**  You should have received a copy of the GNU General Public License
-**  along with Sigil.  If not, see <http://www.gnu.org/licenses/>.
-**
-*************************************************************************/
-
-#pragma once
-#ifndef FINDREPLACE_H
-#define FINDREPLACE_H
+﻿#pragma once
+#ifndef FINDREPLACEPLUS_H
+#define FINDREPLACEPLUS_H
 
 #include <QTimer>
 
-#include "ui_FindReplace.h"
+#include "ui_FindReplacePlus.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "MainUI/MainWindow.h"
 #include "Misc/SearchOperations.h"
@@ -40,13 +16,13 @@ class QAction;
 class Resource;
 class MainWindow;
 
-class FindReplace : public QWidget
+class FindReplacePlus : public QWidget
 {
     Q_OBJECT
 
 public:
-    FindReplace(MainWindow *main_window);
-    ~FindReplace();
+    FindReplacePlus(MainWindow *main_window);
+    ~FindReplacePlus();
 
     /**
      * Defines possible search target areas.
@@ -54,28 +30,22 @@ public:
     enum LookWhere {
         LookWhere_CurrentFile = 0,
         LookWhere_AllHTMLFiles,
-        LookWhere_SelectedHTMLFiles,
-        LookWhere_TabbedHTMLFiles,
         LookWhere_AllCSSFiles,
-        LookWhere_SelectedCSSFiles,
-        LookWhere_TabbedCSSFiles,
+        LookWhere_SelectedFiles,
         LookWhere_OPFFile,
-        LookWhere_NCXFile,
-        LookWhere_SelectedSVGFiles,
-        LookWhere_SelectedJSFiles,
-        LookWhere_SelectedMiscXMLFiles
+        LookWhere_NCXFile
     };
 
     enum SearchMode {
         // Normal is Case insensitive
         SearchMode_Normal = 0,
-        SearchMode_Case_Sensitive,
-        SearchMode_Regex
+        SearchMode_Regex,
+        SearchMode_PreSearch
     };
 
-    enum SearchDirection {
-        SearchDirection_Down = 0,
-        SearchDirection_Up
+    enum Direction {
+        Direction_Up = 0,
+        Direction_Down
     };
 
     /**
@@ -88,21 +58,16 @@ public:
     /**
      * Utility Routines to simplify logical testing
      */
-    bool isWhereHTML();
-    bool isWhereCSS();
-    bool isWhereSVG();
-    bool isWhereJS();
-    bool isWhereMiscXML();
-    bool isWhereSelected();
-    bool isWhereAll();
-    bool isWhereOPF() { return GetLookWhere() == LookWhere_OPFFile; };
-    bool isWhereNCX() { return GetLookWhere() == LookWhere_NCXFile; };
-    bool isWhereCF()  { return GetLookWhere() == LookWhere_CurrentFile; };
-    bool isSearchXML();
+    inline bool isWhereHTML();
+    inline bool isWhereCSS();
+    inline bool isWhereSelected();
+    inline bool isWhereOPF();
+    inline bool isWhereNCX();
+    inline bool isWhereCF();
 
+    QString GetPreSearchRegex();
     QString GetSearchRegex();
     QString GetReplace();
-    QString GetFind();
     QList<Resource*> GetAllResourcesToSearch();
     void EmitOpenFileRequest(const QString& bookpath, int line, int pos);
 
@@ -116,9 +81,8 @@ public slots:
     void ReplaceCurrentSearch();
     void ReplaceSearch();
     void CountAllSearch();
-    int  ReplaceAllSearch();
+    void ReplaceAllSearch();
     void DoRestart();
-    void SetReplace(const QString& text);
 
     // Shows a message in the main window.
     void ShowMessage(const QString &message);
@@ -126,14 +90,8 @@ public slots:
 
     void DryRunComplete() { m_DryRunRunning = false; clearMessage(); };
 
-    bool FindMisspelledWord();
-
-    void SetRegexOptionDotAll(bool new_state);
-    void SetRegexOptionMinimalMatch(bool new_state);
-    void SetRegexOptionAutoTokenise(bool new_state);
-    void SetRegexOptionUnicodeProperty(bool new_state);
     void SetOptionWrap(bool new_state);
-    void SetRegexOptionTextOnly(bool new_state);
+    void SetOptionPreview(bool new_state);
 
     bool FindAnyText(QString text, bool escape = true);
     void FindAnyTextInTags(QString text);
@@ -143,10 +101,11 @@ public slots:
     void HideFindReplace();
 
     void ValidateRegex();
+    void ValidatePreRegex();
 
     void CountsReportCount(SearchEditorModel::searchEntry* entry, int& count);
 
-    void DoPythonFunction();
+    void TokeniseSelection();
 
 signals:
 
@@ -164,12 +123,13 @@ signals:
     void ClipboardSaveRequest();
     void ClipboardRestoreRequest();
 
+    void AskWhyGetEmptyEntries();
+
 protected:
     void keyPressEvent(QKeyEvent *event);
 
 private slots:
 
-    void ManagePythonFunction();
     bool IsMarkedText();
 
     void FindClicked();
@@ -181,8 +141,6 @@ private slots:
     // Uses the find direction to determine if we should find next
     // or previous.
     bool Find();
-    bool FindNext();
-    bool FindPrevious();
     bool DoFindNext();
     bool DoFindPrevious();
 
@@ -197,8 +155,6 @@ private slots:
     // Replaces the user's search term with the user's
     // replacement text if a match is selected. If it's not,
     // calls FindNext() so it becomes selected.
-    bool ReplaceNext();
-    bool ReplacePrevious();
     bool ReplaceCurrent();
     bool DoReplaceNext();
     bool DoReplacePrevious();
@@ -224,23 +180,24 @@ private slots:
 
     void SaveSearchAction();
 
-    void TokeniseSelection();
-
     void ClearHistory();
 
-private:
+    void UpdatePreSearchUI();
 
+private:
     void SetPreviousSearch();
     bool IsNewSearch();
 
-    void SetStartingResource(bool update_position = true);
+    bool SetStartingResource(bool open_starting_tab = false);
+    void OpenResourceTabForSearch(Resource* resource);
 
     QString GetControls();
-    Searchable::Direction GetSearchableDirection();
-    bool FindText(Searchable::Direction direction);
-    bool ReplaceText(Searchable::Direction direction, bool replace_current = false);
+    bool FindText(Direction direction);
+    bool ReplaceText(Direction direction, bool replace_current = false);
 
     void SetCodeViewIfNeeded();
+
+    // void RestoreFRFocusIfNeeded(bool had_focus, bool force=false);
 
     // Displays a message to the user informing him
     // that his last search term could not be found.
@@ -248,11 +205,9 @@ private:
 
     Searchable *GetAvailableSearchable();
 
-    // Constructs a searching regex from the selected
-    // options and fields and then returns it.
-    QString PrependRegexOptionToSearch(const QString &option, const QString &search);
-
     QList <Resource *> GetFilesToSearch(bool force_all = false);
+
+    QString TokeniseForRegex(const QString& text, bool includeNumerics);
 
     bool IsCurrentFileInSelection();
 
@@ -262,22 +217,34 @@ private:
 
     int CountInFiles();
 
+    bool GetSearchableAndFindNext(bool marked_text, int split_at, bool inRemainder);
+
     int ReplaceInAllFiles();
 
-    bool FindInAllFiles(Searchable::Direction direction);
+    bool FindInAllFiles(Direction direction);
 
-    Resource *GetNextContainingResource(Searchable::Direction direction);
+    Resource *GetNextContainingResource(Direction direction);
 
-    Resource *GetNextResource(Resource *current_resource, Searchable::Direction direction);
+    Resource *GetNextResource(Resource *current_resource, Direction direction);
 
     Resource *GetCurrentResource();
+
+    int GetStartingPos();
 
     void SetSearchMode(int search_mode);
     void SetLookWhere(int look_where);
     void SetSearchDirection(int search_direction);
 
-    template<class T>
-    bool ResourceContainsCurrentRegex(T *resource);
+    bool ResourceContainsCurrentRegex(Resource* resource);
+
+    void SearchEndingProcess();
+    /**
+     * Returns a list of all the strings
+     * currently stored in the PreFind combo box.
+     *
+     * @return The stored find strings.
+     */
+    QStringList GetPreviousPreFindStrings();
 
     /**
      * Returns a list of all the strings
@@ -296,6 +263,12 @@ private:
     QStringList GetPreviousReplaceStrings();
 
     /**
+     * Updates the PreFind combo box with the
+     * currently typed-in string.
+     */
+    void UpdatePreviousPreFindStrings(const QString& text = QString());
+
+    /**
      * Updates the find combo box with the
      * currently typed-in string.
      */
@@ -309,9 +282,9 @@ private:
 
     void UpdateSearchControls(const QString &text = QString());
 
-    FindReplace::LookWhere GetLookWhere();
-    FindReplace::SearchMode GetSearchMode();
-    FindReplace::SearchDirection GetSearchDirection();
+    FindReplacePlus::LookWhere GetLookWhere();
+    FindReplacePlus::SearchMode GetSearchMode();
+    FindReplacePlus::Direction GetSearchDirection();
 
     // Checks if Find is empty when not checking spelling
     bool IsValidFindText();
@@ -322,31 +295,30 @@ private:
     // Writes all the stored dialog settings
     void WriteSettings();
 
+    // void ShowHideAdvancedOptions();
+
     // Set all F&R buttons to text-only
     // Default: icon-only
     void SetFRButtonsTextOnly();
 
     void ExtendUI();
 
-    /*
-     * Tokenisation helper function for automating replacement
-     * of elements of Find text in regular expressions
-     */
-    QString TokeniseForRegex(const QString &text, bool includeNumerics);
-
     void WriteSettingsVisible(bool visible);
-    // void WriteSettingsAdvancedVisible(bool advanced);
 
     /**
      * Connects all the required signals to their respective slots.
      */
     void ConnectSignalsToSlots();
 
+    void SetFocusPreFind();
     void SetFocusFind();
     void SetFocusReplace();
+    bool HasFocusPreFind();
     bool HasFocusFind();
     bool HasFocusReplace();
 
+    void warningEmptyExpression();
+    void warningEndedSearch();
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES
     ///////////////////////////////
@@ -357,15 +329,11 @@ private:
 
     QTimer m_timer;
 
-    Ui::FindReplace ui;
+    Ui::FindReplacePlus ui;
 
-    bool m_RegexOptionDotAll;
-    bool m_RegexOptionMinimalMatch;
-    bool m_RegexOptionAutoTokenise;
-    bool m_RegexOptionUnicodeProperty;
     bool m_OptionWrap;
-    bool m_RegexOptionTextOnly;
-    bool m_SpellCheck;
+
+    bool m_OptionPreview;
 
     bool m_LookWhereCurrentFile;
 
@@ -373,6 +341,8 @@ private:
 
     bool m_IsSearchGroupRunning;
 
+    // Save the lasted search regex and options for
+    // determining if the search options has changed.
     QStringList m_PreviousSearch;
 
     Resource * m_StartingResource;
@@ -381,34 +351,12 @@ private:
 
     bool m_InRemainder;
 
-    bool m_RestartPerformed;
-
     bool m_SearchRunning;
 
     bool m_DryRunRunning;
 
     bool m_ShiftUsed;
 
-    QAction* m_DotAllCheckAction;
-    QAction* m_MinimalMatchCheckAction;
-    QAction* m_AutoTokeniseCheckAction;
-    QAction* m_UnicodePropertyCheckAction;
-    QMenu*   m_menu;
+    int m_StartingTextLen;
 };
-
-
-template<class T>
-bool FindReplace::ResourceContainsCurrentRegex(T *resource)
-{
-    // For now, this must hold
-    // Q_ASSERT(GetLookWhere() == FindReplace::LookWhere_AllHTMLFiles || GetLookWhere() == FindReplace::LookWhere_SelectedHTMLFiles);
-    Resource *generic_resource = resource;
-    QList<Resource*> reslist;
-    reslist << generic_resource;
-    return SearchOperations::CountInFiles(
-               GetSearchRegex(),
-               reslist,
-               m_SpellCheck) > 0;
-}
-
-#endif // FINDREPLACE_H
+#endif // FINDREPLACEPLUS_H

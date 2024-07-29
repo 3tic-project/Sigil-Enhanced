@@ -128,6 +128,7 @@
 #include "Tabs/TabManager.h"
 #include "MainUI/MainApplication.h"
 #include "Widgets/FileDropZone.h"
+#include "Misc/SettingsStoreExtend.h" //modified: SettingsStoreExtend
 
 #define DWINGEO if(0)
 #define DBG if(0)
@@ -224,6 +225,7 @@ MainWindow::MainWindow(const QString &openfilepath,
     m_BookBrowser(NULL),
     m_Clips(NULL),
     m_FindReplace(new FindReplace(this)),
+    m_FindReplacePlus(new FindReplacePlus(this)), //modified: FindReplacePlus
     m_TableOfContents(NULL),
     m_ValidationResultsView(NULL),
     m_PreviewWindow(NULL),
@@ -232,7 +234,7 @@ MainWindow::MainWindow(const QString &openfilepath,
     c_SaveFilters(GetSaveFiltersMap()),
     c_LoadFilters(GetLoadFiltersMap()),
     m_casingChangeGroup(new QActionGroup(this)),
-    m_SearchEditor(new SearchEditor(this)),
+    //m_SearchEditor(new SearchEditor(this)), //modified: SavedSearchPlus
     m_ClipEditor(new ClipEditor(this)),
     m_IndexEditor(new IndexEditor(this)),
     m_SpellcheckEditor(new SpellcheckEditor(this)),
@@ -270,6 +272,7 @@ MainWindow::MainWindow(const QString &openfilepath,
     // (avoiding side-effects)
     ReadSettings();
     // Ensure the UI is properly set to the saved view state.
+    m_SearchEditor = new SearchEditor(this, m_findReplaceMode == EnhancedMode); //modified: SavedSearchPlus
     SetupPreviewTimer();
     ConnectSignalsToSlots();
     CreateRecentFilesActions();
@@ -310,6 +313,7 @@ MainWindow::~MainWindow()
     if (m_ValidationResultsView) delete m_ValidationResultsView;
     if (m_TableOfContents) delete m_TableOfContents;
     if (m_FindReplace) delete m_FindReplace;
+    if (m_FindReplacePlus) delete m_FindReplacePlus; //modified: FindReplacePlus
     if (m_Clips) delete m_Clips;
     if (m_BookBrowser) delete m_BookBrowser;
     if (m_TabManager) delete m_TabManager;
@@ -2310,8 +2314,19 @@ void MainWindow::Exit()
 void MainWindow::Find()
 {
     SaveTabData();
-    m_FindReplace->SetUpFindText();
-    m_FindReplace->show();
+    //--------- modified: FindReplacePlus ---------
+    //m_FindReplace->SetUpFindText();
+    //m_FindReplace->show();
+    if (m_findReplaceMode == FindReplaceMode::EnhancedMode) {
+        m_FindReplacePlus->SetUpFindText();
+        m_FindReplacePlus->show();
+    }
+    else if (m_findReplaceMode == FindReplaceMode::OriginalMode) {
+        m_FindReplace->SetUpFindText();
+        m_FindReplace->show();
+    }
+
+    //---------------------------------------------
 }
 
 void MainWindow::GoToLine()
@@ -4432,6 +4447,7 @@ void MainWindow::MarkSelection()
     }
     bool marked = tab->MarkSelection();
     m_FindReplace->ShowHideMarkedText(marked);
+    m_FindReplacePlus->ShowHideMarkedText(marked); // modified: FindReplacePlus
     if (marked) {
         ShowMessageOnStatusBar(tr("Text selection marked."));
     } else {
@@ -4457,6 +4473,7 @@ void MainWindow::ClearMarkedText(ContentTab *old_tab)
     }
 
     m_FindReplace->ShowHideMarkedText(false);
+    m_FindReplacePlus->ShowHideMarkedText(false); //modified: FindReplacePlus
 }
 
 void MainWindow::CodeView()
@@ -4569,6 +4586,12 @@ void MainWindow::PreferencesDialog()
         loadPluginsMenu();
     }
     //-----------------------------------------------------------------
+    //----------------- modified: FindReplacePlus ---------------
+    if (prefers.isRefreshFindRepWidgetRequired()) {
+        changeFindReplaceMode();
+    }
+    //-----------------------------------------------------------
+
     if (m_SelectCharacter->isVisible()) {
         // To ensure any font size changes are immediately applied.
         m_SelectCharacter->show();
@@ -4918,6 +4941,7 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionMergeNextElement->setEnabled(true);//modified: MergeNextElement
     UpdateUIOnTabChanges();
     m_FindReplace->ShowHide();
+    m_FindReplacePlus->ShowHide(); //modified: FindReplacePlus
 }
 
 void MainWindow::SetStateActionsCSSView()
@@ -5010,6 +5034,7 @@ void MainWindow::SetStateActionsRawView()
     ui.actionHeadingDivision->setEnabled(false); // modified: actionHeadingDivision
     UpdateUIOnTabChanges();
     m_FindReplace->ShowHide();
+    m_FindReplacePlus->ShowHide(); //modified: FindReplacePlus
 }
 
 void MainWindow::SetStateActionsStaticView()
@@ -5551,6 +5576,16 @@ void MainWindow::ReadSettings()
     mathjaxurl = QUrl::fromLocalFile(mathjaxurl).toString();
     if (mathjaxurl.startsWith("file:")) mathjaxurl = "sigil:" + mathjaxurl.mid(5,-1);
     m_PreviewWindow->setMathJaxURL(mathjaxurl);
+
+    //----- modified: FindReplacePlus -------
+    SettingsStoreExtend sse;
+    if (sse.getFindReplaceEnhancedMode()) {
+        m_findReplaceMode = FindReplaceMode::EnhancedMode;
+    }
+    else {
+        m_findReplaceMode = FindReplaceMode::OriginalMode;
+    }
+    //---------------------------------------
 }
 
 
@@ -6378,6 +6413,8 @@ void MainWindow::ExtendUI()
         }
     }
 
+    m_FindReplace->ShowHide();
+    m_FindReplacePlus->ShowHide(); //modified: FindReplacePlus
     // We want a nice frame around the tab manager
     QFrame *frame = new QFrame(this);
     QLayout *layout = new QVBoxLayout(frame);
@@ -6386,6 +6423,7 @@ void MainWindow::ExtendUI()
     m_FindReplace->setObjectName(FIND_REPLACE_NAME);
     layout->addWidget(m_TabManager);
     layout->addWidget(m_FindReplace);
+    layout->addWidget(m_FindReplacePlus); //modified: FindReplacePlus
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(1);
     frame->setObjectName(FRAME_NAME);
@@ -6873,6 +6911,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionInsertHyperlink, SIGNAL(triggered()),  this,   SLOT(InsertHyperlink()));
     connect(ui.actionPreferences,     SIGNAL(triggered()), this, SLOT(PreferencesDialog()));
     // Search
+#if(0) //modified: FindReplacePlus
     connect(ui.actionFind,              SIGNAL(triggered()), this, SLOT(Find()));
     connect(ui.actionHideFind,          SIGNAL(triggered()), m_FindReplace, SLOT(HideFindReplace()));
     connect(ui.actionFindNext,          SIGNAL(triggered()), m_FindReplace, SLOT(DoFindNext()));
@@ -6889,6 +6928,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionReplaceNextInFile, SIGNAL(triggered()), m_FindReplace, SLOT(ReplaceNextInFile()));
     connect(ui.actionReplaceAllInFile,  SIGNAL(triggered()), m_FindReplace, SLOT(ReplaceAllInFile()));
     connect(ui.actionCountInFile,       SIGNAL(triggered()), m_FindReplace, SLOT(CountInFile()));
+#endif
 
     connect(ui.actionMarkSelection,    SIGNAL(triggered()), this, SLOT(MarkSelection()));
     connect(ui.actionGoToLine,         SIGNAL(triggered()), this, SLOT(GoToLine()));
@@ -7015,12 +7055,13 @@ void MainWindow::ConnectSignalsToSlots()
             this,          SLOT(SearchEditorDialog(SearchEditorModel::searchEntry *)));
     connect(m_FindReplace, SIGNAL(FROpenFileRequest(QString, int, int)), this, SLOT(OpenFile(QString, int, int)));
     connect(m_TabManager, SIGNAL(ShowStatusMessageRequest(const QString &, int)), this, SLOT(ShowMessageOnStatusBar(const QString &, int)));
-
+#if(0) //modified: FindReplacePlus
     connect(m_FindReplace, SIGNAL(ShowMessageRequest(const QString &)),
             m_SearchEditor, SLOT(ShowMessage(const QString &)));
+#endif
     connect(m_FindReplace,   SIGNAL(ClipboardSaveRequest()),     m_ClipboardHistorySelector,  SLOT(SaveClipboardState()));
     connect(m_FindReplace,   SIGNAL(ClipboardRestoreRequest()),  m_ClipboardHistorySelector,  SLOT(RestoreClipboardState()));
-
+#if(0) //modified: FindReplacePlus
     connect(m_SearchEditor, SIGNAL(FindSelectedSearchRequest()), m_FindReplace,   SLOT(FindSearch()));
     connect(m_SearchEditor, SIGNAL(ReplaceCurrentSelectedSearchRequest()), m_FindReplace,   SLOT(ReplaceCurrentSearch()));
     connect(m_SearchEditor, SIGNAL(ReplaceSelectedSearchRequest()), m_FindReplace,   SLOT(ReplaceSearch()));
@@ -7031,7 +7072,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_SearchEditor, SIGNAL(RestartSearch()), m_FindReplace, SLOT(DoRestart()));
     connect(m_SearchEditor, SIGNAL(CountsReportCountRequest(SearchEditorModel::searchEntry*, int&)),
             m_FindReplace, SLOT(CountsReportCount(SearchEditorModel::searchEntry*, int&)));
-
+#endif
     connect(m_ClipboardHistorySelector, SIGNAL(PasteRequest(const QString &)), this, SLOT(PasteTextIntoCurrentTarget(const QString &)));
     connect(m_SelectCharacter, SIGNAL(SelectedCharacter(const QString &)), this, SLOT(PasteTextIntoCurrentTarget(const QString &)));
     connect(m_ClipEditor, SIGNAL(PasteSelectedClipRequest(QList<ClipEditorModel::clipEntry *>)),
@@ -7067,6 +7108,15 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
     connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
+    //modified: FindReplacePlus
+    connect(m_FindReplacePlus, SIGNAL(FROpenFileRequest(QString, int, int)), this, SLOT(OpenFile(QString, int, int)));
+    connect(m_FindReplacePlus, SIGNAL(OpenSearchEditorRequest(SearchEditorModel::searchEntry*)),
+                         this, SLOT(SearchEditorDialog(SearchEditorModel::searchEntry*)));
+    connect(m_FindReplacePlus, SIGNAL(ClipboardSaveRequest()), m_ClipboardHistorySelector, SLOT(SaveClipboardState()));
+    connect(m_FindReplacePlus, SIGNAL(ClipboardRestoreRequest()), m_ClipboardHistorySelector, SLOT(RestoreClipboardState()));
+
+    ConnectSignalsToSearchEditor();
+    ConnectActionSignalsToFindReplace();
     //---------------------------------------------------------------------------------------------
 
     // Plugins
@@ -7096,7 +7146,6 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(ui.actionCut,                      SIGNAL(triggered()),  tab,   SLOT(Cut()));
         connect(ui.actionCopy,                     SIGNAL(triggered()),  tab,   SLOT(Copy()));
         connect(ui.actionPaste,                    SIGNAL(triggered()),  tab,   SLOT(Paste()));
-        connect(ui.actionPasteRichText,            SIGNAL(triggered()),  tab,   SLOT(PasteRichText())); //modified: PasteRichText
         connect(ui.actionDeleteLine,               SIGNAL(triggered()),  tab,   SLOT(DeleteLine()));
         connect(tab,   SIGNAL(OpenClipEditorRequest(ClipEditorModel::clipEntry *)),
                 this,  SLOT(ClipEditorDialog(ClipEditorModel::clipEntry *)));
@@ -7163,8 +7212,9 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(ui.actionAddMisspelledWord,        SIGNAL(triggered()),  tab,   SLOT(AddMisspelledWord()));
         connect(ui.actionIgnoreMisspelledWord,     SIGNAL(triggered()),  tab,   SLOT(IgnoreMisspelledWord()));
         connect(this,                              SIGNAL(SettingsChanged()), tab, SLOT(LoadSettings()));
-        connect(ui.actionSplitTagOrAddBreak,     SIGNAL(triggered()),  tab,   SLOT(SplitTagOrAddBreak())); // modified: SplitTagOrAddBreak
+        connect(ui.actionSplitTagOrAddBreak,       SIGNAL(triggered()),  tab,   SLOT(SplitTagOrAddBreak())); // modified: SplitTagOrAddBreak
         connect(ui.actionMergeNextElement,         SIGNAL(triggered()),  tab,   SLOT(MergeNextElement())); // modified: MergeNextElement
+        connect(ui.actionPasteRichText,            SIGNAL(triggered()),  tab,   SLOT(PasteRichText())); //modified: PasteRichText
         connect(tab,   SIGNAL(OpenIndexEditorRequest(IndexEditorModel::indexEntry *)),
                 this,  SLOT(IndexEditorDialog(IndexEditorModel::indexEntry *)));
         connect(tab,   SIGNAL(ViewImageRequest(const QUrl &)),

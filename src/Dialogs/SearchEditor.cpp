@@ -35,18 +35,23 @@
 #include "Dialogs/SearchEditorItemDelegate.h"
 #include "Dialogs/SearchEditor.h"
 #include "Misc/Utility.h"
+#include "Misc/SettingsStoreExtend.h" //modified: SavedSearchPlus
+
 
 static const QString SETTINGS_GROUP = "saved_searches";
 static const QString FILE_EXTENSION = "ini";
 
-SearchEditor::SearchEditor(QWidget *parent)
+//SearchEditor::SearchEditor(QWidget *parent)
+SearchEditor::SearchEditor(QWidget* parent,bool plus_mode) //modified: SavedSearchPlus
     :
     QDialog(parent),
     m_LastFolderOpen(QString()),
     m_ContextMenu(new QMenu(this)),
     m_SearchToLoad(nullptr),
+    m_PlusMode(plus_mode), //modified: SavedSearchPlus
     m_CntrlDelegate(new SearchEditorItemDelegate())
 {
+    m_CntrlDelegate->setPlusMode(plus_mode); //modified: SavedSearchPlus
     ui.setupUi(this);
     ui.FilterText->installEventFilter(this);
     ui.LoadSearch->setDefault(true);
@@ -81,7 +86,11 @@ SearchEditor::~SearchEditor()
 
 void SearchEditor::SetupSearchEditorTree()
 {
-    m_SearchEditorModel = SearchEditorModel::instance();
+    //modified: SavedSearchPlus
+    //m_SearchEditorModel = SearchEditorModel::instance();
+    if (m_PlusMode) m_SearchEditorModel = SearchEditorModel::instance(true);
+    if (!m_PlusMode) m_SearchEditorModel = SearchEditorModel::instance();
+    //-------------------------
     ui.SearchEditorTree->setModel(m_SearchEditorModel);
     ui.SearchEditorTree->setContextMenuPolicy(Qt::CustomContextMenu);
     ui.SearchEditorTree->setSortingEnabled(false);
@@ -122,12 +131,28 @@ void SearchEditor::SetupSearchEditorTree()
         "<dd>WR - " + tr("Option: Wrap") + "</dd>" + "</dl>" +
         "<dd>TO - " + tr("Option: Text") + "</dd>" + "</dl>";
 
-    ui.SearchEditorTree->model()->setHeaderData(0,Qt::Horizontal,nametooltip,Qt::ToolTipRole);
+    ui.SearchEditorTree->model()->setHeaderData(0, Qt::Horizontal, nametooltip, Qt::ToolTipRole);
+    //modified: SavedSearchPlus
+    /*
     ui.SearchEditorTree->model()->setHeaderData(1,Qt::Horizontal,findtooltip,Qt::ToolTipRole);
     ui.SearchEditorTree->model()->setHeaderData(2,Qt::Horizontal,replacetooltip,Qt::ToolTipRole);
     ui.SearchEditorTree->model()->setHeaderData(3,Qt::Horizontal,controlstooltip,Qt::ToolTipRole);
 
     ui.SearchEditorTree->setItemDelegateForColumn(3, m_CntrlDelegate);
+    */
+    if (m_PlusMode) {
+        ui.SearchEditorTree->model()->setHeaderData(2, Qt::Horizontal, findtooltip, Qt::ToolTipRole);
+        ui.SearchEditorTree->model()->setHeaderData(3, Qt::Horizontal, replacetooltip, Qt::ToolTipRole);
+        ui.SearchEditorTree->model()->setHeaderData(4, Qt::Horizontal, controlstooltip, Qt::ToolTipRole);
+        ui.SearchEditorTree->setItemDelegateForColumn(4, m_CntrlDelegate);
+    }
+    else {
+        ui.SearchEditorTree->model()->setHeaderData(1, Qt::Horizontal, findtooltip, Qt::ToolTipRole);
+        ui.SearchEditorTree->model()->setHeaderData(2, Qt::Horizontal, replacetooltip, Qt::ToolTipRole);
+        ui.SearchEditorTree->model()->setHeaderData(3, Qt::Horizontal, controlstooltip, Qt::ToolTipRole);
+        ui.SearchEditorTree->setItemDelegateForColumn(3, m_CntrlDelegate);
+    }
+    //-------------------------
     ui.buttonBox->setToolTip(QString() +
                              "<dl>" +
                              "<dt><b>" + tr("Save") + "</b><dd>" + tr("Save your changes.") + "<br/><br/>" + tr("If any other instances of Sigil are running they will be automatically updated with your changes.") + "</dd>" +
@@ -360,7 +385,10 @@ bool SearchEditor::ItemsAreUnique(QList<QStandardItem *> items)
     std::sort(nodupitems.begin(), nodupitems.end());
     nodupitems.erase(std::unique(nodupitems.begin(), nodupitems.end()), nodupitems.end());
     if (nodupitems.count() != items.count()) {
-        Utility::DisplayStdErrorDialog(tr("You cannot select an entry and a group containing the entry."));
+        //modified: SavedSearchPlus
+        //Utility::DisplayStdErrorDialog(tr("You cannot select an entry and a group containing the entry."));
+        ShowMessage(tr("Do not select Groups and Entries together, or most operations will fail!"));
+        //-------------------------
         return false;
     }
 
@@ -429,6 +457,7 @@ void SearchEditor::Cut()
 // NOTE: Provides the remembered state needed by downstream F&R routines
 void SearchEditor::RecordEntryAsCompleted(SearchEditorModel::searchEntry* entry)
 {
+
     for (int i = 0; i < m_CurrentSearchEntries.count(); i++) {
         if (m_CurrentSearchEntries.at(i) == entry) {
             m_CurrentSearchEntries.removeAt(i);
@@ -719,7 +748,10 @@ void SearchEditor::FillControls()
 
         if (!ItemsAreUnique(items)) return;
 
-        if (items.size() < 2) return;
+        if (items.size() < 2) {
+            ShowMessage(tr("FillControls requires selecting at least two entries,which filled base on the first."));
+            return;
+        }
 
         m_SearchEditorModel->FillControls(items);
     }
@@ -756,6 +788,9 @@ bool SearchEditor::FilterEntries(const QString &text, QStandardItem *item)
                        entry->find.toLower().contains(lowercaseText) ||
                        entry->replace.toLower().contains(lowercaseText) ||
                        entry->controls.toLower().contains(lowercaseText));
+            //modified: SavedSearchPlus
+            if (m_PlusMode && hidden) hidden = !(text.isEmpty() || entry->prefind.toLower().contains(lowercaseText));
+            //-------------------------
         }
 
         ui.SearchEditorTree->setRowHidden(item->row(), parent_index, hidden);
@@ -817,6 +852,31 @@ bool SearchEditor::SelectFirstVisibleNonGroup(QStandardItem *item)
 
 bool SearchEditor::ReadSettings()
 {
+    //modified: SavedSearchPlus
+    if (m_PlusMode) {
+        SettingsStoreExtend settings;
+        settings.beginGroup(SETTINGS_GROUP);
+        QByteArray geometry = settings.value("geometry").toByteArray();
+
+        if (!geometry.isNull()) {
+            restoreGeometry(geometry);
+        }
+        int size = settings.beginReadArray("column_data");
+
+        for (int column = 0; column < size && column < ui.SearchEditorTree->header()->count(); column++) {
+            settings.setArrayIndex(column);
+            int column_width = settings.value("width").toInt();
+
+            if (column_width) {
+                ui.SearchEditorTree->setColumnWidth(column, column_width);
+            }
+        }
+        settings.endArray();
+        m_LastFolderOpen = settings.value("last_folder_open").toString();
+        settings.endGroup();
+        return size > 0;
+    }
+    //-------------------------
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     // The size of the window and it's full screen status
@@ -848,6 +908,22 @@ bool SearchEditor::ReadSettings()
 
 void SearchEditor::WriteSettings()
 {
+    //modified: SavedSearchPlus
+    if (m_PlusMode) {
+        SettingsStoreExtend settings;
+        settings.beginGroup(SETTINGS_GROUP);
+        settings.setValue("geometry", saveGeometry());
+        settings.beginWriteArray("column_data");
+        for (int column = 0; column < ui.SearchEditorTree->header()->count(); column++) {
+            settings.setArrayIndex(column);
+            settings.setValue("width", ui.SearchEditorTree->columnWidth(column));
+        }
+        settings.endArray();
+        settings.setValue("last_folder_open", m_LastFolderOpen);
+        settings.endGroup();
+        return;
+    }
+    //-------------------------
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     // The size of the window and it's full screen status
@@ -1194,7 +1270,8 @@ void SearchEditor::MoveHorizontal(bool move_left)
 void SearchEditor::MakeCountsReport()
 {
     // non-modal dialog
-    CountsReport* crpt = new CountsReport(this);
+    //CountsReport* crpt = new CountsReport(this);
+    CountsReport* crpt = new CountsReport(this,m_PlusMode); //modified: SavedSearchPlus
     connect(crpt, SIGNAL(CountRequest(SearchEditorModel::searchEntry*, int&)),
             this, SIGNAL(CountsReportCountRequest(SearchEditorModel::searchEntry*, int&)));
     crpt->CreateReport(GetSelectedEntries());
@@ -1235,8 +1312,19 @@ void SearchEditor::ConnectSignalsSlots()
     connect(m_CollapseAll, SIGNAL(triggered()), this, SLOT(CollapseAll()));
     connect(m_ExpandAll,   SIGNAL(triggered()), this, SLOT(ExpandAll()));
     connect(m_FillIn,      SIGNAL(triggered()), this, SLOT(FillControls()));
-    connect(m_SearchEditorModel, SIGNAL(SettingsFileUpdated()), this, SLOT(SettingsFileModelUpdated()));
+    //connect(m_SearchEditorModel, SIGNAL(SettingsFileUpdated()), this, SLOT(SettingsFileModelUpdated()));
     connect(m_SearchEditorModel, SIGNAL(ItemDropped(const QModelIndex &)), this, SLOT(ModelItemDropped(const QModelIndex &)));
     connect(ui.SearchEditorTree->selectionModel(), SIGNAL(selectionChanged(const QItemSelection&, const QItemSelection&)), this, SLOT(SelectionChanged()));
 
+}
+
+//modified: SavedSearchPlus
+void SearchEditor::WhyEntriesEmpty()
+{
+    if (ui.SearchEditorTree->selectionModel()->hasSelection()) {
+        ShowMessage(tr("Searches seleted have ended,you might click \"Load Search\" to reload them if run again."));
+    }
+    else {
+        ShowMessage(tr("No searches selected"));
+    }
 }

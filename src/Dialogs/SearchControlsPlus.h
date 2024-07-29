@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
 **
 **  Copyright (C) 2021-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
 **
@@ -20,22 +20,22 @@
 *************************************************************************/
 
 #pragma once
-#ifndef CONTROLS_H
-#define CONTROLS_H
+#ifndef SEARCHCONTROLSPLUS_H
+#define SEARCHCONTROLSPLUS_H
 
 
-#include "ui_Controls.h"
+#include "ui_SearchControlsPlus.h"
 
 class QCloseEvent;
 class QShowEvent;
 
-class Controls : public QDialog
+class SearchControlsPlus : public QDialog
 {
     Q_OBJECT
 
 public:
-    Controls(QWidget *parent);
-    ~Controls();
+    SearchControlsPlus(QWidget* parent);
+    ~SearchControlsPlus();
 
     QString GetLookWhere();
     QString GetSearchMode();
@@ -50,12 +50,6 @@ public:
 
 
 public slots:
-    void SetRegexOptionDotAll(bool new_state);
-    void SetRegexOptionMinimalMatch(bool new_state);
-    void SetRegexOptionAutoTokenise(bool new_state);
-    void SetRegexOptionUnicodeProperty(bool new_state);
-    void SetOptionWrap(bool new_state);
-    void SetRegexOptionTextOnly(bool new_state);
     void DoClearAll();
 
     void closeEvent(QCloseEvent *e);
@@ -77,15 +71,9 @@ private:
     // PRIVATE MEMBER VARIABLES
     ///////////////////////////////
 
-    Ui::Controls ui;
+    Ui::SearchControlsPlus ui;
 
-    bool m_RegexOptionDotAll;
-    bool m_RegexOptionMinimalMatch;
-    bool m_RegexOptionAutoTokenise;
-    bool m_RegexOptionUnicodeProperty;
-    bool m_OptionWrap;
-    bool m_RegexOptionTextOnly;
     bool m_ClearAll;
 };
 
-#endif // CONTROLS_H
+#endif // SEARCHCONTROLSPLUS_H

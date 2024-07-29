@@ -35,6 +35,12 @@ PreferencesWidget::ResultActions ModifiedVerPrefsWidget::saveSettings()
     if (ignore_blankline != sse.getIgnoreBlankLine())
         sse.setIgnoreBlankLine(ignore_blankline);
 
+    // modified: FindReplacePlus
+    bool isFindReplaceEnhancedMode = ui.rbEnhancedMode->isChecked();
+    if (isFindReplaceEnhancedMode != sse.getFindReplaceEnhancedMode())
+        results = results | PreferencesWidget::ResultAction_RefreshFindRepWidget;
+        sse.setFindReplaceEnhancedMode(isFindReplaceEnhancedMode);
+
 	return results;
 }
 
@@ -57,6 +63,15 @@ void ModifiedVerPrefsWidget::readSettings()
     ui.EnableEmmet->setChecked(emmetEnabled);
     // modified: TxtImporting
     ui.IgnoreBlankLine->setChecked(sse.getIgnoreBlankLine());
+    // modified: FindReplacePlus
+    bool isFindReplaceEnhancedMode = sse.getFindReplaceEnhancedMode();
+    if (isFindReplaceEnhancedMode) {
+        ui.rbEnhancedMode->setChecked(true);
+    }
+    else {
+        ui.rbOriginalMode->setChecked(true);
+    }
+
 }
 
 void ModifiedVerPrefsWidget::connectSignalsToSlots()

@@ -35,6 +35,7 @@ public:
 		QString keyword;
 	};
 	CodeCompleterParser(QPlainTextEdit *editor, FileType filetype);
+	~CodeCompleterParser();
 	QString completionPrefix();
 	PosState getState();
 	void insertSelectedCompletion();

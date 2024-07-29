@@ -35,10 +35,12 @@
 #include "MiscEditors/SearchEditorModel.h"
 #include "Misc/FindReplaceQLineEdit.h"
 
-FindReplaceQLineEdit::FindReplaceQLineEdit(QWidget *parent)
+//FindReplaceQLineEdit::FindReplaceQLineEdit(QWidget *parent)
+FindReplaceQLineEdit::FindReplaceQLineEdit(QWidget* parent,bool plus_mode) //modified: FindReplacePlus
     : QLineEdit(parent),
       m_FindReplace(parent),
       m_searchMapper(new QSignalMapper(this)),
+      m_PlusMode(plus_mode), //modified: FindReplacePlus
       m_tokeniseEnabled(true)
 {
     connect(m_searchMapper, SIGNAL(mappedString(const QString &)), m_FindReplace, SLOT(LoadSearchByName(const QString &)));
@@ -100,11 +102,19 @@ void FindReplaceQLineEdit::contextMenuEvent(QContextMenuEvent *event)
     menu->insertAction(topAction, saveSearchAction);
     menu->insertSeparator(topAction);
     topAction = saveSearchAction;
-
+    //modified: FindReplacePlus
+    /*
     if (CreateMenuEntries(menu, topAction, SearchEditorModel::instance()->invisibleRootItem())) {
         menu->insertSeparator(topAction);
     }
-
+    */
+    bool create_made;
+    if (m_PlusMode) create_made = CreateMenuEntries(menu, topAction, SearchEditorModel::instance(true)->invisibleRootItem());
+    if (!m_PlusMode) create_made = CreateMenuEntries(menu, topAction, SearchEditorModel::instance()->invisibleRootItem());
+    if (create_made) {
+        menu->insertSeparator(topAction);
+    }
+    //-------------------------
     menu->exec(mapToGlobal(event->pos()));
     if (!menu.isNull()) {
         delete menu.data();
@@ -125,8 +135,11 @@ bool FindReplaceQLineEdit::CreateMenuEntries(QMenu *parent_menu, QAction *topAct
         if (!item->data().toBool()) {
             searchAction = new QAction(item->text(), this);
             connect(searchAction, SIGNAL(triggered()), m_searchMapper, SLOT(map()));
-            m_searchMapper->setMapping(searchAction, SearchEditorModel::instance()->GetFullName(item));
-
+            //modified: FindReplacePlus
+            //m_searchMapper->setMapping(searchAction, SearchEditorModel::instance()->GetFullName(item));
+            if (m_PlusMode) m_searchMapper->setMapping(searchAction, SearchEditorModel::instance(true)->GetFullName(item));
+            if (!m_PlusMode) m_searchMapper->setMapping(searchAction, SearchEditorModel::instance()->GetFullName(item));
+            //-------------------------
             if (!topAction) {
                 parent_menu->addAction(searchAction);
             } else {

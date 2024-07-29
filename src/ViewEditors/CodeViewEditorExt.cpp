@@ -13,6 +13,7 @@
 #include "MainUI/BookBrowser.h"
 #include "Tabs/ContentTab.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "PCRE2/PCRECache.h"
 
 #define TagInfo TagLister::TagInfo
 
@@ -22,33 +23,45 @@ static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_CSSVIEW({ Qt::Key_Return,Qt::Ke
 static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_HTMLVIEW({ Qt::Key_Return,Qt::Key_Enter, Qt::Key_Slash,Qt::Key_Greater });
 static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_QUICKSWITCH({ Qt::Key_Left,Qt::Key_Up,Qt::Key_Right,Qt::Key_Down });
 
-//-------------------------------------------------------------- modified: keyborad event --------------------------------------------------------------
+//modified: CodeCompleterParser
+void CodeViewEditor::setHTMLCodeCompleter() {
+     m_completeParser = new CodeCompleterParser(this, CodeCompleterParser::FileType::HTML);
+     m_hasCodeCompleter = true;
+}
+void CodeViewEditor::setCSSCodeCompleter() {
+    m_completeParser = new CodeCompleterParser(this, CodeCompleterParser::FileType::CSS);
+    m_hasCodeCompleter = true;
+}
+
+//modified: keyborad event
 inline void CodeViewEditor::insertTextAtCursor(QString text, QTextCursor cursor) {
     cursor.beginEditBlock();
     cursor.insertText(text);
     cursor.endEditBlock();
 }
 
+//modified: keyborad event
 void CodeViewEditor::keyPressEvent(QKeyEvent* event)
 {
-    if (m_hightype == CodeViewEditor::Highlight_XHTML) {
+    if (m_hightype == CodeViewEditor::Highlight_XHTML && m_hasCodeCompleter) {
         if (VisibleCompleterEvent(event)) return;
         if (CommonKeyPressEvent(event)) return;
         if (HtmlViewKeyPressEvent(event)) return;
         if (quickSwitchOfCursor(event)) return;
         if (CodeCompleterEvent(event)) return;
     }
-    else if (m_hightype == CodeViewEditor::Highlight_CSS) {
+    if (m_hightype == CodeViewEditor::Highlight_CSS && m_hasCodeCompleter) {
         if (VisibleCompleterEvent(event)) return;
         if (CommonKeyPressEvent(event)) return;
         if (CssViewKeyPressEvent(event)) return;
         if (CodeCompleterEvent(event)) return;
     }
-    else {
-        if (CommonKeyPressEvent(event)) return;
-    }
+    if (CommonKeyPressEvent(event)) return;
+
     QPlainTextEdit::keyPressEvent(event);
 }
+
+//modified: keyborad event
 bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
     if (SYMBOLS_TO_DETECT_IN_ALL.contains(event->key())) {
 
@@ -237,6 +250,8 @@ bool CodeViewEditor::CommonKeyPressEvent(QKeyEvent* event) {
     }
     return false;
 }
+
+//modified: keyborad event
 bool CodeViewEditor::HtmlViewKeyPressEvent(QKeyEvent* event)
 {
     if (SYMBOLS_TO_DETECT_IN_CSSVIEW.contains(event->key())) {
@@ -393,6 +408,8 @@ bool CodeViewEditor::HtmlViewKeyPressEvent(QKeyEvent* event)
     }
     return false;
 }
+
+//modified: keyborad event
 bool CodeViewEditor::CssViewKeyPressEvent(QKeyEvent* event)
 {
     auto getIndexOfLineWithLBrace = [](const QString& source, int start_pos, bool enterkey = false)->int {
@@ -521,6 +538,8 @@ bool CodeViewEditor::CssViewKeyPressEvent(QKeyEvent* event)
     }
     return false;
 }
+
+//modified: keyborad event
 bool CodeViewEditor::VisibleCompleterEvent(QKeyEvent* event) {
     if (m_completeParser->isVisible()) {
         if (event->key() == Qt::Key_Tab) {
@@ -543,6 +562,8 @@ bool CodeViewEditor::VisibleCompleterEvent(QKeyEvent* event) {
     }
     return false;
 }
+
+//modified: keyborad event
 bool CodeViewEditor::CodeCompleterEvent(QKeyEvent* event)
 {
     if (!m_completeParser->isVisible() && event->key() == Qt::Key_Backspace) {
@@ -558,8 +579,8 @@ bool CodeViewEditor::CodeCompleterEvent(QKeyEvent* event)
     m_completeParser->popupCompleter();
     return true;
 }
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+//modified: keyborad event
 bool CodeViewEditor::quickSwitchOfCursor(QKeyEvent* e) {
     if (!SYMBOLS_TO_DETECT_IN_QUICKSWITCH.contains(e->key()))
         return false;
@@ -646,7 +667,8 @@ bool CodeViewEditor::quickSwitchOfCursor(QKeyEvent* e) {
     return true;
 }
 
-// ---------------------------------- modified: SplitTagOrAddBreak ---------------------------------
+
+// modified: SplitTagOrAddBreak
 // 该函数的作用是，根据光标在行中的位置插入空行或者分割标签。
 // 如果光标处于行尾，则向下插入空行，如果光标处于行头缩进位置，则向前插入空行。
 // 如果光标处于标签内部，则从该处分割段落。
@@ -753,9 +775,9 @@ void CodeViewEditor::SplitTagOrAddBreak()
         }
     }
 }
-// -------------------------------------------------------------------------------------------------------------
 
-//------------------------------------------------ modified: Add labels for block elements ( ctrl + 1 ~ ctrl + 8 )------------------------------------------------
+
+//modified: Add labels for block elements ( ctrl + 1 ~ ctrl + 8 )
 void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool preserve_attributes)
 {
     if (element_name.isEmpty()) {
@@ -857,10 +879,10 @@ void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool pre
     }
     return;
 }
-//-------------------------------------------------------------------------------------------------------------------------------------------
 
 
-//---------------------------------------- modified: paste event:  when you do a actionPaste in the codeview editor, this function will be called.-----------------------------------------------------
+//modified: paste event
+//when you do a actionPaste in the codeview editor, this function will be called.
 void CodeViewEditor::insertFromMimeData(const QMimeData* source) {
     if (m_hightype == CodeViewEditor::Highlight_XHTML) {
         if (HtmlViewPasteEvent(source)) return;
@@ -871,6 +893,7 @@ void CodeViewEditor::insertFromMimeData(const QMimeData* source) {
     CommonPasteEvent(source);
 }
 
+//modified: paste event
 void CodeViewEditor::CommonPasteEvent(const QMimeData* source) {
     if (!source->hasText())
         return;
@@ -906,6 +929,8 @@ void CodeViewEditor::CommonPasteEvent(const QMimeData* source) {
         QPlainTextEdit::insertFromMimeData(source);
     }
 }
+
+//modified: paste event
 bool CodeViewEditor::HtmlViewPasteEvent(const QMimeData* s) {
     bool insert_on_css = false;
     if (s->hasImage() || s->hasUrls()) {
@@ -935,6 +960,8 @@ bool CodeViewEditor::HtmlViewPasteEvent(const QMimeData* s) {
     }
     return false;
 }
+
+//modified: paste event
 bool CodeViewEditor::CssViewPasteEvent(const QMimeData* s) {
     if (s->hasImage()) {
         if (s->hasUrls() && s->urls().size() == 1) {
@@ -950,6 +977,8 @@ bool CodeViewEditor::CssViewPasteEvent(const QMimeData* s) {
     }
     return false;
 }
+
+//modified: paste event
 bool CodeViewEditor::insertImageFromByteData(const QByteArray& data, bool insert_on_css) {
     QString filename = "Images0001.png";
     QWidget* mainwin_w = Utility::GetMainWindow();
@@ -975,6 +1004,7 @@ bool CodeViewEditor::insertImageFromByteData(const QByteArray& data, bool insert
     return true;
 }
 
+//modified: paste event
 bool CodeViewEditor::insertImagesFromUrls(const QList<QUrl>& urls, bool insert_on_css) {
     QStringList imgpaths;
     QStringList added_bookpaths;
@@ -1009,9 +1039,9 @@ bool CodeViewEditor::insertImagesFromUrls(const QList<QUrl>& urls, bool insert_o
     return true;
 }
 
-//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-//---------------- modified: AddPasteRichText: add an action of pasting rich text to right click menu within codeview editor.------------------
+//modified: AddPasteRichText
+//Add an action of pasting rich text to right click menu within codeview editor.
 void CodeViewEditor::AddPasteRichText(QMenu* menu)
 {
     bool sucess = false;
@@ -1050,6 +1080,8 @@ void CodeViewEditor::AddPasteRichText(QMenu* menu)
     }
 #endif
 }
+
+//modified: AddPasteRichText
 void CodeViewEditor::PasteRichText() {
     // This function is to clean entities "&quot;" inside opentag,
     // which might make the Rich Text Engine of QTextDocument work error.
@@ -1087,9 +1119,9 @@ void CodeViewEditor::PasteRichText() {
     }
     InsertText(text);
 }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------
 
-//----------------------------- modified: MergeNextElement --------------------------------------
+
+// modified: MergeNextElement
 void CodeViewEditor::MergeNextElement() {
     QTextCursor cursor = textCursor();
     QString text = toPlainText();
@@ -1163,3 +1195,461 @@ void CodeViewEditor::MergeNextElement() {
 
 }
 //-----------------------------------------------------------------------------------------------
+
+//modified: FindReplacePlus
+bool CodeViewEditor::FindNextPreSearch(const QString& presearch_regex,
+                                       bool marked_text,
+                                       int split_at,
+                                       bool inRemainder)
+{
+    QString text = toPlainText();
+    int start_offset = 0;
+    int text_start = 0,
+        text_end = text.length();
+    if (marked_text) {
+        text_start = m_MarkedTextStart;
+        text_end = m_MarkedTextEnd;
+    }
+
+    // get start offset
+    // split_at will not be -1 just during the search run on the starting resource.
+    // !inRemainder && split_at != -1 means the search run on the
+    // starting resource from split_at to end_of_text (When Direction Down).
+    if (!inRemainder && split_at != -1) {
+        start_offset = split_at < text_start ? text_start : split_at > text_end ? text_end : split_at;
+    }
+    else {
+        start_offset = text_start;
+    }
+    start_offset = m_preSearchInfo.matched_end != -1 ? m_preSearchInfo.matched_end : start_offset;
+
+    // get end of text
+    // inRemainder is true means the search run on the starting resource from start_of_text to split_at (When Direction Down).
+    if (inRemainder && split_at != -1) {
+        // considering that the position of Split Pos might be changed due to replacement text,
+        // we need to calculate the lastest position of Split Pos.
+        m_CountSplitOffset = true;
+        text_end = split_at + m_SplitOffset;
+    }
+
+    SPCRE* spcre_pre = PCRECache::instance()->getObject(presearch_regex);
+    QString _t = Utility::Substring(start_offset, text_end, text);
+    SPCRE::MatchInfo pre_match_info = spcre_pre->getFirstMatchInfo(Utility::Substring(start_offset, text_end, text));
+
+    if (pre_match_info.offset.first != -1) {
+        m_preSearchInfo.presearch_has_executed = true;
+        m_preSearchInfo.lastPreFindRegex = presearch_regex;
+        if (pre_match_info.capture_groups_offsets.count() >= 2) {
+            std::pair<int, int> first_group = pre_match_info.capture_groups_offsets.at(1);
+            m_preSearchInfo.matched_start = pre_match_info.offset.first + first_group.first + start_offset;
+            m_preSearchInfo.matched_end = pre_match_info.offset.first + first_group.second + start_offset;
+        }
+        else {
+            m_preSearchInfo.matched_start = pre_match_info.offset.first + start_offset;
+            m_preSearchInfo.matched_end = pre_match_info.offset.second + start_offset;
+        }
+        return true;
+    }
+    m_lastMatch = SPCRE::MatchInfo();
+    m_preSearchInfo = PreSearchInfo();
+    return false;
+}
+
+// modified: FindReplacePlus
+bool CodeViewEditor::FindNextPlus(const QString& presearch_regex,
+                                  const QString& search_regex,
+                                  bool marked_text,
+                                  int split_at,
+                                  bool inRemainder)
+{
+    m_InSearchingState = true;
+    QString txt = toPlainText();
+    int offset = 0;
+    int text_start = 0,
+        text_end = txt.length();
+
+    if (!presearch_regex.isEmpty()) {
+        if (!m_preSearchInfo.presearch_has_executed || presearch_regex != m_preSearchInfo.lastPreFindRegex) {
+            bool hasPreSearch = FindNextPreSearch(presearch_regex, marked_text, split_at, inRemainder);
+            if (!hasPreSearch) return false;
+        }
+        text_start = m_preSearchInfo.matched_start;
+        text_end = m_preSearchInfo.matched_end;
+        offset = text_start;
+        offset = m_lastMatch.offset.first != -1 ? m_lastMatch.offset.second : offset;
+    }
+    else {
+        if (marked_text) {
+            text_start = m_MarkedTextStart;
+            text_end = m_MarkedTextEnd;
+        }
+        // get start offset
+        // split_at will not be -1 just during the search run on the starting resource.
+        // !inRemainder && split_at != -1 means the search run on the
+        // starting resource from split_at to end_of_text (When Direction Down).
+        if (!inRemainder && split_at != -1) {
+            offset = split_at < text_start ? text_start : split_at > text_end ? text_end : split_at;
+        }
+        else {
+            offset = text_start;
+        }
+        offset = m_lastMatch.offset.first != -1 ? m_lastMatch.offset.second : offset;
+        // get end of text
+        // inRemainder is true means the search run on the starting resource from start_of_text to split_at (When Direction Down),
+        if (inRemainder && split_at != -1) {
+            m_CountSplitOffset = true;
+            text_end = split_at + m_SplitOffset;
+        }
+    }
+
+    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    SPCRE::MatchInfo match_info = spcre->getFirstMatchInfo(Utility::Substring(offset, text_end, txt));
+    m_lastFindRegex = search_regex;
+    m_lastMatch = match_info;
+
+    if (match_info.offset.first != -1) {
+        int match_start = match_info.offset.first + offset;
+        int match_end = match_info.offset.second + offset;
+        // We will scroll the position on screen in order to ensure the entire block is visible
+        // and if not, then center the match.
+        SelectAndScrollIntoView(match_start, match_end, Searchable::Direction_Down, false);
+        // We store our offset after the selection changing event which would otherwise reset it
+        m_lastMatch.offset.first = match_start;
+        m_lastMatch.offset.second = match_end;
+        return true;
+    }
+    else if (!presearch_regex.isEmpty()) {
+        m_preSearchInfo.presearch_has_executed = false;
+        return FindNextPlus(presearch_regex, search_regex, marked_text, split_at, inRemainder);
+    }
+    return false;
+}
+
+//modified: FindReplacePlus
+bool CodeViewEditor::FindPrevPreSearch(const QString& presearch_regex,
+                                       bool marked_text,
+                                       int split_at,
+                                       bool inRemainder)
+{
+    QString text = toPlainText();
+
+    int offset = 0;
+    int text_start = 0,
+        text_end = text.length();
+    if (marked_text) {
+        text_start = m_MarkedTextStart;
+        text_end = m_MarkedTextEnd;
+    }
+
+    // get start offset
+    // split_at will not be -1 just during the search run on the starting resource.
+    // !inRemainder && split_at != -1 means the search run on the
+    // starting resource from split_at to start_of_text (When Direction Up).
+    if (split_at != -1 && !inRemainder) {
+        m_CountSplitOffset = true;
+        offset = split_at < text_start ? text_start : split_at > text_end ? text_end : split_at;
+    }
+    else {
+        offset = text_end;
+    }
+    offset = m_preSearchInfo.matched_start != -1 ? m_preSearchInfo.matched_start : offset;
+
+    // get end of text
+    // inRemainder is true means the search run on the starting resource from end_of_text to split_at (When Direction Up).
+    if (inRemainder && split_at != -1) {
+        m_CountSplitOffset = false;
+        text_start = split_at + m_SplitOffset;
+    }
+
+    SPCRE* spcre_pre = PCRECache::instance()->getObject(presearch_regex);
+    SPCRE::MatchInfo pre_match_info = spcre_pre->getLastMatchInfo(Utility::Substring(text_start, offset, text));
+
+    if (pre_match_info.offset.first != -1) {
+        m_preSearchInfo.presearch_has_executed = true;
+        m_preSearchInfo.lastPreFindRegex = presearch_regex;
+        if (pre_match_info.capture_groups_offsets.count() >= 2) {
+            std::pair<int, int> first_group = pre_match_info.capture_groups_offsets.at(1);
+            m_preSearchInfo.matched_start = pre_match_info.offset.first + first_group.first + text_start;
+            m_preSearchInfo.matched_end = pre_match_info.offset.first + first_group.second + text_start;
+        }
+        else {
+            m_preSearchInfo.matched_start = pre_match_info.offset.first + text_start;
+            m_preSearchInfo.matched_end = pre_match_info.offset.second + text_start;
+        }
+        return true;
+    }
+    m_lastMatch = SPCRE::MatchInfo();
+    m_preSearchInfo = PreSearchInfo();
+    return false;
+}
+
+// modified: FindReplacePlus
+bool CodeViewEditor::FindPrevPlus(const QString& presearch_regex,
+                                  const QString& search_regex,
+                                  bool marked_text,
+                                  int split_at,
+                                  bool inRemainder)
+{
+    m_InSearchingState = true;
+    QString txt = toPlainText();
+    int offset = 0;
+    int text_start = 0,
+        text_end = txt.length();
+
+    if (!presearch_regex.isEmpty()) {
+        if (!m_preSearchInfo.presearch_has_executed || presearch_regex != m_preSearchInfo.lastPreFindRegex) {
+            bool hasPreSearch = FindPrevPreSearch(presearch_regex, marked_text, split_at, inRemainder);
+            if (!hasPreSearch) return false;
+        }
+        text_start = m_preSearchInfo.matched_start;
+        text_end = m_preSearchInfo.matched_end;
+        offset = text_end;
+        offset = m_lastMatch.offset.first != -1 ? m_lastMatch.offset.first : offset;
+    }
+    else {
+        if (marked_text) {
+            text_start = m_MarkedTextStart;
+            text_end = m_MarkedTextEnd;
+        }
+        // get start offset
+        // split_at will not be -1 just during the search run on the starting resource.
+        // !inRemainder && split_at != -1 means the search run on the
+        // starting resource from split_at to start_of_text (When Direction Up).
+        if (!inRemainder && split_at != -1) {
+            m_CountSplitOffset = true;
+            offset = split_at < text_start ? text_start : split_at > text_end ? text_end : split_at;
+        }
+        else {
+            offset = text_end;
+        }
+        offset = m_lastMatch.offset.first != -1 ? m_lastMatch.offset.first : offset;
+
+        // get end of text
+        // inRemainder is true means the search run on the starting resource from end_of_text to split_at (When Direction Up).
+        if (inRemainder && split_at != -1) {
+            m_CountSplitOffset = false;
+            text_start = split_at + m_SplitOffset;
+        }
+    }
+
+    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    SPCRE::MatchInfo match_info = spcre->getLastMatchInfo(Utility::Substring(text_start, offset, txt));
+    m_lastFindRegex = search_regex;
+    m_lastMatch = match_info;
+
+    if (match_info.offset.first != -1) {
+        int match_start = match_info.offset.first + text_start,
+            match_end = match_info.offset.second + text_start;
+        // We will scroll the position on screen in order to ensure the entire block is visible
+        // and if not, then center the match.
+        SelectAndScrollIntoView(match_start, match_end ,Searchable::Direction_Up, false);
+        // We store our offset after the selection changing event which would otherwise reset it
+        m_lastMatch.offset.first = match_start;
+        m_lastMatch.offset.second = match_end;
+        return true;
+    }
+    else if (!presearch_regex.isEmpty()){
+        m_preSearchInfo.presearch_has_executed = false;
+        return FindPrevPlus(presearch_regex, search_regex, marked_text, split_at, inRemainder);
+    }
+}
+
+
+//modified: FindReplacePlus
+bool CodeViewEditor::ReplaceSelectedPlus(const QString& search_regex, const QString& replacement, Searchable::Direction direction, bool replace_current)
+{
+    // It is only safe to do a replace if we have not changed the selection or find text
+    // since we last did a Find.
+    if ((search_regex != m_lastFindRegex) || (m_lastMatch.offset.first == -1)) {
+        return false;
+    }
+
+    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    int selection_start = textCursor().selectionStart();
+    int selection_end = textCursor().selectionEnd();
+
+    m_ReplacingInSearch = true;
+    disconnect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
+
+    // Convert to plain text or \s won't get newlines
+    const QString& document_text = toPlainText();
+    QString selected_text = Utility::Substring(selection_start, selection_end, document_text);
+    QString replaced_text;
+    bool replacement_made = false;
+    bool in_marked_text = selection_start >= m_MarkedTextStart && selection_end <= m_MarkedTextEnd;
+    if (in_marked_text) {
+        m_ReplacingInMarkedText = true;
+    }
+
+    int original_text_length = textLength();
+    replacement_made = spcre->replaceText(selected_text, m_lastMatch.capture_groups_offsets, replacement, replaced_text);
+
+    if (replacement_made) {
+        QTextCursor cursor = textCursor();
+        int start = cursor.position();
+        // Replace the selected text with our replacement text.
+        cursor.beginEditBlock();
+        cursor.removeSelectedText();
+        cursor.insertText(replaced_text);
+        cursor.clearSelection();
+        cursor.endEditBlock();
+
+        // Select the new text
+        if (replace_current) {
+            if (direction == Searchable::Direction_Up) {
+                cursor.setPosition(start + replaced_text.length());
+                cursor.setPosition(start, QTextCursor::KeepAnchor);
+            }
+            else {
+                cursor.setPosition(selection_start);
+                cursor.setPosition(selection_start + replaced_text.length(), QTextCursor::KeepAnchor);
+            }
+        }
+        else if (direction == Searchable::Direction_Up) {
+            // Find for next match done after will set selection
+            cursor.setPosition(selection_start);
+        }
+
+        setTextCursor(cursor);
+
+        int offset = textLength() - original_text_length;
+
+        m_lastMatch.offset.second += offset;
+
+        if (m_preSearchInfo.presearch_has_executed) {
+            m_preSearchInfo.matched_end += offset;
+        }
+
+        // Adjust size of marked text.
+        if (in_marked_text) {
+            m_ReplacingInMarkedText = false;
+            m_MarkedTextEnd += offset;
+        }
+
+        if (m_CountSplitOffset) {
+            m_SplitOffset += offset;
+        }
+
+        if (!hasFocus()) {
+            // The replace operation is being performed where focus is elsewhere (like in the F&R combos)
+            // If the user does not click back into the tab, these changes will not be saved yet, which
+            // means if the switch to another tab (such as a BV tab after doing a F&R in CSS) they will
+            // not see the result of those changes. So we will emit a FocusLost event, which will trigger
+            // the saving of the tab content and all associated ResourceModified signals to fire.
+            emit FocusLost(this);
+        }
+    }
+
+    m_ReplacingInSearch = false;
+    connect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
+
+    HighlightCurrentLine();
+    return replacement_made;
+}
+
+//modified: FindReplacePlus
+int CodeViewEditor::CountPlus(const QString& presearch_regex, const QString& search_regex, bool marked_text)
+{
+    SPCRE* pre_spcre = PCRECache::instance()->getObject(presearch_regex);
+    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    QString text = toPlainText();
+    int start = 0;
+    int end = text.length();
+    if (marked_text) {
+        start = m_MarkedTextStart;
+        end = m_MarkedTextEnd;
+    }
+    QString text_ = text.mid(start, end - start);
+    return Utility::GetSearchInfoWithPreSearch(presearch_regex, search_regex, text_).count();
+}
+
+//modified: FindReplacePlus
+int CodeViewEditor::ReplaceAllPlus(const QString& presearch_regex,
+                                   const QString& search_regex,
+                                   const QString& replacement,
+                                   bool marked_text)
+{
+    QString text = toPlainText();
+    int original_position = textCursor().position();
+    if (marked_text) {
+        m_ReplacingInMarkedText = true;
+        // Restrict replace to the marked area.
+        text = Utility::Substring(m_MarkedTextStart, m_MarkedTextEnd, text);
+    }
+    QList<Utility::MatchInfo> match_infos = Utility::GetSearchInfoWithPreSearch(presearch_regex, search_regex, text);
+    if (match_infos.isEmpty()) return 0;
+
+    int origin_pos = textCursor().position();
+    int new_pos = -1;
+
+    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    Utility::MatchInfo info;
+    QString new_text;
+    int head_start = 0,
+        head_end = 0;
+    int count = 0;
+    for (int i = 0; i < match_infos.count(); i++){
+        info = match_infos.at(i);
+        head_end = info.offset.first;
+        QString replaced_text;
+        int sub_start = info.offset.first,
+            sub_end = info.offset.second;
+        QString head_text = text.mid(head_start, head_end - head_start);
+        QString sub_text = text.mid(sub_start, sub_end - sub_start);
+        if (spcre->replaceText(sub_text, info.capture_groups_offsets, replacement, replaced_text)) {
+            ++count;
+        }
+        else {
+            replaced_text = sub_text;
+        }
+        new_text += head_text + replaced_text;
+
+        if (new_pos == -1 && sub_end >= origin_pos) {
+            if (origin_pos == sub_end) {
+                new_pos = new_text.length();
+            }
+            else if (origin_pos < sub_end && origin_pos >= sub_start) {
+                new_pos = new_text.length() - replaced_text.length();
+            }
+            else if (origin_pos < sub_start) {
+                new_pos = new_text.length() - replaced_text.length() - head_text.length() + origin_pos - head_start;
+            }
+            if (marked_text) new_pos += m_MarkedTextStart;
+        }
+
+        head_start = info.offset.second;
+    }
+    new_text += text.mid(head_start);
+    if (new_pos == -1) new_pos = origin_pos + new_text.length() - text.length();
+
+    QTextCursor cursor = textCursor();
+    if (marked_text) {
+        cursor.setPosition(m_MarkedTextStart);
+        cursor.setPosition(m_MarkedTextEnd, QTextCursor::KeepAnchor);
+        m_MarkedTextEnd = m_MarkedTextStart + new_text.length();
+    }
+    else {
+        cursor.select(QTextCursor::Document);
+    }
+    cursor.beginEditBlock();
+    cursor.insertText(new_text);
+    cursor.endEditBlock();
+    cursor.setPosition(new_pos);
+    setTextCursor(cursor);
+    HighlightCurrentLine();
+
+    if (marked_text) {
+        m_ReplacingInMarkedText = false;
+    }
+
+    if (!hasFocus()) {
+        // The replace operation is being performed where focus is elsewhere (like in the F&R combos)
+        // If the user does not click back into the tab, these changes will not be saved yet, which
+        // means if the switch to another tab (such as a BV tab after doing a F&R in CSS) they will
+        // not see the result of those changes. So we will emit a FocusLost event, which will trigger
+        // the saving of the tab content and all associated ResourceModified signals to fire.
+        emit FocusLost(this);
+    }
+
+    return count;
+}

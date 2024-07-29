@@ -48,7 +48,10 @@ class SearchEditor : public QDialog
     Q_OBJECT
 
 public:
-    SearchEditor(QWidget *parent);
+
+    //SearchEditor(QWidget *parent);
+    SearchEditor(QWidget* parent,bool plus_mode = false); //modified: SavedSearchPlus
+
     ~SearchEditor();
 
     void ForceClose();
@@ -193,6 +196,12 @@ private:
     SearchEditorItemDelegate * m_CntrlDelegate;
 
     Ui::SearchEditor ui;
+
+//----------- modified: SavedSearchPlus -----------
+public slots:
+    void WhyEntriesEmpty();
+private:
+    bool m_PlusMode = false;
 };
 
 #endif // SEARCHEDITOR_H

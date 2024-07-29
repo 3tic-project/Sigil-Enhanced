@@ -49,6 +49,7 @@ Preferences::Preferences(QWidget *parent) :
     m_refreshClipHistoryLimit(false),
     m_refreshBookBrowser(false),
     m_refreshToolBarPlugins(false), // modified: RefreshToolBarPlugins
+    m_refreshFindRepWdiget(false), // modified: FindReplacePlus
     m_reloadPreview(false)
 {
     ui.setupUi(this);
@@ -111,9 +112,12 @@ void Preferences::saveSettings()
 
             if (widgetResult & PreferencesWidget::ResultAction_ReloadPreview)
                 m_reloadPreview = true;
-            //-------------------- modified: RefreshToolBarPlugins ---------------
+            //------------------------ modified: ResultAction --------------------
             if (widgetResult & PreferencesWidget::ResultAction_RefreshToolBarPlugins)
                 m_refreshToolBarPlugins = true;
+
+            if (widgetResult & PreferencesWidget::ResultAction_RefreshFindRepWidget)
+                m_refreshFindRepWdiget = true;
             //--------------------------------------------------------------------
         }
     }
@@ -201,6 +205,13 @@ bool Preferences::isRefreshToolBarPluginsRequired()
     return m_refreshToolBarPlugins;
 }
 //----------------------------------------------------------
+
+//------------ modified: FindReplacePlus --------------
+bool Preferences::isRefreshFindRepWidgetRequired()
+{
+    return m_refreshFindRepWdiget;
+}
+//-----------------------------------------------------
 
 void Preferences::openPreferencesLocation()
 {
