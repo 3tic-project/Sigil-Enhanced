@@ -50,7 +50,11 @@
 #include "Tabs/ContentTab.h"
 #include "ViewEditors/ElementIndex.h"
 #include "Dialogs/SearchEditor.h"
-#include "MainUI/FindReplacePlus.h" //modified: FindReplacePlus
+//modified: FindReplacePlus
+#include "MainUI/FindReplacePlus.h"
+//modified: SavedSearchPlus
+#include "Dialogs/SearchEditorPlus.h"
+#include "MiscEditors/SearchEditorModelPlus.h"
 
 const int MAX_RECENT_FILES = 9;
 const int STATUSBAR_MSG_DISPLAY_TIME = 7000;
@@ -1124,6 +1128,8 @@ public:
         OriginalMode
     };
     FindReplaceMode GetFindReplaceMode();
+    QList<SearchEditorModelPlus::searchEntry*> SearchEditorGetCurrentEntriesPlus();
+    void SearchEditorRecordEntryAsCompletedPlus(SearchEditorModelPlus::searchEntry* entry);
 public slots:
     void Epub3ToEpub2(); //modified: Epub3ToEpub2
     void Epub2ToEpub3(); //modified: Epub2ToEpub3
@@ -1135,14 +1141,17 @@ private:
     FindReplacePlus* m_FindReplacePlus;
     void changeFindReplaceMode();
     void ConnectSignalsToSearchEditor();
-    void ConnectActionSignalsToFindReplace();
+    void ConnectSignalsToFindReplace();
+    //modified: SavedSearchPlus
+    SearchEditorPlus* m_SearchEditorPlus;
 private slots:
     //modified: Add Lables On Multiple Lines
     void ApplyHeadingStyleToTab_Plus(QAction* act);
+    //modified: SavedSearchPlus
+    void SearchEditorDialogPlus(SearchEditorModelPlus::searchEntry* search_entry = NULL);
 signals:
     //modified: FindReplacePlus
     void UpdateSearchStateRequest();
 };
 
 #endif // SIGIL_H
-

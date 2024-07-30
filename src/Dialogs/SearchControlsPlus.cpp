@@ -111,17 +111,18 @@ void SearchControlsPlus::UpdateSearchControls(const QString &text)
 
 QString SearchControlsPlus::GetControlsCode()
 {
-    // if any cb left with placeholder clear entire entry
-    // to prevent impossible search controls from being generated
-    if ((ui.cbSearchMode->currentIndex() == 0) ||
-        (ui.cbSearchDirection->currentIndex() == 0) ||
-        (ui.cbLookWhere->currentIndex() == 0)) {
-        return "";
-    }
     QStringList codes;
-    codes.append(GetSearchMode());
-    codes.append(GetSearchDirection());
-    codes.append(GetLookWhere());
+    if (ui.cbSearchMode->currentIndex() != 0) {
+        codes.append(GetSearchMode());
+    }
+    if (ui.cbLookWhere->currentIndex() != 0) {
+        codes.append(GetLookWhere());
+    }
+    if (ui.cbSearchDirection->currentIndex() != 0) {
+        codes.append(GetSearchDirection());
+    }
+    if (codes.isEmpty())
+        return "";
     return codes.join(" ");
 }
 

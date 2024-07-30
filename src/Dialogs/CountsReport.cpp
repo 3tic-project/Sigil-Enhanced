@@ -31,19 +31,16 @@
 #include "Dialogs/CountsReport.h"
 
 #include "sigil_exception.h"
-#include "Misc/SettingsStoreExtend.h" //modified: SavedSearchPlus
 
 static const QString SETTINGS_GROUP = "counts_report";
 static const QString DEFAULT_REPORT_FILE = "CountsReport.csv";
 
 
-//CountsReport::CountsReport(QWidget* parent)
-CountsReport::CountsReport(QWidget* parent,bool plus_mode) //modified: SavedSearchPlus
+CountsReport::CountsReport(QWidget* parent)
     :
     QDialog(parent),
     m_ItemModel(new QStandardItemModel),
     m_LastDirSaved(QString()),
-    m_PlusMode(plus_mode), //modified: SavedSearchPlus
     m_LastFileSaved(QString())
 {
     ui.setupUi(this);
@@ -86,7 +83,6 @@ void CountsReport::SetupTable(int sort_column, Qt::SortOrder sort_order)
     m_ItemModel->clear();
     QStringList header;
     header.append(tr("Search Full Name"));
-    if (m_PlusMode) header.append(tr("PreFind")); //modified: SavedSearchPlus
     header.append(tr("Find"));
     header.append(tr("Target"));
     header.append(tr("Count"));
@@ -113,12 +109,6 @@ void CountsReport::SetupTable(int sort_column, Qt::SortOrder sort_order)
         if (controls.contains("SV")) target = tr("Selected SVG Files");
         if (controls.contains("SJ")) target = tr("Selected Javascript Files");
         if (controls.contains("SX")) target = tr("Selected Other XML Files");
-        //modified: SavedSearchPlus
-        if (controls.contains("SF")) target = tr("Selected Files");
-        QString prefind;
-        if (m_PlusMode)
-            prefind = entry->prefind;
-        //-------------------------
         QList<QStandardItem *> rowItems;
         QStandardItem *item;
         // Full Name
@@ -126,14 +116,6 @@ void CountsReport::SetupTable(int sort_column, Qt::SortOrder sort_order)
         item->setText(fullname);
         rowItems << item;
         num_entries++;
-        //modified: SavedSearchPlus
-        // PreFind
-        if (m_PlusMode) {
-            item = new QStandardItem();
-            item->setText(prefind);
-            rowItems << item;
-        }
-        //-------------------------
         // Find
         item = new QStandardItem();
         item->setText(find);
@@ -148,8 +130,7 @@ void CountsReport::SetupTable(int sort_column, Qt::SortOrder sort_order)
         if (count > -1) total_count += count;
         NumericItem *count_item = new NumericItem();
         count_item->setText(QString::number(count));
-        //count_item->setTextAlignment(Qt::AlignRight);
-        count_item->setTextAlignment(Qt::AlignCenter);//modified: SavedSearchPlus
+        count_item->setTextAlignment(Qt::AlignRight);
         rowItems << count_item;
         // Add item to table
         m_ItemModel->appendRow(rowItems);
@@ -170,13 +151,6 @@ void CountsReport::SetupTable(int sort_column, Qt::SortOrder sort_order)
     nitem->setText(QString::number(num_entries));
     nitem->setTextAlignment(Qt::AlignRight);
     rowItems << nitem;
-    //modified: SavedSearchPlus
-    // PreFind
-    if (m_PlusMode) {
-        nitem = new NumericItem();
-        rowItems << nitem;
-    }
-    //-------------------------
     // Finds
     nitem = new NumericItem();
     rowItems << nitem;
@@ -186,8 +160,7 @@ void CountsReport::SetupTable(int sort_column, Qt::SortOrder sort_order)
     // Count 
     nitem = new NumericItem();
     nitem->setText(QString::number(total_count));
-    //nitem->setTextAlignment(Qt::AlignRight);
-    nitem->setTextAlignment(Qt::AlignCenter);//modified: SavedSearchPlus
+    nitem->setTextAlignment(Qt::AlignRight);
     rowItems << nitem;
     QFont font;
     font.setWeight(QFont::Bold);
@@ -300,28 +273,6 @@ void CountsReport::Save()
 
 void CountsReport::ReadSettings()
 {
-    //modified: SavedSearchPlus
-    if (m_PlusMode) {
-        SettingsStoreExtend settings;
-        settings.beginGroup(SETTINGS_GROUP);
-        // Last file open
-        m_LastDirSaved = settings.value("last_dir_saved").toString();
-        m_LastFileSaved = settings.value("last_file_saved_all_files").toString();
-
-        if (m_LastFileSaved.isEmpty()) {
-            m_LastFileSaved = DEFAULT_REPORT_FILE;
-        }
-
-        // The size of the window and it's full screen status
-        QByteArray geometry = settings.value("geometry").toByteArray();
-
-        if (!geometry.isNull()) {
-            restoreGeometry(geometry);
-        }
-        settings.endGroup();
-        return;
-    }
-    //-------------------------
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     // Last file open
@@ -343,17 +294,6 @@ void CountsReport::ReadSettings()
 
 void CountsReport::WriteSettings()
 {
-    //modified: SavedSearchPlus
-    if (m_PlusMode) {
-        SettingsStoreExtend settings;
-        settings.beginGroup(SETTINGS_GROUP);
-        settings.setValue("last_dir_saved", m_LastDirSaved);
-        settings.setValue("last_file_saved_all_files", m_LastFileSaved);
-        settings.setValue("geometry", saveGeometry());
-        settings.endGroup();
-        return;
-    }
-    //-------------------------
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     // Last file open

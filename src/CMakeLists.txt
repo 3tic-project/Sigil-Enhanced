@@ -215,6 +215,8 @@ set( DIALOG_FILES
     Dialogs/LinkJavascripts.h
     Dialogs/SearchEditor.cpp
     Dialogs/SearchEditor.h
+    Dialogs/SearchEditorPlus.cpp
+    Dialogs/SearchEditorPlus.h
     Dialogs/Controls.cpp
     Dialogs/Controls.h
     Dialogs/SearchControlsPlus.cpp
@@ -489,6 +491,8 @@ set( MISC_EDITORS_FILES
     MiscEditors/SearchEditorModel.h
     MiscEditors/MetaEditorTreeView.cpp
     MiscEditors/MetaEditorTreeView.h
+    MiscEditors/SearchEditorModelPlus.cpp
+    MiscEditors/SearchEditorModelPlus.h
     )
 
 set( SPCRE_FILES

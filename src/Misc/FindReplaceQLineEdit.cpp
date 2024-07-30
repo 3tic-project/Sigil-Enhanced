@@ -34,6 +34,7 @@
 #include "Misc/Utility.h"
 #include "MiscEditors/SearchEditorModel.h"
 #include "Misc/FindReplaceQLineEdit.h"
+#include "MiscEditors/SearchEditorModelPlus.h" //modified: FindReplacePlus
 
 //FindReplaceQLineEdit::FindReplaceQLineEdit(QWidget *parent)
 FindReplaceQLineEdit::FindReplaceQLineEdit(QWidget* parent,bool plus_mode) //modified: FindReplacePlus
@@ -109,7 +110,7 @@ void FindReplaceQLineEdit::contextMenuEvent(QContextMenuEvent *event)
     }
     */
     bool create_made;
-    if (m_PlusMode) create_made = CreateMenuEntries(menu, topAction, SearchEditorModel::instance(true)->invisibleRootItem());
+    if (m_PlusMode) create_made = CreateMenuEntries(menu, topAction, SearchEditorModelPlus::instance()->invisibleRootItem());
     if (!m_PlusMode) create_made = CreateMenuEntries(menu, topAction, SearchEditorModel::instance()->invisibleRootItem());
     if (create_made) {
         menu->insertSeparator(topAction);
@@ -137,7 +138,7 @@ bool FindReplaceQLineEdit::CreateMenuEntries(QMenu *parent_menu, QAction *topAct
             connect(searchAction, SIGNAL(triggered()), m_searchMapper, SLOT(map()));
             //modified: FindReplacePlus
             //m_searchMapper->setMapping(searchAction, SearchEditorModel::instance()->GetFullName(item));
-            if (m_PlusMode) m_searchMapper->setMapping(searchAction, SearchEditorModel::instance(true)->GetFullName(item));
+            if (m_PlusMode) m_searchMapper->setMapping(searchAction, SearchEditorModelPlus::instance()->GetFullName(item));
             if (!m_PlusMode) m_searchMapper->setMapping(searchAction, SearchEditorModel::instance()->GetFullName(item));
             //-------------------------
             if (!topAction) {

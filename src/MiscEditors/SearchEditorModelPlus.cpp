@@ -1,27 +1,3 @@
-/************************************************************************
-**
-**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
-**  Copyright (C) 2012 John Schember <john@nachtimwald.com>
-**  Copyright (C) 2012 Dave Heiland
-**  Copyright (C) 2012 Grant Drake
-**
-**  This file is part of Sigil.
-**
-**  Sigil is free software: you can redistribute it and/or modify
-**  it under the terms of the GNU General Public License as published by
-**  the Free Software Foundation, either version 3 of the License, or
-**  (at your option) any later version.
-**
-**  Sigil is distributed in the hope that it will be useful,
-**  but WITHOUT ANY WARRANTY; without even the implied warranty of
-**  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-**  GNU General Public License for more details.
-**
-**  You should have received a copy of the GNU General Public License
-**  along with Sigil.  If not, see <http://www.gnu.org/licenses/>.
-**
-*************************************************************************/
-
 #include <QtCore/QCoreApplication>
 #include <QByteArray>
 #include <QDataStream>
@@ -31,45 +7,55 @@
 #include <QRegularExpression>
 #include <QDebug>
 
-#include "MiscEditors/SearchEditorModel.h"
+#include "MiscEditors/SearchEditorModelPlus.h"
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
 #include "sigil_exception.h"
 
-static const QString SETTINGS_FILE = SEARCHES_V6_SETTINGS_FILE;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    #define QT_ENUM_SKIPEMPTYPARTS Qt::SkipEmptyParts
+    #define QT_ENUM_KEEPEMPTYPARTS Qt::KeepEmptyParts
+#else
+    #define QT_ENUM_SKIPEMPTYPARTS QString::SkipEmptyParts
+    #define QT_ENUM_KEEPEMPTYPARTS QString::KeepEmptyParts
+#endif
+
+static const QString SETTINGSEXTEND_FILE = "saved_searches_plus_m.ini";
 
 static const QString SETTINGS_GROUP         = "search_entries";
 static const QString ENTRY_NAME             = "Name";
 static const QString ENTRY_FIND             = "Find";
 static const QString ENTRY_REPLACE          = "Replace";
 static const QString ENTRY_CONTROLS         = "Controls";
+static const QString ENTRY_PREFIND          = "PreFind";
 
-const int COLUMNS = 4;
+
+const int COLUMNS = 5;
 
 static const int IS_GROUP_ROLE = Qt::UserRole + 1;
 static const int FULLNAME_ROLE = Qt::UserRole + 2;
 
-static const QString SEARCH_EXAMPLES_FILE = "search_entries.ini";
+static const QString SEARCH_EXAMPLES_FILE = "search_entries_with_presearch.ini";
 
-SearchEditorModel *SearchEditorModel::m_instance = 0;
+SearchEditorModelPlus *SearchEditorModelPlus::m_instance = 0;
 
-SearchEditorModel *SearchEditorModel::instance()
+SearchEditorModelPlus* SearchEditorModelPlus::instance()
 {
     if (m_instance == 0) {
-        m_instance = new SearchEditorModel();
+        m_instance = new SearchEditorModelPlus();
     }
-
     return m_instance;
 }
 
-SearchEditorModel::SearchEditorModel(QObject *parent)
+SearchEditorModelPlus::SearchEditorModelPlus(QObject *parent)
     : QStandardItemModel(parent),
       m_FSWatcher(new QFileSystemWatcher()),
       m_IsDataModified(false)
 {
-    m_SettingsPath = Utility::DefinePrefsDir() + "/" + SETTINGS_FILE;
+    m_SettingsPath = Utility::DefinePrefsDir() + "/" + SETTINGSEXTEND_FILE;
     QStringList header;
     header.append(tr("Name"));
+    header.append(tr("PreFind"));
     header.append(tr("Find"));
     header.append(tr("Replace"));
     header.append(tr("Controls"));
@@ -90,7 +76,7 @@ SearchEditorModel::SearchEditorModel(QObject *parent)
             this, SLOT(RowsRemovedHandler(const QModelIndex &, int, int)));
 }
 
-SearchEditorModel::~SearchEditorModel()
+SearchEditorModelPlus::~SearchEditorModelPlus()
 {
     if (m_instance) {
         delete m_instance;
@@ -98,22 +84,22 @@ SearchEditorModel::~SearchEditorModel()
     }
 }
 
-void SearchEditorModel::SetDataModified(bool modified)
+void SearchEditorModelPlus::SetDataModified(bool modified)
 {
     m_IsDataModified = modified;
 }
 
-bool SearchEditorModel::IsDataModified()
+bool SearchEditorModelPlus::IsDataModified()
 {
     return m_IsDataModified;
 }
 
-Qt::DropActions SearchEditorModel::supportedDropActions() const
+Qt::DropActions SearchEditorModelPlus::supportedDropActions() const
 {
     return Qt::MoveAction;
 }
 
-bool SearchEditorModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent)
+bool SearchEditorModelPlus::dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent)
 {
     QModelIndex new_parent(parent);
 
@@ -149,17 +135,17 @@ bool SearchEditorModel::dropMimeData(const QMimeData *data, Qt::DropAction actio
     return true;
 }
 
-void SearchEditorModel::RowsRemovedHandler(const QModelIndex &parent, int start, int end)
+void SearchEditorModelPlus::RowsRemovedHandler(const QModelIndex &parent, int start, int end)
 {
     SetDataModified(true);
 }
 
 
-void SearchEditorModel::ItemChangedHandler(QStandardItem *item)
+void SearchEditorModelPlus::ItemChangedHandler(QStandardItem *item)
 {
     Q_ASSERT(item);
 
-    if (item->column() == 3) {
+    if (item->column() == 4) {
         QString controls = item->text();
         item->setToolTip(BuildControlsToolTip(controls));
     }
@@ -185,7 +171,7 @@ void SearchEditorModel::ItemChangedHandler(QStandardItem *item)
     Rename(item);
 }
 
-void SearchEditorModel::Rename(QStandardItem *item, const QString &name)
+void SearchEditorModelPlus::Rename(QStandardItem *item, const QString &name)
 {
     // Update the name and all its children
     // Disconnect change signal while changing the items
@@ -207,7 +193,7 @@ void SearchEditorModel::Rename(QStandardItem *item, const QString &name)
     SetDataModified(true);
 }
 
-void SearchEditorModel::UpdateFullName(QStandardItem *item)
+void SearchEditorModelPlus::UpdateFullName(QStandardItem *item)
 {
     QStandardItem *parent_item = item->parent();
 
@@ -229,7 +215,7 @@ void SearchEditorModel::UpdateFullName(QStandardItem *item)
     }
 }
 
-void SearchEditorModel::SettingsFileChanged(const QString &path) const
+void SearchEditorModelPlus::SettingsFileChanged(const QString &path) const
 {
     // The file may have been deleted prior to writing a new version - give it a chance to write.
     QTime wake_time = QTime::currentTime().addMSecs(1000);
@@ -253,22 +239,22 @@ void SearchEditorModel::SettingsFileChanged(const QString &path) const
     }
 }
 
-bool SearchEditorModel::ItemIsGroup(QStandardItem *item)
+bool SearchEditorModelPlus::ItemIsGroup(QStandardItem *item)
 {
     return item->data(IS_GROUP_ROLE).toBool();
 }
 
-QString SearchEditorModel::GetFullName(QStandardItem *item)
+QString SearchEditorModelPlus::GetFullName(QStandardItem *item)
 {
     return item->data(FULLNAME_ROLE).toString();
 }
 
-SearchEditorModel::searchEntry *SearchEditorModel::GetEntryFromName(const QString &name, QStandardItem *item)
+SearchEditorModelPlus::searchEntry *SearchEditorModelPlus::GetEntryFromName(const QString &name, QStandardItem *item)
 {
     return GetEntry(GetItemFromName(name, item));
 }
 
-QStandardItem *SearchEditorModel::GetItemFromName(const QString &name, QStandardItem *item)
+QStandardItem *SearchEditorModelPlus::GetItemFromName(const QString &name, QStandardItem *item)
 {
     QStandardItem *found_item = NULL;
 
@@ -292,7 +278,7 @@ QStandardItem *SearchEditorModel::GetItemFromName(const QString &name, QStandard
     return found_item;
 }
 
-void SearchEditorModel::LoadInitialData()
+void SearchEditorModelPlus::LoadInitialData()
 {
     removeRows(0, rowCount());
     LoadData();
@@ -304,7 +290,7 @@ void SearchEditorModel::LoadInitialData()
     SetDataModified(false);
 }
 
-void SearchEditorModel::LoadData(const QString &filename, QStandardItem *item)
+void SearchEditorModelPlus::LoadData(const QString &filename, QStandardItem *item)
 {
     QString settings_path = filename;
     if (settings_path.isEmpty()) settings_path = m_SettingsPath;
@@ -316,7 +302,7 @@ void SearchEditorModel::LoadData(const QString &filename, QStandardItem *item)
     // Add one entry at a time to the list
     for (int i = 0; i < size; ++i) {
         ss.setArrayIndex(i);
-        SearchEditorModel::searchEntry *entry = new SearchEditorModel::searchEntry();
+        SearchEditorModelPlus::searchEntry *entry = new SearchEditorModelPlus::searchEntry();
         QString fullname = ss.value(ENTRY_NAME).toString();
         fullname.replace(QRegularExpression("\\s*/+\\s*"), "/");
         fullname.replace(QRegularExpression("^/"), "");
@@ -324,6 +310,7 @@ void SearchEditorModel::LoadData(const QString &filename, QStandardItem *item)
         // Name is set to fullname only while looping through parent groups when adding
         entry->name = fullname;
         entry->fullname = fullname;
+        entry->prefind = ss.value(ENTRY_PREFIND,QString()).toString();
         entry->find = ss.value(ENTRY_FIND).toString();
         entry->replace = ss.value(ENTRY_REPLACE).toString();
         entry->controls = ss.value(ENTRY_CONTROLS, "").toString();
@@ -335,7 +322,7 @@ void SearchEditorModel::LoadData(const QString &filename, QStandardItem *item)
 }
 
 
-void SearchEditorModel::LoadTextData(const QString &filename, QStandardItem *item, const QChar &sep)
+void SearchEditorModelPlus::LoadTextData(const QString &filename, QStandardItem *item, const QChar &sep)
 {
     QFileInfo fi(filename);
     QString groupname = fi.fileName() + "/";
@@ -355,7 +342,7 @@ void SearchEditorModel::LoadTextData(const QString &filename, QStandardItem *ite
                 findreplace << "" << "" << "" << "";
                 QString localname = "rep" + QStringLiteral("%1").arg(cnt, 5, 10, QLatin1Char('0'));
                 QString fullname;
-                SearchEditorModel::searchEntry *entry = new SearchEditorModel::searchEntry();
+                SearchEditorModelPlus::searchEntry *entry = new SearchEditorModelPlus::searchEntry();
                 // if no name info appears
                 if (findreplace.at(0).isEmpty()) {
                     fullname = groupname + localname;
@@ -369,9 +356,11 @@ void SearchEditorModel::LoadTextData(const QString &filename, QStandardItem *ite
                 // Name is set to fullname only while looping through parent groups when adding
                 entry->name = fullname;
                 entry->fullname = fullname;
-                entry->find = findreplace.at(1);
-                entry->replace = findreplace.at(2);
-                entry->controls = findreplace.at(3);
+
+                entry->prefind = findreplace.at(1);
+                entry->find = findreplace.at(2);
+                entry->replace = findreplace.at(3);
+                entry->controls = findreplace.at(4);
 
                 AddFullNameEntry(entry, item);
                 // done with the temporary entry so remove it
@@ -383,7 +372,7 @@ void SearchEditorModel::LoadTextData(const QString &filename, QStandardItem *ite
 }
 
 
-void SearchEditorModel::AddFullNameEntry(SearchEditorModel::searchEntry *entry, QStandardItem *parent_item, int row)
+void SearchEditorModelPlus::AddFullNameEntry(SearchEditorModelPlus::searchEntry *entry, QStandardItem *parent_item, int row)
 {
     if (!parent_item) {
         parent_item = invisibleRootItem();
@@ -401,7 +390,7 @@ void SearchEditorModel::AddFullNameEntry(SearchEditorModel::searchEntry *entry, 
     QString entry_name = entry->name;
 
     if (entry->name.contains("/")) {
-        QStringList group_names = entry->name.split("/", Qt::SkipEmptyParts);
+        QStringList group_names = entry->name.split("/", QT_ENUM_SKIPEMPTYPARTS);
         entry_name = group_names.last();
 
         if (!entry->is_group) {
@@ -420,7 +409,7 @@ void SearchEditorModel::AddFullNameEntry(SearchEditorModel::searchEntry *entry, 
             }
 
             if (!found) {
-                SearchEditorModel::searchEntry *new_entry = new SearchEditorModel::searchEntry();
+                SearchEditorModelPlus::searchEntry *new_entry = new SearchEditorModelPlus::searchEntry();
                 new_entry->is_group = true;
                 new_entry->name = group_name;
                 parent_item = AddEntryToModel(new_entry, new_entry->is_group, parent_item, parent_item->rowCount());
@@ -437,7 +426,7 @@ void SearchEditorModel::AddFullNameEntry(SearchEditorModel::searchEntry *entry, 
 }
 
 
-void SearchEditorModel::FillControls(const QList<QStandardItem*> &items)
+void SearchEditorModelPlus::FillControls(const QList<QStandardItem*> &items)
 {
     if (items.isEmpty()) return;
 
@@ -447,7 +436,8 @@ void SearchEditorModel::FillControls(const QList<QStandardItem*> &items)
     if (source_item->parent()) {
         parent_item = source_item->parent();
     }
-    QString controls = parent_item->child(source_item->row(), 3)->text();
+
+    QString controls = parent_item->child(source_item->row(), 4)->text();
 
     for (int i = 1; i < items.size(); i++) {
         QStandardItem* aitem = items.at(i);
@@ -455,13 +445,13 @@ void SearchEditorModel::FillControls(const QList<QStandardItem*> &items)
         if (aitem->parent()) {
             parent_item = aitem->parent();
         }
-        parent_item->child(aitem->row(), 3)->setText(controls);
+        parent_item->child(aitem->row(), 4)->setText(controls);
     }
     SetDataModified(true);
 }
 
 
-QString SearchEditorModel::BuildControlsToolTip(const QString & controls)
+QString SearchEditorModelPlus::BuildControlsToolTip(const QString & controls)
 {
     QString tooltip_controls = "";
     if (controls != "") {
@@ -471,14 +461,8 @@ QString SearchEditorModel::BuildControlsToolTip(const QString & controls)
         if (controls.contains("RX")) {
             tooltip_controls.append("RX - " + tr("Mode: Regular Expression") + "\n");
         }
-        if (controls.contains("CS")) {
-            tooltip_controls.append("CS - " + tr("Mode: Case Sensitive") + "\n");
-        }
-        if (controls.contains("UP")) {
-            tooltip_controls.append("UP - " + tr("Direction: Up") + "\n");
-        }
-        if (controls.contains("DN")) {
-            tooltip_controls.append("DN - " + tr("Direction: Down") + "\n");
+        if (controls.contains("PS")) {
+            tooltip_controls.append("PS - " + tr("Mode: Regex With PreSearch") + "\n");
         }
         if (controls.contains("CF")) {
             tooltip_controls.append("CF - " + tr("Target: Current File") + "\n");
@@ -486,20 +470,11 @@ QString SearchEditorModel::BuildControlsToolTip(const QString & controls)
         if (controls.contains("AH")) {
             tooltip_controls.append("AH - " + tr("Target: All HTML Files") + "\n");
         }
-        if (controls.contains("SH")) {
-            tooltip_controls.append("SH - " + tr("Target: Selected HTML Files") + "\n");
-        }
-        if (controls.contains("TH")) {
-            tooltip_controls.append("TH - " + tr("Target: Tabbed HTML Files") + "\n");
-        }
         if (controls.contains("AC")) {
             tooltip_controls.append("AC - " + tr("Target: All CSS Files") + "\n");
         }
-        if (controls.contains("SC")) {
-            tooltip_controls.append("SC - " + tr("Target: Selected CSS Files") + "\n");
-        }
-        if (controls.contains("TC")) {
-            tooltip_controls.append("TC - " + tr("Target: Tabbed CSS Files") + "\n");
+        if (controls.contains("SF")) {
+            tooltip_controls.append("SF - " + tr("Target: Selected Files") + "\n");
         }
         if (controls.contains("OP")) {
             tooltip_controls.append("OP - " + tr("Target: OPF File") + "\n");
@@ -507,35 +482,17 @@ QString SearchEditorModel::BuildControlsToolTip(const QString & controls)
         if (controls.contains("NX")) {
             tooltip_controls.append("NX - " + tr("Target: NCX File") + "\n");
         }
-        if (controls.contains("SV")) {
-            tooltip_controls.append("SV - " + tr("Target: Selected SVG Files") + "\n");
+        if (controls.contains("UP")) {
+            tooltip_controls.append("UP - " + tr("Direction: Up") + "\n");
         }
-        if (controls.contains("SJ")) {
-            tooltip_controls.append("SJ - " + tr("Target: Selected Javascript Files") + "\n");
-        }
-        if (controls.contains("SX")) {
-            tooltip_controls.append("SX - " + tr("Target: Selected Misc XML Files") + "\n");
-        }
-        if (controls.contains("DA")) {
-            tooltip_controls.append("DA - " + tr("Option: DotAll") + "\n");
-        }
-        if (controls.contains("MM")) {
-            tooltip_controls.append("MM - " + tr("Option: Minimal Match") + "\n");
-        }
-        if (controls.contains("AT")) {
-            tooltip_controls.append("AT - " + tr("Option: Auto Tokenise") + "\n");
-        }
-        if (controls.contains("WR")) {
-            tooltip_controls.append("WR - " + tr("Option: Wrap") + "\n");
-        }
-        if (controls.contains("TO")) {
-            tooltip_controls.append("TO - " + tr("Option: Text Only") + "\n");
+        if (controls.contains("DN")) {
+            tooltip_controls.append("DN - " + tr("Direction: Down") + "\n");
         }
     }
     return tooltip_controls;
 }
 
-QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry *entry, bool is_group, QStandardItem *parent_item, int row)
+QStandardItem *SearchEditorModelPlus::AddEntryToModel(SearchEditorModelPlus::searchEntry *entry, bool is_group, QStandardItem *parent_item, int row)
 {
     bool clean_up_needed = false;
     // parent_item must be a group item
@@ -545,12 +502,13 @@ QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry
 
     // Create an empty entry if none supplied
     if (!entry) {
-        entry = new SearchEditorModel::searchEntry();
+        entry = new SearchEditorModelPlus::searchEntry();
         clean_up_needed = true;
         entry->is_group = is_group;
 
         if (!is_group) {
             entry->name = "Search";
+            entry->prefind = "";
             entry->find = "";
             entry->replace = "";
             entry->controls = "";
@@ -580,13 +538,14 @@ QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry
         group_item->setFont(font);
         rowItems << group_item;
 
-        for (int col = 1; col < COLUMNS ; col++) {
+        for (int col = 1; col < COLUMNS; col++) {
             QStandardItem *item = new QStandardItem("");
             item->setEditable(false);
             rowItems << item;
         }
     } else {
         rowItems << new QStandardItem(entry->name);
+        rowItems << new QStandardItem(entry->prefind);
         rowItems << new QStandardItem(entry->find);
         rowItems << new QStandardItem(entry->replace);
         rowItems << new QStandardItem(entry->controls);
@@ -595,7 +554,7 @@ QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry
     rowItems[0]->setData(entry->is_group, IS_GROUP_ROLE);
     rowItems[0]->setData(entry->fullname, FULLNAME_ROLE);
     rowItems[0]->setToolTip(entry->fullname);
-    rowItems[3]->setToolTip(BuildControlsToolTip(entry->controls));
+    rowItems[4]->setToolTip(BuildControlsToolTip(entry->controls));
 
     // Add the new item to the model at the specified row
     QStandardItem *new_item;
@@ -613,7 +572,7 @@ QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry
     return new_item;
 }
 
-void SearchEditorModel::AddExampleEntries()
+void SearchEditorModelPlus::AddExampleEntries()
 {
     QString examples_dir;
 #ifdef Q_OS_MAC
@@ -632,7 +591,7 @@ void SearchEditorModel::AddExampleEntries()
     LoadData(examples_dir % SEARCH_EXAMPLES_FILE);
 }
 
-QList<QStandardItem *> SearchEditorModel::GetNonGroupItems(QList<QStandardItem *> items)
+QList<QStandardItem *> SearchEditorModelPlus::GetNonGroupItems(QList<QStandardItem *> items)
 {
     QList<QStandardItem *> all_items;
     foreach(QStandardItem * item, items) {
@@ -641,7 +600,7 @@ QList<QStandardItem *> SearchEditorModel::GetNonGroupItems(QList<QStandardItem *
     return all_items;
 }
 
-QList<QStandardItem *> SearchEditorModel::GetNonGroupItems(QStandardItem *item)
+QList<QStandardItem *> SearchEditorModelPlus::GetNonGroupItems(QStandardItem *item)
 {
     QList<QStandardItem *> items;
 
@@ -656,7 +615,7 @@ QList<QStandardItem *> SearchEditorModel::GetNonGroupItems(QStandardItem *item)
     return items;
 }
 
-QList<QStandardItem *> SearchEditorModel::GetNonParentItems(QList<QStandardItem *> items)
+QList<QStandardItem *> SearchEditorModelPlus::GetNonParentItems(QList<QStandardItem *> items)
 {
     QList<QStandardItem *> all_items;
     foreach(QStandardItem * item, items) {
@@ -665,7 +624,7 @@ QList<QStandardItem *> SearchEditorModel::GetNonParentItems(QList<QStandardItem 
     return all_items;
 }
 
-QList<QStandardItem *> SearchEditorModel::GetNonParentItems(QStandardItem *item)
+QList<QStandardItem *> SearchEditorModelPlus::GetNonParentItems(QStandardItem *item)
 {
     QList<QStandardItem *> items;
 
@@ -682,16 +641,16 @@ QList<QStandardItem *> SearchEditorModel::GetNonParentItems(QStandardItem *item)
     return items;
 }
 
-QList<SearchEditorModel::searchEntry *> SearchEditorModel::GetEntries(QList<QStandardItem *> items)
+QList<SearchEditorModelPlus::searchEntry *> SearchEditorModelPlus::GetEntries(QList<QStandardItem *> items)
 {
-    QList<SearchEditorModel::searchEntry *> entries;
+    QList<SearchEditorModelPlus::searchEntry *> entries;
     foreach(QStandardItem * item, items) {
         entries.append(GetEntry(item));
     }
     return entries;
 }
 
-SearchEditorModel::searchEntry *SearchEditorModel::GetEntry(QStandardItem *item)
+SearchEditorModelPlus::searchEntry *SearchEditorModelPlus::GetEntry(QStandardItem *item)
 {
     QStandardItem *parent_item;
 
@@ -701,17 +660,19 @@ SearchEditorModel::searchEntry *SearchEditorModel::GetEntry(QStandardItem *item)
         parent_item = invisibleRootItem();
     }
 
-    SearchEditorModel::searchEntry *entry = new SearchEditorModel::searchEntry();
+    SearchEditorModelPlus::searchEntry *entry = new SearchEditorModelPlus::searchEntry();
     entry->is_group =    parent_item->child(item->row(), 0)->data(IS_GROUP_ROLE).toBool();
     entry->fullname =    parent_item->child(item->row(), 0)->data(FULLNAME_ROLE).toString();
     entry->name =        parent_item->child(item->row(), 0)->text();
-    entry->find =        parent_item->child(item->row(), 1)->text();
-    entry->replace =     parent_item->child(item->row(), 2)->text();
-    entry->controls =    parent_item->child(item->row(), 3)->text();
+
+    entry->prefind = parent_item->child(item->row(), 1)->text();
+    entry->find = parent_item->child(item->row(), 2)->text();
+    entry->replace = parent_item->child(item->row(), 3)->text();
+    entry->controls = parent_item->child(item->row(), 4)->text();
     return entry;
 }
 
-QStandardItem *SearchEditorModel::GetItemFromId(quintptr id, int row, QStandardItem *item) const
+QStandardItem *SearchEditorModelPlus::GetItemFromId(quintptr id, int row, QStandardItem *item) const
 {
     QStandardItem *found_item = NULL;
 
@@ -742,7 +703,7 @@ QStandardItem *SearchEditorModel::GetItemFromId(quintptr id, int row, QStandardI
 }
 
 
-QString SearchEditorModel::SaveTextData(QList<SearchEditorModel::searchEntry *> entries,
+QString SearchEditorModelPlus::SaveTextData(QList<SearchEditorModelPlus::searchEntry *> entries,
                                         const QString &filename,
                                         const QChar &sep)
 {
@@ -763,10 +724,11 @@ QString SearchEditorModel::SaveTextData(QList<SearchEditorModel::searchEntry *> 
 
     // Create Data to write to file
     QStringList res;
-    foreach(SearchEditorModel::searchEntry * entry, entries) {
+    foreach(SearchEditorModelPlus::searchEntry * entry, entries) {
         QStringList data;
         data << entry->fullname;
         if (!entry->is_group) {
+           data << entry->prefind;
            data << entry->find;
            data << entry->replace;
            data << entry->controls;
@@ -786,7 +748,7 @@ QString SearchEditorModel::SaveTextData(QList<SearchEditorModel::searchEntry *> 
 
     // delete each entry if we created them above
     if (clean_up_needed) {
-        foreach(SearchEditorModel::searchEntry* entry, entries) {
+        foreach(SearchEditorModelPlus::searchEntry* entry, entries) {
             delete entry;
         }
     }
@@ -794,7 +756,7 @@ QString SearchEditorModel::SaveTextData(QList<SearchEditorModel::searchEntry *> 
 }
 
 
-QString SearchEditorModel::SaveData(QList<SearchEditorModel::searchEntry *> entries, const QString &filename)
+QString SearchEditorModelPlus::SaveData(QList<SearchEditorModelPlus::searchEntry *> entries, const QString &filename)
 {
     QString message = "";
     bool clean_up_needed = false;
@@ -829,7 +791,7 @@ QString SearchEditorModel::SaveData(QList<SearchEditorModel::searchEntry *> entr
             m_FSWatcher->addPath(settings_path);
             // delete each entry if we created them above
             if (clean_up_needed) {
-                foreach(SearchEditorModel::searchEntry* entry, entries) {
+                foreach(SearchEditorModelPlus::searchEntry* entry, entries) {
                     delete entry;
                 }
             }
@@ -840,11 +802,12 @@ QString SearchEditorModel::SaveData(QList<SearchEditorModel::searchEntry *> entr
         ss.remove(SETTINGS_GROUP);
         ss.beginWriteArray(SETTINGS_GROUP);
         int i = 0;
-        foreach(SearchEditorModel::searchEntry * entry, entries) {
+        foreach(SearchEditorModelPlus::searchEntry * entry, entries) {
             ss.setArrayIndex(i++);
             ss.setValue(ENTRY_NAME, entry->fullname);
 
             if (!entry->is_group) {
+                ss.setValue(ENTRY_PREFIND, entry->prefind);
                 ss.setValue(ENTRY_FIND, entry->find);
                 ss.setValue(ENTRY_REPLACE, entry->replace);
                 ss.setValue(ENTRY_CONTROLS, entry->controls);
@@ -853,7 +816,7 @@ QString SearchEditorModel::SaveData(QList<SearchEditorModel::searchEntry *> entr
 
         // delete each entry if we created them above
         if (clean_up_needed) {
-            foreach(SearchEditorModel::searchEntry* entry, entries) {
+            foreach(SearchEditorModelPlus::searchEntry* entry, entries) {
                 delete entry;
             }
         }
@@ -870,7 +833,7 @@ QString SearchEditorModel::SaveData(QList<SearchEditorModel::searchEntry *> entr
     return message;
 }
 
-QVariant SearchEditorModel::data(const QModelIndex &index, int role) const
+QVariant SearchEditorModelPlus::data(const QModelIndex &index, int role) const
 {
     if (index.isValid() && index.column() > 0 && role == Qt::SizeHintRole) {
         // Make all rows the same height using the name column to ensure text limited to a single line

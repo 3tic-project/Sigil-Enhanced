@@ -8,7 +8,7 @@
 #include "BookManipulation/FolderKeeper.h"
 #include "MainUI/MainWindow.h"
 #include "Misc/SearchOperations.h"
-#include "MiscEditors/SearchEditorModel.h"
+#include "MiscEditors/SearchEditorModelPlus.h"
 #include "ViewEditors/Searchable.h"
 
 class QMenu;
@@ -76,7 +76,7 @@ public slots:
     void show();
 
     void LoadSearchByName(const QString &name);
-    void LoadSearch(SearchEditorModel::searchEntry *search_entry);
+    void LoadSearch(SearchEditorModelPlus::searchEntry *search_entry);
     void FindSearch();
     void ReplaceCurrentSearch();
     void ReplaceSearch();
@@ -103,13 +103,13 @@ public slots:
     void ValidateRegex();
     void ValidatePreRegex();
 
-    void CountsReportCount(SearchEditorModel::searchEntry* entry, int& count);
+    void CountsReportCount(SearchEditorModelPlus::searchEntry* entry, int& count);
 
     void TokeniseSelection();
 
 signals:
 
-    void OpenSearchEditorRequest(SearchEditorModel::searchEntry *search_entry = NULL);
+    void OpenSearchEditorRequest(SearchEditorModelPlus::searchEntry *search_entry = NULL);
 
     void ShowMessageRequest(const QString &message);
 

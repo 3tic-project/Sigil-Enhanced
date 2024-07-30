@@ -24,8 +24,6 @@
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
 
-#define DBG if(0)
-
 static const QString SETTINGS_GROUP = "find_replace_plus";
 static const QString REGEX_OPTION_IGNORE_CASE = "(?i)";
 static const QString REGEX_OPTION_DOT_ALL = "(?s)";
@@ -37,11 +35,7 @@ static const int SHOW_FIND_RESULTS_MESSAGE_DELAY_MS = 20000;
 // Must be kept in sync with those enums
 static const QStringList TGTS = QStringList() << "CF" << "AH"  << "AC" << "SF" << "OP" << "NX";
 static const QStringList MDS = QStringList() << "NL" << "RX" << "PS";
-static const QStringList DRS = QStringList() << "DN" << "UP";
-
-static const QString INVALID = QString(QChar(9940));
-static const QString VALID = QString("");
-
+static const QStringList DRS = QStringList() << "UP" << "DN";
 
 FindReplacePlus::FindReplacePlus(MainWindow *main_window)
     : QWidget(main_window),
@@ -468,7 +462,6 @@ int FindReplacePlus::Count()
     }
 
     if (IsNewSearch()) {
-        DBG qDebug() << " .. new search";
         SetPreviousSearch();
         if (!SetStartingResource())
             return 0;
@@ -506,9 +499,7 @@ int FindReplacePlus::Count()
 
 bool FindReplacePlus::Replace()
 {
-    DBG qDebug() << "In Replace";
     if (IsNewSearch()) {
-        DBG qDebug() << " .. new search";
         SetPreviousSearch();
         if (!SetStartingResource(true)) return false;
     }
@@ -520,8 +511,6 @@ bool FindReplacePlus::Replace()
 
 bool FindReplacePlus::ReplaceCurrent()
 {
-    DBG qDebug() << "In ReplaceCurrent";
-
     // isNewSearch should always return false here
     // as search must have already found something to replace
 
@@ -567,6 +556,7 @@ void FindReplacePlus::PerformDryRunReplace()
 void FindReplacePlus::ChooseReplacements()
 {
     return; // Function not implemented
+    /*
     m_MainWindow->GetCurrentContentTab()->SaveTabContent();
     ShowMessage(tr("Choose Replacements"));
 
@@ -601,6 +591,7 @@ void FindReplacePlus::ChooseReplacements()
     UpdatePreviousPreFindStrings();
     UpdatePreviousFindStrings();
     UpdatePreviousReplaceStrings();
+    */
 }
 
 
@@ -612,7 +603,6 @@ int FindReplacePlus::ReplaceAll()
     clearMessage();
 
     if (IsNewSearch()) {
-        DBG qDebug() << " .. new search";
         SetPreviousSearch();
         if (!SetStartingResource()) return 0;
     }
@@ -771,7 +761,6 @@ bool FindReplacePlus::FindText(Direction direction)
 // calls Find in the direction specified so it becomes selected.
 bool FindReplacePlus::ReplaceText(Direction direction, bool replace_current)
 {
-    DBG qDebug() << "In ReplaceText with replace_current: " << replace_current;
     bool found = false;
     clearMessage();
 
@@ -1426,7 +1415,7 @@ Searchable *FindReplacePlus::GetAvailableSearchable()
 
 void FindReplacePlus::SaveSearchAction()
 {
-    SearchEditorModel::searchEntry *search_entry = new SearchEditorModel::searchEntry();
+    SearchEditorModelPlus::searchEntry *search_entry = new SearchEditorModelPlus::searchEntry();
     search_entry->name = "Unnamed Search";
     search_entry->is_group = false;
     search_entry->prefind = ui.cbPreFind->lineEdit()->text();;
@@ -1443,7 +1432,7 @@ void FindReplacePlus::LoadSearchByName(const QString &name)
 {
     // callers to SearchEditorModel's GetEntryFromName receive a searchEntry pointer
     // created by a call to new and must take ownership and so must clean up after themselves
-    SearchEditorModel::searchEntry * search_entry = SearchEditorModel::instance(true)->GetEntryFromName(name);
+    SearchEditorModelPlus::searchEntry * search_entry = SearchEditorModelPlus::instance()->GetEntryFromName(name);
     if (search_entry) {
         LoadSearch(search_entry);
         delete search_entry;
@@ -1451,7 +1440,7 @@ void FindReplacePlus::LoadSearchByName(const QString &name)
 }
 
 // LoadSearch is NOT the owner of any passed in search entry pointers
-void FindReplacePlus::LoadSearch(SearchEditorModel::searchEntry *search_entry)
+void FindReplacePlus::LoadSearch(SearchEditorModelPlus::searchEntry *search_entry)
 {
     if (!search_entry) {
         clearMessage();
@@ -1513,7 +1502,7 @@ bool FindReplacePlus::SetStartingResource(bool open_starting_tab)
 void FindReplacePlus::FindSearch()
 {
     // these entries are owned by the Search Editor who will clean up as needed
-    QList<SearchEditorModel::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntries();
+    QList<SearchEditorModelPlus::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntriesPlus();
 
     if (search_entries.isEmpty()) {
         emit AskWhyGetEmptyEntries();
@@ -1522,12 +1511,12 @@ void FindReplacePlus::FindSearch()
 
     SetKeyModifiers();
     m_IsSearchGroupRunning = true;
-    foreach(SearchEditorModel::searchEntry * search_entry, search_entries) {
+    foreach(SearchEditorModelPlus::searchEntry * search_entry, search_entries) {
         LoadSearch(search_entry);
         if (Find()) {
             break;
         } else {
-            m_MainWindow->SearchEditorRecordEntryAsCompleted(search_entry);
+            m_MainWindow->SearchEditorRecordEntryAsCompletedPlus(search_entry);
         }
     }
     m_IsSearchGroupRunning = false;
@@ -1537,7 +1526,7 @@ void FindReplacePlus::FindSearch()
 void FindReplacePlus::ReplaceCurrentSearch()
 {
     // these entries are owned by the Search Editor who will clean up as needed
-    QList<SearchEditorModel::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntries();
+    QList<SearchEditorModelPlus::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntriesPlus();
 
     if (search_entries.isEmpty()) {
         emit AskWhyGetEmptyEntries();
@@ -1545,7 +1534,7 @@ void FindReplacePlus::ReplaceCurrentSearch()
     }
 
     m_IsSearchGroupRunning = true;
-    SearchEditorModel::searchEntry * search_entry = search_entries.first();
+    SearchEditorModelPlus::searchEntry * search_entry = search_entries.first();
     LoadSearch(search_entry);
     ReplaceCurrent();
     m_IsSearchGroupRunning = false;
@@ -1554,7 +1543,7 @@ void FindReplacePlus::ReplaceCurrentSearch()
 void FindReplacePlus::ReplaceSearch()
 {
     // these entries are owned by the Search Editor who will clean up as needed
-    QList<SearchEditorModel::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntries();
+    QList<SearchEditorModelPlus::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntriesPlus();
 
     if (search_entries.isEmpty()) {
         emit AskWhyGetEmptyEntries();
@@ -1564,12 +1553,12 @@ void FindReplacePlus::ReplaceSearch()
     SetKeyModifiers();
     m_IsSearchGroupRunning = true;
 
-    foreach(SearchEditorModel::searchEntry * search_entry, search_entries) {
+    foreach(SearchEditorModelPlus::searchEntry * search_entry, search_entries) {
         LoadSearch(search_entry);
         if (Replace()) {
             break;
         } else {
-            m_MainWindow->SearchEditorRecordEntryAsCompleted(search_entry);
+            m_MainWindow->SearchEditorRecordEntryAsCompletedPlus(search_entry);
         }
     }
     m_IsSearchGroupRunning = false;
@@ -1579,7 +1568,7 @@ void FindReplacePlus::ReplaceSearch()
 void FindReplacePlus::CountAllSearch()
 {
     // these entries are owned by the Search Editor who will clean up as needed
-    QList<SearchEditorModel::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntries();
+    QList<SearchEditorModelPlus::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntriesPlus();
 
     if (search_entries.isEmpty()) {
         emit AskWhyGetEmptyEntries();
@@ -1589,7 +1578,7 @@ void FindReplacePlus::CountAllSearch()
     SetKeyModifiers();
     m_IsSearchGroupRunning = true;
     int count = 0;
-    foreach(SearchEditorModel::searchEntry * search_entry, search_entries) {
+    foreach(SearchEditorModelPlus::searchEntry * search_entry, search_entries) {
         LoadSearch(search_entry);
         count += Count();
     }
@@ -1605,7 +1594,7 @@ void FindReplacePlus::CountAllSearch()
 }
 
 
-void FindReplacePlus::CountsReportCount(SearchEditorModel::searchEntry* entry, int& count)
+void FindReplacePlus::CountsReportCount(SearchEditorModelPlus::searchEntry* entry, int& count)
 {
     if (entry) {
         SetKeyModifiers();
@@ -1623,7 +1612,7 @@ void FindReplacePlus::CountsReportCount(SearchEditorModel::searchEntry* entry, i
 void FindReplacePlus::ReplaceAllSearch()
 {
     // these entries are owned by the Search Editor who will clean up as needed
-    QList<SearchEditorModel::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntries();
+    QList<SearchEditorModelPlus::searchEntry*> search_entries = m_MainWindow->SearchEditorGetCurrentEntriesPlus();
 
     if (search_entries.isEmpty()) {
         emit AskWhyGetEmptyEntries();
@@ -1633,10 +1622,10 @@ void FindReplacePlus::ReplaceAllSearch()
     SetKeyModifiers();
     m_IsSearchGroupRunning = true;
     int count = 0;
-    foreach(SearchEditorModel::searchEntry * search_entry, search_entries) {
+    foreach(SearchEditorModelPlus::searchEntry * search_entry, search_entries) {
         LoadSearch(search_entry);
         count += ReplaceAll();
-        m_MainWindow->SearchEditorRecordEntryAsCompleted(search_entry);
+        m_MainWindow->SearchEditorRecordEntryAsCompletedPlus(search_entry);
     }
     m_IsSearchGroupRunning = false;
 

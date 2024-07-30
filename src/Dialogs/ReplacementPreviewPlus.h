@@ -29,18 +29,8 @@
 #include <QDialog>
 #include <QHash>
 #include <QStandardItemModel>
-#include <QStyledItemDelegate>
 #include "ui_ReplacementPreviewPlus.h"
 
-
-class StyledTextDelegatePlus : public QStyledItemDelegate
-{
-    Q_OBJECT
-
-public:
-    StyledTextDelegatePlus(QObject* parent = 0) :QStyledItemDelegate(parent) {};
-    virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
-};
 
 
 class QString;
@@ -59,35 +49,17 @@ public:
 
 public slots:
 
-    void CreateTable();
     void closeEvent(QCloseEvent *e);
-    void reject();
 
 private slots:
-    void ChangeContext();
-    //void FilterEditTextChangedSlot(const QString &text);
-    void DeleteSelectedRows();
     void ApplyReplacements();
-    void CreateContextMenuActions();
-    void SetupContextMenu(const QPoint &point);
-    void OpenContextMenu(const QPoint &point);
 
 private:
-
-    QString GetPriorContext(int start, const QString &text, int amt);
-    QString GetPostContext(int end, const QString &text, int amt);
-
-    void InitItemsProperties();
 
     void ReadSettings();
     void WriteSettings();
 
-    void SetContextCB(int val);
     void connectSignalsSlots();
-
-    QStandardItemModel *m_ItemModel;
-
-    StyledTextDelegatePlus* m_TextDelegate;
 
     FindReplacePlus* m_FindReplacePlus;
 

@@ -128,6 +128,18 @@ MainWindow::FindReplaceMode MainWindow::GetFindReplaceMode()
 }
 
 //modified: FindReplacePlus
+QList<SearchEditorModelPlus::searchEntry*> MainWindow::SearchEditorGetCurrentEntriesPlus()
+{
+    return m_SearchEditorPlus->GetCurrentEntries();
+}
+
+//modified: FindReplacePlus
+void MainWindow::SearchEditorRecordEntryAsCompletedPlus(SearchEditorModelPlus::searchEntry* entry)
+{
+    m_SearchEditorPlus->RecordEntryAsCompleted(entry);
+}
+
+//modified: FindReplacePlus
 void MainWindow::changeFindReplaceMode()
 {
     m_findReplaceMode = m_findReplaceMode == EnhancedMode ? OriginalMode : EnhancedMode;
@@ -138,57 +150,88 @@ void MainWindow::changeFindReplaceMode()
         if (isShowed)
             m_FindReplacePlus->show();
         delete m_SearchEditor;
-        m_SearchEditor = new SearchEditor(this, true);
+        m_SearchEditorPlus = new SearchEditorPlus(this);
         ConnectSignalsToSearchEditor();
-        ConnectActionSignalsToFindReplace();
+        ConnectSignalsToFindReplace();
     }
     else if (m_findReplaceMode == FindReplaceMode::OriginalMode) {
         bool isShowed = m_FindReplacePlus->isVisible();
         m_FindReplacePlus->HideFindReplace();
         if (isShowed)
             m_FindReplace->show();
-        delete m_SearchEditor;
-        m_SearchEditor = new SearchEditor(this, false);
+        delete m_SearchEditorPlus;
+        m_SearchEditor = new SearchEditor(this);
         ConnectSignalsToSearchEditor();
-        ConnectActionSignalsToFindReplace();
+        ConnectSignalsToFindReplace();
+    }
+}
+
+//modified: SavedSearchPlus
+void MainWindow::SearchEditorDialogPlus(SearchEditorModelPlus::searchEntry* search_entry)
+{
+    // non-modal dialog
+    m_SearchEditorPlus->show();
+    m_SearchEditorPlus->raise();
+    m_SearchEditorPlus->activateWindow();
+
+    if (search_entry) {
+        m_SearchEditorPlus->AddEntry(search_entry->is_group, search_entry, false);
     }
 }
 
 void MainWindow::ConnectSignalsToSearchEditor()
 {
     QObject* findReplace;
+    QObject* searchEditor;
     if (m_findReplaceMode == FindReplaceMode::EnhancedMode) {
         findReplace = qobject_cast<QObject*>(m_FindReplacePlus);
-        connect(findReplace,SIGNAL(AskWhyGetEmptyEntries()), m_SearchEditor,SLOT(WhyEntriesEmpty()));
+        searchEditor = qobject_cast<QObject*>(m_SearchEditorPlus);
+        connect(findReplace,SIGNAL(AskWhyGetEmptyEntries()), m_SearchEditorPlus,SLOT(WhyEntriesEmpty()));
+        disconnect(ui.actionSearchEditor, SIGNAL(triggered()), this, SLOT(SearchEditorDialog()));
+        connect(ui.actionSearchEditor, SIGNAL(triggered()), this, SLOT(SearchEditorDialogPlus()));
+        connect(m_SearchEditorPlus, SIGNAL(LoadSelectedSearchRequest(SearchEditorModelPlus::searchEntry*)),
+                m_FindReplacePlus, SLOT(LoadSearch(SearchEditorModelPlus::searchEntry*)));
     } else {
         findReplace = qobject_cast<QObject*>(m_FindReplace);
+        searchEditor = qobject_cast<QObject*>(m_SearchEditor);
+        connect(m_SearchEditor, SIGNAL(CountsReportCountRequest(SearchEditorModel::searchEntry*, int&)),
+                findReplace, SLOT(CountsReportCount(SearchEditorModel::searchEntry*, int&)));
+        disconnect(ui.actionSearchEditor, SIGNAL(triggered()), this, SLOT(SearchEditorDialogPlus()));
+        connect(ui.actionSearchEditor, SIGNAL(triggered()), this, SLOT(SearchEditorDialog()));
+        connect(m_SearchEditor, SIGNAL(LoadSelectedSearchRequest(SearchEditorModel::searchEntry*)),
+                m_FindReplace, SLOT(LoadSearch(SearchEditorModel::searchEntry*)));
     }
-    connect(findReplace, SIGNAL(ShowMessageRequest(const QString&)), m_SearchEditor, SLOT(ShowMessage(const QString&)));
-    connect(m_SearchEditor, SIGNAL(FindSelectedSearchRequest()), findReplace, SLOT(FindSearch()));
-    connect(m_SearchEditor, SIGNAL(ReplaceCurrentSelectedSearchRequest()), findReplace, SLOT(ReplaceCurrentSearch()));
-    connect(m_SearchEditor, SIGNAL(ReplaceSelectedSearchRequest()), findReplace, SLOT(ReplaceSearch()));
-    connect(m_SearchEditor, SIGNAL(CountAllSelectedSearchRequest()), findReplace, SLOT(CountAllSearch()));
-    connect(m_SearchEditor, SIGNAL(ReplaceAllSelectedSearchRequest()), findReplace, SLOT(ReplaceAllSearch()));
-    connect(m_SearchEditor, SIGNAL(LoadSelectedSearchRequest(SearchEditorModel::searchEntry*)),
-        findReplace, SLOT(LoadSearch(SearchEditorModel::searchEntry*)));
-    connect(m_SearchEditor, SIGNAL(RestartSearch()), findReplace, SLOT(DoRestart()));
-    connect(m_SearchEditor, SIGNAL(CountsReportCountRequest(SearchEditorModel::searchEntry*, int&)),
-        findReplace, SLOT(CountsReportCount(SearchEditorModel::searchEntry*, int&)));
+    connect(findReplace, SIGNAL(ShowMessageRequest(const QString&)), searchEditor, SLOT(ShowMessage(const QString&)));
+    connect(searchEditor, SIGNAL(FindSelectedSearchRequest()), findReplace, SLOT(FindSearch()));
+    connect(searchEditor, SIGNAL(ReplaceCurrentSelectedSearchRequest()), findReplace, SLOT(ReplaceCurrentSearch()));
+    connect(searchEditor, SIGNAL(ReplaceSelectedSearchRequest()), findReplace, SLOT(ReplaceSearch()));
+    connect(searchEditor, SIGNAL(CountAllSelectedSearchRequest()), findReplace, SLOT(CountAllSearch()));
+    connect(searchEditor, SIGNAL(ReplaceAllSelectedSearchRequest()), findReplace, SLOT(ReplaceAllSearch()));
+    connect(searchEditor, SIGNAL(RestartSearch()), findReplace, SLOT(DoRestart()));
+
 }
 
-void MainWindow::ConnectActionSignalsToFindReplace()
+void MainWindow::ConnectSignalsToFindReplace()
 {
     QObject* findReplace;
     QObject* hiddenFindReplace;
     if (m_findReplaceMode == FindReplaceMode::EnhancedMode) {
         findReplace = qobject_cast<QObject*>(m_FindReplacePlus);
         hiddenFindReplace = qobject_cast<QObject*>(m_FindReplace);
-        connect(this, SIGNAL(UpdateSearchStateRequest()), findReplace, SLOT(DoRestart()));
+        connect(this, SIGNAL(UpdateSearchStateRequest()), m_FindReplacePlus, SLOT(DoRestart()));
+        connect(m_FindReplacePlus, SIGNAL(OpenSearchEditorRequest(SearchEditorModelPlus::searchEntry*)),
+                this, SLOT(SearchEditorDialogPlus(SearchEditorModelPlus::searchEntry*)));
+        disconnect(m_FindReplace, SIGNAL(OpenSearchEditorRequest(SearchEditorModel::searchEntry*)),
+                this, SLOT(SearchEditorDialog(SearchEditorModel::searchEntry*)));
     }
     else {
         findReplace = qobject_cast<QObject*>(m_FindReplace);
         hiddenFindReplace = qobject_cast<QObject*>(m_FindReplacePlus);
-        disconnect(this, SIGNAL(UpdateSearchStateRequest()), hiddenFindReplace, SLOT(DoRestart()));
+        disconnect(this, SIGNAL(UpdateSearchStateRequest()), m_FindReplacePlus, SLOT(DoRestart()));
+        disconnect(m_FindReplacePlus, SIGNAL(OpenSearchEditorRequest(SearchEditorModelPlus::searchEntry*)),
+                   this, SLOT(SearchEditorDialogPlus(SearchEditorModelPlus::searchEntry*)));
+        connect(m_FindReplace, SIGNAL(OpenSearchEditorRequest(SearchEditorModel::searchEntry*)),
+                   this, SLOT(SearchEditorDialog(SearchEditorModel::searchEntry*)));
     }
 
     disconnect(ui.actionFind, SIGNAL(triggered()), this, SLOT(Find()));
@@ -205,6 +248,9 @@ void MainWindow::ConnectActionSignalsToFindReplace()
     disconnect(ui.actionReplaceNextInFile, SIGNAL(triggered()), hiddenFindReplace, SLOT(ReplaceNextInFile()));
     disconnect(ui.actionReplaceAllInFile, SIGNAL(triggered()), hiddenFindReplace, SLOT(ReplaceAllInFile()));
     disconnect(ui.actionCountInFile, SIGNAL(triggered()), hiddenFindReplace, SLOT(CountInFile()));
+    disconnect(hiddenFindReplace, SIGNAL(FROpenFileRequest(QString, int, int)), this, SLOT(OpenFile(QString, int, int)));
+    disconnect(hiddenFindReplace, SIGNAL(ClipboardSaveRequest()), m_ClipboardHistorySelector, SLOT(SaveClipboardState()));
+    disconnect(hiddenFindReplace, SIGNAL(ClipboardRestoreRequest()), m_ClipboardHistorySelector, SLOT(RestoreClipboardState()));
 
     connect(ui.actionFind, SIGNAL(triggered()), this, SLOT(Find()));
     connect(ui.actionFindNext, SIGNAL(triggered()), findReplace, SLOT(DoFindNext()));
@@ -220,4 +266,7 @@ void MainWindow::ConnectActionSignalsToFindReplace()
     connect(ui.actionReplaceNextInFile, SIGNAL(triggered()), findReplace, SLOT(ReplaceNextInFile()));
     connect(ui.actionReplaceAllInFile, SIGNAL(triggered()), findReplace, SLOT(ReplaceAllInFile()));
     connect(ui.actionCountInFile, SIGNAL(triggered()), findReplace, SLOT(CountInFile()));
+    connect(findReplace, SIGNAL(FROpenFileRequest(QString, int, int)), this, SLOT(OpenFile(QString, int, int)));
+    connect(findReplace, SIGNAL(ClipboardSaveRequest()), m_ClipboardHistorySelector, SLOT(SaveClipboardState()));
+    connect(findReplace, SIGNAL(ClipboardRestoreRequest()), m_ClipboardHistorySelector, SLOT(RestoreClipboardState()));
 }

@@ -271,8 +271,17 @@ MainWindow::MainWindow(const QString &openfilepath,
     // Needs to come before signals connect and after ExtendUI
     // (avoiding side-effects)
     ReadSettings();
+    //modified: SavedSearchPlus
+    if (m_findReplaceMode == EnhancedMode) {
+        m_SearchEditorPlus = new SearchEditorPlus(this);
+        m_SearchEditor = nullptr;
+    }
+    else {
+        m_SearchEditor = new SearchEditor(this);
+        m_SearchEditorPlus = nullptr;
+    }
+    //--------------------------
     // Ensure the UI is properly set to the saved view state.
-    m_SearchEditor = new SearchEditor(this, m_findReplaceMode == EnhancedMode); //modified: SavedSearchPlus
     SetupPreviewTimer();
     ConnectSignalsToSlots();
     CreateRecentFilesActions();
@@ -7051,17 +7060,15 @@ void MainWindow::ConnectSignalsToSlots()
             this, SLOT(OpenUrl(const QUrl &)));
     connect(m_TabManager, SIGNAL(OldTabRequest(QString, HTMLResource *)),
             this,          SLOT(CreateSectionBreakOldTab(QString, HTMLResource *)));
+#if(0) //modified: FindReplacePlus
     connect(m_FindReplace, SIGNAL(OpenSearchEditorRequest(SearchEditorModel::searchEntry *)),
             this,          SLOT(SearchEditorDialog(SearchEditorModel::searchEntry *)));
     connect(m_FindReplace, SIGNAL(FROpenFileRequest(QString, int, int)), this, SLOT(OpenFile(QString, int, int)));
     connect(m_TabManager, SIGNAL(ShowStatusMessageRequest(const QString &, int)), this, SLOT(ShowMessageOnStatusBar(const QString &, int)));
-#if(0) //modified: FindReplacePlus
     connect(m_FindReplace, SIGNAL(ShowMessageRequest(const QString &)),
             m_SearchEditor, SLOT(ShowMessage(const QString &)));
-#endif
     connect(m_FindReplace,   SIGNAL(ClipboardSaveRequest()),     m_ClipboardHistorySelector,  SLOT(SaveClipboardState()));
     connect(m_FindReplace,   SIGNAL(ClipboardRestoreRequest()),  m_ClipboardHistorySelector,  SLOT(RestoreClipboardState()));
-#if(0) //modified: FindReplacePlus
     connect(m_SearchEditor, SIGNAL(FindSelectedSearchRequest()), m_FindReplace,   SLOT(FindSearch()));
     connect(m_SearchEditor, SIGNAL(ReplaceCurrentSelectedSearchRequest()), m_FindReplace,   SLOT(ReplaceCurrentSearch()));
     connect(m_SearchEditor, SIGNAL(ReplaceSelectedSearchRequest()), m_FindReplace,   SLOT(ReplaceSearch()));
@@ -7104,19 +7111,14 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_Reports,       SIGNAL(RPFindTextInTags(QString)), m_FindReplace, SLOT(FindAnyTextInTags(QString)));
 
     //------------------------------------ modified: MainWindowExt --------------------------------
+    connect(m_TabManager, SIGNAL(ShowStatusMessageRequest(const QString&, int)), this, SLOT(ShowMessageOnStatusBar(const QString&, int)));
     connect(ui.actionEpub3To2, SIGNAL(triggered()), this, SLOT(Epub3ToEpub2())); // modified: Epub3ToEpub2
     connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
     connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
     //modified: FindReplacePlus
-    connect(m_FindReplacePlus, SIGNAL(FROpenFileRequest(QString, int, int)), this, SLOT(OpenFile(QString, int, int)));
-    connect(m_FindReplacePlus, SIGNAL(OpenSearchEditorRequest(SearchEditorModel::searchEntry*)),
-                         this, SLOT(SearchEditorDialog(SearchEditorModel::searchEntry*)));
-    connect(m_FindReplacePlus, SIGNAL(ClipboardSaveRequest()), m_ClipboardHistorySelector, SLOT(SaveClipboardState()));
-    connect(m_FindReplacePlus, SIGNAL(ClipboardRestoreRequest()), m_ClipboardHistorySelector, SLOT(RestoreClipboardState()));
-
     ConnectSignalsToSearchEditor();
-    ConnectActionSignalsToFindReplace();
+    ConnectSignalsToFindReplace();
     //---------------------------------------------------------------------------------------------
 
     // Plugins
