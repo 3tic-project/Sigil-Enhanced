@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015 Kevin B. Hendricks Stratford, ON, Canada 
+**  Copyright (C) 2015 Kevin B. Hendricks Stratford, ON, Canada
 **  Copyright (C) 2009, 2010, 2011  Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -28,12 +28,13 @@
 
 #include "ResourceObjects/HTMLResource.h"
 #include "BookManipulation/XhtmlDoc.h"
+#include "Parsers/XhtmlFormatParser.h" // modified: XHTML Fomat Configure
 
 class CleanSource
 {
 
 public:
-    // Performs minimal mending to provided book XHTML code 
+    // Performs minimal mending to provided book XHTML code
     static QString Mend(const QString &source, const QString &version);
 
     // Convert to valid XHTML with Mending
@@ -46,6 +47,8 @@ public:
     static bool IsWellFormedXML(const QString &source, const QString mtype="");
 
     static QString PrettyPrint(const QString &source, bool keep_whitespace, const QString &version);
+    static QString MendPrettify(const QString &source, const QString &version);
+    static QString XhtmlPrettify(const QString& source, XhtmlFormatParser& xfparser);// modified: Prettify xhtml
 
     static QString XMLPrettyPrintBS4(const QString &source, const QString mtype="");
 
@@ -55,14 +58,15 @@ public:
 
     static bool ReformatMendAll(QList<HTMLResource *> resources);
 
-    /** 
+    static bool ReformatAllWithParser(QList <HTMLResource*> resources, XhtmlFormatParser& xfparser);// modified: Prettify xhtml
+    /**
      * neither svg nor math tags need a namespace prefix defined
      * especially as epub3 now includes them into the html5 spec
      * So we need to remove the svg prefix from the tags before
      * processing them with gumbo
      **/
      static QString PreprocessSpecialCases(const QString &source);
-
+     static QString PrettifyXhtml(const QString& source, XhtmlFormatParser& xfparser); // modified: PrettifyXhtml
 
 private:
 
@@ -80,5 +84,4 @@ private:
 
 
 #endif // CLEANSOURCE_H
-
 

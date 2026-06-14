@@ -111,7 +111,7 @@ public:
     bool IsCoverImage(const ImageResource *image_resource) const;
 
     QString GetCoverImagePath() const;
-    
+
     void AutoFixWellFormedErrors();
 
     QStringList GetSpineOrderBookPaths() const;
@@ -147,7 +147,7 @@ public:
      * Returns list of any Media Overlay Active Class Selctors if defined in OPF metadata
      */
     QStringList GetMediaOverlayActiveClassSelectors() const;
-    
+
     /**
      * Returns the values for a specific dc: metadata name.
      *
@@ -205,6 +205,11 @@ public slots:
 
     void RebaseManifestIDs();
 
+    //-------------------------------- modified: OPFResourceExt -------------------------------
+    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //modified: BulkResourceRenamed
+    void BulkAddResource(const QList<Resource*>resources); //modified: BulkAddResource
+    //----------------------------------------------------------------------------------------------
+
 private:
 
     /**
@@ -237,7 +242,7 @@ private:
     int GetGuideReferenceForResourcePos(const Resource *resource, const OPFParser &p, QString tgt_id="") const;
 
     void RemoveGuideReferenceForResource(const Resource *resource, OPFParser &p, QString tgt_id="");
-    
+
     void RemoveAllGuideReferencesForResource(const Resource *resource, OPFParser& p);
 
     QString GetGuideSemanticCodeForResource(const Resource *resource, const OPFParser &p, QString tgt_id="") const;

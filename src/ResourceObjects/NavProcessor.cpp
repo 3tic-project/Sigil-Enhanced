@@ -48,7 +48,7 @@ NavProcessor::NavProcessor(HTMLResource * nav_resource)
     SettingsStore ss;
     QString lang = ss.defaultMetadataLang();
     if (source.isEmpty()) {
-          QString newsource = 
+          QString newsource =
             "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
             "<!DOCTYPE html>\n"
             "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" "
@@ -99,7 +99,7 @@ NavProcessor::~NavProcessor()
 QList<NavLandmarkEntry> NavProcessor::GetLandmarks()
 {
     QList<NavLandmarkEntry> landlist;
-    if (!m_NavResource) return landlist; 
+    if (!m_NavResource) return landlist;
 
     QReadLocker locker(&m_NavResource->GetLock());
     QString source = m_NavResource->GetText();
@@ -145,8 +145,8 @@ QList<NavLandmarkEntry> NavProcessor::GetLandmarks()
 QList<NavPageListEntry> NavProcessor::GetPageList()
 {
     QList<NavPageListEntry> pagelist;
-    if (!m_NavResource) return pagelist; 
-        
+    if (!m_NavResource) return pagelist;
+
     QReadLocker locker(&m_NavResource->GetLock());
     QString source = m_NavResource->GetText();
 
@@ -189,8 +189,8 @@ QList<NavPageListEntry> NavProcessor::GetPageList()
 QList<NavTOCEntry> NavProcessor::GetTOC()
 {
     QList<NavTOCEntry> toclist;
-    if (!m_NavResource) return toclist; 
-        
+    if (!m_NavResource) return toclist;
+
     QReadLocker locker(&m_NavResource->GetLock());
     QString source = m_NavResource->GetText();
 
@@ -220,7 +220,7 @@ QList<NavTOCEntry> NavProcessor::GetTOC()
                 toclist.append(GetNodeTOC(gi, olnode, 1));
                 break;
             }
-            break;              
+            break;
         }
     }
     return toclist;
@@ -232,7 +232,7 @@ QList<NavTOCEntry> NavProcessor::GetNodeTOC(GumboInterface & gi, const GumboNode
     if ((node->type != GUMBO_NODE_ELEMENT) || (node->v.element.tag != GUMBO_TAG_OL)) {
         return QList<NavTOCEntry>();
     }
-  
+
     QList<NavTOCEntry> toclist;
     const GumboVector* children = &node->v.element.children;
 
@@ -248,7 +248,7 @@ QList<NavTOCEntry> NavProcessor::GetNodeTOC(GumboInterface & gi, const GumboNode
                             NavTOCEntry te;
                             te.lvl = lvl;
                             GumboAttribute* hrefattr = gumbo_get_attribute(&li_child->v.element.attributes, "href");
-                            if (hrefattr) { 
+                            if (hrefattr) {
                                 te.href = QString::fromUtf8(hrefattr->value);
                             }
                             te.title = Utility::DecodeXML(gi.get_local_text_of_node(li_child));
@@ -258,10 +258,10 @@ QList<NavTOCEntry> NavProcessor::GetNodeTOC(GumboInterface & gi, const GumboNode
                         }
                     }
                 }
-            }  
+            }
         }
-    } 
-    return toclist;             
+    }
+    return toclist;
 }
 
 
@@ -297,14 +297,14 @@ QString NavProcessor::BuildTOC(const QList<NavTOCEntry> & toclist)
             QString indent = base + step.repeated(lvl-1);
             res << indent + step  + "</li>\n";
             res << indent + step + "<li>\n";
-            res << indent + step.repeated(2) + "<a href=\"" + href + "\">" + title + "</a>\n";              
+            res << indent + step.repeated(2) + "<a href=\"" + href + "\">" + title + "</a>\n";
         } else {
             QString indent = base + step.repeated(lvl-1);
             if (!initial) {
                 res << indent + step  + "</li>\n";
             }
             res << indent + step + "<li>\n";
-            res << indent + step.repeated(2) + "<a href=\"" + href + "\">" + title + "</a>\n";              
+            res << indent + step.repeated(2) + "<a href=\"" + href + "\">" + title + "</a>\n";
         }
         initial = false;
         curlvl = lvl;
@@ -363,8 +363,8 @@ QString NavProcessor::BuildPageList(const QList<NavPageListEntry> & pagelist)
 
 void NavProcessor::SetPageList(const QList<NavPageListEntry> & pagelist)
 {
-    if (!m_NavResource) return; 
-        
+    if (!m_NavResource) return;
+
     bool found_pagelist = false;
     // QWriteLocker locker(&m_NavResource->GetLock());
     GumboInterface gi = GumboInterface(m_NavResource->GetText(), "3.0");
@@ -394,7 +394,7 @@ void NavProcessor::SetPageList(const QList<NavPageListEntry> & pagelist)
     }
     QString nav_data = gi.getxhtml();
     QString page_xml = BuildPageList(pagelist);
-    QRegularExpression pagelist_placeholder(NAV_PAGELIST_PATTERN, 
+    QRegularExpression pagelist_placeholder(NAV_PAGELIST_PATTERN,
                        QRegularExpression::MultilineOption | QRegularExpression::DotMatchesEverythingOption);
     QRegularExpressionMatch mo = pagelist_placeholder.match(nav_data);
     if (mo.hasMatch()) {
@@ -406,7 +406,7 @@ void NavProcessor::SetPageList(const QList<NavPageListEntry> & pagelist)
 
 void NavProcessor::SetLandmarks(const QList<NavLandmarkEntry> & landlist)
 {
-    if (!m_NavResource) return; 
+    if (!m_NavResource) return;
 
     bool found_landmarks = false;
     // QWriteLocker locker(&m_NavResource->GetLock());
@@ -450,7 +450,7 @@ void NavProcessor::SetLandmarks(const QList<NavLandmarkEntry> & landlist)
 
 void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)
 {
-    if (!m_NavResource) return; 
+    if (!m_NavResource) return;
 
     bool found_toc = false;
     // QWriteLocker locker(&m_NavResource->GetLock());
@@ -481,12 +481,13 @@ void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)
     }
     QString nav_data = gi.getxhtml();
     QString toc_xml = BuildTOC(toclist);
-    QRegularExpression toc_placeholder(NAV_TOC_PATTERN, 
+    QRegularExpression toc_placeholder(NAV_TOC_PATTERN,
                        QRegularExpression::MultilineOption | QRegularExpression::DotMatchesEverythingOption);
     QRegularExpressionMatch mo = toc_placeholder.match(nav_data);
     if (mo.hasMatch()) {
         nav_data.replace(mo.capturedStart(), mo.capturedLength(), toc_xml);
     }
+    nav_data = format_nav_text(nav_data); // modified: format_nav_text
     m_NavResource->SetText(nav_data);
 }
 
@@ -531,7 +532,7 @@ void NavProcessor::AddLandmarkCode(const Resource *resource, QString new_code, b
     SetLandmarks(landlist);
 }
 
-void NavProcessor::RemoveLandmarkForResource(const Resource * resource, QString tgt_id) 
+void NavProcessor::RemoveLandmarkForResource(const Resource * resource, QString tgt_id)
 {
     QList<NavLandmarkEntry> landlist = GetLandmarks();
     QWriteLocker locker(&m_NavResource->GetLock());
@@ -542,7 +543,7 @@ void NavProcessor::RemoveLandmarkForResource(const Resource * resource, QString 
     SetLandmarks(landlist);
 }
 
-void NavProcessor::RemoveAllLandmarksForResource(const Resource * resource) 
+void NavProcessor::RemoveAllLandmarksForResource(const Resource * resource)
 {
     QList<NavLandmarkEntry> landlist = GetLandmarks();
     QWriteLocker locker(&m_NavResource->GetLock());
@@ -602,7 +603,7 @@ QString NavProcessor::GetLandmarkNameForResource(const Resource *resource, QStri
     return name;
 }
 
-// return the landmark info converted to bookpath 
+// return the landmark info converted to bookpath
 // with the following formant for each string in the returned list
 // bookpath|fragment|code|title
 QStringList NavProcessor::GetAllLandmarkInfoByBookPath()
@@ -618,7 +619,7 @@ QStringList NavProcessor::GetAllLandmarkInfoByBookPath()
         QString bkpath = Utility::URLDecodePath(parts.at(0));
         if (parts.size() > 1) frag = parts.at(1);
         rec = bkpath + _RS + frag + _RS + le.etype + _RS + le.title;
-        landmark_info << rec;    
+        landmark_info << rec;
     }
     return landmark_info;
 }
@@ -736,7 +737,7 @@ TOCModel::TOCEntry NavProcessor::GetRootTOCEntry()
     return root;
 }
 
-void NavProcessor::AddTOCEntry(const NavTOCEntry & nav_entry, TOCModel::TOCEntry & parent) 
+void NavProcessor::AddTOCEntry(const NavTOCEntry & nav_entry, TOCModel::TOCEntry & parent)
 {
     TOCModel::TOCEntry toc_entry;
     toc_entry.text = nav_entry.title;
@@ -753,7 +754,7 @@ QList<NavTOCEntry> NavProcessor::MakeHierarchy(const QList<NavTOCEntry> & toclis
     // Based on the approach used in Headings::
     QList<NavTOCEntry> navtree = toclist;
     for (int i = 0; i < navtree.size(); ++i) {
-        // As long as entries after this one are higher in level, we 
+        // As long as entries after this one are higher in level, we
         // continue adding them to this entry's children or grandchildren
         while(true) {
             if ((i == navtree.size() - 1) || (navtree[ i + 1 ].lvl  <= navtree[ i ].lvl)) {
@@ -784,7 +785,7 @@ void NavProcessor::AddChildEntry(NavTOCEntry &parent, NavTOCEntry new_child)
 
 
 
-// Interface from EditTOC Dialog to Set the Nav TOC 
+// Interface from EditTOC Dialog to Set the Nav TOC
 // passes in TOCModel::TOCEntry root
 // So convert to flat Nav TOC Entry list and rebuild the Nav TOC Section
 void NavProcessor::GenerateNavTOCFromTOCEntries(const TOCModel::TOCEntry& root)
@@ -793,7 +794,7 @@ void NavProcessor::GenerateNavTOCFromTOCEntries(const TOCModel::TOCEntry& root)
     foreach(TOCModel::TOCEntry entry, root.children) {
         toclist.append(AddEditTOCEntry(entry, 1));
     }
-    SetTOC(toclist);   
+    SetTOC(toclist);
 }
 
 // Used by GenerateNavTOCFromTOCEntries
@@ -814,9 +815,9 @@ QList<NavTOCEntry> NavProcessor::AddEditTOCEntry(TOCModel::TOCEntry & entry, int
 
 
 
-// Utility Routines to convert hrefs between Book Relative and Nav Relative 
+// Utility Routines to convert hrefs between Book Relative and Nav Relative
 // Note all hrefs are stored in URLEncoded forms because fragments may be used
-QString NavProcessor::ConvertHREFToBookPath(const QString & nav_rel_href) 
+QString NavProcessor::ConvertHREFToBookPath(const QString & nav_rel_href)
 {
     QString bookpath;
     if (nav_rel_href.indexOf(":") != -1) return nav_rel_href;
@@ -829,18 +830,18 @@ QString NavProcessor::ConvertHREFToBookPath(const QString & nav_rel_href)
     if (basepath == "./" || basepath.isEmpty()) {
         // this link ends in the nav itself
         bookpath = Utility::URLEncodePath(m_NavResource->GetRelativePath());
-        if (!fragment.isEmpty()) bookpath = bookpath + "#" + fragment; 
+        if (!fragment.isEmpty()) bookpath = bookpath + "#" + fragment;
         return bookpath;
     }
     bookpath = Utility::buildBookPath(basepath, m_NavResource->GetFolder());
     bookpath = Utility::URLEncodePath(bookpath);
-    if (!fragment.isEmpty()) bookpath = bookpath + "#" + fragment; 
+    if (!fragment.isEmpty()) bookpath = bookpath + "#" + fragment;
     return bookpath;
 }
 
 // note bookpaths on entry must be full URLEncoded since they may contain fragments
 // convert BookPaths (epub folder relative paths) to be relative to the Nav
-QString NavProcessor::ConvertBookPathToNavRelative(const QString & bookpath) 
+QString NavProcessor::ConvertBookPathToNavRelative(const QString & bookpath)
 {
     QString nav_bkpath = m_NavResource->GetRelativePath();
     // split off any fragment added to bookpath destination
@@ -857,3 +858,11 @@ QString NavProcessor::ConvertBookPathToNavRelative(const QString & bookpath)
     if (new_href.isEmpty()) new_href = "#";
     return new_href;
 }
+
+//-------------modified: format_nav_text ----------------
+QString NavProcessor::format_nav_text(QString text) {
+    text = Utility::RegExpSub("(<li ?[^>]*>)[ \\n\\t]*<a", "\\1<a", text);
+    text = Utility::RegExpSub("(<a ?[^>]*>)[ \\n\\t]*</li>", "\\1</li>", text);
+    return text;
+}
+//-------------------------------------------------------

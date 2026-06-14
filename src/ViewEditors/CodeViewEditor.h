@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2026 Kevin B. Hendricks Stratford, ON Canada 
+**  Copyright (C) 2015-2026 Kevin B. Hendricks Stratford, ON Canada
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -39,6 +39,7 @@
 #include "MiscEditors/ClipEditorModel.h"
 #include "MiscEditors/IndexEditorModel.h"
 #include "ViewEditors/ViewEditor.h"
+#include "Parsers/CodeCompleterParser.h" // modified: CodeCompleterParser
 
 class QResizeEvent;
 class QSize;
@@ -135,15 +136,15 @@ public:
     bool IsInsertFileAllowed();
 
     QString GetCurrentSingleOrOpenTagName();
-    
+
     bool InsertId(const QString &attribute_value);
     bool InsertRole(const QString &attribute_value);
     bool InsertHyperlink(const QString &attribute_value);
     bool IsInsertIdAllowed();
     bool IsInsertRoleAllowed();
     bool IsInsertHyperlinkAllowed();
-    bool InsertTagAttribute(const QString &element_name, const QString &attribute_name, 
-                            const QString &attribute_value, const QStringList &tag_list, 
+    bool InsertTagAttribute(const QString &element_name, const QString &attribute_name,
+                            const QString &attribute_value, const QStringList &tag_list,
                             bool ignore_seletion = false);
 
     /**
@@ -225,12 +226,12 @@ public:
     // converted to normal spaces)
     QString toPlainText() const;
 
-    // override the createMimeDataFromSelection() to 
+    // override the createMimeDataFromSelection() to
     // prevent copy and cut from losing nbsp
     // ala Kovid's solution in calibre PlainTextEdit
     virtual QMimeData *createMimeDataFromSelection() const;
 
-    // override the insertFromMimeData() to 
+    // override the insertFromMimeData() to
     // attempt to normalize any text to form NFC before paste
     virtual void insertFromMimeData(const QMimeData* source);
 
@@ -241,7 +242,7 @@ public:
     int GetCursorLine() const;
     int GetCursorColumn() const;
     int GetCursorCodepoint() const;
-  
+
     void SetZoomFactor(float factor);
 
     float GetZoomFactor() const;
@@ -381,7 +382,7 @@ public:
                              const QString &attribute_value = QString(), bool set_attribute = false,
                              bool must_be_in_attribute = false, bool skip_paired_tags = false,
                              bool must_be_in_body = true);
-    
+
     /**
      * Control whether the Reformat CSS submenu is available on the context menu.
      */
@@ -485,7 +486,7 @@ public slots:
 protected:
 
     QString cursor_selected_text(const QTextCursor& c) const;
-    
+
     /**
      * The global event processing function.
      *
@@ -510,7 +511,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
 
     void mouseDoubleClickEvent(QMouseEvent *event);
-    
+
     /**
      * Handles the content menu event for the editor.
      *
@@ -874,6 +875,44 @@ private:
 
     QString m_mediatype;
     QString m_bookpath;
+
+/*-------------------- - modified: CodeViewEditorExt--------------------------------*/
+signals:
+    void PasteRichTextRequest(); // modified: AddPasteRichText
+
+public:
+    void SplitTagOrAddBreak(); // modified: SplitTagOrAddBreak
+    void MergeNextElement(); // modified: MergeNextElement
+    void FormatBlock_multiline(const QString& element_name, bool preserve_attributes); // modified: Add Lables On Multiple Lines
+
+public slots:
+    void PasteRichText(); // modified: AddPasteRichText
+
+protected:
+    void keyPressEvent(QKeyEvent* event); //modified: keyPressEvent
+
+private:
+    // relate to keyborad event
+    CodeCompleterParser* m_completeParser; // modified: CodeCompleterParser
+    HighlighterType m_hightype;
+    const QString m_symbolsToDetectInCSSView;
+    const QString m_symbolsToDetectInHTMLView;
+    const QString m_symbolsToDetectInAll;
+    bool HtmlViewKeyPressEvent(QKeyEvent* event);
+    bool CssViewKeyPressEvent(QKeyEvent* event);
+    bool CommonKeyPressEvent(QKeyEvent* event);
+    bool VisibleCompleterEvent(QKeyEvent* event); // modified: CodeCompleterParser
+    bool CodeCompleterEvent(QKeyEvent* event); // modified: CodeCompleterParser
+    bool quickSwitchOfCursor(QKeyEvent* event);
+    inline void insertTextAtCursor(QString text,QTextCursor cursor);
+
+    // relate to paste event
+    bool insertImagesFromUrls(const QList<QUrl>& urls,bool insert_on_css = false);
+    bool insertImageFromByteData(const QByteArray& data, bool insert_on_css = false);
+    void CommonPasteEvent(const QMimeData* source);
+    bool CssViewPasteEvent(const QMimeData* source);
+    bool HtmlViewPasteEvent(const QMimeData* source);
+    void AddPasteRichText(QMenu* menu); // modified: AddPasteRichText
 };
 
 #endif // CODEVIEWEDITOR_H

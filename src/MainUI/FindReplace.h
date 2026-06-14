@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
 **
 **  Copyright (C) 2015-2025 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2011-2012 John Schember <john@nachtimwald.com>
@@ -99,13 +99,13 @@ public:
     bool isWhereNCX() { return GetLookWhere() == LookWhere_NCXFile; };
     bool isWhereCF()  { return GetLookWhere() == LookWhere_CurrentFile; };
     bool isSearchXML();
-    
+
     QString GetSearchRegex();
     QString GetReplace();
     QString GetFind();
     QList<Resource*> GetAllResourcesToSearch();
     void EmitOpenFileRequest(const QString& bookpath, int line, int pos);
-                                                                        
+
 public slots:
     void close();
     void show();
@@ -147,7 +147,7 @@ public slots:
     void CountsReportCount(SearchEditorModel::searchEntry* entry, int& count);
 
     void DoPythonFunction();
-    
+
 signals:
 
     void OpenSearchEditorRequest(SearchEditorModel::searchEntry *search_entry = NULL);
@@ -155,7 +155,7 @@ signals:
     void ShowMessageRequest(const QString &message);
 
     void FROpenFileRequest(const QString &bookpath, int line, int offset);
-    
+
     /**
      * Emitted when we want to do some operations with the clipboard
      * to paste things, but restoring state afterwards so that the
@@ -185,7 +185,7 @@ private slots:
     bool FindPrevious();
     bool DoFindNext();
     bool DoFindPrevious();
-    
+
     // Counts the number of occurrences of the user's
     // term in the document.
     int Count();
@@ -209,7 +209,7 @@ private slots:
     // Allows a user to choose which matches in Replace All should
     // be applied
     void ChooseReplacements();
-    
+
     // Replaces the user's search term with the user's
     // replacement text in the entire document. Shows a
     // dialog telling how many occurrences were replaced.
@@ -394,6 +394,7 @@ private:
     QAction* m_AutoTokeniseCheckAction;
     QAction* m_UnicodePropertyCheckAction;
     QMenu*   m_menu;
+    bool m_CF_RestartFlag;  //修改：循环查找BUG
 };
 
 

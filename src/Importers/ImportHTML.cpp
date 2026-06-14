@@ -89,11 +89,11 @@ const QStringList& ImportHTML::GetAddedBookPaths()
 // and returns the created Book
 QSharedPointer<Book> ImportHTML::GetBook(bool extract_metadata)
 {
-    // First handle any new created Books by making sure there is 
+    // First handle any new created Books by making sure there is
     // an OPF in the current Book
     if (!m_Book->GetConstOPF()) {
         m_Book->GetFolderKeeper()->AddOPFToFolder(m_EpubVersion);
-    } 
+    }
 
     QString source = LoadSource();
     if (extract_metadata) {
@@ -158,7 +158,7 @@ void ImportHTML::LoadMetadata(const QString & source)
     GumboInterface gi(source, m_EpubVersion);
     gi.parse();
     QList<MetaEntry> metadata;
-    QList<GumboNode*> nodes = gi.get_all_nodes_with_tag(GUMBO_TAG_META); 
+    QList<GumboNode*> nodes = gi.get_all_nodes_with_tag(GUMBO_TAG_META);
     for (int i = 0; i < nodes.count(); ++i) {
         GumboNode* node = nodes.at(i);
         MetaEntry meta = HTMLMetadata::Instance()->MapHTMLToOPFMetadata(node, gi);
@@ -183,7 +183,7 @@ HTMLResource *ImportHTML::CreateHTMLResource()
 
 
 void ImportHTML::UpdateFiles(HTMLResource *html_resource,
-                             QString &source, 
+                             QString &source,
                              const QHash<QString, QString> &updates)
 {
     Q_ASSERT(html_resource != NULL);
@@ -205,7 +205,7 @@ void ImportHTML::UpdateFiles(HTMLResource *html_resource,
             css_resources.append(qobject_cast<CSSResource *>(resource));
         }
     }
-    
+
     QFutureSynchronizer<void> sync;
     sync.addFuture(QtConcurrent::map(css_resources,
                                      std::bind(UniversalUpdates::LoadAndUpdateOneCSSFile, std::placeholders::_1, css_updates)));
@@ -270,7 +270,7 @@ QHash<QString, QString> ImportHTML::LoadFolderStructure(const QString &source)
 }
 
 
-// note file_paths here are hrefs to media files from the html file being imported 
+// note file_paths here are hrefs to media files from the html file being imported
 // that should be imported as well
 
 QHash<QString, QString> ImportHTML::LoadMediaFiles(const QStringList & file_paths)
@@ -344,3 +344,8 @@ QHash<QString, QString> ImportHTML::LoadStyleFiles(const QStringList & file_path
 
     return updates;
 }
+//-------------- modified: BulkAddResource ----------------
+void ImportHTML::setDoNotUpdateOPF(bool notUpdate) {
+    m_UpdateOPF = !notUpdate;
+}
+//---------------------------------------------------------

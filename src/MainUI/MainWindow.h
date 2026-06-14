@@ -105,10 +105,10 @@ public:
      * @param parent The window's parent object.
      * @param flags The flags used to modify window behavior.
      */
-    MainWindow(const QString &openfilepath = QString(), 
+    MainWindow(const QString &openfilepath = QString(),
                const QString version = QString(),
-               bool is_internal = false, 
-               QWidget *parent = 0, 
+               bool is_internal = false,
+               QWidget *parent = 0,
                Qt::WindowFlags flags = Qt::WindowFlags());
 
     ~MainWindow();
@@ -234,7 +234,7 @@ public:
 
 public slots:
 
-    bool AddNavToSpine(); 
+    bool AddNavToSpine();
     bool AddNavToSpineNonLinear();
 
     bool Automate(const QStringList &commands);
@@ -292,7 +292,7 @@ public slots:
     void RunAutomate(const QString &automatefile);
     void UpdateAutomationMenu();
     void ManageAutomateListsDialog();
-    
+
     bool StandardizeEpub();
     bool UseStandardFileExtensions();
     bool RebaseManifestIDs();
@@ -428,7 +428,7 @@ private slots:
 
     void ApplicationPaletteChanged();
 
-    /** 
+    /**
      *  Quick Launch Plugins via icon button
      */
     void QuickLaunchPlugin(int i);
@@ -467,7 +467,7 @@ private slots:
      * Allow Keyboard Focus Navigation to main QDockWidgets
      */
     void FocusOn(QWidget* dw=nullptr);
-  
+
     /**
      * Implements User Guide action functionality.
      */
@@ -912,7 +912,7 @@ private:
     bool m_IsInitialLoad;
 
     QByteArray m_LastState;
-    
+
     /**
      * The path to the current file loaded.
      */
@@ -1110,11 +1110,19 @@ private:
     QStringList m_automateLists;
 
     bool m_inShowLastOpenWarnings = false;
-    
+
     /**
      * Holds all the widgets Qt Designer created for us.
      */
     Ui::MainWindow ui;
+/*-------------------------------- modified: MainWindowExt -------------------------------------------*/
+public slots:
+    void Epub3ToEpub2(); //modified: Epub3ToEpub2
+    void Epub2ToEpub3(); //modified: Epub2ToEpub3
+    bool NormalizedOPF(); //modified: NormalizedOPF
+    void InsertFileFromBookBrowser(); //modified: insertFileToEditor
+private slots:
+    void ApplyHeadingStyleToTab_Plus(QAction* act); // modified: Add Lables On Multiple Lines
 };
 
 #endif // SIGIL_H

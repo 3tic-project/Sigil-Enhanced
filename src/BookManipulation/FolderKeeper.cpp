@@ -126,11 +126,11 @@ QString FolderKeeper::DetermineFileGroup(const QString &filepath, const QString 
     return group;
 }
 
-// This routine should never process the opf or the ncx as they 
+// This routine should never process the opf or the ncx as they
 // are special cased elsewhere in FolderKeeper
-Resource *FolderKeeper::AddContentFileToFolder(const QString &fullfilepath, 
-                                               bool update_opf, 
-                                               const QString &mimetype, 
+Resource *FolderKeeper::AddContentFileToFolder(const QString &fullfilepath,
+                                               bool update_opf,
+                                               const QString &mimetype,
                                                const QString &bookpath,
                                                const QString &folderpath)
 {
@@ -164,7 +164,7 @@ Resource *FolderKeeper::AddContentFileToFolder(const QString &fullfilepath,
     Resource *resource = NULL;
     QString new_file_path;
 
-    // lock for GetUniqueFilenameVersion() until the 
+    // lock for GetUniqueFilenameVersion() until the
     // resource with that file name has been created
     // and added to the list of all resources so it
     // will return that this filename is now taken
@@ -180,7 +180,7 @@ Resource *FolderKeeper::AddContentFileToFolder(const QString &fullfilepath,
             new_file_path = m_FullPathToMainFolder + "/" + bookpath;
         } else {
             // Use either the provided folder path or the default folder to store the file
- 
+
             // Rename files that start with a '.'
             // These merely introduce needless difficulties
             if (filename.left(1) == ".") {
@@ -325,7 +325,7 @@ QString FolderKeeper::GetUniqueFilenameVersion(const QString &filename) const
 
         bool conversion_successful = false;
         int number_suffix = match.captured(1).toInt(&conversion_successful);
-        
+
         if (conversion_successful && number_suffix > max_num) {
             max_num = number_suffix;
             max_num_length = match.capturedLength(1);
@@ -478,8 +478,8 @@ void FolderKeeper::UpdateContainerXML(const QString& FullPathToMainFolder, const
 }
 
 
-NCXResource*FolderKeeper::AddNCXToFolder(const QString &version, 
-                                         const QString &bookpath, 
+NCXResource*FolderKeeper::AddNCXToFolder(const QString &version,
+                                         const QString &bookpath,
                                          const QString &first_textdir)
 {
     QString ncxdir = GetDefaultFolderForGroup("ncx");
@@ -528,7 +528,7 @@ void FolderKeeper::RemoveNCXFromFolder()
                this,     SLOT(ResourceRenamed(const Resource *, QString)));
     disconnect(m_NCX, SIGNAL(Moved(const Resource *, QString)),
                this,     SLOT(ResourceMoved(const Resource *, QString)));
-    RemoveResource(m_NCX);    
+    RemoveResource(m_NCX);
     m_NCX = NULL;
     return;
 }
@@ -599,7 +599,7 @@ void FolderKeeper::RemoveWithoutUpdatingOPF(Resource* resource)
     if (m_FSWatcher->files().contains(resource->GetFullPath())) {
         m_FSWatcher->removePath(resource->GetFullPath());
     }
-    
+
     m_SuspendedWatchedFiles.removeAll(resource->GetFullPath());
 
     disconnect(resource, SIGNAL(Deleted(const Resource*)), this, SLOT(RemoveResource(const Resource*)));
@@ -630,7 +630,7 @@ void FolderKeeper::BulkRenameResources(const QList<Resource *> resources, const 
 void FolderKeeper::ResourceRenamed(const Resource *resource, const QString &old_full_path)
 {
     // Renaming means the resource book path has changed and so we need to update it
-    // Note:  m_FullPathToMainFolder **never** ends with a "/"                                                        
+    // Note:  m_FullPathToMainFolder **never** ends with a "/"
     QString book_path = old_full_path.right(old_full_path.length() - m_FullPathToMainFolder.length() - 1);
     Resource * res = m_Path2Resource[book_path];
     m_Path2Resource.remove(book_path);
@@ -664,7 +664,7 @@ void FolderKeeper::BulkMoveResources(const QList<Resource *>resources, const QSt
 void FolderKeeper::ResourceMoved(const Resource *resource, const QString &old_full_path)
 {
     // Renaming means the resource book path has changed and so we need to update it
-    // Note:  m_FullPathToMainFolder **never** ends with a "/"                                                        
+    // Note:  m_FullPathToMainFolder **never** ends with a "/"
     QString book_path = old_full_path.right(old_full_path.length() - m_FullPathToMainFolder.length() - 1);
     Resource * res = m_Path2Resource[book_path];
     m_Path2Resource.remove(book_path);
@@ -920,7 +920,7 @@ void FolderKeeper::SetGroupFolders(const QStringList &bookpaths, const QStringLi
         i++;
     }
 
-    // finally sort each group's list of folders by number 
+    // finally sort each group's list of folders by number
     // of files of that type in each folder.
     // the default folder for that group will be the first
     QStringList dirlst;
@@ -957,7 +957,16 @@ void FolderKeeper::SetGroupFolders(const QStringList &bookpaths, const QStringLi
             QString gname = group;
             if (use_lower_case) gname = gname.toLower();
             if (folderlst.isEmpty()) {
-                folderlst << commonbase + gname;
+                // ------------------modified: files group: change the assignment of default group of opf or ncx-----------------------
+                //folderlst << commonbase + gname;
+                if (group == "opf" || group == "ncx") {
+                    if (commonbase.endsWith("/")) commonbase = commonbase.left(commonbase.size() - 1);
+                    folderlst << commonbase;
+                }
+                else {
+                    folderlst << commonbase + gname;
+                }
+                // --------------------------------------------------------------------------------------------------------------------
                 group_folder[group] = folderlst;
             }
         }

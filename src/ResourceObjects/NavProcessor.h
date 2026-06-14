@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2016-2021 Kevin B. Hendricks Stratford, ON, Canada 
+**  Copyright (C) 2016-2021 Kevin B. Hendricks Stratford, ON, Canada
 **
 **  This file is part of Sigil.
 **
@@ -79,11 +79,11 @@ public:
     QStringList GetAllLandmarkInfoByBookPath();
 
 
-private:    
+private:
     QString BuildTOC(const QList<NavTOCEntry> & toclist);
     QString BuildLandmarks(const QList<NavLandmarkEntry> & landlist);
     QString BuildPageList(const QList<NavPageListEntry> & pagelist);
-    
+
     void SetTOC(const QList<NavTOCEntry> & toclist);
     void SetLandmarks(const QList<NavLandmarkEntry> & landlist);
     void SetPageList(const QList<NavPageListEntry> & pagelist);
@@ -96,13 +96,14 @@ private:
 
     QList<NavTOCEntry> MakeHierarchy(const QList<NavTOCEntry> & toclist);
     void AddChildEntry(NavTOCEntry &parent, NavTOCEntry new_child);
-    
+
     QList<NavTOCEntry> AddEditTOCEntry(TOCModel::TOCEntry & rentry, int lvl);
 
     QString ConvertHREFToBookPath(const QString & href);
     QString ConvertBookPathToNavRelative(const QString & href);
-    
+
     HTMLResource * m_NavResource;
     QString m_language;
+    QString format_nav_text(QString text); // modified: format_nav_text
 };
 #endif  // NAVPROCESSORH

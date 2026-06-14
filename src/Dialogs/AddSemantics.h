@@ -32,7 +32,7 @@
 #include "Misc/DescriptiveInfo.h"
 
 /**
- * The dialog for selecting from a list of available 
+ * The dialog for selecting from a list of available
  * Semantic properties.  Used for Nav Landmarks, OPF Guide Entries
  * and for adding semantics epub:type attributes to section and other elements
  */
@@ -61,7 +61,7 @@ signals:
      * Emitted when the user has selected what he wants to insert.
      *
      * @param name The name of the semantics the user has selected
-     *             
+     *
      */
     void SemanticsToAdd(QStringList semantics);
 
@@ -94,7 +94,7 @@ private:
      */
     void ReadSettings();
 
-    /** 
+    /**
      * Represents the semantics property  information list that this dialog displays
      * and generates a reverse mapping
      */

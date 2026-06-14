@@ -159,7 +159,7 @@ static const QString HTML_TOC_FILE = "TOC.xhtml";
 static const QString HTML_INDEX_FILE = "Index.xhtml";
 const QString HTML_COVER_FILENAME = "cover.xhtml";
 const QString CUSTOM_ICON_THEME_FILENAME = "custom_icon_theme.rcc";
-    
+
 // External constant (sigil_contants.h) used to consolidate the upper clipboard history limit.
 const int CLIPBOARD_HISTORY_MAX = 20;
 
@@ -204,7 +204,7 @@ static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "ValidateStylesheetsWithW3C" <<
     "WellFormedCheckEpub";
 
-MainWindow::MainWindow(const QString &openfilepath, 
+MainWindow::MainWindow(const QString &openfilepath,
                        const QString version,
                        bool is_internal,
                        QWidget *parent,
@@ -366,7 +366,7 @@ bool MainWindow::Automate(const QStringList &commands)
     QStringList plugin_names = plugins.keys();
     bool has_error = false;
     int countReplaced = -1;
-    
+
     foreach(QString cmd , commands) {
         bool success = false;
         QString plugin_type;
@@ -386,7 +386,7 @@ bool MainWindow::Automate(const QStringList &commands)
             plugin_type = prunner.getPluginType();
             // plugin done rubnning clear any set plugin parameter
             m_AutomatePluginParameter = "";
-            
+
         } else if (AUTOMATE_TOOLS.contains(cmd)) {
             if (cmd == "Save")                            success = Save();
             else if (cmd == "WellFormedCheckEpub")        success = WellFormedCheckEpub();
@@ -435,7 +435,7 @@ bool MainWindow::Automate(const QStringList &commands)
                     if (cmd == "RemoveNavFromSpine")       success = RemoveNavFromSpine();
                     if (cmd == "AddNavToSpine")            success = AddNavToSpine(false);
                     if (cmd == "AddNavToSpineNonLinear")   success = AddNavToSpine(true);
-                    
+
                 } else {
                     ShowMessageOnStatusBar(cmd + " " + tr("skipped since not an epub3"));
                     success = true;
@@ -447,7 +447,7 @@ bool MainWindow::Automate(const QStringList &commands)
             m_AutomatePluginParameter  = cmd.mid(19, -1).trimmed();
             success = true;
 
-        // handle saved search and its full name parameter     
+        // handle saved search and its full name parameter
         } else if (cmd.startsWith("RunSavedSearchReplaceAll")) {
             QString fullname = cmd.mid(25, -1).trimmed();
             m_SearchEditor->SetCurrentEntriesFromFullName(fullname);
@@ -524,7 +524,7 @@ bool MainWindow::Automate(const QStringList &commands)
         }
         if ((plugin_type == "validation") || (cmd == "WellFormedCheckEpub")) {
             validation_error_count = m_ValidationResultsView->ResultCount();
-            if (validation_error_count > 0) {        
+            if (validation_error_count > 0) {
                 // Try to pause to see if can ignore or not in a non-modal way
                 ShowMessageOnStatusBar(tr("Validation tool") + ": " + cmd + " "
                                        + tr("found errors") + " " + QString::number(validation_error_count));
@@ -570,7 +570,7 @@ void MainWindow::loadPluginsMenu()
 
     m_menuPlugins = ui.menuPlugins;
     m_actionManagePlugins = ui.actionManage_Plugins;
-    
+
     unloadPluginsMenu();
 
     connect(m_actionManagePlugins, SIGNAL(triggered()), this, SLOT(ManagePluginsDialog()));
@@ -730,7 +730,7 @@ void MainWindow::UpdateAutomationMenu()
         });
         i++;
     }
-    
+
     // build a current list of automation lists
     QString directoryPath = Utility::DefinePrefsDir();
     QStringList nameFilters = QStringList() << "automate*.txt";
@@ -760,9 +760,9 @@ void MainWindow::UpdateAutomationMenu()
             m_menuAutomateRun->addAction(key);
         }
     }
-    
+
     updateToolTipsOnAutomateIcons();
-    
+
     SettingsStore settings;
     automate_menu_action->setVisible(settings.automateShowMenu());
 
@@ -774,20 +774,20 @@ bool MainWindow::StandardizeEpub()
 
     // ask to be sure
     QMessageBox::StandardButton button_pressed;
-    button_pressed = Utility::warning(this, tr("Sigil"), 
-                                      tr("Are you sure you want to restructure this epub?\nThis action cannot be reversed."), 
+    button_pressed = Utility::warning(this, tr("Sigil"),
+                                      tr("Are you sure you want to restructure this epub?\nThis action cannot be reversed."),
                                       QMessageBox::Ok | QMessageBox::Cancel);
     if (button_pressed != QMessageBox::Ok) {
       return false;
     }
-    
+
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     // perform well-formed check on all the html resources
     QList<HTMLResource *> htmlresources = m_Book->GetHTMLResources();
     foreach (HTMLResource * hresource, htmlresources) {
         if (!hresource->FileIsWellFormed()) {
-            Utility::warning(this, tr("Sigil"), 
+            Utility::warning(this, tr("Sigil"),
                                  tr("Restructure cancelled: %1, XML not well formed.").arg(hresource->ShortPathName()));
             QApplication::restoreOverrideCursor();
             return false;
@@ -810,7 +810,7 @@ bool MainWindow::StandardizeEpub()
         return false;
     }
     // we really should parse validate each css file here but
-    // since we update css files using regular expressions, the full 
+    // since we update css files using regular expressions, the full
     // parseability is really not critical
 
     // first standardize the opf and ncx names
@@ -844,7 +844,7 @@ bool MainWindow::StandardizeEpub()
 
     if (!fs_case_sensitive) {
         // opf is first to handle OEBPS before fighting with its subdirectories
-        QStringList groups = QStringList() << "opf" << "Text" << "Styles" << "Images" 
+        QStringList groups = QStringList() << "opf" << "Text" << "Styles" << "Images"
                                            << "Fonts" << "Audio" << "Video" << "Misc";
         // try renaming all matching existing directories to what we want
         QDir mf(mainfolder);
@@ -898,7 +898,7 @@ bool MainWindow::UseStandardFileExtensions()
     QList<HTMLResource *> htmlresources = m_Book->GetHTMLResources();
     foreach (HTMLResource * hresource, htmlresources) {
         if (!hresource->FileIsWellFormed()) {
-            Utility::warning(this, tr("Sigil"), 
+            Utility::warning(this, tr("Sigil"),
                                  tr("Bulk rename cancelled: %1, XML not well formed.").arg(hresource->ShortPathName()));
             QApplication::restoreOverrideCursor();
             return false;
@@ -915,7 +915,7 @@ bool MainWindow::UseStandardFileExtensions()
 
     QList<Resource*> resources;
     QStringList newfilenames;
-    
+
     // first special case the opf and ncx by handling them first
     QString opfname = m_Book->GetOPF()->Filename();
     if (!opfname.endsWith(".opf")) {
@@ -1007,7 +1007,7 @@ void MainWindow::FixDuplicateFilenames()
   QStringList bookpaths = m_Book->GetFolderKeeper()->GetAllBookPaths();
     QStringList problem_bookpaths;
     QSet<QString>UsedSet;
-  
+
     foreach(QString bkpath, bookpaths) {
         QString aname =bkpath.split('/').last().toLower();
         if (UsedSet.contains(aname)) {
@@ -1053,7 +1053,7 @@ void MainWindow::MoveContentFilesToStdFolders()
         }
     }
     if (!newbookpaths.isEmpty()) {
-        m_BookBrowser->MoveResourceList(resources_to_move, newbookpaths); 
+        m_BookBrowser->MoveResourceList(resources_to_move, newbookpaths);
     }
 }
 
@@ -1184,7 +1184,7 @@ void MainWindow::RepoCheckout(QString bookid, QString destdir, QString filename,
     }
     open_tab_bookpaths << current_resource->GetRelativePath();
     open_tab_positions << m_TabManager->GetCurrentContentTab()->GetCursorPosition();
-    
+
     QApplication::setOverrideCursor(Qt::WaitCursor);
     QFuture<QString> afuture = QtConcurrent::run(&PythonRoutines::GenerateEpubFromTagInPython, &pr,
                                                  localRepo, bookid, tagname, filename, destdir);
@@ -1199,12 +1199,12 @@ void MainWindow::RepoCheckout(QString bookid, QString destdir, QString filename,
     ShowMessageOnStatusBar(tr("Epub Generation succeeded"));
 
     if (loadnow) {
-        // on macOS bad things with checkpoints could happen if we have 
+        // on macOS bad things with checkpoints could happen if we have
         // two different epubs open but both with the exact same book id
-        // so treat macOS just like Linux and Windows when restoring from 
+        // so treat macOS just like Linux and Windows when restoring from
         // a checkpoint
 
-        // For Linux and Windows (and macOS in this one case) will replace 
+        // For Linux and Windows (and macOS in this one case) will replace
         // current book So Throw Up a Dialog to See if they want to proceed
         bool proceed = false;
         QMessageBox msgBox;
@@ -1299,7 +1299,7 @@ void MainWindow::RepoDiff(QString bookid)
     bookfiles << "META-INF/container.xml";
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    
+
     QFuture<QList<QStringList> > dfuture = QtConcurrent::run(&PythonRoutines::GetCurrentStatusVsDestDirInPython,
                                              &pr, bookroot, bookfiles, destdir.GetPath());
     dfuture.waitForFinished();
@@ -1313,7 +1313,7 @@ void MainWindow::RepoDiff(QString bookid)
     if (dlist.isEmpty() && alist.isEmpty() && mlist.isEmpty()) {
         Utility::information(this, tr("Results of Comparison"), tr("No differences were found."));
         return;
-    } 
+    }
 
     // use CPCompare dialog modally to allow the user to explore the changes
     CPCompare comp(bookroot, destdir.GetPath(), dlist, alist, mlist, this);
@@ -1443,7 +1443,7 @@ void MainWindow::launchExternalXEditor()
 
     HTMLResource *html_resource = NULL;
     OPFResource * opf_resource = NULL;
-    
+
     ContentTab *tab = GetCurrentContentTab();
     if (tab) {
         html_resource = qobject_cast<HTMLResource *>(tab->GetLoadedResource());
@@ -1477,7 +1477,7 @@ void MainWindow::launchExternalXEditor()
             ShowMessageOnStatusBar(tr("PageEdit XHtml Editor works only on Html/OPF Resources"));
             return;
         }
-    } else { 
+    } else {
         // PageEdit isn't being used, so only an open html resource will work
         if (!html_resource ) {
             ShowMessageOnStatusBar(tr("External XHtml Editor works only on Html Resources"));
@@ -1534,7 +1534,7 @@ void MainWindow::launchExternalXEditor()
         m_Book->GetFolderKeeper()->ResumeWatchingResources();
 
         if (OpenExternally::openFile(resource->GetFullPath(), XEditorPath)) {
-	        m_Book->GetFolderKeeper()->WatchResourceFile(resource);
+            m_Book->GetFolderKeeper()->WatchResourceFile(resource);
             ShowMessageOnStatusBar(tr("Executing External Xhtml Editor"));
             return;
         }
@@ -1635,7 +1635,7 @@ QString MainWindow::GetOPFMetadataXML()
 QList <Resource *> MainWindow::GetOPFResource()
 {
     QList<Resource *> resources;
-    Resource * resource = m_Book->GetOPF(); 
+    Resource * resource = m_Book->GetOPF();
     resources << resource;
     return resources;
 }
@@ -1873,7 +1873,7 @@ void MainWindow::ShowLastOpenFileWarnings()
                     msg = info;
                     details = "";
                 }
-                Utility::DisplayStdWarningDialog( 
+                Utility::DisplayStdWarningDialog(
                 "<p><b>" %
                 tr("Warning: ") % msg %
                 "</b><p>", details, this);
@@ -1890,7 +1890,7 @@ void MainWindow::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
 }
 
-void MainWindow::DebugCurrentWidgetSizes() 
+void MainWindow::DebugCurrentWidgetSizes()
 {
     DWINGEO {
         qDebug() << "visible: " << isVisible();
@@ -1918,10 +1918,10 @@ void MainWindow::moveEvent(QMoveEvent *event)
     QMainWindow::moveEvent(event);
 }
 
-// AAARRRRGGGGHHHHHHH!  This is invoked during the resize to fullscreen or maximize 
-// *BEFORE* those WindowStates are actually set!!!!!  The Window size has already been 
+// AAARRRRGGGGHHHHHHH!  This is invoked during the resize to fullscreen or maximize
+// *BEFORE* those WindowStates are actually set!!!!!  The Window size has already been
 // maximized or fullscreened but isFullScreen() and isMaximized() still returns FALSE.
-// So we can not use it to record last known good sizes of these windows before maximize 
+// So we can not use it to record last known good sizes of these windows before maximize
 // or full screen is done by the user.
 // Furthermore this can be invoked more than once for Maximize while it is adjusted in size
 // to fit the available geometry
@@ -2283,7 +2283,7 @@ void MainWindow::CreateEpubLayout()
         ShowMessageOnStatusBar(tr("Epub layout discarded."));
         return;
     }
- 
+
     if (MaybeSaveDialogSaysProceed()) {
         CreateNewBook(version, bookpaths);
     }
@@ -2486,7 +2486,7 @@ void MainWindow::clearMemoryCaches()
     // the equivalent in QtWebEngine does not really exist
     // the closest thing is page()->profile() which gets you the QWebEngineProfile
     // You can then use on a page by page basis:
-  
+
     //      clearHttpCache()
     //      clearVisitedLinks()
 
@@ -2538,7 +2538,7 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
 bool MainWindow::AddCover()
 {
     QString version = m_Book->GetOPF()->GetEpubVersion();
- 
+
     // Get the image to use.
     QStringList selected_files;
     // Get just images, not svg files.
@@ -2546,7 +2546,7 @@ bool MainWindow::AddCover()
     QString title = tr("Add Cover");
     // SelectFiles returns the bookpaths of all selected resources
     SelectFiles select_files(title, image_resources, m_LastInsertedFile, this);
-    
+
     if (select_files.exec() == QDialog::Accepted) {
         if (select_files.IsInsertFromDisk()) {
             // m_BookBrowser->AddExisting returns the full file paths
@@ -2565,6 +2565,8 @@ bool MainWindow::AddCover()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
+    // -------------------------- modified: Optimize the efficency of setting Cover Page -------------------------------
+    /*
     // Find existing cover HTML file if there is one.
     HTMLResource *html_cover_resource = NULL;
     QList<HTMLResource *> html_resources;
@@ -2590,6 +2592,51 @@ bool MainWindow::AddCover()
             }
         }
     }
+    */
+
+    // Find the first HTML file that is setted the semantic "cover"
+    OPFResource* m_OPF = m_Book->GetOPF();
+    OPFParser p;
+    p.parse(m_OPF->GetText());
+    QList<GuideEntry> guides = p.m_guide;
+
+    QString cover_href = "";
+    if (version.startsWith('2') && !guides.isEmpty()) {
+        for (unsigned short i = 0; i < guides.count(); ++i) {
+            GuideEntry ref = guides.at(i);
+            if (ref.m_type == QString("cover")) {
+                cover_href = ref.m_href;
+                break;
+            }
+        }
+    }
+    else if (version.startsWith('3')) {
+        NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
+        QList<NavLandmarkEntry> landmarks = navproc.GetLandmarks();
+        foreach(NavLandmarkEntry landmark, landmarks) {
+            if (landmark.etype == QString("cover")) {
+                cover_href = landmark.href;
+                break;
+            }
+        }
+    }
+
+    if (cover_href == QString("") && HTML_COVER_FILENAME != QString("")) {
+        cover_href = HTML_COVER_FILENAME;
+    }
+
+    QList<Resource*> resources = GetAllHTMLResources();
+    HTMLResource* html_cover_resource = NULL;
+    if (cover_href != QString("")) {
+        foreach(Resource * resource, resources) {
+            HTMLResource* html_resource = qobject_cast<HTMLResource*>(resource);
+            if (html_resource->GetRelativePathFromResource(m_Book->GetOPF()) == cover_href) {
+                html_cover_resource = html_resource;
+                break;
+            }
+        }
+    }
+    //-------------------------------------------------------------------------------------------
 
     if (html_cover_resource != NULL) {
         QString msg = tr("An existing Cover file has been found.");
@@ -2830,12 +2877,12 @@ bool MainWindow::GenerateNCXGuideFromNav()
     QString doctitle = "UNKNOWN";
     if (!mvalues.isEmpty()) {
         doctitle = mvalues.at(0);
-    } 
+    }
     QString mainid = m_Book->GetConstOPF()->GetMainIdentifierValue();
 
     // Now build the ncx in python in a separate thread since may be an long job
     PythonRoutines pr;
-    QFuture<QString> future = QtConcurrent::run(&PythonRoutines::GenerateNcxInPython, &pr, navdata, 
+    QFuture<QString> future = QtConcurrent::run(&PythonRoutines::GenerateNcxInPython, &pr, navdata,
                                              navbkpath, ncxdir, doctitle, mainid);
     future.waitForFinished();
     QString ncxdata = future.result();
@@ -2930,9 +2977,9 @@ void MainWindow::CreateIndex()
         semantic_codes = m_Book->GetOPF()->GetSemanticCodeForPaths();
     }
     QStringList allow_index;
-    allow_index  << "bodymatter" << "chapter" << "conclusion" << "division" << "epilogue" << 
-                    "introduction" << "part" << "preamble" << "prologue" << "subchapter" <<  
-                    "text" << "volume"; 
+    allow_index  << "bodymatter" << "chapter" << "conclusion" << "division" << "epilogue" <<
+                    "introduction" << "part" << "preamble" << "prologue" << "subchapter" <<
+                    "text" << "volume";
 
     HTMLResource *index_resource = nullptr;
 
@@ -2940,30 +2987,30 @@ void MainWindow::CreateIndex()
 
     // Turn the list of Resources that are really HTMLResources to a real list
     // of HTMLResources stripping out any front or back matter
-    
+
     QList<Resource *> resources = GetAllHTMLResources();
     foreach(Resource * resource, resources) {
         QStringList codeslist;
         bool keepit = false;
         HTMLResource *html_resource = qobject_cast<HTMLResource *>(resource);
-    
+
         if (html_resource) {
 
             QString resource_path = html_resource->GetRelativePath();
-            
+
             codeslist = semantic_codes.value(resource_path, QStringList());
             if (codeslist.isEmpty()) {
                 keepit = true;
             }
-        
-            if (!keepit) {   
+
+            if (!keepit) {
                 foreach(QString code, allow_index) {
                     if (codeslist.contains(code)) keepit = true;
                 }
             }
-            
+
             if (keepit) html_resources.append(html_resource);
-            
+
             // Check if this is an existing index file.
             if (codeslist.contains("index")) {
                 index_resource = html_resource;
@@ -3092,7 +3139,7 @@ void MainWindow::ReportsDialog()
 
     DBG qDebug() << "Creating All of the Reports";
     m_Reports->CreateReports(m_Book);
-    
+
     QApplication::restoreOverrideCursor();
 
     // non-modal dialog
@@ -3253,7 +3300,7 @@ bool MainWindow::DeleteUnusedStyles(bool in_automate)
 
     // get list of any media overlay active class selectors from the opf
     QStringList activeclassselectors = m_Book->GetOPF()->GetMediaOverlayActiveClassSelectors();
-    
+
     // This one handles all selector types
     QList<BookReports::StyleData *> css_selector_usage = BookReports::GetAllCSSSelectorsUsed(m_Book, true);
     QList<BookReports::StyleData *> css_selectors_to_delete;
@@ -3434,10 +3481,10 @@ void MainWindow::InsertClip()
     if (book_lang.isEmpty()) {
         book_lang = m_Book->GetOPF()->GetPrimaryBookLanguage();
     }
-    
+
     QString selected_text = flow_tab->GetSelectedText();
-    
-    
+
+
     AddClips addclip(selected_text, book_lang, this);
 
     if (addclip.exec() == QDialog::Accepted) {
@@ -3463,7 +3510,7 @@ void MainWindow::InsertRole()
     }
 
     QString tagname = flow_tab->GetCurrentTag();
-    
+
     AddRoles addmeaning(tagname, this);
 
     if (addmeaning.exec() == QDialog::Accepted) {
@@ -3560,7 +3607,7 @@ void MainWindow::ApplicationFocusChanged(QWidget *old, QWidget *now)
     DBG qDebug() << "focus changed: " << old << now;
     QWidget *window = QApplication::activeWindow();
     DBG qDebug() << "active window is: " << window;
-    
+
     // sometimes QApplication::activeWindow() returns nullptr but
     // the destination for focus (now) exists.  What we really
     // need to know is the QMainWindow whose descendent is now
@@ -3573,7 +3620,7 @@ void MainWindow::ApplicationFocusChanged(QWidget *old, QWidget *now)
     }
 
     DBG qDebug() << "final active window: " << window;
-    
+
     if (!window || !now) {
         DBG qDebug() << "returning since no active window or no new focus point";
         // Nothing to do - application is exiting
@@ -3592,7 +3639,7 @@ void MainWindow::ApplicationFocusChanged(QWidget *old, QWidget *now)
         m_LastPasteTarget = npt;
         DBG qDebug() << "updating m_LastPasteTarget to: " << m_LastPasteTarget;
     }
-    
+
     // Update the zoom target based on current window.
     if (m_PreviewWindow->HasFocus()) {
         m_ZoomPreview = true;
@@ -3619,7 +3666,7 @@ void MainWindow::QuickLaunchPlugin(int i)
         if (m_pluginList.contains(pname)) {
             // QApplication keeps a single modalWindowList across multiple main
             // windows and this list is not updated until modal dialog is deleted
-            { 
+            {
                 PluginRunner prunner(m_TabManager, this);
                 prunner.exec(pname);
             }
@@ -4046,7 +4093,7 @@ void MainWindow::LinkJavascriptsToResources(QList <Resource *> resources)
 
     SaveTabData();
 
-    // Check if data is well formed before saving                                                                   
+    // Check if data is well formed before saving
     foreach (Resource *r, resources) {
         HTMLResource *h = qobject_cast<HTMLResource *>(r);
         if (!h) {
@@ -4059,7 +4106,7 @@ h->ShortPathName()));
         }
     }
 
-    // Choose which javascripts to link                                                                             
+    // Choose which javascripts to link
     LinkJavascripts link(GetJavascriptsMap(resources), this);
 
     if (link.exec() != QDialog::Accepted) {
@@ -4075,11 +4122,11 @@ h->ShortPathName()));
 
     QStringList javascripts = link.GetJavascripts();
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    // Convert HTML resources into HTMLResource types                                                               
+    // Convert HTML resources into HTMLResource types
     QList<HTMLResource *>html_resources;
     foreach(Resource *resource, resources) {
         html_resources.append(qobject_cast<HTMLResource *>(resource));
-    } 
+    }
     JavascriptUpdates::UpdateJavascriptsInAllFiles(html_resources, javascripts);
 
     m_Book->GetOPF()->UpdateManifestProperties(resources);
@@ -4099,29 +4146,29 @@ QList<std::pair<QString, bool>> MainWindow::GetJavascriptsMap(QList<Resource *> 
     QList<std::pair<QString, bool>> javascript_map;
     QStringList mtypes = QStringList() << "application/javascript" << "application/ecmascript" << "text/javascript";
     QList<Resource *> js_resources = m_Book->GetFolderKeeper()->GetResourceListByMediaTypes(mtypes);
-    // Use the first resource to get a list of known linked javascripts in order.                                   
+    // Use the first resource to get a list of known linked javascripts in order.
     QStringList checked_linked_bookpaths = GetJavascriptsAlreadyLinked(resources.at(0));
-    // Then only consider them included if every selected resource includes                                         
-    // the same javascripts in the same order.                                                                      
+    // Then only consider them included if every selected resource includes
+    // the same javascripts in the same order.
     foreach(Resource * valid_resource, resources) {
         QStringList linked_bookpaths = GetJavascriptsAlreadyLinked(valid_resource);
         foreach(QString bookpath, checked_linked_bookpaths) {
             if (!linked_bookpaths.contains(bookpath)) {
-		        checked_linked_bookpaths.removeOne(bookpath);
+                checked_linked_bookpaths.removeOne(bookpath);
             }
         }
     }
-    // Save the paths included in all resources in order                                                            
+    // Save the paths included in all resources in order
     foreach(QString bookpath, checked_linked_bookpaths) {
         javascript_map.append(std::make_pair(bookpath, true));
     }
-    // Save all the remaining paths and mark them not included                                                      
+    // Save all the remaining paths and mark them not included
     foreach(Resource * resource, js_resources) {
-	    QString abookpath = resource->GetRelativePath();
+        QString abookpath = resource->GetRelativePath();
 
         if (!checked_linked_bookpaths.contains(abookpath)) {
             javascript_map.append(std::make_pair(abookpath, false));
-	    }
+        }
     }
     return javascript_map;
 }
@@ -4136,7 +4183,7 @@ QStringList MainWindow::GetJavascriptsAlreadyLinked(Resource *resource)
         existing_javascripts.append(js_resource->GetRelativePath());
     }
     foreach(QString bookpath, html_resource->GetLinkedJavascripts()) {
-        // Only list the javascript if it exists in the book                                                        
+        // Only list the javascript if it exists in the book
         if (existing_javascripts.contains(bookpath)) {
             linked_javascripts.append(bookpath);
         }
@@ -4299,7 +4346,7 @@ bool MainWindow::CreateHTMLTOC()
             }
         }
     }
- 
+
     if (tocResource != NULL) {
 
         QString msg = tr("An existing HTML Table of Contents file has been found.");
@@ -4308,7 +4355,7 @@ bool MainWindow::CreateHTMLTOC()
         }
     }
 
-    // If you found an existing one, close the tab so the focus 
+    // If you found an existing one, close the tab so the focus
     // saving doesn't overwrite the text we are replacing in the resource.
     if (tocResource != NULL) {
         m_TabManager->CloseTabForResource(tocResource);
@@ -4324,8 +4371,8 @@ bool MainWindow::CreateHTMLTOC()
 
     // Get Primary language from the OPF and use it to Translate "toc" for title
     QString lang = m_Book->GetOPF()->GetPrimaryBookLanguage();
-    QString title = Landmarks::instance()->GetTitle("toc", lang); 
-    TOCHTMLWriter toc(tocResource->GetRelativePath(), 
+    QString title = Landmarks::instance()->GetTitle("toc", lang);
+    TOCHTMLWriter toc(tocResource->GetRelativePath(),
                       css_resource->GetRelativePath(),
                       m_TableOfContents->GetRootEntry(),
                       title);
@@ -4493,7 +4540,7 @@ void MainWindow::PreferencesDialog()
 
     // QApplication keeps a single modalWindowList across multiple main
     // windows and this list is not updated until modal dialog is deleted
-  
+
     Preferences prefers(this);
     prefers.exec();
 
@@ -4517,7 +4564,11 @@ void MainWindow::PreferencesDialog()
             UpdatePreview();
         }
     }
-
+    //----------------- modified: RefreshToolBarPlugins ---------------
+    if (prefers.isRefreshToolBarPluginsRequired()) {
+        loadPluginsMenu();
+    }
+    //-----------------------------------------------------------------
     if (m_SelectCharacter->isVisible()) {
         // To ensure any font size changes are immediately applied.
         m_SelectCharacter->show();
@@ -4597,6 +4648,14 @@ void MainWindow::updateToolTipsOnAutomateIcons()
         i++;
     }
 }
+
+//----------modified: NormalizedOPF--------------
+bool MainWindow::NormalizedOPF()
+{
+    m_ValidationResultsView->correctOPF();
+    return true;
+}
+//-----------------------------------------------
 
 bool MainWindow::WellFormedCheckEpub()
 {
@@ -4691,7 +4750,7 @@ void MainWindow::UpdateMWState(bool set_tab_state)
         m_LastPasteTarget = nullptr;
         DBG qDebug() << "UpdateMWState, tab changed to non-text tab so reset m_LastPasteTarget: ";
     }
-    
+
     if (type == Resource::HTMLResourceType) {
         if (set_tab_state) {
             FlowTab *ftab = qobject_cast<FlowTab *>(tab);
@@ -4730,6 +4789,7 @@ void MainWindow::UpdateUIOnTabChanges()
     ui.actionCut                ->setEnabled(tab->CutEnabled());
     ui.actionCopy               ->setEnabled(tab->CopyEnabled());
     ui.actionPaste              ->setEnabled(tab->PasteEnabled());
+    ui.actionPasteRichText      ->setEnabled(tab->PasteRichTextEnabled());// modified: AddPasteRichText
     ui.actionDeleteLine         ->setEnabled(tab->DeleteLineEnabled());
     ui.actionAddToIndex         ->setEnabled(tab->AddToIndexEnabled());
     ui.actionMarkForIndex       ->setEnabled(tab->MarkForIndexEnabled());
@@ -4853,6 +4913,9 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionAddMisspelledWord->setEnabled(true);
     ui.actionIgnoreMisspelledWord->setEnabled(true);
     ui.actionAutoSpellCheck->setEnabled(true);
+    ui.actionHeadingDivision->setEnabled(true); //modified: actionHeadingDivision
+    ui.actionSplitTagOrAddBreak->setEnabled(true);//modified: SplitTagOrAddBreak
+    ui.actionMergeNextElement->setEnabled(true);//modified: MergeNextElement
     UpdateUIOnTabChanges();
     m_FindReplace->ShowHide();
 }
@@ -4944,6 +5007,7 @@ void MainWindow::SetStateActionsRawView()
     ui.actionAddMisspelledWord->setEnabled(false);
     ui.actionIgnoreMisspelledWord->setEnabled(false);
     ui.actionAutoSpellCheck->setEnabled(false);
+    ui.actionHeadingDivision->setEnabled(false); // modified: actionHeadingDivision
     UpdateUIOnTabChanges();
     m_FindReplace->ShowHide();
 }
@@ -5268,14 +5332,14 @@ void MainWindow::CreateSectionBreakOldTab(QString content, HTMLResource *origina
     // The test for nav is done in FlowTab::SplitSection via a signal OldTabRequest
     //  so it need not be repeated.
     // The xml file test can not be done here as it is already too late for the
-    // originating tab. Since this comes from a FlowTab assume that it is 
+    // originating tab. Since this comes from a FlowTab assume that it is
     // an xhtml file even if called .xml to avoid doing damage.
 
     HTMLResource *html_resource = m_Book->CreateSectionBreakOriginalResource(content, originating_resource);
     m_BookBrowser->Refresh();
 
     // Open the split off piece of content in a new tab preceding the current one.
-    // * without grabbing focus 
+    // * without grabbing focus
     OpenResource(html_resource, -1, -1, QString(), QUrl(), true);
 
     // scroll current tab (bottom of split) to split point which is now top of file
@@ -5454,7 +5518,7 @@ void MainWindow::ReadSettings()
     QString mathjaxurl;
     QString mathjaxscript;
 #ifdef Q_OS_MAC
-    // On Mac OS X QCoreApplication::applicationDirPath() points to Sigil.app/Contents/MacOS/ 
+    // On Mac OS X QCoreApplication::applicationDirPath() points to Sigil.app/Contents/MacOS/
     QDir execdir(QCoreApplication::applicationDirPath());
     execdir.cdUp();
     mathjaxurl = execdir.absolutePath() + "/polyfills/";
@@ -5517,7 +5581,7 @@ void MainWindow::WriteSettings()
     DBG DebugCurrentWidgetSizes();
 
     settings.setValue("geometry", saveGeometry());
-    
+
     // The positions of all the toolbars and dock widgets
     settings.setValue("toolbars", saveState());
 
@@ -6127,6 +6191,7 @@ void MainWindow::SelectEntryOnHeadingToolbar(const QString &element_name)
     ui.actionHeading5->setChecked(false);
     ui.actionHeading6->setChecked(false);
     ui.actionHeadingNormal->setChecked(false);
+    ui.actionHeadingDivision->setChecked(false); // modified: actionHeadingDivision
 
     if (!element_name.isEmpty()) {
         if ((element_name[ 0 ].toLower() == QChar('h')) && (element_name[ 1 ].isDigit())) {
@@ -6147,6 +6212,7 @@ void MainWindow::SelectEntryOnHeadingToolbar(const QString &element_name)
             }
         } else {
             ui.actionHeadingNormal->setChecked(true);
+            ui.actionHeadingDivision->setChecked(true); // modified: actionHeadingDivision
         }
     }
 }
@@ -6277,7 +6343,7 @@ void MainWindow::ExtendUI()
     m_auactions.append(ui.actionAutomate1);
     m_auactions.append(ui.actionAutomate2);
     m_auactions.append(ui.actionAutomate3);
-    
+
     // initialize the first set of clip actions
     foreach(QAction * clipaction, ui.toolBarClips->actions()) {
         if (!clipaction->isSeparator()) {
@@ -6367,7 +6433,7 @@ void MainWindow::ExtendUI()
     ui.menuView->addAction(ui.actionFocusPreview);
     ui.menuView->addAction(ui.actionFocusTOC);
     ui.menuView->addAction(ui.actionFocusClips);
-    
+
     // Create the view menu to hide and show toolbars.
     ui.menuToolbars->addAction(ui.toolBarNewActions->toggleViewAction());
     ui.menuToolbars->addAction(ui.toolBarFileActions->toggleViewAction());
@@ -6620,7 +6686,17 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionFocusPreview,     "MainWindow.FocusOnPreview");
     sm->registerAction(this, ui.actionFocusTOC,         "MainWindow.FocusOnTOC");
     sm->registerAction(this, ui.actionFocusClips,       "MainWindow.FocusOnClips");
-    
+
+    //---------------------------------- modified: MainWindowExt ---------------------------------------
+    sm->registerAction(this, ui.actionEpub3To2, "MainWindow.Epub3To2"); // modified: Epub3ToEpub2
+    sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
+    sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
+    sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
+    sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
+    sm->registerAction(this, ui.actionSplitTagOrAddBreak, "MainWindow.SplitTagOrAddBreak"); // modified: SplitTagOrAddBreak
+    sm->registerAction(this, ui.actionMergeNextElement, "MainWindow.MergeNextElement");//modified: MergeNextElement
+    //--------------------------------------------------------------------------------------------------
+
     // Headings QToolButton
     ui.tbHeadings->setPopupMode(QToolButton::MenuButtonPopup);
 
@@ -6674,7 +6750,7 @@ void MainWindow::LoadInitialFile(const QString &openfilepath, const QString vers
     }
 }
 
-void MainWindow::changeEvent(QEvent *e) 
+void MainWindow::changeEvent(QEvent *e)
 {
     DWINGEO qDebug() << "------";
     DWINGEO qDebug() << "In ChangeEvent: " << e;
@@ -6756,7 +6832,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_PreviewWindow, SIGNAL(ZoomFactorChanged(float)),     this, SLOT(UpdateZoomLabel(float)));
     connect(m_PreviewWindow, SIGNAL(ZoomFactorChanged(float)),     this, SLOT(UpdateZoomSlider(float)));
     connect(m_PreviewWindow, SIGNAL(GoToPreviewLocationRequest()), this, SLOT(GoToPreviewLocation()));
-    connect(m_PreviewWindow, SIGNAL(RequestPreviewReload()),       this, SLOT(UpdatePreview())); 
+    connect(m_PreviewWindow, SIGNAL(RequestPreviewReload()),       this, SLOT(UpdatePreview()));
     connect(m_PreviewWindow, SIGNAL(OpenUrlRequest(const QUrl &)), this, SLOT(OpenUrl(const QUrl &)));
     connect(m_PreviewWindow, SIGNAL(ScrollToFragmentRequest(const QString &)), this, SLOT(ScrollCVToFragment(const QString &)));
     connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)), this, SLOT(ApplicationFocusChanged(QWidget *, QWidget *)));
@@ -6864,7 +6940,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionZoomReset,     SIGNAL(triggered()), this, SLOT(ZoomReset()));
     connect(ui.actionHeadingPreserveAttributes, SIGNAL(triggered(bool)), this, SLOT(SetPreserveHeadingAttributes(bool)));
     connect(ui.tbHeadings, &QToolButton::triggered, ui.tbHeadings, &QToolButton::setDefaultAction);
-    connect(m_headingActionGroup,   SIGNAL(triggered(QAction*)), this, SLOT(ApplyHeadingStyleToTab(QAction*)));
+    connect(m_headingActionGroup,   SIGNAL(triggered(QAction*)), this, SLOT(ApplyHeadingStyleToTab_Plus(QAction*))); // modified: Add Lables On Multiple Lines
     // Window
     connect(ui.actionNextTab,       SIGNAL(triggered()), m_TabManager, SLOT(NextTab()));
     connect(ui.actionPreviousTab,   SIGNAL(triggered()), m_TabManager, SLOT(PreviousTab()));
@@ -6895,7 +6971,7 @@ void MainWindow::ConnectSignalsToSlots()
     }
     // Drop zone
     connect(m_lbDropZone, SIGNAL(AddDroppedToEpub(const QStringList&)), this, SLOT(AddDroppedFiles(const QStringList&)));
-    
+
     // Slider
     connect(m_slZoomSlider,         SIGNAL(valueChanged(int)), this, SLOT(SliderZoom(int)));
     // We also update the label when the slider moves... this is to show
@@ -6986,6 +7062,13 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_Reports,       SIGNAL(RPFindText(QString)), m_FindReplace, SLOT(FindAnyText(QString)));
     connect(m_Reports,       SIGNAL(RPFindTextInTags(QString)), m_FindReplace, SLOT(FindAnyTextInTags(QString)));
 
+    //------------------------------------ modified: MainWindowExt --------------------------------
+    connect(ui.actionEpub3To2, SIGNAL(triggered()), this, SLOT(Epub3ToEpub2())); // modified: Epub3ToEpub2
+    connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
+    connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
+    connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
+    //---------------------------------------------------------------------------------------------
+
     // Plugins
     PluginDB *pdb = PluginDB::instance();
     connect(pdb, SIGNAL(plugins_changed()), this, SLOT(loadPluginsMenu()));
@@ -7003,16 +7086,17 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
     rType = tab->GetLoadedResource()->Type();
 
     // Triggered connections should be disconnected in BreakTabConnections
-    if (rType != Resource::ImageResourceType && 
-        rType != Resource::AudioResourceType && 
-        rType != Resource::VideoResourceType && 
-        rType != Resource::PdfResourceType && 
+    if (rType != Resource::ImageResourceType &&
+        rType != Resource::AudioResourceType &&
+        rType != Resource::VideoResourceType &&
+        rType != Resource::PdfResourceType &&
         rType != Resource::FontResourceType) {
         connect(ui.actionUndo,                     SIGNAL(triggered()),  tab,   SLOT(Undo()));
         connect(ui.actionRedo,                     SIGNAL(triggered()),  tab,   SLOT(Redo()));
         connect(ui.actionCut,                      SIGNAL(triggered()),  tab,   SLOT(Cut()));
         connect(ui.actionCopy,                     SIGNAL(triggered()),  tab,   SLOT(Copy()));
         connect(ui.actionPaste,                    SIGNAL(triggered()),  tab,   SLOT(Paste()));
+        connect(ui.actionPasteRichText,            SIGNAL(triggered()),  tab,   SLOT(PasteRichText())); //modified: PasteRichText
         connect(ui.actionDeleteLine,               SIGNAL(triggered()),  tab,   SLOT(DeleteLine()));
         connect(tab,   SIGNAL(OpenClipEditorRequest(ClipEditorModel::clipEntry *)),
                 this,  SLOT(ClipEditorDialog(ClipEditorModel::clipEntry *)));
@@ -7079,6 +7163,8 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(ui.actionAddMisspelledWord,        SIGNAL(triggered()),  tab,   SLOT(AddMisspelledWord()));
         connect(ui.actionIgnoreMisspelledWord,     SIGNAL(triggered()),  tab,   SLOT(IgnoreMisspelledWord()));
         connect(this,                              SIGNAL(SettingsChanged()), tab, SLOT(LoadSettings()));
+        connect(ui.actionSplitTagOrAddBreak,     SIGNAL(triggered()),  tab,   SLOT(SplitTagOrAddBreak())); // modified: SplitTagOrAddBreak
+        connect(ui.actionMergeNextElement,         SIGNAL(triggered()),  tab,   SLOT(MergeNextElement())); // modified: MergeNextElement
         connect(tab,   SIGNAL(OpenIndexEditorRequest(IndexEditorModel::indexEntry *)),
                 this,  SLOT(IndexEditorDialog(IndexEditorModel::indexEntry *)));
         connect(tab,   SIGNAL(ViewImageRequest(const QUrl &)),
@@ -7096,7 +7182,7 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         connect(tab,   SIGNAL(ScrollPreviewImmediately()), this, SLOT(ScrollPreview()));
     }
 
-    if (rType != Resource::AudioResourceType && 
+    if (rType != Resource::AudioResourceType &&
         rType != Resource::VideoResourceType &&
         rType != Resource::PdfResourceType &&
         rType != Resource::FontResourceType) {
@@ -7162,6 +7248,9 @@ void MainWindow::BreakTabConnections(ContentTab *tab)
     disconnect(ui.actionPrint,                     0, tab, 0);
     disconnect(ui.actionAddToIndex,                0, tab, 0);
     disconnect(ui.actionMarkForIndex,              0, tab, 0);
+    disconnect(ui.actionSplitTagOrAddBreak,        0, tab, 0);//modified: SplitTagOrAddBreak
+    disconnect(ui.actionMergeNextElement,          0, tab, 0);//modified: MergeNextElement
+    disconnect(ui.actionPasteRichText,             0, tab, 0);//modified: AddPasteRichText
 }
 
 

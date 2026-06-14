@@ -61,6 +61,10 @@ signals:
 
 private slots:
     void EmitTabUpdated();
+    void EmitCSSUpdated();
+
+public:
+    void InsertFile(QString css);
 };
 
 #endif // CSSTAB_H

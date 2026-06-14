@@ -35,8 +35,12 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/Index.cpp
     BookManipulation/Index.h
     BookManipulation/CleanSource.cpp
+    BookManipulation/CleanSourceExt.cpp
     BookManipulation/CleanSource.h
+    BookManipulation/EpubVersionConv.cpp
+    BookManipulation/EpubVersionConv.h
     BookManipulation/FolderKeeper.cpp
+    BookManipulation/FolderKeeperExt.cpp
     BookManipulation/FolderKeeper.h
     BookManipulation/Headings.cpp
     BookManipulation/Headings.h
@@ -70,6 +74,7 @@ set( RESOURCE_OBJECT_FILES
     ResourceObjects/FontResource.cpp
     ResourceObjects/FontResource.h
     ResourceObjects/OPFResource.cpp
+    ResourceObjects/OPFResourceExt.cpp
     ResourceObjects/OPFResource.h
     ResourceObjects/NavProcessor.cpp
     ResourceObjects/NavProcessor.h
@@ -171,12 +176,15 @@ set( DIALOG_FILES
     Dialogs/PreferenceWidgets/KeyboardShortcutsWidget.h
     Dialogs/PreferenceWidgets/LanguageWidget.cpp
     Dialogs/PreferenceWidgets/LanguageWidget.h
+    Dialogs/PreferenceWidgets/ModifiedVerPrefsWidget.cpp
+    Dialogs/PreferenceWidgets/ModifiedVerPrefsWidget.h
     Dialogs/PreferenceWidgets/PreferencesWidget.h
     Dialogs/PreferenceWidgets/SpellCheckWidget.cpp
     Dialogs/PreferenceWidgets/SpellCheckWidget.h
     Dialogs/PreferenceWidgets/PreserveEntitiesWidget.cpp
     Dialogs/PreferenceWidgets/PreserveEntitiesWidget.h
     Dialogs/PreferenceWidgets/PluginWidget.cpp
+    Dialogs/PreferenceWidgets/PluginWidgetExt.cpp
     Dialogs/PreferenceWidgets/PluginWidget.h
     Dialogs/PreviewFileDialog.cpp
     Dialogs/PreviewFileDialog.h
@@ -258,7 +266,7 @@ set( WIDGET_FILES
     Widgets/TVLineNumberArea.cpp
     Widgets/TVLineNumberArea.h
     Widgets/CaretStyle.cpp
-    Widgets/CaretStyle.h 
+    Widgets/CaretStyle.h
     Widgets/SELineNumberArea.cpp
     Widgets/SELineNumberArea.h
     Widgets/SourceEditor.cpp
@@ -335,6 +343,14 @@ set( PARSERS_FILES
     Parsers/TagLister.h
     Parsers/OPFParser.cpp
     Parsers/OPFParser.h
+    Parsers/XhtmlFormatParser.cpp
+    Parsers/XhtmlFormatParser.h
+    Parsers/CodeCompleterParser.cpp
+    Parsers/CodeCompleterParser.h
+    Parsers/CompletionWords.cpp
+    Parsers/CompletionWords.h
+    Parsers/Emmet.cpp
+    Parsers/Emmet.h
    )
 
 set( EMBEDPYTHON_FILES
@@ -363,6 +379,7 @@ set( MISC_FILES
     Misc/URLSchemeHandler.cpp
     Misc/URLSchemeHandler.h
     Misc/Utility.cpp
+    Misc/UtilityExt.cpp
     Misc/Utility.h
     Misc/SearchUtils.cpp
     Misc/SearchUtils.h
@@ -445,6 +462,8 @@ set( MISC_FILES
     Misc/webviewprinter.h
     Misc/CodepointNames.cpp
     Misc/CodepointNames.h
+    Misc/SettingsStoreExtend.cpp
+    Misc/SettingsStoreExtend.h
     )
 
 set( MISC_EDITORS_FILES
@@ -481,6 +500,7 @@ set( SPCRE_FILES
 
 set( VIEW_EDITOR_FILES
     ViewEditors/CodeViewEditor.cpp
+    ViewEditors/CodeViewEditorExt.cpp
     ViewEditors/CodeViewEditor.h
     ViewEditors/WebEngPage.cpp
     ViewEditors/WebEngPage.h
@@ -497,16 +517,22 @@ set( VIEW_EDITOR_FILES
     ViewEditors/ViewEditor.h
     ViewEditors/Viewer.h
     ViewEditors/Overlay.h
+    ViewEditors/XhtmlFormatEditor.CPP
+    ViewEditors/XhtmlFormatEditor.h
      )
 
 set( MAINUI_FILES
     MainUI/MainApplication.cpp
     MainUI/MainApplication.h
     MainUI/MainWindow.cpp
+    MainUI/MainWindowExt.cpp
     MainUI/MainWindow.h
     MainUI/FindReplace.cpp
     MainUI/FindReplace.h
     MainUI/BookBrowser.cpp
+    MainUI/BookBrowserExt.cpp
+    MainUI/BookBrowserTreeView.cpp
+    MainUI/BookBrowserTreeView.h
     MainUI/BookBrowser.h
     MainUI/ClipsWindow.cpp
     MainUI/ClipsWindow.h
@@ -521,6 +547,7 @@ set( MAINUI_FILES
     MainUI/TOCModel.cpp
     MainUI/TOCModel.h
     MainUI/ValidationResultsView.cpp
+    MainUI/ValidationResultsViewExt.cpp
     MainUI/ValidationResultsView.h
     )
 
@@ -530,6 +557,7 @@ set( TAB_FILES
     Tabs/TabManager.cpp
     Tabs/TabManager.h
     Tabs/FlowTab.cpp
+    Tabs/FlowTabExt.cpp
     Tabs/FlowTab.h
     Tabs/ContentTab.cpp
     Tabs/ContentTab.h
@@ -598,6 +626,7 @@ set( UI_FILES
     Form_Files/PKeyboardShortcutsWidget.ui
     Form_Files/PGeneralSettingsWidget.ui
     Form_Files/PLanguageWidget.ui
+    Form_Files/PModifiedVerPrefs.ui
     Form_Files/PSpellCheckWidget.ui
     Form_Files/PPreserveEntitiesWidget.ui
     Form_Files/PPluginWidget.ui

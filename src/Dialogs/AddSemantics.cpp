@@ -46,9 +46,9 @@ AddSemantics::AddSemantics(const QHash<QString, DescriptiveInfo> &infomap, const
         QString name = m_SemanticsInfo.value(code, DescriptiveInfo()).name;
         // Some translations are broken, add code in parentheses after translate4d name
         // To force them to be visually unique without having to read the entire Description
-        name = name + " (" + code + ")"; 
-        
-        // add a space and check mark to the end of the name if current semantic set 
+        name = name + " (" + code + ")";
+
+        // add a space and check mark to the end of the name if current semantic set
         if (code == current_code) {
             name.append(' ');
             name.append(QChar(10003));

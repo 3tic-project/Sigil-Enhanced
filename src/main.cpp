@@ -294,7 +294,7 @@ void MessageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
             Utility::DisplayExceptionErrorDialog(QString("Fatal: %1").arg(QString(message)));
             abort();
     }
-    
+
     // qDebug() prints to SIGIL_DEBUG_LOGFILE environment variable.
     // User must have permissions to write to the location or no file will be created.
     QString sigil_log_file;
@@ -521,7 +521,7 @@ int main(int argc, char *argv[])
     }
 
     // enable disabling of gpu acceleration for QtWebEngine.
-    // append to current environment variable contents as numerous chromium 
+    // append to current environment variable contents as numerous chromium
     // switches exist that may be useful
     if (settings.disableGPU()) {
         QString current_flags = Utility::GetEnvironmentVar("QTWEBENGINE_CHROMIUM_FLAGS");
@@ -546,7 +546,7 @@ int main(int argc, char *argv[])
     // Test to see if there is another instance of Sigil already running
     QString memorykey = qgetenv("USER");
     if (memorykey.isEmpty()) memorykey = qgetenv("USERNAME");
-    memorykey = "SIGIL-EBOOK-SIGIL" + memorykey; 
+    memorykey = "SIGIL-EBOOK-SIGIL" + memorykey;
     QSharedMemory sharedMemory(memorykey);
     if (!sharedMemory.create(128)) {
         // another version of Sigil is already running
@@ -554,7 +554,7 @@ int main(int argc, char *argv[])
     } else {
         app.setFirstInstance(true);
     }
-    
+
     // Install an event filter for the application
     // so we can catch OS X's file open events
     // This needs to be done upfront to prevent events from
@@ -697,7 +697,7 @@ int main(int argc, char *argv[])
         app.setStyleSheet(app.styleSheet().append(LINWIN_DOCK_TITLEBAR_FIX));
 #endif // end *nix
 
-#ifdef Q_OS_WIN32 
+#ifdef Q_OS_WIN32
         // Windows likes these dockwidget icons for light/dark too,
         // but only when using Qt's inherent fusion light/dark modes.
         if (!Utility::WindowsShouldUseDarkMode() || !settings.uiUseCustomSigilDarkTheme()) {
@@ -721,7 +721,7 @@ int main(int argc, char *argv[])
             // can be added back on theme changes.
             accumulatedQss.append(focus_qss);
         }
-        
+
         // Check for existing qt_styles.qss in Prefs dir and load it if present
         QString qt_stylesheet_path = Utility::DefinePrefsDir() + "/qt_styles.qss";
         QFileInfo QtStylesheetInfo(qt_stylesheet_path);
@@ -745,8 +745,8 @@ int main(int argc, char *argv[])
         app.setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles);
 
         // Qt's setCursorFlashTime(msecs) (or the docs) are broken
-        // According to the docs, setting a negative value should disable cursor blinking 
-        // but instead just forces it to look for PlatformSpecific Themeable Hints to get 
+        // According to the docs, setting a negative value should disable cursor blinking
+        // but instead just forces it to look for PlatformSpecific Themeable Hints to get
         // a value which for Mac OS X is hardcoded to 1000 ms
         // This was the only way I could get Qt to disable cursor blinking on a Mac if desired
         if (qEnvironmentVariableIsSet("SIGIL_DISABLE_CURSOR_BLINK")) {
@@ -757,7 +757,7 @@ int main(int argc, char *argv[])
         // and on Mac by the ICNS file.
 #if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
         app.setWindowIcon(GetApplicationIcon());
-        // Wayland needs this clarified in order to propery assign the icon 
+        // Wayland needs this clarified in order to propery assign the icon
         app.setDesktopFileName(QStringLiteral("sigil"));
 #endif //!defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
 
@@ -779,12 +779,14 @@ int main(int argc, char *argv[])
         // Needs to be created on the heap so that
         // the reply has time to return.
         // Skip if compile-time define or runtime env var is set.
+        //---------------------------- modified: Disable UpdateChecker ---------------------------------
+        /*
         if ((!DONT_CHECK_FOR_UPDATES) && !qEnvironmentVariableIsSet("SKIP_SIGIL_UPDATE_CHECK")
-	    && !qEnvironmentVariableIsSet("SIGIL_SKIP_UPDATE_CHECK")) {
+            && !qEnvironmentVariableIsSet("SIGIL_SKIP_UPDATE_CHECK")) {
             UpdateChecker *checker = new UpdateChecker(&app);
             checker->CheckForUpdate();
-        }
-
+        }*/
+        //-----------------------------------------------------------------------------------------------
         // select the icon theme to use
         QString RCCResourcePath;
 #ifdef Q_OS_MAC

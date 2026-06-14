@@ -20,6 +20,7 @@
 **
 *************************************************************************/
 
+#include <QTextCodec> // modified: Encoding Conversion
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/XhtmlDoc.h"
@@ -32,6 +33,7 @@
 #include "ResourceObjects/NCXResource.h"
 #include "sigil_constants.h"
 #include "sigil_exception.h"
+#include "Misc/SettingsStoreExtend.h" // modified: importing text
 
 const QString FIRST_SECTION_PREFIX = "Section0001";
 const QString FIRST_SECTION_NAME   = FIRST_SECTION_PREFIX + ".xhtml";
@@ -42,7 +44,7 @@ ImportTXT::ImportTXT(const QString &fullfilepath)
     : Importer(fullfilepath)
 {
     SettingsStore ss;
-    m_EpubVersion = ss.defaultVersion(); 
+    m_EpubVersion = ss.defaultVersion();
 }
 
 
@@ -50,20 +52,22 @@ ImportTXT::ImportTXT(const QString &fullfilepath)
 // and returns the created Book
 QSharedPointer<Book> ImportTXT::GetBook(bool extract_metadata)
 {
-    
+
     if (!Utility::IsFileReadable(m_FullFilePath)) {
         throw(CannotReadFile(m_FullFilePath.toStdString()));
     }
 
-    // First handle any new created Books by making sure there is 
+    // First handle any new created Books by making sure there is
     // an OPF in the current Book
     if (!m_Book->GetConstOPF()) {
         m_Book->GetFolderKeeper()->AddOPFToFolder(m_EpubVersion);
-    } 
+    }
 
     QString source = LoadSource();
-    HTMLResource * new_resource = CreateHTMLResource(source);
+    //HTMLResource * new_resource = CreateHTMLResource(source);
+    HTMLResource* new_resource = CreateHTMLResource_M(source); // modified: importing txt
     InitializeHTMLResource(source, new_resource);
+    m_AddedBookPath = new_resource->GetRelativePath(); // modified: importing txt
 
     // Before returning the new book, if it is epub3, make sure it has a nav
     if (m_EpubVersion.startsWith('3')) {
@@ -94,8 +98,12 @@ QSharedPointer<Book> ImportTXT::GetBook(bool extract_metadata)
 
 QString ImportTXT::LoadSource() const
 {
-    QString source = Utility::ReadUnicodeTextFile(m_FullFilePath);
-    source = CreateParagraphs(source.split(QChar('\n')));
+    //------------ modified: importing text ----------------
+    //QString source = Utility::ReadUnicodeTextFile(m_FullFilePath);
+    //source = CreateParagraphs(source.split(QChar('\n')));
+    QString source = Utility::ReadUnicodeTextFile_M(m_FullFilePath);
+    source = CreateParagraphs_M(source.split(QChar('\n')));
+    //------------------------------------------------------
     return CleanSource::Mend(source, m_EpubVersion);
 }
 
@@ -141,4 +149,45 @@ QString ImportTXT::CreateParagraphs(const QStringList &lines) const
     return text;
 }
 
+//--------- modified: importing text: modified the format logic of txt importing --------
+QString ImportTXT::CreateParagraphs_M(const QStringList& lines) const
+{
+    SettingsStoreExtend sse;
+    bool ignore_blankline = sse.getIgnoreBlankLine();
 
+    QString text = "";
+    int num_lines = lines.count();
+    for (int i = 0; i < num_lines; ++i) {
+        QString line = lines.at(i);
+        if (line.isEmpty()) {
+            if (!ignore_blankline)
+                text.append("<p><br/></p>\n");
+        }
+        else {
+            text.append("<p>" + line.toHtmlEscaped() + "</p>\n");
+        }
+    }
+    return text;
+}
+
+HTMLResource* ImportTXT::CreateHTMLResource_M(const QString& source)
+{
+    TempFolder tempfolder;
+    QString sction_name = m_Book->GetFolderKeeper()->GetUniqueFilenameVersion(FIRST_SECTION_NAME);
+    QString fullfilepath = tempfolder.GetPath() + "/" + sction_name;
+    Utility::WriteUnicodeTextFile(source, fullfilepath);
+    Resource* res = m_Book->GetFolderKeeper()->AddContentFileToFolder(fullfilepath);
+    return qobject_cast<HTMLResource*>(res);
+}
+
+void ImportTXT::SetBook(QSharedPointer<Book> book)
+{
+    m_Book = book;
+    m_EpubVersion = m_Book->GetConstOPF()->GetEpubVersion();
+}
+
+QString ImportTXT::GetAddedBookPath()
+{
+    return m_AddedBookPath;
+}
+//---------------------------------------------------------------------------------------

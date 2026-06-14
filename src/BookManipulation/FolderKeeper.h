@@ -169,7 +169,7 @@ public:
 
     // this is O(n) but no filesystem is queried
     QString GetBookPathByPathEnd(const QString& path_end) const;
-    
+
 
     OPFResource* AddOPFToFolder(const QString &version, const QString& bookpath=QString());
     static void UpdateContainerXML(const QString &FullPathToMainFolder, const QString& opfbookpath);
@@ -269,9 +269,17 @@ public slots:
     void BulkRenameResources(const QList<Resource *> resources, const QStringList &newnames);
 
     void BulkAddResourcesToOPF(const QList<Resource*>resources);
-    
+
     void RemoveWithoutUpdatingOPF(Resource* resource);
-                                                                                         
+
+    //------------------------------------------ modified: FolderKeeperExt ------------------------------------------
+    void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //modified: BulkResourceRenamed
+    Resource* AddContentFromQByteArray(const QByteArray& data,
+                                    QString filename,
+                                    bool update_opf = true,
+                                    const QString& mimetype = QString(),
+                                    const QString& folderpath = QString("\\")); //modified: AddContentFromQByteArray
+    //---------------------------------------------------------------------------------------------------------------
 private slots:
 
     /**
@@ -440,5 +448,4 @@ bool FolderKeeper::PointerLessThan(T *first_item, T *second_item)
     return *first_item < *second_item;
 }
 #endif // FOLDERKEEPER_H
-
 

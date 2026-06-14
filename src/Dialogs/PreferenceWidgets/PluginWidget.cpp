@@ -60,6 +60,11 @@ PluginWidget::PluginWidget()
     ui.pluginTable->setTabKeyNavigation(false);
     readSettings();
     connectSignalsToSlots();
+
+    //--------------------- modified: PluginWidget -----------------
+    ui.removeAllButton->hide(); // hide the button "Remove All"
+    ui.pluginTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    //--------------------------------------------------------------
 }
 
 
@@ -94,6 +99,11 @@ PreferencesWidget::ResultActions PluginWidget::saveSettings()
         }
     }
     settings.setPluginMap(pluginmap);
+    //---------- modified: RefreshToolBarPlugins ------------
+    if (pluginmap != m_OriPluginMap) {
+        results = results | PreferencesWidget::ResultAction_RefreshToolBarPlugins;
+    }
+    //-------------------------------------------------------
 
     if (!bundledInterpReady()) {
         settings.setUseBundledInterp(false);
@@ -179,6 +189,8 @@ void PluginWidget::readSettings()
         m_qlcbxs.at(i)->setCurrentIndex(t);
     }
 
+    m_OriPluginMap = pluginmap; // modified: RefreshToolBarPlugins
+
     // If the python bundled interpreter is present/ready, enable the checkbox and set it
     // based on the value of the SettingStore Value. Otherwise keep it disabled.
     if (bundledInterpReady()) {
@@ -204,9 +216,9 @@ void PluginWidget::addPlugin()
 {
     QFileDialog::Options options = Utility::DlgOptions();
 
-    QString zippath = QFileDialog::getOpenFileName(this, 
-                                                   tr("Select Plugin Zip Archive"), 
-                                                   m_LastFolderOpen, 
+    QString zippath = QFileDialog::getOpenFileName(this,
+                                                   tr("Select Plugin Zip Archive"),
+                                                   m_LastFolderOpen,
                                                    tr("Plugin Files (*.zip)"),
                                                    NULL,
                                                    options);
@@ -217,7 +229,7 @@ void PluginWidget::addPlugin()
     PluginDB *pdb = PluginDB::instance();
 
     PluginDB::AddResult ar = pdb->add_plugin(zippath);
-    
+
     // Save the last folder used for adding plugin zips
     m_LastFolderOpen = QFileInfo(zippath).absolutePath();
     SettingsStore settings;
@@ -228,8 +240,27 @@ void PluginWidget::addPlugin()
             Utility::DisplayStdWarningDialog(tr("Error: Plugin plugin.xml is invalid or not supported on your operating system."));
             return;
         case PluginDB::AR_EXISTS:
+        //---------------------------- modified: reInstallPlugin -----------------------------
+        /*
             Utility::DisplayStdWarningDialog(tr("Warning: A plugin by that name already exists"));
             return;
+        */
+        {
+            QMessageBox msgBox;
+            msgBox.setIcon(QMessageBox::Warning);
+            msgBox.setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+            msgBox.setWindowTitle(tr("Add Plugin"));
+            msgBox.setText(tr("A plugin by that name already exists, are you sure to overwrite this plugin?"));
+            QPushButton* yesButton = msgBox.addButton(QMessageBox::Yes);
+            QPushButton* noButton = msgBox.addButton(QMessageBox::No);
+            msgBox.setDefaultButton(noButton);
+            msgBox.exec();
+            if (msgBox.clickedButton() == yesButton) {
+                reInstallPlugin(zippath);
+            }
+            return;
+        }
+        //-------------------------------------------------------------------------------------
         case PluginDB::AR_UNZIP:
             Utility::DisplayStdWarningDialog(tr("Error: Plugin Could Not be Unzipped."));
             return;
@@ -262,6 +293,7 @@ void PluginWidget::addPlugin()
     foreach(QComboBox* cb, m_qlcbxs) {
         cb->addItem(pluginname);
     }
+    addNewPluginAssignment(pluginname); // modified: addNewPluginAssignment
     ui.pluginTable->setSortingEnabled(true);
 }
 
@@ -275,7 +307,13 @@ void PluginWidget::removePlugin()
         Utility::DisplayStdWarningDialog(tr("Nothing is Selected."));
         return;
     }
-
+    //--- modified: removeSelectedPlugins ---
+    int column_count = ui.pluginTable->columnCount();
+    if (itemlist.size() > column_count) {
+        removeSelectedPlugins();
+        return;
+    }
+    //---------------------------------------
     ui.pluginTable->setSortingEnabled(false);
 
     PluginDB *pdb = PluginDB::instance();
@@ -375,7 +413,7 @@ void PluginWidget::SetPy3()
 {
     QFileDialog::Options options = Utility::DlgOptions();
 
-    QString name = QFileDialog::getOpenFileName(this, 
+    QString name = QFileDialog::getOpenFileName(this,
                                                 tr("Select Interpreter"),
                                                 QString(),
                                                 QString(),

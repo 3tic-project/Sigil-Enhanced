@@ -28,7 +28,7 @@
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
 
-const QString VERSION_NUMBERS = "(\\d+)\\.(\\d+)\\.(\\d+)";
+const QString VERSION_NUMBERS = "(\\d+)\\.(\\d+)\\.(\\d+)\\.(X\\d+[A-Z]?)"; // modified: version
 const QString SIGIL_VERSION   = QString(SIGIL_FULL_VERSION);
 const QString SIGIL_HOMEPAGE  = "https://sigil-ebook.com/sigil";
 const QString GNU_LICENSE     = "http://www.gnu.org/licenses/gpl-3.0-standalone.html";
@@ -44,10 +44,11 @@ About::About(QWidget *parent)
     ui.lbLoadedQtDisplay->setText(QString(qVersion()));
     QRegularExpression version_number(VERSION_NUMBERS);
     QRegularExpressionMatch mo = version_number.match(SIGIL_VERSION);
-    QString version_text = QString("%1.%2.%3")
+    QString version_text = QString("%1.%2.%3.%4") // modified: version
                            .arg(mo.captured(1).toInt())
                            .arg(mo.captured(2).toInt())
-                           .arg(mo.captured(3).toInt());
+                           .arg(mo.captured(3).toInt())
+                           .arg(mo.captured(4));
     ui.lbVersionDisplay->setText(version_text);
     QString credits = "<h4>" + tr("Developers(s)") + "</h4>" +
                       "<ul>" +

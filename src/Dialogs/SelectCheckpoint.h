@@ -30,7 +30,7 @@
 #include "ui_SelectCheckpoint.h"
 
 /**
- * The dialog for selecting from a list of available 
+ * The dialog for selecting from a list of available
  * checkpoint tags.  Each tag includes some descriptive text
  */
 class SelectCheckpoint : public QDialog

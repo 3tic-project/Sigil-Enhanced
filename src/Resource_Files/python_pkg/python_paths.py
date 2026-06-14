@@ -17,7 +17,7 @@ else:
     py_lib_temp = '${PYTHON_LIBRARIES}'
     py_inc = '${PYTHON_INCLUDE_DIRS}'
 
-if not sys.platform.startswith('win') and not sys.platform.startswith('darwin'):    
+if not sys.platform.startswith('win') and not sys.platform.startswith('darwin'):
     if not py_lib_temp.endswith('.1.0'):
         py_lib_temp = py_lib_temp + '.1.0'
 py_lib = py_lib_temp

@@ -111,6 +111,7 @@
     <addaction name="actionCut"/>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
+    <addaction name="actionPasteRichText"/>
     <addaction name="actionPasteClipboardHistory"/>
     <addaction name="actionDeleteLine"/>
     <addaction name="separator"/>
@@ -195,6 +196,8 @@
      <addaction name="actionClip59"/>
      <addaction name="actionClip60"/>
     </widget>
+	<addaction name="actionSplitTagOrAddBreak"/><!--modified-->
+    <addaction name="actionMergeNextElement"/><!--modified-->
     <addaction name="actionInsertSGFSectionMarker"/>
     <addaction name="separator"/>
     <addaction name="actionInsertFile"/>
@@ -235,6 +238,7 @@
      <addaction name="actionHeading5"/>
      <addaction name="actionHeading6"/>
      <addaction name="actionHeadingNormal"/>
+     <addaction name="actionHeadingDivision"/>
      <addaction name="separator"/>
      <addaction name="actionHeadingPreserveAttributes"/>
     </widget>
@@ -387,6 +391,8 @@
      <addaction name="actionRemoveNavFromSpine"/>
      <addaction name="actionAddNavToSpine"/>
      <addaction name="actionAddNavToSpineNonLinear"/>
+     <addaction name="actionEpub3To2"/>
+     <addaction name="actionEpub2To3"/>
     </widget>
     <addaction name="actionAddCover"/>
     <addaction name="actionMetaEditor"/>
@@ -402,6 +408,7 @@
     <addaction name="menuReformatHTML"/>
     <addaction name="menuEPUB3Tools"/>
     <addaction name="actionWellFormedCheckEpub"/>
+	<addaction name="actionNormalizedOPF"/>
     <addaction name="actionValidateStylesheetsWithW3C"/>
     <addaction name="actionReports"/>
     <addaction name="separator"/>
@@ -463,7 +470,7 @@
    <addaction name="actionNewEpub2"/>
    <addaction name="actionNewEpub3"/>
   </widget>
-  
+
   <widget class="QToolBar" name="toolBarFileActions">
    <property name="windowTitle">
     <string>File</string>
@@ -535,7 +542,7 @@
    <addaction name="actionUndo"/>
    <addaction name="actionRedo"/>
   </widget>
-   
+
   <widget class="QToolBar" name="toolBarTextManip">
    <property name="windowTitle">
     <string>Edit</string>
@@ -549,9 +556,10 @@
    <addaction name="actionCut"/>
    <addaction name="actionCopy"/>
    <addaction name="actionPaste"/>
+   <addaction name="actionPasteRichText"/>
    <addaction name="actionRemoveTagPair"/>
   </widget>
-  
+
   <widget class="QToolBar" name="toolBarXEditor">
    <property name="windowTitle">
     <string>External Editor</string>
@@ -564,7 +572,7 @@
    </attribute>
    <addaction name="actionXEditor"/>
   </widget>
-  
+
   <widget class="QToolBar" name="toolBarFind">
    <property name="windowTitle">
     <string>Find</string>
@@ -709,6 +717,7 @@
     <addaction name="actionHeading5"/>
     <addaction name="actionHeading6"/>
     <addaction name="actionHeadingNormal"/>
+	<addaction name="actionHeadingDivision"/>
   </widget>
   </widget>
   <widget class="QToolBar" name="toolBarTextFormats">
@@ -1002,6 +1011,23 @@
     <string>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Paste&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Pastes the content from the clipboard into the book.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="actionPasteRichText">
+   <property name="icon">
+    <iconset resource="../Resource_Files/main/main.qrc">
+     <normaloff>:/main/edit-paste-rich.svg</normaloff>:/main/edit-paste-rich.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Paste Rich Text</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Paste Rich Text&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Pastes the rich text from the clipboard into the book.&lt;/p&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+V</string>
    </property>
   </action>
   <action name="actionInsertClosingTag">
@@ -1317,9 +1343,6 @@
     <string>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Split At Cursor&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Split the current file into two files using your cursor location as the dividing point.&lt;/p&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Return</string>
    </property>
   </action>
   <action name="actionInsertFile">
@@ -1843,6 +1866,30 @@
     <string>Ctrl+Shift+Return</string>
    </property>
   </action>
+  <!--modified-->
+  <action name="actionSplitTagOrAddBreak">
+	<property name="text">
+		<string>Split Tag or Add Break</string>
+	</property>
+	<property name="toolTip">
+		<string>Split at tag or add a new blank line according where the cursor positon at.</string>
+	</property>
+	<property name="shortcut">
+		<string>Ctrl+Return</string>
+	</property>
+  </action>
+  <!--modified-->
+  <action name="actionMergeNextElement">
+	<property name="text">
+		<string>Merge with Next Element</string>
+	</property>
+	<property name="toolTip">
+		<string>Merge the current element which the next element.</string>
+	</property>
+	<property name="shortcut">
+		<string>Ctrl+Alt+Return</string>
+	</property>
+  </action>
   <action name="actionUserGuide">
    <property name="text">
     <string>User &amp;Guide...</string>
@@ -1869,6 +1916,14 @@
    <property name="toolTip">
     <string>Tutorials</string>
    </property>
+  </action>
+  <action name="actionNormalizedOPF">
+    <property name="text">
+	    <string>Normalized OPF</string>
+    </property>
+    <property name="toolTip">
+	    <string>Well formed check and normalized the OPF.</string>
+    </property>
   </action>
   <action name="actionWellFormedCheckEpub">
    <property name="text">
@@ -2813,6 +2868,24 @@
     <string>Ctrl+7</string>
    </property>
   </action>
+  <action name="actionHeadingDivision">
+	<property name="checkable">
+		<bool>true</bool>
+	</property>
+	<property name="text">
+		<string>&amp;Division</string>
+	</property>
+	<property name="toolTip">
+		<string>
+			&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Division&lt;/b&gt;&lt;/p&gt;
+
+			&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a division element.&lt;/p&gt;
+		</string>
+	</property>
+	<property name="shortcut">
+		<string>Ctrl+8</string>
+	</property>
+  </action>
   <action name="actionHeadingPreserveAttributes">
    <property name="checkable">
     <bool>true</bool>
@@ -3003,7 +3076,7 @@
     <string>Run Automate List 1</string>
    </property>
   </action>
-  
+
   <action name="actionAutomate2">
    <property name="icon">
     <iconset resource="../Resource_Files/main/main.qrc">
@@ -3013,7 +3086,7 @@
     <string>Run Automate List 2</string>
    </property>
   </action>
-  
+
   <action name="actionAutomate3">
    <property name="icon">
     <iconset resource="../Resource_Files/main/main.qrc">
@@ -3023,7 +3096,7 @@
     <string>Run Automate List 3</string>
    </property>
   </action>
-    
+
   <action name="actionManage_AutomateLists">
    <property name="text">
     <string>Manage Automation Lists</string>
@@ -3139,7 +3212,9 @@
   </action>
   <action name="actionMendPrettifyHTML">
    <property name="text">
-    <string>Mend and &amp;Prettify All HTML Files</string>
+    <!--modified-->
+    <!--<string>Mend and &amp;Prettify All HTML Files</string>-->
+    <string>Prettify All HTML Files</string>
    </property>
   </action>
   <action name="actionMendHTML">
@@ -3185,6 +3260,16 @@
   <action name="actionAddNavToSpine">
    <property name="text">
     <string>Add Nav to Reading Order</string>
+   </property>
+  </action>
+  <action name="actionEpub3To2">
+   <property name="text">
+    <string>Epub3 to Epub2</string>
+   </property>
+  </action>
+  <action name="actionEpub2To3">
+   <property name="text">
+    <string>Epub2 to Epub3</string>
    </property>
   </action>
   <action name="actionCommit">

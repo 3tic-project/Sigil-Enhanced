@@ -77,7 +77,7 @@ public:
     bool CutEnabled();
     bool CopyEnabled();
     bool PasteEnabled();
-
+    bool PasteRichTextEnabled(); // modified: AddPasteRichText
     bool DeleteLineEnabled();
 
     bool RemoveFormattingEnabled();
@@ -93,7 +93,7 @@ public:
 
     bool InsertIdEnabled();
     bool InsertRoleEnabled();
-    
+
     bool InsertHyperlinkEnabled();
 
     bool InsertSpecialCharacterEnabled();
@@ -112,7 +112,7 @@ public:
     int GetCursorLine() const;
     int GetCursorColumn() const;
     int GetCursorCodepoint() const;
-  
+
     float GetZoomFactor() const;
 
     void SetZoomFactor(float new_zoom_factor);
@@ -413,6 +413,13 @@ private:
     bool m_defaultCaretLocationToTop;
 
     int m_LastPosition;
+
+/* ------------------- modified: FlowTabExt ------------------------ */
+public slots:
+    void HeadingStylePlus(const QString& heading_type, bool preserve_attributes); // modified: Add Lables On Multiple Lines
+    void PasteRichText(); // modified: AddPasteRichText
+    void SplitTagOrAddBreak();//modified: SplitTagOrAddBreak
+    void MergeNextElement();//modified: MergeNextElement
 };
 
 #endif // FLOWTAB_H

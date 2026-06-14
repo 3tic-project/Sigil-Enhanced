@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
 **
 **  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2011      John Schember <john@nachtimwald.com>
@@ -346,7 +346,15 @@ void KeyboardShortcutsWidget::handleKeyEvent(QKeyEvent *event)
     if (result != 0) {
         // Dead keys (ie. diacritics should not be used in Keyboard Shortcuts
         if (isDeadKey) return;
-        ui.targetEdit->setText(QKeySequence(result | state).toString(QKeySequence::PortableText));
+        //ui.targetEdit->setText(QKeySequence(result | state).toString(QKeySequence::PortableText));
+        //----------------------------修改：快捷键设置BUG：无法正确设置Return键的BUG-------------------------
+        QString PortableText = QKeySequence(result | state).toString(QKeySequence::PortableText);
+        if (result == 13) {
+            PortableText = PortableText.replace(QChar(13), "Return");
+        }
+        //ui.targetEdit->setText(QKeySequence(result | state).toString(QKeySequence::PortableText));
+        ui.targetEdit->setText(PortableText);
+        //---------------------------------------------------------------------------------------------------
     } else {
         if ((state & Qt::ShiftModifier) && letter.toUpper() == letter.toLower()) {
             // remove the shift since it is included in the keycode

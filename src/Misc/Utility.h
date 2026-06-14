@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
 **
 **  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2016-2020 Doug Massay
@@ -209,7 +209,7 @@ public:
 
     // Generate relative path to destination from starting directory path
     // Both paths should be absolute and preferably cannonical
-    static QString relativePath(const QString & destination, const QString & starting_dir); 
+    static QString relativePath(const QString & destination, const QString & starting_dir);
 
     // works with absolute or book paths
     static QString longestCommonPath(const QStringList& filepaths, const QString& sep);
@@ -224,9 +224,9 @@ public:
     static QString buildRelativePath(const QString &from_file_bkpath, const QString &to_file_bkpath);
 
     static std::pair<QString, QString> parseRelativeHREF(const QString &relative_href);
-    
+
     static QString buildRelativeHREF(const QString &apath, const QString &afrag);
-    
+
     static QString startingDir(const QString &file_bookpath);
 
     // sorting string pairs
@@ -244,7 +244,7 @@ public:
 
     // return the proper background color for QWebEngineView
     static QColor WebViewBackgroundColor(bool followpref = false);
-    
+
     // return the qbrushes for ValidationResultsView
     static QBrush ValidationResultBrush(const Val_Msg_Type &valres);
 
@@ -253,7 +253,7 @@ public:
 
     // create a line of data in csv format
     static QString createCSVLine(const QStringList &data);
-    
+
     // Generate a Unique Id given a root id and Used Set
     static QString GenerateUniqueId(const QString &id, const QSet<QString>& Used);
 
@@ -285,7 +285,24 @@ public:
     static QString CleanFileName(const QString &name);
 
     static QFileDialog::Options DlgOptions(const QString special_case = QString());
+
+    // -------------------------- modified: my additions ----------------------------------
+
+    static QString RegExpSub(const QString& regexp, const QString& alt_pattern, const QString& text, int max_count = 0); // modified: Prettify xhtml, Regexp, re_sub
+
+    static QString trimmed(const QString& text, const QString& chars);
+
+    static QStringList walkDirs(QString root);//modified: used by correctOPF, walk direct files;
+
+    static QString ExtToMTypeMap(QString& ext);
+
+    struct TrimmedIndex {
+        int before;
+        int after;
+    };
+    static TrimmedIndex StringTrimmedIndex(const QString& text);
+
+    static QString ReadUnicodeTextFile_M(const QString& fullfilepath);
 };
 #endif // UTILITY_H
-
 

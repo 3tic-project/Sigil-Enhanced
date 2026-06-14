@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
 **
 **  Copyright (C) 2015-2025 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2011-2012 John Schember <john@nachtimwald.com>
@@ -98,7 +98,8 @@ FindReplace::FindReplace(MainWindow *main_window)
       m_MinimalMatchCheckAction(nullptr),
       m_AutoTokeniseCheckAction(nullptr),
       m_UnicodePropertyCheckAction(nullptr),
-      m_menu(nullptr)
+      m_menu(nullptr),
+      m_CF_RestartFlag(false) //修改：循环查找BUG
 {
     ui.setupUi(this);
     FindReplaceQLineEdit *find_ledit = new FindReplaceQLineEdit(this);
@@ -352,6 +353,7 @@ void FindReplace::RestartClicked()
 {
     m_PreviousSearch.clear();
     m_RestartPerformed = true;
+    m_CF_RestartFlag = true;  // 修改：循环查找BUG：当前页面查找的重开始标志
     ShowMessage(tr("Search will restart"));
 }
 
@@ -509,7 +511,7 @@ bool FindReplace::DoReplaceNext()
     bool found = Replace();
     m_SearchRunning = false;
     return found;
-    
+
 }
 
 bool FindReplace::DoReplacePrevious()
@@ -530,7 +532,7 @@ bool FindReplace::Find()
         SetStartingResource(true);
         SetPreviousSearch();
     }
-    
+
     bool found = false;
 
     if (GetSearchDirection() == FindReplace::SearchDirection_Up) {
@@ -568,7 +570,7 @@ int FindReplace::Count()
         SetStartingResource(true);
         SetPreviousSearch();
     }
-    
+
     if (!IsValidFindText()) {
         return 0;
     }
@@ -880,6 +882,13 @@ bool FindReplace::FindText(Searchable::Direction direction)
     // bool had_focus = HasFocus();
     SetCodeViewIfNeeded();
 
+    // 修改：循环查找BUG：点“重新查找”时忽略查找偏移值
+    bool ignore_offset = false;
+    if (m_CF_RestartFlag) {
+        ignore_offset = true;
+        m_CF_RestartFlag = false;
+    }
+
     if (isWhereCF() || m_LookWhereCurrentFile || IsMarkedText()) {
         Searchable *searchable = GetAvailableSearchable();
 
@@ -1175,7 +1184,7 @@ QList <Resource *> FindReplace::GetFilesToSearch(bool force_all)
         bool skip_resource = s < c;
         foreach (Resource *resource, all_resources) {
             if (! skip_resource) resources.append(resource);
-            // if the last resource was the starting resource disable skipping for the next 
+            // if the last resource was the starting resource disable skipping for the next
             if (resource == m_StartingResource) skip_resource = false;
             // if the last resource was the current resource enable skipping for the next
             if (resource == current_resource) skip_resource = true;
@@ -1281,14 +1290,24 @@ bool FindReplace::FindInAllFiles(Searchable::Direction direction)
     if (!found) {
         Resource *containing_resource = GetNextContainingResource(direction);
         DBG qDebug() << " .. FindInAllFiles GetNextContainingResource" << containing_resource;
-
+        // --------------------------------------------- 修改：循环查找BUG -----------------------------------------------------
+        /*
         if (containing_resource) {
+            DBG qDebug() << " .. which is " << containing_resource->GetRelativePath();*/
+
+        // 改变 GetNextContainingResource 功能，当筛选资源存在能匹配到的资源，则循环返回那些资源，匹配一周后不再返回nullptr。
+        if (containing_resource && current_resource != containing_resource) {
             DBG qDebug() << " .. which is " << containing_resource->GetRelativePath();
 
+            if (containing_resource == m_StartingResource) { // 搜索抵达起始页，当 Wrap 开启时进入下个循环，否则结束搜索。
+                if (m_OptionWrap) { m_InRemainder = false; }
+                else { return false; }
+            }
+        // ---------------------------------------------------------------------------------------------------------------------
             // Save if editor or F&R has focus
             bool has_focus_find = HasFocusFind();
             bool has_focus_replace = HasFocusReplace();
-            
+
             // Save selected resources since opening tabs changes selection
             QList<Resource *>selected_resources = m_MainWindow->GetBookBrowserSelectedResources();
 
@@ -1312,6 +1331,12 @@ bool FindReplace::FindInAllFiles(Searchable::Direction direction)
                 found = searchable->FindNext(GetSearchRegex(), direction, m_SpellCheck, true, false);
             }
         }
+        // ---------------------------修改：循环查找BUG：多文件搜索时的循环匹配----------------------------
+        else if (m_OptionWrap && containing_resource == current_resource) {
+            m_InRemainder = false;
+            found = searchable->FindNext(GetSearchRegex(), direction, m_SpellCheck, true, false);
+        }
+        // ------------------------------------------------------------------------------------------------
 
         // } else {
         //     if (searchable) {
@@ -1330,7 +1355,7 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
     Resource *current_resource = GetCurrentResource();
     Resource *starting_resource = NULL;
     bool need_to_check_assigned_starting_resource = false;
-    
+
     // if CurrentFile is the same type as LookWhere, set it as the starting resource
     if (isWhereHTML() && (current_resource->Type() == Resource::HTMLResourceType)) {
         starting_resource = current_resource;
@@ -1365,7 +1390,8 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
     }
 
     Resource *next_resource = starting_resource;
-
+    //------------------------------------ 修改：循环查找BUG ----------------------------------------
+    /*
     if (need_to_check_assigned_starting_resource) {
         DBG qDebug() << "Trying newly assigned first resource: " << next_resource->GetRelativePath();
         if (next_resource) {
@@ -1377,24 +1403,54 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
 
     // handle list of resources to search of size 1 as special case
     if (resources.count() == 1) {
-            /* already searched it so done */
+            // already searched it so done
             return NULL;
         }
     }
-    
+
     // this will only work if the resource list has at least 2 elements
     // as it relies on list order to know if already searched or not
     // since it keeps no state itself
     bool passed_starting_resource = false;
-
+    */
+    bool passed_starting_resource = false;
+    if (need_to_check_assigned_starting_resource) {
+        DBG qDebug() << "Trying newly assigned first eesource: " << next_resource->GetRelativePath();
+        if (next_resource) {
+            if (ResourceContainsCurrentRegex(next_resource)) {
+                DBG qDebug() << "Found it";
+                return next_resource;
+            }
+        }
+        // handle list of resources to search of size 1 as special case
+        if (resources.count() == 1) {
+            /* already searched it so done */
+            return NULL;
+        }
+        passed_starting_resource = true;
+    }
+    //---------------------------------------------------------------------------------------------------
+    //-----------------------------------修改：循环查找BUG----------------------------------------------
+    /*
     while (!passed_starting_resource || (next_resource != starting_resource)) {
-        
+
         next_resource = GetNextResource(next_resource, direction);
 
         if (next_resource == starting_resource) {
             return NULL;
+        }*/
+    while (true) {
+        next_resource = GetNextResource(next_resource, direction);
+        //修改：改变 GetNextContainingResource 功能，可返回搜索起始页面
+        if (next_resource == starting_resource) {
+            if (!passed_starting_resource && ResourceContainsCurrentRegex(next_resource)) {
+                return next_resource;
+            }
+            else {
+                return NULL;
+            }
         }
-
+    //---------------------------------------------------------------------------------------------------
         if (next_resource) {
             DBG qDebug() << "Trying Next Resource: " << next_resource->GetRelativePath();
             if (ResourceContainsCurrentRegex(next_resource)) {
@@ -1417,7 +1473,8 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
 
 Resource *FindReplace::GetNextResource(Resource *current_resource, Searchable::Direction direction)
 {
-    QList <Resource *> resources = GetFilesToSearch();
+    //QList <Resource *> resources = GetFilesToSearch();
+    QList <Resource*> resources = GetFilesToSearch(true); // 修改：循环查找BUG：GetFilesToSearch强制返回所有筛选到的资源。
     int max_reading_order       = resources.count() - 1;
     int current_reading_order   = 0;
     int next_reading_order      = 0;
@@ -1759,7 +1816,7 @@ void FindReplace::SaveSearchAction()
 
 void FindReplace::LoadSearchByName(const QString &name)
 {
-    // callers to SearchEditorModel's GetEntryFromName receive a searchEntry pointer 
+    // callers to SearchEditorModel's GetEntryFromName receive a searchEntry pointer
     // created by a call to new and must take ownership and so must clean up after themselves
     SearchEditorModel::searchEntry * search_entry = SearchEditorModel::instance()->GetEntryFromName(name);
     if (search_entry) {
@@ -1793,7 +1850,7 @@ void FindReplace::SetStartingResource(bool update_position)
 {
     bool manual_restart = m_RestartPerformed;
     Q_UNUSED(manual_restart);
-    
+
     m_RestartPerformed = false;
 
     if (isWhereCF() || m_LookWhereCurrentFile || IsMarkedText()) return;
@@ -1823,7 +1880,7 @@ void FindReplace::SetStartingResource(bool update_position)
     // All new searches running from the Saved Search Dialog should start
     // new searches at the top (or bottom) of the current file if it is in the set.
     // Also, when the user hits Restart, the next search should start at the top (bottom)
-    
+
     // if (m_IsSearchGroupRunning || manual_restart ) {
     if (m_IsSearchGroupRunning) {
         if ( m_StartingResource == current_resource ) {
@@ -1886,7 +1943,7 @@ void FindReplace::ReplaceCurrentSearch()
     }
 
     m_IsSearchGroupRunning = true;
-    
+
     SearchEditorModel::searchEntry * search_entry = search_entries.first();
     LoadSearch(search_entry);
     ReplaceCurrent();
@@ -2043,7 +2100,7 @@ void FindReplace::ClearHistory()
     if (button_pressed == QMessageBox::Yes) {
         ui.cbFind->clear();
         ui.cbReplace->clear();
-    } 
+    }
 }
 
 void FindReplace::TokeniseSelection()
@@ -2240,7 +2297,7 @@ void FindReplace::ExtendUI()
 
     // setup up regex options toolbutton and menu
     QMenu * m_menu = new QMenu();
-    
+
     m_DotAllCheckAction = new QAction(tr("Dot All"), m_menu);
     m_DotAllCheckAction->setCheckable(true);
     m_DotAllCheckAction->setEnabled(true);
@@ -2292,9 +2349,9 @@ void FindReplace::ValidateRegex()
         QString emsg;
         if (!rex.isValid()) {
             emsg = tr("Invalid Regex:") + " " + PCREErrors::instance()->GetError(rex.getError(),"");
-            emsg = emsg + "\n" + tr("offset:") + " " + QString::number(rex.getErrPos() - offset_correction); 
+            emsg = emsg + "\n" + tr("offset:") + " " + QString::number(rex.getErrPos() - offset_correction);
             ui.cbFind->setToolTip(emsg);
-            ui.revalid->setText(INVALID); 
+            ui.revalid->setText(INVALID);
         } else {
             ui.cbFind->setToolTip(tr("Valid Regex"));
             ui.revalid->setText(VALID);
@@ -2329,7 +2386,7 @@ void FindReplace::ManagePythonFunction()
     } else {
         functionName = "";
     }
-    
+
     QMap<QString, QVariant> funcmap = SearchUtils::ReadFuncDictfromJSONFile(fullfilepath);
     PythonFunctionEditor pfe(funcmap, functionName, this);
     connect(&pfe, SIGNAL(UseFunctionRequest(const QString&)), this, SLOT(SetReplace(const QString&)));

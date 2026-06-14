@@ -37,6 +37,7 @@
 #include "PreferenceWidgets/SpellCheckWidget.h"
 #include "PreferenceWidgets/PreserveEntitiesWidget.h"
 #include "PreferenceWidgets/PluginWidget.h"
+#include "PreferenceWidgets/ModifiedVerPrefsWidget.h" // modified: ModifiedVerPrefsWidget
 
 static const QString SETTINGS_GROUP = "preferences_dialog";
 
@@ -47,6 +48,7 @@ Preferences::Preferences(QWidget *parent) :
     m_restartSigil(false),
     m_refreshClipHistoryLimit(false),
     m_refreshBookBrowser(false),
+    m_refreshToolBarPlugins(false), // modified: RefreshToolBarPlugins
     m_reloadPreview(false)
 {
     ui.setupUi(this);
@@ -54,6 +56,9 @@ Preferences::Preferences(QWidget *parent) :
     // Create and load all of our preference widgets.;
     appendPreferenceWidget(new AppearanceWidget);
     appendPreferenceWidget(new GeneralSettingsWidget);
+    //--------- modified: ModifiedVerPrefsWidget ------------
+    appendPreferenceWidget(new ModifiedVerPrefsWidget);
+    //-------------------------------------------------------
     appendPreferenceWidget(new KeyboardShortcutsWidget);
     appendPreferenceWidget(new LanguageWidget);
     appendPreferenceWidget(new SpellCheckWidget);
@@ -106,6 +111,10 @@ void Preferences::saveSettings()
 
             if (widgetResult & PreferencesWidget::ResultAction_ReloadPreview)
                 m_reloadPreview = true;
+            //-------------------- modified: RefreshToolBarPlugins ---------------
+            if (widgetResult & PreferencesWidget::ResultAction_RefreshToolBarPlugins)
+                m_refreshToolBarPlugins = true;
+            //--------------------------------------------------------------------
         }
     }
 
@@ -185,6 +194,13 @@ bool Preferences::isReloadPreviewRequired()
 {
     return m_reloadPreview;
 }
+
+//------------ modified: RefreshToolBarPlugins -------------
+bool Preferences::isRefreshToolBarPluginsRequired()
+{
+    return m_refreshToolBarPlugins;
+}
+//----------------------------------------------------------
 
 void Preferences::openPreferencesLocation()
 {

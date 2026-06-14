@@ -76,7 +76,7 @@ public:
     QString getPluginType() { return m_pluginType; }
     QString getResult() { return m_result; }
     int getValidationErrorCount() { return m_validationResults.count(); }
-                       
+
 public slots:
     int exec(const QString &name);
     void reject();
@@ -145,7 +145,9 @@ private:
     static const QStringList CHANGESTAGS;
 
     Ui::PluginRunner ui;
-
+    //---------------- modified: reInstallPlugin ---------------
+    void reInstallPlugin();
+    //----------------------------------------------------------
 };
 
 #endif

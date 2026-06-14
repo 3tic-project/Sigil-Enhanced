@@ -2,10 +2,10 @@
 #define _PYOBJECTPTR_H
 
 /*
- *  Copyright (C) 2015 Kevin B. Hendricks Stratford, ON, Canada 
+ *  Copyright (C) 2015 Kevin B. Hendricks Stratford, ON, Canada
  *  Much Simplified Version adapted from the PythonQt project.
  *  Original license and info provided below:
- * 
+ *
  *  Copyright (C) 2010 MeVis Medical Solutions AG All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
@@ -54,17 +54,17 @@ public:
     setObject(p.object());
   }
 
-  // If the given variant holds a PythonQtObjectPtr, extract the value from it 
+  // If the given variant holds a PythonQtObjectPtr, extract the value from it
   // and hold onto the reference. This results in an increment of the reference count.
   PyObjectPtr(const QVariant& variant):_object(NULL) {
       fromVariant(variant);
   }
 
   PyObjectPtr(PyObject* o);
-  
+
   ~PyObjectPtr();
-  
-  // If the given variant holds a PyObjectPtr, extract the value from it and hold 
+
+  // If the given variant holds a PyObjectPtr, extract the value from it and hold
   // onto the reference. This results in an increment of the reference count.
   bool fromVariant(const QVariant& variant);
 
@@ -109,7 +109,7 @@ public:
 
   //! sets the object and passes the ownership (stealing the reference, in Python slang)
   void setNewRef(PyObject* o);
-  
+
   PyObject* object() const {
     return _object;
   }
@@ -117,7 +117,7 @@ public:
 protected:
 
   void setObject(PyObject* o);
-  
+
 private:
   PyObject* _object;
 };

@@ -73,7 +73,7 @@ PluginRunner::PluginRunner(TabManager *tabMgr, QWidget *parent)
     m_book = m_mainWindow->GetCurrentBook();
     m_bookBrowser = m_mainWindow->GetBookBrowser();
     m_bookRoot = m_book->GetFolderKeeper()->GetFullPathToMainFolder();
-    
+
     // set default font obfuscation algorithm to use
     // ADOBE_FONT_ALGO_ID or IDPF_FONT_ALGO_ID ??
     QList<Resource *> fonts = m_book->GetFolderKeeper()->GetResourceListByType(Resource::FontResourceType);
@@ -155,7 +155,7 @@ int PluginRunner::exec(const QString &name)
         foreach(QString engine, engineList) {
             m_enginePath = pdb->get_engine_path(engine);
             if (!m_enginePath.isEmpty()) break;
-        } 
+        }
         if (m_enginePath.isEmpty()) {
             Utility::DisplayStdErrorDialog(tr("Error: Interpreter") + " " + m_engine + " " + tr("has no path set"));
             reject();
@@ -342,7 +342,7 @@ void PluginRunner::startPlugin()
                       << "PYTHONINSPECT" << "PYTHONUNBUFFERED" << "PYTHONVERBOSE" << "PYTHONCASEOK"
                       << "PYTHONDONTWRITEBYTECODE" << "PYTHONHASHSEED" << "PYTHONNOUSERSITE" << "PYTHONUSERBASE"
                       << "PYTHONWARNINGS" << "PYTHONFAULTHANDLER" << "PYTHONTRACEMALLOC" << "PYTHONASYNCIODEBUG"
-                      << "PYTHONMALLOC" << "PYTHONMALLOCSTATS" << "PYTHONLEGACYWINDOWSFSENCODING" 
+                      << "PYTHONMALLOC" << "PYTHONMALLOCSTATS" << "PYTHONLEGACYWINDOWSFSENCODING"
                       << "PYTHONLEGACYWINDOWSIOENCODING";
         foreach(QString envvar, vars_to_unset) {
             env.remove(envvar);
@@ -453,7 +453,7 @@ void PluginRunner::pluginFinished(int exitcode, QProcess::ExitStatus exitstatus)
     if (m_result == "crashed" ||
         m_result == "failed" ||
         m_result == "cancelled") return;
-                           
+
     ui.statusLbl->setText(tr("Status: finished"));
 
     if (!processResultXML()) {
@@ -648,7 +648,7 @@ bool PluginRunner::processResultXML()
                 if (reader.name().compare(QLatin1String("deleted")) == 0) {
                     m_filesToDelete.append(fileinfo);
                     if (mime == "application/xhtml+xml") {
-                        // only count deleting xhtml files that are 
+                        // only count deleting xhtml files that are
                         // currently resources (skip unmanifested files)
                         if (m_xhtmlFiles.contains(href)) {
                             m_xhtml_net_change--;
@@ -811,6 +811,7 @@ bool PluginRunner::checkIsWellFormed()
 bool PluginRunner::deleteFiles(const QStringList &files)
 {
     QList <Resource *> tabResources=m_tabManager->GetTabResources();
+    QList <Resource*> resourcesToBeDeleted;   //modified: BulkRemoveResources
     bool changes_made = false;
     ui.statusLbl->setText(tr("Status: cleaning up - deleting files"));
     foreach (QString fileinfo, files) {
@@ -850,8 +851,11 @@ bool PluginRunner::deleteFiles(const QStringList &files)
             if (tabResources.contains(resource)) {
                 m_tabManager->CloseTabForResource(resource);
             }
-            m_book->GetFolderKeeper()->RemoveResource(resource);
-            resource->Delete();
+            // -------------------------- modified: BulkRemoveResources --------------------------
+            //m_book->GetFolderKeeper()->RemoveResource(resource);
+            //resource->Delete();
+            resourcesToBeDeleted << resource;    // Add resouces to the group to be deleted
+            // -------------------------------------------------------------------
             changes_made = true;
         } else {
            // try to remove non-manifested, non-resource files inside book folder
@@ -864,6 +868,7 @@ bool PluginRunner::deleteFiles(const QStringList &files)
            }
         }
     }
+    m_book->GetFolderKeeper()->BulkRemoveResources(resourcesToBeDeleted); //modified: BulkRemoveResources
     if (changes_made) {
         m_bookBrowser->ResourcesDeleted();
     }

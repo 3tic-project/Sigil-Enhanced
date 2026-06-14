@@ -55,6 +55,9 @@ public:
 
     void setUpdateOPF(bool enable=true) { m_UpdateOPF = enable; };
 
+    //-------------- modified: BulkAddResource ----------------
+    void setDoNotUpdateOPF(bool notUpdate);
+    //---------------------------------------------------------
 private:
 
     // Loads the source code into the Book
@@ -88,7 +91,7 @@ private:
     bool m_IgnoreDuplicates;
 
     QString m_CachedSource;
-   
+
     QString m_EpubVersion;
 
     QStringList m_AddedBookPaths;

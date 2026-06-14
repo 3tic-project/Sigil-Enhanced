@@ -68,6 +68,8 @@
 #include "ViewEditors/CodeViewEditor.h"
 #include "ViewEditors/LineNumberArea.h"
 #include "sigil_constants.h"
+#include "Parsers/XhtmlFormatParser.h" // modified: XHTML Fomat Configure
+#include "Misc/SettingsStoreExtend.h" // modified: XHTML Fomat Configure
 
 const int PROGRESS_BAR_MINIMUM_DURATION = 1000;
 const QString BREAK_TAG_INSERT    = "<hr class=\"sigil_split_marker\" />";
@@ -113,7 +115,10 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     m_MarkedTextStart(-1),
     m_MarkedTextEnd(-1),
     m_ReplacingInMarkedText(false),
-    m_regen_taglist(true)
+    m_regen_taglist(true),
+    // --- modified: keyboard_event ---
+    m_hightype(high_type)
+    // --------------------------------
 {
     if (!qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP")) setAcceptDrops(false);
     if (high_type == CodeViewEditor::Highlight_XHTML) {
@@ -126,7 +131,14 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     } else {
         m_Highlighter = NULL;
     }
-
+    //--------- modified: CodeCompleterParser ------------
+    if (high_type == CodeViewEditor::Highlight_XHTML) {
+        m_completeParser = new CodeCompleterParser(this,CodeCompleterParser::FileType::HTML);
+    }
+    else if (high_type == CodeViewEditor::Highlight_CSS) {
+        m_completeParser = new CodeCompleterParser(this,CodeCompleterParser::FileType::CSS);
+    }
+    //----------------------------------------------------
 
     // if we use the following we can get instances
     // of accidental insertion of tabs into CodeView
@@ -459,7 +471,7 @@ bool CodeViewEditor::TextIsSelectedAndNotInStartOrEndTag()
     int end = textCursor().selectionEnd()-1;
 
     if ((text[pos] == '<') && (text[end] == '>')) return true;
-    
+
     if (IsPositionInTag(pos) || IsPositionInTag(end)) {
         return false;
     }
@@ -520,7 +532,7 @@ QString CodeViewEditor::SplitSection()
 
     MaybeRegenerateTagList();
     QString text = m_TagList.getSource();
-    
+
     // Abort splitting the section if user is within a tag - MainWindow will display a status message
     if (IsPositionInTag(split_position)) {
         // exempt the case of cursor |<tag>
@@ -531,7 +543,7 @@ QString CodeViewEditor::SplitSection()
     int bo = m_TagList.findBodyOpenTag();
     int bc = m_TagList.findBodyCloseTag();
     if (bo == -1 || bc == -1) return QString();
-    
+
     int body_tag_start = m_TagList.at(bo).pos;
     int body_tag_end   = body_tag_start + m_TagList.at(bo).len;
     int body_contents_end = m_TagList.at(bc).pos;
@@ -545,14 +557,14 @@ QString CodeViewEditor::SplitSection()
         // Cursor is after or in the closing body tag
         split_position = body_contents_end;
     }
-    
+
     const QStringList &opening_tags = GetUnmatchedTagsForBlock(split_position);
- 
+
     QString text_segment = "<p>&#160;</p>";
     if (split_position != body_tag_end) {
         text_segment = Utility::Substring(body_tag_start, split_position, text);
     }
-    
+
     // This splits off from contents of body from top to the split position
     // Remove the text that will be in the new section from the View.
     QTextCursor cursor = textCursor();
@@ -567,7 +579,7 @@ QString CodeViewEditor::SplitSection()
     }
 
     // We identify any open tags for the current caret position, and repeat
-    // those at the caret position to ensure we have valid html 
+    // those at the caret position to ensure we have valid html
     if (!opening_tags.isEmpty()) {
         cursor.insertText(opening_tags.join(""));
     }
@@ -733,7 +745,7 @@ void CodeViewEditor::ScrollToTop()
 }
 
 // Note: using
-//     QTextCursor cursor(document()); 
+//     QTextCursor cursor(document());
 // instead of:
 //     QTextCursor cursor = textCursor();
 // creates a new text coursor that points to the document top
@@ -813,33 +825,12 @@ QString CodeViewEditor::toPlainText() const
 
 // overrides createMimeDataFromSelection()
 QMimeData *CodeViewEditor::createMimeDataFromSelection() const
-{ 
+{
     QString selected_text = cursor_selected_text(textCursor());
     selected_text = selected_text.replace(QChar::ParagraphSeparator, '\n');
     QMimeData* md = new QMimeData();
     md->setText(selected_text);
     return md;
-}
-
-// overrides insertFromMimeData(const QMimeData* source)
-void CodeViewEditor::insertFromMimeData(const QMimeData* source)
-{
-    if (source->hasText() || source->hasHtml()) {
-        QMimeData nmd;
-        if (source->hasText()) {
-            QString txt = source->text();
-            txt = Utility::UseNFC(txt);
-            nmd.setText(txt);
-        }
-        if (source->hasHtml()) {
-            QString ht = source->html();
-            ht = Utility::UseNFC(ht);
-            nmd.setHtml(ht);
-        }
-        QPlainTextEdit::insertFromMimeData(&nmd);
-    } else {
-        QPlainTextEdit::insertFromMimeData(source);
-    }
 }
 
 bool CodeViewEditor::IsLoadingFinished()
@@ -991,7 +982,7 @@ bool CodeViewEditor::FindNext(const QString &search_regex,
     // the impact of wrap around, split will always be -1 if
     // marked text is being used and in all Current File Mode searches
     if (split_at != -1) {
-        original_pos = textCursor().position(); 
+        original_pos = textCursor().position();
         if (search_direction == Searchable::Direction_Up) {
             start = split_at;
         } else {
@@ -1107,7 +1098,7 @@ bool CodeViewEditor::ReplaceSelected(const QString &search_regex, const QString 
     // Convert to plain text or \s won't get newlines
     // assume already NFC normalized by earlier find
     const QString document_text = toPlainText();
-    
+
     QString selected_text = Utility::Substring(selection_start, selection_end, document_text);
     QString replaced_text;
     bool replacement_made = false;
@@ -1199,7 +1190,7 @@ int CodeViewEditor::ReplaceAll(const QString &search_regex,
                 if (match_info.at(i).offset.first > position) {
                     break;
                 }
-            } else { 
+            } else {
                 if (match_info.at(i).offset.second < position) {
                     break;
                 }
@@ -1448,11 +1439,11 @@ void CodeViewEditor::mouseReleaseEvent(QMouseEvent *event)
 
 void CodeViewEditor::contextMenuEvent(QContextMenuEvent *event)
 {
-    // Need to use QPointer to prevent crashes on macOS when closing 
+    // Need to use QPointer to prevent crashes on macOS when closing
     // parent during qmenu exec.  See discussion at:
     // https://www.qtcentre.org/threads/65046-closing-parent-widget-during-QMenu-exec()
     QPointer<QMenu> menu = createStandardContextMenu();
-    
+
     if (m_reformatCSSEnabled) {
         AddReformatCSSContextMenu(menu);
         AddCSSClassContextMenu(menu);
@@ -1460,6 +1451,7 @@ void CodeViewEditor::contextMenuEvent(QContextMenuEvent *event)
 
     if (m_reformatHTMLEnabled) {
         AddReformatHTMLContextMenu(menu);
+        AddPasteRichText(menu); // modified: AddPasteRichText
     }
 
     AddMarkSelectionMenu(menu);
@@ -1688,9 +1680,10 @@ void CodeViewEditor::AddReformatHTMLContextMenu(QMenu *menu)
     }
 
     QMenu *reformatMenu = new QMenu(tr("Reformat HTML"), menu);
-
-    QAction *cleanAction = new QAction(tr("Mend and Prettify Code"), reformatMenu);
-    QAction *cleanAllAction = new QAction(tr("Mend and Prettify Code - All HTML Files"), reformatMenu);
+    //QAction *cleanAction = new QAction(tr("Mend and Prettify Code"), reformatMenu);
+    QAction *cleanAction = new QAction(tr("Prettify Code"), reformatMenu); // modified: Prettify xhtml
+    //QAction *cleanAllAction = new QAction(tr("Mend and Prettify Code - All HTML Files"), reformatMenu);
+    QAction* cleanAllAction = new QAction(tr("Prettify Code - All HTML Files"), reformatMenu); // modified: Prettify xhtml
     QAction *toValidAction = new QAction(tr("Mend Code"), reformatMenu);
     QAction *toValidAllAction = new QAction(tr("Mend Code - All HTML Files"), reformatMenu);
     connect(cleanAction, SIGNAL(triggered()), this, SLOT(ReformatHTMLCleanAction()));
@@ -1935,12 +1928,12 @@ void CodeViewEditor::GoToLinkOrStyleAction()
 void CodeViewEditor::GoToLinkOrStyle()
 {
     QString url_name = GetAttribute("href", ANCHOR_TAGS, true);
-    
+
     if (url_name.isEmpty()) {
         QStringList LINK_TAGS = QStringList() << "link";
         url_name = GetAttribute("href", LINK_TAGS, true, false, false);
     }
-    
+
     if (url_name.isEmpty()) {
         url_name = GetAttribute("src", SRC_TAGS, true);
     }
@@ -1953,9 +1946,9 @@ void CodeViewEditor::GoToLinkOrStyle()
     if (url_name.isEmpty() && m_mediatype == "image/svg+xml") {
         url_name = "./SVGTab.svg";
     }
-    
+
     if (!url_name.isEmpty()) {
-        
+
         QUrl url = QUrl(url_name);
         QString extension = url_name.right(url_name.length() - url_name.lastIndexOf('.') - 1).toLower();
 
@@ -2248,7 +2241,7 @@ bool CodeViewEditor::InsertRole(const QString &attribute_value)
     }
     // This could have both aria role and epub:type
     bool rv = InsertTagAttribute(element_name, attribute_name, attribute_value, tag_list);
-    if (rv) { 
+    if (rv) {
         if (!etype.isEmpty()) {
             attribute_name = "epub:type";
             InsertTagAttribute(element_name, attribute_name, etype, tag_list);
@@ -2444,7 +2437,7 @@ void CodeViewEditor::MaybeRegenerateTagList()
     // calling toPlainText before the initial load is finished causes
     // a segfault deep inside QTextDocument
     // if (!m_isLoadFinished) return;
-    
+
     if (m_regen_taglist) {
         // qDebug() << "regenerating tag list";
         m_TagList.reloadLister(toPlainText());
@@ -2486,7 +2479,7 @@ void CodeViewEditor::HighlightCurrentLine(bool highlight_tags)
 
         // find next begin tag marker *after* this char
         // and handle case if missing
-        int nb = text.indexOf('<', pos+1);   
+        int nb = text.indexOf('<', pos+1);
         if (nb == -1) nb = text.length()+1;
 
         // in tag if '<' is closer than '>' when search backwards
@@ -2509,7 +2502,7 @@ void CodeViewEditor::HighlightCurrentLine(bool highlight_tags)
                     open_tag_len = ti.open_len;
                     close_tag_pos = ti.pos;
                     close_tag_len = ti.len;
-                } else { // all others: single, begin, xmlheader, doctype, comment, cdata, etc 
+                } else { // all others: single, begin, xmlheader, doctype, comment, cdata, etc
                     open_tag_pos = ti.pos;
                     open_tag_len = ti.len;
                 }
@@ -2540,7 +2533,7 @@ void CodeViewEditor::HighlightCurrentLine(bool highlight_tags)
                 selection_close.cursor.setPosition(close_tag_pos);
                 selection_close.cursor.setPosition(close_tag_pos + close_tag_len, QTextCursor::KeepAnchor);
                 extraSelections.append(selection_close);
-            } 
+            }
         }
     }
 
@@ -2803,7 +2796,7 @@ void CodeViewEditor::ScrollByLine(bool down)
     }
 }
 
-QString CodeViewEditor::GetCaretElementName() 
+QString CodeViewEditor::GetCaretElementName()
 {
     return m_element_name;
 }
@@ -2875,7 +2868,7 @@ std::tuple<int, int> CodeViewEditor::ConvertHierarchyToCaretMove(const QList<Ele
     }
     unsigned int line = 0;
     unsigned int col = 0;
-    if ((end_node->type == GUMBO_NODE_TEXT) || (end_node->type == GUMBO_NODE_WHITESPACE) || 
+    if ((end_node->type == GUMBO_NODE_TEXT) || (end_node->type == GUMBO_NODE_WHITESPACE) ||
         (end_node->type == GUMBO_NODE_CDATA) || (end_node->type == GUMBO_NODE_COMMENT)) {
         line = end_node->v.text.start_pos.line + 1; // compensate for xml header removed for gumbo
         col = end_node->v.text.start_pos.column;
@@ -2941,7 +2934,7 @@ void CodeViewEditor::FormatBlock(const QString &element_name, bool preserve_attr
         if (pos > 0) startpos = startpos + pos;
         newcursor.clearSelection();
         newcursor.setPosition(startpos);
-        newcursor.setPosition(startpos + cleantxt.length(), QTextCursor::KeepAnchor); 
+        newcursor.setPosition(startpos + cleantxt.length(), QTextCursor::KeepAnchor);
         setTextCursor(newcursor);
     }
 
@@ -2983,7 +2976,7 @@ void CodeViewEditor::FormatBlock(const QString &element_name, bool preserve_attr
             // if we reached here we have an opening block tag we need to replace
             QStringView opening_tag_text = QStringView(text).sliced(ti.pos, ti.len);
             QString all_attributes = TagLister::extractAllAttributes(opening_tag_text);
-            
+
             // look for matching closing tag from here to the end
             int j = i+1;
             TagLister::TagInfo et = m_TagList.at(j);
@@ -3170,12 +3163,12 @@ void CodeViewEditor::ToggleFormatSelection(const QString &element_name, const QS
     // Look backwards from the current selection to find whether we are in an open occurrence
     // of this tag already within this block.
     int i = m_TagList.findLastTagOnOrBefore(pos);
-    
+
     TagLister::TagInfo ti;
     while (i >= 0) {
         ti = m_TagList.at(i);
         if (ti.len == -1) return;
-        
+
         if (element_name == ti.tname) {
             if (ti.ttype != "end") in_existing_tag_occurrence = true;
             break;
@@ -3295,9 +3288,9 @@ CodeViewEditor::StyleTagElement CodeViewEditor::GetSelectedStyleTagElement()
     int pos = textCursor().selectionStart();
 
     if (!IsPositionInOpeningTag(pos)) return element;
-    
+
     QString text = m_TagList.getSource();
-    
+
     int i = m_TagList.findLastTagOnOrBefore(pos);
     TagLister::TagInfo ti = m_TagList.at(i);
     QStringView tagstring = QStringView(text).sliced(ti.pos, ti.len);
@@ -3320,7 +3313,7 @@ CodeViewEditor::StyleTagElement CodeViewEditor::GetSelectedStyleTagElement()
         element.classStyle = avalue;
         return element;
     }
-    
+
     // multiple values present, see if the original cursor as in one of them
     // if so use that one, if not return the first
     int vstart = ti.pos + attr.vpos;
@@ -3367,7 +3360,7 @@ QString CodeViewEditor::GetAttribute(const QString &attribute_name,
                                      bool skip_paired_tags,
                                      bool must_be_in_body)
 {
-    return ProcessAttribute(attribute_name, tag_list, QString(), 
+    return ProcessAttribute(attribute_name, tag_list, QString(),
                             false, must_be_in_attribute, skip_paired_tags, must_be_in_body);
 }
 
@@ -3378,7 +3371,7 @@ QString CodeViewEditor::SetAttribute(const QString &attribute_name,
                                      bool must_be_in_attribute,
                                      bool skip_paired_tags)
 {
-    return ProcessAttribute(attribute_name, tag_list, attribute_value, 
+    return ProcessAttribute(attribute_name, tag_list, attribute_value,
                             true, must_be_in_attribute, skip_paired_tags);
 }
 
@@ -3405,7 +3398,7 @@ QString CodeViewEditor::ProcessAttribute(const QString &attribute_name,
     // one character to the left of the first <.
     int pos = textCursor().selectionStart();
     int original_position = textCursor().position();
-    
+
     MaybeRegenerateTagList();
     QString text = m_TagList.getSource();
 
@@ -3420,7 +3413,7 @@ QString CodeViewEditor::ProcessAttribute(const QString &attribute_name,
             pos--;
         }
         // special case: cursor just before closing < so move back by 1 to be in text.
-        if (pos > 0) pos--; 
+        if (pos > 0) pos--;
     }
     if (pos < 0) return QString();
 
@@ -3443,12 +3436,12 @@ QString CodeViewEditor::ProcessAttribute(const QString &attribute_name,
                 paired_tags.removeOne(ti.pos);
             } else {
                 // did we found what we want
-                if (tag_list.contains(ti.tname) || BLOCK_LEVEL_TAGS.contains(ti.tname)) break; 
+                if (tag_list.contains(ti.tname) || BLOCK_LEVEL_TAGS.contains(ti.tname)) break;
             }
         }
         // skip all special tags like doctype, cdata, pi, xmlheaders, and comments
         i--;
-    }     
+    }
     if ((i < 0) || !tag_list.contains(ti.tname) || (ti.tname == "body")) return QString();
     QStringView opening_tag_text = QStringView(text).sliced(ti.pos, ti.len);
 
@@ -3464,7 +3457,7 @@ QString CodeViewEditor::ProcessAttribute(const QString &attribute_name,
     int attribute_end = attribute_start;
     if (ainfo.pos != -1) {
         // attribute exists
-        attribute_start = ti.pos + ainfo.pos - 1; // include single leading space as part of attribute 
+        attribute_start = ti.pos + ainfo.pos - 1; // include single leading space as part of attribute
         attribute_end = attribute_start + 1 + ainfo.len; // and compensate when setting the end position
         if (must_be_in_attribute && (original_position <= attribute_start  || original_position >= attribute_end)) {
             return "";
@@ -3695,7 +3688,7 @@ void CodeViewEditor::ReformatHTML(bool all, bool to_valid)
         return;
     }
     QString version = mainWindow->GetCurrentBook()->GetConstOPF()->GetEpubVersion();
-    
+
     if (all) {
         mainWindow->GetCurrentBook()->ReformatAllHTML(to_valid);
     } else {
@@ -3704,7 +3697,9 @@ void CodeViewEditor::ReformatHTML(bool all, bool to_valid)
         if (to_valid) {
             new_text = CleanSource::Mend(original_text, version);
         } else {
-            new_text = mainWindow->GetCurrentBook()->SafePrettyPrint(m_bookpath, original_text);
+            SettingsStoreExtend settings_ext;
+            XhtmlFormatParser xfparser(settings_ext.getXhtmlFormat());
+            new_text = CleanSource::XhtmlPrettify(original_text, xfparser);
         }
 
         if (original_text != new_text) {
@@ -3745,7 +3740,7 @@ QString CodeViewEditor::RemoveLastTag(const QString &text, const QString &tagnam
     return result;
 }
 
-bool CodeViewEditor::IsSelectionValid(const QString & text) 
+bool CodeViewEditor::IsSelectionValid(const QString & text)
 {
     // whatever is selected must either be pure text or have balanced
     // opening and closing tags (ie. well-formed).
@@ -3768,7 +3763,7 @@ void CodeViewEditor::WrapSelectionInElement(const QString& element, bool unwrap)
     }
 
     QString new_text = selected_text;
- 
+
     if (!IsSelectionValid(new_text)) return;
 
     QRegularExpression start_indent(STARTING_INDENT_USED);
@@ -3778,7 +3773,7 @@ void CodeViewEditor::WrapSelectionInElement(const QString& element, bool unwrap)
         indent = indent_mo.captured(1);
     indent = indent.replace("\t","    ");
     }
- 
+
     QRegularExpression open_tag_at_start(OPEN_TAG_STARTS_SELECTION);
     QRegularExpressionMatch open_mo = open_tag_at_start.match(new_text);
     QString tagname;
@@ -3802,7 +3797,7 @@ void CodeViewEditor::WrapSelectionInElement(const QString& element, bool unwrap)
     result.append(indent + "</" + element + ">\n");
     new_text = result.join('\n');
     }
-    
+
     if (new_text == selected_text) {
         return;
     }
@@ -3836,7 +3831,7 @@ void CodeViewEditor::ApplyListToSelection(const QString &element)
         indent = indent_mo.captured(1);
         indent = indent.replace("\t","    ");
     }
- 
+
     QRegularExpression open_tag_at_start(OPEN_TAG_STARTS_SELECTION);
     QRegularExpressionMatch open_mo = open_tag_at_start.match(new_text);
     QString tagname;
@@ -3844,12 +3839,12 @@ void CodeViewEditor::ApplyListToSelection(const QString &element)
         tagname = open_mo.captured(2);
     }
 
-    if (((tagname == "ol") && (element == "ol")) || 
+    if (((tagname == "ol") && (element == "ol")) ||
         ((tagname == "ul") && (element == "ul"))) {
         new_text = RemoveFirstTag(new_text, element);
         new_text = RemoveLastTag(new_text, element);
         new_text = new_text.trimmed();
-        // now split remaining text by new lines and 
+        // now split remaining text by new lines and
         // remove any beginning and ending li tags
         QStringList alist = new_text.split(QChar::ParagraphSeparator, Qt::SkipEmptyParts);
         QStringList result;
@@ -3864,12 +3859,12 @@ void CodeViewEditor::ApplyListToSelection(const QString &element)
         QStringList result;
         result.append(indent + "<" + element + ">");
         foreach(QString aitem, alist) {
-            result.append(indent + "    " + "<li>" + aitem.trimmed() + "</li>"); 
+            result.append(indent + "    " + "<li>" + aitem.trimmed() + "</li>");
         }
         result.append(indent + "</" + element + ">\n");
         new_text = result.join('\n');
     }
-    
+
     if (new_text == selected_text) {
         return;
     }
@@ -3944,7 +3939,7 @@ QStringList CodeViewEditor::GetUnmatchedTagsForBlock(int pos)
         }
         // ignore single, and all special tags like doctype, cdata, pi, xmlheaders, and comments
         i--;
-    }     
+    }
     return opening_tags;
 }
 

@@ -62,6 +62,8 @@ public:
      */
     void ValidateCurrentBook();
 
+    void correctOPF(); //modified: correctOPF
+
     QStringList ValidateFile(QString &apath);
 
     void LoadResults(const QList<ValidationResult> &results);
@@ -73,7 +75,7 @@ public:
 
 
     int ResultCount();
-                     
+
 public slots:
 
     /**
@@ -82,6 +84,7 @@ public slots:
      * @param book The book to be validated.
      */
     void SetBook(QSharedPointer<Book> book);
+    void SetBookBrowser(BookBrowser* bookbrowser); // modified: correctOPF;
 
     void OpenContextMenu(const QPoint &point);
 
@@ -120,6 +123,7 @@ private:
 
     void ReadSettings();
     void WriteSettings();
+    void DisplayCorrectOPFResults(QList<pair<QString, QString>> log);//modified: correctOPF
 
     /**
      * Sets up the table widget to our liking.
@@ -167,6 +171,7 @@ private:
      * The book being validated.
      */
     QSharedPointer<Book> m_Book;
+    BookBrowser* m_BookBrowser; // modified: correctOPF
 
     static const QString SEP;
 

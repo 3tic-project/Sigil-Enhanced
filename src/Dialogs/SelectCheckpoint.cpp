@@ -47,7 +47,7 @@ SelectCheckpoint::SelectCheckpoint(const QStringList &checkpointlst, QWidget *pa
     }
     ui.lwProperties->setCurrentRow(0);
     ui.lbDescription->setText(m_CheckpointInfo[key0]);
-    
+
     ReadSettings();
 
     connect(ui.lwProperties, SIGNAL(currentItemChanged(QListWidgetItem *, QListWidgetItem *)),
@@ -56,7 +56,7 @@ SelectCheckpoint::SelectCheckpoint(const QStringList &checkpointlst, QWidget *pa
     connect(ui.lwProperties, SIGNAL(doubleClicked(const QModelIndex &)), this, SLOT(accept()));
     connect(ui.lwProperties, SIGNAL(itemSelectionChanged()),
             this, SLOT(ClearDescription()));
-    
+
 
 }
 

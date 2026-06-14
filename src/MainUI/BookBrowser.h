@@ -32,6 +32,7 @@
 
 #include "BookManipulation/Book.h"
 #include "ResourceObjects/Resource.h"
+#include "MainUI/BookBrowserTreeView.h" // modified: BookBrowserTreeView
 
 class MainWindow;
 class HTMLResource;
@@ -73,7 +74,7 @@ public:
     ~BookBrowser();
 
     /**
-     * List of selected resources 
+     * List of selected resources
      */
     QList <Resource *> AllSelectedResources();
 
@@ -144,7 +145,7 @@ public:
      *  Allow automatic moving of resources
      */
     void MoveResourceList(const QList<Resource *> &resources, const QStringList &newbookpaths);
- 
+
 public slots:
 
     /**
@@ -241,7 +242,7 @@ signals:
      *
      * @param book:/// url to the image resource
      */
-    
+
     void ViewImageRequest(const QUrl& url);
 
     /**
@@ -369,7 +370,7 @@ private slots:
      */
     QString BuildListMD(const QStringList& lst);
     void GetInfo();
-    
+
 
     /**
      * Implements the Merge context menu action functionality.
@@ -396,6 +397,8 @@ private slots:
     void IdpfsObfuscationMethod();
 
     void ValidateStylesheetWithW3C();
+
+    void insertFileToEditor();
 
 protected:
     virtual void showEvent(QShowEvent *event);
@@ -513,7 +516,8 @@ private:
     /**
      * The tree view used to represent the book's files.
      */
-    QTreeView *m_TreeView;
+    //QTreeView *m_TreeView;
+    BookBrowserTreeView* m_TreeView;
 
     /**
      * The data model used to feed the tree view.
@@ -570,7 +574,7 @@ private:
     QAction *m_OpenWithEditor2;
     QAction *m_OpenWithEditor3;
     QAction *m_OpenWithEditor4;
-    
+
     QSignalMapper *m_openWithMapper;
 
     /**
@@ -591,6 +595,26 @@ private:
 
     Resource *m_RenamedResource;
     Resource *m_MovedResource;
+
+/* ------------------------------ modified: BookBrowserExt --------------------------------*/
+signals:
+    void InsertFileRequest(); // insertFileToEditor
+
+public slots:
+    QStringList AddFiles(QStringList& filepaths);
+    QStringList AddImagesFromFilePaths(QStringList& filepaths);
+    QString AddImageFromClipboard(const QByteArray& data, QString defaultFilename);
+    // modified: BookBrowserTreeView
+    void InsertTxtToTextGroup(QString& filepath,const QPoint& event_pos);
+    void InsertHtmlToTextGroup(QString& filepath,const QPoint& event_pos);
+
+private:
+    // modified: insertFileToEditor
+    QAction* m_InsertFileToDocument1;
+    QAction* m_InsertFileToDocument2;
+    QAction* m_InsertFileToDocument3;
+
+    void InsertHTMLResource(HTMLResource* res,const QPoint& event_pos, QList<HTMLResource*>& spine);
 };
 
 #endif // BOOKBROWSER_H

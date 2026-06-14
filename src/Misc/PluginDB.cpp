@@ -77,10 +77,10 @@ QString PluginDB::pluginsPath()
 
 QString PluginDB::buildBundledInterpPath()
 {
-  QString bundled_python3_path; 
+  QString bundled_python3_path;
 
 #ifdef Q_OS_MAC
-  // On Mac OS X QCoreApplication::applicationDirPath() points to Sigil.app/Contents/MacOS/ 
+  // On Mac OS X QCoreApplication::applicationDirPath() points to Sigil.app/Contents/MacOS/
   // is located, but the Python.framework dir is in Contents/Frameworks
   QDir execdir(QCoreApplication::applicationDirPath());
   execdir.cdUp();
@@ -93,9 +93,9 @@ QString PluginDB::buildBundledInterpPath()
   } else {
       bundled_python3_path = "";
   }
- 
+
 #endif
-  
+
   QFileInfo checkPython3(bundled_python3_path);
   if (checkPython3.exists() && checkPython3.isFile() && checkPython3.isReadable() && checkPython3.isExecutable() ) {
     return bundled_python3_path;
@@ -173,12 +173,22 @@ PluginDB::AddResult PluginDB::add_plugin(const QString &path, bool force)
     }
 
     ret = add_plugin_int(name, force);
+    //------------ modified: fix bug ------------------
+    // Fixed the bug that when adding a plugin with the same name exists, the plugin directory will be accidentally deleted.
+    /*
     if (ret != PluginDB::AR_SUCCESS) {
         // Couldn't load the plugin so remove it.
         Utility::removeDir(pluginsPath() + "/" + name);
     } else {
         emit plugins_changed();
+    }*/
+    if (ret != PluginDB::AR_SUCCESS && ret != PluginDB::AR_EXISTS) {
+        Utility::removeDir(pluginsPath() + "/" + name);
     }
+    if (ret == PluginDB::AR_SUCCESS) {
+        emit plugins_changed();
+    }
+    //------------------------------------------------
 
     return ret;
 }

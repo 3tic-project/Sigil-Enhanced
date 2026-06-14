@@ -46,6 +46,11 @@ void CSSTab::EmitTabUpdated()
     emit TabUpdated();
 }
 
+void CSSTab::EmitCSSUpdated()
+{
+    emit TabUpdated();
+}
+
 void CSSTab::Bold()
 {
     m_wCodeView->FormatCSSStyle("font-weight", "bold");
@@ -100,3 +105,12 @@ void CSSTab::TextDirectionDefault()
 {
     m_wCodeView->FormatCSSStyle("direction", "inherit");
 }
+
+//-------------------- modified: InsertFile -----------------------
+void CSSTab::InsertFile(QString css)
+{
+    if (m_wCodeView) {
+        m_wCodeView->insertPlainText(css);
+    }
+}
+//-----------------------------------------------------------------
