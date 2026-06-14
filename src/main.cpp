@@ -537,6 +537,7 @@ int main(int argc, char *argv[])
     qputenv("QT_ENABLE_REGEXP_JIT","0");
 
     MainApplication app(argc, argv);
+    app.setApplicationDisplayName(QStringLiteral("Sigil-Enhanced"));
 
 #ifdef Q_OS_MAC
     disableWindowTabbing();
@@ -869,7 +870,7 @@ int main(int argc, char *argv[])
             QMenuBar *mac_bar = new QMenuBar(0);
 
             // Create the Application Menu
-            QMenu *app_menu = new QMenu("Sigil");
+            QMenu *app_menu = new QMenu(QApplication::applicationDisplayName());
             QIcon icon;
 
             // Quit

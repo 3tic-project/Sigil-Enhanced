@@ -92,6 +92,7 @@ set( EXT_RCC_FILES
 # Define the Sigil version string for use in source files
 set_source_files_properties( Dialogs/About.cpp PROPERTIES COMPILE_DEFINITIONS SIGIL_FULL_VERSION="${SIGIL_FULL_VERSION}" )
 set_source_files_properties( Misc/Utility.cpp PROPERTIES COMPILE_DEFINITIONS SIGIL_FULL_VERSION="${SIGIL_FULL_VERSION}" )
+set_source_files_properties( sigil_constants.cpp PROPERTIES COMPILE_DEFINITIONS SIGIL_FULL_VERSION="${SIGIL_FULL_VERSION}" )
 
 #############################################################################
 
@@ -294,6 +295,7 @@ if( APPLE )
     set_property (
         SOURCE sigil_constants.cpp
         PROPERTY COMPILE_DEFINITIONS
+        SIGIL_FULL_VERSION="${SIGIL_FULL_VERSION}"
         DONT_CHECK_UPDATES=${DISABLE_UPDATE_CHECK}
         _BUNDLED_PYVER="${_BUNDLED_PYVER}"
     )
@@ -361,6 +363,7 @@ elseif (MSVC)
     set_property (
         SOURCE sigil_constants.cpp
         PROPERTY COMPILE_DEFINITIONS
+        SIGIL_FULL_VERSION="${SIGIL_FULL_VERSION}"
         DONT_CHECK_UPDATES=${DISABLE_UPDATE_CHECK}
     )
 
@@ -592,7 +595,7 @@ if( UNIX AND NOT APPLE )
         PROPERTY COMPILE_DEFINITIONS
         SIGIL_SHARE_ROOT="${SIGIL_SHARE_ROOT}" DICTS_ARE_BUNDLED=${INSTALL_BUNDLED_DICTS}
         EXTRA_DICT_DIRS="${EXTRA_DICT_DIRS}" MATHJAX3_DIR="${MATHJAX3_DIR}"
-        DONT_CHECK_UPDATES=${DISABLE_UPDATE_CHECK} VIRT_PYTHON_BIN="${Python3_EXECUTABLE}"
+        SIGIL_FULL_VERSION="${SIGIL_FULL_VERSION}" DONT_CHECK_UPDATES=${DISABLE_UPDATE_CHECK} VIRT_PYTHON_BIN="${Python3_EXECUTABLE}"
         _BUNDLED_PYVER="${_BUNDLED_PYVER}" _APPIMAGE_BUILD=${APPIMAGE_BUILD}
     )
 

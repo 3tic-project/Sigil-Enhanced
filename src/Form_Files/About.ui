@@ -53,7 +53,7 @@
       </font>
      </property>
      <property name="text">
-      <string>The EPUB Editor</string>
+      <string>Sigil-Enhanced EPUB Editor</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignHCenter|Qt::AlignTop</set>
@@ -116,7 +116,7 @@
             </font>
            </property>
            <property name="text">
-            <string notr="true">&lt;a href=&quot;http://github.com/Sigil-Ebook/Sigil/&quot;&gt;http://github.com/Sigil-Ebook/Sigil/&lt;/a&gt;</string>
+            <string notr="true">&lt;a href=&quot;https://github.com/3tic-project/Sigil-Enhanced&quot;&gt;https://github.com/3tic-project/Sigil-Enhanced&lt;/a&gt;</string>
            </property>
            <property name="textFormat">
             <enum>Qt::AutoText</enum>

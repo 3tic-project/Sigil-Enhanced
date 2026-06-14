@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>untitled.epub[*] - Sigil</string>
+   <string>untitled.epub[*] - Sigil-Enhanced</string>
   </property>
   <property name="iconSize">
    <size>
@@ -1271,7 +1271,7 @@
     <string>&amp;About...</string>
    </property>
    <property name="toolTip">
-    <string>Show information about Sigil.</string>
+    <string>Show information about Sigil-Enhanced.</string>
    </property>
   </action>
   <action name="actionAddCover">
@@ -1820,7 +1820,7 @@
   </action>
   <action name="actionSigilWebsite">
    <property name="text">
-    <string>Sigil Website...</string>
+    <string>Sigil-Enhanced Website...</string>
    </property>
   </action>
   <action name="actionNextTab">

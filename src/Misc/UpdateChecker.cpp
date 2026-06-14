@@ -36,7 +36,7 @@
 #include "Misc/UpdateChecker.h"
 #include "sigil_constants.h"
 
-static const QString DOWNLOAD_PAGE_LOCATION  = "http://sigil-ebook.com/get";
+static const QString DOWNLOAD_PAGE_LOCATION  = "https://github.com/3tic-project/Sigil-Enhanced/releases";
 static const QString UPDATE_XML_LOCATION     = "https://raw.githubusercontent.com/Sigil-Ebook/Sigil/master/version.xml";
 static const QString LAST_ONLINE_VERSION_KEY = "last_online_version";
 static const QString LAST_CHECK_TIME_KEY     = "last_check_time";
@@ -96,8 +96,8 @@ void UpdateChecker::CheckForUpdate()
             QMessageBox::StandardButton button_clicked;
             button_clicked = Utility::question(
                                  0,
-                                 QObject::tr("Sigil"),
-                                 QObject::tr("<p>A newer version of Sigil is available, version <b>%1</b>.<br/>"
+                                 QStringLiteral("Sigil-Enhanced"),
+                                 QObject::tr("<p>A newer version of Sigil-Enhanced is available, version <b>%1</b>.<br/>"
                                              "<p>Would you like to go to the download page?</p>")
                                  .arg(current_online_version),
                                  QMessageBox::Yes | QMessageBox::No,

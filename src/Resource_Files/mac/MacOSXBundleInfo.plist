@@ -5,13 +5,13 @@
 	<key>CFBundleVersion</key>
 	<string>SGVERSION</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © Sigil Authors 2010-2025, GNU GPL v3</string>
+	<string>Copyright © Sigil Authors and Sigil-Enhanced contributors, GNU GPL v3</string>
 	<key>CFBundleShortVersionString</key>
 	<string>SGVERSION</string>
 	<key>CFBundleGetInfoString</key>
-	<string>SGVERSION Sigil Open Source ePub Editor. See http://github.com/Sigil-Ebook/Sigil/</string>
+	<string>SGVERSION Sigil-Enhanced EPUB Editor. Based on Sigil. See https://github.com/3tic-project/Sigil-Enhanced/</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.sigil-ebook.Sigil.app</string>
+	<string>org.3ticproject.SigilEnhanced</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -44,7 +44,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Sigil</string>
+	<string>Sigil-Enhanced</string>
+	<key>CFBundleDisplayName</key>
+	<string>Sigil-Enhanced</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleSignature</key>

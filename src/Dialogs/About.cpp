@@ -28,29 +28,30 @@
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
 
-const QString VERSION_NUMBERS = "(\\d+)\\.(\\d+)\\.(\\d+)\\.(X\\d+[A-Z]?)"; // modified: version
-const QString SIGIL_VERSION   = QString(SIGIL_FULL_VERSION);
-const QString SIGIL_HOMEPAGE  = "https://sigil-ebook.com/sigil";
-const QString GNU_LICENSE     = "http://www.gnu.org/licenses/gpl-3.0-standalone.html";
+const QString APP_DISPLAY_NAME = QStringLiteral("Sigil-Enhanced");
+const QString SIGIL_HOMEPAGE   = QStringLiteral("https://github.com/3tic-project/Sigil-Enhanced");
+const QString GNU_LICENSE      = QStringLiteral("http://www.gnu.org/licenses/gpl-3.0-standalone.html");
 
 
 About::About(QWidget *parent)
     : QDialog(parent)
 {
     ui.setupUi(this);
+    setWindowTitle(tr("About %1").arg(APP_DISPLAY_NAME));
     ui.lbHomepageDisplay->setText("<a href=\"" % SIGIL_HOMEPAGE % "\">" % SIGIL_HOMEPAGE % "</a>");
     ui.lbLicenseDisplay->setText("<a href=\"" % GNU_LICENSE % "\">" % tr("GNU General Public License v3") % "</a>");
     ui.lbBuildTimeDisplay->setText(GetUTCBuildTime().toString("yyyy.MM.dd HH:mm:ss") + " UTC");
     ui.lbLoadedQtDisplay->setText(QString(qVersion()));
-    QRegularExpression version_number(VERSION_NUMBERS);
-    QRegularExpressionMatch mo = version_number.match(SIGIL_VERSION);
-    QString version_text = QString("%1.%2.%3.%4") // modified: version
-                           .arg(mo.captured(1).toInt())
-                           .arg(mo.captured(2).toInt())
-                           .arg(mo.captured(3).toInt())
-                           .arg(mo.captured(4));
-    ui.lbVersionDisplay->setText(version_text);
-    QString credits = "<h4>" + tr("Developers(s)") + "</h4>" +
+    ui.lbVersionDisplay->setText(SIGIL_VERSION);
+    QString credits = "<h4>" + tr("Sigil-Enhanced Maintainer") + "</h4>" +
+                      "<ul>" +
+                      "<li>3TIC-Project</li>" +
+                      "</ul>" +
+                      "<h4>" + tr("Original sigil-modified Author") + "</h4>" +
+                      "<ul>" +
+                      "<li>ichigo250</li>" +
+                      "</ul>" +
+                      "<h4>" + tr("Sigil Developer(s)") + "</h4>" +
                       "<ul>" +
                       "<li>Kevin Hendricks</li>" +
                       "<li>Doug Massay</li>" +
