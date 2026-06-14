@@ -2,8 +2,8 @@
 
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     ${SIGIL_MAJOR_VERSION},${SIGIL_MINOR_VERSION},${SIGIL_REVISION_VERSION},0
-PRODUCTVERSION  ${SIGIL_MAJOR_VERSION},${SIGIL_MINOR_VERSION},${SIGIL_REVISION_VERSION},0
+FILEVERSION     ${SIGIL_MAJOR_VERSION},${SIGIL_MINOR_VERSION},${SIGIL_REVISION_VERSION},${SIGIL_ENHANCED_VERSION}
+PRODUCTVERSION  ${SIGIL_MAJOR_VERSION},${SIGIL_MINOR_VERSION},${SIGIL_REVISION_VERSION},${SIGIL_ENHANCED_VERSION}
 
 BEGIN
     BLOCK "StringFileInfo"
@@ -12,14 +12,14 @@ BEGIN
         BEGIN
             VALUE "CompanyName",        "3TIC-Project"
             VALUE "FileDescription",    "Sigil-Enhanced is a multi-platform EPUB ebook editor"
-            VALUE "FileVersion",        "${SIGIL_FULL_VERSION}.0"
+            VALUE "FileVersion",        "${SIGIL_FULL_VERSION}"
             VALUE "InternalName",       "Sigil"
             VALUE "LegalCopyright",     "Copyright (c) 2010-${SIGIL_BUILD_YEAR} Sigil Authors"
             VALUE "LegalTrademarks1",   "All Rights Reserved"
             VALUE "LegalTrademarks2",   "All Rights Reserved"
             VALUE "OriginalFilename",   "Sigil.exe"
             VALUE "ProductName",        "Sigil-Enhanced"
-            VALUE "ProductVersion",     "${SIGIL_FULL_VERSION}.0"
+            VALUE "ProductVersion",     "${SIGIL_FULL_VERSION}"
         END
     END
 

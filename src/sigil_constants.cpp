@@ -40,7 +40,7 @@ const QString SIGIL_PREFS_DIR = QString(getenv("SIGIL_PREFS_DIR"));
 
 // CMAKE configuration -DDISABLE_UPDATE_CHECK (0 or 1)
 const bool DONT_CHECK_FOR_UPDATES = DONT_CHECK_UPDATES;
-const QString VERSION_NUMBERS = QStringLiteral("(\\d+)\\.(\\d+)\\.(\\d+)");
+const QString VERSION_NUMBERS = QStringLiteral("(\\d+)\\.(\\d+)\\.(\\d+)(?:\\.E\\d+)?");
 const QString SIGIL_VERSION = QString(SIGIL_FULL_VERSION);
 
 #if __APPLE__

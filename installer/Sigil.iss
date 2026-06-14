@@ -8,7 +8,7 @@
 AppName={#AppName}${BETA_BUILD}
 AppVerName={#AppName}${BETA_BUILD} ${SIGIL_FULL_VERSION}
 AppVersion=${SIGIL_FULL_VERSION}
-VersionInfoVersion=${SIGIL_FULL_VERSION}
+VersionInfoVersion=${SIGIL_NUMERIC_VERSION}
 DefaultDirName={autopf}\{#AppName}${BETA_BUILD}
 DisableDirPage=no
 AllowNoIcons=yes
