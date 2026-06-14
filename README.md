@@ -2,6 +2,7 @@
 
 Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 编辑器。本项目以当前仍在维护的 Sigil 主线为基础，重新接入 sigil-modified 曾经提供的效率优化、编辑器增强、拖拽导入、插件管理改进等功能，并在后续维护中尽量跟随上游主线更新。
 
+关于本项目的讨论、建议：https://t.me/+bUUc3T1rwVZmNWE9
 
 ## 致谢
 
@@ -11,8 +12,6 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 * sigil-modified：感谢原 sigil-modified 作者 ichigo250 对批量操作效率、代码编辑体验、插件管理和 EPUB 检查等功能所做的改进。
 
 本仓库中的主线 Sigil README 另存为 [README-Sigil.md](README-Sigil.md)。下面保留原 sigil-modified 的功能说明，作为本项目增强功能来源和行为说明的参考。
-
-
 
 # Sigil修改版
 Sigil是目前主流的E非商业化EPUB制作工具，界面直观，功能丰富，配插件系统，可完成复杂的EPUB编辑工作。对于EPUB校验严格，规范明确，是目前同行软件中对于EPUB规范化做的最好的软件。但是Sigil的缺点也是比较明显，操作卡顿，是Sigil长期存在的一个问题，由于其对于批量文件操作的逻辑不合理，导致进行文件操作时，耗时跟随着文件数量增长而指数式上涨，在处理一些合集类的书籍，文件数量动辄上千，这种情况下进行文件批量操作往往要卡顿十几分钟到半小时，这点不少人有过切身体会。此外Sigil还有一些不够人性化的操作模式也是令人头疼。Sigil修改版的出现，正是为了优化Sigil的运行效率，提供一些更加人性化的操作模式，顺便解决一些遇到的BUG。
