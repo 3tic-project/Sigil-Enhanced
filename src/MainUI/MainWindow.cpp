@@ -7086,8 +7086,6 @@ void MainWindow::ConnectSignalsToSlots()
             this,           SLOT(PasteClipEntriesIntoCurrentTarget(QList<ClipEditorModel::clipEntry *>)));
     connect(m_Clips,        SIGNAL(PasteClips(QList<ClipEditorModel::clipEntry *>)),
             this,            SLOT(PasteClipEntriesIntoPreviousTarget(QList<ClipEditorModel::clipEntry *>)));
-    connect(m_SearchEditor, SIGNAL(ShowStatusMessageRequest(const QString &)),
-            this,            SLOT(ShowMessageOnStatusBar(const QString &)));
     connect(m_ClipEditor,   SIGNAL(ShowStatusMessageRequest(const QString &)),
             this,            SLOT(ShowMessageOnStatusBar(const QString &)));
     connect(m_ClipEditor,   SIGNAL(ClipsUpdated()),

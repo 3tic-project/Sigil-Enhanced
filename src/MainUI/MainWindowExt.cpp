@@ -202,6 +202,7 @@ void MainWindow::ConnectSignalsToSearchEditor()
                 m_FindReplace, SLOT(LoadSearch(SearchEditorModel::searchEntry*)));
     }
     connect(findReplace, SIGNAL(ShowMessageRequest(const QString&)), searchEditor, SLOT(ShowMessage(const QString&)));
+    connect(searchEditor, SIGNAL(ShowStatusMessageRequest(const QString&)), this, SLOT(ShowMessageOnStatusBar(const QString&)));
     connect(searchEditor, SIGNAL(FindSelectedSearchRequest()), findReplace, SLOT(FindSearch()));
     connect(searchEditor, SIGNAL(ReplaceCurrentSelectedSearchRequest()), findReplace, SLOT(ReplaceCurrentSearch()));
     connect(searchEditor, SIGNAL(ReplaceSelectedSearchRequest()), findReplace, SLOT(ReplaceSearch()));

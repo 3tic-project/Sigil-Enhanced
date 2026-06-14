@@ -258,7 +258,16 @@ bool Utility::IsMixedCase(const QString &string)
 // [ start_index, end_index >
 QString Utility::Substring(int start_index, int end_index, const QStringView string)
 {
-    return string.sliced(start_index, end_index - start_index).toString();
+    qsizetype start = start_index;
+    qsizetype end = end_index;
+    const qsizetype string_size = string.size();
+
+    if (start < 0) start = 0;
+    if (start > string_size) start = string_size;
+    if (end < start) end = start;
+    if (end > string_size) end = string_size;
+
+    return string.sliced(start, end - start).toString();
 }
 
 
@@ -276,7 +285,17 @@ QString Utility::Substring(int start_index, int end_index, const QString &string
 // [ start_index, end_index >
 QStringView Utility::SubstringView(int start_index, int end_index, const QString &string)
 {
-    return QStringView(string).sliced(start_index, end_index - start_index);
+    const QStringView view(string);
+    qsizetype start = start_index;
+    qsizetype end = end_index;
+    const qsizetype string_size = view.size();
+
+    if (start < 0) start = 0;
+    if (start > string_size) start = string_size;
+    if (end < start) end = start;
+    if (end > string_size) end = string_size;
+
+    return view.sliced(start, end - start);
 }
 
 // Replace the first occurrence of string "before"
