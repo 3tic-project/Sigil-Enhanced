@@ -338,6 +338,8 @@ if( APPLE )
         set( PY_INTERP ${Python3_EXECUTABLE} )
 
         add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND ${PY_INTERP} ARGS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/osx_add_python_framework6.py )
+        add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
+                            COMMAND ${PY_INTERP} ARGS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/copy_python_package.py lxml ${WORK_DIR}/Sigil.app/Contents/python3lib )
         message(STATUS "Using ${PY_INTERP} to bundle python")
     endif()
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp ${PROJECT_BINARY_DIR}/*.rcc ${WORK_DIR}/Sigil.app/Contents/Resources/ )
