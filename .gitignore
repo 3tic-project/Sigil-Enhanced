@@ -84,3 +84,6 @@ build
 #AppImage builds
 *.AppImage
 *.zsync
+
+#LOGFILE
+*.log
