@@ -1,3 +1,16 @@
+# Sigil-Enhanced
+
+Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 编辑器。本项目以当前仍在维护的 Sigil 主线为基础，重新接入 sigil-modified 曾经提供的效率优化、编辑器增强、拖拽导入、插件管理改进等功能，并在后续维护中尽量跟随上游主线更新。
+
+
+## 致谢
+
+本项目基于以下项目和作者的工作继续维护：
+
+* Sigil：感谢 Sigil 项目的原作者、维护者和所有贡献者提供长期维护的开源 EPUB 编辑器基础。
+* sigil-modified：感谢原 sigil-modified 作者 ichigo250 对批量操作效率、代码编辑体验、插件管理和 EPUB 检查等功能所做的改进。
+
+本仓库中的主线 Sigil README 另存为 [README-Sigil.md](README-Sigil.md)。下面保留原 sigil-modified 的功能说明，作为本项目增强功能来源和行为说明的参考。
 
 
 
