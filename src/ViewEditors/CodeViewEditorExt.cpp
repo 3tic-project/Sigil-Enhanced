@@ -912,7 +912,7 @@ void CodeViewEditor::CommonPasteEvent(const QMimeData* source) {
         QString paste_indent = paste_txt.left(trimmed_pos.before);
         if (indentation == paste_indent) {
             paste_txt = paste_txt.mid(trimmed_pos.before);
-            textCursor().insertText(paste_txt);
+            InsertTextAsSingleUndoStep(paste_txt);
             return;
         }
     }
@@ -1108,10 +1108,10 @@ void CodeViewEditor::PasteRichText() {
     QString text;
 
     if (mimedata->hasHtml()) {
-        QTextDocument* qdoc = new QTextDocument();
+        QTextDocument qdoc;
         QString html = cleanRichText(mimedata->html());
-        qdoc->setHtml(html); // This step is to organize the source code to reduce redundancy.
-        text = Utility::RegExpSub("[\\s\\S]*<body[^>]*>([\\s\\S]*)</body>[\\s\\S]*", "\\1", qdoc->toHtml());
+        qdoc.setHtml(html); // This step is to organize the source code to reduce redundancy.
+        text = Utility::RegExpSub("[\\s\\S]*<body[^>]*>([\\s\\S]*)</body>[\\s\\S]*", "\\1", qdoc.toHtml());
         text = Utility::trimmed(text, " \n\r\t");
     }
     else if (mimedata->hasText()) {

@@ -887,7 +887,7 @@ bool FlowTab::InsertHyperlink(const QString &href)
 void FlowTab::InsertFile(QString html)
 {
     if (m_wCodeView) {
-        m_wCodeView->insertPlainText(html);
+        m_wCodeView->InsertTextAsSingleUndoStep(html);
     }
 }
 

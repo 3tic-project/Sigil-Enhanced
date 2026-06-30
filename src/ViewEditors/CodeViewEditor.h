@@ -24,6 +24,8 @@
 #ifndef CODEVIEWEDITOR_H
 #define CODEVIEWEDITOR_H
 
+#include <functional>
+
 #include <QtCore/QList>
 #include <QtWidgets/QPlainTextEdit>
 #include <QtGui/QStandardItem>
@@ -402,6 +404,10 @@ public:
     bool PasteClipText(const QString& cliptext);
 
     void HighlightWord(const QString &word, int pos);
+
+    void RunAsSingleUndoStep(const std::function<void(QTextCursor &)> &operation);
+    void InsertTextAsSingleUndoStep(const QString &text);
+    void ReplaceSelectionAsSingleUndoStep(const QString &text);
 
 signals:
 

@@ -90,6 +90,31 @@ static const QString STARTING_INDENT_USED = "(^\\s*)[^\\s]";
 
 static const uint MAX_SPELLING_SUGGESTIONS = 10;
 
+namespace {
+
+class ScopedTextEditBlock
+{
+public:
+    explicit ScopedTextEditBlock(QTextCursor &cursor)
+        : m_cursor(cursor)
+    {
+        m_cursor.beginEditBlock();
+    }
+
+    ~ScopedTextEditBlock()
+    {
+        m_cursor.endEditBlock();
+    }
+
+    ScopedTextEditBlock(const ScopedTextEditBlock &) = delete;
+    ScopedTextEditBlock &operator=(const ScopedTextEditBlock &) = delete;
+
+private:
+    QTextCursor &m_cursor;
+};
+
+}
+
 
 CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, QWidget *parent)
     :
@@ -593,7 +618,7 @@ QString CodeViewEditor::SplitSection()
 
 void CodeViewEditor::InsertSGFSectionMarker()
 {
-    textCursor().insertText(BREAK_TAG_INSERT);
+    InsertTextAsSingleUndoStep(BREAK_TAG_INSERT);
 }
 
 
@@ -619,7 +644,7 @@ void CodeViewEditor::InsertClosingTag()
 
     if (tag_name_index >= 0) {
         const QString closing_tag = "</" %  mo.captured(1) % ">";
-        textCursor().insertText(closing_tag);
+        InsertTextAsSingleUndoStep(closing_tag);
     }
 }
 
@@ -2609,9 +2634,38 @@ void CodeViewEditor::ScrollOneLineDown()
 
 void CodeViewEditor::InsertText(const QString &text)
 {
-    QTextCursor c = textCursor();
-    c.insertText(text);
-    setTextCursor(c);
+    InsertTextAsSingleUndoStep(text);
+}
+
+void CodeViewEditor::RunAsSingleUndoStep(const std::function<void(QTextCursor &)> &operation)
+{
+    if (!operation) {
+        return;
+    }
+
+    QTextCursor cursor = textCursor();
+    {
+        ScopedTextEditBlock edit_block(cursor);
+        operation(cursor);
+    }
+    setTextCursor(cursor);
+}
+
+void CodeViewEditor::InsertTextAsSingleUndoStep(const QString &text)
+{
+    RunAsSingleUndoStep([&text](QTextCursor &cursor) {
+        cursor.insertText(text);
+    });
+}
+
+void CodeViewEditor::ReplaceSelectionAsSingleUndoStep(const QString &text)
+{
+    RunAsSingleUndoStep([&text](QTextCursor &cursor) {
+        if (cursor.hasSelection()) {
+            cursor.removeSelectedText();
+        }
+        cursor.insertText(text);
+    });
 }
 
 void CodeViewEditor::HighlightWord(const QString &word, int pos)

@@ -113,7 +113,7 @@ void CSSTab::TextDirectionDefault()
 void CSSTab::InsertFile(QString css)
 {
     if (m_wCodeView) {
-        m_wCodeView->insertPlainText(css);
+        m_wCodeView->InsertTextAsSingleUndoStep(css);
     }
 }
 //-----------------------------------------------------------------
