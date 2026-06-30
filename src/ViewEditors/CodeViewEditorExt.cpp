@@ -1452,6 +1452,7 @@ bool CodeViewEditor::FindPrevPlus(const QString& presearch_regex,
         m_preSearchInfo.presearch_has_executed = false;
         return FindPrevPlus(presearch_regex, search_regex, marked_text, split_at, inRemainder);
     }
+    return false;
 }
 
 

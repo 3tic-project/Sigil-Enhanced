@@ -62,7 +62,7 @@ public:
     void SetAppearance();
     void SetAppearanceColors();
 
-    QSize sizeHint() const;
+    QSize sizeHint() const override;
 
     void LineNumberAreaPaintEvent(QPaintEvent *event);
     void LineNumberAreaMouseEvent(QMouseEvent *event);
@@ -86,7 +86,7 @@ public:
     // override the createMimeDataFromSelection() to 
     // prevent copy and cut from losing nbsp
     // ala Kovid's solution in calibre PlainTextEdit
-    virtual QMimeData *createMimeDataFromSelection() const;
+    QMimeData *createMimeDataFromSelection() const override;
 
     int GetCursorPosition() const;
     int GetCursorBlockNumber() const;
@@ -114,14 +114,14 @@ signals:
 protected:
 
     bool event(QEvent* event) override;
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
-    void resizeEvent(QResizeEvent *event);
-    void contextMenuEvent(QContextMenuEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
 
-    void focusInEvent(QFocusEvent *event);
-    void focusOutEvent(QFocusEvent *event);
+    void focusInEvent(QFocusEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
 
 private slots:
 

@@ -50,13 +50,13 @@ public:
 
     bool RedoEnabled() override;
 
-    float GetZoomFactor() const;
+    float GetZoomFactor() const override;
 
-    void SetZoomFactor(float new_zoom_factor);
+    void SetZoomFactor(float new_zoom_factor) override;
 
-    void UpdateDisplay();
+    void UpdateDisplay() override;
 
-    void ThemeChangeRefresh();
+    void ThemeChangeRefresh() override;
 
 public slots:
     void RefreshContent();

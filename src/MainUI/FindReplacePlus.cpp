@@ -954,7 +954,14 @@ bool FindReplacePlus::FindInAllFiles(Direction direction)
     // because we have set it in SetStartingResource() by force.
     if (current_resource == m_StartingResource) {
         found = GetSearchableAndFindNext(false, m_StartingPos, m_InRemainder);
-        if (!found) m_InRemainder = !m_InRemainder ? true : isFinish = true, false;
+        if (!found) {
+            if (!m_InRemainder) {
+                m_InRemainder = true;
+            } else {
+                isFinish = true;
+                m_InRemainder = false;
+            }
+        }
     }
     else if (IsCurrentFileInSelection()){
         found = GetSearchableAndFindNext(false, -1, m_InRemainder);
@@ -1796,10 +1803,10 @@ void FindReplacePlus::ExtendUI()
               "<p style=\"margin-left: 0.5em;\">" + tr("Find next match.") + "</p>";
     ui.findNext->setToolTip(tooltip);
     tooltip = "<p style=\"padding-top:0.5em;\"><b>" + tr("Replace/Find") + "</b></p>"
-              "<p style=\"margin-left: 0.5em;\">" + tr("Replace highlighted match \(if any\), then find the Next match in Code View.") + "</p>";
+              "<p style=\"margin-left: 0.5em;\">" + tr("Replace highlighted match (if any), then find the Next match in Code View.") + "</p>";
     ui.replaceFind->setToolTip(tooltip);
     tooltip = "<p style=\"padding-top:0.5em;\"><b>" + tr("Replace") + "</b></p>"
-              "<p style=\"margin-left: 0.5em;\">" + tr("Replace highlighted match \(if any\) in Code View.") + "</p>";
+              "<p style=\"margin-left: 0.5em;\">" + tr("Replace highlighted match (if any) in Code View.") + "</p>";
     ui.replaceCurrent->setToolTip(tooltip);
     tooltip = "<p style=\"padding-top:0.5em;\"><b>" + tr("Replace All") + "</b></p>"
               "<p style=\"margin-left: 0.5em;\">" + tr("Replace all matches in Code View.") + "</p>"
