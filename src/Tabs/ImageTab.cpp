@@ -130,6 +130,16 @@ void ImageTab::RotateRight() { m_AdjImg->doRotateRight(); }
 void ImageTab::CropImage()   { m_AdjImg->doCrop();        }
 void ImageTab::ResizeImage() { m_AdjImg->doResizeImage(); }
 
+bool ImageTab::UndoEnabled()
+{
+    return m_AdjImg && m_AdjImg->isUndoEnabled();
+}
+
+bool ImageTab::RedoEnabled()
+{
+    return m_AdjImg && m_AdjImg->isRedoEnabled();
+}
+
 float ImageTab::GetZoomFactor() const
 {
     float zf = (float) m_AdjImg->getZoomFactor();
@@ -518,6 +528,7 @@ void ImageTab::ConnectSignalsToSlots()
 
     connect(m_AdjImg, SIGNAL(customContextMenuRequested(const QPoint &)),this, SLOT(OpenContextMenu(const QPoint &)));
     connect(m_AdjImg, SIGNAL(InternalZoomFactorChanged(double)),  this, SLOT(HandleInternalImageZoomChange(double)));
+    connect(m_AdjImg, SIGNAL(UndoRedoStateChanged()), this, SLOT(EmitUndoRedoStateChanged()));
 
     connect(m_OpenWith,       SIGNAL(triggered()),   this, SLOT(openWith()));
     connect(m_OpenWithEditor0, SIGNAL(triggered()),  m_openWithMapper, SLOT(map()));

@@ -57,6 +57,10 @@ public:
     // Overrides inherited from ContentTab
     bool IsModified();
 
+    bool UndoEnabled();
+
+    bool RedoEnabled();
+
     bool CutEnabled();
 
     bool CopyEnabled();

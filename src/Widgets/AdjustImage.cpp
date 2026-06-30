@@ -126,6 +126,21 @@ bool AdjustImage::isCropEnabled() { return ui->actionCrop->isEnabled(); }
 bool AdjustImage::isUndoEnabled() { return ui->actionUndo->isEnabled(); }
 bool AdjustImage::isRedoEnabled() { return ui->actionRedo->isEnabled(); }
 
+void AdjustImage::updateUndoRedoActions()
+{
+    bool undo_enabled = !m_history.isEmpty();
+    bool redo_enabled = !m_reverseHistory.isEmpty();
+    bool changed = ui->actionUndo->isEnabled() != undo_enabled ||
+                   ui->actionRedo->isEnabled() != redo_enabled;
+
+    ui->actionUndo->setEnabled(undo_enabled);
+    ui->actionRedo->setEnabled(redo_enabled);
+
+    if (changed) {
+        emit UndoRedoStateChanged();
+    }
+}
+
 
 void AdjustImage::extendToolTip(QAction*m, const QString sc)
 {
@@ -220,20 +235,20 @@ void AdjustImage::rotateImage(int angle)
 void AdjustImage::saveToHistory(QImage imageToSave)
 {
     m_history.push_back(imageToSave);
-    ui->actionUndo->setEnabled(true);
+    updateUndoRedoActions();
 }
 
 void AdjustImage::saveToHistoryWithClear(QImage imageToSave)
 {
-    saveToHistory(imageToSave);
+    m_history.push_back(imageToSave);
     m_reverseHistory.clear();
-    ui->actionRedo->setEnabled(false);
+    updateUndoRedoActions();
 }
 
 void AdjustImage::saveToReverseHistory(QImage imageToSave)
 {
     m_reverseHistory.push_back(imageToSave);
-    ui->actionRedo->setEnabled(true);
+    updateUndoRedoActions();
 }
 
 void AdjustImage::resizeImage(int targetW, int targetH)
@@ -444,26 +459,26 @@ void AdjustImage::toggleShowToolbar(bool checked)
 
 void AdjustImage::doUndo()
 {
-    saveToReverseHistory(m_image);
-    if (!m_history.isEmpty()) {
-        m_image = m_history.last();
-        refreshLabel();
-        m_history.pop_back();
+    if (m_history.isEmpty()) {
+        return;
     }
-    if (m_history.size() == 0)
-        ui->actionUndo->setEnabled(false);
+    m_reverseHistory.push_back(m_image);
+    m_image = m_history.last();
+    refreshLabel();
+    m_history.pop_back();
+    updateUndoRedoActions();
 }
 
 void AdjustImage::doRedo()
 {
-    saveToHistory(m_image);
-    if (!m_reverseHistory.isEmpty()) {
-        m_image = m_reverseHistory.last();
-        refreshLabel();
-        m_reverseHistory.pop_back();
+    if (m_reverseHistory.isEmpty()) {
+        return;
     }
-    if (m_reverseHistory.size() == 0)
-        ui->actionRedo->setEnabled(false);
+    m_history.push_back(m_image);
+    m_image = m_reverseHistory.last();
+    refreshLabel();
+    m_reverseHistory.pop_back();
+    updateUndoRedoActions();
 }
 
 void AdjustImage::doZoomIn()

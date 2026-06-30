@@ -200,6 +200,16 @@ bool FlowTab::IsModified()
     return is_modified;
 }
 
+bool FlowTab::UndoEnabled()
+{
+    return m_wCodeView && m_wCodeView->document()->isUndoAvailable();
+}
+
+bool FlowTab::RedoEnabled()
+{
+    return m_wCodeView && m_wCodeView->document()->isRedoAvailable();
+}
+
 void FlowTab::CodeView()
 {
     CreateCodeViewIfRequired();
@@ -1219,6 +1229,8 @@ void FlowTab::ConnectCodeViewSignalsToSlots()
     connect(m_wCodeView, SIGNAL(cursorPositionChanged()), this, SLOT(EmitUpdateCursorPosition()));
     connect(m_wCodeView, SIGNAL(ZoomFactorChanged(float)), this, SIGNAL(ZoomFactorChanged(float)));
     connect(m_wCodeView, SIGNAL(selectionChanged()), this, SIGNAL(SelectionChanged()));
+    connect(m_wCodeView, SIGNAL(undoAvailable(bool)), this, SLOT(EmitUndoRedoStateChanged()));
+    connect(m_wCodeView, SIGNAL(redoAvailable(bool)), this, SLOT(EmitUndoRedoStateChanged()));
     connect(m_wCodeView, SIGNAL(FocusLost(QWidget *)), this, SLOT(LeaveEditor(QWidget *)));
     connect(m_wCodeView, SIGNAL(LinkClicked(const QUrl &)), this, SIGNAL(LinkClicked(const QUrl &)));
     connect(m_wCodeView, SIGNAL(ViewImage(const QUrl &)), this, SLOT(HandleViewImage(const QUrl &)));

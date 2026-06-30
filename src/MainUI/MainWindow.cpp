@@ -4932,7 +4932,9 @@ void MainWindow::UpdateUIOnTabChanges()
         return;
     }
 
-    // Set enabled state based on selection change
+    // Set enabled state based on current tab capabilities.
+    ui.actionUndo               ->setEnabled(tab->UndoEnabled());
+    ui.actionRedo               ->setEnabled(tab->RedoEnabled());
     ui.actionCut                ->setEnabled(tab->CutEnabled());
     ui.actionCopy               ->setEnabled(tab->CopyEnabled());
     ui.actionPaste              ->setEnabled(tab->PasteEnabled());
@@ -5001,8 +5003,6 @@ void MainWindow::SetStateActionsCodeView()
     ui.actionInsertRole->setEnabled(editing_epub3);
     ui.actionInsertHyperlink->setEnabled(true);
     ui.actionInsertClosingTag->setEnabled(true);
-    ui.actionUndo->setEnabled(true);
-    ui.actionRedo->setEnabled(true);
     ui.actionPasteClipboardHistory->setEnabled(true);
     ui.actionBold         ->setEnabled(true);
     ui.actionItalic       ->setEnabled(true);
@@ -5098,8 +5098,6 @@ void MainWindow::SetStateActionsRawView()
     ui.actionInsertRole->setEnabled(false);
     ui.actionInsertHyperlink->setEnabled(false);
     ui.actionInsertClosingTag->setEnabled(false);
-    ui.actionUndo->setEnabled(true);
-    ui.actionRedo->setEnabled(true);
     ui.actionPasteClipboardHistory->setEnabled(true);
     ui.actionBold         ->setEnabled(false);
     ui.actionItalic       ->setEnabled(false);
@@ -7250,14 +7248,22 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
 
     rType = tab->GetLoadedResource()->Type();
 
+    connect(tab, SIGNAL(UndoRedoStateChanged()), this, SLOT(UpdateUIOnTabChanges()));
+
     // Triggered connections should be disconnected in BreakTabConnections
-    if (rType != Resource::ImageResourceType &&
-        rType != Resource::AudioResourceType &&
+    if (rType != Resource::AudioResourceType &&
         rType != Resource::VideoResourceType &&
         rType != Resource::PdfResourceType &&
         rType != Resource::FontResourceType) {
         connect(ui.actionUndo,                     SIGNAL(triggered()),  tab,   SLOT(Undo()));
         connect(ui.actionRedo,                     SIGNAL(triggered()),  tab,   SLOT(Redo()));
+    }
+
+    if (rType != Resource::ImageResourceType &&
+        rType != Resource::AudioResourceType &&
+        rType != Resource::VideoResourceType &&
+        rType != Resource::PdfResourceType &&
+        rType != Resource::FontResourceType) {
         connect(ui.actionCut,                      SIGNAL(triggered()),  tab,   SLOT(Cut()));
         connect(ui.actionCopy,                     SIGNAL(triggered()),  tab,   SLOT(Copy()));
         connect(ui.actionPaste,                    SIGNAL(triggered()),  tab,   SLOT(Paste()));

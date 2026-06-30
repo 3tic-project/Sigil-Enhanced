@@ -85,6 +85,7 @@ public slots:
 
 signals:
     void InternalZoomFactorChanged(double factor);
+    void UndoRedoStateChanged();
 
 private slots:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -96,6 +97,7 @@ private:
     void WriteSettings();
     void ConnectSignalsToSlots();
     void adjustScrollBar(QScrollBar *scrollBar, double factor);
+    void updateUndoRedoActions();
     void changeCroppingState(bool changeTo);
     void refreshLabel();
     void rotateImage(int angle);

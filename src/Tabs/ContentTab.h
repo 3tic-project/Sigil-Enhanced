@@ -90,6 +90,24 @@ public:
     }
 
     /**
+     * Can the user perform the Undo operation.
+     *
+     * @return \c true if the user can Undo.
+     */
+    virtual bool UndoEnabled()          {
+        return false;
+    }
+
+    /**
+     * Can the user perform the Redo operation.
+     *
+     * @return \c true if the user can Redo.
+     */
+    virtual bool RedoEnabled()          {
+        return false;
+    }
+
+    /**
      * Can the user perform the Cut clipboard operation.
      *
      * @return \c true if the user can Cut.
@@ -430,7 +448,17 @@ signals:
     void MarkSelectionRequest();
     void ClearMarkedTextRequest();
 
+    /**
+     * Emitted when undo/redo availability changes.
+     */
+    void UndoRedoStateChanged();
+
 protected slots:
+
+    /**
+     * Emits the UndoRedoStateChanged signal.
+     */
+    void EmitUndoRedoStateChanged();
 
     /**
      * Invoked when underlying resource sends out its Deleted signal
@@ -494,4 +522,3 @@ public:
 };
 
 #endif // CONTENTTAB_H
-

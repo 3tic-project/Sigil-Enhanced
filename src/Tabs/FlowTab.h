@@ -74,6 +74,9 @@ public:
     // Overrides inherited from ContentTabs
     bool IsModified();
 
+    bool UndoEnabled();
+    bool RedoEnabled();
+
     bool CutEnabled();
     bool CopyEnabled();
     bool PasteEnabled();
@@ -423,5 +426,4 @@ public slots:
 };
 
 #endif // FLOWTAB_H
-
 

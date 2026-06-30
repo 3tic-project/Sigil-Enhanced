@@ -78,6 +78,17 @@ bool TextTab::IsModified()
     return m_wCodeView->document()->isModified();
 }
 
+bool TextTab::UndoEnabled()
+{
+    return m_wCodeView && m_wCodeView->document()->isUndoAvailable();
+}
+
+
+bool TextTab::RedoEnabled()
+{
+    return m_wCodeView && m_wCodeView->document()->isRedoAvailable();
+}
+
 
 bool TextTab::CutEnabled()
 {
@@ -164,7 +175,7 @@ bool TextTab::IsLoadingFinished()
 
 void TextTab::Undo()
 {
-    if (m_wCodeView->hasFocus()) {
+    if (m_wCodeView) {
         m_wCodeView->undo();
     }
 }
@@ -172,7 +183,7 @@ void TextTab::Undo()
 
 void TextTab::Redo()
 {
-    if (m_wCodeView->hasFocus()) {
+    if (m_wCodeView) {
         m_wCodeView->redo();
     }
 }
@@ -328,6 +339,8 @@ void TextTab::ConnectSignalsToSlots()
     connect(m_wCodeView, SIGNAL(cursorPositionChanged()),     this, SLOT(EmitUpdateCursorPosition()));
     connect(m_wCodeView, SIGNAL(ZoomFactorChanged(float)), this, SIGNAL(ZoomFactorChanged(float)));
     connect(m_wCodeView, SIGNAL(selectionChanged()),         this, SIGNAL(SelectionChanged()));
+    connect(m_wCodeView, SIGNAL(undoAvailable(bool)),        this, SLOT(EmitUndoRedoStateChanged()));
+    connect(m_wCodeView, SIGNAL(redoAvailable(bool)),        this, SLOT(EmitUndoRedoStateChanged()));
     connect(m_wCodeView, SIGNAL(OpenClipEditorRequest(ClipEditorModel::clipEntry *)), this, SIGNAL(OpenClipEditorRequest(ClipEditorModel::clipEntry *)));
     connect(m_wCodeView, SIGNAL(MarkSelectionRequest()),         this, SIGNAL(MarkSelectionRequest()));
     connect(m_wCodeView, SIGNAL(ClearMarkedTextRequest()),              this, SIGNAL(ClearMarkedTextRequest()));

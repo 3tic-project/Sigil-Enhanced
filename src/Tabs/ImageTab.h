@@ -46,6 +46,10 @@ public:
     ~ImageTab();
 
     // Overrides inherited from ContentTab
+    bool UndoEnabled() override;
+
+    bool RedoEnabled() override;
+
     float GetZoomFactor() const;
 
     void SetZoomFactor(float new_zoom_factor);

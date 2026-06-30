@@ -100,6 +100,11 @@ void ContentTab::EmitCentralTabRequest()
     emit CentralTabRequest(this);
 }
 
+void ContentTab::EmitUndoRedoStateChanged()
+{
+    emit UndoRedoStateChanged();
+}
+
 
 void ContentTab::ContentChangedExternally()
 {
