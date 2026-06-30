@@ -35,8 +35,14 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QProgressDialog>
 #include <QToolBar>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QUrl>
 #include <QtWebEngineWidgets>
 #include <QtWebEngineCore>
 #include <QRegularExpression>
@@ -174,6 +180,34 @@ static const QString CUSTOM_PREVIEW_STYLE_ALT_FILENAME = "custom_preview_style_a
 
 QStringList MainWindow::s_RecentFiles = QStringList();
 
+static QStringList GetLocalDroppedFilePaths(const QMimeData *mime_data)
+{
+    QStringList filepaths;
+    if (!mime_data || !mime_data->hasUrls()) {
+        return filepaths;
+    }
+
+    const QList<QUrl> urls = mime_data->urls();
+    foreach(const QUrl &url, urls) {
+        if (!url.isLocalFile()) {
+            return QStringList();
+        }
+        const QString filepath = url.toLocalFile();
+        const QFileInfo file_info(filepath);
+        if (filepath.isEmpty() || !file_info.isFile()) {
+            return QStringList();
+        }
+        filepaths << filepath;
+    }
+    return filepaths;
+}
+
+static bool IsSingleDroppedEpubFile(const QStringList &filepaths)
+{
+    return filepaths.count() == 1 &&
+           QFileInfo(filepaths.at(0)).suffix().compare("epub", Qt::CaseInsensitive) == 0;
+}
+
 // This list needs to be kept in exact sync with AutomateEditor.cpp in Dialogs
 static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "AddCover" <<
@@ -268,6 +302,7 @@ MainWindow::MainWindow(const QString &openfilepath,
     // Telling Qt to delete this window
     // from memory when it is closed
     setAttribute(Qt::WA_DeleteOnClose);
+    setAcceptDrops(true);
     ExtendUI();
     PlatformSpecificTweaks();
     // Needs to come before signals connect and after ExtendUI
@@ -1905,6 +1940,35 @@ void MainWindow::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
 }
 
+void MainWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (IsSingleDroppedEpubFile(GetLocalDroppedFilePaths(event->mimeData()))) {
+        event->acceptProposedAction();
+        return;
+    }
+    QMainWindow::dragEnterEvent(event);
+}
+
+void MainWindow::dragMoveEvent(QDragMoveEvent *event)
+{
+    if (IsSingleDroppedEpubFile(GetLocalDroppedFilePaths(event->mimeData()))) {
+        event->acceptProposedAction();
+        return;
+    }
+    QMainWindow::dragMoveEvent(event);
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+    const QStringList filepaths = GetLocalDroppedFilePaths(event->mimeData());
+    if (IsSingleDroppedEpubFile(filepaths)) {
+        AddDroppedFiles(filepaths);
+        event->acceptProposedAction();
+        return;
+    }
+    QMainWindow::dropEvent(event);
+}
+
 void MainWindow::DebugCurrentWidgetSizes()
 {
     DWINGEO {
@@ -2550,13 +2614,41 @@ bool MainWindow::ProceedWithUndefinedUrlFragments()
 
 void MainWindow::AddDroppedFiles(const QStringList& filepaths)
 {
-    if (!filepaths.isEmpty()) {
-        QStringList added_book_paths = m_BookBrowser->AddExisting(false, false, filepaths);
-        if (!added_book_paths.isEmpty()) {
-            m_BookBrowser->Refresh();
-            m_Book->SetModified();
-	    ShowMessageOnStatusBar(tr("Dropped files added."));
-	}
+    if (filepaths.isEmpty()) {
+        return;
+    }
+
+    if (IsSingleDroppedEpubFile(filepaths)) {
+        const QString filepath = filepaths.at(0);
+        QMessageBox msgbox(this);
+        msgbox.setIcon(QMessageBox::Question);
+        msgbox.setWindowTitle(APP_DISPLAY_NAME);
+        msgbox.setText(tr("The dropped file is an EPUB."));
+        msgbox.setInformativeText(tr("Do you want to add it to the current book, or open it for editing in a new window?\n\n%1")
+                                  .arg(QDir::toNativeSeparators(filepath)));
+        QPushButton *add_button = msgbox.addButton(tr("Add to Current Book"), QMessageBox::AcceptRole);
+        QPushButton *open_button = msgbox.addButton(tr("Open in New Window"), QMessageBox::ActionRole);
+        msgbox.addButton(QMessageBox::Cancel);
+        msgbox.setDefaultButton(open_button);
+        msgbox.exec();
+
+        if (msgbox.clickedButton() == open_button) {
+            MainWindow *new_window = new MainWindow(filepath);
+            new_window->show();
+            new_window->activateWindow();
+            qApp->processEvents();
+            return;
+        }
+        if (msgbox.clickedButton() != add_button) {
+            return;
+        }
+    }
+
+    QStringList added_book_paths = m_BookBrowser->AddExisting(false, false, filepaths);
+    if (!added_book_paths.isEmpty()) {
+        m_BookBrowser->Refresh();
+        m_Book->SetModified();
+        ShowMessageOnStatusBar(tr("Dropped files added."));
     }
 }
 

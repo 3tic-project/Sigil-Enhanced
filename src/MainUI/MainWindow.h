@@ -79,6 +79,9 @@ class ViewImage;
 class FlowTab;
 class QWidget;
 class FileDropZone;
+class QDragEnterEvent;
+class QDragMoveEvent;
+class QDropEvent;
 
 /**
  * @mainpage
@@ -317,6 +320,10 @@ protected:
     void showEvent(QShowEvent *event);
 
     void changeEvent(QEvent * event);
+
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dragMoveEvent(QDragMoveEvent *event);
+    void dropEvent(QDropEvent *event);
 
     /**
      * Workaround for Qt 4.8 bug, which does not save/restore window state

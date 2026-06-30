@@ -87,3 +87,5 @@ build
 
 #LOGFILE
 *.log
+.idea/
+todo/
