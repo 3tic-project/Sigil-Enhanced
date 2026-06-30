@@ -102,6 +102,7 @@ private:
     void refreshLabel();
     void rotateImage(int angle);
     void resizeImage(int tgtw, int tgth); 
+    void appendToLimitedHistory(QVector<QImage> &history, const QImage &imageToSave);
     void saveToHistory(QImage imageToSave);
     void saveToHistoryWithClear(QImage imageToSave);
     void saveToReverseHistory(QImage imageToSave);

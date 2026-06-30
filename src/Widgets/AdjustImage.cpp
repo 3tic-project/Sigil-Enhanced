@@ -43,6 +43,7 @@
 
 static const QString SETTINGS_GROUP = "adjust_image";
 static QStringList SAVE_QUALITY_MEDIATYPES = QStringList() << "image/jpeg" << "image/webp" << "image/avif" << "image/jxl";
+static const int MAX_IMAGE_HISTORY_STEPS = 20;
 
 AdjustImage::AdjustImage(const QString filepath, const QString& mediatype,  QWidget *parent) :
     QWidget(parent),
@@ -232,27 +233,39 @@ void AdjustImage::rotateImage(int angle)
     refreshLabel();
 }
 
+void AdjustImage::appendToLimitedHistory(QVector<QImage> &history, const QImage &imageToSave)
+{
+    history.push_back(imageToSave);
+    if (history.size() > MAX_IMAGE_HISTORY_STEPS) {
+        history.remove(0, history.size() - MAX_IMAGE_HISTORY_STEPS);
+    }
+}
+
 void AdjustImage::saveToHistory(QImage imageToSave)
 {
-    m_history.push_back(imageToSave);
+    appendToLimitedHistory(m_history, imageToSave);
     updateUndoRedoActions();
 }
 
 void AdjustImage::saveToHistoryWithClear(QImage imageToSave)
 {
-    m_history.push_back(imageToSave);
+    appendToLimitedHistory(m_history, imageToSave);
     m_reverseHistory.clear();
     updateUndoRedoActions();
 }
 
 void AdjustImage::saveToReverseHistory(QImage imageToSave)
 {
-    m_reverseHistory.push_back(imageToSave);
+    appendToLimitedHistory(m_reverseHistory, imageToSave);
     updateUndoRedoActions();
 }
 
 void AdjustImage::resizeImage(int targetW, int targetH)
 {
+    if (targetW == m_image.width() && targetH == m_image.height()) {
+        return;
+    }
+
     saveToHistoryWithClear(m_image);
     QPixmap pixmap(m_imageLabel->pixmap());
     pixmap = pixmap.scaled(targetW, targetH, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
@@ -378,7 +391,6 @@ void AdjustImage::toggleFullscreen()
 
 void AdjustImage::doResizeImage()
 {
-    saveToHistoryWithClear(m_image);
     int width = m_image.width();
     int height = m_image.height();
     ImageResizeDialog dlg(width, height, this);
@@ -462,7 +474,7 @@ void AdjustImage::doUndo()
     if (m_history.isEmpty()) {
         return;
     }
-    m_reverseHistory.push_back(m_image);
+    appendToLimitedHistory(m_reverseHistory, m_image);
     m_image = m_history.last();
     refreshLabel();
     m_history.pop_back();
@@ -474,7 +486,7 @@ void AdjustImage::doRedo()
     if (m_reverseHistory.isEmpty()) {
         return;
     }
-    m_history.push_back(m_image);
+    appendToLimitedHistory(m_history, m_image);
     m_image = m_reverseHistory.last();
     refreshLabel();
     m_reverseHistory.pop_back();
