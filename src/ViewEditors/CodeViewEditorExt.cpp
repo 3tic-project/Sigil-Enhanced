@@ -983,8 +983,25 @@ bool CodeViewEditor::insertImageFromByteData(const QByteArray& data, bool insert
     QString filename = "Images0001.png";
     QWidget* mainwin_w = Utility::GetMainWindow();
     MainWindow* mainwin = qobject_cast<MainWindow*>(mainwin_w);
+    if (!mainwin) {
+        return false;
+    }
+
     QString added_bookpath = mainwin->GetBookBrowser()->AddImageFromClipboard(data, filename);
-    Resource* res = mainwin->GetCurrentContentTab()->GetLoadedResource();
+    if (added_bookpath.isEmpty()) {
+        return false;
+    }
+
+    ContentTab* current_tab = mainwin->GetCurrentContentTab();
+    if (!current_tab) {
+        return false;
+    }
+
+    Resource* res = current_tab->GetLoadedResource();
+    if (!res) {
+        return false;
+    }
+
     QString insert_text;
     QString new_filename = QFileInfo(added_bookpath).baseName();
     if (new_filename.contains("."))
@@ -1000,6 +1017,7 @@ bool CodeViewEditor::insertImageFromByteData(const QByteArray& data, bool insert
         if (insert_on_css)
             insert_text = insert_text.left(insert_text.size() - 1);
         InsertText(insert_text);
+        emit ShowStatusMessageRequest(tr("Image imported. Undo removes only the inserted reference."));
     }
     return true;
 }
@@ -1014,10 +1032,31 @@ bool CodeViewEditor::insertImagesFromUrls(const QList<QUrl>& urls, bool insert_o
             return false;
         imgpaths << filepath;
     }
+    if (imgpaths.isEmpty()) {
+        return false;
+    }
+
     QWidget* mainwin_w = Utility::GetMainWindow();
     MainWindow* mainwin = qobject_cast<MainWindow*>(mainwin_w);
+    if (!mainwin) {
+        return false;
+    }
+
     added_bookpaths = mainwin->GetBookBrowser()->AddImagesFromFilePaths(imgpaths);
-    Resource* res = mainwin->GetCurrentContentTab()->GetLoadedResource();
+    if (added_bookpaths.isEmpty()) {
+        return false;
+    }
+
+    ContentTab* current_tab = mainwin->GetCurrentContentTab();
+    if (!current_tab) {
+        return false;
+    }
+
+    Resource* res = current_tab->GetLoadedResource();
+    if (!res) {
+        return false;
+    }
+
     QString insert_text;
     foreach(QString added_bookpath, added_bookpaths) {
         QString filename = QFileInfo(added_bookpath).baseName();
@@ -1035,6 +1074,9 @@ bool CodeViewEditor::insertImagesFromUrls(const QList<QUrl>& urls, bool insert_o
         if (insert_on_css)
             insert_text = insert_text.left(insert_text.size() - 1);
         InsertText(insert_text);
+        emit ShowStatusMessageRequest(added_bookpaths.size() == 1 ?
+                                      tr("Image imported. Undo removes only the inserted reference.") :
+                                      tr("Images imported. Undo removes only the inserted references."));
     }
     return true;
 }

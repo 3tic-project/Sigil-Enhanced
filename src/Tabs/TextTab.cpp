@@ -344,6 +344,7 @@ void TextTab::ConnectSignalsToSlots()
     connect(m_wCodeView, SIGNAL(OpenClipEditorRequest(ClipEditorModel::clipEntry *)), this, SIGNAL(OpenClipEditorRequest(ClipEditorModel::clipEntry *)));
     connect(m_wCodeView, SIGNAL(MarkSelectionRequest()),         this, SIGNAL(MarkSelectionRequest()));
     connect(m_wCodeView, SIGNAL(ClearMarkedTextRequest()),              this, SIGNAL(ClearMarkedTextRequest()));
+    connect(m_wCodeView, SIGNAL(ShowStatusMessageRequest(const QString &)), this, SIGNAL(ShowStatusMessageRequest(const QString &)));
 }
 
 
