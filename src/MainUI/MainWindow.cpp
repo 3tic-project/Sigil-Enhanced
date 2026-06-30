@@ -202,10 +202,18 @@ static QStringList GetLocalDroppedFilePaths(const QMimeData *mime_data)
     return filepaths;
 }
 
-static bool IsSingleDroppedEpubFile(const QStringList &filepaths)
+static bool AreAllDroppedFilesEpub(const QStringList &filepaths)
 {
-    return filepaths.count() == 1 &&
-           QFileInfo(filepaths.at(0)).suffix().compare("epub", Qt::CaseInsensitive) == 0;
+    if (filepaths.isEmpty()) {
+        return false;
+    }
+
+    foreach(const QString &filepath, filepaths) {
+        if (QFileInfo(filepath).suffix().compare("epub", Qt::CaseInsensitive) != 0) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // This list needs to be kept in exact sync with AutomateEditor.cpp in Dialogs
@@ -1942,7 +1950,7 @@ void MainWindow::showEvent(QShowEvent *event)
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (IsSingleDroppedEpubFile(GetLocalDroppedFilePaths(event->mimeData()))) {
+    if (!GetLocalDroppedFilePaths(event->mimeData()).isEmpty()) {
         event->acceptProposedAction();
         return;
     }
@@ -1951,7 +1959,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 
 void MainWindow::dragMoveEvent(QDragMoveEvent *event)
 {
-    if (IsSingleDroppedEpubFile(GetLocalDroppedFilePaths(event->mimeData()))) {
+    if (!GetLocalDroppedFilePaths(event->mimeData()).isEmpty()) {
         event->acceptProposedAction();
         return;
     }
@@ -1961,7 +1969,7 @@ void MainWindow::dragMoveEvent(QDragMoveEvent *event)
 void MainWindow::dropEvent(QDropEvent *event)
 {
     const QStringList filepaths = GetLocalDroppedFilePaths(event->mimeData());
-    if (IsSingleDroppedEpubFile(filepaths)) {
+    if (!filepaths.isEmpty()) {
         AddDroppedFiles(filepaths);
         event->acceptProposedAction();
         return;
@@ -2618,24 +2626,37 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
         return;
     }
 
-    if (IsSingleDroppedEpubFile(filepaths)) {
-        const QString filepath = filepaths.at(0);
+    if (AreAllDroppedFilesEpub(filepaths)) {
         QMessageBox msgbox(this);
         msgbox.setIcon(QMessageBox::Question);
         msgbox.setWindowTitle(APP_DISPLAY_NAME);
-        msgbox.setText(tr("The dropped file is an EPUB."));
-        msgbox.setInformativeText(tr("Do you want to add it to the current book, or open it for editing in a new window?\n\n%1")
-                                  .arg(QDir::toNativeSeparators(filepath)));
+        msgbox.setText(filepaths.count() == 1 ?
+                       tr("The dropped file is an EPUB.") :
+                       tr("The dropped files are EPUB files."));
+        msgbox.setInformativeText(filepaths.count() == 1 ?
+                                  tr("Do you want to add it to the current book, or open it for editing in a new window?\n\n%1")
+                                  .arg(QDir::toNativeSeparators(filepaths.at(0))) :
+                                  tr("Do you want to add them to the current book, or open them for editing in new windows?\n\n%1")
+                                  .arg(QDir::toNativeSeparators(filepaths.join("\n"))));
         QPushButton *add_button = msgbox.addButton(tr("Add to Current Book"), QMessageBox::AcceptRole);
-        QPushButton *open_button = msgbox.addButton(tr("Open in New Window"), QMessageBox::ActionRole);
+        QPushButton *open_button = msgbox.addButton(filepaths.count() == 1 ?
+                                                    tr("Open in New Window") :
+                                                    tr("Open in New Windows"),
+                                                    QMessageBox::ActionRole);
         msgbox.addButton(QMessageBox::Cancel);
         msgbox.setDefaultButton(open_button);
         msgbox.exec();
 
         if (msgbox.clickedButton() == open_button) {
-            MainWindow *new_window = new MainWindow(filepath);
-            new_window->show();
-            new_window->activateWindow();
+            MainWindow *last_window = nullptr;
+            foreach(const QString &filepath, filepaths) {
+                MainWindow *new_window = new MainWindow(filepath);
+                new_window->show();
+                last_window = new_window;
+            }
+            if (last_window) {
+                last_window->activateWindow();
+            }
             qApp->processEvents();
             return;
         }
