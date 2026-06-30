@@ -628,6 +628,10 @@ int FindReplacePlus::ReplaceAll()
 
     }
 
+    if (count < 0) {
+        return 0;
+    }
+
     if (count == 0) {
         ShowMessage(tr("No replacements made"));
     } else if (count > 0) {
@@ -933,6 +937,15 @@ int FindReplacePlus::ReplaceInAllFiles()
     m_MainWindow->GetCurrentContentTab()->SaveTabContent();
     QList<Resource *>search_files = GetFilesToSearch(true);
     if (search_files.isEmpty()) return 0;
+
+    int pending_count = SearchOperations::CountInFilesPlus(GetPreSearchRegex(), GetSearchRegex(), search_files);
+    if (pending_count == 0) return 0;
+
+    ShowMessage(tr("Creating checkpoint before Replace All..."));
+    if (!m_MainWindow->RepoCommit()) {
+        ShowMessage(tr("Replace All cancelled: checkpoint failed."));
+        return -1;
+    }
 
     int count = SearchOperations::ReplaceInAllFIlesPlus(
                     GetPreSearchRegex(),
