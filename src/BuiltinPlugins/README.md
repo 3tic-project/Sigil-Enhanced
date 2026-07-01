@@ -158,6 +158,36 @@ Phase 2:
 - 最终目标结构为 `OEBPS/content.opf`、`OEBPS/toc.ncx`、`OEBPS/Text`、`OEBPS/Styles`、`OEBPS/Images`、`OEBPS/Fonts`、`OEBPS/Audio`、`OEBPS/Video`、`OEBPS/Misc`。
 - 归档完成后会将 Validation Results 中的资源路径同步到移动后的新路径，避免结果列表双击定位到旧路径。
 
+## BR Paragraph Normalizer
+
+目标是识别并修复部分自动生成 EPUB 中“正文直接挂在 `body` 下，靠顶层 `<br/>` 分段”的结构问题，安全转换为 `<p>` 段落。
+
+当前实现范围:
+
+- 新增核心模块 `BrParagraphNormalizer`。
+- 提供 `analyzeXhtmlText()`，按 XHTML 文本分类:
+  - `normal-body-flow`: 可自动规范化的 BR 正文流候选。
+  - `toc-like`: 目录页，默认跳过。
+  - `notice-or-imprint`: 阅读提示、版权、发行信息、初出等页面，只做人工确认候选。
+  - `short-flow`: 极短 BR 流页面，只做人工确认候选。
+  - `image-or-title-page`: 封面、图片或扉页，默认跳过。
+  - `block-layout`: 已存在顶层块级布局，默认跳过。
+  - `already-normalized`: 已有 `<p>`，默认跳过。
+  - `no-candidate` / `no-body` / `parse-error`: 无候选或不可处理。
+- 提供 `normalizeXhtmlText()`，转换时校验 XML well-formed、可见文本、`id`/`name`、`href`/`src`。
+- 新增 `Enhancement > Analyze BR Paragraphs...` 和 Automate 命令 `AnalyzeBrParagraphs`。
+- 新增 `Enhancement > Normalize Current BR Paragraphs...`，允许用户确认后处理当前 XHTML；人工确认候选也可通过此入口显式转换。
+- 新增 `Enhancement > Normalize BR Paragraphs...` 和 Automate 命令 `NormalizeBrParagraphs`，只批量转换 auto-safe 正文页。
+- 分析和转换结果写入 Validation Results，auto-safe 和人工确认候选用 warning，普通跳过页用 info。
+
+当前边界:
+
+- 整书转换会先 dry-run 分类并弹窗确认，短页、版权页、阅读提示页、目录页不会自动写回。
+- 当前文件转换走显式确认；如页面被判为人工确认候选，确认框会提示它不会进入批量自动修复。
+- 批量转换通过资源写回，不提供跨文件文本 undo；执行前会自动创建 Sigil Checkpoint，失败则取消本次批量写回。
+- 转换会给页面补充 `body.se-br-normalized` 作用域 CSS，将生成段落的默认 margin 归零，并用 `se-br-gap-before` 表示原始连续 `<br/>` 造成的空行。
+- 根 `<html xmlns="http://www.w3.org/1999/xhtml">` 会保留；生成段落不会重复写 `xmlns`，兼容上一版输出时也会清理子元素上的冗余 XHTML namespace。
+
 相比旧实现的改进:
 
 - OPF 修复逻辑从 `ValidationResultsView` 迁到内置插件模块。

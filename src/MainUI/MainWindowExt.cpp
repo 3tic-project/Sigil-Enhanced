@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QHash>
 #include <QMessageBox>
+#include <QWriteLocker>
 
 #include "MainUI/MainWindow.h"
 #include "MainUI/BookBrowser.h"
@@ -8,7 +9,9 @@
 #include "MainUI/ValidationResultsView.h"
 #include "BuiltinPlugins/EpubStructureNormalizer.h"
 #include "BuiltinPlugins/FormatterEnhancer.h"
+#include "BuiltinPlugins/BrParagraphNormalizer.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/Resource.h"
 #include "Tabs/ContentTab.h"
 #include "Tabs/FlowTab.h"
@@ -193,6 +196,331 @@ bool MainWindow::EnhanceSourceFormatting()
                            tr("Source formatting enhancement completed.") :
                            tr("No source formatting changes needed."));
     return true;
+}
+
+bool MainWindow::AnalyzeBrParagraphs()
+{
+    SaveTabData();
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QList<ValidationResult> results;
+    int checked = 0;
+    int auto_candidates = 0;
+    int manual_candidates = 0;
+    int skipped = 0;
+    int total_paragraphs = 0;
+
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        results << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                    tr("BR paragraph analysis: no EPUB is currently loaded."));
+        QApplication::restoreOverrideCursor();
+        m_ValidationResultsView->LoadResults(results);
+        return false;
+    }
+
+    const QList<HTMLResource*> html_resources =
+        m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
+    foreach(HTMLResource* resource, html_resources) {
+        if (!resource) {
+            continue;
+        }
+
+        checked++;
+        resource->InitialLoad();
+        const QString bookpath = resource->GetRelativePath();
+        const BuiltinPlugins::BrParagraphNormalizer::Analysis analysis =
+            BuiltinPlugins::BrParagraphNormalizer::analyzeXhtmlText(resource->GetText());
+
+        if (analysis.safeToNormalize) {
+            auto_candidates++;
+            total_paragraphs += analysis.candidateParagraphs;
+            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1, analysis.message);
+        } else if (analysis.candidate) {
+            manual_candidates++;
+            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1, analysis.message);
+        } else {
+            skipped++;
+            results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1, analysis.message);
+        }
+    }
+
+    results << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
+                                tr("BR paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.")
+                                    .arg(checked)
+                                    .arg(auto_candidates)
+                                    .arg(manual_candidates)
+                                    .arg(skipped)
+                                    .arg(total_paragraphs));
+    QApplication::restoreOverrideCursor();
+
+    m_ValidationResultsView->LoadResults(results);
+    ShowMessageOnStatusBar((auto_candidates + manual_candidates) > 0 ?
+                           tr("BR paragraph candidates found. See Validation Results.") :
+                           tr("No BR paragraph candidates found."));
+    return true;
+}
+
+bool MainWindow::NormalizeCurrentBrParagraphs()
+{
+    SaveTabData();
+
+    ContentTab* tab = GetCurrentContentTab();
+    HTMLResource* resource = tab ? qobject_cast<HTMLResource*>(tab->GetLoadedResource()) : nullptr;
+    QList<ValidationResult> results;
+
+    if (!resource) {
+        results << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                    tr("BR paragraph normalization: current tab is not an XHTML resource."));
+        m_ValidationResultsView->LoadResults(results);
+        Utility::warning(this, tr("Sigil-Enhanced"), tr("The current tab is not an XHTML file."));
+        return false;
+    }
+
+    resource->InitialLoad();
+    const QString bookpath = resource->GetRelativePath();
+    const BuiltinPlugins::BrParagraphNormalizer::NormalizeResult normalize_result =
+        BuiltinPlugins::BrParagraphNormalizer::normalizeXhtmlText(resource->GetText(), true);
+
+    results << ValidationResult((normalize_result.before.candidate || normalize_result.before.safeToNormalize) ?
+                                    ValidationResult::ResType_Warn :
+                                    ValidationResult::ResType_Info,
+                                bookpath, -1, -1, normalize_result.before.message);
+    foreach(const QString& message, normalize_result.messages) {
+        results << ValidationResult(normalize_result.ok ?
+                                        ValidationResult::ResType_Info :
+                                        ValidationResult::ResType_Error,
+                                    bookpath, -1, -1, message);
+    }
+
+    if (!normalize_result.before.candidate) {
+        m_ValidationResultsView->LoadResults(results);
+        Utility::warning(this, tr("Sigil-Enhanced"),
+                         tr("The current XHTML file is not a BR paragraph candidate. See Validation Results."));
+        return false;
+    }
+
+    if (!normalize_result.ok) {
+        m_ValidationResultsView->LoadResults(results);
+        Utility::warning(this, tr("Sigil-Enhanced"),
+                         tr("BR paragraph normalization failed safety checks. See Validation Results."));
+        return false;
+    }
+
+    if (!normalize_result.changed) {
+        results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1,
+                                    tr("BR paragraph normalization: no changes needed."));
+        m_ValidationResultsView->LoadResults(results);
+        ShowMessageOnStatusBar(tr("No BR paragraph changes needed."));
+        return true;
+    }
+
+    const QString review_note = normalize_result.before.safeToNormalize ?
+        tr("This file is an auto-safe BR paragraph candidate.") :
+        tr("This file requires manual review and is skipped by full-book normalization. Continue only if you inspected it.");
+
+    QMessageBox::StandardButton button_pressed;
+    button_pressed = Utility::warning(
+        this,
+        tr("Sigil-Enhanced"),
+        tr("Normalize BR paragraphs in the current XHTML file?\n\n"
+           "%1\n\n"
+           "This will convert body-level BR-separated text into p elements. "
+           "Safety checks have confirmed visible text, id/name, and href/src values are preserved.\n\n"
+           "Estimated paragraphs: %2")
+            .arg(review_note)
+            .arg(normalize_result.before.candidateParagraphs),
+        QMessageBox::Ok | QMessageBox::Cancel);
+    if (button_pressed != QMessageBox::Ok) {
+        m_ValidationResultsView->LoadResults(results);
+        return false;
+    }
+
+    FlowTab* flowtab = qobject_cast<FlowTab*>(tab);
+    if (flowtab) {
+        const int cursor_position = flowtab->GetCursorPosition();
+        flowtab->ReplaceDocumentText(normalize_result.text);
+        flowtab->ScrollToPosition(qMin(cursor_position, normalize_result.text.length()));
+    } else {
+        QWriteLocker locker(&resource->GetLock());
+        resource->SetText(normalize_result.text);
+        if (tab) {
+            tab->ContentChangedExternally();
+        }
+    }
+    if (m_Book) {
+        m_Book->SetModified();
+    }
+
+    results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1,
+                                tr("BR paragraph normalization: current XHTML file was updated."));
+    m_ValidationResultsView->LoadResults(results);
+    ShowMessageOnStatusBar(tr("Current XHTML BR paragraphs normalized."));
+    return true;
+}
+
+bool MainWindow::NormalizeAllBrParagraphs()
+{
+    SaveTabData();
+
+    QList<ValidationResult> results;
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        results << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                    tr("BR paragraph normalization: no EPUB is currently loaded."));
+        m_ValidationResultsView->LoadResults(results);
+        return false;
+    }
+
+    struct PlanEntry {
+        HTMLResource* resource = nullptr;
+        QString bookpath;
+        BuiltinPlugins::BrParagraphNormalizer::Analysis analysis;
+    };
+
+    QList<PlanEntry> plan;
+    int checked = 0;
+    int manual_candidates = 0;
+    int skipped = 0;
+    int total_paragraphs = 0;
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    const QList<HTMLResource*> html_resources =
+        m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
+    foreach(HTMLResource* resource, html_resources) {
+        if (!resource) {
+            continue;
+        }
+
+        checked++;
+        resource->InitialLoad();
+        const QString bookpath = resource->GetRelativePath();
+        const BuiltinPlugins::BrParagraphNormalizer::Analysis analysis =
+            BuiltinPlugins::BrParagraphNormalizer::analyzeXhtmlText(resource->GetText());
+
+        if (analysis.safeToNormalize) {
+            plan << PlanEntry{resource, bookpath, analysis};
+            total_paragraphs += analysis.candidateParagraphs;
+            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1, analysis.message);
+        } else if (analysis.candidate) {
+            manual_candidates++;
+            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1, analysis.message);
+        } else {
+            skipped++;
+            results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1, analysis.message);
+        }
+    }
+    QApplication::restoreOverrideCursor();
+
+    results << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
+                                tr("BR paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs.")
+                                    .arg(checked)
+                                    .arg(plan.count())
+                                    .arg(manual_candidates)
+                                    .arg(skipped)
+                                    .arg(total_paragraphs));
+
+    if (plan.isEmpty()) {
+        m_ValidationResultsView->LoadResults(results);
+        Utility::warning(this, tr("Sigil-Enhanced"),
+                         tr("No auto-safe BR paragraph files were found. See Validation Results."));
+        return false;
+    }
+
+    QMessageBox::StandardButton button_pressed;
+    button_pressed = Utility::warning(
+        this,
+        tr("Sigil-Enhanced"),
+        tr("Normalize BR paragraphs in %1 auto-safe XHTML files?\n\n"
+           "%2 files require manual review and will be skipped. %3 non-candidate files will be skipped.\n\n"
+           "Visible text, id/name, and href/src safety checks will be run for every changed file.\n\n"
+           "Estimated paragraphs: %4")
+            .arg(plan.count())
+            .arg(manual_candidates)
+            .arg(skipped)
+            .arg(total_paragraphs),
+        QMessageBox::Ok | QMessageBox::Cancel);
+    if (button_pressed != QMessageBox::Ok) {
+        m_ValidationResultsView->LoadResults(results);
+        return false;
+    }
+
+    ShowMessageOnStatusBar(tr("Creating checkpoint before BR paragraph normalization..."));
+    if (!RepoCommit()) {
+        results << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                    tr("BR paragraph normalization cancelled: checkpoint failed. No XHTML files were changed."));
+        m_ValidationResultsView->LoadResults(results);
+        Utility::warning(this, tr("Sigil-Enhanced"),
+                         tr("Checkpoint creation failed. BR paragraph normalization was cancelled."));
+        return false;
+    }
+    results << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
+                                tr("BR paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo."));
+
+    int changed = 0;
+    int unchanged = 0;
+    int failed = 0;
+    ContentTab* current_tab = GetCurrentContentTab();
+    Resource* current_resource = current_tab ? current_tab->GetLoadedResource() : nullptr;
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    foreach(const PlanEntry& entry, plan) {
+        HTMLResource* resource = entry.resource;
+        if (!resource) {
+            continue;
+        }
+
+        resource->InitialLoad();
+        const BuiltinPlugins::BrParagraphNormalizer::NormalizeResult normalize_result =
+            BuiltinPlugins::BrParagraphNormalizer::normalizeXhtmlText(resource->GetText());
+
+        foreach(const QString& message, normalize_result.messages) {
+            results << ValidationResult(normalize_result.ok ?
+                                            ValidationResult::ResType_Info :
+                                            ValidationResult::ResType_Error,
+                                        entry.bookpath, -1, -1, message);
+        }
+
+        if (!normalize_result.ok) {
+            failed++;
+            continue;
+        }
+
+        if (!normalize_result.changed) {
+            unchanged++;
+            results << ValidationResult(ValidationResult::ResType_Info, entry.bookpath, -1, -1,
+                                        tr("BR paragraph normalization: no changes needed."));
+            continue;
+        }
+
+        {
+            QWriteLocker locker(&resource->GetLock());
+            resource->SetText(normalize_result.text);
+        }
+        if (current_resource == resource && current_tab) {
+            current_tab->ContentChangedExternally();
+        }
+
+        changed++;
+        results << ValidationResult(ValidationResult::ResType_Info, entry.bookpath, -1, -1,
+                                    tr("BR paragraph normalization: XHTML file was updated."));
+    }
+    QApplication::restoreOverrideCursor();
+
+    if (changed > 0 && m_Book) {
+        m_Book->SetModified();
+    }
+
+    results << ValidationResult(failed > 0 ? ValidationResult::ResType_Warn : ValidationResult::ResType_Info,
+                                QString(), -1, -1,
+                                tr("BR paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.")
+                                    .arg(changed)
+                                    .arg(unchanged)
+                                    .arg(failed)
+                                    .arg(manual_candidates));
+    m_ValidationResultsView->LoadResults(results);
+    ShowMessageOnStatusBar(changed > 0 ?
+                           tr("BR paragraph normalization completed.") :
+                           tr("No BR paragraph files were changed."));
+    return failed == 0;
 }
 
 //modified: insertFileToEditor

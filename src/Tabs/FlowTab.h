@@ -147,6 +147,8 @@ public:
      */
     void ScrollToTop();
 
+    void ReplaceDocumentText(const QString& text);
+
     // Overrides inherited from WellFormedContent
 
     void AutoFixWellFormedErrors();
@@ -426,4 +428,3 @@ public slots:
 };
 
 #endif // FLOWTAB_H
-

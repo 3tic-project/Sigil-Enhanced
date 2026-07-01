@@ -430,6 +430,9 @@
     </property>
     <addaction name="actionNormalizeEpubStructure"/>
     <addaction name="actionEnhanceSourceFormatting"/>
+    <addaction name="actionAnalyzeBrParagraphs"/>
+    <addaction name="actionNormalizeCurrentBrParagraphs"/>
+    <addaction name="actionNormalizeBrParagraphs"/>
    </widget>
    <widget class="QMenu" name="menuCheckpoints">
     <property name="title">
@@ -1950,6 +1953,30 @@
     </property>
     <property name="toolTip">
       <string>Format all XHTML and CSS resources with the built-in EPUB-safe formatter backend</string>
+    </property>
+  </action>
+  <action name="actionAnalyzeBrParagraphs">
+    <property name="text">
+      <string>Analyze BR Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Report XHTML files that use body-level BR tags as paragraph separators</string>
+    </property>
+  </action>
+  <action name="actionNormalizeCurrentBrParagraphs">
+    <property name="text">
+      <string>Normalize Current BR Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert body-level BR-separated text in the current XHTML file into paragraphs after safety checks</string>
+    </property>
+  </action>
+  <action name="actionNormalizeBrParagraphs">
+    <property name="text">
+      <string>Normalize BR Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert auto-safe body-level BR-separated XHTML files into paragraphs after per-file safety checks</string>
     </property>
   </action>
   <action name="actionWellFormedCheckEpub">

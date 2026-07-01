@@ -51,6 +51,8 @@ set( BOOK_MANIPULATION_FILES
     )
 
 set( BUILTIN_PLUGIN_FILES
+    BuiltinPlugins/BrParagraphNormalizer.cpp
+    BuiltinPlugins/BrParagraphNormalizer.h
     BuiltinPlugins/EpubStructureNormalizer.cpp
     BuiltinPlugins/EpubStructureNormalizer.h
     BuiltinPlugins/FormatterEnhancer.cpp

@@ -348,9 +348,11 @@ void AutomateEditor::loadToolElements()
          "DeleteUnusedStyles" << "DeleteUnusedStyles" << tr("Delete Unused CSS Selectors.") <<
          "GenerateNCXGuideFromNav" << "GenerateNCXGuideFromNav" << tr("Generate NCX and OPF Guide from Epub3 Nav.") <<
          "GenerateTOC" << "GenerateTOC" << tr("Generate TOC from Heading Tags.") <<
+         "AnalyzeBrParagraphs" << "AnalyzeBrParagraphs" << tr("Analyze XHTML files that use body-level BR tags as paragraph separators.") <<
          "EnhanceSourceFormatting" << "EnhanceSourceFormatting" << tr("Format XHTML and CSS resources with the built-in EPUB-safe formatter.") <<
          "MendPrettifyHTML" << "MendPrettifyHTML" << tr("Mend and Prettify all XHtml files.") <<
          "MendHTML" << "MendHTML"  << tr("Mend All XHtml files.") <<
+         "NormalizeBrParagraphs" << "NormalizeBrParagraphs" << tr("Normalize auto-safe XHTML files that use body-level BR tags as paragraph separators.") <<
          "NormalizeEpubStructure" << "NormalizeEpubStructure" << tr("Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil's standard folder layout.") <<
          "OnFailedRunSavedSearchReplaceAll" << "OnFailedRunSavedSearchReplaceAll" << tr("If previous search failed, run the named Saved Search.") <<
          "OnSuccessRunSavedSearchReplaceAll" << "OnSuccessRunSavedSearchReplaceAll" << tr("If previous search had success, run the named Saved Search.") <<

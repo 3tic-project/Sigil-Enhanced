@@ -637,6 +637,13 @@ void FlowTab::ScrollToTop()
     }
 }
 
+void FlowTab::ReplaceDocumentText(const QString& text)
+{
+    if (m_wCodeView) {
+        m_wCodeView->ReplaceDocumentText(text);
+    }
+}
+
 void FlowTab::AutoFixWellFormedErrors()
 {
     if (m_wCodeView) {

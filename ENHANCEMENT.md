@@ -68,10 +68,30 @@
 - 外部 formatter 后端必须作为显式可选 backend 接入，不能改变默认 EPUB-safe 行为。
 - 不对 SVG、NCX、OPF、XML 等非 XHTML/CSS 资源做格式化。
 
+### BR Paragraph Normalizer
+
+入口:
+
+- `Enhancement > Analyze BR Paragraphs...`
+- `Enhancement > Normalize Current BR Paragraphs...`
+- `Enhancement > Normalize BR Paragraphs...`
+- Automate 命令: `AnalyzeBrParagraphs`
+- Automate 命令: `NormalizeBrParagraphs`
+
+职责:
+
+- 扫描 XHTML 文件中直接挂在 `body` 下、使用顶层 `<br/>` 作为段落分隔的正文流。
+- 将可自动规范化正文页、需人工确认短页/版权提示页、目录页、图片/扉页、已有块级布局页和已规范化页面分类写入 Validation Results。
+- 当前文件入口允许用户显式确认后转换当前 XHTML，并尽量通过编辑器文档替换保留单步 undo。
+- 整书入口只转换 `auto-safe` 正文页；短页、版权/发行信息、阅读提示、目录等只报告并跳过；写回前会自动创建 Checkpoint，因为批量资源写回不进入 Code View undo 栈。
+- 转换后逐文件校验 XML well-formed、可见文本等价、`id`/`name` 集合等价、`href`/`src` 集合等价，失败则不写回。
+- 转换会保留根 XHTML namespace，但不会在每个生成的 `<p>` 上重复输出 `xmlns`；同时注入 `body.se-br-normalized` 作用域 CSS，避免阅读器默认段落 margin 改变行距。
+
 ## 测试要求
 
 - 至少验证 Debug 构建能通过 `cmake --build cmake-build-debug --target Sigil -j 4`。
 - 对批量资源移动类功能，必须测试移动后 OPF manifest、spine、XHTML 链接、CSS url、NCX src 是否仍然可用。
 - 对路径相关功能，必须覆盖空格、中文、URL 编码、大小写不一致、fragment、外部链接和不存在目标。
 - 对 formatter 类功能，必须覆盖 XHTML well-formed 跳过、XHTML 正常重排、CSS 正常重排、CSS parser error 跳过、无变化文件记录。
+- 对 BR 段落规范化类功能，必须覆盖正文候选、目录页跳过、扉页/块布局跳过、`ruby`/anchor 保留、连续 `<br/>` 不生成空段落。
 - 对 Automate 命令，需确认命令列表可见且执行行为与菜单入口一致。
