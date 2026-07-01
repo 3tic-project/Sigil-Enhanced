@@ -8,6 +8,7 @@
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
 #include <QDropEvent>
+#include <QMouseEvent>
 #include <QPaintEvent>
 
 class BookBrowserTreeView : public QTreeView
@@ -24,11 +25,14 @@ public:
 	~BookBrowserTreeView();
 
 protected:
+	void mousePressEvent(QMouseEvent* event);
+	void mouseMoveEvent(QMouseEvent* event);
 	void dragEnterEvent(QDragEnterEvent* event);
 	void dragMoveEvent(QDragMoveEvent* event);
 	void dragLeaveEvent(QDragLeaveEvent* event);
 	void dropEvent(QDropEvent* event);
 	void paintEvent(QPaintEvent* event);
+	void startDrag(Qt::DropActions supportedActions);
 
 private:
 	struct Line {
@@ -37,6 +41,8 @@ private:
 	};
 	bool dropIndicatorEnabled;
 	Line dropIndicatorLine;
+	QPoint dragStartPosition;
+	QModelIndex dragStartIndex;
 
 	void drawOtherDropIndicator(QPoint& eventPos);
 };

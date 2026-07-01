@@ -107,6 +107,7 @@
 #include "Misc/OpenExternally.h"
 #include "Misc/Plugin.h"
 #include "Misc/PluginDB.h"
+#include "Misc/ResourceInsertion.h"
 #include "Misc/CodepointNames.h"
 #include "EmbedPython/PythonRoutines.h"
 #include "Misc/SettingsStore.h"
@@ -3510,26 +3511,10 @@ void MainWindow::InsertFiles(const QStringList &selected_files)
             foreach(QString selected_file, selected_files) {
                 try {
                     Resource *resource = m_Book->GetFolderKeeper()->GetResourceByBookPath(selected_file);
-                    QString relative_path = resource->GetRelativePathFromResource(tab_resource);
-                    relative_path = Utility::URLEncodePath(relative_path);
-
-                    // extract just the filename without extension to create a text label
-                    QString filename = resource->Filename();
-                    if (filename.contains(".")) {
-                        filename = filename.left(filename.lastIndexOf("."));
+                    QString html = ResourceInsertion::TextForResource(resource, tab_resource, ResourceInsertion::Context::HTML);
+                    if (!html.isEmpty()) {
+                        flow_tab->InsertFile(html);
                     }
-
-                    QString html;
-                    if (resource->Type() == Resource::ImageResourceType || resource->Type() == Resource::SVGResourceType) {
-                        html = QString("<img alt=\"%1\" src=\"%2\"/>").arg(filename).arg(relative_path);
-                    } else if (resource->Type() == Resource::VideoResourceType) {
-                        // When inserted in BV the filename will disappear
-                        html = QString("<video controls=\"controls\" src=\"%1\">%2</video>").arg(relative_path).arg(filename);
-                    } else if (resource->Type() == Resource::AudioResourceType) {
-                        html = QString("<audio controls=\"controls\" src=\"%1\">%2</audio>").arg(relative_path).arg(filename);
-                    }
-
-                    flow_tab->InsertFile(html);
                 } catch (ResourceDoesNotExist&) {
                     Utility::DisplayStdErrorDialog(tr("The file \"%1\" does not exist.") .arg(selected_file));
                 }

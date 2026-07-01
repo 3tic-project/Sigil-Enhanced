@@ -52,6 +52,9 @@ class LineNumberArea;
 class QSyntaxHighlighter;
 class QContextMenuEvent;
 class QSignalMapper;
+class QDragEnterEvent;
+class QDragMoveEvent;
+class QDropEvent;
 
 /**
  * A text editor for source code.
@@ -933,6 +936,9 @@ public slots:
 protected:
     //modified: keyPressEvent
     void keyPressEvent(QKeyEvent* event);
+    void dragEnterEvent(QDragEnterEvent* event);
+    void dragMoveEvent(QDragMoveEvent* event);
+    void dropEvent(QDropEvent* event);
 
 private:
     //modified: keyPressEvent
@@ -955,6 +961,8 @@ private:
     // modified: paste event
     bool insertImagesFromUrls(const QList<QUrl>& urls,bool insert_on_css = false);
     bool insertImageFromByteData(const QByteArray& data, bool insert_on_css = false);
+    bool canInsertBookBrowserResources(const QMimeData* source, const QPoint& drop_position);
+    bool insertBookBrowserResources(const QMimeData* source, const QPoint& drop_position);
     void CommonPasteEvent(const QMimeData* source);
     bool CssViewPasteEvent(const QMimeData* source);
     bool HtmlViewPasteEvent(const QMimeData* source);

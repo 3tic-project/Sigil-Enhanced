@@ -384,6 +384,8 @@ set( MISC_FILES
     Misc/URLInterceptor.h
     Misc/URLSchemeHandler.cpp
     Misc/URLSchemeHandler.h
+    Misc/ResourceInsertion.cpp
+    Misc/ResourceInsertion.h
     Misc/Utility.cpp
     Misc/UtilityExt.cpp
     Misc/Utility.h

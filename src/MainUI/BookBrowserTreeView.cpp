@@ -4,8 +4,13 @@
 #include <QModelIndex>
 #include <QMimeData>
 #include <QFileInfo>
+#include <QApplication>
+#include <QDrag>
+#include <QItemSelectionModel>
+#include <QStringList>
 
 #include "BookBrowserTreeView.h"
+#include "Misc/ResourceInsertion.h"
 
 QStringList IMPORT_SUFFIX = { "xhtml","html","htm","txt" };
 
@@ -14,7 +19,9 @@ QStringList IMPORT_SUFFIX = { "xhtml","html","htm","txt" };
 BookBrowserTreeView::BookBrowserTreeView(QWidget* parent)
 	:
 	QTreeView(parent),
-	dropIndicatorEnabled(false)
+	dropIndicatorEnabled(false),
+	dragStartPosition(QPoint()),
+	dragStartIndex(QModelIndex())
 {
 }
 
@@ -54,6 +61,69 @@ void BookBrowserTreeView::paintEvent(QPaintEvent* e)
 			endPt = dropIndicatorLine.endPoint;
 		painter.drawLine(startPt, endPt);
 	}
+}
+
+void BookBrowserTreeView::mousePressEvent(QMouseEvent* e)
+{
+	QTreeView::mousePressEvent(e);
+
+	if (e->button() == Qt::LeftButton) {
+		QModelIndex index = indexAt(e->position().toPoint());
+		if (index.isValid() && !index.data(Qt::UserRole + 1).toString().isEmpty()) {
+			dragStartPosition = e->position().toPoint();
+			dragStartIndex = index;
+		} else {
+			dragStartIndex = QModelIndex();
+		}
+	}
+}
+
+void BookBrowserTreeView::mouseMoveEvent(QMouseEvent* e)
+{
+	if ((e->buttons() & Qt::LeftButton) &&
+		dragStartIndex.isValid() &&
+		(e->position().toPoint() - dragStartPosition).manhattanLength() >= QApplication::startDragDistance()) {
+		startDrag(Qt::CopyAction | Qt::MoveAction);
+		dragStartIndex = QModelIndex();
+		e->accept();
+		return;
+	}
+
+	QTreeView::mouseMoveEvent(e);
+}
+
+void BookBrowserTreeView::startDrag(Qt::DropActions supportedActions)
+{
+	QModelIndexList indexes;
+	if (selectionModel()) {
+		indexes = selectionModel()->selectedRows(0);
+	}
+	if (indexes.isEmpty()) {
+		indexes = selectedIndexes();
+	}
+
+	QMimeData* mime_data = model() ? model()->mimeData(indexes) : nullptr;
+	if (!mime_data) {
+		mime_data = new QMimeData;
+	}
+
+	QStringList identifiers;
+	foreach(QModelIndex index, indexes) {
+		if (!index.isValid()) {
+			continue;
+		}
+		const QString identifier = index.data(Qt::UserRole + 1).toString();
+		if (!identifier.isEmpty()) {
+			identifiers << identifier;
+		}
+	}
+	if (!identifiers.isEmpty()) {
+		mime_data->setData(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME, identifiers.join("\n").toUtf8());
+	}
+
+	QDrag* drag = new QDrag(this);
+	drag->setMimeData(mime_data);
+	drag->exec(supportedActions | Qt::CopyAction, Qt::MoveAction);
 }
 
 

@@ -2,10 +2,14 @@
 #include <QMimeData>
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 #include <QRegExp>
 #include <QRegularExpression>
 #include <QFileInfo>
 #include <QBuffer>
+#include <QtGlobal>
 
 #include "ViewEditors/CodeViewEditor.h"
 #include "sigil_constants.h"
@@ -13,6 +17,7 @@
 #include "MainUI/BookBrowser.h"
 #include "Tabs/ContentTab.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "Misc/ResourceInsertion.h"
 #include "PCRE2/PCRECache.h"
 
 #define TagInfo TagLister::TagInfo
@@ -22,6 +27,42 @@ static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_ALL({ Qt::Key_Tab,Qt::Key_Backt
 static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_CSSVIEW({ Qt::Key_Return,Qt::Key_Enter,Qt::Key_BraceLeft,Qt::Key_BraceRight });
 static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_HTMLVIEW({ Qt::Key_Return,Qt::Key_Enter, Qt::Key_Slash,Qt::Key_Greater });
 static const QList<Qt::Key> SYMBOLS_TO_DETECT_IN_QUICKSWITCH({ Qt::Key_Left,Qt::Key_Up,Qt::Key_Right,Qt::Key_Down });
+
+static ResourceInsertion::Context ResourceInsertionContext(bool insert_on_css)
+{
+    return insert_on_css ? ResourceInsertion::Context::CSS : ResourceInsertion::Context::HTML;
+}
+
+static Resource* ResourceForBookPath(MainWindow *mainwin, const QString &bookpath)
+{
+    if (!mainwin || bookpath.isEmpty() || mainwin->GetCurrentBook().isNull()) {
+        return nullptr;
+    }
+    return mainwin->GetCurrentBook()->GetFolderKeeper()->GetResourceByBookPathNoThrow(bookpath);
+}
+
+static QStringList BookBrowserResourceIdentifiers(const QMimeData* source)
+{
+    if (!source || !source->hasFormat(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME)) {
+        return QStringList();
+    }
+
+    return QString::fromUtf8(source->data(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME))
+        .split('\n', Qt::SkipEmptyParts);
+}
+
+static Resource* ResourceForIdentifier(MainWindow *mainwin, const QString &identifier)
+{
+    if (!mainwin || identifier.isEmpty() || mainwin->GetCurrentBook().isNull()) {
+        return nullptr;
+    }
+    return mainwin->GetCurrentBook()->GetFolderKeeper()->GetResourceByIdentifier(identifier);
+}
+
+static bool AllowPlainCodeViewDrop()
+{
+    return qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP");
+}
 
 //modified: CodeCompleterParser
 void CodeViewEditor::setHTMLCodeCompleter() {
@@ -883,6 +924,162 @@ void CodeViewEditor::FormatBlock_multiline(const QString& element_name, bool pre
 
 //modified: paste event
 //when you do a actionPaste in the codeview editor, this function will be called.
+bool CodeViewEditor::canInsertBookBrowserResources(const QMimeData* source, const QPoint& drop_position)
+{
+    Q_UNUSED(drop_position)
+
+    const QStringList identifiers = BookBrowserResourceIdentifiers(source);
+    if (identifiers.isEmpty() ||
+        (m_hightype != CodeViewEditor::Highlight_XHTML && m_hightype != CodeViewEditor::Highlight_CSS)) {
+        return false;
+    }
+
+    QWidget* mainwin_w = Utility::GetMainWindow();
+    MainWindow* mainwin = qobject_cast<MainWindow*>(mainwin_w);
+    if (!mainwin || mainwin->GetCurrentBook().isNull()) {
+        return false;
+    }
+
+    foreach(QString identifier, identifiers) {
+        Resource* resource = ResourceForIdentifier(mainwin, identifier);
+        if (!resource) {
+            continue;
+        }
+
+        if (m_hightype == CodeViewEditor::Highlight_CSS &&
+            ResourceInsertion::CanInsertResource(resource, ResourceInsertion::Context::CSS)) {
+            return true;
+        }
+
+        if (m_hightype == CodeViewEditor::Highlight_XHTML &&
+            (ResourceInsertion::CanInsertResource(resource, ResourceInsertion::Context::HTML) ||
+             ResourceInsertion::CanInsertResource(resource, ResourceInsertion::Context::CSS))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool CodeViewEditor::insertBookBrowserResources(const QMimeData* source, const QPoint& drop_position)
+{
+    const QStringList identifiers = BookBrowserResourceIdentifiers(source);
+    if (identifiers.isEmpty()) {
+        return false;
+    }
+
+    QWidget* mainwin_w = Utility::GetMainWindow();
+    MainWindow* mainwin = qobject_cast<MainWindow*>(mainwin_w);
+    if (!mainwin || mainwin->GetCurrentBook().isNull()) {
+        return false;
+    }
+
+    ContentTab* current_tab = mainwin->GetCurrentContentTab();
+    if (!current_tab) {
+        return false;
+    }
+
+    Resource* target_resource = current_tab->GetLoadedResource();
+    if (!target_resource) {
+        return false;
+    }
+
+    ResourceInsertion::Context context;
+    if (m_hightype == CodeViewEditor::Highlight_CSS) {
+        context = ResourceInsertion::Context::CSS;
+    } else if (m_hightype == CodeViewEditor::Highlight_XHTML) {
+        QTextCursor drop_cursor = cursorForPosition(drop_position);
+        setTextCursor(drop_cursor);
+
+        context = ResourceInsertion::Context::HTML;
+        if (m_hasCodeCompleter && m_completeParser) {
+            m_completeParser->parseCursorPosType();
+            CodeCompleterParser::PosType postype = m_completeParser->getState().postype;
+            if ((postype & (CodeCompleterParser::HTML_TEXT |
+                CodeCompleterParser::CSS_SELECTOR |
+                CodeCompleterParser::CSS_ATTR |
+                CodeCompleterParser::CSS_VALUE)) == 0) {
+                return false;
+            }
+            if (postype != CodeCompleterParser::HTML_TEXT) {
+                context = ResourceInsertion::Context::CSS;
+            }
+        }
+    } else {
+        return false;
+    }
+
+    QStringList insert_texts;
+    foreach(QString identifier, identifiers) {
+        Resource* resource = ResourceForIdentifier(mainwin, identifier);
+        QString insert_text = ResourceInsertion::TextForResource(resource, target_resource, context);
+        if (!insert_text.isEmpty()) {
+            insert_texts << insert_text;
+        }
+    }
+
+    QString insert_text = context == ResourceInsertion::Context::CSS ? insert_texts.join(",") : insert_texts.join("");
+    if (insert_text.isEmpty()) {
+        return false;
+    }
+
+    InsertText(insert_text);
+    emit ShowStatusMessageRequest(tr("Reference inserted from Book Browser."));
+    return true;
+}
+
+void CodeViewEditor::dragEnterEvent(QDragEnterEvent* event)
+{
+    if (canInsertBookBrowserResources(event->mimeData(), event->position().toPoint())) {
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
+        return;
+    }
+
+    if (AllowPlainCodeViewDrop()) {
+        QPlainTextEdit::dragEnterEvent(event);
+        return;
+    }
+
+    event->ignore();
+}
+
+void CodeViewEditor::dragMoveEvent(QDragMoveEvent* event)
+{
+    if (canInsertBookBrowserResources(event->mimeData(), event->position().toPoint())) {
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
+        return;
+    }
+
+    if (AllowPlainCodeViewDrop()) {
+        QPlainTextEdit::dragMoveEvent(event);
+        return;
+    }
+
+    event->ignore();
+}
+
+void CodeViewEditor::dropEvent(QDropEvent* event)
+{
+    if (event->mimeData()->hasFormat(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME)) {
+        if (insertBookBrowserResources(event->mimeData(), event->position().toPoint())) {
+            event->setDropAction(Qt::CopyAction);
+            event->accept();
+        } else {
+            event->ignore();
+        }
+        return;
+    }
+
+    if (AllowPlainCodeViewDrop()) {
+        QPlainTextEdit::dropEvent(event);
+        return;
+    }
+
+    event->ignore();
+}
+
 void CodeViewEditor::insertFromMimeData(const QMimeData* source) {
     if (m_hightype == CodeViewEditor::Highlight_XHTML) {
         if (HtmlViewPasteEvent(source)) return;
@@ -1002,20 +1199,13 @@ bool CodeViewEditor::insertImageFromByteData(const QByteArray& data, bool insert
         return false;
     }
 
-    QString insert_text;
-    QString new_filename = QFileInfo(added_bookpath).baseName();
-    if (new_filename.contains("."))
-        new_filename = new_filename.left(new_filename.lastIndexOf("."));
-    QString relative_path = Utility::relativePath(added_bookpath, res->GetFolder());
-    if (!insert_on_css) {
-        insert_text += QString("<img alt=\"%1\" src=\"%2\"/>").arg(new_filename).arg(relative_path);
-    }
-    else {
-        insert_text += QString("url(\"%1\") ").arg(relative_path);
-    }
+    Resource* added_resource = ResourceForBookPath(mainwin, added_bookpath);
+    QString insert_text = ResourceInsertion::TextForResource(
+        added_resource,
+        res,
+        ResourceInsertionContext(insert_on_css));
+
     if (!insert_text.isEmpty()) {
-        if (insert_on_css)
-            insert_text = insert_text.left(insert_text.size() - 1);
         InsertText(insert_text);
         emit ShowStatusMessageRequest(tr("Image imported. Undo removes only the inserted reference."));
     }
@@ -1057,22 +1247,20 @@ bool CodeViewEditor::insertImagesFromUrls(const QList<QUrl>& urls, bool insert_o
         return false;
     }
 
-    QString insert_text;
+    QStringList insert_texts;
     foreach(QString added_bookpath, added_bookpaths) {
-        QString filename = QFileInfo(added_bookpath).baseName();
-        if (filename.contains("."))
-            filename = filename.left(filename.lastIndexOf("."));
-        QString relative_path = Utility::relativePath(added_bookpath, res->GetFolder());
-        if (!insert_on_css) {
-            insert_text += QString("<img alt=\"%1\" src=\"%2\"/>").arg(filename).arg(relative_path);
-        }
-        else {
-            insert_text += QString("url(\"%1\"),").arg(relative_path);
+        Resource* added_resource = ResourceForBookPath(mainwin, added_bookpath);
+        QString insert_text = ResourceInsertion::TextForResource(
+            added_resource,
+            res,
+            ResourceInsertionContext(insert_on_css));
+        if (!insert_text.isEmpty()) {
+            insert_texts << insert_text;
         }
     }
+
+    QString insert_text = insert_on_css ? insert_texts.join(",") : insert_texts.join("");
     if (!insert_text.isEmpty()) {
-        if (insert_on_css)
-            insert_text = insert_text.left(insert_text.size() - 1);
         InsertText(insert_text);
         emit ShowStatusMessageRequest(added_bookpaths.size() == 1 ?
                                       tr("Image imported. Undo removes only the inserted reference.") :

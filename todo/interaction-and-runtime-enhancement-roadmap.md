@@ -57,6 +57,40 @@
 - `git diff --check` 通过。
 - 人工验证功能正常。
 
+### 2026-07-01: Step 3 已完成
+
+已完成“抽公共资源插入逻辑”的第一阶段实现:
+
+- 新增 `src/Misc/ResourceInsertion.cpp` / `src/Misc/ResourceInsertion.h`, 统一判断资源是否可插入 HTML/CSS 上下文。
+- 统一生成图片/SVG、音频、视频的 HTML 插入片段, 以及 CSS `url("...")` 引用。
+- 菜单 `Insert File`、Book Browser 右键 `Insert Into HTML/CSS File`、粘贴本地/剪贴板图片均改为复用同一套插入文本生成逻辑。
+- 资源相对路径统一使用 `Resource::GetRelativePathFromResource()` 后再 URL 编码。
+- 文件名生成的 alt/文本标签统一做 XML 转义, 避免文件名含 `&`, `<`, `"` 等字符时生成非法片段。
+- Book Browser 向编辑器拖入资源已接入同一套插入逻辑; 外部本地文件拖入编辑器仍留给 Step 4/5。
+
+已验证:
+
+- `cmake --build cmake-build-debug --target Sigil -j 4` 通过。
+- `git diff --check` 通过。
+- 人工验证 Book Browser 拖入编辑器功能正常。
+
+### 2026-07-01: Book Browser 拖入编辑器已完成
+
+已完成:
+
+- Book Browser 拖出资源时额外携带 Sigil-Enhanced 自定义资源 identifier mime 数据。
+- CodeViewEditor 允许接收 Book Browser 资源拖拽, 但仍默认拒绝普通外部文本/文件拖入, 保持原有误插入保护。
+- 拖入 XHTML 正文时按 HTML 插入逻辑生成图片/SVG、音频、视频标签。
+- 拖入 CSS 文件或 XHTML 内嵌 CSS 区域时按 CSS 插入逻辑生成 `url("...")`。
+- 拖入编辑器时使用鼠标释放位置设置插入光标, 插入位置跟随 drop 点。
+- 拖入编辑器采用 Copy 语义, 只插入引用, 不移动 Book Browser 中的资源。
+
+已验证:
+
+- `cmake --build cmake-build-debug --target Sigil -j 4` 通过。
+- `git diff --check` 通过。
+- 人工验证拖放功能正常。
+
 ## 当前代码现状
 
 ### 图片编辑缩放
@@ -104,20 +138,19 @@
 - `src/Tabs/FlowTab.cpp`
 - `src/Tabs/CSSTab.cpp`
 
-现状:
+当前状态:
 
 - 菜单 `Insert File` 路径在 `MainWindow::InsertFileDialog()` / `MainWindow::InsertFiles()`:
-  - 只要求当前 `FlowTab` 可插入。
-  - 图片/SVG 插入 `<img alt="..." src="..."/>`。
-  - 视频插入 `<video controls="controls" src="...">name</video>`。
-  - 音频插入 `<audio controls="controls" src="...">name</audio>`。
+  - 仍只要求当前 `FlowTab` 可插入。
+  - 插入片段改由 `ResourceInsertion::TextForResource()` 生成。
 - Book Browser 右键 `Insert Into HTML/CSS File` 路径在 `MainWindow::InsertFileFromBookBrowser()`:
-  - HTML 目标允许图片/SVG/视频/音频, 并调用 `FlowTab::InsertFile()`。
-  - CSS 目标允许图片/SVG/字体, 并调用 `CSSTab::InsertFile("url(\"...\")")`。
+  - HTML/CSS 目标判断改由 `ResourceInsertion::ContextFromTargetResource()` 和 `ResourceInsertion::CanInsertResource()` 处理。
+  - 插入片段改由 `ResourceInsertion::TextForResource()` 生成。
 - `CodeViewEditorExt.cpp` 已经支持粘贴图片:
   - `QMimeData::hasImage()` 时保存成 PNG。
   - `hasUrls()` 时仅处理本地图片路径。
   - 当前默认名固定为 `Images0001.png`, 依赖 `FolderKeeper::GetUniqueFilenameVersion()` 间接去重。
+  - 导入后的 HTML/CSS 引用文本改由 `ResourceInsertion::TextForResource()` 生成。
 - 主窗口拖放 `MainWindow::dropEvent()` 只接受本地文件路径, 然后 `AddDroppedFiles()` 把文件加入书内, 不会插入当前位置。
 - Book Browser 的 `BookBrowserTreeView::dropEvent()` 会处理本地文件:
   - 单个 HTML/TXT 拖到 Text 分组时按阅读顺序插入。
@@ -409,6 +442,7 @@ cmake-build-debug/bin/Sigil.app/Contents/MacOS/Sigil
 
 目标:
 
+- 从 Book Browser 拖已有资源到编辑器时, 在释放位置按当前编辑器上下文插入引用。
 - 拖本地图片/CSS/字体等到编辑器时, 先加入书内, 再按当前编辑器上下文插入引用。
 - 主窗口空白区域拖入仍保持“只添加文件”。
 
@@ -471,4 +505,4 @@ cmake-build-debug/bin/Sigil.app/Contents/MacOS/Sigil
 
 ## 下一步建议
 
-Step 2 已完成。下一步进入 Step 3“抽公共资源插入逻辑”, 先统一右键 Insert、菜单 Insert、粘贴图片的标签/引用生成规则, 再做拖入文件和非本地图片导入。
+Step 3 和 Book Browser 拖入编辑器已完成代码实现, 建议先验证现有插入入口和 Book Browser 拖放没有回归。验证通过后继续 Step 4 的外部本地文件拖入编辑器, 复用 `ResourceInsertion` 处理 HTML/CSS 引用文本。

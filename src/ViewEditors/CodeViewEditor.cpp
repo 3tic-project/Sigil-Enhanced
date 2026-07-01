@@ -153,7 +153,13 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     // ------------------------------------
     m_regen_taglist(true)
 {
-    if (!qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP")) setAcceptDrops(false);
+    if (high_type == CodeViewEditor::Highlight_XHTML ||
+        high_type == CodeViewEditor::Highlight_CSS ||
+        qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP")) {
+        setAcceptDrops(true);
+    } else {
+        setAcceptDrops(false);
+    }
     if (high_type == CodeViewEditor::Highlight_XHTML) {
         // m_Highlighter = new XHTMLHighlighter(check_spelling, this);
         m_Highlighter = new XHTMLHighlighter2(check_spelling, this);

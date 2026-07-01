@@ -7,6 +7,7 @@
 #include "Tabs/FlowTab.h"
 #include "Tabs/CSSTab.h"
 #include "BookManipulation/EpubVersionConv.h" // modified: Epub3ToEpub2 Epub2ToEpub3
+#include "Misc/ResourceInsertion.h"
 
 //-----modified: Epub3ToEpub2------
 void MainWindow::Epub3ToEpub2()
@@ -50,53 +51,40 @@ void MainWindow::InsertFileFromBookBrowser()
     Resource* res = m_BookBrowser->GetCurrentResource();
 
     ContentTab* tab = GetCurrentContentTab();
-    Resource* tab_res = tab->GetLoadedResource();
-    bool insert_allowed = false;
-    if (tab_res->Type() == Resource::HTMLResourceType) {
-        FlowTab* flowtab = qobject_cast<FlowTab*>(tab);
-        if (res->Type() & (Resource::ImageResourceType | Resource::SVGResourceType |
-                           Resource::VideoResourceType | Resource::AudioResourceType))
-        {
-            insert_allowed = flowtab->InsertFileEnabled();
-        }
-    }
-    else if (tab_res->Type() == Resource::CSSResourceType) {
-        if (res->Type() & (Resource::ImageResourceType | Resource::SVGResourceType | Resource::FontResourceType))
-            insert_allowed = true;
-    }
-    if (insert_allowed) {
-        QString relative_path = res->GetRelativePathFromResource(tab_res);
-        relative_path = Utility::URLEncodePath(relative_path);
-
-        if (tab_res->Type() == Resource::CSSResourceType) {
-            QString url = QString("url(\"%1\")").arg(relative_path);
-            CSSTab* csstab = qobject_cast<CSSTab*>(tab);
-            csstab->InsertFile(url);
-            return;
-        }
-        else if (tab_res->Type() == Resource::HTMLResourceType) {
-            QString filename = res->Filename();
-            if (filename.contains(".")) {
-                filename = filename.left(filename.lastIndexOf("."));
-            }
-            QString node;
-            if (res->Type() == Resource::ImageResourceType || res->Type() == Resource::SVGResourceType) {
-                node = QString("<img alt=\"%1\" src=\"%2\"/>").arg(filename).arg(relative_path);
-            }
-            else if (res->Type() == Resource::VideoResourceType) {
-                node = QString("<video controls=\"controls\" src=\"%1\">%2</video>").arg(relative_path).arg(filename);
-            }
-            else if (res->Type() == Resource::AudioResourceType) {
-                node = QString("<audio controls=\"controls\" src=\"%1\">%2</audio>").arg(relative_path).arg(filename);
-            }
-            FlowTab* flowtab = qobject_cast<FlowTab*>(tab);
-            flowtab->InsertFile(node);
-            return;
-        }
-    }
-    else {
+    if (!res || !tab) {
         QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert a file at this position."));
+        return;
     }
+
+    Resource* tab_res = tab->GetLoadedResource();
+    ResourceInsertion::Context context;
+    if (!ResourceInsertion::ContextFromTargetResource(tab_res, context) ||
+        !ResourceInsertion::CanInsertResource(res, context)) {
+        QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert a file at this position."));
+        return;
+    }
+
+    QString insert_text = ResourceInsertion::TextForResource(res, tab_res, context);
+    if (insert_text.isEmpty()) {
+        QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert a file at this position."));
+        return;
+    }
+
+    if (context == ResourceInsertion::Context::CSS) {
+        CSSTab* csstab = qobject_cast<CSSTab*>(tab);
+        if (csstab) {
+            csstab->InsertFile(insert_text);
+            return;
+        }
+    } else {
+        FlowTab* flowtab = qobject_cast<FlowTab*>(tab);
+        if (flowtab && flowtab->InsertFileEnabled()) {
+            flowtab->InsertFile(insert_text);
+            return;
+        }
+    }
+
+    QMessageBox::warning(this, tr("Sigil"), tr("You cannot insert a file at this position."));
 }
 
 //modified: Add Lables On Multiple Lines
