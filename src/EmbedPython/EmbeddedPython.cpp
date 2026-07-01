@@ -374,6 +374,23 @@ bool EmbeddedPython::addToPythonSysPath(const QString &mpath)
     return success;
 }
 
+void EmbeddedPython::setupRedirects()
+{
+    // Runs from main.cpp after python3lib is added to syspath
+    EmbeddedPython::m_mutex.lock();
+    PyGILState_STATE gstate = PyGILState_Ensure();
+
+    // Automatically import the module into the C layer
+    PyObject* redirect_module = PyImport_ImportModule("redirect_imports");
+    if (redirect_module == NULL) {
+        PyErr_Clear();
+    }
+    Py_XDECREF(redirect_module);
+
+    PyGILState_Release(gstate);
+    EmbeddedPython::m_mutex.unlock();
+}
+
 // run interpreter without initiating/locking/unlocking GIL 
 // in a single thread at a time
 QVariant EmbeddedPython::runInPython(const QString &mname, 

@@ -1,5 +1,7 @@
-Sigil-Enhanced-2.8.0.E2
+Sigil-Enhanced-2.8.1.E2
    Bug Fixes
+     - Synced upstream 2.8.x fixes for AddExisting duplicate/skipped imports, math altimage URL updates,
+       Python function replace regex handling, Mac Open With behavior, PageEdit launch behavior, and CSS newline sync.
      - Fixed Undo/Redo menu state so it now follows the current tab's real undo/redo availability.
      - Fixed TextTab Undo/Redo actions so menu-triggered undo/redo works even when CodeView itself does not have focus.
      - Fixed image resize undo history so canceling the resize dialog or confirming unchanged dimensions no longer creates an undo step.
@@ -9,6 +11,7 @@ Sigil-Enhanced-2.8.0.E2
      - Added missing override annotations in several widgets/dialogs and fixed a missing return in FindPrevPlus.
 
    New Features
+     - Synced upstream support for optionally substituting Python regex for re in embedded Python via SIGIL_EMBED_PY_USES_REGEX.
      - Added support for dropping multiple EPUB files and choosing whether to add them to the current book or open them in new windows.
      - Added tab-level UndoEnabled/RedoEnabled capability reporting and UndoRedoStateChanged notifications.
      - Connected image tabs to the main Undo/Redo actions and shortcuts.
@@ -17,6 +20,20 @@ Sigil-Enhanced-2.8.0.E2
      - Limited image edit undo/redo history to the latest 20 states.
      - Added status messages clarifying that undoing a pasted/imported image removes only the inserted text reference, not the imported resource.
      - Made cross-file Replace All create a checkpoint before modifying files; if checkpoint creation fails, replacement is cancelled.
+
+Sigil 2.8.x
+   Bug Fixes
+     - fix bug in AddExisting that could sometimes add duplicate image entries and skip some xhtml imports
+     - fix bug that caused altimage urls on math tags to not be preoperly updated when moved or renamed
+     - prevent crash in python function replace when re can not handle an expression that PCRE2 recognizes
+     - fix bug when using OpenWith to re-open BBEdit.app on MacOS if BBEdit was already open
+     - make launching PageEdit on MacOS via the Preferred XEditor always spawn a new copy of the PageApp
+     - fix bugs when newlines were sometimes added to css files that threw off sync to Style.
+
+   New Features
+     - add ability to use python regex in place of python re for embedded python controlled via an
+       environment variable (SIGIL_EMBED_PY_USES_REGEX).
+
 
 Sigil-2.8.0
    Bug Fies
