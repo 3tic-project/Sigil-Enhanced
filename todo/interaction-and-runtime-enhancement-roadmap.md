@@ -66,7 +66,7 @@
 - 菜单 `Insert File`、Book Browser 右键 `Insert Into HTML/CSS File`、粘贴本地/剪贴板图片均改为复用同一套插入文本生成逻辑。
 - 资源相对路径统一使用 `Resource::GetRelativePathFromResource()` 后再 URL 编码。
 - 文件名生成的 alt/文本标签统一做 XML 转义, 避免文件名含 `&`, `<`, `"` 等字符时生成非法片段。
-- Book Browser 向编辑器拖入资源已接入同一套插入逻辑; 外部本地文件拖入编辑器仍留给 Step 4/5。
+- Book Browser 向编辑器拖入资源已接入同一套插入逻辑; 外部本地文件直接拖入编辑器已取消。
 
 已验证:
 
@@ -90,6 +90,33 @@
 - `cmake --build cmake-build-debug --target Sigil -j 4` 通过。
 - `git diff --check` 通过。
 - 人工验证拖放功能正常。
+
+### 2026-07-01: 外部本地文件直接拖入编辑器已取消
+
+已按维护决策撤销“从 Finder 等外部来源直接拖文件到编辑器并插入”的未提交实现。
+
+保留策略:
+
+- Book Browser 内已有资源可以拖入编辑器并在释放位置插入引用。
+- 外部本地文件拖到主窗口空白区域或 File Drop Zone 时仍只添加文件, 不直接向编辑器插入引用。
+- 下一步只处理非本地图片“粘贴”导入, 不做外部直接拖入。
+
+### 2026-07-01: 非本地图片粘贴已完成
+
+已完成:
+
+- 浏览器复制图片时, 如果剪贴板同时带非本地 URL 和图片数据, 不再错误地按本地文件 URL 导入。
+- 非本地图片粘贴改为直接读取 `QMimeData::imageData()`, 转为 PNG 后加入书内并插入引用。
+- 没有可靠文件名时使用 `image-0001.png`, 后续重复粘贴由 `FolderKeeper::GetUniqueFilenameVersion()` 递增命名。
+- 如果远程 URL 路径里能取到文件名, 取净化后的 basename 并保存为 `.png`, 以匹配实际写入的 PNG 数据。
+- XHTML 正文粘贴生成 `<img .../>`; CSS 文件或 XHTML 内嵌 CSS 区域粘贴生成 `url("...")`。
+- 不做远程 URL 下载, 不做网页图片拖入。
+
+已验证:
+
+- `cmake --build cmake-build-debug --target Sigil -j 4` 通过。
+- `git diff --check` 通过。
+- 人工验证行为正确。
 
 ## 当前代码现状
 
@@ -203,35 +230,30 @@ CSS 目标:
 
 注意:
 
-- CSS 文件拖入 HTML 是本轮需求里唯一超出现有右键 Insert 的语义。推荐支持, 但要作为明确增强写进 changelog。
+- CSS 文件拖入 HTML 是超出现有右键 Insert 的语义, 当前维护决策为暂不支持。
 - 多文件插入时, HTML 标签可以连续插入; CSS `url(...)` 多项可用逗号分隔, 延续现有 `CodeViewEditorExt.cpp` 的行为。
 - 插入动作必须使用 `InsertTextAsSingleUndoStep()` 或等价路径, 使“插入引用”可撤销。导入到书内的资源不随撤销删除, 状态栏要延续“Undo removes only the inserted reference”提示。
 
-### 拖入本地文件
+### 拖入文件
 
-推荐推进顺序:
+当前决策:
 
-1. 把 `MainWindow::InsertFiles()` 和 `MainWindow::InsertFileFromBookBrowser()` 改为调用同一套 `BuildInsertionText/InsertResourceReferencesIntoCurrentEditor`。
-2. 把 `CodeViewEditorExt.cpp` 里粘贴图片后拼接 `<img>`/`url()` 的逻辑切到公共入口。
-3. 对拖入当前编辑器的本地文件:
-   - 如果文件尚未在书内, 走 `BookBrowser::AddExisting(false, false, filepaths)` 或抽出的公共添加函数。
-   - 如果目标编辑器当前位置可插入, 添加后立即插入对应引用。
-   - 如果当前位置不可插入, 只添加资源并提示, 或直接拒绝并提示; 推荐先拒绝插入但保留“添加到书内”的现有行为, 降低惊讶。
-4. 对拖入主窗口但不是编辑器区域的文件:
-   - 保持当前 `AddDroppedFiles()` 行为, 避免用户只是想加文件时被意外插入。
+- 已支持 Book Browser 内已有资源拖入编辑器, 在释放位置按 HTML/CSS 上下文插入引用。
+- 不支持 Finder 等外部本地文件直接拖入编辑器并插入引用。
+- 对拖入主窗口但不是编辑器区域的外部本地文件, 保持当前 `AddDroppedFiles()` 行为, 避免用户只是想加文件时被意外插入。
 
 实现位置:
 
-- 更精准的“拖入光标位置”应在 `CodeViewEditor` 层处理 `dragEnterEvent/dropEvent` 或 `canInsertFromMimeData/insertFromMimeData`, 因为只有编辑器知道鼠标落点对应的文本光标。
+- Book Browser 拖入编辑器已在 `BookBrowserTreeView` 和 `CodeViewEditor` 层处理。
 - `MainWindow::dropEvent()` 仍负责窗口空白区域或非编辑器区域的添加文件。
 
-### 非本地图片粘贴/拖入
+### 非本地图片粘贴
 
 支持来源:
 
 - `QMimeData::hasImage()`: 直接将 `imageData()` 写入 PNG。
 - `text/html` 中的 `data:image/...;base64,...`: 可解析出原始 bytes 和扩展名。
-- `text/uri-list` 里非本地 URL: 第一阶段不自动联网下载, 仅在同时存在 `hasImage()` 或 data URI 时处理。后续如要支持远程 URL 下载, 应加确认和错误提示。
+- `text/uri-list` 里非本地 URL: 不自动联网下载, 仅在同时存在 `hasImage()` 时处理。后续如要支持远程 URL 下载, 应加确认和错误提示。
 
 命名规则:
 
@@ -257,10 +279,7 @@ CSS 目标:
 
 验收项:
 
-- 从 Finder 拖 PNG/JPG 到 HTML 正文光标处, 自动加入 Images 并插入 `<img>`。
-- 从 Finder 拖图片到 CSS 文件, 自动加入 Images 并插入 `url("...")`。
-- 从 Finder 拖 CSS 到 HTML 光标处, 自动加入 Styles 并插入 `<link ...>`。
-- 从浏览器复制图片后在 HTML 粘贴, 自动生成 `image-0001.png` 并插入 `<img>`。
+- 从浏览器复制图片后在 HTML 粘贴, 自动生成 `image-0001.png` 或基于远程 URL basename 的 `.png` 文件名, 并插入 `<img>`。
 - 第二次粘贴同类无名图片生成递增文件名, 不覆盖已有资源。
 - 在 HTML 标签属性内部、body 外等非法位置尝试插入, 应拒绝并提示。
 - 撤销只移除插入文本, 不删除已导入资源。
@@ -438,33 +457,33 @@ cmake-build-debug/bin/Sigil.app/Contents/MacOS/Sigil
 - 菜单 Insert File 插入图片/音频/视频。
 - 粘贴本地图片仍可插入。
 
-### Step 4: 支持编辑器拖入本地文件并插入当前位置
+### Step 4: 支持 Book Browser 拖入编辑器
 
 目标:
 
 - 从 Book Browser 拖已有资源到编辑器时, 在释放位置按当前编辑器上下文插入引用。
-- 拖本地图片/CSS/字体等到编辑器时, 先加入书内, 再按当前编辑器上下文插入引用。
-- 主窗口空白区域拖入仍保持“只添加文件”。
+- 主窗口空白区域拖入外部本地文件仍保持“只添加文件”。
+- 不做外部本地文件直接拖入编辑器。
 
 建议提交:
 
-- `* 支持拖入文件后插入当前位置`
+- `* 统一资源插入逻辑并支持Book Browser拖入`
 
 验证:
 
-- HTML 正文拖图。
-- CSS 文件拖图/字体。
-- HTML 拖 CSS。
+- 从 Book Browser 拖图片/SVG/音频/视频到 HTML 正文。
+- 从 Book Browser 拖图片/SVG/字体到 CSS。
 - 非法位置拒绝插入。
 - 多文件插入。
 
-### Step 5: 支持非本地图片粘贴/拖入
+### Step 5: 支持非本地图片粘贴
 
 目标:
 
 - 浏览器复制图片后可粘贴插入。
 - 没有合法文件名时使用 `image-0001.png` 递增命名。
 - data URI 图片可解析。
+- 不做网页或外部应用直接拖入。
 
 建议提交:
 
@@ -473,7 +492,6 @@ cmake-build-debug/bin/Sigil.app/Contents/MacOS/Sigil
 验证:
 
 - Chrome/Safari/Firefox 复制图片粘贴。
-- 从网页拖图片到 HTML/CSS。
 - 重复粘贴命名递增。
 - 不能取得图片数据时给出提示, 不误插空引用。
 
@@ -505,4 +523,4 @@ cmake-build-debug/bin/Sigil.app/Contents/MacOS/Sigil
 
 ## 下一步建议
 
-Step 3 和 Book Browser 拖入编辑器已完成代码实现, 建议先验证现有插入入口和 Book Browser 拖放没有回归。验证通过后继续 Step 4 的外部本地文件拖入编辑器, 复用 `ResourceInsertion` 处理 HTML/CSS 引用文本。
+外部本地文件直接拖入编辑器已取消。Step 5 非本地图片粘贴已完成代码实现, 建议按上方“待人工验证”复测浏览器复制图片粘贴路径; 验证通过后提交本步, 然后进入 Step 6“Book Browser 图片悬停预览”。

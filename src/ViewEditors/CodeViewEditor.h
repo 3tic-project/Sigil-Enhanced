@@ -960,7 +960,7 @@ private:
 
     // modified: paste event
     bool insertImagesFromUrls(const QList<QUrl>& urls,bool insert_on_css = false);
-    bool insertImageFromByteData(const QByteArray& data, bool insert_on_css = false);
+    bool insertImageFromByteData(const QByteArray& data, bool insert_on_css = false, const QString& filename = QString());
     bool canInsertBookBrowserResources(const QMimeData* source, const QPoint& drop_position);
     bool insertBookBrowserResources(const QMimeData* source, const QPoint& drop_position);
     void CommonPasteEvent(const QMimeData* source);

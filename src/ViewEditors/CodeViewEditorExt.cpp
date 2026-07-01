@@ -64,6 +64,49 @@ static bool AllowPlainCodeViewDrop()
     return qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP");
 }
 
+static QString SafeClipboardImageFilename(const QMimeData* source)
+{
+    const QString default_filename = "image-0001.png";
+    if (!source || !source->hasUrls() || source->urls().size() != 1) {
+        return default_filename;
+    }
+
+    QString basename = QFileInfo(source->urls().first().path()).completeBaseName();
+    basename = basename.trimmed();
+    basename.replace(QRegularExpression("[\\\\/:*?\"<>|\\x00-\\x1f]"), "-");
+    basename.replace(QRegularExpression("\\s+"), "-");
+    basename.replace(QRegularExpression("-+"), "-");
+    basename = basename.trimmed();
+    while (basename.startsWith(".")) {
+        basename.remove(0, 1);
+    }
+    basename = basename.left(80);
+
+    if (basename.isEmpty()) {
+        return default_filename;
+    }
+
+    return basename + ".png";
+}
+
+static QByteArray PngBytesFromImageMimeData(const QMimeData* source)
+{
+    QByteArray bytes;
+    if (!source || !source->hasImage()) {
+        return bytes;
+    }
+
+    QImage image = qvariant_cast<QImage>(source->imageData());
+    if (image.isNull()) {
+        return bytes;
+    }
+
+    QBuffer buffer(&bytes);
+    buffer.open(QIODevice::WriteOnly);
+    image.save(&buffer, "PNG");
+    return bytes;
+}
+
 //modified: CodeCompleterParser
 void CodeViewEditor::setHTMLCodeCompleter() {
      m_completeParser = new CodeCompleterParser(this, CodeCompleterParser::FileType::HTML);
@@ -1144,13 +1187,10 @@ bool CodeViewEditor::HtmlViewPasteEvent(const QMimeData* s) {
         }
     }
     if (s->hasImage()) {
-        if (s->hasUrls() && s->urls().size() == 1) {
+        if (s->hasUrls() && s->urls().size() == 1 && s->urls().first().isLocalFile()) {
             return insertImagesFromUrls(s->urls(), insert_on_css);
         }
-        QBuffer buf;
-        QImage img = qvariant_cast<QImage>(s->imageData());
-        img.save(&buf, "PNG");
-        return insertImageFromByteData(buf.buffer(), insert_on_css);
+        return insertImageFromByteData(PngBytesFromImageMimeData(s), insert_on_css, SafeClipboardImageFilename(s));
     }
     else if (s->hasUrls()) {
         return insertImagesFromUrls(s->urls(), insert_on_css);
@@ -1161,13 +1201,10 @@ bool CodeViewEditor::HtmlViewPasteEvent(const QMimeData* s) {
 //modified: paste event
 bool CodeViewEditor::CssViewPasteEvent(const QMimeData* s) {
     if (s->hasImage()) {
-        if (s->hasUrls() && s->urls().size() == 1) {
+        if (s->hasUrls() && s->urls().size() == 1 && s->urls().first().isLocalFile()) {
             return insertImagesFromUrls(s->urls(), true);
         }
-        QBuffer buf;
-        QImage img = qvariant_cast<QImage>(s->imageData());
-        img.save(&buf, "PNG");
-        return insertImageFromByteData(buf.buffer(), true);
+        return insertImageFromByteData(PngBytesFromImageMimeData(s), true, SafeClipboardImageFilename(s));
     }
     else if (s->hasUrls()) {
         return insertImagesFromUrls(s->urls(), true);
@@ -1176,15 +1213,18 @@ bool CodeViewEditor::CssViewPasteEvent(const QMimeData* s) {
 }
 
 //modified: paste event
-bool CodeViewEditor::insertImageFromByteData(const QByteArray& data, bool insert_on_css) {
-    QString filename = "Images0001.png";
+bool CodeViewEditor::insertImageFromByteData(const QByteArray& data, bool insert_on_css, const QString& filename) {
+    if (data.isEmpty()) {
+        return false;
+    }
+    QString image_filename = filename.isEmpty() ? "image-0001.png" : filename;
     QWidget* mainwin_w = Utility::GetMainWindow();
     MainWindow* mainwin = qobject_cast<MainWindow*>(mainwin_w);
     if (!mainwin) {
         return false;
     }
 
-    QString added_bookpath = mainwin->GetBookBrowser()->AddImageFromClipboard(data, filename);
+    QString added_bookpath = mainwin->GetBookBrowser()->AddImageFromClipboard(data, image_filename);
     if (added_bookpath.isEmpty()) {
         return false;
     }
