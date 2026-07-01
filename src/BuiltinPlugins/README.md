@@ -113,6 +113,11 @@ Phase 2:
 
 资源诊断:
 
+- 检查 `META-INF/container.xml` 是否存在、可解析、rootfile 是否指向当前 OPF；可安全重建时按当前 OPF 路径重写。
+- 检查已存在的 `mimetype` 文件内容是否精确为 `application/epub+zip`。
+- 检查 Manifest 是否错误登记 `mimetype` 或 `META-INF` 内文件。
+- 检查文件路径空白字符、尾随点、隐藏文件风格、非 ASCII 路径、Unicode 规范化和大小写折叠冲突。
+- 检查 Publication Resource 是否错误放在 `META-INF` 中。
 - 检查 XML/XHTML/SVG/NCX/OPF 的 XML 声明 encoding，非 UTF-8 时给 warning。
 - 检查外部实体声明，提示 EPUB3 和安全风险。
 - 检查 XHTML/NCX/OPF/SVG/XML 的 DOCTYPE 风险与 EPUB2/EPUB3 常见要求。

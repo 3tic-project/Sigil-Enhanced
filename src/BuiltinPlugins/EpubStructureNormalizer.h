@@ -60,7 +60,7 @@ private:
                    int line,
                    int charoffset,
                    const QString& message) const;
-    Result validateResourceDiagnostics() const;
+    Result validateResourceDiagnostics(const Options& options) const;
 
     Book* m_Book;
 };

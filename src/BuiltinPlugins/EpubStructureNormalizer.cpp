@@ -13,6 +13,7 @@
 
 #include "BuiltinPlugins/EpubStructureNormalizer.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -726,6 +727,201 @@ static bool isGifResource(const QString& extension, const QString& media_type)
            media_type.trimmed().toLower() == QLatin1String("image/gif");
 }
 
+static bool pathContainsWhitespace(const QString& path)
+{
+    for (const QChar& ch : path) {
+        if (ch.isSpace()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool pathContainsNonAscii(const QString& path)
+{
+    for (const QChar& ch : path) {
+        if (ch.unicode() > 0x7f) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool isAllowedMetaInfPath(const QString& bookpath)
+{
+    const QString normalized = bookpath.toLower();
+    return normalized == QLatin1String("meta-inf/container.xml") ||
+           normalized == QLatin1String("meta-inf/encryption.xml") ||
+           normalized == QLatin1String("meta-inf/metadata.xml") ||
+           normalized == QLatin1String("meta-inf/signatures.xml") ||
+           normalized == QLatin1String("meta-inf/manifest.xml") ||
+           normalized == QLatin1String("meta-inf/com.apple.ibooks.display-options.xml");
+}
+
+static QString ocfComparablePath(const QString& bookpath)
+{
+    return bookpath.normalized(QString::NormalizationForm_C).toCaseFolded();
+}
+
+static void validateMimetypeFile(EpubStructureNormalizer::Result& result,
+                                 const QString& root_folder)
+{
+    QFile file(root_folder + QStringLiteral("/mimetype"));
+    if (!file.exists()) {
+        return;
+    }
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, QStringLiteral("mimetype"), SourceLocation(),
+                         QStringLiteral("OCF检查：无法读取 mimetype 文件。"));
+        return;
+    }
+
+    const QByteArray content = file.readAll();
+    if (content != QByteArray("application/epub+zip")) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, QStringLiteral("mimetype"), SourceLocation{1, 0},
+                         QStringLiteral("OCF检查：mimetype 文件内容不是精确的 application/epub+zip；导出时会由 Sigil 重新写入。"));
+    }
+}
+
+static OpfTagLocation firstXmlTag(const QString& source, const QString& tag_name)
+{
+    const QList<OpfTagLocation> tags = scanOpfTags(source, tag_name, 0, source.size());
+    return tags.isEmpty() ? OpfTagLocation() : tags.first();
+}
+
+static void validateContainerXml(EpubStructureNormalizer::Result& result,
+                                 const QString& root_folder,
+                                 const QString& opf_bookpath,
+                                 bool dry_run)
+{
+    const QString container_bookpath = QStringLiteral("META-INF/container.xml");
+    const QString container_path = root_folder + QStringLiteral("/") + container_bookpath;
+    QFileInfo container_info(container_path);
+
+    if (!container_info.exists()) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath, SourceLocation(),
+                         QStringLiteral("OCF检查：缺少 META-INF/container.xml，需要按当前 OPF 路径重建。"));
+        result.modified = true;
+        if (!dry_run) {
+            FolderKeeper::UpdateContainerXML(root_folder, opf_bookpath);
+        }
+        return;
+    }
+
+    QFile file(container_path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath, SourceLocation(),
+                         QStringLiteral("OCF检查：无法读取 META-INF/container.xml。"));
+        return;
+    }
+
+    const QString source = QString::fromUtf8(file.readAll());
+    QXmlStreamReader reader(source);
+    while (!reader.atEnd()) {
+        reader.readNext();
+    }
+    if (reader.hasError()) {
+        addLocatedResult(result, ValidationResult::ResType_Error, container_bookpath,
+                         sourceLocationForLineColumn(source, reader.lineNumber(), reader.columnNumber()),
+                         QStringLiteral("OCF检查：container.xml 解析错误：%1").arg(reader.errorString()));
+        return;
+    }
+
+    QList<OpfTagLocation> rootfiles = scanOpfTags(source, QStringLiteral("rootfile"), 0, source.size());
+    if (rootfiles.isEmpty()) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath, firstXmlTag(source, QStringLiteral("container")).tagLocation,
+                         QStringLiteral("OCF检查：container.xml 缺少 rootfile，需要按当前 OPF 路径重建。"));
+        result.modified = true;
+        if (!dry_run) {
+            FolderKeeper::UpdateContainerXML(root_folder, opf_bookpath);
+        }
+        return;
+    }
+
+    int selected_index = 0;
+    for (int i = 0; i < rootfiles.count(); i++) {
+        if (rootfiles.at(i).attrs.value(QStringLiteral("media-type")) == QLatin1String("application/oebps-package+xml")) {
+            selected_index = i;
+            break;
+        }
+    }
+
+    const OpfTagLocation rootfile = rootfiles.at(selected_index);
+    const QString full_path = rootfile.attrs.value(QStringLiteral("full-path")).trimmed();
+    const QString media_type = rootfile.attrs.value(QStringLiteral("media-type")).trimmed();
+    bool rewrite_container = false;
+
+    if (full_path.isEmpty()) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath, rootfile.tagLocation,
+                         QStringLiteral("OCF检查：rootfile 缺少 full-path，需要按当前 OPF 路径重建。"));
+        rewrite_container = true;
+    } else if (full_path != opf_bookpath) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath,
+                         opfAttrLocation(rootfile, QStringLiteral("full-path")),
+                         QStringLiteral("OCF检查：rootfile full-path【%1】与当前 OPF【%2】不一致，需要重建 container.xml。")
+                             .arg(full_path, opf_bookpath));
+        rewrite_container = true;
+    }
+
+    if (media_type != QLatin1String("application/oebps-package+xml")) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath,
+                         opfAttrLocation(rootfile, QStringLiteral("media-type")),
+                         QStringLiteral("OCF检查：rootfile media-type 应为 application/oebps-package+xml，需要重建 container.xml。"));
+        rewrite_container = true;
+    }
+
+    if (rewrite_container) {
+        result.modified = true;
+        if (!dry_run) {
+            FolderKeeper::UpdateContainerXML(root_folder, opf_bookpath);
+        }
+    }
+}
+
+static void validateOcfPathDiagnostics(EpubStructureNormalizer::Result& result,
+                                       const QString& root_folder)
+{
+    QHash<QString, QString> comparable_to_path;
+    const QStringList filepaths = Utility::walkDirs(root_folder);
+
+    foreach(QString filepath, filepaths) {
+        QString bookpath = filepath.mid(root_folder.size() + 1);
+        bookpath.replace(QChar('\\'), QChar('/'));
+
+        const QString comparable = ocfComparablePath(bookpath);
+        if (comparable_to_path.contains(comparable) && comparable_to_path.value(comparable) != bookpath) {
+            addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                             QStringLiteral("OCF检查：文件路径【%1】与【%2】在 Unicode 规范化和大小写折叠后冲突，可能在部分文件系统或阅读器中互相覆盖。")
+                                 .arg(bookpath, comparable_to_path.value(comparable)));
+        } else {
+            comparable_to_path[comparable] = bookpath;
+        }
+
+        const QString filename = QFileInfo(bookpath).fileName();
+        if (filename.endsWith(QLatin1Char('.'))) {
+            addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                             QStringLiteral("OCF检查：文件名【%1】以点号结尾，EPUBCheck 会报告路径兼容性风险。").arg(filename));
+        }
+        if (filename.startsWith(QLatin1Char('.'))) {
+            addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                             QStringLiteral("OCF检查：文件名【%1】是隐藏文件风格，建议不要打包进 EPUB。").arg(filename));
+        }
+        if (pathContainsWhitespace(bookpath)) {
+            addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                             QStringLiteral("OCF检查：文件路径【%1】包含空白字符，建议改名并使用 URL 编码引用。").arg(bookpath));
+        }
+        if (pathContainsNonAscii(bookpath)) {
+            addLocatedResult(result, ValidationResult::ResType_Info, bookpath, SourceLocation(),
+                             QStringLiteral("OCF检查：文件路径【%1】包含非 ASCII 字符，现代 EPUB 可用，但旧阅读器可能兼容性较差。").arg(bookpath));
+        }
+        if (bookpath.startsWith(QStringLiteral("META-INF/")) && !isAllowedMetaInfPath(bookpath)) {
+            addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                             QStringLiteral("OCF检查：文件【%1】位于 META-INF 中。Publication Resource 不应放在 META-INF。").arg(bookpath));
+        }
+    }
+}
+
 static QString canonicalEncodingName(const QString& encoding)
 {
     QString normalized = encoding.trimmed().toLower();
@@ -917,7 +1113,7 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalize(const Options
         appendResult(result, normalizeLinkCase(options));
     }
 
-    appendResult(result, validateResourceDiagnostics());
+    appendResult(result, validateResourceDiagnostics(options));
 
     return result;
 }
@@ -952,13 +1148,20 @@ void EpubStructureNormalizer::addResult(Result& result,
     result.validationResults << ValidationResult(type, bookpath, line, charoffset, message);
 }
 
-EpubStructureNormalizer::Result EpubStructureNormalizer::validateResourceDiagnostics() const
+EpubStructureNormalizer::Result EpubStructureNormalizer::validateResourceDiagnostics(const Options& options) const
 {
     Result result;
 
     if (!m_Book) {
         return result;
     }
+
+    const QString root_folder = m_Book->GetFolderKeeper()->GetFullPathToMainFolder();
+    if (m_Book->GetOPF()) {
+        validateContainerXml(result, root_folder, m_Book->GetOPF()->GetRelativePath(), options.dryRun);
+    }
+    validateMimetypeFile(result, root_folder);
+    validateOcfPathDiagnostics(result, root_folder);
 
     const QList<Resource*> resources = m_Book->GetFolderKeeper()->GetResourceList();
     foreach(Resource* resource, resources) {
@@ -1294,6 +1497,11 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
             }
             new_manifest.append(me);
             continue;
+        }
+
+        if (lower_bkpath == QLatin1String("mimetype") || lower_bkpath.startsWith(QStringLiteral("meta-inf/"))) {
+            addLocatedResult(result, warning_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("href")),
+                             QStringLiteral("OCF检查：Manifest 项【%1】指向 mimetype 或 META-INF 内文件，Publication Resource 不应登记在这些位置。").arg(me.m_href));
         }
 
         if (href_info.hasQuery || href_info.hasFragment) {
