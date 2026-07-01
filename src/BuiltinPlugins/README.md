@@ -30,6 +30,13 @@
 - `epubcheck` 是官方规范验证器，适合借鉴其 URL 解析、OPF Manifest、spine、nav、guide、media-type 等结构性规则。
 - 当前实现只吸收可用 C++/Sigil 模型稳定完成的规则，不移植 Java 验证引擎、schema、RelaxNG、Schematron 或完整报错体系。
 
+许可证边界:
+
+- `EPUB-Checker` 的 GUI/wrapper 代码使用 GPL-2.0-only；Sigil-Enhanced 继承 Sigil 的 GPL-3.0-or-later，不能复制或改写合并 GPL-2.0-only 代码。
+- `todo/vendor/EPUB-Checker` 只作为本地行为参考，不作为构建输入、不复制源码、不移植实现。
+- 如需参考 W3C `epubcheck` 代码，必须确认对应文件许可证并保留必要 attribution；当前策略仍是按规则语义做 clean-room C++ 实现。
+- 文档可以记录检查类别和规范行为，但代码必须基于 Qt/Sigil 自有模型重新实现。
+
 不照搬的点:
 
 - 不直接读取 `.epub` zip 并生成一个新 EPUB。
@@ -105,6 +112,10 @@ Phase 2:
 
 资源诊断:
 
+- 检查 XML/XHTML/SVG/NCX/OPF 的 XML 声明 encoding，非 UTF-8 时给 warning。
+- 检查外部实体声明，提示 EPUB3 和安全风险。
+- 检查 XHTML/NCX/OPF/SVG/XML 的 DOCTYPE 风险与 EPUB2/EPUB3 常见要求。
+- 使用 Qt XML 流式解析器做基础 well-formed 检查，解析错误写入行号和字符 offset。
 - 检查图片资源是否存在、是否 0 字节。
 - 检查 PNG/JPEG/GIF 文件头是否与扩展名或 media-type 匹配。
 - 检查图片是否能读取尺寸。
@@ -215,6 +226,13 @@ Phase 2 需要覆盖:
 
 资源诊断需要覆盖:
 
+- XML declaration 中非 UTF-8 encoding 只报告、不自动改。
+- 外部实体声明只报告、不自动改。
+- EPUB2 XHTML 缺失或非 XHTML 1.1 DOCTYPE 只报告。
+- EPUB3 XHTML 旧式外部 DOCTYPE 只报告。
+- EPUB2 NCX 缺失或非 NCX 2005-1 DOCTYPE 只报告。
+- OPF 中出现 DOCTYPE 只报告。
+- XML well-formed 错误进入 Validation Results，并尽量定位到 line/offset。
 - 图片文件缺失或 0 字节只报告。
 - PNG/JPEG/GIF 文件头与扩展名或 media-type 不一致只报告。
 - 损坏图片无法读取尺寸只报告。

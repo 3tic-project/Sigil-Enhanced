@@ -25,6 +25,7 @@
 #include <QString>
 #include <QStringList>
 #include <QUrl>
+#include <QXmlStreamReader>
 
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
@@ -38,6 +39,7 @@
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/SVGResource.h"
+#include "ResourceObjects/TextResource.h"
 #include "ResourceObjects/XMLResource.h"
 #include "SourceUpdates/UniversalUpdates.h"
 
@@ -96,6 +98,45 @@ static SourceLocation sourceLocationForOffset(const QString& source, int offset)
         }
     }
     return location;
+}
+
+static SourceLocation sourceLocationForLineColumn(const QString& source, int line, int column)
+{
+    SourceLocation location;
+    location.line = line;
+
+    if (line <= 0) {
+        return location;
+    }
+
+    int current_line = 1;
+    int line_start = 0;
+    for (int i = 0; i < source.size(); i++) {
+        if (current_line == line) {
+            break;
+        }
+        if (source.at(i) == QLatin1Char('\n')) {
+            current_line++;
+            line_start = i + 1;
+        }
+    }
+
+    if (current_line != line) {
+        return location;
+    }
+
+    const int column_offset = qMax(0, column - 1);
+    location.offset = qMin(source.size(), line_start + column_offset);
+    return location;
+}
+
+static void addLocatedResult(EpubStructureNormalizer::Result& result,
+                             ValidationResult::ResType type,
+                             const QString& bookpath,
+                             const SourceLocation& location,
+                             const QString& message)
+{
+    result.validationResults << ValidationResult(type, bookpath, location.line, location.offset, message);
 }
 
 static bool bookPathEscapesRoot(const QString& href_path, const QString& source_bookpath)
@@ -525,6 +566,172 @@ static bool isGifResource(const QString& extension, const QString& media_type)
            media_type.trimmed().toLower() == QLatin1String("image/gif");
 }
 
+static QString canonicalEncodingName(const QString& encoding)
+{
+    QString normalized = encoding.trimmed().toLower();
+    normalized.remove(QLatin1Char('-'));
+    normalized.remove(QLatin1Char('_'));
+    return normalized;
+}
+
+static void validateXmlDeclaration(EpubStructureNormalizer::Result& result,
+                                   const QString& bookpath,
+                                   const QString& source)
+{
+    QRegularExpression xml_decl_re(QStringLiteral("^\\s*<\\?xml\\b([^?]*)\\?>"),
+                                   QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatch decl_match = xml_decl_re.match(source);
+    if (!decl_match.hasMatch()) {
+        return;
+    }
+
+    QRegularExpression encoding_re(QStringLiteral("\\bencoding\\s*=\\s*([\"'])(.*?)\\1"),
+                                   QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch encoding_match = encoding_re.match(decl_match.captured(1));
+    if (!encoding_match.hasMatch()) {
+        return;
+    }
+
+    const QString encoding = encoding_match.captured(2);
+    if (canonicalEncodingName(encoding) != QLatin1String("utf8")) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                         sourceLocationForOffset(source, decl_match.capturedStart(1) + encoding_match.capturedStart(2)),
+                         QStringLiteral("XML检查：声明的 encoding 为【%1】，EPUB 内容文档建议使用 UTF-8。").arg(encoding));
+    }
+}
+
+static QList<QRegularExpressionMatch> doctypeMatches(const QString& source)
+{
+    QList<QRegularExpressionMatch> matches;
+    QRegularExpression doctype_re(QStringLiteral("<!DOCTYPE\\b([\\s\\S]*?)>"),
+                                  QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatchIterator it = doctype_re.globalMatch(source);
+    while (it.hasNext()) {
+        matches << it.next();
+    }
+    return matches;
+}
+
+static void validateExternalEntities(EpubStructureNormalizer::Result& result,
+                                     const QString& bookpath,
+                                     const QString& source)
+{
+    QRegularExpression entity_re(QStringLiteral("<!ENTITY\\s+%?\\s*[^>]*\\b(?:SYSTEM|PUBLIC)\\b[^>]*>"),
+                                 QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatchIterator it = entity_re.globalMatch(source);
+    while (it.hasNext()) {
+        QRegularExpressionMatch match = it.next();
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                         sourceLocationForOffset(source, match.capturedStart(0)),
+                         QStringLiteral("XML检查：发现外部实体声明，EPUB3 不允许外部实体，且会带来解析和安全风险。"));
+    }
+}
+
+static void validateDoctype(EpubStructureNormalizer::Result& result,
+                            const QString& bookpath,
+                            const QString& source,
+                            Resource::ResourceType resource_type,
+                            const QString& epub_version)
+{
+    const QList<QRegularExpressionMatch> matches = doctypeMatches(source);
+    if (matches.count() > 1) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                         sourceLocationForOffset(source, matches.at(1).capturedStart(0)),
+                         QStringLiteral("XML检查：同一文件中发现多个 DOCTYPE 声明，请保留一个符合 EPUB 版本的声明。"));
+    }
+
+    const bool has_doctype = !matches.isEmpty();
+    const QString doctype = has_doctype ? matches.first().captured(0).simplified() : QString();
+    const QString lower_doctype = doctype.toLower();
+
+    if (resource_type == Resource::HTMLResourceType) {
+        if (epub_version.startsWith(QLatin1Char('2'))) {
+            if (!has_doctype) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation{1, 0},
+                                 QStringLiteral("EPUBCheck：EPUB2 XHTML 建议声明 XHTML 1.1 DOCTYPE。"));
+            } else if (!lower_doctype.contains(QStringLiteral("xhtml 1.1"))) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                                 sourceLocationForOffset(source, matches.first().capturedStart(0)),
+                                 QStringLiteral("EPUBCheck：EPUB2 XHTML 的 DOCTYPE 不是 XHTML 1.1，建议检查文档类型声明。"));
+            }
+        } else if (epub_version.startsWith(QLatin1Char('3')) && has_doctype) {
+            const bool html5_doctype = lower_doctype == QStringLiteral("<!doctype html>");
+            const bool has_external_identifier = lower_doctype.contains(QStringLiteral(" public ")) ||
+                                                 lower_doctype.contains(QStringLiteral(" system "));
+            if (!html5_doctype || has_external_identifier) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                                 sourceLocationForOffset(source, matches.first().capturedStart(0)),
+                                 QStringLiteral("EPUBCheck：EPUB3 XHTML 建议使用简单的 <!DOCTYPE html>，避免旧式外部标识。"));
+            }
+        }
+        return;
+    }
+
+    if (resource_type == Resource::NCXResourceType) {
+        if (epub_version.startsWith(QLatin1Char('2'))) {
+            if (!has_doctype) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation{1, 0},
+                                 QStringLiteral("EPUBCheck：EPUB2 NCX 建议声明 NCX 2005-1 DOCTYPE。"));
+            } else if (!lower_doctype.contains(QStringLiteral("ncx 2005-1"))) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                                 sourceLocationForOffset(source, matches.first().capturedStart(0)),
+                                 QStringLiteral("EPUBCheck：NCX DOCTYPE 不是 NCX 2005-1，建议检查声明。"));
+            }
+        }
+        return;
+    }
+
+    if (resource_type == Resource::OPFResourceType && has_doctype) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                         sourceLocationForOffset(source, matches.first().capturedStart(0)),
+                         QStringLiteral("EPUBCheck：OPF package document 通常不应声明 DOCTYPE，建议移除旧式声明。"));
+        return;
+    }
+
+    if ((resource_type == Resource::SVGResourceType || resource_type == Resource::XMLResourceType) &&
+        has_doctype &&
+        (lower_doctype.contains(QStringLiteral(" public ")) || lower_doctype.contains(QStringLiteral(" system ")))) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                         sourceLocationForOffset(source, matches.first().capturedStart(0)),
+                         QStringLiteral("XML检查：DOCTYPE 使用外部标识，建议避免依赖外部 DTD。"));
+    }
+}
+
+static void validateXmlWellFormed(EpubStructureNormalizer::Result& result,
+                                  const QString& bookpath,
+                                  const QString& source)
+{
+    QXmlStreamReader reader(source);
+    while (!reader.atEnd()) {
+        reader.readNext();
+    }
+
+    if (!reader.hasError()) {
+        return;
+    }
+
+    const SourceLocation location = sourceLocationForLineColumn(source, reader.lineNumber(), reader.columnNumber());
+    addLocatedResult(result, ValidationResult::ResType_Error, bookpath, location,
+                     QStringLiteral("XML检查：解析错误：%1").arg(reader.errorString()));
+}
+
+static void validateXmlTextResource(EpubStructureNormalizer::Result& result,
+                                    Resource* resource)
+{
+    TextResource* text_resource = qobject_cast<TextResource*>(resource);
+    if (!text_resource) {
+        return;
+    }
+
+    const QString source = text_resource->GetText();
+    const QString bookpath = resource->GetRelativePath();
+
+    validateXmlDeclaration(result, bookpath, source);
+    validateExternalEntities(result, bookpath, source);
+    validateDoctype(result, bookpath, source, resource->Type(), resource->GetEpubVersion());
+    validateXmlWellFormed(result, bookpath, source);
+}
+
 }
 
 EpubStructureNormalizer::EpubStructureNormalizer(Book* book)
@@ -595,7 +802,23 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::validateResourceDiagnos
 
     const QList<Resource*> resources = m_Book->GetFolderKeeper()->GetResourceList();
     foreach(Resource* resource, resources) {
-        if (!resource || resource->Type() != Resource::ImageResourceType) {
+        if (!resource) {
+            continue;
+        }
+
+        switch (resource->Type()) {
+        case Resource::HTMLResourceType:
+        case Resource::SVGResourceType:
+        case Resource::XMLResourceType:
+        case Resource::OPFResourceType:
+        case Resource::NCXResourceType:
+            validateXmlTextResource(result, resource);
+            break;
+        default:
+            break;
+        }
+
+        if (resource->Type() != Resource::ImageResourceType) {
             continue;
         }
 
