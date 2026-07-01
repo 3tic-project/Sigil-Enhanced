@@ -1,0 +1,400 @@
+name: Package Sigil-Enhanced
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_windows_x86:
+        description: Build the Windows x86 installer. Requires a matching 32-bit Qt archive URL.
+        required: true
+        default: false
+        type: boolean
+      qt_windows_x86_url:
+        description: Optional Qt 6.10.2 x86 archive URL for the Windows x86 job.
+        required: false
+        default: ''
+        type: string
+      retention_days:
+        description: Artifact retention days.
+        required: true
+        default: 14
+        type: number
+  push:
+    tags:
+      - 'v*'
+      - '2.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-sigil-enhanced-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUILD_TYPE: Release
+  QT_VERSION: 6.10.2
+  PYTHON_VERSION: 3.14.2
+  PYTHON_FRAMEWORK_VERSION: 3.14
+
+jobs:
+  windows-x64:
+    name: Windows x64 installer
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: windows-2025-vs2026
+    env:
+      QT_URL: https://github.com/dougmassay/win-qtwebkit-5.212/releases/download/v5.212-1/Qt6.10.2ci_x64_VS2026.7z
+      QT_ROOT: ${{ github.workspace }}\.ci-cache\qt-windows-x64
+      BUILD_DIR: ${{ github.workspace }}\.ci-build\windows-x64
+      SIGIL_PYTHON_CACHE_DIR: ${{ github.workspace }}\.ci-cache\sigil-python-cache-windows-x64
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+
+      - name: Cache Qt
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.QT_ROOT }}
+          key: sigil-enhanced-windows-x64-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-win-caches.txt') }}
+
+      - name: Cache pip wheels
+        uses: actions/cache@v6
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: sigil-enhanced-windows-x64-pip-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt') }}
+          restore-keys: |
+            sigil-enhanced-windows-x64-pip-${{ env.PYTHON_VERSION }}-
+
+      - name: Cache bundled Python environment
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.SIGIL_PYTHON_CACHE_DIR }}
+          key: sigil-enhanced-windows-x64-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-core.txt') }}
+          restore-keys: |
+            sigil-enhanced-windows-x64-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $qtRoot = $env:QT_ROOT
+          $qtUrl = $env:QT_URL
+          if ([string]::IsNullOrWhiteSpace($qtUrl)) {
+            throw 'QT_URL is empty.'
+          }
+
+          $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\lib\\cmake\\Qt6\\Qt6Config\.cmake$' } |
+            Select-Object -First 1
+
+          if (-not $qtConfig) {
+            Remove-Item -Recurse -Force $qtRoot -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Force -Path $qtRoot | Out-Null
+            Push-Location $qtRoot
+            curl.exe -L -o qt.7z $qtUrl
+            7z x qt.7z -y
+            Pop-Location
+          }
+
+          $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse |
+            Where-Object { $_.FullName -match '\\lib\\cmake\\Qt6\\Qt6Config\.cmake$' } |
+            Select-Object -First 1
+          if (-not $qtConfig) {
+            throw "Qt6Config.cmake was not found under $qtRoot."
+          }
+
+          $qtDir = (Resolve-Path (Join-Path $qtConfig.Directory.FullName '..\..\..')).Path
+          "QT_DIR=$qtDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "$qtDir\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco upgrade innosetup -y --no-progress
+          'C:\Program Files (x86)\Inno Setup 6' | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Configure and build
+        shell: cmd
+        run: |
+          qmake -v
+          python --version
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%i"
+          if "%VSINSTALL%"=="" exit /b 1
+          call "%VSINSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cmake -S "%GITHUB_WORKSPACE%" -B "%BUILD_DIR%" ^
+            -G "Ninja" ^
+            -DCMAKE_BUILD_TYPE="%BUILD_TYPE%" ^
+            -DPKG_SYSTEM_PYTHON=1 ^
+            -DQTVER="%QT_VERSION%" ^
+            -DQt6_DIR="%QT_DIR%\lib\cmake\Qt6" ^
+            -DSIGIL_PYTHON_CACHE_DIR="%SIGIL_PYTHON_CACHE_DIR%"
+          cmake --build "%BUILD_DIR%" --parallel 2
+          cmake --build "%BUILD_DIR%" --target makeinstaller --parallel 2
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: Sigil-Enhanced-windows-x64
+          path: ${{ env.BUILD_DIR }}\installer\*.exe
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention_days || 14 }}
+
+  windows-x86:
+    name: Windows x86 installer
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_windows_x86 }}
+    runs-on: windows-2025-vs2026
+    env:
+      QT_URL: ${{ inputs.qt_windows_x86_url }}
+      QT_ROOT: ${{ github.workspace }}\.ci-cache\qt-windows-x86
+      BUILD_DIR: ${{ github.workspace }}\.ci-build\windows-x86
+      SIGIL_PYTHON_CACHE_DIR: ${{ github.workspace }}\.ci-cache\sigil-python-cache-windows-x86
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check Qt URL
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:QT_URL)) {
+            throw 'Windows x86 packaging requires a 32-bit Qt 6.10.2 archive URL in qt_windows_x86_url.'
+          }
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x86
+
+      - name: Cache Qt
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.QT_ROOT }}
+          key: sigil-enhanced-windows-x86-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-win-caches.txt') }}
+
+      - name: Cache pip wheels
+        uses: actions/cache@v6
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: sigil-enhanced-windows-x86-pip-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt') }}
+          restore-keys: |
+            sigil-enhanced-windows-x86-pip-${{ env.PYTHON_VERSION }}-
+
+      - name: Cache bundled Python environment
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.SIGIL_PYTHON_CACHE_DIR }}
+          key: sigil-enhanced-windows-x86-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-core.txt') }}
+          restore-keys: |
+            sigil-enhanced-windows-x86-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $qtRoot = $env:QT_ROOT
+          $qtUrl = $env:QT_URL
+
+          $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\lib\\cmake\\Qt6\\Qt6Config\.cmake$' } |
+            Select-Object -First 1
+
+          if (-not $qtConfig) {
+            Remove-Item -Recurse -Force $qtRoot -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Force -Path $qtRoot | Out-Null
+            Push-Location $qtRoot
+            curl.exe -L -o qt.7z $qtUrl
+            7z x qt.7z -y
+            Pop-Location
+          }
+
+          $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse |
+            Where-Object { $_.FullName -match '\\lib\\cmake\\Qt6\\Qt6Config\.cmake$' } |
+            Select-Object -First 1
+          if (-not $qtConfig) {
+            throw "Qt6Config.cmake was not found under $qtRoot."
+          }
+
+          $qtDir = (Resolve-Path (Join-Path $qtConfig.Directory.FullName '..\..\..')).Path
+          "QT_DIR=$qtDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "$qtDir\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco upgrade innosetup -y --no-progress
+          'C:\Program Files (x86)\Inno Setup 6' | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Configure and build
+        shell: cmd
+        run: |
+          qmake -v
+          python --version
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%i"
+          if "%VSINSTALL%"=="" exit /b 1
+          call "%VSINSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x86
+          cmake -S "%GITHUB_WORKSPACE%" -B "%BUILD_DIR%" ^
+            -G "Ninja" ^
+            -DCMAKE_BUILD_TYPE="%BUILD_TYPE%" ^
+            -DPKG_SYSTEM_PYTHON=1 ^
+            -DQTVER="%QT_VERSION%" ^
+            -DQt6_DIR="%QT_DIR%\lib\cmake\Qt6" ^
+            -DSIGIL_PYTHON_CACHE_DIR="%SIGIL_PYTHON_CACHE_DIR%"
+          cmake --build "%BUILD_DIR%" --parallel 2
+          cmake --build "%BUILD_DIR%" --target makeinstaller --parallel 2
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: Sigil-Enhanced-windows-x86
+          path: ${{ env.BUILD_DIR }}\installer\*.exe
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention_days || 14 }}
+
+  macos:
+    name: macOS ${{ matrix.arch }} package
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-15-intel
+            osx_arch: x86_64
+            qt_url: https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Qt6102.tar.xz
+            py_url: https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Python.framework.tar.xz
+            cache_suffix: macos-x64
+          - arch: arm64
+            runner: macos-latest
+            osx_arch: arm64
+            qt_url: https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Qt6102_arm64.tar.xz
+            py_url: https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Python.framework_arm64.tar.xz
+            cache_suffix: macos-arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: 13
+      QT_ROOT: ${{ github.workspace }}/.ci-cache/qt-${{ matrix.cache_suffix }}
+      PYTHON_FRAMEWORK_ROOT: ${{ github.workspace }}/.ci-cache/Frameworks-${{ matrix.cache_suffix }}
+      BUILD_DIR: ${{ github.workspace }}/.ci-build/${{ matrix.cache_suffix }}
+      SIGIL_PYTHON_CACHE_DIR: ${{ github.workspace }}/.ci-cache/sigil-python-cache-${{ matrix.cache_suffix }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache Qt
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.QT_ROOT }}
+          key: sigil-enhanced-${{ matrix.cache_suffix }}-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-mac*-caches.txt') }}
+
+      - name: Cache relocatable Python framework
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.PYTHON_FRAMEWORK_ROOT }}
+          key: sigil-enhanced-${{ matrix.cache_suffix }}-python-framework-${{ env.PYTHON_FRAMEWORK_VERSION }}-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-mac*-caches.txt') }}
+
+      - name: Cache pip wheels
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/pip
+          key: sigil-enhanced-${{ matrix.cache_suffix }}-pip-${{ env.PYTHON_FRAMEWORK_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/requirements-core.txt') }}
+          restore-keys: |
+            sigil-enhanced-${{ matrix.cache_suffix }}-pip-${{ env.PYTHON_FRAMEWORK_VERSION }}-
+
+      - name: Cache bundled Python packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.SIGIL_PYTHON_CACHE_DIR }}
+          key: sigil-enhanced-${{ matrix.cache_suffix }}-python-packages-${{ env.PYTHON_FRAMEWORK_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/requirements-core.txt') }}
+          restore-keys: |
+            sigil-enhanced-${{ matrix.cache_suffix }}-python-packages-${{ env.PYTHON_FRAMEWORK_VERSION }}-
+
+      - name: Install Qt and Python framework
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$QT_ROOT"
+          qt_config="$(find "$QT_ROOT" -path '*/lib/cmake/Qt6/Qt6Config.cmake' -print -quit || true)"
+          if [[ -z "$qt_config" ]]; then
+            rm -rf "$QT_ROOT"
+            mkdir -p "$QT_ROOT"
+            curl -L -o "$QT_ROOT/qt.tar.xz" "${{ matrix.qt_url }}"
+            tar -xf "$QT_ROOT/qt.tar.xz" -C "$QT_ROOT"
+          fi
+
+          qt_config="$(find "$QT_ROOT" -path '*/lib/cmake/Qt6/Qt6Config.cmake' -print -quit || true)"
+          if [[ -z "$qt_config" ]]; then
+            echo "Qt6Config.cmake was not found under $QT_ROOT" >&2
+            exit 1
+          fi
+          qt_dir="$(cd "$(dirname "$qt_config")/../../.." && pwd)"
+          if [[ -d "$qt_dir/bin" ]]; then
+            printf '[Paths]\nPrefix=..\n' > "$qt_dir/bin/qt.conf"
+          fi
+
+          if [[ ! -x "$PYTHON_FRAMEWORK_ROOT/Python.framework/Versions/$PYTHON_FRAMEWORK_VERSION/bin/python3" ]]; then
+            rm -rf "$PYTHON_FRAMEWORK_ROOT"
+            mkdir -p "$PYTHON_FRAMEWORK_ROOT"
+            curl -L -o "$PYTHON_FRAMEWORK_ROOT/python.tar.xz" "${{ matrix.py_url }}"
+            tar -xf "$PYTHON_FRAMEWORK_ROOT/python.tar.xz" -C "$PYTHON_FRAMEWORK_ROOT"
+          fi
+
+          py_bin="$PYTHON_FRAMEWORK_ROOT/Python.framework/Versions/$PYTHON_FRAMEWORK_VERSION/bin"
+          if [[ ! -x "$py_bin/python3" ]]; then
+            echo "python3 was not found in $py_bin" >&2
+            exit 1
+          fi
+
+          echo "QT_DIR=$qt_dir" >> "$GITHUB_ENV"
+          echo "$qt_dir/bin" >> "$GITHUB_PATH"
+          echo "$py_bin" >> "$GITHUB_PATH"
+          echo "PYTHON_EXECUTABLE=$py_bin/python3" >> "$GITHUB_ENV"
+
+      - name: Configure and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$(dirname "$PYTHON_EXECUTABLE"):$QT_DIR/bin:$PATH"
+          qmake -v
+          "$PYTHON_EXECUTABLE" --version
+          cmake -S "$GITHUB_WORKSPACE" -B "$BUILD_DIR" \
+            -DPKG_SYSTEM_PYTHON=1 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" \
+            -DCMAKE_OSX_ARCHITECTURES="${{ matrix.osx_arch }}" \
+            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+            -DCMAKE_CXX_FLAGS=-Wno-inconsistent-missing-override \
+            -DCMAKE_PREFIX_PATH="$QT_DIR/lib/cmake" \
+            -DQt6_DIR="$QT_DIR/lib/cmake/Qt6" \
+            -DSIGIL_PYTHON_CACHE_DIR="$SIGIL_PYTHON_CACHE_DIR" \
+            -DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+          cmake --build "$BUILD_DIR" --parallel "$(sysctl -n hw.ncpu)"
+
+      - name: Package app
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$(dirname "$PYTHON_EXECUTABLE"):$QT_DIR/bin:$PATH"
+          cmake --build "$BUILD_DIR" --target addframeworks
+          cd "$BUILD_DIR"
+          bash "$GITHUB_WORKSPACE/ci_scripts/rpath_adjust.sh"
+          mkdir -p dist
+          tar -cJf "dist/Sigil-Enhanced-macos-${{ matrix.arch }}.tar.xz" -C bin Sigil.app
+          hdiutil create \
+            -volname "Sigil-Enhanced" \
+            -srcfolder "bin/Sigil.app" \
+            -ov \
+            -format UDZO \
+            "dist/Sigil-Enhanced-macos-${{ matrix.arch }}.dmg"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: Sigil-Enhanced-macos-${{ matrix.arch }}
+          path: ${{ env.BUILD_DIR }}/dist/*
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention_days || 14 }}
