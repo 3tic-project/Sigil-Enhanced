@@ -506,6 +506,158 @@ static void scanElementAttributes(EpubStructureNormalizer* normalizer,
     }
 }
 
+static bool isCssIdentifierChar(const QChar& ch)
+{
+    return ch.isLetterOrNumber() ||
+           ch == QLatin1Char('_') ||
+           ch == QLatin1Char('-') ||
+           ch.unicode() >= 0x80;
+}
+
+static bool cssIdentifierAt(const QString& source, int offset, const QString& identifier)
+{
+    if (offset < 0 || offset + identifier.size() > source.size()) {
+        return false;
+    }
+    if (source.mid(offset, identifier.size()).compare(identifier, Qt::CaseInsensitive) != 0) {
+        return false;
+    }
+    if (offset > 0 && isCssIdentifierChar(source.at(offset - 1))) {
+        return false;
+    }
+    const int end = offset + identifier.size();
+    return end >= source.size() || !isCssIdentifierChar(source.at(end));
+}
+
+static int skipCssWhitespaceAndComments(const QString& source, int offset)
+{
+    int i = offset;
+    while (i < source.size()) {
+        if (source.at(i).isSpace()) {
+            i++;
+            continue;
+        }
+        if (i + 1 < source.size() &&
+            source.at(i) == QLatin1Char('/') &&
+            source.at(i + 1) == QLatin1Char('*')) {
+            const int comment_end = source.indexOf(QStringLiteral("*/"), i + 2);
+            if (comment_end < 0) {
+                return source.size();
+            }
+            i = comment_end + 2;
+            continue;
+        }
+        break;
+    }
+    return i;
+}
+
+static bool parseCssQuotedString(const QString& source,
+                                 int quote_offset,
+                                 QString& value,
+                                 int& value_offset,
+                                 int& end_offset)
+{
+    if (quote_offset < 0 || quote_offset >= source.size()) {
+        return false;
+    }
+    const QChar quote = source.at(quote_offset);
+    if (quote != QLatin1Char('"') && quote != QLatin1Char('\'')) {
+        return false;
+    }
+
+    value.clear();
+    value_offset = quote_offset + 1;
+    int i = value_offset;
+    while (i < source.size()) {
+        const QChar ch = source.at(i);
+        if (ch == QLatin1Char('\\')) {
+            value.append(ch);
+            i++;
+            if (i < source.size()) {
+                value.append(source.at(i));
+                i++;
+            }
+            continue;
+        }
+        if (ch == quote) {
+            end_offset = i + 1;
+            return true;
+        }
+        value.append(ch);
+        i++;
+    }
+    end_offset = source.size();
+    return false;
+}
+
+static bool parseCssUrlFunction(const QString& source,
+                                int url_offset,
+                                QString& value,
+                                int& value_offset,
+                                int& end_offset)
+{
+    int i = skipCssWhitespaceAndComments(source, url_offset + 3);
+    if (i >= source.size() || source.at(i) != QLatin1Char('(')) {
+        return false;
+    }
+
+    i = skipCssWhitespaceAndComments(source, i + 1);
+    if (i >= source.size()) {
+        return false;
+    }
+
+    if (source.at(i) == QLatin1Char('"') || source.at(i) == QLatin1Char('\'')) {
+        if (!parseCssQuotedString(source, i, value, value_offset, end_offset)) {
+            return false;
+        }
+        end_offset = skipCssWhitespaceAndComments(source, end_offset);
+        if (end_offset < source.size() && source.at(end_offset) == QLatin1Char(')')) {
+            end_offset++;
+        }
+        return true;
+    }
+
+    value.clear();
+    value_offset = i;
+    while (i < source.size()) {
+        const QChar ch = source.at(i);
+        if (ch == QLatin1Char('\\')) {
+            value.append(ch);
+            i++;
+            if (i < source.size()) {
+                value.append(source.at(i));
+                i++;
+            }
+            continue;
+        }
+        if (ch == QLatin1Char(')')) {
+            end_offset = i + 1;
+            value = value.trimmed();
+            return true;
+        }
+        if (i + 1 < source.size() &&
+            ch == QLatin1Char('/') &&
+            source.at(i + 1) == QLatin1Char('*')) {
+            const int comment_end = source.indexOf(QStringLiteral("*/"), i + 2);
+            if (comment_end < 0) {
+                end_offset = source.size();
+                value = value.trimmed();
+                return false;
+            }
+            value.append(QLatin1Char(' '));
+            i = comment_end + 2;
+            continue;
+        }
+        value.append(ch);
+        i++;
+    }
+
+    end_offset = source.size();
+    value = value.trimmed();
+    return false;
+}
+
 static void scanCssUrls(EpubStructureNormalizer* normalizer,
                         EpubStructureNormalizer::Result& result,
                         LinkScanContext& context,
@@ -515,28 +667,55 @@ static void scanCssUrls(EpubStructureNormalizer* normalizer,
                         int base_offset,
                         bool report_missing)
 {
-    QRegularExpression url_re(QStringLiteral("url\\(\\s*[\"']?([^\\(\\)\"']*)[\"']?\\s*\\)"),
-                              QRegularExpression::CaseInsensitiveOption);
-    QRegularExpressionMatchIterator url_it = url_re.globalMatch(source);
-    while (url_it.hasNext()) {
-        QRegularExpressionMatch match = url_it.next();
-        inspectLink(normalizer, result, context, source_bookpath, match.captured(1),
-                    sourceLocationForOffset(location_source, base_offset + match.capturedStart(1)), report_missing);
-    }
-
-    QRegularExpression import_re(QStringLiteral("@import\\s+(?:url\\(\\s*[\"']?([^\\(\\)\"']*)[\"']?\\s*\\)|[\"']([^\"']*)[\"'])"),
-                                 QRegularExpression::CaseInsensitiveOption);
-    QRegularExpressionMatchIterator import_it = import_re.globalMatch(source);
-    while (import_it.hasNext()) {
-        QRegularExpressionMatch match = import_it.next();
-        int capture_index = 1;
-        QString href = match.captured(capture_index);
-        if (href.isEmpty()) {
-            capture_index = 2;
-            href = match.captured(capture_index);
+    int i = 0;
+    while (i < source.size()) {
+        if (i + 1 < source.size() &&
+            source.at(i) == QLatin1Char('/') &&
+            source.at(i + 1) == QLatin1Char('*')) {
+            const int comment_end = source.indexOf(QStringLiteral("*/"), i + 2);
+            i = comment_end < 0 ? source.size() : comment_end + 2;
+            continue;
         }
-        inspectLink(normalizer, result, context, source_bookpath, href,
-                    sourceLocationForOffset(location_source, base_offset + match.capturedStart(capture_index)), report_missing);
+
+        if (source.at(i) == QLatin1Char('"') || source.at(i) == QLatin1Char('\'')) {
+            QString ignored;
+            int ignored_offset = -1;
+            int string_end = i + 1;
+            parseCssQuotedString(source, i, ignored, ignored_offset, string_end);
+            i = qMax(i + 1, string_end);
+            continue;
+        }
+
+        if (source.at(i) == QLatin1Char('@') &&
+            cssIdentifierAt(source, i + 1, QStringLiteral("import"))) {
+            const int import_value_offset = skipCssWhitespaceAndComments(source, i + 7);
+            if (import_value_offset < source.size() &&
+                (source.at(import_value_offset) == QLatin1Char('"') ||
+                 source.at(import_value_offset) == QLatin1Char('\''))) {
+                QString href;
+                int href_offset = -1;
+                int import_end = import_value_offset + 1;
+                if (parseCssQuotedString(source, import_value_offset, href, href_offset, import_end)) {
+                    inspectLink(normalizer, result, context, source_bookpath, href,
+                                sourceLocationForOffset(location_source, base_offset + href_offset), report_missing);
+                    i = import_end;
+                    continue;
+                }
+            }
+        }
+
+        if (cssIdentifierAt(source, i, QStringLiteral("url"))) {
+            QString href;
+            int href_offset = -1;
+            int url_end = i + 3;
+            if (parseCssUrlFunction(source, i, href, href_offset, url_end)) {
+                inspectLink(normalizer, result, context, source_bookpath, href,
+                            sourceLocationForOffset(location_source, base_offset + href_offset), report_missing);
+                i = qMax(i + 1, url_end);
+                continue;
+            }
+        }
+        i++;
     }
 }
 

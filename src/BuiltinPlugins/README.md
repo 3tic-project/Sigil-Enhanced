@@ -103,8 +103,8 @@ Phase 1:
 Phase 2:
 
 - 扫描 XHTML/HTML 中的 `href`、`src`、`poster`、`data`、`altimg` 属性。
-- 扫描 XHTML/HTML 内联 `style` 属性中的 `url(...)`。
-- 扫描 CSS 中的 `url(...)` 和 `@import`。
+- 使用轻量 CSS token 扫描 XHTML/HTML 内联 `style` 属性中的 `url(...)`。
+- 使用轻量 CSS token 扫描 CSS 中的 `url(...)` 和 `@import`，跳过块注释和普通字符串中的伪链接。
 - 扫描 NCX 中的 `src`。
 - 跳过外部链接、data/http 等带 scheme 的链接和空链接；对 `file:` URL、带 query 的书内相对链接、根路径、逃出 EPUB 根目录的相对路径生成 warning。
 - 对未编码空格、反斜杠和非严格合法 URL 生成 warning。
@@ -188,8 +188,8 @@ struct Options {
 
 - 建立 `lowerBookPath -> actualBookPath` 索引。
 - 建立 XHTML/XML/SVG/NCX 的 `id` 索引，用于 fragment 检查。
-- 扫描 XHTML 的 `href`、`src`、`url(...)`。
-- 扫描 CSS 的 `@import`、`url(...)`。
+- 扫描 XHTML 的 `href`、`src`、内联样式 `url(...)`。
+- 用轻量 CSS token scanner 扫描 CSS 的 `@import`、`url(...)`，避免注释和字符串中的误报。
 - 扫描 NCX 的 `content src`。
 - 跳过 `http:`、`https:`、`mailto:`、`data:`、`res:` 等非书内链接。
 - 对 `file:`、query、根路径、逃出 EPUB 根目录、严格 URL 风险和 fragment 缺失只报告，不自动修改。
@@ -200,7 +200,7 @@ struct Options {
 后续优化点:
 
 - 用 Gumbo/现有 parser 暴露结构化链接 walker，替换第一版 HTML 属性正则扫描，减少代码示例、脚本字符串中的误报。
-- 为 CSS 增加更完整的 token 级扫描，保留注释、引号、转义边界。
+- CSS token scanner 后续可继续扩展到更多语法级诊断；当前已用于链接扫描，保留注释、引号、转义边界。
 - 增加 dry-run 预览对话框，让用户确认删除/补齐 manifest 项和链接大小写修正。
 - 增加标准目录归档的 dry-run 结果预览，包括将要移动的资源列表和可能失败的路径。
 
@@ -243,6 +243,7 @@ Phase 2 需要覆盖:
 - `file:` 链接和带 query 的书内相对链接只报告、不自动改。
 - 未编码空格、反斜杠、根路径和逃出 EPUB 根目录的链接只报告、不自动改。
 - Validation Results 中 XHTML/CSS/NCX 链接问题显示 line 和 offset，双击可跳转。
+- CSS 注释或普通字符串中放置 `url(...)`，确认不会触发链接检查。
 - 大小写冲突不自动修复。
 - 找不到目标的链接只报告。
 
