@@ -1314,41 +1314,48 @@ bool CodeViewEditor::insertImagesFromUrls(const QList<QUrl>& urls, bool insert_o
 //Add an action of pasting rich text to right click menu within codeview editor.
 void CodeViewEditor::AddPasteRichText(QMenu* menu)
 {
-    bool sucess = false;
+    if (!menu) {
+        return;
+    }
 
-    QObject* mw = Utility::GetMainWindow();
-    QAction* action = mw->findChild<QAction*>("actionPasteRichText");
+    bool success = false;
+
+    MainWindow* mainwin = qobject_cast<MainWindow*>(window());
+    if (!mainwin) {
+        mainwin = qobject_cast<MainWindow*>(Utility::GetMainWindow());
+    }
+
+    QAction* action = mainwin ? mainwin->findChild<QAction*>("actionPasteRichText") : nullptr;
+    bool local_action = false;
     if (action == NULL) {
         action = new QAction(tr("Paste Rich Text"), menu);
+        action->setEnabled(canPaste());
+        local_action = true;
     }
 #ifdef Q_OS_MAC
     action = new QAction(tr("Paste Rich Text"), menu);
+    action->setEnabled(canPaste());
+    local_action = true;
 #endif
     for (int i = 0; i < menu->actions().size(); ++i) {
         QAction* locatorAction = menu->actions().at(i);
-        if (locatorAction->objectName() == "edit-paste" && i + 1 < menu->actions().size()) {
-            menu->insertAction(menu->actions().at(i + 1), action);
-            sucess = true;
-        }
-    }
-    if (!sucess) {
-        if (menu->actions().isEmpty()) {
-            menu->addAction(action);
-            sucess = true;
-        }
-        else {
-            QAction* topAction = 0;
-            if (topAction) {
-                menu->insertAction(topAction, action);
-                menu->insertSeparator(topAction);
+        if (locatorAction->objectName() == "edit-paste") {
+            if (i + 1 < menu->actions().size()) {
+                menu->insertAction(menu->actions().at(i + 1), action);
+            } else {
+                menu->addAction(action);
             }
+            success = true;
+            break;
         }
     }
-#ifdef Q_OS_MAC
-    if (sucess) {
+    if (!success) {
+        menu->addAction(action);
+        success = true;
+    }
+    if (success && local_action) {
         connect(action, SIGNAL(triggered()), this, SLOT(PasteRichText()));
     }
-#endif
 }
 
 //modified: AddPasteRichText
