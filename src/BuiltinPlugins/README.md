@@ -110,6 +110,7 @@ Phase 2:
 - 对未编码空格、反斜杠和非严格合法 URL 生成 warning。
 - 对纯 fragment 和跨文件 fragment 执行基础 id 存在性检查。
 - 检查 XHTML/XML/SVG/NCX 中重复 `id` / `xml:id`。
+- 检查内容文档中明确元素的资源类型是否匹配，例如 `img/src` 指向图片、`audio/src` 指向音频、`video/src` 指向视频、`video/poster` 指向图片、`link rel="stylesheet"` 指向 CSS。
 - XHTML/HTML、CSS、NCX 的链接检查结果会写入行号和字符 offset，Validation Results 双击可跳转到对应位置。
 - 对能唯一匹配实际资源、但大小写不一致的链接，生成 `旧大小写路径 -> 实际路径` 映射。
 - 使用现有 `UniversalUpdates` 执行最终更新，避免直接正则替换源文件。
@@ -187,6 +188,7 @@ struct Options {
 `repairLinkCase` 当前策略:
 
 - 建立 `lowerBookPath -> actualBookPath` 索引。
+- 建立 `bookPath -> media-type` 索引，用于内容文档资源引用类型检查。
 - 建立 XHTML/XML/SVG/NCX 的 `id` 索引，用于 fragment 检查。
 - 扫描 XHTML 的 `href`、`src`、内联样式 `url(...)`。
 - 用轻量 CSS token scanner 扫描 CSS 的 `@import`、`url(...)`，避免注释和字符串中的误报。
@@ -196,6 +198,7 @@ struct Options {
 - 只在大小写可唯一纠正时自动修改。
 - 找不到目标时仅报告，不误改。
 - CSS 无效链接默认弱提示，避免备用 font-face 等场景产生过多噪音。
+- 对 `img`、`audio`、`video`、`source type=...`、`track`、`link rel=stylesheet/icon`、`iframe`、`object`、`embed` 等明确场景做资源类型匹配提示。
 
 后续优化点:
 
@@ -244,6 +247,8 @@ Phase 2 需要覆盖:
 - 未编码空格、反斜杠、根路径和逃出 EPUB 根目录的链接只报告、不自动改。
 - Validation Results 中 XHTML/CSS/NCX 链接问题显示 line 和 offset，双击可跳转。
 - CSS 注释或普通字符串中放置 `url(...)`，确认不会触发链接检查。
+- `img/src` 指向 CSS、`audio/src` 指向图片、`video/poster` 指向视频等类型错误能给出 warning 并跳转。
+- `link rel="stylesheet"` 指向非 CSS、`track/src` 指向非 `text/vtt`/TTML 时能给出 warning。
 - 大小写冲突不自动修复。
 - 找不到目标的链接只报告。
 

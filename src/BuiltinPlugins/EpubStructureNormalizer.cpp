@@ -69,6 +69,7 @@ struct LinkScanContext {
     BookPathIndex index;
     QHash<QString, QString> updates;
     QHash<QString, QSet<QString>> idsByBookPath;
+    QHash<QString, QString> mediaTypesByBookPath;
     QSet<QString> reported;
 };
 
@@ -383,6 +384,40 @@ static QString resolvedBookPath(const QString& raw_link, const QString& source_b
     return Utility::buildBookPath(href_path, QFileInfo(source_bookpath).dir().path());
 }
 
+static QString actualBookPathForLocalLink(const LinkScanContext& context,
+                                          const QString& raw_link,
+                                          const QString& source_bookpath)
+{
+    const QString link = raw_link.trimmed();
+    if (link.isEmpty() || link.startsWith("//") || link.startsWith("#") ||
+        link.startsWith("file:", Qt::CaseInsensitive)) {
+        return QString();
+    }
+
+    QUrl url(link);
+    if (!url.isRelative() || url.hasQuery()) {
+        return QString();
+    }
+
+    const QString href_path = Utility::URLDecodePath(url.path());
+    if (href_path.isEmpty() || href_path.startsWith(QLatin1Char('/')) ||
+        bookPathEscapesRoot(href_path, source_bookpath)) {
+        return QString();
+    }
+
+    const QString target_bookpath = resolvedBookPath(raw_link, source_bookpath);
+    if (context.index.exactBookPaths.contains(target_bookpath)) {
+        return target_bookpath;
+    }
+
+    const QStringList matches = context.index.lowerToBookPaths.value(target_bookpath.toLower());
+    if (matches.count() == 1) {
+        return matches.first();
+    }
+
+    return QString();
+}
+
 static void inspectLink(EpubStructureNormalizer* normalizer,
                         EpubStructureNormalizer::Result& result,
                         LinkScanContext& context,
@@ -490,19 +525,250 @@ static void inspectLink(EpubStructureNormalizer* normalizer,
     }
 }
 
+enum class ResourceReferenceExpectation {
+    None,
+    Image,
+    Audio,
+    Video,
+    Style,
+    TextTrack,
+    ContentDocument,
+    EmbeddedContent
+};
+
+static QString localName(const QString& name)
+{
+    return name.section(QLatin1Char(':'), -1).toLower();
+}
+
+static QString mediaTypeBase(const QString& media_type)
+{
+    return media_type.split(QLatin1Char(';')).first().trimmed().toLower();
+}
+
+static bool mediaTypeMatchesExpectation(ResourceReferenceExpectation expectation,
+                                        const QString& media_type)
+{
+    const QString type = mediaTypeBase(media_type);
+    switch (expectation) {
+    case ResourceReferenceExpectation::Image:
+        return type.startsWith(QLatin1String("image/"));
+    case ResourceReferenceExpectation::Audio:
+        return type.startsWith(QLatin1String("audio/"));
+    case ResourceReferenceExpectation::Video:
+        return type.startsWith(QLatin1String("video/"));
+    case ResourceReferenceExpectation::Style:
+        return type == QLatin1String("text/css");
+    case ResourceReferenceExpectation::TextTrack:
+        return type == QLatin1String("text/vtt") ||
+               type == QLatin1String("application/ttml+xml");
+    case ResourceReferenceExpectation::ContentDocument:
+        return type == QLatin1String("application/xhtml+xml") ||
+               type == QLatin1String("text/html");
+    case ResourceReferenceExpectation::EmbeddedContent:
+        return type.startsWith(QLatin1String("image/")) ||
+               type.startsWith(QLatin1String("audio/")) ||
+               type.startsWith(QLatin1String("video/")) ||
+               type == QLatin1String("application/xhtml+xml") ||
+               type == QLatin1String("text/html") ||
+               type == QLatin1String("application/pdf");
+    case ResourceReferenceExpectation::None:
+        return true;
+    }
+    return true;
+}
+
+static QString expectationDescription(ResourceReferenceExpectation expectation)
+{
+    switch (expectation) {
+    case ResourceReferenceExpectation::Image:
+        return QStringLiteral("图片");
+    case ResourceReferenceExpectation::Audio:
+        return QStringLiteral("音频");
+    case ResourceReferenceExpectation::Video:
+        return QStringLiteral("视频");
+    case ResourceReferenceExpectation::Style:
+        return QStringLiteral("CSS样式");
+    case ResourceReferenceExpectation::TextTrack:
+        return QStringLiteral("字幕/文本轨道");
+    case ResourceReferenceExpectation::ContentDocument:
+        return QStringLiteral("内容文档");
+    case ResourceReferenceExpectation::EmbeddedContent:
+        return QStringLiteral("可嵌入内容");
+    case ResourceReferenceExpectation::None:
+        return QString();
+    }
+    return QString();
+}
+
+static bool relContainsToken(const QString& rel, const QString& token)
+{
+    return rel.toLower().split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts)
+        .contains(token);
+}
+
+static ResourceReferenceExpectation sourceExpectationFromDeclaredType(const QString& declared_type)
+{
+    const QString type = mediaTypeBase(declared_type);
+    if (type.startsWith(QLatin1String("image/"))) {
+        return ResourceReferenceExpectation::Image;
+    }
+    if (type.startsWith(QLatin1String("audio/"))) {
+        return ResourceReferenceExpectation::Audio;
+    }
+    if (type.startsWith(QLatin1String("video/"))) {
+        return ResourceReferenceExpectation::Video;
+    }
+    if (type == QLatin1String("text/vtt") ||
+        type == QLatin1String("application/ttml+xml")) {
+        return ResourceReferenceExpectation::TextTrack;
+    }
+    return ResourceReferenceExpectation::None;
+}
+
+static ResourceReferenceExpectation expectationForElementAttribute(const QString& element_name,
+                                                                   const QString& attr_name,
+                                                                   const QHash<QString, QString>& attrs)
+{
+    const QString element = localName(element_name);
+    const QString attr = localName(attr_name);
+
+    if (attr == QLatin1String("altimg")) {
+        return ResourceReferenceExpectation::Image;
+    }
+    if ((element == QLatin1String("img") && attr == QLatin1String("src")) ||
+        (element == QLatin1String("image") && attr == QLatin1String("href"))) {
+        return ResourceReferenceExpectation::Image;
+    }
+    if (element == QLatin1String("audio") && attr == QLatin1String("src")) {
+        return ResourceReferenceExpectation::Audio;
+    }
+    if (element == QLatin1String("video")) {
+        if (attr == QLatin1String("src")) {
+            return ResourceReferenceExpectation::Video;
+        }
+        if (attr == QLatin1String("poster")) {
+            return ResourceReferenceExpectation::Image;
+        }
+    }
+    if (element == QLatin1String("source") && attr == QLatin1String("src")) {
+        return sourceExpectationFromDeclaredType(attrs.value(QStringLiteral("type")));
+    }
+    if (element == QLatin1String("track") && attr == QLatin1String("src")) {
+        return ResourceReferenceExpectation::TextTrack;
+    }
+    if (element == QLatin1String("link") && attr == QLatin1String("href")) {
+        const QString rel = attrs.value(QStringLiteral("rel"));
+        const QString as_value = attrs.value(QStringLiteral("as")).toLower();
+        if (relContainsToken(rel, QStringLiteral("stylesheet")) ||
+            as_value == QLatin1String("style")) {
+            return ResourceReferenceExpectation::Style;
+        }
+        if (relContainsToken(rel, QStringLiteral("icon")) ||
+            as_value == QLatin1String("image")) {
+            return ResourceReferenceExpectation::Image;
+        }
+        if (as_value == QLatin1String("font")) {
+            return ResourceReferenceExpectation::None;
+        }
+        if (as_value == QLatin1String("audio")) {
+            return ResourceReferenceExpectation::Audio;
+        }
+        if (as_value == QLatin1String("video")) {
+            return ResourceReferenceExpectation::Video;
+        }
+    }
+    if (element == QLatin1String("iframe") && attr == QLatin1String("src")) {
+        return ResourceReferenceExpectation::ContentDocument;
+    }
+    if ((element == QLatin1String("object") && attr == QLatin1String("data")) ||
+        (element == QLatin1String("embed") && attr == QLatin1String("src"))) {
+        return ResourceReferenceExpectation::EmbeddedContent;
+    }
+
+    return ResourceReferenceExpectation::None;
+}
+
+static bool isLinkAttribute(const QString& attr_name)
+{
+    const QString attr = localName(attr_name);
+    return attr == QLatin1String("href") ||
+           attr == QLatin1String("src") ||
+           attr == QLatin1String("poster") ||
+           attr == QLatin1String("data") ||
+           attr == QLatin1String("altimg");
+}
+
+static void validateElementResourceReference(EpubStructureNormalizer::Result& result,
+                                             LinkScanContext& context,
+                                             const QString& source_bookpath,
+                                             const QString& element_name,
+                                             const QString& attr_name,
+                                             const QString& raw_link,
+                                             const SourceLocation& location,
+                                             const QHash<QString, QString>& attrs)
+{
+    const ResourceReferenceExpectation expectation =
+        expectationForElementAttribute(element_name, attr_name, attrs);
+    if (expectation == ResourceReferenceExpectation::None) {
+        return;
+    }
+
+    const QString actual_bookpath = actualBookPathForLocalLink(context, raw_link, source_bookpath);
+    if (actual_bookpath.isEmpty() || !context.mediaTypesByBookPath.contains(actual_bookpath)) {
+        return;
+    }
+
+    const QString media_type = context.mediaTypesByBookPath.value(actual_bookpath);
+    if (mediaTypeMatchesExpectation(expectation, media_type)) {
+        return;
+    }
+
+    addUniqueResult(result, context, ValidationResult::ResType_Warn, source_bookpath, location,
+                    QStringLiteral("内容引用检查：<%1> 的 %2 属性指向【%3】，media-type 为【%4】，但这里应引用%5资源。")
+                        .arg(localName(element_name), localName(attr_name), actual_bookpath,
+                             media_type, expectationDescription(expectation)));
+}
+
 static void scanElementAttributes(EpubStructureNormalizer* normalizer,
                                   EpubStructureNormalizer::Result& result,
                                   LinkScanContext& context,
                                   const QString& source_bookpath,
                                   const QString& source)
 {
-    QRegularExpression attr_re(QStringLiteral("\\b(?:href|src|poster|data|altimg)\\s*=\\s*([\"'])(.*?)\\1"),
-                               QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
-    QRegularExpressionMatchIterator it = attr_re.globalMatch(source);
-    while (it.hasNext()) {
-        QRegularExpressionMatch match = it.next();
-        inspectLink(normalizer, result, context, source_bookpath, match.captured(2),
-                    sourceLocationForOffset(source, match.capturedStart(2)), true);
+    QRegularExpression tag_re(QStringLiteral("<\\s*([A-Za-z][A-Za-z0-9:_-]*)\\b([^<>]*)>"),
+                              QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpression attr_re(QStringLiteral("([A-Za-z_:][A-Za-z0-9_.:-]*)\\s*=\\s*([\"'])(.*?)\\2"),
+                               QRegularExpression::DotMatchesEverythingOption);
+
+    QRegularExpressionMatchIterator tag_it = tag_re.globalMatch(source);
+    while (tag_it.hasNext()) {
+        const QRegularExpressionMatch tag_match = tag_it.next();
+        const QString element_name = tag_match.captured(1);
+        const QString tag_text = tag_match.captured(0);
+        const int tag_offset = tag_match.capturedStart(0);
+
+        QHash<QString, QString> attrs;
+        QHash<QString, QPair<QString, SourceLocation>> link_attrs;
+        QRegularExpressionMatchIterator attr_it = attr_re.globalMatch(tag_text);
+        while (attr_it.hasNext()) {
+            const QRegularExpressionMatch attr_match = attr_it.next();
+            const QString attr_name = attr_match.captured(1);
+            const QString attr_value = attr_match.captured(3);
+            const SourceLocation attr_location =
+                sourceLocationForOffset(source, tag_offset + attr_match.capturedStart(3));
+            attrs[localName(attr_name)] = attr_value;
+            if (isLinkAttribute(attr_name)) {
+                link_attrs[attr_name] = qMakePair(attr_value, attr_location);
+            }
+        }
+
+        for (auto it = link_attrs.constBegin(); it != link_attrs.constEnd(); ++it) {
+            inspectLink(normalizer, result, context, source_bookpath, it.value().first,
+                        it.value().second, true);
+            validateElementResourceReference(result, context, source_bookpath, element_name,
+                                             it.key(), it.value().first, it.value().second, attrs);
+        }
     }
 }
 
@@ -1798,6 +2064,7 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeLinkCase(const
         const QString bookpath = resource->GetRelativePath();
         context.index.exactBookPaths.insert(bookpath);
         context.index.lowerToBookPaths[bookpath.toLower()].append(bookpath);
+        context.mediaTypesByBookPath[bookpath] = resource->GetMediaType();
 
         QString id_source;
         bool scan_ids = true;
