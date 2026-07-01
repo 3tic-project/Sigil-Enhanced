@@ -29,6 +29,7 @@
  * THE SOFTWARE.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <QTransform>
 #include <QDebug>
@@ -36,6 +37,7 @@
 #include <QImageWriter>
 #include <QInputDialog>
 #include <QKeySequence>
+#include <QWheelEvent>
 #include "Misc/SettingsStore.h"
 #include "Dialogs/ImageResizeDialog.h"
 #include "Widgets/AdjustImage.h"
@@ -44,6 +46,15 @@
 static const QString SETTINGS_GROUP = "adjust_image";
 static QStringList SAVE_QUALITY_MEDIATYPES = QStringList() << "image/jpeg" << "image/webp" << "image/avif" << "image/jxl";
 static const int MAX_IMAGE_HISTORY_STEPS = 20;
+static const double MIN_IMAGE_ZOOM = 0.10;
+static const double MAX_IMAGE_ZOOM = 3.0;
+static const double IMAGE_ZOOM_STEP_IN = 1.25;
+static const double IMAGE_ZOOM_STEP_OUT = 0.80;
+
+static double clampImageZoom(double factor)
+{
+    return std::clamp(factor, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM);
+}
 
 AdjustImage::AdjustImage(const QString filepath, const QString& mediatype,  QWidget *parent) :
     QWidget(parent),
@@ -73,6 +84,7 @@ AdjustImage::AdjustImage(const QString filepath, const QString& mediatype,  QWid
     m_scrollArea = new QScrollArea;
     m_scrollArea->setBackgroundRole(QPalette::Dark);
     m_scrollArea->setWidget(m_imageLabel);
+    m_scrollArea->viewport()->installEventFilter(this);
 
     m_description = new QLabel;
     m_statusBar->addPermanentWidget(m_description);
@@ -275,29 +287,36 @@ void AdjustImage::resizeImage(int targetW, int targetH)
 
 void AdjustImage::scaleImageBy(double factor)
 {
-    m_scaleFactor *= factor;
+    double old_scale_factor = m_scaleFactor;
+    m_scaleFactor = clampImageZoom(m_scaleFactor * factor);
     m_imageLabel->resize(m_scaleFactor * m_imageLabel->pixmap().size());
 
-    adjustScrollBar(m_scrollArea->horizontalScrollBar(), factor);
-    adjustScrollBar(m_scrollArea->verticalScrollBar(), factor);
+    double scroll_factor = old_scale_factor > 0 ? m_scaleFactor / old_scale_factor : 1.0;
+    adjustScrollBar(m_scrollArea->horizontalScrollBar(), scroll_factor);
+    adjustScrollBar(m_scrollArea->verticalScrollBar(), scroll_factor);
 
-    ui->actionZoomIn->setEnabled(m_scaleFactor < 3.0);
-    ui->actionZoomOut->setEnabled(m_scaleFactor > 0.333);
+    updateZoomActions();
     emit InternalZoomFactorChanged(m_scaleFactor);
 }
 
 void AdjustImage::scaleImageUsing(double factor)
 {
-    m_scaleFactor = factor;
+    double old_scale_factor = m_scaleFactor;
+    m_scaleFactor = clampImageZoom(factor);
     m_imageLabel->resize(m_scaleFactor * m_imageLabel->pixmap().size());
 
-    adjustScrollBar(m_scrollArea->horizontalScrollBar(), factor);
-    adjustScrollBar(m_scrollArea->verticalScrollBar(), factor);
+    double scroll_factor = old_scale_factor > 0 ? m_scaleFactor / old_scale_factor : 1.0;
+    adjustScrollBar(m_scrollArea->horizontalScrollBar(), scroll_factor);
+    adjustScrollBar(m_scrollArea->verticalScrollBar(), scroll_factor);
 
-    ui->actionZoomIn->setEnabled(m_scaleFactor < 3.0);
-    ui->actionZoomOut->setEnabled(m_scaleFactor > 0.333);
+    updateZoomActions();
 }
 
+void AdjustImage::updateZoomActions()
+{
+    ui->actionZoomIn->setEnabled(m_scaleFactor < MAX_IMAGE_ZOOM);
+    ui->actionZoomOut->setEnabled(m_scaleFactor > MIN_IMAGE_ZOOM);
+}
 
 void AdjustImage::updateActions(bool updateTo)
 {
@@ -306,8 +325,12 @@ void AdjustImage::updateActions(bool updateTo)
     ui->actionRotateLeft->setEnabled(updateTo);
     ui->actionRotateRight->setEnabled(updateTo);
     ui->actionSave->setEnabled(updateTo);
-    ui->actionZoomIn->setEnabled(updateTo);
-    ui->actionZoomOut->setEnabled(updateTo);
+    if (updateTo) {
+        updateZoomActions();
+    } else {
+        ui->actionZoomIn->setEnabled(false);
+        ui->actionZoomOut->setEnabled(false);
+    }
     ui->actionZoomToFit->setEnabled(updateTo);
 }
 
@@ -316,6 +339,28 @@ void AdjustImage::updateActions(bool updateTo)
 
 bool AdjustImage::eventFilter(QObject* watched, QEvent* event)
 {
+    if (watched != m_imageLabel && watched != m_scrollArea->viewport())
+        return false;
+
+    if (event->type() == QEvent::Wheel) {
+        QWheelEvent* const we = static_cast<QWheelEvent*>(event);
+        if (we->modifiers() & Qt::ControlModifier) {
+            const QPoint delta = !we->angleDelta().isNull() ? we->angleDelta() : we->pixelDelta();
+
+            if (delta.y() > 0) {
+                scaleImageBy(IMAGE_ZOOM_STEP_IN);
+                event->accept();
+                return true;
+            }
+            if (delta.y() < 0) {
+                scaleImageBy(IMAGE_ZOOM_STEP_OUT);
+                event->accept();
+                return true;
+            }
+        }
+        return false;
+    }
+
     if (watched != m_imageLabel)
         return false;
 
@@ -495,18 +540,22 @@ void AdjustImage::doRedo()
 
 void AdjustImage::doZoomIn()
 {
-    scaleImageBy(1.25);
+    scaleImageBy(IMAGE_ZOOM_STEP_IN);
 }
 
 void AdjustImage::doZoomOut()
 {
-    scaleImageBy(0.80);
+    scaleImageBy(IMAGE_ZOOM_STEP_OUT);
 }
 
 void AdjustImage::doZoomToFit()
 {
     QSize windowSize = m_scrollArea->viewport()->size();
     QSize labelSize = m_imageLabel->pixmap().size();
+
+    if (windowSize.isEmpty() || labelSize.isEmpty()) {
+        return;
+    }
 
     double imageRatio = double(labelSize.height()) / labelSize.width();
     double scaleTo;

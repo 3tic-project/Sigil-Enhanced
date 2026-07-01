@@ -40,6 +40,23 @@
 - 直接导入 `repomanager` 成功, 覆盖之前 `ModuleNotFoundError: No module named 'dulwich'` 的路径。
 - `git diff --check` 通过。
 
+### 2026-07-01: Step 2 已完成
+
+已完成“图片编辑缩放体验”的代码实现:
+
+- 图片编辑页最小缩放从约 33.3% 降到 10%, 最大缩放保持 300%。
+- 将缩放上下限和缩放步进统一成常量, 避免继续散落硬编码。
+- 支持在图片编辑区使用 `Ctrl+滚轮` 放大/缩小。
+- 普通滚轮不被拦截, 仍交给滚动区域做上下滚动。
+- 修正按绝对比例恢复缩放时滚动条调整倍率的计算, 避免把目标缩放比例误当作滚动倍率。
+- `Zoom To Fit` 增加空尺寸保护, 避免异常图片或未初始化视口触发无效计算。
+
+已验证:
+
+- `cmake --build cmake-build-debug --target Sigil -j 4` 通过。
+- `git diff --check` 通过。
+- 人工验证功能正常。
+
 ## 当前代码现状
 
 ### 图片编辑缩放
@@ -50,32 +67,20 @@
 - `src/Widgets/AdjustImage.h`
 - `src/Tabs/ImageTab.cpp`
 
-现状:
+当前状态:
 
-- `AdjustImage::scaleImageBy()` 和 `AdjustImage::scaleImageUsing()` 当前把缩放按钮状态硬编码为 `m_scaleFactor < 3.0` 和 `m_scaleFactor > 0.333`。
-- `AdjustImage::eventFilter()` 已经安装在 `m_imageLabel` 上, 处理裁剪和鼠标移动坐标显示, 但没有处理 `QEvent::Wheel`。
-- `ImageTab` 通过 `SettingsStore::zoomImage()` 保存图片缩放比例, 并通过 `InternalZoomFactorChanged` 同步设置。
+- `AdjustImage::scaleImageBy()` 和 `AdjustImage::scaleImageUsing()` 已统一通过缩放常量限制比例。
+- `AdjustImage::eventFilter()` 已处理 `QEvent::Wheel`, 仅在按下 Ctrl 时拦截并执行图片缩放。
+- `m_imageLabel` 和 `QScrollArea` viewport 都安装了 event filter, 避免鼠标位于图片或空白滚动区时行为不一致。
+- `ImageTab` 仍通过 `SettingsStore::zoomImage()` 保存图片缩放比例, 并通过 `InternalZoomFactorChanged` 同步设置。
 
-判断:
+已处理:
 
-- 允许缩放更小属于小改动, 但应该把最小/最大缩放改为常量, 避免两处硬编码继续扩散。
-- Ctrl+滚轮应放在 `AdjustImage::eventFilter()` 中处理, 只在按下 Ctrl 时拦截滚轮; 普通滚轮继续交给 `QScrollArea` 滚动。
-- `scaleImageUsing()` 目前直接设置绝对缩放, 却把绝对值当作滚动条调整 factor 传给 `adjustScrollBar()`。如果后续要优化滚轮以鼠标位置为锚点, 需要顺手把“旧比例 -> 新比例 -> 实际 factor”的计算理清。
-
-建议实现:
-
-- 增加常量:
-  - `MIN_IMAGE_ZOOM = 0.05` 或 `0.10`; 推荐先用 `0.10`, 保守且够用。
-  - `MAX_IMAGE_ZOOM = 3.0`, 暂不扩大最大值。
-  - `IMAGE_ZOOM_STEP_IN = 1.25`, `IMAGE_ZOOM_STEP_OUT = 0.80`。
-- 增加 `setZoomFactorClamped(double factor)` 或在 `scaleImageBy/Using` 内统一 clamp。
-- Ctrl+滚轮:
-  - `QEvent::Wheel` + `QWheelEvent::modifiers() & Qt::ControlModifier`。
-  - `angleDelta().y() > 0` 放大, `< 0` 缩小。
-  - 事件 `accept()` 后返回 `true`, 避免同时滚动页面。
-- 保持 `ZoomToFit` 可落在最小缩放以下还是强制 clamp, 需要选择:
-  - 推荐强制 clamp 到最小值, 避免状态栏/设置保存极小异常值。
-  - 如果后续用户确实需要 Fit 到 3% 这类比例, 再把最小值调到 `0.05`。
+- 最小缩放采用 `MIN_IMAGE_ZOOM = 0.10`, 最大缩放保持 `MAX_IMAGE_ZOOM = 3.0`。
+- Ctrl+滚轮使用原有缩放步进: 放大 `1.25`, 缩小 `0.80`。
+- 普通滚轮不拦截, 继续由 `QScrollArea` 处理。
+- `scaleImageUsing()` 已改为使用“旧比例 -> 新比例”的实际倍率调整滚动条。
+- `ZoomToFit` 结果会被 clamp 到最小/最大缩放范围内。若后续需要超大图完整 fit 到 3%-5%, 再单独讨论是否把 `MIN_IMAGE_ZOOM` 降到 `0.05`。
 
 验收项:
 
@@ -466,4 +471,4 @@ cmake-build-debug/bin/Sigil.app/Contents/MacOS/Sigil
 
 ## 下一步建议
 
-Step 1 已完成。下一步建议做 Step 2“图片编辑缩放体验”, 因为它改动范围小、验证快, 可以先把明显的编辑体验补上。完成后再进入 Step 3/4/5 的资源插入链路重构, 避免在已有重复逻辑上继续堆功能。
+Step 2 已完成。下一步进入 Step 3“抽公共资源插入逻辑”, 先统一右键 Insert、菜单 Insert、粘贴图片的标签/引用生成规则, 再做拖入文件和非本地图片导入。

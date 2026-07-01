@@ -107,6 +107,7 @@ private:
     void saveToHistoryWithClear(QImage imageToSave);
     void saveToReverseHistory(QImage imageToSave);
     void scaleImageBy(double factor);
+    void updateZoomActions();
     void updateActions(bool updateTo);
     void UpdateImageDescription();
     QRect BuildRect(const QPoint& p1, const QPoint& p2);
