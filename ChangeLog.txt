@@ -1,3 +1,23 @@
+Sigil-Enhanced-2.8.0.E2
+   Bug Fixes
+     - Fixed Undo/Redo menu state so it now follows the current tab's real undo/redo availability.
+     - Fixed TextTab Undo/Redo actions so menu-triggered undo/redo works even when CodeView itself does not have focus.
+     - Fixed image resize undo history so canceling the resize dialog or confirming unchanged dimensions no longer creates an undo step.
+     - Fixed Paste Rich Text leaking a QTextDocument by using a stack document.
+     - Fixed image paste/import edge cases so failed imports or missing current resources no longer insert empty image references.
+     - Fixed FindReplacePlus warning-prone control flow and tooltip string escapes.
+     - Added missing override annotations in several widgets/dialogs and fixed a missing return in FindPrevPlus.
+
+   New Features
+     - Added support for dropping multiple EPUB files and choosing whether to add them to the current book or open them in new windows.
+     - Added tab-level UndoEnabled/RedoEnabled capability reporting and UndoRedoStateChanged notifications.
+     - Connected image tabs to the main Undo/Redo actions and shortcuts.
+     - Added shared single-step text edit helpers for compound text insertions and replacements.
+     - Made inserted HTML/CSS file references, Paste Rich Text, indentation-trimmed paste, split markers, and closing-tag insertion undo as single user actions.
+     - Limited image edit undo/redo history to the latest 20 states.
+     - Added status messages clarifying that undoing a pasted/imported image removes only the inserted text reference, not the imported resource.
+     - Made cross-file Replace All create a checkpoint before modifying files; if checkpoint creation fails, replacement is cancelled.
+
 Sigil-2.8.0
    Bug Fies
      - make sure assigned clip number is not editable in ClipEditor
