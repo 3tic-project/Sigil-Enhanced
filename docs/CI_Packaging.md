@@ -26,9 +26,9 @@ good fit for the desktop package jobs.
 
 Current runner assumptions:
 
-- `windows-2025-vs2026` for Windows x64 and x86 builds. The checked-in Qt
-  archive is built for the VS2026 toolchain, so the workflow locates Visual
-  Studio with `vswhere` and then calls `vcvarsall.bat`.
+- `windows-2025` for Windows x64 and x86 builds. Windows x64 uses the official
+  Qt `win64_msvc2022_64` packages installed by `aqtinstall`; the workflow
+  locates Visual Studio with `vswhere` and then calls `vcvarsall.bat`.
 - `macos-15-intel` for Intel macOS packages.
 - `macos-latest` for ARM macOS packages, matching the existing upstream Sigil
   ARM workflow in this repository.
@@ -69,9 +69,9 @@ Useful references:
 
 The workflow currently pins Qt to `6.10.2`.
 
-Windows x64 uses:
+Windows x64 uses the official Qt online repository through `aqtinstall`:
 
-`https://github.com/dougmassay/win-qtwebkit-5.212/releases/download/v5.212-1/Qt6.10.2ci_x64_VS2026.7z`
+`aqt install-qt windows desktop 6.10.2 win64_msvc2022_64 -m qt5compat qtwebengine`
 
 macOS Intel uses:
 
@@ -81,16 +81,11 @@ macOS ARM uses:
 
 `https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Qt6102_arm64.tar.xz`
 
-Windows x86 is not enabled by default because the current
-`dougmassay/win-qtwebkit-5.212` release provides Qt `6.10.2` for Windows x64,
-but not Windows x86. The workflow can still run the x86 job when manually
-triggered, but `qt_windows_x86_url` must point to a compatible 32-bit Qt archive
-that contains `lib/cmake/Qt6/Qt6Config.cmake`.
-
-Useful reference:
-
-- Windows Qt/WebKit assets:
-  https://github.com/dougmassay/win-qtwebkit-5.212/releases/tag/v5.212-1
+Windows x86 is not enabled by default because current official Qt 6 packages and
+the previously used custom Qt archive do not provide a maintained 32-bit
+Windows Qt/WebEngine package for this project. The workflow can still run the
+x86 job when manually triggered, but `qt_windows_x86_url` must point to a
+compatible 32-bit Qt archive that contains `lib/cmake/Qt6/Qt6Config.cmake`.
 
 ## Cache Strategy
 

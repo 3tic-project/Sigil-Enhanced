@@ -40,9 +40,8 @@ jobs:
   windows-x64:
     name: Windows x64 installer
     if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]') }}
-    runs-on: windows-2025-vs2026
+    runs-on: windows-2025
     env:
-      QT_URL: https://github.com/dougmassay/win-qtwebkit-5.212/releases/download/v5.212-1/Qt6.10.2ci_x64_VS2026.7z
       QT_ROOT: ${{ github.workspace }}\.ci-cache\qt-windows-x64
       BUILD_DIR: ${{ github.workspace }}\.ci-build\windows-x64
       SIGIL_PYTHON_CACHE_DIR: ${{ github.workspace }}\.ci-cache\sigil-python-cache-windows-x64
@@ -60,7 +59,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.QT_ROOT }}
-          key: sigil-enhanced-windows-x64-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-win-caches.txt') }}
+          key: sigil-enhanced-windows-x64-official-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-win-caches.txt') }}
 
       - name: Cache pip wheels
         uses: actions/cache@v6
@@ -83,10 +82,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $qtRoot = $env:QT_ROOT
-          $qtUrl = $env:QT_URL
-          if ([string]::IsNullOrWhiteSpace($qtUrl)) {
-            throw 'QT_URL is empty.'
-          }
 
           $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse -ErrorAction SilentlyContinue |
             Where-Object { $_.FullName -match '\\lib\\cmake\\Qt6\\Qt6Config\.cmake$' } |
@@ -95,10 +90,11 @@ jobs:
           if (-not $qtConfig) {
             Remove-Item -Recurse -Force $qtRoot -ErrorAction SilentlyContinue
             New-Item -ItemType Directory -Force -Path $qtRoot | Out-Null
-            Push-Location $qtRoot
-            curl.exe -L -o qt.7z $qtUrl
-            7z x qt.7z -y
-            Pop-Location
+            python -m pip install --upgrade pip
+            python -m pip install aqtinstall
+            python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
+              -O $qtRoot `
+              -m qt5compat qtwebengine
           }
 
           $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse |
@@ -147,7 +143,7 @@ jobs:
   windows-x86:
     name: Windows x86 installer
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_windows_x86 }}
-    runs-on: windows-2025-vs2026
+    runs-on: windows-2025
     env:
       QT_URL: ${{ inputs.qt_windows_x86_url }}
       QT_ROOT: ${{ github.workspace }}\.ci-cache\qt-windows-x86
