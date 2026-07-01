@@ -468,19 +468,18 @@ elseif (MSVC)
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy ${UITOOLS} ${MAIN_PACKAGE_DIR} )
     endif()
 
-    # Copy ICU libs. Windeployqt does not always pick up all three.
-    set( ICU_BIN_LIBS icudt icuin icuuc )
+    # Copy ICU libs. Windeployqt does not always pick them up.
+    # Older Qt (<= 6.7) ships the three split DLLs (icudt/icuin/icuuc), while
+    # Qt 6.8+ ships a single combined "icu.dll". Grabbing every icu*.dll covers
+    # both layouts so the runtime doesn't fail with a missing icu.DLL error.
     add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/ )
-    foreach( lib ${ICU_BIN_LIBS} )
-        # If the three are there (any version), copy them. Otherwise keep going without them.
-        file( GLOB ICU_LIB ${QT_INSTALL_BINS}/${lib}*.dll )
-        list( LENGTH ICU_LIB PATHS_LEN )
-        if( PATHS_LEN GREATER 0 )
-            foreach( ICU ${ICU_LIB} )
-                add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E copy ${ICU} ${MAIN_PACKAGE_DIR}/ )
-            endforeach( ICU )
-        endif()
-    endforeach( lib )
+    file( GLOB ICU_LIBS ${QT_INSTALL_BINS}/icu*.dll )
+    list( LENGTH ICU_LIBS ICU_PATHS_LEN )
+    if( ICU_PATHS_LEN GREATER 0 )
+        foreach( ICU ${ICU_LIBS} )
+            add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E copy ${ICU} ${MAIN_PACKAGE_DIR}/ )
+        endforeach( ICU )
+    endif()
 
     # Copy the translation qm files
     add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/translations/ )

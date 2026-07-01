@@ -49,6 +49,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Determine version
+        shell: pwsh
+        run: |
+          $content = Get-Content CMakeLists.txt -Raw
+          $maj = [regex]::Match($content, 'SIGIL_MAJOR_VERSION\s+(\d+)').Groups[1].Value
+          $min = [regex]::Match($content, 'SIGIL_MINOR_VERSION\s+(\d+)').Groups[1].Value
+          $rev = [regex]::Match($content, 'SIGIL_REVISION_VERSION\s+(\d+)').Groups[1].Value
+          $enh = [regex]::Match($content, 'SIGIL_ENHANCED_VERSION\s+(\d+)').Groups[1].Value
+          $ver = "$maj.$min.$rev" + "E" + "$enh"
+          "SIGIL_VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -135,7 +146,7 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v7
         with:
-          name: Sigil-Enhanced-windows-x64
+          name: Sigil-Enhanced-${{ env.SIGIL_VERSION }}-windows-x64
           path: ${{ env.BUILD_DIR }}\installer\*.exe
           if-no-files-found: error
           retention-days: ${{ inputs.retention_days || 14 }}
@@ -152,6 +163,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+
+      - name: Determine version
+        shell: pwsh
+        run: |
+          $content = Get-Content CMakeLists.txt -Raw
+          $maj = [regex]::Match($content, 'SIGIL_MAJOR_VERSION\s+(\d+)').Groups[1].Value
+          $min = [regex]::Match($content, 'SIGIL_MINOR_VERSION\s+(\d+)').Groups[1].Value
+          $rev = [regex]::Match($content, 'SIGIL_REVISION_VERSION\s+(\d+)').Groups[1].Value
+          $enh = [regex]::Match($content, 'SIGIL_ENHANCED_VERSION\s+(\d+)').Groups[1].Value
+          $ver = "$maj.$min.$rev" + "E" + "$enh"
+          "SIGIL_VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Check Qt URL
         shell: pwsh
@@ -246,7 +268,7 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v7
         with:
-          name: Sigil-Enhanced-windows-x86
+          name: Sigil-Enhanced-${{ env.SIGIL_VERSION }}-windows-x86
           path: ${{ env.BUILD_DIR }}\installer\*.exe
           if-no-files-found: error
           retention-days: ${{ inputs.retention_days || 14 }}
@@ -280,6 +302,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+
+      - name: Determine version
+        shell: bash
+        run: |
+          set -euo pipefail
+          maj=$(sed -n 's/^set( SIGIL_MAJOR_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
+          min=$(sed -n 's/^set( SIGIL_MINOR_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
+          rev=$(sed -n 's/^set( SIGIL_REVISION_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
+          enh=$(sed -n 's/^set( SIGIL_ENHANCED_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
+          echo "SIGIL_VERSION=${maj}.${min}.${rev}E${enh}" >> "$GITHUB_ENV"
 
       - name: Cache Qt
         uses: actions/cache@v6
@@ -379,18 +411,18 @@ jobs:
           cd "$BUILD_DIR"
           bash "$GITHUB_WORKSPACE/ci_scripts/rpath_adjust.sh"
           mkdir -p dist
-          tar -cJf "dist/Sigil-Enhanced-macos-${{ matrix.arch }}.tar.xz" -C bin Sigil.app
+          tar -cJf "dist/Sigil-Enhanced-${SIGIL_VERSION}-macos-${{ matrix.arch }}.tar.xz" -C bin Sigil.app
           hdiutil create \
             -volname "Sigil-Enhanced" \
             -srcfolder "bin/Sigil.app" \
             -ov \
             -format UDZO \
-            "dist/Sigil-Enhanced-macos-${{ matrix.arch }}.dmg"
+            "dist/Sigil-Enhanced-${SIGIL_VERSION}-macos-${{ matrix.arch }}.dmg"
 
       - name: Upload package
         uses: actions/upload-artifact@v7
         with:
-          name: Sigil-Enhanced-macos-${{ matrix.arch }}
+          name: Sigil-Enhanced-${{ env.SIGIL_VERSION }}-macos-${{ matrix.arch }}
           path: ${{ env.BUILD_DIR }}/dist/*
           if-no-files-found: error
           retention-days: ${{ inputs.retention_days || 14 }}
