@@ -103,6 +103,7 @@ Phase 1:
 Phase 2:
 
 - 扫描 XHTML/HTML 中的 `href`、`src`、`poster`、`data`、`altimg` 属性。
+- 扫描独立 SVG 资源中的 `href` / `xlink:href` 等元素引用，补齐 SVG 内部 `<use>`、fragment 和资源类型检查覆盖。
 - 使用轻量 CSS token 扫描 XHTML/HTML 内联 `style` 属性中的 `url(...)`。
 - 使用轻量 CSS token 扫描 CSS 中的 `url(...)` 和 `@import`，跳过块注释和普通字符串中的伪链接。
 - 扫描 NCX 中的 `src`。
@@ -113,10 +114,12 @@ Phase 2:
 - 检查内容文档中明确元素的资源类型是否匹配，例如 `img/src` 指向图片、`audio/src` 指向音频、`video/src` 指向视频、`video/poster` 指向图片、`link rel="stylesheet"` 指向 CSS。
 - 检查非 SVG 图片引用是否带 fragment，并提示该 fragment 通常无法被阅读器定位。
 - 检查 SVG `<use>` 的 `href` / `xlink:href` 是否指向具体 fragment。
-- XHTML/HTML、CSS、NCX 的链接检查结果会写入行号和字符 offset，Validation Results 双击可跳转到对应位置。
+- 对 `<img>` 缺少 `alt`/`title`/ARIA 替代文本、`<svg>` 缺少 `title`/`desc`/ARIA 名称的场景给出低噪声可访问性提示；`alt=""`、`aria-hidden="true"`、`role="presentation"` / `none` 会被视为显式处理。
+- XHTML/HTML、独立 SVG、CSS、NCX 的链接检查结果会写入行号和字符 offset，Validation Results 双击可跳转到对应位置。
 - 对能唯一匹配实际资源、但大小写不一致的链接，生成 `旧大小写路径 -> 实际路径` 映射。
 - 使用现有 `UniversalUpdates` 执行最终更新，避免直接正则替换源文件。
 - 对无法定位的 XHTML/NCX 书内链接生成 warning；CSS 无效链接暂不报告，避免备用 font-face 等场景产生噪音。
+- 独立 SVG 资源内的链接大小写不一致当前只提示手动修正；后续需要为 `UniversalUpdates` 增加 SVG/text 写回通道后再启用自动修正。
 
 资源诊断:
 
@@ -193,6 +196,7 @@ struct Options {
 - 建立 `bookPath -> media-type` 索引，用于内容文档资源引用类型检查。
 - 建立 XHTML/XML/SVG/NCX 的 `id` 索引，用于 fragment 检查。
 - 扫描 XHTML 的 `href`、`src`、内联样式 `url(...)`。
+- 扫描独立 SVG 的 `href` / `xlink:href` 等元素引用，但 SVG 内链接大小写暂仅提示。
 - 用轻量 CSS token scanner 扫描 CSS 的 `@import`、`url(...)`，避免注释和字符串中的误报。
 - 扫描 NCX 的 `content src`。
 - 跳过 `http:`、`https:`、`mailto:`、`data:`、`res:` 等非书内链接。
@@ -202,6 +206,7 @@ struct Options {
 - CSS 无效链接默认弱提示，避免备用 font-face 等场景产生过多噪音。
 - 对 `img`、`audio`、`video`、`source type=...`、`track`、`link rel=stylesheet/icon`、`iframe`、`object`、`embed` 等明确场景做资源类型匹配提示。
 - 对 `img`/`image`/`altimg` 指向非 SVG 图片 fragment、SVG `use` 未指向 fragment 等场景给出提示。
+- 对 `img` 和 `svg` 做低噪声可访问性提示，只报告缺少替代文本/可访问名称的明显场景。
 
 后续优化点:
 

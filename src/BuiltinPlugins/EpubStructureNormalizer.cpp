@@ -424,7 +424,8 @@ static void inspectLink(EpubStructureNormalizer* normalizer,
                         const QString& source_bookpath,
                         const QString& raw_link,
                         const SourceLocation& location,
-                        bool report_missing)
+                        bool report_missing,
+                        bool allow_case_update)
 {
     Q_UNUSED(normalizer);
 
@@ -509,10 +510,16 @@ static void inspectLink(EpubStructureNormalizer* normalizer,
         }
 
         actual_bookpath = matches.first();
-        context.updates[target_bookpath] = actual_bookpath;
-        addUniqueResult(result, context, ValidationResult::ResType_Info, source_bookpath, location,
-                        QStringLiteral("链接检查：链接【%1】与实际文件路径大小写不一致，已计划修正为【%2】。")
-                            .arg(raw_link, actual_bookpath));
+        if (allow_case_update) {
+            context.updates[target_bookpath] = actual_bookpath;
+            addUniqueResult(result, context, ValidationResult::ResType_Info, source_bookpath, location,
+                            QStringLiteral("链接检查：链接【%1】与实际文件路径大小写不一致，已计划修正为【%2】。")
+                                .arg(raw_link, actual_bookpath));
+        } else {
+            addUniqueResult(result, context, ValidationResult::ResType_Warn, source_bookpath, location,
+                            QStringLiteral("链接检查：链接【%1】与实际文件路径大小写不一致，建议手动修正为【%2】。")
+                                .arg(raw_link, actual_bookpath));
+        }
     }
 
     const QString fragment = url.fragment(QUrl::FullyDecoded);
@@ -699,6 +706,103 @@ static bool isLinkAttribute(const QString& attr_name)
            attr == QLatin1String("altimg");
 }
 
+static bool hasNonEmptyAttr(const QHash<QString, QString>& attrs, const QString& attr_name)
+{
+    return attrs.contains(attr_name) && !attrs.value(attr_name).trimmed().isEmpty();
+}
+
+static bool hasAriaHidden(const QHash<QString, QString>& attrs)
+{
+    return attrs.value(QStringLiteral("aria-hidden")).trimmed().compare(QStringLiteral("true"),
+                                                                        Qt::CaseInsensitive) == 0;
+}
+
+static bool hasPresentationalRole(const QHash<QString, QString>& attrs)
+{
+    const QStringList roles = attrs.value(QStringLiteral("role")).toLower()
+        .split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+    return roles.contains(QStringLiteral("presentation")) ||
+           roles.contains(QStringLiteral("none"));
+}
+
+static bool isHiddenFromAccessibility(const QHash<QString, QString>& attrs)
+{
+    return hasAriaHidden(attrs) || hasPresentationalRole(attrs);
+}
+
+static bool hasImageAlternative(const QHash<QString, QString>& attrs)
+{
+    return attrs.contains(QStringLiteral("alt")) ||
+           hasNonEmptyAttr(attrs, QStringLiteral("title")) ||
+           hasNonEmptyAttr(attrs, QStringLiteral("aria-label")) ||
+           hasNonEmptyAttr(attrs, QStringLiteral("aria-labelledby"));
+}
+
+static bool hasSvgAccessibleNameAttr(const QHash<QString, QString>& attrs)
+{
+    return hasNonEmptyAttr(attrs, QStringLiteral("aria-label")) ||
+           hasNonEmptyAttr(attrs, QStringLiteral("aria-labelledby"));
+}
+
+static bool svgBodyContainsTitleOrDesc(const QString& source,
+                                       int open_tag_end_offset,
+                                       bool self_closing)
+{
+    if (self_closing || open_tag_end_offset < 0 || open_tag_end_offset >= source.size()) {
+        return false;
+    }
+
+    int range_end = source.size();
+    QRegularExpression close_re(QStringLiteral("</\\s*(?:[A-Za-z_][\\w.-]*:)?svg\\s*>"),
+                                QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch close_match = close_re.match(source, open_tag_end_offset);
+    if (close_match.hasMatch()) {
+        range_end = close_match.capturedStart(0);
+    }
+
+    QRegularExpression title_desc_re(QStringLiteral("<\\s*(?:[A-Za-z_][\\w.-]*:)?(?:title|desc)\\b"),
+                                     QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch title_desc_match = title_desc_re.match(source, open_tag_end_offset);
+    return title_desc_match.hasMatch() && title_desc_match.capturedStart(0) < range_end;
+}
+
+static void validateAccessibilityHints(EpubStructureNormalizer::Result& result,
+                                       LinkScanContext& context,
+                                       const QString& source_bookpath,
+                                       const QString& source,
+                                       const QString& element_name,
+                                       const QString& tag_text,
+                                       const QHash<QString, QString>& attrs,
+                                       int tag_offset,
+                                       int open_tag_end_offset)
+{
+    const QString element = localName(element_name);
+    if (element != QLatin1String("img") && element != QLatin1String("svg")) {
+        return;
+    }
+    if (isHiddenFromAccessibility(attrs)) {
+        return;
+    }
+
+    const SourceLocation tag_location = sourceLocationForOffset(source, tag_offset);
+    if (element == QLatin1String("img")) {
+        if (hasImageAlternative(attrs)) {
+            return;
+        }
+        addUniqueResult(result, context, ValidationResult::ResType_Warn, source_bookpath, tag_location,
+                        QStringLiteral("可访问性检查：<img> 缺少 alt/title 或 aria-label/aria-labelledby，建议提供替代文本；装饰图片可使用 alt=\"\" 或 aria-hidden=\"true\"。"));
+        return;
+    }
+
+    const bool self_closing = tag_text.trimmed().endsWith(QStringLiteral("/>"));
+    if (hasSvgAccessibleNameAttr(attrs) ||
+        svgBodyContainsTitleOrDesc(source, open_tag_end_offset, self_closing)) {
+        return;
+    }
+    addUniqueResult(result, context, ValidationResult::ResType_Warn, source_bookpath, tag_location,
+                    QStringLiteral("可访问性检查：<svg> 缺少 title/desc 或 aria-label/aria-labelledby，建议为有含义的 SVG 提供可访问名称；装饰图可使用 aria-hidden=\"true\"。"));
+}
+
 static void validateElementResourceReference(EpubStructureNormalizer::Result& result,
                                              LinkScanContext& context,
                                              const QString& source_bookpath,
@@ -791,7 +895,8 @@ static void scanElementAttributes(EpubStructureNormalizer* normalizer,
                                   EpubStructureNormalizer::Result& result,
                                   LinkScanContext& context,
                                   const QString& source_bookpath,
-                                  const QString& source)
+                                  const QString& source,
+                                  bool allow_case_updates)
 {
     QRegularExpression tag_re(QStringLiteral("<\\s*([A-Za-z][A-Za-z0-9:_-]*)\\b([^<>]*)>"),
                               QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
@@ -804,6 +909,7 @@ static void scanElementAttributes(EpubStructureNormalizer* normalizer,
         const QString element_name = tag_match.captured(1);
         const QString tag_text = tag_match.captured(0);
         const int tag_offset = tag_match.capturedStart(0);
+        const int open_tag_end_offset = tag_match.capturedEnd(0);
 
         QHash<QString, QString> attrs;
         QHash<QString, QPair<QString, SourceLocation>> link_attrs;
@@ -820,9 +926,12 @@ static void scanElementAttributes(EpubStructureNormalizer* normalizer,
             }
         }
 
+        validateAccessibilityHints(result, context, source_bookpath, source, element_name,
+                                   tag_text, attrs, tag_offset, open_tag_end_offset);
+
         for (auto it = link_attrs.constBegin(); it != link_attrs.constEnd(); ++it) {
             inspectLink(normalizer, result, context, source_bookpath, it.value().first,
-                        it.value().second, true);
+                        it.value().second, true, allow_case_updates);
             validateElementResourceReference(result, context, source_bookpath, element_name,
                                              it.key(), it.value().first, it.value().second, attrs);
             validateFragmentReferenceSemantics(result, context, source_bookpath, element_name,
@@ -1022,7 +1131,8 @@ static void scanCssUrls(EpubStructureNormalizer* normalizer,
                 int import_end = import_value_offset + 1;
                 if (parseCssQuotedString(source, import_value_offset, href, href_offset, import_end)) {
                     inspectLink(normalizer, result, context, source_bookpath, href,
-                                sourceLocationForOffset(location_source, base_offset + href_offset), report_missing);
+                                sourceLocationForOffset(location_source, base_offset + href_offset),
+                                report_missing, true);
                     i = import_end;
                     continue;
                 }
@@ -1035,7 +1145,8 @@ static void scanCssUrls(EpubStructureNormalizer* normalizer,
             int url_end = i + 3;
             if (parseCssUrlFunction(source, i, href, href_offset, url_end)) {
                 inspectLink(normalizer, result, context, source_bookpath, href,
-                            sourceLocationForOffset(location_source, base_offset + href_offset), report_missing);
+                            sourceLocationForOffset(location_source, base_offset + href_offset),
+                            report_missing, true);
                 i = qMax(i + 1, url_end);
                 continue;
             }
@@ -1072,7 +1183,7 @@ static void scanNcxContentSources(EpubStructureNormalizer* normalizer,
     while (it.hasNext()) {
         QRegularExpressionMatch match = it.next();
         inspectLink(normalizer, result, context, source_bookpath, match.captured(2),
-                    sourceLocationForOffset(source, match.capturedStart(2)), true);
+                    sourceLocationForOffset(source, match.capturedStart(2)), true, true);
     }
 }
 
@@ -2172,8 +2283,14 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeLinkCase(const
                 continue;
             }
             const QString source = html_resource->GetText();
-            scanElementAttributes(this, result, context, bookpath, source);
+            scanElementAttributes(this, result, context, bookpath, source, true);
             scanStyleAttributes(this, result, context, bookpath, source);
+        } else if (resource->Type() == Resource::SVGResourceType) {
+            SVGResource* svg_resource = qobject_cast<SVGResource*>(resource);
+            if (!svg_resource) {
+                continue;
+            }
+            scanElementAttributes(this, result, context, bookpath, svg_resource->GetText(), false);
         } else if (resource->Type() == Resource::CSSResourceType) {
             CSSResource* css_resource = qobject_cast<CSSResource*>(resource);
             if (!css_resource) {
