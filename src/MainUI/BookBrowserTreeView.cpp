@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QApplication>
 #include <QDrag>
+#include <QFontMetrics>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QPixmap>
@@ -23,6 +24,12 @@
 QStringList IMPORT_SUFFIX = { "xhtml","html","htm","txt" };
 static const int IMAGE_PREVIEW_MAX_SIDE = 300;
 static const int IMAGE_PREVIEW_DELAY_MS = 150;
+
+struct ImagePreviewData {
+	QPixmap pixmap;
+	QSize pixelSize;
+	qint64 fileSize = 0;
+};
 
 //------------------- modified: BookBrowserTreeView -----------------------
 
@@ -71,25 +78,90 @@ Resource* BookBrowserTreeView::resourceForIndex(const QModelIndex& index) const
 	return mainwin->GetCurrentBook()->GetFolderKeeper()->GetResourceByIdentifier(identifier);
 }
 
-static QPixmap scaledBitmapPreview(const QString& filepath)
+static QString formatPreviewFileSize(qint64 bytes)
 {
-	QPixmap pixmap(filepath);
-	if (pixmap.isNull()) {
-		return QPixmap();
+	if (bytes < 1024) {
+		return QString("%1 B").arg(bytes);
 	}
-	return pixmap.scaled(QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE),
-	                     Qt::KeepAspectRatio,
-	                     Qt::SmoothTransformation);
+
+	double size = bytes / 1024.0;
+	QString unit = "KB";
+	if (size >= 1024.0) {
+		size = size / 1024.0;
+		unit = "MB";
+	}
+	if (size >= 1024.0) {
+		size = size / 1024.0;
+		unit = "GB";
+	}
+
+	return QString("%1 %2").arg(QString::number(size, 'f', size < 10.0 ? 1 : 0), unit);
 }
 
-static QPixmap scaledSvgPreview(const QString& filepath)
+static QString formatPreviewInfo(const QSize& pixel_size, qint64 file_size)
 {
+	QString dimensions = pixel_size.isEmpty() ?
+	                     QString("Unknown px") :
+	                     QString("%1 x %2 px").arg(pixel_size.width()).arg(pixel_size.height());
+	return QString("%1 | %2").arg(dimensions, formatPreviewFileSize(file_size));
+}
+
+static QPixmap imagePreviewWithInfoBar(const ImagePreviewData& preview,
+                                       const QFont& font,
+                                       const QPalette& palette)
+{
+	const QString info = formatPreviewInfo(preview.pixelSize, preview.fileSize);
+	const QFontMetrics fm(font);
+	const int horizontal_padding = 12;
+	const int info_height = fm.height() + 10;
+	const int width = qMax(preview.pixmap.width(), fm.horizontalAdvance(info) + horizontal_padding * 2);
+	const int height = preview.pixmap.height() + info_height;
+
+	QPixmap pixmap(width, height);
+	pixmap.fill(palette.base().color());
+
+	QPainter painter(&pixmap);
+	const int image_x = (width - preview.pixmap.width()) / 2;
+	painter.drawPixmap(image_x, 0, preview.pixmap);
+
+	const QRect info_rect(0, preview.pixmap.height(), width, info_height);
+	painter.fillRect(info_rect, palette.window().color());
+	painter.setPen(palette.mid().color());
+	painter.drawLine(info_rect.topLeft(), info_rect.topRight());
+	painter.setFont(font);
+	painter.setPen(palette.text().color());
+	painter.drawText(info_rect.adjusted(horizontal_padding, 0, -horizontal_padding, 0),
+	                 Qt::AlignCenter,
+	                 info);
+	return pixmap;
+}
+
+static ImagePreviewData scaledBitmapPreview(const QString& filepath)
+{
+	ImagePreviewData preview;
+	preview.fileSize = QFileInfo(filepath).size();
+	QPixmap pixmap(filepath);
+	if (pixmap.isNull()) {
+		return preview;
+	}
+	preview.pixelSize = pixmap.size();
+	preview.pixmap = pixmap.scaled(QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE),
+	                               Qt::KeepAspectRatio,
+	                               Qt::SmoothTransformation);
+	return preview;
+}
+
+static ImagePreviewData scaledSvgPreview(const QString& filepath)
+{
+	ImagePreviewData preview;
+	preview.fileSize = QFileInfo(filepath).size();
 	QSvgRenderer renderer(filepath);
 	if (!renderer.isValid()) {
-		return QPixmap();
+		return preview;
 	}
 
 	QSize size = renderer.defaultSize();
+	preview.pixelSize = size;
 	if (size.isEmpty()) {
 		size = QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE);
 	}
@@ -99,7 +171,8 @@ static QPixmap scaledSvgPreview(const QString& filepath)
 	pixmap.fill(Qt::transparent);
 	QPainter painter(&pixmap);
 	renderer.render(&painter);
-	return pixmap;
+	preview.pixmap = pixmap;
+	return preview;
 }
 
 void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
@@ -131,14 +204,17 @@ void BookBrowserTreeView::showImagePreview()
 		return;
 	}
 
-	QPixmap pixmap = resource->Type() == Resource::SVGResourceType ?
-	                 scaledSvgPreview(resource->GetFullPath()) :
-	                 scaledBitmapPreview(resource->GetFullPath());
-	if (pixmap.isNull()) {
+	ImagePreviewData preview = resource->Type() == Resource::SVGResourceType ?
+	                           scaledSvgPreview(resource->GetFullPath()) :
+	                           scaledBitmapPreview(resource->GetFullPath());
+	if (preview.pixmap.isNull()) {
 		hideImagePreview();
 		return;
 	}
 
+	QPixmap pixmap = imagePreviewWithInfoBar(preview,
+	                                         imagePreviewPopup->font(),
+	                                         imagePreviewPopup->palette());
 	imagePreviewPopup->setPixmap(pixmap);
 	imagePreviewPopup->adjustSize();
 
