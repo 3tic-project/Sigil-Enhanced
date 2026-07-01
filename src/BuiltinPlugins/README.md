@@ -119,7 +119,7 @@ Phase 2:
 - 对能唯一匹配实际资源、但大小写不一致的链接，生成 `旧大小写路径 -> 实际路径` 映射。
 - 使用现有 `UniversalUpdates` 执行最终更新，避免直接正则替换源文件。
 - 对无法定位的 XHTML/NCX 书内链接生成 warning；CSS 无效链接暂不报告，避免备用 font-face 等场景产生噪音。
-- 独立 SVG 资源内的链接大小写不一致当前只提示手动修正；后续需要为 `UniversalUpdates` 增加 SVG/text 写回通道后再启用自动修正。
+- 独立 SVG 资源内可唯一确认的链接大小写不一致，会按原属性值位置做窄范围文本替换；不确定或无法定位时只提示。
 
 资源诊断:
 
@@ -196,7 +196,7 @@ struct Options {
 - 建立 `bookPath -> media-type` 索引，用于内容文档资源引用类型检查。
 - 建立 XHTML/XML/SVG/NCX 的 `id` 索引，用于 fragment 检查。
 - 扫描 XHTML 的 `href`、`src`、内联样式 `url(...)`。
-- 扫描独立 SVG 的 `href` / `xlink:href` 等元素引用，但 SVG 内链接大小写暂仅提示。
+- 扫描独立 SVG 的 `href` / `xlink:href` 等元素引用，并对可唯一确认的链接大小写不一致做原地修正。
 - 用轻量 CSS token scanner 扫描 CSS 的 `@import`、`url(...)`，避免注释和字符串中的误报。
 - 扫描 NCX 的 `content src`。
 - 跳过 `http:`、`https:`、`mailto:`、`data:`、`res:` 等非书内链接。

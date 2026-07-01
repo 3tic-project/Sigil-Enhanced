@@ -13,6 +13,8 @@
 
 #include "BuiltinPlugins/EpubStructureNormalizer.h"
 
+#include <algorithm>
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -65,9 +67,22 @@ struct IdScanResult {
     QList<QPair<QString, SourceLocation>> duplicateIds;
 };
 
+struct TextReplacement {
+    int offset = -1;
+    int length = 0;
+    QString replacement;
+};
+
+enum class LinkCaseAction {
+    UniversalUpdate,
+    TextReplacement,
+    WarnOnly
+};
+
 struct LinkScanContext {
     BookPathIndex index;
     QHash<QString, QString> updates;
+    QHash<QString, QList<TextReplacement>> textReplacementsByBookPath;
     QHash<QString, QSet<QString>> idsByBookPath;
     QHash<QString, QString> mediaTypesByBookPath;
     QSet<QString> reported;
@@ -418,6 +433,30 @@ static QString actualBookPathForLocalLink(const LinkScanContext& context,
     return QString();
 }
 
+static QString replacementHrefForBookPath(const QString& raw_link,
+                                          const QString& source_bookpath,
+                                          const QString& actual_bookpath)
+{
+    const bool has_fragment = raw_link.contains(QLatin1Char('#'));
+    QUrl url(raw_link);
+    QString fragment;
+    if (has_fragment) {
+        fragment = url.fragment();
+    }
+
+    QString new_path = Utility::buildRelativePath(source_bookpath, actual_bookpath);
+    QString new_href = Utility::URLEncodePath(new_path);
+    if (has_fragment) {
+        new_href.append(QLatin1Char('#'));
+        new_href.append(QUrl::toPercentEncoding(fragment));
+    }
+
+    if (new_href.isEmpty()) {
+        new_href = QFileInfo(actual_bookpath).fileName();
+    }
+    return new_href;
+}
+
 static void inspectLink(EpubStructureNormalizer* normalizer,
                         EpubStructureNormalizer::Result& result,
                         LinkScanContext& context,
@@ -425,7 +464,7 @@ static void inspectLink(EpubStructureNormalizer* normalizer,
                         const QString& raw_link,
                         const SourceLocation& location,
                         bool report_missing,
-                        bool allow_case_update)
+                        LinkCaseAction case_action)
 {
     Q_UNUSED(normalizer);
 
@@ -510,11 +549,24 @@ static void inspectLink(EpubStructureNormalizer* normalizer,
         }
 
         actual_bookpath = matches.first();
-        if (allow_case_update) {
+        if (case_action == LinkCaseAction::UniversalUpdate) {
             context.updates[target_bookpath] = actual_bookpath;
             addUniqueResult(result, context, ValidationResult::ResType_Info, source_bookpath, location,
                             QStringLiteral("链接检查：链接【%1】与实际文件路径大小写不一致，已计划修正为【%2】。")
                                 .arg(raw_link, actual_bookpath));
+        } else if (case_action == LinkCaseAction::TextReplacement) {
+            const QString replacement = replacementHrefForBookPath(raw_link, source_bookpath, actual_bookpath);
+            if (!replacement.isEmpty() && replacement != raw_link && location.offset >= 0) {
+                context.textReplacementsByBookPath[source_bookpath].append(
+                    TextReplacement{location.offset, static_cast<int>(raw_link.size()), replacement});
+                addUniqueResult(result, context, ValidationResult::ResType_Info, source_bookpath, location,
+                                QStringLiteral("链接检查：链接【%1】与实际文件路径大小写不一致，已计划修正为【%2】。")
+                                    .arg(raw_link, replacement));
+            } else {
+                addUniqueResult(result, context, ValidationResult::ResType_Warn, source_bookpath, location,
+                                QStringLiteral("链接检查：链接【%1】与实际文件路径大小写不一致，建议手动修正为【%2】。")
+                                    .arg(raw_link, actual_bookpath));
+            }
         } else {
             addUniqueResult(result, context, ValidationResult::ResType_Warn, source_bookpath, location,
                             QStringLiteral("链接检查：链接【%1】与实际文件路径大小写不一致，建议手动修正为【%2】。")
@@ -896,7 +948,7 @@ static void scanElementAttributes(EpubStructureNormalizer* normalizer,
                                   LinkScanContext& context,
                                   const QString& source_bookpath,
                                   const QString& source,
-                                  bool allow_case_updates)
+                                  LinkCaseAction case_action)
 {
     QRegularExpression tag_re(QStringLiteral("<\\s*([A-Za-z][A-Za-z0-9:_-]*)\\b([^<>]*)>"),
                               QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
@@ -931,7 +983,7 @@ static void scanElementAttributes(EpubStructureNormalizer* normalizer,
 
         for (auto it = link_attrs.constBegin(); it != link_attrs.constEnd(); ++it) {
             inspectLink(normalizer, result, context, source_bookpath, it.value().first,
-                        it.value().second, true, allow_case_updates);
+                        it.value().second, true, case_action);
             validateElementResourceReference(result, context, source_bookpath, element_name,
                                              it.key(), it.value().first, it.value().second, attrs);
             validateFragmentReferenceSemantics(result, context, source_bookpath, element_name,
@@ -1132,7 +1184,7 @@ static void scanCssUrls(EpubStructureNormalizer* normalizer,
                 if (parseCssQuotedString(source, import_value_offset, href, href_offset, import_end)) {
                     inspectLink(normalizer, result, context, source_bookpath, href,
                                 sourceLocationForOffset(location_source, base_offset + href_offset),
-                                report_missing, true);
+                                report_missing, LinkCaseAction::UniversalUpdate);
                     i = import_end;
                     continue;
                 }
@@ -1146,7 +1198,7 @@ static void scanCssUrls(EpubStructureNormalizer* normalizer,
             if (parseCssUrlFunction(source, i, href, href_offset, url_end)) {
                 inspectLink(normalizer, result, context, source_bookpath, href,
                             sourceLocationForOffset(location_source, base_offset + href_offset),
-                            report_missing, true);
+                            report_missing, LinkCaseAction::UniversalUpdate);
                 i = qMax(i + 1, url_end);
                 continue;
             }
@@ -1183,7 +1235,8 @@ static void scanNcxContentSources(EpubStructureNormalizer* normalizer,
     while (it.hasNext()) {
         QRegularExpressionMatch match = it.next();
         inspectLink(normalizer, result, context, source_bookpath, match.captured(2),
-                    sourceLocationForOffset(source, match.capturedStart(2)), true, true);
+                    sourceLocationForOffset(source, match.capturedStart(2)),
+                    true, LinkCaseAction::UniversalUpdate);
     }
 }
 
@@ -2283,14 +2336,14 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeLinkCase(const
                 continue;
             }
             const QString source = html_resource->GetText();
-            scanElementAttributes(this, result, context, bookpath, source, true);
+            scanElementAttributes(this, result, context, bookpath, source, LinkCaseAction::UniversalUpdate);
             scanStyleAttributes(this, result, context, bookpath, source);
         } else if (resource->Type() == Resource::SVGResourceType) {
             SVGResource* svg_resource = qobject_cast<SVGResource*>(resource);
             if (!svg_resource) {
                 continue;
             }
-            scanElementAttributes(this, result, context, bookpath, svg_resource->GetText(), false);
+            scanElementAttributes(this, result, context, bookpath, svg_resource->GetText(), LinkCaseAction::TextReplacement);
         } else if (resource->Type() == Resource::CSSResourceType) {
             CSSResource* css_resource = qobject_cast<CSSResource*>(resource);
             if (!css_resource) {
@@ -2307,7 +2360,7 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeLinkCase(const
         }
     }
 
-    if (context.updates.isEmpty()) {
+    if (context.updates.isEmpty() && context.textReplacementsByBookPath.isEmpty()) {
         return result;
     }
 
@@ -2315,6 +2368,40 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeLinkCase(const
 
     if (options.dryRun) {
         return result;
+    }
+
+    foreach(Resource* resource, resources) {
+        if (!resource || resource->Type() != Resource::SVGResourceType) {
+            continue;
+        }
+        QList<TextReplacement> replacements =
+            context.textReplacementsByBookPath.value(resource->GetRelativePath());
+        if (replacements.isEmpty()) {
+            continue;
+        }
+        std::sort(replacements.begin(), replacements.end(),
+                  [](const TextReplacement& left, const TextReplacement& right) {
+                      return left.offset > right.offset;
+                  });
+
+        SVGResource* svg_resource = qobject_cast<SVGResource*>(resource);
+        if (!svg_resource) {
+            continue;
+        }
+
+        QString source = svg_resource->GetText();
+        for (int i = 0; i < replacements.count(); i++) {
+            const TextReplacement replacement = replacements.at(i);
+            if (replacement.offset < 0 ||
+                replacement.length < 0 ||
+                replacement.offset + replacement.length > source.size()) {
+                addResult(result, ValidationResult::ResType_Error, resource->GetRelativePath(),
+                          QStringLiteral("链接检查：自动修正 SVG 链接大小写时定位失效，已跳过该处替换。"));
+                continue;
+            }
+            source.replace(replacement.offset, replacement.length, replacement.replacement);
+        }
+        svg_resource->SetText(source);
     }
 
     foreach(Resource* resource, resources) {
