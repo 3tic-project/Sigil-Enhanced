@@ -409,7 +409,6 @@
     <addaction name="menuEPUB3Tools"/>
     <addaction name="actionWellFormedCheckEpub"/>
 	<addaction name="actionNormalizedOPF"/>
-    <addaction name="actionNormalizeEpubStructure"/>
     <addaction name="actionValidateStylesheetsWithW3C"/>
     <addaction name="actionReports"/>
     <addaction name="separator"/>
@@ -424,6 +423,12 @@
      <string>&amp;Plugins</string>
     </property>
     <addaction name="actionManage_Plugins"/>
+   </widget>
+   <widget class="QMenu" name="menuEnhancement">
+    <property name="title">
+     <string>&amp;Enhancement</string>
+    </property>
+    <addaction name="actionNormalizeEpubStructure"/>
    </widget>
    <widget class="QMenu" name="menuCheckpoints">
     <property name="title">
@@ -448,6 +453,7 @@
    <addaction name="menuFormat"/>
    <addaction name="menuFindReplace"/>
    <addaction name="menuTools"/>
+   <addaction name="menuEnhancement"/>
    <addaction name="menuView"/>
    <addaction name="menuWindow"/>
    <addaction name="menuPlugins"/>

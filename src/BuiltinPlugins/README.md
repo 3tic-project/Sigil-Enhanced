@@ -35,7 +35,7 @@
 
 1. 显式执行
    - 默认不在打开 EPUB 时静默重构目录。
-   - 先通过菜单或现有 `Normalized OPF` 入口执行。
+   - 先通过 `Enhancement` 菜单或现有 `Normalized OPF` 入口执行。
    - 后续可增加打开时检测提示，但不自动修改。
 
 2. 分阶段实现
@@ -83,7 +83,7 @@ Phase 2:
 
 新增显式入口:
 
-- Tools 菜单: `Normalize EPUB Structure...`
+- Enhancement 菜单: `Normalize EPUB Structure...`
 - 自动化命令: `NormalizeEpubStructure`
 
 标准目录归档:
