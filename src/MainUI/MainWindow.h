@@ -907,8 +907,10 @@ private:
 
     void SetupPreviewTimer();
 
-    void FixDuplicateFilenames();
-    void MoveContentFilesToStdFolders();
+    bool CanStandardizeEpubLayout(const QString& action_name);
+    bool ApplyStandardEpubLayout();
+    bool FixDuplicateFilenames();
+    bool MoveContentFilesToStdFolders();
 
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES
@@ -1141,6 +1143,7 @@ public slots:
     void Epub3ToEpub2(); //modified: Epub3ToEpub2
     void Epub2ToEpub3(); //modified: Epub2ToEpub3
     bool NormalizedOPF(); //modified: NormalizedOPF
+    bool NormalizeEpubStructure(); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
     //modified: FindReplacePlus

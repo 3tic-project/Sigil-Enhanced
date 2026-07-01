@@ -1,13 +1,79 @@
+#include <QApplication>
+#include <QHash>
 #include <QMessageBox>
 
 #include "MainUI/MainWindow.h"
 #include "MainUI/BookBrowser.h"
 #include "MainUI/TableOfContents.h"
+#include "MainUI/ValidationResultsView.h"
+#include "BuiltinPlugins/EpubStructureNormalizer.h"
+#include "BookManipulation/FolderKeeper.h"
+#include "ResourceObjects/Resource.h"
 #include "Tabs/ContentTab.h"
 #include "Tabs/FlowTab.h"
 #include "Tabs/CSSTab.h"
 #include "BookManipulation/EpubVersionConv.h" // modified: Epub3ToEpub2 Epub2ToEpub3
 #include "Misc/ResourceInsertion.h"
+#include "Misc/Utility.h"
+
+namespace
+{
+
+QHash<Resource*, QString> CaptureResourcePaths(Book* book)
+{
+    QHash<Resource*, QString> paths;
+    if (!book || !book->GetFolderKeeper()) {
+        return paths;
+    }
+
+    foreach(Resource* resource, book->GetFolderKeeper()->GetResourceList()) {
+        if (resource) {
+            paths.insert(resource, resource->GetRelativePath());
+        }
+    }
+    return paths;
+}
+
+QHash<QString, QString> BuildResourcePathMap(Book* book, const QHash<Resource*, QString>& old_paths)
+{
+    QHash<QString, QString> path_map;
+    if (!book || !book->GetFolderKeeper()) {
+        return path_map;
+    }
+
+    foreach(Resource* resource, book->GetFolderKeeper()->GetResourceList()) {
+        if (!resource || !old_paths.contains(resource)) {
+            continue;
+        }
+        const QString old_path = old_paths.value(resource);
+        const QString new_path = resource->GetRelativePath();
+        if (old_path != new_path) {
+            path_map.insert(old_path, new_path);
+        }
+    }
+    return path_map;
+}
+
+QList<ValidationResult> RebaseValidationResultPaths(const QList<ValidationResult>& results,
+                                                    const QHash<QString, QString>& path_map)
+{
+    if (path_map.isEmpty()) {
+        return results;
+    }
+
+    QList<ValidationResult> rebased;
+    foreach(ValidationResult result, results) {
+        QString bookpath = result.BookPath();
+        if (path_map.contains(bookpath)) {
+            bookpath = path_map.value(bookpath);
+        }
+        rebased << ValidationResult(result.Type(), bookpath, result.LineNumber(),
+                                    result.CharOffset(), result.Message());
+    }
+    return rebased;
+}
+
+}
 
 //-----modified: Epub3ToEpub2------
 void MainWindow::Epub3ToEpub2()
@@ -43,6 +109,52 @@ void MainWindow::Epub2ToEpub3()
     m_TableOfContents->SetBook(m_Book); // set the TOCModel's m_EpubVersion to 3.0
     ResourcesAddedOrDeletedOrMoved(); // Change the main window's title to show 3.0 version
     m_BookBrowser->Refresh();
+}
+
+bool MainWindow::NormalizeEpubStructure()
+{
+    SaveTabData();
+
+    QMessageBox::StandardButton button_pressed;
+    button_pressed = Utility::warning(
+        this,
+        tr("Sigil-Enhanced"),
+        tr("Normalize this EPUB structure?\n\n"
+           "This will repair OPF manifest issues, correct internal link path casing, "
+           "and move resources to Sigil's standard folder layout."),
+        QMessageBox::Ok | QMessageBox::Cancel);
+    if (button_pressed != QMessageBox::Ok) {
+        return false;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    if (!CanStandardizeEpubLayout(tr("Normalize EPUB structure"))) {
+        QApplication::restoreOverrideCursor();
+        return false;
+    }
+
+    BuiltinPlugins::EpubStructureNormalizer normalizer(m_Book.data());
+    BuiltinPlugins::EpubStructureNormalizer::Result result = normalizer.normalize();
+    QHash<Resource*, QString> paths_before_layout = CaptureResourcePaths(m_Book.data());
+    bool layout_modified = ApplyStandardEpubLayout();
+    result.validationResults = RebaseValidationResultPaths(
+        result.validationResults,
+        BuildResourcePathMap(m_Book.data(), paths_before_layout));
+    QApplication::restoreOverrideCursor();
+
+    if (result.bookBrowserRefreshRequired && !layout_modified) {
+        m_BookBrowser->Refresh();
+    }
+    if (result.modified && !layout_modified) {
+        m_Book->SetModified();
+    }
+
+    bool modified = result.modified || layout_modified;
+    m_ValidationResultsView->LoadResults(result.validationResults);
+    ShowMessageOnStatusBar(modified ?
+                           tr("EPUB structure normalization completed.") :
+                           tr("No EPUB structure changes needed."));
+    return true;
 }
 
 //modified: insertFileToEditor

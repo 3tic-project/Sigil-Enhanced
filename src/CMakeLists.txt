@@ -50,6 +50,11 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/XhtmlDoc.h
     )
 
+set( BUILTIN_PLUGIN_FILES
+    BuiltinPlugins/EpubStructureNormalizer.cpp
+    BuiltinPlugins/EpubStructureNormalizer.h
+    )
+
 set( RESOURCE_OBJECT_FILES
     ResourceObjects/Resource.cpp
     ResourceObjects/Resource.h

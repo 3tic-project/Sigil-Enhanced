@@ -409,6 +409,7 @@
     <addaction name="menuEPUB3Tools"/>
     <addaction name="actionWellFormedCheckEpub"/>
 	<addaction name="actionNormalizedOPF"/>
+    <addaction name="actionNormalizeEpubStructure"/>
     <addaction name="actionValidateStylesheetsWithW3C"/>
     <addaction name="actionReports"/>
     <addaction name="separator"/>
@@ -1926,6 +1927,14 @@
     </property>
     <property name="toolTip">
 	    <string>Well formed check and normalized the OPF.</string>
+    </property>
+  </action>
+  <action name="actionNormalizeEpubStructure">
+    <property name="text">
+      <string>Normalize EPUB Structure...</string>
+    </property>
+    <property name="toolTip">
+      <string>Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil's standard folder layout</string>
     </property>
   </action>
   <action name="actionWellFormedCheckEpub">

@@ -350,6 +350,7 @@ void AutomateEditor::loadToolElements()
          "GenerateTOC" << "GenerateTOC" << tr("Generate TOC from Heading Tags.") <<
          "MendPrettifyHTML" << "MendPrettifyHTML" << tr("Mend and Prettify all XHtml files.") <<
          "MendHTML" << "MendHTML"  << tr("Mend All XHtml files.") <<
+         "NormalizeEpubStructure" << "NormalizeEpubStructure" << tr("Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil's standard folder layout.") <<
          "OnFailedRunSavedSearchReplaceAll" << "OnFailedRunSavedSearchReplaceAll" << tr("If previous search failed, run the named Saved Search.") <<
          "OnSuccessRunSavedSearchReplaceAll" << "OnSuccessRunSavedSearchReplaceAll" << tr("If previous search had success, run the named Saved Search.") <<
          "ReformatCSSMultipleLines" << "ReformatCSSMultipleLines" << tr("Reformat All CSS to Multiple Lines format.") <<

@@ -229,6 +229,7 @@ static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "GenerateTOC" <<
     "MendPrettifyHTML" <<
     "MendHTML" <<
+    "NormalizeEpubStructure" <<
     "OnFailedRunSavedSearchReplaceAll" <<
     "OnSuccessRunSavedSearchReplaceAll" <<
     "ReformatCSSMultipleLines" <<
@@ -451,6 +452,7 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "WellFormedCheckEpub")        success = WellFormedCheckEpub();
             else if (cmd == "MendPrettifyHTML")           success = MendPrettifyHTML();
             else if (cmd == "MendHTML")                   success = MendHTML();
+            else if (cmd == "NormalizeEpubStructure")     success = NormalizeEpubStructure();
             else if (cmd == "ValidateStylesheetsWithW3C") success = ValidateStylesheetsWithW3C();
             else if (cmd == "RepoCommit")                 success = RepoCommit();
             else if (cmd == "DeleteUnusedMedia")          success = DeleteUnusedMedia(true);
@@ -842,37 +844,50 @@ bool MainWindow::StandardizeEpub()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
-    // perform well-formed check on all the html resources
+    if (!CanStandardizeEpubLayout(tr("Restructure"))) {
+        QApplication::restoreOverrideCursor();
+        return false;
+    }
+
+    bool changed = ApplyStandardEpubLayout();
+    QApplication::restoreOverrideCursor();
+
+    ShowMessageOnStatusBar(changed ? tr("Restructure completed.") : tr("No restructure changes needed."));
+    return true;
+}
+
+bool MainWindow::CanStandardizeEpubLayout(const QString& action_name)
+{
     QList<HTMLResource *> htmlresources = m_Book->GetHTMLResources();
     foreach (HTMLResource * hresource, htmlresources) {
         if (!hresource->FileIsWellFormed()) {
             Utility::warning(this, APP_DISPLAY_NAME,
-                                 tr("Restructure cancelled: %1, XML not well formed.").arg(hresource->ShortPathName()));
-            QApplication::restoreOverrideCursor();
+                                 tr("%1 cancelled: %2, XML not well formed.").arg(action_name, hresource->ShortPathName()));
             return false;
         }
     }
-    // make sure opf is in good shape as well
+
     OPFResource* opfresource = m_Book->GetOPF();
     if (!opfresource->FileIsWellFormed()) {
         Utility::warning(this, APP_DISPLAY_NAME,
-                             tr("Restructure cancelled: %1, XML not well formed.").arg(opfresource->ShortPathName()));
-        QApplication::restoreOverrideCursor();
+                             tr("%1 cancelled: %2, XML not well formed.").arg(action_name, opfresource->ShortPathName()));
         return false;
     }
-    // ditto for ncx if one exists
+
     NCXResource* ncxresource = m_Book->GetNCX();
     if (ncxresource && !ncxresource->FileIsWellFormed()) {
         Utility::warning(this, APP_DISPLAY_NAME,
-                             tr("Restructure cancelled: %1, XML not well formed.").arg(ncxresource->ShortPathName()));
-        QApplication::restoreOverrideCursor();
+                             tr("%1 cancelled: %2, XML not well formed.").arg(action_name, ncxresource->ShortPathName()));
         return false;
     }
-    // we really should parse validate each css file here but
-    // since we update css files using regular expressions, the full
-    // parseability is really not critical
 
-    // first standardize the opf and ncx names
+    return true;
+}
+
+bool MainWindow::ApplyStandardEpubLayout()
+{
+    bool changed = false;
+
     QList<Resource*> resources;
     QStringList newfilenames;
     QString opfname = m_Book->GetOPF()->Filename();
@@ -886,12 +901,18 @@ bool MainWindow::StandardizeEpub()
         newfilenames << "toc.ncx";
     }
     if (!newfilenames.isEmpty()) {
+        QStringList oldbookpaths;
+        foreach(Resource* resource, resources) {
+            oldbookpaths << resource->GetRelativePath();
+        }
         m_BookBrowser->RenameResourceList(resources, newfilenames);
+        for (int i = 0; i < resources.count(); i++) {
+            changed = (resources.at(i)->GetRelativePath() != oldbookpaths.at(i)) || changed;
+        }
     }
-    // handle any other name conflicts
-    FixDuplicateFilenames();
 
-    // handle case insensitive filesystems and clashing directory names
+    changed = FixDuplicateFilenames() || changed;
+
     bool fs_case_sensitive = false;
     QString mainfolder = m_Book->GetFolderKeeper()->GetFullPathToMainFolder();
     QString apath = mainfolder + "/oebps/images";
@@ -913,15 +934,14 @@ bool MainWindow::StandardizeEpub()
             bpath = mainfolder + "/" + folderpath;
             if (QFileInfo(apath).exists() && QFileInfo(apath).isDir()) {
                 bool result = mf.rename(folderpath.toLower(), folderpath);
+                changed = result || changed;
                 DBG qDebug() << "rename directory: " << folderpath << result;
             }
         }
     }
 
-    // finally move all content to their standard folders if need be
-    MoveContentFilesToStdFolders();
+    changed = MoveContentFilesToStdFolders() || changed;
 
-    // update what is needed
     m_Book->GetFolderKeeper()->updateShortPathNames();
     QList<Resource*> allresources = m_Book->GetFolderKeeper()->GetResourceList();
     QStringList bookpaths;
@@ -932,18 +952,11 @@ bool MainWindow::StandardizeEpub()
     }
     m_Book->GetFolderKeeper()->SetGroupFolders(bookpaths, mtypes);
     m_BookBrowser->Refresh();
-    m_Book->SetModified();
-    QApplication::restoreOverrideCursor();
-
-    // Update the titlebar
-    QString epubversion = m_Book->GetConstOPF()->GetEpubVersion();
-    if (m_Book->GetFolderKeeper()->EpubInSigilStandardForm()) {
-        setWindowTitle(tr("%1[*] - epub%2 - %3").arg(m_CurrentFileName).arg(epubversion).arg(APP_STD_DISPLAY_NAME));
-    } else {
-        setWindowTitle(tr("%1[*] - epub%2 - %3").arg(m_CurrentFileName).arg(epubversion).arg(APP_DISPLAY_NAME));
+    if (changed) {
+        m_Book->SetModified();
     }
-    ShowMessageOnStatusBar(tr("Restructure completed."));
-    return true;
+    ResourcesAddedOrDeletedOrMoved();
+    return changed;
 }
 
 
@@ -1061,9 +1074,10 @@ bool MainWindow::RebaseManifestIDs()
 }
 
 
-void MainWindow::FixDuplicateFilenames()
+bool MainWindow::FixDuplicateFilenames()
 {
-  QStringList bookpaths = m_Book->GetFolderKeeper()->GetAllBookPaths();
+    bool changed = false;
+    QStringList bookpaths = m_Book->GetFolderKeeper()->GetAllBookPaths();
     QStringList problem_bookpaths;
     QSet<QString>UsedSet;
 
@@ -1080,17 +1094,20 @@ void MainWindow::FixDuplicateFilenames()
         Resource * resource = m_Book->GetFolderKeeper()->GetResourceByBookPath(bkpath);
         QList<Resource*> resources = QList<Resource*>() << resource;
         QStringList newfilenames = QStringList() << newname;
+        QString oldbookpath = resource->GetRelativePath();
         m_BookBrowser->RenameResourceList(resources, newfilenames);
+        changed = (resource->GetRelativePath() != oldbookpath) || changed;
     }
-    return;
+    return changed;
 }
 
 
-void MainWindow::MoveContentFilesToStdFolders()
+bool MainWindow::MoveContentFilesToStdFolders()
 {
     QList<Resource*> resources = m_Book->GetFolderKeeper()->GetResourceList();
     QList<Resource*> resources_to_move;
     QStringList newbookpaths;
+    QStringList oldbookpaths;
     QString MainFolder = m_Book->GetFolderKeeper()->GetFullPathToMainFolder();
     QDir epub_root(MainFolder);
     foreach(Resource* resource, resources) {
@@ -1109,11 +1126,17 @@ void MainWindow::MoveContentFilesToStdFolders()
             }
             resources_to_move << resource;
             newbookpaths << newbookpath;
+            oldbookpaths << resource->GetRelativePath();
         }
     }
+    bool changed = false;
     if (!newbookpaths.isEmpty()) {
         m_BookBrowser->MoveResourceList(resources_to_move, newbookpaths);
+        for (int i = 0; i < resources_to_move.count(); i++) {
+            changed = (resources_to_move.at(i)->GetRelativePath() != oldbookpaths.at(i)) || changed;
+        }
     }
+    return changed;
 }
 
 bool MainWindow::RepoCommit()
@@ -6836,6 +6859,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionEpub3To2, "MainWindow.Epub3To2"); // modified: Epub3ToEpub2
     sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
     sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
+    sm->registerAction(this, ui.actionNormalizeEpubStructure, "MainWindow.NormalizeEpubStructure"); // modified: Builtin native plugin
     sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     sm->registerAction(this, ui.actionSplitTagOrAddBreak, "MainWindow.SplitTagOrAddBreak"); // modified: SplitTagOrAddBreak
@@ -7211,6 +7235,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionEpub3To2, SIGNAL(triggered()), this, SLOT(Epub3ToEpub2())); // modified: Epub3ToEpub2
     connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
     connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
+    connect(ui.actionNormalizeEpubStructure, SIGNAL(triggered()), this, SLOT(NormalizeEpubStructure())); // modified: Builtin native plugin
     connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
     //modified: FindReplacePlus
     ConnectSignalsToSearchEditor();
