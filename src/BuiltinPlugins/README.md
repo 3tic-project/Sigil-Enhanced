@@ -111,6 +111,8 @@ Phase 2:
 - 对纯 fragment 和跨文件 fragment 执行基础 id 存在性检查。
 - 检查 XHTML/XML/SVG/NCX 中重复 `id` / `xml:id`。
 - 检查内容文档中明确元素的资源类型是否匹配，例如 `img/src` 指向图片、`audio/src` 指向音频、`video/src` 指向视频、`video/poster` 指向图片、`link rel="stylesheet"` 指向 CSS。
+- 检查非 SVG 图片引用是否带 fragment，并提示该 fragment 通常无法被阅读器定位。
+- 检查 SVG `<use>` 的 `href` / `xlink:href` 是否指向具体 fragment。
 - XHTML/HTML、CSS、NCX 的链接检查结果会写入行号和字符 offset，Validation Results 双击可跳转到对应位置。
 - 对能唯一匹配实际资源、但大小写不一致的链接，生成 `旧大小写路径 -> 实际路径` 映射。
 - 使用现有 `UniversalUpdates` 执行最终更新，避免直接正则替换源文件。
@@ -199,6 +201,7 @@ struct Options {
 - 找不到目标时仅报告，不误改。
 - CSS 无效链接默认弱提示，避免备用 font-face 等场景产生过多噪音。
 - 对 `img`、`audio`、`video`、`source type=...`、`track`、`link rel=stylesheet/icon`、`iframe`、`object`、`embed` 等明确场景做资源类型匹配提示。
+- 对 `img`/`image`/`altimg` 指向非 SVG 图片 fragment、SVG `use` 未指向 fragment 等场景给出提示。
 
 后续优化点:
 
@@ -249,6 +252,8 @@ Phase 2 需要覆盖:
 - CSS 注释或普通字符串中放置 `url(...)`，确认不会触发链接检查。
 - `img/src` 指向 CSS、`audio/src` 指向图片、`video/poster` 指向视频等类型错误能给出 warning 并跳转。
 - `link rel="stylesheet"` 指向非 CSS、`track/src` 指向非 `text/vtt`/TTML 时能给出 warning。
+- `img/src` 或 SVG `image href` 指向 JPG/PNG/GIF 且带 fragment 时能给出 warning；指向 SVG fragment 时不额外报警。
+- SVG `use href="icons.svg"` 未带 fragment 时能给出 warning；`use href="icons.svg#id"` 不报警。
 - 大小写冲突不自动修复。
 - 找不到目标的链接只报告。
 

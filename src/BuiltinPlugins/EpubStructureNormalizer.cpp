@@ -730,6 +730,63 @@ static void validateElementResourceReference(EpubStructureNormalizer::Result& re
                              media_type, expectationDescription(expectation)));
 }
 
+static void validateFragmentReferenceSemantics(EpubStructureNormalizer::Result& result,
+                                               LinkScanContext& context,
+                                               const QString& source_bookpath,
+                                               const QString& element_name,
+                                               const QString& attr_name,
+                                               const QString& raw_link,
+                                               const SourceLocation& location)
+{
+    const QString element = localName(element_name);
+    const QString attr = localName(attr_name);
+    const QString link = raw_link.trimmed();
+    if (link.isEmpty() || link.startsWith("//") ||
+        link.startsWith("file:", Qt::CaseInsensitive)) {
+        return;
+    }
+
+    QUrl url(link);
+    if (!url.isRelative() || url.hasQuery()) {
+        return;
+    }
+
+    const QString fragment = url.fragment(QUrl::FullyDecoded);
+    if (element == QLatin1String("use") && (attr == QLatin1String("href"))) {
+        if (fragment.isEmpty()) {
+            addUniqueResult(result, context, ValidationResult::ResType_Warn, source_bookpath, location,
+                            QStringLiteral("SVG检查：<use> 的 href【%1】没有指向具体 fragment，建议引用目标 SVG 元素 ID。")
+                                .arg(raw_link));
+        }
+        return;
+    }
+
+    if (fragment.isEmpty()) {
+        return;
+    }
+
+    const bool image_reference =
+        (element == QLatin1String("img") && attr == QLatin1String("src")) ||
+        (element == QLatin1String("image") && attr == QLatin1String("href")) ||
+        attr == QLatin1String("altimg");
+    if (!image_reference) {
+        return;
+    }
+
+    const QString actual_bookpath = actualBookPathForLocalLink(context, raw_link, source_bookpath);
+    if (actual_bookpath.isEmpty() || !context.mediaTypesByBookPath.contains(actual_bookpath)) {
+        return;
+    }
+
+    const QString media_type = mediaTypeBase(context.mediaTypesByBookPath.value(actual_bookpath));
+    if (media_type.startsWith(QLatin1String("image/")) &&
+        media_type != QLatin1String("image/svg+xml")) {
+        addUniqueResult(result, context, ValidationResult::ResType_Warn, source_bookpath, location,
+                        QStringLiteral("SVG检查：图片引用【%1】带有 fragment，但目标【%2】不是 SVG 图片，阅读器通常无法定位该 fragment。")
+                            .arg(raw_link, actual_bookpath));
+    }
+}
+
 static void scanElementAttributes(EpubStructureNormalizer* normalizer,
                                   EpubStructureNormalizer::Result& result,
                                   LinkScanContext& context,
@@ -768,6 +825,8 @@ static void scanElementAttributes(EpubStructureNormalizer* normalizer,
                         it.value().second, true);
             validateElementResourceReference(result, context, source_bookpath, element_name,
                                              it.key(), it.value().first, it.value().second, attrs);
+            validateFragmentReferenceSemantics(result, context, source_bookpath, element_name,
+                                               it.key(), it.value().first, it.value().second);
         }
     }
 }
