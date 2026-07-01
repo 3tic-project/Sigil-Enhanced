@@ -82,6 +82,21 @@ struct ManifestHrefInfo {
     bool isFileUrl = false;
 };
 
+struct OpfTagLocation {
+    SourceLocation tagLocation;
+    QHash<QString, SourceLocation> attrLocations;
+    QHash<QString, QString> attrs;
+};
+
+struct OpfSourceIndex {
+    OpfTagLocation packageTag;
+    OpfTagLocation metadataTag;
+    QList<OpfTagLocation> metadataMetaTags;
+    QList<OpfTagLocation> manifestItems;
+    QList<OpfTagLocation> spineItemrefs;
+    QList<OpfTagLocation> guideReferences;
+};
+
 static SourceLocation sourceLocationForOffset(const QString& source, int offset)
 {
     SourceLocation location;
@@ -137,6 +152,151 @@ static void addLocatedResult(EpubStructureNormalizer::Result& result,
                              const QString& message)
 {
     result.validationResults << ValidationResult(type, bookpath, location.line, location.offset, message);
+}
+
+static QPair<int, int> tagSectionRange(const QString& source, const QString& tag_name)
+{
+    QRegularExpression begin_re(QStringLiteral("<\\s*(?:[A-Za-z_][\\w.-]*:)?%1\\b[^>]*>")
+                                    .arg(QRegularExpression::escape(tag_name)),
+                                QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatch begin_match = begin_re.match(source);
+    if (!begin_match.hasMatch()) {
+        return qMakePair(-1, -1);
+    }
+
+    QRegularExpression end_re(QStringLiteral("</\\s*(?:[A-Za-z_][\\w.-]*:)?%1\\s*>")
+                                  .arg(QRegularExpression::escape(tag_name)),
+                              QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch end_match = end_re.match(source, begin_match.capturedEnd(0));
+    const int end = end_match.hasMatch() ? end_match.capturedEnd(0) : begin_match.capturedEnd(0);
+    return qMakePair(begin_match.capturedStart(0), end);
+}
+
+static OpfTagLocation makeOpfTagLocation(const QString& source,
+                                         const QRegularExpressionMatch& match)
+{
+    OpfTagLocation location;
+    location.tagLocation = sourceLocationForOffset(source, match.capturedStart(0));
+
+    const QString tag_text = match.captured(0);
+    const int tag_offset = match.capturedStart(0);
+    QRegularExpression attr_re(QStringLiteral("([A-Za-z_:][A-Za-z0-9_.:-]*)\\s*=\\s*([\"'])(.*?)\\2"),
+                               QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatchIterator it = attr_re.globalMatch(tag_text);
+    while (it.hasNext()) {
+        QRegularExpressionMatch attr_match = it.next();
+        const QString name = attr_match.captured(1);
+        location.attrs[name] = attr_match.captured(3);
+        location.attrLocations[name] = sourceLocationForOffset(source, tag_offset + attr_match.capturedStart(3));
+    }
+
+    return location;
+}
+
+static QList<OpfTagLocation> scanOpfTags(const QString& source,
+                                         const QString& tag_name,
+                                         int range_start,
+                                         int range_end)
+{
+    QList<OpfTagLocation> tags;
+    if (range_start < 0 || range_end <= range_start) {
+        return tags;
+    }
+
+    QRegularExpression tag_re(QStringLiteral("<\\s*(?:[A-Za-z_][\\w.-]*:)?%1\\b[^>]*>")
+                                  .arg(QRegularExpression::escape(tag_name)),
+                              QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatchIterator it = tag_re.globalMatch(source.mid(range_start, range_end - range_start));
+    while (it.hasNext()) {
+        QRegularExpressionMatch local_match = it.next();
+        QRegularExpressionMatch match = tag_re.match(source, range_start + local_match.capturedStart(0));
+        if (match.hasMatch() && match.capturedStart(0) < range_end) {
+            tags << makeOpfTagLocation(source, match);
+        }
+    }
+    return tags;
+}
+
+static OpfTagLocation firstOpfTag(const QString& source, const QString& tag_name)
+{
+    QRegularExpression tag_re(QStringLiteral("<\\s*(?:[A-Za-z_][\\w.-]*:)?%1\\b[^>]*>")
+                                  .arg(QRegularExpression::escape(tag_name)),
+                              QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatch match = tag_re.match(source);
+    if (!match.hasMatch()) {
+        return OpfTagLocation();
+    }
+    return makeOpfTagLocation(source, match);
+}
+
+static OpfSourceIndex buildOpfSourceIndex(const QString& source)
+{
+    OpfSourceIndex index;
+    index.packageTag = firstOpfTag(source, QStringLiteral("package"));
+    index.metadataTag = firstOpfTag(source, QStringLiteral("metadata"));
+
+    const QPair<int, int> metadata_range = tagSectionRange(source, QStringLiteral("metadata"));
+    const QPair<int, int> manifest_range = tagSectionRange(source, QStringLiteral("manifest"));
+    const QPair<int, int> spine_range = tagSectionRange(source, QStringLiteral("spine"));
+    const QPair<int, int> guide_range = tagSectionRange(source, QStringLiteral("guide"));
+
+    index.metadataMetaTags = scanOpfTags(source, QStringLiteral("meta"), metadata_range.first, metadata_range.second);
+    index.manifestItems = scanOpfTags(source, QStringLiteral("item"), manifest_range.first, manifest_range.second);
+    index.spineItemrefs = scanOpfTags(source, QStringLiteral("itemref"), spine_range.first, spine_range.second);
+    index.guideReferences = scanOpfTags(source, QStringLiteral("reference"), guide_range.first, guide_range.second);
+    return index;
+}
+
+static SourceLocation opfAttrLocation(const OpfTagLocation& tag, const QString& attr_name)
+{
+    return tag.attrLocations.value(attr_name, tag.tagLocation);
+}
+
+static SourceLocation opfManifestLocation(const OpfSourceIndex& index, int manifest_index, const QString& attr_name)
+{
+    if (manifest_index < 0 || manifest_index >= index.manifestItems.count()) {
+        return SourceLocation();
+    }
+    return opfAttrLocation(index.manifestItems.at(manifest_index), attr_name);
+}
+
+static SourceLocation opfSpineLocation(const OpfSourceIndex& index, int spine_index, const QString& attr_name)
+{
+    if (spine_index < 0 || spine_index >= index.spineItemrefs.count()) {
+        return SourceLocation();
+    }
+    return opfAttrLocation(index.spineItemrefs.at(spine_index), attr_name);
+}
+
+static SourceLocation opfGuideLocation(const OpfSourceIndex& index, int guide_index, const QString& attr_name)
+{
+    if (guide_index < 0 || guide_index >= index.guideReferences.count()) {
+        return SourceLocation();
+    }
+    return opfAttrLocation(index.guideReferences.at(guide_index), attr_name);
+}
+
+static SourceLocation opfManifestLocationById(const OpfSourceIndex& index,
+                                              const QString& id,
+                                              const QString& attr_name)
+{
+    for (const OpfTagLocation& item : index.manifestItems) {
+        if (item.attrs.value(QStringLiteral("id")) == id) {
+            return opfAttrLocation(item, attr_name);
+        }
+    }
+    return SourceLocation();
+}
+
+static SourceLocation opfCoverMetaLocation(const OpfSourceIndex& index, const QString& cover_idref)
+{
+    for (const OpfTagLocation& meta : index.metadataMetaTags) {
+        if (meta.attrs.value(QStringLiteral("name")) == QLatin1String("cover") &&
+            (cover_idref.isEmpty() || meta.attrs.value(QStringLiteral("content")) == cover_idref)) {
+            return opfAttrLocation(meta, QStringLiteral("content"));
+        }
+    }
+    return SourceLocation();
 }
 
 static bool bookPathEscapesRoot(const QString& href_path, const QString& source_bookpath)
@@ -1012,35 +1172,38 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
         opfpath = opf->GetRelativePath();
     }
 
+    const QString opf_source = opf->GetText();
+    const OpfSourceIndex opf_index = buildOpfSourceIndex(opf_source);
+
     OPFParser p;
-    p.parse(opf->GetText());
+    p.parse(opf_source);
 
     const ValidationResult::ResType error_type = ValidationResult::ResType_Error;
     const ValidationResult::ResType warning_type = ValidationResult::ResType_Warn;
     bool opf_modified = false;
 
     if (!p.m_package.m_atts.contains("xmlns")) {
-        addResult(result, error_type, opfpath,
-                  QStringLiteral("OPF规范：找不到在package节点的xmlns属性，建议以\"http://www.idpf.org/2007/opf\"值补上该属性。"));
+        addLocatedResult(result, error_type, opfpath, opf_index.packageTag.tagLocation,
+                         QStringLiteral("OPF规范：找不到在package节点的xmlns属性，建议以\"http://www.idpf.org/2007/opf\"值补上该属性。"));
     } else if (p.m_package.m_atts["xmlns"] != "http://www.idpf.org/2007/opf") {
-        addResult(result, error_type, opfpath,
-                  QStringLiteral("OPF规范：不规范的xmlns属性值【%1】,建议改为\"http://www.idpf.org/2007/opf\"").arg(p.m_package.m_atts["xmlns"]));
+        addLocatedResult(result, error_type, opfpath, opfAttrLocation(opf_index.packageTag, QStringLiteral("xmlns")),
+                         QStringLiteral("OPF规范：不规范的xmlns属性值【%1】,建议改为\"http://www.idpf.org/2007/opf\"").arg(p.m_package.m_atts["xmlns"]));
     }
 
     if (!p.m_metans.m_atts.contains("xmlns:dc")) {
-        addResult(result, error_type, opfpath,
-                  QStringLiteral("OPF规范：找不到在metadata节点的xmlns:dc属性，,建议以\"http://purl.org/dc/elements/1.1/\"值补上该属性。"));
+        addLocatedResult(result, error_type, opfpath, opf_index.metadataTag.tagLocation,
+                         QStringLiteral("OPF规范：找不到在metadata节点的xmlns:dc属性，,建议以\"http://purl.org/dc/elements/1.1/\"值补上该属性。"));
     } else if (p.m_metans.m_atts["xmlns:dc"] != "http://purl.org/dc/elements/1.1/") {
-        addResult(result, error_type, opfpath,
-                  QStringLiteral("OPF规范：不规范的xmlns:dc属性值【%1】，建议改为\"http://purl.org/dc/elements/1.1/\"").arg(p.m_metans.m_atts["xmlns:dc"]));
+        addLocatedResult(result, error_type, opfpath, opfAttrLocation(opf_index.metadataTag, QStringLiteral("xmlns:dc")),
+                         QStringLiteral("OPF规范：不规范的xmlns:dc属性值【%1】，建议改为\"http://purl.org/dc/elements/1.1/\"").arg(p.m_metans.m_atts["xmlns:dc"]));
     }
 
     if (!p.m_metans.m_atts.contains("xmlns:opf")) {
-        addResult(result, error_type, opfpath,
-                  QStringLiteral("OPF规范：找不到在metadata节点的xmlns:opf属性，建议以\"http://www.idpf.org/2007/opf\"值补上该属性。"));
+        addLocatedResult(result, error_type, opfpath, opf_index.metadataTag.tagLocation,
+                         QStringLiteral("OPF规范：找不到在metadata节点的xmlns:opf属性，建议以\"http://www.idpf.org/2007/opf\"值补上该属性。"));
     } else if (p.m_metans.m_atts["xmlns:opf"] != "http://www.idpf.org/2007/opf") {
-        addResult(result, error_type, opfpath,
-                  QStringLiteral("OPF规范：不规范的xmlns:opf属性值【%1】，建议改为\"http://www.idpf.org/2007/opf\"").arg(p.m_metans.m_atts["xmlns:opf"]));
+        addLocatedResult(result, error_type, opfpath, opfAttrLocation(opf_index.metadataTag, QStringLiteral("xmlns:opf")),
+                         QStringLiteral("OPF规范：不规范的xmlns:opf属性值【%1】，建议改为\"http://www.idpf.org/2007/opf\"").arg(p.m_metans.m_atts["xmlns:opf"]));
     }
 
     QString tempfolder = m_Book->GetFolderKeeper()->GetFullPathToMainFolder();
@@ -1101,71 +1264,71 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
         QString id = me.m_id;
 
         if (href_info.key != id_to_manifest_key[id]) {
-            addResult(result, error_type, opfpath,
-                      QStringLiteral("OPF规范：非唯一ID：在manifest项发现非唯一ID【%1】，已进行删除对应项的处理。").arg(id));
+            addLocatedResult(result, error_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("id")),
+                             QStringLiteral("OPF规范：非唯一ID：在manifest项发现非唯一ID【%1】，已进行删除对应项的处理。").arg(id));
             opf_modified = true;
             continue;
         }
 
         if (id != manifest_key_to_id[href_info.key]) {
-            addResult(result, error_type, opfpath,
-                      QStringLiteral("OPF规范：多余ID：在manifest项发现多余ID【%1】，已进行删除对应项的处理。").arg(id));
+            addLocatedResult(result, error_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("id")),
+                             QStringLiteral("OPF规范：多余ID：在manifest项发现多余ID【%1】，已进行删除对应项的处理。").arg(id));
             opf_modified = true;
             continue;
         }
 
         if (!href_info.isLocal) {
             if (href_info.isFileUrl) {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：manifest href【%1】使用 file: URL，建议改为书内相对路径或移除。").arg(me.m_href));
+                addLocatedResult(result, warning_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("href")),
+                                 QStringLiteral("EPUBCheck：manifest href【%1】使用 file: URL，建议改为书内相对路径或移除。").arg(me.m_href));
             } else if (href_info.isDataUrl) {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：manifest href【%1】使用 data: URL，EPUB3 中不允许作为 Manifest 资源。").arg(me.m_href.left(64)));
+                addLocatedResult(result, warning_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("href")),
+                                 QStringLiteral("EPUBCheck：manifest href【%1】使用 data: URL，EPUB3 中不允许作为 Manifest 资源。").arg(me.m_href.left(64)));
             } else if (p.m_package.m_version.startsWith("3") && !isRemoteManifestMediaTypeAllowed(me.m_mtype)) {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：EPUB3 Manifest 远程资源【%1】的 media-type【%2】通常只允许音频、视频或字体。")
-                              .arg(me.m_href, me.m_mtype));
+                addLocatedResult(result, warning_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("media-type")),
+                                 QStringLiteral("EPUBCheck：EPUB3 Manifest 远程资源【%1】的 media-type【%2】通常只允许音频、视频或字体。")
+                                     .arg(me.m_href, me.m_mtype));
             } else if (!p.m_package.m_version.startsWith("3")) {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：Manifest href【%1】是远程资源，EPUB2 通常要求 Manifest 资源为包内文件。").arg(me.m_href));
+                addLocatedResult(result, warning_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("href")),
+                                 QStringLiteral("EPUBCheck：Manifest href【%1】是远程资源，EPUB2 通常要求 Manifest 资源为包内文件。").arg(me.m_href));
             }
             new_manifest.append(me);
             continue;
         }
 
         if (href_info.hasQuery || href_info.hasFragment) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：manifest href【%1】包含 query 或 fragment，已按资源路径规范化。").arg(me.m_href));
+            addLocatedResult(result, warning_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("href")),
+                             QStringLiteral("EPUBCheck：manifest href【%1】包含 query 或 fragment，已按资源路径规范化。").arg(me.m_href));
             opf_modified = true;
         }
 
         if (!lower_bkpath_to_original_bkpath.contains(lower_bkpath)) {
-            addResult(result, error_type, opfpath,
-                      QStringLiteral("OPF规范：无效OPF超链接：在manifest项发现无效href【%1】，已进行删除对应项的处理。").arg(me.m_href));
+            addLocatedResult(result, error_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("href")),
+                             QStringLiteral("OPF规范：无效OPF超链接：在manifest项发现无效href【%1】，已进行删除对应项的处理。").arg(me.m_href));
             opf_modified = true;
             continue;
         }
 
         QString original_bkpath = lower_bkpath_to_original_bkpath[lower_bkpath];
         if (original_bkpath == opf->GetRelativePath()) {
-            addResult(result, error_type, opfpath,
-                      QStringLiteral("EPUBCheck：manifest 不应登记 OPF package document 自身，已删除 href【%1】。").arg(me.m_href));
+            addLocatedResult(result, error_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("href")),
+                             QStringLiteral("EPUBCheck：manifest 不应登记 OPF package document 自身，已删除 href【%1】。").arg(me.m_href));
             opf_modified = true;
             continue;
         }
 
         if (bkpath != original_bkpath) {
-            addResult(result, error_type, opfpath,
-                      QStringLiteral("OPF规范：大小写不一致：发现 OPF 超链接【%1】与实际路径大小写不一致，已自动校正。").arg(me.m_href));
+            addLocatedResult(result, error_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("href")),
+                             QStringLiteral("OPF规范：大小写不一致：发现 OPF 超链接【%1】与实际路径大小写不一致，已自动校正。").arg(me.m_href));
             opf_modified = true;
         }
         me.m_href = manifestHrefForBookPath(original_bkpath, opf->GetFolder());
 
         QString expected_media_type = mediaTypeForBookPath(original_bkpath, tempfolder);
         if (!expected_media_type.isEmpty() && me.m_mtype != expected_media_type) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：manifest 项【%1】的 media-type【%2】与文件类型不一致，已修正为【%3】。")
-                          .arg(me.m_href, me.m_mtype, expected_media_type));
+            addLocatedResult(result, warning_type, opfpath, opfManifestLocation(opf_index, i, QStringLiteral("media-type")),
+                             QStringLiteral("EPUBCheck：manifest 项【%1】的 media-type【%2】与文件类型不一致，已修正为【%3】。")
+                                 .arg(me.m_href, me.m_mtype, expected_media_type));
             me.m_mtype = expected_media_type;
             opf_modified = true;
         }
@@ -1254,8 +1417,9 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
 
     if (p.m_package.m_version.startsWith("3")) {
         if (nav_ids.count() > 1) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：EPUB3 Manifest 中发现多个 properties=\"nav\" 项，建议仅保留一个导航文档。"));
+            addLocatedResult(result, warning_type, opfpath,
+                             opfManifestLocationById(opf_index, nav_ids.at(1), QStringLiteral("properties")),
+                             QStringLiteral("EPUBCheck：EPUB3 Manifest 中发现多个 properties=\"nav\" 项，建议仅保留一个导航文档。"));
         } else if (nav_ids.isEmpty()) {
             QList<int> nav_candidates;
             for (int i = 0; i < new_manifest.count(); i++) {
@@ -1273,18 +1437,20 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
                 addProperty(me, "nav");
                 new_manifest[nav_candidates.first()] = me;
                 manifest_by_id[me.m_id] = me;
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：EPUB3 未标记导航文档，已为 manifest 项【%1】添加 properties=\"nav\"。").arg(me.m_id));
+                addLocatedResult(result, warning_type, opfpath,
+                                 opfManifestLocationById(opf_index, me.m_id, QStringLiteral("id")),
+                                 QStringLiteral("EPUBCheck：EPUB3 未标记导航文档，已为 manifest 项【%1】添加 properties=\"nav\"。").arg(me.m_id));
                 opf_modified = true;
             } else {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：EPUB3 Manifest 中没有唯一的 nav 导航文档，请手动确认并设置 properties=\"nav\"。"));
+                addLocatedResult(result, warning_type, opfpath, opf_index.packageTag.tagLocation,
+                                 QStringLiteral("EPUBCheck：EPUB3 Manifest 中没有唯一的 nav 导航文档，请手动确认并设置 properties=\"nav\"。"));
             }
         } else {
             ManifestEntry nav_entry = manifest_by_id.value(nav_ids.first());
             if (nav_entry.m_mtype != "application/xhtml+xml") {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：nav 导航文档【%1】的 media-type 应为 application/xhtml+xml。").arg(nav_entry.m_id));
+                addLocatedResult(result, warning_type, opfpath,
+                                 opfManifestLocationById(opf_index, nav_entry.m_id, QStringLiteral("media-type")),
+                                 QStringLiteral("EPUBCheck：nav 导航文档【%1】的 media-type 应为 application/xhtml+xml。").arg(nav_entry.m_id));
             }
         }
     }
@@ -1292,57 +1458,61 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
     for (int i = 0; i < new_manifest.count(); i++) {
         ManifestEntry me = new_manifest.at(i);
         if (hasProperty(me, "cover-image") && !isImageMediaType(me.m_mtype)) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：manifest 项【%1】声明 cover-image，但 media-type【%2】不是图片类型。")
-                          .arg(me.m_id, me.m_mtype));
+            addLocatedResult(result, warning_type, opfpath,
+                             opfManifestLocationById(opf_index, me.m_id, QStringLiteral("properties")),
+                             QStringLiteral("EPUBCheck：manifest 项【%1】声明 cover-image，但 media-type【%2】不是图片类型。")
+                                 .arg(me.m_id, me.m_mtype));
         }
         if (hasProperty(me, "nav") && me.m_mtype != "application/xhtml+xml") {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：manifest 项【%1】声明 nav，但 media-type【%2】不是 application/xhtml+xml。")
-                          .arg(me.m_id, me.m_mtype));
+            addLocatedResult(result, warning_type, opfpath,
+                             opfManifestLocationById(opf_index, me.m_id, QStringLiteral("properties")),
+                             QStringLiteral("EPUBCheck：manifest 项【%1】声明 nav，但 media-type【%2】不是 application/xhtml+xml。")
+                                 .arg(me.m_id, me.m_mtype));
         }
         if (p.m_package.m_version.startsWith("3") && me.m_id == cover_idref &&
             isImageMediaType(me.m_mtype) && !hasProperty(me, "cover-image")) {
             addProperty(me, "cover-image");
             new_manifest[i] = me;
             manifest_by_id[me.m_id] = me;
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：EPUB3 封面图片【%1】缺少 cover-image 属性，已自动补齐。").arg(me.m_id));
+            addLocatedResult(result, warning_type, opfpath,
+                             opfManifestLocationById(opf_index, me.m_id, QStringLiteral("id")),
+                             QStringLiteral("EPUBCheck：EPUB3 封面图片【%1】缺少 cover-image 属性，已自动补齐。").arg(me.m_id));
             opf_modified = true;
         }
     }
 
     if (!cover_idref.isEmpty() && !all_ids_without_duplication.contains(cover_idref)) {
-        addResult(result, warning_type, opfpath,
-                  QStringLiteral("OPF规范：无效ID引用：在meta项发现无效引用ID【%1】，建议检查metadata对应引用处并手动修改。").arg(cover_idref));
+        addLocatedResult(result, warning_type, opfpath, opfCoverMetaLocation(opf_index, cover_idref),
+                         QStringLiteral("OPF规范：无效ID引用：在meta项发现无效引用ID【%1】，建议检查metadata对应引用处并手动修改。").arg(cover_idref));
     }
 
     bool has_linear_spine_item = false;
     QSet<QString> seen_spine_ids;
-    foreach(SpineEntry se, p.m_spine) {
+    for (int i = 0; i < p.m_spine.count(); i++) {
+        SpineEntry se = p.m_spine.at(i);
         QString idref = se.m_idref;
         if (!all_ids_without_duplication.contains(idref)) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("OPF规范：无效ID引用：在spine项发现无效引用ID【%1】，建议检查spine对应引用处并手动修改。").arg(idref));
+            addLocatedResult(result, warning_type, opfpath, opfSpineLocation(opf_index, i, QStringLiteral("idref")),
+                             QStringLiteral("OPF规范：无效ID引用：在spine项发现无效引用ID【%1】，建议检查spine对应引用处并手动修改。").arg(idref));
             continue;
         }
 
         ManifestEntry spine_entry = manifest_by_id.value(idref);
         ManifestHrefInfo spine_href_info = manifestHrefInfo(spine_entry.m_href, opf->GetFolder());
         if (!spine_href_info.isLocal) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：spine 项【%1】引用远程 Manifest 资源，阅读器可能无法作为阅读顺序内容处理。").arg(idref));
+            addLocatedResult(result, warning_type, opfpath, opfSpineLocation(opf_index, i, QStringLiteral("idref")),
+                             QStringLiteral("EPUBCheck：spine 项【%1】引用远程 Manifest 资源，阅读器可能无法作为阅读顺序内容处理。").arg(idref));
         }
 
         if (!isContentDocumentMediaType(spine_entry.m_mtype, p.m_package.m_version)) {
             const QString fallback_id = spine_entry.m_atts.value("fallback", "").trimmed();
             if (fallback_id.isEmpty()) {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：spine 项【%1】的 media-type【%2】不是内容文档，且缺少 fallback。")
-                              .arg(idref, spine_entry.m_mtype));
+                addLocatedResult(result, warning_type, opfpath, opfSpineLocation(opf_index, i, QStringLiteral("idref")),
+                                 QStringLiteral("EPUBCheck：spine 项【%1】的 media-type【%2】不是内容文档，且缺少 fallback。")
+                                     .arg(idref, spine_entry.m_mtype));
             } else if (!hasContentDocumentFallback(spine_entry, manifest_by_id, p.m_package.m_version)) {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：spine 项【%1】的 fallback 链未指向可阅读内容文档。").arg(idref));
+                addLocatedResult(result, warning_type, opfpath, opfManifestLocationById(opf_index, idref, QStringLiteral("fallback")),
+                                 QStringLiteral("EPUBCheck：spine 项【%1】的 fallback 链未指向可阅读内容文档。").arg(idref));
             }
         }
 
@@ -1352,38 +1522,39 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
 
         if (p.m_package.m_version.startsWith("2")) {
             if (seen_spine_ids.contains(idref)) {
-                addResult(result, warning_type, opfpath,
-                          QStringLiteral("EPUBCheck：EPUB2 spine 中重复引用了 manifest 项【%1】。").arg(idref));
+                addLocatedResult(result, warning_type, opfpath, opfSpineLocation(opf_index, i, QStringLiteral("idref")),
+                                 QStringLiteral("EPUBCheck：EPUB2 spine 中重复引用了 manifest 项【%1】。").arg(idref));
             }
             seen_spine_ids.insert(idref);
         }
     }
 
     if (!p.m_spine.isEmpty() && !has_linear_spine_item) {
-        addResult(result, warning_type, opfpath,
-                  QStringLiteral("EPUBCheck：spine 中没有 linear=\"yes\" 的阅读顺序项目，阅读器可能无法确定主要内容。"));
+        addLocatedResult(result, warning_type, opfpath, opfSpineLocation(opf_index, 0, QStringLiteral("idref")),
+                         QStringLiteral("EPUBCheck：spine 中没有 linear=\"yes\" 的阅读顺序项目，阅读器可能无法确定主要内容。"));
     }
 
-    foreach(GuideEntry ge, p.m_guide) {
+    for (int i = 0; i < p.m_guide.count(); i++) {
+        GuideEntry ge = p.m_guide.at(i);
         QUrl guide_url(ge.m_href);
         if (!guide_url.isRelative() || guide_url.hasQuery()) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：guide 引用【%1】不是规范的书内相对链接。").arg(ge.m_href));
+            addLocatedResult(result, warning_type, opfpath, opfGuideLocation(opf_index, i, QStringLiteral("href")),
+                             QStringLiteral("EPUBCheck：guide 引用【%1】不是规范的书内相对链接。").arg(ge.m_href));
             continue;
         }
 
         const QString guide_bkpath = Utility::buildBookPath(Utility::URLDecodePath(guide_url.path()), opf->GetFolder());
         if (!manifest_by_lower_bkpath.contains(guide_bkpath.toLower())) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：guide 引用【%1】没有对应的 Manifest 内容项。").arg(ge.m_href));
+            addLocatedResult(result, warning_type, opfpath, opfGuideLocation(opf_index, i, QStringLiteral("href")),
+                             QStringLiteral("EPUBCheck：guide 引用【%1】没有对应的 Manifest 内容项。").arg(ge.m_href));
             continue;
         }
 
         ManifestEntry guide_entry = manifest_by_lower_bkpath.value(guide_bkpath.toLower());
         if (!isContentDocumentMediaType(guide_entry.m_mtype, p.m_package.m_version)) {
-            addResult(result, warning_type, opfpath,
-                      QStringLiteral("EPUBCheck：guide 引用【%1】指向的 media-type【%2】不是内容文档。")
-                          .arg(ge.m_href, guide_entry.m_mtype));
+            addLocatedResult(result, warning_type, opfpath, opfGuideLocation(opf_index, i, QStringLiteral("href")),
+                             QStringLiteral("EPUBCheck：guide 引用【%1】指向的 media-type【%2】不是内容文档。")
+                                 .arg(ge.m_href, guide_entry.m_mtype));
         }
     }
 

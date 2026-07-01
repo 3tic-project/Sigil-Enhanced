@@ -93,6 +93,7 @@ Phase 1:
 - 检查 spine 项是否为可阅读内容文档；若不是，则检查 Manifest fallback 链是否能回落到内容文档。
 - 检查 spine 是否引用远程 Manifest 资源、是否至少有一个 linear 项，以及 EPUB2 spine 重复 idref。
 - 检查 guide 引用是否能对应到 Manifest 内容项。
+- OPF package/metadata/manifest/spine/guide/cover 检查结果尽量写入具体节点或属性的行号和字符 offset。
 - 保持现有 `Normalized OPF` 菜单行为可用。
 
 Phase 2:
@@ -139,6 +140,7 @@ Phase 2:
 - 核心实现不依赖 UI 类。
 - 返回结构化结果，调用方决定是否刷新 Book Browser。
 - 仅在确实修改 Manifest/Spine 时改写 OPF，避免只有 warning 时无意义重写 OPF。
+- OPF 结构检查会旁路建立源文本定位索引，用于 Validation Results 跳转；不改变 OPFParser 的解析/写回语义。
 - 链接大小写修正只负责发现映射，实际写回复用现有跨资源更新系统。
 
 ## 后续接口
@@ -208,6 +210,7 @@ Phase 1 需要覆盖:
 - spine 全部为 `linear="no"`、spine 指向非内容文档、spine 非内容文档但有/没有合法 fallback 链、EPUB2 重复 spine idref。
 - spine 引用远程 Manifest 资源只报告、不自动改。
 - guide 指向未登记资源或非内容文档。
+- package/metadata namespace、manifest item、spine itemref、guide reference、cover meta 的结果显示 line/offset 并可双击跳转。
 - `Normalized OPF` 执行后 Book Browser 在新增资源时刷新。
 
 Phase 2 需要覆盖:
