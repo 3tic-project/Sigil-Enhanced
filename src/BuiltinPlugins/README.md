@@ -93,6 +93,8 @@ Phase 1:
 - 检查 cover metadata 无效 idref。
 - 检查 spine 无效 idref。
 - 检查 spine 项是否为可阅读内容文档；若不是，则检查 Manifest fallback 链是否能回落到内容文档。
+- 检查 Manifest fallback / fallback-style 属性是否为空、是否指向不存在 ID、fallback 链是否形成循环。
+- 检查 fallback-style 是否指向 CSS 资源，并提示 EPUB3 中继续使用 fallback-style 的兼容性风险。
 - 检查 spine 是否引用远程 Manifest 资源、是否至少有一个 linear 项，以及 EPUB2 spine 重复 idref。
 - 检查 guide 引用是否能对应到 Manifest 内容项。
 - OPF package/metadata/manifest/spine/guide/cover 检查结果尽量写入具体节点或属性的行号和字符 offset。
@@ -126,6 +128,8 @@ Phase 2:
 - 检查外部实体声明，提示 EPUB3 和安全风险。
 - 检查 XHTML/NCX/OPF/SVG/XML 的 DOCTYPE 风险与 EPUB2/EPUB3 常见要求。
 - 使用 Qt XML 流式解析器做基础 well-formed 检查，解析错误写入行号和字符 offset。
+- 检查 CSS `@charset` 是否在首条规则、是否重复、是否声明为非 UTF-8。
+- 检查 CSS 未闭合块注释、未闭合字符串和花括号不平衡。
 - 检查图片资源是否存在、是否 0 字节。
 - 检查 PNG/JPEG/GIF 文件头是否与扩展名或 media-type 匹配。
 - 检查图片是否能读取尺寸。
@@ -222,6 +226,7 @@ Phase 1 需要覆盖:
 - cover metadata 无效 idref 只报告。
 - spine 无效 idref 只报告。
 - spine 全部为 `linear="no"`、spine 指向非内容文档、spine 非内容文档但有/没有合法 fallback 链、EPUB2 重复 spine idref。
+- manifest fallback 指向不存在 ID、fallback 循环、fallback-style 指向非 CSS 资源。
 - spine 引用远程 Manifest 资源只报告、不自动改。
 - guide 指向未登记资源或非内容文档。
 - package/metadata namespace、manifest item、spine itemref、guide reference、cover meta 的结果显示 line/offset 并可双击跳转。
@@ -250,6 +255,7 @@ Phase 2 需要覆盖:
 - EPUB2 NCX 缺失或非 NCX 2005-1 DOCTYPE 只报告。
 - OPF 中出现 DOCTYPE 只报告。
 - XML well-formed 错误进入 Validation Results，并尽量定位到 line/offset。
+- CSS `@charset` 位置、重复、非 UTF-8 和轻量语法外壳问题只报告。
 - 图片文件缺失或 0 字节只报告。
 - PNG/JPEG/GIF 文件头与扩展名或 media-type 不一致只报告。
 - 损坏图片无法读取尺寸只报告。

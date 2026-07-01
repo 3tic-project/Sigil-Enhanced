@@ -687,6 +687,77 @@ static bool hasContentDocumentFallback(const ManifestEntry& entry,
     return false;
 }
 
+static bool isStyleMediaType(const QString& media_type)
+{
+    return media_type.trimmed().toLower() == QLatin1String("text/css");
+}
+
+static void validateManifestFallbackDiagnostics(EpubStructureNormalizer::Result& result,
+                                                const QString& opfpath,
+                                                const OpfSourceIndex& opf_index,
+                                                const QList<ManifestEntry>& manifest,
+                                                const QHash<QString, ManifestEntry>& manifest_by_id,
+                                                const QString& epub_version)
+{
+    for (const ManifestEntry& me : manifest) {
+        if (me.m_atts.keys().contains(QStringLiteral("fallback"))) {
+            QString fallback_id = me.m_atts.value(QStringLiteral("fallback")).trimmed();
+            if (fallback_id.isEmpty()) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, opfpath,
+                                 opfManifestLocationById(opf_index, me.m_id, QStringLiteral("fallback")),
+                                 QStringLiteral("EPUBCheck：manifest 项【%1】的 fallback 属性为空。").arg(me.m_id));
+            } else {
+                QSet<QString> seen;
+                seen.insert(me.m_id);
+                QString current_id = fallback_id;
+                while (!current_id.isEmpty()) {
+                    if (!manifest_by_id.contains(current_id)) {
+                        addLocatedResult(result, ValidationResult::ResType_Warn, opfpath,
+                                         opfManifestLocationById(opf_index, me.m_id, QStringLiteral("fallback")),
+                                         QStringLiteral("EPUBCheck：manifest 项【%1】的 fallback 指向不存在的 ID【%2】。")
+                                             .arg(me.m_id, current_id));
+                        break;
+                    }
+                    if (seen.contains(current_id)) {
+                        addLocatedResult(result, ValidationResult::ResType_Warn, opfpath,
+                                         opfManifestLocationById(opf_index, me.m_id, QStringLiteral("fallback")),
+                                         QStringLiteral("EPUBCheck：manifest 项【%1】的 fallback 链形成循环，循环点为【%2】。")
+                                             .arg(me.m_id, current_id));
+                        break;
+                    }
+                    seen.insert(current_id);
+                    current_id = manifest_by_id.value(current_id).m_atts.value(QStringLiteral("fallback")).trimmed();
+                }
+            }
+        }
+
+        if (me.m_atts.keys().contains(QStringLiteral("fallback-style"))) {
+            const QString fallback_style_id = me.m_atts.value(QStringLiteral("fallback-style")).trimmed();
+            if (!epub_version.startsWith(QLatin1String("2"))) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, opfpath,
+                                 opfManifestLocationById(opf_index, me.m_id, QStringLiteral("fallback-style")),
+                                 QStringLiteral("EPUBCheck：manifest 项【%1】使用 fallback-style；该属性主要属于 EPUB2 兼容路径，EPUB3 中建议改用标准 CSS 引用。")
+                                     .arg(me.m_id));
+            }
+            if (fallback_style_id.isEmpty()) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, opfpath,
+                                 opfManifestLocationById(opf_index, me.m_id, QStringLiteral("fallback-style")),
+                                 QStringLiteral("EPUBCheck：manifest 项【%1】的 fallback-style 属性为空。").arg(me.m_id));
+            } else if (!manifest_by_id.contains(fallback_style_id)) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, opfpath,
+                                 opfManifestLocationById(opf_index, me.m_id, QStringLiteral("fallback-style")),
+                                 QStringLiteral("EPUBCheck：manifest 项【%1】的 fallback-style 指向不存在的 ID【%2】。")
+                                     .arg(me.m_id, fallback_style_id));
+            } else if (!isStyleMediaType(manifest_by_id.value(fallback_style_id).m_mtype)) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, opfpath,
+                                 opfManifestLocationById(opf_index, me.m_id, QStringLiteral("fallback-style")),
+                                 QStringLiteral("EPUBCheck：manifest 项【%1】的 fallback-style【%2】不是 CSS 样式资源。")
+                                     .arg(me.m_id, fallback_style_id));
+            }
+        }
+    }
+}
+
 static QString formatFileSize(qint64 bytes)
 {
     if (bytes >= 1024 * 1024) {
@@ -867,6 +938,113 @@ static void validatePdfDiagnostics(EpubStructureNormalizer::Result& result,
     if (!header.startsWith("%PDF-")) {
         addLocatedResult(result, ValidationResult::ResType_Warn, resource->GetRelativePath(), SourceLocation(),
                          QStringLiteral("PDF检查：文件头不是 %PDF-，文件内容可能与扩展名或 media-type 不一致。"));
+    }
+}
+
+static void validateCssDiagnostics(EpubStructureNormalizer::Result& result,
+                                   Resource* resource,
+                                   const QString& source)
+{
+    const QString bookpath = resource->GetRelativePath();
+    QRegularExpression charset_re(QStringLiteral("@charset\\s+([\"'])(.*?)\\1\\s*;"),
+                                  QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatchIterator charset_it = charset_re.globalMatch(source);
+    int charset_count = 0;
+    while (charset_it.hasNext()) {
+        const QRegularExpressionMatch match = charset_it.next();
+        charset_count++;
+        QString prefix = source.left(match.capturedStart(0));
+        if (prefix.startsWith(QChar(0xfeff))) {
+            prefix.remove(0, 1);
+        }
+        if (!prefix.trimmed().isEmpty()) {
+            addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                             sourceLocationForOffset(source, match.capturedStart(0)),
+                             QStringLiteral("CSS检查：@charset 不是样式表中的第一条规则，阅读器可能忽略该声明。"));
+        }
+        if (charset_count > 1) {
+            addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                             sourceLocationForOffset(source, match.capturedStart(0)),
+                             QStringLiteral("CSS检查：样式表中存在多个 @charset 声明，建议只保留第一条。"));
+        }
+        const QString encoding = match.captured(2).trimmed().toLower();
+        if (encoding != QLatin1String("utf-8") && encoding != QLatin1String("utf8")) {
+            addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                             sourceLocationForOffset(source, match.capturedStart(2)),
+                             QStringLiteral("CSS检查：@charset 声明为【%1】，EPUB 中建议统一使用 UTF-8。")
+                                 .arg(match.captured(2)));
+        }
+    }
+
+    QList<SourceLocation> brace_stack;
+    bool in_comment = false;
+    bool in_string = false;
+    QChar string_quote;
+    int token_start = -1;
+
+    for (int i = 0; i < source.size(); i++) {
+        const QChar ch = source.at(i);
+        const QChar next = (i + 1 < source.size()) ? source.at(i + 1) : QChar();
+
+        if (in_comment) {
+            if (ch == QLatin1Char('*') && next == QLatin1Char('/')) {
+                in_comment = false;
+                i++;
+            }
+            continue;
+        }
+
+        if (in_string) {
+            if (ch == QLatin1Char('\\')) {
+                i++;
+                continue;
+            }
+            if (ch == string_quote) {
+                in_string = false;
+            }
+            continue;
+        }
+
+        if (ch == QLatin1Char('/') && next == QLatin1Char('*')) {
+            in_comment = true;
+            token_start = i;
+            i++;
+            continue;
+        }
+
+        if (ch == QLatin1Char('"') || ch == QLatin1Char('\'')) {
+            in_string = true;
+            string_quote = ch;
+            token_start = i;
+            continue;
+        }
+
+        if (ch == QLatin1Char('{')) {
+            brace_stack << sourceLocationForOffset(source, i);
+        } else if (ch == QLatin1Char('}')) {
+            if (brace_stack.isEmpty()) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                                 sourceLocationForOffset(source, i),
+                                 QStringLiteral("CSS检查：发现没有匹配开始花括号的 }。"));
+            } else {
+                brace_stack.removeLast();
+            }
+        }
+    }
+
+    if (in_comment) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                         sourceLocationForOffset(source, token_start),
+                         QStringLiteral("CSS检查：存在未闭合的块注释。"));
+    }
+    if (in_string) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath,
+                         sourceLocationForOffset(source, token_start),
+                         QStringLiteral("CSS检查：存在未闭合的字符串。"));
+    }
+    for (const SourceLocation& location : brace_stack) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, location,
+                         QStringLiteral("CSS检查：发现没有匹配结束花括号的 {。"));
     }
 }
 
@@ -1332,6 +1510,12 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::validateResourceDiagnos
             break;
         default:
             break;
+        }
+
+        if (resource->Type() == Resource::CSSResourceType) {
+            if (CSSResource* css_resource = qobject_cast<CSSResource*>(resource)) {
+                validateCssDiagnostics(result, resource, css_resource->GetText());
+            }
         }
 
         const QString bookpath = resource->GetRelativePath();
@@ -1867,6 +2051,9 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
             opf_modified = true;
         }
     }
+
+    validateManifestFallbackDiagnostics(result, opfpath, opf_index, new_manifest,
+                                        manifest_by_id, p.m_package.m_version);
 
     if (!cover_idref.isEmpty() && !all_ids_without_duplication.contains(cover_idref)) {
         addLocatedResult(result, warning_type, opfpath, opfCoverMetaLocation(opf_index, cover_idref),
