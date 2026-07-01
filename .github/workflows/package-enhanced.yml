@@ -94,7 +94,7 @@ jobs:
             python -m pip install aqtinstall
             python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
               -O $qtRoot `
-              -m qt5compat qtwebengine
+              -m qt5compat qtwebengine qtwebchannel
           }
 
           $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse |
