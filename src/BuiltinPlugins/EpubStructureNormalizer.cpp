@@ -727,6 +727,149 @@ static bool isGifResource(const QString& extension, const QString& media_type)
            media_type.trimmed().toLower() == QLatin1String("image/gif");
 }
 
+static bool hasMp4FtypSignature(const QByteArray& header)
+{
+    return header.size() >= 8 && header.mid(4, 4) == QByteArray("ftyp", 4);
+}
+
+static bool hasEbmlSignature(const QByteArray& header)
+{
+    return header.startsWith(QByteArray::fromHex("1A45DFA3"));
+}
+
+static bool hasMp3Signature(const QByteArray& header)
+{
+    if (header.startsWith("ID3")) {
+        return true;
+    }
+    if (header.size() < 2) {
+        return false;
+    }
+    const unsigned char first = static_cast<unsigned char>(header.at(0));
+    const unsigned char second = static_cast<unsigned char>(header.at(1));
+    return first == 0xff && (second & 0xe0) == 0xe0;
+}
+
+static bool hasAacAdtsSignature(const QByteArray& header)
+{
+    if (header.size() < 2) {
+        return false;
+    }
+    const unsigned char first = static_cast<unsigned char>(header.at(0));
+    const unsigned char second = static_cast<unsigned char>(header.at(1));
+    return first == 0xff && (second == 0xf1 || second == 0xf9);
+}
+
+static bool hasFontSignature(const QByteArray& header)
+{
+    return header.startsWith(QByteArray::fromHex("00010000")) ||
+           header.startsWith("OTTO") ||
+           header.startsWith("ttcf") ||
+           header.startsWith("true") ||
+           header.startsWith("wOFF") ||
+           header.startsWith("wOF2");
+}
+
+static bool expectedFontSignatureMatches(const QString& extension, const QByteArray& header)
+{
+    if (extension == QLatin1String("woff")) {
+        return header.startsWith("wOFF");
+    }
+    if (extension == QLatin1String("woff2")) {
+        return header.startsWith("wOF2");
+    }
+    if (extension == QLatin1String("ttc")) {
+        return header.startsWith("ttcf");
+    }
+    if (extension == QLatin1String("ttf")) {
+        return header.startsWith(QByteArray::fromHex("00010000")) || header.startsWith("true");
+    }
+    if (extension == QLatin1String("otf")) {
+        return header.startsWith("OTTO") ||
+               header.startsWith(QByteArray::fromHex("00010000")) ||
+               header.startsWith("true");
+    }
+    return hasFontSignature(header);
+}
+
+static void validateFontDiagnostics(EpubStructureNormalizer::Result& result,
+                                    Resource* resource,
+                                    const QFileInfo& file_info,
+                                    const QByteArray& header)
+{
+    const QString bookpath = resource->GetRelativePath();
+    const QString extension = file_info.suffix().toLower();
+    if (!hasFontSignature(header)) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                         QStringLiteral("字体检查：无法识别字体文件头，文件内容可能与扩展名或 media-type 不一致。"));
+        return;
+    }
+    if (!expectedFontSignatureMatches(extension, header)) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                         QStringLiteral("字体检查：字体文件头与扩展名【%1】不一致，建议检查文件类型。").arg(extension));
+    }
+}
+
+static void validateAudioDiagnostics(EpubStructureNormalizer::Result& result,
+                                     Resource* resource,
+                                     const QFileInfo& file_info,
+                                     const QByteArray& header)
+{
+    const QString bookpath = resource->GetRelativePath();
+    const QString extension = file_info.suffix().toLower();
+    bool valid = true;
+
+    if (extension == QLatin1String("mp3") || extension == QLatin1String("mpeg") || extension == QLatin1String("mpg")) {
+        valid = hasMp3Signature(header);
+    } else if (extension == QLatin1String("oga") || extension == QLatin1String("ogg") || extension == QLatin1String("opus")) {
+        valid = header.startsWith("OggS");
+    } else if (extension == QLatin1String("m4a") || extension == QLatin1String("mp4")) {
+        valid = hasMp4FtypSignature(header);
+    } else if (extension == QLatin1String("aac")) {
+        valid = hasAacAdtsSignature(header) || hasMp4FtypSignature(header);
+    }
+
+    if (!valid) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                         QStringLiteral("音频检查：文件头与扩展名【%1】不一致，建议检查 media-type 和实际文件内容。").arg(extension));
+    }
+}
+
+static void validateVideoDiagnostics(EpubStructureNormalizer::Result& result,
+                                     Resource* resource,
+                                     const QFileInfo& file_info,
+                                     const QByteArray& header)
+{
+    const QString bookpath = resource->GetRelativePath();
+    const QString extension = file_info.suffix().toLower();
+    bool valid = true;
+
+    if (extension == QLatin1String("mp4") || extension == QLatin1String("m4v") || extension == QLatin1String("mov")) {
+        valid = hasMp4FtypSignature(header);
+    } else if (extension == QLatin1String("ogv")) {
+        valid = header.startsWith("OggS");
+    } else if (extension == QLatin1String("webm")) {
+        valid = hasEbmlSignature(header);
+    } else if (extension == QLatin1String("vtt")) {
+        valid = header.startsWith("WEBVTT");
+    }
+
+    if (!valid) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, bookpath, SourceLocation(),
+                         QStringLiteral("视频检查：文件头与扩展名【%1】不一致，建议检查 media-type 和实际文件内容。").arg(extension));
+    }
+}
+
+static void validatePdfDiagnostics(EpubStructureNormalizer::Result& result,
+                                   Resource* resource,
+                                   const QByteArray& header)
+{
+    if (!header.startsWith("%PDF-")) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, resource->GetRelativePath(), SourceLocation(),
+                         QStringLiteral("PDF检查：文件头不是 %PDF-，文件内容可能与扩展名或 media-type 不一致。"));
+    }
+}
+
 static bool pathContainsWhitespace(const QString& path)
 {
     for (const QChar& ch : path) {
@@ -801,7 +944,9 @@ static void validateContainerXml(EpubStructureNormalizer::Result& result,
 
     if (!container_info.exists()) {
         addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath, SourceLocation(),
-                         QStringLiteral("OCF检查：缺少 META-INF/container.xml，需要按当前 OPF 路径重建。"));
+                         dry_run ?
+                             QStringLiteral("OCF检查：缺少 META-INF/container.xml，需要按当前 OPF 路径重建。") :
+                             QStringLiteral("OCF检查：缺少 META-INF/container.xml，已按当前 OPF 路径重建。"));
         result.modified = true;
         if (!dry_run) {
             FolderKeeper::UpdateContainerXML(root_folder, opf_bookpath);
@@ -831,7 +976,9 @@ static void validateContainerXml(EpubStructureNormalizer::Result& result,
     QList<OpfTagLocation> rootfiles = scanOpfTags(source, QStringLiteral("rootfile"), 0, source.size());
     if (rootfiles.isEmpty()) {
         addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath, firstXmlTag(source, QStringLiteral("container")).tagLocation,
-                         QStringLiteral("OCF检查：container.xml 缺少 rootfile，需要按当前 OPF 路径重建。"));
+                         dry_run ?
+                             QStringLiteral("OCF检查：container.xml 缺少 rootfile，需要按当前 OPF 路径重建。") :
+                             QStringLiteral("OCF检查：container.xml 缺少 rootfile，已按当前 OPF 路径重建。"));
         result.modified = true;
         if (!dry_run) {
             FolderKeeper::UpdateContainerXML(root_folder, opf_bookpath);
@@ -854,12 +1001,16 @@ static void validateContainerXml(EpubStructureNormalizer::Result& result,
 
     if (full_path.isEmpty()) {
         addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath, rootfile.tagLocation,
-                         QStringLiteral("OCF检查：rootfile 缺少 full-path，需要按当前 OPF 路径重建。"));
+                         dry_run ?
+                             QStringLiteral("OCF检查：rootfile 缺少 full-path，需要按当前 OPF 路径重建。") :
+                             QStringLiteral("OCF检查：rootfile 缺少 full-path，已按当前 OPF 路径重建。"));
         rewrite_container = true;
     } else if (full_path != opf_bookpath) {
         addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath,
                          opfAttrLocation(rootfile, QStringLiteral("full-path")),
-                         QStringLiteral("OCF检查：rootfile full-path【%1】与当前 OPF【%2】不一致，需要重建 container.xml。")
+                         (dry_run ?
+                              QStringLiteral("OCF检查：rootfile full-path【%1】与当前 OPF【%2】不一致，需要重建 container.xml。") :
+                              QStringLiteral("OCF检查：rootfile full-path【%1】与当前 OPF【%2】不一致，已重建 container.xml。"))
                              .arg(full_path, opf_bookpath));
         rewrite_container = true;
     }
@@ -867,7 +1018,9 @@ static void validateContainerXml(EpubStructureNormalizer::Result& result,
     if (media_type != QLatin1String("application/oebps-package+xml")) {
         addLocatedResult(result, ValidationResult::ResType_Warn, container_bookpath,
                          opfAttrLocation(rootfile, QStringLiteral("media-type")),
-                         QStringLiteral("OCF检查：rootfile media-type 应为 application/oebps-package+xml，需要重建 container.xml。"));
+                         dry_run ?
+                             QStringLiteral("OCF检查：rootfile media-type 应为 application/oebps-package+xml，需要重建 container.xml。") :
+                             QStringLiteral("OCF检查：rootfile media-type 应为 application/oebps-package+xml，已重建 container.xml。"));
         rewrite_container = true;
     }
 
@@ -1181,56 +1334,79 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::validateResourceDiagnos
             break;
         }
 
-        if (resource->Type() != Resource::ImageResourceType) {
-            continue;
-        }
-
         const QString bookpath = resource->GetRelativePath();
         const QFileInfo file_info(resource->GetFullPath());
-        if (!file_info.exists() || !file_info.isFile()) {
-            addResult(result, ValidationResult::ResType_Warn, bookpath,
-                      QStringLiteral("图片检查：图片文件在临时书目录中不存在，建议检查 Manifest 与 Book Browser。"));
+        if (resource->Type() == Resource::ImageResourceType ||
+            resource->Type() == Resource::FontResourceType ||
+            resource->Type() == Resource::AudioResourceType ||
+            resource->Type() == Resource::VideoResourceType ||
+            resource->Type() == Resource::PdfResourceType) {
+            if (!file_info.exists() || !file_info.isFile()) {
+                addResult(result, ValidationResult::ResType_Warn, bookpath,
+                          QStringLiteral("资源检查：文件在临时书目录中不存在，建议检查 Manifest 与 Book Browser。"));
+                continue;
+            }
+
+            if (file_info.size() == 0) {
+                addResult(result, ValidationResult::ResType_Warn, bookpath,
+                          QStringLiteral("资源检查：文件大小为 0，阅读器无法正常显示。"));
+                continue;
+            }
+        }
+
+        if (resource->Type() == Resource::ImageResourceType) {
+            if (file_info.size() >= 4 * 1024 * 1024) {
+                addResult(result, ValidationResult::ResType_Warn, bookpath,
+                          QStringLiteral("图片检查：图片文件大小为【%1】，超过 EPUBCheck 常见 4 MB 建议值。")
+                              .arg(formatFileSize(file_info.size())));
+            }
+
+            QImageReader reader(resource->GetFullPath());
+            const QSize image_size = reader.size();
+            if (!reader.canRead() || !image_size.isValid()) {
+                addResult(result, ValidationResult::ResType_Warn, bookpath,
+                          QStringLiteral("图片检查：无法读取图片尺寸，文件头或图片数据可能损坏。"));
+            } else if (image_size.width() >= 3840 || image_size.height() >= 2160) {
+                addResult(result, ValidationResult::ResType_Warn, bookpath,
+                          QStringLiteral("图片检查：图片尺寸为【%1x%2】，超过 EPUBCheck 常见大图提示阈值。")
+                              .arg(image_size.width()).arg(image_size.height()));
+            }
+
+            const QString extension = file_info.suffix().toLower();
+            const QString media_type = resource->GetMediaType();
+            const QByteArray header = readFileHeader(resource->GetFullPath(), 8);
+            if (isJpegResource(extension, media_type) &&
+                !header.startsWith(QByteArray::fromHex("FFD8"))) {
+                addResult(result, ValidationResult::ResType_Warn, bookpath,
+                          QStringLiteral("图片检查：JPEG 图片文件头无效，实际文件内容可能与扩展名或 media-type 不一致。"));
+            } else if (isPngResource(extension, media_type) &&
+                       !header.startsWith(QByteArray::fromHex("89504E470D0A1A0A"))) {
+                addResult(result, ValidationResult::ResType_Warn, bookpath,
+                          QStringLiteral("图片检查：PNG 图片文件头无效，实际文件内容可能与扩展名或 media-type 不一致。"));
+            } else if (isGifResource(extension, media_type) &&
+                       !header.startsWith("GIF8")) {
+                addResult(result, ValidationResult::ResType_Warn, bookpath,
+                          QStringLiteral("图片检查：GIF 图片文件头无效，实际文件内容可能与扩展名或 media-type 不一致。"));
+            }
             continue;
         }
 
-        if (file_info.size() == 0) {
-            addResult(result, ValidationResult::ResType_Warn, bookpath,
-                      QStringLiteral("图片检查：图片文件大小为 0，阅读器无法正常显示。"));
-            continue;
-        }
-
-        if (file_info.size() >= 4 * 1024 * 1024) {
-            addResult(result, ValidationResult::ResType_Warn, bookpath,
-                      QStringLiteral("图片检查：图片文件大小为【%1】，超过 EPUBCheck 常见 4 MB 建议值。")
-                          .arg(formatFileSize(file_info.size())));
-        }
-
-        QImageReader reader(resource->GetFullPath());
-        const QSize image_size = reader.size();
-        if (!reader.canRead() || !image_size.isValid()) {
-            addResult(result, ValidationResult::ResType_Warn, bookpath,
-                      QStringLiteral("图片检查：无法读取图片尺寸，文件头或图片数据可能损坏。"));
-        } else if (image_size.width() >= 3840 || image_size.height() >= 2160) {
-            addResult(result, ValidationResult::ResType_Warn, bookpath,
-                      QStringLiteral("图片检查：图片尺寸为【%1x%2】，超过 EPUBCheck 常见大图提示阈值。")
-                          .arg(image_size.width()).arg(image_size.height()));
-        }
-
-        const QString extension = file_info.suffix().toLower();
-        const QString media_type = resource->GetMediaType();
-        const QByteArray header = readFileHeader(resource->GetFullPath(), 8);
-        if (isJpegResource(extension, media_type) &&
-            !header.startsWith(QByteArray::fromHex("FFD8"))) {
-            addResult(result, ValidationResult::ResType_Warn, bookpath,
-                      QStringLiteral("图片检查：JPEG 图片文件头无效，实际文件内容可能与扩展名或 media-type 不一致。"));
-        } else if (isPngResource(extension, media_type) &&
-                   !header.startsWith(QByteArray::fromHex("89504E470D0A1A0A"))) {
-            addResult(result, ValidationResult::ResType_Warn, bookpath,
-                      QStringLiteral("图片检查：PNG 图片文件头无效，实际文件内容可能与扩展名或 media-type 不一致。"));
-        } else if (isGifResource(extension, media_type) &&
-                   !header.startsWith("GIF8")) {
-            addResult(result, ValidationResult::ResType_Warn, bookpath,
-                      QStringLiteral("图片检查：GIF 图片文件头无效，实际文件内容可能与扩展名或 media-type 不一致。"));
+        const QByteArray header = readFileHeader(resource->GetFullPath(), 16);
+        switch (resource->Type()) {
+        case Resource::FontResourceType:
+            validateFontDiagnostics(result, resource, file_info, header);
+            break;
+        case Resource::AudioResourceType:
+            validateAudioDiagnostics(result, resource, file_info, header);
+            break;
+        case Resource::VideoResourceType:
+            validateVideoDiagnostics(result, resource, file_info, header);
+            break;
+        case Resource::PdfResourceType:
+            validatePdfDiagnostics(result, resource, header);
+            break;
+        default:
+            break;
         }
     }
 
@@ -1617,6 +1793,9 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
             SpineEntry se;
             se.m_idref = me.m_id;
             p.m_spine << se;
+            addResult(result, warning_type, opfpath,
+                      QStringLiteral("OPF规范：新增 XHTML 文件【%1】未在 spine 中登记，已自动追加阅读顺序项【%2】。")
+                          .arg(bkpath, me.m_id));
         }
 
         addResult(result, warning_type, opfpath,

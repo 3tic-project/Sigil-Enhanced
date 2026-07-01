@@ -66,6 +66,8 @@
 4. 可报告
    - 自动修复和需要人工处理的问题都进入结果列表。
    - 结果结构应能被 Validation Results 直接展示。
+   - 所有自动改动必须有对应 Message/Validation Result 记录，不能静默修改。
+   - dry-run 结果使用“需要/将会”措辞；实际执行后的结果使用“已”措辞，避免用户误判当前书籍状态。
 
 ## 当前实现范围
 
@@ -115,6 +117,8 @@ Phase 2:
 
 - 检查 `META-INF/container.xml` 是否存在、可解析、rootfile 是否指向当前 OPF；可安全重建时按当前 OPF 路径重写。
 - 检查已存在的 `mimetype` 文件内容是否精确为 `application/epub+zip`。
+- 确认 Sigil 导出的 EPUB ZIP 外壳保持 OCF 基本要求: `mimetype` 是 ZIP 第一项，内容精确为 `application/epub+zip`，不压缩，无 local/global extra field。
+- 导出普通文件时只在未压缩大小达到 ZIP32 边界时启用 ZIP64，避免小文件无意义写入 ZIP64 结构。
 - 检查 Manifest 是否错误登记 `mimetype` 或 `META-INF` 内文件。
 - 检查文件路径空白字符、尾随点、隐藏文件风格、非 ASCII 路径、Unicode 规范化和大小写折叠冲突。
 - 检查 Publication Resource 是否错误放在 `META-INF` 中。
@@ -126,6 +130,10 @@ Phase 2:
 - 检查 PNG/JPEG/GIF 文件头是否与扩展名或 media-type 匹配。
 - 检查图片是否能读取尺寸。
 - 对超过 4 MB 或大于等于 `3840x2160` 的图片生成 warning。
+- 检查字体资源是否存在、是否 0 字节，以及 TrueType/OpenType/TTC/WOFF/WOFF2 文件头是否与扩展名匹配。
+- 检查音频资源是否存在、是否 0 字节，以及 MP3/Ogg/M4A/MP4/AAC 文件头是否与扩展名匹配。
+- 检查视频资源是否存在、是否 0 字节，以及 MP4/M4V/MOV/Ogg/WebM/VTT 文件头是否与扩展名匹配。
+- 检查 PDF 资源是否存在、是否 0 字节，以及文件头是否为 `%PDF-`。
 
 新增显式入口:
 
@@ -144,6 +152,7 @@ Phase 2:
 - OPF 修复逻辑从 `ValidationResultsView` 迁到内置插件模块。
 - 核心实现不依赖 UI 类。
 - 返回结构化结果，调用方决定是否刷新 Book Browser。
+- 自动修复的结果消息覆盖 Manifest、spine、container.xml、链接大小写和标准目录归档等改动，避免用户看不见插件改了什么。
 - 仅在确实修改 Manifest/Spine 时改写 OPF，避免只有 warning 时无意义重写 OPF。
 - OPF 结构检查会旁路建立源文本定位索引，用于 Validation Results 跳转；不改变 OPFParser 的解析/写回语义。
 - 链接大小写修正只负责发现映射，实际写回复用现有跨资源更新系统。
@@ -245,6 +254,9 @@ Phase 2 需要覆盖:
 - PNG/JPEG/GIF 文件头与扩展名或 media-type 不一致只报告。
 - 损坏图片无法读取尺寸只报告。
 - 大文件和大尺寸图片只报告。
+- 字体、音频、视频、PDF 文件缺失或 0 字节只报告。
+- 字体、音频、视频、PDF 文件头与扩展名不一致只报告。
+- 导出 EPUB 后确认 ZIP 第一项为未压缩 `mimetype`，且普通资源按需使用 ZIP64。
 
 Phase 3 需要覆盖:
 

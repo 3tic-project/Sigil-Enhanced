@@ -201,9 +201,9 @@ void ExportEPUB::SaveFolderAsEpubToLocation(const QString &fullfolderpath, const
         fileInfo.tmz_date.tm_mon  = moddate.date().month() - 1;
         fileInfo.tmz_date.tm_year = moddate.date().year();
 
-        // Add the file entry to the archive.
-        // We should check the uncompressed file size. If it's over >= 0xffffffff the last parameter (zip64) should be 1.
-        if (zipOpenNewFileInZip4_64(zfile, relpath.toUtf8().constData(), &fileInfo, NULL, 0, NULL, 0, NULL, Z_DEFLATED, 8, 0, 15, 8, Z_DEFAULT_STRATEGY, NULL, 0, 0x0b00, 1<<11, 0) != ZIP_OK) {
+        // Add the file entry to the archive. OCF permits ZIP64 only when needed.
+        const int use_zip64 = afilesize >= 0xffffffffu ? 1 : 0;
+        if (zipOpenNewFileInZip4_64(zfile, relpath.toUtf8().constData(), &fileInfo, NULL, 0, NULL, 0, NULL, Z_DEFLATED, 8, 0, 15, 8, Z_DEFAULT_STRATEGY, NULL, 0, 0x0b00, 1<<11, use_zip64) != ZIP_OK) {
             zipClose(zfile, NULL);
             QFile::remove(tempFile);
             throw(CannotStoreFile(relpath.toStdString()));
