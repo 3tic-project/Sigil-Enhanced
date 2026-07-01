@@ -71,7 +71,7 @@ The workflow currently pins Qt to `6.10.2`.
 
 Windows x64 uses the official Qt online repository through `aqtinstall`:
 
-`aqt install-qt windows desktop 6.10.2 win64_msvc2022_64 -m qt5compat qtwebengine`
+`aqt install-qt windows desktop 6.10.2 win64_msvc2022_64 -m qt5compat qtwebengine qtwebchannel qtpositioning`
 
 macOS Intel uses:
 
