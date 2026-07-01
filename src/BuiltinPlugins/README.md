@@ -24,6 +24,12 @@
 - 将资源整理到 Sigil 标准目录。
 - 检查 XHTML/NCX/CSS 中链接大小写不一致和无效链接。
 
+`todo/vendor/EPUB-Checker` 和 `todo/vendor/epubcheck` 的参考价值:
+
+- `EPUB-Checker` 是 W3C EPUBCheck 的桌面包装器，主要提供打包、GUI 和本地化思路；本项目不嵌入它的 Java GUI。
+- `epubcheck` 是官方规范验证器，适合借鉴其 URL 解析、OPF Manifest、spine、nav、guide、media-type 等结构性规则。
+- 当前实现只吸收可用 C++/Sigil 模型稳定完成的规则，不移植 Java 验证引擎、schema、RelaxNG、Schematron 或完整报错体系。
+
 不照搬的点:
 
 - 不直接读取 `.epub` zip 并生成一个新 EPUB。
@@ -56,7 +62,7 @@
 
 ## 当前实现范围
 
-当前实现 `EpubStructureNormalizer` 已包含 Phase 1 和 Phase 2 的第一版能力；`Normalize EPUB Structure...` 入口已接入 Phase 3 的标准目录归档流程。
+当前实现 `EpubStructureNormalizer` 已包含 Phase 1 和 Phase 2 的第一版能力；`Normalize EPUB Structure...` 入口已接入 Phase 3 的标准目录归档流程，并开始吸收 EPUBCheck 的资源级诊断。
 
 Phase 1:
 
@@ -65,9 +71,21 @@ Phase 1:
 - 删除重复 Manifest href。
 - 删除 Manifest 中指向不存在文件的 href。
 - 修复 Manifest href 与实际资源路径大小写不一致。
+- 读取 Manifest href 时先按 URL/URI 解码，写回时保持 URL 编码。
+- 不再将远程 Manifest href 当成本地缺失文件删除；对 `file:`、`data:` 等高风险 URL 给出提示。
+- EPUB3 远程 Manifest 资源只提示合法性风险，不自动删除；当前按 EPUBCheck 思路允许音频、视频、字体等常见远程资源类型。
+- 发现 Manifest href 含 query 或 fragment 时按资源路径规范化。
+- 删除错误登记 OPF package document 自身的 Manifest 项。
+- 根据文件扩展名/XML sniff 修正明显不一致的 Manifest media-type。
 - 将未登记到 Manifest 的有效资源补入 Manifest。
+- EPUB3 中缺少唯一 `nav` 标记时，能唯一识别 `nav.xhtml`/`nav.html`/`id=nav` 时自动补 `properties="nav"`。
+- EPUB3 中封面图片由旧 `meta name="cover"` 指向但缺少 `cover-image` 属性时自动补齐。
+- 检查 `nav`、`cover-image` 属性与 media-type 是否匹配。
 - 检查 cover metadata 无效 idref。
 - 检查 spine 无效 idref。
+- 检查 spine 项是否为可阅读内容文档；若不是，则检查 Manifest fallback 链是否能回落到内容文档。
+- 检查 spine 是否引用远程 Manifest 资源、是否至少有一个 linear 项，以及 EPUB2 spine 重复 idref。
+- 检查 guide 引用是否能对应到 Manifest 内容项。
 - 保持现有 `Normalized OPF` 菜单行为可用。
 
 Phase 2:
@@ -76,10 +94,21 @@ Phase 2:
 - 扫描 XHTML/HTML 内联 `style` 属性中的 `url(...)`。
 - 扫描 CSS 中的 `url(...)` 和 `@import`。
 - 扫描 NCX 中的 `src`。
-- 跳过外部链接、data/file/http 等带 scheme 的链接、纯 fragment、空链接和带 query 的链接。
+- 跳过外部链接、data/http 等带 scheme 的链接和空链接；对 `file:` URL、带 query 的书内相对链接、根路径、逃出 EPUB 根目录的相对路径生成 warning。
+- 对未编码空格、反斜杠和非严格合法 URL 生成 warning。
+- 对纯 fragment 和跨文件 fragment 执行基础 id 存在性检查。
+- 检查 XHTML/XML/SVG/NCX 中重复 `id` / `xml:id`。
+- XHTML/HTML、CSS、NCX 的链接检查结果会写入行号和字符 offset，Validation Results 双击可跳转到对应位置。
 - 对能唯一匹配实际资源、但大小写不一致的链接，生成 `旧大小写路径 -> 实际路径` 映射。
 - 使用现有 `UniversalUpdates` 执行最终更新，避免直接正则替换源文件。
 - 对无法定位的 XHTML/NCX 书内链接生成 warning；CSS 无效链接暂不报告，避免备用 font-face 等场景产生噪音。
+
+资源诊断:
+
+- 检查图片资源是否存在、是否 0 字节。
+- 检查 PNG/JPEG/GIF 文件头是否与扩展名或 media-type 匹配。
+- 检查图片是否能读取尺寸。
+- 对超过 4 MB 或大于等于 `3840x2160` 的图片生成 warning。
 
 新增显式入口:
 
@@ -127,10 +156,12 @@ struct Options {
 `repairLinkCase` 当前策略:
 
 - 建立 `lowerBookPath -> actualBookPath` 索引。
+- 建立 XHTML/XML/SVG/NCX 的 `id` 索引，用于 fragment 检查。
 - 扫描 XHTML 的 `href`、`src`、`url(...)`。
 - 扫描 CSS 的 `@import`、`url(...)`。
 - 扫描 NCX 的 `content src`。
-- 跳过 `http:`、`https:`、`mailto:`、`data:`、`file:`、`res:`、纯 fragment 等非书内链接。
+- 跳过 `http:`、`https:`、`mailto:`、`data:`、`res:` 等非书内链接。
+- 对 `file:`、query、根路径、逃出 EPUB 根目录、严格 URL 风险和 fragment 缺失只报告，不自动修改。
 - 只在大小写可唯一纠正时自动修改。
 - 找不到目标时仅报告，不误改。
 - CSS 无效链接默认弱提示，避免备用 font-face 等场景产生过多噪音。
@@ -149,21 +180,45 @@ Phase 1 需要覆盖:
 - Manifest 重复 ID。
 - Manifest 重复 href。
 - 重复项中 spine/cover 引用项优先保留。
+- Manifest 远程 href 不被误删。
+- Manifest `file:`、`data:` href 只报告。
+- EPUB3 远程 Manifest 资源 media-type 合法性提示。
+- Manifest href 中 `%20`、中文百分号编码、query、fragment 被正确处理。
+- Manifest 自引用 OPF package document 时被删除。
+- Manifest media-type 与扩展名不一致时被修正。
 - Manifest href 指向不存在文件时删除。
 - Manifest href 大小写与实际资源路径不一致时修复。
 - 未登记 Manifest 的图片/CSS/HTML/字体等资源被补入。
 - XML/OPF 文件不被错误补入。
+- EPUB3 nav 缺失、重复、media-type 错误。
+- EPUB3 cover-image 缺失或声明在非图片资源上。
 - cover metadata 无效 idref 只报告。
 - spine 无效 idref 只报告。
+- spine 全部为 `linear="no"`、spine 指向非内容文档、spine 非内容文档但有/没有合法 fallback 链、EPUB2 重复 spine idref。
+- spine 引用远程 Manifest 资源只报告、不自动改。
+- guide 指向未登记资源或非内容文档。
 - `Normalized OPF` 执行后 Book Browser 在新增资源时刷新。
 
 Phase 2 需要覆盖:
 
 - XHTML、NCX、CSS 链接大小写自动纠正。
 - fragment 保留。
+- 纯 fragment 指向当前文件 id 时不报错，指向不存在 id 时可跳转到对应位置。
+- 跨文件 fragment 指向目标文件 id 时不报错，目标 id 不存在时可跳转到来源链接位置。
+- 重复 `id` / `xml:id` 能在 Validation Results 中跳转到重复处。
 - 外部链接不处理。
+- `file:` 链接和带 query 的书内相对链接只报告、不自动改。
+- 未编码空格、反斜杠、根路径和逃出 EPUB 根目录的链接只报告、不自动改。
+- Validation Results 中 XHTML/CSS/NCX 链接问题显示 line 和 offset，双击可跳转。
 - 大小写冲突不自动修复。
 - 找不到目标的链接只报告。
+
+资源诊断需要覆盖:
+
+- 图片文件缺失或 0 字节只报告。
+- PNG/JPEG/GIF 文件头与扩展名或 media-type 不一致只报告。
+- 损坏图片无法读取尺寸只报告。
+- 大文件和大尺寸图片只报告。
 
 Phase 3 需要覆盖:
 

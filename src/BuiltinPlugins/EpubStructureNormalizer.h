@@ -54,6 +54,13 @@ private:
                    ValidationResult::ResType type,
                    const QString& bookpath,
                    const QString& message) const;
+    void addResult(Result& result,
+                   ValidationResult::ResType type,
+                   const QString& bookpath,
+                   int line,
+                   int charoffset,
+                   const QString& message) const;
+    Result validateResourceDiagnostics() const;
 
     Book* m_Book;
 };
