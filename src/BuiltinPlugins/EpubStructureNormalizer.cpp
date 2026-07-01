@@ -105,9 +105,16 @@ struct OpfTagLocation {
     QHash<QString, QString> attrs;
 };
 
+struct OpfMetadataElementLocation {
+    QString name;
+    SourceLocation tagLocation;
+    SourceLocation contentLocation;
+};
+
 struct OpfSourceIndex {
     OpfTagLocation packageTag;
     OpfTagLocation metadataTag;
+    QList<OpfMetadataElementLocation> metadataElements;
     QList<OpfTagLocation> metadataMetaTags;
     QList<OpfTagLocation> manifestItems;
     QList<OpfTagLocation> spineItemrefs;
@@ -234,6 +241,35 @@ static QList<OpfTagLocation> scanOpfTags(const QString& source,
     return tags;
 }
 
+static QList<OpfMetadataElementLocation> scanOpfMetadataElements(const QString& source,
+                                                                 int range_start,
+                                                                 int range_end)
+{
+    QList<OpfMetadataElementLocation> elements;
+    if (range_start < 0 || range_end <= range_start) {
+        return elements;
+    }
+
+    QRegularExpression tag_re(QStringLiteral("<\\s*([A-Za-z_][A-Za-z0-9_.:-]*)\\b[^<>]*>"),
+                              QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatchIterator it = tag_re.globalMatch(source.mid(range_start, range_end - range_start));
+    while (it.hasNext()) {
+        const QRegularExpressionMatch local_match = it.next();
+        const int tag_start = range_start + local_match.capturedStart(0);
+        const int tag_end = range_start + local_match.capturedEnd(0);
+        if (tag_start >= range_end) {
+            continue;
+        }
+
+        OpfMetadataElementLocation element;
+        element.name = local_match.captured(1);
+        element.tagLocation = sourceLocationForOffset(source, tag_start);
+        element.contentLocation = sourceLocationForOffset(source, qMin(tag_end, range_end));
+        elements << element;
+    }
+    return elements;
+}
+
 static OpfTagLocation firstOpfTag(const QString& source, const QString& tag_name)
 {
     QRegularExpression tag_re(QStringLiteral("<\\s*(?:[A-Za-z_][\\w.-]*:)?%1\\b[^>]*>")
@@ -257,6 +293,7 @@ static OpfSourceIndex buildOpfSourceIndex(const QString& source)
     const QPair<int, int> spine_range = tagSectionRange(source, QStringLiteral("spine"));
     const QPair<int, int> guide_range = tagSectionRange(source, QStringLiteral("guide"));
 
+    index.metadataElements = scanOpfMetadataElements(source, metadata_range.first, metadata_range.second);
     index.metadataMetaTags = scanOpfTags(source, QStringLiteral("meta"), metadata_range.first, metadata_range.second);
     index.manifestItems = scanOpfTags(source, QStringLiteral("item"), manifest_range.first, manifest_range.second);
     index.spineItemrefs = scanOpfTags(source, QStringLiteral("itemref"), spine_range.first, spine_range.second);
@@ -314,6 +351,85 @@ static SourceLocation opfCoverMetaLocation(const OpfSourceIndex& index, const QS
         }
     }
     return SourceLocation();
+}
+
+static SourceLocation opfMetadataElementLocation(const OpfSourceIndex& index,
+                                                 const QString& name,
+                                                 int occurrence,
+                                                 bool prefer_content)
+{
+    int seen = 0;
+    for (const OpfMetadataElementLocation& element : index.metadataElements) {
+        if (element.name.compare(name, Qt::CaseInsensitive) != 0) {
+            continue;
+        }
+        if (seen == occurrence) {
+            return prefer_content ? element.contentLocation : element.tagLocation;
+        }
+        seen++;
+    }
+    return index.metadataTag.tagLocation;
+}
+
+static bool isWellFormedLanguageTag(const QString& value)
+{
+    const QString tag = value.trimmed();
+    if (tag.isEmpty()) {
+        return false;
+    }
+
+    QRegularExpression language_re(
+        QStringLiteral("^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xXiI](?:-[A-Za-z0-9]{1,8})+)$"));
+    return language_re.match(tag).hasMatch();
+}
+
+static void validateOpfMetadataDiagnostics(EpubStructureNormalizer::Result& result,
+                                           const QString& opfpath,
+                                           const OpfSourceIndex& opf_index,
+                                           const QList<MetaEntry>& metadata)
+{
+    bool has_title = false;
+    bool has_language = false;
+    QHash<QString, int> occurrence_by_name;
+
+    for (const MetaEntry& meta : metadata) {
+        const QString name = meta.m_name.toLower();
+        const int occurrence = occurrence_by_name.value(name, 0);
+        occurrence_by_name[name] = occurrence + 1;
+
+        if (name == QLatin1String("dc:title")) {
+            has_title = true;
+            if (meta.m_content.trimmed().isEmpty()) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, opfpath,
+                                 opfMetadataElementLocation(opf_index, meta.m_name, occurrence, true),
+                                 QStringLiteral("EPUBCheck：metadata 中 dc:title 为空，建议填写书名。"));
+            }
+            continue;
+        }
+
+        if (name == QLatin1String("dc:language")) {
+            has_language = true;
+            const QString language = meta.m_content.trimmed();
+            const SourceLocation location = opfMetadataElementLocation(opf_index, meta.m_name, occurrence, true);
+            if (language.isEmpty()) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, opfpath, location,
+                                 QStringLiteral("EPUBCheck：metadata 中 dc:language 为空，建议填写主语言标签。"));
+            } else if (!isWellFormedLanguageTag(language)) {
+                addLocatedResult(result, ValidationResult::ResType_Warn, opfpath, location,
+                                 QStringLiteral("EPUBCheck：metadata 中 dc:language【%1】不是规范的语言标签，建议使用 BCP 47 形式，例如 zh-Hans 或 en-US。")
+                                     .arg(language));
+            }
+        }
+    }
+
+    if (!has_title) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, opfpath, opf_index.metadataTag.tagLocation,
+                         QStringLiteral("EPUBCheck：metadata 缺少 dc:title，建议填写书名。"));
+    }
+    if (!has_language) {
+        addLocatedResult(result, ValidationResult::ResType_Warn, opfpath, opf_index.metadataTag.tagLocation,
+                         QStringLiteral("EPUBCheck：metadata 缺少 dc:language，建议填写主语言标签。"));
+    }
 }
 
 static bool bookPathEscapesRoot(const QString& href_path, const QString& source_bookpath)
@@ -2477,6 +2593,8 @@ EpubStructureNormalizer::Result EpubStructureNormalizer::normalizeOpfManifest(co
         addLocatedResult(result, error_type, opfpath, opfAttrLocation(opf_index.metadataTag, QStringLiteral("xmlns:opf")),
                          QStringLiteral("OPF规范：不规范的xmlns:opf属性值【%1】，建议改为\"http://www.idpf.org/2007/opf\"").arg(p.m_metans.m_atts["xmlns:opf"]));
     }
+
+    validateOpfMetadataDiagnostics(result, opfpath, opf_index, p.m_metadata);
 
     QString tempfolder = m_Book->GetFolderKeeper()->GetFullPathToMainFolder();
     QStringList filepath_list = Utility::walkDirs(tempfolder);

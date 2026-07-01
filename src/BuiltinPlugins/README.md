@@ -76,6 +76,7 @@
 Phase 1:
 
 - 检查 OPF package/metadata namespace。
+- 检查 metadata 中 `dc:title`、`dc:language` 是否缺失或为空，并对 `dc:language` 做宽松 BCP 47 语言标签形态提示。
 - 删除重复 Manifest ID。
 - 删除重复 Manifest href。
 - 删除 Manifest 中指向不存在文件的 href。
