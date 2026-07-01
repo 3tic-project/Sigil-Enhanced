@@ -1148,6 +1148,9 @@ public slots:
     bool AnalyzeBrParagraphs(); // modified: Builtin native plugin
     bool NormalizeCurrentBrParagraphs(); // modified: Builtin native plugin
     bool NormalizeAllBrParagraphs(); // modified: Builtin native plugin
+    bool AnalyzeKfxParagraphs(); // modified: Builtin native plugin
+    bool NormalizeCurrentKfxParagraphs(); // modified: Builtin native plugin
+    bool NormalizeAllKfxParagraphs(); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
     //modified: FindReplacePlus

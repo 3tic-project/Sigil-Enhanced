@@ -188,6 +188,40 @@ Phase 2:
 - 转换会给页面补充 `body.se-br-normalized` 作用域 CSS，将生成段落的默认 margin 归零，并用 `se-br-gap-before` 表示原始连续 `<br/>` 造成的空行。
 - 根 `<html xmlns="http://www.w3.org/1999/xhtml">` 会保留；生成段落不会重复写 `xmlns`，兼容上一版输出时也会清理子元素上的冗余 XHTML namespace。
 
+## KFX Paragraph Normalizer
+
+目标是识别并修复 KFX/XMDF/calibre 转换后常见的“正文裸文本直接位于 `body` 下，使用空白高度 `<p>` 作为段落分隔”的结构问题。
+
+当前实现范围:
+
+- 新增核心模块 `KfxParagraphNormalizer`。
+- 提供 `analyzeXhtmlText()`，按 XHTML 文本分类:
+  - `normal-body-flow`: 可自动规范化的 KFX spacer 正文流候选。
+  - `toc-like`: 目录页，默认跳过。
+  - `notice-or-imprint`: 版权、发行、出版信息等页面，只做人工确认候选。
+  - `short-flow`: 极短 spacer flow 页面，只做人工确认候选。
+  - `image-or-title-page`: 封面、图片或扉页，默认跳过。
+  - `block-layout`: 已存在有意义顶层块级布局，默认跳过。
+  - `already-normalized`: 已无 body 直接文本，默认跳过。
+  - `no-candidate` / `no-body` / `parse-error`: 无候选或不可处理。
+- 提供 `normalizeXhtmlText()`，转换时校验 XML well-formed、可见文本、`id`/`name`、`href`/`src`。
+- 新增 `Enhancement > Analyze KFX Paragraphs...` 和 Automate 命令 `AnalyzeKfxParagraphs`。
+- 新增 `Enhancement > Normalize Current KFX Paragraphs...`，允许用户确认后处理当前 XHTML；人工确认候选也可通过此入口显式转换。
+- 新增 `Enhancement > Normalize KFX Paragraphs...` 和 Automate 命令 `NormalizeKfxParagraphs`，只批量转换 auto-safe 正文页。
+- 分析和转换结果写入 Validation Results，auto-safe 和人工确认候选用 warning，普通跳过页用 info。
+
+转换策略:
+
+- spacer p 不绑定固定 class；直接位于 `body` 下、仅含空白/NBSP、无业务属性且带 `height` 样式时才视为 spacer。
+- `height:0` spacer p 被移除，因为生成段落已经提供段落边界。
+- `height > 0` spacer p 会原样保留，用来稳定章前空白、插图前后空白和竖排布局。
+- 裸文本、章节标题锚点、inline `span`、单独插图等 body-level run 会包装为 `<p class="se-kfx-paragraph">`。
+- 章节标题、图片段、场景分隔会额外添加识别 class；默认通过 `body.se-kfx-normalized p.se-kfx-paragraph` 将生成段落 margin/padding/border 归零，并继承字号、字体、行高、对齐和 writing-mode。
+- 非零 spacer p 会补回 NBSP，避免 XML serializer 或后续格式化把它压成自闭合空元素，导致阅读器忽略原本的空白高度。
+- 当前文件和整书入口写回前会对本次修改的 XHTML 自动应用一次当前 XHTML formatter；整书入口只格式化本次成功修复的文件，不扫无关 XHTML/CSS。
+- 批量转换通过资源写回，不提供跨文件文本 undo；执行前会自动创建 Sigil Checkpoint。
+- 当前文件转换走 `FlowTab::ReplaceDocumentText()`，尽量保留 Code View undo。
+
 相比旧实现的改进:
 
 - OPF 修复逻辑从 `ValidationResultsView` 迁到内置插件模块。

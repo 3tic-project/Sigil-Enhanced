@@ -57,6 +57,8 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/EpubStructureNormalizer.h
     BuiltinPlugins/FormatterEnhancer.cpp
     BuiltinPlugins/FormatterEnhancer.h
+    BuiltinPlugins/KfxParagraphNormalizer.cpp
+    BuiltinPlugins/KfxParagraphNormalizer.h
     )
 
 set( RESOURCE_OBJECT_FILES

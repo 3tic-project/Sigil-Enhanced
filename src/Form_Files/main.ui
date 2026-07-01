@@ -433,6 +433,9 @@
     <addaction name="actionAnalyzeBrParagraphs"/>
     <addaction name="actionNormalizeCurrentBrParagraphs"/>
     <addaction name="actionNormalizeBrParagraphs"/>
+    <addaction name="actionAnalyzeKfxParagraphs"/>
+    <addaction name="actionNormalizeCurrentKfxParagraphs"/>
+    <addaction name="actionNormalizeKfxParagraphs"/>
    </widget>
    <widget class="QMenu" name="menuCheckpoints">
     <property name="title">
@@ -1977,6 +1980,30 @@
     </property>
     <property name="toolTip">
       <string>Convert auto-safe body-level BR-separated XHTML files into paragraphs after per-file safety checks</string>
+    </property>
+  </action>
+  <action name="actionAnalyzeKfxParagraphs">
+    <property name="text">
+      <string>Analyze KFX Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Report XHTML files that use KFX/calibre spacer p elements around body-level raw text</string>
+    </property>
+  </action>
+  <action name="actionNormalizeCurrentKfxParagraphs">
+    <property name="text">
+      <string>Normalize Current KFX Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Wrap KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</string>
+    </property>
+  </action>
+  <action name="actionNormalizeKfxParagraphs">
+    <property name="text">
+      <string>Normalize KFX Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert auto-safe KFX/calibre spacer paragraph XHTML files into paragraphs after per-file safety checks</string>
     </property>
   </action>
   <action name="actionWellFormedCheckEpub">

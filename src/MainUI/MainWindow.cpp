@@ -228,11 +228,13 @@ static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "GenerateNCXGuideFromNav" <<
     "GenerateTOC" <<
     "AnalyzeBrParagraphs" <<
+    "AnalyzeKfxParagraphs" <<
     "EnhanceSourceFormatting" <<
     "MendPrettifyHTML" <<
     "MendHTML" <<
     "NormalizeBrParagraphs" <<
     "NormalizeEpubStructure" <<
+    "NormalizeKfxParagraphs" <<
     "OnFailedRunSavedSearchReplaceAll" <<
     "OnSuccessRunSavedSearchReplaceAll" <<
     "ReformatCSSMultipleLines" <<
@@ -456,9 +458,11 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "MendPrettifyHTML")           success = MendPrettifyHTML();
             else if (cmd == "MendHTML")                   success = MendHTML();
             else if (cmd == "AnalyzeBrParagraphs")        success = AnalyzeBrParagraphs();
+            else if (cmd == "AnalyzeKfxParagraphs")       success = AnalyzeKfxParagraphs();
             else if (cmd == "EnhanceSourceFormatting")    success = EnhanceSourceFormatting();
             else if (cmd == "NormalizeBrParagraphs")       success = NormalizeAllBrParagraphs();
             else if (cmd == "NormalizeEpubStructure")     success = NormalizeEpubStructure();
+            else if (cmd == "NormalizeKfxParagraphs")      success = NormalizeAllKfxParagraphs();
             else if (cmd == "ValidateStylesheetsWithW3C") success = ValidateStylesheetsWithW3C();
             else if (cmd == "RepoCommit")                 success = RepoCommit();
             else if (cmd == "DeleteUnusedMedia")          success = DeleteUnusedMedia(true);
@@ -6899,6 +6903,9 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionAnalyzeBrParagraphs, "MainWindow.AnalyzeBrParagraphs"); // modified: Builtin native plugin
     sm->registerAction(this, ui.actionNormalizeCurrentBrParagraphs, "MainWindow.NormalizeCurrentBrParagraphs"); // modified: Builtin native plugin
     sm->registerAction(this, ui.actionNormalizeBrParagraphs, "MainWindow.NormalizeBrParagraphs"); // modified: Builtin native plugin
+    sm->registerAction(this, ui.actionAnalyzeKfxParagraphs, "MainWindow.AnalyzeKfxParagraphs"); // modified: Builtin native plugin
+    sm->registerAction(this, ui.actionNormalizeCurrentKfxParagraphs, "MainWindow.NormalizeCurrentKfxParagraphs"); // modified: Builtin native plugin
+    sm->registerAction(this, ui.actionNormalizeKfxParagraphs, "MainWindow.NormalizeKfxParagraphs"); // modified: Builtin native plugin
     sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     sm->registerAction(this, ui.actionSplitTagOrAddBreak, "MainWindow.SplitTagOrAddBreak"); // modified: SplitTagOrAddBreak
@@ -7279,6 +7286,9 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionAnalyzeBrParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeBrParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeCurrentBrParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentBrParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeBrParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllBrParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionAnalyzeKfxParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeKfxParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionNormalizeCurrentKfxParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentKfxParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionNormalizeKfxParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllKfxParagraphs())); // modified: Builtin native plugin
     connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
     //modified: FindReplacePlus
     ConnectSignalsToSearchEditor();
