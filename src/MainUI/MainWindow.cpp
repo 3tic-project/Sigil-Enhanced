@@ -227,6 +227,7 @@ static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "DeleteUnusedStyles" <<
     "GenerateNCXGuideFromNav" <<
     "GenerateTOC" <<
+    "EnhanceSourceFormatting" <<
     "MendPrettifyHTML" <<
     "MendHTML" <<
     "NormalizeEpubStructure" <<
@@ -452,6 +453,7 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "WellFormedCheckEpub")        success = WellFormedCheckEpub();
             else if (cmd == "MendPrettifyHTML")           success = MendPrettifyHTML();
             else if (cmd == "MendHTML")                   success = MendHTML();
+            else if (cmd == "EnhanceSourceFormatting")    success = EnhanceSourceFormatting();
             else if (cmd == "NormalizeEpubStructure")     success = NormalizeEpubStructure();
             else if (cmd == "ValidateStylesheetsWithW3C") success = ValidateStylesheetsWithW3C();
             else if (cmd == "RepoCommit")                 success = RepoCommit();
@@ -6889,6 +6891,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionEpub2To3, "MainWindow.Epub2To3"); // modified: Epub2ToEpub3
     sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
     sm->registerAction(this, ui.actionNormalizeEpubStructure, "MainWindow.NormalizeEpubStructure"); // modified: Builtin native plugin
+    sm->registerAction(this, ui.actionEnhanceSourceFormatting, "MainWindow.EnhanceSourceFormatting"); // modified: Builtin native plugin
     sm->registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     sm->registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     sm->registerAction(this, ui.actionSplitTagOrAddBreak, "MainWindow.SplitTagOrAddBreak"); // modified: SplitTagOrAddBreak
@@ -7265,6 +7268,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionEpub2To3, SIGNAL(triggered()), this, SLOT(Epub2ToEpub3())); // modified: Epub2ToEpub3
     connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(ui.actionNormalizeEpubStructure, SIGNAL(triggered()), this, SLOT(NormalizeEpubStructure())); // modified: Builtin native plugin
+    connect(ui.actionEnhanceSourceFormatting, SIGNAL(triggered()), this, SLOT(EnhanceSourceFormatting())); // modified: Builtin native plugin
     connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
     //modified: FindReplacePlus
     ConnectSignalsToSearchEditor();

@@ -1144,6 +1144,7 @@ public slots:
     void Epub2ToEpub3(); //modified: Epub2ToEpub3
     bool NormalizedOPF(); //modified: NormalizedOPF
     bool NormalizeEpubStructure(); // modified: Builtin native plugin
+    bool EnhanceSourceFormatting(); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
     //modified: FindReplacePlus

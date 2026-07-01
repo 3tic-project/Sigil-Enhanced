@@ -53,6 +53,8 @@ set( BOOK_MANIPULATION_FILES
 set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/EpubStructureNormalizer.cpp
     BuiltinPlugins/EpubStructureNormalizer.h
+    BuiltinPlugins/FormatterEnhancer.cpp
+    BuiltinPlugins/FormatterEnhancer.h
     )
 
 set( RESOURCE_OBJECT_FILES

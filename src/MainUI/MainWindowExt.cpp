@@ -7,6 +7,7 @@
 #include "MainUI/TableOfContents.h"
 #include "MainUI/ValidationResultsView.h"
 #include "BuiltinPlugins/EpubStructureNormalizer.h"
+#include "BuiltinPlugins/FormatterEnhancer.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/Resource.h"
 #include "Tabs/ContentTab.h"
@@ -158,6 +159,39 @@ bool MainWindow::NormalizeEpubStructure()
     ShowMessageOnStatusBar(modified ?
                            tr("EPUB structure normalization completed.") :
                            tr("No EPUB structure changes needed."));
+    return true;
+}
+
+bool MainWindow::EnhanceSourceFormatting()
+{
+    SaveTabData();
+
+    QMessageBox::StandardButton button_pressed;
+    button_pressed = Utility::warning(
+        this,
+        tr("Sigil-Enhanced"),
+        tr("Enhance source formatting for all XHTML and CSS resources?\n\n"
+           "This uses the built-in EPUB-safe formatter backend. XHTML files that are not well-formed "
+           "and CSS files with parser errors will be skipped and reported in Validation Results."),
+        QMessageBox::Ok | QMessageBox::Cancel);
+    if (button_pressed != QMessageBox::Ok) {
+        return false;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    BuiltinPlugins::FormatterEnhancer formatter(m_Book.data());
+    BuiltinPlugins::FormatterEnhancer::Options options;
+    BuiltinPlugins::FormatterEnhancer::Result result = formatter.format(options);
+    QApplication::restoreOverrideCursor();
+
+    if (result.modified) {
+        m_Book->SetModified();
+    }
+
+    m_ValidationResultsView->LoadResults(result.validationResults);
+    ShowMessageOnStatusBar(result.modified ?
+                           tr("Source formatting enhancement completed.") :
+                           tr("No source formatting changes needed."));
     return true;
 }
 

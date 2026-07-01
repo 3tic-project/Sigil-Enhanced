@@ -48,9 +48,30 @@
 - 修正 XHTML、CSS、NCX 中可唯一匹配的书内链接大小写。
 - 将资源整理到 Sigil 标准目录结构，如 `OEBPS/content.opf`、`OEBPS/Text`、`OEBPS/Images`。
 
+### Formatter Enhancer
+
+入口:
+
+- `Enhancement > Enhance Source Formatting...`
+- Automate 命令: `EnhanceSourceFormatting`
+
+职责:
+
+- 使用当前项目内置 EPUB-safe formatter backend 批量格式化 XHTML 和 CSS。
+- XHTML 先做 well-formed 检查；不合法的文件不会被重写，而是在 Validation Results 中记录跳过原因。
+- CSS 使用当前 C++ CSSParser/serializer readable profile；解析失败的文件不会被重写，而是在 Validation Results 中记录 parser 错误。
+- 每个资源的修改、跳过、未变化状态都会写入 Validation Results，便于复查本次操作实际影响。
+
+当前边界:
+
+- 第一版不直接调用 HTML Tidy、Prettier 或 Lexbor。
+- 外部 formatter 后端必须作为显式可选 backend 接入，不能改变默认 EPUB-safe 行为。
+- 不对 SVG、NCX、OPF、XML 等非 XHTML/CSS 资源做格式化。
+
 ## 测试要求
 
 - 至少验证 Debug 构建能通过 `cmake --build cmake-build-debug --target Sigil -j 4`。
 - 对批量资源移动类功能，必须测试移动后 OPF manifest、spine、XHTML 链接、CSS url、NCX src 是否仍然可用。
 - 对路径相关功能，必须覆盖空格、中文、URL 编码、大小写不一致、fragment、外部链接和不存在目标。
+- 对 formatter 类功能，必须覆盖 XHTML well-formed 跳过、XHTML 正常重排、CSS 正常重排、CSS parser error 跳过、无变化文件记录。
 - 对 Automate 命令，需确认命令列表可见且执行行为与菜单入口一致。

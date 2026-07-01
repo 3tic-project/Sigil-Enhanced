@@ -429,6 +429,7 @@
      <string>&amp;Enhancement</string>
     </property>
     <addaction name="actionNormalizeEpubStructure"/>
+    <addaction name="actionEnhanceSourceFormatting"/>
    </widget>
    <widget class="QMenu" name="menuCheckpoints">
     <property name="title">
@@ -1941,6 +1942,14 @@
     </property>
     <property name="toolTip">
       <string>Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil's standard folder layout</string>
+    </property>
+  </action>
+  <action name="actionEnhanceSourceFormatting">
+    <property name="text">
+      <string>Enhance Source Formatting...</string>
+    </property>
+    <property name="toolTip">
+      <string>Format all XHTML and CSS resources with the built-in EPUB-safe formatter backend</string>
     </property>
   </action>
   <action name="actionWellFormedCheckEpub">

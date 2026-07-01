@@ -348,6 +348,7 @@ void AutomateEditor::loadToolElements()
          "DeleteUnusedStyles" << "DeleteUnusedStyles" << tr("Delete Unused CSS Selectors.") <<
          "GenerateNCXGuideFromNav" << "GenerateNCXGuideFromNav" << tr("Generate NCX and OPF Guide from Epub3 Nav.") <<
          "GenerateTOC" << "GenerateTOC" << tr("Generate TOC from Heading Tags.") <<
+         "EnhanceSourceFormatting" << "EnhanceSourceFormatting" << tr("Format XHTML and CSS resources with the built-in EPUB-safe formatter.") <<
          "MendPrettifyHTML" << "MendPrettifyHTML" << tr("Mend and Prettify all XHtml files.") <<
          "MendHTML" << "MendHTML"  << tr("Mend All XHtml files.") <<
          "NormalizeEpubStructure" << "NormalizeEpubStructure" << tr("Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil's standard folder layout.") <<
