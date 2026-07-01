@@ -411,7 +411,6 @@ jobs:
           cd "$BUILD_DIR"
           bash "$GITHUB_WORKSPACE/ci_scripts/rpath_adjust.sh"
           mkdir -p dist
-          tar -cJf "dist/Sigil-Enhanced-${SIGIL_VERSION}-macos-${{ matrix.arch }}.tar.xz" -C bin Sigil.app
           hdiutil create \
             -volname "Sigil-Enhanced" \
             -srcfolder "bin/Sigil.app" \
