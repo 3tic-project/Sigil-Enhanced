@@ -229,6 +229,24 @@ set( _BUNDLED_PYVER "${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}" )
 message(STATUS "Using newer Python3::Python target to link to Python")
 list( APPEND LIBS_TO_LINK Python3::Python )
 
+set( SIGIL_CORE_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-core.txt )
+set( SIGIL_CORE_PYTHON_CACHE_DIR ${SIGIL_PYTHON_CACHE_DIR}/core )
+set( SIGIL_CORE_PYTHON_PACKAGE_IMPORTS
+     lxml
+     dulwich
+     regex
+     css_parser
+     cssselect
+     html5lib
+     webencodings
+     urllib3
+     typing_extensions.py
+     chardet
+     certifi
+     PIL
+     six.py
+     )
+
 # QtUiTools needed for PySide plugins
 if ( APPLE )
     list( APPEND LIBS_TO_LINK Qt6::UiTools )
@@ -344,7 +362,14 @@ if( APPLE )
     endif()
     if ( Python3_EXECUTABLE )
         add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
-                            COMMAND ${Python3_EXECUTABLE} ARGS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/copy_python_package.py lxml ${WORK_DIR}/Sigil.app/Contents/python3lib )
+                            COMMAND ${Python3_EXECUTABLE}
+                                    ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/sync_python_packages.py
+                                    --requirements ${SIGIL_CORE_PYTHON_REQUIREMENTS}
+                                    --cache-dir ${SIGIL_CORE_PYTHON_CACHE_DIR}
+                                    --dest ${WORK_DIR}/Sigil.app/Contents/python3lib
+                                    --packages ${SIGIL_CORE_PYTHON_PACKAGE_IMPORTS}
+                            COMMENT "Syncing cached Python runtime packages into Sigil.app"
+                            VERBATIM )
     endif()
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp ${PROJECT_BINARY_DIR}/*.rcc ${WORK_DIR}/Sigil.app/Contents/Resources/ )
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp ${CMAKE_SOURCE_DIR}/src/Resource_Files/examples/* ${WORK_DIR}/Sigil.app/Contents/examples )

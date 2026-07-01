@@ -25,7 +25,27 @@ endif()
 # Set to 1 to create and use a virtual Python venv on Windows and Linux.
 # Use in conjunction with QTVER to download/install correct PySide6 module
 if ( NOT DEFINED USE_VIRT_PY )
-    set ( USE_VERT_PY 0 )
+    if ( WIN32 )
+        set ( USE_VIRT_PY 1 )
+    else()
+        set ( USE_VIRT_PY 0 )
+    endif()
+endif()
+
+# Cache downloaded Python wheels/venvs outside of the build tree by default.
+# This keeps package builds reproducible without re-downloading Python modules
+# every time a build directory is recreated.
+if ( NOT DEFINED SIGIL_PYTHON_CACHE_DIR )
+    if ( DEFINED ENV{SIGIL_PYTHON_CACHE_DIR} )
+        file(TO_CMAKE_PATH "$ENV{SIGIL_PYTHON_CACHE_DIR}" SIGIL_PYTHON_CACHE_DIR_DEFAULT)
+    elseif( WIN32 AND DEFINED ENV{LOCALAPPDATA} )
+        file(TO_CMAKE_PATH "$ENV{LOCALAPPDATA}/Sigil-Enhanced/python-cache" SIGIL_PYTHON_CACHE_DIR_DEFAULT)
+    elseif( DEFINED ENV{HOME} )
+        file(TO_CMAKE_PATH "$ENV{HOME}/.cache/sigil-enhanced/python" SIGIL_PYTHON_CACHE_DIR_DEFAULT)
+    else()
+        set( SIGIL_PYTHON_CACHE_DIR_DEFAULT "${PROJECT_BINARY_DIR}/python-cache" )
+    endif()
+    set( SIGIL_PYTHON_CACHE_DIR "${SIGIL_PYTHON_CACHE_DIR_DEFAULT}" CACHE PATH "Cache directory for Sigil Python runtime packages" )
 endif()
 
 # Set to 1 to download and use a custom-built Qt from WINQTURL.
@@ -152,9 +172,9 @@ if ( WIN32 )
         set(Python3_FIND_REGISTRY NEVER)
         set(Python3_FIND_STRATEGY LOCATION)
         # Trick cmake's findPython3 module into thinking the virtual python is activated
-        set(VIRT_PATH "${CMAKE_CURRENT_BINARY_DIR}/sigilpy")
+        set(VIRT_PATH "${SIGIL_WIN_PYTHON_VENV_DIR}")
         set(ENV{VIRTUAL_ENV} "${VIRT_PATH}")
-        if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/sigilpy/Scripts/python.exe")
+        if(NOT EXISTS "${SIGIL_WIN_PYTHON_VENV_DIR}/Scripts/python.exe")
             message(FATAL_ERROR "Virtual Python setup unsuccessful!")
         endif()
     endif()
