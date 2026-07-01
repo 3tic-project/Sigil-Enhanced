@@ -849,9 +849,11 @@ bool MainWindow::StandardizeEpub()
         return false;
     }
 
-    bool changed = ApplyStandardEpubLayout();
+    QList<ValidationResult> layout_results;
+    bool changed = ApplyStandardEpubLayout(&layout_results);
     QApplication::restoreOverrideCursor();
 
+    m_ValidationResultsView->LoadResults(layout_results);
     ShowMessageOnStatusBar(changed ? tr("Restructure completed.") : tr("No restructure changes needed."));
     return true;
 }
@@ -884,7 +886,7 @@ bool MainWindow::CanStandardizeEpubLayout(const QString& action_name)
     return true;
 }
 
-bool MainWindow::ApplyStandardEpubLayout()
+bool MainWindow::ApplyStandardEpubLayout(QList<ValidationResult>* results)
 {
     bool changed = false;
 
@@ -907,11 +909,18 @@ bool MainWindow::ApplyStandardEpubLayout()
         }
         m_BookBrowser->RenameResourceList(resources, newfilenames);
         for (int i = 0; i < resources.count(); i++) {
-            changed = (resources.at(i)->GetRelativePath() != oldbookpaths.at(i)) || changed;
+            const QString newbookpath = resources.at(i)->GetRelativePath();
+            const bool renamed = newbookpath != oldbookpaths.at(i);
+            if (renamed && results) {
+                results->append(ValidationResult(
+                    ValidationResult::ResType_Info, newbookpath, -1, -1,
+                    tr("标准目录整理：已将【%1】重命名为【%2】。").arg(oldbookpaths.at(i), newbookpath)));
+            }
+            changed = renamed || changed;
         }
     }
 
-    changed = FixDuplicateFilenames() || changed;
+    changed = FixDuplicateFilenames(results) || changed;
 
     bool fs_case_sensitive = false;
     QString mainfolder = m_Book->GetFolderKeeper()->GetFullPathToMainFolder();
@@ -934,13 +943,19 @@ bool MainWindow::ApplyStandardEpubLayout()
             bpath = mainfolder + "/" + folderpath;
             if (QFileInfo(apath).exists() && QFileInfo(apath).isDir()) {
                 bool result = mf.rename(folderpath.toLower(), folderpath);
+                if (result && results) {
+                    results->append(ValidationResult(
+                        ValidationResult::ResType_Info, folderpath, -1, -1,
+                        tr("标准目录整理：已将目录【%1】大小写规范化为【%2】。")
+                            .arg(folderpath.toLower(), folderpath)));
+                }
                 changed = result || changed;
                 DBG qDebug() << "rename directory: " << folderpath << result;
             }
         }
     }
 
-    changed = MoveContentFilesToStdFolders() || changed;
+    changed = MoveContentFilesToStdFolders(results) || changed;
 
     m_Book->GetFolderKeeper()->updateShortPathNames();
     QList<Resource*> allresources = m_Book->GetFolderKeeper()->GetResourceList();
@@ -1074,7 +1089,7 @@ bool MainWindow::RebaseManifestIDs()
 }
 
 
-bool MainWindow::FixDuplicateFilenames()
+bool MainWindow::FixDuplicateFilenames(QList<ValidationResult>* results)
 {
     bool changed = false;
     QStringList bookpaths = m_Book->GetFolderKeeper()->GetAllBookPaths();
@@ -1096,13 +1111,20 @@ bool MainWindow::FixDuplicateFilenames()
         QStringList newfilenames = QStringList() << newname;
         QString oldbookpath = resource->GetRelativePath();
         m_BookBrowser->RenameResourceList(resources, newfilenames);
-        changed = (resource->GetRelativePath() != oldbookpath) || changed;
+        const QString newbookpath = resource->GetRelativePath();
+        const bool renamed = newbookpath != oldbookpath;
+        if (renamed && results) {
+            results->append(ValidationResult(
+                ValidationResult::ResType_Info, newbookpath, -1, -1,
+                tr("标准目录整理：发现重复文件名，已将【%1】重命名为【%2】。").arg(oldbookpath, newbookpath)));
+        }
+        changed = renamed || changed;
     }
     return changed;
 }
 
 
-bool MainWindow::MoveContentFilesToStdFolders()
+bool MainWindow::MoveContentFilesToStdFolders(QList<ValidationResult>* results)
 {
     QList<Resource*> resources = m_Book->GetFolderKeeper()->GetResourceList();
     QList<Resource*> resources_to_move;
@@ -1133,7 +1155,14 @@ bool MainWindow::MoveContentFilesToStdFolders()
     if (!newbookpaths.isEmpty()) {
         m_BookBrowser->MoveResourceList(resources_to_move, newbookpaths);
         for (int i = 0; i < resources_to_move.count(); i++) {
-            changed = (resources_to_move.at(i)->GetRelativePath() != oldbookpaths.at(i)) || changed;
+            const QString newbookpath = resources_to_move.at(i)->GetRelativePath();
+            const bool moved = newbookpath != oldbookpaths.at(i);
+            if (moved && results) {
+                results->append(ValidationResult(
+                    ValidationResult::ResType_Info, newbookpath, -1, -1,
+                    tr("标准目录整理：已将资源【%1】移动到标准目录【%2】。").arg(oldbookpaths.at(i), newbookpath)));
+            }
+            changed = moved || changed;
         }
     }
     return changed;

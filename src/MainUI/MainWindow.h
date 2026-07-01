@@ -908,9 +908,9 @@ private:
     void SetupPreviewTimer();
 
     bool CanStandardizeEpubLayout(const QString& action_name);
-    bool ApplyStandardEpubLayout();
-    bool FixDuplicateFilenames();
-    bool MoveContentFilesToStdFolders();
+    bool ApplyStandardEpubLayout(QList<ValidationResult>* results = nullptr);
+    bool FixDuplicateFilenames(QList<ValidationResult>* results = nullptr);
+    bool MoveContentFilesToStdFolders(QList<ValidationResult>* results = nullptr);
 
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES

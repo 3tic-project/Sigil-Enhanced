@@ -136,10 +136,14 @@ bool MainWindow::NormalizeEpubStructure()
     BuiltinPlugins::EpubStructureNormalizer normalizer(m_Book.data());
     BuiltinPlugins::EpubStructureNormalizer::Result result = normalizer.normalize();
     QHash<Resource*, QString> paths_before_layout = CaptureResourcePaths(m_Book.data());
-    bool layout_modified = ApplyStandardEpubLayout();
+    QList<ValidationResult> layout_results;
+    bool layout_modified = ApplyStandardEpubLayout(&layout_results);
     result.validationResults = RebaseValidationResultPaths(
         result.validationResults,
         BuildResourcePathMap(m_Book.data(), paths_before_layout));
+    foreach(const ValidationResult& validation_result, layout_results) {
+        result.validationResults.append(validation_result);
+    }
     QApplication::restoreOverrideCursor();
 
     if (result.bookBrowserRefreshRequired && !layout_modified) {
