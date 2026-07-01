@@ -8,8 +8,8 @@
     </message>
     <message>
         <location filename="../../Form_Files/About.ui" line="56"/>
-        <source>The EPUB Editor</source>
-        <translation>EPUB编辑器</translation>
+        <source>Sigil-Enhanced EPUB Editor</source>
+        <translation>Sigil-Enhanced EPUB 编辑器</translation>
     </message>
     <message>
         <location filename="../../Form_Files/About.ui" line="70"/>
@@ -52,14 +52,29 @@
         <translation>作者</translation>
     </message>
     <message>
+        <location filename="../../Dialogs/About.cpp" line="39"/>
+        <source>About %1</source>
+        <translation>关于 %1</translation>
+    </message>
+    <message>
         <location filename="../../Dialogs/About.cpp" line="42"/>
         <source>GNU General Public License v3</source>
         <translation>GNU General Public License v3</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/About.cpp" line="52"/>
-        <source>Developers(s)</source>
-        <translation>开发者</translation>
+        <location filename="../../Dialogs/About.cpp" line="46"/>
+        <source>Sigil-Enhanced Maintainer</source>
+        <translation>Sigil-Enhanced 维护者</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/About.cpp" line="50"/>
+        <source>Original sigil-modified Author</source>
+        <translation>原 sigil-modified 作者</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/About.cpp" line="54"/>
+        <source>Sigil Developer(s)</source>
+        <translation>Sigil 开发者</translation>
     </message>
     <message>
         <location filename="../../Dialogs/About.cpp" line="57"/>
@@ -1589,6 +1604,18 @@ if a sans-serif font-family specified in your CSS</source>
         <translation>从标题属性生成目录。</translation>
     </message>
     <message>
+        <source>Analyze XHTML files that use body-level BR tags as paragraph separators.</source>
+        <translation>分析使用 body 级 BR 标签作为段落分隔的 XHTML 文件。</translation>
+    </message>
+    <message>
+        <source>Analyze XHTML files that use KFX/calibre spacer p elements around body-level raw text.</source>
+        <translation>分析使用 KFX/calibre 空白 p 元素分隔 body 级裸文本的 XHTML 文件。</translation>
+    </message>
+    <message>
+        <source>Format XHTML and CSS resources with the built-in EPUB-safe formatter.</source>
+        <translation>使用内置 EPUB 安全格式化器格式化 XHTML 和 CSS 资源。</translation>
+    </message>
+    <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="351"/>
         <source>Mend and Prettify all XHtml files.</source>
         <translation>修改和美化所有 XHtml 文件。</translation>
@@ -1597,6 +1624,18 @@ if a sans-serif font-family specified in your CSS</source>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="352"/>
         <source>Mend All XHtml files.</source>
         <translation>修复所有 XHtml 文件。</translation>
+    </message>
+    <message>
+        <source>Normalize auto-safe XHTML files that use body-level BR tags as paragraph separators.</source>
+        <translation>规范化可自动安全处理的、使用 body 级 BR 标签作为段落分隔的 XHTML 文件。</translation>
+    </message>
+    <message>
+        <source>Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil&apos;s standard folder layout.</source>
+        <translation>修复 OPF manifest 问题，校正内部链接路径大小写，并将资源移动到 Sigil 标准目录结构。</translation>
+    </message>
+    <message>
+        <source>Normalize auto-safe XHTML files that use KFX/calibre spacer p elements around body-level raw text.</source>
+        <translation>规范化可自动安全处理的、使用 KFX/calibre 空白 p 元素分隔 body 级裸文本的 XHTML 文件。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="353"/>
@@ -13454,6 +13493,470 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <source>Focus changed to Clips window.</source>
         <translation>焦点更改到片段窗口</translation>
     </message>
+    <message>
+        <source>Paste Rich Text</source>
+        <translation>粘贴富文本</translation>
+    </message>
+    <message>
+        <source>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;Paste Rich Text&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style="margin-left: 0.5em;"&gt;Pastes the rich text from the clipboard into the book.&lt;/p&gt;</source>
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;粘贴富文本&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style="margin-left: 0.5em;"&gt;将剪贴板中的富文本粘贴到书籍中。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Ctrl+Shift+V</source>
+        <translation>Ctrl+Shift+V</translation>
+    </message>
+    <message>
+        <source>Split Tag or Add Break</source>
+        <translation>拆分标签或添加换行</translation>
+    </message>
+    <message>
+        <source>Split at tag or add a new blank line according where the cursor positon at.</source>
+        <translation>根据光标位置拆分标签，或新增一个空行。</translation>
+    </message>
+    <message>
+        <source>Merge with Next Element</source>
+        <translation>与下一个元素合并</translation>
+    </message>
+    <message>
+        <source>Merge the current element which the next element.</source>
+        <translation>将当前元素与下一个元素合并。</translation>
+    </message>
+    <message>
+        <source>Ctrl+Alt+Return</source>
+        <translation>Ctrl+Alt+Return</translation>
+    </message>
+    <message>
+        <source>&amp;Division</source>
+        <translation>分区(&amp;D)</translation>
+    </message>
+    <message>
+        <source>
+			&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;Division&lt;/b&gt;&lt;/p&gt;
+
+			&lt;p style="margin-left: 0.5em;"&gt;Format paragraph as a division element.&lt;/p&gt;
+		</source>
+        <translation>
+			&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;分区&lt;/b&gt;&lt;/p&gt;
+
+			&lt;p style="margin-left: 0.5em;"&gt;将段落格式化为 div 元素。&lt;/p&gt;
+		</translation>
+    </message>
+    <message>
+        <source>Ctrl+8</source>
+        <translation>Ctrl+8</translation>
+    </message>
+    <message>
+        <source>Prettify All HTML Files</source>
+        <translation>格式化所有 HTML 文件</translation>
+    </message>
+    <message>
+        <source>Epub3 to Epub2</source>
+        <translation>EPUB3 转 EPUB2</translation>
+    </message>
+    <message>
+        <source>Epub2 to Epub3</source>
+        <translation>EPUB2 转 EPUB3</translation>
+    </message>
+    <message>
+        <source>This Epub is already the version 2.0 !</source>
+        <translation>此 EPUB 已经是 2.0 版本！</translation>
+    </message>
+    <message>
+        <source>This Epub is already the version 3.0 !</source>
+        <translation>此 EPUB 已经是 3.0 版本！</translation>
+    </message>
+    <message>
+        <source>&amp;Enhancement</source>
+        <translation>增强(&amp;E)</translation>
+    </message>
+    <message>
+        <source>Normalized OPF</source>
+        <translation>规范化 OPF</translation>
+    </message>
+    <message>
+        <source>Well formed check and normalized the OPF.</source>
+        <translation>检查 OPF 格式正确性并进行规范化。</translation>
+    </message>
+    <message>
+        <source>Normalize EPUB Structure...</source>
+        <translation>规范化 EPUB 结构...</translation>
+    </message>
+    <message>
+        <source>Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil&apos;s standard folder layout</source>
+        <translation>修复 OPF manifest 问题，校正内部链接路径大小写，并将资源移动到 Sigil 标准目录结构</translation>
+    </message>
+    <message>
+        <source>Enhance Source Formatting...</source>
+        <translation>增强源码格式化...</translation>
+    </message>
+    <message>
+        <source>Format all XHTML and CSS resources with the built-in EPUB-safe formatter backend</source>
+        <translation>使用内置 EPUB 安全格式化后端格式化所有 XHTML 和 CSS 资源</translation>
+    </message>
+    <message>
+        <source>Analyze BR Paragraphs...</source>
+        <translation>分析 BR 段落...</translation>
+    </message>
+    <message>
+        <source>Report XHTML files that use body-level BR tags as paragraph separators</source>
+        <translation>报告使用 body 级 BR 标签作为段落分隔的 XHTML 文件</translation>
+    </message>
+    <message>
+        <source>Normalize Current BR Paragraphs...</source>
+        <translation>规范化当前 BR 段落...</translation>
+    </message>
+    <message>
+        <source>Convert body-level BR-separated text in the current XHTML file into paragraphs after safety checks</source>
+        <translation>通过安全检查后，将当前 XHTML 文件中由 body 级 BR 分隔的文本转换为段落</translation>
+    </message>
+    <message>
+        <source>Normalize BR Paragraphs...</source>
+        <translation>规范化 BR 段落...</translation>
+    </message>
+    <message>
+        <source>Convert auto-safe body-level BR-separated XHTML files into paragraphs after per-file safety checks</source>
+        <translation>对每个文件执行安全检查后，将可自动安全处理的 body 级 BR 分隔 XHTML 文件转换为段落</translation>
+    </message>
+    <message>
+        <source>Analyze KFX Paragraphs...</source>
+        <translation>分析 KFX 段落...</translation>
+    </message>
+    <message>
+        <source>Report XHTML files that use KFX/calibre spacer p elements around body-level raw text</source>
+        <translation>报告使用 KFX/calibre 空白 p 元素分隔 body 级裸文本的 XHTML 文件</translation>
+    </message>
+    <message>
+        <source>Normalize Current KFX Paragraphs...</source>
+        <translation>规范化当前 KFX 段落...</translation>
+    </message>
+    <message>
+        <source>Wrap KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</source>
+        <translation>通过安全检查后，将当前 XHTML 文件中的 KFX/calibre body 级裸文本包装为段落</translation>
+    </message>
+    <message>
+        <source>Normalize KFX Paragraphs...</source>
+        <translation>规范化 KFX 段落...</translation>
+    </message>
+    <message>
+        <source>Convert auto-safe KFX/calibre spacer paragraph XHTML files into paragraphs after per-file safety checks</source>
+        <translation>对每个文件执行安全检查后，将可自动安全处理的 KFX/calibre 空白段落 XHTML 文件转换为段落</translation>
+    </message>
+    <message>
+        <source>Sigil-Enhanced</source>
+        <translation>Sigil-Enhanced</translation>
+    </message>
+    <message>
+        <source>untitled.epub[*] - Sigil-Enhanced</source>
+        <translation>untitled.epub[*] - Sigil-Enhanced</translation>
+    </message>
+    <message>
+        <source>Show information about Sigil-Enhanced.</source>
+        <translation>显示关于 Sigil-Enhanced 的信息。</translation>
+    </message>
+    <message>
+        <source>Sigil-Enhanced Website...</source>
+        <translation>Sigil-Enhanced 网站...</translation>
+    </message>
+    <message>
+        <source>Normalize this EPUB structure?
+
+This will repair OPF manifest issues, correct internal link path casing, and move resources to Sigil&apos;s standard folder layout.</source>
+        <translation>要规范化此 EPUB 结构吗？
+
+这将修复 OPF manifest 问题，校正内部链接路径大小写，并将资源移动到 Sigil 标准目录结构。</translation>
+    </message>
+    <message>
+        <source>Normalize EPUB structure</source>
+        <translation>规范化 EPUB 结构</translation>
+    </message>
+    <message>
+        <source>EPUB structure normalization completed.</source>
+        <translation>EPUB 结构规范化已完成。</translation>
+    </message>
+    <message>
+        <source>No EPUB structure changes needed.</source>
+        <translation>EPUB 结构无需修改。</translation>
+    </message>
+    <message>
+        <source>Enhance source formatting for all XHTML and CSS resources?
+
+This uses the built-in EPUB-safe formatter backend. XHTML files that are not well-formed and CSS files with parser errors will be skipped and reported in Validation Results.</source>
+        <translation>要增强格式化所有 XHTML 和 CSS 资源吗？
+
+此操作会使用内置 EPUB 安全格式化后端。格式不正确的 XHTML 文件以及存在解析错误的 CSS 文件会被跳过，并在验证结果中报告。</translation>
+    </message>
+    <message>
+        <source>Source formatting enhancement completed.</source>
+        <translation>源码格式化增强已完成。</translation>
+    </message>
+    <message>
+        <source>No source formatting changes needed.</source>
+        <translation>源码格式无需修改。</translation>
+    </message>
+    <message>
+        <source>BR paragraph analysis: no EPUB is currently loaded.</source>
+        <translation>BR 段落分析：当前未加载 EPUB。</translation>
+    </message>
+    <message>
+        <source>BR paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.</source>
+        <translation>BR 段落分析完成。已检查 %1 个 XHTML 文件，发现 %2 个可自动安全处理的候选文件、%3 个需人工复核的候选文件，跳过 %4 个文件，预计可自动安全处理 %5 个段落。</translation>
+    </message>
+    <message>
+        <source>BR paragraph candidates found. See Validation Results.</source>
+        <translation>发现 BR 段落候选。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>No BR paragraph candidates found.</source>
+        <translation>未发现 BR 段落候选。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization: current tab is not an XHTML resource.</source>
+        <translation>BR 段落规范化：当前标签页不是 XHTML 资源。</translation>
+    </message>
+    <message>
+        <source>The current tab is not an XHTML file.</source>
+        <translation>当前标签页不是 XHTML 文件。</translation>
+    </message>
+    <message>
+        <source>The current XHTML file is not a BR paragraph candidate. See Validation Results.</source>
+        <translation>当前 XHTML 文件不是 BR 段落候选。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization failed safety checks. See Validation Results.</source>
+        <translation>BR 段落规范化未通过安全检查。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization: no changes needed.</source>
+        <translation>BR 段落规范化：无需修改。</translation>
+    </message>
+    <message>
+        <source>No BR paragraph changes needed.</source>
+        <translation>BR 段落无需修改。</translation>
+    </message>
+    <message>
+        <source>This file is an auto-safe BR paragraph candidate.</source>
+        <translation>此文件是可自动安全处理的 BR 段落候选。</translation>
+    </message>
+    <message>
+        <source>This file requires manual review and is skipped by full-book normalization. Continue only if you inspected it.</source>
+        <translation>此文件需要人工复核，整本规范化时会跳过。仅在你已检查确认后继续。</translation>
+    </message>
+    <message>
+        <source>Normalize BR paragraphs in the current XHTML file?
+
+%1
+
+This will convert body-level BR-separated text into p elements. Safety checks have confirmed visible text, id/name, and href/src values are preserved.
+
+Estimated paragraphs: %2</source>
+        <translation>要规范化当前 XHTML 文件中的 BR 段落吗？
+
+%1
+
+这会将 body 级 BR 分隔文本转换为 p 元素。安全检查已确认可见文本、id/name 以及 href/src 值都会被保留。
+
+预计段落数：%2</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization: current XHTML file was updated.</source>
+        <translation>BR 段落规范化：当前 XHTML 文件已更新。</translation>
+    </message>
+    <message>
+        <source>Current XHTML BR paragraphs normalized.</source>
+        <translation>当前 XHTML 的 BR 段落已规范化。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization: no EPUB is currently loaded.</source>
+        <translation>BR 段落规范化：当前未加载 EPUB。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs.</source>
+        <translation>BR 段落规范化预检查完成。已检查 %1 个 XHTML 文件，其中 %2 个文件可自动安全处理，%3 个文件需要人工复核，%4 个文件已跳过，预计可自动安全处理 %5 个段落。</translation>
+    </message>
+    <message>
+        <source>No auto-safe BR paragraph files were found. See Validation Results.</source>
+        <translation>未发现可自动安全处理的 BR 段落文件。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>Normalize BR paragraphs in %1 auto-safe XHTML files?
+
+%2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
+
+Visible text, id/name, and href/src safety checks will be run for every changed file.
+
+Estimated paragraphs: %4</source>
+        <translation>要规范化 %1 个可自动安全处理 XHTML 文件中的 BR 段落吗？
+
+%2 个文件需要人工复核并会被跳过。%3 个非候选文件会被跳过。
+
+每个被修改的文件都会执行可见文本、id/name 以及 href/src 安全检查。
+
+预计段落数：%4</translation>
+    </message>
+    <message>
+        <source>Creating checkpoint before BR paragraph normalization...</source>
+        <translation>正在 BR 段落规范化前创建检查点...</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
+        <translation>BR 段落规范化已取消：检查点创建失败。没有 XHTML 文件被修改。</translation>
+    </message>
+    <message>
+        <source>Checkpoint creation failed. BR paragraph normalization was cancelled.</source>
+        <translation>检查点创建失败。BR 段落规范化已取消。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
+        <translation>BR 段落规范化：批量修改前已保存检查点。可使用检查点恢复；批量资源写入无法通过代码视图撤销恢复。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization: XHTML file was updated.</source>
+        <translation>BR 段落规范化：XHTML 文件已更新。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
+        <translation>BR 段落规范化完成。已更新 %1 个文件，%2 个文件未改动，%3 个文件失败，跳过 %4 个需人工复核的候选文件。</translation>
+    </message>
+    <message>
+        <source>BR paragraph normalization completed.</source>
+        <translation>BR 段落规范化已完成。</translation>
+    </message>
+    <message>
+        <source>No BR paragraph files were changed.</source>
+        <translation>没有 BR 段落文件被修改。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph analysis: no EPUB is currently loaded.</source>
+        <translation>KFX 段落分析：当前未加载 EPUB。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.</source>
+        <translation>KFX 段落分析完成。已检查 %1 个 XHTML 文件，发现 %2 个可自动安全处理的候选文件、%3 个需人工复核的候选文件，跳过 %4 个文件，预计可自动安全处理 %5 个段落。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph candidates found. See Validation Results.</source>
+        <translation>发现 KFX 段落候选。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>No KFX paragraph candidates found.</source>
+        <translation>未发现 KFX 段落候选。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: current tab is not an XHTML resource.</source>
+        <translation>KFX 段落规范化：当前标签页不是 XHTML 资源。</translation>
+    </message>
+    <message>
+        <source>The current XHTML file is not a KFX paragraph candidate. See Validation Results.</source>
+        <translation>当前 XHTML 文件不是 KFX 段落候选。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization failed safety checks. See Validation Results.</source>
+        <translation>KFX 段落规范化未通过安全检查。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: no changes needed.</source>
+        <translation>KFX 段落规范化：无需修改。</translation>
+    </message>
+    <message>
+        <source>No KFX paragraph changes needed.</source>
+        <translation>KFX 段落无需修改。</translation>
+    </message>
+    <message>
+        <source>This file is an auto-safe KFX paragraph candidate.</source>
+        <translation>此文件是可自动安全处理的 KFX 段落候选。</translation>
+    </message>
+    <message>
+        <source>Normalize KFX paragraphs in the current XHTML file?
+
+%1
+
+This will wrap body-level raw text and inline/media runs into p elements, remove 0-height spacer p elements, and preserve non-zero spacer p elements for visual spacing. The result will be formatted once before writing. Safety checks have confirmed visible text, id/name, and href/src values are preserved.
+
+Estimated paragraphs: %2</source>
+        <translation>要规范化当前 XHTML 文件中的 KFX 段落吗？
+
+%1
+
+这会将 body 级裸文本和内联/媒体片段包装为 p 元素，移除 0 高度空白 p 元素，并保留非零空白 p 元素以维持视觉间距。写入前会对结果再执行一次格式化。安全检查已确认可见文本、id/name 以及 href/src 值都会被保留。
+
+预计段落数：%2</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: current XHTML file was updated.</source>
+        <translation>KFX 段落规范化：当前 XHTML 文件已更新。</translation>
+    </message>
+    <message>
+        <source>Current XHTML KFX paragraphs normalized.</source>
+        <translation>当前 XHTML 的 KFX 段落已规范化。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: no EPUB is currently loaded.</source>
+        <translation>KFX 段落规范化：当前未加载 EPUB。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs. Will remove %6 0-height spacer p elements and preserve %7 spacing p elements.</source>
+        <translation>KFX 段落规范化预检查完成。已检查 %1 个 XHTML 文件，其中 %2 个文件可自动安全处理，%3 个文件需要人工复核，%4 个文件已跳过，预计可自动安全处理 %5 个段落。将移除 %6 个 0 高度空白 p 元素，并保留 %7 个间距 p 元素。</translation>
+    </message>
+    <message>
+        <source>No auto-safe KFX paragraph files were found. See Validation Results.</source>
+        <translation>未发现可自动安全处理的 KFX 段落文件。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>Normalize KFX paragraphs in %1 auto-safe XHTML files?
+
+%2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
+
+The operation wraps body-level raw text into p elements, removes 0-height spacer p elements, preserves non-zero spacing p elements, formats each changed XHTML once, and runs safety checks for every changed file.
+
+Estimated paragraphs: %4
+0-height spacer p elements to remove: %5
+Spacing p elements to preserve: %6</source>
+        <translation>要规范化 %1 个可自动安全处理 XHTML 文件中的 KFX 段落吗？
+
+%2 个文件需要人工复核并会被跳过。%3 个非候选文件会被跳过。
+
+此操作会将 body 级裸文本包装为 p 元素，移除 0 高度空白 p 元素，保留非零间距 p 元素，对每个修改后的 XHTML 执行一次格式化，并为每个修改文件运行安全检查。
+
+预计段落数：%4
+要移除的 0 高度空白 p 元素：%5
+要保留的间距 p 元素：%6</translation>
+    </message>
+    <message>
+        <source>Creating checkpoint before KFX paragraph normalization...</source>
+        <translation>正在 KFX 段落规范化前创建检查点...</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
+        <translation>KFX 段落规范化已取消：检查点创建失败。没有 XHTML 文件被修改。</translation>
+    </message>
+    <message>
+        <source>Checkpoint creation failed. KFX paragraph normalization was cancelled.</source>
+        <translation>检查点创建失败。KFX 段落规范化已取消。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
+        <translation>KFX 段落规范化：批量修改前已保存检查点。可使用检查点恢复；批量资源写入无法通过代码视图撤销恢复。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: XHTML file was updated.</source>
+        <translation>KFX 段落规范化：XHTML 文件已更新。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
+        <translation>KFX 段落规范化完成。已更新 %1 个文件，%2 个文件未改动，%3 个文件失败，跳过 %4 个需人工复核的候选文件。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization completed.</source>
+        <translation>KFX 段落规范化已完成。</translation>
+    </message>
+    <message>
+        <source>No KFX paragraph files were changed.</source>
+        <translation>没有 KFX 段落文件被修改。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -18871,6 +19374,18 @@ Line: %1 Column %2 - %3</source>
         <location filename="../../SourceUpdates/UniversalUpdates.cpp" line="349"/>
         <source>Invalid NCX file: %1</source>
         <translation>无效的NCX文件：%1</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
+        <translation>KFX 段落规范化：自动 XHTML 格式化失败；将写入未经过格式化器进一步修改的规范化 XHTML。%1</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: automatic XHTML formatting was applied.</source>
+        <translation>KFX 段落规范化：已应用自动 XHTML 格式化。</translation>
+    </message>
+    <message>
+        <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
+        <translation>KFX 段落规范化：自动 XHTML 格式化未发现进一步修改。</translation>
     </message>
 </context>
 <context>

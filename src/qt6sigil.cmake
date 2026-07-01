@@ -468,19 +468,6 @@ elseif (MSVC)
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy ${UITOOLS} ${MAIN_PACKAGE_DIR} )
     endif()
 
-    # Copy ICU libs. Windeployqt does not always pick them up.
-    # Older Qt (<= 6.7) ships the three split DLLs (icudt/icuin/icuuc), while
-    # Qt 6.8+ ships a single combined "icu.dll". Grabbing every icu*.dll covers
-    # both layouts so the runtime doesn't fail with a missing icu.DLL error.
-    add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/ )
-    file( GLOB ICU_LIBS ${QT_INSTALL_BINS}/icu*.dll )
-    list( LENGTH ICU_LIBS ICU_PATHS_LEN )
-    if( ICU_PATHS_LEN GREATER 0 )
-        foreach( ICU ${ICU_LIBS} )
-            add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E copy ${ICU} ${MAIN_PACKAGE_DIR}/ )
-        endforeach( ICU )
-    endif()
-
     # Copy the translation qm files
     add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/translations/ )
     foreach( QM ${QM_FILES} )
@@ -522,6 +509,16 @@ elseif (MSVC)
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
                             COMMAND ${PY_INTERP} ARGS ${CMAKE_BINARY_DIR}/windows_python_gather6.py )
     endif()
+
+    # windeployqt can miss ICU/WebEngine runtime dependencies in newer Qt 6
+    # packages. Verify and patch the package directory before Inno Setup runs.
+    add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND}
+                            "-DAPP_DIR=${MAIN_PACKAGE_DIR}"
+                            "-DAPP_EXE=${MAIN_PACKAGE_DIR}/${PROJECT_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+                            "-DQT_BIN_DIR=${QT_INSTALL_BINS}"
+                            "-DPYTHON_DIR=${PYTHON_DEST_DIR}"
+                            -P "${CMAKE_CURRENT_SOURCE_DIR}/Resource_Files/windows/deploy_windows_runtime.cmake" )
 
     # Add external binary resource files
     add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/iconthemes/ )
