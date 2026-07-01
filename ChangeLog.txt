@@ -1,3 +1,16 @@
+Sigil-Enhanced-2.8.1.E3
+   Bug Fixes
+     - Fixed browser-copied image paste when the clipboard exposes a non-local URL, so available image data is imported instead of being treated as a missing local file.
+     - Kept direct external-file drops out of the editor path after validation; editor drop insertion now uses Book Browser resources only.
+
+   New Features
+     - Added cached Python dependency packaging for macOS and Windows builds, including reusable local package caches.
+     - Improved image editor zoom with a smaller minimum zoom level and Ctrl+mouse-wheel zoom support.
+     - Unified HTML/CSS resource insertion behavior across Insert File, Book Browser Insert, pasted/imported images, and Book Browser drag/drop.
+     - Added Book Browser resource dragging into XHTML/CSS editors at the drop position.
+     - Added non-local image paste import with sanitized file names and image-0001.png style fallback naming.
+     - Added Book Browser image/SVG hover previews.
+
 Sigil-Enhanced-2.8.1.E2
    Bug Fixes
      - Synced upstream 2.8.x fixes for AddExisting duplicate/skipped imports, math altimage URL updates,

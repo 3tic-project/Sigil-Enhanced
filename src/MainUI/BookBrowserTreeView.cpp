@@ -7,12 +7,22 @@
 #include <QApplication>
 #include <QDrag>
 #include <QItemSelectionModel>
+#include <QLabel>
+#include <QPixmap>
+#include <QTimer>
 #include <QStringList>
+#include <QtSvg/QSvgRenderer>
 
 #include "BookBrowserTreeView.h"
+#include "BookManipulation/FolderKeeper.h"
+#include "MainUI/MainWindow.h"
 #include "Misc/ResourceInsertion.h"
+#include "Misc/Utility.h"
+#include "ResourceObjects/Resource.h"
 
 QStringList IMPORT_SUFFIX = { "xhtml","html","htm","txt" };
+static const int IMAGE_PREVIEW_MAX_SIDE = 300;
+static const int IMAGE_PREVIEW_DELAY_MS = 150;
 
 //------------------- modified: BookBrowserTreeView -----------------------
 
@@ -21,13 +31,130 @@ BookBrowserTreeView::BookBrowserTreeView(QWidget* parent)
 	QTreeView(parent),
 	dropIndicatorEnabled(false),
 	dragStartPosition(QPoint()),
-	dragStartIndex(QModelIndex())
+	dragStartIndex(QModelIndex()),
+	imagePreviewIndex(QModelIndex()),
+	imagePreviewPopup(new QLabel(nullptr, Qt::ToolTip)),
+	imagePreviewTimer(new QTimer(this))
 {
+	setMouseTracking(true);
+	viewport()->setMouseTracking(true);
+	imagePreviewPopup->setAttribute(Qt::WA_ShowWithoutActivating);
+	imagePreviewPopup->setAlignment(Qt::AlignCenter);
+	imagePreviewPopup->setStyleSheet("QLabel { background: palette(base); border: 1px solid palette(mid); padding: 4px; }");
+	imagePreviewPopup->hide();
+	imagePreviewTimer->setSingleShot(true);
+	connect(imagePreviewTimer, &QTimer::timeout, this, [this]() { showImagePreview(); });
 }
 
 
 BookBrowserTreeView::~BookBrowserTreeView()
 {
+	delete imagePreviewPopup;
+}
+
+Resource* BookBrowserTreeView::resourceForIndex(const QModelIndex& index) const
+{
+	if (!index.isValid()) {
+		return nullptr;
+	}
+
+	const QString identifier = index.data(Qt::UserRole + 1).toString();
+	if (identifier.isEmpty()) {
+		return nullptr;
+	}
+
+	MainWindow* mainwin = qobject_cast<MainWindow*>(Utility::GetMainWindow());
+	if (!mainwin || mainwin->GetCurrentBook().isNull()) {
+		return nullptr;
+	}
+
+	return mainwin->GetCurrentBook()->GetFolderKeeper()->GetResourceByIdentifier(identifier);
+}
+
+static QPixmap scaledBitmapPreview(const QString& filepath)
+{
+	QPixmap pixmap(filepath);
+	if (pixmap.isNull()) {
+		return QPixmap();
+	}
+	return pixmap.scaled(QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE),
+	                     Qt::KeepAspectRatio,
+	                     Qt::SmoothTransformation);
+}
+
+static QPixmap scaledSvgPreview(const QString& filepath)
+{
+	QSvgRenderer renderer(filepath);
+	if (!renderer.isValid()) {
+		return QPixmap();
+	}
+
+	QSize size = renderer.defaultSize();
+	if (size.isEmpty()) {
+		size = QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE);
+	}
+	size.scale(QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE), Qt::KeepAspectRatio);
+
+	QPixmap pixmap(size);
+	pixmap.fill(Qt::transparent);
+	QPainter painter(&pixmap);
+	renderer.render(&painter);
+	return pixmap;
+}
+
+void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
+{
+	Resource* resource = resourceForIndex(index);
+	if (!resource ||
+		(resource->Type() != Resource::ImageResourceType &&
+		 resource->Type() != Resource::SVGResourceType)) {
+		hideImagePreview();
+		return;
+	}
+
+	if (imagePreviewIndex == index && imagePreviewPopup->isVisible()) {
+		return;
+	}
+
+	imagePreviewIndex = index;
+	imagePreviewPopup->hide();
+	imagePreviewTimer->start(IMAGE_PREVIEW_DELAY_MS);
+}
+
+void BookBrowserTreeView::showImagePreview()
+{
+	Resource* resource = resourceForIndex(imagePreviewIndex);
+	if (!resource ||
+		(resource->Type() != Resource::ImageResourceType &&
+		 resource->Type() != Resource::SVGResourceType)) {
+		hideImagePreview();
+		return;
+	}
+
+	QPixmap pixmap = resource->Type() == Resource::SVGResourceType ?
+	                 scaledSvgPreview(resource->GetFullPath()) :
+	                 scaledBitmapPreview(resource->GetFullPath());
+	if (pixmap.isNull()) {
+		hideImagePreview();
+		return;
+	}
+
+	imagePreviewPopup->setPixmap(pixmap);
+	imagePreviewPopup->adjustSize();
+
+	QRect item_rect = visualRect(imagePreviewIndex);
+	QPoint pos = viewport()->mapToGlobal(item_rect.topRight() + QPoint(12, 0));
+	imagePreviewPopup->move(pos);
+	imagePreviewPopup->show();
+}
+
+void BookBrowserTreeView::hideImagePreview()
+{
+	imagePreviewTimer->stop();
+	imagePreviewIndex = QModelIndex();
+	if (imagePreviewPopup) {
+		imagePreviewPopup->hide();
+	}
 }
 
 
@@ -65,6 +192,7 @@ void BookBrowserTreeView::paintEvent(QPaintEvent* e)
 
 void BookBrowserTreeView::mousePressEvent(QMouseEvent* e)
 {
+	hideImagePreview();
 	QTreeView::mousePressEvent(e);
 
 	if (e->button() == Qt::LeftButton) {
@@ -83,6 +211,7 @@ void BookBrowserTreeView::mouseMoveEvent(QMouseEvent* e)
 	if ((e->buttons() & Qt::LeftButton) &&
 		dragStartIndex.isValid() &&
 		(e->position().toPoint() - dragStartPosition).manhattanLength() >= QApplication::startDragDistance()) {
+		hideImagePreview();
 		startDrag(Qt::CopyAction | Qt::MoveAction);
 		dragStartIndex = QModelIndex();
 		e->accept();
@@ -90,6 +219,10 @@ void BookBrowserTreeView::mouseMoveEvent(QMouseEvent* e)
 	}
 
 	QTreeView::mouseMoveEvent(e);
+
+	if (e->buttons() == Qt::NoButton) {
+		scheduleImagePreview(indexAt(e->position().toPoint()));
+	}
 }
 
 void BookBrowserTreeView::startDrag(Qt::DropActions supportedActions)
@@ -129,6 +262,7 @@ void BookBrowserTreeView::startDrag(Qt::DropActions supportedActions)
 
 void BookBrowserTreeView::dragEnterEvent(QDragEnterEvent* e)
 {
+	hideImagePreview();
 	if (e->mimeData()->hasUrls()) {
 		QList<QUrl> urls = e->mimeData()->urls();
 		bool no_directory = true;
@@ -181,12 +315,14 @@ void BookBrowserTreeView::dragMoveEvent(QDragMoveEvent* e)
 void BookBrowserTreeView::dragLeaveEvent(QDragLeaveEvent* e)
 {
 	dropIndicatorEnabled = false;
+	hideImagePreview();
 	QTreeView::dragLeaveEvent(e);
 }
 
 
 void BookBrowserTreeView::dropEvent(QDropEvent* e)
 {
+	hideImagePreview();
 	QList<QUrl> urls = e->mimeData()->urls();
 	QStringList filepaths;
 	bool requestEmitted = false;
@@ -212,4 +348,16 @@ void BookBrowserTreeView::dropEvent(QDropEvent* e)
 		emit addFilesRequest(filepaths);
 
 	QTreeView::dropEvent(e);
+}
+
+void BookBrowserTreeView::leaveEvent(QEvent* e)
+{
+	hideImagePreview();
+	QTreeView::leaveEvent(e);
+}
+
+void BookBrowserTreeView::scrollContentsBy(int dx, int dy)
+{
+	hideImagePreview();
+	QTreeView::scrollContentsBy(dx, dy);
 }

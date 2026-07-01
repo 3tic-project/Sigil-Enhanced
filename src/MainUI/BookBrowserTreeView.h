@@ -11,6 +11,10 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 
+class QLabel;
+class QTimer;
+class Resource;
+
 class BookBrowserTreeView : public QTreeView
 {
 	Q_OBJECT
@@ -32,6 +36,8 @@ protected:
 	void dragLeaveEvent(QDragLeaveEvent* event);
 	void dropEvent(QDropEvent* event);
 	void paintEvent(QPaintEvent* event);
+	void leaveEvent(QEvent* event);
+	void scrollContentsBy(int dx, int dy);
 	void startDrag(Qt::DropActions supportedActions);
 
 private:
@@ -43,8 +49,15 @@ private:
 	Line dropIndicatorLine;
 	QPoint dragStartPosition;
 	QModelIndex dragStartIndex;
+	QModelIndex imagePreviewIndex;
+	QLabel* imagePreviewPopup;
+	QTimer* imagePreviewTimer;
 
 	void drawOtherDropIndicator(QPoint& eventPos);
+	void scheduleImagePreview(const QModelIndex& index);
+	void showImagePreview();
+	void hideImagePreview();
+	Resource* resourceForIndex(const QModelIndex& index) const;
 };
 
 #endif // !BOOKBROWSERTREEVIEW_H
