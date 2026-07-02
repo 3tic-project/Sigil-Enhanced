@@ -468,20 +468,25 @@ elseif (MSVC)
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy ${UITOOLS} ${MAIN_PACKAGE_DIR} )
     endif()
 
-    # Copy the ICU DLLs required by Qt's Windows runtime to the app root.
-    # The Qt 6.9.x CI packages ship these as icudt74/icuin74/icuuc74.
+    # Copy any ICU DLLs shipped by Qt's Windows runtime to the app root.
+    # Some Qt CI packages ship these as icudt*/icuin*/icuuc* (e.g. icu*74),
+    # while the standard aqtinstall MSVC packages are built against native
+    # Windows APIs and ship no ICU DLLs at all. Copy them when present, but do
+    # not fail packaging when they are absent.
     file( GLOB ICU_LIBS
         ${QT_INSTALL_BINS}/icudt*.dll
         ${QT_INSTALL_BINS}/icuin*.dll
         ${QT_INSTALL_BINS}/icuuc*.dll
     )
     list( LENGTH ICU_LIBS ICU_PATHS_LEN )
-    if( ICU_PATHS_LEN LESS 3 )
-        message( FATAL_ERROR "Expected Qt ICU DLLs icudt*.dll, icuin*.dll, and icuuc*.dll under ${QT_INSTALL_BINS}; found ${ICU_PATHS_LEN}." )
+    if( ICU_PATHS_LEN GREATER 0 )
+        message( STATUS "Bundling ${ICU_PATHS_LEN} Qt ICU DLL(s) from ${QT_INSTALL_BINS}." )
+        foreach( ICU ${ICU_LIBS} )
+            add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy "${ICU}" "${MAIN_PACKAGE_DIR}" )
+        endforeach()
+    else()
+        message( STATUS "No Qt ICU DLLs found under ${QT_INSTALL_BINS}; assuming Qt was built without a separate ICU dependency." )
     endif()
-    foreach( ICU ${ICU_LIBS} )
-        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy "${ICU}" "${MAIN_PACKAGE_DIR}" )
-    endforeach()
 
     # Copy the translation qm files
     add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/translations/ )
