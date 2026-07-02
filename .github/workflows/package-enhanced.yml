@@ -46,6 +46,8 @@ jobs:
       BUILD_DIR: ${{ github.workspace }}\.ci-build\windows-x64
       SIGIL_PYTHON_CACHE_DIR: ${{ github.workspace }}\.ci-cache\sigil-python-cache-windows-x64
       # Custom Sigil Qt6 build hosted on the win-qtwebkit-5.212 releases page.
+      # aqtinstall's MSVC Qt is built without ICU, so we harvest the ICU runtime
+      # DLLs from this archive and drop them next to the aqt Qt binaries.
       QT_WIN_BASE_URL: https://github.com/dougmassay/win-qtwebkit-5.212/releases/download/v5.212-1
       QT_WIN_ARCHIVE: Qt6.10.2ci_x64_VS2026.7z
 
@@ -73,7 +75,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.QT_ROOT }}
-          key: sigil-enhanced-windows-x64-customqt-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-win-caches.txt') }}
+          key: sigil-enhanced-windows-x64-aqtqt-icu-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-win-caches.txt') }}
 
       - name: Cache pip wheels
         uses: actions/cache@v6
@@ -104,13 +106,30 @@ jobs:
           if (-not $qtConfig) {
             Remove-Item -Recurse -Force $qtRoot -ErrorAction SilentlyContinue
             New-Item -ItemType Directory -Force -Path $qtRoot | Out-Null
+            python -m pip install --upgrade pip
+            python -m pip install aqtinstall
+            python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
+              -O $qtRoot `
+              -m qt5compat qtwebengine qtwebchannel qtpositioning
+
+            # aqtinstall's MSVC Qt is built without ICU, but Sigil's Qt build
+            # expects the ICU runtime DLLs. Harvest them from the custom Sigil
+            # Qt archive on the win-qtwebkit-5.212 releases page and place them
+            # alongside the aqt Qt binaries so windeployqt/packaging bundle them.
+            $qtBinDir = Get-ChildItem -Path $qtRoot -Filter qmake.exe -Recurse |
+              Where-Object { $_.FullName -match '\\bin\\qmake\.exe$' } |
+              Select-Object -First 1 -ExpandProperty Directory
+            if (-not $qtBinDir) {
+              throw "Could not locate the Qt bin directory under $qtRoot."
+            }
             $archivePath = Join-Path $qtRoot $env:QT_WIN_ARCHIVE
             $qtUrl = "$env:QT_WIN_BASE_URL/$env:QT_WIN_ARCHIVE"
-            Write-Host "Downloading custom Sigil Qt $env:QT_VERSION from $qtUrl"
+            Write-Host "Downloading ICU runtime DLLs from $qtUrl"
             Invoke-WebRequest -Uri $qtUrl -OutFile $archivePath
-            & 7z x $archivePath "-o$qtRoot" -y
+            # -e flattens paths so the DLLs land directly in the Qt bin dir.
+            & 7z e $archivePath "-o$($qtBinDir.FullName)" icudt*.dll icuin*.dll icuuc*.dll -r -y
             if ($LASTEXITCODE -ne 0) {
-              throw "Failed to extract $archivePath (7z exit code $LASTEXITCODE)."
+              throw "Failed to extract ICU DLLs from $archivePath (7z exit code $LASTEXITCODE)."
             }
             Remove-Item -Force $archivePath -ErrorAction SilentlyContinue
           }
