@@ -17,7 +17,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 * 支持从文件浏览器直接将图片拖入编辑器并自动生成img标签或CSS url()链接
 * 支持从剪贴板粘贴非本地文件
 * 加入图片预览器：当光标停留在文件浏览器的图片文件上方时，会显示该图片的预览图，以及尺寸和体积
-* 内置插件：规范化EPUB文件，包括文件结构、XHTML、CSS、OPF、NCX、文件格式正确性等等（感谢：Sigil吧@遥遥心航，本插件基于“重构epub为规范格式_v2.8.4”重构和优化；部分规则来自 https://github.com/w3c/epubcheck https://github.com/paginagmbh/EPUB-Checker）
+* 内置插件：规范化EPUB文件，包括文件结构、XHTML、CSS、OPF、NCX、文件格式正确性等等（感谢：Sigil吧@遥遥心航，本插件基于“重构epub为规范格式_v2.8.4”重构和优化；部分规则来自 https://github.com/w3c/epubcheck https://github.com/paginagmbh/EPUB-Checker ）
 * 内置插件：增强的代码格式化，用于将所有XHTML/CSS文件格式化为统一风格
 * 内置插件：修正部分来源的EPUB文件，正文部分仅用br换行，段落没有p标签包围的情况
 * 内置插件：修正部分KFX来源的EPUB文件，使用多个不包围段落的p标签的迷之结构
