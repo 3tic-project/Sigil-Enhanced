@@ -478,6 +478,10 @@ elseif (MSVC)
         ${QT_INSTALL_BINS}/icuin*.dll
         ${QT_INSTALL_BINS}/icuuc*.dll
     )
+    # The unversioned icuuc.dll is a stale/incorrect artifact that is not part
+    # of the versioned ICU runtime (icudt*/icuin*/icuuc* with a version suffix,
+    # e.g. icu*74). Never bundle it.
+    list( FILTER ICU_LIBS EXCLUDE REGEX "/icuuc\\.dll$" )
     list( LENGTH ICU_LIBS ICU_PATHS_LEN )
     if( ICU_PATHS_LEN GREATER 0 )
         message( STATUS "Bundling ${ICU_PATHS_LEN} Qt ICU DLL(s) from ${QT_INSTALL_BINS}." )
@@ -487,6 +491,14 @@ elseif (MSVC)
     else()
         message( STATUS "No Qt ICU DLLs found under ${QT_INSTALL_BINS}; assuming Qt was built without a separate ICU dependency." )
     endif()
+
+    # Defensively remove any stray unversioned icuuc.dll from the package dir
+    # before the installer is built. It may be deposited by windeployqt or copied
+    # from elsewhere (it is not necessarily present in the custom Qt), so this
+    # runs regardless of where it came from. cmake -E rm -f does not fail when
+    # the file is absent.
+    add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
+        COMMAND cmake -E rm -f "${MAIN_PACKAGE_DIR}/icuuc.dll" )
 
     # Copy the translation qm files
     add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/translations/ )
