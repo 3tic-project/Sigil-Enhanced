@@ -127,7 +127,9 @@ jobs:
             Write-Host "Downloading ICU runtime DLLs from $qtUrl"
             Invoke-WebRequest -Uri $qtUrl -OutFile $archivePath
             # -e flattens paths so the DLLs land directly in the Qt bin dir.
-            & 7z e $archivePath "-o$($qtBinDir.FullName)" icudt*.dll icuin*.dll icuuc*.dll -r -y
+            # -x!icuuc.dll excludes the stale unversioned icuuc.dll; only the
+            # versioned ICU 74 runtime (icudt74/icuin74/icuuc74) is needed.
+            & 7z e $archivePath "-o$($qtBinDir.FullName)" icudt*.dll icuin*.dll icuuc*.dll -x!icuuc.dll -r -y
             if ($LASTEXITCODE -ne 0) {
               throw "Failed to extract ICU DLLs from $archivePath (7z exit code $LASTEXITCODE)."
             }
