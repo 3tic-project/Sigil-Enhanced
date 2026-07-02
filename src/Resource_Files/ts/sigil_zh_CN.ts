@@ -12960,6 +12960,42 @@ This action cannot be reversed.</source>
         <translation>&lt;html&gt;&lt;p&gt;在&lt;b&gt;%2&lt;/b&gt;中的href&lt;b&gt;%1&lt;/b&gt;不存在 (并且可能有更多)。在这些条件下拆分或合并可能导致链接断开。&lt;/p&gt;&lt;p&gt;你希望继续吗?&lt;/p&gt;&lt;/html&gt;</translation>
     </message>
     <message>
+        <source>The dropped file is an EPUB.</source>
+        <translation>拖入的文件是 EPUB。</translation>
+    </message>
+    <message>
+        <source>The dropped files are EPUB files.</source>
+        <translation>拖入的文件都是 EPUB 文件。</translation>
+    </message>
+    <message>
+        <source>Do you want to add it to the current book, or open it for editing in a new window?
+
+%1</source>
+        <translation>要将它加入当前书籍，还是在新窗口中打开编辑？
+
+%1</translation>
+    </message>
+    <message>
+        <source>Do you want to add them to the current book, or open them for editing in new windows?
+
+%1</source>
+        <translation>要将它们加入当前书籍，还是在新窗口中打开编辑？
+
+%1</translation>
+    </message>
+    <message>
+        <source>Add to Current Book</source>
+        <translation>加入当前书籍</translation>
+    </message>
+    <message>
+        <source>Open in New Window</source>
+        <translation>在新窗口打开</translation>
+    </message>
+    <message>
+        <source>Open in New Windows</source>
+        <translation>在多个新窗口打开</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/MainWindow.cpp" line="2532"/>
         <source>Dropped files added.</source>
         <translation>添加了拖放的文件。</translation>
