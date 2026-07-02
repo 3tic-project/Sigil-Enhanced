@@ -45,6 +45,9 @@ jobs:
       QT_ROOT: ${{ github.workspace }}\.ci-cache\qt-windows-x64
       BUILD_DIR: ${{ github.workspace }}\.ci-build\windows-x64
       SIGIL_PYTHON_CACHE_DIR: ${{ github.workspace }}\.ci-cache\sigil-python-cache-windows-x64
+      # Custom Sigil Qt6 build hosted on the win-qtwebkit-5.212 releases page.
+      QT_WIN_BASE_URL: https://github.com/dougmassay/win-qtwebkit-5.212/releases/download/v5.212-1
+      QT_WIN_ARCHIVE: Qt6.10.2ci_x64_VS2026.7z
 
     steps:
       - uses: actions/checkout@v7
@@ -70,7 +73,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.QT_ROOT }}
-          key: sigil-enhanced-windows-x64-official-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-win-caches.txt') }}
+          key: sigil-enhanced-windows-x64-customqt-qt6102-${{ hashFiles('.github/workflows/package-enhanced.yml', '**/reset-win-caches.txt') }}
 
       - name: Cache pip wheels
         uses: actions/cache@v6
@@ -101,11 +104,15 @@ jobs:
           if (-not $qtConfig) {
             Remove-Item -Recurse -Force $qtRoot -ErrorAction SilentlyContinue
             New-Item -ItemType Directory -Force -Path $qtRoot | Out-Null
-            python -m pip install --upgrade pip
-            python -m pip install aqtinstall
-            python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
-              -O $qtRoot `
-              -m qt5compat qtwebengine qtwebchannel qtpositioning
+            $archivePath = Join-Path $qtRoot $env:QT_WIN_ARCHIVE
+            $qtUrl = "$env:QT_WIN_BASE_URL/$env:QT_WIN_ARCHIVE"
+            Write-Host "Downloading custom Sigil Qt $env:QT_VERSION from $qtUrl"
+            Invoke-WebRequest -Uri $qtUrl -OutFile $archivePath
+            & 7z x $archivePath "-o$qtRoot" -y
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to extract $archivePath (7z exit code $LASTEXITCODE)."
+            }
+            Remove-Item -Force $archivePath -ErrorAction SilentlyContinue
           }
 
           $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse |
