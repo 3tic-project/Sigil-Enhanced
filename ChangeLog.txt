@@ -1,3 +1,25 @@
+Sigil-Enhanced-2.8.1.E4
+   Bug Fixes
+     - Fixed Paste Rich Text menu handling to avoid a crash.
+     - Fixed EPUB export ZIP64 handling for large archives and updated standardization messages to record all file changes.
+     - Fixed SVG link path casing during structure normalization.
+     - Fixed Windows packaging so Qt ICU runtime DLLs are copied from the Qt bin directory and stale unversioned icuuc.dll files are excluded.
+     - Added Simplified Chinese translations for Sigil-Enhanced menus, native enhancement tools, dialogs, and the drag-and-drop EPUB choice dialog.
+
+   New Features
+     - Added the Enhancement menu as the home for built-in native enhancement tools.
+     - Added EPUB Structure Normalizer to repair OPF manifest issues, correct internal link path casing, move resources to Sigil's standard folder layout, and report changes in Validation Results.
+     - Expanded native EPUB checks with lightweight XML, OPF, OCF/container, path, media resource, CSS link/fallback, content reference, SVG fragment, accessibility, and OPF metadata diagnostics.
+     - Added an EPUB-safe source formatting enhancement for XHTML and CSS resources.
+     - Added BR paragraph analysis and normalization for XHTML files that use body-level BR tags as paragraph separators.
+     - Added KFX/calibre paragraph analysis and normalization for files that use spacer p elements around body-level raw text, with automatic formatting after repair.
+     - Added image hover preview details in Book Browser, including pixel dimensions and file size.
+
+   Build/Packaging
+     - Added GitHub Actions package builds for Windows and macOS release artifacts with bundled Python runtime support.
+     - Improved Windows x64 CI packaging by installing the required Qt WebEngine modules and restoring custom Qt package handling.
+     - Changed macOS packaging to produce a Sigil-Enhanced.app DMG without overwriting an original Sigil install.
+
 Sigil-Enhanced-2.8.1.E3
    Bug Fixes
      - Fixed browser-copied image paste when the clipboard exposes a non-local URL, so available image data is imported instead of being treated as a missing local file.
