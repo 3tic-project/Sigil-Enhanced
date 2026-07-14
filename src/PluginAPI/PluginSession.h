@@ -112,6 +112,9 @@ private:
     bool m_EndSignalScheduled;
     QStringList m_Permissions;
     QSet<QString> m_Subscriptions;
+    QString m_ProgressId;
+    QString m_ProgressLabel;
+    int m_ProgressMaximum;
     QHash<QString, quint64> m_ResourceRevisions;
     QHash<QString, BinaryReadStream> m_BinaryReadStreams;
     QHash<QString, InputUpload> m_InputUploads;

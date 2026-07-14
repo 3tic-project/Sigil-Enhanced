@@ -620,6 +620,34 @@ class ValidationApi:
         return self._rpc.call("validation.publishResults", {"results": normalized})
 
 
+class Progress:
+    def __init__(self, rpc, result):
+        self._rpc = rpc
+        self.id = result["progress_id"]
+        self.total = result["total"]
+        self.ended = False
+
+    def update(self, value, label=None):
+        if self.ended:
+            raise RuntimeError("progress operation has ended")
+        params = {"progress_id": self.id, "value": value}
+        if label is not None:
+            params["label"] = label
+        return self._rpc.call("ui.progressUpdate", params)["updated"]
+
+    def end(self):
+        if not self.ended:
+            self._rpc.call("ui.progressEnd", {"progress_id": self.id})
+            self.ended = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.end()
+        return False
+
+
 class UiApi:
     def __init__(self, rpc):
         self._rpc = rpc
@@ -640,6 +668,12 @@ class UiApi:
         if title is not None:
             params["title"] = title
         return self._rpc.call("ui.confirm", params)["confirmed"]
+
+    def progress(self, label, total=0):
+        return Progress(
+            self._rpc,
+            self._rpc.call("ui.progressBegin", {"label": label, "total": total}),
+        )
 
 
 class EventsApi:

@@ -241,9 +241,13 @@ edit block.
 | `show_status(message, duration_ms=5000)` | Display a status-bar message for 0-60 seconds. |
 | `show_message(message, title=None, level="info")` | Display an information, warning, or error dialog. |
 | `confirm(message, title=None)` | Ask a yes/no question; No is the default. |
+| `progress(label, total=0)` | Return a context-managed progress operation; `total=0` is indeterminate. |
 
 Navigation requires `ui.navigate`; messages and confirmation require
-`ui.message`. Dialog text and status duration are bounded by the wire contract.
+`ui.message`; progress requires `ui.progress`. Call `progress.update(value,
+label=None)` while working. Leaving the context ends and hides progress even
+when Python raises. Dialog text, labels, values, and status duration are bounded
+by the wire contract.
 
 ### `EventsApi`
 

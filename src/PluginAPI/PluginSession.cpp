@@ -506,6 +506,7 @@ PluginSession::PluginSession(const Plugin &plugin,
     m_Ending(false),
     m_EndSignalScheduled(false),
     m_Permissions(EffectivePermissions()),
+    m_ProgressMaximum(0),
     m_InputEpubFile(nullptr),
     m_InputEpubAccepted(false),
     m_BookRevision(1),
@@ -2513,6 +2514,58 @@ void PluginSession::Dispatch(const QJsonObject &request)
             m_MainWindow, title, message, QMessageBox::Yes | QMessageBox::No,
             QMessageBox::No) == QMessageBox::Yes;
         Respond(id, QJsonObject {{ QStringLiteral("confirmed"), confirmed }});
+    } else if (method == QStringLiteral("ui.progressBegin")) {
+        if (!RequirePermission(QStringLiteral("ui.progress"), id)) return;
+        if (!m_ProgressId.isEmpty()) {
+            RespondError(id, PluginApi::Busy, QStringLiteral("A progress operation is already active"));
+            return;
+        }
+        const QString label = params.value(QStringLiteral("label")).toString();
+        const int maximum = params.value(QStringLiteral("total")).toInt(0);
+        if (label.isEmpty() || label.size() > 1024 || maximum < 0 || maximum > 1000000000) {
+            RespondError(id, -32602, QStringLiteral("Progress label or total is invalid"));
+            return;
+        }
+        m_ProgressId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        m_ProgressLabel = label;
+        m_ProgressMaximum = maximum;
+        if (m_Console) m_Console->SetProgress(label, 0, maximum);
+        Respond(id, QJsonObject {
+            { QStringLiteral("progress_id"), m_ProgressId },
+            { QStringLiteral("total"), maximum }
+        });
+    } else if (method == QStringLiteral("ui.progressUpdate")) {
+        if (!RequirePermission(QStringLiteral("ui.progress"), id)) return;
+        if (params.value(QStringLiteral("progress_id")).toString() != m_ProgressId
+            || m_ProgressId.isEmpty()) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Progress operation not found"));
+            return;
+        }
+        const int value = params.value(QStringLiteral("value")).toInt(-1);
+        const QString label = params.value(QStringLiteral("label")).toString();
+        if (value < 0 || (m_ProgressMaximum > 0 && value > m_ProgressMaximum)
+            || label.size() > 1024) {
+            RespondError(id, -32602, QStringLiteral("Progress value or label is invalid"));
+            return;
+        }
+        if (m_Console) {
+            if (!label.isEmpty()) m_ProgressLabel = label;
+            m_Console->SetProgress(
+                m_ProgressLabel, value, m_ProgressMaximum);
+        }
+        Respond(id, QJsonObject {{ QStringLiteral("updated"), true }});
+    } else if (method == QStringLiteral("ui.progressEnd")) {
+        if (!RequirePermission(QStringLiteral("ui.progress"), id)) return;
+        if (params.value(QStringLiteral("progress_id")).toString() != m_ProgressId
+            || m_ProgressId.isEmpty()) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Progress operation not found"));
+            return;
+        }
+        m_ProgressId.clear();
+        m_ProgressLabel.clear();
+        m_ProgressMaximum = 0;
+        if (m_Console) m_Console->ClearProgress();
+        Respond(id, QJsonObject {{ QStringLiteral("ended"), true }});
     } else if (method == QStringLiteral("editor.setCursor")
                || method == QStringLiteral("editor.setSelection")) {
         if (!RequirePermission(QStringLiteral("editor.write"), id)) return;
@@ -2707,6 +2760,7 @@ QStringList PluginSession::EffectivePermissions() const
             permissions << QStringLiteral("input.submit");
         }
         permissions << QStringLiteral("events.book") << QStringLiteral("events.editor");
+        permissions << QStringLiteral("ui.progress");
     }
     return permissions;
 }

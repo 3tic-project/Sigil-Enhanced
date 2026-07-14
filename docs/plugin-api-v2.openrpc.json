@@ -404,6 +404,37 @@
       "result": { "name": "result", "schema": { "type": "object", "required": ["confirmed"], "properties": { "confirmed": { "type": "boolean" } } } }
     },
     {
+      "name": "ui.progressBegin",
+      "summary": "Begin one determinate or indeterminate progress operation in the session console.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "label", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 1024 } },
+        { "name": "total", "schema": { "type": "integer", "minimum": 0, "maximum": 1000000000, "default": 0 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["progress_id", "total"], "properties": {
+        "progress_id": { "type": "string", "format": "uuid" },
+        "total": { "type": "integer", "minimum": 0, "maximum": 1000000000 }
+      } } }
+    },
+    {
+      "name": "ui.progressUpdate",
+      "summary": "Update the active progress value and optional label.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "progress_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "value", "required": true, "schema": { "type": "integer", "minimum": 0, "maximum": 1000000000 } },
+        { "name": "label", "schema": { "type": "string", "maxLength": 1024 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["updated"], "properties": { "updated": { "type": "boolean", "const": true } } } }
+    },
+    {
+      "name": "ui.progressEnd",
+      "summary": "End and hide the active progress operation.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "progress_id", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["ended"], "properties": { "ended": { "type": "boolean", "const": true } } } }
+    },
+    {
       "name": "transaction.begin",
       "summary": "Begin the session's single staged text transaction.",
       "paramStructure": "by-name",

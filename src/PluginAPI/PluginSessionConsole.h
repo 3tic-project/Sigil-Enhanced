@@ -12,6 +12,7 @@
 
 class QLabel;
 class QPlainTextEdit;
+class QProgressBar;
 class QPushButton;
 
 class PluginSessionConsole : public QDialog
@@ -23,6 +24,8 @@ public:
 
     void AppendOutput(const QString &text);
     void SetStatus(const QString &status);
+    void SetProgress(const QString &label, int value, int maximum);
+    void ClearProgress();
     void SetFinished();
 
 signals:
@@ -31,6 +34,7 @@ signals:
 private:
     QLabel *m_StatusLabel;
     QPlainTextEdit *m_Output;
+    QProgressBar *m_ProgressBar;
     QPushButton *m_CancelButton;
     QPushButton *m_CloseButton;
 };

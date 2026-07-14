@@ -177,6 +177,21 @@ class LiveSdkTest(unittest.TestCase):
         selection = EditorApi(rpc).get_selection()
         self.assertEqual((selection.start, selection.end, selection.text), (2, 5, "abc"))
 
+    def test_ui_progress_context_updates_and_ends(self):
+        transport = FakeTransport(
+            [
+                {"jsonrpc": "2.0", "id": 1, "result": {"progress_id": "p", "total": 2}},
+                {"jsonrpc": "2.0", "id": 2, "result": {"updated": True}},
+                {"jsonrpc": "2.0", "id": 3, "result": {"ended": True}},
+            ]
+        )
+        with UiApi(RpcClient(transport)).progress("Scanning", total=2) as progress:
+            self.assertTrue(progress.update(1, "Chapter 1"))
+        self.assertEqual(
+            [item["method"] for item in transport.sent],
+            ["ui.progressBegin", "ui.progressUpdate", "ui.progressEnd"],
+        )
+
     def test_editor_apply_edits_preserves_utf16_ranges(self):
         transport = FakeTransport(
             [
