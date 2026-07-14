@@ -3,46 +3,360 @@
   "info": {
     "title": "Sigil Live Python Plugin API",
     "version": "2.0.0",
-    "description": "Protocol version 1. Messages use a four-byte big-endian length followed by a UTF-8 JSON-RPC 2.0 object."
+    "description": "Implemented protocol version 1. Each message is a four-byte big-endian length followed by one UTF-8 JSON-RPC 2.0 object. Editor offsets use UTF-16 code units."
   },
   "methods": [
     {
       "name": "session.hello",
       "summary": "Authenticate and negotiate a live plugin session.",
+      "paramStructure": "by-name",
       "params": [
         { "name": "token", "required": true, "schema": { "type": "string" } },
         { "name": "protocol_version", "required": true, "schema": { "type": "integer", "const": 1 } },
         { "name": "api_version", "required": true, "schema": { "type": "integer", "const": 2 } },
-        { "name": "plugin_name", "required": true, "schema": { "type": "string" } }
+        { "name": "plugin_name", "required": true, "schema": { "type": "string" } },
+        { "name": "client", "schema": { "type": "object" } },
+        { "name": "capabilities", "schema": { "type": "object" } }
       ],
-      "result": {
-        "name": "session",
-        "schema": { "$ref": "#/components/schemas/SessionInfo" }
-      }
+      "result": { "name": "session", "schema": { "$ref": "#/components/schemas/SessionInfo" } }
     },
     {
       "name": "session.ping",
       "summary": "Check that the host session is responsive.",
       "params": [],
-      "result": {
-        "name": "pong",
-        "schema": { "type": "object", "properties": { "pong": { "type": "boolean" } }, "required": ["pong"] }
-      }
+      "result": { "name": "result", "schema": { "type": "object", "required": ["pong"], "properties": { "pong": { "type": "boolean", "const": true } } } }
+    },
+    {
+      "name": "session.getInfo",
+      "summary": "Return the session ID, plugin name, and granted permissions.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "session.finish",
+      "summary": "Report command completion and close the session.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "status", "schema": { "type": "string", "enum": ["success", "failed"] } },
+        { "name": "message", "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "book.getInfo",
+      "summary": "Return current in-memory Book metadata and revision.",
+      "params": [],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/BookInfo" } }
+    },
+    {
+      "name": "book.getRevision",
+      "summary": "Return the current session-local Book revision.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["revision"], "properties": { "revision": { "$ref": "#/components/schemas/Revision" } } } }
+    },
+    {
+      "name": "resource.list",
+      "summary": "List resources with type filtering and offset cursor pagination.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "types", "schema": { "type": "array", "items": { "type": "string" } } },
+        { "name": "page_size", "schema": { "type": "integer", "minimum": 1, "maximum": 500, "default": 200 } },
+        { "name": "cursor", "schema": { "type": ["string", "null"] } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/ResourcePage" } }
+    },
+    {
+      "name": "resource.resolvePath",
+      "summary": "Resolve a current canonical Book path.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "book_path", "required": true, "schema": { "type": "string" } }],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/Resource" } }
+    },
+    {
+      "name": "resource.getInfo",
+      "summary": "Return metadata for one session resource ID.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "resource_id", "required": true, "schema": { "type": "string" } }],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/Resource" } }
+    },
+    {
+      "name": "resource.readText",
+      "summary": "Read current in-memory text without writing the Book to disk.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "resource_id", "required": true, "schema": { "type": "string" } }],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextContent" } }
+    },
+    {
+      "name": "resource.readMany",
+      "summary": "Read at most 100 current text resources.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "resource_ids", "required": true, "schema": { "type": "array", "maxItems": 100, "items": { "type": "string" } } }],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "allOf": [{ "$ref": "#/components/schemas/TextContent" }, { "type": "object", "required": ["resource_id"], "properties": { "resource_id": { "type": "string" } } }] } } } } }
+    },
+    {
+      "name": "editor.getState",
+      "summary": "Return active editor resource, revision, cursor, and selection.",
+      "params": [],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditorState" } }
+    },
+    {
+      "name": "editor.getSelection",
+      "summary": "Return the current editor state including selected text.",
+      "params": [],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditorState" } }
+    },
+    {
+      "name": "editor.getOpenTabs",
+      "summary": "Return resources currently loaded in editor tabs.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Resource" } } } } }
+    },
+    {
+      "name": "editor.applyEdits",
+      "summary": "Apply 1-1000 non-overlapping UTF-16 edits to the active text tab as one undo step.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "label", "schema": { "type": "string" } },
+        { "name": "edits", "required": true, "schema": { "type": "array", "minItems": 1, "maxItems": 1000, "items": { "$ref": "#/components/schemas/TextEdit" } } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditResult" } }
+    },
+    {
+      "name": "editor.replaceSelection",
+      "summary": "Replace the active editor selection as one undo step.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "text", "required": true, "schema": { "type": "string" } },
+        { "name": "label", "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditResult" } }
+    },
+    {
+      "name": "editor.insertText",
+      "summary": "Insert text at the active editor cursor as one undo step.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "text", "required": true, "schema": { "type": "string" } },
+        { "name": "label", "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditResult" } }
+    },
+    {
+      "name": "editor.setCursor",
+      "summary": "Set the current editor cursor using a UTF-16 position.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "schema": { "type": "string" } },
+        { "name": "position", "required": true, "schema": { "$ref": "#/components/schemas/Position" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditorState" } }
+    },
+    {
+      "name": "editor.setSelection",
+      "summary": "Set the current editor selection using UTF-16 positions.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "schema": { "type": "string" } },
+        { "name": "start", "required": true, "schema": { "$ref": "#/components/schemas/Position" } },
+        { "name": "end", "required": true, "schema": { "$ref": "#/components/schemas/Position" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditorState" } }
+    },
+    {
+      "name": "transaction.begin",
+      "summary": "Begin the session's single staged text transaction.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "label", "schema": { "type": "string" } },
+        { "name": "visibility", "schema": { "type": "string", "const": "staged", "default": "staged" } },
+        { "name": "checkpoint", "schema": { "type": "string", "enum": ["none", "auto", "required"], "default": "auto" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TransactionInfo" } }
+    },
+    {
+      "name": "transaction.readText",
+      "summary": "Read staged content when present, otherwise current live content.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "allOf": [{ "$ref": "#/components/schemas/TextContent" }, { "type": "object", "properties": { "resource_id": { "type": "string" }, "staged": { "type": "boolean" } } }] } }
+    },
+    {
+      "name": "transaction.replaceText",
+      "summary": "Stage a complete text replacement without changing the Book.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "text", "required": true, "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.applyTextEdits",
+      "summary": "Compose UTF-16 patches against the transaction's staged text.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "edits", "required": true, "schema": { "type": "array", "minItems": 1, "maxItems": 1000, "items": { "$ref": "#/components/schemas/TextEdit" } } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.validate",
+      "summary": "Report revision conflicts without applying staged changes.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TransactionValidation" } }
+    },
+    {
+      "name": "transaction.preview",
+      "summary": "Return staged change counts, lengths, conflicts, and warnings.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TransactionValidation" } }
+    },
+    {
+      "name": "transaction.commit",
+      "summary": "Revalidate, optionally create one Checkpoint, and apply once per changed resource.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.rollback",
+      "summary": "Discard all staged changes without changing the Book.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "result": { "name": "result", "schema": { "type": "object" } }
     }
   ],
   "components": {
     "schemas": {
+      "Revision": { "type": "integer", "minimum": 0 },
+      "Position": { "type": "integer", "minimum": 0 },
       "SessionInfo": {
         "type": "object",
+        "required": ["session_id", "protocol_version", "api_version", "position_encoding", "max_message_size", "permissions"],
         "properties": {
           "session_id": { "type": "string", "format": "uuid" },
           "protocol_version": { "type": "integer", "const": 1 },
           "api_version": { "type": "integer", "const": 2 },
           "position_encoding": { "type": "string", "const": "utf-16" },
           "max_message_size": { "type": "integer", "minimum": 1, "maximum": 33554432 },
-          "permissions": { "type": "array", "items": { "type": "string" } }
-        },
-        "required": ["session_id", "protocol_version", "api_version", "position_encoding", "max_message_size", "permissions"]
+          "permissions": { "type": "array", "items": { "type": "string" } },
+          "book_revision": { "$ref": "#/components/schemas/Revision" },
+          "ui": { "type": "object" }
+        }
+      },
+      "BookInfo": {
+        "type": "object",
+        "required": ["epub_version", "modified", "file_path", "revision"],
+        "properties": {
+          "epub_version": { "type": "string" },
+          "modified": { "type": "boolean" },
+          "file_path": { "type": "string" },
+          "revision": { "$ref": "#/components/schemas/Revision" }
+        }
+      },
+      "Resource": {
+        "type": "object",
+        "required": ["resource_id", "book_path", "media_type", "resource_type", "content_revision", "loaded"],
+        "properties": {
+          "resource_id": { "type": "string" },
+          "book_path": { "type": "string" },
+          "media_type": { "type": "string" },
+          "resource_type": { "type": "string" },
+          "content_revision": { "$ref": "#/components/schemas/Revision" },
+          "loaded": { "type": "boolean" }
+        }
+      },
+      "ResourcePage": {
+        "type": "object",
+        "required": ["items", "next_cursor"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Resource" } },
+          "next_cursor": { "type": ["string", "null"] }
+        }
+      },
+      "TextContent": {
+        "type": "object",
+        "required": ["text", "revision"],
+        "properties": {
+          "text": { "type": "string" },
+          "revision": { "$ref": "#/components/schemas/Revision" }
+        }
+      },
+      "Selection": {
+        "type": "object",
+        "required": ["start", "end", "text"],
+        "properties": {
+          "start": { "$ref": "#/components/schemas/Position" },
+          "end": { "$ref": "#/components/schemas/Position" },
+          "text": { "type": "string" }
+        }
+      },
+      "EditorState": {
+        "type": "object",
+        "required": ["active"],
+        "properties": {
+          "active": { "type": "boolean" },
+          "resource_id": { "type": "string" },
+          "book_path": { "type": "string" },
+          "revision": { "$ref": "#/components/schemas/Revision" },
+          "cursor": { "$ref": "#/components/schemas/Position" },
+          "selection": { "$ref": "#/components/schemas/Selection" },
+          "position_encoding": { "type": "string", "const": "utf-16" }
+        }
+      },
+      "TextEdit": {
+        "type": "object",
+        "required": ["start", "end", "text"],
+        "properties": {
+          "start": { "$ref": "#/components/schemas/Position" },
+          "end": { "$ref": "#/components/schemas/Position" },
+          "text": { "type": "string" }
+        }
+      },
+      "EditResult": {
+        "type": "object",
+        "required": ["resource_id", "revision", "applied_edits"],
+        "properties": {
+          "resource_id": { "type": "string" },
+          "revision": { "$ref": "#/components/schemas/Revision" },
+          "applied_edits": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "TransactionInfo": {
+        "type": "object",
+        "required": ["transaction_id", "base_book_revision", "visibility", "checkpoint"],
+        "properties": {
+          "transaction_id": { "type": "string", "format": "uuid" },
+          "base_book_revision": { "$ref": "#/components/schemas/Revision" },
+          "visibility": { "type": "string", "const": "staged" },
+          "checkpoint": { "type": "string", "enum": ["none", "auto", "required"] }
+        }
+      },
+      "TransactionValidation": {
+        "type": "object",
+        "required": ["transaction_id", "valid", "conflicts", "summary"],
+        "properties": {
+          "transaction_id": { "type": "string", "format": "uuid" },
+          "valid": { "type": "boolean" },
+          "conflicts": { "type": "array", "items": { "type": "object" } },
+          "summary": { "type": "object" }
+        }
       }
     },
     "errors": {

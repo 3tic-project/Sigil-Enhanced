@@ -97,6 +97,11 @@ add_test(NAME python_live_sdk
 )
 set_tests_properties(python_live_sdk PROPERTIES TIMEOUT 30)
 
+add_test(NAME plugin_openrpc_contract
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/plugin_openrpc_contract_test.py
+)
+set_tests_properties(plugin_openrpc_contract PROPERTIES TIMEOUT 30)
+
 add_executable(plugin_transport_integration_test
     plugin_transport_integration_test.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp

@@ -7,6 +7,9 @@ Unreleased
      - Moved Book Browser image preview decoding off the GUI thread and added cancellation plus a bounded LRU cache.
      - Batched Book Browser model removal and insertion notifications during full refreshes.
 
+   New Features
+     - Added the first Python Plugin API v2 milestones: per-plugin legacy/live runtime selection, authenticated local-socket sessions, in-memory Book/editor reads, revision-safe editor edits, and staged cross-file text transactions.
+
 Sigil-Enhanced-2.8.1.E4
    Bug Fixes
      - Fixed Paste Rich Text menu handling to avoid a crash.
