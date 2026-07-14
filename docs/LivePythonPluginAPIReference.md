@@ -210,6 +210,9 @@ progress。文件对话框仅返回用户明确选择的路径；插件进程仍
 支持事件：
 
 - `editor.activeChanged`
+- `editor.selectionChanged`
+- `editor.cursorChanged`
+- `editor.contentChanged`
 - `book.resourceChanged`
 - `book.resourceAdded`
 - `book.resourceRemoved`
@@ -223,6 +226,8 @@ plugin.events.unsubscribe("book.resourceChanged")
 
 `poll()` 只取已排队事件，无事件返回 `None`；`next_event()` 阻塞等待。每个事件含
 `book_revision` 与 `origin_session_id`。一个连接上不能并发消费事件和发普通 RPC。
+编辑器事件携带选区范围但不携带选中文本，避免 notification 被超大选区撑破；需要文本时
+再调用 `get_selection()`。
 
 ## 10. Validation 与 input
 

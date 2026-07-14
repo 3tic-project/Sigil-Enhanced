@@ -48,7 +48,7 @@
       "paramStructure": "by-name",
       "params": [{ "name": "events", "required": true, "schema": {
         "type": "array", "uniqueItems": true,
-        "items": { "type": "string", "enum": ["editor.activeChanged", "book.resourceChanged", "book.resourceAdded", "book.resourceRemoved"] }
+        "items": { "type": "string", "enum": ["editor.activeChanged", "editor.selectionChanged", "editor.cursorChanged", "editor.contentChanged", "book.resourceChanged", "book.resourceAdded", "book.resourceRemoved"] }
       } }],
       "result": { "name": "result", "schema": { "type": "object", "required": ["subscribed"], "properties": { "subscribed": { "type": "array", "items": { "type": "string" } } } } }
     },
@@ -58,7 +58,7 @@
       "paramStructure": "by-name",
       "params": [{ "name": "events", "required": true, "schema": {
         "type": "array", "uniqueItems": true,
-        "items": { "type": "string", "enum": ["editor.activeChanged", "book.resourceChanged", "book.resourceAdded", "book.resourceRemoved"] }
+        "items": { "type": "string", "enum": ["editor.activeChanged", "editor.selectionChanged", "editor.cursorChanged", "editor.contentChanged", "book.resourceChanged", "book.resourceAdded", "book.resourceRemoved"] }
       } }],
       "result": { "name": "result", "schema": { "type": "object", "required": ["subscribed"], "properties": { "subscribed": { "type": "array", "items": { "type": "string" } } } } }
     },

@@ -276,13 +276,17 @@ event = plugin.events.next_event()
 print(event["name"], event["params"])
 ```
 
-Supported events are `editor.activeChanged`, `book.resourceChanged`,
+Supported events are `editor.activeChanged`, `editor.selectionChanged`,
+`editor.cursorChanged`, `editor.contentChanged`, `book.resourceChanged`,
 `book.resourceAdded`, and `book.resourceRemoved`. Book events require
 `events.book`; editor events require `events.editor`. Subscriptions declared in
 `plugin.xml` are installed at session startup when their permissions are
 granted. Every event contains `book_revision` and `origin_session_id`; the
 origin is this session for changes synchronously caused by its request and
 `None` for external/user changes.
+
+Editor event state contains selection ranges but omits selected text to keep
+notifications bounded; call `editor.get_selection()` when the text is needed.
 
 `poll()` consumes an already queued event without blocking. `next_event()`
 waits using the transport timeout. The SDK queues notifications received while

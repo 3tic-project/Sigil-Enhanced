@@ -17,6 +17,9 @@
   </permissions>
   <events>
     <event>editor.activeChanged</event>
+    <event>editor.selectionChanged</event>
+    <event>editor.cursorChanged</event>
+    <event>editor.contentChanged</event>
     <event>book.resourceChanged</event>
     <event>book.resourceAdded</event>
     <event>book.resourceRemoved</event>

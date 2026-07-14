@@ -89,10 +89,12 @@ private:
     Resource *ResolveResource(const QString &resource_id) const;
     TextResource *ResolveTextResource(const QString &resource_id) const;
     void TrackResource(Resource *resource);
+    void TrackEditorTab(ContentTab *tab);
     PluginApi::TextTransaction *RequireTransaction(const QJsonObject &params,
                                                    const QJsonValue &request_id);
     quint64 Revision(Resource *resource) const;
     QJsonObject EditorState() const;
+    QJsonObject EditorEventState() const;
     QString ResolveInterpreter() const;
     QStringList EffectivePermissions() const;
     void Finish(const QString &status, const QString &message = QString());
@@ -113,6 +115,7 @@ private:
     bool m_EndSignalScheduled;
     QStringList m_Permissions;
     QSet<QString> m_Subscriptions;
+    QSet<ContentTab *> m_TrackedEditorTabs;
     QString m_ProgressId;
     QString m_ProgressLabel;
     int m_ProgressMaximum;

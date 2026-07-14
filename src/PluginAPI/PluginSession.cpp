@@ -53,6 +53,7 @@
 #include "ResourceObjects/TextResource.h"
 #include "SourceUpdates/UniversalUpdates.h"
 #include "Tabs/ContentTab.h"
+#include "Tabs/FlowTab.h"
 #include "Tabs/TabManager.h"
 #include "ViewEditors/Searchable.h"
 
@@ -67,6 +68,9 @@ constexpr qint64 MAX_INPUT_EPUB_SIZE = 2LL * 1024 * 1024 * 1024;
 
 const QSet<QString> SUPPORTED_EVENTS {
     QStringLiteral("editor.activeChanged"),
+    QStringLiteral("editor.selectionChanged"),
+    QStringLiteral("editor.cursorChanged"),
+    QStringLiteral("editor.contentChanged"),
     QStringLiteral("book.resourceChanged"),
     QStringLiteral("book.resourceAdded"),
     QStringLiteral("book.resourceRemoved")
@@ -594,6 +598,9 @@ bool PluginSession::Start(QString *error)
     for (Resource *resource : book->GetFolderKeeper()->GetResourceList()) {
         TrackResource(resource);
     }
+    for (ContentTab *tab : m_TabManager->GetContentTabs()) {
+        TrackEditorTab(tab);
+    }
     for (const QString &event : m_Plugin.get_events()) {
         const QString permission = event.startsWith(QStringLiteral("editor."))
             ? QStringLiteral("events.editor") : QStringLiteral("events.book");
@@ -622,13 +629,14 @@ bool PluginSession::Start(QString *error)
     });
     connect(m_TabManager, &TabManager::TabChanged, this,
             [this](ContentTab *old_tab, ContentTab *new_tab) {
+        TrackEditorTab(new_tab);
         if (!m_Subscriptions.contains(QStringLiteral("editor.activeChanged"))) return;
         Notify(QStringLiteral("editor.activeChanged"), QJsonObject {
             { QStringLiteral("old_resource_id"), old_tab
                 ? QJsonValue(old_tab->GetLoadedResource()->GetIdentifier()) : QJsonValue() },
             { QStringLiteral("new_resource_id"), new_tab
                 ? QJsonValue(new_tab->GetLoadedResource()->GetIdentifier()) : QJsonValue() },
-            { QStringLiteral("state"), EditorState() }
+            { QStringLiteral("state"), EditorEventState() }
         });
     });
 
@@ -2752,6 +2760,11 @@ void PluginSession::TrackResource(Resource *resource)
             Resource *changed = ResolveResource(resource_id);
             if (changed) Notify(QStringLiteral("book.resourceChanged"), ResourceInfo(changed));
         }
+        ContentTab *tab = m_TabManager->GetCurrentContentTab();
+        if (tab && tab->GetLoadedResource()->GetIdentifier() == resource_id
+            && m_Subscriptions.contains(QStringLiteral("editor.contentChanged"))) {
+            Notify(QStringLiteral("editor.contentChanged"), EditorEventState());
+        }
     });
     connect(resource, &Resource::Renamed, this,
             [this, resource_id](const Resource *, const QString &) {
@@ -2768,6 +2781,30 @@ void PluginSession::TrackResource(Resource *resource)
         m_ResourceRevisions.remove(resource_id);
         m_BookRevision += 1;
     });
+}
+
+void PluginSession::TrackEditorTab(ContentTab *tab)
+{
+    if (!tab || m_TrackedEditorTabs.contains(tab)) return;
+    m_TrackedEditorTabs.insert(tab);
+    connect(tab, &QObject::destroyed, this, [this, tab]() {
+        m_TrackedEditorTabs.remove(tab);
+    });
+    connect(tab, &ContentTab::UpdateCursorPosition, this,
+            [this, tab](int, int, int) {
+        if (tab == m_TabManager->GetCurrentContentTab()
+            && m_Subscriptions.contains(QStringLiteral("editor.cursorChanged"))) {
+            Notify(QStringLiteral("editor.cursorChanged"), EditorEventState());
+        }
+    });
+    if (FlowTab *flow = qobject_cast<FlowTab *>(tab)) {
+        connect(flow, &FlowTab::SelectionChanged, this, [this, flow]() {
+            if (flow == m_TabManager->GetCurrentContentTab()
+                && m_Subscriptions.contains(QStringLiteral("editor.selectionChanged"))) {
+                Notify(QStringLiteral("editor.selectionChanged"), EditorEventState());
+            }
+        });
+    }
 }
 
 PluginApi::TextTransaction *PluginSession::RequireTransaction(const QJsonObject &params,
@@ -2811,6 +2848,15 @@ QJsonObject PluginSession::EditorState() const
         } },
         { QStringLiteral("position_encoding"), QStringLiteral("utf-16") }
     };
+}
+
+QJsonObject PluginSession::EditorEventState() const
+{
+    QJsonObject state = EditorState();
+    QJsonObject selection = state.value(QStringLiteral("selection")).toObject();
+    selection.remove(QStringLiteral("text"));
+    if (!selection.isEmpty()) state.insert(QStringLiteral("selection"), selection);
+    return state;
 }
 
 QString PluginSession::ResolveInterpreter() const
