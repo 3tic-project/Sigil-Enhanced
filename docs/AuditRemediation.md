@@ -13,7 +13,7 @@ work in `todo/audit/06-整改路线图与验收标准.md`.
 | --- | --- | --- |
 | Singleton self-deletion | Complete | Eight destructors only clear their own registered instance pointer; Debug build passes |
 | FindReplacePlus double initialization | Complete | One initialization; all option lists are idempotent and have asserted counts |
-| CSSInfo leak | Pending | Repeated formatting leaves no orphaned allocation |
+| CSSInfo leak | Complete | Inline style formatting uses scoped parser ownership; Debug build passes |
 | Safe archive paths and budgets | Pending | ZIP Slip and ZIP bomb cases fail safely; normal EPUB/plugin archives pass |
 | Image hover preview | Pending | Background scaled decode, cancellation, bounded cache |
 | Book Browser fast clear | Pending | Batched removal with before/after measurements |
@@ -65,3 +65,26 @@ edits, completers, options, signal connections, and settings are initialized is 
 - Build regression: `cmake --build cmake-build-debug -j2` passes with assertions enabled.
 - Repeated initialization no longer changes any option count.
 - Existing translated strings are reused; no translation catalogs or settings keys change.
+
+## Inline CSS Parser Lifetime
+
+### Impact
+
+`CleanSource::PrettifyXhtml()` allocated one `CSSInfo` for every non-empty inline
+`style` block and never deleted it. Reformatting books with many embedded styles
+therefore retained parser tokens and selector objects for the rest of the process.
+
+### Change Boundary
+
+The parser is now a block-scoped stack object. Its destructor runs immediately after
+the formatted CSS is obtained. Formatting, indentation, well-formedness checks,
+progress reporting, and resource transaction behavior are unchanged. Other
+`CSSInfo` heap allocations were reviewed and retain explicit owning cleanup.
+
+### Verification
+
+- Static regression: the inline style path contains no `new CSSInfo`.
+- Ownership regression: all remaining `new CSSInfo` calls are held by
+  `HTMLStyleInfo` or `BookReports` and have matching cleanup.
+- Build regression: `cmake --build cmake-build-debug -j2` passes.
+- The parser output call and `cssfold` option are unchanged; no UI or translation changes.

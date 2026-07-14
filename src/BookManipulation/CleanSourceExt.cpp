@@ -183,8 +183,8 @@ QString CleanSource::PrettifyXhtml(const QString& source, XhtmlFormatParser& xfp
                 }
                 else if (Utility::trimmed(previousText, "\n\t ") != "") {
                     QString indent_ = indentPara * lvl > 0 ? QString(indentPara * lvl, ' ') : "";
-                    CSSInfo* cp = new CSSInfo(previousText);
-                    QString reformatCss = '\n' + cp->getReformattedCSSText(!cssfold) + '\n';
+                    CSSInfo css_info(previousText);
+                    QString reformatCss = '\n' + css_info.getReformattedCSSText(!cssfold) + '\n';
                     previousText = Utility::RegExpSub("\n", "\n" + indent_, reformatCss);
                 }
             }
