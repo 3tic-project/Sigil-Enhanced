@@ -1,6 +1,6 @@
 # Audit Remediation Status
 
-Baseline: `099adbd1d95902c2d858e8c5b5459024654ed17e`  
+Baseline: `099adbd1d95902c2d858e8c5b5459024654ed17e`
 Started: 2026-07-14
 
 This document tracks implementation and verification of the first four findings in
@@ -233,3 +233,43 @@ macOS Debug process:
   OPF parsing, semantic lookup, icon creation, and final sorting remain future
   optimization targets.
 - No resource data, OPF transaction, undo behavior, UI text, or translations change.
+
+## Completion Summary
+
+The requested audit slice was completed on 2026-07-14 in six independently tested
+implementation commits:
+
+| Commit | Work item |
+| --- | --- |
+| `9c95ae1cc` | Remove recursive self-deletion from eight singleton destructors |
+| `152917798` | Make FindReplacePlus initialization idempotent |
+| `f4760e56b` | Give inline CSS parsers scoped lifetime |
+| `07f33fd68` | Add shared safe archive extraction and transactional plugin install |
+| `1bf3868ee` | Move image preview decoding off the GUI thread |
+| `1ba27c4a4` | Batch Book Browser model removal and insertion |
+
+### Final Verification
+
+- A clean macOS Debug build completed all 466 build steps and linked Sigil.
+- All three CTest targets pass: safe archive extraction, image preview service, and
+  OPF model clear/rebuild benchmark.
+- All three targets also pass in an AddressSanitizer build. The macOS ASan runtime
+  does not support leak detection, so those runs use `detect_leaks=0`.
+- Static regression checks confirm no singleton `delete m_instance`, duplicate
+  FindReplacePlus constructor initialization, leaking inline `new CSSInfo`, archive
+  writer outside `SafeArchiveExtractor`, GUI-thread file `QPixmap` preview decode, or
+  `removeRow(0)` loop in `OPFModel::ClearModel` remains.
+- Simplified and Traditional Chinese archive error catalogs compile, and both TS
+  files pass XML validation.
+
+### Remaining Boundaries
+
+- EPUB/plugin extraction supports cancellation internally, but the current
+  synchronous UI entry points do not expose a cancel control.
+- Image parsing is off the GUI thread and memory-bounded at the output/cache layers,
+  but third-party decoders are not isolated in a helper process.
+- The Book Browser benchmark covers model structure only, not full OPF parsing,
+  semantic lookup, icon creation, or sorting.
+- The clean build reports pre-existing warnings in `SearchEditorTreeView.cpp`,
+  `CodeCompleterParser.cpp`, and `CompletionWords.cpp`; none are in files changed by
+  this remediation series.
