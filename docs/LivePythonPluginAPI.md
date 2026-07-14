@@ -164,6 +164,7 @@ not construct the transport directly.
 | `read_text(resource)` | Dictionary containing `text` and `revision`. |
 | `read_many(resources)` | Up to 100 current text resources in one round trip. |
 | `read_binary(resource)` | Read a binary resource up to 5 MiB and return decoded `data`. |
+| `open_binary(resource)` | Open a context-managed, chunked snapshot reader for a binary resource of any size. |
 | `transaction(label, checkpoint="auto")` | Begin a staged `Transaction`. |
 
 `Resource` contains `id`, `book_path`, `media_type`, `resource_type`,
@@ -174,6 +175,12 @@ synchronization API. It is protected by `book.read`; writes still go through
 revision-checked transactions. Application and preferences paths are included
 because the v1 container exposes them for Hunspell, Gumbo, and per-plugin
 preferences compatibility.
+
+`open_binary()` returns a `BinaryReader` with `size`, `sha256`, `revision`, and
+`chunk_size` metadata. Iterate `reader.chunks()` or call `reader.read()`, and
+use it as a context manager so the session-owned temporary snapshot is removed
+immediately. Individual chunks are limited to 2 MiB; all remaining snapshots
+are removed when the plugin session ends.
 
 ### `EditorApi`
 

@@ -58,6 +58,49 @@ class EditorState:
         )
 
 
+class BinaryReader:
+    """A bounded-chunk reader for a session-owned binary snapshot."""
+
+    def __init__(self, rpc, result):
+        self._rpc = rpc
+        self.id = result["stream_id"]
+        self.resource_id = result["resource_id"]
+        self.revision = result["revision"]
+        self.size = result["size"]
+        self.sha256 = result["sha256"]
+        self.chunk_size = result["chunk_size"]
+        self.closed = False
+
+    def chunks(self, max_bytes=None):
+        if self.closed:
+            raise RuntimeError("binary stream is closed")
+        size = self.chunk_size if max_bytes is None else max_bytes
+        while True:
+            result = self._rpc.call(
+                "binary.readChunk", {"stream_id": self.id, "max_bytes": size}
+            )
+            data = base64.b64decode(result["data_base64"], validate=True)
+            if data:
+                yield data
+            if result["eof"]:
+                break
+
+    def read(self, max_bytes=None):
+        return b"".join(self.chunks(max_bytes))
+
+    def close(self):
+        if not self.closed:
+            self._rpc.call("binary.close", {"stream_id": self.id})
+            self.closed = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+        return False
+
+
 class Transaction:
     def __init__(self, rpc, result):
         self._rpc = rpc
@@ -346,6 +389,14 @@ class BookApi:
         result = self._rpc.call("resource.readBinary", {"resource_id": resource_id})
         result["data"] = base64.b64decode(result.pop("data_base64"), validate=True)
         return result
+
+    def open_binary(self, resource):
+        """Open a chunked snapshot reader without the inline payload limit."""
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        return BinaryReader(
+            self._rpc,
+            self._rpc.call("binary.openRead", {"resource_id": resource_id}),
+        )
 
     def transaction(self, label="Plugin changes", checkpoint="auto"):
         result = self._rpc.call(

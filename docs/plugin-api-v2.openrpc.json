@@ -156,6 +156,42 @@
       "result": { "name": "result", "schema": { "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "allOf": [{ "$ref": "#/components/schemas/TextContent" }, { "type": "object", "required": ["resource_id"], "properties": { "resource_id": { "type": "string" } } }] } } } } }
     },
     {
+      "name": "binary.openRead",
+      "summary": "Create a stable session-owned snapshot for chunked binary reading.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "resource_id", "required": true, "schema": { "type": "string" } }],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["stream_id", "resource_id", "revision", "size", "sha256", "chunk_size"], "properties": {
+        "stream_id": { "type": "string", "format": "uuid" },
+        "resource_id": { "type": "string" },
+        "revision": { "$ref": "#/components/schemas/Revision" },
+        "size": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "chunk_size": { "type": "integer", "minimum": 1, "maximum": 2097152 }
+      } } }
+    },
+    {
+      "name": "binary.readChunk",
+      "summary": "Read the next base64-encoded chunk from a binary snapshot.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "stream_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "max_bytes", "schema": { "type": "integer", "minimum": 1, "maximum": 2097152, "default": 1048576 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["stream_id", "data_base64", "offset", "eof"], "properties": {
+        "stream_id": { "type": "string", "format": "uuid" },
+        "data_base64": { "type": "string", "contentEncoding": "base64" },
+        "offset": { "type": "integer", "minimum": 0 },
+        "eof": { "type": "boolean" }
+      } } }
+    },
+    {
+      "name": "binary.close",
+      "summary": "Close and remove a session-owned binary snapshot.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "stream_id", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["closed"], "properties": { "closed": { "type": "boolean", "const": true } } } }
+    },
+    {
       "name": "editor.getState",
       "summary": "Return active editor resource, revision, cursor, and selection.",
       "params": [],

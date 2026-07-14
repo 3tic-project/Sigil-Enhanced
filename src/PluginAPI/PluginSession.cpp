@@ -59,6 +59,8 @@ namespace
 
 // Base64 plus the JSON envelope must still fit the 8 MiB framed-message limit.
 constexpr qsizetype MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024;
+constexpr qsizetype DEFAULT_BINARY_CHUNK_SIZE = 1024 * 1024;
+constexpr qsizetype MAX_BINARY_CHUNK_SIZE = 2 * 1024 * 1024;
 
 const QSet<QString> SUPPORTED_EVENTS {
     QStringLiteral("editor.activeChanged"),
@@ -963,6 +965,108 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
             });
         }
+    } else if (method == QStringLiteral("binary.openRead")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
+        if (!resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
+            return;
+        }
+        if (qobject_cast<TextResource *>(resource)) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Text resources use resource.readText"));
+            return;
+        }
+
+        auto *snapshot = new QTemporaryFile(this);
+        if (!snapshot->open()) {
+            const QString error = snapshot->errorString();
+            delete snapshot;
+            RespondError(id, PluginApi::UnsupportedOperation, error);
+            return;
+        }
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        qint64 total = 0;
+        QString copy_error;
+        {
+            QReadLocker locker(&resource->GetLock());
+            QFile source(resource->GetFullPath());
+            if (!source.open(QIODevice::ReadOnly)) {
+                copy_error = source.errorString();
+            } else {
+                while (!source.atEnd()) {
+                    const QByteArray chunk = source.read(DEFAULT_BINARY_CHUNK_SIZE);
+                    if (chunk.isEmpty() && source.error() != QFile::NoError) {
+                        copy_error = source.errorString();
+                        break;
+                    }
+                    if (snapshot->write(chunk) != chunk.size()) {
+                        copy_error = snapshot->errorString();
+                        break;
+                    }
+                    hash.addData(chunk);
+                    total += chunk.size();
+                }
+            }
+        }
+        if (!copy_error.isEmpty() || !snapshot->flush() || !snapshot->seek(0)) {
+            if (copy_error.isEmpty()) copy_error = snapshot->errorString();
+            delete snapshot;
+            RespondError(id, PluginApi::UnsupportedOperation, copy_error);
+            return;
+        }
+        const QString stream_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        BinaryReadStream stream;
+        stream.file = snapshot;
+        stream.resourceId = resource->GetIdentifier();
+        stream.revision = Revision(resource);
+        stream.size = total;
+        stream.sha256 = QString::fromLatin1(hash.result().toHex());
+        m_BinaryReadStreams.insert(stream_id, stream);
+        Respond(id, QJsonObject {
+            { QStringLiteral("stream_id"), stream_id },
+            { QStringLiteral("resource_id"), stream.resourceId },
+            { QStringLiteral("revision"), static_cast<qint64>(stream.revision) },
+            { QStringLiteral("size"), stream.size },
+            { QStringLiteral("sha256"), stream.sha256 },
+            { QStringLiteral("chunk_size"), static_cast<qint64>(DEFAULT_BINARY_CHUNK_SIZE) }
+        });
+    } else if (method == QStringLiteral("binary.readChunk")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        const QString stream_id = params.value(QStringLiteral("stream_id")).toString();
+        auto stream = m_BinaryReadStreams.find(stream_id);
+        if (stream == m_BinaryReadStreams.end()) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Binary stream not found"));
+            return;
+        }
+        qint64 requested = params.value(QStringLiteral("max_bytes"))
+            .toInteger(DEFAULT_BINARY_CHUNK_SIZE);
+        if (requested < 1 || requested > MAX_BINARY_CHUNK_SIZE) {
+            RespondError(id, -32602, QStringLiteral("max_bytes is outside the allowed range"));
+            return;
+        }
+        const QByteArray chunk = stream->file->read(requested);
+        if (chunk.isEmpty() && stream->file->error() != QFile::NoError) {
+            RespondError(id, PluginApi::UnsupportedOperation, stream->file->errorString());
+            return;
+        }
+        Respond(id, QJsonObject {
+            { QStringLiteral("stream_id"), stream_id },
+            { QStringLiteral("data_base64"), QString::fromLatin1(chunk.toBase64()) },
+            { QStringLiteral("offset"), stream->file->pos() },
+            { QStringLiteral("eof"), stream->file->atEnd() }
+        });
+    } else if (method == QStringLiteral("binary.close")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        const QString stream_id = params.value(QStringLiteral("stream_id")).toString();
+        auto stream = m_BinaryReadStreams.find(stream_id);
+        if (stream == m_BinaryReadStreams.end()) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Binary stream not found"));
+            return;
+        }
+        delete stream->file;
+        m_BinaryReadStreams.erase(stream);
+        Respond(id, QJsonObject {{ QStringLiteral("closed"), true }});
     } else if (method == QStringLiteral("resource.readMany")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QJsonArray ids = params.value(QStringLiteral("resource_ids")).toArray();
@@ -2346,6 +2450,10 @@ void PluginSession::Finish(const QString &status, const QString &message)
 
 void PluginSession::CleanServer()
 {
+    for (const BinaryReadStream &stream : std::as_const(m_BinaryReadStreams)) {
+        delete stream.file;
+    }
+    m_BinaryReadStreams.clear();
     if (m_Socket) {
         m_Socket->disconnect(this);
         m_Socket->disconnectFromServer();

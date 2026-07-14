@@ -90,6 +90,30 @@ class LiveSdkTest(unittest.TestCase):
             transport.sent[0]["method"], "book.getCompatibilitySnapshot"
         )
 
+    def test_book_api_streams_binary_snapshots_and_closes_them(self):
+        transport = FakeTransport(
+            [
+                {"jsonrpc": "2.0", "id": 1, "result": {
+                    "stream_id": "stream", "resource_id": "image", "revision": 7,
+                    "size": 5, "sha256": "0" * 64, "chunk_size": 3,
+                }},
+                {"jsonrpc": "2.0", "id": 2, "result": {
+                    "stream_id": "stream", "data_base64": "aGVs", "offset": 3, "eof": False,
+                }},
+                {"jsonrpc": "2.0", "id": 3, "result": {
+                    "stream_id": "stream", "data_base64": "bG8=", "offset": 5, "eof": True,
+                }},
+                {"jsonrpc": "2.0", "id": 4, "result": {"closed": True}},
+            ]
+        )
+        with BookApi(RpcClient(transport)).open_binary("image") as reader:
+            self.assertEqual(reader.read(), b"hello")
+            self.assertEqual((reader.size, reader.revision), (5, 7))
+        self.assertEqual(
+            [item["method"] for item in transport.sent],
+            ["binary.openRead", "binary.readChunk", "binary.readChunk", "binary.close"],
+        )
+
     def test_editor_selection_is_typed(self):
         rpc = RpcClient(
             FakeTransport(

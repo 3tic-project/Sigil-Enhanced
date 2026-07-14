@@ -29,6 +29,7 @@ class QLocalSocket;
 class Resource;
 class TabManager;
 class TextResource;
+class QTemporaryFile;
 
 namespace PluginApi
 {
@@ -59,6 +60,14 @@ private slots:
     void ProcessFinished(int exit_code, QProcess::ExitStatus exit_status);
 
 private:
+    struct BinaryReadStream {
+        QTemporaryFile *file = nullptr;
+        QString resourceId;
+        quint64 revision = 0;
+        qint64 size = 0;
+        QString sha256;
+    };
+
     void Dispatch(const QJsonObject &request);
     void Respond(const QJsonValue &id, const QJsonValue &result);
     void RespondError(const QJsonValue &id, int code, const QString &message,
@@ -94,6 +103,7 @@ private:
     QStringList m_Permissions;
     QSet<QString> m_Subscriptions;
     QHash<QString, quint64> m_ResourceRevisions;
+    QHash<QString, BinaryReadStream> m_BinaryReadStreams;
     quint64 m_BookRevision;
     bool m_InRequest;
     std::unique_ptr<PluginApi::TextTransaction> m_Transaction;
