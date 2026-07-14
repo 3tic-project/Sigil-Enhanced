@@ -35,6 +35,7 @@ class FakeWrapper:
         self.plugin = plugin
         self.plugin_dir = plugin_dir
         self.plugin_name = plugin_name
+        self.writable = writable
         self.commits = 0
         self.rollbacks = 0
         self.__class__.instances.append(self)
@@ -76,6 +77,7 @@ class LiveLauncherCompatTest(unittest.TestCase):
              mock.patch.object(live_launcher, "load_plugin", return_value=module), \
              mock.patch.object(sigil_live.compat, "LiveWrapper", FakeWrapper), \
              mock.patch.object(sigil_live.compat, "CompatBookContainer", FakeContainer), \
+             mock.patch.object(sigil_live.compat, "CompatOutputContainer", FakeContainer), \
              mock.patch.object(sigil_live.compat, "CompatValidationContainer", FakeContainer), \
              mock.patch("sys.stderr", new_callable=io.StringIO):
             return live_launcher.main(arguments)
@@ -111,6 +113,15 @@ class LiveLauncherCompatTest(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual((wrapper.commits, wrapper.rollbacks), (0, 0))
         self.assertEqual(self.plugin.validation.published, [["validation-result"]])
+
+    def test_output_success_uses_a_read_only_wrapper_without_commit(self):
+        observed = []
+        result = self.launch(lambda container: observed.append(container) or 0, plugin_type="output")
+        wrapper = FakeWrapper.instances[0]
+        self.assertEqual(result, 0)
+        self.assertFalse(wrapper.writable)
+        self.assertEqual((wrapper.commits, wrapper.rollbacks), (0, 0))
+        self.assertEqual(len(observed), 1)
 
 
 if __name__ == "__main__":

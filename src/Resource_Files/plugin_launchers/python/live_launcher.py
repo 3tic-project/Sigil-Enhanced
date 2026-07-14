@@ -45,10 +45,11 @@ def main(argv=None):
             raise TypeError("plugin.py must define run(plugin)")
         target = plugin
         if args.compat_v1:
-            if args.plugin_type not in ("edit", "validation"):
-                raise ValueError("live v1 compatibility supports edit and validation plugins")
+            if args.plugin_type not in ("edit", "output", "validation"):
+                raise ValueError("live v1 compatibility supports edit, output, and validation plugins")
             from sigil_live.compat import (
                 CompatBookContainer,
+                CompatOutputContainer,
                 CompatValidationContainer,
                 LiveWrapper,
             )
@@ -60,11 +61,12 @@ def main(argv=None):
                 args.plugin_name,
                 writable=args.plugin_type == "edit",
             )
-            target = (
-                CompatBookContainer(wrapper)
-                if args.plugin_type == "edit"
-                else CompatValidationContainer(wrapper)
-            )
+            containers = {
+                "edit": CompatBookContainer,
+                "output": CompatOutputContainer,
+                "validation": CompatValidationContainer,
+            }
+            target = containers[args.plugin_type](wrapper)
         result = run(target)
         status = "success" if result in (None, 0) else "failed"
         if wrapper is not None:
