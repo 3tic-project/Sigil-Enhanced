@@ -15,7 +15,7 @@ work in `todo/audit/06-整改路线图与验收标准.md`.
 | FindReplacePlus double initialization | Complete | One initialization; all option lists are idempotent and have asserted counts |
 | CSSInfo leak | Complete | Inline style formatting uses scoped parser ownership; Debug build passes |
 | Safe archive paths and budgets | Complete | Shared extractor enforces path/resource limits; negative corpus and real EPUB/plugin fixtures pass |
-| Image hover preview | Pending | Background scaled decode, cancellation, bounded cache |
+| Image hover preview | Complete | Background scaled decode, stale-request cancellation, 32 MiB LRU; service tests pass |
 | Book Browser fast clear | Pending | Batched removal with before/after measurements |
 
 ## Singleton Destruction
@@ -144,3 +144,47 @@ The cancellation callback is implemented and tested, but current synchronous EPU
 and plugin callers do not yet expose a UI cancel control. Archive processing has no
 EPUB undo transaction; a failed import cleans its files, while plugin replacement is
 handled by the staging/backup transaction described above.
+
+## Image Hover Preview
+
+### Impact
+
+Book Browser hover previously constructed a full `QPixmap` from each bitmap on the
+GUI thread and then scaled it. Large or adversarial images could therefore block
+event processing and create a source-sized memory peak; repeated hover decoded the
+same file again because there was no cache.
+
+### Change Boundary
+
+`ImagePreviewService` performs all file inspection, bitmap decoding, and SVG parsing/
+rendering through `QtConcurrent`. Bitmap previews use `QImageReader::setScaledSize`
+before `read()`, and SVGs render directly to a bounded `QImage`. Both outputs have a
+maximum side of 300 pixels. Source files over 128 MiB are not previewed.
+
+The GUI thread only submits a request, validates the returned persistent model index
+and resource path, converts the already-scaled image into the popup pixmap, and
+positions the popup. Moving to another item, scrolling, dragging, or hiding the view
+invalidates active request IDs and sets cooperative cancellation tokens, so stale
+results are discarded even if a third-party decoder cannot stop mid-call.
+
+Successful results use a modification-aware key (absolute path, size, mtime, format)
+in a 32 MiB `QCache` LRU. Cached delivery is still deferred to the event loop, which
+keeps request ordering consistent. Invalid or over-budget input hides the preview;
+it does not modify the resource, book, undo history, or persisted settings.
+
+### Verification
+
+- `image_preview_service_test` verifies scaled bitmap decode and original dimensions,
+  SVG rendering, callback delivery on the service/GUI thread, stale-result
+  cancellation, cache hits, and eviction below a configured byte ceiling.
+- A 20,000 x 20,000 SVG with 8,000 shapes is used for the UI-blocking regression.
+  On the local macOS Debug build, equivalent synchronous decode/render took
+  31.892 ms while the asynchronous request returned in 0.068 ms. The request path is
+  asserted below 16 ms in the test; background completion time is intentionally not
+  counted as GUI blocking.
+- The production cache limit is 32 MiB; a 700 KiB test cache evicts older 300-pixel
+  previews and never reports cost above its limit.
+- The image preview test also passes in the separate AddressSanitizer build
+  (`detect_leaks=0` because the macOS runtime does not support leak detection).
+- `cmake --build cmake-build-debug -j2` and the complete CTest suite pass.
+- No user-visible strings or translation catalogs change in this batch.

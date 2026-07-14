@@ -1,4 +1,4 @@
-find_package(Qt6 6.4 COMPONENTS Core REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Svg REQUIRED)
 
 add_executable(safe_archive_extractor_test
     safe_archive_extractor_test.cpp
@@ -22,3 +22,25 @@ target_compile_definitions(safe_archive_extractor_test PRIVATE
 
 add_test(NAME safe_archive_extractor COMMAND safe_archive_extractor_test)
 set_tests_properties(safe_archive_extractor PROPERTIES TIMEOUT 30)
+
+add_executable(image_preview_service_test
+    image_preview_service_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/ImagePreviewService.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/ImagePreviewService.h
+)
+
+set_target_properties(image_preview_service_test PROPERTIES AUTOMOC ON)
+
+target_include_directories(image_preview_service_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(image_preview_service_test PRIVATE
+    Qt6::Concurrent
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Svg
+)
+
+add_test(NAME image_preview_service COMMAND image_preview_service_test)
+set_tests_properties(image_preview_service PROPERTIES TIMEOUT 30)

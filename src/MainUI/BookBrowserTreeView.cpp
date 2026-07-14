@@ -3,7 +3,6 @@
 #include <QPainter>
 #include <QModelIndex>
 #include <QMimeData>
-#include <QFileInfo>
 #include <QApplication>
 #include <QDrag>
 #include <QFontMetrics>
@@ -12,24 +11,17 @@
 #include <QPixmap>
 #include <QTimer>
 #include <QStringList>
-#include <QtSvg/QSvgRenderer>
 
 #include "BookBrowserTreeView.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "MainUI/MainWindow.h"
+#include "Misc/ImagePreviewService.h"
 #include "Misc/ResourceInsertion.h"
 #include "Misc/Utility.h"
 #include "ResourceObjects/Resource.h"
 
 QStringList IMPORT_SUFFIX = { "xhtml","html","htm","txt" };
-static const int IMAGE_PREVIEW_MAX_SIDE = 300;
 static const int IMAGE_PREVIEW_DELAY_MS = 150;
-
-struct ImagePreviewData {
-	QPixmap pixmap;
-	QSize pixelSize;
-	qint64 fileSize = 0;
-};
 
 //------------------- modified: BookBrowserTreeView -----------------------
 
@@ -41,7 +33,9 @@ BookBrowserTreeView::BookBrowserTreeView(QWidget* parent)
 	dragStartIndex(QModelIndex()),
 	imagePreviewIndex(QModelIndex()),
 	imagePreviewPopup(new QLabel(nullptr, Qt::ToolTip)),
-	imagePreviewTimer(new QTimer(this))
+	imagePreviewTimer(new QTimer(this)),
+	imagePreviewService(new ImagePreviewService(this)),
+	imagePreviewRequestId(0)
 {
 	setMouseTracking(true);
 	viewport()->setMouseTracking(true);
@@ -51,6 +45,8 @@ BookBrowserTreeView::BookBrowserTreeView(QWidget* parent)
 	imagePreviewPopup->hide();
 	imagePreviewTimer->setSingleShot(true);
 	connect(imagePreviewTimer, &QTimer::timeout, this, [this]() { showImagePreview(); });
+	connect(imagePreviewService, &ImagePreviewService::previewReady,
+	        this, &BookBrowserTreeView::imagePreviewReady);
 }
 
 
@@ -114,17 +110,17 @@ static QPixmap imagePreviewWithInfoBar(const ImagePreviewData& preview,
 	const QFontMetrics fm(font);
 	const int horizontal_padding = 12;
 	const int info_height = fm.height() + 10;
-	const int width = qMax(preview.pixmap.width(), fm.horizontalAdvance(info) + horizontal_padding * 2);
-	const int height = preview.pixmap.height() + info_height;
+	const int width = qMax(preview.image.width(), fm.horizontalAdvance(info) + horizontal_padding * 2);
+	const int height = preview.image.height() + info_height;
 
 	QPixmap pixmap(width, height);
 	pixmap.fill(palette.base().color());
 
 	QPainter painter(&pixmap);
-	const int image_x = (width - preview.pixmap.width()) / 2;
-	painter.drawPixmap(image_x, 0, preview.pixmap);
+	const int image_x = (width - preview.image.width()) / 2;
+	painter.drawImage(image_x, 0, preview.image);
 
-	const QRect info_rect(0, preview.pixmap.height(), width, info_height);
+	const QRect info_rect(0, preview.image.height(), width, info_height);
 	painter.fillRect(info_rect, palette.window().color());
 	painter.setPen(palette.mid().color());
 	painter.drawLine(info_rect.topLeft(), info_rect.topRight());
@@ -134,45 +130,6 @@ static QPixmap imagePreviewWithInfoBar(const ImagePreviewData& preview,
 	                 Qt::AlignCenter,
 	                 info);
 	return pixmap;
-}
-
-static ImagePreviewData scaledBitmapPreview(const QString& filepath)
-{
-	ImagePreviewData preview;
-	preview.fileSize = QFileInfo(filepath).size();
-	QPixmap pixmap(filepath);
-	if (pixmap.isNull()) {
-		return preview;
-	}
-	preview.pixelSize = pixmap.size();
-	preview.pixmap = pixmap.scaled(QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE),
-	                               Qt::KeepAspectRatio,
-	                               Qt::SmoothTransformation);
-	return preview;
-}
-
-static ImagePreviewData scaledSvgPreview(const QString& filepath)
-{
-	ImagePreviewData preview;
-	preview.fileSize = QFileInfo(filepath).size();
-	QSvgRenderer renderer(filepath);
-	if (!renderer.isValid()) {
-		return preview;
-	}
-
-	QSize size = renderer.defaultSize();
-	preview.pixelSize = size;
-	if (size.isEmpty()) {
-		size = QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE);
-	}
-	size.scale(QSize(IMAGE_PREVIEW_MAX_SIDE, IMAGE_PREVIEW_MAX_SIDE), Qt::KeepAspectRatio);
-
-	QPixmap pixmap(size);
-	pixmap.fill(Qt::transparent);
-	QPainter painter(&pixmap);
-	renderer.render(&painter);
-	preview.pixmap = pixmap;
-	return preview;
 }
 
 void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
@@ -185,10 +142,15 @@ void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
 		return;
 	}
 
-	if (imagePreviewIndex == index && imagePreviewPopup->isVisible()) {
+	if (imagePreviewIndex == index &&
+	    (imagePreviewPopup->isVisible() || imagePreviewTimer->isActive() ||
+	     imagePreviewRequestId != 0)) {
 		return;
 	}
 
+	imagePreviewService->cancelPending();
+	imagePreviewRequestId = 0;
+	imagePreviewPath.clear();
 	imagePreviewIndex = index;
 	imagePreviewPopup->hide();
 	imagePreviewTimer->start(IMAGE_PREVIEW_DELAY_MS);
@@ -204,10 +166,25 @@ void BookBrowserTreeView::showImagePreview()
 		return;
 	}
 
-	ImagePreviewData preview = resource->Type() == Resource::SVGResourceType ?
-	                           scaledSvgPreview(resource->GetFullPath()) :
-	                           scaledBitmapPreview(resource->GetFullPath());
-	if (preview.pixmap.isNull()) {
+	imagePreviewPath = resource->GetFullPath();
+	if (imagePreviewPath.isEmpty()) {
+		hideImagePreview();
+		return;
+	}
+	const ImagePreviewService::Format format =
+		resource->Type() == Resource::SVGResourceType ?
+		ImagePreviewService::Format::Svg : ImagePreviewService::Format::Bitmap;
+	imagePreviewRequestId = imagePreviewService->request(imagePreviewPath, format);
+}
+
+void BookBrowserTreeView::imagePreviewReady(quint64 requestId,
+	                                        const ImagePreviewData& preview)
+{
+	if (requestId != imagePreviewRequestId || !imagePreviewIndex.isValid()) {
+		return;
+	}
+	Resource* resource = resourceForIndex(imagePreviewIndex);
+	if (!resource || resource->GetFullPath() != imagePreviewPath || preview.image.isNull()) {
 		hideImagePreview();
 		return;
 	}
@@ -222,12 +199,16 @@ void BookBrowserTreeView::showImagePreview()
 	QPoint pos = viewport()->mapToGlobal(item_rect.topRight() + QPoint(12, 0));
 	imagePreviewPopup->move(pos);
 	imagePreviewPopup->show();
+	imagePreviewRequestId = 0;
 }
 
 void BookBrowserTreeView::hideImagePreview()
 {
 	imagePreviewTimer->stop();
-	imagePreviewIndex = QModelIndex();
+	imagePreviewService->cancelPending();
+	imagePreviewRequestId = 0;
+	imagePreviewPath.clear();
+	imagePreviewIndex = QPersistentModelIndex();
 	if (imagePreviewPopup) {
 		imagePreviewPopup->hide();
 	}

@@ -10,10 +10,13 @@
 #include <QDropEvent>
 #include <QMouseEvent>
 #include <QPaintEvent>
+#include <QPersistentModelIndex>
 
 class QLabel;
 class QTimer;
 class Resource;
+class ImagePreviewService;
+struct ImagePreviewData;
 
 class BookBrowserTreeView : public QTreeView
 {
@@ -49,13 +52,17 @@ private:
 	Line dropIndicatorLine;
 	QPoint dragStartPosition;
 	QModelIndex dragStartIndex;
-	QModelIndex imagePreviewIndex;
+	QPersistentModelIndex imagePreviewIndex;
 	QLabel* imagePreviewPopup;
 	QTimer* imagePreviewTimer;
+	ImagePreviewService* imagePreviewService;
+	quint64 imagePreviewRequestId;
+	QString imagePreviewPath;
 
 	void drawOtherDropIndicator(QPoint& eventPos);
 	void scheduleImagePreview(const QModelIndex& index);
 	void showImagePreview();
+	void imagePreviewReady(quint64 requestId, const ImagePreviewData& preview);
 	void hideImagePreview();
 	Resource* resourceForIndex(const QModelIndex& index) const;
 };

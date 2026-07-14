@@ -421,6 +421,8 @@ set( MISC_FILES
     Misc/PythonHighlighter.h
     Misc/HTMLEncodingResolver.cpp
     Misc/HTMLEncodingResolver.h
+    Misc/ImagePreviewService.cpp
+    Misc/ImagePreviewService.h
     Misc/HTMLSpellCheck.cpp
     Misc/HTMLSpellCheck.h
     Misc/HTMLSpellCheckML.cpp
