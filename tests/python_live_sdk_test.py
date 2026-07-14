@@ -6,7 +6,7 @@ import unittest
 LAUNCHER_ROOT = pathlib.Path(__file__).parents[1] / "src" / "Resource_Files" / "plugin_launchers" / "python"
 sys.path.insert(0, str(LAUNCHER_ROOT))
 
-from sigil_live.client import BookApi, EditorApi, Resource
+from sigil_live.client import BookApi, EditorApi, Resource, ValidationApi
 from sigil_live.errors import PermissionDenied
 from sigil_live.rpc import RpcClient
 
@@ -210,6 +210,21 @@ class LiveSdkTest(unittest.TestCase):
             [request["method"] for request in transport.sent],
             ["transaction.replaceArchiveFile", "transaction.removeArchiveFile"],
         )
+
+    def test_validation_api_normalizes_result_locations(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {"accepted": 1}}
+        ])
+        result = ValidationApi(RpcClient(transport)).publish_results([
+            {
+                "type": "warning",
+                "book_path": "OEBPS/Text/a.xhtml",
+                "line": 4,
+                "message": "Check this",
+            }
+        ])
+        self.assertEqual(result, {"accepted": 1})
+        self.assertEqual(transport.sent[0]["params"]["results"][0]["character"], -1)
 
     def test_structure_transaction_maps_resource_operations(self):
         responses = [

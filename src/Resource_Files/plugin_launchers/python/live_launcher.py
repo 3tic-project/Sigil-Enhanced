@@ -45,25 +45,35 @@ def main(argv=None):
             raise TypeError("plugin.py must define run(plugin)")
         target = plugin
         if args.compat_v1:
-            if args.plugin_type != "edit":
-                raise ValueError("live v1 compatibility currently supports edit plugins only")
-            from sigil_live.compat import CompatBookContainer, LiveWrapper
+            if args.plugin_type not in ("edit", "validation"):
+                raise ValueError("live v1 compatibility supports edit and validation plugins")
+            from sigil_live.compat import (
+                CompatBookContainer,
+                CompatValidationContainer,
+                LiveWrapper,
+            )
 
             plugin_home = os.path.dirname(os.path.abspath(args.plugin))
             wrapper = LiveWrapper(
                 plugin,
                 os.path.dirname(plugin_home),
                 args.plugin_name,
-                writable=True,
+                writable=args.plugin_type == "edit",
             )
-            target = CompatBookContainer(wrapper)
+            target = (
+                CompatBookContainer(wrapper)
+                if args.plugin_type == "edit"
+                else CompatValidationContainer(wrapper)
+            )
         result = run(target)
         status = "success" if result in (None, 0) else "failed"
         if wrapper is not None:
-            if status == "success":
+            if status == "success" and args.plugin_type == "edit":
                 wrapper.commit()
-            else:
+            elif status != "success" and args.plugin_type == "edit":
                 wrapper.rollback()
+            if status == "success" and args.plugin_type == "validation":
+                plugin.validation.publish_results(target.results)
         plugin.finish(status=status, message="" if result in (None, 0) else "Plugin returned %r" % result)
         return 0 if status == "success" else 1
     except BaseException as exc:

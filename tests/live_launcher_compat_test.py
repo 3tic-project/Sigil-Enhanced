@@ -18,6 +18,8 @@ class FakePlugin:
     def __init__(self):
         self.finished = []
         self.closed = False
+        self.validation = types.SimpleNamespace(published=[])
+        self.validation.publish_results = self.validation.published.append
 
     def finish(self, status="success", message=""):
         self.finished.append((status, message))
@@ -47,6 +49,7 @@ class FakeWrapper:
 class FakeContainer:
     def __init__(self, wrapper):
         self._w = wrapper
+        self.results = ["validation-result"]
 
 
 class LiveLauncherCompatTest(unittest.TestCase):
@@ -61,18 +64,19 @@ class LiveLauncherCompatTest(unittest.TestCase):
         self.environment.start()
         self.addCleanup(self.environment.stop)
 
-    def launch(self, run):
+    def launch(self, run, plugin_type="edit"):
         module = types.SimpleNamespace(run=run)
         arguments = [
             "--plugin", "/plugins/Test/plugin.py",
             "--plugin-name", "Test",
             "--compat-v1",
-            "--plugin-type", "edit",
+            "--plugin-type", plugin_type,
         ]
         with mock.patch.object(live_launcher.Plugin, "connect", return_value=self.plugin), \
              mock.patch.object(live_launcher, "load_plugin", return_value=module), \
              mock.patch.object(sigil_live.compat, "LiveWrapper", FakeWrapper), \
              mock.patch.object(sigil_live.compat, "CompatBookContainer", FakeContainer), \
+             mock.patch.object(sigil_live.compat, "CompatValidationContainer", FakeContainer), \
              mock.patch("sys.stderr", new_callable=io.StringIO):
             return live_launcher.main(arguments)
 
@@ -100,6 +104,13 @@ class LiveLauncherCompatTest(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertEqual((wrapper.commits, wrapper.rollbacks), (0, 1))
         self.assertEqual(self.plugin.finished, [("failed", "failed run")])
+
+    def test_validation_success_publishes_without_a_write_commit(self):
+        result = self.launch(lambda container: 0, plugin_type="validation")
+        wrapper = FakeWrapper.instances[0]
+        self.assertEqual(result, 0)
+        self.assertEqual((wrapper.commits, wrapper.rollbacks), (0, 0))
+        self.assertEqual(self.plugin.validation.published, [["validation-result"]])
 
 
 if __name__ == "__main__":

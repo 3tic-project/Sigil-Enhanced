@@ -428,6 +428,36 @@ class EditorApi:
         return EditorState.from_result(self._rpc.call("editor.setSelection", params))
 
 
+class ValidationApi:
+    def __init__(self, rpc):
+        self._rpc = rpc
+
+    def publish_results(self, results):
+        normalized = []
+        for result in results:
+            if isinstance(result, dict):
+                normalized.append(
+                    {
+                        "type": result["type"],
+                        "book_path": result.get("book_path", ""),
+                        "line": result.get("line", -1),
+                        "character": result.get("character", -1),
+                        "message": result["message"],
+                    }
+                )
+            else:
+                normalized.append(
+                    {
+                        "type": result.restype,
+                        "book_path": result.bookpath,
+                        "line": int(result.linenumber),
+                        "character": int(result.charoffset),
+                        "message": result.message,
+                    }
+                )
+        return self._rpc.call("validation.publishResults", {"results": normalized})
+
+
 class Plugin:
     def __init__(self, rpc, session_info, transport):
         self._rpc = rpc
@@ -435,6 +465,7 @@ class Plugin:
         self.session_info = session_info
         self.book = BookApi(rpc)
         self.editor = EditorApi(rpc)
+        self.validation = ValidationApi(rpc)
 
     @classmethod
     def connect(cls, socket_name, token, plugin_name):

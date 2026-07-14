@@ -25,9 +25,10 @@ PluginSessionManager::~PluginSessionManager()
 bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
 {
     const bool native_live = plugin.get_declared_runtime() == Plugin::LiveRuntime;
-    if (!native_live && plugin.get_type() != QStringLiteral("edit")) {
+    if (!native_live && plugin.get_type() != QStringLiteral("edit")
+        && plugin.get_type() != QStringLiteral("validation")) {
         if (error) {
-            *error = tr("Live compatibility currently supports legacy edit plugins only.");
+            *error = tr("Live compatibility currently supports legacy edit and validation plugins only.");
         }
         return false;
     }

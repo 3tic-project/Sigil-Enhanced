@@ -16,6 +16,7 @@ IMPLEMENTED_METHODS = {
     "book.getInfo",
     "book.getCompatibilitySnapshot",
     "book.getRevision",
+    "validation.publishResults",
     "archive.listFiles",
     "archive.readFile",
     "resource.list",

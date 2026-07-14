@@ -38,6 +38,7 @@
 #include "Misc/PluginDB.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
+#include "Misc/ValidationResult.h"
 #include "PluginAPI/PluginSessionConsole.h"
 #include "PluginAPI/PluginTextEdit.h"
 #include "PluginAPI/PluginTextTransaction.h"
@@ -106,6 +107,18 @@ bool ReadRevision(const QJsonObject &params, const QString &name, quint64 *revis
         return false;
     }
     *revision = static_cast<quint64>(number);
+    return true;
+}
+
+bool ReadResultPosition(const QJsonValue &value, int *position)
+{
+    if (!value.isDouble()) return false;
+    const double number = value.toDouble();
+    if (!std::isfinite(number) || std::floor(number) != number
+        || number < -1 || number > std::numeric_limits<int>::max()) {
+        return false;
+    }
+    *position = static_cast<int>(number);
     return true;
 }
 
@@ -703,6 +716,43 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     m_MainWindow->AutomatePluginParameter() }
             } }
         });
+    } else if (method == QStringLiteral("validation.publishResults")) {
+        if (!RequirePermission(QStringLiteral("validation.publish"), id)) return;
+        if (m_Plugin.get_type() != QStringLiteral("validation")) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Only validation plugins may publish validation results"));
+            return;
+        }
+        const QJsonArray values = params.value(QStringLiteral("results")).toArray();
+        if (values.size() > 10000) {
+            RespondError(id, PluginApi::PayloadTooLarge,
+                         QStringLiteral("At most 10000 validation results may be published"));
+            return;
+        }
+        QList<ValidationResult> results;
+        for (const QJsonValue &value : values) {
+            const QJsonObject item = value.toObject();
+            const QString type = item.value(QStringLiteral("type")).toString();
+            const QString book_path = item.value(QStringLiteral("book_path")).toString();
+            const QString message = item.value(QStringLiteral("message")).toString();
+            int line = -1;
+            int character = -1;
+            if ((type != QStringLiteral("info") && type != QStringLiteral("warning")
+                 && type != QStringLiteral("error"))
+                || (!book_path.isEmpty() && !IsCanonicalBookPath(book_path))
+                || message.isEmpty() || message.size() > 65536
+                || !ReadResultPosition(item.value(QStringLiteral("line")), &line)
+                || !ReadResultPosition(item.value(QStringLiteral("character")), &character)) {
+                RespondError(id, -32602, QStringLiteral("Validation result is invalid"));
+                return;
+            }
+            ValidationResult::ResType result_type = ValidationResult::ResType_Info;
+            if (type == QStringLiteral("warning")) result_type = ValidationResult::ResType_Warn;
+            else if (type == QStringLiteral("error")) result_type = ValidationResult::ResType_Error;
+            results.append(ValidationResult(result_type, book_path, line, character, message));
+        }
+        m_MainWindow->SetValidationResults(results);
+        Respond(id, QJsonObject {{ QStringLiteral("accepted"), results.size() }});
     } else if (method == QStringLiteral("archive.listFiles")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         FolderKeeper *folder_keeper = m_MainWindow->GetCurrentBook()->GetFolderKeeper();
@@ -2083,6 +2133,9 @@ QStringList PluginSession::EffectivePermissions() const
         if (m_Plugin.get_type() == QStringLiteral("edit")) {
             permissions << QStringLiteral("book.write.text") << QStringLiteral("book.write.binary")
                         << QStringLiteral("book.structure") << QStringLiteral("editor.write");
+        }
+        if (m_Plugin.get_type() == QStringLiteral("validation")) {
+            permissions << QStringLiteral("validation.publish");
         }
     }
     return permissions;

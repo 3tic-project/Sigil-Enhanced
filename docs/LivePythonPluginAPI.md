@@ -19,8 +19,10 @@ Native live execution uses an explicit `<api version="2" interface="live"/>`
 declaration. Selecting Live for an undeclared v1 `edit` plugin invokes the
 RPC-backed `CompatBookContainer`, preserving the legacy entry point and public
 API. Success commits its implicit transaction; a nonzero return, exception,
-cancel, crash, or rejected commit rolls it back. Legacy input/output/validation
-plugins remain on the legacy runtime until their result channels are complete.
+cancel, crash, or rejected commit rolls it back. Legacy validation plugins use
+a read-only compatibility container and publish structured results after
+success. Legacy input/output plugins remain on the legacy runtime until their
+result-file channels are complete.
 
 The complete v1 behavior and method inventory are documented in
 `LegacyPythonPluginSystem.md`. The legacy launcher and `BookContainer` remain
@@ -191,6 +193,14 @@ An edit can be a dictionary with `start`, `end`, and `text`, or a
 must be in bounds, non-overlapping, and cannot split a UTF-16 surrogate pair.
 The host sorts them in descending position order before applying them in one
 edit block.
+
+### `ValidationApi`
+
+`plugin.validation.publish_results(results)` accepts dictionaries with `type`
+(`info`, `warning`, or `error`), `message`, optional canonical `book_path`, and
+optional `line`/`character` positions. Unknown positions are `-1`. Only
+validation plugins with `validation.publish` may call it. A call atomically
+replaces the Validation Results view and accepts at most 10,000 entries.
 
 ### `Transaction`
 

@@ -61,6 +61,18 @@
       "result": { "name": "result", "schema": { "type": "object", "required": ["revision"], "properties": { "revision": { "$ref": "#/components/schemas/Revision" } } } }
     },
     {
+      "name": "validation.publishResults",
+      "summary": "Replace Sigil's Validation Results view with structured plugin findings.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "results", "required": true, "schema": {
+          "type": "array", "maxItems": 10000,
+          "items": { "$ref": "#/components/schemas/ValidationResult" }
+        } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["accepted"], "properties": { "accepted": { "type": "integer", "minimum": 0 } } } }
+    },
+    {
       "name": "archive.listFiles",
       "summary": "List every regular file in the expanded EPUB, including untracked infrastructure files.",
       "paramStructure": "by-name",
@@ -491,6 +503,17 @@
           "data_base64": { "type": "string", "contentEncoding": "base64" },
           "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "protected": { "type": "boolean" }
+        }
+      },
+      "ValidationResult": {
+        "type": "object",
+        "required": ["type", "book_path", "line", "character", "message"],
+        "properties": {
+          "type": { "type": "string", "enum": ["info", "warning", "error"] },
+          "book_path": { "type": "string" },
+          "line": { "type": "integer", "minimum": -1 },
+          "character": { "type": "integer", "minimum": -1 },
+          "message": { "type": "string", "minLength": 1, "maxLength": 65536 }
         }
       },
       "TextContent": {

@@ -266,9 +266,11 @@ before local copying so staged paths cannot escape a requested destination.
 
 `live_legacy_wrapper_test.py` exercises the behavioral adapter. The live
 launcher routes manager-selected legacy `edit` plugins through it and commits
-only after `run(container)` returns success. Validation-result delivery and
-input/output completion remain tracked separately; the manager rejects those
-legacy plugin types when Live is selected.
+only after `run(container)` returns success. Legacy validation plugins receive
+the read-only `CompatValidationContainer`; their accumulated results are
+published to Sigil only after a successful return. Input/output completion
+remains tracked separately; the manager rejects those legacy plugin types when
+Live is selected.
 
 The compatibility wrapper enumerates the complete expanded EPUB through the
 archive-file API, so `other_iter()`, `readotherfile()`, staged replacement,
