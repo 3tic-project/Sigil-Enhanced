@@ -48,13 +48,15 @@ quint64 TextTransaction::BaseBookRevision() const
 bool TextTransaction::IsEmpty() const
 {
     return m_Changes.isEmpty() && m_BinaryChanges.isEmpty() && m_Additions.isEmpty()
-        && m_Removals.isEmpty() && m_Relocations.isEmpty() && !m_HasPackageChange;
+        && m_Removals.isEmpty() && m_Relocations.isEmpty() && m_ArchiveChanges.isEmpty()
+        && !m_HasPackageChange;
 }
 
 int TextTransaction::Size() const
 {
     return m_Changes.size() + m_BinaryChanges.size() + m_Additions.size()
-        + m_Removals.size() + m_Relocations.size() + (m_HasPackageChange ? 1 : 0);
+        + m_Removals.size() + m_Relocations.size() + m_ArchiveChanges.size()
+        + (m_HasPackageChange ? 1 : 0);
 }
 
 bool TextTransaction::HasChange(const QString &resource_id) const
@@ -70,6 +72,11 @@ bool TextTransaction::HasBinaryChange(const QString &resource_id) const
 bool TextTransaction::HasPackageChange() const
 {
     return m_HasPackageChange;
+}
+
+bool TextTransaction::HasArchiveChange(const QString &book_path) const
+{
+    return m_ArchiveChanges.contains(book_path);
 }
 
 QString TextTransaction::ReadText(const QString &resource_id,
@@ -206,6 +213,58 @@ StagedPackageChange TextTransaction::PackageChange() const
     return m_PackageChange;
 }
 
+bool TextTransaction::ReplaceArchiveFile(const QString &book_path,
+                                         const QByteArray &current_data,
+                                         const QString &current_fingerprint,
+                                         const QString &expected_fingerprint,
+                                         const QByteArray &replacement,
+                                         QString *error)
+{
+    auto found = m_ArchiveChanges.find(book_path);
+    const QString required_fingerprint = found == m_ArchiveChanges.end()
+        ? current_fingerprint : found->baseFingerprint;
+    if (expected_fingerprint != required_fingerprint) {
+        if (error) *error = QStringLiteral("Archive file fingerprint conflict");
+        return false;
+    }
+    if (found == m_ArchiveChanges.end()) {
+        StagedArchiveChange change;
+        change.bookPath = book_path;
+        change.originalData = current_data;
+        change.baseFingerprint = current_fingerprint;
+        change.stagedData = replacement;
+        m_ArchiveChanges.insert(book_path, change);
+    } else {
+        found->stagedData = replacement;
+        found->remove = false;
+    }
+    return true;
+}
+
+bool TextTransaction::RemoveArchiveFile(const QString &book_path,
+                                        const QByteArray &current_data,
+                                        const QString &current_fingerprint,
+                                        const QString &expected_fingerprint,
+                                        QString *error)
+{
+    if (!ReplaceArchiveFile(book_path, current_data, current_fingerprint,
+                            expected_fingerprint, QByteArray(), error)) {
+        return false;
+    }
+    m_ArchiveChanges[book_path].remove = true;
+    return true;
+}
+
+QList<StagedArchiveChange> TextTransaction::ArchiveChanges() const
+{
+    QList<StagedArchiveChange> result = m_ArchiveChanges.values();
+    std::sort(result.begin(), result.end(), [](const StagedArchiveChange &left,
+                                               const StagedArchiveChange &right) {
+        return left.bookPath < right.bookPath;
+    });
+    return result;
+}
+
 bool TextTransaction::AddResource(const StagedResourceAddition &addition, QString *error)
 {
     if (addition.stagingId.isEmpty() || addition.bookPath.isEmpty()
@@ -317,6 +376,7 @@ void TextTransaction::Clear()
     m_BinaryChanges.clear();
     m_PackageChange = StagedPackageChange();
     m_HasPackageChange = false;
+    m_ArchiveChanges.clear();
     m_Additions.clear();
     m_Removals.clear();
     m_Relocations.clear();

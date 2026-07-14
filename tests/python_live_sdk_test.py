@@ -180,6 +180,37 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual(transport.sent[0]["method"], "transaction.writeBinary")
         self.assertEqual(transport.sent[0]["params"]["data_base64"], "AP8=")
 
+    def test_archive_api_paginates_reads_and_stages_by_fingerprint(self):
+        transport = FakeTransport(
+            [
+                {"jsonrpc": "2.0", "id": 1, "result": {
+                    "items": [{"book_path": "mimetype"}], "next_cursor": None
+                }},
+                {"jsonrpc": "2.0", "id": 2, "result": {
+                    "book_path": "mimetype", "data_base64": "YWJj", "sha256": "hash"
+                }},
+            ]
+        )
+        book = BookApi(RpcClient(transport))
+        self.assertEqual(list(book.archive_files()), [{"book_path": "mimetype"}])
+        self.assertEqual(book.read_archive_file("mimetype")["data"], b"abc")
+
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {"staged": True}},
+            {"jsonrpc": "2.0", "id": 2, "result": {"staged": True}},
+        ])
+        from sigil_live.client import Transaction
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        tx.replace_archive_file("META-INF/metadata.xml", b"new", "hash")
+        tx.remove_archive_file("META-INF/signatures.xml", "hash2")
+        self.assertEqual(
+            [request["method"] for request in transport.sent],
+            ["transaction.replaceArchiveFile", "transaction.removeArchiveFile"],
+        )
+
     def test_structure_transaction_maps_resource_operations(self):
         responses = [
             {"jsonrpc": "2.0", "id": index, "result": {"staged": True}}

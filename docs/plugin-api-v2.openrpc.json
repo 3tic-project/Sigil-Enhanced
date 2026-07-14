@@ -61,6 +61,23 @@
       "result": { "name": "result", "schema": { "type": "object", "required": ["revision"], "properties": { "revision": { "$ref": "#/components/schemas/Revision" } } } }
     },
     {
+      "name": "archive.listFiles",
+      "summary": "List every regular file in the expanded EPUB, including untracked infrastructure files.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "page_size", "schema": { "type": "integer", "minimum": 1, "maximum": 500, "default": 200 } },
+        { "name": "cursor", "schema": { "type": ["string", "null"] } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/ArchiveFilePage" } }
+    },
+    {
+      "name": "archive.readFile",
+      "summary": "Read an expanded EPUB file up to 5 MiB with its SHA-256 concurrency token.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "book_path", "required": true, "schema": { "type": "string" } }],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/ArchiveFileContent" } }
+    },
+    {
       "name": "resource.list",
       "summary": "List resources with type filtering and offset cursor pagination.",
       "paramStructure": "by-name",
@@ -244,6 +261,30 @@
       "result": { "name": "result", "schema": { "type": "object" } }
     },
     {
+      "name": "transaction.replaceArchiveFile",
+      "summary": "Stage replacement of an existing untracked EPUB file by SHA-256 token.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "book_path", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_sha256", "required": true, "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+        { "name": "text", "schema": { "type": "string" } },
+        { "name": "data_base64", "schema": { "type": "string", "contentEncoding": "base64" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.removeArchiveFile",
+      "summary": "Stage removal of an existing untracked EPUB file by SHA-256 token.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "book_path", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_sha256", "required": true, "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
       "name": "transaction.removeResource",
       "summary": "Stage removal of an existing resource.",
       "paramStructure": "by-name",
@@ -422,6 +463,34 @@
         "properties": {
           "items": { "type": "array", "items": { "$ref": "#/components/schemas/Resource" } },
           "next_cursor": { "type": ["string", "null"] }
+        }
+      },
+      "ArchiveFile": {
+        "type": "object",
+        "required": ["book_path", "size", "resource_id", "protected"],
+        "properties": {
+          "book_path": { "type": "string" },
+          "size": { "type": "integer", "minimum": 0 },
+          "resource_id": { "type": ["string", "null"] },
+          "protected": { "type": "boolean" }
+        }
+      },
+      "ArchiveFilePage": {
+        "type": "object",
+        "required": ["items", "next_cursor"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ArchiveFile" } },
+          "next_cursor": { "type": ["string", "null"] }
+        }
+      },
+      "ArchiveFileContent": {
+        "type": "object",
+        "required": ["book_path", "data_base64", "sha256", "protected"],
+        "properties": {
+          "book_path": { "type": "string" },
+          "data_base64": { "type": "string", "contentEncoding": "base64" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "protected": { "type": "boolean" }
         }
       },
       "TextContent": {

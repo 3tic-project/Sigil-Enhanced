@@ -57,6 +57,12 @@ class FakeTransaction:
     def replace_package(self, data, expected_revision):
         self.calls.append(("replace_package", data, expected_revision))
 
+    def replace_archive_file(self, book_path, data, expected_sha256):
+        self.calls.append(("replace_archive_file", book_path, data, expected_sha256))
+
+    def remove_archive_file(self, book_path, expected_sha256):
+        self.calls.append(("remove_archive_file", book_path, expected_sha256))
+
     def commit(self):
         self.active = False
         self.calls.append(("commit",))
@@ -107,6 +113,11 @@ class FakeBook:
                 "automate_parameter": "",
             },
         }
+        self.archive = {
+            "mimetype": b"application/epub+zip",
+            "META-INF/container.xml": b"<container/>",
+            "META-INF/metadata.xml": b"<metadata/>",
+        }
 
     def get_compatibility_snapshot(self):
         return self.snapshot
@@ -118,6 +129,18 @@ class FakeBook:
         transaction = FakeTransaction()
         self.transactions.append((label, checkpoint, transaction))
         return transaction
+
+    def archive_files(self, page_size=200):
+        for book_path, data in self.archive.items():
+            yield {
+                "book_path": book_path,
+                "size": len(data),
+                "resource_id": None,
+                "protected": book_path in ("mimetype", "META-INF/container.xml"),
+            }
+
+    def read_archive_file(self, book_path):
+        return {"book_path": book_path, "data": self.archive[book_path], "sha256": "hash"}
 
     def read_text(self, target):
         return {"text": self.text[target.book_path], "revision": target.revision}
@@ -144,6 +167,8 @@ class LiveLegacyWrapperTest(unittest.TestCase):
         self.assertEqual(self.wrapper.readfile("cover"), b"png")
         self.assertEqual(self.wrapper.get_opfbookpath(), "OEBPS/content.opf")
         self.assertEqual(self.wrapper.selected, ["OEBPS/Text/chapter.xhtml"])
+        self.assertEqual(self.wrapper.readotherfile("mimetype"), b"application/epub+zip")
+        self.assertEqual(self.wrapper.readotherfile("META-INF/container.xml"), b"<container/>")
 
     def test_stages_writes_additions_deletions_and_package_once(self):
         self.wrapper.writefile("chapter", "<p>new</p>")
@@ -172,6 +197,23 @@ class LiveLegacyWrapperTest(unittest.TestCase):
             self.wrapper.copy_book_contents_to(destination)
             copied = pathlib.Path(destination, "META-INF", "custom.xml")
             self.assertEqual(copied.read_text(encoding="utf-8"), "<custom/>")
+
+    def test_existing_untracked_archive_files_use_fingerprint_transactions(self):
+        self.wrapper.writeotherfile("META-INF/metadata.xml", "<metadata changed='1'/>")
+        self.wrapper.commit()
+        calls = self.plugin.book.transactions[0][2].calls
+        self.assertEqual(calls[0], (
+            "replace_archive_file", "META-INF/metadata.xml",
+            b"<metadata changed='1'/>", "hash"
+        ))
+
+        plugin = FakePlugin()
+        wrapper = LiveWrapper(plugin, "/plugins/Test", "Test")
+        wrapper.deleteotherfile("META-INF/metadata.xml")
+        wrapper.commit()
+        self.assertEqual(plugin.book.transactions[0][2].calls[0], (
+            "remove_archive_file", "META-INF/metadata.xml", "hash"
+        ))
 
     def test_read_only_wrapper_rejects_mutation(self):
         wrapper = LiveWrapper(self.plugin, "/plugins/Test", "Test", writable=False)

@@ -67,6 +67,8 @@ class LiveWrapper(Wrapper):
         self._pending_writes = OrderedDict()
         self._added_data = OrderedDict()
         self._removed_resources = OrderedDict()
+        self._removed_archive_files = OrderedDict()
+        self._archive_reads = {}
         self._load_snapshot(plugin.book.get_compatibility_snapshot())
         if writable:
             self._begin_transaction()
@@ -129,6 +131,11 @@ class LiveWrapper(Wrapper):
         self._resource_by_path = OrderedDict(
             (resource.book_path, resource) for resource in resources
         )
+        self._archive_by_path = OrderedDict(
+            (value["book_path"], value)
+            for value in self._plugin.book.archive_files()
+            if value.get("resource_id") is None
+        )
         self.other = []
         self.id_to_filepath = OrderedDict()
         self.book_href_to_filepath = OrderedDict()
@@ -139,12 +146,18 @@ class LiveWrapper(Wrapper):
                 self.book_href_to_filepath[resource.book_path] = resource.book_path
             else:
                 self.id_to_filepath[manifest_id] = resource.book_path
+        for book_path in self._archive_by_path:
+            if book_path not in self.bookpath_to_id and book_path not in self.other:
+                self.other.append(book_path)
+                self.book_href_to_filepath[book_path] = book_path
         self.modified = OrderedDict()
         self.added = []
         self.deleted = []
         self._pending_writes.clear()
         self._added_data.clear()
         self._removed_resources.clear()
+        self._removed_archive_files.clear()
+        self._archive_reads.clear()
 
     def _require_writable(self):
         if not self._writable:
@@ -156,6 +169,12 @@ class LiveWrapper(Wrapper):
         if resource.resource_type in _TEXT_RESOURCE_TYPES:
             return self._plugin.book.read_text(resource)["text"]
         return self._plugin.book.read_binary(resource)["data"]
+
+    def _read_archive(self, book_path):
+        if book_path not in self._archive_reads:
+            self._archive_reads[book_path] = self._plugin.book.read_archive_file(book_path)
+        data = self._archive_reads[book_path]["data"]
+        return _text_data(data) if self.getmime(book_path) in TEXT_MIMETYPES else data
 
     def readfile(self, id):
         id = _unicode_data(id)
@@ -197,7 +216,8 @@ class LiveWrapper(Wrapper):
         bookpath = _validate_book_path(bookpath)
         if uniqueid in self.id_to_href:
             raise WrapperException("Manifest Id is not unique")
-        if bookpath in self._resource_by_path or bookpath in self._added_data:
+        if (bookpath in self._resource_by_path or bookpath in self._archive_by_path
+                or bookpath in self._added_data):
             raise WrapperException("bookpath already exists")
         href = buildRelativePath(self.opfbookpath, bookpath)
         if href in self.href_to_id:
@@ -283,9 +303,13 @@ class LiveWrapper(Wrapper):
         if book_href in self._added_data:
             return self._added_data[book_href]
         resource = self._resource_by_path.get(book_href)
-        if resource is None or book_href not in self.other:
+        if book_href not in self.other:
             raise WrapperException("Book href does not exist")
-        return self._read_resource(resource)
+        if resource is not None:
+            return self._read_resource(resource)
+        if book_href in self._archive_by_path:
+            return self._read_archive(book_href)
+        raise WrapperException("Book href does not exist")
 
     def writeotherfile(self, book_href, data):
         self._require_writable()
@@ -293,18 +317,25 @@ class LiveWrapper(Wrapper):
         if book_href in PROTECTED_FILES or book_href == self.opfbookpath:
             raise WrapperException("Attempt to modify protected file")
         resource = self._resource_by_path.get(book_href)
-        if resource is None or book_href not in self.other:
+        if book_href not in self.other:
             raise WrapperException("Book href does not exist")
-        self._pending_writes[book_href] = (
-            _text_data(data) if resource.resource_type in _TEXT_RESOURCE_TYPES
-            else _binary_data(data)
-        )
+        if resource is not None:
+            self._pending_writes[book_href] = (
+                _text_data(data) if resource.resource_type in _TEXT_RESOURCE_TYPES
+                else _binary_data(data)
+            )
+        elif book_href in self._archive_by_path:
+            self._read_archive(book_href)
+            self._pending_writes[book_href] = _binary_data(data)
+        else:
+            raise WrapperException("Book href does not exist")
         self.modified[book_href] = "file"
 
     def addotherfile(self, book_href, data):
         self._require_writable()
         book_href = _validate_book_path(urldecodepart(_unicode_data(book_href)))
-        if book_href in self._resource_by_path or book_href in self._added_data:
+        if (book_href in self._resource_by_path or book_href in self._archive_by_path
+                or book_href in self._added_data):
             raise WrapperException("Book href must be unique")
         self.other.append(book_href)
         self.book_href_to_filepath[book_href] = book_href
@@ -323,9 +354,13 @@ class LiveWrapper(Wrapper):
             self.added.remove(book_href)
         else:
             resource = self._resource_by_path.get(book_href)
-            if resource is None:
+            if resource is not None:
+                self._removed_resources[book_href] = resource
+            elif book_href in self._archive_by_path:
+                self._read_archive(book_href)
+                self._removed_archive_files[book_href] = self._archive_reads[book_href]
+            else:
                 raise WrapperException("Book href does not exist")
-            self._removed_resources[book_href] = resource
             self.deleted.append(("other", book_href, book_href))
         self.other.remove(book_href)
         self.book_href_to_filepath.pop(book_href, None)
@@ -346,19 +381,21 @@ class LiveWrapper(Wrapper):
 
     def _stage_all(self):
         for bookpath, data in self._pending_writes.items():
-            resource = self._resource_by_path[bookpath]
-            if isinstance(data, str):
-                self._transaction.replace_text(
-                    resource, data, expected_revision=resource.revision
+            resource = self._resource_by_path.get(bookpath)
+            if resource is None:
+                self._transaction.replace_archive_file(
+                    bookpath, data, self._archive_reads[bookpath]["sha256"]
                 )
+            elif isinstance(data, str):
+                self._transaction.replace_text(resource, data, expected_revision=resource.revision)
             else:
-                self._transaction.write_binary(
-                    resource, data, expected_revision=resource.revision
-                )
+                self._transaction.write_binary(resource, data, expected_revision=resource.revision)
         for bookpath, resource in self._removed_resources.items():
             self._transaction.remove_resource(
                 resource, expected_revision=resource.revision
             )
+        for bookpath, archive in self._removed_archive_files.items():
+            self._transaction.remove_archive_file(bookpath, archive["sha256"])
         for entry in self.added:
             manifested = entry in self.id_to_bookpath
             bookpath = self.id_to_bookpath[entry] if manifested else entry

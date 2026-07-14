@@ -11,7 +11,9 @@
 #include <limits>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -53,6 +55,8 @@ namespace
 
 // Base64 plus the JSON envelope must still fit the 8 MiB framed-message limit.
 constexpr qsizetype MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024;
+
+bool IsCanonicalBookPath(const QString &book_path);
 
 QString ResourceTypeName(Resource::ResourceType type)
 {
@@ -123,6 +127,63 @@ bool ReadBinaryFile(Resource *resource, QByteArray *data, QString *error)
     }
     *data = file.readAll();
     return true;
+}
+
+QString DataFingerprint(const QByteArray &data)
+{
+    return QString::fromLatin1(
+        QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
+}
+
+bool ResolveArchiveFile(FolderKeeper *folder_keeper,
+                        const QString &book_path,
+                        QString *full_path,
+                        QString *error)
+{
+    if (!IsCanonicalBookPath(book_path)) {
+        if (error) *error = QStringLiteral("Archive path is not canonical");
+        return false;
+    }
+    const QString root = QFileInfo(folder_keeper->GetFullPathToMainFolder()).canonicalFilePath();
+    const QFileInfo candidate(root + QLatin1Char('/') + book_path);
+    const QString canonical = candidate.canonicalFilePath();
+    if (root.isEmpty() || canonical.isEmpty()
+        || (!canonical.startsWith(root + QLatin1Char('/')) && canonical != root)
+        || !candidate.isFile() || candidate.isSymLink()) {
+        if (error) *error = QStringLiteral("Archive file does not exist or is unsafe");
+        return false;
+    }
+    *full_path = canonical;
+    return true;
+}
+
+bool ReadArchiveFile(FolderKeeper *folder_keeper,
+                     const QString &book_path,
+                     QByteArray *data,
+                     QString *fingerprint,
+                     QString *error)
+{
+    QString full_path;
+    if (!ResolveArchiveFile(folder_keeper, book_path, &full_path, error)) return false;
+    QFile file(full_path);
+    if (file.size() > MAX_INLINE_BINARY_SIZE) {
+        if (error) *error = QStringLiteral("Archive file exceeds the inline size limit");
+        return false;
+    }
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error) *error = file.errorString();
+        return false;
+    }
+    *data = file.readAll();
+    if (fingerprint) *fingerprint = DataFingerprint(*data);
+    return true;
+}
+
+bool IsProtectedArchivePath(const QString &book_path, OPFResource *opf)
+{
+    return book_path == QStringLiteral("mimetype")
+        || book_path == QStringLiteral("META-INF/container.xml")
+        || (opf && book_path == opf->GetRelativePath());
 }
 
 bool IsCanonicalBookPath(const QString &book_path)
@@ -642,6 +703,63 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     m_MainWindow->AutomatePluginParameter() }
             } }
         });
+    } else if (method == QStringLiteral("archive.listFiles")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        FolderKeeper *folder_keeper = m_MainWindow->GetCurrentBook()->GetFolderKeeper();
+        const QString root_path = QFileInfo(folder_keeper->GetFullPathToMainFolder())
+            .canonicalFilePath();
+        QDir root(root_path);
+        QStringList paths;
+        QDirIterator iterator(root_path, QDir::Files | QDir::NoSymLinks,
+                              QDirIterator::Subdirectories);
+        while (iterator.hasNext()) {
+            iterator.next();
+            const QString book_path = QDir::fromNativeSeparators(
+                root.relativeFilePath(iterator.filePath()));
+            if (IsCanonicalBookPath(book_path)) paths.append(book_path);
+        }
+        std::sort(paths.begin(), paths.end());
+        const int page_size = qBound(1, params.value(QStringLiteral("page_size")).toInt(200), 500);
+        const int offset = qMax(0, params.value(QStringLiteral("cursor")).toString().toInt());
+        QJsonArray items;
+        for (int index = offset; index < paths.size() && items.size() < page_size; ++index) {
+            const QString &book_path = paths.at(index);
+            Resource *resource = folder_keeper->GetResourceByBookPathNoThrow(book_path);
+            items.append(QJsonObject {
+                { QStringLiteral("book_path"), book_path },
+                { QStringLiteral("size"), QFileInfo(root.filePath(book_path)).size() },
+                { QStringLiteral("resource_id"), resource
+                    ? QJsonValue(resource->GetIdentifier()) : QJsonValue() },
+                { QStringLiteral("protected"), IsProtectedArchivePath(
+                    book_path, m_MainWindow->GetCurrentBook()->GetOPF()) }
+            });
+        }
+        const int next_offset = offset + items.size();
+        Respond(id, QJsonObject {
+            { QStringLiteral("items"), items },
+            { QStringLiteral("next_cursor"), next_offset < paths.size()
+                ? QJsonValue(QString::number(next_offset)) : QJsonValue() }
+        });
+    } else if (method == QStringLiteral("archive.readFile")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        const QString book_path = params.value(QStringLiteral("book_path")).toString();
+        QByteArray data;
+        QString fingerprint;
+        QString read_error;
+        if (!ReadArchiveFile(m_MainWindow->GetCurrentBook()->GetFolderKeeper(), book_path,
+                             &data, &fingerprint, &read_error)) {
+            const int code = read_error.contains(QStringLiteral("size limit"))
+                ? PluginApi::PayloadTooLarge : PluginApi::ResourceNotFound;
+            RespondError(id, code, read_error);
+        } else {
+            Respond(id, QJsonObject {
+                { QStringLiteral("book_path"), book_path },
+                { QStringLiteral("data_base64"), QString::fromLatin1(data.toBase64()) },
+                { QStringLiteral("sha256"), fingerprint },
+                { QStringLiteral("protected"), IsProtectedArchivePath(
+                    book_path, m_MainWindow->GetCurrentBook()->GetOPF()) }
+            });
+        }
     } else if (method == QStringLiteral("resource.list")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         QStringList types;
@@ -866,6 +984,63 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("resource_id"), resource->GetIdentifier() },
             { QStringLiteral("base_revision"), static_cast<qint64>(required_revision) },
+            { QStringLiteral("staged"), true }
+        });
+    } else if (method == QStringLiteral("transaction.replaceArchiveFile")
+               || method == QStringLiteral("transaction.removeArchiveFile")) {
+        if (!RequirePermission(QStringLiteral("book.structure"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        const QString book_path = params.value(QStringLiteral("book_path")).toString();
+        const QString expected_fingerprint = params.value(QStringLiteral("expected_sha256"))
+            .toString();
+        FolderKeeper *folder_keeper = m_MainWindow->GetCurrentBook()->GetFolderKeeper();
+        if (expected_fingerprint.isEmpty() || !IsCanonicalBookPath(book_path)) {
+            RespondError(id, -32602, QStringLiteral("Canonical path and expected_sha256 are required"));
+            return;
+        }
+        if (folder_keeper->GetResourceByBookPathNoThrow(book_path)) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Managed resources require the resource transaction API"));
+            return;
+        }
+        if (IsProtectedArchivePath(book_path, m_MainWindow->GetCurrentBook()->GetOPF())) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Protected EPUB infrastructure cannot be modified"));
+            return;
+        }
+        QByteArray current_data;
+        QString current_fingerprint;
+        QString archive_error;
+        if (!ReadArchiveFile(folder_keeper, book_path, &current_data, &current_fingerprint,
+                             &archive_error)) {
+            RespondError(id, PluginApi::ResourceNotFound, archive_error);
+            return;
+        }
+        bool staged = false;
+        if (method == QStringLiteral("transaction.removeArchiveFile")) {
+            staged = transaction->RemoveArchiveFile(
+                book_path, current_data, current_fingerprint, expected_fingerprint,
+                &archive_error);
+        } else {
+            QByteArray replacement;
+            if (!DecodeResourcePayload(params, &replacement, &archive_error)) {
+                const int code = archive_error.contains(QStringLiteral("size limit"))
+                    ? PluginApi::PayloadTooLarge : -32602;
+                RespondError(id, code, archive_error);
+                return;
+            }
+            staged = transaction->ReplaceArchiveFile(
+                book_path, current_data, current_fingerprint, expected_fingerprint,
+                replacement, &archive_error);
+        }
+        if (!staged) {
+            RespondError(id, PluginApi::RevisionConflict, archive_error);
+            return;
+        }
+        Respond(id, QJsonObject {
+            { QStringLiteral("book_path"), book_path },
+            { QStringLiteral("base_sha256"), current_fingerprint },
             { QStringLiteral("staged"), true }
         });
     } else if (method == QStringLiteral("transaction.addResource")) {
@@ -1195,6 +1370,33 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("book_path"), addition.bookPath }
             });
         }
+        int archive_deleted = 0;
+        for (const PluginApi::StagedArchiveChange &change : transaction->ArchiveChanges()) {
+            QByteArray current_data;
+            QString actual_fingerprint;
+            QString archive_error;
+            if (!ReadArchiveFile(m_MainWindow->GetCurrentBook()->GetFolderKeeper(),
+                                 change.bookPath, &current_data, &actual_fingerprint,
+                                 &archive_error)
+                || actual_fingerprint != change.baseFingerprint) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("book_path"), change.bookPath },
+                    { QStringLiteral("expected_sha256"), change.baseFingerprint },
+                    { QStringLiteral("actual_sha256"), actual_fingerprint },
+                    { QStringLiteral("message"), archive_error }
+                });
+            }
+            if (change.remove) ++archive_deleted;
+            else if (change.originalData != change.stagedData) ++modified;
+            structure_changes.append(QJsonObject {
+                { QStringLiteral("operation"), change.remove
+                    ? QStringLiteral("remove-archive-file")
+                    : QStringLiteral("replace-archive-file") },
+                { QStringLiteral("book_path"), change.bookPath },
+                { QStringLiteral("before_size"), change.originalData.size() },
+                { QStringLiteral("after_size"), change.remove ? 0 : change.stagedData.size() }
+            });
+        }
         if (transaction->HasPackageChange()) {
             const PluginApi::StagedPackageChange package = transaction->PackageChange();
             Resource *resource = ResolveResource(package.resourceId);
@@ -1228,7 +1430,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("summary"), QJsonObject {
                 { QStringLiteral("modified"), modified },
                 { QStringLiteral("added"), transaction->Additions().size() },
-                { QStringLiteral("deleted"), transaction->Removals().size() },
+                { QStringLiteral("deleted"), transaction->Removals().size() + archive_deleted },
                 { QStringLiteral("renamed"), transaction->Relocations().size() }
             } }
         };
@@ -1250,6 +1452,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         QList<PluginApi::StagedResourceAddition> additions = transaction->Additions();
         QList<PluginApi::StagedResourceRemoval> removals = transaction->Removals();
         QList<PluginApi::StagedResourceRelocation> relocations = transaction->Relocations();
+        QList<PluginApi::StagedArchiveChange> archive_changes = transaction->ArchiveChanges();
         const bool has_package_change = transaction->HasPackageChange();
         PluginApi::StagedPackageChange package_change;
         if (has_package_change) package_change = transaction->PackageChange();
@@ -1293,6 +1496,24 @@ void PluginSession::Dispatch(const QJsonObject &request)
             } else if (!ValidatePackageTransaction(transaction, folder_keeper, opf, &package_error)) {
                 RespondError(id, PluginApi::ValidationFailed, package_error);
                 return;
+            }
+        }
+        QList<PluginApi::StagedArchiveChange> dirty_archive_changes;
+        for (const PluginApi::StagedArchiveChange &change : archive_changes) {
+            QByteArray current_data;
+            QString actual_fingerprint;
+            QString archive_error;
+            if (!ReadArchiveFile(folder_keeper, change.bookPath, &current_data,
+                                 &actual_fingerprint, &archive_error)
+                || actual_fingerprint != change.baseFingerprint) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("book_path"), change.bookPath },
+                    { QStringLiteral("expected_sha256"), change.baseFingerprint },
+                    { QStringLiteral("actual_sha256"), actual_fingerprint }
+                });
+            }
+            if (change.remove || change.originalData != change.stagedData) {
+                dirty_archive_changes.append(change);
             }
         }
         QList<Resource *> removal_resources;
@@ -1374,7 +1595,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const bool has_structure_changes = !additions.isEmpty() || !removals.isEmpty()
             || !relocations.isEmpty();
         bool safety_checkpoint_required = dirty_changes.size() + dirty_binary_changes.size() > 1
-            || !dirty_binary_changes.isEmpty() || has_structure_changes || has_package_change;
+            || !dirty_binary_changes.isEmpty() || !dirty_archive_changes.isEmpty()
+            || has_structure_changes || has_package_change;
         for (const PluginApi::StagedTextChange &change : dirty_changes) {
             Resource *resource = ResolveResource(change.resourceId);
             safety_checkpoint_required = safety_checkpoint_required || (resource &&
@@ -1537,21 +1759,65 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 return;
             }
         }
+        if (!dirty_archive_changes.isEmpty()) {
+            folder_keeper->SuspendWatchingResources();
+            QString archive_error;
+            for (const PluginApi::StagedArchiveChange &change : dirty_archive_changes) {
+                QString full_path;
+                if (!ResolveArchiveFile(folder_keeper, change.bookPath, &full_path,
+                                        &archive_error)) {
+                    break;
+                }
+                if (change.remove) {
+                    if (!QFile::remove(full_path)) {
+                        archive_error = QStringLiteral("Could not remove archive file %1")
+                            .arg(change.bookPath);
+                        break;
+                    }
+                } else {
+                    QSaveFile file(full_path);
+                    if (!file.open(QIODevice::WriteOnly)
+                        || file.write(change.stagedData) != change.stagedData.size()
+                        || !file.commit()) {
+                        archive_error = file.errorString();
+                        break;
+                    }
+                }
+                committed.append(QJsonObject {
+                    { QStringLiteral("book_path"), change.bookPath },
+                    { QStringLiteral("removed"), change.remove },
+                    { QStringLiteral("sha256"), change.remove
+                        ? QJsonValue() : QJsonValue(DataFingerprint(change.stagedData)) }
+                });
+                m_BookRevision += 1;
+            }
+            folder_keeper->ResumeWatchingResources();
+            if (!archive_error.isEmpty()) {
+                RespondError(id, PluginApi::ValidationFailed,
+                             QStringLiteral("Archive commit failed: %1").arg(archive_error));
+                return;
+            }
+        }
         if (!dirty_changes.isEmpty() || !dirty_binary_changes.isEmpty() || has_structure_changes
+            || !dirty_archive_changes.isEmpty()
             || (has_package_change && package_change.originalText != package_change.stagedText)) {
             m_MainWindow->GetCurrentBook()->SetModified();
         }
         const QString transaction_id = transaction->Id();
+        const int archive_removed = static_cast<int>(std::count_if(
+            dirty_archive_changes.cbegin(), dirty_archive_changes.cend(),
+            [](const PluginApi::StagedArchiveChange &change) { return change.remove; }));
         m_Transaction.reset();
         Respond(id, QJsonObject {
             { QStringLiteral("transaction_id"), transaction_id },
             { QStringLiteral("committed"), committed },
             { QStringLiteral("modified"), dirty_changes.size() + dirty_binary_changes.size()
                 + ((has_package_change && package_change.originalText != package_change.stagedText)
-                    ? 1 : 0) },
+                    ? 1 : 0) + dirty_archive_changes.size() - archive_removed },
             { QStringLiteral("added"), additions.size() },
-            { QStringLiteral("removed"), removals.size() },
+            { QStringLiteral("removed"), removals.size() + archive_removed },
             { QStringLiteral("relocated"), relocations.size() },
+            { QStringLiteral("archive_files"), dirty_archive_changes.size() },
             { QStringLiteral("checkpoint_created"), checkpoint_required }
         });
     } else if (method == QStringLiteral("transaction.rollback")) {

@@ -38,6 +38,14 @@ struct StagedPackageChange {
     quint64 baseRevision = 0;
 };
 
+struct StagedArchiveChange {
+    QString bookPath;
+    QByteArray originalData;
+    QByteArray stagedData;
+    QString baseFingerprint;
+    bool remove = false;
+};
+
 struct StagedResourceAddition {
     QString stagingId;
     QString bookPath;
@@ -80,6 +88,7 @@ public:
     bool HasChange(const QString &resource_id) const;
     bool HasBinaryChange(const QString &resource_id) const;
     bool HasPackageChange() const;
+    bool HasArchiveChange(const QString &book_path) const;
 
     QString ReadText(const QString &resource_id,
                      const QString &current_text,
@@ -117,6 +126,19 @@ public:
                         QString *error);
     StagedPackageChange PackageChange() const;
 
+    bool ReplaceArchiveFile(const QString &book_path,
+                            const QByteArray &current_data,
+                            const QString &current_fingerprint,
+                            const QString &expected_fingerprint,
+                            const QByteArray &replacement,
+                            QString *error);
+    bool RemoveArchiveFile(const QString &book_path,
+                           const QByteArray &current_data,
+                           const QString &current_fingerprint,
+                           const QString &expected_fingerprint,
+                           QString *error);
+    QList<StagedArchiveChange> ArchiveChanges() const;
+
     bool AddResource(const StagedResourceAddition &addition, QString *error);
     bool RemoveResource(const QString &resource_id, quint64 base_revision, QString *error);
     bool RelocateResource(const QString &resource_id,
@@ -141,6 +163,7 @@ private:
     QHash<QString, StagedBinaryChange> m_BinaryChanges;
     StagedPackageChange m_PackageChange;
     bool m_HasPackageChange = false;
+    QHash<QString, StagedArchiveChange> m_ArchiveChanges;
     QHash<QString, StagedResourceAddition> m_Additions;
     QHash<QString, StagedResourceRemoval> m_Removals;
     QHash<QString, StagedResourceRelocation> m_Relocations;

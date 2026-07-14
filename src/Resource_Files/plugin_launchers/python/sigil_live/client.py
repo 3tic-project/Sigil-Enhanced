@@ -151,6 +151,29 @@ class Transaction:
             ),
         )
 
+    def replace_archive_file(self, book_path, data, expected_sha256):
+        params = {
+            "book_path": book_path,
+            "expected_sha256": expected_sha256,
+        }
+        if isinstance(data, str):
+            params["text"] = data
+        elif isinstance(data, (bytes, bytearray, memoryview)):
+            params["data_base64"] = base64.b64encode(bytes(data)).decode("ascii")
+        else:
+            raise TypeError("archive file data must be str or bytes-like")
+        return self._rpc.call(
+            "transaction.replaceArchiveFile", self._params(params)
+        )
+
+    def remove_archive_file(self, book_path, expected_sha256):
+        return self._rpc.call(
+            "transaction.removeArchiveFile",
+            self._params(
+                {"book_path": book_path, "expected_sha256": expected_sha256}
+            ),
+        )
+
     def add_resource(
         self,
         book_path,
@@ -268,6 +291,23 @@ class BookApi:
 
     def get_revision(self):
         return self._rpc.call("book.getRevision")["revision"]
+
+    def archive_files(self, page_size=200):
+        cursor = None
+        while True:
+            params = {"page_size": page_size}
+            if cursor is not None:
+                params["cursor"] = cursor
+            result = self._rpc.call("archive.listFiles", params)
+            yield from result["items"]
+            cursor = result.get("next_cursor")
+            if cursor is None:
+                break
+
+    def read_archive_file(self, book_path):
+        result = self._rpc.call("archive.readFile", {"book_path": book_path})
+        result["data"] = base64.b64decode(result.pop("data_base64"), validate=True)
+        return result
 
     def resources(self, types=None, page_size=200):
         cursor = None

@@ -153,6 +153,8 @@ not construct the transport directly.
 | `get_info()` | EPUB version, modified state, file path, and book revision. |
 | `get_compatibility_snapshot()` | Immutable OPF, resource index, selection, UI, spellcheck, automation, and font-mangling startup state for the v1 adapter. |
 | `get_revision()` | Current session-local monotonic book revision. |
+| `archive_files(page_size=200)` | Iterate every regular expanded-EPUB file, including files outside the Resource model. |
+| `read_archive_file(book_path)` | Read up to 5 MiB and return decoded `data`, SHA-256, and protection state. |
 | `resources(types=None, page_size=200)` | Iterator of typed `Resource` values. |
 | `text_resources()` | Iterator limited to current text resource types. |
 | `resolve_path(book_path)` | Resolve a current book path to `Resource`. |
@@ -200,6 +202,8 @@ edit block.
 | `read_binary(resource)` | Read staged binary data when present. |
 | `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 5 MiB. |
 | `replace_package(text, expected_revision)` | Stage a complete OPF replacement after XML, version, manifest, and spine validation. |
+| `replace_archive_file(book_path, data, expected_sha256)` | Stage replacement of an existing untracked archive file. |
+| `remove_archive_file(book_path, expected_sha256)` | Stage removal of an existing untracked archive file. |
 | `add_resource(book_path, data, media_type, ...)` | Stage a manifested or unmanifested resource addition. |
 | `remove_resource(resource, expected_revision=None)` | Stage removal while protecting OPF, nav, and the last XHTML. |
 | `move_resource(resource, book_path, expected_revision=None)` | Stage a canonical Book-path relocation. |
@@ -224,6 +228,14 @@ add/remove/move set, that manifest IDs and hrefs are unique, that every spine
 does not generate a second manifest rewrite; it applies the package once after
 the physical structure changes. Larger binary resources will use a later chunk
 API rather than increasing the JSON message limit.
+
+Archive-file methods cover EPUB entries that Sigil intentionally keeps outside
+the `Resource` model, including `mimetype` and files under `META-INF`. Reads use
+canonical paths and reject symlinks or paths outside the expanded Book root.
+Writes use the SHA-256 returned by the read as their concurrency token and
+always require a checkpoint. `mimetype`, `META-INF/container.xml`, the OPF, and
+all managed resources are rejected by archive writes; use the resource/package
+APIs where applicable.
 
 ## Revision and position rules
 

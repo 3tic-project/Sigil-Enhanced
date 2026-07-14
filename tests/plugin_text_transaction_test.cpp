@@ -84,6 +84,19 @@ int main()
                                         6, 7, QStringLiteral("bad"), &error),
             "package replacement accepted a different revision");
 
+    Require(transaction.ReplaceArchiveFile(QStringLiteral("META-INF/metadata.xml"),
+                                           QByteArray("old"), QStringLiteral("hash"),
+                                           QStringLiteral("hash"), QByteArray("new"), &error),
+            "archive replacement was not staged");
+    Require(transaction.RemoveArchiveFile(QStringLiteral("META-INF/metadata.xml"),
+                                          QByteArray("old"), QStringLiteral("changed"),
+                                          QStringLiteral("hash"), &error),
+            "archive removal did not preserve its base fingerprint");
+    Require(transaction.HasArchiveChange(QStringLiteral("META-INF/metadata.xml")),
+            "archive staging flag is wrong");
+    Require(transaction.ArchiveChanges().first().remove,
+            "archive removal flag is wrong");
+
     PluginApi::StagedResourceAddition addition;
     addition.stagingId = QStringLiteral("new:1");
     addition.bookPath = QStringLiteral("OEBPS/Text/new.xhtml");

@@ -266,10 +266,16 @@ before local copying so staged paths cannot escape a requested destination.
 
 `live_legacy_wrapper_test.py` exercises the behavioral adapter. The live
 launcher routes manager-selected legacy `edit` plugins through it and commits
-only after `run(container)` returns success. Host support for non-Resource EPUB
-control files, validation-result delivery, and input/output completion remains
-tracked separately; the manager rejects those legacy plugin types when Live is
-selected.
+only after `run(container)` returns success. Validation-result delivery and
+input/output completion remain tracked separately; the manager rejects those
+legacy plugin types when Live is selected.
+
+The compatibility wrapper enumerates the complete expanded EPUB through the
+archive-file API, so `other_iter()`, `readotherfile()`, staged replacement,
+deletion, and `copy_book_contents_to()` include untracked files as well as
+Sigil Resources. SHA-256 tokens protect untracked writes from concurrent disk
+changes. The v1 protections for `mimetype`, `META-INF/container.xml`, and the
+OPF remain enforced.
 
 ## Known v1 boundaries
 
