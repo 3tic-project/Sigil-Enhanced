@@ -264,10 +264,12 @@ one revision-checked host transaction. `flush()` commits and refreshes the
 snapshot before starting another transaction. Canonical Book paths are checked
 before local copying so staged paths cannot escape a requested destination.
 
-`live_legacy_wrapper_test.py` exercises the behavioral adapter. Host launcher
-routing, non-Resource EPUB control files, validation-result delivery, and
-input/output completion are tracked separately; until those are wired, the
-plugin manager continues to reject live execution for undeclared v1 plugins.
+`live_legacy_wrapper_test.py` exercises the behavioral adapter. The live
+launcher routes manager-selected legacy `edit` plugins through it and commits
+only after `run(container)` returns success. Host support for non-Resource EPUB
+control files, validation-result delivery, and input/output completion remains
+tracked separately; the manager rejects those legacy plugin types when Live is
+selected.
 
 ## Known v1 boundaries
 

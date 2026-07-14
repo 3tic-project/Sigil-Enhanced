@@ -112,6 +112,11 @@ add_test(NAME live_legacy_wrapper
 )
 set_tests_properties(live_legacy_wrapper PROPERTIES TIMEOUT 30)
 
+add_test(NAME live_launcher_compat
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/live_launcher_compat_test.py
+)
+set_tests_properties(live_launcher_compat PROPERTIES TIMEOUT 30)
+
 add_executable(plugin_transport_integration_test
     plugin_transport_integration_test.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp

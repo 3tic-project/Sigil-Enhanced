@@ -413,11 +413,18 @@ bool PluginSession::Start(QString *error)
     environment.insert(QStringLiteral("SIGIL_PLUGIN_API_VERSION"), QStringLiteral("2"));
     m_Process->setProcessEnvironment(environment);
     m_Process->setProgram(interpreter);
-    m_Process->setArguments(QStringList {
+    QStringList arguments {
         launcher,
         QStringLiteral("--plugin"), plugin_path,
         QStringLiteral("--plugin-name"), m_Plugin.get_name()
-    });
+    };
+    if (m_Plugin.get_declared_runtime() != Plugin::LiveRuntime) {
+        arguments.append(QStringList {
+            QStringLiteral("--compat-v1"),
+            QStringLiteral("--plugin-type"), m_Plugin.get_type()
+        });
+    }
+    m_Process->setArguments(arguments);
     m_Process->setWorkingDirectory(QFileInfo(plugin_path).absolutePath());
     m_Process->start();
 

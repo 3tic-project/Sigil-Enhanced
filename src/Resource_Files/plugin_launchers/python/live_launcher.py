@@ -25,6 +25,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--plugin", required=True)
     parser.add_argument("--plugin-name", required=True)
+    parser.add_argument("--compat-v1", action="store_true")
+    parser.add_argument("--plugin-type", choices=("edit", "validation", "output", "input"))
     args = parser.parse_args(argv)
 
     socket_name = os.environ.get("SIGIL_PLUGIN_SOCKET", "")
@@ -34,18 +36,43 @@ def main(argv=None):
         return 2
 
     plugin = None
+    wrapper = None
     try:
         plugin = Plugin.connect(socket_name, token, args.plugin_name)
         module = load_plugin(os.path.abspath(args.plugin))
         run = getattr(module, "run", None)
         if not callable(run):
             raise TypeError("plugin.py must define run(plugin)")
-        result = run(plugin)
+        target = plugin
+        if args.compat_v1:
+            if args.plugin_type != "edit":
+                raise ValueError("live v1 compatibility currently supports edit plugins only")
+            from sigil_live.compat import CompatBookContainer, LiveWrapper
+
+            plugin_home = os.path.dirname(os.path.abspath(args.plugin))
+            wrapper = LiveWrapper(
+                plugin,
+                os.path.dirname(plugin_home),
+                args.plugin_name,
+                writable=True,
+            )
+            target = CompatBookContainer(wrapper)
+        result = run(target)
         status = "success" if result in (None, 0) else "failed"
+        if wrapper is not None:
+            if status == "success":
+                wrapper.commit()
+            else:
+                wrapper.rollback()
         plugin.finish(status=status, message="" if result in (None, 0) else "Plugin returned %r" % result)
         return 0 if status == "success" else 1
     except BaseException as exc:
         traceback.print_exc()
+        if wrapper is not None:
+            try:
+                wrapper.rollback()
+            except BaseException:
+                pass
         if plugin is not None:
             try:
                 plugin.finish(status="failed", message=str(exc))

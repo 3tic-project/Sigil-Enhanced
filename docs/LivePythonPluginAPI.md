@@ -15,12 +15,12 @@ Sigil currently contains two independent plugin execution paths:
 | Live | v2 `sigil_live` SDK | Modeless, local-socket RPC against the in-memory Book and current editor. |
 
 The plugin manager stores a `Legacy (v1)` or `Live (v2)` choice per plugin.
-Native live execution currently requires an explicit
-`<api version="2" interface="live"/>` declaration. Selecting Live for an
-undeclared v1 plugin is reserved for the compatibility runner and currently
-fails with a clear error; it does not silently run the plugin with a partial
-container. Input, output streaming, persistent book-session, event, binary,
-and resource-structure support are later phases.
+Native live execution uses an explicit `<api version="2" interface="live"/>`
+declaration. Selecting Live for an undeclared v1 `edit` plugin invokes the
+RPC-backed `CompatBookContainer`, preserving the legacy entry point and public
+API. Success commits its implicit transaction; a nonzero return, exception,
+cancel, crash, or rejected commit rolls it back. Legacy input/output/validation
+plugins remain on the legacy runtime until their result channels are complete.
 
 The complete v1 behavior and method inventory are documented in
 `LegacyPythonPluginSystem.md`. The legacy launcher and `BookContainer` remain

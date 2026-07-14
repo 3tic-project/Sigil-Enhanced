@@ -24,9 +24,10 @@ PluginSessionManager::~PluginSessionManager()
 
 bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
 {
-    if (plugin.get_api_version() != 2 || plugin.get_api_interface() != QStringLiteral("live")) {
+    const bool native_live = plugin.get_declared_runtime() == Plugin::LiveRuntime;
+    if (!native_live && plugin.get_type() != QStringLiteral("edit")) {
         if (error) {
-            *error = tr("This plugin does not declare Plugin API v2 live support.");
+            *error = tr("Live compatibility currently supports legacy edit plugins only.");
         }
         return false;
     }
@@ -36,7 +37,7 @@ bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
         }
         return false;
     }
-    if (plugin.get_lifetime() != QStringLiteral("command")) {
+    if (native_live && plugin.get_lifetime() != QStringLiteral("command")) {
         if (error) {
             *error = tr("Book-session plugins are not supported by this live runtime stage.");
         }
