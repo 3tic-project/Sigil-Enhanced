@@ -211,6 +211,58 @@
       "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditorState" } }
     },
     {
+      "name": "editor.openResource",
+      "summary": "Open or activate a resource and optionally reveal a UTF-16 position.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "position", "schema": { "$ref": "#/components/schemas/Position" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditorState" } }
+    },
+    {
+      "name": "editor.revealRange",
+      "summary": "Open a resource and select a UTF-16 range.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "start", "required": true, "schema": { "$ref": "#/components/schemas/Position" } },
+        { "name": "end", "required": true, "schema": { "$ref": "#/components/schemas/Position" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/EditorState" } }
+    },
+    {
+      "name": "ui.showStatus",
+      "summary": "Show a bounded message in Sigil's status bar.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "message", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+        { "name": "duration_ms", "schema": { "type": "integer", "minimum": 0, "maximum": 60000, "default": 5000 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["shown"], "properties": { "shown": { "type": "boolean" } } } }
+    },
+    {
+      "name": "ui.showMessage",
+      "summary": "Show a modal informational, warning, or error message.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "message", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 65536 } },
+        { "name": "title", "schema": { "type": "string", "maxLength": 256 } },
+        { "name": "level", "schema": { "type": "string", "enum": ["info", "warning", "error"], "default": "info" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["shown"], "properties": { "shown": { "type": "boolean" } } } }
+    },
+    {
+      "name": "ui.confirm",
+      "summary": "Ask the user a yes/no question with No as the safe default.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "message", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 65536 } },
+        { "name": "title", "schema": { "type": "string", "maxLength": 256 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["confirmed"], "properties": { "confirmed": { "type": "boolean" } } } }
+    },
+    {
       "name": "transaction.begin",
       "summary": "Begin the session's single staged text transaction.",
       "paramStructure": "by-name",

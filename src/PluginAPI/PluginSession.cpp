@@ -20,12 +20,14 @@
 #include <QJsonDocument>
 #include <QLocalServer>
 #include <QLocalSocket>
+#include <QMessageBox>
 #include <QProcessEnvironment>
 #include <QPalette>
 #include <QRandomGenerator>
 #include <QReadLocker>
 #include <QSaveFile>
 #include <QSet>
+#include <QStatusBar>
 #include <QTemporaryFile>
 #include <QWriteLocker>
 #include <QTimer>
@@ -1966,6 +1968,83 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("revision"), static_cast<qint64>(Revision(active_resource)) },
             { QStringLiteral("applied_edits"), edits.size() }
         });
+    } else if (method == QStringLiteral("editor.openResource")
+               || method == QStringLiteral("editor.revealRange")) {
+        if (!RequirePermission(QStringLiteral("ui.navigate"), id)) return;
+        Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
+        if (!resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
+            return;
+        }
+        int start = 0;
+        int end = 0;
+        if (method == QStringLiteral("editor.revealRange")
+            && (!ReadPosition(params, QStringLiteral("start"), &start)
+                || !ReadPosition(params, QStringLiteral("end"), &end))) {
+            RespondError(id, -32602, QStringLiteral("A valid UTF-16 range is required"));
+            return;
+        }
+        int position = -1;
+        if (method == QStringLiteral("editor.openResource")
+            && params.contains(QStringLiteral("position"))
+            && !ReadPosition(params, QStringLiteral("position"), &position)) {
+            RespondError(id, -32602, QStringLiteral("Position is invalid"));
+            return;
+        }
+        m_MainWindow->OpenResourceAndWaitUntilLoaded(resource, -1, position);
+        if (method == QStringLiteral("editor.revealRange")) {
+            ContentTab *tab = m_TabManager->GetCurrentContentTab();
+            if (!tab || tab->GetLoadedResource() != resource
+                || !tab->SetSelectionRange(start, end)) {
+                RespondError(id, PluginApi::InvalidPatch,
+                             QStringLiteral("Selection range is invalid for the opened resource"));
+                return;
+            }
+        }
+        Respond(id, EditorState());
+    } else if (method == QStringLiteral("ui.showStatus")) {
+        if (!RequirePermission(QStringLiteral("ui.message"), id)) return;
+        const QString message = params.value(QStringLiteral("message")).toString();
+        const int duration = params.value(QStringLiteral("duration_ms")).toInt(5000);
+        if (message.isEmpty() || message.size() > 4096 || duration < 0 || duration > 60000) {
+            RespondError(id, -32602, QStringLiteral("Status message or duration is invalid"));
+            return;
+        }
+        m_MainWindow->statusBar()->showMessage(message, duration);
+        Respond(id, QJsonObject {{ QStringLiteral("shown"), true }});
+    } else if (method == QStringLiteral("ui.showMessage")) {
+        if (!RequirePermission(QStringLiteral("ui.message"), id)) return;
+        const QString title = params.value(QStringLiteral("title"))
+            .toString(m_Plugin.get_name());
+        const QString message = params.value(QStringLiteral("message")).toString();
+        const QString level = params.value(QStringLiteral("level")).toString(QStringLiteral("info"));
+        if (title.size() > 256 || message.isEmpty() || message.size() > 65536
+            || (level != QStringLiteral("info") && level != QStringLiteral("warning")
+                && level != QStringLiteral("error"))) {
+            RespondError(id, -32602, QStringLiteral("Message parameters are invalid"));
+            return;
+        }
+        if (level == QStringLiteral("warning")) {
+            QMessageBox::warning(m_MainWindow, title, message);
+        } else if (level == QStringLiteral("error")) {
+            QMessageBox::critical(m_MainWindow, title, message);
+        } else {
+            QMessageBox::information(m_MainWindow, title, message);
+        }
+        Respond(id, QJsonObject {{ QStringLiteral("shown"), true }});
+    } else if (method == QStringLiteral("ui.confirm")) {
+        if (!RequirePermission(QStringLiteral("ui.message"), id)) return;
+        const QString title = params.value(QStringLiteral("title"))
+            .toString(m_Plugin.get_name());
+        const QString message = params.value(QStringLiteral("message")).toString();
+        if (title.size() > 256 || message.isEmpty() || message.size() > 65536) {
+            RespondError(id, -32602, QStringLiteral("Confirmation parameters are invalid"));
+            return;
+        }
+        const bool confirmed = QMessageBox::question(
+            m_MainWindow, title, message, QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No) == QMessageBox::Yes;
+        Respond(id, QJsonObject {{ QStringLiteral("confirmed"), confirmed }});
     } else if (method == QStringLiteral("editor.setCursor")
                || method == QStringLiteral("editor.setSelection")) {
         if (!RequirePermission(QStringLiteral("editor.write"), id)) return;
@@ -2132,7 +2211,8 @@ QStringList PluginSession::EffectivePermissions() const
         permissions << QStringLiteral("book.read") << QStringLiteral("editor.read");
         if (m_Plugin.get_type() == QStringLiteral("edit")) {
             permissions << QStringLiteral("book.write.text") << QStringLiteral("book.write.binary")
-                        << QStringLiteral("book.structure") << QStringLiteral("editor.write");
+                        << QStringLiteral("book.structure") << QStringLiteral("editor.write")
+                        << QStringLiteral("ui.navigate") << QStringLiteral("ui.message");
         }
         if (m_Plugin.get_type() == QStringLiteral("validation")) {
             permissions << QStringLiteral("validation.publish");

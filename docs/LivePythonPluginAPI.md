@@ -187,12 +187,25 @@ preferences compatibility.
 | `insert_text(text, expected_revision, resource_id, label)` | Insert at the active cursor. |
 | `set_cursor(position, resource_id=None)` | Move the current editor cursor. |
 | `set_selection(start, end, resource_id=None)` | Select a current editor range. |
+| `open_resource(resource, position=None)` | Open/activate a resource and optionally reveal a UTF-16 position. |
+| `reveal_range(resource, start, end)` | Open a resource and select a validated UTF-16 range. |
 
 An edit can be a dictionary with `start`, `end`, and `text`, or a
 `(start, end, text)` tuple. A request contains between 1 and 1000 edits. Ranges
 must be in bounds, non-overlapping, and cannot split a UTF-16 surrogate pair.
 The host sorts them in descending position order before applying them in one
 edit block.
+
+### `UiApi`
+
+| Method | Behavior |
+| --- | --- |
+| `show_status(message, duration_ms=5000)` | Display a status-bar message for 0-60 seconds. |
+| `show_message(message, title=None, level="info")` | Display an information, warning, or error dialog. |
+| `confirm(message, title=None)` | Ask a yes/no question; No is the default. |
+
+Navigation requires `ui.navigate`; messages and confirmation require
+`ui.message`. Dialog text and status duration are bounded by the wire contract.
 
 ### `ValidationApi`
 

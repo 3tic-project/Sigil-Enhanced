@@ -6,7 +6,7 @@ import unittest
 LAUNCHER_ROOT = pathlib.Path(__file__).parents[1] / "src" / "Resource_Files" / "plugin_launchers" / "python"
 sys.path.insert(0, str(LAUNCHER_ROOT))
 
-from sigil_live.client import BookApi, EditorApi, Resource, ValidationApi
+from sigil_live.client import BookApi, EditorApi, Resource, UiApi, ValidationApi
 from sigil_live.errors import PermissionDenied
 from sigil_live.rpc import RpcClient
 
@@ -129,6 +129,34 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual(
             transport.sent[0]["params"]["edits"], [{"start": 1, "end": 3, "text": "x"}]
         )
+
+    def test_editor_navigation_uses_resource_ids_and_utf16_ranges(self):
+        state = {
+            "active": True, "resource_id": "a", "book_path": "Text/a.xhtml",
+            "revision": 2, "cursor": 4,
+            "selection": {"start": 1, "end": 4, "text": "abc"},
+            "position_encoding": "utf-16",
+        }
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": state},
+            {"jsonrpc": "2.0", "id": 2, "result": state},
+        ])
+        editor = EditorApi(RpcClient(transport))
+        editor.open_resource("a", position=4)
+        editor.reveal_range("a", 1, 4)
+        self.assertEqual(transport.sent[0]["method"], "editor.openResource")
+        self.assertEqual(transport.sent[1]["params"]["end"], 4)
+
+    def test_ui_api_returns_host_decisions(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {"shown": True}},
+            {"jsonrpc": "2.0", "id": 2, "result": {"shown": True}},
+            {"jsonrpc": "2.0", "id": 3, "result": {"confirmed": False}},
+        ])
+        ui = UiApi(RpcClient(transport))
+        self.assertTrue(ui.show_status("Working", 1000))
+        self.assertTrue(ui.show_message("Done", level="info"))
+        self.assertFalse(ui.confirm("Continue?"))
 
     def test_text_transaction_uses_one_id_until_commit(self):
         transport = FakeTransport(

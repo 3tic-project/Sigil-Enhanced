@@ -1,6 +1,6 @@
 """Sigil Plugin API v2 client library."""
 
-from .client import EditorState, Plugin, Resource, Selection, Transaction, ValidationApi
+from .client import EditorState, Plugin, Resource, Selection, Transaction, UiApi, ValidationApi
 from .errors import (
     BookClosed,
     Busy,
@@ -37,6 +37,7 @@ __all__ = [
     "UnsupportedOperation",
     "ValidationFailed",
     "ValidationApi",
+    "UiApi",
 ]
 
 __version__ = "2.0.0"

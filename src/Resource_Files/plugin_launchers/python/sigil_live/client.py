@@ -427,6 +427,22 @@ class EditorApi:
             params["resource_id"] = resource_id
         return EditorState.from_result(self._rpc.call("editor.setSelection", params))
 
+    def open_resource(self, resource, position=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        params = {"resource_id": resource_id}
+        if position is not None:
+            params["position"] = position
+        return EditorState.from_result(self._rpc.call("editor.openResource", params))
+
+    def reveal_range(self, resource, start, end):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        return EditorState.from_result(
+            self._rpc.call(
+                "editor.revealRange",
+                {"resource_id": resource_id, "start": start, "end": end},
+            )
+        )
+
 
 class ValidationApi:
     def __init__(self, rpc):
@@ -458,6 +474,28 @@ class ValidationApi:
         return self._rpc.call("validation.publishResults", {"results": normalized})
 
 
+class UiApi:
+    def __init__(self, rpc):
+        self._rpc = rpc
+
+    def show_status(self, message, duration_ms=5000):
+        return self._rpc.call(
+            "ui.showStatus", {"message": message, "duration_ms": duration_ms}
+        )["shown"]
+
+    def show_message(self, message, title=None, level="info"):
+        params = {"message": message, "level": level}
+        if title is not None:
+            params["title"] = title
+        return self._rpc.call("ui.showMessage", params)["shown"]
+
+    def confirm(self, message, title=None):
+        params = {"message": message}
+        if title is not None:
+            params["title"] = title
+        return self._rpc.call("ui.confirm", params)["confirmed"]
+
+
 class Plugin:
     def __init__(self, rpc, session_info, transport):
         self._rpc = rpc
@@ -466,6 +504,7 @@ class Plugin:
         self.book = BookApi(rpc)
         self.editor = EditorApi(rpc)
         self.validation = ValidationApi(rpc)
+        self.ui = UiApi(rpc)
 
     @classmethod
     def connect(cls, socket_name, token, plugin_name):
