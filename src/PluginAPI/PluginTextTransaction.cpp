@@ -47,17 +47,22 @@ quint64 TextTransaction::BaseBookRevision() const
 
 bool TextTransaction::IsEmpty() const
 {
-    return m_Changes.isEmpty();
+    return m_Changes.isEmpty() && m_BinaryChanges.isEmpty();
 }
 
 int TextTransaction::Size() const
 {
-    return m_Changes.size();
+    return m_Changes.size() + m_BinaryChanges.size();
 }
 
 bool TextTransaction::HasChange(const QString &resource_id) const
 {
     return m_Changes.contains(resource_id);
+}
+
+bool TextTransaction::HasBinaryChange(const QString &resource_id) const
+{
+    return m_BinaryChanges.contains(resource_id);
 }
 
 QString TextTransaction::ReadText(const QString &resource_id,
@@ -125,6 +130,47 @@ bool TextTransaction::ApplyEdits(const QString &resource_id,
                        document.toRawText(), error);
 }
 
+QByteArray TextTransaction::ReadBinary(const QString &resource_id,
+                                       const QByteArray &current_data,
+                                       quint64 current_revision,
+                                       quint64 *revision) const
+{
+    const auto found = m_BinaryChanges.constFind(resource_id);
+    if (found == m_BinaryChanges.constEnd()) {
+        if (revision) *revision = current_revision;
+        return current_data;
+    }
+    if (revision) *revision = found->baseRevision;
+    return found->stagedData;
+}
+
+bool TextTransaction::ReplaceBinary(const QString &resource_id,
+                                    const QByteArray &current_data,
+                                    quint64 current_revision,
+                                    quint64 expected_revision,
+                                    const QByteArray &replacement,
+                                    QString *error)
+{
+    auto found = m_BinaryChanges.find(resource_id);
+    const quint64 required_revision = found == m_BinaryChanges.end()
+        ? current_revision : found->baseRevision;
+    if (expected_revision != required_revision) {
+        if (error) *error = QStringLiteral("Revision conflict");
+        return false;
+    }
+    if (found == m_BinaryChanges.end()) {
+        StagedBinaryChange change;
+        change.resourceId = resource_id;
+        change.originalData = current_data;
+        change.stagedData = replacement;
+        change.baseRevision = current_revision;
+        m_BinaryChanges.insert(resource_id, change);
+    } else {
+        found->stagedData = replacement;
+    }
+    return true;
+}
+
 QList<StagedTextChange> TextTransaction::Changes() const
 {
     QList<StagedTextChange> result = m_Changes.values();
@@ -135,9 +181,20 @@ QList<StagedTextChange> TextTransaction::Changes() const
     return result;
 }
 
+QList<StagedBinaryChange> TextTransaction::BinaryChanges() const
+{
+    QList<StagedBinaryChange> result = m_BinaryChanges.values();
+    std::sort(result.begin(), result.end(), [](const StagedBinaryChange &left,
+                                               const StagedBinaryChange &right) {
+        return left.resourceId < right.resourceId;
+    });
+    return result;
+}
+
 void TextTransaction::Clear()
 {
     m_Changes.clear();
+    m_BinaryChanges.clear();
 }
 
 } // namespace PluginApi

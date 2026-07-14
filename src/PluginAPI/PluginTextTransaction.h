@@ -8,6 +8,7 @@
 #ifndef PLUGINTEXTTRANSACTION_H
 #define PLUGINTEXTTRANSACTION_H
 
+#include <QByteArray>
 #include <QHash>
 #include <QJsonArray>
 #include <QList>
@@ -20,6 +21,13 @@ struct StagedTextChange {
     QString resourceId;
     QString originalText;
     QString stagedText;
+    quint64 baseRevision = 0;
+};
+
+struct StagedBinaryChange {
+    QString resourceId;
+    QByteArray originalData;
+    QByteArray stagedData;
     quint64 baseRevision = 0;
 };
 
@@ -38,6 +46,7 @@ public:
     bool IsEmpty() const;
     int Size() const;
     bool HasChange(const QString &resource_id) const;
+    bool HasBinaryChange(const QString &resource_id) const;
 
     QString ReadText(const QString &resource_id,
                      const QString &current_text,
@@ -56,7 +65,19 @@ public:
                     const QJsonArray &edit_values,
                     QString *error);
 
+    QByteArray ReadBinary(const QString &resource_id,
+                          const QByteArray &current_data,
+                          quint64 current_revision,
+                          quint64 *revision) const;
+    bool ReplaceBinary(const QString &resource_id,
+                       const QByteArray &current_data,
+                       quint64 current_revision,
+                       quint64 expected_revision,
+                       const QByteArray &replacement,
+                       QString *error);
+
     QList<StagedTextChange> Changes() const;
+    QList<StagedBinaryChange> BinaryChanges() const;
     void Clear();
 
 private:
@@ -65,6 +86,7 @@ private:
     QString m_CheckpointPolicy;
     quint64 m_BaseBookRevision;
     QHash<QString, StagedTextChange> m_Changes;
+    QHash<QString, StagedBinaryChange> m_BinaryChanges;
 };
 
 } // namespace PluginApi

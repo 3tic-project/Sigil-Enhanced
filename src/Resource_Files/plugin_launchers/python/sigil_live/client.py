@@ -1,3 +1,4 @@
+import base64
 import platform
 from dataclasses import dataclass
 
@@ -116,6 +117,31 @@ class Transaction:
             ),
         )
 
+    def read_binary(self, resource):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        result = self._rpc.call(
+            "transaction.readBinary", self._params({"resource_id": resource_id})
+        )
+        result["data"] = base64.b64decode(result.pop("data_base64"), validate=True)
+        return result
+
+    def write_binary(self, resource, data, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            expected_revision = self.read_binary(resource_id)["revision"]
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError("binary data must be bytes-like")
+        return self._rpc.call(
+            "transaction.writeBinary",
+            self._params(
+                {
+                    "resource_id": resource_id,
+                    "expected_revision": expected_revision,
+                    "data_base64": base64.b64encode(bytes(data)).decode("ascii"),
+                }
+            ),
+        )
+
     def validate(self):
         return self._rpc.call("transaction.validate", self._params())
 
@@ -184,6 +210,12 @@ class BookApi:
     def read_many(self, resources):
         ids = [item.id if isinstance(item, Resource) else item for item in resources]
         return self._rpc.call("resource.readMany", {"resource_ids": ids})["items"]
+
+    def read_binary(self, resource):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        result = self._rpc.call("resource.readBinary", {"resource_id": resource_id})
+        result["data"] = base64.b64decode(result.pop("data_base64"), validate=True)
+        return result
 
     def transaction(self, label="Plugin changes", checkpoint="auto"):
         result = self._rpc.call(

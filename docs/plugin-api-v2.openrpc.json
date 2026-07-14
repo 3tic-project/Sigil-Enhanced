@@ -87,6 +87,13 @@
       "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextContent" } }
     },
     {
+      "name": "resource.readBinary",
+      "summary": "Read a binary resource up to 5 MiB as base64 without snapshotting the Book.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "resource_id", "required": true, "schema": { "type": "string" } }],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/BinaryContent" } }
+    },
+    {
       "name": "resource.readMany",
       "summary": "Read at most 100 current text resources.",
       "paramStructure": "by-name",
@@ -188,6 +195,28 @@
         { "name": "resource_id", "required": true, "schema": { "type": "string" } }
       ],
       "result": { "name": "result", "schema": { "allOf": [{ "$ref": "#/components/schemas/TextContent" }, { "type": "object", "properties": { "resource_id": { "type": "string" }, "staged": { "type": "boolean" } } }] } }
+    },
+    {
+      "name": "transaction.readBinary",
+      "summary": "Read staged binary data when present, otherwise current resource data.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "allOf": [{ "$ref": "#/components/schemas/BinaryContent" }, { "type": "object", "properties": { "staged": { "type": "boolean" } } }] } }
+    },
+    {
+      "name": "transaction.writeBinary",
+      "summary": "Stage a complete binary replacement up to 5 MiB.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "data_base64", "required": true, "schema": { "type": "string", "contentEncoding": "base64" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
     },
     {
       "name": "transaction.replaceText",
@@ -295,6 +324,15 @@
         "required": ["text", "revision"],
         "properties": {
           "text": { "type": "string" },
+          "revision": { "$ref": "#/components/schemas/Revision" }
+        }
+      },
+      "BinaryContent": {
+        "type": "object",
+        "required": ["resource_id", "data_base64", "revision"],
+        "properties": {
+          "resource_id": { "type": "string" },
+          "data_base64": { "type": "string", "contentEncoding": "base64" },
           "revision": { "$ref": "#/components/schemas/Revision" }
         }
       },

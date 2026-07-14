@@ -142,6 +142,32 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual(transport.sent[1]["params"]["transaction_id"], "tx-1")
         self.assertEqual(transport.sent[2]["method"], "transaction.commit")
 
+    def test_binary_api_encodes_and_decodes_base64(self):
+        transport = FakeTransport(
+            [
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": {"resource_id": "image", "revision": 2, "data_base64": "AAEC"},
+                }
+            ]
+        )
+        result = BookApi(RpcClient(transport)).read_binary("image")
+        self.assertEqual(result["data"], b"\x00\x01\x02")
+
+        transport = FakeTransport(
+            [{"jsonrpc": "2.0", "id": 1, "result": {"staged": True}}]
+        )
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        tx.write_binary("image", b"\x00\xff", expected_revision=2)
+        self.assertEqual(transport.sent[0]["method"], "transaction.writeBinary")
+        self.assertEqual(transport.sent[0]["params"]["data_base64"], "AP8=")
+
 
 if __name__ == "__main__":
     unittest.main()

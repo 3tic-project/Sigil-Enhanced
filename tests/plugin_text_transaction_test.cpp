@@ -59,6 +59,20 @@ int main()
                                      QStringLiteral("bad"), &error),
             "staged write accepted a different revision");
 
+    const QByteArray original_binary = QByteArray::fromHex("00112233");
+    Require(transaction.ReadBinary(QStringLiteral("image"), original_binary, 3, &revision)
+                == original_binary,
+            "initial binary read changed host data");
+    const QByteArray replacement_binary = QByteArray::fromHex("aabbcc");
+    Require(transaction.ReplaceBinary(QStringLiteral("image"), original_binary, 3, 3,
+                                      replacement_binary, &error),
+            "binary replacement was not staged");
+    Require(transaction.ReadBinary(QStringLiteral("image"), QByteArray("host"), 4, &revision)
+                == replacement_binary,
+            "transaction does not read its own binary write");
+    Require(revision == 3, "staged binary read did not preserve base revision");
+    Require(transaction.BinaryChanges().size() == 1, "binary staging count is wrong");
+
     transaction.Clear();
     Require(transaction.IsEmpty(), "rollback did not discard staged data");
     return EXIT_SUCCESS;

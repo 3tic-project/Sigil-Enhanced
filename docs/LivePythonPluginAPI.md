@@ -158,6 +158,7 @@ not construct the transport directly.
 | `get_resource(resource_id)` | Fetch current resource metadata. |
 | `read_text(resource)` | Dictionary containing `text` and `revision`. |
 | `read_many(resources)` | Up to 100 current text resources in one round trip. |
+| `read_binary(resource)` | Read a binary resource up to 5 MiB and return decoded `data`. |
 | `transaction(label, checkpoint="auto")` | Begin a staged `Transaction`. |
 
 `Resource` contains `id`, `book_path`, `media_type`, `resource_type`,
@@ -189,14 +190,19 @@ edit block.
 | `read_text(resource)` | Read staged content when present, otherwise live content. |
 | `replace_text(resource, text, expected_revision=None)` | Stage a whole-text replacement. |
 | `apply_edits(resource, edits, expected_revision=None)` | Compose patches against staged content. |
+| `read_binary(resource)` | Read staged binary data when present. |
+| `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 5 MiB. |
 | `validate()` | Return conflicts without changing the Book. |
 | `preview()` | Return counts and before/after lengths without changing the Book. |
 | `commit()` | Revalidate, optionally checkpoint, and apply once per resource. |
 | `rollback()` | Discard all staged data. |
 
-The current transaction implementation is text-only. `writeBinary`,
-`addResource`, `removeResource`, `renameResource`, `moveResource`, metadata,
-and spine methods are intentionally not exposed yet.
+The current transaction implementation supports existing text and binary
+resources. Binary commits always require one Checkpoint and use `QSaveFile` for
+replacement. `addResource`, `removeResource`, `renameResource`,
+`moveResource`, metadata, and spine methods are intentionally not exposed
+until the deferred OPF structure path is complete. Larger binary resources
+will use a later chunk API rather than increasing the JSON message limit.
 
 ## Revision and position rules
 

@@ -12,6 +12,7 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -20,6 +21,8 @@
 #include <QProcessEnvironment>
 #include <QPalette>
 #include <QRandomGenerator>
+#include <QReadLocker>
+#include <QSaveFile>
 #include <QWriteLocker>
 #include <QTimer>
 
@@ -40,6 +43,9 @@
 
 namespace
 {
+
+// Base64 plus the JSON envelope must still fit the 8 MiB framed-message limit.
+constexpr qsizetype MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024;
 
 QString ResourceTypeName(Resource::ResourceType type)
 {
@@ -89,6 +95,26 @@ bool ReadRevision(const QJsonObject &params, const QString &name, quint64 *revis
         return false;
     }
     *revision = static_cast<quint64>(number);
+    return true;
+}
+
+bool ReadBinaryFile(Resource *resource, QByteArray *data, QString *error)
+{
+    if (!resource || qobject_cast<TextResource *>(resource)) {
+        if (error) *error = QStringLiteral("Resource is not binary");
+        return false;
+    }
+    QReadLocker locker(&resource->GetLock());
+    QFile file(resource->GetFullPath());
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error) *error = file.errorString();
+        return false;
+    }
+    if (file.size() > MAX_INLINE_BINARY_SIZE) {
+        if (error) *error = QStringLiteral("Binary resource exceeds the inline size limit");
+        return false;
+    }
+    *data = file.readAll();
     return true;
 }
 
@@ -431,6 +457,24 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
             });
         }
+    } else if (method == QStringLiteral("resource.readBinary")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
+        QByteArray data;
+        QString read_error;
+        if (!resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
+        } else if (!ReadBinaryFile(resource, &data, &read_error)) {
+            const int code = read_error.contains(QStringLiteral("size limit"))
+                ? PluginApi::PayloadTooLarge : PluginApi::UnsupportedOperation;
+            RespondError(id, code, read_error);
+        } else {
+            Respond(id, QJsonObject {
+                { QStringLiteral("resource_id"), resource->GetIdentifier() },
+                { QStringLiteral("data_base64"), QString::fromLatin1(data.toBase64()) },
+                { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
+            });
+        }
     } else if (method == QStringLiteral("resource.readMany")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QJsonArray ids = params.value(QStringLiteral("resource_ids")).toArray();
@@ -497,6 +541,89 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("revision"), static_cast<qint64>(revision) },
             { QStringLiteral("staged"), transaction->HasChange(resource->GetIdentifier()) }
         });
+    } else if (method == QStringLiteral("transaction.readBinary")) {
+        if (!RequirePermission(QStringLiteral("book.write.binary"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
+        QByteArray current_data;
+        QString read_error;
+        if (!resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
+            return;
+        }
+        if (!ReadBinaryFile(resource, &current_data, &read_error)) {
+            const int code = read_error.contains(QStringLiteral("size limit"))
+                ? PluginApi::PayloadTooLarge : PluginApi::UnsupportedOperation;
+            RespondError(id, code, read_error);
+            return;
+        }
+        quint64 revision = 0;
+        const QByteArray data = transaction->ReadBinary(resource->GetIdentifier(), current_data,
+                                                        Revision(resource), &revision);
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), resource->GetIdentifier() },
+            { QStringLiteral("data_base64"), QString::fromLatin1(data.toBase64()) },
+            { QStringLiteral("revision"), static_cast<qint64>(revision) },
+            { QStringLiteral("staged"), transaction->HasBinaryChange(resource->GetIdentifier()) }
+        });
+    } else if (method == QStringLiteral("transaction.writeBinary")) {
+        if (!RequirePermission(QStringLiteral("book.write.binary"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
+        if (!resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
+            return;
+        }
+        quint64 expected_revision = 0;
+        if (!ReadRevision(params, QStringLiteral("expected_revision"), &expected_revision)
+            || !params.value(QStringLiteral("data_base64")).isString()) {
+            RespondError(id, -32602,
+                         QStringLiteral("Expected revision and base64 data are required"));
+            return;
+        }
+        const QByteArray encoded = params.value(QStringLiteral("data_base64")).toString().toLatin1();
+        const auto decoded = QByteArray::fromBase64Encoding(
+            encoded, QByteArray::AbortOnBase64DecodingErrors);
+        if (decoded.decodingStatus != QByteArray::Base64DecodingStatus::Ok) {
+            RespondError(id, -32602, QStringLiteral("data_base64 is invalid"));
+            return;
+        }
+        if (decoded.decoded.size() > MAX_INLINE_BINARY_SIZE) {
+            RespondError(id, PluginApi::PayloadTooLarge,
+                         QStringLiteral("Binary resource exceeds the inline size limit"));
+            return;
+        }
+        QByteArray current_data;
+        QString read_error;
+        if (!ReadBinaryFile(resource, &current_data, &read_error)) {
+            RespondError(id, PluginApi::UnsupportedOperation, read_error);
+            return;
+        }
+        quint64 required_revision = 0;
+        transaction->ReadBinary(resource->GetIdentifier(), current_data, Revision(resource),
+                                &required_revision);
+        if (expected_revision != required_revision) {
+            RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"),
+                         QJsonObject {
+                             { QStringLiteral("expected"), static_cast<qint64>(expected_revision) },
+                             { QStringLiteral("actual"), static_cast<qint64>(required_revision) },
+                             { QStringLiteral("resource_id"), resource->GetIdentifier() }
+                         });
+            return;
+        }
+        QString stage_error;
+        if (!transaction->ReplaceBinary(resource->GetIdentifier(), current_data, Revision(resource),
+                                        expected_revision, decoded.decoded, &stage_error)) {
+            RespondError(id, PluginApi::RevisionConflict, stage_error);
+            return;
+        }
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), resource->GetIdentifier() },
+            { QStringLiteral("base_revision"), static_cast<qint64>(required_revision) },
+            { QStringLiteral("staged"), true }
+        });
     } else if (method == QStringLiteral("transaction.replaceText")
                || method == QStringLiteral("transaction.applyTextEdits")) {
         if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
@@ -559,6 +686,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (!transaction) return;
         QJsonArray conflicts;
         QJsonArray text_changes;
+        QJsonArray binary_changes;
         int modified = 0;
         for (const PluginApi::StagedTextChange &change : transaction->Changes()) {
             Resource *resource = ResolveResource(change.resourceId);
@@ -579,6 +707,25 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 });
             }
         }
+        for (const PluginApi::StagedBinaryChange &change : transaction->BinaryChanges()) {
+            Resource *resource = ResolveResource(change.resourceId);
+            const quint64 actual = resource ? Revision(resource) : 0;
+            if (!resource || actual != change.baseRevision) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("resource_id"), change.resourceId },
+                    { QStringLiteral("expected"), static_cast<qint64>(change.baseRevision) },
+                    { QStringLiteral("actual"), resource ? QJsonValue(static_cast<qint64>(actual)) : QJsonValue() }
+                });
+            }
+            if (change.originalData != change.stagedData) {
+                ++modified;
+                binary_changes.append(QJsonObject {
+                    { QStringLiteral("resource_id"), change.resourceId },
+                    { QStringLiteral("before_size"), change.originalData.size() },
+                    { QStringLiteral("after_size"), change.stagedData.size() }
+                });
+            }
+        }
         QJsonObject result {
             { QStringLiteral("transaction_id"), transaction->Id() },
             { QStringLiteral("valid"), conflicts.isEmpty() },
@@ -592,7 +739,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         };
         if (method == QStringLiteral("transaction.preview")) {
             result.insert(QStringLiteral("text_changes"), text_changes);
-            result.insert(QStringLiteral("binary_changes"), QJsonArray());
+            result.insert(QStringLiteral("binary_changes"), binary_changes);
             result.insert(QStringLiteral("opf_changes"), QJsonArray());
             result.insert(QStringLiteral("warnings"), QJsonArray());
         }
@@ -603,6 +750,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (!transaction) return;
         QJsonArray conflicts;
         QList<PluginApi::StagedTextChange> dirty_changes;
+        QList<PluginApi::StagedBinaryChange> dirty_binary_changes;
         for (const PluginApi::StagedTextChange &change : transaction->Changes()) {
             Resource *resource = ResolveResource(change.resourceId);
             const quint64 actual = resource ? Revision(resource) : 0;
@@ -615,12 +763,25 @@ void PluginSession::Dispatch(const QJsonObject &request)
             }
             if (change.originalText != change.stagedText) dirty_changes.append(change);
         }
+        for (const PluginApi::StagedBinaryChange &change : transaction->BinaryChanges()) {
+            Resource *resource = ResolveResource(change.resourceId);
+            const quint64 actual = resource ? Revision(resource) : 0;
+            if (!resource || actual != change.baseRevision) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("resource_id"), change.resourceId },
+                    { QStringLiteral("expected"), static_cast<qint64>(change.baseRevision) },
+                    { QStringLiteral("actual"), resource ? QJsonValue(static_cast<qint64>(actual)) : QJsonValue() }
+                });
+            }
+            if (change.originalData != change.stagedData) dirty_binary_changes.append(change);
+        }
         if (!conflicts.isEmpty()) {
             RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Transaction has conflicts"),
                          QJsonObject {{ QStringLiteral("conflicts"), conflicts }});
             return;
         }
-        bool safety_checkpoint_required = dirty_changes.size() > 1;
+        bool safety_checkpoint_required = dirty_changes.size() + dirty_binary_changes.size() > 1
+            || !dirty_binary_changes.isEmpty();
         for (const PluginApi::StagedTextChange &change : dirty_changes) {
             Resource *resource = ResolveResource(change.resourceId);
             safety_checkpoint_required = safety_checkpoint_required || (resource &&
@@ -650,13 +811,44 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
             });
         }
-        if (!dirty_changes.isEmpty()) m_MainWindow->GetCurrentBook()->SetModified();
+        if (!dirty_binary_changes.isEmpty()) {
+            FolderKeeper *folder_keeper = m_MainWindow->GetCurrentBook()->GetFolderKeeper();
+            folder_keeper->SuspendWatchingResources();
+            QString write_error;
+            for (const PluginApi::StagedBinaryChange &change : dirty_binary_changes) {
+                Resource *resource = ResolveResource(change.resourceId);
+                {
+                    QWriteLocker locker(&resource->GetLock());
+                    QSaveFile file(resource->GetFullPath());
+                    if (!file.open(QIODevice::WriteOnly)
+                        || file.write(change.stagedData) != change.stagedData.size()
+                        || !file.commit()) {
+                        write_error = file.errorString();
+                        break;
+                    }
+                }
+                resource->Modified();
+                committed.append(QJsonObject {
+                    { QStringLiteral("resource_id"), change.resourceId },
+                    { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
+                });
+            }
+            folder_keeper->ResumeWatchingResources();
+            if (!write_error.isEmpty()) {
+                RespondError(id, PluginApi::ValidationFailed,
+                             QStringLiteral("Binary commit failed: %1").arg(write_error));
+                return;
+            }
+        }
+        if (!dirty_changes.isEmpty() || !dirty_binary_changes.isEmpty()) {
+            m_MainWindow->GetCurrentBook()->SetModified();
+        }
         const QString transaction_id = transaction->Id();
         m_Transaction.reset();
         Respond(id, QJsonObject {
             { QStringLiteral("transaction_id"), transaction_id },
             { QStringLiteral("committed"), committed },
-            { QStringLiteral("modified"), dirty_changes.size() },
+            { QStringLiteral("modified"), dirty_changes.size() + dirty_binary_changes.size() },
             { QStringLiteral("checkpoint_created"), checkpoint_required }
         });
     } else if (method == QStringLiteral("transaction.rollback")) {
