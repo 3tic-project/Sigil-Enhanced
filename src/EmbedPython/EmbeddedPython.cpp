@@ -308,9 +308,8 @@ EmbeddedPython::EmbeddedPython()
 
 EmbeddedPython::~EmbeddedPython()
 {
-    if (m_instance) {
-        delete m_instance;
-        m_instance = 0;
+    if (m_instance == this) {
+        m_instance = nullptr;
     }
     m_pyobjmetaid = 0;
     m_listintmetaid = 0;

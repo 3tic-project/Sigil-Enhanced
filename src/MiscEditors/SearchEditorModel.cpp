@@ -92,9 +92,8 @@ SearchEditorModel::SearchEditorModel(QObject *parent)
 
 SearchEditorModel::~SearchEditorModel()
 {
-    if (m_instance) {
-        delete m_instance;
-        m_instance = 0;
+    if (m_instance == this) {
+        m_instance = nullptr;
     }
 }
 

@@ -1,3 +1,7 @@
+Unreleased
+   Bug Fixes
+     - Fixed singleton destruction paths that could recursively delete the object being destroyed.
+
 Sigil-Enhanced-2.8.1.E4
    Bug Fixes
      - Fixed Paste Rich Text menu handling to avoid a crash.
