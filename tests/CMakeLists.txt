@@ -142,3 +142,21 @@ target_link_libraries(plugin_launcher_integration_test PRIVATE
 
 add_test(NAME plugin_launcher_integration COMMAND plugin_launcher_integration_test)
 set_tests_properties(plugin_launcher_integration PROPERTIES TIMEOUT 30)
+
+add_executable(plugin_text_edit_test
+    plugin_text_edit_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.h
+)
+
+target_include_directories(plugin_text_edit_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(plugin_text_edit_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+)
+
+add_test(NAME plugin_text_edit COMMAND plugin_text_edit_test)
+set_tests_properties(plugin_text_edit PROPERTIES TIMEOUT 30)

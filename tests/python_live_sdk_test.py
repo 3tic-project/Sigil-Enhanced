@@ -96,6 +96,24 @@ class LiveSdkTest(unittest.TestCase):
         selection = EditorApi(rpc).get_selection()
         self.assertEqual((selection.start, selection.end, selection.text), (2, 5, "abc"))
 
+    def test_editor_apply_edits_preserves_utf16_ranges(self):
+        transport = FakeTransport(
+            [
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": {"resource_id": "a", "revision": 3, "applied_edits": 1},
+                }
+            ]
+        )
+        result = EditorApi(RpcClient(transport)).apply_edits(
+            [(1, 3, "x")], expected_revision=2, resource_id="a"
+        )
+        self.assertEqual(result["revision"], 3)
+        self.assertEqual(
+            transport.sent[0]["params"]["edits"], [{"start": 1, "end": 3, "text": "x"}]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

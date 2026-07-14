@@ -76,6 +76,7 @@ public:
     int GetCursorPosition() const;
     int GetSelectionStart() const;
     int GetSelectionEnd() const;
+    bool SetSelectionRange(int start, int end);
 
     int GetCursorColumn() const;
 

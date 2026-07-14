@@ -7,6 +7,8 @@
 #include "PluginAPI/PluginSession.h"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDir>
@@ -18,6 +20,7 @@
 #include <QProcessEnvironment>
 #include <QPalette>
 #include <QRandomGenerator>
+#include <QWriteLocker>
 #include <QTimer>
 
 #include "BookManipulation/Book.h"
@@ -26,6 +29,7 @@
 #include "Misc/PluginDB.h"
 #include "Misc/SettingsStore.h"
 #include "PluginAPI/PluginSessionConsole.h"
+#include "PluginAPI/PluginTextEdit.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
@@ -59,6 +63,19 @@ QJsonValue RequestId(const QJsonObject &request)
 {
     return request.contains(QStringLiteral("id"))
         ? request.value(QStringLiteral("id")) : QJsonValue();
+}
+
+bool ReadPosition(const QJsonObject &params, const QString &name, int *position)
+{
+    const QJsonValue value = params.value(name);
+    if (!value.isDouble()) return false;
+    const double number = value.toDouble();
+    if (!std::isfinite(number) || std::floor(number) != number
+        || number < 0 || number > std::numeric_limits<int>::max()) {
+        return false;
+    }
+    *position = static_cast<int>(number);
+    return true;
 }
 
 }
@@ -431,6 +448,102 @@ void PluginSession::Dispatch(const QJsonObject &request)
             tabs.append(ResourceInfo(tab->GetLoadedResource()));
         }
         Respond(id, QJsonObject {{ QStringLiteral("items"), tabs }});
+    } else if (method == QStringLiteral("editor.applyEdits")
+               || method == QStringLiteral("editor.replaceSelection")
+               || method == QStringLiteral("editor.insertText")) {
+        if (!RequirePermission(QStringLiteral("editor.write"), id)) return;
+        ContentTab *tab = m_TabManager->GetCurrentContentTab();
+        Resource *active_resource = tab ? tab->GetLoadedResource() : nullptr;
+        const QString requested_id = params.value(QStringLiteral("resource_id")).toString();
+        if (!active_resource || (!requested_id.isEmpty()
+                                 && requested_id != active_resource->GetIdentifier())) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Editor writes require the active resource"));
+            return;
+        }
+        auto *text_resource = qobject_cast<TextResource *>(active_resource);
+        if (!text_resource) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("The active resource is not editable text"));
+            return;
+        }
+        const QJsonValue expected_value = params.value(QStringLiteral("expected_revision"));
+        const double expected_number = expected_value.toDouble(-1);
+        const quint64 actual_revision = Revision(text_resource);
+        if (!expected_value.isDouble() || expected_number < 0
+            || std::floor(expected_number) != expected_number
+            || expected_number > static_cast<double>(std::numeric_limits<qint64>::max())
+            || static_cast<quint64>(expected_number) != actual_revision) {
+            RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"),
+                         QJsonObject {
+                             { QStringLiteral("expected"), expected_value },
+                             { QStringLiteral("actual"), static_cast<qint64>(actual_revision) },
+                             { QStringLiteral("resource_id"), active_resource->GetIdentifier() }
+                         });
+            return;
+        }
+
+        QJsonArray edit_values;
+        if (method == QStringLiteral("editor.applyEdits")) {
+            edit_values = params.value(QStringLiteral("edits")).toArray();
+        } else {
+            if (!params.value(QStringLiteral("text")).isString()) {
+                RespondError(id, -32602, QStringLiteral("Text must be a string"));
+                return;
+            }
+            const int position = method == QStringLiteral("editor.insertText")
+                ? tab->GetCursorPosition() : tab->GetSelectionStart();
+            const int end = method == QStringLiteral("editor.insertText")
+                ? position : tab->GetSelectionEnd();
+            edit_values.append(QJsonObject {
+                { QStringLiteral("start"), position },
+                { QStringLiteral("end"), end },
+                { QStringLiteral("text"), params.value(QStringLiteral("text")) }
+            });
+        }
+
+        text_resource->InitialLoad();
+        const QString current_text = text_resource->GetText();
+        QList<PluginApi::TextEdit> edits;
+        QString patch_error;
+        if (!PluginApi::ParseTextEdits(edit_values, current_text, &edits, &patch_error)) {
+            RespondError(id, PluginApi::InvalidPatch, patch_error);
+            return;
+        }
+        {
+            QWriteLocker locker(&text_resource->GetLock());
+            PluginApi::ApplyTextEdits(&text_resource->GetTextDocumentForWriting(), edits);
+        }
+        m_MainWindow->GetCurrentBook()->SetModified();
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), active_resource->GetIdentifier() },
+            { QStringLiteral("revision"), static_cast<qint64>(Revision(active_resource)) },
+            { QStringLiteral("applied_edits"), edits.size() }
+        });
+    } else if (method == QStringLiteral("editor.setCursor")
+               || method == QStringLiteral("editor.setSelection")) {
+        if (!RequirePermission(QStringLiteral("editor.write"), id)) return;
+        ContentTab *tab = m_TabManager->GetCurrentContentTab();
+        Resource *active_resource = tab ? tab->GetLoadedResource() : nullptr;
+        const QString requested_id = params.value(QStringLiteral("resource_id")).toString();
+        if (!active_resource || (!requested_id.isEmpty()
+                                 && requested_id != active_resource->GetIdentifier())) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Editor navigation requires the active resource"));
+            return;
+        }
+        int start = 0;
+        int end = 0;
+        const bool positions_valid = method == QStringLiteral("editor.setCursor")
+            ? ReadPosition(params, QStringLiteral("position"), &start)
+            : ReadPosition(params, QStringLiteral("start"), &start)
+                && ReadPosition(params, QStringLiteral("end"), &end);
+        if (method == QStringLiteral("editor.setCursor")) end = start;
+        if (!positions_valid || !tab->SetSelectionRange(start, end)) {
+            RespondError(id, PluginApi::InvalidPatch, QStringLiteral("Selection range is invalid"));
+            return;
+        }
+        Respond(id, EditorState());
     } else {
         RespondError(id, -32601, QStringLiteral("Method not found"));
     }

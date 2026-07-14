@@ -210,6 +210,11 @@ public:
     virtual int GetSelectionEnd() const {
         return GetCursorPosition();
     }
+    virtual bool SetSelectionRange(int start, int end) {
+        Q_UNUSED(start);
+        Q_UNUSED(end);
+        return false;
+    }
     virtual int GetCursorLine() const {
         return 0;
     }

@@ -567,6 +567,16 @@ int FlowTab::GetSelectionEnd() const
     return m_wCodeView ? m_wCodeView->textCursor().selectionEnd() : 0;
 }
 
+bool FlowTab::SetSelectionRange(int start, int end)
+{
+    if (!m_wCodeView || start < 0 || start > end || end > m_wCodeView->textLength()) return false;
+    QTextCursor cursor(m_wCodeView->document());
+    cursor.setPosition(start);
+    cursor.setPosition(end, QTextCursor::KeepAnchor);
+    m_wCodeView->setTextCursor(cursor);
+    return true;
+}
+
 int FlowTab::GetCursorLine() const
 {
     if (m_wCodeView) {

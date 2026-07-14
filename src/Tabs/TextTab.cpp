@@ -138,6 +138,16 @@ int TextTab::GetSelectionEnd() const
     return m_wCodeView->textCursor().selectionEnd();
 }
 
+bool TextTab::SetSelectionRange(int start, int end)
+{
+    if (start < 0 || start > end || end > m_wCodeView->textLength()) return false;
+    QTextCursor cursor(m_wCodeView->document());
+    cursor.setPosition(start);
+    cursor.setPosition(end, QTextCursor::KeepAnchor);
+    m_wCodeView->setTextCursor(cursor);
+    return true;
+}
+
 int TextTab::GetCursorColumn() const
 {
     return m_wCodeView->GetCursorColumn();

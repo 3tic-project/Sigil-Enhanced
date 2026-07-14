@@ -114,6 +114,7 @@ public:
     int GetCursorPosition() const;
     int GetSelectionStart() const;
     int GetSelectionEnd() const;
+    bool SetSelectionRange(int start, int end);
     int GetCursorLine() const;
     int GetCursorColumn() const;
     int GetCursorCodepoint() const;

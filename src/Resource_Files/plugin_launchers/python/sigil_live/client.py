@@ -113,6 +113,65 @@ class EditorApi:
     def get_open_tabs(self):
         return [Resource.from_result(item) for item in self._rpc.call("editor.getOpenTabs")["items"]]
 
+    def apply_edits(self, edits, expected_revision=None, resource_id=None, label="Plugin edit"):
+        state = self.get_state() if expected_revision is None or resource_id is None else None
+        if expected_revision is None:
+            expected_revision = state.revision
+        if resource_id is None:
+            resource_id = state.resource_id
+        normalized = []
+        for edit in edits:
+            if isinstance(edit, dict):
+                normalized.append({"start": edit["start"], "end": edit["end"], "text": edit["text"]})
+            else:
+                start, end, text = edit
+                normalized.append({"start": start, "end": end, "text": text})
+        return self._rpc.call(
+            "editor.applyEdits",
+            {
+                "resource_id": resource_id,
+                "expected_revision": expected_revision,
+                "label": label,
+                "edits": normalized,
+            },
+        )
+
+    def replace_selection(self, text, expected_revision=None, resource_id=None, label="Replace selection"):
+        state = self.get_state() if expected_revision is None or resource_id is None else None
+        return self._rpc.call(
+            "editor.replaceSelection",
+            {
+                "resource_id": resource_id if resource_id is not None else state.resource_id,
+                "expected_revision": expected_revision if expected_revision is not None else state.revision,
+                "label": label,
+                "text": text,
+            },
+        )
+
+    def insert_text(self, text, expected_revision=None, resource_id=None, label="Insert text"):
+        state = self.get_state() if expected_revision is None or resource_id is None else None
+        return self._rpc.call(
+            "editor.insertText",
+            {
+                "resource_id": resource_id if resource_id is not None else state.resource_id,
+                "expected_revision": expected_revision if expected_revision is not None else state.revision,
+                "label": label,
+                "text": text,
+            },
+        )
+
+    def set_cursor(self, position, resource_id=None):
+        params = {"position": position}
+        if resource_id is not None:
+            params["resource_id"] = resource_id
+        return EditorState.from_result(self._rpc.call("editor.setCursor", params))
+
+    def set_selection(self, start, end, resource_id=None):
+        params = {"start": start, "end": end}
+        if resource_id is not None:
+            params["resource_id"] = resource_id
+        return EditorState.from_result(self._rpc.call("editor.setSelection", params))
+
 
 class Plugin:
     def __init__(self, rpc, session_info, transport):
