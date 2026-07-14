@@ -417,6 +417,27 @@
       } } }
     },
     {
+      "name": "ui.chooseOpenFile",
+      "summary": "Ask the user to select one readable file and return its local path.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "title", "schema": { "type": "string", "maxLength": 256 } },
+        { "name": "filter", "schema": { "type": "string", "maxLength": 2048 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["path"], "properties": { "path": { "type": ["string", "null"] } } } }
+    },
+    {
+      "name": "ui.chooseSaveFile",
+      "summary": "Ask the user to select one output file and return its local path.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "suggested_name", "schema": { "type": "string", "maxLength": 255 } },
+        { "name": "title", "schema": { "type": "string", "maxLength": 256 } },
+        { "name": "filter", "schema": { "type": "string", "maxLength": 2048 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["path"], "properties": { "path": { "type": ["string", "null"] } } } }
+    },
+    {
       "name": "ui.progressUpdate",
       "summary": "Update the active progress value and optional label.",
       "paramStructure": "by-name",

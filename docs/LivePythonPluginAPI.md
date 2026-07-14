@@ -242,12 +242,16 @@ edit block.
 | `show_message(message, title=None, level="info")` | Display an information, warning, or error dialog. |
 | `confirm(message, title=None)` | Ask a yes/no question; No is the default. |
 | `progress(label, total=0)` | Return a context-managed progress operation; `total=0` is indeterminate. |
+| `choose_open_file(title=None, filter=None)` | Return a user-selected input path or `None` on cancel. |
+| `choose_save_file(suggested_name=None, title=None, filter=None)` | Return a user-selected output path or `None` on cancel. |
 
 Navigation requires `ui.navigate`; messages and confirmation require
 `ui.message`; progress requires `ui.progress`. Call `progress.update(value,
 label=None)` while working. Leaving the context ends and hides progress even
 when Python raises. Dialog text, labels, values, and status duration are bounded
-by the wire contract.
+by the wire contract. File dialogs require `ui.fileDialog`; they expose only a
+path explicitly selected by the user and do not read or write that path in the
+host.
 
 ### `EventsApi`
 

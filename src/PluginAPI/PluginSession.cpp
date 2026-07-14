@@ -15,6 +15,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -2514,6 +2515,33 @@ void PluginSession::Dispatch(const QJsonObject &request)
             m_MainWindow, title, message, QMessageBox::Yes | QMessageBox::No,
             QMessageBox::No) == QMessageBox::Yes;
         Respond(id, QJsonObject {{ QStringLiteral("confirmed"), confirmed }});
+    } else if (method == QStringLiteral("ui.chooseOpenFile")
+               || method == QStringLiteral("ui.chooseSaveFile")) {
+        if (!RequirePermission(QStringLiteral("ui.fileDialog"), id)) return;
+        const QString title = params.value(QStringLiteral("title"))
+            .toString(m_Plugin.get_name());
+        const QString filter = params.value(QStringLiteral("filter"))
+            .toString(tr("All Files (*)"));
+        const QString suggested_name = params.value(QStringLiteral("suggested_name")).toString();
+        if (title.size() > 256 || filter.size() > 2048
+            || suggested_name.size() > 255
+            || (!suggested_name.isEmpty()
+                && QFileInfo(suggested_name).fileName() != suggested_name)) {
+            RespondError(id, -32602, QStringLiteral("File dialog parameters are invalid"));
+            return;
+        }
+        const QString current_path = m_MainWindow->GetCurrentFilePath();
+        const QString directory = current_path.isEmpty()
+            ? QDir::homePath() : QFileInfo(current_path).absolutePath();
+        const QString initial_path = suggested_name.isEmpty()
+            ? directory : QDir(directory).filePath(suggested_name);
+        QScopedValueRollback<bool> modal_scope(m_InRequest, false);
+        const QString path = method == QStringLiteral("ui.chooseOpenFile")
+            ? QFileDialog::getOpenFileName(m_MainWindow, title, initial_path, filter)
+            : QFileDialog::getSaveFileName(m_MainWindow, title, initial_path, filter);
+        Respond(id, QJsonObject {
+            { QStringLiteral("path"), path.isEmpty() ? QJsonValue() : QJsonValue(path) }
+        });
     } else if (method == QStringLiteral("ui.progressBegin")) {
         if (!RequirePermission(QStringLiteral("ui.progress"), id)) return;
         if (!m_ProgressId.isEmpty()) {
@@ -2761,6 +2789,7 @@ QStringList PluginSession::EffectivePermissions() const
         }
         permissions << QStringLiteral("events.book") << QStringLiteral("events.editor");
         permissions << QStringLiteral("ui.progress");
+        permissions << QStringLiteral("ui.fileDialog");
     }
     return permissions;
 }

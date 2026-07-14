@@ -669,6 +669,24 @@ class UiApi:
             params["title"] = title
         return self._rpc.call("ui.confirm", params)["confirmed"]
 
+    def choose_open_file(self, title=None, filter=None):
+        params = {}
+        if title is not None:
+            params["title"] = title
+        if filter is not None:
+            params["filter"] = filter
+        return self._rpc.call("ui.chooseOpenFile", params)["path"]
+
+    def choose_save_file(self, suggested_name=None, title=None, filter=None):
+        params = {}
+        if suggested_name is not None:
+            params["suggested_name"] = suggested_name
+        if title is not None:
+            params["title"] = title
+        if filter is not None:
+            params["filter"] = filter
+        return self._rpc.call("ui.chooseSaveFile", params)["path"]
+
     def progress(self, label, total=0):
         return Progress(
             self._rpc,

@@ -55,6 +55,8 @@ IMPLEMENTED_METHODS = {
     "ui.progressBegin",
     "ui.progressUpdate",
     "ui.progressEnd",
+    "ui.chooseOpenFile",
+    "ui.chooseSaveFile",
     "transaction.begin",
     "transaction.readText",
     "transaction.readBinary",

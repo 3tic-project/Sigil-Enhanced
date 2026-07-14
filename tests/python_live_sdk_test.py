@@ -192,6 +192,19 @@ class LiveSdkTest(unittest.TestCase):
             ["ui.progressBegin", "ui.progressUpdate", "ui.progressEnd"],
         )
 
+    def test_ui_file_dialogs_return_paths_or_none(self):
+        transport = FakeTransport(
+            [
+                {"jsonrpc": "2.0", "id": 1, "result": {"path": "/tmp/input.epub"}},
+                {"jsonrpc": "2.0", "id": 2, "result": {"path": None}},
+            ]
+        )
+        ui = UiApi(RpcClient(transport))
+        self.assertEqual(
+            ui.choose_open_file("Open", "EPUB (*.epub)"), "/tmp/input.epub"
+        )
+        self.assertIsNone(ui.choose_save_file("output.epub"))
+
     def test_editor_apply_edits_preserves_utf16_ranges(self):
         transport = FakeTransport(
             [
