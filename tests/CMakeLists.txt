@@ -102,6 +102,11 @@ add_test(NAME plugin_openrpc_contract
 )
 set_tests_properties(plugin_openrpc_contract PROPERTIES TIMEOUT 30)
 
+add_test(NAME legacy_plugin_api_surface
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/legacy_plugin_api_surface_test.py
+)
+set_tests_properties(legacy_plugin_api_surface PROPERTIES TIMEOUT 30)
+
 add_executable(plugin_transport_integration_test
     plugin_transport_integration_test.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp

@@ -24,6 +24,10 @@ class FakeTransport:
 
 
 class LiveSdkTest(unittest.TestCase):
+    def test_native_sdk_does_not_eagerly_load_legacy_containers(self):
+        self.assertNotIn("bookcontainer", sys.modules)
+        self.assertNotIn("pluginhunspell", sys.modules)
+
     def test_rpc_keeps_notifications_and_returns_matching_result(self):
         transport = FakeTransport(
             [

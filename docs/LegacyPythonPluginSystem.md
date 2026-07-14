@@ -249,6 +249,16 @@ The v2 compatibility test suite must account for every public method listed
 above. A method may be delegated to an unchanged local helper (for example path
 calculation or preferences), but it may not silently disappear.
 
+The live compatibility foundation provides `CompatBookContainer`,
+`CompatOutputContainer`, `CompatInputContainer`, and
+`CompatValidationContainer` in `sigil_live.compat`. They inherit the
+authoritative v1 classes so the public member kinds and signatures cannot
+diverge. `legacy_plugin_api_surface_test.py` verifies all 76/60/12 members and
+the two validation extensions on every test run. This is API-surface coverage,
+not a claim of behavioral completion: the RPC-backed wrapper, implicit commit,
+binary operations, resource structure changes, and compatibility launcher
+routing remain required before v1 plugins can use the live runtime.
+
 ## Known v1 boundaries
 
 - The host and plugin communicate control data through mixed stdout/XML.
