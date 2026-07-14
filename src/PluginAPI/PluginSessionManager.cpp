@@ -10,6 +10,8 @@
 #include "Misc/Plugin.h"
 #include "PluginAPI/PluginSession.h"
 
+#include <QMessageBox>
+
 PluginSessionManager::PluginSessionManager(MainWindow *main_window, TabManager *tab_manager) :
     QObject(main_window),
     m_MainWindow(main_window),
@@ -25,20 +27,6 @@ PluginSessionManager::~PluginSessionManager()
 bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
 {
     const bool native_live = plugin.get_declared_runtime() == Plugin::LiveRuntime;
-    if (!native_live && plugin.get_type() != QStringLiteral("edit")
-        && plugin.get_type() != QStringLiteral("validation")
-        && plugin.get_type() != QStringLiteral("output")) {
-        if (error) {
-            *error = tr("Live compatibility currently supports legacy edit, output, and validation plugins only.");
-        }
-        return false;
-    }
-    if (plugin.get_type() == QStringLiteral("input")) {
-        if (error) {
-            *error = tr("Input plugins currently require the legacy plugin runtime.");
-        }
-        return false;
-    }
     if (native_live && plugin.get_lifetime() != QStringLiteral("command")) {
         if (error) {
             *error = tr("Book-session plugins are not supported by this live runtime stage.");
@@ -51,6 +39,21 @@ bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
     connect(session, &PluginSession::Ended, this, [this, id]() {
         PluginSession *finished = m_Sessions.take(id);
         if (finished) {
+            const QString input_path = finished->PendingInputEpubPath();
+            finished->disconnect(this);
+            if (!input_path.isEmpty()) {
+                bool proceed = true;
+                if (m_MainWindow->GetCurrentBook()->IsModified()) {
+                    proceed = QMessageBox::question(
+                        m_MainWindow, tr("Input Plugin"),
+                        tr("Your current book will be completely replaced, losing any unsaved changes. Continue?"),
+                        QMessageBox::Yes | QMessageBox::No,
+                        QMessageBox::No) == QMessageBox::Yes;
+                }
+                if (proceed) {
+                    m_MainWindow->LoadFile(input_path, true);
+                }
+            }
             finished->deleteLater();
         }
     });

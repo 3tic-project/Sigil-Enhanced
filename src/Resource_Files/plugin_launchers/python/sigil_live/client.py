@@ -1,4 +1,6 @@
 import base64
+import hashlib
+import os
 import platform
 from dataclasses import dataclass
 
@@ -99,6 +101,78 @@ class BinaryReader:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
         return False
+
+
+class InputWriter:
+    """Chunked, integrity-checked EPUB upload owned by an input plugin."""
+
+    def __init__(self, rpc, filename, size=None):
+        self._rpc = rpc
+        params = {"filename": filename}
+        if size is not None:
+            params["size"] = size
+        result = rpc.call("input.beginEpub", params)
+        self.id = result["upload_id"]
+        self.chunk_size = result["chunk_size"]
+        self.max_size = result["max_size"]
+        self.received = 0
+        self._hash = hashlib.sha256()
+        self.finished = False
+
+    def write(self, data):
+        if self.finished:
+            raise RuntimeError("input upload is finished")
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError("EPUB data must be bytes-like")
+        value = memoryview(data)
+        for offset in range(0, len(value), self.chunk_size):
+            chunk = bytes(value[offset:offset + self.chunk_size])
+            if not chunk:
+                continue
+            result = self._rpc.call(
+                "input.writeChunk",
+                {
+                    "upload_id": self.id,
+                    "data_base64": base64.b64encode(chunk).decode("ascii"),
+                },
+            )
+            self._hash.update(chunk)
+            self.received = result["received"]
+        return self.received
+
+    def finish(self):
+        if self.finished:
+            raise RuntimeError("input upload is finished")
+        result = self._rpc.call(
+            "input.finishEpub",
+            {"upload_id": self.id, "sha256": self._hash.hexdigest()},
+        )
+        self.finished = True
+        return result
+
+
+class InputApi:
+    def __init__(self, rpc):
+        self._rpc = rpc
+
+    def begin_epub(self, filename, size=None):
+        return InputWriter(self._rpc, filename, size)
+
+    def submit_epub(self, data, filename="input.epub"):
+        writer = self.begin_epub(filename, len(data))
+        writer.write(data)
+        return writer.finish()
+
+    def submit_epub_file(self, path):
+        size = os.path.getsize(path)
+        writer = self.begin_epub(os.path.basename(path), size)
+        with open(path, "rb") as stream:
+            while True:
+                chunk = stream.read(writer.chunk_size)
+                if not chunk:
+                    break
+                writer.write(chunk)
+        return writer.finish()
 
 
 class Transaction:
@@ -579,6 +653,7 @@ class Plugin:
         self.book = BookApi(rpc)
         self.editor = EditorApi(rpc)
         self.validation = ValidationApi(rpc)
+        self.input = InputApi(rpc)
         self.ui = UiApi(rpc)
         self.events = EventsApi(rpc)
 

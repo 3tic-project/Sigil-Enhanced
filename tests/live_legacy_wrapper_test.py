@@ -7,7 +7,7 @@ import unittest
 LAUNCHER_ROOT = pathlib.Path(__file__).parents[1] / "src" / "Resource_Files" / "plugin_launchers" / "python"
 sys.path.insert(0, str(LAUNCHER_ROOT))
 
-from sigil_live.compat import LiveWrapper, WrapperException
+from sigil_live.compat import LiveInputWrapper, LiveWrapper, WrapperException
 
 
 PACKAGE = """<?xml version="1.0" encoding="utf-8"?>
@@ -152,6 +152,11 @@ class FakeBook:
 class FakePlugin:
     def __init__(self):
         self.book = FakeBook()
+        self.input = type("FakeInput", (), {})()
+        self.input.submissions = []
+        self.input.submit_epub = lambda data, filename: self.input.submissions.append(
+            (data, filename)
+        )
 
     def ping(self):
         return True
@@ -223,6 +228,16 @@ class LiveLegacyWrapperTest(unittest.TestCase):
     def test_added_other_paths_cannot_escape_the_book(self):
         with self.assertRaises(WrapperException):
             self.wrapper.addotherfile("../outside.txt", b"bad")
+
+    def test_input_wrapper_submits_only_epub_results_without_a_transaction(self):
+        wrapper = LiveInputWrapper(self.plugin, "/plugins/Test", "Test")
+        wrapper.addotherfile("converted.epub", b"PK\x03\x04book")
+        self.assertEqual(
+            self.plugin.input.submissions, [(b"PK\x03\x04book", "converted.epub")]
+        )
+        self.assertEqual(len(self.plugin.book.transactions), 1)
+        with self.assertRaises(WrapperException):
+            wrapper.addotherfile("not-a-book.zip", b"PK\x03\x04")
 
 
 if __name__ == "__main__":

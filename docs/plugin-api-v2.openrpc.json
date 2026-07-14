@@ -192,6 +192,48 @@
       "result": { "name": "result", "schema": { "type": "object", "required": ["closed"], "properties": { "closed": { "type": "boolean", "const": true } } } }
     },
     {
+      "name": "input.beginEpub",
+      "summary": "Begin a bounded, session-private EPUB upload for an input plugin.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "filename", "required": true, "schema": { "type": "string", "pattern": "^[^/\\\\]+\\.[eE][pP][uU][bB]$" } },
+        { "name": "size", "schema": { "type": "integer", "minimum": 0, "maximum": 2147483648 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["upload_id", "chunk_size", "max_size"], "properties": {
+        "upload_id": { "type": "string", "format": "uuid" },
+        "chunk_size": { "type": "integer", "minimum": 1, "maximum": 2097152 },
+        "max_size": { "type": "integer", "const": 2147483648 }
+      } } }
+    },
+    {
+      "name": "input.writeChunk",
+      "summary": "Append one base64-encoded chunk to an input EPUB upload.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "upload_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "data_base64", "required": true, "schema": { "type": "string", "contentEncoding": "base64" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["upload_id", "received"], "properties": {
+        "upload_id": { "type": "string", "format": "uuid" },
+        "received": { "type": "integer", "minimum": 1, "maximum": 2147483648 }
+      } } }
+    },
+    {
+      "name": "input.finishEpub",
+      "summary": "Verify and submit a completed EPUB upload for replacement after plugin success.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "upload_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "sha256", "required": true, "schema": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["accepted", "filename", "size", "sha256"], "properties": {
+        "accepted": { "type": "boolean", "const": true },
+        "filename": { "type": "string" },
+        "size": { "type": "integer", "minimum": 4, "maximum": 2147483648 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      } } }
+    },
+    {
       "name": "editor.getState",
       "summary": "Return active editor resource, revision, cursor, and selection.",
       "params": [],

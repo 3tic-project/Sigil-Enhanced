@@ -6,7 +6,7 @@ import unittest
 LAUNCHER_ROOT = pathlib.Path(__file__).parents[1] / "src" / "Resource_Files" / "plugin_launchers" / "python"
 sys.path.insert(0, str(LAUNCHER_ROOT))
 
-from sigil_live.client import BookApi, EditorApi, EventsApi, Resource, UiApi, ValidationApi
+from sigil_live.client import BookApi, EditorApi, EventsApi, InputApi, Resource, UiApi, ValidationApi
 from sigil_live.errors import PermissionDenied
 from sigil_live.rpc import RpcClient
 
@@ -112,6 +112,29 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual(
             [item["method"] for item in transport.sent],
             ["binary.openRead", "binary.readChunk", "binary.readChunk", "binary.close"],
+        )
+
+    def test_input_api_chunks_and_hashes_epub_uploads(self):
+        transport = FakeTransport(
+            [
+                {"jsonrpc": "2.0", "id": 1, "result": {
+                    "upload_id": "upload", "chunk_size": 4, "max_size": 100,
+                }},
+                {"jsonrpc": "2.0", "id": 2, "result": {"received": 4}},
+                {"jsonrpc": "2.0", "id": 3, "result": {"received": 6}},
+                {"jsonrpc": "2.0", "id": 4, "result": {"accepted": True}},
+            ]
+        )
+        self.assertTrue(InputApi(RpcClient(transport)).submit_epub(
+            b"PK\x03\x04ok", "converted.epub"
+        )["accepted"])
+        self.assertEqual(
+            [item["method"] for item in transport.sent],
+            ["input.beginEpub", "input.writeChunk", "input.writeChunk", "input.finishEpub"],
+        )
+        self.assertEqual(
+            transport.sent[-1]["params"]["sha256"],
+            "fb789d1e6f25f631f2a44d1cd635b3ba6e93708eca58ae6a12f6084af458c5ef",
         )
 
     def test_editor_selection_is_typed(self):

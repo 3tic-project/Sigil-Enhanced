@@ -76,7 +76,9 @@ class LiveLauncherCompatTest(unittest.TestCase):
         with mock.patch.object(live_launcher.Plugin, "connect", return_value=self.plugin), \
              mock.patch.object(live_launcher, "load_plugin", return_value=module), \
              mock.patch.object(sigil_live.compat, "LiveWrapper", FakeWrapper), \
+             mock.patch.object(sigil_live.compat, "LiveInputWrapper", FakeWrapper), \
              mock.patch.object(sigil_live.compat, "CompatBookContainer", FakeContainer), \
+             mock.patch.object(sigil_live.compat, "CompatInputContainer", FakeContainer), \
              mock.patch.object(sigil_live.compat, "CompatOutputContainer", FakeContainer), \
              mock.patch.object(sigil_live.compat, "CompatValidationContainer", FakeContainer), \
              mock.patch("sys.stderr", new_callable=io.StringIO):
@@ -122,6 +124,12 @@ class LiveLauncherCompatTest(unittest.TestCase):
         self.assertFalse(wrapper.writable)
         self.assertEqual((wrapper.commits, wrapper.rollbacks), (0, 0))
         self.assertEqual(len(observed), 1)
+
+    def test_input_success_uses_result_wrapper_without_a_book_commit(self):
+        result = self.launch(lambda container: 0, plugin_type="input")
+        wrapper = FakeWrapper.instances[0]
+        self.assertEqual(result, 0)
+        self.assertEqual((wrapper.commits, wrapper.rollbacks), (0, 0))
 
 
 if __name__ == "__main__":

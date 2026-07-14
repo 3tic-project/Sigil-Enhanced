@@ -268,9 +268,12 @@ before local copying so staged paths cannot escape a requested destination.
 launcher routes manager-selected legacy `edit` plugins through it and commits
 only after `run(container)` returns success. Legacy validation plugins receive
 the read-only `CompatValidationContainer`; their accumulated results are
-published to Sigil only after a successful return. Input/output completion
-remains tracked separately; the manager rejects those legacy plugin types when
-Live is selected.
+published to Sigil only after a successful return. Output plugins use the same
+read-only snapshot wrapper and retain `copy_book_contents_to()`. Input plugins
+use `LiveInputWrapper`: `addotherfile()` accepts an EPUB result, uploads it in
+bounded chunks, verifies its length and SHA-256 in the host, and replaces the
+current Book only after successful plugin completion and the existing unsaved
+changes confirmation.
 
 The compatibility wrapper enumerates the complete expanded EPUB through the
 archive-file API, so `other_iter()`, `readotherfile()`, staged replacement,

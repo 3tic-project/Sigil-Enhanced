@@ -21,8 +21,10 @@ RPC-backed `CompatBookContainer`, preserving the legacy entry point and public
 API. Success commits its implicit transaction; a nonzero return, exception,
 cancel, crash, or rejected commit rolls it back. Legacy validation plugins use
 a read-only compatibility container and publish structured results after
-success. Legacy input/output plugins remain on the legacy runtime until their
-result-file channels are complete.
+success. Legacy output plugins use the read-only compatibility wrapper. Legacy
+input plugins upload their resulting EPUB through a bounded, integrity-checked
+stream; after success, Sigil preserves the existing unsaved-change confirmation
+before replacing the current book.
 
 The complete v1 behavior and method inventory are documented in
 `LegacyPythonPluginSystem.md`. The legacy launcher and `BookContainer` remain
@@ -145,6 +147,7 @@ not construct the transport directly.
 | `session_info` | Negotiated session dictionary. |
 | `book` | `BookApi` instance. |
 | `editor` | `EditorApi` instance. |
+| `input` | `InputApi` instance for input plugins. |
 | `ping()` | `True` when the host responds. |
 | `finish(status, message)` | Normally called by the launcher. |
 
@@ -181,6 +184,20 @@ preferences compatibility.
 use it as a context manager so the session-owned temporary snapshot is removed
 immediately. Individual chunks are limited to 2 MiB; all remaining snapshots
 are removed when the plugin session ends.
+
+### `InputApi`
+
+| Method | Behavior |
+| --- | --- |
+| `begin_epub(filename, size=None)` | Create an `InputWriter` for a basename ending in `.epub`. |
+| `submit_epub(data, filename="input.epub")` | Upload a bytes-like EPUB in negotiated chunks and submit it. |
+| `submit_epub_file(path)` | Stream an EPUB file without reading the whole file into Python memory. |
+
+`InputWriter.write(data)` updates a client-side SHA-256 while sending chunks;
+`finish()` asks the host to verify that hash, the optional declared length, the
+2 GiB limit, and the ZIP signature. Only an input plugin with `input.submit`
+may use these methods. Submission does not replace the Book unless the plugin
+subsequently finishes successfully.
 
 ### `EditorApi`
 

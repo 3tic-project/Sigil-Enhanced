@@ -453,8 +453,21 @@ class CompatOutputContainer(OutputContainer):
     """V1 output container API surface for the live compatibility runtime."""
 
 
+class LiveInputWrapper(LiveWrapper):
+    """Read-only v1 wrapper that submits the input plugin's resulting EPUB."""
+
+    def __init__(self, plugin, plugin_dir, plugin_name, debug=False):
+        super().__init__(plugin, plugin_dir, plugin_name, writable=False, debug=debug)
+
+    def addotherfile(self, book_href, data):
+        filename = os.path.basename(_unicode_data(book_href))
+        if not filename.lower().endswith(".epub"):
+            raise WrapperException("Input plugins must return an .epub file")
+        self._plugin.input.submit_epub(_binary_data(data), filename)
+
+
 class CompatInputContainer(InputContainer):
-    """V1 input container API surface; live input execution is not wired yet."""
+    """V1 input container API surface backed by chunked EPUB submission."""
 
 
 class CompatValidationContainer(ValidationContainer):

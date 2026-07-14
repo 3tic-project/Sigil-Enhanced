@@ -61,6 +61,7 @@ namespace
 constexpr qsizetype MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024;
 constexpr qsizetype DEFAULT_BINARY_CHUNK_SIZE = 1024 * 1024;
 constexpr qsizetype MAX_BINARY_CHUNK_SIZE = 2 * 1024 * 1024;
+constexpr qint64 MAX_INPUT_EPUB_SIZE = 2LL * 1024 * 1024 * 1024;
 
 const QSet<QString> SUPPORTED_EVENTS {
     QStringLiteral("editor.activeChanged"),
@@ -405,6 +406,8 @@ PluginSession::PluginSession(const Plugin &plugin,
     m_Ending(false),
     m_EndSignalScheduled(false),
     m_Permissions(EffectivePermissions()),
+    m_InputEpubFile(nullptr),
+    m_InputEpubAccepted(false),
     m_BookRevision(1),
     m_InRequest(false)
 {
@@ -422,6 +425,12 @@ PluginSession::~PluginSession()
 QUuid PluginSession::SessionId() const
 {
     return m_SessionId;
+}
+
+QString PluginSession::PendingInputEpubPath() const
+{
+    return m_InputEpubAccepted && m_InputEpubFile
+        ? m_InputEpubFile->fileName() : QString();
 }
 
 bool PluginSession::Start(QString *error)
@@ -1067,6 +1076,127 @@ void PluginSession::Dispatch(const QJsonObject &request)
         delete stream->file;
         m_BinaryReadStreams.erase(stream);
         Respond(id, QJsonObject {{ QStringLiteral("closed"), true }});
+    } else if (method == QStringLiteral("input.beginEpub")) {
+        if (!RequirePermission(QStringLiteral("input.submit"), id)) return;
+        if (m_Plugin.get_type() != QStringLiteral("input")) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Only input plugins may submit an EPUB"));
+            return;
+        }
+        const QString filename = params.value(QStringLiteral("filename")).toString();
+        const QFileInfo filename_info(filename);
+        const QJsonValue expected_value = params.value(QStringLiteral("size"));
+        const qint64 expected_size = expected_value.isUndefined()
+            ? -1 : expected_value.toInteger(-1);
+        if (filename.isEmpty() || filename != filename_info.fileName()
+            || filename_info.suffix().compare(QStringLiteral("epub"), Qt::CaseInsensitive) != 0
+            || expected_size < -1 || expected_size > MAX_INPUT_EPUB_SIZE) {
+            RespondError(id, -32602,
+                         QStringLiteral("A basename ending in .epub and a valid size are required"));
+            return;
+        }
+        auto *file = new QTemporaryFile(
+            QDir::tempPath() + QStringLiteral("/sigil-plugin-input-XXXXXX.epub"), this);
+        if (!file->open()) {
+            const QString error = file->errorString();
+            delete file;
+            RespondError(id, PluginApi::UnsupportedOperation, error);
+            return;
+        }
+        const QString upload_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        InputUpload upload;
+        upload.file = file;
+        upload.filename = filename;
+        upload.expectedSize = expected_size;
+        m_InputUploads.insert(upload_id, upload);
+        Respond(id, QJsonObject {
+            { QStringLiteral("upload_id"), upload_id },
+            { QStringLiteral("chunk_size"), static_cast<qint64>(DEFAULT_BINARY_CHUNK_SIZE) },
+            { QStringLiteral("max_size"), MAX_INPUT_EPUB_SIZE }
+        });
+    } else if (method == QStringLiteral("input.writeChunk")) {
+        if (!RequirePermission(QStringLiteral("input.submit"), id)) return;
+        const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
+        auto upload = m_InputUploads.find(upload_id);
+        if (upload == m_InputUploads.end()) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Input upload not found"));
+            return;
+        }
+        const auto decoded = QByteArray::fromBase64Encoding(
+            params.value(QStringLiteral("data_base64")).toString().toLatin1(),
+            QByteArray::AbortOnBase64DecodingErrors);
+        if (decoded.decodingStatus != QByteArray::Base64DecodingStatus::Ok
+            || decoded.decoded.isEmpty() || decoded.decoded.size() > MAX_BINARY_CHUNK_SIZE) {
+            RespondError(id, -32602, QStringLiteral("Input chunk is empty, invalid, or too large"));
+            return;
+        }
+        if (upload->received + decoded.decoded.size() > MAX_INPUT_EPUB_SIZE
+            || (upload->expectedSize >= 0
+                && upload->received + decoded.decoded.size() > upload->expectedSize)) {
+            RespondError(id, PluginApi::PayloadTooLarge,
+                         QStringLiteral("Input EPUB exceeds its declared or maximum size"));
+            return;
+        }
+        if (upload->file->write(decoded.decoded) != decoded.decoded.size()) {
+            RespondError(id, PluginApi::UnsupportedOperation, upload->file->errorString());
+            return;
+        }
+        upload->received += decoded.decoded.size();
+        Respond(id, QJsonObject {
+            { QStringLiteral("upload_id"), upload_id },
+            { QStringLiteral("received"), upload->received }
+        });
+    } else if (method == QStringLiteral("input.finishEpub")) {
+        if (!RequirePermission(QStringLiteral("input.submit"), id)) return;
+        const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
+        const QString expected_sha256 = params.value(QStringLiteral("sha256")).toString().toLower();
+        auto upload = m_InputUploads.find(upload_id);
+        if (upload == m_InputUploads.end()) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Input upload not found"));
+            return;
+        }
+        if (expected_sha256.size() != 64
+            || std::any_of(expected_sha256.cbegin(), expected_sha256.cend(),
+                           [](QChar value) { return !value.isDigit()
+                               && (value < QLatin1Char('a') || value > QLatin1Char('f')); })) {
+            RespondError(id, -32602,
+                         QStringLiteral("sha256 must contain 64 hexadecimal characters"));
+            return;
+        }
+        if ((upload->expectedSize >= 0 && upload->received != upload->expectedSize)
+            || upload->received < 4 || !upload->file->flush() || !upload->file->seek(0)) {
+            RespondError(id, PluginApi::ValidationFailed,
+                         QStringLiteral("Input EPUB length does not match or could not be finalized"));
+            return;
+        }
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        QByteArray signature;
+        while (!upload->file->atEnd()) {
+            const QByteArray chunk = upload->file->read(DEFAULT_BINARY_CHUNK_SIZE);
+            if (signature.size() < 4) signature.append(chunk.left(4 - signature.size()));
+            if (chunk.isEmpty() && upload->file->error() != QFile::NoError) {
+                RespondError(id, PluginApi::UnsupportedOperation, upload->file->errorString());
+                return;
+            }
+            hash.addData(chunk);
+        }
+        const QString actual_sha256 = QString::fromLatin1(hash.result().toHex());
+        if (actual_sha256 != expected_sha256 || !signature.startsWith("PK")) {
+            RespondError(id, PluginApi::ValidationFailed,
+                         QStringLiteral("Input EPUB hash or ZIP signature is invalid"));
+            return;
+        }
+        if (m_InputEpubFile) delete m_InputEpubFile;
+        m_InputEpubFile = upload->file;
+        const qint64 size = upload->received;
+        const QString original_filename = upload->filename;
+        m_InputUploads.erase(upload);
+        Respond(id, QJsonObject {
+            { QStringLiteral("accepted"), true },
+            { QStringLiteral("filename"), original_filename },
+            { QStringLiteral("size"), size },
+            { QStringLiteral("sha256"), actual_sha256 }
+        });
     } else if (method == QStringLiteral("resource.readMany")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QJsonArray ids = params.value(QStringLiteral("resource_ids")).toArray();
@@ -2426,6 +2556,9 @@ QStringList PluginSession::EffectivePermissions() const
         if (m_Plugin.get_type() == QStringLiteral("validation")) {
             permissions << QStringLiteral("validation.publish");
         }
+        if (m_Plugin.get_type() == QStringLiteral("input")) {
+            permissions << QStringLiteral("input.submit");
+        }
         permissions << QStringLiteral("events.book") << QStringLiteral("events.editor");
     }
     return permissions;
@@ -2433,6 +2566,7 @@ QStringList PluginSession::EffectivePermissions() const
 
 void PluginSession::Finish(const QString &status, const QString &message)
 {
+    m_InputEpubAccepted = status == QStringLiteral("success") && m_InputEpubFile;
     m_Ending = true;
     if (!message.isEmpty() && m_Console) {
         m_Console->AppendOutput(message);
@@ -2454,6 +2588,10 @@ void PluginSession::CleanServer()
         delete stream.file;
     }
     m_BinaryReadStreams.clear();
+    for (const InputUpload &upload : std::as_const(m_InputUploads)) {
+        delete upload.file;
+    }
+    m_InputUploads.clear();
     if (m_Socket) {
         m_Socket->disconnect(this);
         m_Socket->disconnectFromServer();

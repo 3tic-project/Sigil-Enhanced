@@ -48,6 +48,7 @@ public:
     ~PluginSession() override;
 
     QUuid SessionId() const;
+    QString PendingInputEpubPath() const;
     bool Start(QString *error);
     void Cancel();
 
@@ -66,6 +67,13 @@ private:
         quint64 revision = 0;
         qint64 size = 0;
         QString sha256;
+    };
+
+    struct InputUpload {
+        QTemporaryFile *file = nullptr;
+        QString filename;
+        qint64 expectedSize = -1;
+        qint64 received = 0;
     };
 
     void Dispatch(const QJsonObject &request);
@@ -104,6 +112,9 @@ private:
     QSet<QString> m_Subscriptions;
     QHash<QString, quint64> m_ResourceRevisions;
     QHash<QString, BinaryReadStream> m_BinaryReadStreams;
+    QHash<QString, InputUpload> m_InputUploads;
+    QTemporaryFile *m_InputEpubFile;
+    bool m_InputEpubAccepted;
     quint64 m_BookRevision;
     bool m_InRequest;
     std::unique_ptr<PluginApi::TextTransaction> m_Transaction;
