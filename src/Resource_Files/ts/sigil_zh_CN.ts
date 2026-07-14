@@ -23638,4 +23638,21 @@ Continue using the requested filename?</source>
         <translation>黑方块♦</translation>
     </message>
 </context>
+<context>
+    <name>SafeArchiveExtractor</name>
+    <message><source>No error</source><translation>无错误</translation></message>
+    <message><source>Cannot open archive</source><translation>无法打开归档</translation></message>
+    <message><source>Invalid extraction destination</source><translation>解压目标无效</translation></message>
+    <message><source>Unsafe archive path</source><translation>归档路径不安全</translation></message>
+    <message><source>Duplicate archive path</source><translation>归档中存在重复路径</translation></message>
+    <message><source>Archive links are not allowed</source><translation>归档中不允许包含链接</translation></message>
+    <message><source>Archive file-count limit exceeded</source><translation>归档文件数量超出限制</translation></message>
+    <message><source>Archive single-file size limit exceeded</source><translation>归档单文件大小超出限制</translation></message>
+    <message><source>Archive total-size limit exceeded</source><translation>归档总解压大小超出限制</translation></message>
+    <message><source>Archive compression-ratio limit exceeded</source><translation>归档压缩比超出限制</translation></message>
+    <message><source>Cannot create extraction directory</source><translation>无法创建解压目录</translation></message>
+    <message><source>Cannot write extracted file</source><translation>无法写入解压文件</translation></message>
+    <message><source>Archive is corrupt or truncated</source><translation>归档已损坏或不完整</translation></message>
+    <message><source>Archive extraction cancelled</source><translation>归档解压已取消</translation></message>
+</context>
 </TS>

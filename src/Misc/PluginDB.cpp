@@ -25,10 +25,13 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStringList>
+#include <QTemporaryDir>
+#include <QUuid>
 #include <QXmlStreamReader>
 
 #include "Misc/Plugin.h"
 #include "Misc/PluginDB.h"
+#include "Misc/SafeArchiveExtractor.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
@@ -153,7 +156,6 @@ void PluginDB::load_plugins_from_disk(bool force)
 
 PluginDB::AddResult PluginDB::add_plugin(const QString &path, bool force)
 {
-    PluginDB::AddResult ret;
     QFileInfo zipinfo(path);
     QString name = zipinfo.baseName();
 
@@ -163,33 +165,63 @@ PluginDB::AddResult PluginDB::add_plugin(const QString &path, bool force)
         name.truncate(version_index);
     }
 
-    if (!verify_plugin_zip(path, name)) {
-        return PluginDB::AR_INVALID;
+    const QString targetPath = QDir(pluginsPath()).filePath(name);
+    if (QFileInfo::exists(targetPath) && !force) {
+        return PluginDB::AR_EXISTS;
     }
 
-    if (!Utility::UnZip(path, pluginsPath())) {
+    QTemporaryDir staging(QDir(pluginsPath()).filePath(".install-XXXXXX"));
+    if (!staging.isValid()) {
+        return PluginDB::AR_UNZIP;
+    }
+    const SafeArchiveExtractor::Result extractResult =
+        SafeArchiveExtractor::extract(path, staging.path());
+    if (!extractResult.ok) {
         return PluginDB::AR_UNZIP;
     }
 
-    ret = add_plugin_int(name, force);
-    //------------ modified: fix bug ------------------
-    // Fixed the bug that when adding a plugin with the same name exists, the plugin directory will be accidentally deleted.
-    /*
-    if (ret != PluginDB::AR_SUCCESS) {
-        // Couldn't load the plugin so remove it.
-        Utility::removeDir(pluginsPath() + "/" + name);
-    } else {
-        emit plugins_changed();
-    }*/
-    if (ret != PluginDB::AR_SUCCESS && ret != PluginDB::AR_EXISTS) {
-        Utility::removeDir(pluginsPath() + "/" + name);
+    bool hasPluginXml = false;
+    for (const SafeArchiveExtractor::Entry& entry : extractResult.entries) {
+        if (entry.path.section('/', 0, 0) != name) {
+            return PluginDB::AR_INVALID;
+        }
+        hasPluginXml = hasPluginXml || entry.path == name + "/plugin.xml";
     }
-    if (ret == PluginDB::AR_SUCCESS) {
-        emit plugins_changed();
+    const QString stagedPluginPath = QDir(staging.path()).filePath(name);
+    if (!hasPluginXml ||
+        !QFileInfo::exists(QDir(stagedPluginPath).filePath("plugin.xml"))) {
+        return PluginDB::AR_INVALID;
     }
-    //------------------------------------------------
 
-    return ret;
+    QString backupPath;
+    if (QFileInfo::exists(targetPath)) {
+        backupPath = QDir(pluginsPath()).filePath(
+            ".backup-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
+        if (!QDir().rename(targetPath, backupPath)) {
+            return PluginDB::AR_UNZIP;
+        }
+    }
+    if (!QDir().rename(stagedPluginPath, targetPath)) {
+        if (!backupPath.isEmpty()) {
+            QDir().rename(backupPath, targetPath);
+        }
+        return PluginDB::AR_UNZIP;
+    }
+
+    const PluginDB::AddResult result = add_plugin_int(name, force);
+    if (result != PluginDB::AR_SUCCESS) {
+        Utility::removeDir(targetPath);
+        if (!backupPath.isEmpty()) {
+            QDir().rename(backupPath, targetPath);
+        }
+        return result;
+    }
+    if (!backupPath.isEmpty()) {
+        Utility::removeDir(backupPath);
+    }
+
+    emit plugins_changed();
+    return PluginDB::AR_SUCCESS;
 }
 
 PluginDB::AddResult PluginDB::add_plugin_int(const QString &name, bool force)
@@ -212,24 +244,6 @@ PluginDB::AddResult PluginDB::add_plugin_int(const QString &name, bool force)
     m_plugins.insert(plugin->get_name(), plugin);
     return PluginDB::AR_SUCCESS;
 }
-
-bool PluginDB::verify_plugin_zip(const QString &path, const QString &name)
-{
-    QStringList filelist = Utility::ZipInspect(path);
-    if (filelist.isEmpty()) {
-        return false;
-    }
-    foreach (QString filepath, filelist) {
-        if (name != filepath.split("/").at(0)) {
-            return false;
-        }
-    }
-    if (!filelist.contains(name + "/" + "plugin.xml")) {
-        return false;
-    }
-    return true;
-}
-
 
 void PluginDB::remove_plugin(const QString &name)
 {

@@ -12,6 +12,8 @@ cmake_minimum_required( VERSION 3.18 )
 
 project( Sigil )
 
+include(CTest)
+
 # Change this URL if the location of the CI Windows Qt6 download ever changes
 set (WINQTURL "https://github.com/dougmassay/win-qtwebkit-5.212/releases/download/v5.212-1")
 
@@ -202,3 +204,6 @@ endif()
 
 add_subdirectory( 3rdparty/ )
 add_subdirectory( src/ )
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

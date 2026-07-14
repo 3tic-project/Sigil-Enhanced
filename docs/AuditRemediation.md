@@ -14,7 +14,7 @@ work in `todo/audit/06-整改路线图与验收标准.md`.
 | Singleton self-deletion | Complete | Eight destructors only clear their own registered instance pointer; Debug build passes |
 | FindReplacePlus double initialization | Complete | One initialization; all option lists are idempotent and have asserted counts |
 | CSSInfo leak | Complete | Inline style formatting uses scoped parser ownership; Debug build passes |
-| Safe archive paths and budgets | Pending | ZIP Slip and ZIP bomb cases fail safely; normal EPUB/plugin archives pass |
+| Safe archive paths and budgets | Complete | Shared extractor enforces path/resource limits; negative corpus and real EPUB/plugin fixtures pass |
 | Image hover preview | Pending | Background scaled decode, cancellation, bounded cache |
 | Book Browser fast clear | Pending | Batched removal with before/after measurements |
 
@@ -88,3 +88,59 @@ progress reporting, and resource transaction behavior are unchanged. Other
   `HTMLStyleInfo` or `BookReports` and have matching cleanup.
 - Build regression: `cmake --build cmake-build-debug -j2` passes.
 - The parser output call and `cssfold` option are unchanged; no UI or translation changes.
+
+## Safe Archive Extraction
+
+### Impact And Trust Boundary
+
+EPUB files and plugin ZIPs are untrusted inputs. Their former extraction loops used
+path string rewriting and had no file-count, expanded-size, or compression-ratio
+budget. A crafted archive could consume disk and UI time, and malformed path forms
+were handled differently between the two entry points. Plugins remain trusted local
+code after installation; this change secures installation, not plugin execution.
+
+### Change Boundary
+
+`SafeArchiveExtractor` is now the only writing extraction implementation used by
+EPUB import, plugin installation, and `Utility::UnZip`. It applies these defaults:
+
+| Boundary | Default |
+| --- | ---: |
+| Entries | 100,000 |
+| Single expanded file | 2 GiB |
+| Total expanded data | min(8 GiB, archive size x 200) |
+| Per-file compression ratio | 200:1 |
+| Path depth | 64 segments |
+| Path length | 1,024 characters |
+
+Paths are normalized to NFC and must remain lexically below the destination.
+Absolute, drive, UNC/backslash, empty, dot, parent, colon, trailing-dot/space, and
+Windows device-name segments are rejected. Duplicate normalized paths, platform
+case collisions, symbolic-link entries, and existing parent symlinks are rejected.
+UTF-8 names are decoded strictly and legacy names use a local CP437 table.
+
+Declared sizes are checked before each write and actual streamed bytes are checked
+again while writing. Files use `QSaveFile`; any error, CRC mismatch, budget breach,
+or cancellation removes content created by that extraction. Existing destination
+files are never overwritten. Plugin ZIPs extract into a same-filesystem temporary
+directory, validate their single top-level folder and `plugin.xml`, then commit by
+rename. Forced updates keep a backup and restore it if loading the replacement fails.
+
+### Verification
+
+- `safe_archive_extractor_test` covers normal EPUB-like and plugin layouts; parent,
+  absolute, drive, backslash, empty-segment, device-name, and symlink-parent paths;
+  Unicode normalization; duplicate paths; file-count, single-file, total-size,
+  compression-ratio, depth, and length budgets; cancellation; and partial cleanup.
+- Repository fixtures `docs/testplugin_v020.zip` and
+  `docs/Sigil_Plugin_Framework_rev15.epub` extract successfully.
+- `ctest --test-dir cmake-build-debug --output-on-failure` passes.
+- A separate AddressSanitizer build passes the same test corpus; leak detection is
+  disabled because the macOS ASan runtime reports it as unsupported.
+- `cmake --build cmake-build-debug -j2` passes, including Simplified and Traditional
+  Chinese catalogs for every new user-visible archive error.
+
+The cancellation callback is implemented and tested, but current synchronous EPUB
+and plugin callers do not yet expose a UI cancel control. Archive processing has no
+EPUB undo transaction; a failed import cleans its files, while plugin replacement is
+handled by the staging/backup transaction described above.

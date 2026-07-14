@@ -23037,4 +23037,21 @@ Continue using the requested filename?</source>
         <translation>黑鑽石</translation>
     </message>
 </context>
+<context>
+    <name>SafeArchiveExtractor</name>
+    <message><source>No error</source><translation>無錯誤</translation></message>
+    <message><source>Cannot open archive</source><translation>無法開啟封存檔</translation></message>
+    <message><source>Invalid extraction destination</source><translation>解壓縮目標無效</translation></message>
+    <message><source>Unsafe archive path</source><translation>封存檔路徑不安全</translation></message>
+    <message><source>Duplicate archive path</source><translation>封存檔中有重複路徑</translation></message>
+    <message><source>Archive links are not allowed</source><translation>封存檔中不允許包含連結</translation></message>
+    <message><source>Archive file-count limit exceeded</source><translation>封存檔檔案數量超出限制</translation></message>
+    <message><source>Archive single-file size limit exceeded</source><translation>封存檔單一檔案大小超出限制</translation></message>
+    <message><source>Archive total-size limit exceeded</source><translation>封存檔總解壓縮大小超出限制</translation></message>
+    <message><source>Archive compression-ratio limit exceeded</source><translation>封存檔壓縮比超出限制</translation></message>
+    <message><source>Cannot create extraction directory</source><translation>無法建立解壓縮目錄</translation></message>
+    <message><source>Cannot write extracted file</source><translation>無法寫入解壓縮檔案</translation></message>
+    <message><source>Archive is corrupt or truncated</source><translation>封存檔已損壞或不完整</translation></message>
+    <message><source>Archive extraction cancelled</source><translation>封存檔解壓縮已取消</translation></message>
+</context>
 </TS>

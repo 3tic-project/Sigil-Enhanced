@@ -81,12 +81,18 @@ void PluginWidget::reInstallPlugin(QString zippath)
     }
 
     PluginDB* pdb = PluginDB::instance();
-    Utility::removeDir(pdb->pluginsPath() + "/" + pluginname);
-
     PluginDB::AddResult ar = pdb->add_plugin(zippath, true);
     switch (ar) {
     case PluginDB::AR_XML:
         Utility::DisplayStdWarningDialog(tr("Error: Plugin plugin.xml is invalid or not supported on your operating system."));
+        return;
+    case PluginDB::AR_UNZIP:
+        Utility::DisplayStdWarningDialog(tr("Error: Plugin Could Not be Unzipped."));
+        return;
+    case PluginDB::AR_INVALID:
+        Utility::DisplayStdWarningDialog(tr("Error: Plugin not a valid Sigil plugin."));
+        return;
+    case PluginDB::AR_EXISTS:
         return;
     case PluginDB::AR_SUCCESS:
         break;

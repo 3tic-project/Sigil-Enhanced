@@ -397,6 +397,8 @@ set( MISC_FILES
     Misc/URLSchemeHandler.h
     Misc/ResourceInsertion.cpp
     Misc/ResourceInsertion.h
+    Misc/SafeArchiveExtractor.cpp
+    Misc/SafeArchiveExtractor.h
     Misc/Utility.cpp
     Misc/UtilityExt.cpp
     Misc/Utility.h
