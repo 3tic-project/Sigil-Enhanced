@@ -606,7 +606,9 @@ void FolderKeeper::RemoveWithoutUpdatingOPF(Resource* resource)
     resource->Delete();
 }
 
-void FolderKeeper::BulkRenameResources(const QList<Resource *> resources, const QStringList &newnames)
+void FolderKeeper::BulkRenameResources(const QList<Resource *> resources,
+                                       const QStringList &newnames,
+                                       bool update_opf)
 {
     bool in_bulk = true;
     QHash<QString, Resource*> renamedDict;
@@ -622,7 +624,7 @@ void FolderKeeper::BulkRenameResources(const QList<Resource *> resources, const 
             m_Path2Resource[newbookpath] = rsc;
         }
     }
-    m_OPF->BulkResourcesRenamed(renamedDict);
+    if (update_opf) m_OPF->BulkResourcesRenamed(renamedDict);
     updateShortPathNames();
 }
 
@@ -642,7 +644,9 @@ void FolderKeeper::ResourceRenamed(const Resource *resource, const QString &old_
 }
 
 
-void FolderKeeper::BulkMoveResources(const QList<Resource *>resources, const QStringList &newpaths)
+void FolderKeeper::BulkMoveResources(const QList<Resource *>resources,
+                                     const QStringList &newpaths,
+                                     bool update_opf)
 {
     bool in_bulk = true;
     QHash<QString, Resource*> movedDict;
@@ -657,7 +661,7 @@ void FolderKeeper::BulkMoveResources(const QList<Resource *>resources, const QSt
             m_Path2Resource[pnew] = rsc;
         }
     }
-    m_OPF->BulkResourcesMoved(movedDict);
+    if (update_opf) m_OPF->BulkResourcesMoved(movedDict);
     updateShortPathNames();
 }
 

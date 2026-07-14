@@ -168,6 +168,42 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual(transport.sent[0]["method"], "transaction.writeBinary")
         self.assertEqual(transport.sent[0]["params"]["data_base64"], "AP8=")
 
+    def test_structure_transaction_maps_resource_operations(self):
+        responses = [
+            {"jsonrpc": "2.0", "id": index, "result": {"staged": True}}
+            for index in range(1, 5)
+        ]
+        transport = FakeTransport(responses)
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        tx.add_resource(
+            "OEBPS/Text/new.xhtml",
+            "<html/>",
+            "application/xhtml+xml",
+            manifest_id="new_chapter",
+        )
+        resource = Resource(
+            "resource", "OEBPS/Text/old.xhtml", "application/xhtml+xml", "html", 4, True
+        )
+        tx.rename_resource(resource, "renamed.xhtml")
+        tx.move_resource(resource, "OEBPS/Appendix/renamed.xhtml")
+        tx.remove_resource(resource)
+        self.assertEqual(
+            [request["method"] for request in transport.sent],
+            [
+                "transaction.addResource",
+                "transaction.renameResource",
+                "transaction.moveResource",
+                "transaction.removeResource",
+            ],
+        )
+        self.assertEqual(transport.sent[0]["params"]["text"], "<html/>")
+        self.assertEqual(transport.sent[1]["params"]["expected_revision"], 4)
+
 
 if __name__ == "__main__":
     unittest.main()

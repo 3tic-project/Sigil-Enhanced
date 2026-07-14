@@ -73,6 +73,24 @@ int main()
     Require(revision == 3, "staged binary read did not preserve base revision");
     Require(transaction.BinaryChanges().size() == 1, "binary staging count is wrong");
 
+    PluginApi::StagedResourceAddition addition;
+    addition.stagingId = QStringLiteral("new:1");
+    addition.bookPath = QStringLiteral("OEBPS/Text/new.xhtml");
+    addition.mediaType = QStringLiteral("application/xhtml+xml");
+    addition.manifestId = QStringLiteral("new_chapter");
+    addition.data = QByteArray("<html/>");
+    Require(transaction.AddResource(addition, &error), "resource addition was not staged");
+    Require(!transaction.AddResource(addition, &error), "duplicate resource addition was accepted");
+    Require(transaction.RemoveResource(QStringLiteral("old"), 9, &error),
+            "resource removal was not staged");
+    Require(transaction.RelocateResource(QStringLiteral("css"),
+                                         QStringLiteral("OEBPS/Styles/a.css"),
+                                         QStringLiteral("OEBPS/Styles/b.css"), 5, &error),
+            "resource relocation was not staged");
+    Require(transaction.Additions().size() == 1 && transaction.Removals().size() == 1
+                && transaction.Relocations().size() == 1,
+            "structure staging counts are wrong");
+
     transaction.Clear();
     Require(transaction.IsEmpty(), "rollback did not discard staged data");
     return EXIT_SUCCESS;

@@ -264,9 +264,11 @@ public slots:
 
     void BulkRemoveResources(const QList<Resource *> resources);
 
-    void BulkMoveResources(const QList<Resource *>resources, const QStringList &newpaths);
+    void BulkMoveResources(const QList<Resource *>resources, const QStringList &newpaths,
+                           bool update_opf = true);
 
-    void BulkRenameResources(const QList<Resource *> resources, const QStringList &newnames);
+    void BulkRenameResources(const QList<Resource *> resources, const QStringList &newnames,
+                             bool update_opf = true);
 
     void BulkAddResourcesToOPF(const QList<Resource*>resources);
 
@@ -448,4 +450,3 @@ bool FolderKeeper::PointerLessThan(T *first_item, T *second_item)
     return *first_item < *second_item;
 }
 #endif // FOLDERKEEPER_H
-

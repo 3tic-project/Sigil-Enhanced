@@ -192,17 +192,26 @@ edit block.
 | `apply_edits(resource, edits, expected_revision=None)` | Compose patches against staged content. |
 | `read_binary(resource)` | Read staged binary data when present. |
 | `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 5 MiB. |
+| `add_resource(book_path, data, media_type, ...)` | Stage a manifested or unmanifested resource addition. |
+| `remove_resource(resource, expected_revision=None)` | Stage removal while protecting OPF, nav, and the last XHTML. |
+| `move_resource(resource, book_path, expected_revision=None)` | Stage a canonical Book-path relocation. |
+| `rename_resource(resource, filename, expected_revision=None)` | Stage a filename change in the current folder. |
 | `validate()` | Return conflicts without changing the Book. |
 | `preview()` | Return counts and before/after lengths without changing the Book. |
 | `commit()` | Revalidate, optionally checkpoint, and apply once per resource. |
 | `rollback()` | Discard all staged data. |
 
-The current transaction implementation supports existing text and binary
-resources. Binary commits always require one Checkpoint and use `QSaveFile` for
-replacement. `addResource`, `removeResource`, `renameResource`,
-`moveResource`, metadata, and spine methods are intentionally not exposed
-until the deferred OPF structure path is complete. Larger binary resources
-will use a later chunk API rather than increasing the JSON message limit.
+The transaction implementation supports existing text/binary resources and
+staged add/remove/move/rename operations. Binary and structure commits always
+require one Checkpoint. A structural commit materializes additions, performs
+filesystem relocation with OPF updates suppressed, parses and writes the OPF
+once through `ApplyResourceBatch`, applies `UniversalUpdates` to non-OPF
+references, then removes staged resources. Relocation cannot be combined with
+staged text writes because the latter could overwrite link corrections.
+
+Metadata and explicit spine replacement methods remain separate work. Larger
+binary resources will use a later chunk API rather than increasing the JSON
+message limit.
 
 ## Revision and position rules
 

@@ -142,6 +142,83 @@ class Transaction:
             ),
         )
 
+    def add_resource(
+        self,
+        book_path,
+        data,
+        media_type,
+        manifest_id=None,
+        properties=None,
+        fallback=None,
+        overlay=None,
+        add_to_spine=True,
+        manifested=True,
+    ):
+        params = {
+            "book_path": book_path,
+            "media_type": media_type,
+            "manifest_id": manifest_id,
+            "properties": properties,
+            "fallback": fallback,
+            "overlay": overlay,
+            "add_to_spine": add_to_spine,
+            "manifested": manifested,
+        }
+        if isinstance(data, str):
+            params["text"] = data
+        elif isinstance(data, (bytes, bytearray, memoryview)):
+            params["data_base64"] = base64.b64encode(bytes(data)).decode("ascii")
+        else:
+            raise TypeError("resource data must be str or bytes-like")
+        return self._rpc.call("transaction.addResource", self._params(params))
+
+    def remove_resource(self, resource, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            if not isinstance(resource, Resource):
+                raise ValueError("expected_revision is required when resource is an ID")
+            expected_revision = resource.revision
+        return self._rpc.call(
+            "transaction.removeResource",
+            self._params(
+                {"resource_id": resource_id, "expected_revision": expected_revision}
+            ),
+        )
+
+    def move_resource(self, resource, book_path, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            if not isinstance(resource, Resource):
+                raise ValueError("expected_revision is required when resource is an ID")
+            expected_revision = resource.revision
+        return self._rpc.call(
+            "transaction.moveResource",
+            self._params(
+                {
+                    "resource_id": resource_id,
+                    "book_path": book_path,
+                    "expected_revision": expected_revision,
+                }
+            ),
+        )
+
+    def rename_resource(self, resource, filename, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            if not isinstance(resource, Resource):
+                raise ValueError("expected_revision is required when resource is an ID")
+            expected_revision = resource.revision
+        return self._rpc.call(
+            "transaction.renameResource",
+            self._params(
+                {
+                    "resource_id": resource_id,
+                    "filename": filename,
+                    "expected_revision": expected_revision,
+                }
+            ),
+        )
+
     def validate(self):
         return self._rpc.call("transaction.validate", self._params())
 

@@ -31,6 +31,31 @@ struct StagedBinaryChange {
     quint64 baseRevision = 0;
 };
 
+struct StagedResourceAddition {
+    QString stagingId;
+    QString bookPath;
+    QString mediaType;
+    QString manifestId;
+    QString properties;
+    QString fallback;
+    QString overlay;
+    QByteArray data;
+    bool manifested = true;
+    bool addToSpine = true;
+};
+
+struct StagedResourceRemoval {
+    QString resourceId;
+    quint64 baseRevision = 0;
+};
+
+struct StagedResourceRelocation {
+    QString resourceId;
+    QString originalBookPath;
+    QString targetBookPath;
+    quint64 baseRevision = 0;
+};
+
 class TextTransaction
 {
 public:
@@ -76,8 +101,19 @@ public:
                        const QByteArray &replacement,
                        QString *error);
 
+    bool AddResource(const StagedResourceAddition &addition, QString *error);
+    bool RemoveResource(const QString &resource_id, quint64 base_revision, QString *error);
+    bool RelocateResource(const QString &resource_id,
+                          const QString &original_book_path,
+                          const QString &target_book_path,
+                          quint64 base_revision,
+                          QString *error);
+
     QList<StagedTextChange> Changes() const;
     QList<StagedBinaryChange> BinaryChanges() const;
+    QList<StagedResourceAddition> Additions() const;
+    QList<StagedResourceRemoval> Removals() const;
+    QList<StagedResourceRelocation> Relocations() const;
     void Clear();
 
 private:
@@ -87,6 +123,9 @@ private:
     quint64 m_BaseBookRevision;
     QHash<QString, StagedTextChange> m_Changes;
     QHash<QString, StagedBinaryChange> m_BinaryChanges;
+    QHash<QString, StagedResourceAddition> m_Additions;
+    QHash<QString, StagedResourceRemoval> m_Removals;
+    QHash<QString, StagedResourceRelocation> m_Relocations;
 };
 
 } // namespace PluginApi

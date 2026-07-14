@@ -47,12 +47,14 @@ quint64 TextTransaction::BaseBookRevision() const
 
 bool TextTransaction::IsEmpty() const
 {
-    return m_Changes.isEmpty() && m_BinaryChanges.isEmpty();
+    return m_Changes.isEmpty() && m_BinaryChanges.isEmpty() && m_Additions.isEmpty()
+        && m_Removals.isEmpty() && m_Relocations.isEmpty();
 }
 
 int TextTransaction::Size() const
 {
-    return m_Changes.size() + m_BinaryChanges.size();
+    return m_Changes.size() + m_BinaryChanges.size() + m_Additions.size()
+        + m_Removals.size() + m_Relocations.size();
 }
 
 bool TextTransaction::HasChange(const QString &resource_id) const
@@ -171,6 +173,61 @@ bool TextTransaction::ReplaceBinary(const QString &resource_id,
     return true;
 }
 
+bool TextTransaction::AddResource(const StagedResourceAddition &addition, QString *error)
+{
+    if (addition.stagingId.isEmpty() || addition.bookPath.isEmpty()
+        || addition.mediaType.isEmpty()
+        || (addition.manifested && addition.manifestId.isEmpty())) {
+        if (error) *error = QStringLiteral("Added resource fields are incomplete");
+        return false;
+    }
+    for (const StagedResourceAddition &existing : m_Additions) {
+        if (existing.bookPath == addition.bookPath
+            || (addition.manifested && existing.manifested
+                && existing.manifestId == addition.manifestId)) {
+            if (error) *error = QStringLiteral("Added resource path or manifest ID is duplicated");
+            return false;
+        }
+    }
+    m_Additions.insert(addition.stagingId, addition);
+    return true;
+}
+
+bool TextTransaction::RemoveResource(const QString &resource_id,
+                                     quint64 base_revision,
+                                     QString *error)
+{
+    if (resource_id.isEmpty() || m_Relocations.contains(resource_id)) {
+        if (error) *error = QStringLiteral("Resource cannot be removed after relocation");
+        return false;
+    }
+    m_Removals.insert(resource_id, StagedResourceRemoval { resource_id, base_revision });
+    return true;
+}
+
+bool TextTransaction::RelocateResource(const QString &resource_id,
+                                       const QString &original_book_path,
+                                       const QString &target_book_path,
+                                       quint64 base_revision,
+                                       QString *error)
+{
+    if (resource_id.isEmpty() || original_book_path.isEmpty() || target_book_path.isEmpty()
+        || m_Removals.contains(resource_id)) {
+        if (error) *error = QStringLiteral("Resource cannot be relocated");
+        return false;
+    }
+    for (const StagedResourceRelocation &existing : m_Relocations) {
+        if (existing.resourceId != resource_id && existing.targetBookPath == target_book_path) {
+            if (error) *error = QStringLiteral("Relocation target is duplicated");
+            return false;
+        }
+    }
+    m_Relocations.insert(resource_id, StagedResourceRelocation {
+        resource_id, original_book_path, target_book_path, base_revision
+    });
+    return true;
+}
+
 QList<StagedTextChange> TextTransaction::Changes() const
 {
     QList<StagedTextChange> result = m_Changes.values();
@@ -191,10 +248,43 @@ QList<StagedBinaryChange> TextTransaction::BinaryChanges() const
     return result;
 }
 
+QList<StagedResourceAddition> TextTransaction::Additions() const
+{
+    QList<StagedResourceAddition> result = m_Additions.values();
+    std::sort(result.begin(), result.end(), [](const StagedResourceAddition &left,
+                                               const StagedResourceAddition &right) {
+        return left.bookPath < right.bookPath;
+    });
+    return result;
+}
+
+QList<StagedResourceRemoval> TextTransaction::Removals() const
+{
+    QList<StagedResourceRemoval> result = m_Removals.values();
+    std::sort(result.begin(), result.end(), [](const StagedResourceRemoval &left,
+                                               const StagedResourceRemoval &right) {
+        return left.resourceId < right.resourceId;
+    });
+    return result;
+}
+
+QList<StagedResourceRelocation> TextTransaction::Relocations() const
+{
+    QList<StagedResourceRelocation> result = m_Relocations.values();
+    std::sort(result.begin(), result.end(), [](const StagedResourceRelocation &left,
+                                               const StagedResourceRelocation &right) {
+        return left.resourceId < right.resourceId;
+    });
+    return result;
+}
+
 void TextTransaction::Clear()
 {
     m_Changes.clear();
     m_BinaryChanges.clear();
+    m_Additions.clear();
+    m_Removals.clear();
+    m_Relocations.clear();
 }
 
 } // namespace PluginApi

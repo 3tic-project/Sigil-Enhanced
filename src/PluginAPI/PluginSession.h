@@ -66,6 +66,7 @@ private:
     QJsonObject ResourceInfo(Resource *resource) const;
     Resource *ResolveResource(const QString &resource_id) const;
     TextResource *ResolveTextResource(const QString &resource_id) const;
+    void TrackResource(Resource *resource);
     PluginApi::TextTransaction *RequireTransaction(const QJsonObject &params,
                                                    const QJsonValue &request_id);
     quint64 Revision(Resource *resource) const;

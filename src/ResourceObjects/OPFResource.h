@@ -37,6 +37,15 @@ class HTMLResource;
 class ImageResource;
 class NCXResource;
 
+struct ManifestResourceAddition {
+    Resource *resource = nullptr;
+    QString manifestId;
+    QString properties;
+    QString fallback;
+    QString overlay;
+    bool addToSpine = true;
+};
+
 
 class OPFResource : public XMLResource
 {
@@ -182,6 +191,11 @@ public slots:
 
     void RemoveResource(const Resource *resource);
     void BulkRemoveResources(const QList<Resource *>resources);
+
+    bool ApplyResourceBatch(const QList<ManifestResourceAddition> &additions,
+                            const QList<Resource *> &removals,
+                            const QHash<QString, Resource *> &relocations,
+                            QString *error = nullptr);
 
     void AddGuideSemanticCode(HTMLResource *html_resource, QString code, bool toggle = true, QString tgt_id="");
 

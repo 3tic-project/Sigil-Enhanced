@@ -219,6 +219,60 @@
       "result": { "name": "result", "schema": { "type": "object" } }
     },
     {
+      "name": "transaction.addResource",
+      "summary": "Stage a manifested or unmanifested text/binary resource addition.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "book_path", "required": true, "schema": { "type": "string" } },
+        { "name": "media_type", "required": true, "schema": { "type": "string" } },
+        { "name": "manifest_id", "schema": { "type": ["string", "null"] } },
+        { "name": "text", "schema": { "type": "string" } },
+        { "name": "data_base64", "schema": { "type": "string", "contentEncoding": "base64" } },
+        { "name": "properties", "schema": { "type": ["string", "null"] } },
+        { "name": "fallback", "schema": { "type": ["string", "null"] } },
+        { "name": "overlay", "schema": { "type": ["string", "null"] } },
+        { "name": "add_to_spine", "schema": { "type": "boolean", "default": true } },
+        { "name": "manifested", "schema": { "type": "boolean", "default": true } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.removeResource",
+      "summary": "Stage removal of an existing resource.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.moveResource",
+      "summary": "Stage relocation to a canonical unoccupied Book path.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "book_path", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.renameResource",
+      "summary": "Stage a filename change in the current resource folder.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "filename", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
       "name": "transaction.replaceText",
       "summary": "Stage a complete text replacement without changing the Book.",
       "paramStructure": "by-name",
