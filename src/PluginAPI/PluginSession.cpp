@@ -30,6 +30,7 @@
 #include "Misc/SettingsStore.h"
 #include "PluginAPI/PluginSessionConsole.h"
 #include "PluginAPI/PluginTextEdit.h"
+#include "PluginAPI/PluginTextTransaction.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
@@ -75,6 +76,19 @@ bool ReadPosition(const QJsonObject &params, const QString &name, int *position)
         return false;
     }
     *position = static_cast<int>(number);
+    return true;
+}
+
+bool ReadRevision(const QJsonObject &params, const QString &name, quint64 *revision)
+{
+    const QJsonValue value = params.value(name);
+    if (!value.isDouble()) return false;
+    const double number = value.toDouble();
+    if (!std::isfinite(number) || std::floor(number) != number
+        || number < 0 || number > static_cast<double>(std::numeric_limits<qint64>::max())) {
+        return false;
+    }
+    *revision = static_cast<quint64>(number);
     return true;
 }
 
@@ -436,6 +450,227 @@ void PluginSession::Dispatch(const QJsonObject &request)
             });
         }
         Respond(id, QJsonObject {{ QStringLiteral("items"), items }});
+    } else if (method == QStringLiteral("transaction.begin")) {
+        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
+        if (m_Transaction) {
+            RespondError(id, PluginApi::Busy, QStringLiteral("A transaction is already active"));
+            return;
+        }
+        const QString visibility = params.value(QStringLiteral("visibility"))
+            .toString(QStringLiteral("staged"));
+        const QString checkpoint = params.value(QStringLiteral("checkpoint"))
+            .toString(QStringLiteral("auto"));
+        if (visibility != QStringLiteral("staged")
+            || (checkpoint != QStringLiteral("none")
+                && checkpoint != QStringLiteral("auto")
+                && checkpoint != QStringLiteral("required"))) {
+            RespondError(id, -32602, QStringLiteral("Invalid transaction policy"));
+            return;
+        }
+        const QString transaction_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        m_Transaction = std::make_unique<PluginApi::TextTransaction>(
+            transaction_id,
+            params.value(QStringLiteral("label")).toString(QStringLiteral("Plugin changes")),
+            checkpoint, m_BookRevision);
+        Respond(id, QJsonObject {
+            { QStringLiteral("transaction_id"), transaction_id },
+            { QStringLiteral("base_book_revision"), static_cast<qint64>(m_BookRevision) },
+            { QStringLiteral("visibility"), QStringLiteral("staged") },
+            { QStringLiteral("checkpoint"), checkpoint }
+        });
+    } else if (method == QStringLiteral("transaction.readText")) {
+        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        TextResource *resource = ResolveTextResource(params.value(QStringLiteral("resource_id")).toString());
+        if (!resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Text resource not found"));
+            return;
+        }
+        resource->InitialLoad();
+        quint64 revision = 0;
+        const QString text = transaction->ReadText(resource->GetIdentifier(), resource->GetText(),
+                                                   Revision(resource), &revision);
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), resource->GetIdentifier() },
+            { QStringLiteral("text"), text },
+            { QStringLiteral("revision"), static_cast<qint64>(revision) },
+            { QStringLiteral("staged"), transaction->HasChange(resource->GetIdentifier()) }
+        });
+    } else if (method == QStringLiteral("transaction.replaceText")
+               || method == QStringLiteral("transaction.applyTextEdits")) {
+        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        TextResource *resource = ResolveTextResource(params.value(QStringLiteral("resource_id")).toString());
+        if (!resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Text resource not found"));
+            return;
+        }
+        if (resource->Type() == Resource::OPFResourceType) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("OPF changes require the structure transaction API"));
+            return;
+        }
+        quint64 expected_revision = 0;
+        if (!ReadRevision(params, QStringLiteral("expected_revision"), &expected_revision)) {
+            RespondError(id, -32602, QStringLiteral("expected_revision must be a non-negative integer"));
+            return;
+        }
+        if (method == QStringLiteral("transaction.replaceText")
+            && !params.value(QStringLiteral("text")).isString()) {
+            RespondError(id, -32602, QStringLiteral("Text must be a string"));
+            return;
+        }
+        resource->InitialLoad();
+        quint64 required_revision = 0;
+        transaction->ReadText(resource->GetIdentifier(), resource->GetText(), Revision(resource),
+                              &required_revision);
+        if (expected_revision != required_revision) {
+            RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"),
+                         QJsonObject {
+                             { QStringLiteral("expected"), static_cast<qint64>(expected_revision) },
+                             { QStringLiteral("actual"), static_cast<qint64>(required_revision) },
+                             { QStringLiteral("resource_id"), resource->GetIdentifier() }
+                         });
+            return;
+        }
+        QString stage_error;
+        const bool staged = method == QStringLiteral("transaction.replaceText")
+            ? transaction->ReplaceText(resource->GetIdentifier(), resource->GetText(), Revision(resource),
+                                       expected_revision, params.value(QStringLiteral("text")).toString(),
+                                       &stage_error)
+            : transaction->ApplyEdits(resource->GetIdentifier(), resource->GetText(), Revision(resource),
+                                      expected_revision, params.value(QStringLiteral("edits")).toArray(),
+                                      &stage_error);
+        if (!staged) {
+            RespondError(id, PluginApi::InvalidPatch, stage_error);
+            return;
+        }
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), resource->GetIdentifier() },
+            { QStringLiteral("base_revision"), static_cast<qint64>(required_revision) },
+            { QStringLiteral("staged"), true }
+        });
+    } else if (method == QStringLiteral("transaction.validate")
+               || method == QStringLiteral("transaction.preview")) {
+        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        QJsonArray conflicts;
+        QJsonArray text_changes;
+        int modified = 0;
+        for (const PluginApi::StagedTextChange &change : transaction->Changes()) {
+            Resource *resource = ResolveResource(change.resourceId);
+            const quint64 actual = resource ? Revision(resource) : 0;
+            if (!resource || actual != change.baseRevision) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("resource_id"), change.resourceId },
+                    { QStringLiteral("expected"), static_cast<qint64>(change.baseRevision) },
+                    { QStringLiteral("actual"), resource ? QJsonValue(static_cast<qint64>(actual)) : QJsonValue() }
+                });
+            }
+            if (change.originalText != change.stagedText) {
+                ++modified;
+                text_changes.append(QJsonObject {
+                    { QStringLiteral("resource_id"), change.resourceId },
+                    { QStringLiteral("before_length"), change.originalText.size() },
+                    { QStringLiteral("after_length"), change.stagedText.size() }
+                });
+            }
+        }
+        QJsonObject result {
+            { QStringLiteral("transaction_id"), transaction->Id() },
+            { QStringLiteral("valid"), conflicts.isEmpty() },
+            { QStringLiteral("conflicts"), conflicts },
+            { QStringLiteral("summary"), QJsonObject {
+                { QStringLiteral("modified"), modified },
+                { QStringLiteral("added"), 0 },
+                { QStringLiteral("deleted"), 0 },
+                { QStringLiteral("renamed"), 0 }
+            } }
+        };
+        if (method == QStringLiteral("transaction.preview")) {
+            result.insert(QStringLiteral("text_changes"), text_changes);
+            result.insert(QStringLiteral("binary_changes"), QJsonArray());
+            result.insert(QStringLiteral("opf_changes"), QJsonArray());
+            result.insert(QStringLiteral("warnings"), QJsonArray());
+        }
+        Respond(id, result);
+    } else if (method == QStringLiteral("transaction.commit")) {
+        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        QJsonArray conflicts;
+        QList<PluginApi::StagedTextChange> dirty_changes;
+        for (const PluginApi::StagedTextChange &change : transaction->Changes()) {
+            Resource *resource = ResolveResource(change.resourceId);
+            const quint64 actual = resource ? Revision(resource) : 0;
+            if (!resource || actual != change.baseRevision) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("resource_id"), change.resourceId },
+                    { QStringLiteral("expected"), static_cast<qint64>(change.baseRevision) },
+                    { QStringLiteral("actual"), resource ? QJsonValue(static_cast<qint64>(actual)) : QJsonValue() }
+                });
+            }
+            if (change.originalText != change.stagedText) dirty_changes.append(change);
+        }
+        if (!conflicts.isEmpty()) {
+            RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Transaction has conflicts"),
+                         QJsonObject {{ QStringLiteral("conflicts"), conflicts }});
+            return;
+        }
+        bool safety_checkpoint_required = dirty_changes.size() > 1;
+        for (const PluginApi::StagedTextChange &change : dirty_changes) {
+            Resource *resource = ResolveResource(change.resourceId);
+            safety_checkpoint_required = safety_checkpoint_required || (resource &&
+                (resource->Type() == Resource::OPFResourceType
+                 || resource->Type() == Resource::NCXResourceType));
+        }
+        if (transaction->CheckpointPolicy() == QStringLiteral("none")
+            && safety_checkpoint_required) {
+            RespondError(id, PluginApi::TransactionRequired,
+                         QStringLiteral("This transaction requires a checkpoint"));
+            return;
+        }
+        const bool checkpoint_required = transaction->CheckpointPolicy() == QStringLiteral("required")
+            || (transaction->CheckpointPolicy() == QStringLiteral("auto")
+                && safety_checkpoint_required);
+        if (checkpoint_required && !m_MainWindow->RepoCommit()) {
+            RespondError(id, PluginApi::ValidationFailed,
+                         QStringLiteral("Could not create the required checkpoint"));
+            return;
+        }
+        QJsonArray committed;
+        for (const PluginApi::StagedTextChange &change : dirty_changes) {
+            TextResource *resource = ResolveTextResource(change.resourceId);
+            resource->SetText(change.stagedText);
+            committed.append(QJsonObject {
+                { QStringLiteral("resource_id"), change.resourceId },
+                { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
+            });
+        }
+        if (!dirty_changes.isEmpty()) m_MainWindow->GetCurrentBook()->SetModified();
+        const QString transaction_id = transaction->Id();
+        m_Transaction.reset();
+        Respond(id, QJsonObject {
+            { QStringLiteral("transaction_id"), transaction_id },
+            { QStringLiteral("committed"), committed },
+            { QStringLiteral("modified"), dirty_changes.size() },
+            { QStringLiteral("checkpoint_created"), checkpoint_required }
+        });
+    } else if (method == QStringLiteral("transaction.rollback")) {
+        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        const QString transaction_id = transaction->Id();
+        const int discarded = transaction->Size();
+        m_Transaction.reset();
+        Respond(id, QJsonObject {
+            { QStringLiteral("transaction_id"), transaction_id },
+            { QStringLiteral("rolled_back"), true },
+            { QStringLiteral("discarded"), discarded }
+        });
     } else if (method == QStringLiteral("editor.getState")
                || method == QStringLiteral("editor.getSelection")) {
         if (RequirePermission(QStringLiteral("editor.read"), id)) {
@@ -599,6 +834,19 @@ Resource *PluginSession::ResolveResource(const QString &resource_id) const
 TextResource *PluginSession::ResolveTextResource(const QString &resource_id) const
 {
     return qobject_cast<TextResource *>(ResolveResource(resource_id));
+}
+
+PluginApi::TextTransaction *PluginSession::RequireTransaction(const QJsonObject &params,
+                                                              const QJsonValue &request_id)
+{
+    const QString transaction_id = params.value(QStringLiteral("transaction_id")).toString();
+    if (!m_Transaction || transaction_id.isEmpty()
+        || transaction_id != m_Transaction->Id()) {
+        RespondError(request_id, PluginApi::TransactionNotFound,
+                     QStringLiteral("Transaction not found"));
+        return nullptr;
+    }
+    return m_Transaction.get();
 }
 
 quint64 PluginSession::Revision(Resource *resource) const

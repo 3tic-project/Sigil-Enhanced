@@ -15,6 +15,8 @@
 #include <QProcess>
 #include <QUuid>
 
+#include <memory>
+
 #include "Misc/Plugin.h"
 #include "PluginAPI/PluginProtocol.h"
 
@@ -26,6 +28,11 @@ class QLocalSocket;
 class Resource;
 class TabManager;
 class TextResource;
+
+namespace PluginApi
+{
+class TextTransaction;
+}
 
 class PluginSession : public QObject
 {
@@ -59,6 +66,8 @@ private:
     QJsonObject ResourceInfo(Resource *resource) const;
     Resource *ResolveResource(const QString &resource_id) const;
     TextResource *ResolveTextResource(const QString &resource_id) const;
+    PluginApi::TextTransaction *RequireTransaction(const QJsonObject &params,
+                                                   const QJsonValue &request_id);
     quint64 Revision(Resource *resource) const;
     QJsonObject EditorState() const;
     QString ResolveInterpreter() const;
@@ -82,6 +91,7 @@ private:
     QStringList m_Permissions;
     QHash<QString, quint64> m_ResourceRevisions;
     quint64 m_BookRevision;
+    std::unique_ptr<PluginApi::TextTransaction> m_Transaction;
     QPointer<PluginSessionConsole> m_Console;
 };
 

@@ -57,6 +57,92 @@ class EditorState:
         )
 
 
+class Transaction:
+    def __init__(self, rpc, result):
+        self._rpc = rpc
+        self.id = result["transaction_id"]
+        self.base_book_revision = result["base_book_revision"]
+        self.checkpoint = result["checkpoint"]
+        self.active = True
+
+    def _params(self, values=None):
+        if not self.active:
+            raise RuntimeError("transaction is no longer active")
+        params = {"transaction_id": self.id}
+        if values:
+            params.update(values)
+        return params
+
+    def read_text(self, resource):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        return self._rpc.call(
+            "transaction.readText", self._params({"resource_id": resource_id})
+        )
+
+    def replace_text(self, resource, text, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            expected_revision = self.read_text(resource_id)["revision"]
+        return self._rpc.call(
+            "transaction.replaceText",
+            self._params(
+                {
+                    "resource_id": resource_id,
+                    "expected_revision": expected_revision,
+                    "text": text,
+                }
+            ),
+        )
+
+    def apply_edits(self, resource, edits, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            expected_revision = self.read_text(resource_id)["revision"]
+        normalized = []
+        for edit in edits:
+            if isinstance(edit, dict):
+                normalized.append({"start": edit["start"], "end": edit["end"], "text": edit["text"]})
+            else:
+                start, end, text = edit
+                normalized.append({"start": start, "end": end, "text": text})
+        return self._rpc.call(
+            "transaction.applyTextEdits",
+            self._params(
+                {
+                    "resource_id": resource_id,
+                    "expected_revision": expected_revision,
+                    "edits": normalized,
+                }
+            ),
+        )
+
+    def validate(self):
+        return self._rpc.call("transaction.validate", self._params())
+
+    def preview(self):
+        return self._rpc.call("transaction.preview", self._params())
+
+    def commit(self):
+        result = self._rpc.call("transaction.commit", self._params())
+        self.active = False
+        return result
+
+    def rollback(self):
+        if not self.active:
+            return None
+        result = self._rpc.call("transaction.rollback", self._params())
+        self.active = False
+        return result
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.active:
+            self.rollback()
+        return False
+
+
 class BookApi:
     def __init__(self, rpc):
         self._rpc = rpc
@@ -98,6 +184,13 @@ class BookApi:
     def read_many(self, resources):
         ids = [item.id if isinstance(item, Resource) else item for item in resources]
         return self._rpc.call("resource.readMany", {"resource_ids": ids})["items"]
+
+    def transaction(self, label="Plugin changes", checkpoint="auto"):
+        result = self._rpc.call(
+            "transaction.begin",
+            {"label": label, "visibility": "staged", "checkpoint": checkpoint},
+        )
+        return Transaction(self._rpc, result)
 
 
 class EditorApi:

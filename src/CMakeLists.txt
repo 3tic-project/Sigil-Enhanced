@@ -187,6 +187,8 @@ set( DIALOG_FILES
     PluginAPI/PluginSessionManager.h
     PluginAPI/PluginTextEdit.cpp
     PluginAPI/PluginTextEdit.h
+    PluginAPI/PluginTextTransaction.cpp
+    PluginAPI/PluginTextTransaction.h
     Dialogs/Preferences.cpp
     Dialogs/Preferences.h
     Dialogs/PreferenceWidgets/AppearanceWidget.cpp

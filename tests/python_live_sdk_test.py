@@ -114,6 +114,30 @@ class LiveSdkTest(unittest.TestCase):
             transport.sent[0]["params"]["edits"], [{"start": 1, "end": 3, "text": "x"}]
         )
 
+    def test_text_transaction_uses_one_id_until_commit(self):
+        transport = FakeTransport(
+            [
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": {
+                        "transaction_id": "tx-1",
+                        "base_book_revision": 8,
+                        "checkpoint": "auto",
+                    },
+                },
+                {"jsonrpc": "2.0", "id": 2, "result": {"staged": True}},
+                {"jsonrpc": "2.0", "id": 3, "result": {"modified": 1}},
+            ]
+        )
+        tx = BookApi(RpcClient(transport)).transaction("Normalize")
+        tx.replace_text("chapter", "updated", expected_revision=4)
+        result = tx.commit()
+        self.assertEqual(result["modified"], 1)
+        self.assertFalse(tx.active)
+        self.assertEqual(transport.sent[1]["params"]["transaction_id"], "tx-1")
+        self.assertEqual(transport.sent[2]["method"], "transaction.commit")
+
 
 if __name__ == "__main__":
     unittest.main()
