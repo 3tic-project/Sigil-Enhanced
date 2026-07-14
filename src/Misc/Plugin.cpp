@@ -89,7 +89,7 @@ Plugin::~Plugin()
 {
 }
 
-QHash<QString, QString> Plugin::serialize()
+QHash<QString, QString> Plugin::serialize() const
 {
     QHash <QString, QString> info;
 
@@ -112,7 +112,7 @@ QHash<QString, QString> Plugin::serialize()
     return info;
 }
 
-bool Plugin::isvalid()
+bool Plugin::isvalid() const
 {
     return (!m_name.isEmpty()   &&
             !m_type.isEmpty()   &&
@@ -120,37 +120,37 @@ bool Plugin::isvalid()
             (m_oslist.isEmpty() || m_oslist.split(',', Qt::SkipEmptyParts).contains(POS)));
 }
 
-QString Plugin::get_name()
+QString Plugin::get_name() const
 {
     return m_name;
 }
 
-QString Plugin::get_author()
+QString Plugin::get_author() const
 {
     return m_author;
 }
 
-QString Plugin::get_description()
+QString Plugin::get_description() const
 {
     return m_description;
 }
 
-QString Plugin::get_type()
+QString Plugin::get_type() const
 {
     return m_type;
 }
 
-QString Plugin::get_version()
+QString Plugin::get_version() const
 {
     return m_version;
 }
 
-QString Plugin::get_engine()
+QString Plugin::get_engine() const
 {
     return m_engine;
 }
 
-QString Plugin::get_autostart()
+QString Plugin::get_autostart() const
 {
   if (m_autostart.isEmpty()) {
      return "false";
@@ -158,7 +158,7 @@ QString Plugin::get_autostart()
   return m_autostart;
 }
 
-QString Plugin::get_autoclose()
+QString Plugin::get_autoclose() const
 {
   if (m_autoclose.isEmpty()) {
      return "false";
@@ -166,13 +166,13 @@ QString Plugin::get_autoclose()
   return m_autoclose;
 }
 
-QString Plugin::get_oslist()
+QString Plugin::get_oslist() const
 {
     return m_oslist;
 }
 
 
-QString Plugin::get_iconpath()
+QString Plugin::get_iconpath() const
 {
     return m_iconpath;
 }

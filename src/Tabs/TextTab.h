@@ -74,6 +74,8 @@ public:
     int GetCursorLine() const;
 
     int GetCursorPosition() const;
+    int GetSelectionStart() const;
+    int GetSelectionEnd() const;
 
     int GetCursorColumn() const;
 

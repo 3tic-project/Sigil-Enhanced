@@ -204,6 +204,12 @@ public:
     virtual int GetCursorPosition() const {
         return 0;
     }
+    virtual int GetSelectionStart() const {
+        return GetCursorPosition();
+    }
+    virtual int GetSelectionEnd() const {
+        return GetCursorPosition();
+    }
     virtual int GetCursorLine() const {
         return 0;
     }

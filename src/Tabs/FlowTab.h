@@ -112,6 +112,8 @@ public:
     QString GetText();
 
     int GetCursorPosition() const;
+    int GetSelectionStart() const;
+    int GetSelectionEnd() const;
     int GetCursorLine() const;
     int GetCursorColumn() const;
     int GetCursorCodepoint() const;

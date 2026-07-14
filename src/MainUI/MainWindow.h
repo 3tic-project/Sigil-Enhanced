@@ -71,6 +71,7 @@ class BookBrowser;
 class TableOfContents;
 class ValidationResultsView;
 class PreviewWindow;
+class PluginSessionManager;
 class SearchEditor;
 class ClipEditor;
 class ClipsWindow;
@@ -973,6 +974,7 @@ private:
      * The tab managing object.
      */
     TabManager *m_TabManager;
+    PluginSessionManager *m_PluginSessionManager;
 
     /**
      * The Book Browser pane that lists all the files in the book.

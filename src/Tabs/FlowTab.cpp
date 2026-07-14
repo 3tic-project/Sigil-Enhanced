@@ -557,6 +557,16 @@ int FlowTab::GetCursorPosition() const
     return -1;
 }
 
+int FlowTab::GetSelectionStart() const
+{
+    return m_wCodeView ? m_wCodeView->textCursor().selectionStart() : 0;
+}
+
+int FlowTab::GetSelectionEnd() const
+{
+    return m_wCodeView ? m_wCodeView->textCursor().selectionEnd() : 0;
+}
+
 int FlowTab::GetCursorLine() const
 {
     if (m_wCodeView) {

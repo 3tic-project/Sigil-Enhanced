@@ -128,6 +128,16 @@ int TextTab::GetCursorPosition() const
     return m_wCodeView->GetCursorPosition();
 }
 
+int TextTab::GetSelectionStart() const
+{
+    return m_wCodeView->textCursor().selectionStart();
+}
+
+int TextTab::GetSelectionEnd() const
+{
+    return m_wCodeView->textCursor().selectionEnd();
+}
+
 int TextTab::GetCursorColumn() const
 {
     return m_wCodeView->GetCursorColumn();

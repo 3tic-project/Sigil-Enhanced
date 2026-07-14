@@ -107,6 +107,7 @@
 #include "Misc/OpenExternally.h"
 #include "Misc/Plugin.h"
 #include "Misc/PluginDB.h"
+#include "PluginAPI/PluginSessionManager.h"
 #include "Misc/ResourceInsertion.h"
 #include "Misc/CodepointNames.h"
 #include "EmbedPython/PythonRoutines.h"
@@ -273,6 +274,7 @@ MainWindow::MainWindow(const QString &openfilepath,
     m_SaveACopyFilename(QString()),
     m_LastInsertedFile(QString()),
     m_TabManager(new TabManager(this)),
+    m_PluginSessionManager(new PluginSessionManager(this, m_TabManager)),
     m_BookBrowser(NULL),
     m_Clips(NULL),
     m_FindReplace(new FindReplace(this)),
@@ -346,6 +348,8 @@ MainWindow::MainWindow(const QString &openfilepath,
 
 MainWindow::~MainWindow()
 {
+    delete m_PluginSessionManager;
+    m_PluginSessionManager = nullptr;
     // Make sure that any modeless windows that are visible are closed first
     // to prevent crashes on Windows.
     if (m_SelectCharacter && m_SelectCharacter->isVisible()) {
@@ -1676,7 +1680,17 @@ void MainWindow::runPlugin(QAction *action)
         pname = altname;
     }
 #endif
-    {
+    SettingsStore settings;
+    Plugin *plugin = PluginDB::instance()->get_plugin(pname);
+    const QString declared_mode = plugin && plugin->get_declared_runtime() == Plugin::LiveRuntime
+        ? QStringLiteral("live") : QStringLiteral("legacy");
+    const QString runtime_mode = settings.pluginRuntimeModes().value(pname, declared_mode);
+    if (runtime_mode == QStringLiteral("live")) {
+        QString error;
+        if (!plugin || !m_PluginSessionManager->StartPlugin(*plugin, &error)) {
+            Utility::DisplayStdErrorDialog(error.isEmpty() ? tr("Unable to start live plugin.") : error);
+        }
+    } else {
         PluginRunner prunner(m_TabManager, this);
         prunner.exec(pname);
     }
@@ -5841,6 +5855,7 @@ bool MainWindow::ProceedToOverwrite(const QString& msg, const QString &filename)
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
+    m_PluginSessionManager->StopAll();
     m_TabManager->CloseOtherTabs();
     m_TabManager->CloseAllTabs(true);
 #ifndef Q_OS_MAC

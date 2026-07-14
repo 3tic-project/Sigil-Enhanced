@@ -40,20 +40,20 @@ public:
     Plugin(const QHash<QString, QString> &info);
     ~Plugin();
 
-    QHash<QString, QString> serialize();
+    QHash<QString, QString> serialize() const;
 
-    bool isvalid();
+    bool isvalid() const;
 
-    QString get_name();
-    QString get_author();
-    QString get_description();
-    QString get_type();
-    QString get_version();
-    QString get_engine();
-    QString get_oslist();
-    QString get_autostart();
-    QString get_autoclose();
-    QString get_iconpath();
+    QString get_name() const;
+    QString get_author() const;
+    QString get_description() const;
+    QString get_type() const;
+    QString get_version() const;
+    QString get_engine() const;
+    QString get_oslist() const;
+    QString get_autostart() const;
+    QString get_autoclose() const;
+    QString get_iconpath() const;
     int get_api_version() const;
     QString get_api_interface() const;
     QString get_lifetime() const;

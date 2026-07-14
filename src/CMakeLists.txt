@@ -179,6 +179,12 @@ set( DIALOG_FILES
     Dialogs/PluginRunner.h
     PluginAPI/PluginProtocol.cpp
     PluginAPI/PluginProtocol.h
+    PluginAPI/PluginSession.cpp
+    PluginAPI/PluginSession.h
+    PluginAPI/PluginSessionConsole.cpp
+    PluginAPI/PluginSessionConsole.h
+    PluginAPI/PluginSessionManager.cpp
+    PluginAPI/PluginSessionManager.h
     Dialogs/Preferences.cpp
     Dialogs/Preferences.h
     Dialogs/PreferenceWidgets/AppearanceWidget.cpp

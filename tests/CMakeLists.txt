@@ -1,4 +1,4 @@
-find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Svg REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg REQUIRED)
 
 add_executable(safe_archive_extractor_test
     safe_archive_extractor_test.cpp
@@ -90,3 +90,55 @@ target_link_libraries(plugin_metadata_test PRIVATE
 
 add_test(NAME plugin_metadata COMMAND plugin_metadata_test)
 set_tests_properties(plugin_metadata PROPERTIES TIMEOUT 30)
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME python_live_sdk
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_live_sdk_test.py
+)
+set_tests_properties(python_live_sdk PROPERTIES TIMEOUT 30)
+
+add_executable(plugin_transport_integration_test
+    plugin_transport_integration_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.h
+)
+
+target_include_directories(plugin_transport_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_compile_definitions(plugin_transport_integration_test PRIVATE
+    SIGIL_TEST_PYTHON="${Python3_EXECUTABLE}"
+    SIGIL_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)
+
+target_link_libraries(plugin_transport_integration_test PRIVATE
+    Qt6::Core
+    Qt6::Network
+)
+
+add_test(NAME plugin_transport_integration COMMAND plugin_transport_integration_test)
+set_tests_properties(plugin_transport_integration PROPERTIES TIMEOUT 30)
+
+add_executable(plugin_launcher_integration_test
+    plugin_launcher_integration_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.h
+)
+
+target_include_directories(plugin_launcher_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_compile_definitions(plugin_launcher_integration_test PRIVATE
+    SIGIL_TEST_PYTHON="${Python3_EXECUTABLE}"
+    SIGIL_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)
+
+target_link_libraries(plugin_launcher_integration_test PRIVATE
+    Qt6::Core
+    Qt6::Network
+)
+
+add_test(NAME plugin_launcher_integration COMMAND plugin_launcher_integration_test)
+set_tests_properties(plugin_launcher_integration PROPERTIES TIMEOUT 30)
