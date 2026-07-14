@@ -44,3 +44,15 @@ target_link_libraries(image_preview_service_test PRIVATE
 
 add_test(NAME image_preview_service COMMAND image_preview_service_test)
 set_tests_properties(image_preview_service PROPERTIES TIMEOUT 30)
+
+add_executable(opf_model_clear_benchmark
+    opf_model_clear_benchmark.cpp
+)
+
+target_link_libraries(opf_model_clear_benchmark PRIVATE
+    Qt6::Core
+    Qt6::Gui
+)
+
+add_test(NAME opf_model_clear_benchmark COMMAND opf_model_clear_benchmark)
+set_tests_properties(opf_model_clear_benchmark PROPERTIES TIMEOUT 30)

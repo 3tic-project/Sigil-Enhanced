@@ -16,7 +16,7 @@ work in `todo/audit/06-整改路线图与验收标准.md`.
 | CSSInfo leak | Complete | Inline style formatting uses scoped parser ownership; Debug build passes |
 | Safe archive paths and budgets | Complete | Shared extractor enforces path/resource limits; negative corpus and real EPUB/plugin fixtures pass |
 | Image hover preview | Complete | Background scaled decode, stale-request cancellation, 32 MiB LRU; service tests pass |
-| Book Browser fast clear | Pending | Batched removal with before/after measurements |
+| Book Browser fast clear | Complete | Folder/root removal and category insertion are batched; 5000-node model rebuild is 2.405 ms |
 
 ## Singleton Destruction
 
@@ -188,3 +188,48 @@ it does not modify the resource, book, undo history, or persisted settings.
   (`detect_leaks=0` because the macOS runtime does not support leak detection).
 - `cmake --build cmake-build-debug -j2` and the complete CTest suite pass.
 - No user-visible strings or translation catalogs change in this batch.
+
+## Book Browser Model Rebuild
+
+### Impact
+
+`OPFModel::ClearModel()` removed row zero repeatedly in each of seven resource
+folders. A 5,000-resource refresh consequently emitted 5,002 removal notifications,
+then `InitializeModel()` emitted another notification for every appended resource.
+Even where Qt's item removal itself remained fast, the view and connected model
+observers had to process thousands of intermediate structural changes.
+
+### Change Boundary
+
+Each resource folder now removes its full row range with one `removeRows()` call.
+Non-folder root items such as OPF and NCX are removed as reverse contiguous ranges,
+which preserves the seven long-lived folder objects regardless of root ordering.
+
+During initialization, new items are accumulated into Text, Styles, Images, Fonts,
+Misc, Audio, Video, and root lists, then appended with one `appendRows()` call per
+non-empty list. The view already has automatic sorting disabled. The existing final
+filename and reading-order sorts remain the only sorts performed by `Refresh()`.
+Signals are not globally blocked: the view still receives valid batched remove and
+insert notifications, and `m_RefreshInProgress` continues to prevent removal events
+from changing the EPUB reading order during a rebuild.
+
+### Verification
+
+`opf_model_clear_benchmark` builds equivalent seven-folder models and compares the
+former row-at-a-time clear/repopulate pattern with the batched pattern in the same
+macOS Debug process:
+
+| Resources | Former | Batched | Remove signals | Insert signals |
+| ---: | ---: | ---: | ---: | ---: |
+| 100 | 0.081 ms | 0.057 ms | 102 -> 8 | 102 -> 8 |
+| 1,000 | 0.707 ms | 0.474 ms | 1,002 -> 8 | 1,002 -> 8 |
+| 5,000 | 3.970 ms | 2.405 ms | 5,002 -> 8 | 5,002 -> 8 |
+
+- The 5,000-node batched model operation is asserted below the 500 ms target.
+- Ten consecutive benchmark runs pass, as does the AddressSanitizer build
+  (`detect_leaks=0` on the macOS runtime).
+- The full Debug build and complete CTest suite pass.
+- This is a model-structure benchmark, not an end-to-end `Refresh()` measurement;
+  OPF parsing, semantic lookup, icon creation, and final sorting remain future
+  optimization targets.
+- No resource data, OPF transaction, undo behavior, UI text, or translations change.

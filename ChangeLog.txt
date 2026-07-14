@@ -5,6 +5,7 @@ Unreleased
      - Fixed a CSS parser allocation leak when formatting XHTML files with inline style blocks.
      - Hardened EPUB and plugin ZIP extraction with path validation, resource budgets, cleanup, and transactional plugin updates.
      - Moved Book Browser image preview decoding off the GUI thread and added cancellation plus a bounded LRU cache.
+     - Batched Book Browser model removal and insertion notifications during full refreshes.
 
 Sigil-Enhanced-2.8.1.E4
    Bug Fixes

@@ -541,6 +541,14 @@ void OPFModel::InitializeModel()
     QString version = m_Book->GetConstOPF()->GetEpubVersion();
     QHash <QString, QStringList> semantic_type_all;
     QHash <QString, QString> manifest_properties_all;
+    QList<QStandardItem*> text_items;
+    QList<QStandardItem*> style_items;
+    QList<QStandardItem*> image_items;
+    QList<QStandardItem*> font_items;
+    QList<QStandardItem*> misc_items;
+    QList<QStandardItem*> audio_items;
+    QList<QStandardItem*> video_items;
+    QList<QStandardItem*> root_items;
     SettingsStore ss;
     if (version.startsWith('3')) {
         NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
@@ -593,38 +601,52 @@ void OPFModel::InitializeModel()
                 name = resource->ShortPathName().left(resource->ShortPathName().lastIndexOf('.'));
             }
             item->setData(name, ALPHANUMERIC_ORDER_ROLE);
-            m_TextFolderItem->appendRow(item);
+            text_items.append(item);
         } else if (resource->Type() == Resource::CSSResourceType) {
             item->setDragEnabled(false);
-            m_StylesFolderItem->appendRow(item);
+            style_items.append(item);
         } else if (resource->Type() == Resource::ImageResourceType ||
                    resource->Type() == Resource::SVGResourceType
                   ) {
             item->setDragEnabled(false);
-            m_ImagesFolderItem->appendRow(item);
+            image_items.append(item);
         } else if (resource->Type() == Resource::FontResourceType) {
             item->setDragEnabled(false);
-            m_FontsFolderItem->appendRow(item);
+            font_items.append(item);
         } else if (resource->Type() == Resource::AudioResourceType) {
             item->setDragEnabled(false);
-            m_AudioFolderItem->appendRow(item);
+            audio_items.append(item);
         } else if (resource->Type() == Resource::VideoResourceType) {
             item->setDragEnabled(false);
-            m_VideoFolderItem->appendRow(item);
+            video_items.append(item);
         } else if (resource->Type() == Resource::PdfResourceType) {
             item->setDragEnabled(false);
-            m_MiscFolderItem->appendRow(item);
+            misc_items.append(item);
         } else if (resource->Type() == Resource::OPFResourceType ||
                    resource->Type() == Resource::NCXResourceType) {
             item->setEditable(true);
             item->setDragEnabled(false);
             item->setToolTip(resource->GetRelativePath());
-            appendRow(item);
+            root_items.append(item);
         } else {
             item->setDragEnabled(false);
-            m_MiscFolderItem->appendRow(item);
+            misc_items.append(item);
         }
     }
+
+    auto append_items = [](QStandardItem* parent, const QList<QStandardItem*>& items) {
+        if (!items.isEmpty()) {
+            parent->appendRows(items);
+        }
+    };
+    append_items(m_TextFolderItem, text_items);
+    append_items(m_StylesFolderItem, style_items);
+    append_items(m_ImagesFolderItem, image_items);
+    append_items(m_FontsFolderItem, font_items);
+    append_items(m_MiscFolderItem, misc_items);
+    append_items(m_AudioFolderItem, audio_items);
+    append_items(m_VideoFolderItem, video_items);
+    append_items(invisibleRootItem(), root_items);
 }
 
 
@@ -673,50 +695,31 @@ void OPFModel::UpdateHTMLReadingOrders()
 
 void OPFModel::ClearModel()
 {
-    while (m_TextFolderItem->rowCount() != 0) {
-        m_TextFolderItem->removeRow(0);
-    }
-
-    while (m_StylesFolderItem->rowCount() != 0) {
-        m_StylesFolderItem->removeRow(0);
-    }
-
-    while (m_ImagesFolderItem->rowCount() != 0) {
-        m_ImagesFolderItem->removeRow(0);
-    }
-
-    while (m_FontsFolderItem->rowCount() != 0) {
-        m_FontsFolderItem->removeRow(0);
-    }
-
-    while (m_MiscFolderItem->rowCount() != 0) {
-        m_MiscFolderItem->removeRow(0);
-    }
-
-    while (m_AudioFolderItem->rowCount() != 0) {
-        m_AudioFolderItem->removeRow(0);
-    }
-
-    while (m_VideoFolderItem->rowCount() != 0) {
-        m_VideoFolderItem->removeRow(0);
-    }
-
-    int i = 0;
-
-    while (i < invisibleRootItem()->rowCount()) {
-        QStandardItem *child = invisibleRootItem()->child(i, 0);
-
-        if (child != m_TextFolderItem   &&
-            child != m_StylesFolderItem &&
-            child != m_ImagesFolderItem &&
-            child != m_FontsFolderItem  &&
-            child != m_MiscFolderItem   &&
-            child != m_AudioFolderItem  &&
-            child != m_VideoFolderItem) {
-            invisibleRootItem()->removeRow(i);
-        } else {
-            ++i;
+    const QList<QStandardItem*> folders = {
+        m_TextFolderItem, m_StylesFolderItem, m_ImagesFolderItem,
+        m_FontsFolderItem, m_MiscFolderItem, m_AudioFolderItem,
+        m_VideoFolderItem
+    };
+    for (QStandardItem* folder : folders) {
+        const int rows = folder->rowCount();
+        if (rows > 0) {
+            folder->removeRows(0, rows);
         }
+    }
+
+    QStandardItem* root = invisibleRootItem();
+    int end = root->rowCount() - 1;
+    while (end >= 0) {
+        if (folders.contains(root->child(end, 0))) {
+            --end;
+            continue;
+        }
+        int start = end;
+        while (start > 0 && !folders.contains(root->child(start - 1, 0))) {
+            --start;
+        }
+        root->removeRows(start, end - start + 1);
+        end = start - 1;
     }
 }
 
