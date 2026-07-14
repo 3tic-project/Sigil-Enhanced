@@ -186,6 +186,11 @@
              <string>Interpreter</string>
             </property>
            </column>
+           <column>
+            <property name="text">
+             <string>Plugin API</string>
+            </property>
+           </column>
           </widget>
          </item>
          <item row="1" column="1">

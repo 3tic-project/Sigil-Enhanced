@@ -36,6 +36,8 @@ void PluginWidget::removeSelectedPlugins() {
         QTableWidgetItem* item = itemlist.at(i);
         int row = ui.pluginTable->row(item);
         QString pluginname = ui.pluginTable->item(row, PluginWidget::NameField)->text();
+        m_RuntimeModes.remove(pluginname);
+        m_isDirty = true;
         ui.pluginTable->removeRow(row);
         pdb->remove_plugin(pluginname);
 

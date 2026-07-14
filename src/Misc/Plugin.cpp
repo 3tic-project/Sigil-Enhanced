@@ -24,7 +24,6 @@
 #include <QStringList>
 
 #include "Misc/Plugin.h"
-#include "Dialogs/PluginRunner.h"
 
 #if defined(__APPLE__)
 static const QString POS = "osx";
@@ -70,6 +69,18 @@ Plugin::Plugin(const QHash<QString, QString> &info)
     if (info.contains("iconpath")) {
         set_iconpath(info.value("iconpath"));
     }
+    if (info.contains("api_version")) {
+        set_api(info.value("api_version").toInt(), info.value("api_interface"));
+    }
+    if (info.contains("lifetime")) {
+        set_lifetime(info.value("lifetime"));
+    }
+    foreach (const QString &permission, info.value("permissions").split(',', Qt::SkipEmptyParts)) {
+        add_permission(permission);
+    }
+    foreach (const QString &event, info.value("events").split(',', Qt::SkipEmptyParts)) {
+        add_event(event);
+    }
 
 
 }
@@ -92,6 +103,11 @@ QHash<QString, QString> Plugin::serialize()
     info.insert("autostart", get_autostart());
     info.insert("autoclose", get_autoclose());
     info.insert("iconpath", get_iconpath());
+    info.insert("api_version", QString::number(get_api_version()));
+    info.insert("api_interface", get_api_interface());
+    info.insert("lifetime", get_lifetime());
+    info.insert("permissions", get_permissions().join(','));
+    info.insert("events", get_events().join(','));
 
     return info;
 }
@@ -100,7 +116,7 @@ bool Plugin::isvalid()
 {
     return (!m_name.isEmpty()   &&
             !m_type.isEmpty()   &&
-            (!m_engine.isEmpty() && PluginRunner::SupportedEngines().contains(m_engine)) &&
+            (!m_engine.isEmpty() && SupportedEngines().contains(m_engine)) &&
             (m_oslist.isEmpty() || m_oslist.split(',', Qt::SkipEmptyParts).contains(POS)));
 }
 
@@ -161,6 +177,47 @@ QString Plugin::get_iconpath()
     return m_iconpath;
 }
 
+int Plugin::get_api_version() const
+{
+    return m_apiVersion;
+}
+
+QString Plugin::get_api_interface() const
+{
+    return m_apiInterface;
+}
+
+QString Plugin::get_lifetime() const
+{
+    return m_lifetime.isEmpty() ? QStringLiteral("command") : m_lifetime;
+}
+
+QStringList Plugin::get_permissions() const
+{
+    return m_permissions;
+}
+
+QStringList Plugin::get_events() const
+{
+    return m_events;
+}
+
+Plugin::RuntimeMode Plugin::get_declared_runtime() const
+{
+    return m_apiVersion == 2 && m_apiInterface == QStringLiteral("live")
+        ? LiveRuntime : LegacyRuntime;
+}
+
+QStringList Plugin::SupportedEngines()
+{
+    return QStringList {
+        QStringLiteral("python3"),
+        QStringLiteral("python3.4"),
+        QStringLiteral("python2.7,python3.4"),
+        QStringLiteral("python3.4,python2.7")
+    };
+}
+
 void Plugin::set_name(const QString &val)
 {
     m_name = val;
@@ -218,4 +275,34 @@ void Plugin::set_autoclose(const QString &val)
 void Plugin::set_iconpath(const QString &val)
 {
     m_iconpath = val;
+}
+
+void Plugin::set_api(int version, const QString &interface_name)
+{
+    m_apiVersion = version > 0 ? version : 1;
+    m_apiInterface = interface_name.trimmed().toLower();
+}
+
+void Plugin::set_lifetime(const QString &val)
+{
+    const QString lifetime = val.trimmed().toLower();
+    if (lifetime == QStringLiteral("command") || lifetime == QStringLiteral("book-session")) {
+        m_lifetime = lifetime;
+    }
+}
+
+void Plugin::add_permission(const QString &val)
+{
+    const QString permission = val.trimmed();
+    if (!permission.isEmpty() && !m_permissions.contains(permission)) {
+        m_permissions.append(permission);
+    }
+}
+
+void Plugin::add_event(const QString &val)
+{
+    const QString event = val.trimmed();
+    if (!event.isEmpty() && !m_events.contains(event)) {
+        m_events.append(event);
+    }
 }

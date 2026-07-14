@@ -24,12 +24,18 @@
 #define PLUGIN_H
 
 #include <QHash>
+#include <QStringList>
 
 class QString;
 
 class Plugin
 {
 public:
+    enum RuntimeMode {
+        LegacyRuntime,
+        LiveRuntime
+    };
+
     Plugin();
     Plugin(const QHash<QString, QString> &info);
     ~Plugin();
@@ -48,6 +54,13 @@ public:
     QString get_autostart();
     QString get_autoclose();
     QString get_iconpath();
+    int get_api_version() const;
+    QString get_api_interface() const;
+    QString get_lifetime() const;
+    QStringList get_permissions() const;
+    QStringList get_events() const;
+    RuntimeMode get_declared_runtime() const;
+    static QStringList SupportedEngines();
 
     void set_name(const QString &val);
     void set_author(const QString &val);
@@ -59,6 +72,10 @@ public:
     void set_autostart(const QString &val);
     void set_autoclose(const QString &val);
     void set_iconpath(const QString &val);
+    void set_api(int version, const QString &interface_name);
+    void set_lifetime(const QString &val);
+    void add_permission(const QString &val);
+    void add_event(const QString &val);
 
 private:
     QString m_name;
@@ -71,6 +88,11 @@ private:
     QString m_autostart;
     QString m_autoclose;
     QString m_iconpath;
+    int m_apiVersion = 1;
+    QString m_apiInterface;
+    QString m_lifetime;
+    QStringList m_permissions;
+    QStringList m_events;
 };
 
 #endif // PLUGIN_H

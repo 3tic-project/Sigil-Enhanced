@@ -73,3 +73,20 @@ target_link_libraries(plugin_protocol_test PRIVATE
 
 add_test(NAME plugin_protocol COMMAND plugin_protocol_test)
 set_tests_properties(plugin_protocol PROPERTIES TIMEOUT 30)
+
+add_executable(plugin_metadata_test
+    plugin_metadata_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/Plugin.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/Plugin.h
+)
+
+target_include_directories(plugin_metadata_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(plugin_metadata_test PRIVATE
+    Qt6::Core
+)
+
+add_test(NAME plugin_metadata COMMAND plugin_metadata_test)
+set_tests_properties(plugin_metadata PROPERTIES TIMEOUT 30)

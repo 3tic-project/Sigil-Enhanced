@@ -80,6 +80,7 @@ static QString KEY_PLUGIN_INFO = SETTINGS_GROUP + "/" + "plugin_info";
 static QString KEY_PLUGIN_ENGINE_PATHS = SETTINGS_GROUP + "/" + "plugin_engine_paths";
 static QString KEY_PLUGIN_LAST_FOLDER = SETTINGS_GROUP + "/" + "plugin_add_last_folder";
 static QString KEY_PLUGIN_USE_BUNDLED_INTERP = SETTINGS_GROUP + "/" + "plugin_use_bundled_interp";
+static QString KEY_PLUGIN_RUNTIME_MODES = SETTINGS_GROUP + "/" + "plugin_runtime_modes";
 
 static QString KEY_CSS_EPUB2_VALIDATION_SPEC = SETTINGS_GROUP + "/" + "css_epub2_validation_spec";
 static QString KEY_CSS_EPUB3_VALIDATION_SPEC = SETTINGS_GROUP + "/" + "css_epub3_validation_spec";
@@ -412,6 +413,20 @@ QHash <QString, QString> SettingsStore::pluginEnginePaths()
     }
 
     return enginepath;
+}
+
+QHash <QString, QString> SettingsStore::pluginRuntimeModes()
+{
+    clearSettingsGroup();
+    const QVariantHash stored_modes = value(KEY_PLUGIN_RUNTIME_MODES).toHash();
+    QHash<QString, QString> runtime_modes;
+    for (auto it = stored_modes.constBegin(); it != stored_modes.constEnd(); ++it) {
+        const QString mode = it.value().toString();
+        if (mode == QStringLiteral("legacy") || mode == QStringLiteral("live")) {
+            runtime_modes.insert(it.key(), mode);
+        }
+    }
+    return runtime_modes;
 }
 
 QString SettingsStore::pluginLastFolder()
@@ -803,6 +818,18 @@ void SettingsStore::setPluginEnginePaths(const QHash <QString, QString> &enginep
         ep.insert(k, enginepaths.value(k));
     }
     setValue(KEY_PLUGIN_ENGINE_PATHS, ep);
+}
+
+void SettingsStore::setPluginRuntimeModes(const QHash<QString, QString> &runtime_modes)
+{
+    clearSettingsGroup();
+    QVariantHash stored_modes;
+    for (auto it = runtime_modes.constBegin(); it != runtime_modes.constEnd(); ++it) {
+        if (it.value() == QStringLiteral("legacy") || it.value() == QStringLiteral("live")) {
+            stored_modes.insert(it.key(), it.value());
+        }
+    }
+    setValue(KEY_PLUGIN_RUNTIME_MODES, stored_modes);
 }
 
 void SettingsStore::setPluginLastFolder(const QString &lastfolder)

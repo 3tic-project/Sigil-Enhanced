@@ -109,9 +109,7 @@ PluginRunner::~PluginRunner()
 
 QStringList PluginRunner::SupportedEngines()
 {
-    QStringList engines;
-    engines << "python3.4" << "python2.7,python3.4" << "python3.4,python2.7";
-    return engines;
+    return Plugin::SupportedEngines();
 }
 
 int PluginRunner::exec(const QString &name)
@@ -141,7 +139,7 @@ int PluginRunner::exec(const QString &name)
     m_engine = plugin->get_engine();
     // Use the bundled interpreter if user requested it (and plugin supports it)
     QString bundled_interp_path = PluginDB::buildBundledInterpPath();
-    if (m_engine.contains("python3.4") && settings.useBundledInterp() && !bundled_interp_path.isEmpty()) {
+    if (m_engine.contains("python3") && settings.useBundledInterp() && !bundled_interp_path.isEmpty()) {
         m_enginePath = bundled_interp_path;
     }
     else { // Otherwise, parse to find correct external interpreter path
@@ -153,6 +151,9 @@ int PluginRunner::exec(const QString &name)
             engineList.append(m_engine);
         }
         foreach(QString engine, engineList) {
+            if (engine == QStringLiteral("python3")) {
+                engine = QStringLiteral("python3.4");
+            }
             m_enginePath = pdb->get_engine_path(engine);
             if (!m_enginePath.isEmpty()) break;
         }
@@ -166,7 +167,7 @@ int PluginRunner::exec(const QString &name)
     launcher_root = PluginDB::launcherRoot();
 
     // Note: Keep SupportedEngines() in sync with the engine calling code here.
-    if ( m_engine.contains("python3.4") ) {
+    if ( m_engine.contains("python3") ) {
         m_launcherPath = launcher_root + "/python/launcher.py";
         m_pluginPath = m_pluginsFolder + "/" + m_pluginName + "/" + "plugin.py";
         if (!QFileInfo(m_launcherPath).exists()) {

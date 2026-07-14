@@ -99,6 +99,7 @@ PreferencesWidget::ResultActions PluginWidget::saveSettings()
         }
     }
     settings.setPluginMap(pluginmap);
+    settings.setPluginRuntimeModes(m_RuntimeModes);
     //---------- modified: RefreshToolBarPlugins ------------
     if (pluginmap != m_OriPluginMap) {
         results = results | PreferencesWidget::ResultAction_RefreshToolBarPlugins;
@@ -126,6 +127,20 @@ void PluginWidget::setPluginTableRow(Plugin *p, int row)
     ui.pluginTable->setItem(row, PluginWidget::AuthorField,      new QTableWidgetItem(p->get_author()));
     ui.pluginTable->setItem(row, PluginWidget::TypeField,        new QTableWidgetItem(p->get_type()));
     ui.pluginTable->setItem(row, PluginWidget::EngineField,      new QTableWidgetItem(p->get_engine()));
+    const QString declared_mode = p->get_declared_runtime() == Plugin::LiveRuntime
+        ? QStringLiteral("live") : QStringLiteral("legacy");
+    const QString current_mode = m_RuntimeModes.value(pname, declared_mode);
+    m_RuntimeModes.insert(pname, current_mode);
+    auto *runtime_selector = new QComboBox(ui.pluginTable);
+    runtime_selector->addItem(tr("Legacy (v1)"), QStringLiteral("legacy"));
+    runtime_selector->addItem(tr("Live (v2)"), QStringLiteral("live"));
+    runtime_selector->setToolTip(tr("Choose which Python plugin runtime is used for this plugin."));
+    runtime_selector->setCurrentIndex(current_mode == QStringLiteral("live") ? 1 : 0);
+    ui.pluginTable->setCellWidget(row, PluginWidget::RuntimeField, runtime_selector);
+    connect(runtime_selector, &QComboBox::currentIndexChanged, this, [this, pname, runtime_selector](int) {
+        m_RuntimeModes.insert(pname, runtime_selector->currentData().toString());
+        m_isDirty = true;
+    });
     ui.pluginTable->setSortingEnabled(sortingOn);
 }
 
@@ -139,6 +154,7 @@ void PluginWidget::readSettings()
 
     // Should the bundled Python interpreter be used?
     m_useBundledInterp = settings.useBundledInterp();
+    m_RuntimeModes = settings.pluginRuntimeModes();
 
     // Load the available plugin information
     PluginDB *pdb = PluginDB::instance();
@@ -319,6 +335,8 @@ void PluginWidget::removePlugin()
     PluginDB *pdb = PluginDB::instance();
     int row = ui.pluginTable->row(itemlist.at(0));
     QString pluginname = ui.pluginTable->item(row, PluginWidget::NameField)->text();
+    m_RuntimeModes.remove(pluginname);
+    m_isDirty = true;
     ui.pluginTable->removeRow(row);
     pdb->remove_plugin(pluginname);
     ui.pluginTable->resizeColumnsToContents();
@@ -370,6 +388,8 @@ void PluginWidget::removeAllPlugins()
             ui.pluginTable->removeRow(0);
         }
         pdb->remove_all_plugins();
+        m_RuntimeModes.clear();
+        m_isDirty = true;
         ui.pluginTable->resizeColumnsToContents();
         ui.pluginTable->setSortingEnabled(true);
     }

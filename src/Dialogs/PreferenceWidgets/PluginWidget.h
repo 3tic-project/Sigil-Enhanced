@@ -59,7 +59,8 @@ private:
         AuthorField      = 2,
         TypeField        = 3,
         EngineField      = 4,
-        OSListField      = 5
+        RuntimeField     = 5,
+        OSListField      = 6
     };
 
     void readSettings();
@@ -72,6 +73,7 @@ private:
     bool m_useBundledInterp;
     QList<QComboBox*> m_qlcbxs;
     QStringList m_OriPluginMap; // modified: RefreshToolBarPlugins
+    QHash<QString, QString> m_RuntimeModes;
     //---------------- modified: PluginWidgetExt ---------------
     void reInstallPlugin(QString zippath); // modified: reInstallPlugin
     void removeSelectedPlugins(); // modified: removeSelectedPlugins

@@ -336,6 +336,16 @@ Plugin *PluginDB::load_plugin(const QString &name)
                 plugin->set_autostart(reader.readElementText());
             } else if (reader.name().compare(QLatin1String("autoclose")) == 0) {
                 plugin->set_autoclose(reader.readElementText());
+            } else if (reader.name().compare(QLatin1String("api")) == 0) {
+                const QXmlStreamAttributes attributes = reader.attributes();
+                plugin->set_api(attributes.value(QLatin1String("version")).toInt(),
+                                attributes.value(QLatin1String("interface")).toString());
+            } else if (reader.name().compare(QLatin1String("lifetime")) == 0) {
+                plugin->set_lifetime(reader.readElementText());
+            } else if (reader.name().compare(QLatin1String("permission")) == 0) {
+                plugin->add_permission(reader.readElementText());
+            } else if (reader.name().compare(QLatin1String("event")) == 0) {
+                plugin->add_event(reader.readElementText());
             }
         }
     }

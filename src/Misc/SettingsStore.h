@@ -109,6 +109,7 @@ public:
      * Support for Plugins
      */
     QHash <QString, QString> pluginEnginePaths();
+    QHash <QString, QString> pluginRuntimeModes();
     QString pluginLastFolder();
     bool useBundledInterp();
 
@@ -345,6 +346,7 @@ public slots:
      */
 
     void setPluginEnginePaths(const QHash <QString, QString> &enginepaths);
+    void setPluginRuntimeModes(const QHash <QString, QString> &runtime_modes);
     void setPluginLastFolder(const QString &lastfolder);
     void setUseBundledInterp(bool use);
 
