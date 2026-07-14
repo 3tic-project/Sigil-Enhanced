@@ -12,6 +12,8 @@
 
 #include <QMessageBox>
 
+#include <utility>
+
 PluginSessionManager::PluginSessionManager(MainWindow *main_window, TabManager *tab_manager) :
     QObject(main_window),
     m_MainWindow(main_window),
@@ -26,12 +28,15 @@ PluginSessionManager::~PluginSessionManager()
 
 bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
 {
-    const bool native_live = plugin.get_declared_runtime() == Plugin::LiveRuntime;
-    if (native_live && plugin.get_lifetime() != QStringLiteral("command")) {
-        if (error) {
-            *error = tr("Book-session plugins are not supported by this live runtime stage.");
+    if (plugin.get_lifetime() == QStringLiteral("book-session")) {
+        for (PluginSession *running : std::as_const(m_Sessions)) {
+            if (running->IsBookSession() && running->PluginName() == plugin.get_name()) {
+                if (error) {
+                    *error = tr("This book-session plugin is already running for the current Book.");
+                }
+                return false;
+            }
         }
-        return false;
     }
 
     auto *session = new PluginSession(plugin, m_MainWindow, m_TabManager, this);

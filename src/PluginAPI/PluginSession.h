@@ -48,6 +48,8 @@ public:
     ~PluginSession() override;
 
     QUuid SessionId() const;
+    QString PluginName() const;
+    bool IsBookSession() const;
     QString PendingInputEpubPath() const;
     bool Start(QString *error);
     void Cancel();

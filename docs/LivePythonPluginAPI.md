@@ -67,7 +67,8 @@ defaults: `book.read`, `book.write.text`, `book.write.binary`,
 `book.structure`, `editor.read`, and `editor.write`. Declaring permissions is
 recommended because the RPC dispatcher enforces the declared list.
 
-Only `lifetime=command` is implemented. `plugin.py` must export:
+Both `lifetime=command` and `lifetime=book-session` are implemented.
+`plugin.py` must export:
 
 ```python
 def run(plugin):
@@ -77,6 +78,13 @@ def run(plugin):
 `None` and `0` mean success. Other return values and uncaught exceptions fail
 the session. Standard output and standard error are displayed in the modeless
 session console.
+
+A book-session plugin keeps `run(plugin)` active, normally by consuming
+`plugin.events.next_event()` in a loop. Only one instance of the same
+book-session plugin can run for a Book. Cancel, application shutdown, closing
+the Book, or loading another Book terminates its process and removes its
+session-owned streams and staged state. The single RPC connection remains
+single-threaded; event consumption and ordinary calls must not run concurrently.
 
 ## Current editor example
 
@@ -300,8 +308,8 @@ operations. The host verifies that its manifest exactly matches the final
 add/remove/move set, that manifest IDs and hrefs are unique, that every spine
 `idref` exists, and that the EPUB version is unchanged. In this mode the host
 does not generate a second manifest rewrite; it applies the package once after
-the physical structure changes. Larger binary resources will use a later chunk
-API rather than increasing the JSON message limit.
+the physical structure changes. Larger binary resources use `open_binary()`
+chunk streams rather than increasing the JSON message limit.
 
 Archive-file methods cover EPUB entries that Sigil intentionally keeps outside
 the `Resource` model, including `mimetype` and files under `META-INF`. Reads use

@@ -13,6 +13,7 @@ class _UnixSocket:
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._socket.settimeout(timeout)
         self._socket.connect(name)
+        self._socket.settimeout(None)
 
     def read(self, size):
         return self._socket.recv(size)

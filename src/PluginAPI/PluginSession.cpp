@@ -527,6 +527,16 @@ QUuid PluginSession::SessionId() const
     return m_SessionId;
 }
 
+QString PluginSession::PluginName() const
+{
+    return m_Plugin.get_name();
+}
+
+bool PluginSession::IsBookSession() const
+{
+    return m_Plugin.get_lifetime() == QStringLiteral("book-session");
+}
+
 QString PluginSession::PendingInputEpubPath() const
 {
     return m_InputEpubAccepted && m_InputEpubFile
@@ -773,6 +783,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("session_id"), m_SessionId.toString(QUuid::WithoutBraces) },
             { QStringLiteral("protocol_version"), PluginApi::PROTOCOL_VERSION },
             { QStringLiteral("api_version"), PluginApi::API_VERSION },
+            { QStringLiteral("lifetime"), m_Plugin.get_lifetime() },
             { QStringLiteral("position_encoding"), QStringLiteral("utf-16") },
             { QStringLiteral("max_message_size"), static_cast<qint64>(PluginApi::DEFAULT_MAX_MESSAGE_SIZE) },
             { QStringLiteral("permissions"), QJsonArray::fromStringList(m_Permissions) },
@@ -794,6 +805,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("session_id"), m_SessionId.toString(QUuid::WithoutBraces) },
             { QStringLiteral("plugin_name"), m_Plugin.get_name() },
+            { QStringLiteral("lifetime"), m_Plugin.get_lifetime() },
             { QStringLiteral("permissions"), QJsonArray::fromStringList(m_Permissions) }
         });
     } else if (method == QStringLiteral("session.finish")) {
