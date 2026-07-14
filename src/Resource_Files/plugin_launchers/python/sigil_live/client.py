@@ -496,6 +496,30 @@ class UiApi:
         return self._rpc.call("ui.confirm", params)["confirmed"]
 
 
+class EventsApi:
+    def __init__(self, rpc):
+        self._rpc = rpc
+
+    def subscribe(self, *events):
+        return self._rpc.call("events.subscribe", {"events": list(events)})["subscribed"]
+
+    def unsubscribe(self, *events):
+        return self._rpc.call("events.unsubscribe", {"events": list(events)})["subscribed"]
+
+    @staticmethod
+    def _event(notification):
+        if notification is None:
+            return None
+        return {"name": notification["method"], "params": notification.get("params", {})}
+
+    def poll(self):
+        return self._event(self._rpc.poll_notification())
+
+    def next_event(self):
+        """Wait for the next event; do not consume one RPC connection concurrently."""
+        return self._event(self._rpc.next_notification())
+
+
 class Plugin:
     def __init__(self, rpc, session_info, transport):
         self._rpc = rpc
@@ -505,6 +529,7 @@ class Plugin:
         self.editor = EditorApi(rpc)
         self.validation = ValidationApi(rpc)
         self.ui = UiApi(rpc)
+        self.events = EventsApi(rpc)
 
     @classmethod
     def connect(cls, socket_name, token, plugin_name):
@@ -519,7 +544,7 @@ class Plugin:
                 "api_version": 2,
                 "plugin_name": plugin_name,
                 "client": {"python": platform.python_version(), "library": "sigil_live/2.0.0"},
-                "capabilities": {"events": False, "binary_chunks": False, "position_encodings": ["utf-16"]},
+                "capabilities": {"events": True, "binary_chunks": False, "position_encodings": ["utf-16"]},
             },
         )
         transport.max_message_size = session_info["max_message_size"]

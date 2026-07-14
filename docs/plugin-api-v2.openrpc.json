@@ -43,6 +43,26 @@
       "result": { "name": "result", "schema": { "type": "object" } }
     },
     {
+      "name": "events.subscribe",
+      "summary": "Subscribe this session to supported editor and Book notifications.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "events", "required": true, "schema": {
+        "type": "array", "uniqueItems": true,
+        "items": { "type": "string", "enum": ["editor.activeChanged", "book.resourceChanged", "book.resourceAdded", "book.resourceRemoved"] }
+      } }],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["subscribed"], "properties": { "subscribed": { "type": "array", "items": { "type": "string" } } } } }
+    },
+    {
+      "name": "events.unsubscribe",
+      "summary": "Remove editor and Book event subscriptions from this session.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "events", "required": true, "schema": {
+        "type": "array", "uniqueItems": true,
+        "items": { "type": "string", "enum": ["editor.activeChanged", "book.resourceChanged", "book.resourceAdded", "book.resourceRemoved"] }
+      } }],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["subscribed"], "properties": { "subscribed": { "type": "array", "items": { "type": "string" } } } } }
+    },
+    {
       "name": "book.getInfo",
       "summary": "Return current in-memory Book metadata and revision.",
       "params": [],

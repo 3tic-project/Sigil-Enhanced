@@ -26,6 +26,7 @@
 #include <QRandomGenerator>
 #include <QReadLocker>
 #include <QSaveFile>
+#include <QScopedValueRollback>
 #include <QSet>
 #include <QStatusBar>
 #include <QTemporaryFile>
@@ -58,6 +59,13 @@ namespace
 
 // Base64 plus the JSON envelope must still fit the 8 MiB framed-message limit.
 constexpr qsizetype MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024;
+
+const QSet<QString> SUPPORTED_EVENTS {
+    QStringLiteral("editor.activeChanged"),
+    QStringLiteral("book.resourceChanged"),
+    QStringLiteral("book.resourceAdded"),
+    QStringLiteral("book.resourceRemoved")
+};
 
 bool IsCanonicalBookPath(const QString &book_path);
 
@@ -395,7 +403,8 @@ PluginSession::PluginSession(const Plugin &plugin,
     m_Ending(false),
     m_EndSignalScheduled(false),
     m_Permissions(EffectivePermissions()),
-    m_BookRevision(1)
+    m_BookRevision(1),
+    m_InRequest(false)
 {
 }
 
@@ -462,6 +471,43 @@ bool PluginSession::Start(QString *error)
     for (Resource *resource : book->GetFolderKeeper()->GetResourceList()) {
         TrackResource(resource);
     }
+    for (const QString &event : m_Plugin.get_events()) {
+        const QString permission = event.startsWith(QStringLiteral("editor."))
+            ? QStringLiteral("events.editor") : QStringLiteral("events.book");
+        if (SUPPORTED_EVENTS.contains(event) && m_Permissions.contains(permission)) {
+            m_Subscriptions.insert(event);
+        }
+    }
+    connect(book->GetFolderKeeper(), &FolderKeeper::ResourceAdded, this,
+            [this](const Resource *resource) {
+        Resource *tracked = const_cast<Resource *>(resource);
+        TrackResource(tracked);
+        m_BookRevision += 1;
+        if (m_Subscriptions.contains(QStringLiteral("book.resourceAdded"))) {
+            Notify(QStringLiteral("book.resourceAdded"), ResourceInfo(tracked));
+        }
+    });
+    connect(book->GetFolderKeeper(), &FolderKeeper::ResourceRemoved, this,
+            [this](const Resource *resource) {
+        if (m_Subscriptions.contains(QStringLiteral("book.resourceRemoved"))) {
+            Notify(QStringLiteral("book.resourceRemoved"),
+                   QJsonObject {
+                       { QStringLiteral("resource_id"), resource->GetIdentifier() },
+                       { QStringLiteral("book_path"), resource->GetRelativePath() }
+                   });
+        }
+    });
+    connect(m_TabManager, &TabManager::TabChanged, this,
+            [this](ContentTab *old_tab, ContentTab *new_tab) {
+        if (!m_Subscriptions.contains(QStringLiteral("editor.activeChanged"))) return;
+        Notify(QStringLiteral("editor.activeChanged"), QJsonObject {
+            { QStringLiteral("old_resource_id"), old_tab
+                ? QJsonValue(old_tab->GetLoadedResource()->GetIdentifier()) : QJsonValue() },
+            { QStringLiteral("new_resource_id"), new_tab
+                ? QJsonValue(new_tab->GetLoadedResource()->GetIdentifier()) : QJsonValue() },
+            { QStringLiteral("state"), EditorState() }
+        });
+    });
 
     m_Console = new PluginSessionConsole(m_Plugin.get_name(), m_MainWindow);
     connect(m_Console, &PluginSessionConsole::CancelRequested, this, &PluginSession::Cancel);
@@ -585,6 +631,7 @@ void PluginSession::ProcessFinished(int exit_code, QProcess::ExitStatus exit_sta
 
 void PluginSession::Dispatch(const QJsonObject &request)
 {
+    QScopedValueRollback<bool> request_scope(m_InRequest, true);
     const QJsonValue id = RequestId(request);
     if (request.value(QStringLiteral("jsonrpc")) != QStringLiteral("2.0")
         || !request.value(QStringLiteral("method")).isString()) {
@@ -642,6 +689,33 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {{ QStringLiteral("accepted"), true }});
         Finish(params.value(QStringLiteral("status")).toString(QStringLiteral("success")),
                params.value(QStringLiteral("message")).toString());
+    } else if (method == QStringLiteral("events.subscribe")
+               || method == QStringLiteral("events.unsubscribe")) {
+        const QJsonArray requested = params.value(QStringLiteral("events")).toArray();
+        QSet<QString> events;
+        for (const QJsonValue &value : requested) {
+            if (!value.isString() || !SUPPORTED_EVENTS.contains(value.toString())) {
+                RespondError(id, -32602, QStringLiteral("Event name is unsupported"));
+                return;
+            }
+            const QString event = value.toString();
+            const QString permission = event.startsWith(QStringLiteral("editor."))
+                ? QStringLiteral("events.editor") : QStringLiteral("events.book");
+            if (!m_Permissions.contains(permission)) {
+                RespondError(id, PluginApi::PermissionDenied,
+                             QStringLiteral("Permission denied"),
+                             QJsonObject {{ QStringLiteral("permission"), permission }});
+                return;
+            }
+            events.insert(event);
+        }
+        if (method == QStringLiteral("events.subscribe")) m_Subscriptions.unite(events);
+        else m_Subscriptions.subtract(events);
+        QStringList subscribed = m_Subscriptions.values();
+        std::sort(subscribed.begin(), subscribed.end());
+        Respond(id, QJsonObject {
+            { QStringLiteral("subscribed"), QJsonArray::fromStringList(subscribed) }
+        });
     } else if (method == QStringLiteral("book.getRevision")) {
         if (RequirePermission(QStringLiteral("book.read"), id)) {
             Respond(id, QJsonObject {{ QStringLiteral("revision"), static_cast<qint64>(m_BookRevision) }});
@@ -1740,7 +1814,14 @@ void PluginSession::Dispatch(const QJsonObject &request)
             if (structure_error.isEmpty()) {
                 for (Resource *resource : removal_resources) {
                     m_TabManager->CloseTabForResource(resource, true);
+                    const QJsonObject removed_info {
+                        { QStringLiteral("resource_id"), resource->GetIdentifier() },
+                        { QStringLiteral("book_path"), resource->GetRelativePath() }
+                    };
                     folder_keeper->RemoveWithoutUpdatingOPF(resource);
+                    if (m_Subscriptions.contains(QStringLiteral("book.resourceRemoved"))) {
+                        Notify(QStringLiteral("book.resourceRemoved"), removed_info);
+                    }
                 }
             } else {
                 if (!relocation_resources.isEmpty()) {
@@ -1760,11 +1841,15 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 return;
             }
             for (Resource *resource : added_resources) {
+                m_BookRevision += 1;
                 committed.append(QJsonObject {
                     { QStringLiteral("resource_id"), resource->GetIdentifier() },
                     { QStringLiteral("book_path"), resource->GetRelativePath() },
                     { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
                 });
+                if (m_Subscriptions.contains(QStringLiteral("book.resourceAdded"))) {
+                    Notify(QStringLiteral("book.resourceAdded"), ResourceInfo(resource));
+                }
             }
             m_MainWindow->GetBookBrowser()->Refresh();
         }
@@ -2024,6 +2109,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, -32602, QStringLiteral("Message parameters are invalid"));
             return;
         }
+        QScopedValueRollback<bool> modal_scope(m_InRequest, false);
         if (level == QStringLiteral("warning")) {
             QMessageBox::warning(m_MainWindow, title, message);
         } else if (level == QStringLiteral("error")) {
@@ -2041,6 +2127,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, -32602, QStringLiteral("Confirmation parameters are invalid"));
             return;
         }
+        QScopedValueRollback<bool> modal_scope(m_InRequest, false);
         const bool confirmed = QMessageBox::question(
             m_MainWindow, title, message, QMessageBox::Yes | QMessageBox::No,
             QMessageBox::No) == QMessageBox::Yes;
@@ -2095,6 +2182,20 @@ void PluginSession::RespondError(const QJsonValue &id, int code, const QString &
     m_Socket->flush();
 }
 
+void PluginSession::Notify(const QString &method, QJsonObject params)
+{
+    if (!m_Authenticated || !m_Socket || m_Ending) return;
+    params.insert(QStringLiteral("origin_session_id"), m_InRequest
+        ? QJsonValue(m_SessionId.toString(QUuid::WithoutBraces)) : QJsonValue());
+    params.insert(QStringLiteral("book_revision"), static_cast<qint64>(m_BookRevision));
+    m_Socket->write(PluginApi::EncodeFrame(QJsonObject {
+        { QStringLiteral("jsonrpc"), QStringLiteral("2.0") },
+        { QStringLiteral("method"), method },
+        { QStringLiteral("params"), params }
+    }));
+    m_Socket->flush();
+}
+
 bool PluginSession::RequirePermission(const QString &permission, const QJsonValue &id)
 {
     if (m_Permissions.contains(permission)) return true;
@@ -2133,6 +2234,10 @@ void PluginSession::TrackResource(Resource *resource)
     connect(resource, &Resource::Modified, this, [this, resource_id]() {
         m_ResourceRevisions[resource_id] += 1;
         m_BookRevision += 1;
+        if (m_Subscriptions.contains(QStringLiteral("book.resourceChanged"))) {
+            Resource *changed = ResolveResource(resource_id);
+            if (changed) Notify(QStringLiteral("book.resourceChanged"), ResourceInfo(changed));
+        }
     });
     connect(resource, &Resource::Renamed, this,
             [this, resource_id](const Resource *, const QString &) {
@@ -2217,6 +2322,7 @@ QStringList PluginSession::EffectivePermissions() const
         if (m_Plugin.get_type() == QStringLiteral("validation")) {
             permissions << QStringLiteral("validation.publish");
         }
+        permissions << QStringLiteral("events.book") << QStringLiteral("events.editor");
     }
     return permissions;
 }

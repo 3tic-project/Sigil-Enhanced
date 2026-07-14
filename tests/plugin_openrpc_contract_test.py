@@ -13,6 +13,8 @@ IMPLEMENTED_METHODS = {
     "session.ping",
     "session.getInfo",
     "session.finish",
+    "events.subscribe",
+    "events.unsubscribe",
     "book.getInfo",
     "book.getCompatibilitySnapshot",
     "book.getRevision",

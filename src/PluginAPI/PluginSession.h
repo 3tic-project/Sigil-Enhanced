@@ -13,6 +13,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QProcess>
+#include <QSet>
 #include <QUuid>
 
 #include <memory>
@@ -62,6 +63,7 @@ private:
     void Respond(const QJsonValue &id, const QJsonValue &result);
     void RespondError(const QJsonValue &id, int code, const QString &message,
                       const QJsonValue &data = QJsonValue());
+    void Notify(const QString &method, QJsonObject params = QJsonObject());
     bool RequirePermission(const QString &permission, const QJsonValue &id);
     QJsonObject ResourceInfo(Resource *resource) const;
     Resource *ResolveResource(const QString &resource_id) const;
@@ -90,8 +92,10 @@ private:
     bool m_Ending;
     bool m_EndSignalScheduled;
     QStringList m_Permissions;
+    QSet<QString> m_Subscriptions;
     QHash<QString, quint64> m_ResourceRevisions;
     quint64 m_BookRevision;
+    bool m_InRequest;
     std::unique_ptr<PluginApi::TextTransaction> m_Transaction;
     QPointer<PluginSessionConsole> m_Console;
 };

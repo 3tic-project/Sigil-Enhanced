@@ -26,3 +26,15 @@ class RpcClient:
             if "result" not in response:
                 raise RuntimeError("JSON-RPC response has no result")
             return response["result"]
+
+    def poll_notification(self):
+        return self.notifications.pop(0) if self.notifications else None
+
+    def next_notification(self):
+        queued = self.poll_notification()
+        if queued is not None:
+            return queued
+        message = self.transport.receive()
+        if "id" in message:
+            raise RuntimeError("received an RPC response while waiting for an event")
+        return message

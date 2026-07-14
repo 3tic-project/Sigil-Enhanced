@@ -6,7 +6,7 @@ import unittest
 LAUNCHER_ROOT = pathlib.Path(__file__).parents[1] / "src" / "Resource_Files" / "plugin_launchers" / "python"
 sys.path.insert(0, str(LAUNCHER_ROOT))
 
-from sigil_live.client import BookApi, EditorApi, Resource, UiApi, ValidationApi
+from sigil_live.client import BookApi, EditorApi, EventsApi, Resource, UiApi, ValidationApi
 from sigil_live.errors import PermissionDenied
 from sigil_live.rpc import RpcClient
 
@@ -39,6 +39,7 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual(rpc.call("session.ping"), {"pong": True})
         self.assertEqual(transport.sent[0]["id"], 1)
         self.assertEqual(len(rpc.notifications), 1)
+        self.assertEqual(rpc.poll_notification()["method"], "editor.contentChanged")
 
     def test_rpc_maps_host_errors(self):
         rpc = RpcClient(
@@ -157,6 +158,24 @@ class LiveSdkTest(unittest.TestCase):
         self.assertTrue(ui.show_status("Working", 1000))
         self.assertTrue(ui.show_message("Done", level="info"))
         self.assertFalse(ui.confirm("Continue?"))
+
+    def test_events_api_subscribes_and_consumes_queued_notifications(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "subscribed": ["editor.activeChanged"]
+            }},
+        ])
+        rpc = RpcClient(transport)
+        events = EventsApi(rpc)
+        self.assertEqual(events.subscribe("editor.activeChanged"), ["editor.activeChanged"])
+        rpc.notifications.append({
+            "jsonrpc": "2.0", "method": "editor.activeChanged",
+            "params": {"new_resource_id": "chapter"},
+        })
+        self.assertEqual(events.poll(), {
+            "name": "editor.activeChanged",
+            "params": {"new_resource_id": "chapter"},
+        })
 
     def test_text_transaction_uses_one_id_until_commit(self):
         transport = FakeTransport(

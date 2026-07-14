@@ -207,6 +207,27 @@ edit block.
 Navigation requires `ui.navigate`; messages and confirmation require
 `ui.message`. Dialog text and status duration are bounded by the wire contract.
 
+### `EventsApi`
+
+```python
+plugin.events.subscribe("editor.activeChanged", "book.resourceChanged")
+event = plugin.events.next_event()
+print(event["name"], event["params"])
+```
+
+Supported events are `editor.activeChanged`, `book.resourceChanged`,
+`book.resourceAdded`, and `book.resourceRemoved`. Book events require
+`events.book`; editor events require `events.editor`. Subscriptions declared in
+`plugin.xml` are installed at session startup when their permissions are
+granted. Every event contains `book_revision` and `origin_session_id`; the
+origin is this session for changes synchronously caused by its request and
+`None` for external/user changes.
+
+`poll()` consumes an already queued event without blocking. `next_event()`
+waits using the transport timeout. The SDK queues notifications received while
+waiting for ordinary RPC results. Calls and event consumption on a single
+connection must remain single-threaded.
+
 ### `ValidationApi`
 
 `plugin.validation.publish_results(results)` accepts dictionaries with `type`
