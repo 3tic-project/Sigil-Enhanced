@@ -151,6 +151,7 @@ not construct the transport directly.
 | Method | Result |
 | --- | --- |
 | `get_info()` | EPUB version, modified state, file path, and book revision. |
+| `get_compatibility_snapshot()` | Immutable OPF, resource index, selection, UI, spellcheck, automation, and font-mangling startup state for the v1 adapter. |
 | `get_revision()` | Current session-local monotonic book revision. |
 | `resources(types=None, page_size=200)` | Iterator of typed `Resource` values. |
 | `text_resources()` | Iterator limited to current text resource types. |
@@ -163,6 +164,12 @@ not construct the transport directly.
 
 `Resource` contains `id`, `book_path`, `media_type`, `resource_type`,
 `revision`, and `loaded`. Its ID is stable only while the current Book is open.
+
+`get_compatibility_snapshot()` is a startup snapshot, not a general
+synchronization API. It is protected by `book.read`; writes still go through
+revision-checked transactions. Application and preferences paths are included
+because the v1 container exposes them for Hunspell, Gumbo, and per-plugin
+preferences compatibility.
 
 ### `EditorApi`
 

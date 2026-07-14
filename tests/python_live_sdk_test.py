@@ -77,6 +77,18 @@ class LiveSdkTest(unittest.TestCase):
         resources = list(BookApi(rpc).resources(types=("html",), page_size=1))
         self.assertEqual(resources, [Resource("a", "Text/a.xhtml", "application/xhtml+xml", "html", 4, True)])
 
+    def test_book_api_requests_compatibility_snapshot(self):
+        snapshot = {"package": {"text": "<package/>", "book_path": "content.opf"}}
+        transport = FakeTransport(
+            [{"jsonrpc": "2.0", "id": 1, "result": snapshot}]
+        )
+        self.assertIs(
+            BookApi(RpcClient(transport)).get_compatibility_snapshot(), snapshot
+        )
+        self.assertEqual(
+            transport.sent[0]["method"], "book.getCompatibilitySnapshot"
+        )
+
     def test_editor_selection_is_typed(self):
         rpc = RpcClient(
             FakeTransport(

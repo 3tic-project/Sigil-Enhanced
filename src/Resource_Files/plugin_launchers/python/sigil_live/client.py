@@ -253,6 +253,10 @@ class BookApi:
     def get_info(self):
         return self._rpc.call("book.getInfo")
 
+    def get_compatibility_snapshot(self):
+        """Return the immutable startup state used by the legacy API adapter."""
+        return self._rpc.call("book.getCompatibilitySnapshot")
+
     def get_revision(self):
         return self._rpc.call("book.getRevision")["revision"]
 

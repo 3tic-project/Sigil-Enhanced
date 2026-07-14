@@ -14,6 +14,7 @@ IMPLEMENTED_METHODS = {
     "session.getInfo",
     "session.finish",
     "book.getInfo",
+    "book.getCompatibilitySnapshot",
     "book.getRevision",
     "resource.list",
     "resource.resolvePath",

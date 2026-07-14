@@ -37,6 +37,7 @@
 #include "PluginAPI/PluginSessionConsole.h"
 #include "PluginAPI/PluginTextEdit.h"
 #include "PluginAPI/PluginTextTransaction.h"
+#include "ResourceObjects/FontResource.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
@@ -433,6 +434,68 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("revision"), static_cast<qint64>(m_BookRevision) }
             });
         }
+    } else if (method == QStringLiteral("book.getCompatibilitySnapshot")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        QSharedPointer<Book> book = m_MainWindow->GetCurrentBook();
+        OPFResource *opf = book->GetOPF();
+        opf->InitialLoad();
+
+        QJsonArray resources;
+        QJsonObject font_mangling;
+        for (Resource *resource : book->GetFolderKeeper()->GetResourceList()) {
+            resources.append(ResourceInfo(resource));
+            if (FontResource *font = qobject_cast<FontResource *>(resource)) {
+                const QString algorithm = font->GetObfuscationAlgorithm();
+                if (!algorithm.isEmpty()) {
+                    font_mangling.insert(resource->GetRelativePath(), algorithm);
+                }
+            }
+        }
+
+        QJsonArray selected;
+        for (Resource *resource : m_MainWindow->GetBookBrowserSelectedResources()) {
+            selected.append(resource->GetRelativePath());
+        }
+
+        SettingsStore settings;
+        const QPalette palette = qApp->palette();
+        const bool dark = palette.color(QPalette::Window).lightness() < 128;
+        QStringList linux_hunspell_dictionary_dirs;
+#if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
+        linux_hunspell_dictionary_dirs = Utility::LinuxHunspellDictionaryDirs();
+#endif
+        QJsonObject colors {
+            { QStringLiteral("Window"), palette.color(QPalette::Window).name() },
+            { QStringLiteral("Base"), palette.color(QPalette::Base).name() },
+            { QStringLiteral("Text"), palette.color(QPalette::Text).name() },
+            { QStringLiteral("Highlight"), palette.color(QPalette::Highlight).name() },
+            { QStringLiteral("HighlightedText"), palette.color(QPalette::HighlightedText).name() }
+        };
+        Respond(id, QJsonObject {
+            { QStringLiteral("package"), QJsonObject {
+                { QStringLiteral("resource"), ResourceInfo(opf) },
+                { QStringLiteral("text"), opf->GetText() },
+                { QStringLiteral("book_path"), opf->GetRelativePath() }
+            } },
+            { QStringLiteral("resources"), resources },
+            { QStringLiteral("selected"), selected },
+            { QStringLiteral("font_mangling"), font_mangling },
+            { QStringLiteral("configuration"), QJsonObject {
+                { QStringLiteral("application_dir"), QCoreApplication::applicationDirPath() },
+                { QStringLiteral("preferences_dir"), Utility::DefinePrefsDir() },
+                { QStringLiteral("linux_hunspell_dictionary_dirs"),
+                    QJsonArray::fromStringList(linux_hunspell_dictionary_dirs) },
+                { QStringLiteral("ui_language"), settings.uiLanguage() },
+                { QStringLiteral("spellcheck_language"), settings.dictionary() },
+                { QStringLiteral("color_mode"), dark ? QStringLiteral("dark")
+                                                      : QStringLiteral("light") },
+                { QStringLiteral("colors"), colors },
+                { QStringLiteral("ui_font"), qApp->font().toString() },
+                { QStringLiteral("using_automate"), m_MainWindow->UsingAutomate() },
+                { QStringLiteral("automate_parameter"),
+                    m_MainWindow->AutomatePluginParameter() }
+            } }
+        });
     } else if (method == QStringLiteral("resource.list")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         QStringList types;

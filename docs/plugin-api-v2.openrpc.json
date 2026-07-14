@@ -49,6 +49,12 @@
       "result": { "name": "result", "schema": { "$ref": "#/components/schemas/BookInfo" } }
     },
     {
+      "name": "book.getCompatibilitySnapshot",
+      "summary": "Return the immutable startup state required by the legacy container adapter.",
+      "params": [],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/CompatibilitySnapshot" } }
+    },
+    {
       "name": "book.getRevision",
       "summary": "Return the current session-local Book revision.",
       "params": [],
@@ -351,6 +357,40 @@
           "modified": { "type": "boolean" },
           "file_path": { "type": "string" },
           "revision": { "$ref": "#/components/schemas/Revision" }
+        }
+      },
+      "CompatibilitySnapshot": {
+        "type": "object",
+        "required": ["package", "resources", "selected", "font_mangling", "configuration"],
+        "properties": {
+          "package": {
+            "type": "object",
+            "required": ["resource", "text", "book_path"],
+            "properties": {
+              "resource": { "$ref": "#/components/schemas/Resource" },
+              "text": { "type": "string" },
+              "book_path": { "type": "string" }
+            }
+          },
+          "resources": { "type": "array", "items": { "$ref": "#/components/schemas/Resource" } },
+          "selected": { "type": "array", "items": { "type": "string" } },
+          "font_mangling": { "type": "object", "additionalProperties": { "type": "string" } },
+          "configuration": {
+            "type": "object",
+            "required": ["application_dir", "preferences_dir", "linux_hunspell_dictionary_dirs", "ui_language", "spellcheck_language", "color_mode", "colors", "ui_font", "using_automate", "automate_parameter"],
+            "properties": {
+              "application_dir": { "type": "string" },
+              "preferences_dir": { "type": "string" },
+              "linux_hunspell_dictionary_dirs": { "type": "array", "items": { "type": "string" } },
+              "ui_language": { "type": "string" },
+              "spellcheck_language": { "type": "string" },
+              "color_mode": { "type": "string", "enum": ["light", "dark"] },
+              "colors": { "type": "object", "additionalProperties": { "type": "string" } },
+              "ui_font": { "type": "string" },
+              "using_automate": { "type": "boolean" },
+              "automate_parameter": { "type": "string" }
+            }
+          }
         }
       },
       "Resource": {
