@@ -56,3 +56,20 @@ target_link_libraries(opf_model_clear_benchmark PRIVATE
 
 add_test(NAME opf_model_clear_benchmark COMMAND opf_model_clear_benchmark)
 set_tests_properties(opf_model_clear_benchmark PROPERTIES TIMEOUT 30)
+
+add_executable(plugin_protocol_test
+    plugin_protocol_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.h
+)
+
+target_include_directories(plugin_protocol_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(plugin_protocol_test PRIVATE
+    Qt6::Core
+)
+
+add_test(NAME plugin_protocol COMMAND plugin_protocol_test)
+set_tests_properties(plugin_protocol PROPERTIES TIMEOUT 30)

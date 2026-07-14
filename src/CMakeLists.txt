@@ -177,6 +177,8 @@ set( DIALOG_FILES
     Dialogs/HeadingSelector.h
     Dialogs/PluginRunner.cpp
     Dialogs/PluginRunner.h
+    PluginAPI/PluginProtocol.cpp
+    PluginAPI/PluginProtocol.h
     Dialogs/Preferences.cpp
     Dialogs/Preferences.h
     Dialogs/PreferenceWidgets/AppearanceWidget.cpp

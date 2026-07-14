@@ -1,0 +1,63 @@
+{
+  "openrpc": "1.3.2",
+  "info": {
+    "title": "Sigil Live Python Plugin API",
+    "version": "2.0.0",
+    "description": "Protocol version 1. Messages use a four-byte big-endian length followed by a UTF-8 JSON-RPC 2.0 object."
+  },
+  "methods": [
+    {
+      "name": "session.hello",
+      "summary": "Authenticate and negotiate a live plugin session.",
+      "params": [
+        { "name": "token", "required": true, "schema": { "type": "string" } },
+        { "name": "protocol_version", "required": true, "schema": { "type": "integer", "const": 1 } },
+        { "name": "api_version", "required": true, "schema": { "type": "integer", "const": 2 } },
+        { "name": "plugin_name", "required": true, "schema": { "type": "string" } }
+      ],
+      "result": {
+        "name": "session",
+        "schema": { "$ref": "#/components/schemas/SessionInfo" }
+      }
+    },
+    {
+      "name": "session.ping",
+      "summary": "Check that the host session is responsive.",
+      "params": [],
+      "result": {
+        "name": "pong",
+        "schema": { "type": "object", "properties": { "pong": { "type": "boolean" } }, "required": ["pong"] }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "SessionInfo": {
+        "type": "object",
+        "properties": {
+          "session_id": { "type": "string", "format": "uuid" },
+          "protocol_version": { "type": "integer", "const": 1 },
+          "api_version": { "type": "integer", "const": 2 },
+          "position_encoding": { "type": "string", "const": "utf-16" },
+          "max_message_size": { "type": "integer", "minimum": 1, "maximum": 33554432 },
+          "permissions": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["session_id", "protocol_version", "api_version", "position_encoding", "max_message_size", "permissions"]
+      }
+    },
+    "errors": {
+      "PermissionDenied": { "code": -32001, "message": "Permission denied" },
+      "BookClosed": { "code": -32002, "message": "Book closed" },
+      "ResourceNotFound": { "code": -32003, "message": "Resource not found" },
+      "RevisionConflict": { "code": -32004, "message": "Revision conflict" },
+      "InvalidPatch": { "code": -32005, "message": "Invalid patch" },
+      "TransactionRequired": { "code": -32006, "message": "Transaction required" },
+      "ValidationFailed": { "code": -32007, "message": "Validation failed" },
+      "PayloadTooLarge": { "code": -32008, "message": "Payload too large" },
+      "Busy": { "code": -32009, "message": "Busy" },
+      "UnsupportedOperation": { "code": -32010, "message": "Unsupported operation" },
+      "TransactionNotFound": { "code": -32011, "message": "Transaction not found" },
+      "SessionEnding": { "code": -32012, "message": "Session ending" }
+    }
+  }
+}
