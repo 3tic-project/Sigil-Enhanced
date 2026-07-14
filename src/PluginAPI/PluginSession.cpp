@@ -42,6 +42,7 @@
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "Misc/ValidationResult.h"
+#include "Parsers/OPFParser.h"
 #include "PluginAPI/PluginSessionConsole.h"
 #include "PluginAPI/PluginTextEdit.h"
 #include "PluginAPI/PluginTextTransaction.h"
@@ -71,6 +72,105 @@ const QSet<QString> SUPPORTED_EVENTS {
 };
 
 bool IsCanonicalBookPath(const QString &book_path);
+
+QJsonObject AttributesToJson(const TagAtts &attributes)
+{
+    QJsonObject result;
+    for (const auto &attribute : attributes.pairs()) {
+        result.insert(attribute.first, attribute.second);
+    }
+    return result;
+}
+
+QJsonObject PackageSections(Book *book)
+{
+    OPFResource *opf = book->GetOPF();
+    opf->InitialLoad();
+    OPFParser parser;
+    parser.parse(opf->GetText());
+    FolderKeeper *folder_keeper = book->GetFolderKeeper();
+
+    QJsonArray metadata;
+    for (const MetaEntry &entry : parser.m_metadata) {
+        metadata.append(QJsonObject {
+            { QStringLiteral("name"), entry.m_name },
+            { QStringLiteral("content"), entry.m_content },
+            { QStringLiteral("attributes"), AttributesToJson(entry.m_atts) }
+        });
+    }
+
+    QHash<QString, QString> manifest_paths;
+    QJsonArray manifest;
+    for (const ManifestEntry &entry : parser.m_manifest) {
+        const QString decoded_href = Utility::URLDecodePath(entry.m_href);
+        const QString book_path = Utility::buildBookPath(decoded_href, opf->GetFolder());
+        manifest_paths.insert(entry.m_id, book_path);
+        Resource *resource = folder_keeper->GetResourceByBookPathNoThrow(book_path);
+        manifest.append(QJsonObject {
+            { QStringLiteral("id"), entry.m_id },
+            { QStringLiteral("href"), entry.m_href },
+            { QStringLiteral("book_path"), book_path },
+            { QStringLiteral("media_type"), entry.m_mtype },
+            { QStringLiteral("properties"), entry.m_atts.value(QStringLiteral("properties")) },
+            { QStringLiteral("fallback"), entry.m_atts.value(QStringLiteral("fallback")) },
+            { QStringLiteral("media_overlay"), entry.m_atts.value(QStringLiteral("media-overlay")) },
+            { QStringLiteral("resource_id"), resource
+                ? QJsonValue(resource->GetIdentifier()) : QJsonValue() }
+        });
+    }
+
+    QJsonArray spine;
+    for (const SpineEntry &entry : parser.m_spine) {
+        const QString book_path = manifest_paths.value(entry.m_idref);
+        Resource *resource = folder_keeper->GetResourceByBookPathNoThrow(book_path);
+        spine.append(QJsonObject {
+            { QStringLiteral("idref"), entry.m_idref },
+            { QStringLiteral("book_path"), book_path },
+            { QStringLiteral("linear"), entry.m_atts.value(QStringLiteral("linear")) },
+            { QStringLiteral("properties"), entry.m_atts.value(QStringLiteral("properties")) },
+            { QStringLiteral("resource_id"), resource
+                ? QJsonValue(resource->GetIdentifier()) : QJsonValue() }
+        });
+    }
+
+    QJsonArray guide;
+    for (const GuideEntry &entry : parser.m_guide) {
+        const QStringList href_parts = entry.m_href.split(QLatin1Char('#'), Qt::KeepEmptyParts);
+        const QString book_path = Utility::buildBookPath(
+            Utility::URLDecodePath(href_parts.first()), opf->GetFolder());
+        guide.append(QJsonObject {
+            { QStringLiteral("type"), entry.m_type },
+            { QStringLiteral("title"), entry.m_title },
+            { QStringLiteral("href"), entry.m_href },
+            { QStringLiteral("book_path"), book_path },
+            { QStringLiteral("fragment"), href_parts.size() > 1 ? href_parts.at(1) : QString() }
+        });
+    }
+
+    QJsonArray bindings;
+    for (const BindingsEntry &entry : parser.m_bindings) {
+        bindings.append(QJsonObject {
+            { QStringLiteral("media_type"), entry.m_mtype },
+            { QStringLiteral("handler"), entry.m_handler }
+        });
+    }
+
+    return QJsonObject {
+        { QStringLiteral("package"), QJsonObject {
+            { QStringLiteral("version"), parser.m_package.m_version },
+            { QStringLiteral("unique_identifier"), parser.m_package.m_uniqueid },
+            { QStringLiteral("attributes"), AttributesToJson(parser.m_package.m_atts) },
+            { QStringLiteral("book_path"), opf->GetRelativePath() }
+        } },
+        { QStringLiteral("metadata"), metadata },
+        { QStringLiteral("metadata_xml"), opf->GetMetadataXML() },
+        { QStringLiteral("manifest"), manifest },
+        { QStringLiteral("spine"), spine },
+        { QStringLiteral("spine_attributes"), AttributesToJson(parser.m_spineattr.m_atts) },
+        { QStringLiteral("guide"), guide },
+        { QStringLiteral("bindings"), bindings }
+    };
+}
 
 QString ResourceTypeName(Resource::ResourceType type)
 {
@@ -741,6 +841,41 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("revision"), static_cast<qint64>(m_BookRevision) }
             });
         }
+    } else if (method == QStringLiteral("book.getMetadata")
+               || method == QStringLiteral("book.getManifest")
+               || method == QStringLiteral("book.getSpine")
+               || method == QStringLiteral("book.getGuide")
+               || method == QStringLiteral("book.getBindings")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        const QJsonObject sections = PackageSections(m_MainWindow->GetCurrentBook().data());
+        if (method == QStringLiteral("book.getMetadata")) {
+            Respond(id, QJsonObject {
+                { QStringLiteral("items"), sections.value(QStringLiteral("metadata")) },
+                { QStringLiteral("xml"), sections.value(QStringLiteral("metadata_xml")) },
+                { QStringLiteral("package"), sections.value(QStringLiteral("package")) }
+            });
+        } else if (method == QStringLiteral("book.getSpine")) {
+            Respond(id, QJsonObject {
+                { QStringLiteral("items"), sections.value(QStringLiteral("spine")) },
+                { QStringLiteral("attributes"), sections.value(QStringLiteral("spine_attributes")) }
+            });
+        } else {
+            const QHash<QString, QString> section_names {
+                { QStringLiteral("book.getManifest"), QStringLiteral("manifest") },
+                { QStringLiteral("book.getGuide"), QStringLiteral("guide") },
+                { QStringLiteral("book.getBindings"), QStringLiteral("bindings") }
+            };
+            Respond(id, QJsonObject {
+                { QStringLiteral("items"), sections.value(section_names.value(method)) }
+            });
+        }
+    } else if (method == QStringLiteral("book.getSelection")) {
+        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
+        QJsonArray items;
+        for (Resource *resource : m_MainWindow->GetBookBrowserSelectedResources()) {
+            items.append(ResourceInfo(resource));
+        }
+        Respond(id, QJsonObject {{ QStringLiteral("items"), items }});
     } else if (method == QStringLiteral("book.getCompatibilitySnapshot")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         QSharedPointer<Book> book = m_MainWindow->GetCurrentBook();

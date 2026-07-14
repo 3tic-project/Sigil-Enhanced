@@ -90,6 +90,23 @@ class LiveSdkTest(unittest.TestCase):
             transport.sent[0]["method"], "book.getCompatibilitySnapshot"
         )
 
+    def test_book_api_exposes_structured_package_sections(self):
+        transport = FakeTransport(
+            [
+                {"jsonrpc": "2.0", "id": 1, "result": {"items": [{"name": "dc:title"}]}},
+                {"jsonrpc": "2.0", "id": 2, "result": {"items": [{"id": "chapter"}]}},
+                {"jsonrpc": "2.0", "id": 3, "result": {"items": [{"idref": "chapter"}]}},
+                {"jsonrpc": "2.0", "id": 4, "result": {"items": []}},
+                {"jsonrpc": "2.0", "id": 5, "result": {"items": []}},
+            ]
+        )
+        book = BookApi(RpcClient(transport))
+        self.assertEqual(book.get_metadata()["items"][0]["name"], "dc:title")
+        self.assertEqual(book.get_manifest()[0]["id"], "chapter")
+        self.assertEqual(book.get_spine()["items"][0]["idref"], "chapter")
+        self.assertEqual(book.get_guide(), [])
+        self.assertEqual(book.get_bindings(), [])
+
     def test_book_api_streams_binary_snapshots_and_closes_them(self):
         transport = FakeTransport(
             [

@@ -156,6 +156,12 @@ not construct the transport directly.
 | Method | Result |
 | --- | --- |
 | `get_info()` | EPUB version, modified state, file path, and book revision. |
+| `get_metadata()` | Ordered metadata entries, raw metadata XML, and package attributes. |
+| `get_manifest()` | Ordered manifest entries with href, resolved Book path, properties, and resource ID. |
+| `get_spine()` | Ordered spine entries plus spine element attributes. |
+| `get_guide()` | EPUB 2 guide entries with resolved paths and fragments. |
+| `get_bindings()` | EPUB 3 media type handler bindings. |
+| `get_selection()` | Typed resources selected in the Book Browser. |
 | `get_compatibility_snapshot()` | Immutable OPF, resource index, selection, UI, spellcheck, automation, and font-mangling startup state for the v1 adapter. |
 | `get_revision()` | Current session-local monotonic book revision. |
 | `archive_files(page_size=200)` | Iterate every regular expanded-EPUB file, including files outside the Resource model. |

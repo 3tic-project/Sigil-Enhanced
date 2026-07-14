@@ -409,6 +409,27 @@ class BookApi:
     def get_revision(self):
         return self._rpc.call("book.getRevision")["revision"]
 
+    def get_metadata(self):
+        return self._rpc.call("book.getMetadata")
+
+    def get_manifest(self):
+        return self._rpc.call("book.getManifest")["items"]
+
+    def get_spine(self):
+        return self._rpc.call("book.getSpine")
+
+    def get_guide(self):
+        return self._rpc.call("book.getGuide")["items"]
+
+    def get_bindings(self):
+        return self._rpc.call("book.getBindings")["items"]
+
+    def get_selection(self):
+        return [
+            Resource.from_result(item)
+            for item in self._rpc.call("book.getSelection")["items"]
+        ]
+
     def archive_files(self, page_size=200):
         cursor = None
         while True:

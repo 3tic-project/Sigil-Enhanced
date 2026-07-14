@@ -69,6 +69,49 @@
       "result": { "name": "result", "schema": { "$ref": "#/components/schemas/BookInfo" } }
     },
     {
+      "name": "book.getMetadata",
+      "summary": "Return ordered package metadata with attributes and the metadata XML fragment.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items", "xml", "package"], "properties": {
+        "items": { "type": "array", "items": { "type": "object" } },
+        "xml": { "type": "string" },
+        "package": { "type": "object" }
+      } } }
+    },
+    {
+      "name": "book.getManifest",
+      "summary": "Return the ordered OPF manifest with resolved Book paths and resource IDs.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "type": "object" } } } } }
+    },
+    {
+      "name": "book.getSpine",
+      "summary": "Return ordered spine entries and spine element attributes.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items", "attributes"], "properties": {
+        "items": { "type": "array", "items": { "type": "object" } },
+        "attributes": { "type": "object" }
+      } } }
+    },
+    {
+      "name": "book.getGuide",
+      "summary": "Return EPUB 2 guide references with resolved Book paths and fragments.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "type": "object" } } } } }
+    },
+    {
+      "name": "book.getBindings",
+      "summary": "Return EPUB 3 media type handler bindings.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "type": "object" } } } } }
+    },
+    {
+      "name": "book.getSelection",
+      "summary": "Return resources currently selected in the Book Browser.",
+      "params": [],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Resource" } } } } }
+    },
+    {
       "name": "book.getCompatibilitySnapshot",
       "summary": "Return the immutable startup state required by the legacy container adapter.",
       "params": [],
