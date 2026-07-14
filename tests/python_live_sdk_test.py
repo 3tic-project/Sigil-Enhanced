@@ -112,7 +112,8 @@ class LiveSdkTest(unittest.TestCase):
             [
                 {"jsonrpc": "2.0", "id": 1, "result": {
                     "stream_id": "stream", "resource_id": "image", "revision": 7,
-                    "size": 5, "sha256": "0" * 64, "chunk_size": 3,
+                    "book_path": "Images/cover.png", "size": 5,
+                    "sha256": "0" * 64, "chunk_size": 3,
                 }},
                 {"jsonrpc": "2.0", "id": 2, "result": {
                     "stream_id": "stream", "data_base64": "aGVs", "offset": 3, "eof": False,
@@ -130,6 +131,19 @@ class LiveSdkTest(unittest.TestCase):
             [item["method"] for item in transport.sent],
             ["binary.openRead", "binary.readChunk", "binary.readChunk", "binary.close"],
         )
+
+    def test_book_api_opens_unmanaged_archive_streams(self):
+        transport = FakeTransport(
+            [{"jsonrpc": "2.0", "id": 1, "result": {
+                "stream_id": "stream", "resource_id": None, "revision": None,
+                "book_path": "META-INF/large.bin", "size": 9,
+                "sha256": "1" * 64, "chunk_size": 1024,
+            }}]
+        )
+        reader = BookApi(RpcClient(transport)).open_archive_file("META-INF/large.bin")
+        self.assertEqual(reader.book_path, "META-INF/large.bin")
+        self.assertIsNone(reader.resource_id)
+        self.assertEqual(transport.sent[0]["params"], {"book_path": "META-INF/large.bin"})
 
     def test_input_api_chunks_and_hashes_epub_uploads(self):
         transport = FakeTransport(

@@ -66,6 +66,7 @@ private:
     struct BinaryReadStream {
         QTemporaryFile *file = nullptr;
         QString resourceId;
+        QString bookPath;
         quint64 revision = 0;
         qint64 size = 0;
         QString sha256;

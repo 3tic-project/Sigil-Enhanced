@@ -182,6 +182,7 @@ not construct the transport directly.
 | `read_many(resources)` | Up to 100 current text resources in one round trip. |
 | `read_binary(resource)` | Read a binary resource up to 5 MiB and return decoded `data`. |
 | `open_binary(resource)` | Open a context-managed, chunked snapshot reader for a binary resource of any size. |
+| `open_archive_file(book_path)` | Open any managed or unmanaged expanded-EPUB file as a chunked snapshot. |
 | `transaction(label, checkpoint="auto")` | Begin a staged `Transaction`. |
 
 `Resource` contains `id`, `book_path`, `media_type`, `resource_type`,
@@ -194,7 +195,9 @@ because the v1 container exposes them for Hunspell, Gumbo, and per-plugin
 preferences compatibility.
 
 `open_binary()` returns a `BinaryReader` with `size`, `sha256`, `revision`, and
-`chunk_size` metadata. Iterate `reader.chunks()` or call `reader.read()`, and
+`chunk_size` metadata. `open_archive_file()` uses the same reader and reports
+`resource_id=None`/`revision=None` for unmanaged entries. Iterate
+`reader.chunks()` or call `reader.read()`, and
 use it as a context manager so the session-owned temporary snapshot is removed
 immediately. Individual chunks are limited to 2 MiB; all remaining snapshots
 are removed when the plugin session ends.

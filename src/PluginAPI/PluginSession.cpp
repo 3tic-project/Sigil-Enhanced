@@ -1125,15 +1125,34 @@ void PluginSession::Dispatch(const QJsonObject &request)
         }
     } else if (method == QStringLiteral("binary.openRead")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
-        Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
-        if (!resource) {
-            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
+        const QString resource_id = params.value(QStringLiteral("resource_id")).toString();
+        const QString requested_path = params.value(QStringLiteral("book_path")).toString();
+        if (resource_id.isEmpty() == requested_path.isEmpty()) {
+            RespondError(id, -32602,
+                         QStringLiteral("Provide exactly one of resource_id or book_path"));
             return;
         }
-        if (qobject_cast<TextResource *>(resource)) {
+        Resource *resource = resource_id.isEmpty() ? nullptr : ResolveResource(resource_id);
+        QString source_path;
+        QString book_path;
+        if (!resource_id.isEmpty() && !resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
+            return;
+        } else if (resource && qobject_cast<TextResource *>(resource)) {
             RespondError(id, PluginApi::UnsupportedOperation,
                          QStringLiteral("Text resources use resource.readText"));
             return;
+        } else if (resource) {
+            source_path = resource->GetFullPath();
+            book_path = resource->GetRelativePath();
+        } else {
+            QString path_error;
+            if (!ResolveArchiveFile(m_MainWindow->GetCurrentBook()->GetFolderKeeper(),
+                                    requested_path, &source_path, &path_error)) {
+                RespondError(id, PluginApi::ResourceNotFound, path_error);
+                return;
+            }
+            book_path = requested_path;
         }
 
         auto *snapshot = new QTemporaryFile(this);
@@ -1147,8 +1166,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
         qint64 total = 0;
         QString copy_error;
         {
-            QReadLocker locker(&resource->GetLock());
-            QFile source(resource->GetFullPath());
+            std::unique_ptr<QReadLocker> locker;
+            if (resource) locker = std::make_unique<QReadLocker>(&resource->GetLock());
+            QFile source(source_path);
             if (!source.open(QIODevice::ReadOnly)) {
                 copy_error = source.errorString();
             } else {
@@ -1176,15 +1196,19 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const QString stream_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         BinaryReadStream stream;
         stream.file = snapshot;
-        stream.resourceId = resource->GetIdentifier();
-        stream.revision = Revision(resource);
+        stream.resourceId = resource ? resource->GetIdentifier() : QString();
+        stream.bookPath = book_path;
+        stream.revision = resource ? Revision(resource) : 0;
         stream.size = total;
         stream.sha256 = QString::fromLatin1(hash.result().toHex());
         m_BinaryReadStreams.insert(stream_id, stream);
         Respond(id, QJsonObject {
             { QStringLiteral("stream_id"), stream_id },
-            { QStringLiteral("resource_id"), stream.resourceId },
-            { QStringLiteral("revision"), static_cast<qint64>(stream.revision) },
+            { QStringLiteral("resource_id"), stream.resourceId.isEmpty()
+                ? QJsonValue() : QJsonValue(stream.resourceId) },
+            { QStringLiteral("book_path"), stream.bookPath },
+            { QStringLiteral("revision"), stream.resourceId.isEmpty()
+                ? QJsonValue() : QJsonValue(static_cast<qint64>(stream.revision)) },
             { QStringLiteral("size"), stream.size },
             { QStringLiteral("sha256"), stream.sha256 },
             { QStringLiteral("chunk_size"), static_cast<qint64>(DEFAULT_BINARY_CHUNK_SIZE) }

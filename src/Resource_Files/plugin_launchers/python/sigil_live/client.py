@@ -66,8 +66,9 @@ class BinaryReader:
     def __init__(self, rpc, result):
         self._rpc = rpc
         self.id = result["stream_id"]
-        self.resource_id = result["resource_id"]
-        self.revision = result["revision"]
+        self.resource_id = result.get("resource_id")
+        self.book_path = result["book_path"]
+        self.revision = result.get("revision")
         self.size = result["size"]
         self.sha256 = result["sha256"]
         self.chunk_size = result["chunk_size"]
@@ -491,6 +492,13 @@ class BookApi:
         return BinaryReader(
             self._rpc,
             self._rpc.call("binary.openRead", {"resource_id": resource_id}),
+        )
+
+    def open_archive_file(self, book_path):
+        """Open any expanded EPUB file as a chunked stable snapshot."""
+        return BinaryReader(
+            self._rpc,
+            self._rpc.call("binary.openRead", {"book_path": book_path}),
         )
 
     def transaction(self, label="Plugin changes", checkpoint="auto"):

@@ -200,13 +200,17 @@
     },
     {
       "name": "binary.openRead",
-      "summary": "Create a stable session-owned snapshot for chunked binary reading.",
+      "summary": "Create a stable session-owned snapshot of a resource or expanded EPUB file.",
       "paramStructure": "by-name",
-      "params": [{ "name": "resource_id", "required": true, "schema": { "type": "string" } }],
-      "result": { "name": "result", "schema": { "type": "object", "required": ["stream_id", "resource_id", "revision", "size", "sha256", "chunk_size"], "properties": {
+      "params": [
+        { "name": "resource_id", "schema": { "type": "string" } },
+        { "name": "book_path", "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["stream_id", "resource_id", "book_path", "revision", "size", "sha256", "chunk_size"], "properties": {
         "stream_id": { "type": "string", "format": "uuid" },
-        "resource_id": { "type": "string" },
-        "revision": { "$ref": "#/components/schemas/Revision" },
+        "resource_id": { "type": ["string", "null"] },
+        "book_path": { "type": "string" },
+        "revision": { "oneOf": [{ "$ref": "#/components/schemas/Revision" }, { "type": "null" }] },
         "size": { "type": "integer", "minimum": 0 },
         "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "chunk_size": { "type": "integer", "minimum": 1, "maximum": 2097152 }
