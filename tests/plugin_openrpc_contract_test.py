@@ -39,6 +39,7 @@ IMPLEMENTED_METHODS = {
     "input.beginEpub",
     "input.writeChunk",
     "input.finishEpub",
+    "output.exportEpub",
     "editor.getState",
     "editor.getSelection",
     "editor.getOpenTabs",

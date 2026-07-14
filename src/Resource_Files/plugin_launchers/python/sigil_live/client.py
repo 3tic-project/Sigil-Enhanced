@@ -176,6 +176,14 @@ class InputApi:
         return writer.finish()
 
 
+class OutputApi:
+    def __init__(self, rpc):
+        self._rpc = rpc
+
+    def export_epub(self, path):
+        return self._rpc.call("output.exportEpub", {"path": os.path.abspath(path)})
+
+
 class Transaction:
     def __init__(self, rpc, result):
         self._rpc = rpc
@@ -735,6 +743,7 @@ class Plugin:
         self.editor = EditorApi(rpc)
         self.validation = ValidationApi(rpc)
         self.input = InputApi(rpc)
+        self.output = OutputApi(rpc)
         self.ui = UiApi(rpc)
         self.events = EventsApi(rpc)
 

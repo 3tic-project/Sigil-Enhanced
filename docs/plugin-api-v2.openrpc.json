@@ -281,6 +281,16 @@
       } } }
     },
     {
+      "name": "output.exportEpub",
+      "summary": "Export the current in-memory Book through Sigil's EPUB exporter.",
+      "paramStructure": "by-name",
+      "params": [{ "name": "path", "required": true, "schema": { "type": "string" } }],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["exported", "path"], "properties": {
+        "exported": { "type": "boolean" },
+        "path": { "type": "string" }
+      } } }
+    },
+    {
       "name": "editor.getState",
       "summary": "Return active editor resource, revision, cursor, and selection.",
       "params": [],

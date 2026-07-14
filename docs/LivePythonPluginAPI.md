@@ -156,6 +156,7 @@ not construct the transport directly.
 | `book` | `BookApi` instance. |
 | `editor` | `EditorApi` instance. |
 | `input` | `InputApi` instance for input plugins. |
+| `output` | `OutputApi` instance for output plugins. |
 | `ping()` | `True` when the host responds. |
 | `finish(status, message)` | Normally called by the launcher. |
 
@@ -215,6 +216,14 @@ are removed when the plugin session ends.
 2 GiB limit, and the ZIP signature. Only an input plugin with `input.submit`
 may use these methods. Submission does not replace the Book unless the plugin
 subsequently finishes successfully.
+
+### `OutputApi`
+
+`plugin.output.export_epub(path)` asks Sigil's native exporter to write the
+current in-memory Book to an absolute `.epub` path. It preserves Sigil's EPUB
+validation, cleaning, and font-obfuscation behavior and does not change the
+current Book filename or modified state. Only output plugins with
+`output.export` may call it, and the current open EPUB cannot be overwritten.
 
 ### `EditorApi`
 

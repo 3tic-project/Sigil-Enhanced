@@ -6124,6 +6124,12 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal)
 }
 
 
+bool MainWindow::ExportCurrentBookCopy(const QString &fullfilepath)
+{
+    return SaveFile(fullfilepath, false);
+}
+
+
 void MainWindow::SetValidationResults(const QList<ValidationResult> &results)
 {
     m_ValidationResultsView->LoadResults(results);

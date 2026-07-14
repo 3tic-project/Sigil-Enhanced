@@ -219,6 +219,7 @@ public:
      * @param fullfilepath The path to the file to load.
      */
     bool LoadFile(const QString &fullfilepath, bool is_internal = false);
+    bool ExportCurrentBookCopy(const QString &fullfilepath);
 
     void SetValidationResults(const QList<ValidationResult> &results);
 

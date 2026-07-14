@@ -6,7 +6,7 @@ import unittest
 LAUNCHER_ROOT = pathlib.Path(__file__).parents[1] / "src" / "Resource_Files" / "plugin_launchers" / "python"
 sys.path.insert(0, str(LAUNCHER_ROOT))
 
-from sigil_live.client import BookApi, EditorApi, EventsApi, InputApi, Resource, UiApi, ValidationApi
+from sigil_live.client import BookApi, EditorApi, EventsApi, InputApi, OutputApi, Resource, UiApi, ValidationApi
 from sigil_live.errors import PermissionDenied
 from sigil_live.rpc import RpcClient
 
@@ -167,6 +167,16 @@ class LiveSdkTest(unittest.TestCase):
             transport.sent[-1]["params"]["sha256"],
             "fb789d1e6f25f631f2a44d1cd635b3ba6e93708eca58ae6a12f6084af458c5ef",
         )
+
+    def test_output_api_requests_host_epub_export(self):
+        transport = FakeTransport(
+            [{"jsonrpc": "2.0", "id": 1, "result": {
+                "exported": True, "path": "/tmp/output.epub",
+            }}]
+        )
+        result = OutputApi(RpcClient(transport)).export_epub("/tmp/output.epub")
+        self.assertTrue(result["exported"])
+        self.assertEqual(transport.sent[0]["method"], "output.exportEpub")
 
     def test_editor_selection_is_typed(self):
         rpc = RpcClient(

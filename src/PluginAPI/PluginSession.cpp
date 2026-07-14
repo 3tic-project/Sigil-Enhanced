@@ -1370,6 +1370,34 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("size"), size },
             { QStringLiteral("sha256"), actual_sha256 }
         });
+    } else if (method == QStringLiteral("output.exportEpub")) {
+        if (!RequirePermission(QStringLiteral("output.export"), id)) return;
+        if (m_Plugin.get_type() != QStringLiteral("output")) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Only output plugins may export an EPUB"));
+            return;
+        }
+        const QString path = params.value(QStringLiteral("path")).toString();
+        const QFileInfo target(path);
+        const QString current_file = m_MainWindow->GetCurrentFilePath();
+        const QFileInfo current(current_file);
+        const QString target_path = target.absoluteFilePath();
+        const QString current_path = current.absoluteFilePath();
+        const QString target_identity = target.exists() ? target.canonicalFilePath() : target_path;
+        const QString current_identity = current.exists() ? current.canonicalFilePath() : current_path;
+        if (path.isEmpty() || !target.isAbsolute()
+            || target.suffix().compare(QStringLiteral("epub"), Qt::CaseInsensitive) != 0
+            || (!current_file.isEmpty() && target_identity == current_identity)) {
+            RespondError(id, -32602,
+                         QStringLiteral("An absolute .epub path other than the current Book is required"));
+            return;
+        }
+        QScopedValueRollback<bool> modal_scope(m_InRequest, false);
+        const bool exported = m_MainWindow->ExportCurrentBookCopy(target_path);
+        Respond(id, QJsonObject {
+            { QStringLiteral("exported"), exported },
+            { QStringLiteral("path"), target_path }
+        });
     } else if (method == QStringLiteral("resource.readMany")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QJsonArray ids = params.value(QStringLiteral("resource_ids")).toArray();
@@ -2810,6 +2838,9 @@ QStringList PluginSession::EffectivePermissions() const
         }
         if (m_Plugin.get_type() == QStringLiteral("input")) {
             permissions << QStringLiteral("input.submit");
+        }
+        if (m_Plugin.get_type() == QStringLiteral("output")) {
+            permissions << QStringLiteral("output.export");
         }
         permissions << QStringLiteral("events.book") << QStringLiteral("events.editor");
         permissions << QStringLiteral("ui.progress");
