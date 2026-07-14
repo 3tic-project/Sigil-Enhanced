@@ -53,7 +53,6 @@ FindReplacePlus::FindReplacePlus(MainWindow *main_window)
       m_StartingTextLen(-1)
 {
     ui.setupUi(this);
-    ExtendUI();
     FindReplaceQLineEdit* prefind_ledit = new FindReplaceQLineEdit(this, true);
     ui.cbPreFind->setLineEdit(prefind_ledit);
     FindReplaceQLineEdit *find_ledit = new FindReplaceQLineEdit(this,true);
@@ -1835,6 +1834,7 @@ void FindReplacePlus::ExtendUI()
     ui.cbSearchMode->clear();
     ui.cbLookWhere->clear();
     ui.cbSearchDirection->clear();
+    ui.MarkedTextIndicator->clear();
 
     QString mode_tooltip = "<dl>";
     ui.cbSearchMode->addItem(tr("Normal"), FindReplacePlus::SearchMode_Normal);
@@ -1884,6 +1884,11 @@ void FindReplacePlus::ExtendUI()
                                      "<dt><b>" + tr("Up") + "</b><dd>" + tr("Search for the previous match from your current position.") + "</dd>"
                                      "<dt><b>" + tr("Down") + "</b><dd>" + tr("Search for the next match from your current position.") + "</dd>"
                                      "</dl>");
+
+    Q_ASSERT(ui.cbSearchMode->count() == 3);
+    Q_ASSERT(ui.cbLookWhere->count() == 6);
+    Q_ASSERT(ui.cbSearchDirection->count() == 2);
+    Q_ASSERT(ui.MarkedTextIndicator->count() == 1);
 }
 
 

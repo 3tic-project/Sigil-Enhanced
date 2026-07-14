@@ -1,6 +1,7 @@
 Unreleased
    Bug Fixes
      - Fixed singleton destruction paths that could recursively delete the object being destroyed.
+     - Fixed duplicate FindReplacePlus initialization that added the Marked Text indicator twice.
 
 Sigil-Enhanced-2.8.1.E4
    Bug Fixes

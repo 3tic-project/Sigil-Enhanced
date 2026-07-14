@@ -12,7 +12,7 @@ work in `todo/audit/06-整改路线图与验收标准.md`.
 | Work item | Status | Acceptance summary |
 | --- | --- | --- |
 | Singleton self-deletion | Complete | Eight destructors only clear their own registered instance pointer; Debug build passes |
-| FindReplacePlus double initialization | Pending | Marked Text has exactly one item |
+| FindReplacePlus double initialization | Complete | One initialization; all option lists are idempotent and have asserted counts |
 | CSSInfo leak | Pending | Repeated formatting leaves no orphaned allocation |
 | Safe archive paths and budgets | Pending | ZIP Slip and ZIP bomb cases fail safely; normal EPUB/plugin archives pass |
 | Image hover preview | Pending | Background scaled decode, cancellation, bounded cache |
@@ -43,3 +43,25 @@ creation and process shutdown timing are outside this change.
 - Failure path: destroying an object that is not the registered instance does not
   overwrite the pointer to the registered instance.
 - No UI strings, persistence formats, transaction boundaries, or undo behavior change.
+
+## FindReplacePlus Initialization
+
+### Impact
+
+The constructor called `ExtendUI()` both before and after replacing the combo-box
+line edits. Most option lists were cleared by that function, but the Marked Text
+indicator was not, so it accumulated two identical entries.
+
+### Change Boundary
+
+The premature call was removed. `ExtendUI()` now also clears the Marked Text
+indicator, making repeated calls idempotent. The existing order in which custom line
+edits, completers, options, signal connections, and settings are initialized is kept.
+
+### Verification
+
+- Debug assertions verify 3 search modes, 6 search scopes, 2 directions, and exactly
+  1 Marked Text entry after every call to `ExtendUI()`.
+- Build regression: `cmake --build cmake-build-debug -j2` passes with assertions enabled.
+- Repeated initialization no longer changes any option count.
+- Existing translated strings are reused; no translation catalogs or settings keys change.
