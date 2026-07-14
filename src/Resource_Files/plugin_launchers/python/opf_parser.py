@@ -55,15 +55,20 @@ def build_short_name(bookpath, lvl):
 
 class Opf_Parser(object):
 
-    def __init__(self, opf_path, opf_bookpath, debug=False):
+    def __init__(self, opf_path, opf_bookpath, debug=False, opf_data=None):
         self._debug = debug
-        opf_path = os.fsdecode(opf_path)
+        opf_path = os.fsdecode(opf_path) if opf_path is not None else opf_bookpath
         self.opfname = os.path.basename(opf_path)
         self.opf_bookpath = opf_bookpath
         self.opf_dir = startingDir(opf_bookpath)
         self.opf = None
-        with open(opf_path, 'rb') as fp:
-            self.opf = fp.read().decode('utf-8')
+        if opf_data is None:
+            with open(opf_path, 'rb') as fp:
+                self.opf = fp.read().decode('utf-8')
+        elif isinstance(opf_data, bytes):
+            self.opf = opf_data.decode('utf-8')
+        else:
+            self.opf = opf_data
         self.opos = 0
         self.package = None
         self.metadata_attr = None

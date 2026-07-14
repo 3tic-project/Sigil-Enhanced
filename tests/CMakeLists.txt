@@ -107,6 +107,11 @@ add_test(NAME legacy_plugin_api_surface
 )
 set_tests_properties(legacy_plugin_api_surface PROPERTIES TIMEOUT 30)
 
+add_test(NAME live_legacy_wrapper
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/live_legacy_wrapper_test.py
+)
+set_tests_properties(live_legacy_wrapper PROPERTIES TIMEOUT 30)
+
 add_executable(plugin_transport_integration_test
     plugin_transport_integration_test.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp

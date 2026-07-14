@@ -254,10 +254,20 @@ The live compatibility foundation provides `CompatBookContainer`,
 `CompatValidationContainer` in `sigil_live.compat`. They inherit the
 authoritative v1 classes so the public member kinds and signatures cannot
 diverge. `legacy_plugin_api_surface_test.py` verifies all 76/60/12 members and
-the two validation extensions on every test run. This is API-surface coverage,
-not a claim of behavioral completion: the RPC-backed wrapper, implicit commit,
-binary operations, resource structure changes, and compatibility launcher
-routing remain required before v1 plugins can use the live runtime.
+the two validation extensions on every test run.
+
+`LiveWrapper` now initializes those containers from the in-memory compatibility
+snapshot. It delegates current text and binary reads to RPC, keeps legacy
+read-your-writes behavior in a private client-side stage, and translates final
+writes, manifested/unmanifested additions, removals, and OPF serialization into
+one revision-checked host transaction. `flush()` commits and refreshes the
+snapshot before starting another transaction. Canonical Book paths are checked
+before local copying so staged paths cannot escape a requested destination.
+
+`live_legacy_wrapper_test.py` exercises the behavioral adapter. Host launcher
+routing, non-Resource EPUB control files, validation-result delivery, and
+input/output completion are tracked separately; until those are wired, the
+plugin manager continues to reject live execution for undeclared v1 plugins.
 
 ## Known v1 boundaries
 
