@@ -5,6 +5,9 @@ tree. It is the user and API reference for implemented behavior. The broader
 design roadmap is not an implementation contract; methods that are not listed
 here are not available yet.
 
+For a method-by-method Chinese reference and installable examples, see
+`LivePythonPluginAPIReference.md` and `../examples/live_plugins/`.
+
 ## Status and compatibility
 
 Sigil currently contains two independent plugin execution paths:

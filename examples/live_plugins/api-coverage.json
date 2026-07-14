@@ -1,0 +1,96 @@
+{
+  "BinaryReader": {
+    "chunks": "LiveApiShowcase/plugin.py",
+    "read": "LiveApiShowcase/plugin.py",
+    "close": "LiveApiShowcase/plugin.py"
+  },
+  "InputWriter": {
+    "write": "LiveInputExample/plugin.py",
+    "finish": "LiveInputExample/plugin.py"
+  },
+  "InputApi": {
+    "begin_epub": "LiveInputExample/plugin.py",
+    "submit_epub": "LiveInputExample/plugin.py",
+    "submit_epub_file": "LiveInputExample/plugin.py"
+  },
+  "OutputApi": {
+    "export_epub": "LiveOutputExample/plugin.py"
+  },
+  "Transaction": {
+    "read_text": "LiveTransactionLab/plugin.py",
+    "replace_text": "LiveTransactionLab/plugin.py",
+    "apply_edits": "LiveTransactionLab/plugin.py",
+    "read_binary": "LiveTransactionLab/plugin.py",
+    "write_binary": "LiveTransactionLab/plugin.py",
+    "replace_package": "LiveTransactionLab/plugin.py",
+    "replace_archive_file": "LiveTransactionLab/plugin.py",
+    "remove_archive_file": "LiveTransactionLab/plugin.py",
+    "add_resource": "LiveTransactionLab/plugin.py",
+    "remove_resource": "LiveTransactionLab/plugin.py",
+    "move_resource": "LiveTransactionLab/plugin.py",
+    "rename_resource": "LiveTransactionLab/plugin.py",
+    "validate": "LiveTransactionLab/plugin.py",
+    "preview": "LiveTransactionLab/plugin.py",
+    "commit": "LiveTransactionLab/plugin.py",
+    "rollback": "LiveTransactionLab/plugin.py"
+  },
+  "BookApi": {
+    "get_info": "LiveApiShowcase/plugin.py",
+    "get_compatibility_snapshot": "LiveTransactionLab/plugin.py",
+    "get_revision": "LiveApiShowcase/plugin.py",
+    "get_metadata": "LiveApiShowcase/plugin.py",
+    "get_manifest": "LiveApiShowcase/plugin.py",
+    "get_spine": "LiveApiShowcase/plugin.py",
+    "get_guide": "LiveApiShowcase/plugin.py",
+    "get_bindings": "LiveApiShowcase/plugin.py",
+    "get_selection": "LiveApiShowcase/plugin.py",
+    "archive_files": "LiveOutputExample/plugin.py",
+    "read_archive_file": "LiveTransactionLab/plugin.py",
+    "resources": "LiveApiShowcase/plugin.py",
+    "text_resources": "LiveApiShowcase/plugin.py",
+    "resolve_path": "LiveApiShowcase/plugin.py",
+    "get_resource": "LiveOutputExample/plugin.py",
+    "read_text": "LiveOutputExample/plugin.py",
+    "read_many": "LiveApiShowcase/plugin.py",
+    "read_binary": "LiveApiShowcase/plugin.py",
+    "open_binary": "LiveApiShowcase/plugin.py",
+    "open_archive_file": "LiveOutputExample/plugin.py",
+    "transaction": "LiveTransactionLab/plugin.py"
+  },
+  "EditorApi": {
+    "get_state": "LiveApiShowcase/plugin.py",
+    "get_selection": "LiveApiShowcase/plugin.py",
+    "get_open_tabs": "LiveApiShowcase/plugin.py",
+    "apply_edits": "LiveApiShowcase/plugin.py",
+    "replace_selection": "LiveApiShowcase/plugin.py",
+    "insert_text": "LiveApiShowcase/plugin.py",
+    "set_cursor": "LiveApiShowcase/plugin.py",
+    "set_selection": "LiveApiShowcase/plugin.py",
+    "open_resource": "LiveApiShowcase/plugin.py",
+    "reveal_range": "LiveApiShowcase/plugin.py"
+  },
+  "ValidationApi": {
+    "publish_results": "LiveValidationExample/plugin.py"
+  },
+  "Progress": {
+    "update": "LiveApiShowcase/plugin.py",
+    "end": "LiveApiShowcase/plugin.py"
+  },
+  "UiApi": {
+    "show_status": "LiveApiShowcase/plugin.py",
+    "show_message": "LiveApiShowcase/plugin.py",
+    "confirm": "LiveApiShowcase/plugin.py",
+    "choose_open_file": "LiveInputExample/plugin.py",
+    "choose_save_file": "LiveOutputExample/plugin.py",
+    "progress": "LiveApiShowcase/plugin.py"
+  },
+  "EventsApi": {
+    "subscribe": "LiveApiShowcase/plugin.py",
+    "unsubscribe": "LiveApiShowcase/plugin.py",
+    "poll": "LiveApiShowcase/plugin.py",
+    "next_event": "LiveBookWatcher/plugin.py"
+  },
+  "Plugin": {
+    "ping": "LiveApiShowcase/plugin.py"
+  }
+}

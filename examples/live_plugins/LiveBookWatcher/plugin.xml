@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>Live Book Watcher</name>
+  <author>Sigil Enhanced</author>
+  <description>Prints current Book and editor events until cancelled or the Book closes.</description>
+  <type>validation</type>
+  <engine>python3</engine>
+  <version>2.0.0</version>
+  <api version="2" interface="live" />
+  <lifetime>book-session</lifetime>
+  <permissions>
+    <permission>book.read</permission>
+    <permission>editor.read</permission>
+    <permission>events.book</permission>
+    <permission>events.editor</permission>
+    <permission>ui.message</permission>
+  </permissions>
+  <events>
+    <event>editor.activeChanged</event>
+    <event>book.resourceChanged</event>
+    <event>book.resourceAdded</event>
+    <event>book.resourceRemoved</event>
+  </events>
+</plugin>

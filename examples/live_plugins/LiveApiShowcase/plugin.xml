@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>Live API Showcase</name>
+  <author>Sigil Enhanced</author>
+  <description>Demonstrates live Book, editor, event, UI, and progress APIs.</description>
+  <type>edit</type>
+  <engine>python3</engine>
+  <version>2.0.0</version>
+  <api version="2" interface="live" />
+  <lifetime>command</lifetime>
+  <permissions>
+    <permission>book.read</permission>
+    <permission>editor.read</permission>
+    <permission>editor.write</permission>
+    <permission>ui.navigate</permission>
+    <permission>ui.message</permission>
+    <permission>ui.progress</permission>
+    <permission>events.book</permission>
+    <permission>events.editor</permission>
+  </permissions>
+</plugin>

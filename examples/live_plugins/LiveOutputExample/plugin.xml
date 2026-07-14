@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>Live Output Example</name>
+  <author>Sigil Enhanced</author>
+  <description>Exports the current in-memory Book through chunked reads.</description>
+  <type>output</type>
+  <engine>python3</engine>
+  <version>2.0.0</version>
+  <api version="2" interface="live" />
+  <lifetime>command</lifetime>
+  <permissions>
+    <permission>book.read</permission>
+    <permission>output.export</permission>
+    <permission>ui.fileDialog</permission>
+    <permission>ui.message</permission>
+    <permission>ui.progress</permission>
+  </permissions>
+</plugin>
