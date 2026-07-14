@@ -48,13 +48,13 @@ quint64 TextTransaction::BaseBookRevision() const
 bool TextTransaction::IsEmpty() const
 {
     return m_Changes.isEmpty() && m_BinaryChanges.isEmpty() && m_Additions.isEmpty()
-        && m_Removals.isEmpty() && m_Relocations.isEmpty();
+        && m_Removals.isEmpty() && m_Relocations.isEmpty() && !m_HasPackageChange;
 }
 
 int TextTransaction::Size() const
 {
     return m_Changes.size() + m_BinaryChanges.size() + m_Additions.size()
-        + m_Removals.size() + m_Relocations.size();
+        + m_Removals.size() + m_Relocations.size() + (m_HasPackageChange ? 1 : 0);
 }
 
 bool TextTransaction::HasChange(const QString &resource_id) const
@@ -65,6 +65,11 @@ bool TextTransaction::HasChange(const QString &resource_id) const
 bool TextTransaction::HasBinaryChange(const QString &resource_id) const
 {
     return m_BinaryChanges.contains(resource_id);
+}
+
+bool TextTransaction::HasPackageChange() const
+{
+    return m_HasPackageChange;
 }
 
 QString TextTransaction::ReadText(const QString &resource_id,
@@ -171,6 +176,34 @@ bool TextTransaction::ReplaceBinary(const QString &resource_id,
         found->stagedData = replacement;
     }
     return true;
+}
+
+bool TextTransaction::ReplacePackage(const QString &resource_id,
+                                     const QString &current_text,
+                                     quint64 current_revision,
+                                     quint64 expected_revision,
+                                     const QString &replacement,
+                                     QString *error)
+{
+    const quint64 required_revision = m_HasPackageChange
+        ? m_PackageChange.baseRevision : current_revision;
+    if (expected_revision != required_revision) {
+        if (error) *error = QStringLiteral("Revision conflict");
+        return false;
+    }
+    if (!m_HasPackageChange) {
+        m_PackageChange.resourceId = resource_id;
+        m_PackageChange.originalText = current_text;
+        m_PackageChange.baseRevision = current_revision;
+        m_HasPackageChange = true;
+    }
+    m_PackageChange.stagedText = replacement;
+    return true;
+}
+
+StagedPackageChange TextTransaction::PackageChange() const
+{
+    return m_PackageChange;
 }
 
 bool TextTransaction::AddResource(const StagedResourceAddition &addition, QString *error)
@@ -282,6 +315,8 @@ void TextTransaction::Clear()
 {
     m_Changes.clear();
     m_BinaryChanges.clear();
+    m_PackageChange = StagedPackageChange();
+    m_HasPackageChange = false;
     m_Additions.clear();
     m_Removals.clear();
     m_Relocations.clear();

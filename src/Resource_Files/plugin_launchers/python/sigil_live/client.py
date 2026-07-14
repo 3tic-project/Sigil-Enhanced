@@ -142,6 +142,15 @@ class Transaction:
             ),
         )
 
+    def replace_package(self, text, expected_revision):
+        """Stage an authoritative OPF package document replacement."""
+        return self._rpc.call(
+            "transaction.replacePackage",
+            self._params(
+                {"expected_revision": expected_revision, "text": text}
+            ),
+        )
+
     def add_resource(
         self,
         book_path,

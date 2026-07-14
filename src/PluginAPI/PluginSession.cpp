@@ -23,9 +23,11 @@
 #include <QRandomGenerator>
 #include <QReadLocker>
 #include <QSaveFile>
+#include <QSet>
 #include <QTemporaryFile>
 #include <QWriteLocker>
 #include <QTimer>
+#include <QXmlStreamReader>
 
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
@@ -157,6 +159,143 @@ bool DecodeResourcePayload(const QJsonObject &params, QByteArray *data, QString 
     }
     if (data->size() > MAX_INLINE_BINARY_SIZE) {
         if (error) *error = QStringLiteral("Resource data exceeds the inline size limit");
+        return false;
+    }
+    return true;
+}
+
+struct PackageDocumentInfo {
+    QSet<QString> manifestIds;
+    QSet<QString> manifestPaths;
+    QSet<QString> spineIds;
+};
+
+bool ParsePackageDocument(const QString &source,
+                          const QString &book_path,
+                          const QString &expected_version,
+                          PackageDocumentInfo *info,
+                          QString *error)
+{
+    QXmlStreamReader reader(source);
+    bool package_seen = false;
+    bool metadata_seen = false;
+    bool manifest_seen = false;
+    bool spine_seen = false;
+    bool in_manifest = false;
+    bool in_spine = false;
+    const QString package_dir = Utility::startingDir(book_path);
+
+    while (!reader.atEnd()) {
+        reader.readNext();
+        if (reader.isStartElement()) {
+            const QString name = reader.name().toString();
+            if (!package_seen) {
+                if (name != QStringLiteral("package")) {
+                    if (error) *error = QStringLiteral("The document root must be package");
+                    return false;
+                }
+                package_seen = true;
+                const QString version = reader.attributes().value(QStringLiteral("version")).toString();
+                if (version != expected_version) {
+                    if (error) *error = QStringLiteral("The package version cannot be changed");
+                    return false;
+                }
+            }
+            if (name == QStringLiteral("metadata")) metadata_seen = true;
+            if (name == QStringLiteral("manifest")) {
+                manifest_seen = true;
+                in_manifest = true;
+            } else if (name == QStringLiteral("spine")) {
+                spine_seen = true;
+                in_spine = true;
+            } else if (in_manifest && name == QStringLiteral("item")) {
+                const QString manifest_id = reader.attributes().value(QStringLiteral("id")).toString();
+                const QString href = reader.attributes().value(QStringLiteral("href")).toString();
+                if (manifest_id.isEmpty() || href.isEmpty()
+                    || info->manifestIds.contains(manifest_id)) {
+                    if (error) *error = QStringLiteral("Manifest IDs and hrefs must be present and unique");
+                    return false;
+                }
+                QString normalized_path = href;
+                if (!href.contains(QLatin1Char(':'))) {
+                    const auto path_and_fragment = Utility::parseRelativeHREF(href);
+                    if (!path_and_fragment.second.isEmpty()) {
+                        if (error) *error = QStringLiteral("Manifest hrefs cannot contain fragments");
+                        return false;
+                    }
+                    normalized_path = Utility::buildBookPath(path_and_fragment.first, package_dir);
+                    if (!IsCanonicalBookPath(normalized_path)) {
+                        if (error) *error = QStringLiteral("Manifest href is not a canonical Book path");
+                        return false;
+                    }
+                }
+                if (info->manifestPaths.contains(normalized_path)) {
+                    if (error) *error = QStringLiteral("Manifest hrefs must be unique");
+                    return false;
+                }
+                info->manifestIds.insert(manifest_id);
+                info->manifestPaths.insert(normalized_path);
+            } else if (in_spine && name == QStringLiteral("itemref")) {
+                const QString idref = reader.attributes().value(QStringLiteral("idref")).toString();
+                if (idref.isEmpty()) {
+                    if (error) *error = QStringLiteral("Spine itemrefs require an idref");
+                    return false;
+                }
+                info->spineIds.insert(idref);
+            }
+        } else if (reader.isEndElement()) {
+            if (reader.name() == QStringLiteral("manifest")) in_manifest = false;
+            if (reader.name() == QStringLiteral("spine")) in_spine = false;
+        }
+    }
+    if (reader.hasError()) {
+        if (error) *error = QStringLiteral("Package XML is not well formed: %1")
+            .arg(reader.errorString());
+        return false;
+    }
+    if (!package_seen || !metadata_seen || !manifest_seen || !spine_seen) {
+        if (error) *error = QStringLiteral("Package metadata, manifest, and spine are required");
+        return false;
+    }
+    for (const QString &idref : info->spineIds) {
+        if (!info->manifestIds.contains(idref)) {
+            if (error) *error = QStringLiteral("Spine idref is missing from the manifest: %1").arg(idref);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ValidatePackageTransaction(PluginApi::TextTransaction *transaction,
+                                FolderKeeper *folder_keeper,
+                                OPFResource *opf,
+                                QString *error)
+{
+    if (!transaction->HasPackageChange()) return true;
+    PackageDocumentInfo original;
+    PackageDocumentInfo staged;
+    if (!ParsePackageDocument(opf->GetText(), opf->GetRelativePath(), opf->GetEpubVersion(),
+                              &original, error)
+        || !ParsePackageDocument(transaction->PackageChange().stagedText,
+                                 opf->GetRelativePath(), opf->GetEpubVersion(),
+                                 &staged, error)) {
+        return false;
+    }
+    QSet<QString> expected_paths = original.manifestPaths;
+    for (const PluginApi::StagedResourceRemoval &removal : transaction->Removals()) {
+        Resource *resource = folder_keeper->GetResourceByIdentifier(removal.resourceId);
+        if (resource) expected_paths.remove(resource->GetRelativePath());
+    }
+    for (const PluginApi::StagedResourceRelocation &relocation : transaction->Relocations()) {
+        if (expected_paths.remove(relocation.originalBookPath)) {
+            expected_paths.insert(relocation.targetBookPath);
+        }
+    }
+    for (const PluginApi::StagedResourceAddition &addition : transaction->Additions()) {
+        if (addition.manifested) expected_paths.insert(addition.bookPath);
+    }
+    if (staged.manifestPaths != expected_paths) {
+        if (error) *error = QStringLiteral("Package manifest does not match the staged resource structure");
         return false;
     }
     return true;
@@ -851,6 +990,52 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("book_path"), target_path },
             { QStringLiteral("staged"), true }
         });
+    } else if (method == QStringLiteral("transaction.replacePackage")) {
+        if (!RequirePermission(QStringLiteral("book.structure"), id)) return;
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        quint64 expected_revision = 0;
+        if (!ReadRevision(params, QStringLiteral("expected_revision"), &expected_revision)
+            || !params.value(QStringLiteral("text")).isString()) {
+            RespondError(id, -32602, QStringLiteral("Expected revision and package text are required"));
+            return;
+        }
+        const QString replacement = params.value(QStringLiteral("text")).toString();
+        if (replacement.toUtf8().size() > MAX_INLINE_BINARY_SIZE) {
+            RespondError(id, PluginApi::PayloadTooLarge,
+                         QStringLiteral("Package document exceeds the inline size limit"));
+            return;
+        }
+        OPFResource *opf = m_MainWindow->GetCurrentBook()->GetOPF();
+        opf->InitialLoad();
+        const quint64 required_revision = transaction->HasPackageChange()
+            ? transaction->PackageChange().baseRevision : Revision(opf);
+        if (expected_revision != required_revision) {
+            RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"),
+                         QJsonObject {
+                             { QStringLiteral("expected"), static_cast<qint64>(expected_revision) },
+                             { QStringLiteral("actual"), static_cast<qint64>(required_revision) },
+                             { QStringLiteral("resource_id"), opf->GetIdentifier() }
+                         });
+            return;
+        }
+        PackageDocumentInfo package_info;
+        QString package_error;
+        if (!ParsePackageDocument(replacement, opf->GetRelativePath(), opf->GetEpubVersion(),
+                                  &package_info, &package_error)) {
+            RespondError(id, PluginApi::ValidationFailed, package_error);
+            return;
+        }
+        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetText(), Revision(opf),
+                                         expected_revision, replacement, &package_error)) {
+            RespondError(id, PluginApi::RevisionConflict, package_error);
+            return;
+        }
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), opf->GetIdentifier() },
+            { QStringLiteral("base_revision"), static_cast<qint64>(required_revision) },
+            { QStringLiteral("staged"), true }
+        });
     } else if (method == QStringLiteral("transaction.replaceText")
                || method == QStringLiteral("transaction.applyTextEdits")) {
         if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
@@ -915,6 +1100,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         QJsonArray text_changes;
         QJsonArray binary_changes;
         QJsonArray structure_changes;
+        QJsonArray opf_changes;
         int modified = 0;
         for (const PluginApi::StagedTextChange &change : transaction->Changes()) {
             Resource *resource = ResolveResource(change.resourceId);
@@ -1002,6 +1188,32 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("book_path"), addition.bookPath }
             });
         }
+        if (transaction->HasPackageChange()) {
+            const PluginApi::StagedPackageChange package = transaction->PackageChange();
+            Resource *resource = ResolveResource(package.resourceId);
+            QString package_error;
+            const quint64 actual = resource ? Revision(resource) : 0;
+            if (!resource || actual != package.baseRevision
+                || !ValidatePackageTransaction(
+                    transaction, m_MainWindow->GetCurrentBook()->GetFolderKeeper(),
+                    m_MainWindow->GetCurrentBook()->GetOPF(), &package_error)) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("resource_id"), package.resourceId },
+                    { QStringLiteral("expected"), static_cast<qint64>(package.baseRevision) },
+                    { QStringLiteral("actual"), resource
+                        ? QJsonValue(static_cast<qint64>(actual)) : QJsonValue() },
+                    { QStringLiteral("message"), package_error }
+                });
+            }
+            if (package.originalText != package.stagedText) {
+                ++modified;
+                opf_changes.append(QJsonObject {
+                    { QStringLiteral("operation"), QStringLiteral("replace-package") },
+                    { QStringLiteral("before_length"), package.originalText.size() },
+                    { QStringLiteral("after_length"), package.stagedText.size() }
+                });
+            }
+        }
         QJsonObject result {
             { QStringLiteral("transaction_id"), transaction->Id() },
             { QStringLiteral("valid"), conflicts.isEmpty() },
@@ -1017,7 +1229,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             result.insert(QStringLiteral("text_changes"), text_changes);
             result.insert(QStringLiteral("binary_changes"), binary_changes);
             result.insert(QStringLiteral("structure_changes"), structure_changes);
-            result.insert(QStringLiteral("opf_changes"), QJsonArray());
+            result.insert(QStringLiteral("opf_changes"), opf_changes);
             result.insert(QStringLiteral("warnings"), QJsonArray());
         }
         Respond(id, result);
@@ -1031,6 +1243,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
         QList<PluginApi::StagedResourceAddition> additions = transaction->Additions();
         QList<PluginApi::StagedResourceRemoval> removals = transaction->Removals();
         QList<PluginApi::StagedResourceRelocation> relocations = transaction->Relocations();
+        const bool has_package_change = transaction->HasPackageChange();
+        PluginApi::StagedPackageChange package_change;
+        if (has_package_change) package_change = transaction->PackageChange();
         for (const PluginApi::StagedTextChange &change : transaction->Changes()) {
             Resource *resource = ResolveResource(change.resourceId);
             const quint64 actual = resource ? Revision(resource) : 0;
@@ -1056,6 +1271,23 @@ void PluginSession::Dispatch(const QJsonObject &request)
             if (change.originalData != change.stagedData) dirty_binary_changes.append(change);
         }
         FolderKeeper *folder_keeper = m_MainWindow->GetCurrentBook()->GetFolderKeeper();
+        OPFResource *opf = m_MainWindow->GetCurrentBook()->GetOPF();
+        QString package_error;
+        if (has_package_change) {
+            Resource *resource = ResolveResource(package_change.resourceId);
+            const quint64 actual = resource ? Revision(resource) : 0;
+            if (!resource || actual != package_change.baseRevision) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("resource_id"), package_change.resourceId },
+                    { QStringLiteral("expected"), static_cast<qint64>(package_change.baseRevision) },
+                    { QStringLiteral("actual"), resource
+                        ? QJsonValue(static_cast<qint64>(actual)) : QJsonValue() }
+                });
+            } else if (!ValidatePackageTransaction(transaction, folder_keeper, opf, &package_error)) {
+                RespondError(id, PluginApi::ValidationFailed, package_error);
+                return;
+            }
+        }
         QList<Resource *> removal_resources;
         int removed_html = 0;
         for (const PluginApi::StagedResourceRemoval &removal : removals) {
@@ -1135,7 +1367,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const bool has_structure_changes = !additions.isEmpty() || !removals.isEmpty()
             || !relocations.isEmpty();
         bool safety_checkpoint_required = dirty_changes.size() + dirty_binary_changes.size() > 1
-            || !dirty_binary_changes.isEmpty() || has_structure_changes;
+            || !dirty_binary_changes.isEmpty() || has_structure_changes || has_package_change;
         for (const PluginApi::StagedTextChange &change : dirty_changes) {
             Resource *resource = ResolveResource(change.resourceId);
             safety_checkpoint_required = safety_checkpoint_required || (resource &&
@@ -1205,7 +1437,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     m_BookRevision += 1;
                 }
             }
-            if (structure_error.isEmpty()
+            if (structure_error.isEmpty() && !has_package_change
                 && !m_MainWindow->GetCurrentBook()->GetOPF()->ApplyResourceBatch(
                     manifest_additions, removal_resources, relocation_map, &structure_error)) {
                 if (structure_error.isEmpty()) {
@@ -1255,6 +1487,13 @@ void PluginSession::Dispatch(const QJsonObject &request)
             }
             m_MainWindow->GetBookBrowser()->Refresh();
         }
+        if (has_package_change && package_change.originalText != package_change.stagedText) {
+            opf->SetText(package_change.stagedText);
+            committed.append(QJsonObject {
+                { QStringLiteral("resource_id"), package_change.resourceId },
+                { QStringLiteral("revision"), static_cast<qint64>(Revision(opf)) }
+            });
+        }
         for (const PluginApi::StagedTextChange &change : dirty_changes) {
             TextResource *resource = ResolveTextResource(change.resourceId);
             resource->SetText(change.stagedText);
@@ -1291,7 +1530,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 return;
             }
         }
-        if (!dirty_changes.isEmpty() || !dirty_binary_changes.isEmpty() || has_structure_changes) {
+        if (!dirty_changes.isEmpty() || !dirty_binary_changes.isEmpty() || has_structure_changes
+            || (has_package_change && package_change.originalText != package_change.stagedText)) {
             m_MainWindow->GetCurrentBook()->SetModified();
         }
         const QString transaction_id = transaction->Id();
@@ -1299,7 +1539,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("transaction_id"), transaction_id },
             { QStringLiteral("committed"), committed },
-            { QStringLiteral("modified"), dirty_changes.size() + dirty_binary_changes.size() },
+            { QStringLiteral("modified"), dirty_changes.size() + dirty_binary_changes.size()
+                + ((has_package_change && package_change.originalText != package_change.stagedText)
+                    ? 1 : 0) },
             { QStringLiteral("added"), additions.size() },
             { QStringLiteral("removed"), removals.size() },
             { QStringLiteral("relocated"), relocations.size() },

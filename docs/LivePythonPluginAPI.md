@@ -199,6 +199,7 @@ edit block.
 | `apply_edits(resource, edits, expected_revision=None)` | Compose patches against staged content. |
 | `read_binary(resource)` | Read staged binary data when present. |
 | `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 5 MiB. |
+| `replace_package(text, expected_revision)` | Stage a complete OPF replacement after XML, version, manifest, and spine validation. |
 | `add_resource(book_path, data, media_type, ...)` | Stage a manifested or unmanifested resource addition. |
 | `remove_resource(resource, expected_revision=None)` | Stage removal while protecting OPF, nav, and the last XHTML. |
 | `move_resource(resource, book_path, expected_revision=None)` | Stage a canonical Book-path relocation. |
@@ -216,9 +217,13 @@ once through `ApplyResourceBatch`, applies `UniversalUpdates` to non-OPF
 references, then removes staged resources. Relocation cannot be combined with
 staged text writes because the latter could overwrite link corrections.
 
-Metadata and explicit spine replacement methods remain separate work. Larger
-binary resources will use a later chunk API rather than increasing the JSON
-message limit.
+An authoritative package replacement can accompany resource structure
+operations. The host verifies that its manifest exactly matches the final
+add/remove/move set, that manifest IDs and hrefs are unique, that every spine
+`idref` exists, and that the EPUB version is unchanged. In this mode the host
+does not generate a second manifest rewrite; it applies the package once after
+the physical structure changes. Larger binary resources will use a later chunk
+API rather than increasing the JSON message limit.
 
 ## Revision and position rules
 

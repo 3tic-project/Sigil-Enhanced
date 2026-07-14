@@ -38,6 +38,7 @@ IMPLEMENTED_METHODS = {
     "transaction.removeResource",
     "transaction.moveResource",
     "transaction.renameResource",
+    "transaction.replacePackage",
     "transaction.replaceText",
     "transaction.applyTextEdits",
     "transaction.validate",

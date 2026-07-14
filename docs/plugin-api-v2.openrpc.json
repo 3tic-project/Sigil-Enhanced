@@ -291,6 +291,17 @@
       "result": { "name": "result", "schema": { "type": "object" } }
     },
     {
+      "name": "transaction.replacePackage",
+      "summary": "Stage one authoritative, validated OPF package replacement.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "text", "required": true, "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
       "name": "transaction.applyTextEdits",
       "summary": "Compose UTF-16 patches against the transaction's staged text.",
       "paramStructure": "by-name",

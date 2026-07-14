@@ -31,6 +31,13 @@ struct StagedBinaryChange {
     quint64 baseRevision = 0;
 };
 
+struct StagedPackageChange {
+    QString resourceId;
+    QString originalText;
+    QString stagedText;
+    quint64 baseRevision = 0;
+};
+
 struct StagedResourceAddition {
     QString stagingId;
     QString bookPath;
@@ -72,6 +79,7 @@ public:
     int Size() const;
     bool HasChange(const QString &resource_id) const;
     bool HasBinaryChange(const QString &resource_id) const;
+    bool HasPackageChange() const;
 
     QString ReadText(const QString &resource_id,
                      const QString &current_text,
@@ -101,6 +109,14 @@ public:
                        const QByteArray &replacement,
                        QString *error);
 
+    bool ReplacePackage(const QString &resource_id,
+                        const QString &current_text,
+                        quint64 current_revision,
+                        quint64 expected_revision,
+                        const QString &replacement,
+                        QString *error);
+    StagedPackageChange PackageChange() const;
+
     bool AddResource(const StagedResourceAddition &addition, QString *error);
     bool RemoveResource(const QString &resource_id, quint64 base_revision, QString *error);
     bool RelocateResource(const QString &resource_id,
@@ -123,6 +139,8 @@ private:
     quint64 m_BaseBookRevision;
     QHash<QString, StagedTextChange> m_Changes;
     QHash<QString, StagedBinaryChange> m_BinaryChanges;
+    StagedPackageChange m_PackageChange;
+    bool m_HasPackageChange = false;
     QHash<QString, StagedResourceAddition> m_Additions;
     QHash<QString, StagedResourceRemoval> m_Removals;
     QHash<QString, StagedResourceRelocation> m_Relocations;

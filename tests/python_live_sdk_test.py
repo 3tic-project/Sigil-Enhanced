@@ -183,7 +183,7 @@ class LiveSdkTest(unittest.TestCase):
     def test_structure_transaction_maps_resource_operations(self):
         responses = [
             {"jsonrpc": "2.0", "id": index, "result": {"staged": True}}
-            for index in range(1, 5)
+            for index in range(1, 6)
         ]
         transport = FakeTransport(responses)
         from sigil_live.client import Transaction
@@ -198,6 +198,7 @@ class LiveSdkTest(unittest.TestCase):
             "application/xhtml+xml",
             manifest_id="new_chapter",
         )
+        tx.replace_package("<package/>", expected_revision=3)
         resource = Resource(
             "resource", "OEBPS/Text/old.xhtml", "application/xhtml+xml", "html", 4, True
         )
@@ -208,13 +209,15 @@ class LiveSdkTest(unittest.TestCase):
             [request["method"] for request in transport.sent],
             [
                 "transaction.addResource",
+                "transaction.replacePackage",
                 "transaction.renameResource",
                 "transaction.moveResource",
                 "transaction.removeResource",
             ],
         )
         self.assertEqual(transport.sent[0]["params"]["text"], "<html/>")
-        self.assertEqual(transport.sent[1]["params"]["expected_revision"], 4)
+        self.assertEqual(transport.sent[1]["params"]["expected_revision"], 3)
+        self.assertEqual(transport.sent[2]["params"]["expected_revision"], 4)
 
 
 if __name__ == "__main__":

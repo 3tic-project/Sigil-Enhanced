@@ -73,6 +73,17 @@ int main()
     Require(revision == 3, "staged binary read did not preserve base revision");
     Require(transaction.BinaryChanges().size() == 1, "binary staging count is wrong");
 
+    Require(transaction.ReplacePackage(QStringLiteral("opf"), QStringLiteral("<package/>"),
+                                       6, 6, QStringLiteral("<package version=\"3.0\"/>"),
+                                       &error),
+            "package replacement was not staged");
+    Require(transaction.HasPackageChange(), "package staging flag is wrong");
+    Require(transaction.PackageChange().baseRevision == 6,
+            "package base revision was not preserved");
+    Require(!transaction.ReplacePackage(QStringLiteral("opf"), QStringLiteral("<package/>"),
+                                        6, 7, QStringLiteral("bad"), &error),
+            "package replacement accepted a different revision");
+
     PluginApi::StagedResourceAddition addition;
     addition.stagingId = QStringLiteral("new:1");
     addition.bookPath = QStringLiteral("OEBPS/Text/new.xhtml");
