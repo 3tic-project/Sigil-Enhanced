@@ -205,3 +205,19 @@ target_link_libraries(plugin_text_transaction_test PRIVATE
 
 add_test(NAME plugin_text_transaction COMMAND plugin_text_transaction_test)
 set_tests_properties(plugin_text_transaction PROPERTIES TIMEOUT 30)
+
+add_executable(plugin_writer_lock_test
+    plugin_writer_lock_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginWriterLock.h
+)
+
+target_include_directories(plugin_writer_lock_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(plugin_writer_lock_test PRIVATE
+    Qt6::Core
+)
+
+add_test(NAME plugin_writer_lock COMMAND plugin_writer_lock_test)
+set_tests_properties(plugin_writer_lock PROPERTIES TIMEOUT 30)

@@ -70,6 +70,16 @@ bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
     return true;
 }
 
+bool PluginSessionManager::AcquireWriter(const QUuid &session_id)
+{
+    return m_WriterLock.Acquire(session_id);
+}
+
+void PluginSessionManager::ReleaseWriter(const QUuid &session_id)
+{
+    m_WriterLock.Release(session_id);
+}
+
 void PluginSessionManager::StopAll()
 {
     const QList<PluginSession *> sessions = m_Sessions.values();
@@ -78,9 +88,15 @@ void PluginSessionManager::StopAll()
         session->Cancel();
         delete session;
     }
+    m_WriterLock.Clear();
 }
 
 int PluginSessionManager::SessionCount() const
 {
     return m_Sessions.size();
+}
+
+bool PluginSessionManager::HasWriter() const
+{
+    return m_WriterLock.IsHeld();
 }

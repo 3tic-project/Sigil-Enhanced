@@ -185,6 +185,7 @@ set( DIALOG_FILES
     PluginAPI/PluginSessionConsole.h
     PluginAPI/PluginSessionManager.cpp
     PluginAPI/PluginSessionManager.h
+    PluginAPI/PluginWriterLock.h
     PluginAPI/PluginTextEdit.cpp
     PluginAPI/PluginTextEdit.h
     PluginAPI/PluginTextTransaction.cpp

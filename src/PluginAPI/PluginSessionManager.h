@@ -12,6 +12,8 @@
 #include <QObject>
 #include <QUuid>
 
+#include "PluginAPI/PluginWriterLock.h"
+
 class MainWindow;
 class Plugin;
 class PluginSession;
@@ -26,13 +28,17 @@ public:
     ~PluginSessionManager() override;
 
     bool StartPlugin(const Plugin &plugin, QString *error = nullptr);
+    bool AcquireWriter(const QUuid &session_id);
+    void ReleaseWriter(const QUuid &session_id);
     void StopAll();
     int SessionCount() const;
+    bool HasWriter() const;
 
 private:
     MainWindow *m_MainWindow;
     TabManager *m_TabManager;
     QHash<QUuid, PluginSession *> m_Sessions;
+    PluginApi::WriterLock m_WriterLock;
 };
 
 #endif // PLUGINSESSIONMANAGER_H

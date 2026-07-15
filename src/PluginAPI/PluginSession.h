@@ -90,6 +90,8 @@ private:
     TextResource *ResolveTextResource(const QString &resource_id) const;
     void TrackResource(Resource *resource);
     void TrackEditorTab(ContentTab *tab);
+    bool AcquireWriter();
+    void ReleaseWriter();
     PluginApi::TextTransaction *RequireTransaction(const QJsonObject &params,
                                                    const QJsonValue &request_id);
     quint64 Revision(Resource *resource) const;
@@ -126,6 +128,7 @@ private:
     bool m_InputEpubAccepted;
     quint64 m_BookRevision;
     bool m_InRequest;
+    bool m_HoldsWriter;
     std::unique_ptr<PluginApi::TextTransaction> m_Transaction;
     QPointer<PluginSessionConsole> m_Console;
 };
