@@ -14,6 +14,35 @@ project( Sigil )
 
 include(CTest)
 
+set(SIGIL_FONT_SUBSETTING "AUTO" CACHE STRING
+    "Build the HarfBuzz font-subsetting feature (AUTO, ON, or OFF)")
+set_property(CACHE SIGIL_FONT_SUBSETTING PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER "${SIGIL_FONT_SUBSETTING}" SIGIL_FONT_SUBSETTING)
+if(NOT SIGIL_FONT_SUBSETTING MATCHES "^(AUTO|ON|OFF)$")
+    message(FATAL_ERROR
+        "SIGIL_FONT_SUBSETTING must be AUTO, ON, or OFF (got '${SIGIL_FONT_SUBSETTING}')")
+endif()
+
+set(SIGIL_FONT_SUBSETTING_AVAILABLE OFF)
+if(NOT SIGIL_FONT_SUBSETTING STREQUAL "OFF")
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(HARFBUZZ_SUBSET QUIET IMPORTED_TARGET
+            harfbuzz-subset>=4.0.0)
+    endif()
+    if(HARFBUZZ_SUBSET_FOUND)
+        set(SIGIL_FONT_SUBSETTING_AVAILABLE ON)
+        message(STATUS
+            "HarfBuzz font subsetting enabled (${HARFBUZZ_SUBSET_VERSION})")
+    elseif(SIGIL_FONT_SUBSETTING STREQUAL "ON")
+        message(FATAL_ERROR
+            "SIGIL_FONT_SUBSETTING=ON requires harfbuzz-subset >= 4.0.0")
+    else()
+        message(STATUS
+            "HarfBuzz font subsetting disabled: harfbuzz-subset >= 4.0.0 not found")
+    endif()
+endif()
+
 # Change this URL if the location of the CI Windows Qt6 download ever changes
 set (WINQTURL "https://github.com/dougmassay/win-qtwebkit-5.212/releases/download/v5.212-1")
 
