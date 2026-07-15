@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include <QObject>
 #include <hb.h>
 #include <hb-subset.h>
 
@@ -46,7 +47,7 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
         return result;
     }
     if (codepoints.isEmpty()) {
-        result.error = QStringLiteral("No Unicode codepoints were requested.");
+        result.error = QObject::tr("No Unicode codepoints were requested.");
         return result;
     }
 
@@ -64,19 +65,19 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
         }
     }
     if (result.requestedCodepoints.isEmpty()) {
-        result.error = QStringLiteral(
+        result.error = QObject::tr(
             "The source font does not cover any requested codepoints.");
         return result;
     }
     if (!result.unavailableCodepoints.isEmpty()) {
-        result.warnings.append(QStringLiteral(
+        result.warnings.append(QObject::tr(
             "Some book codepoints were not present in the source font and were ignored."));
     }
 
     auto subsetInput = TakeHb<hb_subset_input_t, hb_subset_input_destroy>(
         hb_subset_input_create_or_fail());
     if (!subsetInput) {
-        result.error = QStringLiteral("Could not create HarfBuzz subset input.");
+        result.error = QObject::tr("Could not create HarfBuzz subset input.");
         return result;
     }
     hb_set_t* unicodeSet = hb_subset_input_unicode_set(subsetInput.get());
@@ -104,7 +105,7 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
     auto plan = TakeHb<hb_subset_plan_t, hb_subset_plan_destroy>(
         hb_subset_plan_create_or_fail(inputFace.get(), subsetInput.get()));
     if (!plan) {
-        result.error = QStringLiteral("Could not create HarfBuzz subset plan.");
+        result.error = QObject::tr("Could not create HarfBuzz subset plan.");
         return result;
     }
     const hb_map_t* oldToNew =
@@ -114,21 +115,21 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
     auto outputFace = TakeHb<hb_face_t, hb_face_destroy>(
         hb_subset_plan_execute_or_fail(plan.get()));
     if (!outputFace) {
-        result.error = QStringLiteral("HarfBuzz could not execute the subset plan.");
+        result.error = QObject::tr("HarfBuzz could not execute the subset plan.");
         return result;
     }
     result.outputBytes = Serialize(outputFace.get());
     result.newSize = result.outputBytes.size();
     result.newGlyphCount = hb_face_get_glyph_count(outputFace.get());
     if (result.outputBytes.isEmpty() || result.newGlyphCount == 0) {
-        result.error = QStringLiteral("HarfBuzz produced an empty or invalid font.");
+        result.error = QObject::tr("HarfBuzz produced an empty or invalid font.");
         result.outputBytes.clear();
         return result;
     }
 
     const Inspection outputInspection = m_Inspector.Inspect(result.outputBytes, 0);
     if (!outputInspection.valid || outputInspection.format != result.inspection.format) {
-        result.error = QStringLiteral(
+        result.error = QObject::tr(
             "The subset output could not be reparsed as the original font format.");
         result.outputBytes.clear();
         return result;
@@ -141,7 +142,7 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
         }
     }
     if (!result.missingCodepoints.isEmpty()) {
-        result.error = QStringLiteral(
+        result.error = QObject::tr(
             "The subset output does not cover every requested codepoint.");
         result.outputBytes.clear();
         return result;
@@ -170,7 +171,7 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
         }
     }
     if (result.newSize >= result.oldSize) {
-        result.warnings.append(QStringLiteral(
+        result.warnings.append(QObject::tr(
             "The subset output is not smaller than the source font."));
     }
     result.success = true;
@@ -212,7 +213,7 @@ bool HarfBuzzSubsetEngine::ValidateShaping(hb_face_t* inputFace,
         const hb_glyph_position_t* outputPositions =
             hb_buffer_get_glyph_positions(outputBuffer.get(), nullptr);
         if (inputLength != outputLength) {
-            *error = QStringLiteral("Shaping validation changed the glyph count.");
+            *error = QObject::tr("Shaping validation changed the glyph count.");
             return false;
         }
         for (unsigned i = 0; i < inputLength; ++i) {
@@ -225,7 +226,7 @@ bool HarfBuzzSubsetEngine::ValidateShaping(hb_face_t* inputFace,
                 inputPositions[i].y_advance != outputPositions[i].y_advance ||
                 inputPositions[i].x_offset != outputPositions[i].x_offset ||
                 inputPositions[i].y_offset != outputPositions[i].y_offset) {
-                *error = QStringLiteral(
+                *error = QObject::tr(
                     "Shaping validation changed glyph mapping or positioning.");
                 return false;
             }

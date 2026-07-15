@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include <QObject>
 #include <QXmlStreamReader>
 
 namespace FontSubset
@@ -156,7 +157,7 @@ void GlobalFontUsageCollector::CollectXml(const UsageSource& source,
     }
     if (reader.hasError()) {
         usage.warnings.append(
-            QStringLiteral("%1: XML parsing stopped at line %2: %3")
+            QObject::tr("%1: XML parsing stopped at line %2: %3")
                 .arg(source.path)
                 .arg(reader.lineNumber())
                 .arg(reader.errorString()));
@@ -227,7 +228,7 @@ void GlobalFontUsageCollector::CollectCss(const QString& css,
             }
         }
         if (foundDynamicValue && !foundString) {
-            usage.warnings.append(QStringLiteral(
+            usage.warnings.append(QObject::tr(
                 "%1: a dynamic CSS content value could not be resolved.").arg(path));
         }
     }

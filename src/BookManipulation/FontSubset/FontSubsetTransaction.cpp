@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QObject>
 #include <QSaveFile>
 
 namespace FontSubset
@@ -27,37 +28,37 @@ bool FontSubsetTransaction::Stage(const QString& path,
         error->clear();
     }
     if (m_State != State::Empty && m_State != State::Staged) {
-        SetError(error, QStringLiteral("The transaction cannot accept more entries."));
+        SetError(error, QObject::tr("The transaction cannot accept more entries."));
         return false;
     }
     const QFileInfo info(path);
     if (!info.isFile() || info.isSymLink()) {
-        SetError(error, QStringLiteral("The font path is not a regular file: %1").arg(path));
+        SetError(error, QObject::tr("The font path is not a regular file: %1").arg(path));
         return false;
     }
     if (replacement.isEmpty()) {
-        SetError(error, QStringLiteral("The replacement font is empty: %1").arg(path));
+        SetError(error, QObject::tr("The replacement font is empty: %1").arg(path));
         return false;
     }
     if (replacement == expectedOriginal) {
-        SetError(error, QStringLiteral("The replacement font is unchanged: %1").arg(path));
+        SetError(error, QObject::tr("The replacement font is unchanged: %1").arg(path));
         return false;
     }
     const QString canonicalPath = info.canonicalFilePath();
     for (const Entry& entry : m_Entries) {
         if (entry.path == canonicalPath) {
-            SetError(error, QStringLiteral("The font was staged more than once: %1").arg(path));
+            SetError(error, QObject::tr("The font was staged more than once: %1").arg(path));
             return false;
         }
     }
     QFile file(canonicalPath);
     if (!file.open(QIODevice::ReadOnly)) {
-        SetError(error, QStringLiteral("Could not read the font: %1").arg(path));
+        SetError(error, QObject::tr("Could not read the font: %1").arg(path));
         return false;
     }
     const QByteArray current = file.readAll();
     if (current != expectedOriginal) {
-        SetError(error, QStringLiteral("The font changed before it was staged: %1").arg(path));
+        SetError(error, QObject::tr("The font changed before it was staged: %1").arg(path));
         return false;
     }
     m_Entries.append({canonicalPath, current, replacement});
@@ -71,14 +72,14 @@ bool FontSubsetTransaction::Commit(QString* error)
         error->clear();
     }
     if (m_State != State::Staged || m_Entries.isEmpty()) {
-        SetError(error, QStringLiteral("No font replacements are staged."));
+        SetError(error, QObject::tr("No font replacements are staged."));
         return false;
     }
     for (const Entry& entry : m_Entries) {
         QFile file(entry.path);
         if (!file.open(QIODevice::ReadOnly) || file.readAll() != entry.original) {
             m_State = State::Failed;
-            SetError(error, QStringLiteral(
+            SetError(error, QObject::tr(
                 "A font changed after analysis; no files were written: %1").arg(entry.path));
             return false;
         }
@@ -90,7 +91,7 @@ bool FontSubsetTransaction::Commit(QString* error)
             QString rollbackError;
             const bool restored = RollBack(writtenCount, &rollbackError);
             SetError(error, restored
-                ? QStringLiteral("Injected font transaction failure; changes were rolled back.")
+                ? QObject::tr("Injected font transaction failure; changes were rolled back.")
                 : rollbackError);
             return false;
         }
@@ -137,17 +138,17 @@ bool FontSubsetTransaction::WriteAtomically(const QString& path,
     const QFile::Permissions permissions = QFileInfo(path).permissions();
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly)) {
-        SetError(error, QStringLiteral("Could not open a font for replacement: %1").arg(path));
+        SetError(error, QObject::tr("Could not open a font for replacement: %1").arg(path));
         return false;
     }
     file.setPermissions(permissions);
     if (file.write(bytes) != bytes.size()) {
         file.cancelWriting();
-        SetError(error, QStringLiteral("Could not write the complete font: %1").arg(path));
+        SetError(error, QObject::tr("Could not write the complete font: %1").arg(path));
         return false;
     }
     if (!file.commit()) {
-        SetError(error, QStringLiteral("Could not commit the font replacement: %1").arg(path));
+        SetError(error, QObject::tr("Could not commit the font replacement: %1").arg(path));
         return false;
     }
     return true;
@@ -167,7 +168,7 @@ bool FontSubsetTransaction::RollBack(int writtenCount, QString* error)
     }
     m_State = restored ? State::RolledBack : State::Failed;
     if (!restored) {
-        SetError(error, QStringLiteral("Font transaction rollback failed:\n%1")
+        SetError(error, QObject::tr("Font transaction rollback failed:\n%1")
                             .arg(failures.join(QLatin1Char('\n'))));
     }
     return restored;

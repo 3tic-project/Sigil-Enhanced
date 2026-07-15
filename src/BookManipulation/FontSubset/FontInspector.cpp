@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include <QObject>
 #include <hb.h>
 
 #include "BookManipulation/FontSubset/HarfBuzzRAII.h"
@@ -136,13 +137,13 @@ Inspection FontInspector::Inspect(const QByteArray& fontBytes, unsigned faceInde
     inspection.faceIndex = faceIndex;
     if (inspection.format == ContainerFormat::Collection) {
         AddRisk(inspection, Risk::Collection,
-                QStringLiteral("Font collections are not supported."), true);
+                QObject::tr("Font collections are not supported."), true);
         return inspection;
     }
     if (inspection.format != ContainerFormat::SfntTrueType &&
         inspection.format != ContainerFormat::SfntCff) {
         AddRisk(inspection, Risk::UnsupportedContainer,
-                QStringLiteral("Only sfnt TTF and OTF fonts are supported."), true);
+                QObject::tr("Only sfnt TTF and OTF fonts are supported."), true);
         return inspection;
     }
 
@@ -152,7 +153,7 @@ Inspection FontInspector::Inspect(const QByteArray& fontBytes, unsigned faceInde
     inspection.faceCount = hb_face_count(blob.get());
     if (inspection.faceCount != 1 || faceIndex >= inspection.faceCount) {
         AddRisk(inspection, Risk::InvalidFont,
-                QStringLiteral("The font does not contain one accessible face."), true);
+                QObject::tr("The font does not contain one accessible face."), true);
         return inspection;
     }
 
@@ -161,7 +162,7 @@ Inspection FontInspector::Inspect(const QByteArray& fontBytes, unsigned faceInde
     inspection.tableTags = ReadTableTags(face.get());
     if (inspection.glyphCount == 0 || inspection.tableTags.isEmpty()) {
         AddRisk(inspection, Risk::InvalidFont,
-                QStringLiteral("The font has no readable glyphs or tables."), true);
+                QObject::tr("The font has no readable glyphs or tables."), true);
         return inspection;
     }
 
@@ -173,23 +174,23 @@ Inspection FontInspector::Inspect(const QByteArray& fontBytes, unsigned faceInde
     case LicenseStatus::Editable:
         break;
     case LicenseStatus::PreviewAndPrint:
-        inspection.blockingReason = QStringLiteral(
+        inspection.blockingReason = QObject::tr(
             "Preview-and-print embedding does not allow editing the font.");
         break;
     case LicenseStatus::Restricted:
-        inspection.blockingReason = QStringLiteral(
+        inspection.blockingReason = QObject::tr(
             "The font has a restricted embedding license.");
         break;
     case LicenseStatus::NoSubsetting:
-        inspection.blockingReason = QStringLiteral(
+        inspection.blockingReason = QObject::tr(
             "The font license explicitly forbids subsetting.");
         break;
     case LicenseStatus::BitmapOnly:
-        inspection.blockingReason = QStringLiteral(
+        inspection.blockingReason = QObject::tr(
             "The font license permits bitmap embedding only.");
         break;
     case LicenseStatus::InvalidOrMissing:
-        inspection.blockingReason = QStringLiteral(
+        inspection.blockingReason = QObject::tr(
             "The font has missing or invalid embedding permissions.");
         break;
     }
@@ -200,41 +201,41 @@ Inspection FontInspector::Inspect(const QByteArray& fontBytes, unsigned faceInde
                                     Tag('C', 'F', 'F', '2')});
     if (!hasOutline) {
         AddRisk(inspection, Risk::MissingOutline,
-                QStringLiteral("The font has no supported outline table."), true);
+                QObject::tr("The font has no supported outline table."), true);
     }
     if (inspection.tableTags.contains(Tag('S', 'V', 'G', ' '))) {
         AddRisk(inspection, Risk::SvgTable,
-                QStringLiteral("Fonts with SVG glyph tables are not supported."), true);
+                QObject::tr("Fonts with SVG glyph tables are not supported."), true);
     }
     if (HasAny(inspection.tableTags,
                {Tag('E', 'B', 'D', 'T'), Tag('E', 'B', 'L', 'C')})) {
         AddRisk(inspection, Risk::EbdtEblc,
-                QStringLiteral("EBDT/EBLC bitmap fonts are not supported."), true);
+                QObject::tr("EBDT/EBLC bitmap fonts are not supported."), true);
     }
     if (HasAny(inspection.tableTags,
                {Tag('S', 'i', 'l', 'f'), Tag('G', 'l', 'o', 'c'),
                 Tag('G', 'l', 'a', 't'), Tag('F', 'e', 'a', 't'),
                 Tag('S', 'i', 'l', 'l')})) {
         AddRisk(inspection, Risk::GraphiteLayout,
-                QStringLiteral("Graphite layout tables require conservative handling."), true);
+                QObject::tr("Graphite layout tables require conservative handling."), true);
     }
     if (HasAny(inspection.tableTags,
                {Tag('m', 'o', 'r', 'x'), Tag('k', 'e', 'r', 'x'),
                 Tag('a', 'n', 'k', 'r'), Tag('t', 'r', 'a', 'k')})) {
         AddRisk(inspection, Risk::AatLayout,
-                QStringLiteral("AAT layout tables require conservative handling."), true);
+                QObject::tr("AAT layout tables require conservative handling."), true);
     }
     if (HasAny(inspection.tableTags,
                {Tag('C', 'O', 'L', 'R'), Tag('C', 'B', 'D', 'T'),
                 Tag('C', 'B', 'L', 'C'), Tag('s', 'b', 'i', 'x')})) {
         AddRisk(inspection, Risk::ColorBitmap,
-                QStringLiteral("Color or bitmap glyph tables require extra validation."));
+                QObject::tr("Color or bitmap glyph tables require extra validation."));
     }
     if (HasAny(inspection.tableTags,
                {Tag('f', 'v', 'a', 'r'), Tag('g', 'v', 'a', 'r'),
                 Tag('a', 'v', 'a', 'r')})) {
         AddRisk(inspection, Risk::VariableFont,
-                QStringLiteral("Variable font axes will be preserved."));
+                QObject::tr("Variable font axes will be preserved."));
     }
 
     inspection.canSubset = inspection.blockingReason.isEmpty();
