@@ -155,6 +155,14 @@ add_test(NAME plugin_metadata COMMAND plugin_metadata_test)
 set_tests_properties(plugin_metadata PROPERTIES TIMEOUT 30)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME zh_cn_translation_coverage
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/zh_cn_translation_coverage_test.py
+        --source-root ${CMAKE_SOURCE_DIR}
+        --lupdate $<TARGET_FILE:Qt6::lupdate>
+)
+set_tests_properties(zh_cn_translation_coverage PROPERTIES TIMEOUT 60)
+
 add_test(NAME python_live_sdk
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_live_sdk_test.py
 )
