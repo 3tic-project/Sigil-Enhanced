@@ -8,6 +8,7 @@
 
 当前版本提供首个可用的 TTF/OTF 原位子集化流程：
 
+- 字体子集化始终编译，固定静态内置 HarfBuzz 14.2.1，不探测或链接系统 HarfBuzz；
 - 从编辑器内存同步当前书籍，再扫描 XHTML、SVG、OPF、NCX 等 XML 文本及 CSS
   `content` 字符串；
 - 在后台线程中完成字符收集、字体检查、HarfBuzz 子集化和输出验证；
@@ -201,20 +202,30 @@ if (!result.success) {
 
 ## 构建和依赖
 
-构建选项 `SIGIL_FONT_SUBSETTING` 接受 `AUTO`、`ON`、`OFF`：
+字体子集化是必需功能，没有关闭选项，也不受 `USE_SYSTEM_LIBS` 影响。标准构建即可包含该功能：
 
 ```sh
-cmake -S . -B build -DSIGIL_FONT_SUBSETTING=AUTO
+cmake -S . -B build
 cmake --build build --parallel
 ```
 
-- `AUTO`：找到 `harfbuzz-subset >= 4.0.0` 时启用，否则不构建子集化模块；
-- `ON`：缺少依赖或版本不足时配置失败；
-- `OFF`：完全排除核心、控制器和对话框，主程序仍可编译，菜单操作会说明当前构建不支持。
+仓库在 `3rdparty/harfbuzz/` 固定 HarfBuzz 14.2.1。源码来自官方
+`harfbuzz-14.2.1.tar.xz`，SHA-256 为
+`a54a5d8e9380a41fbb762ce367bcbf7704792dfca0d93f1bbca86c5a57902e0e`；许可证、来源和
+裁剪范围见 `3rdparty/harfbuzz/README.sigil.md`。
 
-启用时通过 `PkgConfig::HARFBUZZ_SUBSET` 同时链接 `harfbuzz-subset` 和 `harfbuzz`，并定义
-`SIGIL_ENABLE_FONT_SUBSETTING=1`。不得链接 Qt 私有 HarfBuzz，也不使用 Python、外部命令或
-本地模型执行子集化。
+`3rdparty/cmake/harfbuzz.cmake` 调用上游 CMake 工程，只构建静态 `harfbuzz` 和
+`harfbuzz-subset`。包装层关闭 CoreText、DirectWrite、FreeType、GLib、ICU、Graphite、Cairo、
+raster、vector、GPU、工具程序和共享库，并在配置时断言两个目标均为静态库。主程序与测试只
+链接 `Sigil::HarfBuzzSubset`，不查找 pkg-config，不链接 Qt 私有 HarfBuzz，也不使用 Python、
+外部命令或本地模型执行子集化。
+
+升级 HarfBuzz 时必须一起完成：
+
+1. 从官方 release 下载源码并独立校验 SHA-256；
+2. 替换未修改的 `src` 和上游 CMake 必需文件，保留 `COPYING`；
+3. 同步包装层版本、`README.sigil.md`、本文和 smoke test 的精确版本断言；
+4. 在 macOS、Windows、Linux 重新执行完整构建、字体测试和动态依赖检查。
 
 官方 API 参考：
 
@@ -235,7 +246,7 @@ ctest --test-dir build --output-on-failure \
 
 | 测试 | 覆盖 |
 | --- | --- |
-| `font_subset_smoke` | 真实 HarfBuzz blob/face/input/plan/execute/serialize |
+| `font_subset_smoke` | 精确内置版本断言及真实 blob/face/input/plan/execute/serialize |
 | `font_subset_core` | 格式、许可、风险、覆盖、实际子集和 shaping |
 | `font_subset_workflow` | XML/CSS 字符收集、冲突、提交和故障回滚 |
 | `font_subset_batch` | 快照到批量结果的端到端纯分析管线 |
@@ -243,11 +254,12 @@ ctest --test-dir build --output-on-failure \
 
 发布前还应完成：
 
-1. `SIGIL_FONT_SUBSETTING=ON` 的主程序完整编译链接；
-2. `SIGIL_FONT_SUBSETTING=OFF` 的 `MainWindowExt.cpp` 和 `FontResource.cpp` 编译；
-3. `git diff --check`；
-4. 使用含 TTF、OTF、混淆字体和受限字体的人工 EPUB 检查对话框、报告和 Checkpoint 恢复；
-5. 至少在一个 macOS、Windows 和 Linux 打包环境确认 `harfbuzz-subset` 运行库部署。
+1. 在无系统 HarfBuzz、清空 pkg-config 搜索路径的新目录中完成配置和构建；
+2. 主程序完整编译链接，`font_subset_smoke` 报告精确的固定版本；
+3. 使用 `otool -L`、`ldd` 或 `dumpbin /DEPENDENTS` 确认产物没有 HarfBuzz 动态依赖；
+4. `git diff --check` 和全部自动测试通过；
+5. 使用含 TTF、OTF、混淆字体和受限字体的人工 EPUB 检查对话框、报告和 Checkpoint 恢复；
+6. 至少在一个 macOS、Windows 和 Linux 打包环境确认内置静态库构建成功。
 
 ## 安全审计结论
 
@@ -259,7 +271,7 @@ ctest --test-dir build --output-on-failure \
 
 剩余风险：
 
-- HarfBuzz 和系统字体栈仍属于解析不可信字体的攻击面，应及时跟随上游安全更新；
+- 内置 HarfBuzz 仍属于解析不可信字体的攻击面，应及时跟随上游安全更新并重跑回归测试；
 - 全书快照和输入/输出字体同时驻留内存，大型 CJK 字体较多时内存峰值较高；
 - shaping 是代表性样本验证，不是所有 OpenType feature、语言和阅读器的穷举证明；
 - 跨文件事务不能抵御进程被强制终止或系统掉电，必须保留 Checkpoint 恢复路径；

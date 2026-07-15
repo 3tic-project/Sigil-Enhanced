@@ -13739,47 +13739,47 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>実行</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="139"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="157"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1368"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1376"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1382"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1400"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="137"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="155"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1359"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1367"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1373"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1391"/>
         <source>Sigil</source>
         <translation>Sigil</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="140"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="138"/>
         <source>This Epub is already the version 2.0 !</source>
         <translation>このEpubはすでにバージョン2.0です!</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="158"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="156"/>
         <source>This Epub is already the version 3.0 !</source>
         <translation>このEpubはすでにバージョン3.0です!</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="177"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="227"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="766"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="788"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="795"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="815"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="914"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="922"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="942"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1091"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1113"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1120"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1140"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1250"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1258"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1283"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="175"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="225"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="757"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="779"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="786"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="806"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="905"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="913"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="933"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1082"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1104"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1111"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1131"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1241"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1249"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1274"/>
         <source>Sigil-Enhanced</source>
         <translation>Sigil-Enhanced</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="178"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="176"/>
         <source>Normalize this EPUB structure?
 
 This will repair OPF manifest issues, correct internal link path casing, and move resources to Sigil&apos;s standard folder layout.</source>
@@ -13788,22 +13788,22 @@ This will repair OPF manifest issues, correct internal link path casing, and mov
 OPF マニフェストの問題を修復し、内部リンクパスの大文字/小文字を修正して、リソースを Sigil の標準フォルダー構成へ移動します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="187"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="185"/>
         <source>Normalize EPUB structure</source>
         <translation>EPUB 構造を正規化</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="215"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="213"/>
         <source>EPUB structure normalization completed.</source>
         <translation>EPUB 構造の正規化が完了しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="216"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="214"/>
         <source>No EPUB structure changes needed.</source>
         <translation>EPUB 構造の変更は不要です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="228"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="226"/>
         <source>Enhance source formatting for all XHTML and CSS resources?
 
 This uses the built-in EPUB-safe formatter backend. XHTML files that are not well-formed and CSS files with parser errors will be skipped and reported in Validation Results.</source>
@@ -13812,238 +13812,232 @@ This uses the built-in EPUB-safe formatter backend. XHTML files that are not wel
 組み込みの EPUB 対応フォーマッターを使用します。整形式でない XHTML ファイルと、パーサーエラーがある CSS ファイルはスキップされ、検証結果に報告されます。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="248"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="246"/>
         <source>Source formatting enhancement completed.</source>
         <translation>ソース整形の強化が完了しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="249"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="247"/>
         <source>No source formatting changes needed.</source>
         <translation>ソース整形の変更は不要です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="280"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="278"/>
         <source>Current book</source>
         <translation>現在の書籍</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="297"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="305"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="312"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="373"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="422"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="429"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="445"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="451"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="490"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="502"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="537"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="546"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="566"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="594"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="599"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="295"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="303"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="310"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="371"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="420"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="427"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="443"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="449"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="488"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="500"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="535"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="544"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="564"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="592"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="597"/>
         <source>Chinese Conversion</source>
         <translation>中国語変換</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="298"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="296"/>
         <source>OpenCC conversion data was not found. Checked:
 %1</source>
         <translation>OpenCC の変換データが見つかりません。確認した場所:
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="312"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="631"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="310"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="623"/>
         <source>No EPUB is currently loaded.</source>
         <translation>現在 EPUB が読み込まれていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="358"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="356"/>
         <source>%1: %2</source>
         <translation>%1: %2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="374"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="372"/>
         <source>Batch analysis failed. No files were changed.
 %1</source>
         <translation>一括解析に失敗しました。ファイルは変更されていません。
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="379"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="377"/>
         <source>No Chinese conversion changes were found in the selected scope.</source>
         <translation>選択した範囲内では中国語変換の変更点は見つかりませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="430"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="428"/>
         <source>%1 changed after analysis. No files were changed.</source>
         <translation>解析後に %1 が変更されました。ファイルは変更されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="436"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="434"/>
         <source>Creating checkpoint before Chinese conversion...</source>
         <translation>中国語変換前にチェックポイントを作成中...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="446"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="444"/>
         <source>Checkpoint creation failed. No files were changed.</source>
         <translation>チェックポイントの作成に失敗しました。ファイルは変更されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="452"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="450"/>
         <source>%1 changed while creating the checkpoint. No conversion was applied.</source>
         <translation>チェックポイントの作成中に %1 が変更されました。変換は適用されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="480"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="478"/>
         <source>Chinese conversion applied: %1 changes in %2 files. A checkpoint was created.</source>
         <translation>中国語変換を適用しました: %2 ファイルで %1 件を変更しました。チェックポイントを作成しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="491"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="489"/>
         <source>The selection contains markup or an entity reference. Convert the current file with structure-aware rules instead?</source>
         <translation>選択範囲にマークアップまたはエンティティ参照が含まれています。代わりに、構造を考慮した規則で現在のファイルを変換しますか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="506"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="504"/>
         <source>No Chinese conversion changes were found in the selection.</source>
         <translation>選択範囲に中国語変換の変更は見つかりませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="515"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="513"/>
         <source>Current selection</source>
         <translation>現在の選択範囲</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="538"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="600"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="536"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="598"/>
         <source>The editor changed after analysis. No text was replaced.</source>
         <translation>解析後にエディターの内容が変更されました。テキストは置換されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="547"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="545"/>
         <source>The selected text could not be replaced.</source>
         <translation>選択したテキストを置換できませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="553"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="551"/>
         <source>Chinese conversion applied to the current selection.</source>
         <translation>現在の選択範囲に中国語変換を適用しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="567"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="565"/>
         <source>The current file could not be analyzed:
 %1</source>
         <translation>現在のファイルを解析できませんでした:
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="571"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="569"/>
         <source>No Chinese conversion changes were found in the current file.</source>
         <translation>現在のファイルには中国語変換の変更点は見つかりませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="616"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="614"/>
         <source>Chinese conversion applied: %1 changes in the current file.</source>
         <translation>中国語変換を適用しました: 現在のファイルで %1 件を変更しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="625"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="630"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="648"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="667"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="679"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="622"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="640"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="659"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="671"/>
         <source>Font Subsetting</source>
         <translation>フォントのサブセット化</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="626"/>
-        <source>This build does not include HarfBuzz font subsetting support.</source>
-        <translation>このビルドには HarfBuzz フォントサブセット化のサポートが含まれていません。</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="649"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="641"/>
         <source>The current EPUB has no readable embedded fonts.</source>
         <translation>現在の EPUB には読み取り可能な埋め込みフォントがありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="668"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="660"/>
         <source>A recovery checkpoint could not be created. No fonts were changed.</source>
         <translation>復元用チェックポイントを作成できませんでした。フォントは変更されていません。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../../MainUI/MainWindowExt.cpp" line="686"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="678"/>
         <source>Subset %n font(s); saved %1.</source>
         <translation>
             <numerusform>%n 個のフォントをサブセット化し、%1 節約しました。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="706"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="697"/>
         <source>BR paragraph analysis: no EPUB is currently loaded.</source>
         <translation>BR 段落の解析: 現在 EPUB が読み込まれていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="739"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="730"/>
         <source>BR paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.</source>
         <translation>BR 段落の解析が完了しました。XHTML ファイル %1 件を確認し、自動処理可能な候補 %2 件、手動確認が必要な候補 %3 件を検出しました。%4 件をスキップし、自動処理可能な段落は推定 %5 件です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="749"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="740"/>
         <source>BR paragraph candidates found. See Validation Results.</source>
         <translation>BR 段落の候補が見つかりました。検証結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="750"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="741"/>
         <source>No BR paragraph candidates found.</source>
         <translation>BR 段落の候補は見つかりませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="764"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="755"/>
         <source>BR paragraph normalization: current tab is not an XHTML resource.</source>
         <translation>BR 段落の正規化: 現在のタブは XHTML リソースではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="766"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1091"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="757"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1082"/>
         <source>The current tab is not an XHTML file.</source>
         <translation>現在のタブは XHTML ファイルではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="789"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="780"/>
         <source>The current XHTML file is not a BR paragraph candidate. See Validation Results.</source>
         <translation>現在の XHTML ファイルは BR 段落の候補ではありません。検証結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="796"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="787"/>
         <source>BR paragraph normalization failed safety checks. See Validation Results.</source>
         <translation>BR 段落の正規化が安全性チェックに失敗しました。検証結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="802"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="981"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="793"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="972"/>
         <source>BR paragraph normalization: no changes needed.</source>
         <translation>BR 段落の正規化: 変更は不要です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="804"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="795"/>
         <source>No BR paragraph changes needed.</source>
         <translation>BR 段落の変更は不要です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="809"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="800"/>
         <source>This file is an auto-safe BR paragraph candidate.</source>
         <translation>このファイルは自動処理可能な BR 段落の候補です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="810"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1135"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="801"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1126"/>
         <source>This file requires manual review and is skipped by full-book normalization. Continue only if you inspected it.</source>
         <translation>このファイルは手動確認が必要なため、書籍全体の正規化ではスキップされます。内容を確認済みの場合にのみ続行してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="816"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="807"/>
         <source>Normalize BR paragraphs in the current XHTML file?
 
 %1
@@ -14060,32 +14054,32 @@ Estimated paragraphs: %2</source>
 推定段落数: %2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="846"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="837"/>
         <source>BR paragraph normalization: current XHTML file was updated.</source>
         <translation>BR 段落の正規化: 現在の XHTML ファイルを更新しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="848"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="839"/>
         <source>Current XHTML BR paragraphs normalized.</source>
         <translation>現在の XHTML ファイルの BR 段落を正規化しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="859"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="850"/>
         <source>BR paragraph normalization: no EPUB is currently loaded.</source>
         <translation>BR 段落の正規化: 現在 EPUB が読み込まれていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="905"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="896"/>
         <source>BR paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs.</source>
         <translation>BR 段落の正規化ドライランが完了しました。XHTML ファイル %1 件を確認し、%2 件は自動処理可能、%3 件は手動確認が必要、%4 件はスキップされました。自動処理可能な段落は推定 %5 件です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="915"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="906"/>
         <source>No auto-safe BR paragraph files were found. See Validation Results.</source>
         <translation>自動処理可能な BR 段落ファイルは見つかりませんでした。検証結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="923"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="914"/>
         <source>Normalize BR paragraphs in %1 auto-safe XHTML files?
 
 %2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
@@ -14102,98 +14096,98 @@ Estimated paragraphs: %4</source>
 推定段落数: %4</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="937"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="928"/>
         <source>Creating checkpoint before BR paragraph normalization...</source>
         <translation>BR 段落の正規化前にチェックポイントを作成中...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="940"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="931"/>
         <source>BR paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
         <translation>BR 段落の正規化をキャンセルしました: チェックポイントの作成に失敗しました。XHTML ファイルは変更されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="943"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="934"/>
         <source>Checkpoint creation failed. BR paragraph normalization was cancelled.</source>
         <translation>チェックポイントの作成に失敗しました。BR 段落の正規化をキャンセルしました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="947"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="938"/>
         <source>BR paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
         <translation>BR 段落の正規化: 一括変更前にチェックポイントを保存しました。復元にはチェックポイントを使用してください。リソースの一括書き込みはコードビューの元に戻す操作では取り消せません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="995"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="986"/>
         <source>BR paragraph normalization: XHTML file was updated.</source>
         <translation>BR 段落の正規化: XHTML ファイルを更新しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1005"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="996"/>
         <source>BR paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
         <translation>BR 段落の正規化が完了しました。%1 件を更新し、%2 件は変更なし、%3 件は失敗、手動確認が必要な候補 %4 件はスキップしました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1012"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1003"/>
         <source>BR paragraph normalization completed.</source>
         <translation>BR 段落の正規化が完了しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1013"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1004"/>
         <source>No BR paragraph files were changed.</source>
         <translation>BR 段落を含むファイルは変更されませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1031"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1022"/>
         <source>KFX paragraph analysis: no EPUB is currently loaded.</source>
         <translation>KFX 段落の解析: 現在 EPUB が読み込まれていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1064"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1055"/>
         <source>KFX paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.</source>
         <translation>KFX 段落の解析が完了しました。XHTML ファイル %1 件を確認し、自動処理可能な候補 %2 件、手動確認が必要な候補 %3 件を検出しました。%4 件をスキップし、自動処理可能な段落は推定 %5 件です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1074"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1065"/>
         <source>KFX paragraph candidates found. See Validation Results.</source>
         <translation>KFX 段落の候補が見つかりました。検証結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1075"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1066"/>
         <source>No KFX paragraph candidates found.</source>
         <translation>KFX 段落の候補は見つかりませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1089"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1080"/>
         <source>KFX paragraph normalization: current tab is not an XHTML resource.</source>
         <translation>KFX 段落の正規化: 現在のタブは XHTML リソースではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1114"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1105"/>
         <source>The current XHTML file is not a KFX paragraph candidate. See Validation Results.</source>
         <translation>現在の XHTML ファイルは KFX 段落の候補ではありません。検証結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1121"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1112"/>
         <source>KFX paragraph normalization failed safety checks. See Validation Results.</source>
         <translation>KFX 段落の正規化が安全性チェックに失敗しました。検証結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1127"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1322"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1118"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1313"/>
         <source>KFX paragraph normalization: no changes needed.</source>
         <translation>KFX 段落の正規化: 変更は不要です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1129"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1120"/>
         <source>No KFX paragraph changes needed.</source>
         <translation>KFX 段落の変更は不要です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1134"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1125"/>
         <source>This file is an auto-safe KFX paragraph candidate.</source>
         <translation>このファイルは自動処理可能な KFX 段落の候補です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1141"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1132"/>
         <source>Normalize KFX paragraphs in the current XHTML file?
 
 %1
@@ -14210,32 +14204,32 @@ Estimated paragraphs: %2</source>
 推定段落数: %2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1176"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1167"/>
         <source>KFX paragraph normalization: current XHTML file was updated.</source>
         <translation>KFX 段落の正規化: 現在の XHTML ファイルを更新しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1178"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1169"/>
         <source>Current XHTML KFX paragraphs normalized.</source>
         <translation>現在の XHTML ファイルの KFX 段落を正規化しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1189"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1180"/>
         <source>KFX paragraph normalization: no EPUB is currently loaded.</source>
         <translation>KFX 段落の正規化: 現在 EPUB が読み込まれていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1239"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1230"/>
         <source>KFX paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs. Will remove %6 0-height spacer p elements and preserve %7 spacing p elements.</source>
         <translation>KFX 段落の正規化ドライランが完了しました。XHTML ファイル %1 件を確認し、%2 件は自動処理可能、%3 件は手動確認が必要、%4 件はスキップされました。自動処理可能な段落は推定 %5 件です。高さ 0 のスペーサー p 要素 %6 件を削除し、間隔用の p 要素 %7 件を保持します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1251"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1242"/>
         <source>No auto-safe KFX paragraph files were found. See Validation Results.</source>
         <translation>自動処理可能な KFX 段落ファイルは見つかりませんでした。検証結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1259"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1250"/>
         <source>Normalize KFX paragraphs in %1 auto-safe XHTML files?
 
 %2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
@@ -14256,42 +14250,42 @@ Spacing p elements to preserve: %6</source>
 保持する間隔用 p 要素: %6</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1278"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1269"/>
         <source>Creating checkpoint before KFX paragraph normalization...</source>
         <translation>KFX 段落の正規化前にチェックポイントを作成中...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1281"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1272"/>
         <source>KFX paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
         <translation>KFX 段落の正規化をキャンセルしました: チェックポイントの作成に失敗しました。XHTML ファイルは変更されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1284"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1275"/>
         <source>Checkpoint creation failed. KFX paragraph normalization was cancelled.</source>
         <translation>チェックポイントの作成に失敗しました。KFX 段落の正規化をキャンセルしました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1288"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1279"/>
         <source>KFX paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
         <translation>KFX 段落の正規化: 一括変更前にチェックポイントを保存しました。復元にはチェックポイントを使用してください。リソースの一括書き込みはコードビューの元に戻す操作では取り消せません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1339"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1330"/>
         <source>KFX paragraph normalization: XHTML file was updated.</source>
         <translation>KFX 段落の正規化: XHTML ファイルを更新しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1349"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1340"/>
         <source>KFX paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
         <translation>KFX 段落の正規化が完了しました。%1 件を更新し、%2 件は変更なし、%3 件は失敗、手動確認が必要な候補 %4 件はスキップしました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1356"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1347"/>
         <source>KFX paragraph normalization completed.</source>
         <translation>KFX 段落の正規化が完了しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1357"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1348"/>
         <source>No KFX paragraph files were changed.</source>
         <translation>KFX 段落を含むファイルは変更されませんでした。</translation>
     </message>
@@ -14808,10 +14802,10 @@ This action cannot be reversed.</source>
     </message>
     <message>
         <location filename="../../MainUI/MainWindow.cpp" line="3567"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1368"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1376"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1382"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1400"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1359"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1367"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1373"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1391"/>
         <source>You cannot insert a file at this position.</source>
         <translation>この位置にファイルを挿入できません。</translation>
     </message>
@@ -20852,17 +20846,17 @@ Line: %1 Column %2 - %3</source>
         <translation>無効なNCXファイル: %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="117"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="115"/>
         <source>KFX paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
         <translation>KFX 段落の正規化: XHTML の自動整形に失敗したため、整形せずに正規化済み XHTML を書き込みます。%1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="125"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="123"/>
         <source>KFX paragraph normalization: automatic XHTML formatting was applied.</source>
         <translation>KFX 段落の正規化: XHTML の自動整形を適用しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="128"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="126"/>
         <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>KFX 段落の正規化: XHTML の自動整形による追加の変更はありませんでした。</translation>
     </message>
@@ -21060,12 +21054,12 @@ Line: %1 Column %2 - %3</source>
 %1</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/GlobalFontUsageCollector.cpp" line="160"/>
+        <location filename="../../BookManipulation/FontSubset/GlobalFontUsageCollector.cpp" line="180"/>
         <source>%1: XML parsing stopped at line %2: %3</source>
         <translation>%1：XML 解析は %2 行目で停止しました：%3</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/GlobalFontUsageCollector.cpp" line="231"/>
+        <location filename="../../BookManipulation/FontSubset/GlobalFontUsageCollector.cpp" line="249"/>
         <source>%1: a dynamic CSS content value could not be resolved.</source>
         <translation>%1：動的な CSS content 値を解決できませんでした。</translation>
     </message>
@@ -21105,27 +21099,27 @@ Line: %1 Column %2 - %3</source>
         <translation>HarfBuzz が空または無効なフォントを生成しました。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="132"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="133"/>
         <source>The subset output could not be reparsed as the original font format.</source>
         <translation>サブセット出力を元のフォント形式として再解析できませんでした。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="145"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="146"/>
         <source>The subset output does not cover every requested codepoint.</source>
         <translation>サブセット出力が要求されたすべてのコードポイントを含んでいません。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="174"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="175"/>
         <source>The subset output is not smaller than the source font.</source>
         <translation>サブセット出力は元のフォントより小さくありません。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="216"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="217"/>
         <source>Shaping validation changed the glyph count.</source>
         <translation>シェーピング検証でグリフ数が変化しました。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="229"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="230"/>
         <source>Shaping validation changed glyph mapping or positioning.</source>
         <translation>シェーピング検証でグリフの対応または配置が変化しました。</translation>
     </message>

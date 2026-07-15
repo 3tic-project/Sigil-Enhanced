@@ -13549,12 +13549,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>运行</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="139"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="157"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1368"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1376"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1382"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1400"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="137"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="155"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1359"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1367"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1373"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1391"/>
         <source>Sigil</source>
         <translation>Sigil</translation>
     </message>
@@ -14071,10 +14071,10 @@ This action cannot be reversed.</source>
     </message>
     <message>
         <location filename="../../MainUI/MainWindow.cpp" line="3567"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1368"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1376"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1382"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1400"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1359"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1367"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1373"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1391"/>
         <source>You cannot insert a file at this position.</source>
         <translation>您无法在此处插入文件。</translation>
     </message>
@@ -14568,12 +14568,12 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <translation>EPUB2 转 EPUB3</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="140"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="138"/>
         <source>This Epub is already the version 2.0 !</source>
         <translation>此 EPUB 已经是 2.0 版本！</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="158"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="156"/>
         <source>This Epub is already the version 3.0 !</source>
         <translation>此 EPUB 已经是 3.0 版本！</translation>
     </message>
@@ -14673,22 +14673,22 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <translation>对每个文件执行安全检查后，将可自动安全处理的 KFX/calibre 空白段落 XHTML 文件转换为段落</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="177"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="227"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="766"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="788"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="795"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="815"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="914"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="922"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="942"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1091"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1113"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1120"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1140"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1250"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1258"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1283"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="175"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="225"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="757"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="779"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="786"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="806"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="905"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="913"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="933"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1082"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1104"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1111"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1131"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1241"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1249"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1274"/>
         <source>Sigil-Enhanced</source>
         <translation>Sigil-Enhanced</translation>
     </message>
@@ -14708,7 +14708,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <translation>Sigil-Enhanced 网站...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="178"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="176"/>
         <source>Normalize this EPUB structure?
 
 This will repair OPF manifest issues, correct internal link path casing, and move resources to Sigil&apos;s standard folder layout.</source>
@@ -14717,22 +14717,22 @@ This will repair OPF manifest issues, correct internal link path casing, and mov
 这将修复 OPF manifest 问题，校正内部链接路径大小写，并将资源移动到 Sigil 标准目录结构。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="187"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="185"/>
         <source>Normalize EPUB structure</source>
         <translation>规范化 EPUB 结构</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="215"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="213"/>
         <source>EPUB structure normalization completed.</source>
         <translation>EPUB 结构规范化已完成。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="216"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="214"/>
         <source>No EPUB structure changes needed.</source>
         <translation>EPUB 结构无需修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="228"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="226"/>
         <source>Enhance source formatting for all XHTML and CSS resources?
 
 This uses the built-in EPUB-safe formatter backend. XHTML files that are not well-formed and CSS files with parser errors will be skipped and reported in Validation Results.</source>
@@ -14741,238 +14741,232 @@ This uses the built-in EPUB-safe formatter backend. XHTML files that are not wel
 此操作会使用内置 EPUB 安全格式化后端。格式不正确的 XHTML 文件以及存在解析错误的 CSS 文件会被跳过，并在验证结果中报告。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="248"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="246"/>
         <source>Source formatting enhancement completed.</source>
         <translation>源码格式化增强已完成。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="249"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="247"/>
         <source>No source formatting changes needed.</source>
         <translation>源码格式无需修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="280"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="278"/>
         <source>Current book</source>
         <translation>当前书籍</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="297"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="305"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="312"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="373"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="422"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="429"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="445"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="451"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="490"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="502"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="537"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="546"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="566"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="594"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="599"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="295"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="303"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="310"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="371"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="420"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="427"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="443"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="449"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="488"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="500"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="535"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="544"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="564"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="592"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="597"/>
         <source>Chinese Conversion</source>
         <translation>中文转换</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="298"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="296"/>
         <source>OpenCC conversion data was not found. Checked:
 %1</source>
         <translation>未找到 OpenCC 转换数据。已检查：
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="312"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="631"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="310"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="623"/>
         <source>No EPUB is currently loaded.</source>
         <translation>当前未加载 EPUB。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="358"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="356"/>
         <source>%1: %2</source>
         <translation>%1：%2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="374"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="372"/>
         <source>Batch analysis failed. No files were changed.
 %1</source>
         <translation>批量分析失败。未更改任何文件。
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="379"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="377"/>
         <source>No Chinese conversion changes were found in the selected scope.</source>
         <translation>在所选范围内未发现中文转换更改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="430"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="428"/>
         <source>%1 changed after analysis. No files were changed.</source>
         <translation>%1 在分析后发生了更改。未更改任何文件。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="436"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="434"/>
         <source>Creating checkpoint before Chinese conversion...</source>
         <translation>正在中文转换前创建检查点…</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="446"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="444"/>
         <source>Checkpoint creation failed. No files were changed.</source>
         <translation>检查点创建失败。未更改任何文件。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="452"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="450"/>
         <source>%1 changed while creating the checkpoint. No conversion was applied.</source>
         <translation>创建检查点期间 %1 发生了更改。未应用转换。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="480"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="478"/>
         <source>Chinese conversion applied: %1 changes in %2 files. A checkpoint was created.</source>
         <translation>已应用中文转换：在 %2 个文件中完成 %1 项更改。已创建检查点。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="491"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="489"/>
         <source>The selection contains markup or an entity reference. Convert the current file with structure-aware rules instead?</source>
         <translation>选区包含标记或实体引用。是否改用结构感知规则转换当前文件？</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="506"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="504"/>
         <source>No Chinese conversion changes were found in the selection.</source>
         <translation>在选区中未发现中文转换更改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="515"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="513"/>
         <source>Current selection</source>
         <translation>当前选区</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="538"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="600"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="536"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="598"/>
         <source>The editor changed after analysis. No text was replaced.</source>
         <translation>分析后编辑器内容已更改。未替换任何文本。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="547"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="545"/>
         <source>The selected text could not be replaced.</source>
         <translation>无法替换选中的文本。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="553"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="551"/>
         <source>Chinese conversion applied to the current selection.</source>
         <translation>已对当前选区应用中文转换。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="567"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="565"/>
         <source>The current file could not be analyzed:
 %1</source>
         <translation>无法分析当前文件：
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="571"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="569"/>
         <source>No Chinese conversion changes were found in the current file.</source>
         <translation>在当前文件中未发现中文转换更改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="616"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="614"/>
         <source>Chinese conversion applied: %1 changes in the current file.</source>
         <translation>已应用中文转换：当前文件中完成 %1 项更改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="625"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="630"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="648"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="667"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="679"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="622"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="640"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="659"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="671"/>
         <source>Font Subsetting</source>
         <translation>字体子集化</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="626"/>
-        <source>This build does not include HarfBuzz font subsetting support.</source>
-        <translation>此版本未包含 HarfBuzz 字体子集化支持。</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="649"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="641"/>
         <source>The current EPUB has no readable embedded fonts.</source>
         <translation>当前 EPUB 中没有可读取的内嵌字体。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="668"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="660"/>
         <source>A recovery checkpoint could not be created. No fonts were changed.</source>
         <translation>无法创建恢复检查点。未更改任何字体。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../../MainUI/MainWindowExt.cpp" line="686"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="678"/>
         <source>Subset %n font(s); saved %1.</source>
         <translation>
             <numerusform>已对子集化 %n 个字体；节省 %1。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="706"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="697"/>
         <source>BR paragraph analysis: no EPUB is currently loaded.</source>
         <translation>BR 段落分析：当前未加载 EPUB。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="739"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="730"/>
         <source>BR paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.</source>
         <translation>BR 段落分析完成。已检查 %1 个 XHTML 文件，发现 %2 个可自动安全处理的候选文件、%3 个需人工复核的候选文件，跳过 %4 个文件，预计可自动安全处理 %5 个段落。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="749"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="740"/>
         <source>BR paragraph candidates found. See Validation Results.</source>
         <translation>发现 BR 段落候选。请查看验证结果。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="750"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="741"/>
         <source>No BR paragraph candidates found.</source>
         <translation>未发现 BR 段落候选。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="764"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="755"/>
         <source>BR paragraph normalization: current tab is not an XHTML resource.</source>
         <translation>BR 段落规范化：当前标签页不是 XHTML 资源。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="766"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1091"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="757"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1082"/>
         <source>The current tab is not an XHTML file.</source>
         <translation>当前标签页不是 XHTML 文件。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="789"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="780"/>
         <source>The current XHTML file is not a BR paragraph candidate. See Validation Results.</source>
         <translation>当前 XHTML 文件不是 BR 段落候选。请查看验证结果。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="796"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="787"/>
         <source>BR paragraph normalization failed safety checks. See Validation Results.</source>
         <translation>BR 段落规范化未通过安全检查。请查看验证结果。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="802"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="981"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="793"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="972"/>
         <source>BR paragraph normalization: no changes needed.</source>
         <translation>BR 段落规范化：无需修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="804"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="795"/>
         <source>No BR paragraph changes needed.</source>
         <translation>BR 段落无需修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="809"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="800"/>
         <source>This file is an auto-safe BR paragraph candidate.</source>
         <translation>此文件是可自动安全处理的 BR 段落候选。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="810"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1135"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="801"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1126"/>
         <source>This file requires manual review and is skipped by full-book normalization. Continue only if you inspected it.</source>
         <translation>此文件需要人工复核，整本规范化时会跳过。仅在你已检查确认后继续。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="816"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="807"/>
         <source>Normalize BR paragraphs in the current XHTML file?
 
 %1
@@ -14989,32 +14983,32 @@ Estimated paragraphs: %2</source>
 预计段落数：%2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="846"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="837"/>
         <source>BR paragraph normalization: current XHTML file was updated.</source>
         <translation>BR 段落规范化：当前 XHTML 文件已更新。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="848"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="839"/>
         <source>Current XHTML BR paragraphs normalized.</source>
         <translation>当前 XHTML 的 BR 段落已规范化。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="859"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="850"/>
         <source>BR paragraph normalization: no EPUB is currently loaded.</source>
         <translation>BR 段落规范化：当前未加载 EPUB。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="905"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="896"/>
         <source>BR paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs.</source>
         <translation>BR 段落规范化预检查完成。已检查 %1 个 XHTML 文件，其中 %2 个文件可自动安全处理，%3 个文件需要人工复核，%4 个文件已跳过，预计可自动安全处理 %5 个段落。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="915"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="906"/>
         <source>No auto-safe BR paragraph files were found. See Validation Results.</source>
         <translation>未发现可自动安全处理的 BR 段落文件。请查看验证结果。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="923"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="914"/>
         <source>Normalize BR paragraphs in %1 auto-safe XHTML files?
 
 %2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
@@ -15031,98 +15025,98 @@ Estimated paragraphs: %4</source>
 预计段落数：%4</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="937"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="928"/>
         <source>Creating checkpoint before BR paragraph normalization...</source>
         <translation>正在 BR 段落规范化前创建检查点...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="940"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="931"/>
         <source>BR paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
         <translation>BR 段落规范化已取消：检查点创建失败。没有 XHTML 文件被修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="943"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="934"/>
         <source>Checkpoint creation failed. BR paragraph normalization was cancelled.</source>
         <translation>检查点创建失败。BR 段落规范化已取消。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="947"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="938"/>
         <source>BR paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
         <translation>BR 段落规范化：批量修改前已保存检查点。可使用检查点恢复；批量资源写入无法通过代码视图撤销恢复。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="995"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="986"/>
         <source>BR paragraph normalization: XHTML file was updated.</source>
         <translation>BR 段落规范化：XHTML 文件已更新。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1005"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="996"/>
         <source>BR paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
         <translation>BR 段落规范化完成。已更新 %1 个文件，%2 个文件未改动，%3 个文件失败，跳过 %4 个需人工复核的候选文件。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1012"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1003"/>
         <source>BR paragraph normalization completed.</source>
         <translation>BR 段落规范化已完成。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1013"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1004"/>
         <source>No BR paragraph files were changed.</source>
         <translation>没有 BR 段落文件被修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1031"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1022"/>
         <source>KFX paragraph analysis: no EPUB is currently loaded.</source>
         <translation>KFX 段落分析：当前未加载 EPUB。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1064"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1055"/>
         <source>KFX paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.</source>
         <translation>KFX 段落分析完成。已检查 %1 个 XHTML 文件，发现 %2 个可自动安全处理的候选文件、%3 个需人工复核的候选文件，跳过 %4 个文件，预计可自动安全处理 %5 个段落。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1074"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1065"/>
         <source>KFX paragraph candidates found. See Validation Results.</source>
         <translation>发现 KFX 段落候选。请查看验证结果。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1075"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1066"/>
         <source>No KFX paragraph candidates found.</source>
         <translation>未发现 KFX 段落候选。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1089"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1080"/>
         <source>KFX paragraph normalization: current tab is not an XHTML resource.</source>
         <translation>KFX 段落规范化：当前标签页不是 XHTML 资源。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1114"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1105"/>
         <source>The current XHTML file is not a KFX paragraph candidate. See Validation Results.</source>
         <translation>当前 XHTML 文件不是 KFX 段落候选。请查看验证结果。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1121"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1112"/>
         <source>KFX paragraph normalization failed safety checks. See Validation Results.</source>
         <translation>KFX 段落规范化未通过安全检查。请查看验证结果。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1127"/>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1322"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1118"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1313"/>
         <source>KFX paragraph normalization: no changes needed.</source>
         <translation>KFX 段落规范化：无需修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1129"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1120"/>
         <source>No KFX paragraph changes needed.</source>
         <translation>KFX 段落无需修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1134"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1125"/>
         <source>This file is an auto-safe KFX paragraph candidate.</source>
         <translation>此文件是可自动安全处理的 KFX 段落候选。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1141"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1132"/>
         <source>Normalize KFX paragraphs in the current XHTML file?
 
 %1
@@ -15139,32 +15133,32 @@ Estimated paragraphs: %2</source>
 预计段落数：%2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1176"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1167"/>
         <source>KFX paragraph normalization: current XHTML file was updated.</source>
         <translation>KFX 段落规范化：当前 XHTML 文件已更新。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1178"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1169"/>
         <source>Current XHTML KFX paragraphs normalized.</source>
         <translation>当前 XHTML 的 KFX 段落已规范化。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1189"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1180"/>
         <source>KFX paragraph normalization: no EPUB is currently loaded.</source>
         <translation>KFX 段落规范化：当前未加载 EPUB。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1239"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1230"/>
         <source>KFX paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs. Will remove %6 0-height spacer p elements and preserve %7 spacing p elements.</source>
         <translation>KFX 段落规范化预检查完成。已检查 %1 个 XHTML 文件，其中 %2 个文件可自动安全处理，%3 个文件需要人工复核，%4 个文件已跳过，预计可自动安全处理 %5 个段落。将移除 %6 个 0 高度空白 p 元素，并保留 %7 个间距 p 元素。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1251"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1242"/>
         <source>No auto-safe KFX paragraph files were found. See Validation Results.</source>
         <translation>未发现可自动安全处理的 KFX 段落文件。请查看验证结果。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1259"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1250"/>
         <source>Normalize KFX paragraphs in %1 auto-safe XHTML files?
 
 %2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
@@ -15185,42 +15179,42 @@ Spacing p elements to preserve: %6</source>
 要保留的间距 p 元素：%6</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1278"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1269"/>
         <source>Creating checkpoint before KFX paragraph normalization...</source>
         <translation>正在 KFX 段落规范化前创建检查点...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1281"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1272"/>
         <source>KFX paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
         <translation>KFX 段落规范化已取消：检查点创建失败。没有 XHTML 文件被修改。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1284"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1275"/>
         <source>Checkpoint creation failed. KFX paragraph normalization was cancelled.</source>
         <translation>检查点创建失败。KFX 段落规范化已取消。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1288"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1279"/>
         <source>KFX paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
         <translation>KFX 段落规范化：批量修改前已保存检查点。可使用检查点恢复；批量资源写入无法通过代码视图撤销恢复。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1339"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1330"/>
         <source>KFX paragraph normalization: XHTML file was updated.</source>
         <translation>KFX 段落规范化：XHTML 文件已更新。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1349"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1340"/>
         <source>KFX paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
         <translation>KFX 段落规范化完成。已更新 %1 个文件，%2 个文件未改动，%3 个文件失败，跳过 %4 个需人工复核的候选文件。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1356"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1347"/>
         <source>KFX paragraph normalization completed.</source>
         <translation>KFX 段落规范化已完成。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="1357"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1348"/>
         <source>No KFX paragraph files were changed.</source>
         <translation>没有 KFX 段落文件被修改。</translation>
     </message>
@@ -20854,17 +20848,17 @@ Line: %1 Column %2 - %3</source>
         <translation>无效的NCX文件：%1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="117"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="115"/>
         <source>KFX paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
         <translation>KFX 段落规范化：自动 XHTML 格式化失败；将写入未经过格式化器进一步修改的规范化 XHTML。%1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="125"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="123"/>
         <source>KFX paragraph normalization: automatic XHTML formatting was applied.</source>
         <translation>KFX 段落规范化：已应用自动 XHTML 格式化。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindowExt.cpp" line="128"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="126"/>
         <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>KFX 段落规范化：自动 XHTML 格式化未发现进一步修改。</translation>
     </message>
@@ -21062,12 +21056,12 @@ Line: %1 Column %2 - %3</source>
 %1</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/GlobalFontUsageCollector.cpp" line="160"/>
+        <location filename="../../BookManipulation/FontSubset/GlobalFontUsageCollector.cpp" line="180"/>
         <source>%1: XML parsing stopped at line %2: %3</source>
         <translation>%1：XML 解析在第 %2 行停止：%3</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/GlobalFontUsageCollector.cpp" line="231"/>
+        <location filename="../../BookManipulation/FontSubset/GlobalFontUsageCollector.cpp" line="249"/>
         <source>%1: a dynamic CSS content value could not be resolved.</source>
         <translation>%1：无法解析动态 CSS content 值。</translation>
     </message>
@@ -21107,27 +21101,27 @@ Line: %1 Column %2 - %3</source>
         <translation>HarfBuzz 生成了空字体或无效字体。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="132"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="133"/>
         <source>The subset output could not be reparsed as the original font format.</source>
         <translation>无法按原字体格式重新解析子集化输出。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="145"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="146"/>
         <source>The subset output does not cover every requested codepoint.</source>
         <translation>子集化输出未覆盖所有请求的码点。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="174"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="175"/>
         <source>The subset output is not smaller than the source font.</source>
         <translation>子集化输出不小于源字体。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="216"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="217"/>
         <source>Shaping validation changed the glyph count.</source>
         <translation>塑形验证发现字形数量发生变化。</translation>
     </message>
     <message>
-        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="229"/>
+        <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="230"/>
         <source>Shaping validation changed glyph mapping or positioning.</source>
         <translation>塑形验证发现字形映射或定位发生变化。</translation>
     </message>
