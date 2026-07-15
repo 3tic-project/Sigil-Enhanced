@@ -10,6 +10,7 @@
 
 #include <QByteArray>
 #include <QList>
+#include <QSet>
 #include <QString>
 
 #include "ChineseConversion/ChineseConversionTypes.h"
@@ -52,6 +53,7 @@ public:
     int SkippedJapaneseSegments() const;
     int SkippedProtectedSegments() const;
     QString Apply(QString *error = nullptr) const;
+    QString Apply(const QSet<int>& enabledChanges, QString *error = nullptr) const;
 
 private:
     QString m_Source;

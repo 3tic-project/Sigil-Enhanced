@@ -34,6 +34,7 @@
 #include "PreferenceWidgets/GeneralSettingsWidget.h"
 #include "PreferenceWidgets/KeyboardShortcutsWidget.h"
 #include "PreferenceWidgets/LanguageWidget.h"
+#include "PreferenceWidgets/ChineseConversionSettingsWidget.h"
 #include "PreferenceWidgets/SpellCheckWidget.h"
 #include "PreferenceWidgets/PreserveEntitiesWidget.h"
 #include "PreferenceWidgets/PluginWidget.h"
@@ -62,6 +63,7 @@ Preferences::Preferences(QWidget *parent) :
     //-------------------------------------------------------
     appendPreferenceWidget(new KeyboardShortcutsWidget);
     appendPreferenceWidget(new LanguageWidget);
+    appendPreferenceWidget(new ChineseConversionSettingsWidget);
     appendPreferenceWidget(new SpellCheckWidget);
     appendPreferenceWidget(new PreserveEntitiesWidget);
     appendPreferenceWidget(new PluginWidget);

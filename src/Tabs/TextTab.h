@@ -77,6 +77,10 @@ public:
     int GetSelectionStart() const;
     int GetSelectionEnd() const;
     bool SetSelectionRange(int start, int end);
+    QString GetText() const;
+    QString GetSelectedText() const;
+    void ReplaceDocumentText(const QString& text, bool normalize = true);
+    bool ReplaceSelectedText(const QString& text, bool normalize = true);
 
     int GetCursorColumn() const;
 

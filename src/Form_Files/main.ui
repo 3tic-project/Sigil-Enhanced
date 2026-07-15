@@ -430,6 +430,7 @@
     </property>
     <addaction name="actionNormalizeEpubStructure"/>
     <addaction name="actionEnhanceSourceFormatting"/>
+    <addaction name="actionChineseConversion"/>
     <addaction name="actionAnalyzeBrParagraphs"/>
     <addaction name="actionNormalizeCurrentBrParagraphs"/>
     <addaction name="actionNormalizeBrParagraphs"/>
@@ -1956,6 +1957,14 @@
     </property>
     <property name="toolTip">
       <string>Format all XHTML and CSS resources with the built-in EPUB-safe formatter backend</string>
+    </property>
+  </action>
+  <action name="actionChineseConversion">
+    <property name="text">
+      <string>Chinese Conversion...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert Simplified and Traditional Chinese in editor text</string>
     </property>
   </action>
   <action name="actionAnalyzeBrParagraphs">

@@ -150,7 +150,8 @@ public:
      */
     void ScrollToTop();
 
-    void ReplaceDocumentText(const QString& text);
+    void ReplaceDocumentText(const QString& text, bool normalize = true);
+    bool ReplaceSelectedText(const QString& text, bool normalize = true);
 
     // Overrides inherited from WellFormedContent
 

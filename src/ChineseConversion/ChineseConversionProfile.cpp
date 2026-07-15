@@ -10,6 +10,8 @@
 
 #include <stdexcept>
 
+#include <QCoreApplication>
+
 ChineseConversionProfile::ChineseConversionProfile(ChineseConversionMode mode,
                                                      const QString& key,
                                                      const QString& configFile,
@@ -46,6 +48,39 @@ QString ChineseConversionProfile::SourceLocale() const
 QString ChineseConversionProfile::TargetLocale() const
 {
     return m_TargetLocale;
+}
+
+QString ChineseConversionProfile::DisplayName() const
+{
+    const char *name = "Simplified -> Standard Traditional";
+    switch (m_Mode) {
+    case ChineseConversionMode::S2T:   name = "Simplified -> Standard Traditional"; break;
+    case ChineseConversionMode::T2S:   name = "Standard Traditional -> Simplified"; break;
+    case ChineseConversionMode::S2TW:  name = "Simplified -> Taiwan Traditional"; break;
+    case ChineseConversionMode::TW2S:  name = "Taiwan Traditional -> Simplified"; break;
+    case ChineseConversionMode::S2HK:  name = "Simplified -> Hong Kong Traditional"; break;
+    case ChineseConversionMode::HK2S:  name = "Hong Kong Traditional -> Simplified"; break;
+    case ChineseConversionMode::S2TWP: name = "Simplified -> Taiwan Traditional (with phrases)"; break;
+    case ChineseConversionMode::TW2SP: name = "Taiwan Traditional -> Simplified (with phrases)"; break;
+    case ChineseConversionMode::T2TW:  name = "Standard Traditional -> Taiwan Traditional"; break;
+    case ChineseConversionMode::TW2T:  name = "Taiwan Traditional -> Standard Traditional"; break;
+    case ChineseConversionMode::T2HK:  name = "Standard Traditional -> Hong Kong Traditional"; break;
+    case ChineseConversionMode::HK2T:  name = "Hong Kong Traditional -> Standard Traditional"; break;
+    }
+    return QCoreApplication::translate("ChineseConversionProfile", name);
+}
+
+QString ChineseConversionProfile::Description() const
+{
+    const bool phraseConversion = m_Mode == ChineseConversionMode::S2TWP
+        || m_Mode == ChineseConversionMode::TW2SP;
+    return phraseConversion
+        ? QCoreApplication::translate(
+              "ChineseConversionProfile",
+              "Converts Chinese characters and regional vocabulary.")
+        : QCoreApplication::translate(
+              "ChineseConversionProfile",
+              "Converts Chinese characters without regional vocabulary substitution.");
 }
 
 QList<ChineseConversionProfile> ChineseConversionProfile::All()

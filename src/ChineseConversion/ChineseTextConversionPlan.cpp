@@ -378,6 +378,15 @@ int ChineseTextConversionPlan::SkippedProtectedSegments() const
 
 QString ChineseTextConversionPlan::Apply(QString *error) const
 {
+    QSet<int> enabledChanges;
+    for (int index = 0; index < m_Changes.size(); ++index) {
+        enabledChanges.insert(index);
+    }
+    return Apply(enabledChanges, error);
+}
+
+QString ChineseTextConversionPlan::Apply(const QSet<int>& enabledChanges, QString *error) const
+{
     if (error) {
         error->clear();
     }
@@ -388,9 +397,13 @@ QString ChineseTextConversionPlan::Apply(QString *error) const
         return m_Source;
     }
     QByteArray output = m_Utf8Source;
-    for (auto iterator = m_Changes.crbegin(); iterator != m_Changes.crend(); ++iterator) {
-        output.replace(iterator->byteStart, iterator->byteLength,
-                       ReplacementFor(*iterator, m_Utf8Source));
+    for (int index = m_Changes.size() - 1; index >= 0; --index) {
+        if (!enabledChanges.contains(index)) {
+            continue;
+        }
+        const ChineseTextChange& change = m_Changes.at(index);
+        output.replace(change.byteStart, change.byteLength,
+                       ReplacementFor(change, m_Utf8Source));
     }
     return QString::fromUtf8(output);
 }

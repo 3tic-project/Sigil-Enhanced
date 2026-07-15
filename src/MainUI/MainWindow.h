@@ -1150,6 +1150,7 @@ public slots:
     bool NormalizedOPF(); //modified: NormalizedOPF
     bool NormalizeEpubStructure(); // modified: Builtin native plugin
     bool EnhanceSourceFormatting(); // modified: Builtin native plugin
+    bool ConvertChineseText(); // modified: Chinese conversion
     bool AnalyzeBrParagraphs(); // modified: Builtin native plugin
     bool NormalizeCurrentBrParagraphs(); // modified: Builtin native plugin
     bool NormalizeAllBrParagraphs(); // modified: Builtin native plugin

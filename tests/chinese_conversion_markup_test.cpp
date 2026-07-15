@@ -90,6 +90,18 @@ int main()
     Require(textOnly.contains(QStringLiteral("title='简体提示'")),
             "disabled title attribute conversion was ignored");
 
+    const QString twoSegments = QStringLiteral(
+        "<html><body><p>汉字</p><p>转换</p></body></html>");
+    const ChineseTextConversionPlan partialPlan = ChineseTextConversionPlan::Build(
+        twoSegments, ChineseDocumentKind::Xhtml, options, converter);
+    Require(partialPlan.Changes().size() == 2,
+            "partial preview fixture did not produce two changes");
+    const QString partiallyConverted = partialPlan.Apply(QSet<int> { 0 });
+    Require(partiallyConverted.contains(QStringLiteral("<p>漢字</p>")),
+            "enabled preview change was not applied");
+    Require(partiallyConverted.contains(QStringLiteral("<p>转换</p>")),
+            "disabled preview change was applied");
+
     const QString svg = QStringLiteral(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"汉字图\" "
         "aria-label=\"汉字插图\"><title>汉字标题</title>"

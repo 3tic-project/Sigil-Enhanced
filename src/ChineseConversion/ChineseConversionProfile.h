@@ -30,6 +30,8 @@ public:
     QString ConfigFile() const;
     QString SourceLocale() const;
     QString TargetLocale() const;
+    QString DisplayName() const;
+    QString Description() const;
 
     static QList<ChineseConversionProfile> All();
     static ChineseConversionProfile ForMode(ChineseConversionMode mode);
