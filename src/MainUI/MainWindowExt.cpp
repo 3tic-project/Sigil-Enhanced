@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QHash>
+#include <QLocale>
 #include <QMessageBox>
 #include <QObject>
 #include <QSet>
@@ -35,6 +36,11 @@
 #include "Dialogs/ChineseConversionPreviewDialog.h"
 #include "Tabs/SVGTab.h"
 #include "Tabs/TextTab.h"
+#ifdef SIGIL_ENABLE_FONT_SUBSETTING
+#include "BookManipulation/FontSubset/FontSubsetController.h"
+#include "Dialogs/FontSubsetDialog.h"
+#include "ResourceObjects/FontResource.h"
+#endif
 
 namespace
 {
@@ -610,6 +616,77 @@ bool MainWindow::ConvertChineseText()
         tr("Chinese conversion applied: %1 changes in the current file.")
             .arg(enabledChanges.size()));
     return true;
+}
+
+bool MainWindow::SubsetEmbeddedFonts()
+{
+#ifndef SIGIL_ENABLE_FONT_SUBSETTING
+    Utility::warning(
+        this, tr("Font Subsetting"),
+        tr("This build does not include HarfBuzz font subsetting support."));
+    return false;
+#else
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        Utility::warning(this, tr("Font Subsetting"),
+                         tr("No EPUB is currently loaded."));
+        return false;
+    }
+
+    SaveTabData();
+    QSet<QString> selectedFontIdentifiers;
+    const QList<Resource*> selectedResources = m_BookBrowser
+        ? m_BookBrowser->AllSelectedResources() : QList<Resource*>();
+    for (Resource* resource : selectedResources) {
+        if (qobject_cast<FontResource*>(resource)) {
+            selectedFontIdentifiers.insert(resource->GetIdentifier());
+        }
+    }
+
+    const FontSubset::BookSnapshot snapshot =
+        FontSubset::FontSubsetController::CreateSnapshot(m_Book.data());
+    if (snapshot.fonts.isEmpty()) {
+        Utility::warning(this, tr("Font Subsetting"),
+                         tr("The current EPUB has no readable embedded fonts."));
+        return false;
+    }
+
+    FontSubsetDialog dialog(snapshot, selectedFontIdentifiers, this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+
+    OPFResource* opf = m_Book->GetOPF();
+    opf->InitialLoad();
+    const QString opfBeforeCheckpoint = opf->GetText();
+    const bool bookWasModified = m_Book->IsModified();
+    if (!RepoCommit()) {
+        opf->SetText(opfBeforeCheckpoint);
+        opf->SaveToDisk(true);
+        m_Book->SetModified(bookWasModified);
+        Utility::warning(
+            this, tr("Font Subsetting"),
+            tr("A recovery checkpoint could not be created. No fonts were changed."));
+        return false;
+    }
+
+    const FontSubset::CommitResult result =
+        FontSubset::FontSubsetController::Commit(
+            m_Book.data(), dialog.Analysis(), dialog.SelectedFontIdentifiers());
+    if (!result.success) {
+        opf->SetText(opfBeforeCheckpoint);
+        opf->SaveToDisk(true);
+        m_Book->SetModified(bookWasModified);
+        Utility::warning(this, tr("Font Subsetting"), result.error);
+        return false;
+    }
+
+    m_BookBrowser->Refresh();
+    const qsizetype saved = result.oldSize - result.newSize;
+    ShowMessageOnStatusBar(
+        tr("Subset %n font(s); saved %1.", "", result.fontCount)
+            .arg(QLocale().formattedDataSize(saved)));
+    return true;
+#endif
 }
 
 bool MainWindow::AnalyzeBrParagraphs()

@@ -51,6 +51,33 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
     )
     add_test(NAME font_subset_workflow COMMAND font_subset_workflow_test)
     set_tests_properties(font_subset_workflow PROPERTIES TIMEOUT 30)
+
+    add_executable(font_subset_batch_test
+        font_subset_batch_test.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontSubsetController.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontSubsetTypes.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontInspector.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontInspector.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/GlobalFontUsageCollector.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/GlobalFontUsageCollector.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzRAII.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
+    )
+    target_include_directories(font_subset_batch_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    target_link_libraries(font_subset_batch_test PRIVATE
+        Qt6::Core
+        Qt6::Xml
+        PkgConfig::HARFBUZZ_SUBSET
+    )
+    target_compile_definitions(font_subset_batch_test PRIVATE
+        SIGIL_FONT_TEST_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/fonts/OpenSans-Test.ttf"
+    )
+    add_test(NAME font_subset_batch COMMAND font_subset_batch_test)
+    set_tests_properties(font_subset_batch PROPERTIES TIMEOUT 30)
 endif()
 
 add_executable(safe_archive_extractor_test

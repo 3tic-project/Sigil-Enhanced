@@ -394,6 +394,12 @@
      <addaction name="actionEpub3To2"/>
      <addaction name="actionEpub2To3"/>
     </widget>
+    <widget class="QMenu" name="menuFonts">
+     <property name="title">
+      <string>&amp;Fonts</string>
+     </property>
+     <addaction name="actionSubsetEmbeddedFonts"/>
+    </widget>
     <addaction name="actionAddCover"/>
     <addaction name="actionMetaEditor"/>
     <addaction name="menuTOC"/>
@@ -407,6 +413,7 @@
     <addaction name="menuSpellCheckMenu"/>
     <addaction name="menuReformatHTML"/>
     <addaction name="menuEPUB3Tools"/>
+    <addaction name="menuFonts"/>
     <addaction name="actionWellFormedCheckEpub"/>
 	<addaction name="actionNormalizedOPF"/>
     <addaction name="actionValidateStylesheetsWithW3C"/>
@@ -1966,6 +1973,14 @@
     <property name="toolTip">
       <string>Convert Simplified and Traditional Chinese in editor text</string>
     </property>
+  </action>
+  <action name="actionSubsetEmbeddedFonts">
+   <property name="text">
+    <string>Subset Embedded Fonts...</string>
+   </property>
+   <property name="toolTip">
+    <string>Analyze and safely reduce embedded TTF and OTF fonts</string>
+   </property>
   </action>
   <action name="actionAnalyzeBrParagraphs">
     <property name="text">

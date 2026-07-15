@@ -62,6 +62,9 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
         BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
         BookManipulation/FontSubset/FontSubsetTransaction.cpp
         BookManipulation/FontSubset/FontSubsetTransaction.h
+        BookManipulation/FontSubset/FontSubsetController.cpp
+        BookManipulation/FontSubset/FontSubsetController.h
+        BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp
     )
 endif()
 
@@ -314,6 +317,13 @@ set( DIALOG_FILES
     Dialogs/PythonFunctionEditor.cpp
     Dialogs/PythonFunctionEditor.h
     )
+
+if(SIGIL_FONT_SUBSETTING_AVAILABLE)
+    list(APPEND DIALOG_FILES
+        Dialogs/FontSubsetDialog.cpp
+        Dialogs/FontSubsetDialog.h
+    )
+endif()
 
 set( WIDGET_FILES
     Widgets/ImageView.cpp
