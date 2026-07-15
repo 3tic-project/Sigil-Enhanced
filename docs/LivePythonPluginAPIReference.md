@@ -38,6 +38,18 @@ Live v2 不实现 RPC 方法级权限系统。旧 `<permissions>` 元素仍可�
 插件类型。Python 插件与 Sigil 使用同一系统账户，可直接使用 Python 的文件、网络和进程
 API，因此只能安装和运行可信插件；本地 socket 鉴权不是操作系统沙箱。
 
+### 新旧运行时兼容
+
+插件管理器为每个插件保存 `Legacy (v1)` 或 `Live (v2)` 选择，默认仍为 Legacy。原生 v2
+插件通过 `<api version="2" interface="live" />` 声明 Live 接口。未声明 v2 的旧 `edit`
+插件也可在管理器中选择 Live，此时 launcher 提供 RPC-backed `CompatBookContainer`，保留旧
+入口与公开 API；成功时提交隐式事务，非零返回、异常、取消、崩溃或提交失败时回滚。
+
+旧 validation 与 output 插件在 Live 模式下使用只读兼容容器；旧 input 插件通过受限、校验
+完整性的流上传生成的 EPUB，且只在插件成功结束后才替换当前 Book。菜单、QuickLaunch 和
+Automate 共用同一运行时选择；Automate 会等待 Live command 完成，并拒绝不适用的
+`book-session` 插件。旧系统完整行为见 `LegacyPythonPluginSystem.md`。
+
 ## 3. 数据类型
 
 ### `Resource`
@@ -67,8 +79,10 @@ API，因此只能安装和运行可信插件；本地 socket 鉴权不是操作
 | `input` | `InputApi`。 |
 | `output` | `OutputApi`。 |
 | `ping()` | 检查宿主连接。 |
+| `finish(status="success", message="")` | 报告最终状态；通常由 launcher 调用。 |
+| `close()` | 关闭 transport；通常由 launcher 调用。 |
 
-`finish()` 与 `close()` 由 launcher 管理，普通插件不应自行调用。
+`connect()` 依赖 launcher 注入的私有 socket 与一次性 token，普通插件不应自行建立连接。
 
 ## 5. `BookApi`
 
@@ -95,9 +109,9 @@ API，因此只能安装和运行可信插件；本地 socket 鉴权不是操作
 | `resolve_path(book_path)` | 当前路径对应的 `Resource`。 |
 | `get_resource(resource_id)` | 当前资源信息。 |
 | `read_text(resource)` | `text` 与 `revision`。 |
-| `read_many(resources)` | 最多 100 个文本资源；SDK 自动跟随响应大小 continuation。 |
+| `read_many(resources)` | 最多 100 个文本资源；SDK 自动跟随 6 MiB 响应预算的 continuation。 |
 | `read_binary(resource)` | 最多 5 MiB 的 bytes 数据与 revision。 |
-| `open_binary(resource)` | 任意大小资源的 `BinaryReader` 快照。 |
+| `open_binary(resource)` | 二进制资源的分块 `BinaryReader` 快照。 |
 | `materialize_temporary(resource=None, book_path=None)` | 将一个实时资源复制到 Session 私有临时目录。 |
 
 ### Expanded EPUB/archive
@@ -106,15 +120,21 @@ API，因此只能安装和运行可信插件；本地 socket 鉴权不是操作
 | --- | --- |
 | `archive_files(page_size=200)` | 展开 EPUB 中所有常规文件，包括未托管文件。 |
 | `read_archive_file(book_path)` | 最多 5 MiB 的 bytes、SHA-256 与保护状态。 |
-| `open_archive_file(book_path)` | 任意大小 archive 文件的 `BinaryReader` 快照。 |
+| `open_archive_file(book_path)` | archive 文件的分块 `BinaryReader` 快照。 |
 
-`BinaryReader` 支持 `chunks(max_bytes=None)`、`read()`、`close()` 和上下文管理器。
+`BinaryReader` 支持 `chunks(max_bytes=None)`、`read(max_bytes=None)`、`close()` 和上下文管理器。
 其 `size`、`sha256`、`book_path`、`resource_id`、`revision` 对应打开流时固定的同一
-份临时快照。单块最多 2 MiB；退出上下文或 Session 结束时删除快照。
-`materialize_temporary()` 不接受目标路径，文本来自当前内存；修改临时文件不会自动写回，
-必须使用事务写 API。
+份临时快照。单块最多 2 MiB；每个 Session 最多同时保留 8 个快照、合计 1 GiB。退出上下文、
+显式关闭或 Session 结束时删除快照。
+
+`materialize_temporary()` 必须且只能传 `resource` 或 `book_path` 之一，不接受目标路径；返回
+`path`、`book_path`、`resource_id`、`revision`、`size` 和 `sha256`。文本资源来自当前内存，
+每个 Session 最多 16 个文件、合计 512 MiB。修改临时文件不会自动写回，必须使用事务写 API。
 
 ### 创建事务
+
+`transaction(label="Plugin changes", checkpoint="auto")` 创建 staged `Transaction`；上下文
+退出不会自动提交，必须显式调用 `commit()`。
 
 ```python
 with plugin.book.transaction("Normalize chapters", checkpoint="auto") as tx:
@@ -136,7 +156,7 @@ with plugin.book.transaction("Normalize chapters", checkpoint="auto") as tx:
 | `replace_text(resource, text, expected_revision=None)` | 暂存完整文本。 |
 | `apply_edits(resource, edits, expected_revision=None)` | 暂存不重叠 UTF-16 patches。 |
 | `read_binary(resource)` | 读 staged/live 二进制，内联上限 5 MiB。 |
-| `write_binary(resource, data, expected_revision=None)` | 暂存二进制替换，内联上限 5 MiB。 |
+| `write_binary(resource, data, expected_revision=None)` | 暂存最大 256 MiB 的 bytes-like 数据；超过 4 MiB 时 SDK 自动分块。 |
 | `begin_binary_write(resource, size, expected_revision=None)` | 开始最大 256 MiB 的分块写。 |
 | `write_binary_file(resource, path, expected_revision=None)` | 将本地文件分块写入事务。 |
 | `add_resource(book_path, data, media_type, ...)` | 新增 manifested 或 unmanifested 文件。 |
@@ -160,6 +180,18 @@ archive API 修改。
 
 `replace_package()` 会验证 XML、EPUB 版本、manifest id/href 唯一性、spine idref，
 以及 package manifest 是否与同一事务的 add/remove/move 最终状态完全一致。
+
+`begin_binary_write()` 返回具有 `chunk_size`、`write(data)` 和 `finish()` 的 writer；完成时宿主
+核对声明长度与 SHA-256 后才暂存数据。`write_binary_file()` 使用同一分块 writer，不会把整个
+文件一次性读入 Python 内存。
+
+`update_metadata(items)` 的每项为 `{"name": str, "content": str, "attributes": {str: str}}`，
+其中 `attributes` 可省略。该操作替换 `<metadata>` 的全部子元素；带前缀名称所需 namespace
+必须已在 package 中声明，结果仍会接受完整 OPF 校验。
+
+`update_spine(items, attributes)` 的每项必须含字符串 `idref`，并可含字符串 `id`、`linear`、
+`properties`；`attributes` 是要更新的 spine 字符串属性。该操作替换全部 `<itemref>`，保留
+未指定的原 spine 属性，并验证每个 `idref` 都存在于 manifest。
 
 ## 7. `EditorApi`
 
@@ -212,7 +244,8 @@ print(event["name"], event["params"])
 plugin.events.unsubscribe("book.resourceChanged")
 ```
 
-`poll()` 只取已排队事件，无事件返回 `None`；`next_event()` 阻塞等待。两者默认过滤
+`subscribe(*events)` 订阅事件，`unsubscribe(*events)` 取消订阅。`poll()` 只取已排队事件，
+无事件返回 `None`；`next_event()` 阻塞等待。两者默认过滤
 本 Session 自己产生的事件，传 `include_self=True` 可接收。每个事件含
 `book_revision` 与 `origin_session_id`。光标/选区按 50ms 合并，内容/单资源变更按
 100ms 合并；慢客户端填满 4 MiB 待发送队列时会丢弃通知，后续事件以
@@ -220,46 +253,64 @@ plugin.events.unsubscribe("book.resourceChanged")
 编辑器事件携带选区范围但不携带选中文本，避免 notification 被超大选区撑破；需要文本时
 再调用 `get_selection()`。
 
-## 10. Validation 与 input
+## 10. Validation、input 与 output
+
+### `ValidationApi`
 
 `plugin.validation.publish_results(results)` 原子替换 Validation Results，最多 10,000
 项。每项含 `type` (`info`/`warning`/`error`)、`message`、可选 `book_path`、`line`、
-`character`；未知位置用 `-1`。
+`character`；未知位置用 `-1`。`book_path` 必须是规范的 Book 路径。该接口仅供 validation
+插件使用。
+
+### `InputApi`
 
 `plugin.input` 仅供 input 插件：
 
 | 方法 | 说明 |
 | --- | --- |
-| `begin_epub(filename, size=None)` | 创建 `InputWriter`。 |
+| `begin_epub(filename, size=None)` | 创建 `InputWriter`；文件名必须是以 `.epub` 结尾的 basename。 |
 | `submit_epub(data, filename="input.epub")` | 从 bytes-like 分块上传。 |
-| `submit_epub_file(path)` | 从文件流式上传。 |
+| `submit_epub_file(path)` | 从文件流式上传，不把整个文件读入 Python 内存。 |
 
-`InputWriter.write(data)` 分块发送并累计 SHA-256，`finish()` 要求宿主核验长度、hash、
-ZIP signature、mimetype、container、OPF 安全路径和 2 GiB 上限。只有插件随后成功结束，宿主才询问是否丢弃当前 Book
-的未保存修改并加载上传结果。
+`InputWriter.write(data)` 分块发送并累计 SHA-256，`InputWriter.finish()` 要求宿主核验声明
+长度、hash、ZIP signature、mimetype、container、规范且不越界的 OPF 路径，以及 OPF 的
+package/metadata/manifest/spine 必需结构。每个 Session 同时只能有 1 个 input 上传，最大
+2 GiB。只有插件随后成功结束，宿主才询问是否丢弃当前 Book 的未保存修改并加载上传结果；
+上传、校验、插件执行或加载任一步失败都保留原 Book。
 
-`plugin.output.save_source()` 将当前 Book 保存回源 EPUB；`export_epub(path)` 接受绝对
-`.epub` 路径并导出副本，传当前路径等同 source 模式。两者通过 Sigil 原生保存流程并保留
-字体混淆、清理和 EPUB 校验；copy 模式不更改当前文件名或 modified。output 插件仍可用
-`archive_files()`、`read_text()` 与流 API 实现自定义非 EPUB 格式导出。
+### `OutputApi`
+
+`plugin.output` 仅供 output 插件：
+
+| 方法 | 说明 |
+| --- | --- |
+| `save_source()` | 保存回当前源 EPUB；没有已保存的源路径时失败。 |
+| `export_epub(path)` | 保存到绝对 `.epub` 路径；当前源路径选择 source 模式，其他路径选择 copy 模式。 |
+
+两者返回 `{"exported": bool, "path": str, "mode": "source"|"copy"}`，并通过 Sigil 原生
+保存流程保留字体混淆、清理和 EPUB 校验。copy 模式不更改当前文件名或 modified。output
+插件仍可用 `archive_files()`、`read_text()` 与流 API 将内容保存为其他格式或目录。
 
 ## 11. 错误与恢复
 
 SDK 将 JSON-RPC 错误映射为 `sigil_live.errors` 异常。协议错误码：
 
-| code | 名称 |
-| --- | --- |
-| `-32002` | BookClosed |
-| `-32003` | ResourceNotFound |
-| `-32004` | RevisionConflict |
-| `-32005` | InvalidPatch |
-| `-32006` | TransactionRequired |
-| `-32007` | ValidationFailed |
-| `-32008` | PayloadTooLarge |
-| `-32009` | Busy |
-| `-32010` | UnsupportedOperation |
-| `-32011` | TransactionNotFound |
-| `-32012` | SessionEnding |
+| code | 名称 | 含义 |
+| --- | --- | --- |
+| `-32002` | BookClosed | 当前 Book 已关闭或替换。 |
+| `-32003` | ResourceNotFound | 资源 ID、Book 路径或文本资源不存在。 |
+| `-32004` | RevisionConflict | 写入依据的 revision 已过期。 |
+| `-32005` | InvalidPatch | 文本范围或 patch 结构无效。 |
+| `-32006` | TransactionRequired | 当前 checkpoint 策略不允许该操作。 |
+| `-32007` | ValidationFailed | 数据校验或 Checkpoint 失败。 |
+| `-32008` | PayloadTooLarge | 请求、响应、上传或快照超过限制。 |
+| `-32009` | Busy | writer、事务或流配额正被占用。 |
+| `-32010` | UnsupportedOperation | 插件类型、资源或受保护目标不支持该操作。 |
+| `-32011` | TransactionNotFound | 事务 ID 不存在、已失效或属于其他 Session。 |
+| `-32012` | SessionEnding | Session 正在结束。 |
+
+SDK 为兼容旧宿主仍能解码历史 `PermissionDenied` 异常，但当前宿主与 OpenRPC 不再发出该
+错误；API 可用性不由 `<permissions>` 控制。
 
 发生异常时未提交事务由 Session 清理；已提交事务通过 Sigil Checkpoint/undo 恢复。
 不要捕获所有异常后仍返回成功，尤其是 input 插件与结构修改插件。
@@ -272,4 +323,14 @@ SDK 将 JSON-RPC 错误映射为 `sigil_live.errors` 异常。协议错误码：
 
 可安装示例位于 `examples/live_plugins/`。`api-coverage.json` 将 SDK 公共方法映射到
 示例或专门测试，`tests/live_plugin_examples_test.py` 校验 XML、Python 语法和覆盖清单。
-宿主 dispatcher 与 OpenRPC 方法集合由 `tests/plugin_openrpc_contract_test.py` 锁定。
+宿主 dispatcher 与 OpenRPC 方法集合由 `tests/plugin_openrpc_contract_test.py` 锁定；
+`tests/live_plugin_docs_test.py` 从 SDK 源码提取公共方法，确保中英文手册同步覆盖。
+
+```sh
+cmake -S . -B cmake-build-debug -DBUILD_TESTING=ON
+cmake --build cmake-build-debug -j4
+ctest --test-dir cmake-build-debug --output-on-failure
+```
+
+当前环境完整结果及尚未自动化的 GUI、崩溃恢复和平台矩阵范围见
+`LivePythonPluginSecurityAudit.md`，不能用 SDK 方法覆盖替代这些端到端验收。

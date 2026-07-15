@@ -135,9 +135,9 @@ session termination also discards it.
 At commit the host rechecks every staged resource revision. An `auto`
 transaction creates one Checkpoint for two or more changed resources and for
 NCX changes. Each changed text resource receives one final `SetText()` call,
-regardless of how many staged patches were composed. OPF writes are currently
-rejected until the structure transaction API can validate manifest, spine, and
-metadata invariants.
+regardless of how many staged patches were composed. OPF changes use
+`replace_package()`, `update_metadata()`, or `update_spine()` so the host can
+validate manifest, spine, metadata, and EPUB-version invariants before commit.
 
 ## Python SDK
 
@@ -156,6 +156,7 @@ not construct the transport directly.
 | `output` | `OutputApi` instance for output plugins. |
 | `ping()` | `True` when the host responds. |
 | `finish(status, message)` | Normally called by the launcher. |
+| `close()` | Close the transport; normally called by the launcher. |
 
 ### `BookApi`
 
@@ -177,10 +178,10 @@ not construct the transport directly.
 | `resolve_path(book_path)` | Resolve a current book path to `Resource`. |
 | `get_resource(resource_id)` | Fetch current resource metadata. |
 | `read_text(resource)` | Dictionary containing `text` and `revision`. |
-| `read_many(resources)` | Up to 100 current text resources; response-size continuation is automatic. |
+| `read_many(resources)` | Up to 100 current text resources; continuation across the 6 MiB response budget is automatic. |
 | `read_binary(resource)` | Read a binary resource up to 5 MiB and return decoded `data`. |
-| `open_binary(resource)` | Open a context-managed, chunked snapshot reader for a binary resource of any size. |
-| `open_archive_file(book_path)` | Open any managed or unmanaged expanded-EPUB file as a chunked snapshot. |
+| `open_binary(resource)` | Open a context-managed, chunked snapshot reader for a binary resource. |
+| `open_archive_file(book_path)` | Open a managed or unmanaged expanded-EPUB file as a chunked snapshot. |
 | `materialize_temporary(resource=None, book_path=None)` | Copy one live resource into the session-private temporary directory. |
 | `transaction(label, checkpoint="auto")` | Begin a staged `Transaction`. |
 
@@ -196,14 +197,16 @@ preferences compatibility.
 `open_binary()` returns a `BinaryReader` with `size`, `sha256`, `revision`, and
 `chunk_size` metadata. `open_archive_file()` uses the same reader and reports
 `resource_id=None`/`revision=None` for unmanaged entries. Iterate
-`reader.chunks()` or call `reader.read()`, and
-use it as a context manager so the session-owned temporary snapshot is removed
-immediately. Individual chunks are limited to 2 MiB; all remaining snapshots
-are removed when the plugin session ends.
+`reader.chunks()` or call `reader.read()`, then use `reader.close()` or a context
+manager so the session-owned temporary snapshot is removed immediately.
+Individual chunks are limited to 2 MiB. A session may keep at most 8 snapshots
+totaling 1 GiB; all remaining snapshots are removed when the session ends.
 
-`materialize_temporary()` accepts no target path, reflects current in-memory
-text, returns size and SHA-256, and is deleted with the session. Modifying that
-file does not update the Book; use a transaction write method to import changes.
+`materialize_temporary()` accepts exactly one resource or Book path and no target
+path. It reflects current in-memory text and returns `path`, `book_path`,
+`resource_id`, `revision`, `size`, and `sha256`. A session may materialize at most
+16 files totaling 512 MiB; they are deleted with the session. Modifying one does
+not update the Book; use a transaction write method to import changes.
 
 ### `InputApi`
 
@@ -214,18 +217,22 @@ file does not update the Book; use a transaction write method to import changes.
 | `submit_epub_file(path)` | Stream an EPUB file without reading the whole file into Python memory. |
 
 `InputWriter.write(data)` updates a client-side SHA-256 while sending chunks;
-`finish()` asks the host to verify that hash, the optional declared length, the
-2 GiB limit, ZIP signature, EPUB mimetype/container, safe OPF path, and required
-OPF sections. Only input plugins may use these methods. Submission does not replace the Book unless the plugin
-subsequently finishes successfully.
+`InputWriter.finish()` asks the host to verify that hash, the optional declared
+length, the 2 GiB limit, ZIP signature, EPUB mimetype/container, safe OPF path,
+and required package/metadata/manifest/spine sections. A session may have one
+input upload. Only input plugins may use these methods. Submission does not
+replace the Book unless the plugin subsequently finishes successfully; upload,
+validation, plugin, or load failure preserves the existing Book.
 
 ### `OutputApi`
 
-`plugin.output.save_source()` saves to the current source EPUB.
+`plugin.output.save_source()` saves to the current source EPUB and
 `plugin.output.export_epub(path)` writes the current in-memory Book to an
 absolute `.epub` path; the current path also selects source mode. Both use
 Sigil's native save/export pipeline. Copy mode does not change the current
-filename or modified state. Only output plugins may call these methods.
+filename or modified state. Both return `exported`, `path`, and `mode`
+(`source` or `copy`). Source mode requires an existing source path. Only output
+plugins may call these methods.
 
 ### `EditorApi`
 
@@ -259,13 +266,12 @@ edit block.
 | `choose_open_file(title=None, filter=None)` | Return a user-selected input path or `None` on cancel. |
 | `choose_save_file(suggested_name=None, title=None, filter=None)` | Return a user-selected output path or `None` on cancel. |
 
-Navigation requires `ui.navigate`; messages and confirmation require
-`ui.message`; progress requires `ui.progress`. Call `progress.update(value,
-label=None)` while working. Leaving the context ends and hides progress even
-when Python raises. Dialog text, labels, values, and status duration are bounded
-by the wire contract. File dialogs require `ui.fileDialog`; they expose only a
-path explicitly selected by the user and do not read or write that path in the
-host.
+The live runtime has no method-level permission gates. Call
+`progress.update(value, label=None)` while working and `progress.end()` to
+finish explicitly. Leaving the context also ends and hides progress even when
+Python raises. Dialog text, labels, values, and status duration are bounded by
+the wire contract. File dialogs expose only a path explicitly selected by the
+user and do not read or write that path in the host.
 
 ### `EventsApi`
 
@@ -289,7 +295,8 @@ notifications bounded; call `editor.get_selection()` when the text is needed.
 Cursor/selection events are coalesced over 50 ms and content/per-resource
 changes over 100 ms. When a slow client fills the 4 MiB notification backlog,
 events are dropped and the next event reports `dropped_events`.
-`poll()` consumes an already queued event without blocking. `next_event()`
+`subscribe()` and `unsubscribe()` change the active event set. `poll()` consumes
+an already queued event without blocking. `next_event()`
 waits using the transport timeout. The SDK queues notifications received while
 waiting for ordinary RPC results. Calls and event consumption on a single
 connection must remain single-threaded. Both methods filter this session's own
@@ -310,8 +317,8 @@ replaces the Validation Results view and accepts at most 10,000 entries.
 | `read_text(resource)` | Read staged content when present, otherwise live content. |
 | `replace_text(resource, text, expected_revision=None)` | Stage a whole-text replacement. |
 | `apply_edits(resource, edits, expected_revision=None)` | Compose patches against staged content. |
-| `read_binary(resource)` | Read staged binary data when present. |
-| `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 5 MiB. |
+| `read_binary(resource)` | Read staged binary data when present, up to the 5 MiB inline limit. |
+| `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 256 MiB; the SDK switches to chunking above 4 MiB. |
 | `begin_binary_write(resource, size, expected_revision=None)` | Begin a chunked replacement up to 256 MiB. |
 | `write_binary_file(resource, path, expected_revision=None)` | Stream a local file through the chunked transaction writer. |
 | `replace_package(text, expected_revision)` | Stage a complete OPF replacement after XML, version, manifest, and spine validation. |
@@ -343,6 +350,19 @@ add/remove/move set, that manifest IDs and hrefs are unique, that every spine
 does not generate a second manifest rewrite; it applies the package once after
 the physical structure changes. Larger reads use `open_binary()` streams;
 larger writes use Begin/Chunk/End and are length/SHA-256 checked before staging.
+
+`begin_binary_write()` returns a writer with `chunk_size`, `write(data)`, and
+`finish()`; the finish call checks the declared length and SHA-256 before staging.
+`write_binary_file()` uses that writer and does not load the entire file into
+Python memory.
+
+Each `update_metadata(items)` item contains string `name` and `content` values
+plus an optional string-valued `attributes` object. The call replaces all
+metadata children; prefixes must resolve to namespaces already available in the
+package. Each `update_spine(items, attributes)` item contains a string `idref`
+and optional string `id`, `linear`, and `properties` values. It replaces all
+itemrefs, preserves unspecified existing spine attributes, updates the supplied
+attributes, and verifies every `idref` against the manifest.
 
 Archive-file methods cover EPUB entries that Sigil intentionally keeps outside
 the `Resource` model, including `mimetype` and files under `META-INF`. Reads use
@@ -415,10 +435,11 @@ chunked transaction binary, and a bounded 1000-block console.
 
 ## Verification
 
-The CTest suite contains 17 registered targets covering archive/input
+The CTest suite contains 18 registered targets covering archive/input
 validation, frame limits, metadata/runtime selection, OpenRPC/dispatcher parity,
-the SDK and examples, real launcher/transport handshakes, UTF-16 patches,
-transactions, rollback, and the global writer lease. GUI save/load and
+the SDK, examples, bilingual documentation coverage, real launcher/transport
+handshakes, UTF-16 patches, transactions, rollback, and the global writer lease.
+The current macOS Debug result is 18/18. GUI save/load and
 fault-injected cross-resource recovery remain manual acceptance items; see
 `LivePythonPluginSecurityAudit.md`.
 Run it with:

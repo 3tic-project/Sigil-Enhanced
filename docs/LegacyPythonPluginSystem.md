@@ -292,4 +292,4 @@ OPF remain enforced.
 - File-level result XML has no patch, revision, transaction, event, progress, or
   structured cancellation semantics.
 - Python plugins run with the user's operating-system permissions. Neither v1
-  nor the planned RPC permission model is an OS sandbox.
+  nor the implemented Live v2 local-socket authentication is an OS sandbox.
