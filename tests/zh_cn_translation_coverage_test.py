@@ -79,14 +79,14 @@ def extract_current_messages(source_root, lupdate):
         return messages
 
 
-def validate_catalog(source_root, lupdate):
-    catalog = source_root / "src" / "Resource_Files" / "ts" / "sigil_zh_CN.ts"
+def validate_catalog(source_root, lupdate, locale):
+    catalog = source_root / "src" / "Resource_Files" / "ts" / ("sigil_{0}.ts".format(locale))
     root, translated = messages_by_key(catalog)
     extracted = extract_current_messages(source_root, lupdate)
     failures = []
 
-    if root.get("language") != "zh_CN":
-        failures.append("catalog language must be zh_CN")
+    if root.get("language") != locale:
+        failures.append("catalog language must be {0}".format(locale))
 
     missing = sorted(set(extracted) - set(translated))
     stale = sorted(set(translated) - set(extracted))
@@ -141,13 +141,20 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-root", type=pathlib.Path, required=True)
     parser.add_argument("--lupdate", type=pathlib.Path, required=True)
+    parser.add_argument("--locale", default="zh_CN")
     args = parser.parse_args()
 
-    catalog_failures, source_count = validate_catalog(args.source_root, args.lupdate)
+    catalog_failures, source_count = validate_catalog(
+        args.source_root, args.lupdate, args.locale
+    )
     failures = catalog_failures + validate_ui_literals(args.source_root)
     if failures:
         raise SystemExit("\n".join(failures))
-    print("zh_CN coverage: {0} active messages, all translated".format(source_count))
+    print(
+        "{0} coverage: {1} active messages, all translated".format(
+            args.locale, source_count
+        )
+    )
 
 
 if __name__ == "__main__":
