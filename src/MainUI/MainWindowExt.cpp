@@ -15,6 +15,7 @@
 #include "BuiltinPlugins/KfxParagraphNormalizer.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/HTMLResource.h"
+#include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/SVGResource.h"
 #include "ResourceObjects/TextResource.h"
@@ -427,7 +428,14 @@ bool MainWindow::ConvertChineseText()
         }
 
         ShowMessageOnStatusBar(tr("Creating checkpoint before Chinese conversion..."));
+        OPFResource *opf = m_Book->GetOPF();
+        opf->InitialLoad();
+        const QString opfBeforeCheckpoint = opf->GetText();
+        const bool bookWasModified = m_Book->IsModified();
         if (!RepoCommit()) {
+            opf->SetText(opfBeforeCheckpoint);
+            opf->SaveToDisk(true);
+            m_Book->SetModified(bookWasModified);
             Utility::warning(this, tr("Chinese Conversion"),
                              tr("Checkpoint creation failed. No files were changed."));
             return false;
