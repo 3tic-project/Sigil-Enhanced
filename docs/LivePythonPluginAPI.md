@@ -435,11 +435,11 @@ chunked transaction binary, and a bounded 1000-block console.
 
 ## Verification
 
-The CTest suite contains 19 registered targets covering archive/input
+The CTest suite contains 20 registered targets covering archive/input
 validation, frame limits, metadata/runtime selection, OpenRPC/dispatcher parity,
 the SDK, examples, bilingual documentation coverage, real launcher/transport
 handshakes, UTF-16 patches, transactions, rollback, and the global writer lease.
-The current macOS Debug result is 19/19. GUI save/load and
+The current macOS Debug result is 20/20. GUI save/load and
 fault-injected cross-resource recovery remain manual acceptance items; see
 `LivePythonPluginSecurityAudit.md`.
 Run it with:
