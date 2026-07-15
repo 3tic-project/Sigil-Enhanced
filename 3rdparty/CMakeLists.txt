@@ -8,6 +8,10 @@ IF(MSVC)
     add_definitions( /D_CRT_SECURE_NO_WARNINGS /DUNICODE /D_UNICODE )
 ENDIF()
 
+# Font subsetting is a required Sigil feature and always uses the bundled
+# HarfBuzz build, independently of USE_SYSTEM_LIBS.
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/harfbuzz.cmake)
+
 if( NOT USE_SYSTEM_LIBS OR NOT ZLIB_FOUND )
     MESSAGE(STATUS "Using Bundled ZLIB")
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)

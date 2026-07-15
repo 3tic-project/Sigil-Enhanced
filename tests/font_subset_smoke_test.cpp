@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <memory>
 
@@ -31,6 +32,9 @@ void Require(bool condition, const char* message)
 
 int main()
 {
+    Require(std::strcmp(hb_version_string(), SIGIL_BUNDLED_HARFBUZZ_VERSION) == 0,
+            "linked HarfBuzz does not match the bundled version");
+
     QFile fixture(QStringLiteral(SIGIL_FONT_TEST_FIXTURE));
     Require(fixture.open(QIODevice::ReadOnly), "could not open the font fixture");
     const QByteArray inputBytes = fixture.readAll();

@@ -50,23 +50,21 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/XhtmlDoc.h
     )
 
-if(SIGIL_FONT_SUBSETTING_AVAILABLE)
-    list(APPEND BOOK_MANIPULATION_FILES
-        BookManipulation/FontSubset/FontSubsetTypes.h
-        BookManipulation/FontSubset/HarfBuzzRAII.h
-        BookManipulation/FontSubset/FontInspector.cpp
-        BookManipulation/FontSubset/FontInspector.h
-        BookManipulation/FontSubset/GlobalFontUsageCollector.cpp
-        BookManipulation/FontSubset/GlobalFontUsageCollector.h
-        BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
-        BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
-        BookManipulation/FontSubset/FontSubsetTransaction.cpp
-        BookManipulation/FontSubset/FontSubsetTransaction.h
-        BookManipulation/FontSubset/FontSubsetController.cpp
-        BookManipulation/FontSubset/FontSubsetController.h
-        BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp
-    )
-endif()
+list(APPEND BOOK_MANIPULATION_FILES
+    BookManipulation/FontSubset/FontSubsetTypes.h
+    BookManipulation/FontSubset/HarfBuzzRAII.h
+    BookManipulation/FontSubset/FontInspector.cpp
+    BookManipulation/FontSubset/FontInspector.h
+    BookManipulation/FontSubset/GlobalFontUsageCollector.cpp
+    BookManipulation/FontSubset/GlobalFontUsageCollector.h
+    BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
+    BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
+    BookManipulation/FontSubset/FontSubsetTransaction.cpp
+    BookManipulation/FontSubset/FontSubsetTransaction.h
+    BookManipulation/FontSubset/FontSubsetController.cpp
+    BookManipulation/FontSubset/FontSubsetController.h
+    BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp
+)
 
 set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/BrParagraphNormalizer.cpp
@@ -318,12 +316,10 @@ set( DIALOG_FILES
     Dialogs/PythonFunctionEditor.h
     )
 
-if(SIGIL_FONT_SUBSETTING_AVAILABLE)
-    list(APPEND DIALOG_FILES
-        Dialogs/FontSubsetDialog.cpp
-        Dialogs/FontSubsetDialog.h
-    )
-endif()
+list(APPEND DIALOG_FILES
+    Dialogs/FontSubsetDialog.cpp
+    Dialogs/FontSubsetDialog.h
+)
 
 set( WIDGET_FILES
     Widgets/ImageView.cpp

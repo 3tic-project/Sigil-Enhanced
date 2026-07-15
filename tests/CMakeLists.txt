@@ -1,12 +1,11 @@
 find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Xml REQUIRED)
 
-if(SIGIL_FONT_SUBSETTING_AVAILABLE)
     add_executable(font_subset_smoke_test
         font_subset_smoke_test.cpp
     )
     target_link_libraries(font_subset_smoke_test PRIVATE
         Qt6::Core
-        PkgConfig::HARFBUZZ_SUBSET
+        Sigil::HarfBuzzSubset
     )
     target_compile_definitions(font_subset_smoke_test PRIVATE
         SIGIL_FONT_TEST_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/fonts/OpenSans-Test.ttf"
@@ -28,7 +27,7 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
     )
     target_link_libraries(font_subset_core_test PRIVATE
         Qt6::Core
-        PkgConfig::HARFBUZZ_SUBSET
+        Sigil::HarfBuzzSubset
     )
     target_compile_definitions(font_subset_core_test PRIVATE
         SIGIL_FONT_TEST_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/fonts/OpenSans-Test.ttf"
@@ -75,15 +74,13 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
     target_link_libraries(font_subset_batch_test PRIVATE
         Qt6::Core
         Qt6::Xml
-        PkgConfig::HARFBUZZ_SUBSET
+        Sigil::HarfBuzzSubset
     )
     target_compile_definitions(font_subset_batch_test PRIVATE
         SIGIL_FONT_TEST_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/fonts/OpenSans-Test.ttf"
     )
     add_test(NAME font_subset_batch COMMAND font_subset_batch_test)
     set_tests_properties(font_subset_batch PROPERTIES TIMEOUT 30)
-endif()
-
 add_executable(safe_archive_extractor_test
     safe_archive_extractor_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SafeArchiveExtractor.cpp

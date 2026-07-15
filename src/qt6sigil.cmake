@@ -222,13 +222,9 @@ else()
 endif()
 
 # LIBS_TO_LINK for all platforms
-set( LIBS_TO_LINK ${HUNSPELL_LIBRARIES} ${PCRE2_LIBRARIES} ${GUMBO_LIBRARIES} ${MINIZIP_LIBRARIES} OpenCC::OpenCC
+set( LIBS_TO_LINK ${HUNSPELL_LIBRARIES} ${PCRE2_LIBRARIES} ${GUMBO_LIBRARIES} ${MINIZIP_LIBRARIES} OpenCC::OpenCC Sigil::HarfBuzzSubset
                   Qt6::Core5Compat Qt6::Widgets  Qt6::Xml  Qt6::PrintSupport  Qt6::WebEngineCore
                   Qt6::WebEngineWidgets  Qt6::Network  Qt6::Concurrent Qt6::Svg)
-
-if(SIGIL_FONT_SUBSETTING_AVAILABLE)
-    list(APPEND LIBS_TO_LINK PkgConfig::HARFBUZZ_SUBSET)
-endif()
 
 # Additions to LIBS_TO_LINK for Python3
 set( _BUNDLED_PYVER "${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}" )
@@ -263,10 +259,6 @@ add_dependencies( ${PROJECT_NAME} sigil_opencc_data )
 target_compile_definitions( ${PROJECT_NAME} PRIVATE
     SIGIL_OPENCC_BUILD_DATA_DIR="${SIGIL_OPENCC_DATA_DIR}"
 )
-if(SIGIL_FONT_SUBSETTING_AVAILABLE)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-        SIGIL_ENABLE_FONT_SUBSETTING=1)
-endif()
 
 if( APPLE )
     set( SIGIL_OPENCC_APP_DATA_DIR "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/opencc" )

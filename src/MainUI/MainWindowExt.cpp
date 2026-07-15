@@ -36,11 +36,9 @@
 #include "Dialogs/ChineseConversionPreviewDialog.h"
 #include "Tabs/SVGTab.h"
 #include "Tabs/TextTab.h"
-#ifdef SIGIL_ENABLE_FONT_SUBSETTING
 #include "BookManipulation/FontSubset/FontSubsetController.h"
 #include "Dialogs/FontSubsetDialog.h"
 #include "ResourceObjects/FontResource.h"
-#endif
 
 namespace
 {
@@ -620,12 +618,6 @@ bool MainWindow::ConvertChineseText()
 
 bool MainWindow::SubsetEmbeddedFonts()
 {
-#ifndef SIGIL_ENABLE_FONT_SUBSETTING
-    Utility::warning(
-        this, tr("Font Subsetting"),
-        tr("This build does not include HarfBuzz font subsetting support."));
-    return false;
-#else
     if (!m_Book || !m_Book->GetFolderKeeper()) {
         Utility::warning(this, tr("Font Subsetting"),
                          tr("No EPUB is currently loaded."));
@@ -686,7 +678,6 @@ bool MainWindow::SubsetEmbeddedFonts()
         tr("Subset %n font(s); saved %1.", "", result.fontCount)
             .arg(QLocale().formattedDataSize(saved)));
     return true;
-#endif
 }
 
 bool MainWindow::AnalyzeBrParagraphs()
