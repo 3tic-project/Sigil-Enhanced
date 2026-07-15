@@ -94,7 +94,7 @@ void PCREErrors::SetErrorMap()
     m_XlateError[ "a relative value of zero is not allowed" ] = tr( "a relative value of zero is not allowed" );
     m_XlateError[ "conditional subpattern contains more than two branches" ] = tr( "conditional subpattern contains more than two branches" );
     m_XlateError[ "assertion expected after (?( or (?(?C)" ] = tr( "assertion expected after (?( or (?(?C)" );
-    m_XlateError[ "digit expected after (?+ or (?-\0" ] = tr( "digit expected after (?+ or (?-\0" );
+    m_XlateError[ "digit expected after (?+ or (?-" ] = tr( "digit expected after (?+ or (?-" );
 
     // 30
     m_XlateError[ "unknown POSIX class name" ] = tr( "unknown POSIX class name" );

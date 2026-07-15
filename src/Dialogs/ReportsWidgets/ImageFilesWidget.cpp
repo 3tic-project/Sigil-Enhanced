@@ -165,7 +165,7 @@ void ImageFilesWidget::SetupTable(int sort_column, Qt::SortOrder sort_order)
         rowItems << pixel_item;
         // Color
         QStandardItem *color_item = new QStandardItem();
-        color_item->setText(image.allGray() ? "Grayscale" : "Color");
+        color_item->setText(image.allGray() ? tr("Grayscale") : tr("Color"));
         rowItems << color_item;
 
         // Thumbnail

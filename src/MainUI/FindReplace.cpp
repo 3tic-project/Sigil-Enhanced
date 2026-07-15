@@ -1768,7 +1768,7 @@ Searchable *FindReplace::GetAvailableSearchable()
 void FindReplace::SaveSearchAction()
 {
     SearchEditorModel::searchEntry *search_entry = new SearchEditorModel::searchEntry();
-    search_entry->name = "Unnamed Search";
+    search_entry->name = tr("Unnamed Search");
     search_entry->is_group = false;
     search_entry->find = GetFind();
     search_entry->replace = GetReplace();

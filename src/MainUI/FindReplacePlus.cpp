@@ -1435,7 +1435,7 @@ Searchable *FindReplacePlus::GetAvailableSearchable()
 void FindReplacePlus::SaveSearchAction()
 {
     SearchEditorModelPlus::searchEntry *search_entry = new SearchEditorModelPlus::searchEntry();
-    search_entry->name = "Unnamed Search";
+    search_entry->name = tr("Unnamed Search");
     search_entry->is_group = false;
     search_entry->prefind = ui.cbPreFind->lineEdit()->text();;
     search_entry->find = ui.cbFind->lineEdit()->text();

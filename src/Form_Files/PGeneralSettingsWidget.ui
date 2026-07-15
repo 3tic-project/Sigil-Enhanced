@@ -106,8 +106,7 @@ when creating new or empty Epubs in Sigil.</string>
           </sizepolicy>
          </property>
          <property name="toolTip">
-          <string>Choose when your not well formed HTML code is automatically 
-mended.</string>
+          <string>Choose when your not well formed HTML code is automatically mended.</string>
          </property>
          <property name="title">
           <string>Mend Not Well Formed HTML Source Code On:</string>
