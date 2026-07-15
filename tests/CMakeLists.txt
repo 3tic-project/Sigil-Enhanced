@@ -59,6 +59,32 @@ target_link_libraries(opf_model_clear_benchmark PRIVATE
 add_test(NAME opf_model_clear_benchmark COMMAND opf_model_clear_benchmark)
 set_tests_properties(opf_model_clear_benchmark PROPERTIES TIMEOUT 30)
 
+add_executable(chinese_conversion_core_test
+    chinese_conversion_core_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionProfile.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionProfile.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionTypes.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/OpenCCConverter.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/OpenCCConverter.h
+)
+
+target_include_directories(chinese_conversion_core_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(chinese_conversion_core_test PRIVATE
+    Qt6::Core
+    OpenCC::OpenCC
+)
+
+target_compile_definitions(chinese_conversion_core_test PRIVATE
+    SIGIL_OPENCC_TEST_DATA_DIR="${SIGIL_OPENCC_DATA_DIR}"
+)
+
+add_dependencies(chinese_conversion_core_test sigil_opencc_data)
+add_test(NAME chinese_conversion_core COMMAND chinese_conversion_core_test)
+set_tests_properties(chinese_conversion_core PROPERTIES TIMEOUT 60)
+
 add_executable(plugin_protocol_test
     plugin_protocol_test.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp

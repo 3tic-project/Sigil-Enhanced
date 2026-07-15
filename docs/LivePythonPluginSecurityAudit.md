@@ -26,7 +26,7 @@ Live 插件仍是**可信本地代码**，不是沙箱。插件进程与 Sigil �
 | 6 单写者 | 已修复 | `PluginSessionManager` 持有跨 Session writer lease，事务 begin 获取，commit/rollback/finish/destructor 释放。`7e033e7f6`。 |
 | 7 事件与资源压力 | 已修复主要边界 | 高频事件按 50/100ms 和资源 ID 合并；4 MiB socket backlog 丢弃并报告；限制请求率、读写流、上传、临时文件、聚合快照与控制台。`f57a653b0` 及本轮配额补充。 |
 | 8 缺失 API | 已完成 | `materializeTemporary`、readMany continuation、分块二进制写、结构化 metadata/spine 更新均已接入宿主、SDK、OpenRPC 和示例。`8904fd1b0`。 |
-| 9 测试不足 | 已改善，未达到全 GUI 自动化 | 18 个 CTest 目标；OpenRPC/dispatcher 集合锁定；SDK 聚焦测试；中英文文档与示例公共 SDK 方法覆盖清单；输入、OPF 结构更新和全局 writer 有 C++ 测试。 |
+| 9 测试不足 | 已改善，未达到全 GUI 自动化 | 19 个 CTest 目标；OpenRPC/dispatcher 集合锁定；SDK 聚焦测试；中英文文档与示例公共 SDK 方法覆盖清单；输入、OPF 结构更新和全局 writer 有 C++ 测试。 |
 
 ## 防护边界
 
@@ -47,7 +47,7 @@ cmake --build cmake-build-debug -j4
 ctest --test-dir cmake-build-debug --output-on-failure
 ```
 
-当前环境结果为 18/18。关键自动化资产：
+当前环境结果为 19/19。关键自动化资产：
 
 - `safe_archive_extractor_test`：归档预算、路径与 input EPUB 验证。
 - `plugin_protocol_test`、`plugin_transport_integration_test`：帧边界与真实 socket。

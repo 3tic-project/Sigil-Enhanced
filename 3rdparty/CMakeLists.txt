@@ -46,3 +46,5 @@ endif()
 if( (UNIX AND NOT APPLE) AND BUILD_PATCHED_LIBXML2 )
       include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ext_libxml2.cmake)
 endif()
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/opencc.cmake)
