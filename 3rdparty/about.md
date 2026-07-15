@@ -23,11 +23,16 @@ that need to be or are modified will be in the extra directory.
 Versions
 ========
 
+harfbuzz - 14.2.1
 hunspell - 1.3.3
 minizip  - 1.1
 pcre     - 8.37
 python   - 3.4.3
 zlib     - 1.2.8
+
+HarfBuzz is always built from the bundled source so that font subsetting does
+not depend on the host system. Its source URL and archive checksum are recorded
+in `harfbuzz/README.sigil.md`.
 
 
 extra
