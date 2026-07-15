@@ -75,7 +75,9 @@ struct Result {
     unsigned oldGlyphCount = 0;
     unsigned newGlyphCount = 0;
     unsigned mappedGlyphCount = 0;
+    QSet<quint32> inputCodepoints;
     QSet<quint32> requestedCodepoints;
+    QSet<quint32> unavailableCodepoints;
     QSet<quint32> missingCodepoints;
     QStringList warnings;
     QString harfbuzzVersion;

@@ -56,8 +56,12 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
         BookManipulation/FontSubset/HarfBuzzRAII.h
         BookManipulation/FontSubset/FontInspector.cpp
         BookManipulation/FontSubset/FontInspector.h
+        BookManipulation/FontSubset/GlobalFontUsageCollector.cpp
+        BookManipulation/FontSubset/GlobalFontUsageCollector.h
         BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
         BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
+        BookManipulation/FontSubset/FontSubsetTransaction.cpp
+        BookManipulation/FontSubset/FontSubsetTransaction.h
     )
 endif()
 

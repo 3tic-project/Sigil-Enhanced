@@ -149,9 +149,13 @@ void TestSubsetAndValidation()
     Require(result.harfbuzzVersion == QString::fromLatin1(hb_version_string()),
             "result did not record the HarfBuzz version");
 
+    const Result mixed = engine.Subset(Fixture(), {0x0041, 0x4e2d}, options);
+    Require(mixed.success && mixed.requestedCodepoints.contains(0x0041) &&
+                mixed.unavailableCodepoints.contains(0x4e2d),
+            "global usage was not intersected with source coverage");
     const Result missing = engine.Subset(Fixture(), {0x4e2d}, options);
-    Require(!missing.success && missing.missingCodepoints.contains(0x4e2d),
-            "missing source coverage was not rejected");
+    Require(!missing.success && missing.unavailableCodepoints.contains(0x4e2d),
+            "empty source coverage intersection was not rejected");
     const Result blocked = engine.Subset(WithFsType(Fixture(), 0x0100),
                                          requested, options);
     Require(!blocked.success &&

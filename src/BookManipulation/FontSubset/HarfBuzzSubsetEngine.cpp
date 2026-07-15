@@ -36,7 +36,7 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
 {
     Result result;
     result.oldSize = fontBytes.size();
-    result.requestedCodepoints = codepoints;
+    result.inputCodepoints = codepoints;
     result.harfbuzzVersion = QString::fromLatin1(hb_version_string());
     result.inspection = m_Inspector.Inspect(fontBytes, faceIndex);
     result.oldGlyphCount = result.inspection.glyphCount;
@@ -57,14 +57,20 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
         hb_face_create(inputBlob.get(), faceIndex));
     auto inputFont = TakeHb<hb_font_t, hb_font_destroy>(hb_font_create(inputFace.get()));
     for (quint32 codepoint : codepoints) {
-        if (!Covers(inputFont.get(), codepoint)) {
-            result.missingCodepoints.insert(codepoint);
+        if (Covers(inputFont.get(), codepoint)) {
+            result.requestedCodepoints.insert(codepoint);
+        } else {
+            result.unavailableCodepoints.insert(codepoint);
         }
     }
-    if (!result.missingCodepoints.isEmpty()) {
+    if (result.requestedCodepoints.isEmpty()) {
         result.error = QStringLiteral(
-            "The source font does not cover every requested codepoint.");
+            "The source font does not cover any requested codepoints.");
         return result;
+    }
+    if (!result.unavailableCodepoints.isEmpty()) {
+        result.warnings.append(QStringLiteral(
+            "Some book codepoints were not present in the source font and were ignored."));
     }
 
     auto subsetInput = TakeHb<hb_subset_input_t, hb_subset_input_destroy>(
@@ -74,7 +80,8 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
         return result;
     }
     hb_set_t* unicodeSet = hb_subset_input_unicode_set(subsetInput.get());
-    QList<quint32> sortedCodepoints(codepoints.begin(), codepoints.end());
+    QList<quint32> sortedCodepoints(result.requestedCodepoints.begin(),
+                                    result.requestedCodepoints.end());
     std::sort(sortedCodepoints.begin(), sortedCodepoints.end());
     for (quint32 codepoint : sortedCodepoints) {
         hb_set_add(unicodeSet, codepoint);
@@ -128,7 +135,7 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
     }
 
     auto outputFont = TakeHb<hb_font_t, hb_font_destroy>(hb_font_create(outputFace.get()));
-    for (quint32 codepoint : codepoints) {
+    for (quint32 codepoint : result.requestedCodepoints) {
         if (!Covers(outputFont.get(), codepoint)) {
             result.missingCodepoints.insert(codepoint);
         }
@@ -140,11 +147,27 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
         return result;
     }
 
-    if (options.validateShaping && !options.shapingSamples.isEmpty() &&
-        !ValidateShaping(inputFace.get(), outputFace.get(), oldToNew,
-                         options.shapingSamples, &result.error)) {
-        result.outputBytes.clear();
-        return result;
+    if (options.validateShaping && !options.shapingSamples.isEmpty()) {
+        QStringList applicableSamples;
+        for (const QString& sample : options.shapingSamples) {
+            const QList<uint> sampleCodepoints = sample.toUcs4();
+            const bool covered = std::all_of(
+                sampleCodepoints.begin(), sampleCodepoints.end(),
+                [&result](uint codepoint) {
+                    return codepoint == '\n' || codepoint == '\r' ||
+                           codepoint == '\t' ||
+                           result.requestedCodepoints.contains(codepoint);
+                });
+            if (covered) {
+                applicableSamples.append(sample);
+            }
+        }
+        if (!applicableSamples.isEmpty() &&
+            !ValidateShaping(inputFace.get(), outputFace.get(), oldToNew,
+                             applicableSamples, &result.error)) {
+            result.outputBytes.clear();
+            return result;
+        }
     }
     if (result.newSize >= result.oldSize) {
         result.warnings.append(QStringLiteral(

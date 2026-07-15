@@ -35,6 +35,22 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
     )
     add_test(NAME font_subset_core COMMAND font_subset_core_test)
     set_tests_properties(font_subset_core PROPERTIES TIMEOUT 30)
+
+    add_executable(font_subset_workflow_test
+        font_subset_workflow_test.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/GlobalFontUsageCollector.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/GlobalFontUsageCollector.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontSubsetTransaction.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontSubsetTransaction.h
+    )
+    target_include_directories(font_subset_workflow_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    target_link_libraries(font_subset_workflow_test PRIVATE
+        Qt6::Core
+    )
+    add_test(NAME font_subset_workflow COMMAND font_subset_workflow_test)
+    set_tests_properties(font_subset_workflow PROPERTIES TIMEOUT 30)
 endif()
 
 add_executable(safe_archive_extractor_test
