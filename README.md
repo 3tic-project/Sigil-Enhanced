@@ -21,6 +21,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 * 内置插件：增强的代码格式化，用于将所有XHTML/CSS文件格式化为统一风格
 * 内置插件：修正部分来源的EPUB文件，正文部分仅用br换行，段落没有p标签包围的情况
 * 内置插件：修正部分KFX来源的EPUB文件，使用多个不包围段落的p标签的迷之结构
+* 内置中文简繁与地区转换：支持当前选区、当前XHTML/SVG、选中文件和全书正文，提供结构安全白名单、逐项预览、单步撤销和批量Checkpoint。详见 [中文转换文档](docs/ChineseConversion.md)
 
 
 # =========
