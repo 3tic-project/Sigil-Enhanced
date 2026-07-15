@@ -14627,7 +14627,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Form_Files/main.ui" line="14"/>
         <source>untitled.epub[*] - Sigil-Enhanced</source>
-        <translation>untitled.epub[*] - Sigil-Enhanced</translation>
+        <translation>未命名.epub[*] - Sigil-Enhanced</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1289"/>
