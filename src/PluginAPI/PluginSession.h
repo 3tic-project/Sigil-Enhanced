@@ -49,6 +49,9 @@ public:
 
     QUuid SessionId() const;
     QString PluginName() const;
+    QString PluginType() const;
+    QString Status() const;
+    int ValidationErrorCount() const;
     bool IsBookSession() const;
     QString PendingInputEpubPath() const;
     bool Start(QString *error);
@@ -121,6 +124,8 @@ private:
     QString m_ProgressId;
     QString m_ProgressLabel;
     int m_ProgressMaximum;
+    int m_ValidationErrorCount;
+    QString m_Status;
     QHash<QString, quint64> m_ResourceRevisions;
     QHash<QString, BinaryReadStream> m_BinaryReadStreams;
     QHash<QString, InputUpload> m_InputUploads;

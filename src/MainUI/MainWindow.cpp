@@ -446,13 +446,10 @@ bool MainWindow::Automate(const QStringList &commands)
         ShowMessageOnStatusBar(cmd + " " + tr("running"));
 
         if (plugin_names.contains(cmd)) {
-            PluginRunner prunner(m_TabManager, this);
-            prunner.exec(cmd);
-
-            qApp->processEvents();
-
-            success = prunner.getResult() == "success";
-            plugin_type = prunner.getPluginType();
+            QString plugin_error;
+            success = ExecutePluginByName(cmd, true, &plugin_type,
+                                          &validation_error_count, &plugin_error);
+            if (!plugin_error.isEmpty()) m_AutomateLog << plugin_error;
             // plugin done rubnning clear any set plugin parameter
             m_AutomatePluginParameter = "";
 
@@ -1667,6 +1664,35 @@ void MainWindow::launchExternalXEditor()
     ShowMessageOnStatusBar(tr("Failed to Launch External Xhtml Editor"));
 }
 
+bool MainWindow::ExecutePluginByName(const QString &plugin_name, bool wait_for_completion,
+                                     QString *plugin_type, int *validation_error_count,
+                                     QString *error)
+{
+    SettingsStore settings;
+    Plugin *plugin = PluginDB::instance()->get_plugin(plugin_name);
+    if (!plugin) {
+        if (error) *error = tr("Plugin not found: %1").arg(plugin_name);
+        return false;
+    }
+    const QString declared_mode = plugin->get_declared_runtime() == Plugin::LiveRuntime
+        ? QStringLiteral("live") : QStringLiteral("legacy");
+    const QString runtime_mode = settings.pluginRuntimeModes().value(plugin_name, declared_mode);
+    if (runtime_mode == QStringLiteral("live")) {
+        if (wait_for_completion) {
+            QString status;
+            return m_PluginSessionManager->RunPluginAndWait(
+                *plugin, &status, plugin_type, validation_error_count, error);
+        }
+        return m_PluginSessionManager->StartPlugin(*plugin, error);
+    }
+
+    PluginRunner runner(m_TabManager, this);
+    runner.exec(plugin_name);
+    if (plugin_type) *plugin_type = runner.getPluginType();
+    if (validation_error_count) *validation_error_count = runner.getValidationErrorCount();
+    return !wait_for_completion || runner.getResult() == QStringLiteral("success");
+}
+
 void MainWindow::runPlugin(QAction *action)
 {
     QString pname = action->text();
@@ -1680,19 +1706,9 @@ void MainWindow::runPlugin(QAction *action)
         pname = altname;
     }
 #endif
-    SettingsStore settings;
-    Plugin *plugin = PluginDB::instance()->get_plugin(pname);
-    const QString declared_mode = plugin && plugin->get_declared_runtime() == Plugin::LiveRuntime
-        ? QStringLiteral("live") : QStringLiteral("legacy");
-    const QString runtime_mode = settings.pluginRuntimeModes().value(pname, declared_mode);
-    if (runtime_mode == QStringLiteral("live")) {
-        QString error;
-        if (!plugin || !m_PluginSessionManager->StartPlugin(*plugin, &error)) {
-            Utility::DisplayStdErrorDialog(error.isEmpty() ? tr("Unable to start live plugin.") : error);
-        }
-    } else {
-        PluginRunner prunner(m_TabManager, this);
-        prunner.exec(pname);
+    QString error;
+    if (!ExecutePluginByName(pname, false, nullptr, nullptr, &error)) {
+        Utility::DisplayStdErrorDialog(error.isEmpty() ? tr("Unable to start plugin.") : error);
     }
     qApp->processEvents();
 }
@@ -3864,11 +3880,10 @@ void MainWindow::QuickLaunchPlugin(int i)
     if ((i >= 0) && (namemap.count() > i)) {
         QString pname = namemap.at(i);
         if (m_pluginList.contains(pname)) {
-            // QApplication keeps a single modalWindowList across multiple main
-            // windows and this list is not updated until modal dialog is deleted
-            {
-                PluginRunner prunner(m_TabManager, this);
-                prunner.exec(pname);
+            QString error;
+            if (!ExecutePluginByName(pname, false, nullptr, nullptr, &error)) {
+                Utility::DisplayStdErrorDialog(
+                    error.isEmpty() ? tr("Unable to start plugin.") : error);
             }
             qApp->processEvents();
         }
@@ -6031,7 +6046,8 @@ void MainWindow::CreateNewBook(const QString version, const QStringList &book_pa
 }
 
 
-bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal)
+bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
+                          bool preserve_current_on_error)
 {
     if (!Utility::IsFileReadable(fullfilepath)) {
         return false;
@@ -6056,8 +6072,9 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal)
                                            .arg(error.message));
         } else {
             ShowMessageOnStatusBar(tr("Loading file..."), 0);
+            QSharedPointer<Book> imported_book = importer->GetBook();
             m_Book->SetModified(false);
-            SetNewBook(importer->GetBook());
+            SetNewBook(imported_book);
 
             // The m_IsModified state variable is set in GetBook() to indicate whether the OPF
             // file was invalid and had to be recreated.
@@ -6093,28 +6110,28 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal)
    } catch (FileEncryptedWithDrm&) {
        ShowMessageOnStatusBar();
        QApplication::restoreOverrideCursor();
-       CreateNewBook();
+       if (!preserve_current_on_error) CreateNewBook();
        Utility::DisplayStdErrorDialog(
            tr("The creator of this file has encrypted it with DRM. "
               "%1 cannot open such files.").arg(APP_DISPLAY_NAME));
    } catch (EPUBLoadParseError& epub_load_error) {
        ShowMessageOnStatusBar();
        QApplication::restoreOverrideCursor();
-       CreateNewBook();
+       if (!preserve_current_on_error) CreateNewBook();
        const QString errors = QString(epub_load_error.what());
        Utility::DisplayStdErrorDialog(
            tr("Cannot load EPUB: %1").arg(QDir::toNativeSeparators(fullfilepath)), errors);
    } catch (const std::runtime_error &e) {
        ShowMessageOnStatusBar();
        QApplication::restoreOverrideCursor();
-       CreateNewBook();
+       if (!preserve_current_on_error) CreateNewBook();
        Utility::DisplayExceptionErrorDialog(tr("Cannot load file %1: %2")
                                              .arg(QDir::toNativeSeparators(fullfilepath))
                                              .arg(e.what()));
    } catch (QString& err) {
        ShowMessageOnStatusBar();
        QApplication::restoreOverrideCursor();
-       CreateNewBook();
+       if (!preserve_current_on_error) CreateNewBook();
        Utility::DisplayStdErrorDialog(err);
     }
     // If we got to here some sort of error occurred while loading the file

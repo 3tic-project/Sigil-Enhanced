@@ -6,6 +6,7 @@
 #include <QTemporaryDir>
 
 #include "Misc/SafeArchiveExtractor.h"
+#include "PluginAPI/PluginInputValidator.h"
 
 namespace
 {
@@ -276,6 +277,38 @@ bool testCancellation()
                   "cancelled output not cleaned");
 }
 
+bool testPluginInputValidation()
+{
+    const QByteArray container = QByteArrayLiteral(
+        "<?xml version='1.0'?><container><rootfiles>"
+        "<rootfile full-path='EPUB/content.opf'/></rootfiles></container>");
+    const QByteArray package = QByteArrayLiteral(
+        "<?xml version='1.0'?><package version='3.0'>"
+        "<metadata/><manifest/><spine/></package>");
+    QTemporaryDir valid_workspace;
+    const QString valid_path = QDir(valid_workspace.path()).filePath("valid.epub");
+    if (!expect(createArchive(valid_path, {
+                    {"mimetype", "application/epub+zip"},
+                    {"META-INF/container.xml", container},
+                    {"EPUB/content.opf", package}
+                }), "could not create valid input EPUB")) {
+        return false;
+    }
+    QString error;
+    if (!expect(PluginApi::ValidateInputEpub(valid_path, &error),
+                "valid input EPUB was rejected")) {
+        fprintf(stderr, "Validator error: %s\n", error.toUtf8().constData());
+        return false;
+    }
+
+    QTemporaryDir invalid_workspace;
+    const QString invalid_path = QDir(invalid_workspace.path()).filePath("invalid.epub");
+    return expect(createArchive(invalid_path, {{"payload.bin", "PK-like payload"}}),
+                  "could not create invalid input EPUB") &&
+           expect(!PluginApi::ValidateInputEpub(invalid_path, &error),
+                  "ZIP without EPUB infrastructure was accepted");
+}
+
 } // namespace
 
 int main(int argc, char* argv[])
@@ -289,7 +322,8 @@ int main(int argc, char* argv[])
                     testBudgets() &&
                     testDuplicateRejection() &&
                     testSymbolicLinkRejection() &&
-                    testCancellation();
+                    testCancellation() &&
+                    testPluginInputValidation();
     if (ok) {
         fprintf(stdout, "All safe archive extractor tests passed.\n");
     }

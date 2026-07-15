@@ -45,6 +45,7 @@
 #include "Misc/ValidationResult.h"
 #include "Parsers/OPFParser.h"
 #include "PluginAPI/PluginSessionConsole.h"
+#include "PluginAPI/PluginInputValidator.h"
 #include "PluginAPI/PluginSessionManager.h"
 #include "PluginAPI/PluginTextEdit.h"
 #include "PluginAPI/PluginTextTransaction.h"
@@ -525,6 +526,7 @@ PluginSession::PluginSession(const Plugin &plugin,
     m_EndSignalScheduled(false),
     m_Permissions(EffectivePermissions()),
     m_ProgressMaximum(0),
+    m_ValidationErrorCount(0),
     m_InputEpubFile(nullptr),
     m_InputEpubAccepted(false),
     m_BookRevision(1),
@@ -551,6 +553,21 @@ QUuid PluginSession::SessionId() const
 QString PluginSession::PluginName() const
 {
     return m_Plugin.get_name();
+}
+
+QString PluginSession::PluginType() const
+{
+    return m_Plugin.get_type();
+}
+
+QString PluginSession::Status() const
+{
+    return m_Status;
+}
+
+int PluginSession::ValidationErrorCount() const
+{
+    return m_ValidationErrorCount;
 }
 
 bool PluginSession::IsBookSession() const
@@ -989,6 +1006,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             return;
         }
         QList<ValidationResult> results;
+        int error_count = 0;
         for (const QJsonValue &value : values) {
             const QJsonObject item = value.toObject();
             const QString type = item.value(QStringLiteral("type")).toString();
@@ -1007,10 +1025,14 @@ void PluginSession::Dispatch(const QJsonObject &request)
             }
             ValidationResult::ResType result_type = ValidationResult::ResType_Info;
             if (type == QStringLiteral("warning")) result_type = ValidationResult::ResType_Warn;
-            else if (type == QStringLiteral("error")) result_type = ValidationResult::ResType_Error;
+            else if (type == QStringLiteral("error")) {
+                result_type = ValidationResult::ResType_Error;
+                ++error_count;
+            }
             results.append(ValidationResult(result_type, book_path, line, character, message));
         }
         m_MainWindow->SetValidationResults(results);
+        m_ValidationErrorCount = error_count;
         Respond(id, QJsonObject {{ QStringLiteral("accepted"), results.size() }});
     } else if (method == QStringLiteral("archive.listFiles")) {
         if (!RequirePermission(QStringLiteral("book.read"), id)) return;
@@ -1380,6 +1402,16 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (actual_sha256 != expected_sha256 || !signature.startsWith("PK")) {
             RespondError(id, PluginApi::ValidationFailed,
                          QStringLiteral("Input EPUB hash or ZIP signature is invalid"));
+            return;
+        }
+        upload->file->close();
+        QString validation_error;
+        if (!PluginApi::ValidateInputEpub(upload->file->fileName(), &validation_error)) {
+            QTemporaryFile *rejected = upload->file;
+            m_InputUploads.erase(upload);
+            delete rejected;
+            RespondError(id, PluginApi::ValidationFailed,
+                         QStringLiteral("Input EPUB validation failed: %1").arg(validation_error));
             return;
         }
         if (m_InputEpubFile) delete m_InputEpubFile;
@@ -3020,6 +3052,7 @@ QStringList PluginSession::EffectivePermissions() const
 void PluginSession::Finish(const QString &status, const QString &message)
 {
     ReleaseWriter();
+    m_Status = status;
     m_InputEpubAccepted = status == QStringLiteral("success") && m_InputEpubFile;
     m_Ending = true;
     if (!message.isEmpty() && m_Console) {

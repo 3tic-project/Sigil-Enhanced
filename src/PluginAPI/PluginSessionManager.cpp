@@ -10,7 +10,9 @@
 #include "Misc/Plugin.h"
 #include "PluginAPI/PluginSession.h"
 
+#include <QEventLoop>
 #include <QMessageBox>
+#include <QTimer>
 
 #include <utility>
 
@@ -28,13 +30,18 @@ PluginSessionManager::~PluginSessionManager()
 
 bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
 {
+    return StartSession(plugin, error) != nullptr;
+}
+
+PluginSession *PluginSessionManager::StartSession(const Plugin &plugin, QString *error)
+{
     if (plugin.get_lifetime() == QStringLiteral("book-session")) {
         for (PluginSession *running : std::as_const(m_Sessions)) {
             if (running->IsBookSession() && running->PluginName() == plugin.get_name()) {
                 if (error) {
                     *error = tr("This book-session plugin is already running for the current Book.");
                 }
-                return false;
+                return nullptr;
             }
         }
     }
@@ -56,7 +63,7 @@ bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
                         QMessageBox::No) == QMessageBox::Yes;
                 }
                 if (proceed) {
-                    m_MainWindow->LoadFile(input_path, true);
+                    m_MainWindow->LoadFile(input_path, true, true);
                 }
             }
             finished->deleteLater();
@@ -64,10 +71,49 @@ bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
     });
     if (!session->Start(error)) {
         delete session;
-        return false;
+        return nullptr;
     }
     m_Sessions.insert(id, session);
-    return true;
+    return session;
+}
+
+bool PluginSessionManager::RunPluginAndWait(const Plugin &plugin, QString *status,
+                                            QString *plugin_type,
+                                            int *validation_error_count,
+                                            QString *error, int timeout_ms)
+{
+    if (plugin.get_lifetime() == QStringLiteral("book-session")) {
+        if (error) *error = tr("Book-session plugins cannot run as an Automate step.");
+        return false;
+    }
+    PluginSession *session = StartSession(plugin, error);
+    if (!session) return false;
+
+    QEventLoop loop;
+    bool timed_out = false;
+    QString completed_status;
+    connect(session, &PluginSession::Ended, &loop, [&]() {
+        completed_status = session->Status();
+        if (status) *status = completed_status;
+        if (plugin_type) *plugin_type = session->PluginType();
+        if (validation_error_count) {
+            *validation_error_count = session->ValidationErrorCount();
+        }
+        loop.quit();
+    });
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    connect(&timeout, &QTimer::timeout, &loop, [&]() {
+        timed_out = true;
+        session->Cancel();
+    });
+    timeout.start(qMax(1, timeout_ms));
+    loop.exec();
+    if (timed_out) {
+        if (error) *error = tr("Live plugin timed out.");
+        return false;
+    }
+    return completed_status == QStringLiteral("success");
 }
 
 bool PluginSessionManager::AcquireWriter(const QUuid &session_id)

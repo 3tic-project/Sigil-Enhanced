@@ -3,6 +3,8 @@ find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg REQUIRED)
 add_executable(safe_archive_extractor_test
     safe_archive_extractor_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SafeArchiveExtractor.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginInputValidator.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginInputValidator.h
 )
 
 target_include_directories(safe_archive_extractor_test PRIVATE

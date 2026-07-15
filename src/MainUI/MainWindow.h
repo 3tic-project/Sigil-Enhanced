@@ -218,7 +218,8 @@ public:
      *
      * @param fullfilepath The path to the file to load.
      */
-    bool LoadFile(const QString &fullfilepath, bool is_internal = false);
+    bool LoadFile(const QString &fullfilepath, bool is_internal = false,
+                  bool preserve_current_on_error = false);
     bool ExportCurrentBookCopy(const QString &fullfilepath);
 
     void SetValidationResults(const QList<ValidationResult> &results);
@@ -1156,6 +1157,10 @@ public slots:
     bool NormalizeAllKfxParagraphs(); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
+    bool ExecutePluginByName(const QString &plugin_name, bool wait_for_completion,
+                             QString *plugin_type = nullptr,
+                             int *validation_error_count = nullptr,
+                             QString *error = nullptr);
     //modified: FindReplacePlus
     FindReplaceMode m_findReplaceMode;
     FindReplacePlus* m_FindReplacePlus;
