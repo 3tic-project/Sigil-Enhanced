@@ -1,4 +1,6 @@
-<?xml version="1.0" ?><!DOCTYPE TS><TS version="2.1" language="ja">
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="ja">
 <context>
     <name>About</name>
     <message>
@@ -7,9 +9,13 @@
         <translation>情報</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/About.ui" line="56"/>
         <source>The EPUB Editor</source>
-        <translation>EPUBエディター</translation>
+        <translation type="vanished">EPUBエディター</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/About.ui" line="56"/>
+        <source>Sigil-Enhanced EPUB Editor</source>
+        <translation>Sigil-Enhanced EPUB エディター</translation>
     </message>
     <message>
         <location filename="../../Form_Files/About.ui" line="70"/>
@@ -57,32 +63,47 @@
         <translation>GNU General Public License v3</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/About.cpp" line="52"/>
-        <source>Developers(s)</source>
-        <translation type="unfinished"/>
+        <location filename="../../Dialogs/About.cpp" line="40"/>
+        <source>About %1</source>
+        <translation>%1 について</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/About.cpp" line="57"/>
+        <location filename="../../Dialogs/About.cpp" line="46"/>
+        <source>Sigil-Enhanced Maintainer</source>
+        <translation>Sigil-Enhanced メンテナ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/About.cpp" line="50"/>
+        <source>Original sigil-modified Author</source>
+        <translation>元の sigil-modified 作者</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/About.cpp" line="54"/>
+        <source>Sigil Developer(s)</source>
+        <translation>Sigil 開発者</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/About.cpp" line="59"/>
         <source>Previous Developer(s)</source>
-        <translation type="unfinished"/>
+        <translation>過去の開発者</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/About.cpp" line="61"/>
+        <location filename="../../Dialogs/About.cpp" line="63"/>
         <source>Code Contributors</source>
         <translation>ソースコード貢献者</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/About.cpp" line="70"/>
+        <location filename="../../Dialogs/About.cpp" line="72"/>
         <source>Translators</source>
         <translation>翻訳者</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/About.cpp" line="72"/>
+        <location filename="../../Dialogs/About.cpp" line="74"/>
         <source>Original Creator</source>
         <translation>オリジナルの作者</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/About.cpp" line="73"/>
+        <location filename="../../Dialogs/About.cpp" line="75"/>
         <source>retired</source>
         <translation>引退した</translation>
     </message>
@@ -123,7 +144,7 @@
     <message>
         <location filename="../../Form_Files/AddClips.ui" line="56"/>
         <source>Aria Clips Code Template</source>
-        <translation type="unfinished"/>
+        <translation>ARIA クリップのコードテンプレート</translation>
     </message>
 </context>
 <context>
@@ -149,7 +170,7 @@
     <message>
         <location filename="../../Form_Files/AddRoles.ui" line="56"/>
         <source>Description of Aria Roles</source>
-        <translation type="unfinished"/>
+        <translation>ARIA ロールの説明</translation>
     </message>
 </context>
 <context>
@@ -170,57 +191,57 @@
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="6"/>
         <source>AdjustImage</source>
-        <translation type="unfinished"/>
+        <translation>画像調整</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="47"/>
         <source>Zoom &amp;In (25%)</source>
-        <translation type="unfinished"/>
+        <translation>ズームイン(&amp;I) (25%)</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="50"/>
         <source>Zoom in on the image.</source>
-        <translation type="unfinished"/>
+        <translation>画像を拡大します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="59"/>
         <source>Zoom Out (25%)</source>
-        <translation type="unfinished"/>
+        <translation>ズームアウト (25%)</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="62"/>
         <source>Zoom out on the image.</source>
-        <translation type="unfinished"/>
+        <translation>画像を縮小します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="71"/>
         <source>Rotate Left</source>
-        <translation type="unfinished"/>
+        <translation>左に回転</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="74"/>
         <source>Rotate image 90 degrees left (counter-clockwise).</source>
-        <translation type="unfinished"/>
+        <translation>画像を左（反時計回り）に 90 度回転します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="83"/>
         <source>Rotate Right</source>
-        <translation type="unfinished"/>
+        <translation>右に回転</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="86"/>
         <source>Rotate image 90 degrees right (clockwise).</source>
-        <translation type="unfinished"/>
+        <translation>画像を右（時計回り）に 90 度回転します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="95"/>
         <source>Crop</source>
-        <translation type="unfinished"/>
+        <translation>切り抜き</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="98"/>
         <source>Crop image.</source>
-        <translation type="unfinished"/>
+        <translation>画像を切り抜きます。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="107"/>
@@ -230,12 +251,12 @@
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="110"/>
         <source>Save image changes to the Epub.</source>
-        <translation type="unfinished"/>
+        <translation>画像の変更を EPUB に保存します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="121"/>
         <source>Show Toolbar</source>
-        <translation type="unfinished"/>
+        <translation>ツールバーを表示</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="124"/>
@@ -245,12 +266,12 @@
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="133"/>
         <source>Resize Image</source>
-        <translation type="unfinished"/>
+        <translation>画像のサイズを変更</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="136"/>
         <source>Resize image.</source>
-        <translation type="unfinished"/>
+        <translation>画像のサイズを変更します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="145"/>
@@ -260,7 +281,7 @@
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="148"/>
         <source>Undo last change.</source>
-        <translation type="unfinished"/>
+        <translation>直前の変更を元に戻します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="157"/>
@@ -270,89 +291,89 @@
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="160"/>
         <source>Redo last change.</source>
-        <translation type="unfinished"/>
+        <translation>直前の変更をやり直します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="169"/>
         <source>Zoom To Fit</source>
-        <translation type="unfinished"/>
+        <translation>全体表示</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="172"/>
         <source>Zoom image to fit.</source>
-        <translation type="unfinished"/>
+        <translation>画像全体が収まるように表示します。</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="97"/>
-        <location filename="../../Widgets/AdjustImage.cpp" line="103"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="110"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="116"/>
         <source>Adjust Image</source>
-        <translation type="unfinished"/>
+        <translation>画像を調整</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="104"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="117"/>
         <source>Cannot load %1.</source>
-        <translation type="unfinished"/>
+        <translation>%1 を読み込めません。</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="173"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="201"/>
         <source>shades</source>
         <translation>階調</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="173"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="201"/>
         <source>colors</source>
         <translation>カラー</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="174"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="202"/>
         <source>Grayscale</source>
         <translation>グレースケール</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="174"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="202"/>
         <source>Color</source>
         <translation>カラー</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="329"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="402"/>
         <source>(x,y) coordinates:</source>
-        <translation type="unfinished"/>
+        <translation>(x,y) 座標:</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="329"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="402"/>
         <source>Zoom</source>
-        <translation type="unfinished"/>
+        <translation>ズーム</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="398"/>
-        <location filename="../../Widgets/AdjustImage.cpp" line="427"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="470"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="499"/>
         <source>Image successfully saved.</source>
-        <translation type="unfinished"/>
+        <translation>画像が正常に保存されました。</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="400"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="472"/>
         <source>Image save failed.</source>
-        <translation type="unfinished"/>
+        <translation>画像の保存に失敗しました。</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="411"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="483"/>
         <source>Image Quality</source>
-        <translation type="unfinished"/>
+        <translation>画質</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="412"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="484"/>
         <source>Enter quality level (0-100):</source>
-        <translation type="unfinished"/>
+        <translation>品質レベル（0～100）を入力してください:</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="414"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="486"/>
         <source>Image save failed. </source>
-        <translation type="unfinished"/>
+        <translation>画像の保存に失敗しました。 </translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="429"/>
+        <location filename="../../Widgets/AdjustImage.cpp" line="501"/>
         <source>Image save failed: </source>
-        <translation type="unfinished"/>
+        <translation>画像保存に失敗しました: </translation>
     </message>
 </context>
 <context>
@@ -366,7 +387,7 @@
     <message>
         <location filename="../../Widgets/AlertBox.cpp" line="108"/>
         <source>Hide Details...</source>
-        <translation type="unfinished"/>
+        <translation>詳細を隠す...</translation>
     </message>
 </context>
 <context>
@@ -419,7 +440,9 @@
     <message numerus="yes">
         <location filename="../../Dialogs/ReportsWidgets/AllFilesWidget.cpp" line="158"/>
         <source>%n file(s)</source>
-        <translation><numerusform>%n 個のファイル</numerusform></translation>
+        <translation>
+            <numerusform>%n 個のファイル</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../../Dialogs/ReportsWidgets/AllFilesWidget.cpp" line="264"/>
@@ -792,89 +815,94 @@ if a sans-serif font-family specified in your CSS</source>
         <translation>カーソルがタグ内にある場合、コードビューで一致するタグを強調表示します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="331"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="337"/>
         <source>CSS Comment</source>
         <translation>CSS コメント</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="332"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="338"/>
         <source>CSS Property</source>
         <translation>CSS プロパティー</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="333"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="339"/>
         <source>CSS Quote</source>
         <translation>CSS クォート</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="334"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="340"/>
         <source>CSS Selector</source>
         <translation>CSS セレクター</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="335"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="341"/>
         <source>CSS Value</source>
         <translation>CSS 値</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="336"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="342"/>
         <source>Line Highlight</source>
         <translation>行ハイライト</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="337"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="343"/>
         <source>Line# Background</source>
         <translation>行番号の背景色</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="338"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="344"/>
         <source>Line# Foreground</source>
         <translation>行番号の前景色</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="339"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="345"/>
         <source>Spelling Underline</source>
         <translation>ミススペルの下線</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="340"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="346"/>
         <source>XHTML Attribute Name</source>
         <translation>XHTML 属性名</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="341"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="347"/>
         <source>XHTML Attribute Value</source>
         <translation>XHTML 属性値</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="342"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="348"/>
         <source>XHTML CSS</source>
         <translation>XHTML CSS</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="343"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="349"/>
         <source>XHTML CSS Comment</source>
         <translation>XHTML CSSコメント</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="344"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="350"/>
         <source>XHTML DocType</source>
         <translation>XHTML DocType</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="345"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="351"/>
         <source>XHTML Entity</source>
         <translation>XHTML エンティティ</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="346"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="352"/>
         <source>XHTML HTML Tag</source>
         <translation>XHTML HTMLタグ</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="347"/>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="353"/>
         <source>XHTML HTML Comment</source>
         <translation>XHTML HTMLコメント</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/AppearanceWidget.cpp" line="355"/>
+        <source>PreFind Selection</source>
+        <translation>事前検索の選択範囲</translation>
     </message>
 </context>
 <context>
@@ -907,27 +935,27 @@ if a sans-serif font-family specified in your CSS</source>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="39"/>
         <source>Sidebar</source>
-        <translation type="unfinished"/>
+        <translation>サイドバー</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="40"/>
         <source>Page</source>
-        <translation type="unfinished"/>
+        <translation>ページ</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="42"/>
         <source>Back to</source>
-        <translation type="unfinished"/>
+        <translation>戻る</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="44"/>
         <source>To footnote</source>
-        <translation type="unfinished"/>
+        <translation>脚注へ</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="45"/>
         <source>To endnote</source>
-        <translation type="unfinished"/>
+        <translation>後注へ</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="181"/>
@@ -977,42 +1005,42 @@ if a sans-serif font-family specified in your CSS</source>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="199"/>
         <source>PageBreak in hr</source>
-        <translation type="unfinished"/>
+        <translation>hr 要素の改ページ</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="201"/>
         <source>PageBreak in span</source>
-        <translation type="unfinished"/>
+        <translation>span 要素の改ページ</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="203"/>
         <source>Reference to Footnote</source>
-        <translation type="unfinished"/>
+        <translation>脚注への参照</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="205"/>
         <source>Reference to Endnote</source>
-        <translation type="unfinished"/>
+        <translation>後注への参照</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="207"/>
         <source>Section</source>
-        <translation type="unfinished"/>
+        <translation>セクション</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="209"/>
         <source>Section: Chapter</source>
-        <translation type="unfinished"/>
+        <translation>セクション:章</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="211"/>
         <source>Section: Endnotes</source>
-        <translation type="unfinished"/>
+        <translation>セクション: 後注</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaClips.cpp" line="213"/>
         <source>Section: Footnotes</source>
-        <translation type="unfinished"/>
+        <translation>セクション:脚注</translation>
     </message>
 </context>
 <context>
@@ -1135,7 +1163,7 @@ if a sans-serif font-family specified in your CSS</source>
     <message>
         <location filename="../../Misc/AriaRoles.cpp" line="195"/>
         <source>An image that sets the mood or tone for the work and typically includes the title and author.</source>
-        <translation type="unfinished"/>
+        <translation>作品の雰囲気や調子を示す画像で、通常はタイトルと著者を含みます。</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaRoles.cpp" line="196"/>
@@ -1320,12 +1348,12 @@ if a sans-serif font-family specified in your CSS</source>
     <message>
         <location filename="../../Misc/AriaRoles.cpp" line="214"/>
         <source>Pagebreak</source>
-        <translation type="unfinished"/>
+        <translation>ページ区切り</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaRoles.cpp" line="214"/>
         <source>A separator denoting the position before which a break occurs between contiguous pages in a statically paginated version of the content.</source>
-        <translation type="unfinished"/>
+        <translation>固定レイアウト版のコンテンツで、連続するページ間の改ページ位置を示す区切りです。</translation>
     </message>
     <message>
         <location filename="../../Misc/AriaRoles.cpp" line="215"/>
@@ -1536,7 +1564,7 @@ if a sans-serif font-family specified in your CSS</source>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="227"/>
         <source>Cannot save an empty automation list.</source>
-        <translation type="unfinished"/>
+        <translation>空の自動化リストを保存できません。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="239"/>
@@ -1546,7 +1574,7 @@ if a sans-serif font-family specified in your CSS</source>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="239"/>
         <source>Failed to save automation list to %1</source>
-        <translation type="unfinished"/>
+        <translation>自動化リストを%1に保存できませんでした</translation>
     </message>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="343"/>
@@ -1556,12 +1584,12 @@ if a sans-serif font-family specified in your CSS</source>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="344"/>
         <source>Add Nav to OPF Spine.</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を OPF スパインに追加します。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="345"/>
         <source>Add Nav to OPF Spine with linear=&apos;no&apos;.</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を linear='no' で OPF スパインに追加します。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="346"/>
@@ -1590,111 +1618,141 @@ if a sans-serif font-family specified in your CSS</source>
     </message>
     <message>
         <location filename="../../Dialogs/AutomateEditor.cpp" line="351"/>
+        <source>Analyze XHTML files that use body-level BR tags as paragraph separators.</source>
+        <translation>本文直下の BR タグを段落区切りとして使用する XHTML ファイルを解析します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="352"/>
+        <source>Analyze XHTML files that use KFX/calibre spacer p elements around body-level raw text.</source>
+        <translation>本文直下の生テキスト周辺に KFX/calibre のスペーサー p 要素を使用する XHTML ファイルを解析します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="353"/>
+        <source>Format XHTML and CSS resources with the built-in EPUB-safe formatter.</source>
+        <translation>組み込みの EPUB 対応フォーマッターで XHTML および CSS リソースを整形します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="354"/>
         <source>Mend and Prettify all XHtml files.</source>
         <translation>すべてのXHTMLを修正して整形表示します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="352"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="355"/>
         <source>Mend All XHtml files.</source>
         <translation>すべてのXHTMLファイルを修正します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="353"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="356"/>
+        <source>Normalize auto-safe XHTML files that use body-level BR tags as paragraph separators.</source>
+        <translation>本文直下の BR タグを段落区切りとして使用する、自動処理可能な XHTML ファイルを正規化します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="357"/>
+        <source>Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil&apos;s standard folder layout.</source>
+        <translation>OPF マニフェストの問題を修復し、内部リンクパスの大文字/小文字を修正して、リソースを Sigil の標準フォルダー構成へ移動します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="358"/>
+        <source>Normalize auto-safe XHTML files that use KFX/calibre spacer p elements around body-level raw text.</source>
+        <translation>本文直下の生テキスト周辺に KFX/calibre のスペーサー p 要素を使用する、自動処理可能な XHTML ファイルを正規化します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="359"/>
         <source>If previous search failed, run the named Saved Search.</source>
         <translation>前回の検索が失敗した場合、指定された保存済み検索を実行します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="354"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="360"/>
         <source>If previous search had success, run the named Saved Search.</source>
         <translation>前回の検索が成功した場合、指定された保存済み検索を実行します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="355"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="361"/>
         <source>Reformat All CSS to Multiple Lines format.</source>
         <translation>すべてのCSSを複数行形式に再フォーマットします。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="356"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="362"/>
         <source>Reformat All CSS to Single Lines format.</source>
         <translation>すべてのCSSを1行形式に再フォーマットします。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="357"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="363"/>
         <source>Remove Nav from OPF Spine.</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を OPF スパインから削除します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="358"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="364"/>
         <source>Remove NCX and OPF Guide from Epub3.</source>
         <translation>Epub3から、NCXおよびOPFガイドを削除します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="359"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="365"/>
         <source>Save a Checkpoint of the current epub.</source>
         <translation>現在のepubのチェックポイントを保存します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="360"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="366"/>
         <source>Run the named Saved Search with Replace All.</source>
         <translation>名前付きの保存済み検索を[すべて置換]で実行します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="361"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="367"/>
         <source>Save the current epub.</source>
         <translation>現在のepubを保存します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="362"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="368"/>
         <source>Select all CSS Files in BookBrowser</source>
         <translation>ブックブラウザーで、すべてのCSSファイルを選択します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="363"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="369"/>
         <source>Select all HTML Files in BookBrowser</source>
         <translation>ブックブラウザーで、すべてのHTMLファイルを選択します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="364"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="370"/>
         <source>Select all Image Files in BookBrowser</source>
         <translation>ブックブラウザーで、すべての画像ファイルを選択します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="365"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="371"/>
         <source>Reset BookBrowser to its initial selection</source>
         <translation>ブックブラウザーを初期の選択状態にリセットします。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="366"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="372"/>
         <source>set a string parameter to be passed to the next plugin.</source>
         <translation>次のプラグインに渡される文字列パラメータを設定します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="368"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="374"/>
         <source>Split XHtml files on Sigil Section Markers</source>
         <translation>Sigilのセクション マーカーで、XHTMLファイルを分割します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="369"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="375"/>
         <source>Convert Epub layout to Sigil&apos;s historic Standard form.</source>
         <translation>Epubレイアウトを、Sigilの従来の標準形式に変換します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="370"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="376"/>
         <source>Rename files to use standard file extensions for their media type.</source>
         <translation>ファイルをメディアタイプに応じた標準のファイル拡張子に名前を変更します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="371"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="377"/>
         <source>Update Epub3 OPF Manifest properties.</source>
         <translation>Epub3 OPFマニフェストプロパティを更新します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="372"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="378"/>
         <source>Validate All Stylesheets with W3C in external browser.</source>
         <translation>外部ブラウザーにて、すべてのスタイルシートをW3Cで検証します。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/AutomateEditor.cpp" line="373"/>
+        <location filename="../../Dialogs/AutomateEditor.cpp" line="379"/>
         <source>Perform a basic Well-Formed Check on Epub XHtml files.</source>
         <translation>EpubのXHTMLファイルに対して、基本的な整形式チェックを実行します。</translation>
     </message>
@@ -1702,7 +1760,7 @@ if a sans-serif font-family specified in your CSS</source>
 <context>
     <name>Book</name>
     <message>
-        <location filename="../../BookManipulation/Book.cpp" line="429"/>
+        <location filename="../../BookManipulation/Book.cpp" line="431"/>
         <source>Start</source>
         <translation>開始</translation>
     </message>
@@ -1711,66 +1769,73 @@ if a sans-serif font-family specified in your CSS</source>
     <name>BookBrowser</name>
     <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="86"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="116"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="117"/>
         <source>Book Browser</source>
         <translation>ブックブラウザー</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="98"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="99"/>
         <source>Font Obfuscation</source>
         <translation>フォント難読化</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="99"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2346"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="100"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2390"/>
         <source>Open With</source>
         <translation>アプリケーションから開く</translation>
     </message>
     <message numerus="yes">
-        <location filename="../../MainUI/BookBrowser.cpp" line="193"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="194"/>
         <source>%n file(s)</source>
-        <translation><numerusform>%n 個のファイル</numerusform></translation>
+        <translation>
+            <numerusform>%n 個のファイル</numerusform>
+        </translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="305"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="773"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="943"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="978"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1043"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1150"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1461"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1566"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="306"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="780"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="953"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="988"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1067"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1174"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1485"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1590"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="78"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="113"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="179"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="296"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="305"/>
         <source>Sigil</source>
         <translation>Sigil</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="306"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="307"/>
         <source>Are you sure you want to sort the selected files alphanumerically?</source>
         <translation>本当に選択されたファイルをアルファベット順にソートしますか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="307"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="308"/>
         <source>This action cannot be reversed.</source>
         <translation>この操作は元に戻せません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="390"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="391"/>
         <source>The file &quot;%1&quot; does not exist.</source>
         <translation>ファイル &quot;%1&quot; は存在しません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="773"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="780"/>
         <source>Javascript is not supported on epub2.</source>
         <translation>epub2では、Javascriptはサポートされていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="848"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="855"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="862"/>
         <source>Add Existing Files</source>
         <translation>既存のファイルを追加</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="911"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="920"/>
         <source>File is not an image and cannot be used:
 
 &quot;%1&quot;.</source>
@@ -1779,7 +1844,7 @@ if a sans-serif font-family specified in your CSS</source>
 &quot;%1&quot;</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="920"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="929"/>
         <source>File is not multimedia (image, video, audio) and cannot be inserted:
 
 &quot;%1&quot;.</source>
@@ -1788,7 +1853,8 @@ if a sans-serif font-family specified in your CSS</source>
 &quot;%1&quot;</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="944"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="954"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="79"/>
         <source>The multimedia file &quot;%1&quot; already exists in the book.
 
 OK to replace?</source>
@@ -1797,12 +1863,14 @@ OK to replace?</source>
 OKを押して置換しますか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="973"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="983"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="107"/>
         <source>Unable to delete or replace file &quot;%1&quot;.</source>
         <translation>ファイル &quot;%1&quot; を削除または上書きできません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="978"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="988"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="113"/>
         <source>Unable to load &quot;%1&quot;
 
 A file with this name already exists in the book.</source>
@@ -1811,7 +1879,8 @@ A file with this name already exists in the book.</source>
 この名前のファイルは、ブック中にすでに存在します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1044"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1068"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="180"/>
         <source>The following file(s) were not loaded due to invalid content or not well formed XML:
 
 %1</source>
@@ -1820,376 +1889,400 @@ A file with this name already exists in the book.</source>
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1057"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1081"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="193"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="343"/>
         <source>File(s) added or replaced.</source>
         <translation>ファイルを追加または置換しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1094"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1118"/>
         <source>Save As File</source>
         <translation>ファイルに保存</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1117"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1141"/>
         <source>Unable to save the file.</source>
         <translation>ファイルに保存できませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1128"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1152"/>
         <source>Choose the directory to save the files to</source>
         <translation>ファイルを保存するディレクトリを選択</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1150"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1174"/>
         <source>One or more files already exists.  OK to overwrite?</source>
         <translation>すでに1つ以上のファイルが存在します。OKを押して上書きしますか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1167"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1191"/>
         <source>Unable to save files.  Destination may be a directory.</source>
         <translation>ファイルに保存できません。保存先がディレクトリのようです。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1175"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1199"/>
         <source>Unable to save files.</source>
         <translation>ファイルを保存できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1399"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1423"/>
         <source>Filenames cannot contain these characters: &quot;%1&quot;.</source>
-        <translation type="unfinished"/>
+        <translation>ファイル名に次の文字は使用できません: 「%1」</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1461"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1485"/>
         <source>Cannot rename files since this would result in duplicate filenames.</source>
         <translation>ファイル名が重複するため、ファイル名を変更できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1532"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1556"/>
         <source>Destination Folder has invalid path &quot;%1&quot;</source>
         <translation>コピー先フォルダーのパス &quot;%1&quot; が無効です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1566"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1590"/>
         <source>Cannot move files since this would result in duplicate filenames.</source>
         <translation>ファイル名が重複するため、ファイルを移動できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1613"/>
-        <source>The Nav document cannot be removed.</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1621"/>
-        <source>The NCX cannot be removed.</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1628"/>
-        <source>The OPF is required for epub and cannot be removed.</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="1637"/>
+        <source>The Nav document cannot be removed.</source>
+        <translation>ナビゲーション文書は削除できません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1645"/>
+        <source>The NCX cannot be removed.</source>
+        <translation>NCX は削除できません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1652"/>
+        <source>The OPF is required for epub and cannot be removed.</source>
+        <translation>OPF は EPUB に必須のため削除できません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1661"/>
         <source>You cannot remove all html files.
 There always has to be at least one.</source>
         <translation>HTMLをすべて削除することはできません。
 少なくとも常に一つは必要です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1785"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1807"/>
         <source>Unable to set file as cover image.</source>
         <translation>ファイルを表紙画像として設定できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1822"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1844"/>
         <source>(root folder)</source>
         <translation>(ルートフォルダー)</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1832"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1854"/>
         <source>FileName</source>
         <translation>ファイル名</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1835"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1857"/>
         <source>Folder</source>
         <translation>フォルダー</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1838"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1860"/>
         <source>Media Type</source>
         <translation>メディアタイプ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1841"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1863"/>
         <source>File Size(kb)</source>
         <translation>ファイルサイズ(KB)</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1844"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1866"/>
         <source>Epub Version</source>
         <translation>EPUBバージョン</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1861"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1883"/>
         <source>Word Count</source>
         <translation>単語数</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1864"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1886"/>
         <source>Primary Language</source>
         <translation>第一言語</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1871"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1893"/>
         <source>WellFormed</source>
         <translation>整形式</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1873"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1895"/>
         <source>Yes</source>
         <translation>はい</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1875"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1897"/>
         <source>No</source>
         <translation>いいえ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1878"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1900"/>
         <source>Linked Stylesheets</source>
         <translation>リンクされたスタイルシート</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1881"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1903"/>
         <source>Linked Javascripts</source>
         <translation>リンクされたJavaScript</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1884"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1906"/>
         <source>Linked Images</source>
         <translation>リンクされた画像</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1887"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1909"/>
         <source>Linked Audio</source>
         <translation>リンクされたオーディオ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1890"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1912"/>
         <source>Linked Video</source>
         <translation>リンクされた動画</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1917"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1939"/>
         <source>Semantics OPF Guide or Nav Landmarks</source>
         <translation>セマンティックOPFガイドまたはNavランドマーク</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1926"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1948"/>
         <source>Manifest Properties</source>
         <translation>マニフェストプロパティ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1929"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1951"/>
         <source>Defined Ids</source>
         <translation>定義済みID</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1936"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1948"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1958"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1970"/>
         <source>Description</source>
         <translation>Description（説明）</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1939"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1961"/>
         <source>Obfuscation Algorithm</source>
-        <translation type="unfinished"/>
+        <translation>難読化アルゴリズム</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="1941"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2194"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="1963"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2216"/>
         <source>None</source>
         <translation>なし
 </translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2179"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2201"/>
         <source>Select All</source>
         <translation>すべて選択</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2180"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2202"/>
         <source>Add Blank HTML File</source>
         <translation>空のHTMLファイルを追加</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2181"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2203"/>
         <source>Add Blank Stylesheet</source>
         <translation>空のスタイルシートを追加</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2182"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2204"/>
         <source>Add Blank Javascript</source>
         <translation>空のJavaScriptを追加</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2183"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2205"/>
         <source>Add Blank SVG Image</source>
         <translation>空のSVG画像を追加</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2184"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2206"/>
         <source>View Image</source>
         <translation>画像を表示</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2185"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2207"/>
         <source>Add Existing Files...</source>
         <translation>既存のファイルを追加...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2186"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2187"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2208"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2209"/>
         <source>Add Copy</source>
         <translation>コピーを追加</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2188"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2210"/>
         <source>Rename</source>
         <translation>名前を変更</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2189"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2211"/>
         <source>RegEx Rename</source>
         <translation>正規表現で名前を変更</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2190"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2212"/>
         <source>Move</source>
         <translation>移動</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2191"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2213"/>
         <source>Delete</source>
         <translation>削除</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2192"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2214"/>
         <source>Cover Image</source>
         <translation>表紙の画像</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2193"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2215"/>
         <source>Merge</source>
         <translation>マージ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2195"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2217"/>
         <source>Use Adobe&apos;s Method</source>
         <translation>Adobe方式を利用</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2196"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2218"/>
         <source>Use IDPF&apos;s Method</source>
         <translation>IDPF方式を利用</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2197"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2219"/>
         <source>Sort</source>
         <translation>ソート</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2198"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2220"/>
         <source>Change Reading Order</source>
-        <translation type="unfinished"/>
+        <translation>読み上げ順を変更</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2199"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2221"/>
         <source>Renumber TOC Entries</source>
         <translation>目次のエントリーの数字をつけ直す</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2200"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2222"/>
         <source>Link Stylesheets...</source>
         <translation>スタイルシートにリンク...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2201"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2223"/>
         <source>Link Javascripts...</source>
         <translation>JavaScriptにリンク...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2202"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2224"/>
         <source>Add Semantics...</source>
         <translation>セマンティックを追加...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2203"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2225"/>
         <source>Get Info...</source>
         <translation>情報を取得...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2204"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2226"/>
         <source>Validate with W3C</source>
         <translation>W3Cで検証</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2205"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2227"/>
         <source>Save As</source>
         <translation>名前を付けて保存</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2211"/>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2386"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2233"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2430"/>
         <source>Other Application</source>
         <translation>他のアプリケーション</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2212"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2234"/>
         <source>Clear Editor List</source>
-        <translation type="unfinished"/>
+        <translation>エディター一覧をクリア</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2221"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2235"/>
+        <source>Insert Into HTML/CSS File</source>
+        <translation>HTML/CSS ファイルに挿入</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2236"/>
+        <source>Insert Into HTML File</source>
+        <translation>HTML ファイルに挿入</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2237"/>
+        <source>Insert Into CSS File</source>
+        <translation>CSS ファイルに挿入</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2246"/>
         <source>Merge with previous file, or merge multiple files into one.</source>
         <translation>前のファイルとマージするか、複数のファイルを1つにマージします。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2224"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2249"/>
         <source>Rename selected file(s)</source>
         <translation>選択したファイルの名前を変更します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2226"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2251"/>
         <source>Use Regular Expressions to Rename selected file(s)</source>
         <translation>正規表現を使用して、選択したファイルの名前を変更します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2229"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2254"/>
         <source>Move selected file(s) to a new folder</source>
         <translation>選択したファイルを新しいフォルダーに移動します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2231"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2256"/>
         <source>Link Stylesheets to selected file(s).</source>
         <translation>選択したファイルにスタイルシートをリンクします。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2233"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2258"/>
         <source>Link Javascripts to selected file(s).</source>
         <translation>選択したファイルにJavaScriptをリンクします。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2235"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2260"/>
         <source>Add Semantics to selected file(s).</source>
         <translation>選択したファイルにセマンティックを追加します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2237"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="2262"/>
         <source>Show Information about selected files.</source>
-        <translation type="unfinished"/>
+        <translation>選択したファイルの情報を表示します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="296"/>
+        <source>Unable to add &quot;%1&quot;
+A file with this name already exists in the book.</source>
+        <translation>「%1」を追加できません。
+同じ名前のファイルが書籍内にすでに存在します。</translation>
     </message>
 </context>
 <context>
@@ -2286,7 +2379,9 @@ There always has to be at least one.</source>
     <message numerus="yes">
         <location filename="../../Dialogs/ReportsWidgets/CSSFilesWidget.cpp" line="150"/>
         <source>%n file(s)</source>
-        <translation><numerusform>%n 個のファイル</numerusform></translation>
+        <translation>
+            <numerusform>%n 個のファイル</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../../Dialogs/ReportsWidgets/CSSFilesWidget.cpp" line="275"/>
@@ -2396,6 +2491,253 @@ There always has to be at least one.</source>
     </message>
 </context>
 <context>
+    <name>ChineseConversionDialog</name>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="41"/>
+        <source>Chinese Conversion</source>
+        <translation>中国語変換</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="50"/>
+        <source>Conversion</source>
+        <translation>変換</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="58"/>
+        <source>Current selection</source>
+        <translation>現在の選択範囲</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="62"/>
+        <source>Current file</source>
+        <translation>現在のファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="65"/>
+        <source>Selected XHTML/SVG files (%1)</source>
+        <translation>選択した XHTML/SVG ファイル（%1）</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="68"/>
+        <source>All XHTML/SVG files</source>
+        <translation>すべての XHTML/SVG ファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="72"/>
+        <source>Mode:</source>
+        <translation>モード:</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="73"/>
+        <source>Scope:</source>
+        <translation>範囲:</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="76"/>
+        <source>Text attributes</source>
+        <translation>テキスト属性</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="78"/>
+        <source>Alternative text (alt)</source>
+        <translation>代替テキスト（alt）</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="79"/>
+        <source>Title attributes</source>
+        <translation>タイトル属性</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="80"/>
+        <source>Accessible labels (ARIA)</source>
+        <translation>アクセシブルラベル（ARIA）</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="85"/>
+        <source>Protected content</source>
+        <translation>保護コンテンツ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="87"/>
+        <source>Skip Japanese language content</source>
+        <translation>日本語のコンテンツをスキップ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="88"/>
+        <source>Skip code, kbd, samp, and var elements</source>
+        <translation>code、kbd、samp、var 要素をスキップ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="89"/>
+        <source>Skip pre elements</source>
+        <translation>pre 要素をスキップ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="94"/>
+        <source>Preview changes before applying</source>
+        <translation>適用前に変更をプレビュー</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="97"/>
+        <source>Preview</source>
+        <translation>プレビュー</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionDialog.cpp" line="98"/>
+        <source>Convert</source>
+        <translation>変換</translation>
+    </message>
+</context>
+<context>
+    <name>ChineseConversionPreviewDialog</name>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionPreviewDialog.cpp" line="51"/>
+        <source>Chinese Conversion Preview</source>
+        <translation>中国語変換プレビュー</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionPreviewDialog.cpp" line="63"/>
+        <source>Apply</source>
+        <translation>適用</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionPreviewDialog.cpp" line="63"/>
+        <source>Resource</source>
+        <translation>リソース</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionPreviewDialog.cpp" line="63"/>
+        <source>Location</source>
+        <translation>場所</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionPreviewDialog.cpp" line="63"/>
+        <source>Before</source>
+        <translation>前</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionPreviewDialog.cpp" line="63"/>
+        <source>After</source>
+        <translation>後</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionPreviewDialog.cpp" line="93"/>
+        <source>Apply Selected Changes</source>
+        <translation>選択した変更を適用</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ChineseConversionPreviewDialog.cpp" line="123"/>
+        <source>%1 of %2 changes selected; %3 Japanese segments and %4 protected segments skipped.</source>
+        <translation>%2 件中 %1 件の変更を選択。日本語のセグメント %3 件と保護されたセグメント %4 件をスキップしました。</translation>
+    </message>
+</context>
+<context>
+    <name>ChineseConversionProfile</name>
+    <message>
+        <location filename="../../ChineseConversion/ChineseConversionProfile.cpp" line="78"/>
+        <source>Converts Chinese characters and regional vocabulary.</source>
+        <translation>漢字と地域語彙を変換します。</translation>
+    </message>
+    <message>
+        <location filename="../../ChineseConversion/ChineseConversionProfile.cpp" line="81"/>
+        <source>Converts Chinese characters without regional vocabulary substitution.</source>
+        <translation>地域語彙を置換せずに漢字を変換します。</translation>
+    </message>
+</context>
+<context>
+    <name>ChineseConversionSettingsWidget</name>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="33"/>
+        <source>Chinese Conversion</source>
+        <translation>中国語変換</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="36"/>
+        <source>Defaults</source>
+        <translation>既定値</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="43"/>
+        <source>Current file</source>
+        <translation>現在のファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="44"/>
+        <source>Current selection</source>
+        <translation>現在の選択範囲</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="45"/>
+        <source>Selected XHTML/SVG files</source>
+        <translation>選択した XHTML/SVG ファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="46"/>
+        <source>All XHTML/SVG files</source>
+        <translation>すべての XHTML/SVG ファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="47"/>
+        <source>Conversion mode:</source>
+        <translation>変換モード:</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="48"/>
+        <source>Scope:</source>
+        <translation>範囲:</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="50"/>
+        <source>Text attributes</source>
+        <translation>テキスト属性</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="52"/>
+        <source>Alternative text (alt)</source>
+        <translation>代替テキスト（alt）</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="53"/>
+        <source>Title attributes</source>
+        <translation>タイトル属性</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="54"/>
+        <source>Accessible labels (ARIA)</source>
+        <translation>アクセシブルラベル（ARIA）</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="59"/>
+        <source>Protected content</source>
+        <translation>保護コンテンツ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="61"/>
+        <source>Skip Japanese language content</source>
+        <translation>日本語のコンテンツをスキップ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="62"/>
+        <source>Skip code, kbd, samp, and var elements</source>
+        <translation>code、kbd、samp、var 要素をスキップ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="63"/>
+        <source>Skip pre elements</source>
+        <translation>pre 要素をスキップ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="68"/>
+        <source>Workflow</source>
+        <translation>ワークフロー</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp" line="70"/>
+        <source>Preview changes before applying</source>
+        <translation>適用前に変更をプレビュー</translation>
+    </message>
+</context>
+<context>
     <name>ClassesInHTMLFilesWidget</name>
     <message>
         <location filename="../../Form_Files/ReportsClassesInHTMLFilesWidget.ui" line="14"/>
@@ -2466,6 +2808,30 @@ There always has to be at least one.</source>
         <location filename="../../Dialogs/ReportsWidgets/ClassesInHTMLFilesWidget.cpp" line="269"/>
         <source>Cannot save report file.</source>
         <translation>レポートファイルを保存できません。</translation>
+    </message>
+</context>
+<context>
+    <name>CleanSource</name>
+    <message>
+        <location filename="../../BookManipulation/CleanSourceExt.cpp" line="24"/>
+        <location filename="../../BookManipulation/CleanSourceExt.cpp" line="57"/>
+        <source>Sigil</source>
+        <translation>Sigil</translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/CleanSourceExt.cpp" line="25"/>
+        <source>Prettification cancelled: This XHTML is not well formed.</source>
+        <translation>整形をキャンセルしました: この XHTML は整形式ではありません。</translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/CleanSourceExt.cpp" line="32"/>
+        <source>Cleaning...</source>
+        <translation>クリーンアップ中...</translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/CleanSourceExt.cpp" line="58"/>
+        <source>Prettification cancelled: %1 is not well formed.</source>
+        <translation>整形をキャンセルしました: %1 は整形式ではありません。</translation>
     </message>
 </context>
 <context>
@@ -2599,7 +2965,7 @@ There always has to be at least one.</source>
     <message>
         <location filename="../../Dialogs/ClipEditor.cpp" line="92"/>
         <source>Cannot save entries.</source>
-        <translation>エントリーを保存できません。</translation>
+        <translation>検索項目を保存できません。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/ClipEditor.cpp" line="136"/>
@@ -2639,7 +3005,9 @@ There always has to be at least one.</source>
     <message numerus="yes">
         <location filename="../../Dialogs/ClipEditor.cpp" line="537"/>
         <source>CSS entries added: %n</source>
-        <translation><numerusform>CSSエントリーが追加されました。: %n</numerusform></translation>
+        <translation>
+            <numerusform>CSSエントリーが追加されました。: %n</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../../Dialogs/ClipEditor.cpp" line="650"/>
@@ -2737,7 +3105,7 @@ Do you want to save your changes?</source>
         <translation>テキスト</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/ClipEditorModel.cpp" line="737"/>
+        <location filename="../../MiscEditors/ClipEditorModel.cpp" line="736"/>
         <source>Unable to create file %1</source>
         <translation>ファイル %1 を作成できません</translation>
     </message>
@@ -2791,149 +3159,179 @@ Do you want to save your changes?</source>
 <context>
     <name>CodeViewEditor</name>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="591"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="634"/>
         <source>Cannot insert closing tag at this position.</source>
         <translation>この位置には終了タグを挿入できません。</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="599"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="642"/>
         <source>No open tags found at this position.</source>
         <translation>この位置に開始タグが見つかりません。</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1547"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1600"/>
         <source>Add To Default Dictionary</source>
         <translation>デフォルトの辞書に追加</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1560"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1613"/>
         <source>Add To Dictionary</source>
         <translation>辞書に追加</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1577"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1630"/>
         <source>Ignore</source>
         <translation>無視</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1639"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1692"/>
         <source>Reformat CSS</source>
         <translation>CSSを再フォーマット</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1641"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1694"/>
         <source>Multiple Lines Per Style</source>
         <translation>各スタイルを複数行で定義</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1642"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1695"/>
         <source>Single Line Per Style</source>
         <translation>各スタイルを1行で定義</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1668"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1721"/>
         <source>Rename Selected Class</source>
         <translation>選択したクラス名を変更</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1690"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1743"/>
         <source>Reformat HTML</source>
         <translation>HTMLを再フォーマット</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1692"/>
         <source>Mend and Prettify Code</source>
-        <translation>コードを修正して整形表示</translation>
+        <translation type="vanished">コードを修正して整形表示</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1693"/>
         <source>Mend and Prettify Code - All HTML Files</source>
-        <translation>すべてのHTMLファイルで、コードを修正して整形表示</translation>
+        <translation type="vanished">すべてのHTMLファイルで、コードを修正して整形表示</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1694"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1745"/>
+        <source>Prettify Code</source>
+        <translation>コードを整形</translation>
+    </message>
+    <message>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1747"/>
+        <source>Prettify Code - All HTML Files</source>
+        <translation>コードを整形 - すべての HTML ファイル</translation>
+    </message>
+    <message>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1748"/>
         <source>Mend Code</source>
         <translation>コードを修正</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1695"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1749"/>
         <source>Mend Code - All HTML Files</source>
         <translation>すべてのHTMLファイルで、コードを修正</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1725"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1779"/>
         <source>Go To Link Or Style</source>
         <translation>リンクまたはスタイルに進む</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1747"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1801"/>
         <source>Toggle Line Wrap Mode</source>
         <translation>行の折り返しモードの切り替え</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1769"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1823"/>
         <source>View Image</source>
         <translation>画像を表示</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1770"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1824"/>
         <source>Open Tab For Image</source>
         <translation>画像をタブで開く</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1796"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1850"/>
         <source>Mark Selected Text</source>
         <translation>選択されたテキストをマークする</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1798"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1852"/>
         <source>Unmark Marked Text</source>
         <translation>マークされたテキストのマークを外す</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1824"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1878"/>
         <source>Clips</source>
         <translation>クリップ</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1834"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1888"/>
         <source>Add To Clips</source>
         <translation>クリップに追加</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1972"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2026"/>
         <source>You must be in an opening HTML tag to use this feature.</source>
         <translation>この機能を使用するには、HTML開始タグ内にいる必要があります。</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1982"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2036"/>
         <source>You must be inside an opening HTML tag to use this feature.</source>
         <translation>この機能を使用するには、HTML開始タグの内側にいる必要があります。</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2046"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2100"/>
         <source>Selected Text is not a valid class name.</source>
         <translation>選択されたテキストは、有効なクラス名ではありません。</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2053"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2107"/>
         <source>Rename Class</source>
         <translation>クラス名を変更</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2054"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2108"/>
         <source>Enter new class name</source>
         <translation>新しいクラス名を入力してください。</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2074"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2128"/>
         <source>Class renamed.</source>
         <translation>クラス名が変更されました。</translation>
     </message>
     <message>
-        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2076"/>
+        <location filename="../../ViewEditors/CodeViewEditor.cpp" line="2130"/>
         <source>Class rename aborted.</source>
         <translation>クラス名の変更が中止されました。</translation>
+    </message>
+    <message>
+        <location filename="../../ViewEditors/CodeViewEditorExt.cpp" line="1070"/>
+        <source>Reference inserted from Book Browser.</source>
+        <translation>ブックブラウザーから参照を挿入しました。</translation>
+    </message>
+    <message>
+        <location filename="../../ViewEditors/CodeViewEditorExt.cpp" line="1250"/>
+        <location filename="../../ViewEditors/CodeViewEditorExt.cpp" line="1306"/>
+        <source>Image imported. Undo removes only the inserted reference.</source>
+        <translation>画像をインポートしました。元に戻す操作では、挿入した参照のみが削除されます。</translation>
+    </message>
+    <message>
+        <location filename="../../ViewEditors/CodeViewEditorExt.cpp" line="1307"/>
+        <source>Images imported. Undo removes only the inserted references.</source>
+        <translation>画像をインポートしました。元に戻す操作では、挿入した参照のみが削除されます。</translation>
+    </message>
+    <message>
+        <location filename="../../ViewEditors/CodeViewEditorExt.cpp" line="1331"/>
+        <location filename="../../ViewEditors/CodeViewEditorExt.cpp" line="1336"/>
+        <source>Paste Rich Text</source>
+        <translation>リッチテキストを貼り付け</translation>
     </message>
 </context>
 <context>
@@ -3045,7 +3443,7 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     <message>
         <location filename="../../Form_Files/Controls.ui" line="310"/>
         <source>Ignore current settings and return an empty Controls value. </source>
-        <translation>現在の設定を無視して、空のコントロール値を返します。</translation>
+        <translation>現在の設定を無視して、空のコントロール値を返します。 </translation>
     </message>
     <message>
         <location filename="../../Form_Files/Controls.ui" line="313"/>
@@ -3478,7 +3876,7 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     <message>
         <location filename="../../Form_Files/DryRunReplace.ui" line="93"/>
         <source>Total Number of Matches/Replacements</source>
-        <translation>マッチ/置換した合計数</translation>
+        <translation>一致/置換の合計数</translation>
     </message>
     <message>
         <location filename="../../Form_Files/DryRunReplace.ui" line="96"/>
@@ -3506,9 +3904,8 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/DryRunReplace.cpp" line="125"/>
         <source>... Creating Table</source>
-        <translation>... テーブル作成中</translation>
+        <translation type="vanished">... テーブル作成中</translation>
     </message>
     <message>
         <location filename="../../Dialogs/DryRunReplace.cpp" line="130"/>
@@ -3531,9 +3928,8 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
         <translation>後</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/DryRunReplace.cpp" line="261"/>
         <source>Dry Run Replace-All</source>
-        <translation>すべて置換のテスト実行(Dry Run)</translation>
+        <translation type="vanished">すべて置換のテスト実行(Dry Run)</translation>
     </message>
 </context>
 <context>
@@ -3541,27 +3937,27 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="14"/>
         <source>Edit Reading Order</source>
-        <translation type="unfinished"/>
+        <translation>読み上げ順を編集</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="59"/>
         <source>First</source>
-        <translation type="unfinished"/>
+        <translation>先頭</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="62"/>
         <source>Make selected entry first in the list. Shortcut: F</source>
-        <translation type="unfinished"/>
+        <translation>選択した項目を一覧の先頭へ移動します。ショートカット: F</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="72"/>
         <source>Last</source>
-        <translation type="unfinished"/>
+        <translation>末尾</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="75"/>
         <source>Make selected entry last in the list. Shortcut: L</source>
-        <translation type="unfinished"/>
+        <translation>選択した項目を一覧の末尾へ移動します。ショートカット: L</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="101"/>
@@ -3571,7 +3967,7 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="107"/>
         <source>Move selected entry up in the list. Shortcut: U</source>
-        <translation type="unfinished"/>
+        <translation>選択した項目を一覧の 1 つ上へ移動します。ショートカット: U</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="117"/>
@@ -3581,7 +3977,7 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     <message>
         <location filename="../../Form_Files/EditRO.ui" line="123"/>
         <source>Move selected entry down in the list. Shortcut: D</source>
-        <translation type="unfinished"/>
+        <translation>選択した項目を一覧の 1 つ下へ移動します。ショートカット: D</translation>
     </message>
 </context>
 <context>
@@ -3665,7 +4061,7 @@ You can also use the right arrow key.</source>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="384"/>
         <source>[placeholder]</source>
-        <translation type="unfinished"/>
+        <translation>[プレースホルダー]</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="496"/>
@@ -3696,7 +4092,7 @@ You can also use the right arrow key.</source>
 <context>
     <name>EmbeddedPython</name>
     <message>
-        <location filename="../../EmbedPython/EmbeddedPython.cpp" line="726"/>
+        <location filename="../../EmbedPython/EmbeddedPython.cpp" line="742"/>
         <source>Embedded Python Error</source>
         <translation>埋め込みPythonエラー</translation>
     </message>
@@ -3867,7 +4263,7 @@ locations and names for the OPF, NCX and/or Nav.</source>
     <message>
         <location filename="../../Dialogs/EmptyLayout.cpp" line="356"/>
         <source>untitled_folder</source>
-        <translation>folder</translation>
+        <translation>無題のフォルダー</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EmptyLayout.cpp" line="393"/>
@@ -3944,7 +4340,7 @@ locations and names for the OPF, NCX and/or Nav.</source>
     <message>
         <location filename="../../Widgets/FileDropZone.h" line="42"/>
         <source>Drop Files Here To Add to Epub</source>
-        <translation type="unfinished"/>
+        <translation>EPUB に追加するファイルをここへドロップ</translation>
     </message>
 </context>
 <context>
@@ -3998,9 +4394,9 @@ locations and names for the OPF, NCX and/or Nav.</source>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Replace&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Replace highlighted match (if any) in Code View.&lt;/p&gt;</source>
-        <translation>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;置換&lt;/b&gt;&lt;/p&gt;
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;置換&lt;/b&gt;&lt;/p&gt;
 
-&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;コードビューで、ハイライトされた一致を置換します。（ある場合）&lt;/p&gt;</translation>
+&lt;p style="margin-left: 0.5em;"&gt;コードビューで、強調表示された一致があれば置換します。&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../Form_Files/FindReplace.ui" line="234"/>
@@ -4032,10 +4428,10 @@ locations and names for the OPF, NCX and/or Nav.</source>
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Replace highlighted match (if any),
 then find the Next match in Code View.&lt;/p&gt;</source>
-        <translation>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;置換/検索&lt;/b&gt;&lt;/p&gt;
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;置換/検索&lt;/b&gt;&lt;/p&gt;
 
-&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;コートビューで、ハイライトされた一致がある場合、
-それを置換して、次の一致を見つけます。&lt;/p&gt;</translation>
+&lt;p style="margin-left: 0.5em;"&gt;強調表示された一致があれば置換し、
+コードビューで次の一致を検索します。&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../Form_Files/FindReplace.ui" line="332"/>
@@ -4129,21 +4525,21 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
         <location filename="../../MainUI/FindReplace.cpp" line="348"/>
         <location filename="../../MainUI/FindReplace.cpp" line="355"/>
         <source>Search will restart</source>
-        <translation>検索を再検索します</translation>
+        <translation>検索を再開します</translation>
     </message>
     <message>
         <location filename="../../MainUI/FindReplace.cpp" line="371"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2186"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2187"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2196"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2206"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2207"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2216"/>
         <source>Current File</source>
         <translation>現在のファイル</translation>
     </message>
     <message numerus="yes">
         <location filename="../../MainUI/FindReplace.cpp" line="603"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="1944"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1964"/>
         <source>Matches found: %n</source>
-        <translation><numerusform>一致が見つかりました。: %n</numerusform></translation>
+        <translation><numerusform>一致: %n 件</numerusform></translation>
     </message>
     <message>
         <location filename="../../MainUI/FindReplace.cpp" line="693"/>
@@ -4152,353 +4548,803 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     </message>
     <message>
         <location filename="../../MainUI/FindReplace.cpp" line="711"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="770"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="1987"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="774"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2007"/>
         <source>No replacements made</source>
         <translation>置換するものはありませんでした</translation>
     </message>
     <message numerus="yes">
         <location filename="../../MainUI/FindReplace.cpp" line="713"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="772"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="1989"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="776"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2009"/>
         <source>Replacements made: %n</source>
-        <translation><numerusform>置換が行われました。: %n</numerusform></translation>
+        <translation><numerusform>置換: %n 件</numerusform></translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="898"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="902"/>
         <source>End of search</source>
         <translation>検索終了</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="971"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="975"/>
         <source>No matches found</source>
         <translation>一致が見つかりません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1741"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1221"/>
+        <source>Creating checkpoint before Replace All...</source>
+        <translation>すべて置換の前にチェックポイントを作成中...</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplace.cpp" line="1223"/>
+        <source>Replace All cancelled: checkpoint failed.</source>
+        <translation>チェックポイントの作成に失敗したため、すべて置換をキャンセルしました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplace.cpp" line="1761"/>
         <source>This tab cannot be searched</source>
         <translation>このタブは検索できません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1784"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1771"/>
+        <source>Unnamed Search</source>
+        <translation>名前のない検索</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplace.cpp" line="1804"/>
         <source>Unnamed search loaded</source>
         <translation>名前のない検索が読み込まれました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1787"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1807"/>
         <source>Loaded</source>
         <translation>読み込みました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1860"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="1884"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="1903"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="1928"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="1972"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1880"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1904"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1923"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1948"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="1992"/>
         <source>No searches selected</source>
         <translation>検索が選択されていません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2038"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2058"/>
         <source>Sigil</source>
         <translation>Sigil</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2039"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2059"/>
         <source>Are you sure you want to clear your Find and Replace current values and history?</source>
         <translation>検索と置換の現在の値と履歴をクリアしてもよろしいですか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2172"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2192"/>
         <source>What to search for</source>
         <translation>検索対象</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2173"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2174"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2193"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2194"/>
         <source>Normal</source>
         <translation>通常</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2174"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2194"/>
         <source>Case in-sensitive search of exactly what you type.</source>
         <translation>入力した内容を大文字と小文字を区別せずに検索します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2176"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2177"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2196"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2197"/>
         <source>Case Sensitive</source>
         <translation>大文字小文字を区別</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2177"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2197"/>
         <source>Case sensitive search of exactly what you type.</source>
         <translation>入力した内容を大文字と小文字を区別して検索します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2179"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2180"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2199"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2200"/>
         <source>Regex</source>
         <translation>正規表現</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2180"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2200"/>
         <source>Search for a pattern using Regular Expression syntax.</source>
         <translation>正規表現の構文を使用してパターン検索します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2184"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2227"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2204"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2247"/>
         <source>Where to search</source>
         <translation>検索場所</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2187"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2207"/>
         <source>Restrict the find or replace to the opened file.  Hold the Ctrl key down while clicking any search buttons to temporarily restrict the search to the Current File.</source>
         <translation>検索や置換を、開いているファイルに制限します。 Ctrlキーを押しながら検索ボタンをクリックすると、検索を一時的に現在のファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2189"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2190"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2209"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2210"/>
         <source>All HTML Files</source>
         <translation>すべてのHTMLファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2190"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2210"/>
         <source>Find or replace in all HTML files in Code View.</source>
         <translation>コードビューで、すべてのHTMLファイルを検索または置換します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2192"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2193"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2212"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2213"/>
         <source>Selected HTML Files</source>
         <translation>選択されたHTMLファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2193"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2213"/>
         <source>Restrict the find or replace to the HTML files selected in the Book Browser in Code View.</source>
         <translation>コードビューの検索または置換を、ブックブラウザーで選択されたHTMLファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2195"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2215"/>
         <source>Tabbed HTML Files</source>
         <translation>タブ表示のHTMLファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2196"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2216"/>
         <source>Restrict the find or replace to the HTML files open in Tabs.</source>
         <translation>検索または置換を、タブで開いているHTMLファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2198"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2199"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2218"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2219"/>
         <source>All CSS Files</source>
         <translation>すべてのCSSファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2199"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2219"/>
         <source>Find or replace in all CSS files in Code View.</source>
         <translation>コードビューで、すべてのCSSファイルを検索または置換します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2201"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2202"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2221"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2222"/>
         <source>Selected CSS Files</source>
         <translation>選択されたCSSファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2202"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2222"/>
         <source>Restrict the find or replace to the CSS files selected in the Book Browser in Code View.</source>
         <translation>コードビューの検索または置換を、ブックブラウザーで選択されたCSSファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2204"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2205"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2224"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2225"/>
         <source>Tabbed CSS Files</source>
         <translation>タブ表示のCSSファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2205"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2225"/>
         <source>Restrict the find or replace to the CSS files open in Tabs.</source>
         <translation>検索または置換を、タブで開いているCSSファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2207"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2208"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2227"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2228"/>
         <source>OPF File</source>
         <translation>OPFファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2208"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2228"/>
         <source>Restrict the find or replace to the OPF file.</source>
         <translation>検索または置換をOPFファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2210"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2211"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2230"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2231"/>
         <source>NCX File</source>
         <translation>NCXファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2211"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2231"/>
         <source>Restrict the find or replace to the NCX file.</source>
         <translation>検索または置換をNCXファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2213"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2214"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2233"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2234"/>
         <source>Selected SVG Files</source>
         <translation>選択されたSVGファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2214"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2234"/>
         <source>Restrict the find or replace to the SVG files selected in the Book Browser in Code View.</source>
         <translation>コードビューの検索または置換を、ブックブラウザーで選択されたSVGファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2216"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2236"/>
         <source>Selected Javascript Files</source>
         <translation>選択されたJavaScriptファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2217"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2237"/>
         <source>Selected JS Files</source>
         <translation>選択されたJSファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2217"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2237"/>
         <source>Restrict the find or replace to the JS files selected in the Book Browser in Code View.</source>
         <translation>コードビューの検索または置換を、ブックブラウザーで選択されたJSファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2219"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2220"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2239"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2240"/>
         <source>Selected Misc XML Files</source>
         <translation>選択されたその他のXMLファイル</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2220"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2240"/>
         <source>Restrict the find or replace to the XML files selected in the Misc folder of the Book Browser in Code View.</source>
         <translation>コードビューの検索または置換を、ブックブラウザーのMiscフォルダー内で選択されたXMLファイルに制限します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2223"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2243"/>
         <source>To restrict search to selected text, use Search&amp;rarr;Mark Selected Text.</source>
         <translation>検索対象を、選択されたテキストに制限するには、[検索]→[選択されたテキストをマーク]を使用します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2228"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2229"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2248"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2249"/>
         <source>Marked Text</source>
         <translation>マークされたテキスト</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2229"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2249"/>
         <source>Restrict the find or replace to the text marked by Search&amp;rarr;Mark Selected Text.  Cleared if you use Undo, enter text, or change views or tabs.</source>
         <translation>検索や置換を、[検索]→[選択されたテキストをマーク]でマークされたテキストに制限します。[元に戻す]や、テキスト入力、ビューやタブの変更を行うと、クリアされます。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2233"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2237"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2253"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2257"/>
         <source>Up</source>
         <translation>上へ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2234"/>
-        <location filename="../../MainUI/FindReplace.cpp" line="2238"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2254"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2258"/>
         <source>Down</source>
         <translation>下へ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2235"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2255"/>
         <source>Direction to search</source>
         <translation>検索する方向</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2237"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2257"/>
         <source>Search for the previous match from your current position.</source>
         <translation>現在の位置から前の一致を検索します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2238"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2258"/>
         <source>Search for the next match from your current position.</source>
         <translation>現在の位置から次の一致を検索します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2244"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2264"/>
         <source>Dot All</source>
         <translation>ドットを改行にもマッチ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2247"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2267"/>
         <source>For Regex searches, prefix your search with (?s).</source>
         <translation>正規表現検索で、検索語の前に(?s)を追加します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2251"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2271"/>
         <source>Minimal Match</source>
         <translation>最小一致</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2254"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2274"/>
         <source>For Regex searches, prefix your search with (?U).</source>
         <translation>正規表現検索で、検索語の前に(?U)を追加します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2258"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2278"/>
         <source>Auto Tokenise</source>
         <translation>自動トークン化</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2261"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2281"/>
         <source>For Regex searches, tokenise/escape selection when opening Find.</source>
         <translation>正規表現検索で、検索を開くときに、選択範囲をトークン化/エスケープします。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2265"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2285"/>
         <source>Unicode Property</source>
         <translation>Unicodeプロパティ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2268"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2288"/>
         <source>For Regex searches, set the Unicode Property flag.</source>
         <translation>正規表現検索で、Unicodeプロパティのフラグを設定します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2294"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2314"/>
         <source>Invalid Regex:</source>
         <translation>無効な正規表現:</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2295"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2315"/>
         <source>offset:</source>
         <translation>オフセット:</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="2299"/>
+        <location filename="../../MainUI/FindReplace.cpp" line="2319"/>
         <source>Valid Regex</source>
         <translation>有効な正規表現</translation>
     </message>
 </context>
 <context>
+    <name>FindReplacePlus</name>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="20"/>
+        <source>Find &amp; Replace</source>
+        <translation>検索と置換</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="55"/>
+        <source>Hide Find and Replace</source>
+        <translation>検索と置換を隠す</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="61"/>
+        <source>...</source>
+        <translation>...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="131"/>
+        <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Replace/Find&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Replace highlighted match (if any),
+then find the Next match in Code View.&lt;/p&gt;</source>
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;置換/検索&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style="margin-left: 0.5em;"&gt;強調表示された一致があれば置換し、
+コードビューで次の一致を検索します。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="140"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1817"/>
+        <source>Replace/Find</source>
+        <translation>置換/検索</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="198"/>
+        <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Find&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Find next match.&lt;/p&gt;</source>
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;検索&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style="margin-left: 0.5em;"&gt;次の一致を検索します。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="206"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1814"/>
+        <source>Find</source>
+        <translation>検索</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="217"/>
+        <source>Mode:</source>
+        <translation>モード:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="246"/>
+        <source>Options:</source>
+        <translation>オプション:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="294"/>
+        <source>Find:</source>
+        <translation>検索:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="319"/>
+        <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Replace All&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Replace all matches in Code View.&lt;/p&gt;
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Use with SHIFT to Filter Replacements before changes are applied.&lt;/p&gt;</source>
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;すべて置換&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style="margin-left: 0.5em;"&gt;コードビューで、一致するものをすべて置換します。&lt;/p&gt;
+&lt;p style="margin-left: 0.5em;"&gt;SHIFTキーと一緒に使用すると、変更が適用される前に置換のフィルタリングを行うことができます。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="328"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1823"/>
+        <source>Replace All</source>
+        <translation>すべて置換</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="354"/>
+        <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Replace&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Replace highlighted match (if any) in Code View.&lt;/p&gt;</source>
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;置換&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style="margin-left: 0.5em;"&gt;コードビューで、強調表示された一致があれば置換します。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="362"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1820"/>
+        <source>Replace</source>
+        <translation>置換</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="373"/>
+        <source>PreFind:</source>
+        <translation>事前検索:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="383"/>
+        <source>Replace:</source>
+        <translation>置換:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="398"/>
+        <source>Search from current position to top or end of the current file and then wrap to the other end to continue searching.</source>
+        <translation>現在位置からファイルの先頭または末尾まで検索し、反対側へ折り返して検索を続けます。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="401"/>
+        <source>Wrap</source>
+        <translation>折り返し</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="408"/>
+        <source>Preview matching results as click Replace All button or Count All button.</source>
+        <translation>「すべて置換」または「すべてカウント」をクリックしたときに一致結果をプレビューします。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="411"/>
+        <source>Preview</source>
+        <translation>プレビュー</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="460"/>
+        <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Count All&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Count all matches in Code View.&lt;/p&gt;
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Use with SHIFT to generate a Dry Run Replace All table.&lt;/p&gt;</source>
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;すべてカウント&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style="margin-left: 0.5em;"&gt;コードビューで、一致するものをすべてカウントします。&lt;/p&gt;
+&lt;p style="margin-left: 0.5em;"&gt;SHIFTキーと一緒に使用すると、すべて置換のテスト実行(Dry Run)のテーブルを生成します。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="469"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1827"/>
+        <source>Count All</source>
+        <translation>すべてカウント</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="489"/>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="492"/>
+        <source>ReInvalidIcon</source>
+        <translation>ReInvalidIcon</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="87"/>
+        <source>Function not implemented!</source>
+        <translation>この機能は実装されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="267"/>
+        <source>Search will restart</source>
+        <translation>検索を再開します</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="283"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1853"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1854"/>
+        <source>Current File</source>
+        <translation>現在のファイル</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="488"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1609"/>
+        <source>Matches found: %n</source>
+        <translation><numerusform>一致: %n 件</numerusform></translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="635"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1652"/>
+        <source>No replacements made</source>
+        <translation>置換するものはありませんでした</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="637"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1654"/>
+        <source>Replacements made: %n</source>
+        <translation><numerusform>置換: %n 件</numerusform></translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="749"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1287"/>
+        <source>End of search</source>
+        <translation>検索終了</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="829"/>
+        <source>No matches found</source>
+        <translation>一致が見つかりません</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="943"/>
+        <source>Creating checkpoint before Replace All...</source>
+        <translation>すべて置換の前にチェックポイントを作成中...</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="945"/>
+        <source>Replace All cancelled: checkpoint failed.</source>
+        <translation>チェックポイントの作成に失敗したため、すべて置換をキャンセルしました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1428"/>
+        <source>This tab cannot be searched</source>
+        <translation>このタブは検索できません</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1438"/>
+        <source>Unnamed Search</source>
+        <translation>名前のない検索</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1475"/>
+        <source>Unnamed search loaded</source>
+        <translation>名前のない検索が読み込まれました</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1478"/>
+        <source>Loaded</source>
+        <translation>読み込みました</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1773"/>
+        <source>Sigil</source>
+        <translation>Sigil</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1774"/>
+        <source>Are you sure you want to clear your Find and Replace current values and history?</source>
+        <translation>検索と置換の現在の値と履歴をクリアしてもよろしいですか?</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1815"/>
+        <source>Find next match.</source>
+        <translation>次の一致を検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1818"/>
+        <source>Replace highlighted match (if any), then find the Next match in Code View.</source>
+        <translation>強調表示された一致があれば置換し、コードビューで次の一致を検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1821"/>
+        <source>Replace highlighted match (if any) in Code View.</source>
+        <translation>コードビューで、強調表示された一致があれば置換します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1824"/>
+        <source>Replace all matches in Code View.</source>
+        <translation>コードビューですべての一致を置換します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1825"/>
+        <source>Use with SHIFT to Filter Replacements before changes are applied.</source>
+        <translation>Shift キーを押しながら使用すると、変更の適用前に置換内容を絞り込めます。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1828"/>
+        <source>Count all matches in Code View.</source>
+        <translation>コードビューですべての一致を数えます。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1829"/>
+        <source>Use with SHIFT to generate a Dry Run Replace All table.</source>
+        <translation>Shift キーを押しながら使用すると、すべて置換のドライラン表を生成します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1840"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1841"/>
+        <source>Normal</source>
+        <translation>通常</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1841"/>
+        <source>Case in-sensitive search of exactly what you type.</source>
+        <translation>入力した内容を大文字と小文字を区別せずに検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1843"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1844"/>
+        <source>Regex</source>
+        <translation>正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1844"/>
+        <source>Search for a pattern using Regular Expression syntax.</source>
+        <translation>正規表現の構文を使用してパターン検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1846"/>
+        <source>PreSearch Regex</source>
+        <translation>事前検索用正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1847"/>
+        <source>Regex With PreSearch</source>
+        <translation>事前検索付き正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1847"/>
+        <source>Search and replace based on the content which searched by Pre Search Regex Expression.</source>
+        <translation>事前検索用の正規表現で見つかった内容を対象に検索と置換を行います。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1854"/>
+        <source>Restrict the find or replace to the opened file.  Hold the Ctrl key down while clicking any search buttons to temporarily restrict the search to the Current File.</source>
+        <translation>検索や置換を、開いているファイルに制限します。 Ctrlキーを押しながら検索ボタンをクリックすると、検索を一時的に現在のファイルに制限します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1856"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1857"/>
+        <source>All HTML Files</source>
+        <translation>すべてのHTMLファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1857"/>
+        <source>Find or replace in all HTML files in Code View.</source>
+        <translation>コードビューで、すべてのHTMLファイルを検索または置換します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1859"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1860"/>
+        <source>All CSS Files</source>
+        <translation>すべてのCSSファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1860"/>
+        <source>Find or replace in all CSS files in Code View.</source>
+        <translation>コードビューで、すべてのCSSファイルを検索または置換します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1862"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1863"/>
+        <source>Selected Files</source>
+        <translation>選択したファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1863"/>
+        <source>Restrict the find or replace to the files selected in the Book Browser in Code View.</source>
+        <translation>コードビューで、ブックブラウザーから選択したファイルのみに検索または置換を制限します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1865"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1866"/>
+        <source>OPF File</source>
+        <translation>OPFファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1866"/>
+        <source>Restrict the find or replace to the OPF file.</source>
+        <translation>検索または置換をOPFファイルに制限します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1868"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1869"/>
+        <source>NCX File</source>
+        <translation>NCXファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1869"/>
+        <source>Restrict the find or replace to the NCX file.</source>
+        <translation>検索または置換をNCXファイルに制限します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1876"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1877"/>
+        <source>Marked Text</source>
+        <translation>マークされたテキスト</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1877"/>
+        <source>Restrict the find or replace to the text marked by Search Mark Selected Text. Cleared if you use Undo, enter text, or change views or tabs.</source>
+        <translation>「選択テキストを検索対象に設定」でマークしたテキストのみに検索または置換を制限します。元に戻す操作、テキスト入力、ビューまたはタブの変更で解除されます。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1881"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1884"/>
+        <source>Up</source>
+        <translation>上へ</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1882"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1885"/>
+        <source>Down</source>
+        <translation>下へ</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1884"/>
+        <source>Search for the previous match from your current position.</source>
+        <translation>現在の位置から前の一致を検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1885"/>
+        <source>Search for the next match from your current position.</source>
+        <translation>現在の位置から次の一致を検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1904"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1928"/>
+        <source>Invalid Regex:</source>
+        <translation>無効な正規表現:</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1905"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1929"/>
+        <source>offset:</source>
+        <translation>オフセット:</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1911"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1935"/>
+        <source>Valid Regex</source>
+        <translation>有効な正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1956"/>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1961"/>
+        <source>Find and Replace</source>
+        <translation>検索と置換</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1956"/>
+        <source>Find Expression cannot be empty!</source>
+        <translation>検索式を空にすることはできません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1962"/>
+        <source>The search has ended.Please click &quot;OK&quot; to restart the search.</source>
+        <translation>検索が終了しました。再開するには「OK」をクリックしてください。</translation>
+    </message>
+</context>
+<context>
     <name>FindReplaceQLineEdit</name>
     <message>
-        <location filename="../../Misc/FindReplaceQLineEdit.cpp" line="60"/>
+        <location filename="../../Misc/FindReplaceQLineEdit.cpp" line="63"/>
         <source>Clear Find Replace History</source>
         <translation>検索と置換の履歴をクリア</translation>
     </message>
     <message>
-        <location filename="../../Misc/FindReplaceQLineEdit.cpp" line="72"/>
+        <location filename="../../Misc/FindReplaceQLineEdit.cpp" line="75"/>
         <source>Python Function Replace</source>
         <translation>Python関数置換</translation>
     </message>
     <message>
-        <location filename="../../Misc/FindReplaceQLineEdit.cpp" line="85"/>
+        <location filename="../../Misc/FindReplaceQLineEdit.cpp" line="88"/>
         <source>Tokenise Selection</source>
         <translation>トークン化の選択</translation>
     </message>
     <message>
-        <location filename="../../Misc/FindReplaceQLineEdit.cpp" line="98"/>
+        <location filename="../../Misc/FindReplaceQLineEdit.cpp" line="101"/>
         <source>Save Search</source>
         <translation>検索を保存</translation>
     </message>
@@ -4506,7 +5352,7 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
 <context>
     <name>FlowTab</name>
     <message>
-        <location filename="../../Tabs/FlowTab.cpp" line="899"/>
+        <location filename="../../Tabs/FlowTab.cpp" line="944"/>
         <source>Print %1</source>
         <translation>%1 を印刷</translation>
     </message>
@@ -4593,248 +5439,247 @@ when creating new or empty Epubs in Sigil.</source>
     </message>
     <message>
         <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="109"/>
-        <source>Choose when your not well formed HTML code is automatically 
-mended.</source>
-        <translation>整形式でないHTMLコードを自動で修正する場合に選択します。</translation>
+        <source>Choose when your not well formed HTML code is automatically mended.</source>
+        <translation>整形式でない HTML コードを自動修復するタイミングを選択します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="113"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="112"/>
         <source>Mend Not Well Formed HTML Source Code On:</source>
         <translation>整形式でないHTMLソースコードを修正する:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="125"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="124"/>
         <source>Mend Not Well Formed HTML when opening an Epub or HTML file.</source>
         <translation>EpubまたはHTMLファイルを開くときに、整形式でないHTMLを修正します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="128"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="127"/>
         <source>Open</source>
         <translation>開く</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="138"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="137"/>
         <source>Mend Not Well Formed HTML when saving an Epub.</source>
         <translation>Epubを保存するときに、整形式でないHTMLを修正します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="141"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="140"/>
         <source>Save</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="164"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="163"/>
         <source>Number of clipboard history items to save (0 disables):</source>
         <translation>セッション間で保存するクリップボード履歴アイテムの数（0は無効）:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="179"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="178"/>
         <source>Use to limit (or disable) clipboard history saving between sessions</source>
         <translation>セッション間で保存するクリップボード履歴を制限（または無効化）するために使用します</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="198"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="197"/>
         <source>Set your preferred external xhtml editor:</source>
         <translation>任意の外部XHTMLエディターを設定:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="218"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="217"/>
         <source>Clear</source>
         <translation>クリア</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="228"/>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="606"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="227"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="605"/>
         <source>Browse</source>
         <translation>参照</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="240"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="239"/>
         <source>Determine if files can be dragged and dropped to add them to an epub.</source>
-        <translation type="unfinished"/>
+        <translation>ドラッグ＆ドロップで EPUB にファイルを追加できるようにするかを設定します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="243"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="242"/>
         <source> Control use of drag and drop to add files to an epub.</source>
-        <translation type="unfinished"/>
+        <translation> EPUB へのファイル追加でドラッグ＆ドロップを使用するかを設定します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="261"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="260"/>
         <source>Check to use drag and drop to add files to your epub.</source>
-        <translation type="unfinished"/>
+        <translation>EPUB にファイルを追加するときにドラッグ＆ドロップを使用します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="264"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="263"/>
         <source>May use drag and drop to add files.</source>
-        <translation type="unfinished"/>
+        <translation>ドラッグ＆ドロップでファイルを追加できます。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="288"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="287"/>
         <source>Security</source>
         <translation>セキュリティ</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="294"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="293"/>
         <source>Determine if Epubs are allowed to access non-multimedia remote resources.</source>
         <translation>EPUBが、マルチメディア以外のリモートリソースにアクセスすることを許可するかどうかを決定します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="297"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="296"/>
         <source> Control Access by Epubs to non-multimedia remote resources:</source>
         <translation>EPUBによる、マルチメディア以外のリモートリソースへのアクセス制御:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="315"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="314"/>
         <source>Check to allow Epubs to access non-multimedia remote resources.</source>
         <translation>EPUBが、マルチメディア以外のリモートリソースにアクセスすることを許可する場合にチェックします。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="318"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="317"/>
         <source>Epubs may access all remote resources types.</source>
         <translation>EPUBが、すべてのリモートリソースタイプにアクセスすることを許可する</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="331"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="330"/>
         <source>Determine if javascript is allowed to be used by Epubs</source>
         <translation>EPUBが、JavaScriptを利用することを許可するかどうかを決定します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="334"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="333"/>
         <source> Control Use of Javascript by Epubs.</source>
         <translation>EPUBによる、JavaScriptの利用制御:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="352"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="351"/>
         <source>Check to allow Epubs to use javascript.</source>
         <translation>EPUBが、JavaScriptを利用することを許可する場合にチェックします。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="355"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="354"/>
         <source>Epubs may use javascript.</source>
         <translation>EPUBが、JavaScriptを利用することを許可する</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="382"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="381"/>
         <source>Validation</source>
         <translation>検証</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="394"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="393"/>
         <source>What CSS level to specify for W3C stylesheet validation tool (EPUB2)</source>
         <translation>W3Cスタイルシート検証ツール（EPUB2）に指定するCSSレベル</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="397"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="396"/>
         <source>EPUB2 W3C Stylesheet Validation Level:</source>
         <translation>EPUB2 W3Cスタイルシート検証レベル:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="409"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="408"/>
         <source>W3C stylesheet validator will use CSS level 2 for EPUB2</source>
         <translation>W3Cスタイルシート検証ツールは、EPUB2にCSSレベル2を使用します</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="412"/>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="491"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="411"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="490"/>
         <source>CSS Level 2</source>
         <translation>CSSレベル2</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="422"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="421"/>
         <source>W3C stylesheet validator will use CSS level 2.1 for EPUB2</source>
         <translation>W3Cスタイルシート検証ツールは、EPUB2にCSSレベル2.1を使用します</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="425"/>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="504"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="424"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="503"/>
         <source>CSS Level 2.1</source>
         <translation>CSSレベル2.1</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="438"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="437"/>
         <source>W3C stylesheet validator will use CSS level 3 for EPUB2</source>
         <translation>W3Cスタイルシート検証ツールは、EPUB2にCSSレベル3を使用します</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="441"/>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="520"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="440"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="519"/>
         <source>CSS Level 3</source>
         <translation>CSSレベル3</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="473"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="472"/>
         <source>What CSS Level to specify for W3C stylesheet validation tool (EPUB3)</source>
         <translation>W3Cスタイルシート検証ツール(EPUB3)に指定するCSSレベル</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="476"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="475"/>
         <source>EPUB3 W3C Stylesheet Validation Level:</source>
         <translation>EPUB3 W3Cスタイルシート検証レベル:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="488"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="487"/>
         <source>W3C stylesheet validator will use CSS level 2 for EPUB3</source>
         <translation>W3Cスタイルシート検証ツールは、EPUB3にCSSレベル2を使用します</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="501"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="500"/>
         <source>W3C stylesheet validator will use CSS level 2.1 for EPUB3</source>
         <translation>W3Cスタイルシート検証ツールは、EPUB3にCSSレベル2.1を使用します</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="517"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="516"/>
         <source>W3C stylesheet validator will use CSS level 3 for EPUB3</source>
         <translation>W3Cスタイルシート検証ツールは、EPUB3にCSSレベル3を使用します</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="560"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="559"/>
         <source>Advanced</source>
         <translation>高度な設定</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="566"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="565"/>
         <source>Unless you know exactly what you&apos;re doing, there&apos;s very little reason to ever change this setting. Use extreme caution!</source>
         <translation>何を行っているのか正確にわからない限り、この設定を変更する理由はほとんどありません。細心の注意を払ってください!</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="576"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="575"/>
         <source>Set folder where temporary files should be created:</source>
         <translation>一時ファイルが作成されるフォルダーを設定:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="596"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="595"/>
         <source>Auto</source>
         <translation>自動</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="618"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="617"/>
         <source>Disable GPU Acceleration in QtWebEngine/Preview</source>
         <translation>QtWebEngine/Previewで、GPUアクセラレーションを無効にします</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="621"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="620"/>
         <source> Disable GPU Acceleration in QtWebEngine/Preview.</source>
         <translation>QtWebEngine/Previewで、GPUアクセラレーション無効:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="639"/>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="642"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="638"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="641"/>
         <source>Disable GPU Acceleration in QtWebEngine.</source>
         <translation>QtWebEngineで、GPUアクセラレーションを無効にする</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="655"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="654"/>
         <source>Preview Print Settings</source>
         <translation>プレビュー印刷設定</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="664"/>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="667"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="663"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="666"/>
         <source>Skip Print Preview</source>
         <translation>印刷プレビューのスキップ</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="676"/>
+        <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="675"/>
         <source>Print DPI:</source>
         <translation>印刷DPI:</translation>
     </message>
@@ -5292,7 +6137,9 @@ mended.</source>
     <message numerus="yes">
         <location filename="../../Dialogs/ReportsWidgets/HTMLFilesWidget.cpp" line="199"/>
         <source>%n file(s)</source>
-        <translation><numerusform>%n 個のファイル</numerusform></translation>
+        <translation>
+            <numerusform>%n 個のファイル</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../../Dialogs/ReportsWidgets/HTMLFilesWidget.cpp" line="339"/>
@@ -5338,7 +6185,7 @@ The heading&apos;s title attribute will be updated in the document.</source>
     <message>
         <location filename="../../Form_Files/HeadingSelector.ui" line="87"/>
         <source>Decrease the heading level of the selected entry by 1.
-The heading's tag will be updated in the document.
+The heading&apos;s tag will be updated in the document.
 You can also use the left arrow key.</source>
         <translation>選択したエントリーの見出しレベルを1つ下げます。
 見出しタグが文書内で更新されます。
@@ -5347,7 +6194,7 @@ You can also use the left arrow key.</source>
     <message>
         <location filename="../../Form_Files/HeadingSelector.ui" line="105"/>
         <source>Increase the heading level of the selected entry by 1.
-The heading's tag will be updated in the document.
+The heading&apos;s tag will be updated in the document.
 You can also use the right arrow key.</source>
         <translation>選択したエントリーの見出しレベルを1つ上げます。
 見出しタグが文書内で更新されます。
@@ -5475,6 +6322,7 @@ You can then check or uncheck individual headings in the list above.</source>
     </message>
     <message>
         <location filename="../../Dialogs/ReportsWidgets/ImageFilesWidget.cpp" line="96"/>
+        <location filename="../../Dialogs/ReportsWidgets/ImageFilesWidget.cpp" line="168"/>
         <source>Color</source>
         <translation>カラー</translation>
     </message>
@@ -5483,10 +6331,17 @@ You can then check or uncheck individual headings in the list above.</source>
         <source>Image</source>
         <translation>画像</translation>
     </message>
+    <message>
+        <location filename="../../Dialogs/ReportsWidgets/ImageFilesWidget.cpp" line="168"/>
+        <source>Grayscale</source>
+        <translation>グレースケール</translation>
+    </message>
     <message numerus="yes">
         <location filename="../../Dialogs/ReportsWidgets/ImageFilesWidget.cpp" line="198"/>
         <source>%n file(s)</source>
-        <translation><numerusform>%n 個のファイル</numerusform></translation>
+        <translation>
+            <numerusform>%n 個のファイル</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../../Dialogs/ReportsWidgets/ImageFilesWidget.cpp" line="338"/>
@@ -5507,6 +6362,39 @@ You can then check or uncheck individual headings in the list above.</source>
         <location filename="../../Dialogs/ReportsWidgets/ImageFilesWidget.cpp" line="425"/>
         <source>Delete From Book</source>
         <translation>本から削除</translation>
+    </message>
+</context>
+<context>
+    <name>ImageResizeDialog</name>
+    <message>
+        <location filename="../../Dialogs/ImageResizeDialog.cpp" line="8"/>
+        <source>Resize Image</source>
+        <translation>画像のサイズを変更</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ImageResizeDialog.cpp" line="14"/>
+        <source>Width:</source>
+        <translation>幅:</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ImageResizeDialog.cpp" line="23"/>
+        <source>Height:</source>
+        <translation>高さ:</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ImageResizeDialog.cpp" line="31"/>
+        <source>Keep Aspect Ratio</source>
+        <translation>縦横比を維持</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ImageResizeDialog.cpp" line="37"/>
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/ImageResizeDialog.cpp" line="38"/>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
     </message>
 </context>
 <context>
@@ -5535,94 +6423,94 @@ You can then check or uncheck individual headings in the list above.</source>
 <context>
     <name>ImageTab</name>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="287"/>
-        <location filename="../../Tabs/ImageTab.cpp" line="364"/>
-        <location filename="../../Tabs/ImageTab.cpp" line="365"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="297"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="374"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="375"/>
         <source>Open With</source>
         <translation>アプリケーションから開く</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="323"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="333"/>
         <source>Other Application</source>
         <translation>他のアプリケーション</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="372"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="382"/>
         <source>Save As</source>
         <translation>名前を付けて保存</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="373"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="383"/>
         <source>Copy Image</source>
         <translation>画像をコピー</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="375"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="385"/>
         <source>Save Changes</source>
-        <translation type="unfinished"/>
+        <translation>変更を保存</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="376"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="386"/>
         <source>Zoom In</source>
         <translation>拡大</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="377"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="387"/>
         <source>Zoom Out</source>
         <translation>縮小</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="378"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="388"/>
         <source>Zoom to Fit</source>
-        <translation type="unfinished"/>
+        <translation>全体表示</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="379"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="389"/>
         <source>Undo Change</source>
-        <translation type="unfinished"/>
+        <translation>変更を元に戻す</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="380"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="390"/>
         <source>Redo Change</source>
-        <translation type="unfinished"/>
+        <translation>変更をやり直す</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="381"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="391"/>
         <source>Rotate Left</source>
-        <translation type="unfinished"/>
+        <translation>左に回転</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="382"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="392"/>
         <source>Rotate Right</source>
-        <translation type="unfinished"/>
+        <translation>右に回転</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="383"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="393"/>
         <source>Crop Image</source>
-        <translation type="unfinished"/>
+        <translation>画像を切り抜き</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="384"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="394"/>
         <source>Resize Image</source>
-        <translation type="unfinished"/>
+        <translation>画像のサイズを変更</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="567"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="578"/>
         <source>shades</source>
         <translation>階調</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="567"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="578"/>
         <source>colors</source>
         <translation>カラー</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="568"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="579"/>
         <source>Grayscale</source>
         <translation>グレースケール</translation>
     </message>
     <message>
-        <location filename="../../Tabs/ImageTab.cpp" line="568"/>
+        <location filename="../../Tabs/ImageTab.cpp" line="579"/>
         <source>Color</source>
         <translation>カラー</translation>
     </message>
@@ -5653,22 +6541,22 @@ You can then check or uncheck individual headings in the list above.</source>
 <context>
     <name>ImportEPUB</name>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="156"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="138"/>
         <source>Files exist in epub that are not listed in the manifest, they will be ignored.</source>
         <translation>マニフェストにリストされていないファイルがepubに存在する場合、それらは無視されます。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="199"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="181"/>
         <source>This EPUB had HTML files that were not well formed or are missing a DOCTYPE, html, head or body elements.&lt;br/&gt;&lt;br&gt;They were automatically fixed based on your Preference setting to Clean on Open.</source>
         <translation>このEPUBには、整形式でないか、あるいは、DOCTYPE、html、head、body要素が欠落しているHTMLファイルがありました。&lt;br/&gt;&lt;br&gt;これらは、開くときに修正する環境設定に基づいて、自動的に修正されました。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="205"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="187"/>
         <source>This EPUB has HTML files that are not well formed or are missing a DOCTYPE, html, head or body elements.&lt;br/&gt;&lt;/br&gt;Fix these manually or use Sigil&apos;s Mend tool to automatically fixed these errors or omissions.</source>
         <translation>このEPUBには、整形式でないか、あるいは、DOCTYPE、html、head、body要素が欠落しているHTMLファイルがあります。&lt;br/&gt;&lt;/br&gt;手動で修正するか、SigilのMendツールを使用して、これらのエラーや欠落を自動的に修正してください。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="606"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="433"/>
         <source>Epub has missing or improperly specified OPF.</source>
         <translation>EpubにOPFが不足しているか、正しく指定されていません。</translation>
     </message>
@@ -5745,7 +6633,7 @@ You can then check or uncheck individual headings in the list above.</source>
     <message>
         <location filename="../../Dialogs/IndexEditor.cpp" line="85"/>
         <source>Cannot save entries.</source>
-        <translation>エントリーを保存できません。</translation>
+        <translation>検索項目を保存できません。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/IndexEditor.cpp" line="127"/>
@@ -5755,7 +6643,9 @@ You can then check or uncheck individual headings in the list above.</source>
     <message numerus="yes">
         <location filename="../../Dialogs/IndexEditor.cpp" line="288"/>
         <source>Entries added: %n</source>
-        <translation><numerusform>エントリーが追加されました。: %n</numerusform></translation>
+        <translation>
+            <numerusform>エントリーが追加されました。: %n</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../../Dialogs/IndexEditor.cpp" line="294"/>
@@ -5863,7 +6753,7 @@ Do you want to save your changes?</source>
         <translation>インデックスエントリー</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/IndexEditorModel.cpp" line="350"/>
+        <location filename="../../MiscEditors/IndexEditorModel.cpp" line="349"/>
         <source>Unable to create file %1</source>
         <translation>ファイル %1 を作成できません</translation>
     </message>
@@ -5955,7 +6845,7 @@ Do you want to save your changes?</source>
         <translation>削除</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/KeyboardShortcutsWidget.cpp" line="466"/>
+        <location filename="../../Dialogs/PreferenceWidgets/KeyboardShortcutsWidget.cpp" line="474"/>
         <source>Conflicts with: &lt;b&gt;</source>
         <translation>右と競合: &lt;b&gt;</translation>
     </message>
@@ -6390,7 +7280,7 @@ Do you want to save your changes?</source>
     <message>
         <location filename="../../Misc/Landmarks.cpp" line="206"/>
         <source>A collection of notes appearing at the rear (backmatter) of the work, or at the end of a section. Status: Deprecated</source>
-        <translation type="unfinished"/>
+        <translation>作品の後部（後付け）またはセクション末尾にある注記の集まり。状態: 非推奨</translation>
     </message>
     <message>
         <location filename="../../Misc/Landmarks.cpp" line="207"/>
@@ -9630,9 +10520,8 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../Form_Files/main.ui" line="14"/>
         <source>untitled.epub[*] - Sigil</source>
-        <translation>untitled.epub[*] - Sigil</translation>
+        <translation type="vanished">untitled.epub[*] - Sigil</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="58"/>
@@ -9660,249 +10549,254 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>大文字小文字の切替え(&amp;H)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="126"/>
+        <location filename="../../Form_Files/main.ui" line="127"/>
         <source>&amp;Insert</source>
         <translation>挿入(&amp;I)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="130"/>
+        <location filename="../../Form_Files/main.ui" line="131"/>
         <source>Cli&amp;p</source>
         <translation>クリップ(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="165"/>
+        <location filename="../../Form_Files/main.ui" line="166"/>
         <source>Cli&amp;p2</source>
         <translation>クリップ2(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="215"/>
+        <location filename="../../Form_Files/main.ui" line="218"/>
         <source>&amp;Help</source>
         <translation>ヘルプ(&amp;H)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="225"/>
+        <location filename="../../Form_Files/main.ui" line="228"/>
         <source>For&amp;mat</source>
         <translation>書式(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="229"/>
+        <location filename="../../Form_Files/main.ui" line="232"/>
         <source>&amp;Heading</source>
         <translation>見出し(&amp;H)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="270"/>
+        <location filename="../../Form_Files/main.ui" line="274"/>
         <source>&amp;View</source>
         <translation>表示(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="274"/>
+        <location filename="../../Form_Files/main.ui" line="278"/>
         <source>&amp;Toolbars</source>
         <translation>ツールバー(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="286"/>
+        <location filename="../../Form_Files/main.ui" line="290"/>
         <source>&amp;Search</source>
         <translation>検索(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="290"/>
+        <location filename="../../Form_Files/main.ui" line="294"/>
         <source>Current Fil&amp;e</source>
         <translation>現在のファイル(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="326"/>
+        <location filename="../../Form_Files/main.ui" line="330"/>
         <source>&amp;Window</source>
         <translation>ウィンドウ(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="338"/>
+        <location filename="../../Form_Files/main.ui" line="342"/>
         <source>&amp;Tools</source>
         <translation>ツール(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="342"/>
+        <location filename="../../Form_Files/main.ui" line="346"/>
         <source>&amp;Table Of Contents</source>
         <translation>目次(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="350"/>
+        <location filename="../../Form_Files/main.ui" line="354"/>
         <source>Spe&amp;llcheck</source>
         <translation>スペルチェック(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="364"/>
+        <location filename="../../Form_Files/main.ui" line="368"/>
         <source>&amp;Index</source>
         <translation>インデックス(&amp;I)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="375"/>
+        <location filename="../../Form_Files/main.ui" line="379"/>
         <source>Re&amp;format HTML</source>
         <translation>HTMLの再フォーマット(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="382"/>
+        <location filename="../../Form_Files/main.ui" line="386"/>
         <source>Epub&amp;3 Tools</source>
         <translation>Epub3ツール(&amp;3)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="416"/>
+        <location filename="../../Form_Files/main.ui" line="423"/>
         <source>&amp;Plugins</source>
         <translation>プラグイン(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="422"/>
+        <location filename="../../Form_Files/main.ui" line="429"/>
+        <source>&amp;Enhancement</source>
+        <translation>拡張機能(&amp;E)</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="443"/>
         <source>Chec&amp;kpoints</source>
         <translation>チェックポイント(&amp;K)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="433"/>
+        <location filename="../../Form_Files/main.ui" line="454"/>
         <source>&amp;Automation</source>
         <translation>自動化(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="455"/>
+        <location filename="../../Form_Files/main.ui" line="477"/>
         <source>New</source>
         <translation>新規</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="469"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="1828"/>
+        <location filename="../../Form_Files/main.ui" line="491"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1979"/>
         <source>File</source>
         <translation>ファイル</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="483"/>
+        <location filename="../../Form_Files/main.ui" line="505"/>
         <source>Add Existing</source>
         <translation>既存のファイルを追加</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="496"/>
+        <location filename="../../Form_Files/main.ui" line="518"/>
         <source>Checkpoints</source>
         <translation>チェックポイント</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="511"/>
+        <location filename="../../Form_Files/main.ui" line="533"/>
         <source>Index</source>
         <translation>インデックス（索引）</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="527"/>
+        <location filename="../../Form_Files/main.ui" line="549"/>
         <source>Undo/Redo</source>
         <translation>元に戻す/やり直す</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="541"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="646"/>
+        <location filename="../../Form_Files/main.ui" line="563"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="718"/>
         <source>Edit</source>
         <translation>編集</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="557"/>
+        <location filename="../../Form_Files/main.ui" line="580"/>
         <source>External Editor</source>
         <translation>外部エディター</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="570"/>
+        <location filename="../../Form_Files/main.ui" line="593"/>
         <source>Find</source>
         <translation>検索</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="584"/>
+        <location filename="../../Form_Files/main.ui" line="607"/>
         <source>Insert</source>
         <translation>挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="603"/>
+        <location filename="../../Form_Files/main.ui" line="626"/>
         <source>Back</source>
         <translation>戻る</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="616"/>
+        <location filename="../../Form_Files/main.ui" line="639"/>
         <source>Donate</source>
         <translation>寄付</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="628"/>
+        <location filename="../../Form_Files/main.ui" line="651"/>
         <source>Tools</source>
         <translation>ツール</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="643"/>
+        <location filename="../../Form_Files/main.ui" line="666"/>
         <source>Plugins Set 1</source>
         <translation>プラグイン設定 1</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="659"/>
+        <location filename="../../Form_Files/main.ui" line="682"/>
         <source>Plugins Set 2</source>
         <translation>プラグイン設定 2</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="675"/>
+        <location filename="../../Form_Files/main.ui" line="698"/>
         <source>Automation Lists</source>
         <translation>自動化リスト</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="689"/>
+        <location filename="../../Form_Files/main.ui" line="712"/>
         <source>Heading</source>
         <translation>見出し</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="703"/>
+        <location filename="../../Form_Files/main.ui" line="726"/>
         <source>Set Heading Level of Selected Text</source>
         <translation>選択したテキストの見出しレベルを設定</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="716"/>
+        <location filename="../../Form_Files/main.ui" line="740"/>
         <source>Format</source>
         <translation>書式</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="733"/>
+        <location filename="../../Form_Files/main.ui" line="757"/>
         <source>Align</source>
         <translation>テキスト揃え</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="748"/>
+        <location filename="../../Form_Files/main.ui" line="772"/>
         <source>List</source>
         <translation>リスト</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="761"/>
+        <location filename="../../Form_Files/main.ui" line="785"/>
         <source>Indent</source>
         <translation>インデント</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="774"/>
+        <location filename="../../Form_Files/main.ui" line="798"/>
         <source>Change Case</source>
         <translation>大文字小文字の切替え</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="788"/>
+        <location filename="../../Form_Files/main.ui" line="812"/>
         <source>Set Case of Selected Text</source>
         <translation>選択したテキストの大文字と小文字を設定します</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="798"/>
+        <location filename="../../Form_Files/main.ui" line="822"/>
         <source>Text Direction</source>
         <translation>テキストの方向</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="812"/>
+        <location filename="../../Form_Files/main.ui" line="836"/>
         <source>Clip Bar</source>
         <translation>クリップバー</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="853"/>
+        <location filename="../../Form_Files/main.ui" line="877"/>
         <source>Clip Bar2</source>
         <translation>クリップバー2</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="899"/>
+        <location filename="../../Form_Files/main.ui" line="923"/>
         <source>New Default</source>
         <translation>新規デフォルト</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="902"/>
+        <location filename="../../Form_Files/main.ui" line="926"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;New&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Create a new default book.&lt;/p&gt;</source>
@@ -9911,17 +10805,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;新規にデフォルトのブックを作成します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="907"/>
+        <location filename="../../Form_Files/main.ui" line="931"/>
         <source>Ctrl+N</source>
         <translation>Ctrl+N</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="917"/>
+        <location filename="../../Form_Files/main.ui" line="941"/>
         <source>ePub&amp;2</source>
         <translation>ePub2(&amp;2)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="920"/>
+        <location filename="../../Form_Files/main.ui" line="944"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;New ePub2&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Create a new ePub2 book.&lt;/p&gt;</source>
@@ -9930,12 +10824,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;新規に ePub2 ブックを作成します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="932"/>
+        <location filename="../../Form_Files/main.ui" line="956"/>
         <source>ePub&amp;3</source>
         <translation>ePub3(&amp;3)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="935"/>
+        <location filename="../../Form_Files/main.ui" line="959"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;New ePub3&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Create a new ePub3 book.&lt;/p&gt;</source>
@@ -9944,12 +10838,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;新規に ePub3 ブックを作成します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="947"/>
+        <location filename="../../Form_Files/main.ui" line="971"/>
         <source>&amp;Save</source>
         <translation>保存(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="950"/>
+        <location filename="../../Form_Files/main.ui" line="974"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Save&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Save the current book.&lt;/p&gt;</source>
@@ -9958,17 +10852,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;現在の本を保存します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="955"/>
+        <location filename="../../Form_Files/main.ui" line="979"/>
         <source>Ctrl+S</source>
         <translation>Ctrl+S</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="960"/>
+        <location filename="../../Form_Files/main.ui" line="984"/>
         <source>Save &amp;As...</source>
         <translation>名前を付けて保存(&amp;A)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="963"/>
+        <location filename="../../Form_Files/main.ui" line="987"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Save As&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Save the current book with a different filename.&lt;/p&gt;</source>
@@ -9977,27 +10871,27 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;現在の本と異なるファイル名を付けて保存します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="968"/>
+        <location filename="../../Form_Files/main.ui" line="992"/>
         <source>Ctrl+Shift+S</source>
         <translation>Ctrl+Shift+S</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="973"/>
+        <location filename="../../Form_Files/main.ui" line="997"/>
         <source>Save A &amp;Copy...</source>
         <translation>コピーを保存(&amp;C)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="976"/>
+        <location filename="../../Form_Files/main.ui" line="1000"/>
         <source>Save a copy of your book to another file name.</source>
         <translation>ブックのコピーを他のファイル名で保存します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="985"/>
+        <location filename="../../Form_Files/main.ui" line="1009"/>
         <source>Cu&amp;t</source>
         <translation>切り取り(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="988"/>
+        <location filename="../../Form_Files/main.ui" line="1012"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Cut&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Cuts the selected text from the document and puts it on the clipboard.&lt;/p&gt;</source>
@@ -10006,12 +10900,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;ドキュメントから選択されたテキストを切り出してクリップボードに出力します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="999"/>
+        <location filename="../../Form_Files/main.ui" line="1023"/>
         <source>&amp;Paste</source>
         <translation>貼り付け(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1002"/>
+        <location filename="../../Form_Files/main.ui" line="1026"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Paste&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Pastes the content from the clipboard into the book.&lt;/p&gt;</source>
@@ -10020,27 +10914,46 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;クリップボードから本に内容を貼り付けます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1009"/>
+        <location filename="../../Form_Files/main.ui" line="1038"/>
+        <source>Paste Rich Text</source>
+        <translation>リッチテキストを貼り付け</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1041"/>
+        <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Paste Rich Text&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Pastes the rich text from the clipboard into the book.&lt;/p&gt;</source>
+        <translation>&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;リッチテキストを貼り付け&lt;/b&gt;&lt;/p&gt;
+
+&lt;p style="margin-left: 0.5em;"&gt;クリップボードのリッチテキストを書籍に貼り付けます。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1046"/>
+        <source>Ctrl+Shift+V</source>
+        <translation>Ctrl+Shift+V</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1051"/>
         <source>&amp;Closing Tag</source>
         <translation>終了タグ(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1012"/>
+        <location filename="../../Form_Files/main.ui" line="1054"/>
         <source>Insert a closing tag in Code View.</source>
         <translation>コードビューに終了タグを挿入します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1015"/>
+        <location filename="../../Form_Files/main.ui" line="1057"/>
         <source>Ctrl+.</source>
         <translation>Ctrl+.</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1024"/>
+        <location filename="../../Form_Files/main.ui" line="1066"/>
         <source>&amp;Undo</source>
         <translation>元に戻す(&amp;U)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1027"/>
+        <location filename="../../Form_Files/main.ui" line="1069"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Undo&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Reverts the changes of the previous operation.&lt;/p&gt;</source>
@@ -10049,17 +10962,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;直前に行った操作の変更点を元に戻します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1032"/>
+        <location filename="../../Form_Files/main.ui" line="1074"/>
         <source>Ctrl+Z</source>
         <translation>Ctrl+Z</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1041"/>
+        <location filename="../../Form_Files/main.ui" line="1083"/>
         <source>&amp;Redo</source>
         <translation>やり直す(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1044"/>
+        <location filename="../../Form_Files/main.ui" line="1086"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Redo&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Restores the changes reverted by the previous Undo action.&lt;/p&gt;</source>
@@ -10068,17 +10981,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;直前に行った「元に戻す」操作で元に戻した変更点を復活させます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1049"/>
+        <location filename="../../Form_Files/main.ui" line="1091"/>
         <source>Ctrl+Y</source>
         <translation>Ctrl+Y</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1058"/>
+        <location filename="../../Form_Files/main.ui" line="1100"/>
         <source>&amp;Copy</source>
         <translation>コピー(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1061"/>
+        <location filename="../../Form_Files/main.ui" line="1103"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Copy&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Copies the selected text and puts it on the clipboard.&lt;/p&gt;</source>
@@ -10087,12 +11000,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;選択されたテキストをコピーしてクリップボードに出力します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1075"/>
+        <location filename="../../Form_Files/main.ui" line="1117"/>
         <source>Align &amp;Left</source>
         <translation>左揃え(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1078"/>
+        <location filename="../../Form_Files/main.ui" line="1120"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Align Left&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Align the paragraph to the left.&lt;/p&gt;</source>
@@ -10101,12 +11014,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;段落を左に揃えます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1092"/>
+        <location filename="../../Form_Files/main.ui" line="1134"/>
         <source>Align &amp;Right</source>
         <translation>右揃え(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1095"/>
+        <location filename="../../Form_Files/main.ui" line="1137"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Align Right&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Align the paragraph to the right.&lt;/p&gt;</source>
@@ -10115,12 +11028,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;段落を右に揃えます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1109"/>
+        <location filename="../../Form_Files/main.ui" line="1151"/>
         <source>&amp;Center</source>
         <translation>中央揃え(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1112"/>
+        <location filename="../../Form_Files/main.ui" line="1154"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Center&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Center the paragraph.&lt;/p&gt;</source>
@@ -10129,17 +11042,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;段落を中央に揃えます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1117"/>
+        <location filename="../../Form_Files/main.ui" line="1159"/>
         <source>Ctrl+E</source>
         <translation>Ctrl+E</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1129"/>
+        <location filename="../../Form_Files/main.ui" line="1171"/>
         <source>&amp;Justify</source>
         <translation>両端揃え(&amp;J)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1132"/>
+        <location filename="../../Form_Files/main.ui" line="1174"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Justify&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Align the paragraph to both the left and right margins.&lt;/p&gt;</source>
@@ -10148,17 +11061,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;段落を左右両方のマージンに揃えます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1137"/>
+        <location filename="../../Form_Files/main.ui" line="1179"/>
         <source>Ctrl+J</source>
         <translation>Ctrl+J</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1149"/>
+        <location filename="../../Form_Files/main.ui" line="1191"/>
         <source>&amp;Bold</source>
         <translation>太字(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1152"/>
+        <location filename="../../Form_Files/main.ui" line="1194"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Bold&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Make the selected text bold.&lt;/p&gt;</source>
@@ -10167,17 +11080,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;選択されたテキストを太字にします。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1157"/>
+        <location filename="../../Form_Files/main.ui" line="1199"/>
         <source>Ctrl+B</source>
         <translation>Ctrl+B</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1169"/>
+        <location filename="../../Form_Files/main.ui" line="1211"/>
         <source>&amp;Italic</source>
         <translation>イタリック(&amp;I)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1172"/>
+        <location filename="../../Form_Files/main.ui" line="1214"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Italic&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Make the selected text italic.&lt;/p&gt;</source>
@@ -10186,17 +11099,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;選択されたテキストをイタリックにします。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1177"/>
+        <location filename="../../Form_Files/main.ui" line="1219"/>
         <source>Ctrl+I</source>
         <translation>Ctrl+I</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1186"/>
+        <location filename="../../Form_Files/main.ui" line="1228"/>
         <source>&amp;Open...</source>
         <translation>開く(&amp;O)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1189"/>
+        <location filename="../../Form_Files/main.ui" line="1231"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Open&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Open a book from disk.&lt;/p&gt;</source>
@@ -10205,17 +11118,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;ディスクから本を開きます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1194"/>
+        <location filename="../../Form_Files/main.ui" line="1236"/>
         <source>Ctrl+O</source>
         <translation>Ctrl+O</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1206"/>
+        <location filename="../../Form_Files/main.ui" line="1248"/>
         <source>&amp;Underline</source>
         <translation>下線(&amp;U)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1209"/>
+        <location filename="../../Form_Files/main.ui" line="1251"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Underline&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Underline the selected text.&lt;/p&gt;</source>
@@ -10224,42 +11137,41 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;選択されたテキストに下線を引きます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1214"/>
+        <location filename="../../Form_Files/main.ui" line="1256"/>
         <source>Ctrl+U</source>
         <translation>Ctrl+U</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1226"/>
+        <location filename="../../Form_Files/main.ui" line="1268"/>
         <source>&amp;Quit</source>
         <translation>終了(&amp;Q)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1229"/>
+        <location filename="../../Form_Files/main.ui" line="1271"/>
         <source>Exit</source>
         <translation>終了</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1232"/>
+        <location filename="../../Form_Files/main.ui" line="1274"/>
         <source>Ctrl+Q</source>
         <translation>Ctrl+Q</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1244"/>
+        <location filename="../../Form_Files/main.ui" line="1286"/>
         <source>&amp;About...</source>
         <translation>情報(&amp;A)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1247"/>
         <source>Show information about Sigil.</source>
-        <translation>Sigilに関する情報を表示</translation>
+        <translation type="vanished">Sigilに関する情報を表示</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1252"/>
+        <location filename="../../Form_Files/main.ui" line="1294"/>
         <source>Add &amp;Cover...</source>
         <translation>表紙を追加(&amp;C)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1255"/>
+        <location filename="../../Form_Files/main.ui" line="1297"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Add Cover&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Add a cover.&lt;/p&gt;</source>
@@ -10268,12 +11180,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;表紙を追加します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1266"/>
+        <location filename="../../Form_Files/main.ui" line="1308"/>
         <source>&amp;Metadata Editor...</source>
         <translation>メタデータエディター(&amp;M)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1269"/>
+        <location filename="../../Form_Files/main.ui" line="1311"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Metadata Editor&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Edit and display information about your book including the author and title.&lt;/p&gt;</source>
@@ -10282,17 +11194,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;著者やタイトルを含む本に関する情報を編集/表示します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1274"/>
+        <location filename="../../Form_Files/main.ui" line="1316"/>
         <source>F8</source>
         <translation>F8</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1283"/>
+        <location filename="../../Form_Files/main.ui" line="1325"/>
         <source>&amp;Generate Table Of Contents...</source>
         <translation>目次を生成(&amp;G)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1286"/>
+        <location filename="../../Form_Files/main.ui" line="1328"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Generate Table of Contents&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Generate a new Table of Contents from headings in your book.&lt;/p&gt;</source>
@@ -10301,17 +11213,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;本にある見出しから新しい目次を生成します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1291"/>
+        <location filename="../../Form_Files/main.ui" line="1333"/>
         <source>Ctrl+T</source>
         <translation>Ctrl+T</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1300"/>
+        <location filename="../../Form_Files/main.ui" line="1342"/>
         <source>&amp;Edit Table Of Contents...</source>
         <translation>目次を編集(&amp;E)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1303"/>
+        <location filename="../../Form_Files/main.ui" line="1345"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Edit Table of Contents&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Directly edit the existing Table of Contents.&lt;/p&gt;</source>
@@ -10320,12 +11232,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;既存の目次を直接編集します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1314"/>
+        <location filename="../../Form_Files/main.ui" line="1356"/>
         <source>&amp;Split At Cursor</source>
         <translation>カーソル位置で分割(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1317"/>
+        <location filename="../../Form_Files/main.ui" line="1359"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Split At Cursor&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Split the current file into two files using your cursor location as the dividing point.&lt;/p&gt;</source>
@@ -10334,17 +11246,32 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;分割ポイントとしてカーソルの位置を利用し、現在のファイルを2つに分割します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1322"/>
+        <location filename="../../Form_Files/main.ui" line="1838"/>
+        <source>Sigil-Enhanced Website...</source>
+        <translation>Sigil-Enhanced ウェブサイト...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1896"/>
         <source>Ctrl+Return</source>
         <translation>Ctrl+Return</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1331"/>
+        <location filename="../../Form_Files/main.ui" line="1372"/>
         <source>&amp;File...</source>
         <translation>ファイル(&amp;F)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1334"/>
+        <location filename="../../Form_Files/main.ui" line="14"/>
+        <source>untitled.epub[*] - Sigil-Enhanced</source>
+        <translation>無題.epub[*] - Sigil-Enhanced</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1289"/>
+        <source>Show information about Sigil-Enhanced.</source>
+        <translation>Sigil-Enhanced に関する情報を表示します。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1375"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Insert File&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Select image, video or audio files from your book to insert into the text.&lt;/p&gt;
@@ -10357,17 +11284,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;メニューのファイル-追加-既存のファイルでブックにファイルを追加できます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1341"/>
+        <location filename="../../Form_Files/main.ui" line="1382"/>
         <source>Ctrl+Shift+I</source>
         <translation>Ctrl+Shift+I</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1350"/>
+        <location filename="../../Form_Files/main.ui" line="1391"/>
         <source>&amp;Special Character...</source>
         <translation>特殊文字(&amp;S)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1353"/>
+        <location filename="../../Form_Files/main.ui" line="1394"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Insert Special Character&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Select a character to insert into your text.&lt;/p&gt;</source>
@@ -10376,12 +11303,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;テキストに挿入したい文字を選択してください。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1364"/>
+        <location filename="../../Form_Files/main.ui" line="1405"/>
         <source>I&amp;D...</source>
         <translation>ID(&amp;D)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1367"/>
+        <location filename="../../Form_Files/main.ui" line="1408"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Insert ID&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Insert or edit an anchor with an ID name to use as a link target.&lt;/p&gt;</source>
@@ -10390,12 +11317,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;リンクターゲットとして使用するID名を含むアンカーを挿入/編集します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1378"/>
+        <location filename="../../Form_Files/main.ui" line="1419"/>
         <source>Aria Clip...</source>
-        <translation>Aria Clip...</translation>
+        <translation>ARIA クリップ...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1381"/>
+        <location filename="../../Form_Files/main.ui" line="1422"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Insert Aria Clip&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Insert a Aria code clip.&lt;/p&gt;</source>
@@ -10404,12 +11331,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Aria code clipを挿入します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1392"/>
+        <location filename="../../Form_Files/main.ui" line="1433"/>
         <source>Role...</source>
         <translation>Aria Role (役割)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1395"/>
+        <location filename="../../Form_Files/main.ui" line="1436"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Insert Aria Role&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Insert an Aria role and any associated epub:type.&lt;/p&gt;</source>
@@ -10418,12 +11345,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Aria Roleと関連するepub:typeを挿入します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1406"/>
+        <location filename="../../Form_Files/main.ui" line="1447"/>
         <source>&amp;Link...</source>
         <translation>リンク(&amp;L)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1409"/>
+        <location filename="../../Form_Files/main.ui" line="1450"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Insert Link&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Insert or edit an anchor with a hyperlink to a target.&lt;/p&gt;</source>
@@ -10432,12 +11359,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;ターゲットにハイパーリンク付きのアンカーを挿入/編集します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1423"/>
+        <location filename="../../Form_Files/main.ui" line="1464"/>
         <source>&amp;Numbered List</source>
         <translation>番号付け(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1426"/>
+        <location filename="../../Form_Files/main.ui" line="1467"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Numbering&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Create a numbered list.&lt;/p&gt;</source>
@@ -10446,12 +11373,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;番号付けしたリストを作成します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1440"/>
+        <location filename="../../Form_Files/main.ui" line="1481"/>
         <source>Bulle&amp;ted List</source>
         <translation>箇条書き(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1443"/>
+        <location filename="../../Form_Files/main.ui" line="1484"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Bullets&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Create a bulleted list.&lt;/p&gt;</source>
@@ -10460,17 +11387,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;箇条書きのリストを作成します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1448"/>
+        <location filename="../../Form_Files/main.ui" line="1489"/>
         <source>Ctrl+Shift+L</source>
         <translation>Ctrl+Shift+L</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1460"/>
+        <location filename="../../Form_Files/main.ui" line="1501"/>
         <source>Stri&amp;kethrough</source>
         <translation>取り消し線(&amp;K)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1463"/>
+        <location filename="../../Form_Files/main.ui" line="1504"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Strikethrough&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Draw a line through the selected text.&lt;/p&gt;</source>
@@ -10479,12 +11406,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;選択されたテキスト範囲に直線を描きます。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1477"/>
+        <location filename="../../Form_Files/main.ui" line="1518"/>
         <source>&amp;Subscript</source>
         <translation>下付き文字(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1480"/>
+        <location filename="../../Form_Files/main.ui" line="1521"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Subscript&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Set the selected text slightly smaller and below the normal line.&lt;/p&gt;</source>
@@ -10493,12 +11420,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;選択されたテキストを少し小さくして基準線より下に設定します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1494"/>
+        <location filename="../../Form_Files/main.ui" line="1535"/>
         <source>Su&amp;perscript</source>
         <translation>上付き文字(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1497"/>
+        <location filename="../../Form_Files/main.ui" line="1538"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Superscript&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Set the selected text slightly smaller and above the normal line.&lt;/p&gt;</source>
@@ -10507,108 +11434,108 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;選択されたテキストを少し小さくして基準線より上に設定します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1508"/>
+        <location filename="../../Form_Files/main.ui" line="1549"/>
         <source>&amp;Print...</source>
         <translation>印刷(&amp;P)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1511"/>
+        <location filename="../../Form_Files/main.ui" line="1552"/>
         <source>Print</source>
         <translation>印刷</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1514"/>
+        <location filename="../../Form_Files/main.ui" line="1555"/>
         <source>Ctrl+P</source>
         <translation>Ctrl+P</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1523"/>
+        <location filename="../../Form_Files/main.ui" line="1564"/>
         <source>Print Pre&amp;view...</source>
         <translation>印刷プレビュー(&amp;V)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1526"/>
+        <location filename="../../Form_Files/main.ui" line="1567"/>
         <source>Print Preview</source>
         <translation>印刷プレビュー</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1531"/>
-        <location filename="../../Form_Files/main.ui" line="1534"/>
+        <location filename="../../Form_Files/main.ui" line="1572"/>
+        <location filename="../../Form_Files/main.ui" line="1575"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1537"/>
+        <location filename="../../Form_Files/main.ui" line="1578"/>
         <source>Ctrl+Shift+W</source>
         <translation>Ctrl+Shift+W</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1542"/>
+        <location filename="../../Form_Files/main.ui" line="1583"/>
         <source>Restructure Epub to Sigil Norm</source>
         <translation>EpubをSigilフォームに再構築</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1545"/>
+        <location filename="../../Form_Files/main.ui" line="1586"/>
         <source>Restructure Epub to Sigil Standard Form</source>
         <translation>EpubをSigil標準フォームに再構築します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1550"/>
+        <location filename="../../Form_Files/main.ui" line="1591"/>
         <source>Use Standard File Extensions</source>
         <translation>標準ファイル拡張子を使用</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1553"/>
+        <location filename="../../Form_Files/main.ui" line="1594"/>
         <source>Rename all files to use standard file extensions</source>
         <translation>すべてのファイルを標準ファイル拡張子を使用するように名前を変更</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1558"/>
+        <location filename="../../Form_Files/main.ui" line="1599"/>
         <source>Rebase OPF Manifest IDs on Current Filenames</source>
         <translation>OPFマニフェストIDを、現在のファイル名でリベース</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1561"/>
+        <location filename="../../Form_Files/main.ui" line="1602"/>
         <source>Updates each Manifest ID to reflect its current file name</source>
         <translation>各マニフェストIDを、現在のファイル名に一致するように更新します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1570"/>
+        <location filename="../../Form_Files/main.ui" line="1611"/>
         <source>Zoom &amp;In</source>
         <translation>拡大(&amp;I)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1573"/>
+        <location filename="../../Form_Files/main.ui" line="1614"/>
         <source>Zoom In</source>
         <translation>拡大</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1576"/>
+        <location filename="../../Form_Files/main.ui" line="1617"/>
         <source>Ctrl+=</source>
         <translation>Ctrl+=</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1585"/>
+        <location filename="../../Form_Files/main.ui" line="1626"/>
         <source>Zoom &amp;Out</source>
         <translation>縮小(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1588"/>
+        <location filename="../../Form_Files/main.ui" line="1629"/>
         <source>Zoom Out</source>
         <translation>縮小</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1591"/>
+        <location filename="../../Form_Files/main.ui" line="1632"/>
         <source>Ctrl+-</source>
         <translation>Ctrl+-</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1600"/>
+        <location filename="../../Form_Files/main.ui" line="1641"/>
         <source>&amp;Find &amp;&amp; Replace...</source>
         <translation>検索と置換(&amp;F)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1603"/>
+        <location filename="../../Form_Files/main.ui" line="1644"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Find &amp;amp; Replace&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Find and replace text in the document.&lt;/p&gt;</source>
@@ -10617,17 +11544,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;ドキュメント中のテキストを検索したり置換します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1608"/>
+        <location filename="../../Form_Files/main.ui" line="1649"/>
         <source>Ctrl+F</source>
         <translation>Ctrl+F</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1613"/>
+        <location filename="../../Form_Files/main.ui" line="1654"/>
         <source>&amp;Hide Find &amp;&amp; Replace...</source>
         <translation>検索と置換を隠す(&amp;H)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1616"/>
+        <location filename="../../Form_Files/main.ui" line="1657"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Hide Find &amp;amp; Replace&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Hide the Find and Replace Window.&lt;/p&gt;</source>
@@ -10636,12 +11563,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;検索と置換ウィンドウを隠します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1627"/>
+        <location filename="../../Form_Files/main.ui" line="1668"/>
         <source>Incre&amp;ase Indent</source>
         <translation>インデントを増やす(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1630"/>
+        <location filename="../../Form_Files/main.ui" line="1671"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Increase Indent&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Increase the indent level of the paragraph.&lt;/p&gt;</source>
@@ -10650,17 +11577,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;段落のインデントレベルを増やします。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1635"/>
+        <location filename="../../Form_Files/main.ui" line="1676"/>
         <source>Ctrl+Alt+M</source>
         <translation>Ctrl+Alt+M</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1644"/>
+        <location filename="../../Form_Files/main.ui" line="1685"/>
         <source>&amp;Decrease Indent</source>
         <translation>インデントを減らす(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1647"/>
+        <location filename="../../Form_Files/main.ui" line="1688"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Decrease Indent&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Decrease the indent level of the paragraph.&lt;/p&gt;</source>
@@ -10669,18 +11596,18 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;段落のインデントレベルを減らします。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1652"/>
-        <location filename="../../Form_Files/main.ui" line="2097"/>
+        <location filename="../../Form_Files/main.ui" line="1693"/>
+        <location filename="../../Form_Files/main.ui" line="2242"/>
         <source>Ctrl+Shift+M</source>
         <translation>Ctrl+Shift+M</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1661"/>
+        <location filename="../../Form_Files/main.ui" line="1702"/>
         <source>Te&amp;xt Direction LTR</source>
         <translation>テキスト方向 左から右(&amp;X)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1664"/>
+        <location filename="../../Form_Files/main.ui" line="1705"/>
         <source>
      &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Left-to-Right&lt;/b&gt;&lt;/p&gt;
 
@@ -10693,12 +11620,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1677"/>
+        <location filename="../../Form_Files/main.ui" line="1718"/>
         <source>T&amp;ext Direction RTL</source>
         <translation>テキスト方向 右から左(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1680"/>
+        <location filename="../../Form_Files/main.ui" line="1721"/>
         <source>
      &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Right-to-Left&lt;/b&gt;&lt;/p&gt;
 
@@ -10711,12 +11638,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1693"/>
+        <location filename="../../Form_Files/main.ui" line="1734"/>
         <source>Text Directi&amp;on Default</source>
         <translation>テキスト方向 デフォルト(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1696"/>
+        <location filename="../../Form_Files/main.ui" line="1737"/>
         <source>
      &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Default&lt;/b&gt;&lt;/p&gt;
 
@@ -10729,22 +11656,22 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1705"/>
+        <location filename="../../Form_Files/main.ui" line="1746"/>
         <source>Remove &amp;Formatting</source>
         <translation>書式を削除(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1708"/>
+        <location filename="../../Form_Files/main.ui" line="1749"/>
         <source>Ctrl+Space</source>
         <translation>Ctrl+スペース</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1717"/>
+        <location filename="../../Form_Files/main.ui" line="1758"/>
         <source>Remove Tag Pair</source>
         <translation>タグペアを削除</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1720"/>
+        <location filename="../../Form_Files/main.ui" line="1761"/>
         <source>
      &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Remove Open and Close Tag Pair.&lt;/p&gt;
     </source>
@@ -10753,12 +11680,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1731"/>
+        <location filename="../../Form_Files/main.ui" line="1772"/>
         <source>&amp;Lowercase</source>
         <translation>小文字(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1734"/>
+        <location filename="../../Form_Files/main.ui" line="1775"/>
         <source>
      &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Lowercase&lt;/b&gt;&lt;/p&gt;
 
@@ -10771,17 +11698,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1741"/>
+        <location filename="../../Form_Files/main.ui" line="1782"/>
         <source>Ctrl+Alt+L</source>
         <translation>Ctrl+Alt+L</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1750"/>
+        <location filename="../../Form_Files/main.ui" line="1791"/>
         <source>&amp;Uppercase</source>
         <translation>大文字(&amp;U)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1753"/>
+        <location filename="../../Form_Files/main.ui" line="1794"/>
         <source>
      &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Uppercase&lt;/b&gt;&lt;/p&gt;
 
@@ -10794,17 +11721,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1760"/>
+        <location filename="../../Form_Files/main.ui" line="1801"/>
         <source>Ctrl+Alt+U</source>
         <translation>Ctrl+Alt+U</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1769"/>
+        <location filename="../../Form_Files/main.ui" line="1810"/>
         <source>&amp;Titlecase</source>
         <translation>タイトルケース(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1772"/>
+        <location filename="../../Form_Files/main.ui" line="1813"/>
         <source>
      &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Titlecase&lt;/b&gt;&lt;/p&gt;
 
@@ -10817,12 +11744,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1785"/>
+        <location filename="../../Form_Files/main.ui" line="1826"/>
         <source>&amp;Capitalize</source>
         <translation>キャピタライズ(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1788"/>
+        <location filename="../../Form_Files/main.ui" line="1829"/>
         <source>
      &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Capitalize&lt;/b&gt;&lt;/p&gt;
 
@@ -10835,127 +11762,251 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1797"/>
         <source>Sigil Website...</source>
-        <translation>Sigil Webサイト</translation>
+        <translation type="vanished">Sigil Webサイト</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1802"/>
+        <location filename="../../Form_Files/main.ui" line="1843"/>
         <source>&amp;Next Tab</source>
         <translation>次のタブ(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1805"/>
+        <location filename="../../Form_Files/main.ui" line="1846"/>
         <source>Ctrl+PgDown</source>
         <translation>Ctrl+PgDown</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1810"/>
+        <location filename="../../Form_Files/main.ui" line="1851"/>
         <source>&amp;Previous Tab</source>
         <translation>前のタブ(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1813"/>
+        <location filename="../../Form_Files/main.ui" line="1854"/>
         <source>Ctrl+PgUp</source>
         <translation>Ctrl+PgUp</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1818"/>
+        <location filename="../../Form_Files/main.ui" line="1859"/>
         <source>&amp;Close Tab</source>
         <translation>タブを閉じる(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1821"/>
+        <location filename="../../Form_Files/main.ui" line="1862"/>
         <source>Ctrl+W</source>
         <translation>Ctrl+W</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1826"/>
+        <location filename="../../Form_Files/main.ui" line="1867"/>
         <source>Split At &amp;Markers</source>
         <translation>マーカー位置で分割(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1829"/>
+        <location filename="../../Form_Files/main.ui" line="1870"/>
         <source>Split At Sigil split file markers</source>
         <translation>Sigil分割ファイルマーカーで分割</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1832"/>
+        <location filename="../../Form_Files/main.ui" line="1873"/>
         <source>F6</source>
         <translation>F6</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1837"/>
+        <location filename="../../Form_Files/main.ui" line="1878"/>
         <source>Split &amp;Marker</source>
         <translation>分割マーカー(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1840"/>
+        <location filename="../../Form_Files/main.ui" line="1881"/>
         <source>Insert Sigil split file marker</source>
         <translation>Sigil分割ファイルマーカーを挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1843"/>
+        <location filename="../../Form_Files/main.ui" line="1884"/>
         <source>Ctrl+Shift+Return</source>
         <translation>Ctrl+Shift+Return</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1848"/>
+        <location filename="../../Form_Files/main.ui" line="1890"/>
+        <source>Split Tag or Add Break</source>
+        <translation>タグを分割または改行を追加</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1893"/>
+        <source>Split at tag or add a new blank line according where the cursor positon at.</source>
+        <translation>カーソル位置に応じてタグを分割するか、空行を追加します。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1902"/>
+        <source>Merge with Next Element</source>
+        <translation>次の要素と結合</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1905"/>
+        <source>Merge the current element which the next element.</source>
+        <translation>現在の要素を次の要素と結合します。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1908"/>
+        <source>Ctrl+Alt+Return</source>
+        <translation>Ctrl+Alt+Return</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1913"/>
         <source>User &amp;Guide...</source>
         <translation>ユーザーガイド(&amp;G)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1851"/>
+        <location filename="../../Form_Files/main.ui" line="1916"/>
         <source>User Guide</source>
         <translation>ユーザーガイド</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1854"/>
+        <location filename="../../Form_Files/main.ui" line="1919"/>
         <source>F1</source>
         <translation>F1</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1859"/>
+        <location filename="../../Form_Files/main.ui" line="1924"/>
         <source>&amp;Frequently Asked Questions...</source>
         <translation>FAQ(&amp;F)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1862"/>
+        <location filename="../../Form_Files/main.ui" line="1927"/>
         <source>Frequently Asked Questions</source>
         <translation>FAQ</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1867"/>
+        <location filename="../../Form_Files/main.ui" line="1932"/>
         <source>&amp;Tutorials...</source>
         <translation>チュートリアル(&amp;T)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1870"/>
+        <location filename="../../Form_Files/main.ui" line="1935"/>
         <source>Tutorials</source>
         <translation>チュートリアル</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1875"/>
+        <location filename="../../Form_Files/main.ui" line="1940"/>
+        <source>Normalized OPF</source>
+        <translation>OPF を正規化</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1943"/>
+        <source>Well formed check and normalized the OPF.</source>
+        <translation>整形式か確認して OPF を正規化します。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1948"/>
+        <source>Normalize EPUB Structure...</source>
+        <translation>EPUB 構造を正規化...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1951"/>
+        <source>Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil&apos;s standard folder layout</source>
+        <translation>OPF マニフェストの問題を修復し、内部リンクパスの大文字/小文字を修正して、リソースを Sigil の標準フォルダー構成へ移動します</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1956"/>
+        <source>Enhance Source Formatting...</source>
+        <translation>ソース整形を強化...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1959"/>
+        <source>Format all XHTML and CSS resources with the built-in EPUB-safe formatter backend</source>
+        <translation>組み込みの EPUB 対応フォーマッターですべての XHTML および CSS リソースを整形します</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1964"/>
+        <source>Chinese Conversion...</source>
+        <translation>中国語変換...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1967"/>
+        <source>Convert Simplified and Traditional Chinese in editor text</source>
+        <translation>エディターテキスト内の簡体字中国語と繁体字中国語を変換します</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1972"/>
+        <source>Analyze BR Paragraphs...</source>
+        <translation>BR 段落を解析...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1975"/>
+        <source>Report XHTML files that use body-level BR tags as paragraph separators</source>
+        <translation>本文直下の BR タグを段落区切りとして使用する XHTML ファイルを報告します</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1980"/>
+        <source>Normalize Current BR Paragraphs...</source>
+        <translation>現在の BR 段落を正規化...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1983"/>
+        <source>Convert body-level BR-separated text in the current XHTML file into paragraphs after safety checks</source>
+        <translation>安全性チェック後、現在の XHTML ファイルにある本文直下の BR 区切りテキストを段落へ変換します</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1988"/>
+        <source>Normalize BR Paragraphs...</source>
+        <translation>BR 段落を正規化...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1991"/>
+        <source>Convert auto-safe body-level BR-separated XHTML files into paragraphs after per-file safety checks</source>
+        <translation>ファイルごとの安全性チェック後、自動処理可能な BR 区切り XHTML ファイルを段落へ変換します</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1996"/>
+        <source>Analyze KFX Paragraphs...</source>
+        <translation>KFX 段落を解析...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="1999"/>
+        <source>Report XHTML files that use KFX/calibre spacer p elements around body-level raw text</source>
+        <translation>本文直下の生テキスト周辺で KFX/calibre のスペーサー p 要素を使用する XHTML ファイルを報告します</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="2004"/>
+        <source>Normalize Current KFX Paragraphs...</source>
+        <translation>現在の KFX 段落を正規化...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="2007"/>
+        <source>Wrap KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</source>
+        <translation>安全性チェック後、現在の XHTML ファイルにある KFX/calibre の本文直下の生テキストを段落で囲みます</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="2012"/>
+        <source>Normalize KFX Paragraphs...</source>
+        <translation>KFX 段落を正規化...</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="2015"/>
+        <source>Convert auto-safe KFX/calibre spacer paragraph XHTML files into paragraphs after per-file safety checks</source>
+        <translation>ファイルごとの安全性チェック後、自動処理可能な KFX/calibre スペーサー段落の XHTML ファイルを段落へ変換します</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="2020"/>
         <source>Well-Formed Check &amp;EPUB</source>
         <translation>EPUBの整形式チェック</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1878"/>
+        <location filename="../../Form_Files/main.ui" line="2023"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Well-Formed Check EPUB&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Verify your document complies with minimum needed to be successfully parsed. This does not indicate compliance with the relevant epub standards.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Well-Formed Check EPUB&lt;/span&gt;&lt;/p&gt;&lt;p&gt;文書を正常に解析するために最低限必要な条件を満たしていることを確認します。これは、関連するepub標準への準拠を示すものではありません。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1881"/>
+        <location filename="../../Form_Files/main.ui" line="2026"/>
         <source>F7</source>
         <translation>F7</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1886"/>
+        <location filename="../../Form_Files/main.ui" line="2031"/>
         <source>Validate Stylesheets With &amp;W3C</source>
         <translation>W3Cでスタイルシートを検証(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1889"/>
+        <location filename="../../Form_Files/main.ui" line="2034"/>
         <source>
      &lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Validate Stylesheets with W3C&lt;/b&gt;&lt;/p&gt;
 
@@ -10968,12 +12019,12 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1902"/>
+        <location filename="../../Form_Files/main.ui" line="2047"/>
         <source>&amp;Spellcheck...</source>
         <translation>スペルチェック(&amp;S)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1905"/>
+        <location filename="../../Form_Files/main.ui" line="2050"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Spellcheck&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Find all misspelled words and allow you to add them to a dictionary or ignore them.&lt;/p&gt;</source>
@@ -10982,102 +12033,102 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;すべてのミススペルした単語を検索して、辞書に追加するか無視できるようにします。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1910"/>
+        <location filename="../../Form_Files/main.ui" line="2055"/>
         <source>Ctrl+Alt+Q</source>
         <translation>Ctrl+Alt+Q</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1918"/>
+        <location filename="../../Form_Files/main.ui" line="2063"/>
         <source>&amp;Highlight Misspelled Words</source>
         <translation>ミススペル単語を強調する(&amp;H)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1921"/>
+        <location filename="../../Form_Files/main.ui" line="2066"/>
         <source>Enable or disable highlighting of misspelled words in Code View.</source>
         <translation>コードビューでミススペル単語を強調するのを有効/無効にします。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1926"/>
+        <location filename="../../Form_Files/main.ui" line="2071"/>
         <source>&amp;Next Misspelled Word</source>
         <translation>次のミススペル単語(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1929"/>
+        <location filename="../../Form_Files/main.ui" line="2074"/>
         <source>Find the next misspelled word in the book.</source>
         <translation>ブック内の次のミススペル単語を検索します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1932"/>
+        <location filename="../../Form_Files/main.ui" line="2077"/>
         <source>F4</source>
         <translation>F4</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1937"/>
+        <location filename="../../Form_Files/main.ui" line="2082"/>
         <source>&amp;Add Misspelled Word</source>
         <translation>ミススペル単語を追加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1940"/>
+        <location filename="../../Form_Files/main.ui" line="2085"/>
         <source>Add the current misspelled word under the caret to the default user dictionary.</source>
         <translation>キャレットの下にある現在のミススペル単語をデフォルトのユーザー辞書に追加します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1945"/>
+        <location filename="../../Form_Files/main.ui" line="2090"/>
         <source>&amp;Ignore Misspelled Word</source>
         <translation>ミススペル単語を無視(&amp;I)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1948"/>
+        <location filename="../../Form_Files/main.ui" line="2093"/>
         <source>Ignore the current misspelled word under the caret until Sigil is restarted.</source>
         <translation>Sigilが再起動されるまで、キャレットの下にある現在のミススペル単語を無視します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1953"/>
+        <location filename="../../Form_Files/main.ui" line="2098"/>
         <source>&amp;Clear Ignored Words</source>
         <translation>無視する単語をクリア(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1956"/>
+        <location filename="../../Form_Files/main.ui" line="2101"/>
         <source>Clear currently ignored words from Spellcheck without having to restart Sigil.</source>
         <translation>Sigilを再起動せずにスペルチェックから今無視している単語をクリアします。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1961"/>
+        <location filename="../../Form_Files/main.ui" line="2106"/>
         <source>&amp;Index Editor...</source>
         <translation>インデックスエディター(&amp;I)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1969"/>
+        <location filename="../../Form_Files/main.ui" line="2114"/>
         <source>Ctrl+Alt+I</source>
         <translation>Ctrl+Alt+I</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1974"/>
+        <location filename="../../Form_Files/main.ui" line="2119"/>
         <source>&amp;Delete Unused Media Files...</source>
         <translation>未使用のメディアファイルを削除(&amp;D)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1979"/>
+        <location filename="../../Form_Files/main.ui" line="2124"/>
         <source>Delete &amp;Unused Stylesheet Selectors...</source>
         <translation>未使用のスタイルシートセレクターを削除(&amp;U)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1984"/>
+        <location filename="../../Form_Files/main.ui" line="2129"/>
         <source>&amp;Reports...</source>
         <translation>レポート(&amp;R)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1987"/>
+        <location filename="../../Form_Files/main.ui" line="2132"/>
         <source>Ctrl+Shift+R</source>
         <translation>Ctrl+Shift+R</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1996"/>
+        <location filename="../../Form_Files/main.ui" line="2141"/>
         <source>&amp;Donate...</source>
         <translation>寄付(&amp;B)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="1999"/>
+        <location filename="../../Form_Files/main.ui" line="2144"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Donate&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Donate to support Sigil.&lt;/p&gt;
@@ -11088,842 +12139,842 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2007"/>
+        <location filename="../../Form_Files/main.ui" line="2152"/>
         <source>Close &amp;Other Tabs</source>
         <translation>他のタブを閉じる(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2010"/>
+        <location filename="../../Form_Files/main.ui" line="2155"/>
         <source>Ctrl+Alt+W</source>
         <translation>Ctrl+Alt+W</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2015"/>
+        <location filename="../../Form_Files/main.ui" line="2160"/>
         <source>Go To &amp;Line...</source>
         <translation>指定行に移動(&amp;L)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2018"/>
+        <location filename="../../Form_Files/main.ui" line="2163"/>
         <source>Ctrl+/</source>
         <translation>Ctrl+/</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2023"/>
+        <location filename="../../Form_Files/main.ui" line="2168"/>
         <source>Find &amp;Next</source>
         <translation>次を検索(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2026"/>
+        <location filename="../../Form_Files/main.ui" line="2171"/>
         <source>Ctrl+G</source>
         <translation>Ctrl+G</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2031"/>
+        <location filename="../../Form_Files/main.ui" line="2176"/>
         <source>Find &amp;Previous</source>
         <translation>前を検索(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2034"/>
+        <location filename="../../Form_Files/main.ui" line="2179"/>
         <source>Ctrl+Shift+G</source>
         <translation>Ctrl+Shift+G</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2039"/>
+        <location filename="../../Form_Files/main.ui" line="2184"/>
         <source>Replace</source>
         <translation>置換</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2042"/>
+        <location filename="../../Form_Files/main.ui" line="2187"/>
         <source>Ctrl+R</source>
         <translation>Ctrl+R</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2047"/>
+        <location filename="../../Form_Files/main.ui" line="2192"/>
         <source>&amp;Replace/Find Next</source>
         <translation>次を置換/検索(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2050"/>
+        <location filename="../../Form_Files/main.ui" line="2195"/>
         <source>Ctrl+]</source>
         <translation>Ctrl+]</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2055"/>
+        <location filename="../../Form_Files/main.ui" line="2200"/>
         <source>R&amp;eplace/Find Previous</source>
         <translation>前を置換/検索(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2058"/>
+        <location filename="../../Form_Files/main.ui" line="2203"/>
         <source>Ctrl+[</source>
         <translation>Ctrl+[</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2063"/>
+        <location filename="../../Form_Files/main.ui" line="2208"/>
         <source>Replace &amp;All</source>
         <translation>すべて置換(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2066"/>
+        <location filename="../../Form_Files/main.ui" line="2211"/>
         <source>Ctrl+Alt+A</source>
         <translation>Ctrl+Alt+A</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2071"/>
+        <location filename="../../Form_Files/main.ui" line="2216"/>
         <source>&amp;Count All</source>
         <translation>すべてカウント(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2074"/>
+        <location filename="../../Form_Files/main.ui" line="2219"/>
         <source>Ctrl+Alt+N</source>
         <translation>Ctrl+Alt+N</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2079"/>
+        <location filename="../../Form_Files/main.ui" line="2224"/>
         <source>Dry Run Replace All</source>
         <translation>すべて置換のテスト実行(Dry Run)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2084"/>
+        <location filename="../../Form_Files/main.ui" line="2229"/>
         <source>Filter Replacements</source>
         <translation>置換をフィルタリング</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2089"/>
+        <location filename="../../Form_Files/main.ui" line="2234"/>
         <source>Restart Current Search</source>
         <translation>現在の検索をやり直し</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2094"/>
+        <location filename="../../Form_Files/main.ui" line="2239"/>
         <source>Mar&amp;k Selected Text</source>
         <translation>選択されたテキストをマーク(&amp;K)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2102"/>
+        <location filename="../../Form_Files/main.ui" line="2247"/>
         <source>Find &amp;Next In File</source>
         <translation>ファイル内で次を検索(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2107"/>
+        <location filename="../../Form_Files/main.ui" line="2252"/>
         <source>&amp;Replace Next In File</source>
         <translation>ファイル内で次を置換(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2112"/>
+        <location filename="../../Form_Files/main.ui" line="2257"/>
         <source>Replace &amp;All In File</source>
         <translation>ファイル内ですべて置換(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2117"/>
+        <location filename="../../Form_Files/main.ui" line="2262"/>
         <source>&amp;Count All In File</source>
         <translation>ファイル内ですべてカウント(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2126"/>
+        <location filename="../../Form_Files/main.ui" line="2271"/>
         <source>&amp;Saved Searches...</source>
         <translation>保存された検索(&amp;S)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2129"/>
+        <location filename="../../Form_Files/main.ui" line="2274"/>
         <source>Ctrl+Alt+F</source>
         <translation>Ctrl+Alt+F</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2134"/>
+        <location filename="../../Form_Files/main.ui" line="2279"/>
         <source>&amp;Clip Editor...</source>
         <translation>クリップエディター(&amp;C)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2137"/>
+        <location filename="../../Form_Files/main.ui" line="2282"/>
         <source>Open the Clip Editor.</source>
         <translation>クリップエディターを開きます。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2140"/>
+        <location filename="../../Form_Files/main.ui" line="2285"/>
         <source>Ctrl+Alt+C</source>
         <translation>Ctrl+Alt+C</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2145"/>
+        <location filename="../../Form_Files/main.ui" line="2290"/>
         <source>Clip &amp;1</source>
         <translation>クリップ&amp;1</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2148"/>
+        <location filename="../../Form_Files/main.ui" line="2293"/>
         <source>Insert Clip 1</source>
         <translation>クリップ1を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2151"/>
+        <location filename="../../Form_Files/main.ui" line="2296"/>
         <source>Ctrl+Alt+1</source>
         <translation>Ctrl+Alt+1</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2156"/>
+        <location filename="../../Form_Files/main.ui" line="2301"/>
         <source>Clip &amp;2</source>
         <translation>クリップ&amp;2</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2159"/>
+        <location filename="../../Form_Files/main.ui" line="2304"/>
         <source>Insert Clip 2</source>
         <translation>クリップ2を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2162"/>
+        <location filename="../../Form_Files/main.ui" line="2307"/>
         <source>Ctrl+Alt+2</source>
         <translation>Ctrl+Alt+2</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2167"/>
+        <location filename="../../Form_Files/main.ui" line="2312"/>
         <source>Clip &amp;3</source>
         <translation>クリップ&amp;3</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2170"/>
+        <location filename="../../Form_Files/main.ui" line="2315"/>
         <source>Insert Clip 3</source>
         <translation>クリップ3を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2173"/>
+        <location filename="../../Form_Files/main.ui" line="2318"/>
         <source>Ctrl+Alt+3</source>
         <translation>Ctrl+Alt+3</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2178"/>
+        <location filename="../../Form_Files/main.ui" line="2323"/>
         <source>Clip &amp;4</source>
         <translation>クリップ&amp;4</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2181"/>
+        <location filename="../../Form_Files/main.ui" line="2326"/>
         <source>Insert Clip 4</source>
         <translation>クリップ4を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2184"/>
+        <location filename="../../Form_Files/main.ui" line="2329"/>
         <source>Ctrl+Alt+4</source>
         <translation>Ctrl+Alt+4</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2189"/>
+        <location filename="../../Form_Files/main.ui" line="2334"/>
         <source>Clip &amp;5</source>
         <translation>クリップ&amp;5</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2192"/>
+        <location filename="../../Form_Files/main.ui" line="2337"/>
         <source>Insert Clip 5</source>
         <translation>クリップ5を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2195"/>
+        <location filename="../../Form_Files/main.ui" line="2340"/>
         <source>Ctrl+Alt+5</source>
         <translation>Ctrl+Alt+5</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2200"/>
+        <location filename="../../Form_Files/main.ui" line="2345"/>
         <source>Clip &amp;6</source>
         <translation>クリップ&amp;6</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2203"/>
+        <location filename="../../Form_Files/main.ui" line="2348"/>
         <source>Insert Clip 6</source>
         <translation>クリップ6を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2206"/>
+        <location filename="../../Form_Files/main.ui" line="2351"/>
         <source>Ctrl+Alt+6</source>
         <translation>Ctrl+Alt+6</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2211"/>
+        <location filename="../../Form_Files/main.ui" line="2356"/>
         <source>Clip &amp;7</source>
         <translation>クリップ&amp;7</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2214"/>
+        <location filename="../../Form_Files/main.ui" line="2359"/>
         <source>Insert Clip 7</source>
         <translation>クリップ7を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2217"/>
+        <location filename="../../Form_Files/main.ui" line="2362"/>
         <source>Ctrl+Alt+7</source>
         <translation>Ctrl+Alt+7</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2222"/>
+        <location filename="../../Form_Files/main.ui" line="2367"/>
         <source>Clip &amp;8</source>
         <translation>クリップ&amp;8</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2225"/>
+        <location filename="../../Form_Files/main.ui" line="2370"/>
         <source>Insert Clip 8</source>
         <translation>クリップ8を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2228"/>
+        <location filename="../../Form_Files/main.ui" line="2373"/>
         <source>Ctrl+Alt+8</source>
         <translation>Ctrl+Alt+8</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2233"/>
+        <location filename="../../Form_Files/main.ui" line="2378"/>
         <source>Clip &amp;9</source>
         <translation>クリップ&amp;9</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2236"/>
+        <location filename="../../Form_Files/main.ui" line="2381"/>
         <source>Insert Clip 9</source>
         <translation>クリップ9を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2239"/>
+        <location filename="../../Form_Files/main.ui" line="2384"/>
         <source>Ctrl+Alt+9</source>
         <translation>Ctrl+Alt+9</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2244"/>
+        <location filename="../../Form_Files/main.ui" line="2389"/>
         <source>Clip 1&amp;0</source>
         <translation>クリップ1&amp;0</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2247"/>
+        <location filename="../../Form_Files/main.ui" line="2392"/>
         <source>Insert Clip 10</source>
         <translation>クリップ10を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2250"/>
+        <location filename="../../Form_Files/main.ui" line="2395"/>
         <source>Ctrl+Alt+0</source>
         <translation>Ctrl+Alt+0</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2255"/>
+        <location filename="../../Form_Files/main.ui" line="2400"/>
         <source>Clip 11</source>
         <translation>クリップ11</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2258"/>
+        <location filename="../../Form_Files/main.ui" line="2403"/>
         <source>Insert Clip 11</source>
         <translation>クリップ11を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2263"/>
+        <location filename="../../Form_Files/main.ui" line="2408"/>
         <source>Clip 12</source>
         <translation>クリップ12</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2266"/>
+        <location filename="../../Form_Files/main.ui" line="2411"/>
         <source>Insert Clip 12</source>
         <translation>クリップ12を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2271"/>
+        <location filename="../../Form_Files/main.ui" line="2416"/>
         <source>Clip 13</source>
         <translation>クリップ13</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2274"/>
+        <location filename="../../Form_Files/main.ui" line="2419"/>
         <source>Insert Clip 13</source>
         <translation>クリップ13を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2279"/>
+        <location filename="../../Form_Files/main.ui" line="2424"/>
         <source>Clip 14</source>
         <translation>クリップ14</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2282"/>
+        <location filename="../../Form_Files/main.ui" line="2427"/>
         <source>Insert Clip 14</source>
         <translation>クリップ14を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2287"/>
+        <location filename="../../Form_Files/main.ui" line="2432"/>
         <source>Clip 15</source>
         <translation>クリップ15</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2290"/>
+        <location filename="../../Form_Files/main.ui" line="2435"/>
         <source>Insert Clip 15</source>
         <translation>クリップ15を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2295"/>
+        <location filename="../../Form_Files/main.ui" line="2440"/>
         <source>Clip 16</source>
         <translation>クリップ16</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2298"/>
+        <location filename="../../Form_Files/main.ui" line="2443"/>
         <source>Insert Clip 16</source>
         <translation>クリップ16を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2303"/>
+        <location filename="../../Form_Files/main.ui" line="2448"/>
         <source>Clip 17</source>
         <translation>クリップ17</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2306"/>
+        <location filename="../../Form_Files/main.ui" line="2451"/>
         <source>Insert Clip 17</source>
         <translation>クリップ17を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2311"/>
+        <location filename="../../Form_Files/main.ui" line="2456"/>
         <source>Clip 18</source>
         <translation>クリップ18</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2314"/>
+        <location filename="../../Form_Files/main.ui" line="2459"/>
         <source>Insert Clip 18</source>
         <translation>クリップ18を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2319"/>
+        <location filename="../../Form_Files/main.ui" line="2464"/>
         <source>Clip 19</source>
         <translation>クリップ19</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2322"/>
+        <location filename="../../Form_Files/main.ui" line="2467"/>
         <source>Insert Clip 19</source>
         <translation>クリップ19を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2327"/>
+        <location filename="../../Form_Files/main.ui" line="2472"/>
         <source>Clip 20</source>
         <translation>クリップ20</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2330"/>
+        <location filename="../../Form_Files/main.ui" line="2475"/>
         <source>Insert Clip 20</source>
         <translation>クリップ20を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2336"/>
+        <location filename="../../Form_Files/main.ui" line="2481"/>
         <source>Clip 21</source>
         <translation>クリップ21</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2339"/>
+        <location filename="../../Form_Files/main.ui" line="2484"/>
         <source>Insert Clip 21</source>
         <translation>クリップ21を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2344"/>
+        <location filename="../../Form_Files/main.ui" line="2489"/>
         <source>Clip 22</source>
         <translation>クリップ22</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2347"/>
+        <location filename="../../Form_Files/main.ui" line="2492"/>
         <source>Insert Clip 22</source>
         <translation>クリップ22を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2352"/>
+        <location filename="../../Form_Files/main.ui" line="2497"/>
         <source>Clip 23</source>
         <translation>クリップ23</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2355"/>
+        <location filename="../../Form_Files/main.ui" line="2500"/>
         <source>Insert Clip 23</source>
         <translation>クリップ23を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2360"/>
+        <location filename="../../Form_Files/main.ui" line="2505"/>
         <source>Clip 24</source>
         <translation>クリップ24</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2363"/>
+        <location filename="../../Form_Files/main.ui" line="2508"/>
         <source>Insert Clip 24</source>
         <translation>クリップ24を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2368"/>
+        <location filename="../../Form_Files/main.ui" line="2513"/>
         <source>Clip 25</source>
         <translation>クリップ25</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2371"/>
+        <location filename="../../Form_Files/main.ui" line="2516"/>
         <source>Insert Clip 25</source>
         <translation>クリップ25を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2376"/>
+        <location filename="../../Form_Files/main.ui" line="2521"/>
         <source>Clip 26</source>
         <translation>クリップ26</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2379"/>
+        <location filename="../../Form_Files/main.ui" line="2524"/>
         <source>Insert Clip 26</source>
         <translation>クリップ26を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2384"/>
+        <location filename="../../Form_Files/main.ui" line="2529"/>
         <source>Clip 27</source>
         <translation>クリップ27</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2387"/>
+        <location filename="../../Form_Files/main.ui" line="2532"/>
         <source>Insert Clip 27</source>
         <translation>クリップ27を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2392"/>
+        <location filename="../../Form_Files/main.ui" line="2537"/>
         <source>Clip 28</source>
         <translation>クリップ28</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2395"/>
+        <location filename="../../Form_Files/main.ui" line="2540"/>
         <source>Insert Clip 28</source>
         <translation>クリップ28を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2400"/>
+        <location filename="../../Form_Files/main.ui" line="2545"/>
         <source>Clip 29</source>
         <translation>クリップ29</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2403"/>
+        <location filename="../../Form_Files/main.ui" line="2548"/>
         <source>Insert Clip 29</source>
         <translation>クリップ29を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2408"/>
+        <location filename="../../Form_Files/main.ui" line="2553"/>
         <source>Clip 30</source>
         <translation>クリップ30</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2411"/>
+        <location filename="../../Form_Files/main.ui" line="2556"/>
         <source>Insert Clip 30</source>
         <translation>クリップ30を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2416"/>
+        <location filename="../../Form_Files/main.ui" line="2561"/>
         <source>Clip 31</source>
         <translation>クリップ31</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2419"/>
+        <location filename="../../Form_Files/main.ui" line="2564"/>
         <source>Insert Clip 31</source>
         <translation>クリップ31を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2424"/>
+        <location filename="../../Form_Files/main.ui" line="2569"/>
         <source>Clip 32</source>
         <translation>クリップ32</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2427"/>
+        <location filename="../../Form_Files/main.ui" line="2572"/>
         <source>Insert Clip 32</source>
         <translation>クリップ32を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2432"/>
+        <location filename="../../Form_Files/main.ui" line="2577"/>
         <source>Clip 33</source>
         <translation>クリップ33</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2435"/>
+        <location filename="../../Form_Files/main.ui" line="2580"/>
         <source>Insert Clip 33</source>
         <translation>クリップ33を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2440"/>
+        <location filename="../../Form_Files/main.ui" line="2585"/>
         <source>Clip 34</source>
         <translation>クリップ34</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2443"/>
+        <location filename="../../Form_Files/main.ui" line="2588"/>
         <source>Insert Clip 34</source>
         <translation>クリップ34を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2448"/>
+        <location filename="../../Form_Files/main.ui" line="2593"/>
         <source>Clip 35</source>
         <translation>クリップ35</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2451"/>
+        <location filename="../../Form_Files/main.ui" line="2596"/>
         <source>Insert Clip 35</source>
         <translation>クリップ35を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2456"/>
+        <location filename="../../Form_Files/main.ui" line="2601"/>
         <source>Clip 36</source>
         <translation>クリップ36</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2459"/>
+        <location filename="../../Form_Files/main.ui" line="2604"/>
         <source>Insert Clip 36</source>
         <translation>クリップ36を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2464"/>
+        <location filename="../../Form_Files/main.ui" line="2609"/>
         <source>Clip 37</source>
         <translation>クリップ37</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2467"/>
+        <location filename="../../Form_Files/main.ui" line="2612"/>
         <source>Insert Clip 37</source>
         <translation>クリップ37を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2472"/>
+        <location filename="../../Form_Files/main.ui" line="2617"/>
         <source>Clip 38</source>
         <translation>クリップ38</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2475"/>
+        <location filename="../../Form_Files/main.ui" line="2620"/>
         <source>Insert Clip 38</source>
         <translation>クリップ38を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2480"/>
+        <location filename="../../Form_Files/main.ui" line="2625"/>
         <source>Clip 39</source>
         <translation>クリップ39</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2483"/>
+        <location filename="../../Form_Files/main.ui" line="2628"/>
         <source>Insert Clip 39</source>
         <translation>クリップ39を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2488"/>
+        <location filename="../../Form_Files/main.ui" line="2633"/>
         <source>Clip 40</source>
         <translation>クリップ40</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2491"/>
+        <location filename="../../Form_Files/main.ui" line="2636"/>
         <source>Insert Clip 40</source>
         <translation>クリップ40を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2496"/>
+        <location filename="../../Form_Files/main.ui" line="2641"/>
         <source>Clip 41</source>
         <translation>クリップ41</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2499"/>
+        <location filename="../../Form_Files/main.ui" line="2644"/>
         <source>Insert Clip 41</source>
         <translation>クリップ41を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2504"/>
+        <location filename="../../Form_Files/main.ui" line="2649"/>
         <source>Clip 42</source>
         <translation>クリップ42</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2507"/>
+        <location filename="../../Form_Files/main.ui" line="2652"/>
         <source>Insert Clip 42</source>
         <translation>クリップ42を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2512"/>
+        <location filename="../../Form_Files/main.ui" line="2657"/>
         <source>Clip 43</source>
         <translation>クリップ43</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2515"/>
+        <location filename="../../Form_Files/main.ui" line="2660"/>
         <source>Insert Clip 43</source>
         <translation>クリップ43を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2520"/>
+        <location filename="../../Form_Files/main.ui" line="2665"/>
         <source>Clip 44</source>
         <translation>クリップ44</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2523"/>
+        <location filename="../../Form_Files/main.ui" line="2668"/>
         <source>Insert Clip 44</source>
         <translation>クリップ44を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2528"/>
+        <location filename="../../Form_Files/main.ui" line="2673"/>
         <source>Clip 45</source>
         <translation>クリップ45</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2531"/>
+        <location filename="../../Form_Files/main.ui" line="2676"/>
         <source>Insert Clip 45</source>
         <translation>クリップ45を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2536"/>
+        <location filename="../../Form_Files/main.ui" line="2681"/>
         <source>Clip 46</source>
         <translation>クリップ46</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2539"/>
+        <location filename="../../Form_Files/main.ui" line="2684"/>
         <source>Insert Clip 46</source>
         <translation>クリップ46を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2544"/>
+        <location filename="../../Form_Files/main.ui" line="2689"/>
         <source>Clip 47</source>
         <translation>クリップ47</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2547"/>
+        <location filename="../../Form_Files/main.ui" line="2692"/>
         <source>Insert Clip 47</source>
         <translation>クリップ47を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2552"/>
+        <location filename="../../Form_Files/main.ui" line="2697"/>
         <source>Clip 48</source>
         <translation>クリップ48</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2555"/>
+        <location filename="../../Form_Files/main.ui" line="2700"/>
         <source>Insert Clip 48</source>
         <translation>クリップ48を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2560"/>
+        <location filename="../../Form_Files/main.ui" line="2705"/>
         <source>Clip 49</source>
         <translation>クリップ49</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2563"/>
+        <location filename="../../Form_Files/main.ui" line="2708"/>
         <source>Insert Clip 49</source>
         <translation>クリップ49を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2568"/>
+        <location filename="../../Form_Files/main.ui" line="2713"/>
         <source>Clip 50</source>
         <translation>クリップ50</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2571"/>
+        <location filename="../../Form_Files/main.ui" line="2716"/>
         <source>Insert Clip 50</source>
         <translation>クリップ50を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2576"/>
+        <location filename="../../Form_Files/main.ui" line="2721"/>
         <source>Clip 51</source>
         <translation>クリップ51</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2579"/>
+        <location filename="../../Form_Files/main.ui" line="2724"/>
         <source>Insert Clip 51</source>
         <translation>クリップ51を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2584"/>
+        <location filename="../../Form_Files/main.ui" line="2729"/>
         <source>Clip 52</source>
         <translation>クリップ52</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2587"/>
+        <location filename="../../Form_Files/main.ui" line="2732"/>
         <source>Insert Clip 52</source>
         <translation>クリップ52を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2592"/>
+        <location filename="../../Form_Files/main.ui" line="2737"/>
         <source>Clip 53</source>
         <translation>クリップ53</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2595"/>
+        <location filename="../../Form_Files/main.ui" line="2740"/>
         <source>Insert Clip 53</source>
         <translation>クリップ53を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2600"/>
+        <location filename="../../Form_Files/main.ui" line="2745"/>
         <source>Clip 54</source>
         <translation>クリップ54</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2603"/>
+        <location filename="../../Form_Files/main.ui" line="2748"/>
         <source>Insert Clip 54</source>
         <translation>クリップ54を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2608"/>
+        <location filename="../../Form_Files/main.ui" line="2753"/>
         <source>Clip 55</source>
         <translation>クリップ55</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2611"/>
+        <location filename="../../Form_Files/main.ui" line="2756"/>
         <source>Insert Clip 55</source>
         <translation>クリップ55を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2616"/>
+        <location filename="../../Form_Files/main.ui" line="2761"/>
         <source>Clip 56</source>
         <translation>クリップ56</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2619"/>
+        <location filename="../../Form_Files/main.ui" line="2764"/>
         <source>Insert Clip 56</source>
         <translation>クリップ56を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2624"/>
+        <location filename="../../Form_Files/main.ui" line="2769"/>
         <source>Clip 57</source>
         <translation>クリップ57</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2627"/>
+        <location filename="../../Form_Files/main.ui" line="2772"/>
         <source>Insert Clip 57</source>
         <translation>クリップ57を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2632"/>
+        <location filename="../../Form_Files/main.ui" line="2777"/>
         <source>Clip 58</source>
         <translation>クリップ58</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2635"/>
+        <location filename="../../Form_Files/main.ui" line="2780"/>
         <source>Insert Clip 58</source>
         <translation>クリップ58を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2640"/>
+        <location filename="../../Form_Files/main.ui" line="2785"/>
         <source>Clip 59</source>
         <translation>クリップ59</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2643"/>
+        <location filename="../../Form_Files/main.ui" line="2788"/>
         <source>Insert Clip 59</source>
         <translation>クリップ59を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2648"/>
+        <location filename="../../Form_Files/main.ui" line="2793"/>
         <source>Clip 60</source>
         <translation>クリップ60</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2651"/>
+        <location filename="../../Form_Files/main.ui" line="2796"/>
         <source>Insert Clip 60</source>
         <translation>クリップ60を挿入</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2659"/>
+        <location filename="../../Form_Files/main.ui" line="2804"/>
         <source>&amp;Preferences...</source>
         <translation>環境設定(&amp;P)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2662"/>
+        <location filename="../../Form_Files/main.ui" line="2807"/>
         <source>F5</source>
         <translation>F5</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2667"/>
+        <location filename="../../Form_Files/main.ui" line="2812"/>
         <source>&amp;Zoom Reset</source>
         <translation>ズームをリセット(&amp;Z)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2670"/>
+        <location filename="../../Form_Files/main.ui" line="2815"/>
         <source>Zoom Reset</source>
         <translation>ズームをリセット</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2673"/>
+        <location filename="../../Form_Files/main.ui" line="2818"/>
         <source>Ctrl+0</source>
         <translation>Ctrl+0</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2685"/>
+        <location filename="../../Form_Files/main.ui" line="2830"/>
         <source>Heading &amp;1</source>
         <translation>見出し&amp;1</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2688"/>
+        <location filename="../../Form_Files/main.ui" line="2833"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Heading 1&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a level 1 heading.&lt;/p&gt;</source>
@@ -11932,17 +12983,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;レベル1の見出しとしての段落のフォーマット。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2693"/>
+        <location filename="../../Form_Files/main.ui" line="2838"/>
         <source>Ctrl+1</source>
         <translation>Ctrl+1</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2705"/>
+        <location filename="../../Form_Files/main.ui" line="2850"/>
         <source>Heading &amp;2</source>
         <translation>見出し&amp;2</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2708"/>
+        <location filename="../../Form_Files/main.ui" line="2853"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Heading 2&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a level 2 heading.&lt;/p&gt;</source>
@@ -11951,17 +13002,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;レベル2の見出しとしての段落のフォーマット。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2713"/>
+        <location filename="../../Form_Files/main.ui" line="2858"/>
         <source>Ctrl+2</source>
         <translation>Ctrl+2</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2725"/>
+        <location filename="../../Form_Files/main.ui" line="2870"/>
         <source>Heading &amp;3</source>
         <translation>見出し&amp;3</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2728"/>
+        <location filename="../../Form_Files/main.ui" line="2873"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Heading 3&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a level 3 heading.&lt;/p&gt;</source>
@@ -11970,17 +13021,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;レベル3の見出しとしての段落のフォーマット。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2733"/>
+        <location filename="../../Form_Files/main.ui" line="2878"/>
         <source>Ctrl+3</source>
         <translation>Ctrl+3</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2745"/>
+        <location filename="../../Form_Files/main.ui" line="2890"/>
         <source>Heading &amp;4</source>
         <translation>見出し&amp;4</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2748"/>
+        <location filename="../../Form_Files/main.ui" line="2893"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Heading 4&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a level 4 heading.&lt;/p&gt;</source>
@@ -11989,17 +13040,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;レベル4の見出しとしての段落のフォーマット。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2753"/>
+        <location filename="../../Form_Files/main.ui" line="2898"/>
         <source>Ctrl+4</source>
         <translation>Ctrl+4</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2765"/>
+        <location filename="../../Form_Files/main.ui" line="2910"/>
         <source>Heading &amp;5</source>
         <translation>見出し&amp;5</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2768"/>
+        <location filename="../../Form_Files/main.ui" line="2913"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Heading 5&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a level 5 heading.&lt;/p&gt;</source>
@@ -12008,17 +13059,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;レベル5の見出しとしての段落のフォーマット。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2773"/>
+        <location filename="../../Form_Files/main.ui" line="2918"/>
         <source>Ctrl+5</source>
         <translation>Ctrl+5</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2785"/>
+        <location filename="../../Form_Files/main.ui" line="2930"/>
         <source>Heading &amp;6</source>
         <translation>見出し&amp;6</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2788"/>
+        <location filename="../../Form_Files/main.ui" line="2933"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Heading 6&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a level 6 heading.&lt;/p&gt;</source>
@@ -12027,17 +13078,17 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;レベル6の見出しとしての段落のフォーマット。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2793"/>
+        <location filename="../../Form_Files/main.ui" line="2938"/>
         <source>Ctrl+6</source>
         <translation>Ctrl+6</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2805"/>
+        <location filename="../../Form_Files/main.ui" line="2950"/>
         <source>&amp;Normal</source>
         <translation>段落(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2808"/>
+        <location filename="../../Form_Files/main.ui" line="2953"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Paragraph&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a normal paragraph.&lt;/p&gt;</source>
@@ -12046,37 +13097,60 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;段落を通常の段落のフォーマットにします。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2813"/>
+        <location filename="../../Form_Files/main.ui" line="2958"/>
         <source>Ctrl+7</source>
         <translation>Ctrl+7</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2821"/>
+        <location filename="../../Form_Files/main.ui" line="2967"/>
+        <source>&amp;Division</source>
+        <translation>区分(&amp;D)</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="2970"/>
+        <source>
+			&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Division&lt;/b&gt;&lt;/p&gt;
+
+			&lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Format paragraph as a division element.&lt;/p&gt;
+		</source>
+        <translation>
+			&lt;p style="padding-top: 0.5em;" &gt;&lt;b&gt;区分&lt;/b&gt;&lt;/p&gt;
+
+			&lt;p style="margin-left: 0.5em;"&gt;段落を div 要素として整形します。&lt;/p&gt;
+		</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="2977"/>
+        <source>Ctrl+8</source>
+        <translation>Ctrl+8</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="2985"/>
         <source>&amp;Preserve Existing Attributes</source>
         <translation>既存の属性を保持(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2824"/>
+        <location filename="../../Form_Files/main.ui" line="2988"/>
         <source>When applying this style, preserve any existing attributes on the tag</source>
         <translation>このスタイルを適用する際にタグの既存の属性をすべて保持する</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2829"/>
+        <location filename="../../Form_Files/main.ui" line="2993"/>
         <source>Blank HTML File</source>
         <translation>空のHTMLファイル</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2832"/>
+        <location filename="../../Form_Files/main.ui" line="2996"/>
         <source>Add a new blank HTML file to the book.</source>
         <translation>新しい空のHTMLファイルをブックに追加します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2841"/>
+        <location filename="../../Form_Files/main.ui" line="3005"/>
         <source>Existing Files...</source>
         <translation>既存のファイル...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2844"/>
+        <location filename="../../Form_Files/main.ui" line="3008"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Add Existing Files&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Add files from your computer to the book.&lt;/p&gt;</source>
@@ -12085,137 +13159,137 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;コンピューターから本にファイルを追加します。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2851"/>
+        <location filename="../../Form_Files/main.ui" line="3015"/>
         <source>Blank Stylesheet</source>
         <translation>空のスタイルシート</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2854"/>
+        <location filename="../../Form_Files/main.ui" line="3018"/>
         <source>Add a new blank stylesheet to the book.</source>
         <translation>新しい空のスタイルシートをブックに追加します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2859"/>
+        <location filename="../../Form_Files/main.ui" line="3023"/>
         <source>Blank Javascript</source>
         <translation>空のJavaScript</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2862"/>
+        <location filename="../../Form_Files/main.ui" line="3026"/>
         <source>Add a new blank javascript to the book.</source>
         <translation>新しい空のJavaScriptをブックに追加します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2867"/>
+        <location filename="../../Form_Files/main.ui" line="3031"/>
         <source>Blank SVG Image</source>
         <translation>空のSVG画像</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2870"/>
+        <location filename="../../Form_Files/main.ui" line="3034"/>
         <source>Add a new blank svg image file to the book.</source>
         <translation>新しい空のSVG画像ファイルをブックに追加します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2875"/>
+        <location filename="../../Form_Files/main.ui" line="3039"/>
         <source>Pre&amp;vious File</source>
         <translation>前のファイル(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2878"/>
+        <location filename="../../Form_Files/main.ui" line="3042"/>
         <source>Open previous file of the same type.</source>
         <translation>同じタイプの前のファイルを開きます。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2881"/>
+        <location filename="../../Form_Files/main.ui" line="3045"/>
         <source>Alt+PgUp</source>
         <translation>Alt+PgUp</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2886"/>
+        <location filename="../../Form_Files/main.ui" line="3050"/>
         <source>Next &amp;File</source>
         <translation>次のファイル(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2889"/>
+        <location filename="../../Form_Files/main.ui" line="3053"/>
         <source>Open next file of the same type.</source>
         <translation>同じタイプの次のファイルを開きます。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2892"/>
+        <location filename="../../Form_Files/main.ui" line="3056"/>
         <source>Alt+PgDown</source>
         <translation>Alt+PgDown</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2897"/>
+        <location filename="../../Form_Files/main.ui" line="3061"/>
         <source>&amp;Add To Index Editor</source>
         <translation>インデックスエディターに追加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2904"/>
+        <location filename="../../Form_Files/main.ui" line="3068"/>
         <source>Add the selected text to the Index Editor.</source>
         <translation>選択されたテキストをインデックスエディターに追加します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2909"/>
+        <location filename="../../Form_Files/main.ui" line="3073"/>
         <source>&amp;Mark For Index</source>
         <translation>インデックスをマーク(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2916"/>
+        <location filename="../../Form_Files/main.ui" line="3080"/>
         <source>Mark the selected text for inclusion in the Index.</source>
         <translation>選択したテキストをインデックスに含めるようにマークします。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2919"/>
+        <location filename="../../Form_Files/main.ui" line="3083"/>
         <source>Ctrl+Shift+X</source>
         <translation>Ctrl+Shift+X</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2924"/>
+        <location filename="../../Form_Files/main.ui" line="3088"/>
         <source>&amp;Create Index</source>
         <translation>インデックスを作成(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2931"/>
+        <location filename="../../Form_Files/main.ui" line="3095"/>
         <source>Generate a new Index HTML file.</source>
         <translation>新しいインデックスHTMLファイルを生成します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2936"/>
+        <location filename="../../Form_Files/main.ui" line="3100"/>
         <source>&amp;Create HTML from Table Of Contents</source>
         <translation>目次からHTMLファイルを作成(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2939"/>
+        <location filename="../../Form_Files/main.ui" line="3103"/>
         <source>Create a new HTML file using the current TOC.</source>
         <translation>現在の目次を利用して新しいHTMLファイルを作成します。</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2948"/>
+        <location filename="../../Form_Files/main.ui" line="3112"/>
         <source>Book&amp;mark Location</source>
         <translation>位置をブックマーク(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2951"/>
+        <location filename="../../Form_Files/main.ui" line="3115"/>
         <source>Ctrl+Alt+B</source>
         <translation>Ctrl+Alt+B</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2956"/>
+        <location filename="../../Form_Files/main.ui" line="3120"/>
         <source>&amp;Go To Link Or Style</source>
         <translation>リンクまたはスタイルに進む(&amp;G)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2959"/>
+        <location filename="../../Form_Files/main.ui" line="3123"/>
         <source>F3</source>
         <translation>F3</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2968"/>
+        <location filename="../../Form_Files/main.ui" line="3132"/>
         <source>&amp;Back</source>
         <translation>戻る(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2971"/>
+        <location filename="../../Form_Files/main.ui" line="3135"/>
         <source>&lt;p style=&quot;padding-top: 0.5em;&quot; &gt;&lt;b&gt;Back&lt;/b&gt;&lt;/p&gt;
 
 &lt;p style=&quot;margin-left: 0.5em;&quot;&gt;Go back to where you last went to a link or style, or bookmarked your location.&lt;/p&gt;
@@ -12226,593 +13300,1073 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2977"/>
+        <location filename="../../Form_Files/main.ui" line="3141"/>
         <source>Ctrl+\</source>
         <translation>Ctrl+\</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2982"/>
+        <location filename="../../Form_Files/main.ui" line="3146"/>
         <source>Edit/Paste From Clipboard &amp;History...</source>
         <translation>クリップボード履歴から編集/貼り付け(&amp;H)...</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2985"/>
+        <location filename="../../Form_Files/main.ui" line="3149"/>
         <source>Ctrl+Alt+V</source>
         <translation>Ctrl+Alt+V</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2990"/>
+        <location filename="../../Form_Files/main.ui" line="3154"/>
         <source>&amp;Delete Line</source>
         <translation>行を削除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="2993"/>
+        <location filename="../../Form_Files/main.ui" line="3157"/>
         <source>Ctrl+D</source>
         <translation>Ctrl+D</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3003"/>
+        <location filename="../../Form_Files/main.ui" line="3167"/>
         <source>Run Automate List 1</source>
         <translation>自動化リスト1 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3013"/>
+        <location filename="../../Form_Files/main.ui" line="3177"/>
         <source>Run Automate List 2</source>
         <translation>自動化リスト2 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3023"/>
+        <location filename="../../Form_Files/main.ui" line="3187"/>
         <source>Run Automate List 3</source>
         <translation>自動化リスト3 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3029"/>
+        <location filename="../../Form_Files/main.ui" line="3193"/>
         <source>Manage Automation Lists</source>
         <translation>自動化リストを管理</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3035"/>
+        <location filename="../../Form_Files/main.ui" line="3199"/>
         <source>Manage Plugins</source>
         <translation>プラグインの管理</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3044"/>
+        <location filename="../../Form_Files/main.ui" line="3208"/>
         <source>Run Plugin 1</source>
         <translation>プラグイン1 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3053"/>
+        <location filename="../../Form_Files/main.ui" line="3217"/>
         <source>Run Plugin 2</source>
         <translation>プラグイン2 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3062"/>
+        <location filename="../../Form_Files/main.ui" line="3226"/>
         <source>Run Plugin 3</source>
         <translation>プラグイン3 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3071"/>
+        <location filename="../../Form_Files/main.ui" line="3235"/>
         <source>Run Plugin 4</source>
         <translation>プラグイン4 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3080"/>
+        <location filename="../../Form_Files/main.ui" line="3244"/>
         <source>Run Plugin 5</source>
         <translation>プラグイン5 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3089"/>
+        <location filename="../../Form_Files/main.ui" line="3253"/>
         <source>Run Plugin 6</source>
         <translation>プラグイン6 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3098"/>
+        <location filename="../../Form_Files/main.ui" line="3262"/>
         <source>Run Plugin 7</source>
         <translation>プラグイン7 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3107"/>
+        <location filename="../../Form_Files/main.ui" line="3271"/>
         <source>Run Plugin 8</source>
         <translation>プラグイン8 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3116"/>
+        <location filename="../../Form_Files/main.ui" line="3280"/>
         <source>Run Plugin 9</source>
         <translation>プラグイン9 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3125"/>
+        <location filename="../../Form_Files/main.ui" line="3289"/>
         <source>Run Plugin 10</source>
         <translation>プラグイン10 を実行</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3134"/>
+        <location filename="../../Form_Files/main.ui" line="3298"/>
         <source>Launch External Xhtml Editor</source>
         <translation>外部XHTMLエディターを起動</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3137"/>
+        <location filename="../../Form_Files/main.ui" line="3301"/>
         <source>F2</source>
         <translation>F2</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3142"/>
-        <source>Mend and &amp;Prettify All HTML Files</source>
-        <translation>すべてのHTMLファイルの修正と整形表示(&amp;P)</translation>
+        <location filename="../../Form_Files/main.ui" line="3307"/>
+        <source>Prettify All HTML Files</source>
+        <translation>すべての HTML ファイルを整形</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3147"/>
+        <source>Mend and &amp;Prettify All HTML Files</source>
+        <translation type="vanished">すべてのHTMLファイルの修正と整形表示(&amp;P)</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="3312"/>
         <source>&amp;Mend All HTML Files</source>
         <translation>すべてのHTMLファイルを修正(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3152"/>
+        <location filename="../../Form_Files/main.ui" line="3317"/>
         <source>&amp;Update Manifest Properties</source>
         <translation>マニフェストプロパティの更新(&amp;U)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3157"/>
+        <location filename="../../Form_Files/main.ui" line="3322"/>
         <source>Update OPF Manifest Media Types</source>
         <translation>OPFマニフェストメディアタイプを更新</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3162"/>
+        <location filename="../../Form_Files/main.ui" line="3327"/>
         <source>Generate &amp;NCX/Guide for epub2 e-readers</source>
         <translation>epub2電子書籍リーダー用のNCX/ガイドの生成(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3167"/>
+        <location filename="../../Form_Files/main.ui" line="3332"/>
         <source>Create a Custom Empty Epub</source>
         <translation>カスタムの空のEpubの作成</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3172"/>
+        <location filename="../../Form_Files/main.ui" line="3337"/>
         <source>Remove the NCX and Guide</source>
         <translation>NCXおよびガイドの削除</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3177"/>
+        <location filename="../../Form_Files/main.ui" line="3342"/>
         <source>Remove Nav from Reading Order</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を読み上げ順から削除</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3182"/>
+        <location filename="../../Form_Files/main.ui" line="3347"/>
         <source>Add Nav to Reading Order with linear=&quot;no&quot;</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を linear="no" で読み上げ順に追加</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3187"/>
+        <location filename="../../Form_Files/main.ui" line="3352"/>
         <source>Add Nav to Reading Order</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を読み上げ順に追加</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3196"/>
+        <location filename="../../Form_Files/main.ui" line="3357"/>
+        <source>Epub3 to Epub2</source>
+        <translation>Epub3 から Epub2 へ</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="3363"/>
+        <source>Epub2 to Epub3</source>
+        <translation>Epub2 から Epub3 へ</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/main.ui" line="3372"/>
         <source>Create Checkpoint for Epub</source>
         <translation>Epubチェックポイントの作成</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3205"/>
+        <location filename="../../Form_Files/main.ui" line="3381"/>
         <source>Restore Epub from previous Checkpoint</source>
         <translation>以前のチェックポイントからEpubを復元する</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3214"/>
+        <location filename="../../Form_Files/main.ui" line="3390"/>
         <source>Compare Epub against Previous Checkpoint</source>
         <translation>Epubと以前のチェックポイントを比較する</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3223"/>
+        <location filename="../../Form_Files/main.ui" line="3399"/>
         <source>Manage Checkpoint Repositories</source>
         <translation>チェックポイント リポジトリの管理</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3228"/>
+        <location filename="../../Form_Files/main.ui" line="3404"/>
         <source>Edit Checkpoint Descriptions</source>
         <translation>チェックポイントの説明を編集</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3233"/>
+        <location filename="../../Form_Files/main.ui" line="3409"/>
         <source>Show Log of Checkpoints</source>
         <translation>チェックポイントのログを表示</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3238"/>
+        <location filename="../../Form_Files/main.ui" line="3414"/>
         <source>Focus on CodeView</source>
         <translation>コードビューにフォーカス</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3243"/>
+        <location filename="../../Form_Files/main.ui" line="3419"/>
         <source>Focus on BookBrowser</source>
         <translation>ブックブラウザーにフォーカス</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3248"/>
+        <location filename="../../Form_Files/main.ui" line="3424"/>
         <source>Focus on Preview</source>
         <translation>プレビューにフォーカス</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3253"/>
+        <location filename="../../Form_Files/main.ui" line="3429"/>
         <source>Focus on Table of Contents</source>
         <translation>目次にフォーカス</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="3258"/>
+        <location filename="../../Form_Files/main.ui" line="3434"/>
         <source>Focus on Clips Window</source>
         <translation>クリップウィンドウにフォーカス</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="330"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="399"/>
         <source>Error: Automation Already in Use</source>
         <translation>エラー: 自動化はすでに使用されています</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="336"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="405"/>
         <source>Missing Automation List</source>
         <translation>自動化リストが見つかりません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="377"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="446"/>
         <source>running</source>
         <translation>起動中</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="440"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="512"/>
         <source>skipped since not an epub3</source>
         <translation>epub3ではないため、スキップされました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="465"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="484"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="508"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="537"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="556"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="580"/>
         <source>Missing or unknown Saved Search name</source>
         <translation>保存された検索名が、見つからないか不明です</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="488"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="560"/>
         <source>Conditional search did not run.</source>
-        <translation type="unfinished"/>
+        <translation>条件付き検索は実行されませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="512"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="584"/>
         <source>Conditional Search did not run.</source>
-        <translation type="unfinished"/>
+        <translation>条件付き検索は実行されませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="516"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="588"/>
         <source>Missing or unknown plugin or tool</source>
         <translation>プラグインまたはツールが、見つからないか不明です</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="521"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="593"/>
         <source>failed</source>
         <translation>失敗した</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="529"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="601"/>
         <source>Validation tool</source>
         <translation>検証ツール</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="530"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="602"/>
         <source>found errors</source>
         <translation>エラーが見つかりました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="533"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="605"/>
         <source>Validation tool found errors - Abort or Ignore?</source>
         <translation>検証ツールでエラーが見つかりました - 中止または無視しますか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="542"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="614"/>
         <source>Aborted due to Validation Errors</source>
         <translation>検証エラーのため中止されました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="545"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="617"/>
         <source>Ignored Validation Errors</source>
         <translation>検証エラーを無視しました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="548"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="620"/>
         <source>Validation Tool Reported No Problems Found</source>
         <translation>検証ツールから「問題なし」と報告されました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="555"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="627"/>
         <source>Automation List Failed</source>
         <translation>自動化リストが失敗しました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="557"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="629"/>
         <source>Automation List Completed</source>
         <translation>自動化リストが完了しました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="559"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="631"/>
         <source>Automate Log</source>
         <translation>自動化ログ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="634"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="706"/>
         <source>Input</source>
         <translation>入力</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="640"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="712"/>
         <source>Output</source>
         <translation>出力</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="652"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="724"/>
         <source>Validation</source>
         <translation>検証</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="757"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="829"/>
         <source>Run</source>
         <translation>実行</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="777"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="790"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="799"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="807"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="884"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="901"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="910"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="991"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="1792"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="2106"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="2348"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="2513"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3088"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3184"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3240"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3250"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3274"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3288"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3394"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3410"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3415"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3428"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3447"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3461"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3476"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3480"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3496"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3509"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3514"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3526"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3536"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3541"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3743"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3750"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3766"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3825"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3857"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="4056"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5264"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5305"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5311"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5317"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5546"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5566"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5623"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5887"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="6093"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="133"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="151"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1291"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1299"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1305"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1323"/>
         <source>Sigil</source>
         <translation>Sigil</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="778"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="134"/>
+        <source>This Epub is already the version 2.0 !</source>
+        <translation>このEpubはすでにバージョン2.0です!</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="152"/>
+        <source>This Epub is already the version 3.0 !</source>
+        <translation>このEpubはすでにバージョン3.0です!</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="171"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="221"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="689"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="711"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="718"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="738"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="837"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="845"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="865"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1014"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1036"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1043"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1063"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1173"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1181"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1206"/>
+        <source>Sigil-Enhanced</source>
+        <translation>Sigil-Enhanced</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="172"/>
+        <source>Normalize this EPUB structure?
+
+This will repair OPF manifest issues, correct internal link path casing, and move resources to Sigil&apos;s standard folder layout.</source>
+        <translation>この EPUB の構造を正規化しますか?
+
+OPF マニフェストの問題を修復し、内部リンクパスの大文字/小文字を修正して、リソースを Sigil の標準フォルダー構成へ移動します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="181"/>
+        <source>Normalize EPUB structure</source>
+        <translation>EPUB 構造を正規化</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="209"/>
+        <source>EPUB structure normalization completed.</source>
+        <translation>EPUB 構造の正規化が完了しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="210"/>
+        <source>No EPUB structure changes needed.</source>
+        <translation>EPUB 構造の変更は不要です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="222"/>
+        <source>Enhance source formatting for all XHTML and CSS resources?
+
+This uses the built-in EPUB-safe formatter backend. XHTML files that are not well-formed and CSS files with parser errors will be skipped and reported in Validation Results.</source>
+        <translation>すべての XHTML および CSS リソースのソース整形を強化しますか?
+
+組み込みの EPUB 対応フォーマッターを使用します。整形式でない XHTML ファイルと、パーサーエラーがある CSS ファイルはスキップされ、検証結果に報告されます。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="242"/>
+        <source>Source formatting enhancement completed.</source>
+        <translation>ソース整形の強化が完了しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="243"/>
+        <source>No source formatting changes needed.</source>
+        <translation>ソース整形の変更は不要です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="274"/>
+        <source>Current book</source>
+        <translation>現在の書籍</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="291"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="299"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="306"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="367"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="416"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="423"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="439"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="445"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="484"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="496"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="531"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="540"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="560"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="588"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="593"/>
+        <source>Chinese Conversion</source>
+        <translation>中国語変換</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="292"/>
+        <source>OpenCC conversion data was not found. Checked:
+%1</source>
+        <translation>OpenCC の変換データが見つかりません。確認した場所:
+%1</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="306"/>
+        <source>No EPUB is currently loaded.</source>
+        <translation>現在 EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="352"/>
+        <source>%1: %2</source>
+        <translation>%1: %2</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="368"/>
+        <source>Batch analysis failed. No files were changed.
+%1</source>
+        <translation>一括解析に失敗しました。ファイルは変更されていません。
+%1</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="373"/>
+        <source>No Chinese conversion changes were found in the selected scope.</source>
+        <translation>選択した範囲内では中国語変換の変更点は見つかりませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="424"/>
+        <source>%1 changed after analysis. No files were changed.</source>
+        <translation>解析後に %1 が変更されました。ファイルは変更されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="430"/>
+        <source>Creating checkpoint before Chinese conversion...</source>
+        <translation>中国語変換前にチェックポイントを作成中...</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="440"/>
+        <source>Checkpoint creation failed. No files were changed.</source>
+        <translation>チェックポイントの作成に失敗しました。ファイルは変更されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="446"/>
+        <source>%1 changed while creating the checkpoint. No conversion was applied.</source>
+        <translation>チェックポイントの作成中に %1 が変更されました。変換は適用されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="474"/>
+        <source>Chinese conversion applied: %1 changes in %2 files. A checkpoint was created.</source>
+        <translation>中国語変換を適用しました: %2 ファイルで %1 件を変更しました。チェックポイントを作成しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="485"/>
+        <source>The selection contains markup or an entity reference. Convert the current file with structure-aware rules instead?</source>
+        <translation>選択範囲にマークアップまたはエンティティ参照が含まれています。代わりに、構造を考慮した規則で現在のファイルを変換しますか?</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="500"/>
+        <source>No Chinese conversion changes were found in the selection.</source>
+        <translation>選択範囲に中国語変換の変更は見つかりませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="509"/>
+        <source>Current selection</source>
+        <translation>現在の選択範囲</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="532"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="594"/>
+        <source>The editor changed after analysis. No text was replaced.</source>
+        <translation>解析後にエディターの内容が変更されました。テキストは置換されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="541"/>
+        <source>The selected text could not be replaced.</source>
+        <translation>選択したテキストを置換できませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="547"/>
+        <source>Chinese conversion applied to the current selection.</source>
+        <translation>現在の選択範囲に中国語変換を適用しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="561"/>
+        <source>The current file could not be analyzed:
+%1</source>
+        <translation>現在のファイルを解析できませんでした:
+%1</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="565"/>
+        <source>No Chinese conversion changes were found in the current file.</source>
+        <translation>現在のファイルには中国語変換の変更点は見つかりませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="610"/>
+        <source>Chinese conversion applied: %1 changes in the current file.</source>
+        <translation>中国語変換を適用しました: 現在のファイルで %1 件を変更しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="629"/>
+        <source>BR paragraph analysis: no EPUB is currently loaded.</source>
+        <translation>BR 段落の解析: 現在 EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="662"/>
+        <source>BR paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.</source>
+        <translation>BR 段落の解析が完了しました。XHTML ファイル %1 件を確認し、自動処理可能な候補 %2 件、手動確認が必要な候補 %3 件を検出しました。%4 件をスキップし、自動処理可能な段落は推定 %5 件です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="672"/>
+        <source>BR paragraph candidates found. See Validation Results.</source>
+        <translation>BR 段落の候補が見つかりました。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="673"/>
+        <source>No BR paragraph candidates found.</source>
+        <translation>BR 段落の候補は見つかりませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="687"/>
+        <source>BR paragraph normalization: current tab is not an XHTML resource.</source>
+        <translation>BR 段落の正規化: 現在のタブは XHTML リソースではありません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="689"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1014"/>
+        <source>The current tab is not an XHTML file.</source>
+        <translation>現在のタブは XHTML ファイルではありません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="712"/>
+        <source>The current XHTML file is not a BR paragraph candidate. See Validation Results.</source>
+        <translation>現在の XHTML ファイルは BR 段落の候補ではありません。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="719"/>
+        <source>BR paragraph normalization failed safety checks. See Validation Results.</source>
+        <translation>BR 段落の正規化が安全性チェックに失敗しました。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="725"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="904"/>
+        <source>BR paragraph normalization: no changes needed.</source>
+        <translation>BR 段落の正規化: 変更は不要です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="727"/>
+        <source>No BR paragraph changes needed.</source>
+        <translation>BR 段落の変更は不要です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="732"/>
+        <source>This file is an auto-safe BR paragraph candidate.</source>
+        <translation>このファイルは自動処理可能な BR 段落の候補です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="733"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1058"/>
+        <source>This file requires manual review and is skipped by full-book normalization. Continue only if you inspected it.</source>
+        <translation>このファイルは手動確認が必要なため、書籍全体の正規化ではスキップされます。内容を確認済みの場合にのみ続行してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="739"/>
+        <source>Normalize BR paragraphs in the current XHTML file?
+
+%1
+
+This will convert body-level BR-separated text into p elements. Safety checks have confirmed visible text, id/name, and href/src values are preserved.
+
+Estimated paragraphs: %2</source>
+        <translation>現在の XHTML ファイルの BR 段落を正規化しますか?
+
+%1
+
+本文直下の BR 区切りテキストを p 要素に変換します。安全性チェックにより、表示テキスト、id/name、href/src の値が保持されることを確認済みです。
+
+推定段落数: %2</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="769"/>
+        <source>BR paragraph normalization: current XHTML file was updated.</source>
+        <translation>BR 段落の正規化: 現在の XHTML ファイルを更新しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="771"/>
+        <source>Current XHTML BR paragraphs normalized.</source>
+        <translation>現在の XHTML ファイルの BR 段落を正規化しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="782"/>
+        <source>BR paragraph normalization: no EPUB is currently loaded.</source>
+        <translation>BR 段落の正規化: 現在 EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="828"/>
+        <source>BR paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs.</source>
+        <translation>BR 段落の正規化ドライランが完了しました。XHTML ファイル %1 件を確認し、%2 件は自動処理可能、%3 件は手動確認が必要、%4 件はスキップされました。自動処理可能な段落は推定 %5 件です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="838"/>
+        <source>No auto-safe BR paragraph files were found. See Validation Results.</source>
+        <translation>自動処理可能な BR 段落ファイルは見つかりませんでした。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="846"/>
+        <source>Normalize BR paragraphs in %1 auto-safe XHTML files?
+
+%2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
+
+Visible text, id/name, and href/src safety checks will be run for every changed file.
+
+Estimated paragraphs: %4</source>
+        <translation>自動処理可能な XHTML ファイル %1 件の BR 段落を正規化しますか?
+
+手動確認が必要な %2 件と、候補ではない %3 件はスキップされます。
+
+変更する各ファイルで、表示テキスト、id/name、href/src の安全性チェックを実行します。
+
+推定段落数: %4</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="860"/>
+        <source>Creating checkpoint before BR paragraph normalization...</source>
+        <translation>BR 段落の正規化前にチェックポイントを作成中...</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="863"/>
+        <source>BR paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
+        <translation>BR 段落の正規化をキャンセルしました: チェックポイントの作成に失敗しました。XHTML ファイルは変更されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="866"/>
+        <source>Checkpoint creation failed. BR paragraph normalization was cancelled.</source>
+        <translation>チェックポイントの作成に失敗しました。BR 段落の正規化をキャンセルしました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="870"/>
+        <source>BR paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
+        <translation>BR 段落の正規化: 一括変更前にチェックポイントを保存しました。復元にはチェックポイントを使用してください。リソースの一括書き込みはコードビューの元に戻す操作では取り消せません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="918"/>
+        <source>BR paragraph normalization: XHTML file was updated.</source>
+        <translation>BR 段落の正規化: XHTML ファイルを更新しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="928"/>
+        <source>BR paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
+        <translation>BR 段落の正規化が完了しました。%1 件を更新し、%2 件は変更なし、%3 件は失敗、手動確認が必要な候補 %4 件はスキップしました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="935"/>
+        <source>BR paragraph normalization completed.</source>
+        <translation>BR 段落の正規化が完了しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="936"/>
+        <source>No BR paragraph files were changed.</source>
+        <translation>BR 段落を含むファイルは変更されませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="954"/>
+        <source>KFX paragraph analysis: no EPUB is currently loaded.</source>
+        <translation>KFX 段落の解析: 現在 EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="987"/>
+        <source>KFX paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, estimated %5 auto-safe paragraphs.</source>
+        <translation>KFX 段落の解析が完了しました。XHTML ファイル %1 件を確認し、自動処理可能な候補 %2 件、手動確認が必要な候補 %3 件を検出しました。%4 件をスキップし、自動処理可能な段落は推定 %5 件です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="997"/>
+        <source>KFX paragraph candidates found. See Validation Results.</source>
+        <translation>KFX 段落の候補が見つかりました。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="998"/>
+        <source>No KFX paragraph candidates found.</source>
+        <translation>KFX 段落の候補は見つかりませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1012"/>
+        <source>KFX paragraph normalization: current tab is not an XHTML resource.</source>
+        <translation>KFX 段落の正規化: 現在のタブは XHTML リソースではありません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1037"/>
+        <source>The current XHTML file is not a KFX paragraph candidate. See Validation Results.</source>
+        <translation>現在の XHTML ファイルは KFX 段落の候補ではありません。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1044"/>
+        <source>KFX paragraph normalization failed safety checks. See Validation Results.</source>
+        <translation>KFX 段落の正規化が安全性チェックに失敗しました。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1050"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1245"/>
+        <source>KFX paragraph normalization: no changes needed.</source>
+        <translation>KFX 段落の正規化: 変更は不要です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1052"/>
+        <source>No KFX paragraph changes needed.</source>
+        <translation>KFX 段落の変更は不要です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1057"/>
+        <source>This file is an auto-safe KFX paragraph candidate.</source>
+        <translation>このファイルは自動処理可能な KFX 段落の候補です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1064"/>
+        <source>Normalize KFX paragraphs in the current XHTML file?
+
+%1
+
+This will wrap body-level raw text and inline/media runs into p elements, remove 0-height spacer p elements, and preserve non-zero spacer p elements for visual spacing. The result will be formatted once before writing. Safety checks have confirmed visible text, id/name, and href/src values are preserved.
+
+Estimated paragraphs: %2</source>
+        <translation>現在の XHTML ファイルの KFX 段落を正規化しますか?
+
+%1
+
+本文直下の生テキストとインライン/メディアの並びを p 要素で囲み、高さ 0 のスペーサー p 要素を削除し、視覚的な間隔を保つ高さ 0 以外のスペーサー p 要素は保持します。書き込み前に結果を一度だけ整形します。安全性チェックにより、表示テキスト、id/name、href/src の値が保持されることを確認済みです。
+
+推定段落数: %2</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1099"/>
+        <source>KFX paragraph normalization: current XHTML file was updated.</source>
+        <translation>KFX 段落の正規化: 現在の XHTML ファイルを更新しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1101"/>
+        <source>Current XHTML KFX paragraphs normalized.</source>
+        <translation>現在の XHTML ファイルの KFX 段落を正規化しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1112"/>
+        <source>KFX paragraph normalization: no EPUB is currently loaded.</source>
+        <translation>KFX 段落の正規化: 現在 EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1162"/>
+        <source>KFX paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, estimated %5 auto-safe paragraphs. Will remove %6 0-height spacer p elements and preserve %7 spacing p elements.</source>
+        <translation>KFX 段落の正規化ドライランが完了しました。XHTML ファイル %1 件を確認し、%2 件は自動処理可能、%3 件は手動確認が必要、%4 件はスキップされました。自動処理可能な段落は推定 %5 件です。高さ 0 のスペーサー p 要素 %6 件を削除し、間隔用の p 要素 %7 件を保持します。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1174"/>
+        <source>No auto-safe KFX paragraph files were found. See Validation Results.</source>
+        <translation>自動処理可能な KFX 段落ファイルは見つかりませんでした。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1182"/>
+        <source>Normalize KFX paragraphs in %1 auto-safe XHTML files?
+
+%2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
+
+The operation wraps body-level raw text into p elements, removes 0-height spacer p elements, preserves non-zero spacing p elements, formats each changed XHTML once, and runs safety checks for every changed file.
+
+Estimated paragraphs: %4
+0-height spacer p elements to remove: %5
+Spacing p elements to preserve: %6</source>
+        <translation>自動処理可能な XHTML ファイル %1 件の KFX 段落を正規化しますか?
+
+手動確認が必要な %2 件と、候補ではない %3 件はスキップされます。
+
+本文直下の生テキストを p 要素で囲み、高さ 0 のスペーサー p 要素を削除し、高さ 0 以外の間隔用 p 要素を保持します。変更する各 XHTML を一度だけ整形し、各ファイルで安全性チェックを実行します。
+
+推定段落数: %4
+削除する高さ 0 のスペーサー p 要素: %5
+保持する間隔用 p 要素: %6</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1201"/>
+        <source>Creating checkpoint before KFX paragraph normalization...</source>
+        <translation>KFX 段落の正規化前にチェックポイントを作成中...</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1204"/>
+        <source>KFX paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
+        <translation>KFX 段落の正規化をキャンセルしました: チェックポイントの作成に失敗しました。XHTML ファイルは変更されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1207"/>
+        <source>Checkpoint creation failed. KFX paragraph normalization was cancelled.</source>
+        <translation>チェックポイントの作成に失敗しました。KFX 段落の正規化をキャンセルしました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1211"/>
+        <source>KFX paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
+        <translation>KFX 段落の正規化: 一括変更前にチェックポイントを保存しました。復元にはチェックポイントを使用してください。リソースの一括書き込みはコードビューの元に戻す操作では取り消せません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1262"/>
+        <source>KFX paragraph normalization: XHTML file was updated.</source>
+        <translation>KFX 段落の正規化: XHTML ファイルを更新しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1272"/>
+        <source>KFX paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
+        <translation>KFX 段落の正規化が完了しました。%1 件を更新し、%2 件は変更なし、%3 件は失敗、手動確認が必要な候補 %4 件はスキップしました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1279"/>
+        <source>KFX paragraph normalization completed.</source>
+        <translation>KFX 段落の正規化が完了しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1280"/>
+        <source>No KFX paragraph files were changed.</source>
+        <translation>KFX 段落を含むファイルは変更されませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="850"/>
         <source>Are you sure you want to restructure this epub?
 This action cannot be reversed.</source>
         <translation>このepubを再構築してもよろしいですか?
 この操作は元に戻せません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="791"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="800"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="808"/>
         <source>Restructure cancelled: %1, XML not well formed.</source>
-        <translation>再構築がキャンセルされました: %1、XMLが整形式ではありません。</translation>
+        <translation type="vanished">再構築がキャンセルされました: %1、XMLが整形式ではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="882"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="884"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5621"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5623"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="6091"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="6093"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5919"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5921"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6403"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6405"/>
         <source>%1[*] - epub%2 - %3</source>
         <translation>%1[*] - epub%2 - %3</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="882"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="5621"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="6091"/>
         <source>Sigil [std]</source>
-        <translation>Sigil [std]</translation>
+        <translation type="vanished">Sigil [std]</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="886"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="868"/>
         <source>Restructure completed.</source>
         <translation>再構築が完了しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="902"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1000"/>
         <source>Bulk rename cancelled: %1, XML not well formed.</source>
         <translation>一括リネームがキャンセルされました: %1、XMLが整形式ではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="911"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1009"/>
         <source>Bulk rename cancelled: %1, OPF not well formed.</source>
         <translation>一括リネームがキャンセルされました: %1、OPFが整形式ではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="980"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1078"/>
         <source>Bulk rename completed.</source>
         <translation>一括リネームが完了しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="992"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1090"/>
         <source>Rebase cancelled: %1, XML not well formed.</source>
         <translation>リベースがキャンセルされました: %1、XMLが整形式ではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1000"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1098"/>
         <source>Rebase completed.</source>
         <translation>リベースが完了しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1110"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1232"/>
         <source>Checkpoint generation failed.</source>
         <translation>チェックポイントの生成に失敗しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1116"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1238"/>
         <source>Checkpoint saved.</source>
         <translation>チェックポイントを保存しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1153"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1275"/>
         <source>Checkout Failed. No checkpoints found</source>
         <translation>チェックアウトに失敗しました。チェックポイントが見つかりません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1170"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1292"/>
         <source>Checkout Failed. No checkpoint selected</source>
         <translation>チェックアウトに失敗しました。チェックポイントが選択されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1194"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1316"/>
         <source>Epub Generate from Tag Failed.</source>
         <translation>タグからのEpub生成に失敗しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1199"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1321"/>
         <source>Epub Generation succeeded</source>
         <translation>Epub生成に成功しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1213"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1335"/>
         <source>Repository Checkout</source>
         <translation>リポジトリ チェックアウト</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1214"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1336"/>
         <source>Your current book will be replaced losing any unsaved changes ... Are you sure you want to proceed?</source>
         <translation>現在のブックは置き換えられ、保存されていない変更は失われます ... 続行してもよろしいですか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1238"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="1267"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1360"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1389"/>
         <source>Diff Failed. No checkpoints found</source>
         <translation>差分に失敗しました。チェックポイントが見つかりません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1283"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1405"/>
         <source>Diff Failed. No checkpoint selected for comparison</source>
         <translation>差分に失敗しました。比較するチェックポイントが選択されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1314"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1436"/>
         <source>Results of Comparison</source>
         <translation>比較結果</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1314"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1436"/>
         <source>No differences were found.</source>
         <translation>差異はありませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1335"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="1350"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1457"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1472"/>
         <source>Description Edit Failed. No checkpoints found</source>
         <translation>説明の編集に失敗しました。チェックポイントが見つかりません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1367"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1489"/>
         <source>Description Edit Failed. No checkpoint selected to edit</source>
         <translation>説明の編集に失敗しました。編集するためのチェックポイントが選択されていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1384"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1506"/>
         <source>Edit checkpoint Description</source>
         <translation>チェックポイントの説明を編集する</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1385"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1507"/>
         <source>New Checkpoint Description:</source>
         <translation>新しいチェックポイントの説明:&lt;</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1396"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1518"/>
         <source>Description Edit Failed for unknown reason</source>
         <translation>説明の編集に失敗しました、理由は不明です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1402"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1524"/>
         <source>Description edit cancelled or empty</source>
         <translation>説明の編集がキャンセルされたか、空になりました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1405"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1527"/>
         <source>Description successfully updated</source>
         <translation>説明の更新に成功しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1429"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1551"/>
         <source>Repository Log</source>
         <translation>リポジトリ ログ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1460"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1582"/>
         <source>No External Xhtml Editor has been specified:  See Preferences</source>
         <translation>外部XHTMLエディターが指定されていません: 環境設定を参照してください</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1467"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1589"/>
         <source>Specified External Xhtml Editor path does not exist</source>
         <translation>指定された外部XHTMLエディターのパスが存在しません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1477"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1599"/>
         <source>PageEdit XHtml Editor works only on Html/OPF Resources</source>
         <translation>PageEdit XHTMLエディターは、HTML/OPFリソースでのみ機能します</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1483"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1605"/>
         <source>External XHtml Editor works only on Html Resources</source>
         <translation>外部XHTMLエディターは、HTMLリソースでのみ機能します</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1525"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1647"/>
         <source>Executing PageEdit Xhtml Editor</source>
         <translation>PageEdit 外部XHTMLエディターの実行</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1538"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1660"/>
         <source>Executing External Xhtml Editor</source>
         <translation>外部XHTMLエディターの実行</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1542"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1664"/>
         <source>Failed to Launch External Xhtml Editor</source>
         <translation>外部XHTMLエディターの起動に失敗しました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1710"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1861"/>
         <source>Navigation cancelled as location no longer exists.</source>
         <translation>位置が存在しないため、ナビゲーションはキャンセルされました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1727"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1878"/>
         <source>Location bookmarked.</source>
         <translation>位置をブックマークしました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1792"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1943"/>
         <source>Are you sure you want to open this external link?
 
 %1</source>
@@ -12821,486 +14375,601 @@ This action cannot be reversed.</source>
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1828"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1979"/>
         <source>was updated</source>
         <translation>が更新されました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1834"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1985"/>
         <source>Warning</source>
         <translation>警告</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1834"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="1985"/>
         <source>The file was NOT well formed and may be corrupted.</source>
         <translation>このファイルは整形式ではなく、破損している可能性があります。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1878"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2029"/>
         <source>Warning: </source>
-        <translation>警告: </translation>
+        <translation>警告:&#xa0;</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="1975"/>
         <source>Sigil is closing...</source>
-        <translation>Sigilを閉じています...</translation>
+        <translation type="vanished">Sigilを閉じています...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2042"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="858"/>
+        <source>Restructure</source>
+        <translation>再編成</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="868"/>
+        <source>No restructure changes needed.</source>
+        <translation>再構成の変更は不要です。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="878"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="886"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="893"/>
+        <source>%1 cancelled: %2, XML not well formed.</source>
+        <translation>%1 をキャンセルしました: %2 の XML が整形式ではありません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="928"/>
+        <source>标准目录整理：已将【%1】重命名为【%2】。</source>
+        <translation>標準ディレクトリ整理: 【%1】を【%2】に名前変更しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="960"/>
+        <source>标准目录整理：已将目录【%1】大小写规范化为【%2】。</source>
+        <translation>標準ディレクトリ整理: ディレクトリ【%1】の大文字/小文字を【%2】に正規化しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="1130"/>
+        <source>标准目录整理：发现重复文件名，已将【%1】重命名为【%2】。</source>
+        <translation>標準ディレクトリ整理: 重複するファイル名が見つかったため、【%1】を【%2】に名前変更しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="1174"/>
+        <source>标准目录整理：已将资源【%1】移动到标准目录【%2】。</source>
+        <translation>標準ディレクトリ整理: リソース【%1】を標準ディレクトリ【%2】へ移動しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="1674"/>
+        <source>Plugin not found: %1</source>
+        <translation>プラグインが見つかりません: %1</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="1711"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3886"/>
+        <source>Unable to start plugin.</source>
+        <translation>プラグインを起動できません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2155"/>
+        <source>%1 is closing...</source>
+        <translation>%1 を閉じています...</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2222"/>
         <source>New file created.</source>
         <translation>新しいファイルが作成されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2065"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2245"/>
         <source>Open File</source>
         <translation>ファイルを開く</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2105"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2285"/>
         <source>This file no longer exists. Click OK to remove it from the menu.
 %1</source>
         <translation>このファイルは存在しません。[OK]をクリックしてメニューから削除します。
 %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2188"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2368"/>
         <source>Save File</source>
         <translation>ファイルを保存</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2244"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2424"/>
         <source>Save a Copy</source>
         <translation>コピーを保存</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2283"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2463"/>
         <source>Epub layout discarded.</source>
         <translation>Epubレイアウトが破棄されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2290"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2470"/>
         <source>New epub created.</source>
         <translation>新しいepubが作成されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2325"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2516"/>
         <source>Go To Line</source>
         <translation>指定行に移動</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2325"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2516"/>
         <source>Line #</source>
         <translation>行番号</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2348"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2539"/>
         <source>Image does not exist: </source>
         <translation>画像がありません:</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2428"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2619"/>
         <source>or</source>
         <translation>または</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2436"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2627"/>
         <source>No CSS styles named</source>
         <translation>CSS スタイルの名前</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2436"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2627"/>
         <source>found, or stylesheet not linked.</source>
         <translation>は見つからないか、スタイルシートがリンクされていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2509"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2700"/>
         <source>&lt;html&gt;&lt;p&gt;The href &lt;b&gt;%1&lt;/b&gt; found in &lt;b&gt;%2&lt;/b&gt; does not exist (and there may be more). Splitting or merging under these conditions can result in broken links.&lt;/p&gt;&lt;p&gt;Do you still wish to continue?&lt;/p&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;p&gt;&lt;b&gt;%2&lt;/b&gt; で見つかった、href &lt;b&gt;%1&lt;/b&gt; が存在しません（それ以外に存在する可能性があります）。このような状況で、分割またはマージを行うと、リンクが壊れる可能性があります。&lt;/p&gt;&lt;p&gt;続行しますか?&lt;/p&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2532"/>
-        <source>Dropped files added.</source>
-        <translation type="unfinished"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2727"/>
+        <source>The dropped file is an EPUB.</source>
+        <translation>ドロップされたファイルは EPUB です。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2546"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2728"/>
+        <source>The dropped files are EPUB files.</source>
+        <translation>ドロップされたファイルは EPUB ファイルです。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2730"/>
+        <source>Do you want to add it to the current book, or open it for editing in a new window?
+
+%1</source>
+        <translation>現在の書籍に追加しますか、それとも新しいウィンドウで開いて編集しますか?
+
+%1</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2732"/>
+        <source>Do you want to add them to the current book, or open them for editing in new windows?
+
+%1</source>
+        <translation>現在の書籍に追加しますか、それとも新しいウィンドウで開いて編集しますか?
+
+%1</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2734"/>
+        <source>Add to Current Book</source>
+        <translation>現在の書籍に追加</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2736"/>
+        <source>Open in New Window</source>
+        <translation>新しいウィンドウで開く</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2737"/>
+        <source>Open in New Windows</source>
+        <translation>新しいウィンドウで開く</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2765"/>
+        <source>Dropped files added.</source>
+        <translation>ドロップされたファイルを追加しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="2778"/>
         <source>Add Cover</source>
         <translation>表紙を追加</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2595"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2874"/>
         <source>An existing Cover file has been found.</source>
         <translation>既存の表紙用ファイルが見つかりました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2658"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2937"/>
         <source>Unexpected error. Only image files can be used for the cover.</source>
         <translation>予期せぬエラーです。表紙には画像ファイルのみ使用できます。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2677"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2956"/>
         <source>Cover added.</source>
         <translation>表紙を追加しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2693"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2972"/>
         <source>OPF Manifest Mimetypes Updated.</source>
         <translation>OPFマニフェストMIMEタイプが更新されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2702"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="2719"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="2739"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="2762"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="2794"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2981"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2998"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3018"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3041"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3073"/>
         <source>Not Available for epub2.</source>
         <translation>epub2では使用できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2710"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="2989"/>
         <source>OPF Manifest Properties Updated.</source>
         <translation>OPFマニフェストプロパティが更新されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2725"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3004"/>
         <source>Nav removed from OPF Spine.</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を OPF スパインから削除しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2746"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3025"/>
         <source>Nav added to OPF Spine with linear=&quot;no&quot;</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を linear="no" で OPF スパインに追加しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2748"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3027"/>
         <source>Nav added to OPF Spine.</source>
-        <translation type="unfinished"/>
+        <translation>ナビゲーション文書を OPF スパインに追加しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2784"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3063"/>
         <source>NCX and Guide removed.</source>
         <translation>NCXおよびガイドが削除されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2811"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="2844"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3090"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3123"/>
         <source>NCX and Guide generation failed.</source>
         <translation>NCXおよびガイドの生成に失敗しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2880"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3159"/>
         <source>NCX and Guide generated.</source>
         <translation>NCXおよびガイドが生成されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="2977"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3256"/>
         <source>An existing Index file has been found.</source>
         <translation>既存のインデックスファイルが見つかりました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3069"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3348"/>
         <source>Styles deleted.</source>
         <translation>スタイルが削除されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3077"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3356"/>
         <source>Reports Being Generated.</source>
         <translation>レポートが生成されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3088"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3367"/>
         <source>Reports cancelled due to XML not well formed.</source>
         <translation>XMLが整形式でないため、レポートがキャンセルされました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3184"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3463"/>
         <source>Delete Unused Media Files cancelled due to XML not well formed.</source>
         <translation>XMLが整形式でないため、未使用のメディアファイルの削除がキャンセルされました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3234"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3513"/>
         <source>Unused media files deleted.</source>
         <translation>未使用のメディアファイルを削除しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3237"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3240"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3516"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3519"/>
         <source>There are no unused image, video or audio files to delete.</source>
         <translation>削除すべき未使用の画像、動画、オーディオファイルがありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3250"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3529"/>
         <source>Delete Unused Styles cancelled due to XML not well formed.</source>
         <translation>XMLが整形式でないため、未使用のスタイルの削除がキャンセルされました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3272"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3274"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3551"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3553"/>
         <source>There are no unused stylesheet selectors to delete.</source>
         <translation>削除すべき未使用のスタイルシートセレクターがありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3288"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3567"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1291"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1299"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1305"/>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="1323"/>
         <source>You cannot insert a file at this position.</source>
         <translation>この位置にファイルを挿入できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3295"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3574"/>
         <source>Insert File</source>
         <translation>ファイルを挿入</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3348"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3611"/>
         <source>The file &quot;%1&quot; does not exist.</source>
         <translation>ファイル &quot;%1&quot; は存在しません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3394"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3415"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3657"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3678"/>
         <source>You cannot insert an id at this position.</source>
         <translation>この位置にIDを挿入できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3410"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3673"/>
         <source>ID is invalid - must start with a letter, followed by letter number _ : - or .</source>
         <translation>IDが無効です。文字で始まり、文字の後に「数字」「_」「:」「-」「.」が続く必要があります。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3428"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3691"/>
         <source>You can only insert an aria clips in xhtml files.</source>
-        <translation type="unfinished"/>
+        <translation>ARIA クリップは XHTML ファイルにのみ挿入できます。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3447"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3710"/>
         <source>Inserting an aria clip failed.</source>
-        <translation type="unfinished"/>
+        <translation>ARIA クリップの挿入に失敗しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3461"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3480"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3724"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3743"/>
         <source>You cannot insert an aria role at this position.</source>
         <translation>この位置にAria Roleを挿入できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3476"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3739"/>
         <source>The selected role cannot be used on this tag.</source>
-        <translation type="unfinished"/>
+        <translation>選択したロールはこのタグには使用できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3496"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3514"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3759"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3777"/>
         <source>You cannot insert a link at this position.</source>
         <translation>この位置にリンクを挿入できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3509"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3772"/>
         <source>Link is invalid - cannot contain &apos;&lt;&apos; or &apos;&gt;&apos;</source>
         <translation>リンクは有効です - &apos;&lt;&apos;または&apos;&gt;&apos;は含めません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3526"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3789"/>
         <source>You cannot mark an index at this position or without selecting text.</source>
         <translation>この位置で、またはテキストが選択されていない状態で、インデックスをマークできません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3536"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3799"/>
         <source>Entry is invalid - cannot contain &apos;&lt;&apos; or &apos;&gt;&apos;</source>
         <translation>エントリーが無効です - &apos;&lt;&apos; または &apos;&gt;&apos; を含むことはできません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3541"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3804"/>
         <source>You cannot mark an index at this position.</source>
         <translation>この位置でインデックスをマークできません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3652"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3664"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="3683"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3914"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3926"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3945"/>
         <source>Select the destination to paste into first.</source>
         <translation>最初に貼り付ける貼り付け先を選択します。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3672"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="3934"/>
         <source>Pasted clip entry %1.</source>
         <translation>クリップエントリー %1 を貼り付けます。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3743"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4005"/>
         <source>One resource selected and there is no previous resource to merge into.</source>
         <translation>1つのリソースが選択されていますが、マージする前のリソースがありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3751"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4013"/>
         <source>Are you sure you want to merge the selected files?
 This action cannot be reversed.</source>
         <translation>選択したファイルをマージしますか?
 この操作は元に戻せません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3766"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4028"/>
         <source>Merge cancelled: XHTML files involved in merge are not well formed.</source>
         <translation>マージをキャンセル: マージに関係するXHTMLファイルが整形式ではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3825"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4087"/>
         <source>Cannot merge file %1</source>
         <translation>ファイル %1 をマージできません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3839"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4101"/>
         <source>Merge completed. You may need to regenerate or edit your Table Of Contents.</source>
         <translation>マージが完了しました。目次の再生成または編集が必要な場合があります。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3857"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4119"/>
         <source>Link Stylesheets cancelled: %1, XML not well formed.</source>
         <translation>スタイルシートへのリンクをキャンセル: %1, XMLが整形式ではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="3987"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4249"/>
         <source>Word updated.</source>
         <translation>単語が更新されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4056"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4318"/>
         <source>Link Javascripts cancelled: %1, XML not well formed.</source>
         <translation>JavaScriptへのリンクをキャンセル: %1, XMLが整形式ではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4166"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4428"/>
         <source>File(s) deleted.</source>
         <translation>ファイルを削除しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4177"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4439"/>
         <source>Edit Table of Contents cancelled.</source>
         <translation>目次の編集をキャンセルしました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4182"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4444"/>
         <source>Table Of Contents edited.</source>
         <translation>目次を編集しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4200"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4462"/>
         <source>Generate TOC cancelled.</source>
         <translation>目次の生成をキャンセルしました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4225"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4487"/>
         <source>Table Of Contents generated.</source>
         <translation>目次を生成しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4227"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4489"/>
         <source>No Table Of Contents changes were necessary.</source>
         <translation>目次を変更する必要はありませんでした。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4305"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4567"/>
         <source>An existing HTML Table of Contents file has been found.</source>
         <translation>既存のHTML目次ファイルが見つかりました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4389"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4652"/>
         <source>Text selection marked.</source>
         <translation>テキスト選択をマークしました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4391"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="4409"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4654"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4672"/>
         <source>Text selection unmarked.</source>
         <translation>テキスト選択をマーク解除しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4458"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4722"/>
         <source>Metadata Editor cancelled.</source>
         <translation>メタデータエディターがキャンセルされました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4461"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4725"/>
         <source>Metadata edited.</source>
         <translation>メタデータが編集されました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4581"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4855"/>
         <source>RunPlugin</source>
         <translation>プラグイン実行</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4594"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4868"/>
         <source>RunAutomate</source>
-        <translation type="unfinished"/>
+        <translation>自動化を実行</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4620"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4902"/>
         <source>This EPUB does not contain any CSS stylesheets to validate.</source>
         <translation>このEPUBには検証するCSSスタイルシートが含まれていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="4651"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="4933"/>
         <source>This EPUB does not contain any CSS stylesheets to reformat.</source>
         <translation>このEPUBには再フォーマットするCSSスタイルシートが含まれていません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5176"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5463"/>
         <source>%1%2 - Line: %3, Col: %4</source>
-        <translation type="unfinished"/>
+        <translation>%1%2 - 行: %3、列: %4</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5264"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5551"/>
         <source>File cannot be split at this position.</source>
         <translation>この位置でファイルを分割することはできません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5287"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5574"/>
         <source>Split completed.</source>
         <translation>分割が完了しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5305"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5592"/>
         <source>Cannot split since at least one file is not an HTML file.</source>
         <translation>少なくとも1つのファイルがHTMLファイルではないため、分割できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5311"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5598"/>
         <source>Cannot split: %1 XML is not well formed</source>
         <translation>分割できません: %1、XMLが整形式ではありません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5317"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5604"/>
         <source>Cannot split since at least one file may not be an HTML file.</source>
         <translation>少なくとも1つのファイルがHTMLファイルでない可能性があるため、分割できません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5350"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5637"/>
         <source>Split completed. You may need to update the Table of Contents.</source>
         <translation>分割が完了しました。必要に応じて目次を更新してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5352"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5639"/>
         <source>No split file markers found. Use Insert-&gt;Split Marker.</source>
         <translation>分割ファイルマーカーが見つかりません。挿入-&gt;分割マーカーを使用してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5547"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="5844"/>
         <source>The document has been modified.
 Do you want to save your changes?</source>
         <translation>ドキュメントは変更されています。
 変更点を保存しますか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5568"/>
-        <source>Should Sigil overwrite this file?</source>
-        <translation>Sigilがこのファイルを上書きしてもよいですか?</translation>
+        <location filename="../../MainUI/MainWindow.cpp" line="5865"/>
+        <source>Should %1 overwrite this file?</source>
+        <translation>%1 がこのファイルを上書きしてもよろしいですか?</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5763"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6115"/>
+        <source>The creator of this file has encrypted it with DRM. %1 cannot open such files.</source>
+        <translation>このファイルは作成者によって DRM で暗号化されています。%1 ではこの種類のファイルを開けません。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="6176"/>
+        <source>%1 cannot save files of type &quot;%2&quot;.
+Please choose a different format.</source>
+        <translation>%1 では「%2」形式のファイルを保存できません。
+別の形式を選択してください。</translation>
+    </message>
+    <message>
+        <source>Should Sigil overwrite this file?</source>
+        <translation type="vanished">Sigilがこのファイルを上書きしてもよいですか?</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindow.cpp" line="6062"/>
         <source>No importer for file type: %1</source>
         <translation>ファイルタイプ %1 のインポーターがありません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5770"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6069"/>
         <source>The following file was not loaded due to invalid content or not well formed XML:
 
 %1 (line %2: %3)
@@ -13313,44 +14982,42 @@ Try setting the Clean Source preference to Mend XHTML Source Code on Open and re
 [XHTMLソースコードを修繕するタイミング]の設定で、&quot;開く&quot;を指定して、ファイルを再読み込みしてください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5775"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6074"/>
         <source>Loading file...</source>
         <translation>ファイルを読み込んでいます...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5789"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6089"/>
         <source>File loaded.</source>
         <translation>ファイルを読み込みました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5815"/>
         <source>The creator of this file has encrypted it with DRM. Sigil cannot open such files.</source>
-        <translation>このファイルの作者はDRMでの暗号化を行っています。Sigilはこういったファイルは開けません。</translation>
+        <translation type="vanished">このファイルの作者はDRMでの暗号化を行っています。Sigilはこういったファイルは開けません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5823"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6123"/>
         <source>Cannot load EPUB: %1</source>
         <translation>EPUBをロードできません: %1</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5828"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6128"/>
         <source>Cannot load file %1: %2</source>
         <translation>ファイル %1 を読み込めません: %2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5855"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6167"/>
         <source>Saving EPUB...</source>
         <translation>EPUBを保存しています...</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5864"/>
         <source>Sigil cannot save files of type &quot;%1&quot;.
 Please choose a different format.</source>
-        <translation>Sigilは、タイプ &quot;%1&quot; のファイルを保存できません。
+        <translation type="vanished">Sigilは、タイプ &quot;%1&quot; のファイルを保存できません。
 別の形式を選択してください。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5888"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6200"/>
         <source>This EPUB has HTML files that are not well formed and your current Clean Source preferences are set to mend on Save.
 
 Do you want to automatically mend the files before saving? Or cancel the Save?</source>
@@ -13359,94 +15026,94 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
 保存する前に自動的にファイルを修正しますか？それとも保存をキャンセルしますか？</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5893"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6205"/>
         <source>Saving EPUB... cancelled</source>
         <translation>EPUBを保存 ... キャンセルされました</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5919"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6231"/>
         <source>EPUB saved, but not all HTML files are well formed.</source>
         <translation>EPUBは保存されましたが、すべてのHTMLファイルが整形式とは限りません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5921"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6233"/>
         <source>EPUB saved.</source>
         <translation>EPUBを保存しました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="5927"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6239"/>
         <source>Cannot save file %1: %2</source>
         <translation>ファイル %1 を保存できません: %2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6060"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6372"/>
         <source>EPUB files (*.epub)</source>
         <translation>EPUBファイル (*.epub)</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6061"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="6062"/>
-        <location filename="../../MainUI/MainWindow.cpp" line="6063"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6373"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6374"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6375"/>
         <source>HTML files (*.htm *.html *.xhtml)</source>
         <translation>HTMLファイル (*.htm *.html *.xhtml)</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6064"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6376"/>
         <source>Text files (*.txt)</source>
         <translation>テキストファイル (*.txt)</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6065"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6377"/>
         <source>All files (*.*)</source>
         <translation>すべてのファイル (*.*)</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6073"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6385"/>
         <source>EPUB file (*.epub)</source>
         <translation>EPUBファイル (*.epub)</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6175"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6489"/>
         <source>Preserve existing heading attributes is now:</source>
         <translation>既存の見出し属性を保持するようになりました。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6176"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6490"/>
         <source>ON</source>
         <translation>ON</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6176"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6490"/>
         <source>OFF</source>
         <translation>オフ</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="6201"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="6515"/>
         <source>&amp;%1 %2</source>
         <translation>&amp;%1 %2</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="7189"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="7558"/>
         <source>Focus changed to CodeView window.</source>
         <translation>コードビューウィンドウにフォーカスを変更</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="7198"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="7567"/>
         <source>Focus changed to BookBrowser window.</source>
         <translation>ブックブラウザーウィンドウにフォーカスを変更</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="7207"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="7576"/>
         <source>Focus changed to Preview window.</source>
         <translation>プレビューウィンドウにフォーカスを変更</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="7216"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="7585"/>
         <source>Focus changed to Table Of Contents window.</source>
         <translation>目次ウィンドウにフォーカスを変更</translation>
     </message>
     <message>
-        <location filename="../../MainUI/MainWindow.cpp" line="7225"/>
+        <location filename="../../MainUI/MainWindow.cpp" line="7594"/>
         <source>Focus changed to Clips window.</source>
         <translation>クリップウィンドウにフォーカスを変更</translation>
     </message>
@@ -13709,7 +15376,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="120"/>
         <source>Architect</source>
-        <translation type="unfinished"/>
+        <translation>建築家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="120"/>
@@ -13719,7 +15386,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="121"/>
         <source>Arranger</source>
-        <translation type="unfinished"/>
+        <translation>編曲者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="121"/>
@@ -13729,7 +15396,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="122"/>
         <source>Art copyist</source>
-        <translation type="unfinished"/>
+        <translation>美術模写家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="122"/>
@@ -13739,7 +15406,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="123"/>
         <source>Art director</source>
-        <translation type="unfinished"/>
+        <translation>アートディレクター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="123"/>
@@ -13749,17 +15416,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="124"/>
         <source>Artist</source>
-        <translation type="unfinished"/>
+        <translation>アーティスト</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="124"/>
         <source>Use for a person (e.g., a painter) or organization who conceives, and perhaps also implements, an original graphic design or work of art, if specific codes (e.g., [egr], [etr]) are not desired. For book illustrators, prefer Illustrator [ill]. </source>
-        <translation type="unfinished"/>
+        <translation>特定のコード(例:[egr]、[etr])が望まない場合、オリジナルのグラフィックデザインや芸術作品を構想し、場合によっては実装する個人(例:画家)や組織に使用されます。書籍のイラストレーターについては、Illustrator[ill]を推奨します。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="125"/>
         <source>Artistic director</source>
-        <translation type="unfinished"/>
+        <translation>芸術監督</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="125"/>
@@ -13769,7 +15436,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="126"/>
         <source>Assignee</source>
-        <translation type="unfinished"/>
+        <translation>譲受人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="126"/>
@@ -13779,17 +15446,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="127"/>
         <source>Associated name</source>
-        <translation type="unfinished"/>
+        <translation>関係者名</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="127"/>
         <source>Use for a person or organization associated with or found in an item or collection, which cannot be determined to be that of a Former owner [fmo] or other designated relator indicative of provenance.</source>
-        <translation type="unfinished"/>
+        <translation>資料またはコレクションに関係する、あるいはその中に記載されている個人または組織で、旧所有者 [fmo] など来歴を示す特定の関係者に該当すると判断できない場合に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="128"/>
         <source>Attributed name</source>
-        <translation type="unfinished"/>
+        <translation>帰属名</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="128"/>
@@ -13799,7 +15466,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="129"/>
         <source>Auctioneer</source>
-        <translation type="unfinished"/>
+        <translation>競売人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="129"/>
@@ -13819,7 +15486,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="131"/>
         <source>Author in quotations or text extracts</source>
-        <translation type="unfinished"/>
+        <translation>引用または本文抜粋による著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="131"/>
@@ -13829,17 +15496,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="132"/>
         <source>Author of afterword, colophon, etc.</source>
-        <translation type="unfinished"/>
+        <translation>後書き、奥付などの著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="132"/>
         <source>Use for a person or organization responsible for an afterword, postface, colophon, etc. but who is not the chief author of a work.</source>
-        <translation type="unfinished"/>
+        <translation>作品の主著者ではなく、後書き、跋文、奥付などを担当した個人または組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="133"/>
         <source>Author of dialog</source>
-        <translation type="unfinished"/>
+        <translation>台詞の著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="133"/>
@@ -13849,7 +15516,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="134"/>
         <source>Author of introduction, etc.</source>
-        <translation type="unfinished"/>
+        <translation>序文などの著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="134"/>
@@ -13859,7 +15526,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="135"/>
         <source>Author of screenplay, etc.</source>
-        <translation type="unfinished"/>
+        <translation>脚本などの著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="135"/>
@@ -13869,7 +15536,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="136"/>
         <source>Autographer</source>
-        <translation type="unfinished"/>
+        <translation>自筆署名者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="136"/>
@@ -13879,7 +15546,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="137"/>
         <source>Bibliographic antecedent</source>
-        <translation type="unfinished"/>
+        <translation>書誌的先行資料</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="137"/>
@@ -13889,7 +15556,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="138"/>
         <source>Binder</source>
-        <translation type="unfinished"/>
+        <translation>製本者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="138"/>
@@ -13899,7 +15566,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="139"/>
         <source>Binding designer</source>
-        <translation type="unfinished"/>
+        <translation>製本デザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="139"/>
@@ -13909,17 +15576,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="140"/>
         <source>Blurb writer</source>
-        <translation type="unfinished"/>
+        <translation>紹介文作成者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="140"/>
         <source>A person or organization responsible for writing a commendation or testimonial for a work, which appears on or within the publication itself, frequently on the back or dust jacket of print publications or on advertising material for all media.</source>
-        <translation type="unfinished"/>
+        <translation>作品の称賛や推薦文を執筆する責任のある個人または組織は、出版物自体の上や内部、しばしば印刷物の裏紙やカバー、すべてのメディアの広告資料に掲載されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="141"/>
         <source>Book designer</source>
-        <translation type="unfinished"/>
+        <translation>ブックデザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="141"/>
@@ -13929,17 +15596,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="142"/>
         <source>Book producer</source>
-        <translation type="unfinished"/>
+        <translation>書籍プロデューサー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="142"/>
         <source>Use for a person or organization responsible for the production of books and other print media, if specific codes (e.g., [bkd], [egr], [tyd], [prt]) are not desired. </source>
-        <translation type="unfinished"/>
+        <translation>特定のコード(例:[bkd]、[egr]、[tyd]、[prt])が望まない場合、書籍やその他の印刷メディアの制作を担当する個人または組織に使用されます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="143"/>
         <source>Bookjacket designer</source>
-        <translation type="unfinished"/>
+        <translation>ブックジャケットデザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="143"/>
@@ -13949,7 +15616,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="144"/>
         <source>Bookplate designer</source>
-        <translation type="unfinished"/>
+        <translation>蔵書票デザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="144"/>
@@ -13959,7 +15626,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="145"/>
         <source>Bookseller</source>
-        <translation type="unfinished"/>
+        <translation>書店主</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="145"/>
@@ -13969,17 +15636,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="146"/>
         <source>Braille embosser</source>
-        <translation type="unfinished"/>
+        <translation>点字エンボス加工者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="146"/>
         <source>A person, family, or organization involved in manufacturing a resource by embossing Braille cells using a stylus, special embossing printer, or other device.</source>
-        <translation type="unfinished"/>
+        <translation>点字セルをスタイラス、特殊なエンボスプリンター、またはその他の機器でエンボス加工して製造する個人、家族、または組織。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="147"/>
         <source>Broadcaster</source>
-        <translation type="unfinished"/>
+        <translation>放送事業者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="147"/>
@@ -13989,7 +15656,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="148"/>
         <source>Calligrapher</source>
-        <translation type="unfinished"/>
+        <translation>書道家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="148"/>
@@ -13999,7 +15666,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="149"/>
         <source>Cartographer</source>
-        <translation type="unfinished"/>
+        <translation>地図製作者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="149"/>
@@ -14009,17 +15676,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="150"/>
         <source>Caster</source>
-        <translation type="unfinished"/>
+        <translation>鋳造者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="150"/>
         <source>A person, family, or organization involved in manufacturing a resource by pouring a liquid or molten substance into a mold and leaving it to solidify to take the shape of the mold.</source>
-        <translation type="unfinished"/>
+        <translation>液体や溶融した物質を型に注ぎ込み、型の形に固まらせて資源を製造する個人、家族、または組織。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="151"/>
         <source>Censor</source>
-        <translation type="unfinished"/>
+        <translation>検閲官</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="151"/>
@@ -14029,37 +15696,37 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="152"/>
         <source>Choreographer</source>
-        <translation type="unfinished"/>
+        <translation>振付師</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="152"/>
         <source>Use for a person or organization who composes or arranges dances or other movements (e.g., &quot;master of swords&quot;) for a musical or dramatic presentation or entertainment.</source>
-        <translation type="unfinished"/>
+        <translation>音楽、演劇、娯楽作品のためにダンスやその他の動作（例: 剣術指導）を創作または構成する個人または組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="153"/>
         <source>Cinematographer</source>
-        <translation type="unfinished"/>
+        <translation>撮影監督</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="153"/>
         <source>Use for a person or organization who is in charge of the images captured for a motion picture film. The cinematographer works under the supervision of a director, and may also be referred to as director of photography. Do not confuse with videographer.</source>
-        <translation type="unfinished"/>
+        <translation>映画の撮影映像を担当する個人または組織に使用します。撮影監督は監督の指揮下で作業し、director of photography とも呼ばれます。ビデオ撮影者とは区別してください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="154"/>
         <source>Client</source>
-        <translation type="unfinished"/>
+        <translation>クライアント</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="154"/>
         <source>Use for a person or organization for whom another person or organization is acting.</source>
-        <translation type="unfinished"/>
+        <translation>他の個人や組織が代理している場合に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="155"/>
         <source>Collection registrar</source>
-        <translation type="unfinished"/>
+        <translation>コレクション登録担当者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="155"/>
@@ -14069,7 +15736,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="156"/>
         <source>Collector</source>
-        <translation type="unfinished"/>
+        <translation>収集家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="156"/>
@@ -14079,7 +15746,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="157"/>
         <source>Collotyper</source>
-        <translation type="unfinished"/>
+        <translation>コロタイプ印刷者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="157"/>
@@ -14089,7 +15756,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="158"/>
         <source>Colorist</source>
-        <translation type="unfinished"/>
+        <translation>カラーリスト</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="158"/>
@@ -14099,7 +15766,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="159"/>
         <source>Commentator</source>
-        <translation type="unfinished"/>
+        <translation>解説者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="159"/>
@@ -14109,7 +15776,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="160"/>
         <source>Commentator for written text</source>
-        <translation type="unfinished"/>
+        <translation>文章の解説者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="160"/>
@@ -14119,7 +15786,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="161"/>
         <source>Compiler</source>
-        <translation type="unfinished"/>
+        <translation>編纂者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="161"/>
@@ -14129,7 +15796,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="162"/>
         <source>Complainant</source>
-        <translation type="unfinished"/>
+        <translation>原告</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="162"/>
@@ -14139,7 +15806,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="163"/>
         <source>Complainant-appellant</source>
-        <translation type="unfinished"/>
+        <translation>原告・控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="163"/>
@@ -14149,7 +15816,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="164"/>
         <source>Complainant-appellee</source>
-        <translation type="unfinished"/>
+        <translation>原告・被控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="164"/>
@@ -14169,7 +15836,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="166"/>
         <source>Compositor</source>
-        <translation type="unfinished"/>
+        <translation>コンポジター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="166"/>
@@ -14179,7 +15846,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="167"/>
         <source>Conceptor</source>
-        <translation type="unfinished"/>
+        <translation>コンセプター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="167"/>
@@ -14189,7 +15856,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="168"/>
         <source>Conductor</source>
-        <translation type="unfinished"/>
+        <translation>指揮者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="168"/>
@@ -14199,7 +15866,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="169"/>
         <source>Conservator</source>
-        <translation type="unfinished"/>
+        <translation>保存修復士</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="169"/>
@@ -14209,7 +15876,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="170"/>
         <source>Consultant</source>
-        <translation type="unfinished"/>
+        <translation>コンサルタント</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="170"/>
@@ -14219,7 +15886,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="171"/>
         <source>Consultant to a project</source>
-        <translation type="unfinished"/>
+        <translation>プロジェクトのコンサルタント</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="171"/>
@@ -14229,7 +15896,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="172"/>
         <source>Contestant</source>
-        <translation type="unfinished"/>
+        <translation>出場者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="172"/>
@@ -14239,7 +15906,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="173"/>
         <source>Contestant-appellant</source>
-        <translation type="unfinished"/>
+        <translation>控訴人・出場者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="173"/>
@@ -14249,7 +15916,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="174"/>
         <source>Contestant-appellee</source>
-        <translation type="unfinished"/>
+        <translation>被控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="174"/>
@@ -14259,7 +15926,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="175"/>
         <source>Contestee</source>
-        <translation type="unfinished"/>
+        <translation>争議被申立人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="175"/>
@@ -14269,7 +15936,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="176"/>
         <source>Contestee-appellant</source>
-        <translation type="unfinished"/>
+        <translation>争議被申立人・控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="176"/>
@@ -14279,7 +15946,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="177"/>
         <source>Contestee-appellee</source>
-        <translation type="unfinished"/>
+        <translation>争議被申立人・被控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="177"/>
@@ -14289,7 +15956,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="178"/>
         <source>Contractor</source>
-        <translation type="unfinished"/>
+        <translation>請負業者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="178"/>
@@ -14309,7 +15976,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="180"/>
         <source>Copyright claimant</source>
-        <translation type="unfinished"/>
+        <translation>著作権請求者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="180"/>
@@ -14319,7 +15986,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="181"/>
         <source>Copyright holder</source>
-        <translation type="unfinished"/>
+        <translation>著作権者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="181"/>
@@ -14329,7 +15996,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="182"/>
         <source>Corrector</source>
-        <translation type="unfinished"/>
+        <translation>校訂者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="182"/>
@@ -14339,7 +16006,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="183"/>
         <source>Correspondent</source>
-        <translation type="unfinished"/>
+        <translation>書簡執筆者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="183"/>
@@ -14359,7 +16026,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="185"/>
         <source>Court governed</source>
-        <translation type="unfinished"/>
+        <translation>規則適用裁判所</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="185"/>
@@ -14369,7 +16036,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="186"/>
         <source>Court reporter</source>
-        <translation type="unfinished"/>
+        <translation>裁判速記官</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="186"/>
@@ -14379,7 +16046,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="187"/>
         <source>Cover designer</source>
-        <translation type="unfinished"/>
+        <translation>カバーデザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="187"/>
@@ -14399,7 +16066,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="189"/>
         <source>Curator of an exhibition</source>
-        <translation type="unfinished"/>
+        <translation>展覧会のキュレーター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="189"/>
@@ -14409,7 +16076,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="190"/>
         <source>Dancer</source>
-        <translation type="unfinished"/>
+        <translation>ダンサー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="190"/>
@@ -14419,7 +16086,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="191"/>
         <source>Data contributor</source>
-        <translation type="unfinished"/>
+        <translation>データ寄稿者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="191"/>
@@ -14429,7 +16096,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="192"/>
         <source>Data manager</source>
-        <translation type="unfinished"/>
+        <translation>データマネージャー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="192"/>
@@ -14439,7 +16106,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="193"/>
         <source>Dedicatee</source>
-        <translation type="unfinished"/>
+        <translation>献呈者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="193"/>
@@ -14449,7 +16116,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="194"/>
         <source>Dedicator</source>
-        <translation type="unfinished"/>
+        <translation>献呈者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="194"/>
@@ -14459,7 +16126,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="195"/>
         <source>Defendant</source>
-        <translation type="unfinished"/>
+        <translation>被告</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="195"/>
@@ -14469,7 +16136,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="196"/>
         <source>Defendant-appellant</source>
-        <translation type="unfinished"/>
+        <translation>被告・控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="196"/>
@@ -14479,7 +16146,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="197"/>
         <source>Defendant-appellee</source>
-        <translation type="unfinished"/>
+        <translation>被告・被控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="197"/>
@@ -14489,7 +16156,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="198"/>
         <source>Degree grantor</source>
-        <translation type="unfinished"/>
+        <translation>学位授与者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="198"/>
@@ -14499,7 +16166,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="199"/>
         <source>Delineator</source>
-        <translation type="unfinished"/>
+        <translation>製図者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="199"/>
@@ -14519,7 +16186,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="201"/>
         <source>Depositor</source>
-        <translation type="unfinished"/>
+        <translation>寄託者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="201"/>
@@ -14529,17 +16196,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="202"/>
         <source>Designer</source>
-        <translation type="unfinished"/>
+        <translation>デザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="202"/>
         <source>Use for a person or organization responsible for the design if more specific codes (e.g., [bkd], [tyd]) are not desired.</source>
-        <translation type="unfinished"/>
+        <translation>より具体的なコード(例:[bkd]、[tyd])が望まない場合、設計を担当する個人や組織が使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="203"/>
         <source>Director</source>
-        <translation type="unfinished"/>
+        <translation>監督</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="203"/>
@@ -14549,7 +16216,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="204"/>
         <source>Dissertant</source>
-        <translation type="unfinished"/>
+        <translation>学位論文提出者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="204"/>
@@ -14559,17 +16226,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="205"/>
         <source>Distribution place</source>
-        <translation type="unfinished"/>
+        <translation>配布場所</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="205"/>
         <source>A place from which a resource, e.g., a serial, is distributed.</source>
-        <translation type="unfinished"/>
+        <translation>例えば、シリアルなどのリソースが配布される場所です。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="206"/>
         <source>Distributor</source>
-        <translation type="unfinished"/>
+        <translation>配給会社</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="206"/>
@@ -14579,17 +16246,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="207"/>
         <source>Donor</source>
-        <translation type="unfinished"/>
+        <translation>寄贈者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="207"/>
         <source>Use for a person or organization who is the donor of a book, manuscript, etc., to its present owner. Donors to previous owners are designated as Former owner [fmo] or Inscriber [ins].</source>
-        <translation type="unfinished"/>
+        <translation>書籍や原稿などを現在の所有者へ寄贈した個人または組織に使用します。以前の所有者への寄贈者には、旧所有者 [fmo] または献辞記入者 [ins] を指定します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="208"/>
         <source>Draftsman</source>
-        <translation type="unfinished"/>
+        <translation>製図士</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="208"/>
@@ -14599,17 +16266,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="209"/>
         <source>Dubious author</source>
-        <translation type="unfinished"/>
+        <translation>著者帰属不確実</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="209"/>
         <source>Use for a person or organization to which authorship has been dubiously or incorrectly ascribed.</source>
-        <translation type="unfinished"/>
+        <translation>著者としての帰属が疑わしい、または誤っている個人または組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="210"/>
         <source>Editor</source>
-        <translation type="unfinished"/>
+        <translation>編集者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="210"/>
@@ -14619,17 +16286,17 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="211"/>
         <source>Editor of compilation</source>
-        <translation type="unfinished"/>
+        <translation>編纂編集者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="211"/>
         <source>A person, family, or organization contributing to a collective or aggregate work by selecting and putting together works, or parts of works, by one or more creators. For compilations of data, information, etc., that result in new works, see compiler.</source>
-        <translation type="unfinished"/>
+        <translation>一人以上の作成者による作品またはその一部を選択してまとめ、集合著作物に貢献した個人、家族、または組織です。データや情報などを編纂して新たな作品を作成した場合は、編纂者を参照してください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="212"/>
         <source>Editor of moving image work</source>
-        <translation type="unfinished"/>
+        <translation>映像作品の編集者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="212"/>
@@ -14639,7 +16306,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="213"/>
         <source>Electrician</source>
-        <translation type="unfinished"/>
+        <translation>電気技師</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="213"/>
@@ -14649,7 +16316,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="214"/>
         <source>Electrotyper</source>
-        <translation type="unfinished"/>
+        <translation>電鋳版製作者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="214"/>
@@ -14659,7 +16326,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="215"/>
         <source>Engineer</source>
-        <translation type="unfinished"/>
+        <translation>技師</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="215"/>
@@ -14669,7 +16336,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="216"/>
         <source>Engraver</source>
-        <translation type="unfinished"/>
+        <translation>彫版師</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="216"/>
@@ -14679,7 +16346,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="217"/>
         <source>Etcher</source>
-        <translation type="unfinished"/>
+        <translation>エッチング作家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="217"/>
@@ -14689,7 +16356,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="218"/>
         <source>Event place</source>
-        <translation type="unfinished"/>
+        <translation>イベントの場所</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="218"/>
@@ -14699,7 +16366,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="219"/>
         <source>Expert</source>
-        <translation type="unfinished"/>
+        <translation>専門家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="219"/>
@@ -14709,7 +16376,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="220"/>
         <source>Facsimilist</source>
-        <translation type="unfinished"/>
+        <translation>模写家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="220"/>
@@ -14719,27 +16386,27 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="221"/>
         <source>Field director</source>
-        <translation type="unfinished"/>
+        <translation>フィールドディレクター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="221"/>
         <source>Use for a person or organization that manages or supervises the work done to collect raw data or do research in an actual setting or environment (typically applies to the natural and social sciences).</source>
-        <translation type="unfinished"/>
+        <translation>実際の環境や環境で生データを収集したり研究を行う作業を管理または監督する個人や組織に使用されます(通常は自然科学や社会科学に当てはまります)。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="222"/>
         <source>Film director</source>
-        <translation type="unfinished"/>
+        <translation>映画監督</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="222"/>
         <source>A director responsible for the general management and supervision of a filmed performance.</source>
-        <translation type="unfinished"/>
+        <translation>映像公演の総合管理と監督を担当する監督。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="223"/>
         <source>Film distributor</source>
-        <translation type="unfinished"/>
+        <translation>映画配給会社</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="223"/>
@@ -14749,7 +16416,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="224"/>
         <source>Film editor</source>
-        <translation type="unfinished"/>
+        <translation>フィルムエディター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="224"/>
@@ -14759,7 +16426,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="225"/>
         <source>Film producer</source>
-        <translation type="unfinished"/>
+        <translation>映画プロデューサー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="225"/>
@@ -14769,102 +16436,102 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="226"/>
         <source>Filmmaker</source>
-        <translation type="unfinished"/>
+        <translation>映画製作者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="226"/>
         <source>A person, family or organization responsible for creating an independent or personal film. A filmmaker is individually responsible for the conception and execution of all aspects of the film.</source>
-        <translation type="unfinished"/>
+        <translation>独立系または個人的な映画を制作する責任を持つ個人、家族、または組織。映画製作者は、映画のすべての側面の構想と実行に個人的に責任を負います。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="227"/>
         <source>First party</source>
-        <translation type="unfinished"/>
+        <translation>第一当事者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="227"/>
         <source>Use for a person or organization who is identified as the only party or the party of the first part. In the case of transfer of right, this is the assignor, transferor, licensor, grantor, etc. Multiple parties can be named jointly as the first party.</source>
-        <translation type="unfinished"/>
+        <translation>唯一の当事者または第一当事者として指定された個人または組織に使用します。権利移転の場合は、譲渡人、移転人、許諾者、付与者などに当たります。複数の当事者を共同で第一当事者として指定できます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="228"/>
         <source>Forger</source>
-        <translation type="unfinished"/>
+        <translation>偽作者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="228"/>
         <source>Use for a person or organization who makes or imitates something of value or importance, especially with the intent to defraud. </source>
-        <translation type="unfinished"/>
+        <translation>特に詐欺の意図で価値あるまたは重要なものを作ったり模倣したりする個人や組織に使われます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="229"/>
         <source>Former owner</source>
-        <translation type="unfinished"/>
+        <translation>旧所有者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="229"/>
         <source>Use for a person or organization who owned an item at any time in the past. Includes those to whom the material was once presented. A person or organization giving the item to the present owner is designated as Donor [dnr].</source>
-        <translation type="unfinished"/>
+        <translation>過去に物品を所有していた個人または組織に使用します。かつてその資料が提示された人々も含まれます。現在の所有者に品物を渡す個人または団体は「ドナー(DNR)」と指定されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="230"/>
         <source>Funder</source>
-        <translation type="unfinished"/>
+        <translation>資金提供者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="230"/>
         <source>Use for a person or organization that furnished financial support for the production of the work.</source>
-        <translation type="unfinished"/>
+        <translation>作品制作に財政的支援を提供した個人または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="231"/>
         <source>Geographic information specialist</source>
-        <translation type="unfinished"/>
+        <translation>地理情報スペシャリスト</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="231"/>
         <source>Use for a person responsible for geographic information system (GIS) development and integration with global positioning system data.</source>
-        <translation type="unfinished"/>
+        <translation>地理情報システム(GIS)の開発およびグローバルポジショニングシステムデータとの統合を担当する人物に利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="232"/>
         <source>Honoree</source>
-        <translation type="unfinished"/>
+        <translation>顕彰対象者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="232"/>
         <source>Use for a person or organization in memory or honor of whom a book, manuscript, etc. is donated. </source>
-        <translation type="unfinished"/>
+        <translation>書籍や原稿などが寄贈された人物や団体の記憶や名誉のために使用されます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="233"/>
         <source>Host</source>
-        <translation type="unfinished"/>
+        <translation>ホスト</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="233"/>
         <source>Use for a person who is invited or regularly leads a program (often broadcast) that includes other guests, performers, etc. (e.g., talk show host).</source>
-        <translation type="unfinished"/>
+        <translation>招待されたり、定期的に番組をリードしたりする人(多くは放送)で、他のゲストやパフォーマーなど(例:トークショーホスト)が参加する人に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="234"/>
         <source>Host institution</source>
-        <translation type="unfinished"/>
+        <translation>ホスト機関</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="234"/>
         <source>An organization hosting the event, exhibit, conference, etc., which gave rise to a resource, but having little or no responsibility for the content of the resource.</source>
-        <translation type="unfinished"/>
+        <translation>イベント、展示、会議などを主催し、リソースを生み出したが、そのリソースの内容に対してほとんど責任を負わない組織。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="235"/>
         <source>Illuminator</source>
-        <translation type="unfinished"/>
+        <translation>彩飾者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="235"/>
         <source>Use for a person or organization responsible for the decoration of a work (especially manuscript material) with precious metals or color, usually with elaborate designs and motifs.</source>
-        <translation type="unfinished"/>
+        <translation>作品(特に写本資料)を貴金属や色彩で装飾する責任のある個人や組織に使用され、通常は精巧なデザインやモチーフが施されています。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="236"/>
@@ -14879,742 +16546,742 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="237"/>
         <source>Inscriber</source>
-        <translation type="unfinished"/>
+        <translation>献辞記入者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="237"/>
         <source>Use for a person who has written a statement of dedication or gift.</source>
-        <translation type="unfinished"/>
+        <translation>献身や贈与の意思を書いた人に使う。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="238"/>
         <source>Instrumentalist</source>
-        <translation type="unfinished"/>
+        <translation>器楽奏者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="238"/>
         <source>Use for a person or organization who principally plays an instrument in a musical or dramatic presentation or entertainment.</source>
-        <translation type="unfinished"/>
+        <translation>主に音楽や演劇の演出や娯楽で楽器を演奏する個人または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="239"/>
         <source>Interviewee</source>
-        <translation type="unfinished"/>
+        <translation>インタビュー対象者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="239"/>
         <source>Use for a person or organization who is interviewed at a consultation or meeting, usually by a reporter, pollster, or some other information gathering agent.</source>
-        <translation type="unfinished"/>
+        <translation>通常は記者、世論調査員、その他の情報収集担当者による協議や会議でインタビューを受ける個人や組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="240"/>
         <source>Interviewer</source>
-        <translation type="unfinished"/>
+        <translation>インタビュアー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="240"/>
         <source>Use for a person or organization who acts as a reporter, pollster, or other information gathering agent in a consultation or meeting involving one or more individuals.</source>
-        <translation type="unfinished"/>
+        <translation>これは、1人または複数の個人が関与する協議や会議において、記者、世論調査員、その他の情報収集代理人として活動する個人または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="241"/>
         <source>Inventor</source>
-        <translation type="unfinished"/>
+        <translation>発明者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="241"/>
         <source>Use for a person or organization who first produces a particular useful item, or develops a new process for obtaining a known item or result.</source>
-        <translation type="unfinished"/>
+        <translation>特定の有用なアイテムを最初に生産した個人や組織、または既知のアイテムや結果を得るための新しいプロセスを開発した人や組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="242"/>
         <source>Issuing body</source>
-        <translation type="unfinished"/>
+        <translation>発行主体</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="242"/>
         <source>A person, family or organization issuing a work, such as an official organ of the body.</source>
-        <translation type="unfinished"/>
+        <translation>団体の機関誌など、作品を発行する個人、家族、または組織です。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="243"/>
         <source>Judge</source>
-        <translation type="unfinished"/>
+        <translation>裁判官</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="243"/>
         <source>A person who hears and decides on legal matters in court.</source>
-        <translation type="unfinished"/>
+        <translation>法廷で法的事項を審理し、決定する人。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="244"/>
         <source>Jurisdiction governed</source>
-        <translation type="unfinished"/>
+        <translation>管轄権</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="244"/>
         <source>A jurisdiction governed by a law, regulation, etc., that was enacted by another jurisdiction.</source>
-        <translation type="unfinished"/>
+        <translation>別の管轄区域によって制定された法律や規則などによって統治された管轄区域。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="245"/>
         <source>Laboratory</source>
-        <translation type="unfinished"/>
+        <translation>研究所</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="245"/>
         <source>Use for an institution that provides scientific analyses of material samples.</source>
-        <translation type="unfinished"/>
+        <translation>材料サンプルの科学的分析を提供する機関での利用。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="246"/>
         <source>Laboratory director</source>
-        <translation type="unfinished"/>
+        <translation>研究所長</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="246"/>
         <source>Use for a person or organization that manages or supervises work done in a controlled setting or environment. </source>
-        <translation type="unfinished"/>
+        <translation>管理された環境や環境で行われる作業を管理または監督する個人または組織に使用されます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="247"/>
         <source>Landscape architect</source>
-        <translation type="unfinished"/>
+        <translation>ランドスケープアーキテクト</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="247"/>
         <source>Use for a person or organization whose work involves coordinating the arrangement of existing and proposed land features and structures.</source>
-        <translation type="unfinished"/>
+        <translation>既存および提案中の土地の特徴や構造物の配置調整を行う個人または組織の利用。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="248"/>
         <source>Lead</source>
-        <translation type="unfinished"/>
+        <translation>主担当</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="248"/>
         <source>Use to indicate that a person or organization takes primary responsibility for a particular activity or endeavor. Use with another relator term or code to show the greater importance this person or organization has regarding that particular role. If more than one relator is assigned to a heading, use the Lead relator only if it applies to all the relators.</source>
-        <translation type="unfinished"/>
+        <translation>特定の活動や取り組みに対して個人や組織が主たる責任を負うことを示すために使われます。他のリレーター用語やコードと組み合わせて、その人物や組織がその役割に対してどれほど重要視されているかを示します。複数のリレータが見出しに割り当てられている場合は、リードリレータはすべてのリレータに適用される場合にのみ使用してください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="249"/>
         <source>Lender</source>
-        <translation type="unfinished"/>
+        <translation>貸し手</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="249"/>
         <source>Use for a person or organization permitting the temporary use of a book, manuscript, etc., such as for photocopying or microfilming.</source>
-        <translation type="unfinished"/>
+        <translation>個人や組織が書籍や原稿などの一時的な使用を許可する場合、例えばコピーやマイクロフィルム化など。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="250"/>
         <source>Libelant</source>
-        <translation type="unfinished"/>
+        <translation>申立人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="250"/>
         <source>Use for the party who files a libel in an ecclesiastical or admiralty case.</source>
-        <translation type="unfinished"/>
+        <translation>教会裁判所や海事裁判所の訴訟で名誉毀損を申し立てる当事者に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="251"/>
         <source>Libelant-appellant</source>
-        <translation type="unfinished"/>
+        <translation>申立人・控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="251"/>
         <source>Use for a libelant who takes an appeal from one ecclesiastical court or admiralty to another to reverse the judgment.</source>
-        <translation type="unfinished"/>
+        <translation>名誉毀損者が、ある教会裁判所や海事裁判所から別の裁判所へ上訴して判決を覆すために使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="252"/>
         <source>Libelant-appellee</source>
-        <translation type="unfinished"/>
+        <translation>申立人・被控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="252"/>
         <source>Use for a libelant against whom an appeal is taken from one ecclesiastical court or admiralty to another to reverse the judgment.</source>
-        <translation type="unfinished"/>
+        <translation>名誉毀損者に対して、ある教会裁判所や海事裁判所から別の裁判所へ控訴が行われ、判決を覆すために使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="253"/>
         <source>Libelee</source>
-        <translation type="unfinished"/>
+        <translation>被申立人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="253"/>
         <source>Use for a party against whom a libel has been filed in an ecclesiastical court or admiralty.</source>
-        <translation type="unfinished"/>
+        <translation>教会裁判所または海事裁判所で名誉毀損が起訴された当事者に対して使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="254"/>
         <source>Libelee-appellant</source>
-        <translation type="unfinished"/>
+        <translation>被申立人・控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="254"/>
         <source>Use for a libelee who takes an appeal from one ecclesiastical court or admiralty to another to reverse the judgment.</source>
-        <translation type="unfinished"/>
+        <translation>リベリーが、ある教会裁判所や海事裁判所から別の裁判所へ上訴して判決を覆すために利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="255"/>
         <source>Libelee-appellee</source>
-        <translation type="unfinished"/>
+        <translation>被申立人・被控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="255"/>
         <source>Use for a libelee against whom an appeal is taken from one ecclesiastical court or admiralty to another to reverse the judgment.</source>
-        <translation type="unfinished"/>
+        <translation>ある教会裁判所や海事裁判所から別の裁判所へ控訴がなされた場合、判決を覆すためのリベリー(請求権)を用いる。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="256"/>
         <source>Librettist</source>
-        <translation type="unfinished"/>
+        <translation>台本作家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="256"/>
         <source>Use for a person or organization who is a writer of the text of an opera, oratorio, etc.</source>
-        <translation type="unfinished"/>
+        <translation>オペラやオラトリオなどのテキストを書く個人や団体に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="257"/>
         <source>Licensee</source>
-        <translation type="unfinished"/>
+        <translation>ライセンシー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="257"/>
         <source>Use for a person or organization who is an original recipient of the right to print or publish.</source>
-        <translation type="unfinished"/>
+        <translation>印刷または出版の権利を最初に受領した個人または組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="258"/>
         <source>Licensor</source>
-        <translation type="unfinished"/>
+        <translation>ライセンサー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="258"/>
         <source>Use for person or organization who is a signer of the license, imprimatur, etc. </source>
-        <translation type="unfinished"/>
+        <translation>ライセンスやインプマチュアなどの署名者である個人または組織に使われます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="259"/>
         <source>Lighting designer</source>
-        <translation type="unfinished"/>
+        <translation>照明デザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="259"/>
         <source>Use for a person or organization who designs the lighting scheme for a theatrical presentation, entertainment, motion picture, etc.</source>
-        <translation type="unfinished"/>
+        <translation>演劇、エンターテインメント、映画などの照明スキームを設計する個人や組織に利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="260"/>
         <source>Lithographer</source>
-        <translation type="unfinished"/>
+        <translation>石版画家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="260"/>
         <source>Use for a person or organization who prepares the stone or plate for lithographic printing, including a graphic artist creating a design directly on the surface from which printing will be done.</source>
-        <translation type="unfinished"/>
+        <translation>リトグラフ印刷のために石や版を準備する個人や組織、印刷が行われる表面に直接デザインを作成するグラフィックアーティストも含まれます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="261"/>
         <source>Lyricist</source>
-        <translation type="unfinished"/>
+        <translation>作詞家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="261"/>
         <source>Use for a person or organization who is the a writer of the text of a song.</source>
-        <translation type="unfinished"/>
+        <translation>歌詞の作詞者である個人や団体に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="262"/>
         <source>Manufacture place</source>
-        <translation type="unfinished"/>
+        <translation>製造地</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="262"/>
         <source>The place of manufacture (e.g., printing, duplicating, casting, etc.) of a resource in a published form.</source>
-        <translation type="unfinished"/>
+        <translation>出版された形での資源の製造場所(例:印刷、複写、鋳造など)。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="263"/>
         <source>Manufacturer</source>
-        <translation type="unfinished"/>
+        <translation>製造者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="263"/>
         <source>Use for a person or organization that makes an artifactual work (an object made or modified by one or more persons). Examples of artifactual works include vases, cannons or pieces of furniture.</source>
-        <translation type="unfinished"/>
+        <translation>人工物作品(一人または複数の人物によって作られたまたは改変された物体)を制作する個人や組織に使用されます。工芸品の例としては、花瓶、大砲、家具などがあります。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="264"/>
         <source>Marbler</source>
-        <translation type="unfinished"/>
+        <translation>マーブル紙職人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="264"/>
         <source>The entity responsible for marbling paper, cloth, leather, etc. used in construction of a resource.</source>
-        <translation type="unfinished"/>
+        <translation>資料の製作に使用する紙、布、革などのマーブル加工を担当する個人または組織です。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="265"/>
         <source>Markup editor</source>
-        <translation type="unfinished"/>
+        <translation>マークアップエディター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="265"/>
         <source>Use for a person or organization performing the coding of SGML, HTML, or XML markup of metadata, text, etc.</source>
-        <translation type="unfinished"/>
+        <translation>メタデータやテキストなどのSGML、HTML、XMLマークアップのコーディングを行う個人や組織に利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="266"/>
         <source>Medium</source>
-        <translation type="unfinished"/>
+        <translation>霊媒</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="266"/>
         <source>A person held to be a channel of communication between the earthly world and a different world.</source>
-        <translation type="unfinished"/>
+        <translation>現世と別世界をつなぐ意思伝達の媒介者とされる人物です。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="267"/>
         <source>Metadata contact</source>
-        <translation type="unfinished"/>
+        <translation>メタデータ連絡担当者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="267"/>
         <source>Use for a person or organization primarily responsible for compiling and maintaining the original description of a metadata set (e.g., geospatial metadata set).</source>
-        <translation type="unfinished"/>
+        <translation>メタデータセット(例:地理空間メタデータセット)の元の記述を主にまとめ・維持する個人や組織への使用。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="268"/>
         <source>Metal-engraver</source>
-        <translation type="unfinished"/>
+        <translation>金属彫刻師</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="268"/>
         <source>Use for a person or organization responsible for decorations, illustrations, letters, etc. cut on a metal surface for printing or decoration.</source>
-        <translation type="unfinished"/>
+        <translation>印刷や装飾のために金属面に刻印された装飾、イラスト、文字などを担当する個人または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="269"/>
         <source>Minute taker</source>
-        <translation type="unfinished"/>
+        <translation>議事録作成者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="269"/>
         <source>A person, family, or organization responsible for recording the minutes of a meeting.</source>
-        <translation type="unfinished"/>
+        <translation>会議の議事録を記録する責任を持つ個人、家族、または組織。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="270"/>
         <source>Moderator</source>
-        <translation type="unfinished"/>
+        <translation>モデレーター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="270"/>
         <source>Use for a person who leads a program (often broadcast) where topics are discussed, usually with participation of experts in fields related to the discussion.</source>
-        <translation type="unfinished"/>
+        <translation>番組(多くは放送)を主導する人に使われ、トピックが議論され、通常はその議論に関連する分野の専門家が参加します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="271"/>
         <source>Monitor</source>
-        <translation type="unfinished"/>
+        <translation>履行監督者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="271"/>
         <source>Use for a person or organization that supervises compliance with the contract and is responsible for the report and controls its distribution. Sometimes referred to as the grantee, or controlling agency.</source>
-        <translation type="unfinished"/>
+        <translation>契約遵守を監督し、報告書の管理および配布を管理する個人または組織に使用されます。時に受領者や管理機関とも呼ばれます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="272"/>
         <source>Music copyist</source>
-        <translation type="unfinished"/>
+        <translation>音楽の写譜者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="272"/>
         <source>Use for a person who transcribes or copies musical notation</source>
-        <translation type="unfinished"/>
+        <translation>楽譜の書き起こしや写しを行う人のための使用</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="273"/>
         <source>Musical director</source>
-        <translation type="unfinished"/>
+        <translation>音楽監督</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="273"/>
         <source>Use for a person responsible for basic music decisions about a production, including coordinating the work of the composer, the sound editor, and sound mixers, selecting musicians, and organizing and/or conducting sound for rehearsals and performances.</source>
-        <translation type="unfinished"/>
+        <translation>作曲家、サウンドエディター、サウンドミキサーの作業調整、ミュージシャン選定、リハーサルや公演の音響の組織・指揮など、プロダクションに関する基本的な音楽的決定を担当する人に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="274"/>
         <source>Musician</source>
-        <translation type="unfinished"/>
+        <translation>ミュージシャン</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="274"/>
         <source>Use for a person or organization who performs music or contributes to the musical content of a work when it is not possible or desirable to identify the function more precisely.</source>
-        <translation type="unfinished"/>
+        <translation>音楽を演奏したり、作品の音楽的内容に貢献したりする個人や組織が、その機能をより正確に特定できない場合に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="275"/>
         <source>Narrator</source>
-        <translation type="unfinished"/>
+        <translation>ナレーター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="275"/>
         <source>Use for a person who is a speaker relating the particulars of an act, occurrence, or course of events.</source>
-        <translation type="unfinished"/>
+        <translation>行為、出来事、または出来事の詳細を話す話者に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="276"/>
         <source>Onscreen presenter</source>
-        <translation type="unfinished"/>
+        <translation>画面上のプレゼンター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="276"/>
         <source>A performer contributing to an expression of a work by appearing on screen in nonfiction moving image materials or introductions to fiction moving image materials to provide contextual or background information. Use when another term (e.g., Narrator, Host) is either not applicable or not desired.</source>
-        <translation type="unfinished"/>
+        <translation>ノンフィクションの映像資料やフィクションの映像資料の導入に登場し、文脈や背景情報を提供するパフォーマーの表現に貢献します。他の用語(例:ナレーター、ホスト)が適切でない、または望まない場合に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="277"/>
         <source>Opponent</source>
-        <translation type="unfinished"/>
+        <translation>論文審査反対者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="277"/>
         <source>Use for a person or organization responsible for opposing a thesis or dissertation.</source>
-        <translation type="unfinished"/>
+        <translation>学位論文に対する反対審査を担当する個人または組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="278"/>
         <source>Organizer of meeting</source>
-        <translation type="unfinished"/>
+        <translation>会議の主催者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="278"/>
         <source>Use for a person or organization responsible for organizing a meeting for which an item is the report or proceedings.</source>
-        <translation type="unfinished"/>
+        <translation>会議の組織を担当する個人または組織に、その項目が報告書または議事録として使われる場合。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="279"/>
         <source>Originator</source>
-        <translation type="unfinished"/>
+        <translation>発案者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="279"/>
         <source>Use for a person or organization performing the work, i.e., the name of a person or organization associated with the intellectual content of the work. This category does not include the publisher or personal affiliation, or sponsor except where it is also the corporate author.</source>
-        <translation type="unfinished"/>
+        <translation>仕事を行う個人または組織、すなわちその知的内容に関連する個人または組織の名前を指す。このカテゴリーには、出版社や個人の関係者、スポンサーは含まれません。ただし、企業の著者でもある場合を除きます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="280"/>
         <source>Other</source>
-        <translation type="unfinished"/>
+        <translation>その他</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="280"/>
         <source>Use for relator codes from other lists which have no equivalent in the MARC list or for terms which have not been assigned a code.</source>
-        <translation type="unfinished"/>
+        <translation>MARCリストに対応しないリレーターコードや、コードが割り当てられていない用語のリレーターコードに使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="281"/>
         <source>Owner</source>
-        <translation type="unfinished"/>
+        <translation>所有者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="281"/>
         <source>Use for a person or organization that currently owns an item or collection.</source>
-        <translation type="unfinished"/>
+        <translation>現在アイテムやコレクションを所有している個人または組織に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="282"/>
         <source>Panelist</source>
-        <translation type="unfinished"/>
+        <translation>パネリスト</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="282"/>
         <source> performer contributing to a resource by participating in a program (often broadcast) where topics are discussed, usually with participation of experts in fields related to the discussion.</source>
-        <translation type="unfinished"/>
+        <translation> 出演者が、番組(多くは放送)に参加してリソースに貢献し、トピックが議論される場面で、通常はその議論に関連する分野の専門家が参加します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="283"/>
         <source>Papermaker</source>
-        <translation type="unfinished"/>
+        <translation>製紙職人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="283"/>
         <source>Use for a person or organization responsible for the production of paper, usually from wood, cloth, or other fibrous material.</source>
-        <translation type="unfinished"/>
+        <translation>通常、木材、布、その他の繊維質素材から紙を生産する個人または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="284"/>
         <source>Patent applicant</source>
-        <translation type="unfinished"/>
+        <translation>特許出願者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="284"/>
         <source>Use for a person or organization that applied for a patent.</source>
-        <translation type="unfinished"/>
+        <translation>特許を出願した個人や組織に使用。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="285"/>
         <source>Patent holder</source>
-        <translation type="unfinished"/>
+        <translation>特許権者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="285"/>
         <source>Use for a person or organization that was granted the patent referred to by the item. </source>
-        <translation type="unfinished"/>
+        <translation>その商品で言及された特許を付与された個人または組織に使用。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="286"/>
         <source>Patron</source>
-        <translation type="unfinished"/>
+        <translation>パトロン</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="286"/>
         <source>Use for a person or organization responsible for commissioning a work. Usually a patron uses his or her means or influence to support the work of artists, writers, etc. This includes those who commission and pay for individual works.</source>
-        <translation type="unfinished"/>
+        <translation>作品の委託を担当する個人または組織に使用されます。通常、パトロンは自身の手段や影響力を使って芸術家や作家などの作品を支援します。これには、個別の作品を依頼し支払いを行う人も含まれます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="287"/>
         <source>Performer</source>
-        <translation type="unfinished"/>
+        <translation>演者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="287"/>
         <source>Use for a person or organization who exhibits musical or acting skills in a musical or dramatic presentation or entertainment, if specific codes for those functions ([act], [dnc], [itr], [voc], etc.) are not used. If specific codes are used, [prf] is used for a person whose principal skill is not known or specified.</source>
-        <translation type="unfinished"/>
+        <translation>音楽や演劇の演出やエンターテインメントにおいて、音楽や演技のスキルを示す個人や組織に使用されます。ただし、これらの機能の特定のコード([act]、[dnc]、[itr]、[voc]など)が使われていない場合。特定のコードを使用する場合、[prf]は、主なスキルが不明または指定されていない人に対して使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="288"/>
         <source>Permitting agency</source>
-        <translation type="unfinished"/>
+        <translation>許認可機関</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="288"/>
         <source>Use for an authority (usually a government agency) that issues permits under which work is accomplished.</source>
-        <translation type="unfinished"/>
+        <translation>作業が行われる許可証を発行する権限(通常は政府機関)に利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="289"/>
         <source>Photographer</source>
-        <translation type="unfinished"/>
+        <translation>写真家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="289"/>
         <source>Use for a person or organization responsible for taking photographs, whether they are used in their original form or as reproductions.</source>
-        <translation type="unfinished"/>
+        <translation>写真を撮影する責任のある個人または組織に使用されます。元の形であれ複製品として使用された場合でも。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="290"/>
         <source>Plaintiff</source>
-        <translation type="unfinished"/>
+        <translation>原告</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="290"/>
         <source>Use for the party who complains or sues in court in a personal action, usually in a legal proceeding.</source>
-        <translation type="unfinished"/>
+        <translation>通常は法的手続きにおいて、個人的訴訟で苦情を申し立てたり裁判を起こしたりする当事者に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="291"/>
         <source>Plaintiff-appellant</source>
-        <translation type="unfinished"/>
+        <translation>原告・控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="291"/>
         <source>Use for a plaintiff who takes an appeal from one court or jurisdiction to another to reverse the judgment, usually in a legal proceeding.</source>
-        <translation type="unfinished"/>
+        <translation>原告が裁判所や管轄区域から別の裁判所へ控訴し、通常は法的手続きで判決を覆すために利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="292"/>
         <source>Plaintiff-appellee</source>
-        <translation type="unfinished"/>
+        <translation>原告・被控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="292"/>
         <source>Use for a plaintiff against whom an appeal is taken from one court or jurisdiction to another to reverse the judgment, usually in a legal proceeding.</source>
-        <translation type="unfinished"/>
+        <translation>控訴が裁判所や管轄区域から別の裁判所へ移された場合、通常は法的手続きで判決を覆すために原告に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="293"/>
         <source>Platemaker</source>
-        <translation type="unfinished"/>
+        <translation>製版者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="293"/>
         <source>Use for a person or organization responsible for the production of plates, usually for the production of printed images and/or text.</source>
-        <translation type="unfinished"/>
+        <translation>通常は印刷された画像やテキストの制作を担当する人物または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="294"/>
         <source>Praeses</source>
-        <translation type="unfinished"/>
+        <translation>学術討論主査</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="294"/>
         <source>A person who is the faculty moderator of an academic disputation, normally proposing a thesis and participating in the ensuing disputation.</source>
-        <translation type="unfinished"/>
+        <translation>学術討論の教員モデレーターを務め、通常は論文を提案し、その後の議論に参加する人物。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="295"/>
         <source>Presenter</source>
-        <translation type="unfinished"/>
+        <translation>プレゼンター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="295"/>
         <source>A person or organization mentioned in an &apos;X presents&apos; credit for moving image materials and who is associated with production, finance, or distribution in some way. A vanity credit; in early years, normally the head of a studio.</source>
-        <translation type="unfinished"/>
+        <translation>「X」に記載された個人または組織は、映像素材のクレジットを提供し、制作、財務、または流通に何らかの形で関わっている者を指します。虚栄のクレジット;初期の頃は、通常スタジオの責任者でした。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="296"/>
         <source>Printer</source>
-        <translation type="unfinished"/>
+        <translation>印刷者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="296"/>
         <source>Use for a person or organization who prints texts, whether from type or plates.</source>
-        <translation type="unfinished"/>
+        <translation>活字や版画など、テキストを印刷する個人や組織に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="297"/>
         <source>Printer of plates</source>
-        <translation type="unfinished"/>
+        <translation>プレート印刷業者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="297"/>
         <source>Use for a person or organization who prints illustrations from plates. </source>
-        <translation type="unfinished"/>
+        <translation>図版からイラストを印刷する個人や組織に使います。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="298"/>
         <source>Printmaker</source>
-        <translation type="unfinished"/>
+        <translation>版画家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="298"/>
         <source>Use for a person or organization who makes a relief, intaglio, or planographic printing surface.</source>
-        <translation type="unfinished"/>
+        <translation>レリーフ、凹版、または平面印刷面を作る個人や組織に使用してください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="299"/>
         <source>Process contact</source>
-        <translation type="unfinished"/>
+        <translation>プロセス連絡担当者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="299"/>
         <source>Use for a person or organization primarily responsible for performing or initiating a process, such as is done with the collection of metadata sets.</source>
-        <translation type="unfinished"/>
+        <translation>メタデータセットの収集など、主にプロセスの実行または開始を担当する個人や組織のための使用。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="300"/>
         <source>Producer</source>
-        <translation type="unfinished"/>
+        <translation>プロデューサー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="300"/>
         <source>Use for a person or organization responsible for the making of a motion picture, including business aspects, management of the productions, and the commercial success of the work.</source>
-        <translation type="unfinished"/>
+        <translation>映画制作に関わる個人または組織に使用され、事業面、制作管理、商業的成功を含みます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="301"/>
         <source>Production company</source>
-        <translation type="unfinished"/>
+        <translation>制作会社</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="301"/>
         <source>An organization that is responsible for financial, technical, and organizational management of a production for stage, screen, audio recording, television, webcast, etc.</source>
-        <translation type="unfinished"/>
+        <translation>舞台、スクリーン、音声録音、テレビ、ウェブキャストなどの制作の財務的、技術的、組織的管理を担当する組織です。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="302"/>
         <source>Production designer</source>
-        <translation type="unfinished"/>
+        <translation>プロダクションデザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="302"/>
         <source>A person or organization responsible for designing the overall visual appearance of a moving image production.</source>
-        <translation type="unfinished"/>
+        <translation>映像制作の全体的な視覚的外観をデザインする責任を持つ個人または組織。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="303"/>
         <source>Production manager</source>
-        <translation type="unfinished"/>
+        <translation>制作マネージャー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="303"/>
         <source>Use for a person responsible for all technical and business matters in a production.</source>
-        <translation type="unfinished"/>
+        <translation>制作におけるすべての技術的およびビジネス業務を担当する人物に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="304"/>
         <source>Production personnel</source>
-        <translation type="unfinished"/>
+        <translation>制作スタッフ</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="304"/>
         <source>Use for a person or organization associated with the production (props, lighting, special effects, etc.) of a musical or dramatic presentation or entertainment.</source>
-        <translation type="unfinished"/>
+        <translation>ミュージカルや演劇の演出やエンターテインメントの制作(小道具、照明、特殊効果など)に関わる個人または組織のための使用。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="305"/>
         <source>Production place</source>
-        <translation type="unfinished"/>
+        <translation>制作地</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="305"/>
         <source>The place of production (e.g., inscription, fabrication, construction, etc.) of a resource in an unpublished form.</source>
-        <translation type="unfinished"/>
+        <translation>未発表の形で資源が生産された場所(例:碑文、製造、建設など)を指す。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="306"/>
         <source>Programmer</source>
-        <translation type="unfinished"/>
+        <translation>プログラマー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="306"/>
         <source>Use for a person or organization responsible for the creation and/or maintenance of computer program design documents, source code, and machine-executable digital files and supporting documentation.</source>
-        <translation type="unfinished"/>
+        <translation>コンピュータプログラム設計文書、ソースコード、機械実行可能なデジタルファイルおよび関連文書の作成および/または保守を担当する個人または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="307"/>
         <source>Project director</source>
-        <translation type="unfinished"/>
+        <translation>プロジェクトディレクター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="307"/>
         <source>Use for a person or organization with primary responsibility for all essential aspects of a project, or that manages a very large project that demands senior level responsibility, or that has overall responsibility for managing projects, or provides overall direction to a project manager.</source>
-        <translation type="unfinished"/>
+        <translation>プロジェクトの重要な側面すべてを主たる責任を持つ個人や組織、または上級責任を要する非常に大規模なプロジェクトを管理する者、プロジェクト管理全体を担う者、またはプロジェクトマネージャーに全体的な方向性を提供する人に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="308"/>
         <source>Proofreader</source>
-        <translation type="unfinished"/>
+        <translation>校正者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="308"/>
         <source>Use for a person who corrects printed matter. For manuscripts, use Corrector [crr].</source>
-        <translation type="unfinished"/>
+        <translation>印刷物を訂正する人に使う。原稿の場合はCorrector [crr]を使ってください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="309"/>
         <source>Provider</source>
-        <translation type="unfinished"/>
+        <translation>提供者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="309"/>
         <source>A person or organization who produces, publishes, manufactures, or distributes a resource if specific codes are not desired (e.g. [mfr], [pbl].)</source>
-        <translation type="unfinished"/>
+        <translation>特定のコード(例:[mfr]、[pbl])が望まない場合に資源を生産、出版、製造、または配布する個人や組織。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="310"/>
         <source>Publication place </source>
-        <translation type="unfinished"/>
+        <translation>出版場所 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="310"/>
         <source>The place where a resource is published.</source>
-        <translation type="unfinished"/>
+        <translation>リソースが公開される場所。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="311"/>
@@ -15629,648 +17296,648 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="312"/>
         <source>Publishing director</source>
-        <translation type="unfinished"/>
+        <translation>出版ディレクター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="312"/>
         <source>Use for a person or organization who presides over the elaboration of a collective work to ensure its coherence or continuity. This includes editors-in-chief, literary editors, editors of series, etc.</source>
-        <translation type="unfinished"/>
+        <translation>集合作業の一貫性や継続性を確保するために、個人または組織の策定を担当する者に使用されます。これには編集長、文学編集者、シリーズ編集者などが含まれます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="313"/>
         <source>Puppeteer</source>
-        <translation type="unfinished"/>
+        <translation>人形遣い</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="313"/>
         <source>Use for a person or organization who manipulates, controls, or directs puppets or marionettes in a musical or dramatic presentation or entertainment.</source>
-        <translation type="unfinished"/>
+        <translation>音楽や演劇の演出やエンターテインメントにおいて、人形やマリオネットを操作、制御、または指揮する個人や組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="314"/>
         <source>Radio director</source>
-        <translation type="unfinished"/>
+        <translation>ラジオディレクター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="314"/>
         <source>A director responsible for the general management and supervision of a radio program.</source>
-        <translation type="unfinished"/>
+        <translation>ラジオ番組の総管理と監督を担当するディレクター。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="315"/>
         <source>Radio producer</source>
-        <translation type="unfinished"/>
+        <translation>ラジオプロデューサー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="315"/>
         <source>A producer responsible for most of the business aspects of a radio program.</source>
-        <translation type="unfinished"/>
+        <translation>ラジオ番組のビジネス面の大部分を担当するプロデューサー。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="316"/>
         <source>Recipient</source>
-        <translation type="unfinished"/>
+        <translation>受取人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="316"/>
         <source>Use for a person or organization to whom correspondence is addressed.</source>
-        <translation type="unfinished"/>
+        <translation>書簡などの宛先となる個人または組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="317"/>
         <location filename="../../Misc/MarcRelators.cpp" line="318"/>
         <source>Recording engineer</source>
-        <translation type="unfinished"/>
+        <translation>録音技術者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="317"/>
         <source>Use for a person or organization who supervises the technical aspects of a sound or video recording session.</source>
-        <translation type="unfinished"/>
+        <translation>音声や映像録音セッションの技術的側面を監督する個人または組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="318"/>
         <source>A person contributing to a resource by supervising the technical aspects of a sound or video recording session.</source>
-        <translation type="unfinished"/>
+        <translation>音声や映像の録音セッションの技術的側面を監督することで、リソースに貢献する人。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="319"/>
         <source>Redactor</source>
-        <translation type="unfinished"/>
+        <translation>編纂者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="319"/>
         <source>Use for a person or organization who writes or develops the framework for an item without being intellectually responsible for its content.</source>
-        <translation type="unfinished"/>
+        <translation>内容に知的責任を負わずに、項目の枠組みを作成または開発する個人や組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="320"/>
         <source>Renderer</source>
-        <translation type="unfinished"/>
+        <translation>レンダラー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="320"/>
         <source>Use for a person or organization who prepares drawings of architectural designs (i.e., renderings) in accurate, representational perspective to show what the project will look like when completed.</source>
-        <translation type="unfinished"/>
+        <translation>建築設計図(すなわちレンダリング)を正確かつ表現的な遠近法で作成し、プロジェクト完成後の外観を示す個人や組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="321"/>
         <source>Reporter</source>
-        <translation type="unfinished"/>
+        <translation>記者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="321"/>
         <source>Use for a person or organization who writes or presents reports of news or current events on air or in print.</source>
-        <translation type="unfinished"/>
+        <translation>ニュースや時事事の報道を放送や印刷物で執筆または発表する個人や組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="322"/>
         <source>Repository</source>
-        <translation type="unfinished"/>
+        <translation>リポジトリ</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="322"/>
         <source>Use for an agency that hosts data or material culture objects and provides services to promote long term, consistent and shared use of those data or objects.</source>
-        <translation type="unfinished"/>
+        <translation>データや物質文化オブジェクトをホストし、それらのデータやオブジェクトの長期的かつ一貫した共有利用を促進するサービスを提供する機関の利用。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="323"/>
         <source>Research team head</source>
-        <translation type="unfinished"/>
+        <translation>研究チーム長</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="323"/>
         <source>Use for a person who directed or managed a research project.</source>
-        <translation type="unfinished"/>
+        <translation>研究プロジェクトの指揮や管理を行った人に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="324"/>
         <source>Research team member</source>
-        <translation type="unfinished"/>
+        <translation>研究チームのメンバー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="324"/>
         <source>Use for a person who participated in a research project but whose role did not involve direction or management of it.</source>
-        <translation type="unfinished"/>
+        <translation>研究プロジェクトに参加したが、その指導や管理を伴わない人に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="325"/>
         <source>Researcher</source>
-        <translation type="unfinished"/>
+        <translation>研究者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="325"/>
         <source>Use for a person or organization responsible for performing research. </source>
-        <translation type="unfinished"/>
+        <translation>研究を行う責任のある個人または組織に使用されます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="326"/>
         <source>Respondent</source>
-        <translation type="unfinished"/>
+        <translation>被告</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="326"/>
         <source>Use for the party who makes an answer to the courts pursuant to an application for redress, usually in an equity proceeding.</source>
-        <translation type="unfinished"/>
+        <translation>通常は衡平法手続きにおいて、救済申請に基づき裁判所に答弁を行う当事者に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="327"/>
         <source>Respondent-appellant</source>
-        <translation type="unfinished"/>
+        <translation>被告・控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="327"/>
         <source>Use for a respondent who takes an appeal from one court or jurisdiction to another to reverse the judgment, usually in an equity proceeding.</source>
-        <translation type="unfinished"/>
+        <translation>通常は衡平法手続きにおいて、ある裁判所や管轄区域から別の裁判所へ控訴を行って判決を覆すために被申立人が利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="328"/>
         <source>Respondent-appellee</source>
-        <translation type="unfinished"/>
+        <translation>被控訴人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="328"/>
         <source>Use for a respondent against whom an appeal is taken from one court or jurisdiction to another to reverse the judgment, usually in an equity proceeding.</source>
-        <translation type="unfinished"/>
+        <translation>通常、衡平法手続きにおいて、控訴が裁判所や管轄区域から別の裁判所へ上訴された場合に、判決を覆すために使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="329"/>
         <source>Responsible party</source>
-        <translation type="unfinished"/>
+        <translation>責任者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="329"/>
         <source>Use for a person or organization legally responsible for the content of the published material.</source>
-        <translation type="unfinished"/>
+        <translation>公開された資料の内容に法的責任を負う個人または組織のために使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="330"/>
         <source>Restager</source>
-        <translation type="unfinished"/>
+        <translation>再演出者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="330"/>
         <source>Use for a person or organization, other than the original choreographer or director, responsible for restaging a choreographic or dramatic work and who contributes minimal new content.</source>
-        <translation type="unfinished"/>
+        <translation>元の振付師や演出家以外の個人や組織が振付や演劇作品を再演し、新たにほとんど貢献しない者に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="331"/>
         <source>Restorationist</source>
-        <translation type="unfinished"/>
+        <translation>修復者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="331"/>
         <source>A person, family, or organization responsible for the set of technical, editorial, and intellectual procedures aimed at compensating for the degradation of an item by bringing it back to a state as close as possible to its original condition.</source>
-        <translation type="unfinished"/>
+        <translation>資料の劣化を補い、可能な限り元の状態へ戻すための技術的、編集的、知的な修復手順を担当する個人、家族、または組織です。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="332"/>
         <source>Reviewer</source>
-        <translation type="unfinished"/>
+        <translation>レビュアー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="332"/>
         <source>Use for a person or organization responsible for the review of a book, motion picture, performance, etc.</source>
-        <translation type="unfinished"/>
+        <translation>書籍、映画、パフォーマンスなどのレビューを担当する個人または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="333"/>
         <source>Rubricator</source>
-        <translation type="unfinished"/>
+        <translation>朱書者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="333"/>
         <source>Use for a person or organization responsible for parts of a work, often headings or opening parts of a manuscript, that appear in a distinctive color, usually red.</source>
-        <translation type="unfinished"/>
+        <translation>作品の一部、しばしば見出しや原稿の冒頭部分を担当する個人や組織が、特徴的な色(通常は赤)で表示される場合に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="334"/>
         <source>Scenarist</source>
-        <translation type="unfinished"/>
+        <translation>脚本家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="334"/>
         <source>Use for a person or organization who is the author of a motion picture screenplay.</source>
-        <translation type="unfinished"/>
+        <translation>映画脚本の著者である個人または団体に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="335"/>
         <source>Scientific advisor</source>
-        <translation type="unfinished"/>
+        <translation>科学顧問</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="335"/>
         <source>Use for a person or organization who brings scientific, pedagogical, or historical competence to the conception and realization on a work, particularly in the case of audio-visual items.</source>
-        <translation type="unfinished"/>
+        <translation>特に視聴覚作品の場合、科学的、教育的、または歴史的な能力を作品の構想と実現に持ち込む個人や組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="336"/>
         <source>Scribe</source>
-        <translation type="unfinished"/>
+        <translation>書記</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="336"/>
         <source>Use for a person who is an amanuensis and for a writer of manuscripts proper. For a person who makes pen-facsimiles, use Facsimilist [fac].</source>
-        <translation type="unfinished"/>
+        <translation>書写者や原稿の著者に使う。ペンファクシミリを作る人にはFacsimilist [fac]を使ってください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="337"/>
         <source>Sculptor</source>
-        <translation type="unfinished"/>
+        <translation>彫刻家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="337"/>
         <source>Use for a person or organization who models or carves figures that are three-dimensional representations.</source>
-        <translation type="unfinished"/>
+        <translation>三次元表現の人物をモデリングまたは彫刻する個人や組織に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="338"/>
         <source>Second party</source>
-        <translation type="unfinished"/>
+        <translation>第二当事者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="338"/>
         <source>Use for a person or organization who is identified as the party of the second part. In the case of transfer of right, this is the assignee, transferee, licensee, grantee, etc. Multiple parties can be named jointly as the second party.</source>
-        <translation type="unfinished"/>
+        <translation>第二当事者として指定された個人または組織に使用します。権利移転の場合は、譲受人、移転先、被許諾者、被付与者などに当たります。複数の当事者を共同で第二当事者として指定できます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="339"/>
         <source>Secretary</source>
-        <translation type="unfinished"/>
+        <translation>書記</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="339"/>
         <source>Use for a person or organization who is a recorder, redactor, or other person responsible for expressing the views of a organization.</source>
-        <translation type="unfinished"/>
+        <translation>組織の意見を表明する責任者、編集者、またはその他の責任者である個人または組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="340"/>
         <source>Seller</source>
-        <translation type="unfinished"/>
+        <translation>売り手</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="340"/>
         <source>A former owner of an item who sold that item to another owner.</source>
-        <translation type="unfinished"/>
+        <translation>かつての所有者がその物品を別の所有者に売却した場合。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="341"/>
         <source>Set designer</source>
-        <translation type="unfinished"/>
+        <translation>舞台美術家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="341"/>
         <source>Use for a person or organization who translates the rough sketches of the art director into actual architectural structures for a theatrical presentation, entertainment, motion picture, etc. Set designers draw the detailed guides and specifications for building the set.</source>
-        <translation type="unfinished"/>
+        <translation>アートディレクターのラフスケッチを実際の建築構造に翻訳し、演劇、エンターテインメント、映画などで利用する個人や組織に利用されます。セットデザイナーはセット製作のための詳細なガイドと仕様書を作成します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="342"/>
         <source>Setting</source>
-        <translation type="unfinished"/>
+        <translation>舞台設定</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="342"/>
         <source>An entity in which the activity or plot of a work takes place, e.g. a geographic place, a time period, a building, an event.</source>
-        <translation type="unfinished"/>
+        <translation>作品の活動やプロットが起こる存在、例えば地理的な場所、時代、建物、出来事などを指します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="343"/>
         <source>Signer</source>
-        <translation type="unfinished"/>
+        <translation>署名者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="343"/>
         <source>Use for a person whose signature appears without a presentation or other statement indicative of provenance. When there is a presentation statement, use Inscriber [ins].</source>
-        <translation type="unfinished"/>
+        <translation>署名が出所を示す提示や他の声明なしの人物に使用されます。プレゼンテーションステートメントがある場合は、Inscriber(インスクリバー)を使いましょう。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="344"/>
         <source>Singer</source>
-        <translation type="unfinished"/>
+        <translation>歌手</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="344"/>
         <source>Use for a person or organization who uses his/her/their voice with or without instrumental accompaniment to produce music. A performance may or may not include actual words.</source>
-        <translation type="unfinished"/>
+        <translation>楽器伴奏の有無にかかわらず、自分の声を使って音楽を制作する個人や組織に使います。パフォーマンスには実際の言葉が含まれている場合もあれば、含まれない場合もあります。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="345"/>
         <source>Sound designer</source>
-        <translation type="unfinished"/>
+        <translation>サウンドデザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="345"/>
         <source>Use for a person who produces and reproduces the sound score (both live and recorded), the installation of microphones, the setting of sound levels, and the coordination of sources of sound for a production.</source>
-        <translation type="unfinished"/>
+        <translation>サウンドスコア(ライブおよび録音の両方)を制作・再現する人、マイクの設置、音量設定、そして制作のための音源の調整。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="346"/>
         <source>Speaker</source>
-        <translation type="unfinished"/>
+        <translation>講演者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="346"/>
         <source>Use for a person who participates in a program (often broadcast) and makes a formalized contribution or presentation generally prepared in advance.</source>
-        <translation type="unfinished"/>
+        <translation>番組(多くは放送)に参加し、事前に準備された正式な寄稿やプレゼンテーションを行う人に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="347"/>
         <source>Sponsor</source>
-        <translation type="unfinished"/>
+        <translation>スポンサー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="347"/>
         <source>Use for a person or organization that issued a contract or under the auspices of which a work has been written, printed, published, etc.</source>
-        <translation type="unfinished"/>
+        <translation>契約を締結した個人や組織、またはその後援のもとで作品が執筆、印刷、出版された場合などに使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="348"/>
         <source>Stage director</source>
-        <translation type="unfinished"/>
+        <translation>舞台演出家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="348"/>
         <source>A person or organization contributing to a stage resource through the overall management and supervision of a performance.</source>
-        <translation type="unfinished"/>
+        <translation>パフォーマンスの全体的な管理と監督を通じて、舞台資源に貢献する個人や組織。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="349"/>
         <source>Stage manager</source>
-        <translation type="unfinished"/>
+        <translation>舞台監督</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="349"/>
         <source>Use for a person who is in charge of everything that occurs on a performance stage, and who acts as chief of all crews and assistant to a director during rehearsals.</source>
-        <translation type="unfinished"/>
+        <translation>舞台上で起こるすべてのことを統括し、リハーサル中は全クルーのチーフおよび監督の助手を務める人物に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="350"/>
         <source>Standards body</source>
-        <translation type="unfinished"/>
+        <translation>標準化団体</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="350"/>
         <source>Use for an organization responsible for the development or enforcement of a standard.</source>
-        <translation type="unfinished"/>
+        <translation>標準の開発または施行を担当する組織に使用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="351"/>
         <source>Stereotyper</source>
-        <translation type="unfinished"/>
+        <translation>鉛版製作者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="351"/>
         <source>Use for a person or organization who creates a new plate for printing by molding or copying another printing surface.</source>
-        <translation type="unfinished"/>
+        <translation>新しい印刷用プレートを作成する個人や組織が、別の印刷面を成形またはコピーして作成する場合に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="352"/>
         <source>Storyteller</source>
-        <translation type="unfinished"/>
+        <translation>ストーリーテラー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="352"/>
         <source>Use for a person relaying a story with creative and/or theatrical interpretation.</source>
-        <translation type="unfinished"/>
+        <translation>創造的または演劇的な解釈で物語を伝える人に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="353"/>
         <source>Supporting host</source>
-        <translation type="unfinished"/>
+        <translation>支援機関</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="353"/>
         <source>Use for a person or organization that supports (by allocating facilities, staff, or other resources) a project, program, meeting, event, data objects, material culture objects, or other entities capable of support. </source>
-        <translation type="unfinished"/>
+        <translation>プロジェクト、プログラム、会議、イベント、データオブジェクト、マテリアルカルチャーオブジェクト、または支援可能なその他の主体を(施設、スタッフ、その他のリソースの割り当てによって)支援する個人や組織に使用されます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="354"/>
         <source>Surveyor</source>
-        <translation type="unfinished"/>
+        <translation>測量士</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="354"/>
         <source>Use for a person or organization who does measurements of tracts of land, etc. to determine location, forms, and boundaries.</source>
-        <translation type="unfinished"/>
+        <translation>土地の区画などの測定を行い、場所や形態、境界を決定する個人や組織に利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="355"/>
         <source>Teacher</source>
-        <translation type="unfinished"/>
+        <translation>教師</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="355"/>
         <source>Use for a person who, in the context of a resource, gives instruction in an intellectual subject or demonstrates while teaching physical skills. </source>
-        <translation type="unfinished"/>
+        <translation>リソースの文脈で知的な科目の指導を行う人や、身体技能を教えながら実演する人に使われます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="356"/>
         <source>Technical director</source>
-        <translation type="unfinished"/>
+        <translation>テクニカルディレクター</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="356"/>
         <source>Use for a person who is ultimately in charge of scenery, props, lights and sound for a production.</source>
-        <translation type="unfinished"/>
+        <translation>舞台装置、小道具、照明、音響を最終的に担当する人に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="357"/>
         <source>Television director</source>
-        <translation type="unfinished"/>
+        <translation>テレビ監督</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="357"/>
         <source>A director responsible for the general management and supervision of a television program.</source>
-        <translation type="unfinished"/>
+        <translation>テレビ番組の総管理と監督を担当するディレクター。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="358"/>
         <source>Television producer</source>
-        <translation type="unfinished"/>
+        <translation>テレビプロデューサー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="358"/>
         <source>A producer responsible for most of the business aspects of a television program.</source>
-        <translation type="unfinished"/>
+        <translation>テレビ番組のビジネス面の大部分を担当するプロデューサー。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="359"/>
         <source>Thesis advisor</source>
-        <translation type="unfinished"/>
+        <translation>指導教官</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="359"/>
         <source>Use for a person under whose supervision a degree candidate develops and presents a thesis, mémoire, or text of a dissertation. </source>
-        <translation type="unfinished"/>
+        <translation>学位候補者がその指導の下で学位論文を作成し、提出する指導者に使用します。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="360"/>
         <source>Transcriber</source>
-        <translation type="unfinished"/>
+        <translation>転写者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="360"/>
         <source>Use for a person who prepares a handwritten or typewritten copy from original material, including from dictated or orally recorded material. For makers of pen-facsimiles, use Facsimilist [fac].</source>
-        <translation type="unfinished"/>
+        <translation>口述や口頭記録の資料を含む原資料から手書きまたはタイプライターのコピーを作成する人に使用します。ペンファクシミリの製造者はFacsimilist [fac]を使ってください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="361"/>
         <source>Translator</source>
-        <translation type="unfinished"/>
+        <translation>翻訳者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="361"/>
         <source>Use for a person or organization who renders a text from one language into another, or from an older form of a language into the modern form.</source>
-        <translation type="unfinished"/>
+        <translation>ある言語から別の言語にテキストを翻訳したり、古い言語の形態から現代の形態に変換する個人や組織に使われます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="362"/>
         <source>Type designer</source>
-        <translation type="unfinished"/>
+        <translation>タイプデザイナー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="362"/>
         <source>Use for a person or organization who designed the type face used in a particular item. </source>
-        <translation type="unfinished"/>
+        <translation>特定のアイテムで使われた書体をデザインした個人や組織に使われます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="363"/>
         <source>Typographer</source>
-        <translation type="unfinished"/>
+        <translation>タイポグラファー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="363"/>
         <source>Use for a person or organization primarily responsible for choice and arrangement of type used in an item. If the typographer is also responsible for other aspects of the graphic design of a book (e.g., Book designer [bkd]), codes for both functions may be needed.</source>
-        <translation type="unfinished"/>
+        <translation>資料で使用する書体の選択と配置を主に担当する個人または組織に使用します。タイポグラファーが書籍のグラフィックデザインの他の側面（例: ブックデザイナー [bkd]）も担当する場合は、両方の機能のコードが必要になることがあります。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="364"/>
         <source>University place</source>
-        <translation type="unfinished"/>
+        <translation>大学所在地</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="364"/>
         <source>A place where a university that is associated with a resource is located, for example, a university where an academic dissertation or thesis was presented.</source>
-        <translation type="unfinished"/>
+        <translation>例えば、学術論文や論文が発表された大学など、資源に関連する大学が存在する場所。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="365"/>
         <source>Videographer</source>
-        <translation type="unfinished"/>
+        <translation>ビデオグラファー</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="365"/>
         <source>Use for a person or organization in charge of a video production, e.g. the video recording of a stage production as opposed to a commercial motion picture. The videographer may be the camera operator or may supervise one or more camera operators. Do not confuse with cinematographer.</source>
-        <translation type="unfinished"/>
+        <translation>商業映画ではなく、舞台作品のビデオ録画など、ビデオ制作を担当する個人や組織に使用されます。ビデオグラファーはカメラオペレーターである場合もあれば、1人以上のカメラオペレーターを監督することもあります。撮影監督と混同しないでください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="366"/>
         <source>Voice actor</source>
-        <translation type="unfinished"/>
+        <translation>声優</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="366"/>
         <source>An actor contributing to a resource by providing the voice for characters in radio and audio productions and for animated characters in moving image works, as well as by providing voice overs in radio and television commercials, dubbed resources, etc.</source>
-        <translation type="unfinished"/>
+        <translation>俳優が、ラジオや音声作品のキャラクターの声、映像作品のアニメキャラクターの声、さらにはラジオやテレビのコマーシャル、吹き替えリソースなどのボイスオーバーを提供することで、リソースに貢献します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="367"/>
         <source>Witness</source>
-        <translation type="unfinished"/>
+        <translation>証人</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="367"/>
         <source>Use for a person who verifies the truthfulness of an event or action. </source>
-        <translation type="unfinished"/>
+        <translation>出来事や行動の真実性を検証する人に使われます。 </translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="368"/>
         <source>Wood-engraver</source>
-        <translation type="unfinished"/>
+        <translation>木版彫刻家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="368"/>
         <source>Use for a person or organization who makes prints by cutting the image in relief on the end-grain of a wood block.</source>
-        <translation type="unfinished"/>
+        <translation>木版の端目に浮き彫りの形で画像を切り抜いてプリントを作る個人や団体に使用します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="369"/>
         <source>Woodcutter</source>
-        <translation type="unfinished"/>
+        <translation>木版画家</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="369"/>
         <source>Use for a person or organization who makes prints by cutting the image in relief on the plank side of a wood block.</source>
-        <translation type="unfinished"/>
+        <translation>木版の板面に浮彫で切り出してプリントを作る個人や団体に使います。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="370"/>
         <source>Writer of accompanying material</source>
-        <translation type="unfinished"/>
+        <translation>付随資料の著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="370"/>
         <source>Use for a person or organization who writes significant material which accompanies a sound recording or other audiovisual material.</source>
-        <translation type="unfinished"/>
+        <translation>音声録音やその他の視聴覚資料に伴う重要な資料を書く個人や組織に利用されます。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="371"/>
         <source>Writer of added commentary</source>
-        <translation type="unfinished"/>
+        <translation>追加の解説の執筆者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="371"/>
         <source>A person, family, or organization contributing to an expression of a work by providing an interpretation or critical explanation of the original work.</source>
-        <translation type="unfinished"/>
+        <translation>個人、家族、または組織が、原作の解釈や批判的説明を提供することで作品の表現に貢献します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="372"/>
         <source>Writer of added lyrics</source>
-        <translation type="unfinished"/>
+        <translation>追加歌詞の作詞者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="372"/>
         <source>A writer of words added to an expression of a musical work. For lyric writing in collaboration with a composer to form an original work, see lyricist.</source>
-        <translation type="unfinished"/>
+        <translation>音楽作品の表現に追加された歌詞の執筆者です。作曲家と共同で新しい作品を作る作詞については、作詞家を参照してください。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="373"/>
         <source>Writer of added text</source>
-        <translation type="unfinished"/>
+        <translation>追加テキストの著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="373"/>
         <source>A person, family, or organization contributing to a non-textual resource by providing text for the non-textual work (e.g., writing captions for photographs, descriptions of maps.)</source>
-        <translation type="unfinished"/>
+        <translation>非テキスト作品のためのテキスト(例:写真のキャプション作成、地図の説明の作成など)を通じて非テキストリソースに貢献する個人、家族、または組織。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="374"/>
         <source>Writer of introduction</source>
-        <translation type="unfinished"/>
+        <translation>序文の著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="374"/>
         <source>A person, family, or organization contributing to a resource by providing an introduction to the original work.</source>
-        <translation type="unfinished"/>
+        <translation>個人、家族、または組織が、元の作品の紹介を提供することでリソースに貢献します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="375"/>
         <source>Writer of preface</source>
-        <translation type="unfinished"/>
+        <translation>序文の著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="375"/>
         <source>A person, family, or organization contributing to a resource by providing a preface to the original work.</source>
-        <translation type="unfinished"/>
+        <translation>個人、家族、または組織が、元の作品の序文を提供することで資源に貢献します。</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="376"/>
         <source>Writer of supplementary textual content</source>
-        <translation type="unfinished"/>
+        <translation>補足テキストの著者</translation>
     </message>
     <message>
         <location filename="../../Misc/MarcRelators.cpp" line="376"/>
         <source>A person, family, or organization contributing to a resource by providing supplementary textual content (e.g., an introduction, a preface) to the original work.</source>
-        <translation type="unfinished"/>
+        <translation>個人、家族、または組織が、元の作品に補助的なテキスト内容(例:序文、序文)を提供することで、リソースに貢献する。</translation>
     </message>
 </context>
 <context>
@@ -16461,12 +18128,12 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Dialogs/MetaEditor.cpp" line="578"/>
         <source>Invalid characters were detected in the element name</source>
-        <translation type="unfinished"/>
+        <translation>要素名に無効な文字が検出されました</translation>
     </message>
     <message>
         <location filename="../../Dialogs/MetaEditor.cpp" line="578"/>
         <source>Invalid XML element name.</source>
-        <translation type="unfinished"/>
+        <translation>XML要素名が無効です。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/MetaEditor.cpp" line="674"/>
@@ -16503,7 +18170,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Dialogs/MetaEditor.cpp" line="763"/>
         <source>Add Propety to Element</source>
-        <translation type="unfinished"/>
+        <translation>要素にプロパティを追加</translation>
     </message>
     <message>
         <location filename="../../Dialogs/MetaEditor.cpp" line="797"/>
@@ -17146,7 +18813,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <location filename="../../Dialogs/MetaEditor.cpp" line="1097"/>
         <location filename="../../Dialogs/MetaEditor.cpp" line="1147"/>
         <source>Universally Unique Identifier</source>
-        <translation>Universally Unique Identifier（UUID）</translation>
+        <translation>汎用一意識別子（UUID）</translation>
     </message>
     <message>
         <location filename="../../Dialogs/MetaEditor.cpp" line="1097"/>
@@ -17156,7 +18823,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message>
         <location filename="../../Dialogs/MetaEditor.cpp" line="1098"/>
         <source>Amazon Unique Identifier</source>
-        <translation>Amazon Unique Identifier（Amazon ASIN）</translation>
+        <translation>Amazon 固有識別子（ASIN）</translation>
     </message>
     <message>
         <location filename="../../Dialogs/MetaEditor.cpp" line="1098"/>
@@ -17421,29 +19088,64 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
 <context>
     <name>OPFModel</name>
     <message>
-        <location filename="../../MainUI/OPFModel.cpp" line="793"/>
+        <location filename="../../MainUI/OPFModel.cpp" line="53"/>
+        <source>Text</source>
+        <translation>テキスト</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/OPFModel.cpp" line="54"/>
+        <source>Styles</source>
+        <translation>スタイル</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/OPFModel.cpp" line="55"/>
+        <source>Images</source>
+        <translation>画像</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/OPFModel.cpp" line="56"/>
+        <source>Fonts</source>
+        <translation>フォント</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/OPFModel.cpp" line="57"/>
+        <source>Misc</source>
+        <translation>その他</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/OPFModel.cpp" line="58"/>
+        <source>Audio</source>
+        <translation>オーディオ</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/OPFModel.cpp" line="59"/>
+        <source>Video</source>
+        <translation>動画</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/OPFModel.cpp" line="792"/>
         <source>A filename cannot contains the character &quot;%1&quot;.</source>
         <translation>ファイル名に文字 &quot;%1&quot; を含めることはできません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/OPFModel.cpp" line="804"/>
+        <location filename="../../MainUI/OPFModel.cpp" line="803"/>
         <source>The filename cannot be empty.</source>
         <translation>ファイル名は空にすることはできません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/OPFModel.cpp" line="825"/>
+        <location filename="../../MainUI/OPFModel.cpp" line="824"/>
         <source>The filename &quot;%1&quot; is already in use.
 </source>
         <translation>ファイル名 &quot;%1&quot; はすでに使用されています。
 </translation>
     </message>
     <message>
-        <location filename="../../MainUI/OPFModel.cpp" line="839"/>
+        <location filename="../../MainUI/OPFModel.cpp" line="838"/>
         <source>The book path cannot be empty.</source>
         <translation>ブックのパスを空にすることはできません。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/OPFModel.cpp" line="846"/>
+        <location filename="../../MainUI/OPFModel.cpp" line="845"/>
         <source>That book path &quot;%1&quot; is already in use.
 </source>
         <translation>ブックのパス &quot;%1&quot; はすでに使用されています。
@@ -17640,7 +19342,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     </message>
     <message>
         <location filename="../../PCRE2/PCREErrors.cpp" line="97"/>
-        <source>digit expected after (?+ or (?-<byte value="x0"/></source>
+        <source>digit expected after (?+ or (?-</source>
         <translation>「(?+」または「(?-&lt;byte value=&quot;x0&quot;/&gt;」の後に、数字が必要です。</translation>
     </message>
     <message>
@@ -17995,6 +19697,69 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     </message>
 </context>
 <context>
+    <name>PModifiedVerPrefsWidget</name>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="14"/>
+        <source>ModifiedVersion Prefs</source>
+        <translation>拡張版の設定</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="24"/>
+        <source>General</source>
+        <translation>全般</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="30"/>
+        <source>Enable Code Completer for CodeViewEditor:</source>
+        <translation>コードビューエディターのコード補完を有効にする:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="36"/>
+        <source>Completion</source>
+        <translation>コード補完</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="43"/>
+        <source>Emmet</source>
+        <translation>Emmet</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="66"/>
+        <source>TXT import Settings:</source>
+        <translation>TXT インポート設定:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="72"/>
+        <source>Ignore blank lines when importing TXT as XHTML</source>
+        <translation>TXT を XHTML としてインポートするときに空行を無視する</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="82"/>
+        <source>Find and Replace Mode:</source>
+        <translation>検索と置換モード:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="88"/>
+        <source>Enhanced Mode</source>
+        <translation>拡張モード</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="101"/>
+        <source>Original Mode</source>
+        <translation>オリジナルモード</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="131"/>
+        <source>XHTML Format</source>
+        <translation>XHTML 形式</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="154"/>
+        <source>Reset</source>
+        <translation>リセット</translation>
+    </message>
+</context>
+<context>
     <name>PluginRunner</name>
     <message>
         <location filename="../../Form_Files/PluginRunner.ui" line="14"/>
@@ -18037,180 +19802,284 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <translation>状態:</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="129"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="127"/>
         <source>Error: A plugin by that name does not exist</source>
         <translation>エラー: そのような名前のプラグインはありません</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="160"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="161"/>
         <source>Error: Interpreter</source>
         <translation>エラー: インタープリター</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="160"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="161"/>
         <source>has no path set</source>
         <translation>には、パスが設定されていません</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="173"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="174"/>
         <source>Installation Error: plugin launcher</source>
         <translation>インストールエラー: プラグイン起動</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="174"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="175"/>
         <source>does not exist</source>
         <translation>が、存在しません</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="179"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="180"/>
         <source>Error: plugin engine</source>
         <translation>エラー: プラグインエンジン</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="180"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="181"/>
         <source>is not supported (yet!)</source>
         <translation>が、サポートされていません（まだ）</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="186"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="187"/>
         <source>Status: ready</source>
         <translation>状態: 準備完了</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="274"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="275"/>
         <source>Error: plugin cannot start</source>
-        <translation type="unfinished"/>
+        <translation>エラー: プラグインを起動できません</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="423"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="424"/>
         <source>Status: running</source>
         <translation>状態: 起動中</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="441"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="442"/>
         <source>Launcher process crashed</source>
         <translation>起動プロセスがクラッシュしました</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="457"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="458"/>
         <source>Status: finished</source>
         <translation>状態: 完了</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="464"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="465"/>
         <source>Status: failed</source>
         <translation>状態: 失敗</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="470"/>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="480"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="471"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="481"/>
         <source>Status: No Changes Made</source>
         <translation>状態: 変更なし</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="479"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="480"/>
         <source>Error: Plugin Tried to Remove the Last XHTML file .. aborting changes</source>
         <translation>エラー: プラグインは最後のXHTMLファイルを削除しようとしました .. 変更を中止します</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="544"/>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="633"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="545"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="634"/>
         <source>Status:</source>
         <translation>状態:</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="571"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="572"/>
         <source>Plugin failed to start</source>
         <translation>プラグインの起動に失敗しました</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="579"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="580"/>
         <source>Status: error</source>
         <translation>状態: エラー</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="610"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="611"/>
         <source>Plugin cancelled</source>
         <translation>プラグインをキャンセルしました</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="611"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="612"/>
         <source>Status: cancelled</source>
         <translation>状態: キャンセル</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="705"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="706"/>
         <source>Error Parsing Result XML:  </source>
         <translation>結果XMLの解析エラー: </translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="763"/>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="778"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="764"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="779"/>
         <source>Status: checking</source>
         <translation>状態: チェック中</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="767"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="768"/>
         <source>Incorrect XHTML:</source>
         <translation>不正なXHTML:</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="767"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="768"/>
         <source>Line/Col</source>
         <translation>行/列</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="796"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="797"/>
         <source>Check Report</source>
         <translation>確認レポート</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="797"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="798"/>
         <source>Incorrect XHTML/XML Detected
 Are you Sure You Want to Continue?</source>
         <translation>誤った XHTML/XML が検出されました。
 続行しますか?</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="815"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="817"/>
         <source>Status: cleaning up - deleting files</source>
         <translation>状態: クリーンアップ - ファイルを削除中</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="848"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="850"/>
         <source>Status: deleting</source>
         <translation>状態: 削除中</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="887"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="882"/>
+        <source>Status: adding files</source>
+        <translation>状態: ファイルを追加中</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="893"/>
         <source>Status: Loading</source>
         <translation>状態: 読み込み中</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="895"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="901"/>
         <source>Input Plugin</source>
-        <translation>プラグインの入力</translation>
+        <translation>入力プラグイン</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="896"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="902"/>
         <source>Your current book will be completely replaced losing any unsaved changes ...  Are you sure you want to proceed</source>
         <translation>現在のブックは完全に置き換えられ、保存されていない変更は失われます ... 続行してもよろしいですか?</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="924"/>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="938"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="930"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="944"/>
         <source>Status: adding</source>
         <translation>状態: 追加中</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="976"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="982"/>
         <source>Status: cleaning up - modifying files</source>
         <translation>状態: クリーンアップ - ファイルを変更中</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PluginRunner.cpp" line="1013"/>
+        <location filename="../../Dialogs/PluginRunner.cpp" line="1019"/>
         <source>Status: modifying</source>
         <translation>状態: 変更中</translation>
+    </message>
+</context>
+<context>
+    <name>PluginSession</name>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="607"/>
+        <source>No Python 3 interpreter is configured.</source>
+        <translation>Python 3 インタープリターが設定されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="617"/>
+        <source>The live plugin launcher or plugin entry point does not exist.</source>
+        <translation>ライブプラグインランチャーまたはプラグインのエントリーポイントが存在しません。</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="640"/>
+        <source>Could not create the local plugin server: %1</source>
+        <translation>ローカルプラグインサーバーを作成できませんでした: %1</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="732"/>
+        <source>Plugin handshake timed out.</source>
+        <translation>プラグインのハンドシェイクがタイムアウトしました。</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="777"/>
+        <source>Plugin control connection closed unexpectedly.</source>
+        <translation>プラグイン制御接続が予期せず閉じられました。</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="814"/>
+        <source>Plugin process exited with code %1.</source>
+        <translation>プラグインプロセスが終了コード %1 で終了しました。</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="863"/>
+        <source>Connected</source>
+        <translation>接続済み</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="3064"/>
+        <source>All Files (*)</source>
+        <translation>すべてのファイル (*)</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSession.cpp" line="3412"/>
+        <source>Status: %1</source>
+        <translation>状態: %1</translation>
+    </message>
+</context>
+<context>
+    <name>PluginSessionConsole</name>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionConsole.cpp" line="18"/>
+        <source>Starting</source>
+        <translation>開始中</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionConsole.cpp" line="21"/>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionConsole.cpp" line="22"/>
+        <source>Close</source>
+        <translation>閉じる</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionConsole.cpp" line="25"/>
+        <source>Live Plugin: %1</source>
+        <translation>ライブプラグイン: %1</translation>
+    </message>
+</context>
+<context>
+    <name>PluginSessionManager</name>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionManager.cpp" line="42"/>
+        <source>This book-session plugin is already running for the current Book.</source>
+        <translation>このブックセッションプラグインは、現在の書籍ですでに実行中です。</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionManager.cpp" line="60"/>
+        <source>Input Plugin</source>
+        <translation>入力プラグイン</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionManager.cpp" line="61"/>
+        <source>Your current book will be completely replaced, losing any unsaved changes. Continue?</source>
+        <translation>現在の書籍は完全に置き換えられ、未保存の変更はすべて失われます。続行しますか?</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionManager.cpp" line="86"/>
+        <source>Book-session plugins cannot run as an Automate step.</source>
+        <translation>ブックセッションプラグインは自動化ステップとして実行できません。</translation>
+    </message>
+    <message>
+        <location filename="../../PluginAPI/PluginSessionManager.cpp" line="113"/>
+        <source>Live plugin timed out.</source>
+        <translation>ライブプラグインがタイムアウトしました。</translation>
     </message>
 </context>
 <context>
@@ -18240,7 +20109,7 @@ Are you Sure You Want to Continue?</source>
     <message>
         <location filename="../../Form_Files/PPluginWidget.ui" line="54"/>
         <source>≥Python3.4:</source>
-        <translation>≥Python3.4:</translation>
+        <translation>Python 3.4 以上:</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PPluginWidget.ui" line="73"/>
@@ -18283,134 +20152,172 @@ Are you Sure You Want to Continue?</source>
         <translation>インタープリター</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="210"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="191"/>
+        <source>Plugin API</source>
+        <translation>プラグイン API</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="215"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="268"/>
         <source>Add Plugin</source>
         <translation>プラグインの追加</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="220"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="225"/>
         <source>Remove Plugin</source>
         <translation>プラグインの削除</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="230"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="235"/>
         <source>Remove All</source>
         <translation>すべて削除</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="253"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="258"/>
         <source>Shortcuts</source>
         <translation>ショートカット</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="261"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="266"/>
         <source>Quick Launch Plugin Assignments</source>
         <translation>クイック起動プラグインの割り当て</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="271"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="276"/>
         <source>Plugin 1:</source>
         <translation>プラグイン 1:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="351"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="356"/>
         <source>Plugin 6:</source>
         <translation>プラグイン 6:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="361"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="366"/>
         <source>Plugin 2:</source>
         <translation>プラグイン 2:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="371"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="376"/>
         <source>Plugin 7:</source>
         <translation>プラグイン 7:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="381"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="386"/>
         <source>Plugin 3:</source>
         <translation>プラグイン 3:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="391"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="396"/>
         <source>Plugin 8:</source>
         <translation>プラグイン 8:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="401"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="406"/>
         <source>Plugin 4:</source>
         <translation>プラグイン 4:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="411"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="416"/>
         <source>Plugin 9:</source>
         <translation>プラグイン 9:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="421"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="426"/>
         <source>Plugin 5:</source>
         <translation>プラグイン 5:</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/PPluginWidget.ui" line="431"/>
+        <location filename="../../Form_Files/PPluginWidget.ui" line="436"/>
         <source>Plugin 10:</source>
         <translation>プラグイン 10:</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="208"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="236"/>
         <source>Select Plugin Zip Archive</source>
         <translation>プラグインのZIPアーカイブを選択</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="210"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="238"/>
         <source>Plugin Files (*.zip)</source>
         <translation>プラグインファイル (*.zip)</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="228"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="256"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidgetExt.cpp" line="89"/>
         <source>Error: Plugin plugin.xml is invalid or not supported on your operating system.</source>
         <translation>エラー: プラグイン plugin.xml が無効であるか、お使いのオペレーティングシステムでサポートされていません。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="231"/>
         <source>Warning: A plugin by that name already exists</source>
-        <translation>警告: 同じ名前のプラグインが既に存在します</translation>
+        <translation type="vanished">警告: 同じ名前のプラグインが既に存在します</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="234"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="135"/>
+        <source>Legacy (v1)</source>
+        <translation>従来版 (v1)</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="136"/>
+        <source>Live (v2)</source>
+        <translation>ライブ版 (v2)</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="137"/>
+        <source>Choose which Python plugin runtime is used for this plugin.</source>
+        <translation>このプラグインで使用する Python プラグインランタイムを選択します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="269"/>
+        <source>A plugin by that name already exists, are you sure to overwrite this plugin?</source>
+        <translation>同じ名前のプラグインがすでに存在します。上書きしますか?</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="281"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidgetExt.cpp" line="92"/>
         <source>Error: Plugin Could Not be Unzipped.</source>
         <translation>エラー: プラグインを解凍できませんでした。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="237"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="284"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidgetExt.cpp" line="95"/>
         <source>Error: Plugin not a valid Sigil plugin.</source>
         <translation>エラー: プラグインは、有効なSigilプラグインではありません。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="275"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="323"/>
         <source>Nothing is Selected.</source>
         <translation>何も選択されていません。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="323"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="379"/>
         <source>Remove All Plugins</source>
         <translation>すべてのプラグインを削除</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="324"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="380"/>
         <source>Are you sure sure you want to remove all of your plugins?</source>
         <translation>本当にすべてのプラグインを削除しますか?</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="379"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="437"/>
         <source>Select Interpreter</source>
         <translation>インタープリターの選択</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="408"/>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidget.cpp" line="466"/>
         <source>Incorrect Interpreter Path selected</source>
         <translation>誤ったインタープリターパスが選択されました</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidgetExt.cpp" line="14"/>
+        <source>Remove Selected Plugins</source>
+        <translation>選択したプラグインを削除</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/PreferenceWidgets/PluginWidgetExt.cpp" line="15"/>
+        <source>Are you sure to remove these selected plugins?</source>
+        <translation>選択したプラグインを削除しますか?</translation>
     </message>
 </context>
 <context>
@@ -18421,17 +20328,17 @@ Are you Sure You Want to Continue?</source>
         <translation>設定</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/Preferences.cpp" line="116"/>
+        <location filename="../../Dialogs/Preferences.cpp" line="131"/>
         <source>Sigil</source>
         <translation>Sigil</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/Preferences.cpp" line="116"/>
+        <location filename="../../Dialogs/Preferences.cpp" line="131"/>
         <source>Changes will take effect when you restart Sigil.</source>
         <translation>変更した内容はSigilの再起動後に有効になります。</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/Preferences.cpp" line="197"/>
+        <location filename="../../Dialogs/Preferences.cpp" line="226"/>
         <source>Open Preferences Location</source>
         <translation>設定ファイルの場所を開く</translation>
     </message>
@@ -18491,13 +20398,13 @@ Entities can be separated by lines, commas, or spaces.</source>
     <message>
         <location filename="../../Dialogs/PreviewFileDialog.cpp" line="56"/>
         <source>not an image</source>
-        <translation type="unfinished"/>
+        <translation>画像ではありません</translation>
     </message>
     <message>
         <location filename="../../Dialogs/PreviewFileDialog.cpp" line="68"/>
         <location filename="../../Dialogs/PreviewFileDialog.cpp" line="93"/>
         <source>no preview available</source>
-        <translation type="unfinished"/>
+        <translation>プレビューできません</translation>
     </message>
 </context>
 <context>
@@ -18608,14 +20515,14 @@ Entities can be separated by lines, commas, or spaces.</source>
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../../BookManipulation/Book.cpp" line="1683"/>
+        <location filename="../../BookManipulation/Book.cpp" line="1687"/>
         <source>PrettyPrinting...</source>
-        <translation type="unfinished"/>
+        <translation>整形中...</translation>
     </message>
     <message>
         <location filename="../../BookManipulation/CleanSource.cpp" line="299"/>
         <source>Mending...</source>
-        <translation type="unfinished"/>
+        <translation>修復...</translation>
     </message>
     <message>
         <location filename="../../BookManipulation/Index.cpp" line="48"/>
@@ -18650,158 +20557,153 @@ Entities can be separated by lines, commas, or spaces.</source>
         <translation>レポートを作成中...</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="118"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="100"/>
         <source>Cannot read EPUB: %1</source>
         <translation>EPUBを読み込めません: %1</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="256"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="238"/>
         <source>The OPF file does not contain a valid spine.</source>
         <translation>OPFファイルに、有効なspine要素が含まれていません。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="257"/>
-        <location filename="../../Importers/ImportEPUB.cpp" line="986"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="239"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="813"/>
         <source>Sigil has created a new one for you.</source>
         <translation>Sigilが、新しいものを作成しました。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="258"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="240"/>
         <source>Please verify and correct the OPF Spine order.</source>
         <translation>OPF Spine の順序を確認し、修正してください。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="307"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="289"/>
         <source>Error parsing encryption xml.
 Line: %1 Column %2 - %3</source>
         <translation>暗号化XMLの解析中に、エラーが発生しました。
 行: %1 列 %2 - %3</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="427"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="400"/>
         <source>Cannot unzip EPUB: %1</source>
         <translation>EPUBを解凍できません: %1</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="503"/>
         <source>Possible evil or corrupt epub file name: %1</source>
-        <translation>epubが、不正または破損している可能性があります。ファイル名: %1</translation>
+        <translation type="vanished">epubが、不正または破損している可能性があります。ファイル名: %1</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="534"/>
-        <location filename="../../Importers/ImportEPUB.cpp" line="543"/>
-        <location filename="../../Importers/ImportEPUB.cpp" line="563"/>
-        <location filename="../../Importers/ImportEPUB.cpp" line="571"/>
         <source>Cannot extract file: %1</source>
-        <translation>ファイルを展開できません: %1</translation>
+        <translation type="vanished">ファイルを展開できません: %1</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="584"/>
         <source>Cannot open EPUB: %1</source>
-        <translation>EPUBを開けません: %1</translation>
+        <translation type="vanished">EPUBを開けません: %1</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="638"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="465"/>
         <source>Unable to parse container.xml file.
 Line: %1 Column %2 - %3</source>
         <translation>container.xml ファイルを解析できません。
 行: %1 列 %2 - %3</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="646"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="473"/>
         <source>This epub has multiple renditions (multiple OPF files). Editing this epub in Sigil will produce a normal single rendition epub using only the main (first) OPF file found.</source>
         <translation>このepubには複数のレンディション（複数のOPFファイル）があります。Sigilで、このepubを編集すると、検出されたメインの（最初の）OPFファイルのみを使用して通常の単一レンディションepubが生成されます。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="650"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="477"/>
         <source>No appropriate OPF file found</source>
         <translation>適切なOPFファイルが見つかりません</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="703"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="530"/>
         <source>Unable to read OPF file.
 Line: %1 Column %2 - %3</source>
         <translation>OPF ファイルを読めません。
 行: %1 列 %2 - %3</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="837"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="664"/>
         <source>The OPF has an illegal Manifest entry for a file inside the META-INF folder for file &quot;%1&quot;</source>
         <translation>OPFには、ファイル &quot;%1&quot; のMETA-INFフォルダー内のファイルに対して無効なマニフェストエントリーがあります。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="838"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="665"/>
         <source>You should edit your OPF file to remove this entry.</source>
         <translation>このエントリーを削除するには、OPFファイルを編集する必要があります。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="857"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="684"/>
         <source>The OPF manifest contains duplicate ids for: %1</source>
         <translation>OPFマニフェストに、次の重複IDが含まれています: %1</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="858"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="685"/>
         <source>A temporary id has been assigned to load this EPUB. You should edit your OPF file to remove the duplication.</source>
         <translation>このEPUBを読み込むために、一時IDが割り当てられました。重複を削除するには、OPFファイルを編集する必要があります。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="875"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="702"/>
         <source>The OPF manifest contains duplicate file paths for: %1</source>
-        <translation type="unfinished"/>
+        <translation>OPF マニフェストに重複するファイルパスがあります: %1</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="876"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="703"/>
         <source>You should edit your OPF file&apos;s manifest to remove the duplication.</source>
-        <translation type="unfinished"/>
+        <translation>重複を取り除くためにOPFファイルのマニフェストを編集してください。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="958"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="785"/>
         <source>The OPF file did not identify the NCX file correctly.</source>
         <translation>OPFファイルが、NCXファイルを正しく識別しませんでした。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="959"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="786"/>
         <source>Sigil has used the following file as the NCX:</source>
         <translation>Sigilは、次のファイルをNCXとして使用しています:</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="985"/>
+        <location filename="../../Importers/ImportEPUB.cpp" line="812"/>
         <source>The OPF file does not contain an NCX file.</source>
         <translation>OPFファイルに、NCXファイルが含まれていません。</translation>
     </message>
     <message>
         <location filename="../../Importers/Importer.cpp" line="47"/>
         <source>The OPF contains missing or unrecognized media types.  Temporary media types have been generated. You should edit your OPF to fix these.</source>
-        <translation type="unfinished"/>
+        <translation>OPFには欠落しているか認識されていないメディアタイプが含まれています。 一時的なメディアタイプも生成されています。これらを直すためにOPFを編集すべきです。</translation>
     </message>
     <message>
-        <location filename="../../main.cpp" line="874"/>
-        <location filename="../../main.cpp" line="922"/>
+        <location filename="../../main.cpp" line="883"/>
+        <location filename="../../main.cpp" line="931"/>
         <source>Quit</source>
         <translation>終了</translation>
     </message>
     <message>
-        <location filename="../../main.cpp" line="884"/>
+        <location filename="../../main.cpp" line="893"/>
         <source>About</source>
         <translation>情報</translation>
     </message>
     <message>
-        <location filename="../../main.cpp" line="893"/>
+        <location filename="../../main.cpp" line="902"/>
         <source>Preferences</source>
         <translation>設定</translation>
     </message>
     <message>
-        <location filename="../../main.cpp" line="904"/>
+        <location filename="../../main.cpp" line="913"/>
         <source>New</source>
         <translation>新規</translation>
     </message>
     <message>
-        <location filename="../../main.cpp" line="913"/>
+        <location filename="../../main.cpp" line="922"/>
         <source>Open</source>
         <translation>開く</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="885"/>
+        <location filename="../../MainUI/BookBrowser.cpp" line="894"/>
+        <location filename="../../MainUI/BookBrowserExt.cpp" line="38"/>
         <source>Adding Existing Files..</source>
         <translation>既存のファイルを追加中...</translation>
     </message>
@@ -18812,39 +20714,39 @@ Line: %1 Column %2 - %3</source>
     </message>
     <message>
         <location filename="../../Misc/SearchOperations.cpp" line="46"/>
+        <location filename="../../Misc/SearchOperations.cpp" line="272"/>
         <source>Counting occurrences..</source>
         <translation>件数をカウントしています..</translation>
     </message>
     <message>
         <location filename="../../Misc/SearchOperations.cpp" line="65"/>
-        <location filename="../../Misc/SearchOperations.cpp" line="238"/>
+        <location filename="../../Misc/SearchOperations.cpp" line="237"/>
+        <location filename="../../Misc/SearchOperations.cpp" line="371"/>
         <source>Replacing search term...</source>
         <translation>検索語を置換しています...</translation>
     </message>
     <message>
-        <location filename="../../Misc/UpdateChecker.cpp" line="99"/>
         <source>Sigil</source>
-        <translation>Sigil</translation>
+        <translation type="vanished">Sigil</translation>
     </message>
     <message>
-        <location filename="../../Misc/UpdateChecker.cpp" line="100"/>
         <source>&lt;p&gt;A newer version of Sigil is available, version &lt;b&gt;%1&lt;/b&gt;.&lt;br/&gt;&lt;p&gt;Would you like to go to the download page?&lt;/p&gt;</source>
-        <translation>&lt;p&gt;新しいバージョンのSigilがあります。バージョン &lt;b&gt;%1&lt;/b&gt; &lt;br/&gt;&lt;p&gt;ダウンロードページに移動しますか?&lt;/p&gt;</translation>
+        <translation type="vanished">&lt;p&gt;新しいバージョンのSigilがあります。バージョン &lt;b&gt;%1&lt;/b&gt; &lt;br/&gt;&lt;p&gt;ダウンロードページに移動しますか?&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../../Misc/Utility.cpp" line="485"/>
+        <location filename="../../Misc/Utility.cpp" line="505"/>
         <source>Cannot read file %1:
 %2.</source>
         <translation>ファイル %1 を読み込めませんでした:
 %2。</translation>
     </message>
     <message>
-        <location filename="../../Misc/Utility.cpp" line="678"/>
+        <location filename="../../Misc/Utility.cpp" line="698"/>
         <source>Sigil has encountered a problem.</source>
         <translation>Sigilで問題が発生しました。</translation>
     </message>
     <message>
-        <location filename="../../Misc/Utility.cpp" line="679"/>
+        <location filename="../../Misc/Utility.cpp" line="699"/>
         <source>Sigil may need to close.</source>
         <translation>Sigilを閉じる必要があるかもしれません。</translation>
     </message>
@@ -18868,6 +20770,26 @@ Line: %1 Column %2 - %3</source>
         <location filename="../../SourceUpdates/UniversalUpdates.cpp" line="349"/>
         <source>Invalid NCX file: %1</source>
         <translation>無効なNCXファイル: %1</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="111"/>
+        <source>KFX paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
+        <translation>KFX 段落の正規化: XHTML の自動整形に失敗したため、整形せずに正規化済み XHTML を書き込みます。%1</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="119"/>
+        <source>KFX paragraph normalization: automatic XHTML formatting was applied.</source>
+        <translation>KFX 段落の正規化: XHTML の自動整形を適用しました。</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/MainWindowExt.cpp" line="122"/>
+        <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
+        <translation>KFX 段落の正規化: XHTML の自動整形による追加の変更はありませんでした。</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/UpdateChecker.cpp" line="100"/>
+        <source>&lt;p&gt;A newer version of Sigil-Enhanced is available, version &lt;b&gt;%1&lt;/b&gt;.&lt;br/&gt;&lt;p&gt;Would you like to go to the download page?&lt;/p&gt;</source>
+        <translation>&lt;p&gt;Sigil-Enhanced の新しいバージョン &lt;b&gt;%1&lt;/b&gt; が利用できます。&lt;br/&gt;&lt;p&gt;ダウンロードページを開きますか?&lt;/p&gt;</translation>
     </message>
 </context>
 <context>
@@ -18933,7 +20855,7 @@ Line: %1 Column %2 - %3</source>
 
 All numbers at the END of the filename you enter will be replaced sequentially
 starting at the number provided (default is 1 if no number is provided),  with
-leading 0's added to match the number of digits used.
+leading 0&apos;s added to match the number of digits used.
 
 If you provide a file extension it will be used for all files, otherwise the
 current extensions will be kept.  If you just provide a file extension (e.g. .xhtml)
@@ -18942,9 +20864,9 @@ valid for all selected files.
 </source>
         <translation>選択したすべてのファイルの名前を変更するために使用する開始名を入力します。例:
 
-    filename001
-    filename08.xhtml
-    .html
+&#xa0;   filename001
+&#xa0;   filename08.xhtml
+  &#xa0; .html
 
 入力したファイル名の末尾にあるすべての数字が、順番に置換されます。
 指定された番号から開始し（数値が指定されていない場合のデフォルトは、1 です）、
@@ -18982,7 +20904,7 @@ valid for all selected files.
     <message>
         <location filename="../../Form_Files/ReplacementChooser.ui" line="57"/>
         <source>Select the amount of context in characters shown before and after the match.</source>
-        <translation>一致する前後に表示される文字の文脈量を選択します。</translation>
+        <translation>一致箇所の前後に表示する文字数を選択します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/ReplacementChooser.ui" line="60"/>
@@ -18997,7 +20919,7 @@ valid for all selected files.
     <message>
         <location filename="../../Form_Files/ReplacementChooser.ui" line="90"/>
         <source>Total Number of Matches/Replacements</source>
-        <translation>マッチ/置換した合計数</translation>
+        <translation>一致/置換の合計数</translation>
     </message>
     <message>
         <location filename="../../Form_Files/ReplacementChooser.ui" line="93"/>
@@ -19021,32 +20943,87 @@ valid for all selected files.
     <message>
         <location filename="../../Form_Files/ReplacementChooser.ui" line="140"/>
         <source>Apply Changes</source>
-        <translation>変更を適用する</translation>
+        <translation>変更を適用</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/ReplacementChooser.cpp" line="118"/>
+        <location filename="../../Dialogs/ReplacementChooser.cpp" line="120"/>
         <source>Replace</source>
         <translation>置換</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/ReplacementChooser.cpp" line="119"/>
+        <location filename="../../Dialogs/ReplacementChooser.cpp" line="121"/>
         <source>Book Path</source>
         <translation>ブックパス</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/ReplacementChooser.cpp" line="120"/>
+        <location filename="../../Dialogs/ReplacementChooser.cpp" line="122"/>
         <source>Offset</source>
         <translation>オフセット</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/ReplacementChooser.cpp" line="121"/>
+        <location filename="../../Dialogs/ReplacementChooser.cpp" line="123"/>
         <source>Before</source>
         <translation>前</translation>
     </message>
     <message>
-        <location filename="../../Dialogs/ReplacementChooser.cpp" line="122"/>
+        <location filename="../../Dialogs/ReplacementChooser.cpp" line="124"/>
         <source>After</source>
         <translation>後</translation>
+    </message>
+</context>
+<context>
+    <name>ReplacementPreviewPlus</name>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="14"/>
+        <source>Replacements (Delete Unwanted Replacements)</source>
+        <translation>置換内容（不要な置換を削除）</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="35"/>
+        <source>Select the amount of context in characters shown before and after the match.</source>
+        <translation>一致箇所の前後に表示する文字数を選択します。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="38"/>
+        <source>Context:</source>
+        <translation>コンテキスト:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="61"/>
+        <source>Count:</source>
+        <translation>カウント:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="68"/>
+        <source>Total Number of Matches/Replacements</source>
+        <translation>一致/置換の合計数</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="71"/>
+        <source>----   </source>
+        <translation>----   </translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="114"/>
+        <source>Apply the remaining replacements listed in the table.
+         Warning: Once applied, no &quot;undo&quot; is possible.</source>
+        <translation>表に残っている置換を適用します。
+         警告: 適用後は元に戻せません。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="118"/>
+        <source>Apply Changes</source>
+        <translation>変更を適用</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="125"/>
+        <source>Filter Unchanged</source>
+        <translation>未変更を除外</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/ReplacementPreviewPlus.ui" line="132"/>
+        <source>Refresh</source>
+        <translation>更新</translation>
     </message>
 </context>
 <context>
@@ -19060,6 +21037,257 @@ valid for all selected files.
         <location filename="../../Form_Files/Reports.ui" line="54"/>
         <source>Refresh</source>
         <translation>更新</translation>
+    </message>
+</context>
+<context>
+    <name>SafeArchiveExtractor</name>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="467"/>
+        <source>No error</source>
+        <translation>エラーなし</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="468"/>
+        <source>Cannot open archive</source>
+        <translation>アーカイブを開けません</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="469"/>
+        <source>Invalid extraction destination</source>
+        <translation>無効な抽出先</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="470"/>
+        <source>Unsafe archive path</source>
+        <translation>安全でないアーカイブパス</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="471"/>
+        <source>Duplicate archive path</source>
+        <translation>重複アーカイブパス</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="472"/>
+        <source>Archive links are not allowed</source>
+        <translation>アーカイブリンクは許可されていません</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="473"/>
+        <source>Archive file-count limit exceeded</source>
+        <translation>アーカイブファイル数の上限を超えました</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="474"/>
+        <source>Archive single-file size limit exceeded</source>
+        <translation>アーカイブ内の単一ファイルのサイズ上限を超えました</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="475"/>
+        <source>Archive total-size limit exceeded</source>
+        <translation>アーカイブの総サイズ制限を超えました</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="476"/>
+        <source>Archive compression-ratio limit exceeded</source>
+        <translation>アーカイブの圧縮率上限を超えました</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="477"/>
+        <source>Cannot create extraction directory</source>
+        <translation>抽出ディレクトリを作成できません</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="478"/>
+        <source>Cannot write extracted file</source>
+        <translation>展開したファイルを書き込めません</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="479"/>
+        <source>Archive is corrupt or truncated</source>
+        <translation>アーカイブが破損しているか、途中で切れています</translation>
+    </message>
+    <message>
+        <location filename="../../Misc/SafeArchiveExtractor.cpp" line="480"/>
+        <source>Archive extraction cancelled</source>
+        <translation>アーカイブ抽出がキャンセルされました</translation>
+    </message>
+</context>
+<context>
+    <name>SearchControlsPlus</name>
+    <message>
+        <location filename="../../Form_Files/SearchControlsPlus.ui" line="20"/>
+        <source>Search Controls</source>
+        <translation>検索コントロール</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/SearchControlsPlus.ui" line="65"/>
+        <source>Mode:</source>
+        <translation>モード:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/SearchControlsPlus.ui" line="115"/>
+        <source>Ignore current settings and return an empty Controls value. </source>
+        <translation>現在の設定を無視して、空のコントロール値を返します。 </translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/SearchControlsPlus.ui" line="118"/>
+        <source>Clear All</source>
+        <translation>すべてクリア</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="219"/>
+        <source>What to search for</source>
+        <translation>検索対象</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="220"/>
+        <source>Select Mode</source>
+        <translation>モードを選択</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="221"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="222"/>
+        <source>Normal</source>
+        <translation>通常</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="222"/>
+        <source>Case in-sensitive search of exactly what you type.</source>
+        <translation>入力した内容を大文字と小文字を区別せずに検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="223"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="224"/>
+        <source>Regex</source>
+        <translation>正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="224"/>
+        <source>Search for a pattern using Regular Expression syntax.</source>
+        <translation>正規表現の構文を使用してパターン検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="225"/>
+        <source>PreSearch Regex</source>
+        <translation>事前検索用正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="226"/>
+        <source>Regex With PreSearch</source>
+        <translation>事前検索付き正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="226"/>
+        <source>Search and replace based on the content which searched by Pre Search Regex Expression.</source>
+        <translation>事前検索用の正規表現で見つかった内容を対象に検索と置換を行います。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="230"/>
+        <source>Where to search</source>
+        <translation>検索場所</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="231"/>
+        <source>Select Target</source>
+        <translation>ターゲットを選択</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="232"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="233"/>
+        <source>Current File</source>
+        <translation>現在のファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="233"/>
+        <source>Restrict the find or replace to the opened file.  Hold the Ctrl key down while clicking any search buttons to temporarily restrict the search to the Current File.</source>
+        <translation>検索や置換を、開いているファイルに制限します。 Ctrlキーを押しながら検索ボタンをクリックすると、検索を一時的に現在のファイルに制限します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="234"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="235"/>
+        <source>All HTML Files</source>
+        <translation>すべてのHTMLファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="235"/>
+        <source>Find or replace in all HTML files in Code View.</source>
+        <translation>コードビューで、すべてのHTMLファイルを検索または置換します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="236"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="237"/>
+        <source>All CSS Files</source>
+        <translation>すべてのCSSファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="237"/>
+        <source>Find or replace in all CSS files in Code View.</source>
+        <translation>コードビューで、すべてのCSSファイルを検索または置換します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="238"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="239"/>
+        <source>Selected Files</source>
+        <translation>選択したファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="239"/>
+        <source>Restrict the find or replace to the files selected in the Book Browser in Code View.</source>
+        <translation>コードビューで、ブックブラウザーから選択したファイルのみに検索または置換を制限します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="240"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="241"/>
+        <source>OPF File</source>
+        <translation>OPFファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="241"/>
+        <source>Restrict the find or replace to the OPF file.</source>
+        <translation>検索または置換をOPFファイルに制限します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="242"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="243"/>
+        <source>NCX File</source>
+        <translation>NCXファイル</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="243"/>
+        <source>Restrict the find or replace to the NCX file.</source>
+        <translation>検索または置換をNCXファイルに制限します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="248"/>
+        <source>Select Direction</source>
+        <translation>方向を選択</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="249"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="253"/>
+        <source>Up</source>
+        <translation>上へ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="250"/>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="254"/>
+        <source>Down</source>
+        <translation>下へ</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="251"/>
+        <source>Direction to search</source>
+        <translation>検索する方向</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="253"/>
+        <source>Search for the previous match from your current position.</source>
+        <translation>現在の位置から前の一致を検索します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchControlsPlus.cpp" line="254"/>
+        <source>Search for the next match from your current position.</source>
+        <translation>現在の位置から次の一致を検索します。</translation>
     </message>
 </context>
 <context>
@@ -19390,12 +21618,12 @@ including entries in selected groups.</source>
         <location filename="../../Dialogs/SearchEditor.cpp" line="150"/>
         <location filename="../../Dialogs/SearchEditor.cpp" line="161"/>
         <source>Cannot save entries.</source>
-        <translation>エントリーを保存できません。</translation>
+        <translation>検索項目を保存できません。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/SearchEditor.cpp" line="239"/>
         <source>Saved Searches loaded from file.</source>
-        <translation>ファイルから読み込まれた検索条件を保存しました。</translation>
+        <translation>保存済み検索をファイルから読み込みました。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/SearchEditor.cpp" line="276"/>
@@ -19523,7 +21751,7 @@ including entries in selected groups.</source>
     <message>
         <location filename="../../Dialogs/SearchEditor.cpp" line="884"/>
         <source>Fill Controls</source>
-        <translation>フィルコントロール</translation>
+        <translation>コントロールを設定</translation>
     </message>
     <message>
         <location filename="../../Dialogs/SearchEditor.cpp" line="965"/>
@@ -19566,119 +21794,381 @@ Do you want to save your changes?</source>
         <translation>コントロール</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="469"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="468"/>
         <source>Mode: Normal</source>
         <translation>モード: 通常</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="472"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="471"/>
         <source>Mode: Regular Expression</source>
         <translation>モード: 正規表現</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="475"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="474"/>
         <source>Mode: Case Sensitive</source>
         <translation>モード: 大文字小文字を区別</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="478"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="477"/>
         <source>Direction: Up</source>
         <translation>方向: 上へ</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="481"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="480"/>
         <source>Direction: Down</source>
         <translation>方向: 下へ</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="484"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="483"/>
         <source>Target: Current File</source>
         <translation>ターゲット: 現在のファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="487"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="486"/>
         <source>Target: All HTML Files</source>
         <translation>ターゲット: すべてのHTMLファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="490"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="489"/>
         <source>Target: Selected HTML Files</source>
         <translation>ターゲット: 選択されたHTMLファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="493"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="492"/>
         <source>Target: Tabbed HTML Files</source>
         <translation>ターゲット: タブ表示のHTMLファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="496"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="495"/>
         <source>Target: All CSS Files</source>
         <translation>ターゲット: すべてのCSSファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="499"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="498"/>
         <source>Target: Selected CSS Files</source>
         <translation>ターゲット: 選択されたCSSファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="502"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="501"/>
         <source>Target: Tabbed CSS Files</source>
         <translation>ターゲット: タブ表示のCSSファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="505"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="504"/>
         <source>Target: OPF File</source>
         <translation>ターゲット: OPFファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="508"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="507"/>
         <source>Target: NCX File</source>
         <translation>ターゲット: NCXファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="511"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="510"/>
         <source>Target: Selected SVG Files</source>
         <translation>ターゲット: 選択されたSVGファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="514"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="513"/>
         <source>Target: Selected Javascript Files</source>
         <translation>ターゲット: 選択されたJavaScriptファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="517"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="516"/>
         <source>Target: Selected Misc XML Files</source>
         <translation>ターゲット: 選択されたその他のXMLファイル</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="520"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="519"/>
         <source>Option: DotAll</source>
         <translation>オプション: DotAll</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="523"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="522"/>
         <source>Option: Minimal Match</source>
         <translation>オプション: 最小一致</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="526"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="525"/>
         <source>Option: Auto Tokenise</source>
         <translation>オプション: 自動トークン化</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="529"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="528"/>
         <source>Option: Wrap</source>
         <translation>オプション: 折り返し</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="532"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="531"/>
         <source>Option: Text Only</source>
         <translation>オプション: テキストのみ</translation>
     </message>
     <message>
-        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="827"/>
+        <location filename="../../MiscEditors/SearchEditorModel.cpp" line="826"/>
         <source>Unable to create file %1</source>
         <translation>ファイル %1 を作成できません</translation>
+    </message>
+</context>
+<context>
+    <name>SearchEditorModelPlus</name>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="57"/>
+        <source>Name</source>
+        <translation>名前</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="58"/>
+        <source>PreFind</source>
+        <translation>事前検索</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="59"/>
+        <source>Find</source>
+        <translation>検索</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="60"/>
+        <source>Replace</source>
+        <translation>置換</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="61"/>
+        <source>Controls</source>
+        <translation>コントロール</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="458"/>
+        <source>Mode: Normal</source>
+        <translation>モード: 通常</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="461"/>
+        <source>Mode: Regular Expression</source>
+        <translation>モード: 正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="464"/>
+        <source>Mode: Regex With PreSearch</source>
+        <translation>モード: 事前検索付き正規表現</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="467"/>
+        <source>Target: Current File</source>
+        <translation>ターゲット: 現在のファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="470"/>
+        <source>Target: All HTML Files</source>
+        <translation>ターゲット: すべてのHTMLファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="473"/>
+        <source>Target: All CSS Files</source>
+        <translation>ターゲット: すべてのCSSファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="476"/>
+        <source>Target: Selected Files</source>
+        <translation>対象: 選択したファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="479"/>
+        <source>Target: OPF File</source>
+        <translation>ターゲット: OPFファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="482"/>
+        <source>Target: NCX File</source>
+        <translation>ターゲット: NCXファイル</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="485"/>
+        <source>Direction: Up</source>
+        <translation>方向: 上へ</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="488"/>
+        <source>Direction: Down</source>
+        <translation>方向: 下へ</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="788"/>
+        <source>Unable to create file %1</source>
+        <translation>ファイル %1 を作成できません</translation>
+    </message>
+</context>
+<context>
+    <name>SearchEditorPlus</name>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="86"/>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="97"/>
+        <source>Cannot save entries.</source>
+        <translation>検索項目を保存できません。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="175"/>
+        <source>Saved Searches loaded from file.</source>
+        <translation>保存済み検索をファイルから読み込みました。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="212"/>
+        <source>You cannot select more than one entry when using this action.</source>
+        <translation>このアクションを使用する場合、複数のエントリーを選択することはできません。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="222"/>
+        <source>You cannot select a group for this action.</source>
+        <translation>このアクションのグループは選択できません。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="299"/>
+        <source>Do not select Groups and Entries together, or most operations will fail!</source>
+        <translation>グループと項目を同時に選択しないでください。ほとんどの操作が実行できなくなります。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="416"/>
+        <source>You cannot Copy or Cut groups - use drag-and-drop.</source>
+        <translation>グループのコピーや切り取りはできません。ドラッグアンドドロップを使用してください。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="493"/>
+        <source>Sigil</source>
+        <translation>Sigil</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="493"/>
+        <source>Are you sure you want to reload all entries?  This will overwrite any unsaved changes.</source>
+        <translation>すべてのエントリーを再読み込みしますか?これにより、保存されていない変更が上書きされます。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="508"/>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="607"/>
+        <source>Sigil INI files (*.ini)</source>
+        <translation>Sigil INIファイル (*.ini)</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="509"/>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="608"/>
+        <source>CSV files (*.csv)</source>
+        <translation>CSVファイル (*.csv)</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="510"/>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="609"/>
+        <source>Text files (*.txt)</source>
+        <translation>テキストファイル (*.txt)</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="523"/>
+        <source>Import Search Entries</source>
+        <translation>検索エントリーのインポート</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="623"/>
+        <source>Export Selected Searches</source>
+        <translation>選択した検索条件をエクスポート</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="665"/>
+        <source>FillControls requires selecting at least two entries,which filled base on the first.</source>
+        <translation>「コントロールを設定」では 2 つ以上の項目を選択してください。先頭の項目を基準に設定します。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="806"/>
+        <source>Add Entry</source>
+        <translation>エントリーを追加</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="807"/>
+        <source>Add Group</source>
+        <translation>グループを追加</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="808"/>
+        <source>Edit</source>
+        <translation>編集</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="809"/>
+        <source>Cut</source>
+        <translation>切り取り</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="810"/>
+        <source>Copy</source>
+        <translation>コピー</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="811"/>
+        <source>Paste</source>
+        <translation>貼り付け</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="812"/>
+        <source>Delete</source>
+        <translation>削除</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="813"/>
+        <source>Import</source>
+        <translation>インポート</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="814"/>
+        <source>Reload</source>
+        <translation>再読み込み</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="815"/>
+        <source>Export</source>
+        <translation>エクスポート</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="816"/>
+        <source>Export All</source>
+        <translation>すべてエクスポート</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="817"/>
+        <source>Collapse All</source>
+        <translation>すべて閉じる</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="818"/>
+        <source>Expand All</source>
+        <translation>すべて開く</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="819"/>
+        <source>Fill Controls</source>
+        <translation>コントロールを設定</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="900"/>
+        <source>Search entries saved.</source>
+        <translation>検索エントリーが保存されました。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="925"/>
+        <source>Searches seleted have ended,you might click &quot;Load Search&quot; to reload them if run again.</source>
+        <translation>選択した検索は終了しました。もう一度実行するには「検索を読み込む」をクリックしてください。</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="928"/>
+        <source>No searches selected</source>
+        <translation>検索が選択されていません</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="939"/>
+        <source>Sigil: Saved Searches</source>
+        <translation>Sigil: 保存された検索</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/SearchEditorPlus.cpp" line="940"/>
+        <source>The Search entries may have been modified.
+Do you want to save your changes?</source>
+        <translation>検索エントリーが変更されている可能性があります。
+変更を保存しますか?</translation>
     </message>
 </context>
 <context>
@@ -20820,7 +23310,7 @@ Do you want to save your changes?</source>
     </message>
     <message>
         <location filename="../../Dialogs/SelectCharacter.cpp" line="320"/>
-        <source>per mille sign</source>
+        <source>per mille&#xa0;sign</source>
         <translation>パーミル記号、千分率</translation>
     </message>
     <message>
@@ -21550,7 +24040,7 @@ Use if you edit any HTML files while Spellcheck is open.</source>
     <message>
         <location filename="../../Dialogs/SpellcheckEditor.cpp" line="694"/>
         <source>Cannot save data file.</source>
-        <translation type="unfinished"/>
+        <translation>データファイルを保存できません。</translation>
     </message>
 </context>
 <context>
@@ -21598,12 +24088,12 @@ Use if you edit any HTML files while Spellcheck is open.</source>
     <message>
         <location filename="../../Dialogs/ReportsWidgets/StylesInCSSFilesWidget.cpp" line="92"/>
         <source>&lt;p&gt;Due to the complexities of CSS you must check your code manually to be absolutely certain if a selector is used or not.&lt;/p&gt;</source>
-        <translation>CSSは複雑なため、セレクターが使用されているかどうかを確認するために、コードを手動でチェックする必要があります。</translation>
+        <translation>&lt;p&gt;CSS は複雑なため、セレクターが使用されているかどうかを確実に判断するには、コードを手動で確認する必要があります。&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../Dialogs/ReportsWidgets/StylesInCSSFilesWidget.cpp" line="92"/>
         <source>&lt;p&gt;Note: Only one HTML File is listed among the many possible matches.&lt;/p&gt;</source>
-        <translation>注意: 多くの一致する可能性のあるHTMLファイルのうち、リストされているのは1つだけです。</translation>
+        <translation>&lt;p&gt;注: 一致する可能性がある多数の HTML ファイルのうち、1 つだけが表示されます。&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../Dialogs/ReportsWidgets/StylesInCSSFilesWidget.cpp" line="240"/>
@@ -21668,7 +24158,7 @@ Use if you edit any HTML files while Spellcheck is open.</source>
 <context>
     <name>TextTab</name>
     <message>
-        <location filename="../../Tabs/TextTab.cpp" line="349"/>
+        <location filename="../../Tabs/TextTab.cpp" line="405"/>
         <source>Print %1</source>
         <translation>%1 を印刷</translation>
     </message>
@@ -21676,12 +24166,12 @@ Use if you edit any HTML files while Spellcheck is open.</source>
 <context>
     <name>Utility</name>
     <message>
-        <location filename="../../Misc/Utility.cpp" line="824"/>
+        <location filename="../../Misc/Utility.cpp" line="844"/>
         <source>Sigil</source>
         <translation>Sigil</translation>
     </message>
     <message>
-        <location filename="../../Misc/Utility.cpp" line="825"/>
+        <location filename="../../Misc/Utility.cpp" line="845"/>
         <source>The requested file name contains non-ASCII characters. You should only use ASCII characters in filenames. Using non-ASCII characters can prevent the EPUB from working with some readers.
 
 Continue using the requested filename?</source>
@@ -21725,7 +24215,7 @@ Continue using the requested filename?</source>
     <message>
         <location filename="../../MainUI/ValidationResultsView.cpp" line="334"/>
         <source>Updating Validation Results</source>
-        <translation type="unfinished"/>
+        <translation>検証結果を更新中</translation>
     </message>
     <message>
         <location filename="../../MainUI/ValidationResultsView.cpp" line="409"/>
@@ -21895,7 +24385,7 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="112"/>
-        <source>feminine ordinal indicator</source>
+        <source>feminine&#xa0;ordinal indicator</source>
         <translation>女性序数標識</translation>
     </message>
     <message>
@@ -21955,7 +24445,7 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="124"/>
-        <source>pilcrow sign</source>
+        <source>pilcrow&#xa0;sign</source>
         <translation>段落記号</translation>
     </message>
     <message>
@@ -21975,7 +24465,7 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="128"/>
-        <source>masculine ordinal indicator</source>
+        <source>masculine&#xa0;ordinal indicator</source>
         <translation>男性序数標識</translation>
     </message>
     <message>
@@ -22005,27 +24495,27 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="134"/>
-        <source>Latin capital letter A with grave accent</source>
+        <source>Latin capital letter A with&#xa0;grave accent</source>
         <translation>大文字 A（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="135"/>
-        <source>Latin capital letter A with acute accent</source>
+        <source>Latin capital letter A with&#xa0;acute accent</source>
         <translation>大文字 A（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="136"/>
-        <source>Latin capital letter A with circumflex</source>
+        <source>Latin capital letter A with&#xa0;circumflex</source>
         <translation>大文字 A（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="137"/>
-        <source>Latin capital letter A with tilde</source>
+        <source>Latin capital letter A with&#xa0;tilde</source>
         <translation>大文字 A（チルダ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="138"/>
-        <source>Latin capital letter A with diaeresis</source>
+        <source>Latin capital letter A with&#xa0;diaeresis</source>
         <translation>大文字 A（ウムラウト付）</translation>
     </message>
     <message>
@@ -22040,82 +24530,82 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="141"/>
-        <source>Latin capital letter C with cedilla</source>
+        <source>Latin capital letter C with&#xa0;cedilla</source>
         <translation>大文字 C（セディーユ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="142"/>
-        <source>Latin capital letter E with grave accent</source>
+        <source>Latin capital letter E with&#xa0;grave accent</source>
         <translation>大文字 E（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="143"/>
-        <source>Latin capital letter E with acute accent</source>
+        <source>Latin capital letter E with&#xa0;acute accent</source>
         <translation>大文字 E（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="144"/>
-        <source>Latin capital letter E with circumflex</source>
+        <source>Latin capital letter E with&#xa0;circumflex</source>
         <translation>大文字 E（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="145"/>
-        <source>Latin capital letter E with diaeresis</source>
+        <source>Latin capital letter E with&#xa0;diaeresis</source>
         <translation>大文字 E（ウムラウト付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="146"/>
-        <source>Latin capital letter I with grave accent</source>
+        <source>Latin capital letter I with&#xa0;grave accent</source>
         <translation>大文字 I（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="147"/>
-        <source>Latin capital letter I with acute accent</source>
+        <source>Latin capital letter I with&#xa0;acute accent</source>
         <translation>大文字 I（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="148"/>
-        <source>Latin capital letter I with circumflex</source>
+        <source>Latin capital letter I with&#xa0;circumflex</source>
         <translation>大文字 I（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="149"/>
-        <source>Latin capital letter I with diaeresis</source>
+        <source>Latin capital letter I with&#xa0;diaeresis</source>
         <translation>大文字 I（ウムラウト付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="150"/>
-        <source>Latin capital letter Eth</source>
+        <source>Latin capital letter&#xa0;Eth</source>
         <translation>大文字 Eth</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="151"/>
-        <source>Latin capital letter N with tilde</source>
+        <source>Latin capital letter N with&#xa0;tilde</source>
         <translation>大文字 N（チルダ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="152"/>
-        <source>Latin capital letter O with grave accent</source>
+        <source>Latin capital letter O with&#xa0;grave accent</source>
         <translation>大文字 O（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="153"/>
-        <source>Latin capital letter O with acute accent</source>
+        <source>Latin capital letter O with&#xa0;acute accent</source>
         <translation>大文字 O（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="154"/>
-        <source>Latin capital letter O with circumflex</source>
+        <source>Latin capital letter O with&#xa0;circumflex</source>
         <translation>大文字 O（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="155"/>
-        <source>Latin capital letter O with tilde</source>
+        <source>Latin capital letter O with&#xa0;tilde</source>
         <translation>大文字 O （チルダ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="156"/>
-        <source>Latin capital letter O with diaeresis</source>
+        <source>Latin capital letter O with&#xa0;diaeresis</source>
         <translation>大文字 O（ウムラウト付）</translation>
     </message>
     <message>
@@ -22130,32 +24620,32 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="159"/>
-        <source>Latin capital letter U with grave accent</source>
+        <source>Latin capital letter U with&#xa0;grave accent</source>
         <translation>大文字 U（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="160"/>
-        <source>Latin capital letter U with acute accent</source>
+        <source>Latin capital letter U with&#xa0;acute accent</source>
         <translation>大文字 U（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="161"/>
-        <source>Latin capital letter U with circumflex</source>
+        <source>Latin capital letter U with&#xa0;circumflex</source>
         <translation>大文字 U（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="162"/>
-        <source>Latin capital letter U with diaeresis</source>
+        <source>Latin capital letter U with&#xa0;diaeresis</source>
         <translation>大文字 U（ウムラウト付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="163"/>
-        <source>Latin capital letter Y with acute accent</source>
+        <source>Latin capital letter Y with&#xa0;acute accent</source>
         <translation>大文字 Y（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="164"/>
-        <source>Latin capital letter THORN</source>
+        <source>Latin capital letter&#xa0;THORN</source>
         <translation>大文字 THORN、ソーン</translation>
     </message>
     <message>
@@ -22165,27 +24655,27 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="166"/>
-        <source>Latin small letter a with grave accent</source>
+        <source>Latin small letter a with&#xa0;grave accent</source>
         <translation>小文字 a（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="167"/>
-        <source>Latin small letter a with acute accent</source>
+        <source>Latin small letter a with&#xa0;acute accent</source>
         <translation>小文字 a（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="168"/>
-        <source>Latin small letter a with circumflex</source>
+        <source>Latin small letter a with&#xa0;circumflex</source>
         <translation>小文字 a（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="169"/>
-        <source>Latin small letter a with tilde</source>
+        <source>Latin small letter a with&#xa0;tilde</source>
         <translation>小文字 a（チルダ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="170"/>
-        <source>Latin small letter a with diaeresis</source>
+        <source>Latin small letter a with&#xa0;diaeresis</source>
         <translation>小文字 a（ウムラウト付）</translation>
     </message>
     <message>
@@ -22200,82 +24690,82 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="173"/>
-        <source>Latin small letter c with cedilla</source>
+        <source>Latin small letter c with&#xa0;cedilla</source>
         <translation>小文字 c（セディーユ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="174"/>
-        <source>Latin small letter e with grave accent</source>
+        <source>Latin small letter e with&#xa0;grave accent</source>
         <translation>小文字 e（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="175"/>
-        <source>Latin small letter e with acute accent</source>
+        <source>Latin small letter e with&#xa0;acute accent</source>
         <translation>小文字 e（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="176"/>
-        <source>Latin small letter e with circumflex</source>
+        <source>Latin small letter e with&#xa0;circumflex</source>
         <translation>小文字 e（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="177"/>
-        <source>Latin small letter e with diaeresis</source>
+        <source>Latin small letter e with&#xa0;diaeresis</source>
         <translation>小文字 e（ウムラウト付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="178"/>
-        <source>Latin small letter i with grave accent</source>
+        <source>Latin small letter i with&#xa0;grave accent</source>
         <translation>小文字 i（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="179"/>
-        <source>Latin small letter i with acute accent</source>
+        <source>Latin small letter i with&#xa0;acute accent</source>
         <translation>小文字 i（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="180"/>
-        <source>Latin small letter i with circumflex</source>
+        <source>Latin small letter i with&#xa0;circumflex</source>
         <translation>小文字 i（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="181"/>
-        <source>Latin small letter i with diaeresis</source>
+        <source>Latin small letter i with&#xa0;diaeresis</source>
         <translation>小文字 i（ウムラウト付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="182"/>
-        <source>Latin small letter eth</source>
+        <source>Latin small letter&#xa0;eth</source>
         <translation>小文字 Eth</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="183"/>
-        <source>Latin small letter n with tilde</source>
+        <source>Latin small letter n with&#xa0;tilde</source>
         <translation>小文字 n（チルダ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="184"/>
-        <source>Latin small letter o with grave accent</source>
+        <source>Latin small letter o with&#xa0;grave accent</source>
         <translation>小文字 o（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="185"/>
-        <source>Latin small letter o with acute accent</source>
+        <source>Latin small letter o with&#xa0;acute accent</source>
         <translation>小文字 o（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="186"/>
-        <source>Latin small letter o with circumflex</source>
+        <source>Latin small letter o with&#xa0;circumflex</source>
         <translation>小文字 o（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="187"/>
-        <source>Latin small letter o with tilde</source>
+        <source>Latin small letter o with&#xa0;tilde</source>
         <translation>小文字 o（チルダ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="188"/>
-        <source>Latin small letter o with diaeresis</source>
+        <source>Latin small letter o with&#xa0;diaeresis</source>
         <translation>小文字 o（ウムラウト付）</translation>
     </message>
     <message>
@@ -22290,37 +24780,37 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="191"/>
-        <source>Latin small letter u with grave accent</source>
+        <source>Latin small letter u with&#xa0;grave accent</source>
         <translation>小文字 u（グレーブ付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="192"/>
-        <source>Latin small letter u with acute accent</source>
+        <source>Latin small letter u with&#xa0;acute accent</source>
         <translation>小文字 u（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="193"/>
-        <source>Latin small letter u with circumflex</source>
+        <source>Latin small letter u with&#xa0;circumflex</source>
         <translation>小文字 u（サーカムフレックス付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="194"/>
-        <source>Latin small letter u with diaeresis</source>
+        <source>Latin small letter u with&#xa0;diaeresis</source>
         <translation>小文字 u（ウムラウト付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="195"/>
-        <source>Latin small letter y with acute accent</source>
+        <source>Latin small letter y with&#xa0;acute accent</source>
         <translation>小文字 y（アキュート付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="196"/>
-        <source>Latin small letter thorn</source>
+        <source>Latin small letter&#xa0;thorn</source>
         <translation>小文字 thorn、ソーン</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="197"/>
-        <source>Latin small letter y with diaeresis</source>
+        <source>Latin small letter y with&#xa0;diaeresis</source>
         <translation>小文字 y（ウムラウト付）</translation>
     </message>
     <message>
@@ -22335,17 +24825,17 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="200"/>
-        <source>Latin capital letter S with caron</source>
+        <source>Latin capital letter S with&#xa0;caron</source>
         <translation>大文字 S（キャロン付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="201"/>
-        <source>Latin small letter s with caron</source>
+        <source>Latin small letter s with&#xa0;caron</source>
         <translation>小文字 s（キャロン付）</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="202"/>
-        <source>Latin capital letter Y with diaeresis</source>
+        <source>Latin capital letter Y with&#xa0;diaeresis</source>
         <translation>大文字 Y（ウムラウト付）</translation>
     </message>
     <message>
@@ -22355,12 +24845,12 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="204"/>
-        <source>modifier letter circumflex accent</source>
+        <source>modifier letter&#xa0;circumflex&#xa0;accent</source>
         <translation>修飾文字 サーカムフレックス</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="205"/>
-        <source>small tilde</source>
+        <source>small&#xa0;tilde</source>
         <translation>小チルダ</translation>
     </message>
     <message>
@@ -22670,32 +25160,32 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="267"/>
-        <source>left single quotation mark</source>
+        <source>left single&#xa0;quotation mark</source>
         <translation>左単一引用符、左シングルクォーテーション</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="268"/>
-        <source>right single quotation mark</source>
+        <source>right single&#xa0;quotation mark</source>
         <translation>右単一引用符、右シングルクォーテーション</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="269"/>
-        <source>single low-9 quotation mark</source>
+        <source>single low-9&#xa0;quotation mark</source>
         <translation>下引用符、下シングルクォーテーション</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="270"/>
-        <source>left double quotation mark</source>
+        <source>left double&#xa0;quotation mark</source>
         <translation>左二重引用符、左ダブルクォーテーション</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="271"/>
-        <source>right double quotation mark</source>
+        <source>right double&#xa0;quotation mark</source>
         <translation>右二重引用符、右ダブルクォーテーション</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="272"/>
-        <source>double low-9 quotation mark</source>
+        <source>double low-9&#xa0;quotation mark</source>
         <translation>下二重引用符、下ダブルクォーテーション</translation>
     </message>
     <message>
@@ -22715,12 +25205,12 @@ Continue using the requested filename?</source>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="276"/>
-        <source>horizontal ellipsis</source>
+        <source>horizontal&#xa0;ellipsis</source>
         <translation>三点リーダー、省略記号</translation>
     </message>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="277"/>
-        <source>per mille sign</source>
+        <source>per mille&#xa0;sign</source>
         <translation>パーミル記号、千分率</translation>
     </message>
     <message>

@@ -2,7 +2,8 @@
 
 Sigil 的用户界面支持多语言显示。翻译文件位于
 `src/Resource_Files/ts`，文件名采用 `sigil_语言代码.ts` 格式，例如简体
-中文为 `sigil_zh_CN.ts`，繁体中文为 `sigil_zh_TW.ts`。
+中文为 `sigil_zh_CN.ts`，繁体中文为 `sigil_zh_TW.ts`，日文为
+`sigil_ja.ts`。
 
 ## 更新翻译目录
 
@@ -11,7 +12,9 @@ Sigil 的用户界面支持多语言显示。翻译文件位于
 
 ```sh
 lupdate src -recursive -extensions cpp,h,ui \
-    -ts src/Resource_Files/ts/sigil_zh_CN.ts
+    -ts src/Resource_Files/ts/sigil_zh_CN.ts \
+        src/Resource_Files/ts/sigil_zh_TW.ts \
+        src/Resource_Files/ts/sigil_ja.ts
 ```
 
 逐项翻译新增的有效条目，不要仅删除 `unfinished` 标记。译文必须保留源文
@@ -24,8 +27,10 @@ lupdate src -recursive -extensions cpp,h,ui \
 
 ## 覆盖率检查
 
-`zh_cn_translation_coverage` 测试会重新从当前 C++、头文件和 Qt Designer
-文件提取全部源文本，并与简体中文目录比较。以下情况会导致测试失败：
+`zh_cn_translation_coverage`、`zh_tw_translation_coverage` 和
+`ja_translation_coverage` 测试会重新从当前 C++、头文件和 Qt Designer
+文件提取全部源文本，并分别与简体中文、繁体中文和日文目录比较。以下情况会
+导致测试失败：
 
 - 当前源文本在目录中缺失，或目录仍保留不对应源码的有效条目；
 - 译文为 `unfinished` 或空字符串；
@@ -38,13 +43,13 @@ lupdate src -recursive -extensions cpp,h,ui \
 
 ```sh
 ctest --test-dir cmake-build-debug \
-    -R zh_cn_translation_coverage --output-on-failure
+    -R '(zh_cn|zh_tw|ja)_translation_coverage' --output-on-failure
 ```
 
 生成发布用翻译文件时可额外验证：
 
 ```sh
-lrelease src/Resource_Files/ts/sigil_zh_CN.ts -qm /tmp/sigil_zh_CN.qm
+lrelease src/Resource_Files/ts/sigil_ja.ts -qm /tmp/sigil_ja.qm
 ```
 
 输出必须显示所有有效条目均为 `finished`，且 `unfinished` 为零。

@@ -55,27 +55,30 @@ filename sigil_pl.ts and the German translation will have the filename
 sigil_de.ts.
 
 
-Simplified Chinese Coverage
-===========================
+Translation Coverage
+====================
 
-The Simplified Chinese catalog is checked against the current C++, header, and
-Qt Designer sources by the `zh_cn_translation_coverage` CTest. The check fails
-when an active source is missing, unfinished, empty, stale, loses a `%1`/`%n`
-placeholder, or changes the tag structure of a rich-text label. It also detects
-high-confidence cases where visible text is passed directly to a Qt widget API
-without `tr()`.
+The Simplified Chinese, Traditional Chinese, and Japanese catalogs are checked
+against the current C++, header, and Qt Designer sources by the
+`zh_cn_translation_coverage`, `zh_tw_translation_coverage`, and
+`ja_translation_coverage` CTests. A check fails when an active source is
+missing, unfinished, empty, stale, loses a `%1`/`%n` placeholder, or changes the
+tag structure of a rich-text label. It also detects high-confidence cases where
+visible text is passed directly to a Qt widget API without `tr()`.
 
 After changing user-visible text, update the catalog with the same Qt version
 used to build Sigil:
 
     lupdate src -recursive -extensions cpp,h,ui \
-        -ts src/Resource_Files/ts/sigil_zh_CN.ts
+        -ts src/Resource_Files/ts/sigil_zh_CN.ts \
+            src/Resource_Files/ts/sigil_zh_TW.ts \
+            src/Resource_Files/ts/sigil_ja.ts
 
 Translate every new active entry, preserve placeholders and rich-text tags, and
 then run:
 
     ctest --test-dir cmake-build-debug \
-        -R zh_cn_translation_coverage --output-on-failure
+        -R '(zh_cn|zh_tw|ja)_translation_coverage' --output-on-failure
 
 Names of products, file formats, standards, APIs, keyboard shortcuts, and code
 identifiers may remain unchanged. Dialog text, buttons, labels, settings,

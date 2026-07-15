@@ -172,6 +172,15 @@ add_test(NAME zh_tw_translation_coverage
 )
 set_tests_properties(zh_tw_translation_coverage PROPERTIES TIMEOUT 60)
 
+add_test(NAME ja_translation_coverage
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/zh_cn_translation_coverage_test.py
+        --source-root ${CMAKE_SOURCE_DIR}
+        --lupdate $<TARGET_FILE:Qt6::lupdate>
+        --locale ja
+)
+set_tests_properties(ja_translation_coverage PROPERTIES TIMEOUT 60)
+
 add_test(NAME python_live_sdk
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_live_sdk_test.py
 )
