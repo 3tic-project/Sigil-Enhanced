@@ -31,6 +31,8 @@ int FindData(QComboBox *combo, int value)
 ChineseConversionDialog::ChineseConversionDialog(
     const ChineseConversionOptions& options,
     bool selectionAvailable,
+    bool currentFileAvailable,
+    int selectedResourceCount,
     const QString& resourcePath,
     QWidget *parent)
     : QDialog(parent),
@@ -56,7 +58,15 @@ ChineseConversionDialog::ChineseConversionDialog(
         m_Scope->addItem(tr("Current selection"),
                          static_cast<int>(ChineseConversionScope::CurrentSelection));
     }
-    m_Scope->addItem(tr("Current file"), static_cast<int>(ChineseConversionScope::CurrentFile));
+    if (currentFileAvailable) {
+        m_Scope->addItem(tr("Current file"), static_cast<int>(ChineseConversionScope::CurrentFile));
+    }
+    if (selectedResourceCount > 0) {
+        m_Scope->addItem(tr("Selected XHTML/SVG files (%1)").arg(selectedResourceCount),
+                         static_cast<int>(ChineseConversionScope::SelectedResources));
+    }
+    m_Scope->addItem(tr("All XHTML/SVG files"),
+                     static_cast<int>(ChineseConversionScope::AllTextResources));
     m_Description = new QLabel(conversion);
     m_Description->setWordWrap(true);
     conversionLayout->addRow(tr("Mode:"), m_Mode);

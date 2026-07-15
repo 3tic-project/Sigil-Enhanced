@@ -31,6 +31,19 @@ ChineseConversionPreviewDialog::ChineseConversionPreviewDialog(
     int skippedJapaneseSegments,
     int skippedProtectedSegments,
     QWidget *parent)
+    : ChineseConversionPreviewDialog(
+          QList<ChineseConversionPreviewResource> {
+              ChineseConversionPreviewResource { resourcePath, changes }
+          },
+          skippedJapaneseSegments, skippedProtectedSegments, parent)
+{
+}
+
+ChineseConversionPreviewDialog::ChineseConversionPreviewDialog(
+    const QList<ChineseConversionPreviewResource>& resources,
+    int skippedJapaneseSegments,
+    int skippedProtectedSegments,
+    QWidget *parent)
     : QDialog(parent),
       m_SkippedJapaneseSegments(skippedJapaneseSegments),
       m_SkippedProtectedSegments(skippedProtectedSegments)
@@ -39,41 +52,47 @@ ChineseConversionPreviewDialog::ChineseConversionPreviewDialog(
     resize(900, 560);
 
     auto *root = new QVBoxLayout(this);
-    auto *path = new QLabel(resourcePath, this);
-    path->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    path->setWordWrap(true);
     m_Summary = new QLabel(this);
 
-    m_Table = new QTableWidget(changes.size(), 4, this);
-    m_Table->setHorizontalHeaderLabels({tr("Apply"), tr("Location"), tr("Before"), tr("After")});
+    int changeCount = 0;
+    for (const ChineseConversionPreviewResource& resource : resources) {
+        changeCount += resource.changes.size();
+    }
+    m_Table = new QTableWidget(changeCount, 5, this);
+    m_Table->setHorizontalHeaderLabels(
+        {tr("Apply"), tr("Resource"), tr("Location"), tr("Before"), tr("After")});
     m_Table->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_Table->setSelectionMode(QAbstractItemView::SingleSelection);
     m_Table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_Table->verticalHeader()->setVisible(false);
     m_Table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_Table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    m_Table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    m_Table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     m_Table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+    m_Table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
 
-    for (int row = 0; row < changes.size(); ++row) {
-        const ChineseTextChange& change = changes.at(row);
-        auto *enabled = new QTableWidgetItem;
-        enabled->setFlags(Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsSelectable);
-        enabled->setCheckState(Qt::Checked);
-        const QString location = change.attributeName.isEmpty()
-            ? change.nodePath
-            : QStringLiteral("%1/@%2").arg(change.nodePath, change.attributeName);
-        m_Table->setItem(row, 0, enabled);
-        m_Table->setItem(row, 1, new QTableWidgetItem(location));
-        m_Table->setItem(row, 2, new QTableWidgetItem(CompactText(change.before)));
-        m_Table->setItem(row, 3, new QTableWidgetItem(CompactText(change.after)));
+    int row = 0;
+    for (const ChineseConversionPreviewResource& resource : resources) {
+        for (const ChineseTextChange& change : resource.changes) {
+            auto *enabled = new QTableWidgetItem;
+            enabled->setFlags(Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsSelectable);
+            enabled->setCheckState(Qt::Checked);
+            const QString location = change.attributeName.isEmpty()
+                ? change.nodePath
+                : QStringLiteral("%1/@%2").arg(change.nodePath, change.attributeName);
+            m_Table->setItem(row, 0, enabled);
+            m_Table->setItem(row, 1, new QTableWidgetItem(resource.resourcePath));
+            m_Table->setItem(row, 2, new QTableWidgetItem(location));
+            m_Table->setItem(row, 3, new QTableWidgetItem(CompactText(change.before)));
+            m_Table->setItem(row, 4, new QTableWidgetItem(CompactText(change.after)));
+            ++row;
+        }
     }
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
     m_Apply = buttons->addButton(tr("Apply Selected Changes"), QDialogButtonBox::AcceptRole);
     m_Apply->setDefault(true);
 
-    root->addWidget(path);
     root->addWidget(m_Summary);
     root->addWidget(m_Table, 1);
     root->addWidget(buttons);

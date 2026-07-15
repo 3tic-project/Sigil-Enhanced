@@ -42,6 +42,8 @@ ChineseConversionSettingsWidget::ChineseConversionSettingsWidget(QWidget *parent
     m_Scope = new QComboBox(defaults);
     m_Scope->addItem(tr("Current file"), static_cast<int>(ChineseConversionScope::CurrentFile));
     m_Scope->addItem(tr("Current selection"), static_cast<int>(ChineseConversionScope::CurrentSelection));
+    m_Scope->addItem(tr("Selected XHTML/SVG files"), static_cast<int>(ChineseConversionScope::SelectedResources));
+    m_Scope->addItem(tr("All XHTML/SVG files"), static_cast<int>(ChineseConversionScope::AllTextResources));
     defaultsLayout->addRow(tr("Conversion mode:"), m_Mode);
     defaultsLayout->addRow(tr("Scope:"), m_Scope);
 

@@ -16,6 +16,8 @@
 #include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/Resource.h"
+#include "ResourceObjects/SVGResource.h"
+#include "ResourceObjects/TextResource.h"
 #include "Tabs/ContentTab.h"
 #include "Tabs/FlowTab.h"
 #include "Tabs/CSSTab.h"
@@ -248,25 +250,34 @@ bool MainWindow::ConvertChineseText()
     SVGTab *svgTab = qobject_cast<SVGTab *>(contentTab);
     TextTab *textTab = svgTab;
     Resource *resource = contentTab ? contentTab->GetLoadedResource() : nullptr;
+    const bool currentFileAvailable = (flowTab || svgTab) && resource;
 
-    if ((!flowTab && !svgTab) || !resource) {
-        Utility::warning(this, tr("Chinese Conversion"),
-                         tr("Open an XHTML or SVG file before starting Chinese conversion."));
-        return false;
+    QList<Resource *> selectedResources;
+    if (m_BookBrowser) {
+        const QList<Resource *> browserSelection = m_BookBrowser->AllSelectedResources();
+        for (Resource *selected : browserSelection) {
+            if (selected && (selected->Type() == Resource::HTMLResourceType
+                             || selected->Type() == Resource::SVGResourceType)) {
+                selectedResources.append(selected);
+            }
+        }
     }
 
-    const QString sourceText = flowTab ? flowTab->GetText() : textTab->GetText();
-    const int selectionStart = flowTab ? flowTab->GetSelectionStart() : textTab->GetSelectionStart();
-    const int selectionEnd = flowTab ? flowTab->GetSelectionEnd() : textTab->GetSelectionEnd();
+    const QString sourceText = flowTab ? flowTab->GetText()
+        : (textTab ? textTab->GetText() : QString());
+    const int selectionStart = flowTab ? flowTab->GetSelectionStart()
+        : (textTab ? textTab->GetSelectionStart() : 0);
+    const int selectionEnd = flowTab ? flowTab->GetSelectionEnd()
+        : (textTab ? textTab->GetSelectionEnd() : 0);
     const bool selectionAvailable = selectionEnd > selectionStart;
-    const QString resourcePath = resource->GetRelativePath();
+    const QString resourcePath = resource ? resource->GetRelativePath() : tr("Current book");
 
     ChineseConversionOptions savedOptions = ChineseConversionSettings::Load();
-    if (savedOptions.scope != ChineseConversionScope::CurrentSelection
-        && savedOptions.scope != ChineseConversionScope::CurrentFile) {
-        savedOptions.scope = ChineseConversionScope::CurrentFile;
+    if (savedOptions.scope == ChineseConversionScope::WholeBookWithMetadata) {
+        savedOptions.scope = ChineseConversionScope::AllTextResources;
     }
-    ChineseConversionDialog dialog(savedOptions, selectionAvailable, resourcePath, this);
+    ChineseConversionDialog dialog(savedOptions, selectionAvailable, currentFileAvailable,
+                                   selectedResources.size(), resourcePath, this);
     if (dialog.exec() != QDialog::Accepted) {
         return false;
     }
@@ -286,6 +297,176 @@ bool MainWindow::ConvertChineseText()
     if (!converter.IsValid()) {
         Utility::warning(this, tr("Chinese Conversion"), converter.ErrorString());
         return false;
+    }
+
+    if (options.scope == ChineseConversionScope::SelectedResources
+        || options.scope == ChineseConversionScope::AllTextResources) {
+        if (!m_Book || !m_Book->GetFolderKeeper()) {
+            Utility::warning(this, tr("Chinese Conversion"), tr("No EPUB is currently loaded."));
+            return false;
+        }
+
+        SaveTabData();
+        QList<Resource *> targets = selectedResources;
+        if (options.scope == ChineseConversionScope::AllTextResources) {
+            targets.clear();
+            const QList<HTMLResource *> htmlResources =
+                m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
+            for (HTMLResource *htmlResource : htmlResources) {
+                targets.append(htmlResource);
+            }
+            const QList<SVGResource *> svgResources =
+                m_Book->GetFolderKeeper()->GetResourceTypeList<SVGResource>(true);
+            for (SVGResource *svgResource : svgResources) {
+                targets.append(svgResource);
+            }
+        }
+
+        struct BatchEntry {
+            TextResource *resource = nullptr;
+            QString resourcePath;
+            QString source;
+            ChineseTextConversionPlan plan;
+        };
+        QList<BatchEntry> batch;
+        int skippedJapanese = 0;
+        int skippedProtected = 0;
+        QString analysisError;
+
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        for (Resource *target : targets) {
+            TextResource *targetText = qobject_cast<TextResource *>(target);
+            if (!targetText) {
+                continue;
+            }
+            targetText->InitialLoad();
+            const QString targetSource = targetText->GetText();
+            const ChineseTextConversionPlan targetPlan = ChineseTextConversionPlan::Build(
+                targetSource,
+                target->Type() == Resource::SVGResourceType
+                    ? ChineseDocumentKind::Svg : ChineseDocumentKind::Xhtml,
+                options,
+                converter);
+            if (!targetPlan.IsValid()) {
+                analysisError = tr("%1: %2")
+                    .arg(target->GetRelativePath(), targetPlan.ErrorString());
+                break;
+            }
+            skippedJapanese += targetPlan.SkippedJapaneseSegments();
+            skippedProtected += targetPlan.SkippedProtectedSegments();
+            if (targetPlan.HasChanges()) {
+                batch.append(BatchEntry {
+                    targetText, target->GetRelativePath(), targetSource, targetPlan
+                });
+            }
+        }
+        QApplication::restoreOverrideCursor();
+
+        if (!analysisError.isEmpty()) {
+            Utility::warning(this, tr("Chinese Conversion"),
+                             tr("Batch analysis failed. No files were changed.\n%1")
+                                 .arg(analysisError));
+            return false;
+        }
+        if (batch.isEmpty()) {
+            ShowMessageOnStatusBar(tr("No Chinese conversion changes were found in the selected scope."));
+            return true;
+        }
+
+        QList<ChineseConversionPreviewResource> previewResources;
+        QList<QPair<int, int>> previewRows;
+        for (int resourceIndex = 0; resourceIndex < batch.size(); ++resourceIndex) {
+            const QList<ChineseTextChange> changes = batch.at(resourceIndex).plan.Changes();
+            previewResources.append(ChineseConversionPreviewResource {
+                batch.at(resourceIndex).resourcePath, changes
+            });
+            for (int changeIndex = 0; changeIndex < changes.size(); ++changeIndex) {
+                previewRows.append(qMakePair(resourceIndex, changeIndex));
+            }
+        }
+
+        ChineseConversionPreviewDialog preview(
+            previewResources, skippedJapanese, skippedProtected, this);
+        if (preview.exec() != QDialog::Accepted) {
+            return false;
+        }
+        const QSet<int> enabledRows = preview.EnabledChanges();
+        QList<QSet<int>> enabledByResource;
+        enabledByResource.resize(batch.size());
+        for (int row : enabledRows) {
+            if (row >= 0 && row < previewRows.size()) {
+                const QPair<int, int>& mapping = previewRows.at(row);
+                enabledByResource[mapping.first].insert(mapping.second);
+            }
+        }
+
+        QList<QString> convertedTexts;
+        convertedTexts.reserve(batch.size());
+        for (int resourceIndex = 0; resourceIndex < batch.size(); ++resourceIndex) {
+            const BatchEntry& entry = batch.at(resourceIndex);
+            if (enabledByResource.at(resourceIndex).isEmpty()) {
+                convertedTexts.append(entry.source);
+                continue;
+            }
+            QString applyError;
+            convertedTexts.append(entry.plan.Apply(
+                enabledByResource.at(resourceIndex), &applyError));
+            if (!applyError.isEmpty()) {
+                Utility::warning(this, tr("Chinese Conversion"), applyError);
+                return false;
+            }
+        }
+
+        for (const BatchEntry& entry : batch) {
+            if (entry.resource->GetText() != entry.source) {
+                Utility::warning(this, tr("Chinese Conversion"),
+                                 tr("%1 changed after analysis. No files were changed.")
+                                     .arg(entry.resourcePath));
+                return false;
+            }
+        }
+
+        ShowMessageOnStatusBar(tr("Creating checkpoint before Chinese conversion..."));
+        if (!RepoCommit()) {
+            Utility::warning(this, tr("Chinese Conversion"),
+                             tr("Checkpoint creation failed. No files were changed."));
+            return false;
+        }
+        for (const BatchEntry& entry : batch) {
+            if (entry.resource->GetText() != entry.source) {
+                Utility::warning(this, tr("Chinese Conversion"),
+                                 tr("%1 changed while creating the checkpoint. No conversion was applied.")
+                                     .arg(entry.resourcePath));
+                return false;
+            }
+        }
+
+        int changedResources = 0;
+        int appliedChanges = 0;
+        Resource *currentResource = contentTab ? contentTab->GetLoadedResource() : nullptr;
+        for (int resourceIndex = 0; resourceIndex < batch.size(); ++resourceIndex) {
+            if (enabledByResource.at(resourceIndex).isEmpty()) {
+                continue;
+            }
+            const BatchEntry& entry = batch.at(resourceIndex);
+            {
+                QWriteLocker locker(&entry.resource->GetLock());
+                entry.resource->SetText(convertedTexts.at(resourceIndex));
+            }
+            if (currentResource == entry.resource && contentTab) {
+                contentTab->ContentChangedExternally();
+            }
+            ++changedResources;
+            appliedChanges += enabledByResource.at(resourceIndex).size();
+        }
+        if (changedResources > 0) {
+            m_Book->SetModified();
+        }
+        ShowMessageOnStatusBar(
+            tr("Chinese conversion applied: %1 changes in %2 files. A checkpoint was created.")
+                .arg(appliedChanges)
+                .arg(changedResources));
+        return true;
     }
 
     if (options.scope == ChineseConversionScope::CurrentSelection) {

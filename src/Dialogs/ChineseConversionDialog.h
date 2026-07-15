@@ -26,6 +26,8 @@ public:
 
     ChineseConversionDialog(const ChineseConversionOptions& options,
                             bool selectionAvailable,
+                            bool currentFileAvailable,
+                            int selectedResourceCount,
                             const QString& resourcePath,
                             QWidget *parent = nullptr);
 

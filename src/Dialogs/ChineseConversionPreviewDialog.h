@@ -17,6 +17,11 @@ class QPushButton;
 class QTableWidget;
 class QTableWidgetItem;
 
+struct ChineseConversionPreviewResource {
+    QString resourcePath;
+    QList<ChineseTextChange> changes;
+};
+
 class ChineseConversionPreviewDialog final : public QDialog
 {
     Q_OBJECT
@@ -24,6 +29,10 @@ class ChineseConversionPreviewDialog final : public QDialog
 public:
     ChineseConversionPreviewDialog(const QString& resourcePath,
                                    const QList<ChineseTextChange>& changes,
+                                   int skippedJapaneseSegments,
+                                   int skippedProtectedSegments,
+                                   QWidget *parent = nullptr);
+    ChineseConversionPreviewDialog(const QList<ChineseConversionPreviewResource>& resources,
                                    int skippedJapaneseSegments,
                                    int skippedProtectedSegments,
                                    QWidget *parent = nullptr);
