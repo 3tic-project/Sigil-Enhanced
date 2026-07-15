@@ -44,22 +44,25 @@ void TestUsageCollection()
                         "<script>ignored-script</script></head><body>Latin 中文 😀"
                         "<img alt=\"代替\" title=\"Title\"/></body></html>")},
         {QStringLiteral("Styles/main.css"), QStringLiteral("text/css"),
-         QStringLiteral("p::after { content: '終'; } a::before { content: attr(title); }")},
+         QStringLiteral("p::after { content: '終' counter(chapter); } "
+                        "a::before { content: attr(title); }")},
         {QStringLiteral("toc.ncx"), QStringLiteral("application/x-dtbncx+xml"),
-         QStringLiteral("<?xml version=\"1.0\"?><ncx><text>目次</text></ncx>")}
+         QStringLiteral("<?xml version=\"1.0\"?><ncx><text>目次 "
+                        "&copy; &euro; End</text></ncx>")}
     };
     const GlobalFontUsage usage = GlobalFontUsageCollector().Collect(sources);
     for (quint32 codepoint : {quint32('L'), quint32(0x4e2d), quint32(0x6587),
                               quint32(0x1f600), quint32(0x4ee3), quint32(0x7d42),
-                              quint32(0x76ee), quint32(0x6b21), quint32(0x3000)}) {
+                              quint32(0x76ee), quint32(0x6b21), quint32(0x00a9),
+                              quint32(0x20ac), quint32('E'), quint32(0x3000)}) {
         Require(usage.codepoints.contains(codepoint),
                 "usage collector omitted visible content");
     }
     Require(!usage.codepoints.contains(quint32('g')),
             "usage collector included script-only text");
     Require(!usage.shapingSamples.isEmpty(), "usage collector produced no samples");
-    Require(!usage.warnings.isEmpty(),
-            "dynamic CSS content did not produce a warning");
+    Require(usage.warnings.size() >= 2,
+            "dynamic CSS content did not produce complete warnings");
 }
 
 void TestTransactionCommitAndConflict()

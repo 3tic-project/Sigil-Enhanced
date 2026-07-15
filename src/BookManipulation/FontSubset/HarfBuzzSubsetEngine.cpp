@@ -128,7 +128,8 @@ Result HarfBuzzSubsetEngine::Subset(const QByteArray& fontBytes,
     }
 
     const Inspection outputInspection = m_Inspector.Inspect(result.outputBytes, 0);
-    if (!outputInspection.valid || outputInspection.format != result.inspection.format) {
+    if (!outputInspection.canSubset ||
+        outputInspection.format != result.inspection.format) {
         result.error = QObject::tr(
             "The subset output could not be reparsed as the original font format.");
         result.outputBytes.clear();

@@ -3,7 +3,12 @@
 #include <algorithm>
 
 #include <QObject>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QXmlStreamReader>
+#include <QXmlStreamEntityResolver>
+
+#include "Misc/XMLEntities.h"
 
 namespace FontSubset
 {
@@ -23,6 +28,19 @@ bool IsCssMediaType(const QString& mediaType)
 {
     return mediaType.compare(QStringLiteral("text/css"), Qt::CaseInsensitive) == 0;
 }
+
+class SigilEntityResolver : public QXmlStreamEntityResolver
+{
+public:
+    QString resolveUndeclaredEntity(const QString& name) override
+    {
+        static QMutex entityMutex;
+        QMutexLocker locker(&entityMutex);
+        const ushort codepoint = XMLEntities::instance()->GetEntityCode(
+            QLatin1Char('&') + name + QLatin1Char(';'));
+        return codepoint == 0 ? QString() : QString(QChar(codepoint));
+    }
+};
 
 bool IsIdentifierCharacter(QChar character)
 {
@@ -127,6 +145,8 @@ void GlobalFontUsageCollector::CollectXml(const UsageSource& source,
                                           GlobalFontUsage& usage) const
 {
     QXmlStreamReader reader(source.content);
+    SigilEntityResolver entityResolver;
+    reader.setEntityResolver(&entityResolver);
     while (!reader.atEnd()) {
         const QXmlStreamReader::TokenType token = reader.readNext();
         if (token == QXmlStreamReader::StartElement) {
@@ -209,7 +229,6 @@ void GlobalFontUsageCollector::CollectCss(const QString& css,
         if (!isContent) {
             continue;
         }
-        bool foundString = false;
         bool foundDynamicValue = false;
         while (position < css.size() && css.at(position) != QLatin1Char(';') &&
                css.at(position) != QLatin1Char('}')) {
@@ -221,13 +240,12 @@ void GlobalFontUsageCollector::CollectCss(const QString& css,
             if (css.at(position) == QLatin1Char('\'') ||
                 css.at(position) == QLatin1Char('"')) {
                 AddText(ReadCssString(css, position), usage);
-                foundString = true;
             } else {
                 foundDynamicValue = true;
                 ++position;
             }
         }
-        if (foundDynamicValue && !foundString) {
+        if (foundDynamicValue) {
             usage.warnings.append(QObject::tr(
                 "%1: a dynamic CSS content value could not be resolved.").arg(path));
         }

@@ -46,6 +46,7 @@ WOFF/WOFF2、TTC/OTC、SVG 字形、EBDT/EBLC、Graphite 和 AAT 布局不属于
 收集器规则如下：
 
 - 使用 `QXmlStreamReader` 解析 XML 类型资源，不通过正则解析标记；
+- 通过 Sigil 的 XHTML 实体表解析命名实体，并继续扫描实体后的文本；
 - 收集文本节点，以及 `alt`、`title`、`aria-label`、`label` 属性；
 - 跳过 `script` 内容；
 - 将 `style` 内容作为 CSS 扫描；

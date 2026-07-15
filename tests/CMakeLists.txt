@@ -42,6 +42,8 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/GlobalFontUsageCollector.h
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontSubsetTransaction.cpp
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontSubsetTransaction.h
+        ${CMAKE_SOURCE_DIR}/src/Misc/XMLEntities.cpp
+        ${CMAKE_SOURCE_DIR}/src/Misc/XMLEntities.h
     )
     target_include_directories(font_subset_workflow_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src
@@ -64,6 +66,8 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzRAII.h
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
+        ${CMAKE_SOURCE_DIR}/src/Misc/XMLEntities.cpp
+        ${CMAKE_SOURCE_DIR}/src/Misc/XMLEntities.h
     )
     target_include_directories(font_subset_batch_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src
