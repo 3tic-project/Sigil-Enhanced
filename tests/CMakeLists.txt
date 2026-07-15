@@ -13,6 +13,28 @@ if(SIGIL_FONT_SUBSETTING_AVAILABLE)
     )
     add_test(NAME font_subset_smoke COMMAND font_subset_smoke_test)
     set_tests_properties(font_subset_smoke PROPERTIES TIMEOUT 30)
+
+    add_executable(font_subset_core_test
+        font_subset_core_test.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontInspector.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontInspector.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontSubsetTypes.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzRAII.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
+    )
+    target_include_directories(font_subset_core_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    target_link_libraries(font_subset_core_test PRIVATE
+        Qt6::Core
+        PkgConfig::HARFBUZZ_SUBSET
+    )
+    target_compile_definitions(font_subset_core_test PRIVATE
+        SIGIL_FONT_TEST_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/fonts/OpenSans-Test.ttf"
+    )
+    add_test(NAME font_subset_core COMMAND font_subset_core_test)
+    set_tests_properties(font_subset_core PROPERTIES TIMEOUT 30)
 endif()
 
 add_executable(safe_archive_extractor_test

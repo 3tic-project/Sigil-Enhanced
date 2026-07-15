@@ -50,6 +50,17 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/XhtmlDoc.h
     )
 
+if(SIGIL_FONT_SUBSETTING_AVAILABLE)
+    list(APPEND BOOK_MANIPULATION_FILES
+        BookManipulation/FontSubset/FontSubsetTypes.h
+        BookManipulation/FontSubset/HarfBuzzRAII.h
+        BookManipulation/FontSubset/FontInspector.cpp
+        BookManipulation/FontSubset/FontInspector.h
+        BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
+        BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
+    )
+endif()
+
 set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/BrParagraphNormalizer.cpp
     BuiltinPlugins/BrParagraphNormalizer.h
