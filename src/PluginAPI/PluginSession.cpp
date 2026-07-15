@@ -1202,6 +1202,15 @@ void PluginSession::Dispatch(const QJsonObject &request)
             }
             book_path = requested_path;
         }
+        if (!qobject_cast<TextResource *>(resource)) {
+            const qint64 source_size = QFileInfo(source_path).size();
+            if (source_size < 0
+                || source_size > MAX_MATERIALIZED_BYTES - m_MaterializedBytes) {
+                RespondError(id, PluginApi::PayloadTooLarge,
+                             QStringLiteral("Session temporary materialization byte limit reached"));
+                return;
+            }
+        }
         if (!m_MaterializationRoot) {
             m_MaterializationRoot = new QTemporaryDir(
                 QDir::tempPath() + QStringLiteral("/sigil-plugin-session-XXXXXX"));
@@ -1230,9 +1239,14 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (TextResource *text = qobject_cast<TextResource *>(resource)) {
             text->InitialLoad();
             const QByteArray data = text->GetText().toUtf8();
-            if (temporary->write(data) != data.size()) copy_error = temporary->errorString();
-            hash.addData(data);
-            total = data.size();
+            if (data.size() > MAX_MATERIALIZED_BYTES - m_MaterializedBytes) {
+                copy_error = QStringLiteral("Session temporary materialization byte limit reached");
+            } else if (temporary->write(data) != data.size()) {
+                copy_error = temporary->errorString();
+            } else {
+                hash.addData(data);
+                total = data.size();
+            }
         } else {
             std::unique_ptr<QReadLocker> locker;
             if (resource) locker = std::make_unique<QReadLocker>(&resource->GetLock());
@@ -1242,6 +1256,10 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 const QByteArray chunk = source.read(DEFAULT_BINARY_CHUNK_SIZE);
                 if (chunk.isEmpty() && source.error() != QFile::NoError) {
                     copy_error = source.errorString();
+                } else if (chunk.size() > MAX_MATERIALIZED_BYTES
+                           - m_MaterializedBytes - total) {
+                    copy_error = QStringLiteral(
+                        "Session temporary materialization byte limit reached");
                 } else if (temporary->write(chunk) != chunk.size()) {
                     copy_error = temporary->errorString();
                 } else {
@@ -1256,7 +1274,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (!copy_error.isEmpty() || !temporary->flush()) {
             if (copy_error.isEmpty()) copy_error = temporary->errorString();
             delete temporary;
-            RespondError(id, PluginApi::UnsupportedOperation, copy_error);
+            RespondError(id, copy_error.contains(QStringLiteral("limit"))
+                ? PluginApi::PayloadTooLarge : PluginApi::UnsupportedOperation, copy_error);
             return;
         }
         temporary->close();
@@ -1338,6 +1357,11 @@ void PluginSession::Dispatch(const QJsonObject &request)
                         copy_error = source.errorString();
                         break;
                     }
+                    if (chunk.size() > MAX_BINARY_READ_BYTES
+                        - m_BinaryReadBytes - total) {
+                        copy_error = QStringLiteral("Session binary snapshot byte limit reached");
+                        break;
+                    }
                     if (snapshot->write(chunk) != chunk.size()) {
                         copy_error = snapshot->errorString();
                         break;
@@ -1350,7 +1374,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (!copy_error.isEmpty() || !snapshot->flush() || !snapshot->seek(0)) {
             if (copy_error.isEmpty()) copy_error = snapshot->errorString();
             delete snapshot;
-            RespondError(id, PluginApi::UnsupportedOperation, copy_error);
+            RespondError(id, copy_error.contains(QStringLiteral("limit"))
+                ? PluginApi::PayloadTooLarge : PluginApi::UnsupportedOperation, copy_error);
             return;
         }
         const QString stream_id = QUuid::createUuid().toString(QUuid::WithoutBraces);

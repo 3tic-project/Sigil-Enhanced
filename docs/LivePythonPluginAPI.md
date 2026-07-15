@@ -394,7 +394,7 @@ The full implemented wire contract is `plugin-api-v2.openrpc.json`.
 | `-32007` | `ValidationFailed` | Validation or required Checkpoint failed. |
 | `-32008` | `PayloadTooLarge` | Request or response exceeds limits. |
 | `-32009` | `Busy` | The session already has an active transaction. |
-| `-32010` | `UnsupportedOperation` | The operation is outside the implemented phase. |
+| `-32010` | `UnsupportedOperation` | The operation is invalid for this plugin type, resource, or protected target. |
 | `-32011` | `TransactionNotFound` | Transaction ID is missing, stale, or foreign. |
 | `-32012` | `SessionEnding` | The session is shutting down. |
 

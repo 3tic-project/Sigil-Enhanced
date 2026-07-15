@@ -72,6 +72,11 @@ ctest --test-dir cmake-build-debug --output-on-failure
    这是取消权限系统后的明确产品风险，不应在文档或 UI 中描述为已隔离。
 5. **平台矩阵**：本轮只在当前 macOS Debug 构建验证；Windows/Linux socket 权限、路径身份和
    保存行为仍需 CI/人工矩阵。
+6. **设计稿中的扩展事件/便捷别名**：OpenRPC 是当前实现契约。设计稿曾列出的
+   `book.resourceMoved/resourceRenamed/revisionChanged/selectionChanged`、
+   `editor.opened/closed/getCursor` 和 `session.cancel` 等细粒度通知或别名尚未作为公开 RPC；
+   当前资源移动/重命名会产生既有 resource/structure 变化，取消由宿主控制台和进程生命周期处理。
+   若插件确实需要区分这些原因，应在后续 API minor version 中增加，而不是推断现有事件。
 
 因此，“API 方法存在与 SDK 公共面覆盖”已完成；“所有平台、GUI 流程、崩溃恢复 100% 自动化
 验证”尚未完成，不能作为当前发布声明。
