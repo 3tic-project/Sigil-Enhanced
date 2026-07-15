@@ -415,7 +415,7 @@ chunked transaction binary, and a bounded 1000-block console.
 
 ## Verification
 
-The CTest suite contains 16 registered targets covering archive/input
+The CTest suite contains 17 registered targets covering archive/input
 validation, frame limits, metadata/runtime selection, OpenRPC/dispatcher parity,
 the SDK and examples, real launcher/transport handshakes, UTF-16 patches,
 transactions, rollback, and the global writer lease. GUI save/load and

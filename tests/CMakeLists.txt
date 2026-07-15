@@ -1,4 +1,4 @@
-find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Xml REQUIRED)
 
 add_executable(safe_archive_extractor_test
     safe_archive_extractor_test.cpp
@@ -223,3 +223,21 @@ target_link_libraries(plugin_writer_lock_test PRIVATE
 
 add_test(NAME plugin_writer_lock COMMAND plugin_writer_lock_test)
 set_tests_properties(plugin_writer_lock PROPERTIES TIMEOUT 30)
+
+add_executable(plugin_package_update_test
+    plugin_package_update_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginPackageUpdate.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginPackageUpdate.h
+)
+
+target_include_directories(plugin_package_update_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(plugin_package_update_test PRIVATE
+    Qt6::Core
+    Qt6::Xml
+)
+
+add_test(NAME plugin_package_update COMMAND plugin_package_update_test)
+set_tests_properties(plugin_package_update PROPERTIES TIMEOUT 30)

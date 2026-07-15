@@ -1,0 +1,187 @@
+/************************************************************************
+**
+**  This file is part of Sigil.
+**
+*************************************************************************/
+
+#include "PluginAPI/PluginPackageUpdate.h"
+
+#include <QDomDocument>
+#include <QHash>
+
+namespace
+{
+
+QDomElement DirectChildElement(const QDomElement &parent, const QString &local_name)
+{
+    for (QDomNode child = parent.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        const QDomElement element = child.toElement();
+        if (!element.isNull() && (element.localName() == local_name
+                                  || element.tagName() == local_name)) {
+            return element;
+        }
+    }
+    return QDomElement();
+}
+
+bool ParsePackageDom(const QString &source, QDomDocument *document, QString *error)
+{
+    QString message;
+    int line = 0;
+    int column = 0;
+    if (!document->setContent(source, true, &message, &line, &column)) {
+        if (error) {
+            *error = QStringLiteral("Package XML is not well formed at %1:%2: %3")
+                .arg(line).arg(column).arg(message);
+        }
+        return false;
+    }
+    return true;
+}
+
+void CollectNamespaces(const QDomNode &node, QHash<QString, QString> *namespaces)
+{
+    const QDomElement element = node.toElement();
+    if (!element.isNull() && !element.prefix().isEmpty() && !element.namespaceURI().isEmpty()) {
+        namespaces->insert(element.prefix(), element.namespaceURI());
+    }
+    const QDomNamedNodeMap attributes = node.attributes();
+    for (int index = 0; index < attributes.size(); ++index) {
+        const QDomAttr attribute = attributes.item(index).toAttr();
+        if (!attribute.prefix().isEmpty() && !attribute.namespaceURI().isEmpty()) {
+            namespaces->insert(attribute.prefix(), attribute.namespaceURI());
+        }
+    }
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        CollectNamespaces(child, namespaces);
+    }
+}
+
+bool SplitQualifiedName(const QString &name, QString *prefix, QString *local_name,
+                        QString *error)
+{
+    const int colon = name.indexOf(QLatin1Char(':'));
+    if (colon == 0 || colon == name.size() - 1
+        || (colon >= 0 && name.indexOf(QLatin1Char(':'), colon + 1) >= 0)) {
+        if (error) *error = QStringLiteral("XML qualified name is invalid: %1").arg(name);
+        return false;
+    }
+    *prefix = colon < 0 ? QString() : name.left(colon);
+    *local_name = colon < 0 ? name : name.mid(colon + 1);
+    return !local_name->isEmpty();
+}
+
+}
+
+namespace PluginApi
+{
+
+bool ApplyMetadataUpdate(const QString &source, const QJsonArray &entries,
+                         QString *updated, QString *error)
+{
+    QDomDocument document;
+    if (!ParsePackageDom(source, &document, error)) return false;
+    QDomElement metadata = DirectChildElement(document.documentElement(),
+                                              QStringLiteral("metadata"));
+    if (metadata.isNull()) {
+        if (error) *error = QStringLiteral("Package metadata element is missing");
+        return false;
+    }
+    QHash<QString, QString> namespaces;
+    namespaces.insert(QStringLiteral("xml"),
+                      QStringLiteral("http://www.w3.org/XML/1998/namespace"));
+    CollectNamespaces(document, &namespaces);
+    while (!metadata.firstChild().isNull()) metadata.removeChild(metadata.firstChild());
+    for (const QJsonValue &value : entries) {
+        const QJsonObject entry = value.toObject();
+        const QString name = entry.value(QStringLiteral("name")).toString();
+        if (name.isEmpty() || !value.isObject()
+            || !entry.value(QStringLiteral("content")).isString()) {
+            if (error) *error = QStringLiteral("Metadata entries require name and content strings");
+            return false;
+        }
+        QString prefix;
+        QString local_name;
+        if (!SplitQualifiedName(name, &prefix, &local_name, error)) return false;
+        if (!prefix.isEmpty() && !namespaces.contains(prefix)) {
+            if (error) *error = QStringLiteral("Metadata namespace prefix is undeclared: %1")
+                .arg(prefix);
+            return false;
+        }
+        QDomElement element = prefix.isEmpty()
+            ? document.createElementNS(metadata.namespaceURI(), local_name)
+            : document.createElementNS(namespaces.value(prefix), name);
+        const QJsonObject attributes = entry.value(QStringLiteral("attributes")).toObject();
+        for (auto it = attributes.constBegin(); it != attributes.constEnd(); ++it) {
+            if (!it.value().isString()) {
+                if (error) *error = QStringLiteral("Metadata attributes must be strings");
+                return false;
+            }
+            QString attribute_prefix;
+            QString attribute_name;
+            if (!SplitQualifiedName(it.key(), &attribute_prefix, &attribute_name, error)) return false;
+            if (!attribute_prefix.isEmpty()) {
+                if (!namespaces.contains(attribute_prefix)) {
+                    if (error) *error = QStringLiteral("Metadata attribute prefix is undeclared: %1")
+                        .arg(attribute_prefix);
+                    return false;
+                }
+                element.setAttributeNS(namespaces.value(attribute_prefix), it.key(),
+                                       it.value().toString());
+            } else {
+                element.setAttribute(attribute_name, it.value().toString());
+            }
+        }
+        element.appendChild(document.createTextNode(entry.value(QStringLiteral("content")).toString()));
+        metadata.appendChild(element);
+    }
+    *updated = document.toString(-1);
+    return true;
+}
+
+bool ApplySpineUpdate(const QString &source, const QJsonArray &items,
+                      const QJsonObject &attributes, QString *updated, QString *error)
+{
+    QDomDocument document;
+    if (!ParsePackageDom(source, &document, error)) return false;
+    QDomElement spine = DirectChildElement(document.documentElement(), QStringLiteral("spine"));
+    if (spine.isNull()) {
+        if (error) *error = QStringLiteral("Package spine element is missing");
+        return false;
+    }
+    while (!spine.firstChild().isNull()) spine.removeChild(spine.firstChild());
+    for (auto it = attributes.constBegin(); it != attributes.constEnd(); ++it) {
+        if (!it.value().isString()) {
+            if (error) *error = QStringLiteral("Spine attributes must be strings");
+            return false;
+        }
+        spine.setAttribute(it.key(), it.value().toString());
+    }
+    for (const QJsonValue &value : items) {
+        const QJsonObject item = value.toObject();
+        const QString idref = item.value(QStringLiteral("idref")).toString();
+        if (!value.isObject() || idref.isEmpty()) {
+            if (error) *error = QStringLiteral("Spine items require an idref string");
+            return false;
+        }
+        QDomElement element = document.createElementNS(spine.namespaceURI(),
+                                                       QStringLiteral("itemref"));
+        element.setAttribute(QStringLiteral("idref"), idref);
+        for (const QString &name : { QStringLiteral("id"), QStringLiteral("linear"),
+                                     QStringLiteral("properties") }) {
+            const QJsonValue attribute = item.value(name);
+            if (!attribute.isUndefined()) {
+                if (!attribute.isString()) {
+                    if (error) *error = QStringLiteral("Spine item attributes must be strings");
+                    return false;
+                }
+                element.setAttribute(name, attribute.toString());
+            }
+        }
+        spine.appendChild(element);
+    }
+    *updated = document.toString(-1);
+    return true;
+}
+
+} // namespace PluginApi

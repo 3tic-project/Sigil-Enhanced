@@ -14,7 +14,6 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QDirIterator>
-#include <QDomDocument>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -48,6 +47,7 @@
 #include "Parsers/OPFParser.h"
 #include "PluginAPI/PluginSessionConsole.h"
 #include "PluginAPI/PluginInputValidator.h"
+#include "PluginAPI/PluginPackageUpdate.h"
 #include "PluginAPI/PluginSessionManager.h"
 #include "PluginAPI/PluginTextEdit.h"
 #include "PluginAPI/PluginTextTransaction.h"
@@ -272,113 +272,6 @@ bool ReadBinaryFile(Resource *resource, QByteArray *data, QString *error,
         return false;
     }
     *data = file.readAll();
-    return true;
-}
-
-QDomElement DirectChildElement(const QDomElement &parent, const QString &local_name)
-{
-    for (QDomNode child = parent.firstChild(); !child.isNull(); child = child.nextSibling()) {
-        const QDomElement element = child.toElement();
-        if (!element.isNull() && (element.localName() == local_name
-                                  || element.tagName() == local_name)) {
-            return element;
-        }
-    }
-    return QDomElement();
-}
-
-bool ParsePackageDom(const QString &source, QDomDocument *document, QString *error)
-{
-    QString message;
-    int line = 0;
-    int column = 0;
-    if (!document->setContent(source, true, &message, &line, &column)) {
-        if (error) {
-            *error = QStringLiteral("Package XML is not well formed at %1:%2: %3")
-                .arg(line).arg(column).arg(message);
-        }
-        return false;
-    }
-    return true;
-}
-
-bool ApplyMetadataUpdate(const QString &source, const QJsonArray &entries,
-                         QString *updated, QString *error)
-{
-    QDomDocument document;
-    if (!ParsePackageDom(source, &document, error)) return false;
-    QDomElement metadata = DirectChildElement(document.documentElement(),
-                                              QStringLiteral("metadata"));
-    if (metadata.isNull()) {
-        if (error) *error = QStringLiteral("Package metadata element is missing");
-        return false;
-    }
-    while (!metadata.firstChild().isNull()) metadata.removeChild(metadata.firstChild());
-    for (const QJsonValue &value : entries) {
-        const QJsonObject entry = value.toObject();
-        const QString name = entry.value(QStringLiteral("name")).toString();
-        if (name.isEmpty() || !value.isObject()
-            || !entry.value(QStringLiteral("content")).isString()) {
-            if (error) *error = QStringLiteral("Metadata entries require name and content strings");
-            return false;
-        }
-        QDomElement element = document.createElement(name);
-        const QJsonObject attributes = entry.value(QStringLiteral("attributes")).toObject();
-        for (auto it = attributes.constBegin(); it != attributes.constEnd(); ++it) {
-            if (!it.value().isString()) {
-                if (error) *error = QStringLiteral("Metadata attributes must be strings");
-                return false;
-            }
-            element.setAttribute(it.key(), it.value().toString());
-        }
-        element.appendChild(document.createTextNode(entry.value(QStringLiteral("content")).toString()));
-        metadata.appendChild(element);
-    }
-    *updated = document.toString(-1);
-    return true;
-}
-
-bool ApplySpineUpdate(const QString &source, const QJsonArray &items,
-                      const QJsonObject &attributes, QString *updated, QString *error)
-{
-    QDomDocument document;
-    if (!ParsePackageDom(source, &document, error)) return false;
-    QDomElement spine = DirectChildElement(document.documentElement(), QStringLiteral("spine"));
-    if (spine.isNull()) {
-        if (error) *error = QStringLiteral("Package spine element is missing");
-        return false;
-    }
-    while (!spine.firstChild().isNull()) spine.removeChild(spine.firstChild());
-    for (auto it = attributes.constBegin(); it != attributes.constEnd(); ++it) {
-        if (!it.value().isString()) {
-            if (error) *error = QStringLiteral("Spine attributes must be strings");
-            return false;
-        }
-        spine.setAttribute(it.key(), it.value().toString());
-    }
-    for (const QJsonValue &value : items) {
-        const QJsonObject item = value.toObject();
-        const QString idref = item.value(QStringLiteral("idref")).toString();
-        if (!value.isObject() || idref.isEmpty()) {
-            if (error) *error = QStringLiteral("Spine items require an idref string");
-            return false;
-        }
-        QDomElement element = document.createElement(QStringLiteral("itemref"));
-        element.setAttribute(QStringLiteral("idref"), idref);
-        for (const QString &name : { QStringLiteral("id"), QStringLiteral("linear"),
-                                     QStringLiteral("properties") }) {
-            const QJsonValue attribute = item.value(name);
-            if (!attribute.isUndefined()) {
-                if (!attribute.isString()) {
-                    if (error) *error = QStringLiteral("Spine item attributes must be strings");
-                    return false;
-                }
-                element.setAttribute(name, attribute.toString());
-            }
-        }
-        spine.appendChild(element);
-    }
-    *updated = document.toString(-1);
     return true;
 }
 
@@ -2204,11 +2097,13 @@ void PluginSession::Dispatch(const QJsonObject &request)
         QString replacement;
         QString package_error;
         const bool updated = method == QStringLiteral("transaction.updateMetadata")
-            ? ApplyMetadataUpdate(source, params.value(QStringLiteral("items")).toArray(),
-                                  &replacement, &package_error)
-            : ApplySpineUpdate(source, params.value(QStringLiteral("items")).toArray(),
-                               params.value(QStringLiteral("attributes")).toObject(),
-                               &replacement, &package_error);
+            ? PluginApi::ApplyMetadataUpdate(source,
+                params.value(QStringLiteral("items")).toArray(),
+                &replacement, &package_error)
+            : PluginApi::ApplySpineUpdate(source,
+                params.value(QStringLiteral("items")).toArray(),
+                params.value(QStringLiteral("attributes")).toObject(),
+                &replacement, &package_error);
         PackageDocumentInfo package_info;
         if (!updated
             || !ParsePackageDocument(replacement, opf->GetRelativePath(), opf->GetEpubVersion(),
