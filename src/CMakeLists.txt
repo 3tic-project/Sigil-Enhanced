@@ -61,6 +61,21 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/KfxParagraphNormalizer.h
     )
 
+set( CHINESE_CONVERSION_FILES
+    ChineseConversion/ChineseConversionData.cpp
+    ChineseConversion/ChineseConversionData.h
+    ChineseConversion/ChineseConversionProfile.cpp
+    ChineseConversion/ChineseConversionProfile.h
+    ChineseConversion/ChineseConversionSettings.cpp
+    ChineseConversion/ChineseConversionSettings.h
+    ChineseConversion/ChineseConversionSettingsStore.cpp
+    ChineseConversion/ChineseConversionTypes.h
+    ChineseConversion/ChineseTextConversionPlan.cpp
+    ChineseConversion/ChineseTextConversionPlan.h
+    ChineseConversion/OpenCCConverter.cpp
+    ChineseConversion/OpenCCConverter.h
+    )
+
 set( RESOURCE_OBJECT_FILES
     ResourceObjects/Resource.cpp
     ResourceObjects/Resource.h
@@ -196,6 +211,10 @@ set( DIALOG_FILES
     PluginAPI/PluginTextTransaction.h
     Dialogs/Preferences.cpp
     Dialogs/Preferences.h
+    Dialogs/ChineseConversionDialog.cpp
+    Dialogs/ChineseConversionDialog.h
+    Dialogs/ChineseConversionPreviewDialog.cpp
+    Dialogs/ChineseConversionPreviewDialog.h
     Dialogs/PreferenceWidgets/AppearanceWidget.cpp
     Dialogs/PreferenceWidgets/AppearanceWidget.h
     Dialogs/PreferenceWidgets/GeneralSettingsWidget.cpp
@@ -204,6 +223,8 @@ set( DIALOG_FILES
     Dialogs/PreferenceWidgets/KeyboardShortcutsWidget.h
     Dialogs/PreferenceWidgets/LanguageWidget.cpp
     Dialogs/PreferenceWidgets/LanguageWidget.h
+    Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.cpp
+    Dialogs/PreferenceWidgets/ChineseConversionSettingsWidget.h
     Dialogs/PreferenceWidgets/ModifiedVerPrefsWidget.cpp
     Dialogs/PreferenceWidgets/ModifiedVerPrefsWidget.h
     Dialogs/PreferenceWidgets/PreferencesWidget.h

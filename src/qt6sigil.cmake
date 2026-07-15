@@ -66,7 +66,7 @@ if ( NOT DEFINED DISABLE_UPDATE_CHECK )
     set ( DISABLE_UPDATE_CHECK 0 )
 endif()
 
-set( RAW_SOURCES ${MAIN_FILES} ${TAB_FILES} ${SOURCEUPDATE_FILES} ${BOOK_MANIPULATION_FILES} ${BUILTIN_PLUGIN_FILES} ${RESOURCE_OBJECT_FILES} ${DIALOG_FILES} ${WIDGET_FILES} ${EXPORTER_FILES} ${IMPORTER_FILES} ${MISC_FILES} ${MISC_EDITORS_FILES} ${QUERY_FILES} ${PARSERS_FILES} ${EMBEDPYTHON_FILES} ${SPCRE_FILES} ${VIEW_EDITOR_FILES} ${MAINUI_FILES} )
+set( RAW_SOURCES ${MAIN_FILES} ${TAB_FILES} ${SOURCEUPDATE_FILES} ${BOOK_MANIPULATION_FILES} ${BUILTIN_PLUGIN_FILES} ${CHINESE_CONVERSION_FILES} ${RESOURCE_OBJECT_FILES} ${DIALOG_FILES} ${WIDGET_FILES} ${EXPORTER_FILES} ${IMPORTER_FILES} ${MISC_FILES} ${MISC_EDITORS_FILES} ${QUERY_FILES} ${PARSERS_FILES} ${EMBEDPYTHON_FILES} ${SPCRE_FILES} ${VIEW_EDITOR_FILES} ${MAINUI_FILES} )
 
 #############################################################################
 
@@ -101,6 +101,7 @@ source_group( "Forms"             FILES ${UI_FILES} )
 source_group( "Resource Files"    FILES ${QRC_FILES} )
 source_group( "Book Manipulation" FILES ${BOOK_MANIPULATION_FILES} )
 source_group( "Builtin Plugins"   FILES ${BUILTIN_PLUGIN_FILES} )
+source_group( "Chinese Conversion" FILES ${CHINESE_CONVERSION_FILES} )
 source_group( "Resource Objects"  FILES ${RESOURCE_OBJECT_FILES} )
 source_group( "Dialogs"           FILES ${DIALOG_FILES} )
 source_group( "Widgets"           FILES ${WIDGET_FILES} )
@@ -221,7 +222,7 @@ else()
 endif()
 
 # LIBS_TO_LINK for all platforms
-set( LIBS_TO_LINK ${HUNSPELL_LIBRARIES} ${PCRE2_LIBRARIES} ${GUMBO_LIBRARIES} ${MINIZIP_LIBRARIES}
+set( LIBS_TO_LINK ${HUNSPELL_LIBRARIES} ${PCRE2_LIBRARIES} ${GUMBO_LIBRARIES} ${MINIZIP_LIBRARIES} OpenCC::OpenCC
                   Qt6::Core5Compat Qt6::Widgets  Qt6::Xml  Qt6::PrintSupport  Qt6::WebEngineCore
                   Qt6::WebEngineWidgets  Qt6::Network  Qt6::Concurrent Qt6::Svg)
 
@@ -254,6 +255,22 @@ if ( APPLE )
 endif()
 
 target_link_libraries( ${PROJECT_NAME} ${LIBS_TO_LINK} )
+add_dependencies( ${PROJECT_NAME} sigil_opencc_data )
+target_compile_definitions( ${PROJECT_NAME} PRIVATE
+    SIGIL_OPENCC_BUILD_DATA_DIR="${SIGIL_OPENCC_DATA_DIR}"
+)
+
+if( APPLE )
+    set( SIGIL_OPENCC_APP_DATA_DIR "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/opencc" )
+else()
+    set( SIGIL_OPENCC_APP_DATA_DIR "$<TARGET_FILE_DIR:${PROJECT_NAME}>/opencc" )
+endif()
+add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SIGIL_OPENCC_APP_DATA_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${SIGIL_OPENCC_DATA_DIR}" "${SIGIL_OPENCC_APP_DATA_DIR}"
+    VERBATIM
+)
 
 #############################################################################
 
@@ -528,6 +545,10 @@ elseif (MSVC)
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy ${DIC} ${MAIN_PACKAGE_DIR}/hunspell_dictionaries/ )
     endforeach( DIC )
 
+    # Copy OpenCC conversion profiles and dictionaries
+    add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/opencc/ )
+    add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy_directory ${SIGIL_OPENCC_DATA_DIR} ${MAIN_PACKAGE_DIR}/opencc/ )
+
     # Copy the plugin launcher files
     add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy_directory ${CMAKE_SOURCE_DIR}/src/Resource_Files/plugin_launchers/python ${MAIN_PACKAGE_DIR}/plugin_launchers/python )
 
@@ -632,6 +653,9 @@ if( UNIX AND NOT APPLE )
     endif()
 
     set ( SIGIL_SHARE_ROOT "${SHARE_INSTALL_PREFIX}/share/sigil" )
+    target_compile_definitions( ${PROJECT_NAME} PRIVATE
+        SIGIL_OPENCC_INSTALL_DATA_DIR="${SIGIL_SHARE_ROOT}/opencc"
+    )
 
     # Set some defines that sigil_constants.cpp can then access
     set_property (
@@ -727,6 +751,8 @@ if( UNIX AND NOT APPLE )
         install( FILES ${DIC_FILES} DESTINATION ${SIGIL_SHARE_ROOT}/hunspell_dictionaries/ )
     endif()
     install( FILES ${EXT_RCC_FILES} DESTINATION ${SIGIL_SHARE_ROOT}/iconthemes/ )
+    install( DIRECTORY ${SIGIL_OPENCC_DATA_DIR}/ DESTINATION ${SIGIL_SHARE_ROOT}/opencc/
+             FILES_MATCHING PATTERN "*.json" PATTERN "*.ocd2" PATTERN "LICENSE" )
     if ( MATHJAX3_DIR )
         # Fixme - we need to figure out how to specify svg with mml3 extension only for external mathjax
         # install( FILES ${CMAKE_SOURCE_DIR}/src/Resource_Files/polyfills/SIGIL_EBOOK_MML_SVG.js DESTINATION ${MATHJAX3_DIR}/config/local/ )

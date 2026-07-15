@@ -6944,6 +6944,7 @@ void MainWindow::ExtendUI()
     sm->registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
     sm->registerAction(this, ui.actionNormalizeEpubStructure, "MainWindow.NormalizeEpubStructure"); // modified: Builtin native plugin
     sm->registerAction(this, ui.actionEnhanceSourceFormatting, "MainWindow.EnhanceSourceFormatting"); // modified: Builtin native plugin
+    sm->registerAction(this, ui.actionChineseConversion, "MainWindow.ConvertChineseText"); // modified: Chinese conversion
     sm->registerAction(this, ui.actionAnalyzeBrParagraphs, "MainWindow.AnalyzeBrParagraphs"); // modified: Builtin native plugin
     sm->registerAction(this, ui.actionNormalizeCurrentBrParagraphs, "MainWindow.NormalizeCurrentBrParagraphs"); // modified: Builtin native plugin
     sm->registerAction(this, ui.actionNormalizeBrParagraphs, "MainWindow.NormalizeBrParagraphs"); // modified: Builtin native plugin
@@ -7327,6 +7328,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(ui.actionNormalizeEpubStructure, SIGNAL(triggered()), this, SLOT(NormalizeEpubStructure())); // modified: Builtin native plugin
     connect(ui.actionEnhanceSourceFormatting, SIGNAL(triggered()), this, SLOT(EnhanceSourceFormatting())); // modified: Builtin native plugin
+    connect(ui.actionChineseConversion, SIGNAL(triggered()), this, SLOT(ConvertChineseText())); // modified: Chinese conversion
     connect(ui.actionAnalyzeBrParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeBrParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeCurrentBrParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentBrParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeBrParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllBrParagraphs())); // modified: Builtin native plugin

@@ -757,9 +757,9 @@ int CodeViewEditor::CalculateLineNumberAreaWidth()
 }
 
 
-void CodeViewEditor::ReplaceDocumentText(const QString &new_text)
+void CodeViewEditor::ReplaceDocumentText(const QString &new_text, bool normalize)
 {
-    QString txt = Utility::UseNFC(new_text);
+    const QString txt = normalize ? Utility::UseNFC(new_text) : new_text;
     QTextCursor cursor = textCursor();
     cursor.beginEditBlock();
     cursor.select(QTextCursor::Document);
@@ -767,6 +767,25 @@ void CodeViewEditor::ReplaceDocumentText(const QString &new_text)
     cursor.insertText(txt);
     cursor.endEditBlock();
     m_regen_taglist = true; // just in case
+}
+
+bool CodeViewEditor::ReplaceSelectedText(const QString &new_text, bool normalize)
+{
+    QTextCursor cursor = textCursor();
+    if (!cursor.hasSelection()) {
+        return false;
+    }
+
+    const int selectionStart = cursor.selectionStart();
+    const QString text = normalize ? Utility::UseNFC(new_text) : new_text;
+    cursor.beginEditBlock();
+    cursor.insertText(text);
+    cursor.endEditBlock();
+    cursor.setPosition(selectionStart);
+    cursor.setPosition(selectionStart + text.length(), QTextCursor::KeepAnchor);
+    setTextCursor(cursor);
+    m_regen_taglist = true;
+    return true;
 }
 
 

@@ -59,6 +59,67 @@ target_link_libraries(opf_model_clear_benchmark PRIVATE
 add_test(NAME opf_model_clear_benchmark COMMAND opf_model_clear_benchmark)
 set_tests_properties(opf_model_clear_benchmark PROPERTIES TIMEOUT 30)
 
+add_executable(chinese_conversion_core_test
+    chinese_conversion_core_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionProfile.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionProfile.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionData.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionData.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionSettings.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionSettings.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionTypes.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/OpenCCConverter.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/OpenCCConverter.h
+)
+
+target_include_directories(chinese_conversion_core_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(chinese_conversion_core_test PRIVATE
+    Qt6::Core
+    OpenCC::OpenCC
+)
+
+target_compile_definitions(chinese_conversion_core_test PRIVATE
+    SIGIL_OPENCC_TEST_DATA_DIR="${SIGIL_OPENCC_DATA_DIR}"
+    SIGIL_OPENCC_BUILD_DATA_DIR="${SIGIL_OPENCC_DATA_DIR}"
+)
+
+add_dependencies(chinese_conversion_core_test sigil_opencc_data)
+add_test(NAME chinese_conversion_core COMMAND chinese_conversion_core_test)
+set_tests_properties(chinese_conversion_core PROPERTIES TIMEOUT 60)
+
+add_executable(chinese_conversion_markup_test
+    chinese_conversion_markup_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionProfile.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionProfile.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseConversionTypes.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseTextConversionPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/ChineseTextConversionPlan.h
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/OpenCCConverter.cpp
+    ${CMAKE_SOURCE_DIR}/src/ChineseConversion/OpenCCConverter.h
+)
+
+target_include_directories(chinese_conversion_markup_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${GUMBO_INCLUDE_DIRS}
+)
+
+target_link_libraries(chinese_conversion_markup_test PRIVATE
+    Qt6::Core
+    OpenCC::OpenCC
+    ${GUMBO_LIBRARIES}
+)
+
+target_compile_definitions(chinese_conversion_markup_test PRIVATE
+    SIGIL_OPENCC_TEST_DATA_DIR="${SIGIL_OPENCC_DATA_DIR}"
+)
+
+add_dependencies(chinese_conversion_markup_test sigil_opencc_data)
+add_test(NAME chinese_conversion_markup COMMAND chinese_conversion_markup_test)
+set_tests_properties(chinese_conversion_markup PROPERTIES TIMEOUT 60)
+
 add_executable(plugin_protocol_test
     plugin_protocol_test.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginProtocol.cpp

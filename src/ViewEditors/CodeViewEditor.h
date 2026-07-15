@@ -205,7 +205,8 @@ public:
      *
      * @param new_text The new text of the document.
      */
-    void ReplaceDocumentText(const QString &new_text);
+    void ReplaceDocumentText(const QString &new_text, bool normalize = true);
+    bool ReplaceSelectedText(const QString &new_text, bool normalize = true);
 
     /**
      * Scrolls the entire view to the top.

@@ -657,11 +657,16 @@ void FlowTab::ScrollToTop()
     }
 }
 
-void FlowTab::ReplaceDocumentText(const QString& text)
+void FlowTab::ReplaceDocumentText(const QString& text, bool normalize)
 {
     if (m_wCodeView) {
-        m_wCodeView->ReplaceDocumentText(text);
+        m_wCodeView->ReplaceDocumentText(text, normalize);
     }
+}
+
+bool FlowTab::ReplaceSelectedText(const QString& text, bool normalize)
+{
+    return m_wCodeView && m_wCodeView->ReplaceSelectedText(text, normalize);
 }
 
 void FlowTab::AutoFixWellFormedErrors()

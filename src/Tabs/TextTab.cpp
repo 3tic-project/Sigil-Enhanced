@@ -148,6 +148,28 @@ bool TextTab::SetSelectionRange(int start, int end)
     return true;
 }
 
+QString TextTab::GetText() const
+{
+    return m_wCodeView ? m_wCodeView->toPlainText() : QString();
+}
+
+QString TextTab::GetSelectedText() const
+{
+    return m_wCodeView ? m_wCodeView->GetSelectedText() : QString();
+}
+
+void TextTab::ReplaceDocumentText(const QString& text, bool normalize)
+{
+    if (m_wCodeView) {
+        m_wCodeView->ReplaceDocumentText(text, normalize);
+    }
+}
+
+bool TextTab::ReplaceSelectedText(const QString& text, bool normalize)
+{
+    return m_wCodeView && m_wCodeView->ReplaceSelectedText(text, normalize);
+}
+
 int TextTab::GetCursorColumn() const
 {
     return m_wCodeView->GetCursorColumn();
