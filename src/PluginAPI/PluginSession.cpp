@@ -74,6 +74,7 @@ constexpr qsizetype MAX_READ_MANY_RESPONSE_SIZE = 6 * 1024 * 1024;
 constexpr qint64 MAX_NOTIFICATION_BACKLOG = 4LL * 1024 * 1024;
 constexpr int MAX_REQUESTS_PER_SECOND = 512;
 constexpr int MAX_BINARY_READ_STREAMS = 8;
+constexpr qint64 MAX_BINARY_READ_BYTES = 1024LL * 1024 * 1024;
 constexpr int MAX_BINARY_WRITE_UPLOADS = 2;
 constexpr int MAX_INPUT_UPLOADS = 1;
 constexpr int MAX_MATERIALIZED_FILES = 16;
@@ -646,6 +647,7 @@ PluginSession::PluginSession(const Plugin &plugin,
     m_DroppedNotifications(0),
     m_ProgressMaximum(0),
     m_ValidationErrorCount(0),
+    m_BinaryReadBytes(0),
     m_MaterializedBytes(0),
     m_MaterializationRoot(nullptr),
     m_InputEpubFile(nullptr),
@@ -1413,6 +1415,13 @@ void PluginSession::Dispatch(const QJsonObject &request)
             book_path = requested_path;
         }
 
+        const qint64 source_size = QFileInfo(source_path).size();
+        if (source_size < 0 || source_size > MAX_BINARY_READ_BYTES - m_BinaryReadBytes) {
+            RespondError(id, PluginApi::PayloadTooLarge,
+                         QStringLiteral("Session binary snapshot byte limit reached"));
+            return;
+        }
+
         auto *snapshot = new QTemporaryFile(this);
         if (!snapshot->open()) {
             const QString error = snapshot->errorString();
@@ -1460,6 +1469,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         stream.size = total;
         stream.sha256 = QString::fromLatin1(hash.result().toHex());
         m_BinaryReadStreams.insert(stream_id, stream);
+        m_BinaryReadBytes += total;
         Respond(id, QJsonObject {
             { QStringLiteral("stream_id"), stream_id },
             { QStringLiteral("resource_id"), stream.resourceId.isEmpty()
@@ -1502,6 +1512,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Binary stream not found"));
             return;
         }
+        m_BinaryReadBytes -= stream->size;
         delete stream->file;
         m_BinaryReadStreams.erase(stream);
         Respond(id, QJsonObject {{ QStringLiteral("closed"), true }});
@@ -3498,6 +3509,7 @@ void PluginSession::CleanServer()
         delete stream.file;
     }
     m_BinaryReadStreams.clear();
+    m_BinaryReadBytes = 0;
     for (const InputUpload &upload : std::as_const(m_InputUploads)) {
         delete upload.file;
     }

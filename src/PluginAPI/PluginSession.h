@@ -142,6 +142,7 @@ private:
     QString m_Status;
     QHash<QString, quint64> m_ResourceRevisions;
     QHash<QString, BinaryReadStream> m_BinaryReadStreams;
+    qint64 m_BinaryReadBytes;
     QHash<QString, BinaryWriteUpload> m_BinaryWriteUploads;
     QHash<QString, InputUpload> m_InputUploads;
     QList<QTemporaryFile *> m_MaterializedFiles;

@@ -8,9 +8,4 @@
   <version>2.0.0</version>
   <api version="2" interface="live" />
   <lifetime>command</lifetime>
-  <permissions>
-    <permission>input.submit</permission>
-    <permission>ui.fileDialog</permission>
-    <permission>ui.progress</permission>
-  </permissions>
 </plugin>

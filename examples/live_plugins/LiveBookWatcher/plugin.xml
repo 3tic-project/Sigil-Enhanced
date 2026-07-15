@@ -8,13 +8,6 @@
   <version>2.0.0</version>
   <api version="2" interface="live" />
   <lifetime>book-session</lifetime>
-  <permissions>
-    <permission>book.read</permission>
-    <permission>editor.read</permission>
-    <permission>events.book</permission>
-    <permission>events.editor</permission>
-    <permission>ui.message</permission>
-  </permissions>
   <events>
     <event>editor.activeChanged</event>
     <event>editor.selectionChanged</event>

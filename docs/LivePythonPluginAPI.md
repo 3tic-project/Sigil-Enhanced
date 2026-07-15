@@ -56,19 +56,13 @@ Example `plugin.xml`:
   <version>2.0.0</version>
   <api version="2" interface="live" />
   <lifetime>command</lifetime>
-  <permissions>
-    <permission>book.read</permission>
-    <permission>book.write.text</permission>
-    <permission>editor.read</permission>
-    <permission>editor.write</permission>
-  </permissions>
 </plugin>
 ```
 
-If `permissions` is omitted, edit plugins receive the current compatibility
-defaults: `book.read`, `book.write.text`, `book.write.binary`,
-`book.structure`, `editor.read`, and `editor.write`. Declaring permissions is
-recommended because the RPC dispatcher enforces the declared list.
+The live runtime does not implement an RPC permission system. Historical
+`<permissions>` elements are accepted and preserved as manifest metadata for
+compatibility, but they do not grant or restrict API methods. Plugin type
+checks still apply to input, output, and validation-only operations.
 
 Both `lifetime=command` and `lifetime=book-session` are implemented.
 `plugin.py` must export:
@@ -168,9 +162,9 @@ not construct the transport directly.
 | Method | Result |
 | --- | --- |
 | `get_info()` | EPUB version, modified state, file path, and book revision. |
-| `get_metadata()` | Ordered metadata entries, raw metadata XML, and package attributes. |
+| `get_metadata()` | Ordered metadata entries, raw metadata XML, package attributes, and OPF revision. |
 | `get_manifest()` | Ordered manifest entries with href, resolved Book path, properties, and resource ID. |
-| `get_spine()` | Ordered spine entries plus spine element attributes. |
+| `get_spine()` | Ordered spine entries, spine element attributes, and OPF revision. |
 | `get_guide()` | EPUB 2 guide entries with resolved paths and fragments. |
 | `get_bindings()` | EPUB 3 media type handler bindings. |
 | `get_selection()` | Typed resources selected in the Book Browser. |
@@ -183,18 +177,19 @@ not construct the transport directly.
 | `resolve_path(book_path)` | Resolve a current book path to `Resource`. |
 | `get_resource(resource_id)` | Fetch current resource metadata. |
 | `read_text(resource)` | Dictionary containing `text` and `revision`. |
-| `read_many(resources)` | Up to 100 current text resources in one round trip. |
+| `read_many(resources)` | Up to 100 current text resources; response-size continuation is automatic. |
 | `read_binary(resource)` | Read a binary resource up to 5 MiB and return decoded `data`. |
 | `open_binary(resource)` | Open a context-managed, chunked snapshot reader for a binary resource of any size. |
 | `open_archive_file(book_path)` | Open any managed or unmanaged expanded-EPUB file as a chunked snapshot. |
+| `materialize_temporary(resource=None, book_path=None)` | Copy one live resource into the session-private temporary directory. |
 | `transaction(label, checkpoint="auto")` | Begin a staged `Transaction`. |
 
 `Resource` contains `id`, `book_path`, `media_type`, `resource_type`,
 `revision`, and `loaded`. Its ID is stable only while the current Book is open.
 
 `get_compatibility_snapshot()` is a startup snapshot, not a general
-synchronization API. It is protected by `book.read`; writes still go through
-revision-checked transactions. Application and preferences paths are included
+synchronization API. Writes still go through revision-checked transactions.
+Application and preferences paths are included
 because the v1 container exposes them for Hunspell, Gumbo, and per-plugin
 preferences compatibility.
 
@@ -206,6 +201,10 @@ use it as a context manager so the session-owned temporary snapshot is removed
 immediately. Individual chunks are limited to 2 MiB; all remaining snapshots
 are removed when the plugin session ends.
 
+`materialize_temporary()` accepts no target path, reflects current in-memory
+text, returns size and SHA-256, and is deleted with the session. Modifying that
+file does not update the Book; use a transaction write method to import changes.
+
 ### `InputApi`
 
 | Method | Behavior |
@@ -216,17 +215,17 @@ are removed when the plugin session ends.
 
 `InputWriter.write(data)` updates a client-side SHA-256 while sending chunks;
 `finish()` asks the host to verify that hash, the optional declared length, the
-2 GiB limit, and the ZIP signature. Only an input plugin with `input.submit`
-may use these methods. Submission does not replace the Book unless the plugin
+2 GiB limit, ZIP signature, EPUB mimetype/container, safe OPF path, and required
+OPF sections. Only input plugins may use these methods. Submission does not replace the Book unless the plugin
 subsequently finishes successfully.
 
 ### `OutputApi`
 
-`plugin.output.export_epub(path)` asks Sigil's native exporter to write the
-current in-memory Book to an absolute `.epub` path. It preserves Sigil's EPUB
-validation, cleaning, and font-obfuscation behavior and does not change the
-current Book filename or modified state. Only output plugins with
-`output.export` may call it, and the current open EPUB cannot be overwritten.
+`plugin.output.save_source()` saves to the current source EPUB.
+`plugin.output.export_epub(path)` writes the current in-memory Book to an
+absolute `.epub` path; the current path also selects source mode. Both use
+Sigil's native save/export pipeline. Copy mode does not change the current
+filename or modified state. Only output plugins may call these methods.
 
 ### `EditorApi`
 
@@ -278,27 +277,30 @@ print(event["name"], event["params"])
 
 Supported events are `editor.activeChanged`, `editor.selectionChanged`,
 `editor.cursorChanged`, `editor.contentChanged`, `book.resourceChanged`,
-`book.resourceAdded`, and `book.resourceRemoved`. Book events require
-`events.book`; editor events require `events.editor`. Subscriptions declared in
-`plugin.xml` are installed at session startup when their permissions are
-granted. Every event contains `book_revision` and `origin_session_id`; the
+`book.resourceAdded`, and `book.resourceRemoved`. Subscriptions declared in
+`plugin.xml` are installed at session startup. Every event contains
+`book_revision` and `origin_session_id`; the
 origin is this session for changes synchronously caused by its request and
 `None` for external/user changes.
 
 Editor event state contains selection ranges but omits selected text to keep
 notifications bounded; call `editor.get_selection()` when the text is needed.
 
+Cursor/selection events are coalesced over 50 ms and content/per-resource
+changes over 100 ms. When a slow client fills the 4 MiB notification backlog,
+events are dropped and the next event reports `dropped_events`.
 `poll()` consumes an already queued event without blocking. `next_event()`
 waits using the transport timeout. The SDK queues notifications received while
 waiting for ordinary RPC results. Calls and event consumption on a single
-connection must remain single-threaded.
+connection must remain single-threaded. Both methods filter this session's own
+events by default; pass `include_self=True` to receive them.
 
 ### `ValidationApi`
 
 `plugin.validation.publish_results(results)` accepts dictionaries with `type`
 (`info`, `warning`, or `error`), `message`, optional canonical `book_path`, and
 optional `line`/`character` positions. Unknown positions are `-1`. Only
-validation plugins with `validation.publish` may call it. A call atomically
+validation plugins may call it. A call atomically
 replaces the Validation Results view and accepts at most 10,000 entries.
 
 ### `Transaction`
@@ -310,7 +312,11 @@ replaces the Validation Results view and accepts at most 10,000 entries.
 | `apply_edits(resource, edits, expected_revision=None)` | Compose patches against staged content. |
 | `read_binary(resource)` | Read staged binary data when present. |
 | `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 5 MiB. |
+| `begin_binary_write(resource, size, expected_revision=None)` | Begin a chunked replacement up to 256 MiB. |
+| `write_binary_file(resource, path, expected_revision=None)` | Stream a local file through the chunked transaction writer. |
 | `replace_package(text, expected_revision)` | Stage a complete OPF replacement after XML, version, manifest, and spine validation. |
+| `update_metadata(items, expected_revision=None)` | Replace structured OPF metadata entries. |
+| `update_spine(items, attributes=None, expected_revision=None)` | Replace structured spine itemrefs and update spine attributes. |
 | `replace_archive_file(book_path, data, expected_sha256)` | Stage replacement of an existing untracked archive file. |
 | `remove_archive_file(book_path, expected_sha256)` | Stage removal of an existing untracked archive file. |
 | `add_resource(book_path, data, media_type, ...)` | Stage a manifested or unmanifested resource addition. |
@@ -335,8 +341,8 @@ operations. The host verifies that its manifest exactly matches the final
 add/remove/move set, that manifest IDs and hrefs are unique, that every spine
 `idref` exists, and that the EPUB version is unchanged. In this mode the host
 does not generate a second manifest rewrite; it applies the package once after
-the physical structure changes. Larger binary resources use `open_binary()`
-chunk streams rather than increasing the JSON message limit.
+the physical structure changes. Larger reads use `open_binary()` streams;
+larger writes use Begin/Chunk/End and are length/SHA-256 checked before staging.
 
 Archive-file methods cover EPUB entries that Sigil intentionally keeps outside
 the `Resource` model, including `mimetype` and files under `META-INF`. Reads use
@@ -380,7 +386,6 @@ The full implemented wire contract is `plugin-api-v2.openrpc.json`.
 
 | Code | Python exception | Meaning |
 | --- | --- | --- |
-| `-32001` | `PermissionDenied` | Required permission was not granted. |
 | `-32002` | `BookClosed` | The Book is no longer available. |
 | `-32003` | `ResourceNotFound` | Resource ID or requested text resource is absent. |
 | `-32004` | `RevisionConflict` | A write is based on stale content. |
@@ -395,19 +400,27 @@ The full implemented wire contract is `plugin-api-v2.openrpc.json`.
 
 ## Security model
 
-The local socket and RPC permissions reduce accidental access to Sigil's Book
-model. They are not an operating-system sandbox. A Python plugin runs with the
-same user account as Sigil and can use normal filesystem, process, and network
-APIs. Install only trusted plugins. Live plugins do not receive the Book root
-through this API, but OS permissions still determine what arbitrary Python code
-can access.
+The local socket authenticates the launched process and protects the in-memory
+Book RPC from unrelated local clients. It is not an operating-system sandbox,
+and there is intentionally no method-level permission system. A Python plugin
+runs with the same user account as Sigil and can use normal filesystem,
+process, and network APIs. Install only trusted plugins. The API does not expose
+the expanded Book root, but arbitrary Python may still access files allowed by
+the operating system.
+
+One write transaction is allowed globally across live sessions. Each session
+is limited to 512 requests/second, 8 binary read snapshots totaling 1 GiB, 2 binary write
+uploads, 1 input upload, 16 materialized files totaling 512 MiB, 256 MiB per
+chunked transaction binary, and a bounded 1000-block console.
 
 ## Verification
 
-The CTest suite covers frame fragmentation and limits, metadata parsing,
-runtime persistence, Python SDK request mapping, stdlib socket transport, a
-real launcher handshake, Unicode patch validation, single-step undo, staged
-read-your-writes, composed patches, rollback, and application build linkage.
+The CTest suite contains 16 registered targets covering archive/input
+validation, frame limits, metadata/runtime selection, OpenRPC/dispatcher parity,
+the SDK and examples, real launcher/transport handshakes, UTF-16 patches,
+transactions, rollback, and the global writer lease. GUI save/load and
+fault-injected cross-resource recovery remain manual acceptance items; see
+`LivePythonPluginSecurityAudit.md`.
 Run it with:
 
 ```sh

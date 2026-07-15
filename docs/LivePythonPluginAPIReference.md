@@ -18,9 +18,6 @@
   <version>2.0.0</version>
   <api version="2" interface="live" />
   <lifetime>command</lifetime>
-  <permissions>
-    <permission>book.read</permission>
-  </permissions>
 </plugin>
 ```
 
@@ -34,28 +31,12 @@ def run(plugin):
 `command` 在 `run()` 返回后结束；`book-session` 可在 `run()` 内持续消费事件，
 在取消、关闭/替换 Book 或退出 Sigil 时由宿主终止。
 
-## 2. 权限
+## 2. 信任模型
 
-| 权限 | 允许的操作 |
-| --- | --- |
-| `book.read` | Book、资源、archive 和二进制流读取。 |
-| `book.write.text` | 创建事务并暂存文本。 |
-| `book.write.binary` | 暂存二进制资源替换。 |
-| `book.structure` | 新增、删除、移动、重命名资源，替换 OPF 和 archive 文件。 |
-| `editor.read` | 当前 Tab、光标、选区和打开 Tab。 |
-| `editor.write` | 当前编辑器 patch、插入、选区和光标操作。 |
-| `ui.navigate` | 打开资源和定位范围。 |
-| `ui.message` | 状态栏、消息框和确认框。 |
-| `ui.progress` | Session 控制台进度。 |
-| `ui.fileDialog` | 用户授权的打开/保存路径选择。 |
-| `validation.publish` | 发布 Validation Results。 |
-| `input.submit` | input 插件上传最终 EPUB。 |
-| `output.export` | output 插件通过 Sigil 原生 exporter 导出 EPUB。 |
-| `events.book` | Book 资源事件。 |
-| `events.editor` | 编辑器活动资源事件。 |
-
-声明 `<permissions>` 后只授予列出的权限。未声明时使用按插件类型提供的兼容默认值；
-正式插件应始终显式声明最小权限。
+Live v2 不实现 RPC 方法级权限系统。旧 `<permissions>` 元素仍可被解析和回写，保证已有
+测试插件与清单兼容，但不会授予或限制任何 API。input、output、validation 专用操作仍检查
+插件类型。Python 插件与 Sigil 使用同一系统账户，可直接使用 Python 的文件、网络和进程
+API，因此只能安装和运行可信插件；本地 socket 鉴权不是操作系统沙箱。
 
 ## 3. 数据类型
 
@@ -77,7 +58,7 @@ def run(plugin):
 
 | 成员 | 说明 |
 | --- | --- |
-| `session_info` | 握手结果：Session ID、lifetime、权限、消息上限、Book revision 和 UI 信息。 |
+| `session_info` | 握手结果：Session ID、lifetime、消息上限、Book revision 和 UI 信息。 |
 | `book` | `BookApi`。 |
 | `editor` | `EditorApi`。 |
 | `ui` | `UiApi`。 |
@@ -97,9 +78,9 @@ def run(plugin):
 | --- | --- |
 | `get_info()` | EPUB 版本、modified、当前文件路径、Book revision。 |
 | `get_revision()` | 当前 Session 的单调 Book revision。 |
-| `get_metadata()` | 有序 metadata、属性、原始 metadata XML 与 package 信息。 |
+| `get_metadata()` | 有序 metadata、属性、原始 XML、package 信息与 OPF revision。 |
 | `get_manifest()` | 有序 manifest；含 id、href、book path、类型、属性和 resource ID。 |
-| `get_spine()` | 有序 spine 项与 spine 标签属性。 |
+| `get_spine()` | 有序 spine 项、spine 标签属性与 OPF revision。 |
 | `get_guide()` | EPUB 2 guide，含解析后的 book path 和 fragment。 |
 | `get_bindings()` | EPUB 3 media-type handler bindings。 |
 | `get_selection()` | Book Browser 当前选择的 `Resource` 列表。 |
@@ -114,9 +95,10 @@ def run(plugin):
 | `resolve_path(book_path)` | 当前路径对应的 `Resource`。 |
 | `get_resource(resource_id)` | 当前资源信息。 |
 | `read_text(resource)` | `text` 与 `revision`。 |
-| `read_many(resources)` | 最多 100 个文本资源的一批结果。 |
+| `read_many(resources)` | 最多 100 个文本资源；SDK 自动跟随响应大小 continuation。 |
 | `read_binary(resource)` | 最多 5 MiB 的 bytes 数据与 revision。 |
 | `open_binary(resource)` | 任意大小资源的 `BinaryReader` 快照。 |
+| `materialize_temporary(resource=None, book_path=None)` | 将一个实时资源复制到 Session 私有临时目录。 |
 
 ### Expanded EPUB/archive
 
@@ -129,6 +111,8 @@ def run(plugin):
 `BinaryReader` 支持 `chunks(max_bytes=None)`、`read()`、`close()` 和上下文管理器。
 其 `size`、`sha256`、`book_path`、`resource_id`、`revision` 对应打开流时固定的同一
 份临时快照。单块最多 2 MiB；退出上下文或 Session 结束时删除快照。
+`materialize_temporary()` 不接受目标路径，文本来自当前内存；修改临时文件不会自动写回，
+必须使用事务写 API。
 
 ### 创建事务
 
@@ -153,11 +137,15 @@ with plugin.book.transaction("Normalize chapters", checkpoint="auto") as tx:
 | `apply_edits(resource, edits, expected_revision=None)` | 暂存不重叠 UTF-16 patches。 |
 | `read_binary(resource)` | 读 staged/live 二进制，内联上限 5 MiB。 |
 | `write_binary(resource, data, expected_revision=None)` | 暂存二进制替换，内联上限 5 MiB。 |
+| `begin_binary_write(resource, size, expected_revision=None)` | 开始最大 256 MiB 的分块写。 |
+| `write_binary_file(resource, path, expected_revision=None)` | 将本地文件分块写入事务。 |
 | `add_resource(book_path, data, media_type, ...)` | 新增 manifested 或 unmanifested 文件。 |
 | `remove_resource(resource, expected_revision=None)` | 删除托管资源。 |
 | `move_resource(resource, book_path, expected_revision=None)` | 移动并更新引用。 |
 | `rename_resource(resource, filename, expected_revision=None)` | 同目录重命名并更新引用。 |
 | `replace_package(text, expected_revision)` | 以完整 OPF 作为权威 package 替换。 |
+| `update_metadata(items, expected_revision=None)` | 用结构化条目替换 metadata。 |
+| `update_spine(items, attributes=None, expected_revision=None)` | 用结构化 itemref 替换 spine。 |
 | `replace_archive_file(book_path, data, expected_sha256)` | 替换未托管 archive 文件。 |
 | `remove_archive_file(book_path, expected_sha256)` | 删除未托管 archive 文件。 |
 | `preview()` | 返回校验结果与摘要，不提交。 |
@@ -224,8 +212,11 @@ print(event["name"], event["params"])
 plugin.events.unsubscribe("book.resourceChanged")
 ```
 
-`poll()` 只取已排队事件，无事件返回 `None`；`next_event()` 阻塞等待。每个事件含
-`book_revision` 与 `origin_session_id`。一个连接上不能并发消费事件和发普通 RPC。
+`poll()` 只取已排队事件，无事件返回 `None`；`next_event()` 阻塞等待。两者默认过滤
+本 Session 自己产生的事件，传 `include_self=True` 可接收。每个事件含
+`book_revision` 与 `origin_session_id`。光标/选区按 50ms 合并，内容/单资源变更按
+100ms 合并；慢客户端填满 4 MiB 待发送队列时会丢弃通知，后续事件以
+`dropped_events` 报告。一个连接上不能并发消费事件和发普通 RPC。
 编辑器事件携带选区范围但不携带选中文本，避免 notification 被超大选区撑破；需要文本时
 再调用 `get_selection()`。
 
@@ -244,12 +235,12 @@ plugin.events.unsubscribe("book.resourceChanged")
 | `submit_epub_file(path)` | 从文件流式上传。 |
 
 `InputWriter.write(data)` 分块发送并累计 SHA-256，`finish()` 要求宿主核验长度、hash、
-ZIP signature 和 2 GiB 上限。只有插件随后成功结束，宿主才询问是否丢弃当前 Book
+ZIP signature、mimetype、container、OPF 安全路径和 2 GiB 上限。只有插件随后成功结束，宿主才询问是否丢弃当前 Book
 的未保存修改并加载上传结果。
 
-`plugin.output.export_epub(path)` 仅供 output 插件使用。它要求绝对 `.epub` 路径，
-拒绝覆盖当前打开文件，通过 Sigil 原生 exporter 写出当前内存 Book，并保留字体混淆、
-清理和 EPUB 校验行为；不会更改当前 Book 文件名或 modified 状态。output 插件仍可用
+`plugin.output.save_source()` 将当前 Book 保存回源 EPUB；`export_epub(path)` 接受绝对
+`.epub` 路径并导出副本，传当前路径等同 source 模式。两者通过 Sigil 原生保存流程并保留
+字体混淆、清理和 EPUB 校验；copy 模式不更改当前文件名或 modified。output 插件仍可用
 `archive_files()`、`read_text()` 与流 API 实现自定义非 EPUB 格式导出。
 
 ## 11. 错误与恢复
@@ -258,7 +249,6 @@ SDK 将 JSON-RPC 错误映射为 `sigil_live.errors` 异常。协议错误码：
 
 | code | 名称 |
 | --- | --- |
-| `-32001` | PermissionDenied |
 | `-32002` | BookClosed |
 | `-32003` | ResourceNotFound |
 | `-32004` | RevisionConflict |
@@ -273,6 +263,10 @@ SDK 将 JSON-RPC 错误映射为 `sigil_live.errors` 异常。协议错误码：
 
 发生异常时未提交事务由 Session 清理；已提交事务通过 Sigil Checkpoint/undo 恢复。
 不要捕获所有异常后仍返回成功，尤其是 input 插件与结构修改插件。
+
+宿主全局只允许一个 live 写事务。每个 Session 限制为每秒 512 请求、8 个二进制读快照（合计 1 GiB）、
+2 个二进制写上传、1 个 input 上传、16 个临时物化文件（合计 512 MiB）、单个分块事务
+二进制 256 MiB，控制台最多保留 1000 个文本块。
 
 ## 12. 完整示例与验证
 
