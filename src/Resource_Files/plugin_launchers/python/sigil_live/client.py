@@ -183,6 +183,10 @@ class OutputApi:
     def export_epub(self, path):
         return self._rpc.call("output.exportEpub", {"path": os.path.abspath(path)})
 
+    def save_source(self):
+        """Save the current Book back to its existing source EPUB."""
+        return self._rpc.call("output.exportEpub", {})
+
 
 class Transaction:
     def __init__(self, rpc, result):

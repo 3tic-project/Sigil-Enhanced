@@ -220,6 +220,7 @@ public:
      */
     bool LoadFile(const QString &fullfilepath, bool is_internal = false,
                   bool preserve_current_on_error = false);
+    bool SaveCurrentBook();
     bool ExportCurrentBookCopy(const QString &fullfilepath);
 
     void SetValidationResults(const QList<ValidationResult> &results);

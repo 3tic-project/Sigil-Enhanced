@@ -170,13 +170,24 @@ class LiveSdkTest(unittest.TestCase):
 
     def test_output_api_requests_host_epub_export(self):
         transport = FakeTransport(
-            [{"jsonrpc": "2.0", "id": 1, "result": {
-                "exported": True, "path": "/tmp/output.epub",
-            }}]
+            [
+                {"jsonrpc": "2.0", "id": 1, "result": {
+                    "exported": True, "path": "/tmp/output.epub", "mode": "copy",
+                }},
+                {"jsonrpc": "2.0", "id": 2, "result": {
+                    "exported": True, "path": "/tmp/source.epub", "mode": "source",
+                }},
+            ]
         )
-        result = OutputApi(RpcClient(transport)).export_epub("/tmp/output.epub")
+        output = OutputApi(RpcClient(transport))
+        result = output.export_epub("/tmp/output.epub")
         self.assertTrue(result["exported"])
         self.assertEqual(transport.sent[0]["method"], "output.exportEpub")
+        self.assertEqual(transport.sent[0]["params"], {"path": "/tmp/output.epub"})
+
+        result = output.save_source()
+        self.assertEqual(result["mode"], "source")
+        self.assertEqual(transport.sent[1]["params"], {})
 
     def test_editor_selection_is_typed(self):
         rpc = RpcClient(

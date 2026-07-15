@@ -524,7 +524,6 @@ PluginSession::PluginSession(const Plugin &plugin,
     m_Authenticated(false),
     m_Ending(false),
     m_EndSignalScheduled(false),
-    m_Permissions(EffectivePermissions()),
     m_ProgressMaximum(0),
     m_ValidationErrorCount(0),
     m_InputEpubFile(nullptr),
@@ -634,11 +633,7 @@ bool PluginSession::Start(QString *error)
         TrackEditorTab(tab);
     }
     for (const QString &event : m_Plugin.get_events()) {
-        const QString permission = event.startsWith(QStringLiteral("editor."))
-            ? QStringLiteral("events.editor") : QStringLiteral("events.book");
-        if (SUPPORTED_EVENTS.contains(event) && m_Permissions.contains(permission)) {
-            m_Subscriptions.insert(event);
-        }
+        if (SUPPORTED_EVENTS.contains(event)) m_Subscriptions.insert(event);
     }
     connect(book->GetFolderKeeper(), &FolderKeeper::ResourceAdded, this,
             [this](const Resource *resource) {
@@ -828,7 +823,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("lifetime"), m_Plugin.get_lifetime() },
             { QStringLiteral("position_encoding"), QStringLiteral("utf-16") },
             { QStringLiteral("max_message_size"), static_cast<qint64>(PluginApi::DEFAULT_MAX_MESSAGE_SIZE) },
-            { QStringLiteral("permissions"), QJsonArray::fromStringList(m_Permissions) },
             { QStringLiteral("book_revision"), static_cast<qint64>(m_BookRevision) },
             { QStringLiteral("ui"), QJsonObject {
                 { QStringLiteral("language"), settings.uiLanguage() },
@@ -847,8 +841,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("session_id"), m_SessionId.toString(QUuid::WithoutBraces) },
             { QStringLiteral("plugin_name"), m_Plugin.get_name() },
-            { QStringLiteral("lifetime"), m_Plugin.get_lifetime() },
-            { QStringLiteral("permissions"), QJsonArray::fromStringList(m_Permissions) }
+            { QStringLiteral("lifetime"), m_Plugin.get_lifetime() }
         });
     } else if (method == QStringLiteral("session.finish")) {
         Respond(id, QJsonObject {{ QStringLiteral("accepted"), true }});
@@ -863,16 +856,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 RespondError(id, -32602, QStringLiteral("Event name is unsupported"));
                 return;
             }
-            const QString event = value.toString();
-            const QString permission = event.startsWith(QStringLiteral("editor."))
-                ? QStringLiteral("events.editor") : QStringLiteral("events.book");
-            if (!m_Permissions.contains(permission)) {
-                RespondError(id, PluginApi::PermissionDenied,
-                             QStringLiteral("Permission denied"),
-                             QJsonObject {{ QStringLiteral("permission"), permission }});
-                return;
-            }
-            events.insert(event);
+            events.insert(value.toString());
         }
         if (method == QStringLiteral("events.subscribe")) m_Subscriptions.unite(events);
         else m_Subscriptions.subtract(events);
@@ -882,25 +866,20 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("subscribed"), QJsonArray::fromStringList(subscribed) }
         });
     } else if (method == QStringLiteral("book.getRevision")) {
-        if (RequirePermission(QStringLiteral("book.read"), id)) {
-            Respond(id, QJsonObject {{ QStringLiteral("revision"), static_cast<qint64>(m_BookRevision) }});
-        }
+        Respond(id, QJsonObject {{ QStringLiteral("revision"), static_cast<qint64>(m_BookRevision) }});
     } else if (method == QStringLiteral("book.getInfo")) {
-        if (RequirePermission(QStringLiteral("book.read"), id)) {
-            QSharedPointer<Book> book = m_MainWindow->GetCurrentBook();
-            Respond(id, QJsonObject {
-                { QStringLiteral("epub_version"), book->GetConstOPF()->GetEpubVersion() },
-                { QStringLiteral("modified"), book->IsModified() },
-                { QStringLiteral("file_path"), m_MainWindow->GetCurrentFilePath() },
-                { QStringLiteral("revision"), static_cast<qint64>(m_BookRevision) }
-            });
-        }
+        QSharedPointer<Book> book = m_MainWindow->GetCurrentBook();
+        Respond(id, QJsonObject {
+            { QStringLiteral("epub_version"), book->GetConstOPF()->GetEpubVersion() },
+            { QStringLiteral("modified"), book->IsModified() },
+            { QStringLiteral("file_path"), m_MainWindow->GetCurrentFilePath() },
+            { QStringLiteral("revision"), static_cast<qint64>(m_BookRevision) }
+        });
     } else if (method == QStringLiteral("book.getMetadata")
                || method == QStringLiteral("book.getManifest")
                || method == QStringLiteral("book.getSpine")
                || method == QStringLiteral("book.getGuide")
                || method == QStringLiteral("book.getBindings")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QJsonObject sections = PackageSections(m_MainWindow->GetCurrentBook().data());
         if (method == QStringLiteral("book.getMetadata")) {
             Respond(id, QJsonObject {
@@ -924,14 +903,12 @@ void PluginSession::Dispatch(const QJsonObject &request)
             });
         }
     } else if (method == QStringLiteral("book.getSelection")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         QJsonArray items;
         for (Resource *resource : m_MainWindow->GetBookBrowserSelectedResources()) {
             items.append(ResourceInfo(resource));
         }
         Respond(id, QJsonObject {{ QStringLiteral("items"), items }});
     } else if (method == QStringLiteral("book.getCompatibilitySnapshot")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         QSharedPointer<Book> book = m_MainWindow->GetCurrentBook();
         OPFResource *opf = book->GetOPF();
         opf->InitialLoad();
@@ -993,7 +970,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             } }
         });
     } else if (method == QStringLiteral("validation.publishResults")) {
-        if (!RequirePermission(QStringLiteral("validation.publish"), id)) return;
         if (m_Plugin.get_type() != QStringLiteral("validation")) {
             RespondError(id, PluginApi::UnsupportedOperation,
                          QStringLiteral("Only validation plugins may publish validation results"));
@@ -1035,7 +1011,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         m_ValidationErrorCount = error_count;
         Respond(id, QJsonObject {{ QStringLiteral("accepted"), results.size() }});
     } else if (method == QStringLiteral("archive.listFiles")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         FolderKeeper *folder_keeper = m_MainWindow->GetCurrentBook()->GetFolderKeeper();
         const QString root_path = QFileInfo(folder_keeper->GetFullPathToMainFolder())
             .canonicalFilePath();
@@ -1072,7 +1047,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 ? QJsonValue(QString::number(next_offset)) : QJsonValue() }
         });
     } else if (method == QStringLiteral("archive.readFile")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QString book_path = params.value(QStringLiteral("book_path")).toString();
         QByteArray data;
         QString fingerprint;
@@ -1092,7 +1066,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             });
         }
     } else if (method == QStringLiteral("resource.list")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         QStringList types;
         for (const QJsonValue &type : params.value(QStringLiteral("types")).toArray()) {
             if (type.isString()) {
@@ -1122,7 +1095,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             ? QJsonValue() : QJsonValue(QString::number(next_offset)));
         Respond(id, result);
     } else if (method == QStringLiteral("resource.resolvePath")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         Resource *resource = m_MainWindow->GetCurrentBook()->GetFolderKeeper()->GetResourceByBookPathNoThrow(
             params.value(QStringLiteral("book_path")).toString());
         if (!resource) {
@@ -1131,7 +1103,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             Respond(id, ResourceInfo(resource));
         }
     } else if (method == QStringLiteral("resource.getInfo")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
         if (!resource) {
             RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
@@ -1139,7 +1110,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             Respond(id, ResourceInfo(resource));
         }
     } else if (method == QStringLiteral("resource.readText")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         TextResource *resource = ResolveTextResource(params.value(QStringLiteral("resource_id")).toString());
         if (!resource) {
             RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Text resource not found"));
@@ -1151,7 +1121,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             });
         }
     } else if (method == QStringLiteral("resource.readBinary")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
         QByteArray data;
         QString read_error;
@@ -1169,7 +1138,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             });
         }
     } else if (method == QStringLiteral("binary.openRead")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QString resource_id = params.value(QStringLiteral("resource_id")).toString();
         const QString requested_path = params.value(QStringLiteral("book_path")).toString();
         if (resource_id.isEmpty() == requested_path.isEmpty()) {
@@ -1259,7 +1227,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("chunk_size"), static_cast<qint64>(DEFAULT_BINARY_CHUNK_SIZE) }
         });
     } else if (method == QStringLiteral("binary.readChunk")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QString stream_id = params.value(QStringLiteral("stream_id")).toString();
         auto stream = m_BinaryReadStreams.find(stream_id);
         if (stream == m_BinaryReadStreams.end()) {
@@ -1284,7 +1251,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("eof"), stream->file->atEnd() }
         });
     } else if (method == QStringLiteral("binary.close")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QString stream_id = params.value(QStringLiteral("stream_id")).toString();
         auto stream = m_BinaryReadStreams.find(stream_id);
         if (stream == m_BinaryReadStreams.end()) {
@@ -1295,7 +1261,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         m_BinaryReadStreams.erase(stream);
         Respond(id, QJsonObject {{ QStringLiteral("closed"), true }});
     } else if (method == QStringLiteral("input.beginEpub")) {
-        if (!RequirePermission(QStringLiteral("input.submit"), id)) return;
         if (m_Plugin.get_type() != QStringLiteral("input")) {
             RespondError(id, PluginApi::UnsupportedOperation,
                          QStringLiteral("Only input plugins may submit an EPUB"));
@@ -1333,7 +1298,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("max_size"), MAX_INPUT_EPUB_SIZE }
         });
     } else if (method == QStringLiteral("input.writeChunk")) {
-        if (!RequirePermission(QStringLiteral("input.submit"), id)) return;
         const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
         auto upload = m_InputUploads.find(upload_id);
         if (upload == m_InputUploads.end()) {
@@ -1365,7 +1329,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("received"), upload->received }
         });
     } else if (method == QStringLiteral("input.finishEpub")) {
-        if (!RequirePermission(QStringLiteral("input.submit"), id)) return;
         const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
         const QString expected_sha256 = params.value(QStringLiteral("sha256")).toString().toLower();
         auto upload = m_InputUploads.find(upload_id);
@@ -1426,35 +1389,37 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("sha256"), actual_sha256 }
         });
     } else if (method == QStringLiteral("output.exportEpub")) {
-        if (!RequirePermission(QStringLiteral("output.export"), id)) return;
         if (m_Plugin.get_type() != QStringLiteral("output")) {
             RespondError(id, PluginApi::UnsupportedOperation,
                          QStringLiteral("Only output plugins may export an EPUB"));
             return;
         }
-        const QString path = params.value(QStringLiteral("path")).toString();
-        const QFileInfo target(path);
+        QString path = params.value(QStringLiteral("path")).toString();
         const QString current_file = m_MainWindow->GetCurrentFilePath();
+        if (path.isEmpty()) path = current_file;
+        const QFileInfo target(path);
         const QFileInfo current(current_file);
         const QString target_path = target.absoluteFilePath();
         const QString current_path = current.absoluteFilePath();
         const QString target_identity = target.exists() ? target.canonicalFilePath() : target_path;
         const QString current_identity = current.exists() ? current.canonicalFilePath() : current_path;
         if (path.isEmpty() || !target.isAbsolute()
-            || target.suffix().compare(QStringLiteral("epub"), Qt::CaseInsensitive) != 0
-            || (!current_file.isEmpty() && target_identity == current_identity)) {
+            || target.suffix().compare(QStringLiteral("epub"), Qt::CaseInsensitive) != 0) {
             RespondError(id, -32602,
-                         QStringLiteral("An absolute .epub path other than the current Book is required"));
+                         QStringLiteral("An absolute .epub path or a saved source Book is required"));
             return;
         }
         QScopedValueRollback<bool> modal_scope(m_InRequest, false);
-        const bool exported = m_MainWindow->ExportCurrentBookCopy(target_path);
+        const bool saving_source = !current_file.isEmpty() && target_identity == current_identity;
+        const bool exported = saving_source
+            ? m_MainWindow->SaveCurrentBook() : m_MainWindow->ExportCurrentBookCopy(target_path);
         Respond(id, QJsonObject {
             { QStringLiteral("exported"), exported },
-            { QStringLiteral("path"), target_path }
+            { QStringLiteral("path"), target_path },
+            { QStringLiteral("mode"), saving_source ? QStringLiteral("source")
+                                                     : QStringLiteral("copy") }
         });
     } else if (method == QStringLiteral("resource.readMany")) {
-        if (!RequirePermission(QStringLiteral("book.read"), id)) return;
         const QJsonArray ids = params.value(QStringLiteral("resource_ids")).toArray();
         if (ids.size() > 100) {
             RespondError(id, PluginApi::PayloadTooLarge, QStringLiteral("At most 100 resources may be read"));
@@ -1473,7 +1438,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         }
         Respond(id, QJsonObject {{ QStringLiteral("items"), items }});
     } else if (method == QStringLiteral("transaction.begin")) {
-        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
         if (m_Transaction) {
             RespondError(id, PluginApi::Busy, QStringLiteral("A transaction is already active"));
             return;
@@ -1507,7 +1471,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("checkpoint"), checkpoint }
         });
     } else if (method == QStringLiteral("transaction.readText")) {
-        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         TextResource *resource = ResolveTextResource(params.value(QStringLiteral("resource_id")).toString());
@@ -1526,7 +1489,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("staged"), transaction->HasChange(resource->GetIdentifier()) }
         });
     } else if (method == QStringLiteral("transaction.readBinary")) {
-        if (!RequirePermission(QStringLiteral("book.write.binary"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
@@ -1552,7 +1514,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("staged"), transaction->HasBinaryChange(resource->GetIdentifier()) }
         });
     } else if (method == QStringLiteral("transaction.writeBinary")) {
-        if (!RequirePermission(QStringLiteral("book.write.binary"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
@@ -1610,7 +1571,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         });
     } else if (method == QStringLiteral("transaction.replaceArchiveFile")
                || method == QStringLiteral("transaction.removeArchiveFile")) {
-        if (!RequirePermission(QStringLiteral("book.structure"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         const QString book_path = params.value(QStringLiteral("book_path")).toString();
@@ -1666,7 +1626,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("staged"), true }
         });
     } else if (method == QStringLiteral("transaction.addResource")) {
-        if (!RequirePermission(QStringLiteral("book.structure"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         const QString book_path = params.value(QStringLiteral("book_path")).toString();
@@ -1712,7 +1671,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("staged"), true }
         });
     } else if (method == QStringLiteral("transaction.removeResource")) {
-        if (!RequirePermission(QStringLiteral("book.structure"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
@@ -1744,7 +1702,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {{ QStringLiteral("staged"), true }});
     } else if (method == QStringLiteral("transaction.moveResource")
                || method == QStringLiteral("transaction.renameResource")) {
-        if (!RequirePermission(QStringLiteral("book.structure"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
@@ -1795,7 +1752,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("staged"), true }
         });
     } else if (method == QStringLiteral("transaction.replacePackage")) {
-        if (!RequirePermission(QStringLiteral("book.structure"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         quint64 expected_revision = 0;
@@ -1842,7 +1798,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         });
     } else if (method == QStringLiteral("transaction.replaceText")
                || method == QStringLiteral("transaction.applyTextEdits")) {
-        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         TextResource *resource = ResolveTextResource(params.value(QStringLiteral("resource_id")).toString());
@@ -1897,7 +1852,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         });
     } else if (method == QStringLiteral("transaction.validate")
                || method == QStringLiteral("transaction.preview")) {
-        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         QJsonArray conflicts;
@@ -2065,7 +2019,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         }
         Respond(id, result);
     } else if (method == QStringLiteral("transaction.commit")) {
-        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         QJsonArray conflicts;
@@ -2537,7 +2490,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("checkpoint_created"), checkpoint_required }
         });
     } else if (method == QStringLiteral("transaction.rollback")) {
-        if (!RequirePermission(QStringLiteral("book.write.text"), id)) return;
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
         const QString transaction_id = transaction->Id();
@@ -2551,11 +2503,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
         });
     } else if (method == QStringLiteral("editor.getState")
                || method == QStringLiteral("editor.getSelection")) {
-        if (RequirePermission(QStringLiteral("editor.read"), id)) {
-            Respond(id, EditorState());
-        }
+        Respond(id, EditorState());
     } else if (method == QStringLiteral("editor.getOpenTabs")) {
-        if (!RequirePermission(QStringLiteral("editor.read"), id)) return;
         QJsonArray tabs;
         for (ContentTab *tab : m_TabManager->GetContentTabs()) {
             tabs.append(ResourceInfo(tab->GetLoadedResource()));
@@ -2564,7 +2513,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
     } else if (method == QStringLiteral("editor.applyEdits")
                || method == QStringLiteral("editor.replaceSelection")
                || method == QStringLiteral("editor.insertText")) {
-        if (!RequirePermission(QStringLiteral("editor.write"), id)) return;
         ContentTab *tab = m_TabManager->GetCurrentContentTab();
         Resource *active_resource = tab ? tab->GetLoadedResource() : nullptr;
         const QString requested_id = params.value(QStringLiteral("resource_id")).toString();
@@ -2635,7 +2583,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         });
     } else if (method == QStringLiteral("editor.openResource")
                || method == QStringLiteral("editor.revealRange")) {
-        if (!RequirePermission(QStringLiteral("ui.navigate"), id)) return;
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
         if (!resource) {
             RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
@@ -2668,7 +2615,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         }
         Respond(id, EditorState());
     } else if (method == QStringLiteral("ui.showStatus")) {
-        if (!RequirePermission(QStringLiteral("ui.message"), id)) return;
         const QString message = params.value(QStringLiteral("message")).toString();
         const int duration = params.value(QStringLiteral("duration_ms")).toInt(5000);
         if (message.isEmpty() || message.size() > 4096 || duration < 0 || duration > 60000) {
@@ -2678,7 +2624,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         m_MainWindow->statusBar()->showMessage(message, duration);
         Respond(id, QJsonObject {{ QStringLiteral("shown"), true }});
     } else if (method == QStringLiteral("ui.showMessage")) {
-        if (!RequirePermission(QStringLiteral("ui.message"), id)) return;
         const QString title = params.value(QStringLiteral("title"))
             .toString(m_Plugin.get_name());
         const QString message = params.value(QStringLiteral("message")).toString();
@@ -2699,7 +2644,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         }
         Respond(id, QJsonObject {{ QStringLiteral("shown"), true }});
     } else if (method == QStringLiteral("ui.confirm")) {
-        if (!RequirePermission(QStringLiteral("ui.message"), id)) return;
         const QString title = params.value(QStringLiteral("title"))
             .toString(m_Plugin.get_name());
         const QString message = params.value(QStringLiteral("message")).toString();
@@ -2714,7 +2658,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {{ QStringLiteral("confirmed"), confirmed }});
     } else if (method == QStringLiteral("ui.chooseOpenFile")
                || method == QStringLiteral("ui.chooseSaveFile")) {
-        if (!RequirePermission(QStringLiteral("ui.fileDialog"), id)) return;
         const QString title = params.value(QStringLiteral("title"))
             .toString(m_Plugin.get_name());
         const QString filter = params.value(QStringLiteral("filter"))
@@ -2740,7 +2683,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("path"), path.isEmpty() ? QJsonValue() : QJsonValue(path) }
         });
     } else if (method == QStringLiteral("ui.progressBegin")) {
-        if (!RequirePermission(QStringLiteral("ui.progress"), id)) return;
         if (!m_ProgressId.isEmpty()) {
             RespondError(id, PluginApi::Busy, QStringLiteral("A progress operation is already active"));
             return;
@@ -2760,7 +2702,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("total"), maximum }
         });
     } else if (method == QStringLiteral("ui.progressUpdate")) {
-        if (!RequirePermission(QStringLiteral("ui.progress"), id)) return;
         if (params.value(QStringLiteral("progress_id")).toString() != m_ProgressId
             || m_ProgressId.isEmpty()) {
             RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Progress operation not found"));
@@ -2780,7 +2721,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         }
         Respond(id, QJsonObject {{ QStringLiteral("updated"), true }});
     } else if (method == QStringLiteral("ui.progressEnd")) {
-        if (!RequirePermission(QStringLiteral("ui.progress"), id)) return;
         if (params.value(QStringLiteral("progress_id")).toString() != m_ProgressId
             || m_ProgressId.isEmpty()) {
             RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Progress operation not found"));
@@ -2793,7 +2733,6 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {{ QStringLiteral("ended"), true }});
     } else if (method == QStringLiteral("editor.setCursor")
                || method == QStringLiteral("editor.setSelection")) {
-        if (!RequirePermission(QStringLiteral("editor.write"), id)) return;
         ContentTab *tab = m_TabManager->GetCurrentContentTab();
         Resource *active_resource = tab ? tab->GetLoadedResource() : nullptr;
         const QString requested_id = params.value(QStringLiteral("resource_id")).toString();
@@ -2853,14 +2792,6 @@ void PluginSession::Notify(const QString &method, QJsonObject params)
         { QStringLiteral("params"), params }
     }));
     m_Socket->flush();
-}
-
-bool PluginSession::RequirePermission(const QString &permission, const QJsonValue &id)
-{
-    if (m_Permissions.contains(permission)) return true;
-    RespondError(id, PluginApi::PermissionDenied, QStringLiteral("Permission denied"),
-                 QJsonObject {{ QStringLiteral("permission"), permission }});
-    return false;
 }
 
 QJsonObject PluginSession::ResourceInfo(Resource *resource) const
@@ -3021,32 +2952,6 @@ QString PluginSession::ResolveInterpreter() const
         return bundled;
     }
     return PluginDB::instance()->get_engine_path(QStringLiteral("python3.4"));
-}
-
-QStringList PluginSession::EffectivePermissions() const
-{
-    QStringList permissions = m_Plugin.get_permissions();
-    if (permissions.isEmpty()) {
-        permissions << QStringLiteral("book.read") << QStringLiteral("editor.read");
-        if (m_Plugin.get_type() == QStringLiteral("edit")) {
-            permissions << QStringLiteral("book.write.text") << QStringLiteral("book.write.binary")
-                        << QStringLiteral("book.structure") << QStringLiteral("editor.write")
-                        << QStringLiteral("ui.navigate") << QStringLiteral("ui.message");
-        }
-        if (m_Plugin.get_type() == QStringLiteral("validation")) {
-            permissions << QStringLiteral("validation.publish");
-        }
-        if (m_Plugin.get_type() == QStringLiteral("input")) {
-            permissions << QStringLiteral("input.submit");
-        }
-        if (m_Plugin.get_type() == QStringLiteral("output")) {
-            permissions << QStringLiteral("output.export");
-        }
-        permissions << QStringLiteral("events.book") << QStringLiteral("events.editor");
-        permissions << QStringLiteral("ui.progress");
-        permissions << QStringLiteral("ui.fileDialog");
-    }
-    return permissions;
 }
 
 void PluginSession::Finish(const QString &status, const QString &message)

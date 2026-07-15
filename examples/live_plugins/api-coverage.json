@@ -14,7 +14,8 @@
     "submit_epub_file": "LiveInputExample/plugin.py"
   },
   "OutputApi": {
-    "export_epub": "LiveOutputExample/plugin.py"
+    "export_epub": "LiveOutputExample/plugin.py",
+    "save_source": "LiveOutputExample/plugin.py"
   },
   "Transaction": {
     "read_text": "LiveTransactionLab/plugin.py",

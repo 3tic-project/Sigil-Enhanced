@@ -87,7 +87,6 @@ private:
     void RespondError(const QJsonValue &id, int code, const QString &message,
                       const QJsonValue &data = QJsonValue());
     void Notify(const QString &method, QJsonObject params = QJsonObject());
-    bool RequirePermission(const QString &permission, const QJsonValue &id);
     QJsonObject ResourceInfo(Resource *resource) const;
     Resource *ResolveResource(const QString &resource_id) const;
     TextResource *ResolveTextResource(const QString &resource_id) const;
@@ -101,7 +100,6 @@ private:
     QJsonObject EditorState() const;
     QJsonObject EditorEventState() const;
     QString ResolveInterpreter() const;
-    QStringList EffectivePermissions() const;
     void Finish(const QString &status, const QString &message = QString());
     void CleanServer();
 
@@ -118,7 +116,6 @@ private:
     bool m_Authenticated;
     bool m_Ending;
     bool m_EndSignalScheduled;
-    QStringList m_Permissions;
     QSet<QString> m_Subscriptions;
     QSet<ContentTab *> m_TrackedEditorTabs;
     QString m_ProgressId;

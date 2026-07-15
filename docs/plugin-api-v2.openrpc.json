@@ -28,7 +28,7 @@
     },
     {
       "name": "session.getInfo",
-      "summary": "Return the session ID, plugin name, and granted permissions.",
+      "summary": "Return the session ID, plugin name, and lifetime.",
       "params": [],
       "result": { "name": "result", "schema": { "type": "object" } }
     },
@@ -282,12 +282,13 @@
     },
     {
       "name": "output.exportEpub",
-      "summary": "Export the current in-memory Book through Sigil's EPUB exporter.",
+      "summary": "Save to the current source EPUB when path is omitted, or export a copy to an absolute EPUB path.",
       "paramStructure": "by-name",
-      "params": [{ "name": "path", "required": true, "schema": { "type": "string" } }],
-      "result": { "name": "result", "schema": { "type": "object", "required": ["exported", "path"], "properties": {
+      "params": [{ "name": "path", "schema": { "type": "string" } }],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["exported", "path", "mode"], "properties": {
         "exported": { "type": "boolean" },
-        "path": { "type": "string" }
+        "path": { "type": "string" },
+        "mode": { "type": "string", "enum": ["source", "copy"] }
       } } }
     },
     {
@@ -660,7 +661,7 @@
       "Position": { "type": "integer", "minimum": 0 },
       "SessionInfo": {
         "type": "object",
-        "required": ["session_id", "protocol_version", "api_version", "lifetime", "position_encoding", "max_message_size", "permissions"],
+        "required": ["session_id", "protocol_version", "api_version", "lifetime", "position_encoding", "max_message_size"],
         "properties": {
           "session_id": { "type": "string", "format": "uuid" },
           "protocol_version": { "type": "integer", "const": 1 },
@@ -668,7 +669,6 @@
           "lifetime": { "type": "string", "enum": ["command", "book-session"] },
           "position_encoding": { "type": "string", "const": "utf-16" },
           "max_message_size": { "type": "integer", "minimum": 1, "maximum": 33554432 },
-          "permissions": { "type": "array", "items": { "type": "string" } },
           "book_revision": { "$ref": "#/components/schemas/Revision" },
           "ui": { "type": "object" }
         }
@@ -855,7 +855,6 @@
       }
     },
     "errors": {
-      "PermissionDenied": { "code": -32001, "message": "Permission denied" },
       "BookClosed": { "code": -32002, "message": "Book closed" },
       "ResourceNotFound": { "code": -32003, "message": "Resource not found" },
       "RevisionConflict": { "code": -32004, "message": "Revision conflict" },
