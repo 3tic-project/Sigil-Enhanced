@@ -31,7 +31,7 @@ def run(plugin):
         require_valid(transaction)
         transaction.rollback()
 
-    with plugin.ui.progress("Running transaction probes", total=8) as progress:
+    with plugin.ui.progress("Running transaction probes", total=9) as progress:
         transaction = plugin.book.transaction("Add binary probe", checkpoint="required")
         transaction.add_resource(
             first_path, b"probe-v1", "application/octet-stream",
@@ -48,6 +48,16 @@ def run(plugin):
         require_valid(transaction)
         transaction.commit()
         progress.update(2)
+
+        probe = plugin.book.resolve_path(first_path)
+        materialized = plugin.book.materialize_temporary(probe)
+        transaction = plugin.book.transaction("Chunked binary rollback")
+        writer = transaction.begin_binary_write(probe, len(b"probe-v2"), probe.revision)
+        writer.write(b"probe-v2")
+        writer.finish()
+        transaction.write_binary_file(probe, materialized["path"], probe.revision)
+        require_valid(transaction)
+        transaction.rollback()
 
         probe = plugin.book.resolve_path(first_path)
         transaction = plugin.book.transaction("Rename binary probe")
@@ -94,6 +104,17 @@ def run(plugin):
         require_valid(transaction)
         transaction.commit()
 
+        metadata = plugin.book.get_metadata()
+        spine = plugin.book.get_spine()
+        transaction = plugin.book.transaction("Structured package round trip")
+        transaction.update_metadata(metadata["items"], metadata["revision"])
+        transaction.update_spine(
+            spine["items"], spine["attributes"], spine["revision"]
+        )
+        require_valid(transaction)
+        transaction.commit()
+        progress.update(8)
+
         snapshot = plugin.book.get_compatibility_snapshot()
         package = snapshot["package"]
         transaction = plugin.book.transaction("Package round trip", checkpoint="required")
@@ -102,7 +123,7 @@ def run(plugin):
         )
         require_valid(transaction)
         transaction.commit()
-        progress.update(8)
+        progress.update(9)
 
     plugin.ui.show_message("All disposable transaction probes completed.")
     return 0

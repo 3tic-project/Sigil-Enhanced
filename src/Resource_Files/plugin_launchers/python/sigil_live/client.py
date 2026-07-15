@@ -104,6 +104,62 @@ class BinaryReader:
         return False
 
 
+class _BinaryWriter:
+    def __init__(self, transaction, resource_id, size, expected_revision):
+        self._transaction = transaction
+        self._rpc = transaction._rpc
+        result = self._rpc.call(
+            "transaction.writeBinaryBegin",
+            transaction._params(
+                {
+                    "resource_id": resource_id,
+                    "size": size,
+                    "expected_revision": expected_revision,
+                }
+            ),
+        )
+        self.id = result["upload_id"]
+        self.chunk_size = result["chunk_size"]
+        self.received = 0
+        self._hash = hashlib.sha256()
+        self.finished = False
+
+    def write(self, data):
+        if self.finished:
+            raise RuntimeError("binary write is finished")
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError("binary data must be bytes-like")
+        value = memoryview(data)
+        for offset in range(0, len(value), self.chunk_size):
+            chunk = bytes(value[offset:offset + self.chunk_size])
+            if not chunk:
+                continue
+            result = self._rpc.call(
+                "transaction.writeBinaryChunk",
+                self._transaction._params(
+                    {
+                        "upload_id": self.id,
+                        "data_base64": base64.b64encode(chunk).decode("ascii"),
+                    }
+                ),
+            )
+            self._hash.update(chunk)
+            self.received = result["received"]
+        return self.received
+
+    def finish(self):
+        if self.finished:
+            raise RuntimeError("binary write is finished")
+        result = self._rpc.call(
+            "transaction.writeBinaryEnd",
+            self._transaction._params(
+                {"upload_id": self.id, "sha256": self._hash.hexdigest()}
+            ),
+        )
+        self.finished = True
+        return result
+
+
 class InputWriter:
     """Chunked, integrity-checked EPUB upload owned by an input plugin."""
 
@@ -257,10 +313,18 @@ class Transaction:
 
     def write_binary(self, resource, data, expected_revision=None):
         resource_id = resource.id if isinstance(resource, Resource) else resource
-        if expected_revision is None:
-            expected_revision = self.read_binary(resource_id)["revision"]
         if not isinstance(data, (bytes, bytearray, memoryview)):
             raise TypeError("binary data must be bytes-like")
+        if expected_revision is None:
+            expected_revision = (
+                resource.revision
+                if isinstance(resource, Resource)
+                else self.read_binary(resource_id)["revision"]
+            )
+        if len(data) > 4 * 1024 * 1024:
+            writer = self.begin_binary_write(resource_id, len(data), expected_revision)
+            writer.write(data)
+            return writer.finish()
         return self._rpc.call(
             "transaction.writeBinary",
             self._params(
@@ -272,12 +336,54 @@ class Transaction:
             ),
         )
 
+    def begin_binary_write(self, resource, size, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            if not isinstance(resource, Resource):
+                raise ValueError("expected_revision is required when resource is an ID")
+            expected_revision = resource.revision
+        return _BinaryWriter(self, resource_id, size, expected_revision)
+
+    def write_binary_file(self, resource, path, expected_revision=None):
+        writer = self.begin_binary_write(
+            resource, os.path.getsize(path), expected_revision
+        )
+        with open(path, "rb") as stream:
+            while True:
+                chunk = stream.read(writer.chunk_size)
+                if not chunk:
+                    break
+                writer.write(chunk)
+        return writer.finish()
+
     def replace_package(self, text, expected_revision):
         """Stage an authoritative OPF package document replacement."""
         return self._rpc.call(
             "transaction.replacePackage",
             self._params(
                 {"expected_revision": expected_revision, "text": text}
+            ),
+        )
+
+    def update_metadata(self, items, expected_revision=None):
+        if expected_revision is None:
+            expected_revision = self._rpc.call("book.getMetadata")["revision"]
+        return self._rpc.call(
+            "transaction.updateMetadata",
+            self._params({"items": list(items), "expected_revision": expected_revision}),
+        )
+
+    def update_spine(self, items, attributes=None, expected_revision=None):
+        if expected_revision is None:
+            expected_revision = self._rpc.call("book.getSpine")["revision"]
+        return self._rpc.call(
+            "transaction.updateSpine",
+            self._params(
+                {
+                    "items": list(items),
+                    "attributes": dict(attributes or {}),
+                    "expected_revision": expected_revision,
+                }
             ),
         )
 
@@ -490,7 +596,17 @@ class BookApi:
 
     def read_many(self, resources):
         ids = [item.id if isinstance(item, Resource) else item for item in resources]
-        return self._rpc.call("resource.readMany", {"resource_ids": ids})["items"]
+        items = []
+        cursor = None
+        while True:
+            params = {"resource_ids": ids}
+            if cursor is not None:
+                params["cursor"] = cursor
+            result = self._rpc.call("resource.readMany", params)
+            items.extend(result["items"])
+            cursor = result.get("next_cursor")
+            if cursor is None:
+                return items
 
     def read_binary(self, resource):
         resource_id = resource.id if isinstance(resource, Resource) else resource
@@ -512,6 +628,16 @@ class BookApi:
             self._rpc,
             self._rpc.call("binary.openRead", {"book_path": book_path}),
         )
+
+    def materialize_temporary(self, resource=None, book_path=None):
+        if (resource is None) == (book_path is None):
+            raise ValueError("provide exactly one of resource or book_path")
+        params = {}
+        if resource is not None:
+            params["resource_id"] = resource.id if isinstance(resource, Resource) else resource
+        else:
+            params["book_path"] = book_path
+        return self._rpc.call("resource.materializeTemporary", params)
 
     def transaction(self, label="Plugin changes", checkpoint="auto"):
         result = self._rpc.call(

@@ -33,6 +33,7 @@ IMPLEMENTED_METHODS = {
     "resource.readText",
     "resource.readBinary",
     "resource.readMany",
+    "resource.materializeTemporary",
     "binary.openRead",
     "binary.readChunk",
     "binary.close",
@@ -62,6 +63,9 @@ IMPLEMENTED_METHODS = {
     "transaction.readText",
     "transaction.readBinary",
     "transaction.writeBinary",
+    "transaction.writeBinaryBegin",
+    "transaction.writeBinaryChunk",
+    "transaction.writeBinaryEnd",
     "transaction.replaceArchiveFile",
     "transaction.removeArchiveFile",
     "transaction.addResource",
@@ -69,6 +73,8 @@ IMPLEMENTED_METHODS = {
     "transaction.moveResource",
     "transaction.renameResource",
     "transaction.replacePackage",
+    "transaction.updateMetadata",
+    "transaction.updateSpine",
     "transaction.replaceText",
     "transaction.applyTextEdits",
     "transaction.validate",
@@ -99,7 +105,7 @@ class OpenRpcContractTest(unittest.TestCase):
         errors = self.schema["components"]["errors"]
         self.assertEqual(
             {value["code"] for value in errors.values()},
-            set(range(-32012, -32000)),
+            set(range(-32012, -32001)),
         )
 
     def test_all_local_schema_references_resolve(self):

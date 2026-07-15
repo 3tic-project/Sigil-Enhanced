@@ -23,7 +23,11 @@
     "apply_edits": "LiveTransactionLab/plugin.py",
     "read_binary": "LiveTransactionLab/plugin.py",
     "write_binary": "LiveTransactionLab/plugin.py",
+    "begin_binary_write": "LiveTransactionLab/plugin.py",
+    "write_binary_file": "LiveTransactionLab/plugin.py",
     "replace_package": "LiveTransactionLab/plugin.py",
+    "update_metadata": "LiveTransactionLab/plugin.py",
+    "update_spine": "LiveTransactionLab/plugin.py",
     "replace_archive_file": "LiveTransactionLab/plugin.py",
     "remove_archive_file": "LiveTransactionLab/plugin.py",
     "add_resource": "LiveTransactionLab/plugin.py",
@@ -56,6 +60,7 @@
     "read_binary": "LiveApiShowcase/plugin.py",
     "open_binary": "LiveApiShowcase/plugin.py",
     "open_archive_file": "LiveOutputExample/plugin.py",
+    "materialize_temporary": "LiveApiShowcase/plugin.py",
     "transaction": "LiveTransactionLab/plugin.py"
   },
   "EditorApi": {

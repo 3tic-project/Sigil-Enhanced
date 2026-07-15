@@ -30,6 +30,7 @@ class Resource;
 class TabManager;
 class TextResource;
 class QTemporaryFile;
+class QTemporaryDir;
 
 namespace PluginApi
 {
@@ -82,6 +83,15 @@ private:
         qint64 received = 0;
     };
 
+    struct BinaryWriteUpload {
+        QTemporaryFile *file = nullptr;
+        QString transactionId;
+        QString resourceId;
+        quint64 expectedRevision = 0;
+        qint64 expectedSize = 0;
+        qint64 received = 0;
+    };
+
     void Dispatch(const QJsonObject &request);
     void Respond(const QJsonValue &id, const QJsonValue &result);
     void RespondError(const QJsonValue &id, int code, const QString &message,
@@ -94,6 +104,7 @@ private:
     void TrackEditorTab(ContentTab *tab);
     bool AcquireWriter();
     void ReleaseWriter();
+    void ClearBinaryWriteUploads();
     PluginApi::TextTransaction *RequireTransaction(const QJsonObject &params,
                                                    const QJsonValue &request_id);
     quint64 Revision(Resource *resource) const;
@@ -125,7 +136,10 @@ private:
     QString m_Status;
     QHash<QString, quint64> m_ResourceRevisions;
     QHash<QString, BinaryReadStream> m_BinaryReadStreams;
+    QHash<QString, BinaryWriteUpload> m_BinaryWriteUploads;
     QHash<QString, InputUpload> m_InputUploads;
+    QList<QTemporaryFile *> m_MaterializedFiles;
+    QTemporaryDir *m_MaterializationRoot;
     QTemporaryFile *m_InputEpubFile;
     bool m_InputEpubAccepted;
     quint64 m_BookRevision;

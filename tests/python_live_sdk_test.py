@@ -145,6 +145,32 @@ class LiveSdkTest(unittest.TestCase):
         self.assertIsNone(reader.resource_id)
         self.assertEqual(transport.sent[0]["params"], {"book_path": "META-INF/large.bin"})
 
+    def test_book_api_materializes_one_resource_without_a_target_path(self):
+        transport = FakeTransport(
+            [{"jsonrpc": "2.0", "id": 1, "result": {
+                "path": "/tmp/session/image.png", "book_path": "Images/image.png",
+                "resource_id": "image", "revision": 3, "size": 10, "sha256": "0" * 64,
+            }}]
+        )
+        result = BookApi(RpcClient(transport)).materialize_temporary("image")
+        self.assertEqual(result["path"], "/tmp/session/image.png")
+        self.assertEqual(transport.sent[0]["params"], {"resource_id": "image"})
+
+    def test_book_read_many_follows_continuation_tokens(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "items": [{"resource_id": "a", "text": "A", "revision": 1}],
+                "next_cursor": "1",
+            }},
+            {"jsonrpc": "2.0", "id": 2, "result": {
+                "items": [{"resource_id": "b", "text": "B", "revision": 1}],
+                "next_cursor": None,
+            }},
+        ])
+        items = BookApi(RpcClient(transport)).read_many(["a", "b"])
+        self.assertEqual([item["resource_id"] for item in items], ["a", "b"])
+        self.assertEqual(transport.sent[1]["params"]["cursor"], "1")
+
     def test_input_api_chunks_and_hashes_epub_uploads(self):
         transport = FakeTransport(
             [
@@ -353,6 +379,54 @@ class LiveSdkTest(unittest.TestCase):
         tx.write_binary("image", b"\x00\xff", expected_revision=2)
         self.assertEqual(transport.sent[0]["method"], "transaction.writeBinary")
         self.assertEqual(transport.sent[0]["params"]["data_base64"], "AP8=")
+
+    def test_transaction_binary_writer_chunks_and_hashes_data(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "upload_id": "upload", "chunk_size": 3, "max_size": 100,
+            }},
+            {"jsonrpc": "2.0", "id": 2, "result": {"received": 3}},
+            {"jsonrpc": "2.0", "id": 3, "result": {"received": 5}},
+            {"jsonrpc": "2.0", "id": 4, "result": {"staged": True}},
+        ])
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        writer = tx.begin_binary_write(
+            Resource("image", "Images/a.png", "image/png", "image", 4, True), 5
+        )
+        writer.write(b"hello")
+        self.assertTrue(writer.finish()["staged"])
+        self.assertEqual(
+            [item["method"] for item in transport.sent],
+            ["transaction.writeBinaryBegin", "transaction.writeBinaryChunk",
+             "transaction.writeBinaryChunk", "transaction.writeBinaryEnd"],
+        )
+        self.assertEqual(
+            transport.sent[-1]["params"]["sha256"],
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        )
+
+    def test_transaction_updates_structured_metadata_and_spine(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {"revision": 7, "items": []}},
+            {"jsonrpc": "2.0", "id": 2, "result": {"staged": True}},
+            {"jsonrpc": "2.0", "id": 3, "result": {"revision": 7, "items": []}},
+            {"jsonrpc": "2.0", "id": 4, "result": {"staged": True}},
+        ])
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        tx.update_metadata([{"name": "dc:title", "content": "Title"}])
+        tx.update_spine([{"idref": "chapter", "linear": "yes"}], {"toc": "ncx"})
+        self.assertEqual(transport.sent[1]["method"], "transaction.updateMetadata")
+        self.assertEqual(transport.sent[3]["params"]["attributes"], {"toc": "ncx"})
 
     def test_archive_api_paginates_reads_and_stages_by_fingerprint(self):
         transport = FakeTransport(

@@ -195,8 +195,30 @@
       "name": "resource.readMany",
       "summary": "Read at most 100 current text resources.",
       "paramStructure": "by-name",
-      "params": [{ "name": "resource_ids", "required": true, "schema": { "type": "array", "maxItems": 100, "items": { "type": "string" } } }],
-      "result": { "name": "result", "schema": { "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "allOf": [{ "$ref": "#/components/schemas/TextContent" }, { "type": "object", "required": ["resource_id"], "properties": { "resource_id": { "type": "string" } } }] } } } } }
+      "params": [
+        { "name": "resource_ids", "required": true, "schema": { "type": "array", "maxItems": 100, "items": { "type": "string" } } },
+        { "name": "cursor", "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["items", "next_cursor"], "properties": {
+        "items": { "type": "array", "items": { "allOf": [{ "$ref": "#/components/schemas/TextContent" }, { "type": "object", "required": ["resource_id"], "properties": { "resource_id": { "type": "string" } } }] } },
+        "next_cursor": { "type": ["string", "null"] }
+      } } }
+    },
+    {
+      "name": "resource.materializeTemporary",
+      "summary": "Materialize one live resource or archive file into a session-owned temporary file.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "schema": { "type": "string" } },
+        { "name": "book_path", "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object", "required": ["path", "book_path", "resource_id", "revision", "size", "sha256"], "properties": {
+        "path": { "type": "string" }, "book_path": { "type": "string" },
+        "resource_id": { "type": ["string", "null"] },
+        "revision": { "oneOf": [{ "$ref": "#/components/schemas/Revision" }, { "type": "null" }] },
+        "size": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      } } }
     },
     {
       "name": "binary.openRead",
@@ -514,6 +536,40 @@
       "result": { "name": "result", "schema": { "type": "object" } }
     },
     {
+      "name": "transaction.writeBinaryBegin",
+      "summary": "Begin a chunked binary replacement up to 256 MiB.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "size", "required": true, "schema": { "type": "integer", "minimum": 0, "maximum": 268435456 } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.writeBinaryChunk",
+      "summary": "Append one base64 chunk to a binary transaction upload.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "upload_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "data_base64", "required": true, "schema": { "type": "string", "contentEncoding": "base64" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.writeBinaryEnd",
+      "summary": "Verify SHA-256 and stage a completed binary transaction upload.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "upload_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "sha256", "required": true, "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
       "name": "transaction.addResource",
       "summary": "Stage a manifested or unmanifested text/binary resource addition.",
       "paramStructure": "by-name",
@@ -600,6 +656,35 @@
         { "name": "resource_id", "required": true, "schema": { "type": "string" } },
         { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
         { "name": "text", "required": true, "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.updateMetadata",
+      "summary": "Replace package metadata entries from structured JSON within the transaction.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "items", "required": true, "schema": { "type": "array", "items": { "type": "object", "required": ["name", "content"], "properties": {
+          "name": { "type": "string" }, "content": { "type": "string" },
+          "attributes": { "type": "object", "additionalProperties": { "type": "string" } }
+        } } } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
+    },
+    {
+      "name": "transaction.updateSpine",
+      "summary": "Replace package spine items and update spine attributes within the transaction.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "items", "required": true, "schema": { "type": "array", "items": { "type": "object", "required": ["idref"], "properties": {
+          "idref": { "type": "string" }, "id": { "type": "string" },
+          "linear": { "type": "string" }, "properties": { "type": "string" }
+        } } } },
+        { "name": "attributes", "schema": { "type": "object", "additionalProperties": { "type": "string" } } }
       ],
       "result": { "name": "result", "schema": { "type": "object" } }
     },

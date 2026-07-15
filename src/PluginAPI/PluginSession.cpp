@@ -14,6 +14,7 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QDirIterator>
+#include <QDomDocument>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -31,6 +32,7 @@
 #include <QSet>
 #include <QStatusBar>
 #include <QTemporaryFile>
+#include <QTemporaryDir>
 #include <QWriteLocker>
 #include <QTimer>
 #include <QXmlStreamReader>
@@ -67,6 +69,8 @@ constexpr qsizetype MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024;
 constexpr qsizetype DEFAULT_BINARY_CHUNK_SIZE = 1024 * 1024;
 constexpr qsizetype MAX_BINARY_CHUNK_SIZE = 2 * 1024 * 1024;
 constexpr qint64 MAX_INPUT_EPUB_SIZE = 2LL * 1024 * 1024 * 1024;
+constexpr qint64 MAX_TRANSACTION_BINARY_SIZE = 256LL * 1024 * 1024;
+constexpr qsizetype MAX_READ_MANY_RESPONSE_SIZE = 6 * 1024 * 1024;
 
 const QSet<QString> SUPPORTED_EVENTS {
     QStringLiteral("editor.activeChanged"),
@@ -242,7 +246,8 @@ bool ReadResultPosition(const QJsonValue &value, int *position)
     return true;
 }
 
-bool ReadBinaryFile(Resource *resource, QByteArray *data, QString *error)
+bool ReadBinaryFile(Resource *resource, QByteArray *data, QString *error,
+                    qint64 max_size = MAX_INLINE_BINARY_SIZE)
 {
     if (!resource || qobject_cast<TextResource *>(resource)) {
         if (error) *error = QStringLiteral("Resource is not binary");
@@ -254,11 +259,118 @@ bool ReadBinaryFile(Resource *resource, QByteArray *data, QString *error)
         if (error) *error = file.errorString();
         return false;
     }
-    if (file.size() > MAX_INLINE_BINARY_SIZE) {
-        if (error) *error = QStringLiteral("Binary resource exceeds the inline size limit");
+    if (file.size() > max_size) {
+        if (error) *error = QStringLiteral("Binary resource exceeds the size limit");
         return false;
     }
     *data = file.readAll();
+    return true;
+}
+
+QDomElement DirectChildElement(const QDomElement &parent, const QString &local_name)
+{
+    for (QDomNode child = parent.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        const QDomElement element = child.toElement();
+        if (!element.isNull() && (element.localName() == local_name
+                                  || element.tagName() == local_name)) {
+            return element;
+        }
+    }
+    return QDomElement();
+}
+
+bool ParsePackageDom(const QString &source, QDomDocument *document, QString *error)
+{
+    QString message;
+    int line = 0;
+    int column = 0;
+    if (!document->setContent(source, true, &message, &line, &column)) {
+        if (error) {
+            *error = QStringLiteral("Package XML is not well formed at %1:%2: %3")
+                .arg(line).arg(column).arg(message);
+        }
+        return false;
+    }
+    return true;
+}
+
+bool ApplyMetadataUpdate(const QString &source, const QJsonArray &entries,
+                         QString *updated, QString *error)
+{
+    QDomDocument document;
+    if (!ParsePackageDom(source, &document, error)) return false;
+    QDomElement metadata = DirectChildElement(document.documentElement(),
+                                              QStringLiteral("metadata"));
+    if (metadata.isNull()) {
+        if (error) *error = QStringLiteral("Package metadata element is missing");
+        return false;
+    }
+    while (!metadata.firstChild().isNull()) metadata.removeChild(metadata.firstChild());
+    for (const QJsonValue &value : entries) {
+        const QJsonObject entry = value.toObject();
+        const QString name = entry.value(QStringLiteral("name")).toString();
+        if (name.isEmpty() || !value.isObject()
+            || !entry.value(QStringLiteral("content")).isString()) {
+            if (error) *error = QStringLiteral("Metadata entries require name and content strings");
+            return false;
+        }
+        QDomElement element = document.createElement(name);
+        const QJsonObject attributes = entry.value(QStringLiteral("attributes")).toObject();
+        for (auto it = attributes.constBegin(); it != attributes.constEnd(); ++it) {
+            if (!it.value().isString()) {
+                if (error) *error = QStringLiteral("Metadata attributes must be strings");
+                return false;
+            }
+            element.setAttribute(it.key(), it.value().toString());
+        }
+        element.appendChild(document.createTextNode(entry.value(QStringLiteral("content")).toString()));
+        metadata.appendChild(element);
+    }
+    *updated = document.toString(-1);
+    return true;
+}
+
+bool ApplySpineUpdate(const QString &source, const QJsonArray &items,
+                      const QJsonObject &attributes, QString *updated, QString *error)
+{
+    QDomDocument document;
+    if (!ParsePackageDom(source, &document, error)) return false;
+    QDomElement spine = DirectChildElement(document.documentElement(), QStringLiteral("spine"));
+    if (spine.isNull()) {
+        if (error) *error = QStringLiteral("Package spine element is missing");
+        return false;
+    }
+    while (!spine.firstChild().isNull()) spine.removeChild(spine.firstChild());
+    for (auto it = attributes.constBegin(); it != attributes.constEnd(); ++it) {
+        if (!it.value().isString()) {
+            if (error) *error = QStringLiteral("Spine attributes must be strings");
+            return false;
+        }
+        spine.setAttribute(it.key(), it.value().toString());
+    }
+    for (const QJsonValue &value : items) {
+        const QJsonObject item = value.toObject();
+        const QString idref = item.value(QStringLiteral("idref")).toString();
+        if (!value.isObject() || idref.isEmpty()) {
+            if (error) *error = QStringLiteral("Spine items require an idref string");
+            return false;
+        }
+        QDomElement element = document.createElement(QStringLiteral("itemref"));
+        element.setAttribute(QStringLiteral("idref"), idref);
+        for (const QString &name : { QStringLiteral("id"), QStringLiteral("linear"),
+                                     QStringLiteral("properties") }) {
+            const QJsonValue attribute = item.value(name);
+            if (!attribute.isUndefined()) {
+                if (!attribute.isString()) {
+                    if (error) *error = QStringLiteral("Spine item attributes must be strings");
+                    return false;
+                }
+                element.setAttribute(name, attribute.toString());
+            }
+        }
+        spine.appendChild(element);
+    }
+    *updated = document.toString(-1);
     return true;
 }
 
@@ -526,6 +638,7 @@ PluginSession::PluginSession(const Plugin &plugin,
     m_EndSignalScheduled(false),
     m_ProgressMaximum(0),
     m_ValidationErrorCount(0),
+    m_MaterializationRoot(nullptr),
     m_InputEpubFile(nullptr),
     m_InputEpubAccepted(false),
     m_BookRevision(1),
@@ -885,12 +998,16 @@ void PluginSession::Dispatch(const QJsonObject &request)
             Respond(id, QJsonObject {
                 { QStringLiteral("items"), sections.value(QStringLiteral("metadata")) },
                 { QStringLiteral("xml"), sections.value(QStringLiteral("metadata_xml")) },
-                { QStringLiteral("package"), sections.value(QStringLiteral("package")) }
+                { QStringLiteral("package"), sections.value(QStringLiteral("package")) },
+                { QStringLiteral("revision"), static_cast<qint64>(Revision(
+                    m_MainWindow->GetCurrentBook()->GetOPF())) }
             });
         } else if (method == QStringLiteral("book.getSpine")) {
             Respond(id, QJsonObject {
                 { QStringLiteral("items"), sections.value(QStringLiteral("spine")) },
-                { QStringLiteral("attributes"), sections.value(QStringLiteral("spine_attributes")) }
+                { QStringLiteral("attributes"), sections.value(QStringLiteral("spine_attributes")) },
+                { QStringLiteral("revision"), static_cast<qint64>(Revision(
+                    m_MainWindow->GetCurrentBook()->GetOPF())) }
             });
         } else {
             const QHash<QString, QString> section_names {
@@ -1137,6 +1254,98 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
             });
         }
+    } else if (method == QStringLiteral("resource.materializeTemporary")) {
+        const QString resource_id = params.value(QStringLiteral("resource_id")).toString();
+        const QString requested_path = params.value(QStringLiteral("book_path")).toString();
+        if (resource_id.isEmpty() == requested_path.isEmpty()) {
+            RespondError(id, -32602,
+                         QStringLiteral("Provide exactly one of resource_id or book_path"));
+            return;
+        }
+        Resource *resource = resource_id.isEmpty() ? nullptr : ResolveResource(resource_id);
+        QString source_path;
+        QString book_path;
+        if (!resource_id.isEmpty() && !resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Resource not found"));
+            return;
+        } else if (resource) {
+            source_path = resource->GetFullPath();
+            book_path = resource->GetRelativePath();
+        } else {
+            QString path_error;
+            if (!ResolveArchiveFile(m_MainWindow->GetCurrentBook()->GetFolderKeeper(),
+                                    requested_path, &source_path, &path_error)) {
+                RespondError(id, PluginApi::ResourceNotFound, path_error);
+                return;
+            }
+            book_path = requested_path;
+        }
+        if (!m_MaterializationRoot) {
+            m_MaterializationRoot = new QTemporaryDir(
+                QDir::tempPath() + QStringLiteral("/sigil-plugin-session-XXXXXX"));
+            if (!m_MaterializationRoot->isValid()) {
+                const QString error = m_MaterializationRoot->errorString();
+                delete m_MaterializationRoot;
+                m_MaterializationRoot = nullptr;
+                RespondError(id, PluginApi::UnsupportedOperation, error);
+                return;
+            }
+        }
+        const QString suffix = QFileInfo(book_path).suffix();
+        const QString pattern = m_MaterializationRoot->path()
+            + QStringLiteral("/materialized-XXXXXX")
+            + (suffix.isEmpty() ? QString() : QLatin1Char('.') + suffix);
+        auto *temporary = new QTemporaryFile(pattern, this);
+        if (!temporary->open()) {
+            const QString error = temporary->errorString();
+            delete temporary;
+            RespondError(id, PluginApi::UnsupportedOperation, error);
+            return;
+        }
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        qint64 total = 0;
+        QString copy_error;
+        if (TextResource *text = qobject_cast<TextResource *>(resource)) {
+            text->InitialLoad();
+            const QByteArray data = text->GetText().toUtf8();
+            if (temporary->write(data) != data.size()) copy_error = temporary->errorString();
+            hash.addData(data);
+            total = data.size();
+        } else {
+            std::unique_ptr<QReadLocker> locker;
+            if (resource) locker = std::make_unique<QReadLocker>(&resource->GetLock());
+            QFile source(source_path);
+            if (!source.open(QIODevice::ReadOnly)) copy_error = source.errorString();
+            while (copy_error.isEmpty() && !source.atEnd()) {
+                const QByteArray chunk = source.read(DEFAULT_BINARY_CHUNK_SIZE);
+                if (chunk.isEmpty() && source.error() != QFile::NoError) {
+                    copy_error = source.errorString();
+                } else if (temporary->write(chunk) != chunk.size()) {
+                    copy_error = temporary->errorString();
+                } else {
+                    hash.addData(chunk);
+                    total += chunk.size();
+                }
+            }
+        }
+        if (!copy_error.isEmpty() || !temporary->flush()) {
+            if (copy_error.isEmpty()) copy_error = temporary->errorString();
+            delete temporary;
+            RespondError(id, PluginApi::UnsupportedOperation, copy_error);
+            return;
+        }
+        temporary->close();
+        m_MaterializedFiles.append(temporary);
+        Respond(id, QJsonObject {
+            { QStringLiteral("path"), temporary->fileName() },
+            { QStringLiteral("book_path"), book_path },
+            { QStringLiteral("resource_id"), resource ? QJsonValue(resource->GetIdentifier())
+                                                        : QJsonValue() },
+            { QStringLiteral("revision"), resource
+                ? QJsonValue(static_cast<qint64>(Revision(resource))) : QJsonValue() },
+            { QStringLiteral("size"), total },
+            { QStringLiteral("sha256"), QString::fromLatin1(hash.result().toHex()) }
+        });
     } else if (method == QStringLiteral("binary.openRead")) {
         const QString resource_id = params.value(QStringLiteral("resource_id")).toString();
         const QString requested_path = params.value(QStringLiteral("book_path")).toString();
@@ -1425,18 +1634,45 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, PluginApi::PayloadTooLarge, QStringLiteral("At most 100 resources may be read"));
             return;
         }
+        bool cursor_ok = false;
+        const int offset = params.value(QStringLiteral("cursor")).isUndefined()
+            ? 0 : params.value(QStringLiteral("cursor")).toString().toInt(&cursor_ok);
+        if (offset < 0 || offset > ids.size()
+            || (!params.value(QStringLiteral("cursor")).isUndefined() && !cursor_ok)) {
+            RespondError(id, -32602, QStringLiteral("readMany cursor is invalid"));
+            return;
+        }
         QJsonArray items;
-        for (const QJsonValue &value : ids) {
+        qsizetype response_size = 128;
+        int next_offset = ids.size();
+        for (int index = offset; index < ids.size(); ++index) {
+            const QJsonValue value = ids.at(index);
             TextResource *resource = ResolveTextResource(value.toString());
             if (!resource) continue;
             resource->InitialLoad();
-            items.append(QJsonObject {
+            const QJsonObject item {
                 { QStringLiteral("resource_id"), resource->GetIdentifier() },
                 { QStringLiteral("text"), resource->GetText() },
                 { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
-            });
+            };
+            const qsizetype item_size = QJsonDocument(item).toJson(QJsonDocument::Compact).size();
+            if (response_size + item_size > MAX_READ_MANY_RESPONSE_SIZE) {
+                if (items.isEmpty()) {
+                    RespondError(id, PluginApi::PayloadTooLarge,
+                                 QStringLiteral("A text resource exceeds the readMany response limit"));
+                    return;
+                }
+                next_offset = index;
+                break;
+            }
+            items.append(item);
+            response_size += item_size;
         }
-        Respond(id, QJsonObject {{ QStringLiteral("items"), items }});
+        Respond(id, QJsonObject {
+            { QStringLiteral("items"), items },
+            { QStringLiteral("next_cursor"), next_offset < ids.size()
+                ? QJsonValue(QString::number(next_offset)) : QJsonValue() }
+        });
     } else if (method == QStringLiteral("transaction.begin")) {
         if (m_Transaction) {
             RespondError(id, PluginApi::Busy, QStringLiteral("A transaction is already active"));
@@ -1567,6 +1803,142 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("resource_id"), resource->GetIdentifier() },
             { QStringLiteral("base_revision"), static_cast<qint64>(required_revision) },
+            { QStringLiteral("staged"), true }
+        });
+    } else if (method == QStringLiteral("transaction.writeBinaryBegin")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
+        quint64 expected_revision = 0;
+        const qint64 expected_size = params.value(QStringLiteral("size")).toInteger(-1);
+        if (!resource || qobject_cast<TextResource *>(resource)) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Binary resource not found"));
+            return;
+        }
+        if (!ReadRevision(params, QStringLiteral("expected_revision"), &expected_revision)
+            || expected_size < 0 || expected_size > MAX_TRANSACTION_BINARY_SIZE) {
+            RespondError(id, -32602,
+                         QStringLiteral("A valid expected_revision and size are required"));
+            return;
+        }
+        QByteArray current_data;
+        QString read_error;
+        if (!ReadBinaryFile(resource, &current_data, &read_error,
+                            MAX_TRANSACTION_BINARY_SIZE)) {
+            RespondError(id, PluginApi::PayloadTooLarge, read_error);
+            return;
+        }
+        quint64 required_revision = 0;
+        transaction->ReadBinary(resource->GetIdentifier(), current_data, Revision(resource),
+                                &required_revision);
+        if (expected_revision != required_revision) {
+            RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"));
+            return;
+        }
+        auto *file = new QTemporaryFile(this);
+        if (!file->open()) {
+            const QString error = file->errorString();
+            delete file;
+            RespondError(id, PluginApi::UnsupportedOperation, error);
+            return;
+        }
+        const QString upload_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        BinaryWriteUpload upload;
+        upload.file = file;
+        upload.transactionId = transaction->Id();
+        upload.resourceId = resource->GetIdentifier();
+        upload.expectedRevision = expected_revision;
+        upload.expectedSize = expected_size;
+        m_BinaryWriteUploads.insert(upload_id, upload);
+        Respond(id, QJsonObject {
+            { QStringLiteral("upload_id"), upload_id },
+            { QStringLiteral("chunk_size"), static_cast<qint64>(DEFAULT_BINARY_CHUNK_SIZE) },
+            { QStringLiteral("max_size"), MAX_TRANSACTION_BINARY_SIZE }
+        });
+    } else if (method == QStringLiteral("transaction.writeBinaryChunk")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
+        auto upload = m_BinaryWriteUploads.find(upload_id);
+        if (upload == m_BinaryWriteUploads.end()
+            || upload->transactionId != transaction->Id()) {
+            RespondError(id, PluginApi::ResourceNotFound,
+                         QStringLiteral("Binary write upload not found"));
+            return;
+        }
+        const auto decoded = QByteArray::fromBase64Encoding(
+            params.value(QStringLiteral("data_base64")).toString().toLatin1(),
+            QByteArray::AbortOnBase64DecodingErrors);
+        if (decoded.decodingStatus != QByteArray::Base64DecodingStatus::Ok
+            || decoded.decoded.isEmpty() || decoded.decoded.size() > MAX_BINARY_CHUNK_SIZE) {
+            RespondError(id, -32602, QStringLiteral("Binary chunk is empty, invalid, or too large"));
+            return;
+        }
+        if (upload->received + decoded.decoded.size() > upload->expectedSize
+            || upload->file->write(decoded.decoded) != decoded.decoded.size()) {
+            RespondError(id, PluginApi::PayloadTooLarge,
+                         QStringLiteral("Binary write exceeds its declared size"));
+            return;
+        }
+        upload->received += decoded.decoded.size();
+        Respond(id, QJsonObject {
+            { QStringLiteral("upload_id"), upload_id },
+            { QStringLiteral("received"), upload->received }
+        });
+    } else if (method == QStringLiteral("transaction.writeBinaryEnd")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
+        const QString expected_sha256 = params.value(QStringLiteral("sha256")).toString().toLower();
+        auto upload = m_BinaryWriteUploads.find(upload_id);
+        if (upload == m_BinaryWriteUploads.end()
+            || upload->transactionId != transaction->Id()) {
+            RespondError(id, PluginApi::ResourceNotFound,
+                         QStringLiteral("Binary write upload not found"));
+            return;
+        }
+        if (expected_sha256.size() != 64 || upload->received != upload->expectedSize
+            || !upload->file->flush() || !upload->file->seek(0)) {
+            RespondError(id, PluginApi::ValidationFailed,
+                         QStringLiteral("Binary write length or hash is invalid"));
+            return;
+        }
+        const QByteArray replacement = upload->file->readAll();
+        const QString actual_sha256 = DataFingerprint(replacement);
+        if (replacement.size() != upload->expectedSize || actual_sha256 != expected_sha256) {
+            RespondError(id, PluginApi::ValidationFailed,
+                         QStringLiteral("Binary write length or hash does not match"));
+            return;
+        }
+        Resource *resource = ResolveResource(upload->resourceId);
+        QByteArray current_data;
+        QString read_error;
+        if (!resource || !ReadBinaryFile(resource, &current_data, &read_error,
+                                         MAX_TRANSACTION_BINARY_SIZE)) {
+            RespondError(id, PluginApi::ResourceNotFound,
+                         resource ? read_error : QStringLiteral("Resource not found"));
+            return;
+        }
+        quint64 required_revision = 0;
+        transaction->ReadBinary(resource->GetIdentifier(), current_data, Revision(resource),
+                                &required_revision);
+        if (required_revision != upload->expectedRevision) {
+            RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"));
+            return;
+        }
+        QString stage_error;
+        if (!transaction->ReplaceBinary(resource->GetIdentifier(), current_data, Revision(resource),
+                                        upload->expectedRevision, replacement, &stage_error)) {
+            RespondError(id, PluginApi::RevisionConflict, stage_error);
+            return;
+        }
+        QTemporaryFile *completed = upload->file;
+        m_BinaryWriteUploads.erase(upload);
+        delete completed;
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), resource->GetIdentifier() },
+            { QStringLiteral("size"), static_cast<qint64>(replacement.size()) },
+            { QStringLiteral("sha256"), actual_sha256 },
             { QStringLiteral("staged"), true }
         });
     } else if (method == QStringLiteral("transaction.replaceArchiveFile")
@@ -1749,6 +2121,52 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("resource_id"), resource->GetIdentifier() },
             { QStringLiteral("book_path"), target_path },
+            { QStringLiteral("staged"), true }
+        });
+    } else if (method == QStringLiteral("transaction.updateMetadata")
+               || method == QStringLiteral("transaction.updateSpine")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        quint64 expected_revision = 0;
+        if (!ReadRevision(params, QStringLiteral("expected_revision"), &expected_revision)
+            || !params.value(QStringLiteral("items")).isArray()) {
+            RespondError(id, -32602,
+                         QStringLiteral("Expected revision and an items array are required"));
+            return;
+        }
+        OPFResource *opf = m_MainWindow->GetCurrentBook()->GetOPF();
+        opf->InitialLoad();
+        const quint64 required_revision = transaction->HasPackageChange()
+            ? transaction->PackageChange().baseRevision : Revision(opf);
+        if (expected_revision != required_revision) {
+            RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"));
+            return;
+        }
+        const QString source = transaction->HasPackageChange()
+            ? transaction->PackageChange().stagedText : opf->GetText();
+        QString replacement;
+        QString package_error;
+        const bool updated = method == QStringLiteral("transaction.updateMetadata")
+            ? ApplyMetadataUpdate(source, params.value(QStringLiteral("items")).toArray(),
+                                  &replacement, &package_error)
+            : ApplySpineUpdate(source, params.value(QStringLiteral("items")).toArray(),
+                               params.value(QStringLiteral("attributes")).toObject(),
+                               &replacement, &package_error);
+        PackageDocumentInfo package_info;
+        if (!updated
+            || !ParsePackageDocument(replacement, opf->GetRelativePath(), opf->GetEpubVersion(),
+                                     &package_info, &package_error)) {
+            RespondError(id, PluginApi::ValidationFailed, package_error);
+            return;
+        }
+        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetText(), Revision(opf),
+                                         expected_revision, replacement, &package_error)) {
+            RespondError(id, PluginApi::RevisionConflict, package_error);
+            return;
+        }
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), opf->GetIdentifier() },
+            { QStringLiteral("base_revision"), static_cast<qint64>(required_revision) },
             { QStringLiteral("staged"), true }
         });
     } else if (method == QStringLiteral("transaction.replacePackage")) {
@@ -2338,6 +2756,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             folder_keeper->ResumeWatchingResources();
             if (!structure_error.isEmpty()) {
                 const QStringList recovery_errors = rollback_applied_changes();
+                ClearBinaryWriteUploads();
                 m_Transaction.reset();
                 ReleaseWriter();
                 QString message = structure_error;
@@ -2393,6 +2812,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             folder_keeper->ResumeWatchingResources();
             if (!write_error.isEmpty()) {
                 const QStringList recovery_errors = rollback_applied_changes();
+                ClearBinaryWriteUploads();
                 m_Transaction.reset();
                 ReleaseWriter();
                 RespondError(id, PluginApi::ValidationFailed,
@@ -2434,6 +2854,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             folder_keeper->ResumeWatchingResources();
             if (!archive_error.isEmpty()) {
                 const QStringList recovery_errors = rollback_applied_changes();
+                ClearBinaryWriteUploads();
                 m_Transaction.reset();
                 ReleaseWriter();
                 RespondError(id, PluginApi::ValidationFailed,
@@ -2475,6 +2896,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const int archive_removed = static_cast<int>(std::count_if(
             dirty_archive_changes.cbegin(), dirty_archive_changes.cend(),
             [](const PluginApi::StagedArchiveChange &change) { return change.remove; }));
+        ClearBinaryWriteUploads();
         m_Transaction.reset();
         ReleaseWriter();
         Respond(id, QJsonObject {
@@ -2494,6 +2916,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (!transaction) return;
         const QString transaction_id = transaction->Id();
         const int discarded = transaction->Size();
+        ClearBinaryWriteUploads();
         m_Transaction.reset();
         ReleaseWriter();
         Respond(id, QJsonObject {
@@ -2905,6 +3328,14 @@ void PluginSession::ReleaseWriter()
     m_HoldsWriter = false;
 }
 
+void PluginSession::ClearBinaryWriteUploads()
+{
+    for (const BinaryWriteUpload &upload : std::as_const(m_BinaryWriteUploads)) {
+        delete upload.file;
+    }
+    m_BinaryWriteUploads.clear();
+}
+
 quint64 PluginSession::Revision(Resource *resource) const
 {
     return m_ResourceRevisions.value(resource->GetIdentifier(), 1);
@@ -2976,6 +3407,7 @@ void PluginSession::Finish(const QString &status, const QString &message)
 
 void PluginSession::CleanServer()
 {
+    ClearBinaryWriteUploads();
     for (const BinaryReadStream &stream : std::as_const(m_BinaryReadStreams)) {
         delete stream.file;
     }
@@ -2984,6 +3416,10 @@ void PluginSession::CleanServer()
         delete upload.file;
     }
     m_InputUploads.clear();
+    qDeleteAll(m_MaterializedFiles);
+    m_MaterializedFiles.clear();
+    delete m_MaterializationRoot;
+    m_MaterializationRoot = nullptr;
     if (m_Socket) {
         m_Socket->disconnect(this);
         m_Socket->disconnectFromServer();

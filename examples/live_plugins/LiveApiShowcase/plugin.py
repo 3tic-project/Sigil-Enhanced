@@ -22,6 +22,7 @@ def run(plugin):
         "html", "css", "svg", "opf", "ncx", "xml", "text"
     }), None)
     if binary is not None:
+        plugin.book.materialize_temporary(binary)
         binary_size = next(item["size"] for item in plugin.book.archive_files()
                            if item.get("resource_id") == binary.id)
         if binary_size <= 5 * 1024 * 1024:
