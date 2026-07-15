@@ -841,8 +841,9 @@ class UiApi:
 
 
 class EventsApi:
-    def __init__(self, rpc):
+    def __init__(self, rpc, session_id=None):
         self._rpc = rpc
+        self._session_id = session_id
 
     def subscribe(self, *events):
         return self._rpc.call("events.subscribe", {"events": list(events)})["subscribed"]
@@ -850,18 +851,33 @@ class EventsApi:
     def unsubscribe(self, *events):
         return self._rpc.call("events.unsubscribe", {"events": list(events)})["subscribed"]
 
-    @staticmethod
-    def _event(notification):
+    def _event(self, notification, include_self):
         if notification is None:
             return None
-        return {"name": notification["method"], "params": notification.get("params", {})}
+        params = notification.get("params", {})
+        if (
+            not include_self
+            and self._session_id is not None
+            and params.get("origin_session_id") == self._session_id
+        ):
+            return None
+        return {"name": notification["method"], "params": params}
 
-    def poll(self):
-        return self._event(self._rpc.poll_notification())
+    def poll(self, include_self=False):
+        while True:
+            notification = self._rpc.poll_notification()
+            if notification is None:
+                return None
+            event = self._event(notification, include_self)
+            if event is not None:
+                return event
 
-    def next_event(self):
+    def next_event(self, include_self=False):
         """Wait for the next event; do not consume one RPC connection concurrently."""
-        return self._event(self._rpc.next_notification())
+        while True:
+            event = self._event(self._rpc.next_notification(), include_self)
+            if event is not None:
+                return event
 
 
 class Plugin:
@@ -875,7 +891,7 @@ class Plugin:
         self.input = InputApi(rpc)
         self.output = OutputApi(rpc)
         self.ui = UiApi(rpc)
-        self.events = EventsApi(rpc)
+        self.events = EventsApi(rpc, session_info.get("session_id"))
 
     @classmethod
     def connect(cls, socket_name, token, plugin_name):
@@ -890,7 +906,7 @@ class Plugin:
                 "api_version": 2,
                 "plugin_name": plugin_name,
                 "client": {"python": platform.python_version(), "library": "sigil_live/2.0.0"},
-                "capabilities": {"events": True, "binary_chunks": False, "position_encodings": ["utf-16"]},
+                "capabilities": {"events": True, "binary_chunks": True, "position_encodings": ["utf-16"]},
             },
         )
         transport.max_message_size = session_info["max_message_size"]

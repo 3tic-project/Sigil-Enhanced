@@ -71,6 +71,13 @@ constexpr qsizetype MAX_BINARY_CHUNK_SIZE = 2 * 1024 * 1024;
 constexpr qint64 MAX_INPUT_EPUB_SIZE = 2LL * 1024 * 1024 * 1024;
 constexpr qint64 MAX_TRANSACTION_BINARY_SIZE = 256LL * 1024 * 1024;
 constexpr qsizetype MAX_READ_MANY_RESPONSE_SIZE = 6 * 1024 * 1024;
+constexpr qint64 MAX_NOTIFICATION_BACKLOG = 4LL * 1024 * 1024;
+constexpr int MAX_REQUESTS_PER_SECOND = 512;
+constexpr int MAX_BINARY_READ_STREAMS = 8;
+constexpr int MAX_BINARY_WRITE_UPLOADS = 2;
+constexpr int MAX_INPUT_UPLOADS = 1;
+constexpr int MAX_MATERIALIZED_FILES = 16;
+constexpr qint64 MAX_MATERIALIZED_BYTES = 512LL * 1024 * 1024;
 
 const QSet<QString> SUPPORTED_EVENTS {
     QStringLiteral("editor.activeChanged"),
@@ -636,15 +643,19 @@ PluginSession::PluginSession(const Plugin &plugin,
     m_Authenticated(false),
     m_Ending(false),
     m_EndSignalScheduled(false),
+    m_DroppedNotifications(0),
     m_ProgressMaximum(0),
     m_ValidationErrorCount(0),
+    m_MaterializedBytes(0),
     m_MaterializationRoot(nullptr),
     m_InputEpubFile(nullptr),
     m_InputEpubAccepted(false),
     m_BookRevision(1),
     m_InRequest(false),
-    m_HoldsWriter(false)
+    m_HoldsWriter(false),
+    m_RequestsInWindow(0)
 {
+    m_RequestWindow.start();
 }
 
 PluginSession::~PluginSession()
@@ -880,6 +891,17 @@ void PluginSession::ReadMessages()
     QString error;
     if (!m_Decoder.Append(m_Socket->readAll(), &messages, &error)) {
         RespondError(QJsonValue(), -32700, error);
+        m_Socket->disconnectFromServer();
+        return;
+    }
+    if (m_RequestWindow.elapsed() >= 1000) {
+        m_RequestWindow.restart();
+        m_RequestsInWindow = 0;
+    }
+    m_RequestsInWindow += messages.size();
+    if (m_RequestsInWindow > MAX_REQUESTS_PER_SECOND) {
+        RespondError(QJsonValue(), PluginApi::Busy,
+                     QStringLiteral("Session request rate limit exceeded"));
         m_Socket->disconnectFromServer();
         return;
     }
@@ -1255,6 +1277,11 @@ void PluginSession::Dispatch(const QJsonObject &request)
             });
         }
     } else if (method == QStringLiteral("resource.materializeTemporary")) {
+        if (m_MaterializedFiles.size() >= MAX_MATERIALIZED_FILES) {
+            RespondError(id, PluginApi::Busy,
+                         QStringLiteral("Session temporary materialization limit reached"));
+            return;
+        }
         const QString resource_id = params.value(QStringLiteral("resource_id")).toString();
         const QString requested_path = params.value(QStringLiteral("book_path")).toString();
         if (resource_id.isEmpty() == requested_path.isEmpty()) {
@@ -1328,6 +1355,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 }
             }
         }
+        if (copy_error.isEmpty() && m_MaterializedBytes + total > MAX_MATERIALIZED_BYTES) {
+            copy_error = QStringLiteral("Session temporary materialization byte limit reached");
+        }
         if (!copy_error.isEmpty() || !temporary->flush()) {
             if (copy_error.isEmpty()) copy_error = temporary->errorString();
             delete temporary;
@@ -1336,6 +1366,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         }
         temporary->close();
         m_MaterializedFiles.append(temporary);
+        m_MaterializedBytes += total;
         Respond(id, QJsonObject {
             { QStringLiteral("path"), temporary->fileName() },
             { QStringLiteral("book_path"), book_path },
@@ -1347,6 +1378,11 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("sha256"), QString::fromLatin1(hash.result().toHex()) }
         });
     } else if (method == QStringLiteral("binary.openRead")) {
+        if (m_BinaryReadStreams.size() >= MAX_BINARY_READ_STREAMS) {
+            RespondError(id, PluginApi::Busy,
+                         QStringLiteral("Session binary read stream limit reached"));
+            return;
+        }
         const QString resource_id = params.value(QStringLiteral("resource_id")).toString();
         const QString requested_path = params.value(QStringLiteral("book_path")).toString();
         if (resource_id.isEmpty() == requested_path.isEmpty()) {
@@ -1473,6 +1509,11 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (m_Plugin.get_type() != QStringLiteral("input")) {
             RespondError(id, PluginApi::UnsupportedOperation,
                          QStringLiteral("Only input plugins may submit an EPUB"));
+            return;
+        }
+        if (m_InputUploads.size() >= MAX_INPUT_UPLOADS) {
+            RespondError(id, PluginApi::Busy,
+                         QStringLiteral("An input upload is already active"));
             return;
         }
         const QString filename = params.value(QStringLiteral("filename")).toString();
@@ -1808,6 +1849,11 @@ void PluginSession::Dispatch(const QJsonObject &request)
     } else if (method == QStringLiteral("transaction.writeBinaryBegin")) {
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
+        if (m_BinaryWriteUploads.size() >= MAX_BINARY_WRITE_UPLOADS) {
+            RespondError(id, PluginApi::Busy,
+                         QStringLiteral("Session binary write upload limit reached"));
+            return;
+        }
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
         quint64 expected_revision = 0;
         const qint64 expected_size = params.value(QStringLiteral("size")).toInteger(-1);
@@ -3206,15 +3252,51 @@ void PluginSession::RespondError(const QJsonValue &id, int code, const QString &
 void PluginSession::Notify(const QString &method, QJsonObject params)
 {
     if (!m_Authenticated || !m_Socket || m_Ending) return;
-    params.insert(QStringLiteral("origin_session_id"), m_InRequest
-        ? QJsonValue(m_SessionId.toString(QUuid::WithoutBraces)) : QJsonValue());
-    params.insert(QStringLiteral("book_revision"), static_cast<qint64>(m_BookRevision));
+    if (m_Socket->bytesToWrite() > MAX_NOTIFICATION_BACKLOG) {
+        ++m_DroppedNotifications;
+        return;
+    }
+    if (m_DroppedNotifications > 0) {
+        params.insert(QStringLiteral("dropped_events"), m_DroppedNotifications);
+        m_DroppedNotifications = 0;
+    }
+    if (!params.contains(QStringLiteral("origin_session_id"))) {
+        params.insert(QStringLiteral("origin_session_id"), m_InRequest
+            ? QJsonValue(m_SessionId.toString(QUuid::WithoutBraces)) : QJsonValue());
+    }
+    if (!params.contains(QStringLiteral("book_revision"))) {
+        params.insert(QStringLiteral("book_revision"), static_cast<qint64>(m_BookRevision));
+    }
     m_Socket->write(PluginApi::EncodeFrame(QJsonObject {
         { QStringLiteral("jsonrpc"), QStringLiteral("2.0") },
         { QStringLiteral("method"), method },
         { QStringLiteral("params"), params }
     }));
     m_Socket->flush();
+}
+
+void PluginSession::QueueNotification(const QString &method, const QJsonObject &params,
+                                      int delay_ms)
+{
+    const QString resource_id = params.value(QStringLiteral("resource_id")).toString();
+    const QString key = resource_id.isEmpty()
+        ? method : method + QLatin1Char('|') + resource_id;
+    QJsonObject pending = params;
+    pending.insert(QStringLiteral("origin_session_id"), m_InRequest
+        ? QJsonValue(m_SessionId.toString(QUuid::WithoutBraces)) : QJsonValue());
+    pending.insert(QStringLiteral("book_revision"), static_cast<qint64>(m_BookRevision));
+    m_PendingNotifications.insert(key, pending);
+    if (m_NotificationTimers.contains(key)) return;
+    auto *timer = new QTimer(this);
+    timer->setSingleShot(true);
+    m_NotificationTimers.insert(key, timer);
+    connect(timer, &QTimer::timeout, this, [this, method, key, timer]() {
+        const QJsonObject pending = m_PendingNotifications.take(key);
+        m_NotificationTimers.remove(key);
+        timer->deleteLater();
+        Notify(method, pending);
+    });
+    timer->start(delay_ms);
 }
 
 QJsonObject PluginSession::ResourceInfo(Resource *resource) const
@@ -3249,12 +3331,13 @@ void PluginSession::TrackResource(Resource *resource)
         m_BookRevision += 1;
         if (m_Subscriptions.contains(QStringLiteral("book.resourceChanged"))) {
             Resource *changed = ResolveResource(resource_id);
-            if (changed) Notify(QStringLiteral("book.resourceChanged"), ResourceInfo(changed));
+            if (changed) QueueNotification(QStringLiteral("book.resourceChanged"),
+                                           ResourceInfo(changed), 100);
         }
         ContentTab *tab = m_TabManager->GetCurrentContentTab();
         if (tab && tab->GetLoadedResource()->GetIdentifier() == resource_id
             && m_Subscriptions.contains(QStringLiteral("editor.contentChanged"))) {
-            Notify(QStringLiteral("editor.contentChanged"), EditorEventState());
+            QueueNotification(QStringLiteral("editor.contentChanged"), EditorEventState(), 100);
         }
     });
     connect(resource, &Resource::Renamed, this,
@@ -3285,14 +3368,14 @@ void PluginSession::TrackEditorTab(ContentTab *tab)
             [this, tab](int, int, int) {
         if (tab == m_TabManager->GetCurrentContentTab()
             && m_Subscriptions.contains(QStringLiteral("editor.cursorChanged"))) {
-            Notify(QStringLiteral("editor.cursorChanged"), EditorEventState());
+            QueueNotification(QStringLiteral("editor.cursorChanged"), EditorEventState(), 50);
         }
     });
     if (FlowTab *flow = qobject_cast<FlowTab *>(tab)) {
         connect(flow, &FlowTab::SelectionChanged, this, [this, flow]() {
             if (flow == m_TabManager->GetCurrentContentTab()
                 && m_Subscriptions.contains(QStringLiteral("editor.selectionChanged"))) {
-                Notify(QStringLiteral("editor.selectionChanged"), EditorEventState());
+                QueueNotification(QStringLiteral("editor.selectionChanged"), EditorEventState(), 50);
             }
         });
     }
@@ -3407,6 +3490,9 @@ void PluginSession::Finish(const QString &status, const QString &message)
 
 void PluginSession::CleanServer()
 {
+    qDeleteAll(m_NotificationTimers);
+    m_NotificationTimers.clear();
+    m_PendingNotifications.clear();
     ClearBinaryWriteUploads();
     for (const BinaryReadStream &stream : std::as_const(m_BinaryReadStreams)) {
         delete stream.file;
@@ -3418,6 +3504,7 @@ void PluginSession::CleanServer()
     m_InputUploads.clear();
     qDeleteAll(m_MaterializedFiles);
     m_MaterializedFiles.clear();
+    m_MaterializedBytes = 0;
     delete m_MaterializationRoot;
     m_MaterializationRoot = nullptr;
     if (m_Socket) {

@@ -27,6 +27,7 @@ PluginSessionConsole::PluginSessionConsole(const QString &plugin_name, QWidget *
     resize(640, 360);
 
     m_Output->setReadOnly(true);
+    m_Output->document()->setMaximumBlockCount(1000);
     m_ProgressBar->setVisible(false);
     m_CloseButton->setEnabled(false);
 
@@ -48,7 +49,7 @@ PluginSessionConsole::PluginSessionConsole(const QString &plugin_name, QWidget *
 void PluginSessionConsole::AppendOutput(const QString &text)
 {
     if (!text.isEmpty()) {
-        m_Output->appendPlainText(text.trimmed());
+        m_Output->appendPlainText(text.left(32 * 1024).trimmed());
     }
 }
 

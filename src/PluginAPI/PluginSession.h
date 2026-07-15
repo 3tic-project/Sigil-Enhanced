@@ -9,6 +9,7 @@
 #define PLUGINSESSION_H
 
 #include <QHash>
+#include <QElapsedTimer>
 #include <QJsonObject>
 #include <QObject>
 #include <QPointer>
@@ -31,6 +32,7 @@ class TabManager;
 class TextResource;
 class QTemporaryFile;
 class QTemporaryDir;
+class QTimer;
 
 namespace PluginApi
 {
@@ -97,6 +99,7 @@ private:
     void RespondError(const QJsonValue &id, int code, const QString &message,
                       const QJsonValue &data = QJsonValue());
     void Notify(const QString &method, QJsonObject params = QJsonObject());
+    void QueueNotification(const QString &method, const QJsonObject &params, int delay_ms);
     QJsonObject ResourceInfo(Resource *resource) const;
     Resource *ResolveResource(const QString &resource_id) const;
     TextResource *ResolveTextResource(const QString &resource_id) const;
@@ -128,6 +131,9 @@ private:
     bool m_Ending;
     bool m_EndSignalScheduled;
     QSet<QString> m_Subscriptions;
+    QHash<QString, QJsonObject> m_PendingNotifications;
+    QHash<QString, QTimer *> m_NotificationTimers;
+    int m_DroppedNotifications;
     QSet<ContentTab *> m_TrackedEditorTabs;
     QString m_ProgressId;
     QString m_ProgressLabel;
@@ -139,12 +145,15 @@ private:
     QHash<QString, BinaryWriteUpload> m_BinaryWriteUploads;
     QHash<QString, InputUpload> m_InputUploads;
     QList<QTemporaryFile *> m_MaterializedFiles;
+    qint64 m_MaterializedBytes;
     QTemporaryDir *m_MaterializationRoot;
     QTemporaryFile *m_InputEpubFile;
     bool m_InputEpubAccepted;
     quint64 m_BookRevision;
     bool m_InRequest;
     bool m_HoldsWriter;
+    QElapsedTimer m_RequestWindow;
+    int m_RequestsInWindow;
     std::unique_ptr<PluginApi::TextTransaction> m_Transaction;
     QPointer<PluginSessionConsole> m_Console;
 };

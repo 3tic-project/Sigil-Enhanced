@@ -330,6 +330,22 @@ class LiveSdkTest(unittest.TestCase):
             "params": {"new_resource_id": "chapter"},
         })
 
+    def test_events_api_filters_self_origin_unless_requested(self):
+        rpc = RpcClient(FakeTransport([]))
+        events = EventsApi(rpc, "session-1")
+        own = {
+            "jsonrpc": "2.0", "method": "book.resourceChanged",
+            "params": {"origin_session_id": "session-1"},
+        }
+        external = {
+            "jsonrpc": "2.0", "method": "book.resourceChanged",
+            "params": {"origin_session_id": None},
+        }
+        rpc.notifications.extend([own, external])
+        self.assertIs(events.poll()["params"]["origin_session_id"], None)
+        rpc.notifications.append(own)
+        self.assertEqual(events.poll(include_self=True)["params"]["origin_session_id"], "session-1")
+
     def test_text_transaction_uses_one_id_until_commit(self):
         transport = FakeTransport(
             [
