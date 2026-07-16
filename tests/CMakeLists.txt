@@ -277,6 +277,11 @@ add_test(NAME sigil_mcp_backend
 )
 set_tests_properties(sigil_mcp_backend PROPERTIES TIMEOUT 30)
 
+add_test(NAME sigil_mcp_proxy
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_proxy_test.py
+)
+set_tests_properties(sigil_mcp_proxy PROPERTIES TIMEOUT 30)
+
 add_test(NAME sigil_mcp_protocol
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_protocol_test.py
 )

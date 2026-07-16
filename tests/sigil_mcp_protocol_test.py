@@ -1,10 +1,13 @@
 import asyncio
 import contextlib
 import json
+import pathlib
 import socket
+import sys
+import tempfile
 import unittest
 
-from sigil_mcp_test_support import FakePlugin
+from sigil_mcp_test_support import FakePlugin, ROOT
 
 try:
     import httpx
@@ -209,6 +212,70 @@ class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
                     self.assertIn("TransactionNotFound", error_text)
                     error = json.loads(error_text[error_text.index("{"):])
                     self.assertEqual(error["code"], "TransactionNotFound")
+
+    async def test_stdio_proxy_relays_protocol_without_book_logic(self):
+        proxy = (
+            ROOT
+            / "src"
+            / "Resource_Files"
+            / "plugin_launchers"
+            / "python"
+            / "sigil_mcp_stdio_proxy.py"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            metadata = pathlib.Path(directory) / "sigil-mcp-test.json"
+            metadata.write_text(json.dumps({
+                "endpoint": self.endpoint,
+                "token": self.token,
+                "session_id": "proxy-session",
+                "transport": "streamable-http",
+                "book": {"file_path": "/books/example.epub"},
+            }), encoding="utf-8")
+            process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                str(proxy),
+                "--metadata",
+                str(metadata),
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            async def request(message):
+                process.stdin.write(
+                    (json.dumps(message, separators=(",", ":")) + "\n").encode("utf-8")
+                )
+                await process.stdin.drain()
+                response = await asyncio.wait_for(process.stdout.readline(), timeout=5)
+                self.assertTrue(response)
+                return json.loads(response)
+
+            initialized = await request(self.initialize_payload())
+            self.assertEqual(initialized["result"]["protocolVersion"], "2025-11-25")
+            process.stdin.write(
+                b'{"jsonrpc":"2.0","method":"notifications/initialized"}\n'
+            )
+            await process.stdin.drain()
+            listed = await request({
+                "jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {},
+            })
+            self.assertEqual(
+                tuple(tool["name"] for tool in listed["result"]["tools"]), TOOL_NAMES
+            )
+            called = await request({
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "sigil.book.info", "arguments": {}},
+            })
+            self.assertEqual(called["result"]["structuredContent"]["revision"], 9)
+            process.stdin.close()
+            await process.stdin.wait_closed()
+            self.assertEqual(await asyncio.wait_for(process.wait(), timeout=5), 0)
+            await asyncio.sleep(0.1)
+            stderr = (await process.stderr.read()).decode("utf-8")
+            self.assertIn("/books/example.epub", stderr)
+            self.assertNotIn(self.token, stderr)
 
 
 if __name__ == "__main__":
