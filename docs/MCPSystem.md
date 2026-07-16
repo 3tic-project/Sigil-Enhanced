@@ -104,6 +104,8 @@ or credential-bearing endpoint URLs. The proxy contains no EPUB logic and does
 not implement server-initiated requests; the current adapter does not emit them.
 Discovery mirrors the host runtime locations, including XDG runtime directories,
 macOS Application Support, and the current user's temporary directory.
+Automatic discovery ignores metadata whose owning plugin process is no longer
+running, while explicit `--metadata` selection retains precise connection errors.
 
 ## Concurrency
 

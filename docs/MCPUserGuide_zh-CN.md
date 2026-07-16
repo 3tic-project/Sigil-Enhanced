@@ -178,6 +178,7 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 目录，因此通常不需要手工传入 metadata 路径。
 
 如果同时打开多个启用了 MCP 的 Book，代理会列出候选并退出，不会静默选择任意一个。
+插件异常退出遗留但 PID 已失效的 metadata 文件会被自动忽略。
 
 当前代理转发 request、response 和 notification，并维护 HTTP session/protocol headers。
 当前 MCP Adapter 不发送 server-initiated request；如果未来加入 sampling、elicitation 或反向

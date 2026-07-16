@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import pathlib
 import tempfile
 import unittest
@@ -20,6 +21,7 @@ class SigilMcpProxyTest(unittest.TestCase):
             "token": "secret",
             "session_id": session_id,
             "transport": "streamable-http",
+            "pid": os.getpid(),
             "book": {"file_path": "/books/example.epub"},
         }
 
@@ -67,6 +69,22 @@ class SigilMcpProxyTest(unittest.TestCase):
 
             self.assertEqual(selected, metadata_path)
             self.assertEqual(metadata["session_id"], "session")
+
+    def test_discovery_ignores_metadata_from_stopped_plugin_processes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            stale = self.metadata("stale")
+            stale["pid"] = 2 ** 30
+            (root / "sigil-mcp-stale.json").write_text(
+                json.dumps(stale), encoding="utf-8"
+            )
+            active_path = root / "sigil-mcp-active.json"
+            active_path.write_text(json.dumps(self.metadata("active")), encoding="utf-8")
+
+            selected, metadata = MODULE.discover_metadata(runtime_directory=root)
+
+            self.assertEqual(selected, active_path)
+            self.assertEqual(metadata["session_id"], "active")
 
     def test_endpoint_validation_rejects_remote_or_ambiguous_urls(self):
         self.assertEqual(

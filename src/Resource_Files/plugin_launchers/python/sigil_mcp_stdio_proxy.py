@@ -21,9 +21,10 @@ class ProxyError(RuntimeError):
 
 
 def _candidate_runtime_directories(explicit=None):
-    candidates = []
     if explicit:
-        candidates.append(pathlib.Path(explicit))
+        return [pathlib.Path(explicit).expanduser()]
+
+    candidates = []
     configured = os.environ.get("SIGIL_MCP_RUNTIME_DIR")
     if configured:
         candidates.append(pathlib.Path(configured))
@@ -80,6 +81,19 @@ def _load_metadata(path):
     return metadata
 
 
+def _metadata_process_is_alive(metadata):
+    pid = metadata.get("pid")
+    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
+        return True
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except (PermissionError, OSError):
+        return True
+    return True
+
+
 def discover_metadata(metadata_path=None, runtime_directory=None, session_id=None):
     if metadata_path:
         path = pathlib.Path(metadata_path).expanduser()
@@ -96,6 +110,8 @@ def discover_metadata(metadata_path=None, runtime_directory=None, session_id=Non
             try:
                 metadata = _load_metadata(path)
             except ProxyError:
+                continue
+            if not _metadata_process_is_alive(metadata):
                 continue
             if session_id and metadata.get("session_id") != session_id:
                 continue
