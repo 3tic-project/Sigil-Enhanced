@@ -18,6 +18,7 @@ TOOL_NAMES = (
     "sigil.transaction.replace_text",
     "sigil.transaction.apply_edits",
     "sigil.transaction.add_text_resource",
+    "sigil.transaction.add_binary_resource",
     "sigil.transaction.remove_resource",
     "sigil.transaction.move_resource",
     "sigil.transaction.rename_resource",

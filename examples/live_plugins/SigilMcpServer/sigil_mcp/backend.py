@@ -1,9 +1,14 @@
+import base64
+import binascii
 import dataclasses
 import time
 
 from .catalog import PROMPT_NAMES, RESOURCE_URIS, TOOL_NAMES
 from .errors import BackendError
 from . import MCP_PROTOCOL_VERSION, SERVER_NAME, SERVER_VERSION
+
+
+MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024
 
 
 def _resource(value):
@@ -55,6 +60,7 @@ class SigilMcpBackend:
             "limits": {
                 "resource_page_size_max": 500,
                 "read_many_max": 100,
+                "inline_binary_size_max": MAX_INLINE_BINARY_SIZE,
                 "editor_edits_max": 1000,
                 "position_encoding": "utf-16",
                 "active_transactions": 1,
@@ -192,6 +198,41 @@ class SigilMcpBackend:
         return transaction.add_resource(
             book_path,
             text,
+            media_type,
+            manifest_id=manifest_id,
+            properties=properties,
+            add_to_spine=add_to_spine,
+            manifested=manifested,
+        )
+
+    def transaction_add_binary_resource(
+        self,
+        transaction_id,
+        book_path,
+        data_base64,
+        media_type,
+        manifest_id=None,
+        properties=None,
+        add_to_spine=False,
+        manifested=True,
+    ):
+        try:
+            data = base64.b64decode(data_base64, validate=True)
+        except (binascii.Error, ValueError, TypeError) as error:
+            raise BackendError(
+                "InvalidRequest", "data_base64 must be strict Base64"
+            ) from error
+        if len(data) > MAX_INLINE_BINARY_SIZE:
+            raise BackendError(
+                "PayloadTooLarge",
+                "decoded binary resource exceeds the 5 MiB inline limit",
+                retryable=True,
+                recovery="Submit a resource no larger than 5 MiB.",
+            )
+        transaction = self._require_transaction(transaction_id)
+        return transaction.add_resource(
+            book_path,
+            data,
             media_type,
             manifest_id=manifest_id,
             properties=properties,

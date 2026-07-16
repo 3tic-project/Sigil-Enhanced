@@ -298,7 +298,26 @@ edits 与 editor edit 使用相同 UTF-16 `{start,end,text}` 结构，但针对 
 | `add_to_spine` | boolean | 否 | 默认 `true`。CSS 应设为 `false`。 |
 | `manifested` | boolean | 否 | 默认 `true`。 |
 
-该工具用于生成章节、CSS、SVG、XML 等文本资源。不接受 binary/base64。
+该工具用于生成章节、CSS、SVG、XML 等文本资源。
+
+### `sigil.transaction.add_binary_resource`
+
+参数：
+
+| 参数 | 类型 | 必需 | 说明 |
+| --- | --- | --- | --- |
+| `transaction_id` | string | 是 | 当前 handle。 |
+| `book_path` | string | 是 | canonical Book path，例如 `OEBPS/Images/cover.jpg`。 |
+| `data_base64` | string | 是 | 严格 Base64；解码后最大 5 MiB。 |
+| `media_type` | string | 是 | 例如 `image/jpeg`、`font/woff2`。 |
+| `manifest_id` | string/null | 否 | 空值时由宿主生成/处理。 |
+| `properties` | string/null | 否 | OPF manifest properties。 |
+| `add_to_spine` | boolean | 否 | 默认 `false`。 |
+| `manifested` | boolean | 否 | 默认 `true`。 |
+
+Base64 在进入 Live API 前严格校验，路径、manifest ID、media type 和最终 package invariants
+仍由宿主验证。该工具适合逐个导入图片、字体等小型二进制资源；更大的文件应由未来的分块
+MCP 工具处理。
 
 ### `sigil.transaction.remove_resource`
 
@@ -406,6 +425,7 @@ sigil.transaction.read_text
 sigil.transaction.replace_text
 sigil.transaction.apply_edits
 sigil.transaction.add_text_resource
+sigil.transaction.add_binary_resource
 sigil.transaction.remove_resource
 sigil.transaction.move_resource
 sigil.transaction.rename_resource

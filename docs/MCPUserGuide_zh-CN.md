@@ -204,10 +204,11 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 2. 阅读相邻 XHTML、CSS、语言和 EPUB 版本约定；
 3. 调用 `sigil.transaction.begin`；
 4. 使用 `sigil.transaction.add_text_resource` 生成 XHTML；
-5. 必要时使用 `sigil.transaction.update_spine`；
-6. 调用 `sigil.transaction.preview`；
-7. 调用 `sigil.transaction.validate`；
-8. 调用 `sigil.transaction.commit` 并由用户在 Sigil 中确认。
+5. 使用 `sigil.transaction.add_binary_resource` 导入不超过 5 MiB 的图片等资源；
+6. 必要时使用 `sigil.transaction.update_spine`；
+7. 调用 `sigil.transaction.preview`；
+8. 调用 `sigil.transaction.validate`；
+9. 调用 `sigil.transaction.commit` 并由用户在 Sigil 中确认。
 
 ### 7.3 EPUB 排版和 CSS
 

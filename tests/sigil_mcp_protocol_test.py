@@ -41,6 +41,9 @@ class SigilMcpCatalogTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(commit.annotations.destructiveHint)
         self.assertFalse(commit.annotations.readOnlyHint)
         self.assertTrue(by_name["sigil.book.info"].annotations.readOnlyHint)
+        binary_schema = by_name["sigil.transaction.add_binary_resource"].inputSchema
+        self.assertIn("data_base64", binary_schema["required"])
+        self.assertIn("media_type", binary_schema["required"])
 
     async def test_resources_and_prompts_match_the_public_catalog(self):
         resources = await self.mcp.list_resources()

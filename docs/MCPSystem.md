@@ -7,7 +7,7 @@
 - MCP specification: 2025-11-25
 - Python SDK: `mcp>=1.28.1,<2`
 - Delivery model: installable Live Python Plugin API v2 book-session plugin
-- Implementation: available on `feature/mcp-system` with 29 tools and two transports
+- Implementation: available on `feature/mcp-system` with 30 tools and two transports
 
 This document is the tracked implementation contract for the Sigil Enhanced MCP
 adapter. The longer research draft remains in
@@ -153,6 +153,7 @@ and expected revision and becomes one Qt undo step.
 - `sigil.transaction.replace_text`
 - `sigil.transaction.apply_edits`
 - `sigil.transaction.add_text_resource`
+- `sigil.transaction.add_binary_resource`
 - `sigil.transaction.remove_resource`
 - `sigil.transaction.move_resource`
 - `sigil.transaction.rename_resource`

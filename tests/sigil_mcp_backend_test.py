@@ -1,3 +1,4 @@
+import base64
 import os
 import stat
 import tempfile
@@ -48,6 +49,23 @@ class SigilMcpBackendTest(unittest.TestCase):
         self.assertIn("Modified: 2", self.plugin.ui.confirmations[0][0])
         with self.assertRaises(BackendError):
             self.backend.transaction_preview(transaction_id)
+
+    def test_binary_resource_decodes_strict_base64_before_staging(self):
+        transaction_id = self.backend.transaction_begin()["transaction_id"]
+        result = self.backend.transaction_add_binary_resource(
+            transaction_id,
+            "OEBPS/Images/cover.jpg",
+            base64.b64encode(b"\xff\xd8jpeg\xff\xd9").decode("ascii"),
+            "image/jpeg",
+        )
+        self.assertEqual(result["operation"], "add_resource")
+        call = self.plugin.book.transactions[0].calls[-1]
+        self.assertEqual(call[1][1], b"\xff\xd8jpeg\xff\xd9")
+        self.assertFalse(call[2]["add_to_spine"])
+        with self.assertRaises(BackendError):
+            self.backend.transaction_add_binary_resource(
+                transaction_id, "OEBPS/Images/bad.jpg", "not base64!", "image/jpeg"
+            )
 
     def test_rejected_commit_keeps_transaction_for_rollback(self):
         transaction_id = self.backend.transaction_begin()["transaction_id"]

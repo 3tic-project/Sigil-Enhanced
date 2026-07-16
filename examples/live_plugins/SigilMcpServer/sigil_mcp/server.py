@@ -294,6 +294,31 @@ def _register_transaction_tools(mcp, backend, gate):
             manifested,
         )
 
+    @mcp.tool(name="sigil.transaction.add_binary_resource", annotations=STAGE, structured_output=True)
+    async def transaction_add_binary_resource(
+        transaction_id: str,
+        book_path: str,
+        data_base64: str,
+        media_type: str,
+        manifest_id: str | None = None,
+        properties: str | None = None,
+        add_to_spine: bool = False,
+        manifested: bool = True,
+    ) -> dict[str, Any]:
+        """Stage a strict-Base64 binary resource up to the inline size limit."""
+        return await _invoke(
+            gate,
+            backend.transaction_add_binary_resource,
+            transaction_id,
+            book_path,
+            data_base64,
+            media_type,
+            manifest_id,
+            properties,
+            add_to_spine,
+            manifested,
+        )
+
     @mcp.tool(name="sigil.transaction.remove_resource", annotations=WRITE, structured_output=True)
     async def transaction_remove_resource(
         transaction_id: str, resource_id: str, expected_revision: int
