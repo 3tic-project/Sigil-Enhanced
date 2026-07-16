@@ -54,6 +54,10 @@ def run_book_read_suite(runner):
         "BookApi.resources",
         lambda: resources.extend(list(book.resources(page_size=50))) or resources,
     )
+    runner.check(
+        "BookApi.list_resources",
+        lambda: book.list_resources(page_size=1),
+    )
     text_resources = []
     runner.check(
         "BookApi.text_resources",

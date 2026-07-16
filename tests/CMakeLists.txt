@@ -267,6 +267,11 @@ add_test(NAME python_live_sdk
 )
 set_tests_properties(python_live_sdk PROPERTIES TIMEOUT 30)
 
+add_test(NAME python_package_sync
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_package_sync_test.py
+)
+set_tests_properties(python_package_sync PROPERTIES TIMEOUT 30)
+
 add_test(NAME plugin_openrpc_contract
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/plugin_openrpc_contract_test.py
 )

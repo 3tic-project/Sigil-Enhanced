@@ -174,6 +174,7 @@ not construct the transport directly.
 | `archive_files(page_size=200)` | Iterate every regular expanded-EPUB file, including files outside the Resource model. |
 | `read_archive_file(book_path)` | Read up to 5 MiB and return decoded `data`, SHA-256, and protection state. |
 | `resources(types=None, page_size=200)` | Iterator of typed `Resource` values. |
+| `list_resources(types=None, page_size=200, cursor=None)` | Return one bounded page of typed resources and an opaque `next_cursor`; intended for protocol adapters. |
 | `text_resources()` | Iterator limited to current text resource types. |
 | `resolve_path(book_path)` | Resolve a current book path to `Resource`. |
 | `get_resource(resource_id)` | Fetch current resource metadata. |
@@ -399,6 +400,12 @@ The first request must be `session.hello` with protocol version 1, API version
 2, plugin name, and the one-time token. The server accepts one client, expires
 the token after authentication, and is restricted to the current OS user where
 Qt supports it.
+
+The hello result includes `runtime_directory`, a per-user host location for
+ephemeral coordination files such as MCP endpoint metadata. Plugins must create
+their own session-specific child files, use restrictive permissions, and remove
+them at shutdown. The directory is not an authorization boundary and must never
+be used for EPUB content or durable plugin state.
 
 The full implemented wire contract is `plugin-api-v2.openrpc.json`.
 

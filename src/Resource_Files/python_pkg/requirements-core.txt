@@ -10,3 +10,4 @@ typing_extensions==4.15.0
 chardet==5.2.0
 pillow==12.1.0
 lxml==6.0.2
+mcp==1.28.1

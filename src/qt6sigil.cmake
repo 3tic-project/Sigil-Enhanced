@@ -233,22 +233,6 @@ list( APPEND LIBS_TO_LINK Python3::Python )
 
 set( SIGIL_CORE_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-core.txt )
 set( SIGIL_CORE_PYTHON_CACHE_DIR ${SIGIL_PYTHON_CACHE_DIR}/core )
-set( SIGIL_CORE_PYTHON_PACKAGE_IMPORTS
-     lxml
-     dulwich
-     regex
-     css_parser
-     cssselect
-     html5lib
-     webencodings
-     urllib3
-     typing_extensions.py
-     chardet
-     certifi
-     PIL
-     six.py
-     )
-
 # QtUiTools needed for PySide plugins
 if ( APPLE )
     list( APPEND LIBS_TO_LINK Qt6::UiTools )
@@ -385,7 +369,7 @@ if( APPLE )
                                     --requirements ${SIGIL_CORE_PYTHON_REQUIREMENTS}
                                     --cache-dir ${SIGIL_CORE_PYTHON_CACHE_DIR}
                                     --dest ${WORK_DIR}/Sigil.app/Contents/python3lib
-                                    --packages ${SIGIL_CORE_PYTHON_PACKAGE_IMPORTS}
+                                    --copy-all
                             COMMENT "Syncing cached Python runtime packages into Sigil.app"
                             VERBATIM )
     endif()

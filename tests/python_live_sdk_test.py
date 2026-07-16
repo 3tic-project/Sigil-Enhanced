@@ -78,6 +78,26 @@ class LiveSdkTest(unittest.TestCase):
         resources = list(BookApi(rpc).resources(types=("html",), page_size=1))
         self.assertEqual(resources, [Resource("a", "Text/a.xhtml", "application/xhtml+xml", "html", 4, True)])
 
+    def test_book_api_returns_one_resource_page_for_protocol_adapters(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "items": [{
+                    "resource_id": "css", "book_path": "Styles/book.css",
+                    "media_type": "text/css", "resource_type": "css",
+                    "content_revision": 2, "loaded": True,
+                }],
+                "next_cursor": "1",
+            }},
+        ])
+        page = BookApi(RpcClient(transport)).list_resources(
+            types=("css",), page_size=1, cursor="0"
+        )
+        self.assertEqual(page["items"][0].id, "css")
+        self.assertEqual(page["next_cursor"], "1")
+        self.assertEqual(transport.sent[0]["params"], {
+            "page_size": 1, "types": ["css"], "cursor": "0",
+        })
+
     def test_book_api_requests_compatibility_snapshot(self):
         snapshot = {"package": {"text": "<package/>", "book_path": "content.opf"}}
         transport = FakeTransport(

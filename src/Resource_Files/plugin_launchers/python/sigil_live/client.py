@@ -569,17 +569,24 @@ class BookApi:
     def resources(self, types=None, page_size=200):
         cursor = None
         while True:
-            params = {"page_size": page_size}
-            if types:
-                params["types"] = list(types)
-            if cursor is not None:
-                params["cursor"] = cursor
-            result = self._rpc.call("resource.list", params)
-            for item in result["items"]:
-                yield Resource.from_result(item)
+            result = self.list_resources(types=types, page_size=page_size, cursor=cursor)
+            yield from result["items"]
             cursor = result.get("next_cursor")
             if cursor is None:
                 break
+
+    def list_resources(self, types=None, page_size=200, cursor=None):
+        """Return one bounded resource page and its opaque continuation cursor."""
+        params = {"page_size": page_size}
+        if types:
+            params["types"] = list(types)
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = self._rpc.call("resource.list", params)
+        return {
+            "items": [Resource.from_result(item) for item in result["items"]],
+            "next_cursor": result.get("next_cursor"),
+        }
 
     def text_resources(self):
         return self.resources(types=("html", "css", "xml", "text", "opf", "ncx"))

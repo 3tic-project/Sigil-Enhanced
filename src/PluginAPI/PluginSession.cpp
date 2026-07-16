@@ -29,6 +29,7 @@
 #include <QSaveFile>
 #include <QScopedValueRollback>
 #include <QSet>
+#include <QStandardPaths>
 #include <QStatusBar>
 #include <QTemporaryFile>
 #include <QTemporaryDir>
@@ -79,6 +80,21 @@ constexpr int MAX_BINARY_WRITE_UPLOADS = 2;
 constexpr int MAX_INPUT_UPLOADS = 1;
 constexpr int MAX_MATERIALIZED_FILES = 16;
 constexpr qint64 MAX_MATERIALIZED_BYTES = 512LL * 1024 * 1024;
+
+QString PluginRuntimeDirectory()
+{
+    QString base = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    if (base.isEmpty()) {
+        base = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    }
+    const QString path = QDir(base).filePath(QStringLiteral("sigil-enhanced"));
+    if (!QDir().mkpath(path)) {
+        return QString();
+    }
+    QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner
+                                | QFileDevice::ExeOwner);
+    return QDir::toNativeSeparators(path);
+}
 
 const QSet<QString> SUPPORTED_EVENTS {
     QStringLiteral("editor.activeChanged"),
@@ -854,6 +870,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("lifetime"), m_Plugin.get_lifetime() },
             { QStringLiteral("position_encoding"), QStringLiteral("utf-16") },
             { QStringLiteral("max_message_size"), static_cast<qint64>(PluginApi::DEFAULT_MAX_MESSAGE_SIZE) },
+            { QStringLiteral("runtime_directory"), PluginRuntimeDirectory() },
             { QStringLiteral("book_revision"), static_cast<qint64>(m_BookRevision) },
             { QStringLiteral("ui"), QJsonObject {
                 { QStringLiteral("language"), settings.uiLanguage() },
@@ -872,7 +889,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("session_id"), m_SessionId.toString(QUuid::WithoutBraces) },
             { QStringLiteral("plugin_name"), m_Plugin.get_name() },
-            { QStringLiteral("lifetime"), m_Plugin.get_lifetime() }
+            { QStringLiteral("lifetime"), m_Plugin.get_lifetime() },
+            { QStringLiteral("runtime_directory"), PluginRuntimeDirectory() }
         });
     } else if (method == QStringLiteral("session.finish")) {
         Respond(id, QJsonObject {{ QStringLiteral("accepted"), true }});

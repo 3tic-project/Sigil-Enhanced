@@ -52,6 +52,7 @@
     "archive_files": "LiveApiCoverage/suites_core.py",
     "read_archive_file": "LiveApiCoverage/suites_core.py",
     "resources": "LiveApiCoverage/suites_core.py",
+    "list_resources": "LiveApiCoverage/suites_core.py",
     "text_resources": "LiveApiCoverage/suites_core.py",
     "resolve_path": "LiveApiCoverage/suites_core.py",
     "get_resource": "LiveApiCoverage/suites_core.py",

@@ -105,6 +105,7 @@ Automate 共用同一运行时选择；Automate 会等待 Live command 完成，
 | 方法 | 返回值 |
 | --- | --- |
 | `resources(types=None, page_size=200)` | 分页 `Resource` 迭代器。 |
+| `list_resources(types=None, page_size=200, cursor=None)` | 返回一页有界的 `Resource` 与不透明 `next_cursor`，供协议适配层转发分页。 |
 | `text_resources()` | 文本资源迭代器。 |
 | `resolve_path(book_path)` | 当前路径对应的 `Resource`。 |
 | `get_resource(resource_id)` | 当前资源信息。 |
