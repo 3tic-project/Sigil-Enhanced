@@ -1,8 +1,16 @@
 # Sigil Live Python Plugin Examples
 
-Each child directory is an installable plugin. Copy one directory into Sigil's
-user plugin directory, or zip its contents and install it with the Plugin
-Manager. Most examples use only the Python standard library and bundled
+Each child directory contains an installable plugin. Sigil's Plugin Manager
+accepts ZIP archives, not source directories. Build an installer-compatible
+archive with:
+
+```console
+python3 examples/live_plugins/package_plugin.py examples/live_plugins/SigilMcpServer
+```
+
+The generated `SigilMcpServer.zip` has the required `SigilMcpServer/` top-level
+directory and omits operating-system metadata, Python caches, and nested ZIPs.
+Most examples use only the Python standard library and bundled
 `sigil_live` SDK. `SigilMcpServer` additionally uses the bundled official MCP
 Python SDK.
 

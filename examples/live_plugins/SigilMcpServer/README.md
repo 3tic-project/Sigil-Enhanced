@@ -5,9 +5,17 @@ in-memory EPUB through Model Context Protocol (MCP).
 
 ## Install
 
-Zip the contents of this directory so `plugin.xml` is at the ZIP root, then use
-Sigil's Plugin Manager to install the ZIP. Open one EPUB and run **Sigil MCP
-Server**. The Plugin Session Console remains active for the Book lifetime.
+From the repository root, build the plugin archive with:
+
+```console
+python3 examples/live_plugins/package_plugin.py examples/live_plugins/SigilMcpServer
+```
+
+Install the generated `examples/live_plugins/SigilMcpServer.zip` with Sigil's
+Plugin Manager. Do not select this source directory or use Finder's generic
+compression command: the manager accepts ZIP files whose only top-level
+directory matches the ZIP basename. Open one EPUB and run **Sigil MCP Server**.
+The Plugin Session Console remains active for the Book lifetime.
 
 The status bar reports the generated `sigil-mcp-<session>.json` metadata path.
 That owner-only file contains a dynamic loopback endpoint and bearer token. Do

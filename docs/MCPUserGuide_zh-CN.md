@@ -45,16 +45,33 @@ MCP 层只负责协议、参数 Schema、工具映射、endpoint 和错误转换
 examples/live_plugins/SigilMcpServer/
 ```
 
-将该目录的**内容**压缩为 ZIP，确保 ZIP 根目录直接包含：
+在仓库根目录执行标准打包工具：
 
-```text
-plugin.xml
-plugin.py
-README.md
-sigil_mcp/
+```console
+python3 examples/live_plugins/package_plugin.py examples/live_plugins/SigilMcpServer
 ```
 
-在 Sigil 的插件管理器中安装 ZIP。`plugin.xml` 已声明：
+工具会生成：
+
+```text
+examples/live_plugins/SigilMcpServer.zip
+```
+
+插件管理器只接受 ZIP 文件，不直接接受源码目录。ZIP 文件名决定安装目录名，因此该压缩包的
+唯一顶层目录必须是同名的 `SigilMcpServer/`，其内部包含：
+
+```text
+SigilMcpServer/plugin.xml
+SigilMcpServer/plugin.py
+SigilMcpServer/README.md
+SigilMcpServer/sigil_mcp/
+```
+
+不要使用 macOS Finder 的通用“压缩”结果代替标准工具；额外生成的 `__MACOSX/`、
+`.DS_Store`，以及源码目录中的 `__pycache__/` 或嵌套 ZIP 都会被安装器拒绝。标准工具会
+自动排除这些内容，并以固定顺序生成可复现的压缩包。
+
+在 Sigil 的插件管理器中选择上述 ZIP 安装。`plugin.xml` 已声明：
 
 - `type=edit`
 - `api version=2 interface=live`

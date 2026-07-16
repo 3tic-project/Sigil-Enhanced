@@ -1,15 +1,23 @@
 import ast
+import importlib.util
 import json
 import pathlib
 import re
+import subprocess
+import sys
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
+import zipfile
 
 
 ROOT = pathlib.Path(__file__).parents[1]
 EXAMPLES = ROOT / "examples" / "live_plugins"
 CLIENT = ROOT / "src" / "Resource_Files" / "plugin_launchers" / "python" / "sigil_live" / "client.py"
 COVERAGE = EXAMPLES / "api-coverage.json"
+PACKAGER = EXAMPLES / "package_plugin.py"
+MCP_PLUGIN = EXAMPLES / "SigilMcpServer"
+MCP_ARCHIVE = EXAMPLES / "SigilMcpServer.zip"
 
 PUBLIC_CLASSES = {
     "BinaryReader",
@@ -41,6 +49,13 @@ def sdk_methods():
         }
         result[node.name] = methods - LIFECYCLE_METHODS.get(node.name, set())
     return result
+
+
+def load_packager():
+    spec = importlib.util.spec_from_file_location("package_live_plugin", PACKAGER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class LivePluginExamplesTest(unittest.TestCase):
@@ -84,6 +99,54 @@ class LivePluginExamplesTest(unittest.TestCase):
                         class_name, method, relative_path
                     ),
                 )
+
+    def assert_archive_matches_plugin(self, archive_path, plugin_dir):
+        packager = load_packager()
+        expected = {
+            archive_name.as_posix(): source.read_bytes()
+            for source, archive_name in packager.plugin_files(plugin_dir)
+        }
+        with zipfile.ZipFile(archive_path) as archive:
+            names = archive.namelist()
+            self.assertEqual(names, sorted(names))
+            self.assertEqual(set(names), set(expected))
+            self.assertIn(plugin_dir.name + "/plugin.xml", names)
+            self.assertTrue(all(name.startswith(plugin_dir.name + "/") for name in names))
+            self.assertFalse(
+                any(
+                    part.startswith(".")
+                    for name in names
+                    for part in pathlib.PurePosixPath(name).parts
+                )
+            )
+            self.assertFalse(any("__MACOSX" in name for name in names))
+            self.assertFalse(any("__pycache__" in name for name in names))
+            self.assertFalse(any(name.endswith((".pyc", ".pyo", ".zip")) for name in names))
+            for name, payload in expected.items():
+                self.assertEqual(archive.read(name), payload, name)
+
+    def test_packager_creates_deterministic_installer_layout(self):
+        with tempfile.TemporaryDirectory() as workspace:
+            destination = pathlib.Path(workspace) / "SigilMcpServer.zip"
+            subprocess.run(
+                [sys.executable, str(PACKAGER), str(MCP_PLUGIN), str(destination)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            first = destination.read_bytes()
+            self.assert_archive_matches_plugin(destination, MCP_PLUGIN)
+            subprocess.run(
+                [sys.executable, str(PACKAGER), str(MCP_PLUGIN), str(destination)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(destination.read_bytes(), first)
+
+    def test_bundled_mcp_archive_is_current_and_installable(self):
+        self.assertTrue(MCP_ARCHIVE.is_file())
+        self.assert_archive_matches_plugin(MCP_ARCHIVE, MCP_PLUGIN)
 
 
 if __name__ == "__main__":
