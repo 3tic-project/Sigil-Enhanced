@@ -51,10 +51,10 @@ python3 scripts/validate_epub.py OUTPUT.epub --strict-layout
 5. Generate semantic XHTML. Convert source Ruby markers to `<ruby><rp><rt>`, use stable unique
    IDs, add useful image `alt`, keep URLs relative, and avoid JavaScript and vendor extensions by
    default.
-6. Apply the MCP transaction sequence in `references/mcp-workflow.md`. For a new book, commit
-   resources first and package metadata/spine second. Preview and validate every transaction.
+6. Apply the MCP transaction sequence in `references/mcp-workflow.md`. For a new book, stage all
+   resources before updating metadata/spine, then preview, validate, and commit once.
    A commit applies immediately without a native confirmation dialog.
-7. Immediately batch-read every newly added text resource. Fail the run if any file is empty,
+7. After the commit, immediately batch-read every newly added text resource. Fail the run if any file is empty,
    malformed, truncated, or different from the generated text. Confirm that no transaction remains
    active.
 8. Have the user save to a new `.epub` path when the public MCP catalog has no output tool. Never

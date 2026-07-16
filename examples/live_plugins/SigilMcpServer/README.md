@@ -53,6 +53,8 @@ chapters, CSS/layout changes, OPF metadata, spine work, or multiple resources:
    For large text, page reads with `sigil.resource.read_text_range` or
    `sigil.transaction.read_text_range`, then use the begin/chunk/finish text
    tools instead of one oversized JSON value.
+   Stage all new manifested resources before `sigil.transaction.update_spine`;
+   the host merges them into the staged manifest for a single atomic commit.
 4. Call `sigil.transaction.preview` and `sigil.transaction.validate`.
 5. Call `sigil.transaction.commit`; it commits directly without a confirmation dialog.
 6. On conflict, validation failure, or changed intent before commit, call

@@ -35,7 +35,7 @@ $sigil-epub-layout 使用 /absolute/source/path 的 TXT 和图片，按 standard
 | --- | --- |
 | `SKILL.md` | 输入要求、执行流程、质量门槛和失败处理。 |
 | `references/layout-rules.md` | 从 `todo/test_file/ref` 七本 EPUB 提炼的通用排版规则。 |
-| `references/mcp-workflow.md` | Sigil MCP 两阶段事务、回滚和保存前验收流程。 |
+| `references/mcp-workflow.md` | Sigil MCP 单事务建书、回滚和保存前验收流程。 |
 | `assets/reflowable-horizontal.css` | 最小横排可重排样式。 |
 | `assets/*.xhtml` | 章节、整页插图和 EPUB 3 nav 骨架。 |
 | `scripts/inspect_source.py` | 清点编码、插图/Ruby/脚注标记和图片尺寸，不输出正文。 |
@@ -48,9 +48,10 @@ $sigil-epub-layout 使用 /absolute/source/path 的 TXT 和图片，按 standard
 ## 执行边界
 
 - 只操作当前打开的 Sigil Book，并先读取实际 package、资源和 revision。
-- 新书采用两个事务：先提交文本/图片，再基于已存在的 manifest 更新 metadata/spine。
+- 新书采用一个事务：先暂存全部文本/图片，再更新 metadata 和最终 spine；宿主会把此前暂存的
+  manifested 新资源合并进 staged OPF。
 - 每次事务都必须先 preview、validate；commit 直接应用，不再显示 Sigil 确认对话框。
-- 第一阶段提交后立即批量回读新增文本，拒绝空文件、截断或生成内容不一致。
+- commit 后立即批量或分段回读新增文本，拒绝空文件、截断或生成内容不一致。
 - 长 XHTML/CSS 使用独立的 range/chunk MCP 工具：UTF-16 offset 只用于读取，写入 offset
   必须按 UTF-8 字节累计；单文档不得超过 64 MiB。
 - 单个 `add_binary_resource` 解码后最大 5 MiB，超限时停止并报告，不静默压缩。

@@ -394,7 +394,12 @@ metadata children; prefixes must resolve to namespaces already available in the
 package. Each `update_spine(items, attributes)` item contains a string `idref`
 and optional string `id`, `linear`, and `properties` values. It replaces all
 itemrefs, preserves unspecified existing spine attributes, updates the supplied
-attributes, and verifies every `idref` against the manifest.
+attributes, and verifies every `idref` against the manifest. Before applying
+the spine, the host deterministically merges every manifested resource addition
+already staged in the transaction into the staged OPF manifest. This allows a
+new chapter/CSS/image set, metadata, and its final spine to validate and commit
+atomically. Stage all additions before calling `update_spine()`; later additions
+require another spine update before validation.
 
 Archive-file methods cover EPUB entries that Sigil intentionally keeps outside
 the `Resource` model, including `mimetype` and files under `META-INF`. Reads use

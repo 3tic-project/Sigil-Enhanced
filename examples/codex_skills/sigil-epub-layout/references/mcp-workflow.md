@@ -33,40 +33,32 @@ text document and 1 MiB per host chunk.
 4. Require explicit approval before replacing meaningful existing content.
 5. Prepare deterministic manifest IDs and reject duplicate paths before beginning a transaction.
 
-## Two-Phase Creation
+## Single-Transaction Creation
 
-The current host validates package updates against the live manifest, not additions staged in the
-same transaction. Therefore create a new book in two transactions.
-
-### Transaction A: Content And Resources
+The host merges manifested additions staged before `update_spine` into the staged package document.
+Create a new book in one transaction so resources, metadata, manifest, and spine share one validation
+and one checkpoint.
 
 1. Begin with a descriptive label and `checkpoint=auto`.
 2. Import images with `add_binary_resource`, `add_to_spine=false`.
-3. Add generated XHTML/CSS with `add_text_resource`, `add_to_spine=false`.
-4. Replace blank-template XHTML, nav, or CSS only with their current resource IDs and revisions.
-5. Preview and validate. Roll back on any conflict, warning that changes meaning, invalid result, or
-   count mismatch.
-6. Commit after successful preview and validation.
-7. Refresh resources and batch-read every added text resource. Verify exact generated text and
-   nonzero length before continuing.
-
-### Transaction B: Package Metadata And Spine
-
-1. Refresh `sigil.book.package`; do not reuse the earlier OPF revision.
-2. Begin a new transaction.
-3. Replace ordered metadata with the original identifier plus verified title, roles, language,
+3. Add generated XHTML/CSS with `add_text_resource`, `add_to_spine=false`. Finish every chunked text
+   upload before package updates.
+4. Replace blank-template XHTML, nav, or CSS only with current resource IDs and revisions.
+5. Replace ordered metadata with the original identifier plus verified title, roles, language,
    series, description, and current UTC modified time.
-4. Replace the spine with manifest IDs that now exist. Keep nav non-linear when included.
-5. Preview and validate, then commit.
-
-For edits that add no resources, related XHTML/CSS/package changes may use one transaction when the
-package validator accepts the staged result.
+6. Call `update_spine` only after all manifested additions are staged. Its final idref list may use
+   those additions' manifest IDs; keep nav non-linear when included.
+7. Preview and validate. Roll back on any conflict, warning that changes meaning, invalid result, or
+   count mismatch.
+8. Commit once after successful preview and validation.
+9. Refresh resources and batch/range-read every added text resource. Verify exact generated text and
+   nonzero length.
 
 ## Failure Recovery
 
 - Tool error before commit: call rollback with the printed transaction ID.
 - Validation or preview invalid: rollback; do not call commit.
-- Connection closes: reconnect, inspect `sigil.session.info`, and roll back the known transaction.
+- Connection closes: reconnect, call `sigil.transaction.status`, and roll back the active transaction.
 - Revision conflict: reread live content/package and rebuild the plan; never retry with stale values.
 - Plugin or Sigil exits: treat the transaction as uncommitted until live Book inspection proves
   otherwise.
@@ -75,7 +67,7 @@ Always print the transaction ID in orchestration logs so recovery is possible.
 
 ## Live Acceptance Before Save
 
-After both commits:
+After the commit:
 
 1. assert `transaction_active=false`;
 2. verify expected resource, manifest, spine, chapter, image, Ruby, and footnote counts;

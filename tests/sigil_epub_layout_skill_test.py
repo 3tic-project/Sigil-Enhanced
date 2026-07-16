@@ -75,11 +75,20 @@ def build_epub(path, empty_chapter=False, toc_role=True):
 class SigilEpubLayoutSkillTest(unittest.TestCase):
     def test_skill_is_explicit_only_and_has_no_placeholders(self):
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        workflow = (SKILL / "references" / "mcp-workflow.md").read_text(
+            encoding="utf-8"
+        )
         agent = (SKILL / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertNotIn("TODO", skill)
         self.assertIn("explicitly invokes `$sigil-epub-layout`", skill)
         self.assertIn("allow_implicit_invocation: false", agent)
         self.assertIn("$sigil-epub-layout", agent)
+        self.assertIn("Single-Transaction Creation", workflow)
+        self.assertNotIn("Two-Phase Creation", workflow)
+        self.assertLess(
+            workflow.index("3. Add generated XHTML/CSS"),
+            workflow.index("6. Call `update_spine`"),
+        )
 
     def test_template_assets_are_well_formed_and_css_is_minimal(self):
         bundled = [path for path in SKILL.rglob("*") if path.is_file()]

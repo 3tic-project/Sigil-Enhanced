@@ -188,6 +188,11 @@ exact UTF-8 byte offsets, 1 MiB chunks, a 64 MiB document limit, and host-side
 length/UTF-8/SHA-256 validation before staging. Newly staged text remains
 addressable and editable by its staging ID until commit.
 
+Structured spine updates merge manifested additions already staged in the same
+transaction into the staged OPF before validating idrefs. New-book generation
+therefore uses one transaction and one checkpoint rather than exposing a partial
+Book between resource and package commits.
+
 ## Resources And Prompts
 
 Stable read-only resources:

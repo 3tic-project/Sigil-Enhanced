@@ -133,6 +133,44 @@ int main()
                 == QStringLiteral("b"),
             "spine order changed");
 
+    const QList<PluginApi::PackageManifestAddition> additions {
+        PluginApi::PackageManifestAddition {
+            QStringLiteral("chapter-c"),
+            QStringLiteral("Text/chapter%20c.xhtml"),
+            QStringLiteral("application/xhtml+xml"),
+            QStringLiteral("scripted"),
+            QString(),
+            QString()
+        }
+    };
+    Require(PluginApi::ApplyManifestAdditions(PACKAGE, additions, &updated, &error),
+            "staged manifest addition merge failed");
+    const QJsonArray extended_spine {
+        QJsonObject {{ QStringLiteral("idref"), QStringLiteral("a") }},
+        QJsonObject {{ QStringLiteral("idref"), QStringLiteral("chapter-c") }}
+    };
+    Require(PluginApi::ApplySpineUpdate(updated, extended_spine, QJsonObject(),
+                                        &updated, &error),
+            "spine could not reference a staged manifest addition");
+    Require(document.setContent(updated, true), "extended package XML is malformed");
+    const QDomElement added_item = document.elementsByTagNameNS(
+        QStringLiteral("http://www.idpf.org/2007/opf"), QStringLiteral("item"))
+        .at(2).toElement();
+    Require(added_item.attribute(QStringLiteral("id")) == QStringLiteral("chapter-c")
+                && added_item.attribute(QStringLiteral("properties"))
+                    == QStringLiteral("scripted"),
+            "staged manifest addition attributes were not retained");
+    Require(PluginApi::ApplyManifestAdditions(updated, additions, &updated, &error),
+            "staged manifest addition merge was not idempotent");
+    Require(!PluginApi::ApplyManifestAdditions(PACKAGE,
+            QList<PluginApi::PackageManifestAddition> {
+                PluginApi::PackageManifestAddition {
+                    QStringLiteral("a"), QStringLiteral("other.xhtml"),
+                    QStringLiteral("application/xhtml+xml"), QString(), QString(), QString()
+                }
+            }, &updated, &error),
+            "duplicate manifest ID with another href was accepted");
+
     Require(!PluginApi::ApplyMetadataUpdate(PACKAGE,
             QJsonArray { QJsonObject {{ QStringLiteral("name"), QStringLiteral("dc:title") }} },
             &updated, &error), "metadata without content was accepted");

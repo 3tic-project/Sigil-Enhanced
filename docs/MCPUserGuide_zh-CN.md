@@ -208,10 +208,11 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 4. 普通章节使用 `sigil.transaction.add_text_resource`；大型章节先按 UTF-8 计算字节数，再使用
    `begin_text_resource`、`write_text_chunk`、`finish_text_write`；
 5. 使用 `sigil.transaction.add_binary_resource` 导入不超过 5 MiB 的图片等资源；
-6. 必要时使用 `sigil.transaction.update_spine`；
+6. 全部 manifested 资源完成暂存后，使用 `sigil.transaction.update_metadata` 和最终
+   `sigil.transaction.update_spine`；后者会把同事务的新资源先合并进 staged manifest；
 7. 调用 `sigil.transaction.preview`；
 8. 调用 `sigil.transaction.validate`；
-9. 调用 `sigil.transaction.commit` 直接提交。
+9. 调用 `sigil.transaction.commit` 一次性直接提交资源、metadata、manifest 和 spine。
 
 ### 7.3 EPUB 排版和 CSS
 
@@ -224,7 +225,7 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 ### 7.4 可选 EPUB 排版 Skill
 
 仓库提供独立的 `sigil-epub-layout` Codex Skill，包含从参考 EPUB 提炼的通用版式规则、横排
-可重排模板、MCP 两阶段事务流程和磁盘验收脚本。它默认禁止隐式触发，只有用户明确写出
+可重排模板、MCP 单事务建书流程和磁盘验收脚本。它默认禁止隐式触发，只有用户明确写出
 `$sigil-epub-layout` 时才会加载。安装、调用和边界说明见
 [SigilMcpEpubLayoutSkill_zh-CN.md](SigilMcpEpubLayoutSkill_zh-CN.md)。
 

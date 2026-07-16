@@ -9,6 +9,9 @@
 #include <QDomDocument>
 #include <QHash>
 
+#include <algorithm>
+#include <utility>
+
 namespace
 {
 
@@ -205,6 +208,84 @@ bool ApplyMetadataUpdate(const QString &source, const QJsonArray &entries,
         }
         element.appendChild(document.createTextNode(entry.value(QStringLiteral("content")).toString()));
         metadata.appendChild(element);
+    }
+    *updated = document.toString(-1);
+    return true;
+}
+
+bool ApplyManifestAdditions(const QString &source,
+                            const QList<PackageManifestAddition> &additions,
+                            QString *updated,
+                            QString *error)
+{
+    QDomDocument document;
+    if (!ParsePackageDom(source, &document, error)) return false;
+    QDomElement manifest = DirectChildElement(document.documentElement(),
+                                              QStringLiteral("manifest"));
+    if (manifest.isNull()) {
+        if (error) *error = QStringLiteral("Package manifest element is missing");
+        return false;
+    }
+
+    QHash<QString, QDomElement> items_by_id;
+    QHash<QString, QString> ids_by_href;
+    for (QDomNode child = manifest.firstChild(); !child.isNull();
+         child = child.nextSibling()) {
+        const QDomElement item = child.toElement();
+        if (item.isNull() || (item.localName() != QStringLiteral("item")
+                              && item.tagName() != QStringLiteral("item"))) {
+            continue;
+        }
+        const QString id = item.attribute(QStringLiteral("id"));
+        const QString href = item.attribute(QStringLiteral("href"));
+        if (!id.isEmpty()) items_by_id.insert(id, item);
+        if (!href.isEmpty()) ids_by_href.insert(href, id);
+    }
+
+    QList<PackageManifestAddition> ordered = additions;
+    std::sort(ordered.begin(), ordered.end(),
+              [](const PackageManifestAddition &left,
+                 const PackageManifestAddition &right) {
+        return left.href < right.href;
+    });
+    for (const PackageManifestAddition &addition : std::as_const(ordered)) {
+        if (addition.manifestId.isEmpty() || addition.href.isEmpty()
+            || addition.mediaType.isEmpty()) {
+            if (error) {
+                *error = QStringLiteral("Manifest additions require id, href, and media type");
+            }
+            return false;
+        }
+        QDomElement item = items_by_id.value(addition.manifestId);
+        if (!item.isNull()) {
+            if (item.attribute(QStringLiteral("href")) != addition.href) {
+                if (error) *error = QStringLiteral("A manifest ID already uses another href");
+                return false;
+            }
+        } else {
+            if (ids_by_href.contains(addition.href)) {
+                if (error) *error = QStringLiteral("A manifest href already uses another ID");
+                return false;
+            }
+            item = document.createElementNS(manifest.namespaceURI(),
+                                            QStringLiteral("item"));
+            item.setAttribute(QStringLiteral("id"), addition.manifestId);
+            item.setAttribute(QStringLiteral("href"), addition.href);
+            manifest.appendChild(item);
+            items_by_id.insert(addition.manifestId, item);
+            ids_by_href.insert(addition.href, addition.manifestId);
+        }
+        item.setAttribute(QStringLiteral("media-type"), addition.mediaType);
+        for (const auto &attribute : {
+                 std::pair<QString, QString>(QStringLiteral("properties"), addition.properties),
+                 std::pair<QString, QString>(QStringLiteral("fallback"), addition.fallback),
+                 std::pair<QString, QString>(QStringLiteral("media-overlay"), addition.overlay) }) {
+            if (attribute.second.isEmpty()) {
+                item.removeAttribute(attribute.first);
+            } else {
+                item.setAttribute(attribute.first, attribute.second);
+            }
+        }
     }
     *updated = document.toString(-1);
     return true;

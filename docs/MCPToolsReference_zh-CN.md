@@ -4,7 +4,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| Adapter | `Sigil Enhanced MCP 0.4.0` |
+| Adapter | `Sigil Enhanced MCP 0.5.0` |
 | MCP spec | `2025-11-25` |
 | Python SDK | `mcp>=1.28.1,<2`，发布包固定 `1.28.1` |
 | Live API | v2 / protocol 1 |
@@ -424,6 +424,10 @@ OPF、nav、最后一个 XHTML 等保护规则由宿主执行。
 - `expected_revision`：可选。
 
 所有 `idref` 必须存在于最终 manifest。
+调用时，宿主先把同一事务中此前完成的 manifested 新资源按 href 确定排序合并到 staged
+manifest，再替换 spine。因此生成新书时应先 stage/finish 全部 XHTML、CSS、图片，再调用一次
+`update_metadata` 和最终 `update_spine`，随后 preview、validate、commit；不再需要为了让
+manifest ID 可见而中途 commit。若 `update_spine` 后又新增资源，必须重新调用它。
 
 ## 10. MCP Resources
 

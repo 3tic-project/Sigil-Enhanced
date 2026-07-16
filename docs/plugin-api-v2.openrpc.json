@@ -763,7 +763,7 @@
     },
     {
       "name": "transaction.updateSpine",
-      "summary": "Replace package spine items and update spine attributes within the transaction.",
+      "summary": "Merge prior staged manifest additions, then replace package spine items and attributes.",
       "paramStructure": "by-name",
       "params": [
         { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },

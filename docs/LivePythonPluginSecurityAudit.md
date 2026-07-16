@@ -25,7 +25,7 @@ Live 插件仍是**可信本地代码**，不是沙箱。插件进程与 Sigil �
 | 5 运行入口一致性 | 已修复 | 菜单、QuickLaunch 和 Automate 统一通过 `ExecutePluginByName` 选择 v1/v2；Automate 等待 live command 完成并拒绝不适用的 book-session。`291469a82`。 |
 | 6 单写者 | 已修复 | `PluginSessionManager` 持有跨 Session writer lease，事务 begin 获取，commit/rollback/finish/destructor 释放。`7e033e7f6`。 |
 | 7 事件与资源压力 | 已修复主要边界 | 高频事件按 50/100ms 和资源 ID 合并；4 MiB socket backlog 丢弃并报告；限制请求率、读写流、上传、临时文件、聚合快照与控制台。`f57a653b0` 及本轮配额补充。 |
-| 8 缺失 API | 已完成 | `materializeTemporary`、readMany continuation、分块二进制写、结构化 metadata/spine 更新均已接入宿主、SDK、OpenRPC 和示例。`8904fd1b0`。 |
+| 8 缺失 API | 已完成 | `materializeTemporary`、readMany continuation、分块二进制/文本写、结构化 metadata/spine 更新均已接入宿主、SDK、OpenRPC 和示例；spine 更新可见同事务 staged manifest additions。 |
 | 9 测试不足 | 已改善，未达到全 GUI 自动化 | 32 个 CTest 目标；OpenRPC/dispatcher 集合锁定；SDK 聚焦测试；中英文文档与示例公共 SDK 方法覆盖清单；输入、OPF 结构更新和全局 writer 有 C++ 测试。新增文本资源会在 commit 时立即物化，HTML 保存前强制惰性加载；契约测试锁定零字节保存和空 Gumbo 树保护。 |
 
 ## 防护边界

@@ -2502,16 +2502,39 @@ void PluginSession::Dispatch(const QJsonObject &request)
         }
         const QString source = transaction->HasPackageChange()
             ? transaction->PackageChange().stagedText : opf->GetText();
+        QString package_source = source;
         QString replacement;
         QString package_error;
-        const bool updated = method == QStringLiteral("transaction.updateMetadata")
-            ? PluginApi::ApplyMetadataUpdate(source,
-                params.value(QStringLiteral("items")).toArray(),
-                &replacement, &package_error)
-            : PluginApi::ApplySpineUpdate(source,
-                params.value(QStringLiteral("items")).toArray(),
-                params.value(QStringLiteral("attributes")).toObject(),
-                &replacement, &package_error);
+        bool manifest_updated = true;
+        if (method == QStringLiteral("transaction.updateSpine")) {
+            QList<PluginApi::PackageManifestAddition> manifest_additions;
+            for (const PluginApi::StagedResourceAddition &addition :
+                 transaction->Additions()) {
+                if (!addition.manifested) continue;
+                PluginApi::PackageManifestAddition manifest_addition;
+                manifest_addition.manifestId = addition.manifestId;
+                manifest_addition.href = Utility::URLEncodePath(
+                    Utility::buildRelativePath(opf->GetRelativePath(), addition.bookPath));
+                manifest_addition.mediaType = addition.mediaType;
+                manifest_addition.properties = addition.properties;
+                manifest_addition.fallback = addition.fallback;
+                manifest_addition.overlay = addition.overlay;
+                manifest_additions.append(manifest_addition);
+            }
+            manifest_updated = PluginApi::ApplyManifestAdditions(
+                source, manifest_additions, &package_source, &package_error);
+        }
+        bool updated = false;
+        if (manifest_updated) {
+            updated = method == QStringLiteral("transaction.updateMetadata")
+                ? PluginApi::ApplyMetadataUpdate(package_source,
+                    params.value(QStringLiteral("items")).toArray(),
+                    &replacement, &package_error)
+                : PluginApi::ApplySpineUpdate(package_source,
+                    params.value(QStringLiteral("items")).toArray(),
+                    params.value(QStringLiteral("attributes")).toObject(),
+                    &replacement, &package_error);
+        }
         PackageDocumentInfo package_info;
         if (!updated
             || !ParsePackageDocument(replacement, opf->GetRelativePath(), opf->GetEpubVersion(),

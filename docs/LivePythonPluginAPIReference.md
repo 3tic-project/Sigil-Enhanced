@@ -209,7 +209,10 @@ archive API 修改。
 
 `update_spine(items, attributes)` 的每项必须含字符串 `idref`，并可含字符串 `id`、`linear`、
 `properties`；`attributes` 是要更新的 spine 字符串属性。该操作替换全部 `<itemref>`，保留
-未指定的原 spine 属性，并验证每个 `idref` 都存在于 manifest。
+未指定的原 spine 属性，并验证每个 `idref` 都存在于 manifest。应用 spine 前，宿主会按
+确定顺序把同一事务中此前暂存的 manifested 新资源合并到 staged OPF manifest，因此新章节、
+CSS/图片、metadata 和最终 spine 可以一次校验、一次 commit。必须先 stage 全部新增资源再调用
+`update_spine()`；之后若继续新增，需要再次调用它后才能通过校验。
 
 ## 7. `EditorApi`
 
