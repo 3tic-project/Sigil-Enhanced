@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>Sigil MCP Server</name>
+  <author>Sigil Enhanced</author>
+  <description>Expose the current in-memory EPUB to local MCP hosts.</description>
+  <type>edit</type>
+  <engine>python3</engine>
+  <version>0.1.0</version>
+  <api version="2" interface="live" />
+  <lifetime>book-session</lifetime>
+</plugin>

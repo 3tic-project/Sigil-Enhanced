@@ -1,0 +1,47 @@
+TOOL_NAMES = (
+    "sigil.session.info",
+    "sigil.capabilities.list",
+    "sigil.book.info",
+    "sigil.book.package",
+    "sigil.resource.list",
+    "sigil.resource.read_text",
+    "sigil.resource.read_many",
+    "sigil.editor.state",
+    "sigil.editor.tabs",
+    "sigil.editor.open",
+    "sigil.editor.reveal",
+    "sigil.editor.edit",
+    "sigil.editor.replace_selection",
+    "sigil.editor.insert_text",
+    "sigil.transaction.begin",
+    "sigil.transaction.read_text",
+    "sigil.transaction.replace_text",
+    "sigil.transaction.apply_edits",
+    "sigil.transaction.add_text_resource",
+    "sigil.transaction.remove_resource",
+    "sigil.transaction.move_resource",
+    "sigil.transaction.rename_resource",
+    "sigil.transaction.replace_package",
+    "sigil.transaction.update_metadata",
+    "sigil.transaction.update_spine",
+    "sigil.transaction.preview",
+    "sigil.transaction.validate",
+    "sigil.transaction.commit",
+    "sigil.transaction.rollback",
+)
+
+RESOURCE_URIS = (
+    "sigil://book/info",
+    "sigil://book/metadata",
+    "sigil://book/manifest",
+    "sigil://book/spine",
+    "sigil://editor/state",
+    "sigil://resource/{resource_id}",
+)
+
+PROMPT_NAMES = (
+    "edit_epub_safely",
+    "generate_chapter",
+    "layout_epub",
+    "repair_epub",
+)

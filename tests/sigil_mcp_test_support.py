@@ -1,0 +1,214 @@
+import pathlib
+import sys
+
+
+ROOT = pathlib.Path(__file__).parents[1]
+PLUGIN_ROOT = ROOT / "examples" / "live_plugins" / "SigilMcpServer"
+LAUNCHER_ROOT = ROOT / "src" / "Resource_Files" / "plugin_launchers" / "python"
+sys.path.insert(0, str(PLUGIN_ROOT))
+sys.path.insert(0, str(LAUNCHER_ROOT))
+
+from sigil_live.client import EditorState, Resource, Selection
+
+
+class FakeTransaction:
+    def __init__(self, identifier="transaction-1"):
+        self.id = identifier
+        self.base_book_revision = 9
+        self.checkpoint = "auto"
+        self.active = True
+        self.calls = []
+
+    def _result(self, name, *args, **kwargs):
+        self.calls.append((name, args, kwargs))
+        return {"operation": name, "transaction_id": self.id}
+
+    def read_text(self, resource_id):
+        self.calls.append(("read_text", (resource_id,), {}))
+        return {"resource_id": resource_id, "text": "staged", "revision": 3}
+
+    def replace_text(self, *args, **kwargs):
+        return self._result("replace_text", *args, **kwargs)
+
+    def apply_edits(self, *args, **kwargs):
+        return self._result("apply_edits", *args, **kwargs)
+
+    def add_resource(self, *args, **kwargs):
+        return self._result("add_resource", *args, **kwargs)
+
+    def remove_resource(self, *args, **kwargs):
+        return self._result("remove_resource", *args, **kwargs)
+
+    def move_resource(self, *args, **kwargs):
+        return self._result("move_resource", *args, **kwargs)
+
+    def rename_resource(self, *args, **kwargs):
+        return self._result("rename_resource", *args, **kwargs)
+
+    def replace_package(self, *args, **kwargs):
+        return self._result("replace_package", *args, **kwargs)
+
+    def update_metadata(self, *args, **kwargs):
+        return self._result("update_metadata", *args, **kwargs)
+
+    def update_spine(self, *args, **kwargs):
+        return self._result("update_spine", *args, **kwargs)
+
+    def preview(self):
+        self.calls.append(("preview", (), {}))
+        return {
+            "transaction_id": self.id,
+            "valid": True,
+            "summary": {"modified": 2, "added": 1, "deleted": 0, "renamed": 1},
+            "conflicts": [],
+        }
+
+    def validate(self):
+        self.calls.append(("validate", (), {}))
+        return {"transaction_id": self.id, "valid": True, "conflicts": []}
+
+    def commit(self):
+        self.calls.append(("commit", (), {}))
+        self.active = False
+        return {"committed": True, "transaction_id": self.id}
+
+    def rollback(self):
+        self.calls.append(("rollback", (), {}))
+        self.active = False
+        return {"rolled_back": True, "transaction_id": self.id}
+
+
+class FakeBook:
+    def __init__(self):
+        self.transactions = []
+        self.resources = [
+            Resource(
+                "chapter",
+                "Text/chapter.xhtml",
+                "application/xhtml+xml",
+                "html",
+                3,
+                True,
+            ),
+            Resource("style", "Styles/book.css", "text/css", "css", 2, True),
+        ]
+
+    def get_info(self):
+        return {
+            "epub_version": "3.0",
+            "modified": True,
+            "file_path": "/books/example.epub",
+            "revision": 9,
+        }
+
+    def get_metadata(self):
+        return {"revision": 2, "items": [{"name": "dc:title", "content": "Example"}]}
+
+    def get_manifest(self):
+        return [{"id": "chapter", "book_path": "Text/chapter.xhtml"}]
+
+    def get_spine(self):
+        return {"revision": 2, "items": [{"idref": "chapter"}]}
+
+    def get_guide(self):
+        return []
+
+    def get_bindings(self):
+        return []
+
+    def list_resources(self, types=None, page_size=100, cursor=None):
+        offset = int(cursor or 0)
+        items = [item for item in self.resources if not types or item.resource_type in types]
+        page = items[offset:offset + page_size]
+        next_offset = offset + len(page)
+        return {
+            "items": page,
+            "next_cursor": str(next_offset) if next_offset < len(items) else None,
+        }
+
+    def read_text(self, resource_id):
+        return {"text": "<p>Current editor text</p>", "revision": 3}
+
+    def read_many(self, resource_ids):
+        return [
+            {"resource_id": item, "text": "text:" + item, "revision": 1}
+            for item in resource_ids
+        ]
+
+    def transaction(self, label, checkpoint):
+        transaction = FakeTransaction("transaction-{0}".format(len(self.transactions) + 1))
+        transaction.label = label
+        transaction.checkpoint = checkpoint
+        self.transactions.append(transaction)
+        return transaction
+
+
+class FakeEditor:
+    def get_state(self):
+        return EditorState(
+            active=True,
+            resource_id="chapter",
+            book_path="Text/chapter.xhtml",
+            revision=3,
+            cursor=5,
+            selection=Selection(2, 5, "abc"),
+        )
+
+    def get_open_tabs(self):
+        return [Resource("chapter", "Text/chapter.xhtml", "application/xhtml+xml", "html", 3, True)]
+
+    def open_resource(self, resource_id, position=None):
+        return self.get_state()
+
+    def reveal_range(self, resource_id, start, end):
+        return self.get_state()
+
+    def apply_edits(self, edits, **kwargs):
+        return {"applied": len(edits), "revision": 4}
+
+    def replace_selection(self, text, **kwargs):
+        return {"applied": True, "revision": 4, "text": text}
+
+    def insert_text(self, text, **kwargs):
+        return {"applied": True, "revision": 4, "text": text}
+
+
+class FakeUi:
+    def __init__(self):
+        self.confirmations = []
+        self.confirm_result = True
+        self.status = []
+        self.messages = []
+
+    def confirm(self, message, title=None):
+        self.confirmations.append((message, title))
+        return self.confirm_result
+
+    def show_status(self, message, duration_ms=5000):
+        self.status.append((message, duration_ms))
+        return True
+
+    def show_message(self, message, title=None, level="info"):
+        self.messages.append((message, title, level))
+        return True
+
+
+class FakePlugin:
+    def __init__(self, runtime_directory=None):
+        self.session_info = {
+            "session_id": "session-test",
+            "protocol_version": 1,
+            "api_version": 2,
+            "lifetime": "book-session",
+            "position_encoding": "utf-16",
+            "max_message_size": 8 * 1024 * 1024,
+            "runtime_directory": str(runtime_directory) if runtime_directory else "",
+        }
+        self.book = FakeBook()
+        self.editor = FakeEditor()
+        self.ui = FakeUi()
+        self.pings = 0
+
+    def ping(self):
+        self.pings += 1
+        return True

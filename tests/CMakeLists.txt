@@ -272,6 +272,21 @@ add_test(NAME python_package_sync
 )
 set_tests_properties(python_package_sync PROPERTIES TIMEOUT 30)
 
+add_test(NAME sigil_mcp_backend
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_backend_test.py
+)
+set_tests_properties(sigil_mcp_backend PROPERTIES TIMEOUT 30)
+
+add_test(NAME sigil_mcp_protocol
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_protocol_test.py
+)
+set_tests_properties(sigil_mcp_protocol PROPERTIES TIMEOUT 30)
+if( APPLE )
+    set_tests_properties(sigil_mcp_protocol PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sigil.app/Contents/python3lib"
+    )
+endif()
+
 add_test(NAME plugin_openrpc_contract
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/plugin_openrpc_contract_test.py
 )
