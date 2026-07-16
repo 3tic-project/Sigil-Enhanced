@@ -173,7 +173,9 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 | `--timeout SECONDS` | 单次 HTTP 请求超时，范围 1-300 秒。 |
 
 环境变量 `SIGIL_MCP_RUNTIME_DIR` 可以提供稳定发现目录。Linux 也会检查
-`XDG_RUNTIME_DIR/sigil-enhanced/mcp`。代理还会检查当前用户临时 runtime 目录。
+`XDG_RUNTIME_DIR/sigil-enhanced/mcp`，macOS 会检查
+`~/Library/Application Support/sigil-enhanced/mcp`。代理还会检查当前用户临时 runtime
+目录，因此通常不需要手工传入 metadata 路径。
 
 如果同时打开多个启用了 MCP 的 Book，代理会列出候选并退出，不会静默选择任意一个。
 

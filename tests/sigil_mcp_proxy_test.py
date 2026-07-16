@@ -3,6 +3,7 @@ import json
 import pathlib
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = pathlib.Path(__file__).parents[1]
@@ -49,6 +50,23 @@ class SigilMcpProxyTest(unittest.TestCase):
             )
             self.assertEqual(metadata["session_id"], "session-1")
             self.assertEqual(selected.name, "sigil-mcp-1.json")
+
+    def test_macos_discovery_matches_qstandardpaths_runtime_location(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = pathlib.Path(directory)
+            expected = home / "Library/Application Support/sigil-enhanced/mcp"
+            expected.mkdir(parents=True)
+            metadata_path = expected / "sigil-mcp-session.json"
+            metadata_path.write_text(json.dumps(self.metadata()), encoding="utf-8")
+
+            with mock.patch.object(MODULE.sys, "platform", "darwin"), \
+                 mock.patch.object(MODULE.pathlib.Path, "home", return_value=home), \
+                 mock.patch.dict(MODULE.os.environ, {}, clear=True), \
+                 mock.patch.object(MODULE.tempfile, "gettempdir", return_value=str(home / "tmp")):
+                selected, metadata = MODULE.discover_metadata()
+
+            self.assertEqual(selected, metadata_path)
+            self.assertEqual(metadata["session_id"], "session")
 
     def test_endpoint_validation_rejects_remote_or_ambiguous_urls(self):
         self.assertEqual(

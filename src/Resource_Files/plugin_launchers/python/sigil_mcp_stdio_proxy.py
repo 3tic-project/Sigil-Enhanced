@@ -31,6 +31,16 @@ def _candidate_runtime_directories(explicit=None):
     if xdg_runtime:
         candidates.append(pathlib.Path(xdg_runtime) / "sigil-enhanced" / "mcp")
 
+    # QStandardPaths::RuntimeLocation resolves to Application Support on macOS.
+    if sys.platform == "darwin":
+        candidates.append(
+            pathlib.Path.home()
+            / "Library"
+            / "Application Support"
+            / "sigil-enhanced"
+            / "mcp"
+        )
+
     temporary = pathlib.Path(tempfile.gettempdir())
     candidates.append(temporary / "sigil-enhanced" / "mcp")
     candidates.append(

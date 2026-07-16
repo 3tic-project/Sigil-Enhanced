@@ -102,6 +102,8 @@ to this endpoint. It discovers exactly one running Book or accepts an explicit
 metadata/session selection. It refuses ambiguous multi-Book selection and remote
 or credential-bearing endpoint URLs. The proxy contains no EPUB logic and does
 not implement server-initiated requests; the current adapter does not emit them.
+Discovery mirrors the host runtime locations, including XDG runtime directories,
+macOS Application Support, and the current user's temporary directory.
 
 ## Concurrency
 
