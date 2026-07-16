@@ -1,4 +1,6 @@
 Unreleased
+   New Features
+     - Added an installable MCP book-session adapter with authenticated loopback Streamable HTTP, a stdio transport proxy, live Book/editor context, revision-safe edits, and previewed multi-resource transactions for LLM hosts.
 
 Sigil-Enhanced-2.8.1.E5
    Bug Fixes

@@ -2,8 +2,9 @@
 
 Each child directory is an installable plugin. Copy one directory into Sigil's
 user plugin directory, or zip its contents and install it with the Plugin
-Manager. These examples use only the Python standard library and the bundled
-`sigil_live` SDK.
+Manager. Most examples use only the Python standard library and bundled
+`sigil_live` SDK. `SigilMcpServer` additionally uses the bundled official MCP
+Python SDK.
 
 | Plugin | Purpose |
 | --- | --- |
@@ -12,6 +13,7 @@ Manager. These examples use only the Python standard library and the bundled
 | **`LiveApiCoverageOutput`** | Coverage companion for `OutputApi`. |
 | **`LiveApiCoverageValidation`** | Coverage companion for `ValidationApi`. |
 | **`LiveApiCoverageSession`** | Coverage companion for `EventsApi.next_event` (`book-session`). |
+| **`SigilMcpServer`** | Local MCP tools/resources/prompts for LLM access to the current in-memory Book. |
 | `LiveApiShowcase` | Book/package reads, editor navigation and edits, UI, progress, and subscriptions. |
 | `LiveTransactionLab` | Text, binary, structure, package, and unmanaged archive transactions. |
 | `LiveValidationExample` | Publish structured validation results. |
@@ -44,3 +46,5 @@ confirmation before replacing the current Book. The output example refuses to
 overwrite the file currently open in Sigil.
 
 See `docs/LivePythonPluginAPIReference.md` for the complete API contract.
+See `docs/MCPUserGuide_zh-CN.md` and `docs/MCPToolsReference_zh-CN.md` for MCP
+installation, connection, workflows, and the complete tool contract.

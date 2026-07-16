@@ -125,6 +125,10 @@ Tag trigger:
 - Keep `QT_VERSION`, `QTVER`, PySide6, and the Qt archive URLs in sync.
 - When changing Python package requirements, update
   `requirements-core.txt`/`winreqs.txt`; cache keys already include those files.
+- The first-party MCP adapter requires the stable `mcp==1.28.1` runtime. macOS
+  copies the complete isolated requirement tree so native and transitive MCP
+  dependencies are not omitted; Windows gathers the same dependency through
+  `winreqs.txt`.
 - CI packages are unsigned. Release signing and notarization should be added as
   a separate workflow once certificates and secrets are available.
 - If GitHub changes runner labels, update this workflow and this document

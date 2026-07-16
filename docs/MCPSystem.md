@@ -7,6 +7,7 @@
 - MCP specification: 2025-11-25
 - Python SDK: `mcp>=1.28.1,<2`
 - Delivery model: installable Live Python Plugin API v2 book-session plugin
+- Implementation: available on `feature/mcp-system` with 29 tools and two transports
 
 This document is the tracked implementation contract for the Sigil Enhanced MCP
 adapter. The longer research draft remains in
@@ -79,7 +80,7 @@ editor undo, writer locking, package invariants, Checkpoints, and commit.
 
 ## Transport And Discovery
 
-The first release uses Streamable HTTP only:
+The adapter endpoint uses Streamable HTTP:
 
 - bind exactly to `127.0.0.1` on a pre-bound dynamic port;
 - expose `/mcp` with JSON responses;
@@ -96,8 +97,11 @@ The metadata contains the endpoint, token, process ID, session ID, Book identity
 protocol version, and creation time. It is a local secret and must not be logged,
 returned by a tool, stored in an EPUB, or committed to source control.
 
-A stdio proxy is deferred. It will only translate the standard transport and
-discover an explicitly selected Book endpoint; it will contain no EPUB logic.
+A bundled standard-library stdio proxy translates newline-delimited MCP JSON-RPC
+to this endpoint. It discovers exactly one running Book or accepts an explicit
+metadata/session selection. It refuses ambiguous multi-Book selection and remote
+or credential-bearing endpoint URLs. The proxy contains no EPUB logic and does
+not implement server-initiated requests; the current adapter does not emit them.
 
 ## Concurrency
 
@@ -248,6 +252,8 @@ The tracked test suite must cover:
 - atomic rendezvous creation, permissions, stale-file cleanup, and token secrecy;
 - package dependency synchronization for macOS and Windows builds.
 
-Passing unit and local integration tests does not prove cross-platform or every
-Host compatibility. Release readiness still requires MCP Inspector plus at least
-two real Hosts on Windows, macOS, and Linux.
+The automated suite uses the official MCP client against a real pre-bound HTTP
+endpoint and also exercises the stdio proxy through a subprocess. Passing local
+integration tests does not prove cross-platform or every Host compatibility.
+Release readiness still requires MCP Inspector plus at least two real Hosts on
+Windows, macOS, and Linux.
