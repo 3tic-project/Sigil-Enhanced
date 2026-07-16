@@ -2738,6 +2738,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 try {
                     Resource *resource = folder_keeper->AddContentFileToFolder(
                         staged_file.fileName(), false, addition.mediaType, addition.bookPath);
+                    if (auto *text_resource = qobject_cast<TextResource *>(resource)) {
+                        text_resource->InitialLoad();
+                    }
                     added_resources.append(resource);
                     TrackResource(resource);
                     ManifestResourceAddition manifest_addition;

@@ -7,6 +7,9 @@ import unittest
 ROOT = pathlib.Path(__file__).parents[1]
 SCHEMA_PATH = ROOT / "docs" / "plugin-api-v2.openrpc.json"
 DISPATCH_PATH = ROOT / "src" / "PluginAPI" / "PluginSession.cpp"
+TEXT_RESOURCE_PATH = ROOT / "src" / "ResourceObjects" / "TextResource.cpp"
+GUMBO_INTERFACE_PATH = ROOT / "src" / "Parsers" / "GumboInterface.cpp"
+HTML_RESOURCE_PATH = ROOT / "src" / "ResourceObjects" / "HTMLResource.cpp"
 
 IMPLEMENTED_METHODS = {
     "session.hello",
@@ -125,6 +128,45 @@ class OpenRpcContractTest(unittest.TestCase):
                     walk(child)
 
         walk(self.schema)
+
+    def test_lazy_mcp_reads_cannot_notify_an_unready_editor(self):
+        text_resource = TEXT_RESOURCE_PATH.read_text(encoding="utf-8")
+        initial_load = re.search(
+            r"void TextResource::InitialLoad\(\)\s*\{(?P<body>.*?)\n\}",
+            text_resource,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(initial_load)
+        self.assertIn("QSignalBlocker blocker(m_TextDocument)", initial_load["body"])
+
+        gumbo = GUMBO_INTERFACE_PATH.read_text(encoding="utf-8")
+        self.assertIn("return m_output ? m_output->document : NULL;", gumbo)
+        self.assertIn("return m_output ? m_output->root : NULL;", gumbo)
+        self.assertRegex(
+            gumbo,
+            r"GumboNode\* node = get_root_node\(\);\s*if \(!node\) \{\s*return NULL;",
+        )
+
+    def test_added_html_is_loaded_before_it_can_be_saved(self):
+        dispatcher = DISPATCH_PATH.read_text(encoding="utf-8")
+        self.assertRegex(
+            dispatcher,
+            r"AddContentFileToFolder\([\s\S]*?\);\s*"
+            r"if \(auto \*text_resource = qobject_cast<TextResource \*>\(resource\)\) \{\s*"
+            r"text_resource->InitialLoad\(\);",
+        )
+
+        html_resource = HTML_RESOURCE_PATH.read_text(encoding="utf-8")
+        save = re.search(
+            r"void HTMLResource::SaveToDisk\(bool book_wide_save\)\s*\{(?P<body>.*?)\n\}",
+            html_resource,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(save)
+        self.assertLess(
+            save["body"].index("InitialLoad();"),
+            save["body"].index("SetText(GetText());"),
+        )
 
 
 if __name__ == "__main__":

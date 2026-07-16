@@ -132,6 +132,9 @@ Annotations 只是 MCP Host UI 提示，不是授权判定。
 返回 `items`。SDK 会自动处理宿主 6 MiB response budget 产生的 continuation，最终结果仍受
 MCP 8 MiB 消息限制。大型任务应主动分批。
 
+读取尚未加载的文本资源时，宿主会从当前 Book 工作目录惰性载入，但不会发出资源编辑事件、
+增加内容 revision 或触发编辑器光标同步。
+
 ## 5. Editor 查询与导航
 
 ### `sigil.editor.state`
@@ -299,6 +302,8 @@ edits 与 editor edit 使用相同 UTF-16 `{start,end,text}` 结构，但针对 
 | `manifested` | boolean | 否 | 默认 `true`。 |
 
 该工具用于生成章节、CSS、SVG、XML 等文本资源。
+commit 会在资源加入 Book 后立即物化文本缓存；随后直接保存、创建 checkpoint 或批量读取都必须
+保留传入的完整 `text`，不能用未加载的空文档覆盖文件。
 
 ### `sigil.transaction.add_binary_resource`
 
