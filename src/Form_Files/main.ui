@@ -394,12 +394,6 @@
      <addaction name="actionEpub3To2"/>
      <addaction name="actionEpub2To3"/>
     </widget>
-    <widget class="QMenu" name="menuFonts">
-     <property name="title">
-      <string>&amp;Fonts</string>
-     </property>
-     <addaction name="actionSubsetEmbeddedFonts"/>
-    </widget>
     <addaction name="actionAddCover"/>
     <addaction name="actionMetaEditor"/>
     <addaction name="menuTOC"/>
@@ -413,7 +407,6 @@
     <addaction name="menuSpellCheckMenu"/>
     <addaction name="menuReformatHTML"/>
     <addaction name="menuEPUB3Tools"/>
-    <addaction name="menuFonts"/>
     <addaction name="actionWellFormedCheckEpub"/>
 	<addaction name="actionNormalizedOPF"/>
     <addaction name="actionValidateStylesheetsWithW3C"/>
@@ -438,6 +431,7 @@
     <addaction name="actionNormalizeEpubStructure"/>
     <addaction name="actionEnhanceSourceFormatting"/>
     <addaction name="actionChineseConversion"/>
+    <addaction name="actionSubsetEmbeddedFonts"/>
     <addaction name="actionAnalyzeBrParagraphs"/>
     <addaction name="actionNormalizeCurrentBrParagraphs"/>
     <addaction name="actionNormalizeBrParagraphs"/>

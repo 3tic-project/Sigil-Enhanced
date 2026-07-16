@@ -10724,11 +10724,6 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>Epub&amp;3 工具</translation>
     </message>
     <message>
-        <location filename="../../Form_Files/main.ui" line="399"/>
-        <source>&amp;Fonts</source>
-        <translation>字型(&amp;F)</translation>
-    </message>
-    <message>
         <location filename="../../Form_Files/main.ui" line="430"/>
         <source>&amp;Plugins</source>
         <translation>外掛(&amp;P)</translation>

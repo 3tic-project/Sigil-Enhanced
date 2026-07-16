@@ -27,7 +27,7 @@ WOFF/WOFF2、TTC/OTC、SVG 字形、EBDT/EBLC、Graphite 和 AAT 布局不属于
 
 1. 打开包含内嵌字体的 EPUB。
 2. 可选：在 Book Browser 中选择一个或多个字体，以此作为结果表的初始勾选范围。
-3. 选择 `Tools > Fonts > Subset Embedded Fonts...`。
+3. 选择 `Enhancement > Subset Embedded Fonts...`。
 4. 等待分析完成，检查许可、体积、字形数和状态列。
 5. 按需启用 `Remove font hinting`，然后重新选择 `Analyze`。
 6. 按需选择 `Save Report...` 导出 JSON 报告。
