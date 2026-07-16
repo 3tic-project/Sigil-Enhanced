@@ -110,6 +110,7 @@ Automate 共用同一运行时选择；Automate 会等待 Live command 完成，
 | `resolve_path(book_path)` | 当前路径对应的 `Resource`。 |
 | `get_resource(resource_id)` | 当前资源信息。 |
 | `read_text(resource)` | `text` 与 `revision`。 |
+| `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | 按 UTF-16 范围有界读取文本、revision 与续读位置。 |
 | `read_many(resources)` | 最多 100 个文本资源；SDK 自动跟随 6 MiB 响应预算的 continuation。 |
 | `read_binary(resource)` | 最多 5 MiB 的 bytes 数据与 revision。 |
 | `open_binary(resource)` | 二进制资源的分块 `BinaryReader` 快照。 |
@@ -154,7 +155,10 @@ with plugin.book.transaction("Normalize chapters", checkpoint="auto") as tx:
 | 方法 | 说明 |
 | --- | --- |
 | `read_text(resource)` | 读 staged 值，否则读 live 值。 |
-| `replace_text(resource, text, expected_revision=None)` | 暂存完整文本。 |
+| `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | 读取 live、已修改或新暂存文本的有界范围。 |
+| `replace_text(resource, text, expected_revision=None)` | 暂存完整文本；超过 4 MiB 时 SDK 自动分块。 |
+| `begin_text_write(resource, size, expected_revision=None)` | 开始最大 64 MiB 的 UTF-8 分块替换。 |
+| `begin_text_add(book_path, size, media_type, ...)` | 开始最大 64 MiB 的 UTF-8 分块新增。 |
 | `apply_edits(resource, edits, expected_revision=None)` | 暂存不重叠 UTF-16 patches。 |
 | `read_binary(resource)` | 读 staged/live 二进制，内联上限 5 MiB。 |
 | `write_binary(resource, data, expected_revision=None)` | 暂存最大 256 MiB 的 bytes-like 数据；超过 4 MiB 时 SDK 自动分块。 |
@@ -179,8 +183,21 @@ with plugin.book.transaction("Normalize chapters", checkpoint="auto") as tx:
 提供唯一 `manifest_id`。`mimetype`、`META-INF/container.xml` 和 OPF 不能通过
 archive API 修改。
 
+新增文本返回的 `staging_id` 可在同一事务中继续传给 `read_text_range()`、`replace_text()`
+或 `apply_edits()`。其 staged revision 从 0 开始，每次完成替换或 patch 后递增，提交前不会
+暴露为 live `Resource`。
+
 `replace_package()` 会验证 XML、EPUB 版本、manifest id/href 唯一性、spine idref，
 以及 package manifest 是否与同一事务的 add/remove/move 最终状态完全一致。
+
+`read_text_range()` 返回 `text`、`start`、`end`、`total_utf16_units`、`revision`、`staged`
+和可空 `next_start`；首段 `start=0` 额外返回整文 `total_utf8_bytes` 与 `sha256`，后续段省略
+这两个需要整文编码/哈希的字段。单次最多 1 Mi 个 UTF-16 code units，且不会切开代理项对。
+
+`begin_text_write()` 和 `begin_text_add()` 返回具有 `chunk_size`、`max_size`、`expected_size`、
+`received`、`write(text, offset=None)`、`finish()`、`abort()` 的 writer。offset 是严格 UTF-8
+字节偏移；宿主限制单块 1 MiB、每个 Session 两个并行上传、单次文本 64 MiB，并在 finish 时
+校验长度、UTF-8 和 SHA-256。commit、rollback 或 Session 结束会删除未完成的临时上传。
 
 `begin_binary_write()` 返回具有 `chunk_size`、`write(data)` 和 `finish()` 的 writer；完成时宿主
 核对声明长度与 SHA-256 后才暂存数据。`write_binary_file()` 使用同一分块 writer，不会把整个

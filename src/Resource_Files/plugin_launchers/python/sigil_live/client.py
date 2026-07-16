@@ -160,6 +160,78 @@ class _BinaryWriter:
         return result
 
 
+def _text_chunks(value, maximum_bytes):
+    start = 0
+    while start < len(value):
+        end = min(len(value), start + maximum_bytes)
+        chunk = value[start:end]
+        encoded = chunk.encode("utf-8")
+        while len(encoded) > maximum_bytes:
+            width = max(1, int((end - start) * maximum_bytes / len(encoded)))
+            end = start + width
+            chunk = value[start:end]
+            encoded = chunk.encode("utf-8")
+        yield chunk, encoded
+        start = end
+
+
+class _TextWriter:
+    """An integrity-checked chunked transaction writer for UTF-8 text."""
+
+    def __init__(self, transaction, method, params):
+        self._transaction = transaction
+        self._rpc = transaction._rpc
+        result = self._rpc.call(method, transaction._params(params))
+        self.id = result["upload_id"]
+        self.chunk_size = result["chunk_size"]
+        self.max_size = result["max_size"]
+        self.expected_size = result["expected_size"]
+        self.received = 0
+        self._hash = hashlib.sha256()
+        self.finished = False
+
+    def write(self, text, offset=None):
+        if self.finished:
+            raise RuntimeError("text write is finished")
+        if not isinstance(text, str):
+            raise TypeError("text must be a string")
+        cursor = self.received if offset is None else offset
+        for chunk, encoded in _text_chunks(text, self.chunk_size):
+            result = self._rpc.call(
+                "transaction.writeTextChunk",
+                self._transaction._params(
+                    {"upload_id": self.id, "offset": cursor, "text": chunk}
+                ),
+            )
+            if not result.get("duplicate", False):
+                self._hash.update(encoded)
+            self.received = result["received"]
+            cursor = self.received
+        return self.received
+
+    def finish(self):
+        if self.finished:
+            raise RuntimeError("text write is finished")
+        result = self._rpc.call(
+            "transaction.writeTextEnd",
+            self._transaction._params(
+                {"upload_id": self.id, "sha256": self._hash.hexdigest()}
+            ),
+        )
+        self.finished = True
+        return result
+
+    def abort(self):
+        if self.finished:
+            return False
+        result = self._rpc.call(
+            "transaction.writeTextAbort",
+            self._transaction._params({"upload_id": self.id}),
+        )
+        self.finished = True
+        return result["aborted"]
+
+
 class InputWriter:
     """Chunked, integrity-checked EPUB upload owned by an input plugin."""
 
@@ -266,10 +338,28 @@ class Transaction:
             "transaction.readText", self._params({"resource_id": resource_id})
         )
 
+    def read_text_range(self, resource, start=0, max_utf16_units=1024 * 1024):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        return self._rpc.call(
+            "transaction.readTextRange",
+            self._params(
+                {
+                    "resource_id": resource_id,
+                    "start": start,
+                    "max_utf16_units": max_utf16_units,
+                }
+            ),
+        )
+
     def replace_text(self, resource, text, expected_revision=None):
         resource_id = resource.id if isinstance(resource, Resource) else resource
         if expected_revision is None:
             expected_revision = self.read_text(resource_id)["revision"]
+        encoded_size = len(text.encode("utf-8"))
+        if encoded_size > 4 * 1024 * 1024:
+            writer = self.begin_text_write(resource_id, encoded_size, expected_revision)
+            writer.write(text)
+            return writer.finish()
         return self._rpc.call(
             "transaction.replaceText",
             self._params(
@@ -279,6 +369,51 @@ class Transaction:
                     "text": text,
                 }
             ),
+        )
+
+    def begin_text_write(self, resource, size, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            if isinstance(resource, Resource):
+                expected_revision = resource.revision
+            else:
+                expected_revision = self.read_text(resource_id)["revision"]
+        return _TextWriter(
+            self,
+            "transaction.writeTextBegin",
+            {
+                "resource_id": resource_id,
+                "size": size,
+                "expected_revision": expected_revision,
+            },
+        )
+
+    def begin_text_add(
+        self,
+        book_path,
+        size,
+        media_type,
+        manifest_id=None,
+        properties=None,
+        fallback=None,
+        overlay=None,
+        add_to_spine=True,
+        manifested=True,
+    ):
+        return _TextWriter(
+            self,
+            "transaction.addTextBegin",
+            {
+                "book_path": book_path,
+                "size": size,
+                "media_type": media_type,
+                "manifest_id": manifest_id,
+                "properties": properties,
+                "fallback": fallback,
+                "overlay": overlay,
+                "add_to_spine": add_to_spine,
+                "manifested": manifested,
+            },
         )
 
     def apply_edits(self, resource, edits, expected_revision=None):
@@ -432,6 +567,20 @@ class Transaction:
             "add_to_spine": add_to_spine,
             "manifested": manifested,
         }
+        if isinstance(data, str) and len(data.encode("utf-8")) > 4 * 1024 * 1024:
+            writer = self.begin_text_add(
+                book_path,
+                len(data.encode("utf-8")),
+                media_type,
+                manifest_id=manifest_id,
+                properties=properties,
+                fallback=fallback,
+                overlay=overlay,
+                add_to_spine=add_to_spine,
+                manifested=manifested,
+            )
+            writer.write(data)
+            return writer.finish()
         if isinstance(data, str):
             params["text"] = data
         elif isinstance(data, (bytes, bytearray, memoryview)):
@@ -600,6 +749,17 @@ class BookApi:
     def read_text(self, resource):
         resource_id = resource.id if isinstance(resource, Resource) else resource
         return self._rpc.call("resource.readText", {"resource_id": resource_id})
+
+    def read_text_range(self, resource, start=0, max_utf16_units=1024 * 1024):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        return self._rpc.call(
+            "resource.readTextRange",
+            {
+                "resource_id": resource_id,
+                "start": start,
+                "max_utf16_units": max_utf16_units,
+            },
+        )
 
     def read_many(self, resources):
         ids = [item.id if isinstance(item, Resource) else item for item in resources]
@@ -913,7 +1073,12 @@ class Plugin:
                 "api_version": 2,
                 "plugin_name": plugin_name,
                 "client": {"python": platform.python_version(), "library": "sigil_live/2.0.0"},
-                "capabilities": {"events": True, "binary_chunks": True, "position_encodings": ["utf-16"]},
+                "capabilities": {
+                    "events": True,
+                    "binary_chunks": True,
+                    "text_chunks": True,
+                    "position_encodings": ["utf-16"],
+                },
             },
         )
         transport.max_message_size = session_info["max_message_size"]

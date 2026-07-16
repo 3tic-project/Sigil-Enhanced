@@ -11,6 +11,31 @@ sys.path.insert(0, str(LAUNCHER_ROOT))
 from sigil_live.client import EditorState, Resource, Selection
 
 
+class FakeTextWriter:
+    def __init__(self, identifier="text-upload"):
+        self.id = identifier
+        self.chunk_size = 1024
+        self.max_size = 64 * 1024 * 1024
+        self.expected_size = 12
+        self.received = 0
+        self.finished = False
+
+    def write(self, text, offset=None):
+        encoded = text.encode("utf-8")
+        if offset is not None and offset != self.received:
+            return self.received
+        self.received += len(encoded)
+        return self.received
+
+    def finish(self):
+        self.finished = True
+        return {"staged": True, "resource_id": "new:1", "size": self.received}
+
+    def abort(self):
+        self.finished = True
+        return True
+
+
 class FakeTransaction:
     def __init__(self, identifier="transaction-1"):
         self.id = identifier
@@ -26,6 +51,24 @@ class FakeTransaction:
     def read_text(self, resource_id):
         self.calls.append(("read_text", (resource_id,), {}))
         return {"resource_id": resource_id, "text": "staged", "revision": 3}
+
+    def read_text_range(self, resource_id, start=0, max_utf16_units=1024 * 1024):
+        return {
+            "target_id": resource_id,
+            "text": "staged"[start:start + max_utf16_units],
+            "start": start,
+            "revision": 3,
+        }
+
+    def begin_text_write(self, resource_id, size, expected_revision=None):
+        writer = FakeTextWriter("text-write")
+        writer.expected_size = size
+        return writer
+
+    def begin_text_add(self, book_path, size, media_type, **kwargs):
+        writer = FakeTextWriter("text-add")
+        writer.expected_size = size
+        return writer
 
     def replace_text(self, *args, **kwargs):
         return self._result("replace_text", *args, **kwargs)
@@ -128,6 +171,16 @@ class FakeBook:
 
     def read_text(self, resource_id):
         return {"text": "<p>Current editor text</p>", "revision": 3}
+
+    def read_text_range(self, resource_id, start=0, max_utf16_units=1024 * 1024):
+        text = "<p>Current editor text</p>"
+        return {
+            "target_id": resource_id,
+            "text": text[start:start + max_utf16_units],
+            "start": start,
+            "end": min(len(text), start + max_utf16_units),
+            "revision": 3,
+        }
 
     def read_many(self, resource_ids):
         return [

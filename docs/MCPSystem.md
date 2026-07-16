@@ -131,6 +131,7 @@ Tool names are stable and grouped under `sigil.*`.
 - `sigil.book.package`
 - `sigil.resource.list`
 - `sigil.resource.read_text`
+- `sigil.resource.read_text_range`
 - `sigil.resource.read_many`
 - `sigil.editor.state`
 - `sigil.editor.tabs`
@@ -150,8 +151,14 @@ and expected revision and becomes one Qt undo step.
 
 - `sigil.transaction.begin`
 - `sigil.transaction.read_text`
+- `sigil.transaction.read_text_range`
 - `sigil.transaction.replace_text`
 - `sigil.transaction.apply_edits`
+- `sigil.transaction.begin_text_write`
+- `sigil.transaction.begin_text_resource`
+- `sigil.transaction.write_text_chunk`
+- `sigil.transaction.finish_text_write`
+- `sigil.transaction.abort_text_write`
 - `sigil.transaction.add_text_resource`
 - `sigil.transaction.add_binary_resource`
 - `sigil.transaction.remove_resource`
@@ -170,6 +177,11 @@ detection, package validation, Checkpoint policy, and rollback come from the Liv
 API. Commit revalidates and applies immediately without a native confirmation
 dialog. Clients must preview and validate first, and roll back before commit when
 the staged changes should be discarded.
+
+Text range reads are bounded to 1 Mi UTF-16 code units. Chunked text writes use
+exact UTF-8 byte offsets, 1 MiB chunks, a 64 MiB document limit, and host-side
+length/UTF-8/SHA-256 validation before staging. Newly staged text remains
+addressable and editable by its staging ID until commit.
 
 ## Resources And Prompts
 

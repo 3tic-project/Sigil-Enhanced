@@ -49,6 +49,9 @@ chapters, CSS/layout changes, OPF metadata, spine work, or multiple resources:
 1. Read current Book/package/resource state and revisions.
 2. Call `sigil.transaction.begin`.
 3. Stage changes using the returned `transaction_id`.
+   For large text, page reads with `sigil.resource.read_text_range` or
+   `sigil.transaction.read_text_range`, then use the begin/chunk/finish text
+   tools instead of one oversized JSON value.
 4. Call `sigil.transaction.preview` and `sigil.transaction.validate`.
 5. Call `sigil.transaction.commit`; it commits directly without a confirmation dialog.
 6. On conflict, validation failure, or changed intent before commit, call
@@ -56,6 +59,11 @@ chapters, CSS/layout changes, OPF metadata, spine work, or multiple resources:
 
 Uncommitted transactions roll back after five idle minutes by default, when the
 server stops, or when the Book session ends.
+
+Text range pages are limited to 1 Mi UTF-16 code units. Chunked text uploads are
+limited to 64 MiB, use exact UTF-8 byte offsets and 1 MiB host chunks, and are
+staged only after length, UTF-8, and SHA-256 validation succeeds. An unfinished
+upload can be explicitly aborted and is also removed with its transaction.
 
 ## Documentation
 

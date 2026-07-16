@@ -31,6 +31,7 @@ class SigilMcpBackend:
         self.idle_timeout_seconds = max(60, min(int(idle_timeout_seconds), 1800))
         self._transaction = None
         self._transaction_activity = None
+        self._text_writers = {}
 
     def session_info(self):
         info = dict(self.plugin.session_info)
@@ -60,6 +61,9 @@ class SigilMcpBackend:
             "limits": {
                 "resource_page_size_max": 500,
                 "read_many_max": 100,
+                "text_range_utf16_units_max": 1024 * 1024,
+                "text_write_size_max": 64 * 1024 * 1024,
+                "text_write_chunk_size_max": 1024 * 1024,
                 "inline_binary_size_max": MAX_INLINE_BINARY_SIZE,
                 "editor_edits_max": 1000,
                 "position_encoding": "utf-16",
@@ -98,6 +102,9 @@ class SigilMcpBackend:
         result = dict(self.plugin.book.read_text(resource_id))
         result["resource_id"] = resource_id
         return result
+
+    def resource_read_text_range(self, resource_id, start=0, max_utf16_units=1024 * 1024):
+        return self.plugin.book.read_text_range(resource_id, start, max_utf16_units)
 
     def resource_read_many(self, resource_ids):
         if not 1 <= len(resource_ids) <= 100:
@@ -170,6 +177,79 @@ class SigilMcpBackend:
     def transaction_read_text(self, transaction_id, resource_id):
         transaction = self._require_transaction(transaction_id)
         return transaction.read_text(resource_id)
+
+    def transaction_read_text_range(
+        self, transaction_id, resource_id, start=0, max_utf16_units=1024 * 1024
+    ):
+        transaction = self._require_transaction(transaction_id)
+        return transaction.read_text_range(resource_id, start, max_utf16_units)
+
+    def transaction_begin_text_write(
+        self, transaction_id, resource_id, expected_revision, size
+    ):
+        transaction = self._require_transaction(transaction_id)
+        writer = transaction.begin_text_write(resource_id, size, expected_revision)
+        self._text_writers[writer.id] = (transaction.id, writer)
+        return {
+            "upload_id": writer.id,
+            "chunk_size": writer.chunk_size,
+            "max_size": writer.max_size,
+            "expected_size": writer.expected_size,
+        }
+
+    def transaction_begin_text_resource(
+        self,
+        transaction_id,
+        book_path,
+        size,
+        media_type,
+        manifest_id=None,
+        properties=None,
+        add_to_spine=True,
+        manifested=True,
+    ):
+        transaction = self._require_transaction(transaction_id)
+        writer = transaction.begin_text_add(
+            book_path,
+            size,
+            media_type,
+            manifest_id=manifest_id,
+            properties=properties,
+            add_to_spine=add_to_spine,
+            manifested=manifested,
+        )
+        self._text_writers[writer.id] = (transaction.id, writer)
+        return {
+            "upload_id": writer.id,
+            "chunk_size": writer.chunk_size,
+            "max_size": writer.max_size,
+            "expected_size": writer.expected_size,
+        }
+
+    def transaction_write_text_chunk(self, transaction_id, upload_id, offset, text):
+        transaction = self._require_transaction(transaction_id)
+        writer = self._require_text_writer(transaction.id, upload_id)
+        previous = writer.received
+        received = writer.write(text, offset=offset)
+        return {
+            "upload_id": upload_id,
+            "received": received,
+            "duplicate": offset < previous and received == previous,
+        }
+
+    def transaction_finish_text_write(self, transaction_id, upload_id):
+        transaction = self._require_transaction(transaction_id)
+        writer = self._require_text_writer(transaction.id, upload_id)
+        result = writer.finish()
+        self._text_writers.pop(upload_id, None)
+        return result
+
+    def transaction_abort_text_write(self, transaction_id, upload_id):
+        transaction = self._require_transaction(transaction_id)
+        writer = self._require_text_writer(transaction.id, upload_id)
+        aborted = writer.abort()
+        self._text_writers.pop(upload_id, None)
+        return {"upload_id": upload_id, "aborted": aborted}
 
     def transaction_replace_text(
         self, transaction_id, resource_id, expected_revision, text
@@ -287,6 +367,7 @@ class SigilMcpBackend:
     def transaction_commit(self, transaction_id):
         transaction = self._require_transaction(transaction_id)
         result = transaction.commit()
+        self._text_writers.clear()
         self._transaction = None
         self._transaction_activity = None
         result = dict(result)
@@ -296,6 +377,7 @@ class SigilMcpBackend:
     def transaction_rollback(self, transaction_id):
         transaction = self._require_transaction(transaction_id)
         result = transaction.rollback()
+        self._text_writers.clear()
         self._transaction = None
         self._transaction_activity = None
         return result
@@ -306,6 +388,7 @@ class SigilMcpBackend:
         if time.monotonic() - self._transaction_activity < self.idle_timeout_seconds:
             return False
         self._transaction.rollback()
+        self._text_writers.clear()
         self._transaction = None
         self._transaction_activity = None
         return True
@@ -316,6 +399,7 @@ class SigilMcpBackend:
         try:
             self._transaction.rollback()
         finally:
+            self._text_writers.clear()
             self._transaction = None
             self._transaction_activity = None
         return True
@@ -340,3 +424,14 @@ class SigilMcpBackend:
 
     def _touch_transaction(self):
         self._transaction_activity = time.monotonic()
+
+    def _require_text_writer(self, transaction_id, upload_id):
+        owner = self._text_writers.get(upload_id)
+        if owner is None or owner[0] != transaction_id:
+            raise BackendError(
+                "ResourceNotFound",
+                "Text write upload not found",
+                retryable=True,
+                recovery="Begin a new text write upload.",
+            )
+        return owner[1]

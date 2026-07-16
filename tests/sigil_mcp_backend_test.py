@@ -33,6 +33,8 @@ class SigilMcpBackendTest(unittest.TestCase):
         state = self.backend.editor_state()
         self.assertEqual(state["selection"], {"start": 2, "end": 5, "text": "abc"})
         self.assertEqual(state["position_encoding"], "utf-16")
+        text_range = self.backend.resource_read_text_range("chapter", 3, 5)
+        self.assertEqual(text_range["text"], "Current editor text</p>"[:5])
 
     def test_transaction_rejects_foreign_handle_and_direct_commit_clears_state(self):
         started = self.backend.transaction_begin("Generate chapter", "auto")
@@ -67,6 +69,35 @@ class SigilMcpBackendTest(unittest.TestCase):
             self.backend.transaction_add_binary_resource(
                 transaction_id, "OEBPS/Images/bad.jpg", "not base64!", "image/jpeg"
             )
+
+    def test_chunked_text_writer_tracks_offsets_and_stages_new_resource(self):
+        transaction_id = self.backend.transaction_begin()["transaction_id"]
+        started = self.backend.transaction_begin_text_resource(
+            transaction_id,
+            "OEBPS/Text/new.xhtml",
+            6,
+            "application/xhtml+xml",
+            manifest_id="new_chapter",
+        )
+        self.assertEqual(started["upload_id"], "text-add")
+        written = self.backend.transaction_write_text_chunk(
+            transaction_id, "text-add", 0, "中文"
+        )
+        self.assertEqual(written["received"], 6)
+        result = self.backend.transaction_finish_text_write(transaction_id, "text-add")
+        self.assertTrue(result["staged"])
+        self.assertNotIn("text-add", self.backend._text_writers)
+
+    def test_chunked_text_upload_can_be_aborted_without_rolling_back(self):
+        transaction_id = self.backend.transaction_begin()["transaction_id"]
+        self.backend.transaction_begin_text_write(
+            transaction_id, "chapter", 3, 3
+        )
+        result = self.backend.transaction_abort_text_write(
+            transaction_id, "text-write"
+        )
+        self.assertTrue(result["aborted"])
+        self.assertEqual(self.backend.transaction_status()["transaction_id"], transaction_id)
 
     def test_commit_does_not_consult_the_ui_confirmation_default(self):
         transaction_id = self.backend.transaction_begin()["transaction_id"]

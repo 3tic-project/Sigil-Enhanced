@@ -31,9 +31,10 @@ Live 插件仍是**可信本地代码**，不是沙箱。插件进程与 Sigil �
 ## 防护边界
 
 - socket 使用一次性 token，只接受一个客户端；握手后清除 token 并关闭 listener。
-- 正常帧上限 8 MiB；大二进制使用最多 2 MiB 的 chunk。
+- 正常帧上限 8 MiB；大二进制使用最多 2 MiB 的 chunk；文本范围单次最多 1 Mi 个 UTF-16
+  code units，分块文本写单块最多 1 MiB、单文档最多 64 MiB。
 - 每 Session 最多 512 请求/秒、8 个读快照且合计 1 GiB、2 个二进制写上传、1 个 input
-  上传、16 个物化文件且合计 512 MiB；单个事务二进制最多 256 MiB。
+  上传、2 个文本写上传、16 个物化文件且合计 512 MiB；单个事务二进制最多 256 MiB。
 - `materializeTemporary` 不接受目标路径，目录由 Session 独占并在结束时删除；文本来自内存，
   临时文件修改不会自动导回。
 - archive 路径要求 canonical Book path，拒绝 symlink、越界路径和受保护 EPUB 文件。

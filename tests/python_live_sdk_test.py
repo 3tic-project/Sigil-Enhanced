@@ -191,6 +191,28 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual([item["resource_id"] for item in items], ["a", "b"])
         self.assertEqual(transport.sent[1]["params"]["cursor"], "1")
 
+    def test_book_and_transaction_read_bounded_text_ranges(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "text": "abc", "start": 0, "end": 3, "next_start": 3,
+            }},
+            {"jsonrpc": "2.0", "id": 2, "result": {
+                "text": "def", "start": 3, "end": 6, "next_start": None,
+            }},
+        ])
+        rpc = RpcClient(transport)
+        self.assertEqual(BookApi(rpc).read_text_range("chapter", 0, 3)["text"], "abc")
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            rpc,
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        self.assertEqual(tx.read_text_range("new:1", 3, 3)["text"], "def")
+        self.assertEqual(transport.sent[0]["method"], "resource.readTextRange")
+        self.assertEqual(transport.sent[1]["method"], "transaction.readTextRange")
+        self.assertEqual(transport.sent[1]["params"]["transaction_id"], "tx")
+
     def test_input_api_chunks_and_hashes_epub_uploads(self):
         transport = FakeTransport(
             [
@@ -445,6 +467,63 @@ class LiveSdkTest(unittest.TestCase):
             transport.sent[-1]["params"]["sha256"],
             "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
         )
+
+    def test_transaction_text_writer_chunks_unicode_by_utf8_size(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "upload_id": "text-upload", "chunk_size": 4,
+                "max_size": 100, "expected_size": 9,
+            }},
+            {"jsonrpc": "2.0", "id": 2, "result": {
+                "received": 3, "duplicate": False,
+            }},
+            {"jsonrpc": "2.0", "id": 3, "result": {
+                "received": 7, "duplicate": False,
+            }},
+            {"jsonrpc": "2.0", "id": 4, "result": {
+                "received": 9, "duplicate": False,
+            }},
+            {"jsonrpc": "2.0", "id": 5, "result": {
+                "staged": True, "resource_id": "chapter",
+            }},
+        ])
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        writer = tx.begin_text_write("chapter", 9, expected_revision=4)
+        self.assertEqual(writer.write("中文abc"), 9)
+        self.assertTrue(writer.finish()["staged"])
+        chunks = [
+            item["params"] for item in transport.sent
+            if item["method"] == "transaction.writeTextChunk"
+        ]
+        self.assertEqual([item["offset"] for item in chunks], [0, 3, 7])
+        self.assertTrue(all(len(item["text"].encode("utf-8")) <= 4 for item in chunks))
+
+    def test_transaction_text_add_upload_can_be_aborted(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "upload_id": "text-add", "chunk_size": 1024,
+                "max_size": 4096, "expected_size": 10,
+            }},
+            {"jsonrpc": "2.0", "id": 2, "result": {"aborted": True}},
+        ])
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        writer = tx.begin_text_add(
+            "OEBPS/Text/new.xhtml", 10, "application/xhtml+xml",
+            manifest_id="new_chapter",
+        )
+        self.assertTrue(writer.abort())
+        self.assertEqual(transport.sent[0]["method"], "transaction.addTextBegin")
+        self.assertEqual(transport.sent[1]["method"], "transaction.writeTextAbort")
 
     def test_transaction_updates_structured_metadata_and_spine(self):
         transport = FakeTransport([

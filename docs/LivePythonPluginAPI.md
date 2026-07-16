@@ -179,6 +179,7 @@ not construct the transport directly.
 | `resolve_path(book_path)` | Resolve a current book path to `Resource`. |
 | `get_resource(resource_id)` | Fetch current resource metadata. |
 | `read_text(resource)` | Dictionary containing `text` and `revision`. |
+| `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | Read a bounded UTF-16 range with revision and continuation metadata. |
 | `read_many(resources)` | Up to 100 current text resources; continuation across the 6 MiB response budget is automatic. |
 | `read_binary(resource)` | Read a binary resource up to 5 MiB and return decoded `data`. |
 | `open_binary(resource)` | Open a context-managed, chunked snapshot reader for a binary resource. |
@@ -316,7 +317,10 @@ replaces the Validation Results view and accepts at most 10,000 entries.
 | Method | Behavior |
 | --- | --- |
 | `read_text(resource)` | Read staged content when present, otherwise live content. |
-| `replace_text(resource, text, expected_revision=None)` | Stage a whole-text replacement. |
+| `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | Read a bounded range from live, modified, or newly staged text. |
+| `replace_text(resource, text, expected_revision=None)` | Stage a whole-text replacement; the SDK switches to chunking above 4 MiB. |
+| `begin_text_write(resource, size, expected_revision=None)` | Begin a chunked UTF-8 replacement up to 64 MiB. |
+| `begin_text_add(book_path, size, media_type, ...)` | Begin a chunked UTF-8 resource addition up to 64 MiB. |
 | `apply_edits(resource, edits, expected_revision=None)` | Compose patches against staged content. |
 | `read_binary(resource)` | Read staged binary data when present, up to the 5 MiB inline limit. |
 | `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 256 MiB; the SDK switches to chunking above 4 MiB. |
@@ -344,6 +348,11 @@ once through `ApplyResourceBatch`, applies `UniversalUpdates` to non-OPF
 references, then removes staged resources. Relocation cannot be combined with
 staged text writes because the latter could overwrite link corrections.
 
+Newly staged text resources are addressable by the `staging_id` returned from
+`add_resource()` or a chunked text writer. The same transaction can range-read,
+replace, or patch that ID before commit; its staged revision starts at zero and
+increments after each completed replacement or patch.
+
 An authoritative package replacement can accompany resource structure
 operations. The host verifies that its manifest exactly matches the final
 add/remove/move set, that manifest IDs and hrefs are unique, that every spine
@@ -351,6 +360,19 @@ add/remove/move set, that manifest IDs and hrefs are unique, that every spine
 does not generate a second manifest rewrite; it applies the package once after
 the physical structure changes. Larger reads use `open_binary()` streams;
 larger writes use Begin/Chunk/End and are length/SHA-256 checked before staging.
+
+`read_text_range()` uses UTF-16 offsets and returns `text`, `start`, `end`,
+`total_utf16_units`, `revision`, `staged`, and nullable `next_start`. The first
+range (`start=0`) also returns full-document `total_utf8_bytes` and `sha256`;
+later pages omit those two expensive whole-document fields. A range is limited
+to 1 Mi UTF-16 code units and never splits a surrogate pair.
+
+`begin_text_write()` and `begin_text_add()` return a writer with `chunk_size`,
+`max_size`, `expected_size`, `received`, `write(text, offset=None)`, `finish()`,
+and `abort()`. Offsets are exact UTF-8 byte offsets. The host accepts 1 MiB
+chunks, retains at most two uploads per session, validates length, UTF-8, and
+SHA-256, and stages content only on `finish()`. Transaction commit, rollback,
+or session shutdown removes unfinished temporary uploads.
 
 `begin_binary_write()` returns a writer with `chunk_size`, `write(data)`, and
 `finish()`; the finish call checks the declared length and SHA-256 before staging.

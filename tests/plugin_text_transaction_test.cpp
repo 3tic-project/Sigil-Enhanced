@@ -103,8 +103,21 @@ int main()
     addition.mediaType = QStringLiteral("application/xhtml+xml");
     addition.manifestId = QStringLiteral("new_chapter");
     addition.data = QByteArray("<html/>");
+    addition.isText = true;
     Require(transaction.AddResource(addition, &error), "resource addition was not staged");
     Require(!transaction.AddResource(addition, &error), "duplicate resource addition was accepted");
+    QString added_text;
+    Require(transaction.ReadAddedText(QStringLiteral("new:1"), &added_text, &revision),
+            "staged text addition could not be read");
+    Require(added_text == QStringLiteral("<html/>") && revision == 0,
+            "staged text addition returned wrong content or revision");
+    Require(transaction.ApplyAddedTextEdits(
+                QStringLiteral("new:1"), 0,
+                QJsonArray { Edit(6, 6, QStringLiteral("body")) }, &error),
+            "staged text addition could not be patched");
+    Require(transaction.ReadAddedText(QStringLiteral("new:1"), &added_text, &revision)
+                && added_text == QStringLiteral("<html/body>") && revision == 1,
+            "staged text patch was not retained");
     Require(transaction.RemoveResource(QStringLiteral("old"), 9, &error),
             "resource removal was not staged");
     Require(transaction.RelocateResource(QStringLiteral("css"),

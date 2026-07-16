@@ -203,7 +203,8 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 1. 调用 `sigil.book.info` 和 `sigil.book.package`；
 2. 阅读相邻 XHTML、CSS、语言和 EPUB 版本约定；
 3. 调用 `sigil.transaction.begin`；
-4. 使用 `sigil.transaction.add_text_resource` 生成 XHTML；
+4. 普通章节使用 `sigil.transaction.add_text_resource`；大型章节先按 UTF-8 计算字节数，再使用
+   `begin_text_resource`、`write_text_chunk`、`finish_text_write`；
 5. 使用 `sigil.transaction.add_binary_resource` 导入不超过 5 MiB 的图片等资源；
 6. 必要时使用 `sigil.transaction.update_spine`；
 7. 调用 `sigil.transaction.preview`；
@@ -232,6 +233,20 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 
 stage 期间 live Book 不改变，但 `sigil.transaction.read_text` 可以读取本事务先前写入的内容。
 commit 前宿主会重新检查 resource revision 和 package invariants。失败不会自动覆盖用户修改。
+
+### 7.6 长文本读取与写入
+
+完整文本可能超过 MCP 单消息预算。读取时先调用 `sigil.resource.read_text_range`；事务内读取
+改用 `sigil.transaction.read_text_range`。从 `start=0` 开始，每次把返回的 `next_start` 原样
+用于下一段，直到其为 `null`。offset 是 UTF-16 code units，不是 Python 字符下标。
+
+写入超过约 4 MiB 的现有文本时，使用 `begin_text_write`；新增长文本使用
+`begin_text_resource`。后续 `write_text_chunk` 的 offset 是累计 UTF-8 字节数，不能使用字符数。
+完成时调用 `finish_text_write`，放弃时调用 `abort_text_write`。单文档最多 64 MiB、宿主单块
+最多 1 MiB；finish 前内容只存在于 Session 临时上传，finish 后才进入 staged view。
+
+新文本完成后返回的 `staging_id` 可立即用于事务范围读取、继续替换或 patch。commit、rollback、
+事务超时和 Session 结束都会清除未完成上传。
 
 ## 8. Commit 与回滚
 
@@ -276,7 +291,7 @@ revision、package invariants 和 checkpoint 要求；检查通过即直接应�
 | `RevisionConflict` | 重新读取，重新计算 patch，不能强制覆盖。 |
 | `InvalidPatch` | 修正 UTF-16 range、重叠或 surrogate pair 边界。 |
 | `ValidationFailed` | 阅读 conflict/detail，修正 staged package。 |
-| `PayloadTooLarge` | 使用分页、分批读取或更小上下文。 |
+| `PayloadTooLarge` | 文本改用 range/chunk 工具；其他数据使用分页、分批读取或更小上下文。 |
 | `Busy` | 完成或回滚当前 transaction。 |
 | `TransactionNotFound` | 使用当前 endpoint 新建 transaction。 |
 | `BookClosed` / `SessionEnding` | 停止调用并重新发现 Book Session。 |

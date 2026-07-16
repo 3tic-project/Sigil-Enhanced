@@ -4,7 +4,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| Adapter | `Sigil Enhanced MCP 0.2.0` |
+| Adapter | `Sigil Enhanced MCP 0.3.0` |
 | MCP spec | `2025-11-25` |
 | Python SDK | `mcp>=1.28.1,<2`，发布包固定 `1.28.1` |
 | Live API | v2 / protocol 1 |
@@ -63,6 +63,9 @@ Annotations 只是 MCP Host UI 提示，不是授权判定。
 
 - `resource_page_size_max=500`
 - `read_many_max=100`
+- `text_range_utf16_units_max=1048576`
+- `text_write_size_max=67108864`
+- `text_write_chunk_size_max=1048576`
 - `editor_edits_max=1000`
 - `position_encoding=utf-16`
 - `active_transactions=1`
@@ -124,6 +127,14 @@ Annotations 只是 MCP Host UI 提示，不是授权判定。
 参数：`resource_id`。
 
 返回 `resource_id`、当前内存 `text` 和 `revision`。只接受 text resource。
+
+### `sigil.resource.read_text_range`
+
+参数：`resource_id`、可选 `start=0`、可选 `max_utf16_units=1048576`。
+
+返回有界 `text`、`start`、`end`、`total_utf16_units`、`revision`、`staged=false` 和可空
+`next_start`。首段 `start=0` 还返回整文 `total_utf8_bytes` 与 `sha256`；后续段省略这两个
+整文计算字段。`start`/`end` 均为 UTF-16 code units，范围不会切开代理项对。
 
 ### `sigil.resource.read_many`
 
@@ -222,6 +233,12 @@ Editor 三个写工具立即修改 live Book，不属于 staged transaction。
 
 返回 staged text（如已修改），否则返回 live text；包含本事务可继续使用的 revision。
 
+### `sigil.transaction.read_text_range`
+
+参数：`transaction_id`、`resource_id`、可选 `start=0`、可选
+`max_utf16_units=1048576`。返回结构与资源范围读取一致，但可读取已修改文本和新资源的
+`staging_id`，并通过 `staged` 标记事务视图。
+
 ### `sigil.transaction.preview`
 
 参数：`transaction_id`。
@@ -284,6 +301,28 @@ changes 时，应在 commit 前调用 `rollback`。
 edits 与 editor edit 使用相同 UTF-16 `{start,end,text}` 结构，但针对 transaction 当前 staged
 文本组合。对同一资源多次 stage，commit 时仍只写入最终文本一次。
 
+### 分块文本替换与新增
+
+长文本不应通过一次 `replace_text` 或 `add_text_resource` 发送。使用以下状态机：
+
+1. 现有或已暂存文本调用 `sigil.transaction.begin_text_write`，参数为
+   `transaction_id`、`resource_id`、`expected_revision`、UTF-8 `size`；
+2. 新文本资源调用 `sigil.transaction.begin_text_resource`，参数为 `transaction_id`、
+   `book_path`、UTF-8 `size`、`media_type`，以及 manifest 相关可选项；manifested 资源必须
+   提供唯一 `manifest_id`；
+3. 顺序调用 `sigil.transaction.write_text_chunk`，传 `transaction_id`、`upload_id`、严格
+   UTF-8 字节 `offset` 和 `text`；
+4. 完成后调用 `sigil.transaction.finish_text_write`；若放弃则调用
+   `sigil.transaction.abort_text_write`。
+
+begin 返回 `upload_id`、`chunk_size`、`max_size` 和 `expected_size`。单文档最多 64 MiB，宿主
+单块最多 1 MiB，MCP adapter 会按 Unicode 字符边界继续拆分过大的工具参数。宿主只接受连续
+字节偏移，并允许最后一个已接受块按相同 offset、内容重试。finish 由 adapter 提供累计
+SHA-256，宿主核对声明长度、UTF-8 round trip 与哈希后才写入 staged view。
+
+新资源完成后返回的 `staging_id` 可继续用于 `read_text_range`、`replace_text`、`apply_edits`
+或 `begin_text_write`。commit、rollback、事务超时和 Session 结束都会清除未完成上传。
+
 ### `sigil.transaction.add_text_resource`
 
 参数：
@@ -294,7 +333,7 @@ edits 与 editor edit 使用相同 UTF-16 `{start,end,text}` 结构，但针对 
 | `book_path` | string | 是 | canonical Book path，例如 `Text/chapter.xhtml`。 |
 | `text` | string | 是 | 新资源完整文本。 |
 | `media_type` | string | 是 | 例如 `application/xhtml+xml`、`text/css`。 |
-| `manifest_id` | string/null | 否 | 空值时由宿主生成/处理。 |
+| `manifest_id` | string/null | manifested 时是 | manifested 资源必须提供唯一值。 |
 | `properties` | string/null | 否 | OPF manifest properties。 |
 | `add_to_spine` | boolean | 否 | 默认 `true`。CSS 应设为 `false`。 |
 | `manifested` | boolean | 否 | 默认 `true`。 |
@@ -313,7 +352,7 @@ commit 会在资源加入 Book 后立即物化文本缓存；随后直接保存�
 | `book_path` | string | 是 | canonical Book path，例如 `OEBPS/Images/cover.jpg`。 |
 | `data_base64` | string | 是 | 严格 Base64；解码后最大 5 MiB。 |
 | `media_type` | string | 是 | 例如 `image/jpeg`、`font/woff2`。 |
-| `manifest_id` | string/null | 否 | 空值时由宿主生成/处理。 |
+| `manifest_id` | string/null | manifested 时是 | manifested 资源必须提供唯一值。 |
 | `properties` | string/null | 否 | OPF manifest properties。 |
 | `add_to_spine` | boolean | 否 | 默认 `false`。 |
 | `manifested` | boolean | 否 | 默认 `true`。 |
@@ -415,6 +454,7 @@ sigil.book.info
 sigil.book.package
 sigil.resource.list
 sigil.resource.read_text
+sigil.resource.read_text_range
 sigil.resource.read_many
 sigil.editor.state
 sigil.editor.tabs
@@ -425,8 +465,14 @@ sigil.editor.replace_selection
 sigil.editor.insert_text
 sigil.transaction.begin
 sigil.transaction.read_text
+sigil.transaction.read_text_range
 sigil.transaction.replace_text
 sigil.transaction.apply_edits
+sigil.transaction.begin_text_write
+sigil.transaction.begin_text_resource
+sigil.transaction.write_text_chunk
+sigil.transaction.finish_text_write
+sigil.transaction.abort_text_write
 sigil.transaction.add_text_resource
 sigil.transaction.add_binary_resource
 sigil.transaction.remove_resource

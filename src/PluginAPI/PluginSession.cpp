@@ -71,6 +71,10 @@ constexpr qsizetype DEFAULT_BINARY_CHUNK_SIZE = 1024 * 1024;
 constexpr qsizetype MAX_BINARY_CHUNK_SIZE = 2 * 1024 * 1024;
 constexpr qint64 MAX_INPUT_EPUB_SIZE = 2LL * 1024 * 1024 * 1024;
 constexpr qint64 MAX_TRANSACTION_BINARY_SIZE = 256LL * 1024 * 1024;
+constexpr qint64 MAX_TRANSACTION_TEXT_SIZE = 64LL * 1024 * 1024;
+constexpr qsizetype MAX_TEXT_CHUNK_SIZE = 1024 * 1024;
+constexpr int MAX_TEXT_WRITE_UPLOADS = 2;
+constexpr int MAX_TEXT_RANGE_UNITS = 1024 * 1024;
 constexpr qsizetype MAX_READ_MANY_RESPONSE_SIZE = 6 * 1024 * 1024;
 constexpr qint64 MAX_NOTIFICATION_BACKLOG = 4LL * 1024 * 1024;
 constexpr int MAX_REQUESTS_PER_SECOND = 512;
@@ -295,6 +299,57 @@ QString DataFingerprint(const QByteArray &data)
 {
     return QString::fromLatin1(
         QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
+}
+
+bool ReadBoundedInteger(const QJsonObject &params, const QString &name, int default_value,
+                        int maximum, int *result)
+{
+    const QJsonValue value = params.value(name);
+    if (value.isUndefined()) {
+        *result = default_value;
+        return true;
+    }
+    const double number = value.toDouble(-1);
+    if (!value.isDouble() || !std::isfinite(number) || std::floor(number) != number
+        || number < 0 || number > maximum) {
+        return false;
+    }
+    *result = static_cast<int>(number);
+    return true;
+}
+
+bool IsUtf16Boundary(const QString &text, int position)
+{
+    return position <= 0 || position >= text.size()
+        || !(text.at(position - 1).isHighSurrogate() && text.at(position).isLowSurrogate());
+}
+
+QJsonObject TextRangeResult(const QString &target_id, const QString &text, quint64 revision,
+                            bool staged, int start, int maximum)
+{
+    const int end_limit = static_cast<int>(qMin<qint64>(
+        text.size(), static_cast<qint64>(start) + maximum));
+    int end = end_limit;
+    if (!IsUtf16Boundary(text, end)) {
+        end = end < text.size() ? end + 1 : end - 1;
+    }
+    QJsonObject result {
+        { QStringLiteral("target_id"), target_id },
+        { QStringLiteral("text"), text.mid(start, end - start) },
+        { QStringLiteral("start"), start },
+        { QStringLiteral("end"), end },
+        { QStringLiteral("total_utf16_units"), text.size() },
+        { QStringLiteral("revision"), static_cast<qint64>(revision) },
+        { QStringLiteral("staged"), staged },
+        { QStringLiteral("next_start"), end < text.size() ? QJsonValue(end) : QJsonValue() }
+    };
+    // Avoid repeatedly encoding and hashing the entire document while paging.
+    if (start == 0) {
+        const QByteArray utf8 = text.toUtf8();
+        result.insert(QStringLiteral("total_utf8_bytes"), utf8.size());
+        result.insert(QStringLiteral("sha256"), DataFingerprint(utf8));
+    }
+    return result;
 }
 
 bool WriteAtomicFile(const QString &path, const QByteArray &data, QString *error)
@@ -1173,6 +1228,29 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
             });
         }
+    } else if (method == QStringLiteral("resource.readTextRange")) {
+        TextResource *resource = ResolveTextResource(params.value(QStringLiteral("resource_id")).toString());
+        int start = 0;
+        int maximum = 0;
+        if (!resource) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Text resource not found"));
+        } else if (!ReadBoundedInteger(params, QStringLiteral("start"), 0,
+                                       std::numeric_limits<int>::max(), &start)
+                   || !ReadBoundedInteger(params, QStringLiteral("max_utf16_units"),
+                                          MAX_TEXT_RANGE_UNITS, MAX_TEXT_RANGE_UNITS, &maximum)
+                   || maximum < 1) {
+            RespondError(id, -32602, QStringLiteral("Text range is invalid"));
+        } else {
+            resource->InitialLoad();
+            const QString text = resource->GetText();
+            if (start > text.size() || !IsUtf16Boundary(text, start)) {
+                RespondError(id, PluginApi::InvalidPatch,
+                             QStringLiteral("Text range start is outside the document or splits a surrogate pair"));
+            } else {
+                Respond(id, TextRangeResult(resource->GetIdentifier(), text, Revision(resource),
+                                            false, start, maximum));
+            }
+        }
     } else if (method == QStringLiteral("resource.readBinary")) {
         Resource *resource = ResolveResource(params.value(QStringLiteral("resource_id")).toString());
         QByteArray data;
@@ -1698,7 +1776,19 @@ void PluginSession::Dispatch(const QJsonObject &request)
     } else if (method == QStringLiteral("transaction.readText")) {
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
-        TextResource *resource = ResolveTextResource(params.value(QStringLiteral("resource_id")).toString());
+        const QString target_id = params.value(QStringLiteral("resource_id")).toString();
+        QString added_text;
+        quint64 added_revision = 0;
+        if (transaction->ReadAddedText(target_id, &added_text, &added_revision)) {
+            Respond(id, QJsonObject {
+                { QStringLiteral("resource_id"), target_id },
+                { QStringLiteral("text"), added_text },
+                { QStringLiteral("revision"), static_cast<qint64>(added_revision) },
+                { QStringLiteral("staged"), true }
+            });
+            return;
+        }
+        TextResource *resource = ResolveTextResource(target_id);
         if (!resource) {
             RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Text resource not found"));
             return;
@@ -1712,6 +1802,271 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("text"), text },
             { QStringLiteral("revision"), static_cast<qint64>(revision) },
             { QStringLiteral("staged"), transaction->HasChange(resource->GetIdentifier()) }
+        });
+    } else if (method == QStringLiteral("transaction.readTextRange")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        const QString target_id = params.value(QStringLiteral("resource_id")).toString();
+        int start = 0;
+        int maximum = 0;
+        if (!ReadBoundedInteger(params, QStringLiteral("start"), 0,
+                                std::numeric_limits<int>::max(), &start)
+            || !ReadBoundedInteger(params, QStringLiteral("max_utf16_units"),
+                                   MAX_TEXT_RANGE_UNITS, MAX_TEXT_RANGE_UNITS, &maximum)
+            || maximum < 1) {
+            RespondError(id, -32602, QStringLiteral("Text range is invalid"));
+            return;
+        }
+        QString text;
+        quint64 revision = 0;
+        bool staged = transaction->ReadAddedText(target_id, &text, &revision);
+        if (!staged) {
+            TextResource *resource = ResolveTextResource(target_id);
+            if (!resource) {
+                RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Text resource not found"));
+                return;
+            }
+            resource->InitialLoad();
+            text = transaction->ReadText(resource->GetIdentifier(), resource->GetText(),
+                                         Revision(resource), &revision);
+            staged = transaction->HasChange(resource->GetIdentifier());
+        }
+        if (start > text.size() || !IsUtf16Boundary(text, start)) {
+            RespondError(id, PluginApi::InvalidPatch,
+                         QStringLiteral("Text range start is outside the document or splits a surrogate pair"));
+            return;
+        }
+        Respond(id, TextRangeResult(target_id, text, revision, staged, start, maximum));
+    } else if (method == QStringLiteral("transaction.writeTextBegin")
+               || method == QStringLiteral("transaction.addTextBegin")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        if (m_TextWriteUploads.size() >= MAX_TEXT_WRITE_UPLOADS) {
+            RespondError(id, PluginApi::Busy,
+                         QStringLiteral("Session text write upload limit reached"));
+            return;
+        }
+        const qint64 expected_size = params.value(QStringLiteral("size")).toInteger(-1);
+        if (expected_size < 0 || expected_size > MAX_TRANSACTION_TEXT_SIZE) {
+            RespondError(id, -32602, QStringLiteral("A valid UTF-8 byte size is required"));
+            return;
+        }
+        TextWriteUpload upload;
+        upload.transactionId = transaction->Id();
+        upload.expectedSize = expected_size;
+        upload.addResource = method == QStringLiteral("transaction.addTextBegin");
+        if (upload.addResource) {
+            upload.bookPath = params.value(QStringLiteral("book_path")).toString();
+            upload.mediaType = params.value(QStringLiteral("media_type")).toString();
+            upload.manifestId = params.value(QStringLiteral("manifest_id")).toString();
+            upload.properties = params.value(QStringLiteral("properties")).toString();
+            upload.fallback = params.value(QStringLiteral("fallback")).toString();
+            upload.overlay = params.value(QStringLiteral("overlay")).toString();
+            upload.manifested = params.value(QStringLiteral("manifested")).toBool(true);
+            upload.addToSpine = params.value(QStringLiteral("add_to_spine")).toBool(true);
+            FolderKeeper *folder_keeper = m_MainWindow->GetCurrentBook()->GetFolderKeeper();
+            if (!IsCanonicalBookPath(upload.bookPath) || upload.mediaType.isEmpty()
+                || (upload.manifested && upload.manifestId.isEmpty())
+                || folder_keeper->GetResourceByBookPathNoThrow(upload.bookPath)
+                || QFileInfo::exists(folder_keeper->GetFullPathToMainFolder()
+                                     + QLatin1Char('/') + upload.bookPath)
+                || (!upload.manifested
+                    && IsProtectedArchivePath(upload.bookPath,
+                                              m_MainWindow->GetCurrentBook()->GetOPF()))) {
+                RespondError(id, -32602,
+                             QStringLiteral("Resource path, media type, or manifest ID is invalid"));
+                return;
+            }
+        } else {
+            upload.targetId = params.value(QStringLiteral("resource_id")).toString();
+            if (!ReadRevision(params, QStringLiteral("expected_revision"),
+                              &upload.expectedRevision)) {
+                RespondError(id, -32602,
+                             QStringLiteral("Expected revision is required"));
+                return;
+            }
+            QString added_text;
+            quint64 required_revision = 0;
+            const bool added = transaction->ReadAddedText(upload.targetId, &added_text,
+                                                          &required_revision);
+            TextResource *resource = added ? nullptr : ResolveTextResource(upload.targetId);
+            if (!added && (!resource || resource->Type() == Resource::OPFResourceType)) {
+                RespondError(id, PluginApi::ResourceNotFound,
+                             QStringLiteral("Editable text resource not found"));
+                return;
+            }
+            if (resource) {
+                resource->InitialLoad();
+                transaction->ReadText(resource->GetIdentifier(), resource->GetText(),
+                                      Revision(resource), &required_revision);
+            }
+            if (upload.expectedRevision != required_revision) {
+                RespondError(id, PluginApi::RevisionConflict,
+                             QStringLiteral("Revision conflict"));
+                return;
+            }
+        }
+        upload.file = new QTemporaryFile(this);
+        if (!upload.file->open()) {
+            const QString error = upload.file->errorString();
+            delete upload.file;
+            RespondError(id, PluginApi::UnsupportedOperation, error);
+            return;
+        }
+        const QString upload_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        m_TextWriteUploads.insert(upload_id, upload);
+        Respond(id, QJsonObject {
+            { QStringLiteral("upload_id"), upload_id },
+            { QStringLiteral("chunk_size"), static_cast<qint64>(MAX_TEXT_CHUNK_SIZE) },
+            { QStringLiteral("max_size"), MAX_TRANSACTION_TEXT_SIZE },
+            { QStringLiteral("expected_size"), expected_size }
+        });
+    } else if (method == QStringLiteral("transaction.writeTextChunk")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
+        auto upload = m_TextWriteUploads.find(upload_id);
+        const qint64 offset = params.value(QStringLiteral("offset")).toInteger(-1);
+        if (upload == m_TextWriteUploads.end()
+            || upload->transactionId != transaction->Id()) {
+            RespondError(id, PluginApi::ResourceNotFound,
+                         QStringLiteral("Text write upload not found"));
+            return;
+        }
+        if (!params.value(QStringLiteral("text")).isString() || offset < 0) {
+            RespondError(id, -32602, QStringLiteral("Text chunk and offset are required"));
+            return;
+        }
+        const QByteArray chunk = params.value(QStringLiteral("text")).toString().toUtf8();
+        if (chunk.isEmpty() || chunk.size() > MAX_TEXT_CHUNK_SIZE) {
+            RespondError(id, -32602, QStringLiteral("Text chunk is empty or too large"));
+            return;
+        }
+        const QString chunk_sha256 = DataFingerprint(chunk);
+        if (offset == upload->lastOffset && offset + chunk.size() == upload->received
+            && chunk_sha256 == upload->lastChunkSha256) {
+            Respond(id, QJsonObject {
+                { QStringLiteral("upload_id"), upload_id },
+                { QStringLiteral("received"), upload->received },
+                { QStringLiteral("duplicate"), true }
+            });
+            return;
+        }
+        if (offset != upload->received
+            || upload->received + chunk.size() > upload->expectedSize
+            || upload->file->write(chunk) != chunk.size()) {
+            RespondError(id, PluginApi::InvalidPatch,
+                         QStringLiteral("Text chunk offset or declared size does not match"));
+            return;
+        }
+        upload->lastOffset = offset;
+        upload->lastChunkSha256 = chunk_sha256;
+        upload->received += chunk.size();
+        Respond(id, QJsonObject {
+            { QStringLiteral("upload_id"), upload_id },
+            { QStringLiteral("received"), upload->received },
+            { QStringLiteral("duplicate"), false }
+        });
+    } else if (method == QStringLiteral("transaction.writeTextEnd")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
+        const QString expected_sha256 = params.value(QStringLiteral("sha256")).toString().toLower();
+        auto upload = m_TextWriteUploads.find(upload_id);
+        if (upload == m_TextWriteUploads.end()
+            || upload->transactionId != transaction->Id()) {
+            RespondError(id, PluginApi::ResourceNotFound,
+                         QStringLiteral("Text write upload not found"));
+            return;
+        }
+        if (expected_sha256.size() != 64 || upload->received != upload->expectedSize
+            || !upload->file->flush() || !upload->file->seek(0)) {
+            RespondError(id, PluginApi::ValidationFailed,
+                         QStringLiteral("Text write length or hash is invalid"));
+            return;
+        }
+        const QByteArray data = upload->file->readAll();
+        const QString actual_sha256 = DataFingerprint(data);
+        const QString text = QString::fromUtf8(data);
+        if (data.size() != upload->expectedSize || actual_sha256 != expected_sha256
+            || text.toUtf8() != data) {
+            RespondError(id, PluginApi::ValidationFailed,
+                         QStringLiteral("Text write is not valid UTF-8 or length/hash does not match"));
+            return;
+        }
+        QString target_id = upload->targetId;
+        quint64 revision = upload->expectedRevision;
+        QString stage_error;
+        bool staged = false;
+        if (upload->addResource) {
+            PluginApi::StagedResourceAddition addition;
+            addition.stagingId = QStringLiteral("new:")
+                + QUuid::createUuid().toString(QUuid::WithoutBraces);
+            addition.bookPath = upload->bookPath;
+            addition.mediaType = upload->mediaType;
+            addition.manifestId = upload->manifestId;
+            addition.properties = upload->properties;
+            addition.fallback = upload->fallback;
+            addition.overlay = upload->overlay;
+            addition.data = data;
+            addition.manifested = upload->manifested;
+            addition.addToSpine = upload->addToSpine;
+            addition.isText = true;
+            staged = transaction->AddResource(addition, &stage_error);
+            target_id = addition.stagingId;
+            revision = addition.stagedRevision;
+        } else {
+            QString added_text;
+            quint64 current_revision = 0;
+            if (transaction->ReadAddedText(target_id, &added_text, &current_revision)) {
+                staged = transaction->ReplaceAddedText(target_id, upload->expectedRevision,
+                                                       text, &stage_error);
+                revision = current_revision + 1;
+            } else {
+                TextResource *resource = ResolveTextResource(target_id);
+                if (resource) {
+                    resource->InitialLoad();
+                    staged = transaction->ReplaceText(target_id, resource->GetText(),
+                        Revision(resource), upload->expectedRevision, text, &stage_error);
+                }
+            }
+        }
+        if (!staged) {
+            RespondError(id, upload->addResource ? PluginApi::ValidationFailed
+                                                  : PluginApi::RevisionConflict,
+                         stage_error.isEmpty() ? QStringLiteral("Text write target changed")
+                                               : stage_error);
+            return;
+        }
+        QTemporaryFile *completed = upload->file;
+        m_TextWriteUploads.erase(upload);
+        delete completed;
+        Respond(id, QJsonObject {
+            { QStringLiteral("resource_id"), target_id },
+            { QStringLiteral("staging_id"), upload->addResource ? QJsonValue(target_id)
+                                                                  : QJsonValue() },
+            { QStringLiteral("revision"), static_cast<qint64>(revision) },
+            { QStringLiteral("size"), static_cast<qint64>(data.size()) },
+            { QStringLiteral("sha256"), actual_sha256 },
+            { QStringLiteral("staged"), true }
+        });
+    } else if (method == QStringLiteral("transaction.writeTextAbort")) {
+        PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
+        if (!transaction) return;
+        const QString upload_id = params.value(QStringLiteral("upload_id")).toString();
+        auto upload = m_TextWriteUploads.find(upload_id);
+        if (upload == m_TextWriteUploads.end()
+            || upload->transactionId != transaction->Id()) {
+            RespondError(id, PluginApi::ResourceNotFound,
+                         QStringLiteral("Text write upload not found"));
+            return;
+        }
+        QTemporaryFile *aborted = upload->file;
+        m_TextWriteUploads.erase(upload);
+        delete aborted;
+        Respond(id, QJsonObject {
+            { QStringLiteral("upload_id"), upload_id },
+            { QStringLiteral("aborted"), true }
         });
     } else if (method == QStringLiteral("transaction.readBinary")) {
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
@@ -2031,6 +2386,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         addition.fallback = params.value(QStringLiteral("fallback")).toString();
         addition.overlay = params.value(QStringLiteral("overlay")).toString();
         addition.data = data;
+        addition.isText = params.value(QStringLiteral("text")).isString();
         addition.manifested = manifested;
         addition.addToSpine = params.value(QStringLiteral("add_to_spine")).toBool(true);
         QString stage_error;
@@ -2222,12 +2578,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
                || method == QStringLiteral("transaction.applyTextEdits")) {
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
         if (!transaction) return;
-        TextResource *resource = ResolveTextResource(params.value(QStringLiteral("resource_id")).toString());
-        if (!resource) {
-            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Text resource not found"));
-            return;
-        }
-        if (resource->Type() == Resource::OPFResourceType) {
+        const QString target_id = params.value(QStringLiteral("resource_id")).toString();
+        TextResource *resource = ResolveTextResource(target_id);
+        if (resource && resource->Type() == Resource::OPFResourceType) {
             RespondError(id, PluginApi::UnsupportedOperation,
                          QStringLiteral("OPF changes require the structure transaction API"));
             return;
@@ -2242,34 +2595,50 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, -32602, QStringLiteral("Text must be a string"));
             return;
         }
-        resource->InitialLoad();
         quint64 required_revision = 0;
-        transaction->ReadText(resource->GetIdentifier(), resource->GetText(), Revision(resource),
-                              &required_revision);
+        QString added_text;
+        const bool added = transaction->ReadAddedText(target_id, &added_text, &required_revision);
+        if (!resource && !added) {
+            RespondError(id, PluginApi::ResourceNotFound, QStringLiteral("Text resource not found"));
+            return;
+        }
+        if (resource) {
+            resource->InitialLoad();
+            transaction->ReadText(resource->GetIdentifier(), resource->GetText(), Revision(resource),
+                                  &required_revision);
+        }
         if (expected_revision != required_revision) {
             RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"),
                          QJsonObject {
                              { QStringLiteral("expected"), static_cast<qint64>(expected_revision) },
                              { QStringLiteral("actual"), static_cast<qint64>(required_revision) },
-                             { QStringLiteral("resource_id"), resource->GetIdentifier() }
+                             { QStringLiteral("resource_id"), target_id }
                          });
             return;
         }
         QString stage_error;
-        const bool staged = method == QStringLiteral("transaction.replaceText")
-            ? transaction->ReplaceText(resource->GetIdentifier(), resource->GetText(), Revision(resource),
-                                       expected_revision, params.value(QStringLiteral("text")).toString(),
-                                       &stage_error)
-            : transaction->ApplyEdits(resource->GetIdentifier(), resource->GetText(), Revision(resource),
-                                      expected_revision, params.value(QStringLiteral("edits")).toArray(),
-                                      &stage_error);
+        const bool staged = added
+            ? (method == QStringLiteral("transaction.replaceText")
+                ? transaction->ReplaceAddedText(target_id, expected_revision,
+                    params.value(QStringLiteral("text")).toString(), &stage_error)
+                : transaction->ApplyAddedTextEdits(target_id, expected_revision,
+                    params.value(QStringLiteral("edits")).toArray(), &stage_error))
+            : (method == QStringLiteral("transaction.replaceText")
+                ? transaction->ReplaceText(resource->GetIdentifier(), resource->GetText(), Revision(resource),
+                                           expected_revision, params.value(QStringLiteral("text")).toString(),
+                                           &stage_error)
+                : transaction->ApplyEdits(resource->GetIdentifier(), resource->GetText(), Revision(resource),
+                                          expected_revision, params.value(QStringLiteral("edits")).toArray(),
+                                          &stage_error));
         if (!staged) {
             RespondError(id, PluginApi::InvalidPatch, stage_error);
             return;
         }
         Respond(id, QJsonObject {
-            { QStringLiteral("resource_id"), resource->GetIdentifier() },
+            { QStringLiteral("resource_id"), target_id },
             { QStringLiteral("base_revision"), static_cast<qint64>(required_revision) },
+            { QStringLiteral("revision"), static_cast<qint64>(
+                added ? required_revision + 1 : required_revision) },
             { QStringLiteral("staged"), true }
         });
     } else if (method == QStringLiteral("transaction.validate")
@@ -2798,6 +3167,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             if (!structure_error.isEmpty()) {
                 const QStringList recovery_errors = rollback_applied_changes();
                 ClearBinaryWriteUploads();
+                ClearTextWriteUploads();
                 m_Transaction.reset();
                 ReleaseWriter();
                 QString message = structure_error;
@@ -2863,6 +3233,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             if (!write_error.isEmpty()) {
                 const QStringList recovery_errors = rollback_applied_changes();
                 ClearBinaryWriteUploads();
+                ClearTextWriteUploads();
                 m_Transaction.reset();
                 ReleaseWriter();
                 RespondError(id, PluginApi::ValidationFailed,
@@ -2905,6 +3276,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             if (!archive_error.isEmpty()) {
                 const QStringList recovery_errors = rollback_applied_changes();
                 ClearBinaryWriteUploads();
+                ClearTextWriteUploads();
                 m_Transaction.reset();
                 ReleaseWriter();
                 RespondError(id, PluginApi::ValidationFailed,
@@ -2947,6 +3319,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             dirty_archive_changes.cbegin(), dirty_archive_changes.cend(),
             [](const PluginApi::StagedArchiveChange &change) { return change.remove; }));
         ClearBinaryWriteUploads();
+        ClearTextWriteUploads();
         m_Transaction.reset();
         ReleaseWriter();
         Respond(id, QJsonObject {
@@ -2967,6 +3340,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const QString transaction_id = transaction->Id();
         const int discarded = transaction->Size();
         ClearBinaryWriteUploads();
+        ClearTextWriteUploads();
         m_Transaction.reset();
         ReleaseWriter();
         Respond(id, QJsonObject {
@@ -3423,6 +3797,14 @@ void PluginSession::ClearBinaryWriteUploads()
     m_BinaryWriteUploads.clear();
 }
 
+void PluginSession::ClearTextWriteUploads()
+{
+    for (const TextWriteUpload &upload : std::as_const(m_TextWriteUploads)) {
+        delete upload.file;
+    }
+    m_TextWriteUploads.clear();
+}
+
 quint64 PluginSession::Revision(Resource *resource) const
 {
     return m_ResourceRevisions.value(resource->GetIdentifier(), 1);
@@ -3498,6 +3880,7 @@ void PluginSession::CleanServer()
     m_NotificationTimers.clear();
     m_PendingNotifications.clear();
     ClearBinaryWriteUploads();
+    ClearTextWriteUploads();
     for (const BinaryReadStream &stream : std::as_const(m_BinaryReadStreams)) {
         delete stream.file;
     }

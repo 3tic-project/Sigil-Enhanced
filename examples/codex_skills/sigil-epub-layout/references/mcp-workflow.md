@@ -11,10 +11,18 @@ Required tools for a new illustrated book:
 - `sigil.capabilities.list`
 - `sigil.book.info`, `sigil.book.package`
 - `sigil.resource.list`, `sigil.resource.read_text`, `sigil.resource.read_many`
+- `sigil.resource.read_text_range`, `sigil.transaction.read_text_range`
 - transaction begin, add/replace text, add binary, metadata, spine, preview, validate, commit, rollback
+- chunked text begin/write/finish/abort for large XHTML or CSS
 
 `sigil.transaction.add_binary_resource` accepts strict Base64 and at most 5 MiB decoded data per
 resource. Do not downsample or omit a larger image silently.
+
+Do not send a large document as one JSON string. Page reads from `start=0` through each returned
+`next_start`; those positions are UTF-16 code units. For large writes, declare the UTF-8 byte size,
+begin a text write or text resource, send sequential chunks using cumulative UTF-8 byte offsets, and
+finish before preview. Abort an upload when generation is abandoned. The host limit is 64 MiB per
+text document and 1 MiB per host chunk.
 
 ## Preflight
 

@@ -146,6 +146,17 @@ def _register_context_tools(mcp, backend, gate):
         """Read current in-memory text and its revision by session-scoped resource ID."""
         return await _invoke(gate, backend.resource_read_text, resource_id)
 
+    @mcp.tool(name="sigil.resource.read_text_range", annotations=READ_ONLY, structured_output=True)
+    async def resource_read_text_range(
+        resource_id: str,
+        start: int = 0,
+        max_utf16_units: int = 1024 * 1024,
+    ) -> dict[str, Any]:
+        """Read a bounded UTF-16 range with total size, revision, SHA-256, and cursor."""
+        return await _invoke(
+            gate, backend.resource_read_text_range, resource_id, start, max_utf16_units
+        )
+
     @mcp.tool(name="sigil.resource.read_many", annotations=READ_ONLY, structured_output=True)
     async def resource_read_many(resource_ids: list[str]) -> dict[str, Any]:
         """Read between 1 and 100 current text resources with bounded continuation handling."""
@@ -235,6 +246,23 @@ def _register_transaction_tools(mcp, backend, gate):
             gate, backend.transaction_read_text, transaction_id, resource_id
         )
 
+    @mcp.tool(name="sigil.transaction.read_text_range", annotations=READ_ONLY, structured_output=True)
+    async def transaction_read_text_range(
+        transaction_id: str,
+        resource_id: str,
+        start: int = 0,
+        max_utf16_units: int = 1024 * 1024,
+    ) -> dict[str, Any]:
+        """Read a bounded range from live, staged, or newly staged text."""
+        return await _invoke(
+            gate,
+            backend.transaction_read_text_range,
+            transaction_id,
+            resource_id,
+            start,
+            max_utf16_units,
+        )
+
     @mcp.tool(name="sigil.transaction.replace_text", annotations=STAGE, structured_output=True)
     async def transaction_replace_text(
         transaction_id: str,
@@ -267,6 +295,83 @@ def _register_transaction_tools(mcp, backend, gate):
             resource_id,
             expected_revision,
             edits,
+        )
+
+    @mcp.tool(name="sigil.transaction.begin_text_write", annotations=STAGE, structured_output=True)
+    async def transaction_begin_text_write(
+        transaction_id: str,
+        resource_id: str,
+        expected_revision: int,
+        size: int,
+    ) -> dict[str, Any]:
+        """Begin a chunked UTF-8 replacement of existing or newly staged text."""
+        return await _invoke(
+            gate,
+            backend.transaction_begin_text_write,
+            transaction_id,
+            resource_id,
+            expected_revision,
+            size,
+        )
+
+    @mcp.tool(name="sigil.transaction.begin_text_resource", annotations=STAGE, structured_output=True)
+    async def transaction_begin_text_resource(
+        transaction_id: str,
+        book_path: str,
+        size: int,
+        media_type: str,
+        manifest_id: str | None = None,
+        properties: str | None = None,
+        add_to_spine: bool = True,
+        manifested: bool = True,
+    ) -> dict[str, Any]:
+        """Begin a chunked UTF-8 addition and return a resumable upload handle."""
+        return await _invoke(
+            gate,
+            backend.transaction_begin_text_resource,
+            transaction_id,
+            book_path,
+            size,
+            media_type,
+            manifest_id,
+            properties,
+            add_to_spine,
+            manifested,
+        )
+
+    @mcp.tool(name="sigil.transaction.write_text_chunk", annotations=STAGE, structured_output=True)
+    async def transaction_write_text_chunk(
+        transaction_id: str,
+        upload_id: str,
+        offset: int,
+        text: str,
+    ) -> dict[str, Any]:
+        """Append one idempotent UTF-8 text chunk at the declared byte offset."""
+        return await _invoke(
+            gate,
+            backend.transaction_write_text_chunk,
+            transaction_id,
+            upload_id,
+            offset,
+            text,
+        )
+
+    @mcp.tool(name="sigil.transaction.finish_text_write", annotations=STAGE, structured_output=True)
+    async def transaction_finish_text_write(
+        transaction_id: str, upload_id: str
+    ) -> dict[str, Any]:
+        """Verify length, UTF-8, and SHA-256, then stage the completed text."""
+        return await _invoke(
+            gate, backend.transaction_finish_text_write, transaction_id, upload_id
+        )
+
+    @mcp.tool(name="sigil.transaction.abort_text_write", annotations=STAGE, structured_output=True)
+    async def transaction_abort_text_write(
+        transaction_id: str, upload_id: str
+    ) -> dict[str, Any]:
+        """Discard an unfinished chunked text upload without ending the transaction."""
+        return await _invoke(
+            gate, backend.transaction_abort_text_write, transaction_id, upload_id
         )
 
     @mcp.tool(name="sigil.transaction.add_text_resource", annotations=STAGE, structured_output=True)
