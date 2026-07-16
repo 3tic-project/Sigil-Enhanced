@@ -218,7 +218,14 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 4. 保留语义标签、可访问性、相对 URL 和 EPUB 版本兼容性；
 5. preview/validate 后再 commit。
 
-### 7.4 批量修改
+### 7.4 可选 EPUB 排版 Skill
+
+仓库提供独立的 `sigil-epub-layout` Codex Skill，包含从参考 EPUB 提炼的通用版式规则、横排
+可重排模板、MCP 两阶段事务流程和磁盘验收脚本。它默认禁止隐式触发，只有用户明确写出
+`$sigil-epub-layout` 时才会加载。安装、调用和边界说明见
+[SigilMcpEpubLayoutSkill_zh-CN.md](SigilMcpEpubLayoutSkill_zh-CN.md)。
+
+### 7.5 批量修改
 
 一个 endpoint 同时只允许一个 transaction。`sigil.transaction.begin` 返回显式
 `transaction_id`，后续每次 transaction 工具调用都必须携带它。
@@ -291,9 +298,10 @@ revision、writer lock、transaction 和 package validation。
 
 ## 11. 当前限制
 
-首版是 text-first MCP surface。以下能力尚未进入公共 MCP 工具：
+当前 MCP surface 已允许用 `sigil.transaction.add_binary_resource` 导入解码后不超过 5 MiB 的
+小型二进制资源。以下能力尚未进入公共 MCP 工具：
 
-- binary/chunk/archive 操作；
+- 分块 binary 写入和 archive 操作；
 - input/output/validation 插件专用 RPC；
 - native EPUB-safe source formatter service；
 - EPUB structure normalizer service；

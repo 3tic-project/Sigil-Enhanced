@@ -47,7 +47,7 @@ cmake --build cmake-build-debug -j4
 ctest --test-dir cmake-build-debug --output-on-failure
 ```
 
-当前环境结果为 32/32。关键自动化资产：
+当前环境结果为 33/33。关键自动化资产：
 
 - `safe_archive_extractor_test`：归档预算、路径与 input EPUB 验证。
 - `plugin_protocol_test`、`plugin_transport_integration_test`：帧边界与真实 socket。
@@ -60,6 +60,8 @@ ctest --test-dir cmake-build-debug --output-on-failure
   不通知未就绪编辑器、新增 XHTML 保存前已加载、空 Gumbo 树安全返回。
 - `live_plugin_examples_test.py`：可安装示例语法与全部公共 SDK 方法覆盖。
 - `live_plugin_docs_test.py`：从 SDK 提取公共方法，锁定中英文 API 手册覆盖及关键安全边界。
+- `sigil_epub_layout_skill_test.py`：显式触发策略、模板 XML/CSS、源文件隐私、EPUB 检查与
+  空 spine 文本拒绝。
 
 ## 仍未完成或不可宣称完成
 

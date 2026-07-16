@@ -287,6 +287,11 @@ add_test(NAME sigil_mcp_docs
 )
 set_tests_properties(sigil_mcp_docs PROPERTIES TIMEOUT 30)
 
+add_test(NAME sigil_epub_layout_skill
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_epub_layout_skill_test.py
+)
+set_tests_properties(sigil_epub_layout_skill PROPERTIES TIMEOUT 30)
+
 add_test(NAME sigil_mcp_protocol
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_protocol_test.py
 )
