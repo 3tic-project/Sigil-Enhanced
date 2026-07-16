@@ -132,6 +132,7 @@ private:
     PluginApi::TextTransaction *RequireTransaction(const QJsonObject &params,
                                                    const QJsonValue &request_id);
     quint64 Revision(Resource *resource) const;
+    QString EditorStateToken(ContentTab *tab) const;
     QJsonObject EditorState() const;
     QJsonObject EditorEventState() const;
     QString ResolveInterpreter() const;

@@ -191,12 +191,14 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 适用于选区替换、光标插入或当前文件少量 patch：
 
 1. 调用 `sigil.editor.state`；
-2. 使用返回的 `resource_id`、`revision` 和 UTF-16 range；
+2. 使用同一次返回的 `resource_id`、`revision`、`state_token` 和 UTF-16 range；
 3. 调用 `sigil.editor.edit`、`sigil.editor.replace_selection` 或
    `sigil.editor.insert_text`；
 4. 修改立即进入编辑器，并形成一个 Qt undo step。
 
 不要用 Python 字符串下标代替 UTF-16 offset。包含非 BMP 字符时，两者不同。
+选区替换和光标插入必须携带 `state_token`；即使内容 revision 未变，只要用户移动了光标或
+选区，宿主也会拒绝旧请求。
 
 ### 7.2 生成新章节
 
@@ -230,6 +232,10 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 
 一个 endpoint 同时只允许一个 transaction。`sigil.transaction.begin` 返回显式
 `transaction_id`，后续每次 transaction 工具调用都必须携带它。
+
+重连、调用超时或 Agent 丢失 handle 时先调用 `sigil.transaction.status`。它不需要 handle，
+会返回活动 transaction ID、闲置时间、剩余超时和未完成文本上传数；不要在状态未知时直接
+重复 begin 或 commit。
 
 stage 期间 live Book 不改变，但 `sigil.transaction.read_text` 可以读取本事务先前写入的内容。
 commit 前宿主会重新检查 resource revision 和 package invariants。失败不会自动覆盖用户修改。

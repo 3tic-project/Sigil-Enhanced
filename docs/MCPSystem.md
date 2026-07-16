@@ -147,9 +147,14 @@ Tool names are stable and grouped under `sigil.*`.
 Editor offsets use UTF-16 code units. Every content edit requires a resource ID
 and expected revision and becomes one Qt undo step.
 
+Selection replacement and cursor insertion also require the `state_token` from
+the same editor-state read. The token changes when the active resource, content
+revision, cursor, or selection changes.
+
 ### Transaction
 
 - `sigil.transaction.begin`
+- `sigil.transaction.status`
 - `sigil.transaction.read_text`
 - `sigil.transaction.read_text_range`
 - `sigil.transaction.replace_text`

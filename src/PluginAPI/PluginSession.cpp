@@ -3391,6 +3391,24 @@ void PluginSession::Dispatch(const QJsonObject &request)
             return;
         }
 
+        if (method != QStringLiteral("editor.applyEdits")) {
+            const QString expected_state_token =
+                params.value(QStringLiteral("expected_state_token")).toString();
+            const QString actual_state_token = EditorStateToken(tab);
+            if (!expected_state_token.isEmpty()
+                && expected_state_token != actual_state_token) {
+                RespondError(id, PluginApi::RevisionConflict,
+                             QStringLiteral("Editor cursor or selection changed"),
+                             QJsonObject {
+                                 { QStringLiteral("expected_state_token"), expected_state_token },
+                                 { QStringLiteral("actual_state_token"), actual_state_token },
+                                 { QStringLiteral("resource_id"),
+                                   active_resource->GetIdentifier() }
+                             });
+                return;
+            }
+        }
+
         QJsonArray edit_values;
         if (method == QStringLiteral("editor.applyEdits")) {
             edit_values = params.value(QStringLiteral("edits")).toArray();
@@ -3426,6 +3444,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("resource_id"), active_resource->GetIdentifier() },
             { QStringLiteral("revision"), static_cast<qint64>(Revision(active_resource)) },
+            { QStringLiteral("state_token"), EditorStateToken(tab) },
             { QStringLiteral("applied_edits"), edits.size() }
         });
     } else if (method == QStringLiteral("editor.openResource")
@@ -3810,6 +3829,20 @@ quint64 PluginSession::Revision(Resource *resource) const
     return m_ResourceRevisions.value(resource->GetIdentifier(), 1);
 }
 
+QString PluginSession::EditorStateToken(ContentTab *tab) const
+{
+    if (!tab || !tab->GetLoadedResource()) return QString();
+    const QJsonObject state {
+        { QStringLiteral("resource_id"), tab->GetLoadedResource()->GetIdentifier() },
+        { QStringLiteral("revision"),
+          static_cast<qint64>(Revision(tab->GetLoadedResource())) },
+        { QStringLiteral("cursor"), tab->GetCursorPosition() },
+        { QStringLiteral("selection_start"), tab->GetSelectionStart() },
+        { QStringLiteral("selection_end"), tab->GetSelectionEnd() }
+    };
+    return DataFingerprint(QJsonDocument(state).toJson(QJsonDocument::Compact));
+}
+
 QJsonObject PluginSession::EditorState() const
 {
     ContentTab *tab = m_TabManager->GetCurrentContentTab();
@@ -3825,6 +3858,7 @@ QJsonObject PluginSession::EditorState() const
         { QStringLiteral("resource_id"), tab->GetLoadedResource()->GetIdentifier() },
         { QStringLiteral("book_path"), tab->GetLoadedResource()->GetRelativePath() },
         { QStringLiteral("revision"), static_cast<qint64>(Revision(tab->GetLoadedResource())) },
+        { QStringLiteral("state_token"), EditorStateToken(tab) },
         { QStringLiteral("cursor"), cursor },
         { QStringLiteral("selection"), QJsonObject {
             { QStringLiteral("start"), selection_start },

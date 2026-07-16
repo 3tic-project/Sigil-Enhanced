@@ -6,7 +6,10 @@ from sigil_live.errors import PluginApiError
 RECOVERY = {
     "BookClosed": (False, "Stop and discover a new Sigil Book session."),
     "ResourceNotFound": (True, "List resources again and resolve the current resource ID."),
-    "RevisionConflict": (True, "Read the resource again and rebuild the edit."),
+    "RevisionConflict": (
+        True,
+        "Read the resource and editor state again, then rebuild the edit.",
+    ),
     "InvalidPatch": (True, "Correct the UTF-16 ranges and submit non-overlapping edits."),
     "TransactionRequired": (True, "Begin a transaction before the requested write."),
     "ValidationFailed": (True, "Inspect validation details, revise staged changes, and retry."),

@@ -46,7 +46,8 @@ src/Resource_Files/plugin_launchers/python/sigil_mcp_stdio_proxy.py
 Use immediate editor tools only for a small active-tab change. For generated
 chapters, CSS/layout changes, OPF metadata, spine work, or multiple resources:
 
-1. Read current Book/package/resource state and revisions.
+1. Read current Book/package/resource state and revisions. For selection/cursor
+   writes, use the `state_token` from the same editor-state read.
 2. Call `sigil.transaction.begin`.
 3. Stage changes using the returned `transaction_id`.
    For large text, page reads with `sigil.resource.read_text_range` or
@@ -59,6 +60,9 @@ chapters, CSS/layout changes, OPF metadata, spine work, or multiple resources:
 
 Uncommitted transactions roll back after five idle minutes by default, when the
 server stops, or when the Book session ends.
+After reconnecting or losing a tool response, call `sigil.transaction.status`
+before beginning or committing; it reports the active handle, idle expiry, and
+unfinished text-upload count without requiring a transaction ID.
 
 Text range pages are limited to 1 Mi UTF-16 code units. Chunked text uploads are
 limited to 64 MiB, use exact UTF-8 byte offsets and 1 MiB host chunks, and are

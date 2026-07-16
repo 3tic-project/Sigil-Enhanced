@@ -326,6 +326,31 @@ class LiveSdkTest(unittest.TestCase):
             transport.sent[0]["params"]["edits"], [{"start": 1, "end": 3, "text": "x"}]
         )
 
+    def test_editor_selection_writes_include_current_state_token(self):
+        state = {
+            "active": True,
+            "resource_id": "a",
+            "book_path": "Text/a.xhtml",
+            "revision": 2,
+            "state_token": "state-1",
+            "cursor": 4,
+            "selection": {"start": 1, "end": 4, "text": "abc"},
+            "position_encoding": "utf-16",
+        }
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": state},
+            {"jsonrpc": "2.0", "id": 2, "result": {
+                "resource_id": "a", "revision": 3, "state_token": "state-2",
+                "applied_edits": 1,
+            }},
+        ])
+        result = EditorApi(RpcClient(transport)).replace_selection("replacement")
+        self.assertEqual(result["state_token"], "state-2")
+        self.assertEqual(transport.sent[0]["method"], "editor.getState")
+        self.assertEqual(
+            transport.sent[1]["params"]["expected_state_token"], "state-1"
+        )
+
     def test_editor_navigation_uses_resource_ids_and_utf16_ranges(self):
         state = {
             "active": True, "resource_id": "a", "book_path": "Text/a.xhtml",

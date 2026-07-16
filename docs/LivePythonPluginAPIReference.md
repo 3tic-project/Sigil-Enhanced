@@ -60,7 +60,7 @@ Automate 共用同一运行时选择；Automate 会等待 Live command 完成，
 
 ### `EditorState`
 
-属性：`active`、`resource_id`、`book_path`、`revision`、`cursor`、`selection`、
+属性：`active`、`resource_id`、`book_path`、`revision`、`state_token`、`cursor`、`selection`、
 `position_encoding`。`Selection` 含 `start`、`end`、`text`。
 
 所有编辑位置均为 UTF-16 code unit 偏移，与 Qt `QTextCursor` 一致。Python 字符串
@@ -219,8 +219,8 @@ archive API 修改。
 | `get_selection()` | 当前 `Selection`。 |
 | `get_open_tabs()` | 打开的 `Resource` 列表。 |
 | `apply_edits(edits, expected_revision=None, resource_id=None, label=...)` | 一个 undo block 应用 1-1000 个 patch。 |
-| `replace_selection(text, ...)` | 替换当前选区。 |
-| `insert_text(text, ...)` | 在光标插入。 |
+| `replace_selection(text, expected_revision=None, resource_id=None, label=..., expected_state_token=None)` | 替换当前选区。 |
+| `insert_text(text, expected_revision=None, resource_id=None, label=..., expected_state_token=None)` | 在光标插入。 |
 | `set_cursor(position, resource_id=None)` | 移动光标。 |
 | `set_selection(start, end, resource_id=None)` | 设置选区。 |
 | `open_resource(resource, position=None)` | 打开/激活资源。 |
@@ -228,6 +228,11 @@ archive API 修改。
 
 写请求必须携带读到的 revision。用户在两次调用之间修改内容时返回
 `RevisionConflict`，插件应重新读取、重新计算，而不是盲目重试旧 patch。
+
+`state_token` 同时指纹化活动资源、内容 revision、光标和选区。省略 resource 或 revision 时，
+SDK 自动读取状态并为选区替换/光标插入携带 token；若插件根据先前 `EditorState` 计算文本，则
+必须同时传该状态的 `expected_state_token`。用户只移动光标或选区也会触发冲突，避免把旧结果
+写到新位置。为兼容旧的原始 v2 客户端，宿主仍接受不含 token 的请求。
 
 ## 8. `UiApi`
 

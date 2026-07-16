@@ -361,6 +361,7 @@
       "params": [
         { "name": "resource_id", "required": true, "schema": { "type": "string" } },
         { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "expected_state_token", "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
         { "name": "text", "required": true, "schema": { "type": "string" } },
         { "name": "label", "schema": { "type": "string" } }
       ],
@@ -373,6 +374,7 @@
       "params": [
         { "name": "resource_id", "required": true, "schema": { "type": "string" } },
         { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "expected_state_token", "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
         { "name": "text", "required": true, "schema": { "type": "string" } },
         { "name": "label", "schema": { "type": "string" } }
       ],
@@ -1029,6 +1031,7 @@
           "resource_id": { "type": "string" },
           "book_path": { "type": "string" },
           "revision": { "$ref": "#/components/schemas/Revision" },
+          "state_token": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "cursor": { "$ref": "#/components/schemas/Position" },
           "selection": { "$ref": "#/components/schemas/Selection" },
           "position_encoding": { "type": "string", "const": "utf-16" }
@@ -1045,10 +1048,11 @@
       },
       "EditResult": {
         "type": "object",
-        "required": ["resource_id", "revision", "applied_edits"],
+        "required": ["resource_id", "revision", "state_token", "applied_edits"],
         "properties": {
           "resource_id": { "type": "string" },
           "revision": { "$ref": "#/components/schemas/Revision" },
+          "state_token": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "applied_edits": { "type": "integer", "minimum": 1 }
         }
       },

@@ -264,6 +264,7 @@ def run_editor_suite(runner, allow_writes):
             state.revision,
             state.resource_id,
             "LiveApiCoverage selection round trip",
+            state.state_token,
         ),
     )
     state = editor.get_state()
@@ -274,6 +275,7 @@ def run_editor_suite(runner, allow_writes):
             state.revision,
             state.resource_id,
             "LiveApiCoverage empty insert",
+            state.state_token,
         ),
     )
 

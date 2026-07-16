@@ -200,15 +200,17 @@ def _register_editor_tools(mcp, backend, gate):
     async def editor_replace_selection(
         resource_id: str,
         expected_revision: int,
+        expected_state_token: str,
         text: str,
         label: str = "MCP replace selection",
     ) -> dict[str, Any]:
-        """Replace the active selection after checking resource ID and revision."""
+        """Replace the active selection after checking resource, revision, and state token."""
         return await _invoke(
             gate,
             backend.editor_replace_selection,
             resource_id,
             expected_revision,
+            expected_state_token,
             text,
             label,
         )
@@ -217,15 +219,17 @@ def _register_editor_tools(mcp, backend, gate):
     async def editor_insert_text(
         resource_id: str,
         expected_revision: int,
+        expected_state_token: str,
         text: str,
         label: str = "MCP insert text",
     ) -> dict[str, Any]:
-        """Insert text at the active cursor after checking resource ID and revision."""
+        """Insert text at the active cursor after checking resource, revision, and state token."""
         return await _invoke(
             gate,
             backend.editor_insert_text,
             resource_id,
             expected_revision,
+            expected_state_token,
             text,
             label,
         )
@@ -238,6 +242,11 @@ def _register_transaction_tools(mcp, backend, gate):
     ) -> dict[str, Any]:
         """Acquire the Book writer lease and begin one staged transaction."""
         return await _invoke(gate, backend.transaction_begin, label, checkpoint)
+
+    @mcp.tool(name="sigil.transaction.status", annotations=READ_ONLY, structured_output=True)
+    async def transaction_status() -> dict[str, Any]:
+        """Inspect the active transaction and idle expiry state without requiring its handle."""
+        return await _invoke(gate, backend.transaction_status)
 
     @mcp.tool(name="sigil.transaction.read_text", annotations=READ_ONLY, structured_output=True)
     async def transaction_read_text(transaction_id: str, resource_id: str) -> dict[str, Any]:

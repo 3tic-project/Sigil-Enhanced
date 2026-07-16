@@ -15,6 +15,7 @@ TOOL_NAMES = (
     "sigil.editor.replace_selection",
     "sigil.editor.insert_text",
     "sigil.transaction.begin",
+    "sigil.transaction.status",
     "sigil.transaction.read_text",
     "sigil.transaction.read_text_range",
     "sigil.transaction.replace_text",

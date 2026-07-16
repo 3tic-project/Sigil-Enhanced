@@ -40,6 +40,8 @@ Live 插件仍是**可信本地代码**，不是沙箱。插件进程与 Sigil �
 - archive 路径要求 canonical Book path，拒绝 symlink、越界路径和受保护 EPUB 文件。
 - input EPUB 在替换 Book 前完成结构校验；加载失败保留原 Book。
 - 所有写入要求 revision 或 SHA-256 并发令牌；跨 Session 同时只允许一个事务。
+- 编辑器选区替换/光标插入额外校验同一次状态读取的 `state_token`；MCP 可在不知道 handle 时
+  通过 transaction status 恢复活动事务、闲置超时和未完成上传状态。
 
 ## 测试证据
 

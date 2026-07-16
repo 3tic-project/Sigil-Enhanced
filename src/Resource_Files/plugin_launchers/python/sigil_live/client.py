@@ -45,6 +45,7 @@ class EditorState:
     cursor: int = None
     selection: Selection = None
     position_encoding: str = "utf-16"
+    state_token: str = None
 
     @classmethod
     def from_result(cls, value):
@@ -54,6 +55,7 @@ class EditorState:
             resource_id=value.get("resource_id"),
             book_path=value.get("book_path"),
             revision=value.get("revision"),
+            state_token=value.get("state_token"),
             cursor=value.get("cursor"),
             selection=Selection(**selection) if selection is not None else None,
             position_encoding=value.get("position_encoding", "utf-16"),
@@ -850,25 +852,47 @@ class EditorApi:
             },
         )
 
-    def replace_selection(self, text, expected_revision=None, resource_id=None, label="Replace selection"):
+    def replace_selection(
+        self,
+        text,
+        expected_revision=None,
+        resource_id=None,
+        label="Replace selection",
+        expected_state_token=None,
+    ):
         state = self.get_state() if expected_revision is None or resource_id is None else None
+        state_token = expected_state_token
+        if state_token is None and state is not None:
+            state_token = state.state_token
         return self._rpc.call(
             "editor.replaceSelection",
             {
                 "resource_id": resource_id if resource_id is not None else state.resource_id,
                 "expected_revision": expected_revision if expected_revision is not None else state.revision,
+                "expected_state_token": state_token,
                 "label": label,
                 "text": text,
             },
         )
 
-    def insert_text(self, text, expected_revision=None, resource_id=None, label="Insert text"):
+    def insert_text(
+        self,
+        text,
+        expected_revision=None,
+        resource_id=None,
+        label="Insert text",
+        expected_state_token=None,
+    ):
         state = self.get_state() if expected_revision is None or resource_id is None else None
+        state_token = expected_state_token
+        if state_token is None and state is not None:
+            state_token = state.state_token
         return self._rpc.call(
             "editor.insertText",
             {
                 "resource_id": resource_id if resource_id is not None else state.resource_id,
                 "expected_revision": expected_revision if expected_revision is not None else state.revision,
+                "expected_state_token": state_token,
                 "label": label,
                 "text": text,
             },

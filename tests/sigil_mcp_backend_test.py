@@ -32,6 +32,7 @@ class SigilMcpBackendTest(unittest.TestCase):
         self.assertIsNone(page["next_cursor"])
         state = self.backend.editor_state()
         self.assertEqual(state["selection"], {"start": 2, "end": 5, "text": "abc"})
+        self.assertEqual(state["state_token"], "editor-state-1")
         self.assertEqual(state["position_encoding"], "utf-16")
         text_range = self.backend.resource_read_text_range("chapter", 3, 5)
         self.assertEqual(text_range["text"], "Current editor text</p>"[:5])
@@ -106,8 +107,30 @@ class SigilMcpBackendTest(unittest.TestCase):
         self.assertTrue(result["committed"])
         self.assertFalse(result["confirmation_required"])
         self.assertEqual(self.plugin.ui.confirmations, [])
-        with self.assertRaises(BackendError):
-            self.backend.transaction_status()
+        status = self.backend.transaction_status()
+        self.assertFalse(status["active"])
+        self.assertIsNone(status["transaction_id"])
+
+    def test_editor_selection_write_requires_and_forwards_state_token(self):
+        self.backend.editor_replace_selection(
+            "chapter", 3, "editor-state-1", "updated"
+        )
+        method, text, kwargs = self.plugin.editor.last_call
+        self.assertEqual((method, text), ("replace_selection", "updated"))
+        self.assertEqual(kwargs["expected_state_token"], "editor-state-1")
+
+    def test_transaction_status_reports_recovery_metadata(self):
+        inactive = self.backend.transaction_status()
+        self.assertFalse(inactive["active"])
+        started = self.backend.transaction_begin("Recoverable", "auto")
+        self.assertTrue(started["active"])
+        self.assertEqual(started["pending_text_uploads"], 0)
+        self.backend.transaction_begin_text_write(
+            started["transaction_id"], "chapter", 3, 3
+        )
+        active = self.backend.transaction_status()
+        self.assertEqual(active["pending_text_uploads"], 1)
+        self.assertGreater(active["expires_in_seconds"], 0)
 
     def test_idle_and_shutdown_paths_roll_back(self):
         self.backend.transaction_begin()

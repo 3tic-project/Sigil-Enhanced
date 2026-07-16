@@ -197,12 +197,16 @@ class FakeBook:
 
 
 class FakeEditor:
+    def __init__(self):
+        self.last_call = None
+
     def get_state(self):
         return EditorState(
             active=True,
             resource_id="chapter",
             book_path="Text/chapter.xhtml",
             revision=3,
+            state_token="editor-state-1",
             cursor=5,
             selection=Selection(2, 5, "abc"),
         )
@@ -220,9 +224,11 @@ class FakeEditor:
         return {"applied": len(edits), "revision": 4}
 
     def replace_selection(self, text, **kwargs):
+        self.last_call = ("replace_selection", text, kwargs)
         return {"applied": True, "revision": 4, "text": text}
 
     def insert_text(self, text, **kwargs):
+        self.last_call = ("insert_text", text, kwargs)
         return {"applied": True, "revision": 4, "text": text}
 
 

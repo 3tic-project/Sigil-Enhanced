@@ -4,7 +4,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| Adapter | `Sigil Enhanced MCP 0.3.0` |
+| Adapter | `Sigil Enhanced MCP 0.4.0` |
 | MCP spec | `2025-11-25` |
 | Python SDK | `mcp>=1.28.1,<2`，发布包固定 `1.28.1` |
 | Live API | v2 / protocol 1 |
@@ -160,6 +160,7 @@ MCP 8 MiB 消息限制。大型任务应主动分批。
 - `revision`
 - `cursor`
 - `selection.start/end/text`
+- `state_token`：活动资源、revision、光标与选区的 SHA-256 状态令牌
 - `position_encoding=utf-16`
 
 ### `sigil.editor.tabs`
@@ -197,11 +198,13 @@ MCP 8 MiB 消息限制。大型任务应主动分批。
 
 ### `sigil.editor.replace_selection`
 
-参数：`resource_id`、`expected_revision`、`text`、可选 `label`。只替换当前活动选区。
+参数：`resource_id`、`expected_revision`、`expected_state_token`、`text`、可选 `label`。
+只替换读取该 token 时的活动选区；用户只移动选区也会返回 `RevisionConflict`。
 
 ### `sigil.editor.insert_text`
 
-参数：`resource_id`、`expected_revision`、`text`、可选 `label`。只在当前活动光标插入。
+参数：`resource_id`、`expected_revision`、`expected_state_token`、`text`、可选 `label`。
+只在读取该 token 时的活动光标插入；用户只移动光标也会返回 `RevisionConflict`。
 
 Editor 三个写工具立即修改 live Book，不属于 staged transaction。
 
@@ -226,6 +229,14 @@ Editor 三个写工具立即修改 live Book，不属于 staged transaction。
 ```
 
 已有 transaction 时返回 `Busy`。
+
+### `sigil.transaction.status`
+
+参数：无，不需要预先知道 transaction ID。
+
+始终返回正常结果。无事务时为 `active=false`、`transaction_id=null`；有事务时还返回
+`base_book_revision`、`checkpoint`、`idle_seconds`、`expires_in_seconds` 和
+`pending_text_uploads`。用于重连、工具超时或 Agent 状态丢失后判断应继续、rollback 还是新建事务。
 
 ### `sigil.transaction.read_text`
 
@@ -464,6 +475,7 @@ sigil.editor.edit
 sigil.editor.replace_selection
 sigil.editor.insert_text
 sigil.transaction.begin
+sigil.transaction.status
 sigil.transaction.read_text
 sigil.transaction.read_text_range
 sigil.transaction.replace_text

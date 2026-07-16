@@ -134,23 +134,27 @@ class SigilMcpBackend:
         )
 
     def editor_replace_selection(
-        self, resource_id, expected_revision, text, label="MCP replace selection"
+        self, resource_id, expected_revision, expected_state_token, text,
+        label="MCP replace selection"
     ):
         return self.plugin.editor.replace_selection(
             text,
             expected_revision=expected_revision,
             resource_id=resource_id,
             label=label,
+            expected_state_token=expected_state_token,
         )
 
     def editor_insert_text(
-        self, resource_id, expected_revision, text, label="MCP insert text"
+        self, resource_id, expected_revision, expected_state_token, text,
+        label="MCP insert text"
     ):
         return self.plugin.editor.insert_text(
             text,
             expected_revision=expected_revision,
             resource_id=resource_id,
             label=label,
+            expected_state_token=expected_state_token,
         )
 
     def transaction_begin(self, label="MCP changes", checkpoint="auto"):
@@ -166,12 +170,27 @@ class SigilMcpBackend:
         return self.transaction_status()
 
     def transaction_status(self):
-        transaction = self._require_transaction(None)
+        if self._transaction is None:
+            return {
+                "active": False,
+                "transaction_id": None,
+                "idle_timeout_seconds": self.idle_timeout_seconds,
+                "idle_seconds": None,
+                "expires_in_seconds": None,
+                "pending_text_uploads": 0,
+            }
+        idle_seconds = max(0.0, time.monotonic() - self._transaction_activity)
         return {
-            "transaction_id": transaction.id,
-            "base_book_revision": transaction.base_book_revision,
-            "checkpoint": transaction.checkpoint,
+            "active": True,
+            "transaction_id": self._transaction.id,
+            "base_book_revision": self._transaction.base_book_revision,
+            "checkpoint": self._transaction.checkpoint,
             "idle_timeout_seconds": self.idle_timeout_seconds,
+            "idle_seconds": round(idle_seconds, 3),
+            "expires_in_seconds": round(
+                max(0.0, self.idle_timeout_seconds - idle_seconds), 3
+            ),
+            "pending_text_uploads": len(self._text_writers),
         }
 
     def transaction_read_text(self, transaction_id, resource_id):

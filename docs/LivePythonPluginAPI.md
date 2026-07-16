@@ -96,6 +96,7 @@ def run(plugin):
         replacement,
         expected_revision=state.revision,
         resource_id=state.resource_id,
+        expected_state_token=state.state_token,
         label="Uppercase selection",
     )
     return 0
@@ -240,12 +241,12 @@ plugins may call these methods.
 
 | Method | Behavior |
 | --- | --- |
-| `get_state()` | Return typed active resource, cursor, selection, and revision state. |
+| `get_state()` | Return typed active resource, cursor, selection, revision, and `state_token`. |
 | `get_selection()` | Return a typed `Selection`. |
 | `get_open_tabs()` | Return resources loaded in editor tabs. |
 | `apply_edits(edits, expected_revision, resource_id, label)` | Apply non-overlapping text edits to the active tab. |
-| `replace_selection(text, expected_revision, resource_id, label)` | Replace the active selection. |
-| `insert_text(text, expected_revision, resource_id, label)` | Insert at the active cursor. |
+| `replace_selection(text, expected_revision=None, resource_id=None, label=..., expected_state_token=None)` | Replace the active selection. |
+| `insert_text(text, expected_revision=None, resource_id=None, label=..., expected_state_token=None)` | Insert at the active cursor. |
 | `set_cursor(position, resource_id=None)` | Move the current editor cursor. |
 | `set_selection(start, end, resource_id=None)` | Select a current editor range. |
 | `open_resource(resource, position=None)` | Open/activate a resource and optionally reveal a UTF-16 position. |
@@ -256,6 +257,14 @@ An edit can be a dictionary with `start`, `end`, and `text`, or a
 must be in bounds, non-overlapping, and cannot split a UTF-16 surrogate pair.
 The host sorts them in descending position order before applying them in one
 edit block.
+
+`state_token` fingerprints the active resource, content revision, cursor, and
+selection range. `replace_selection()` and `insert_text()` use the token from
+an automatically fetched state when their resource or revision is omitted. If
+a plugin derives replacement text from an earlier `EditorState`, it must also
+pass that state's `expected_state_token`; a moved cursor or selection then
+returns `RevisionConflict` instead of applying text at the new position. The
+host accepts an omitted token for compatibility with older raw v2 clients.
 
 ### `UiApi`
 
