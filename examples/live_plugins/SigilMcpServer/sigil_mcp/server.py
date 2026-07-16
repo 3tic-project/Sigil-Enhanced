@@ -158,9 +158,11 @@ def _register_context_tools(mcp, backend, gate):
         )
 
     @mcp.tool(name="sigil.resource.read_many", annotations=READ_ONLY, structured_output=True)
-    async def resource_read_many(resource_ids: list[str]) -> dict[str, Any]:
-        """Read between 1 and 100 current text resources with bounded continuation handling."""
-        return await _invoke(gate, backend.resource_read_many, resource_ids)
+    async def resource_read_many(
+        resource_ids: list[str], cursor: str | None = None
+    ) -> dict[str, Any]:
+        """Read one bounded page; pass next_cursor unchanged to continue."""
+        return await _invoke(gate, backend.resource_read_many, resource_ids, cursor)
 
     @mcp.tool(name="sigil.editor.state", annotations=READ_ONLY, structured_output=True)
     async def editor_state() -> dict[str, Any]:

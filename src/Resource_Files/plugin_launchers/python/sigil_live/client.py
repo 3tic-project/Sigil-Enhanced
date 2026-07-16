@@ -764,18 +764,21 @@ class BookApi:
         )
 
     def read_many(self, resources):
-        ids = [item.id if isinstance(item, Resource) else item for item in resources]
         items = []
         cursor = None
         while True:
-            params = {"resource_ids": ids}
-            if cursor is not None:
-                params["cursor"] = cursor
-            result = self._rpc.call("resource.readMany", params)
+            result = self.read_many_page(resources, cursor)
             items.extend(result["items"])
             cursor = result.get("next_cursor")
             if cursor is None:
                 return items
+
+    def read_many_page(self, resources, cursor=None):
+        ids = [item.id if isinstance(item, Resource) else item for item in resources]
+        params = {"resource_ids": ids}
+        if cursor is not None:
+            params["cursor"] = cursor
+        return self._rpc.call("resource.readMany", params)
 
     def read_binary(self, resource):
         resource_id = resource.id if isinstance(resource, Resource) else resource

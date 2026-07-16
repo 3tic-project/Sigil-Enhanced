@@ -188,6 +188,9 @@ exact UTF-8 byte offsets, 1 MiB chunks, a 64 MiB document limit, and host-side
 length/UTF-8/SHA-256 validation before staging. Newly staged text remains
 addressable and editable by its staging ID until commit.
 
+MCP `read_many` forwards one host-bounded page and its opaque continuation
+instead of reassembling pages into a response that can exceed the MCP frame.
+
 Structured spine updates merge manifested additions already staged in the same
 transaction into the staged OPF before validating idrefs. New-book generation
 therefore uses one transaction and one checkpoint rather than exposing a partial

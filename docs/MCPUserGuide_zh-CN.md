@@ -247,6 +247,9 @@ commit 前宿主会重新检查 resource revision 和 package invariants。失�
 改用 `sigil.transaction.read_text_range`。从 `start=0` 开始，每次把返回的 `next_start` 原样
 用于下一段，直到其为 `null`。offset 是 UTF-16 code units，不是 Python 字符下标。
 
+批量读取 `sigil.resource.read_many` 同样返回有界页面。只要 `next_cursor` 非空，就必须保持
+原 `resource_ids` 顺序并原样续传；不要在客户端把所有页面重新拼成一个 MCP 工具结果。
+
 写入超过约 4 MiB 的现有文本时，使用 `begin_text_write`；新增长文本使用
 `begin_text_resource`。后续 `write_text_chunk` 的 offset 是累计 UTF-8 字节数，不能使用字符数。
 完成时调用 `finish_text_write`，放弃时调用 `abort_text_write`。单文档最多 64 MiB、宿主单块

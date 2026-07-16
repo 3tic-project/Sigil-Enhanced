@@ -36,6 +36,13 @@ class SigilMcpBackendTest(unittest.TestCase):
         self.assertEqual(state["position_encoding"], "utf-16")
         text_range = self.backend.resource_read_text_range("chapter", 3, 5)
         self.assertEqual(text_range["text"], "Current editor text</p>"[:5])
+        batch = self.backend.resource_read_many(["chapter", "style"])
+        self.assertEqual(len(batch["items"]), 1)
+        self.assertEqual(batch["next_cursor"], "1")
+        continued = self.backend.resource_read_many(
+            ["chapter", "style"], batch["next_cursor"]
+        )
+        self.assertIsNone(continued["next_cursor"])
 
     def test_transaction_rejects_foreign_handle_and_direct_commit_clears_state(self):
         started = self.backend.transaction_begin("Generate chapter", "auto")

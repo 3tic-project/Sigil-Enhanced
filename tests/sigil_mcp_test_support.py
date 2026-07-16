@@ -188,6 +188,15 @@ class FakeBook:
             for item in resource_ids
         ]
 
+    def read_many_page(self, resource_ids, cursor=None):
+        offset = int(cursor or 0)
+        items = self.read_many(resource_ids[offset:offset + 1])
+        next_offset = offset + len(items)
+        return {
+            "items": items,
+            "next_cursor": str(next_offset) if next_offset < len(resource_ids) else None,
+        }
+
     def transaction(self, label, checkpoint):
         transaction = FakeTransaction("transaction-{0}".format(len(self.transactions) + 1))
         transaction.label = label

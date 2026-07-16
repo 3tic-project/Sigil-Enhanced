@@ -106,12 +106,12 @@ class SigilMcpBackend:
     def resource_read_text_range(self, resource_id, start=0, max_utf16_units=1024 * 1024):
         return self.plugin.book.read_text_range(resource_id, start, max_utf16_units)
 
-    def resource_read_many(self, resource_ids):
+    def resource_read_many(self, resource_ids, cursor=None):
         if not 1 <= len(resource_ids) <= 100:
             raise BackendError(
                 "InvalidRequest", "resource_ids must contain between 1 and 100 IDs"
             )
-        return {"items": self.plugin.book.read_many(resource_ids)}
+        return self.plugin.book.read_many_page(resource_ids, cursor)
 
     def editor_state(self):
         return _editor_state(self.plugin.editor.get_state())

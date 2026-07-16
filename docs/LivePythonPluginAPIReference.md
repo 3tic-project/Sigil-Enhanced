@@ -111,6 +111,7 @@ Automate 共用同一运行时选择；Automate 会等待 Live command 完成，
 | `get_resource(resource_id)` | 当前资源信息。 |
 | `read_text(resource)` | `text` 与 `revision`。 |
 | `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | 按 UTF-16 范围有界读取文本、revision 与续读位置。 |
+| `read_many_page(resources, cursor=None)` | 读取一页最多 100 个指定资源并保留宿主 `next_cursor`，供协议适配层使用。 |
 | `read_many(resources)` | 最多 100 个文本资源；SDK 自动跟随 6 MiB 响应预算的 continuation。 |
 | `read_binary(resource)` | 最多 5 MiB 的 bytes 数据与 revision。 |
 | `open_binary(resource)` | 二进制资源的分块 `BinaryReader` 快照。 |

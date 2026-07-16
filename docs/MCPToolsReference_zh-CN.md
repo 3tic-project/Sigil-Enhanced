@@ -4,7 +4,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| Adapter | `Sigil Enhanced MCP 0.5.0` |
+| Adapter | `Sigil Enhanced MCP 0.6.0` |
 | MCP spec | `2025-11-25` |
 | Python SDK | `mcp>=1.28.1,<2`，发布包固定 `1.28.1` |
 | Live API | v2 / protocol 1 |
@@ -140,8 +140,11 @@ Annotations 只是 MCP Host UI 提示，不是授权判定。
 
 参数：`resource_ids`，1-100 个。
 
-返回 `items`。SDK 会自动处理宿主 6 MiB response budget 产生的 continuation，最终结果仍受
-MCP 8 MiB 消息限制。大型任务应主动分批。
+参数：`resource_ids`（1-100 个）和可选不透明 `cursor`。
+
+返回一页 `items` 和可空 `next_cursor`，页面保持在宿主 6 MiB response budget 内。后续调用
+必须传相同 `resource_ids` 并原样带回 `next_cursor`；MCP adapter 不再把多页重新聚合成可能
+超过 8 MiB 的响应。单个文本本身超过页面预算时，改用 `read_text_range`。
 
 读取尚未加载的文本资源时，宿主会从当前 Book 工作目录惰性载入，但不会发出资源编辑事件、
 增加内容 revision 或触发编辑器光标同步。

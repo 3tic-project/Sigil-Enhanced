@@ -76,12 +76,14 @@ def run_book_read_suite(runner):
             lambda: book.read_text_range(first, 0, 1024),
         )
         batch = text_resources[: min(5, len(text_resources))]
+        runner.check("BookApi.read_many_page", lambda: book.read_many_page(batch))
         runner.check("BookApi.read_many", lambda: book.read_many(batch))
     else:
         runner.skip("BookApi.resolve_path", "no text resources")
         runner.skip("BookApi.get_resource", "no text resources")
         runner.skip("BookApi.read_text", "no text resources")
         runner.skip("BookApi.read_text_range", "no text resources")
+        runner.skip("BookApi.read_many_page", "no text resources")
         runner.skip("BookApi.read_many", "no text resources")
 
     binary = next(

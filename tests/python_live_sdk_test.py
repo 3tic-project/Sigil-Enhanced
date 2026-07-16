@@ -191,6 +191,17 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual([item["resource_id"] for item in items], ["a", "b"])
         self.assertEqual(transport.sent[1]["params"]["cursor"], "1")
 
+    def test_book_read_many_page_preserves_host_continuation(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "items": [{"resource_id": "b", "text": "B", "revision": 1}],
+                "next_cursor": "2",
+            }},
+        ])
+        page = BookApi(RpcClient(transport)).read_many_page(["a", "b"], "1")
+        self.assertEqual(page["next_cursor"], "2")
+        self.assertEqual(transport.sent[0]["params"]["cursor"], "1")
+
     def test_book_and_transaction_read_bounded_text_ranges(self):
         transport = FakeTransport([
             {"jsonrpc": "2.0", "id": 1, "result": {

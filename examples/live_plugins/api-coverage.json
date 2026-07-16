@@ -61,6 +61,7 @@
     "get_resource": "LiveApiCoverage/suites_core.py",
     "read_text": "LiveApiCoverage/suites_core.py",
     "read_text_range": "LiveApiCoverage/suites_core.py",
+    "read_many_page": "LiveApiCoverage/suites_core.py",
     "read_many": "LiveApiCoverage/suites_core.py",
     "read_binary": "LiveApiCoverage/suites_core.py",
     "open_binary": "LiveApiCoverage/suites_core.py",

@@ -70,6 +70,8 @@ Text range pages are limited to 1 Mi UTF-16 code units. Chunked text uploads are
 limited to 64 MiB, use exact UTF-8 byte offsets and 1 MiB host chunks, and are
 staged only after length, UTF-8, and SHA-256 validation succeeds. An unfinished
 upload can be explicitly aborted and is also removed with its transaction.
+`sigil.resource.read_many` also returns one bounded page; keep the resource-ID
+order stable and pass `next_cursor` unchanged until it becomes null.
 
 ## Documentation
 

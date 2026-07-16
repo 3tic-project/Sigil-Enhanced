@@ -181,6 +181,7 @@ not construct the transport directly.
 | `get_resource(resource_id)` | Fetch current resource metadata. |
 | `read_text(resource)` | Dictionary containing `text` and `revision`. |
 | `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | Read a bounded UTF-16 range with revision and continuation metadata. |
+| `read_many_page(resources, cursor=None)` | Read one host-bounded page of up to 100 requested resources and preserve `next_cursor`. |
 | `read_many(resources)` | Up to 100 current text resources; continuation across the 6 MiB response budget is automatic. |
 | `read_binary(resource)` | Read a binary resource up to 5 MiB and return decoded `data`. |
 | `open_binary(resource)` | Open a context-managed, chunked snapshot reader for a binary resource. |
