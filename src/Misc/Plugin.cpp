@@ -42,6 +42,9 @@ Plugin::Plugin(const QHash<QString, QString> &info)
     if (info.contains("name")) {
         set_name(info.value("name"));
     }
+    if (info.contains("dirname")) {
+        set_dirname(info.value("dirname"));
+    }
     if (info.contains("author")) {
         set_author(info.value("author"));
     }
@@ -94,6 +97,7 @@ QHash<QString, QString> Plugin::serialize() const
     QHash <QString, QString> info;
 
     info.insert("name", get_name());
+    info.insert("dirname", get_dirname());
     info.insert("author", get_author());
     info.insert("description", get_description());
     info.insert("type", get_type());
@@ -123,6 +127,11 @@ bool Plugin::isvalid() const
 QString Plugin::get_name() const
 {
     return m_name;
+}
+
+QString Plugin::get_dirname() const
+{
+    return m_dirname.isEmpty() ? m_name : m_dirname;
 }
 
 QString Plugin::get_author() const
@@ -221,6 +230,11 @@ QStringList Plugin::SupportedEngines()
 void Plugin::set_name(const QString &val)
 {
     m_name = val;
+}
+
+void Plugin::set_dirname(const QString &val)
+{
+    m_dirname = val;
 }
 
 void Plugin::set_author(const QString &val)

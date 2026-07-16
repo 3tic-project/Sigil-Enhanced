@@ -45,6 +45,8 @@ public:
     bool isvalid() const;
 
     QString get_name() const;
+    // On-disk install directory under pluginsPath(); falls back to get_name().
+    QString get_dirname() const;
     QString get_author() const;
     QString get_description() const;
     QString get_type() const;
@@ -63,6 +65,7 @@ public:
     static QStringList SupportedEngines();
 
     void set_name(const QString &val);
+    void set_dirname(const QString &val);
     void set_author(const QString &val);
     void set_description(const QString &val);
     void set_type(const QString &val);
@@ -79,6 +82,7 @@ public:
 
 private:
     QString m_name;
+    QString m_dirname;
     QString m_author;
     QString m_description;
     QString m_type;

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>Live API Coverage Validation</name>
+  <author>Sigil Enhanced</author>
+  <description>Coverage companion for Live v2 ValidationApi.</description>
+  <type>validation</type>
+  <engine>python3</engine>
+  <version>1.0.0</version>
+  <api version="2" interface="live" />
+  <lifetime>command</lifetime>
+</plugin>

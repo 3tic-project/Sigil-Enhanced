@@ -169,7 +169,8 @@ int PluginRunner::exec(const QString &name)
     // Note: Keep SupportedEngines() in sync with the engine calling code here.
     if ( m_engine.contains("python3") ) {
         m_launcherPath = launcher_root + "/python/launcher.py";
-        m_pluginPath = m_pluginsFolder + "/" + m_pluginName + "/" + "plugin.py";
+        // Install directory may differ from the display name in plugin.xml.
+        m_pluginPath = m_pluginsFolder + "/" + plugin->get_dirname() + "/" + "plugin.py";
         if (!QFileInfo(m_launcherPath).exists()) {
             Utility::DisplayStdErrorDialog(tr("Installation Error: plugin launcher") +
                                            " " + m_launcherPath + " " + tr("does not exist"));

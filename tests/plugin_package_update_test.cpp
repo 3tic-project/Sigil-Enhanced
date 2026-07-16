@@ -80,6 +80,34 @@ int main()
     Require(!FirstByLocalName(document, QStringLiteral("meta")).isNull(),
             "metadata child is missing");
 
+    // Round-trip entries that carry per-element xmlns:* (as OPFResource does for
+    // dc:date modification stamps with opf:event).
+    const QJsonArray metadata_with_xmlns {
+        QJsonObject {
+            { QStringLiteral("name"), QStringLiteral("dc:title") },
+            { QStringLiteral("content"), QStringLiteral("Kept") },
+            { QStringLiteral("attributes"), QJsonObject() }
+        },
+        QJsonObject {
+            { QStringLiteral("name"), QStringLiteral("dc:date") },
+            { QStringLiteral("content"), QStringLiteral("2024-01-02") },
+            { QStringLiteral("attributes"), QJsonObject {
+                // Intentionally list opf:event before xmlns:opf to verify pass order.
+                { QStringLiteral("opf:event"), QStringLiteral("modification") },
+                { QStringLiteral("xmlns:opf"),
+                  QStringLiteral("http://www.idpf.org/2007/opf") }
+            } }
+        }
+    };
+    Require(PluginApi::ApplyMetadataUpdate(PACKAGE, metadata_with_xmlns, &updated, &error),
+            ("xmlns metadata attribute was rejected: " + error).toUtf8().constData());
+    Require(document.setContent(updated, true, &parse_error),
+            "xmlns metadata update XML is malformed");
+    Require(updated.contains(QStringLiteral("opf:event=\"modification\"")),
+            "opf:event was lost after xmlns: declaration");
+    const QDomElement date = FirstByLocalName(document, QStringLiteral("date"));
+    Require(!date.isNull(), "dc:date with xmlns:opf was not written");
+
     const QJsonArray spine {
         QJsonObject {
             { QStringLiteral("idref"), QStringLiteral("b") },

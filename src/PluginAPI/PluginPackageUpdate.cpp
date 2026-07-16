@@ -39,6 +39,25 @@ bool ParsePackageDom(const QString &source, QDomDocument *document, QString *err
     return true;
 }
 
+const QString XMLNS_NAMESPACE =
+    QStringLiteral("http://www.w3.org/2000/xmlns/");
+
+void RegisterNamespaceDeclaration(const QString &name, const QString &uri,
+                                  QHash<QString, QString> *namespaces)
+{
+    if (name == QStringLiteral("xmlns")) {
+        // Default namespace declaration — tracked under an empty key for lookups.
+        namespaces->insert(QString(), uri);
+        return;
+    }
+    if (name.startsWith(QStringLiteral("xmlns:"))) {
+        const QString declared_prefix = name.mid(6);
+        if (!declared_prefix.isEmpty()) {
+            namespaces->insert(declared_prefix, uri);
+        }
+    }
+}
+
 void CollectNamespaces(const QDomNode &node, QHash<QString, QString> *namespaces)
 {
     const QDomElement element = node.toElement();
@@ -48,7 +67,29 @@ void CollectNamespaces(const QDomNode &node, QHash<QString, QString> *namespaces
     const QDomNamedNodeMap attributes = node.attributes();
     for (int index = 0; index < attributes.size(); ++index) {
         const QDomAttr attribute = attributes.item(index).toAttr();
-        if (!attribute.prefix().isEmpty() && !attribute.namespaceURI().isEmpty()) {
+        // Namespace declarations: xmlns="..." or xmlns:prefix="..."
+        // With namespace processing enabled, QDom reports these under the xmlns NS.
+        if (attribute.namespaceURI() == XMLNS_NAMESPACE
+            || attribute.name() == QStringLiteral("xmlns")
+            || attribute.prefix() == QStringLiteral("xmlns")
+            || attribute.name().startsWith(QStringLiteral("xmlns:"))) {
+            if (attribute.name() == QStringLiteral("xmlns")
+                || (attribute.localName() == QStringLiteral("xmlns")
+                    && attribute.prefix().isEmpty())) {
+                RegisterNamespaceDeclaration(QStringLiteral("xmlns"), attribute.value(),
+                                             namespaces);
+            } else {
+                const QString declared = attribute.prefix() == QStringLiteral("xmlns")
+                    ? attribute.localName()
+                    : attribute.name().section(QLatin1Char(':'), 1);
+                if (!declared.isEmpty()) {
+                    namespaces->insert(declared, attribute.value());
+                }
+            }
+            continue;
+        }
+        if (!attribute.prefix().isEmpty() && !attribute.namespaceURI().isEmpty()
+            && attribute.prefix() != QStringLiteral("xmlns")) {
             namespaces->insert(attribute.prefix(), attribute.namespaceURI());
         }
     }
@@ -69,6 +110,40 @@ bool SplitQualifiedName(const QString &name, QString *prefix, QString *local_nam
     *prefix = colon < 0 ? QString() : name.left(colon);
     *local_name = colon < 0 ? name : name.mid(colon + 1);
     return !local_name->isEmpty();
+}
+
+bool ApplyAttribute(QDomElement &element, const QString &name,
+                    const QString &value, QHash<QString, QString> *namespaces,
+                    QString *error)
+{
+    // xmlns / xmlns:prefix declare namespaces; they are not ordinary prefixed attrs.
+    // Write them as literal attribute names so QDom does not invent xmlns:xmlns.
+    if (name == QStringLiteral("xmlns")
+        || name.startsWith(QStringLiteral("xmlns:"))) {
+        RegisterNamespaceDeclaration(name, value, namespaces);
+        element.setAttribute(name, value);
+        return true;
+    }
+    QString attribute_prefix;
+    QString attribute_name;
+    if (!SplitQualifiedName(name, &attribute_prefix, &attribute_name, error)) {
+        return false;
+    }
+    if (!attribute_prefix.isEmpty()) {
+        if (!namespaces->contains(attribute_prefix)) {
+            if (error) {
+                *error = QStringLiteral("Metadata attribute prefix is undeclared: %1")
+                    .arg(attribute_prefix);
+            }
+            return false;
+        }
+        // Prefer the literal qualified name so round-trips match OPFParser TagAtts
+        // (e.g. opf:event, xml:lang) without rewriting namespace nodes.
+        element.setAttribute(name, value);
+    } else {
+        element.setAttribute(attribute_name, value);
+    }
+    return true;
 }
 
 }
@@ -112,24 +187,20 @@ bool ApplyMetadataUpdate(const QString &source, const QJsonArray &entries,
             ? document.createElementNS(metadata.namespaceURI(), local_name)
             : document.createElementNS(namespaces.value(prefix), name);
         const QJsonObject attributes = entry.value(QStringLiteral("attributes")).toObject();
-        for (auto it = attributes.constBegin(); it != attributes.constEnd(); ++it) {
-            if (!it.value().isString()) {
-                if (error) *error = QStringLiteral("Metadata attributes must be strings");
-                return false;
-            }
-            QString attribute_prefix;
-            QString attribute_name;
-            if (!SplitQualifiedName(it.key(), &attribute_prefix, &attribute_name, error)) return false;
-            if (!attribute_prefix.isEmpty()) {
-                if (!namespaces.contains(attribute_prefix)) {
-                    if (error) *error = QStringLiteral("Metadata attribute prefix is undeclared: %1")
-                        .arg(attribute_prefix);
+        // Two passes so per-element xmlns:* declarations are available for opf:/etc. attrs.
+        for (int pass = 0; pass < 2; ++pass) {
+            for (auto it = attributes.constBegin(); it != attributes.constEnd(); ++it) {
+                if (!it.value().isString()) {
+                    if (error) *error = QStringLiteral("Metadata attributes must be strings");
                     return false;
                 }
-                element.setAttributeNS(namespaces.value(attribute_prefix), it.key(),
-                                       it.value().toString());
-            } else {
-                element.setAttribute(attribute_name, it.value().toString());
+                const bool is_xmlns = it.key() == QStringLiteral("xmlns")
+                    || it.key().startsWith(QStringLiteral("xmlns:"));
+                if (pass == 0 ? !is_xmlns : is_xmlns) continue;
+                if (!ApplyAttribute(element, it.key(), it.value().toString(),
+                                    &namespaces, error)) {
+                    return false;
+                }
             }
         }
         element.appendChild(document.createTextNode(entry.value(QStringLiteral("content")).toString()));

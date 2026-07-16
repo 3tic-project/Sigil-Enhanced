@@ -432,6 +432,16 @@ bool Utility::SMoveFile(const QString &oldfilepath, const QString &newfilepath)
         return false;
     }
 
+    // Create the destination parent folder when moving into a new path.
+    // Callers such as live-plugin relocate and BookBrowser move already
+    // may mkpath themselves; doing it here covers all MoveTo paths.
+    const QString parent_dir = QFileInfo(newfilepath).absolutePath();
+    if (!parent_dir.isEmpty() && !QDir(parent_dir).exists()) {
+        if (!QDir().mkpath(parent_dir)) {
+            return false;
+        }
+    }
+
     // copy file from old file path to new file path
     bool success = QFile::copy(oldfilepath, newfilepath);
     // if and only if copy succeeds then delete old file 

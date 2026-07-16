@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin>
-  <name>Live Transaction Lab</name>
+  <name>Live API Coverage</name>
   <author>Sigil Enhanced</author>
-  <description>Exercises staged transactions and keeps the created probe files for inspection.</description>
+  <description>Coverage harness for Live v2 Python SDK (edit/command suites).</description>
   <type>edit</type>
   <engine>python3</engine>
-  <version>2.0.3</version>
+  <version>1.0.0</version>
   <api version="2" interface="live" />
   <lifetime>command</lifetime>
 </plugin>

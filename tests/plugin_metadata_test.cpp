@@ -28,7 +28,8 @@ int main()
     Require(legacy.get_lifetime() == QStringLiteral("command"), "lifetime default differs");
 
     Plugin live;
-    live.set_name(QStringLiteral("Live"));
+    live.set_name(QStringLiteral("Live API Showcase"));
+    live.set_dirname(QStringLiteral("LiveApiShowcase"));
     live.set_type(QStringLiteral("edit"));
     live.set_engine(QStringLiteral("python3"));
     live.set_api(2, QStringLiteral(" LIVE "));
@@ -38,6 +39,8 @@ int main()
     live.add_event(QStringLiteral("editor.contentChanged"));
     Require(live.isvalid(), "python3 live metadata is invalid");
     Require(live.get_declared_runtime() == Plugin::LiveRuntime, "live declaration was ignored");
+    Require(live.get_dirname() == QStringLiteral("LiveApiShowcase"),
+            "install directory name was ignored");
     Require(live.get_permissions() == QStringList { QStringLiteral("editor.read") },
             "permission de-duplication failed");
 
@@ -45,8 +48,15 @@ int main()
     Require(roundtrip.get_api_version() == 2, "serialized API version differs");
     Require(roundtrip.get_api_interface() == QStringLiteral("live"), "serialized interface differs");
     Require(roundtrip.get_lifetime() == QStringLiteral("book-session"), "serialized lifetime differs");
+    Require(roundtrip.get_dirname() == QStringLiteral("LiveApiShowcase"),
+            "serialized dirname differs");
     Require(roundtrip.get_permissions() == live.get_permissions(), "serialized permissions differ");
     Require(roundtrip.get_events() == live.get_events(), "serialized events differ");
+
+    Plugin unnamed_dir;
+    unnamed_dir.set_name(QStringLiteral("OnlyName"));
+    Require(unnamed_dir.get_dirname() == QStringLiteral("OnlyName"),
+            "dirname should fall back to name");
 
     live.set_api(3, QStringLiteral("live"));
     Require(live.get_declared_runtime() == Plugin::LegacyRuntime,

@@ -253,9 +253,9 @@ void PluginDB::remove_plugin(const QString &name)
 
     Plugin *p = m_plugins.take(name);
     if (p != NULL) {
+        Utility::removeDir(pluginsPath() + "/" + p->get_dirname());
         delete p;
     }
-    Utility::removeDir(pluginsPath() + "/" + name);
     emit plugins_changed();
 }
 
@@ -264,8 +264,10 @@ void PluginDB::remove_all_plugins()
     Plugin *p;
     foreach (QString k, m_plugins.keys()) {
         p = m_plugins.take(k);
-        delete p;
-        Utility::removeDir(pluginsPath() + "/" + k);
+        if (p != NULL) {
+            Utility::removeDir(pluginsPath() + "/" + p->get_dirname());
+            delete p;
+        }
     }
     m_plugins.clear();
     emit plugins_changed();
@@ -314,6 +316,8 @@ Plugin *PluginDB::load_plugin(const QString &name)
     }
 
     Plugin           *plugin = new Plugin();
+    // Keep the install folder name separate from the display name in plugin.xml.
+    plugin->set_dirname(name);
     QXmlStreamReader  reader(&file);
     while (!reader.atEnd()) {
         reader.readNext();

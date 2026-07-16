@@ -1,102 +1,102 @@
 {
   "BinaryReader": {
-    "chunks": "LiveApiShowcase/plugin.py",
-    "read": "LiveApiShowcase/plugin.py",
-    "close": "LiveApiShowcase/plugin.py"
+    "chunks": "LiveApiCoverage/suites_core.py",
+    "read": "LiveApiCoverage/suites_core.py",
+    "close": "LiveApiCoverage/suites_core.py"
   },
   "InputWriter": {
-    "write": "LiveInputExample/plugin.py",
-    "finish": "LiveInputExample/plugin.py"
+    "write": "LiveApiCoverageInput/plugin.py",
+    "finish": "LiveApiCoverageInput/plugin.py"
   },
   "InputApi": {
-    "begin_epub": "LiveInputExample/plugin.py",
-    "submit_epub": "LiveInputExample/plugin.py",
-    "submit_epub_file": "LiveInputExample/plugin.py"
+    "begin_epub": "LiveApiCoverageInput/plugin.py",
+    "submit_epub": "LiveApiCoverageInput/plugin.py",
+    "submit_epub_file": "LiveApiCoverageInput/plugin.py"
   },
   "OutputApi": {
-    "export_epub": "LiveOutputExample/plugin.py",
-    "save_source": "LiveOutputExample/plugin.py"
+    "export_epub": "LiveApiCoverageOutput/plugin.py",
+    "save_source": "LiveApiCoverageOutput/plugin.py"
   },
   "Transaction": {
-    "read_text": "LiveTransactionLab/plugin.py",
-    "replace_text": "LiveTransactionLab/plugin.py",
-    "apply_edits": "LiveTransactionLab/plugin.py",
-    "read_binary": "LiveTransactionLab/plugin.py",
-    "write_binary": "LiveTransactionLab/plugin.py",
-    "begin_binary_write": "LiveTransactionLab/plugin.py",
-    "write_binary_file": "LiveTransactionLab/plugin.py",
-    "replace_package": "LiveTransactionLab/plugin.py",
-    "update_metadata": "LiveTransactionLab/plugin.py",
-    "update_spine": "LiveTransactionLab/plugin.py",
-    "replace_archive_file": "LiveTransactionLab/plugin.py",
-    "remove_archive_file": "LiveTransactionLab/plugin.py",
-    "add_resource": "LiveTransactionLab/plugin.py",
-    "remove_resource": "LiveTransactionLab/plugin.py",
-    "move_resource": "LiveTransactionLab/plugin.py",
-    "rename_resource": "LiveTransactionLab/plugin.py",
-    "validate": "LiveTransactionLab/plugin.py",
-    "preview": "LiveTransactionLab/plugin.py",
-    "commit": "LiveTransactionLab/plugin.py",
-    "rollback": "LiveTransactionLab/plugin.py"
+    "read_text": "LiveApiCoverage/suites_core.py",
+    "replace_text": "LiveApiCoverage/suites_core.py",
+    "apply_edits": "LiveApiCoverage/suites_core.py",
+    "read_binary": "LiveApiCoverage/suites_core.py",
+    "write_binary": "LiveApiCoverage/suites_core.py",
+    "begin_binary_write": "LiveApiCoverage/suites_core.py",
+    "write_binary_file": "LiveApiCoverage/suites_core.py",
+    "replace_package": "LiveApiCoverage/suites_core.py",
+    "update_metadata": "LiveApiCoverage/suites_core.py",
+    "update_spine": "LiveApiCoverage/suites_core.py",
+    "replace_archive_file": "LiveApiCoverage/suites_core.py",
+    "remove_archive_file": "LiveApiCoverage/suites_core.py",
+    "add_resource": "LiveApiCoverage/suites_core.py",
+    "remove_resource": "LiveApiCoverage/suites_core.py",
+    "move_resource": "LiveApiCoverage/suites_core.py",
+    "rename_resource": "LiveApiCoverage/suites_core.py",
+    "validate": "LiveApiCoverage/suites_core.py",
+    "preview": "LiveApiCoverage/suites_core.py",
+    "commit": "LiveApiCoverage/suites_core.py",
+    "rollback": "LiveApiCoverage/suites_core.py"
   },
   "BookApi": {
-    "get_info": "LiveApiShowcase/plugin.py",
-    "get_compatibility_snapshot": "LiveTransactionLab/plugin.py",
-    "get_revision": "LiveApiShowcase/plugin.py",
-    "get_metadata": "LiveApiShowcase/plugin.py",
-    "get_manifest": "LiveApiShowcase/plugin.py",
-    "get_spine": "LiveApiShowcase/plugin.py",
-    "get_guide": "LiveApiShowcase/plugin.py",
-    "get_bindings": "LiveApiShowcase/plugin.py",
-    "get_selection": "LiveApiShowcase/plugin.py",
-    "archive_files": "LiveOutputExample/plugin.py",
-    "read_archive_file": "LiveTransactionLab/plugin.py",
-    "resources": "LiveApiShowcase/plugin.py",
-    "text_resources": "LiveApiShowcase/plugin.py",
-    "resolve_path": "LiveApiShowcase/plugin.py",
-    "get_resource": "LiveOutputExample/plugin.py",
-    "read_text": "LiveOutputExample/plugin.py",
-    "read_many": "LiveApiShowcase/plugin.py",
-    "read_binary": "LiveApiShowcase/plugin.py",
-    "open_binary": "LiveApiShowcase/plugin.py",
-    "open_archive_file": "LiveOutputExample/plugin.py",
-    "materialize_temporary": "LiveApiShowcase/plugin.py",
-    "transaction": "LiveTransactionLab/plugin.py"
+    "get_info": "LiveApiCoverage/suites_core.py",
+    "get_compatibility_snapshot": "LiveApiCoverage/suites_core.py",
+    "get_revision": "LiveApiCoverage/suites_core.py",
+    "get_metadata": "LiveApiCoverage/suites_core.py",
+    "get_manifest": "LiveApiCoverage/suites_core.py",
+    "get_spine": "LiveApiCoverage/suites_core.py",
+    "get_guide": "LiveApiCoverage/suites_core.py",
+    "get_bindings": "LiveApiCoverage/suites_core.py",
+    "get_selection": "LiveApiCoverage/suites_core.py",
+    "archive_files": "LiveApiCoverage/suites_core.py",
+    "read_archive_file": "LiveApiCoverage/suites_core.py",
+    "resources": "LiveApiCoverage/suites_core.py",
+    "text_resources": "LiveApiCoverage/suites_core.py",
+    "resolve_path": "LiveApiCoverage/suites_core.py",
+    "get_resource": "LiveApiCoverage/suites_core.py",
+    "read_text": "LiveApiCoverage/suites_core.py",
+    "read_many": "LiveApiCoverage/suites_core.py",
+    "read_binary": "LiveApiCoverage/suites_core.py",
+    "open_binary": "LiveApiCoverage/suites_core.py",
+    "open_archive_file": "LiveApiCoverage/suites_core.py",
+    "materialize_temporary": "LiveApiCoverage/suites_core.py",
+    "transaction": "LiveApiCoverage/suites_core.py"
   },
   "EditorApi": {
-    "get_state": "LiveApiShowcase/plugin.py",
-    "get_selection": "LiveApiShowcase/plugin.py",
-    "get_open_tabs": "LiveApiShowcase/plugin.py",
-    "apply_edits": "LiveApiShowcase/plugin.py",
-    "replace_selection": "LiveApiShowcase/plugin.py",
-    "insert_text": "LiveApiShowcase/plugin.py",
-    "set_cursor": "LiveApiShowcase/plugin.py",
-    "set_selection": "LiveApiShowcase/plugin.py",
-    "open_resource": "LiveApiShowcase/plugin.py",
-    "reveal_range": "LiveApiShowcase/plugin.py"
+    "get_state": "LiveApiCoverage/suites_core.py",
+    "get_selection": "LiveApiCoverage/suites_core.py",
+    "get_open_tabs": "LiveApiCoverage/suites_core.py",
+    "apply_edits": "LiveApiCoverage/suites_core.py",
+    "replace_selection": "LiveApiCoverage/suites_core.py",
+    "insert_text": "LiveApiCoverage/suites_core.py",
+    "set_cursor": "LiveApiCoverage/suites_core.py",
+    "set_selection": "LiveApiCoverage/suites_core.py",
+    "open_resource": "LiveApiCoverage/suites_core.py",
+    "reveal_range": "LiveApiCoverage/suites_core.py"
   },
   "ValidationApi": {
-    "publish_results": "LiveValidationExample/plugin.py"
+    "publish_results": "LiveApiCoverageValidation/plugin.py"
   },
   "Progress": {
-    "update": "LiveApiShowcase/plugin.py",
-    "end": "LiveApiShowcase/plugin.py"
+    "update": "LiveApiCoverage/suites_core.py",
+    "end": "LiveApiCoverage/suites_core.py"
   },
   "UiApi": {
-    "show_status": "LiveApiShowcase/plugin.py",
-    "show_message": "LiveApiShowcase/plugin.py",
-    "confirm": "LiveApiShowcase/plugin.py",
-    "choose_open_file": "LiveInputExample/plugin.py",
-    "choose_save_file": "LiveOutputExample/plugin.py",
-    "progress": "LiveApiShowcase/plugin.py"
+    "show_status": "LiveApiCoverage/suites_core.py",
+    "show_message": "LiveApiCoverage/suites_core.py",
+    "confirm": "LiveApiCoverage/suites_core.py",
+    "choose_open_file": "LiveApiCoverage/suites_core.py",
+    "choose_save_file": "LiveApiCoverage/suites_core.py",
+    "progress": "LiveApiCoverage/suites_core.py"
   },
   "EventsApi": {
-    "subscribe": "LiveApiShowcase/plugin.py",
-    "unsubscribe": "LiveApiShowcase/plugin.py",
-    "poll": "LiveApiShowcase/plugin.py",
-    "next_event": "LiveBookWatcher/plugin.py"
+    "subscribe": "LiveApiCoverage/suites_core.py",
+    "unsubscribe": "LiveApiCoverage/suites_core.py",
+    "poll": "LiveApiCoverage/suites_core.py",
+    "next_event": "LiveApiCoverageSession/plugin.py"
   },
   "Plugin": {
-    "ping": "LiveApiShowcase/plugin.py"
+    "ping": "LiveApiCoverage/suites_core.py"
   }
 }

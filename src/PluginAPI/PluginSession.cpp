@@ -610,8 +610,9 @@ bool PluginSession::Start(QString *error)
     }
 
     const QString launcher = PluginDB::launcherRoot() + QStringLiteral("/python/live_launcher.py");
+    // Use install directory (dirname), not display name — they may differ.
     const QString plugin_path = PluginDB::pluginsPath() + QLatin1Char('/')
-        + m_Plugin.get_name() + QStringLiteral("/plugin.py");
+        + m_Plugin.get_dirname() + QStringLiteral("/plugin.py");
     if (!QFileInfo::exists(launcher) || !QFileInfo::exists(plugin_path)) {
         if (error) {
             *error = tr("The live plugin launcher or plugin entry point does not exist.");
@@ -1979,11 +1980,19 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const QString media_type = params.value(QStringLiteral("media_type")).toString();
         const bool manifested = params.value(QStringLiteral("manifested")).toBool(true);
         const QString manifest_id = params.value(QStringLiteral("manifest_id")).toString();
+        FolderKeeper *folder_keeper = m_MainWindow->GetCurrentBook()->GetFolderKeeper();
         if (!IsCanonicalBookPath(book_path) || media_type.isEmpty()
             || (manifested && manifest_id.isEmpty())
-            || m_MainWindow->GetCurrentBook()->GetFolderKeeper()
-                ->GetResourceByBookPathNoThrow(book_path)) {
+            || folder_keeper->GetResourceByBookPathNoThrow(book_path)
+            || QFileInfo::exists(folder_keeper->GetFullPathToMainFolder()
+                                 + QLatin1Char('/') + book_path)) {
             RespondError(id, -32602, QStringLiteral("Resource path, media type, or manifest ID is invalid"));
+            return;
+        }
+        if (!manifested
+            && IsProtectedArchivePath(book_path, m_MainWindow->GetCurrentBook()->GetOPF())) {
+            RespondError(id, PluginApi::UnsupportedOperation,
+                         QStringLiteral("Protected EPUB infrastructure cannot be modified"));
             return;
         }
         QByteArray data;
@@ -2540,8 +2549,11 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     { QStringLiteral("book_path"), addition.bookPath }
                 });
             }
-            if (addition.mediaType == QStringLiteral("application/xhtml+xml")
-                || addition.mediaType == QStringLiteral("text/html")) {
+            // Unmanifested additions stay outside the Resource model and do not
+            // count toward the "at least one XHTML resource" invariant.
+            if (addition.manifested
+                && (addition.mediaType == QStringLiteral("application/xhtml+xml")
+                    || addition.mediaType == QStringLiteral("text/html"))) {
                 ++added_html;
             }
         }
@@ -2608,6 +2620,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
 
         QJsonArray committed;
         QList<Resource *> added_resources;
+        QStringList added_unmanaged_paths;
         QList<PluginApi::StagedBinaryChange> applied_binary_changes;
         QList<PluginApi::StagedArchiveChange> applied_archive_changes;
         QList<ManifestResourceAddition> manifest_additions;
@@ -2660,6 +2673,13 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     folder_keeper->RemoveWithoutUpdatingOPF(resource);
                 }
             }
+            for (const QString &book_path : std::as_const(added_unmanaged_paths)) {
+                const QString full_path = folder_keeper->GetFullPathToMainFolder()
+                    + QLatin1Char('/') + book_path;
+                if (QFileInfo::exists(full_path) && !QFile::remove(full_path)) {
+                    recovery_errors.append(QStringLiteral("archive %1: could not remove").arg(book_path));
+                }
+            }
             folder_keeper->ResumeWatchingResources();
             m_MainWindow->GetCurrentBook()->SetModified(book_was_modified);
             m_MainWindow->GetBookBrowser()->Refresh();
@@ -2669,6 +2689,26 @@ void PluginSession::Dispatch(const QJsonObject &request)
             folder_keeper->SuspendWatchingResources();
             QString structure_error;
             for (const PluginApi::StagedResourceAddition &addition : additions) {
+                if (!addition.manifested) {
+                    // Unmanifested files stay outside FolderKeeper so archive.*
+                    // and replace/remove_archive_file can manage them later.
+                    const QString parent = Utility::startingDir(addition.bookPath);
+                    if (!parent.isEmpty()
+                        && !QDir(folder_keeper->GetFullPathToMainFolder()).mkpath(parent)) {
+                        structure_error = QStringLiteral("Could not create folder for %1")
+                            .arg(addition.bookPath);
+                        break;
+                    }
+                    const QString full_path = folder_keeper->GetFullPathToMainFolder()
+                        + QLatin1Char('/') + addition.bookPath;
+                    if (!WriteAtomicFile(full_path, addition.data, &structure_error)) {
+                        structure_error = QStringLiteral("Could not write unmanifested file %1: %2")
+                            .arg(addition.bookPath, structure_error);
+                        break;
+                    }
+                    added_unmanaged_paths.append(addition.bookPath);
+                    continue;
+                }
                 QTemporaryFile staged_file;
                 if (!staged_file.open()
                     || staged_file.write(addition.data) != addition.data.size()
@@ -2682,16 +2722,14 @@ void PluginSession::Dispatch(const QJsonObject &request)
                         staged_file.fileName(), false, addition.mediaType, addition.bookPath);
                     added_resources.append(resource);
                     TrackResource(resource);
-                    if (addition.manifested) {
-                        ManifestResourceAddition manifest_addition;
-                        manifest_addition.resource = resource;
-                        manifest_addition.manifestId = addition.manifestId;
-                        manifest_addition.properties = addition.properties;
-                        manifest_addition.fallback = addition.fallback;
-                        manifest_addition.overlay = addition.overlay;
-                        manifest_addition.addToSpine = addition.addToSpine;
-                        manifest_additions.append(manifest_addition);
-                    }
+                    ManifestResourceAddition manifest_addition;
+                    manifest_addition.resource = resource;
+                    manifest_addition.manifestId = addition.manifestId;
+                    manifest_addition.properties = addition.properties;
+                    manifest_addition.fallback = addition.fallback;
+                    manifest_addition.overlay = addition.overlay;
+                    manifest_addition.addToSpine = addition.addToSpine;
+                    manifest_additions.append(manifest_addition);
                 } catch (...) {
                     structure_error = QStringLiteral("Could not add resource %1").arg(addition.bookPath);
                     break;
@@ -2702,8 +2740,11 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 for (int index = 0; index < relocation_resources.size(); ++index) {
                     Resource *resource = relocation_resources.at(index);
                     if (resource->GetRelativePath() != relocation_targets.at(index)) {
-                        structure_error = QStringLiteral("Could not relocate resource %1")
-                            .arg(resource->GetIdentifier());
+                        structure_error = QStringLiteral(
+                            "Could not relocate resource %1 from %2 to %3")
+                            .arg(resource->GetIdentifier(),
+                                 relocations.at(index).originalBookPath,
+                                 relocation_targets.at(index));
                         break;
                     }
                     resource->SetCurrentBookRelPath(relocations.at(index).originalBookPath);
@@ -2711,7 +2752,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     m_BookRevision += 1;
                 }
             }
-            if (structure_error.isEmpty() && !has_package_change
+            const bool needs_opf_batch = !manifest_additions.isEmpty()
+                || !removal_resources.isEmpty() || !relocation_map.isEmpty();
+            if (structure_error.isEmpty() && !has_package_change && needs_opf_batch
                 && !m_MainWindow->GetCurrentBook()->GetOPF()->ApplyResourceBatch(
                     manifest_additions, removal_resources, relocation_map, &structure_error)) {
                 if (structure_error.isEmpty()) {
@@ -2750,6 +2793,15 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     { QStringLiteral("resource_id"), resource->GetIdentifier() },
                     { QStringLiteral("book_path"), resource->GetRelativePath() },
                     { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
+                });
+            }
+            for (const PluginApi::StagedResourceAddition &addition : additions) {
+                if (addition.manifested) continue;
+                m_BookRevision += 1;
+                committed.append(QJsonObject {
+                    { QStringLiteral("book_path"), addition.bookPath },
+                    { QStringLiteral("manifested"), false },
+                    { QStringLiteral("sha256"), DataFingerprint(addition.data) }
                 });
             }
         }
