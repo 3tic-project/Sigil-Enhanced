@@ -9,6 +9,8 @@ Unreleased
 
    New Features
      - Added the first Python Plugin API v2 milestones: per-plugin legacy/live runtime selection, authenticated local-socket sessions, in-memory Book/editor reads, revision-safe editor edits, and staged cross-file text transactions.
+     - Added built-in Simplified/Traditional Chinese and regional conversion for selections, current files, selected files, and whole-book text, with structure-safe previews and checkpointed batch updates.
+     - Added embedded TTF/OTF font subsetting directly to the Enhancement menu, with license and risk checks, shaping validation, transactional replacement, and an always-built static HarfBuzz dependency.
 
 Sigil-Enhanced-2.8.1.E4
    Bug Fixes
