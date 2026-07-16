@@ -63,6 +63,12 @@ class SigilMcpDocsTest(unittest.TestCase):
         self.assertIn("bundled standard-library stdio proxy", self.system)
         self.assertNotIn("stdio proxy is deferred", self.system)
 
+    def test_commit_docs_match_direct_commit_behavior(self):
+        self.assertIn("without a native confirmation", self.system)
+        self.assertIn("不再显示 Sigil 确认对话框", self.guide)
+        self.assertIn('"confirmation_required": false', self.reference)
+        self.assertIn("without a confirmation dialog", self.readme)
+
 
 if __name__ == "__main__":
     unittest.main()

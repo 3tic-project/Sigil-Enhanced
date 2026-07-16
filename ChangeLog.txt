@@ -1,4 +1,7 @@
 Unreleased
+   Bug Fixes
+     - Removed the Sigil MCP transaction commit confirmation dialog; commit now revalidates and applies directly while preserving preview, validation, checkpoint, and rollback safeguards.
+
    New Features
      - Added an installable MCP book-session adapter with authenticated loopback Streamable HTTP, a stdio transport proxy, live Book/editor context, revision-safe edits, and previewed multi-resource transactions for LLM hosts.
 

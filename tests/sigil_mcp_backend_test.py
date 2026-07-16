@@ -34,7 +34,7 @@ class SigilMcpBackendTest(unittest.TestCase):
         self.assertEqual(state["selection"], {"start": 2, "end": 5, "text": "abc"})
         self.assertEqual(state["position_encoding"], "utf-16")
 
-    def test_transaction_rejects_foreign_handle_and_confirmed_commit_clears_state(self):
+    def test_transaction_rejects_foreign_handle_and_direct_commit_clears_state(self):
         started = self.backend.transaction_begin("Generate chapter", "auto")
         transaction_id = started["transaction_id"]
         with self.assertRaises(BackendError):
@@ -45,8 +45,9 @@ class SigilMcpBackendTest(unittest.TestCase):
         self.assertEqual(staged["operation"], "replace_text")
         result = self.backend.transaction_commit(transaction_id)
         self.assertTrue(result["committed"])
-        self.assertTrue(result["confirmed"])
-        self.assertIn("Modified: 2", self.plugin.ui.confirmations[0][0])
+        self.assertFalse(result["confirmation_required"])
+        self.assertNotIn("confirmed", result)
+        self.assertEqual(self.plugin.ui.confirmations, [])
         with self.assertRaises(BackendError):
             self.backend.transaction_preview(transaction_id)
 
@@ -67,13 +68,15 @@ class SigilMcpBackendTest(unittest.TestCase):
                 transaction_id, "OEBPS/Images/bad.jpg", "not base64!", "image/jpeg"
             )
 
-    def test_rejected_commit_keeps_transaction_for_rollback(self):
+    def test_commit_does_not_consult_the_ui_confirmation_default(self):
         transaction_id = self.backend.transaction_begin()["transaction_id"]
         self.plugin.ui.confirm_result = False
         result = self.backend.transaction_commit(transaction_id)
-        self.assertFalse(result["committed"])
-        self.assertEqual(self.backend.transaction_status()["transaction_id"], transaction_id)
-        self.assertTrue(self.backend.transaction_rollback(transaction_id)["rolled_back"])
+        self.assertTrue(result["committed"])
+        self.assertFalse(result["confirmation_required"])
+        self.assertEqual(self.plugin.ui.confirmations, [])
+        with self.assertRaises(BackendError):
+            self.backend.transaction_status()
 
     def test_idle_and_shutdown_paths_roll_back(self):
         self.backend.transaction_begin()

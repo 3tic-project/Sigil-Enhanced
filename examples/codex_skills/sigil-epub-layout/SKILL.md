@@ -53,7 +53,7 @@ python3 scripts/validate_epub.py OUTPUT.epub --strict-layout
    default.
 6. Apply the MCP transaction sequence in `references/mcp-workflow.md`. For a new book, commit
    resources first and package metadata/spine second. Preview and validate every transaction.
-   Wait for the user to confirm each native Sigil commit dialog.
+   A commit applies immediately without a native confirmation dialog.
 7. Immediately batch-read every newly added text resource. Fail the run if any file is empty,
    malformed, truncated, or different from the generated text. Confirm that no transaction remains
    active.

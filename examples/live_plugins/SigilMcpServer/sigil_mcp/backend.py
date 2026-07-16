@@ -286,31 +286,11 @@ class SigilMcpBackend:
 
     def transaction_commit(self, transaction_id):
         transaction = self._require_transaction(transaction_id)
-        preview = transaction.preview()
-        summary = preview.get("summary", {})
-        message = (
-            "Commit MCP changes to the current Book?\n\n"
-            "Modified: {modified}\nAdded: {added}\nDeleted: {deleted}\n"
-            "Renamed or moved: {renamed}\n\n"
-            "The host will revalidate revisions and package structure before applying."
-        ).format(
-            modified=summary.get("modified", 0),
-            added=summary.get("added", 0),
-            deleted=summary.get("deleted", 0),
-            renamed=summary.get("renamed", 0),
-        )
-        if not self.plugin.ui.confirm(message, "Sigil MCP Commit"):
-            return {
-                "committed": False,
-                "confirmed": False,
-                "transaction_id": transaction.id,
-                "preview": preview,
-            }
         result = transaction.commit()
         self._transaction = None
         self._transaction_activity = None
         result = dict(result)
-        result["confirmed"] = True
+        result["confirmation_required"] = False
         return result
 
     def transaction_rollback(self, transaction_id):

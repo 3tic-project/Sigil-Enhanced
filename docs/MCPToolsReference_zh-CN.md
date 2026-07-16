@@ -4,7 +4,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| Adapter | `Sigil Enhanced MCP 0.1.0` |
+| Adapter | `Sigil Enhanced MCP 0.2.0` |
 | MCP spec | `2025-11-25` |
 | Python SDK | `mcp>=1.28.1,<2`，发布包固定 `1.28.1` |
 | Live API | v2 / protocol 1 |
@@ -249,25 +249,23 @@ Editor 三个写工具立即修改 live Book，不属于 staged transaction。
 
 流程：
 
-1. Adapter 获取 preview；
-2. Sigil 显示 native summary confirmation；
-3. 用户确认后宿主再次 validate revision/package；
-4. 按策略创建 Checkpoint；
-5. 每个最终资源只应用一次；
-6. 成功释放 writer lease。
+1. 宿主再次 validate revision/package；
+2. 按策略创建 Checkpoint；
+3. 每个最终资源只应用一次；
+4. 成功释放 writer lease。
 
-用户拒绝时返回：
+成功返回包含：
 
 ```json
 {
-  "committed": false,
-  "confirmed": false,
+  "committed": true,
   "transaction_id": "...",
-  "preview": {}
+  "confirmation_required": false
 }
 ```
 
-此时 transaction 仍然有效。
+commit 不显示原生确认对话框。调用者必须先显式调用 `preview` 和 `validate`；需要放弃 staged
+changes 时，应在 commit 前调用 `rollback`。
 
 ### `sigil.transaction.rollback`
 

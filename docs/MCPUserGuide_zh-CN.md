@@ -15,7 +15,7 @@ Sigil Enhanced 中打开的 EPUB。它读取的是 Book、Resource 和编辑器�
 - 对当前标签执行一次可撤销的小范围编辑；
 - 批量生成章节、样式表或其他文本资源；
 - 在一个 staged transaction 中修改多个文件、metadata、spine 或完整 OPF；
-- preview、validate、确认 commit，或完整 rollback。
+- preview、validate、直接 commit，或在提交前完整 rollback。
 
 MCP Server 不包含模型，也不会自行调用任何本地或远程 LLM。
 
@@ -208,7 +208,7 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 6. 必要时使用 `sigil.transaction.update_spine`；
 7. 调用 `sigil.transaction.preview`；
 8. 调用 `sigil.transaction.validate`；
-9. 调用 `sigil.transaction.commit` 并由用户在 Sigil 中确认。
+9. 调用 `sigil.transaction.commit` 直接提交。
 
 ### 7.3 EPUB 排版和 CSS
 
@@ -233,20 +233,22 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 stage 期间 live Book 不改变，但 `sigil.transaction.read_text` 可以读取本事务先前写入的内容。
 commit 前宿主会重新检查 resource revision 和 package invariants。失败不会自动覆盖用户修改。
 
-## 8. Commit 确认与回滚
+## 8. Commit 与回滚
 
-`sigil.transaction.commit` 会先取得 preview，并在 Sigil 中显示：
+`sigil.transaction.commit` 不再显示 Sigil 确认对话框。调用后，宿主会重新检查 resource
+revision、package invariants 和 checkpoint 要求；检查通过即直接应用 staged changes，并返回：
 
-- modified 数量；
-- added 数量；
-- deleted 数量；
-- renamed/moved 数量。
+```json
+{
+  "committed": true,
+  "transaction_id": "...",
+  "confirmation_required": false
+}
+```
 
-用户选择 No 时：
-
-- 不修改 Book；
-- transaction 仍然存在；
-- Agent 可以继续 preview、修改或 rollback。
+因此 Agent 必须在 commit **之前**完成 `preview` 和 `validate`。需要放弃修改时也必须在 commit
+之前调用 `rollback`；commit 成功后 transaction 已结束，不能再回滚该 transaction，但宿主按
+策略创建的 Checkpoint 和普通编辑器撤销能力仍然保留。
 
 默认 5 分钟无 transaction 活动会自动 rollback。可在启动插件进程前用
 `SIGIL_MCP_TRANSACTION_TIMEOUT` 设置 60-1800 秒。Book 关闭、Session 停止和 server shutdown
@@ -328,7 +330,7 @@ ctest --test-dir cmake-build-debug --output-on-failure
 - 官方 MCP client lifecycle；
 - 结构化 tool result 和 tool error；
 - bearer、Host、Origin、loopback URL；
-- transaction 状态、确认、idle 和 shutdown rollback；
+- transaction 状态、直接 commit、idle 和 shutdown rollback；
 - atomic owner-only metadata；
 - stdio subprocess 实际转发；
 - 多 Book 拒绝静默选择；

@@ -3,8 +3,8 @@
 ## Read First
 
 Operate only on the currently open Book. Resource IDs are session-scoped. Read current revisions
-before every write. A native commit dialog requires user confirmation, and one endpoint permits only
-one active transaction.
+before every write. A commit applies immediately after host revalidation, and one endpoint permits
+only one active transaction.
 
 Required tools for a new illustrated book:
 
@@ -28,7 +28,7 @@ resource. Do not downsample or omit a larger image silently.
 ## Two-Phase Creation
 
 The current host validates package updates against the live manifest, not additions staged in the
-same transaction. Therefore create a new book in two confirmed transactions.
+same transaction. Therefore create a new book in two transactions.
 
 ### Transaction A: Content And Resources
 
@@ -38,7 +38,7 @@ same transaction. Therefore create a new book in two confirmed transactions.
 4. Replace blank-template XHTML, nav, or CSS only with their current resource IDs and revisions.
 5. Preview and validate. Roll back on any conflict, warning that changes meaning, invalid result, or
    count mismatch.
-6. Commit and wait for the native confirmation.
+6. Commit after successful preview and validation.
 7. Refresh resources and batch-read every added text resource. Verify exact generated text and
    nonzero length before continuing.
 
@@ -49,7 +49,7 @@ same transaction. Therefore create a new book in two confirmed transactions.
 3. Replace ordered metadata with the original identifier plus verified title, roles, language,
    series, description, and current UTC modified time.
 4. Replace the spine with manifest IDs that now exist. Keep nav non-linear when included.
-5. Preview and validate, then commit after native confirmation.
+5. Preview and validate, then commit.
 
 For edits that add no resources, related XHTML/CSS/package changes may use one transaction when the
 package validator accepts the staged result.
@@ -57,8 +57,7 @@ package validator accepts the staged result.
 ## Failure Recovery
 
 - Tool error before commit: call rollback with the printed transaction ID.
-- Validation or preview invalid: rollback; do not ask the user to confirm.
-- User rejects commit: revise the active transaction or roll it back explicitly.
+- Validation or preview invalid: rollback; do not call commit.
 - Connection closes: reconnect, inspect `sigil.session.info`, and roll back the known transaction.
 - Revision conflict: reread live content/package and rebuild the plan; never retry with stale values.
 - Plugin or Sigil exits: treat the transaction as uncommitted until live Book inspection proves

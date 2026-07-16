@@ -167,9 +167,9 @@ and expected revision and becomes one Qt undo step.
 
 Staging does not modify the live Book. Read-your-writes, revision conflict
 detection, package validation, Checkpoint policy, and rollback come from the Live
-API. Commit displays a native Sigil confirmation based on the transaction
-preview. Rejecting confirmation keeps the transaction available for inspection
-or rollback.
+API. Commit revalidates and applies immediately without a native confirmation
+dialog. Clients must preview and validate first, and roll back before commit when
+the staged changes should be discarded.
 
 ## Resources And Prompts
 
@@ -252,7 +252,7 @@ The tracked test suite must cover:
 - bearer, Host, Origin, and loopback behavior;
 - resource pagination and current in-memory text;
 - UTF-16 editor edits and revision errors;
-- transaction state, preview, validation, confirmation, commit, and rollback;
+- transaction state, preview, validation, direct commit, and rollback;
 - automatic rollback on shutdown and failed heartbeat;
 - atomic rendezvous creation, permissions, stale-file cleanup, and token secrecy;
 - package dependency synchronization for macOS and Windows builds.

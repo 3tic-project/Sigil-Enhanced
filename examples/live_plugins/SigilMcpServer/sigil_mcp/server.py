@@ -423,7 +423,7 @@ def _register_transaction_tools(mcp, backend, gate):
 
     @mcp.tool(name="sigil.transaction.commit", annotations=WRITE, structured_output=True)
     async def transaction_commit(transaction_id: str) -> dict[str, Any]:
-        """Show a native confirmation, revalidate, checkpoint as needed, and commit."""
+        """Revalidate, checkpoint as needed, and commit without a confirmation dialog."""
         return await _invoke(gate, backend.transaction_commit, transaction_id)
 
     @mcp.tool(name="sigil.transaction.rollback", annotations=STAGE, structured_output=True)

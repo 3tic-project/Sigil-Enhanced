@@ -48,8 +48,8 @@ $sigil-epub-layout 使用 /absolute/source/path 的 TXT 和图片，按 standard
 ## 执行边界
 
 - 只操作当前打开的 Sigil Book，并先读取实际 package、资源和 revision。
-- 新书采用两个确认事务：先提交文本/图片，再基于已存在的 manifest 更新 metadata/spine。
-- 每次事务都必须 preview、validate，并由用户在 Sigil 原生对话框确认。
+- 新书采用两个事务：先提交文本/图片，再基于已存在的 manifest 更新 metadata/spine。
+- 每次事务都必须先 preview、validate；commit 直接应用，不再显示 Sigil 确认对话框。
 - 第一阶段提交后立即批量回读新增文本，拒绝空文件、截断或生成内容不一致。
 - 单个 `add_binary_resource` 解码后最大 5 MiB，超限时停止并报告，不静默压缩。
 - 当前公共 MCP 工具不提供 Save As；由用户保存到新的 EPUB 路径，再运行磁盘验收。

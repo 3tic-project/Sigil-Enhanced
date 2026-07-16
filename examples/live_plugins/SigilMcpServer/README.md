@@ -50,8 +50,9 @@ chapters, CSS/layout changes, OPF metadata, spine work, or multiple resources:
 2. Call `sigil.transaction.begin`.
 3. Stage changes using the returned `transaction_id`.
 4. Call `sigil.transaction.preview` and `sigil.transaction.validate`.
-5. Call `sigil.transaction.commit`; Sigil displays a native summary confirmation.
-6. On rejection, conflict, or changed intent, call `sigil.transaction.rollback`.
+5. Call `sigil.transaction.commit`; it commits directly without a confirmation dialog.
+6. On conflict, validation failure, or changed intent before commit, call
+   `sigil.transaction.rollback`.
 
 Uncommitted transactions roll back after five idle minutes by default, when the
 server stops, or when the Book session ends.
