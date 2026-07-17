@@ -54,6 +54,29 @@ class PythonPackageSyncTest(unittest.TestCase):
         self.assertIn("cryptography==48.0.0", core)
         self.assertTrue(all("==" in requirement for requirement in core))
 
+    def test_windows_package_sync_preserves_the_curated_pyside_runtime(self):
+        cmake = (ROOT / "src" / "qt6sigil.cmake").read_text(encoding="utf-8")
+        appimage = (
+            ROOT / ".github" / "workflows" / "build_sigil_appimage.sh"
+        ).read_text(encoding="utf-8")
+        gather = (
+            ROOT
+            / "src"
+            / "Resource_Files"
+            / "python_pkg"
+            / "windows_python_gather6.py"
+        ).read_text(encoding="utf-8")
+
+        sync = cmake.index("Syncing complete Python dependency tree into Windows package")
+        gather_copy = cmake.index("windows_python_gather6.py", sync)
+        self.assertLess(sync, gather_copy)
+        appimage_sync = appimage.index("sync_python_packages.py")
+        appimage_gather = appimage.index("appimg_python3_gather.py")
+        self.assertLess(appimage_sync, appimage_gather)
+        self.assertIn("if ( PACKAGE_PYSIDE6 )", cmake)
+        self.assertIn("required_site_packages", gather)
+        self.assertIn("Required bundled Python package not found", gather)
+
     def test_isolated_runtime_verifier_checks_metadata_version_and_import_path(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)

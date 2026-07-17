@@ -205,12 +205,14 @@ pkg_python() {
   mkdir -p /build
   python3 -m pip install --root-user-action ignore patchelf
   python3 -m pip install --root-user-action ignore -r "${SELF_DIR}/requirements.txt"
-  python3 "${SELF_DIR}/appimg_python3_gather.py" /build/sigil.AppDir "${PY_SHORT_VER}"
   python3 /reporoot/src/Resource_Files/python_pkg/sync_python_packages.py \
     --requirements /reporoot/src/Resource_Files/python_pkg/requirements-core.txt \
     --cache-dir /build/sigil-python-package-cache \
     --dest "/build/sigil.AppDir/usr/lib/python${PY_SHORT_VER}/site-packages" \
     --copy-all
+  # The sync manifest can remove paths from an earlier package build. Copy
+  # PySide6 afterwards so its curated runtime remains in the AppImage.
+  python3 "${SELF_DIR}/appimg_python3_gather.py" /build/sigil.AppDir "${PY_SHORT_VER}"
   python3 -I -S /reporoot/ci_scripts/verify_bundled_python.py \
     --requirements /reporoot/src/Resource_Files/python_pkg/requirements-core.txt \
     --site-packages "/build/sigil.AppDir/usr/lib/python${PY_SHORT_VER}/site-packages" \

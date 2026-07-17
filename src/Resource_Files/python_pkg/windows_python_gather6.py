@@ -42,6 +42,8 @@ site_packages = [ ('lxml', 'd'),
 if include_pyside6:
     site_packages.extend([('shiboken6', 'd'), ('PySide6', 'd')])
 
+required_site_packages = {'shiboken6', 'PySide6'} if include_pyside6 else set()
+
 
 def copy_site_packages():
     for pkg, typ in site_packages:
@@ -66,6 +68,8 @@ def copy_site_packages():
             else:
                 break
         if not found:
+            if pkg in required_site_packages:
+                raise RuntimeError('Required bundled Python package not found: %s' % pkg)
             print('WARNING: %s not found in site_packages. Your python environment could potentially be incomplete.' % pkg)
 
 
