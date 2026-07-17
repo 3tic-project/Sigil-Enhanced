@@ -276,7 +276,7 @@ class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
             "Accept": "application/json, text/event-stream",
             "Content-Type": "application/json",
         }
-        async with httpx.AsyncClient(timeout=5) as client:
+        async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
             response = await client.post(
                 self.endpoint, headers=headers, json=self.initialize_payload()
             )
@@ -299,7 +299,9 @@ class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_official_client_initializes_lists_and_calls_tool(self):
         async with httpx.AsyncClient(
-            headers={"Authorization": "Bearer " + self.token}, timeout=5
+            headers={"Authorization": "Bearer " + self.token},
+            timeout=5,
+            trust_env=False,
         ) as http_client:
             async with streamable_http_client(
                 self.endpoint, http_client=http_client
@@ -380,7 +382,7 @@ class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
             "manifest_id": "cover_image",
             "add_to_spine": "false",
         }
-        async with httpx.AsyncClient(timeout=5) as client:
+        async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
             response = await client.post(
                 "http://127.0.0.1:{0}/api/v1/imports".format(self.port),
                 params=query,
@@ -407,7 +409,7 @@ class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
             "media_type": "image/jpeg",
         }
         headers = {"X-Content-SHA256": "0" * 64}
-        async with httpx.AsyncClient(timeout=5) as client:
+        async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
             unauthorized = await client.post(endpoint, params=params, headers=headers, content=b"x")
             self.assertEqual(unauthorized.status_code, 401)
             authorized = dict(headers, Authorization="Bearer " + self.token)
