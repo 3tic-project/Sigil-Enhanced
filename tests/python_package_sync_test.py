@@ -6,6 +6,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+import warnings
 
 
 ROOT = pathlib.Path(__file__).parents[1]
@@ -66,6 +67,13 @@ class PythonPackageSyncTest(unittest.TestCase):
             / "python_pkg"
             / "windows_python_gather6.py"
         ).read_text(encoding="utf-8")
+        paths_template = (
+            ROOT
+            / "src"
+            / "Resource_Files"
+            / "python_pkg"
+            / "python_paths6.py"
+        ).read_text(encoding="utf-8")
 
         sync = cmake.index("Syncing complete Python dependency tree into Windows package")
         gather_copy = cmake.index("windows_python_gather6.py", sync)
@@ -76,6 +84,46 @@ class PythonPackageSyncTest(unittest.TestCase):
         self.assertIn("if ( PACKAGE_PYSIDE6 )", cmake)
         self.assertIn("required_site_packages", gather)
         self.assertIn("Required bundled Python package not found", gather)
+        self.assertIn("def ensure_pyside6():", gather)
+        self.assertIn("'PySide6=={0}'.format(pyside6_version)", gather)
+        self.assertIn("pyside6_version = '${QTVER}'", paths_template)
+        self.assertIn("sys_dlls = r'${SYS_DLL_DIR}'", paths_template)
+
+    def test_windows_python_paths_template_preserves_backslashes(self):
+        template = (
+            ROOT
+            / "src"
+            / "Resource_Files"
+            / "python_pkg"
+            / "python_paths6.py"
+        ).read_text(encoding="utf-8")
+        replacements = {
+            "${USE_NEWER_FINDPYTHON3}": "1",
+            "${Python3_EXECUTABLE}": r"D:\a\Sigil-Enhanced\sigilpy\Scripts\python.exe",
+            "${Python3_LIBRARIES}": r"D:\a\Sigil-Enhanced\python314.lib",
+            "${Python3_INCLUDE_DIRS}": r"D:\a\Sigil-Enhanced\include",
+            "${PYTHON_EXECUTABLE}": r"D:\Python\python.exe",
+            "${PYTHON_LIBRARIES}": r"D:\Python\python314.lib",
+            "${PYTHON_INCLUDE_DIRS}": r"D:\Python\include",
+            "${QTVER}": "6.10.2",
+            "${SYS_DLL_DIR}": r"C:\Windows\System32",
+            "${PYTHON_DEST_DIR}": r"D:\a\Sigil-Enhanced\temp_folder",
+            "${MAIN_PACKAGE_DIR}": r"D:\a\Sigil-Enhanced\temp_folder",
+            "${PROJECT_NAME}": "Sigil",
+            "${CMAKE_BINARY_DIR}": r"D:\a\Sigil-Enhanced\build",
+            "${PACKAGE_PYSIDE6}": "1",
+        }
+        rendered = template
+        for token, value in replacements.items():
+            rendered = rendered.replace(token, value)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", SyntaxWarning)
+            namespace = {}
+            exec(compile(rendered, "python_paths6.py", "exec"), namespace)
+
+        self.assertEqual(namespace["sys_dlls"], r"C:\Windows\System32")
+        self.assertFalse(any(issubclass(item.category, SyntaxWarning) for item in caught))
 
     def test_isolated_runtime_verifier_checks_metadata_version_and_import_path(self):
         with tempfile.TemporaryDirectory() as directory:

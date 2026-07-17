@@ -4,8 +4,8 @@
 from __future__ import (unicode_literals, division, absolute_import,
                         print_function)
 
-import sys, os, glob, inspect, shutil, platform, textwrap, py_compile, site
-from python_paths6 import py_ver, py_lib, sys_dlls, py_inc, py_dest, tmp_prefix, proj_name, include_pyside6
+import sys, os, glob, inspect, shutil, platform, subprocess, textwrap, py_compile, site
+from python_paths6 import py_ver, py_lib, sys_dlls, py_inc, py_dest, tmp_prefix, proj_name, include_pyside6, pyside6_version
 
 # Get "real" python binary, libs and stdlibs regardless if a venv is being used.
 pybase = sys.base_prefix
@@ -43,6 +43,22 @@ if include_pyside6:
     site_packages.extend([('shiboken6', 'd'), ('PySide6', 'd')])
 
 required_site_packages = {'shiboken6', 'PySide6'} if include_pyside6 else set()
+
+
+def site_package_exists(package_name):
+    return any(os.path.isdir(os.path.join(path, package_name))
+               for path in site.getsitepackages())
+
+
+def ensure_pyside6():
+    if not include_pyside6:
+        return
+    if site_package_exists('PySide6') and site_package_exists('shiboken6'):
+        return
+    print('Installing missing PySide6 runtime into the bundled Python environment.')
+    subprocess.check_call([
+        sys.executable, '-m', 'pip', 'install', 'PySide6=={0}'.format(pyside6_version)
+    ])
 
 
 def copy_site_packages():
@@ -311,6 +327,7 @@ if __name__ == '__main__':
     dll_walk()
     copy_pylib()
     copy_python()
+    ensure_pyside6()
     copy_site_packages()
     create_site_py()
     # create_pyvenv()
