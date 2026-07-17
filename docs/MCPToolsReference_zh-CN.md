@@ -72,7 +72,8 @@ Annotations 只是 MCP Host UI 提示，不是授权判定。
 - `position_encoding=utf-16`
 - `active_transactions=1`
 - transaction idle timeout
-- `external_import`：原始字节 endpoint、认证方式、add/replace、text/binary 与批量上传器
+- `external_import`：原始字节 endpoint、认证方式、add/replace、text/binary，以及
+  `batch_uploader_path` 指向的已安装批量上传器绝对路径
 - 当前可用 native `enhancements`，首版为空列表
 
 ## 4. Book 与资源查询
@@ -507,7 +508,9 @@ python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
   --no-add-to-spine
 ```
 
-上传器自动发现唯一活动 Book；多 Book 时必须加 `--metadata` 或 `--session-id`。manifested 新资源
+上传器路径应取自 `sigil.capabilities.list` 的 `external_import.batch_uploader_path`，不要假设当前
+目录或 `PATH` 中存在脚本。上传器自动发现唯一活动 Book；多 Book 时必须加 `--metadata` 或
+`--session-id`。manifested 新资源
 必须提供 `manifest_id`。替换现有资源时改用 `--operation replace --resource-id ID
 --expected-revision REVISION`。
 

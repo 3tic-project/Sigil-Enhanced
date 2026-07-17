@@ -85,11 +85,17 @@ class SigilEpubLayoutSkillTest(unittest.TestCase):
         self.assertIn("$sigil-epub-layout", agent)
         self.assertIn("Single-Transaction Creation", workflow)
         self.assertNotIn("Two-Phase Creation", workflow)
-        self.assertIn("sigil_mcp_upload.py --manifest", workflow)
         self.assertIn("Do not read Base64 into model context", workflow)
+        self.assertIn("external_import.batch_uploader_path", workflow)
         self.assertLess(
-            workflow.index("2. Write generated XHTML/CSS"),
-            workflow.index("6. Call `update_spine`"),
+            workflow.index("Generate every local XHTML/CSS output"),
+            workflow.index("then begin with a descriptive"),
+        )
+        self.assertIn("pending_external_imports=0", workflow)
+        self.assertIn("never use `--start-at`", workflow)
+        self.assertLess(
+            workflow.index("2. Run `python3 UPLOADER_PATH"),
+            workflow.index("6. Call `transaction.status`"),
         )
 
     def test_template_assets_are_well_formed_and_css_is_minimal(self):

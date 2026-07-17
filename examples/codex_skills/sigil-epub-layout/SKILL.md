@@ -55,8 +55,9 @@ python3 scripts/validate_epub.py OUTPUT.epub --strict-layout
 6. Apply the MCP transaction sequence in `references/mcp-workflow.md`. For a new book, stage all
    resources before updating metadata/spine, then preview, validate, and commit once.
    A commit applies immediately without a native confirmation dialog.
-   For local or generated files, create one external-import manifest and call the uploader; never
-   place image Base64 or repeated long file content in model context.
+   Finish local generation and the external-import manifest before beginning the transaction. Call
+   the exact uploader path returned by capabilities; never place image Base64 or repeated long file
+   content in model context.
 7. After the commit, immediately batch-read every newly added text resource. Fail the run if any file is empty,
    malformed, truncated, or different from the generated text. Confirm that no transaction remains
    active.

@@ -75,6 +75,8 @@ class SigilMcpDocsTest(unittest.TestCase):
                 self.assertIn("/api/v1/imports", document)
                 self.assertIn("sigil_mcp_upload.py", document)
         self.assertIn("external_binary_add_size_max", self.reference)
+        self.assertIn("batch_uploader_path", self.reference)
+        self.assertIn("batch_uploader_path", self.guide)
         self.assertIn("服务端不接受 `source_path`", self.reference)
 
 

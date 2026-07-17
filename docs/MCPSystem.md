@@ -124,6 +124,9 @@ reads only source paths explicitly supplied to that client process, computes
 SHA-256, and streams one file at a time. A JSON manifest lets one shell command
 stage a complete image/XHTML/CSS set. Only short resource metadata and results
 appear in orchestration logs.
+Capabilities returns the installed absolute `batch_uploader_path`, avoiding PATH
+searches and source-tree assumptions. Agents prepare all local outputs before
+starting the transaction so generation time does not consume the idle budget.
 
 The endpoint:
 

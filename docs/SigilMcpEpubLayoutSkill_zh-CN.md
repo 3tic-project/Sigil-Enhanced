@@ -56,6 +56,12 @@ $sigil-epub-layout 使用 /absolute/source/path 的 TXT 和图片，按 standard
   必须按 UTF-8 字节累计；单文档不得超过 64 MiB。
 - 运行中的 MCP 报告 external import 时，本地图片、已生成 XHTML/CSS、字体等必须写入 JSON
   清单并调用 `sigil_mcp_upload.py --manifest`；禁止把 Base64 读进模型上下文或交给子 Agent 搬运。
+- 使用 `sigil.capabilities.list` 返回的 `external_import.batch_uploader_path`，不要假设上传器已在
+  `PATH`。必须先完成全部本地文件和清单，再开始事务，避免生成阶段消耗 5 分钟 idle timeout。
+- 清单可混合 add 和带 `resource_id`/`expected_revision` 的 replace；不能把现有 Book path 当成
+  新资源重复 add。上传后确认 `pending_external_imports=0` 再更新 spine、preview 和 validate。
+- 同一事务的批次失败可用 `next_index`/`--start-at` 续传；事务已经失效时必须新建事务并从 0
+  重传，不能跨 transaction ID 复用续传索引。
 - `add_binary_resource` 只作为模型已持有少量二进制的后备，解码后最大 5 MiB；任何路径都不得
   静默压缩或遗漏图片。
 - 当前公共 MCP 工具不提供 Save As；由用户保存到新的 EPUB 路径，再运行磁盘验收。

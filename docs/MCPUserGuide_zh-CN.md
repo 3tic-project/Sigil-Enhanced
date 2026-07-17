@@ -188,7 +188,8 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 重复消耗模型上下文，而且 shell/read 工具常会截断长输出。0.7.0 提供独立的原始字节 endpoint 和
 标准库上传器：模型只处理文件路径、Book path、media type、manifest ID 和短结果。
 
-单文件示例：
+先从 `sigil.capabilities.list` 读取 `external_import.batch_uploader_path`，再使用该绝对路径。不要
+假设上传器在当前目录或 `PATH`。单文件示例：
 
 ```sh
 python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
@@ -267,7 +268,8 @@ loopback endpoint。它不会输出 token 或文件内容。多 Book 时必须�
 3. 调用 `sigil.transaction.begin`；
 4. 普通章节使用 `sigil.transaction.add_text_resource`；大型章节先按 UTF-8 计算字节数，再使用
    `begin_text_resource`、`write_text_chunk`、`finish_text_write`；
-5. 本地图片、XHTML/CSS 和其他文件优先写入批量清单并运行 `sigil_mcp_upload.py`；只有模型已经
+5. 在 begin 前完成本地文件和清单；随后用 capabilities 返回的 `batch_uploader_path` 批量上传
+   图片、XHTML/CSS 和其他文件。只有模型已经
    持有的少量二进制才使用 `sigil.transaction.add_binary_resource`；
 6. 全部 manifested 资源完成暂存后，使用 `sigil.transaction.update_metadata` 和最终
    `sigil.transaction.update_spine`；后者会把同事务的新资源先合并进 staged manifest；

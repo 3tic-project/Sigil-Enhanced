@@ -26,6 +26,11 @@ class SigilMcpBackendTest(unittest.TestCase):
         self.assertEqual(tuple(capabilities["tools"]), TOOL_NAMES)
         self.assertEqual(tuple(capabilities["resources"]), RESOURCE_URIS)
         self.assertEqual(tuple(capabilities["prompts"]), PROMPT_NAMES)
+        uploader = pathlib.Path(
+            capabilities["external_import"]["batch_uploader_path"]
+        )
+        self.assertTrue(uploader.is_file())
+        self.assertEqual(uploader.name, "sigil_mcp_upload.py")
 
     def test_resource_page_and_editor_state_are_json_serializable_values(self):
         page = self.backend.resource_list(types=["html"], page_size=1)

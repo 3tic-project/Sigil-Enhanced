@@ -87,6 +87,10 @@ class SigilMcpBackend:
                 "kinds": ["text", "binary"],
                 "binary_add_size_max": binary_add_max,
                 "batch_uploader": "sigil_mcp_upload.py",
+                "batch_uploader_path": str(
+                    pathlib.Path(__file__).resolve().parents[1]
+                    / "sigil_mcp_upload.py"
+                ),
             },
             "enhancements": [],
         }

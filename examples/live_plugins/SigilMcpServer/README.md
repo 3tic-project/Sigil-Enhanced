@@ -24,7 +24,9 @@ not paste the token into logs, EPUB content, issue reports, or source files.
 ## Import Local Files Without Base64
 
 For local images, XHTML, CSS, fonts, or other generated files, use the bundled
-uploader instead of placing file bytes in an MCP tool argument:
+uploader instead of placing file bytes in an MCP tool argument. Obtain its exact
+installed path from `sigil.capabilities.list` as
+`external_import.batch_uploader_path`:
 
 ```console
 python3 sigil_mcp_upload.py --transaction TRANSACTION_ID \
