@@ -2507,6 +2507,28 @@ void PluginSession::Dispatch(const QJsonObject &request)
         QString package_error;
         bool manifest_updated = true;
         if (method == QStringLiteral("transaction.updateSpine")) {
+            QStringList manifest_removals;
+            for (const PluginApi::StagedResourceRemoval &removal :
+                 transaction->Removals()) {
+                Resource *resource = m_MainWindow->GetCurrentBook()->GetFolderKeeper()
+                    ->GetResourceByIdentifier(removal.resourceId);
+                if (!resource) continue;
+                manifest_removals.append(Utility::URLEncodePath(
+                    Utility::buildRelativePath(opf->GetRelativePath(),
+                                               resource->GetRelativePath())));
+            }
+            QList<PluginApi::PackageManifestRelocation> manifest_relocations;
+            for (const PluginApi::StagedResourceRelocation &relocation :
+                 transaction->Relocations()) {
+                PluginApi::PackageManifestRelocation manifest_relocation;
+                manifest_relocation.originalHref = Utility::URLEncodePath(
+                    Utility::buildRelativePath(opf->GetRelativePath(),
+                                               relocation.originalBookPath));
+                manifest_relocation.targetHref = Utility::URLEncodePath(
+                    Utility::buildRelativePath(opf->GetRelativePath(),
+                                               relocation.targetBookPath));
+                manifest_relocations.append(manifest_relocation);
+            }
             QList<PluginApi::PackageManifestAddition> manifest_additions;
             for (const PluginApi::StagedResourceAddition &addition :
                  transaction->Additions()) {
@@ -2521,8 +2543,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 manifest_addition.overlay = addition.overlay;
                 manifest_additions.append(manifest_addition);
             }
-            manifest_updated = PluginApi::ApplyManifestAdditions(
-                source, manifest_additions, &package_source, &package_error);
+            manifest_updated = PluginApi::ApplyManifestChanges(
+                source, manifest_removals, manifest_relocations,
+                manifest_additions, &package_source, &package_error);
         }
         bool updated = false;
         if (manifest_updated) {

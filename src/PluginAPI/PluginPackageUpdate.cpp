@@ -213,10 +213,12 @@ bool ApplyMetadataUpdate(const QString &source, const QJsonArray &entries,
     return true;
 }
 
-bool ApplyManifestAdditions(const QString &source,
-                            const QList<PackageManifestAddition> &additions,
-                            QString *updated,
-                            QString *error)
+bool ApplyManifestChanges(const QString &source,
+                          const QStringList &removals,
+                          const QList<PackageManifestRelocation> &relocations,
+                          const QList<PackageManifestAddition> &additions,
+                          QString *updated,
+                          QString *error)
 {
     QDomDocument document;
     if (!ParsePackageDom(source, &document, error)) return false;
@@ -240,6 +242,38 @@ bool ApplyManifestAdditions(const QString &source,
         const QString href = item.attribute(QStringLiteral("href"));
         if (!id.isEmpty()) items_by_id.insert(id, item);
         if (!href.isEmpty()) ids_by_href.insert(href, id);
+    }
+
+    for (const QString &href : removals) {
+        const QString id = ids_by_href.take(href);
+        if (id.isEmpty()) continue;
+        const QDomElement item = items_by_id.take(id);
+        if (!item.isNull()) manifest.removeChild(item);
+    }
+
+    for (const PackageManifestRelocation &relocation : relocations) {
+        if (relocation.originalHref.isEmpty() || relocation.targetHref.isEmpty()) {
+            if (error) {
+                *error = QStringLiteral("Manifest relocations require original and target hrefs");
+            }
+            return false;
+        }
+        if (relocation.originalHref == relocation.targetHref) continue;
+        const QString id = ids_by_href.value(relocation.originalHref);
+        if (id.isEmpty()) {
+            // An already-applied relocation or an unmanifested resource needs no OPF change.
+            continue;
+        }
+        const QString target_id = ids_by_href.value(relocation.targetHref);
+        if (!target_id.isEmpty() && target_id != id) {
+            if (error) *error = QStringLiteral("A manifest relocation target is occupied");
+            return false;
+        }
+        QDomElement item = items_by_id.value(id);
+        if (item.isNull()) continue;
+        ids_by_href.remove(relocation.originalHref);
+        ids_by_href.insert(relocation.targetHref, id);
+        item.setAttribute(QStringLiteral("href"), relocation.targetHref);
     }
 
     QList<PackageManifestAddition> ordered = additions;
@@ -289,6 +323,16 @@ bool ApplyManifestAdditions(const QString &source,
     }
     *updated = document.toString(-1);
     return true;
+}
+
+bool ApplyManifestAdditions(const QString &source,
+                            const QList<PackageManifestAddition> &additions,
+                            QString *updated,
+                            QString *error)
+{
+    return ApplyManifestChanges(source, QStringList(),
+                                QList<PackageManifestRelocation>(), additions,
+                                updated, error);
 }
 
 bool ApplySpineUpdate(const QString &source, const QJsonArray &items,

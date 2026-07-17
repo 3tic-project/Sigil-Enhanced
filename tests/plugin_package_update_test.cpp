@@ -171,6 +171,40 @@ int main()
             }, &updated, &error),
             "duplicate manifest ID with another href was accepted");
 
+    const QStringList removals { QStringLiteral("b.xhtml") };
+    const QList<PluginApi::PackageManifestRelocation> relocations {
+        PluginApi::PackageManifestRelocation {
+            QStringLiteral("a.xhtml"), QStringLiteral("Text/a.xhtml")
+        }
+    };
+    Require(PluginApi::ApplyManifestChanges(PACKAGE, removals, relocations,
+                                             additions, &updated, &error),
+            "staged manifest structure merge failed");
+    Require(document.setContent(updated, true),
+            "manifest structure merge produced malformed XML");
+    const QDomNodeList changed_items = document.elementsByTagNameNS(
+        QStringLiteral("http://www.idpf.org/2007/opf"), QStringLiteral("item"));
+    Require(changed_items.size() == 2,
+            "manifest removal did not remove exactly one item");
+    Require(changed_items.at(0).toElement().attribute(QStringLiteral("id"))
+                == QStringLiteral("a")
+            && changed_items.at(0).toElement().attribute(QStringLiteral("href"))
+                == QStringLiteral("Text/a.xhtml"),
+            "manifest relocation changed the ID or retained the old href");
+    Require(changed_items.at(1).toElement().attribute(QStringLiteral("id"))
+                == QStringLiteral("chapter-c"),
+            "manifest addition was lost while applying other structure changes");
+    Require(PluginApi::ApplyManifestChanges(updated, removals, relocations,
+                                             additions, &updated, &error),
+            "manifest structure merge was not idempotent");
+    Require(!PluginApi::ApplyManifestChanges(PACKAGE, QStringList(),
+            QList<PluginApi::PackageManifestRelocation> {
+                PluginApi::PackageManifestRelocation {
+                    QStringLiteral("a.xhtml"), QStringLiteral("b.xhtml")
+                }
+            }, QList<PluginApi::PackageManifestAddition>(), &updated, &error),
+            "occupied manifest relocation target was accepted");
+
     Require(!PluginApi::ApplyMetadataUpdate(PACKAGE,
             QJsonArray { QJsonObject {{ QStringLiteral("name"), QStringLiteral("dc:title") }} },
             &updated, &error), "metadata without content was accepted");
