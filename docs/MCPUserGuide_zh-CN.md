@@ -78,9 +78,14 @@ SigilMcpServer/sigil_mcp/
 - `api version=2 interface=live`
 - `lifetime=book-session`
 
-因此不需要把它切换成 legacy runtime。正式 macOS/Windows 安装包会同时包含官方稳定
-MCP Python SDK `1.28.1`；源码构建会从 `requirements-core.txt` 或 `winreqs.txt` 安装。
-Linux 使用系统 Python 时，需要确保该解释器可以导入兼容的 `mcp>=1.28.1,<2`。
+因此不需要把它切换成 legacy runtime。正式 Windows、macOS 和 AppImage 安装包会包含
+锁定的 MCP Python SDK `1.28.1` 及其完整传递依赖。构建过程会从
+`requirements-core.txt` 或 `winreqs.txt` 安装，并在只可见打包目录的隔离环境中检查
+精确版本和实际 import；本机全局 site-packages 不会掩盖安装包缺包。
+
+Linux 使用系统 Python 而不是 AppImage 时，该解释器需要能够导入 `mcp==1.28.1`。
+源码开发环境应直接安装仓库的锁定 requirements，不要只单独安装 `mcp`，否则 Host
+测试通过也不能证明正式包包含了完整依赖。
 
 ## 4. 启动和停止
 
@@ -426,7 +431,7 @@ ctest --test-dir cmake-build-debug --output-on-failure
 
 自动测试覆盖：
 
-- MCP SDK 依赖完整打包；
+- 三平台 requirements 核心锁一致、MCP SDK 传递依赖完整打包及隔离 import；
 - deterministic tools/resources/prompts；
 - 官方 MCP client lifecycle；
 - 结构化 tool result 和 tool error；

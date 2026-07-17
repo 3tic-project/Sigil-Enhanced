@@ -57,7 +57,7 @@ class SigilMcpDocsTest(unittest.TestCase):
                 ROOT / "src" / "Resource_Files" / "python_pkg" / name
             ).read_text(encoding="utf-8")
             self.assertIn("mcp==1.28.1", requirements)
-        self.assertIn("mcp>=1.28.1,<2", self.system)
+        self.assertIn("mcp==1.28.1", self.system)
 
     def test_tracked_design_matches_the_implemented_proxy(self):
         self.assertIn("bundled standard-library stdio proxy", self.system)

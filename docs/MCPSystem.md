@@ -3,11 +3,11 @@
 ## Status
 
 - Architecture baseline: 2026-07-16
-- Sigil baseline: 2.8.1E5 (`6db30a158`)
+- Sigil baseline: 2.8.1E6 (`f188a166c`)
 - MCP specification: 2025-11-25
-- Python SDK: `mcp>=1.28.1,<2`
+- Python SDK: `mcp==1.28.1`
 - Delivery model: installable Live Python Plugin API v2 book-session plugin
-- Implementation: available on `feature/mcp-system` with 38 tools, two MCP transports,
+- Implementation: available in the source tree with 38 tools, two MCP transports,
   and one authenticated out-of-band import endpoint
 
 This document is the tracked implementation contract for the Sigil Enhanced MCP
@@ -39,8 +39,9 @@ separates model-controlled tools, application-controlled resources, and
 user-controlled prompts.
 
 As of 2026-07-16, the official Python SDK 1.28.1 is the latest stable release.
-The 2.x line is still pre-release, so the bundled dependency has an explicit
-`<2` upper bound. Upgrading to 2.x requires a separate compatibility change and
+The bundled runtime uses that exact version together with an exact transitive
+dependency lock. Upgrading the SDK requires a separate compatibility change,
+cross-platform wheel audit, isolated bundled-runtime import check, and
 cross-host regression pass.
 
 Primary references:
@@ -330,7 +331,8 @@ The tracked test suite must cover:
 - transaction state, preview, validation, direct commit, and rollback;
 - automatic rollback on shutdown and failed heartbeat;
 - atomic rendezvous creation, permissions, stale-file cleanup, and token secrecy;
-- package dependency synchronization for macOS and Windows builds.
+- exact package-lock consistency plus complete dependency synchronization and
+  isolated imports for macOS, Windows, and AppImage builds.
 
 The automated suite uses the official MCP client against a real pre-bound HTTP
 endpoint and also exercises the stdio proxy through a subprocess. Passing local

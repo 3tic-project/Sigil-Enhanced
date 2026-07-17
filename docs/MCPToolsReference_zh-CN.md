@@ -6,7 +6,7 @@
 | --- | --- |
 | Adapter | `Sigil Enhanced MCP 0.7.0` |
 | MCP spec | `2025-11-25` |
-| Python SDK | `mcp>=1.28.1,<2`，发布包固定 `1.28.1` |
+| Python SDK | `mcp==1.28.1`，开发与发布构建使用同一精确依赖锁 |
 | Live API | v2 / protocol 1 |
 | 位置编码 | UTF-16 code units |
 | 传输 | Streamable HTTP；stdio proxy |
