@@ -14,6 +14,7 @@ class VendoredSourceManifestTest(unittest.TestCase):
             "CMakeLists.txt",
             "meson.build",
             "src/harfbuzz.cc",
+            "src/harfbuzz-subset.cc",
             "src/hb-subset.cc",
             "src/hb-version.h",
         ):
@@ -27,6 +28,7 @@ class VendoredSourceManifestTest(unittest.TestCase):
             "3rdparty/harfbuzz/CMakeLists.txt",
             "3rdparty/harfbuzz/meson.build",
             "3rdparty/harfbuzz/src/harfbuzz.cc",
+            "3rdparty/harfbuzz/src/harfbuzz-subset.cc",
             "3rdparty/harfbuzz/src/hb-subset.cc",
             "3rdparty/harfbuzz/src/hb-version.h",
         ):
@@ -64,6 +66,9 @@ class VendoredSourceManifestTest(unittest.TestCase):
         self.assertEqual(wrapper_version.group(1), expected)
         self.assertEqual(header_version.group(1), expected)
         self.assertIn("Upstream version: {0}".format(expected), readme)
+        self.assertIn("harfbuzz-subset.cc", wrapper)
+        self.assertNotIn("add_subdirectory", wrapper)
+        self.assertNotIn("harfbuzz-subset\n        harfbuzz", wrapper)
 
     def test_vendored_compiler_flags_do_not_leak_to_other_languages(self):
         opencc = (ROOT / "3rdparty" / "opencc" / "CMakeLists.txt").read_text(
