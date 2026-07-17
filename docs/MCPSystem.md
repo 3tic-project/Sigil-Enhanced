@@ -127,6 +127,10 @@ appear in orchestration logs.
 Capabilities returns the installed absolute `batch_uploader_path`, avoiding PATH
 searches and source-tree assumptions. Agents prepare all local outputs before
 starting the transaction so generation time does not consume the idle budget.
+`sigil_mcp_upload.py --manifest imports.json --check` validates the full local
+batch without session discovery or network traffic. It rejects missing inputs,
+malformed operations, mixed transactions, and duplicate paths/IDs before a
+partial upload can exist.
 
 The endpoint:
 

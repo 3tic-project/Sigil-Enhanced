@@ -41,6 +41,10 @@ text document and 1 MiB per host chunk.
 5. Generate every local XHTML/CSS output and prepare the complete import manifest before beginning
    a transaction. Reject missing sources, duplicate Book paths/manifest IDs, files above the
    reported limits, and accidental additions over an existing Book path.
+6. Run `python3 UPLOADER_PATH --manifest imports.json --check`. This validates the JSON shape,
+   source files, media types, operation fields, and batch-unique Book paths, manifest IDs, replace
+   targets, and transaction IDs without discovering a session or uploading bytes. Fix every error
+   before calling `transaction.begin`.
 
 ## Single-Transaction Creation
 
@@ -52,8 +56,8 @@ and one checkpoint.
    label and `checkpoint=auto`. Do not generate files, inspect references, or encode images while
    the transaction idle timer is running.
 2. Run `python3 UPLOADER_PATH --transaction TRANSACTION_ID --manifest imports.json`, using the exact
-   path reported by capabilities. Keep images and CSS out of the spine and use deterministic unique
-   manifest IDs.
+   path and the same preflighted manifest. Keep images and CSS out of the spine and use deterministic
+   unique manifest IDs.
 3. Use MCP add/chunk tools only for content that exists solely in model output. Finish every
    chunked text upload before package updates.
 4. Replace blank-template XHTML, nav, or CSS only with current resource IDs and revisions.
@@ -76,6 +80,8 @@ and one checkpoint.
 - External uploader fails: preserve its short error and successful item count, inspect transaction
   status/preview, then use the returned `next_index` with `--start-at` or roll back. Never restart
   the manifest from zero in the same transaction, and never regenerate Base64.
+- Manifest preflight fails: do not begin a transaction. Correct the complete local manifest and run
+  `--check` again; never work around duplicate targets by retrying a partial batch.
 - If status reports no active transaction after an uploader failure, the staged prefix is gone.
   Start a new transaction and upload the complete manifest from index zero; never use `--start-at`
   across different transaction IDs.

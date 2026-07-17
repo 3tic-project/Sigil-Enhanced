@@ -57,7 +57,8 @@ $sigil-epub-layout 使用 /absolute/source/path 的 TXT 和图片，按 standard
 - 运行中的 MCP 报告 external import 时，本地图片、已生成 XHTML/CSS、字体等必须写入 JSON
   清单并调用 `sigil_mcp_upload.py --manifest`；禁止把 Base64 读进模型上下文或交给子 Agent 搬运。
 - 使用 `sigil.capabilities.list` 返回的 `external_import.batch_uploader_path`，不要假设上传器已在
-  `PATH`。必须先完成全部本地文件和清单，再开始事务，避免生成阶段消耗 5 分钟 idle timeout。
+  `PATH`。必须先完成全部本地文件和清单，并在 begin 前运行 `--manifest imports.json --check`；
+  只有离线检查通过后才开始事务，避免结构错误或生成阶段消耗 5 分钟 idle timeout。
 - 清单可混合 add 和带 `resource_id`/`expected_revision` 的 replace；不能把现有 Book path 当成
   新资源重复 add。上传后确认 `pending_external_imports=0` 再更新 spine、preview 和 validate。
 - 同一事务的批次失败可用 `next_index`/`--start-at` 续传；事务已经失效时必须新建事务并从 0

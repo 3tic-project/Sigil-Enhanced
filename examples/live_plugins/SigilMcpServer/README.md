@@ -42,6 +42,16 @@ accepts a server-side source path. Each upload is limited to 32 MiB; query
 On a partial batch failure, use the reported `next_index` with `--start-at`
 after confirming that the same transaction is still active.
 
+Before beginning a transaction, validate the complete local batch without
+discovering a Sigil session or uploading any bytes:
+
+```console
+python3 sigil_mcp_upload.py --manifest imports.json --check
+```
+
+Preflight rejects missing files, invalid resource fields, mixed transaction IDs,
+and duplicate add paths, manifest IDs, or replace targets within the batch.
+
 ## Connect
 
 Streamable HTTP clients use the metadata `endpoint` and this header:

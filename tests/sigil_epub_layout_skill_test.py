@@ -87,8 +87,13 @@ class SigilEpubLayoutSkillTest(unittest.TestCase):
         self.assertNotIn("Two-Phase Creation", workflow)
         self.assertIn("Do not read Base64 into model context", workflow)
         self.assertIn("external_import.batch_uploader_path", workflow)
+        self.assertIn("--manifest imports.json --check", workflow)
         self.assertLess(
             workflow.index("Generate every local XHTML/CSS output"),
+            workflow.index("then begin with a descriptive"),
+        )
+        self.assertLess(
+            workflow.index("--manifest imports.json --check"),
             workflow.index("then begin with a descriptive"),
         )
         self.assertIn("pending_external_imports=0", workflow)

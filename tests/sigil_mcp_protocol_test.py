@@ -153,6 +153,33 @@ class SigilMcpCatalogTest(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(UploadError):
                 _manifest_specs(manifest)
 
+    async def test_batch_uploader_checks_manifest_without_a_session_or_transaction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / "chapter.xhtml").write_text("<p>chapter</p>", encoding="utf-8")
+            manifest = root / "imports.json"
+            manifest.write_text(json.dumps({
+                "resources": [{
+                    "source": "chapter.xhtml",
+                    "book_path": "Text/chapter.xhtml",
+                    "manifest_id": "chapter",
+                }],
+            }), encoding="utf-8")
+            with (
+                mock.patch("sigil_mcp_upload.discover_metadata") as discover,
+                mock.patch("sigil_mcp_upload.upload_file") as upload,
+                mock.patch("sys.stdout") as stdout,
+            ):
+                result = upload_main(["--manifest", str(manifest), "--check"])
+        self.assertEqual(result, 0)
+        discover.assert_not_called()
+        upload.assert_not_called()
+        report = json.loads(stdout.write.call_args_list[0].args[0])
+        self.assertTrue(report["valid"])
+        self.assertEqual(report["resources"], 1)
+        self.assertEqual(report["additions"], 1)
+        self.assertTrue(report["transaction_required"])
+
     async def test_batch_uploader_reports_a_resumable_failure_index(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)

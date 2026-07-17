@@ -18,6 +18,7 @@ import urllib.parse
 IMPORT_PATH = "/api/v1/imports"
 MAX_RESPONSE_SIZE = 1024 * 1024
 METADATA_PATTERN = "sigil-mcp-*.json"
+PREFLIGHT_TRANSACTION = "__manifest_preflight__"
 TEXT_MEDIA_TYPES = {
     "application/javascript",
     "application/json",
@@ -261,7 +262,7 @@ def upload_file(metadata, spec, timeout=120):
         connection.close()
 
 
-def _manifest_specs(path, transaction_id=None):
+def _manifest_specs(path, transaction_id=None, allow_missing_transaction=False):
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -269,6 +270,8 @@ def _manifest_specs(path, transaction_id=None):
     if not isinstance(manifest, dict) or not isinstance(manifest.get("resources"), list):
         raise UploadError("manifest must contain a resources array")
     default_transaction = transaction_id or manifest.get("transaction_id")
+    if allow_missing_transaction and not default_transaction:
+        default_transaction = PREFLIGHT_TRANSACTION
     specs = [
         normalize_spec(item, path.parent, default_transaction)
         for item in manifest["resources"]
@@ -336,6 +339,11 @@ def main(argv=None):
     parser.add_argument("--session-id")
     parser.add_argument("--timeout", type=float, default=120)
     parser.add_argument(
+        "--check",
+        action="store_true",
+        help="validate a manifest and its local files without connecting or uploading",
+    )
+    parser.add_argument(
         "--start-at",
         type=int,
         default=0,
@@ -343,8 +351,14 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
     try:
+        if args.check and not args.manifest:
+            raise UploadError("--check requires --manifest")
+        if args.check and args.start_at:
+            raise UploadError("--check cannot be combined with --start-at")
         if args.manifest:
-            specs = _manifest_specs(args.manifest.expanduser(), args.transaction)
+            specs = _manifest_specs(
+                args.manifest.expanduser(), args.transaction, args.check
+            )
         else:
             raw = {
                 "source": str(args.file),
@@ -363,6 +377,20 @@ def main(argv=None):
             if args.manifested is not None:
                 raw["manifested"] = args.manifested
             specs = [normalize_spec(raw, pathlib.Path.cwd())]
+        if args.check:
+            print(json.dumps({
+                "valid": True,
+                "resources": len(specs),
+                "additions": sum(spec["operation"] == "add" for spec in specs),
+                "replacements": sum(
+                    spec["operation"] == "replace" for spec in specs
+                ),
+                "bytes": sum(spec["source"].stat().st_size for spec in specs),
+                "transaction_required": any(
+                    spec["transaction_id"] == PREFLIGHT_TRANSACTION for spec in specs
+                ),
+            }, ensure_ascii=False))
+            return 0
         _, metadata = discover_metadata(args.metadata, args.runtime_dir, args.session_id)
         if args.start_at < 0 or args.start_at > len(specs):
             raise UploadError("--start-at is outside the manifest resource range")

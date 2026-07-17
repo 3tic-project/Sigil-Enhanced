@@ -205,7 +205,6 @@ python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
 
 ```json
 {
-  "transaction_id": "TRANSACTION_ID",
   "resources": [
     {
       "source": "/absolute/generated/chapter.xhtml",
@@ -224,10 +223,22 @@ python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
 }
 ```
 
-然后只需一次本地命令：
+开始事务前先离线检查完整清单；该命令不发现 Sigil session，也不上传字节：
 
 ```sh
-python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py --manifest imports.json
+python3 /CAPABILITIES/RETURNED/sigil_mcp_upload.py \
+  --manifest /absolute/generated/imports.json --check
+```
+
+检查会一次性验证 JSON 结构、本地源文件、资源字段，以及批内 Book path、manifest ID、replace
+目标和 transaction ID 的唯一性。全部通过后再 begin，并用同一清单加
+`--transaction TRANSACTION_ID` 正式上传。
+
+begin 后使用返回的事务 ID 正式上传同一清单：
+
+```sh
+python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
+  --transaction TRANSACTION_ID --manifest imports.json
 ```
 
 上传器自动发现 metadata、读取调用者明确指定的源文件、计算 SHA-256，并把原始字节流式发送到
@@ -265,11 +276,12 @@ loopback endpoint。它不会输出 token 或文件内容。多 Book 时必须�
 
 1. 调用 `sigil.book.info` 和 `sigil.book.package`；
 2. 阅读相邻 XHTML、CSS、语言和 EPUB 版本约定；
-3. 调用 `sigil.transaction.begin`；
-4. 普通章节使用 `sigil.transaction.add_text_resource`；大型章节先按 UTF-8 计算字节数，再使用
-   `begin_text_resource`、`write_text_chunk`、`finish_text_write`；
-5. 在 begin 前完成本地文件和清单；随后用 capabilities 返回的 `batch_uploader_path` 批量上传
-   图片、XHTML/CSS 和其他文件。只有模型已经
+3. 完成本地文件和清单，并用 capabilities 返回的 `batch_uploader_path` 执行
+   `--manifest imports.json --check`；
+4. 检查通过后调用 `sigil.transaction.begin`；
+5. 用同一清单批量上传图片、XHTML/CSS 和其他文件。仅由模型生成的普通章节使用
+   `sigil.transaction.add_text_resource`；大型章节先按 UTF-8 计算字节数，再使用
+   `begin_text_resource`、`write_text_chunk`、`finish_text_write`。只有模型已经
    持有的少量二进制才使用 `sigil.transaction.add_binary_resource`；
 6. 全部 manifested 资源完成暂存后，使用 `sigil.transaction.update_metadata` 和最终
    `sigil.transaction.update_spine`；后者会把同事务的新资源先合并进 staged manifest；

@@ -518,7 +518,6 @@ python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
 
 ```json
 {
-  "transaction_id": "TRANSACTION_ID",
   "resources": [
     {
       "source": "generated/chapter.xhtml",
@@ -537,8 +536,11 @@ python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
 }
 ```
 
-`source` 相对清单目录解析。执行 `sigil_mcp_upload.py --manifest imports.json` 后，上传器顺序暂存
-全部条目并只输出短 JSON 结果。上传结束后仍须调用 transaction preview、validate 和 commit；
+`source` 相对清单目录解析。begin 前执行 `sigil_mcp_upload.py --manifest imports.json --check`，
+可在不发现 session、不建立网络连接的情况下检查全部源文件和清单字段，并拒绝批内重复 Book
+path、manifest ID、replace resource ID 或混用 transaction ID。通过后加
+`--transaction TRANSACTION_ID` 正式执行，上传器顺序暂存全部条目并只输出短 JSON 结果。
+上传结束后仍须调用 transaction preview、validate 和 commit；
 外部接口不会自动提交。若第 N 项失败，错误 JSON 会返回 `completed_indices`、`failed_index` 和
 `next_index`；确认同一事务仍活动后，用 `--start-at next_index` 继续，不要重传已经暂存的条目。
 
