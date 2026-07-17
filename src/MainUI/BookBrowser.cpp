@@ -935,8 +935,6 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images, QSt
         bool CoverImageSemanticsSet = false;
         // try to see if an existing file has this filename and allow overwriting
         QString existing_book_path = m_Book->GetFolderKeeper()->GetBookPathByPathEnd(filename);
-        bool needsToUpdateOPF = true;
-
         if (!existing_book_path.isEmpty()) {
             // If this is an image prompt to replace it.
             // 修改：添加FONT_EXTENSIONS（字体文件）为可覆盖类型。
@@ -974,10 +972,7 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images, QSt
                     if (image_resource) {
                         CoverImageSemanticsSet = m_Book->GetOPF()->IsCoverImage(image_resource);
                     }
-                    // allow remove without updating OPF since overwrite
-                    // old_resource->Delete();
-                    m_Book->GetFolderKeeper()->RemoveWithoutUpdatingOPF(old_resource);
-                    needsToUpdateOPF = false;
+                    old_resource->Delete();
                     replacements_made = true;
                 } catch (ResourceDoesNotExist&) {
                     Utility::DisplayStdErrorDialog(tr("Unable to delete or replace file \"%1\".").arg(filename)

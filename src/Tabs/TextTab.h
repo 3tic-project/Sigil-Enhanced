@@ -142,6 +142,8 @@ public slots:
 
     void SaveTabContent();
 
+    void UpdateCodeViewBookPath();
+
     
 signals:
 

@@ -5,6 +5,8 @@ Sigil-Enhanced-2.8.1.E6
      - Fixed MCP plugin archive installation and stale session discovery on macOS.
      - Kept MCP batch reads within transport frame limits and made large resource import batches resumable.
      - Fixed transaction structure synchronization so newly imported resources are reflected in the EPUB manifest and spine.
+     - Fixed Code View Mend and Prettify after resource rename, and restored the missing newline used by HTML TOC Preview alignment.
+     - Applied macOS Tahoe dialog and HTML TOC busy-cursor workarounds.
 
    New Features
      - Added an installable MCP book-session adapter with authenticated loopback Streamable HTTP, a stdio transport proxy, live Book/editor context, revision-safe edits, and previewed multi-resource transactions for LLM hosts.
@@ -92,7 +94,7 @@ Sigil-Enhanced-2.8.1.E2
 
 Sigil 2.8.x
    Bug Fixes
-     - fix bug in AddExisting that could sometimes add duplicate image entries and skip some xhtml imports
+     - fix multiple bugs in AddExisting that could sometimes add duplicate image entries and skip some xhtml imports
      - fix bug that caused altimage urls on math tags to not be preoperly updated when moved or renamed
      - prevent crash in python function replace when re can not handle an expression that PCRE2 recognizes
      - fix bug when using OpenWith to re-open BBEdit.app on MacOS if BBEdit was already open
@@ -101,7 +103,7 @@ Sigil 2.8.x
 
    New Features
      - add ability to use python regex in place of python re for embedded python controlled via an
-       environment variable (SIGIL_EMBED_PY_USES_REGEX).
+           environment variable (SIGIL_EMBED_PY_USES_REGEX).
 
 
 Sigil-2.8.0
