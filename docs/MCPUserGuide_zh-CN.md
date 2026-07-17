@@ -80,8 +80,9 @@ SigilMcpServer/sigil_mcp/
 
 因此不需要把它切换成 legacy runtime。正式 Windows、macOS 和 AppImage 安装包会包含
 锁定的 MCP Python SDK `1.28.1` 及其完整传递依赖。构建过程会从
-`requirements-core.txt` 或 `winreqs.txt` 安装，并在只可见打包目录的隔离环境中检查
-精确版本和实际 import；本机全局 site-packages 不会掩盖安装包缺包。
+`requirements-core.txt`、Windows 专用的 `requirements-windows.txt` 或 `winreqs.txt`
+安装，并在只可见打包目录的隔离环境中检查精确版本和实际 import；Windows 内置运行时
+还会正常处理 `pywin32.pth` 等路径扩展。本机全局 site-packages 不会掩盖安装包缺包。
 
 Linux 使用系统 Python 而不是 AppImage 时，该解释器需要能够导入 `mcp==1.28.1`。
 源码开发环境应直接安装仓库的锁定 requirements，不要只单独安装 `mcp`，否则 Host

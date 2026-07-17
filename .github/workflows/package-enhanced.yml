@@ -109,7 +109,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.SIGIL_PYTHON_CACHE_DIR }}
-          key: sigil-enhanced-windows-x64-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-core.txt') }}
+          key: sigil-enhanced-windows-x64-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-windows.txt') }}
           restore-keys: |
             sigil-enhanced-windows-x64-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-
 
@@ -245,7 +245,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.SIGIL_PYTHON_CACHE_DIR }}
-          key: sigil-enhanced-windows-x86-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-core.txt') }}
+          key: sigil-enhanced-windows-x86-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-windows.txt') }}
           restore-keys: |
             sigil-enhanced-windows-x86-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-
 

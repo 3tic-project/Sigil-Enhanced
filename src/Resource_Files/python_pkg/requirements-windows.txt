@@ -40,4 +40,3 @@ typing_extensions==4.15.0
 urllib3==2.7.0
 uvicorn==0.51.0
 webencodings==0.5.1
-PySide6==${QTVER}

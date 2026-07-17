@@ -1,7 +1,10 @@
+import ast
 import importlib.util
 import json
 import pathlib
+import sys
 import tempfile
+import textwrap
 import unittest
 
 
@@ -27,10 +30,23 @@ class PythonPackageSyncTest(unittest.TestCase):
         windows = (package_root / "winreqs.txt").read_text(
             encoding="utf-8"
         ).splitlines()
+        windows_runtime = (package_root / "requirements-windows.txt").read_text(
+            encoding="utf-8"
+        ).splitlines()
         appimage = (ROOT / ".github" / "workflows" / "requirements.txt").read_text(
             encoding="utf-8"
         ).splitlines()
-        self.assertEqual(windows[:-1], core)
+        windows_only = {"colorama==0.4.6", "pywin32==312"}
+        self.assertEqual(
+            [
+                requirement
+                for requirement in windows_runtime
+                if requirement not in windows_only
+            ],
+            core,
+        )
+        self.assertTrue(windows_only.issubset(windows_runtime))
+        self.assertEqual(windows[:-1], windows_runtime)
         self.assertEqual(windows[-1], "PySide6==${QTVER}")
         self.assertEqual(appimage[:-1], core)
         self.assertEqual(appimage[-1], "PySide6==6.10.2")
@@ -56,6 +72,84 @@ class PythonPackageSyncTest(unittest.TestCase):
                 VERIFY_MODULE.verify(requirements, [root]),
                 1,
             )
+
+    def test_isolated_runtime_verifier_processes_pywin32_pth_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            nested = root / "win32" / "lib"
+            nested.mkdir(parents=True)
+            (nested / "pywintypes.py").write_text("VALUE = 1\n", encoding="utf-8")
+            metadata = root / "pywin32-312.dist-info"
+            metadata.mkdir()
+            (metadata / "METADATA").write_text(
+                "Metadata-Version: 2.1\nName: pywin32\nVersion: 312\n",
+                encoding="utf-8",
+            )
+            (root / "pywin32.pth").write_text("win32/lib\n", encoding="utf-8")
+            requirements = root / "requirements.txt"
+            requirements.write_text("pywin32==312\n", encoding="utf-8")
+
+            self.assertEqual(VERIFY_MODULE.verify(requirements, [root]), 1)
+            sys.modules.pop("pywintypes", None)
+
+    def test_isolated_runtime_verifier_rejects_pth_path_escape(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = pathlib.Path(directory)
+            root = base / "site-packages"
+            outside = base / "outside"
+            root.mkdir()
+            outside.mkdir()
+            (root / "escape.pth").write_text("../outside\n", encoding="utf-8")
+            requirements = root / "requirements.txt"
+            requirements.write_text("", encoding="utf-8")
+
+            with self.assertRaisesRegex(RuntimeError, "outside the package directories"):
+                VERIFY_MODULE.verify(requirements, [root])
+
+    def test_generated_windows_site_module_processes_pth_files(self):
+        gather = (
+            ROOT
+            / "src"
+            / "Resource_Files"
+            / "python_pkg"
+            / "windows_python_gather6.py"
+        )
+        tree = ast.parse(gather.read_text(encoding="utf-8"))
+        candidates = [
+            textwrap.dedent(node.value)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and "def addsitedir(sitedir):" in node.value
+        ]
+        self.assertEqual(len(candidates), 1)
+        source = candidates[0].rsplit("if not sys.flags.no_site:", 1)[0]
+        namespace = {}
+        exec(compile(source, "generated-site.py", "exec"), namespace)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            nested = root / "win32" / "lib"
+            nested.mkdir(parents=True)
+            (nested / "generated_site_fixture.py").write_text(
+                "VALUE = 1\n", encoding="utf-8"
+            )
+            (nested / "generated_site_bootstrap.py").write_text(
+                "BOOTSTRAPPED = True\n", encoding="utf-8"
+            )
+            (root / "fixture.pth").write_text(
+                "win32/lib\nimport generated_site_bootstrap\n", encoding="utf-8"
+            )
+            original_sys_path = list(sys.path)
+            try:
+                namespace["addsitedir"](str(root))
+                module = __import__("generated_site_fixture")
+                self.assertEqual(module.VALUE, 1)
+                self.assertTrue(sys.modules["generated_site_bootstrap"].BOOTSTRAPPED)
+            finally:
+                sys.path[:] = original_sys_path
+                sys.modules.pop("generated_site_fixture", None)
+                sys.modules.pop("generated_site_bootstrap", None)
 
     def test_copy_all_preserves_builtins_and_removes_stale_synced_paths(self):
         with tempfile.TemporaryDirectory() as directory:

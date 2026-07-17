@@ -6,7 +6,9 @@ import importlib
 from importlib import metadata
 import pathlib
 import re
+import site
 import sys
+from collections import Counter
 
 
 IMPORT_NAMES = {
@@ -19,6 +21,7 @@ IMPORT_NAMES = {
     "pyjwt": "jwt",
     "python-dotenv": "dotenv",
     "python-multipart": "python_multipart",
+    "pywin32": "pywintypes",
     "rpds-py": "rpds",
     "sse-starlette": "sse_starlette",
     "typing-inspection": "typing_inspection",
@@ -55,14 +58,34 @@ def _inside(path, roots):
     return False
 
 
+def add_isolated_site_directories(roots):
+    """Add package roots with normal .pth processing, rejecting path escapes."""
+    original_sys_path = list(sys.path)
+    before = Counter(
+        str(pathlib.Path(path).resolve()) for path in original_sys_path if path
+    )
+    for root in roots:
+        site.addsitedir(str(root))
+
+    after = Counter(str(pathlib.Path(path).resolve()) for path in sys.path if path)
+    added = after - before
+    escaped = sorted(path for path in added if not _inside(path, roots))
+    if escaped:
+        sys.path[:] = original_sys_path
+        raise RuntimeError(
+            "package .pth files added paths outside the package directories: {0}".format(
+                escaped
+            )
+        )
+
+
 def verify(requirements_path, package_directories, extra_imports=()):
     roots = [pathlib.Path(path).resolve() for path in package_directories]
     missing_roots = [str(path) for path in roots if not path.is_dir()]
     if missing_roots:
         raise RuntimeError("package directories do not exist: {0}".format(missing_roots))
 
-    for root in reversed(roots):
-        sys.path.insert(0, str(root))
+    add_isolated_site_directories(roots)
     distributions = {}
     for distribution in metadata.distributions(path=[str(path) for path in roots]):
         name = distribution.metadata.get("Name")
@@ -79,7 +102,14 @@ def verify(requirements_path, package_directories, extra_imports=()):
                 )
             )
         module_name = IMPORT_NAMES.get(name, name.replace("-", "_"))
-        module = importlib.import_module(module_name)
+        try:
+            module = importlib.import_module(module_name)
+        except (ImportError, OSError) as error:
+            raise RuntimeError(
+                "distribution {0} import {1} failed: {2}".format(
+                    name, module_name, error
+                )
+            ) from error
         module_path = getattr(module, "__file__", None)
         if not module_path or not _inside(module_path, roots):
             raise RuntimeError(
@@ -87,7 +117,12 @@ def verify(requirements_path, package_directories, extra_imports=()):
             )
 
     for module_name in extra_imports:
-        module = importlib.import_module(module_name)
+        try:
+            module = importlib.import_module(module_name)
+        except (ImportError, OSError) as error:
+            raise RuntimeError(
+                "extra import {0} failed: {1}".format(module_name, error)
+            ) from error
         module_path = getattr(module, "__file__", None)
         if not module_path or not _inside(module_path, roots):
             raise RuntimeError(

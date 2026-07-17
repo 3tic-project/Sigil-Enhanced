@@ -192,17 +192,54 @@ def create_site_py():
         def set_helper():
             builtins.help = _sitebuiltins._Helper()
 
+        def makepath(*paths):
+            path = os.path.abspath(os.path.join(*paths))
+            return path, os.path.normcase(path)
+
+        def addpackage(sitedir, name, known_paths):
+            fullname = os.path.join(sitedir, name)
+            line_number = 0
+            try:
+                with open(fullname, encoding="utf-8-sig") as handle:
+                    lines = handle.readlines()
+                for line_number, line in enumerate(lines, 1):
+                    if line.startswith("#") or not line.strip():
+                        continue
+                    if line.startswith(("import ", "import\\t")):
+                        exec(line)
+                        continue
+                    directory, directory_case = makepath(sitedir, line.rstrip())
+                    if directory_case not in known_paths and os.path.isdir(directory):
+                        sys.path.append(directory)
+                        known_paths.add(directory_case)
+            except Exception:
+                import traceback
+                print("Error processing line %d of %s:" %
+                      (line_number, fullname), file=sys.stderr)
+                traceback.print_exc()
+
+        def addsitedir(sitedir):
+            known_paths = {makepath(path)[1] for path in sys.path if path}
+            directory, directory_case = makepath(sitedir)
+            if directory_case not in known_paths:
+                sys.path.append(directory)
+                known_paths.add(directory_case)
+            if os.path.isdir(directory):
+                for name in sorted(os.listdir(directory)):
+                    if name.endswith(".pth") and not name.startswith("."):
+                        addpackage(directory, name, known_paths)
+
         def fix_sys_path():
             if os.sep == '/':
-                sys.path.append(os.path.join(sys.prefix, "lib",
-                                "python" + sys.version[:3],
-                                "site-packages"))
+                addsitedir(os.path.join(sys.prefix, "lib",
+                           "python" + sys.version[:3],
+                           "site-packages"))
             else:
                 for path in sys.path:
                     py_ver = "".join(map(str, sys.version[:3])).replace(".", "")
                     if os.path.basename(path) == "python" + py_ver + ".zip":
                         sys.path.remove(path)
-                sys.path.append(os.path.join(sys.prefix, "lib", "site-packages"))
+                addsitedir(os.path.join(sys.prefix, "lib", "site-packages"))
 
         def main():
             try:

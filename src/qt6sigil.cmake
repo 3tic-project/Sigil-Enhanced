@@ -232,6 +232,7 @@ message(STATUS "Using newer Python3::Python target to link to Python")
 list( APPEND LIBS_TO_LINK Python3::Python )
 
 set( SIGIL_CORE_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-core.txt )
+set( SIGIL_WINDOWS_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-windows.txt )
 set( SIGIL_CORE_PYTHON_CACHE_DIR ${SIGIL_PYTHON_CACHE_DIR}/core )
 # QtUiTools needed for PySide plugins
 if ( APPLE )
@@ -562,7 +563,7 @@ elseif (MSVC)
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
                             COMMAND ${PY_INTERP}
                                     ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/sync_python_packages.py
-                                    --requirements ${SIGIL_CORE_PYTHON_REQUIREMENTS}
+                                    --requirements ${SIGIL_WINDOWS_PYTHON_REQUIREMENTS}
                                     --cache-dir ${SIGIL_CORE_PYTHON_CACHE_DIR}
                                     --dest ${PYTHON_DEST_DIR}/Lib/site-packages
                                     --copy-all
@@ -571,7 +572,7 @@ elseif (MSVC)
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
                             COMMAND ${PY_INTERP} -I -S
                                     ${CMAKE_SOURCE_DIR}/ci_scripts/verify_bundled_python.py
-                                    --requirements ${SIGIL_CORE_PYTHON_REQUIREMENTS}
+                                    --requirements ${SIGIL_WINDOWS_PYTHON_REQUIREMENTS}
                                     --site-packages ${PYTHON_DEST_DIR}/Lib/site-packages
                                     --extra-import PySide6
                             COMMENT "Verifying bundled Python runtime packages"

@@ -48,9 +48,9 @@ architecture. During CMake configure, `winvirtpy.cmake` creates a cached virtual
 environment and installs `src/Resource_Files/python_pkg/winreqs.txt`, including
 the PySide6 version matching `QTVER`. The installer target gathers the base
 Python runtime with `windows_python_gather6.py`, then synchronizes the complete
-installed package tree into `Lib/site-packages`. The second step is required:
-the historical gather script knows about Sigil's original packages but not all
-transitive MCP SDK dependencies.
+`requirements-windows.txt` tree into `Lib/site-packages`. The generated embedded
+`site.py` processes packaged `.pth` files so path-based packages such as
+`pywin32` can load their Python modules and DLL bootstrap code.
 
 macOS uses the relocatable `Python.framework` archives from
 `kevinhendricks/BuildSigilOnMac`. The official python.org macOS framework
@@ -73,19 +73,23 @@ Useful references:
 ## Python Dependency Lock And Verification
 
 `src/Resource_Files/python_pkg/requirements-core.txt` is the canonical lock for
-the 40 distributions used by Sigil's bundled Python features. It includes direct
-requirements and every transitive dependency, all with exact versions.
-`winreqs.txt` contains the same lock plus `PySide6==${QTVER}`. The CI helper lock
-at `.github/workflows/requirements.txt` contains the same core set plus the Qt
-version selected by that workflow.
+the 40 platform-neutral distributions used by Sigil's bundled Python features.
+It includes direct requirements and every platform-neutral transitive
+dependency, all with exact versions. `requirements-windows.txt` adds the locked
+Windows-only transitive dependencies `colorama==0.4.6` and `pywin32==312`.
+`winreqs.txt` contains that 42-distribution Windows runtime lock plus
+`PySide6==${QTVER}`. The CI helper lock at
+`.github/workflows/requirements.txt` contains the core set plus the Qt version
+selected by that workflow.
 
 Every packaged runtime is checked by `ci_scripts/verify_bundled_python.py` after
 copying:
 
 - installed distribution metadata must contain the exact locked versions;
 - imports run with isolated `sys.path` values rooted only in the packaged
-  directories, preventing the build machine's site-packages from masking an
-  incomplete package;
+  directories, including normal `.pth` processing; a `.pth` path that escapes
+  those roots is rejected, preventing the build machine's site-packages from
+  masking an incomplete package;
 - Windows and packaged macOS builds additionally verify PySide6;
 - a missing distribution, mismatched version, or failed import stops the build.
 
@@ -188,10 +192,10 @@ notes until signing is implemented.
 
 - Keep `QT_VERSION`, `QTVER`, PySide6, and the Qt archive URLs in sync.
 - When changing Python packages, keep the core entries in
-  `requirements-core.txt`, `winreqs.txt`, and
-  `.github/workflows/requirements.txt` identical. The automated package-sync
-  test enforces this invariant, and cache keys already include the platform
-  requirements files.
+  `requirements-core.txt`, `requirements-windows.txt`, `winreqs.txt`, and
+  `.github/workflows/requirements.txt` identical. Add Windows-only dependencies
+  to both Windows files. The automated package-sync test enforces these
+  invariants, and cache keys include the platform requirements files.
 - The first-party MCP adapter requires the locked `mcp==1.28.1` runtime. Do not
   remove apparently indirect packages from the lock without repeating the
   isolated-import and cross-platform wheel audits.
