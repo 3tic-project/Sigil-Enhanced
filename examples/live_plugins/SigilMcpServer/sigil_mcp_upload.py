@@ -295,6 +295,12 @@ def main(argv=None):
     parser.add_argument("--runtime-dir")
     parser.add_argument("--session-id")
     parser.add_argument("--timeout", type=float, default=120)
+    parser.add_argument(
+        "--start-at",
+        type=int,
+        default=0,
+        help="zero-based manifest index to resume from",
+    )
     args = parser.parse_args(argv)
     try:
         _, metadata = discover_metadata(args.metadata, args.runtime_dir, args.session_id)
@@ -318,8 +324,39 @@ def main(argv=None):
             if args.manifested is not None:
                 raw["manifested"] = args.manifested
             specs = [normalize_spec(raw, pathlib.Path.cwd())]
-        results = [upload_file(metadata, spec, max(1, min(args.timeout, 1800))) for spec in specs]
-        print(json.dumps({"imported": len(results), "results": results}, ensure_ascii=False))
+        if args.start_at < 0 or args.start_at > len(specs):
+            raise UploadError("--start-at is outside the manifest resource range")
+        if not args.manifest and args.start_at:
+            raise UploadError("--start-at is only valid with --manifest")
+        timeout = max(1, min(args.timeout, 1800))
+        results = []
+        for index in range(args.start_at, len(specs)):
+            spec = specs[index]
+            try:
+                result = upload_file(metadata, spec, timeout)
+            except UploadError as error:
+                print(json.dumps({
+                    "imported": len(results),
+                    "start_at": args.start_at,
+                    "completed_indices": [item["index"] for item in results],
+                    "failed_index": index,
+                    "next_index": index,
+                    "source": str(spec["source"]),
+                    "error": str(error),
+                }, ensure_ascii=False), file=sys.stderr)
+                return 2
+            results.append({
+                "index": index,
+                "source": str(spec["source"]),
+                "book_path": spec.get("book_path"),
+                "result": result,
+            })
+        print(json.dumps({
+            "imported": len(results),
+            "start_at": args.start_at,
+            "next_index": None,
+            "results": results,
+        }, ensure_ascii=False))
         return 0
     except UploadError as error:
         print("Sigil MCP upload: {0}".format(error), file=sys.stderr)

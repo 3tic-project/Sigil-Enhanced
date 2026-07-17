@@ -7,6 +7,7 @@ import socket
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from sigil_mcp_test_support import FakePlugin, ROOT
 
@@ -19,7 +20,13 @@ try:
     from sigil_mcp.backend import SigilMcpBackend
     from sigil_mcp.server import BearerTokenMiddleware, LiveCallGate, create_mcp
     from sigil_mcp.server import create_http_app
-    from sigil_mcp_upload import _manifest_specs, normalize_spec, upload_file
+    from sigil_mcp_upload import (
+        UploadError,
+        _manifest_specs,
+        main as upload_main,
+        normalize_spec,
+        upload_file,
+    )
 except ImportError as error:
     raise unittest.SkipTest("bundled MCP SDK is unavailable: {0}".format(error))
 
@@ -86,6 +93,44 @@ class SigilMcpCatalogTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(specs[0]["media_type"], "application/xhtml+xml")
         self.assertEqual(specs[0]["kind"], "text")
         self.assertTrue(specs[0]["add_to_spine"])
+
+    async def test_batch_uploader_reports_a_resumable_failure_index(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            for name in ("one.css", "two.css"):
+                (root / name).write_text("body {}", encoding="utf-8")
+            manifest = root / "imports.json"
+            manifest.write_text(json.dumps({
+                "transaction_id": "transaction-1",
+                "resources": [
+                    {
+                        "source": "one.css",
+                        "book_path": "Styles/one.css",
+                        "manifest_id": "one",
+                    },
+                    {
+                        "source": "two.css",
+                        "book_path": "Styles/two.css",
+                        "manifest_id": "two",
+                    },
+                ],
+            }), encoding="utf-8")
+            with (
+                mock.patch(
+                    "sigil_mcp_upload.discover_metadata",
+                    return_value=(root / "session.json", {"token": "secret"}),
+                ),
+                mock.patch(
+                    "sigil_mcp_upload.upload_file",
+                    side_effect=[{"staged": True}, UploadError("network lost")],
+                ),
+                mock.patch("sys.stderr") as stderr,
+            ):
+                result = upload_main(["--manifest", str(manifest)])
+        self.assertEqual(result, 2)
+        failure = json.loads(stderr.write.call_args_list[0].args[0])
+        self.assertEqual(failure["completed_indices"], [0])
+        self.assertEqual(failure["next_index"], 1)
 
 
 class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
