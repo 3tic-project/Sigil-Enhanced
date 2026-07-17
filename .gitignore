@@ -89,3 +89,4 @@ build
 *.log
 .idea/
 todo/
+!3rdparty/harfbuzz/meson.build

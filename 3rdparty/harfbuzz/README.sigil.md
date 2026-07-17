@@ -10,8 +10,10 @@ platform without depending on a system HarfBuzz installation.
 - License: MIT; see `COPYING`
 
 The upstream `src` directory and the root files required by its CMake build are
-kept unchanged. Release directories not used to build Sigil, such as upstream
-tests, utilities, documentation, and language bindings, are omitted.
+kept unchanged. This includes `meson.build`: upstream's community-maintained
+`CMakeLists.txt` reads it to determine the HarfBuzz version even though Sigil
+does not invoke Meson. Release directories not used to build Sigil, such as
+upstream tests, utilities, documentation, and language bindings, are omitted.
 
 Sigil configures the upstream CMake project through
 `3rdparty/cmake/harfbuzz.cmake`. That wrapper always builds static `harfbuzz`
