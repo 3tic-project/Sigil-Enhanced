@@ -37,11 +37,42 @@ env:
   PYTHON_FRAMEWORK_VERSION: 3.14
 
 jobs:
+  prepare:
+    name: Validate package version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Determine and validate version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          maj=$(sed -n 's/^set( SIGIL_MAJOR_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
+          min=$(sed -n 's/^set( SIGIL_MINOR_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
+          rev=$(sed -n 's/^set( SIGIL_REVISION_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
+          enh=$(sed -n 's/^set( SIGIL_ENHANCED_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
+          version="${maj}.${min}.${rev}E${enh}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag_version="${GITHUB_REF_NAME#v}"
+            if [[ "$tag_version" != "$version" ]]; then
+              echo "Tag $GITHUB_REF_NAME does not match CMake version $version." >&2
+              exit 1
+            fi
+          fi
+
   windows-x64:
     name: Windows x64 installer
+    needs: prepare
     if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: windows-2025
     env:
+      SIGIL_VERSION: ${{ needs.prepare.outputs.version }}
       QT_ROOT: ${{ github.workspace }}\.ci-cache\qt-windows-x64
       BUILD_DIR: ${{ github.workspace }}\.ci-build\windows-x64
       SIGIL_PYTHON_CACHE_DIR: ${{ github.workspace }}\.ci-cache\sigil-python-cache-windows-x64
@@ -53,17 +84,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-
-      - name: Determine version
-        shell: pwsh
-        run: |
-          $content = Get-Content CMakeLists.txt -Raw
-          $maj = [regex]::Match($content, 'SIGIL_MAJOR_VERSION\s+(\d+)').Groups[1].Value
-          $min = [regex]::Match($content, 'SIGIL_MINOR_VERSION\s+(\d+)').Groups[1].Value
-          $rev = [regex]::Match($content, 'SIGIL_REVISION_VERSION\s+(\d+)').Groups[1].Value
-          $enh = [regex]::Match($content, 'SIGIL_ENHANCED_VERSION\s+(\d+)').Groups[1].Value
-          $ver = "$maj.$min.$rev" + "E" + "$enh"
-          "SIGIL_VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -181,9 +201,11 @@ jobs:
 
   windows-x86:
     name: Windows x86 installer
+    needs: prepare
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_windows_x86 }}
     runs-on: windows-2025
     env:
+      SIGIL_VERSION: ${{ needs.prepare.outputs.version }}
       QT_URL: ${{ inputs.qt_windows_x86_url }}
       QT_ROOT: ${{ github.workspace }}\.ci-cache\qt-windows-x86
       BUILD_DIR: ${{ github.workspace }}\.ci-build\windows-x86
@@ -191,17 +213,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-
-      - name: Determine version
-        shell: pwsh
-        run: |
-          $content = Get-Content CMakeLists.txt -Raw
-          $maj = [regex]::Match($content, 'SIGIL_MAJOR_VERSION\s+(\d+)').Groups[1].Value
-          $min = [regex]::Match($content, 'SIGIL_MINOR_VERSION\s+(\d+)').Groups[1].Value
-          $rev = [regex]::Match($content, 'SIGIL_REVISION_VERSION\s+(\d+)').Groups[1].Value
-          $enh = [regex]::Match($content, 'SIGIL_ENHANCED_VERSION\s+(\d+)').Groups[1].Value
-          $ver = "$maj.$min.$rev" + "E" + "$enh"
-          "SIGIL_VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Check Qt URL
         shell: pwsh
@@ -303,6 +314,7 @@ jobs:
 
   macos:
     name: macOS ${{ matrix.arch }} package
+    needs: prepare
     if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]') }}
     strategy:
       fail-fast: false
@@ -322,6 +334,7 @@ jobs:
             cache_suffix: macos-arm64
     runs-on: ${{ matrix.runner }}
     env:
+      SIGIL_VERSION: ${{ needs.prepare.outputs.version }}
       MACOSX_DEPLOYMENT_TARGET: 13
       QT_ROOT: ${{ github.workspace }}/.ci-cache/qt-${{ matrix.cache_suffix }}
       PYTHON_FRAMEWORK_ROOT: ${{ github.workspace }}/.ci-cache/Frameworks-${{ matrix.cache_suffix }}
@@ -330,16 +343,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-
-      - name: Determine version
-        shell: bash
-        run: |
-          set -euo pipefail
-          maj=$(sed -n 's/^set( SIGIL_MAJOR_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
-          min=$(sed -n 's/^set( SIGIL_MINOR_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
-          rev=$(sed -n 's/^set( SIGIL_REVISION_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
-          enh=$(sed -n 's/^set( SIGIL_ENHANCED_VERSION \([0-9][0-9]*\) )/\1/p' CMakeLists.txt)
-          echo "SIGIL_VERSION=${maj}.${min}.${rev}E${enh}" >> "$GITHUB_ENV"
 
       - name: Cache Qt
         uses: actions/cache@v6
@@ -457,3 +460,47 @@ jobs:
           path: ${{ env.BUILD_DIR }}/dist/*
           if-no-files-found: error
           retention-days: ${{ inputs.retention_days || 14 }}
+
+  release:
+    name: Publish GitHub Release
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs:
+      - prepare
+      - windows-x64
+      - macos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SIGIL_VERSION: ${{ needs.prepare.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: Sigil-Enhanced-${{ needs.prepare.outputs.version }}-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify release assets and generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci_scripts/prepare_release_assets.py release-assets
+
+      - name: Create release or update its assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" release-assets/* --clobber
+          else
+            gh release create "$tag" release-assets/* \
+              --verify-tag \
+              --title "Sigil-Enhanced $SIGIL_VERSION" \
+              --generate-notes
+          fi

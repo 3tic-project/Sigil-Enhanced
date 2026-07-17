@@ -10,12 +10,13 @@ runtime used by Sigil-Enhanced:
 
 - Windows x64: Inno Setup `.exe` installer.
 - Windows x86: Inno Setup `.exe` installer, manually enabled only.
-- macOS Intel: `.dmg` and `.tar.xz` containing `Sigil.app`.
-- macOS ARM: `.dmg` and `.tar.xz` containing `Sigil.app`.
+- macOS Intel: `.dmg` containing `Sigil-Enhanced.app`.
+- macOS ARM: `.dmg` containing `Sigil-Enhanced.app`.
 
-The workflow is intended for release-candidate packaging and manual testing. It
-does not sign Windows binaries, sign macOS app bundles, notarize macOS packages,
-or publish GitHub Releases.
+Manual runs are intended for release-candidate packaging and testing. A matching
+version tag publishes the x64 Windows installer and both macOS packages to the
+tag's GitHub Release. The workflow does not sign Windows binaries, sign macOS
+app bundles, or notarize macOS packages.
 
 ## Runner Selection
 
@@ -117,8 +118,41 @@ Tag trigger:
 
 - Pushing tags that match `v*` or `2.*` builds Windows x64 and both macOS
   packages.
+- The tag, after removing one optional leading `v`, must exactly match the CMake
+  version. For example, CMake version `2.8.1E5` accepts `v2.8.1E5` and
+  `2.8.1E5`; a mismatched tag fails before package runners start.
 - Windows x86 is skipped for tag builds until a maintained 32-bit Qt runtime
   source is available.
+
+Recommended release command:
+
+```sh
+git tag -a v2.8.1E5 -m "Sigil-Enhanced 2.8.1E5"
+git push enhanced v2.8.1E5
+```
+
+## GitHub Release Publishing
+
+The `release` job runs only for tag events and only after Windows x64 and both
+macOS matrix builds succeed. It:
+
+1. downloads the three package artifacts from the same workflow run;
+2. rejects missing, duplicate, or unexpected package types;
+3. creates `SHA256SUMS.txt` over the exact `.exe` and `.dmg` files;
+4. creates a GitHub Release with generated notes, or reuses an existing Release
+   for the same tag when a failed workflow is rerun;
+5. uploads all packages and the checksum file, replacing same-named assets on a
+   rerun.
+
+Only this job receives `contents: write`; checkout and package jobs retain the
+workflow's default read-only permission. It uses the repository-scoped
+`GITHUB_TOKEN`, so no personal access token or additional secret is required.
+Manual `workflow_dispatch` builds remain Actions artifacts and never publish or
+modify a Release.
+
+The resulting Release packages are currently unsigned and unnotarized. This is
+unchanged from the previous CI artifacts and should remain visible in release
+notes until signing is implemented.
 
 ## Maintenance Notes
 
