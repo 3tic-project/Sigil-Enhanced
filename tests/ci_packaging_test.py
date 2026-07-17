@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import pathlib
+import re
 import tempfile
 import unittest
 
@@ -8,6 +9,8 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "package-enhanced.yml"
 SCRIPT = ROOT / "ci_scripts" / "prepare_release_assets.py"
+CHANGELOG = ROOT / "ChangeLog.txt"
+VERSION_XML = ROOT / "version.xml"
 
 
 def load_release_assets_module():
@@ -61,6 +64,26 @@ class CiPackagingTest(unittest.TestCase):
         self.assertRegex(
             self.workflow,
             r"release:\n(?:.*\n){0,8}\s+permissions:\n\s+contents: write",
+        )
+
+    def test_release_version_metadata_is_consistent(self):
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        parts = {
+            name: re.search(
+                r"set\( SIGIL_{0}_VERSION ([0-9]+) \)".format(name), cmake
+            ).group(1)
+            for name in ("MAJOR", "MINOR", "REVISION", "ENHANCED")
+        }
+        release_version = "{MAJOR}.{MINOR}.{REVISION}E{ENHANCED}".format(**parts)
+        update_version = release_version.replace("E", ".E")
+        self.assertIn(
+            "<current-version>{0}</current-version>".format(update_version),
+            VERSION_XML.read_text(encoding="utf-8"),
+        )
+        self.assertTrue(
+            CHANGELOG.read_text(encoding="utf-8").startswith(
+                "Sigil-Enhanced-{0}\n".format(update_version)
+            )
         )
 
 

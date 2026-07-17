@@ -1,9 +1,19 @@
-Unreleased
+Sigil-Enhanced-2.8.1.E6
    Bug Fixes
      - Removed the Sigil MCP transaction commit confirmation dialog; commit now revalidates and applies directly while preserving preview, validation, checkpoint, and rollback safeguards.
+     - Fixed live MCP text updates that could invalidate an open editor's caret hierarchy and crash Sigil while saving a resource.
+     - Fixed MCP plugin archive installation and stale session discovery on macOS.
+     - Kept MCP batch reads within transport frame limits and made large resource import batches resumable.
+     - Fixed transaction structure synchronization so newly imported resources are reflected in the EPUB manifest and spine.
 
    New Features
      - Added an installable MCP book-session adapter with authenticated loopback Streamable HTTP, a stdio transport proxy, live Book/editor context, revision-safe edits, and previewed multi-resource transactions for LLM hosts.
+     - Added chunked text operations and out-of-band file imports for large text, image, font, stylesheet, and other EPUB resources without repeating their contents through the LLM context.
+     - Added import preflight, transaction status, checkpoint, rollback, and explicit EPUB layout guidance for reliable long-running agent workflows.
+
+   Build/Packaging
+     - Added complete, pinned Python runtime dependency synchronization and isolated import verification for Windows, macOS, and AppImage packages.
+     - Added tag-triggered GitHub Releases with validated Windows and macOS artifacts plus deterministic SHA-256 checksums.
 
 Sigil-Enhanced-2.8.1.E5
    Bug Fixes
