@@ -79,6 +79,13 @@ class FakeTransaction:
     def add_resource(self, *args, **kwargs):
         return self._result("add_resource", *args, **kwargs)
 
+    def write_binary_file(self, *args, **kwargs):
+        path = pathlib.Path(args[1])
+        self.calls.append(
+            ("write_binary_file", (args[0], path.read_bytes(), *args[2:]), kwargs)
+        )
+        return {"operation": "write_binary_file", "transaction_id": self.id}
+
     def remove_resource(self, *args, **kwargs):
         return self._result("remove_resource", *args, **kwargs)
 

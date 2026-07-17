@@ -13,12 +13,18 @@ from typing import Any
 import uvicorn
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
-from mcp.server.transport_security import TransportSecuritySettings
+from mcp.server.transport_security import (
+    TransportSecurityMiddleware,
+    TransportSecuritySettings,
+)
 from mcp.types import ToolAnnotations
+from starlette.routing import Route
+from starlette.requests import HTTPConnection
 
 from . import SERVER_NAME, SERVER_VERSION
 from .backend import SigilMcpBackend
 from .errors import format_tool_error
+from .external_import import IMPORT_PATH, create_external_import_handler
 from .rendezvous import RendezvousFile
 
 
@@ -97,6 +103,24 @@ class BearerTokenMiddleware:
             })
             await send({"type": "http.response.body", "body": body})
             return
+        await self.app(scope, receive, send)
+
+
+class LoopbackSecurityMiddleware:
+    """Apply MCP's Host and Origin validation to non-MCP HTTP endpoints."""
+
+    def __init__(self, app, settings):
+        self.app = app
+        self.security = TransportSecurityMiddleware(settings)
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http":
+            response = await self.security.validate_request(
+                HTTPConnection(scope), is_post=False
+            )
+            if response is not None:
+                await response(scope, receive, send)
+                return
         await self.app(scope, receive, send)
 
 
@@ -618,8 +642,8 @@ def _register_prompts(mcp):
         ).format(issue)
 
 
-def create_mcp(backend, gate, port):
-    security = TransportSecuritySettings(
+def _transport_security_settings():
+    return TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=["127.0.0.1:*", "localhost:*", "[::1]:*"],
         allowed_origins=[
@@ -629,6 +653,10 @@ def create_mcp(backend, gate, port):
             "https://localhost:*",
         ],
     )
+
+
+def create_mcp(backend, gate, port):
+    security = _transport_security_settings()
     mcp = FastMCP(
         SERVER_NAME,
         instructions=(
@@ -649,6 +677,22 @@ def create_mcp(backend, gate, port):
     _register_resources(mcp, backend, gate)
     _register_prompts(mcp)
     return mcp
+
+
+def create_http_app(mcp, backend, gate, token):
+    app = mcp.streamable_http_app()
+    app.routes.append(
+        Route(
+            IMPORT_PATH,
+            endpoint=create_external_import_handler(backend, gate),
+            methods=["POST"],
+        )
+    )
+    app.add_middleware(
+        LoopbackSecurityMiddleware, settings=_transport_security_settings()
+    )
+    app.add_middleware(BearerTokenMiddleware, token=token)
+    return app
 
 
 def _loopback_socket():
@@ -680,8 +724,7 @@ async def _run_server(plugin):
     token = secrets.token_urlsafe(32)
     rendezvous = RendezvousFile(plugin.session_info)
     mcp = create_mcp(backend, gate, port)
-    app = mcp.streamable_http_app()
-    app.add_middleware(BearerTokenMiddleware, token=token)
+    app = create_http_app(mcp, backend, gate, token)
     config = uvicorn.Config(
         app,
         host="127.0.0.1",
@@ -708,6 +751,9 @@ async def _run_server(plugin):
             "server": {"name": SERVER_NAME, "version": SERVER_VERSION},
             "transport": "streamable-http",
             "endpoint": "http://127.0.0.1:{0}/mcp".format(port),
+            "external_import_endpoint": "http://127.0.0.1:{0}{1}".format(
+                port, IMPORT_PATH
+            ),
             "token_type": "Bearer",
             "token": token,
             "pid": os.getpid(),

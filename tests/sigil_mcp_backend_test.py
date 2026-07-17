@@ -1,4 +1,5 @@
 import base64
+import pathlib
 import os
 import stat
 import tempfile
@@ -107,6 +108,55 @@ class SigilMcpBackendTest(unittest.TestCase):
         self.assertTrue(result["aborted"])
         self.assertEqual(self.backend.transaction_status()["transaction_id"], transaction_id)
 
+    def test_external_import_stages_text_add_and_binary_replace(self):
+        transaction_id = self.backend.transaction_begin()["transaction_id"]
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            text_path = root / "chapter.xhtml"
+            text_path.write_text("<p>外部文本</p>", encoding="utf-8")
+            result = self.backend.transaction_import_file(
+                transaction_id,
+                text_path,
+                "text",
+                book_path="Text/external.xhtml",
+                media_type="application/xhtml+xml",
+                manifest_id="external",
+                add_to_spine=True,
+            )
+            self.assertEqual(result["operation"], "add_resource")
+            call = self.plugin.book.transactions[0].calls[-1]
+            self.assertEqual(call[1][1], "<p>外部文本</p>")
+            self.assertEqual(result["external_import"]["size"], text_path.stat().st_size)
+
+            binary_path = root / "cover.jpg"
+            binary_path.write_bytes(b"\xff\xd8external-image\xff\xd9")
+            result = self.backend.transaction_import_file(
+                transaction_id,
+                binary_path,
+                "binary",
+                operation="replace",
+                resource_id="cover",
+                expected_revision=4,
+            )
+            self.assertEqual(result["operation"], "write_binary_file")
+            call = self.plugin.book.transactions[0].calls[-1]
+            self.assertEqual(call[1], ("cover", binary_path.read_bytes(), 4))
+
+    def test_external_text_import_rejects_non_utf8(self):
+        transaction_id = self.backend.transaction_begin()["transaction_id"]
+        with tempfile.NamedTemporaryFile() as stream:
+            stream.write(b"\xff\xfe")
+            stream.flush()
+            with self.assertRaises(BackendError) as caught:
+                self.backend.transaction_import_file(
+                    transaction_id,
+                    stream.name,
+                    "text",
+                    book_path="Text/bad.xhtml",
+                    media_type="application/xhtml+xml",
+                )
+        self.assertEqual(caught.exception.error_code, "ValidationFailed")
+
     def test_commit_does_not_consult_the_ui_confirmation_default(self):
         transaction_id = self.backend.transaction_begin()["transaction_id"]
         self.plugin.ui.confirm_result = False
@@ -137,6 +187,14 @@ class SigilMcpBackendTest(unittest.TestCase):
         )
         active = self.backend.transaction_status()
         self.assertEqual(active["pending_text_uploads"], 1)
+        self.backend.begin_external_import(started["transaction_id"])
+        active = self.backend.transaction_status()
+        self.assertEqual(active["pending_external_imports"], 1)
+        self.backend._transaction_activity = time.monotonic() - 61
+        self.assertFalse(self.backend.expire_idle_transaction())
+        with self.assertRaises(BackendError):
+            self.backend.transaction_commit(started["transaction_id"])
+        self.backend.end_external_import(started["transaction_id"])
         self.assertGreater(active["expires_in_seconds"], 0)
 
     def test_idle_and_shutdown_paths_roll_back(self):

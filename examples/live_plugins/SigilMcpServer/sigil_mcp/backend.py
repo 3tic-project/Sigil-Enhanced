@@ -1,6 +1,8 @@
 import base64
 import binascii
 import dataclasses
+import hashlib
+import pathlib
 import time
 
 from .catalog import PROMPT_NAMES, RESOURCE_URIS, TOOL_NAMES
@@ -9,6 +11,8 @@ from . import MCP_PROTOCOL_VERSION, SERVER_NAME, SERVER_VERSION
 
 
 MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024
+MAX_EXTERNAL_IMPORT_SIZE = 32 * 1024 * 1024
+MAX_EXTERNAL_IMPORTS = 2
 
 
 def _resource(value):
@@ -32,6 +36,7 @@ class SigilMcpBackend:
         self._transaction = None
         self._transaction_activity = None
         self._text_writers = {}
+        self._external_imports = 0
 
     def session_info(self):
         info = dict(self.plugin.session_info)
@@ -54,6 +59,7 @@ class SigilMcpBackend:
         }
 
     def capabilities(self):
+        binary_add_max = self._external_binary_add_max()
         return {
             "tools": list(TOOL_NAMES),
             "resources": list(RESOURCE_URIS),
@@ -65,10 +71,22 @@ class SigilMcpBackend:
                 "text_write_size_max": 64 * 1024 * 1024,
                 "text_write_chunk_size_max": 1024 * 1024,
                 "inline_binary_size_max": MAX_INLINE_BINARY_SIZE,
+                "external_import_size_max": MAX_EXTERNAL_IMPORT_SIZE,
+                "external_binary_add_size_max": binary_add_max,
                 "editor_edits_max": 1000,
                 "position_encoding": "utf-16",
                 "active_transactions": 1,
                 "transaction_idle_timeout_seconds": self.idle_timeout_seconds,
+            },
+            "external_import": {
+                "available": True,
+                "endpoint_path": "/api/v1/imports",
+                "authentication": "session bearer token",
+                "content": "raw bytes",
+                "operations": ["add", "replace"],
+                "kinds": ["text", "binary"],
+                "binary_add_size_max": binary_add_max,
+                "batch_uploader": "sigil_mcp_upload.py",
             },
             "enhancements": [],
         }
@@ -178,6 +196,7 @@ class SigilMcpBackend:
                 "idle_seconds": None,
                 "expires_in_seconds": None,
                 "pending_text_uploads": 0,
+                "pending_external_imports": 0,
             }
         idle_seconds = max(0.0, time.monotonic() - self._transaction_activity)
         return {
@@ -191,7 +210,25 @@ class SigilMcpBackend:
                 max(0.0, self.idle_timeout_seconds - idle_seconds), 3
             ),
             "pending_text_uploads": len(self._text_writers),
+            "pending_external_imports": self._external_imports,
         }
+
+    def begin_external_import(self, transaction_id):
+        transaction = self._require_transaction(transaction_id)
+        if self._external_imports >= MAX_EXTERNAL_IMPORTS:
+            raise BackendError(
+                "Busy",
+                "external import concurrency limit reached",
+                retryable=True,
+                recovery="Wait for an active upload to finish and retry.",
+            )
+        self._external_imports += 1
+        return transaction.id
+
+    def end_external_import(self, transaction_id):
+        self._external_imports = max(0, self._external_imports - 1)
+        if self._transaction is not None and self._transaction.id == transaction_id:
+            self._touch_transaction()
 
     def transaction_read_text(self, transaction_id, resource_id):
         transaction = self._require_transaction(transaction_id)
@@ -339,6 +376,94 @@ class SigilMcpBackend:
             manifested=manifested,
         )
 
+    def transaction_import_file(
+        self,
+        transaction_id,
+        path,
+        kind,
+        operation="add",
+        book_path=None,
+        media_type=None,
+        resource_id=None,
+        expected_revision=None,
+        manifest_id=None,
+        properties=None,
+        fallback=None,
+        overlay=None,
+        add_to_spine=False,
+        manifested=True,
+    ):
+        """Stage a verified upload without putting its bytes in an MCP message."""
+        if kind not in {"text", "binary"}:
+            raise BackendError("InvalidRequest", "kind must be text or binary")
+        if operation not in {"add", "replace"}:
+            raise BackendError("InvalidRequest", "operation must be add or replace")
+        source = pathlib.Path(path)
+        try:
+            size = source.stat().st_size
+        except OSError as error:
+            raise BackendError(
+                "ResourceNotFound", "external import temporary file is unavailable"
+            ) from error
+        if size > MAX_EXTERNAL_IMPORT_SIZE:
+            raise BackendError(
+                "PayloadTooLarge",
+                "external import exceeds the 32 MiB limit",
+                retryable=True,
+                recovery="Split the resource or reduce it below 32 MiB.",
+            )
+
+        transaction = self._require_transaction(transaction_id)
+        if operation == "replace":
+            if not resource_id or expected_revision is None:
+                raise BackendError(
+                    "InvalidRequest",
+                    "replace requires resource_id and expected_revision",
+                )
+            if kind == "binary":
+                result = transaction.write_binary_file(
+                    resource_id, str(source), expected_revision
+                )
+            else:
+                result = transaction.replace_text(
+                    resource_id, self._read_utf8(source), expected_revision
+                )
+        else:
+            if not book_path or not media_type:
+                raise BackendError(
+                    "InvalidRequest", "add requires book_path and media_type"
+                )
+            if kind == "binary" and size > self._external_binary_add_max():
+                raise BackendError(
+                    "PayloadTooLarge",
+                    "binary addition exceeds this Live session message budget",
+                    retryable=True,
+                    recovery=(
+                        "Split the asset or reduce it below {0} bytes. Binary replacement "
+                        "and text imports use streaming writers."
+                    ).format(self._external_binary_add_max()),
+                )
+            data = self._read_utf8(source) if kind == "text" else source.read_bytes()
+            result = transaction.add_resource(
+                book_path,
+                data,
+                media_type,
+                manifest_id=manifest_id,
+                properties=properties,
+                fallback=fallback,
+                overlay=overlay,
+                add_to_spine=add_to_spine,
+                manifested=manifested,
+            )
+        value = dict(result)
+        value["external_import"] = {
+            "operation": operation,
+            "kind": kind,
+            "size": size,
+            "sha256": self._file_sha256(source),
+        }
+        return value
+
     def transaction_remove_resource(
         self, transaction_id, resource_id, expected_revision
     ):
@@ -385,6 +510,13 @@ class SigilMcpBackend:
 
     def transaction_commit(self, transaction_id):
         transaction = self._require_transaction(transaction_id)
+        if self._external_imports:
+            raise BackendError(
+                "Busy",
+                "cannot commit while an external import is uploading",
+                retryable=True,
+                recovery="Wait for the uploader to finish, then preview and validate again.",
+            )
         result = transaction.commit()
         self._text_writers.clear()
         self._transaction = None
@@ -399,10 +531,13 @@ class SigilMcpBackend:
         self._text_writers.clear()
         self._transaction = None
         self._transaction_activity = None
+        self._external_imports = 0
         return result
 
     def expire_idle_transaction(self):
         if self._transaction is None or self._transaction_activity is None:
+            return False
+        if self._external_imports:
             return False
         if time.monotonic() - self._transaction_activity < self.idle_timeout_seconds:
             return False
@@ -410,6 +545,7 @@ class SigilMcpBackend:
         self._text_writers.clear()
         self._transaction = None
         self._transaction_activity = None
+        self._external_imports = 0
         return True
 
     def shutdown(self):
@@ -421,6 +557,7 @@ class SigilMcpBackend:
             self._text_writers.clear()
             self._transaction = None
             self._transaction_activity = None
+            self._external_imports = 0
         return True
 
     def _require_transaction(self, transaction_id):
@@ -454,3 +591,27 @@ class SigilMcpBackend:
                 recovery="Begin a new text write upload.",
             )
         return owner[1]
+
+    @staticmethod
+    def _read_utf8(path):
+        try:
+            return path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as error:
+            raise BackendError(
+                "ValidationFailed",
+                "text external import is not strict UTF-8",
+                recovery="Convert the source file to UTF-8 or upload it as binary.",
+            ) from error
+
+    @staticmethod
+    def _file_sha256(path):
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _external_binary_add_max(self):
+        maximum = int(self.plugin.session_info.get("max_message_size") or 0)
+        payload_budget = max(0, maximum - 1024 * 1024)
+        return min(MAX_EXTERNAL_IMPORT_SIZE, payload_budget * 3 // 4)

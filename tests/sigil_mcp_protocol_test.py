@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import hashlib
 import json
 import pathlib
 import socket
@@ -17,6 +18,8 @@ try:
     from sigil_mcp.catalog import PROMPT_NAMES, TOOL_NAMES
     from sigil_mcp.backend import SigilMcpBackend
     from sigil_mcp.server import BearerTokenMiddleware, LiveCallGate, create_mcp
+    from sigil_mcp.server import create_http_app
+    from sigil_mcp_upload import _manifest_specs, normalize_spec, upload_file
 except ImportError as error:
     raise unittest.SkipTest("bundled MCP SDK is unavailable: {0}".format(error))
 
@@ -65,6 +68,25 @@ class SigilMcpCatalogTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(tuple(prompt.name for prompt in prompts), PROMPT_NAMES)
 
+    async def test_batch_upload_manifest_uses_relative_sources_and_defaults(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / "chapter.xhtml").write_text("<p>chapter</p>", encoding="utf-8")
+            manifest = root / "imports.json"
+            manifest.write_text(json.dumps({
+                "transaction_id": "transaction-1",
+                "resources": [{
+                    "source": "chapter.xhtml",
+                    "book_path": "Text/chapter.xhtml",
+                    "manifest_id": "chapter",
+                }],
+            }), encoding="utf-8")
+            specs = _manifest_specs(manifest)
+        self.assertEqual(specs[0]["source"], root / "chapter.xhtml")
+        self.assertEqual(specs[0]["media_type"], "application/xhtml+xml")
+        self.assertEqual(specs[0]["kind"], "text")
+        self.assertTrue(specs[0]["add_to_spine"])
+
 
 class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -79,8 +101,7 @@ class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
         self.endpoint = "http://127.0.0.1:{0}/mcp".format(self.port)
         self.token = "integration-secret"
         mcp = create_mcp(self.backend, self.gate, self.port)
-        app = mcp.streamable_http_app()
-        app.add_middleware(BearerTokenMiddleware, token=self.token)
+        app = create_http_app(mcp, self.backend, self.gate, self.token)
         self.server = uvicorn.Server(uvicorn.Config(
             app,
             host="127.0.0.1",
@@ -215,6 +236,84 @@ class SigilMcpHttpIntegrationTest(unittest.IsolatedAsyncioTestCase):
                     self.assertIn("TransactionNotFound", error_text)
                     error = json.loads(error_text[error_text.index("{"):])
                     self.assertEqual(error["code"], "TransactionNotFound")
+
+    async def test_external_import_accepts_raw_bytes_without_base64(self):
+        transaction_id = self.backend.transaction_begin("External import")["transaction_id"]
+        content = b"\xff\xd8raw-image-bytes\xff\xd9"
+        query = {
+            "transaction_id": transaction_id,
+            "kind": "binary",
+            "operation": "add",
+            "book_path": "Images/cover.jpg",
+            "media_type": "image/jpeg",
+            "manifest_id": "cover_image",
+            "add_to_spine": "false",
+        }
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.post(
+                "http://127.0.0.1:{0}/api/v1/imports".format(self.port),
+                params=query,
+                headers={
+                    "Authorization": "Bearer " + self.token,
+                    "X-Content-SHA256": hashlib.sha256(content).hexdigest(),
+                },
+                content=content,
+            )
+        self.assertEqual(response.status_code, 201, response.text)
+        result = response.json()
+        self.assertEqual(result["external_import"]["size"], len(content))
+        call = self.plugin.book.transactions[0].calls[-1]
+        self.assertEqual(call[0], "add_resource")
+        self.assertEqual(call[1][1], content)
+
+    async def test_external_import_rejects_bad_hash_auth_and_host(self):
+        transaction_id = self.backend.transaction_begin("Rejected imports")["transaction_id"]
+        endpoint = "http://127.0.0.1:{0}/api/v1/imports".format(self.port)
+        params = {
+            "transaction_id": transaction_id,
+            "kind": "binary",
+            "book_path": "Images/a.jpg",
+            "media_type": "image/jpeg",
+        }
+        headers = {"X-Content-SHA256": "0" * 64}
+        async with httpx.AsyncClient(timeout=5) as client:
+            unauthorized = await client.post(endpoint, params=params, headers=headers, content=b"x")
+            self.assertEqual(unauthorized.status_code, 401)
+            authorized = dict(headers, Authorization="Bearer " + self.token)
+            bad_hash = await client.post(endpoint, params=params, headers=authorized, content=b"x")
+            self.assertEqual(bad_hash.status_code, 400)
+            hostile = await client.post(
+                endpoint,
+                params=params,
+                headers=dict(authorized, Host="attacker.example"),
+                content=b"x",
+            )
+            self.assertEqual(hostile.status_code, 421)
+        self.assertEqual(self.plugin.book.transactions[0].calls, [])
+
+    async def test_external_uploader_streams_one_local_file(self):
+        transaction_id = self.backend.transaction_begin("Uploader")["transaction_id"]
+        with tempfile.TemporaryDirectory() as directory:
+            source = pathlib.Path(directory) / "style.css"
+            source.write_text("body { color: #222; }", encoding="utf-8")
+            spec = normalize_spec(
+                {
+                    "source": str(source),
+                    "transaction_id": transaction_id,
+                    "book_path": "Styles/external.css",
+                    "manifest_id": "external_css",
+                },
+                pathlib.Path(directory),
+            )
+            metadata = {
+                "endpoint": self.endpoint,
+                "external_import_endpoint": "http://127.0.0.1:{0}/api/v1/imports".format(self.port),
+                "token": self.token,
+            }
+            result = await asyncio.to_thread(upload_file, metadata, spec, 5)
+        self.assertEqual(result["operation"], "add_resource")
+        call = self.plugin.book.transactions[0].calls[-1]
+        self.assertEqual(call[1][1], "body { color: #222; }")
 
     async def test_stdio_proxy_relays_protocol_without_book_logic(self):
         proxy = (

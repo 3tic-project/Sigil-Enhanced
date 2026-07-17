@@ -5,7 +5,7 @@
   <description>Expose the current in-memory EPUB to local MCP hosts.</description>
   <type>edit</type>
   <engine>python3</engine>
-  <version>0.6.0</version>
+  <version>0.7.0</version>
   <api version="2" interface="live" />
   <lifetime>book-session</lifetime>
 </plugin>
