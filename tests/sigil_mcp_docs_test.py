@@ -69,6 +69,14 @@ class SigilMcpDocsTest(unittest.TestCase):
         self.assertIn('"confirmation_required": false', self.reference)
         self.assertIn("without a confirmation dialog", self.readme)
 
+    def test_external_import_is_documented_as_a_token_free_data_path(self):
+        for document in (self.system, self.guide, self.reference, self.readme):
+            with self.subTest(document=document[:30]):
+                self.assertIn("/api/v1/imports", document)
+                self.assertIn("sigil_mcp_upload.py", document)
+        self.assertIn("external_binary_add_size_max", self.reference)
+        self.assertIn("服务端不接受 `source_path`", self.reference)
+
 
 if __name__ == "__main__":
     unittest.main()

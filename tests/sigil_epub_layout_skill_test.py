@@ -85,8 +85,10 @@ class SigilEpubLayoutSkillTest(unittest.TestCase):
         self.assertIn("$sigil-epub-layout", agent)
         self.assertIn("Single-Transaction Creation", workflow)
         self.assertNotIn("Two-Phase Creation", workflow)
+        self.assertIn("sigil_mcp_upload.py --manifest", workflow)
+        self.assertIn("Do not read Base64 into model context", workflow)
         self.assertLess(
-            workflow.index("3. Add generated XHTML/CSS"),
+            workflow.index("2. Write generated XHTML/CSS"),
             workflow.index("6. Call `update_spine`"),
         )
 

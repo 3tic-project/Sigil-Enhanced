@@ -14,6 +14,7 @@ Sigil Enhanced 中打开的 EPUB。它读取的是 Book、Resource 和编辑器�
 - 定位资源和文本范围；
 - 对当前标签执行一次可撤销的小范围编辑；
 - 批量生成章节、样式表或其他文本资源；
+- 通过外部原始字节接口批量导入本地图片、XHTML、CSS、字体等文件，不让 Base64 或长正文进入模型上下文；
 - 在一个 staged transaction 中修改多个文件、metadata、spine 或完整 OPF；
 - preview、validate、直接 commit，或在提交前完整 rollback。
 
@@ -102,6 +103,7 @@ sigil-mcp-<session-id>.json
   "schema_version": 1,
   "transport": "streamable-http",
   "endpoint": "http://127.0.0.1:43127/mcp",
+  "external_import_endpoint": "http://127.0.0.1:43127/api/v1/imports",
   "token_type": "Bearer",
   "token": "<random-secret>",
   "session_id": "<book-session-id>",
@@ -180,6 +182,64 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 如果同时打开多个启用了 MCP 的 Book，代理会列出候选并退出，不会静默选择任意一个。
 插件异常退出遗留但 PID 已失效的 metadata 文件会被自动忽略。
 
+### 6.1 外部文件上传器
+
+本地图片、已生成 XHTML/CSS、字体或其他文件不应先 Base64 编码再塞进 MCP tool 参数。这样会
+重复消耗模型上下文，而且 shell/read 工具常会截断长输出。0.7.0 提供独立的原始字节 endpoint 和
+标准库上传器：模型只处理文件路径、Book path、media type、manifest ID 和短结果。
+
+单文件示例：
+
+```sh
+python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
+  --transaction TRANSACTION_ID \
+  --file /absolute/source/cover.jpg \
+  --book-path Images/cover.jpg \
+  --media-type image/jpeg \
+  --manifest-id cover-image \
+  --no-add-to-spine
+```
+
+批量导入时先写一个短清单：
+
+```json
+{
+  "transaction_id": "TRANSACTION_ID",
+  "resources": [
+    {
+      "source": "/absolute/generated/chapter.xhtml",
+      "book_path": "Text/chapter.xhtml",
+      "media_type": "application/xhtml+xml",
+      "manifest_id": "chapter"
+    },
+    {
+      "source": "/absolute/images/cover.jpg",
+      "book_path": "Images/cover.jpg",
+      "media_type": "image/jpeg",
+      "manifest_id": "cover-image",
+      "add_to_spine": false
+    }
+  ]
+}
+```
+
+然后只需一次本地命令：
+
+```sh
+python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py --manifest imports.json
+```
+
+上传器自动发现 metadata、读取调用者明确指定的源文件、计算 SHA-256，并把原始字节流式发送到
+loopback endpoint。它不会输出 token 或文件内容。多 Book 时必须传 `--metadata` 或
+`--session-id`。单次传输最大 32 MiB；二进制新增还受当前 Live 消息预算约束，准确值见
+`sigil.capabilities.list` 的 `external_binary_add_size_max`。文本新增/替换和二进制替换使用 SDK
+分块写入。
+
+外部上传仍只做 transaction staging，不会自动 preview、validate 或 commit。上传过程中事务
+不会因 idle timeout 回滚，commit 会返回 `Busy`；上传成功或失败后该保护自动释放。批次中途失败
+会返回 `completed_indices` 和 `next_index`。先调用 `sigil.transaction.status` 确认事务仍活动，再用
+`--start-at next_index` 继续；不要从 0 重传已经暂存的路径。
+
 当前代理转发 request、response 和 notification，并维护 HTTP session/protocol headers。
 当前 MCP Adapter 不发送 server-initiated request；如果未来加入 sampling、elicitation 或反向
 请求，代理需要同步升级。
@@ -207,7 +267,8 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 3. 调用 `sigil.transaction.begin`；
 4. 普通章节使用 `sigil.transaction.add_text_resource`；大型章节先按 UTF-8 计算字节数，再使用
    `begin_text_resource`、`write_text_chunk`、`finish_text_write`；
-5. 使用 `sigil.transaction.add_binary_resource` 导入不超过 5 MiB 的图片等资源；
+5. 本地图片、XHTML/CSS 和其他文件优先写入批量清单并运行 `sigil_mcp_upload.py`；只有模型已经
+   持有的少量二进制才使用 `sigil.transaction.add_binary_resource`；
 6. 全部 manifested 资源完成暂存后，使用 `sigil.transaction.update_metadata` 和最终
    `sigil.transaction.update_spine`；后者会把同事务的新资源先合并进 staged manifest；
 7. 调用 `sigil.transaction.preview`；
@@ -235,7 +296,7 @@ python3 sigil_mcp_stdio_proxy.py --runtime-dir /runtime/path --session-id <id>
 `transaction_id`，后续每次 transaction 工具调用都必须携带它。
 
 重连、调用超时或 Agent 丢失 handle 时先调用 `sigil.transaction.status`。它不需要 handle，
-会返回活动 transaction ID、闲置时间、剩余超时和未完成文本上传数；不要在状态未知时直接
+会返回活动 transaction ID、闲置时间、剩余超时、未完成文本上传数和外部导入数；不要在状态未知时直接
 重复 begin 或 commit。
 
 stage 期间 live Book 不改变，但 `sigil.transaction.read_text` 可以读取本事务先前写入的内容。
@@ -311,11 +372,11 @@ revision、package invariants 和 checkpoint 要求；检查通过即直接应�
 MCP 插件是当前账户下的可信本地 Python 代码，不是 OS sandbox。网络 token 只保护 loopback
 endpoint，不是插件方法级权限系统。
 
-首版明确不提供：
+明确不提供：
 
 - `0.0.0.0` 或公网监听；
 - 任意系统命令、Python eval 或 QAction 执行；
-- 任意本机文件读取/写入；
+- 服务端按路径读取或写入任意本机文件；外部上传器只读取调用者显式传入的客户端源路径；
 - Agent 指定输出路径的 EPUB export；
 - 直接访问展开 EPUB 目录；
 - 绕过 revision/transaction 的磁盘写回。
@@ -325,10 +386,11 @@ revision、writer lock、transaction 和 package validation。
 
 ## 11. 当前限制
 
-当前 MCP surface 已允许用 `sigil.transaction.add_binary_resource` 导入解码后不超过 5 MiB 的
-小型二进制资源。以下能力尚未进入公共 MCP 工具：
+当前 MCP surface 可用 `sigil.transaction.add_binary_resource` 导入解码后不超过 5 MiB 的
+小型二进制，也可通过外部原始字节接口批量导入本地文件。后者不是 MCP tool，需要 Host/Agent
+具有本地命令执行能力；纯 MCP Host 继续使用 inline/chunk 工具。以下能力尚未进入公共 MCP 工具：
 
-- 分块 binary 写入和 archive 操作；
+- binary 新资源的 Live 分块新增和 archive 操作；
 - input/output/validation 插件专用 RPC；
 - native EPUB-safe source formatter service；
 - EPUB structure normalizer service；
@@ -355,6 +417,7 @@ ctest --test-dir cmake-build-debug --output-on-failure
 - 官方 MCP client lifecycle；
 - 结构化 tool result 和 tool error；
 - bearer、Host、Origin、loopback URL；
+- 外部原始字节导入、长度/SHA-256/UTF-8 校验、上传期间事务保护和客户端清单；
 - transaction 状态、直接 commit、idle 和 shutdown rollback；
 - atomic owner-only metadata；
 - stdio subprocess 实际转发；

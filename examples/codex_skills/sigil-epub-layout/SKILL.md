@@ -41,8 +41,9 @@ python3 scripts/validate_epub.py OUTPUT.epub --strict-layout
    scene breaks, footnotes, image dimensions, and unmatched assets. Do not send local content to
    a model or network service.
 2. Inspect the live Book with `sigil.capabilities.list`, `sigil.book.info`,
-   `sigil.book.package`, and `sigil.resource.list`. Require the binary-add tool when importing
-   images. Stop if multiple Books are ambiguous or the running plugin lacks required tools.
+   `sigil.book.package`, and `sigil.resource.list`. Require external import or the binary-add
+   fallback when importing images. Stop if multiple Books are ambiguous or the running plugin lacks
+   required capabilities.
 3. Treat a Book with meaningful existing content as an edit, not a blank template. Do not replace
    it wholesale without explicit user approval. Read adjacent XHTML/CSS before editing it.
 4. Build a page plan from source evidence. Parameterize optional front matter, chapter hierarchy,
@@ -54,6 +55,8 @@ python3 scripts/validate_epub.py OUTPUT.epub --strict-layout
 6. Apply the MCP transaction sequence in `references/mcp-workflow.md`. For a new book, stage all
    resources before updating metadata/spine, then preview, validate, and commit once.
    A commit applies immediately without a native confirmation dialog.
+   For local or generated files, create one external-import manifest and call the uploader; never
+   place image Base64 or repeated long file content in model context.
 7. After the commit, immediately batch-read every newly added text resource. Fail the run if any file is empty,
    malformed, truncated, or different from the generated text. Confirm that no transaction remains
    active.

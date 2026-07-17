@@ -15,8 +15,11 @@ Required tools for a new illustrated book:
 - transaction begin, add/replace text, add binary, metadata, spine, preview, validate, commit, rollback
 - chunked text begin/write/finish/abort for large XHTML or CSS
 
-`sigil.transaction.add_binary_resource` accepts strict Base64 and at most 5 MiB decoded data per
-resource. Do not downsample or omit a larger image silently.
+When `sigil.capabilities.list` reports `external_import.available=true`, local images, generated
+XHTML/CSS, fonts, and other files must use `sigil_mcp_upload.py`, preferably through one JSON
+manifest. Do not read Base64 into model context, split it across tool calls, or delegate that token
+transfer to another agent. `sigil.transaction.add_binary_resource` is only the fallback for a small
+binary value the model already holds; it accepts at most 5 MiB decoded data.
 
 Do not send a large document as one JSON string. Page reads from `start=0` through each returned
 `next_start`; those positions are UTF-16 code units. For large writes, declare the UTF-8 byte size,
@@ -40,9 +43,11 @@ Create a new book in one transaction so resources, metadata, manifest, and spine
 and one checkpoint.
 
 1. Begin with a descriptive label and `checkpoint=auto`.
-2. Import images with `add_binary_resource`, `add_to_spine=false`.
-3. Add generated XHTML/CSS with `add_text_resource`, `add_to_spine=false`. Finish every chunked text
-   upload before package updates.
+2. Write generated XHTML/CSS to local files and create one import manifest with every image and
+   generated file. Run `sigil_mcp_upload.py --manifest imports.json`; keep images and CSS out of the
+   spine and use deterministic unique manifest IDs.
+3. Use MCP add/chunk tools only for content that exists solely in model output. Finish every
+   chunked text upload before package updates.
 4. Replace blank-template XHTML, nav, or CSS only with current resource IDs and revisions.
 5. Replace ordered metadata with the original identifier plus verified title, roles, language,
    series, description, and current UTC modified time.
@@ -59,6 +64,9 @@ and one checkpoint.
 - Tool error before commit: call rollback with the printed transaction ID.
 - Validation or preview invalid: rollback; do not call commit.
 - Connection closes: reconnect, call `sigil.transaction.status`, and roll back the active transaction.
+- External uploader fails: preserve its short error and successful item count, inspect transaction
+  status/preview, then use the returned `next_index` with `--start-at` or roll back. Never restart
+  the manifest from zero in the same transaction, and never regenerate Base64.
 - Revision conflict: reread live content/package and rebuild the plan; never retry with stale values.
 - Plugin or Sigil exits: treat the transaction as uncommitted until live Book inspection proves
   otherwise.

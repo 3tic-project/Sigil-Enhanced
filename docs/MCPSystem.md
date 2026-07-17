@@ -7,7 +7,8 @@
 - MCP specification: 2025-11-25
 - Python SDK: `mcp>=1.28.1,<2`
 - Delivery model: installable Live Python Plugin API v2 book-session plugin
-- Implementation: available on `feature/mcp-system` with 30 tools and two transports
+- Implementation: available on `feature/mcp-system` with 38 tools, two MCP transports,
+  and one authenticated out-of-band import endpoint
 
 This document is the tracked implementation contract for the Sigil Enhanced MCP
 adapter. The longer research draft remains in
@@ -55,8 +56,10 @@ Primary references:
 
 ```text
 MCP Host / coding agent
-        |
-        | Streamable HTTP on 127.0.0.1 + bearer token
+        |\
+        | +-- raw local files -> /api/v1/imports
+        |     (uploader reads the caller-selected path)
+        | Streamable HTTP / stdio + bearer token
         v
 Sigil MCP adapter (Python, one book-session per open Book)
         |
@@ -93,8 +96,8 @@ The adapter endpoint uses Streamable HTTP:
 - remove owned metadata on orderly shutdown;
 - stop on Book close, plugin cancellation, or Live API heartbeat failure.
 
-The metadata contains the endpoint, token, process ID, session ID, Book identity,
-protocol version, and creation time. It is a local secret and must not be logged,
+The metadata contains the MCP endpoint, external import endpoint, token, process
+ID, session ID, Book identity, protocol version, and creation time. It is a local secret and must not be logged,
 returned by a tool, stored in an EPUB, or committed to source control.
 
 A bundled standard-library stdio proxy translates newline-delimited MCP JSON-RPC
@@ -107,11 +110,46 @@ macOS Application Support, and the current user's temporary directory.
 Automatic discovery ignores metadata whose owning plugin process is no longer
 running, while explicit `--metadata` selection retains precise connection errors.
 
+## Out-Of-Band Resource Import
+
+The external import channel exists because JSON/MCP is the wrong data plane for
+local files. In the observed 18-image layout run, the agent generated roughly
+9 MB of Base64, repeatedly tried to read truncated command output, considered
+hundreds of chunk calls, and let transactions approach their idle timeout. None
+of those attempts added semantic information for the model.
+
+`POST /api/v1/imports` therefore accepts raw bytes outside the model context.
+The bundled `sigil_mcp_upload.py` discovers the owner-only session metadata,
+reads only source paths explicitly supplied to that client process, computes
+SHA-256, and streams one file at a time. A JSON manifest lets one shell command
+stage a complete image/XHTML/CSS set. Only short resource metadata and results
+appear in orchestration logs.
+
+The endpoint:
+
+- binds to the same loopback server and requires the same bearer token;
+- applies the same Host and Origin validation as `/mcp`;
+- requires exact `Content-Length` and `X-Content-SHA256` values;
+- spools to an owner-only temporary file and stages only after full validation;
+- deletes the temporary file on success, error, disconnect, or cancellation;
+- supports add and revision-checked replace for strict UTF-8 text and binary data;
+- never accepts a server-side source path or exposes a general filesystem API;
+- keeps the transaction alive while uploading and blocks commit until staging finishes.
+
+One transfer is limited to 32 MiB and two may be in flight. Text add/replace and
+binary replace use Live SDK streaming writers. Binary addition is additionally
+bounded by the current Live message budget; its exact limit is returned as
+`external_binary_add_size_max`. MCP-only hosts without a local command runner can
+continue using inline/chunked MCP tools.
+
 ## Concurrency
 
 `sigil_live` uses one synchronous `QLocalSocket` connection. All MCP tool and
 resource calls therefore enter a single-worker call gate. The HTTP layer may
 receive concurrent requests, but it may not call the Live SDK concurrently.
+External HTTP bodies may arrive concurrently with MCP requests, but transaction
+checks and staging still enter the same gate. Active imports suppress idle
+rollback; commit returns `Busy` until they finish.
 
 Each endpoint permits one active write transaction. It is addressed by the
 explicit `transaction_id` returned from begin. The shared endpoint token does not
@@ -235,6 +273,9 @@ The adapter does not expose:
 
 MCP tool annotations are hints for Host approval UX. Real enforcement remains in
 the Live API's revision, resource, path, transaction, and plugin-type checks.
+The uploader is a separate client-side utility: it reads only paths explicitly
+passed by its caller and sends bytes to the authenticated endpoint. The server
+never resolves or opens a caller-provided local source path.
 
 ## Error Contract
 
@@ -275,6 +316,8 @@ The tracked test suite must cover:
 - deterministic tool names and JSON Schemas;
 - MCP initialize, tools/list, resources/list/read, prompts/list/get, and tools/call;
 - bearer, Host, Origin, and loopback behavior;
+- raw-byte external imports, strict length/hash checks, UTF-8 validation, and
+  client-side single-file/manifest behavior;
 - resource pagination and current in-memory text;
 - UTF-16 editor edits and revision errors;
 - transaction state, preview, validation, direct commit, and rollback;

@@ -54,7 +54,10 @@ $sigil-epub-layout 使用 /absolute/source/path 的 TXT 和图片，按 standard
 - commit 后立即批量或分段回读新增文本，拒绝空文件、截断或生成内容不一致。
 - 长 XHTML/CSS 使用独立的 range/chunk MCP 工具：UTF-16 offset 只用于读取，写入 offset
   必须按 UTF-8 字节累计；单文档不得超过 64 MiB。
-- 单个 `add_binary_resource` 解码后最大 5 MiB，超限时停止并报告，不静默压缩。
+- 运行中的 MCP 报告 external import 时，本地图片、已生成 XHTML/CSS、字体等必须写入 JSON
+  清单并调用 `sigil_mcp_upload.py --manifest`；禁止把 Base64 读进模型上下文或交给子 Agent 搬运。
+- `add_binary_resource` 只作为模型已持有少量二进制的后备，解码后最大 5 MiB；任何路径都不得
+  静默压缩或遗漏图片。
 - 当前公共 MCP 工具不提供 Save As；由用户保存到新的 EPUB 路径，再运行磁盘验收。
 - bundled validator 不是 EPUBCheck 的完整替代；未实际运行 EPUBCheck 时必须明确说明。
 

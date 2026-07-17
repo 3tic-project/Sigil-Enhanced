@@ -4,7 +4,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| Adapter | `Sigil Enhanced MCP 0.6.0` |
+| Adapter | `Sigil Enhanced MCP 0.7.0` |
 | MCP spec | `2025-11-25` |
 | Python SDK | `mcp>=1.28.1,<2`，发布包固定 `1.28.1` |
 | Live API | v2 / protocol 1 |
@@ -66,10 +66,13 @@ Annotations 只是 MCP Host UI 提示，不是授权判定。
 - `text_range_utf16_units_max=1048576`
 - `text_write_size_max=67108864`
 - `text_write_chunk_size_max=1048576`
+- `external_import_size_max=33554432`
+- `external_binary_add_size_max`：按当前 Live 单消息预算动态计算
 - `editor_edits_max=1000`
 - `position_encoding=utf-16`
 - `active_transactions=1`
 - transaction idle timeout
+- `external_import`：原始字节 endpoint、认证方式、add/replace、text/binary 与批量上传器
 - 当前可用 native `enhancements`，首版为空列表
 
 ## 4. Book 与资源查询
@@ -238,8 +241,9 @@ Editor 三个写工具立即修改 live Book，不属于 staged transaction。
 参数：无，不需要预先知道 transaction ID。
 
 始终返回正常结果。无事务时为 `active=false`、`transaction_id=null`；有事务时还返回
-`base_book_revision`、`checkpoint`、`idle_seconds`、`expires_in_seconds` 和
-`pending_text_uploads`。用于重连、工具超时或 Agent 状态丢失后判断应继续、rollback 还是新建事务。
+`base_book_revision`、`checkpoint`、`idle_seconds`、`expires_in_seconds`、
+`pending_text_uploads` 和 `pending_external_imports`。用于重连、工具或上传超时、Agent 状态丢失后
+判断应继续、rollback 还是新建事务。外部上传进行期间不会触发 idle rollback，commit 返回 `Busy`。
 
 ### `sigil.transaction.read_text`
 
@@ -372,8 +376,8 @@ commit 会在资源加入 Book 后立即物化文本缓存；随后直接保存�
 | `manifested` | boolean | 否 | 默认 `true`。 |
 
 Base64 在进入 Live API 前严格校验，路径、manifest ID、media type 和最终 package invariants
-仍由宿主验证。该工具适合逐个导入图片、字体等小型二进制资源；更大的文件应由未来的分块
-MCP 工具处理。
+仍由宿主验证。该工具只适合模型本身已经持有的少量小型二进制内容。本地图片、字体和生成文件
+应使用第 12 节外部导入接口，避免 Base64 进入模型上下文。
 
 ### `sigil.transaction.remove_resource`
 
@@ -463,7 +467,79 @@ URI 只在当前 Book endpoint 内有意义。
 
 要求先复现和定位问题，只做最小改动；冲突时重新读取，不能覆盖。
 
-## 12. 完整工具清单
+## 12. 外部原始文件导入 API
+
+该接口不是 MCP tool，而是同一 Book Session 的本地数据通道。Agent 只需通过 MCP 获取
+`transaction_id`，随后让本地上传器读取文件；图片、长 XHTML、CSS 或字体字节不会进入模型消息。
+
+### 12.1 HTTP 契约
+
+`POST /api/v1/imports`，使用 metadata 中的 `external_import_endpoint`。请求必须包含：
+
+| 位置 | 名称 | 说明 |
+| --- | --- | --- |
+| Header | `Authorization` | 与 `/mcp` 相同的 `Bearer <token>`。 |
+| Header | `Content-Length` | 原始文件精确字节数，最大 32 MiB。 |
+| Header | `X-Content-SHA256` | 64 位十六进制 SHA-256。 |
+| Query | `transaction_id` | 当前活动事务。 |
+| Query | `kind` | `text` 或 `binary`；text 必须是严格 UTF-8。 |
+| Query | `operation` | `add`（默认）或 `replace`。 |
+
+add 还使用 `book_path`、`media_type`、`manifest_id`、`properties`、`fallback`、`overlay`、
+`add_to_spine` 和 `manifested`。replace 使用 `resource_id` 与 `expected_revision`。成功响应为
+HTTP 201，正文是正常 transaction staged result，并附加
+`external_import.operation/kind/size/sha256`。
+
+服务端不接受 `source_path`，不会代替调用者读取任意本机路径。请求先完整写入私有临时文件，
+长度、哈希和 UTF-8 验证全部成功后才进入 staged view；任何失败都会删除临时文件。最多两个上传
+并发。文本新增/替换和二进制替换可使用 32 MiB 上限；二进制新增仍受 Live 消息预算限制，调用
+前读取 `external_binary_add_size_max`。
+
+### 12.2 单文件上传器
+
+```sh
+python3 examples/live_plugins/SigilMcpServer/sigil_mcp_upload.py \
+  --transaction TRANSACTION_ID \
+  --file /absolute/source/cover.jpg \
+  --book-path Images/cover.jpg \
+  --media-type image/jpeg \
+  --manifest-id cover-image \
+  --no-add-to-spine
+```
+
+上传器自动发现唯一活动 Book；多 Book 时必须加 `--metadata` 或 `--session-id`。manifested 新资源
+必须提供 `manifest_id`。替换现有资源时改用 `--operation replace --resource-id ID
+--expected-revision REVISION`。
+
+### 12.3 批量清单
+
+```json
+{
+  "transaction_id": "TRANSACTION_ID",
+  "resources": [
+    {
+      "source": "generated/chapter.xhtml",
+      "book_path": "Text/chapter.xhtml",
+      "media_type": "application/xhtml+xml",
+      "manifest_id": "chapter"
+    },
+    {
+      "source": "images/cover.jpg",
+      "book_path": "Images/cover.jpg",
+      "media_type": "image/jpeg",
+      "manifest_id": "cover-image",
+      "add_to_spine": false
+    }
+  ]
+}
+```
+
+`source` 相对清单目录解析。执行 `sigil_mcp_upload.py --manifest imports.json` 后，上传器顺序暂存
+全部条目并只输出短 JSON 结果。上传结束后仍须调用 transaction preview、validate 和 commit；
+外部接口不会自动提交。若第 N 项失败，错误 JSON 会返回 `completed_indices`、`failed_index` 和
+`next_index`；确认同一事务仍活动后，用 `--start-at next_index` 继续，不要重传已经暂存的条目。
+
+## 13. 完整工具清单
 
 ```text
 sigil.session.info

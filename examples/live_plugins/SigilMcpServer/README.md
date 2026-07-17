@@ -21,6 +21,25 @@ The status bar reports the generated `sigil-mcp-<session>.json` metadata path.
 That owner-only file contains a dynamic loopback endpoint and bearer token. Do
 not paste the token into logs, EPUB content, issue reports, or source files.
 
+## Import Local Files Without Base64
+
+For local images, XHTML, CSS, fonts, or other generated files, use the bundled
+uploader instead of placing file bytes in an MCP tool argument:
+
+```console
+python3 sigil_mcp_upload.py --transaction TRANSACTION_ID \
+  --file /absolute/path/cover.jpg --book-path Images/cover.jpg \
+  --media-type image/jpeg --manifest-id cover-image --no-add-to-spine
+```
+
+The uploader discovers the same owner-only session metadata and sends raw bytes
+to `POST /api/v1/imports` with bearer, length, and SHA-256 checks. Use
+`--manifest imports.json` to stage many files with one command. The service never
+accepts a server-side source path. Each upload is limited to 32 MiB; query
+`sigil.capabilities.list` for the smaller session-specific binary-add limit.
+On a partial batch failure, use the reported `next_index` with `--start-at`
+after confirming that the same transaction is still active.
+
 ## Connect
 
 Streamable HTTP clients use the metadata `endpoint` and this header:
@@ -50,7 +69,9 @@ chapters, CSS/layout changes, OPF metadata, spine work, or multiple resources:
    writes, use the `state_token` from the same editor-state read.
 2. Call `sigil.transaction.begin`.
 3. Stage changes using the returned `transaction_id`.
-   For large text, page reads with `sigil.resource.read_text_range` or
+   For local files, prefer `sigil_mcp_upload.py`; their content never needs to
+   enter the model context. For generated text that exists only in the model,
+   page reads with `sigil.resource.read_text_range` or
    `sigil.transaction.read_text_range`, then use the begin/chunk/finish text
    tools instead of one oversized JSON value.
    Stage all new manifested resources before `sigil.transaction.update_spine`;
@@ -62,9 +83,9 @@ chapters, CSS/layout changes, OPF metadata, spine work, or multiple resources:
 
 Uncommitted transactions roll back after five idle minutes by default, when the
 server stops, or when the Book session ends.
-After reconnecting or losing a tool response, call `sigil.transaction.status`
+After reconnecting or losing a tool/upload response, call `sigil.transaction.status`
 before beginning or committing; it reports the active handle, idle expiry, and
-unfinished text-upload count without requiring a transaction ID.
+unfinished text-upload and external-import counts without requiring a transaction ID.
 
 Text range pages are limited to 1 Mi UTF-16 code units. Chunked text uploads are
 limited to 64 MiB, use exact UTF-8 byte offsets and 1 MiB host chunks, and are
