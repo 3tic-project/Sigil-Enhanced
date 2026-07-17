@@ -94,6 +94,65 @@ class SigilMcpCatalogTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(specs[0]["kind"], "text")
         self.assertTrue(specs[0]["add_to_spine"])
 
+    async def test_batch_upload_manifest_rejects_duplicate_targets_before_upload(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            for name in ("one.css", "two.css"):
+                (root / name).write_text("body {}", encoding="utf-8")
+            base_resources = [
+                {
+                    "source": "one.css",
+                    "book_path": "Styles/one.css",
+                    "manifest_id": "one",
+                },
+                {
+                    "source": "two.css",
+                    "book_path": "Styles/two.css",
+                    "manifest_id": "two",
+                },
+            ]
+            cases = {
+                "book_path": {"book_path": "Styles/one.css"},
+                "manifest_id": {"manifest_id": "one"},
+                "transaction_id": {"transaction_id": "transaction-2"},
+            }
+            for label, change in cases.items():
+                resources = [dict(item) for item in base_resources]
+                resources[1].update(change)
+                manifest = root / (label + ".json")
+                manifest.write_text(json.dumps({
+                    "transaction_id": "transaction-1",
+                    "resources": resources,
+                }), encoding="utf-8")
+                with self.subTest(label=label), self.assertRaises(UploadError):
+                    _manifest_specs(manifest)
+
+    async def test_batch_upload_manifest_rejects_duplicate_replace_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            for name in ("one.css", "two.css"):
+                (root / name).write_text("body {}", encoding="utf-8")
+            manifest = root / "replace.json"
+            manifest.write_text(json.dumps({
+                "transaction_id": "transaction-1",
+                "resources": [
+                    {
+                        "source": "one.css",
+                        "operation": "replace",
+                        "resource_id": "resource-1",
+                        "expected_revision": 1,
+                    },
+                    {
+                        "source": "two.css",
+                        "operation": "replace",
+                        "resource_id": "resource-1",
+                        "expected_revision": 1,
+                    },
+                ],
+            }), encoding="utf-8")
+            with self.assertRaises(UploadError):
+                _manifest_specs(manifest)
+
     async def test_batch_uploader_reports_a_resumable_failure_index(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)

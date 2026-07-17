@@ -269,10 +269,50 @@ def _manifest_specs(path, transaction_id=None):
     if not isinstance(manifest, dict) or not isinstance(manifest.get("resources"), list):
         raise UploadError("manifest must contain a resources array")
     default_transaction = transaction_id or manifest.get("transaction_id")
-    return [
+    specs = [
         normalize_spec(item, path.parent, default_transaction)
         for item in manifest["resources"]
     ]
+    _validate_batch_specs(specs)
+    return specs
+
+
+def _validate_batch_specs(specs):
+    transaction_ids = set()
+    add_paths = {}
+    manifest_ids = {}
+    replace_ids = {}
+    for index, spec in enumerate(specs):
+        transaction_ids.add(spec["transaction_id"])
+        if spec["operation"] == "add":
+            book_path = spec["book_path"]
+            if book_path in add_paths:
+                raise UploadError(
+                    "duplicate add book_path at resources {0} and {1}: {2}".format(
+                        add_paths[book_path], index, book_path
+                    )
+                )
+            add_paths[book_path] = index
+            if spec.get("manifested", True):
+                manifest_id = spec["manifest_id"]
+                if manifest_id in manifest_ids:
+                    raise UploadError(
+                        "duplicate manifest_id at resources {0} and {1}: {2}".format(
+                            manifest_ids[manifest_id], index, manifest_id
+                        )
+                    )
+                manifest_ids[manifest_id] = index
+        else:
+            resource_id = spec["resource_id"]
+            if resource_id in replace_ids:
+                raise UploadError(
+                    "duplicate replace resource_id at resources {0} and {1}: {2}".format(
+                        replace_ids[resource_id], index, resource_id
+                    )
+                )
+            replace_ids[resource_id] = index
+    if len(transaction_ids) > 1:
+        raise UploadError("all manifest resources must use the same transaction_id")
 
 
 def main(argv=None):
@@ -303,7 +343,6 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
     try:
-        _, metadata = discover_metadata(args.metadata, args.runtime_dir, args.session_id)
         if args.manifest:
             specs = _manifest_specs(args.manifest.expanduser(), args.transaction)
         else:
@@ -324,6 +363,7 @@ def main(argv=None):
             if args.manifested is not None:
                 raw["manifested"] = args.manifested
             specs = [normalize_spec(raw, pathlib.Path.cwd())]
+        _, metadata = discover_metadata(args.metadata, args.runtime_dir, args.session_id)
         if args.start_at < 0 or args.start_at > len(specs):
             raise UploadError("--start-at is outside the manifest resource range")
         if not args.manifest and args.start_at:
