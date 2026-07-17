@@ -114,7 +114,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.SIGIL_PYTHON_CACHE_DIR }}
-          key: sigil-enhanced-windows-x64-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-windows.txt') }}
+          key: sigil-enhanced-windows-x64-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('winvirtpy.cmake', 'src/qt6sigil.cmake', 'src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-windows.txt', 'src/Resource_Files/python_pkg/windows_python_gather6.py', 'src/Resource_Files/python_pkg/python_paths6.py') }}
           restore-keys: |
             sigil-enhanced-windows-x64-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-
 
@@ -190,6 +190,8 @@ jobs:
             -G "Ninja" ^
             -DCMAKE_BUILD_TYPE="%BUILD_TYPE%" ^
             -DPKG_SYSTEM_PYTHON=1 ^
+            -DUSE_VIRT_PY=1 ^
+            -DPACKAGE_PYSIDE6=1 ^
             -DQTVER="%QT_VERSION%" ^
             -DQt6_DIR="%QT_DIR%\lib\cmake\Qt6" ^
             -DSIGIL_PYTHON_CACHE_DIR="%SIGIL_PYTHON_CACHE_DIR%"
@@ -250,7 +252,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.SIGIL_PYTHON_CACHE_DIR }}
-          key: sigil-enhanced-windows-x86-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-windows.txt') }}
+          key: sigil-enhanced-windows-x86-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-${{ hashFiles('winvirtpy.cmake', 'src/qt6sigil.cmake', 'src/Resource_Files/python_pkg/winreqs.txt', 'src/Resource_Files/python_pkg/requirements-windows.txt', 'src/Resource_Files/python_pkg/windows_python_gather6.py', 'src/Resource_Files/python_pkg/python_paths6.py') }}
           restore-keys: |
             sigil-enhanced-windows-x86-python-${{ env.PYTHON_VERSION }}-qt${{ env.QT_VERSION }}-
 
@@ -303,6 +305,8 @@ jobs:
             -G "Ninja" ^
             -DCMAKE_BUILD_TYPE="%BUILD_TYPE%" ^
             -DPKG_SYSTEM_PYTHON=1 ^
+            -DUSE_VIRT_PY=1 ^
+            -DPACKAGE_PYSIDE6=1 ^
             -DQTVER="%QT_VERSION%" ^
             -DQt6_DIR="%QT_DIR%\lib\cmake\Qt6" ^
             -DSIGIL_PYTHON_CACHE_DIR="%SIGIL_PYTHON_CACHE_DIR%"

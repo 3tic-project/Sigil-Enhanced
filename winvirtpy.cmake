@@ -20,7 +20,19 @@ if(NOT EXISTS "${SIGIL_WIN_PYTHON_VENV_DIR}/Scripts/python.exe")
     endif()
 endif()
 
-if(NOT EXISTS "${SIGIL_WIN_REQUIREMENTS_STAMP}")
+set(SIGIL_WIN_PYSIDE6_RESULT 1)
+if(EXISTS "${SIGIL_WIN_PYTHON_VENV_DIR}/Scripts/python.exe")
+    # A cache entry can retain its requirements stamp even if a package was
+    # removed or an interrupted pip install left it incomplete.
+    execute_process(
+        COMMAND "${SIGIL_WIN_PYTHON_VENV_DIR}/Scripts/python.exe" -c "import PySide6, shiboken6"
+        RESULT_VARIABLE SIGIL_WIN_PYSIDE6_RESULT)
+endif()
+
+if(NOT EXISTS "${SIGIL_WIN_REQUIREMENTS_STAMP}" OR NOT SIGIL_WIN_PYSIDE6_RESULT EQUAL 0)
+    if(NOT SIGIL_WIN_PYSIDE6_RESULT EQUAL 0)
+        message(STATUS "Repairing cached virtual Python environment missing PySide6.")
+    endif()
     # Update venv pip
     execute_process(COMMAND "${SIGIL_WIN_PYTHON_VENV_DIR}/Scripts/python.exe" -m pip install -U pip
                     RESULT_VARIABLE SIGIL_WIN_PIP_UPDATE_RESULT)
@@ -33,6 +45,12 @@ if(NOT EXISTS "${SIGIL_WIN_REQUIREMENTS_STAMP}")
                     RESULT_VARIABLE SIGIL_WIN_PIP_INSTALL_RESULT)
     if(NOT SIGIL_WIN_PIP_INSTALL_RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to install Python requirements into ${SIGIL_WIN_PYTHON_VENV_DIR}")
+    endif()
+    execute_process(
+        COMMAND "${SIGIL_WIN_PYTHON_VENV_DIR}/Scripts/python.exe" -c "import PySide6, shiboken6"
+        RESULT_VARIABLE SIGIL_WIN_PYSIDE6_RESULT)
+    if(NOT SIGIL_WIN_PYSIDE6_RESULT EQUAL 0)
+        message(FATAL_ERROR "PySide6 is unavailable after installing ${SIGIL_WIN_REQUIREMENTS}")
     endif()
     file(GLOB SIGIL_WIN_OLD_STAMPS "${SIGIL_WIN_PYTHON_VENV_DIR}/.sigil-requirements-*.stamp")
     if(SIGIL_WIN_OLD_STAMPS)

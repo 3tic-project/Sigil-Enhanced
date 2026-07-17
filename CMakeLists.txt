@@ -159,6 +159,11 @@ if ( APPLE )
     find_package(Python3 3.9 COMPONENTS Interpreter Development)
 endif()
 if ( WIN32 )
+    # The Windows package includes PySide6 unless explicitly disabled on the
+    # initial CMake invocation. Set this before creating the cached venv.
+    if ( NOT DEFINED PACKAGE_PYSIDE6 )
+        set( PACKAGE_PYSIDE6 1 CACHE BOOL "Bundle PySide6 with the Windows package" )
+    endif()
     if ( DOWNLOAD_QT )
         include(windownloadqt.cmake)
         set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_BINARY_DIR}/Qt${QTVER}/lib/cmake")

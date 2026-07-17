@@ -439,11 +439,6 @@ elseif (MSVC)
     configure_file( ${ISS_MAIN_LOCATION} ${ISS_CONFIGURED_LOCATION} )
 
     if ( PKG_SYSTEM_PYTHON )
-        # Include PySide6 with the bundled Python by default.
-        # Pass -DPACKAGE_PYSIDE6=0 to initial cmake command to disable.
-        if ( NOT DEFINED PACKAGE_PYSIDE6 )
-            set( PACKAGE_PYSIDE6 1 )
-        endif()
         configure_file( Resource_Files/python_pkg/python_paths6.py ${CMAKE_BINARY_DIR}/python_paths6.py )
         configure_file( Resource_Files/python_pkg/windows_python_gather6.py ${CMAKE_BINARY_DIR}/windows_python_gather6.py COPYONLY )
     endif()

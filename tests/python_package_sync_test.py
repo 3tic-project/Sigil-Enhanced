@@ -82,12 +82,20 @@ class PythonPackageSyncTest(unittest.TestCase):
         appimage_gather = appimage.index("appimg_python3_gather.py")
         self.assertLess(appimage_sync, appimage_gather)
         self.assertIn("if ( PACKAGE_PYSIDE6 )", cmake)
+        self.assertIn("Bundle PySide6 with the Windows package", (ROOT / "CMakeLists.txt").read_text(encoding="utf-8"))
         self.assertIn("required_site_packages", gather)
         self.assertIn("Required bundled Python package not found", gather)
         self.assertIn("def ensure_pyside6():", gather)
         self.assertIn("'PySide6=={0}'.format(pyside6_version)", gather)
         self.assertIn("pyside6_version = '${QTVER}'", paths_template)
         self.assertIn("sys_dlls = r'${SYS_DLL_DIR}'", paths_template)
+
+    def test_windows_venv_repairs_incomplete_pyside6_cache_entries(self):
+        cmake = (ROOT / "winvirtpy.cmake").read_text(encoding="utf-8")
+
+        self.assertIn('import PySide6, shiboken6', cmake)
+        self.assertIn('Repairing cached virtual Python environment missing PySide6.', cmake)
+        self.assertIn('PySide6 is unavailable after installing', cmake)
 
     def test_windows_python_paths_template_preserves_backslashes(self):
         template = (

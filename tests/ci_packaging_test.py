@@ -74,6 +74,11 @@ class CiPackagingTest(unittest.TestCase):
         )
         self.assertIn("&& !inputs.windows_only", self.workflow)
 
+    def test_windows_jobs_explicitly_enable_and_validate_pyside6_packaging(self):
+        self.assertEqual(self.workflow.count("-DUSE_VIRT_PY=1"), 2)
+        self.assertEqual(self.workflow.count("-DPACKAGE_PYSIDE6=1"), 2)
+        self.assertIn("'winvirtpy.cmake'", self.workflow)
+
     def test_release_version_metadata_is_consistent(self):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         parts = {
