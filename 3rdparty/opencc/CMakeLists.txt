@@ -237,10 +237,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     add_definitions(-O0 -g3)
   endif ()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  add_definitions(
-    /W4
-    /D "_CRT_SECURE_NO_WARNINGS"
-  )
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/W4>")
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 endif()
 
 if (NOT BUILD_SHARED_LIBS)

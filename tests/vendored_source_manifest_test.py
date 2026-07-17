@@ -65,6 +65,25 @@ class VendoredSourceManifestTest(unittest.TestCase):
         self.assertEqual(header_version.group(1), expected)
         self.assertIn("Upstream version: {0}".format(expected), readme)
 
+    def test_vendored_compiler_flags_do_not_leak_to_other_languages(self):
+        opencc = (ROOT / "3rdparty" / "opencc" / "CMakeLists.txt").read_text(
+            encoding="utf-8"
+        )
+        hunspell = (ROOT / "3rdparty" / "cmake" / "hunspell.cmake").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('$<$<COMPILE_LANGUAGE:CXX>:/W4>', opencc)
+        for definitions in re.findall(
+            r"add_definitions\((.*?)\)", opencc, flags=re.DOTALL
+        ):
+            self.assertNotIn("/W4", definitions)
+        self.assertNotIn("set(CMAKE_CXX_FLAGS", hunspell)
+        self.assertIn(
+            "target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)",
+            hunspell,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
