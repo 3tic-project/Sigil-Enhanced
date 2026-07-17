@@ -66,6 +66,14 @@ class CiPackagingTest(unittest.TestCase):
             r"release:\n(?:.*\n){0,8}\s+permissions:\n\s+contents: write",
         )
 
+    def test_manual_windows_only_mode_skips_macos_packages(self):
+        self.assertIn("windows_only:", self.workflow)
+        self.assertIn(
+            "Run only Windows package jobs. Useful for Windows CI debugging.",
+            self.workflow,
+        )
+        self.assertIn("&& !inputs.windows_only", self.workflow)
+
     def test_release_version_metadata_is_consistent(self):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         parts = {

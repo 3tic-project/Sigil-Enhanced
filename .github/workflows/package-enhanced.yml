@@ -3,6 +3,11 @@ name: Package Sigil-Enhanced
 on:
   workflow_dispatch:
     inputs:
+      windows_only:
+        description: Run only Windows package jobs. Useful for Windows CI debugging.
+        required: true
+        default: false
+        type: boolean
       build_windows_x86:
         description: Build the Windows x86 installer. Requires a matching 32-bit Qt archive URL.
         required: true
@@ -315,7 +320,7 @@ jobs:
   macos:
     name: macOS ${{ matrix.arch }} package
     needs: prepare
-    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && !inputs.windows_only) || (github.event_name != 'workflow_dispatch' && !contains(github.event.head_commit.message, '[skip ci]')) }}
     strategy:
       fail-fast: false
       matrix:
