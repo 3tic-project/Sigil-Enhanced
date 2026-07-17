@@ -45,6 +45,7 @@ class EditorState:
     cursor: int = None
     selection: Selection = None
     position_encoding: str = "utf-16"
+    state_token: str = None
 
     @classmethod
     def from_result(cls, value):
@@ -54,6 +55,7 @@ class EditorState:
             resource_id=value.get("resource_id"),
             book_path=value.get("book_path"),
             revision=value.get("revision"),
+            state_token=value.get("state_token"),
             cursor=value.get("cursor"),
             selection=Selection(**selection) if selection is not None else None,
             position_encoding=value.get("position_encoding", "utf-16"),
@@ -158,6 +160,78 @@ class _BinaryWriter:
         )
         self.finished = True
         return result
+
+
+def _text_chunks(value, maximum_bytes):
+    start = 0
+    while start < len(value):
+        end = min(len(value), start + maximum_bytes)
+        chunk = value[start:end]
+        encoded = chunk.encode("utf-8")
+        while len(encoded) > maximum_bytes:
+            width = max(1, int((end - start) * maximum_bytes / len(encoded)))
+            end = start + width
+            chunk = value[start:end]
+            encoded = chunk.encode("utf-8")
+        yield chunk, encoded
+        start = end
+
+
+class _TextWriter:
+    """An integrity-checked chunked transaction writer for UTF-8 text."""
+
+    def __init__(self, transaction, method, params):
+        self._transaction = transaction
+        self._rpc = transaction._rpc
+        result = self._rpc.call(method, transaction._params(params))
+        self.id = result["upload_id"]
+        self.chunk_size = result["chunk_size"]
+        self.max_size = result["max_size"]
+        self.expected_size = result["expected_size"]
+        self.received = 0
+        self._hash = hashlib.sha256()
+        self.finished = False
+
+    def write(self, text, offset=None):
+        if self.finished:
+            raise RuntimeError("text write is finished")
+        if not isinstance(text, str):
+            raise TypeError("text must be a string")
+        cursor = self.received if offset is None else offset
+        for chunk, encoded in _text_chunks(text, self.chunk_size):
+            result = self._rpc.call(
+                "transaction.writeTextChunk",
+                self._transaction._params(
+                    {"upload_id": self.id, "offset": cursor, "text": chunk}
+                ),
+            )
+            if not result.get("duplicate", False):
+                self._hash.update(encoded)
+            self.received = result["received"]
+            cursor = self.received
+        return self.received
+
+    def finish(self):
+        if self.finished:
+            raise RuntimeError("text write is finished")
+        result = self._rpc.call(
+            "transaction.writeTextEnd",
+            self._transaction._params(
+                {"upload_id": self.id, "sha256": self._hash.hexdigest()}
+            ),
+        )
+        self.finished = True
+        return result
+
+    def abort(self):
+        if self.finished:
+            return False
+        result = self._rpc.call(
+            "transaction.writeTextAbort",
+            self._transaction._params({"upload_id": self.id}),
+        )
+        self.finished = True
+        return result["aborted"]
 
 
 class InputWriter:
@@ -266,10 +340,28 @@ class Transaction:
             "transaction.readText", self._params({"resource_id": resource_id})
         )
 
+    def read_text_range(self, resource, start=0, max_utf16_units=1024 * 1024):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        return self._rpc.call(
+            "transaction.readTextRange",
+            self._params(
+                {
+                    "resource_id": resource_id,
+                    "start": start,
+                    "max_utf16_units": max_utf16_units,
+                }
+            ),
+        )
+
     def replace_text(self, resource, text, expected_revision=None):
         resource_id = resource.id if isinstance(resource, Resource) else resource
         if expected_revision is None:
             expected_revision = self.read_text(resource_id)["revision"]
+        encoded_size = len(text.encode("utf-8"))
+        if encoded_size > 4 * 1024 * 1024:
+            writer = self.begin_text_write(resource_id, encoded_size, expected_revision)
+            writer.write(text)
+            return writer.finish()
         return self._rpc.call(
             "transaction.replaceText",
             self._params(
@@ -279,6 +371,51 @@ class Transaction:
                     "text": text,
                 }
             ),
+        )
+
+    def begin_text_write(self, resource, size, expected_revision=None):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        if expected_revision is None:
+            if isinstance(resource, Resource):
+                expected_revision = resource.revision
+            else:
+                expected_revision = self.read_text(resource_id)["revision"]
+        return _TextWriter(
+            self,
+            "transaction.writeTextBegin",
+            {
+                "resource_id": resource_id,
+                "size": size,
+                "expected_revision": expected_revision,
+            },
+        )
+
+    def begin_text_add(
+        self,
+        book_path,
+        size,
+        media_type,
+        manifest_id=None,
+        properties=None,
+        fallback=None,
+        overlay=None,
+        add_to_spine=True,
+        manifested=True,
+    ):
+        return _TextWriter(
+            self,
+            "transaction.addTextBegin",
+            {
+                "book_path": book_path,
+                "size": size,
+                "media_type": media_type,
+                "manifest_id": manifest_id,
+                "properties": properties,
+                "fallback": fallback,
+                "overlay": overlay,
+                "add_to_spine": add_to_spine,
+                "manifested": manifested,
+            },
         )
 
     def apply_edits(self, resource, edits, expected_revision=None):
@@ -432,6 +569,20 @@ class Transaction:
             "add_to_spine": add_to_spine,
             "manifested": manifested,
         }
+        if isinstance(data, str) and len(data.encode("utf-8")) > 4 * 1024 * 1024:
+            writer = self.begin_text_add(
+                book_path,
+                len(data.encode("utf-8")),
+                media_type,
+                manifest_id=manifest_id,
+                properties=properties,
+                fallback=fallback,
+                overlay=overlay,
+                add_to_spine=add_to_spine,
+                manifested=manifested,
+            )
+            writer.write(data)
+            return writer.finish()
         if isinstance(data, str):
             params["text"] = data
         elif isinstance(data, (bytes, bytearray, memoryview)):
@@ -569,17 +720,24 @@ class BookApi:
     def resources(self, types=None, page_size=200):
         cursor = None
         while True:
-            params = {"page_size": page_size}
-            if types:
-                params["types"] = list(types)
-            if cursor is not None:
-                params["cursor"] = cursor
-            result = self._rpc.call("resource.list", params)
-            for item in result["items"]:
-                yield Resource.from_result(item)
+            result = self.list_resources(types=types, page_size=page_size, cursor=cursor)
+            yield from result["items"]
             cursor = result.get("next_cursor")
             if cursor is None:
                 break
+
+    def list_resources(self, types=None, page_size=200, cursor=None):
+        """Return one bounded resource page and its opaque continuation cursor."""
+        params = {"page_size": page_size}
+        if types:
+            params["types"] = list(types)
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = self._rpc.call("resource.list", params)
+        return {
+            "items": [Resource.from_result(item) for item in result["items"]],
+            "next_cursor": result.get("next_cursor"),
+        }
 
     def text_resources(self):
         return self.resources(types=("html", "css", "xml", "text", "opf", "ncx"))
@@ -594,19 +752,33 @@ class BookApi:
         resource_id = resource.id if isinstance(resource, Resource) else resource
         return self._rpc.call("resource.readText", {"resource_id": resource_id})
 
+    def read_text_range(self, resource, start=0, max_utf16_units=1024 * 1024):
+        resource_id = resource.id if isinstance(resource, Resource) else resource
+        return self._rpc.call(
+            "resource.readTextRange",
+            {
+                "resource_id": resource_id,
+                "start": start,
+                "max_utf16_units": max_utf16_units,
+            },
+        )
+
     def read_many(self, resources):
-        ids = [item.id if isinstance(item, Resource) else item for item in resources]
         items = []
         cursor = None
         while True:
-            params = {"resource_ids": ids}
-            if cursor is not None:
-                params["cursor"] = cursor
-            result = self._rpc.call("resource.readMany", params)
+            result = self.read_many_page(resources, cursor)
             items.extend(result["items"])
             cursor = result.get("next_cursor")
             if cursor is None:
                 return items
+
+    def read_many_page(self, resources, cursor=None):
+        ids = [item.id if isinstance(item, Resource) else item for item in resources]
+        params = {"resource_ids": ids}
+        if cursor is not None:
+            params["cursor"] = cursor
+        return self._rpc.call("resource.readMany", params)
 
     def read_binary(self, resource):
         resource_id = resource.id if isinstance(resource, Resource) else resource
@@ -683,25 +855,47 @@ class EditorApi:
             },
         )
 
-    def replace_selection(self, text, expected_revision=None, resource_id=None, label="Replace selection"):
+    def replace_selection(
+        self,
+        text,
+        expected_revision=None,
+        resource_id=None,
+        label="Replace selection",
+        expected_state_token=None,
+    ):
         state = self.get_state() if expected_revision is None or resource_id is None else None
+        state_token = expected_state_token
+        if state_token is None and state is not None:
+            state_token = state.state_token
         return self._rpc.call(
             "editor.replaceSelection",
             {
                 "resource_id": resource_id if resource_id is not None else state.resource_id,
                 "expected_revision": expected_revision if expected_revision is not None else state.revision,
+                "expected_state_token": state_token,
                 "label": label,
                 "text": text,
             },
         )
 
-    def insert_text(self, text, expected_revision=None, resource_id=None, label="Insert text"):
+    def insert_text(
+        self,
+        text,
+        expected_revision=None,
+        resource_id=None,
+        label="Insert text",
+        expected_state_token=None,
+    ):
         state = self.get_state() if expected_revision is None or resource_id is None else None
+        state_token = expected_state_token
+        if state_token is None and state is not None:
+            state_token = state.state_token
         return self._rpc.call(
             "editor.insertText",
             {
                 "resource_id": resource_id if resource_id is not None else state.resource_id,
                 "expected_revision": expected_revision if expected_revision is not None else state.revision,
+                "expected_state_token": state_token,
                 "label": label,
                 "text": text,
             },
@@ -906,7 +1100,12 @@ class Plugin:
                 "api_version": 2,
                 "plugin_name": plugin_name,
                 "client": {"python": platform.python_version(), "library": "sigil_live/2.0.0"},
-                "capabilities": {"events": True, "binary_chunks": True, "position_encodings": ["utf-16"]},
+                "capabilities": {
+                    "events": True,
+                    "binary_chunks": True,
+                    "text_chunks": True,
+                    "position_encodings": ["utf-16"],
+                },
             },
         )
         transport.max_message_size = session_info["max_message_size"]

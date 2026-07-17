@@ -94,6 +94,26 @@ private:
         qint64 received = 0;
     };
 
+    struct TextWriteUpload {
+        QTemporaryFile *file = nullptr;
+        QString transactionId;
+        QString targetId;
+        QString bookPath;
+        QString mediaType;
+        QString manifestId;
+        QString properties;
+        QString fallback;
+        QString overlay;
+        quint64 expectedRevision = 0;
+        qint64 expectedSize = 0;
+        qint64 received = 0;
+        qint64 lastOffset = -1;
+        QString lastChunkSha256;
+        bool addResource = false;
+        bool manifested = true;
+        bool addToSpine = true;
+    };
+
     void Dispatch(const QJsonObject &request);
     void Respond(const QJsonValue &id, const QJsonValue &result);
     void RespondError(const QJsonValue &id, int code, const QString &message,
@@ -108,9 +128,11 @@ private:
     bool AcquireWriter();
     void ReleaseWriter();
     void ClearBinaryWriteUploads();
+    void ClearTextWriteUploads();
     PluginApi::TextTransaction *RequireTransaction(const QJsonObject &params,
                                                    const QJsonValue &request_id);
     quint64 Revision(Resource *resource) const;
+    QString EditorStateToken(ContentTab *tab) const;
     QJsonObject EditorState() const;
     QJsonObject EditorEventState() const;
     QString ResolveInterpreter() const;
@@ -144,6 +166,7 @@ private:
     QHash<QString, BinaryReadStream> m_BinaryReadStreams;
     qint64 m_BinaryReadBytes;
     QHash<QString, BinaryWriteUpload> m_BinaryWriteUploads;
+    QHash<QString, TextWriteUpload> m_TextWriteUploads;
     QHash<QString, InputUpload> m_InputUploads;
     QList<QTemporaryFile *> m_MaterializedFiles;
     qint64 m_MaterializedBytes;

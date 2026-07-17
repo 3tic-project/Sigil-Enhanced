@@ -60,7 +60,7 @@ Automate 共用同一运行时选择；Automate 会等待 Live command 完成，
 
 ### `EditorState`
 
-属性：`active`、`resource_id`、`book_path`、`revision`、`cursor`、`selection`、
+属性：`active`、`resource_id`、`book_path`、`revision`、`state_token`、`cursor`、`selection`、
 `position_encoding`。`Selection` 含 `start`、`end`、`text`。
 
 所有编辑位置均为 UTF-16 code unit 偏移，与 Qt `QTextCursor` 一致。Python 字符串
@@ -105,10 +105,13 @@ Automate 共用同一运行时选择；Automate 会等待 Live command 完成，
 | 方法 | 返回值 |
 | --- | --- |
 | `resources(types=None, page_size=200)` | 分页 `Resource` 迭代器。 |
+| `list_resources(types=None, page_size=200, cursor=None)` | 返回一页有界的 `Resource` 与不透明 `next_cursor`，供协议适配层转发分页。 |
 | `text_resources()` | 文本资源迭代器。 |
 | `resolve_path(book_path)` | 当前路径对应的 `Resource`。 |
 | `get_resource(resource_id)` | 当前资源信息。 |
 | `read_text(resource)` | `text` 与 `revision`。 |
+| `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | 按 UTF-16 范围有界读取文本、revision 与续读位置。 |
+| `read_many_page(resources, cursor=None)` | 读取一页最多 100 个指定资源并保留宿主 `next_cursor`，供协议适配层使用。 |
 | `read_many(resources)` | 最多 100 个文本资源；SDK 自动跟随 6 MiB 响应预算的 continuation。 |
 | `read_binary(resource)` | 最多 5 MiB 的 bytes 数据与 revision。 |
 | `open_binary(resource)` | 二进制资源的分块 `BinaryReader` 快照。 |
@@ -153,7 +156,10 @@ with plugin.book.transaction("Normalize chapters", checkpoint="auto") as tx:
 | 方法 | 说明 |
 | --- | --- |
 | `read_text(resource)` | 读 staged 值，否则读 live 值。 |
-| `replace_text(resource, text, expected_revision=None)` | 暂存完整文本。 |
+| `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | 读取 live、已修改或新暂存文本的有界范围。 |
+| `replace_text(resource, text, expected_revision=None)` | 暂存完整文本；超过 4 MiB 时 SDK 自动分块。 |
+| `begin_text_write(resource, size, expected_revision=None)` | 开始最大 64 MiB 的 UTF-8 分块替换。 |
+| `begin_text_add(book_path, size, media_type, ...)` | 开始最大 64 MiB 的 UTF-8 分块新增。 |
 | `apply_edits(resource, edits, expected_revision=None)` | 暂存不重叠 UTF-16 patches。 |
 | `read_binary(resource)` | 读 staged/live 二进制，内联上限 5 MiB。 |
 | `write_binary(resource, data, expected_revision=None)` | 暂存最大 256 MiB 的 bytes-like 数据；超过 4 MiB 时 SDK 自动分块。 |
@@ -178,8 +184,21 @@ with plugin.book.transaction("Normalize chapters", checkpoint="auto") as tx:
 提供唯一 `manifest_id`。`mimetype`、`META-INF/container.xml` 和 OPF 不能通过
 archive API 修改。
 
+新增文本返回的 `staging_id` 可在同一事务中继续传给 `read_text_range()`、`replace_text()`
+或 `apply_edits()`。其 staged revision 从 0 开始，每次完成替换或 patch 后递增，提交前不会
+暴露为 live `Resource`。
+
 `replace_package()` 会验证 XML、EPUB 版本、manifest id/href 唯一性、spine idref，
 以及 package manifest 是否与同一事务的 add/remove/move 最终状态完全一致。
+
+`read_text_range()` 返回 `text`、`start`、`end`、`total_utf16_units`、`revision`、`staged`
+和可空 `next_start`；首段 `start=0` 额外返回整文 `total_utf8_bytes` 与 `sha256`，后续段省略
+这两个需要整文编码/哈希的字段。单次最多 1 Mi 个 UTF-16 code units，且不会切开代理项对。
+
+`begin_text_write()` 和 `begin_text_add()` 返回具有 `chunk_size`、`max_size`、`expected_size`、
+`received`、`write(text, offset=None)`、`finish()`、`abort()` 的 writer。offset 是严格 UTF-8
+字节偏移；宿主限制单块 1 MiB、每个 Session 两个并行上传、单次文本 64 MiB，并在 finish 时
+校验长度、UTF-8 和 SHA-256。commit、rollback 或 Session 结束会删除未完成的临时上传。
 
 `begin_binary_write()` 返回具有 `chunk_size`、`write(data)` 和 `finish()` 的 writer；完成时宿主
 核对声明长度与 SHA-256 后才暂存数据。`write_binary_file()` 使用同一分块 writer，不会把整个
@@ -191,7 +210,10 @@ archive API 修改。
 
 `update_spine(items, attributes)` 的每项必须含字符串 `idref`，并可含字符串 `id`、`linear`、
 `properties`；`attributes` 是要更新的 spine 字符串属性。该操作替换全部 `<itemref>`，保留
-未指定的原 spine 属性，并验证每个 `idref` 都存在于 manifest。
+未指定的原 spine 属性，并验证每个 `idref` 都存在于 manifest。应用 spine 前，宿主会按
+确定顺序把同一事务中此前暂存的 manifested 新资源合并到 staged OPF manifest，因此新章节、
+CSS/图片、metadata 和最终 spine 可以一次校验、一次 commit。必须先 stage 全部新增资源再调用
+`update_spine()`；之后若继续新增，需要再次调用它后才能通过校验。
 
 ## 7. `EditorApi`
 
@@ -201,8 +223,8 @@ archive API 修改。
 | `get_selection()` | 当前 `Selection`。 |
 | `get_open_tabs()` | 打开的 `Resource` 列表。 |
 | `apply_edits(edits, expected_revision=None, resource_id=None, label=...)` | 一个 undo block 应用 1-1000 个 patch。 |
-| `replace_selection(text, ...)` | 替换当前选区。 |
-| `insert_text(text, ...)` | 在光标插入。 |
+| `replace_selection(text, expected_revision=None, resource_id=None, label=..., expected_state_token=None)` | 替换当前选区。 |
+| `insert_text(text, expected_revision=None, resource_id=None, label=..., expected_state_token=None)` | 在光标插入。 |
 | `set_cursor(position, resource_id=None)` | 移动光标。 |
 | `set_selection(start, end, resource_id=None)` | 设置选区。 |
 | `open_resource(resource, position=None)` | 打开/激活资源。 |
@@ -210,6 +232,11 @@ archive API 修改。
 
 写请求必须携带读到的 revision。用户在两次调用之间修改内容时返回
 `RevisionConflict`，插件应重新读取、重新计算，而不是盲目重试旧 patch。
+
+`state_token` 同时指纹化活动资源、内容 revision、光标和选区。省略 resource 或 revision 时，
+SDK 自动读取状态并为选区替换/光标插入携带 token；若插件根据先前 `EditorState` 计算文本，则
+必须同时传该状态的 `expected_state_token`。用户只移动光标或选区也会触发冲突，避免把旧结果
+写到新位置。为兼容旧的原始 v2 客户端，宿主仍接受不含 token 的请求。
 
 ## 8. `UiApi`
 

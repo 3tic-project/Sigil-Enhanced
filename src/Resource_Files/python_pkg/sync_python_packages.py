@@ -14,6 +14,7 @@ import sys
 
 
 SCRIPT_VERSION = 1
+COPY_ALL_MANIFEST = ".sigil-synced-python-packages.json"
 
 
 def normalize_dist_name(name):
@@ -98,6 +99,42 @@ def copy_path(source, destination):
         shutil.copy2(source, target)
 
 
+def remove_path(path):
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    elif path.exists() or path.is_symlink():
+        path.unlink()
+
+
+def sync_all_packages(cache_site, destination):
+    """Copy one isolated pip --target tree, including native dependencies."""
+    destination.mkdir(parents=True, exist_ok=True)
+    manifest = destination / COPY_ALL_MANIFEST
+    previous = []
+    if manifest.exists():
+        try:
+            previous = json.loads(manifest.read_text(encoding="utf-8")).get("paths", [])
+        except (OSError, TypeError, ValueError):
+            previous = []
+
+    for name in previous:
+        if isinstance(name, str) and name not in {"", ".", ".."}:
+            remove_path(destination / name)
+
+    entries = sorted(
+        entry for entry in cache_site.iterdir()
+        if entry.name not in {"__pycache__", "bin"}
+    )
+    for entry in entries:
+        copy_path(entry, destination)
+
+    payload = {"script_version": SCRIPT_VERSION, "paths": [entry.name for entry in entries]}
+    temporary = manifest.with_suffix(manifest.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    os.replace(temporary, manifest)
+    return 0
+
+
 def ignore_package_noise(base, names):
     ignored = []
     for name in names:
@@ -143,8 +180,10 @@ def copy_dist_info(requirement_dist_names, roots, destination):
                 copied.add(metadata_path.name)
 
 
-def sync_packages(requirements_path, cache_dir, destination, package_names):
+def sync_packages(requirements_path, cache_dir, destination, package_names, copy_all=False):
     cache_site = cache_site_packages(cache_dir, requirements_path)
+    if copy_all:
+        return sync_all_packages(cache_site, destination)
     roots = package_search_roots(cache_site)
     missing = []
     destination.mkdir(parents=True, exist_ok=True)
@@ -172,6 +211,11 @@ def main():
     parser.add_argument("--cache-dir", required=True, type=pathlib.Path)
     parser.add_argument("--dest", type=pathlib.Path)
     parser.add_argument("--packages", nargs="+", default=[])
+    parser.add_argument(
+        "--copy-all",
+        action="store_true",
+        help="copy the complete isolated requirement tree, including native dependencies",
+    )
     parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args()
 
@@ -185,10 +229,16 @@ def main():
 
     if args.dest is None:
         parser.error("--dest is required unless --prepare-only is used")
-    if not args.packages:
-        parser.error("--packages is required unless --prepare-only is used")
+    if not args.copy_all and not args.packages:
+        parser.error("--packages or --copy-all is required unless --prepare-only is used")
 
-    return sync_packages(requirements_path, cache_dir, args.dest.resolve(), args.packages)
+    return sync_packages(
+        requirements_path,
+        cache_dir,
+        args.dest.resolve(),
+        args.packages,
+        copy_all=args.copy_all,
+    )
 
 
 if __name__ == "__main__":

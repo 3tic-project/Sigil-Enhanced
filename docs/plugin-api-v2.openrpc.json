@@ -185,6 +185,17 @@
       "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextContent" } }
     },
     {
+      "name": "resource.readTextRange",
+      "summary": "Read a bounded UTF-16 text range; the first page includes total UTF-8 bytes and SHA-256.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "start", "schema": { "type": "integer", "minimum": 0, "default": 0 } },
+        { "name": "max_utf16_units", "schema": { "type": "integer", "minimum": 1, "maximum": 1048576, "default": 1048576 } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextRangeContent" } }
+    },
+    {
       "name": "resource.readBinary",
       "summary": "Read a binary resource up to 5 MiB as base64 without snapshotting the Book.",
       "paramStructure": "by-name",
@@ -350,6 +361,7 @@
       "params": [
         { "name": "resource_id", "required": true, "schema": { "type": "string" } },
         { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "expected_state_token", "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
         { "name": "text", "required": true, "schema": { "type": "string" } },
         { "name": "label", "schema": { "type": "string" } }
       ],
@@ -362,6 +374,7 @@
       "params": [
         { "name": "resource_id", "required": true, "schema": { "type": "string" } },
         { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "expected_state_token", "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
         { "name": "text", "required": true, "schema": { "type": "string" } },
         { "name": "label", "schema": { "type": "string" } }
       ],
@@ -514,6 +527,18 @@
       "result": { "name": "result", "schema": { "allOf": [{ "$ref": "#/components/schemas/TextContent" }, { "type": "object", "properties": { "resource_id": { "type": "string" }, "staged": { "type": "boolean" } } }] } }
     },
     {
+      "name": "transaction.readTextRange",
+      "summary": "Read a bounded range from existing or newly staged transaction text.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "start", "schema": { "type": "integer", "minimum": 0, "default": 0 } },
+        { "name": "max_utf16_units", "schema": { "type": "integer", "minimum": 1, "maximum": 1048576, "default": 1048576 } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextRangeContent" } }
+    },
+    {
       "name": "transaction.readBinary",
       "summary": "Read staged binary data when present, otherwise current resource data.",
       "paramStructure": "by-name",
@@ -522,6 +547,69 @@
         { "name": "resource_id", "required": true, "schema": { "type": "string" } }
       ],
       "result": { "name": "result", "schema": { "allOf": [{ "$ref": "#/components/schemas/BinaryContent" }, { "type": "object", "properties": { "staged": { "type": "boolean" } } }] } }
+    },
+    {
+      "name": "transaction.writeTextBegin",
+      "summary": "Begin a chunked UTF-8 replacement up to 64 MiB.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "resource_id", "required": true, "schema": { "type": "string" } },
+        { "name": "expected_revision", "required": true, "schema": { "$ref": "#/components/schemas/Revision" } },
+        { "name": "size", "required": true, "schema": { "type": "integer", "minimum": 0, "maximum": 67108864 } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextWriteHandle" } }
+    },
+    {
+      "name": "transaction.addTextBegin",
+      "summary": "Begin a chunked UTF-8 staged resource addition up to 64 MiB.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "book_path", "required": true, "schema": { "type": "string" } },
+        { "name": "size", "required": true, "schema": { "type": "integer", "minimum": 0, "maximum": 67108864 } },
+        { "name": "media_type", "required": true, "schema": { "type": "string" } },
+        { "name": "manifest_id", "schema": { "type": ["string", "null"] } },
+        { "name": "properties", "schema": { "type": ["string", "null"] } },
+        { "name": "fallback", "schema": { "type": ["string", "null"] } },
+        { "name": "overlay", "schema": { "type": ["string", "null"] } },
+        { "name": "add_to_spine", "schema": { "type": "boolean", "default": true } },
+        { "name": "manifested", "schema": { "type": "boolean", "default": true } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextWriteHandle" } }
+    },
+    {
+      "name": "transaction.writeTextChunk",
+      "summary": "Append one idempotent Unicode chunk at an exact UTF-8 byte offset.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "upload_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "offset", "required": true, "schema": { "type": "integer", "minimum": 0 } },
+        { "name": "text", "required": true, "schema": { "type": "string" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextWriteChunkResult" } }
+    },
+    {
+      "name": "transaction.writeTextEnd",
+      "summary": "Verify UTF-8 length and SHA-256, then stage a completed text upload.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "upload_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "sha256", "required": true, "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+      ],
+      "result": { "name": "result", "schema": { "$ref": "#/components/schemas/TextWriteResult" } }
+    },
+    {
+      "name": "transaction.writeTextAbort",
+      "summary": "Discard an unfinished chunked text upload.",
+      "paramStructure": "by-name",
+      "params": [
+        { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "upload_id", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "result": { "name": "result", "schema": { "type": "object" } }
     },
     {
       "name": "transaction.writeBinary",
@@ -675,7 +763,7 @@
     },
     {
       "name": "transaction.updateSpine",
-      "summary": "Replace package spine items and update spine attributes within the transaction.",
+      "summary": "Merge prior staged manifest additions, then replace package spine items and attributes.",
       "paramStructure": "by-name",
       "params": [
         { "name": "transaction_id", "required": true, "schema": { "type": "string", "format": "uuid" } },
@@ -746,7 +834,7 @@
       "Position": { "type": "integer", "minimum": 0 },
       "SessionInfo": {
         "type": "object",
-        "required": ["session_id", "protocol_version", "api_version", "lifetime", "position_encoding", "max_message_size"],
+        "required": ["session_id", "protocol_version", "api_version", "lifetime", "position_encoding", "max_message_size", "runtime_directory"],
         "properties": {
           "session_id": { "type": "string", "format": "uuid" },
           "protocol_version": { "type": "integer", "const": 1 },
@@ -754,6 +842,7 @@
           "lifetime": { "type": "string", "enum": ["command", "book-session"] },
           "position_encoding": { "type": "string", "const": "utf-16" },
           "max_message_size": { "type": "integer", "minimum": 1, "maximum": 33554432 },
+          "runtime_directory": { "type": "string", "description": "Per-user host runtime directory for ephemeral session metadata." },
           "book_revision": { "$ref": "#/components/schemas/Revision" },
           "ui": { "type": "object" }
         }
@@ -869,6 +958,53 @@
           "revision": { "$ref": "#/components/schemas/Revision" }
         }
       },
+      "TextRangeContent": {
+        "type": "object",
+        "required": ["target_id", "text", "start", "end", "total_utf16_units", "revision", "staged", "next_start"],
+        "properties": {
+          "target_id": { "type": "string" },
+          "text": { "type": "string" },
+          "start": { "$ref": "#/components/schemas/Position" },
+          "end": { "$ref": "#/components/schemas/Position" },
+          "total_utf16_units": { "type": "integer", "minimum": 0 },
+          "total_utf8_bytes": { "type": "integer", "minimum": 0, "description": "Present only when start is zero." },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Full-document fingerprint present only when start is zero." },
+          "revision": { "$ref": "#/components/schemas/Revision" },
+          "staged": { "type": "boolean" },
+          "next_start": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      },
+      "TextWriteHandle": {
+        "type": "object",
+        "required": ["upload_id", "chunk_size", "max_size", "expected_size"],
+        "properties": {
+          "upload_id": { "type": "string", "format": "uuid" },
+          "chunk_size": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+          "max_size": { "type": "integer", "const": 67108864 },
+          "expected_size": { "type": "integer", "minimum": 0, "maximum": 67108864 }
+        }
+      },
+      "TextWriteChunkResult": {
+        "type": "object",
+        "required": ["upload_id", "received", "duplicate"],
+        "properties": {
+          "upload_id": { "type": "string", "format": "uuid" },
+          "received": { "type": "integer", "minimum": 0, "maximum": 67108864 },
+          "duplicate": { "type": "boolean" }
+        }
+      },
+      "TextWriteResult": {
+        "type": "object",
+        "required": ["resource_id", "revision", "size", "sha256", "staged"],
+        "properties": {
+          "resource_id": { "type": "string" },
+          "staging_id": { "type": ["string", "null"] },
+          "revision": { "$ref": "#/components/schemas/Revision" },
+          "size": { "type": "integer", "minimum": 0, "maximum": 67108864 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "staged": { "type": "boolean", "const": true }
+        }
+      },
       "BinaryContent": {
         "type": "object",
         "required": ["resource_id", "data_base64", "revision"],
@@ -895,6 +1031,7 @@
           "resource_id": { "type": "string" },
           "book_path": { "type": "string" },
           "revision": { "$ref": "#/components/schemas/Revision" },
+          "state_token": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "cursor": { "$ref": "#/components/schemas/Position" },
           "selection": { "$ref": "#/components/schemas/Selection" },
           "position_encoding": { "type": "string", "const": "utf-16" }
@@ -911,10 +1048,11 @@
       },
       "EditResult": {
         "type": "object",
-        "required": ["resource_id", "revision", "applied_edits"],
+        "required": ["resource_id", "revision", "state_token", "applied_edits"],
         "properties": {
           "resource_id": { "type": "string" },
           "revision": { "$ref": "#/components/schemas/Revision" },
+          "state_token": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "applied_edits": { "type": "integer", "minimum": 1 }
         }
       },

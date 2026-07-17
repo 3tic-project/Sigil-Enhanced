@@ -1,0 +1,341 @@
+# Sigil Enhanced MCP System
+
+## Status
+
+- Architecture baseline: 2026-07-16
+- Sigil baseline: 2.8.1E6 (`f188a166c`)
+- MCP specification: 2025-11-25
+- Python SDK: `mcp==1.28.1`
+- Delivery model: installable Live Python Plugin API v2 book-session plugin
+- Implementation: available in the source tree with 38 tools, two MCP transports,
+  and one authenticated out-of-band import endpoint
+
+This document is the tracked implementation contract for the Sigil Enhanced MCP
+adapter. The longer research draft remains in
+`todo/Sigil-Enhanced-MCP-System-Design.md` for development planning.
+
+## Goal
+
+Expose the current in-memory EPUB and editor state to an MCP Host so an LLM can:
+
+- inspect book structure, metadata, resources, open tabs, cursor, and selection;
+- read unsaved XHTML, CSS, XML, OPF, NCX, SVG, and text resources;
+- navigate the editor and make revision-checked, undoable local edits;
+- generate or replace chapters, stylesheets, navigation files, and metadata;
+- stage multi-file editing and layout work in a validated transaction;
+- preview, validate, commit, or roll back changes without bypassing Sigil;
+- use future native enhancement services such as source formatting, Chinese
+  conversion, structure normalization, and font subsetting.
+
+The MCP adapter is not an autonomous LLM client. It never calls a model itself.
+
+## Researched Baseline
+
+The stable MCP specification defines newline-delimited stdio and Streamable HTTP
+as its standard transports. A Streamable HTTP server must expose one endpoint,
+validate `Origin` when present, bind locally when used on one machine, and
+authenticate connections. The protocol uses JSON-RPC lifecycle negotiation and
+separates model-controlled tools, application-controlled resources, and
+user-controlled prompts.
+
+As of 2026-07-16, the official Python SDK 1.28.1 is the latest stable release.
+The bundled runtime uses that exact version together with an exact transitive
+dependency lock. Upgrading the SDK requires a separate compatibility change,
+cross-platform wheel audit, isolated bundled-runtime import check, and
+cross-host regression pass.
+
+Primary references:
+
+- <https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle>
+- <https://modelcontextprotocol.io/specification/2025-11-25/basic/transports>
+- <https://modelcontextprotocol.io/specification/2025-11-25/server/tools>
+- <https://modelcontextprotocol.io/specification/2025-11-25/server/resources>
+- <https://modelcontextprotocol.io/specification/2025-11-25/server/prompts>
+- <https://github.com/modelcontextprotocol/python-sdk/tree/v1.x>
+
+## Architecture
+
+```text
+MCP Host / coding agent
+        |\
+        | +-- raw local files -> /api/v1/imports
+        |     (uploader reads the caller-selected path)
+        | Streamable HTTP / stdio + bearer token
+        v
+Sigil MCP adapter (Python, one book-session per open Book)
+        |
+        | serialized sigil_live calls
+        v
+Live Plugin API v2 / PluginSession
+        |
+        +-- current Book and editor memory
+        +-- UTF-16 revision-checked editor edits
+        +-- staged Book transaction and writer lease
+        +-- OPF/package validation and Checkpoint
+        +-- compensating rollback
+```
+
+The Python adapter owns MCP lifecycle, schemas, transport, resources, prompts,
+and error mapping. It must not read the expanded EPUB directory directly, parse
+and overwrite the OPF independently, or mutate arbitrary local files.
+
+The C++ host remains the only authority for Book identity, resource revisions,
+editor undo, writer locking, package invariants, Checkpoints, and commit.
+
+## Transport And Discovery
+
+The adapter endpoint uses Streamable HTTP:
+
+- bind exactly to `127.0.0.1` on a pre-bound dynamic port;
+- expose `/mcp` with JSON responses;
+- enable the official SDK's Host and Origin validation;
+- accept absent Origin for native clients and allow only loopback HTTP origins;
+- require a randomly generated bearer token using constant-time comparison;
+- write endpoint metadata atomically with owner-only permissions;
+- place metadata in the per-user runtime directory supplied by the host;
+- use one metadata file per Book session and never silently choose among Books;
+- remove owned metadata on orderly shutdown;
+- stop on Book close, plugin cancellation, or Live API heartbeat failure.
+
+The metadata contains the MCP endpoint, external import endpoint, token, process
+ID, session ID, Book identity, protocol version, and creation time. It is a local secret and must not be logged,
+returned by a tool, stored in an EPUB, or committed to source control.
+
+A bundled standard-library stdio proxy translates newline-delimited MCP JSON-RPC
+to this endpoint. It discovers exactly one running Book or accepts an explicit
+metadata/session selection. It refuses ambiguous multi-Book selection and remote
+or credential-bearing endpoint URLs. The proxy contains no EPUB logic and does
+not implement server-initiated requests; the current adapter does not emit them.
+Discovery mirrors the host runtime locations, including XDG runtime directories,
+macOS Application Support, and the current user's temporary directory.
+Automatic discovery ignores metadata whose owning plugin process is no longer
+running, while explicit `--metadata` selection retains precise connection errors.
+
+## Out-Of-Band Resource Import
+
+The external import channel exists because JSON/MCP is the wrong data plane for
+local files. In the observed 18-image layout run, the agent generated roughly
+9 MB of Base64, repeatedly tried to read truncated command output, considered
+hundreds of chunk calls, and let transactions approach their idle timeout. None
+of those attempts added semantic information for the model.
+
+`POST /api/v1/imports` therefore accepts raw bytes outside the model context.
+The bundled `sigil_mcp_upload.py` discovers the owner-only session metadata,
+reads only source paths explicitly supplied to that client process, computes
+SHA-256, and streams one file at a time. A JSON manifest lets one shell command
+stage a complete image/XHTML/CSS set. Only short resource metadata and results
+appear in orchestration logs.
+Capabilities returns the installed absolute `batch_uploader_path`, avoiding PATH
+searches and source-tree assumptions. Agents prepare all local outputs before
+starting the transaction so generation time does not consume the idle budget.
+`sigil_mcp_upload.py --manifest imports.json --check` validates the full local
+batch without session discovery or network traffic. It rejects missing inputs,
+malformed operations, mixed transactions, and duplicate paths/IDs before a
+partial upload can exist.
+
+The endpoint:
+
+- binds to the same loopback server and requires the same bearer token;
+- applies the same Host and Origin validation as `/mcp`;
+- requires exact `Content-Length` and `X-Content-SHA256` values;
+- spools to an owner-only temporary file and stages only after full validation;
+- deletes the temporary file on success, error, disconnect, or cancellation;
+- supports add and revision-checked replace for strict UTF-8 text and binary data;
+- never accepts a server-side source path or exposes a general filesystem API;
+- keeps the transaction alive while uploading and blocks commit until staging finishes.
+
+One transfer is limited to 32 MiB and two may be in flight. Text add/replace and
+binary replace use Live SDK streaming writers. Binary addition is additionally
+bounded by the current Live message budget; its exact limit is returned as
+`external_binary_add_size_max`. MCP-only hosts without a local command runner can
+continue using inline/chunked MCP tools.
+
+## Concurrency
+
+`sigil_live` uses one synchronous `QLocalSocket` connection. All MCP tool and
+resource calls therefore enter a single-worker call gate. The HTTP layer may
+receive concurrent requests, but it may not call the Live SDK concurrently.
+External HTTP bodies may arrive concurrently with MCP requests, but transaction
+checks and staging still enter the same gate. Active imports suppress idle
+rollback; commit returns `Busy` until they finish.
+
+Each endpoint permits one active write transaction. It is addressed by the
+explicit `transaction_id` returned from begin. The shared endpoint token does not
+identify separate clients, so the initial implementation does not claim
+per-client transaction isolation. A future native coordinator can add client
+identity and routing.
+
+## Tool Groups
+
+Tool names are stable and grouped under `sigil.*`.
+
+### Session And Context
+
+- `sigil.session.info`
+- `sigil.capabilities.list`
+- `sigil.book.info`
+- `sigil.book.package`
+- `sigil.resource.list`
+- `sigil.resource.read_text`
+- `sigil.resource.read_text_range`
+- `sigil.resource.read_many`
+- `sigil.editor.state`
+- `sigil.editor.tabs`
+
+### Editor
+
+- `sigil.editor.open`
+- `sigil.editor.reveal`
+- `sigil.editor.edit`
+- `sigil.editor.replace_selection`
+- `sigil.editor.insert_text`
+
+Editor offsets use UTF-16 code units. Every content edit requires a resource ID
+and expected revision and becomes one Qt undo step.
+
+Selection replacement and cursor insertion also require the `state_token` from
+the same editor-state read. The token changes when the active resource, content
+revision, cursor, or selection changes.
+
+### Transaction
+
+- `sigil.transaction.begin`
+- `sigil.transaction.status`
+- `sigil.transaction.read_text`
+- `sigil.transaction.read_text_range`
+- `sigil.transaction.replace_text`
+- `sigil.transaction.apply_edits`
+- `sigil.transaction.begin_text_write`
+- `sigil.transaction.begin_text_resource`
+- `sigil.transaction.write_text_chunk`
+- `sigil.transaction.finish_text_write`
+- `sigil.transaction.abort_text_write`
+- `sigil.transaction.add_text_resource`
+- `sigil.transaction.add_binary_resource`
+- `sigil.transaction.remove_resource`
+- `sigil.transaction.move_resource`
+- `sigil.transaction.rename_resource`
+- `sigil.transaction.replace_package`
+- `sigil.transaction.update_metadata`
+- `sigil.transaction.update_spine`
+- `sigil.transaction.preview`
+- `sigil.transaction.validate`
+- `sigil.transaction.commit`
+- `sigil.transaction.rollback`
+
+Staging does not modify the live Book. Read-your-writes, revision conflict
+detection, package validation, Checkpoint policy, and rollback come from the Live
+API. Commit revalidates and applies immediately without a native confirmation
+dialog. Clients must preview and validate first, and roll back before commit when
+the staged changes should be discarded.
+
+Text range reads are bounded to 1 Mi UTF-16 code units. Chunked text writes use
+exact UTF-8 byte offsets, 1 MiB chunks, a 64 MiB document limit, and host-side
+length/UTF-8/SHA-256 validation before staging. Newly staged text remains
+addressable and editable by its staging ID until commit.
+
+MCP `read_many` forwards one host-bounded page and its opaque continuation
+instead of reassembling pages into a response that can exceed the MCP frame.
+
+Structured spine updates merge manifested additions already staged in the same
+transaction into the staged OPF before validating idrefs. New-book generation
+therefore uses one transaction and one checkpoint rather than exposing a partial
+Book between resource and package commits.
+
+## Resources And Prompts
+
+Stable read-only resources:
+
+- `sigil://book/info`
+- `sigil://book/metadata`
+- `sigil://book/manifest`
+- `sigil://book/spine`
+- `sigil://editor/state`
+- `sigil://resource/{resource_id}`
+
+Workflow prompts:
+
+- `edit_epub_safely`
+- `generate_chapter`
+- `layout_epub`
+- `repair_epub`
+
+Prompts describe safe workflows; they are not permissions and cannot weaken host
+validation.
+
+## Security Boundary
+
+The adapter is trusted local plugin code, not a sandbox. The bearer token protects
+the loopback MCP endpoint from unrelated local/web clients but does not restrict
+what the installed Python plugin process can do.
+
+The adapter does not expose:
+
+- arbitrary QAction execution;
+- Python evaluation or shell commands;
+- arbitrary local path reads/writes;
+- public-network listening;
+- direct EPUB directory access;
+- output export to a model-selected path;
+- a replacement plugin permission system.
+
+MCP tool annotations are hints for Host approval UX. Real enforcement remains in
+the Live API's revision, resource, path, transaction, and plugin-type checks.
+The uploader is a separate client-side utility: it reads only paths explicitly
+passed by its caller and sends bytes to the authenticated endpoint. The server
+never resolves or opens a caller-provided local source path.
+
+## Error Contract
+
+Expected Live API failures are returned as MCP tool errors with a JSON object:
+
+```json
+{
+  "code": "RevisionConflict",
+  "message": "Resource changed since it was read",
+  "retryable": true,
+  "recovery": "Read the resource again and rebuild the edit",
+  "data": {}
+}
+```
+
+Stable codes include `BookClosed`, `ResourceNotFound`, `RevisionConflict`,
+`InvalidPatch`, `ValidationFailed`, `PayloadTooLarge`, `Busy`,
+`TransactionNotFound`, and `SessionEnding`.
+
+## Native Enhancement Roadmap
+
+Generic MCP editing is sufficient for LLM-generated text, chapters, CSS, and
+metadata. Native algorithms must be exposed later through explicit structured
+services rather than copied into the adapter:
+
+1. EPUB-safe XHTML/CSS source formatter;
+2. structure normalizer and validation results;
+3. structure-safe Chinese conversion plans;
+4. HarfBuzz font subsetting plans.
+
+Each service will use analyze/preview/commit/discard plan semantics, bind plans to
+Book and revision, and share its core implementation with the GUI workflow.
+
+## Verification
+
+The tracked test suite must cover:
+
+- deterministic tool names and JSON Schemas;
+- MCP initialize, tools/list, resources/list/read, prompts/list/get, and tools/call;
+- bearer, Host, Origin, and loopback behavior;
+- raw-byte external imports, strict length/hash checks, UTF-8 validation, and
+  client-side single-file/manifest behavior;
+- resource pagination and current in-memory text;
+- UTF-16 editor edits and revision errors;
+- transaction state, preview, validation, direct commit, and rollback;
+- automatic rollback on shutdown and failed heartbeat;
+- atomic rendezvous creation, permissions, stale-file cleanup, and token secrecy;
+- exact package-lock consistency plus complete dependency synchronization and
+  isolated imports for macOS, Windows, and AppImage builds.
+
+The automated suite uses the official MCP client against a real pre-bound HTTP
+endpoint and also exercises the stdio proxy through a subprocess. Passing local
+integration tests does not prove cross-platform or every Host compatibility.
+Release readiness still requires MCP Inspector plus at least two real Hosts on
+Windows, macOS, and Linux.

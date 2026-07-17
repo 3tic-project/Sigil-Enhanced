@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:epub="http://www.idpf.org/2007/ops"
+      xml:lang="{{LANGUAGE}}" lang="{{LANGUAGE}}">
+<head>
+  <meta charset="utf-8"/>
+  <title>{{CONTENTS_LABEL}}</title>
+  <link rel="stylesheet" type="text/css" href="{{STYLESHEET_HREF}}"/>
+</head>
+<body>
+  <nav epub:type="toc" role="doc-toc" id="toc">
+    <h1>{{CONTENTS_LABEL}}</h1>
+    <ol>
+      {{TOC_ITEMS}}
+    </ol>
+  </nav>
+  <nav epub:type="landmarks" hidden="hidden">
+    <h2>{{LANDMARKS_LABEL}}</h2>
+    <ol>
+      <li><a epub:type="cover" href="{{COVER_HREF}}">{{COVER_LABEL}}</a></li>
+      <li><a epub:type="bodymatter" href="{{BODY_HREF}}">{{BODY_LABEL}}</a></li>
+      <li><a epub:type="toc" href="{{NAV_HREF}}">{{CONTENTS_LABEL}}</a></li>
+    </ol>
+  </nav>
+</body>
+</html>

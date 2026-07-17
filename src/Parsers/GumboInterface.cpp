@@ -405,7 +405,7 @@ GumboNode * GumboInterface::get_document_node()
             parse();
         }
     }
-    return m_output->document;
+    return m_output ? m_output->document : NULL;
 }
 
 
@@ -415,7 +415,7 @@ GumboNode * GumboInterface::get_root_node() {
             parse();
         }
     }
-    return m_output->root;
+    return m_output ? m_output->root : NULL;
 }
 
 
@@ -528,6 +528,9 @@ GumboNode* GumboInterface::get_node_from_qwebpath(QString webpath)
 {
     QStringList path_pieces = webpath.split(",", Qt::SkipEmptyParts);
     GumboNode* node = get_root_node();
+    if (!node) {
+        return NULL;
+    }
     GumboNode* end_node = node;
     for (int i=0; i < path_pieces.count() - 1 ; ++i) {
         QString piece = path_pieces.at(i);
@@ -585,6 +588,9 @@ QList<unsigned int> GumboInterface::get_path_to_node(GumboNode* node)
 GumboNode* GumboInterface::get_node_from_path(QList<unsigned int> & apath) 
 {
    GumboNode* dest = get_root_node();
+   if (!dest) {
+       return NULL;
+   }
    foreach(unsigned int childnum, apath) {
        if ((dest->type == GUMBO_NODE_ELEMENT) || (dest->type == GUMBO_NODE_TEMPLATE)) {
            GumboVector* children = &dest->v.element.children;

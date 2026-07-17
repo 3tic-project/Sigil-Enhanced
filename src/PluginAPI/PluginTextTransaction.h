@@ -55,8 +55,10 @@ struct StagedResourceAddition {
     QString fallback;
     QString overlay;
     QByteArray data;
+    quint64 stagedRevision = 0;
     bool manifested = true;
     bool addToSpine = true;
+    bool isText = false;
 };
 
 struct StagedResourceRemoval {
@@ -106,6 +108,17 @@ public:
                     quint64 expected_revision,
                     const QJsonArray &edit_values,
                     QString *error);
+    bool ReadAddedText(const QString &staging_id,
+                       QString *text,
+                       quint64 *revision) const;
+    bool ReplaceAddedText(const QString &staging_id,
+                          quint64 expected_revision,
+                          const QString &replacement,
+                          QString *error);
+    bool ApplyAddedTextEdits(const QString &staging_id,
+                             quint64 expected_revision,
+                             const QJsonArray &edit_values,
+                             QString *error);
 
     QByteArray ReadBinary(const QString &resource_id,
                           const QByteArray &current_data,

@@ -96,6 +96,7 @@ def run(plugin):
         replacement,
         expected_revision=state.revision,
         resource_id=state.resource_id,
+        expected_state_token=state.state_token,
         label="Uppercase selection",
     )
     return 0
@@ -174,10 +175,13 @@ not construct the transport directly.
 | `archive_files(page_size=200)` | Iterate every regular expanded-EPUB file, including files outside the Resource model. |
 | `read_archive_file(book_path)` | Read up to 5 MiB and return decoded `data`, SHA-256, and protection state. |
 | `resources(types=None, page_size=200)` | Iterator of typed `Resource` values. |
+| `list_resources(types=None, page_size=200, cursor=None)` | Return one bounded page of typed resources and an opaque `next_cursor`; intended for protocol adapters. |
 | `text_resources()` | Iterator limited to current text resource types. |
 | `resolve_path(book_path)` | Resolve a current book path to `Resource`. |
 | `get_resource(resource_id)` | Fetch current resource metadata. |
 | `read_text(resource)` | Dictionary containing `text` and `revision`. |
+| `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | Read a bounded UTF-16 range with revision and continuation metadata. |
+| `read_many_page(resources, cursor=None)` | Read one host-bounded page of up to 100 requested resources and preserve `next_cursor`. |
 | `read_many(resources)` | Up to 100 current text resources; continuation across the 6 MiB response budget is automatic. |
 | `read_binary(resource)` | Read a binary resource up to 5 MiB and return decoded `data`. |
 | `open_binary(resource)` | Open a context-managed, chunked snapshot reader for a binary resource. |
@@ -238,12 +242,12 @@ plugins may call these methods.
 
 | Method | Behavior |
 | --- | --- |
-| `get_state()` | Return typed active resource, cursor, selection, and revision state. |
+| `get_state()` | Return typed active resource, cursor, selection, revision, and `state_token`. |
 | `get_selection()` | Return a typed `Selection`. |
 | `get_open_tabs()` | Return resources loaded in editor tabs. |
 | `apply_edits(edits, expected_revision, resource_id, label)` | Apply non-overlapping text edits to the active tab. |
-| `replace_selection(text, expected_revision, resource_id, label)` | Replace the active selection. |
-| `insert_text(text, expected_revision, resource_id, label)` | Insert at the active cursor. |
+| `replace_selection(text, expected_revision=None, resource_id=None, label=..., expected_state_token=None)` | Replace the active selection. |
+| `insert_text(text, expected_revision=None, resource_id=None, label=..., expected_state_token=None)` | Insert at the active cursor. |
 | `set_cursor(position, resource_id=None)` | Move the current editor cursor. |
 | `set_selection(start, end, resource_id=None)` | Select a current editor range. |
 | `open_resource(resource, position=None)` | Open/activate a resource and optionally reveal a UTF-16 position. |
@@ -254,6 +258,14 @@ An edit can be a dictionary with `start`, `end`, and `text`, or a
 must be in bounds, non-overlapping, and cannot split a UTF-16 surrogate pair.
 The host sorts them in descending position order before applying them in one
 edit block.
+
+`state_token` fingerprints the active resource, content revision, cursor, and
+selection range. `replace_selection()` and `insert_text()` use the token from
+an automatically fetched state when their resource or revision is omitted. If
+a plugin derives replacement text from an earlier `EditorState`, it must also
+pass that state's `expected_state_token`; a moved cursor or selection then
+returns `RevisionConflict` instead of applying text at the new position. The
+host accepts an omitted token for compatibility with older raw v2 clients.
 
 ### `UiApi`
 
@@ -315,7 +327,10 @@ replaces the Validation Results view and accepts at most 10,000 entries.
 | Method | Behavior |
 | --- | --- |
 | `read_text(resource)` | Read staged content when present, otherwise live content. |
-| `replace_text(resource, text, expected_revision=None)` | Stage a whole-text replacement. |
+| `read_text_range(resource, start=0, max_utf16_units=1024 * 1024)` | Read a bounded range from live, modified, or newly staged text. |
+| `replace_text(resource, text, expected_revision=None)` | Stage a whole-text replacement; the SDK switches to chunking above 4 MiB. |
+| `begin_text_write(resource, size, expected_revision=None)` | Begin a chunked UTF-8 replacement up to 64 MiB. |
+| `begin_text_add(book_path, size, media_type, ...)` | Begin a chunked UTF-8 resource addition up to 64 MiB. |
 | `apply_edits(resource, edits, expected_revision=None)` | Compose patches against staged content. |
 | `read_binary(resource)` | Read staged binary data when present, up to the 5 MiB inline limit. |
 | `write_binary(resource, data, expected_revision=None)` | Stage a bytes-like replacement up to 256 MiB; the SDK switches to chunking above 4 MiB. |
@@ -343,6 +358,11 @@ once through `ApplyResourceBatch`, applies `UniversalUpdates` to non-OPF
 references, then removes staged resources. Relocation cannot be combined with
 staged text writes because the latter could overwrite link corrections.
 
+Newly staged text resources are addressable by the `staging_id` returned from
+`add_resource()` or a chunked text writer. The same transaction can range-read,
+replace, or patch that ID before commit; its staged revision starts at zero and
+increments after each completed replacement or patch.
+
 An authoritative package replacement can accompany resource structure
 operations. The host verifies that its manifest exactly matches the final
 add/remove/move set, that manifest IDs and hrefs are unique, that every spine
@@ -350,6 +370,19 @@ add/remove/move set, that manifest IDs and hrefs are unique, that every spine
 does not generate a second manifest rewrite; it applies the package once after
 the physical structure changes. Larger reads use `open_binary()` streams;
 larger writes use Begin/Chunk/End and are length/SHA-256 checked before staging.
+
+`read_text_range()` uses UTF-16 offsets and returns `text`, `start`, `end`,
+`total_utf16_units`, `revision`, `staged`, and nullable `next_start`. The first
+range (`start=0`) also returns full-document `total_utf8_bytes` and `sha256`;
+later pages omit those two expensive whole-document fields. A range is limited
+to 1 Mi UTF-16 code units and never splits a surrogate pair.
+
+`begin_text_write()` and `begin_text_add()` return a writer with `chunk_size`,
+`max_size`, `expected_size`, `received`, `write(text, offset=None)`, `finish()`,
+and `abort()`. Offsets are exact UTF-8 byte offsets. The host accepts 1 MiB
+chunks, retains at most two uploads per session, validates length, UTF-8, and
+SHA-256, and stages content only on `finish()`. Transaction commit, rollback,
+or session shutdown removes unfinished temporary uploads.
 
 `begin_binary_write()` returns a writer with `chunk_size`, `write(data)`, and
 `finish()`; the finish call checks the declared length and SHA-256 before staging.
@@ -362,7 +395,12 @@ metadata children; prefixes must resolve to namespaces already available in the
 package. Each `update_spine(items, attributes)` item contains a string `idref`
 and optional string `id`, `linear`, and `properties` values. It replaces all
 itemrefs, preserves unspecified existing spine attributes, updates the supplied
-attributes, and verifies every `idref` against the manifest.
+attributes, and verifies every `idref` against the manifest. Before applying
+the spine, the host deterministically merges every manifested resource addition
+already staged in the transaction into the staged OPF manifest. This allows a
+new chapter/CSS/image set, metadata, and its final spine to validate and commit
+atomically. Stage all additions before calling `update_spine()`; later additions
+require another spine update before validation.
 
 Archive-file methods cover EPUB entries that Sigil intentionally keeps outside
 the `Resource` model, including `mimetype` and files under `META-INF`. Reads use
@@ -399,6 +437,12 @@ The first request must be `session.hello` with protocol version 1, API version
 2, plugin name, and the one-time token. The server accepts one client, expires
 the token after authentication, and is restricted to the current OS user where
 Qt supports it.
+
+The hello result includes `runtime_directory`, a per-user host location for
+ephemeral coordination files such as MCP endpoint metadata. Plugins must create
+their own session-specific child files, use restrictive permissions, and remove
+them at shutdown. The directory is not an authorization boundary and must never
+be used for EPUB content or durable plugin state.
 
 The full implemented wire contract is `plugin-api-v2.openrpc.json`.
 

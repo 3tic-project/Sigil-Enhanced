@@ -54,6 +54,10 @@ def run_book_read_suite(runner):
         "BookApi.resources",
         lambda: resources.extend(list(book.resources(page_size=50))) or resources,
     )
+    runner.check(
+        "BookApi.list_resources",
+        lambda: book.list_resources(page_size=1),
+    )
     text_resources = []
     runner.check(
         "BookApi.text_resources",
@@ -67,12 +71,19 @@ def run_book_read_suite(runner):
         )
         runner.check("BookApi.get_resource", lambda: book.get_resource(first.id))
         runner.check("BookApi.read_text", lambda: book.read_text(first))
+        runner.check(
+            "BookApi.read_text_range",
+            lambda: book.read_text_range(first, 0, 1024),
+        )
         batch = text_resources[: min(5, len(text_resources))]
+        runner.check("BookApi.read_many_page", lambda: book.read_many_page(batch))
         runner.check("BookApi.read_many", lambda: book.read_many(batch))
     else:
         runner.skip("BookApi.resolve_path", "no text resources")
         runner.skip("BookApi.get_resource", "no text resources")
         runner.skip("BookApi.read_text", "no text resources")
+        runner.skip("BookApi.read_text_range", "no text resources")
+        runner.skip("BookApi.read_many_page", "no text resources")
         runner.skip("BookApi.read_many", "no text resources")
 
     binary = next(
@@ -255,6 +266,7 @@ def run_editor_suite(runner, allow_writes):
             state.revision,
             state.resource_id,
             "LiveApiCoverage selection round trip",
+            state.state_token,
         ),
     )
     state = editor.get_state()
@@ -265,6 +277,7 @@ def run_editor_suite(runner, allow_writes):
             state.revision,
             state.resource_id,
             "LiveApiCoverage empty insert",
+            state.state_token,
         ),
     )
 
@@ -350,6 +363,31 @@ def run_transaction_suite(runner, keep_artifacts):
             runner.check("Transaction.read_text", lambda: tx.read_text(text))
             current = tx.read_text(text)
             runner.check(
+                "Transaction.read_text_range",
+                lambda: tx.read_text_range(text, 0, 1024),
+            )
+            encoded = current["text"].encode("utf-8")
+            ok_writer, writer = runner.check(
+                "Transaction.begin_text_write",
+                lambda: tx.begin_text_write(text, len(encoded), current["revision"]),
+            )
+            if ok_writer and writer is not None:
+                writer.write(current["text"])
+                writer.finish()
+            addition_text = "coverage"
+            ok_add, addition_writer = runner.check(
+                "Transaction.begin_text_add",
+                lambda: tx.begin_text_add(
+                    "LiveApiCoverage/{0}.txt".format(token),
+                    len(addition_text.encode("utf-8")),
+                    "text/plain",
+                    manifest_id="live_cov_text_" + token,
+                    add_to_spine=False,
+                ),
+            )
+            if ok_add and addition_writer is not None:
+                addition_writer.abort()
+            runner.check(
                 "Transaction.replace_text",
                 lambda: tx.replace_text(text, current["text"], current["revision"]),
             )
@@ -364,6 +402,9 @@ def run_transaction_suite(runner, keep_artifacts):
         for name in (
             "BookApi.transaction",
             "Transaction.read_text",
+            "Transaction.read_text_range",
+            "Transaction.begin_text_write",
+            "Transaction.begin_text_add",
             "Transaction.replace_text",
             "Transaction.apply_edits",
             "Transaction.validate",

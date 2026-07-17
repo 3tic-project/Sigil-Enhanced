@@ -1,0 +1,98 @@
+@charset "UTF-8";
+
+html {
+  writing-mode: horizontal-tb;
+}
+
+body {
+  margin: 5%;
+  color: #202124;
+  background: #fff;
+  font-family: serif;
+  font-size: 1em;
+  line-height: 1.7;
+}
+
+h1,
+h2,
+h3 {
+  margin: 2.5em 0 1.5em;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+
+h1 {
+  font-size: 1.5em;
+}
+
+p {
+  margin: 0;
+  text-align: justify;
+  text-indent: 2em;
+}
+
+.no-indent,
+.note,
+.scene-break,
+figcaption {
+  text-indent: 0;
+}
+
+.note,
+figcaption {
+  font-size: .9em;
+}
+
+.scene-break {
+  margin: 2em 0;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+figure {
+  margin: 1.5em auto;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  text-align: center;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+body.image-page {
+  margin: 0;
+  padding: 0;
+}
+
+.full-page-image {
+  height: 100vh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.full-page-image img {
+  max-width: 100%;
+  max-height: 100vh;
+  object-fit: contain;
+}
+
+a {
+  color: inherit;
+}
+
+ruby rt {
+  font-size: .58em;
+}
+
+nav ol {
+  padding-left: 1.5em;
+}
+
+nav li {
+  margin: .5em 0;
+}

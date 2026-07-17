@@ -236,6 +236,11 @@ add_test(NAME plugin_metadata COMMAND plugin_metadata_test)
 set_tests_properties(plugin_metadata PROPERTIES TIMEOUT 30)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME ci_packaging
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci_packaging_test.py
+)
+set_tests_properties(ci_packaging PROPERTIES TIMEOUT 30)
+
 add_test(NAME zh_cn_translation_coverage
     COMMAND ${Python3_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/zh_cn_translation_coverage_test.py
@@ -266,6 +271,41 @@ add_test(NAME python_live_sdk
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_live_sdk_test.py
 )
 set_tests_properties(python_live_sdk PROPERTIES TIMEOUT 30)
+
+add_test(NAME python_package_sync
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_package_sync_test.py
+)
+set_tests_properties(python_package_sync PROPERTIES TIMEOUT 30)
+
+add_test(NAME sigil_mcp_backend
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_backend_test.py
+)
+set_tests_properties(sigil_mcp_backend PROPERTIES TIMEOUT 30)
+
+add_test(NAME sigil_mcp_proxy
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_proxy_test.py
+)
+set_tests_properties(sigil_mcp_proxy PROPERTIES TIMEOUT 30)
+
+add_test(NAME sigil_mcp_docs
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_docs_test.py
+)
+set_tests_properties(sigil_mcp_docs PROPERTIES TIMEOUT 30)
+
+add_test(NAME sigil_epub_layout_skill
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_epub_layout_skill_test.py
+)
+set_tests_properties(sigil_epub_layout_skill PROPERTIES TIMEOUT 30)
+
+add_test(NAME sigil_mcp_protocol
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sigil_mcp_protocol_test.py
+)
+set_tests_properties(sigil_mcp_protocol PROPERTIES TIMEOUT 30)
+if( APPLE )
+    set_tests_properties(sigil_mcp_protocol PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sigil.app/Contents/python3lib"
+    )
+endif()
 
 add_test(NAME plugin_openrpc_contract
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/plugin_openrpc_contract_test.py

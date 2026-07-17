@@ -21,6 +21,7 @@
 *************************************************************************/
 
 #include <QtCore/QFile>
+#include <QtCore/QSignalBlocker>
 #include <QtCore/QString>
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
@@ -147,6 +148,10 @@ void TextResource::InitialLoad()
     Q_ASSERT(m_TextDocument);
 
     if (m_TextDocument->isEmpty() && QFile::exists(GetFullPath())) {
+        // Loading an existing file is not an edit. In particular, do not notify
+        // an attached editor while its document and preview state are being
+        // initialized.
+        const QSignalBlocker blocker(m_TextDocument);
         SetText(Utility::ReadUnicodeTextFile(GetFullPath()));
     }
 }

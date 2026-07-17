@@ -144,6 +144,59 @@ bool TextTransaction::ApplyEdits(const QString &resource_id,
                        document.toRawText(), error);
 }
 
+bool TextTransaction::ReadAddedText(const QString &staging_id,
+                                    QString *text,
+                                    quint64 *revision) const
+{
+    const auto found = m_Additions.constFind(staging_id);
+    if (found == m_Additions.constEnd() || !found->isText) return false;
+    if (text) *text = QString::fromUtf8(found->data);
+    if (revision) *revision = found->stagedRevision;
+    return true;
+}
+
+bool TextTransaction::ReplaceAddedText(const QString &staging_id,
+                                       quint64 expected_revision,
+                                       const QString &replacement,
+                                       QString *error)
+{
+    auto found = m_Additions.find(staging_id);
+    if (found == m_Additions.end() || !found->isText) {
+        if (error) *error = QStringLiteral("Staged text resource not found");
+        return false;
+    }
+    if (expected_revision != found->stagedRevision) {
+        if (error) *error = QStringLiteral("Revision conflict");
+        return false;
+    }
+    found->data = replacement.toUtf8();
+    ++found->stagedRevision;
+    return true;
+}
+
+bool TextTransaction::ApplyAddedTextEdits(const QString &staging_id,
+                                          quint64 expected_revision,
+                                          const QJsonArray &edit_values,
+                                          QString *error)
+{
+    QString source;
+    quint64 revision = 0;
+    if (!ReadAddedText(staging_id, &source, &revision)) {
+        if (error) *error = QStringLiteral("Staged text resource not found");
+        return false;
+    }
+    if (expected_revision != revision) {
+        if (error) *error = QStringLiteral("Revision conflict");
+        return false;
+    }
+    QList<TextEdit> edits;
+    if (!ParseTextEdits(edit_values, source, &edits, error)) return false;
+    QTextDocument document;
+    document.setPlainText(source);
+    ApplyTextEdits(&document, edits);
+    return ReplaceAddedText(staging_id, expected_revision, document.toRawText(), error);
+}
+
 QByteArray TextTransaction::ReadBinary(const QString &resource_id,
                                        const QByteArray &current_data,
                                        quint64 current_revision,

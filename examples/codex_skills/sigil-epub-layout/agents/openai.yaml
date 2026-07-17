@@ -1,0 +1,6 @@
+interface:
+  display_name: "Sigil EPUB Layout"
+  short_description: "使用 Sigil MCP 生成、排版并验收 EPUB"
+  default_prompt: "Use $sigil-epub-layout to inspect my source directory and create a validated EPUB in the open Sigil Book."
+policy:
+  allow_implicit_invocation: false

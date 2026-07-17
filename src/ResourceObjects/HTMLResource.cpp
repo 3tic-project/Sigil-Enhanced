@@ -103,6 +103,7 @@ void HTMLResource::SetTOCCache(const QString & text)
 
 void HTMLResource::SaveToDisk(bool book_wide_save)
 {
+    InitialLoad();
     SetText(GetText());
     XMLResource::SaveToDisk(book_wide_save);
 }

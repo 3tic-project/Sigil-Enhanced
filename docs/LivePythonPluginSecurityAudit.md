@@ -25,20 +25,24 @@ Live 插件仍是**可信本地代码**，不是沙箱。插件进程与 Sigil �
 | 5 运行入口一致性 | 已修复 | 菜单、QuickLaunch 和 Automate 统一通过 `ExecutePluginByName` 选择 v1/v2；Automate 等待 live command 完成并拒绝不适用的 book-session。`291469a82`。 |
 | 6 单写者 | 已修复 | `PluginSessionManager` 持有跨 Session writer lease，事务 begin 获取，commit/rollback/finish/destructor 释放。`7e033e7f6`。 |
 | 7 事件与资源压力 | 已修复主要边界 | 高频事件按 50/100ms 和资源 ID 合并；4 MiB socket backlog 丢弃并报告；限制请求率、读写流、上传、临时文件、聚合快照与控制台。`f57a653b0` 及本轮配额补充。 |
-| 8 缺失 API | 已完成 | `materializeTemporary`、readMany continuation、分块二进制写、结构化 metadata/spine 更新均已接入宿主、SDK、OpenRPC 和示例。`8904fd1b0`。 |
-| 9 测试不足 | 已改善，未达到全 GUI 自动化 | 20 个 CTest 目标；OpenRPC/dispatcher 集合锁定；SDK 聚焦测试；中英文文档与示例公共 SDK 方法覆盖清单；输入、OPF 结构更新和全局 writer 有 C++ 测试。 |
+| 8 缺失 API | 已完成 | `materializeTemporary`、readMany continuation、分块二进制/文本写、结构化 metadata/spine 更新均已接入宿主、SDK、OpenRPC 和示例；spine 更新可见同事务 staged manifest additions。 |
+| 9 测试不足 | 已改善，未达到全 GUI 自动化 | 32 个 CTest 目标；OpenRPC/dispatcher 集合锁定；SDK 聚焦测试；中英文文档与示例公共 SDK 方法覆盖清单；输入、OPF 结构更新和全局 writer 有 C++ 测试。新增文本资源会在 commit 时立即物化，HTML 保存前强制惰性加载；契约测试锁定零字节保存和空 Gumbo 树保护。 |
 
 ## 防护边界
 
 - socket 使用一次性 token，只接受一个客户端；握手后清除 token 并关闭 listener。
-- 正常帧上限 8 MiB；大二进制使用最多 2 MiB 的 chunk。
+- 正常帧上限 8 MiB；大二进制使用最多 2 MiB 的 chunk；文本范围单次最多 1 Mi 个 UTF-16
+  code units，分块文本写单块最多 1 MiB、单文档最多 64 MiB。
+- MCP `read_many` 保留宿主 6 MiB 页面与 continuation，不在 adapter 中重新聚合为超限响应。
 - 每 Session 最多 512 请求/秒、8 个读快照且合计 1 GiB、2 个二进制写上传、1 个 input
-  上传、16 个物化文件且合计 512 MiB；单个事务二进制最多 256 MiB。
+  上传、2 个文本写上传、16 个物化文件且合计 512 MiB；单个事务二进制最多 256 MiB。
 - `materializeTemporary` 不接受目标路径，目录由 Session 独占并在结束时删除；文本来自内存，
   临时文件修改不会自动导回。
 - archive 路径要求 canonical Book path，拒绝 symlink、越界路径和受保护 EPUB 文件。
 - input EPUB 在替换 Book 前完成结构校验；加载失败保留原 Book。
 - 所有写入要求 revision 或 SHA-256 并发令牌；跨 Session 同时只允许一个事务。
+- 编辑器选区替换/光标插入额外校验同一次状态读取的 `state_token`；MCP 可在不知道 handle 时
+  通过 transaction status 恢复活动事务、闲置超时和未完成上传状态。
 
 ## 测试证据
 
@@ -47,7 +51,7 @@ cmake --build cmake-build-debug -j4
 ctest --test-dir cmake-build-debug --output-on-failure
 ```
 
-当前环境结果为 20/20。关键自动化资产：
+当前环境结果为 33/33。关键自动化资产：
 
 - `safe_archive_extractor_test`：归档预算、路径与 input EPUB 验证。
 - `plugin_protocol_test`、`plugin_transport_integration_test`：帧边界与真实 socket。
@@ -56,9 +60,12 @@ ctest --test-dir cmake-build-debug --output-on-failure
 - `plugin_package_update_test`：metadata/spine 命名空间、转义、属性、顺序和负向输入。
 - `plugin_writer_lock_test`：跨 Session writer lease。
 - `python_live_sdk_test.py`：分页、流、hash、结构化事务、输出模式和自源过滤。
-- `plugin_openrpc_contract_test.py`：dispatcher 与 OpenRPC 方法集合、引用、错误码。
+- `plugin_openrpc_contract_test.py`：dispatcher 与 OpenRPC 方法集合、引用、错误码，以及 MCP 惰性读取
+  不通知未就绪编辑器、新增 XHTML 保存前已加载、空 Gumbo 树安全返回。
 - `live_plugin_examples_test.py`：可安装示例语法与全部公共 SDK 方法覆盖。
 - `live_plugin_docs_test.py`：从 SDK 提取公共方法，锁定中英文 API 手册覆盖及关键安全边界。
+- `sigil_epub_layout_skill_test.py`：显式触发策略、模板 XML/CSS、源文件隐私、EPUB 检查与
+  空 spine 文本拒绝。
 
 ## 仍未完成或不可宣称完成
 

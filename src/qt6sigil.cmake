@@ -233,22 +233,6 @@ list( APPEND LIBS_TO_LINK Python3::Python )
 
 set( SIGIL_CORE_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-core.txt )
 set( SIGIL_CORE_PYTHON_CACHE_DIR ${SIGIL_PYTHON_CACHE_DIR}/core )
-set( SIGIL_CORE_PYTHON_PACKAGE_IMPORTS
-     lxml
-     dulwich
-     regex
-     css_parser
-     cssselect
-     html5lib
-     webencodings
-     urllib3
-     typing_extensions.py
-     chardet
-     certifi
-     PIL
-     six.py
-     )
-
 # QtUiTools needed for PySide plugins
 if ( APPLE )
     list( APPEND LIBS_TO_LINK Qt6::UiTools )
@@ -379,14 +363,28 @@ if( APPLE )
         message(STATUS "Using ${PY_INTERP} to bundle python")
     endif()
     if ( Python3_EXECUTABLE )
+        set( SIGIL_PYTHON_VERIFY_ARGS
+             --requirements ${SIGIL_CORE_PYTHON_REQUIREMENTS}
+             --site-packages ${WORK_DIR}/Sigil.app/Contents/python3lib )
+        if ( PKG_SYSTEM_PYTHON )
+            list( APPEND SIGIL_PYTHON_VERIFY_ARGS
+                  --site-packages ${WORK_DIR}/Sigil.app/Contents/Frameworks/Python.framework/Versions/${_BUNDLED_PYVER}/lib/python${_BUNDLED_PYVER}/site-packages
+                  --extra-import PySide6 )
+        endif()
         add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
                             COMMAND ${Python3_EXECUTABLE}
                                     ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/sync_python_packages.py
                                     --requirements ${SIGIL_CORE_PYTHON_REQUIREMENTS}
                                     --cache-dir ${SIGIL_CORE_PYTHON_CACHE_DIR}
                                     --dest ${WORK_DIR}/Sigil.app/Contents/python3lib
-                                    --packages ${SIGIL_CORE_PYTHON_PACKAGE_IMPORTS}
+                                    --copy-all
                             COMMENT "Syncing cached Python runtime packages into Sigil.app"
+                            VERBATIM )
+        add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
+                            COMMAND ${Python3_EXECUTABLE} -I -S
+                                    ${CMAKE_SOURCE_DIR}/ci_scripts/verify_bundled_python.py
+                                    ${SIGIL_PYTHON_VERIFY_ARGS}
+                            COMMENT "Verifying bundled Python runtime packages"
                             VERBATIM )
     endif()
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp ${PROJECT_BINARY_DIR}/*.rcc ${WORK_DIR}/Sigil.app/Contents/Resources/ )
@@ -561,6 +559,23 @@ elseif (MSVC)
         message(STATUS "Using ${PY_INTERP} to bundle python")
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
                             COMMAND ${PY_INTERP} ARGS ${CMAKE_BINARY_DIR}/windows_python_gather6.py )
+        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
+                            COMMAND ${PY_INTERP}
+                                    ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/sync_python_packages.py
+                                    --requirements ${SIGIL_CORE_PYTHON_REQUIREMENTS}
+                                    --cache-dir ${SIGIL_CORE_PYTHON_CACHE_DIR}
+                                    --dest ${PYTHON_DEST_DIR}/Lib/site-packages
+                                    --copy-all
+                            COMMENT "Syncing complete Python dependency tree into Windows package"
+                            VERBATIM )
+        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
+                            COMMAND ${PY_INTERP} -I -S
+                                    ${CMAKE_SOURCE_DIR}/ci_scripts/verify_bundled_python.py
+                                    --requirements ${SIGIL_CORE_PYTHON_REQUIREMENTS}
+                                    --site-packages ${PYTHON_DEST_DIR}/Lib/site-packages
+                                    --extra-import PySide6
+                            COMMENT "Verifying bundled Python runtime packages"
+                            VERBATIM )
     endif()
 
     # Add external binary resource files

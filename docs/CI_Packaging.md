@@ -10,12 +10,13 @@ runtime used by Sigil-Enhanced:
 
 - Windows x64: Inno Setup `.exe` installer.
 - Windows x86: Inno Setup `.exe` installer, manually enabled only.
-- macOS Intel: `.dmg` and `.tar.xz` containing `Sigil.app`.
-- macOS ARM: `.dmg` and `.tar.xz` containing `Sigil.app`.
+- macOS Intel: `.dmg` containing `Sigil-Enhanced.app`.
+- macOS ARM: `.dmg` containing `Sigil-Enhanced.app`.
 
-The workflow is intended for release-candidate packaging and manual testing. It
-does not sign Windows binaries, sign macOS app bundles, notarize macOS packages,
-or publish GitHub Releases.
+Manual runs are intended for release-candidate packaging and testing. A matching
+version tag publishes the x64 Windows installer and both macOS packages to the
+tag's GitHub Release. The workflow does not sign Windows binaries, sign macOS
+app bundles, or notarize macOS packages.
 
 ## Runner Selection
 
@@ -45,9 +46,11 @@ Useful references:
 Windows uses `actions/setup-python` with Python `3.14.2` and the requested
 architecture. During CMake configure, `winvirtpy.cmake` creates a cached virtual
 environment and installs `src/Resource_Files/python_pkg/winreqs.txt`, including
-the PySide6 version matching `QTVER`. The installer target then gathers the
-Python runtime into the Inno Setup package with
-`windows_python_gather6.py`.
+the PySide6 version matching `QTVER`. The installer target gathers the base
+Python runtime with `windows_python_gather6.py`, then synchronizes the complete
+installed package tree into `Lib/site-packages`. The second step is required:
+the historical gather script knows about Sigil's original packages but not all
+transitive MCP SDK dependencies.
 
 macOS uses the relocatable `Python.framework` archives from
 `kevinhendricks/BuildSigilOnMac`. The official python.org macOS framework
@@ -56,6 +59,8 @@ without the framework/rpath work documented in
 `docs/Building_A_Relocatable_Python_3.14_Framework_on_MacOSX.txt`. The CI
 therefore follows the existing Sigil macOS packaging route and bundles that
 relocatable framework with `osx_add_python_framework6.py`.
+The build then synchronizes the complete locked dependency tree into
+`Sigil-Enhanced.app/Contents/python3lib`.
 
 Useful references:
 
@@ -64,6 +69,32 @@ Useful references:
   https://www.python.org/downloads/windows/
 - macOS relocatable framework assets:
   https://github.com/kevinhendricks/BuildSigilOnMac/releases/tag/for_sigil_1.0.0
+
+## Python Dependency Lock And Verification
+
+`src/Resource_Files/python_pkg/requirements-core.txt` is the canonical lock for
+the 40 distributions used by Sigil's bundled Python features. It includes direct
+requirements and every transitive dependency, all with exact versions.
+`winreqs.txt` contains the same lock plus `PySide6==${QTVER}`. The CI helper lock
+at `.github/workflows/requirements.txt` contains the same core set plus the Qt
+version selected by that workflow.
+
+Every packaged runtime is checked by `ci_scripts/verify_bundled_python.py` after
+copying:
+
+- installed distribution metadata must contain the exact locked versions;
+- imports run with isolated `sys.path` values rooted only in the packaged
+  directories, preventing the build machine's site-packages from masking an
+  incomplete package;
+- Windows and packaged macOS builds additionally verify PySide6;
+- a missing distribution, mismatched version, or failed import stops the build.
+
+Windows, both macOS architectures, and the AppImage build use the same complete
+package synchronization and verification path. Before changing the lock, audit
+binary wheel availability for the supported Python version and each target
+architecture. A package that silently falls back to a source build can introduce
+an undeclared compiler or Rust dependency; `cryptography==48.0.0` is retained
+because it provides compatible wheels for the current target matrix.
 
 ## Qt Runtime Sources
 
@@ -117,14 +148,53 @@ Tag trigger:
 
 - Pushing tags that match `v*` or `2.*` builds Windows x64 and both macOS
   packages.
+- The tag, after removing one optional leading `v`, must exactly match the CMake
+  version. For example, CMake version `2.8.1E6` accepts `v2.8.1E6` and
+  `2.8.1E6`; a mismatched tag fails before package runners start.
 - Windows x86 is skipped for tag builds until a maintained 32-bit Qt runtime
   source is available.
+
+Recommended release command:
+
+```sh
+git tag -a v2.8.1E6 -m "Sigil-Enhanced 2.8.1E6"
+git push enhanced v2.8.1E6
+```
+
+## GitHub Release Publishing
+
+The `release` job runs only for tag events and only after Windows x64 and both
+macOS matrix builds succeed. It:
+
+1. downloads the three package artifacts from the same workflow run;
+2. rejects missing, duplicate, or unexpected package types;
+3. creates `SHA256SUMS.txt` over the exact `.exe` and `.dmg` files;
+4. creates a GitHub Release with generated notes, or reuses an existing Release
+   for the same tag when a failed workflow is rerun;
+5. uploads all packages and the checksum file, replacing same-named assets on a
+   rerun.
+
+Only this job receives `contents: write`; checkout and package jobs retain the
+workflow's default read-only permission. It uses the repository-scoped
+`GITHUB_TOKEN`, so no personal access token or additional secret is required.
+Manual `workflow_dispatch` builds remain Actions artifacts and never publish or
+modify a Release.
+
+The resulting Release packages are currently unsigned and unnotarized. This is
+unchanged from the previous CI artifacts and should remain visible in release
+notes until signing is implemented.
 
 ## Maintenance Notes
 
 - Keep `QT_VERSION`, `QTVER`, PySide6, and the Qt archive URLs in sync.
-- When changing Python package requirements, update
-  `requirements-core.txt`/`winreqs.txt`; cache keys already include those files.
+- When changing Python packages, keep the core entries in
+  `requirements-core.txt`, `winreqs.txt`, and
+  `.github/workflows/requirements.txt` identical. The automated package-sync
+  test enforces this invariant, and cache keys already include the platform
+  requirements files.
+- The first-party MCP adapter requires the locked `mcp==1.28.1` runtime. Do not
+  remove apparently indirect packages from the lock without repeating the
+  isolated-import and cross-platform wheel audits.
 - CI packages are unsigned. Release signing and notarization should be added as
   a separate workflow once certificates and secrets are available.
 - If GitHub changes runner labels, update this workflow and this document

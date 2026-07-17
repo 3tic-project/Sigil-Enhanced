@@ -78,6 +78,26 @@ class LiveSdkTest(unittest.TestCase):
         resources = list(BookApi(rpc).resources(types=("html",), page_size=1))
         self.assertEqual(resources, [Resource("a", "Text/a.xhtml", "application/xhtml+xml", "html", 4, True)])
 
+    def test_book_api_returns_one_resource_page_for_protocol_adapters(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "items": [{
+                    "resource_id": "css", "book_path": "Styles/book.css",
+                    "media_type": "text/css", "resource_type": "css",
+                    "content_revision": 2, "loaded": True,
+                }],
+                "next_cursor": "1",
+            }},
+        ])
+        page = BookApi(RpcClient(transport)).list_resources(
+            types=("css",), page_size=1, cursor="0"
+        )
+        self.assertEqual(page["items"][0].id, "css")
+        self.assertEqual(page["next_cursor"], "1")
+        self.assertEqual(transport.sent[0]["params"], {
+            "page_size": 1, "types": ["css"], "cursor": "0",
+        })
+
     def test_book_api_requests_compatibility_snapshot(self):
         snapshot = {"package": {"text": "<package/>", "book_path": "content.opf"}}
         transport = FakeTransport(
@@ -170,6 +190,39 @@ class LiveSdkTest(unittest.TestCase):
         items = BookApi(RpcClient(transport)).read_many(["a", "b"])
         self.assertEqual([item["resource_id"] for item in items], ["a", "b"])
         self.assertEqual(transport.sent[1]["params"]["cursor"], "1")
+
+    def test_book_read_many_page_preserves_host_continuation(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "items": [{"resource_id": "b", "text": "B", "revision": 1}],
+                "next_cursor": "2",
+            }},
+        ])
+        page = BookApi(RpcClient(transport)).read_many_page(["a", "b"], "1")
+        self.assertEqual(page["next_cursor"], "2")
+        self.assertEqual(transport.sent[0]["params"]["cursor"], "1")
+
+    def test_book_and_transaction_read_bounded_text_ranges(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "text": "abc", "start": 0, "end": 3, "next_start": 3,
+            }},
+            {"jsonrpc": "2.0", "id": 2, "result": {
+                "text": "def", "start": 3, "end": 6, "next_start": None,
+            }},
+        ])
+        rpc = RpcClient(transport)
+        self.assertEqual(BookApi(rpc).read_text_range("chapter", 0, 3)["text"], "abc")
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            rpc,
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        self.assertEqual(tx.read_text_range("new:1", 3, 3)["text"], "def")
+        self.assertEqual(transport.sent[0]["method"], "resource.readTextRange")
+        self.assertEqual(transport.sent[1]["method"], "transaction.readTextRange")
+        self.assertEqual(transport.sent[1]["params"]["transaction_id"], "tx")
 
     def test_input_api_chunks_and_hashes_epub_uploads(self):
         transport = FakeTransport(
@@ -282,6 +335,31 @@ class LiveSdkTest(unittest.TestCase):
         self.assertEqual(result["revision"], 3)
         self.assertEqual(
             transport.sent[0]["params"]["edits"], [{"start": 1, "end": 3, "text": "x"}]
+        )
+
+    def test_editor_selection_writes_include_current_state_token(self):
+        state = {
+            "active": True,
+            "resource_id": "a",
+            "book_path": "Text/a.xhtml",
+            "revision": 2,
+            "state_token": "state-1",
+            "cursor": 4,
+            "selection": {"start": 1, "end": 4, "text": "abc"},
+            "position_encoding": "utf-16",
+        }
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": state},
+            {"jsonrpc": "2.0", "id": 2, "result": {
+                "resource_id": "a", "revision": 3, "state_token": "state-2",
+                "applied_edits": 1,
+            }},
+        ])
+        result = EditorApi(RpcClient(transport)).replace_selection("replacement")
+        self.assertEqual(result["state_token"], "state-2")
+        self.assertEqual(transport.sent[0]["method"], "editor.getState")
+        self.assertEqual(
+            transport.sent[1]["params"]["expected_state_token"], "state-1"
         )
 
     def test_editor_navigation_uses_resource_ids_and_utf16_ranges(self):
@@ -425,6 +503,63 @@ class LiveSdkTest(unittest.TestCase):
             transport.sent[-1]["params"]["sha256"],
             "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
         )
+
+    def test_transaction_text_writer_chunks_unicode_by_utf8_size(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "upload_id": "text-upload", "chunk_size": 4,
+                "max_size": 100, "expected_size": 9,
+            }},
+            {"jsonrpc": "2.0", "id": 2, "result": {
+                "received": 3, "duplicate": False,
+            }},
+            {"jsonrpc": "2.0", "id": 3, "result": {
+                "received": 7, "duplicate": False,
+            }},
+            {"jsonrpc": "2.0", "id": 4, "result": {
+                "received": 9, "duplicate": False,
+            }},
+            {"jsonrpc": "2.0", "id": 5, "result": {
+                "staged": True, "resource_id": "chapter",
+            }},
+        ])
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        writer = tx.begin_text_write("chapter", 9, expected_revision=4)
+        self.assertEqual(writer.write("中文abc"), 9)
+        self.assertTrue(writer.finish()["staged"])
+        chunks = [
+            item["params"] for item in transport.sent
+            if item["method"] == "transaction.writeTextChunk"
+        ]
+        self.assertEqual([item["offset"] for item in chunks], [0, 3, 7])
+        self.assertTrue(all(len(item["text"].encode("utf-8")) <= 4 for item in chunks))
+
+    def test_transaction_text_add_upload_can_be_aborted(self):
+        transport = FakeTransport([
+            {"jsonrpc": "2.0", "id": 1, "result": {
+                "upload_id": "text-add", "chunk_size": 1024,
+                "max_size": 4096, "expected_size": 10,
+            }},
+            {"jsonrpc": "2.0", "id": 2, "result": {"aborted": True}},
+        ])
+        from sigil_live.client import Transaction
+
+        tx = Transaction(
+            RpcClient(transport),
+            {"transaction_id": "tx", "base_book_revision": 1, "checkpoint": "auto"},
+        )
+        writer = tx.begin_text_add(
+            "OEBPS/Text/new.xhtml", 10, "application/xhtml+xml",
+            manifest_id="new_chapter",
+        )
+        self.assertTrue(writer.abort())
+        self.assertEqual(transport.sent[0]["method"], "transaction.addTextBegin")
+        self.assertEqual(transport.sent[1]["method"], "transaction.writeTextAbort")
 
     def test_transaction_updates_structured_metadata_and_spine(self):
         transport = FakeTransport([
