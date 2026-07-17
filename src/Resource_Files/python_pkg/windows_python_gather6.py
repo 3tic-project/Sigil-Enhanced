@@ -69,16 +69,28 @@ def copy_site_packages():
             if not found:
                 for entry in os.listdir(path):
                     if entry == pkg:
+                        destination = os.path.join(site_dest, entry)
+                        if os.path.exists(destination):
+                            if pkg in ('PySide6', 'shiboken6'):
+                                if os.path.isdir(destination):
+                                    shutil.rmtree(destination)
+                                else:
+                                    os.remove(destination)
+                            else:
+                                # The synchronized dependency tree already
+                                # owns this locked dependency path.
+                                found = True
+                                break
                         if typ == 'd' and os.path.isdir(os.path.join(path, entry)):
                             if pkg in ('PySide6', 'shiboken6'):
-                                shutil.copytree(os.path.join(path, entry), os.path.join(site_dest, entry), ignore=ignore_in_pyside6_dirs)
+                                shutil.copytree(os.path.join(path, entry), destination, ignore=ignore_in_pyside6_dirs)
                             else:
-                                shutil.copytree(os.path.join(path, entry), os.path.join(site_dest, entry), ignore=ignore_in_dirs)
+                                shutil.copytree(os.path.join(path, entry), destination, ignore=ignore_in_dirs)
                             found = True
                             break
                         else:
                             if os.path.isfile(os.path.join(path, entry)):
-                                shutil.copy2(os.path.join(path, entry), os.path.join(site_dest, entry))
+                                shutil.copy2(os.path.join(path, entry), destination)
                                 found = True
                                 break
             else:

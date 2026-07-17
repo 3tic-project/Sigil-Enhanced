@@ -76,8 +76,15 @@ class PythonPackageSyncTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         sync = cmake.index("Syncing complete Python dependency tree into Windows package")
-        gather_copy = cmake.index("windows_python_gather6.py", sync)
-        self.assertLess(sync, gather_copy)
+        gather_copy = cmake.rindex("windows_python_gather6.py", 0, sync)
+        self.assertLess(gather_copy, sync)
+        self.assertIn(
+            "set( SIGIL_WINDOWS_PYTHON_SITE_PACKAGES ${MAIN_PACKAGE_DIR}/Lib/site-packages )",
+            cmake,
+        )
+        self.assertIn("--dest ${SIGIL_WINDOWS_PYTHON_SITE_PACKAGES}", cmake)
+        self.assertIn("--site-packages ${SIGIL_WINDOWS_PYTHON_SITE_PACKAGES}", cmake)
+        self.assertIn("lib_dir = os.path.join(tmp_prefix, 'Lib')", gather)
         appimage_sync = appimage.index("sync_python_packages.py")
         appimage_gather = appimage.index("appimg_python3_gather.py")
         self.assertLess(appimage_sync, appimage_gather)
@@ -87,6 +94,8 @@ class PythonPackageSyncTest(unittest.TestCase):
         self.assertIn("Required bundled Python package not found", gather)
         self.assertIn("def ensure_pyside6():", gather)
         self.assertIn("'PySide6=={0}'.format(pyside6_version)", gather)
+        self.assertIn("The synchronized dependency tree already", gather)
+        self.assertIn("if pkg in ('PySide6', 'shiboken6'):", gather)
         self.assertIn("pyside6_version = '${QTVER}'", paths_template)
         self.assertIn("sys_dlls = r'${SYS_DLL_DIR}'", paths_template)
 

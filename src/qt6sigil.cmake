@@ -552,23 +552,24 @@ elseif (MSVC)
     # Create python virtual environment
     if ( PKG_SYSTEM_PYTHON )
         set( PY_INTERP ${Python3_EXECUTABLE} )
+        # windows_python_gather6.py creates the embedded interpreter under
+        # MAIN_PACKAGE_DIR, where it loads Lib/site-packages at runtime.
+        set( SIGIL_WINDOWS_PYTHON_SITE_PACKAGES ${MAIN_PACKAGE_DIR}/Lib/site-packages )
         message(STATUS "Using ${PY_INTERP} to bundle python")
+        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
+                            COMMAND ${PY_INTERP} ARGS ${CMAKE_BINARY_DIR}/windows_python_gather6.py )
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
                             COMMAND ${PY_INTERP}
                                     ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/sync_python_packages.py
                                     --requirements ${SIGIL_WINDOWS_PYTHON_REQUIREMENTS}
                                     --cache-dir ${SIGIL_CORE_PYTHON_CACHE_DIR}
-                                    --dest ${PYTHON_DEST_DIR}/Lib/site-packages
+                                    --dest ${SIGIL_WINDOWS_PYTHON_SITE_PACKAGES}
                                     --copy-all
                             COMMENT "Syncing complete Python dependency tree into Windows package"
                             VERBATIM )
-        # Syncing removes paths from its previous manifest, so copy the curated
-        # PySide6 runtime afterwards to prevent it being removed on cache reuse.
-        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
-                            COMMAND ${PY_INTERP} ARGS ${CMAKE_BINARY_DIR}/windows_python_gather6.py )
         set( SIGIL_WINDOWS_PYTHON_VERIFY_ARGS
              --requirements ${SIGIL_WINDOWS_PYTHON_REQUIREMENTS}
-             --site-packages ${PYTHON_DEST_DIR}/Lib/site-packages )
+             --site-packages ${SIGIL_WINDOWS_PYTHON_SITE_PACKAGES} )
         if ( PACKAGE_PYSIDE6 )
             list( APPEND SIGIL_WINDOWS_PYTHON_VERIFY_ARGS --extra-import PySide6 )
         endif()
