@@ -94,6 +94,7 @@ SearchBatch::Result SearchBatchCoordinator::Run(
                 result.error = QStringLiteral("Saved-search target changed before commit: %1").arg(path);
                 break;
             }
+            appliedPaths.append(path);
             resource->SetText(result.changedTexts.value(path));
             if (resource->GetText() != result.changedTexts.value(path)) {
                 result.success = false;
@@ -101,11 +102,11 @@ SearchBatch::Result SearchBatchCoordinator::Run(
                 break;
             }
         }
-        appliedPaths.append(path);
     }
 
     if (!result.success) {
-        for (const QString& path : appliedPaths) {
+        for (auto it = appliedPaths.crbegin(); it != appliedPaths.crend(); ++it) {
+            const QString& path = *it;
             TextResource* resource = resources.value(path, nullptr);
             if (resource) {
                 QWriteLocker locker(&resource->GetLock());
