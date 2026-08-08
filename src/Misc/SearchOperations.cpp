@@ -24,6 +24,7 @@
 #include <signal.h>
 
 #include <QtCore/QtCore>
+#include <QEventLoop>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QProgressDialog>
 
@@ -39,6 +40,19 @@
 #include "EmbedPython/PythonRoutines.h"
 #include "sigil_constants.h"
 
+namespace
+{
+
+void ProcessSearchProgressEvents()
+{
+    // Search loops must never dispatch clicks, shortcuts, or window-close input.
+    // Doing so can recursively start another replacement or destroy MainWindow
+    // while the outer operation still holds Resource pointers.
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+}
+
+}
+
 int SearchOperations::CountInFiles(const QString &search_regex,
                                    QList<Resource *> resources,
                                    bool check_spelling)
@@ -51,7 +65,7 @@ int SearchOperations::CountInFiles(const QString &search_regex,
     int count = 0;
     foreach(Resource * resource, resources) {
         progress.setValue(progress_value++);
-        qApp->processEvents();
+        ProcessSearchProgressEvents();
         count += CountInFile(search_regex, resource, check_spelling);
     }
     return count;
@@ -70,7 +84,7 @@ int SearchOperations::ReplaceInAllFIles(const QString &search_regex,
     int count = 0;
     foreach(Resource * resource, resources) {
         progress.setValue(progress_value++);
-        qApp->processEvents();
+        ProcessSearchProgressEvents();
         count += ReplaceInFile(search_regex, replacement, resource);
     }
     return count;
@@ -247,7 +261,7 @@ int SearchOperations::FunctionReplaceInAllFiles(const QString &search_regex,
 
     foreach(Resource * resource, resources) {
        progress.setValue(progress_value++);
-        qApp->processEvents();
+        ProcessSearchProgressEvents();
         QString bookpath = resource->GetRelativePath();
         HTMLResource *html_resource = qobject_cast<HTMLResource *>(resource);
         TextResource *text_resource = qobject_cast<TextResource *>(resource);
@@ -285,7 +299,7 @@ int SearchOperations::CountInFilesPlus(const QString& presearch_regex,
     int count = 0;
     foreach(Resource * resource, resources) {
         progress.setValue(progress_value++);
-        qApp->processEvents();
+        ProcessSearchProgressEvents();
         count += CountInFilePlus(presearch_regex, search_regex, resource);
     }
     return count;
@@ -384,7 +398,7 @@ int SearchOperations::ReplaceInAllFIlesPlus(const QString& presearch_regex,
     int count = 0;
     foreach(Resource * resource, resources) {
         progress.setValue(progress_value++);
-        qApp->processEvents();
+        ProcessSearchProgressEvents();
         count += ReplaceInFilePlus(presearch_regex, search_regex, replacement, resource);
     }
     return count;

@@ -34,6 +34,13 @@ target_link_libraries(search_batch_benchmark PRIVATE
 add_test(NAME search_batch_benchmark COMMAND search_batch_benchmark)
 set_tests_properties(search_batch_benchmark PROPERTIES TIMEOUT 60)
 
+add_test(NAME search_operations_reentrancy
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/search_operations_reentrancy_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(search_operations_reentrancy PROPERTIES TIMEOUT 30)
+
 add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp

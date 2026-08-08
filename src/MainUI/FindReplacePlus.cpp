@@ -304,9 +304,12 @@ void FindReplacePlus::ResetKeyModifiers()
 
 void FindReplacePlus::FindClicked()
 {
+    if (m_SearchRunning) return;
+    m_SearchRunning = true;
     SetKeyModifiers();
     Find();
     ResetKeyModifiers();
+    m_SearchRunning = false;
 }
 
 void FindReplacePlus::ReplaceClicked()
@@ -314,10 +317,13 @@ void FindReplacePlus::ReplaceClicked()
     if (!IsValidFindText())
         return warningEmptyExpression();
 
+    if (m_SearchRunning) return;
+    m_SearchRunning = true;
     // This is really ReplaceFind";
     SetKeyModifiers();
     Replace();
     ResetKeyModifiers();
+    m_SearchRunning = false;
 }
 
 void FindReplacePlus::ReplaceAllClicked()
@@ -325,6 +331,8 @@ void FindReplacePlus::ReplaceAllClicked()
     if (!IsValidFindText())
         return warningEmptyExpression();
 
+    if (m_SearchRunning) return;
+    m_SearchRunning = true;
     //SetKeyModifiers();
     if (m_ShiftUsed || m_OptionPreview) {
         ChooseReplacements();
@@ -332,6 +340,7 @@ void FindReplacePlus::ReplaceAllClicked()
         ReplaceAll();
     }
     ResetKeyModifiers();
+    m_SearchRunning = false;
 }
 
 void FindReplacePlus::CountClicked()
@@ -339,6 +348,8 @@ void FindReplacePlus::CountClicked()
     if (!IsValidFindText())
         return warningEmptyExpression();
 
+    if (m_SearchRunning) return;
+    m_SearchRunning = true;
     //SetKeyModifiers();
     if (m_ShiftUsed || m_OptionPreview) {
         PerformDryRunReplace();
@@ -346,6 +357,7 @@ void FindReplacePlus::CountClicked()
         Count();
     }
     ResetKeyModifiers();
+    m_SearchRunning = false;
 }
 
 

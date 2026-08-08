@@ -394,21 +394,29 @@ void FindReplace::ResetKeyModifiers()
 
 void FindReplace::FindClicked()
 {
+    if (m_SearchRunning) return;
+    m_SearchRunning = true;
     SetKeyModifiers();
     Find();
     ResetKeyModifiers();
+    m_SearchRunning = false;
 }
 
 void FindReplace::ReplaceClicked()
 {
+    if (m_SearchRunning) return;
+    m_SearchRunning = true;
     // This is really ReplaceFind";
     SetKeyModifiers();
     Replace();
     ResetKeyModifiers();
+    m_SearchRunning = false;
 }
 
 void FindReplace::ReplaceAllClicked()
 {
+    if (m_SearchRunning) return;
+    m_SearchRunning = true;
     SetKeyModifiers();
     if (m_ShiftUsed) {
         ChooseReplacements();
@@ -416,10 +424,13 @@ void FindReplace::ReplaceAllClicked()
         ReplaceAll();
     }
     ResetKeyModifiers();
+    m_SearchRunning = false;
 }
 
 void FindReplace::CountClicked()
 {
+    if (m_SearchRunning) return;
+    m_SearchRunning = true;
     SetKeyModifiers();
     if (m_ShiftUsed) {
         PerformDryRunReplace();
@@ -427,6 +438,7 @@ void FindReplace::CountClicked()
         Count();
     }
     ResetKeyModifiers();
+    m_SearchRunning = false;
 }
 
 
