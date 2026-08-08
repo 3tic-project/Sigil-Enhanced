@@ -1185,6 +1185,16 @@ bool MainWindow::MoveContentFilesToStdFolders(QList<ValidationResult>* results)
 
 bool MainWindow::RepoCommit()
 {
+    return CreateRepoCheckpoint(true, true);
+}
+
+bool MainWindow::CreateRecoveryCheckpoint()
+{
+    return CreateRepoCheckpoint(false, false);
+}
+
+bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data)
+{
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     // make sure that the Sigil-Preferences directory has a "repo" folder
@@ -1203,14 +1213,19 @@ bool MainWindow::RepoCommit()
     bookinfo << QFileInfo(m_CurrentFileName).completeBaseName();
     bookinfo << m_Book->GetOPF()->GetPrimaryBookTitle();
 
-    // follow epub3 spec and update modification date/time for every save and commit
-    // manually set the book to be modified since modification date setting is normally
-    // only done upon save or save-as so no need to set the modified flag
-    bookinfo <<  m_Book->GetOPF()->AddModificationDateMeta();
-    m_Book->SetModified();
+    if (update_book_metadata) {
+        // Follow the epub3 spec for user-requested commits. Recovery checkpoints used by
+        // staged batch operations must not mutate OPF text before staged text is applied.
+        bookinfo << m_Book->GetOPF()->AddModificationDateMeta();
+        m_Book->SetModified();
+    } else {
+        bookinfo << QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyy-MM-ddTHH:mm:ssZ"));
+    }
 
     // finally force all changes to Disk
-    SaveTabData();
+    if (save_tab_data) {
+        SaveTabData();
+    }
     m_Book->GetFolderKeeper()->SuspendWatchingResources();
     m_Book->SaveAllResourcesToDisk();
     m_Book->GetFolderKeeper()->ResumeWatchingResources();

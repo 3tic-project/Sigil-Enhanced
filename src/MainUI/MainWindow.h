@@ -294,6 +294,7 @@ public slots:
     void launchExternalXEditor();
 
     bool RepoCommit();
+    bool CreateRecoveryCheckpoint();
     void RepoCheckout(QString bookid="", QString destpath="", QString filename="", bool loadnow=true);
     void RepoDiff(QString bookid="");
     void RepoManage();
@@ -729,6 +730,8 @@ private slots:
     void unloadPluginsMenu();
 
 private:
+    bool CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data);
+
     void updateToolTipsOnPluginIcons();
     void updateToolTipsOnAutomateIcons();
     void UpdateClipButton(QAction *ui_action);
