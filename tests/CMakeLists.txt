@@ -1,5 +1,22 @@
 find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Xml REQUIRED)
 
+add_executable(search_batch_runner_test
+    search_batch_runner_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.h
+)
+
+target_include_directories(search_batch_runner_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(search_batch_runner_test PRIVATE
+    Qt6::Core
+)
+
+add_test(NAME search_batch_runner COMMAND search_batch_runner_test)
+set_tests_properties(search_batch_runner PROPERTIES TIMEOUT 30)
+
 add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp

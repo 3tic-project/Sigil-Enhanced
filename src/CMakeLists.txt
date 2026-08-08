@@ -499,6 +499,8 @@ set( MISC_FILES
     Misc/PluginDB.h
     Misc/SearchOperations.cpp
     Misc/SearchOperations.h
+    Misc/SearchBatchRunner.cpp
+    Misc/SearchBatchRunner.h
     Misc/SigilDarkStyle.cpp
     Misc/SigilDarkStyle.h
     Misc/Language.cpp
