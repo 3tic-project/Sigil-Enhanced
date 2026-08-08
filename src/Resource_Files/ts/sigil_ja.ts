@@ -4543,6 +4543,11 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
         <source>No replacements made</source>
         <translation>置換するものはありませんでした</translation>
     </message>
+    <message>
+        <location filename="../../MainUI/FindReplace.cpp" line="2047"/>
+        <source>Saved-search batch failed: %1</source>
+        <translation>保存済み検索の一括処理に失敗しました: %1</translation>
+    </message>
     <message numerus="yes">
         <location filename="../../MainUI/FindReplace.cpp" line="713"/>
         <location filename="../../MainUI/FindReplace.cpp" line="776"/>
@@ -5062,6 +5067,11 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <location filename="../../MainUI/FindReplacePlus.cpp" line="1652"/>
         <source>No replacements made</source>
         <translation>置換するものはありませんでした</translation>
+    </message>
+    <message>
+        <location filename="../../MainUI/FindReplacePlus.cpp" line="1712"/>
+        <source>Saved-search batch failed: %1</source>
+        <translation>保存済み検索の一括処理に失敗しました: %1</translation>
     </message>
     <message numerus="yes">
         <location filename="../../MainUI/FindReplacePlus.cpp" line="637"/>
