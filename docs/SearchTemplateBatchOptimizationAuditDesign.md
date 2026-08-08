@@ -1,14 +1,15 @@
 # 搜索模板批处理性能优化：审计与实施设计
 
-> 状态：Proposed / implementation-ready draft
+> 状态：Implemented v1 / audited（兼容回退见 1.1）
 > 日期：2026-08-09
 > 审计基线：`de0ea00e0`（`Add BookLive paragraph normalizer`）
+> 实施范围：`9290e4de3` 至 `861b02a9c`
 > 上位路线：`../todo/Sigil-Enhanced-Development-Plan.md` 第 5 节
 > 本文边界：只设计“已保存搜索模板的 Replace All 批处理”；单次交互式 Find/Replace、Dry Run 和 Replace Current 暂不迁移。
 
 ## 1. 结论与决策
 
-当前问题尚未修复。普通版和增强版都会按规则调用 GUI 层 `ReplaceAll()`，并在规则内部直接修改 `TextResource`。其复杂度不仅是不可避免的 `规则数 × 资源数` 文本扫描，还额外产生同量级的 `QTextDocument::setPlainText()`、`Modified()` 信号、光标恢复和 Preview 更新。
+审计基线中的问题已在 v1 支持路径上修复。普通版和增强版保存搜索不再逐规则调用 GUI `ReplaceAll()`；规则先按原顺序作用于内存 working text，整批成功并建立恢复快照后，每个实际变化的资源只写回一次。不可避免的 `规则数 × 资源数` 文本扫描仍然存在，但同量级的 `QTextDocument::setPlainText()`、`Modified()` 信号、重复 checkpoint 和 Preview 更新已从默认批处理路径移除。
 
 目标实现采用以下边界：
 
@@ -21,6 +22,24 @@
 7. 任意编译、Python、取消、冲突或 checkpoint 错误都必须发生在正式写回前，并保证零资源写入。
 
 第一版保持单线程顺序执行。性能收益来自去除 GUI/资源反复写回，而不是冒险并行 PCRE、Python 或 Qt 文档对象。
+
+### 1.1 v1 实施边界
+
+已启用的默认路径：
+
+- 普通保存搜索的 normal、case-sensitive、PCRE regex 及现有 regex options；
+- Plus 保存搜索的 normal、regex 和 pre-search；
+- Current、HTML/CSS、Selected/Tabbed、OPF/NCX、SVG/JS/Misc XML 等现有资源范围；
+- SearchEditor 直接执行和 Automate 的三个保存搜索命令。
+
+为保持既有语义，以下整批仍显式回退旧路径：
+
+- Marked Text；
+- 普通版 Python `\F<function-name>` replacement；
+- 普通版 spell-check replace；
+- 普通版 Current File 且 wrap 关闭。
+
+尚未纳入 v1：临时文件 staging 后端、GUI 取消/进度、完全脱离 QWidget 的 controls compiler，以及 Python function 的 staged executor。纯 runner 已支持取消并按 fail-closed 处理，但 coordinator 暂未暴露 GUI 取消入口。
 
 ## 2. 审计范围
 
@@ -38,7 +57,7 @@
 
 审计未发现 `SearchBatchRunner`、`BookEditSession`、working-text map、搜索批处理 signal-count test 或 1000 × 50 benchmark 的现有实现。
 
-## 3. 当前调用链
+## 3. 变更前调用链（审计基线）
 
 ### 3.1 普通版
 
@@ -394,9 +413,11 @@ final text and counts          = legacy baseline
 
 性能目标：target fixture 相比 legacy 至少 3× 加速；small fixture 不应有超过 10% 的稳定回退。最终门槛以同机多轮中位数记录。
 
-## 11. 分阶段实施
+## 11. 初始分阶段路线与 v1 落地情况
 
 ### PR-1：可测性和低风险止损
+
+状态：已完成核心项；信号次数目前由单写回结构保证，尚缺真实 Tab spy 集成测试。
 
 - 抽出纯 QString replace functions；
 - 零变化不调用 `SetText()`，覆盖普通、Plus、Python；
@@ -404,6 +425,8 @@ final text and counts          = legacy baseline
 - 建立 1000 × 50 baseline。
 
 ### PR-2：Rule compiler 与 staging runner
+
+状态：runner、DTO、内存 staging 和顺序测试已完成；controls 仍由现有 UI 编译后冻结，纯 compiler 待后续拆分。
 
 - DTO、普通 controls、Plus controls；
 - 内存 staging；
@@ -413,11 +436,15 @@ final text and counts          = legacy baseline
 
 ### PR-3：非变异式 recovery snapshot
 
+状态：已完成，并在复审中从直接 `SaveAllResourcesToDisk()` 修正为隔离临时树 materialization；故障注入测试待补。
+
 - 从 `RepoCommit()` 分离“更新 OPF/保存”和“创建恢复快照”；
 - checkpoint failure test；
 - OPF scope conflict test。
 
 ### PR-4：普通 SearchEditor 与 Automate 接入
+
+状态：已完成；Python 整批回退；Automate 可传播批次错误；未增加 feature flag。
 
 - coordinator、scope snapshot、单次提交；
 - 结构化结果；
@@ -426,12 +453,16 @@ final text and counts          = legacy baseline
 
 ### PR-5：Plus 接入与临时文件后端
 
+状态：Plus/pre-search/selected-files 已完成；staging spill-to-temp 未实现。
+
 - pre-search 完整接入；
 - selected-files 语义；
 - spill-to-temp；
 - 移除增强版 per-rule `RepoCommit()`。
 
 ### PR-6：默认启用和清理
+
+状态：v1 已默认启用并保留显式兼容回退；真实 GUI fixture 和 legacy 清理尚未开始。
 
 - 真实 EPUB/搜索模板回归；
 - 默认启用 feature flag；
@@ -453,11 +484,11 @@ final text and counts          = legacy baseline
 9. feature flag 回退验证；
 10. `git diff --check`、目标测试和全量 CTest 结果。
 
-## 13. 实施前必须确认的决策
+## 13. 已确认决策与后续 backlog
 
 当前建议已经给出默认答案：
 
-- staging：内存优先，超预算 spill 到安全临时目录；
+- staging：v1 使用内存；超预算 spill 到安全临时目录留待后续；
 - execution：第一版单线程；
 - Marked Text：整组 legacy fallback；
 - Python：完整支持前整组 fallback，不混合执行；
@@ -465,4 +496,82 @@ final text and counts          = legacy baseline
 - commit：每个 changed resource 一次 `SetText()`，不立即进行第二次全书写盘；
 - compatibility：最终文本、每规则 replacement count、资源顺序是硬约束。
 
-满足上述前置条件后，才能把 `FindReplace::ReplaceAllSearch()` 和 `FindReplacePlus::ReplaceAllSearch()` 的默认实现切换到新 runner。
+v1 已在明确回退边界内把 `FindReplace::ReplaceAllSearch()` 和 `FindReplacePlus::ReplaceAllSearch()` 切换到新 runner。扩展 Python、Marked Text 或 spill 后端前，仍必须先完成对应差分和故障注入测试。
+
+## 14. v1 实施审计记录
+
+### 14.1 提交映射
+
+| Commit | 内容 | 审计意义 |
+| --- | --- | --- |
+| `9290e4de3` | 无变化时不调用 `SetText()` | 即使兼容回退也避免 0-change 文档重建 |
+| `e956aa4a4` | 纯内存 `SearchBatch::Runner` | 规则顺序、working text、计数和 fail-closed 与 UI 解耦 |
+| `cf9052b85` | 分离 recovery checkpoint API | 批次不调用会更新 OPF modification date 的普通 checkpoint |
+| `107ad0c57` | recovery snapshot 隔离 materialization | 修复复审发现的 `SaveAllResourcesToDisk()`/UUID 隐式文档变异 |
+| `9f7a60df7` | 普通版与 Plus coordinator 接入 | 一次保存、一次 checkpoint、每资源一次写回、成功后完成 entries |
+| `b185c6f30` | Automate 错误传播 | checkpoint、冲突或 commit 错误不再被标记为成功 |
+| `7e1a11c3b` | 1000 × 50 benchmark | 固化目标规模、结果和写回上限验收 |
+| `6679316b2` | commit postcondition 回滚补强 | 当前资源写入后校验失败时也纳入逆序回滚 |
+| `861b02a9c` | 批处理失败消息翻译 | 补齐简中、繁中和日文覆盖 |
+
+### 14.2 新调用链
+
+```text
+SearchEditor / SearchEditorPlus / Automate
+→ LoadSearch 并冻结每条规则的 regex、replacement 和 resource paths
+→ SearchBatchCoordinator
+  → SaveTabData（一次）
+  → snapshot original texts
+  → SearchBatch::Runner
+    → rule outer / resource inner
+    → 后续规则读取 working text
+    → staging 期间不访问 Resource 写接口
+  → original-text conflict check
+  → CreateRecoveryCheckpoint（仅有实际变化时一次）
+    → 隔离临时树，不写 live Resource、OPF 或工作目录
+  → second conflict check
+  → unique changed resource SetText（每资源一次）
+  → Book.SetModified（一次）
+  → current tab external refresh（至多一次）
+→ 整批成功后 RecordEntryAsCompleted
+```
+
+### 14.3 不变量复核
+
+| 不变量 | v1 证据 | 结论 |
+| --- | --- | --- |
+| 后续规则看到前序输出 | runner 使用同一 `workingTexts`；顺序依赖测试 `A→B→C` | 通过 |
+| replacement count 与 changed 分离 | same-text replacement 测试：count=2、changed=0 | 通过 |
+| staging 失败零发布 | 前序成功、后序故意失败时 `changedTexts` 仍为空 | 通过 |
+| cancel/missing target fail-closed | runner cancellation、missing-path 用例 | 通过 |
+| checkpoint 失败前零资源写入 | coordinator 在第一个正式 `SetText()` 前完成 checkpoint | 结构审计通过 |
+| checkpoint 不变异 live book | temp tree 从已加载文本/磁盘副本构造；UUID 只读，缺失即失败 | 结构审计通过 |
+| 每 changed resource 最多一次写回 | `changedTexts` 按 bookpath 唯一；`commitOrder` 用 `QSet` 去重 | 结构审计通过 |
+| 冲突不覆盖外部修改 | checkpoint 前后各比较 original full text，提交锁内再次比较 | 通过 |
+| 部分 commit 可回滚 | 写入前登记 applied path，失败时逆序恢复 original text（含 postcondition 失败的当前资源） | 结构审计通过 |
+| entry 完成状态不早于提交 | 两套 SearchEditor 均只在 coordinator success 后统一完成 | 通过 |
+| Automate 失败可见 | `ReplaceAllSearch() < 0` 映射为 `success=false` | 通过 |
+
+### 14.4 benchmark 记录
+
+fixture：1000 resources × 50 ordered rules × 256 tokens/resource，共 50,000 次规则/资源计算和 12,800,000 次 replacement。
+
+- 5 次 staging wall-clock：271、275、270、272、283 ms；中位数 272 ms；
+- legacy write candidates：50,000；
+- staged final write candidates：1,000；
+- 结构性写回/渲染上限缩减：50×；
+- 机器：Darwin 24.6.0 x86_64，Intel Core i5-12400，64 GiB RAM；
+- 工具链：CMake 4.0.2、Apple `/usr/bin/c++`、Qt 6.7.3，Debug build。
+
+wall-clock 只衡量 staging runner，不伪装成完整 GUI legacy 对比；主要性能结论来自可验证的写回次数上限。完整 UI Preview/Modified signal spy 和真实 EPUB 中位数仍列入后续回归工作。
+
+### 14.5 构建与测试记录
+
+- CMake configure：通过；
+- `Sigil` Debug 完整目标编译与链接：通过；
+- `search_batch_runner`：通过；
+- `search_batch_benchmark`：通过；
+- `booklive_paragraph_normalizer`：通过，确认本次性能改造未回归 BookLive 插件；
+- 全量 CTest：38 项中 35 项通过；3 个语言覆盖检查仍失败。
+
+新增的 `FindReplace` / `FindReplacePlus` 批处理错误消息已在简中、繁中、日文目录补齐，复跑后不再出现在 missing-source 清单。剩余 3 个失败均为本批处理范围外的既有翻译目录债务：BookBrowser overwrite 消息、DryRunReplace 两条消息、OPF duplicate-path 消息、若干 stale source，以及 PluginRunner 未翻译 UI literal。它们不影响本次功能测试和链接结果，未在本提交中扩大范围处理。
