@@ -6,9 +6,11 @@
 #include <QApplication>
 #include <QDrag>
 #include <QFontMetrics>
+#include <QGuiApplication>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QPixmap>
+#include <QScreen>
 #include <QTimer>
 #include <QStringList>
 
@@ -132,6 +134,47 @@ static QPixmap imagePreviewWithInfoBar(const ImagePreviewData& preview,
 	return pixmap;
 }
 
+// Keep the hover preview fully visible on the current screen.
+// Prefer the right of the tree item; flip to the left (or clamp) near edges.
+static QPoint imagePreviewPopupPosition(const QRect& anchor_global,
+                                        const QSize& popup_size)
+{
+	constexpr int kGap = 12;
+	constexpr int kMargin = 8;
+
+	QScreen* screen = QGuiApplication::screenAt(anchor_global.center());
+	if (!screen) {
+		screen = QGuiApplication::primaryScreen();
+	}
+	if (!screen) {
+		return QPoint(anchor_global.right() + kGap, anchor_global.top());
+	}
+
+	const QRect available = screen->availableGeometry().adjusted(kMargin, kMargin, -kMargin, -kMargin);
+	// Use exclusive right/bottom so popup size comparisons match window geometry.
+	const int available_right = available.x() + available.width();
+	const int available_bottom = available.y() + available.height();
+	const int max_x = available.x() + qMax(0, available.width() - popup_size.width());
+	const int max_y = available.y() + qMax(0, available.height() - popup_size.height());
+
+	// Prefer to the right of the item; flip left when that would clip.
+	int x = anchor_global.right() + kGap;
+	if (x + popup_size.width() > available_right) {
+		const int left_x = anchor_global.left() - kGap - popup_size.width();
+		x = (left_x >= available.x()) ? left_x : max_x;
+	}
+	x = qBound(available.x(), x, max_x);
+
+	// Prefer top-aligned with the item; clamp vertically into the screen.
+	int y = anchor_global.top();
+	if (y + popup_size.height() > available_bottom) {
+		y = max_y;
+	}
+	y = qBound(available.y(), y, max_y);
+
+	return QPoint(x, y);
+}
+
 void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
 {
 	Resource* resource = resourceForIndex(index);
@@ -195,8 +238,9 @@ void BookBrowserTreeView::imagePreviewReady(quint64 requestId,
 	imagePreviewPopup->setPixmap(pixmap);
 	imagePreviewPopup->adjustSize();
 
-	QRect item_rect = visualRect(imagePreviewIndex);
-	QPoint pos = viewport()->mapToGlobal(item_rect.topRight() + QPoint(12, 0));
+	const QRect item_rect = visualRect(imagePreviewIndex);
+	const QRect anchor_global(viewport()->mapToGlobal(item_rect.topLeft()), item_rect.size());
+	const QPoint pos = imagePreviewPopupPosition(anchor_global, imagePreviewPopup->size());
 	imagePreviewPopup->move(pos);
 	imagePreviewPopup->show();
 	imagePreviewRequestId = 0;
