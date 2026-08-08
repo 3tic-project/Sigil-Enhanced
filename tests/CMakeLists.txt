@@ -17,6 +17,23 @@ target_link_libraries(search_batch_runner_test PRIVATE
 add_test(NAME search_batch_runner COMMAND search_batch_runner_test)
 set_tests_properties(search_batch_runner PROPERTIES TIMEOUT 30)
 
+add_executable(search_batch_benchmark
+    search_batch_benchmark.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.h
+)
+
+target_include_directories(search_batch_benchmark PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(search_batch_benchmark PRIVATE
+    Qt6::Core
+)
+
+add_test(NAME search_batch_benchmark COMMAND search_batch_benchmark)
+set_tests_properties(search_batch_benchmark PROPERTIES TIMEOUT 60)
+
 add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
