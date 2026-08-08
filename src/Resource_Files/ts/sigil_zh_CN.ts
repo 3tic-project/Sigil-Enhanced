@@ -1752,6 +1752,14 @@ if a sans-serif font-family specified in your CSS</source>
         <source>Perform a basic Well-Formed Check on Epub XHtml files.</source>
         <translation>对Epub XHtml文件执行基本的格式正确性检查。</translation>
     </message>
+    <message>
+        <source>Analyze XHTML files that use nested div elements as pseudo-paragraphs in BookLive/EBPAJ reflow content.</source>
+        <translation>分析在 BookLive/EBPAJ 回流内容中使用嵌套 div 作为伪段落的 XHTML 文件。</translation>
+    </message>
+    <message>
+        <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements.</source>
+        <translation>将可自动安全处理的 BookLive/EBPAJ div 伪段落叶转换为保留样式的 p 元素。</translation>
+    </message>
 </context>
 <context>
     <name>Book</name>
@@ -15213,6 +15221,158 @@ Spacing p elements to preserve: %6</source>
         <source>No KFX paragraph files were changed.</source>
         <translation>没有 KFX 段落文件被修改。</translation>
     </message>
+    <message>
+        <source>Analyze BookLive Div Paragraphs...</source>
+        <translation>分析 BookLive Div 段落...</translation>
+    </message>
+    <message>
+        <source>Normalize Current BookLive Div Paragraphs...</source>
+        <translation>规范化当前 BookLive Div 段落...</translation>
+    </message>
+    <message>
+        <source>Normalize BookLive Div Paragraphs...</source>
+        <translation>规范化 BookLive Div 段落...</translation>
+    </message>
+    <message>
+        <source>Report BookLive/EBPAJ XHTML files that use nested div elements as pseudo-paragraphs</source>
+        <translation>报告使用嵌套 div 元素作为伪段落的 BookLive/EBPAJ XHTML 文件</translation>
+    </message>
+    <message>
+        <source>Convert proven pseudo-paragraph div leaves in the current XHTML file into style-preserving p elements</source>
+        <translation>将当前 XHTML 文件中已确认的 div 伪段落叶转换为保留样式的 p 元素</translation>
+    </message>
+    <message>
+        <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements</source>
+        <translation>将可自动安全处理的 BookLive/EBPAJ div 伪段落叶转换为保留样式的 p 元素</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph analysis: no EPUB is currently loaded.</source>
+        <translation>BookLive 段落分析：当前未加载 EPUB。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, and estimated %5 auto-safe div-to-p conversions.</source>
+        <translation>BookLive 段落分析完成。已检查 %1 个 XHTML 文件，发现 %2 个可自动安全处理的候选文件、%3 个需人工复核的候选文件，跳过 %4 个文件，预计执行 %5 次可自动安全处理的 div 到 p 转换。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph candidates found. See Validation Results.</source>
+        <translation>发现 BookLive 段落候选。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>No BookLive paragraph candidates found.</source>
+        <translation>未发现 BookLive 段落候选。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: current tab is not an XHTML resource.</source>
+        <translation>BookLive 段落规范化：当前标签页不是 XHTML 资源。</translation>
+    </message>
+    <message>
+        <source>No BookLive paragraph changes needed.</source>
+        <translation>无需修改 BookLive 段落。</translation>
+    </message>
+    <message>
+        <source>The current XHTML file is not a BookLive div-paragraph candidate. See Validation Results.</source>
+        <translation>当前 XHTML 文件不是 BookLive div 段落候选。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization failed safety checks. See Validation Results.</source>
+        <translation>BookLive 段落规范化未通过安全检查。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>This file is an auto-safe BookLive div-paragraph candidate.</source>
+        <translation>此文件是可自动安全处理的 BookLive div 段落候选。</translation>
+    </message>
+    <message>
+        <source>Normalize BookLive div paragraphs in the current XHTML file?
+
+%1
+
+This converts only proven pseudo-paragraph div leaves into p elements in place. Layout wrappers, blank lines, source classes, inline styles, images, ruby, anchors, and links are preserved. A single nested visual block is represented by a block span without guessing whether it is a title, credit, or scene break. The result will be formatted once before writing.
+
+Estimated div-to-p conversions: %2</source>
+        <translation>要规范化当前 XHTML 文件中的 BookLive div 段落吗？
+
+%1
+
+此操作只会将已确认的 div 伪段落叶原位转换为 p 元素。布局 wrapper、空行、源 class、内联样式、图片、ruby、锚点和链接都会保留。单层嵌套视觉块将用块级 span 表示，不会猜测它是标题、署名还是场景分隔。写入前会对结果执行一次格式化。
+
+预计 div 到 p 转换次数：%2</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: current XHTML file was updated.</source>
+        <translation>BookLive 段落规范化：当前 XHTML 文件已更新。</translation>
+    </message>
+    <message>
+        <source>Current XHTML BookLive div paragraphs normalized.</source>
+        <translation>当前 XHTML 的 BookLive div 段落已规范化。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: no EPUB is currently loaded.</source>
+        <translation>BookLive 段落规范化：当前未加载 EPUB。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, and %5 div leaves will become p elements. All %6 blank-line leaves and %7 single nested visual blocks will be preserved.</source>
+        <translation>BookLive 段落规范化预演完成。已检查 %1 个 XHTML 文件，%2 个文件可自动安全处理，%3 个文件需要人工复核，跳过 %4 个文件，%5 个 div 叶将变为 p 元素。全部 %6 个空行叶和 %7 个单层嵌套视觉块都会保留。</translation>
+    </message>
+    <message>
+        <source>No auto-safe BookLive div-paragraph files were found. See Validation Results.</source>
+        <translation>未发现可自动安全处理的 BookLive div 段落文件。请查看验证结果。</translation>
+    </message>
+    <message>
+        <source>Normalize BookLive div paragraphs in %1 auto-safe XHTML files?
+
+%2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
+
+Only proven pseudo-paragraph div leaves are changed to p elements. Layout wrappers, blank lines, all source classes and inline styles, images, ruby, anchors, and links remain in place. Every changed file is formatted once and checked before writing.
+
+Estimated div-to-p conversions: %4
+Blank-line leaves preserved: %5
+Single nested visual blocks preserved: %6</source>
+        <translation>要规范化 %1 个可自动安全处理 XHTML 文件中的 BookLive div 段落吗？
+
+%2 个文件需要人工复核并会被跳过。%3 个非候选文件会被跳过。
+
+仅将已确认的 div 伪段落叶改为 p 元素。布局 wrapper、空行、全部源 class 和内联样式、图片、ruby、锚点和链接都会原位保留。每个修改后的文件都会格式化一次并在写入前接受检查。
+
+预计 div 到 p 转换次数：%4
+保留的空行叶：%5
+保留的单层嵌套视觉块：%6</translation>
+    </message>
+    <message>
+        <source>Creating checkpoint before BookLive paragraph normalization...</source>
+        <translation>正在 BookLive 段落规范化前创建检查点...</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
+        <translation>BookLive 段落规范化已取消：检查点创建失败。未修改任何 XHTML 文件。</translation>
+    </message>
+    <message>
+        <source>Checkpoint creation failed. BookLive paragraph normalization was cancelled.</source>
+        <translation>检查点创建失败。BookLive 段落规范化已取消。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
+        <translation>BookLive 段落规范化：已在批量修改前保存检查点。可使用“检查点”恢复；批量资源写入无法通过代码视图撤销。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: no changes needed.</source>
+        <translation>BookLive 段落规范化：无需修改。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: XHTML file was updated.</source>
+        <translation>BookLive 段落规范化：XHTML 文件已更新。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
+        <translation>BookLive 段落规范化完成。已更新 %1 个文件，%2 个文件未改动，%3 个文件失败，跳过 %4 个需人工复核的候选文件。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization completed.</source>
+        <translation>BookLive 段落规范化已完成。</translation>
+    </message>
+    <message>
+        <source>No BookLive paragraph files were changed.</source>
+        <translation>没有 BookLive 段落文件被修改。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -20856,6 +21016,18 @@ Line: %1 Column %2 - %3</source>
         <location filename="../../MainUI/MainWindowExt.cpp" line="126"/>
         <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>KFX 段落规范化：自动 XHTML 格式化未发现进一步修改。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
+        <translation>BookLive 段落规范化：自动 XHTML 格式化失败；将写入未经格式化器进一步修改的规范化 XHTML。%1</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: automatic XHTML formatting was applied.</source>
+        <translation>BookLive 段落规范化：已应用自动 XHTML 格式化。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: automatic XHTML formatting found no further changes.</source>
+        <translation>BookLive 段落规范化：自动 XHTML 格式化未发现进一步修改。</translation>
     </message>
     <message>
         <location filename="../../Misc/UpdateChecker.cpp" line="100"/>

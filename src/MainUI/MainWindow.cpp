@@ -231,11 +231,13 @@ static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "DeleteUnusedStyles" <<
     "GenerateNCXGuideFromNav" <<
     "GenerateTOC" <<
+    "AnalyzeBookLiveParagraphs" <<
     "AnalyzeBrParagraphs" <<
     "AnalyzeKfxParagraphs" <<
     "EnhanceSourceFormatting" <<
     "MendPrettifyHTML" <<
     "MendHTML" <<
+    "NormalizeBookLiveParagraphs" <<
     "NormalizeBrParagraphs" <<
     "NormalizeEpubStructure" <<
     "NormalizeKfxParagraphs" <<
@@ -460,9 +462,11 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "WellFormedCheckEpub")        success = WellFormedCheckEpub();
             else if (cmd == "MendPrettifyHTML")           success = MendPrettifyHTML();
             else if (cmd == "MendHTML")                   success = MendHTML();
+            else if (cmd == "AnalyzeBookLiveParagraphs")  success = AnalyzeBookLiveParagraphs();
             else if (cmd == "AnalyzeBrParagraphs")        success = AnalyzeBrParagraphs();
             else if (cmd == "AnalyzeKfxParagraphs")       success = AnalyzeKfxParagraphs();
             else if (cmd == "EnhanceSourceFormatting")    success = EnhanceSourceFormatting();
+            else if (cmd == "NormalizeBookLiveParagraphs") success = NormalizeAllBookLiveParagraphs();
             else if (cmd == "NormalizeBrParagraphs")       success = NormalizeAllBrParagraphs();
             else if (cmd == "NormalizeEpubStructure")     success = NormalizeEpubStructure();
             else if (cmd == "NormalizeKfxParagraphs")      success = NormalizeAllKfxParagraphs();
@@ -6951,6 +6955,9 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeKfxParagraphs, "MainWindow.AnalyzeKfxParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentKfxParagraphs, "MainWindow.NormalizeCurrentKfxParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeKfxParagraphs, "MainWindow.NormalizeKfxParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeBookLiveParagraphs, "MainWindow.AnalyzeBookLiveParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentBookLiveParagraphs, "MainWindow.NormalizeCurrentBookLiveParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeBookLiveParagraphs, "MainWindow.NormalizeBookLiveParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     KeyboardShortcutManager::instance().registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     KeyboardShortcutManager::instance().registerAction(this, ui.actionSplitTagOrAddBreak, "MainWindow.SplitTagOrAddBreak"); // modified: SplitTagOrAddBreak
@@ -7335,6 +7342,9 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionAnalyzeKfxParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeKfxParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeCurrentKfxParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentKfxParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeKfxParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllKfxParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionAnalyzeBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeBookLiveParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionNormalizeCurrentBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentBookLiveParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionNormalizeBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllBookLiveParagraphs())); // modified: Builtin native plugin
     connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
     //modified: FindReplacePlus
     ConnectSignalsToSearchEditor();

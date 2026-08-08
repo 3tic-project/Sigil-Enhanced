@@ -348,11 +348,13 @@ void AutomateEditor::loadToolElements()
          "DeleteUnusedStyles" << "DeleteUnusedStyles" << tr("Delete Unused CSS Selectors.") <<
          "GenerateNCXGuideFromNav" << "GenerateNCXGuideFromNav" << tr("Generate NCX and OPF Guide from Epub3 Nav.") <<
          "GenerateTOC" << "GenerateTOC" << tr("Generate TOC from Heading Tags.") <<
+         "AnalyzeBookLiveParagraphs" << "AnalyzeBookLiveParagraphs" << tr("Analyze XHTML files that use nested div elements as pseudo-paragraphs in BookLive/EBPAJ reflow content.") <<
          "AnalyzeBrParagraphs" << "AnalyzeBrParagraphs" << tr("Analyze XHTML files that use body-level BR tags as paragraph separators.") <<
          "AnalyzeKfxParagraphs" << "AnalyzeKfxParagraphs" << tr("Analyze XHTML files that use KFX/calibre spacer p elements around body-level raw text.") <<
          "EnhanceSourceFormatting" << "EnhanceSourceFormatting" << tr("Format XHTML and CSS resources with the built-in EPUB-safe formatter.") <<
          "MendPrettifyHTML" << "MendPrettifyHTML" << tr("Mend and Prettify all XHtml files.") <<
          "MendHTML" << "MendHTML"  << tr("Mend All XHtml files.") <<
+         "NormalizeBookLiveParagraphs" << "NormalizeBookLiveParagraphs" << tr("Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements.") <<
          "NormalizeBrParagraphs" << "NormalizeBrParagraphs" << tr("Normalize auto-safe XHTML files that use body-level BR tags as paragraph separators.") <<
          "NormalizeEpubStructure" << "NormalizeEpubStructure" << tr("Repair OPF manifest issues, correct internal link path casing, and move resources to Sigil's standard folder layout.") <<
          "NormalizeKfxParagraphs" << "NormalizeKfxParagraphs" << tr("Normalize auto-safe XHTML files that use KFX/calibre spacer p elements around body-level raw text.") <<

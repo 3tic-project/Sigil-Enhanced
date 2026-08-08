@@ -1158,6 +1158,9 @@ public slots:
     bool AnalyzeKfxParagraphs(); // modified: Builtin native plugin
     bool NormalizeCurrentKfxParagraphs(); // modified: Builtin native plugin
     bool NormalizeAllKfxParagraphs(); // modified: Builtin native plugin
+    bool AnalyzeBookLiveParagraphs(); // modified: Builtin native plugin
+    bool NormalizeCurrentBookLiveParagraphs(); // modified: Builtin native plugin
+    bool NormalizeAllBookLiveParagraphs(); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
     bool ExecutePluginByName(const QString &plugin_name, bool wait_for_completion,

@@ -438,6 +438,9 @@
     <addaction name="actionAnalyzeKfxParagraphs"/>
     <addaction name="actionNormalizeCurrentKfxParagraphs"/>
     <addaction name="actionNormalizeKfxParagraphs"/>
+    <addaction name="actionAnalyzeBookLiveParagraphs"/>
+    <addaction name="actionNormalizeCurrentBookLiveParagraphs"/>
+    <addaction name="actionNormalizeBookLiveParagraphs"/>
    </widget>
    <widget class="QMenu" name="menuCheckpoints">
     <property name="title">
@@ -2022,6 +2025,30 @@
     </property>
     <property name="toolTip">
       <string>Convert auto-safe KFX/calibre spacer paragraph XHTML files into paragraphs after per-file safety checks</string>
+    </property>
+  </action>
+  <action name="actionAnalyzeBookLiveParagraphs">
+    <property name="text">
+      <string>Analyze BookLive Div Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Report BookLive/EBPAJ XHTML files that use nested div elements as pseudo-paragraphs</string>
+    </property>
+  </action>
+  <action name="actionNormalizeCurrentBookLiveParagraphs">
+    <property name="text">
+      <string>Normalize Current BookLive Div Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert proven pseudo-paragraph div leaves in the current XHTML file into style-preserving p elements</string>
+    </property>
+  </action>
+  <action name="actionNormalizeBookLiveParagraphs">
+    <property name="text">
+      <string>Normalize BookLive Div Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements</string>
     </property>
   </action>
   <action name="actionWellFormedCheckEpub">

@@ -108,6 +108,25 @@
 - 转换后逐文件校验 XML well-formed、可见文本等价、`id`/`name` 集合等价、`href`/`src` 集合等价，失败则不写回。
 - 当前文件入口允许人工确认候选显式执行，并尽量通过编辑器文档替换保留单步 undo；整书入口只处理 auto-safe 正文页，写回前自动创建 Checkpoint。
 
+### BookLive / EBPAJ Div Paragraph Normalizer
+
+入口:
+
+- `Enhancement > Analyze BookLive Div Paragraphs...`
+- `Enhancement > Normalize Current BookLive Div Paragraphs...`
+- `Enhancement > Normalize BookLive Div Paragraphs...`
+- Automate 命令: `AnalyzeBookLiveParagraphs`
+- Automate 命令: `NormalizeBookLiveParagraphs`
+
+职责:
+
+- 结构化发现 BookLive/EBPAJ 正文 content-parent，将其直接子级的伪段落 `div` 原位转换成语义化 `p`，不依赖混淆 class 名。
+- 保留 `div.main` 及中间布局 wrapper，避免丢失纵排、justify、line-height 和书籍私有样式。
+- 完整迁移源叶子的 class、inline style 和属性；单层嵌套视觉块转换为保持 block 显示的 `span`，不猜测标题、署名或场景语义。
+- 原样保留空行、场景分隔、插图、ruby、锚点和链接，不使用固定间距覆盖原书 CSS。
+- 目录、图片/扉页和复杂块布局默认跳过；整书只转换 auto-safe 正文，短页通过 Current 入口人工确认。
+- 写回前校验 XML、可见文本、原属性/class/style、`id`/`name`、`href`/`src`、ruby 与图片计数；批量写回先创建 Checkpoint。
+
 ## 测试要求
 
 - 至少验证 Debug 构建能通过 `cmake --build cmake-build-debug --target Sigil -j 4`。
@@ -116,4 +135,5 @@
 - 对 formatter 类功能，必须覆盖 XHTML well-formed 跳过、XHTML 正常重排、CSS 正常重排、CSS parser error 跳过、无变化文件记录。
 - 对 BR 段落规范化类功能，必须覆盖正文候选、目录页跳过、扉页/块布局跳过、`ruby`/anchor 保留、连续 `<br/>` 不生成空段落。
 - 对 KFX 段落规范化类功能，必须覆盖正文候选、目录页跳过、版权/出版信息页人工确认、`height:0` spacer 移除、`height:1em` spacer 保留、章节锚点/插图/inline span 保留。
+- 对 BookLive 段落规范化类功能，必须覆盖两本真实 EBPAJ 样本、标题/署名不误分类、原 class/style 与布局 wrapper 保留、空行不删除、复杂嵌套 fail-closed、ruby/锚点/图片保持和幂等。
 - 对 Automate 命令，需确认命令列表可见且执行行为与菜单入口一致。

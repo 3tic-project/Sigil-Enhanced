@@ -1752,6 +1752,14 @@ if a sans-serif font-family specified in your CSS</source>
         <source>Perform a basic Well-Formed Check on Epub XHtml files.</source>
         <translation>EpubのXHTMLファイルに対して、基本的な整形式チェックを実行します。</translation>
     </message>
+    <message>
+        <source>Analyze XHTML files that use nested div elements as pseudo-paragraphs in BookLive/EBPAJ reflow content.</source>
+        <translation>BookLive/EBPAJ のリフロー本文でネストした div を疑似段落として使用する XHTML ファイルを解析します。</translation>
+    </message>
+    <message>
+        <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements.</source>
+        <translation>自動処理して安全な BookLive/EBPAJ の div 疑似段落リーフを、スタイルを保持した p 要素へ変換します。</translation>
+    </message>
 </context>
 <context>
     <name>Book</name>
@@ -14285,6 +14293,158 @@ Spacing p elements to preserve: %6</source>
         <translation>KFX 段落を含むファイルは変更されませんでした。</translation>
     </message>
     <message>
+        <source>Analyze BookLive Div Paragraphs...</source>
+        <translation>BookLive Div 段落を解析...</translation>
+    </message>
+    <message>
+        <source>Normalize Current BookLive Div Paragraphs...</source>
+        <translation>現在の BookLive Div 段落を正規化...</translation>
+    </message>
+    <message>
+        <source>Normalize BookLive Div Paragraphs...</source>
+        <translation>BookLive Div 段落を正規化...</translation>
+    </message>
+    <message>
+        <source>Report BookLive/EBPAJ XHTML files that use nested div elements as pseudo-paragraphs</source>
+        <translation>ネストした div 要素を疑似段落として使用する BookLive/EBPAJ XHTML ファイルを報告します</translation>
+    </message>
+    <message>
+        <source>Convert proven pseudo-paragraph div leaves in the current XHTML file into style-preserving p elements</source>
+        <translation>現在の XHTML ファイル内で確認済みの div 疑似段落リーフを、スタイルを保持した p 要素へ変換します</translation>
+    </message>
+    <message>
+        <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements</source>
+        <translation>自動処理して安全な BookLive/EBPAJ の div 疑似段落リーフを、スタイルを保持した p 要素へ変換します</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph analysis: no EPUB is currently loaded.</source>
+        <translation>BookLive 段落の解析: EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, and estimated %5 auto-safe div-to-p conversions.</source>
+        <translation>BookLive 段落の解析が完了しました。XHTML ファイル %1 件を確認し、自動処理して安全な候補 %2 件、手動確認が必要な候補 %3 件を検出し、%4 件をスキップしました。自動処理する div から p への変換は %5 件です。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph candidates found. See Validation Results.</source>
+        <translation>BookLive 段落の候補が見つかりました。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <source>No BookLive paragraph candidates found.</source>
+        <translation>BookLive 段落の候補は見つかりませんでした。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: current tab is not an XHTML resource.</source>
+        <translation>BookLive 段落の正規化: 現在のタブは XHTML リソースではありません。</translation>
+    </message>
+    <message>
+        <source>No BookLive paragraph changes needed.</source>
+        <translation>BookLive 段落を変更する必要はありません。</translation>
+    </message>
+    <message>
+        <source>The current XHTML file is not a BookLive div-paragraph candidate. See Validation Results.</source>
+        <translation>現在の XHTML ファイルは BookLive div 段落の候補ではありません。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization failed safety checks. See Validation Results.</source>
+        <translation>BookLive 段落の正規化は安全性チェックに失敗しました。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <source>This file is an auto-safe BookLive div-paragraph candidate.</source>
+        <translation>このファイルは自動処理して安全な BookLive div 段落の候補です。</translation>
+    </message>
+    <message>
+        <source>Normalize BookLive div paragraphs in the current XHTML file?
+
+%1
+
+This converts only proven pseudo-paragraph div leaves into p elements in place. Layout wrappers, blank lines, source classes, inline styles, images, ruby, anchors, and links are preserved. A single nested visual block is represented by a block span without guessing whether it is a title, credit, or scene break. The result will be formatted once before writing.
+
+Estimated div-to-p conversions: %2</source>
+        <translation>現在の XHTML ファイル内の BookLive div 段落を正規化しますか？
+
+%1
+
+確認済みの div 疑似段落リーフだけを、その位置で p 要素へ変換します。レイアウトラッパー、空行、元の class、インラインスタイル、画像、ruby、アンカー、リンクは保持されます。単一のネストした視覚ブロックは、タイトル、クレジット、場面区切りのいずれかを推測せず、ブロック表示の span で表現します。書き込み前に結果を一度整形します。
+
+div から p への推定変換数: %2</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: current XHTML file was updated.</source>
+        <translation>BookLive 段落の正規化: 現在の XHTML ファイルを更新しました。</translation>
+    </message>
+    <message>
+        <source>Current XHTML BookLive div paragraphs normalized.</source>
+        <translation>現在の XHTML の BookLive div 段落を正規化しました。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: no EPUB is currently loaded.</source>
+        <translation>BookLive 段落の正規化: EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, and %5 div leaves will become p elements. All %6 blank-line leaves and %7 single nested visual blocks will be preserved.</source>
+        <translation>BookLive 段落の正規化のドライランが完了しました。XHTML ファイル %1 件を確認し、%2 件は自動処理して安全、%3 件は手動確認が必要、%4 件はスキップされ、div リーフ %5 件が p 要素になります。空行リーフ %6 件と単一のネストした視覚ブロック %7 件はすべて保持されます。</translation>
+    </message>
+    <message>
+        <source>No auto-safe BookLive div-paragraph files were found. See Validation Results.</source>
+        <translation>自動処理して安全な BookLive div 段落ファイルは見つかりませんでした。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <source>Normalize BookLive div paragraphs in %1 auto-safe XHTML files?
+
+%2 files require manual review and will be skipped. %3 non-candidate files will be skipped.
+
+Only proven pseudo-paragraph div leaves are changed to p elements. Layout wrappers, blank lines, all source classes and inline styles, images, ruby, anchors, and links remain in place. Every changed file is formatted once and checked before writing.
+
+Estimated div-to-p conversions: %4
+Blank-line leaves preserved: %5
+Single nested visual blocks preserved: %6</source>
+        <translation>自動処理して安全な XHTML ファイル %1 件の BookLive div 段落を正規化しますか？
+
+%2 件は手動確認が必要なためスキップされます。候補ではない %3 件もスキップされます。
+
+確認済みの div 疑似段落リーフだけを p 要素へ変更します。レイアウトラッパー、空行、元のすべての class とインラインスタイル、画像、ruby、アンカー、リンクはその位置に保持されます。変更された各ファイルは一度整形され、書き込み前にチェックされます。
+
+div から p への推定変換数: %4
+保持する空行リーフ: %5
+保持する単一ネスト視覚ブロック: %6</translation>
+    </message>
+    <message>
+        <source>Creating checkpoint before BookLive paragraph normalization...</source>
+        <translation>BookLive 段落の正規化前にチェックポイントを作成しています...</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization cancelled: checkpoint failed. No XHTML files were changed.</source>
+        <translation>チェックポイントの作成に失敗したため、BookLive 段落の正規化をキャンセルしました。XHTML ファイルは変更されていません。</translation>
+    </message>
+    <message>
+        <source>Checkpoint creation failed. BookLive paragraph normalization was cancelled.</source>
+        <translation>チェックポイントの作成に失敗しました。BookLive 段落の正規化をキャンセルしました。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo.</source>
+        <translation>BookLive 段落の正規化: 一括変更前にチェックポイントを保存しました。復元にはチェックポイントを使用してください。一括リソース書き込みはコードビューの元に戻す操作では戻せません。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: no changes needed.</source>
+        <translation>BookLive 段落の正規化: 変更は不要です。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: XHTML file was updated.</source>
+        <translation>BookLive 段落の正規化: XHTML ファイルを更新しました。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.</source>
+        <translation>BookLive 段落の正規化が完了しました。%1 件を更新し、%2 件は変更なし、%3 件は失敗、手動確認が必要な候補 %4 件はスキップしました。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization completed.</source>
+        <translation>BookLive 段落の正規化が完了しました。</translation>
+    </message>
+    <message>
+        <source>No BookLive paragraph files were changed.</source>
+        <translation>BookLive 段落を含むファイルは変更されませんでした。</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/MainWindow.cpp" line="850"/>
         <source>Are you sure you want to restructure this epub?
 This action cannot be reversed.</source>
@@ -20854,6 +21014,18 @@ Line: %1 Column %2 - %3</source>
         <location filename="../../MainUI/MainWindowExt.cpp" line="126"/>
         <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>KFX 段落の正規化: XHTML の自動整形による追加の変更はありませんでした。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
+        <translation>BookLive 段落の正規化: XHTML の自動整形に失敗しました。整形による変更を加えず、正規化済み XHTML を書き込みます。%1</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: automatic XHTML formatting was applied.</source>
+        <translation>BookLive 段落の正規化: XHTML の自動整形を適用しました。</translation>
+    </message>
+    <message>
+        <source>BookLive paragraph normalization: automatic XHTML formatting found no further changes.</source>
+        <translation>BookLive 段落の正規化: XHTML の自動整形による追加の変更はありませんでした。</translation>
     </message>
     <message>
         <location filename="../../Misc/UpdateChecker.cpp" line="100"/>

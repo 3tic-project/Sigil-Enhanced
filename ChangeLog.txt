@@ -9,6 +9,7 @@ Sigil-Enhanced-2.8.1.E6
      - Applied macOS Tahoe dialog and HTML TOC busy-cursor workarounds.
 
    New Features
+     - Added BookLive/EBPAJ div-paragraph analysis and normalization with style-preserving in-place p conversion, manual short-page review, full-book checkpoints, and Automate commands.
      - Added an installable MCP book-session adapter with authenticated loopback Streamable HTTP, a stdio transport proxy, live Book/editor context, revision-safe edits, and previewed multi-resource transactions for LLM hosts.
      - Added chunked text operations and out-of-band file imports for large text, image, font, stylesheet, and other EPUB resources without repeating their contents through the LLM context.
      - Added import preflight, transaction status, checkpoint, rollback, and explicit EPUB layout guidance for reliable long-running agent workflows.

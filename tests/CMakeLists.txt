@@ -1,5 +1,23 @@
 find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Xml REQUIRED)
 
+add_executable(booklive_paragraph_normalizer_test
+    booklive_paragraph_normalizer_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+)
+
+target_include_directories(booklive_paragraph_normalizer_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(booklive_paragraph_normalizer_test PRIVATE
+    Qt6::Core
+    Qt6::Xml
+)
+
+add_test(NAME booklive_paragraph_normalizer COMMAND booklive_paragraph_normalizer_test)
+set_tests_properties(booklive_paragraph_normalizer PROPERTIES TIMEOUT 30)
+
     add_executable(font_subset_smoke_test
         font_subset_smoke_test.cpp
     )

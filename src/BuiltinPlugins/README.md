@@ -222,6 +222,31 @@ Phase 2:
 - 批量转换通过资源写回，不提供跨文件文本 undo；执行前会自动创建 Sigil Checkpoint。
 - 当前文件转换走 `FlowTab::ReplaceDocumentText()`，尽量保留 Code View undo。
 
+## BookLive / EBPAJ Div Paragraph Normalizer
+
+目标是修复 BookLive、Kadokawa、EBPAJ 回流 EPUB 中“多层布局 `div` 下使用叶子 `div` 模拟段落”的结构，同时保持原纵排、行高、对齐、标题间距和空行表现。
+
+入口:
+
+- `Enhancement > Analyze BookLive Div Paragraphs...`
+- `Enhancement > Normalize Current BookLive Div Paragraphs...`
+- `Enhancement > Normalize BookLive Div Paragraphs...`
+- Automate: `AnalyzeBookLiveParagraphs`、`NormalizeBookLiveParagraphs`
+
+转换策略:
+
+- 通过叶子比例、子节点数和深度发现 content-parent，不绑定每本书都会变化的 `css_class_N`。
+- 只在 content-parent 内原位把已证明安全的伪段落 `div` 改成 `p.se-bl-paragraph`；承载 writing-mode、justify、line-height 等样式的布局 wrapper 保持原样。
+- 新 `p` 完整复制源 `div` 的 class、inline style、id/name 和其它属性；外部样式表仍按原 class 生效。
+- 单层嵌套的标题、署名或装饰文字不做语义猜测：外层变成 `p`，内层变成 `span.se-bl-inner-block`，两层属性均保留。
+- `div > br` 空行、场景分隔和插图叶均原位转换并保留，不删除空行、不写死 `5em` 等跨书不稳定的视觉值。
+- 注入的默认规则位于原链接样式表之前，只补偿 `p`/`span` 与原 `div` 的浏览器默认盒模型差异；原 class 规则和 inline style 保持更高或更后的级联优先级。
+- 目录、`body.p-image` 图页和复杂嵌套块默认跳过；短页、后记和署名页只允许从 Current 入口人工确认。
+- 每次转换验证 XML、可见文本、原属性/class/style 多重集、`id`/`name`、`href`/`src`、ruby/rt/rp 与图片计数；任一不一致即不写回。
+- 整书入口只处理 auto-safe 页面并先创建 Checkpoint；当前文件入口使用编辑器文本替换保留 undo。
+
+仓库 CTest 位于 `tests/booklive_paragraph_normalizer_test.cpp`；本地全书回归程序位于 `todo/finish/booklive_normalizer_test/`，覆盖 `todo/booklive_test/` 中两本真实 EPUB。
+
 相比旧实现的改进:
 
 - OPF 修复逻辑从 `ValidationResultsView` 迁到内置插件模块。
