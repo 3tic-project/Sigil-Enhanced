@@ -371,9 +371,11 @@ QString OPFResource::GetPackageVersion() const
 }
 
 
-QString OPFResource::GetUUIDIdentifierValue()
+QString OPFResource::GetUUIDIdentifierValue(bool ensure_present)
 {
-    EnsureUUIDIdentifierPresent();
+    if (ensure_present) {
+        EnsureUUIDIdentifierPresent();
+    }
     QReadLocker locker(&GetLock());
     QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
     OPFParser p;
@@ -387,9 +389,8 @@ QString OPFResource::GetUUIDIdentifierValue()
             }
         }
     }
-    // EnsureUUIDIdentifierPresent should ensure we
-    // never reach here.
-    Q_ASSERT(false);
+    // EnsureUUIDIdentifierPresent should ensure the default path never reaches here.
+    Q_ASSERT(!ensure_present);
     return QString();
 }
 

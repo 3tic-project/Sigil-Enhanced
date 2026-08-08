@@ -23,6 +23,8 @@
 **
 *************************************************************************/
 
+#include <memory>
+
 #include <QFileInfo>
 #include <QThread>
 #include <QTimer>
@@ -57,6 +59,8 @@
 #include <QStyle>
 #include <QDirIterator>
 #include <QDebug>
+#include <QReadLocker>
+#include <QTemporaryDir>
 
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/Index.h"
@@ -122,6 +126,7 @@
 #include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/NCXResource.h"
 #include "ResourceObjects/OPFResource.h"
+#include "ResourceObjects/TextResource.h"
 #include "ResourceObjects/NavProcessor.h"
 #include "sigil_constants.h"
 #include "sigil_exception.h"
@@ -1205,8 +1210,14 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
         repoDir.mkpath(localRepo);
     }
 
-    // ensure epub opf has valid bookid and retrieve it
-    QString bookid = m_Book->GetOPF()->GetUUIDIdentifierValue();
+    // Recovery snapshots must not add a missing UUID to the live OPF. In that
+    // uncommon case fail closed and let the user create a normal checkpoint.
+    QString bookid = m_Book->GetOPF()->GetUUIDIdentifierValue(update_book_metadata);
+    if (bookid.isEmpty()) {
+        ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
+        QApplication::restoreOverrideCursor();
+        return false;
+    }
 
     // collect additional book info (file name, title, datetime)
     QStringList bookinfo;
@@ -1222,22 +1233,62 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
         bookinfo << QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyy-MM-ddTHH:mm:ssZ"));
     }
 
-    // finally force all changes to Disk
+    // User-requested checkpoints retain the historical save/normalise behaviour.
+    // Recovery checkpoints instead materialise an isolated tree so taking the
+    // snapshot cannot rewrite QTextDocuments, OPF source, or the working files.
     if (save_tab_data) {
         SaveTabData();
     }
-    m_Book->GetFolderKeeper()->SuspendWatchingResources();
-    m_Book->SaveAllResourcesToDisk();
-    m_Book->GetFolderKeeper()->ResumeWatchingResources();
-
-    // get epub root
     QString bookroot = m_Book->GetFolderKeeper()->GetFullPathToMainFolder();
-
-    // get a full list of epub resource bookpaths
     QStringList bookfiles = m_Book->GetFolderKeeper()->GetAllBookPaths();
-
-    // add in the META-INF/container.xml file
     bookfiles << "META-INF/container.xml";
+
+    std::unique_ptr<QTemporaryDir> recoveryRoot;
+    if (update_book_metadata) {
+        m_Book->SaveAllResourcesToDisk();
+    } else {
+        recoveryRoot = std::make_unique<QTemporaryDir>();
+        if (!recoveryRoot->isValid()) {
+            ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
+            QApplication::restoreOverrideCursor();
+            return false;
+        }
+
+        bookroot = recoveryRoot->path();
+        const QList<Resource*> resources = m_Book->GetFolderKeeper()->GetResourceList();
+        try {
+            for (Resource* resource : resources) {
+                if (!resource) {
+                    continue;
+                }
+                const QString destination = QDir(bookroot).filePath(resource->GetRelativePath());
+                if (!QDir().mkpath(QFileInfo(destination).path())) {
+                    throw CannotOpenFile(destination.toStdString());
+                }
+
+                TextResource* textResource = qobject_cast<TextResource*>(resource);
+                if (textResource && textResource->IsLoaded()) {
+                    QReadLocker locker(&textResource->GetLock());
+                    Utility::WriteUnicodeTextFile(textResource->GetText(), destination);
+                } else if (!QFile::copy(resource->GetFullPath(), destination)) {
+                    throw CannotOpenFile(resource->GetFullPath().toStdString());
+                }
+            }
+
+            const QString containerPath = QStringLiteral("META-INF/container.xml");
+            const QString containerSource = QDir(
+                m_Book->GetFolderKeeper()->GetFullPathToMainFolder()).filePath(containerPath);
+            const QString containerDestination = QDir(bookroot).filePath(containerPath);
+            if (!QDir().mkpath(QFileInfo(containerDestination).path()) ||
+                !QFile::copy(containerSource, containerDestination)) {
+                throw CannotOpenFile(containerSource.toStdString());
+            }
+        } catch (const CannotOpenFile&) {
+            ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
+            QApplication::restoreOverrideCursor();
+            return false;
+        }
+    }
 
     // now perform the commit using python in a separate thread since this
     // may take a while depending on the speed of the filesystem

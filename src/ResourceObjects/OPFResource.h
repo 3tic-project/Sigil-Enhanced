@@ -97,7 +97,7 @@ public:
     QString GetPackageVersion() const;
 
     // Also creates such an ident if none was found
-    QString GetUUIDIdentifierValue();
+    QString GetUUIDIdentifierValue(bool ensure_present = true);
 
     void EnsureUUIDIdentifierPresent();
 
