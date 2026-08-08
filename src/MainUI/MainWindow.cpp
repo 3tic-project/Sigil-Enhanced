@@ -543,7 +543,7 @@ bool MainWindow::Automate(const QStringList &commands)
                 countReplaced = m_FindReplace->ReplaceAllSearch();
                 disconnect(m_FindReplace, SIGNAL(ShowMessageRequest(const QString &)),
                            this, SLOT(ShowMessageOnStatusBar(const QString &)));
-                success = true;
+                success = countReplaced >= 0;
             } else {
                 ShowMessageOnStatusBar(tr("Missing or unknown Saved Search name") + ": " + cmd);
                 success = false;
@@ -562,7 +562,7 @@ bool MainWindow::Automate(const QStringList &commands)
                     countReplaced = m_FindReplace->ReplaceAllSearch();
                     disconnect(m_FindReplace, SIGNAL(ShowMessageRequest(const QString &)),
                             this, SLOT(ShowMessageOnStatusBar(const QString &)));
-                    success = true;
+                    success = countReplaced >= 0;
                 } else {
                     ShowMessageOnStatusBar(tr("Missing or unknown Saved Search name") + ": " + cmd);
                     success = false;
@@ -586,7 +586,7 @@ bool MainWindow::Automate(const QStringList &commands)
                     countReplaced = m_FindReplace->ReplaceAllSearch();
                     disconnect(m_FindReplace, SIGNAL(ShowMessageRequest(const QString &)),
                             this, SLOT(ShowMessageOnStatusBar(const QString &)));
-                    success = true;
+                    success = countReplaced >= 0;
                 } else {
                     ShowMessageOnStatusBar(tr("Missing or unknown Saved Search name") + ": " + cmd);
                     success = false;
