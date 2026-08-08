@@ -82,6 +82,7 @@ build
 *.tar.xz
 
 #AppImage builds
+squashfs-root/
 *.AppImage
 *.zsync
 

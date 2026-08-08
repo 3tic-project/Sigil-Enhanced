@@ -1,6 +1,6 @@
 /************************************************************************
  **
- **  Copyright (C) 2014-2025 Kevin B. Hendricks, Stratford Ontario Canada
+ **  Copyright (C) 2014-2026 Kevin B. Hendricks, Stratford Ontario Canada
  **  Copyright (C) 2020-2025 Doug Massay
  **
  **  This file is part of Sigil.
@@ -73,7 +73,7 @@ PluginRunner::PluginRunner(TabManager *tabMgr, QWidget *parent)
     m_book = m_mainWindow->GetCurrentBook();
     m_bookBrowser = m_mainWindow->GetBookBrowser();
     m_bookRoot = m_book->GetFolderKeeper()->GetFullPathToMainFolder();
-
+    
     // set default font obfuscation algorithm to use
     // ADOBE_FONT_ALGO_ID or IDPF_FONT_ALGO_ID ??
     QList<Resource *> fonts = m_book->GetFolderKeeper()->GetResourceListByType(Resource::FontResourceType);
@@ -109,20 +109,21 @@ PluginRunner::~PluginRunner()
 
 QStringList PluginRunner::SupportedEngines()
 {
-    return Plugin::SupportedEngines();
+    QStringList engines;
+    engines << "python3.4" << "python2.7,python3.4" << "python3.4,python2.7";
+    return engines;
 }
 
 int PluginRunner::exec(const QString &name)
 {
     QHash <QString, QStringList> plugininfo;
-    PluginDB *pdb = PluginDB::instance();
     Plugin *plugin;
     SettingsStore settings;
     QString launcher_root;
 
     m_ready = false;
 
-    plugin = pdb->get_plugin(name);
+    plugin = PluginDB::instance().get_plugin(name);
     if (plugin == NULL) {
         Utility::DisplayStdErrorDialog(tr("Error: A plugin by that name does not exist"));
         reject();
@@ -139,7 +140,7 @@ int PluginRunner::exec(const QString &name)
     m_engine = plugin->get_engine();
     // Use the bundled interpreter if user requested it (and plugin supports it)
     QString bundled_interp_path = PluginDB::buildBundledInterpPath();
-    if (m_engine.contains("python3") && settings.useBundledInterp() && !bundled_interp_path.isEmpty()) {
+    if (m_engine.contains("python3.4") && settings.useBundledInterp() && !bundled_interp_path.isEmpty()) {
         m_enginePath = bundled_interp_path;
     }
     else { // Otherwise, parse to find correct external interpreter path
@@ -151,12 +152,9 @@ int PluginRunner::exec(const QString &name)
             engineList.append(m_engine);
         }
         foreach(QString engine, engineList) {
-            if (engine == QStringLiteral("python3")) {
-                engine = QStringLiteral("python3.4");
-            }
-            m_enginePath = pdb->get_engine_path(engine);
+            m_enginePath = PluginDB::instance().get_engine_path(engine);
             if (!m_enginePath.isEmpty()) break;
-        }
+        } 
         if (m_enginePath.isEmpty()) {
             Utility::DisplayStdErrorDialog(tr("Error: Interpreter") + " " + m_engine + " " + tr("has no path set"));
             reject();
@@ -167,10 +165,9 @@ int PluginRunner::exec(const QString &name)
     launcher_root = PluginDB::launcherRoot();
 
     // Note: Keep SupportedEngines() in sync with the engine calling code here.
-    if ( m_engine.contains("python3") ) {
+    if ( m_engine.contains("python3.4") ) {
         m_launcherPath = launcher_root + "/python/launcher.py";
-        // Install directory may differ from the display name in plugin.xml.
-        m_pluginPath = m_pluginsFolder + "/" + plugin->get_dirname() + "/" + "plugin.py";
+        m_pluginPath = m_pluginsFolder + "/" + m_pluginName + "/" + "plugin.py";
         if (!QFileInfo(m_launcherPath).exists()) {
             Utility::DisplayStdErrorDialog(tr("Installation Error: plugin launcher") +
                                            " " + m_launcherPath + " " + tr("does not exist"));
@@ -344,7 +341,7 @@ void PluginRunner::startPlugin()
                       << "PYTHONINSPECT" << "PYTHONUNBUFFERED" << "PYTHONVERBOSE" << "PYTHONCASEOK"
                       << "PYTHONDONTWRITEBYTECODE" << "PYTHONHASHSEED" << "PYTHONNOUSERSITE" << "PYTHONUSERBASE"
                       << "PYTHONWARNINGS" << "PYTHONFAULTHANDLER" << "PYTHONTRACEMALLOC" << "PYTHONASYNCIODEBUG"
-                      << "PYTHONMALLOC" << "PYTHONMALLOCSTATS" << "PYTHONLEGACYWINDOWSFSENCODING"
+                      << "PYTHONMALLOC" << "PYTHONMALLOCSTATS" << "PYTHONLEGACYWINDOWSFSENCODING" 
                       << "PYTHONLEGACYWINDOWSIOENCODING";
         foreach(QString envvar, vars_to_unset) {
             env.remove(envvar);
@@ -455,7 +452,7 @@ void PluginRunner::pluginFinished(int exitcode, QProcess::ExitStatus exitstatus)
     if (m_result == "crashed" ||
         m_result == "failed" ||
         m_result == "cancelled") return;
-
+                           
     ui.statusLbl->setText(tr("Status: finished"));
 
     if (!processResultXML()) {
@@ -650,7 +647,7 @@ bool PluginRunner::processResultXML()
                 if (reader.name().compare(QLatin1String("deleted")) == 0) {
                     m_filesToDelete.append(fileinfo);
                     if (mime == "application/xhtml+xml") {
-                        // only count deleting xhtml files that are
+                        // only count deleting xhtml files that are 
                         // currently resources (skip unmanifested files)
                         if (m_xhtmlFiles.contains(href)) {
                             m_xhtml_net_change--;
@@ -813,7 +810,6 @@ bool PluginRunner::checkIsWellFormed()
 bool PluginRunner::deleteFiles(const QStringList &files)
 {
     QList <Resource *> tabResources=m_tabManager->GetTabResources();
-    QList <Resource*> resourcesToBeDeleted;   //modified: BulkRemoveResources
     bool changes_made = false;
     ui.statusLbl->setText(tr("Status: cleaning up - deleting files"));
     foreach (QString fileinfo, files) {
@@ -853,11 +849,8 @@ bool PluginRunner::deleteFiles(const QStringList &files)
             if (tabResources.contains(resource)) {
                 m_tabManager->CloseTabForResource(resource);
             }
-            // -------------------------- modified: BulkRemoveResources --------------------------
-            //m_book->GetFolderKeeper()->RemoveResource(resource);
-            //resource->Delete();
-            resourcesToBeDeleted << resource;    // Add resouces to the group to be deleted
-            // -------------------------------------------------------------------
+            m_book->GetFolderKeeper()->RemoveResource(resource);
+            resource->Delete();
             changes_made = true;
         } else {
            // try to remove non-manifested, non-resource files inside book folder
@@ -870,7 +863,6 @@ bool PluginRunner::deleteFiles(const QStringList &files)
            }
         }
     }
-    m_book->GetFolderKeeper()->BulkRemoveResources(resourcesToBeDeleted); //modified: BulkRemoveResources
     if (changes_made) {
         m_bookBrowser->ResourcesDeleted();
     }
@@ -880,7 +872,7 @@ bool PluginRunner::deleteFiles(const QStringList &files)
 
 bool PluginRunner::addFiles(const QStringList &files)
 {
-    ui.statusLbl->setText(tr("Status: adding files"));
+    ui.statusLbl->setText("Status: adding files");
     foreach (QString fileinfo, files) {
         QStringList fdata = fileinfo.split(SEP);
         QString href = fdata[ hrefField ];

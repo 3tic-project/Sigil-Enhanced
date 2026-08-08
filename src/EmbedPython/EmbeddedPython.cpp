@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2025  Kevin Hendricks
+**  Copyright (C) 2015-2026  Kevin Hendricks
 **  Copyright (C) 2015-2025  Doug Massay
 **  Copyright (C) 2015       John Schember <john@nachtimwald.com>
 **
@@ -171,20 +171,11 @@
 
 QMutex EmbeddedPython::m_mutex;
 
-EmbeddedPython* EmbeddedPython::m_instance = 0;
 int EmbeddedPython::m_pyobjmetaid = 0;
 int EmbeddedPython::m_listintmetaid = 0;
 int EmbeddedPython::m_stdpairintintmetaid = 0;
 
 PyThreadState * EmbeddedPython::m_threadstate = NULL;
-
-EmbeddedPython* EmbeddedPython::instance()
-{
-    if (m_instance == 0) {
-        m_instance = new EmbeddedPython();
-    }
-    return m_instance;
-}
 
 EmbeddedPython::EmbeddedPython()
 {
@@ -308,9 +299,6 @@ EmbeddedPython::EmbeddedPython()
 
 EmbeddedPython::~EmbeddedPython()
 {
-    if (m_instance == this) {
-        m_instance = nullptr;
-    }
     m_pyobjmetaid = 0;
     m_listintmetaid = 0;
     m_stdpairintintmetaid = 0;
@@ -385,7 +373,6 @@ void EmbeddedPython::setupRedirects()
         PyErr_Clear();
     }
     Py_XDECREF(redirect_module);
-
     PyGILState_Release(gstate);
     EmbeddedPython::m_mutex.unlock();
 }

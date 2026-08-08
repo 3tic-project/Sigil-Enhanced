@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2022-2025 Kevin B. Hendricks, Stratford, Ontario
+**  Copyright (C) 2022-2026 Kevin B. Hendricks, Stratford, Ontario
 **
 **  This file is part of Sigil.
 **
@@ -37,7 +37,6 @@
 #include "Dialogs/StyledTextDelegate.h"
 #include "MainUI/FindReplace.h"
 #include "Dialogs/ReplacementChooser.h"
-#include "MainUI/FindReplacePlus.h" //modified: FindReplacePlus
 
 
 static const QString SETTINGS_GROUP = "replacement_chooser";
@@ -78,7 +77,6 @@ ReplacementChooser::ReplacementChooser(QWidget* parent)
     CreateTable();
     ui.chooserTable->setFocus(Qt::OtherFocusReason);
 }
-
 
 ReplacementChooser::~ReplacementChooser()
 {
@@ -127,26 +125,9 @@ void ReplacementChooser::CreateTable()
     ui.chooserTable->setModel(m_ItemModel);
     ui.chooserTable->setContextMenuPolicy(Qt::NoContextMenu);
 
-    //--------------- modified: FindReplacePlus ----------------------
-    /*
     QList<Resource*> resources = m_FindReplace->GetAllResourcesToSearch();
     QString search_regex = m_FindReplace->GetSearchRegex();
     QString replace_text = m_FindReplace->GetReplace();
-    */
-    QList<Resource*> resources;
-    QString presearch_regex, search_regex, replace_text;
-    if (m_PlusMode) {
-        resources = m_FindReplacePlus->GetAllResourcesToSearch();
-        presearch_regex = m_FindReplacePlus->GetPreSearchRegex();
-        search_regex = m_FindReplacePlus->GetSearchRegex();
-        replace_text = m_FindReplacePlus->GetReplace();
-    }
-    else {
-        resources = m_FindReplace->GetAllResourcesToSearch();
-        search_regex = m_FindReplace->GetSearchRegex();
-        replace_text = m_FindReplace->GetReplace();
-    }
-    //----------------------------------------------------------------
 
     // handle possible python function replacements
     QString functionname;
@@ -161,8 +142,8 @@ void ReplacementChooser::CreateTable()
         PythonRoutines pr;
         fsp = pr.SetupInitialFunctionSearchEnvInPython(functionname);
     }
-    SPCRE *spcre = PCRECache::instance()->getObject(search_regex);
-
+    SPCRE *spcre = PCRECache::instance().getObject(search_regex);
+    
     m_current_count = 0;
     foreach(Resource* resource, resources ) {
         qApp->processEvents();
@@ -178,12 +159,7 @@ void ReplacementChooser::CreateTable()
             text = text_resource->GetText();
         } 
         if (!text.isEmpty()) {
-
-            // search the text using the search_regex and get all matches
-            //--------------- modified: FindReplacePlus ----------------------
-            //QList<SPCRE::MatchInfo> match_info = spcre->getEveryMatchInfo(text);
-            QList<Utility::MatchInfo> match_info = Utility::GetSearchInfoWithPreSearch(presearch_regex, search_regex, text);
-            //----------------------------------------------------------------
+            QList<SPCRE::MatchInfo> match_info = spcre->getEveryMatchInfo(text);
 
             // loop through matches to build up before and after snippets for table
             // in forward order but apply them in reverse order
@@ -448,40 +424,4 @@ void ReplacementChooser::connectSignalsSlots()
     connect(ui.buttonBox->button(QDialogButtonBox::Close), SIGNAL(clicked()), this, SLOT(close()));
     connect(ui.ToggleSelectAll, SIGNAL(clicked(bool)), this, SLOT(SelectUnselectAll(bool)));
     connect(ui.chooserTable, SIGNAL(doubleClicked(const QModelIndex &)), this, SLOT(doActivated(const QModelIndex &)));
-}
-
-
-//modified: FindReplacePlus
-ReplacementChooser::ReplacementChooser(bool plus_mode, QWidget* parent)
-    :
-    QDialog(parent),
-    m_ItemModel(new QStandardItemModel),
-    m_TextDelegate(new StyledTextDelegate()),
-    m_replacement_count(0),
-    m_current_count(0),
-    m_PlusMode(plus_mode)
-{
-    m_FindReplacePlus = qobject_cast<FindReplacePlus*>(parent);
-    ui.setupUi(this);
-    ui.amtcb->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    ui.amtcb->addItem("10", 10);
-    ui.amtcb->addItem("20", 20);
-    ui.amtcb->addItem("30", 30);
-    ui.amtcb->addItem("40", 40);
-    ui.amtcb->addItem("50", 50);
-    ui.amtcb->setEditable(false);
-    ui.ToggleSelectAll->setCheckState(Qt::Checked);
-    ReadSettings();
-    connectSignalsSlots();
-    // sorting must NOT be enabled as offset order is important
-    // changes in a file must be made from bottom to top
-    ui.chooserTable->setSortingEnabled(false);
-    ui.chooserTable->setTextElideMode(Qt::ElideLeft);
-    ui.chooserTable->setTabKeyNavigation(false);
-    ui.chooserTable->setFocusPolicy(Qt::TabFocus);
-    ui.chooserTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    ui.amtcb->setFocusPolicy(Qt::TabFocus);
-    ui.ToggleSelectAll->setFocusPolicy(Qt::TabFocus);
-    CreateTable();
-    ui.chooserTable->setFocus(Qt::OtherFocusReason);
 }

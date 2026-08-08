@@ -1901,7 +1901,7 @@ void FindReplacePlus::ValidateRegex()
         SPCRE rex(text);
         QString emsg;
         if (!rex.isValid()) {
-            emsg = tr("Invalid Regex:") + " " + PCREErrors::instance()->GetError(rex.getError(), "");
+            emsg = tr("Invalid Regex:") + " " + PCREErrors::instance().GetError(rex.getError(), "");
             emsg = emsg + "\n" + tr("offset:") + " " + QString::number(rex.getErrPos() - offset_correction);
             ui.cbFind->setToolTip(emsg);
             ui.actionReInvalidIcon->setToolTip(emsg);
@@ -1925,7 +1925,7 @@ void FindReplacePlus::ValidatePreRegex()
         SPCRE rex(text);
         QString emsg;
         if (!rex.isValid()) {
-            emsg = tr("Invalid Regex:") + " " + PCREErrors::instance()->GetError(rex.getError(), "");
+            emsg = tr("Invalid Regex:") + " " + PCREErrors::instance().GetError(rex.getError(), "");
             emsg = emsg + "\n" + tr("offset:") + " " + QString::number(rex.getErrPos() - offset_correction);
             ui.cbPreFind->setToolTip(emsg);
             ui.actionReInvalidIcon->setToolTip(emsg);

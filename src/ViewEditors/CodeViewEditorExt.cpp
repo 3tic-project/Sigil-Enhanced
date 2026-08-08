@@ -1509,7 +1509,7 @@ bool CodeViewEditor::FindNextPreSearch(const QString& presearch_regex,
         text_end = split_at + m_SplitOffset;
     }
 
-    SPCRE* spcre_pre = PCRECache::instance()->getObject(presearch_regex);
+    SPCRE* spcre_pre = PCRECache::instance().getObject(presearch_regex);
     QString _t = Utility::Substring(start_offset, text_end, text);
     SPCRE::MatchInfo pre_match_info = spcre_pre->getFirstMatchInfo(Utility::Substring(start_offset, text_end, text));
 
@@ -1579,7 +1579,7 @@ bool CodeViewEditor::FindNextPlus(const QString& presearch_regex,
         }
     }
 
-    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    SPCRE* spcre = PCRECache::instance().getObject(search_regex);
     SPCRE::MatchInfo match_info = spcre->getFirstMatchInfo(Utility::Substring(offset, text_end, txt));
     m_lastFindRegex = search_regex;
     m_lastMatch = match_info;
@@ -1638,7 +1638,7 @@ bool CodeViewEditor::FindPrevPreSearch(const QString& presearch_regex,
         text_start = split_at + m_SplitOffset;
     }
 
-    SPCRE* spcre_pre = PCRECache::instance()->getObject(presearch_regex);
+    SPCRE* spcre_pre = PCRECache::instance().getObject(presearch_regex);
     SPCRE::MatchInfo pre_match_info = spcre_pre->getLastMatchInfo(Utility::Substring(text_start, offset, text));
 
     if (pre_match_info.offset.first != -1) {
@@ -1709,7 +1709,7 @@ bool CodeViewEditor::FindPrevPlus(const QString& presearch_regex,
         }
     }
 
-    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    SPCRE* spcre = PCRECache::instance().getObject(search_regex);
     SPCRE::MatchInfo match_info = spcre->getLastMatchInfo(Utility::Substring(text_start, offset, txt));
     m_lastFindRegex = search_regex;
     m_lastMatch = match_info;
@@ -1742,7 +1742,7 @@ bool CodeViewEditor::ReplaceSelectedPlus(const QString& search_regex, const QStr
         return false;
     }
 
-    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    SPCRE* spcre = PCRECache::instance().getObject(search_regex);
     int selection_start = textCursor().selectionStart();
     int selection_end = textCursor().selectionEnd();
 
@@ -1828,8 +1828,8 @@ bool CodeViewEditor::ReplaceSelectedPlus(const QString& search_regex, const QStr
 //modified: FindReplacePlus
 int CodeViewEditor::CountPlus(const QString& presearch_regex, const QString& search_regex, bool marked_text)
 {
-    SPCRE* pre_spcre = PCRECache::instance()->getObject(presearch_regex);
-    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    SPCRE* pre_spcre = PCRECache::instance().getObject(presearch_regex);
+    SPCRE* spcre = PCRECache::instance().getObject(search_regex);
     QString text = toPlainText();
     int start = 0;
     int end = text.length();
@@ -1860,7 +1860,7 @@ int CodeViewEditor::ReplaceAllPlus(const QString& presearch_regex,
     int origin_pos = textCursor().position();
     int new_pos = -1;
 
-    SPCRE* spcre = PCRECache::instance()->getObject(search_regex);
+    SPCRE* spcre = PCRECache::instance().getObject(search_regex);
     Utility::MatchInfo info;
     QString new_text;
     int head_start = 0,

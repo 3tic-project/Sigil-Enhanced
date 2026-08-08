@@ -1,9 +1,9 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
-**  Copyright (C) 2012 John Schember <john@nachtimwald.com>
-**  Copyright (C) 2012 Dave Heiland
-**  Copyright (C) 2012 Grant Drake
+**  Copyright (C) 2015-2026 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2012      John Schember <john@nachtimwald.com>
+**  Copyright (C) 2012      Dave Heiland
+**  Copyright (C) 2012      Grant Drake
 **
 **  This file is part of Sigil.
 **
@@ -51,16 +51,6 @@ static const int FULLNAME_ROLE = Qt::UserRole + 2;
 
 static const QString SEARCH_EXAMPLES_FILE = "search_entries.ini";
 
-SearchEditorModel *SearchEditorModel::m_instance = 0;
-
-SearchEditorModel *SearchEditorModel::instance()
-{
-    if (m_instance == 0) {
-        m_instance = new SearchEditorModel();
-    }
-
-    return m_instance;
-}
 
 SearchEditorModel::SearchEditorModel(QObject *parent)
     : QStandardItemModel(parent),
@@ -90,12 +80,6 @@ SearchEditorModel::SearchEditorModel(QObject *parent)
             this, SLOT(RowsRemovedHandler(const QModelIndex &, int, int)));
 }
 
-SearchEditorModel::~SearchEditorModel()
-{
-    if (m_instance == this) {
-        m_instance = nullptr;
-    }
-}
 
 void SearchEditorModel::SetDataModified(bool modified)
 {
@@ -247,7 +231,7 @@ void SearchEditorModel::SettingsFileChanged(const QString &path) const
             m_FSWatcher->addPath(path);
         }
 
-        instance()->LoadInitialData();
+        instance().LoadInitialData();
         emit SettingsFileUpdated();
     }
 }
@@ -347,7 +331,7 @@ void SearchEditorModel::LoadTextData(const QString &filename, QStandardItem *ite
                 QStringList findreplace;
                 if (sep == ',') {
                     findreplace  = Utility::parseCSVLine(aline);
-                } else {
+                } else { 
                     findreplace = aline.split(sep);
                 }
                 // add to end to prevent errors
@@ -371,7 +355,7 @@ void SearchEditorModel::LoadTextData(const QString &filename, QStandardItem *ite
                 entry->find = findreplace.at(1);
                 entry->replace = findreplace.at(2);
                 entry->controls = findreplace.at(3);
-
+                
                 AddFullNameEntry(entry, item);
                 // done with the temporary entry so remove it
                 delete entry;
@@ -439,9 +423,9 @@ void SearchEditorModel::AddFullNameEntry(SearchEditorModel::searchEntry *entry, 
 void SearchEditorModel::FillControls(const QList<QStandardItem*> &items)
 {
     if (items.isEmpty()) return;
-
+    
     QStandardItem *source_item = items.at(0);
-
+    
     QStandardItem *parent_item = invisibleRootItem();
     if (source_item->parent()) {
         parent_item = source_item->parent();
@@ -595,7 +579,7 @@ QStandardItem *SearchEditorModel::AddEntryToModel(SearchEditorModel::searchEntry
     rowItems[0]->setData(entry->fullname, FULLNAME_ROLE);
     rowItems[0]->setToolTip(entry->fullname);
     rowItems[3]->setToolTip(BuildControlsToolTip(entry->controls));
-
+    
     // Add the new item to the model at the specified row
     QStandardItem *new_item;
 
@@ -826,7 +810,7 @@ QString SearchEditorModel::SaveData(QList<SearchEditorModel::searchEntry *> entr
             message = tr("Unable to create file %1").arg(filename);
             // Watch the file again
             m_FSWatcher->addPath(settings_path);
-            // delete each entry if we created them above
+            // delete each entry if we created them above   
             if (clean_up_needed) {
                 foreach(SearchEditorModel::searchEntry* entry, entries) {
                     delete entry;
@@ -849,7 +833,7 @@ QString SearchEditorModel::SaveData(QList<SearchEditorModel::searchEntry *> entr
                 ss.setValue(ENTRY_CONTROLS, entry->controls);
             }
         }
-
+    
         // delete each entry if we created them above
         if (clean_up_needed) {
             foreach(SearchEditorModel::searchEntry* entry, entries) {

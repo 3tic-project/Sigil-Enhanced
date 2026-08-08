@@ -55,7 +55,7 @@ Resource* FolderKeeper::AddContentFromQByteArray(const QByteArray& data,
 
     // check if mediatype is recognized
     QString mt = mimetype;
-    if (!mt.isEmpty() && (MediaTypes::instance()->GetGroupFromMediaType(mt, "") == "")) {
+    if (!mt.isEmpty() && (MediaTypes::instance().GetGroupFromMediaType(mt, "") == "")) {
         qDebug() << "Warning: unrecognized mediatype in OPF: " << mimetype;
         mt = "";
     }
@@ -63,11 +63,11 @@ Resource* FolderKeeper::AddContentFromQByteArray(const QByteArray& data,
     // try using the extension to determine the mediatype
     if (mt.isEmpty()) {
         QString extension = fi.suffix().toLower();
-        mt = MediaTypes::instance()->GetMediaTypeFromExtension(extension, mimetype);
+        mt = MediaTypes::instance().GetMediaTypeFromExtension(extension, mimetype);
     }
 
     QString group = DetermineFileGroup(filename, mt);
-    QString resdesc = MediaTypes::instance()->GetResourceDescFromMediaType(mt, "Resource");
+    QString resdesc = MediaTypes::instance().GetResourceDescFromMediaType(mt, "Resource");
 
     QDir folder(m_FullPathToMainFolder);
 

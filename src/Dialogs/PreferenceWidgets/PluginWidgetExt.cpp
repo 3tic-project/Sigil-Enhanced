@@ -30,7 +30,7 @@ void PluginWidget::removeSelectedPlugins() {
         vals.append(cb->currentText());
     }
 
-    PluginDB* pdb = PluginDB::instance();
+    PluginDB& pdb = PluginDB::instance();
     int column_count = ui.pluginTable->columnCount();
     for (int i = 0; i < itemlist.size(); i += column_count) {
         QTableWidgetItem* item = itemlist.at(i);
@@ -39,7 +39,7 @@ void PluginWidget::removeSelectedPlugins() {
         m_RuntimeModes.remove(pluginname);
         m_isDirty = true;
         ui.pluginTable->removeRow(row);
-        pdb->remove_plugin(pluginname);
+        pdb.remove_plugin(pluginname);
 
         // all 10 have the identical lists
         // so remove the same item from each list
@@ -82,8 +82,8 @@ void PluginWidget::reInstallPlugin(QString zippath)
         pluginname.truncate(version_index);
     }
 
-    PluginDB* pdb = PluginDB::instance();
-    PluginDB::AddResult ar = pdb->add_plugin(zippath, true);
+    PluginDB& pdb = PluginDB::instance();
+    PluginDB::AddResult ar = pdb.add_plugin(zippath, true);
     switch (ar) {
     case PluginDB::AR_XML:
         Utility::DisplayStdWarningDialog(tr("Error: Plugin plugin.xml is invalid or not supported on your operating system."));
@@ -100,7 +100,7 @@ void PluginWidget::reInstallPlugin(QString zippath)
         break;
     }
 
-    Plugin* p = pdb->get_plugin(pluginname);
+    Plugin* p = pdb.get_plugin(pluginname);
 
     if (p == NULL) {
         return;

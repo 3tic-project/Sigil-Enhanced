@@ -198,13 +198,13 @@ QString Utility::ReadUnicodeTextFile_M(const QString& fullfilepath)
     QString error_traceback;
     QList<QVariant> args;
     args.append(QVariant(fullfilepath));
-    EmbeddedPython* epython = EmbeddedPython::instance();
+    EmbeddedPython& epython = EmbeddedPython::instance();
 
-    QVariant res = epython->runInPython(QString("importtxt"),
-                                        QString("read_unicode"),
-                                        args,
-                                        &rv,
-                                        error_traceback);
+    QVariant res = epython.runInPython(QString("importtxt"),
+                                       QString("read_unicode"),
+                                       args,
+                                       &rv,
+                                       error_traceback);
     if (rv != 0) {
         Utility::DisplayStdWarningDialog(QString("error in importtxt read_unicode: ") + QString::number(rv),
             error_traceback);
@@ -220,7 +220,7 @@ QList<std::pair<int, int>> Utility::GetPreSearchMatchInfos(const QString& presea
 {
     if (presearch_regex.isEmpty()) return QList<std::pair<int, int>>();
 
-    SPCRE* spcre_pre = PCRECache::instance()->getObject(presearch_regex);
+    SPCRE* spcre_pre = PCRECache::instance().getObject(presearch_regex);
     SPCRE::MatchInfo pre_m_info;
     QList<std::pair<int, int>> match_infos;
 
@@ -259,7 +259,7 @@ QList<Utility::MatchInfo> Utility::GetSearchInfoWithPreSearch(const QString& pre
     if (search.isEmpty()) return QList<Utility::MatchInfo>();
 
     if (presearch.isEmpty()) {
-        SPCRE* spcre = PCRECache::instance()->getObject(search);
+        SPCRE* spcre = PCRECache::instance().getObject(search);
         QList<Utility::MatchInfo> match_infos;
         Utility::MatchInfo alt_info;
         foreach(SPCRE::MatchInfo info, spcre->getEveryMatchInfo(text)) {
@@ -273,7 +273,7 @@ QList<Utility::MatchInfo> Utility::GetSearchInfoWithPreSearch(const QString& pre
         QList<std::pair<int, int>> pre_offset_infos = Utility::GetPreSearchMatchInfos(presearch, text);
         if (pre_offset_infos.isEmpty()) return QList<Utility::MatchInfo>();
 
-        SPCRE* spcre = PCRECache::instance()->getObject(search);
+        SPCRE* spcre = PCRECache::instance().getObject(search);
         QList<Utility::MatchInfo> match_infos;
         for (int i = 0; i < pre_offset_infos.count(); i++) {
             std::pair<int, int> offset_info = pre_offset_infos.at(i);

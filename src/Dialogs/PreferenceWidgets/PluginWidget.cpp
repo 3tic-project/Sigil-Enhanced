@@ -1,6 +1,6 @@
 /************************************************************************
  **
- **  Copyright (C) 2015-2025 Kevin B. Hendricks, Stratford Ontario Canada
+ **  Copyright (C) 2015-2026 Kevin B. Hendricks, Stratford Ontario Canada
  **
  **  This file is part of Sigil.
  **
@@ -78,13 +78,10 @@ PreferencesWidget::ResultActions PluginWidget::saveSettings()
 
     SettingsStore settings;
 
-    PluginDB *pdb = PluginDB::instance();
-
-    pdb->set_engine_path("python3.4", ui.editPathPy3->text());
-
+    PluginDB::instance().set_engine_path("python3.4", ui.editPathPy3->text());
 
     // handle the 10 assignable plugin buttons
-    QHash<QString, Plugin*> plugins = pdb->all_plugins();
+    QHash<QString, Plugin*> plugins = PluginDB::instance().all_plugins();
     QStringList keys = plugins.keys();
     QStringList pluginmap;
     QStringList pnames;
@@ -157,10 +154,9 @@ void PluginWidget::readSettings()
     m_RuntimeModes = settings.pluginRuntimeModes();
 
     // Load the available plugin information
-    PluginDB *pdb = PluginDB::instance();
     QHash<QString, Plugin *> plugins;
 
-    ui.editPathPy3->setText(pdb->get_engine_path("python3.4"));
+    ui.editPathPy3->setText(PluginDB::instance().get_engine_path("python3.4"));
 
     ui.pluginTable->setSortingEnabled(false);
 
@@ -170,7 +166,7 @@ void PluginWidget::readSettings()
     }
 
     int nrows = 0;
-    plugins = pdb->all_plugins();
+    plugins = PluginDB::instance().all_plugins();
     foreach(Plugin *p, plugins) {
         ui.pluginTable->insertRow(nrows);
         setPluginTableRow(p,nrows);
@@ -242,10 +238,7 @@ void PluginWidget::addPlugin()
         return;
     }
 
-    PluginDB *pdb = PluginDB::instance();
-
-    PluginDB::AddResult ar = pdb->add_plugin(zippath);
-
+    PluginDB::AddResult ar = PluginDB::instance().add_plugin(zippath);
     // Save the last folder used for adding plugin zips
     m_LastFolderOpen = QFileInfo(zippath).absolutePath();
     SettingsStore settings;
@@ -295,7 +288,7 @@ void PluginWidget::addPlugin()
         pluginname.truncate(version_index);
     }
 
-    Plugin *p = pdb->get_plugin(pluginname);
+    Plugin *p = PluginDB::instance().get_plugin(pluginname);
 
     if (p == NULL) {
         return;
@@ -332,13 +325,12 @@ void PluginWidget::removePlugin()
     //---------------------------------------
     ui.pluginTable->setSortingEnabled(false);
 
-    PluginDB *pdb = PluginDB::instance();
     int row = ui.pluginTable->row(itemlist.at(0));
     QString pluginname = ui.pluginTable->item(row, PluginWidget::NameField)->text();
     m_RuntimeModes.remove(pluginname);
     m_isDirty = true;
     ui.pluginTable->removeRow(row);
-    pdb->remove_plugin(pluginname);
+    PluginDB::instance().remove_plugin(pluginname);
     ui.pluginTable->resizeColumnsToContents();
 
 
@@ -371,7 +363,6 @@ void PluginWidget::removePlugin()
 
 void PluginWidget::removeAllPlugins()
 {
-    PluginDB *pdb = PluginDB::instance();
     QMessageBox msgBox;
 
     msgBox.setIcon(QMessageBox::Warning);
@@ -387,9 +378,9 @@ void PluginWidget::removeAllPlugins()
         while (ui.pluginTable->rowCount() > 0) {
             ui.pluginTable->removeRow(0);
         }
-        pdb->remove_all_plugins();
-        m_RuntimeModes.clear();
-        m_isDirty = true;
+        PluginDB::instance().remove_all_plugins();
+    m_RuntimeModes.clear();
+    m_isDirty = true;
         ui.pluginTable->resizeColumnsToContents();
         ui.pluginTable->setSortingEnabled(true);
     }

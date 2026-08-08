@@ -36,7 +36,7 @@ public:
     {
         static QMutex entityMutex;
         QMutexLocker locker(&entityMutex);
-        const ushort codepoint = XMLEntities::instance()->GetEntityCode(
+        const ushort codepoint = XMLEntities::instance().GetEntityCode(
             QLatin1Char('&') + name + QLatin1Char(';'));
         return codepoint == 0 ? QString() : QString(QChar(codepoint));
     }

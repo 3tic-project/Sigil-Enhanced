@@ -21,7 +21,7 @@
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/XhtmlDoc.h"
 #include "Misc/SettingsStoreExtend.h"
-#include "Parsers/qCSSParser.h"
+#include "Parsers/CSSParser.h"
 #include "Parsers/XhtmlFormatParser.h"
 #include "ResourceObjects/CSSResource.h"
 #include "ResourceObjects/HTMLResource.h"
@@ -79,7 +79,6 @@ FormatterEnhancer::FormatResult FormatterEnhancer::formatCssText(const QString& 
     FormatResult result;
 
     CSSParser parser;
-    parser.set_level(QStringLiteral("CSS3.0"));
     QString css = source;
     parser.parse_css(css);
 

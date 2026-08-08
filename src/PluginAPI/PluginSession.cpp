@@ -3931,7 +3931,7 @@ QString PluginSession::ResolveInterpreter() const
     if (settings.useBundledInterp() && !bundled.isEmpty()) {
         return bundled;
     }
-    return PluginDB::instance()->get_engine_path(QStringLiteral("python3.4"));
+    return PluginDB::instance().get_engine_path(QStringLiteral("python3.4"));
 }
 
 void PluginSession::Finish(const QString &status, const QString &message)

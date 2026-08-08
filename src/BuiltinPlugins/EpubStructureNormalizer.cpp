@@ -1393,9 +1393,9 @@ static QString mediaTypeForBookPath(const QString& bookpath, const QString& full
 {
     const QFileInfo info(bookpath);
     const QString ext = info.suffix().toLower();
-    QString media_type = MediaTypes::instance()->GetMediaTypeFromExtension(ext, "");
+    QString media_type = MediaTypes::instance().GetMediaTypeFromExtension(ext, "");
     if (ext == "xml") {
-        media_type = MediaTypes::instance()->GetMediaTypeFromXML(full_book_folder + "/" + bookpath, media_type);
+        media_type = MediaTypes::instance().GetMediaTypeFromXML(full_book_folder + "/" + bookpath, media_type);
     }
     return media_type;
 }

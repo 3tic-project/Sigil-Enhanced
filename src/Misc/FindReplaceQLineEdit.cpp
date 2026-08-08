@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2015-2024 Kevin B. Hendricks, Stratford Ontario Canada
+**  Copyright (C) 2015-2026 Kevin B. Hendricks, Stratford Ontario Canada
 **  Copyright (C) 2012      John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Dave Heiland
 **  Copyright (C) 2012      Grant Drake
@@ -104,14 +104,9 @@ void FindReplaceQLineEdit::contextMenuEvent(QContextMenuEvent *event)
     menu->insertSeparator(topAction);
     topAction = saveSearchAction;
     //modified: FindReplacePlus
-    /*
-    if (CreateMenuEntries(menu, topAction, SearchEditorModel::instance()->invisibleRootItem())) {
-        menu->insertSeparator(topAction);
-    }
-    */
     bool create_made;
     if (m_PlusMode) create_made = CreateMenuEntries(menu, topAction, SearchEditorModelPlus::instance()->invisibleRootItem());
-    if (!m_PlusMode) create_made = CreateMenuEntries(menu, topAction, SearchEditorModel::instance()->invisibleRootItem());
+    if (!m_PlusMode) create_made = CreateMenuEntries(menu, topAction, SearchEditorModel::instance().invisibleRootItem());
     if (create_made) {
         menu->insertSeparator(topAction);
     }
@@ -137,9 +132,8 @@ bool FindReplaceQLineEdit::CreateMenuEntries(QMenu *parent_menu, QAction *topAct
             searchAction = new QAction(item->text(), this);
             connect(searchAction, SIGNAL(triggered()), m_searchMapper, SLOT(map()));
             //modified: FindReplacePlus
-            //m_searchMapper->setMapping(searchAction, SearchEditorModel::instance()->GetFullName(item));
             if (m_PlusMode) m_searchMapper->setMapping(searchAction, SearchEditorModelPlus::instance()->GetFullName(item));
-            if (!m_PlusMode) m_searchMapper->setMapping(searchAction, SearchEditorModel::instance()->GetFullName(item));
+            if (!m_PlusMode) m_searchMapper->setMapping(searchAction, SearchEditorModel::instance().GetFullName(item));
             //-------------------------
             if (!topAction) {
                 parent_menu->addAction(searchAction);

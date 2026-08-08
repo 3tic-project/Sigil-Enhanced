@@ -1,6 +1,6 @@
-﻿/***************************************************************************
+/***************************************************************************
 **
-**  Copyright (C) 2015-2025 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2015-2026 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2011-2012 John Schember <john@nachtimwald.com>
 **  Copyright (C) 2012      Dave Heiland
 **  Copyright (C) 2009-2011 Strahinja Markovic  <strahinja.markovic@gmail.com>
@@ -509,7 +509,7 @@ bool FindReplace::DoReplaceNext()
     bool found = Replace();
     m_SearchRunning = false;
     return found;
-
+    
 }
 
 bool FindReplace::DoReplacePrevious()
@@ -530,7 +530,7 @@ bool FindReplace::Find()
         SetStartingResource(true);
         SetPreviousSearch();
     }
-
+    
     bool found = false;
 
     if (GetSearchDirection() == FindReplace::SearchDirection_Up) {
@@ -568,7 +568,7 @@ int FindReplace::Count()
         SetStartingResource(true);
         SetPreviousSearch();
     }
-
+    
     if (!IsValidFindText()) {
         return 0;
     }
@@ -764,10 +764,6 @@ int FindReplace::ReplaceAll()
         //         count += searchable->ReplaceAll(GetSearchRegex(), GetReplace(), GetSearchableDirection(), m_OptionWrap);
         //     }
         // }
-    }
-
-    if (count < 0) {
-        return 0;
     }
 
     if (count == 0) {
@@ -1179,7 +1175,7 @@ QList <Resource *> FindReplace::GetFilesToSearch(bool force_all)
         bool skip_resource = s < c;
         foreach (Resource *resource, all_resources) {
             if (! skip_resource) resources.append(resource);
-            // if the last resource was the starting resource disable skipping for the next
+            // if the last resource was the starting resource disable skipping for the next 
             if (resource == m_StartingResource) skip_resource = false;
             // if the last resource was the current resource enable skipping for the next
             if (resource == current_resource) skip_resource = true;
@@ -1214,15 +1210,6 @@ int FindReplace::ReplaceInAllFiles()
     m_MainWindow->GetCurrentContentTab()->SaveTabContent();
     QList<Resource *>search_files = GetFilesToSearch(true);
     if (search_files.isEmpty()) return 0;
-
-    int pending_count = SearchOperations::CountInFiles(GetSearchRegex(), search_files);
-    if (pending_count == 0) return 0;
-
-    ShowMessage(tr("Creating checkpoint before Replace All..."));
-    if (!m_MainWindow->RepoCommit()) {
-        ShowMessage(tr("Replace All cancelled: checkpoint failed."));
-        return -1;
-    }
 
     int count = 0;
 
@@ -1301,7 +1288,7 @@ bool FindReplace::FindInAllFiles(Searchable::Direction direction)
             // Save if editor or F&R has focus
             bool has_focus_find = HasFocusFind();
             bool has_focus_replace = HasFocusReplace();
-
+            
             // Save selected resources since opening tabs changes selection
             QList<Resource *>selected_resources = m_MainWindow->GetBookBrowserSelectedResources();
 
@@ -1343,7 +1330,7 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
     Resource *current_resource = GetCurrentResource();
     Resource *starting_resource = NULL;
     bool need_to_check_assigned_starting_resource = false;
-
+    
     // if CurrentFile is the same type as LookWhere, set it as the starting resource
     if (isWhereHTML() && (current_resource->Type() == Resource::HTMLResourceType)) {
         starting_resource = current_resource;
@@ -1394,14 +1381,14 @@ Resource *FindReplace::GetNextContainingResource(Searchable::Direction direction
             return NULL;
         }
     }
-
+    
     // this will only work if the resource list has at least 2 elements
     // as it relies on list order to know if already searched or not
     // since it keeps no state itself
     bool passed_starting_resource = false;
 
     while (!passed_starting_resource || (next_resource != starting_resource)) {
-
+        
         next_resource = GetNextResource(next_resource, direction);
 
         if (next_resource == starting_resource) {
@@ -1706,13 +1693,6 @@ void FindReplace::ReadSettings()
 
 void FindReplace::ShowHide()
 {
-    //--- modified: FindReplacePlus ---
-    if (m_MainWindow->GetFindReplaceMode() != MainWindow::FindReplaceMode::OriginalMode) {
-        hide();
-        return;
-    }
-    //---------------------------------
-
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     QVariant show_find_replace = settings.value("visible");
@@ -1768,7 +1748,7 @@ Searchable *FindReplace::GetAvailableSearchable()
 void FindReplace::SaveSearchAction()
 {
     SearchEditorModel::searchEntry *search_entry = new SearchEditorModel::searchEntry();
-    search_entry->name = tr("Unnamed Search");
+    search_entry->name = "Unnamed Search";
     search_entry->is_group = false;
     search_entry->find = GetFind();
     search_entry->replace = GetReplace();
@@ -1779,9 +1759,9 @@ void FindReplace::SaveSearchAction()
 
 void FindReplace::LoadSearchByName(const QString &name)
 {
-    // callers to SearchEditorModel's GetEntryFromName receive a searchEntry pointer
+    // callers to SearchEditorModel's GetEntryFromName receive a searchEntry pointer 
     // created by a call to new and must take ownership and so must clean up after themselves
-    SearchEditorModel::searchEntry * search_entry = SearchEditorModel::instance()->GetEntryFromName(name);
+    SearchEditorModel::searchEntry * search_entry = SearchEditorModel::instance().GetEntryFromName(name);
     if (search_entry) {
         LoadSearch(search_entry);
         delete search_entry;
@@ -1813,7 +1793,7 @@ void FindReplace::SetStartingResource(bool update_position)
 {
     bool manual_restart = m_RestartPerformed;
     Q_UNUSED(manual_restart);
-
+    
     m_RestartPerformed = false;
 
     if (isWhereCF() || m_LookWhereCurrentFile || IsMarkedText()) return;
@@ -1843,7 +1823,7 @@ void FindReplace::SetStartingResource(bool update_position)
     // All new searches running from the Saved Search Dialog should start
     // new searches at the top (or bottom) of the current file if it is in the set.
     // Also, when the user hits Restart, the next search should start at the top (bottom)
-
+    
     // if (m_IsSearchGroupRunning || manual_restart ) {
     if (m_IsSearchGroupRunning) {
         if ( m_StartingResource == current_resource ) {
@@ -1906,7 +1886,7 @@ void FindReplace::ReplaceCurrentSearch()
     }
 
     m_IsSearchGroupRunning = true;
-
+    
     SearchEditorModel::searchEntry * search_entry = search_entries.first();
     LoadSearch(search_entry);
     ReplaceCurrent();
@@ -2063,7 +2043,7 @@ void FindReplace::ClearHistory()
     if (button_pressed == QMessageBox::Yes) {
         ui.cbFind->clear();
         ui.cbReplace->clear();
-    }
+    } 
 }
 
 void FindReplace::TokeniseSelection()
@@ -2260,7 +2240,7 @@ void FindReplace::ExtendUI()
 
     // setup up regex options toolbutton and menu
     QMenu * m_menu = new QMenu();
-
+    
     m_DotAllCheckAction = new QAction(tr("Dot All"), m_menu);
     m_DotAllCheckAction->setCheckable(true);
     m_DotAllCheckAction->setEnabled(true);
@@ -2311,10 +2291,10 @@ void FindReplace::ValidateRegex()
         SPCRE rex(text);
         QString emsg;
         if (!rex.isValid()) {
-            emsg = tr("Invalid Regex:") + " " + PCREErrors::instance()->GetError(rex.getError(),"");
-            emsg = emsg + "\n" + tr("offset:") + " " + QString::number(rex.getErrPos() - offset_correction);
+            emsg = tr("Invalid Regex:") + " " + PCREErrors::instance().GetError(rex.getError(),"");
+            emsg = emsg + "\n" + tr("offset:") + " " + QString::number(rex.getErrPos() - offset_correction); 
             ui.cbFind->setToolTip(emsg);
-            ui.revalid->setText(INVALID);
+            ui.revalid->setText(INVALID); 
         } else {
             ui.cbFind->setToolTip(tr("Valid Regex"));
             ui.revalid->setText(VALID);
@@ -2349,7 +2329,7 @@ void FindReplace::ManagePythonFunction()
     } else {
         functionName = "";
     }
-
+    
     QMap<QString, QVariant> funcmap = SearchUtils::ReadFuncDictfromJSONFile(fullfilepath);
     PythonFunctionEditor pfe(funcmap, functionName, this);
     connect(&pfe, SIGNAL(UseFunctionRequest(const QString&)), this, SLOT(SetReplace(const QString&)));
