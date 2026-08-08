@@ -3,7 +3,7 @@
 > 状态：Implemented v1 / audited（兼容回退见 1.1）
 > 日期：2026-08-09
 > 审计基线：`de0ea00e0`（`Add BookLive paragraph normalizer`）
-> 实施范围：`9290e4de3` 至 `861b02a9c`
+> 实施范围：`9290e4de3` 至 `92ffa2dd7`
 > 上位路线：`../todo/Sigil-Enhanced-Development-Plan.md` 第 5 节
 > 本文边界：只设计“已保存搜索模板的 Replace All 批处理”；单次交互式 Find/Replace、Dry Run 和 Replace Current 暂不迁移。
 
@@ -513,6 +513,7 @@ v1 已在明确回退边界内把 `FindReplace::ReplaceAllSearch()` 和 `FindRep
 | `7e1a11c3b` | 1000 × 50 benchmark | 固化目标规模、结果和写回上限验收 |
 | `6679316b2` | commit postcondition 回滚补强 | 当前资源写入后校验失败时也纳入逆序回滚 |
 | `861b02a9c` | 批处理失败消息翻译 | 补齐简中、繁中和日文覆盖 |
+| `92ffa2dd7` | 搜索进度事件重入防护 | 修复 Plus Replace All 运行期间重复点击/关闭窗口导致的递归与析构 crash |
 
 ### 14.2 新调用链
 
@@ -572,6 +573,37 @@ wall-clock 只衡量 staging runner，不伪装成完整 GUI legacy 对比；主
 - `search_batch_runner`：通过；
 - `search_batch_benchmark`：通过；
 - `booklive_paragraph_normalizer`：通过，确认本次性能改造未回归 BookLive 插件；
-- 全量 CTest：38 项中 35 项通过；3 个语言覆盖检查仍失败。
+- 全量 CTest：39 项中 36 项通过；3 个语言覆盖检查仍失败。
 
 新增的 `FindReplace` / `FindReplacePlus` 批处理错误消息已在简中、繁中、日文目录补齐，复跑后不再出现在 missing-source 清单。剩余 3 个失败均为本批处理范围外的既有翻译目录债务：BookBrowser overwrite 消息、DryRunReplace 两条消息、OPF duplicate-path 消息、若干 stale source，以及 PluginRunner 未翻译 UI literal。它们不影响本次功能测试和链接结果，未在本提交中扩大范围处理。
+
+## 15. 2026-08-09 crash 复审
+
+证据来源：`todo/log/0809.txt`，macOS crash report，主线程 `EXC_CRASH/SIGABRT`。
+
+### 15.1 堆栈结论
+
+这次 crash 不在新 `SearchBatchCoordinator` / `SearchBatch::Runner` 路径中，而在用户直接点击 Plus `Replace All` 时采用的旧交互路径中：
+
+```text
+FindReplacePlus::ReplaceAllClicked
+→ FindReplacePlus::ReplaceAll
+→ CountInFilesPlus / ReplaceInAllFIlesPlus
+→ qApp->processEvents()                  # 无事件过滤
+→ 再次接收 QToolButton mouseRelease
+→ 递归进入 ReplaceAllClicked
+```
+
+crash 栈中可见 7 层 `ReplaceInAllFIlesPlus()`、1 层 `CountInFilesPlus()`，每层之间都是 Cocoa/Qt mouse event dispatch。最外层搜索尚持有 `Resource*` 和 Find/Replace 对象时，嵌套事件又投递了 `MainWindow` 的 deferred delete；最终在 `MainWindow::~MainWindow()` / `QObjectPrivate::deleteChildren()` 中触发 malloc abort。
+
+根因是进度刷新调用无参数 `processEvents()`，允许按钮、快捷键和窗口关闭等用户输入在非可重入资源循环中执行。性能优化放大或引入此问题的证据不足；堆栈明确命中 legacy Plus 单次替换，但同样的危险调用也存在于普通 Count/Replace 和 Python function replacement，因此必须统一修复。
+
+### 15.2 修复与门禁
+
+- `SearchOperations` 的 5 个跨资源循环统一改用 `QEventLoop::ExcludeUserInputEvents`；进度和非输入事件仍可处理；
+- 普通/Plus 的 Find、Replace、Replace All、Count 按钮槽统一检查并维护 `m_SearchRunning`，程序化递归激活也会被拒绝；
+- 新增 `search_operations_reentrancy` 源契约测试，禁止重新引入无过滤 `qApp->processEvents()`，并检查 8 个按钮槽均有 busy guard；
+- Sigil Debug 完整编译、链接通过；新增重入测试、batch runner、1000 × 50 benchmark 和 BookLive normalizer 回归通过；
+- 全量 CTest 36/39 通过，仍只有第 14.5 节记录的 3 个既有翻译覆盖失败。
+
+修复后，搜索循环不会再从进度刷新入口接收造成堆栈中该模式的 mouse-release/window-close 重入；重复输入最多在外层操作结束、对象状态恢复后由正常事件循环处理。
