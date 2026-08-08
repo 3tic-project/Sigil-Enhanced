@@ -930,6 +930,33 @@ int main(int argc, char *argv[])
             file_menu->addAction(quit_action);
 
             mac_bar->addMenu(file_menu);
+
+            // With setQuitOnLastWindowClosed(false) above, Sigil keeps running after
+            // all windows are closed. Clicking the Dock icon then only delivers an
+            // ApplicationActivate event - Qt itself does not create a new window
+            // (see QCocoaApplicationDelegate::applicationShouldHandleReopen:).
+            // Follow the standard macOS convention and open a new main window
+            // whenever the app is activated but has no visible main window.
+            // Defer the check so any queued QFileOpenEvent (e.g. a file dropped
+            // onto the Dock icon) is processed first and creates its own window.
+            QObject::connect(&app, &MainApplication::applicationActivated, []() {
+                QTimer::singleShot(0, []() {
+                    bool hasVisibleMainWindow = false;
+                    const auto topLevels = QApplication::topLevelWidgets();
+                    for (QWidget *w : topLevels) {
+                        if (qobject_cast<MainWindow *>(w) && w->isVisible()) {
+                            hasVisibleMainWindow = true;
+                            break;
+                        }
+                    }
+                    if (!hasVisibleMainWindow) {
+                        MainWindow *w = GetMainWindow(QStringList());
+                        w->show();
+                        w->activateWindow();
+                        QCoreApplication::processEvents();
+                    }
+                });
+            });
 #endif // Q_OS_MAC
 
             // Set ui font from preferences
