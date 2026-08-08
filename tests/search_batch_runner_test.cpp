@@ -90,27 +90,81 @@ void TestFailureAndCancellationDoNotPublishTexts()
     QHash<QString, QString> originals;
     originals.insert(QStringLiteral("a.xhtml"), QStringLiteral("A"));
 
-    SearchBatch::Rule rule;
-    rule.name = QStringLiteral("failure");
-    rule.resourcePaths = QStringList{QStringLiteral("a.xhtml")};
+    SearchBatch::Rule first;
+    first.name = QStringLiteral("staged success");
+    first.searchRegex = QStringLiteral("A");
+    first.replacement = QStringLiteral("B");
+    first.resourcePaths = QStringList{QStringLiteral("a.xhtml")};
 
+    SearchBatch::Rule second = first;
+    second.name = QStringLiteral("failure after staging");
+
+    int applyCalls = 0;
     const SearchBatch::Result failed = SearchBatch::Runner::Run(
-        QList<SearchBatch::Rule>{rule}, originals,
-        [](const SearchBatch::Rule&, const QString&, const QString&) {
-            SearchBatch::ApplyResult result;
-            result.ok = false;
-            result.error = QStringLiteral("intentional failure");
-            return result;
+        QList<SearchBatch::Rule>{first, second}, originals,
+        [&applyCalls](const SearchBatch::Rule& rule, const QString& path, const QString& text) {
+            if (++applyCalls == 1) {
+                return LiteralApply(rule, path, text);
+            }
+            SearchBatch::ApplyResult failedApply;
+            failedApply.ok = false;
+            failedApply.error = QStringLiteral("intentional failure");
+            return failedApply;
         });
-    Require(!failed.success && failed.changedTexts.isEmpty(),
-            "failed batch must not publish staged texts");
+    Require(applyCalls == 2 && !failed.success && failed.changedTexts.isEmpty(),
+            "failure after successful staging must not publish staged texts");
 
     int cancellationChecks = 0;
     const SearchBatch::Result cancelled = SearchBatch::Runner::Run(
-        QList<SearchBatch::Rule>{rule}, originals, LiteralApply,
+        QList<SearchBatch::Rule>{first}, originals, LiteralApply,
         [&cancellationChecks]() { return ++cancellationChecks == 1; });
     Require(!cancelled.success && cancelled.cancelled && cancelled.changedTexts.isEmpty(),
             "cancelled batch must not publish staged texts");
+}
+
+void TestLargeBatchPublishesOneTextPerResource()
+{
+    constexpr int resourceCount = 200;
+    constexpr int ruleCount = 41;
+
+    QHash<QString, QString> originals;
+    QStringList paths;
+    for (int resourceIndex = 0; resourceIndex < resourceCount; ++resourceIndex) {
+        const QString path = QStringLiteral("Text/chapter-%1.xhtml").arg(resourceIndex);
+        paths.append(path);
+        originals.insert(path, QStringLiteral("A"));
+    }
+
+    QList<SearchBatch::Rule> rules;
+    for (int ruleIndex = 0; ruleIndex < ruleCount; ++ruleIndex) {
+        SearchBatch::Rule rule;
+        rule.id = QString::number(ruleIndex);
+        rule.name = QStringLiteral("alternating rule");
+        rule.searchRegex = ruleIndex % 2 == 0 ? QStringLiteral("A") : QStringLiteral("B");
+        rule.replacement = ruleIndex % 2 == 0 ? QStringLiteral("B") : QStringLiteral("A");
+        rule.resourcePaths = paths;
+        rules.append(rule);
+    }
+
+    int applyCalls = 0;
+    const SearchBatch::Result result = SearchBatch::Runner::Run(
+        rules, originals,
+        [&applyCalls](const SearchBatch::Rule& rule, const QString& path, const QString& text) {
+            ++applyCalls;
+            return LiteralApply(rule, path, text);
+        });
+
+    Require(result.success, "large staged batch should succeed");
+    Require(applyCalls == resourceCount * ruleCount,
+            "every rule/resource pair must be evaluated in order");
+    Require(result.replacementCount == resourceCount * ruleCount,
+            "large batch replacement count mismatch");
+    Require(result.changedTexts.size() == resourceCount,
+            "large batch must publish at most one final text per changed resource");
+    for (const QString& path : paths) {
+        Require(result.changedTexts.value(path) == QStringLiteral("B"),
+                "large batch final text mismatch");
+    }
 }
 
 void TestMissingTargetFailsClosed()
@@ -133,6 +187,7 @@ int main()
     TestCountWithoutTextChange();
     TestFailureAndCancellationDoNotPublishTexts();
     TestMissingTargetFailsClosed();
+    TestLargeBatchPublishesOneTextPerResource();
     std::cout << "search batch runner tests passed\n";
     return 0;
 }

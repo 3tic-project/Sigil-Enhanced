@@ -52,6 +52,17 @@ public:
                                          const QString &function_name,
                                          QList<Resource *> resources);
 
+    // Pure text transformations shared by interactive replace and staged batches.
+    // These methods do not mutate Resource objects or emit UI signals.
+    static std::tuple<QString, int> PerformGlobalReplace(const QString &text,
+            const QString &search_regex,
+            const QString &replacement);
+
+    static std::tuple<QString, int> PerformGlobalReplacePlus(const QString& presearch_regex,
+                                                             const QString& search_regex,
+                                                             const QString& replacement,
+                                                             const QString& text);
+
     //------------- modified: FindPeplacePlus ---------------
     static int CountInFilesPlus(const QString& presearch_regex,
                                 const QString& search_regex,
@@ -104,10 +115,6 @@ private:
                                  const QString &replacement,
                                  TextResource *text_resource);
 
-    static std::tuple<QString, int> PerformGlobalReplace(const QString &text,
-            const QString &search_regex,
-            const QString &replacement);
-
     static std::tuple<QString, int> PerformHTMLSpellCheckReplace(const QString &text,
             const QString &search_regex,
             const QString &replacement);
@@ -120,10 +127,6 @@ private:
                                  const QString& replacement,
                                  Resource* resource);
 
-    static std::tuple<QString, int> PerformGlobalReplacePlus(const QString& presearch_regex,
-                                                             const QString& search_regex,
-                                                             const QString& replacement,
-                                                             const QString& text);
     //-------------------------------------------------------
 };
 

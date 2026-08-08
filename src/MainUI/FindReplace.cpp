@@ -38,6 +38,8 @@
 #include <QMap>
 #include <QDebug>
 
+#include <limits>
+
 #include "EmbedPython/PythonRoutines.h"
 #include "Dialogs/DryRunReplace.h"
 #include "Dialogs/ReplacementChooser.h"
@@ -45,6 +47,7 @@
 #include "Tabs/TextTab.h"
 #include "Tabs/FlowTab.h"
 #include "MainUI/FindReplace.h"
+#include "MainUI/SearchBatchCoordinator.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "Misc/SearchUtils.h"
@@ -1975,11 +1978,82 @@ int FindReplace::ReplaceAllSearch()
 
     SetKeyModifiers();
     m_IsSearchGroupRunning = true;
-    int count = 0;
+
+    const auto runLegacyBatch = [&]() {
+        int legacyCount = 0;
+        foreach(SearchEditorModel::searchEntry * search_entry, search_entries) {
+            LoadSearch(search_entry);
+            legacyCount += ReplaceAll();
+            m_MainWindow->SearchEditorRecordEntryAsCompleted(search_entry);
+        }
+        return legacyCount;
+    };
+
+    QList<SearchBatch::Rule> rules;
+    QHash<QString, TextResource*> resources;
+    bool requiresLegacyBatch = false;
+    int ruleIndex = 0;
     foreach(SearchEditorModel::searchEntry * search_entry, search_entries) {
         LoadSearch(search_entry);
-        count += ReplaceAll();
-        m_MainWindow->SearchEditorRecordEntryAsCompleted(search_entry);
+
+        const bool validRule = IsValidFindText();
+        const QString replacer = GetReplace().trimmed();
+        if (validRule &&
+            (IsMarkedText() || m_SpellCheck ||
+             ((isWhereCF() || m_LookWhereCurrentFile) && !m_OptionWrap) ||
+             (replacer.startsWith("\\F<") && replacer.endsWith(">")))) {
+            requiresLegacyBatch = true;
+        }
+
+        SearchBatch::Rule rule;
+        rule.id = QStringLiteral("%1#%2").arg(search_entry->fullname).arg(ruleIndex++);
+        rule.name = search_entry->name;
+        rule.searchRegex = GetSearchRegex();
+        rule.replacement = GetReplace();
+
+        const QList<Resource*> targets = validRule ? GetAllResourcesToSearch() : QList<Resource*>();
+        for (Resource* target : targets) {
+            TextResource* textResource = qobject_cast<TextResource*>(target);
+            if (!textResource) {
+                continue;
+            }
+            const QString path = textResource->GetRelativePath();
+            resources.insert(path, textResource);
+            if (!rule.resourcePaths.contains(path)) {
+                rule.resourcePaths.append(path);
+            }
+        }
+        rules.append(rule);
+    }
+
+    int count = 0;
+    if (requiresLegacyBatch) {
+        count = runLegacyBatch();
+    } else {
+        const SearchBatch::Result result = SearchBatchCoordinator::Run(
+            m_MainWindow, rules, resources,
+            [](const SearchBatch::Rule& rule, const QString&, const QString& text) {
+                SearchBatch::ApplyResult applied;
+                int replacements = 0;
+                std::tie(applied.text, replacements) = SearchOperations::PerformGlobalReplace(
+                    text, rule.searchRegex, rule.replacement);
+                applied.replacementCount = replacements;
+                return applied;
+            });
+
+        if (!result.success) {
+            m_IsSearchGroupRunning = false;
+            ResetKeyModifiers();
+            ShowMessage(tr("Saved-search batch failed: %1").arg(result.error));
+            return -1;
+        }
+
+        for (SearchEditorModel::searchEntry* search_entry : search_entries) {
+            m_MainWindow->SearchEditorRecordEntryAsCompleted(search_entry);
+        }
+        count = result.replacementCount > std::numeric_limits<int>::max()
+            ? std::numeric_limits<int>::max()
+            : static_cast<int>(result.replacementCount);
     }
     m_IsSearchGroupRunning = false;
 

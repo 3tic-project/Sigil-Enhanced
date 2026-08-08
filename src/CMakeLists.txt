@@ -617,6 +617,8 @@ set( MAINUI_FILES
     MainUI/MainWindow.cpp
     MainUI/MainWindowExt.cpp
     MainUI/MainWindow.h
+    MainUI/SearchBatchCoordinator.cpp
+    MainUI/SearchBatchCoordinator.h
     MainUI/FindReplace.cpp
     MainUI/FindReplace.h
     MainUI/FindReplacePlus.cpp
