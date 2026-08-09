@@ -1,5 +1,25 @@
 find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Xml REQUIRED)
 
+add_executable(regex_match_enumerator_test
+    regex_match_enumerator_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+)
+
+target_include_directories(regex_match_enumerator_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_match_enumerator_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_match_enumerator_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_match_enumerator COMMAND regex_match_enumerator_test)
+set_tests_properties(regex_match_enumerator PROPERTIES TIMEOUT 30)
+
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
