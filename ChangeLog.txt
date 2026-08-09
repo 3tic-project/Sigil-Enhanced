@@ -13,6 +13,7 @@ Sigil-Enhanced-2.8.1.E7
      - Staged ordinary and Plus saved-search Replace All groups in memory, preserving rule order while saving editor state once, creating at most one recovery checkpoint, and writing each changed resource once.
      - Added BookLive/EBPAJ div-paragraph analysis and normalization with style-preserving in-place p conversion, manual short-page review, full-book checkpoints, and Automate commands.
      - Renamed paragraph-normalizer menu entries to identify Kobo BR, Kindle KFX, and BookLive sources and to distinguish Current File from Whole Book operations.
+     - Added browser-style middle-click closing for editor tabs without activating background tabs or closing from blank tab-bar space.
 
    Build/Testing
      - Integrated the vendored Lexbor CSS parser and related late upstream parser, singleton-lifecycle, Book Browser refresh, media-type, and macOS improvements.
