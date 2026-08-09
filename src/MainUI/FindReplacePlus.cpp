@@ -12,7 +12,6 @@
 #include <QRegularExpression>
 #include <QDebug>
 
-#include "Dialogs/DryRunReplace.h"
 #include "Dialogs/ReplacementPreviewPlus.h"
 #include "Tabs/TextTab.h"
 #include "Tabs/FlowTab.h"
@@ -542,26 +541,6 @@ bool FindReplacePlus::ReplaceCurrent()
 void FindReplacePlus::PerformDryRunReplace()
 {
     return; // Function not implemented
-    if (m_DryRunRunning) return;
-    m_DryRunRunning = true;
-
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
-
-    if (IsNewSearch()) {
-        SetStartingResource();
-        SetPreviousSearch();
-    }
-
-    if (!IsValidFindText()) return;
-
-    bool plus_mode = true;
-    DryRunReplace*  dr = new DryRunReplace(plus_mode,this);
-    connect(dr, &QWidget::destroyed, this, &FindReplacePlus::DryRunComplete);
-    dr->CreateTable();
-    // do this non-modally
-    dr->show();
-    dr->raise();
-    dr->activateWindow();
 }
 
 // Allows you to delete unwanted replacements and apply those remaining

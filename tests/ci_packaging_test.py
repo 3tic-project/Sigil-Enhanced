@@ -12,6 +12,9 @@ SCRIPT = ROOT / "ci_scripts" / "prepare_release_assets.py"
 CHANGELOG = ROOT / "ChangeLog.txt"
 VERSION_XML = ROOT / "version.xml"
 README = ROOT / "README.md"
+PCRE2_CMAKE = ROOT / "3rdparty" / "cmake" / "pcre2.cmake"
+DRY_RUN_HEADER = ROOT / "src" / "Dialogs" / "DryRunReplace.h"
+DRY_RUN_SOURCE = ROOT / "src" / "Dialogs" / "DryRunReplace.cpp"
 
 
 def load_release_assets_module():
@@ -79,6 +82,30 @@ class CiPackagingTest(unittest.TestCase):
         self.assertEqual(self.workflow.count("-DUSE_VIRT_PY=1"), 2)
         self.assertEqual(self.workflow.count("-DPACKAGE_PYSIDE6=1"), 2)
         self.assertIn("'winvirtpy.cmake'", self.workflow)
+
+    def test_bundled_pcre2_exports_generated_and_source_headers(self):
+        cmake = PCRE2_CMAKE.read_text(encoding="utf-8")
+        include_dirs = re.search(
+            r"set\(\s*PCRE2_INCLUDE_DIRS(?P<body>.*?)CACHE INTERNAL",
+            cmake,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(include_dirs)
+        self.assertIn(
+            "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}",
+            include_dirs.group("body"),
+        )
+        self.assertIn(
+            "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/src",
+            include_dirs.group("body"),
+        )
+
+    def test_special_dry_run_constructor_is_not_left_undefined(self):
+        header = DRY_RUN_HEADER.read_text(encoding="utf-8")
+        source = DRY_RUN_SOURCE.read_text(encoding="utf-8")
+        declaration = "DryRunReplace(bool plus_mode"
+        definition = "DryRunReplace::DryRunReplace(bool plus_mode"
+        self.assertFalse(declaration in header and definition not in source)
 
     def test_release_version_metadata_is_consistent(self):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")

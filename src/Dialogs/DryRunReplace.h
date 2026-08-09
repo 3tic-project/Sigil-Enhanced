@@ -34,7 +34,6 @@ class QEvent;
 class QCloseEvent;
 class QString;
 class FindReplace;
-class FindReplacePlus;
 
 class DryRunReplace: public QDialog
 {
@@ -78,13 +77,6 @@ private:
     int m_context_amt;
     
     Ui::DryRunReplace ui;
-
-//----------- modified: FindReplace ----------------
-public:
-    DryRunReplace(bool plus_mode,QWidget* parent = NULL);
-private:
-    bool m_PlusMode = false;
-    FindReplacePlus* m_FindReplacePlus;
 };
 
 #endif // DRYRUNREPLACE_H
