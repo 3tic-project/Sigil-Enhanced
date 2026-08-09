@@ -44,6 +44,92 @@ void Fail(RegexWorkbenchBatchResult& result, const QString& error)
     result.report.fatalMessage = error;
 }
 
+bool MapIntervalThroughPass(int& start,
+                            int& end,
+                            const QList<RegexWorkbenchReplacementTrace>& traces)
+{
+    int delta = 0;
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (trace.inputEnd <= start) {
+            delta += (trace.outputEnd - trace.outputStart) -
+                     (trace.inputEnd - trace.inputStart);
+            continue;
+        }
+        if (trace.inputStart >= end) {
+            break;
+        }
+        return false;
+    }
+    start += delta;
+    end += delta;
+    return true;
+}
+
+void RecordPassTrace(RegexWorkbenchDryRunReport& report,
+                     const QString& ruleId,
+                     const QString& ruleName,
+                     const QString& bookpath,
+                     const QList<RegexWorkbenchReplacementTrace>& traces,
+                     int maxRows,
+                     int maxSnippetCodeUnits)
+{
+    for (RegexWorkbenchReportRow& row : report.rows) {
+        if (row.bookpath == bookpath && row.exactNavigationAvailable &&
+            !MapIntervalThroughPass(row.matchStart, row.matchEnd, traces)) {
+            row.exactNavigationAvailable = false;
+            row.matchStart = -1;
+            row.matchEnd = -1;
+            row.lineHint = -1;
+        }
+    }
+
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (report.rows.size() >= maxRows) {
+            report.rowsTruncated = true;
+            ++report.omittedRowCount;
+            continue;
+        }
+        RegexWorkbenchReportRow row;
+        row.ruleId = ruleId;
+        row.ruleName = ruleName;
+        row.bookpath = bookpath;
+        row.iterationNumber = trace.iterationNumber;
+        row.iterationCount = trace.iterationNumber;
+        row.replacementCount = 1;
+        row.coordinateSpace = CoordinateSpace::Intermediate;
+        row.exactNavigationAvailable = true;
+        row.matchStart = trace.outputStart;
+        row.matchEnd = trace.outputEnd;
+        row.beforeSnippet = Snippet(trace.beforeText, maxSnippetCodeUnits);
+        row.afterSnippet = Snippet(trace.afterText, maxSnippetCodeUnits);
+        row.variableNames = trace.variableNames;
+        report.rows.append(row);
+    }
+}
+
+void FinalizeNavigation(RegexWorkbenchDryRunReport& report,
+                        const QHash<QString, QString>& originalTexts,
+                        const QHash<QString, QString>& changedTexts)
+{
+    for (RegexWorkbenchReportRow& row : report.rows) {
+        if (!row.exactNavigationAvailable) {
+            continue;
+        }
+        const QString finalText = changedTexts.contains(row.bookpath)
+                                      ? changedTexts.value(row.bookpath)
+                                      : originalTexts.value(row.bookpath);
+        if (row.matchStart < 0 || row.matchEnd < row.matchStart ||
+            row.matchEnd > finalText.size()) {
+            row.exactNavigationAvailable = false;
+            row.matchStart = -1;
+            row.matchEnd = -1;
+            continue;
+        }
+        row.coordinateSpace = CoordinateSpace::Final;
+        row.lineHint = finalText.left(row.matchStart).count(QLatin1Char('\n')) + 1;
+    }
+}
+
 }
 
 RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
@@ -135,9 +221,21 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
             }
 
             workingStore.setActiveResource(resourcePath);
+            RegexWorkbenchEngineOptions engineOptions = options.engineOptions;
+            const ReplacementPassCallback callerTrace =
+                engineOptions.replacementPassApplied;
+            engineOptions.replacementPassApplied =
+                [&](QList<RegexWorkbenchReplacementTrace> traces) {
+                    RecordPassTrace(result.report, batchRule.id, batchRule.name,
+                                    resourcePath, traces, options.maxReportRows,
+                                    options.maxSnippetCodeUnits);
+                    if (callerTrace) {
+                        callerTrace(std::move(traces));
+                    }
+                };
             const RegexWorkbenchEngineResult engineResult =
                 prepared.at(static_cast<size_t>(ruleIndex))->Apply(
-                    currentText, workingStore, options.engineOptions);
+                    currentText, workingStore, engineOptions);
             if (!engineResult.success) {
                 applied.ok = false;
                 applied.text = currentText;
@@ -164,23 +262,6 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
 
             applied.text = engineResult.text;
             applied.replacementCount = engineResult.replacementCount;
-            if (engineResult.replacementCount > 0) {
-                RegexWorkbenchReportRow row;
-                row.ruleId = batchRule.id;
-                row.ruleName = batchRule.name;
-                row.bookpath = resourcePath;
-                row.iterationCount = engineResult.appliedIterations;
-                row.replacementCount = engineResult.replacementCount;
-                row.beforeSnippet = Snippet(currentText, options.maxSnippetCodeUnits);
-                row.afterSnippet = Snippet(engineResult.text,
-                                           options.maxSnippetCodeUnits);
-                if (result.report.rows.size() < options.maxReportRows) {
-                    result.report.rows.append(row);
-                } else {
-                    result.report.rowsTruncated = true;
-                    ++result.report.omittedRowCount;
-                }
-            }
             return applied;
         },
         options.isCancelled);
@@ -213,6 +294,7 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
     }
 
     result.report.changedResourceCount = result.staged.changedTexts.size();
+    FinalizeNavigation(result.report, originalTexts, result.staged.changedTexts);
     result.finalStore = workingStore.snapshot();
     return result;
 }

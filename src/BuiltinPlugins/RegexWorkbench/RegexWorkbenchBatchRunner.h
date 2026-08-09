@@ -38,12 +38,17 @@ struct RegexWorkbenchReportRow
     QString ruleId;
     QString ruleName;
     QString bookpath;
+    int iterationNumber = 0;
     int iterationCount = 0;
     qint64 replacementCount = 0;
     CoordinateSpace coordinateSpace = CoordinateSpace::Intermediate;
     bool exactNavigationAvailable = false;
+    int matchStart = -1;
+    int matchEnd = -1;
+    int lineHint = -1;
     QString beforeSnippet;
     QString afterSnippet;
+    QStringList variableNames;
 };
 
 struct RegexWorkbenchDryRunReport

@@ -117,6 +117,32 @@ RegexWorkbenchEngineResult MatchFailure(const QString& originalText,
     return result;
 }
 
+QList<RegexWorkbenchReplacementTrace> BuildReplacementTrace(
+    const QList<CandidateMatch>& candidates,
+    const QList<QString>& expandedTexts,
+    int iterationNumber)
+{
+    QList<RegexWorkbenchReplacementTrace> traces;
+    traces.reserve(candidates.size());
+    int outputDelta = 0;
+    for (int index = 0; index < candidates.size(); ++index) {
+        const CandidateMatch& candidate = candidates.at(index);
+        const QString& expanded = expandedTexts.at(index);
+        RegexWorkbenchReplacementTrace trace;
+        trace.iterationNumber = iterationNumber;
+        trace.candidateIndex = index;
+        trace.inputStart = candidate.primary.start;
+        trace.inputEnd = candidate.primary.end;
+        trace.outputStart = candidate.primary.start + outputDelta;
+        trace.outputEnd = trace.outputStart + expanded.size();
+        trace.afterText = expanded;
+        outputDelta += expanded.size() -
+                       (candidate.primary.end - candidate.primary.start);
+        traces.append(trace);
+    }
+    return traces;
+}
+
 }
 
 RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyRule(
@@ -216,6 +242,8 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
         bool cancelledDuringApply = false;
         bool callbackFailed = false;
         QString callbackError;
+        QList<QString> expandedTexts;
+        expandedTexts.reserve(candidates.candidates.size());
         const SearchOperations::ReplacementExpander guardedExpander =
             [&](const QString& matchedText,
                 const QList<std::pair<int, int>>& captureGroups,
@@ -232,6 +260,9 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
                 const bool expandedOk = expander(matchedText, captureGroups,
                                                  replacement, expanded);
                 expansionFailed = expansionFailed || !expandedOk;
+                if (expandedOk) {
+                    expandedTexts.append(expanded);
+                }
                 return expandedOk;
             };
 
@@ -293,7 +324,25 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
                            guardResult.errorMessage, options, initialExternalState);
         }
 
+        if (expandedTexts.size() != candidates.candidates.size()) {
+            return Failure(text, EngineTermination::ExpansionFailure,
+                           QStringLiteral("Replacement trace did not cover every candidate"),
+                           options, initialExternalState);
+        }
+
+        QList<RegexWorkbenchReplacementTrace> passTrace = BuildReplacementTrace(
+            candidates.candidates, expandedTexts, appliedIterations + 1);
+        for (int index = 0; index < passTrace.size(); ++index) {
+            const CandidateMatch& candidate = candidates.candidates.at(index);
+            passTrace[index].beforeText = currentText.mid(
+                candidate.primary.start,
+                candidate.primary.end - candidate.primary.start);
+        }
+
         if (!rule.recursive) {
+            if (options.replacementPassApplied) {
+                options.replacementPassApplied(passTrace);
+            }
             RegexWorkbenchEngineResult result;
             result.success = true;
             result.text = nextText;
@@ -313,6 +362,10 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
             return Failure(text, EngineTermination::StateCycle,
                            QStringLiteral("Recursive replacement entered a previously seen state"),
                            options, initialExternalState);
+        }
+
+        if (options.replacementPassApplied) {
+            options.replacementPassApplied(passTrace);
         }
 
         seenStates.insert(afterState);

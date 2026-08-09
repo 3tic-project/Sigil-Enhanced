@@ -15,6 +15,8 @@
 
 #include <memory>
 
+#include <QSet>
+
 #include "BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h"
 #include "PCRE2/SPCRE.h"
 
@@ -81,6 +83,38 @@ bool CapturesAreAvailable(const RegexWorkbenchRule& rule,
         }
     }
     return true;
+}
+
+void AddChangedFrameNames(const SearchVariableStore::Frame& before,
+                          const SearchVariableStore::Frame& after,
+                          QSet<QString>& changed)
+{
+    QSet<QString> names(before.keyBegin(), before.keyEnd());
+    names.unite(QSet<QString>(after.keyBegin(), after.keyEnd()));
+    for (const QString& name : names) {
+        if (before.value(name) != after.value(name)) {
+            changed.insert(name);
+        }
+    }
+}
+
+QStringList ChangedVariableNames(const SearchVariableStore::Snapshot& before,
+                                 const SearchVariableStore::Snapshot& after)
+{
+    QSet<QString> changed;
+    AddChangedFrameNames(before.batchFrame, after.batchFrame, changed);
+    AddChangedFrameNames(before.sessionFrame, after.sessionFrame, changed);
+    QSet<QString> resources(before.resourceFrames.keyBegin(),
+                            before.resourceFrames.keyEnd());
+    resources.unite(QSet<QString>(after.resourceFrames.keyBegin(),
+                                  after.resourceFrames.keyEnd()));
+    for (const QString& resource : resources) {
+        AddChangedFrameNames(before.resourceFrames.value(resource),
+                             after.resourceFrames.value(resource), changed);
+    }
+    QStringList names(changed.cbegin(), changed.cend());
+    names.sort();
+    return names;
 }
 
 }
@@ -169,6 +203,10 @@ RegexWorkbenchEngineResult PreparedRegexWorkbenchVariableExecutor::Apply(
         store.restore(initialStore);
     };
 
+    const ReplacementPassCallback traceObserver = options.replacementPassApplied;
+    QHash<int, SearchVariableStore::Snapshot> beforeCandidateStores;
+    QHash<int, QStringList> changedCandidateVariables;
+
     QString variableError;
     ReplacementVariableResolver resolver;
     if (rule.variableExpansionEnabled) {
@@ -183,11 +221,12 @@ RegexWorkbenchEngineResult PreparedRegexWorkbenchVariableExecutor::Apply(
     }
 
     if (ShouldIngest(rule)) {
-        options.beforeExpand = [&store, &rule, this](
-            int,
+        options.beforeExpand = [&store, &rule, &beforeCandidateStores, this](
+            int candidateIndex,
             const CandidateMatch& candidate,
             const QString& primaryText,
             QString& error) {
+            beforeCandidateStores.insert(candidateIndex, store.snapshot());
             if (!candidate.hasFilterMatch || m_impl->filterRegex == nullptr) {
                 return true;
             }
@@ -198,15 +237,37 @@ RegexWorkbenchEngineResult PreparedRegexWorkbenchVariableExecutor::Apply(
                                              RelativeCaptures(filter),
                                              rule.captureToVar, &error);
         };
-        options.afterExpand = [&store, &rule, this](
-            int,
+        options.afterExpand = [&store, &rule, &beforeCandidateStores,
+                               &changedCandidateVariables, this](
+            int candidateIndex,
             const CandidateMatch& candidate,
             const QString& primaryText,
             QString& error) {
-            return store.ingestNamedCaptures(*m_impl->primaryRegex, primaryText,
-                                             RelativeCaptures(candidate.primary),
-                                             rule.captureToVar, &error);
+            if (!store.ingestNamedCaptures(*m_impl->primaryRegex, primaryText,
+                                           RelativeCaptures(candidate.primary),
+                                           rule.captureToVar, &error)) {
+                return false;
+            }
+            changedCandidateVariables.insert(
+                candidateIndex,
+                ChangedVariableNames(beforeCandidateStores.value(candidateIndex),
+                                     store.snapshot()));
+            return true;
         };
+    }
+
+    if (traceObserver && ShouldIngest(rule)) {
+        options.replacementPassApplied =
+            [traceObserver, &beforeCandidateStores,
+             &changedCandidateVariables](QList<RegexWorkbenchReplacementTrace> traces) {
+                for (RegexWorkbenchReplacementTrace& trace : traces) {
+                    trace.variableNames = changedCandidateVariables.value(
+                        trace.candidateIndex);
+                }
+                beforeCandidateStores.clear();
+                changedCandidateVariables.clear();
+                traceObserver(std::move(traces));
+            };
     }
 
     const SearchOperations::ReplacementExpander expander =

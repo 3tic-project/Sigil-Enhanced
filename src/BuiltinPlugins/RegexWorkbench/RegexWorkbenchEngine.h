@@ -18,7 +18,9 @@
 #include <functional>
 
 #include <QByteArray>
+#include <QList>
 #include <QString>
+#include <QStringList>
 
 #include "BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h"
 #include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h"
@@ -55,12 +57,29 @@ using CandidateCallback = std::function<bool(int candidateIndex,
                                              const QString& matchedText,
                                              QString& error)>;
 
+struct RegexWorkbenchReplacementTrace
+{
+    int iterationNumber = 0;
+    int candidateIndex = -1;
+    int inputStart = -1;
+    int inputEnd = -1;
+    int outputStart = -1;
+    int outputEnd = -1;
+    QString beforeText;
+    QString afterText;
+    QStringList variableNames;
+};
+
+using ReplacementPassCallback =
+    std::function<void(QList<RegexWorkbenchReplacementTrace> traces)>;
+
 struct RegexWorkbenchEngineOptions
 {
     RegexSearch::MatchOptions matchOptions;
     RecursiveGuardOptions guardOptions;
     CandidateCallback beforeExpand;
     CandidateCallback afterExpand;
+    ReplacementPassCallback replacementPassApplied;
     std::function<QByteArray()> stateSnapshot;
     std::function<void(const QByteArray&)> restoreState;
 };

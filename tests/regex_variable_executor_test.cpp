@@ -232,6 +232,26 @@ void TestPreparedExecutorReusesReplacementPatterns()
             "prepared rules must reuse compiled replacement patterns across resources");
 }
 
+void TestTraceIncludesChangedVariableNames()
+{
+    SearchVariableStore store = BatchStore();
+    RegexWorkbenchRule rule;
+    rule.find = QStringLiteral("(?<seed>\\d+)");
+    rule.replace = QStringLiteral("kept");
+    rule.autoIngestNamedCaptures = true;
+
+    QList<BuiltinPlugins::RegexWorkbench::RegexWorkbenchReplacementTrace> traces;
+    BuiltinPlugins::RegexWorkbench::RegexWorkbenchEngineOptions options;
+    options.replacementPassApplied = [&traces](auto pass) {
+        traces.append(pass);
+    };
+    const auto result = RegexWorkbenchVariableExecutor::ApplyRule(
+        rule, QStringLiteral("42"), store, options);
+    Require(result.success && traces.size() == 1 &&
+                traces.first().variableNames == QStringList{QStringLiteral("seed")},
+            "variable executor traces must report variables changed by each candidate");
+}
+
 }
 
 int main()
@@ -242,6 +262,7 @@ int main()
     TestDisabledExpansionAndUnsupportedFunction();
     TestMissingConfiguredCaptureIsRejected();
     TestPreparedExecutorReusesReplacementPatterns();
+    TestTraceIncludesChangedVariableNames();
     std::cout << "regex variable executor tests passed\n";
     return 0;
 }

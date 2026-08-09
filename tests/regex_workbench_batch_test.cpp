@@ -176,7 +176,16 @@ void TestBatchScopeOrderAndPreparedReuse()
     Require(result.report.rows.size() == 2 && result.report.rowsTruncated &&
                 result.report.omittedRowCount == 2 &&
                 result.report.totalReplacements == 4 &&
-                result.report.changedResourceCount == 2,
+                result.report.changedResourceCount == 2 &&
+                result.report.rows.first().replacementCount == 1 &&
+                result.report.rows.first().exactNavigationAvailable &&
+                result.report.rows.first().coordinateSpace ==
+                    BuiltinPlugins::RegexWorkbench::CoordinateSpace::Final &&
+                result.report.rows.first().lineHint == 1 &&
+                result.report.rows.first().beforeSnippet == QStringLiteral("A1") &&
+                result.report.rows.first().afterSnippet == QStringLiteral("mark") &&
+                result.report.rows.first().variableNames ==
+                    QStringList{QStringLiteral("seed")},
             "batch report details must be bounded without losing exact totals");
     Require(result.finalStore.batchFrame.value(QStringLiteral("seed")).last() ==
                 QStringLiteral("A2") && initial.stateData() == initialState,
@@ -265,6 +274,48 @@ void TestTargetAndMediaMetadataAreClosedWorld()
             "changed resources without snapshotted media metadata must fail validation");
 }
 
+void TestFinalNavigationTracksLaterRulesAndInvalidatesOverlap()
+{
+    RegexRecipe recipe;
+    recipe.name = QStringLiteral("navigation");
+    RegexWorkbenchRule first;
+    first.id = QStringLiteral("first");
+    first.name = QStringLiteral("expand a");
+    first.find = QStringLiteral("a");
+    first.replace = QStringLiteral("XX");
+    recipe.rules.append(first);
+
+    RegexWorkbenchRule second;
+    second.id = QStringLiteral("second");
+    second.name = QStringLiteral("replace b");
+    second.find = QStringLiteral("b");
+    second.replace = QStringLiteral("Y");
+    recipe.rules.append(second);
+
+    RegexWorkbenchRule overlap;
+    overlap.id = QStringLiteral("overlap");
+    overlap.name = QStringLiteral("replace prior result");
+    overlap.find = QStringLiteral("XX");
+    overlap.replace = QStringLiteral("Z");
+    recipe.rules.append(overlap);
+
+    const QString path = QStringLiteral("Text/plain.txt");
+    const auto result = RegexWorkbenchBatchRunner::Run(
+        recipe, QStringList{path}, {{path, QStringLiteral("abc")}},
+        {{path, QStringLiteral("text/plain")}}, SearchVariableStore());
+    Require(result.staged.success &&
+                result.staged.changedTexts.value(path) == QStringLiteral("ZYc") &&
+                result.report.rows.size() == 3 &&
+                !result.report.rows.at(0).exactNavigationAvailable &&
+                result.report.rows.at(1).exactNavigationAvailable &&
+                result.report.rows.at(1).matchStart == 1 &&
+                result.report.rows.at(1).matchEnd == 2 &&
+                result.report.rows.at(2).exactNavigationAvailable &&
+                result.report.rows.at(2).matchStart == 0 &&
+                result.report.rows.at(2).matchEnd == 1,
+            "final navigation must shift through later edits and reject overlapped coordinates");
+}
+
 }
 
 int main()
@@ -273,6 +324,7 @@ int main()
     TestResourceScopeIsolationAndRepeatability();
     TestValidationLimitAndCancellationDiscardPublication();
     TestTargetAndMediaMetadataAreClosedWorld();
+    TestFinalNavigationTracksLaterRulesAndInvalidatesOverlap();
     std::cout << "regex workbench batch tests passed\n";
     return 0;
 }

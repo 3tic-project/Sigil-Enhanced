@@ -225,6 +225,28 @@ void TestExpansionCancellationAndExternalStateRollback()
             "cancellation must discard all staged recursive work");
 }
 
+void TestReplacementPassTraceUsesIterationCoordinates()
+{
+    RegexWorkbenchRule rule = RecursiveRule(QStringLiteral("[1-9]\\d*"),
+                                            QStringLiteral("DECREMENT"));
+    QList<BuiltinPlugins::RegexWorkbench::RegexWorkbenchReplacementTrace> traces;
+    RegexWorkbenchEngineOptions options;
+    options.replacementPassApplied = [&traces](auto pass) {
+        traces.append(pass);
+    };
+    const auto result = RegexWorkbenchEngine::ApplyRule(
+        rule, QStringLiteral("3"), TestExpander(), options);
+    Require(result.success && traces.size() == 3 &&
+                traces.at(0).iterationNumber == 1 &&
+                traces.at(0).inputStart == 0 && traces.at(0).inputEnd == 1 &&
+                traces.at(0).outputStart == 0 && traces.at(0).outputEnd == 1 &&
+                traces.at(0).beforeText == QStringLiteral("3") &&
+                traces.at(0).afterText == QStringLiteral("2") &&
+                traces.at(2).iterationNumber == 3 &&
+                traces.at(2).afterText == QStringLiteral("0"),
+            "replacement traces must expose bounded per-pass input and output coordinates");
+}
+
 }
 
 int main()
@@ -235,6 +257,7 @@ int main()
     TestStallCycleAndIterationLimitAreFatal();
     TestReplacementGrowthAndAbsoluteGuards();
     TestExpansionCancellationAndExternalStateRollback();
+    TestReplacementPassTraceUsesIterationCoordinates();
     std::cout << "recursive regex replacement tests passed\n";
     return 0;
 }
