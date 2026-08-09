@@ -41,14 +41,16 @@ public:
         const Snapshot& snapshot,
         const SearchBatch::Result& staged_result);
 
+    // Verify that a worker result still describes the current resource set.
+    // Capture-only workbench runs use this without creating a checkpoint.
+    static bool ResourcesMatchSnapshot(const QHash<QString, TextResource*>& resources,
+                                       const Snapshot& snapshot,
+                                       QString* conflict_path = nullptr);
+
     // Compatibility wrapper for saved-search batches.
     static SearchBatch::Result Run(MainWindow* main_window,
                                    const QList<SearchBatch::Rule>& rules,
                                    const QHash<QString, TextResource*>& resources,
                                    const SearchBatch::ApplyFunction& apply);
 
-private:
-    static bool ResourcesMatchSnapshot(const QHash<QString, TextResource*>& resources,
-                                       const Snapshot& snapshot,
-                                       QString* conflict_path);
 };

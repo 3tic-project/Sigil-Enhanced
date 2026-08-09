@@ -69,13 +69,22 @@ bool CapturesAreAvailable(const RegexWorkbenchRule& rule,
                           SPCRE* filter,
                           QString& error)
 {
-    if (rule.captureToVar.isEmpty() || !primary.isValid() ||
-        (filter != nullptr && !filter->isValid())) {
+    if (!primary.isValid() || (filter != nullptr && !filter->isValid())) {
         return true;
     }
     QStringList available = primary.getCaptureNames();
     if (filter != nullptr) {
         available.append(filter->getCaptureNames());
+    }
+    available.removeDuplicates();
+    if (rule.captureOnly && rule.autoIngestNamedCaptures && available.isEmpty()) {
+        error = QCoreApplication::translate(
+            "RegexWorkbenchCore",
+            "Capture-only rule has no named capture groups to store");
+        return false;
+    }
+    if (rule.captureToVar.isEmpty()) {
+        return true;
     }
     for (const QString& name : rule.captureToVar) {
         if (!available.contains(name)) {
@@ -132,10 +141,17 @@ struct PreparedRegexWorkbenchVariableExecutor::Impl
             valid = true;
             return;
         }
-        if (IsWholeFunctionReplacement(rule.replace)) {
+        if (!rule.captureOnly && IsWholeFunctionReplacement(rule.replace)) {
             error = QCoreApplication::translate(
                 "RegexWorkbenchCore",
                 "Whole Python function replacements are not supported in Regex Workbench");
+            return;
+        }
+        if (rule.captureOnly &&
+            (rule.recursive || rule.allowEmpty || rule.variableExpansionEnabled ||
+             !ShouldIngest(rule))) {
+            error = QCoreApplication::translate(
+                "RegexWorkbenchCore", "Capture-only rule configuration is invalid");
             return;
         }
         matcher = std::make_unique<SecondaryRegexMatcher>(rule);

@@ -44,6 +44,7 @@ struct RegexWorkbenchRule
     bool recursive = false;
     int maxIterations = 32;
     bool allowEmpty = false;
+    bool captureOnly = false;
     bool variableExpansionEnabled = false;
     bool autoIngestNamedCaptures = false;
     QStringList captureToVar;

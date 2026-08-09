@@ -157,6 +157,7 @@ private:
     QCheckBox* m_Recursive;
     QSpinBox* m_MaxIterations;
     QCheckBox* m_AllowEmpty;
+    QCheckBox* m_CaptureOnly;
     QCheckBox* m_VariableExpansion;
     QCheckBox* m_AutoIngest;
     QLineEdit* m_CaptureNames;

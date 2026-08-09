@@ -179,6 +179,7 @@ void TestBatchScopeOrderAndPreparedReuse()
             "each rule must compile its replacement pattern once for the whole batch");
     Require(result.report.rows.size() == 2 && result.report.rowsTruncated &&
                 result.report.omittedRowCount == 2 &&
+                result.report.totalMatches == 4 &&
                 result.report.totalReplacements == 4 &&
                 result.report.changedResourceCount == 2 &&
                 result.report.rows.first().replacementCount == 1 &&
@@ -200,6 +201,46 @@ void TestBatchScopeOrderAndPreparedReuse()
     Require(result.finalStore.batchFrame.value(QStringLiteral("seed")).last() ==
                 QStringLiteral("A2") && initial.stateData() == initialState,
             "batch execution must return a staged store without mutating its caller");
+}
+
+void TestCaptureOnlyBatchReportsMatchesWithoutTextChanges()
+{
+    RegexRecipe recipe;
+    recipe.name = QStringLiteral("capture only");
+    RegexWorkbenchRule capture;
+    capture.id = QStringLiteral("capture");
+    capture.name = QStringLiteral("capture ids");
+    capture.find = QStringLiteral("(?<seed>A\\d)");
+    capture.replace = QStringLiteral("must not be used");
+    capture.captureOnly = true;
+    capture.autoIngestNamedCaptures = true;
+    recipe.rules.append(capture);
+
+    SearchVariableStore initial;
+    const auto result = RegexWorkbenchBatchRunner::Run(
+        recipe, Paths(), OriginalTexts(), MediaTypes(), initial);
+    Require(result.staged.success && result.validation.success &&
+                result.staged.changedTexts.isEmpty() &&
+                result.staged.replacementCount == 0 &&
+                result.report.totalMatches == 2 &&
+                result.report.totalReplacements == 0 &&
+                result.report.changedResourceCount == 0 &&
+                result.report.rows.size() == 2 &&
+                result.report.rows.first().replacementCount == 0 &&
+                result.report.rows.first().beforeSnippet ==
+                    result.report.rows.first().afterSnippet &&
+                result.finalStore.batchFrame.value(QStringLiteral("seed")).last() ==
+                    QStringLiteral("A2"),
+            "capture-only batches must publish variables and match traces without text changes");
+
+    RegexWorkbenchBatchOptions limited;
+    limited.maxRunMatches = 1;
+    const auto limitFailure = RegexWorkbenchBatchRunner::Run(
+        recipe, Paths(), OriginalTexts(), MediaTypes(), initial, limited);
+    Require(!limitFailure.staged.success &&
+                limitFailure.staged.changedTexts.isEmpty() &&
+                limitFailure.staged.error.contains(QStringLiteral("match limit")),
+            "capture-only batches must remain bounded by the run-wide match limit");
 }
 
 void TestResourceScopeIsolationAndRepeatability()
@@ -374,6 +415,7 @@ void TestSnapshotNavigationPreservesOriginalLineAcrossInsertedNewlines()
 int main()
 {
     TestBatchScopeOrderAndPreparedReuse();
+    TestCaptureOnlyBatchReportsMatchesWithoutTextChanges();
     TestResourceScopeIsolationAndRepeatability();
     TestValidationLimitAndCancellationDiscardPublication();
     TestTargetAndMediaMetadataAreClosedWorld();

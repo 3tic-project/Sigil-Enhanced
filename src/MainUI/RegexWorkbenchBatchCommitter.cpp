@@ -42,6 +42,19 @@ SearchBatch::Result RegexWorkbenchBatchCommitter::Commit(
         return result;
     }
 
+    if (result.changedTexts.isEmpty()) {
+        QString conflictPath;
+        if (!SearchBatchCoordinator::ResourcesMatchSnapshot(
+                resources, snapshot, &conflictPath)) {
+            result.success = false;
+            result.error = QCoreApplication::translate(
+                               "RegexWorkbenchCore",
+                               "Search batch target changed during staging: %1")
+                               .arg(conflictPath);
+            return result;
+        }
+    }
+
     result = SearchBatchCoordinator::CommitStagedResult(
         main_window, resources, snapshot, result);
     if (result.success) {

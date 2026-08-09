@@ -829,8 +829,9 @@ bool MainWindow::RunRegexWorkbenchRecipe(const QString& identifier)
     }
 
     ShowMessageOnStatusBar(
-        tr("Regex recipe %1 applied %2 replacement(s) to %3 resource(s).")
+        tr("Regex recipe %1 processed %2 match(es), applied %3 replacement(s) to %4 resource(s).")
             .arg(recipe.name)
+            .arg(batch.report.totalMatches)
             .arg(batch.report.totalReplacements)
             .arg(batch.report.changedResourceCount));
     return true;

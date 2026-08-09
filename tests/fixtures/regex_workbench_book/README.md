@@ -40,12 +40,12 @@ intentional layout. This is deliberately a Dry Run/convergence test.
 Open `03-python-named-capture-variable.json`, open `p-titlepage.xhtml`, select
 **Current file**, and run **Dry Run**.
 
-- Rule 1 uses `(?P<author>...)`, preserves the matched markup with
-  `\g{author}`, and stores capture `author`.
+- Rule 1 uses `(?P<author>...)`, enables **Capture variables only**, and stores
+  capture `author` without evaluating its empty replacement field.
 - Rule 2 reads `${var:author}` and places it in a synthetic `data-test-author`
   attribute.
-- Expected: variable inspector shows `author = 桜木桜`; 2 replacement traces,
-  1 changed resource; final staged markup contains
+- Expected: variable inspector shows `author = 桜木桜`; 2 match rows, 1 actual
+  replacement, 1 changed resource; final staged markup contains
   `<hr data-test-author="桜木桜"/>`.
 
 This recipe is also intended for Dry Run or a disposable copy because the

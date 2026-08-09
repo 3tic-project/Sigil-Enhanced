@@ -289,6 +289,7 @@ bool ParseRule(const QJsonObject& object,
         QStringLiteral("replace"), QStringLiteral("secondaryMode"),
         QStringLiteral("secondaryPattern"), QStringLiteral("recursive"),
         QStringLiteral("maxIterations"), QStringLiteral("allowEmpty"),
+        QStringLiteral("captureOnly"),
         QStringLiteral("variableExpansionEnabled"),
         QStringLiteral("autoIngestNamedCaptures"),
         QStringLiteral("captureToVar"), QStringLiteral("enabled")
@@ -318,6 +319,8 @@ bool ParseRule(const QJsonObject& object,
                        limits.maxIterations, rule.maxIterations, error) &&
            OptionalBool(object, QStringLiteral("allowEmpty"), false,
                         rule.allowEmpty, error) &&
+           OptionalBool(object, QStringLiteral("captureOnly"), false,
+                        rule.captureOnly, error) &&
            OptionalBool(object, QStringLiteral("variableExpansionEnabled"), false,
                         rule.variableExpansionEnabled, error) &&
            OptionalBool(object, QStringLiteral("autoIngestNamedCaptures"), false,
@@ -340,6 +343,7 @@ QJsonObject SerializeRule(const RegexWorkbenchRule& rule)
     object.insert(QStringLiteral("recursive"), rule.recursive);
     object.insert(QStringLiteral("maxIterations"), rule.maxIterations);
     object.insert(QStringLiteral("allowEmpty"), rule.allowEmpty);
+    object.insert(QStringLiteral("captureOnly"), rule.captureOnly);
     object.insert(QStringLiteral("variableExpansionEnabled"),
                   rule.variableExpansionEnabled);
     object.insert(QStringLiteral("autoIngestNamedCaptures"),
@@ -424,6 +428,15 @@ bool RegexRecipeStore::Validate(const RegexRecipe& recipe,
                                 .arg(rule.id));
             return false;
         }
+        if (rule.captureOnly &&
+            (rule.recursive || rule.allowEmpty || rule.variableExpansionEnabled ||
+             (!rule.autoIngestNamedCaptures && rule.captureToVar.isEmpty()))) {
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Recipe rule %1 has an invalid capture-only configuration")
+                                .arg(rule.id));
+            return false;
+        }
         if (rule.captureToVar.size() > limits.maxCaptureNamesPerRule) {
             SetError(error, QCoreApplication::translate(
                                 "RegexWorkbenchCore",
@@ -442,7 +455,7 @@ bool RegexRecipeStore::Validate(const RegexRecipe& recipe,
             }
             captureNames.insert(name);
         }
-        if (IsWholeFunctionReplacement(rule.replace)) {
+        if (!rule.captureOnly && IsWholeFunctionReplacement(rule.replace)) {
             SetError(error, QCoreApplication::translate(
                                 "RegexWorkbenchCore",
                                 "Recipe rule %1 uses an unsupported Python function replacement")

@@ -133,6 +133,7 @@ void RecordPassTrace(RegexWorkbenchDryRunReport& report,
                      const QString& ruleId,
                      const QString& ruleName,
                      const QString& bookpath,
+                     bool captureOnly,
                      const QList<RegexWorkbenchReplacementTrace>& traces,
                      QList<QList<RegexWorkbenchReplacementTrace>>& priorPasses,
                      int maxRows,
@@ -166,7 +167,7 @@ void RecordPassTrace(RegexWorkbenchDryRunReport& report,
         row.bookpath = bookpath;
         row.iterationNumber = trace.iterationNumber;
         row.iterationCount = trace.iterationNumber;
-        row.replacementCount = 1;
+        row.replacementCount = captureOnly ? 0 : 1;
         row.coordinateSpace = CoordinateSpace::Intermediate;
         row.exactNavigationAvailable = true;
         row.matchStart = trace.outputStart;
@@ -252,7 +253,7 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
     RegexWorkbenchBatchResult result;
     result.finalStore = initialStore.snapshot();
     if (options.maxReportRows <= 0 || options.maxSnippetCodeUnits <= 0 ||
-        options.maxRunReplacements <= 0) {
+        options.maxRunMatches <= 0 || options.maxRunReplacements <= 0) {
         Fail(result, QCoreApplication::translate(
                          "RegexWorkbenchCore", "Invalid regex workbench batch limits"));
         return result;
@@ -324,6 +325,7 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
         };
 
     qint64 observedReplacements = 0;
+    qint64 observedMatches = 0;
     QHash<QString, QList<QList<RegexWorkbenchReplacementTrace>>> navigationPasses;
     int completedSteps = 0;
     const int totalSteps = batchRules.size() * orderedResourcePaths.size();
@@ -352,6 +354,7 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
                                     .arg(batchRule.id);
                 return finishStep(applied);
             }
+            const bool captureOnly = recipe.rules.at(ruleIndex).captureOnly;
 
             workingStore.setActiveResource(resourcePath);
             RegexWorkbenchEngineOptions engineOptions = options.engineOptions;
@@ -360,7 +363,7 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
             engineOptions.replacementPassApplied =
                 [&](QList<RegexWorkbenchReplacementTrace> traces) {
                     RecordPassTrace(result.report, batchRule.id, batchRule.name,
-                                    resourcePath, traces,
+                                    resourcePath, captureOnly, traces,
                                     navigationPasses[resourcePath], options.maxReportRows,
                                     options.maxSnippetCodeUnits);
                     if (callerTrace) {
@@ -378,6 +381,24 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
                                     "Regex workbench rule %1 failed for %2: %3")
                                     .arg(batchRule.name, resourcePath,
                                          engineResult.errorMessage);
+                return finishStep(applied);
+            }
+            if (engineResult.matchCount >
+                std::numeric_limits<qint64>::max() - observedMatches) {
+                applied.ok = false;
+                applied.text = currentText;
+                applied.error = QCoreApplication::translate(
+                    "RegexWorkbenchCore", "Regex workbench match count overflow");
+                return finishStep(applied);
+            }
+            observedMatches += engineResult.matchCount;
+            if (observedMatches > options.maxRunMatches) {
+                applied.ok = false;
+                applied.text = currentText;
+                applied.error = QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Regex workbench run exceeded match limit %1")
+                                    .arg(options.maxRunMatches);
                 return finishStep(applied);
             }
             if (engineResult.replacementCount >
@@ -405,7 +426,7 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
         },
         options.isCancelled);
 
-    result.report.totalMatches = result.staged.replacementCount;
+    result.report.totalMatches = observedMatches;
     result.report.totalReplacements = result.staged.replacementCount;
     if (!result.staged.success) {
         result.report.fatal = true;

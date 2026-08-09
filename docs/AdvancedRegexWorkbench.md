@@ -26,6 +26,7 @@ Apply 后对话框保持打开，可继续调整方案。运行期间可以点�
 | Find regex / Replacement | PCRE2 查找表达式和替换文本。原有 `\g{name}` 仍表示当前匹配的命名捕获组。 |
 | Repeat until no matches remain | 反复执行同一条规则，直到再次探测时没有匹配。达到迭代/增长/数量上限、停滞或循环均视为失败，不提交部分结果。 |
 | Allow zero-length matches | 仅递归规则可用；默认关闭。枚举器会按 Unicode 与 CRLF 边界安全前进。 |
+| Capture variables only | 只枚举被接受的匹配并存储命名捕获组，不展开 Replacement，也不修改文本。此模式不能与递归、零长度递归或替换变量展开同时使用。 |
 | Expand `${var:name}` | 在替换文本中读取工作台变量。未定义变量会使本次运行失败。它不改变 `\v` 或 `\g{name}` 的既有语义。 |
 | Store all named captures | 将主正则和已接受 Filter 的全部命名捕获组写入变量。 |
 | Capture variables | 逗号或空白分隔的命名捕获允许列表；只存储指定名称。 |
@@ -63,7 +64,7 @@ PCRE2 支持 `(?<name>...)` 和 `(?P<name>...)` 命名捕获。启用捕获存�
 ```text
 规则 1
 Find regex: <h1>(?<chapter>[^<]+)</h1>
-Replacement: \0
+Capture variables only: on
 Capture variables: chapter
 
 规则 2
@@ -79,6 +80,8 @@ Expand ${var:name} in replacement: on
 - `Session`：同一次工作台对话框打开期间，多次成功 Apply 之间保留；关闭工作台即清除。
 
 写入策略：`Last value wins` 覆盖旧值，`Keep first value` 保留首次值，`Append values` 保存全部值；变量展开读取最后一个值。
+
+仅捕获规则必须启用“存储所有命名捕获组”或填写“捕获变量”允许列表。它的匹配会出现在 Dry Run 明细和匹配总数中，但替换数、变更资源数均保持为零。Apply 可以发布捕获到的工作台变量；若整批没有文本变化，则不会创建无意义的恢复检查点。
 
 ## 作用域、结果和导航
 

@@ -60,10 +60,14 @@ require(
 workbench_commit_call = workbench_committer.index(
     "SearchBatchCoordinator::CommitStagedResult("
 )
+capture_only_conflict_check = workbench_committer.index(
+    "SearchBatchCoordinator::ResourcesMatchSnapshot("
+)
 store_publish = workbench_committer.index("store = pendingStore;", workbench_commit_call)
 require(
     "pendingStore.restore(batch_result.finalStore" in workbench_committer
-    and workbench_commit_call < store_publish,
+    and "result.changedTexts.isEmpty()" in workbench_committer
+    and capture_only_conflict_check < workbench_commit_call < store_publish,
     "workbench variables must validate before commit and publish only after document commit",
 )
 require(

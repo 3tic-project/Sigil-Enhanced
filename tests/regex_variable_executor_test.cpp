@@ -252,6 +252,39 @@ void TestTraceIncludesChangedVariableNames()
             "variable executor traces must report variables changed by each candidate");
 }
 
+void TestCaptureOnlyStoresVariablesWithoutChangingText()
+{
+    SearchVariableStore store = BatchStore();
+    RegexWorkbenchRule rule;
+    rule.find = QStringLiteral("(?<seed>\\d+)");
+    rule.replace = QStringLiteral("\\F<ignored>");
+    rule.captureOnly = true;
+    rule.autoIngestNamedCaptures = true;
+
+    QList<BuiltinPlugins::RegexWorkbench::RegexWorkbenchReplacementTrace> traces;
+    BuiltinPlugins::RegexWorkbench::RegexWorkbenchEngineOptions options;
+    options.replacementPassApplied = [&traces](auto pass) {
+        traces.append(pass);
+    };
+    const auto result = RegexWorkbenchVariableExecutor::ApplyRule(
+        rule, QStringLiteral("7 42"), store, options);
+    Require(result.success && result.text == QStringLiteral("7 42") &&
+                result.matchCount == 2 && result.replacementCount == 0 &&
+                store.get(QStringLiteral("seed")) == QStringLiteral("42") &&
+                traces.size() == 2 &&
+                traces.at(0).beforeText == traces.at(0).afterText &&
+                traces.at(1).variableNames == QStringList{QStringLiteral("seed")},
+            "capture-only execution must store captures without reading or applying replacement text");
+
+    RegexWorkbenchRule noNamedCapture = rule;
+    noNamedCapture.find = QStringLiteral("\\d+");
+    const auto invalid = RegexWorkbenchVariableExecutor::ApplyRule(
+        noNamedCapture, QStringLiteral("7"), store);
+    Require(!invalid.success &&
+                invalid.termination == EngineTermination::InvalidConfiguration,
+            "capture-only auto-ingest must reject patterns without named captures");
+}
+
 }
 
 int main()
@@ -263,6 +296,7 @@ int main()
     TestMissingConfiguredCaptureIsRejected();
     TestPreparedExecutorReusesReplacementPatterns();
     TestTraceIncludesChangedVariableNames();
+    TestCaptureOnlyStoresVariablesWithoutChangingText();
     std::cout << "regex variable executor tests passed\n";
     return 0;
 }

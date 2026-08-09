@@ -111,12 +111,12 @@ def audit_named_variable(resources: dict[str, str]) -> None:
     author = match.group("author")
     require(author == "桜木桜", f"captured author: {author!r}")
 
-    staged, capture_count = capture_pattern.subn(
-        python_replacement(capture_rule["replace"]), source
-    )
+    capture_count = len(list(capture_pattern.finditer(source)))
+    require(capture_rule["captureOnly"], "author producer must be capture-only")
+    staged = source
     expanded = consume_rule["replace"].replace("${var:author}", author)
     staged, consume_count = re.subn(consume_rule["find"], expanded, staged)
-    require(capture_count == 1 and consume_count == 1, "variable rule trace counts changed")
+    require(capture_count == 1 and consume_count == 1, "variable rule match counts changed")
     require('<hr data-test-author="桜木桜"/>' in staged, "variable consumption failed")
 
 

@@ -59,6 +59,7 @@ for object_name in (
     "regexSecondaryPattern",
     "regexFindPattern",
     "regexReplacePattern",
+    "regexCaptureOnly",
     "regexDryRunButton",
     "regexApplyButton",
     "regexReportTable",
@@ -168,6 +169,18 @@ require(
     and "m_AllowEmpty->setChecked(false);" in dialog,
     "zero-length matching controls must follow the recursive recipe invariant",
 )
+require(
+    "rule.captureOnly = m_CaptureOnly->isChecked();" in dialog
+    and "m_ReplacePattern->setEnabled(!captureOnly && !m_Busy);" in dialog
+    and "m_Recursive->setEnabled(!captureOnly && !m_Busy);" in dialog
+    and "m_VariableExpansion->setEnabled(!captureOnly && !m_Busy);" in dialog,
+    "capture-only rules must disable all replacement-producing controls",
+)
+require(
+    "m_LastResult.report.totalMatches" in dialog
+    and "m_LastResult.report.totalReplacements" in dialog,
+    "workbench completion status must distinguish matches from replacements",
+)
 
 require(
     main_window.count('"RunRegexWorkbenchRecipe"') >= 2
@@ -182,6 +195,7 @@ require(
 for documented_contract in (
     "Enhancement > Advanced Regex Workbench...",
     "${var:name}",
+    "Capture variables only",
     "RunRegexWorkbenchRecipe",
     "Dry Run",
     "Checkpoint",

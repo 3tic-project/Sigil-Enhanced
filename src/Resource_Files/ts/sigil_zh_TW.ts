@@ -15352,7 +15352,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     </message>
     <message><source>Advanced Regex Workbench</source><translation>進階正則工作臺</translation></message>
     <message><source>Advanced Regex Workbench...</source><translation>進階正則工作臺...</translation></message>
-    <message><source>Regex recipe %1 applied %2 replacement(s) to %3 resource(s).</source><translation>正則方案 %1 已執行 %2 次取代，修改了 %3 個資源。</translation></message>
+    <message><source>Regex recipe %1 processed %2 match(es), applied %3 replacement(s) to %4 resource(s).</source><translation>正則方案 %1 已處理 %2 個符合項目，執行 %3 次取代並修改 %4 個資源。</translation></message>
     <message><source>Regex recipe failed: %1</source><translation>正則方案執行失敗：%1</translation></message>
     <message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正則方案執行失敗：目前未載入 EPUB。</translation></message>
     <message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正則方案執行失敗：目前 EPUB 沒有文字資源。</translation></message>
@@ -26114,6 +26114,7 @@ Continue using the requested filename?</source>
 <message><source>Recipe contains duplicate rule id: %1</source><translation>方案包含重複的規則 ID：%1</translation></message>
 <message><source>Recipe rule %1 has inconsistent secondary configuration</source><translation>方案規則 %1 的二級正則設定不一致</translation></message>
 <message><source>Recipe rule %1 has invalid recursive limits</source><translation>方案規則 %1 的遞迴限制無效</translation></message>
+<message><source>Recipe rule %1 has an invalid capture-only configuration</source><translation>方案規則 %1 的僅擷取設定無效</translation></message>
 <message><source>Recipe rule %1 exceeds its capture-name limit</source><translation>方案規則 %1 超過擷取群組名稱數量上限</translation></message>
 <message><source>Recipe rule %1 has an invalid or duplicate capture name</source><translation>方案規則 %1 包含無效或重複的擷取群組名稱</translation></message>
 <message><source>Recipe rule %1 uses an unsupported Python function replacement</source><translation>方案規則 %1 使用不支援的 Python 函式取代</translation></message>
@@ -26143,10 +26144,13 @@ Continue using the requested filename?</source>
 <message><source>Regex workbench rule %1 failed for %2: %3</source><translation>正則工作臺規則 %1 處理 %2 時失敗：%3</translation></message>
 <message><source>Regex workbench replacement count overflow</source><translation>正則工作臺取代計數溢位</translation></message>
 <message><source>Regex workbench run exceeded replacement limit %1</source><translation>正則工作臺執行超過取代上限 %1</translation></message>
+<message><source>Regex workbench match count overflow</source><translation>正則工作臺符合項目計數溢位</translation></message>
+<message><source>Regex workbench run exceeded match limit %1</source><translation>正則工作臺執行超過符合項目上限 %1</translation></message>
 <message><source>stateSnapshot and restoreState must be configured together</source><translation>stateSnapshot 與 restoreState 必須同時設定</translation></message>
 <message><source>Replacement callbacks require state snapshot and restore handlers</source><translation>取代回呼需要狀態快照與還原處理器</translation></message>
 <message><source>A replacement expander is required</source><translation>必須提供取代展開器</translation></message>
 <message><source>Recursive maxIterations must be greater than zero</source><translation>遞迴 maxIterations 必須大於零</translation></message>
+<message><source>Capture-only rules cannot use recursive replacement</source><translation>僅擷取規則不能使用遞迴取代</translation></message>
 <message><source>Recursive replacement reached iteration limit %1 with matches remaining</source><translation>遞迴取代已達迭代上限 %1，但仍有符合項目</translation></message>
 <message><source>Regex replacement cancelled</source><translation>正則取代已取消</translation></message>
 <message><source>Replacement variable callback failed</source><translation>取代變數回呼失敗</translation></message>
@@ -26155,6 +26159,8 @@ Continue using the requested filename?</source>
 <message><source>Recursive replacement made no state progress while matches remain</source><translation>遞迴取代仍有符合項目，但狀態沒有進展</translation></message>
 <message><source>Recursive replacement entered a previously seen state</source><translation>遞迴取代進入先前出現過的狀態</translation></message>
 <message><source>Configured named capture does not exist: %1</source><translation>設定的命名擷取群組不存在：%1</translation></message>
+<message><source>Capture-only rule has no named capture groups to store</source><translation>僅擷取規則沒有可儲存的命名擷取群組</translation></message>
+<message><source>Capture-only rule configuration is invalid</source><translation>僅擷取規則設定無效</translation></message>
 <message><source>Whole Python function replacements are not supported in Regex Workbench</source><translation>正則工作臺不支援完整 Python 函式取代</translation></message>
 <message><source>Prepared regex rule is invalid</source><translation>已準備的正則規則無效</translation></message>
 <message><source>Variable executor owns replacement callbacks and store transactions</source><translation>變數執行器獨佔取代回呼與變數儲存交易</translation></message>
@@ -26216,7 +26222,8 @@ Continue using the requested filename?</source>
 <message><source>All text resources (%1)</source><translation>所有文字資源（%1）</translation></message>
 <message><source>Allow zero-length matches</source><translation>允許零長度符合</translation></message>
 <message><source>Append values</source><translation>附加值</translation></message>
-<message><source>Applied %1 replacement(s) to %2 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>已執行 %1 次取代，修改了 %2 個資源。每個檔案可分別復原；若要還原整個批次，請使用復原檢查點。</translation></message>
+<message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>已從 %2 個符合項目執行 %1 次取代，修改了 %3 個資源。每個檔案可分別復原；若要還原整個批次，請使用復原檢查點。</translation></message>
+<message><source>Apply complete: %1 match(es), %2 replacement(s); no document text was changed.</source><translation>套用完成：%1 個符合項目，%2 次取代；文件文字未變更。</translation></message>
 <message><source>Apply</source><translation>套用</translation></message>
 <message><source>Batch</source><translation>批次</translation></message>
 <message><source>Before</source><translation>取代前</translation></message>
@@ -26224,11 +26231,13 @@ Continue using the requested filename?</source>
 <message><source>Cancel the active run before closing the workbench.</source><translation>請先取消目前執行，再關閉工作臺。</translation></message>
 <message><source>Cancelling after the current bounded regex operation...</source><translation>將在目前受限正則操作完成後取消...</translation></message>
 <message><source>Capture variables:</source><translation>擷取變數：</translation></message>
+<message><source>Capture variables only (do not replace)</source><translation>僅擷取變數（不取代）</translation></message>
+<message><source>Enumerate accepted matches and store named captures without changing text.</source><translation>列舉已接受的符合項目並儲存命名擷取群組，不修改文字。</translation></message>
 <message><source>Clear Variables</source><translation>清除變數</translation></message>
 <message><source>Current file</source><translation>目前檔案</translation></message>
 <message><source>Down</source><translation>下移</translation></message>
 <message><source>Dry Run</source><translation>試執行</translation></message>
-<message><source>Dry-Run complete: %1 replacement(s), %2 changed resource(s). The book and session variables were not modified.</source><translation>試執行完成：%1 次取代，%2 個資源將被修改。書籍與工作階段變數均未變更。</translation></message>
+<message><source>Dry-Run complete: %1 match(es), %2 replacement(s), %3 changed resource(s). The book and session variables were not modified.</source><translation>試執行完成：%1 個符合項目，%2 次取代，%3 個資源將被修改。書籍與工作階段變數均未變更。</translation></message>
 <message><source>Double-click to open the resource and highlight this match.</source><translation>按兩下可開啟資源並反白顯示此符合項目。</translation></message>
 <message><source>Double-click to open the resource; no exact position is available.</source><translation>按兩下可開啟資源；目前沒有可用的精確位置。</translation></message>
 <message><source>Dry-Run results</source><translation>試執行結果</translation></message>
@@ -26293,7 +26302,8 @@ Continue using the requested filename?</source>
 <message><source>Variables</source><translation>變數</translation></message>
 <message><source>Write policy:</source><translation>寫入策略：</translation></message>
 <message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（選用允許清單）</translation></message>
-<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot and recovery checkpoint will be created before any document text is written.</source><translation>要將此方案套用到 %1 個文字資源嗎？寫入任何文件文字前，將重新建立快照與復原檢查點。</translation></message>
+<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>要將此方案套用到 %1 個文字資源嗎？將重新建立快照；若產生文字變更，則會在寫入前建立復原檢查點。</translation></message>
 <message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>正在建立復原檢查點並提交暫存變更...</translation></message>
+<message><source>Publishing captured variables without changing document text...</source><translation>正在發佈擷取變數，不變更文件文字...</translation></message>
 </context>
 </TS>

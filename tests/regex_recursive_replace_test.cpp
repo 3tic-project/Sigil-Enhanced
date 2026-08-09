@@ -66,6 +66,7 @@ void TestSinglePassUsesSharedApplySemantics()
     const RegexWorkbenchEngineResult result =
         RegexWorkbenchEngine::ApplyRule(rule, QStringLiteral("a a"), TestExpander());
     Require(result.success && result.text == QStringLiteral("x x") &&
+                result.matchCount == 2 &&
                 result.replacementCount == 2 &&
                 result.termination == EngineTermination::SinglePassComplete,
             "non-recursive workbench apply must use single-pass shared splice semantics");
@@ -76,6 +77,34 @@ void TestSinglePassUsesSharedApplySemantics()
     Require(disabled.success && disabled.text == QStringLiteral("a") &&
                 disabled.termination == EngineTermination::Disabled,
             "disabled rules must be unconditional no-ops");
+}
+
+void TestCaptureOnlyEnumeratesWithoutReplacement()
+{
+    RegexWorkbenchRule rule;
+    rule.find = QStringLiteral("a");
+    rule.replace = QStringLiteral("FAIL");
+    rule.captureOnly = true;
+    QList<BuiltinPlugins::RegexWorkbench::RegexWorkbenchReplacementTrace> traces;
+    RegexWorkbenchEngineOptions options;
+    options.replacementPassApplied = [&traces](auto pass) {
+        traces.append(pass);
+    };
+    const auto result = RegexWorkbenchEngine::ApplyRule(
+        rule, QStringLiteral("a a"), SearchOperations::ReplacementExpander(), options);
+    Require(result.success && result.text == QStringLiteral("a a") &&
+                result.matchCount == 2 && result.replacementCount == 0 &&
+                result.appliedIterations == 1 && traces.size() == 2 &&
+                traces.first().beforeText == QStringLiteral("a") &&
+                traces.first().afterText == QStringLiteral("a"),
+            "capture-only rules must enumerate and trace matches without expanding replacements");
+
+    rule.recursive = true;
+    const auto invalid = RegexWorkbenchEngine::ApplyRule(
+        rule, QStringLiteral("a"), SearchOperations::ReplacementExpander());
+    Require(!invalid.success &&
+                invalid.termination == EngineTermination::InvalidConfiguration,
+            "capture-only rules must reject recursive execution");
 }
 
 void TestRecursiveConvergenceAndFinalProbe()
@@ -252,6 +281,7 @@ void TestReplacementPassTraceUsesIterationCoordinates()
 int main()
 {
     TestSinglePassUsesSharedApplySemantics();
+    TestCaptureOnlyEnumeratesWithoutReplacement();
     TestRecursiveConvergenceAndFinalProbe();
     TestSecondaryFilterIsReevaluatedEachIteration();
     TestStallCycleAndIterationLimitAreFatal();

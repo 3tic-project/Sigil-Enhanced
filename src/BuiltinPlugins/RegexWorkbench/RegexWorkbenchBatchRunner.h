@@ -78,6 +78,7 @@ struct RegexWorkbenchBatchOptions
     std::function<void(int completed, int total)> progressCallback;
     int maxReportRows = 10000;
     int maxSnippetCodeUnits = 240;
+    qint64 maxRunMatches = 1000000;
     qint64 maxRunReplacements = 1000000;
     bool validateStagedTexts = true;
 };

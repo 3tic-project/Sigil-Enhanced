@@ -193,7 +193,7 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
                            "Replacement callbacks require state snapshot and restore handlers"),
                        options, initialExternalState);
     }
-    if (!expander) {
+    if (!expander && !rule.captureOnly) {
         return Failure(text, EngineTermination::InvalidConfiguration,
                        QCoreApplication::translate(
                            "RegexWorkbenchCore", "A replacement expander is required"),
@@ -206,6 +206,13 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
                            "Recursive maxIterations must be greater than zero"),
                        options, initialExternalState);
     }
+    if (rule.captureOnly && rule.recursive) {
+        return Failure(text, EngineTermination::InvalidConfiguration,
+                       QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Capture-only rules cannot use recursive replacement"),
+                       options, initialExternalState);
+    }
 
     RecursiveReplaceGuard guard(text.size(), options.guardOptions);
     if (!guard.isValid()) {
@@ -215,7 +222,7 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
     }
 
     QString currentText = text;
-    qint64 totalReplacements = 0;
+    qint64 totalMatches = 0;
     int appliedIterations = 0;
     QSet<QByteArray> seenStates;
     seenStates.insert(StateDigest(currentText, initialExternalState));
@@ -230,7 +237,8 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
             RegexWorkbenchEngineResult result;
             result.success = true;
             result.text = currentText;
-            result.replacementCount = totalReplacements;
+            result.matchCount = totalMatches;
+            result.replacementCount = rule.captureOnly ? 0 : totalMatches;
             result.appliedIterations = appliedIterations;
             result.termination = rule.recursive
                                      ? EngineTermination::NoMatches
@@ -267,8 +275,10 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
                     cancelledDuringApply = true;
                     return false;
                 }
-                const bool expandedOk = expander(matchedText, captureGroups,
-                                                 replacement, expanded);
+                const bool expandedOk = rule.captureOnly
+                                            ? (expanded = matchedText, true)
+                                            : expander(matchedText, captureGroups,
+                                                       replacement, expanded);
                 expansionFailed = expansionFailed || !expandedOk;
                 if (expandedOk) {
                     expandedTexts.append(expanded);
@@ -331,8 +341,8 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
                            options, initialExternalState);
         }
 
-        const qint64 nextTotalReplacements = totalReplacements + passReplacements;
-        const GuardResult guardResult = guard.check(nextText.size(), nextTotalReplacements);
+        const qint64 nextTotalMatches = totalMatches + passReplacements;
+        const GuardResult guardResult = guard.check(nextText.size(), nextTotalMatches);
         if (!guardResult.success) {
             return Failure(text, GuardTermination(guardResult.error),
                            guardResult.errorMessage, options, initialExternalState);
@@ -362,7 +372,8 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
             RegexWorkbenchEngineResult result;
             result.success = true;
             result.text = nextText;
-            result.replacementCount = nextTotalReplacements;
+            result.matchCount = nextTotalMatches;
+            result.replacementCount = rule.captureOnly ? 0 : nextTotalMatches;
             result.appliedIterations = passReplacements > 0 ? 1 : 0;
             result.termination = EngineTermination::SinglePassComplete;
             return result;
@@ -390,7 +401,7 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
 
         seenStates.insert(afterState);
         currentText = nextText;
-        totalReplacements = nextTotalReplacements;
+        totalMatches = nextTotalMatches;
         ++appliedIterations;
     }
 }

@@ -5,7 +5,7 @@
 | **文档标题** | Advanced Regex Workbench（正则增强工作台） |
 | **作者** | Sigil-Enhanced 架构组（待填） |
 | **日期** | 2026-08-09 |
-| **状态** | Implemented（修订 7：PR-01–08、UI、Automate、i18n、测试与用户文档完成） |
+| **状态** | Implemented（修订 8：增加仅捕获规则、独立匹配计数与无文本提交审计） |
 | **适用仓库** | `sigil-modified` / Sigil-Enhanced |
 | **关联计划** | `todo/Sigil-Enhanced-Development-Plan.md` §4 `BookEditSession`、§5 `SearchBatchRunner` |
 | **约束文档** | `ENHANCEMENT.md` |
@@ -232,6 +232,7 @@ struct RegexWorkbenchRule {
     // 零宽匹配：默认 false（即使 recursive）。仅插入类配方显式打开。
     // 引擎仅在 recursive==true 时允许 allowEmpty==true；非递归强制 false。
     bool allowEmpty = false;
+    bool captureOnly = false;   // 只存命名捕获；不展开 replace、不修改文本
     bool variableExpansionEnabled = false; // 导入现有搜索时必须保持 false
     bool autoIngestNamedCaptures = false; // true：写入全部命名组；见 captureToVar
     QStringList captureToVar;   // 非空：仅写这些命名组（覆盖 auto 列表）；空且 auto=false：不写
@@ -261,6 +262,7 @@ else:
     secondaryPattern = ""   // 即使 prefind 有值也忽略（与栏上非 PreSearch 模式一致）
 find / replace / name 原样映射
 recursive / 变量相关 = 默认关
+captureOnly = false
 ```
 
 UI 将 PreSearch 与 Filter **分开展示**（模式选择器切换 `secondaryPattern` 标签文案：「预搜索范围」vs「过滤正则」）。
@@ -596,7 +598,17 @@ public:
 | true | 空 | ingest `getCaptureNames()` 全部 |
 | * | 非空 | 仅 ingest 列表中的名（忽略 auto 布尔的「全部」含义，列表优先） |
 
-#### 5.6 替换构建扩展
+#### 5.6 仅捕获规则（Capture-only）
+
+`captureOnly=true` 用于“只采集变量、不产生替换”的规则。它仍按候选顺序执行 Filter 捕获与 primary 捕获的事务回调，因此 LastWins/KeepFirst/Append 及跨规则可见性与普通规则一致；但 `replace` 不展开，输出始终保留原匹配文本。
+
+- 必须启用 `autoIngestNamedCaptures` 或提供非空 `captureToVar`；auto 模式下正则至少声明一个命名捕获组。
+- 禁止同时启用 `recursive`、`allowEmpty` 或 `variableExpansionEnabled`；UI 同步禁用这些控件及 Replacement 编辑框。
+- `replace` 字段被完全忽略，包括 `${var:...}` 与整串 `\F<...>`，不会因为无关替换内容失败。
+- 每个接受候选计入 `totalMatches` 并生成 Dry-Run 行；`replacementCount`、`totalReplacements` 和 `changedResourceCount` 保持为 0，行的 before/after 相同。
+- Apply 可发布最终变量 store；若整批无文本变化，提交前仍校验资源快照，但不创建恢复检查点、不标记书籍已修改。
+
+#### 5.7 替换构建扩展
 
 ```cpp
 bool BuildReplacementText(SPCRE &sre,
@@ -608,7 +620,7 @@ bool BuildReplacementText(SPCRE &sre,
 ```
 
 - resolver 为空：与现网严格 bit-identical；不扫描 `$`，`SPCRE::replaceText` 的 `\F<name>` Python 分支不变。
-- resolver 非空：仅额外解析 `${var:name}`；裸 `\v`、`\g`、大小写/宽度控制不变。工作台在编译规则阶段拒绝整串 `\F<function>`，而不是靠 resolver 是否存在改变 `SPCRE` 分支。
+- resolver 非空：仅额外解析 `${var:name}`；裸 `\v`、`\g`、大小写/宽度控制不变。会产生替换的工作台规则在编译阶段拒绝整串 `\F<function>`；仅捕获规则不执行替换字段，因此无需解析或拒绝它。
 
 ### 6. 引擎执行流水线
 
@@ -688,6 +700,7 @@ struct RunOptions {
     uint32_t pcreDepthLimit = ...;
     int maxReportRows = 10'000;
     int maxSnippetCodeUnits = 240;
+    qint64 maxRunMatches = 1'000'000;
     qint64 maxRunReplacements = 1'000'000;
     // ...
 };
@@ -710,8 +723,8 @@ struct DryRunReport {
         QString warningText;
     };
     QList<Row> rows;
-    int totalMatches = 0;
-    int totalReplacements = 0;
+    qint64 totalMatches = 0;
+    qint64 totalReplacements = 0;
     int changedResourceCount = 0;
     bool fatal = false;
     QString fatalMessage;
@@ -769,6 +782,7 @@ struct DryRunReport {
 |                  | 二级模式: PreSearch ▼  |   全部HTML/CSS/...   |
 |                  | 二级正则: ...          | 变量作用域: Batch ▼  |
 |                  | find / replace         | 写策略: LastWins ▼   |
+|                  | ☐ 仅捕获变量(不替换)   |                      |
 |                  | ☑ 递归  最大迭代 [32]  | [Dry-Run] [应用]     |
 |                  | ☐ 允许零宽匹配(插入类) | [清空变量] [取消]    |
 |                  | ☑ 自动写入命名捕获     |                      |
@@ -814,6 +828,7 @@ struct DryRunReport {
       "recursive": true,
       "maxIterations": 16,
       "allowEmpty": false,
+      "captureOnly": false,
       "variableExpansionEnabled": false,
       "autoIngestNamedCaptures": false,
       "captureToVar": [],
@@ -825,7 +840,8 @@ struct DryRunReport {
       "secondaryMode": "None",
       "secondaryPattern": "",
       "find": "<dc:title[^>]*>(?<booktitle>[^<]+)</dc:title>",
-      "replace": "\\0",
+      "replace": "",
+      "captureOnly": true,
       "variableExpansionEnabled": false,
       "captureToVar": ["booktitle"],
       "recursive": false
@@ -954,7 +970,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 
 ---
 
-## Implementation Checkpoint（修订 7）
+## Implementation Checkpoint（修订 8）
 
 ### 已落地范围
 
@@ -968,11 +984,12 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | PR-06 | 完成 | `b2e2eb277`、`a245a6d52`、`255cc8ea2`、`1257f5c9d`、`7132715fe` | GUI snapshot/commit 边界、staged XML validator、跨资源 prepared rule 复用、内存 working-text map、commit 成功后才发布变量 store |
 | PR-07 | 完成 | `df85fb909`、`d8ef27fa8`、`36c70b1c6`、`cb13fde9c`、`616cec394`、`f7d9e637d` | 逐匹配 trace 与最终坐标映射；模态工作台、规则编辑、scope、Dry Run/Apply/Cancel、进度、变量检查器、结果导航、设置持久化；Enhancement 菜单与默认开启 feature flag；三语目录 |
 | PR-08 | 完成 | `026328b23`、`151380a76`，以及修订 7 文档提交 | Recipe 文件名/显示名/绝对路径安全解析；`RunRegexWorkbenchRecipe` Automate；UI/Automate 接线契约测试与用户文档 |
+| 修订 8 | 完成 | 本次提交 | `captureOnly` schema/UI/执行语义；匹配与替换独立计数；无文本 Apply 的快照冲突检查；三语翻译、真实 EPUB 夹具及回归测试 |
 
 ### 审计结论
 
 1. **Stage 不会写入 live book。** 对话框在 GUI 线程保存编辑器内容并复制 snapshot，worker 只接收 `QString`/media type 和变量 store 副本，返回最终 `changedTexts`；唯一发布桥复用 `SearchBatchCoordinator::CommitStagedResult`，只在冲突复核和一次 Checkpoint 后对每个变更资源调用一次 `SetTextAsUndoableEdit`。Dry Run 不调用发布桥；Apply 每次独立重新 snapshot/stage。
-2. **经典替换兼容边界保持。** `PerformGlobalReplacePlus` 已改为调用共享 splice；未提供 resolver 时 `${var:name}` 保持字面量，裸 `\v` 仍是 VT，原有 `\g{name}` 和 `\F` 路径不变。工作台入口单独拒绝整条 Python `\F<...>`。
+2. **经典替换兼容边界保持。** `PerformGlobalReplacePlus` 已改为调用共享 splice；未提供 resolver 时 `${var:name}` 保持字面量，裸 `\v` 仍是 VT，原有 `\g{name}` 和 `\F` 路径不变。会产生替换的工作台规则单独拒绝整条 Python `\F<...>`；仅捕获规则完全忽略 replacement。
 3. **匹配资源有界且线程所有权明确。** 工作台不持有 `PCRECache` 对象；每次规则执行拥有自己的 compiled code、match data 和 match context。每次 PCRE2 调用设置 match/depth/heap limit，并在调用之间检查 cancel；单次调用不能被协作式中断，但仍受 PCRE2 limit 约束。
 4. **递归和变量共同纳入回滚状态。** cycle/stall digest 同时包含文本和变量状态；任何匹配、展开、变量、限制或取消失败都返回原始文本并恢复初始 store snapshot，不允许发布部分轮次。
 5. **Filter 坐标与写入顺序已锁定。** Filter capture 保持主匹配内局部坐标；接受候选按 `Filter ingest → replacement expand → primary ingest` 执行，拒绝掉的候选不污染 store。
@@ -981,21 +998,22 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 8. **报告已达到逐匹配粒度。** 每行记录 rule/resource、迭代号、替换前后片段、变化变量名、最终 UTF-16 区间和 lineHint。后续规则覆盖区间时精确导航失效；Dry Run 不把 staged 坐标用于 live 文档，Apply 后仅最终坐标可定位。明细截断不影响精确总数。
 9. **Automate 与 UI 共享事务链路。** `RunRegexWorkbenchRecipe` 按默认目录文件名、Recipe 显示名或绝对路径解析；显示名重名 fail closed；固定作用于全部文本资源，并复用 snapshot→stage→validate→commit，不打开交互式对话框。
 10. **UI schema 状态一致。** Secondary 切回 `None` 时不会保存隐藏的旧 pattern；零长度匹配只在递归开启时可选；上次 Recipe 路径与当前未保存 Recipe 路径分离持久化。
+11. **仅捕获发布保持快照一致。** 无文本变化时不创建空 Checkpoint；但发布变量前仍复核全部目标资源与运行快照，冲突时不发布基于旧正文的变量。
 
 ### 验证证据（2026-08-09）
 
 - 核心/批处理测试覆盖安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序、变量执行入口、Recipe/命名解析、跨资源 batch、逐匹配报告、进度/取消和 staged XML validator。
 - `Sigil` 应用目标：在 Qt 6.7.3、Python 3.11 的 clean CMake tree 中完整编译、链接及 Python bundle verification 通过。
 - `regex_workbench_ui_contract` 锁定 Enhancement action、默认 feature flag、模态生命周期、稳定对象名、worker/Cancel、Apply 独立 restage、确认/checkpoint 顺序、坐标提交门控、Recipe 路径和 Automate 链路。
-- `zh_CN`、`zh_TW`、`ja` 覆盖门禁与 `.qm` 生成均通过：5018 条当前消息全部 finished，0 unfinished；同步清理历史陈旧项和 `PluginRunner` 裸 UI 字面量。
-- Debug 默认构建完成；全量 CTest：55/55 通过，0 失败，总耗时约 5 秒。
+- `zh_CN`、`zh_TW`、`ja` 覆盖门禁与 `.qm` 生成均通过：5147 条当前消息全部 finished，0 unfinished。
+- Debug 默认构建完成；全量 CTest：55/55 通过，0 失败，总耗时约 3 秒。
 - `git diff --check`：通过。
 
 ### 后续边界
 
 - PR-01–08 门禁已满足，feature flag 默认开启；紧急关闭值仍为 `false`。
 - `BookEditSession` 就绪后可替换 coordinator commit backend；runner、Recipe、报告 DTO 和 UI 不需要改变。
-- V1 仍不支持 Python `\F`、skip-if/条件分支、部分勾选提交或跨对话框 Session 变量。
+- V1 仍不支持执行 Python `\F`、skip-if/条件分支、部分勾选提交或跨对话框 Session 变量；仅捕获规则中的 replacement 不执行。
 
 ---
 
@@ -1010,7 +1028,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | `regex_variable_store_test.cpp` | 策略、bookpath resource frames、scope、cap、未参与 vs 空捕获、Append resolver=last |
 | `regex_replacement_resolver_test.cpp` | 裸 `\v` 和 `\v{foo}` 永远保持；变量关闭时 `${var:x}` 字面；开启后展开；missing Fatal；值不二次解释 |
 | `regex_filter_ingest_order_test.cpp` | 两个候选不同 Filter 捕获，各自 replacement 读同一候选；Reject 不 ingest |
-| `regex_variable_executor_test.cpp` | 跨规则变量、Filter 同候选读取、missing rollback、变量关闭兼容、`\F`/不存在 capture 拒绝 |
+| `regex_variable_executor_test.cpp` | 跨规则变量、Filter 同候选读取、missing rollback、变量关闭兼容、普通规则 `\F`/不存在 capture 拒绝、仅捕获规则忽略 replacement |
 | `regex_workbench_batch_test.cpp` | 两次 Run 独立 stage；不得缓存 Dry-Run map 给 Apply；逐匹配报告、最终坐标、截断、进度、取消、XML Fatal 零发布 |
 | `regex_capture_names_test.cpp` | `getCaptureNames`、duplicate-name 默认拒绝 |
 | `regex_recipe_store_test.cpp` | JSON；`PS`+prefind 导入 |

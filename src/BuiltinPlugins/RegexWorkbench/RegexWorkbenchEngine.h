@@ -88,6 +88,7 @@ struct RegexWorkbenchEngineResult
 {
     bool success = false;
     QString text;
+    qint64 matchCount = 0;
     qint64 replacementCount = 0;
     int appliedIterations = 0;
     EngineTermination termination = EngineTermination::NotRun;

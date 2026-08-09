@@ -15357,7 +15357,7 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     </message>
     <message><source>Advanced Regex Workbench</source><translation>高度な正規表現ワークベンチ</translation></message>
     <message><source>Advanced Regex Workbench...</source><translation>高度な正規表現ワークベンチ...</translation></message>
-    <message><source>Regex recipe %1 applied %2 replacement(s) to %3 resource(s).</source><translation>正規表現レシピ %1 は %2 件を置換し、%3 個のリソースを変更しました。</translation></message>
+    <message><source>Regex recipe %1 processed %2 match(es), applied %3 replacement(s) to %4 resource(s).</source><translation>正規表現レシピ %1 は %2 件の一致を処理し、%3 件を置換して %4 個のリソースを変更しました。</translation></message>
     <message><source>Regex recipe failed: %1</source><translation>正規表現レシピに失敗しました：%1</translation></message>
     <message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正規表現レシピに失敗しました：EPUB が読み込まれていません。</translation></message>
     <message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正規表現レシピに失敗しました：現在の EPUB にテキストリソースがありません。</translation></message>
@@ -26129,6 +26129,7 @@ Continue using the requested filename?</source>
 <message><source>Recipe contains duplicate rule id: %1</source><translation>レシピに重複したルール ID があります: %1</translation></message>
 <message><source>Recipe rule %1 has inconsistent secondary configuration</source><translation>レシピルール %1 の二次正規表現設定に矛盾があります</translation></message>
 <message><source>Recipe rule %1 has invalid recursive limits</source><translation>レシピルール %1 の再帰制限が無効です</translation></message>
+<message><source>Recipe rule %1 has an invalid capture-only configuration</source><translation>レシピルール %1 のキャプチャ専用設定が無効です</translation></message>
 <message><source>Recipe rule %1 exceeds its capture-name limit</source><translation>レシピルール %1 がキャプチャ名数の上限を超えています</translation></message>
 <message><source>Recipe rule %1 has an invalid or duplicate capture name</source><translation>レシピルール %1 に無効または重複したキャプチャ名があります</translation></message>
 <message><source>Recipe rule %1 uses an unsupported Python function replacement</source><translation>レシピルール %1 は未対応の Python 関数置換を使用しています</translation></message>
@@ -26158,10 +26159,13 @@ Continue using the requested filename?</source>
 <message><source>Regex workbench rule %1 failed for %2: %3</source><translation>正規表現ワークベンチのルール %1 は %2 の処理に失敗しました: %3</translation></message>
 <message><source>Regex workbench replacement count overflow</source><translation>正規表現ワークベンチの置換回数がオーバーフローしました</translation></message>
 <message><source>Regex workbench run exceeded replacement limit %1</source><translation>正規表現ワークベンチの実行が置換上限 %1 を超えました</translation></message>
+<message><source>Regex workbench match count overflow</source><translation>正規表現ワークベンチの一致件数がオーバーフローしました</translation></message>
+<message><source>Regex workbench run exceeded match limit %1</source><translation>正規表現ワークベンチの実行が一致上限 %1 を超えました</translation></message>
 <message><source>stateSnapshot and restoreState must be configured together</source><translation>stateSnapshot と restoreState は同時に設定する必要があります</translation></message>
 <message><source>Replacement callbacks require state snapshot and restore handlers</source><translation>置換コールバックには状態スナップショットと復元ハンドラーが必要です</translation></message>
 <message><source>A replacement expander is required</source><translation>置換展開器が必要です</translation></message>
 <message><source>Recursive maxIterations must be greater than zero</source><translation>再帰の maxIterations は 0 より大きくなければなりません</translation></message>
+<message><source>Capture-only rules cannot use recursive replacement</source><translation>キャプチャ専用ルールでは再帰置換を使用できません</translation></message>
 <message><source>Recursive replacement reached iteration limit %1 with matches remaining</source><translation>一致が残ったまま再帰置換が反復上限 %1 に達しました</translation></message>
 <message><source>Regex replacement cancelled</source><translation>正規表現置換をキャンセルしました</translation></message>
 <message><source>Replacement variable callback failed</source><translation>置換変数コールバックに失敗しました</translation></message>
@@ -26170,6 +26174,8 @@ Continue using the requested filename?</source>
 <message><source>Recursive replacement made no state progress while matches remain</source><translation>一致が残っていますが、再帰置換の状態が進行しませんでした</translation></message>
 <message><source>Recursive replacement entered a previously seen state</source><translation>再帰置換が以前に現れた状態に戻りました</translation></message>
 <message><source>Configured named capture does not exist: %1</source><translation>設定された名前付きキャプチャが存在しません: %1</translation></message>
+<message><source>Capture-only rule has no named capture groups to store</source><translation>キャプチャ専用ルールに保存可能な名前付きキャプチャグループがありません</translation></message>
+<message><source>Capture-only rule configuration is invalid</source><translation>キャプチャ専用ルールの設定が無効です</translation></message>
 <message><source>Whole Python function replacements are not supported in Regex Workbench</source><translation>正規表現ワークベンチは Python 関数による置換全体をサポートしていません</translation></message>
 <message><source>Prepared regex rule is invalid</source><translation>準備済みの正規表現ルールが無効です</translation></message>
 <message><source>Variable executor owns replacement callbacks and store transactions</source><translation>変数実行器が置換コールバックと変数ストアのトランザクションを管理します</translation></message>
@@ -26231,7 +26237,8 @@ Continue using the requested filename?</source>
 <message><source>All text resources (%1)</source><translation>すべてのテキストリソース（%1）</translation></message>
 <message><source>Allow zero-length matches</source><translation>長さゼロの一致を許可</translation></message>
 <message><source>Append values</source><translation>値を追加</translation></message>
-<message><source>Applied %1 replacement(s) to %2 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>%1 件を置換し、%2 個のリソースを変更しました。各ファイルは個別に元に戻せます。バッチ全体を復元するにはリカバリーチェックポイントを使用してください。</translation></message>
+<message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>%2 件の一致から %1 件を置換し、%3 個のリソースを変更しました。各ファイルは個別に元に戻せます。バッチ全体を復元するにはリカバリーチェックポイントを使用してください。</translation></message>
+<message><source>Apply complete: %1 match(es), %2 replacement(s); no document text was changed.</source><translation>適用完了：%1 件の一致、%2 件の置換。文書テキストは変更されていません。</translation></message>
 <message><source>Apply</source><translation>適用</translation></message>
 <message><source>Batch</source><translation>バッチ</translation></message>
 <message><source>Before</source><translation>置換前</translation></message>
@@ -26239,11 +26246,13 @@ Continue using the requested filename?</source>
 <message><source>Cancel the active run before closing the workbench.</source><translation>ワークベンチを閉じる前に実行中の処理をキャンセルしてください。</translation></message>
 <message><source>Cancelling after the current bounded regex operation...</source><translation>現在の制限付き正規表現処理の完了後にキャンセルします...</translation></message>
 <message><source>Capture variables:</source><translation>キャプチャ変数：</translation></message>
+<message><source>Capture variables only (do not replace)</source><translation>変数のキャプチャのみ（置換しない）</translation></message>
+<message><source>Enumerate accepted matches and store named captures without changing text.</source><translation>採用された一致を列挙し、テキストを変更せずに名前付きキャプチャを保存します。</translation></message>
 <message><source>Clear Variables</source><translation>変数を消去</translation></message>
 <message><source>Current file</source><translation>現在のファイル</translation></message>
 <message><source>Down</source><translation>下へ</translation></message>
 <message><source>Dry Run</source><translation>ドライラン</translation></message>
-<message><source>Dry-Run complete: %1 replacement(s), %2 changed resource(s). The book and session variables were not modified.</source><translation>ドライラン完了：%1 件の置換、%2 個のリソースが変更対象です。ブックおよびセッション変数は変更されていません。</translation></message>
+<message><source>Dry-Run complete: %1 match(es), %2 replacement(s), %3 changed resource(s). The book and session variables were not modified.</source><translation>ドライラン完了：%1 件の一致、%2 件の置換、%3 個のリソースが変更対象です。ブックおよびセッション変数は変更されていません。</translation></message>
 <message><source>Double-click to open the resource and highlight this match.</source><translation>ダブルクリックするとリソースを開き、この一致範囲を選択表示します。</translation></message>
 <message><source>Double-click to open the resource; no exact position is available.</source><translation>ダブルクリックするとリソースを開きます。正確な位置は利用できません。</translation></message>
 <message><source>Dry-Run results</source><translation>ドライラン結果</translation></message>
@@ -26308,7 +26317,8 @@ Continue using the requested filename?</source>
 <message><source>Variables</source><translation>変数</translation></message>
 <message><source>Write policy:</source><translation>書き込みポリシー：</translation></message>
 <message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（任意の許可リスト）</translation></message>
-<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot and recovery checkpoint will be created before any document text is written.</source><translation>このレシピを %1 個のテキストリソースに適用しますか？文書テキストを書き込む前に、新しいスナップショットとリカバリーチェックポイントを作成します。</translation></message>
+<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>このレシピを %1 個のテキストリソースに適用しますか？新しいスナップショットを作成し、テキスト変更が生じた場合は書き込み前にリカバリーチェックポイントを作成します。</translation></message>
 <message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>リカバリーチェックポイントを作成し、ステージ済みの変更をコミットしています...</translation></message>
+<message><source>Publishing captured variables without changing document text...</source><translation>文書テキストを変更せず、キャプチャした変数を反映しています...</translation></message>
 </context>
 </TS>

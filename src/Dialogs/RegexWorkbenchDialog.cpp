@@ -152,6 +152,7 @@ RegexWorkbenchDialog::RegexWorkbenchDialog(MainWindow* mainWindow,
       m_Recursive(nullptr),
       m_MaxIterations(nullptr),
       m_AllowEmpty(nullptr),
+      m_CaptureOnly(nullptr),
       m_VariableExpansion(nullptr),
       m_AutoIngest(nullptr),
       m_CaptureNames(nullptr),
@@ -258,6 +259,11 @@ void RegexWorkbenchDialog::BuildUi()
     m_MaxIterations = new QSpinBox(editorBox);
     m_MaxIterations->setRange(1, 10000);
     m_AllowEmpty = new QCheckBox(tr("Allow zero-length matches"), editorBox);
+    m_CaptureOnly = new QCheckBox(
+        tr("Capture variables only (do not replace)"), editorBox);
+    m_CaptureOnly->setObjectName(QStringLiteral("regexCaptureOnly"));
+    m_CaptureOnly->setToolTip(
+        tr("Enumerate accepted matches and store named captures without changing text."));
     m_VariableExpansion = new QCheckBox(tr("Expand ${var:name} in replacement"), editorBox);
     m_AutoIngest = new QCheckBox(tr("Store all named captures"), editorBox);
     m_CaptureNames = new QLineEdit(editorBox);
@@ -268,6 +274,7 @@ void RegexWorkbenchDialog::BuildUi()
     editor->addRow(tr("Secondary regex:"), m_SecondaryPattern);
     editor->addRow(tr("Find regex:"), m_FindPattern);
     editor->addRow(tr("Replacement:"), m_ReplacePattern);
+    editor->addRow(QString(), m_CaptureOnly);
     editor->addRow(QString(), m_Recursive);
     editor->addRow(tr("Maximum iterations:"), m_MaxIterations);
     editor->addRow(QString(), m_AllowEmpty);
@@ -400,6 +407,8 @@ void RegexWorkbenchDialog::BuildUi()
     connect(m_SecondaryMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &RegexWorkbenchDialog::UpdateRuleControlState);
     connect(m_Recursive, &QCheckBox::toggled,
+            this, &RegexWorkbenchDialog::UpdateRuleControlState);
+    connect(m_CaptureOnly, &QCheckBox::toggled,
             this, &RegexWorkbenchDialog::UpdateRuleControlState);
     connect(m_DryRunButton, &QPushButton::clicked,
             this, &RegexWorkbenchDialog::StartDryRun);
@@ -643,7 +652,15 @@ void RegexWorkbenchDialog::UpdateRuleControlState()
     const SecondaryMode mode = static_cast<SecondaryMode>(
         m_SecondaryMode->currentData().toInt());
     m_SecondaryPattern->setEnabled(mode != SecondaryMode::None);
-    const bool recursive = m_Recursive->isChecked();
+    const bool captureOnly = m_CaptureOnly->isChecked();
+    m_ReplacePattern->setEnabled(!captureOnly && !m_Busy);
+    m_Recursive->setEnabled(!captureOnly && !m_Busy);
+    m_VariableExpansion->setEnabled(!captureOnly && !m_Busy);
+    if (captureOnly) {
+        m_Recursive->setChecked(false);
+        m_VariableExpansion->setChecked(false);
+    }
+    const bool recursive = !captureOnly && m_Recursive->isChecked();
     m_MaxIterations->setEnabled(recursive);
     m_AllowEmpty->setEnabled(recursive);
     if (!recursive) {
@@ -703,7 +720,9 @@ void RegexWorkbenchDialog::SaveCurrentRule()
     rule.recursive = m_Recursive->isChecked();
     rule.maxIterations = m_MaxIterations->value();
     rule.allowEmpty = m_AllowEmpty->isChecked();
-    rule.variableExpansionEnabled = m_VariableExpansion->isChecked();
+    rule.captureOnly = m_CaptureOnly->isChecked();
+    rule.variableExpansionEnabled = !rule.captureOnly &&
+                                    m_VariableExpansion->isChecked();
     rule.autoIngestNamedCaptures = m_AutoIngest->isChecked();
     rule.captureToVar = CaptureNames(m_CaptureNames->text());
     rule.enabled = m_RuleEnabled->isChecked();
@@ -724,6 +743,7 @@ void RegexWorkbenchDialog::LoadCurrentRule()
     m_ReplacePattern->setEnabled(available);
     m_Recursive->setEnabled(available);
     m_AllowEmpty->setEnabled(available);
+    m_CaptureOnly->setEnabled(available);
     m_VariableExpansion->setEnabled(available);
     m_AutoIngest->setEnabled(available);
     m_CaptureNames->setEnabled(available);
@@ -742,6 +762,8 @@ void RegexWorkbenchDialog::LoadCurrentRule()
     }
     const RegexWorkbenchRule& rule = m_Recipe.rules.at(m_CurrentRuleRow);
     const QSignalBlocker enabledBlocker(m_RuleEnabled);
+    const QSignalBlocker captureOnlyBlocker(m_CaptureOnly);
+    const QSignalBlocker recursiveBlocker(m_Recursive);
     m_RuleEnabled->setChecked(rule.enabled);
     m_RuleName->setText(rule.name);
     m_SecondaryMode->setCurrentIndex(FindData(
@@ -749,6 +771,7 @@ void RegexWorkbenchDialog::LoadCurrentRule()
     m_SecondaryPattern->setPlainText(rule.secondaryPattern);
     m_FindPattern->setPlainText(rule.find);
     m_ReplacePattern->setPlainText(rule.replace);
+    m_CaptureOnly->setChecked(rule.captureOnly);
     m_Recursive->setChecked(rule.recursive);
     m_MaxIterations->setValue(rule.maxIterations);
     m_AllowEmpty->setChecked(rule.allowEmpty);
@@ -823,8 +846,9 @@ void RegexWorkbenchDialog::StartRun(RunMode mode)
     if (mode == RunMode::Apply &&
         QMessageBox::question(
             this, tr("Advanced Regex Workbench"),
-            tr("Apply this recipe to %1 text resource(s)? A fresh snapshot and "
-               "recovery checkpoint will be created before any document text is written.")
+            tr("Apply this recipe to %1 text resource(s)? A fresh snapshot will be "
+               "created; if text changes are produced, a recovery checkpoint will be "
+               "created before they are written.")
                 .arg(paths.size()),
             QMessageBox::Apply | QMessageBox::Cancel,
             QMessageBox::Cancel) != QMessageBox::Apply) {
@@ -906,7 +930,9 @@ void RegexWorkbenchDialog::RunFinished()
     }
 
     if (completedMode == RunMode::Apply) {
-        SetStatus(tr("Creating the recovery checkpoint and committing staged changes..."));
+        SetStatus(m_LastResult.report.changedResourceCount > 0
+                      ? tr("Creating the recovery checkpoint and committing staged changes...")
+                      : tr("Publishing captured variables without changing document text..."));
         const SearchBatch::Result commit = RegexWorkbenchBatchCommitter::Commit(
             m_MainWindow, m_Targets.resources, m_RunSnapshot, m_LastResult,
             m_Store);
@@ -917,18 +943,27 @@ void RegexWorkbenchDialog::RunFinished()
         }
         PopulateReport(m_LastResult, true);
         PopulateVariables(m_Store.snapshot());
-        SetStatus(tr("Applied %1 replacement(s) to %2 resource(s). Each file can "
-                     "be undone separately; use the recovery checkpoint to restore "
-                     "the entire batch.")
-                      .arg(m_LastResult.report.totalReplacements)
-                      .arg(m_LastResult.report.changedResourceCount));
+        if (m_LastResult.report.changedResourceCount == 0) {
+            SetStatus(tr("Apply complete: %1 match(es), %2 replacement(s); no "
+                         "document text was changed.")
+                          .arg(m_LastResult.report.totalMatches)
+                          .arg(m_LastResult.report.totalReplacements));
+        } else {
+            SetStatus(tr("Applied %1 replacement(s) from %2 match(es) to %3 resource(s). "
+                         "Each file can be undone separately; use the recovery checkpoint "
+                         "to restore the entire batch.")
+                          .arg(m_LastResult.report.totalReplacements)
+                          .arg(m_LastResult.report.totalMatches)
+                          .arg(m_LastResult.report.changedResourceCount));
+        }
         return;
     }
 
     PopulateReport(m_LastResult, false);
     PopulateVariables(m_LastResult.finalStore);
-    SetStatus(tr("Dry-Run complete: %1 replacement(s), %2 changed resource(s). "
+    SetStatus(tr("Dry-Run complete: %1 match(es), %2 replacement(s), %3 changed resource(s). "
                  "The book and session variables were not modified.")
+                  .arg(m_LastResult.report.totalMatches)
                   .arg(m_LastResult.report.totalReplacements)
                   .arg(m_LastResult.report.changedResourceCount));
 }
@@ -956,11 +991,13 @@ void RegexWorkbenchDialog::SetBusy(bool busy)
         !busy && static_cast<SecondaryMode>(m_SecondaryMode->currentData().toInt()) !=
                      SecondaryMode::None);
     m_FindPattern->setEnabled(!busy);
-    m_ReplacePattern->setEnabled(!busy);
-    m_Recursive->setEnabled(!busy);
-    m_MaxIterations->setEnabled(!busy && m_Recursive->isChecked());
-    m_AllowEmpty->setEnabled(!busy && m_Recursive->isChecked());
-    m_VariableExpansion->setEnabled(!busy);
+    m_CaptureOnly->setEnabled(!busy);
+    const bool captureOnly = m_CaptureOnly->isChecked();
+    m_ReplacePattern->setEnabled(!busy && !captureOnly);
+    m_Recursive->setEnabled(!busy && !captureOnly);
+    m_MaxIterations->setEnabled(!busy && !captureOnly && m_Recursive->isChecked());
+    m_AllowEmpty->setEnabled(!busy && !captureOnly && m_Recursive->isChecked());
+    m_VariableExpansion->setEnabled(!busy && !captureOnly);
     m_AutoIngest->setEnabled(!busy);
     m_CaptureNames->setEnabled(!busy);
     m_TargetScope->setEnabled(!busy);

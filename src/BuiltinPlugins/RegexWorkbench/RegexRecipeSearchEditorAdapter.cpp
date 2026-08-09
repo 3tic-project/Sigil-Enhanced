@@ -102,6 +102,7 @@ RegexRecipeImportResult RegexRecipeSearchEditorAdapter::Import(
     // All advanced behavior remains opt-in for imported legacy templates.
     result.rule.recursive = false;
     result.rule.allowEmpty = false;
+    result.rule.captureOnly = false;
     result.rule.variableExpansionEnabled = false;
     result.rule.autoIngestNamedCaptures = false;
     result.rule.captureToVar.clear();

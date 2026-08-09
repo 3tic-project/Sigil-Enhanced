@@ -126,6 +126,7 @@ void TestDefaultsAndStrictSchema()
                 QJsonDocument(MinimalRoot()).toJson(), parsed, &error) &&
                 parsed.rules.first().secondaryMode == SecondaryMode::None &&
                 parsed.rules.first().maxIterations == 32 &&
+                !parsed.rules.first().captureOnly &&
                 !parsed.rules.first().variableExpansionEnabled &&
                 parsed.rules.first().enabled,
             "omitted optional rule fields must use safe defaults");
@@ -164,6 +165,36 @@ void TestSemanticAndResourceLimits()
     function.rules[0].replace = QStringLiteral(" \\F<danger> ");
     Require(!RegexRecipeStore::Validate(function),
             "Python function replacements must not enter recipes");
+
+    RegexRecipe captureOnly;
+    captureOnly.name = QStringLiteral("capture only");
+    RegexWorkbenchRule capture;
+    capture.id = QStringLiteral("capture");
+    capture.name = QStringLiteral("capture chapter");
+    capture.find = QStringLiteral("(?P<chapter>[^<]+)");
+    capture.replace = QStringLiteral("\\F<ignored>");
+    capture.captureOnly = true;
+    capture.captureToVar = {QStringLiteral("chapter")};
+    captureOnly.rules.append(capture);
+    QString captureError;
+    const QByteArray captureJson = RegexRecipeStore::Serialize(
+        captureOnly, &captureError);
+    RegexRecipe loadedCapture;
+    Require(!captureJson.isEmpty() &&
+                RegexRecipeStore::Deserialize(captureJson, loadedCapture,
+                                              &captureError) &&
+                loadedCapture.rules.first().captureOnly,
+            "capture-only recipes must round-trip through schema version 1");
+
+    RegexRecipe noCaptureTarget = captureOnly;
+    noCaptureTarget.rules[0].captureToVar.clear();
+    Require(!RegexRecipeStore::Validate(noCaptureTarget),
+            "capture-only recipes must configure named-capture ingestion");
+
+    RegexRecipe recursiveCapture = captureOnly;
+    recursiveCapture.rules[0].recursive = true;
+    Require(!RegexRecipeStore::Validate(recursiveCapture),
+            "capture-only recipes must reject recursive replacement");
 
     RegexRecipeLimits tiny;
     tiny.maxFileBytes = 32;
@@ -304,6 +335,7 @@ void TestBookSampleRecipesUseProductionSchema()
                 directory + QStringLiteral("/03-python-named-capture-variable.json"),
                 variables, &error) && variables.rules.size() == 2 &&
                 variables.rules.first().find.contains(QStringLiteral("(?P<author>")) &&
+                variables.rules.first().captureOnly &&
                 variables.rules.first().captureToVar ==
                     QStringList{QStringLiteral("author")} &&
                 variables.rules.at(1).variableExpansionEnabled &&
