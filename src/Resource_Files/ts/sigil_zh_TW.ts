@@ -26259,6 +26259,9 @@ Continue using the requested filename?</source>
 <message><source>Maximum iterations:</source><translation>最大迭代次數：</translation></message>
 <message><source>Name</source><translation>名稱</translation></message>
 <message><source>Name:</source><translation>名稱：</translation></message>
+<message><source>Patterns</source><translation>符合運算式</translation></message>
+<message><source>Options</source><translation>規則選項</translation></message>
+<message><source>Named captures</source><translation>命名擷取</translation></message>
 <message><source>New</source><translation>新增</translation></message>
 <message><source>New recipe created.</source><translation>已建立新方案。</translation></message>
 <message><source>No saved search templates are available.</source><translation>沒有可用的已儲存搜尋範本。</translation></message>

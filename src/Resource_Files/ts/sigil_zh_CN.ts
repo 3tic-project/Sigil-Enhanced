@@ -26276,6 +26276,9 @@ Continue using the requested filename?</source>
 <message><source>Maximum iterations:</source><translation>最大迭代次数：</translation></message>
 <message><source>Name</source><translation>名称</translation></message>
 <message><source>Name:</source><translation>名称：</translation></message>
+<message><source>Patterns</source><translation>匹配表达式</translation></message>
+<message><source>Options</source><translation>规则选项</translation></message>
+<message><source>Named captures</source><translation>命名捕获</translation></message>
 <message><source>New</source><translation>新建</translation></message>
 <message><source>New recipe created.</source><translation>已新建方案。</translation></message>
 <message><source>No saved search templates are available.</source><translation>没有可用的已保存搜索模板。</translation></message>

@@ -19,8 +19,10 @@
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QFutureWatcher>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
@@ -199,6 +201,8 @@ void RegexWorkbenchDialog::BuildUi()
     m_OpenButton = new QPushButton(tr("Open Recipe..."), this);
     m_SaveButton = new QPushButton(tr("Save Recipe..."), this);
     m_ImportButton = new QPushButton(tr("Import Search Template..."), this);
+    m_ImportButton->setObjectName(QStringLiteral("regexImportSearchTemplate"));
+    m_ImportButton->setVisible(false);
     m_RecipeName = new QLineEdit(this);
     m_RecipeName->setObjectName(QStringLiteral("regexRecipeName"));
     fileBar->addWidget(m_NewButton);
@@ -213,6 +217,10 @@ void RegexWorkbenchDialog::BuildUi()
     m_EditingPanel = new QWidget(this);
     auto* editingLayout = new QHBoxLayout(m_EditingPanel);
     editingLayout->setContentsMargins(0, 0, 0, 0);
+    auto* editingSplitter = new QSplitter(Qt::Horizontal, m_EditingPanel);
+    editingSplitter->setObjectName(QStringLiteral("regexEditingSplitter"));
+    editingSplitter->setChildrenCollapsible(false);
+    editingLayout->addWidget(editingSplitter);
 
     auto* rulesBox = new QGroupBox(tr("Rules"), m_EditingPanel);
     auto* rulesLayout = new QVBoxLayout(rulesBox);
@@ -228,16 +236,26 @@ void RegexWorkbenchDialog::BuildUi()
     m_DownRuleButton = new QPushButton(tr("Down"), rulesBox);
     ruleButtons->addWidget(m_AddRuleButton, 0, 0);
     ruleButtons->addWidget(m_DuplicateRuleButton, 0, 1);
-    ruleButtons->addWidget(m_RemoveRuleButton, 1, 0);
-    ruleButtons->addWidget(m_UpRuleButton, 1, 1);
+    ruleButtons->addWidget(m_RemoveRuleButton, 1, 0, 1, 2);
+    ruleButtons->addWidget(m_UpRuleButton, 2, 0);
     ruleButtons->addWidget(m_DownRuleButton, 2, 1);
     rulesLayout->addLayout(ruleButtons);
 
     auto* editorBox = new QGroupBox(tr("Rule editor"), m_EditingPanel);
-    auto* editor = new QFormLayout(editorBox);
+    auto* editor = new QVBoxLayout(editorBox);
     m_RuleEnabled = new QCheckBox(tr("Enabled"), editorBox);
     m_RuleName = new QLineEdit(editorBox);
     m_RuleName->setObjectName(QStringLiteral("regexRuleName"));
+
+    auto* identity = new QGridLayout;
+    identity->addWidget(new QLabel(tr("Name:"), editorBox), 0, 0);
+    identity->addWidget(m_RuleName, 0, 1);
+    identity->addWidget(m_RuleEnabled, 0, 2);
+    identity->setColumnStretch(1, 1);
+    editor->addLayout(identity);
+
+    auto* patternsBox = new QGroupBox(tr("Patterns"), editorBox);
+    auto* patterns = new QGridLayout(patternsBox);
     m_SecondaryMode = new QComboBox(editorBox);
     m_SecondaryMode->addItem(tr("None"), static_cast<int>(SecondaryMode::None));
     m_SecondaryMode->addItem(tr("PreSearch range"),
@@ -248,13 +266,31 @@ void RegexWorkbenchDialog::BuildUi()
                              static_cast<int>(SecondaryMode::FilterReject));
     m_SecondaryPattern = new QPlainTextEdit(editorBox);
     m_SecondaryPattern->setObjectName(QStringLiteral("regexSecondaryPattern"));
-    m_SecondaryPattern->setMaximumHeight(74);
+    m_SecondaryPattern->setLineWrapMode(QPlainTextEdit::NoWrap);
+    m_SecondaryPattern->setMaximumHeight(64);
     m_FindPattern = new QPlainTextEdit(editorBox);
     m_FindPattern->setObjectName(QStringLiteral("regexFindPattern"));
-    m_FindPattern->setMaximumHeight(92);
+    m_FindPattern->setLineWrapMode(QPlainTextEdit::NoWrap);
+    m_FindPattern->setMaximumHeight(76);
     m_ReplacePattern = new QPlainTextEdit(editorBox);
     m_ReplacePattern->setObjectName(QStringLiteral("regexReplacePattern"));
-    m_ReplacePattern->setMaximumHeight(92);
+    m_ReplacePattern->setLineWrapMode(QPlainTextEdit::NoWrap);
+    m_ReplacePattern->setMaximumHeight(76);
+
+    patterns->addWidget(new QLabel(tr("Secondary mode:"), patternsBox), 0, 0);
+    patterns->addWidget(m_SecondaryMode, 0, 1);
+    patterns->addWidget(new QLabel(tr("Secondary regex:"), patternsBox), 1, 0, 1, 2);
+    patterns->addWidget(m_SecondaryPattern, 2, 0, 1, 2);
+    patterns->addWidget(new QLabel(tr("Find regex:"), patternsBox), 3, 0);
+    patterns->addWidget(new QLabel(tr("Replacement:"), patternsBox), 3, 1);
+    patterns->addWidget(m_FindPattern, 4, 0);
+    patterns->addWidget(m_ReplacePattern, 4, 1);
+    patterns->setColumnStretch(0, 1);
+    patterns->setColumnStretch(1, 1);
+    editor->addWidget(patternsBox, 1);
+
+    auto* optionsBox = new QGroupBox(tr("Options"), editorBox);
+    auto* options = new QGridLayout(optionsBox);
     m_Recursive = new QCheckBox(tr("Repeat until no matches remain"), editorBox);
     m_MaxIterations = new QSpinBox(editorBox);
     m_MaxIterations->setRange(1, 10000);
@@ -265,22 +301,25 @@ void RegexWorkbenchDialog::BuildUi()
     m_CaptureOnly->setToolTip(
         tr("Enumerate accepted matches and store named captures without changing text."));
     m_VariableExpansion = new QCheckBox(tr("Expand ${var:name} in replacement"), editorBox);
+    options->addWidget(m_CaptureOnly, 0, 0, 1, 3);
+    options->addWidget(m_Recursive, 1, 0);
+    options->addWidget(new QLabel(tr("Maximum iterations:"), optionsBox), 1, 1);
+    options->addWidget(m_MaxIterations, 1, 2);
+    options->addWidget(m_AllowEmpty, 2, 0, 1, 3);
+    options->addWidget(m_VariableExpansion, 3, 0, 1, 3);
+    options->setColumnStretch(0, 1);
+    editor->addWidget(optionsBox);
+
+    auto* capturesBox = new QGroupBox(tr("Named captures"), editorBox);
+    auto* captures = new QGridLayout(capturesBox);
     m_AutoIngest = new QCheckBox(tr("Store all named captures"), editorBox);
     m_CaptureNames = new QLineEdit(editorBox);
     m_CaptureNames->setPlaceholderText(tr("name1, name2 (optional allowlist)"));
-    editor->addRow(QString(), m_RuleEnabled);
-    editor->addRow(tr("Name:"), m_RuleName);
-    editor->addRow(tr("Secondary mode:"), m_SecondaryMode);
-    editor->addRow(tr("Secondary regex:"), m_SecondaryPattern);
-    editor->addRow(tr("Find regex:"), m_FindPattern);
-    editor->addRow(tr("Replacement:"), m_ReplacePattern);
-    editor->addRow(QString(), m_CaptureOnly);
-    editor->addRow(QString(), m_Recursive);
-    editor->addRow(tr("Maximum iterations:"), m_MaxIterations);
-    editor->addRow(QString(), m_AllowEmpty);
-    editor->addRow(QString(), m_VariableExpansion);
-    editor->addRow(QString(), m_AutoIngest);
-    editor->addRow(tr("Capture variables:"), m_CaptureNames);
+    captures->addWidget(m_AutoIngest, 0, 0, 1, 2);
+    captures->addWidget(new QLabel(tr("Capture variables:"), capturesBox), 1, 0);
+    captures->addWidget(m_CaptureNames, 1, 1);
+    captures->setColumnStretch(1, 1);
+    editor->addWidget(capturesBox);
 
     auto* runBox = new QGroupBox(tr("Run"), m_EditingPanel);
     auto* runLayout = new QFormLayout(runBox);
@@ -325,14 +364,20 @@ void RegexWorkbenchDialog::BuildUi()
     runLayout->addRow(tr("Files:"), m_TargetScope);
     runLayout->addRow(tr("Variable scope:"), m_VariableScope);
     runLayout->addRow(tr("Write policy:"), m_WritePolicy);
-    runLayout->addRow(m_DryRunButton);
-    runLayout->addRow(m_ApplyButton);
+    auto* runButtons = new QHBoxLayout;
+    runButtons->addWidget(m_DryRunButton);
+    runButtons->addWidget(m_ApplyButton);
+    runLayout->addRow(runButtons);
     runLayout->addRow(m_CancelButton);
     runLayout->addRow(m_ClearVariablesButton);
 
-    editingLayout->addWidget(rulesBox, 2);
-    editingLayout->addWidget(editorBox, 5);
-    editingLayout->addWidget(runBox, 2);
+    editingSplitter->addWidget(rulesBox);
+    editingSplitter->addWidget(editorBox);
+    editingSplitter->addWidget(runBox);
+    editingSplitter->setStretchFactor(0, 2);
+    editingSplitter->setStretchFactor(1, 6);
+    editingSplitter->setStretchFactor(2, 2);
+    editingSplitter->setSizes({230, 720, 250});
     root->addWidget(m_EditingPanel, 3);
 
     auto* tabs = new QTabWidget(this);

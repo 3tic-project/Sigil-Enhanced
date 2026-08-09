@@ -26274,6 +26274,9 @@ Continue using the requested filename?</source>
 <message><source>Maximum iterations:</source><translation>最大反復回数：</translation></message>
 <message><source>Name</source><translation>名前</translation></message>
 <message><source>Name:</source><translation>名前：</translation></message>
+<message><source>Patterns</source><translation>パターン</translation></message>
+<message><source>Options</source><translation>ルールオプション</translation></message>
+<message><source>Named captures</source><translation>名前付きキャプチャ</translation></message>
 <message><source>New</source><translation>新規</translation></message>
 <message><source>New recipe created.</source><translation>新しいレシピを作成しました。</translation></message>
 <message><source>No saved search templates are available.</source><translation>利用できる保存済み検索テンプレートがありません。</translation></message>

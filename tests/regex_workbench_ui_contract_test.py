@@ -19,6 +19,9 @@ main_window_ext = (repo / "src/MainUI/MainWindowExt.cpp").read_text(encoding="ut
 main_window_header = (repo / "src/MainUI/MainWindow.h").read_text(encoding="utf-8")
 dialog = (repo / "src/Dialogs/RegexWorkbenchDialog.cpp").read_text(encoding="utf-8")
 automate_editor = (repo / "src/Dialogs/AutomateEditor.cpp").read_text(encoding="utf-8")
+search_editor_model = (
+    repo / "src/MiscEditors/SearchEditorModelPlus.cpp"
+).read_text(encoding="utf-8")
 user_guide = (repo / "docs/AdvancedRegexWorkbench.md").read_text(encoding="utf-8")
 
 enhancement_menu = main_ui.find(".//widget[@name='menuEnhancement']")
@@ -60,12 +63,30 @@ for object_name in (
     "regexFindPattern",
     "regexReplacePattern",
     "regexCaptureOnly",
+    "regexImportSearchTemplate",
+    "regexEditingSplitter",
     "regexDryRunButton",
     "regexApplyButton",
     "regexReportTable",
 ):
     require(object_name in dialog, f"missing stable UI object name: {object_name}")
 require("QtConcurrent::run" in dialog, "staging must execute outside the GUI thread")
+require(
+    "m_ImportButton->setVisible(false);" in dialog,
+    "Search Template import must remain hidden while compatibility is under review",
+)
+require(
+    "CorrectLegacyJapaneseQuoteSpacing(" in search_editor_model,
+    "persisted legacy Japanese quote templates must be migrated when loaded",
+)
+require(
+    "new QSplitter(Qt::Horizontal" in dialog
+    and "editingSplitter->setStretchFactor(1, 6);" in dialog
+    and "new QGroupBox(tr(\"Patterns\")" in dialog
+    and "new QGroupBox(tr(\"Options\")" in dialog
+    and "new QGroupBox(tr(\"Named captures\")" in dialog,
+    "rule editing controls must use the resizable grouped layout",
+)
 require("processEvents" not in dialog, "dialog must not use nested processEvents loops")
 require("WA_DeleteOnClose" not in dialog, "stack-owned modal dialog must not self-delete")
 require(

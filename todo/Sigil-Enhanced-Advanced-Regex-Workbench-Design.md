@@ -5,7 +5,7 @@
 | **文档标题** | Advanced Regex Workbench（正则增强工作台） |
 | **作者** | Sigil-Enhanced 架构组（待填） |
 | **日期** | 2026-08-09 |
-| **状态** | Implemented（修订 8：增加仅捕获规则、独立匹配计数与无文本提交审计） |
+| **状态** | Implemented（修订 9：规则编辑区重排、模板导入暂时隐藏、日文引号模板兼容修复） |
 | **适用仓库** | `sigil-modified` / Sigil-Enhanced |
 | **关联计划** | `todo/Sigil-Enhanced-Development-Plan.md` §4 `BookEditSession`、§5 `SearchBatchRunner` |
 | **约束文档** | `ENHANCEMENT.md` |
@@ -760,6 +760,7 @@ struct DryRunReport {
 | **Checkpoint 文案** | 写前状态栏提示 Creating checkpoint…；失败则 **不写回**，QMessageBox 与中文转换/字体子集化同级措辞。 |
 | **Undo 提示** | Apply 成功后注明：每个文件可分别 Undo；整批跨文件恢复请用本次 Checkpoint。 |
 | **Feature flag** | `SettingsStore` 键 `enhanced/regex_workbench_enabled`（默认 true）；PR-06 接线：false 时隐藏菜单 action。 |
+| **搜索模板导入** | 转换器与测试保留，但 UI 按钮暂时隐藏；预览型模板的全量应用兼容审计完成后再开放。 |
 | **换书** | 若将来改为 modeless 才需监听；模态下换书需先关对话框。Session 变量在每次 `OpenRegexWorkbench` 可选择恢复上次 Session（V1：每次打开新 store，Session 仅指单次对话框生命周期内多次 Run）。 |
 
 **Session 澄清（V1）**：`VariableScope::Session` = **同一次对话框 `exec()` 期间**多次 Dry-Run/Apply 之间保留；关闭对话框即销毁。换 Book 不会在模态对话框仍打开时发生（主窗口被模态阻塞）。
@@ -775,9 +776,9 @@ struct DryRunReport {
 
 ```text
 +------------------------------------------------------------------+
-| 文件: 新建 | 打开 Recipe | 保存 | 导入搜索模板 | 导出            |
+| 文件: 新建 | 打开 Recipe | 保存 | Recipe 名称                       |
 +------------------+------------------------+----------------------+
-| 规则列表         | 规则编辑               | 运行控制             |
+| 规则列表         | 规则编辑（可拖动分栏） | 运行控制             |
 | (可排序/启用)    | 名称                   | 作用域: 当前/选中/   |
 |                  | 二级模式: PreSearch ▼  |   全部HTML/CSS/...   |
 |                  | 二级正则: ...          | 变量作用域: Batch ▼  |
@@ -802,7 +803,7 @@ struct DryRunReport {
 | --- | --- |
 | `DryRunReplace` | 参考 context 截取；工作台用自有 `DryRunReport` 模型 |
 | `ReplacementChooser` | V1 不做部分勾选应用 |
-| `SearchEditorPlus` | 导入源；控件码 **`PS`** |
+| `SearchEditorPlus` | 兼容转换源；控件码 **`PS`**；当前 UI 入口隐藏 |
 | `ChineseConversionDialog` / `FontSubsetDialog` | 模态、Checkpoint、失败不写 的范式来源 |
 
 ### 8. Recipe 持久化
@@ -970,7 +971,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 
 ---
 
-## Implementation Checkpoint（修订 8）
+## Implementation Checkpoint（修订 9）
 
 ### 已落地范围
 
@@ -984,7 +985,8 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | PR-06 | 完成 | `b2e2eb277`、`a245a6d52`、`255cc8ea2`、`1257f5c9d`、`7132715fe` | GUI snapshot/commit 边界、staged XML validator、跨资源 prepared rule 复用、内存 working-text map、commit 成功后才发布变量 store |
 | PR-07 | 完成 | `df85fb909`、`d8ef27fa8`、`36c70b1c6`、`cb13fde9c`、`616cec394`、`f7d9e637d` | 逐匹配 trace 与最终坐标映射；模态工作台、规则编辑、scope、Dry Run/Apply/Cancel、进度、变量检查器、结果导航、设置持久化；Enhancement 菜单与默认开启 feature flag；三语目录 |
 | PR-08 | 完成 | `026328b23`、`151380a76`，以及修订 7 文档提交 | Recipe 文件名/显示名/绝对路径安全解析；`RunRegexWorkbenchRecipe` Automate；UI/Automate 接线契约测试与用户文档 |
-| 修订 8 | 完成 | 本次提交 | `captureOnly` schema/UI/执行语义；匹配与替换独立计数；无文本 Apply 的快照冲突检查；三语翻译、真实 EPUB 夹具及回归测试 |
+| 修订 8 | 完成 | `1e6ddae08` | `captureOnly` schema/UI/执行语义；匹配与替换独立计数；无文本 Apply 的快照冲突检查；三语翻译、真实 EPUB 夹具及回归测试 |
+| 修订 9 | 完成 | 本次提交 | 隐藏模板导入按钮；规则编辑区改为可拖动三栏及分组布局；修正旧版“日文引号纠正”把 XML 属性空格当作引号的问题 |
 
 ### 审计结论
 
@@ -999,13 +1001,14 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 9. **Automate 与 UI 共享事务链路。** `RunRegexWorkbenchRecipe` 按默认目录文件名、Recipe 显示名或绝对路径解析；显示名重名 fail closed；固定作用于全部文本资源，并复用 snapshot→stage→validate→commit，不打开交互式对话框。
 10. **UI schema 状态一致。** Secondary 切回 `None` 时不会保存隐藏的旧 pattern；零长度匹配只在递归开启时可选；上次 Recipe 路径与当前未保存 Recipe 路径分离持久化。
 11. **仅捕获发布保持快照一致。** 无文本变化时不创建空 Checkpoint；但发布变量前仍复核全部目标资源与运行快照，冲突时不发布基于旧正文的变量。
+12. **预览型模板继续 fail closed。** 模板导入入口暂时隐藏；旧版“日文引号纠正”仅在名称、Find、Replacement 三者均精确命中历史值时迁移，去除 `[「 」]` 和 `「 \\1」` 中的误置空格，避免把 `<span class>` 的属性空格替换成引号并产生无效 XML；用户修改过的同名模板不动。
 
 ### 验证证据（2026-08-09）
 
 - 核心/批处理测试覆盖安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序、变量执行入口、Recipe/命名解析、跨资源 batch、逐匹配报告、进度/取消和 staged XML validator。
 - `Sigil` 应用目标：在 Qt 6.7.3、Python 3.11 的 clean CMake tree 中完整编译、链接及 Python bundle verification 通过。
 - `regex_workbench_ui_contract` 锁定 Enhancement action、默认 feature flag、模态生命周期、稳定对象名、worker/Cancel、Apply 独立 restage、确认/checkpoint 顺序、坐标提交门控、Recipe 路径和 Automate 链路。
-- `zh_CN`、`zh_TW`、`ja` 覆盖门禁与 `.qm` 生成均通过：5147 条当前消息全部 finished，0 unfinished。
+- `zh_CN`、`zh_TW`、`ja` 覆盖门禁与 `.qm` 生成均通过：5151 条当前消息全部 finished，0 unfinished。
 - Debug 默认构建完成；全量 CTest：55/55 通过，0 失败，总耗时约 3 秒。
 - `git diff --check`：通过。
 
