@@ -18,6 +18,7 @@
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFormLayout>
+#include <QFont>
 #include <QFutureWatcher>
 #include <QGridLayout>
 #include <QGroupBox>
@@ -376,11 +377,17 @@ void RegexWorkbenchDialog::BuildUi()
     runLayout->addLayout(runButtons);
     runLayout->addWidget(m_CancelButton);
 
-    auto* variablesBox = new QGroupBox(tr("Variables"), runBox);
+    auto* variablesBox = new QGroupBox(runBox);
     variablesBox->setObjectName(QStringLiteral("regexVariablesPanel"));
     auto* variablesLayout = new QVBoxLayout(variablesBox);
     m_ClearVariablesButton = new QPushButton(tr("Clear Variables"), variablesBox);
     auto* variableActions = new QHBoxLayout;
+    auto* variableTitle = new QLabel(tr("Variables"), variablesBox);
+    variableTitle->setObjectName(QStringLiteral("regexVariablesTitle"));
+    QFont variableTitleFont = variableTitle->font();
+    variableTitleFont.setBold(true);
+    variableTitle->setFont(variableTitleFont);
+    variableActions->addWidget(variableTitle);
     variableActions->addStretch();
     variableActions->addWidget(m_ClearVariablesButton);
     variablesLayout->addLayout(variableActions);

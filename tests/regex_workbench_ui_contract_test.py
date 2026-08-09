@@ -69,6 +69,7 @@ for object_name in (
     "regexApplyButton",
     "regexReportTable",
     "regexVariablesPanel",
+    "regexVariablesTitle",
     "regexVariableTable",
 ):
     require(object_name in dialog, f"missing stable UI object name: {object_name}")
@@ -88,7 +89,11 @@ require(
     and "new QGroupBox(tr(\"Patterns\")" in dialog
     and "new QGroupBox(tr(\"Options\")" in dialog
     and "new QGroupBox(tr(\"Named captures\")" in dialog
-    and "new QGroupBox(tr(\"Variables\"), runBox)" in dialog
+    and "new QGroupBox(runBox)" in dialog
+    and "new QLabel(tr(\"Variables\"), variablesBox)" in dialog
+    and "variableActions->addWidget(variableTitle);" in dialog
+    and "variableActions->addStretch();" in dialog
+    and "variableActions->addWidget(m_ClearVariablesButton);" in dialog
     and "new QTableWidget(variablesBox)" in dialog,
     "rule editing controls must use the resizable grouped layout",
 )
