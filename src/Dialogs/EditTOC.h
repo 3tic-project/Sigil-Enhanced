@@ -1,6 +1,6 @@
 /************************************************************************
 **
-**  Copyright (C) 2016-2024 Kevin B. Hendricks, Stratford, Ontario, Canada
+**  Copyright (C) 2016-2026 Kevin B. Hendricks, Stratford, Ontario, Canada
 **  Copyright (C) 2013      Dave Heiland
 **
 **  This file is part of Sigil.
@@ -76,6 +76,7 @@ private slots:
 private:
     void AddEntry(bool above);
     QModelIndex CheckSelection(int row);
+    QModelIndexList CheckSelections();
 
     TOCModel::TOCEntry ConvertTableToEntries();
     TOCModel::TOCEntry ConvertItemToEntry(QStandardItem *item);
@@ -84,6 +85,7 @@ private:
     void AddEntryToParentItem(const TOCModel::TOCEntry &entry, QStandardItem *parent, int level);
 
     void ExpandChildren(QStandardItem *item);
+    void ReselectAndExpandItems(const QList<QStandardItem*> &items);
 
     void CreateContextMenuActions();
     void SetupContextMenu(const QPoint &point);
