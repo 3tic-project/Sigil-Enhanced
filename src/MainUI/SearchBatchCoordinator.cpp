@@ -8,6 +8,7 @@
 
 #include "MainUI/SearchBatchCoordinator.h"
 
+#include <QCoreApplication>
 #include <QReadLocker>
 #include <QSet>
 #include <QThread>
@@ -58,13 +59,16 @@ bool SearchBatchCoordinator::CaptureSnapshot(
     snapshot = Snapshot();
     if (!main_window || !main_window->GetCurrentBook()) {
         if (error) {
-            *error = QStringLiteral("No book is available for the search batch.");
+            *error = QCoreApplication::translate(
+                "RegexWorkbenchCore", "No book is available for the search batch.");
         }
         return false;
     }
     if (QThread::currentThread() != main_window->thread()) {
         if (error) {
-            *error = QStringLiteral("Search batch snapshots must be captured on the GUI thread.");
+            *error = QCoreApplication::translate(
+                "RegexWorkbenchCore",
+                "Search batch snapshots must be captured on the GUI thread.");
         }
         return false;
     }
@@ -75,8 +79,12 @@ bool SearchBatchCoordinator::CaptureSnapshot(
         if (path.isEmpty() || seenPaths.contains(path)) {
             if (error) {
                 *error = path.isEmpty()
-                             ? QStringLiteral("Search batch contains an empty target path.")
-                             : QStringLiteral("Search batch contains a duplicate target path: %1")
+                             ? QCoreApplication::translate(
+                                   "RegexWorkbenchCore",
+                                   "Search batch contains an empty target path.")
+                             : QCoreApplication::translate(
+                                   "RegexWorkbenchCore",
+                                   "Search batch contains a duplicate target path: %1")
                                    .arg(path);
             }
             return false;
@@ -85,7 +93,9 @@ bool SearchBatchCoordinator::CaptureSnapshot(
         TextResource* resource = resources.value(path, nullptr);
         if (!resource || resource->GetRelativePath() != path) {
             if (error) {
-                *error = QStringLiteral("Search batch target is no longer available: %1")
+                *error = QCoreApplication::translate(
+                             "RegexWorkbenchCore",
+                             "Search batch target is no longer available: %1")
                              .arg(path);
             }
             return false;
@@ -111,12 +121,14 @@ SearchBatch::Result SearchBatchCoordinator::CommitStagedResult(
     }
     if (!main_window || !main_window->GetCurrentBook()) {
         result.success = false;
-        result.error = QStringLiteral("No book is available for the search batch commit.");
+        result.error = QCoreApplication::translate(
+            "RegexWorkbenchCore", "No book is available for the search batch commit.");
         return result;
     }
     if (QThread::currentThread() != main_window->thread()) {
         result.success = false;
-        result.error = QStringLiteral("Search batch commits must run on the GUI thread.");
+        result.error = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Search batch commits must run on the GUI thread.");
         return result;
     }
     for (auto changed = result.changedTexts.constBegin();
@@ -124,7 +136,9 @@ SearchBatch::Result SearchBatchCoordinator::CommitStagedResult(
         if (!snapshot.originalTexts.contains(changed.key()) ||
             !snapshot.resourcePaths.contains(changed.key())) {
             result.success = false;
-            result.error = QStringLiteral("Staged search result contains an unknown target: %1")
+            result.error = QCoreApplication::translate(
+                               "RegexWorkbenchCore",
+                               "Staged search result contains an unknown target: %1")
                                .arg(changed.key());
             return result;
         }
@@ -133,20 +147,26 @@ SearchBatch::Result SearchBatchCoordinator::CommitStagedResult(
     QString conflictPath;
     if (!ResourcesMatchSnapshot(resources, snapshot, &conflictPath)) {
         result.success = false;
-        result.error = QStringLiteral("Search batch target changed during staging: %1")
+        result.error = QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Search batch target changed during staging: %1")
                            .arg(conflictPath);
         return result;
     }
 
     if (!main_window->CreateRecoveryCheckpoint()) {
         result.success = false;
-        result.error = QStringLiteral("Could not create the recovery checkpoint; no replacements were written.");
+        result.error = QCoreApplication::translate(
+            "RegexWorkbenchCore",
+            "Could not create the recovery checkpoint; no replacements were written.");
         return result;
     }
 
     if (!ResourcesMatchSnapshot(resources, snapshot, &conflictPath)) {
         result.success = false;
-        result.error = QStringLiteral("Search batch target changed while creating the checkpoint: %1")
+        result.error = QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Search batch target changed while creating the checkpoint: %1")
                            .arg(conflictPath);
         return result;
     }
@@ -163,21 +183,30 @@ SearchBatch::Result SearchBatchCoordinator::CommitStagedResult(
         TextResource* resource = resources.value(path, nullptr);
         if (!resource) {
             result.success = false;
-            result.error = QStringLiteral("Saved-search target disappeared before commit: %1").arg(path);
+            result.error = QCoreApplication::translate(
+                               "RegexWorkbenchCore",
+                               "Saved-search target disappeared before commit: %1")
+                               .arg(path);
             break;
         }
         {
             QWriteLocker locker(&resource->GetLock());
             if (resource->GetText() != snapshot.originalTexts.value(path)) {
                 result.success = false;
-                result.error = QStringLiteral("Saved-search target changed before commit: %1").arg(path);
+                result.error = QCoreApplication::translate(
+                                   "RegexWorkbenchCore",
+                                   "Saved-search target changed before commit: %1")
+                                   .arg(path);
                 break;
             }
             appliedPaths.append(path);
             resource->SetTextAsUndoableEdit(result.changedTexts.value(path));
             if (resource->GetText() != result.changedTexts.value(path)) {
                 result.success = false;
-                result.error = QStringLiteral("Saved-search target failed its commit check: %1").arg(path);
+                result.error = QCoreApplication::translate(
+                                   "RegexWorkbenchCore",
+                                   "Saved-search target failed its commit check: %1")
+                                   .arg(path);
                 break;
             }
         }

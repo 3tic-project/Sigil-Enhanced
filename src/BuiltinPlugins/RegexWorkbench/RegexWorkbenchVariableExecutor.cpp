@@ -15,6 +15,7 @@
 
 #include <memory>
 
+#include <QCoreApplication>
 #include <QSet>
 
 #include "BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h"
@@ -78,7 +79,10 @@ bool CapturesAreAvailable(const RegexWorkbenchRule& rule,
     }
     for (const QString& name : rule.captureToVar) {
         if (!available.contains(name)) {
-            error = QStringLiteral("Configured named capture does not exist: %1").arg(name);
+            error = QCoreApplication::translate(
+                        "RegexWorkbenchCore",
+                        "Configured named capture does not exist: %1")
+                        .arg(name);
             return false;
         }
     }
@@ -129,7 +133,9 @@ struct PreparedRegexWorkbenchVariableExecutor::Impl
             return;
         }
         if (IsWholeFunctionReplacement(rule.replace)) {
-            error = QStringLiteral("Whole Python function replacements are not supported in Regex Workbench");
+            error = QCoreApplication::translate(
+                "RegexWorkbenchCore",
+                "Whole Python function replacements are not supported in Regex Workbench");
             return;
         }
         matcher = std::make_unique<SecondaryRegexMatcher>(rule);
@@ -182,7 +188,9 @@ RegexWorkbenchEngineResult PreparedRegexWorkbenchVariableExecutor::Apply(
     const RegexWorkbenchRule& rule = m_impl->rule;
     if (!m_impl->valid) {
         return InvalidResult(text, m_impl->error.isEmpty()
-                                      ? QStringLiteral("Prepared regex rule is invalid")
+                                      ? QCoreApplication::translate(
+                                            "RegexWorkbenchCore",
+                                            "Prepared regex rule is invalid")
                                       : m_impl->error);
     }
     if (!rule.enabled) {
@@ -194,8 +202,10 @@ RegexWorkbenchEngineResult PreparedRegexWorkbenchVariableExecutor::Apply(
     }
     if (options.beforeExpand || options.afterExpand ||
         options.stateSnapshot || options.restoreState) {
-        return InvalidResult(text,
-                             QStringLiteral("Variable executor owns replacement callbacks and store transactions"));
+        return InvalidResult(
+            text, QCoreApplication::translate(
+                      "RegexWorkbenchCore",
+                      "Variable executor owns replacement callbacks and store transactions"));
     }
     const SearchVariableStore::Snapshot initialStore = store.snapshot();
     options.stateSnapshot = [&store]() { return store.stateData(); };
@@ -214,7 +224,9 @@ RegexWorkbenchEngineResult PreparedRegexWorkbenchVariableExecutor::Apply(
             bool found = false;
             value = store.get(name, &found);
             if (!found) {
-                variableError = QStringLiteral("Undefined variable: %1").arg(name);
+                variableError = QCoreApplication::translate(
+                                    "RegexWorkbenchCore", "Undefined variable: %1")
+                                    .arg(name);
             }
             return found;
         };

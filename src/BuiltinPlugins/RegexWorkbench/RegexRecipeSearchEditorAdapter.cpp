@@ -8,6 +8,7 @@
 
 #include "BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.h"
 
+#include <QCoreApplication>
 #include <QSet>
 #include <QUuid>
 
@@ -33,22 +34,27 @@ RegexRecipeImportResult RegexRecipeSearchEditorAdapter::Import(
 {
     RegexRecipeImportResult result;
     if (entry.isGroup) {
-        result.errorMessage = QStringLiteral("Search template groups cannot be imported as rules");
+        result.errorMessage = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Search template groups cannot be imported as rules");
         return result;
     }
     if (entry.name.isEmpty() || entry.find.isEmpty()) {
-        result.errorMessage = QStringLiteral("Search template name and find pattern must not be empty");
+        result.errorMessage = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Search template name and find pattern must not be empty");
         return result;
     }
     if (IsWholeFunctionReplacement(entry.replace)) {
-        result.errorMessage = QStringLiteral("Python function search templates are not supported by Regex Workbench");
+        result.errorMessage = QCoreApplication::translate(
+            "RegexWorkbenchCore",
+            "Python function search templates are not supported by Regex Workbench");
         return result;
     }
 
     const QStringList tokens = entry.controls.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     const QSet<QString> tokenSet(tokens.cbegin(), tokens.cend());
     if (tokenSet.contains(QStringLiteral("NL"))) {
-        result.errorMessage = QStringLiteral("Only regular-expression search templates can be imported");
+        result.errorMessage = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Only regular-expression search templates can be imported");
         return result;
     }
 
@@ -58,15 +64,17 @@ RegexRecipeImportResult RegexRecipeSearchEditorAdapter::Import(
     result.rule.replace = entry.replace;
     if (tokenSet.contains(QStringLiteral("PS"))) {
         if (entry.prefind.isEmpty()) {
-            result.warnings.append(
-                QStringLiteral("PreSearch control was ignored because the prefind pattern is empty"));
+            result.warnings.append(QCoreApplication::translate(
+                "RegexWorkbenchCore",
+                "PreSearch control was ignored because the prefind pattern is empty"));
         } else {
             result.rule.secondaryMode = SecondaryMode::PreSearch;
             result.rule.secondaryPattern = entry.prefind;
         }
     } else if (!entry.prefind.isEmpty()) {
-        result.warnings.append(
-            QStringLiteral("Stored prefind pattern was ignored because controls do not contain PS"));
+        result.warnings.append(QCoreApplication::translate(
+            "RegexWorkbenchCore",
+            "Stored prefind pattern was ignored because controls do not contain PS"));
     }
 
     static const QSet<QString> ignoredScope = {
@@ -85,7 +93,9 @@ RegexRecipeImportResult RegexRecipeSearchEditorAdapter::Import(
     dropped.removeDuplicates();
     if (!dropped.isEmpty()) {
         result.warnings.append(
-            QStringLiteral("Per-entry scope or direction controls were not imported: %1")
+            QCoreApplication::translate(
+                "RegexWorkbenchCore",
+                "Per-entry scope or direction controls were not imported: %1")
                 .arg(dropped.join(QLatin1Char(' '))));
     }
 

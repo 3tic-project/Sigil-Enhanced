@@ -14,6 +14,7 @@
 #include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h"
 
 #include <QByteArrayView>
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QSet>
 
@@ -180,22 +181,29 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
     const QByteArray initialExternalState = CurrentExternalState(options);
     if (static_cast<bool>(options.stateSnapshot) != static_cast<bool>(options.restoreState)) {
         return Failure(text, EngineTermination::InvalidConfiguration,
-                       QStringLiteral("stateSnapshot and restoreState must be configured together"),
+                       QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "stateSnapshot and restoreState must be configured together"),
                        options, initialExternalState);
     }
     if ((options.beforeExpand || options.afterExpand) && !options.stateSnapshot) {
         return Failure(text, EngineTermination::InvalidConfiguration,
-                       QStringLiteral("Replacement callbacks require state snapshot and restore handlers"),
+                       QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Replacement callbacks require state snapshot and restore handlers"),
                        options, initialExternalState);
     }
     if (!expander) {
         return Failure(text, EngineTermination::InvalidConfiguration,
-                       QStringLiteral("A replacement expander is required"),
+                       QCoreApplication::translate(
+                           "RegexWorkbenchCore", "A replacement expander is required"),
                        options, initialExternalState);
     }
     if (rule.recursive && rule.maxIterations <= 0) {
         return Failure(text, EngineTermination::InvalidConfiguration,
-                       QStringLiteral("Recursive maxIterations must be greater than zero"),
+                       QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Recursive maxIterations must be greater than zero"),
                        options, initialExternalState);
     }
 
@@ -231,7 +239,9 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
         }
         if (rule.recursive && appliedIterations >= rule.maxIterations) {
             return Failure(text, EngineTermination::IterationLimit,
-                           QStringLiteral("Recursive replacement reached iteration limit %1 with matches remaining")
+                           QCoreApplication::translate(
+                               "RegexWorkbenchCore",
+                               "Recursive replacement reached iteration limit %1 with matches remaining")
                                .arg(rule.maxIterations),
                            options, initialExternalState);
         }
@@ -301,19 +311,23 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
             guardedExpander, applyOptions);
         if (cancelledDuringApply) {
             return Failure(text, EngineTermination::Cancelled,
-                           QStringLiteral("Regex replacement cancelled"),
+                           QCoreApplication::translate(
+                               "RegexWorkbenchCore", "Regex replacement cancelled"),
                            options, initialExternalState);
         }
         if (callbackFailed) {
             return Failure(text, EngineTermination::VariableFailure,
                            callbackError.isEmpty()
-                               ? QStringLiteral("Replacement variable callback failed")
+                               ? QCoreApplication::translate(
+                                     "RegexWorkbenchCore",
+                                     "Replacement variable callback failed")
                                : callbackError,
                            options, initialExternalState);
         }
         if (expansionFailed) {
             return Failure(text, EngineTermination::ExpansionFailure,
-                           QStringLiteral("Replacement expansion failed"),
+                           QCoreApplication::translate(
+                               "RegexWorkbenchCore", "Replacement expansion failed"),
                            options, initialExternalState);
         }
 
@@ -326,7 +340,9 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
 
         if (expandedTexts.size() != candidates.candidates.size()) {
             return Failure(text, EngineTermination::ExpansionFailure,
-                           QStringLiteral("Replacement trace did not cover every candidate"),
+                           QCoreApplication::translate(
+                               "RegexWorkbenchCore",
+                               "Replacement trace did not cover every candidate"),
                            options, initialExternalState);
         }
 
@@ -355,12 +371,16 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
         const QByteArray afterState = StateDigest(nextText, CurrentExternalState(options));
         if (afterState == beforeState) {
             return Failure(text, EngineTermination::StalledWithMatches,
-                           QStringLiteral("Recursive replacement made no state progress while matches remain"),
+                           QCoreApplication::translate(
+                               "RegexWorkbenchCore",
+                               "Recursive replacement made no state progress while matches remain"),
                            options, initialExternalState);
         }
         if (seenStates.contains(afterState)) {
             return Failure(text, EngineTermination::StateCycle,
-                           QStringLiteral("Recursive replacement entered a previously seen state"),
+                           QCoreApplication::translate(
+                               "RegexWorkbenchCore",
+                               "Recursive replacement entered a previously seen state"),
                            options, initialExternalState);
         }
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -77,6 +78,36 @@ require(
     and "tab->SetSelectionRange(start, end)" in main_window,
     "Dry-Run result activation must open its snapshot location and highlight exact ranges",
 )
+
+error_sources = (
+    "src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp",
+    "src/BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.cpp",
+    "src/BuiltinPlugins/RegexWorkbench/RegexRecipeStore.cpp",
+    "src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchBatchRunner.cpp",
+    "src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp",
+    "src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.cpp",
+    "src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp",
+    "src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp",
+    "src/MainUI/RegexWorkbenchBatchCommitter.cpp",
+    "src/MainUI/SearchBatchCoordinator.cpp",
+    "src/Misc/RegexMatchEnumerator.cpp",
+    "src/Misc/SearchBatchRunner.cpp",
+    "src/Misc/StagedTextValidator.cpp",
+)
+raw_error_literal = re.compile(
+    r'(?:error(?:Message)?\s*=|SetError\(|Fail\(|Failure\()'
+    r'[\s\S]{0,180}?QStringLiteral\("[A-Za-z]'
+)
+for relative_path in error_sources:
+    source = (repo / relative_path).read_text(encoding="utf-8")
+    require(
+        "RegexWorkbenchCore" in source,
+        f"workbench error source lacks a translation context: {relative_path}",
+    )
+    require(
+        raw_error_literal.search(source) is None,
+        f"workbench error source contains an untranslatable literal: {relative_path}",
+    )
 start_run = dialog.index("void RegexWorkbenchDialog::StartRun")
 snapshot = dialog.index("SearchBatchCoordinator::CaptureSnapshot(", start_run)
 worker = dialog.index("m_Watcher->setFuture(QtConcurrent::run(", snapshot)

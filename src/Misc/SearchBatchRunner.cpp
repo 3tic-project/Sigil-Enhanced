@@ -13,6 +13,8 @@
 
 #include "Misc/SearchBatchRunner.h"
 
+#include <QCoreApplication>
+
 namespace SearchBatch
 {
 
@@ -23,7 +25,8 @@ Result Runner::Run(const QList<Rule>& rules,
 {
     Result result;
     if (!apply) {
-        result.error = QStringLiteral("Search batch has no replacement engine.");
+        result.error = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Search batch has no replacement engine.");
         return result;
     }
 
@@ -37,14 +40,18 @@ Result Runner::Run(const QList<Rule>& rules,
         for (const QString& resourcePath : rule.resourcePaths) {
             if (isCancelled && isCancelled()) {
                 result.cancelled = true;
-                result.error = QStringLiteral("Search batch was cancelled.");
+                result.error = QCoreApplication::translate(
+                    "RegexWorkbenchCore", "Search batch was cancelled.");
                 result.rules.append(ruleResult);
                 return result;
             }
 
             const auto working = workingTexts.constFind(resourcePath);
             if (working == workingTexts.constEnd()) {
-                result.error = QStringLiteral("Search batch target is missing: %1").arg(resourcePath);
+                result.error = QCoreApplication::translate(
+                                   "RegexWorkbenchCore",
+                                   "Search batch target is missing: %1")
+                                   .arg(resourcePath);
                 result.rules.append(ruleResult);
                 return result;
             }
@@ -52,9 +59,12 @@ Result Runner::Run(const QList<Rule>& rules,
             const QString currentText = working.value();
             const ApplyResult applyResult = apply(rule, resourcePath, currentText);
             if (!applyResult.ok) {
-                result.error = applyResult.error.isEmpty() ?
-                    QStringLiteral("Search rule failed for %1: %2").arg(rule.name, resourcePath) :
-                    applyResult.error;
+                result.error = applyResult.error.isEmpty()
+                                   ? QCoreApplication::translate(
+                                         "RegexWorkbenchCore",
+                                         "Search rule failed for %1: %2")
+                                         .arg(rule.name, resourcePath)
+                                   : applyResult.error;
                 result.rules.append(ruleResult);
                 return result;
             }

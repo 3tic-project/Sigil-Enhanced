@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+#include <QCoreApplication>
 #include <QSet>
 
 #include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.h"
@@ -252,7 +253,8 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
     result.finalStore = initialStore.snapshot();
     if (options.maxReportRows <= 0 || options.maxSnippetCodeUnits <= 0 ||
         options.maxRunReplacements <= 0) {
-        Fail(result, QStringLiteral("Invalid regex workbench batch limits"));
+        Fail(result, QCoreApplication::translate(
+                         "RegexWorkbenchCore", "Invalid regex workbench batch limits"));
         return result;
     }
     QString recipeError;
@@ -265,11 +267,17 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
     for (const QString& path : orderedResourcePaths) {
         if (path.isEmpty() || seenPaths.contains(path) || !originalTexts.contains(path)) {
             Fail(result, path.isEmpty()
-                             ? QStringLiteral("Regex workbench batch contains an empty resource path")
+                             ? QCoreApplication::translate(
+                                   "RegexWorkbenchCore",
+                                   "Regex workbench batch contains an empty resource path")
                              : seenPaths.contains(path)
-                                   ? QStringLiteral("Regex workbench batch contains duplicate resource path: %1")
+                                   ? QCoreApplication::translate(
+                                         "RegexWorkbenchCore",
+                                         "Regex workbench batch contains duplicate resource path: %1")
                                          .arg(path)
-                                   : QStringLiteral("Regex workbench batch target is missing: %1")
+                                   : QCoreApplication::translate(
+                                         "RegexWorkbenchCore",
+                                         "Regex workbench batch target is missing: %1")
                                          .arg(path));
             return result;
         }
@@ -285,7 +293,9 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
         const RegexWorkbenchRule& rule = recipe.rules.at(index);
         auto executor = std::make_unique<PreparedRegexWorkbenchVariableExecutor>(rule);
         if (!executor->isValid()) {
-            Fail(result, QStringLiteral("Regex workbench rule %1 failed to compile: %2")
+            Fail(result, QCoreApplication::translate(
+                             "RegexWorkbenchCore",
+                             "Regex workbench rule %1 failed to compile: %2")
                              .arg(rule.name, executor->errorMessage()));
             return result;
         }
@@ -336,7 +346,9 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
             const int ruleIndex = ruleIndexes.value(batchRule.id, -1);
             if (ruleIndex < 0 || ruleIndex >= static_cast<int>(prepared.size())) {
                 applied.ok = false;
-                applied.error = QStringLiteral("Prepared regex workbench rule is missing: %1")
+                applied.error = QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Prepared regex workbench rule is missing: %1")
                                     .arg(batchRule.id);
                 return finishStep(applied);
             }
@@ -361,7 +373,9 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
             if (!engineResult.success) {
                 applied.ok = false;
                 applied.text = currentText;
-                applied.error = QStringLiteral("Regex workbench rule %1 failed for %2: %3")
+                applied.error = QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Regex workbench rule %1 failed for %2: %3")
                                     .arg(batchRule.name, resourcePath,
                                          engineResult.errorMessage);
                 return finishStep(applied);
@@ -370,14 +384,17 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
                 std::numeric_limits<qint64>::max() - observedReplacements) {
                 applied.ok = false;
                 applied.text = currentText;
-                applied.error = QStringLiteral("Regex workbench replacement count overflow");
+                applied.error = QCoreApplication::translate(
+                    "RegexWorkbenchCore", "Regex workbench replacement count overflow");
                 return finishStep(applied);
             }
             observedReplacements += engineResult.replacementCount;
             if (observedReplacements > options.maxRunReplacements) {
                 applied.ok = false;
                 applied.text = currentText;
-                applied.error = QStringLiteral("Regex workbench run exceeded replacement limit %1")
+                applied.error = QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Regex workbench run exceeded replacement limit %1")
                                     .arg(options.maxRunReplacements);
                 return finishStep(applied);
             }

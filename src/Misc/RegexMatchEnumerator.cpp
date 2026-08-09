@@ -18,6 +18,8 @@
 
 #include <limits>
 
+#include <QCoreApplication>
+
 namespace RegexSearch
 {
 
@@ -29,9 +31,14 @@ QString PcreErrorMessage(int errorCode)
     PCRE2_UCHAR16 buffer[256] = {};
     const int length = pcre2_get_error_message_16(errorCode, buffer, 256);
     if (length < 0) {
-        return QStringLiteral("PCRE2 error %1").arg(errorCode);
+        return QCoreApplication::translate(
+                   "RegexWorkbenchCore", "PCRE2 error %1")
+            .arg(errorCode);
     }
-    return QString::fromUtf16(reinterpret_cast<const char16_t*>(buffer), length);
+    return QCoreApplication::translate(
+               "RegexWorkbenchCore", "PCRE2 diagnostic: %1")
+        .arg(QString::fromUtf16(
+            reinterpret_cast<const char16_t*>(buffer), length));
 }
 
 MatchError MapRuntimeError(int errorCode)
@@ -162,7 +169,9 @@ MatchResult RegexMatchEnumerator::enumerate(const QString& text, const MatchOpti
     if (options.from < 0 || rangeEnd < options.from || rangeEnd > text.size() ||
         rangeStartsInsideSurrogate || rangeEndsInsideSurrogate) {
         result.error = MatchError::InvalidRange;
-        result.errorMessage = QStringLiteral("Invalid regex search range [%1, %2) for text length %3")
+        result.errorMessage = QCoreApplication::translate(
+                                  "RegexWorkbenchCore",
+                                  "Invalid regex search range [%1, %2) for text length %3")
                                   .arg(options.from)
                                   .arg(rangeEnd)
                                   .arg(text.size());
@@ -171,7 +180,8 @@ MatchResult RegexMatchEnumerator::enumerate(const QString& text, const MatchOpti
     if (options.matchLimit == 0 || options.depthLimit == 0 || options.heapLimitKiB == 0 ||
         options.maxMatches == 0 || options.maxMatches < -1) {
         result.error = MatchError::InternalError;
-        result.errorMessage = QStringLiteral("Invalid PCRE2 enumeration limit");
+        result.errorMessage = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Invalid PCRE2 enumeration limit");
         return result;
     }
 
@@ -179,7 +189,8 @@ MatchResult RegexMatchEnumerator::enumerate(const QString& text, const MatchOpti
         pcre2_set_depth_limit_16(m_impl->matchContext, options.depthLimit) != 0 ||
         pcre2_set_heap_limit_16(m_impl->matchContext, options.heapLimitKiB) != 0) {
         result.error = MatchError::InternalError;
-        result.errorMessage = QStringLiteral("Unable to configure PCRE2 match limits");
+        result.errorMessage = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Unable to configure PCRE2 match limits");
         return result;
     }
 
@@ -191,7 +202,8 @@ MatchResult RegexMatchEnumerator::enumerate(const QString& text, const MatchOpti
         if (options.isCancelled && options.isCancelled()) {
             result.matches.clear();
             result.error = MatchError::Cancelled;
-            result.errorMessage = QStringLiteral("Regex match enumeration cancelled");
+            result.errorMessage = QCoreApplication::translate(
+                "RegexWorkbenchCore", "Regex match enumeration cancelled");
             return result;
         }
 

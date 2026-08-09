@@ -18,6 +18,7 @@
 #include <utility>
 
 #include <QDir>
+#include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -153,7 +154,8 @@ bool HasOnlyKeys(const QJsonObject& object,
 {
     for (auto field = object.constBegin(); field != object.constEnd(); ++field) {
         if (!allowed.contains(field.key())) {
-            SetError(error, QStringLiteral("Unknown %1 field: %2")
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore", "Unknown %1 field: %2")
                                 .arg(context, field.key()));
             return false;
         }
@@ -168,7 +170,9 @@ bool RequiredString(const QJsonObject& object,
 {
     const QJsonValue field = object.value(key);
     if (!field.isString()) {
-        SetError(error, QStringLiteral("Recipe field %1 must be a string").arg(key));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Recipe field %1 must be a string")
+                            .arg(key));
         return false;
     }
     value = field.toString();
@@ -200,7 +204,9 @@ bool OptionalBool(const QJsonObject& object,
     }
     const QJsonValue field = object.value(key);
     if (!field.isBool()) {
-        SetError(error, QStringLiteral("Recipe field %1 must be a boolean").arg(key));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Recipe field %1 must be a boolean")
+                            .arg(key));
         return false;
     }
     value = field.toBool();
@@ -223,7 +229,9 @@ bool OptionalInt(const QJsonObject& object,
     const double number = field.toDouble(std::numeric_limits<double>::quiet_NaN());
     if (!field.isDouble() || !std::isfinite(number) || std::floor(number) != number ||
         number < minimum || number > maximum) {
-        SetError(error, QStringLiteral("Recipe field %1 must be an integer in [%2, %3]")
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe field %1 must be an integer in [%2, %3]")
                             .arg(key)
                             .arg(minimum)
                             .arg(maximum));
@@ -244,19 +252,25 @@ bool ParseCaptureNames(const QJsonObject& object,
     }
     const QJsonValue field = object.value(QStringLiteral("captureToVar"));
     if (!field.isArray()) {
-        SetError(error, QStringLiteral("Recipe field captureToVar must be an array"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe field captureToVar must be an array"));
         return false;
     }
     const QJsonArray array = field.toArray();
     if (array.size() > maximum) {
-        SetError(error, QStringLiteral("Recipe captureToVar exceeds its item limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe captureToVar exceeds its item limit"));
         return false;
     }
     QSet<QString> seen;
     for (const QJsonValue& item : array) {
         if (!item.isString() || !SearchVariableStore::IsValidName(item.toString()) ||
             seen.contains(item.toString())) {
-            SetError(error, QStringLiteral("Recipe captureToVar contains an invalid or duplicate name"));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Recipe captureToVar contains an invalid or duplicate name"));
             return false;
         }
         seen.insert(item.toString());
@@ -293,7 +307,9 @@ bool ParseRule(const QJsonObject& object,
     if (!OptionalString(object, QStringLiteral("secondaryMode"),
                         QStringLiteral("None"), secondaryName, error) ||
         !ParseSecondaryMode(secondaryName, rule.secondaryMode)) {
-        SetError(error, QStringLiteral("Unknown recipe secondaryMode: %1").arg(secondaryName));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Unknown recipe secondaryMode: %1")
+                            .arg(secondaryName));
         return false;
     }
     return OptionalBool(object, QStringLiteral("recursive"), false,
@@ -347,20 +363,27 @@ bool RegexRecipeStore::Validate(const RegexRecipe& recipe,
         error->clear();
     }
     if (!ValidLimits(limits)) {
-        SetError(error, QStringLiteral("Invalid recipe limits"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Invalid recipe limits"));
         return false;
     }
     if (recipe.name.isEmpty() || recipe.name.size() > limits.maxNameCodeUnits) {
-        SetError(error, QStringLiteral("Recipe name is empty or exceeds its limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe name is empty or exceeds its limit"));
         return false;
     }
     if (VariableScopeName(recipe.variableScope).isEmpty() ||
         WritePolicyName(recipe.writePolicy).isEmpty()) {
-        SetError(error, QStringLiteral("Recipe has an unknown variable scope or write policy"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe has an unknown variable scope or write policy"));
         return false;
     }
     if (recipe.rules.size() > limits.maxRules) {
-        SetError(error, QStringLiteral("Recipe exceeds its rule-count limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe exceeds its rule-count limit"));
         return false;
     }
 
@@ -371,43 +394,58 @@ bool RegexRecipeStore::Validate(const RegexRecipe& recipe,
             rule.find.isEmpty() || rule.find.size() > limits.maxPatternCodeUnits ||
             rule.replace.size() > limits.maxPatternCodeUnits ||
             rule.secondaryPattern.size() > limits.maxPatternCodeUnits) {
-            SetError(error, QStringLiteral("Recipe rule has an empty or oversized required field"));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Recipe rule has an empty or oversized required field"));
             return false;
         }
         if (ids.contains(rule.id)) {
-            SetError(error, QStringLiteral("Recipe contains duplicate rule id: %1").arg(rule.id));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Recipe contains duplicate rule id: %1")
+                                .arg(rule.id));
             return false;
         }
         ids.insert(rule.id);
         if (SecondaryModeName(rule.secondaryMode).isEmpty() ||
             (rule.secondaryMode == SecondaryMode::None && !rule.secondaryPattern.isEmpty()) ||
             (rule.secondaryMode != SecondaryMode::None && rule.secondaryPattern.isEmpty())) {
-            SetError(error, QStringLiteral("Recipe rule %1 has inconsistent secondary configuration")
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Recipe rule %1 has inconsistent secondary configuration")
                                 .arg(rule.id));
             return false;
         }
         if (rule.maxIterations <= 0 || rule.maxIterations > limits.maxIterations ||
             (rule.allowEmpty && !rule.recursive)) {
-            SetError(error, QStringLiteral("Recipe rule %1 has invalid recursive limits")
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Recipe rule %1 has invalid recursive limits")
                                 .arg(rule.id));
             return false;
         }
         if (rule.captureToVar.size() > limits.maxCaptureNamesPerRule) {
-            SetError(error, QStringLiteral("Recipe rule %1 exceeds its capture-name limit")
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Recipe rule %1 exceeds its capture-name limit")
                                 .arg(rule.id));
             return false;
         }
         QSet<QString> captureNames;
         for (const QString& name : rule.captureToVar) {
             if (!SearchVariableStore::IsValidName(name) || captureNames.contains(name)) {
-                SetError(error, QStringLiteral("Recipe rule %1 has an invalid or duplicate capture name")
+                SetError(error, QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Recipe rule %1 has an invalid or duplicate capture name")
                                     .arg(rule.id));
                 return false;
             }
             captureNames.insert(name);
         }
         if (IsWholeFunctionReplacement(rule.replace)) {
-            SetError(error, QStringLiteral("Recipe rule %1 uses an unsupported Python function replacement")
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Recipe rule %1 uses an unsupported Python function replacement")
                                 .arg(rule.id));
             return false;
         }
@@ -439,7 +477,9 @@ QByteArray RegexRecipeStore::Serialize(const RegexRecipe& recipe,
     root.insert(QStringLiteral("rules"), rules);
     const QByteArray data = QJsonDocument(root).toJson(QJsonDocument::Indented);
     if (data.size() > limits.maxFileBytes) {
-        SetError(error, QStringLiteral("Serialized recipe exceeds its file-size limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Serialized recipe exceeds its file-size limit"));
         return QByteArray();
     }
     return data;
@@ -454,17 +494,22 @@ bool RegexRecipeStore::Deserialize(const QByteArray& data,
         error->clear();
     }
     if (!ValidLimits(limits)) {
-        SetError(error, QStringLiteral("Invalid recipe limits"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Invalid recipe limits"));
         return false;
     }
     if (data.size() > limits.maxFileBytes) {
-        SetError(error, QStringLiteral("Recipe exceeds its file-size limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe exceeds its file-size limit"));
         return false;
     }
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(data, &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        SetError(error, QStringLiteral("Invalid recipe JSON: %1").arg(parseError.errorString()));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Invalid recipe JSON: %1")
+                            .arg(parseError.errorString()));
         return false;
     }
     const QJsonObject root = document.object();
@@ -477,7 +522,8 @@ bool RegexRecipeStore::Deserialize(const QByteArray& data,
         return false;
     }
     if (root.value(QStringLiteral("format")).toString() != RecipeFormat) {
-        SetError(error, QStringLiteral("Unknown recipe format"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Unknown recipe format"));
         return false;
     }
     int version = 0;
@@ -485,7 +531,8 @@ bool RegexRecipeStore::Deserialize(const QByteArray& data,
         !OptionalInt(root, QStringLiteral("version"), 0, CurrentVersion,
                      CurrentVersion, version, error)) {
         if (error != nullptr && error->isEmpty()) {
-            SetError(error, QStringLiteral("Recipe version is required"));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore", "Recipe version is required"));
         }
         return false;
     }
@@ -500,17 +547,23 @@ bool RegexRecipeStore::Deserialize(const QByteArray& data,
     }
     if (!ParseVariableScope(scopeName, parsed.variableScope) ||
         !ParseWritePolicy(policyName, parsed.writePolicy)) {
-        SetError(error, QStringLiteral("Unknown recipe variable scope or write policy"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Unknown recipe variable scope or write policy"));
         return false;
     }
     const QJsonValue rulesValue = root.value(QStringLiteral("rules"));
     if (!rulesValue.isArray() || rulesValue.toArray().size() > limits.maxRules) {
-        SetError(error, QStringLiteral("Recipe rules must be an array within the rule-count limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe rules must be an array within the rule-count limit"));
         return false;
     }
     for (const QJsonValue& item : rulesValue.toArray()) {
         if (!item.isObject()) {
-            SetError(error, QStringLiteral("Each recipe rule must be an object"));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Each recipe rule must be an object"));
             return false;
         }
         RegexWorkbenchRule rule;
@@ -535,7 +588,8 @@ bool RegexRecipeStore::SaveFile(const QString& path,
         error->clear();
     }
     if (path.isEmpty()) {
-        SetError(error, QStringLiteral("Recipe path is empty"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Recipe path is empty"));
         return false;
     }
     const QByteArray data = Serialize(recipe, error, limits);
@@ -545,14 +599,17 @@ bool RegexRecipeStore::SaveFile(const QString& path,
     const QFileInfo info(path);
     QDir directory = info.dir();
     if (!directory.exists() && !directory.mkpath(QStringLiteral("."))) {
-        SetError(error, QStringLiteral("Could not create recipe directory: %1")
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Could not create recipe directory: %1")
                             .arg(directory.absolutePath()));
         return false;
     }
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() ||
         !file.commit()) {
-        SetError(error, QStringLiteral("Could not save recipe %1: %2")
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Could not save recipe %1: %2")
                             .arg(path, file.errorString()));
         return false;
     }
@@ -569,12 +626,15 @@ bool RegexRecipeStore::LoadFile(const QString& path,
     }
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        SetError(error, QStringLiteral("Could not open recipe %1: %2")
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Could not open recipe %1: %2")
                             .arg(path, file.errorString()));
         return false;
     }
     if (file.size() > limits.maxFileBytes) {
-        SetError(error, QStringLiteral("Recipe exceeds its file-size limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe exceeds its file-size limit"));
         return false;
     }
     const qint64 readLimit = limits.maxFileBytes == std::numeric_limits<qint64>::max()
@@ -582,7 +642,9 @@ bool RegexRecipeStore::LoadFile(const QString& path,
                                  : limits.maxFileBytes + 1;
     const QByteArray data = file.read(readLimit);
     if (data.size() > limits.maxFileBytes) {
-        SetError(error, QStringLiteral("Recipe exceeds its file-size limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Recipe exceeds its file-size limit"));
         return false;
     }
     return Deserialize(data, recipe, error, limits);
@@ -602,14 +664,17 @@ bool RegexRecipeStore::LoadNamed(const QString& identifier,
     }
     const QString trimmed = identifier.trimmed();
     if (trimmed.isEmpty()) {
-        SetError(error, QStringLiteral("Recipe name or path is empty"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Recipe name or path is empty"));
         return false;
     }
 
     const QFileInfo explicitInfo(trimmed);
     if (explicitInfo.isAbsolute()) {
         if (!explicitInfo.isFile()) {
-            SetError(error, QStringLiteral("Recipe file does not exist: %1").arg(trimmed));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore", "Recipe file does not exist: %1")
+                                .arg(trimmed));
             return false;
         }
         if (!LoadFile(explicitInfo.absoluteFilePath(), recipe, error, limits)) {
@@ -622,7 +687,9 @@ bool RegexRecipeStore::LoadNamed(const QString& identifier,
     }
 
     if (QFileInfo(trimmed).fileName() != trimmed) {
-        SetError(error, QStringLiteral("Relative recipe identifiers must not contain directories"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Relative recipe identifiers must not contain directories"));
         return false;
     }
 
@@ -656,14 +723,18 @@ bool RegexRecipeStore::LoadNamed(const QString& identifier,
             continue;
         }
         if (!matchedPath.isEmpty()) {
-            SetError(error, QStringLiteral("Recipe name is ambiguous: %1").arg(trimmed));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore", "Recipe name is ambiguous: %1")
+                                .arg(trimmed));
             return false;
         }
         matchedPath = entry.absoluteFilePath();
         matchedRecipe = candidate;
     }
     if (matchedPath.isEmpty()) {
-        SetError(error, QStringLiteral("Could not find recipe: %1").arg(trimmed));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Could not find recipe: %1")
+                            .arg(trimmed));
         return false;
     }
     recipe = matchedRecipe;

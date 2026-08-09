@@ -26100,6 +26100,126 @@ Continue using the requested filename?</source>
         <translation>黒ダイヤ</translation>
     </message>
 </context>
+<context><name>RegexWorkbenchCore</name>
+<message><source>Invalid recursive replacement guard configuration</source><translation>再帰置換ガードの設定が無効です</translation></message>
+<message><source>Invalid recursive replacement guard input</source><translation>再帰置換ガードの入力が無効です</translation></message>
+<message><source>Replacement count %1 exceeds limit %2</source><translation>置換回数 %1 が上限 %2 を超えています</translation></message>
+<message><source>Text length %1 exceeds absolute limit %2 UTF-16 units</source><translation>テキスト長 %1 が絶対上限 %2 UTF-16 単位を超えています</translation></message>
+<message><source>Text length %1 exceeds original-relative growth limit %2 UTF-16 units</source><translation>テキスト長 %1 が原文基準の増加上限 %2 UTF-16 単位を超えています</translation></message>
+<message><source>Search template groups cannot be imported as rules</source><translation>検索テンプレートのグループはルールとして読み込めません</translation></message>
+<message><source>Search template name and find pattern must not be empty</source><translation>検索テンプレート名と検索パターンは空にできません</translation></message>
+<message><source>Python function search templates are not supported by Regex Workbench</source><translation>正規表現ワークベンチは Python 関数検索テンプレートをサポートしていません</translation></message>
+<message><source>Only regular-expression search templates can be imported</source><translation>正規表現の検索テンプレートのみ読み込めます</translation></message>
+<message><source>PreSearch control was ignored because the prefind pattern is empty</source><translation>事前検索パターンが空のため PreSearch 制御を無視しました</translation></message>
+<message><source>Stored prefind pattern was ignored because controls do not contain PS</source><translation>制御に PS がないため保存済みの事前検索パターンを無視しました</translation></message>
+<message><source>Per-entry scope or direction controls were not imported: %1</source><translation>項目ごとの範囲または方向制御は読み込まれませんでした: %1</translation></message>
+<message><source>Unknown %1 field: %2</source><translation>不明な %1 フィールドです: %2</translation></message>
+<message><source>Recipe field %1 must be a string</source><translation>レシピのフィールド %1 は文字列でなければなりません</translation></message>
+<message><source>Recipe field %1 must be a boolean</source><translation>レシピのフィールド %1 は真偽値でなければなりません</translation></message>
+<message><source>Recipe field %1 must be an integer in [%2, %3]</source><translation>レシピのフィールド %1 は [%2, %3] の整数でなければなりません</translation></message>
+<message><source>Recipe field captureToVar must be an array</source><translation>レシピのフィールド captureToVar は配列でなければなりません</translation></message>
+<message><source>Recipe captureToVar exceeds its item limit</source><translation>レシピの captureToVar が項目数の上限を超えています</translation></message>
+<message><source>Recipe captureToVar contains an invalid or duplicate name</source><translation>レシピの captureToVar に無効または重複した名前があります</translation></message>
+<message><source>Unknown recipe secondaryMode: %1</source><translation>不明なレシピ secondaryMode です: %1</translation></message>
+<message><source>Invalid recipe limits</source><translation>レシピの制限が無効です</translation></message>
+<message><source>Recipe name is empty or exceeds its limit</source><translation>レシピ名が空か、長さの上限を超えています</translation></message>
+<message><source>Recipe has an unknown variable scope or write policy</source><translation>レシピに不明な変数スコープまたは書き込み方針があります</translation></message>
+<message><source>Recipe exceeds its rule-count limit</source><translation>レシピがルール数の上限を超えています</translation></message>
+<message><source>Recipe rule has an empty or oversized required field</source><translation>レシピルールの必須フィールドが空か、サイズ上限を超えています</translation></message>
+<message><source>Recipe contains duplicate rule id: %1</source><translation>レシピに重複したルール ID があります: %1</translation></message>
+<message><source>Recipe rule %1 has inconsistent secondary configuration</source><translation>レシピルール %1 の二次正規表現設定に矛盾があります</translation></message>
+<message><source>Recipe rule %1 has invalid recursive limits</source><translation>レシピルール %1 の再帰制限が無効です</translation></message>
+<message><source>Recipe rule %1 exceeds its capture-name limit</source><translation>レシピルール %1 がキャプチャ名数の上限を超えています</translation></message>
+<message><source>Recipe rule %1 has an invalid or duplicate capture name</source><translation>レシピルール %1 に無効または重複したキャプチャ名があります</translation></message>
+<message><source>Recipe rule %1 uses an unsupported Python function replacement</source><translation>レシピルール %1 は未対応の Python 関数置換を使用しています</translation></message>
+<message><source>Serialized recipe exceeds its file-size limit</source><translation>シリアライズしたレシピがファイルサイズ上限を超えています</translation></message>
+<message><source>Recipe exceeds its file-size limit</source><translation>レシピがファイルサイズ上限を超えています</translation></message>
+<message><source>Invalid recipe JSON: %1</source><translation>レシピの JSON が無効です: %1</translation></message>
+<message><source>Unknown recipe format</source><translation>不明なレシピ形式です</translation></message>
+<message><source>Recipe version is required</source><translation>レシピのバージョンが必要です</translation></message>
+<message><source>Unknown recipe variable scope or write policy</source><translation>不明なレシピ変数スコープまたは書き込み方針です</translation></message>
+<message><source>Recipe rules must be an array within the rule-count limit</source><translation>レシピの rules はルール数上限内の配列でなければなりません</translation></message>
+<message><source>Each recipe rule must be an object</source><translation>各レシピルールはオブジェクトでなければなりません</translation></message>
+<message><source>Recipe path is empty</source><translation>レシピのパスが空です</translation></message>
+<message><source>Could not create recipe directory: %1</source><translation>レシピのディレクトリを作成できませんでした: %1</translation></message>
+<message><source>Could not save recipe %1: %2</source><translation>レシピ %1 を保存できませんでした: %2</translation></message>
+<message><source>Could not open recipe %1: %2</source><translation>レシピ %1 を開けませんでした: %2</translation></message>
+<message><source>Recipe name or path is empty</source><translation>レシピ名またはパスが空です</translation></message>
+<message><source>Recipe file does not exist: %1</source><translation>レシピファイルが存在しません: %1</translation></message>
+<message><source>Relative recipe identifiers must not contain directories</source><translation>相対レシピ識別子にディレクトリを含めることはできません</translation></message>
+<message><source>Recipe name is ambiguous: %1</source><translation>レシピ名が一意ではありません: %1</translation></message>
+<message><source>Could not find recipe: %1</source><translation>レシピが見つかりません: %1</translation></message>
+<message><source>Invalid regex workbench batch limits</source><translation>正規表現ワークベンチのバッチ制限が無効です</translation></message>
+<message><source>Regex workbench batch contains an empty resource path</source><translation>正規表現ワークベンチのバッチに空のリソースパスがあります</translation></message>
+<message><source>Regex workbench batch contains duplicate resource path: %1</source><translation>正規表現ワークベンチのバッチに重複したリソースパスがあります: %1</translation></message>
+<message><source>Regex workbench batch target is missing: %1</source><translation>正規表現ワークベンチのバッチ対象がありません: %1</translation></message>
+<message><source>Regex workbench rule %1 failed to compile: %2</source><translation>正規表現ワークベンチのルール %1 をコンパイルできませんでした: %2</translation></message>
+<message><source>Prepared regex workbench rule is missing: %1</source><translation>準備済みの正規表現ワークベンチルールがありません: %1</translation></message>
+<message><source>Regex workbench rule %1 failed for %2: %3</source><translation>正規表現ワークベンチのルール %1 は %2 の処理に失敗しました: %3</translation></message>
+<message><source>Regex workbench replacement count overflow</source><translation>正規表現ワークベンチの置換回数がオーバーフローしました</translation></message>
+<message><source>Regex workbench run exceeded replacement limit %1</source><translation>正規表現ワークベンチの実行が置換上限 %1 を超えました</translation></message>
+<message><source>stateSnapshot and restoreState must be configured together</source><translation>stateSnapshot と restoreState は同時に設定する必要があります</translation></message>
+<message><source>Replacement callbacks require state snapshot and restore handlers</source><translation>置換コールバックには状態スナップショットと復元ハンドラーが必要です</translation></message>
+<message><source>A replacement expander is required</source><translation>置換展開器が必要です</translation></message>
+<message><source>Recursive maxIterations must be greater than zero</source><translation>再帰の maxIterations は 0 より大きくなければなりません</translation></message>
+<message><source>Recursive replacement reached iteration limit %1 with matches remaining</source><translation>一致が残ったまま再帰置換が反復上限 %1 に達しました</translation></message>
+<message><source>Regex replacement cancelled</source><translation>正規表現置換をキャンセルしました</translation></message>
+<message><source>Replacement variable callback failed</source><translation>置換変数コールバックに失敗しました</translation></message>
+<message><source>Replacement expansion failed</source><translation>置換テキストの展開に失敗しました</translation></message>
+<message><source>Replacement trace did not cover every candidate</source><translation>置換トレースがすべての候補を網羅していません</translation></message>
+<message><source>Recursive replacement made no state progress while matches remain</source><translation>一致が残っていますが、再帰置換の状態が進行しませんでした</translation></message>
+<message><source>Recursive replacement entered a previously seen state</source><translation>再帰置換が以前に現れた状態に戻りました</translation></message>
+<message><source>Configured named capture does not exist: %1</source><translation>設定された名前付きキャプチャが存在しません: %1</translation></message>
+<message><source>Whole Python function replacements are not supported in Regex Workbench</source><translation>正規表現ワークベンチは Python 関数による置換全体をサポートしていません</translation></message>
+<message><source>Prepared regex rule is invalid</source><translation>準備済みの正規表現ルールが無効です</translation></message>
+<message><source>Variable executor owns replacement callbacks and store transactions</source><translation>変数実行器が置換コールバックと変数ストアのトランザクションを管理します</translation></message>
+<message><source>Undefined variable: %1</source><translation>未定義の変数です: %1</translation></message>
+<message><source>Invalid variable name: %1</source><translation>変数名が無効です: %1</translation></message>
+<message><source>Invalid variable store limits</source><translation>変数ストアの制限が無効です</translation></message>
+<message><source>Variable %1 exceeds the per-value UTF-16 limit</source><translation>変数 %1 が値ごとの UTF-16 長上限を超えています</translation></message>
+<message><source>No active resource for resource-scoped variables</source><translation>リソーススコープ変数に対応するアクティブなリソースがありません</translation></message>
+<message><source>Variable store exceeds its variable-count limit</source><translation>変数ストアが変数数の上限を超えています</translation></message>
+<message><source>Variable store exceeds its total UTF-16 limit</source><translation>変数ストアが UTF-16 総長上限を超えています</translation></message>
+<message><source>Invalid capture number for %1</source><translation>%1 のキャプチャ番号が無効です</translation></message>
+<message><source>Invalid capture offsets for %1</source><translation>%1 のキャプチャオフセットが無効です</translation></message>
+<message><source>Unknown variable scope</source><translation>不明な変数スコープです</translation></message>
+<message><source>Invalid variable store snapshot</source><translation>変数ストアのスナップショットが無効です</translation></message>
+<message><source>Invalid resource frame in variable store snapshot</source><translation>変数ストアのスナップショットに無効なリソースフレームがあります</translation></message>
+<message><source>Variable store snapshot exceeds total limit</source><translation>変数ストアのスナップショットが総量上限を超えています</translation></message>
+<message><source>secondaryPattern must be empty when secondaryMode is None</source><translation>secondaryMode が None の場合、secondaryPattern は空でなければなりません</translation></message>
+<message><source>secondaryPattern must not be empty when a secondary mode is active</source><translation>二次モードが有効な場合、secondaryPattern は空にできません</translation></message>
+<message><source>Unknown secondary regex mode</source><translation>不明な二次正規表現モードです</translation></message>
+<message><source>Regex workbench staged validation did not succeed</source><translation>正規表現ワークベンチのステージ済み内容の検証に失敗しました</translation></message>
+<message><source>Regex workbench variable state is invalid: %1</source><translation>正規表現ワークベンチの変数状態が無効です: %1</translation></message>
+<message><source>No book is available for the search batch.</source><translation>検索バッチに使用できるブックがありません。</translation></message>
+<message><source>Search batch snapshots must be captured on the GUI thread.</source><translation>検索バッチのスナップショットは GUI スレッドで取得する必要があります。</translation></message>
+<message><source>Search batch contains an empty target path.</source><translation>検索バッチに空の対象パスがあります。</translation></message>
+<message><source>Search batch contains a duplicate target path: %1</source><translation>検索バッチに重複した対象パスがあります: %1</translation></message>
+<message><source>Search batch target is no longer available: %1</source><translation>検索バッチの対象は利用できなくなりました: %1</translation></message>
+<message><source>No book is available for the search batch commit.</source><translation>検索バッチのコミットに使用できるブックがありません。</translation></message>
+<message><source>Search batch commits must run on the GUI thread.</source><translation>検索バッチのコミットは GUI スレッドで実行する必要があります。</translation></message>
+<message><source>Staged search result contains an unknown target: %1</source><translation>ステージ済み検索結果に不明な対象があります: %1</translation></message>
+<message><source>Search batch target changed during staging: %1</source><translation>ステージ中に検索バッチの対象が変更されました: %1</translation></message>
+<message><source>Could not create the recovery checkpoint; no replacements were written.</source><translation>復元チェックポイントを作成できませんでした。置換は書き込まれていません。</translation></message>
+<message><source>Search batch target changed while creating the checkpoint: %1</source><translation>チェックポイントの作成中に検索バッチの対象が変更されました: %1</translation></message>
+<message><source>Saved-search target disappeared before commit: %1</source><translation>コミット前に保存済み検索の対象が消失しました: %1</translation></message>
+<message><source>Saved-search target changed before commit: %1</source><translation>コミット前に保存済み検索の対象が変更されました: %1</translation></message>
+<message><source>Saved-search target failed its commit check: %1</source><translation>保存済み検索の対象がコミット検査に失敗しました: %1</translation></message>
+<message><source>PCRE2 error %1</source><translation>PCRE2 エラー %1</translation></message>
+<message><source>PCRE2 diagnostic: %1</source><translation>PCRE2 診断: %1</translation></message>
+<message><source>Invalid regex search range [%1, %2) for text length %3</source><translation>テキスト長 %3 に対する正規表現検索範囲 [%1, %2) が無効です</translation></message>
+<message><source>Invalid PCRE2 enumeration limit</source><translation>PCRE2 列挙制限が無効です</translation></message>
+<message><source>Unable to configure PCRE2 match limits</source><translation>PCRE2 の一致制限を設定できません</translation></message>
+<message><source>Regex match enumeration cancelled</source><translation>正規表現の一致列挙をキャンセルしました</translation></message>
+<message><source>Search batch has no replacement engine.</source><translation>検索バッチに置換エンジンがありません。</translation></message>
+<message><source>Search batch was cancelled.</source><translation>検索バッチをキャンセルしました。</translation></message>
+<message><source>Search batch target is missing: %1</source><translation>検索バッチの対象がありません: %1</translation></message>
+<message><source>Search rule failed for %1: %2</source><translation>検索ルール %1 は %2 の処理に失敗しました</translation></message>
+<message><source>Invalid staged text validation limits</source><translation>ステージ済みテキストの検証制限が無効です</translation></message>
+<message><source>Staged text validation was cancelled</source><translation>ステージ済みテキストの検証をキャンセルしました</translation></message>
+<message><source>Missing media type for staged resource</source><translation>ステージ済みリソースのメディアタイプがありません</translation></message>
+<message><source>Staged XML is not well formed: %1 at %2:%3: %4</source><translation>ステージ済み XML は整形式ではありません: %1 の %2:%3: %4</translation></message>
+</context>
 <context><name>RegexWorkbenchDialog</name>
 <message><source>%1 copy</source><translation>%1 のコピー</translation></message>
 <message><source>Accept when secondary matches</source><translation>二次正規表現に一致した場合に採用</translation></message>

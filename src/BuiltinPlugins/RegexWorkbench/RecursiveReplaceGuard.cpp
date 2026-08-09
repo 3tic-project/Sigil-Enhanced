@@ -17,6 +17,8 @@
 #include <cmath>
 #include <limits>
 
+#include <QCoreApplication>
+
 namespace BuiltinPlugins
 {
 namespace RegexWorkbench
@@ -59,7 +61,8 @@ RecursiveReplaceGuard::RecursiveReplaceGuard(qint64 originalTextCodeUnits,
     if (originalTextCodeUnits < 0 || options.maxTotalReplacements <= 0 ||
         !std::isfinite(options.maxTextGrowthFactor) || options.maxTextGrowthFactor <= 0.0 ||
         options.maxAbsoluteGrowthCodeUnits < 0 || options.maxTextCodeUnits <= 0) {
-        m_configurationError = QStringLiteral("Invalid recursive replacement guard configuration");
+        m_configurationError = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Invalid recursive replacement guard configuration");
         return;
     }
 
@@ -91,24 +94,31 @@ GuardResult RecursiveReplaceGuard::check(qint64 newTextCodeUnits,
     if (!isValid() || newTextCodeUnits < 0 || totalReplacements < 0) {
         return Failure(GuardError::InvalidConfiguration,
                        m_configurationError.isEmpty()
-                           ? QStringLiteral("Invalid recursive replacement guard input")
+                           ? QCoreApplication::translate(
+                                 "RegexWorkbenchCore",
+                                 "Invalid recursive replacement guard input")
                            : m_configurationError);
     }
     if (totalReplacements > m_options.maxTotalReplacements) {
         return Failure(GuardError::ReplacementLimit,
-                       QStringLiteral("Replacement count %1 exceeds limit %2")
+                       QCoreApplication::translate(
+                           "RegexWorkbenchCore", "Replacement count %1 exceeds limit %2")
                            .arg(totalReplacements)
                            .arg(m_options.maxTotalReplacements));
     }
     if (newTextCodeUnits > m_effectiveMaxTextCodeUnits) {
         return Failure(GuardError::TextSizeLimit,
-                       QStringLiteral("Text length %1 exceeds absolute limit %2 UTF-16 units")
+                       QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Text length %1 exceeds absolute limit %2 UTF-16 units")
                            .arg(newTextCodeUnits)
                            .arg(m_effectiveMaxTextCodeUnits));
     }
     if (newTextCodeUnits > m_growthLimit) {
         return Failure(GuardError::TextGrowthLimit,
-                       QStringLiteral("Text length %1 exceeds original-relative growth limit %2 UTF-16 units")
+                       QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Text length %1 exceeds original-relative growth limit %2 UTF-16 units")
                            .arg(newTextCodeUnits)
                            .arg(m_growthLimit));
     }

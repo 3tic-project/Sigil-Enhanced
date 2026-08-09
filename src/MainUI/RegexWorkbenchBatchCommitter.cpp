@@ -8,6 +8,8 @@
 
 #include "MainUI/RegexWorkbenchBatchCommitter.h"
 
+#include <QCoreApplication>
+
 SearchBatch::Result RegexWorkbenchBatchCommitter::Commit(
     MainWindow* main_window,
     const QHash<QString, TextResource*>& resources,
@@ -22,7 +24,9 @@ SearchBatch::Result RegexWorkbenchBatchCommitter::Commit(
     if (!batch_result.validation.success) {
         result.success = false;
         result.error = batch_result.validation.error.isEmpty()
-                           ? QStringLiteral("Regex workbench staged validation did not succeed")
+                           ? QCoreApplication::translate(
+                                 "RegexWorkbenchCore",
+                                 "Regex workbench staged validation did not succeed")
                            : batch_result.validation.error;
         return result;
     }
@@ -31,7 +35,9 @@ SearchBatch::Result RegexWorkbenchBatchCommitter::Commit(
     QString storeError;
     if (!pendingStore.restore(batch_result.finalStore, &storeError)) {
         result.success = false;
-        result.error = QStringLiteral("Regex workbench variable state is invalid: %1")
+        result.error = QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Regex workbench variable state is invalid: %1")
                            .arg(storeError);
         return result;
     }

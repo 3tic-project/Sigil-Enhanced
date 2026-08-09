@@ -8,6 +8,7 @@
 
 #include "Misc/StagedTextValidator.h"
 
+#include <QCoreApplication>
 #include <QXmlStreamReader>
 
 namespace SearchBatch
@@ -50,7 +51,8 @@ StagedValidationResult StagedTextValidator::Validate(
 {
     StagedValidationResult result;
     if (options.maxIssues <= 0 || options.entityExpansionLimit <= 0) {
-        result.error = QStringLiteral("Invalid staged text validation limits");
+        result.error = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Invalid staged text validation limits");
         return result;
     }
 
@@ -59,13 +61,15 @@ StagedValidationResult StagedTextValidator::Validate(
     for (const QString& path : paths) {
         if (options.isCancelled && options.isCancelled()) {
             result.cancelled = true;
-            result.error = QStringLiteral("Staged text validation was cancelled");
+            result.error = QCoreApplication::translate(
+                "RegexWorkbenchCore", "Staged text validation was cancelled");
             return result;
         }
         if (!mediaTypes.contains(path)) {
             StagedValidationIssue issue;
             issue.resourcePath = path;
-            issue.message = QStringLiteral("Missing media type for staged resource");
+            issue.message = QCoreApplication::translate(
+                "RegexWorkbenchCore", "Missing media type for staged resource");
             AppendIssue(result, issue, options.maxIssues);
             continue;
         }
@@ -91,7 +95,9 @@ StagedValidationResult StagedTextValidator::Validate(
 
     if (result.issueCount > 0) {
         const StagedValidationIssue& first = result.issues.first();
-        result.error = QStringLiteral("Staged XML is not well formed: %1 at %2:%3: %4")
+        result.error = QCoreApplication::translate(
+                           "RegexWorkbenchCore",
+                           "Staged XML is not well formed: %1 at %2:%3: %4")
                            .arg(first.resourcePath)
                            .arg(first.line)
                            .arg(first.column)

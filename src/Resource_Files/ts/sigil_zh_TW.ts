@@ -26085,6 +26085,126 @@ Continue using the requested filename?</source>
         <translation>黑鑽石</translation>
     </message>
 </context>
+<context><name>RegexWorkbenchCore</name>
+<message><source>Invalid recursive replacement guard configuration</source><translation>遞迴取代保護設定無效</translation></message>
+<message><source>Invalid recursive replacement guard input</source><translation>遞迴取代保護輸入無效</translation></message>
+<message><source>Replacement count %1 exceeds limit %2</source><translation>取代次數 %1 超過上限 %2</translation></message>
+<message><source>Text length %1 exceeds absolute limit %2 UTF-16 units</source><translation>文字長度 %1 超過絕對上限 %2 個 UTF-16 單位</translation></message>
+<message><source>Text length %1 exceeds original-relative growth limit %2 UTF-16 units</source><translation>文字長度 %1 超過相對原文增長上限 %2 個 UTF-16 單位</translation></message>
+<message><source>Search template groups cannot be imported as rules</source><translation>搜尋範本群組不能匯入為規則</translation></message>
+<message><source>Search template name and find pattern must not be empty</source><translation>搜尋範本名稱與尋找運算式不能為空</translation></message>
+<message><source>Python function search templates are not supported by Regex Workbench</source><translation>正則工作臺不支援 Python 函式搜尋範本</translation></message>
+<message><source>Only regular-expression search templates can be imported</source><translation>只能匯入正則運算式搜尋範本</translation></message>
+<message><source>PreSearch control was ignored because the prefind pattern is empty</source><translation>預搜尋運算式為空，已忽略 PreSearch 控制項</translation></message>
+<message><source>Stored prefind pattern was ignored because controls do not contain PS</source><translation>控制項不含 PS，已忽略儲存的預搜尋運算式</translation></message>
+<message><source>Per-entry scope or direction controls were not imported: %1</source><translation>未匯入項目層級的範圍或方向控制項：%1</translation></message>
+<message><source>Unknown %1 field: %2</source><translation>未知的 %1 欄位：%2</translation></message>
+<message><source>Recipe field %1 must be a string</source><translation>方案欄位 %1 必須是字串</translation></message>
+<message><source>Recipe field %1 must be a boolean</source><translation>方案欄位 %1 必須是布林值</translation></message>
+<message><source>Recipe field %1 must be an integer in [%2, %3]</source><translation>方案欄位 %1 必須是 [%2, %3] 範圍內的整數</translation></message>
+<message><source>Recipe field captureToVar must be an array</source><translation>方案欄位 captureToVar 必須是陣列</translation></message>
+<message><source>Recipe captureToVar exceeds its item limit</source><translation>方案的 captureToVar 超過項目數上限</translation></message>
+<message><source>Recipe captureToVar contains an invalid or duplicate name</source><translation>方案的 captureToVar 包含無效或重複名稱</translation></message>
+<message><source>Unknown recipe secondaryMode: %1</source><translation>未知的方案 secondaryMode：%1</translation></message>
+<message><source>Invalid recipe limits</source><translation>方案限制無效</translation></message>
+<message><source>Recipe name is empty or exceeds its limit</source><translation>方案名稱為空或超過長度上限</translation></message>
+<message><source>Recipe has an unknown variable scope or write policy</source><translation>方案包含未知的變數範圍或寫入策略</translation></message>
+<message><source>Recipe exceeds its rule-count limit</source><translation>方案超過規則數量上限</translation></message>
+<message><source>Recipe rule has an empty or oversized required field</source><translation>方案規則的必填欄位為空或超過大小上限</translation></message>
+<message><source>Recipe contains duplicate rule id: %1</source><translation>方案包含重複的規則 ID：%1</translation></message>
+<message><source>Recipe rule %1 has inconsistent secondary configuration</source><translation>方案規則 %1 的二級正則設定不一致</translation></message>
+<message><source>Recipe rule %1 has invalid recursive limits</source><translation>方案規則 %1 的遞迴限制無效</translation></message>
+<message><source>Recipe rule %1 exceeds its capture-name limit</source><translation>方案規則 %1 超過擷取群組名稱數量上限</translation></message>
+<message><source>Recipe rule %1 has an invalid or duplicate capture name</source><translation>方案規則 %1 包含無效或重複的擷取群組名稱</translation></message>
+<message><source>Recipe rule %1 uses an unsupported Python function replacement</source><translation>方案規則 %1 使用不支援的 Python 函式取代</translation></message>
+<message><source>Serialized recipe exceeds its file-size limit</source><translation>序列化後的方案超過檔案大小上限</translation></message>
+<message><source>Recipe exceeds its file-size limit</source><translation>方案超過檔案大小上限</translation></message>
+<message><source>Invalid recipe JSON: %1</source><translation>方案 JSON 無效：%1</translation></message>
+<message><source>Unknown recipe format</source><translation>未知的方案格式</translation></message>
+<message><source>Recipe version is required</source><translation>方案必須指定版本</translation></message>
+<message><source>Unknown recipe variable scope or write policy</source><translation>未知的方案變數範圍或寫入策略</translation></message>
+<message><source>Recipe rules must be an array within the rule-count limit</source><translation>方案 rules 必須是未超過規則數量上限的陣列</translation></message>
+<message><source>Each recipe rule must be an object</source><translation>每一條方案規則都必須是物件</translation></message>
+<message><source>Recipe path is empty</source><translation>方案路徑為空</translation></message>
+<message><source>Could not create recipe directory: %1</source><translation>無法建立方案目錄：%1</translation></message>
+<message><source>Could not save recipe %1: %2</source><translation>無法儲存方案 %1：%2</translation></message>
+<message><source>Could not open recipe %1: %2</source><translation>無法開啟方案 %1：%2</translation></message>
+<message><source>Recipe name or path is empty</source><translation>方案名稱或路徑為空</translation></message>
+<message><source>Recipe file does not exist: %1</source><translation>方案檔案不存在：%1</translation></message>
+<message><source>Relative recipe identifiers must not contain directories</source><translation>相對方案識別碼不能包含目錄</translation></message>
+<message><source>Recipe name is ambiguous: %1</source><translation>方案名稱不唯一：%1</translation></message>
+<message><source>Could not find recipe: %1</source><translation>找不到方案：%1</translation></message>
+<message><source>Invalid regex workbench batch limits</source><translation>正則工作臺批次處理限制無效</translation></message>
+<message><source>Regex workbench batch contains an empty resource path</source><translation>正則工作臺批次處理包含空白資源路徑</translation></message>
+<message><source>Regex workbench batch contains duplicate resource path: %1</source><translation>正則工作臺批次處理包含重複資源路徑：%1</translation></message>
+<message><source>Regex workbench batch target is missing: %1</source><translation>正則工作臺批次處理目標遺失：%1</translation></message>
+<message><source>Regex workbench rule %1 failed to compile: %2</source><translation>正則工作臺規則 %1 編譯失敗：%2</translation></message>
+<message><source>Prepared regex workbench rule is missing: %1</source><translation>缺少已準備的正則工作臺規則：%1</translation></message>
+<message><source>Regex workbench rule %1 failed for %2: %3</source><translation>正則工作臺規則 %1 處理 %2 時失敗：%3</translation></message>
+<message><source>Regex workbench replacement count overflow</source><translation>正則工作臺取代計數溢位</translation></message>
+<message><source>Regex workbench run exceeded replacement limit %1</source><translation>正則工作臺執行超過取代上限 %1</translation></message>
+<message><source>stateSnapshot and restoreState must be configured together</source><translation>stateSnapshot 與 restoreState 必須同時設定</translation></message>
+<message><source>Replacement callbacks require state snapshot and restore handlers</source><translation>取代回呼需要狀態快照與還原處理器</translation></message>
+<message><source>A replacement expander is required</source><translation>必須提供取代展開器</translation></message>
+<message><source>Recursive maxIterations must be greater than zero</source><translation>遞迴 maxIterations 必須大於零</translation></message>
+<message><source>Recursive replacement reached iteration limit %1 with matches remaining</source><translation>遞迴取代已達迭代上限 %1，但仍有符合項目</translation></message>
+<message><source>Regex replacement cancelled</source><translation>正則取代已取消</translation></message>
+<message><source>Replacement variable callback failed</source><translation>取代變數回呼失敗</translation></message>
+<message><source>Replacement expansion failed</source><translation>取代文字展開失敗</translation></message>
+<message><source>Replacement trace did not cover every candidate</source><translation>取代追蹤記錄未涵蓋所有候選項目</translation></message>
+<message><source>Recursive replacement made no state progress while matches remain</source><translation>遞迴取代仍有符合項目，但狀態沒有進展</translation></message>
+<message><source>Recursive replacement entered a previously seen state</source><translation>遞迴取代進入先前出現過的狀態</translation></message>
+<message><source>Configured named capture does not exist: %1</source><translation>設定的命名擷取群組不存在：%1</translation></message>
+<message><source>Whole Python function replacements are not supported in Regex Workbench</source><translation>正則工作臺不支援完整 Python 函式取代</translation></message>
+<message><source>Prepared regex rule is invalid</source><translation>已準備的正則規則無效</translation></message>
+<message><source>Variable executor owns replacement callbacks and store transactions</source><translation>變數執行器獨佔取代回呼與變數儲存交易</translation></message>
+<message><source>Undefined variable: %1</source><translation>變數未定義：%1</translation></message>
+<message><source>Invalid variable name: %1</source><translation>變數名稱無效：%1</translation></message>
+<message><source>Invalid variable store limits</source><translation>變數儲存限制無效</translation></message>
+<message><source>Variable %1 exceeds the per-value UTF-16 limit</source><translation>變數 %1 超過單一值的 UTF-16 長度上限</translation></message>
+<message><source>No active resource for resource-scoped variables</source><translation>資源範圍變數沒有作用中的資源</translation></message>
+<message><source>Variable store exceeds its variable-count limit</source><translation>變數儲存超過變數數量上限</translation></message>
+<message><source>Variable store exceeds its total UTF-16 limit</source><translation>變數儲存超過 UTF-16 總長度上限</translation></message>
+<message><source>Invalid capture number for %1</source><translation>%1 的擷取群組編號無效</translation></message>
+<message><source>Invalid capture offsets for %1</source><translation>%1 的擷取群組位移無效</translation></message>
+<message><source>Unknown variable scope</source><translation>未知的變數範圍</translation></message>
+<message><source>Invalid variable store snapshot</source><translation>變數儲存快照無效</translation></message>
+<message><source>Invalid resource frame in variable store snapshot</source><translation>變數儲存快照中的資源框架無效</translation></message>
+<message><source>Variable store snapshot exceeds total limit</source><translation>變數儲存快照超過總量上限</translation></message>
+<message><source>secondaryPattern must be empty when secondaryMode is None</source><translation>secondaryMode 為 None 時 secondaryPattern 必須為空</translation></message>
+<message><source>secondaryPattern must not be empty when a secondary mode is active</source><translation>啟用二級模式時 secondaryPattern 不能為空</translation></message>
+<message><source>Unknown secondary regex mode</source><translation>未知的二級正則模式</translation></message>
+<message><source>Regex workbench staged validation did not succeed</source><translation>正則工作臺暫存內容驗證未通過</translation></message>
+<message><source>Regex workbench variable state is invalid: %1</source><translation>正則工作臺變數狀態無效：%1</translation></message>
+<message><source>No book is available for the search batch.</source><translation>沒有可供搜尋批次處理使用的書籍。</translation></message>
+<message><source>Search batch snapshots must be captured on the GUI thread.</source><translation>搜尋批次處理快照必須在 GUI 執行緒中取得。</translation></message>
+<message><source>Search batch contains an empty target path.</source><translation>搜尋批次處理包含空白目標路徑。</translation></message>
+<message><source>Search batch contains a duplicate target path: %1</source><translation>搜尋批次處理包含重複目標路徑：%1</translation></message>
+<message><source>Search batch target is no longer available: %1</source><translation>搜尋批次處理目標已無法使用：%1</translation></message>
+<message><source>No book is available for the search batch commit.</source><translation>沒有可供提交搜尋批次處理的書籍。</translation></message>
+<message><source>Search batch commits must run on the GUI thread.</source><translation>搜尋批次處理提交必須在 GUI 執行緒中執行。</translation></message>
+<message><source>Staged search result contains an unknown target: %1</source><translation>暫存搜尋結果包含未知目標：%1</translation></message>
+<message><source>Search batch target changed during staging: %1</source><translation>搜尋批次處理目標在暫存期間發生變更：%1</translation></message>
+<message><source>Could not create the recovery checkpoint; no replacements were written.</source><translation>無法建立復原檢查點；未寫入任何取代。</translation></message>
+<message><source>Search batch target changed while creating the checkpoint: %1</source><translation>建立檢查點時搜尋批次處理目標發生變更：%1</translation></message>
+<message><source>Saved-search target disappeared before commit: %1</source><translation>已儲存的搜尋目標在提交前消失：%1</translation></message>
+<message><source>Saved-search target changed before commit: %1</source><translation>已儲存的搜尋目標在提交前發生變更：%1</translation></message>
+<message><source>Saved-search target failed its commit check: %1</source><translation>已儲存的搜尋目標未通過提交檢查：%1</translation></message>
+<message><source>PCRE2 error %1</source><translation>PCRE2 錯誤 %1</translation></message>
+<message><source>PCRE2 diagnostic: %1</source><translation>PCRE2 診斷：%1</translation></message>
+<message><source>Invalid regex search range [%1, %2) for text length %3</source><translation>正則搜尋範圍 [%1, %2) 無效，文字長度為 %3</translation></message>
+<message><source>Invalid PCRE2 enumeration limit</source><translation>PCRE2 列舉限制無效</translation></message>
+<message><source>Unable to configure PCRE2 match limits</source><translation>無法設定 PCRE2 符合限制</translation></message>
+<message><source>Regex match enumeration cancelled</source><translation>正則符合列舉已取消</translation></message>
+<message><source>Search batch has no replacement engine.</source><translation>搜尋批次處理沒有取代引擎。</translation></message>
+<message><source>Search batch was cancelled.</source><translation>搜尋批次處理已取消。</translation></message>
+<message><source>Search batch target is missing: %1</source><translation>搜尋批次處理目標遺失：%1</translation></message>
+<message><source>Search rule failed for %1: %2</source><translation>搜尋規則 %1 處理 %2 時失敗</translation></message>
+<message><source>Invalid staged text validation limits</source><translation>暫存文字驗證限制無效</translation></message>
+<message><source>Staged text validation was cancelled</source><translation>暫存文字驗證已取消</translation></message>
+<message><source>Missing media type for staged resource</source><translation>暫存資源缺少媒體類型</translation></message>
+<message><source>Staged XML is not well formed: %1 at %2:%3: %4</source><translation>暫存 XML 格式不正確：%1，位置 %2:%3：%4</translation></message>
+</context>
 <context><name>RegexWorkbenchDialog</name>
 <message><source>%1 copy</source><translation>%1 副本</translation></message>
 <message><source>Accept when secondary matches</source><translation>二級正則符合時接受</translation></message>

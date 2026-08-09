@@ -15,6 +15,8 @@
 
 #include <memory>
 
+#include <QCoreApplication>
+
 #include "Misc/PreSearchMatcher.h"
 
 namespace BuiltinPlugins
@@ -59,20 +61,25 @@ bool ValidateSecondaryConfiguration(const RegexWorkbenchRule& rule, QString& err
 {
     if (rule.secondaryMode == SecondaryMode::None) {
         if (!rule.secondaryPattern.isEmpty()) {
-            error = QStringLiteral("secondaryPattern must be empty when secondaryMode is None");
+            error = QCoreApplication::translate(
+                "RegexWorkbenchCore",
+                "secondaryPattern must be empty when secondaryMode is None");
             return false;
         }
         return true;
     }
 
     if (rule.secondaryPattern.isEmpty()) {
-        error = QStringLiteral("secondaryPattern must not be empty when a secondary mode is active");
+        error = QCoreApplication::translate(
+            "RegexWorkbenchCore",
+            "secondaryPattern must not be empty when a secondary mode is active");
         return false;
     }
     if (rule.secondaryMode != SecondaryMode::PreSearch &&
         rule.secondaryMode != SecondaryMode::FilterAccept &&
         rule.secondaryMode != SecondaryMode::FilterReject) {
-        error = QStringLiteral("Unknown secondary regex mode");
+        error = QCoreApplication::translate(
+            "RegexWorkbenchCore", "Unknown secondary regex mode");
         return false;
     }
     return true;

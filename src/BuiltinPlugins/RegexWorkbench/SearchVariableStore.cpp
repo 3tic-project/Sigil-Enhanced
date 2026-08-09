@@ -15,6 +15,7 @@
 
 #include <algorithm>
 
+#include <QCoreApplication>
 #include <QDataStream>
 #include <QIODevice>
 #include <QSet>
@@ -123,21 +124,29 @@ QStringList SearchVariableStore::getList(const QString& name) const
 bool SearchVariableStore::set(const QString& name, const QString& value, QString* error)
 {
     if (!IsValidName(name)) {
-        SetError(error, QStringLiteral("Invalid variable name: %1").arg(name));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Invalid variable name: %1")
+                            .arg(name));
         return false;
     }
     if (m_limits.maxValueCodeUnits <= 0 || m_limits.maxTotalCodeUnits <= 0 ||
         m_limits.maxVariables <= 0) {
-        SetError(error, QStringLiteral("Invalid variable store limits"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Invalid variable store limits"));
         return false;
     }
     if (value.size() > m_limits.maxValueCodeUnits) {
-        SetError(error, QStringLiteral("Variable %1 exceeds the per-value UTF-16 limit").arg(name));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Variable %1 exceeds the per-value UTF-16 limit")
+                            .arg(name));
         return false;
     }
 
     if (m_scope == VariableScope::Resource && m_activeResource.isEmpty()) {
-        SetError(error, QStringLiteral("No active resource for resource-scoped variables"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "No active resource for resource-scoped variables"));
         return false;
     }
     const Frame* existingFrame = static_cast<const SearchVariableStore*>(this)->activeFrame();
@@ -149,7 +158,9 @@ bool SearchVariableStore::set(const QString& name, const QString& value, QString
         return true;
     }
     if (isNewVariable && m_variableCount >= m_limits.maxVariables) {
-        SetError(error, QStringLiteral("Variable store exceeds its variable-count limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Variable store exceeds its variable-count limit"));
         return false;
     }
 
@@ -161,7 +172,9 @@ bool SearchVariableStore::set(const QString& name, const QString& value, QString
                                      ? m_totalCodeUnits + value.size()
                                      : m_totalCodeUnits - previousUnits + value.size();
     if (proposedTotal > m_limits.maxTotalCodeUnits) {
-        SetError(error, QStringLiteral("Variable store exceeds its total UTF-16 limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Variable store exceeds its total UTF-16 limit"));
         return false;
     }
 
@@ -205,7 +218,9 @@ bool SearchVariableStore::ingestNamedCaptures(
         const int number = captureNumbers.value(name);
         if (number <= 0 || number >= captures.size()) {
             restore(before);
-            SetError(error, QStringLiteral("Invalid capture number for %1").arg(name));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore", "Invalid capture number for %1")
+                                .arg(name));
             return false;
         }
         const std::pair<int, int> offsets = captures.at(number);
@@ -215,7 +230,9 @@ bool SearchVariableStore::ingestNamedCaptures(
         if (offsets.first < 0 || offsets.second < 0 ||
             offsets.second < offsets.first || offsets.second > matchText.size()) {
             restore(before);
-            SetError(error, QStringLiteral("Invalid capture offsets for %1").arg(name));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore", "Invalid capture offsets for %1")
+                                .arg(name));
             return false;
         }
         if (!set(name, matchText.mid(offsets.first, offsets.second - offsets.first), error)) {
@@ -309,7 +326,9 @@ SearchVariableStore::Frame* SearchVariableStore::activeFrame(QString* error)
     switch (m_scope) {
         case VariableScope::Resource:
             if (m_activeResource.isEmpty()) {
-                SetError(error, QStringLiteral("No active resource for resource-scoped variables"));
+                SetError(error, QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "No active resource for resource-scoped variables"));
                 return nullptr;
             }
             return &m_resourceFrames[m_activeResource];
@@ -318,7 +337,8 @@ SearchVariableStore::Frame* SearchVariableStore::activeFrame(QString* error)
         case VariableScope::Session:
             return &m_sessionFrame;
     }
-    SetError(error, QStringLiteral("Unknown variable scope"));
+    SetError(error, QCoreApplication::translate(
+                        "RegexWorkbenchCore", "Unknown variable scope"));
     return nullptr;
 }
 
@@ -393,20 +413,25 @@ bool SearchVariableStore::validateSnapshot(const Snapshot& value,
                              value.writePolicy == WritePolicy::Append;
     if (!validScope || !validPolicy ||
         !validateFrame(value.batchFrame) || !validateFrame(value.sessionFrame)) {
-        SetError(error, QStringLiteral("Invalid variable store snapshot"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore", "Invalid variable store snapshot"));
         return false;
     }
     for (auto resource = value.resourceFrames.constBegin();
          resource != value.resourceFrames.constEnd(); ++resource) {
         if (resource.key().isEmpty() || !validateFrame(resource.value())) {
-            SetError(error, QStringLiteral("Invalid resource frame in variable store snapshot"));
+            SetError(error, QCoreApplication::translate(
+                                "RegexWorkbenchCore",
+                                "Invalid resource frame in variable store snapshot"));
             return false;
         }
     }
     codeUnits = SnapshotCodeUnits(value);
     variableCount = SnapshotVariableCount(value);
     if (codeUnits > m_limits.maxTotalCodeUnits || variableCount > m_limits.maxVariables) {
-        SetError(error, QStringLiteral("Variable store snapshot exceeds total limit"));
+        SetError(error, QCoreApplication::translate(
+                            "RegexWorkbenchCore",
+                            "Variable store snapshot exceeds total limit"));
         return false;
     }
     return true;
