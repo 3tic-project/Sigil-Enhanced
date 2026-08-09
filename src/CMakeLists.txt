@@ -82,6 +82,9 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
     BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
     BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+    BuiltinPlugins/RegexWorkbench/SearchVariableStoreSPCRE.cpp
     BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
     BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
     )
@@ -590,6 +593,8 @@ set( MISC_EDITORS_FILES
     )
 
 set( SPCRE_FILES
+    PCRE2/CaptureNameTable.cpp
+    PCRE2/CaptureNameTable.h
     PCRE2/SPCRE.cpp
     PCRE2/SPCRE.h
     PCRE2/PCRECache.cpp

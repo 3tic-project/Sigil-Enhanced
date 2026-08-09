@@ -32,6 +32,7 @@
 
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 using std::pair;
 
@@ -118,6 +119,7 @@ public:
      * named group does not exist within the pattern.
      */
     int getCaptureStringNumber(const QString &name);
+    QStringList getCaptureNames() const;
 
     /**
      * Generate match information from a segment of text. Finds all matching

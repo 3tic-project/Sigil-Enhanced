@@ -25,6 +25,7 @@
 // #include <QDebug>
 
 #include "PCRE2/SPCRE.h"
+#include "PCRE2/CaptureNameTable.h"
 #include "PCRE2/PCREReplaceTextBuilder.h"
 #include "Misc/Utility.h"
 #include "Misc/SearchUtils.h"
@@ -161,6 +162,11 @@ int SPCRE::getCaptureStringNumber(const QString &name)
     }
 
     return number;
+}
+
+QStringList SPCRE::getCaptureNames() const
+{
+    return PCRE2Helpers::CaptureNames(m_re);
 }
 
 QList<SPCRE::MatchInfo> SPCRE::getEveryMatchInfo(const QString &text)

@@ -116,6 +116,44 @@ target_compile_features(regex_recursive_replace_test PRIVATE cxx_std_17)
 add_test(NAME regex_recursive_replace COMMAND regex_recursive_replace_test)
 set_tests_properties(regex_recursive_replace PROPERTIES TIMEOUT 30)
 
+add_executable(regex_capture_names_test
+    regex_capture_names_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/CaptureNameTable.cpp
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/CaptureNameTable.h
+)
+
+target_include_directories(regex_capture_names_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_capture_names_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_capture_names_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_capture_names COMMAND regex_capture_names_test)
+set_tests_properties(regex_capture_names PROPERTIES TIMEOUT 30)
+
+add_executable(regex_variable_store_test
+    regex_variable_store_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+)
+
+target_include_directories(regex_variable_store_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(regex_variable_store_test PRIVATE
+    Qt6::Core
+)
+target_compile_features(regex_variable_store_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_variable_store COMMAND regex_variable_store_test)
+set_tests_properties(regex_variable_store PROPERTIES TIMEOUT 30)
+
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
