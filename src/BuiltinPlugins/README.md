@@ -158,7 +158,7 @@ Phase 2:
 - 最终目标结构为 `OEBPS/content.opf`、`OEBPS/toc.ncx`、`OEBPS/Text`、`OEBPS/Styles`、`OEBPS/Images`、`OEBPS/Fonts`、`OEBPS/Audio`、`OEBPS/Video`、`OEBPS/Misc`。
 - 归档完成后会将 Validation Results 中的资源路径同步到移动后的新路径，避免结果列表双击定位到旧路径。
 
-## BR Paragraph Normalizer
+## Kobo BR Paragraph Normalizer
 
 目标是识别并修复部分自动生成 EPUB 中“正文直接挂在 `body` 下，靠顶层 `<br/>` 分段”的结构问题，安全转换为 `<p>` 段落。
 
@@ -175,9 +175,9 @@ Phase 2:
   - `already-normalized`: 已有 `<p>`，默认跳过。
   - `no-candidate` / `no-body` / `parse-error`: 无候选或不可处理。
 - 提供 `normalizeXhtmlText()`，转换时校验 XML well-formed、可见文本、`id`/`name`、`href`/`src`。
-- 新增 `Enhancement > Analyze BR Paragraphs...` 和 Automate 命令 `AnalyzeBrParagraphs`。
-- 新增 `Enhancement > Normalize Current BR Paragraphs...`，允许用户确认后处理当前 XHTML；人工确认候选也可通过此入口显式转换。
-- 新增 `Enhancement > Normalize BR Paragraphs...` 和 Automate 命令 `NormalizeBrParagraphs`，只批量转换 auto-safe 正文页。
+- `Enhancement > Analyze Kobo BR Paragraphs (Whole Book)...` 和 Automate 命令 `AnalyzeBrParagraphs` 扫描全书。
+- `Enhancement > Normalize Kobo BR Paragraphs (Current File)...` 允许用户确认后处理当前 XHTML；人工确认候选也可通过此入口显式转换。
+- `Enhancement > Normalize Kobo BR Paragraphs (Whole Book)...` 和 Automate 命令 `NormalizeBrParagraphs` 只批量转换 auto-safe 正文页。
 - 分析和转换结果写入 Validation Results，auto-safe 和人工确认候选用 warning，普通跳过页用 info。
 
 当前边界:
@@ -188,7 +188,7 @@ Phase 2:
 - 转换会给页面补充 `body.se-br-normalized` 作用域 CSS，将生成段落的默认 margin 归零，并用 `se-br-gap-before` 表示原始连续 `<br/>` 造成的空行。
 - 根 `<html xmlns="http://www.w3.org/1999/xhtml">` 会保留；生成段落不会重复写 `xmlns`，兼容上一版输出时也会清理子元素上的冗余 XHTML namespace。
 
-## KFX Paragraph Normalizer
+## Kindle KFX Paragraph Normalizer
 
 目标是识别并修复 KFX/XMDF/calibre 转换后常见的“正文裸文本直接位于 `body` 下，使用空白高度 `<p>` 作为段落分隔”的结构问题。
 
@@ -205,9 +205,9 @@ Phase 2:
   - `already-normalized`: 已无 body 直接文本，默认跳过。
   - `no-candidate` / `no-body` / `parse-error`: 无候选或不可处理。
 - 提供 `normalizeXhtmlText()`，转换时校验 XML well-formed、可见文本、`id`/`name`、`href`/`src`。
-- 新增 `Enhancement > Analyze KFX Paragraphs...` 和 Automate 命令 `AnalyzeKfxParagraphs`。
-- 新增 `Enhancement > Normalize Current KFX Paragraphs...`，允许用户确认后处理当前 XHTML；人工确认候选也可通过此入口显式转换。
-- 新增 `Enhancement > Normalize KFX Paragraphs...` 和 Automate 命令 `NormalizeKfxParagraphs`，只批量转换 auto-safe 正文页。
+- `Enhancement > Analyze Kindle KFX Paragraphs (Whole Book)...` 和 Automate 命令 `AnalyzeKfxParagraphs` 扫描全书。
+- `Enhancement > Normalize Kindle KFX Paragraphs (Current File)...` 允许用户确认后处理当前 XHTML；人工确认候选也可通过此入口显式转换。
+- `Enhancement > Normalize Kindle KFX Paragraphs (Whole Book)...` 和 Automate 命令 `NormalizeKfxParagraphs` 只批量转换 auto-safe 正文页。
 - 分析和转换结果写入 Validation Results，auto-safe 和人工确认候选用 warning，普通跳过页用 info。
 
 转换策略:

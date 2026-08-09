@@ -1991,50 +1991,50 @@
   </action>
   <action name="actionAnalyzeBrParagraphs">
     <property name="text">
-      <string>Analyze BR Paragraphs...</string>
+      <string>Analyze Kobo BR Paragraphs (Whole Book)...</string>
     </property>
     <property name="toolTip">
-      <string>Report XHTML files that use body-level BR tags as paragraph separators</string>
+      <string>Report XHTML files across the whole book that use body-level BR tags as paragraph separators</string>
     </property>
   </action>
   <action name="actionNormalizeCurrentBrParagraphs">
     <property name="text">
-      <string>Normalize Current BR Paragraphs...</string>
+      <string>Normalize Kobo BR Paragraphs (Current File)...</string>
     </property>
     <property name="toolTip">
-      <string>Convert body-level BR-separated text in the current XHTML file into paragraphs after safety checks</string>
+      <string>Convert Kobo BR-separated text in the current XHTML file into paragraphs after safety checks</string>
     </property>
   </action>
   <action name="actionNormalizeBrParagraphs">
     <property name="text">
-      <string>Normalize BR Paragraphs...</string>
+      <string>Normalize Kobo BR Paragraphs (Whole Book)...</string>
     </property>
     <property name="toolTip">
-      <string>Convert auto-safe body-level BR-separated XHTML files into paragraphs after per-file safety checks</string>
+      <string>Convert auto-safe Kobo BR-separated XHTML files across the whole book into paragraphs after per-file safety checks</string>
     </property>
   </action>
   <action name="actionAnalyzeKfxParagraphs">
     <property name="text">
-      <string>Analyze KFX Paragraphs...</string>
+      <string>Analyze Kindle KFX Paragraphs (Whole Book)...</string>
     </property>
     <property name="toolTip">
-      <string>Report XHTML files that use KFX/calibre spacer p elements around body-level raw text</string>
+      <string>Report XHTML files across the whole book that use Kindle KFX/calibre spacer p elements around body-level raw text</string>
     </property>
   </action>
   <action name="actionNormalizeCurrentKfxParagraphs">
     <property name="text">
-      <string>Normalize Current KFX Paragraphs...</string>
+      <string>Normalize Kindle KFX Paragraphs (Current File)...</string>
     </property>
     <property name="toolTip">
-      <string>Wrap KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</string>
+      <string>Wrap Kindle KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</string>
     </property>
   </action>
   <action name="actionNormalizeKfxParagraphs">
     <property name="text">
-      <string>Normalize KFX Paragraphs...</string>
+      <string>Normalize Kindle KFX Paragraphs (Whole Book)...</string>
     </property>
     <property name="toolTip">
-      <string>Convert auto-safe KFX/calibre spacer paragraph XHTML files into paragraphs after per-file safety checks</string>
+      <string>Convert auto-safe Kindle KFX/calibre spacer paragraph XHTML files across the whole book into paragraphs after per-file safety checks</string>
     </property>
   </action>
   <action name="actionAnalyzeBookLiveParagraphs">

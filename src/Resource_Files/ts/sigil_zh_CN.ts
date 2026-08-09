@@ -14602,63 +14602,63 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1987"/>
-        <source>Analyze BR Paragraphs...</source>
-        <translation>分析 BR 段落...</translation>
+        <source>Analyze Kobo BR Paragraphs (Whole Book)...</source>
+        <translation>分析 Kobo BR 段落（全书）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1990"/>
-        <source>Report XHTML files that use body-level BR tags as paragraph separators</source>
-        <translation>报告使用 body 级 BR 标签作为段落分隔的 XHTML 文件</translation>
+        <source>Report XHTML files across the whole book that use body-level BR tags as paragraph separators</source>
+        <translation>报告全书中使用 body 级 BR 标签作为段落分隔的 XHTML 文件</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1995"/>
-        <source>Normalize Current BR Paragraphs...</source>
-        <translation>规范化当前 BR 段落...</translation>
+        <source>Normalize Kobo BR Paragraphs (Current File)...</source>
+        <translation>规范化 Kobo BR 段落（当前文件）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1998"/>
-        <source>Convert body-level BR-separated text in the current XHTML file into paragraphs after safety checks</source>
-        <translation>通过安全检查后，将当前 XHTML 文件中由 body 级 BR 分隔的文本转换为段落</translation>
+        <source>Convert Kobo BR-separated text in the current XHTML file into paragraphs after safety checks</source>
+        <translation>通过安全检查后，将当前 XHTML 文件中由 Kobo BR 分隔的文本转换为段落</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2003"/>
-        <source>Normalize BR Paragraphs...</source>
-        <translation>规范化 BR 段落...</translation>
+        <source>Normalize Kobo BR Paragraphs (Whole Book)...</source>
+        <translation>规范化 Kobo BR 段落（全书）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2006"/>
-        <source>Convert auto-safe body-level BR-separated XHTML files into paragraphs after per-file safety checks</source>
-        <translation>对每个文件执行安全检查后，将可自动安全处理的 body 级 BR 分隔 XHTML 文件转换为段落</translation>
+        <source>Convert auto-safe Kobo BR-separated XHTML files across the whole book into paragraphs after per-file safety checks</source>
+        <translation>对每个文件执行安全检查后，将全书中可自动安全处理的 Kobo BR 分隔 XHTML 文件转换为段落</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2011"/>
-        <source>Analyze KFX Paragraphs...</source>
-        <translation>分析 KFX 段落...</translation>
+        <source>Analyze Kindle KFX Paragraphs (Whole Book)...</source>
+        <translation>分析 Kindle KFX 段落（全书）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2014"/>
-        <source>Report XHTML files that use KFX/calibre spacer p elements around body-level raw text</source>
-        <translation>报告使用 KFX/calibre 空白 p 元素分隔 body 级裸文本的 XHTML 文件</translation>
+        <source>Report XHTML files across the whole book that use Kindle KFX/calibre spacer p elements around body-level raw text</source>
+        <translation>报告全书中使用 Kindle KFX/calibre 空白 p 元素分隔 body 级裸文本的 XHTML 文件</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2019"/>
-        <source>Normalize Current KFX Paragraphs...</source>
-        <translation>规范化当前 KFX 段落...</translation>
+        <source>Normalize Kindle KFX Paragraphs (Current File)...</source>
+        <translation>规范化 Kindle KFX 段落（当前文件）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2022"/>
-        <source>Wrap KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</source>
-        <translation>通过安全检查后，将当前 XHTML 文件中的 KFX/calibre body 级裸文本包装为段落</translation>
+        <source>Wrap Kindle KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</source>
+        <translation>通过安全检查后，将当前 XHTML 文件中的 Kindle KFX/calibre body 级裸文本包装为段落</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2027"/>
-        <source>Normalize KFX Paragraphs...</source>
-        <translation>规范化 KFX 段落...</translation>
+        <source>Normalize Kindle KFX Paragraphs (Whole Book)...</source>
+        <translation>规范化 Kindle KFX 段落（全书）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2030"/>
-        <source>Convert auto-safe KFX/calibre spacer paragraph XHTML files into paragraphs after per-file safety checks</source>
-        <translation>对每个文件执行安全检查后，将可自动安全处理的 KFX/calibre 空白段落 XHTML 文件转换为段落</translation>
+        <source>Convert auto-safe Kindle KFX/calibre spacer paragraph XHTML files across the whole book into paragraphs after per-file safety checks</source>
+        <translation>对每个文件执行安全检查后，将全书中可自动安全处理的 Kindle KFX/calibre 空白段落 XHTML 文件转换为段落</translation>
     </message>
     <message>
         <location filename="../../MainUI/MainWindowExt.cpp" line="175"/>

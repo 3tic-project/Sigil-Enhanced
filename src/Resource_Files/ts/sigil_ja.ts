@@ -12017,63 +12017,63 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1987"/>
-        <source>Analyze BR Paragraphs...</source>
-        <translation>BR 段落を解析...</translation>
+        <source>Analyze Kobo BR Paragraphs (Whole Book)...</source>
+        <translation>Kobo BR 段落を解析（書籍全体）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1990"/>
-        <source>Report XHTML files that use body-level BR tags as paragraph separators</source>
-        <translation>本文直下の BR タグを段落区切りとして使用する XHTML ファイルを報告します</translation>
+        <source>Report XHTML files across the whole book that use body-level BR tags as paragraph separators</source>
+        <translation>書籍全体で本文直下の BR タグを段落区切りとして使用する XHTML ファイルを報告します</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1995"/>
-        <source>Normalize Current BR Paragraphs...</source>
-        <translation>現在の BR 段落を正規化...</translation>
+        <source>Normalize Kobo BR Paragraphs (Current File)...</source>
+        <translation>Kobo BR 段落を正規化（現在のファイル）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1998"/>
-        <source>Convert body-level BR-separated text in the current XHTML file into paragraphs after safety checks</source>
-        <translation>安全性チェック後、現在の XHTML ファイルにある本文直下の BR 区切りテキストを段落へ変換します</translation>
+        <source>Convert Kobo BR-separated text in the current XHTML file into paragraphs after safety checks</source>
+        <translation>安全性チェック後、現在の XHTML ファイルにある Kobo BR 区切りテキストを段落へ変換します</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2003"/>
-        <source>Normalize BR Paragraphs...</source>
-        <translation>BR 段落を正規化...</translation>
+        <source>Normalize Kobo BR Paragraphs (Whole Book)...</source>
+        <translation>Kobo BR 段落を正規化（書籍全体）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2006"/>
-        <source>Convert auto-safe body-level BR-separated XHTML files into paragraphs after per-file safety checks</source>
-        <translation>ファイルごとの安全性チェック後、自動処理可能な BR 区切り XHTML ファイルを段落へ変換します</translation>
+        <source>Convert auto-safe Kobo BR-separated XHTML files across the whole book into paragraphs after per-file safety checks</source>
+        <translation>ファイルごとの安全性チェック後、書籍全体の自動処理可能な Kobo BR 区切り XHTML ファイルを段落へ変換します</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2011"/>
-        <source>Analyze KFX Paragraphs...</source>
-        <translation>KFX 段落を解析...</translation>
+        <source>Analyze Kindle KFX Paragraphs (Whole Book)...</source>
+        <translation>Kindle KFX 段落を解析（書籍全体）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2014"/>
-        <source>Report XHTML files that use KFX/calibre spacer p elements around body-level raw text</source>
-        <translation>本文直下の生テキスト周辺で KFX/calibre のスペーサー p 要素を使用する XHTML ファイルを報告します</translation>
+        <source>Report XHTML files across the whole book that use Kindle KFX/calibre spacer p elements around body-level raw text</source>
+        <translation>書籍全体で本文直下の生テキスト周辺に Kindle KFX/calibre のスペーサー p 要素を使用する XHTML ファイルを報告します</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2019"/>
-        <source>Normalize Current KFX Paragraphs...</source>
-        <translation>現在の KFX 段落を正規化...</translation>
+        <source>Normalize Kindle KFX Paragraphs (Current File)...</source>
+        <translation>Kindle KFX 段落を正規化（現在のファイル）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2022"/>
-        <source>Wrap KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</source>
-        <translation>安全性チェック後、現在の XHTML ファイルにある KFX/calibre の本文直下の生テキストを段落で囲みます</translation>
+        <source>Wrap Kindle KFX/calibre body-level raw text in the current XHTML file into paragraphs after safety checks</source>
+        <translation>安全性チェック後、現在の XHTML ファイルにある Kindle KFX/calibre の本文直下の生テキストを段落で囲みます</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2027"/>
-        <source>Normalize KFX Paragraphs...</source>
-        <translation>KFX 段落を正規化...</translation>
+        <source>Normalize Kindle KFX Paragraphs (Whole Book)...</source>
+        <translation>Kindle KFX 段落を正規化（書籍全体）...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2030"/>
-        <source>Convert auto-safe KFX/calibre spacer paragraph XHTML files into paragraphs after per-file safety checks</source>
-        <translation>ファイルごとの安全性チェック後、自動処理可能な KFX/calibre スペーサー段落の XHTML ファイルを段落へ変換します</translation>
+        <source>Convert auto-safe Kindle KFX/calibre spacer paragraph XHTML files across the whole book into paragraphs after per-file safety checks</source>
+        <translation>ファイルごとの安全性チェック後、書籍全体の自動処理可能な Kindle KFX/calibre スペーサー段落の XHTML ファイルを段落へ変換します</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="2035"/>

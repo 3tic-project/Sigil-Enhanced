@@ -68,13 +68,13 @@
 - 外部 formatter 后端必须作为显式可选 backend 接入，不能改变默认 EPUB-safe 行为。
 - 不对 SVG、NCX、OPF、XML 等非 XHTML/CSS 资源做格式化。
 
-### BR Paragraph Normalizer
+### Kobo BR Paragraph Normalizer
 
 入口:
 
-- `Enhancement > Analyze BR Paragraphs...`
-- `Enhancement > Normalize Current BR Paragraphs...`
-- `Enhancement > Normalize BR Paragraphs...`
+- `Enhancement > Analyze Kobo BR Paragraphs (Whole Book)...`
+- `Enhancement > Normalize Kobo BR Paragraphs (Current File)...`
+- `Enhancement > Normalize Kobo BR Paragraphs (Whole Book)...`
 - Automate 命令: `AnalyzeBrParagraphs`
 - Automate 命令: `NormalizeBrParagraphs`
 
@@ -87,13 +87,13 @@
 - 转换后逐文件校验 XML well-formed、可见文本等价、`id`/`name` 集合等价、`href`/`src` 集合等价，失败则不写回。
 - 转换会保留根 XHTML namespace，但不会在每个生成的 `<p>` 上重复输出 `xmlns`；同时注入 `body.se-br-normalized` 作用域 CSS，避免阅读器默认段落 margin 改变行距。
 
-### KFX Paragraph Normalizer
+### Kindle KFX Paragraph Normalizer
 
 入口:
 
-- `Enhancement > Analyze KFX Paragraphs...`
-- `Enhancement > Normalize Current KFX Paragraphs...`
-- `Enhancement > Normalize KFX Paragraphs...`
+- `Enhancement > Analyze Kindle KFX Paragraphs (Whole Book)...`
+- `Enhancement > Normalize Kindle KFX Paragraphs (Current File)...`
+- `Enhancement > Normalize Kindle KFX Paragraphs (Whole Book)...`
 - Automate 命令: `AnalyzeKfxParagraphs`
 - Automate 命令: `NormalizeKfxParagraphs`
 
