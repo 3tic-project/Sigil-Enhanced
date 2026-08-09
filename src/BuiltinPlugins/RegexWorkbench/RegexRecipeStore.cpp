@@ -15,6 +15,7 @@
 
 #include <cmath>
 #include <limits>
+#include <utility>
 
 #include <QDir>
 #include <QFile>
@@ -585,6 +586,91 @@ bool RegexRecipeStore::LoadFile(const QString& path,
         return false;
     }
     return Deserialize(data, recipe, error, limits);
+}
+
+bool RegexRecipeStore::LoadNamed(const QString& identifier,
+                                 RegexRecipe& recipe,
+                                 QString* resolvedPath,
+                                 QString* error,
+                                 RegexRecipeLimits limits)
+{
+    if (error != nullptr) {
+        error->clear();
+    }
+    if (resolvedPath != nullptr) {
+        resolvedPath->clear();
+    }
+    const QString trimmed = identifier.trimmed();
+    if (trimmed.isEmpty()) {
+        SetError(error, QStringLiteral("Recipe name or path is empty"));
+        return false;
+    }
+
+    const QFileInfo explicitInfo(trimmed);
+    if (explicitInfo.isAbsolute()) {
+        if (!explicitInfo.isFile()) {
+            SetError(error, QStringLiteral("Recipe file does not exist: %1").arg(trimmed));
+            return false;
+        }
+        if (!LoadFile(explicitInfo.absoluteFilePath(), recipe, error, limits)) {
+            return false;
+        }
+        if (resolvedPath != nullptr) {
+            *resolvedPath = explicitInfo.absoluteFilePath();
+        }
+        return true;
+    }
+
+    if (QFileInfo(trimmed).fileName() != trimmed) {
+        SetError(error, QStringLiteral("Relative recipe identifiers must not contain directories"));
+        return false;
+    }
+
+    const QDir directory(DefaultDirectory());
+    QStringList candidateNames{trimmed};
+    if (!trimmed.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+        candidateNames.append(trimmed + QStringLiteral(".json"));
+    }
+    for (const QString& candidateName : std::as_const(candidateNames)) {
+        const QFileInfo candidate(directory.filePath(candidateName));
+        if (!candidate.isFile()) {
+            continue;
+        }
+        if (!LoadFile(candidate.absoluteFilePath(), recipe, error, limits)) {
+            return false;
+        }
+        if (resolvedPath != nullptr) {
+            *resolvedPath = candidate.absoluteFilePath();
+        }
+        return true;
+    }
+
+    QString matchedPath;
+    RegexRecipe matchedRecipe;
+    const QFileInfoList entries = directory.entryInfoList(
+        {QStringLiteral("*.json")}, QDir::Files | QDir::Readable, QDir::Name);
+    for (const QFileInfo& entry : entries) {
+        RegexRecipe candidate;
+        if (!LoadFile(entry.absoluteFilePath(), candidate, nullptr, limits) ||
+            candidate.name != trimmed) {
+            continue;
+        }
+        if (!matchedPath.isEmpty()) {
+            SetError(error, QStringLiteral("Recipe name is ambiguous: %1").arg(trimmed));
+            return false;
+        }
+        matchedPath = entry.absoluteFilePath();
+        matchedRecipe = candidate;
+    }
+    if (matchedPath.isEmpty()) {
+        SetError(error, QStringLiteral("Could not find recipe: %1").arg(trimmed));
+        return false;
+    }
+    recipe = matchedRecipe;
+    if (resolvedPath != nullptr) {
+        *resolvedPath = matchedPath;
+    }
+    return true;
 }
 
 QString RegexRecipeStore::DefaultDirectory()

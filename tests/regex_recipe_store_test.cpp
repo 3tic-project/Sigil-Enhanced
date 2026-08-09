@@ -189,6 +189,37 @@ void TestAtomicFileRoundTripAndDefaultDirectory()
     Require(RegexRecipeStore::LoadFile(path, loaded, &error) &&
                 loaded.name == CompleteRecipe().name,
             "saved recipe files must load successfully");
+
+    const QString directPath = RegexRecipeStore::DefaultDirectory() +
+                               QStringLiteral("/filename.json");
+    RegexRecipe named = CompleteRecipe();
+    named.name = QStringLiteral("Display Name");
+    Require(RegexRecipeStore::SaveFile(directPath, named, &error),
+            "named recipe fixture must save");
+    QString resolved;
+    Require(RegexRecipeStore::LoadNamed(QStringLiteral("filename"), loaded,
+                                        &resolved, &error) &&
+                resolved == directPath && loaded.name == named.name,
+            "recipe filenames without .json must resolve below the default directory");
+    Require(RegexRecipeStore::LoadNamed(QStringLiteral("Display Name"), loaded,
+                                        &resolved, &error) &&
+                resolved == directPath,
+            "recipe display names must resolve deterministically");
+    Require(RegexRecipeStore::LoadNamed(directPath, loaded, &resolved, &error) &&
+                resolved == directPath,
+            "absolute recipe paths must be accepted");
+
+    const QString duplicatePath = RegexRecipeStore::DefaultDirectory() +
+                                  QStringLiteral("/duplicate.json");
+    Require(RegexRecipeStore::SaveFile(duplicatePath, named, &error),
+            "duplicate display-name fixture must save");
+    Require(!RegexRecipeStore::LoadNamed(QStringLiteral("Display Name"), loaded,
+                                         &resolved, &error) &&
+                error.contains(QStringLiteral("ambiguous")),
+            "duplicate display names must fail closed");
+    Require(!RegexRecipeStore::LoadNamed(QStringLiteral("../outside"), loaded,
+                                         &resolved, &error),
+            "relative recipe identifiers must not escape the recipe directory");
 }
 
 void TestSearchEditorImportMappingAndWarnings()

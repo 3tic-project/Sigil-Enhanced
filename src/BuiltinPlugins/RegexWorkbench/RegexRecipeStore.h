@@ -71,6 +71,12 @@ public:
         RegexRecipe& recipe,
         QString* error = nullptr,
         RegexRecipeLimits limits = RegexRecipeLimits());
+    static bool LoadNamed(
+        const QString& identifier,
+        RegexRecipe& recipe,
+        QString* resolvedPath = nullptr,
+        QString* error = nullptr,
+        RegexRecipeLimits limits = RegexRecipeLimits());
 
     static QString DefaultDirectory();
     static bool Validate(
