@@ -12,6 +12,7 @@ def require(condition: bool, message: str) -> None:
 repo = Path(sys.argv[1]).resolve()
 operations = (repo / "src/Misc/SearchOperations.cpp").read_text(encoding="utf-8")
 coordinator = (repo / "src/MainUI/SearchBatchCoordinator.cpp").read_text(encoding="utf-8")
+coordinator_header = (repo / "src/MainUI/SearchBatchCoordinator.h").read_text(encoding="utf-8")
 text_resource = (repo / "src/ResourceObjects/TextResource.cpp").read_text(encoding="utf-8")
 html_resource = (repo / "src/ResourceObjects/HTMLResource.cpp").read_text(encoding="utf-8")
 
@@ -30,6 +31,28 @@ commit_body = coordinator[commit_start:commit_end]
 require(
     "SetTextAsUndoableEdit(result.changedTexts.value(path))" in commit_body,
     "saved-search batch commit must create one undo step per changed resource",
+)
+
+require(
+    "CaptureSnapshot" in coordinator_header
+    and "CommitStagedResult" in coordinator_header,
+    "search batch coordinator must expose separate GUI snapshot and commit boundaries",
+)
+run_start = coordinator.index("SearchBatch::Result SearchBatchCoordinator::Run(")
+capture_call = coordinator.index("CaptureSnapshot(", run_start)
+stage_call = coordinator.index("SearchBatch::Runner::Run(", capture_call)
+commit_call = coordinator.index("CommitStagedResult(", stage_call)
+require(
+    capture_call < stage_call < commit_call,
+    "saved-search compatibility wrapper must snapshot, stage in memory, then commit",
+)
+checkpoint_call = coordinator.index("CreateRecoveryCheckpoint()", commit_call)
+undoable_write = coordinator.index(
+    "SetTextAsUndoableEdit(result.changedTexts.value(path))", checkpoint_call
+)
+require(
+    checkpoint_call < undoable_write,
+    "recovery checkpoint must succeed before the first staged resource write",
 )
 require(
     "resource->SetText(" not in commit_body,

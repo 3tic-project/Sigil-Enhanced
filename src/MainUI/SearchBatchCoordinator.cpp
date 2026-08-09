@@ -10,6 +10,7 @@
 
 #include <QReadLocker>
 #include <QSet>
+#include <QThread>
 #include <QWriteLocker>
 
 #include "BookManipulation/Book.h"
@@ -25,34 +26,115 @@ SearchBatch::Result SearchBatchCoordinator::Run(
     const SearchBatch::ApplyFunction& apply)
 {
     SearchBatch::Result failed;
-    if (!main_window || !main_window->GetCurrentBook()) {
-        failed.error = QStringLiteral("No book is available for the saved-search batch.");
+    QStringList orderedPaths;
+    QSet<QString> seenPaths;
+    for (const SearchBatch::Rule& rule : rules) {
+        for (const QString& path : rule.resourcePaths) {
+            if (!seenPaths.contains(path)) {
+                seenPaths.insert(path);
+                orderedPaths.append(path);
+            }
+        }
+    }
+
+    Snapshot snapshot;
+    if (!CaptureSnapshot(main_window, orderedPaths, resources, snapshot,
+                         &failed.error)) {
         return failed;
     }
 
-    main_window->SaveTabData();
+    const SearchBatch::Result staged = SearchBatch::Runner::Run(
+        rules, snapshot.originalTexts, apply);
+    return CommitStagedResult(main_window, resources, snapshot, staged);
+}
 
-    QHash<QString, QString> originalTexts;
-    for (auto it = resources.constBegin(); it != resources.constEnd(); ++it) {
-        TextResource* resource = it.value();
-        if (!resource || resource->GetRelativePath() != it.key()) {
-            failed.error = QStringLiteral("Saved-search target is no longer available: %1").arg(it.key());
-            return failed;
+bool SearchBatchCoordinator::CaptureSnapshot(
+    MainWindow* main_window,
+    const QStringList& ordered_paths,
+    const QHash<QString, TextResource*>& resources,
+    Snapshot& snapshot,
+    QString* error)
+{
+    snapshot = Snapshot();
+    if (!main_window || !main_window->GetCurrentBook()) {
+        if (error) {
+            *error = QStringLiteral("No book is available for the search batch.");
+        }
+        return false;
+    }
+    if (QThread::currentThread() != main_window->thread()) {
+        if (error) {
+            *error = QStringLiteral("Search batch snapshots must be captured on the GUI thread.");
+        }
+        return false;
+    }
+
+    main_window->SaveTabData();
+    QSet<QString> seenPaths;
+    for (const QString& path : ordered_paths) {
+        if (path.isEmpty() || seenPaths.contains(path)) {
+            if (error) {
+                *error = path.isEmpty()
+                             ? QStringLiteral("Search batch contains an empty target path.")
+                             : QStringLiteral("Search batch contains a duplicate target path: %1")
+                                   .arg(path);
+            }
+            return false;
+        }
+        seenPaths.insert(path);
+        TextResource* resource = resources.value(path, nullptr);
+        if (!resource || resource->GetRelativePath() != path) {
+            if (error) {
+                *error = QStringLiteral("Search batch target is no longer available: %1")
+                             .arg(path);
+            }
+            return false;
         }
         resource->InitialLoad();
         QReadLocker locker(&resource->GetLock());
-        originalTexts.insert(it.key(), resource->GetText());
+        snapshot.resourcePaths.append(path);
+        snapshot.originalTexts.insert(path, resource->GetText());
+        snapshot.mediaTypes.insert(path, resource->GetMediaType());
     }
+    return true;
+}
 
-    SearchBatch::Result result = SearchBatch::Runner::Run(rules, originalTexts, apply);
+SearchBatch::Result SearchBatchCoordinator::CommitStagedResult(
+    MainWindow* main_window,
+    const QHash<QString, TextResource*>& resources,
+    const Snapshot& snapshot,
+    const SearchBatch::Result& staged_result)
+{
+    SearchBatch::Result result = staged_result;
     if (!result.success || result.changedTexts.isEmpty()) {
         return result;
     }
+    if (!main_window || !main_window->GetCurrentBook()) {
+        result.success = false;
+        result.error = QStringLiteral("No book is available for the search batch commit.");
+        return result;
+    }
+    if (QThread::currentThread() != main_window->thread()) {
+        result.success = false;
+        result.error = QStringLiteral("Search batch commits must run on the GUI thread.");
+        return result;
+    }
+    for (auto changed = result.changedTexts.constBegin();
+         changed != result.changedTexts.constEnd(); ++changed) {
+        if (!snapshot.originalTexts.contains(changed.key()) ||
+            !snapshot.resourcePaths.contains(changed.key())) {
+            result.success = false;
+            result.error = QStringLiteral("Staged search result contains an unknown target: %1")
+                               .arg(changed.key());
+            return result;
+        }
+    }
 
     QString conflictPath;
-    if (!ResourcesMatchSnapshot(resources, originalTexts, &conflictPath)) {
+    if (!ResourcesMatchSnapshot(resources, snapshot, &conflictPath)) {
         result.success = false;
-        result.error = QStringLiteral("Saved-search target changed during staging: %1").arg(conflictPath);
+        result.error = QStringLiteral("Search batch target changed during staging: %1")
+                           .arg(conflictPath);
         return result;
     }
 
@@ -62,20 +144,17 @@ SearchBatch::Result SearchBatchCoordinator::Run(
         return result;
     }
 
-    if (!ResourcesMatchSnapshot(resources, originalTexts, &conflictPath)) {
+    if (!ResourcesMatchSnapshot(resources, snapshot, &conflictPath)) {
         result.success = false;
-        result.error = QStringLiteral("Saved-search target changed while creating the checkpoint: %1").arg(conflictPath);
+        result.error = QStringLiteral("Search batch target changed while creating the checkpoint: %1")
+                           .arg(conflictPath);
         return result;
     }
 
     QStringList commitOrder;
-    QSet<QString> seenPaths;
-    for (const SearchBatch::Rule& rule : rules) {
-        for (const QString& path : rule.resourcePaths) {
-            if (result.changedTexts.contains(path) && !seenPaths.contains(path)) {
-                seenPaths.insert(path);
-                commitOrder.append(path);
-            }
+    for (const QString& path : snapshot.resourcePaths) {
+        if (result.changedTexts.contains(path)) {
+            commitOrder.append(path);
         }
     }
 
@@ -89,7 +168,7 @@ SearchBatch::Result SearchBatchCoordinator::Run(
         }
         {
             QWriteLocker locker(&resource->GetLock());
-            if (resource->GetText() != originalTexts.value(path)) {
+            if (resource->GetText() != snapshot.originalTexts.value(path)) {
                 result.success = false;
                 result.error = QStringLiteral("Saved-search target changed before commit: %1").arg(path);
                 break;
@@ -110,7 +189,7 @@ SearchBatch::Result SearchBatchCoordinator::Run(
             TextResource* resource = resources.value(path, nullptr);
             if (resource) {
                 QWriteLocker locker(&resource->GetLock());
-                resource->SetText(originalTexts.value(path));
+                resource->SetText(snapshot.originalTexts.value(path));
             }
         }
         return result;
@@ -128,21 +207,21 @@ SearchBatch::Result SearchBatchCoordinator::Run(
 
 bool SearchBatchCoordinator::ResourcesMatchSnapshot(
     const QHash<QString, TextResource*>& resources,
-    const QHash<QString, QString>& original_texts,
+    const Snapshot& snapshot,
     QString* conflict_path)
 {
-    for (auto it = original_texts.constBegin(); it != original_texts.constEnd(); ++it) {
-        TextResource* resource = resources.value(it.key(), nullptr);
-        if (!resource || resource->GetRelativePath() != it.key()) {
+    for (const QString& path : snapshot.resourcePaths) {
+        TextResource* resource = resources.value(path, nullptr);
+        if (!resource || resource->GetRelativePath() != path) {
             if (conflict_path) {
-                *conflict_path = it.key();
+                *conflict_path = path;
             }
             return false;
         }
         QReadLocker locker(&resource->GetLock());
-        if (resource->GetText() != it.value()) {
+        if (resource->GetText() != snapshot.originalTexts.value(path)) {
             if (conflict_path) {
-                *conflict_path = it.key();
+                *conflict_path = path;
             }
             return false;
         }
