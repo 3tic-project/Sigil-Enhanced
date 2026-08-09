@@ -304,6 +304,24 @@ target_link_libraries(search_batch_benchmark PRIVATE
 add_test(NAME search_batch_benchmark COMMAND search_batch_benchmark)
 set_tests_properties(search_batch_benchmark PROPERTIES TIMEOUT 60)
 
+add_executable(staged_text_validator_test
+    staged_text_validator_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/StagedTextValidator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/StagedTextValidator.h
+)
+
+target_include_directories(staged_text_validator_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(staged_text_validator_test PRIVATE
+    Qt6::Core
+)
+target_compile_features(staged_text_validator_test PRIVATE cxx_std_17)
+
+add_test(NAME staged_text_validator COMMAND staged_text_validator_test)
+set_tests_properties(staged_text_validator PROPERTIES TIMEOUT 30)
+
 add_test(NAME search_operations_reentrancy
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/search_operations_reentrancy_test.py

@@ -518,6 +518,8 @@ set( MISC_FILES
     Misc/SearchOperationsApply.cpp
     Misc/SearchBatchRunner.cpp
     Misc/SearchBatchRunner.h
+    Misc/StagedTextValidator.cpp
+    Misc/StagedTextValidator.h
     Misc/RegexMatchEnumerator.cpp
     Misc/RegexMatchEnumerator.h
     Misc/PreSearchMatcher.cpp
