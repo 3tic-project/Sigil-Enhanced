@@ -503,6 +503,8 @@ set( MISC_FILES
     Misc/SearchBatchRunner.h
     Misc/RegexMatchEnumerator.cpp
     Misc/RegexMatchEnumerator.h
+    Misc/PreSearchMatcher.cpp
+    Misc/PreSearchMatcher.h
     Misc/SigilDarkStyle.cpp
     Misc/SigilDarkStyle.h
     Misc/Language.cpp

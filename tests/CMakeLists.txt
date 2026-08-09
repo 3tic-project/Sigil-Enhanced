@@ -20,6 +20,28 @@ target_compile_features(regex_match_enumerator_test PRIVATE cxx_std_17)
 add_test(NAME regex_match_enumerator COMMAND regex_match_enumerator_test)
 set_tests_properties(regex_match_enumerator PROPERTIES TIMEOUT 30)
 
+add_executable(presearch_progress_test
+    presearch_progress_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+)
+
+target_include_directories(presearch_progress_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(presearch_progress_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(presearch_progress_test PRIVATE cxx_std_17)
+
+add_test(NAME presearch_progress COMMAND presearch_progress_test)
+set_tests_properties(presearch_progress PROPERTIES TIMEOUT 30)
+
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp

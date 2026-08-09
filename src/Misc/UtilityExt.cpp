@@ -6,6 +6,7 @@
 #include <QTextCodec>
 
 #include "Misc/Utility.h"
+#include "Misc/PreSearchMatcher.h"
 #include "sigil_exception.h"
 #include "PCRE2/PCRECache.h"
 
@@ -218,39 +219,9 @@ QString Utility::ReadUnicodeTextFile_M(const QString& fullfilepath)
 //modified: FindReplacePlus
 QList<std::pair<int, int>> Utility::GetPreSearchMatchInfos(const QString& presearch_regex, const QString& text)
 {
-    if (presearch_regex.isEmpty()) return QList<std::pair<int, int>>();
-
-    SPCRE* spcre_pre = PCRECache::instance().getObject(presearch_regex);
-    SPCRE::MatchInfo pre_m_info;
-    QList<std::pair<int, int>> match_infos;
-
-    int pre_start = 0,
-        pre_end = text.length();
-
-    while (pre_start < pre_end) {
-        QString pre_text = text.mid(pre_start, pre_end - pre_start);
-        pre_m_info = spcre_pre->getFirstMatchInfo(pre_text);
-
-        if (pre_m_info.offset.first == -1) break;
-
-        int _start,_end;
-        int match_start = pre_start,
-            match_end = pre_start;
-        if (pre_m_info.capture_groups_offsets.count() >= 2) {
-            std::pair<int, int> g_offset = pre_m_info.capture_groups_offsets.at(1);
-            _start = pre_m_info.offset.first + g_offset.first;
-            _end = pre_m_info.offset.first + g_offset.second;
-        }
-        else {
-            _start = pre_m_info.offset.first;
-            _end = pre_m_info.offset.second;
-        }
-        match_start += _start;
-        match_end += _end;
-        pre_start = match_end;
-        match_infos << std::pair<int, int>{match_start, match_end};
-    }
-    return match_infos;
+    const RegexSearch::PreSearchRangeResult result =
+        RegexSearch::EnumeratePreSearchRanges(presearch_regex, text);
+    return result.success ? result.ranges : QList<std::pair<int, int>>();
 }
 
 //modified: FindReplacePlus
