@@ -133,6 +133,27 @@ void TestFilterRejectAndZeroWidthPredicate()
             "zero-width filter predicates must count as a secondary match");
 }
 
+void TestJapaneseQuoteTemplateDoesNotMatchMarkupWhitespace()
+{
+    RegexWorkbenchRule rule;
+    rule.secondaryMode = SecondaryMode::PreSearch;
+    rule.secondaryPattern = QStringLiteral("(?sU)<p.*>(.*)</p>");
+    rule.find = QStringLiteral(
+        "(?|^([^「」]*)」$(?#末尾孤引号匹配)|[「」]([^「」]*)(?:[「」]|$)(?#强制成对匹配))");
+    const QString inlineMarkup = QStringLiteral(
+        "<p><span class=\"gfont\">カバー・口絵　本文イラスト</span></p>\n"
+        "<p><span class=\"gfont bold\">ただのゆきこ</span></p>");
+    const SecondaryMatchResult markupResult =
+        SecondaryRegexMatcher::Enumerate(rule, inlineMarkup);
+    Require(markupResult.success && markupResult.candidates.isEmpty(),
+            "Japanese quote correction must not treat tag attribute spaces as quotes");
+
+    const SecondaryMatchResult quoteResult = SecondaryRegexMatcher::Enumerate(
+        rule, QStringLiteral("<p><span class=\"gfont\">「台詞」</span></p>"));
+    Require(quoteResult.success && quoteResult.candidates.size() == 1,
+            "Japanese quote correction must still enumerate quoted dialogue");
+}
+
 void TestEmptyPrimaryRequiresRecursiveOptIn()
 {
     RegexWorkbenchRule rule;
@@ -197,6 +218,7 @@ int main()
     TestNoneAndPreSearchModes();
     TestFilterAcceptCarriesCandidateLocalCapture();
     TestFilterRejectAndZeroWidthPredicate();
+    TestJapaneseQuoteTemplateDoesNotMatchMarkupWhitespace();
     TestEmptyPrimaryRequiresRecursiveOptIn();
     TestPatternErrorsAndCancellationAreFatal();
     std::cout << "regex secondary match tests passed\n";

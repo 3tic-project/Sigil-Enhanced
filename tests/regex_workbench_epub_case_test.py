@@ -8,10 +8,18 @@ import json
 import re
 import sys
 import zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "regex_workbench_book"
+SEARCH_TEMPLATE_FILE = (
+    Path(__file__).parent.parent
+    / "src"
+    / "Resource_Files"
+    / "examples"
+    / "search_entries_with_presearch.ini"
+)
 
 
 def require(condition: bool, message: str) -> None:
@@ -120,6 +128,49 @@ def audit_named_variable(resources: dict[str, str]) -> None:
     require('<hr data-test-author="桜木桜"/>' in staged, "variable consumption failed")
 
 
+def audit_japanese_quote_template(resources: dict[str, str]) -> None:
+    template = SEARCH_TEMPLATE_FILE.read_text(encoding="utf-8")
+    require(
+        "14\\Find=(?|^([^「」]*)」$" in template
+        and "[「」]([^「」]*)(?:[「」]|$)" in template,
+        "Japanese quote template must not include XML whitespace in its quote class",
+    )
+    require(
+        "14\\Replace=「\\\\1」" in template,
+        "Japanese quote template replacement must not insert a stray space",
+    )
+
+    outer = re.compile(r"<p.*?>(.*?)</p>", re.DOTALL)
+    primary = re.compile(r"(?:^([^「」]*)」$|[「」]([^「」]*)(?:[「」]|$))")
+    match_count = 0
+    changed: set[str] = set()
+
+    for name, source in resources.items():
+        def replace_range(match: re.Match[str]) -> str:
+            nonlocal match_count
+
+            def replace_quote(quote: re.Match[str]) -> str:
+                nonlocal match_count
+                match_count += 1
+                body = quote.group(1) if quote.group(1) is not None else quote.group(2)
+                return f"「{body}」"
+
+            body = primary.sub(replace_quote, match.group(1))
+            prefix = match.group(0)[: match.start(1) - match.start(0)]
+            suffix = match.group(0)[match.end(1) - match.start(0) :]
+            return prefix + body + suffix
+
+        output = outer.sub(replace_range, source)
+        ET.fromstring(output)
+        if output != source:
+            changed.add(name)
+        if name == "p-006.xhtml":
+            require(output == source, "Japanese quote template changed inline span markup")
+
+    require(match_count == 1463, f"Japanese quote matches: {match_count}, expected 1463")
+    require(changed == {"p-028.xhtml", "p-030.xhtml"}, f"Japanese quote resources: {changed}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--epub", required=True, type=Path)
@@ -130,13 +181,24 @@ def main() -> int:
     audit_secondary(resources)
     audit_recursive(resources)
     audit_named_variable(resources)
-    print("regex workbench EPUB cases passed: secondary=2, recursive=73/16, author=桜木桜")
+    audit_japanese_quote_template(resources)
+    print(
+        "regex workbench EPUB cases passed: secondary=2, recursive=73/16, "
+        "author=桜木桜, Japanese quotes=1463/2"
+    )
     return 0
 
 
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (AssertionError, KeyError, OSError, re.error, zipfile.BadZipFile) as error:
+    except (
+        AssertionError,
+        ET.ParseError,
+        KeyError,
+        OSError,
+        re.error,
+        zipfile.BadZipFile,
+    ) as error:
         print(f"FAILED: {error}", file=sys.stderr)
         sys.exit(1)

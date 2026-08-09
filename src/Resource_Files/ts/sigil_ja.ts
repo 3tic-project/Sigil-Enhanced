@@ -26113,6 +26113,7 @@ Continue using the requested filename?</source>
 <message><source>PreSearch control was ignored because the prefind pattern is empty</source><translation>事前検索パターンが空のため PreSearch 制御を無視しました</translation></message>
 <message><source>Stored prefind pattern was ignored because controls do not contain PS</source><translation>制御に PS がないため保存済みの事前検索パターンを無視しました</translation></message>
 <message><source>Per-entry scope or direction controls were not imported: %1</source><translation>項目ごとの範囲または方向制御は読み込まれませんでした: %1</translation></message>
+<message><source>Corrected legacy Japanese quote template spacing that matched XML markup</source><translation>XML マークアップに一致していた旧版の日本語かぎ括弧テンプレートの空白を修正しました</translation></message>
 <message><source>Unknown %1 field: %2</source><translation>不明な %1 フィールドです: %2</translation></message>
 <message><source>Recipe field %1 must be a string</source><translation>レシピのフィールド %1 は文字列でなければなりません</translation></message>
 <message><source>Recipe field %1 must be a boolean</source><translation>レシピのフィールド %1 は真偽値でなければなりません</translation></message>

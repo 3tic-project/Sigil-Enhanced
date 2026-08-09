@@ -8,6 +8,7 @@
 #include <QDebug>
 
 #include "MiscEditors/SearchEditorModelPlus.h"
+#include "MiscEditors/SearchTemplateCompatibility.h"
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
 #include "sigil_exception.h"
@@ -313,6 +314,8 @@ void SearchEditorModelPlus::LoadData(const QString &filename, QStandardItem *ite
         entry->find = ss.value(ENTRY_FIND).toString();
         entry->replace = ss.value(ENTRY_REPLACE).toString();
         entry->controls = ss.value(ENTRY_CONTROLS, "").toString();
+        SearchTemplateCompatibility::CorrectLegacyJapaneseQuoteSpacing(
+            entry->name, entry->fullname, entry->find, entry->replace);
         AddFullNameEntry(entry, item);
         // done with the temporary entry so remove it
         delete entry;

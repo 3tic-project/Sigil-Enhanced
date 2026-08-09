@@ -26098,6 +26098,7 @@ Continue using the requested filename?</source>
 <message><source>PreSearch control was ignored because the prefind pattern is empty</source><translation>預搜尋運算式為空，已忽略 PreSearch 控制項</translation></message>
 <message><source>Stored prefind pattern was ignored because controls do not contain PS</source><translation>控制項不含 PS，已忽略儲存的預搜尋運算式</translation></message>
 <message><source>Per-entry scope or direction controls were not imported: %1</source><translation>未匯入項目層級的範圍或方向控制項：%1</translation></message>
+<message><source>Corrected legacy Japanese quote template spacing that matched XML markup</source><translation>已修正舊版日文引號範本中會符合 XML 標記的空格</translation></message>
 <message><source>Unknown %1 field: %2</source><translation>未知的 %1 欄位：%2</translation></message>
 <message><source>Recipe field %1 must be a string</source><translation>方案欄位 %1 必須是字串</translation></message>
 <message><source>Recipe field %1 must be a boolean</source><translation>方案欄位 %1 必須是布林值</translation></message>

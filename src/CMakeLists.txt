@@ -602,6 +602,7 @@ set( MISC_EDITORS_FILES
     MiscEditors/MetaEditorTreeView.h
     MiscEditors/SearchEditorModelPlus.cpp
     MiscEditors/SearchEditorModelPlus.h
+    MiscEditors/SearchTemplateCompatibility.h
     )
 
 set( SPCRE_FILES

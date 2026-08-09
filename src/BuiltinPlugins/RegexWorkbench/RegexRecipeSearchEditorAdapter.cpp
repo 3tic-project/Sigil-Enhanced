@@ -12,6 +12,8 @@
 #include <QSet>
 #include <QUuid>
 
+#include "MiscEditors/SearchTemplateCompatibility.h"
+
 namespace BuiltinPlugins
 {
 namespace RegexWorkbench
@@ -62,6 +64,12 @@ RegexRecipeImportResult RegexRecipeSearchEditorAdapter::Import(
     result.rule.name = entry.name;
     result.rule.find = entry.find;
     result.rule.replace = entry.replace;
+    if (SearchTemplateCompatibility::CorrectLegacyJapaneseQuoteSpacing(
+            entry.name, entry.fullName, result.rule.find, result.rule.replace)) {
+        result.warnings.append(QCoreApplication::translate(
+            "RegexWorkbenchCore",
+            "Corrected legacy Japanese quote template spacing that matched XML markup"));
+    }
     if (tokenSet.contains(QStringLiteral("PS"))) {
         if (entry.prefind.isEmpty()) {
             result.warnings.append(QCoreApplication::translate(

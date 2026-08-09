@@ -305,6 +305,22 @@ void TestSearchEditorImportMappingAndWarnings()
                 modelImport.rule.secondaryMode == SecondaryMode::PreSearch &&
                 !modelImport.warnings.isEmpty(),
             "SearchEditorModelPlus entries must use the same import contract");
+
+    RegexSearchTemplateEntry legacyJapaneseQuotes;
+    legacyJapaneseQuotes.name = QStringLiteral("日文引号纠正");
+    legacyJapaneseQuotes.prefind = QStringLiteral("(?sU)<p.*>(.*)</p>");
+    legacyJapaneseQuotes.find = QStringLiteral(
+        "(?|^([^「 」]*)」$(?#末尾孤引号匹配)|[「 」]([^「 」]*)(?:[「 」]|$)(?#强制成对匹配))");
+    legacyJapaneseQuotes.replace = QStringLiteral("「 \\1」");
+    legacyJapaneseQuotes.controls = QStringLiteral("PS DN AH");
+    const auto corrected = RegexRecipeSearchEditorAdapter::Import(
+        legacyJapaneseQuotes);
+    Require(corrected.success &&
+                corrected.rule.find.contains(QStringLiteral("[^「」]*")) &&
+                !corrected.rule.find.contains(QStringLiteral("「 」")) &&
+                corrected.rule.replace == QStringLiteral("「\\1」") &&
+                !corrected.warnings.isEmpty(),
+            "legacy Japanese quote templates must not treat XML whitespace as a quote");
 }
 
 void TestBookSampleRecipesUseProductionSchema()

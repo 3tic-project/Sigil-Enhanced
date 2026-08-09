@@ -26115,6 +26115,7 @@ Continue using the requested filename?</source>
 <message><source>PreSearch control was ignored because the prefind pattern is empty</source><translation>预搜索表达式为空，已忽略 PreSearch 控制项</translation></message>
 <message><source>Stored prefind pattern was ignored because controls do not contain PS</source><translation>控制项不含 PS，已忽略保存的预搜索表达式</translation></message>
 <message><source>Per-entry scope or direction controls were not imported: %1</source><translation>未导入条目级作用域或方向控制项：%1</translation></message>
+<message><source>Corrected legacy Japanese quote template spacing that matched XML markup</source><translation>已纠正旧版日文引号模板中会匹配 XML 标记的空格</translation></message>
 <message><source>Unknown %1 field: %2</source><translation>未知的 %1 字段：%2</translation></message>
 <message><source>Recipe field %1 must be a string</source><translation>方案字段 %1 必须是字符串</translation></message>
 <message><source>Recipe field %1 must be a boolean</source><translation>方案字段 %1 必须是布尔值</translation></message>
