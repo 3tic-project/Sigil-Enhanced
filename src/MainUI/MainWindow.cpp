@@ -81,6 +81,7 @@
 #include "Dialogs/MetaEditor.h"
 #include "Dialogs/PluginRunner.h"
 #include "Dialogs/Preferences.h"
+#include "Dialogs/RegexWorkbenchDialog.h"
 #include "Dialogs/RepoLog.h"
 #include "Dialogs/ChgViewer.h"
 #include "Dialogs/CPCompare.h"
@@ -365,6 +366,9 @@ MainWindow::MainWindow(const QString &openfilepath,
 
 MainWindow::~MainWindow()
 {
+    if (m_RegexWorkbenchDialog) {
+        delete m_RegexWorkbenchDialog.data();
+    }
     delete m_PluginSessionManager;
     m_PluginSessionManager = nullptr;
     // Make sure that any modeless windows that are visible are closed first
@@ -5975,6 +5979,10 @@ bool MainWindow::ProceedToOverwrite(const QString& msg, const QString &filename)
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
+    if (m_RegexWorkbenchDialog) {
+        ui.actionOpenRegexWorkbench->setEnabled(false);
+        m_RegexWorkbenchDialog->CloseForBookChange();
+    }
     m_PluginSessionManager->StopAll();
     m_TabManager->CloseOtherTabs();
     m_TabManager->CloseAllTabs(true);

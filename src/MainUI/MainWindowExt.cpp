@@ -47,56 +47,6 @@
 namespace
 {
 
-RegexWorkbenchDialog::TargetSet CollectRegexWorkbenchTargets(
-    Book* book,
-    ContentTab* currentTab,
-    BookBrowser* bookBrowser)
-{
-    RegexWorkbenchDialog::TargetSet targets;
-    if (!book || !book->GetFolderKeeper()) {
-        return targets;
-    }
-    for (Resource* resource : book->GetFolderKeeper()->GetResourceList()) {
-        TextResource* text = qobject_cast<TextResource*>(resource);
-        if (!text) {
-            continue;
-        }
-        const QString path = text->GetRelativePath();
-        targets.resources.insert(path, text);
-        targets.allTextPaths.append(path);
-        if (qobject_cast<HTMLResource*>(text)) {
-            targets.htmlPaths.append(path);
-        } else if (qobject_cast<CSSResource*>(text)) {
-            targets.cssPaths.append(path);
-        } else {
-            // OPF, NCX, SVG, XML, and other editable text resources are
-            // special-cased by Sigil's resource model but remain safe batch
-            // targets through the common TextResource snapshot/commit path.
-            targets.specialPaths.append(path);
-        }
-    }
-    if (currentTab) {
-        if (TextResource* current =
-                qobject_cast<TextResource*>(currentTab->GetLoadedResource())) {
-            targets.currentPath = current->GetRelativePath();
-        }
-    }
-    if (bookBrowser) {
-        for (Resource* resource : bookBrowser->AllSelectedResources()) {
-            if (TextResource* selected = qobject_cast<TextResource*>(resource)) {
-                targets.selectedPaths.append(selected->GetRelativePath());
-            }
-        }
-        targets.selectedPaths.removeDuplicates();
-        targets.selectedPaths.sort();
-    }
-    targets.htmlPaths.sort();
-    targets.cssPaths.sort();
-    targets.specialPaths.sort();
-    targets.allTextPaths.sort();
-    return targets;
-}
-
 QHash<Resource*, QString> CaptureResourcePaths(Book* book)
 {
     QHash<Resource*, QString> paths;
@@ -766,14 +716,24 @@ bool MainWindow::SubsetEmbeddedFonts()
 
 bool MainWindow::OpenRegexWorkbench()
 {
+    if (m_RegexWorkbenchDialog) {
+        if (m_RegexWorkbenchDialog->isMinimized()) {
+            m_RegexWorkbenchDialog->showNormal();
+        } else {
+            m_RegexWorkbenchDialog->show();
+        }
+        m_RegexWorkbenchDialog->raise();
+        m_RegexWorkbenchDialog->activateWindow();
+        return true;
+    }
     if (!m_Book || !m_Book->GetFolderKeeper()) {
         Utility::warning(this, tr("Advanced Regex Workbench"),
                          tr("No EPUB is currently loaded."));
         return false;
     }
 
-    const RegexWorkbenchDialog::TargetSet targets = CollectRegexWorkbenchTargets(
-        m_Book.data(), GetCurrentContentTab(), m_BookBrowser);
+    const RegexWorkbenchDialog::TargetSet targets =
+        RegexWorkbenchDialog::CollectTargets(this);
 
     if (targets.allTextPaths.isEmpty()) {
         Utility::warning(this, tr("Advanced Regex Workbench"),
@@ -781,10 +741,26 @@ bool MainWindow::OpenRegexWorkbench()
         return false;
     }
 
-    RegexWorkbenchDialog dialog(this, targets, this);
-    connect(&dialog, &RegexWorkbenchDialog::OpenFileRequest,
+    auto* dialog = new RegexWorkbenchDialog(this, targets, nullptr);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    m_RegexWorkbenchDialog = dialog;
+    connect(dialog, &QObject::destroyed, this, [this]() {
+        m_RegexWorkbenchDialog = nullptr;
+        ui.actionOpenRegexWorkbench->setEnabled(true);
+    });
+    connect(dialog, &RegexWorkbenchDialog::OpenFileRequest,
             this, &MainWindow::OpenFileAndSelect);
-    dialog.exec();
+    const auto syncTitle = [this, dialog]() {
+        dialog->SyncHostWindowTitle(windowTitle(), isWindowModified());
+    };
+    connect(this, &QWidget::windowTitleChanged, dialog,
+            [syncTitle](const QString&) { syncTitle(); });
+    connect(m_Book.data(), &Book::ModifiedStateChanged, dialog,
+            [syncTitle](bool) { syncTitle(); });
+    syncTitle();
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
     return true;
 }
 
@@ -805,7 +781,7 @@ bool MainWindow::RunRegexWorkbenchRecipe(const QString& identifier)
     }
 
     const RegexWorkbenchDialog::TargetSet targets =
-        CollectRegexWorkbenchTargets(m_Book.data(), nullptr, nullptr);
+        RegexWorkbenchDialog::CollectTargets(this);
     if (targets.allTextPaths.isEmpty()) {
         ShowMessageOnStatusBar(
             tr("Regex recipe failed: the current EPUB has no text resources."));

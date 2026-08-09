@@ -29,6 +29,7 @@
 
 #include <QSharedPointer>
 #include <QMainWindow>
+#include <QPointer>
 
 #include "ui_main.h"
 #include "BookManipulation/Book.h"
@@ -72,6 +73,7 @@ class TableOfContents;
 class ValidationResultsView;
 class PreviewWindow;
 class PluginSessionManager;
+class RegexWorkbenchDialog;
 class SearchEditor;
 class ClipEditor;
 class ClipsWindow;
@@ -1176,6 +1178,7 @@ private:
     //modified: FindReplacePlus
     FindReplaceMode m_findReplaceMode;
     FindReplacePlus* m_FindReplacePlus;
+    QPointer<RegexWorkbenchDialog> m_RegexWorkbenchDialog;
     void changeFindReplaceMode();
     void ConnectSignalsToSearchEditor();
     void ConnectSignalsToFindReplace();

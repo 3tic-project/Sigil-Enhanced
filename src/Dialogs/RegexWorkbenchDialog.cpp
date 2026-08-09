@@ -16,6 +16,7 @@
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QEvent>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QFont>
@@ -34,6 +35,7 @@
 #include <QPointer>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QReadLocker>
 #include <QRegularExpression>
 #include <QSignalBlocker>
 #include <QSpinBox>
@@ -47,10 +49,17 @@
 #include <QtConcurrent>
 
 #include "BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.h"
+#include "BookManipulation/FolderKeeper.h"
+#include "MainUI/BookBrowser.h"
 #include "MainUI/MainWindow.h"
 #include "MainUI/RegexWorkbenchBatchCommitter.h"
 #include "Misc/SettingsStore.h"
 #include "MiscEditors/SearchEditorModelPlus.h"
+#include "ResourceObjects/CSSResource.h"
+#include "ResourceObjects/HTMLResource.h"
+#include "ResourceObjects/Resource.h"
+#include "ResourceObjects/TextResource.h"
+#include "Tabs/ContentTab.h"
 
 namespace
 {
@@ -123,16 +132,73 @@ void AddVariableRows(QTableWidget* table,
 
 }
 
+RegexWorkbenchDialog::TargetSet RegexWorkbenchDialog::CollectTargets(
+    MainWindow* mainWindow)
+{
+    TargetSet targets;
+    if (!mainWindow) {
+        return targets;
+    }
+    const QSharedPointer<Book> book = mainWindow->GetCurrentBook();
+    if (!book || !book->GetFolderKeeper()) {
+        return targets;
+    }
+    for (Resource* resource : book->GetFolderKeeper()->GetResourceList()) {
+        TextResource* text = qobject_cast<TextResource*>(resource);
+        if (!text) {
+            continue;
+        }
+        const QString path = text->GetRelativePath();
+        targets.resources.insert(path, text);
+        targets.allTextPaths.append(path);
+        if (qobject_cast<HTMLResource*>(text)) {
+            targets.htmlPaths.append(path);
+        } else if (qobject_cast<CSSResource*>(text)) {
+            targets.cssPaths.append(path);
+        } else {
+            targets.specialPaths.append(path);
+        }
+    }
+    if (ContentTab* currentTab = mainWindow->GetCurrentContentTab()) {
+        if (TextResource* current =
+                qobject_cast<TextResource*>(currentTab->GetLoadedResource())) {
+            targets.currentPath = current->GetRelativePath();
+        }
+    }
+    if (BookBrowser* bookBrowser = mainWindow->GetBookBrowser()) {
+        for (Resource* resource : bookBrowser->AllSelectedResources()) {
+            if (TextResource* selected = qobject_cast<TextResource*>(resource)) {
+                targets.selectedPaths.append(selected->GetRelativePath());
+            }
+        }
+        targets.selectedPaths.removeDuplicates();
+        targets.selectedPaths.sort();
+    }
+    targets.htmlPaths.sort();
+    targets.cssPaths.sort();
+    targets.specialPaths.sort();
+    targets.allTextPaths.sort();
+    return targets;
+}
+
 RegexWorkbenchDialog::RegexWorkbenchDialog(MainWindow* mainWindow,
                                            const TargetSet& targets,
                                            QWidget* parent)
-    : QDialog(parent),
+    : QDialog(parent, Qt::Window | Qt::WindowTitleHint |
+                          Qt::WindowSystemMenuHint |
+                          Qt::WindowMinimizeButtonHint |
+                          Qt::WindowMaximizeButtonHint |
+                          Qt::WindowCloseButtonHint),
       m_MainWindow(mainWindow),
+      m_BookContext(mainWindow ? mainWindow->GetCurrentBook()
+                               : QSharedPointer<Book>()),
       m_Targets(targets),
       m_Watcher(new QFutureWatcher<RegexWorkbenchBatchResult>(this)),
       m_CurrentRuleRow(-1),
       m_RunMode(RunMode::None),
       m_Busy(false),
+      m_CloseWhenIdle(false),
+      m_ReportApplied(false),
       m_EditingPanel(nullptr),
       m_RecipeName(nullptr),
       m_RuleList(nullptr),
@@ -171,6 +237,11 @@ RegexWorkbenchDialog::RegexWorkbenchDialog(MainWindow* mainWindow,
       m_Progress(nullptr),
       m_ButtonBox(nullptr)
 {
+    setWindowModality(Qt::NonModal);
+    for (auto it = targets.resources.constBegin();
+         it != targets.resources.constEnd(); ++it) {
+        m_ResourceGuards.insert(it.key(), it.value());
+    }
     BuildUi();
     RestoreSettings();
     NewRecipe();
@@ -325,33 +396,7 @@ void RegexWorkbenchDialog::BuildUi()
     auto* runLayout = new QVBoxLayout(runBox);
     auto* runForm = new QFormLayout;
     m_TargetScope = new QComboBox(runBox);
-    if (!m_Targets.currentPath.isEmpty()) {
-        m_TargetScope->addItem(tr("Current file"),
-                               static_cast<int>(TargetScope::CurrentFile));
-    }
-    if (!m_Targets.selectedPaths.isEmpty()) {
-        m_TargetScope->addItem(tr("Selected text files (%1)")
-                                   .arg(m_Targets.selectedPaths.size()),
-                               static_cast<int>(TargetScope::SelectedFiles));
-    }
-    if (!m_Targets.htmlPaths.isEmpty()) {
-        m_TargetScope->addItem(tr("All XHTML files (%1)")
-                                   .arg(m_Targets.htmlPaths.size()),
-                               static_cast<int>(TargetScope::AllHtml));
-    }
-    if (!m_Targets.cssPaths.isEmpty()) {
-        m_TargetScope->addItem(tr("All CSS files (%1)")
-                                   .arg(m_Targets.cssPaths.size()),
-                               static_cast<int>(TargetScope::AllCss));
-    }
-    if (!m_Targets.specialPaths.isEmpty()) {
-        m_TargetScope->addItem(tr("All special text files (%1)")
-                                   .arg(m_Targets.specialPaths.size()),
-                               static_cast<int>(TargetScope::AllSpecial));
-    }
-    m_TargetScope->addItem(tr("All text resources (%1)")
-                               .arg(m_Targets.allTextPaths.size()),
-                           static_cast<int>(TargetScope::AllText));
+    PopulateTargetScopes(static_cast<int>(TargetScope::CurrentFile));
     m_VariableScope = new QComboBox(runBox);
     m_VariableScope->addItem(tr("Resource"), static_cast<int>(VariableScope::Resource));
     m_VariableScope->addItem(tr("Batch"), static_cast<int>(VariableScope::Batch));
@@ -526,6 +571,14 @@ void RegexWorkbenchDialog::closeEvent(QCloseEvent* event)
     QDialog::closeEvent(event);
 }
 
+void RegexWorkbenchDialog::changeEvent(QEvent* event)
+{
+    QDialog::changeEvent(event);
+    if (event->type() == QEvent::WindowActivate && !m_Busy) {
+        RefreshTargets();
+    }
+}
+
 void RegexWorkbenchDialog::reject()
 {
     if (m_Busy) {
@@ -533,6 +586,26 @@ void RegexWorkbenchDialog::reject()
         return;
     }
     QDialog::reject();
+}
+
+void RegexWorkbenchDialog::SyncHostWindowTitle(const QString& hostTitle,
+                                               bool modified)
+{
+    QString visibleHostTitle = hostTitle;
+    visibleHostTitle.replace(QStringLiteral("[*]"),
+                             modified ? QStringLiteral("*") : QString());
+    setWindowTitle(tr("Advanced Regex Workbench — %1").arg(visibleHostTitle));
+}
+
+void RegexWorkbenchDialog::CloseForBookChange()
+{
+    m_CloseWhenIdle = true;
+    if (m_Busy) {
+        CancelRun();
+        hide();
+        return;
+    }
+    close();
 }
 
 void RegexWorkbenchDialog::NewRecipe()
@@ -584,6 +657,74 @@ bool RegexWorkbenchDialog::IsPristineNewRecipe()
            !rule.allowEmpty && !rule.captureOnly &&
            !rule.variableExpansionEnabled && !rule.autoIngestNamedCaptures &&
            rule.captureToVar.isEmpty() && rule.enabled;
+}
+
+bool RegexWorkbenchDialog::HasCurrentBook() const
+{
+    return m_MainWindow && m_BookContext &&
+           m_MainWindow->GetCurrentBook().data() == m_BookContext.data();
+}
+
+QHash<QString, TextResource*> RegexWorkbenchDialog::LiveResources() const
+{
+    QHash<QString, TextResource*> resources;
+    for (auto it = m_ResourceGuards.constBegin();
+         it != m_ResourceGuards.constEnd(); ++it) {
+        if (it.value()) {
+            resources.insert(it.key(), it.value().data());
+        }
+    }
+    return resources;
+}
+
+void RegexWorkbenchDialog::RefreshTargets()
+{
+    if (!HasCurrentBook()) {
+        return;
+    }
+    const int preferredScope = m_TargetScope && m_TargetScope->currentIndex() >= 0
+                                   ? m_TargetScope->currentData().toInt()
+                                   : static_cast<int>(TargetScope::CurrentFile);
+    m_Targets = CollectTargets(m_MainWindow);
+    m_ResourceGuards.clear();
+    for (auto it = m_Targets.resources.constBegin();
+         it != m_Targets.resources.constEnd(); ++it) {
+        m_ResourceGuards.insert(it.key(), it.value());
+    }
+    PopulateTargetScopes(preferredScope);
+}
+
+void RegexWorkbenchDialog::PopulateTargetScopes(int preferredScope)
+{
+    if (!m_TargetScope) {
+        return;
+    }
+    const QSignalBlocker blocker(m_TargetScope);
+    m_TargetScope->clear();
+    m_TargetScope->addItem(tr("Current file"),
+                           static_cast<int>(TargetScope::CurrentFile));
+    m_TargetScope->addItem(tr("Selected text files (%1)")
+                               .arg(m_Targets.selectedPaths.size()),
+                           static_cast<int>(TargetScope::SelectedFiles));
+    if (!m_Targets.htmlPaths.isEmpty()) {
+        m_TargetScope->addItem(tr("All XHTML files (%1)")
+                                   .arg(m_Targets.htmlPaths.size()),
+                               static_cast<int>(TargetScope::AllHtml));
+    }
+    if (!m_Targets.cssPaths.isEmpty()) {
+        m_TargetScope->addItem(tr("All CSS files (%1)")
+                                   .arg(m_Targets.cssPaths.size()),
+                               static_cast<int>(TargetScope::AllCss));
+    }
+    if (!m_Targets.specialPaths.isEmpty()) {
+        m_TargetScope->addItem(tr("All special text files (%1)")
+                                   .arg(m_Targets.specialPaths.size()),
+                               static_cast<int>(TargetScope::AllSpecial));
+    }
+    m_TargetScope->addItem(tr("All text resources (%1)")
+                               .arg(m_Targets.allTextPaths.size()),
+                           static_cast<int>(TargetScope::AllText));
+    m_TargetScope->setCurrentIndex(FindData(m_TargetScope, preferredScope));
 }
 
 void RegexWorkbenchDialog::OpenRecipe()
@@ -945,6 +1086,14 @@ void RegexWorkbenchDialog::StartRun(RunMode mode)
     if (m_Busy) {
         return;
     }
+    if (!HasCurrentBook()) {
+        QMessageBox::warning(
+            this, tr("Advanced Regex Workbench"),
+            tr("This workbench belongs to a book that is no longer open. "
+               "Close it and reopen the workbench for the current book."));
+        return;
+    }
+    RefreshTargets();
     RegexRecipe recipe;
     QString error;
     if (!RecipeFromUi(recipe, &error)) {
@@ -968,8 +1117,9 @@ void RegexWorkbenchDialog::StartRun(RunMode mode)
             QMessageBox::Cancel) != QMessageBox::Apply) {
         return;
     }
+    const QHash<QString, TextResource*> resources = LiveResources();
     if (!SearchBatchCoordinator::CaptureSnapshot(
-            m_MainWindow, paths, m_Targets.resources, m_RunSnapshot, &error)) {
+            m_MainWindow, paths, resources, m_RunSnapshot, &error)) {
         QMessageBox::warning(this, tr("Advanced Regex Workbench"), error);
         return;
     }
@@ -1029,6 +1179,17 @@ void RegexWorkbenchDialog::RunFinished()
     m_RunMode = RunMode::None;
     SetBusy(false);
 
+    if (m_CloseWhenIdle || !HasCurrentBook()) {
+        m_RunSnapshot = SearchBatchCoordinator::Snapshot();
+        if (m_CloseWhenIdle) {
+            close();
+        } else {
+            SetStatus(tr("The book changed while the recipe was running; the "
+                         "staged result was discarded."), true);
+        }
+        return;
+    }
+
     if (!m_LastResult.staged.success) {
         if (m_LastResult.staged.cancelled) {
             SetStatus(tr("Run cancelled. No book text or variables were changed."));
@@ -1048,7 +1209,7 @@ void RegexWorkbenchDialog::RunFinished()
                       ? tr("Creating the recovery checkpoint and committing staged changes...")
                       : tr("Publishing captured variables without changing document text..."));
         const SearchBatch::Result commit = RegexWorkbenchBatchCommitter::Commit(
-            m_MainWindow, m_Targets.resources, m_RunSnapshot, m_LastResult,
+            m_MainWindow, LiveResources(), m_RunSnapshot, m_LastResult,
             m_Store);
         if (!commit.success) {
             SetStatus(commit.error, true);
@@ -1131,6 +1292,7 @@ void RegexWorkbenchDialog::SetBusy(bool busy)
 void RegexWorkbenchDialog::PopulateReport(const RegexWorkbenchBatchResult& result,
                                           bool applied)
 {
+    m_ReportApplied = applied;
     m_ReportTable->setRowCount(result.report.rows.size());
     for (int row = 0; row < result.report.rows.size(); ++row) {
         const RegexWorkbenchReportRow& report = result.report.rows.at(row);
@@ -1204,7 +1366,28 @@ void RegexWorkbenchDialog::OpenResultRow(int row, int)
         return;
     }
     const QString bookpath = item->data(Qt::UserRole).toString();
-    const bool exact = item->data(Qt::UserRole + 3).toBool();
+    TextResource* resource = m_ResourceGuards.value(bookpath).data();
+    if (!HasCurrentBook() || !resource ||
+        resource->GetRelativePath() != bookpath) {
+        SetStatus(tr("This result refers to a resource that is no longer available."),
+                  true);
+        return;
+    }
+    bool exact = item->data(Qt::UserRole + 3).toBool();
+    if (exact) {
+        QString expected = m_RunSnapshot.originalTexts.value(bookpath);
+        if (m_ReportApplied && m_LastResult.staged.changedTexts.contains(bookpath)) {
+            expected = m_LastResult.staged.changedTexts.value(bookpath);
+        }
+        QReadLocker locker(&resource->GetLock());
+        if (resource->GetText() != expected) {
+            exact = false;
+        }
+    }
+    if (!exact && item->data(Qt::UserRole + 3).toBool()) {
+        SetStatus(tr("The resource changed after this report was created; opening "
+                     "the nearest recorded line without highlighting."));
+    }
     emit OpenFileRequest(bookpath,
                          item->data(Qt::UserRole + 1).toInt(),
                          item->data(Qt::UserRole + 2).toInt(),

@@ -26327,5 +26327,10 @@ Continue using the requested filename?</source>
 <message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>このレシピを %1 個のテキストリソースに適用しますか？新しいスナップショットを作成し、テキスト変更が生じた場合は書き込み前にリカバリーチェックポイントを作成します。</translation></message>
 <message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>リカバリーチェックポイントを作成し、ステージ済みの変更をコミットしています...</translation></message>
 <message><source>Publishing captured variables without changing document text...</source><translation>文書テキストを変更せず、キャプチャした変数を反映しています...</translation></message>
+<message><source>Advanced Regex Workbench — %1</source><translation>高度な正規表現ワークベンチ — %1</translation></message>
+<message><source>This workbench belongs to a book that is no longer open. Close it and reopen the workbench for the current book.</source><translation>このワークベンチが属するブックは既に閉じられています。閉じてから、現在のブック用にワークベンチを開き直してください。</translation></message>
+<message><source>The book changed while the recipe was running; the staged result was discarded.</source><translation>レシピの実行中にブックが切り替わったため、ステージ済み結果を破棄しました。</translation></message>
+<message><source>This result refers to a resource that is no longer available.</source><translation>この結果が参照するリソースは利用できなくなりました。</translation></message>
+<message><source>The resource changed after this report was created; opening the nearest recorded line without highlighting.</source><translation>このレポートの作成後にリソースが変更されました。強調表示せず、記録された最寄りの行を開きます。</translation></message>
 </context>
 </TS>

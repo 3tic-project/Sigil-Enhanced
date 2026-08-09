@@ -18,6 +18,9 @@ main_window = (repo / "src/MainUI/MainWindow.cpp").read_text(encoding="utf-8")
 main_window_ext = (repo / "src/MainUI/MainWindowExt.cpp").read_text(encoding="utf-8")
 main_window_header = (repo / "src/MainUI/MainWindow.h").read_text(encoding="utf-8")
 dialog = (repo / "src/Dialogs/RegexWorkbenchDialog.cpp").read_text(encoding="utf-8")
+dialog_header = (
+    repo / "src/Dialogs/RegexWorkbenchDialog.h"
+).read_text(encoding="utf-8")
 automate_editor = (repo / "src/Dialogs/AutomateEditor.cpp").read_text(encoding="utf-8")
 search_editor_model = (
     repo / "src/MiscEditors/SearchEditorModelPlus.cpp"
@@ -107,11 +110,11 @@ require(
     and "QMessageBox::Yes | QMessageBox::Cancel" in dialog,
     "New must warn before clearing a non-pristine recipe",
 )
-collect_start = main_window_ext.index(
-    "RegexWorkbenchDialog::TargetSet CollectRegexWorkbenchTargets"
+collect_start = dialog.index(
+    "RegexWorkbenchDialog::TargetSet RegexWorkbenchDialog::CollectTargets"
 )
-collect_end = main_window_ext.index("QHash<Resource*, QString>", collect_start)
-collect_body = main_window_ext[collect_start:collect_end]
+collect_end = dialog.index("RegexWorkbenchDialog::RegexWorkbenchDialog", collect_start)
+collect_body = dialog[collect_start:collect_end]
 require(
     "targets.specialPaths.append(path);" in collect_body
     and "targets.selectedPaths.sort();" in collect_body
@@ -121,8 +124,19 @@ require(
     and "case TargetScope::AllSpecial:" in dialog,
     "OPF, NCX, and other special text resources must have a stable target scope",
 )
+require(
+    "void RegexWorkbenchDialog::RefreshTargets()" in dialog
+    and "event->type() == QEvent::WindowActivate" in dialog
+    and dialog.index(
+        "RefreshTargets();", dialog.index("void RegexWorkbenchDialog::StartRun")
+    )
+    < dialog.index(
+        "SearchBatchCoordinator::CaptureSnapshot(",
+        dialog.index("void RegexWorkbenchDialog::StartRun"),
+    ),
+    "modeless current/selected scopes must refresh on activation and before snapshots",
+)
 require("processEvents" not in dialog, "dialog must not use nested processEvents loops")
-require("WA_DeleteOnClose" not in dialog, "stack-owned modal dialog must not self-delete")
 require(
     "m_CancelFlag->store(true" in dialog and "options.isCancelled" in dialog,
     "Cancel must reach the bounded batch engine",
@@ -182,6 +196,10 @@ finished = dialog.index("void RegexWorkbenchDialog::RunFinished")
 commit = dialog.index("RegexWorkbenchBatchCommitter::Commit(", finished)
 require(finished < commit, "Apply must commit only after worker staging finishes")
 require(
+    dialog.index("if (m_CloseWhenIdle || !HasCurrentBook())", finished) < commit,
+    "a run tied to a closed book must be discarded before commit",
+)
+require(
     dialog.index("Creating the recovery checkpoint and committing staged changes", finished)
     < commit,
     "the UI must announce the checkpoint/commit boundary before writing",
@@ -191,9 +209,34 @@ open_start = main_window_ext.index("bool MainWindow::OpenRegexWorkbench()")
 open_end = main_window_ext.index("bool MainWindow::RunRegexWorkbenchRecipe", open_start)
 open_body = main_window_ext[open_start:open_end]
 require(
-    "RegexWorkbenchDialog dialog(this, targets, this);" in open_body
-    and "dialog.exec();" in open_body,
-    "interactive entry must use a stack-owned modal dialog",
+    "new RegexWorkbenchDialog(this, targets, nullptr)" in open_body
+    and "dialog->setAttribute(Qt::WA_DeleteOnClose);" in open_body
+    and "m_RegexWorkbenchDialog = dialog;" in open_body
+    and "dialog->show();" in open_body
+    and "dialog->raise();" in open_body
+    and "dialog->activateWindow();" in open_body
+    and "dialog.exec();" not in open_body
+    and "QPointer<RegexWorkbenchDialog> m_RegexWorkbenchDialog;"
+    in main_window_header,
+    "interactive entry must use one reusable modeless top-level window",
+)
+require(
+    "Qt::Window | Qt::WindowTitleHint" in dialog
+    and "setWindowModality(Qt::NonModal);" in dialog
+    and "SyncHostWindowTitle(windowTitle(), isWindowModified())" in open_body
+    and "Advanced Regex Workbench — %1" in dialog,
+    "the modeless workbench must be independently selectable and mirror book title data",
+)
+require(
+    "delete m_RegexWorkbenchDialog.data();" in main_window
+    and "m_RegexWorkbenchDialog->CloseForBookChange();" in main_window,
+    "main-window teardown and book replacement must retire the modeless workbench",
+)
+require(
+    "QHash<QString, QPointer<TextResource>> m_ResourceGuards;" in dialog_header
+    and "LiveResources()" in dialog
+    and "resource->GetText() != expected" in dialog,
+    "modeless runs and result navigation must guard deleted or concurrently edited resources",
 )
 automation_start = main_window_ext.index("bool MainWindow::RunRegexWorkbenchRecipe")
 automation_body = main_window_ext[automation_start:]

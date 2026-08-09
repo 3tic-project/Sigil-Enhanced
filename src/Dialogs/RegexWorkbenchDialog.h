@@ -15,18 +15,22 @@
 
 #include <QDialog>
 #include <QHash>
+#include <QPointer>
+#include <QSharedPointer>
 #include <QStringList>
 
 #include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchBatchRunner.h"
 #include "MainUI/SearchBatchCoordinator.h"
 
 class MainWindow;
+class Book;
 class TextResource;
 
 class QCheckBox;
 class QCloseEvent;
 class QComboBox;
 class QDialogButtonBox;
+class QEvent;
 class QGroupBox;
 class QLabel;
 class QLineEdit;
@@ -60,10 +64,15 @@ public:
                                   QWidget* parent = nullptr);
     ~RegexWorkbenchDialog() override;
 
+    static TargetSet CollectTargets(MainWindow* mainWindow);
+    void SyncHostWindowTitle(const QString& hostTitle, bool modified);
+    void CloseForBookChange();
+
 signals:
     void OpenFileRequest(QString bookpath, int line, int start, int end);
 
 protected:
+    void changeEvent(QEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
 
 public slots:
@@ -114,6 +123,10 @@ private:
     void SaveCurrentRule();
     void LoadCurrentRule();
     bool IsPristineNewRecipe();
+    bool HasCurrentBook() const;
+    QHash<QString, TextResource*> LiveResources() const;
+    void RefreshTargets();
+    void PopulateTargetScopes(int preferredScope = -1);
     bool RecipeFromUi(BuiltinPlugins::RegexWorkbench::RegexRecipe& recipe,
                       QString* error);
     QStringList SelectedTargetPaths() const;
@@ -126,7 +139,9 @@ private:
     void SetStatus(const QString& message, bool error = false);
 
     MainWindow* m_MainWindow;
+    QSharedPointer<Book> m_BookContext;
     TargetSet m_Targets;
+    QHash<QString, QPointer<TextResource>> m_ResourceGuards;
     BuiltinPlugins::RegexWorkbench::RegexRecipe m_Recipe;
     BuiltinPlugins::RegexWorkbench::SearchVariableStore m_Store;
     BuiltinPlugins::RegexWorkbench::RegexWorkbenchBatchResult m_LastResult;
@@ -138,6 +153,8 @@ private:
     int m_CurrentRuleRow;
     RunMode m_RunMode;
     bool m_Busy;
+    bool m_CloseWhenIdle;
+    bool m_ReportApplied;
 
     QWidget* m_EditingPanel;
     QLineEdit* m_RecipeName;

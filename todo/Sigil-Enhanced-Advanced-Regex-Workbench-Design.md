@@ -5,7 +5,7 @@
 | **文档标题** | Advanced Regex Workbench（正则增强工作台） |
 | **作者** | Sigil-Enhanced 架构组（待填） |
 | **日期** | 2026-08-09 |
-| **状态** | Implemented（修订 10：运行区变量检查器、新建保护、特殊文本作用域） |
+| **状态** | Implemented（修订 11：modeless 独立窗口、动态作用域和并发编辑保护） |
 | **适用仓库** | `sigil-modified` / Sigil-Enhanced |
 | **关联计划** | `todo/Sigil-Enhanced-Development-Plan.md` §4 `BookEditSession`、§5 `SearchBatchRunner` |
 | **约束文档** | `ENHANCEMENT.md` |
@@ -752,18 +752,19 @@ struct DryRunReport {
 
 | 项 | 决定 |
 | --- | --- |
-| **模态** | **模态** `QDialog::exec()`（对齐 `ChineseConversionDialog` / `FontSubsetDialog`）。V1 **不做** modeless 长驻窗口，避免与书籍并发编辑的安全模型复杂化。 |
-| **父对象 / 生命周期** | `parent = MainWindow`；**栈上** `RegexWorkbenchDialog dlg(this); dlg.exec();`，与 `FontSubsetDialog` / `ChineseConversionDialog` 一致。**不**设置 `WA_DeleteOnClose`（避免栈对象被 Qt 再 `delete` 导致 double-free）。**不**使用长期堆分配 + DeleteOnClose（那是 `DryRunReplace` 一类路径，不适用于本模态工作台）。 |
-| **成员指针** | **不**在 MainWindow 持有 `m_RegexWorkbench`；每次菜单打开一次完整会话。 |
+| **窗口模式** | **非模态顶层窗口**：`Qt::Window` + `Qt::NonModal`，无 QWidget parent，允许回到 Sigil 编辑器查找与核对正文，并可由任务栏/窗口切换器单独选中。 |
+| **父对象 / 生命周期** | `MainWindow` 以 `QPointer<RegexWorkbenchDialog>` 持有单实例堆对象；对话框设置 `WA_DeleteOnClose`。菜单重复触发只执行 show/raise/activate；MainWindow 析构时显式删除仍存活的顶层窗口。 |
+| **标题同步** | 工作台标题镜像 Sigil 主窗口的当前 EPUB 文件名、EPUB 版本、应用名称和修改标记，格式为 `Advanced Regex Workbench — %1`。 |
 | **定位匹配** | 结果行双击 → `MainWindow::OpenFile(bookpath, lineHint, matchStart)`（`MainWindow.h` 公开 API）。**不要**调用 `FindReplacePlus::EmitOpenFileRequest`（那是 Find 栏内部信号）。`position` 优先用 match 起始 UTF-16 偏移；`line == -1` 时由 OpenFile 现有逻辑处理。 |
 | **Apply 后对话框** | 保持打开，刷新结果表为「已应用」摘要；变量检查器显示最终 store；用户可继续 Dry-Run 或关闭。 |
 | **Checkpoint 文案** | 写前状态栏提示 Creating checkpoint…；失败则 **不写回**，QMessageBox 与中文转换/字体子集化同级措辞。 |
 | **Undo 提示** | Apply 成功后注明：每个文件可分别 Undo；整批跨文件恢复请用本次 Checkpoint。 |
 | **Feature flag** | `SettingsStore` 键 `enhanced/regex_workbench_enabled`（默认 true）；PR-06 接线：false 时隐藏菜单 action。 |
 | **搜索模板导入** | 转换器与测试保留，但 UI 按钮暂时隐藏；预览型模板的全量应用兼容审计完成后再开放。 |
-| **换书** | 若将来改为 modeless 才需监听；模态下换书需先关对话框。Session 变量在每次 `OpenRegexWorkbench` 可选择恢复上次 Session（V1：每次打开新 store，Session 仅指单次对话框生命周期内多次 Run）。 |
+| **并发编辑** | 每次 Run 前刷新当前/已选/全书资源；资源指针以 `QPointer` 守护。后台编辑导致 Apply snapshot 冲突时拒绝提交；报告导航在 live text 与报告基线不一致时降级为行跳转，不高亮旧 offset。 |
+| **换书** | `SetNewBook` 通知工作台取消运行并关闭；运行中的旧 Book 由 `QSharedPointer` 保活到 worker 结束，`RunFinished` 在 commit 前复核 Book 身份并丢弃旧书结果。 |
 
-**Session 澄清（V1）**：`VariableScope::Session` = **同一次对话框 `exec()` 期间**多次 Dry-Run/Apply 之间保留；关闭对话框即销毁。换 Book 不会在模态对话框仍打开时发生（主窗口被模态阻塞）。
+**Session 澄清（修订 11）**：`VariableScope::Session` = **同一个工作台顶层窗口生命周期内**多次 Dry-Run/Apply 之间保留；关闭窗口或切换 Book 即销毁，不跨 EPUB。
 
 #### 7.2 入口
 
@@ -785,13 +786,12 @@ struct DryRunReport {
 |                  | find / replace         | 写策略: LastWins ▼   |
 |                  | ☐ 仅捕获变量(不替换)   |                      |
 |                  | ☑ 递归  最大迭代 [32]  | [Dry-Run] [应用]     |
-|                  | ☐ 允许零宽匹配(插入类) | [清空变量] [取消]    |
-|                  | ☑ 自动写入命名捕获     |                      |
+|                  | ☐ 允许零宽匹配(插入类) | [取消运行]           |
+|                  | ☑ 自动写入命名捕获     | Variables  [清空变量]|
+|                  |                        | Scope/Resource/Name  |
 +------------------+------------------------+----------------------+
 | Dry-Run 结果表                                               [过滤] |
 | 规则 | 资源 | 行 | 匹配前 | 匹配后 | 迭代# | 警告                  |
-+------------------------------------------------------------------+
-| 变量检查器: name | value | lastRule                                |
 +------------------------------------------------------------------+
 | 状态: 匹配 120 / 将修改 8 文件 / 警告 2                            |
 +------------------------------------------------------------------+
@@ -804,7 +804,7 @@ struct DryRunReport {
 | `DryRunReplace` | 参考 context 截取；工作台用自有 `DryRunReport` 模型 |
 | `ReplacementChooser` | V1 不做部分勾选应用 |
 | `SearchEditorPlus` | 兼容转换源；控件码 **`PS`**；当前 UI 入口隐藏 |
-| `ChineseConversionDialog` / `FontSubsetDialog` | 模态、Checkpoint、失败不写 的范式来源 |
+| `ChineseConversionDialog` / `FontSubsetDialog` | Checkpoint、失败不写 的范式来源；窗口生命周期不再照搬其模态方案 |
 
 ### 8. Recipe 持久化
 
@@ -971,7 +971,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 
 ---
 
-## Implementation Checkpoint（修订 10）
+## Implementation Checkpoint（修订 11）
 
 ### 已落地范围
 
@@ -983,11 +983,12 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | PR-04 | 完成 | `4c71babfe`、`4304f7f3b`、`ad2baa45e`、`efe492bc1` | 命名组枚举、Resource/Batch/Session store、`${var:name}` 显式 resolver、Filter→expand→primary 时序、入口级事务回滚测试 |
 | PR-05 | 完成 | `705752df1` | 严格 version 1 JSON schema、原子保存、4 MiB/1000-rule 上限、重复 id/未知字段拒绝、SearchEditorPlus `PS` token 导入与丢失控制警告 |
 | PR-06 | 完成 | `b2e2eb277`、`a245a6d52`、`255cc8ea2`、`1257f5c9d`、`7132715fe` | GUI snapshot/commit 边界、staged XML validator、跨资源 prepared rule 复用、内存 working-text map、commit 成功后才发布变量 store |
-| PR-07 | 完成 | `df85fb909`、`d8ef27fa8`、`36c70b1c6`、`cb13fde9c`、`616cec394`、`f7d9e637d` | 逐匹配 trace 与最终坐标映射；模态工作台、规则编辑、scope、Dry Run/Apply/Cancel、进度、变量检查器、结果导航、设置持久化；Enhancement 菜单与默认开启 feature flag；三语目录 |
+| PR-07 | 完成 | `df85fb909`、`d8ef27fa8`、`36c70b1c6`、`cb13fde9c`、`616cec394`、`f7d9e637d` | 逐匹配 trace 与最终坐标映射；初版工作台、规则编辑、scope、Dry Run/Apply/Cancel、进度、变量检查器、结果导航、设置持久化；Enhancement 菜单与默认开启 feature flag；三语目录 |
 | PR-08 | 完成 | `026328b23`、`151380a76`，以及修订 7 文档提交 | Recipe 文件名/显示名/绝对路径安全解析；`RunRegexWorkbenchRecipe` Automate；UI/Automate 接线契约测试与用户文档 |
 | 修订 8 | 完成 | `1e6ddae08` | `captureOnly` schema/UI/执行语义；匹配与替换独立计数；无文本 Apply 的快照冲突检查；三语翻译、真实 EPUB 夹具及回归测试 |
 | 修订 9 | 完成 | `6174a6395`、`de5672e75` | 隐藏模板导入按钮；规则编辑区改为可拖动三栏及分组布局；修正旧版“日文引号纠正”把 XML 属性空格当作引号的问题 |
-| 修订 10 | 完成 | `fa1e84dc8`、本次提交 | Apply 使用确认型突出样式；变量检查器移入运行区；非全新方案执行 New 前确认；OPF/NCX/SVG/XML/MiscText 增加独立特殊文本作用域和 XML 校验回归 |
+| 修订 10 | 完成 | `fa1e84dc8`、`3c0bd5072` | Apply 使用确认型突出样式；变量检查器移入运行区；非全新方案执行 New 前确认；OPF/NCX/SVG/XML/MiscText 增加独立特殊文本作用域和 XML 校验回归 |
+| 修订 11 | 完成 | 本次提交 | 变量区内嵌左右标题栏；单实例 modeless 顶层窗口；Sigil 书籍标题同步；动态当前/选中作用域；Book/Resource 生命周期、并发提交和旧报告导航保护 |
 
 ### 审计结论
 
@@ -996,7 +997,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 3. **匹配资源有界且线程所有权明确。** 工作台不持有 `PCRECache` 对象；每次规则执行拥有自己的 compiled code、match data 和 match context。每次 PCRE2 调用设置 match/depth/heap limit，并在调用之间检查 cancel；单次调用不能被协作式中断，但仍受 PCRE2 limit 约束。
 4. **递归和变量共同纳入回滚状态。** cycle/stall digest 同时包含文本和变量状态；任何匹配、展开、变量、限制或取消失败都返回原始文本并恢复初始 store snapshot，不允许发布部分轮次。
 5. **Filter 坐标与写入顺序已锁定。** Filter capture 保持主匹配内局部坐标；接受候选按 `Filter ingest → replacement expand → primary ingest` 执行，拒绝掉的候选不污染 store。
-6. **产品入口已完成。** `Enhancement > Advanced Regex Workbench...` 默认可见；`enhanced/regex_workbench_enabled=false` 可紧急隐藏。模态对话框为栈对象，无 `WA_DeleteOnClose`；运行中只开放 Cancel，关闭动作被阻止。Apply 在 snapshot 前确认范围，并在提交前提示 Checkpoint 边界。
+6. **产品入口已完成。** `Enhancement > Advanced Regex Workbench...` 默认可见；`enhanced/regex_workbench_enabled=false` 可紧急隐藏。工作台是无 parent 的 `Qt::Window` modeless 单实例，设置 `WA_DeleteOnClose` 并由 MainWindow 的 `QPointer` 跟踪；重复菜单动作聚焦现有窗口。运行中只开放 Cancel，关闭动作被阻止。Apply 在 snapshot 前确认范围，并在提交前提示 Checkpoint 边界。
 7. **跨资源编译不随资源数增长。** Batch 在进入 `SearchBatch::Runner` 前为每条规则创建一个 prepared executor；primary、secondary 与 replacement SPCRE 跨资源及递归轮次复用。测试用构造计数锁定“每规则一次”，避免把写回优化换成 pattern 重编译开销。
 8. **报告已达到逐匹配粒度。** 每行记录 rule/resource、迭代号、替换前后片段、变化变量名、最终 UTF-16 区间和 lineHint。后续规则覆盖区间时精确导航失效；Dry Run 不把 staged 坐标用于 live 文档，Apply 后仅最终坐标可定位。明细截断不影响精确总数。
 9. **Automate 与 UI 共享事务链路。** `RunRegexWorkbenchRecipe` 按默认目录文件名、Recipe 显示名或绝对路径解析；显示名重名 fail closed；固定作用于全部文本资源，并复用 snapshot→stage→validate→commit，不打开交互式对话框。
@@ -1005,13 +1006,16 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 12. **预览型模板继续 fail closed。** 模板导入入口暂时隐藏；旧版“日文引号纠正”仅在名称、Find、Replacement 三者均精确命中历史值时迁移，去除 `[「 」]` 和 `「 \\1」` 中的误置空格，避免把 `<span class>` 的属性空格替换成引号并产生无效 XML；用户修改过的同名模板不动。
 13. **特殊文本资源显式可见且仍走同一事务边界。** 收集器把 HTML、CSS 以外的 `TextResource` 归入排序后的特殊文本集合，其中包含 OPF、NCX、SVG、XML 与 MiscText；“全部文本资源”继续包含它们。特殊 XML 使用媒体类型触发 staged well-formed 校验，提交仍复用快照冲突检查、Checkpoint 和单资源一次 Undo 写回，不新增旁路。
 14. **破坏性 UI 动作有明确层级。** Apply 使用平台原生默认确认按钮样式；变量检查器占用运行栏下方空间；New 仅在当前内容严格等于未编辑的默认空方案时直接执行，否则以 Cancel 为默认选项确认清空规则和未保存更改。
+15. **Modeless 不放宽事务边界。** 每次窗口激活和 Run 前重建当前文件、Book Browser 选中项及全书文本资源，目标按 bookpath 排序；资源由 `QPointer` 守护，删除不会遗留可解引用的裸指针。worker 期间的正文编辑由 snapshot 冲突检测拒绝 Apply；切换 Book 会取消、隐藏并最终销毁旧工作台，旧 Book 由 `QSharedPointer` 保活且在 commit 前再次核对身份。
+16. **报告导航复核 live text。** Dry Run 以 snapshot 原文、Apply 以最终 staged 文本作为报告基线；双击前持读锁比较当前资源，发生后续编辑时只打开记录行并禁用旧 offset 高亮。已删除/移动资源直接拒绝导航。
+17. **运行区视觉层级收紧。** 变量容器不再使用边框标题；内部首行左侧为加粗 Variables，右侧为 Clear Variables，变量表紧随其下。
 
 ### 验证证据（2026-08-09）
 
 - 核心/批处理测试覆盖安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序、变量执行入口、Recipe/命名解析、跨资源 batch、逐匹配报告、进度/取消和 staged XML validator。
 - `Sigil` 应用目标：在 Qt 6.7.3、Python 3.11 的 clean CMake tree 中完整编译、链接及 Python bundle verification 通过。
-- `regex_workbench_ui_contract` 锁定 Enhancement action、默认 feature flag、模态生命周期、稳定对象名、worker/Cancel、Apply 独立 restage、确认/checkpoint 顺序、坐标提交门控、Recipe 路径和 Automate 链路。
-- `zh_CN`、`zh_TW`、`ja` 覆盖门禁与 `.qm` 生成均通过：5154 条当前消息全部 finished，0 unfinished。
+- `regex_workbench_ui_contract` 锁定 Enhancement action、默认 feature flag、modeless 单实例生命周期、独立顶层窗口/标题同步、动态作用域、Book/Resource 守卫、worker/Cancel、Apply 独立 restage、确认/checkpoint 顺序、坐标提交门控、Recipe 路径和 Automate 链路。
+- `zh_CN`、`zh_TW`、`ja` 覆盖门禁与 `.qm` 生成均通过：5159 条当前消息全部 finished，0 unfinished。
 - Debug 默认构建完成；全量 CTest：55/55 通过，0 失败，总耗时约 3 秒。
 - `git diff --check`：通过。
 
@@ -1043,7 +1047,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | `staged_text_validator_test.cpp` | XML media type、CSS bypass、well-formed 错误定位、missing metadata、issue cap、cancel |
 | `search_undo_contract_test.py` | coordinator/工作台发布桥只使用可撤销写入，Checkpoint 在首个写入前，变量只在成功提交后发布 |
 | `text_document_undo_test.cpp` | `SetTextAsUndoableEdit` 形成单步 Undo，并能恢复写入前文本 |
-| `regex_workbench_ui_contract_test.py` | 菜单/flag/模态 UI、稳定控件、worker Cancel、Apply 确认与独立 restage、结果提交门控、Automate 顺序 |
+| `regex_workbench_ui_contract_test.py` | 菜单/flag、modeless 单实例、顶层 flags/标题同步、动态作用域、Book/Resource 生命周期、并发导航降级、worker Cancel、Apply 确认与独立 restage、Automate 顺序 |
 | 三语覆盖 | `zh_CN`、`zh_TW`、`ja` 当前源消息无 missing/stale/unfinished，placeholder 一致，`.qm` 可生成 |
 
 性能：200 HTML × 10 规则，stage 内写回次数 ≤ 变更资源数。
@@ -1054,7 +1058,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 
 1. ~~Filter 捕获是否写入 store？~~ → **已决**：是；时序见 §3.5（Key Decision #12）。
 2. ~~V1 是否支持 Python `\F<function>`？~~ → **已决**：否（Non-Goals #7）；工作台编译规则时拒绝，不改变共享 `replaceText` 的经典分支。
-3. ~~Session 跨 EPUB？~~ → **已决**：模态对话框生命周期；关闭即清；无跨书（Key Decision #13）。
+3. ~~Session 跨 EPUB？~~ → **已决（修订 11）**：modeless 工作台窗口生命周期；关闭或换书即清；无跨书（Key Decision #13）。
 4. ~~零宽默认？~~ → **已决（修订 4）**：默认 `allowEmpty=false`（含 recursive）；插入类显式勾选，并采用 PCRE2 标准全局枚举算法（Key Decision #10）。
 5. ~~是否另建工作台 staging adapter？~~ → **已决（修订 4）**：否；V1 泛化现有 runner/coordinator。
 6. ~~变量引用是否复用 `\v`？~~ → **已决（修订 4）**：否；`${var:name}` + per-rule opt-in，导入默认关。
@@ -1095,7 +1099,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | 10 | **默认 `allowEmpty=false`；零宽后按 PCRE2 标准算法重试/Unicode 前进** | 避免死循环、代理对 BADUTFOFFSET 和跳过同位置非空替代 |
 | 11 | **ApplyOnce 内 L→R：先 expand（store-before）再 ingest primary** | 消除多匹配变量时序歧义；可测 |
 | 12 | **Filter match 随候选携带；逐候选 Filter ingest → expand → primary ingest** | 同一候选读取正确；后续候选不提前污染 |
-| 13 | **栈上模态对话框；无 `WA_DeleteOnClose`；Session=单次 exec；关闭即清 store** | 对齐 FontSubset/ChineseConversion；避免 double-free |
+| 13 | **单实例 modeless `Qt::Window`；MainWindow `QPointer` + `WA_DeleteOnClose`；Session=窗口生命周期** | 可回到正文查句子并由任务栏切换；关闭/换书清 store；避免顶层窗口泄漏 |
 | 14 | **导航按 coordinate space 门控；每资源 Undo，跨资源恢复用 Checkpoint** | 中间态 offset 不误跳；符合现有可撤销写回 |
 | 15 | **Recipe JSON + `Utility::DefinePrefsDir()/regex_workbench/`** | 不污染 SearchEditor ini；路径跨平台一致 |
 | 16 | **PR-03 抽取共享 `ApplyReplacements`，禁止永久平行实现** | 避免 Plus/工作台再分叉（classic vs Plus 历史教训） |
@@ -1156,12 +1160,12 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 - **依赖**：PR-03–05
 - **描述**：CaptureSnapshot/CommitStagedResult；worker per-run PCRE；Dry-Run/Apply 独立重跑；非变异 checkpoint；undoable write；report caps；无平行 adapter。
 
-### PR-07：对话框 UI + Enhancement 菜单 + feature flag
+### PR-07：工作台 UI + Enhancement 菜单 + feature flag
 
-- **标题**：`UI: Regex Workbench modal dialog + Enhancement menu`
+- **标题**：`UI: Regex Workbench window + Enhancement menu`
 - **文件**：`RegexWorkbenchDialog.*`、`main.ui` action、`MainWindowExt`、`ENHANCEMENT.md`、开发期默认 false flag、三语言目录、CMake
 - **依赖**：PR-06
-- **描述**：模态 exec；worker progress/cancel；坐标空间导航；每资源 Undo/整批 Checkpoint 文案。
+- **描述**：初版对话框，修订 11 已升级为 modeless 单实例顶层窗口；worker progress/cancel；坐标空间导航；每资源 Undo/整批 Checkpoint 文案。
 
 ### PR-08：用户文档、Recipe Automate、审计
 
@@ -1195,4 +1199,4 @@ flowchart LR
 
 ---
 
-*文档结束（修订 10）。*
+*文档结束（修订 11）。*

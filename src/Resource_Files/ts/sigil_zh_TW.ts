@@ -26312,5 +26312,10 @@ Continue using the requested filename?</source>
 <message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>要將此方案套用到 %1 個文字資源嗎？將重新建立快照；若產生文字變更，則會在寫入前建立復原檢查點。</translation></message>
 <message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>正在建立復原檢查點並提交暫存變更...</translation></message>
 <message><source>Publishing captured variables without changing document text...</source><translation>正在發佈擷取變數，不變更文件文字...</translation></message>
+<message><source>Advanced Regex Workbench — %1</source><translation>進階正規表示式工作台 — %1</translation></message>
+<message><source>This workbench belongs to a book that is no longer open. Close it and reopen the workbench for the current book.</source><translation>此工作台屬於一本已不再開啟的書籍。請關閉它，並為目前書籍重新開啟工作台。</translation></message>
+<message><source>The book changed while the recipe was running; the staged result was discarded.</source><translation>方案執行期間書籍已切換；暫存結果已捨棄。</translation></message>
+<message><source>This result refers to a resource that is no longer available.</source><translation>此結果參照的資源已無法使用。</translation></message>
+<message><source>The resource changed after this report was created; opening the nearest recorded line without highlighting.</source><translation>此報告建立後資源已變更；將開啟最接近的記錄行，但不反白顯示。</translation></message>
 </context>
 </TS>
