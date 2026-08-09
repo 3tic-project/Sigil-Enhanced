@@ -1155,6 +1155,7 @@ public slots:
     bool EnhanceSourceFormatting(); // modified: Builtin native plugin
     bool ConvertChineseText(); // modified: Chinese conversion
     bool SubsetEmbeddedFonts(); // modified: HarfBuzz font subsetting
+    bool OpenRegexWorkbench(); // modified: Advanced Regex Workbench
     bool AnalyzeBrParagraphs(); // modified: Builtin native plugin
     bool NormalizeCurrentBrParagraphs(); // modified: Builtin native plugin
     bool NormalizeAllBrParagraphs(); // modified: Builtin native plugin

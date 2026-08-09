@@ -39,6 +39,8 @@
 #include "Tabs/TextTab.h"
 #include "BookManipulation/FontSubset/FontSubsetController.h"
 #include "Dialogs/FontSubsetDialog.h"
+#include "Dialogs/RegexWorkbenchDialog.h"
+#include "ResourceObjects/CSSResource.h"
 #include "ResourceObjects/FontResource.h"
 
 namespace
@@ -708,6 +710,60 @@ bool MainWindow::SubsetEmbeddedFonts()
     ShowMessageOnStatusBar(
         tr("Subset %n font(s); saved %1.", "", result.fontCount)
             .arg(QLocale().formattedDataSize(saved)));
+    return true;
+}
+
+bool MainWindow::OpenRegexWorkbench()
+{
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        Utility::warning(this, tr("Advanced Regex Workbench"),
+                         tr("No EPUB is currently loaded."));
+        return false;
+    }
+
+    RegexWorkbenchDialog::TargetSet targets;
+    const QList<Resource*> allResources =
+        m_Book->GetFolderKeeper()->GetResourceList();
+    for (Resource* resource : allResources) {
+        TextResource* text = qobject_cast<TextResource*>(resource);
+        if (!text) {
+            continue;
+        }
+        const QString path = text->GetRelativePath();
+        targets.resources.insert(path, text);
+        targets.allTextPaths.append(path);
+        if (qobject_cast<HTMLResource*>(text)) {
+            targets.htmlPaths.append(path);
+        } else if (qobject_cast<CSSResource*>(text)) {
+            targets.cssPaths.append(path);
+        }
+    }
+
+    if (targets.allTextPaths.isEmpty()) {
+        Utility::warning(this, tr("Advanced Regex Workbench"),
+                         tr("The current EPUB has no text resources."));
+        return false;
+    }
+
+    if (ContentTab* tab = GetCurrentContentTab()) {
+        if (TextResource* current =
+                qobject_cast<TextResource*>(tab->GetLoadedResource())) {
+            targets.currentPath = current->GetRelativePath();
+        }
+    }
+    if (m_BookBrowser) {
+        for (Resource* resource : m_BookBrowser->AllSelectedResources()) {
+            if (TextResource* selected = qobject_cast<TextResource*>(resource)) {
+                targets.selectedPaths.append(selected->GetRelativePath());
+            }
+        }
+        targets.selectedPaths.removeDuplicates();
+    }
+
+    RegexWorkbenchDialog dialog(this, targets, this);
+    connect(&dialog, &RegexWorkbenchDialog::OpenFileRequest,
+            this, &MainWindow::OpenFile);
+    dialog.exec();
     return true;
 }
 

@@ -432,6 +432,8 @@
     <addaction name="actionEnhanceSourceFormatting"/>
     <addaction name="actionChineseConversion"/>
     <addaction name="actionSubsetEmbeddedFonts"/>
+    <addaction name="actionOpenRegexWorkbench"/>
+    <addaction name="separator"/>
     <addaction name="actionAnalyzeBrParagraphs"/>
     <addaction name="actionNormalizeCurrentBrParagraphs"/>
     <addaction name="actionNormalizeBrParagraphs"/>
@@ -1977,6 +1979,14 @@
    </property>
    <property name="toolTip">
     <string>Analyze and safely reduce embedded TTF and OTF fonts</string>
+   </property>
+  </action>
+  <action name="actionOpenRegexWorkbench">
+   <property name="text">
+    <string>Advanced Regex Workbench...</string>
+   </property>
+   <property name="toolTip">
+    <string>Run staged secondary, recursive, and variable-aware regular-expression recipes</string>
    </property>
   </action>
   <action name="actionAnalyzeBrParagraphs">

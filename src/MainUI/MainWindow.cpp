@@ -335,6 +335,12 @@ MainWindow::MainWindow(const QString &openfilepath,
     // Needs to come before signals connect and after ExtendUI
     // (avoiding side-effects)
     ReadSettings();
+    {
+        SettingsStore settings;
+        ui.actionOpenRegexWorkbench->setVisible(
+            settings.value(QStringLiteral("enhanced/regex_workbench_enabled"),
+                           true).toBool());
+    }
     //modified: SavedSearchPlus
     if (m_findReplaceMode == EnhancedMode) {
         m_SearchEditorPlus = new SearchEditorPlus(this);
@@ -7015,6 +7021,7 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionEnhanceSourceFormatting, "MainWindow.EnhanceSourceFormatting"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionChineseConversion, "MainWindow.ConvertChineseText"); // modified: Chinese conversion
     KeyboardShortcutManager::instance().registerAction(this, ui.actionSubsetEmbeddedFonts, "MainWindow.SubsetEmbeddedFonts"); // modified: font subsetting
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionOpenRegexWorkbench, "MainWindow.OpenRegexWorkbench"); // modified: Advanced Regex Workbench
     KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeBrParagraphs, "MainWindow.AnalyzeBrParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentBrParagraphs, "MainWindow.NormalizeCurrentBrParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeBrParagraphs, "MainWindow.NormalizeBrParagraphs"); // modified: Builtin native plugin
@@ -7402,6 +7409,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionEnhanceSourceFormatting, SIGNAL(triggered()), this, SLOT(EnhanceSourceFormatting())); // modified: Builtin native plugin
     connect(ui.actionChineseConversion, SIGNAL(triggered()), this, SLOT(ConvertChineseText())); // modified: Chinese conversion
     connect(ui.actionSubsetEmbeddedFonts, SIGNAL(triggered()), this, SLOT(SubsetEmbeddedFonts())); // modified: font subsetting
+    connect(ui.actionOpenRegexWorkbench, SIGNAL(triggered()), this, SLOT(OpenRegexWorkbench())); // modified: Advanced Regex Workbench
     connect(ui.actionAnalyzeBrParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeBrParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeCurrentBrParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentBrParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeBrParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllBrParagraphs())); // modified: Builtin native plugin
