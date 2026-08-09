@@ -23,6 +23,7 @@
 *************************************************************************/
 
 #include <QtGui/QContextMenuEvent>
+#include <QtGui/QMouseEvent>
 #include <QAction>
 #include <QtWidgets/QMenu>
 #include <QPointer>
@@ -55,7 +56,14 @@ void TabBar::mouseDoubleClickEvent(QMouseEvent *event)
 
 void TabBar::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::RightButton) {
+    if (event->button() == Qt::MiddleButton) {
+        const int tab_index = tabAt(event->pos());
+        if (tab_index >= 0) {
+            emit tabCloseRequested(tab_index);
+        }
+        event->accept();
+        return;
+    } else if (event->button() == Qt::RightButton) {
         int tabCount = count();
 
         if (tabCount <= 1) {

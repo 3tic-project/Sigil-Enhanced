@@ -27,6 +27,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 * 内置插件：Kindle KFX 段落规范化，修正 KFX 来源 EPUB 中由 spacer p 分隔裸文本的结构；菜单明确区分当前文件与全书操作
 * 内置插件：BookLive/EBPAJ Div 段落规范化，将正文中的 div 伪段落安全拍平为保留原样式的 p 元素；菜单明确区分当前文件与全书操作
 * 内置[高级正则工作台](docs/AdvancedRegexWorkbench.md)：支持二级正则筛选、递归替换、命名捕获变量、仅捕获规则、可保存方案、试运行定位和 OPF/NCX 等特殊文本资源
+* 编辑标签栏支持使用鼠标中键直接关闭所指向的标签页
 * 搜索模板批处理先在内存中完成全部规则并校验，再对每个变化资源统一写回一次，减少重复渲染和写盘，同时保留撤销与 Checkpoint 恢复能力
 * 内置中文简繁与地区转换：支持当前选区、当前XHTML/SVG、选中文件和全书正文，提供结构安全白名单、逐项预览、单步撤销和批量Checkpoint。详见 [中文转换文档](docs/ChineseConversion.md)
 * 内置 HarfBuzz 字体子集化：HarfBuzz 随 Sigil 静态构建，不依赖系统安装；支持 TTF/OTF 字体许可与风险检查、全书字符收集、后台 dry-run、逐字体报告、shaping 验证、Checkpoint 和事务式原位替换。详见 [字体子集化文档](docs/FontSubsetting.md)

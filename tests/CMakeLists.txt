@@ -1,5 +1,28 @@
 find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Widgets Xml REQUIRED)
 
+add_executable(tab_bar_middle_click_test
+    tab_bar_middle_click_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Tabs/TabBar.cpp
+    ${CMAKE_SOURCE_DIR}/src/Tabs/TabBar.h
+)
+
+target_include_directories(tab_bar_middle_click_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(tab_bar_middle_click_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+)
+set_target_properties(tab_bar_middle_click_test PROPERTIES AUTOMOC ON)
+
+add_test(NAME tab_bar_middle_click COMMAND tab_bar_middle_click_test)
+set_tests_properties(tab_bar_middle_click PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(regex_match_enumerator_test
     regex_match_enumerator_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
