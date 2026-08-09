@@ -502,6 +502,7 @@ set( MISC_FILES
     Misc/PluginDB.h
     Misc/SearchOperations.cpp
     Misc/SearchOperations.h
+    Misc/SearchOperationsApply.cpp
     Misc/SearchBatchRunner.cpp
     Misc/SearchBatchRunner.h
     Misc/RegexMatchEnumerator.cpp

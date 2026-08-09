@@ -67,6 +67,24 @@ target_compile_features(regex_secondary_match_test PRIVATE cxx_std_17)
 add_test(NAME regex_secondary_match COMMAND regex_secondary_match_test)
 set_tests_properties(regex_secondary_match PROPERTIES TIMEOUT 30)
 
+add_executable(regex_apply_shared_test
+    regex_apply_shared_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperationsApply.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperations.h
+)
+
+target_include_directories(regex_apply_shared_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(regex_apply_shared_test PRIVATE
+    Qt6::Core
+)
+target_compile_features(regex_apply_shared_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_apply_shared COMMAND regex_apply_shared_test)
+set_tests_properties(regex_apply_shared PROPERTIES TIMEOUT 30)
+
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
