@@ -5,7 +5,7 @@
 | **文档标题** | Advanced Regex Workbench（正则增强工作台） |
 | **作者** | Sigil-Enhanced 架构组（待填） |
 | **日期** | 2026-08-09 |
-| **状态** | Draft（修订 4：implementation audit — current batch integration / recursion state machine / safe matching） |
+| **状态** | Draft（修订 5：PR-01–04 核心实现与阶段审计完成；PR-05–08 待推进） |
 | **适用仓库** | `sigil-modified` / Sigil-Enhanced |
 | **关联计划** | `todo/Sigil-Enhanced-Development-Plan.md` §4 `BookEditSession`、§5 `SearchBatchRunner` |
 | **约束文档** | `ENHANCEMENT.md` |
@@ -954,6 +954,42 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 
 ---
 
+## Implementation Checkpoint（修订 5）
+
+### 已落地范围
+
+| 计划 | 状态 | 提交 | 落地结果 |
+| --- | --- | --- | --- |
+| PR-01 | 完成 | `1d2545fa0`、`d02998b61` | per-run owned PCRE2 枚举器、match/depth/heap/match-count 限制、取消、UTF-16/CRLF 零宽前进；PreSearch 按外层完整 match 推进 |
+| PR-02 | 完成 | `11a389b5f`、`30cb427f4` | `PreSearch`、`FilterAccept`、`FilterReject`；主/次级 pattern 每个规则执行只编译一次并跨递归轮次复用 |
+| PR-03 | 完成 | `dc95bdea9`、`e66084430` | Plus 与工作台共用 `ApplyReplacements`；递归仅 `NoMatches` 成功，stall/cycle/iteration/count/growth/size/cancel 均 fail closed |
+| PR-04 | 完成 | `4c71babfe`、`4304f7f3b`、`ad2baa45e`、`efe492bc1` | 命名组枚举、Resource/Batch/Session store、`${var:name}` 显式 resolver、Filter→expand→primary 时序、入口级事务回滚测试 |
+| PR-05–08 | 未开始 | — | Recipe、全书 staging/validation/commit、UI/菜单/i18n、Automate 与最终用户文档 |
+
+### 审计结论
+
+1. **当前核心不会写入 live book。** 已完成层只接收 `QString` 和变量 store，返回 staged 文本；尚未连接 `Resource`、`MainWindow` 或 coordinator。因此当前里程碑不存在逐条规则写回、重复渲染或破坏撤销栈的路径，最终发布必须经过 PR-06 的单次 commit adapter。
+2. **经典替换兼容边界保持。** `PerformGlobalReplacePlus` 已改为调用共享 splice；未提供 resolver 时 `${var:name}` 保持字面量，裸 `\v` 仍是 VT，原有 `\g{name}` 和 `\F` 路径不变。工作台入口单独拒绝整条 Python `\F<...>`。
+3. **匹配资源有界且线程所有权明确。** 工作台不持有 `PCRECache` 对象；每次规则执行拥有自己的 compiled code、match data 和 match context。每次 PCRE2 调用设置 match/depth/heap limit，并在调用之间检查 cancel；单次调用不能被协作式中断，但仍受 PCRE2 limit 约束。
+4. **递归和变量共同纳入回滚状态。** cycle/stall digest 同时包含文本和变量状态；任何匹配、展开、变量、限制或取消失败都返回原始文本并恢复初始 store snapshot，不允许发布部分轮次。
+5. **Filter 坐标与写入顺序已锁定。** Filter capture 保持主匹配内局部坐标；接受候选按 `Filter ingest → replacement expand → primary ingest` 执行，拒绝掉的候选不污染 store。
+6. **当前功能尚不可由用户操作。** Recipe、批处理 coordinator、XML staged validation、对话框和菜单均未实现；PR-01–04 是可复用核心里程碑，不应被描述为完整产品功能。
+
+### 验证证据（2026-08-09）
+
+- 新增核心测试：10/10 通过，包括安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序和变量执行入口。
+- `Sigil` 应用目标：在 Qt 6.7.3、Python 3.11 的 clean CMake tree 中完整编译、链接及 Python bundle verification 通过。
+- 全量 CTest：50 项中 47 项通过；失败的 `zh_cn_translation_coverage`、`zh_tw_translation_coverage`、`ja_translation_coverage` 均为本分支开始实现前已经存在的翻译目录缺失/陈旧项及 `PluginRunner.cpp` 未翻译字面量，本里程碑未修改相关源文件或 locale 目录。
+- `git diff --check`：通过。
+
+### 下一阶段门禁
+
+- PR-05 必须先固定 recipe schema、大小限制、重复 id 与 SearchEditor `PS` 导入警告，才能进入批处理接口。
+- PR-06 必须证明：worker 只修改内存 working-text map；每个变更资源最多一次可撤销写回；Dry-Run 与 Apply 各自重跑完整 stage；XML/checkpoint/conflict 任一失败均为零发布。
+- PR-07 前不开放 feature flag；引入 UI 时必须同步补齐三语言目录，否则现有 translation coverage 门禁会继续失败。
+
+---
+
 ## Testing Strategy
 
 | 测试 | 覆盖 |
@@ -962,11 +998,12 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | `regex_recursive_replace_test.cpp` | NoMatches 唯一成功；max=1 最终探测；stalled、store-only progress、state cycle、original-relative growth |
 | `regex_match_enumerator_test.cpp` | allowEmpty；同 offset 非空替代；emoji surrogate；CRLF；range 末端；match/depth limit 错误 |
 | `presearch_progress_test.cpp` | group1 空/未参与仍推进；outer-end 前进；非重叠范围 |
-| `search_variable_store_test.cpp` | 策略、bookpath resource frames、scope、cap、未参与 vs 空捕获、Append resolver=last |
-| `pcre_replace_var_test.cpp` | 裸 `\v` 和 `\v{foo}` 永远保持；变量关闭时 `${var:x}` 字面；开启后展开；missing Fatal；值不二次解释 |
+| `regex_variable_store_test.cpp` | 策略、bookpath resource frames、scope、cap、未参与 vs 空捕获、Append resolver=last |
+| `regex_replacement_resolver_test.cpp` | 裸 `\v` 和 `\v{foo}` 永远保持；变量关闭时 `${var:x}` 字面；开启后展开；missing Fatal；值不二次解释 |
 | `regex_filter_ingest_order_test.cpp` | 两个候选不同 Filter 捕获，各自 replacement 读同一候选；Reject 不 ingest |
+| `regex_variable_executor_test.cpp` | 跨规则变量、Filter 同候选读取、missing rollback、变量关闭兼容、`\F`/不存在 capture 拒绝 |
 | `regex_dryrun_apply_restage_test.cpp`（或引擎 API 测） | 两次 Run 独立 stage；不得缓存 Dry-Run map 给 Apply |
-| `spcre_capture_names_test.cpp` | `getCaptureNames` |
+| `regex_capture_names_test.cpp` | `getCaptureNames`、duplicate-name 默认拒绝 |
 | `regex_recipe_store_test.cpp` | JSON；`PS`+prefind 导入 |
 | `regex_apply_shared_test.cpp` | fixtures 对齐 `PerformGlobalReplacePlus` |
 | `regex_batch_commit_test.cpp` | staged XML failure/checkpoint failure/conflict 零写入；每资源一次 undoable write；失败逆序回滚 |
@@ -1039,28 +1076,28 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 
 每个含新 `.cpp` 的 PR 必须更新 `src/CMakeLists.txt` 与 Qt6 source group（不单 PR-01）。
 
-### PR-01：PreSearch 前进修复 + 安全 MatchEnumerator
+### PR-01：PreSearch 前进修复 + 安全 MatchEnumerator（已完成）
 
 - **标题**：`Harden PreSearch progress and add bounded PCRE2 match enumeration`
 - **文件**：`UtilityExt.cpp`、`RegexMatchEnumerator.*`、CMake、`tests/presearch_progress_test.cpp`、`regex_match_enumerator_test.cpp`
 - **依赖**：无
 - **描述**：外层完整 match 推进；空/未参与 group1 fail-safe；PCRE2 标准零宽算法；Unicode/CRLF；match/depth limit 与错误分类。经典 allowEmpty=false 金样先锁定。
 
-### PR-02：SecondaryRegexMatcher（PreSearch + Filter）
+### PR-02：SecondaryRegexMatcher（PreSearch + Filter）（已完成）
 
 - **标题**：`RegexWorkbench: SecondaryRegexMatcher core`
 - **文件**：`BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h`、`SecondaryRegexMatcher.*`、CMake、`tests/regex_secondary_match_test.cpp`
 - **依赖**：PR-01
 - **描述**：PreSearch 范围与 FilterAccept/Reject；Filter 无副作用枚举并携带 candidate-local capture。
 
-### PR-03：共享 ApplyReplacements + 递归状态机
+### PR-03：共享 ApplyReplacements + 递归状态机（已完成）
 
 - **标题**：`Extract shared replacement apply and add recursive state machine`
 - **文件**：`SearchOperations.*`、`RecursiveReplaceGuard.*`、`RegexWorkbenchEngine.*`（单文本）、`tests/regex_recursive_replace_test.cpp`、`regex_apply_shared_test.cpp`
 - **依赖**：PR-02
 - **描述**：Plus 调用共享 splice；NoMatches/Stalled/Cycle/Limit；original-relative growth；非递归与 Plus 逐字节一致。
 
-### PR-04：Capture names + SearchVariableStore + `${var:name}`
+### PR-04：Capture names + SearchVariableStore + `${var:name}`（已完成）
 
 - **标题**：`Add resource-framed capture variables and explicit replacement resolver`
 - **文件**：`SPCRE.*`（capture name metadata）、`PCREReplaceTextBuilder.*`（通用 resolver）、`SearchVariableStore.*`、共享 Apply callbacks、变量/Filter 时序测试
@@ -1120,4 +1157,4 @@ flowchart LR
 
 ---
 
-*文档结束（修订 4）。*
+*文档结束（修订 5）。*
