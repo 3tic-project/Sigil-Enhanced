@@ -245,6 +245,31 @@ target_compile_features(regex_variable_executor_test PRIVATE cxx_std_17)
 add_test(NAME regex_variable_executor COMMAND regex_variable_executor_test)
 set_tests_properties(regex_variable_executor PROPERTIES TIMEOUT 30)
 
+add_executable(regex_recipe_store_test
+    regex_recipe_store_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeStore.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+)
+
+target_include_directories(regex_recipe_store_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(regex_recipe_store_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+)
+target_compile_features(regex_recipe_store_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_recipe_store COMMAND regex_recipe_store_test)
+set_tests_properties(regex_recipe_store PROPERTIES TIMEOUT 30)
+
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
