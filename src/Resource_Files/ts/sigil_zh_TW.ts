@@ -2226,21 +2226,6 @@ There always has to be at least one.</source>
         <translation>清理編輯人員列表</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2235"/>
-        <source>Insert Into HTML/CSS File</source>
-        <translation>插入到 HTML/CSS 檔案</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2236"/>
-        <source>Insert Into HTML File</source>
-        <translation>插入到 HTML 檔案</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2237"/>
-        <source>Insert Into CSS File</source>
-        <translation>插入到 CSS 檔案</translation>
-    </message>
-    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="2246"/>
         <source>Merge with previous file, or merge multiple files into one.</source>
         <translation>與上一個檔案合併，或將多個檔案合併為一個。</translation>
@@ -4563,24 +4548,9 @@ Valid only when searching HTML files.</source>
         <translation>沒有發現符合條件</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1221"/>
-        <source>Creating checkpoint before Replace All...</source>
-        <translation>正在“全部替換”前建立檢查點…</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1223"/>
-        <source>Replace All cancelled: checkpoint failed.</source>
-        <translation>全部替換已取消：檢查點建立失敗。</translation>
-    </message>
-    <message>
         <location filename="../../MainUI/FindReplace.cpp" line="1761"/>
         <source>This tab cannot be searched</source>
         <translation>這個選項無法搜尋</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1771"/>
-        <source>Unnamed Search</source>
-        <translation>未命名搜尋</translation>
     </message>
     <message>
         <location filename="../../MainUI/FindReplace.cpp" line="1804"/>
@@ -20888,16 +20858,6 @@ Line: %1 Column %2 - %3</source>
         <translation>暫時指定一個 id 以便載入此 EPUB。您應該編輯您的 OPF 檔將重覆的 id 移除。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="702"/>
-        <source>The OPF manifest contains duplicate file paths for: %1</source>
-        <translation>OPF 清單檔案包含下列項的重複檔案路徑：%1</translation>
-    </message>
-    <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="703"/>
-        <source>You should edit your OPF file&apos;s manifest to remove the duplication.</source>
-        <translation>你應當編輯 OPF 檔案的清單檔案來刪除重複。</translation>
-    </message>
-    <message>
         <location filename="../../Importers/ImportEPUB.cpp" line="785"/>
         <source>The OPF file did not identify the NCX file correctly.</source>
         <translation>OPF 檔無法正確辨識 NCX 檔。</translation>
@@ -26109,5 +26069,118 @@ Continue using the requested filename?</source>
         <source>black diamond suit</source>
         <translation>黑鑽石</translation>
     </message>
+</context>
+<context><name>AutomateEditor</name>
+<message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>對所有文字資源執行指定的正則工作臺方案。</translation></message>
+<message><source>[Regex recipe name or absolute path here]</source><translation>[在此輸入正則方案名稱或絕對路徑]</translation></message>
+</context>
+<context><name>BookBrowser</name>
+<message><source>Overwrite of image "%1" failed.</source><translation>覆寫影像「%1」失敗。</translation></message>
+</context>
+<context><name>DryRunReplace</name>
+<message><source>... Creating Table</source><translation>... 正在建立表格</translation></message>
+<message><source>Dry Run Replace-All</source><translation>試執行全部取代</translation></message>
+</context>
+<context><name>MainWindow</name>
+<message><source>Advanced Regex Workbench</source><translation>進階正則工作臺</translation></message>
+<message><source>Advanced Regex Workbench...</source><translation>進階正則工作臺...</translation></message>
+<message><source>Regex recipe %1 applied %2 replacement(s) to %3 resource(s).</source><translation>正則方案 %1 已執行 %2 次取代，修改了 %3 個資源。</translation></message>
+<message><source>Regex recipe failed: %1</source><translation>正則方案執行失敗：%1</translation></message>
+<message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正則方案執行失敗：目前未載入 EPUB。</translation></message>
+<message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正則方案執行失敗：目前 EPUB 沒有文字資源。</translation></message>
+<message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>執行支援二級篩選、遞迴及變數的分階段正則方案</translation></message>
+<message><source>The current EPUB has no text resources.</source><translation>目前 EPUB 沒有文字資源。</translation></message>
+</context>
+<context><name>QObject</name>
+<message><source>Rule %1</source><translation>規則 %1</translation></message>
+<message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF 資訊清單含有重複的檔案路徑。請編輯 OPF 檔案的資訊清單並移除重複項目。</translation></message>
+</context>
+<context><name>RegexWorkbenchDialog</name>
+<message><source>%1 copy</source><translation>%1 副本</translation></message>
+<message><source>Accept when secondary matches</source><translation>二級正則符合時接受</translation></message>
+<message><source>Add</source><translation>新增</translation></message>
+<message><source>Advanced Regex Workbench</source><translation>進階正則工作臺</translation></message>
+<message><source>After</source><translation>取代後</translation></message>
+<message><source>All CSS files (%1)</source><translation>所有 CSS 檔案（%1）</translation></message>
+<message><source>All XHTML files (%1)</source><translation>所有 XHTML 檔案（%1）</translation></message>
+<message><source>All text resources (%1)</source><translation>所有文字資源（%1）</translation></message>
+<message><source>Allow zero-length matches</source><translation>允許零長度符合</translation></message>
+<message><source>Append values</source><translation>附加值</translation></message>
+<message><source>Applied %1 replacement(s) to %2 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>已執行 %1 次取代，修改了 %2 個資源。每個檔案可分別復原；若要還原整個批次，請使用復原檢查點。</translation></message>
+<message><source>Apply</source><translation>套用</translation></message>
+<message><source>Batch</source><translation>批次</translation></message>
+<message><source>Before</source><translation>取代前</translation></message>
+<message><source>Cancel Run</source><translation>取消執行</translation></message>
+<message><source>Cancel the active run before closing the workbench.</source><translation>請先取消目前執行，再關閉工作臺。</translation></message>
+<message><source>Cancelling after the current bounded regex operation...</source><translation>將在目前受限正則操作完成後取消...</translation></message>
+<message><source>Capture variables:</source><translation>擷取變數：</translation></message>
+<message><source>Clear Variables</source><translation>清除變數</translation></message>
+<message><source>Current file</source><translation>目前檔案</translation></message>
+<message><source>Down</source><translation>下移</translation></message>
+<message><source>Dry Run</source><translation>試執行</translation></message>
+<message><source>Dry-Run complete: %1 replacement(s), %2 changed resource(s). The book and session variables were not modified.</source><translation>試執行完成：%1 次取代，%2 個資源將被修改。書籍與工作階段變數均未變更。</translation></message>
+<message><source>Dry-Run coordinates refer to staged text; navigation opens the unchanged resource without an exact position.</source><translation>試執行座標基於暫存文字；導覽只會開啟未修改的資源，不會精確定位。</translation></message>
+<message><source>Dry-Run results</source><translation>試執行結果</translation></message>
+<message><source>Duplicate</source><translation>複製</translation></message>
+<message><source>Enabled</source><translation>啟用</translation></message>
+<message><source>Expand ${var:name} in replacement</source><translation>在取代文字中展開 ${var:name}</translation></message>
+<message><source>File</source><translation>檔案</translation></message>
+<message><source>Files:</source><translation>檔案：</translation></message>
+<message><source>Find regex:</source><translation>尋找正則：</translation></message>
+<message><source>Import Search Template</source><translation>匯入搜尋範本</translation></message>
+<message><source>Import Search Template...</source><translation>匯入搜尋範本...</translation></message>
+<message><source>Imported saved search: %1</source><translation>已匯入儲存的搜尋：%1</translation></message>
+<message><source>Iteration</source><translation>迭代</translation></message>
+<message><source>Keep first value</source><translation>保留第一個值</translation></message>
+<message><source>Last value wins</source><translation>使用最後一個值</translation></message>
+<message><source>Line</source><translation>行</translation></message>
+<message><source>Loaded recipe: %1</source><translation>已載入方案：%1</translation></message>
+<message><source>Maximum iterations:</source><translation>最大迭代次數：</translation></message>
+<message><source>Name</source><translation>名稱</translation></message>
+<message><source>Name:</source><translation>名稱：</translation></message>
+<message><source>New</source><translation>新增</translation></message>
+<message><source>New recipe created.</source><translation>已建立新方案。</translation></message>
+<message><source>No saved search templates are available.</source><translation>沒有可用的已儲存搜尋範本。</translation></message>
+<message><source>None</source><translation>無</translation></message>
+<message><source>Open Recipe...</source><translation>開啟方案...</translation></message>
+<message><source>Open Regex Workbench Recipe</source><translation>開啟正則工作臺方案</translation></message>
+<message><source>PreSearch range</source><translation>預搜尋範圍</translation></message>
+<message><source>Ready.</source><translation>就緒。</translation></message>
+<message><source>Recipe:</source><translation>方案：</translation></message>
+<message><source>Regex Workbench recipes (*.json);;All files (*)</source><translation>正則工作臺方案 (*.json);;所有檔案 (*)</translation></message>
+<message><source>Reject when secondary matches</source><translation>二級正則符合時拒絕</translation></message>
+<message><source>Remove</source><translation>移除</translation></message>
+<message><source>Repeat until no matches remain</source><translation>重複執行直到不再有符合項目</translation></message>
+<message><source>Replacement:</source><translation>取代文字：</translation></message>
+<message><source>Resource</source><translation>資源</translation></message>
+<message><source>Rule</source><translation>規則</translation></message>
+<message><source>Rule editor</source><translation>規則編輯器</translation></message>
+<message><source>Rules</source><translation>規則</translation></message>
+<message><source>Run</source><translation>執行</translation></message>
+<message><source>Run cancelled. No book text or variables were changed.</source><translation>執行已取消。書籍文字與變數均未變更。</translation></message>
+<message><source>Running Dry-Run in memory...</source><translation>正在記憶體中試執行...</translation></message>
+<message><source>Save Recipe...</source><translation>儲存方案...</translation></message>
+<message><source>Save Regex Workbench Recipe</source><translation>儲存正則工作臺方案</translation></message>
+<message><source>Saved recipe: %1</source><translation>已儲存方案：%1</translation></message>
+<message><source>Saved search:</source><translation>已儲存搜尋：</translation></message>
+<message><source>Scope</source><translation>範圍</translation></message>
+<message><source>Secondary mode:</source><translation>二級模式：</translation></message>
+<message><source>Secondary regex:</source><translation>二級正則：</translation></message>
+<message><source>Selected text files (%1)</source><translation>選取的文字檔案（%1）</translation></message>
+<message><source>Session</source><translation>工作階段</translation></message>
+<message><source>Session variables cleared.</source><translation>工作階段變數已清除。</translation></message>
+<message><source>Staging a fresh Apply run in memory...</source><translation>正在記憶體中重新暫存本次套用...</translation></message>
+<message><source>Store all named captures</source><translation>儲存所有命名擷取群組</translation></message>
+<message><source>The report omitted %1 additional row(s); totals remain exact.</source><translation>報告省略了另外 %1 列；總計數仍然準確。</translation></message>
+<message><source>The result was changed by a later rule; navigation opens the resource without an exact position.</source><translation>此結果已被後續規則變更；導覽只會開啟資源，不會精確定位。</translation></message>
+<message><source>The selected saved search no longer exists.</source><translation>選取的已儲存搜尋已不存在。</translation></message>
+<message><source>The selected scope contains no text resources.</source><translation>選取的範圍不含文字資源。</translation></message>
+<message><source>Untitled Recipe</source><translation>未命名方案</translation></message>
+<message><source>Up</source><translation>上移</translation></message>
+<message><source>Value</source><translation>值</translation></message>
+<message><source>Variable scope:</source><translation>變數範圍：</translation></message>
+<message><source>Variables</source><translation>變數</translation></message>
+<message><source>Write policy:</source><translation>寫入策略：</translation></message>
+<message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（選用允許清單）</translation></message>
 </context>
 </TS>
