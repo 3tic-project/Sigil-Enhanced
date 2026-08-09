@@ -1760,6 +1760,8 @@ if a sans-serif font-family specified in your CSS</source>
         <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements.</source>
         <translation>将可自动安全处理的 BookLive/EBPAJ div 伪段落叶转换为保留样式的 p 元素。</translation>
     </message>
+    <message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>对所有文本资源运行指定的正则工作台方案。</translation></message>
+    <message><source>[Regex recipe name or absolute path here]</source><translation>[在此输入正则方案名称或绝对路径]</translation></message>
 </context>
 <context>
     <name>Book</name>
@@ -2227,21 +2229,6 @@ There always has to be at least one.</source>
         <translation>清理编辑人员列表</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2235"/>
-        <source>Insert Into HTML/CSS File</source>
-        <translation>插入到 HTML/CSS 文件</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2236"/>
-        <source>Insert Into HTML File</source>
-        <translation>插入到 HTML 文件</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2237"/>
-        <source>Insert Into CSS File</source>
-        <translation>插入到 CSS 文件</translation>
-    </message>
-    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="2246"/>
         <source>Merge with previous file, or merge multiple files into one.</source>
         <translation>合并先前的文件，或合并多个文件为一个。</translation>
@@ -2288,6 +2275,7 @@ A file with this name already exists in the book.</source>
         <translation>无法添加“%1”
 书中已存在同名文件。</translation>
     </message>
+    <message><source>Overwrite of image "%1" failed.</source><translation>覆盖图像“%1”失败。</translation></message>
 </context>
 <context>
     <name>CPCompare</name>
@@ -3920,6 +3908,8 @@ other end to continue searching.</source>
         <source>After</source>
         <translation>之后</translation>
     </message>
+    <message><source>... Creating Table</source><translation>... 正在创建表格</translation></message>
+    <message><source>Dry Run Replace-All</source><translation>试运行全部替换</translation></message>
 </context>
 <context>
     <name>EditRO</name>
@@ -4569,24 +4559,9 @@ Valid only when searching HTML files.</source>
         <translation>没有匹配项。</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1221"/>
-        <source>Creating checkpoint before Replace All...</source>
-        <translation>正在“全部替换”前创建检查点…</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1223"/>
-        <source>Replace All cancelled: checkpoint failed.</source>
-        <translation>全部替换已取消：检查点创建失败。</translation>
-    </message>
-    <message>
         <location filename="../../MainUI/FindReplace.cpp" line="1761"/>
         <source>This tab cannot be searched</source>
         <translation>当前标签页无法执行查找</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1771"/>
-        <source>Unnamed Search</source>
-        <translation>未命名搜索</translation>
     </message>
     <message>
         <location filename="../../MainUI/FindReplace.cpp" line="1804"/>
@@ -15383,6 +15358,14 @@ Single nested visual blocks preserved: %6</source>
         <source>No BookLive paragraph files were changed.</source>
         <translation>没有 BookLive 段落文件被修改。</translation>
     </message>
+    <message><source>Advanced Regex Workbench</source><translation>高级正则工作台</translation></message>
+    <message><source>Advanced Regex Workbench...</source><translation>高级正则工作台...</translation></message>
+    <message><source>Regex recipe %1 processed %2 match(es), applied %3 replacement(s) to %4 resource(s).</source><translation>正则方案 %1 已处理 %2 个匹配，执行 %3 次替换并修改 %4 个资源。</translation></message>
+    <message><source>Regex recipe failed: %1</source><translation>正则方案执行失败：%1</translation></message>
+    <message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正则方案执行失败：当前未载入 EPUB。</translation></message>
+    <message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正则方案执行失败：当前 EPUB 没有文本资源。</translation></message>
+    <message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>运行支持二级筛选、递归和变量的分阶段正则方案</translation></message>
+    <message><source>The current EPUB has no text resources.</source><translation>当前 EPUB 没有文本资源。</translation></message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -20895,16 +20878,6 @@ Line: %1 Column %2 - %3</source>
         <translation>加载EPUB时已经指定了一个临时id，请编辑您的OPF文件移除重复的id。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="702"/>
-        <source>The OPF manifest contains duplicate file paths for: %1</source>
-        <translation>OPF 清单文件包含下列项的重复文件路径：%1</translation>
-    </message>
-    <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="703"/>
-        <source>You should edit your OPF file&apos;s manifest to remove the duplication.</source>
-        <translation>你应当编辑 OPF 文件的清单文件来删除重复。</translation>
-    </message>
-    <message>
         <location filename="../../Importers/ImportEPUB.cpp" line="785"/>
         <source>The OPF file did not identify the NCX file correctly.</source>
         <translation>OPF文件没有正确识别NCX文件。</translation>
@@ -21344,6 +21317,8 @@ Line: %1 Column %2 - %3</source>
         <source>Invalid or missing</source>
         <translation>无效或缺失</translation>
     </message>
+    <message><source>Rule %1</source><translation>规则 %1</translation></message>
+    <message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF 清单中包含重复的文件路径。请编辑 OPF 文件的清单并移除重复项。</translation></message>
 </context>
 <context>
     <name>RERenamer</name>
@@ -26126,5 +26101,238 @@ Continue using the requested filename?</source>
         <source>black diamond suit</source>
         <translation>黑方块♦</translation>
     </message>
+</context>
+<context><name>RegexWorkbenchCore</name>
+<message><source>Invalid recursive replacement guard configuration</source><translation>递归替换保护配置无效</translation></message>
+<message><source>Invalid recursive replacement guard input</source><translation>递归替换保护输入无效</translation></message>
+<message><source>Replacement count %1 exceeds limit %2</source><translation>替换次数 %1 超过上限 %2</translation></message>
+<message><source>Text length %1 exceeds absolute limit %2 UTF-16 units</source><translation>文本长度 %1 超过绝对上限 %2 个 UTF-16 单元</translation></message>
+<message><source>Text length %1 exceeds original-relative growth limit %2 UTF-16 units</source><translation>文本长度 %1 超过相对原文增长上限 %2 个 UTF-16 单元</translation></message>
+<message><source>Search template groups cannot be imported as rules</source><translation>搜索模板组不能作为规则导入</translation></message>
+<message><source>Search template name and find pattern must not be empty</source><translation>搜索模板名称和查找表达式不能为空</translation></message>
+<message><source>Python function search templates are not supported by Regex Workbench</source><translation>正则工作台不支持 Python 函数搜索模板</translation></message>
+<message><source>Only regular-expression search templates can be imported</source><translation>只能导入正则表达式搜索模板</translation></message>
+<message><source>PreSearch control was ignored because the prefind pattern is empty</source><translation>预搜索表达式为空，已忽略 PreSearch 控制项</translation></message>
+<message><source>Stored prefind pattern was ignored because controls do not contain PS</source><translation>控制项不含 PS，已忽略保存的预搜索表达式</translation></message>
+<message><source>Per-entry scope or direction controls were not imported: %1</source><translation>未导入条目级作用域或方向控制项：%1</translation></message>
+<message><source>Corrected legacy Japanese quote template spacing that matched XML markup</source><translation>已纠正旧版日文引号模板中会匹配 XML 标记的空格</translation></message>
+<message><source>Unknown %1 field: %2</source><translation>未知的 %1 字段：%2</translation></message>
+<message><source>Recipe field %1 must be a string</source><translation>方案字段 %1 必须是字符串</translation></message>
+<message><source>Recipe field %1 must be a boolean</source><translation>方案字段 %1 必须是布尔值</translation></message>
+<message><source>Recipe field %1 must be an integer in [%2, %3]</source><translation>方案字段 %1 必须是 [%2, %3] 范围内的整数</translation></message>
+<message><source>Recipe field captureToVar must be an array</source><translation>方案字段 captureToVar 必须是数组</translation></message>
+<message><source>Recipe captureToVar exceeds its item limit</source><translation>方案的 captureToVar 超过项目数上限</translation></message>
+<message><source>Recipe captureToVar contains an invalid or duplicate name</source><translation>方案的 captureToVar 包含无效或重复名称</translation></message>
+<message><source>Unknown recipe secondaryMode: %1</source><translation>未知的方案 secondaryMode：%1</translation></message>
+<message><source>Invalid recipe limits</source><translation>方案限制无效</translation></message>
+<message><source>Recipe name is empty or exceeds its limit</source><translation>方案名称为空或超过长度上限</translation></message>
+<message><source>Recipe has an unknown variable scope or write policy</source><translation>方案包含未知的变量作用域或写入策略</translation></message>
+<message><source>Recipe exceeds its rule-count limit</source><translation>方案超过规则数量上限</translation></message>
+<message><source>Recipe rule has an empty or oversized required field</source><translation>方案规则的必填字段为空或超过大小上限</translation></message>
+<message><source>Recipe contains duplicate rule id: %1</source><translation>方案包含重复的规则 ID：%1</translation></message>
+<message><source>Recipe rule %1 has inconsistent secondary configuration</source><translation>方案规则 %1 的二级正则配置不一致</translation></message>
+<message><source>Recipe rule %1 has invalid recursive limits</source><translation>方案规则 %1 的递归限制无效</translation></message>
+<message><source>Recipe rule %1 has an invalid capture-only configuration</source><translation>方案规则 %1 的仅捕获配置无效</translation></message>
+<message><source>Recipe rule %1 exceeds its capture-name limit</source><translation>方案规则 %1 超过捕获组名称数量上限</translation></message>
+<message><source>Recipe rule %1 has an invalid or duplicate capture name</source><translation>方案规则 %1 包含无效或重复的捕获组名称</translation></message>
+<message><source>Recipe rule %1 uses an unsupported Python function replacement</source><translation>方案规则 %1 使用了不受支持的 Python 函数替换</translation></message>
+<message><source>Serialized recipe exceeds its file-size limit</source><translation>序列化后的方案超过文件大小上限</translation></message>
+<message><source>Recipe exceeds its file-size limit</source><translation>方案超过文件大小上限</translation></message>
+<message><source>Invalid recipe JSON: %1</source><translation>方案 JSON 无效：%1</translation></message>
+<message><source>Unknown recipe format</source><translation>未知的方案格式</translation></message>
+<message><source>Recipe version is required</source><translation>方案必须指定版本</translation></message>
+<message><source>Unknown recipe variable scope or write policy</source><translation>未知的方案变量作用域或写入策略</translation></message>
+<message><source>Recipe rules must be an array within the rule-count limit</source><translation>方案 rules 必须是未超过规则数量上限的数组</translation></message>
+<message><source>Each recipe rule must be an object</source><translation>每条方案规则都必须是对象</translation></message>
+<message><source>Recipe path is empty</source><translation>方案路径为空</translation></message>
+<message><source>Could not create recipe directory: %1</source><translation>无法创建方案目录：%1</translation></message>
+<message><source>Could not save recipe %1: %2</source><translation>无法保存方案 %1：%2</translation></message>
+<message><source>Could not open recipe %1: %2</source><translation>无法打开方案 %1：%2</translation></message>
+<message><source>Recipe name or path is empty</source><translation>方案名称或路径为空</translation></message>
+<message><source>Recipe file does not exist: %1</source><translation>方案文件不存在：%1</translation></message>
+<message><source>Relative recipe identifiers must not contain directories</source><translation>相对方案标识符不能包含目录</translation></message>
+<message><source>Recipe name is ambiguous: %1</source><translation>方案名称不唯一：%1</translation></message>
+<message><source>Could not find recipe: %1</source><translation>找不到方案：%1</translation></message>
+<message><source>Invalid regex workbench batch limits</source><translation>正则工作台批处理限制无效</translation></message>
+<message><source>Regex workbench batch contains an empty resource path</source><translation>正则工作台批处理包含空资源路径</translation></message>
+<message><source>Regex workbench batch contains duplicate resource path: %1</source><translation>正则工作台批处理包含重复资源路径：%1</translation></message>
+<message><source>Regex workbench batch target is missing: %1</source><translation>正则工作台批处理目标缺失：%1</translation></message>
+<message><source>Regex workbench rule %1 failed to compile: %2</source><translation>正则工作台规则 %1 编译失败：%2</translation></message>
+<message><source>Prepared regex workbench rule is missing: %1</source><translation>缺少已准备的正则工作台规则：%1</translation></message>
+<message><source>Regex workbench rule %1 failed for %2: %3</source><translation>正则工作台规则 %1 处理 %2 时失败：%3</translation></message>
+<message><source>Regex workbench replacement count overflow</source><translation>正则工作台替换计数溢出</translation></message>
+<message><source>Regex workbench run exceeded replacement limit %1</source><translation>正则工作台运行超过替换上限 %1</translation></message>
+<message><source>Regex workbench match count overflow</source><translation>正则工作台匹配计数溢出</translation></message>
+<message><source>Regex workbench run exceeded match limit %1</source><translation>正则工作台运行超过匹配上限 %1</translation></message>
+<message><source>stateSnapshot and restoreState must be configured together</source><translation>stateSnapshot 和 restoreState 必须同时配置</translation></message>
+<message><source>Replacement callbacks require state snapshot and restore handlers</source><translation>替换回调需要状态快照和恢复处理器</translation></message>
+<message><source>A replacement expander is required</source><translation>必须提供替换展开器</translation></message>
+<message><source>Recursive maxIterations must be greater than zero</source><translation>递归 maxIterations 必须大于零</translation></message>
+<message><source>Capture-only rules cannot use recursive replacement</source><translation>仅捕获规则不能使用递归替换</translation></message>
+<message><source>Recursive replacement reached iteration limit %1 with matches remaining</source><translation>递归替换达到迭代上限 %1，但仍有匹配项</translation></message>
+<message><source>Regex replacement cancelled</source><translation>正则替换已取消</translation></message>
+<message><source>Replacement variable callback failed</source><translation>替换变量回调失败</translation></message>
+<message><source>Replacement expansion failed</source><translation>替换文本展开失败</translation></message>
+<message><source>Replacement trace did not cover every candidate</source><translation>替换跟踪记录未覆盖所有候选项</translation></message>
+<message><source>Recursive replacement made no state progress while matches remain</source><translation>递归替换仍有匹配项，但状态没有进展</translation></message>
+<message><source>Recursive replacement entered a previously seen state</source><translation>递归替换进入了先前出现过的状态</translation></message>
+<message><source>Configured named capture does not exist: %1</source><translation>配置的命名捕获组不存在：%1</translation></message>
+<message><source>Capture-only rule has no named capture groups to store</source><translation>仅捕获规则没有可存储的命名捕获组</translation></message>
+<message><source>Capture-only rule configuration is invalid</source><translation>仅捕获规则配置无效</translation></message>
+<message><source>Whole Python function replacements are not supported in Regex Workbench</source><translation>正则工作台不支持整条 Python 函数替换</translation></message>
+<message><source>Prepared regex rule is invalid</source><translation>已准备的正则规则无效</translation></message>
+<message><source>Variable executor owns replacement callbacks and store transactions</source><translation>变量执行器独占替换回调和变量存储事务</translation></message>
+<message><source>Undefined variable: %1</source><translation>变量未定义：%1</translation></message>
+<message><source>Invalid variable name: %1</source><translation>变量名称无效：%1</translation></message>
+<message><source>Invalid variable store limits</source><translation>变量存储限制无效</translation></message>
+<message><source>Variable %1 exceeds the per-value UTF-16 limit</source><translation>变量 %1 超过单个值的 UTF-16 长度上限</translation></message>
+<message><source>No active resource for resource-scoped variables</source><translation>资源作用域变量没有活动资源</translation></message>
+<message><source>Variable store exceeds its variable-count limit</source><translation>变量存储超过变量数量上限</translation></message>
+<message><source>Variable store exceeds its total UTF-16 limit</source><translation>变量存储超过 UTF-16 总长度上限</translation></message>
+<message><source>Invalid capture number for %1</source><translation>%1 的捕获组编号无效</translation></message>
+<message><source>Invalid capture offsets for %1</source><translation>%1 的捕获组偏移无效</translation></message>
+<message><source>Unknown variable scope</source><translation>未知的变量作用域</translation></message>
+<message><source>Invalid variable store snapshot</source><translation>变量存储快照无效</translation></message>
+<message><source>Invalid resource frame in variable store snapshot</source><translation>变量存储快照中的资源帧无效</translation></message>
+<message><source>Variable store snapshot exceeds total limit</source><translation>变量存储快照超过总量上限</translation></message>
+<message><source>secondaryPattern must be empty when secondaryMode is None</source><translation>secondaryMode 为 None 时 secondaryPattern 必须为空</translation></message>
+<message><source>secondaryPattern must not be empty when a secondary mode is active</source><translation>启用二级模式时 secondaryPattern 不能为空</translation></message>
+<message><source>Unknown secondary regex mode</source><translation>未知的二级正则模式</translation></message>
+<message><source>Regex workbench staged validation did not succeed</source><translation>正则工作台暂存内容验证未通过</translation></message>
+<message><source>Regex workbench variable state is invalid: %1</source><translation>正则工作台变量状态无效：%1</translation></message>
+<message><source>No book is available for the search batch.</source><translation>没有可用于搜索批处理的书籍。</translation></message>
+<message><source>Search batch snapshots must be captured on the GUI thread.</source><translation>搜索批处理快照必须在 GUI 线程中获取。</translation></message>
+<message><source>Search batch contains an empty target path.</source><translation>搜索批处理包含空目标路径。</translation></message>
+<message><source>Search batch contains a duplicate target path: %1</source><translation>搜索批处理包含重复目标路径：%1</translation></message>
+<message><source>Search batch target is no longer available: %1</source><translation>搜索批处理目标已不可用：%1</translation></message>
+<message><source>No book is available for the search batch commit.</source><translation>没有可用于提交搜索批处理的书籍。</translation></message>
+<message><source>Search batch commits must run on the GUI thread.</source><translation>搜索批处理提交必须在 GUI 线程中运行。</translation></message>
+<message><source>Staged search result contains an unknown target: %1</source><translation>暂存搜索结果包含未知目标：%1</translation></message>
+<message><source>Search batch target changed during staging: %1</source><translation>搜索批处理目标在暂存期间发生变化：%1</translation></message>
+<message><source>Could not create the recovery checkpoint; no replacements were written.</source><translation>无法创建恢复检查点；未写入任何替换。</translation></message>
+<message><source>Search batch target changed while creating the checkpoint: %1</source><translation>创建检查点时搜索批处理目标发生变化：%1</translation></message>
+<message><source>Saved-search target disappeared before commit: %1</source><translation>保存的搜索目标在提交前消失：%1</translation></message>
+<message><source>Saved-search target changed before commit: %1</source><translation>保存的搜索目标在提交前发生变化：%1</translation></message>
+<message><source>Saved-search target failed its commit check: %1</source><translation>保存的搜索目标未通过提交检查：%1</translation></message>
+<message><source>PCRE2 error %1</source><translation>PCRE2 错误 %1</translation></message>
+<message><source>PCRE2 diagnostic: %1</source><translation>PCRE2 诊断：%1</translation></message>
+<message><source>Invalid regex search range [%1, %2) for text length %3</source><translation>正则搜索范围 [%1, %2) 无效，文本长度为 %3</translation></message>
+<message><source>Invalid PCRE2 enumeration limit</source><translation>PCRE2 枚举限制无效</translation></message>
+<message><source>Unable to configure PCRE2 match limits</source><translation>无法配置 PCRE2 匹配限制</translation></message>
+<message><source>Regex match enumeration cancelled</source><translation>正则匹配枚举已取消</translation></message>
+<message><source>Search batch has no replacement engine.</source><translation>搜索批处理没有替换引擎。</translation></message>
+<message><source>Search batch was cancelled.</source><translation>搜索批处理已取消。</translation></message>
+<message><source>Search batch target is missing: %1</source><translation>搜索批处理目标缺失：%1</translation></message>
+<message><source>Search rule failed for %1: %2</source><translation>搜索规则 %1 处理 %2 时失败</translation></message>
+<message><source>Invalid staged text validation limits</source><translation>暂存文本验证限制无效</translation></message>
+<message><source>Staged text validation was cancelled</source><translation>暂存文本验证已取消</translation></message>
+<message><source>Missing media type for staged resource</source><translation>暂存资源缺少媒体类型</translation></message>
+<message><source>Staged XML is not well formed: %1 at %2:%3: %4</source><translation>暂存 XML 格式不正确：%1，位置 %2:%3：%4</translation></message>
+</context>
+<context><name>RegexWorkbenchDialog</name>
+<message><source>%1 copy</source><translation>%1 副本</translation></message>
+<message><source>Accept when secondary matches</source><translation>二级正则匹配时接受</translation></message>
+<message><source>Add</source><translation>添加</translation></message>
+<message><source>Advanced Regex Workbench</source><translation>高级正则工作台</translation></message>
+<message><source>After</source><translation>替换后</translation></message>
+<message><source>All CSS files (%1)</source><translation>所有 CSS 文件（%1）</translation></message>
+<message><source>All XHTML files (%1)</source><translation>所有 XHTML 文件（%1）</translation></message>
+<message><source>All text resources (%1)</source><translation>所有文本资源（%1）</translation></message>
+<message><source>All special text files (%1)</source><translation>所有特殊文本文件（%1）</translation></message>
+<message><source>Allow zero-length matches</source><translation>允许零长度匹配</translation></message>
+<message><source>Append values</source><translation>追加值</translation></message>
+<message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>已从 %2 个匹配执行 %1 次替换，修改了 %3 个资源。每个文件可分别撤销；若要恢复整个批次，请使用恢复检查点。</translation></message>
+<message><source>Apply complete: %1 match(es), %2 replacement(s); no document text was changed.</source><translation>应用完成：%1 个匹配，%2 次替换；文档文本未更改。</translation></message>
+<message><source>Apply</source><translation>应用</translation></message>
+<message><source>Batch</source><translation>批次</translation></message>
+<message><source>Before</source><translation>替换前</translation></message>
+<message><source>Cancel Run</source><translation>取消运行</translation></message>
+<message><source>Cancel the active run before closing the workbench.</source><translation>请先取消当前运行，再关闭工作台。</translation></message>
+<message><source>Cancelling after the current bounded regex operation...</source><translation>将在当前受限正则操作完成后取消...</translation></message>
+<message><source>Capture variables:</source><translation>捕获变量：</translation></message>
+<message><source>Capture variables only (do not replace)</source><translation>仅捕获变量（不替换）</translation></message>
+<message><source>Enumerate accepted matches and store named captures without changing text.</source><translation>枚举已接受的匹配并存储命名捕获组，不修改文本。</translation></message>
+<message><source>Clear Variables</source><translation>清空变量</translation></message>
+<message><source>Current file</source><translation>当前文件</translation></message>
+<message><source>Down</source><translation>下移</translation></message>
+<message><source>Dry Run</source><translation>试运行</translation></message>
+<message><source>Dry-Run complete: %1 match(es), %2 replacement(s), %3 changed resource(s). The book and session variables were not modified.</source><translation>试运行完成：%1 个匹配，%2 次替换，%3 个资源将被修改。书籍和会话变量均未更改。</translation></message>
+<message><source>Double-click to open the resource and highlight this match.</source><translation>双击可打开资源并高亮此匹配。</translation></message>
+<message><source>Double-click to open the resource; no exact position is available.</source><translation>双击可打开资源；当前没有可用的精确位置。</translation></message>
+<message><source>Dry-Run results</source><translation>试运行结果</translation></message>
+<message><source>Duplicate</source><translation>复制</translation></message>
+<message><source>Enabled</source><translation>启用</translation></message>
+<message><source>Expand ${var:name} in replacement</source><translation>在替换文本中展开 ${var:name}</translation></message>
+<message><source>File</source><translation>文件</translation></message>
+<message><source>Files:</source><translation>文件：</translation></message>
+<message><source>Find regex:</source><translation>查找正则：</translation></message>
+<message><source>Import Search Template</source><translation>导入搜索模板</translation></message>
+<message><source>Import Search Template...</source><translation>导入搜索模板...</translation></message>
+<message><source>Imported saved search: %1</source><translation>已导入保存的搜索：%1</translation></message>
+<message><source>Iteration</source><translation>迭代</translation></message>
+<message><source>Keep first value</source><translation>保留首个值</translation></message>
+<message><source>Last value wins</source><translation>使用最后一个值</translation></message>
+<message><source>Line</source><translation>行</translation></message>
+<message><source>Loaded recipe: %1</source><translation>已载入方案：%1</translation></message>
+<message><source>Maximum iterations:</source><translation>最大迭代次数：</translation></message>
+<message><source>Name</source><translation>名称</translation></message>
+<message><source>Name:</source><translation>名称：</translation></message>
+<message><source>Patterns</source><translation>匹配表达式</translation></message>
+<message><source>Options</source><translation>规则选项</translation></message>
+<message><source>Named captures</source><translation>命名捕获</translation></message>
+<message><source>New</source><translation>新建</translation></message>
+<message><source>New recipe created.</source><translation>已新建方案。</translation></message>
+<message><source>New Regex Workbench Recipe</source><translation>新建正则工作台方案</translation></message>
+<message><source>Creating a new recipe will clear the current rules and unsaved rule changes. Continue?</source><translation>新建方案将清空当前规则及未保存的规则更改。是否继续？</translation></message>
+<message><source>No saved search templates are available.</source><translation>没有可用的已保存搜索模板。</translation></message>
+<message><source>None</source><translation>无</translation></message>
+<message><source>Open Recipe...</source><translation>打开方案...</translation></message>
+<message><source>Open Regex Workbench Recipe</source><translation>打开正则工作台方案</translation></message>
+<message><source>PreSearch range</source><translation>预搜索范围</translation></message>
+<message><source>Ready.</source><translation>就绪。</translation></message>
+<message><source>Recipe:</source><translation>方案：</translation></message>
+<message><source>Regex Workbench recipes (*.json);;All files (*)</source><translation>正则工作台方案 (*.json);;所有文件 (*)</translation></message>
+<message><source>Reject when secondary matches</source><translation>二级正则匹配时拒绝</translation></message>
+<message><source>Remove</source><translation>移除</translation></message>
+<message><source>Repeat until no matches remain</source><translation>重复执行直到不再有匹配</translation></message>
+<message><source>Replacement:</source><translation>替换文本：</translation></message>
+<message><source>Resource</source><translation>资源</translation></message>
+<message><source>Rule</source><translation>规则</translation></message>
+<message><source>Rule editor</source><translation>规则编辑器</translation></message>
+<message><source>Rules</source><translation>规则</translation></message>
+<message><source>Run</source><translation>运行</translation></message>
+<message><source>Run cancelled. No book text or variables were changed.</source><translation>运行已取消。书籍文本和变量均未更改。</translation></message>
+<message><source>Running Dry-Run in memory...</source><translation>正在内存中执行试运行...</translation></message>
+<message><source>Save Recipe...</source><translation>保存方案...</translation></message>
+<message><source>Save Regex Workbench Recipe</source><translation>保存正则工作台方案</translation></message>
+<message><source>Saved recipe: %1</source><translation>已保存方案：%1</translation></message>
+<message><source>Saved search:</source><translation>已保存搜索：</translation></message>
+<message><source>Scope</source><translation>作用域</translation></message>
+<message><source>Secondary mode:</source><translation>二级模式：</translation></message>
+<message><source>Secondary regex:</source><translation>二级正则：</translation></message>
+<message><source>Selected text files (%1)</source><translation>选中的文本文件（%1）</translation></message>
+<message><source>Session</source><translation>会话</translation></message>
+<message><source>Session variables cleared.</source><translation>会话变量已清空。</translation></message>
+<message><source>Staging a fresh Apply run in memory...</source><translation>正在内存中重新暂存本次应用...</translation></message>
+<message><source>Store all named captures</source><translation>存储所有命名捕获组</translation></message>
+<message><source>The report omitted %1 additional row(s); totals remain exact.</source><translation>报告省略了另外 %1 行；总计数仍然准确。</translation></message>
+<message><source>The exact range no longer maps to the document; double-click to open the nearest corresponding line.</source><translation>精确范围已无法映射到文档；双击可打开最接近的对应行。</translation></message>
+<message><source>The selected saved search no longer exists.</source><translation>所选的已保存搜索已不存在。</translation></message>
+<message><source>The selected scope contains no text resources.</source><translation>所选作用域不包含文本资源。</translation></message>
+<message><source>Untitled Recipe</source><translation>未命名方案</translation></message>
+<message><source>Up</source><translation>上移</translation></message>
+<message><source>Value</source><translation>值</translation></message>
+<message><source>Variable scope:</source><translation>变量作用域：</translation></message>
+<message><source>Variables</source><translation>变量</translation></message>
+<message><source>Write policy:</source><translation>写入策略：</translation></message>
+<message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（可选允许列表）</translation></message>
+<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>要将此方案应用到 %1 个文本资源吗？将重新创建快照；若产生文本更改，则会在写入前创建恢复检查点。</translation></message>
+<message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>正在创建恢复检查点并提交暂存更改...</translation></message>
+<message><source>Publishing captured variables without changing document text...</source><translation>正在发布捕获变量，不更改文档文本...</translation></message>
+<message><source>Advanced Regex Workbench — %1</source><translation>高级正则工作台 — %1</translation></message>
+<message><source>This workbench belongs to a book that is no longer open. Close it and reopen the workbench for the current book.</source><translation>此工作台属于一本已不再打开的书籍。请关闭它，并为当前书籍重新打开工作台。</translation></message>
+<message><source>The book changed while the recipe was running; the staged result was discarded.</source><translation>方案运行期间书籍已切换；暂存结果已丢弃。</translation></message>
+<message><source>This result refers to a resource that is no longer available.</source><translation>此结果引用的资源已不可用。</translation></message>
+<message><source>The resource changed after this report was created; opening the nearest recorded line without highlighting.</source><translation>此报告生成后资源已发生变化；将打开记录位置附近的行，但不高亮。</translation></message>
 </context>
 </TS>

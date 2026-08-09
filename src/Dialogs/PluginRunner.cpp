@@ -872,7 +872,7 @@ bool PluginRunner::deleteFiles(const QStringList &files)
 
 bool PluginRunner::addFiles(const QStringList &files)
 {
-    ui.statusLbl->setText("Status: adding files");
+    ui.statusLbl->setText(tr("Status: adding files"));
     foreach (QString fileinfo, files) {
         QStringList fdata = fileinfo.split(SEP);
         QString href = fdata[ hrefField ];

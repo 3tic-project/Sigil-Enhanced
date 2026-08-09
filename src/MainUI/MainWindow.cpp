@@ -81,6 +81,7 @@
 #include "Dialogs/MetaEditor.h"
 #include "Dialogs/PluginRunner.h"
 #include "Dialogs/Preferences.h"
+#include "Dialogs/RegexWorkbenchDialog.h"
 #include "Dialogs/RepoLog.h"
 #include "Dialogs/ChgViewer.h"
 #include "Dialogs/CPCompare.h"
@@ -253,6 +254,7 @@ static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "RemoveNavFromSpine" <<
     "RemoveNCXGuideFromEpub3" <<
     "RepoCommit" <<
+    "RunRegexWorkbenchRecipe" <<
     "RunSavedSearchReplaceAll" <<
     "Save" <<
     "SetBookBrowserToAllCSS" <<
@@ -335,6 +337,12 @@ MainWindow::MainWindow(const QString &openfilepath,
     // Needs to come before signals connect and after ExtendUI
     // (avoiding side-effects)
     ReadSettings();
+    {
+        SettingsStore settings;
+        ui.actionOpenRegexWorkbench->setVisible(
+            settings.value(QStringLiteral("enhanced/regex_workbench_enabled"),
+                           true).toBool());
+    }
     //modified: SavedSearchPlus
     if (m_findReplaceMode == EnhancedMode) {
         m_SearchEditorPlus = new SearchEditorPlus(this);
@@ -358,6 +366,9 @@ MainWindow::MainWindow(const QString &openfilepath,
 
 MainWindow::~MainWindow()
 {
+    if (m_RegexWorkbenchDialog) {
+        delete m_RegexWorkbenchDialog.data();
+    }
     delete m_PluginSessionManager;
     m_PluginSessionManager = nullptr;
     // Make sure that any modeless windows that are visible are closed first
@@ -477,6 +488,7 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "NormalizeKfxParagraphs")      success = NormalizeAllKfxParagraphs();
             else if (cmd == "ValidateStylesheetsWithW3C") success = ValidateStylesheetsWithW3C();
             else if (cmd == "RepoCommit")                 success = RepoCommit();
+            else if (cmd == "RunRegexWorkbenchRecipe")    success = RunRegexWorkbenchRecipe(QString());
             else if (cmd == "DeleteUnusedMedia")          success = DeleteUnusedMedia(true);
             else if (cmd == "DeleteUnusedStyles")         success = DeleteUnusedStyles(true);
             else if (cmd == "StandardizeEpub")            success = StandardizeEpub();
@@ -529,6 +541,12 @@ bool MainWindow::Automate(const QStringList &commands)
         } else if (cmd.startsWith("SetPluginParameter")) {
             m_AutomatePluginParameter  = cmd.mid(19, -1).trimmed();
             success = true;
+
+        // Run a named Regex Workbench recipe against all text resources.
+        } else if (cmd.startsWith("RunRegexWorkbenchRecipe ")) {
+            const QString identifier = cmd.mid(
+                QStringLiteral("RunRegexWorkbenchRecipe").size()).trimmed();
+            success = RunRegexWorkbenchRecipe(identifier);
 
         // handle saved search and its full name parameter
         } else if (cmd.startsWith("RunSavedSearchReplaceAll")) {
@@ -3469,6 +3487,28 @@ void MainWindow::OpenFile(QString bookpath, int line, int position)
     }
 }
 
+void MainWindow::OpenFileAndSelect(QString bookpath, int line, int start, int end)
+{
+    if (bookpath.isEmpty()) {
+        return;
+    }
+    if (start < 0) {
+        OpenFile(bookpath, line, -1);
+        return;
+    }
+
+    try {
+        Resource* resource = m_Book->GetFolderKeeper()->GetResourceByBookPath(bookpath);
+        OpenResourceAndWaitUntilLoaded(resource, line, start);
+        ContentTab* tab = GetCurrentContentTab();
+        if (end > start && tab && tab->GetLoadedResource() == resource) {
+            tab->SetSelectionRange(start, end);
+        }
+    } catch (ResourceDoesNotExist&) {
+        // The result refers to a resource that no longer exists.
+    }
+}
+
 // note the files_to_delete is a list of Resource Book Paths
 // for safety
 void MainWindow::DeleteFilenames(QStringList files_to_delete)
@@ -5939,6 +5979,10 @@ bool MainWindow::ProceedToOverwrite(const QString& msg, const QString &filename)
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
+    if (m_RegexWorkbenchDialog) {
+        ui.actionOpenRegexWorkbench->setEnabled(false);
+        m_RegexWorkbenchDialog->CloseForBookChange();
+    }
     m_PluginSessionManager->StopAll();
     m_TabManager->CloseOtherTabs();
     m_TabManager->CloseAllTabs(true);
@@ -7015,6 +7059,7 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionEnhanceSourceFormatting, "MainWindow.EnhanceSourceFormatting"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionChineseConversion, "MainWindow.ConvertChineseText"); // modified: Chinese conversion
     KeyboardShortcutManager::instance().registerAction(this, ui.actionSubsetEmbeddedFonts, "MainWindow.SubsetEmbeddedFonts"); // modified: font subsetting
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionOpenRegexWorkbench, "MainWindow.OpenRegexWorkbench"); // modified: Advanced Regex Workbench
     KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeBrParagraphs, "MainWindow.AnalyzeBrParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentBrParagraphs, "MainWindow.NormalizeCurrentBrParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeBrParagraphs, "MainWindow.NormalizeBrParagraphs"); // modified: Builtin native plugin
@@ -7402,6 +7447,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionEnhanceSourceFormatting, SIGNAL(triggered()), this, SLOT(EnhanceSourceFormatting())); // modified: Builtin native plugin
     connect(ui.actionChineseConversion, SIGNAL(triggered()), this, SLOT(ConvertChineseText())); // modified: Chinese conversion
     connect(ui.actionSubsetEmbeddedFonts, SIGNAL(triggered()), this, SLOT(SubsetEmbeddedFonts())); // modified: font subsetting
+    connect(ui.actionOpenRegexWorkbench, SIGNAL(triggered()), this, SLOT(OpenRegexWorkbench())); // modified: Advanced Regex Workbench
     connect(ui.actionAnalyzeBrParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeBrParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeCurrentBrParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentBrParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeBrParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllBrParagraphs())); // modified: Builtin native plugin

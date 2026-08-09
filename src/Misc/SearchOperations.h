@@ -24,6 +24,13 @@
 #ifndef SEARCHOPERATIONS_H
 #define SEARCHOPERATIONS_H
 
+#include <functional>
+#include <tuple>
+#include <utility>
+
+#include <QList>
+#include <QString>
+
 class Resource;
 class TextResource;
 class HTMLResource;
@@ -32,6 +39,24 @@ class SearchOperations
 {
 
 public:
+
+    struct ReplacementMatch {
+        std::pair<int, int> offset;
+        // Relative to the matched segment; index 0 is the full match.
+        QList<std::pair<int, int>> captureGroups;
+    };
+
+    using ReplacementExpander = std::function<bool(
+        const QString& matchedText,
+        const QList<std::pair<int, int>>& captureGroups,
+        const QString& replacement,
+        QString& expanded)>;
+    using MatchCallback = std::function<void(int matchIndex, const ReplacementMatch& match)>;
+
+    struct ApplyReplacementsOptions {
+        MatchCallback beforeExpand;
+        MatchCallback afterExpand;
+    };
 
     /**
      * Returns the number of matching occurrences.
@@ -62,6 +87,15 @@ public:
                                                              const QString& search_regex,
                                                              const QString& replacement,
                                                              const QString& text);
+
+    // Applies an already-enumerated, ordered match list in a single left-to-right splice.
+    // Failed expansions preserve the original matched segment and are not counted.
+    static std::tuple<QString, int> ApplyReplacements(
+        const QString& text,
+        const QList<ReplacementMatch>& matches,
+        const QString& replacement,
+        const ReplacementExpander& expander,
+        const ApplyReplacementsOptions& options = ApplyReplacementsOptions());
 
     //------------- modified: FindPeplacePlus ---------------
     static int CountInFilesPlus(const QString& presearch_regex,

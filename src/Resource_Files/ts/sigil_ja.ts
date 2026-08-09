@@ -1760,6 +1760,8 @@ if a sans-serif font-family specified in your CSS</source>
         <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements.</source>
         <translation>自動処理して安全な BookLive/EBPAJ の div 疑似段落リーフを、スタイルを保持した p 要素へ変換します。</translation>
     </message>
+    <message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>指定した正規表現ワークベンチのレシピをすべてのテキストリソースに実行します。</translation></message>
+    <message><source>[Regex recipe name or absolute path here]</source><translation>[正規表現レシピ名または絶対パスを入力]</translation></message>
 </context>
 <context>
     <name>Book</name>
@@ -2227,21 +2229,6 @@ There always has to be at least one.</source>
         <translation>エディター一覧をクリア</translation>
     </message>
     <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2235"/>
-        <source>Insert Into HTML/CSS File</source>
-        <translation>HTML/CSS ファイルに挿入</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2236"/>
-        <source>Insert Into HTML File</source>
-        <translation>HTML ファイルに挿入</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/BookBrowser.cpp" line="2237"/>
-        <source>Insert Into CSS File</source>
-        <translation>CSS ファイルに挿入</translation>
-    </message>
-    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="2246"/>
         <source>Merge with previous file, or merge multiple files into one.</source>
         <translation>前のファイルとマージするか、複数のファイルを1つにマージします。</translation>
@@ -2288,6 +2275,7 @@ A file with this name already exists in the book.</source>
         <translation>「%1」を追加できません。
 同じ名前のファイルが書籍内にすでに存在します。</translation>
     </message>
+    <message><source>Overwrite of image "%1" failed.</source><translation>画像「%1」の上書きに失敗しました。</translation></message>
 </context>
 <context>
     <name>CPCompare</name>
@@ -3919,6 +3907,8 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
         <source>After</source>
         <translation>後</translation>
     </message>
+    <message><source>... Creating Table</source><translation>... テーブルを作成しています</translation></message>
+    <message><source>Dry Run Replace-All</source><translation>すべて置換をドライラン</translation></message>
 </context>
 <context>
     <name>EditRO</name>
@@ -4568,24 +4558,9 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
         <translation>一致が見つかりません</translation>
     </message>
     <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1221"/>
-        <source>Creating checkpoint before Replace All...</source>
-        <translation>すべて置換の前にチェックポイントを作成中...</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1223"/>
-        <source>Replace All cancelled: checkpoint failed.</source>
-        <translation>チェックポイントの作成に失敗したため、すべて置換をキャンセルしました。</translation>
-    </message>
-    <message>
         <location filename="../../MainUI/FindReplace.cpp" line="1761"/>
         <source>This tab cannot be searched</source>
         <translation>このタブは検索できません</translation>
-    </message>
-    <message>
-        <location filename="../../MainUI/FindReplace.cpp" line="1771"/>
-        <source>Unnamed Search</source>
-        <translation>名前のない検索</translation>
     </message>
     <message>
         <location filename="../../MainUI/FindReplace.cpp" line="1804"/>
@@ -15380,6 +15355,14 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <source>Focus changed to Clips window.</source>
         <translation>クリップウィンドウにフォーカスを変更</translation>
     </message>
+    <message><source>Advanced Regex Workbench</source><translation>高度な正規表現ワークベンチ</translation></message>
+    <message><source>Advanced Regex Workbench...</source><translation>高度な正規表現ワークベンチ...</translation></message>
+    <message><source>Regex recipe %1 processed %2 match(es), applied %3 replacement(s) to %4 resource(s).</source><translation>正規表現レシピ %1 は %2 件の一致を処理し、%3 件を置換して %4 個のリソースを変更しました。</translation></message>
+    <message><source>Regex recipe failed: %1</source><translation>正規表現レシピに失敗しました：%1</translation></message>
+    <message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正規表現レシピに失敗しました：EPUB が読み込まれていません。</translation></message>
+    <message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正規表現レシピに失敗しました：現在の EPUB にテキストリソースがありません。</translation></message>
+    <message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>二次検索、再帰、変数に対応した段階的な正規表現レシピを実行します</translation></message>
+    <message><source>The current EPUB has no text resources.</source><translation>現在の EPUB にテキストリソースがありません。</translation></message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -20893,16 +20876,6 @@ Line: %1 Column %2 - %3</source>
         <translation>このEPUBを読み込むために、一時IDが割り当てられました。重複を削除するには、OPFファイルを編集する必要があります。</translation>
     </message>
     <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="702"/>
-        <source>The OPF manifest contains duplicate file paths for: %1</source>
-        <translation>OPF マニフェストに重複するファイルパスがあります: %1</translation>
-    </message>
-    <message>
-        <location filename="../../Importers/ImportEPUB.cpp" line="703"/>
-        <source>You should edit your OPF file&apos;s manifest to remove the duplication.</source>
-        <translation>重複を取り除くためにOPFファイルのマニフェストを編集してください。</translation>
-    </message>
-    <message>
         <location filename="../../Importers/ImportEPUB.cpp" line="785"/>
         <source>The OPF file did not identify the NCX file correctly.</source>
         <translation>OPFファイルが、NCXファイルを正しく識別しませんでした。</translation>
@@ -21342,6 +21315,8 @@ Line: %1 Column %2 - %3</source>
         <source>Invalid or missing</source>
         <translation>無効または欠落</translation>
     </message>
+    <message><source>Rule %1</source><translation>ルール %1</translation></message>
+    <message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF マニフェストに重複したファイルパスがあります。OPF ファイルのマニフェストを編集して重複を削除してください。</translation></message>
 </context>
 <context>
     <name>RERenamer</name>
@@ -26124,5 +26099,238 @@ Continue using the requested filename?</source>
         <source>black diamond suit</source>
         <translation>黒ダイヤ</translation>
     </message>
+</context>
+<context><name>RegexWorkbenchCore</name>
+<message><source>Invalid recursive replacement guard configuration</source><translation>再帰置換ガードの設定が無効です</translation></message>
+<message><source>Invalid recursive replacement guard input</source><translation>再帰置換ガードの入力が無効です</translation></message>
+<message><source>Replacement count %1 exceeds limit %2</source><translation>置換回数 %1 が上限 %2 を超えています</translation></message>
+<message><source>Text length %1 exceeds absolute limit %2 UTF-16 units</source><translation>テキスト長 %1 が絶対上限 %2 UTF-16 単位を超えています</translation></message>
+<message><source>Text length %1 exceeds original-relative growth limit %2 UTF-16 units</source><translation>テキスト長 %1 が原文基準の増加上限 %2 UTF-16 単位を超えています</translation></message>
+<message><source>Search template groups cannot be imported as rules</source><translation>検索テンプレートのグループはルールとして読み込めません</translation></message>
+<message><source>Search template name and find pattern must not be empty</source><translation>検索テンプレート名と検索パターンは空にできません</translation></message>
+<message><source>Python function search templates are not supported by Regex Workbench</source><translation>正規表現ワークベンチは Python 関数検索テンプレートをサポートしていません</translation></message>
+<message><source>Only regular-expression search templates can be imported</source><translation>正規表現の検索テンプレートのみ読み込めます</translation></message>
+<message><source>PreSearch control was ignored because the prefind pattern is empty</source><translation>事前検索パターンが空のため PreSearch 制御を無視しました</translation></message>
+<message><source>Stored prefind pattern was ignored because controls do not contain PS</source><translation>制御に PS がないため保存済みの事前検索パターンを無視しました</translation></message>
+<message><source>Per-entry scope or direction controls were not imported: %1</source><translation>項目ごとの範囲または方向制御は読み込まれませんでした: %1</translation></message>
+<message><source>Corrected legacy Japanese quote template spacing that matched XML markup</source><translation>XML マークアップに一致していた旧版の日本語かぎ括弧テンプレートの空白を修正しました</translation></message>
+<message><source>Unknown %1 field: %2</source><translation>不明な %1 フィールドです: %2</translation></message>
+<message><source>Recipe field %1 must be a string</source><translation>レシピのフィールド %1 は文字列でなければなりません</translation></message>
+<message><source>Recipe field %1 must be a boolean</source><translation>レシピのフィールド %1 は真偽値でなければなりません</translation></message>
+<message><source>Recipe field %1 must be an integer in [%2, %3]</source><translation>レシピのフィールド %1 は [%2, %3] の整数でなければなりません</translation></message>
+<message><source>Recipe field captureToVar must be an array</source><translation>レシピのフィールド captureToVar は配列でなければなりません</translation></message>
+<message><source>Recipe captureToVar exceeds its item limit</source><translation>レシピの captureToVar が項目数の上限を超えています</translation></message>
+<message><source>Recipe captureToVar contains an invalid or duplicate name</source><translation>レシピの captureToVar に無効または重複した名前があります</translation></message>
+<message><source>Unknown recipe secondaryMode: %1</source><translation>不明なレシピ secondaryMode です: %1</translation></message>
+<message><source>Invalid recipe limits</source><translation>レシピの制限が無効です</translation></message>
+<message><source>Recipe name is empty or exceeds its limit</source><translation>レシピ名が空か、長さの上限を超えています</translation></message>
+<message><source>Recipe has an unknown variable scope or write policy</source><translation>レシピに不明な変数スコープまたは書き込み方針があります</translation></message>
+<message><source>Recipe exceeds its rule-count limit</source><translation>レシピがルール数の上限を超えています</translation></message>
+<message><source>Recipe rule has an empty or oversized required field</source><translation>レシピルールの必須フィールドが空か、サイズ上限を超えています</translation></message>
+<message><source>Recipe contains duplicate rule id: %1</source><translation>レシピに重複したルール ID があります: %1</translation></message>
+<message><source>Recipe rule %1 has inconsistent secondary configuration</source><translation>レシピルール %1 の二次正規表現設定に矛盾があります</translation></message>
+<message><source>Recipe rule %1 has invalid recursive limits</source><translation>レシピルール %1 の再帰制限が無効です</translation></message>
+<message><source>Recipe rule %1 has an invalid capture-only configuration</source><translation>レシピルール %1 のキャプチャ専用設定が無効です</translation></message>
+<message><source>Recipe rule %1 exceeds its capture-name limit</source><translation>レシピルール %1 がキャプチャ名数の上限を超えています</translation></message>
+<message><source>Recipe rule %1 has an invalid or duplicate capture name</source><translation>レシピルール %1 に無効または重複したキャプチャ名があります</translation></message>
+<message><source>Recipe rule %1 uses an unsupported Python function replacement</source><translation>レシピルール %1 は未対応の Python 関数置換を使用しています</translation></message>
+<message><source>Serialized recipe exceeds its file-size limit</source><translation>シリアライズしたレシピがファイルサイズ上限を超えています</translation></message>
+<message><source>Recipe exceeds its file-size limit</source><translation>レシピがファイルサイズ上限を超えています</translation></message>
+<message><source>Invalid recipe JSON: %1</source><translation>レシピの JSON が無効です: %1</translation></message>
+<message><source>Unknown recipe format</source><translation>不明なレシピ形式です</translation></message>
+<message><source>Recipe version is required</source><translation>レシピのバージョンが必要です</translation></message>
+<message><source>Unknown recipe variable scope or write policy</source><translation>不明なレシピ変数スコープまたは書き込み方針です</translation></message>
+<message><source>Recipe rules must be an array within the rule-count limit</source><translation>レシピの rules はルール数上限内の配列でなければなりません</translation></message>
+<message><source>Each recipe rule must be an object</source><translation>各レシピルールはオブジェクトでなければなりません</translation></message>
+<message><source>Recipe path is empty</source><translation>レシピのパスが空です</translation></message>
+<message><source>Could not create recipe directory: %1</source><translation>レシピのディレクトリを作成できませんでした: %1</translation></message>
+<message><source>Could not save recipe %1: %2</source><translation>レシピ %1 を保存できませんでした: %2</translation></message>
+<message><source>Could not open recipe %1: %2</source><translation>レシピ %1 を開けませんでした: %2</translation></message>
+<message><source>Recipe name or path is empty</source><translation>レシピ名またはパスが空です</translation></message>
+<message><source>Recipe file does not exist: %1</source><translation>レシピファイルが存在しません: %1</translation></message>
+<message><source>Relative recipe identifiers must not contain directories</source><translation>相対レシピ識別子にディレクトリを含めることはできません</translation></message>
+<message><source>Recipe name is ambiguous: %1</source><translation>レシピ名が一意ではありません: %1</translation></message>
+<message><source>Could not find recipe: %1</source><translation>レシピが見つかりません: %1</translation></message>
+<message><source>Invalid regex workbench batch limits</source><translation>正規表現ワークベンチのバッチ制限が無効です</translation></message>
+<message><source>Regex workbench batch contains an empty resource path</source><translation>正規表現ワークベンチのバッチに空のリソースパスがあります</translation></message>
+<message><source>Regex workbench batch contains duplicate resource path: %1</source><translation>正規表現ワークベンチのバッチに重複したリソースパスがあります: %1</translation></message>
+<message><source>Regex workbench batch target is missing: %1</source><translation>正規表現ワークベンチのバッチ対象がありません: %1</translation></message>
+<message><source>Regex workbench rule %1 failed to compile: %2</source><translation>正規表現ワークベンチのルール %1 をコンパイルできませんでした: %2</translation></message>
+<message><source>Prepared regex workbench rule is missing: %1</source><translation>準備済みの正規表現ワークベンチルールがありません: %1</translation></message>
+<message><source>Regex workbench rule %1 failed for %2: %3</source><translation>正規表現ワークベンチのルール %1 は %2 の処理に失敗しました: %3</translation></message>
+<message><source>Regex workbench replacement count overflow</source><translation>正規表現ワークベンチの置換回数がオーバーフローしました</translation></message>
+<message><source>Regex workbench run exceeded replacement limit %1</source><translation>正規表現ワークベンチの実行が置換上限 %1 を超えました</translation></message>
+<message><source>Regex workbench match count overflow</source><translation>正規表現ワークベンチの一致件数がオーバーフローしました</translation></message>
+<message><source>Regex workbench run exceeded match limit %1</source><translation>正規表現ワークベンチの実行が一致上限 %1 を超えました</translation></message>
+<message><source>stateSnapshot and restoreState must be configured together</source><translation>stateSnapshot と restoreState は同時に設定する必要があります</translation></message>
+<message><source>Replacement callbacks require state snapshot and restore handlers</source><translation>置換コールバックには状態スナップショットと復元ハンドラーが必要です</translation></message>
+<message><source>A replacement expander is required</source><translation>置換展開器が必要です</translation></message>
+<message><source>Recursive maxIterations must be greater than zero</source><translation>再帰の maxIterations は 0 より大きくなければなりません</translation></message>
+<message><source>Capture-only rules cannot use recursive replacement</source><translation>キャプチャ専用ルールでは再帰置換を使用できません</translation></message>
+<message><source>Recursive replacement reached iteration limit %1 with matches remaining</source><translation>一致が残ったまま再帰置換が反復上限 %1 に達しました</translation></message>
+<message><source>Regex replacement cancelled</source><translation>正規表現置換をキャンセルしました</translation></message>
+<message><source>Replacement variable callback failed</source><translation>置換変数コールバックに失敗しました</translation></message>
+<message><source>Replacement expansion failed</source><translation>置換テキストの展開に失敗しました</translation></message>
+<message><source>Replacement trace did not cover every candidate</source><translation>置換トレースがすべての候補を網羅していません</translation></message>
+<message><source>Recursive replacement made no state progress while matches remain</source><translation>一致が残っていますが、再帰置換の状態が進行しませんでした</translation></message>
+<message><source>Recursive replacement entered a previously seen state</source><translation>再帰置換が以前に現れた状態に戻りました</translation></message>
+<message><source>Configured named capture does not exist: %1</source><translation>設定された名前付きキャプチャが存在しません: %1</translation></message>
+<message><source>Capture-only rule has no named capture groups to store</source><translation>キャプチャ専用ルールに保存可能な名前付きキャプチャグループがありません</translation></message>
+<message><source>Capture-only rule configuration is invalid</source><translation>キャプチャ専用ルールの設定が無効です</translation></message>
+<message><source>Whole Python function replacements are not supported in Regex Workbench</source><translation>正規表現ワークベンチは Python 関数による置換全体をサポートしていません</translation></message>
+<message><source>Prepared regex rule is invalid</source><translation>準備済みの正規表現ルールが無効です</translation></message>
+<message><source>Variable executor owns replacement callbacks and store transactions</source><translation>変数実行器が置換コールバックと変数ストアのトランザクションを管理します</translation></message>
+<message><source>Undefined variable: %1</source><translation>未定義の変数です: %1</translation></message>
+<message><source>Invalid variable name: %1</source><translation>変数名が無効です: %1</translation></message>
+<message><source>Invalid variable store limits</source><translation>変数ストアの制限が無効です</translation></message>
+<message><source>Variable %1 exceeds the per-value UTF-16 limit</source><translation>変数 %1 が値ごとの UTF-16 長上限を超えています</translation></message>
+<message><source>No active resource for resource-scoped variables</source><translation>リソーススコープ変数に対応するアクティブなリソースがありません</translation></message>
+<message><source>Variable store exceeds its variable-count limit</source><translation>変数ストアが変数数の上限を超えています</translation></message>
+<message><source>Variable store exceeds its total UTF-16 limit</source><translation>変数ストアが UTF-16 総長上限を超えています</translation></message>
+<message><source>Invalid capture number for %1</source><translation>%1 のキャプチャ番号が無効です</translation></message>
+<message><source>Invalid capture offsets for %1</source><translation>%1 のキャプチャオフセットが無効です</translation></message>
+<message><source>Unknown variable scope</source><translation>不明な変数スコープです</translation></message>
+<message><source>Invalid variable store snapshot</source><translation>変数ストアのスナップショットが無効です</translation></message>
+<message><source>Invalid resource frame in variable store snapshot</source><translation>変数ストアのスナップショットに無効なリソースフレームがあります</translation></message>
+<message><source>Variable store snapshot exceeds total limit</source><translation>変数ストアのスナップショットが総量上限を超えています</translation></message>
+<message><source>secondaryPattern must be empty when secondaryMode is None</source><translation>secondaryMode が None の場合、secondaryPattern は空でなければなりません</translation></message>
+<message><source>secondaryPattern must not be empty when a secondary mode is active</source><translation>二次モードが有効な場合、secondaryPattern は空にできません</translation></message>
+<message><source>Unknown secondary regex mode</source><translation>不明な二次正規表現モードです</translation></message>
+<message><source>Regex workbench staged validation did not succeed</source><translation>正規表現ワークベンチのステージ済み内容の検証に失敗しました</translation></message>
+<message><source>Regex workbench variable state is invalid: %1</source><translation>正規表現ワークベンチの変数状態が無効です: %1</translation></message>
+<message><source>No book is available for the search batch.</source><translation>検索バッチに使用できるブックがありません。</translation></message>
+<message><source>Search batch snapshots must be captured on the GUI thread.</source><translation>検索バッチのスナップショットは GUI スレッドで取得する必要があります。</translation></message>
+<message><source>Search batch contains an empty target path.</source><translation>検索バッチに空の対象パスがあります。</translation></message>
+<message><source>Search batch contains a duplicate target path: %1</source><translation>検索バッチに重複した対象パスがあります: %1</translation></message>
+<message><source>Search batch target is no longer available: %1</source><translation>検索バッチの対象は利用できなくなりました: %1</translation></message>
+<message><source>No book is available for the search batch commit.</source><translation>検索バッチのコミットに使用できるブックがありません。</translation></message>
+<message><source>Search batch commits must run on the GUI thread.</source><translation>検索バッチのコミットは GUI スレッドで実行する必要があります。</translation></message>
+<message><source>Staged search result contains an unknown target: %1</source><translation>ステージ済み検索結果に不明な対象があります: %1</translation></message>
+<message><source>Search batch target changed during staging: %1</source><translation>ステージ中に検索バッチの対象が変更されました: %1</translation></message>
+<message><source>Could not create the recovery checkpoint; no replacements were written.</source><translation>復元チェックポイントを作成できませんでした。置換は書き込まれていません。</translation></message>
+<message><source>Search batch target changed while creating the checkpoint: %1</source><translation>チェックポイントの作成中に検索バッチの対象が変更されました: %1</translation></message>
+<message><source>Saved-search target disappeared before commit: %1</source><translation>コミット前に保存済み検索の対象が消失しました: %1</translation></message>
+<message><source>Saved-search target changed before commit: %1</source><translation>コミット前に保存済み検索の対象が変更されました: %1</translation></message>
+<message><source>Saved-search target failed its commit check: %1</source><translation>保存済み検索の対象がコミット検査に失敗しました: %1</translation></message>
+<message><source>PCRE2 error %1</source><translation>PCRE2 エラー %1</translation></message>
+<message><source>PCRE2 diagnostic: %1</source><translation>PCRE2 診断: %1</translation></message>
+<message><source>Invalid regex search range [%1, %2) for text length %3</source><translation>テキスト長 %3 に対する正規表現検索範囲 [%1, %2) が無効です</translation></message>
+<message><source>Invalid PCRE2 enumeration limit</source><translation>PCRE2 列挙制限が無効です</translation></message>
+<message><source>Unable to configure PCRE2 match limits</source><translation>PCRE2 の一致制限を設定できません</translation></message>
+<message><source>Regex match enumeration cancelled</source><translation>正規表現の一致列挙をキャンセルしました</translation></message>
+<message><source>Search batch has no replacement engine.</source><translation>検索バッチに置換エンジンがありません。</translation></message>
+<message><source>Search batch was cancelled.</source><translation>検索バッチをキャンセルしました。</translation></message>
+<message><source>Search batch target is missing: %1</source><translation>検索バッチの対象がありません: %1</translation></message>
+<message><source>Search rule failed for %1: %2</source><translation>検索ルール %1 は %2 の処理に失敗しました</translation></message>
+<message><source>Invalid staged text validation limits</source><translation>ステージ済みテキストの検証制限が無効です</translation></message>
+<message><source>Staged text validation was cancelled</source><translation>ステージ済みテキストの検証をキャンセルしました</translation></message>
+<message><source>Missing media type for staged resource</source><translation>ステージ済みリソースのメディアタイプがありません</translation></message>
+<message><source>Staged XML is not well formed: %1 at %2:%3: %4</source><translation>ステージ済み XML は整形式ではありません: %1 の %2:%3: %4</translation></message>
+</context>
+<context><name>RegexWorkbenchDialog</name>
+<message><source>%1 copy</source><translation>%1 のコピー</translation></message>
+<message><source>Accept when secondary matches</source><translation>二次正規表現に一致した場合に採用</translation></message>
+<message><source>Add</source><translation>追加</translation></message>
+<message><source>Advanced Regex Workbench</source><translation>高度な正規表現ワークベンチ</translation></message>
+<message><source>After</source><translation>置換後</translation></message>
+<message><source>All CSS files (%1)</source><translation>すべての CSS ファイル（%1）</translation></message>
+<message><source>All XHTML files (%1)</source><translation>すべての XHTML ファイル（%1）</translation></message>
+<message><source>All text resources (%1)</source><translation>すべてのテキストリソース（%1）</translation></message>
+<message><source>All special text files (%1)</source><translation>すべての特殊テキストファイル（%1）</translation></message>
+<message><source>Allow zero-length matches</source><translation>長さゼロの一致を許可</translation></message>
+<message><source>Append values</source><translation>値を追加</translation></message>
+<message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>%2 件の一致から %1 件を置換し、%3 個のリソースを変更しました。各ファイルは個別に元に戻せます。バッチ全体を復元するにはリカバリーチェックポイントを使用してください。</translation></message>
+<message><source>Apply complete: %1 match(es), %2 replacement(s); no document text was changed.</source><translation>適用完了：%1 件の一致、%2 件の置換。文書テキストは変更されていません。</translation></message>
+<message><source>Apply</source><translation>適用</translation></message>
+<message><source>Batch</source><translation>バッチ</translation></message>
+<message><source>Before</source><translation>置換前</translation></message>
+<message><source>Cancel Run</source><translation>実行をキャンセル</translation></message>
+<message><source>Cancel the active run before closing the workbench.</source><translation>ワークベンチを閉じる前に実行中の処理をキャンセルしてください。</translation></message>
+<message><source>Cancelling after the current bounded regex operation...</source><translation>現在の制限付き正規表現処理の完了後にキャンセルします...</translation></message>
+<message><source>Capture variables:</source><translation>キャプチャ変数：</translation></message>
+<message><source>Capture variables only (do not replace)</source><translation>変数のキャプチャのみ（置換しない）</translation></message>
+<message><source>Enumerate accepted matches and store named captures without changing text.</source><translation>採用された一致を列挙し、テキストを変更せずに名前付きキャプチャを保存します。</translation></message>
+<message><source>Clear Variables</source><translation>変数を消去</translation></message>
+<message><source>Current file</source><translation>現在のファイル</translation></message>
+<message><source>Down</source><translation>下へ</translation></message>
+<message><source>Dry Run</source><translation>ドライラン</translation></message>
+<message><source>Dry-Run complete: %1 match(es), %2 replacement(s), %3 changed resource(s). The book and session variables were not modified.</source><translation>ドライラン完了：%1 件の一致、%2 件の置換、%3 個のリソースが変更対象です。ブックおよびセッション変数は変更されていません。</translation></message>
+<message><source>Double-click to open the resource and highlight this match.</source><translation>ダブルクリックするとリソースを開き、この一致範囲を選択表示します。</translation></message>
+<message><source>Double-click to open the resource; no exact position is available.</source><translation>ダブルクリックするとリソースを開きます。正確な位置は利用できません。</translation></message>
+<message><source>Dry-Run results</source><translation>ドライラン結果</translation></message>
+<message><source>Duplicate</source><translation>複製</translation></message>
+<message><source>Enabled</source><translation>有効</translation></message>
+<message><source>Expand ${var:name} in replacement</source><translation>置換テキスト内の ${var:name} を展開</translation></message>
+<message><source>File</source><translation>ファイル</translation></message>
+<message><source>Files:</source><translation>ファイル：</translation></message>
+<message><source>Find regex:</source><translation>検索正規表現：</translation></message>
+<message><source>Import Search Template</source><translation>検索テンプレートをインポート</translation></message>
+<message><source>Import Search Template...</source><translation>検索テンプレートをインポート...</translation></message>
+<message><source>Imported saved search: %1</source><translation>保存済み検索をインポートしました：%1</translation></message>
+<message><source>Iteration</source><translation>反復</translation></message>
+<message><source>Keep first value</source><translation>最初の値を保持</translation></message>
+<message><source>Last value wins</source><translation>最後の値を使用</translation></message>
+<message><source>Line</source><translation>行</translation></message>
+<message><source>Loaded recipe: %1</source><translation>レシピを読み込みました：%1</translation></message>
+<message><source>Maximum iterations:</source><translation>最大反復回数：</translation></message>
+<message><source>Name</source><translation>名前</translation></message>
+<message><source>Name:</source><translation>名前：</translation></message>
+<message><source>Patterns</source><translation>パターン</translation></message>
+<message><source>Options</source><translation>ルールオプション</translation></message>
+<message><source>Named captures</source><translation>名前付きキャプチャ</translation></message>
+<message><source>New</source><translation>新規</translation></message>
+<message><source>New recipe created.</source><translation>新しいレシピを作成しました。</translation></message>
+<message><source>New Regex Workbench Recipe</source><translation>正規表現ワークベンチレシピを新規作成</translation></message>
+<message><source>Creating a new recipe will clear the current rules and unsaved rule changes. Continue?</source><translation>新しいレシピを作成すると、現在のルールと未保存のルール変更が消去されます。続行しますか？</translation></message>
+<message><source>No saved search templates are available.</source><translation>利用できる保存済み検索テンプレートがありません。</translation></message>
+<message><source>None</source><translation>なし</translation></message>
+<message><source>Open Recipe...</source><translation>レシピを開く...</translation></message>
+<message><source>Open Regex Workbench Recipe</source><translation>正規表現ワークベンチのレシピを開く</translation></message>
+<message><source>PreSearch range</source><translation>事前検索範囲</translation></message>
+<message><source>Ready.</source><translation>準備完了。</translation></message>
+<message><source>Recipe:</source><translation>レシピ：</translation></message>
+<message><source>Regex Workbench recipes (*.json);;All files (*)</source><translation>正規表現ワークベンチのレシピ (*.json);;すべてのファイル (*)</translation></message>
+<message><source>Reject when secondary matches</source><translation>二次正規表現に一致した場合に除外</translation></message>
+<message><source>Remove</source><translation>削除</translation></message>
+<message><source>Repeat until no matches remain</source><translation>一致がなくなるまで繰り返す</translation></message>
+<message><source>Replacement:</source><translation>置換テキスト：</translation></message>
+<message><source>Resource</source><translation>リソース</translation></message>
+<message><source>Rule</source><translation>ルール</translation></message>
+<message><source>Rule editor</source><translation>ルールエディター</translation></message>
+<message><source>Rules</source><translation>ルール</translation></message>
+<message><source>Run</source><translation>実行</translation></message>
+<message><source>Run cancelled. No book text or variables were changed.</source><translation>実行をキャンセルしました。ブックのテキストと変数は変更されていません。</translation></message>
+<message><source>Running Dry-Run in memory...</source><translation>メモリ上でドライランを実行しています...</translation></message>
+<message><source>Save Recipe...</source><translation>レシピを保存...</translation></message>
+<message><source>Save Regex Workbench Recipe</source><translation>正規表現ワークベンチのレシピを保存</translation></message>
+<message><source>Saved recipe: %1</source><translation>レシピを保存しました：%1</translation></message>
+<message><source>Saved search:</source><translation>保存済み検索：</translation></message>
+<message><source>Scope</source><translation>スコープ</translation></message>
+<message><source>Secondary mode:</source><translation>二次モード：</translation></message>
+<message><source>Secondary regex:</source><translation>二次正規表現：</translation></message>
+<message><source>Selected text files (%1)</source><translation>選択したテキストファイル（%1）</translation></message>
+<message><source>Session</source><translation>セッション</translation></message>
+<message><source>Session variables cleared.</source><translation>セッション変数を消去しました。</translation></message>
+<message><source>Staging a fresh Apply run in memory...</source><translation>今回の適用内容をメモリ上で新たにステージしています...</translation></message>
+<message><source>Store all named captures</source><translation>すべての名前付きキャプチャを保存</translation></message>
+<message><source>The report omitted %1 additional row(s); totals remain exact.</source><translation>レポートでは追加の %1 行を省略しました。合計値は正確です。</translation></message>
+<message><source>The exact range no longer maps to the document; double-click to open the nearest corresponding line.</source><translation>正確な範囲を文書に対応付けられません。ダブルクリックすると最も近い対応行を開きます。</translation></message>
+<message><source>The selected saved search no longer exists.</source><translation>選択した保存済み検索は存在しません。</translation></message>
+<message><source>The selected scope contains no text resources.</source><translation>選択したスコープにテキストリソースがありません。</translation></message>
+<message><source>Untitled Recipe</source><translation>無題のレシピ</translation></message>
+<message><source>Up</source><translation>上へ</translation></message>
+<message><source>Value</source><translation>値</translation></message>
+<message><source>Variable scope:</source><translation>変数スコープ：</translation></message>
+<message><source>Variables</source><translation>変数</translation></message>
+<message><source>Write policy:</source><translation>書き込みポリシー：</translation></message>
+<message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（任意の許可リスト）</translation></message>
+<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>このレシピを %1 個のテキストリソースに適用しますか？新しいスナップショットを作成し、テキスト変更が生じた場合は書き込み前にリカバリーチェックポイントを作成します。</translation></message>
+<message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>リカバリーチェックポイントを作成し、ステージ済みの変更をコミットしています...</translation></message>
+<message><source>Publishing captured variables without changing document text...</source><translation>文書テキストを変更せず、キャプチャした変数を反映しています...</translation></message>
+<message><source>Advanced Regex Workbench — %1</source><translation>高度な正規表現ワークベンチ — %1</translation></message>
+<message><source>This workbench belongs to a book that is no longer open. Close it and reopen the workbench for the current book.</source><translation>このワークベンチが属するブックは既に閉じられています。閉じてから、現在のブック用にワークベンチを開き直してください。</translation></message>
+<message><source>The book changed while the recipe was running; the staged result was discarded.</source><translation>レシピの実行中にブックが切り替わったため、ステージ済み結果を破棄しました。</translation></message>
+<message><source>This result refers to a resource that is no longer available.</source><translation>この結果が参照するリソースは利用できなくなりました。</translation></message>
+<message><source>The resource changed after this report was created; opening the nearest recorded line without highlighting.</source><translation>このレポートの作成後にリソースが変更されました。強調表示せず、記録された最寄りの行を開きます。</translation></message>
 </context>
 </TS>

@@ -1,0 +1,43 @@
+{
+    "format": "sigil.regexWorkbench.recipe",
+    "version": 1,
+    "name": "Book sample - Python named capture variable",
+    "variableScope": "Batch",
+    "writePolicy": "LastWins",
+    "rules": [
+        {
+            "id": "capture-titlepage-author",
+            "name": "Capture author with Python named-group syntax",
+            "secondaryMode": "None",
+            "secondaryPattern": "",
+            "find": "<span class=\"font-120per gfont\">(?P<author>[^<]+)</span>",
+            "replace": "",
+            "recursive": false,
+            "maxIterations": 32,
+            "allowEmpty": false,
+            "captureOnly": true,
+            "variableExpansionEnabled": false,
+            "autoIngestNamedCaptures": false,
+            "captureToVar": [
+                "author"
+            ],
+            "enabled": true
+        },
+        {
+            "id": "consume-titlepage-author",
+            "name": "Read captured author in a later replacement",
+            "secondaryMode": "None",
+            "secondaryPattern": "",
+            "find": "<hr/>",
+            "replace": "<hr data-test-author=\"${var:author}\"/>",
+            "recursive": false,
+            "maxIterations": 32,
+            "allowEmpty": false,
+            "captureOnly": false,
+            "variableExpansionEnabled": true,
+            "autoIngestNamedCaptures": false,
+            "captureToVar": [],
+            "enabled": true
+        }
+    ]
+}

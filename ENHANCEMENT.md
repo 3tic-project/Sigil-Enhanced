@@ -127,6 +127,24 @@
 - 目录、图片/扉页和复杂块布局默认跳过；整书只转换 auto-safe 正文，短页通过 Current 入口人工确认。
 - 写回前校验 XML、可见文本、原属性/class/style、`id`/`name`、`href`/`src`、ruby 与图片计数；批量写回先创建 Checkpoint。
 
+### Advanced Regex Workbench
+
+入口:
+
+- `Enhancement > Advanced Regex Workbench...`
+- Automate 命令: `RunRegexWorkbenchRecipe <Recipe 名称或绝对路径>`
+
+职责:
+
+- 以顺序 Recipe 提供 PreSearch 范围、主匹配内 Filter 接受/拒绝、受限递归替换和命名捕获变量。
+- Dry Run 和 Apply 每次都从当前书籍重新 snapshot；worker 只处理内存文本，不接触 `Resource` 或 `QTextDocument`。
+- Apply 确认后在内存中完成全批 stage 与 XML 校验；成功时先创建恢复检查点，再对每个变化资源执行一次可撤销写入。
+- Dry Run 不修改书籍或 Session 变量；取消、校验失败、Checkpoint 失败和提交冲突均不发布部分文本或变量。
+- Recipe 使用严格的版本化 JSON，可从 Search Editor Plus 的 `PS` 模板导入；工作台不接受 Python `\F` 函数替换。
+- Automate 固定作用于全部文本资源，并复用与 UI 相同的 Recipe 解析、staging、验证和提交链路。
+
+使用说明与安全边界见 `docs/AdvancedRegexWorkbench.md`。
+
 ## 测试要求
 
 - 至少验证 Debug 构建能通过 `cmake --build cmake-build-debug --target Sigil -j 4`。
@@ -136,4 +154,5 @@
 - 对 BR 段落规范化类功能，必须覆盖正文候选、目录页跳过、扉页/块布局跳过、`ruby`/anchor 保留、连续 `<br/>` 不生成空段落。
 - 对 KFX 段落规范化类功能，必须覆盖正文候选、目录页跳过、版权/出版信息页人工确认、`height:0` spacer 移除、`height:1em` spacer 保留、章节锚点/插图/inline span 保留。
 - 对 BookLive 段落规范化类功能，必须覆盖两本真实 EBPAJ 样本、标题/署名不误分类、原 class/style 与布局 wrapper 保留、空行不删除、复杂嵌套 fail-closed、ruby/锚点/图片保持和幂等。
+- 对高级正则工作台，必须覆盖二级模式、递归终止、变量时序、Recipe schema、Dry Run/Apply 独立 restage、staged XML 校验、报告坐标门控、Cancel、每资源一次可撤销提交、Automate 接线和三语目录。
 - 对 Automate 命令，需确认命令列表可见且执行行为与菜单入口一致。

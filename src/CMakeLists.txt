@@ -77,6 +77,24 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/FormatterEnhancer.h
     BuiltinPlugins/KfxParagraphNormalizer.cpp
     BuiltinPlugins/KfxParagraphNormalizer.h
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
+    BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchBatchRunner.cpp
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchBatchRunner.h
+    BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.cpp
+    BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.h
+    BuiltinPlugins/RegexWorkbench/RegexRecipeStore.cpp
+    BuiltinPlugins/RegexWorkbench/RegexRecipeStore.h
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.cpp
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.h
+    BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+    BuiltinPlugins/RegexWorkbench/SearchVariableStoreSPCRE.cpp
+    BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
     )
 
 set( CHINESE_CONVERSION_FILES
@@ -321,6 +339,8 @@ set( DIALOG_FILES
 list(APPEND DIALOG_FILES
     Dialogs/FontSubsetDialog.cpp
     Dialogs/FontSubsetDialog.h
+    Dialogs/RegexWorkbenchDialog.cpp
+    Dialogs/RegexWorkbenchDialog.h
 )
 
 set( WIDGET_FILES
@@ -499,8 +519,15 @@ set( MISC_FILES
     Misc/PluginDB.h
     Misc/SearchOperations.cpp
     Misc/SearchOperations.h
+    Misc/SearchOperationsApply.cpp
     Misc/SearchBatchRunner.cpp
     Misc/SearchBatchRunner.h
+    Misc/StagedTextValidator.cpp
+    Misc/StagedTextValidator.h
+    Misc/RegexMatchEnumerator.cpp
+    Misc/RegexMatchEnumerator.h
+    Misc/PreSearchMatcher.cpp
+    Misc/PreSearchMatcher.h
     Misc/SigilDarkStyle.cpp
     Misc/SigilDarkStyle.h
     Misc/Language.cpp
@@ -575,15 +602,19 @@ set( MISC_EDITORS_FILES
     MiscEditors/MetaEditorTreeView.h
     MiscEditors/SearchEditorModelPlus.cpp
     MiscEditors/SearchEditorModelPlus.h
+    MiscEditors/SearchTemplateCompatibility.h
     )
 
 set( SPCRE_FILES
+    PCRE2/CaptureNameTable.cpp
+    PCRE2/CaptureNameTable.h
     PCRE2/SPCRE.cpp
     PCRE2/SPCRE.h
     PCRE2/PCRECache.cpp
     PCRE2/PCRECache.h
     PCRE2/PCREReplaceTextBuilder.cpp
     PCRE2/PCREReplaceTextBuilder.h
+    PCRE2/ReplacementVariableResolver.h
     PCRE2/PCREErrors.cpp
     PCRE2/PCREErrors.h
     )
@@ -619,6 +650,8 @@ set( MAINUI_FILES
     MainUI/MainWindow.h
     MainUI/SearchBatchCoordinator.cpp
     MainUI/SearchBatchCoordinator.h
+    MainUI/RegexWorkbenchBatchCommitter.cpp
+    MainUI/RegexWorkbenchBatchCommitter.h
     MainUI/FindReplace.cpp
     MainUI/FindReplace.h
     MainUI/FindReplacePlus.cpp

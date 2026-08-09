@@ -1,4 +1,323 @@
-find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Xml REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Widgets Xml REQUIRED)
+
+add_executable(regex_match_enumerator_test
+    regex_match_enumerator_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+)
+
+target_include_directories(regex_match_enumerator_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_match_enumerator_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_match_enumerator_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_match_enumerator COMMAND regex_match_enumerator_test)
+set_tests_properties(regex_match_enumerator PROPERTIES TIMEOUT 30)
+
+add_executable(presearch_progress_test
+    presearch_progress_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+)
+
+target_include_directories(presearch_progress_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(presearch_progress_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(presearch_progress_test PRIVATE cxx_std_17)
+
+add_test(NAME presearch_progress COMMAND presearch_progress_test)
+set_tests_properties(presearch_progress PROPERTIES TIMEOUT 30)
+
+add_executable(regex_secondary_match_test
+    regex_secondary_match_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+)
+
+target_include_directories(regex_secondary_match_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_secondary_match_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_secondary_match_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_secondary_match COMMAND regex_secondary_match_test)
+set_tests_properties(regex_secondary_match PROPERTIES TIMEOUT 30)
+
+add_executable(regex_apply_shared_test
+    regex_apply_shared_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperationsApply.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperations.h
+)
+
+target_include_directories(regex_apply_shared_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(regex_apply_shared_test PRIVATE
+    Qt6::Core
+)
+target_compile_features(regex_apply_shared_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_apply_shared COMMAND regex_apply_shared_test)
+set_tests_properties(regex_apply_shared PROPERTIES TIMEOUT 30)
+
+add_executable(regex_recursive_replace_test
+    regex_recursive_replace_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperationsApply.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperations.h
+)
+
+target_include_directories(regex_recursive_replace_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_recursive_replace_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_recursive_replace_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_recursive_replace COMMAND regex_recursive_replace_test)
+set_tests_properties(regex_recursive_replace PROPERTIES TIMEOUT 30)
+
+add_executable(regex_capture_names_test
+    regex_capture_names_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/CaptureNameTable.cpp
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/CaptureNameTable.h
+)
+
+target_include_directories(regex_capture_names_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_capture_names_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_capture_names_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_capture_names COMMAND regex_capture_names_test)
+set_tests_properties(regex_capture_names PROPERTIES TIMEOUT 30)
+
+add_executable(regex_variable_store_test
+    regex_variable_store_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+)
+
+target_include_directories(regex_variable_store_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(regex_variable_store_test PRIVATE
+    Qt6::Core
+)
+target_compile_features(regex_variable_store_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_variable_store COMMAND regex_variable_store_test)
+set_tests_properties(regex_variable_store PROPERTIES TIMEOUT 30)
+
+add_executable(regex_replacement_resolver_test
+    regex_replacement_resolver_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/PCREReplaceTextBuilder.cpp
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/PCREReplaceTextBuilder.h
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/ReplacementVariableResolver.h
+)
+
+target_include_directories(regex_replacement_resolver_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_replacement_resolver_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+)
+target_compile_features(regex_replacement_resolver_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_replacement_resolver COMMAND regex_replacement_resolver_test)
+set_tests_properties(regex_replacement_resolver PROPERTIES TIMEOUT 30)
+
+add_executable(regex_filter_ingest_order_test
+    regex_filter_ingest_order_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperationsApply.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperations.h
+)
+
+target_include_directories(regex_filter_ingest_order_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_filter_ingest_order_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_filter_ingest_order_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_filter_ingest_order COMMAND regex_filter_ingest_order_test)
+set_tests_properties(regex_filter_ingest_order PROPERTIES TIMEOUT 30)
+
+add_executable(regex_variable_executor_test
+    regex_variable_executor_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStoreSPCRE.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperationsApply.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperations.h
+)
+
+target_include_directories(regex_variable_executor_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_variable_executor_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_variable_executor_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_variable_executor COMMAND regex_variable_executor_test)
+set_tests_properties(regex_variable_executor PROPERTIES TIMEOUT 30)
+
+add_executable(regex_recipe_store_test
+    regex_recipe_store_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeSearchEditorAdapter.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeStore.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+)
+
+target_include_directories(regex_recipe_store_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(regex_recipe_store_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+)
+target_compile_features(regex_recipe_store_test PRIVATE cxx_std_17)
+target_compile_definitions(regex_recipe_store_test PRIVATE
+    SIGIL_REGEX_RECIPE_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/regex_workbench_book"
+)
+
+add_test(NAME regex_recipe_store COMMAND regex_recipe_store_test)
+set_tests_properties(regex_recipe_store PROPERTIES TIMEOUT 30)
+
+add_executable(regex_workbench_batch_test
+    regex_workbench_batch_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexRecipeStore.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchBatchRunner.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchBatchRunner.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStoreSPCRE.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperationsApply.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperations.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/StagedTextValidator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/StagedTextValidator.h
+)
+
+target_include_directories(regex_workbench_batch_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_workbench_batch_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_workbench_batch_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_workbench_batch COMMAND regex_workbench_batch_test)
+set_tests_properties(regex_workbench_batch PROPERTIES TIMEOUT 30)
 
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
@@ -33,6 +352,24 @@ target_link_libraries(search_batch_benchmark PRIVATE
 
 add_test(NAME search_batch_benchmark COMMAND search_batch_benchmark)
 set_tests_properties(search_batch_benchmark PROPERTIES TIMEOUT 60)
+
+add_executable(staged_text_validator_test
+    staged_text_validator_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/StagedTextValidator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/StagedTextValidator.h
+)
+
+target_include_directories(staged_text_validator_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(staged_text_validator_test PRIVATE
+    Qt6::Core
+)
+target_compile_features(staged_text_validator_test PRIVATE cxx_std_17)
+
+add_test(NAME staged_text_validator COMMAND staged_text_validator_test)
+set_tests_properties(staged_text_validator PROPERTIES TIMEOUT 30)
 
 add_test(NAME search_operations_reentrancy
     COMMAND ${Python3_EXECUTABLE}
@@ -69,6 +406,13 @@ add_test(NAME search_undo_contract
             ${CMAKE_SOURCE_DIR}
 )
 set_tests_properties(search_undo_contract PROPERTIES TIMEOUT 30)
+
+add_test(NAME regex_workbench_ui_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/regex_workbench_ui_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(regex_workbench_ui_contract PROPERTIES TIMEOUT 30)
 
 add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp

@@ -1,0 +1,24 @@
+{
+    "format": "sigil.regexWorkbench.recipe",
+    "version": 1,
+    "name": "Book sample - secondary dialogue inner quotes",
+    "variableScope": "Batch",
+    "writePolicy": "LastWins",
+    "rules": [
+        {
+            "id": "secondary-dialog-inner-quotes",
+            "name": "Replace double-prime quotes only inside corner-bracket dialogue",
+            "secondaryMode": "PreSearch",
+            "secondaryPattern": "「([^」]*)」",
+            "find": "〝([^〟]*)〟",
+            "replace": "『\\g{1}』",
+            "recursive": false,
+            "maxIterations": 32,
+            "allowEmpty": false,
+            "variableExpansionEnabled": false,
+            "autoIngestNamedCaptures": false,
+            "captureToVar": [],
+            "enabled": true
+        }
+    ]
+}

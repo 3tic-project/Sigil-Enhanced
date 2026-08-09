@@ -29,6 +29,7 @@
 
 #include <QSharedPointer>
 #include <QMainWindow>
+#include <QPointer>
 
 #include "ui_main.h"
 #include "BookManipulation/Book.h"
@@ -72,6 +73,7 @@ class TableOfContents;
 class ValidationResultsView;
 class PreviewWindow;
 class PluginSessionManager;
+class RegexWorkbenchDialog;
 class SearchEditor;
 class ClipEditor;
 class ClipsWindow;
@@ -720,6 +722,7 @@ private slots:
     void DeleteFilenames(QStringList files_to_delete);
 
     void OpenFile(QString file_bookpath, int line = -1, int position = -1);
+    void OpenFileAndSelect(QString file_bookpath, int line, int start, int end);
 
     void UpdateClipsUI();
 
@@ -1155,6 +1158,8 @@ public slots:
     bool EnhanceSourceFormatting(); // modified: Builtin native plugin
     bool ConvertChineseText(); // modified: Chinese conversion
     bool SubsetEmbeddedFonts(); // modified: HarfBuzz font subsetting
+    bool OpenRegexWorkbench(); // modified: Advanced Regex Workbench
+    bool RunRegexWorkbenchRecipe(const QString& identifier); // modified: Advanced Regex Workbench Automate
     bool AnalyzeBrParagraphs(); // modified: Builtin native plugin
     bool NormalizeCurrentBrParagraphs(); // modified: Builtin native plugin
     bool NormalizeAllBrParagraphs(); // modified: Builtin native plugin
@@ -1173,6 +1178,7 @@ private:
     //modified: FindReplacePlus
     FindReplaceMode m_findReplaceMode;
     FindReplacePlus* m_FindReplacePlus;
+    QPointer<RegexWorkbenchDialog> m_RegexWorkbenchDialog;
     void changeFindReplaceMode();
     void ConnectSignalsToSearchEditor();
     void ConnectSignalsToFindReplace();

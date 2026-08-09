@@ -443,32 +443,25 @@ std::tuple<QString, int> SearchOperations::PerformGlobalReplacePlus(const QStrin
                                                                     const QString& text)
 {
     QList<Utility::MatchInfo> match_infos = Utility::GetSearchInfoWithPreSearch(presearch_regex, search_regex, text);
-
     SPCRE* spcre = PCRECache::instance().getObject(search_regex);
 
-    QString new_text;
-    int count = 0;
-    int head_start = 0,
-        head_end = 0;
-    int match_start, match_end;
-    foreach(Utility::MatchInfo info, match_infos) {
-        match_start = info.offset.first;
-        match_end = info.offset.second;
-        head_end = match_start;
-        QString head_text = text.mid(head_start, head_end - head_start);
-        QString match_segement = text.mid(match_start, match_end - match_start);
-        QString replacement_text;
-        if (spcre->replaceText(match_segement, info.capture_groups_offsets, replacement, replacement_text)) {
-            ++count;
-            new_text += head_text + replacement_text;
-        }
-        else {
-            new_text += head_text + match_segement;
-        }
-        head_start = match_end;
+    QList<ReplacementMatch> matches;
+    matches.reserve(match_infos.size());
+    for (const Utility::MatchInfo& info : match_infos) {
+        ReplacementMatch match;
+        match.offset = info.offset;
+        match.captureGroups = info.capture_groups_offsets;
+        matches.append(match);
     }
-    new_text += text.mid(head_start);
-    return std::make_tuple(new_text, count);
+
+    const ReplacementExpander expander = [spcre](
+        const QString& matchedText,
+        const QList<std::pair<int, int>>& captureGroups,
+        const QString& replacementPattern,
+        QString& expanded) {
+        return spcre->replaceText(matchedText, captureGroups, replacementPattern, expanded);
+    };
+    return ApplyReplacements(text, matches, replacement, expander);
 }
 
 //modified: FindReplacePlus

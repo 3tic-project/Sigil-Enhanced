@@ -32,6 +32,9 @@
 
 #include <QList>
 #include <QString>
+#include <QStringList>
+
+#include "PCRE2/ReplacementVariableResolver.h"
 
 using std::pair;
 
@@ -118,6 +121,7 @@ public:
      * named group does not exist within the pattern.
      */
     int getCaptureStringNumber(const QString &name);
+    QStringList getCaptureNames() const;
 
     /**
      * Generate match information from a segment of text. Finds all matching
@@ -146,7 +150,8 @@ public:
      * @return true if the replacement string was created successfully.
      */
     bool replaceText(const QString &text, const QList<std::pair<int, int>> &capture_groups_offsets,
-                     const QString &replacement_pattern, QString &out);
+                     const QString &replacement_pattern, QString &out,
+                     const ReplacementVariableResolver& resolver = ReplacementVariableResolver());
 
     bool functionReplaceText(const QString &bookpath, const QString &text,
                              const QList<std::pair<int, int>> &capture_groups_offsets,

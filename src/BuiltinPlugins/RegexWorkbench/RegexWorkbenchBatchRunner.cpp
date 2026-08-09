@@ -1,0 +1,463 @@
+/************************************************************************
+**
+**  Copyright (C) 2026 Sigil-Ebook contributors
+**
+**  This file is part of Sigil-Enhanced.
+**
+*************************************************************************/
+
+#include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchBatchRunner.h"
+
+#include <limits>
+#include <memory>
+#include <vector>
+
+#include <QCoreApplication>
+#include <QSet>
+
+#include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.h"
+
+namespace BuiltinPlugins
+{
+namespace RegexWorkbench
+{
+
+namespace
+{
+
+QString Snippet(const QString& text, int maximum)
+{
+    if (text.size() <= maximum) {
+        return text;
+    }
+    const int leftSize = maximum / 2;
+    const int rightSize = maximum - leftSize - 1;
+    return text.left(leftSize) + QChar(0x2026) + text.right(rightSize);
+}
+
+void Fail(RegexWorkbenchBatchResult& result, const QString& error)
+{
+    result.staged.success = false;
+    result.staged.changedTexts.clear();
+    result.staged.error = error;
+    result.report.rows.clear();
+    result.report.fatal = true;
+    result.report.fatalMessage = error;
+}
+
+bool MapIntervalThroughPass(int& start,
+                            int& end,
+                            const QList<RegexWorkbenchReplacementTrace>& traces)
+{
+    int delta = 0;
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (trace.inputEnd <= start) {
+            delta += (trace.outputEnd - trace.outputStart) -
+                     (trace.inputEnd - trace.inputStart);
+            continue;
+        }
+        if (trace.inputStart >= end) {
+            break;
+        }
+        return false;
+    }
+    start += delta;
+    end += delta;
+    return true;
+}
+
+int MapPositionThroughPass(int position,
+                           const QList<RegexWorkbenchReplacementTrace>& traces)
+{
+    int delta = 0;
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (position < trace.inputStart) {
+            break;
+        }
+        if (position >= trace.inputEnd) {
+            delta += (trace.outputEnd - trace.outputStart) -
+                     (trace.inputEnd - trace.inputStart);
+            continue;
+        }
+        const int outputLength = trace.outputEnd - trace.outputStart;
+        return trace.outputStart +
+               qMin(position - trace.inputStart, outputLength);
+    }
+    return position + delta;
+}
+
+bool MapIntervalBackThroughPass(
+    int& start,
+    int& end,
+    const QList<RegexWorkbenchReplacementTrace>& traces)
+{
+    int delta = 0;
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (trace.outputEnd <= start) {
+            delta += (trace.inputEnd - trace.inputStart) -
+                     (trace.outputEnd - trace.outputStart);
+            continue;
+        }
+        if (trace.outputStart >= end) {
+            break;
+        }
+        return false;
+    }
+    start += delta;
+    end += delta;
+    return true;
+}
+
+int MapPositionBackThroughPass(
+    int position,
+    const QList<RegexWorkbenchReplacementTrace>& traces)
+{
+    int delta = 0;
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (position < trace.outputStart) {
+            break;
+        }
+        if (position >= trace.outputEnd) {
+            delta += (trace.inputEnd - trace.inputStart) -
+                     (trace.outputEnd - trace.outputStart);
+            continue;
+        }
+        const int inputLength = trace.inputEnd - trace.inputStart;
+        return trace.inputStart +
+               qMin(position - trace.outputStart, inputLength);
+    }
+    return position + delta;
+}
+
+void RecordPassTrace(RegexWorkbenchDryRunReport& report,
+                     const QString& ruleId,
+                     const QString& ruleName,
+                     const QString& bookpath,
+                     bool captureOnly,
+                     const QList<RegexWorkbenchReplacementTrace>& traces,
+                     QList<QList<RegexWorkbenchReplacementTrace>>& priorPasses,
+                     int maxRows,
+                     int maxSnippetCodeUnits)
+{
+    for (RegexWorkbenchReportRow& row : report.rows) {
+        if (row.bookpath != bookpath || row.matchStart < 0) {
+            continue;
+        }
+        if (!row.exactNavigationAvailable) {
+            row.matchStart = MapPositionThroughPass(row.matchStart, traces);
+            continue;
+        }
+        const int previousStart = row.matchStart;
+        if (!MapIntervalThroughPass(row.matchStart, row.matchEnd, traces)) {
+            row.exactNavigationAvailable = false;
+            row.matchStart = MapPositionThroughPass(previousStart, traces);
+            row.matchEnd = -1;
+        }
+    }
+
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (report.rows.size() >= maxRows) {
+            report.rowsTruncated = true;
+            ++report.omittedRowCount;
+            continue;
+        }
+        RegexWorkbenchReportRow row;
+        row.ruleId = ruleId;
+        row.ruleName = ruleName;
+        row.bookpath = bookpath;
+        row.iterationNumber = trace.iterationNumber;
+        row.iterationCount = trace.iterationNumber;
+        row.replacementCount = captureOnly ? 0 : 1;
+        row.coordinateSpace = CoordinateSpace::Intermediate;
+        row.exactNavigationAvailable = true;
+        row.matchStart = trace.outputStart;
+        row.matchEnd = trace.outputEnd;
+        int snapshotStart = trace.inputStart;
+        int snapshotEnd = trace.inputEnd;
+        bool exactSnapshot = true;
+        for (auto pass = priorPasses.crbegin(); pass != priorPasses.crend(); ++pass) {
+            if (!MapIntervalBackThroughPass(snapshotStart, snapshotEnd, *pass)) {
+                exactSnapshot = false;
+                break;
+            }
+        }
+        int snapshotAnchor = trace.inputStart;
+        for (auto pass = priorPasses.crbegin(); pass != priorPasses.crend(); ++pass) {
+            snapshotAnchor = MapPositionBackThroughPass(snapshotAnchor, *pass);
+        }
+        row.exactSnapshotNavigationAvailable = exactSnapshot;
+        row.snapshotMatchStart = exactSnapshot ? snapshotStart : snapshotAnchor;
+        row.snapshotMatchEnd = exactSnapshot ? snapshotEnd : -1;
+        row.beforeSnippet = Snippet(trace.beforeText, maxSnippetCodeUnits);
+        row.afterSnippet = Snippet(trace.afterText, maxSnippetCodeUnits);
+        row.variableNames = trace.variableNames;
+        report.rows.append(row);
+    }
+    priorPasses.append(traces);
+}
+
+void FinalizeNavigation(RegexWorkbenchDryRunReport& report,
+                        const QHash<QString, QString>& originalTexts,
+                        const QHash<QString, QString>& changedTexts)
+{
+    for (RegexWorkbenchReportRow& row : report.rows) {
+        const QString finalText = changedTexts.contains(row.bookpath)
+                                      ? changedTexts.value(row.bookpath)
+                                      : originalTexts.value(row.bookpath);
+        if (row.matchStart < 0 || row.matchStart > finalText.size()) {
+            row.exactNavigationAvailable = false;
+            row.matchStart = -1;
+            row.matchEnd = -1;
+            row.lineHint = -1;
+        } else {
+            if (row.exactNavigationAvailable &&
+                (row.matchEnd < row.matchStart || row.matchEnd > finalText.size())) {
+                row.exactNavigationAvailable = false;
+                row.matchEnd = -1;
+            }
+            row.coordinateSpace = CoordinateSpace::Final;
+            row.lineHint = finalText.left(row.matchStart)
+                               .count(QLatin1Char('\n')) + 1;
+        }
+
+        const QString snapshotText = originalTexts.value(row.bookpath);
+        if (row.snapshotMatchStart < 0 ||
+            row.snapshotMatchStart > snapshotText.size()) {
+            row.exactSnapshotNavigationAvailable = false;
+            row.snapshotMatchStart = -1;
+            row.snapshotMatchEnd = -1;
+            row.snapshotLineHint = -1;
+            continue;
+        }
+        if (row.exactSnapshotNavigationAvailable &&
+            (row.snapshotMatchEnd < row.snapshotMatchStart ||
+             row.snapshotMatchEnd > snapshotText.size())) {
+            row.exactSnapshotNavigationAvailable = false;
+            row.snapshotMatchEnd = -1;
+        }
+        row.snapshotLineHint = snapshotText.left(row.snapshotMatchStart)
+                                   .count(QLatin1Char('\n')) + 1;
+    }
+}
+
+}
+
+RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
+    const RegexRecipe& recipe,
+    const QStringList& orderedResourcePaths,
+    const QHash<QString, QString>& originalTexts,
+    const QHash<QString, QString>& mediaTypes,
+    const SearchVariableStore& initialStore,
+    RegexWorkbenchBatchOptions options)
+{
+    RegexWorkbenchBatchResult result;
+    result.finalStore = initialStore.snapshot();
+    if (options.maxReportRows <= 0 || options.maxSnippetCodeUnits <= 0 ||
+        options.maxRunMatches <= 0 || options.maxRunReplacements <= 0) {
+        Fail(result, QCoreApplication::translate(
+                         "RegexWorkbenchCore", "Invalid regex workbench batch limits"));
+        return result;
+    }
+    QString recipeError;
+    if (!RegexRecipeStore::Validate(recipe, &recipeError)) {
+        Fail(result, recipeError);
+        return result;
+    }
+
+    QSet<QString> seenPaths;
+    for (const QString& path : orderedResourcePaths) {
+        if (path.isEmpty() || seenPaths.contains(path) || !originalTexts.contains(path)) {
+            Fail(result, path.isEmpty()
+                             ? QCoreApplication::translate(
+                                   "RegexWorkbenchCore",
+                                   "Regex workbench batch contains an empty resource path")
+                             : seenPaths.contains(path)
+                                   ? QCoreApplication::translate(
+                                         "RegexWorkbenchCore",
+                                         "Regex workbench batch contains duplicate resource path: %1")
+                                         .arg(path)
+                                   : QCoreApplication::translate(
+                                         "RegexWorkbenchCore",
+                                         "Regex workbench batch target is missing: %1")
+                                         .arg(path));
+            return result;
+        }
+        seenPaths.insert(path);
+    }
+
+    std::vector<std::unique_ptr<PreparedRegexWorkbenchVariableExecutor>> prepared;
+    prepared.reserve(static_cast<size_t>(recipe.rules.size()));
+    QHash<QString, int> ruleIndexes;
+    QList<SearchBatch::Rule> batchRules;
+    batchRules.reserve(recipe.rules.size());
+    for (int index = 0; index < recipe.rules.size(); ++index) {
+        const RegexWorkbenchRule& rule = recipe.rules.at(index);
+        auto executor = std::make_unique<PreparedRegexWorkbenchVariableExecutor>(rule);
+        if (!executor->isValid()) {
+            Fail(result, QCoreApplication::translate(
+                             "RegexWorkbenchCore",
+                             "Regex workbench rule %1 failed to compile: %2")
+                             .arg(rule.name, executor->errorMessage()));
+            return result;
+        }
+        prepared.push_back(std::move(executor));
+        ruleIndexes.insert(rule.id, index);
+
+        SearchBatch::Rule batchRule;
+        batchRule.id = rule.id;
+        batchRule.name = rule.name;
+        batchRule.searchRegex = rule.find;
+        batchRule.replacement = rule.replace;
+        batchRule.resourcePaths = orderedResourcePaths;
+        batchRules.append(batchRule);
+    }
+
+    SearchVariableStore workingStore = initialStore;
+    workingStore.clearRunLocals();
+    workingStore.setScope(recipe.variableScope);
+    workingStore.setWritePolicy(recipe.writePolicy);
+
+    const auto callerMatchCancellation = options.engineOptions.matchOptions.isCancelled;
+    options.engineOptions.matchOptions.isCancelled =
+        [cancel = options.isCancelled, callerMatchCancellation]() {
+            return (cancel && cancel()) ||
+                   (callerMatchCancellation && callerMatchCancellation());
+        };
+
+    qint64 observedReplacements = 0;
+    qint64 observedMatches = 0;
+    QHash<QString, QList<QList<RegexWorkbenchReplacementTrace>>> navigationPasses;
+    int completedSteps = 0;
+    const int totalSteps = batchRules.size() * orderedResourcePaths.size();
+    if (options.progressCallback) {
+        options.progressCallback(0, totalSteps);
+    }
+    result.staged = SearchBatch::Runner::Run(
+        batchRules, originalTexts,
+        [&](const SearchBatch::Rule& batchRule,
+            const QString& resourcePath,
+            const QString& currentText) {
+            SearchBatch::ApplyResult applied;
+            const auto finishStep = [&](SearchBatch::ApplyResult value) {
+                ++completedSteps;
+                if (options.progressCallback) {
+                    options.progressCallback(completedSteps, totalSteps);
+                }
+                return value;
+            };
+            const int ruleIndex = ruleIndexes.value(batchRule.id, -1);
+            if (ruleIndex < 0 || ruleIndex >= static_cast<int>(prepared.size())) {
+                applied.ok = false;
+                applied.error = QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Prepared regex workbench rule is missing: %1")
+                                    .arg(batchRule.id);
+                return finishStep(applied);
+            }
+            const bool captureOnly = recipe.rules.at(ruleIndex).captureOnly;
+
+            workingStore.setActiveResource(resourcePath);
+            RegexWorkbenchEngineOptions engineOptions = options.engineOptions;
+            const ReplacementPassCallback callerTrace =
+                engineOptions.replacementPassApplied;
+            engineOptions.replacementPassApplied =
+                [&](QList<RegexWorkbenchReplacementTrace> traces) {
+                    RecordPassTrace(result.report, batchRule.id, batchRule.name,
+                                    resourcePath, captureOnly, traces,
+                                    navigationPasses[resourcePath], options.maxReportRows,
+                                    options.maxSnippetCodeUnits);
+                    if (callerTrace) {
+                        callerTrace(std::move(traces));
+                    }
+                };
+            const RegexWorkbenchEngineResult engineResult =
+                prepared.at(static_cast<size_t>(ruleIndex))->Apply(
+                    currentText, workingStore, engineOptions);
+            if (!engineResult.success) {
+                applied.ok = false;
+                applied.text = currentText;
+                applied.error = QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Regex workbench rule %1 failed for %2: %3")
+                                    .arg(batchRule.name, resourcePath,
+                                         engineResult.errorMessage);
+                return finishStep(applied);
+            }
+            if (engineResult.matchCount >
+                std::numeric_limits<qint64>::max() - observedMatches) {
+                applied.ok = false;
+                applied.text = currentText;
+                applied.error = QCoreApplication::translate(
+                    "RegexWorkbenchCore", "Regex workbench match count overflow");
+                return finishStep(applied);
+            }
+            observedMatches += engineResult.matchCount;
+            if (observedMatches > options.maxRunMatches) {
+                applied.ok = false;
+                applied.text = currentText;
+                applied.error = QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Regex workbench run exceeded match limit %1")
+                                    .arg(options.maxRunMatches);
+                return finishStep(applied);
+            }
+            if (engineResult.replacementCount >
+                std::numeric_limits<qint64>::max() - observedReplacements) {
+                applied.ok = false;
+                applied.text = currentText;
+                applied.error = QCoreApplication::translate(
+                    "RegexWorkbenchCore", "Regex workbench replacement count overflow");
+                return finishStep(applied);
+            }
+            observedReplacements += engineResult.replacementCount;
+            if (observedReplacements > options.maxRunReplacements) {
+                applied.ok = false;
+                applied.text = currentText;
+                applied.error = QCoreApplication::translate(
+                                    "RegexWorkbenchCore",
+                                    "Regex workbench run exceeded replacement limit %1")
+                                    .arg(options.maxRunReplacements);
+                return finishStep(applied);
+            }
+
+            applied.text = engineResult.text;
+            applied.replacementCount = engineResult.replacementCount;
+            return finishStep(applied);
+        },
+        options.isCancelled);
+
+    result.report.totalMatches = observedMatches;
+    result.report.totalReplacements = result.staged.replacementCount;
+    if (!result.staged.success) {
+        result.report.fatal = true;
+        result.report.fatalMessage = result.staged.error;
+        result.report.rows.clear();
+        return result;
+    }
+
+    if (options.validateStagedTexts) {
+        const auto validationCancellation = options.validationOptions.isCancelled;
+        options.validationOptions.isCancelled =
+            [cancel = options.isCancelled, validationCancellation]() {
+                return (cancel && cancel()) ||
+                       (validationCancellation && validationCancellation());
+            };
+        result.validation = SearchBatch::StagedTextValidator::Validate(
+            result.staged.changedTexts, mediaTypes, options.validationOptions);
+        if (!result.validation.success) {
+            result.staged.cancelled = result.validation.cancelled;
+            Fail(result, result.validation.error);
+            return result;
+        }
+    } else {
+        result.validation.success = true;
+    }
+
+    result.report.changedResourceCount = result.staged.changedTexts.size();
+    FinalizeNavigation(result.report, originalTexts, result.staged.changedTexts);
+    result.finalStore = workingStore.snapshot();
+    return result;
+}
+
+}
+}

@@ -25,6 +25,7 @@
 // #include <QDebug>
 
 #include "PCRE2/SPCRE.h"
+#include "PCRE2/CaptureNameTable.h"
 #include "PCRE2/PCREReplaceTextBuilder.h"
 #include "Misc/Utility.h"
 #include "Misc/SearchUtils.h"
@@ -163,6 +164,11 @@ int SPCRE::getCaptureStringNumber(const QString &name)
     return number;
 }
 
+QStringList SPCRE::getCaptureNames() const
+{
+    return PCRE2Helpers::CaptureNames(m_re);
+}
+
 QList<SPCRE::MatchInfo> SPCRE::getEveryMatchInfo(const QString &text)
 {
     // This function is very similar to getNextMatchInfo but we don't
@@ -264,7 +270,8 @@ SPCRE::MatchInfo SPCRE::getLastMatchInfo(const QString &text)
 }
 
 bool SPCRE::replaceText(const QString &text, const QList<std::pair<int, int>> &capture_groups_offsets,
-                        const QString &replacement_pattern, QString &out)
+                        const QString &replacement_pattern, QString &out,
+                        const ReplacementVariableResolver& resolver)
 {
     QString functionname;
     QString rname = replacement_pattern.trimmed();
@@ -275,7 +282,8 @@ bool SPCRE::replaceText(const QString &text, const QList<std::pair<int, int>> &c
     }
     if (functionname.isEmpty() ) {
         PCREReplaceTextBuilder builder;
-        return builder.BuildReplacementText(*this, text, capture_groups_offsets, replacement_pattern, out);
+        return builder.BuildReplacementText(*this, text, capture_groups_offsets,
+                                            replacement_pattern, out, resolver);
     }
     if (!isValid()) return false;
     QList<std::pair<int, int> > fixed_groups = SearchUtils::ConvertCaptureGroupstoUTF32(text, capture_groups_offsets);

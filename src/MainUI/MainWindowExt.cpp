@@ -39,6 +39,9 @@
 #include "Tabs/TextTab.h"
 #include "BookManipulation/FontSubset/FontSubsetController.h"
 #include "Dialogs/FontSubsetDialog.h"
+#include "Dialogs/RegexWorkbenchDialog.h"
+#include "MainUI/RegexWorkbenchBatchCommitter.h"
+#include "ResourceObjects/CSSResource.h"
 #include "ResourceObjects/FontResource.h"
 
 namespace
@@ -708,6 +711,115 @@ bool MainWindow::SubsetEmbeddedFonts()
     ShowMessageOnStatusBar(
         tr("Subset %n font(s); saved %1.", "", result.fontCount)
             .arg(QLocale().formattedDataSize(saved)));
+    return true;
+}
+
+bool MainWindow::OpenRegexWorkbench()
+{
+    if (m_RegexWorkbenchDialog) {
+        if (m_RegexWorkbenchDialog->isMinimized()) {
+            m_RegexWorkbenchDialog->showNormal();
+        } else {
+            m_RegexWorkbenchDialog->show();
+        }
+        m_RegexWorkbenchDialog->raise();
+        m_RegexWorkbenchDialog->activateWindow();
+        return true;
+    }
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        Utility::warning(this, tr("Advanced Regex Workbench"),
+                         tr("No EPUB is currently loaded."));
+        return false;
+    }
+
+    const RegexWorkbenchDialog::TargetSet targets =
+        RegexWorkbenchDialog::CollectTargets(this);
+
+    if (targets.allTextPaths.isEmpty()) {
+        Utility::warning(this, tr("Advanced Regex Workbench"),
+                         tr("The current EPUB has no text resources."));
+        return false;
+    }
+
+    auto* dialog = new RegexWorkbenchDialog(this, targets, nullptr);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    m_RegexWorkbenchDialog = dialog;
+    connect(dialog, &QObject::destroyed, this, [this]() {
+        m_RegexWorkbenchDialog = nullptr;
+        ui.actionOpenRegexWorkbench->setEnabled(true);
+    });
+    connect(dialog, &RegexWorkbenchDialog::OpenFileRequest,
+            this, &MainWindow::OpenFileAndSelect);
+    const auto syncTitle = [this, dialog]() {
+        dialog->SyncHostWindowTitle(windowTitle(), isWindowModified());
+    };
+    connect(this, &QWidget::windowTitleChanged, dialog,
+            [syncTitle](const QString&) { syncTitle(); });
+    connect(m_Book.data(), &Book::ModifiedStateChanged, dialog,
+            [syncTitle](bool) { syncTitle(); });
+    syncTitle();
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+    return true;
+}
+
+bool MainWindow::RunRegexWorkbenchRecipe(const QString& identifier)
+{
+    using namespace BuiltinPlugins::RegexWorkbench;
+
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        ShowMessageOnStatusBar(tr("Regex recipe failed: no EPUB is currently loaded."));
+        return false;
+    }
+
+    RegexRecipe recipe;
+    QString error;
+    if (!RegexRecipeStore::LoadNamed(identifier, recipe, nullptr, &error)) {
+        ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(error));
+        return false;
+    }
+
+    const RegexWorkbenchDialog::TargetSet targets =
+        RegexWorkbenchDialog::CollectTargets(this);
+    if (targets.allTextPaths.isEmpty()) {
+        ShowMessageOnStatusBar(
+            tr("Regex recipe failed: the current EPUB has no text resources."));
+        return false;
+    }
+
+    SearchBatchCoordinator::Snapshot snapshot;
+    if (!SearchBatchCoordinator::CaptureSnapshot(
+            this, targets.allTextPaths, targets.resources, snapshot, &error)) {
+        ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(error));
+        return false;
+    }
+
+    SearchVariableStore store;
+    const RegexWorkbenchBatchResult batch = RegexWorkbenchBatchRunner::Run(
+        recipe, targets.allTextPaths, snapshot.originalTexts,
+        snapshot.mediaTypes, store);
+    if (!batch.staged.success) {
+        const QString detail = batch.report.fatalMessage.isEmpty()
+                                   ? batch.staged.error
+                                   : batch.report.fatalMessage;
+        ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(detail));
+        return false;
+    }
+
+    const SearchBatch::Result commit = RegexWorkbenchBatchCommitter::Commit(
+        this, targets.resources, snapshot, batch, store);
+    if (!commit.success) {
+        ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(commit.error));
+        return false;
+    }
+
+    ShowMessageOnStatusBar(
+        tr("Regex recipe %1 processed %2 match(es), applied %3 replacement(s) to %4 resource(s).")
+            .arg(recipe.name)
+            .arg(batch.report.totalMatches)
+            .arg(batch.report.totalReplacements)
+            .arg(batch.report.changedResourceCount));
     return true;
 }
 
