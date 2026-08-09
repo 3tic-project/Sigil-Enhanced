@@ -68,6 +68,11 @@ RegexWorkbenchDialog::TargetSet CollectRegexWorkbenchTargets(
             targets.htmlPaths.append(path);
         } else if (qobject_cast<CSSResource*>(text)) {
             targets.cssPaths.append(path);
+        } else {
+            // OPF, NCX, SVG, XML, and other editable text resources are
+            // special-cased by Sigil's resource model but remain safe batch
+            // targets through the common TextResource snapshot/commit path.
+            targets.specialPaths.append(path);
         }
     }
     if (currentTab) {
@@ -83,7 +88,12 @@ RegexWorkbenchDialog::TargetSet CollectRegexWorkbenchTargets(
             }
         }
         targets.selectedPaths.removeDuplicates();
+        targets.selectedPaths.sort();
     }
+    targets.htmlPaths.sort();
+    targets.cssPaths.sort();
+    targets.specialPaths.sort();
+    targets.allTextPaths.sort();
     return targets;
 }
 

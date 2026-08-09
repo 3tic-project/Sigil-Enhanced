@@ -5,7 +5,7 @@
 | **文档标题** | Advanced Regex Workbench（正则增强工作台） |
 | **作者** | Sigil-Enhanced 架构组（待填） |
 | **日期** | 2026-08-09 |
-| **状态** | Implemented（修订 9：规则编辑区重排、模板导入暂时隐藏、日文引号模板兼容修复） |
+| **状态** | Implemented（修订 10：运行区变量检查器、新建保护、特殊文本作用域） |
 | **适用仓库** | `sigil-modified` / Sigil-Enhanced |
 | **关联计划** | `todo/Sigil-Enhanced-Development-Plan.md` §4 `BookEditSession`、§5 `SearchBatchRunner` |
 | **约束文档** | `ENHANCEMENT.md` |
@@ -971,7 +971,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 
 ---
 
-## Implementation Checkpoint（修订 9）
+## Implementation Checkpoint（修订 10）
 
 ### 已落地范围
 
@@ -986,7 +986,8 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | PR-07 | 完成 | `df85fb909`、`d8ef27fa8`、`36c70b1c6`、`cb13fde9c`、`616cec394`、`f7d9e637d` | 逐匹配 trace 与最终坐标映射；模态工作台、规则编辑、scope、Dry Run/Apply/Cancel、进度、变量检查器、结果导航、设置持久化；Enhancement 菜单与默认开启 feature flag；三语目录 |
 | PR-08 | 完成 | `026328b23`、`151380a76`，以及修订 7 文档提交 | Recipe 文件名/显示名/绝对路径安全解析；`RunRegexWorkbenchRecipe` Automate；UI/Automate 接线契约测试与用户文档 |
 | 修订 8 | 完成 | `1e6ddae08` | `captureOnly` schema/UI/执行语义；匹配与替换独立计数；无文本 Apply 的快照冲突检查；三语翻译、真实 EPUB 夹具及回归测试 |
-| 修订 9 | 完成 | 本次提交 | 隐藏模板导入按钮；规则编辑区改为可拖动三栏及分组布局；修正旧版“日文引号纠正”把 XML 属性空格当作引号的问题 |
+| 修订 9 | 完成 | `6174a6395`、`de5672e75` | 隐藏模板导入按钮；规则编辑区改为可拖动三栏及分组布局；修正旧版“日文引号纠正”把 XML 属性空格当作引号的问题 |
+| 修订 10 | 完成 | `fa1e84dc8`、本次提交 | Apply 使用确认型突出样式；变量检查器移入运行区；非全新方案执行 New 前确认；OPF/NCX/SVG/XML/MiscText 增加独立特殊文本作用域和 XML 校验回归 |
 
 ### 审计结论
 
@@ -1002,13 +1003,15 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 10. **UI schema 状态一致。** Secondary 切回 `None` 时不会保存隐藏的旧 pattern；零长度匹配只在递归开启时可选；上次 Recipe 路径与当前未保存 Recipe 路径分离持久化。
 11. **仅捕获发布保持快照一致。** 无文本变化时不创建空 Checkpoint；但发布变量前仍复核全部目标资源与运行快照，冲突时不发布基于旧正文的变量。
 12. **预览型模板继续 fail closed。** 模板导入入口暂时隐藏；旧版“日文引号纠正”仅在名称、Find、Replacement 三者均精确命中历史值时迁移，去除 `[「 」]` 和 `「 \\1」` 中的误置空格，避免把 `<span class>` 的属性空格替换成引号并产生无效 XML；用户修改过的同名模板不动。
+13. **特殊文本资源显式可见且仍走同一事务边界。** 收集器把 HTML、CSS 以外的 `TextResource` 归入排序后的特殊文本集合，其中包含 OPF、NCX、SVG、XML 与 MiscText；“全部文本资源”继续包含它们。特殊 XML 使用媒体类型触发 staged well-formed 校验，提交仍复用快照冲突检查、Checkpoint 和单资源一次 Undo 写回，不新增旁路。
+14. **破坏性 UI 动作有明确层级。** Apply 使用平台原生默认确认按钮样式；变量检查器占用运行栏下方空间；New 仅在当前内容严格等于未编辑的默认空方案时直接执行，否则以 Cancel 为默认选项确认清空规则和未保存更改。
 
 ### 验证证据（2026-08-09）
 
 - 核心/批处理测试覆盖安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序、变量执行入口、Recipe/命名解析、跨资源 batch、逐匹配报告、进度/取消和 staged XML validator。
 - `Sigil` 应用目标：在 Qt 6.7.3、Python 3.11 的 clean CMake tree 中完整编译、链接及 Python bundle verification 通过。
 - `regex_workbench_ui_contract` 锁定 Enhancement action、默认 feature flag、模态生命周期、稳定对象名、worker/Cancel、Apply 独立 restage、确认/checkpoint 顺序、坐标提交门控、Recipe 路径和 Automate 链路。
-- `zh_CN`、`zh_TW`、`ja` 覆盖门禁与 `.qm` 生成均通过：5151 条当前消息全部 finished，0 unfinished。
+- `zh_CN`、`zh_TW`、`ja` 覆盖门禁与 `.qm` 生成均通过：5154 条当前消息全部 finished，0 unfinished。
 - Debug 默认构建完成；全量 CTest：55/55 通过，0 失败，总耗时约 3 秒。
 - `git diff --check`：通过。
 
@@ -1192,4 +1195,4 @@ flowchart LR
 
 ---
 
-*文档结束（修订 6）。*
+*文档结束（修订 10）。*

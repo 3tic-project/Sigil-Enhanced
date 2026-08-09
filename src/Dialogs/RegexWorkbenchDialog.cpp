@@ -343,6 +343,11 @@ void RegexWorkbenchDialog::BuildUi()
                                    .arg(m_Targets.cssPaths.size()),
                                static_cast<int>(TargetScope::AllCss));
     }
+    if (!m_Targets.specialPaths.isEmpty()) {
+        m_TargetScope->addItem(tr("All special text files (%1)")
+                                   .arg(m_Targets.specialPaths.size()),
+                               static_cast<int>(TargetScope::AllSpecial));
+    }
     m_TargetScope->addItem(tr("All text resources (%1)")
                                .arg(m_Targets.allTextPaths.size()),
                            static_cast<int>(TargetScope::AllText));
@@ -565,7 +570,7 @@ bool RegexWorkbenchDialog::IsPristineNewRecipe()
         return false;
     }
     const RegexWorkbenchRule& rule = m_Recipe.rules.constFirst();
-    return rule.name == tr("Rule 1") && rule.find.isEmpty() &&
+    return rule.name == QObject::tr("Rule %1").arg(1) && rule.find.isEmpty() &&
            rule.secondaryPattern.isEmpty() && rule.replace.isEmpty() &&
            rule.secondaryMode == SecondaryMode::None && !rule.recursive &&
            rule.maxIterations == defaultMaxIterations &&
@@ -910,6 +915,8 @@ QStringList RegexWorkbenchDialog::SelectedTargetPaths() const
             return m_Targets.htmlPaths;
         case TargetScope::AllCss:
             return m_Targets.cssPaths;
+        case TargetScope::AllSpecial:
+            return m_Targets.specialPaths;
         case TargetScope::AllText:
             return m_Targets.allTextPaths;
     }

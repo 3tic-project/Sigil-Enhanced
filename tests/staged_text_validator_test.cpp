@@ -21,6 +21,10 @@ void TestXmlMediaTypesAndCssBypass()
                 SearchBatch::StagedTextValidator::RequiresXmlValidation(
                     QStringLiteral("IMAGE/SVG+XML")) &&
                 SearchBatch::StagedTextValidator::RequiresXmlValidation(
+                    QStringLiteral("application/oebps-package+xml")) &&
+                SearchBatch::StagedTextValidator::RequiresXmlValidation(
+                    QStringLiteral("application/x-dtbncx+xml")) &&
+                SearchBatch::StagedTextValidator::RequiresXmlValidation(
                     QStringLiteral("text/xml")) &&
                 !SearchBatch::StagedTextValidator::RequiresXmlValidation(
                     QStringLiteral("text/css")),
@@ -28,16 +32,22 @@ void TestXmlMediaTypesAndCssBypass()
 
     const QHash<QString, QString> texts = {
         {QStringLiteral("Text/a.xhtml"), QStringLiteral("<html><body/></html>")},
+        {QStringLiteral("content.opf"), QStringLiteral("<package/>")},
+        {QStringLiteral("toc.ncx"), QStringLiteral("<ncx/>")},
         {QStringLiteral("Styles/a.css"), QStringLiteral("body { broken")}
     };
     const QHash<QString, QString> mediaTypes = {
         {QStringLiteral("Text/a.xhtml"), QStringLiteral("application/xhtml+xml")},
+        {QStringLiteral("content.opf"),
+         QStringLiteral("application/oebps-package+xml")},
+        {QStringLiteral("toc.ncx"),
+         QStringLiteral("application/x-dtbncx+xml")},
         {QStringLiteral("Styles/a.css"), QStringLiteral("text/css")}
     };
     const auto result = SearchBatch::StagedTextValidator::Validate(texts, mediaTypes);
-    Require(result.success && result.validatedResourceCount == 1 &&
+    Require(result.success && result.validatedResourceCount == 3 &&
                 result.issueCount == 0,
-            "well-formed XML must pass while non-XML text remains untouched");
+            "well-formed XHTML, OPF, and NCX must pass while CSS remains untouched");
 }
 
 void TestMalformedXmlAndMissingMetadataFailClosed()

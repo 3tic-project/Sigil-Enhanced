@@ -26236,6 +26236,7 @@ Continue using the requested filename?</source>
 <message><source>All CSS files (%1)</source><translation>すべての CSS ファイル（%1）</translation></message>
 <message><source>All XHTML files (%1)</source><translation>すべての XHTML ファイル（%1）</translation></message>
 <message><source>All text resources (%1)</source><translation>すべてのテキストリソース（%1）</translation></message>
+<message><source>All special text files (%1)</source><translation>すべての特殊テキストファイル（%1）</translation></message>
 <message><source>Allow zero-length matches</source><translation>長さゼロの一致を許可</translation></message>
 <message><source>Append values</source><translation>値を追加</translation></message>
 <message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>%2 件の一致から %1 件を置換し、%3 個のリソースを変更しました。各ファイルは個別に元に戻せます。バッチ全体を復元するにはリカバリーチェックポイントを使用してください。</translation></message>

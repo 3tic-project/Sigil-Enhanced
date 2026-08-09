@@ -51,6 +51,7 @@ public:
         QStringList selectedPaths;
         QStringList htmlPaths;
         QStringList cssPaths;
+        QStringList specialPaths;
         QStringList allTextPaths;
     };
 
@@ -100,6 +101,7 @@ private:
         SelectedFiles,
         AllHtml,
         AllCss,
+        AllSpecial,
         AllText
     };
 

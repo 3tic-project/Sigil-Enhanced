@@ -26221,6 +26221,7 @@ Continue using the requested filename?</source>
 <message><source>All CSS files (%1)</source><translation>所有 CSS 檔案（%1）</translation></message>
 <message><source>All XHTML files (%1)</source><translation>所有 XHTML 檔案（%1）</translation></message>
 <message><source>All text resources (%1)</source><translation>所有文字資源（%1）</translation></message>
+<message><source>All special text files (%1)</source><translation>所有特殊文字檔案（%1）</translation></message>
 <message><source>Allow zero-length matches</source><translation>允許零長度符合</translation></message>
 <message><source>Append values</source><translation>附加值</translation></message>
 <message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; use the recovery checkpoint to restore the entire batch.</source><translation>已從 %2 個符合項目執行 %1 次取代，修改了 %3 個資源。每個檔案可分別復原；若要還原整個批次，請使用復原檢查點。</translation></message>

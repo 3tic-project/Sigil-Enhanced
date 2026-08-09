@@ -102,6 +102,20 @@ require(
     and "QMessageBox::Yes | QMessageBox::Cancel" in dialog,
     "New must warn before clearing a non-pristine recipe",
 )
+collect_start = main_window_ext.index(
+    "RegexWorkbenchDialog::TargetSet CollectRegexWorkbenchTargets"
+)
+collect_end = main_window_ext.index("QHash<Resource*, QString>", collect_start)
+collect_body = main_window_ext[collect_start:collect_end]
+require(
+    "targets.specialPaths.append(path);" in collect_body
+    and "targets.selectedPaths.sort();" in collect_body
+    and "targets.specialPaths.sort();" in collect_body
+    and "targets.allTextPaths.sort();" in collect_body
+    and 'tr("All special text files (%1)")' in dialog
+    and "case TargetScope::AllSpecial:" in dialog,
+    "OPF, NCX, and other special text resources must have a stable target scope",
+)
 require("processEvents" not in dialog, "dialog must not use nested processEvents loops")
 require("WA_DeleteOnClose" not in dialog, "stack-owned modal dialog must not self-delete")
 require(
