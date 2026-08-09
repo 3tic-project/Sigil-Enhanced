@@ -41,6 +41,35 @@ add_test(NAME search_operations_reentrancy
 )
 set_tests_properties(search_operations_reentrancy PROPERTIES TIMEOUT 30)
 
+add_executable(text_document_undo_test
+    text_document_undo_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/TextDocument.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/TextDocument.h
+)
+
+target_include_directories(text_document_undo_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(text_document_undo_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+)
+set_target_properties(text_document_undo_test PROPERTIES AUTOMOC ON)
+
+add_test(NAME text_document_undo COMMAND text_document_undo_test)
+set_tests_properties(text_document_undo PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
+add_test(NAME search_undo_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/search_undo_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(search_undo_contract PROPERTIES TIMEOUT 30)
+
 add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp

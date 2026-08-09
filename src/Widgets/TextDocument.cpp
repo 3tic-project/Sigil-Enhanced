@@ -71,3 +71,16 @@ QString TextDocument::toText()
 
     return txt;
 }
+
+void TextDocument::replaceTextAsSingleUndoStep(const QString &text)
+{
+    if (toText() == text) {
+        return;
+    }
+
+    QTextCursor cursor(this);
+    cursor.beginEditBlock();
+    cursor.select(QTextCursor::Document);
+    cursor.insertText(text);
+    cursor.endEditBlock();
+}

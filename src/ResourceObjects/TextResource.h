@@ -63,6 +63,12 @@ public:
     virtual void SetText(const QString &text);
 
     /**
+     * Replaces the text as one QTextDocument undo command. This must be
+     * called on the GUI thread and is intended for user-visible edits.
+     */
+    virtual void SetTextAsUndoableEdit(const QString &text);
+
+    /**
      * Returns a reference to the QTextDocument that can be read and written to
      * in consumers. If you need just read access, use GetTextDocumentForReading().
      *
@@ -136,4 +142,3 @@ private:
 };
 
 #endif // TEXTRESOURCE_H
-

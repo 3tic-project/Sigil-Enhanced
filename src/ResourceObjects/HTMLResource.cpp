@@ -88,6 +88,15 @@ void HTMLResource::SetText(const QString &text)
     TrackNewResources();
 }
 
+void HTMLResource::SetTextAsUndoableEdit(const QString &text)
+{
+    emit TextChanging();
+
+    TextResource::SetTextAsUndoableEdit(text);
+
+    TrackNewResources();
+}
+
 QString HTMLResource::GetTOCCache()
 {
     if (m_TOCCache.isEmpty()) {

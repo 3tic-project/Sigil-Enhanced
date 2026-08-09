@@ -82,6 +82,16 @@ void TextResource::SetText(const QString &text)
     }
 }
 
+void TextResource::SetTextAsUndoableEdit(const QString &text)
+{
+    Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
+    Q_ASSERT(m_TextDocument);
+
+    m_TextDocument->replaceTextAsSingleUndoStep(text);
+    m_IsLoaded = true;
+    m_CacheInUse = false;
+}
+
 
 TextDocument& TextResource::GetTextDocumentForWriting()
 {

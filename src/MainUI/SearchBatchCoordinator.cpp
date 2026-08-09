@@ -95,7 +95,7 @@ SearchBatch::Result SearchBatchCoordinator::Run(
                 break;
             }
             appliedPaths.append(path);
-            resource->SetText(result.changedTexts.value(path));
+            resource->SetTextAsUndoableEdit(result.changedTexts.value(path));
             if (resource->GetText() != result.changedTexts.value(path)) {
                 result.success = false;
                 result.error = QStringLiteral("Saved-search target failed its commit check: %1").arg(path);

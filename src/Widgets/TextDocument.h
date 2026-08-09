@@ -50,6 +50,10 @@ class TextDocument : public QTextDocument
 
   QString toText();
 
+  // Replaces the whole document while preserving the existing undo stack.
+  // The replacement is recorded as one undo command.
+  void replaceTextAsSingleUndoStep(const QString &text);
+
 };
 
 #endif
