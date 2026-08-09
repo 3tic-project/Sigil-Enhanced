@@ -29,6 +29,8 @@ namespace BuiltinPlugins
 namespace RegexWorkbench
 {
 
+class SecondaryRegexMatcher;
+
 enum class EngineTermination {
     NotRun,
     Disabled,
@@ -79,6 +81,13 @@ class RegexWorkbenchEngine final
 public:
     static RegexWorkbenchEngineResult ApplyRule(
         const RegexWorkbenchRule& rule,
+        const QString& text,
+        const SearchOperations::ReplacementExpander& expander,
+        const RegexWorkbenchEngineOptions& options = RegexWorkbenchEngineOptions());
+
+    static RegexWorkbenchEngineResult ApplyPreparedRule(
+        const RegexWorkbenchRule& rule,
+        SecondaryRegexMatcher& matcher,
         const QString& text,
         const SearchOperations::ReplacementExpander& expander,
         const RegexWorkbenchEngineOptions& options = RegexWorkbenchEngineOptions());

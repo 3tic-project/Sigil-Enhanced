@@ -132,6 +132,24 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyRule(
         result.termination = EngineTermination::Disabled;
         return result;
     }
+    SecondaryRegexMatcher matcher(rule);
+    return ApplyPreparedRule(rule, matcher, text, expander, options);
+}
+
+RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyPreparedRule(
+    const RegexWorkbenchRule& rule,
+    SecondaryRegexMatcher& matcher,
+    const QString& text,
+    const SearchOperations::ReplacementExpander& expander,
+    const RegexWorkbenchEngineOptions& options)
+{
+    if (!rule.enabled) {
+        RegexWorkbenchEngineResult result;
+        result.success = true;
+        result.text = text;
+        result.termination = EngineTermination::Disabled;
+        return result;
+    }
 
     const QByteArray initialExternalState = CurrentExternalState(options);
     if (static_cast<bool>(options.stateSnapshot) != static_cast<bool>(options.restoreState)) {
@@ -162,7 +180,6 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyRule(
                        guardResult.errorMessage, options, initialExternalState);
     }
 
-    SecondaryRegexMatcher matcher(rule);
     QString currentText = text;
     qint64 totalReplacements = 0;
     int appliedIterations = 0;

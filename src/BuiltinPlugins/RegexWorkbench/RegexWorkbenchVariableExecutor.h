@@ -15,6 +15,8 @@
 #ifndef REGEX_WORKBENCH_VARIABLE_EXECUTOR_H
 #define REGEX_WORKBENCH_VARIABLE_EXECUTOR_H
 
+#include <memory>
+
 #include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h"
 #include "BuiltinPlugins/RegexWorkbench/SearchVariableStore.h"
 
@@ -22,6 +24,29 @@ namespace BuiltinPlugins
 {
 namespace RegexWorkbench
 {
+
+class PreparedRegexWorkbenchVariableExecutor final
+{
+public:
+    explicit PreparedRegexWorkbenchVariableExecutor(const RegexWorkbenchRule& rule);
+    ~PreparedRegexWorkbenchVariableExecutor();
+
+    PreparedRegexWorkbenchVariableExecutor(
+        const PreparedRegexWorkbenchVariableExecutor&) = delete;
+    PreparedRegexWorkbenchVariableExecutor& operator=(
+        const PreparedRegexWorkbenchVariableExecutor&) = delete;
+
+    bool isValid() const;
+    QString errorMessage() const;
+    RegexWorkbenchEngineResult Apply(
+        const QString& text,
+        SearchVariableStore& store,
+        RegexWorkbenchEngineOptions options = RegexWorkbenchEngineOptions());
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;
+};
 
 class RegexWorkbenchVariableExecutor final
 {

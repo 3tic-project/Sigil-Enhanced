@@ -33,6 +33,8 @@ public:
     SecondaryRegexMatcher(const SecondaryRegexMatcher&) = delete;
     SecondaryRegexMatcher& operator=(const SecondaryRegexMatcher&) = delete;
 
+    bool isValid() const;
+    SecondaryMatchResult initializationFailure() const;
     SecondaryMatchResult enumerate(
         const QString& text,
         RegexSearch::MatchOptions options = RegexSearch::MatchOptions());

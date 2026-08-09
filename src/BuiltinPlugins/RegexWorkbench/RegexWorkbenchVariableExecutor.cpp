@@ -15,6 +15,7 @@
 
 #include <memory>
 
+#include "BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h"
 #include "PCRE2/SPCRE.h"
 
 namespace BuiltinPlugins
@@ -84,37 +85,84 @@ bool CapturesAreAvailable(const RegexWorkbenchRule& rule,
 
 }
 
-RegexWorkbenchEngineResult RegexWorkbenchVariableExecutor::ApplyRule(
-    const RegexWorkbenchRule& rule,
+struct PreparedRegexWorkbenchVariableExecutor::Impl
+{
+    explicit Impl(const RegexWorkbenchRule& sourceRule) :
+        rule(sourceRule)
+    {
+        if (!rule.enabled) {
+            valid = true;
+            return;
+        }
+        if (IsWholeFunctionReplacement(rule.replace)) {
+            error = QStringLiteral("Whole Python function replacements are not supported in Regex Workbench");
+            return;
+        }
+        matcher = std::make_unique<SecondaryRegexMatcher>(rule);
+        if (!matcher->isValid()) {
+            error = matcher->initializationFailure().errorMessage;
+            return;
+        }
+        primaryRegex = std::make_unique<SPCRE>(rule.find);
+        if (rule.secondaryMode == SecondaryMode::FilterAccept ||
+            rule.secondaryMode == SecondaryMode::FilterReject) {
+            filterRegex = std::make_unique<SPCRE>(rule.secondaryPattern);
+        }
+        if (!CapturesAreAvailable(rule, *primaryRegex, filterRegex.get(), error)) {
+            return;
+        }
+        valid = true;
+    }
+
+    RegexWorkbenchRule rule;
+    std::unique_ptr<SecondaryRegexMatcher> matcher;
+    std::unique_ptr<SPCRE> primaryRegex;
+    std::unique_ptr<SPCRE> filterRegex;
+    bool valid = false;
+    QString error;
+};
+
+PreparedRegexWorkbenchVariableExecutor::PreparedRegexWorkbenchVariableExecutor(
+    const RegexWorkbenchRule& rule) :
+    m_impl(std::make_unique<Impl>(rule))
+{
+}
+
+PreparedRegexWorkbenchVariableExecutor::~PreparedRegexWorkbenchVariableExecutor() = default;
+
+bool PreparedRegexWorkbenchVariableExecutor::isValid() const
+{
+    return m_impl->valid;
+}
+
+QString PreparedRegexWorkbenchVariableExecutor::errorMessage() const
+{
+    return m_impl->error;
+}
+
+RegexWorkbenchEngineResult PreparedRegexWorkbenchVariableExecutor::Apply(
     const QString& text,
     SearchVariableStore& store,
     RegexWorkbenchEngineOptions options)
 {
+    const RegexWorkbenchRule& rule = m_impl->rule;
+    if (!m_impl->valid) {
+        return InvalidResult(text, m_impl->error.isEmpty()
+                                      ? QStringLiteral("Prepared regex rule is invalid")
+                                      : m_impl->error);
+    }
     if (!rule.enabled) {
-        return RegexWorkbenchEngine::ApplyRule(
-            rule, text, SearchOperations::ReplacementExpander(), options);
+        RegexWorkbenchEngineResult result;
+        result.success = true;
+        result.text = text;
+        result.termination = EngineTermination::Disabled;
+        return result;
     }
     if (options.beforeExpand || options.afterExpand ||
         options.stateSnapshot || options.restoreState) {
         return InvalidResult(text,
                              QStringLiteral("Variable executor owns replacement callbacks and store transactions"));
     }
-    if (IsWholeFunctionReplacement(rule.replace)) {
-        return InvalidResult(text,
-                             QStringLiteral("Whole Python function replacements are not supported in Regex Workbench"));
-    }
-
-    SPCRE primaryRegex(rule.find);
-    std::unique_ptr<SPCRE> filterRegex;
-    if (rule.secondaryMode == SecondaryMode::FilterAccept ||
-        rule.secondaryMode == SecondaryMode::FilterReject) {
-        filterRegex = std::make_unique<SPCRE>(rule.secondaryPattern);
-    }
-    QString captureError;
-    if (!CapturesAreAvailable(rule, primaryRegex, filterRegex.get(), captureError)) {
-        return InvalidResult(text, captureError);
-    }
-
     const SearchVariableStore::Snapshot initialStore = store.snapshot();
     options.stateSnapshot = [&store]() { return store.stateData(); };
     options.restoreState = [&store, initialStore](const QByteArray&) {
@@ -135,49 +183,59 @@ RegexWorkbenchEngineResult RegexWorkbenchVariableExecutor::ApplyRule(
     }
 
     if (ShouldIngest(rule)) {
-        options.beforeExpand = [&store, &rule, &filterRegex](
+        options.beforeExpand = [&store, &rule, this](
             int,
             const CandidateMatch& candidate,
             const QString& primaryText,
             QString& error) {
-            if (!candidate.hasFilterMatch || filterRegex == nullptr) {
+            if (!candidate.hasFilterMatch || m_impl->filterRegex == nullptr) {
                 return true;
             }
             const RegexSearch::Match& filter = candidate.filter;
             const QString filterText = primaryText.mid(filter.start,
                                                        filter.end - filter.start);
-            return store.ingestNamedCaptures(*filterRegex, filterText,
+            return store.ingestNamedCaptures(*m_impl->filterRegex, filterText,
                                              RelativeCaptures(filter),
                                              rule.captureToVar, &error);
         };
-        options.afterExpand = [&store, &rule, &primaryRegex](
+        options.afterExpand = [&store, &rule, this](
             int,
             const CandidateMatch& candidate,
             const QString& primaryText,
             QString& error) {
-            return store.ingestNamedCaptures(primaryRegex, primaryText,
+            return store.ingestNamedCaptures(*m_impl->primaryRegex, primaryText,
                                              RelativeCaptures(candidate.primary),
                                              rule.captureToVar, &error);
         };
     }
 
     const SearchOperations::ReplacementExpander expander =
-        [&primaryRegex, &resolver](const QString& matchedText,
-                                  const QList<std::pair<int, int>>& captures,
-                                  const QString& replacement,
-                                  QString& expanded) {
-            return primaryRegex.replaceText(matchedText, captures, replacement,
-                                            expanded, resolver);
+        [this, &resolver](const QString& matchedText,
+                         const QList<std::pair<int, int>>& captures,
+                         const QString& replacement,
+                         QString& expanded) {
+            return m_impl->primaryRegex->replaceText(matchedText, captures,
+                                                     replacement, expanded, resolver);
         };
 
-    RegexWorkbenchEngineResult result = RegexWorkbenchEngine::ApplyRule(
-        rule, text, expander, options);
+    RegexWorkbenchEngineResult result = RegexWorkbenchEngine::ApplyPreparedRule(
+        rule, *m_impl->matcher, text, expander, options);
     if (!result.success && result.termination == EngineTermination::ExpansionFailure &&
         !variableError.isEmpty()) {
         result.termination = EngineTermination::UndefinedVariable;
         result.errorMessage = variableError;
     }
     return result;
+}
+
+RegexWorkbenchEngineResult RegexWorkbenchVariableExecutor::ApplyRule(
+    const RegexWorkbenchRule& rule,
+    const QString& text,
+    SearchVariableStore& store,
+    RegexWorkbenchEngineOptions options)
+{
+    PreparedRegexWorkbenchVariableExecutor prepared(rule);
+    return prepared.Apply(text, store, options);
 }
 
 }

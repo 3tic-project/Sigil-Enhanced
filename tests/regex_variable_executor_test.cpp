@@ -4,6 +4,11 @@
 #include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.h"
 #include "PCRE2/SPCRE.h"
 
+namespace
+{
+int gSpcreConstructions = 0;
+}
+
 // Keep this orchestration test independent from embedded Python. The production
 // SPCRE replacement builder has its own resolver tests; this stub supplies the
 // capture metadata and literal variable expansion needed to exercise the real
@@ -17,6 +22,7 @@ SPCRE::SPCRE(const QString& pattern) :
     m_captureSubpatternCount(0),
     m_mcontext(nullptr)
 {
+    ++gSpcreConstructions;
 #ifndef PCRE_NO_JIT
     m_jitstack = nullptr;
 #endif
@@ -83,6 +89,7 @@ namespace
 {
 
 using BuiltinPlugins::RegexWorkbench::EngineTermination;
+using BuiltinPlugins::RegexWorkbench::PreparedRegexWorkbenchVariableExecutor;
 using BuiltinPlugins::RegexWorkbench::RegexWorkbenchRule;
 using BuiltinPlugins::RegexWorkbench::RegexWorkbenchVariableExecutor;
 using BuiltinPlugins::RegexWorkbench::SearchVariableStore;
@@ -202,6 +209,29 @@ void TestMissingConfiguredCaptureIsRejected()
             "configured capture names must exist in the primary or filter pattern");
 }
 
+void TestPreparedExecutorReusesReplacementPatterns()
+{
+    SearchVariableStore store = BatchStore();
+    RegexWorkbenchRule rule;
+    rule.find = QStringLiteral("\\[(?<primary>\\d+)\\]");
+    rule.secondaryMode = SecondaryMode::FilterAccept;
+    rule.secondaryPattern = QStringLiteral("(?<filter>\\d+)");
+    rule.replace = QStringLiteral("${var:filter}");
+    rule.variableExpansionEnabled = true;
+    rule.autoIngestNamedCaptures = true;
+
+    const int before = gSpcreConstructions;
+    PreparedRegexWorkbenchVariableExecutor prepared(rule);
+    Require(prepared.isValid() && gSpcreConstructions == before + 2,
+            "prepared Filter rules must compile one primary and one filter replacement pattern");
+    const auto first = prepared.Apply(QStringLiteral("[1]"), store);
+    const auto second = prepared.Apply(QStringLiteral("[22]"), store);
+    Require(first.success && first.text == QStringLiteral("1") &&
+                second.success && second.text == QStringLiteral("22") &&
+                gSpcreConstructions == before + 2,
+            "prepared rules must reuse compiled replacement patterns across resources");
+}
+
 }
 
 int main()
@@ -211,6 +241,7 @@ int main()
     TestUndefinedVariableRollsBackTextAndStore();
     TestDisabledExpansionAndUnsupportedFunction();
     TestMissingConfiguredCaptureIsRejected();
+    TestPreparedExecutorReusesReplacementPatterns();
     std::cout << "regex variable executor tests passed\n";
     return 0;
 }

@@ -139,6 +139,16 @@ SecondaryRegexMatcher::SecondaryRegexMatcher(const RegexWorkbenchRule& rule) :
 
 SecondaryRegexMatcher::~SecondaryRegexMatcher() = default;
 
+bool SecondaryRegexMatcher::isValid() const
+{
+    return m_impl->valid;
+}
+
+SecondaryMatchResult SecondaryRegexMatcher::initializationFailure() const
+{
+    return m_impl->initializationFailure;
+}
+
 SecondaryMatchResult SecondaryRegexMatcher::enumerate(const QString& text,
                                                       RegexSearch::MatchOptions options)
 {
