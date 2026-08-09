@@ -49,7 +49,8 @@ bool PCREReplaceTextBuilder::BuildReplacementText(SPCRE &sre,
         const QString &text,
         const QList<std::pair<int, int>> &capture_groups_offsets,
         const QString &replacement_pattern,
-        QString &out)
+        QString &out,
+        const ReplacementVariableResolver& resolver)
 {
     resetState();
 
@@ -62,7 +63,8 @@ bool PCREReplaceTextBuilder::BuildReplacementText(SPCRE &sre,
     // can just return the pattern as the replaced text.
     // This is a simple and quick way that will catch a large number of
     // cases but not all.
-    if (!replacement_pattern.contains("\\")) {
+    if (!replacement_pattern.contains("\\") &&
+        (!resolver || !replacement_pattern.contains(QStringLiteral("${var:")))) {
         out = replacement_pattern;
         return true;
     }
@@ -299,6 +301,20 @@ bool PCREReplaceTextBuilder::BuildReplacementText(SPCRE &sre,
         }
         // We're not in a control.
         else {
+            if (resolver && c == QLatin1Char('$') &&
+                replacement_pattern.mid(i, 6) == QStringLiteral("${var:")) {
+                const int closing = replacement_pattern.indexOf(QLatin1Char('}'), i + 6);
+                if (closing >= 0) {
+                    const QString name = replacement_pattern.mid(i + 6, closing - (i + 6));
+                    QString value;
+                    if (!resolver(name, value)) {
+                        return false;
+                    }
+                    accumulateReplcementText(value);
+                    i = closing;
+                    continue;
+                }
+            }
             // Start a control character.
             if (c == '\\') {
                 // Reset our invalid control accumulator.

@@ -270,7 +270,8 @@ SPCRE::MatchInfo SPCRE::getLastMatchInfo(const QString &text)
 }
 
 bool SPCRE::replaceText(const QString &text, const QList<std::pair<int, int>> &capture_groups_offsets,
-                        const QString &replacement_pattern, QString &out)
+                        const QString &replacement_pattern, QString &out,
+                        const ReplacementVariableResolver& resolver)
 {
     QString functionname;
     QString rname = replacement_pattern.trimmed();
@@ -281,7 +282,8 @@ bool SPCRE::replaceText(const QString &text, const QList<std::pair<int, int>> &c
     }
     if (functionname.isEmpty() ) {
         PCREReplaceTextBuilder builder;
-        return builder.BuildReplacementText(*this, text, capture_groups_offsets, replacement_pattern, out);
+        return builder.BuildReplacementText(*this, text, capture_groups_offsets,
+                                            replacement_pattern, out, resolver);
     }
     if (!isValid()) return false;
     QList<std::pair<int, int> > fixed_groups = SearchUtils::ConvertCaptureGroupstoUTF32(text, capture_groups_offsets);

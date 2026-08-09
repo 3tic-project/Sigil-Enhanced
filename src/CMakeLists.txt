@@ -601,6 +601,7 @@ set( SPCRE_FILES
     PCRE2/PCRECache.h
     PCRE2/PCREReplaceTextBuilder.cpp
     PCRE2/PCREReplaceTextBuilder.h
+    PCRE2/ReplacementVariableResolver.h
     PCRE2/PCREErrors.cpp
     PCRE2/PCREErrors.h
     )

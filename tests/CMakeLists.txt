@@ -1,4 +1,4 @@
-find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Xml REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Widgets Xml REQUIRED)
 
 add_executable(regex_match_enumerator_test
     regex_match_enumerator_test.cpp
@@ -153,6 +153,28 @@ target_compile_features(regex_variable_store_test PRIVATE cxx_std_17)
 
 add_test(NAME regex_variable_store COMMAND regex_variable_store_test)
 set_tests_properties(regex_variable_store PROPERTIES TIMEOUT 30)
+
+add_executable(regex_replacement_resolver_test
+    regex_replacement_resolver_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/PCREReplaceTextBuilder.cpp
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/PCREReplaceTextBuilder.h
+    ${CMAKE_SOURCE_DIR}/src/PCRE2/ReplacementVariableResolver.h
+)
+
+target_include_directories(regex_replacement_resolver_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_replacement_resolver_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+)
+target_compile_features(regex_replacement_resolver_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_replacement_resolver COMMAND regex_replacement_resolver_test)
+set_tests_properties(regex_replacement_resolver PROPERTIES TIMEOUT 30)
 
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp

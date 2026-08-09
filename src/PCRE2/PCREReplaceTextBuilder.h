@@ -27,6 +27,7 @@
 
 #include <QtCore/QString>
 
+#include "PCRE2/ReplacementVariableResolver.h"
 #include "PCRE2/SPCRE.h"
 
 class QChar;
@@ -59,7 +60,8 @@ public:
                               const QString &text,
                               const QList<std::pair<int, int>> &capture_groups_offsets,
                               const QString &replacement_pattern,
-                              QString &out);
+                              QString &out,
+                              const ReplacementVariableResolver& resolver = ReplacementVariableResolver());
 
 private:
     /**

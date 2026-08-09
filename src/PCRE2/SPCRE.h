@@ -34,6 +34,8 @@
 #include <QString>
 #include <QStringList>
 
+#include "PCRE2/ReplacementVariableResolver.h"
+
 using std::pair;
 
 class PyObjectPtr;
@@ -148,7 +150,8 @@ public:
      * @return true if the replacement string was created successfully.
      */
     bool replaceText(const QString &text, const QList<std::pair<int, int>> &capture_groups_offsets,
-                     const QString &replacement_pattern, QString &out);
+                     const QString &replacement_pattern, QString &out,
+                     const ReplacementVariableResolver& resolver = ReplacementVariableResolver());
 
     bool functionReplaceText(const QString &bookpath, const QString &text,
                              const QList<std::pair<int, int>> &capture_groups_offsets,
