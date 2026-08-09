@@ -647,6 +647,8 @@ set( MAINUI_FILES
     MainUI/MainWindow.h
     MainUI/SearchBatchCoordinator.cpp
     MainUI/SearchBatchCoordinator.h
+    MainUI/RegexWorkbenchBatchCommitter.cpp
+    MainUI/RegexWorkbenchBatchCommitter.h
     MainUI/FindReplace.cpp
     MainUI/FindReplace.h
     MainUI/FindReplacePlus.cpp

@@ -13,6 +13,9 @@ repo = Path(sys.argv[1]).resolve()
 operations = (repo / "src/Misc/SearchOperations.cpp").read_text(encoding="utf-8")
 coordinator = (repo / "src/MainUI/SearchBatchCoordinator.cpp").read_text(encoding="utf-8")
 coordinator_header = (repo / "src/MainUI/SearchBatchCoordinator.h").read_text(encoding="utf-8")
+workbench_committer = (
+    repo / "src/MainUI/RegexWorkbenchBatchCommitter.cpp"
+).read_text(encoding="utf-8")
 text_resource = (repo / "src/ResourceObjects/TextResource.cpp").read_text(encoding="utf-8")
 html_resource = (repo / "src/ResourceObjects/HTMLResource.cpp").read_text(encoding="utf-8")
 
@@ -53,6 +56,15 @@ undoable_write = coordinator.index(
 require(
     checkpoint_call < undoable_write,
     "recovery checkpoint must succeed before the first staged resource write",
+)
+workbench_commit_call = workbench_committer.index(
+    "SearchBatchCoordinator::CommitStagedResult("
+)
+store_publish = workbench_committer.index("store = pendingStore;", workbench_commit_call)
+require(
+    "pendingStore.restore(batch_result.finalStore" in workbench_committer
+    and workbench_commit_call < store_publish,
+    "workbench variables must validate before commit and publish only after document commit",
 )
 require(
     "resource->SetText(" not in commit_body,
