@@ -26198,5 +26198,6 @@ Continue using the requested filename?</source>
 <message><source>Write policy:</source><translation>書き込みポリシー：</translation></message>
 <message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（任意の許可リスト）</translation></message>
 <message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot and recovery checkpoint will be created before any document text is written.</source><translation>このレシピを %1 個のテキストリソースに適用しますか？文書テキストを書き込む前に、新しいスナップショットとリカバリーチェックポイントを作成します。</translation></message>
+<message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>リカバリーチェックポイントを作成し、ステージ済みの変更をコミットしています...</translation></message>
 </context>
 </TS>

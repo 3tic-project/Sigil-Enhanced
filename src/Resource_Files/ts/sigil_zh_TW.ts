@@ -26183,5 +26183,6 @@ Continue using the requested filename?</source>
 <message><source>Write policy:</source><translation>寫入策略：</translation></message>
 <message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（選用允許清單）</translation></message>
 <message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot and recovery checkpoint will be created before any document text is written.</source><translation>要將此方案套用到 %1 個文字資源嗎？寫入任何文件文字前，將重新建立快照與復原檢查點。</translation></message>
+<message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>正在建立復原檢查點並提交暫存變更...</translation></message>
 </context>
 </TS>

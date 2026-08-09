@@ -906,6 +906,7 @@ void RegexWorkbenchDialog::RunFinished()
     }
 
     if (completedMode == RunMode::Apply) {
+        SetStatus(tr("Creating the recovery checkpoint and committing staged changes..."));
         const SearchBatch::Result commit = RegexWorkbenchBatchCommitter::Commit(
             m_MainWindow, m_Targets.resources, m_RunSnapshot, m_LastResult,
             m_Store);
