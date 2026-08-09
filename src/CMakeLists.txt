@@ -339,6 +339,8 @@ set( DIALOG_FILES
 list(APPEND DIALOG_FILES
     Dialogs/FontSubsetDialog.cpp
     Dialogs/FontSubsetDialog.h
+    Dialogs/RegexWorkbenchDialog.cpp
+    Dialogs/RegexWorkbenchDialog.h
 )
 
 set( WIDGET_FILES

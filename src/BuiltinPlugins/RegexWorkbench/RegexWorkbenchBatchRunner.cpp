@@ -206,18 +206,30 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
         };
 
     qint64 observedReplacements = 0;
+    int completedSteps = 0;
+    const int totalSteps = batchRules.size() * orderedResourcePaths.size();
+    if (options.progressCallback) {
+        options.progressCallback(0, totalSteps);
+    }
     result.staged = SearchBatch::Runner::Run(
         batchRules, originalTexts,
         [&](const SearchBatch::Rule& batchRule,
             const QString& resourcePath,
             const QString& currentText) {
             SearchBatch::ApplyResult applied;
+            const auto finishStep = [&](SearchBatch::ApplyResult value) {
+                ++completedSteps;
+                if (options.progressCallback) {
+                    options.progressCallback(completedSteps, totalSteps);
+                }
+                return value;
+            };
             const int ruleIndex = ruleIndexes.value(batchRule.id, -1);
             if (ruleIndex < 0 || ruleIndex >= static_cast<int>(prepared.size())) {
                 applied.ok = false;
                 applied.error = QStringLiteral("Prepared regex workbench rule is missing: %1")
                                     .arg(batchRule.id);
-                return applied;
+                return finishStep(applied);
             }
 
             workingStore.setActiveResource(resourcePath);
@@ -242,14 +254,14 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
                 applied.error = QStringLiteral("Regex workbench rule %1 failed for %2: %3")
                                     .arg(batchRule.name, resourcePath,
                                          engineResult.errorMessage);
-                return applied;
+                return finishStep(applied);
             }
             if (engineResult.replacementCount >
                 std::numeric_limits<qint64>::max() - observedReplacements) {
                 applied.ok = false;
                 applied.text = currentText;
                 applied.error = QStringLiteral("Regex workbench replacement count overflow");
-                return applied;
+                return finishStep(applied);
             }
             observedReplacements += engineResult.replacementCount;
             if (observedReplacements > options.maxRunReplacements) {
@@ -257,12 +269,12 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
                 applied.text = currentText;
                 applied.error = QStringLiteral("Regex workbench run exceeded replacement limit %1")
                                     .arg(options.maxRunReplacements);
-                return applied;
+                return finishStep(applied);
             }
 
             applied.text = engineResult.text;
             applied.replacementCount = engineResult.replacementCount;
-            return applied;
+            return finishStep(applied);
         },
         options.isCancelled);
 

@@ -68,6 +68,7 @@ struct RegexWorkbenchBatchOptions
     RegexWorkbenchEngineOptions engineOptions;
     SearchBatch::StagedValidationOptions validationOptions;
     std::function<bool()> isCancelled;
+    std::function<void(int completed, int total)> progressCallback;
     int maxReportRows = 10000;
     int maxSnippetCodeUnits = 240;
     qint64 maxRunReplacements = 1000000;

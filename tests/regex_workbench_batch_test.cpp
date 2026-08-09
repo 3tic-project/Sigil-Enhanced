@@ -160,6 +160,10 @@ void TestBatchScopeOrderAndPreparedReuse()
     RegexWorkbenchBatchOptions options;
     options.maxReportRows = 2;
     options.maxSnippetCodeUnits = 12;
+    QList<std::pair<int, int>> progress;
+    options.progressCallback = [&progress](int completed, int total) {
+        progress.append(std::make_pair(completed, total));
+    };
     const auto result = RegexWorkbenchBatchRunner::Run(
         VariableRecipe(VariableScope::Batch), Paths(), OriginalTexts(),
         MediaTypes(), initial, options);
@@ -185,7 +189,9 @@ void TestBatchScopeOrderAndPreparedReuse()
                 result.report.rows.first().beforeSnippet == QStringLiteral("A1") &&
                 result.report.rows.first().afterSnippet == QStringLiteral("mark") &&
                 result.report.rows.first().variableNames ==
-                    QStringList{QStringLiteral("seed")},
+                    QStringList{QStringLiteral("seed")} &&
+                progress.first() == std::make_pair(0, 4) &&
+                progress.last() == std::make_pair(4, 4),
             "batch report details must be bounded without losing exact totals");
     Require(result.finalStore.batchFrame.value(QStringLiteral("seed")).last() ==
                 QStringLiteral("A2") && initial.stateData() == initialState,
