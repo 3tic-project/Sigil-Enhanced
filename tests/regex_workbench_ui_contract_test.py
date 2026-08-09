@@ -18,6 +18,7 @@ main_window_ext = (repo / "src/MainUI/MainWindowExt.cpp").read_text(encoding="ut
 main_window_header = (repo / "src/MainUI/MainWindow.h").read_text(encoding="utf-8")
 dialog = (repo / "src/Dialogs/RegexWorkbenchDialog.cpp").read_text(encoding="utf-8")
 automate_editor = (repo / "src/Dialogs/AutomateEditor.cpp").read_text(encoding="utf-8")
+user_guide = (repo / "docs/AdvancedRegexWorkbench.md").read_text(encoding="utf-8")
 
 enhancement_menu = main_ui.find(".//widget[@name='menuEnhancement']")
 require(enhancement_menu is not None, "Enhancement menu must exist")
@@ -86,6 +87,11 @@ require(
 finished = dialog.index("void RegexWorkbenchDialog::RunFinished")
 commit = dialog.index("RegexWorkbenchBatchCommitter::Commit(", finished)
 require(finished < commit, "Apply must commit only after worker staging finishes")
+require(
+    dialog.index("Creating the recovery checkpoint and committing staged changes", finished)
+    < commit,
+    "the UI must announce the checkpoint/commit boundary before writing",
+)
 
 open_start = main_window_ext.index("bool MainWindow::OpenRegexWorkbench()")
 open_end = main_window_ext.index("bool MainWindow::RunRegexWorkbenchRecipe", open_start)
@@ -135,5 +141,17 @@ require(
     and "[Regex recipe name or absolute path here]" in automate_editor,
     "Automate editor must expose and persist the recipe parameter",
 )
+for documented_contract in (
+    "Enhancement > Advanced Regex Workbench...",
+    "${var:name}",
+    "RunRegexWorkbenchRecipe",
+    "Dry Run",
+    "Checkpoint",
+    "Undo",
+):
+    require(
+        documented_contract in user_guide,
+        f"user guide is missing contract: {documented_contract}",
+    )
 
 print("regex workbench UI and automation contract passed")
