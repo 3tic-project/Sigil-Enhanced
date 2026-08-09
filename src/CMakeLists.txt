@@ -78,6 +78,10 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/KfxParagraphNormalizer.cpp
     BuiltinPlugins/KfxParagraphNormalizer.h
     BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
+    BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
     BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
     BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
     )

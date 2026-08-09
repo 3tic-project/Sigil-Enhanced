@@ -85,6 +85,37 @@ target_compile_features(regex_apply_shared_test PRIVATE cxx_std_17)
 add_test(NAME regex_apply_shared COMMAND regex_apply_shared_test)
 set_tests_properties(regex_apply_shared PROPERTIES TIMEOUT 30)
 
+add_executable(regex_recursive_replace_test
+    regex_recursive_replace_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperationsApply.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperations.h
+)
+
+target_include_directories(regex_recursive_replace_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_recursive_replace_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_recursive_replace_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_recursive_replace COMMAND regex_recursive_replace_test)
+set_tests_properties(regex_recursive_replace PROPERTIES TIMEOUT 30)
+
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
