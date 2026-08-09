@@ -643,7 +643,12 @@ void RegexWorkbenchDialog::UpdateRuleControlState()
     const SecondaryMode mode = static_cast<SecondaryMode>(
         m_SecondaryMode->currentData().toInt());
     m_SecondaryPattern->setEnabled(mode != SecondaryMode::None);
-    m_MaxIterations->setEnabled(m_Recursive->isChecked());
+    const bool recursive = m_Recursive->isChecked();
+    m_MaxIterations->setEnabled(recursive);
+    m_AllowEmpty->setEnabled(recursive);
+    if (!recursive) {
+        m_AllowEmpty->setChecked(false);
+    }
 }
 
 void RegexWorkbenchDialog::LoadRecipeIntoUi(const RegexRecipe& recipe,
@@ -690,7 +695,9 @@ void RegexWorkbenchDialog::SaveCurrentRule()
     rule.name = m_RuleName->text().trimmed();
     rule.secondaryMode = static_cast<SecondaryMode>(
         m_SecondaryMode->currentData().toInt());
-    rule.secondaryPattern = m_SecondaryPattern->toPlainText();
+    rule.secondaryPattern = rule.secondaryMode == SecondaryMode::None
+                                ? QString()
+                                : m_SecondaryPattern->toPlainText();
     rule.find = m_FindPattern->toPlainText();
     rule.replace = m_ReplacePattern->toPlainText();
     rule.recursive = m_Recursive->isChecked();
@@ -951,7 +958,7 @@ void RegexWorkbenchDialog::SetBusy(bool busy)
     m_ReplacePattern->setEnabled(!busy);
     m_Recursive->setEnabled(!busy);
     m_MaxIterations->setEnabled(!busy && m_Recursive->isChecked());
-    m_AllowEmpty->setEnabled(!busy);
+    m_AllowEmpty->setEnabled(!busy && m_Recursive->isChecked());
     m_VariableExpansion->setEnabled(!busy);
     m_AutoIngest->setEnabled(!busy);
     m_CaptureNames->setEnabled(!busy);

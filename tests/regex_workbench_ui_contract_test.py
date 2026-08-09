@@ -114,6 +114,16 @@ require(
     and "settings.setValue(LastRecipeKey, m_LastRecipePath)" in dialog,
     "the last recipe location must survive creating a new unsaved recipe",
 )
+require(
+    "rule.secondaryMode == SecondaryMode::None\n                                ? QString()"
+    in dialog,
+    "switching secondary mode to None must not save a hidden stale pattern",
+)
+require(
+    "m_AllowEmpty->setEnabled(recursive);" in dialog
+    and "m_AllowEmpty->setChecked(false);" in dialog,
+    "zero-length matching controls must follow the recursive recipe invariant",
+)
 
 require(
     main_window.count('"RunRegexWorkbenchRecipe"') >= 2
