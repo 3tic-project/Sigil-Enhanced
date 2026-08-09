@@ -5,7 +5,7 @@
 | **文档标题** | Advanced Regex Workbench（正则增强工作台） |
 | **作者** | Sigil-Enhanced 架构组（待填） |
 | **日期** | 2026-08-09 |
-| **状态** | Draft（修订 5：PR-01–04 核心实现与阶段审计完成；PR-05–08 待推进） |
+| **状态** | Draft（修订 5：PR-01–05 核心与 Recipe 实现完成；PR-06–08 待推进） |
 | **适用仓库** | `sigil-modified` / Sigil-Enhanced |
 | **关联计划** | `todo/Sigil-Enhanced-Development-Plan.md` §4 `BookEditSession`、§5 `SearchBatchRunner` |
 | **约束文档** | `ENHANCEMENT.md` |
@@ -964,7 +964,8 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | PR-02 | 完成 | `11a389b5f`、`30cb427f4` | `PreSearch`、`FilterAccept`、`FilterReject`；主/次级 pattern 每个规则执行只编译一次并跨递归轮次复用 |
 | PR-03 | 完成 | `dc95bdea9`、`e66084430` | Plus 与工作台共用 `ApplyReplacements`；递归仅 `NoMatches` 成功，stall/cycle/iteration/count/growth/size/cancel 均 fail closed |
 | PR-04 | 完成 | `4c71babfe`、`4304f7f3b`、`ad2baa45e`、`efe492bc1` | 命名组枚举、Resource/Batch/Session store、`${var:name}` 显式 resolver、Filter→expand→primary 时序、入口级事务回滚测试 |
-| PR-05–08 | 未开始 | — | Recipe、全书 staging/validation/commit、UI/菜单/i18n、Automate 与最终用户文档 |
+| PR-05 | 完成 | `705752df1` | 严格 version 1 JSON schema、原子保存、4 MiB/1000-rule 上限、重复 id/未知字段拒绝、SearchEditorPlus `PS` token 导入与丢失控制警告 |
+| PR-06–08 | 未开始 | — | 全书 staging/validation/commit、UI/菜单/i18n、Automate 与最终用户文档 |
 
 ### 审计结论
 
@@ -973,18 +974,18 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 3. **匹配资源有界且线程所有权明确。** 工作台不持有 `PCRECache` 对象；每次规则执行拥有自己的 compiled code、match data 和 match context。每次 PCRE2 调用设置 match/depth/heap limit，并在调用之间检查 cancel；单次调用不能被协作式中断，但仍受 PCRE2 limit 约束。
 4. **递归和变量共同纳入回滚状态。** cycle/stall digest 同时包含文本和变量状态；任何匹配、展开、变量、限制或取消失败都返回原始文本并恢复初始 store snapshot，不允许发布部分轮次。
 5. **Filter 坐标与写入顺序已锁定。** Filter capture 保持主匹配内局部坐标；接受候选按 `Filter ingest → replacement expand → primary ingest` 执行，拒绝掉的候选不污染 store。
-6. **当前功能尚不可由用户操作。** Recipe、批处理 coordinator、XML staged validation、对话框和菜单均未实现；PR-01–04 是可复用核心里程碑，不应被描述为完整产品功能。
+6. **当前功能尚不可由用户操作。** Recipe 核心已实现，但批处理 coordinator、XML staged validation、对话框和菜单均未实现；PR-01–05 是可复用核心里程碑，不应被描述为完整产品功能。
 
 ### 验证证据（2026-08-09）
 
-- 新增核心测试：10/10 通过，包括安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序和变量执行入口。
+- 新增核心测试：11/11 通过，包括安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序、变量执行入口和 Recipe。
 - `Sigil` 应用目标：在 Qt 6.7.3、Python 3.11 的 clean CMake tree 中完整编译、链接及 Python bundle verification 通过。
 - 全量 CTest：50 项中 47 项通过；失败的 `zh_cn_translation_coverage`、`zh_tw_translation_coverage`、`ja_translation_coverage` 均为本分支开始实现前已经存在的翻译目录缺失/陈旧项及 `PluginRunner.cpp` 未翻译字面量，本里程碑未修改相关源文件或 locale 目录。
 - `git diff --check`：通过。
 
 ### 下一阶段门禁
 
-- PR-05 必须先固定 recipe schema、大小限制、重复 id 与 SearchEditor `PS` 导入警告，才能进入批处理接口。
+- PR-05 门禁已满足：recipe schema、大小限制、重复 id 与 SearchEditor `PS` 导入警告均已有测试。
 - PR-06 必须证明：worker 只修改内存 working-text map；每个变更资源最多一次可撤销写回；Dry-Run 与 Apply 各自重跑完整 stage；XML/checkpoint/conflict 任一失败均为零发布。
 - PR-07 前不开放 feature flag；引入 UI 时必须同步补齐三语言目录，否则现有 translation coverage 门禁会继续失败。
 
@@ -1104,7 +1105,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 - **依赖**：PR-03
 - **描述**：导入默认关闭变量展开；不改 `\v`；bookpath frames；未参与/空捕获；duplicate-name 拒绝；resolver 值不二次解释。
 
-### PR-05：Recipe JSON + `PS` 导入
+### PR-05：Recipe JSON + `PS` 导入（已完成）
 
 - **标题**：`RegexRecipeStore JSON + import from SearchEditorModelPlus`
 - **文件**：`RegexRecipeStore.*`、`tests/regex_recipe_store_test.cpp`
