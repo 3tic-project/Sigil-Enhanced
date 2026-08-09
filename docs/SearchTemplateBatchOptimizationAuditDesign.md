@@ -3,7 +3,7 @@
 > 状态：Implemented v1 / audited（兼容回退见 1.1）
 > 日期：2026-08-09
 > 审计基线：`de0ea00e0`（`Add BookLive paragraph normalizer`）
-> 实施范围：`9290e4de3` 至 `92ffa2dd7`
+> 实施范围：`9290e4de3` 至 `6289416cd`
 > 上位路线：`../todo/Sigil-Enhanced-Development-Plan.md` 第 5 节
 > 本文边界：只设计“已保存搜索模板的 Replace All 批处理”；单次交互式 Find/Replace、Dry Run 和 Replace Current 暂不迁移。
 
@@ -17,7 +17,7 @@
 2. 把搜索条目编译为与 UI 解耦的不可变规则 DTO。
 3. 所有规则按原顺序作用于 staging text；分析阶段不调用 `Resource::SetText()`。
 4. 全部规则成功后，只创建一个非变异式恢复快照。
-5. 每个实际变化的资源最多调用一次 `SetText()`。
+5. 每个实际变化的资源最多调用一次 `SetTextAsUndoableEdit()`，并形成一个撤销步骤。
 6. Book modified、标签页刷新和 Preview 更新在提交阶段汇总。
 7. 任意编译、Python、取消、冲突或 checkpoint 错误都必须发生在正式写回前，并保证零资源写入。
 
@@ -284,7 +284,7 @@ CheckpointResult MainWindow::CreateRecoverySnapshot(
 
 1. 进入不可取消的短提交段。
 2. 再次执行 lightweight fingerprint precondition。
-3. 按稳定资源顺序，对每个 changed resource 获取写锁并调用一次 `SetText(stagedText)`。
+3. 按稳定资源顺序，对每个 changed resource 获取写锁并调用一次 `SetTextAsUndoableEdit(stagedText)`。
 4. 校验 `GetText() == stagedText`；若异常，使用保留的 original text 回滚已应用资源并报告 fatal error。
 5. 仅调用一次 `Book::SetModified()`。
 6. 对 changed open tabs 汇总刷新；同一 tab 最多一次。当前 tab 的 `ContentChangedExternally()` 最多一次。
@@ -373,7 +373,7 @@ CheckpointResult MainWindow::CreateRecoverySnapshot(
 - 批处理期间改变 UI selection 不影响 snapshot；
 - 0 match：`SetText=0`、`Modified=0`、checkpoint=0；
 - N 条规则只修改同一资源：`SetText=1`、该 tab Preview update ≤ 1；
-- 多资源：`SetText == distinct changed resources`；
+- 多资源：`undoable resource writes == distinct changed resources`；
 - 一组只 `SaveTabData=1`、recovery snapshot ≤ 1、Book modified ≤ 1；
 - checkpoint 失败、冲突、取消、Python 失败均为零写入；
 - 搜索完成状态只在 commit 成功后改变；
@@ -405,7 +405,7 @@ CheckpointResult MainWindow::CreateRecoverySnapshot(
 ```text
 SaveTabData calls              = 1
 recovery snapshots             = changed ? 1 : 0
-SetText calls                  <= distinct changed resources
+undoable resource writes      <= distinct changed resources
 Modified signals               <= distinct changed resources
 current-tab external refreshes <= 1
 final text and counts          = legacy baseline
@@ -493,7 +493,7 @@ final text and counts          = legacy baseline
 - Marked Text：整组 legacy fallback；
 - Python：完整支持前整组 fallback，不混合执行；
 - checkpoint：新增非变异式 recovery snapshot，禁止直接把现有 `RepoCommit()` 放到 staging 后；
-- commit：每个 changed resource 一次 `SetText()`，不立即进行第二次全书写盘；
+- commit：每个 changed resource 一次 `SetTextAsUndoableEdit()`，不立即进行第二次全书写盘；
 - compatibility：最终文本、每规则 replacement count、资源顺序是硬约束。
 
 v1 已在明确回退边界内把 `FindReplace::ReplaceAllSearch()` 和 `FindReplacePlus::ReplaceAllSearch()` 切换到新 runner。扩展 Python、Marked Text 或 spill 后端前，仍必须先完成对应差分和故障注入测试。
@@ -514,6 +514,7 @@ v1 已在明确回退边界内把 `FindReplace::ReplaceAllSearch()` 和 `FindRep
 | `6679316b2` | commit postcondition 回滚补强 | 当前资源写入后校验失败时也纳入逆序回滚 |
 | `861b02a9c` | 批处理失败消息翻译 | 补齐简中、繁中和日文覆盖 |
 | `92ffa2dd7` | 搜索进度事件重入防护 | 修复 Plus Replace All 运行期间重复点击/关闭窗口导致的递归与析构 crash |
+| `6289416cd` | 搜索写回保留撤销历史 | 成功写回按资源形成一个 undo command，保留更早的编辑历史 |
 
 ### 14.2 新调用链
 
@@ -531,7 +532,7 @@ SearchEditor / SearchEditorPlus / Automate
   → CreateRecoveryCheckpoint（仅有实际变化时一次）
     → 隔离临时树，不写 live Resource、OPF 或工作目录
   → second conflict check
-  → unique changed resource SetText（每资源一次）
+  → unique changed resource SetTextAsUndoableEdit（每资源一个撤销步骤）
   → Book.SetModified（一次）
   → current tab external refresh（至多一次）
 → 整批成功后 RecordEntryAsCompleted
@@ -545,7 +546,7 @@ SearchEditor / SearchEditorPlus / Automate
 | replacement count 与 changed 分离 | same-text replacement 测试：count=2、changed=0 | 通过 |
 | staging 失败零发布 | 前序成功、后序故意失败时 `changedTexts` 仍为空 | 通过 |
 | cancel/missing target fail-closed | runner cancellation、missing-path 用例 | 通过 |
-| checkpoint 失败前零资源写入 | coordinator 在第一个正式 `SetText()` 前完成 checkpoint | 结构审计通过 |
+| checkpoint 失败前零资源写入 | coordinator 在第一个正式 `SetTextAsUndoableEdit()` 前完成 checkpoint | 结构审计通过 |
 | checkpoint 不变异 live book | temp tree 从已加载文本/磁盘副本构造；UUID 只读，缺失即失败 | 结构审计通过 |
 | 每 changed resource 最多一次写回 | `changedTexts` 按 bookpath 唯一；`commitOrder` 用 `QSet` 去重 | 结构审计通过 |
 | 冲突不覆盖外部修改 | checkpoint 前后各比较 original full text，提交锁内再次比较 | 通过 |
@@ -573,7 +574,7 @@ wall-clock 只衡量 staging runner，不伪装成完整 GUI legacy 对比；主
 - `search_batch_runner`：通过；
 - `search_batch_benchmark`：通过；
 - `booklive_paragraph_normalizer`：通过，确认本次性能改造未回归 BookLive 插件；
-- 全量 CTest：39 项中 36 项通过；3 个语言覆盖检查仍失败。
+- 全量 CTest：41 项中 38 项通过；3 个语言覆盖检查仍失败。
 
 新增的 `FindReplace` / `FindReplacePlus` 批处理错误消息已在简中、繁中、日文目录补齐，复跑后不再出现在 missing-source 清单。剩余 3 个失败均为本批处理范围外的既有翻译目录债务：BookBrowser overwrite 消息、DryRunReplace 两条消息、OPF duplicate-path 消息、若干 stale source，以及 PluginRunner 未翻译 UI literal。它们不影响本次功能测试和链接结果，未在本提交中扩大范围处理。
 
@@ -604,6 +605,33 @@ crash 栈中可见 7 层 `ReplaceInAllFIlesPlus()`、1 层 `CountInFilesPlus()`�
 - 普通/Plus 的 Find、Replace、Replace All、Count 按钮槽统一检查并维护 `m_SearchRunning`，程序化递归激活也会被拒绝；
 - 新增 `search_operations_reentrancy` 源契约测试，禁止重新引入无过滤 `qApp->processEvents()`，并检查 8 个按钮槽均有 busy guard；
 - Sigil Debug 完整编译、链接通过；新增重入测试、batch runner、1000 × 50 benchmark 和 BookLive normalizer 回归通过；
-- 全量 CTest 36/39 通过，仍只有第 14.5 节记录的 3 个既有翻译覆盖失败。
+- 全量 CTest 38/41 通过，仍只有第 14.5 节记录的 3 个既有翻译覆盖失败。
 
 修复后，搜索循环不会再从进度刷新入口接收造成堆栈中该模式的 mouse-release/window-close 重入；重复输入最多在外层操作结束、对象状态恢复后由正常事件循环处理。
+
+## 16. Undo 可用性复审
+
+用户复测发现保存搜索批处理结束后 Undo 不可用。根因不是 Undo action 的菜单状态：`TextTab` / `FlowTab` 已从当前 `QTextDocument::isUndoAvailable()` 读取状态，且 `undoAvailable` 信号会触发 MainWindow 刷新。真正的问题是搜索写回调用 `TextResource::SetText()`，其 GUI 线程实现最终调用 `QTextDocument::setPlainText()`；Qt 会把它视为重新装载全文并清空既有 undo/redo stack。
+
+该问题同时影响两类路径：
+
+- 新 coordinator 的成功提交，因此即使 Current File 只写回一次，Undo 仍会消失；
+- legacy 普通/Plus 跨资源替换和 Python function replacement，它们同样通过 `SetText()` 重建全文。
+
+修复新增了明确区分“装载内容”和“用户可撤销编辑”的写接口：
+
+1. `TextDocument::replaceTextAsSingleUndoStep()` 用 `QTextCursor::Document` selection 和单个 edit block 替换全文；同文输入直接 no-op；
+2. `TextResource::SetTextAsUndoableEdit()` 只允许 GUI 线程调用，不经过 `setPlainText()`；
+3. `HTMLResource` override 保留 `TextChanging`、caret restoration、linked-resource tracking 和 Preview 更新语义；
+4. 普通、Plus、Python 的跨资源搜索，以及 staged saved-search commit，全部切换到 undoable 接口；
+5. coordinator 在多条规则都修改同一资源时仍只发布最终文本一次，因此该资源只增加一个撤销步骤。
+
+Undo 的原子性边界是单个 `TextResource`，与 Sigil 当前按标签页/文档维护 undo stack 的架构一致。当前标签页可立即撤销本资源的整批最终变化；其他已修改资源各自在自己的文档中保留一个撤销步骤。这不是跨多个资源的全局原子 Undo，整书级回退仍由批处理前 recovery checkpoint 提供。
+
+唯一例外是 coordinator 在极少见的 commit postcondition 失败后执行的 fail-safe rollback：该失败路径继续用装载式 `SetText(original)` 强制恢复已发布资源，并可能清空相应文档的 undo stack。因为批次最终报告失败且不保留用户可见修改，此处优先保证原文恢复；正常成功路径不经过该分支。
+
+新增测试门禁：
+
+- `text_document_undo`：验证一次 undo 精确恢复批处理前全文和 clean state，更早的 undo 历史仍可用，redo 可恢复批处理结果，NBSP/换行逐字符保真，同文写入不产生空 command；
+- `search_undo_contract`：验证普通、Plus、Python 和 coordinator 的成功写回均使用 undoable 接口，并保留 HTML 通知链；
+- 定向搜索/BookLive 回归 6/6 通过；Sigil Debug 完整编译链接通过；全量 CTest 38/41 通过，仍只有第 14.5 节所列 3 个既有翻译覆盖失败。

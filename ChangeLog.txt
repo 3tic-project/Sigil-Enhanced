@@ -1,6 +1,7 @@
 Sigil-Enhanced-2.8.1.E6
    Bug Fixes
      - Prevented Find/Replace progress updates from accepting recursive button clicks or window-close input while a cross-file search is running, avoiding a MainWindow destruction crash in Plus Replace All.
+     - Preserved undo history for ordinary, Plus, Python-function, and staged saved-search replacements, recording each successful resource write as one undo step.
      - Made saved-search recovery checkpoints materialize from an isolated snapshot without rewriting live XHTML, OPF, or working files, and made Automate stop when a saved-search batch fails.
      - Removed the Sigil MCP transaction commit confirmation dialog; commit now revalidates and applies directly while preserving preview, validation, checkpoint, and rollback safeguards.
      - Fixed live MCP text updates that could invalidate an open editor's caret hierarchy and crash Sigil while saving a resource.
