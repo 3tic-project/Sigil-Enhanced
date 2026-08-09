@@ -61,6 +61,7 @@ struct MatchOptions
     uint32_t matchLimit = 1000000;
     uint32_t depthLimit = 10000;
     uint32_t heapLimitKiB = 32 * 1024;
+    int maxMatches = -1;
     std::function<bool()> isCancelled;
 };
 

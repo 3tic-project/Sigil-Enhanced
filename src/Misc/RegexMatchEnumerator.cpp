@@ -168,9 +168,10 @@ MatchResult RegexMatchEnumerator::enumerate(const QString& text, const MatchOpti
                                   .arg(text.size());
         return result;
     }
-    if (options.matchLimit == 0 || options.depthLimit == 0 || options.heapLimitKiB == 0) {
+    if (options.matchLimit == 0 || options.depthLimit == 0 || options.heapLimitKiB == 0 ||
+        options.maxMatches == 0 || options.maxMatches < -1) {
         result.error = MatchError::InternalError;
-        result.errorMessage = QStringLiteral("PCRE2 limits must be greater than zero");
+        result.errorMessage = QStringLiteral("Invalid PCRE2 enumeration limit");
         return result;
     }
 
@@ -250,6 +251,10 @@ MatchResult RegexMatchEnumerator::enumerate(const QString& text, const MatchOpti
         const bool isEmpty = matchStart == matchEnd;
         if (!isEmpty || options.allowEmpty) {
             result.matches.append(match);
+            if (options.maxMatches > 0 && result.matches.size() >= options.maxMatches) {
+                result.success = true;
+                return result;
+            }
         }
         startOffset = matchEnd;
         retryNonEmptyAtSameOffset = isEmpty;

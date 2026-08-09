@@ -42,6 +42,31 @@ target_compile_features(presearch_progress_test PRIVATE cxx_std_17)
 add_test(NAME presearch_progress COMMAND presearch_progress_test)
 set_tests_properties(presearch_progress PROPERTIES TIMEOUT 30)
 
+add_executable(regex_secondary_match_test
+    regex_secondary_match_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+)
+
+target_include_directories(regex_secondary_match_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_secondary_match_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_secondary_match_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_secondary_match COMMAND regex_secondary_match_test)
+set_tests_properties(regex_secondary_match PROPERTIES TIMEOUT 30)
+
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp

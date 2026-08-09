@@ -77,6 +77,9 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/FormatterEnhancer.h
     BuiltinPlugins/KfxParagraphNormalizer.cpp
     BuiltinPlugins/KfxParagraphNormalizer.h
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
     )
 
 set( CHINESE_CONVERSION_FILES

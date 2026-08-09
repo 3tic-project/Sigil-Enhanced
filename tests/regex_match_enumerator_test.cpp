@@ -109,6 +109,16 @@ void TestRangesAndEmptySubject()
             "ranges must not split UTF-16 surrogate pairs");
 }
 
+void TestMatchCountBound()
+{
+    RegexSearch::RegexMatchEnumerator enumerator(QStringLiteral("."));
+    RegexSearch::MatchOptions options;
+    options.maxMatches = 1;
+    const RegexSearch::MatchResult result = enumerator.enumerate(QStringLiteral("abcdef"), options);
+    Require(result.success && result.matches.size() == 1 && result.matches.first().start == 0,
+            "maxMatches must stop enumeration after the requested number of matches");
+}
+
 void TestCompileCancellationAndMatchLimitErrors()
 {
     RegexSearch::RegexMatchEnumerator invalid(QStringLiteral("("));
@@ -151,6 +161,7 @@ int main()
     TestEmptyAlternativeRetriesNonEmptyAtSameOffset();
     TestUnicodeAndCrLfAdvance();
     TestRangesAndEmptySubject();
+    TestMatchCountBound();
     TestCompileCancellationAndMatchLimitErrors();
     std::cout << "regex match enumerator tests passed\n";
     return 0;
