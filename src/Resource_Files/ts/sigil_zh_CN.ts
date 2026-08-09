@@ -1760,6 +1760,8 @@ if a sans-serif font-family specified in your CSS</source>
         <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements.</source>
         <translation>将可自动安全处理的 BookLive/EBPAJ div 伪段落叶转换为保留样式的 p 元素。</translation>
     </message>
+    <message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>对所有文本资源运行指定的正则工作台方案。</translation></message>
+    <message><source>[Regex recipe name or absolute path here]</source><translation>[在此输入正则方案名称或绝对路径]</translation></message>
 </context>
 <context>
     <name>Book</name>
@@ -2273,6 +2275,7 @@ A file with this name already exists in the book.</source>
         <translation>无法添加“%1”
 书中已存在同名文件。</translation>
     </message>
+    <message><source>Overwrite of image "%1" failed.</source><translation>覆盖图像“%1”失败。</translation></message>
 </context>
 <context>
     <name>CPCompare</name>
@@ -3905,6 +3908,8 @@ other end to continue searching.</source>
         <source>After</source>
         <translation>之后</translation>
     </message>
+    <message><source>... Creating Table</source><translation>... 正在创建表格</translation></message>
+    <message><source>Dry Run Replace-All</source><translation>试运行全部替换</translation></message>
 </context>
 <context>
     <name>EditRO</name>
@@ -15353,6 +15358,14 @@ Single nested visual blocks preserved: %6</source>
         <source>No BookLive paragraph files were changed.</source>
         <translation>没有 BookLive 段落文件被修改。</translation>
     </message>
+    <message><source>Advanced Regex Workbench</source><translation>高级正则工作台</translation></message>
+    <message><source>Advanced Regex Workbench...</source><translation>高级正则工作台...</translation></message>
+    <message><source>Regex recipe %1 applied %2 replacement(s) to %3 resource(s).</source><translation>正则方案 %1 已执行 %2 次替换，修改了 %3 个资源。</translation></message>
+    <message><source>Regex recipe failed: %1</source><translation>正则方案执行失败：%1</translation></message>
+    <message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正则方案执行失败：当前未载入 EPUB。</translation></message>
+    <message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正则方案执行失败：当前 EPUB 没有文本资源。</translation></message>
+    <message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>运行支持二级筛选、递归和变量的分阶段正则方案</translation></message>
+    <message><source>The current EPUB has no text resources.</source><translation>当前 EPUB 没有文本资源。</translation></message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -21304,6 +21317,8 @@ Line: %1 Column %2 - %3</source>
         <source>Invalid or missing</source>
         <translation>无效或缺失</translation>
     </message>
+    <message><source>Rule %1</source><translation>规则 %1</translation></message>
+    <message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF 清单中包含重复的文件路径。请编辑 OPF 文件的清单并移除重复项。</translation></message>
 </context>
 <context>
     <name>RERenamer</name>
@@ -26086,31 +26101,6 @@ Continue using the requested filename?</source>
         <source>black diamond suit</source>
         <translation>黑方块♦</translation>
     </message>
-</context>
-<context><name>AutomateEditor</name>
-<message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>对所有文本资源运行指定的正则工作台方案。</translation></message>
-<message><source>[Regex recipe name or absolute path here]</source><translation>[在此输入正则方案名称或绝对路径]</translation></message>
-</context>
-<context><name>BookBrowser</name>
-<message><source>Overwrite of image "%1" failed.</source><translation>覆盖图像“%1”失败。</translation></message>
-</context>
-<context><name>DryRunReplace</name>
-<message><source>... Creating Table</source><translation>... 正在创建表格</translation></message>
-<message><source>Dry Run Replace-All</source><translation>试运行全部替换</translation></message>
-</context>
-<context><name>MainWindow</name>
-<message><source>Advanced Regex Workbench</source><translation>高级正则工作台</translation></message>
-<message><source>Advanced Regex Workbench...</source><translation>高级正则工作台...</translation></message>
-<message><source>Regex recipe %1 applied %2 replacement(s) to %3 resource(s).</source><translation>正则方案 %1 已执行 %2 次替换，修改了 %3 个资源。</translation></message>
-<message><source>Regex recipe failed: %1</source><translation>正则方案执行失败：%1</translation></message>
-<message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正则方案执行失败：当前未载入 EPUB。</translation></message>
-<message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正则方案执行失败：当前 EPUB 没有文本资源。</translation></message>
-<message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>运行支持二级筛选、递归和变量的分阶段正则方案</translation></message>
-<message><source>The current EPUB has no text resources.</source><translation>当前 EPUB 没有文本资源。</translation></message>
-</context>
-<context><name>QObject</name>
-<message><source>Rule %1</source><translation>规则 %1</translation></message>
-<message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF 清单中包含重复的文件路径。请编辑 OPF 文件的清单并移除重复项。</translation></message>
 </context>
 <context><name>RegexWorkbenchDialog</name>
 <message><source>%1 copy</source><translation>%1 副本</translation></message>

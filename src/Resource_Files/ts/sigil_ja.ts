@@ -1760,6 +1760,8 @@ if a sans-serif font-family specified in your CSS</source>
         <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements.</source>
         <translation>自動処理して安全な BookLive/EBPAJ の div 疑似段落リーフを、スタイルを保持した p 要素へ変換します。</translation>
     </message>
+    <message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>指定した正規表現ワークベンチのレシピをすべてのテキストリソースに実行します。</translation></message>
+    <message><source>[Regex recipe name or absolute path here]</source><translation>[正規表現レシピ名または絶対パスを入力]</translation></message>
 </context>
 <context>
     <name>Book</name>
@@ -2273,6 +2275,7 @@ A file with this name already exists in the book.</source>
         <translation>「%1」を追加できません。
 同じ名前のファイルが書籍内にすでに存在します。</translation>
     </message>
+    <message><source>Overwrite of image "%1" failed.</source><translation>画像「%1」の上書きに失敗しました。</translation></message>
 </context>
 <context>
     <name>CPCompare</name>
@@ -3904,6 +3907,8 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
         <source>After</source>
         <translation>後</translation>
     </message>
+    <message><source>... Creating Table</source><translation>... テーブルを作成しています</translation></message>
+    <message><source>Dry Run Replace-All</source><translation>すべて置換をドライラン</translation></message>
 </context>
 <context>
     <name>EditRO</name>
@@ -15350,6 +15355,14 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <source>Focus changed to Clips window.</source>
         <translation>クリップウィンドウにフォーカスを変更</translation>
     </message>
+    <message><source>Advanced Regex Workbench</source><translation>高度な正規表現ワークベンチ</translation></message>
+    <message><source>Advanced Regex Workbench...</source><translation>高度な正規表現ワークベンチ...</translation></message>
+    <message><source>Regex recipe %1 applied %2 replacement(s) to %3 resource(s).</source><translation>正規表現レシピ %1 は %2 件を置換し、%3 個のリソースを変更しました。</translation></message>
+    <message><source>Regex recipe failed: %1</source><translation>正規表現レシピに失敗しました：%1</translation></message>
+    <message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正規表現レシピに失敗しました：EPUB が読み込まれていません。</translation></message>
+    <message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正規表現レシピに失敗しました：現在の EPUB にテキストリソースがありません。</translation></message>
+    <message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>二次検索、再帰、変数に対応した段階的な正規表現レシピを実行します</translation></message>
+    <message><source>The current EPUB has no text resources.</source><translation>現在の EPUB にテキストリソースがありません。</translation></message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -21302,6 +21315,8 @@ Line: %1 Column %2 - %3</source>
         <source>Invalid or missing</source>
         <translation>無効または欠落</translation>
     </message>
+    <message><source>Rule %1</source><translation>ルール %1</translation></message>
+    <message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF マニフェストに重複したファイルパスがあります。OPF ファイルのマニフェストを編集して重複を削除してください。</translation></message>
 </context>
 <context>
     <name>RERenamer</name>
@@ -26084,31 +26099,6 @@ Continue using the requested filename?</source>
         <source>black diamond suit</source>
         <translation>黒ダイヤ</translation>
     </message>
-</context>
-<context><name>AutomateEditor</name>
-<message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>指定した正規表現ワークベンチのレシピをすべてのテキストリソースに実行します。</translation></message>
-<message><source>[Regex recipe name or absolute path here]</source><translation>[正規表現レシピ名または絶対パスを入力]</translation></message>
-</context>
-<context><name>BookBrowser</name>
-<message><source>Overwrite of image "%1" failed.</source><translation>画像「%1」の上書きに失敗しました。</translation></message>
-</context>
-<context><name>DryRunReplace</name>
-<message><source>... Creating Table</source><translation>... テーブルを作成しています</translation></message>
-<message><source>Dry Run Replace-All</source><translation>すべて置換をドライラン</translation></message>
-</context>
-<context><name>MainWindow</name>
-<message><source>Advanced Regex Workbench</source><translation>高度な正規表現ワークベンチ</translation></message>
-<message><source>Advanced Regex Workbench...</source><translation>高度な正規表現ワークベンチ...</translation></message>
-<message><source>Regex recipe %1 applied %2 replacement(s) to %3 resource(s).</source><translation>正規表現レシピ %1 は %2 件を置換し、%3 個のリソースを変更しました。</translation></message>
-<message><source>Regex recipe failed: %1</source><translation>正規表現レシピに失敗しました：%1</translation></message>
-<message><source>Regex recipe failed: no EPUB is currently loaded.</source><translation>正規表現レシピに失敗しました：EPUB が読み込まれていません。</translation></message>
-<message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正規表現レシピに失敗しました：現在の EPUB にテキストリソースがありません。</translation></message>
-<message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>二次検索、再帰、変数に対応した段階的な正規表現レシピを実行します</translation></message>
-<message><source>The current EPUB has no text resources.</source><translation>現在の EPUB にテキストリソースがありません。</translation></message>
-</context>
-<context><name>QObject</name>
-<message><source>Rule %1</source><translation>ルール %1</translation></message>
-<message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF マニフェストに重複したファイルパスがあります。OPF ファイルのマニフェストを編集して重複を削除してください。</translation></message>
 </context>
 <context><name>RegexWorkbenchDialog</name>
 <message><source>%1 copy</source><translation>%1 のコピー</translation></message>
