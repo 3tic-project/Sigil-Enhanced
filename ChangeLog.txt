@@ -1,8 +1,26 @@
-Sigil-Enhanced-2.8.1.E6
+Sigil-Enhanced-2.8.1.E7
    Bug Fixes
      - Prevented Find/Replace progress updates from accepting recursive button clicks or window-close input while a cross-file search is running, avoiding a MainWindow destruction crash in Plus Replace All.
      - Preserved undo history for ordinary, Plus, Python-function, and staged saved-search replacements, recording each successful resource write as one undo step.
-     - Made saved-search recovery checkpoints materialize from an isolated snapshot without rewriting live XHTML, OPF, or working files, and made Automate stop when a saved-search batch fails.
+     - Made saved-search recovery checkpoints materialize from an isolated snapshot without rewriting live XHTML, OPF, or working files; batch failures now roll back applied resources and stop Automate.
+     - Migrated legacy Japanese quote-correction search entries whose old replacement syntax could create invalid XML names.
+     - Clamped Book Browser image hover previews to the available screen and restored a new main window when the macOS Dock icon is clicked with no visible windows.
+     - Grouped duplicate manifest-path load warnings and synchronized late upstream Sigil 2.8.1 fixes.
+
+   New Features
+     - Added Advanced Regex Workbench with secondary regex filtering, bounded recursive replacement, named capture variables, capture-only rules, versioned recipes, and Automate integration.
+     - Made the regex workbench a modeless top-level window with current-book title synchronization, multi-scope text-resource support, precise dry-run navigation, staged XML validation, checkpoints, cancellation, and one undoable write per changed resource.
+     - Staged ordinary and Plus saved-search Replace All groups in memory, preserving rule order while saving editor state once, creating at most one recovery checkpoint, and writing each changed resource once.
+     - Added BookLive/EBPAJ div-paragraph analysis and normalization with style-preserving in-place p conversion, manual short-page review, full-book checkpoints, and Automate commands.
+     - Renamed paragraph-normalizer menu entries to identify Kobo BR, Kindle KFX, and BookLive sources and to distinguish Current File from Whole Book operations.
+
+   Build/Testing
+     - Integrated the vendored Lexbor CSS parser and related late upstream parser, singleton-lifecycle, Book Browser refresh, media-type, and macOS improvements.
+     - Fixed direct Sigil target dependencies so IDE Build Before Run configurations generate required resources reliably.
+     - Expanded CTest coverage for saved-search staging and rollback, undo preservation, BookLive normalization, regex workbench behavior and UI contracts, EPUB-backed recipes, and complete Simplified Chinese, Traditional Chinese, and Japanese catalogs.
+
+Sigil-Enhanced-2.8.1.E6
+   Bug Fixes
      - Removed the Sigil MCP transaction commit confirmation dialog; commit now revalidates and applies directly while preserving preview, validation, checkpoint, and rollback safeguards.
      - Fixed live MCP text updates that could invalidate an open editor's caret hierarchy and crash Sigil while saving a resource.
      - Fixed MCP plugin archive installation and stale session discovery on macOS.
@@ -12,8 +30,6 @@ Sigil-Enhanced-2.8.1.E6
      - Applied macOS Tahoe dialog and HTML TOC busy-cursor workarounds.
 
    New Features
-     - Staged ordinary and Plus saved-search Replace All groups in memory, preserving rule order while saving editor state once, creating at most one recovery checkpoint, and writing each changed resource once.
-     - Added BookLive/EBPAJ div-paragraph analysis and normalization with style-preserving in-place p conversion, manual short-page review, full-book checkpoints, and Automate commands.
      - Added an installable MCP book-session adapter with authenticated loopback Streamable HTTP, a stdio transport proxy, live Book/editor context, revision-safe edits, and previewed multi-resource transactions for LLM hosts.
      - Added chunked text operations and out-of-band file imports for large text, image, font, stylesheet, and other EPUB resources without repeating their contents through the LLM context.
      - Added import preflight, transaction status, checkpoint, rollback, and explicit EPUB layout guidance for reliable long-running agent workflows.

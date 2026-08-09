@@ -8,14 +8,18 @@ Details
 =======
 
 * Ensure Sigil builds and runs.
-* Write release announcement.
+* Identify the previous enhanced release tag and audit the full `previous-tag..HEAD` range.
+* Write the release announcement and `docs/ReleaseNotes-<version>.md` from that range.
+* Add a new top section to `ChangeLog.txt`; never append post-release work to an already tagged version section.
+* Link the current release notes from `README.md`.
 * Update translations.
 * Ensure Qt is at the latest version on all OSs packages will be built for.
-* Bump version in CMakeLists.txt.
-* Bump version in version.xml.
-* Set release date in Changelog.txt.
+* Bump the enhanced version in `CMakeLists.txt`.
+* Bump `version.xml` to the matching dotted enhanced version.
+* Verify the CMake, `version.xml`, ChangeLog, release-notes, and tag versions agree.
+* Record the release date in the release notes (and in `ChangeLog.txt` if its format includes dates).
 * Commit version changes but do not push them.
-* Tag version.
+* Tag version using the established `vX.Y.ZEN` form.
 * Build source package $ git archive --prefix Sigil-x.y.z/ -o ../Sigil-x.y.z-Code.zip HEAD
 * Build packages.
   * OS X

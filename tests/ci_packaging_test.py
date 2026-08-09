@@ -11,6 +11,7 @@ WORKFLOW = ROOT / ".github" / "workflows" / "package-enhanced.yml"
 SCRIPT = ROOT / "ci_scripts" / "prepare_release_assets.py"
 CHANGELOG = ROOT / "ChangeLog.txt"
 VERSION_XML = ROOT / "version.xml"
+README = ROOT / "README.md"
 
 
 def load_release_assets_module():
@@ -97,6 +98,22 @@ class CiPackagingTest(unittest.TestCase):
             CHANGELOG.read_text(encoding="utf-8").startswith(
                 "Sigil-Enhanced-{0}\n".format(update_version)
             )
+        )
+        release_notes = (
+            ROOT / "docs" / "ReleaseNotes-{0}.md".format(release_version)
+        )
+        self.assertTrue(release_notes.is_file())
+        self.assertTrue(
+            release_notes.read_text(encoding="utf-8").startswith(
+                "# Sigil-Enhanced {0} 更新说明\n".format(release_version)
+            )
+        )
+        readme = README.read_text(encoding="utf-8")
+        self.assertIn(
+            "当前开发版本：**{0}**".format(release_version), readme
+        )
+        self.assertIn(
+            "docs/ReleaseNotes-{0}.md".format(release_version), readme
         )
 
 

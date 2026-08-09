@@ -153,16 +153,16 @@ Tag trigger:
 - Pushing tags that match `v*` or `2.*` builds Windows x64 and both macOS
   packages.
 - The tag, after removing one optional leading `v`, must exactly match the CMake
-  version. For example, CMake version `2.8.1E6` accepts `v2.8.1E6` and
-  `2.8.1E6`; a mismatched tag fails before package runners start.
+  version. For example, CMake version `2.8.1E7` accepts `v2.8.1E7` and
+  `2.8.1E7`; a mismatched tag fails before package runners start.
 - Windows x86 is skipped for tag builds until a maintained 32-bit Qt runtime
   source is available.
 
 Recommended release command:
 
 ```sh
-git tag -a v2.8.1E6 -m "Sigil-Enhanced 2.8.1E6"
-git push enhanced v2.8.1E6
+git tag -a v2.8.1E7 -m "Sigil-Enhanced 2.8.1E7"
+git push enhanced v2.8.1E7
 ```
 
 ## GitHub Release Publishing
