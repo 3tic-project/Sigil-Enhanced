@@ -291,17 +291,42 @@ require(
     "Automate editor must expose and persist the recipe parameter",
 )
 for documented_contract in (
-    "Enhancement > Advanced Regex Workbench...",
+    "增强 > 高级正则工作台...",
+    "试运行",
+    "应用",
+    "二级正则匹配时接受",
+    "重复执行直到不再有匹配",
+    "仅捕获变量（不替换）",
+    "变量作用域",
+    "使用最后一个值",
     "${var:name}",
-    "Capture variables only",
     "RunRegexWorkbenchRecipe",
-    "Dry Run",
-    "Checkpoint",
-    "Undo",
+    "检查点",
+    "撤销",
 ):
     require(
         documented_contract in user_guide,
         f"user guide is missing contract: {documented_contract}",
     )
+for example_number in ("一", "二", "三", "四", "五", "六"):
+    require(
+        f"### 示例{example_number}：" in user_guide,
+        f"user guide is missing example {example_number}",
+    )
+for forbidden_content in (
+    "Book Browser",
+    "Code View",
+    "```mermaid",
+    "flowchart",
+    "流程图",
+):
+    require(
+        forbidden_content not in user_guide,
+        f"user guide contains forbidden content: {forbidden_content}",
+    )
+require(
+    re.search(r"[\u2600-\u27BF\U0001F300-\U0001FAFF]", user_guide) is None,
+    "user guide must not contain emoji",
+)
 
 print("regex workbench UI and automation contract passed")
