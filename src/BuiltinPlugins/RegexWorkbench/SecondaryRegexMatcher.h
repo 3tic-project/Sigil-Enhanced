@@ -15,6 +15,8 @@
 #ifndef SECONDARY_REGEX_MATCHER_H
 #define SECONDARY_REGEX_MATCHER_H
 
+#include <memory>
+
 #include "BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h"
 
 namespace BuiltinPlugins
@@ -25,9 +27,23 @@ namespace RegexWorkbench
 class SecondaryRegexMatcher final
 {
 public:
+    explicit SecondaryRegexMatcher(const RegexWorkbenchRule& rule);
+    ~SecondaryRegexMatcher();
+
+    SecondaryRegexMatcher(const SecondaryRegexMatcher&) = delete;
+    SecondaryRegexMatcher& operator=(const SecondaryRegexMatcher&) = delete;
+
+    SecondaryMatchResult enumerate(
+        const QString& text,
+        RegexSearch::MatchOptions options = RegexSearch::MatchOptions());
+
     static SecondaryMatchResult Enumerate(const RegexWorkbenchRule& rule,
                                           const QString& text,
                                           RegexSearch::MatchOptions options = RegexSearch::MatchOptions());
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 }

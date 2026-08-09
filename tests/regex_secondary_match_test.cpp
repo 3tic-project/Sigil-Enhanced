@@ -60,6 +60,13 @@ void TestNoneAndPreSearchModes()
     Require(noneResult.success && noneResult.candidates.size() == 2,
             "None mode must enumerate all primary matches");
 
+    SecondaryRegexMatcher prepared(none);
+    const SecondaryMatchResult preparedFirst = prepared.enumerate(QStringLiteral("one"));
+    const SecondaryMatchResult preparedSecond = prepared.enumerate(QStringLiteral("two three"));
+    Require(preparedFirst.success && preparedFirst.candidates.size() == 1 &&
+                preparedSecond.success && preparedSecond.candidates.size() == 2,
+            "a prepared matcher must safely reuse compiled patterns across current-text enumerations");
+
     RegexWorkbenchRule presearch = BaseRule();
     presearch.secondaryMode = SecondaryMode::PreSearch;
     presearch.secondaryPattern = QStringLiteral("<keep>(.*?)</keep>");

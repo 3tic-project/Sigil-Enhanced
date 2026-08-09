@@ -38,6 +38,9 @@ struct PreSearchRangeResult
 PreSearchRangeResult EnumeratePreSearchRanges(const QString& pattern,
                                               const QString& text,
                                               MatchOptions options = MatchOptions());
+PreSearchRangeResult EnumeratePreSearchRanges(RegexMatchEnumerator& enumerator,
+                                              const QString& text,
+                                              MatchOptions options = MatchOptions());
 
 }
 

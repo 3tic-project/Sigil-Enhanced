@@ -13,6 +13,8 @@
 
 #include "BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h"
 
+#include <memory>
+
 #include "Misc/PreSearchMatcher.h"
 
 namespace BuiltinPlugins
@@ -96,24 +98,59 @@ void AppendPrimaryCandidates(const RegexSearch::MatchResult& matches,
 
 }
 
-SecondaryMatchResult SecondaryRegexMatcher::Enumerate(const RegexWorkbenchRule& rule,
-                                                      const QString& text,
+struct SecondaryRegexMatcher::Impl
+{
+    explicit Impl(const RegexWorkbenchRule& sourceRule) : rule(sourceRule)
+    {
+        QString validationError;
+        if (!ValidateSecondaryConfiguration(rule, validationError)) {
+            initializationFailure = ValidationFailure(validationError);
+            return;
+        }
+
+        primary = std::make_unique<RegexSearch::RegexMatchEnumerator>(rule.find);
+        if (!primary->isValid()) {
+            initializationFailure = RegexFailure(MatchStage::Primary, primary->enumerate(QString()));
+            return;
+        }
+
+        if (rule.secondaryMode != SecondaryMode::None) {
+            secondary = std::make_unique<RegexSearch::RegexMatchEnumerator>(rule.secondaryPattern);
+            if (!secondary->isValid()) {
+                initializationFailure = RegexFailure(MatchStage::Secondary,
+                                                     secondary->enumerate(QString()));
+                return;
+            }
+        }
+        valid = true;
+    }
+
+    RegexWorkbenchRule rule;
+    std::unique_ptr<RegexSearch::RegexMatchEnumerator> primary;
+    std::unique_ptr<RegexSearch::RegexMatchEnumerator> secondary;
+    bool valid = false;
+    SecondaryMatchResult initializationFailure;
+};
+
+SecondaryRegexMatcher::SecondaryRegexMatcher(const RegexWorkbenchRule& rule) :
+    m_impl(std::make_unique<Impl>(rule))
+{
+}
+
+SecondaryRegexMatcher::~SecondaryRegexMatcher() = default;
+
+SecondaryMatchResult SecondaryRegexMatcher::enumerate(const QString& text,
                                                       RegexSearch::MatchOptions options)
 {
-    QString validationError;
-    if (!ValidateSecondaryConfiguration(rule, validationError)) {
-        return ValidationFailure(validationError);
+    if (!m_impl->valid) {
+        return m_impl->initializationFailure;
     }
 
-    RegexSearch::RegexMatchEnumerator primaryEnumerator(rule.find);
-    if (!primaryEnumerator.isValid()) {
-        return RegexFailure(MatchStage::Primary, primaryEnumerator.enumerate(QString()));
-    }
-    const RegexSearch::MatchOptions primaryOptions = PrimaryOptions(rule, options);
+    const RegexSearch::MatchOptions primaryOptions = PrimaryOptions(m_impl->rule, options);
 
-    if (rule.secondaryMode == SecondaryMode::PreSearch) {
+    if (m_impl->rule.secondaryMode == SecondaryMode::PreSearch) {
         const RegexSearch::PreSearchRangeResult ranges =
-            RegexSearch::EnumeratePreSearchRanges(rule.secondaryPattern, text, options);
+            RegexSearch::EnumeratePreSearchRanges(*m_impl->secondary, text, options);
         if (!ranges.success) {
             return PreSearchFailure(ranges);
         }
@@ -123,7 +160,7 @@ SecondaryMatchResult SecondaryRegexMatcher::Enumerate(const RegexWorkbenchRule& 
             RegexSearch::MatchOptions rangeOptions = primaryOptions;
             rangeOptions.from = range.first;
             rangeOptions.to = range.second;
-            const RegexSearch::MatchResult primaryMatches = primaryEnumerator.enumerate(text, rangeOptions);
+            const RegexSearch::MatchResult primaryMatches = m_impl->primary->enumerate(text, rangeOptions);
             if (!primaryMatches.success) {
                 return RegexFailure(MatchStage::Primary, primaryMatches);
             }
@@ -133,21 +170,16 @@ SecondaryMatchResult SecondaryRegexMatcher::Enumerate(const RegexWorkbenchRule& 
         return result;
     }
 
-    const RegexSearch::MatchResult primaryMatches = primaryEnumerator.enumerate(text, primaryOptions);
+    const RegexSearch::MatchResult primaryMatches = m_impl->primary->enumerate(text, primaryOptions);
     if (!primaryMatches.success) {
         return RegexFailure(MatchStage::Primary, primaryMatches);
     }
 
     SecondaryMatchResult result;
-    if (rule.secondaryMode == SecondaryMode::None) {
+    if (m_impl->rule.secondaryMode == SecondaryMode::None) {
         AppendPrimaryCandidates(primaryMatches, result.candidates);
         result.success = true;
         return result;
-    }
-
-    RegexSearch::RegexMatchEnumerator filterEnumerator(rule.secondaryPattern);
-    if (!filterEnumerator.isValid()) {
-        return RegexFailure(MatchStage::Secondary, filterEnumerator.enumerate(QString()));
     }
 
     RegexSearch::MatchOptions filterOptions = options;
@@ -158,13 +190,13 @@ SecondaryMatchResult SecondaryRegexMatcher::Enumerate(const RegexWorkbenchRule& 
     result.candidates.reserve(primaryMatches.matches.size());
     for (const RegexSearch::Match& primary : primaryMatches.matches) {
         const QString matchText = text.mid(primary.start, primary.end - primary.start);
-        const RegexSearch::MatchResult filterMatches = filterEnumerator.enumerate(matchText, filterOptions);
+        const RegexSearch::MatchResult filterMatches = m_impl->secondary->enumerate(matchText, filterOptions);
         if (!filterMatches.success) {
             return RegexFailure(MatchStage::Secondary, filterMatches);
         }
 
         const bool filterMatched = !filterMatches.matches.isEmpty();
-        const bool keep = rule.secondaryMode == SecondaryMode::FilterAccept
+        const bool keep = m_impl->rule.secondaryMode == SecondaryMode::FilterAccept
                               ? filterMatched
                               : !filterMatched;
         if (!keep) {
@@ -182,6 +214,14 @@ SecondaryMatchResult SecondaryRegexMatcher::Enumerate(const RegexWorkbenchRule& 
 
     result.success = true;
     return result;
+}
+
+SecondaryMatchResult SecondaryRegexMatcher::Enumerate(const RegexWorkbenchRule& rule,
+                                                      const QString& text,
+                                                      RegexSearch::MatchOptions options)
+{
+    SecondaryRegexMatcher matcher(rule);
+    return matcher.enumerate(text, options);
 }
 
 }

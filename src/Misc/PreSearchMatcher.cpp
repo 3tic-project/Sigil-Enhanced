@@ -27,6 +27,14 @@ PreSearchRangeResult EnumeratePreSearchRanges(const QString& pattern,
     }
 
     RegexMatchEnumerator enumerator(pattern);
+    return EnumeratePreSearchRanges(enumerator, text, options);
+}
+
+PreSearchRangeResult EnumeratePreSearchRanges(RegexMatchEnumerator& enumerator,
+                                              const QString& text,
+                                              MatchOptions options)
+{
+    PreSearchRangeResult result;
     options.allowEmpty = false;
     const MatchResult matchResult = enumerator.enumerate(text, options);
     if (!matchResult.success) {
