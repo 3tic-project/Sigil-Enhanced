@@ -5,7 +5,7 @@
 | **文档标题** | Advanced Regex Workbench（正则增强工作台） |
 | **作者** | Sigil-Enhanced 架构组（待填） |
 | **日期** | 2026-08-09 |
-| **状态** | Draft（修订 5：PR-01–05 核心与 Recipe 实现完成；PR-06–08 待推进） |
+| **状态** | Draft（修订 6：PR-01–06 核心、Recipe 与内存批处理完成；PR-07–08 待推进） |
 | **适用仓库** | `sigil-modified` / Sigil-Enhanced |
 | **关联计划** | `todo/Sigil-Enhanced-Development-Plan.md` §4 `BookEditSession`、§5 `SearchBatchRunner` |
 | **约束文档** | `ENHANCEMENT.md` |
@@ -954,7 +954,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 
 ---
 
-## Implementation Checkpoint（修订 5）
+## Implementation Checkpoint（修订 6）
 
 ### 已落地范围
 
@@ -965,28 +965,31 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | PR-03 | 完成 | `dc95bdea9`、`e66084430` | Plus 与工作台共用 `ApplyReplacements`；递归仅 `NoMatches` 成功，stall/cycle/iteration/count/growth/size/cancel 均 fail closed |
 | PR-04 | 完成 | `4c71babfe`、`4304f7f3b`、`ad2baa45e`、`efe492bc1` | 命名组枚举、Resource/Batch/Session store、`${var:name}` 显式 resolver、Filter→expand→primary 时序、入口级事务回滚测试 |
 | PR-05 | 完成 | `705752df1` | 严格 version 1 JSON schema、原子保存、4 MiB/1000-rule 上限、重复 id/未知字段拒绝、SearchEditorPlus `PS` token 导入与丢失控制警告 |
-| PR-06–08 | 未开始 | — | 全书 staging/validation/commit、UI/菜单/i18n、Automate 与最终用户文档 |
+| PR-06 | 完成 | `b2e2eb277`、`a245a6d52`、`255cc8ea2`、`1257f5c9d`、`7132715fe` | GUI snapshot/commit 边界、staged XML validator、跨资源 prepared rule 复用、内存 working-text map、commit 成功后才发布变量 store |
+| PR-07–08 | 未开始 | — | UI/菜单/i18n、Automate 与最终用户文档 |
 
 ### 审计结论
 
-1. **当前核心不会写入 live book。** 已完成层只接收 `QString` 和变量 store，返回 staged 文本；尚未连接 `Resource`、`MainWindow` 或 coordinator。因此当前里程碑不存在逐条规则写回、重复渲染或破坏撤销栈的路径，最终发布必须经过 PR-06 的单次 commit adapter。
+1. **Stage 不会写入 live book。** worker 层只接收 snapshot `QString`/media type 和变量 store 副本，返回最终 `changedTexts`；唯一发布桥复用 `SearchBatchCoordinator::CommitStagedResult`，只在冲突复核和一次 Checkpoint 后对每个变更资源调用一次 `SetTextAsUndoableEdit`。工作台 UI 尚未接入该桥。
 2. **经典替换兼容边界保持。** `PerformGlobalReplacePlus` 已改为调用共享 splice；未提供 resolver 时 `${var:name}` 保持字面量，裸 `\v` 仍是 VT，原有 `\g{name}` 和 `\F` 路径不变。工作台入口单独拒绝整条 Python `\F<...>`。
 3. **匹配资源有界且线程所有权明确。** 工作台不持有 `PCRECache` 对象；每次规则执行拥有自己的 compiled code、match data 和 match context。每次 PCRE2 调用设置 match/depth/heap limit，并在调用之间检查 cancel；单次调用不能被协作式中断，但仍受 PCRE2 limit 约束。
 4. **递归和变量共同纳入回滚状态。** cycle/stall digest 同时包含文本和变量状态；任何匹配、展开、变量、限制或取消失败都返回原始文本并恢复初始 store snapshot，不允许发布部分轮次。
 5. **Filter 坐标与写入顺序已锁定。** Filter capture 保持主匹配内局部坐标；接受候选按 `Filter ingest → replacement expand → primary ingest` 执行，拒绝掉的候选不污染 store。
-6. **当前功能尚不可由用户操作。** Recipe 核心已实现，但批处理 coordinator、XML staged validation、对话框和菜单均未实现；PR-01–05 是可复用核心里程碑，不应被描述为完整产品功能。
+6. **当前功能尚不可由用户操作。** Recipe、批处理 stage、XML validation 与 commit bridge 已实现，但对话框、菜单和 worker UI orchestration 尚未接入；PR-01–06 是可复用核心里程碑，不应被描述为完整产品功能。
+7. **跨资源编译不随资源数增长。** Batch 在进入 `SearchBatch::Runner` 前为每条规则创建一个 prepared executor；primary、secondary 与 replacement SPCRE 跨资源及递归轮次复用。测试用构造计数锁定“每规则一次”，避免把写回优化换成 pattern 重编译开销。
+8. **当前报告粒度仍是 rule/resource summary。** 总匹配/替换数、截断数和变更资源数精确，但 per-match offset、lineHint、varDelta 与最终坐标导航 trace 尚未接入；这些属于 PR-07 预览模型门禁，不影响 stage/commit 原子性。
 
 ### 验证证据（2026-08-09）
 
-- 新增核心测试：11/11 通过，包括安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序、变量执行入口和 Recipe。
+- 新增核心/批处理测试：13/13 通过，包括安全枚举、PreSearch、二级匹配、共享替换、递归、捕获名、变量 store、resolver、Filter 时序、变量执行入口、Recipe、跨资源 batch 和 staged XML validator。
 - `Sigil` 应用目标：在 Qt 6.7.3、Python 3.11 的 clean CMake tree 中完整编译、链接及 Python bundle verification 通过。
-- 全量 CTest：50 项中 47 项通过；失败的 `zh_cn_translation_coverage`、`zh_tw_translation_coverage`、`ja_translation_coverage` 均为本分支开始实现前已经存在的翻译目录缺失/陈旧项及 `PluginRunner.cpp` 未翻译字面量，本里程碑未修改相关源文件或 locale 目录。
+- 全量 CTest：54 项中 51 项通过；失败的 `zh_cn_translation_coverage`、`zh_tw_translation_coverage`、`ja_translation_coverage` 均为本分支开始实现前已经存在的翻译目录缺失/陈旧项及 `PluginRunner.cpp` 未翻译字面量，本里程碑未修改相关源文件或 locale 目录。
 - `git diff --check`：通过。
 
 ### 下一阶段门禁
 
 - PR-05 门禁已满足：recipe schema、大小限制、重复 id 与 SearchEditor `PS` 导入警告均已有测试。
-- PR-06 必须证明：worker 只修改内存 working-text map；每个变更资源最多一次可撤销写回；Dry-Run 与 Apply 各自重跑完整 stage；XML/checkpoint/conflict 任一失败均为零发布。
+- PR-06 门禁已满足：worker 只修改内存 working-text map；每个变更资源最多一次可撤销写回；独立运行从 original snapshot 重建 stage；XML/checkpoint/conflict 任一失败均为零文本/变量发布。
 - PR-07 前不开放 feature flag；引入 UI 时必须同步补齐三语言目录，否则现有 translation coverage 门禁会继续失败。
 
 ---
@@ -1007,6 +1010,8 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 | `regex_capture_names_test.cpp` | `getCaptureNames`、duplicate-name 默认拒绝 |
 | `regex_recipe_store_test.cpp` | JSON；`PS`+prefind 导入 |
 | `regex_apply_shared_test.cpp` | fixtures 对齐 `PerformGlobalReplacePlus` |
+| `regex_workbench_batch_test.cpp` | rule-outer/resource-inner、prepared compile reuse、Resource/Batch scope、独立 restage、report/run cap、cancel/XML Fatal 零发布 |
+| `staged_text_validator_test.cpp` | XML media type、CSS bypass、well-formed 错误定位、missing metadata、issue cap、cancel |
 | `regex_batch_commit_test.cpp` | staged XML failure/checkpoint failure/conflict 零写入；每资源一次 undoable write；失败逆序回滚 |
 | UI 冒烟 | 模态打开、Dry-Run 无改书、Apply+Checkpoint/Undo 提示、worker Cancel、导航坐标门控 |
 
@@ -1112,7 +1117,7 @@ void OpenRegexWorkbench();  // 无长期 dialog 成员
 - **依赖**：PR-02 类型、PR-04 变量字段
 - **描述**：`DefinePrefsDir()/regex_workbench/`；`PS`+prefind；变量展开默认关；丢弃 per-entry scope 时明确警告；schema/文件大小/重复 id 校验。
 
-### PR-06：泛化 SearchBatch snapshot/worker stage/validate/commit
+### PR-06：泛化 SearchBatch snapshot/worker stage/validate/commit（已完成）
 
 - **标题**：`Generalize SearchBatch staging and commit for Regex Workbench`
 - **文件**：扩展 `SearchBatchRunner` / `SearchBatchCoordinator`、多资源 Workbench engine、DryRunReport、staged XML validator、多资源测试
@@ -1158,4 +1163,4 @@ flowchart LR
 
 ---
 
-*文档结束（修订 5）。*
+*文档结束（修订 6）。*
