@@ -266,6 +266,9 @@ target_link_libraries(regex_recipe_store_test PRIVATE
     Qt6::Widgets
 )
 target_compile_features(regex_recipe_store_test PRIVATE cxx_std_17)
+target_compile_definitions(regex_recipe_store_test PRIVATE
+    SIGIL_REGEX_RECIPE_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/regex_workbench_book"
+)
 
 add_test(NAME regex_recipe_store COMMAND regex_recipe_store_test)
 set_tests_properties(regex_recipe_store PROPERTIES TIMEOUT 30)

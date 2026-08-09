@@ -42,6 +42,13 @@ void TestCaptureNameEnumeration()
             "named captures must be read from the PCRE2 name table in stable order");
     pcre2_code_free_16(named);
 
+    pcre2_code_16* pythonNamed = Compile(QStringLiteral("(?P<author>[^<]+)"));
+    Require(pythonNamed != nullptr &&
+                PCRE2Helpers::CaptureNames(pythonNamed) ==
+                    QStringList({QStringLiteral("author")}),
+            "Python-style named captures must appear in capture-name metadata");
+    pcre2_code_free_16(pythonNamed);
+
     Require(PCRE2Helpers::CaptureNames(nullptr).isEmpty(),
             "null compiled patterns must yield no capture names");
 }

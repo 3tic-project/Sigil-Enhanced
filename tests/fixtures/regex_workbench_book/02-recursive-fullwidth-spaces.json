@@ -1,0 +1,24 @@
+{
+    "format": "sigil.regexWorkbench.recipe",
+    "version": 1,
+    "name": "Book sample - recursive full-width spaces",
+    "variableScope": "Batch",
+    "writePolicy": "LastWins",
+    "rules": [
+        {
+            "id": "recursive-fullwidth-spaces",
+            "name": "Collapse adjacent ideographic spaces until stable",
+            "secondaryMode": "None",
+            "secondaryPattern": "",
+            "find": "　　",
+            "replace": "　",
+            "recursive": true,
+            "maxIterations": 8,
+            "allowEmpty": false,
+            "variableExpansionEnabled": false,
+            "autoIngestNamedCaptures": false,
+            "captureToVar": [],
+            "enabled": true
+        }
+    ]
+}

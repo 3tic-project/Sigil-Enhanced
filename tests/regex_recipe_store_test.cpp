@@ -34,6 +34,10 @@ using BuiltinPlugins::RegexWorkbench::SecondaryMode;
 using BuiltinPlugins::RegexWorkbench::VariableScope;
 using BuiltinPlugins::RegexWorkbench::WritePolicy;
 
+#ifndef SIGIL_REGEX_RECIPE_FIXTURE_DIR
+#error SIGIL_REGEX_RECIPE_FIXTURE_DIR must identify the recipe fixture directory
+#endif
+
 void Require(bool condition, const char* message)
 {
     if (!condition) {
@@ -272,6 +276,41 @@ void TestSearchEditorImportMappingAndWarnings()
             "SearchEditorModelPlus entries must use the same import contract");
 }
 
+void TestBookSampleRecipesUseProductionSchema()
+{
+    const QString directory = QString::fromUtf8(SIGIL_REGEX_RECIPE_FIXTURE_DIR);
+    QString error;
+    RegexRecipe secondary;
+    Require(RegexRecipeStore::LoadFile(
+                directory + QStringLiteral("/01-secondary-dialog-inner-quotes.json"),
+                secondary, &error) && secondary.rules.size() == 1 &&
+                secondary.rules.first().secondaryMode == SecondaryMode::PreSearch &&
+                secondary.rules.first().secondaryPattern == QStringLiteral("「([^」]*)」") &&
+                secondary.rules.first().find == QStringLiteral("〝([^〟]*)〟"),
+            "book secondary-search recipe must load through the production schema");
+
+    RegexRecipe recursive;
+    Require(RegexRecipeStore::LoadFile(
+                directory + QStringLiteral("/02-recursive-fullwidth-spaces.json"),
+                recursive, &error) && recursive.rules.size() == 1 &&
+                recursive.rules.first().recursive &&
+                recursive.rules.first().maxIterations == 8 &&
+                recursive.rules.first().find == QStringLiteral("　　") &&
+                recursive.rules.first().replace == QStringLiteral("　"),
+            "book recursive recipe must load through the production schema");
+
+    RegexRecipe variables;
+    Require(RegexRecipeStore::LoadFile(
+                directory + QStringLiteral("/03-python-named-capture-variable.json"),
+                variables, &error) && variables.rules.size() == 2 &&
+                variables.rules.first().find.contains(QStringLiteral("(?P<author>")) &&
+                variables.rules.first().captureToVar ==
+                    QStringList{QStringLiteral("author")} &&
+                variables.rules.at(1).variableExpansionEnabled &&
+                variables.rules.at(1).replace.contains(QStringLiteral("${var:author}")),
+            "book named-capture variable recipe must load through the production schema");
+}
+
 }
 
 int main()
@@ -281,6 +320,7 @@ int main()
     TestSemanticAndResourceLimits();
     TestAtomicFileRoundTripAndDefaultDirectory();
     TestSearchEditorImportMappingAndWarnings();
+    TestBookSampleRecipesUseProductionSchema();
     std::cout << "regex recipe store tests passed\n";
     return 0;
 }
