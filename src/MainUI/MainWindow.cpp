@@ -253,6 +253,7 @@ static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "RemoveNavFromSpine" <<
     "RemoveNCXGuideFromEpub3" <<
     "RepoCommit" <<
+    "RunRegexWorkbenchRecipe" <<
     "RunSavedSearchReplaceAll" <<
     "Save" <<
     "SetBookBrowserToAllCSS" <<
@@ -483,6 +484,7 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "NormalizeKfxParagraphs")      success = NormalizeAllKfxParagraphs();
             else if (cmd == "ValidateStylesheetsWithW3C") success = ValidateStylesheetsWithW3C();
             else if (cmd == "RepoCommit")                 success = RepoCommit();
+            else if (cmd == "RunRegexWorkbenchRecipe")    success = RunRegexWorkbenchRecipe(QString());
             else if (cmd == "DeleteUnusedMedia")          success = DeleteUnusedMedia(true);
             else if (cmd == "DeleteUnusedStyles")         success = DeleteUnusedStyles(true);
             else if (cmd == "StandardizeEpub")            success = StandardizeEpub();
@@ -535,6 +537,12 @@ bool MainWindow::Automate(const QStringList &commands)
         } else if (cmd.startsWith("SetPluginParameter")) {
             m_AutomatePluginParameter  = cmd.mid(19, -1).trimmed();
             success = true;
+
+        // Run a named Regex Workbench recipe against all text resources.
+        } else if (cmd.startsWith("RunRegexWorkbenchRecipe ")) {
+            const QString identifier = cmd.mid(
+                QStringLiteral("RunRegexWorkbenchRecipe").size()).trimmed();
+            success = RunRegexWorkbenchRecipe(identifier);
 
         // handle saved search and its full name parameter
         } else if (cmd.startsWith("RunSavedSearchReplaceAll")) {

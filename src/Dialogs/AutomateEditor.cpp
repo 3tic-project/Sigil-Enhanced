@@ -119,6 +119,9 @@ QString AutomateEditor::GetAutomateList()
             if (cmd.startsWith("RunSavedSearchReplaceAll")) {
                 value = cmd.mid(25,-1).trimmed();
                 cmd = "RunSavedSearchReplaceAll";
+            } else if (cmd.startsWith("RunRegexWorkbenchRecipe")) {
+                value = cmd.mid(QStringLiteral("RunRegexWorkbenchRecipe").size()).trimmed();
+                cmd = "RunRegexWorkbenchRecipe";
             } else if (cmd.startsWith("OnFailedRunSavedSearchReplaceAll")) {
                 value = cmd.mid(33,-1).trimmed();
                 cmd = "OnFailedRunSavedSearchReplaceAll";
@@ -184,6 +187,9 @@ void AutomateEditor::selectTool()
     foreach(QString code, codes) {
         if (code == "RunSavedSearchReplaceAll") {
             QString content = tr("[SavedSearch full name here]");
+            insertRow(code, code, content, "");
+        } else if (code == "RunRegexWorkbenchRecipe") {
+            QString content = tr("[Regex recipe name or absolute path here]");
             insertRow(code, code, content, "");
         } else if (code == "OnFailedRunSavedSearchReplaceAll") {
             QString content = tr("[SavedSearch full name here]");
@@ -365,6 +371,7 @@ void AutomateEditor::loadToolElements()
          "RemoveNavFromSpine" << "RemoveNavFromSpine" << tr("Remove Nav from OPF Spine.") <<
          "RemoveNCXGuideFromEpub3" << "RemoveNCXGuideFromEpub3" << tr("Remove NCX and OPF Guide from Epub3.") <<
          "RepoCommit" << "RepoCommit" << tr("Save a Checkpoint of the current epub.") << 
+         "RunRegexWorkbenchRecipe" << "RunRegexWorkbenchRecipe" << tr("Run the named Regex Workbench recipe against all text resources.") <<
          "RunSavedSearchReplaceAll" << "RunSavedSearchReplaceAll" << tr("Run the named Saved Search with Replace All.") <<
          "Save" << "Save" << tr("Save the current epub.") <<
          "SetBookBrowserToAllCSS" << "SetBookBrowserToAllCSS" << tr("Select all CSS Files in BookBrowser") << 

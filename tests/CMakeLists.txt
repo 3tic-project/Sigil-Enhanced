@@ -404,6 +404,13 @@ add_test(NAME search_undo_contract
 )
 set_tests_properties(search_undo_contract PROPERTIES TIMEOUT 30)
 
+add_test(NAME regex_workbench_ui_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/regex_workbench_ui_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(regex_workbench_ui_contract PROPERTIES TIMEOUT 30)
+
 add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp

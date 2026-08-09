@@ -40,11 +40,52 @@
 #include "BookManipulation/FontSubset/FontSubsetController.h"
 #include "Dialogs/FontSubsetDialog.h"
 #include "Dialogs/RegexWorkbenchDialog.h"
+#include "MainUI/RegexWorkbenchBatchCommitter.h"
 #include "ResourceObjects/CSSResource.h"
 #include "ResourceObjects/FontResource.h"
 
 namespace
 {
+
+RegexWorkbenchDialog::TargetSet CollectRegexWorkbenchTargets(
+    Book* book,
+    ContentTab* currentTab,
+    BookBrowser* bookBrowser)
+{
+    RegexWorkbenchDialog::TargetSet targets;
+    if (!book || !book->GetFolderKeeper()) {
+        return targets;
+    }
+    for (Resource* resource : book->GetFolderKeeper()->GetResourceList()) {
+        TextResource* text = qobject_cast<TextResource*>(resource);
+        if (!text) {
+            continue;
+        }
+        const QString path = text->GetRelativePath();
+        targets.resources.insert(path, text);
+        targets.allTextPaths.append(path);
+        if (qobject_cast<HTMLResource*>(text)) {
+            targets.htmlPaths.append(path);
+        } else if (qobject_cast<CSSResource*>(text)) {
+            targets.cssPaths.append(path);
+        }
+    }
+    if (currentTab) {
+        if (TextResource* current =
+                qobject_cast<TextResource*>(currentTab->GetLoadedResource())) {
+            targets.currentPath = current->GetRelativePath();
+        }
+    }
+    if (bookBrowser) {
+        for (Resource* resource : bookBrowser->AllSelectedResources()) {
+            if (TextResource* selected = qobject_cast<TextResource*>(resource)) {
+                targets.selectedPaths.append(selected->GetRelativePath());
+            }
+        }
+        targets.selectedPaths.removeDuplicates();
+    }
+    return targets;
+}
 
 QHash<Resource*, QString> CaptureResourcePaths(Book* book)
 {
@@ -721,23 +762,8 @@ bool MainWindow::OpenRegexWorkbench()
         return false;
     }
 
-    RegexWorkbenchDialog::TargetSet targets;
-    const QList<Resource*> allResources =
-        m_Book->GetFolderKeeper()->GetResourceList();
-    for (Resource* resource : allResources) {
-        TextResource* text = qobject_cast<TextResource*>(resource);
-        if (!text) {
-            continue;
-        }
-        const QString path = text->GetRelativePath();
-        targets.resources.insert(path, text);
-        targets.allTextPaths.append(path);
-        if (qobject_cast<HTMLResource*>(text)) {
-            targets.htmlPaths.append(path);
-        } else if (qobject_cast<CSSResource*>(text)) {
-            targets.cssPaths.append(path);
-        }
-    }
+    const RegexWorkbenchDialog::TargetSet targets = CollectRegexWorkbenchTargets(
+        m_Book.data(), GetCurrentContentTab(), m_BookBrowser);
 
     if (targets.allTextPaths.isEmpty()) {
         Utility::warning(this, tr("Advanced Regex Workbench"),
@@ -745,25 +771,68 @@ bool MainWindow::OpenRegexWorkbench()
         return false;
     }
 
-    if (ContentTab* tab = GetCurrentContentTab()) {
-        if (TextResource* current =
-                qobject_cast<TextResource*>(tab->GetLoadedResource())) {
-            targets.currentPath = current->GetRelativePath();
-        }
-    }
-    if (m_BookBrowser) {
-        for (Resource* resource : m_BookBrowser->AllSelectedResources()) {
-            if (TextResource* selected = qobject_cast<TextResource*>(resource)) {
-                targets.selectedPaths.append(selected->GetRelativePath());
-            }
-        }
-        targets.selectedPaths.removeDuplicates();
-    }
-
     RegexWorkbenchDialog dialog(this, targets, this);
     connect(&dialog, &RegexWorkbenchDialog::OpenFileRequest,
             this, &MainWindow::OpenFile);
     dialog.exec();
+    return true;
+}
+
+bool MainWindow::RunRegexWorkbenchRecipe(const QString& identifier)
+{
+    using namespace BuiltinPlugins::RegexWorkbench;
+
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        ShowMessageOnStatusBar(tr("Regex recipe failed: no EPUB is currently loaded."));
+        return false;
+    }
+
+    RegexRecipe recipe;
+    QString error;
+    if (!RegexRecipeStore::LoadNamed(identifier, recipe, nullptr, &error)) {
+        ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(error));
+        return false;
+    }
+
+    const RegexWorkbenchDialog::TargetSet targets =
+        CollectRegexWorkbenchTargets(m_Book.data(), nullptr, nullptr);
+    if (targets.allTextPaths.isEmpty()) {
+        ShowMessageOnStatusBar(
+            tr("Regex recipe failed: the current EPUB has no text resources."));
+        return false;
+    }
+
+    SearchBatchCoordinator::Snapshot snapshot;
+    if (!SearchBatchCoordinator::CaptureSnapshot(
+            this, targets.allTextPaths, targets.resources, snapshot, &error)) {
+        ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(error));
+        return false;
+    }
+
+    SearchVariableStore store;
+    const RegexWorkbenchBatchResult batch = RegexWorkbenchBatchRunner::Run(
+        recipe, targets.allTextPaths, snapshot.originalTexts,
+        snapshot.mediaTypes, store);
+    if (!batch.staged.success) {
+        const QString detail = batch.report.fatalMessage.isEmpty()
+                                   ? batch.staged.error
+                                   : batch.report.fatalMessage;
+        ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(detail));
+        return false;
+    }
+
+    const SearchBatch::Result commit = RegexWorkbenchBatchCommitter::Commit(
+        this, targets.resources, snapshot, batch, store);
+    if (!commit.success) {
+        ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(commit.error));
+        return false;
+    }
+
+    ShowMessageOnStatusBar(
+        tr("Regex recipe %1 applied %2 replacement(s) to %3 resource(s).")
+            .arg(recipe.name)
+            .arg(batch.report.totalReplacements)
+            .arg(batch.report.changedResourceCount));
     return true;
 }
 
