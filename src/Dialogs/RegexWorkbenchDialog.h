@@ -131,6 +131,7 @@ private:
     QFutureWatcher<BuiltinPlugins::RegexWorkbench::RegexWorkbenchBatchResult>* m_Watcher;
     std::shared_ptr<std::atomic_bool> m_CancelFlag;
     QString m_RecipePath;
+    QString m_LastRecipePath;
     int m_CurrentRuleRow;
     RunMode m_RunMode;
     bool m_Busy;

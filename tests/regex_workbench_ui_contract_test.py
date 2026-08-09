@@ -72,6 +72,11 @@ require(
 start_run = dialog.index("void RegexWorkbenchDialog::StartRun")
 snapshot = dialog.index("SearchBatchCoordinator::CaptureSnapshot(", start_run)
 worker = dialog.index("m_Watcher->setFuture(QtConcurrent::run(", snapshot)
+confirmation = dialog.index("QMessageBox::question(", start_run)
+require(
+    confirmation < snapshot,
+    "Apply confirmation must happen before the fresh document snapshot",
+)
 require(snapshot < worker, "each run must capture a fresh snapshot before staging")
 apply_slot = dialog.index("void RegexWorkbenchDialog::StartApply")
 require(
@@ -103,6 +108,11 @@ require(
 require(
     "targets.allTextPaths" in automation_body,
     "Automate recipes must have a deterministic all-text target scope",
+)
+require(
+    "m_LastRecipePath" in dialog
+    and "settings.setValue(LastRecipeKey, m_LastRecipePath)" in dialog,
+    "the last recipe location must survive creating a new unsaved recipe",
 )
 
 require(

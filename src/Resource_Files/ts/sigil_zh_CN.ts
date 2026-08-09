@@ -26199,5 +26199,6 @@ Continue using the requested filename?</source>
 <message><source>Variables</source><translation>变量</translation></message>
 <message><source>Write policy:</source><translation>写入策略：</translation></message>
 <message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（可选允许列表）</translation></message>
+<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot and recovery checkpoint will be created before any document text is written.</source><translation>要将此方案应用到 %1 个文本资源吗？写入任何文档文本前，将重新创建快照和恢复检查点。</translation></message>
 </context>
 </TS>

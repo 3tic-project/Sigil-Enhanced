@@ -422,14 +422,14 @@ void RegexWorkbenchDialog::RestoreSettings()
     if (!geometry.isEmpty()) {
         restoreGeometry(geometry);
     }
-    m_RecipePath = settings.value(LastRecipeKey).toString();
+    m_LastRecipePath = settings.value(LastRecipeKey).toString();
 }
 
 void RegexWorkbenchDialog::SaveSettings() const
 {
     SettingsStore settings;
     settings.setValue(GeometryKey, saveGeometry());
-    settings.setValue(LastRecipeKey, m_RecipePath);
+    settings.setValue(LastRecipeKey, m_LastRecipePath);
     settings.setValue(DefaultIterationsKey, m_MaxIterations->value());
 }
 
@@ -467,9 +467,9 @@ void RegexWorkbenchDialog::NewRecipe()
 
 void RegexWorkbenchDialog::OpenRecipe()
 {
-    const QString start = m_RecipePath.isEmpty()
+    const QString start = m_LastRecipePath.isEmpty()
                               ? RegexRecipeStore::DefaultDirectory()
-                              : m_RecipePath;
+                              : m_LastRecipePath;
     const QString path = QFileDialog::getOpenFileName(
         this, tr("Open Regex Workbench Recipe"), start,
         tr("Regex Workbench recipes (*.json);;All files (*)"));
@@ -496,8 +496,10 @@ void RegexWorkbenchDialog::SaveRecipe()
     }
     QString path = m_RecipePath;
     if (path.isEmpty()) {
-        path = RegexRecipeStore::DefaultDirectory() + QLatin1Char('/') +
-               QStringLiteral("recipe.json");
+        path = m_LastRecipePath.isEmpty()
+                   ? RegexRecipeStore::DefaultDirectory() + QLatin1Char('/') +
+                         QStringLiteral("recipe.json")
+                   : m_LastRecipePath;
     }
     path = QFileDialog::getSaveFileName(
         this, tr("Save Regex Workbench Recipe"), path,
@@ -514,6 +516,7 @@ void RegexWorkbenchDialog::SaveRecipe()
     }
     m_Recipe = recipe;
     m_RecipePath = path;
+    m_LastRecipePath = path;
     SetStatus(tr("Saved recipe: %1").arg(path));
 }
 
@@ -648,6 +651,9 @@ void RegexWorkbenchDialog::LoadRecipeIntoUi(const RegexRecipe& recipe,
 {
     m_Recipe = recipe;
     m_RecipePath = path;
+    if (!path.isEmpty()) {
+        m_LastRecipePath = path;
+    }
     m_RecipeName->setText(recipe.name);
     m_VariableScope->setCurrentIndex(FindData(
         m_VariableScope, static_cast<int>(recipe.variableScope)));
@@ -805,6 +811,16 @@ void RegexWorkbenchDialog::StartRun(RunMode mode)
     if (paths.isEmpty()) {
         QMessageBox::warning(this, tr("Advanced Regex Workbench"),
                              tr("The selected scope contains no text resources."));
+        return;
+    }
+    if (mode == RunMode::Apply &&
+        QMessageBox::question(
+            this, tr("Advanced Regex Workbench"),
+            tr("Apply this recipe to %1 text resource(s)? A fresh snapshot and "
+               "recovery checkpoint will be created before any document text is written.")
+                .arg(paths.size()),
+            QMessageBox::Apply | QMessageBox::Cancel,
+            QMessageBox::Cancel) != QMessageBox::Apply) {
         return;
     }
     if (!SearchBatchCoordinator::CaptureSnapshot(
