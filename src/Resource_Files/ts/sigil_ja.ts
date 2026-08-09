@@ -14278,28 +14278,28 @@ Spacing p elements to preserve: %6</source>
         <translation>KFX 段落を含むファイルは変更されませんでした。</translation>
     </message>
     <message>
-        <source>Analyze BookLive Div Paragraphs...</source>
-        <translation>BookLive Div 段落を解析...</translation>
+        <source>Analyze BookLive Div Paragraphs (Whole Book)...</source>
+        <translation>BookLive Div 段落を解析（書籍全体）...</translation>
     </message>
     <message>
-        <source>Normalize Current BookLive Div Paragraphs...</source>
-        <translation>現在の BookLive Div 段落を正規化...</translation>
+        <source>Normalize BookLive Div Paragraphs (Current File)...</source>
+        <translation>BookLive Div 段落を正規化（現在のファイル）...</translation>
     </message>
     <message>
-        <source>Normalize BookLive Div Paragraphs...</source>
-        <translation>BookLive Div 段落を正規化...</translation>
+        <source>Normalize BookLive Div Paragraphs (Whole Book)...</source>
+        <translation>BookLive Div 段落を正規化（書籍全体）...</translation>
     </message>
     <message>
-        <source>Report BookLive/EBPAJ XHTML files that use nested div elements as pseudo-paragraphs</source>
-        <translation>ネストした div 要素を疑似段落として使用する BookLive/EBPAJ XHTML ファイルを報告します</translation>
+        <source>Report BookLive/EBPAJ XHTML files across the whole book that use nested div elements as pseudo-paragraphs</source>
+        <translation>書籍全体でネストした div 要素を疑似段落として使用する BookLive/EBPAJ XHTML ファイルを報告します</translation>
     </message>
     <message>
         <source>Convert proven pseudo-paragraph div leaves in the current XHTML file into style-preserving p elements</source>
         <translation>現在の XHTML ファイル内で確認済みの div 疑似段落リーフを、スタイルを保持した p 要素へ変換します</translation>
     </message>
     <message>
-        <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements</source>
-        <translation>自動処理して安全な BookLive/EBPAJ の div 疑似段落リーフを、スタイルを保持した p 要素へ変換します</translation>
+        <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves across the whole book into style-preserving p elements</source>
+        <translation>書籍全体の自動処理して安全な BookLive/EBPAJ の div 疑似段落リーフを、スタイルを保持した p 要素へ変換します</translation>
     </message>
     <message>
         <source>BookLive paragraph analysis: no EPUB is currently loaded.</source>

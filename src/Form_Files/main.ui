@@ -2039,15 +2039,15 @@
   </action>
   <action name="actionAnalyzeBookLiveParagraphs">
     <property name="text">
-      <string>Analyze BookLive Div Paragraphs...</string>
+      <string>Analyze BookLive Div Paragraphs (Whole Book)...</string>
     </property>
     <property name="toolTip">
-      <string>Report BookLive/EBPAJ XHTML files that use nested div elements as pseudo-paragraphs</string>
+      <string>Report BookLive/EBPAJ XHTML files across the whole book that use nested div elements as pseudo-paragraphs</string>
     </property>
   </action>
   <action name="actionNormalizeCurrentBookLiveParagraphs">
     <property name="text">
-      <string>Normalize Current BookLive Div Paragraphs...</string>
+      <string>Normalize BookLive Div Paragraphs (Current File)...</string>
     </property>
     <property name="toolTip">
       <string>Convert proven pseudo-paragraph div leaves in the current XHTML file into style-preserving p elements</string>
@@ -2055,10 +2055,10 @@
   </action>
   <action name="actionNormalizeBookLiveParagraphs">
     <property name="text">
-      <string>Normalize BookLive Div Paragraphs...</string>
+      <string>Normalize BookLive Div Paragraphs (Whole Book)...</string>
     </property>
     <property name="toolTip">
-      <string>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements</string>
+      <string>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves across the whole book into style-preserving p elements</string>
     </property>
   </action>
   <action name="actionWellFormedCheckEpub">

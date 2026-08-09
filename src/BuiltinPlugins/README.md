@@ -228,9 +228,9 @@ Phase 2:
 
 入口:
 
-- `Enhancement > Analyze BookLive Div Paragraphs...`
-- `Enhancement > Normalize Current BookLive Div Paragraphs...`
-- `Enhancement > Normalize BookLive Div Paragraphs...`
+- `Enhancement > Analyze BookLive Div Paragraphs (Whole Book)...`
+- `Enhancement > Normalize BookLive Div Paragraphs (Current File)...`
+- `Enhancement > Normalize BookLive Div Paragraphs (Whole Book)...`
 - Automate: `AnalyzeBookLiveParagraphs`、`NormalizeBookLiveParagraphs`
 
 转换策略:

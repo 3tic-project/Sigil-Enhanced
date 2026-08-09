@@ -14273,28 +14273,28 @@ Spacing p elements to preserve: %6</source>
         <translation>沒有 KFX 段落檔案被修改。</translation>
     </message>
     <message>
-        <source>Analyze BookLive Div Paragraphs...</source>
-        <translation>分析 BookLive Div 段落...</translation>
+        <source>Analyze BookLive Div Paragraphs (Whole Book)...</source>
+        <translation>分析 BookLive Div 段落（全書）...</translation>
     </message>
     <message>
-        <source>Normalize Current BookLive Div Paragraphs...</source>
-        <translation>規範化目前的 BookLive Div 段落...</translation>
+        <source>Normalize BookLive Div Paragraphs (Current File)...</source>
+        <translation>規範化 BookLive Div 段落（目前檔案）...</translation>
     </message>
     <message>
-        <source>Normalize BookLive Div Paragraphs...</source>
-        <translation>規範化 BookLive Div 段落...</translation>
+        <source>Normalize BookLive Div Paragraphs (Whole Book)...</source>
+        <translation>規範化 BookLive Div 段落（全書）...</translation>
     </message>
     <message>
-        <source>Report BookLive/EBPAJ XHTML files that use nested div elements as pseudo-paragraphs</source>
-        <translation>報告使用巢狀 div 元素作為偽段落的 BookLive/EBPAJ XHTML 檔案</translation>
+        <source>Report BookLive/EBPAJ XHTML files across the whole book that use nested div elements as pseudo-paragraphs</source>
+        <translation>報告全書中使用巢狀 div 元素作為偽段落的 BookLive/EBPAJ XHTML 檔案</translation>
     </message>
     <message>
         <source>Convert proven pseudo-paragraph div leaves in the current XHTML file into style-preserving p elements</source>
         <translation>將目前 XHTML 檔案中已確認的 div 偽段落葉轉換為保留樣式的 p 元素</translation>
     </message>
     <message>
-        <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves into style-preserving p elements</source>
-        <translation>將可自動安全處理的 BookLive/EBPAJ div 偽段落葉轉換為保留樣式的 p 元素</translation>
+        <source>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves across the whole book into style-preserving p elements</source>
+        <translation>將全書中可自動安全處理的 BookLive/EBPAJ div 偽段落葉轉換為保留樣式的 p 元素</translation>
     </message>
     <message>
         <source>BookLive paragraph analysis: no EPUB is currently loaded.</source>

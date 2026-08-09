@@ -51,6 +51,24 @@ expected = (
         "NormalizeAllKfxParagraphs",
         "whole book",
     ),
+    (
+        "actionAnalyzeBookLiveParagraphs",
+        "Analyze BookLive Div Paragraphs (Whole Book)...",
+        "AnalyzeBookLiveParagraphs",
+        "whole book",
+    ),
+    (
+        "actionNormalizeCurrentBookLiveParagraphs",
+        "Normalize BookLive Div Paragraphs (Current File)...",
+        "NormalizeCurrentBookLiveParagraphs",
+        "current XHTML file",
+    ),
+    (
+        "actionNormalizeBookLiveParagraphs",
+        "Normalize BookLive Div Paragraphs (Whole Book)...",
+        "NormalizeAllBookLiveParagraphs",
+        "whole book",
+    ),
 )
 
 enhancement_menu = main_ui.find(".//widget[@name='menuEnhancement']")
@@ -60,7 +78,7 @@ expected_names = [item[0] for item in expected]
 positions = [menu_actions.index(name) for name in expected_names]
 require(
     positions == list(range(positions[0], positions[0] + len(expected))),
-    "Kobo BR and Kindle KFX menu actions must remain grouped in scope order",
+    "paragraph normalizer menu actions must remain grouped in scope order",
 )
 
 for action_name, label, slot, scope_hint in expected:
@@ -76,4 +94,3 @@ for action_name, label, slot, scope_hint in expected:
         f"connect(ui.{action_name}, SIGNAL(triggered()), this, SLOT({slot}()));"
     )
     require(connection in main_window, f"wrong scope handler for {action_name}")
-
