@@ -26281,6 +26281,8 @@ Continue using the requested filename?</source>
 <message><source>Named captures</source><translation>命名捕获</translation></message>
 <message><source>New</source><translation>新建</translation></message>
 <message><source>New recipe created.</source><translation>已新建方案。</translation></message>
+<message><source>New Regex Workbench Recipe</source><translation>新建正则工作台方案</translation></message>
+<message><source>Creating a new recipe will clear the current rules and unsaved rule changes. Continue?</source><translation>新建方案将清空当前规则及未保存的规则更改。是否继续？</translation></message>
 <message><source>No saved search templates are available.</source><translation>没有可用的已保存搜索模板。</translation></message>
 <message><source>None</source><translation>无</translation></message>
 <message><source>Open Recipe...</source><translation>打开方案...</translation></message>

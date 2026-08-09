@@ -41,7 +41,6 @@
 #include <QStyle>
 #include <QTableWidget>
 #include <QTableWidgetItem>
-#include <QTabWidget>
 #include <QUuid>
 #include <QVBoxLayout>
 #include <QtConcurrent>
@@ -322,7 +321,8 @@ void RegexWorkbenchDialog::BuildUi()
     editor->addWidget(capturesBox);
 
     auto* runBox = new QGroupBox(tr("Run"), m_EditingPanel);
-    auto* runLayout = new QFormLayout(runBox);
+    auto* runLayout = new QVBoxLayout(runBox);
+    auto* runForm = new QFormLayout;
     m_TargetScope = new QComboBox(runBox);
     if (!m_Targets.currentPath.isEmpty()) {
         m_TargetScope->addItem(tr("Current file"),
@@ -358,30 +358,56 @@ void RegexWorkbenchDialog::BuildUi()
     m_DryRunButton->setObjectName(QStringLiteral("regexDryRunButton"));
     m_ApplyButton = new QPushButton(tr("Apply"), runBox);
     m_ApplyButton->setObjectName(QStringLiteral("regexApplyButton"));
+    m_ApplyButton->setDefault(true);
     m_CancelButton = new QPushButton(tr("Cancel Run"), runBox);
-    m_ClearVariablesButton = new QPushButton(tr("Clear Variables"), runBox);
     m_CancelButton->setEnabled(false);
-    runLayout->addRow(tr("Files:"), m_TargetScope);
-    runLayout->addRow(tr("Variable scope:"), m_VariableScope);
-    runLayout->addRow(tr("Write policy:"), m_WritePolicy);
+    runForm->addRow(tr("Files:"), m_TargetScope);
+    runForm->addRow(tr("Variable scope:"), m_VariableScope);
+    runForm->addRow(tr("Write policy:"), m_WritePolicy);
+    runLayout->addLayout(runForm);
     auto* runButtons = new QHBoxLayout;
     runButtons->addWidget(m_DryRunButton);
     runButtons->addWidget(m_ApplyButton);
-    runLayout->addRow(runButtons);
-    runLayout->addRow(m_CancelButton);
-    runLayout->addRow(m_ClearVariablesButton);
+    runLayout->addLayout(runButtons);
+    runLayout->addWidget(m_CancelButton);
+
+    auto* variablesBox = new QGroupBox(tr("Variables"), runBox);
+    variablesBox->setObjectName(QStringLiteral("regexVariablesPanel"));
+    auto* variablesLayout = new QVBoxLayout(variablesBox);
+    m_ClearVariablesButton = new QPushButton(tr("Clear Variables"), variablesBox);
+    auto* variableActions = new QHBoxLayout;
+    variableActions->addStretch();
+    variableActions->addWidget(m_ClearVariablesButton);
+    variablesLayout->addLayout(variableActions);
+    m_VariableTable = new QTableWidget(variablesBox);
+    m_VariableTable->setObjectName(QStringLiteral("regexVariableTable"));
+    m_VariableTable->setColumnCount(4);
+    m_VariableTable->setHorizontalHeaderLabels(
+        {tr("Scope"), tr("Resource"), tr("Name"), tr("Value")});
+    m_VariableTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_VariableTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_VariableTable->verticalHeader()->setVisible(false);
+    m_VariableTable->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::ResizeToContents);
+    m_VariableTable->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::Stretch);
+    m_VariableTable->horizontalHeader()->setSectionResizeMode(
+        3, QHeaderView::Stretch);
+    variablesLayout->addWidget(m_VariableTable, 1);
+    runLayout->addWidget(variablesBox, 1);
 
     editingSplitter->addWidget(rulesBox);
     editingSplitter->addWidget(editorBox);
     editingSplitter->addWidget(runBox);
     editingSplitter->setStretchFactor(0, 2);
     editingSplitter->setStretchFactor(1, 6);
-    editingSplitter->setStretchFactor(2, 2);
-    editingSplitter->setSizes({230, 720, 250});
+    editingSplitter->setStretchFactor(2, 3);
+    editingSplitter->setSizes({220, 680, 340});
     root->addWidget(m_EditingPanel, 3);
 
-    auto* tabs = new QTabWidget(this);
-    m_ReportTable = new QTableWidget(tabs);
+    auto* resultsBox = new QGroupBox(tr("Dry-Run results"), this);
+    auto* resultsLayout = new QVBoxLayout(resultsBox);
+    m_ReportTable = new QTableWidget(resultsBox);
     m_ReportTable->setObjectName(QStringLiteral("regexReportTable"));
     m_ReportTable->setColumnCount(7);
     m_ReportTable->setHorizontalHeaderLabels(
@@ -394,18 +420,8 @@ void RegexWorkbenchDialog::BuildUi()
     m_ReportTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     m_ReportTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
     m_ReportTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
-    m_VariableTable = new QTableWidget(tabs);
-    m_VariableTable->setColumnCount(4);
-    m_VariableTable->setHorizontalHeaderLabels(
-        {tr("Scope"), tr("Resource"), tr("Name"), tr("Value")});
-    m_VariableTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    m_VariableTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_VariableTable->verticalHeader()->setVisible(false);
-    m_VariableTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    m_VariableTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
-    tabs->addTab(m_ReportTable, tr("Dry-Run results"));
-    tabs->addTab(m_VariableTable, tr("Variables"));
-    root->addWidget(tabs, 2);
+    resultsLayout->addWidget(m_ReportTable);
+    root->addWidget(resultsBox, 2);
 
     auto* bottom = new QHBoxLayout;
     m_Progress = new QProgressBar(this);
@@ -509,6 +525,15 @@ void RegexWorkbenchDialog::reject()
 
 void RegexWorkbenchDialog::NewRecipe()
 {
+    if (!IsPristineNewRecipe() &&
+        QMessageBox::question(
+            this, tr("New Regex Workbench Recipe"),
+            tr("Creating a new recipe will clear the current rules and unsaved "
+               "rule changes. Continue?"),
+            QMessageBox::Yes | QMessageBox::Cancel,
+            QMessageBox::Cancel) != QMessageBox::Yes) {
+        return;
+    }
     SettingsStore settings;
     const int maxIterations = std::clamp(
         settings.value(DefaultIterationsKey, 32).toInt(), 1, 10000);
@@ -517,6 +542,36 @@ void RegexWorkbenchDialog::NewRecipe()
     recipe.rules.append(NewRule(1, maxIterations));
     LoadRecipeIntoUi(recipe);
     SetStatus(tr("New recipe created."));
+}
+
+bool RegexWorkbenchDialog::IsPristineNewRecipe()
+{
+    if (m_Recipe.rules.isEmpty()) {
+        return true;
+    }
+    SaveCurrentRule();
+    m_Recipe.name = m_RecipeName->text().trimmed();
+    m_Recipe.variableScope = static_cast<VariableScope>(
+        m_VariableScope->currentData().toInt());
+    m_Recipe.writePolicy = static_cast<WritePolicy>(
+        m_WritePolicy->currentData().toInt());
+    SettingsStore settings;
+    const int defaultMaxIterations = std::clamp(
+        settings.value(DefaultIterationsKey, 32).toInt(), 1, 10000);
+    if (!m_RecipePath.isEmpty() || m_Recipe.name != tr("Untitled Recipe") ||
+        m_Recipe.variableScope != VariableScope::Batch ||
+        m_Recipe.writePolicy != WritePolicy::LastWins ||
+        m_Recipe.rules.size() != 1) {
+        return false;
+    }
+    const RegexWorkbenchRule& rule = m_Recipe.rules.constFirst();
+    return rule.name == tr("Rule 1") && rule.find.isEmpty() &&
+           rule.secondaryPattern.isEmpty() && rule.replace.isEmpty() &&
+           rule.secondaryMode == SecondaryMode::None && !rule.recursive &&
+           rule.maxIterations == defaultMaxIterations &&
+           !rule.allowEmpty && !rule.captureOnly &&
+           !rule.variableExpansionEnabled && !rule.autoIngestNamedCaptures &&
+           rule.captureToVar.isEmpty() && rule.enabled;
 }
 
 void RegexWorkbenchDialog::OpenRecipe()

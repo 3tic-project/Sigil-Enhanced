@@ -68,6 +68,8 @@ for object_name in (
     "regexDryRunButton",
     "regexApplyButton",
     "regexReportTable",
+    "regexVariablesPanel",
+    "regexVariableTable",
 ):
     require(object_name in dialog, f"missing stable UI object name: {object_name}")
 require("QtConcurrent::run" in dialog, "staging must execute outside the GUI thread")
@@ -82,10 +84,23 @@ require(
 require(
     "new QSplitter(Qt::Horizontal" in dialog
     and "editingSplitter->setStretchFactor(1, 6);" in dialog
+    and "editingSplitter->setStretchFactor(2, 3);" in dialog
     and "new QGroupBox(tr(\"Patterns\")" in dialog
     and "new QGroupBox(tr(\"Options\")" in dialog
-    and "new QGroupBox(tr(\"Named captures\")" in dialog,
+    and "new QGroupBox(tr(\"Named captures\")" in dialog
+    and "new QGroupBox(tr(\"Variables\"), runBox)" in dialog
+    and "new QTableWidget(variablesBox)" in dialog,
     "rule editing controls must use the resizable grouped layout",
+)
+require(
+    "m_ApplyButton->setDefault(true);" in dialog,
+    "Apply must use the dialog's prominent confirmation-button styling",
+)
+require(
+    "bool RegexWorkbenchDialog::IsPristineNewRecipe()" in dialog
+    and "Creating a new recipe will clear the current rules" in dialog
+    and "QMessageBox::Yes | QMessageBox::Cancel" in dialog,
+    "New must warn before clearing a non-pristine recipe",
 )
 require("processEvents" not in dialog, "dialog must not use nested processEvents loops")
 require("WA_DeleteOnClose" not in dialog, "stack-owned modal dialog must not self-delete")

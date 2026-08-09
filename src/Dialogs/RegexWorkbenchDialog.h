@@ -111,6 +111,7 @@ private:
     void RefreshRuleList(int selectedRow = -1);
     void SaveCurrentRule();
     void LoadCurrentRule();
+    bool IsPristineNewRecipe();
     bool RecipeFromUi(BuiltinPlugins::RegexWorkbench::RegexRecipe& recipe,
                       QString* error);
     QStringList SelectedTargetPaths() const;

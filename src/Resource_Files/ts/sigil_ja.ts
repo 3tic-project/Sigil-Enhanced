@@ -26279,6 +26279,8 @@ Continue using the requested filename?</source>
 <message><source>Named captures</source><translation>名前付きキャプチャ</translation></message>
 <message><source>New</source><translation>新規</translation></message>
 <message><source>New recipe created.</source><translation>新しいレシピを作成しました。</translation></message>
+<message><source>New Regex Workbench Recipe</source><translation>正規表現ワークベンチレシピを新規作成</translation></message>
+<message><source>Creating a new recipe will clear the current rules and unsaved rule changes. Continue?</source><translation>新しいレシピを作成すると、現在のルールと未保存のルール変更が消去されます。続行しますか？</translation></message>
 <message><source>No saved search templates are available.</source><translation>利用できる保存済み検索テンプレートがありません。</translation></message>
 <message><source>None</source><translation>なし</translation></message>
 <message><source>Open Recipe...</source><translation>レシピを開く...</translation></message>
