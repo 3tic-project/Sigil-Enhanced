@@ -141,9 +141,11 @@ void TestCaptureIngestAndTransactionalRollback()
             "capture ingest must distinguish empty participation from unmatched groups");
 
     const auto before = store.snapshot();
+    QHash<QString, int> invalidNumbers = numbers;
+    invalidNumbers.insert(QStringLiteral("bad"), 9);
     QString error;
-    Require(!store.ingestNamedCaptures(numbers, QStringLiteral("abc"), captures,
-                                       {QStringLiteral("word"), QStringLiteral("missing")},
+    Require(!store.ingestNamedCaptures(invalidNumbers, QStringLiteral("abc"), captures,
+                                       {QStringLiteral("word"), QStringLiteral("bad")},
                                        &error) &&
                 store.stateData() == [&]() {
                     SearchVariableStore copy;

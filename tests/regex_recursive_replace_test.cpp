@@ -182,7 +182,10 @@ void TestExpansionCancellationAndExternalStateRollback()
     RegexWorkbenchEngineOptions options;
     options.stateSnapshot = [&state]() { return state; };
     options.restoreState = [&state](const QByteArray& snapshot) { state = snapshot; };
-    options.beforeExpand = [&state](int, const auto&) { state = QByteArray("mutated"); };
+    options.beforeExpand = [&state](int, const auto&, const QString&, QString&) {
+        state = QByteArray("mutated");
+        return true;
+    };
     const RegexWorkbenchEngineResult failed = RegexWorkbenchEngine::ApplyRule(
         rule, QStringLiteral("a"), TestExpander(), options);
     Require(!failed.success && failed.termination == EngineTermination::ExpansionFailure &&
@@ -190,11 +193,28 @@ void TestExpansionCancellationAndExternalStateRollback()
             "expansion failure must restore text publication and external state snapshot");
 
     RegexWorkbenchEngineOptions unsafeCallback;
-    unsafeCallback.beforeExpand = [](int, const auto&) {};
+    unsafeCallback.beforeExpand = [](int, const auto&, const QString&, QString&) {
+        return true;
+    };
     const RegexWorkbenchEngineResult unsafe = RegexWorkbenchEngine::ApplyRule(
         rule, QStringLiteral("a"), TestExpander(), unsafeCallback);
     Require(!unsafe.success && unsafe.termination == EngineTermination::InvalidConfiguration,
             "stateful replacement callbacks must provide rollback handlers");
+
+    state = QByteArray("before");
+    options.beforeExpand = [&state](int, const auto&, const QString&, QString& error) {
+        state = QByteArray("mutated");
+        error = QStringLiteral("intentional variable failure");
+        return false;
+    };
+    rule.replace = QStringLiteral("x");
+    const RegexWorkbenchEngineResult callbackFailure = RegexWorkbenchEngine::ApplyRule(
+        rule, QStringLiteral("a"), TestExpander(), options);
+    Require(!callbackFailure.success &&
+                callbackFailure.termination == EngineTermination::VariableFailure &&
+                callbackFailure.errorMessage == QStringLiteral("intentional variable failure") &&
+                state == QByteArray("before"),
+            "callback failure must preserve its diagnostic and restore external state");
 
     RegexWorkbenchEngineOptions cancelled;
     cancelled.matchOptions.isCancelled = []() { return true; };

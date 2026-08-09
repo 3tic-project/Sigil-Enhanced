@@ -38,6 +38,8 @@ enum class EngineTermination {
     MatchFailure,
     Cancelled,
     ExpansionFailure,
+    UndefinedVariable,
+    VariableFailure,
     ReplacementLimit,
     TextGrowthLimit,
     TextSizeLimit,
@@ -46,8 +48,10 @@ enum class EngineTermination {
     IterationLimit
 };
 
-using CandidateCallback = std::function<void(int candidateIndex,
-                                             const CandidateMatch& candidate)>;
+using CandidateCallback = std::function<bool(int candidateIndex,
+                                             const CandidateMatch& candidate,
+                                             const QString& matchedText,
+                                             QString& error)>;
 
 struct RegexWorkbenchEngineOptions
 {

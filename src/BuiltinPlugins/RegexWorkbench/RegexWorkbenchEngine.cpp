@@ -197,12 +197,14 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyRule(
                                                    CurrentExternalState(options));
         bool expansionFailed = false;
         bool cancelledDuringApply = false;
+        bool callbackFailed = false;
+        QString callbackError;
         const SearchOperations::ReplacementExpander guardedExpander =
             [&](const QString& matchedText,
                 const QList<std::pair<int, int>>& captureGroups,
                 const QString& replacement,
                 QString& expanded) {
-                if (expansionFailed || cancelledDuringApply) {
+                if (expansionFailed || cancelledDuringApply || callbackFailed) {
                     return false;
                 }
                 if (options.matchOptions.isCancelled &&
@@ -220,16 +222,26 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyRule(
         if (options.beforeExpand) {
             applyOptions.beforeExpand = [&](int index,
                                             const SearchOperations::ReplacementMatch&) {
-                if (!expansionFailed && !cancelledDuringApply) {
-                    options.beforeExpand(index, candidates.candidates.at(index));
+                if (!expansionFailed && !cancelledDuringApply && !callbackFailed) {
+                    const CandidateMatch& candidate = candidates.candidates.at(index);
+                    callbackFailed = !options.beforeExpand(
+                        index, candidate,
+                        currentText.mid(candidate.primary.start,
+                                        candidate.primary.end - candidate.primary.start),
+                        callbackError);
                 }
             };
         }
         if (options.afterExpand) {
             applyOptions.afterExpand = [&](int index,
                                            const SearchOperations::ReplacementMatch&) {
-                if (!expansionFailed && !cancelledDuringApply) {
-                    options.afterExpand(index, candidates.candidates.at(index));
+                if (!expansionFailed && !cancelledDuringApply && !callbackFailed) {
+                    const CandidateMatch& candidate = candidates.candidates.at(index);
+                    callbackFailed = !options.afterExpand(
+                        index, candidate,
+                        currentText.mid(candidate.primary.start,
+                                        candidate.primary.end - candidate.primary.start),
+                        callbackError);
                 }
             };
         }
@@ -242,6 +254,13 @@ RegexWorkbenchEngineResult RegexWorkbenchEngine::ApplyRule(
         if (cancelledDuringApply) {
             return Failure(text, EngineTermination::Cancelled,
                            QStringLiteral("Regex replacement cancelled"),
+                           options, initialExternalState);
+        }
+        if (callbackFailed) {
+            return Failure(text, EngineTermination::VariableFailure,
+                           callbackError.isEmpty()
+                               ? QStringLiteral("Replacement variable callback failed")
+                               : callbackError,
                            options, initialExternalState);
         }
         if (expansionFailed) {

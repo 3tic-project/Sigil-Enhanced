@@ -200,9 +200,7 @@ bool SearchVariableStore::ingestNamedCaptures(
         }
         seen.insert(name);
         if (!captureNumbers.contains(name)) {
-            restore(before);
-            SetError(error, QStringLiteral("Named capture does not exist: %1").arg(name));
-            return false;
+            continue;
         }
         const int number = captureNumbers.value(name);
         if (number <= 0 || number >= captures.size()) {

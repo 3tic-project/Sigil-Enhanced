@@ -82,6 +82,8 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
     BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
     BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.cpp
+    BuiltinPlugins/RegexWorkbench/RegexWorkbenchVariableExecutor.h
     BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
     BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
     BuiltinPlugins/RegexWorkbench/SearchVariableStoreSPCRE.cpp

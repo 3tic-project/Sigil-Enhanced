@@ -176,6 +176,39 @@ target_compile_features(regex_replacement_resolver_test PRIVATE cxx_std_17)
 add_test(NAME regex_replacement_resolver COMMAND regex_replacement_resolver_test)
 set_tests_properties(regex_replacement_resolver PROPERTIES TIMEOUT 30)
 
+add_executable(regex_filter_ingest_order_test
+    regex_filter_ingest_order_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchEngine.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SearchVariableStore.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/RegexWorkbench/SecondaryRegexMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/PreSearchMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperationsApply.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/SearchOperations.h
+)
+
+target_include_directories(regex_filter_ingest_order_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${PCRE2_INCLUDE_DIRS}
+)
+
+target_link_libraries(regex_filter_ingest_order_test PRIVATE
+    Qt6::Core
+    ${PCRE2_LIBRARIES}
+)
+target_compile_features(regex_filter_ingest_order_test PRIVATE cxx_std_17)
+
+add_test(NAME regex_filter_ingest_order COMMAND regex_filter_ingest_order_test)
+set_tests_properties(regex_filter_ingest_order PROPERTIES TIMEOUT 30)
+
 add_executable(search_batch_runner_test
     search_batch_runner_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/SearchBatchRunner.cpp
