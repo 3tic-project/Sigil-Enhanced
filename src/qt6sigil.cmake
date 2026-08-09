@@ -220,7 +220,8 @@ if ( APPLE )
 endif()
 
 target_link_libraries( ${PROJECT_NAME} ${LIBS_TO_LINK} )
-add_dependencies( ${PROJECT_NAME} sigil_opencc_data )
+# Direct target builds (including IDE Build Before Run) need the external icon resources.
+add_dependencies( ${PROJECT_NAME} sigil_opencc_data main fluent material )
 target_compile_definitions( ${PROJECT_NAME} PRIVATE
     SIGIL_OPENCC_BUILD_DATA_DIR="${SIGIL_OPENCC_DATA_DIR}"
 )
