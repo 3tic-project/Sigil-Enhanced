@@ -70,6 +70,13 @@ require(
     "m_CancelFlag->store(true" in dialog and "options.isCancelled" in dialog,
     "Cancel must reach the bounded batch engine",
 )
+require(
+    "exactSnapshotNavigationAvailable" in dialog
+    and "OpenFileRequest(bookpath," in dialog
+    and "OpenFileAndSelect" in main_window_ext
+    and "tab->SetSelectionRange(start, end)" in main_window,
+    "Dry-Run result activation must open its snapshot location and highlight exact ranges",
+)
 start_run = dialog.index("void RegexWorkbenchDialog::StartRun")
 snapshot = dialog.index("SearchBatchCoordinator::CaptureSnapshot(", start_run)
 worker = dialog.index("m_Watcher->setFuture(QtConcurrent::run(", snapshot)

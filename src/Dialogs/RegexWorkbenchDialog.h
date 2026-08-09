@@ -60,7 +60,7 @@ public:
     ~RegexWorkbenchDialog() override;
 
 signals:
-    void OpenFileRequest(QString bookpath, int line, int position);
+    void OpenFileRequest(QString bookpath, int line, int start, int end);
 
 protected:
     void closeEvent(QCloseEvent* event) override;

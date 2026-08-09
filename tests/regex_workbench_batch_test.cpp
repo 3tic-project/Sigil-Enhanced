@@ -186,6 +186,10 @@ void TestBatchScopeOrderAndPreparedReuse()
                 result.report.rows.first().coordinateSpace ==
                     BuiltinPlugins::RegexWorkbench::CoordinateSpace::Final &&
                 result.report.rows.first().lineHint == 1 &&
+                result.report.rows.first().exactSnapshotNavigationAvailable &&
+                result.report.rows.first().snapshotMatchStart == 3 &&
+                result.report.rows.first().snapshotMatchEnd == 5 &&
+                result.report.rows.first().snapshotLineHint == 1 &&
                 result.report.rows.first().beforeSnippet == QStringLiteral("A1") &&
                 result.report.rows.first().afterSnippet == QStringLiteral("mark") &&
                 result.report.rows.first().variableNames ==
@@ -313,13 +317,56 @@ void TestFinalNavigationTracksLaterRulesAndInvalidatesOverlap()
                 result.staged.changedTexts.value(path) == QStringLiteral("ZYc") &&
                 result.report.rows.size() == 3 &&
                 !result.report.rows.at(0).exactNavigationAvailable &&
+                result.report.rows.at(0).matchStart == 0 &&
+                result.report.rows.at(0).lineHint == 1 &&
+                result.report.rows.at(0).exactSnapshotNavigationAvailable &&
+                result.report.rows.at(0).snapshotMatchStart == 0 &&
+                result.report.rows.at(0).snapshotMatchEnd == 1 &&
                 result.report.rows.at(1).exactNavigationAvailable &&
                 result.report.rows.at(1).matchStart == 1 &&
                 result.report.rows.at(1).matchEnd == 2 &&
+                result.report.rows.at(1).exactSnapshotNavigationAvailable &&
+                result.report.rows.at(1).snapshotMatchStart == 1 &&
+                result.report.rows.at(1).snapshotMatchEnd == 2 &&
                 result.report.rows.at(2).exactNavigationAvailable &&
                 result.report.rows.at(2).matchStart == 0 &&
-                result.report.rows.at(2).matchEnd == 1,
-            "final navigation must shift through later edits and reject overlapped coordinates");
+                result.report.rows.at(2).matchEnd == 1 &&
+                !result.report.rows.at(2).exactSnapshotNavigationAvailable &&
+                result.report.rows.at(2).snapshotMatchStart == 0 &&
+                result.report.rows.at(2).snapshotMatchEnd == -1 &&
+                result.report.rows.at(2).snapshotLineHint == 1,
+            "navigation must map final and snapshot coordinates across later edits");
+}
+
+void TestSnapshotNavigationPreservesOriginalLineAcrossInsertedNewlines()
+{
+    RegexRecipe recipe;
+    recipe.name = QStringLiteral("line navigation");
+    RegexWorkbenchRule insertLine;
+    insertLine.id = QStringLiteral("insert-line");
+    insertLine.name = QStringLiteral("insert staged line");
+    insertLine.find = QStringLiteral("head");
+    insertLine.replace = QStringLiteral("HEAD\nEXTRA");
+    recipe.rules.append(insertLine);
+
+    RegexWorkbenchRule replaceBody;
+    replaceBody.id = QStringLiteral("replace-body");
+    replaceBody.name = QStringLiteral("replace body");
+    replaceBody.find = QStringLiteral("b");
+    replaceBody.replace = QStringLiteral("B");
+    recipe.rules.append(replaceBody);
+
+    const QString path = QStringLiteral("Text/lines.txt");
+    const auto result = RegexWorkbenchBatchRunner::Run(
+        recipe, QStringList{path}, {{path, QStringLiteral("head\na b\n")}},
+        {{path, QStringLiteral("text/plain")}}, SearchVariableStore());
+    Require(result.staged.success && result.report.rows.size() == 2 &&
+                result.report.rows.at(1).lineHint == 3 &&
+                result.report.rows.at(1).exactSnapshotNavigationAvailable &&
+                result.report.rows.at(1).snapshotMatchStart == 7 &&
+                result.report.rows.at(1).snapshotMatchEnd == 8 &&
+                result.report.rows.at(1).snapshotLineHint == 2,
+            "Dry-Run navigation must display and select the original snapshot line");
 }
 
 }
@@ -331,6 +378,7 @@ int main()
     TestValidationLimitAndCancellationDiscardPublication();
     TestTargetAndMediaMetadataAreClosedWorld();
     TestFinalNavigationTracksLaterRulesAndInvalidatesOverlap();
+    TestSnapshotNavigationPreservesOriginalLineAcrossInsertedNewlines();
     std::cout << "regex workbench batch tests passed\n";
     return 0;
 }

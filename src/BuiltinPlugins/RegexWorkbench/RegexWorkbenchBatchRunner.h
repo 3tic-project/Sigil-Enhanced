@@ -46,6 +46,13 @@ struct RegexWorkbenchReportRow
     int matchStart = -1;
     int matchEnd = -1;
     int lineHint = -1;
+    // Snapshot coordinates drive Dry-Run navigation. When exact navigation is
+    // unavailable, snapshotMatchStart remains a best-effort caret anchor and
+    // snapshotMatchEnd is -1 so callers can still open the corresponding line.
+    bool exactSnapshotNavigationAvailable = false;
+    int snapshotMatchStart = -1;
+    int snapshotMatchEnd = -1;
+    int snapshotLineHint = -1;
     QString beforeSnippet;
     QString afterSnippet;
     QStringList variableNames;

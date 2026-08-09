@@ -3483,6 +3483,28 @@ void MainWindow::OpenFile(QString bookpath, int line, int position)
     }
 }
 
+void MainWindow::OpenFileAndSelect(QString bookpath, int line, int start, int end)
+{
+    if (bookpath.isEmpty()) {
+        return;
+    }
+    if (start < 0) {
+        OpenFile(bookpath, line, -1);
+        return;
+    }
+
+    try {
+        Resource* resource = m_Book->GetFolderKeeper()->GetResourceByBookPath(bookpath);
+        OpenResourceAndWaitUntilLoaded(resource, line, start);
+        ContentTab* tab = GetCurrentContentTab();
+        if (end > start && tab && tab->GetLoadedResource() == resource) {
+            tab->SetSelectionRange(start, end);
+        }
+    } catch (ResourceDoesNotExist&) {
+        // The result refers to a resource that no longer exists.
+    }
+}
+
 // note the files_to_delete is a list of Resource Book Paths
 // for safety
 void MainWindow::DeleteFilenames(QStringList files_to_delete)

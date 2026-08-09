@@ -26109,7 +26109,8 @@ Continue using the requested filename?</source>
 <message><source>Down</source><translation>下移</translation></message>
 <message><source>Dry Run</source><translation>試執行</translation></message>
 <message><source>Dry-Run complete: %1 replacement(s), %2 changed resource(s). The book and session variables were not modified.</source><translation>試執行完成：%1 次取代，%2 個資源將被修改。書籍與工作階段變數均未變更。</translation></message>
-<message><source>Dry-Run coordinates refer to staged text; navigation opens the unchanged resource without an exact position.</source><translation>試執行座標基於暫存文字；導覽只會開啟未修改的資源，不會精確定位。</translation></message>
+<message><source>Double-click to open the resource and highlight this match.</source><translation>按兩下可開啟資源並反白顯示此符合項目。</translation></message>
+<message><source>Double-click to open the resource; no exact position is available.</source><translation>按兩下可開啟資源；目前沒有可用的精確位置。</translation></message>
 <message><source>Dry-Run results</source><translation>試執行結果</translation></message>
 <message><source>Duplicate</source><translation>複製</translation></message>
 <message><source>Enabled</source><translation>啟用</translation></message>
@@ -26162,7 +26163,7 @@ Continue using the requested filename?</source>
 <message><source>Staging a fresh Apply run in memory...</source><translation>正在記憶體中重新暫存本次套用...</translation></message>
 <message><source>Store all named captures</source><translation>儲存所有命名擷取群組</translation></message>
 <message><source>The report omitted %1 additional row(s); totals remain exact.</source><translation>報告省略了另外 %1 列；總計數仍然準確。</translation></message>
-<message><source>The result was changed by a later rule; navigation opens the resource without an exact position.</source><translation>此結果已被後續規則變更；導覽只會開啟資源，不會精確定位。</translation></message>
+<message><source>The exact range no longer maps to the document; double-click to open the nearest corresponding line.</source><translation>精確範圍已無法對應到文件；按兩下可開啟最接近的對應行。</translation></message>
 <message><source>The selected saved search no longer exists.</source><translation>選取的已儲存搜尋已不存在。</translation></message>
 <message><source>The selected scope contains no text resources.</source><translation>選取的範圍不含文字資源。</translation></message>
 <message><source>Untitled Recipe</source><translation>未命名方案</translation></message>

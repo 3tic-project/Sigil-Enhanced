@@ -65,21 +65,91 @@ bool MapIntervalThroughPass(int& start,
     return true;
 }
 
+int MapPositionThroughPass(int position,
+                           const QList<RegexWorkbenchReplacementTrace>& traces)
+{
+    int delta = 0;
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (position < trace.inputStart) {
+            break;
+        }
+        if (position >= trace.inputEnd) {
+            delta += (trace.outputEnd - trace.outputStart) -
+                     (trace.inputEnd - trace.inputStart);
+            continue;
+        }
+        const int outputLength = trace.outputEnd - trace.outputStart;
+        return trace.outputStart +
+               qMin(position - trace.inputStart, outputLength);
+    }
+    return position + delta;
+}
+
+bool MapIntervalBackThroughPass(
+    int& start,
+    int& end,
+    const QList<RegexWorkbenchReplacementTrace>& traces)
+{
+    int delta = 0;
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (trace.outputEnd <= start) {
+            delta += (trace.inputEnd - trace.inputStart) -
+                     (trace.outputEnd - trace.outputStart);
+            continue;
+        }
+        if (trace.outputStart >= end) {
+            break;
+        }
+        return false;
+    }
+    start += delta;
+    end += delta;
+    return true;
+}
+
+int MapPositionBackThroughPass(
+    int position,
+    const QList<RegexWorkbenchReplacementTrace>& traces)
+{
+    int delta = 0;
+    for (const RegexWorkbenchReplacementTrace& trace : traces) {
+        if (position < trace.outputStart) {
+            break;
+        }
+        if (position >= trace.outputEnd) {
+            delta += (trace.inputEnd - trace.inputStart) -
+                     (trace.outputEnd - trace.outputStart);
+            continue;
+        }
+        const int inputLength = trace.inputEnd - trace.inputStart;
+        return trace.inputStart +
+               qMin(position - trace.outputStart, inputLength);
+    }
+    return position + delta;
+}
+
 void RecordPassTrace(RegexWorkbenchDryRunReport& report,
                      const QString& ruleId,
                      const QString& ruleName,
                      const QString& bookpath,
                      const QList<RegexWorkbenchReplacementTrace>& traces,
+                     QList<QList<RegexWorkbenchReplacementTrace>>& priorPasses,
                      int maxRows,
                      int maxSnippetCodeUnits)
 {
     for (RegexWorkbenchReportRow& row : report.rows) {
-        if (row.bookpath == bookpath && row.exactNavigationAvailable &&
-            !MapIntervalThroughPass(row.matchStart, row.matchEnd, traces)) {
+        if (row.bookpath != bookpath || row.matchStart < 0) {
+            continue;
+        }
+        if (!row.exactNavigationAvailable) {
+            row.matchStart = MapPositionThroughPass(row.matchStart, traces);
+            continue;
+        }
+        const int previousStart = row.matchStart;
+        if (!MapIntervalThroughPass(row.matchStart, row.matchEnd, traces)) {
             row.exactNavigationAvailable = false;
-            row.matchStart = -1;
+            row.matchStart = MapPositionThroughPass(previousStart, traces);
             row.matchEnd = -1;
-            row.lineHint = -1;
         }
     }
 
@@ -100,11 +170,28 @@ void RecordPassTrace(RegexWorkbenchDryRunReport& report,
         row.exactNavigationAvailable = true;
         row.matchStart = trace.outputStart;
         row.matchEnd = trace.outputEnd;
+        int snapshotStart = trace.inputStart;
+        int snapshotEnd = trace.inputEnd;
+        bool exactSnapshot = true;
+        for (auto pass = priorPasses.crbegin(); pass != priorPasses.crend(); ++pass) {
+            if (!MapIntervalBackThroughPass(snapshotStart, snapshotEnd, *pass)) {
+                exactSnapshot = false;
+                break;
+            }
+        }
+        int snapshotAnchor = trace.inputStart;
+        for (auto pass = priorPasses.crbegin(); pass != priorPasses.crend(); ++pass) {
+            snapshotAnchor = MapPositionBackThroughPass(snapshotAnchor, *pass);
+        }
+        row.exactSnapshotNavigationAvailable = exactSnapshot;
+        row.snapshotMatchStart = exactSnapshot ? snapshotStart : snapshotAnchor;
+        row.snapshotMatchEnd = exactSnapshot ? snapshotEnd : -1;
         row.beforeSnippet = Snippet(trace.beforeText, maxSnippetCodeUnits);
         row.afterSnippet = Snippet(trace.afterText, maxSnippetCodeUnits);
         row.variableNames = trace.variableNames;
         report.rows.append(row);
     }
+    priorPasses.append(traces);
 }
 
 void FinalizeNavigation(RegexWorkbenchDryRunReport& report,
@@ -112,21 +199,42 @@ void FinalizeNavigation(RegexWorkbenchDryRunReport& report,
                         const QHash<QString, QString>& changedTexts)
 {
     for (RegexWorkbenchReportRow& row : report.rows) {
-        if (!row.exactNavigationAvailable) {
-            continue;
-        }
         const QString finalText = changedTexts.contains(row.bookpath)
                                       ? changedTexts.value(row.bookpath)
                                       : originalTexts.value(row.bookpath);
-        if (row.matchStart < 0 || row.matchEnd < row.matchStart ||
-            row.matchEnd > finalText.size()) {
+        if (row.matchStart < 0 || row.matchStart > finalText.size()) {
             row.exactNavigationAvailable = false;
             row.matchStart = -1;
             row.matchEnd = -1;
+            row.lineHint = -1;
+        } else {
+            if (row.exactNavigationAvailable &&
+                (row.matchEnd < row.matchStart || row.matchEnd > finalText.size())) {
+                row.exactNavigationAvailable = false;
+                row.matchEnd = -1;
+            }
+            row.coordinateSpace = CoordinateSpace::Final;
+            row.lineHint = finalText.left(row.matchStart)
+                               .count(QLatin1Char('\n')) + 1;
+        }
+
+        const QString snapshotText = originalTexts.value(row.bookpath);
+        if (row.snapshotMatchStart < 0 ||
+            row.snapshotMatchStart > snapshotText.size()) {
+            row.exactSnapshotNavigationAvailable = false;
+            row.snapshotMatchStart = -1;
+            row.snapshotMatchEnd = -1;
+            row.snapshotLineHint = -1;
             continue;
         }
-        row.coordinateSpace = CoordinateSpace::Final;
-        row.lineHint = finalText.left(row.matchStart).count(QLatin1Char('\n')) + 1;
+        if (row.exactSnapshotNavigationAvailable &&
+            (row.snapshotMatchEnd < row.snapshotMatchStart ||
+             row.snapshotMatchEnd > snapshotText.size())) {
+            row.exactSnapshotNavigationAvailable = false;
+            row.snapshotMatchEnd = -1;
+        }
+        row.snapshotLineHint = snapshotText.left(row.snapshotMatchStart)
+                                   .count(QLatin1Char('\n')) + 1;
     }
 }
 
@@ -206,6 +314,7 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
         };
 
     qint64 observedReplacements = 0;
+    QHash<QString, QList<QList<RegexWorkbenchReplacementTrace>>> navigationPasses;
     int completedSteps = 0;
     const int totalSteps = batchRules.size() * orderedResourcePaths.size();
     if (options.progressCallback) {
@@ -239,7 +348,8 @@ RegexWorkbenchBatchResult RegexWorkbenchBatchRunner::Run(
             engineOptions.replacementPassApplied =
                 [&](QList<RegexWorkbenchReplacementTrace> traces) {
                     RecordPassTrace(result.report, batchRule.id, batchRule.name,
-                                    resourcePath, traces, options.maxReportRows,
+                                    resourcePath, traces,
+                                    navigationPasses[resourcePath], options.maxReportRows,
                                     options.maxSnippetCodeUnits);
                     if (callerTrace) {
                         callerTrace(std::move(traces));

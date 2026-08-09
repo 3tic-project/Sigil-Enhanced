@@ -26124,7 +26124,8 @@ Continue using the requested filename?</source>
 <message><source>Down</source><translation>下へ</translation></message>
 <message><source>Dry Run</source><translation>ドライラン</translation></message>
 <message><source>Dry-Run complete: %1 replacement(s), %2 changed resource(s). The book and session variables were not modified.</source><translation>ドライラン完了：%1 件の置換、%2 個のリソースが変更対象です。ブックおよびセッション変数は変更されていません。</translation></message>
-<message><source>Dry-Run coordinates refer to staged text; navigation opens the unchanged resource without an exact position.</source><translation>ドライランの座標はステージ済みテキストを基準とします。移動時は未変更のリソースを開き、正確な位置には移動しません。</translation></message>
+<message><source>Double-click to open the resource and highlight this match.</source><translation>ダブルクリックするとリソースを開き、この一致範囲を選択表示します。</translation></message>
+<message><source>Double-click to open the resource; no exact position is available.</source><translation>ダブルクリックするとリソースを開きます。正確な位置は利用できません。</translation></message>
 <message><source>Dry-Run results</source><translation>ドライラン結果</translation></message>
 <message><source>Duplicate</source><translation>複製</translation></message>
 <message><source>Enabled</source><translation>有効</translation></message>
@@ -26177,7 +26178,7 @@ Continue using the requested filename?</source>
 <message><source>Staging a fresh Apply run in memory...</source><translation>今回の適用内容をメモリ上で新たにステージしています...</translation></message>
 <message><source>Store all named captures</source><translation>すべての名前付きキャプチャを保存</translation></message>
 <message><source>The report omitted %1 additional row(s); totals remain exact.</source><translation>レポートでは追加の %1 行を省略しました。合計値は正確です。</translation></message>
-<message><source>The result was changed by a later rule; navigation opens the resource without an exact position.</source><translation>この結果は後続のルールで変更されました。移動時はリソースを開きますが、正確な位置には移動しません。</translation></message>
+<message><source>The exact range no longer maps to the document; double-click to open the nearest corresponding line.</source><translation>正確な範囲を文書に対応付けられません。ダブルクリックすると最も近い対応行を開きます。</translation></message>
 <message><source>The selected saved search no longer exists.</source><translation>選択した保存済み検索は存在しません。</translation></message>
 <message><source>The selected scope contains no text resources.</source><translation>選択したスコープにテキストリソースがありません。</translation></message>
 <message><source>Untitled Recipe</source><translation>無題のレシピ</translation></message>

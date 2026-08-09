@@ -773,7 +773,7 @@ bool MainWindow::OpenRegexWorkbench()
 
     RegexWorkbenchDialog dialog(this, targets, this);
     connect(&dialog, &RegexWorkbenchDialog::OpenFileRequest,
-            this, &MainWindow::OpenFile);
+            this, &MainWindow::OpenFileAndSelect);
     dialog.exec();
     return true;
 }

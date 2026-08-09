@@ -984,17 +984,26 @@ void RegexWorkbenchDialog::PopulateReport(const RegexWorkbenchBatchResult& resul
     for (int row = 0; row < result.report.rows.size(); ++row) {
         const RegexWorkbenchReportRow& report = result.report.rows.at(row);
         auto* rule = new QTableWidgetItem(report.ruleName);
+        const bool exact = applied
+                               ? report.exactNavigationAvailable &&
+                                     report.coordinateSpace == CoordinateSpace::Final
+                               : report.exactSnapshotNavigationAvailable;
+        const int navigationLine = applied ? report.lineHint
+                                           : report.snapshotLineHint;
+        const int navigationStart = applied ? report.matchStart
+                                            : report.snapshotMatchStart;
+        const int navigationEnd = applied ? report.matchEnd
+                                          : report.snapshotMatchEnd;
         rule->setData(Qt::UserRole, report.bookpath);
-        rule->setData(Qt::UserRole + 1, report.lineHint);
-        rule->setData(Qt::UserRole + 2, report.matchStart);
-        const bool navigationAvailable = applied && report.exactNavigationAvailable &&
-                                         report.coordinateSpace == CoordinateSpace::Final;
-        rule->setData(Qt::UserRole + 3, navigationAvailable);
+        rule->setData(Qt::UserRole + 1, navigationLine);
+        rule->setData(Qt::UserRole + 2, navigationStart);
+        rule->setData(Qt::UserRole + 3, exact);
+        rule->setData(Qt::UserRole + 4, exact ? navigationEnd : -1);
         m_ReportTable->setItem(row, 0, rule);
         m_ReportTable->setItem(row, 1, new QTableWidgetItem(report.bookpath));
         m_ReportTable->setItem(
-            row, 2, new QTableWidgetItem(report.lineHint > 0
-                                             ? QString::number(report.lineHint)
+            row, 2, new QTableWidgetItem(navigationLine > 0
+                                             ? QString::number(navigationLine)
                                              : QStringLiteral("-")));
         m_ReportTable->setItem(row, 3, new QTableWidgetItem(report.beforeSnippet));
         m_ReportTable->setItem(row, 4, new QTableWidgetItem(report.afterSnippet));
@@ -1002,13 +1011,16 @@ void RegexWorkbenchDialog::PopulateReport(const RegexWorkbenchBatchResult& resul
             QString::number(report.iterationNumber)));
         m_ReportTable->setItem(row, 6, new QTableWidgetItem(
             report.variableNames.join(QStringLiteral(", "))));
-        if (!report.exactNavigationAvailable ||
-            report.coordinateSpace != CoordinateSpace::Final) {
-            rule->setToolTip(tr("The result was changed by a later rule; navigation "
-                                "opens the resource without an exact position."));
-        } else if (!applied) {
-            rule->setToolTip(tr("Dry-Run coordinates refer to staged text; navigation "
-                                "opens the unchanged resource without an exact position."));
+        if (exact) {
+            rule->setToolTip(
+                tr("Double-click to open the resource and highlight this match."));
+        } else if (navigationLine > 0) {
+            rule->setToolTip(
+                tr("The exact range no longer maps to the document; double-click "
+                   "to open the nearest corresponding line."));
+        } else {
+            rule->setToolTip(
+                tr("Double-click to open the resource; no exact position is available."));
         }
     }
     if (result.report.rowsTruncated) {
@@ -1043,8 +1055,9 @@ void RegexWorkbenchDialog::OpenResultRow(int row, int)
     const QString bookpath = item->data(Qt::UserRole).toString();
     const bool exact = item->data(Qt::UserRole + 3).toBool();
     emit OpenFileRequest(bookpath,
-                         exact ? item->data(Qt::UserRole + 1).toInt() : -1,
-                         exact ? item->data(Qt::UserRole + 2).toInt() : -1);
+                         item->data(Qt::UserRole + 1).toInt(),
+                         item->data(Qt::UserRole + 2).toInt(),
+                         exact ? item->data(Qt::UserRole + 4).toInt() : -1);
 }
 
 void RegexWorkbenchDialog::ClearVariables()

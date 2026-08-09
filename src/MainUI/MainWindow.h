@@ -720,6 +720,7 @@ private slots:
     void DeleteFilenames(QStringList files_to_delete);
 
     void OpenFile(QString file_bookpath, int line = -1, int position = -1);
+    void OpenFileAndSelect(QString file_bookpath, int line, int start, int end);
 
     void UpdateClipsUI();
 
