@@ -462,6 +462,59 @@ target_link_libraries(booklive_paragraph_normalizer_test PRIVATE
 add_test(NAME booklive_paragraph_normalizer COMMAND booklive_paragraph_normalizer_test)
 set_tests_properties(booklive_paragraph_normalizer PROPERTIES TIMEOUT 30)
 
+set(V2H_TEST_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalProfileDetector.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalProfileDetector.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalCssTransformer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalCssTransformer.h
+    ${CMAKE_SOURCE_DIR}/src/Parsers/CSSParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/Parsers/CSSDeNest.cpp
+    ${CMAKE_SOURCE_DIR}/src/Parsers/css_structure_parser.c
+    ${CMAKE_SOURCE_DIR}/src/Parsers/CSSUtils.cpp
+)
+
+add_executable(vertical_layout_analyzer_test
+    vertical_layout_analyzer_test.cpp
+    ${V2H_TEST_SOURCES}
+)
+target_include_directories(vertical_layout_analyzer_test PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/internal/lexbor)
+target_link_libraries(vertical_layout_analyzer_test PRIVATE Qt6::Core Qt6::Xml lexborcss)
+set_target_properties(vertical_layout_analyzer_test PROPERTIES C_STANDARD 11)
+add_test(NAME vertical_layout_analyzer COMMAND vertical_layout_analyzer_test)
+set_tests_properties(vertical_layout_analyzer PROPERTIES TIMEOUT 30)
+
+add_executable(vertical_profile_detector_test
+    vertical_profile_detector_test.cpp
+    ${V2H_TEST_SOURCES}
+)
+target_include_directories(vertical_profile_detector_test PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/internal/lexbor)
+target_link_libraries(vertical_profile_detector_test PRIVATE Qt6::Core Qt6::Xml lexborcss)
+set_target_properties(vertical_profile_detector_test PROPERTIES C_STANDARD 11)
+add_test(NAME vertical_profile_detector COMMAND vertical_profile_detector_test)
+set_tests_properties(vertical_profile_detector PROPERTIES TIMEOUT 30)
+
+add_executable(vertical_css_transformer_test
+    vertical_css_transformer_test.cpp
+    ${V2H_TEST_SOURCES}
+)
+target_include_directories(vertical_css_transformer_test PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/internal/lexbor)
+target_link_libraries(vertical_css_transformer_test PRIVATE Qt6::Core Qt6::Xml lexborcss)
+set_target_properties(vertical_css_transformer_test PROPERTIES C_STANDARD 11)
+add_test(NAME vertical_css_transformer COMMAND vertical_css_transformer_test)
+set_tests_properties(vertical_css_transformer PROPERTIES TIMEOUT 30)
+
+add_executable(vertical_conversion_invariants_test
+    vertical_conversion_invariants_test.cpp
+    ${V2H_TEST_SOURCES}
+)
+target_include_directories(vertical_conversion_invariants_test PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/internal/lexbor)
+target_link_libraries(vertical_conversion_invariants_test PRIVATE Qt6::Core Qt6::Xml lexborcss)
+set_target_properties(vertical_conversion_invariants_test PROPERTIES C_STANDARD 11)
+add_test(NAME vertical_conversion_invariants COMMAND vertical_conversion_invariants_test)
+set_tests_properties(vertical_conversion_invariants PROPERTIES TIMEOUT 30)
+
     add_executable(font_subset_smoke_test
         font_subset_smoke_test.cpp
     )

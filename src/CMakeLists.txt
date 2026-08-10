@@ -77,6 +77,14 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/FormatterEnhancer.h
     BuiltinPlugins/KfxParagraphNormalizer.cpp
     BuiltinPlugins/KfxParagraphNormalizer.h
+    BuiltinPlugins/VerticalCssTransformer.cpp
+    BuiltinPlugins/VerticalCssTransformer.h
+    BuiltinPlugins/VerticalLayoutAnalyzer.cpp
+    BuiltinPlugins/VerticalLayoutAnalyzer.h
+    BuiltinPlugins/VerticalProfileDetector.cpp
+    BuiltinPlugins/VerticalProfileDetector.h
+    BuiltinPlugins/VerticalToHorizontalConverter.cpp
+    BuiltinPlugins/VerticalToHorizontalConverter.h
     BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h
     BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.cpp
     BuiltinPlugins/RegexWorkbench/RecursiveReplaceGuard.h
