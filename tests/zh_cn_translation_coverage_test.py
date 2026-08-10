@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 
 PLACEHOLDER_PATTERN = re.compile(r"%(?:L?\d+|n)")
 HTML_TAG_PATTERN = re.compile(r"</?([A-Za-z][\w:-]*)\b")
+JAPANESE_KANA_PATTERN = re.compile(r"[\u3040-\u30ff]")
 UI_LITERAL_PATTERNS = (
     re.compile(
         r'(?:->|\.)set(?:Text|ToolTip|StatusTip|WhatsThis|WindowTitle|PlaceholderText|AccessibleName|AccessibleDescription)'
@@ -114,6 +115,12 @@ def validate_catalog(source_root, lupdate, locale):
                 failures.append("placeholder mismatch: {0}: {1!r}".format(context, source))
             if "</" in source and collections.Counter(HTML_TAG_PATTERN.findall(value)) != source_tags:
                 failures.append("rich-text tag mismatch: {0}: {1!r}".format(context, source))
+            if locale == "zh_CN" and JAPANESE_KANA_PATTERN.search(value):
+                failures.append(
+                    "unexpected Japanese kana in zh_CN translation: {0}: {1!r}".format(
+                        context, source
+                    )
+                )
 
     return failures, len(extracted)
 
