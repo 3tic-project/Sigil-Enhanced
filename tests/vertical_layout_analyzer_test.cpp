@@ -129,6 +129,39 @@ int runTests()
         }
     }
 
+    // ---- effectiveWritingMode: DPFJ 共用样式表以页面根 class 为准 ----
+    {
+        const auto css = VerticalLayoutAnalyzer::analyzeCss(QStringLiteral(
+            ".vrtl { writing-mode: vertical-rl; }\n"
+            ".hltr { writing-mode: horizontal-tb; }\n"));
+        const auto vertical = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/>"
+            "<body class=\"vrtl\"><p>縦</p></body></html>"));
+        const auto horizontal = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\" class=\"hltr\"><head/>"
+            "<body><p>横</p></body></html>"));
+        if (VerticalLayoutAnalyzer::effectiveWritingMode(css, vertical)
+                != VerticalLayoutAnalyzer::WritingMode::Vertical
+            || VerticalLayoutAnalyzer::effectiveWritingMode(css, horizontal)
+                != VerticalLayoutAnalyzer::WritingMode::Horizontal) {
+            return fail(QStringLiteral("paired profile root class direction failed"));
+        }
+    }
+
+    // ---- effectiveWritingMode: compatibility override class wins ----
+    {
+        const auto vertical_css = VerticalLayoutAnalyzer::analyzeCss(QStringLiteral(
+            "body { writing-mode: vertical-rl; }"));
+        const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\" class=\"vrtl se-v2h-horizontal\">"
+            "<head/><body><p>横</p></body></html>"));
+        if (!xhtml.hasV2hOverrideClass
+            || VerticalLayoutAnalyzer::effectiveWritingMode(vertical_css, xhtml)
+                != VerticalLayoutAnalyzer::WritingMode::Horizontal) {
+            return fail(QStringLiteral("compatibility override direction failed"));
+        }
+    }
+
     // ---- analyzeXhtml: 固定 viewport ----
     {
         const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(

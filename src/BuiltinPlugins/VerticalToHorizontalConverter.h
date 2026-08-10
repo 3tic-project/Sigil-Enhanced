@@ -92,6 +92,8 @@ private:
         VerticalLayoutAnalyzer::CssAnalysis css;
         VerticalLayoutAnalyzer::XhtmlAnalysis xhtml;
         PageKind kind = PageKind::ParseError;
+        VerticalLayoutAnalyzer::WritingMode writingMode =
+            VerticalLayoutAnalyzer::WritingMode::Unknown;
         int riskScore = 0;
         bool vertical = false;
         QStringList reasons;

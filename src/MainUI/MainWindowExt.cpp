@@ -1908,7 +1908,8 @@ bool MainWindow::ConvertVerticalLayoutDirection(bool to_horizontal)
     QApplication::restoreOverrideCursor();
 
     const bool already_target = to_horizontal
-        ? (analysis.verticalCount == 0) : (analysis.horizontalCount == 0);
+        ? (analysis.verticalCount == 0 && analysis.reviewCount == 0)
+        : (analysis.horizontalCount == 0 && analysis.reviewCount == 0);
     if (already_target) {
         ShowMessageOnStatusBar(tr("%1: the book is already in the target direction.").arg(op_name));
         m_ValidationResultsView->LoadResults(QList<ValidationResult>()

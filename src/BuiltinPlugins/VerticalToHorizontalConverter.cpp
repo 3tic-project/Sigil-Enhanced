@@ -273,44 +273,47 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
         file.profileName = analysis.profileName;
         file.reasons = context.reasons;
 
-        if (context.vertical) {
+        if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Vertical) {
             analysis.verticalCount++;
-        } else if (context.kind == VerticalLayoutAnalyzer::PageKind::AlreadyHorizontal
-                   || context.kind == VerticalLayoutAnalyzer::PageKind::TitleOrColophon) {
+        } else if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Horizontal) {
+            analysis.horizontalCount++;
+        } else if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Mixed
+                   || context.writingMode == VerticalLayoutAnalyzer::WritingMode::Unknown) {
+            // Count mixed or ambiguous pages in both totals so neither
+            // direction is incorrectly reported as already converted.
+            analysis.verticalCount++;
             analysis.horizontalCount++;
         }
 
-        if (isVerticalKind(context.kind)) {
-            if (to_horizontal) {
-                if (context.riskScore < 50) {
-                    analysis.safeCount++;
-                    file.plannedChanges << QStringLiteral("写入横排覆盖样式");
-                } else if (context.riskScore < 75) {
-                    analysis.reviewCount++;
-                    file.plannedChanges << QStringLiteral("人工复核（风险 %1）").arg(context.riskScore);
-                } else {
-                    analysis.skippedCount++;
-                    file.plannedChanges << QStringLiteral("不支持（风险 %1）").arg(context.riskScore);
-                }
-            } else {
-                // H2V：已竖排页面即为目标方向，跳过
-                analysis.skippedCount++;
-                file.plannedChanges << QStringLiteral("已是竖排，跳过");
-            }
-        } else if (context.kind == VerticalLayoutAnalyzer::PageKind::AlreadyHorizontal
-                   || context.kind == VerticalLayoutAnalyzer::PageKind::TitleOrColophon) {
-            if (to_horizontal) {
-                analysis.skippedCount++;
-                file.plannedChanges << QStringLiteral("已是横排，跳过");
-            } else if (context.riskScore < 50) {
+        if (to_horizontal) {
+            if (isConvertibleKind(context.kind, context.riskScore)) {
                 analysis.safeCount++;
-                file.plannedChanges << QStringLiteral("写入竖排覆盖样式");
-            } else {
+                file.plannedChanges << QStringLiteral("写入横排覆盖样式");
+            } else if (isVerticalKind(context.kind) && context.riskScore < 75) {
                 analysis.reviewCount++;
                 file.plannedChanges << QStringLiteral("人工复核（风险 %1）").arg(context.riskScore);
+            } else if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Horizontal) {
+                analysis.skippedCount++;
+                file.plannedChanges << QStringLiteral("已是横排，跳过");
+            } else {
+                analysis.skippedCount++;
             }
         } else {
-            analysis.skippedCount++;
+            const bool horizontal_candidate =
+                context.kind == VerticalLayoutAnalyzer::PageKind::AlreadyHorizontal
+                || context.kind == VerticalLayoutAnalyzer::PageKind::TitleOrColophon;
+            if (horizontal_candidate && context.riskScore < 50) {
+                analysis.safeCount++;
+                file.plannedChanges << QStringLiteral("写入竖排覆盖样式");
+            } else if (horizontal_candidate) {
+                analysis.reviewCount++;
+                file.plannedChanges << QStringLiteral("人工复核（风险 %1）").arg(context.riskScore);
+            } else {
+                analysis.skippedCount++;
+                if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Vertical) {
+                    file.plannedChanges << QStringLiteral("已是竖排，跳过");
+                }
+            }
         }
         analysis.files.append(file);
     }
@@ -355,10 +358,10 @@ VerticalToHorizontalConverter::PageContext VerticalToHorizontalConverter::analyz
     }
     context.css = VerticalLayoutAnalyzer::analyzeCss(joined);
 
-    const bool has_vrtl_class = context.xhtml.htmlHasVrtlClass || context.xhtml.bodyHasVrtlClass;
-    context.vertical = context.xhtml.hasVerticalWritingMode
-        || context.css.hasVerticalWritingMode
-        || has_vrtl_class;
+    context.writingMode =
+        VerticalLayoutAnalyzer::effectiveWritingMode(context.css, context.xhtml);
+    context.vertical = context.writingMode == VerticalLayoutAnalyzer::WritingMode::Vertical
+        || context.writingMode == VerticalLayoutAnalyzer::WritingMode::Mixed;
 
     context.riskScore = VerticalLayoutAnalyzer::combinedRiskScore(
         context.css, context.xhtml, bookLevel.canSwitchHltr);
@@ -406,7 +409,17 @@ void VerticalToHorizontalConverter::classifyPage(PageContext& context,
         context.reasons << QStringLiteral("SVG 内含纵排文本");
         return;
     }
-    if (!context.vertical) {
+    if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Unknown) {
+        context.kind = PageKind::MixedWritingMode;
+        context.reasons << QStringLiteral("共用样式表同时定义纵横排，但页面没有明确的根布局 class");
+        return;
+    }
+    if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Mixed) {
+        context.kind = PageKind::MixedWritingMode;
+        context.reasons << QStringLiteral("纵横混排或方向信号冲突");
+        return;
+    }
+    if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Horizontal) {
         if (x.visibleTextLength > 0 && x.visibleTextLength < 400) {
             context.kind = PageKind::TitleOrColophon;
             context.reasons << QStringLiteral("标题/版权页，非正文");
@@ -414,11 +427,6 @@ void VerticalToHorizontalConverter::classifyPage(PageContext& context,
             context.kind = PageKind::AlreadyHorizontal;
             context.reasons << QStringLiteral("已是横排");
         }
-        return;
-    }
-    if (x.hasHorizontalWritingMode) {
-        context.kind = PageKind::MixedWritingMode;
-        context.reasons << QStringLiteral("纵横混排");
         return;
     }
     if (context.riskScore >= 75) {
@@ -516,8 +524,9 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         result.ok = true;
         return result;
     }
-    const bool already_target =
-        to_horizontal ? (result.before.verticalCount == 0) : (result.before.horizontalCount == 0);
+    const bool already_target = to_horizontal
+        ? (result.before.verticalCount == 0 && result.before.reviewCount == 0)
+        : (result.before.horizontalCount == 0 && result.before.reviewCount == 0);
     if (already_target) {
         addResult(result, ValidationResult::ResType_Info, QString(),
                   to_horizontal
@@ -598,7 +607,8 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         css_text_cache.insert(css->GetRelativePath(), css->GetText());
     }
     QList<QPair<CSSResource*, QString>> css_changes; // resource + new text
-    if (options.mode == VerticalCssTransformer::ConversionMode::ProfileAwareRewrite) {
+    if (options.mode == VerticalCssTransformer::ConversionMode::ProfileAwareRewrite
+        && !switch_target_class) {
         QSet<QString> linked_css_paths;
         for (const PlannedPage& page : pages) {
             const QStringList linked = linkedStylesheetBookPaths(page.source, page.bookpath, css_text_cache);
@@ -624,7 +634,8 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
     // OPF page progression（V2H -> ltr，H2V -> rtl）
     OPFResource* opf = m_Book->GetOPF();
     opf->InitialLoad();
-    QString opf_text = opf->GetText();
+    const QString opf_source = opf->GetText();
+    QString opf_text = opf_source;
     bool opf_changed = false;
     if (options.updatePageProgression) {
         const VerticalCssTransformer::TransformResult transform =
@@ -643,7 +654,7 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
             return result;
         }
     }
-    if (opf_changed && opf->GetText() != opf_text) {
+    if (opf_changed && opf->GetText() != opf_source) {
         addResult(result, ValidationResult::ResType_Error, opf->GetRelativePath(),
                   QStringLiteral("%1：OPF 在分析后被修改，未写回任何文件。").arg(op_name));
         return result;

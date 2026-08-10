@@ -52,7 +52,27 @@ void appendClass(QDomElement& element, const QString& class_name)
     }
 }
 
-void replaceClassToken(QDomElement& element, const QString& from_class, const QString& to_class)
+bool hasClassToken(const QDomElement& element, const QString& class_name)
+{
+    return classTokens(element.attribute(QStringLiteral("class"))).contains(class_name);
+}
+
+bool removeClassToken(QDomElement& element, const QString& class_name)
+{
+    QStringList classes = classTokens(element.attribute(QStringLiteral("class")));
+    const int removed = classes.removeAll(class_name);
+    if (removed == 0) {
+        return false;
+    }
+    if (classes.isEmpty()) {
+        element.removeAttribute(QStringLiteral("class"));
+    } else {
+        element.setAttribute(QStringLiteral("class"), classes.join(QLatin1Char(' ')));
+    }
+    return true;
+}
+
+bool replaceClassToken(QDomElement& element, const QString& from_class, const QString& to_class)
 {
     QStringList classes = classTokens(element.attribute(QStringLiteral("class")));
     bool changed = false;
@@ -65,6 +85,26 @@ void replaceClassToken(QDomElement& element, const QString& from_class, const QS
     if (changed) {
         element.setAttribute(QStringLiteral("class"), classes.join(QLatin1Char(' ')));
     }
+    return changed;
+}
+
+bool removeOverrideStyles(QDomElement& head, const QString& override_class)
+{
+    if (head.isNull()) {
+        return false;
+    }
+    bool changed = false;
+    QDomNode child = head.firstChild();
+    while (!child.isNull()) {
+        const QDomNode next = child.nextSibling();
+        if (child.isElement() && localName(child) == QStringLiteral("style")
+            && child.toElement().text().contains(override_class)) {
+            head.removeChild(child);
+            changed = true;
+        }
+        child = next;
+    }
+    return changed;
 }
 
 bool isVerticalWritingValue(const QString& value)
@@ -102,6 +142,14 @@ bool isWritingModeProperty(const QString& property)
         || property == QStringLiteral("-webkit-writing-mode")
         || property == QStringLiteral("-epub-writing-mode")
         || property == QStringLiteral("-ms-writing-mode");
+}
+
+bool selectorTargetsRootFlow(const QString& selector)
+{
+    static const QRegularExpression root_re(
+        QStringLiteral("(^|[\\s>+~,])(?:html|body|:root)(?=($|[\\s>+~.#:\\[]))"),
+        QRegularExpression::CaseInsensitiveOption);
+    return root_re.match(selector).hasMatch();
 }
 
 using ConversionDirection = VerticalCssTransformer::ConversionDirection;
@@ -274,6 +322,9 @@ QString VerticalCssTransformer::buildOverrideCss(ConversionDirection direction,
             "  -webkit-writing-mode: horizontal-tb !important;\n"
             "}\n"
             "html.%1 * {\n"
+            "  writing-mode: horizontal-tb !important;\n"
+            "  -epub-writing-mode: horizontal-tb !important;\n"
+            "  -webkit-writing-mode: horizontal-tb !important;\n"
             "  text-combine-upright: none !important;\n"
             "  -webkit-text-combine: none !important;\n"
             "  text-orientation: initial !important;\n"
@@ -339,13 +390,22 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::injectOverrideSt
         return result;
     }
 
-    // 幂等：已存在包含 overrideClass 选择器的 <style> 则不再注入
+    // 幂等：已存在包含本次 override 选择器的 <style> 则不再注入。
+    QString marker;
+    for (const QString& candidate : {QStringLiteral("se-v2h-horizontal"),
+                                     QStringLiteral("se-h2v-vertical")}) {
+        if (cssText.contains(candidate)) {
+            marker = candidate;
+            break;
+        }
+    }
     bool already_injected = false;
     QDomElement head = findElementByLocalName(html, QStringLiteral("head"));
     if (!head.isNull()) {
         for (QDomNode child = head.firstChild(); !child.isNull(); child = child.nextSibling()) {
             if (child.isElement() && localName(child) == QStringLiteral("style")
-                && child.toElement().text().contains(QStringLiteral("se-v2h-horizontal"))) {
+                && ((marker.isEmpty() && child.toElement().text() == cssText)
+                    || (!marker.isEmpty() && child.toElement().text().contains(marker)))) {
                 already_injected = true;
                 break;
             }
@@ -400,13 +460,12 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::switchLayoutClas
         ? QStringLiteral("vrtl") : QStringLiteral("hltr");
     const QString to_class = direction == ConversionDirection::VerticalToHorizontal
         ? QStringLiteral("hltr") : QStringLiteral("vrtl");
-    const QString before = html.attribute(QStringLiteral("class"));
-    replaceClassToken(html, from_class, to_class);
+    bool changed = replaceClassToken(html, from_class, to_class);
     QDomElement body = findElementByLocalName(html, QStringLiteral("body"));
     if (!body.isNull()) {
-        replaceClassToken(body, from_class, to_class);
+        changed = replaceClassToken(body, from_class, to_class) || changed;
     }
-    result.changed = html.attribute(QStringLiteral("class")) != before;
+    result.changed = changed;
     result.text = document.toString(2);
     result.ok = true;
     return result;
@@ -461,28 +520,71 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
     }
 
     const QString cls = overrideClassName(options.direction);
+    const QString opposite_cls = overrideClassName(
+        options.direction == ConversionDirection::VerticalToHorizontal
+            ? ConversionDirection::HorizontalToVertical
+            : ConversionDirection::VerticalToHorizontal);
+    const QString from_class = options.direction == ConversionDirection::VerticalToHorizontal
+        ? QStringLiteral("vrtl") : QStringLiteral("hltr");
+    const QString to_class = options.direction == ConversionDirection::VerticalToHorizontal
+        ? QStringLiteral("hltr") : QStringLiteral("vrtl");
+    QDomElement body = findElementByLocalName(html, QStringLiteral("body"));
+    QDomElement head = findElementByLocalName(html, QStringLiteral("head"));
+
+    // Make direction changes reversible: discard an earlier override for the
+    // opposite direction before applying this one.
+    result.changed = removeClassToken(html, opposite_cls) || result.changed;
+    if (!body.isNull()) {
+        result.changed = removeClassToken(body, opposite_cls) || result.changed;
+    }
+    result.changed = removeOverrideStyles(head, opposite_cls) || result.changed;
+
+    bool use_override = !switchToTargetClass;
     if (switchToTargetClass) {
-        const QString from_class = options.direction == ConversionDirection::VerticalToHorizontal
-            ? QStringLiteral("vrtl") : QStringLiteral("hltr");
-        const QString to_class = options.direction == ConversionDirection::VerticalToHorizontal
-            ? QStringLiteral("hltr") : QStringLiteral("vrtl");
-        const QString before = html.attribute(QStringLiteral("class"));
-        replaceClassToken(html, from_class, to_class);
-        QDomElement body = findElementByLocalName(html, QStringLiteral("body"));
+        bool class_switched = replaceClassToken(html, from_class, to_class);
         if (!body.isNull()) {
-            replaceClassToken(body, from_class, to_class);
+            class_switched = replaceClassToken(body, from_class, to_class)
+                || class_switched;
         }
-        result.changed = result.changed || (html.attribute(QStringLiteral("class")) != before);
-    } else {
-        const QString before_class = html.attribute(QStringLiteral("class"));
-        appendClass(html, cls);
-        result.changed = result.changed || (html.attribute(QStringLiteral("class")) != before_class);
+        const bool target_class_present = hasClassToken(html, to_class)
+            || (!body.isNull() && hasClassToken(body, to_class));
+        if (class_switched || target_class_present) {
+            result.changed = class_switched || result.changed;
+            // A paired profile class is sufficient. Remove compatibility
+            // overrides so the shared .vrtl/.hltr stylesheet remains intact.
+            result.changed = removeClassToken(html, cls) || result.changed;
+            if (!body.isNull()) {
+                result.changed = removeClassToken(body, cls) || result.changed;
+            }
+            result.changed = removeOverrideStyles(head, cls) || result.changed;
+        } else {
+            // The book profile may be paired globally while an individual
+            // page has no layout class. Fall back to a local override instead
+            // of reporting a successful no-op.
+            use_override = true;
+        }
     }
 
-    if (options.mode == ConversionMode::ProfileAwareRewrite) {
+    if (use_override) {
+        const QString before_class = html.attribute(QStringLiteral("class"));
+        appendClass(html, cls);
+        result.changed = result.changed
+            || html.attribute(QStringLiteral("class")) != before_class;
+    }
+
+    // Inline !important declarations outrank a compatibility stylesheet.
+    // Rewrite root declarations in both directions; when converting to
+    // vertical, preserve explicit horizontal descendant subflows by default.
+    {
         walkDomElements(document, [&](QDomElement& element) {
             const QString style = element.attribute(QStringLiteral("style"));
             if (style.isEmpty()) {
+                return;
+            }
+            if (options.direction == ConversionDirection::HorizontalToVertical
+                && options.preserveHorizontalSubflows
+                && localName(element) != QStringLiteral("html")
+                && localName(element) != QStringLiteral("body")) {
                 return;
             }
             const QString rewritten = rewriteStyleForDirection(style, options.direction);
@@ -493,8 +595,7 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
         });
     }
 
-    if (!switchToTargetClass) {
-        QDomElement head = findElementByLocalName(html, QStringLiteral("head"));
+    if (use_override) {
         bool already_injected = false;
         if (!head.isNull()) {
             for (QDomNode child = head.firstChild(); !child.isNull(); child = child.nextSibling()) {
@@ -553,6 +654,7 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformCss(
 
     const bool to_horizontal = options.direction == ConversionDirection::VerticalToHorizontal;
     QList<CssEdit> edits;
+    QString current_selector;
     QString current_property;
     int current_property_pos = 0;
     const auto declarationRemoveEnd = [&css](int value_end) {
@@ -571,6 +673,10 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformCss(
         if (token.type == TKN_CSS_END) {
             break;
         }
+        if (token.type == TKN_SELECTOR) {
+            current_selector = token.data.trimmed();
+            continue;
+        }
         if (token.type == TKN_PROPERTY) {
             current_property = token.data.trimmed().toLower();
             current_property_pos = token.pos;
@@ -583,7 +689,9 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformCss(
         const int value_end = value_start + token.data.length();
         const QString value = token.data.trimmed();
 
-        if (isWritingModeProperty(current_property) && isSourceWritingValue(value, options.direction)) {
+        if (isWritingModeProperty(current_property) && isSourceWritingValue(value, options.direction)
+            && (to_horizontal || !options.preserveHorizontalSubflows
+                || selectorTargetsRootFlow(current_selector))) {
             QString important;
             if (token.data.endsWith(QStringLiteral("!important"))) {
                 important = QStringLiteral(" !important");

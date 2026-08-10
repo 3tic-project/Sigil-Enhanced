@@ -515,6 +515,13 @@ set_target_properties(vertical_conversion_invariants_test PROPERTIES C_STANDARD 
 add_test(NAME vertical_conversion_invariants COMMAND vertical_conversion_invariants_test)
 set_tests_properties(vertical_conversion_invariants PROPERTIES TIMEOUT 30)
 
+add_test(NAME vertical_converter_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/vertical_converter_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(vertical_converter_contract PROPERTIES TIMEOUT 30)
+
     add_executable(font_subset_smoke_test
         font_subset_smoke_test.cpp
     )

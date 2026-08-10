@@ -33,6 +33,13 @@ namespace BuiltinPlugins
 class VerticalLayoutAnalyzer
 {
 public:
+    enum class WritingMode {
+        Unknown,
+        Horizontal,
+        Vertical,
+        Mixed
+    };
+
     enum class PageKind {
         ReflowVerticalSafe,
         ReflowVerticalReview,
@@ -89,6 +96,8 @@ public:
         bool htmlHasHltrClass = false;
         bool bodyHasVrtlClass = false;
         bool bodyHasHltrClass = false;
+        bool hasV2hOverrideClass = false;
+        bool hasH2vOverrideClass = false;
         bool hasInlineVerticalStyle = false;
 
         bool hasRuby = false;
@@ -133,6 +142,12 @@ public:
     static int combinedRiskScore(const CssAnalysis& css,
                                  const XhtmlAnalysis& xhtml,
                                  bool profileHighConfidence);
+
+    // Resolve the effective page direction. Root conversion/layout classes
+    // take precedence over stylesheet-wide signals so a shared DPFJ sheet
+    // containing both .vrtl and .hltr does not mark every page as vertical.
+    static WritingMode effectiveWritingMode(const CssAnalysis& css,
+                                            const XhtmlAnalysis& xhtml);
 
     static QString pageKindName(PageKind pageKind);
     static QString riskLevelName(int riskScore);

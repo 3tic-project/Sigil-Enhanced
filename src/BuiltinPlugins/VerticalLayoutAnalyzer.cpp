@@ -478,8 +478,13 @@ VerticalLayoutAnalyzer::XhtmlAnalysis VerticalLayoutAnalyzer::analyzeXhtml(const
 
     const QDomElement html = document.documentElement();
     const QString html_class = html.attribute(QStringLiteral("class"));
-    analysis.htmlHasVrtlClass = classTokens(html_class).contains(QStringLiteral("vrtl"));
-    analysis.htmlHasHltrClass = classTokens(html_class).contains(QStringLiteral("hltr"));
+    const QStringList html_classes = classTokens(html_class);
+    analysis.htmlHasVrtlClass = html_classes.contains(QStringLiteral("vrtl"));
+    analysis.htmlHasHltrClass = html_classes.contains(QStringLiteral("hltr"));
+    analysis.hasV2hOverrideClass =
+        html_classes.contains(QStringLiteral("se-v2h-horizontal"));
+    analysis.hasH2vOverrideClass =
+        html_classes.contains(QStringLiteral("se-h2v-vertical"));
 
     QDomElement body;
     walkElements(html, [&body](const QDomElement& element) {
@@ -489,8 +494,13 @@ VerticalLayoutAnalyzer::XhtmlAnalysis VerticalLayoutAnalyzer::analyzeXhtml(const
     });
     if (!body.isNull()) {
         const QString body_class = body.attribute(QStringLiteral("class"));
-        analysis.bodyHasVrtlClass = classTokens(body_class).contains(QStringLiteral("vrtl"));
-        analysis.bodyHasHltrClass = classTokens(body_class).contains(QStringLiteral("hltr"));
+        const QStringList body_classes = classTokens(body_class);
+        analysis.bodyHasVrtlClass = body_classes.contains(QStringLiteral("vrtl"));
+        analysis.bodyHasHltrClass = body_classes.contains(QStringLiteral("hltr"));
+        analysis.hasV2hOverrideClass = analysis.hasV2hOverrideClass
+            || body_classes.contains(QStringLiteral("se-v2h-horizontal"));
+        analysis.hasH2vOverrideClass = analysis.hasH2vOverrideClass
+            || body_classes.contains(QStringLiteral("se-h2v-vertical"));
     }
 
     // inline style：html / body 级（根级 writing-mode 判定）
@@ -765,6 +775,64 @@ int VerticalLayoutAnalyzer::combinedRiskScore(const CssAnalysis& css,
         score -= 20;
     }
     return qBound(0, score, 100);
+}
+
+VerticalLayoutAnalyzer::WritingMode VerticalLayoutAnalyzer::effectiveWritingMode(
+    const CssAnalysis& css,
+    const XhtmlAnalysis& xhtml)
+{
+    // Compatibility overrides use !important and are intentionally stronger
+    // than an original .vrtl/.hltr class left on the document root.
+    if (xhtml.hasV2hOverrideClass && xhtml.hasH2vOverrideClass) {
+        return WritingMode::Mixed;
+    }
+    if (xhtml.hasV2hOverrideClass) {
+        return WritingMode::Horizontal;
+    }
+    if (xhtml.hasH2vOverrideClass) {
+        return WritingMode::Vertical;
+    }
+
+    const bool class_vertical = xhtml.htmlHasVrtlClass || xhtml.bodyHasVrtlClass;
+    const bool class_horizontal = xhtml.htmlHasHltrClass || xhtml.bodyHasHltrClass;
+
+    if (class_vertical && class_horizontal) {
+        return WritingMode::Mixed;
+    }
+    if (class_vertical) {
+        return WritingMode::Vertical;
+    }
+    if (class_horizontal) {
+        return WritingMode::Horizontal;
+    }
+
+    if (xhtml.hasVerticalWritingMode && xhtml.hasHorizontalWritingMode) {
+        return WritingMode::Mixed;
+    }
+    if (xhtml.hasVerticalWritingMode) {
+        return WritingMode::Vertical;
+    }
+    if (xhtml.hasHorizontalWritingMode) {
+        return WritingMode::Horizontal;
+    }
+
+    // A shared profile stylesheet can contain both directions. Without a
+    // matching root class, its effective direction cannot be inferred safely.
+    if (css.hasPairedVrtlHltr) {
+        return WritingMode::Unknown;
+    }
+    if (css.hasVerticalWritingMode && css.hasHorizontalWritingMode) {
+        return WritingMode::Mixed;
+    }
+    if (css.hasVerticalWritingMode) {
+        return WritingMode::Vertical;
+    }
+    if (css.hasHorizontalWritingMode) {
+        return WritingMode::Horizontal;
+    }
+
+    // CSS writing-mode defaults to horizontal-tb.
+    return WritingMode::Horizontal;
 }
 
 QString VerticalLayoutAnalyzer::pageKindName(PageKind pageKind)

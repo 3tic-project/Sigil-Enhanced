@@ -24,8 +24,54 @@ int runTests()
     {
         const QString css = VerticalCssTransformer::buildOverrideCss();
         if (!css.contains(QStringLiteral("horizontal-tb")) ||
-            !css.contains(QStringLiteral("se-v2h-horizontal"))) {
+            !css.contains(QStringLiteral("se-v2h-horizontal")) ||
+            !css.contains(QStringLiteral("html.se-v2h-horizontal *"))) {
             return fail(QStringLiteral("override css content wrong"));
+        }
+    }
+
+    // ---- transformXhtml profile：body-only vrtl 也必须报告变化 ----
+    {
+        VerticalCssTransformer::Options options;
+        options.mode = VerticalCssTransformer::ConversionMode::ProfileAwareRewrite;
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body class=\"vrtl\">"
+            "<p>本文</p></body></html>");
+        const auto result = VerticalCssTransformer::transformXhtml(source, options, true);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("class=\"hltr\""))
+            || result.text.contains(QStringLiteral("class=\"vrtl\""))) {
+            return fail(QStringLiteral("body-only profile class switch was lost"));
+        }
+    }
+
+    // ---- profile 判定为成对但页面无布局 class 时回退兼容覆盖 ----
+    {
+        VerticalCssTransformer::Options options;
+        options.mode = VerticalCssTransformer::ConversionMode::ProfileAwareRewrite;
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body><p>本文</p></body></html>");
+        const auto result = VerticalCssTransformer::transformXhtml(source, options, true);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("se-v2h-horizontal"))
+            || !result.text.contains(QStringLiteral("writing-mode: horizontal-tb !important"))) {
+            return fail(QStringLiteral("classless profile page did not fall back to override"));
+        }
+    }
+
+    // ---- 兼容覆盖可逆：反向转换清除旧方向 class/style ----
+    {
+        VerticalCssTransformer::Options h2v;
+        h2v.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body><p>本文</p></body></html>");
+        const auto vertical = VerticalCssTransformer::transformXhtml(source, h2v, false);
+        VerticalCssTransformer::Options v2h;
+        const auto horizontal = VerticalCssTransformer::transformXhtml(vertical.text, v2h, false);
+        if (!vertical.ok || !horizontal.ok || !horizontal.changed
+            || horizontal.text.contains(QStringLiteral("se-h2v-vertical"))
+            || !horizontal.text.contains(QStringLiteral("se-v2h-horizontal"))) {
+            return fail(QStringLiteral("opposite compatibility override was not replaced"));
         }
     }
 
@@ -189,6 +235,37 @@ int runTests()
             result.text.contains(QStringLiteral("horizontal-tb")) ||
             !result.text.contains(QStringLiteral("text-combine-upright: all"))) {
             return fail(QStringLiteral("h2v transformCss failed:\n%1").arg(result.text));
+        }
+    }
+
+    // ---- transformCss(H2V)：默认保留子流横排 ----
+    {
+        VerticalCssTransformer::Options options;
+        options.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        const auto result = VerticalCssTransformer::transformCss(QStringLiteral(
+            "body { writing-mode: horizontal-tb; }\n"
+            "table { writing-mode: horizontal-tb; }\n"), options);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("body { writing-mode: vertical-rl; }"))
+            || !result.text.contains(QStringLiteral("table { writing-mode: horizontal-tb; }"))) {
+            return fail(QStringLiteral("h2v horizontal subflow preservation failed:\n%1")
+                            .arg(result.text));
+        }
+    }
+
+    // ---- transformXhtml(H2V)：root inline 改写但保留子流 inline ----
+    {
+        VerticalCssTransformer::Options options;
+        options.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        const auto result = VerticalCssTransformer::transformXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/>"
+            "<body style=\"writing-mode: horizontal-tb\"><table "
+            "style=\"writing-mode: horizontal-tb\"><tr><td>x</td></tr></table>"
+            "</body></html>"), options, false);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("style=\"writing-mode: vertical-rl\""))
+            || !result.text.contains(QStringLiteral("style=\"writing-mode: horizontal-tb\""))) {
+            return fail(QStringLiteral("h2v inline subflow preservation failed"));
         }
     }
 
