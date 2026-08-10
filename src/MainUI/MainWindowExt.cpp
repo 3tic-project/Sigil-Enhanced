@@ -1962,16 +1962,9 @@ bool MainWindow::ConvertVerticalLayoutDirection(bool to_horizontal)
         ? BuiltinPlugins::VerticalCssTransformer::ConversionMode::ProfileAwareRewrite
         : BuiltinPlugins::VerticalCssTransformer::ConversionMode::CompatibilityOverride;
 
-    // Checkpoint 之后才允许批量写回
+    // 使用隔离式恢复 Checkpoint，避免保存/规范化资源时清空各文本资源的撤销栈。
     ShowMessageOnStatusBar(tr("Creating checkpoint before %1...").arg(op_name));
-    OPFResource *opf = m_Book->GetOPF();
-    opf->InitialLoad();
-    const QString opf_before_checkpoint = opf->GetText();
-    const bool book_was_modified = m_Book->IsModified();
-    if (!RepoCommit()) {
-        opf->SetText(opf_before_checkpoint);
-        opf->SaveToDisk(true);
-        m_Book->SetModified(book_was_modified);
+    if (!CreateRecoveryCheckpoint()) {
         m_ValidationResultsView->LoadResults(QList<ValidationResult>()
             << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
                                 tr("%1: checkpoint creation failed. No files were changed.").arg(op_name)));
@@ -1981,9 +1974,6 @@ bool MainWindow::ConvertVerticalLayoutDirection(bool to_horizontal)
     options.dryRun = false;
     const BuiltinPlugins::VerticalToHorizontalConverter::Result result = converter.convert(options);
     if (!result.ok) {
-        opf->SetText(opf_before_checkpoint);
-        opf->SaveToDisk(true);
-        m_Book->SetModified(book_was_modified);
         m_ValidationResultsView->LoadResults(result.validationResults);
         return false;
     }

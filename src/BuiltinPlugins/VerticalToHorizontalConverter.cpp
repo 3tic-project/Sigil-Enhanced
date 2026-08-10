@@ -676,7 +676,7 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
     for (const PlannedPage& page : pages) {
         if (!options.dryRun) {
             QWriteLocker locker(&page.resource->GetLock());
-            page.resource->SetText(page.transformed);
+            page.resource->SetTextAsUndoableEdit(page.transformed);
             result.modified = true;
         }
         result.changedBookPaths.append(page.bookpath);
@@ -687,7 +687,7 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
     for (const QPair<CSSResource*, QString>& change : css_changes) {
         if (!options.dryRun) {
             QWriteLocker locker(&change.first->GetLock());
-            change.first->SetText(change.second);
+            change.first->SetTextAsUndoableEdit(change.second);
             result.modified = true;
         }
         result.changedBookPaths.append(change.first->GetRelativePath());
@@ -700,7 +700,7 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
     if (opf_changed) {
         if (!options.dryRun) {
             QWriteLocker locker(&opf->GetLock());
-            opf->SetText(opf_text);
+            opf->SetTextAsUndoableEdit(opf_text);
             result.modified = true;
         }
         result.changedBookPaths.append(opf->GetRelativePath());

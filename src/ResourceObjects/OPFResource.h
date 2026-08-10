@@ -74,6 +74,10 @@ public:
 
     virtual void SetText(const QString &text);
 
+    // Preserve the document undo stack for user-visible batch edits while
+    // retaining OPF package-version validation and TextChanging notification.
+    virtual void SetTextAsUndoableEdit(const QString &text);
+
     virtual bool LoadFromDisk();
 
     QString GetGuideSemanticCodeForResource(const Resource *resource, QString tgt_id="") const;

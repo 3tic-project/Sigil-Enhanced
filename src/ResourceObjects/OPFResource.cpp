@@ -190,6 +190,17 @@ void OPFResource::SetText(const QString &text)
 }
 
 
+void OPFResource::SetTextAsUndoableEdit(const QString &text)
+{
+    // Like HTMLResource::SetTextAsUndoableEdit(), callers hold the resource
+    // write lock. Do not call SetText() here: it locks internally and replaces
+    // the QTextDocument in a way that clears its undo history.
+    emit TextChanging();
+    const QString source = ValidatePackageVersion(text);
+    TextResource::SetTextAsUndoableEdit(source);
+}
+
+
 bool OPFResource::LoadFromDisk()
 {
     try {
