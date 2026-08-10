@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QCheckBox>
 #include <QHash>
 #include <QLocale>
 #include <QMessageBox>
@@ -15,6 +16,7 @@
 #include "BuiltinPlugins/BookLiveParagraphNormalizer.h"
 #include "BuiltinPlugins/BrParagraphNormalizer.h"
 #include "BuiltinPlugins/KfxParagraphNormalizer.h"
+#include "BuiltinPlugins/VerticalToHorizontalConverter.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/OPFResource.h"
@@ -1818,6 +1820,183 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
                            tr("BookLive paragraph normalization completed.") :
                            tr("No BookLive paragraph files were changed."));
     return failed == 0;
+}
+
+bool MainWindow::AnalyzeVerticalLayout()
+{
+    SaveTabData();
+
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        m_ValidationResultsView->LoadResults(QList<ValidationResult>()
+            << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                tr("Vertical layout analysis: no EPUB is currently loaded.")));
+        return false;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    BuiltinPlugins::VerticalToHorizontalConverter converter(m_Book.data());
+    const BuiltinPlugins::VerticalToHorizontalConverter::Analysis analysis =
+        converter.analyze(BuiltinPlugins::VerticalCssTransformer::Options());
+    QApplication::restoreOverrideCursor();
+
+    QList<ValidationResult> results;
+    results << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
+                                tr("Vertical layout analysis: EPUB %1 / languages [%2] / page-progression %3 / "
+                                   "writing mode %4 / profile %5 (%6%% confidence).")
+                                    .arg(analysis.epubVersion.isEmpty() ? QStringLiteral("?") : analysis.epubVersion)
+                                    .arg(analysis.languages.join(QStringLiteral(", ")))
+                                    .arg(analysis.pageProgression)
+                                    .arg(analysis.detectedWritingMode)
+                                    .arg(analysis.profileName.isEmpty() ? tr("none") : analysis.profileName)
+                                    .arg(qRound(analysis.profileConfidence * 100)));
+    for (const BuiltinPlugins::VerticalToHorizontalConverter::FileAnalysis& file : analysis.files) {
+        const ValidationResult::ResType type =
+            (file.riskScore >= 50) ? ValidationResult::ResType_Warn : ValidationResult::ResType_Info;
+        results << ValidationResult(type, file.bookpath, -1, -1,
+                                    tr("kind %1 / risk %2 (%3) / %4")
+                                        .arg(BuiltinPlugins::VerticalLayoutAnalyzer::pageKindName(file.kind))
+                                        .arg(file.riskScore)
+                                        .arg(BuiltinPlugins::VerticalLayoutAnalyzer::riskLevelName(file.riskScore))
+                                        .arg(file.reasons.join(QStringLiteral("; "))));
+    }
+    results << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
+                                tr("Vertical layout analysis completed: %1 vertical, %2 horizontal, %3 auto-safe, %4 review, %5 skipped.")
+                                    .arg(analysis.verticalCount)
+                                    .arg(analysis.horizontalCount)
+                                    .arg(analysis.safeCount)
+                                    .arg(analysis.reviewCount)
+                                    .arg(analysis.skippedCount));
+    m_ValidationResultsView->LoadResults(results);
+    ShowMessageOnStatusBar(analysis.verticalCount > 0
+                           ? tr("Vertical layout candidates found. See Validation Results.")
+                           : tr("No vertical layout found; the book appears horizontal."));
+    return true;
+}
+
+bool MainWindow::ConvertVerticalToHorizontal()
+{
+    return ConvertVerticalLayoutDirection(true);
+}
+
+bool MainWindow::ConvertHorizontalToVertical()
+{
+    return ConvertVerticalLayoutDirection(false);
+}
+
+bool MainWindow::ConvertVerticalLayoutDirection(bool to_horizontal)
+{
+    SaveTabData();
+
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        m_ValidationResultsView->LoadResults(QList<ValidationResult>()
+            << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                tr("Layout direction conversion: no EPUB is currently loaded.")));
+        return false;
+    }
+
+    const QString op_name = to_horizontal
+        ? tr("Convert Vertical to Horizontal") : tr("Convert Horizontal to Vertical");
+
+    BuiltinPlugins::VerticalCssTransformer::Options options;
+    options.direction = to_horizontal
+        ? BuiltinPlugins::VerticalCssTransformer::ConversionDirection::VerticalToHorizontal
+        : BuiltinPlugins::VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    BuiltinPlugins::VerticalToHorizontalConverter converter(m_Book.data());
+    const BuiltinPlugins::VerticalToHorizontalConverter::Analysis analysis = converter.analyze(options);
+    QApplication::restoreOverrideCursor();
+
+    const bool already_target = to_horizontal
+        ? (analysis.verticalCount == 0) : (analysis.horizontalCount == 0);
+    if (already_target) {
+        ShowMessageOnStatusBar(tr("%1: the book is already in the target direction.").arg(op_name));
+        m_ValidationResultsView->LoadResults(QList<ValidationResult>()
+            << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
+                                tr("%1: the book is already in the target direction; no conversion needed.").arg(op_name)));
+        return true;
+    }
+    if (analysis.fixedLayoutBook) {
+        m_ValidationResultsView->LoadResults(QList<ValidationResult>()
+            << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                tr("%1: the book is fixed-layout (pre-paginated) and cannot be auto-reflowed.").arg(op_name)));
+        return false;
+    }
+    if (analysis.safeCount == 0) {
+        m_ValidationResultsView->LoadResults(QList<ValidationResult>()
+            << ValidationResult(ValidationResult::ResType_Warn, QString(), -1, -1,
+                                tr("%1: no auto-safe pages were found. See Validation Results for review items.").arg(op_name)));
+        return false;
+    }
+
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Question);
+    box.setWindowTitle(tr("Sigil-Enhanced"));
+    box.setText(tr("%1\n\n"
+                   "EPUB %2 / languages [%3] / page-progression %4\n"
+                   "Profile: %5 (%6%% confidence)\n"
+                   "Vertical pages: %7, Horizontal pages: %8\n"
+                   "Auto-safe: %9, Review: %10, Skipped: %11\n\n"
+                   "A checkpoint will be created before batch changes.")
+                    .arg(op_name)
+                    .arg(analysis.epubVersion.isEmpty() ? QStringLiteral("?") : analysis.epubVersion)
+                    .arg(analysis.languages.join(QStringLiteral(", ")))
+                    .arg(analysis.pageProgression)
+                    .arg(analysis.profileName.isEmpty() ? tr("none") : analysis.profileName)
+                    .arg(qRound(analysis.profileConfidence * 100))
+                    .arg(analysis.verticalCount)
+                    .arg(analysis.horizontalCount)
+                    .arg(analysis.safeCount)
+                    .arg(analysis.reviewCount)
+                    .arg(analysis.skippedCount));
+    QCheckBox *structured_box = new QCheckBox(
+        tr("Profile-aware structured conversion (switch .vrtl/.hltr where available)"), &box);
+    box.setCheckBox(structured_box);
+    box.addButton(QMessageBox::Ok);
+    box.addButton(QMessageBox::Cancel);
+    if (box.exec() != QMessageBox::Ok) {
+        return false;
+    }
+    options.mode = structured_box->isChecked()
+        ? BuiltinPlugins::VerticalCssTransformer::ConversionMode::ProfileAwareRewrite
+        : BuiltinPlugins::VerticalCssTransformer::ConversionMode::CompatibilityOverride;
+
+    // Checkpoint 之后才允许批量写回
+    ShowMessageOnStatusBar(tr("Creating checkpoint before %1...").arg(op_name));
+    OPFResource *opf = m_Book->GetOPF();
+    opf->InitialLoad();
+    const QString opf_before_checkpoint = opf->GetText();
+    const bool book_was_modified = m_Book->IsModified();
+    if (!RepoCommit()) {
+        opf->SetText(opf_before_checkpoint);
+        opf->SaveToDisk(true);
+        m_Book->SetModified(book_was_modified);
+        m_ValidationResultsView->LoadResults(QList<ValidationResult>()
+            << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                tr("%1: checkpoint creation failed. No files were changed.").arg(op_name)));
+        return false;
+    }
+
+    options.dryRun = false;
+    const BuiltinPlugins::VerticalToHorizontalConverter::Result result = converter.convert(options);
+    if (!result.ok) {
+        opf->SetText(opf_before_checkpoint);
+        opf->SaveToDisk(true);
+        m_Book->SetModified(book_was_modified);
+        m_ValidationResultsView->LoadResults(result.validationResults);
+        return false;
+    }
+
+    if (result.modified) {
+        if (m_BookBrowser) {
+            m_BookBrowser->Refresh();
+        }
+        ShowMessageOnStatusBar(tr("%1 completed. See Validation Results. A checkpoint was created before batch changes.").arg(op_name));
+    } else {
+        ShowMessageOnStatusBar(tr("%1 produced no changes.").arg(op_name));
+    }
+    m_ValidationResultsView->LoadResults(result.validationResults);
+    return true;
 }
 
 //modified: insertFileToEditor

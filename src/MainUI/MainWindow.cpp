@@ -240,6 +240,9 @@ static const QStringList AUTOMATE_TOOLS = QStringList() <<
     "AnalyzeBookLiveParagraphs" <<
     "AnalyzeBrParagraphs" <<
     "AnalyzeKfxParagraphs" <<
+    "AnalyzeVerticalLayout" <<
+    "ConvertHorizontalToVertical" <<
+    "ConvertVerticalToHorizontal" <<
     "EnhanceSourceFormatting" <<
     "MendPrettifyHTML" <<
     "MendHTML" <<
@@ -481,6 +484,9 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "AnalyzeBookLiveParagraphs")  success = AnalyzeBookLiveParagraphs();
             else if (cmd == "AnalyzeBrParagraphs")        success = AnalyzeBrParagraphs();
             else if (cmd == "AnalyzeKfxParagraphs")       success = AnalyzeKfxParagraphs();
+            else if (cmd == "AnalyzeVerticalLayout")      success = AnalyzeVerticalLayout();
+            else if (cmd == "ConvertHorizontalToVertical") success = ConvertHorizontalToVertical();
+            else if (cmd == "ConvertVerticalToHorizontal") success = ConvertVerticalToHorizontal();
             else if (cmd == "EnhanceSourceFormatting")    success = EnhanceSourceFormatting();
             else if (cmd == "NormalizeBookLiveParagraphs") success = NormalizeAllBookLiveParagraphs();
             else if (cmd == "NormalizeBrParagraphs")       success = NormalizeAllBrParagraphs();
@@ -7069,6 +7075,9 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeBookLiveParagraphs, "MainWindow.AnalyzeBookLiveParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentBookLiveParagraphs, "MainWindow.NormalizeCurrentBookLiveParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeBookLiveParagraphs, "MainWindow.NormalizeBookLiveParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeVerticalLayout, "MainWindow.AnalyzeVerticalLayout"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertVerticalToHorizontal, "MainWindow.ConvertVerticalToHorizontal"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertHorizontalToVertical, "MainWindow.ConvertHorizontalToVertical"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionHeadingDivision, "MainWindow.actionHeadingDivision"); // modified: actionHeadingDivision
     KeyboardShortcutManager::instance().registerAction(this, ui.actionPasteRichText, "MainWindow.PasteRichText"); // modified: AddPasteRichText
     KeyboardShortcutManager::instance().registerAction(this, ui.actionSplitTagOrAddBreak, "MainWindow.SplitTagOrAddBreak"); // modified: SplitTagOrAddBreak
@@ -7457,6 +7466,9 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionAnalyzeBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeBookLiveParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeCurrentBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentBookLiveParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllBookLiveParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionAnalyzeVerticalLayout, SIGNAL(triggered()), this, SLOT(AnalyzeVerticalLayout())); // modified: Builtin native plugin
+    connect(ui.actionConvertVerticalToHorizontal, SIGNAL(triggered()), this, SLOT(ConvertVerticalToHorizontal())); // modified: Builtin native plugin
+    connect(ui.actionConvertHorizontalToVertical, SIGNAL(triggered()), this, SLOT(ConvertHorizontalToVertical())); // modified: Builtin native plugin
     connect(m_BookBrowser, SIGNAL(InsertFileRequest()), this, SLOT(InsertFileFromBookBrowser())); // modified: insertFileToEditor
     //modified: FindReplacePlus
     ConnectSignalsToSearchEditor();

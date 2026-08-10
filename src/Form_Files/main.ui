@@ -443,6 +443,10 @@
     <addaction name="actionAnalyzeBookLiveParagraphs"/>
     <addaction name="actionNormalizeCurrentBookLiveParagraphs"/>
     <addaction name="actionNormalizeBookLiveParagraphs"/>
+    <addaction name="separator"/>
+    <addaction name="actionAnalyzeVerticalLayout"/>
+    <addaction name="actionConvertVerticalToHorizontal"/>
+    <addaction name="actionConvertHorizontalToVertical"/>
    </widget>
    <widget class="QMenu" name="menuCheckpoints">
     <property name="title">
@@ -2059,6 +2063,30 @@
     </property>
     <property name="toolTip">
       <string>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves across the whole book into style-preserving p elements</string>
+    </property>
+  </action>
+  <action name="actionAnalyzeVerticalLayout">
+    <property name="text">
+      <string>Analyze Vertical Layout...</string>
+    </property>
+    <property name="toolTip">
+      <string>Analyze the current EPUB's writing mode, layout profile, and per-file conversion risk for vertical/horizontal conversion</string>
+    </property>
+  </action>
+  <action name="actionConvertVerticalToHorizontal">
+    <property name="text">
+      <string>Convert Vertical Book to Horizontal...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert a vertical-rl (tategaki) EPUB to horizontal-tb with a checkpoint created before batch changes</string>
+    </property>
+  </action>
+  <action name="actionConvertHorizontalToVertical">
+    <property name="text">
+      <string>Convert Horizontal Book to Vertical...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert a horizontal-tb EPUB to vertical-rl (tategaki) with a checkpoint created before batch changes</string>
     </property>
   </action>
   <action name="actionWellFormedCheckEpub">

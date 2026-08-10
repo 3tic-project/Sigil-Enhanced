@@ -1169,6 +1169,10 @@ public slots:
     bool AnalyzeBookLiveParagraphs(); // modified: Builtin native plugin
     bool NormalizeCurrentBookLiveParagraphs(); // modified: Builtin native plugin
     bool NormalizeAllBookLiveParagraphs(); // modified: Builtin native plugin
+    bool AnalyzeVerticalLayout(); // modified: Builtin native plugin
+    bool ConvertVerticalToHorizontal(); // modified: Builtin native plugin
+    bool ConvertHorizontalToVertical(); // modified: Builtin native plugin
+    bool ConvertVerticalLayoutDirection(bool to_horizontal); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
     bool ExecutePluginByName(const QString &plugin_name, bool wait_for_completion,

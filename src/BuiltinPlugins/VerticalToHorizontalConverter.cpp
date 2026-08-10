@@ -198,6 +198,11 @@ bool isConvertibleKind(VerticalLayoutAnalyzer::PageKind kind, int riskScore)
 // 分析
 // ---------------------------------------------------------------------
 
+VerticalToHorizontalConverter::VerticalToHorizontalConverter(Book* book)
+    : m_Book(book)
+{
+}
+
 VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(const Options& options) const
 {
     Analysis analysis;
@@ -630,46 +635,47 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         }
     }
 
-    // 写回（调用方已先创建 Checkpoint）
+    // 写回（调用方已先创建 Checkpoint；dryRun 时只报告计划）
     int changed_resources = 0;
     int skipped = 0;
     int warnings = 0;
     const QString target_label = to_horizontal ? QStringLiteral("横排") : QStringLiteral("竖排");
+    const QString prefix = options.dryRun ? QStringLiteral("%1（dry-run）：").arg(op_name) : QStringLiteral("%1：").arg(op_name);
     for (const PlannedPage& page : pages) {
-        {
+        if (!options.dryRun) {
             QWriteLocker locker(&page.resource->GetLock());
             page.resource->SetText(page.transformed);
+            result.modified = true;
         }
         result.changedBookPaths.append(page.bookpath);
-        result.modified = true;
         changed_resources++;
         addResult(result, ValidationResult::ResType_Info, page.bookpath,
-                  QStringLiteral("%1：已转换为%2。").arg(op_name, target_label));
+                  QStringLiteral("%1将%2。").arg(prefix, target_label));
     }
     for (const QPair<CSSResource*, QString>& change : css_changes) {
-        {
+        if (!options.dryRun) {
             QWriteLocker locker(&change.first->GetLock());
             change.first->SetText(change.second);
+            result.modified = true;
         }
         result.changedBookPaths.append(change.first->GetRelativePath());
-        result.modified = true;
         changed_resources++;
         addResult(result, ValidationResult::ResType_Info, change.first->GetRelativePath(),
                   to_horizontal
-                      ? QStringLiteral("%1：已中和纵向专属 CSS 声明。").arg(op_name)
-                      : QStringLiteral("%1：已改写 writing-mode 为纵向。").arg(op_name));
+                      ? QStringLiteral("%1将中和纵向专属 CSS 声明。").arg(prefix)
+                      : QStringLiteral("%1将改写 writing-mode 为纵向。").arg(prefix));
     }
     if (opf_changed) {
-        {
+        if (!options.dryRun) {
             QWriteLocker locker(&opf->GetLock());
             opf->SetText(opf_text);
+            result.modified = true;
         }
         result.changedBookPaths.append(opf->GetRelativePath());
-        result.modified = true;
         changed_resources++;
         addResult(result, ValidationResult::ResType_Info, opf->GetRelativePath(),
-                  QStringLiteral("%1：page-progression-direction 已改为 %2。")
-                      .arg(op_name, to_horizontal ? QStringLiteral("ltr") : QStringLiteral("rtl")));
+                  QStringLiteral("%1将 page-progression-direction 改为 %2。")
+                      .arg(prefix, to_horizontal ? QStringLiteral("ltr") : QStringLiteral("rtl")));
     }
 
     for (const FileAnalysis& file : result.before.files) {
@@ -685,18 +691,18 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         }
     }
 
-    if (result.modified) {
+    if (result.modified && !options.dryRun) {
         m_Book->SetModified();
     }
     result.bookBrowserRefreshRequired = result.modified;
     result.after = analyze(options);
     result.ok = true;
     addResult(result, ValidationResult::ResType_Info, QString(),
-              QStringLiteral("%1完成：%2 个文件已修改，%3 个跳过，%4 个警告。")
-                  .arg(op_name)
-                  .arg(changed_resources)
-                  .arg(skipped)
-                  .arg(warnings));
+              options.dryRun
+                  ? QStringLiteral("%1（dry-run）：计划修改 %2 个文件，%3 个跳过，%4 个警告。")
+                        .arg(op_name).arg(changed_resources).arg(skipped).arg(warnings)
+                  : QStringLiteral("%1完成：%2 个文件已修改，%3 个跳过，%4 个警告。")
+                        .arg(op_name).arg(changed_resources).arg(skipped).arg(warnings));
     return result;
 }
 

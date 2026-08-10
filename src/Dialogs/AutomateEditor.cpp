@@ -357,6 +357,9 @@ void AutomateEditor::loadToolElements()
          "AnalyzeBookLiveParagraphs" << "AnalyzeBookLiveParagraphs" << tr("Analyze XHTML files that use nested div elements as pseudo-paragraphs in BookLive/EBPAJ reflow content.") <<
          "AnalyzeBrParagraphs" << "AnalyzeBrParagraphs" << tr("Analyze XHTML files that use body-level BR tags as paragraph separators.") <<
          "AnalyzeKfxParagraphs" << "AnalyzeKfxParagraphs" << tr("Analyze XHTML files that use KFX/calibre spacer p elements around body-level raw text.") <<
+         "AnalyzeVerticalLayout" << "AnalyzeVerticalLayout" << tr("Analyze the current EPUB's writing mode, layout profile, and per-file conversion risk.") <<
+         "ConvertHorizontalToVertical" << "ConvertHorizontalToVertical" << tr("Convert a horizontal-tb EPUB to vertical-rl (tategaki) with a checkpoint before batch changes.") <<
+         "ConvertVerticalToHorizontal" << "ConvertVerticalToHorizontal" << tr("Convert a vertical-rl (tategaki) EPUB to horizontal-tb with a checkpoint before batch changes.") <<
          "EnhanceSourceFormatting" << "EnhanceSourceFormatting" << tr("Format XHTML and CSS resources with the built-in EPUB-safe formatter.") <<
          "MendPrettifyHTML" << "MendPrettifyHTML" << tr("Mend and Prettify all XHtml files.") <<
          "MendHTML" << "MendHTML"  << tr("Mend All XHtml files.") <<
