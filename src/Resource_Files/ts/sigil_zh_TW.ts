@@ -1762,6 +1762,18 @@ if a sans-serif font-family specified in your CSS</source>
     </message>
     <message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>對所有文字資源執行指定的正則工作臺方案。</translation></message>
     <message><source>[Regex recipe name or absolute path here]</source><translation>[在此輸入正則方案名稱或絕對路徑]</translation></message>
+    <message>
+        <source>Analyze the current EPUB's writing mode, layout profile, and per-file conversion risk.</source>
+        <translation>分析目前 EPUB 的排版方向、版面模板，以及每個檔案的轉換風險。</translation>
+    </message>
+    <message>
+        <source>Convert a horizontal-tb EPUB to vertical-rl (tategaki) with a checkpoint before batch changes.</source>
+        <translation>將橫排（horizontal-tb）EPUB 轉換為直排（vertical-rl/縦組），批量修改前建立檢查點。</translation>
+    </message>
+    <message>
+        <source>Convert a vertical-rl (tategaki) EPUB to horizontal-tb with a checkpoint before batch changes.</source>
+        <translation>將直排（vertical-rl/縦組）EPUB 轉換為橫排（horizontal-tb），批量修改前建立檢查點。</translation>
+    </message>
 </context>
 <context>
     <name>Book</name>
@@ -15358,6 +15370,124 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正則方案執行失敗：目前 EPUB 沒有文字資源。</translation></message>
     <message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>執行支援二級篩選、遞迴及變數的分階段正則方案</translation></message>
     <message><source>The current EPUB has no text resources.</source><translation>目前 EPUB 沒有文字資源。</translation></message>
+    <message>
+        <source>Analyze Vertical Layout...</source>
+        <translation>分析縱向排版...</translation>
+    </message>
+    <message>
+        <source>Analyze the current EPUB's writing mode, layout profile, and per-file conversion risk for vertical/horizontal conversion</source>
+        <translation>分析目前 EPUB 的排版方向、版面模板，以及每個檔案在直排/橫排轉換中的風險</translation>
+    </message>
+    <message>
+        <source>Convert Vertical Book to Horizontal...</source>
+        <translation>將直排書籍轉換為橫排...</translation>
+    </message>
+    <message>
+        <source>Convert Horizontal Book to Vertical...</source>
+        <translation>將橫排書籍轉換為直排...</translation>
+    </message>
+    <message>
+        <source>Convert Vertical to Horizontal</source>
+        <translation>直排轉橫排</translation>
+    </message>
+    <message>
+        <source>Convert Horizontal to Vertical</source>
+        <translation>橫排轉直排</translation>
+    </message>
+    <message>
+        <source>Convert a vertical-rl (tategaki) EPUB to horizontal-tb with a checkpoint created before batch changes</source>
+        <translation>將直排（vertical-rl/縦組）EPUB 轉換為橫排（horizontal-tb），批量修改前會自動建立檢查點</translation>
+    </message>
+    <message>
+        <source>Convert a horizontal-tb EPUB to vertical-rl (tategaki) with a checkpoint created before batch changes</source>
+        <translation>將橫排（horizontal-tb）EPUB 轉換為直排（vertical-rl/縦組），批量修改前會自動建立檢查點</translation>
+    </message>
+    <message>
+        <source>Vertical layout analysis: no EPUB is currently loaded.</source>
+        <translation>縱向排版分析：目前沒有開啟 EPUB。</translation>
+    </message>
+    <message>
+        <source>Vertical layout analysis: EPUB %1 / languages [%2] / page-progression %3 / writing mode %4 / profile %5 (%6%% confidence).</source>
+        <translation>縱向排版分析：EPUB %1 / 語言 [%2] / 閱讀方向 %3 / 排版模式 %4 / 模板 %5（信心度 %6%%）。</translation>
+    </message>
+    <message>
+        <source>kind %1 / risk %2 (%3) / %4</source>
+        <translation>類型 %1 / 風險 %2（%3）/ %4</translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation>無</translation>
+    </message>
+    <message>
+        <source>Vertical layout analysis completed: %1 vertical, %2 horizontal, %3 auto-safe, %4 review, %5 skipped.</source>
+        <translation>縱向排版分析完成：%1 個直排，%2 個橫排，%3 個可自動轉換，%4 個需人工複核，%5 個已略過。</translation>
+    </message>
+    <message>
+        <source>Vertical layout candidates found. See Validation Results.</source>
+        <translation>發現縱向排版候選，詳見驗證結果。</translation>
+    </message>
+    <message>
+        <source>No vertical layout found; the book appears horizontal.</source>
+        <translation>未發現縱向排版，該書應為橫排。</translation>
+    </message>
+    <message>
+        <source>Layout direction conversion: no EPUB is currently loaded.</source>
+        <translation>排版方向轉換：目前沒有開啟 EPUB。</translation>
+    </message>
+    <message>
+        <source>%1: the book is already in the target direction.</source>
+        <translation>%1：書籍已處於目標排版方向。</translation>
+    </message>
+    <message>
+        <source>%1: the book is already in the target direction; no conversion needed.</source>
+        <translation>%1：書籍已處於目標排版方向，無需轉換。</translation>
+    </message>
+    <message>
+        <source>%1: the book is fixed-layout (pre-paginated) and cannot be auto-reflowed.</source>
+        <translation>%1：書籍為固定版式（pre-paginated），無法自動重排。</translation>
+    </message>
+    <message>
+        <source>%1: no auto-safe pages were found. See Validation Results for review items.</source>
+        <translation>%1：未找到可自動轉換的頁面，請查看驗證結果中的複核項目。</translation>
+    </message>
+    <message>
+        <source>%1
+
+EPUB %2 / languages [%3] / page-progression %4
+Profile: %5 (%6%% confidence)
+Vertical pages: %7, Horizontal pages: %8
+Auto-safe: %9, Review: %10, Skipped: %11
+
+A checkpoint will be created before batch changes.</source>
+        <translation>%1
+
+EPUB %2 / 語言 [%3] / 閱讀方向 %4
+模板：%5（信心度 %6%%）
+直排頁：%7，橫排頁：%8
+可自動轉換：%9，需複核：%10，已略過：%11
+
+批量修改前會自動建立檢查點。</translation>
+    </message>
+    <message>
+        <source>Profile-aware structured conversion (switch .vrtl/.hltr where available)</source>
+        <translation>依模板結構化轉換（可用時切換 .vrtl/.hltr）</translation>
+    </message>
+    <message>
+        <source>Creating checkpoint before %1...</source>
+        <translation>正在為 %1 建立檢查點...</translation>
+    </message>
+    <message>
+        <source>%1: checkpoint creation failed. No files were changed.</source>
+        <translation>%1：建立檢查點失敗，未修改任何檔案。</translation>
+    </message>
+    <message>
+        <source>%1 completed. See Validation Results. A checkpoint was created before batch changes.</source>
+        <translation>%1 完成，詳見驗證結果。批量修改前已建立檢查點。</translation>
+    </message>
+    <message>
+        <source>%1 produced no changes.</source>
+        <translation>%1 未產生任何修改。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>

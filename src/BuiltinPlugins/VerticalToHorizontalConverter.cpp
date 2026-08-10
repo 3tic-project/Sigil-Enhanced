@@ -233,6 +233,26 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
 
     const QStringList generators = generatorMetadata(opf_source);
 
+    // Profile 判定（先于页面循环，使风险评分能应用 DPFJ/EBPAJ 折扣）
+    QStringList css_names;
+    QStringList css_texts;
+    for (const QString& path : css_text_cache.keys()) {
+        QString base = path;
+        const int slash = base.lastIndexOf(QLatin1Char('/'));
+        if (slash >= 0) {
+            base = base.mid(slash + 1);
+        }
+        if (!css_names.contains(base)) {
+            css_names.append(base);
+        }
+        css_texts.append(css_text_cache.value(path));
+    }
+    const VerticalProfileDetector::Detection profile =
+        VerticalProfileDetector::detect(css_names, css_texts, generators);
+    analysis.profileName = profile.profileName;
+    analysis.profileConfidence = profile.confidence;
+    analysis.canSwitchHltr = profile.canSwitchHltr;
+
     const QList<HTMLResource*> html_resources = m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
     for (HTMLResource* resource : html_resources) {
         resource->InitialLoad();
@@ -273,26 +293,6 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
         }
         analysis.files.append(file);
     }
-
-    // Profile 判定
-    QStringList css_names;
-    QStringList css_texts;
-    for (const QString& path : css_text_cache.keys()) {
-        QString base = path;
-        const int slash = base.lastIndexOf(QLatin1Char('/'));
-        if (slash >= 0) {
-            base = base.mid(slash + 1);
-        }
-        if (!css_names.contains(base)) {
-            css_names.append(base);
-        }
-        css_texts.append(css_text_cache.value(path));
-    }
-    const VerticalProfileDetector::Detection profile =
-        VerticalProfileDetector::detect(css_names, css_texts, generators);
-    analysis.profileName = profile.profileName;
-    analysis.profileConfidence = profile.confidence;
-    analysis.canSwitchHltr = profile.canSwitchHltr;
 
     if (analysis.verticalCount > 0 && analysis.horizontalCount == 0) {
         analysis.detectedWritingMode = QStringLiteral("vertical-rl");

@@ -1762,6 +1762,18 @@ if a sans-serif font-family specified in your CSS</source>
     </message>
     <message><source>Run the named Regex Workbench recipe against all text resources.</source><translation>指定した正規表現ワークベンチのレシピをすべてのテキストリソースに実行します。</translation></message>
     <message><source>[Regex recipe name or absolute path here]</source><translation>[正規表現レシピ名または絶対パスを入力]</translation></message>
+    <message>
+        <source>Analyze the current EPUB's writing mode, layout profile, and per-file conversion risk.</source>
+        <translation>現在の EPUB の書字方向・レイアウトテンプレート・各ファイルの変換リスクを分析します。</translation>
+    </message>
+    <message>
+        <source>Convert a horizontal-tb EPUB to vertical-rl (tategaki) with a checkpoint before batch changes.</source>
+        <translation>横組み（horizontal-tb）EPUB を縦組み（vertical-rl）に変換します。一括変更前にチェックポイントを作成します。</translation>
+    </message>
+    <message>
+        <source>Convert a vertical-rl (tategaki) EPUB to horizontal-tb with a checkpoint before batch changes.</source>
+        <translation>縦組み（vertical-rl）EPUB を横組み（horizontal-tb）に変換します。一括変更前にチェックポイントを作成します。</translation>
+    </message>
 </context>
 <context>
     <name>Book</name>
@@ -15363,6 +15375,124 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     <message><source>Regex recipe failed: the current EPUB has no text resources.</source><translation>正規表現レシピに失敗しました：現在の EPUB にテキストリソースがありません。</translation></message>
     <message><source>Run staged secondary, recursive, and variable-aware regular-expression recipes</source><translation>二次検索、再帰、変数に対応した段階的な正規表現レシピを実行します</translation></message>
     <message><source>The current EPUB has no text resources.</source><translation>現在の EPUB にテキストリソースがありません。</translation></message>
+    <message>
+        <source>Analyze Vertical Layout...</source>
+        <translation>縦組みレイアウトを分析...</translation>
+    </message>
+    <message>
+        <source>Analyze the current EPUB's writing mode, layout profile, and per-file conversion risk for vertical/horizontal conversion</source>
+        <translation>現在の EPUB の書字方向・レイアウトテンプレート・各ファイルの縦横変換リスクを分析します</translation>
+    </message>
+    <message>
+        <source>Convert Vertical Book to Horizontal...</source>
+        <translation>縦組み書籍を横組みに変換...</translation>
+    </message>
+    <message>
+        <source>Convert Horizontal Book to Vertical...</source>
+        <translation>横組み書籍を縦組みに変換...</translation>
+    </message>
+    <message>
+        <source>Convert Vertical to Horizontal</source>
+        <translation>縦組みを横組みに変換</translation>
+    </message>
+    <message>
+        <source>Convert Horizontal to Vertical</source>
+        <translation>横組みを縦組みに変換</translation>
+    </message>
+    <message>
+        <source>Convert a vertical-rl (tategaki) EPUB to horizontal-tb with a checkpoint created before batch changes</source>
+        <translation>縦組み（vertical-rl）EPUB を横組み（horizontal-tb）に変換します。一括変更前にチェックポイントを作成します</translation>
+    </message>
+    <message>
+        <source>Convert a horizontal-tb EPUB to vertical-rl (tategaki) with a checkpoint created before batch changes</source>
+        <translation>横組み（horizontal-tb）EPUB を縦組み（vertical-rl）に変換します。一括変更前にチェックポイントを作成します</translation>
+    </message>
+    <message>
+        <source>Vertical layout analysis: no EPUB is currently loaded.</source>
+        <translation>縦組み解析：EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <source>Vertical layout analysis: EPUB %1 / languages [%2] / page-progression %3 / writing mode %4 / profile %5 (%6%% confidence).</source>
+        <translation>縦組み解析：EPUB %1 / 言語 [%2] / ページ進行方向 %3 / 書字方向 %4 / テンプレート %5（信頼度 %6%%）。</translation>
+    </message>
+    <message>
+        <source>kind %1 / risk %2 (%3) / %4</source>
+        <translation>種別 %1 / リスク %2（%3）/ %4</translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation>なし</translation>
+    </message>
+    <message>
+        <source>Vertical layout analysis completed: %1 vertical, %2 horizontal, %3 auto-safe, %4 review, %5 skipped.</source>
+        <translation>縦組み解析完了：縦組み %1、横組み %2、自動変換可 %3、要確認 %4、スキップ %5。</translation>
+    </message>
+    <message>
+        <source>Vertical layout candidates found. See Validation Results.</source>
+        <translation>縦組みの候補が見つかりました。検証結果を参照してください。</translation>
+    </message>
+    <message>
+        <source>No vertical layout found; the book appears horizontal.</source>
+        <translation>縦組みは見つかりませんでした。この書籍は横組みのようです。</translation>
+    </message>
+    <message>
+        <source>Layout direction conversion: no EPUB is currently loaded.</source>
+        <translation>排版方向の変換：EPUB が読み込まれていません。</translation>
+    </message>
+    <message>
+        <source>%1: the book is already in the target direction.</source>
+        <translation>%1：書籍は既に目標の書字方向です。</translation>
+    </message>
+    <message>
+        <source>%1: the book is already in the target direction; no conversion needed.</source>
+        <translation>%1：書籍は既に目標の書字方向のため、変換は不要です。</translation>
+    </message>
+    <message>
+        <source>%1: the book is fixed-layout (pre-paginated) and cannot be auto-reflowed.</source>
+        <translation>%1：固定レイアウト（pre-paginated）のため自動リフローできません。</translation>
+    </message>
+    <message>
+        <source>%1: no auto-safe pages were found. See Validation Results for review items.</source>
+        <translation>%1：自動変換できるページが見つかりませんでした。要確認項目は検証結果を参照してください。</translation>
+    </message>
+    <message>
+        <source>%1
+
+EPUB %2 / languages [%3] / page-progression %4
+Profile: %5 (%6%% confidence)
+Vertical pages: %7, Horizontal pages: %8
+Auto-safe: %9, Review: %10, Skipped: %11
+
+A checkpoint will be created before batch changes.</source>
+        <translation>%1
+
+EPUB %2 / 言語 [%3] / ページ進行方向 %4
+テンプレート：%5（信頼度 %6%%）
+縦組みページ：%7、横組みページ：%8
+自動変換可：%9、要確認：%10、スキップ：%11
+
+一括変更前にチェックポイントを作成します。</translation>
+    </message>
+    <message>
+        <source>Profile-aware structured conversion (switch .vrtl/.hltr where available)</source>
+        <translation>テンプレート対応の構造変換（利用可能な場合は .vrtl/.hltr を切替）</translation>
+    </message>
+    <message>
+        <source>Creating checkpoint before %1...</source>
+        <translation>%1 の前にチェックポイントを作成中...</translation>
+    </message>
+    <message>
+        <source>%1: checkpoint creation failed. No files were changed.</source>
+        <translation>%1：チェックポイントの作成に失敗しました。ファイルは変更されていません。</translation>
+    </message>
+    <message>
+        <source>%1 completed. See Validation Results. A checkpoint was created before batch changes.</source>
+        <translation>%1 が完了しました。検証結果を参照してください。一括変更前にチェックポイントを作成済みです。</translation>
+    </message>
+    <message>
+        <source>%1 produced no changes.</source>
+        <translation>%1 は変更を生成しませんでした。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
