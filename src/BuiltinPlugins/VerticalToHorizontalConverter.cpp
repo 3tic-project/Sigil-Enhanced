@@ -211,6 +211,9 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
         return analysis;
     }
 
+    const bool to_horizontal =
+        options.direction == VerticalCssTransformer::ConversionDirection::VerticalToHorizontal;
+
     OPFResource* opf = m_Book->GetOPF();
     opf->InitialLoad();
     const QString opf_source = opf->GetText();
@@ -278,15 +281,33 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
         }
 
         if (isVerticalKind(context.kind)) {
-            if (context.riskScore < 50) {
+            if (to_horizontal) {
+                if (context.riskScore < 50) {
+                    analysis.safeCount++;
+                    file.plannedChanges << QStringLiteral("写入横排覆盖样式");
+                } else if (context.riskScore < 75) {
+                    analysis.reviewCount++;
+                    file.plannedChanges << QStringLiteral("人工复核（风险 %1）").arg(context.riskScore);
+                } else {
+                    analysis.skippedCount++;
+                    file.plannedChanges << QStringLiteral("不支持（风险 %1）").arg(context.riskScore);
+                }
+            } else {
+                // H2V：已竖排页面即为目标方向，跳过
+                analysis.skippedCount++;
+                file.plannedChanges << QStringLiteral("已是竖排，跳过");
+            }
+        } else if (context.kind == VerticalLayoutAnalyzer::PageKind::AlreadyHorizontal
+                   || context.kind == VerticalLayoutAnalyzer::PageKind::TitleOrColophon) {
+            if (to_horizontal) {
+                analysis.skippedCount++;
+                file.plannedChanges << QStringLiteral("已是横排，跳过");
+            } else if (context.riskScore < 50) {
                 analysis.safeCount++;
-                file.plannedChanges << QStringLiteral("写入横排覆盖样式");
-            } else if (context.riskScore < 75) {
+                file.plannedChanges << QStringLiteral("写入竖排覆盖样式");
+            } else {
                 analysis.reviewCount++;
                 file.plannedChanges << QStringLiteral("人工复核（风险 %1）").arg(context.riskScore);
-            } else {
-                analysis.skippedCount++;
-                file.plannedChanges << QStringLiteral("不支持（风险 %1）").arg(context.riskScore);
             }
         } else {
             analysis.skippedCount++;
@@ -679,7 +700,11 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
     }
 
     for (const FileAnalysis& file : result.before.files) {
-        if (isVerticalKind(file.kind) && file.riskScore >= 50) {
+        const bool needs_review = to_horizontal
+            ? (isVerticalKind(file.kind) && file.riskScore >= 50)
+            : ((file.kind == PageKind::AlreadyHorizontal || file.kind == PageKind::TitleOrColophon)
+               && file.riskScore >= 50);
+        if (needs_review) {
             warnings++;
             addResult(result, ValidationResult::ResType_Warn, file.bookpath,
                       QStringLiteral("%1：需人工复核（风险 %2）。").arg(op_name).arg(file.riskScore));
