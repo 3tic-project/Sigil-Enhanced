@@ -162,6 +162,20 @@ int runTests()
         }
     }
 
+    // ---- conversion provenance markers are detected but do not change direction ----
+    {
+        const auto css = VerticalLayoutAnalyzer::analyzeCss(QStringLiteral(
+            ".vrtl { writing-mode: vertical-rl; } .hltr { writing-mode: horizontal-tb; }"));
+        const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\" "
+            "class=\"hltr se-v2h-converted\"><head/><body><p>横</p></body></html>"));
+        if (!xhtml.hasV2hConversionMarker || xhtml.hasH2vConversionMarker
+            || VerticalLayoutAnalyzer::effectiveWritingMode(css, xhtml)
+                != VerticalLayoutAnalyzer::WritingMode::Horizontal) {
+            return fail(QStringLiteral("conversion provenance marker analysis failed"));
+        }
+    }
+
     // ---- analyzeXhtml: 固定 viewport ----
     {
         const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(

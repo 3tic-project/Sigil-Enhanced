@@ -70,8 +70,29 @@ int runTests()
         const auto horizontal = VerticalCssTransformer::transformXhtml(vertical.text, v2h, false);
         if (!vertical.ok || !horizontal.ok || !horizontal.changed
             || horizontal.text.contains(QStringLiteral("se-h2v-vertical"))
-            || !horizontal.text.contains(QStringLiteral("se-v2h-horizontal"))) {
-            return fail(QStringLiteral("opposite compatibility override was not replaced"));
+            || horizontal.text.contains(QStringLiteral("se-v2h-horizontal"))
+            || horizontal.text.contains(QStringLiteral("writing-mode: horizontal-tb !important"))) {
+            return fail(QStringLiteral("opposite compatibility override was not restored cleanly"));
+        }
+    }
+
+    // ---- profile class 切换记录来源，反向转换恢复原 class ----
+    {
+        VerticalCssTransformer::Options v2h;
+        v2h.mode = VerticalCssTransformer::ConversionMode::ProfileAwareRewrite;
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\" class=\"vrtl\">"
+            "<head/><body><p>本文</p></body></html>");
+        const auto horizontal = VerticalCssTransformer::transformXhtml(source, v2h, true);
+        VerticalCssTransformer::Options h2v = v2h;
+        h2v.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        const auto restored = VerticalCssTransformer::transformXhtml(horizontal.text, h2v, true);
+        if (!horizontal.ok || !restored.ok
+            || !horizontal.text.contains(QStringLiteral("se-v2h-converted"))
+            || !restored.text.contains(QStringLiteral("class=\"vrtl\""))
+            || restored.text.contains(QStringLiteral("se-v2h-converted"))
+            || restored.text.contains(QStringLiteral("se-h2v-converted"))) {
+            return fail(QStringLiteral("profile conversion provenance did not restore original class"));
         }
     }
 
@@ -100,23 +121,49 @@ int runTests()
             "<body><p>こんにちは</p></body></html>");
         const auto result = VerticalCssTransformer::transformXhtml(source, options, true);
         if (!result.ok || !result.changed ||
-            !result.text.contains(QStringLiteral("class=\"hltr\"")) ||
+            !result.text.contains(QStringLiteral("class=\"hltr se-v2h-converted\"")) ||
             result.text.contains(QStringLiteral("vrtl")) ||
-            result.text.contains(QStringLiteral("<style"))) {
+            result.text.contains(QStringLiteral("<style")) ||
+            !result.text.contains(QStringLiteral("se-v2h-converted"))) {
             return fail(QStringLiteral("profile switch transform failed"));
         }
     }
 
     // ---- transformInlineWritingMode ----
     {
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body>"
+            "<p style=\"writing-mode: vertical-rl; margin-left: 1em; \" >x</p>"
+            "<div style=\"width: 9.8em; width: fit-content; \" >y</div>"
+            "</body></html>");
         const auto result = VerticalCssTransformer::transformInlineWritingMode(
-            QStringLiteral("<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body>"
-                           "<p style=\"writing-mode: vertical-rl; margin-left: 1em\">x</p>"
-                           "</body></html>"));
+            source);
         if (!result.ok || !result.changed ||
             !result.text.contains(QStringLiteral("writing-mode: horizontal-tb")) ||
-            !result.text.contains(QStringLiteral("margin-left: 1em"))) {
+            !result.text.contains(QStringLiteral("margin-left: 1em; ")) ||
+            !result.text.contains(QStringLiteral("width: 9.8em; width: fit-content; "))) {
             return fail(QStringLiteral("inline writing-mode transform failed"));
+        }
+    }
+
+    // ---- 双向循环不得累积无关 style 空白 ----
+    {
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body>"
+            "<div style=\"width: 9.8em; width: fit-content; \" >x</div>"
+            "</body></html>");
+        VerticalCssTransformer::Options h2v;
+        h2v.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        VerticalCssTransformer::Options v2h;
+        const auto vertical1 = VerticalCssTransformer::transformXhtml(source, h2v, false);
+        const auto horizontal1 = VerticalCssTransformer::transformXhtml(vertical1.text, v2h, false);
+        const auto vertical2 = VerticalCssTransformer::transformXhtml(horizontal1.text, h2v, false);
+        const auto horizontal2 = VerticalCssTransformer::transformXhtml(vertical2.text, v2h, false);
+        if (!vertical1.ok || !horizontal1.ok || !vertical2.ok || !horizontal2.ok
+            || horizontal1.text != horizontal2.text
+            || !horizontal2.text.contains(
+                QStringLiteral("style=\"width: 9.8em; width: fit-content; \""))) {
+            return fail(QStringLiteral("direction round-trip accumulated inline style drift"));
         }
     }
 

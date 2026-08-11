@@ -485,6 +485,10 @@ VerticalLayoutAnalyzer::XhtmlAnalysis VerticalLayoutAnalyzer::analyzeXhtml(const
         html_classes.contains(QStringLiteral("se-v2h-horizontal"));
     analysis.hasH2vOverrideClass =
         html_classes.contains(QStringLiteral("se-h2v-vertical"));
+    analysis.hasV2hConversionMarker =
+        html_classes.contains(QStringLiteral("se-v2h-converted"));
+    analysis.hasH2vConversionMarker =
+        html_classes.contains(QStringLiteral("se-h2v-converted"));
 
     QDomElement body;
     walkElements(html, [&body](const QDomElement& element) {
@@ -501,6 +505,10 @@ VerticalLayoutAnalyzer::XhtmlAnalysis VerticalLayoutAnalyzer::analyzeXhtml(const
             || body_classes.contains(QStringLiteral("se-v2h-horizontal"));
         analysis.hasH2vOverrideClass = analysis.hasH2vOverrideClass
             || body_classes.contains(QStringLiteral("se-h2v-vertical"));
+        analysis.hasV2hConversionMarker = analysis.hasV2hConversionMarker
+            || body_classes.contains(QStringLiteral("se-v2h-converted"));
+        analysis.hasH2vConversionMarker = analysis.hasH2vConversionMarker
+            || body_classes.contains(QStringLiteral("se-h2v-converted"));
     }
 
     // inline style：html / body 级（根级 writing-mode 判定）

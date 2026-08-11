@@ -175,29 +175,62 @@ QString overrideClassName(ConversionDirection direction)
         : QStringLiteral("se-h2v-vertical");
 }
 
-// 把 style 属性里“源方向”的 writing-mode 值改写成目标方向值，保留其它声明。
+QString conversionMarkerName(ConversionDirection direction)
+{
+    return direction == ConversionDirection::VerticalToHorizontal
+        ? QStringLiteral("se-v2h-converted")
+        : QStringLiteral("se-h2v-converted");
+}
+
+// 把 style 属性里“源方向”的 writing-mode 值改写成目标方向值。
+// 只替换属性值区间，必须逐字节保留其它声明和尾随空白；若用 split/join
+// 重建整个 style，带尾分号的属性会在每次互转时累计一个空格。
 QString rewriteStyleForDirection(const QString& style, ConversionDirection direction)
 {
-    const QStringList parts = style.split(QLatin1Char(';'));
-    QStringList rebuilt;
-    for (const QString& part : parts) {
-        const int colon = part.indexOf(QLatin1Char(':'));
-        if (colon <= 0) {
-            rebuilt.append(part);
+    struct StyleEdit {
+        qsizetype start = 0;
+        qsizetype length = 0;
+        QString replacement;
+    };
+
+    static const QRegularExpression writing_mode_re(
+        QStringLiteral("(^|;)\\s*(?:-(?:webkit|epub|ms)-)?writing-mode\\s*:\\s*([^;]*)"),
+        QRegularExpression::CaseInsensitiveOption);
+
+    QList<StyleEdit> edits;
+    QRegularExpressionMatchIterator matches = writing_mode_re.globalMatch(style);
+    while (matches.hasNext()) {
+        const QRegularExpressionMatch match = matches.next();
+        const QString captured_value = match.captured(2);
+        int leading = 0;
+        while (leading < captured_value.size() && captured_value.at(leading).isSpace()) {
+            ++leading;
+        }
+        int trailing = captured_value.size();
+        while (trailing > leading && captured_value.at(trailing - 1).isSpace()) {
+            --trailing;
+        }
+        const QString value = captured_value.mid(leading, trailing - leading);
+        if (!isSourceWritingValue(value, direction)) {
             continue;
         }
-        QString prop = part.left(colon).trimmed().toLower();
-        QString value = part.mid(colon + 1).trimmed();
-        if (isWritingModeProperty(prop) && isSourceWritingValue(value, direction)) {
-            QString important;
-            if (value.endsWith(QStringLiteral("!important"))) {
-                important = QStringLiteral(" !important");
-            }
-            value = targetWritingMode(direction) + important;
+
+        QString important;
+        if (value.endsWith(QStringLiteral("!important"), Qt::CaseInsensitive)) {
+            important = QStringLiteral(" !important");
         }
-        rebuilt.append(prop + QStringLiteral(": ") + value);
+        edits.append(StyleEdit {
+            match.capturedStart(2) + leading,
+            trailing - leading,
+            targetWritingMode(direction) + important
+        });
     }
-    return rebuilt.join(QStringLiteral("; "));
+
+    QString rewritten = style;
+    for (auto it = edits.crbegin(); it != edits.crend(); ++it) {
+        rewritten.replace(it->start, it->length, it->replacement);
+    }
+    return rewritten;
 }
 
 // 在 tag 开标签的属性段中设置/新增某 XML 属性（保持其它字节不变）。
@@ -524,12 +557,25 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
         options.direction == ConversionDirection::VerticalToHorizontal
             ? ConversionDirection::HorizontalToVertical
             : ConversionDirection::VerticalToHorizontal);
+    const QString marker = conversionMarkerName(options.direction);
+    const QString opposite_marker = conversionMarkerName(
+        options.direction == ConversionDirection::VerticalToHorizontal
+            ? ConversionDirection::HorizontalToVertical
+            : ConversionDirection::VerticalToHorizontal);
     const QString from_class = options.direction == ConversionDirection::VerticalToHorizontal
         ? QStringLiteral("vrtl") : QStringLiteral("hltr");
     const QString to_class = options.direction == ConversionDirection::VerticalToHorizontal
         ? QStringLiteral("hltr") : QStringLiteral("vrtl");
     QDomElement body = findElementByLocalName(html, QStringLiteral("body"));
     QDomElement head = findElementByLocalName(html, QStringLiteral("head"));
+
+    // An opposite override/marker proves that this page was changed by an
+    // earlier plugin run. Reversing it must restore the original page rather
+    // than applying a fresh target-direction override on top.
+    const bool reversing_generated = hasClassToken(html, opposite_cls)
+        || hasClassToken(html, opposite_marker)
+        || (!body.isNull() && (hasClassToken(body, opposite_cls)
+                               || hasClassToken(body, opposite_marker)));
 
     // Make direction changes reversible: discard an earlier override for the
     // opposite direction before applying this one.
@@ -538,8 +584,12 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
         result.changed = removeClassToken(body, opposite_cls) || result.changed;
     }
     result.changed = removeOverrideStyles(head, opposite_cls) || result.changed;
+    result.changed = removeClassToken(html, opposite_marker) || result.changed;
+    if (!body.isNull()) {
+        result.changed = removeClassToken(body, opposite_marker) || result.changed;
+    }
 
-    bool use_override = !switchToTargetClass;
+    bool use_override = !switchToTargetClass && !reversing_generated;
     if (switchToTargetClass) {
         bool class_switched = replaceClassToken(html, from_class, to_class);
         if (!body.isNull()) {
@@ -557,6 +607,17 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
                 result.changed = removeClassToken(body, cls) || result.changed;
             }
             result.changed = removeOverrideStyles(head, cls) || result.changed;
+            if (reversing_generated) {
+                result.changed = removeClassToken(html, marker) || result.changed;
+                if (!body.isNull()) {
+                    result.changed = removeClassToken(body, marker) || result.changed;
+                }
+            } else {
+                const QString before_marker = html.attribute(QStringLiteral("class"));
+                appendClass(html, marker);
+                result.changed = result.changed
+                    || html.attribute(QStringLiteral("class")) != before_marker;
+            }
         } else {
             // The book profile may be paired globally while an individual
             // page has no layout class. Fall back to a local override instead

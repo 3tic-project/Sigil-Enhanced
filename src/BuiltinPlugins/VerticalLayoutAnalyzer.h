@@ -98,6 +98,8 @@ public:
         bool bodyHasHltrClass = false;
         bool hasV2hOverrideClass = false;
         bool hasH2vOverrideClass = false;
+        bool hasV2hConversionMarker = false;
+        bool hasH2vConversionMarker = false;
         bool hasInlineVerticalStyle = false;
 
         bool hasRuby = false;

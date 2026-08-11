@@ -152,7 +152,7 @@ int runTests()
         if (!checkInvariants(source, result.text)) {
             return fail(QStringLiteral("profile transform violated invariants"));
         }
-        if (!result.text.contains(QStringLiteral("class=\"hltr\""))) {
+        if (!result.text.contains(QStringLiteral("class=\"hltr se-v2h-converted\""))) {
             return fail(QStringLiteral("profile transform did not switch class"));
         }
     }

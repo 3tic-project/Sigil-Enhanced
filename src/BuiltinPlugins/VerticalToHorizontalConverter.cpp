@@ -257,6 +257,27 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
     analysis.canSwitchHltr = profile.canSwitchHltr;
 
     const QList<HTMLResource*> html_resources = m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
+    // If the opposite direction left provenance on any selected page, this is
+    // a reverse operation. Restrict it to pages changed by that earlier run so
+    // originally-horizontal title pages (or originally-vertical subdocuments)
+    // retain their original direction.
+    for (HTMLResource* resource : html_resources) {
+        resource->InitialLoad();
+        const QString bookpath = resource->GetRelativePath();
+        if (!options.selectedBookPaths.isEmpty() && !options.selectedBookPaths.contains(bookpath)) {
+            continue;
+        }
+        const VerticalLayoutAnalyzer::XhtmlAnalysis xhtml =
+            VerticalLayoutAnalyzer::analyzeXhtml(resource->GetText());
+        const bool opposite_generated = to_horizontal
+            ? (xhtml.hasH2vOverrideClass || xhtml.hasH2vConversionMarker)
+            : (xhtml.hasV2hOverrideClass || xhtml.hasV2hConversionMarker);
+        if (opposite_generated) {
+            analysis.restoringGeneratedConversion = true;
+            break;
+        }
+    }
+
     for (HTMLResource* resource : html_resources) {
         resource->InitialLoad();
         const QString bookpath = resource->GetRelativePath();
@@ -272,6 +293,13 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
         file.profileConfidence = analysis.profileConfidence;
         file.profileName = analysis.profileName;
         file.reasons = context.reasons;
+        file.generatedByV2h = context.xhtml.hasV2hOverrideClass
+            || context.xhtml.hasV2hConversionMarker;
+        file.generatedByH2v = context.xhtml.hasH2vOverrideClass
+            || context.xhtml.hasH2vConversionMarker;
+
+        const bool in_conversion_scope = !analysis.restoringGeneratedConversion
+            || (to_horizontal ? file.generatedByH2v : file.generatedByV2h);
 
         if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Vertical) {
             analysis.verticalCount++;
@@ -285,7 +313,10 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
             analysis.horizontalCount++;
         }
 
-        if (to_horizontal) {
+        if (!in_conversion_scope) {
+            analysis.skippedCount++;
+            file.plannedChanges << QStringLiteral("不属于上次方向转换，跳过");
+        } else if (to_horizontal) {
             if (isConvertibleKind(context.kind, context.riskScore)) {
                 analysis.safeCount++;
                 file.plannedChanges << QStringLiteral("写入横排覆盖样式");
@@ -547,7 +578,12 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
     };
     QList<PlannedPage> pages;
 
-    const auto isConvertible = [to_horizontal](const FileAnalysis& file) {
+    const bool restoring_generated = result.before.restoringGeneratedConversion;
+    const auto isConvertible = [to_horizontal, restoring_generated](const FileAnalysis& file) {
+        if (restoring_generated
+            && !(to_horizontal ? file.generatedByH2v : file.generatedByV2h)) {
+            return false;
+        }
         if (to_horizontal) {
             return isConvertibleKind(file.kind, file.riskScore);
         }
@@ -711,6 +747,10 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
     }
 
     for (const FileAnalysis& file : result.before.files) {
+        if (restoring_generated
+            && !(to_horizontal ? file.generatedByH2v : file.generatedByV2h)) {
+            continue;
+        }
         const bool needs_review = to_horizontal
             ? (isVerticalKind(file.kind) && file.riskScore >= 50)
             : ((file.kind == PageKind::AlreadyHorizontal || file.kind == PageKind::TitleOrColophon)

@@ -51,6 +51,8 @@ public:
         QString profileName;
         QStringList reasons;
         QStringList plannedChanges;
+        bool generatedByV2h = false;
+        bool generatedByH2v = false;
     };
 
     struct Analysis {
@@ -63,6 +65,7 @@ public:
         double profileConfidence = 0.0;
         bool canSwitchHltr = false;
         bool fixedLayoutBook = false;
+        bool restoringGeneratedConversion = false;
         QList<FileAnalysis> files;
         int verticalCount = 0;
         int horizontalCount = 0;

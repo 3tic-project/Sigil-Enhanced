@@ -46,6 +46,12 @@ require(
     is not None,
     "paired profile conversion must preserve shared .vrtl/.hltr CSS",
 )
+require(
+    "analysis.restoringGeneratedConversion = true;" in converter
+    and "file.generatedByV2h" in converter
+    and "file.generatedByH2v" in converter,
+    "reverse conversion must be restricted to pages changed by the previous direction run",
+)
 
 # Keep public actions and the direction enum wired in the same direction.
 require(

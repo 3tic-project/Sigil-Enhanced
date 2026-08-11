@@ -522,6 +522,17 @@ add_test(NAME vertical_converter_contract
 )
 set_tests_properties(vertical_converter_contract PROPERTIES TIMEOUT 30)
 
+# Manual real-book audit helper. It is intentionally not registered with
+# CTest because it operates only on explicit temporary copies supplied by a
+# developer and never on repository fixtures.
+add_executable(vertical_layout_probe EXCLUDE_FROM_ALL
+    vertical_layout_probe.cpp
+    ${V2H_TEST_SOURCES}
+)
+target_include_directories(vertical_layout_probe PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/internal/lexbor)
+target_link_libraries(vertical_layout_probe PRIVATE Qt6::Core Qt6::Xml lexborcss)
+set_target_properties(vertical_layout_probe PROPERTIES C_STANDARD 11)
+
     add_executable(font_subset_smoke_test
         font_subset_smoke_test.cpp
     )
