@@ -108,6 +108,7 @@
 #include "Misc/KeyboardShortcutManager.h"
 #include "Misc/Landmarks.h"
 #include "Misc/AriaRoles.h"
+#include "Misc/CheckpointIdentifier.h"
 #include "Misc/MediaTypes.h"
 #include "Misc/OpenExternally.h"
 #include "Misc/Plugin.h"
@@ -1234,9 +1235,32 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
         repoDir.mkpath(localRepo);
     }
 
-    // Recovery snapshots must not add a missing UUID to the live OPF. In that
-    // uncommon case fail closed and let the user create a normal checkpoint.
-    QString bookid = m_Book->GetOPF()->GetUUIDIdentifierValue(update_book_metadata);
+    OPFResource* opf = m_Book->GetOPF();
+    QString checkpointOpfText;
+    QString liveOpfBeforeIdentity;
+    QString bookid = opf->GetUUIDIdentifierValue(update_book_metadata);
+    if (bookid.isEmpty() && !update_book_metadata) {
+        // Some otherwise usable EPUBs have a dangling unique-identifier or
+        // only vendor identifiers such as "none". Prepare the UUID entirely
+        // in memory first. The temporary snapshot receives that OPF text; the
+        // live resource is updated as one undoable edit only after the
+        // checkpoint commit has succeeded.
+        {
+            QReadLocker locker(&opf->GetLock());
+            liveOpfBeforeIdentity = opf->GetText();
+        }
+        const CheckpointIdentifier::Result identity =
+            CheckpointIdentifier::ensureUuid(liveOpfBeforeIdentity);
+        if (!identity.ok || !identity.changed || identity.bookId.isEmpty()) {
+            qWarning() << "Could not prepare recovery checkpoint OPF identity:"
+                       << identity.error;
+            ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
+            QApplication::restoreOverrideCursor();
+            return false;
+        }
+        bookid = identity.bookId;
+        checkpointOpfText = identity.text;
+    }
     if (bookid.isEmpty()) {
         ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
         QApplication::restoreOverrideCursor();
@@ -1291,7 +1315,9 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
                 }
 
                 TextResource* textResource = qobject_cast<TextResource*>(resource);
-                if (textResource && textResource->IsLoaded()) {
+                if (resource == opf && !checkpointOpfText.isEmpty()) {
+                    Utility::WriteUnicodeTextFile(checkpointOpfText, destination);
+                } else if (textResource && textResource->IsLoaded()) {
                     QReadLocker locker(&textResource->GetLock());
                     Utility::WriteUnicodeTextFile(textResource->GetText(), destination);
                 } else if (!QFile::copy(resource->GetFullPath(), destination)) {
@@ -1326,6 +1352,18 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
         ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
         QApplication::restoreOverrideCursor();
         return false;
+    }
+
+    if (!checkpointOpfText.isEmpty()) {
+        QWriteLocker locker(&opf->GetLock());
+        if (opf->GetText() != liveOpfBeforeIdentity) {
+            qWarning() << "Live OPF changed while creating a recovery checkpoint";
+            ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
+            QApplication::restoreOverrideCursor();
+            return false;
+        }
+        opf->SetTextAsUndoableEdit(checkpointOpfText);
+        m_Book->SetModified();
     }
 
     QApplication::restoreOverrideCursor();

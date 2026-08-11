@@ -490,6 +490,8 @@ set( MISC_FILES
     Misc/ResourceInsertion.h
     Misc/SafeArchiveExtractor.cpp
     Misc/SafeArchiveExtractor.h
+    Misc/CheckpointIdentifier.cpp
+    Misc/CheckpointIdentifier.h
     Misc/Utility.cpp
     Misc/UtilityExt.cpp
     Misc/Utility.h

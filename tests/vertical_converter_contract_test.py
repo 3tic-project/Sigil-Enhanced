@@ -15,6 +15,7 @@ converter = (
     repo / "src/BuiltinPlugins/VerticalToHorizontalConverter.cpp"
 ).read_text(encoding="utf-8")
 main_window = (repo / "src/MainUI/MainWindowExt.cpp").read_text(encoding="utf-8")
+main_window_core = (repo / "src/MainUI/MainWindow.cpp").read_text(encoding="utf-8")
 opf_header = (repo / "src/ResourceObjects/OPFResource.h").read_text(encoding="utf-8")
 opf_resource = (repo / "src/ResourceObjects/OPFResource.cpp").read_text(encoding="utf-8")
 
@@ -111,6 +112,26 @@ require(
 require(
     "RepoCommit()" not in conversion_body,
     "layout conversion must not use the undo-clearing normal checkpoint path",
+)
+
+# A missing UUID is repaired first in the isolated checkpoint OPF. Only after
+# the repository commit succeeds may that exact OPF be applied to the live
+# resource as one undoable edit.
+checkpoint_start = main_window_core.index("bool MainWindow::CreateRepoCheckpoint")
+checkpoint_end = main_window_core.index("// handle both the current epub", checkpoint_start)
+checkpoint_body = main_window_core[checkpoint_start:checkpoint_end]
+require(
+    "CheckpointIdentifier::ensureUuid(liveOpfBeforeIdentity)" in checkpoint_body,
+    "recovery checkpoints must prepare a missing UUID without mutating live OPF",
+)
+require(
+    checkpoint_body.index("PerformRepoCommitInPython")
+    < checkpoint_body.index("opf->SetTextAsUndoableEdit(checkpointOpfText)"),
+    "the synthesized OPF must not reach the live book before checkpoint commit succeeds",
+)
+require(
+    "resource == opf && !checkpointOpfText.isEmpty()" in checkpoint_body,
+    "the isolated snapshot must contain the synthesized UUID-bearing OPF",
 )
 
 # OPF has additional validation and notifications that the base TextResource

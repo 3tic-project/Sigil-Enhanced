@@ -23,6 +23,17 @@ set_tests_properties(tab_bar_middle_click PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
+add_executable(checkpoint_identifier_test
+    checkpoint_identifier_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/CheckpointIdentifier.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/CheckpointIdentifier.h
+)
+target_include_directories(checkpoint_identifier_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(checkpoint_identifier_test PRIVATE Qt6::Core Qt6::Xml)
+target_compile_features(checkpoint_identifier_test PRIVATE cxx_std_17)
+add_test(NAME checkpoint_identifier COMMAND checkpoint_identifier_test)
+set_tests_properties(checkpoint_identifier PROPERTIES TIMEOUT 30)
+
 add_executable(regex_match_enumerator_test
     regex_match_enumerator_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
