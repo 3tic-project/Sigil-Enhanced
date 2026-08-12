@@ -270,22 +270,24 @@ Phase 2:
 
 模块:
 
-- `VerticalLayoutAnalyzer` — 纯函数 Book/Document 级检测：OPF 版本、语言、page progression、`rendition:layout`；XHTML 的根/body class、inline writing-mode、ruby/表格/SVG 文本/绝对定位/viewport；CSS 的 writing-mode、`.vrtl/.hltr`、tcy/upright、`vert/vrt2`、物理方向 utility class。页面实际方向优先采用根布局 class 或兼容覆盖 class，避免把同时包含纵横规则的共享 CSS 误判为竖排；同时识别插件写入的方向来源标记，用于安全反向恢复。产出 PageKind 分类与 0~100 风险分。
+- `VerticalLayoutAnalyzer` — 纯函数 Book/Document 级检测：OPF 版本、语言、page progression、全局/逐 itemref `rendition:layout` 与 legacy fixed-layout metadata；XHTML 的根/body class、inline writing-mode、ruby/表格/SVG 文本/绝对定位/viewport；CSS 的 writing-mode、`.vrtl/.hltr`、tcy/upright、`vert/vrt2`、物理方向 utility class。页面实际方向优先采用根布局 class 或兼容覆盖 class，避免把同时包含纵横规则的共享 CSS 误判为竖排；同时识别插件写入的方向来源标记，用于安全反向恢复。产出 PageKind 分类与 0~100 风险分。
 - `VerticalProfileDetector` — DPFJ/EBPAJ / AozoraEpub3 / Generic profile 指纹判定，输出置信度与 `.vrtl/.hltr` 成对可用性。
-- `VerticalCssTransformer` — 双向纯变换器：兼容覆盖 override 注入、`.vrtl <-> .hltr` class 切换、inline style writing-mode 改写、CSS 结构化改写（writing-mode 值改写 + 纵向专属属性中和 + 移除 `vert/vrt2`）、OPF page-progression 变换。兼容覆盖可反向切换并清理旧方向标记；结构化 class 切换会记录转换来源，反向恢复后删除标记；inline style 只替换 writing-mode 值区间，不重排无关声明或累计空白。横排转竖排默认保留显式横排的表格等局部子流。
-- `VerticalToHorizontalConverter` — Book 级编排：`analyze()`/`convert()`，转换前 stale-source 校验与不变量校验（可见文本、id/name、href/src、ruby/rt/rp、img、`<a>`），批量写回。OPF 的 stale-source 校验始终与转换前快照比较；恢复 Checkpoint 由调用方（MainWindow）在 `convert()` 前创建。
+- `VerticalStylesheetResolver` — 从页面实际 `<link>` 出发解析书内样式表依赖，支持命名空间前缀、query/fragment、百分号编码、递归 `@import`、去重和循环保护，拒绝外部 URI 与越界路径。
+- `VerticalCssTransformer` — 双向纯变换器：带专用来源标记的兼容覆盖、`.vrtl <-> .hltr` class 切换、显式 inline style writing-mode 变换、CSS 低层结构化变换，以及可恢复原始 `absent/default/ltr/rtl` 状态的 OPF page-progression 变换。整书自动流程不改写 inline style 或共享 CSS；结构化 class 与 OPF 来源在反向转换时恢复，检测到人工改动则拒绝覆盖。
+- `VerticalToHorizontalConverter` — Book 级编排：`analyze()`/`convert()`，逐页合并实际关联 CSS，转换前 stale-source 校验与不变量校验（可见文本、id/name、href/src、ruby/rt/rp、img、`<a>`），先完成全批计划再统一写回。OPF 的 stale-source 校验始终与转换前快照比较；MainWindow 先对用户选定模式执行精确 dry-run，只有成功且确有变化才创建恢复 Checkpoint。
 
 安全策略:
 
-- 固定版式（`pre-paginated`）整书禁止自动重排；图片页、SVG 文本、脚本驱动布局默认跳过或人工复核。
-- 未知 CSS 默认走“兼容覆盖”，不猜测重写物理方向属性；已知 profile（DPFJ/EBPAJ）且 `.vrtl/.hltr` 成对存在时，结构化模式只切换页面根 class，不全局重写共享样式表。共享样式表同时含纵横规则但页面没有明确根 class 时列为人工复核。
+- 固定版式（`pre-paginated`）整书禁止自动重排；局部 fixed-layout itemref、图片页、含文本 SVG、脚本驱动布局默认跳过或人工复核。混合固定版式或只转换部分文件时不修改整书 page progression。
+- 未知 CSS 默认走“兼容覆盖”，不猜测重写物理方向属性；已知 profile（DPFJ/EBPAJ）且当前页面实际关联的 CSS 含 `.vrtl/.hltr` 成对规则时，结构化模式只切换该页面根 class，不全局重写共享样式表。共享样式表同时含纵横规则但页面没有明确根 class 时列为人工复核。
+- 关联 CSS、页内 `<style>` 或 OPF 解析失败，以及源方向 inline `!important` 会压过覆盖时，禁止自动写回。所有文件与 OPF 的计划必须同时通过，任何失败都在首次写回前终止整批。
 - 检测到相反方向的插件来源标记时，当前操作视为恢复：只处理上一次由插件转换的页面，不改变书中原本就采用目标方向的扉页、版权页或局部混排页面；恢复完成后不残留 override 或来源 class。
 - EPUB 缺少合法 UUID 时，恢复 Checkpoint 会先在隔离快照中补全 UUID；仅在快照提交成功后，才把同一份 OPF 作为一步可撤销编辑写回实时文档，检查点失败不会污染文档。
 - 文本、链接、id、ruby 等不变量任一不一致即不写回该文件；批量写回前必须成功创建 Checkpoint。
 - XHTML、CSS、OPF 的写回分别记录为各资源的一步撤销；在对应文件标签页中可用“撤销”恢复该文件。整书一次恢复使用转换前自动创建的恢复 Checkpoint。
 - 幂等：对已处于目标方向的书再次运行不产生新的实质修改。
 
-CTest 位于 `tests/vertical_layout_analyzer_test.cpp`、`tests/vertical_profile_detector_test.cpp`、`tests/vertical_css_transformer_test.cpp`、`tests/vertical_conversion_invariants_test.cpp`、`tests/vertical_converter_contract_test.py`。`vertical_layout_probe` 是只针对显式临时副本运行的真实 EPUB 审计工具，不注册为依赖本机书库的 CTest。
+CTest 位于 `tests/vertical_layout_analyzer_test.cpp`、`tests/vertical_profile_detector_test.cpp`、`tests/vertical_stylesheet_resolver_test.cpp`、`tests/vertical_css_transformer_test.cpp`、`tests/vertical_conversion_invariants_test.cpp`、`tests/vertical_converter_contract_test.py`。`vertical_layout_probe` 是只针对显式临时副本运行的真实 EPUB 审计工具，不注册为依赖本机书库的 CTest。用户机制、安全边界和真实书籍审计结果见 `docs/VerticalLayoutConversion.md`。
 
 ## 后续接口
 
