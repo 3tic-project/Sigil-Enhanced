@@ -39,13 +39,13 @@ require(
 # Switching the root class is sufficient; rewriting that stylesheet globally
 # makes horizontal pages inherit vertical rules (or vice versa).
 require(
-    re.search(
-        r"options\.mode\s*==\s*VerticalCssTransformer::ConversionMode::ProfileAwareRewrite"
-        r"\s*&&\s*!switch_target_class",
-        converter,
-    )
-    is not None,
-    "paired profile conversion must preserve shared .vrtl/.hltr CSS",
+    "const bool switch_target_class = file.canSwitchLayoutClass" in converter,
+    "structured class switching must be proven for each page, not only book-wide",
+)
+require(
+    "destructive generic CSS cleanup is not safe for automatic round trips" in converter
+    and "VerticalCssTransformer::transformCss(css_text, options)" not in converter,
+    "unknown or unpaired CSS must fall back to a reversible override",
 )
 require(
     "analysis.restoringGeneratedConversion = true;" in converter
@@ -81,16 +81,11 @@ require(
     "converted XHTML pages must be written as undoable edits",
 )
 require(
-    "change.first->SetTextAsUndoableEdit(change.second);" in converter,
-    "converted CSS resources must be written as undoable edits",
-)
-require(
     "opf->SetTextAsUndoableEdit(opf_text);" in converter,
     "OPF page-progression changes must be written as undoable edits",
 )
 for destructive_write in (
     "page.resource->SetText(page.transformed);",
-    "change.first->SetText(change.second);",
     "opf->SetText(opf_text);",
 ):
     require(
@@ -112,6 +107,16 @@ require(
 require(
     "RepoCommit()" not in conversion_body,
     "layout conversion must not use the undo-clearing normal checkpoint path",
+)
+require(
+    conversion_body.index("converter.convert(options)")
+    < conversion_body.index("CreateRecoveryCheckpoint()"),
+    "the selected conversion mode must pass dry-run preflight before checkpoint creation",
+)
+require(
+    "options.dryRun = true;" in conversion_body
+    and "if (!preflight.ok)" in conversion_body,
+    "preflight failures must stop before checkpoint or document writes",
 )
 
 # A missing UUID is repaired first in the isolated checkpoint OPF. Only after

@@ -15440,6 +15440,10 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <translation>排版方向の変換：EPUB が読み込まれていません。</translation>
     </message>
     <message>
+        <source>%1: EPUB layout analysis failed. No files were changed.</source>
+        <translation>%1：EPUB のレイアウト解析に失敗しました。ファイルは変更されていません。</translation>
+    </message>
+    <message>
         <source>%1: the book is already in the target direction.</source>
         <translation>%1：書籍は既に目標の書字方向です。</translation>
     </message>
@@ -15476,6 +15480,14 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
     <message>
         <source>Profile-aware structured conversion (switch .vrtl/.hltr where available)</source>
         <translation>テンプレート対応の構造変換（利用可能な場合は .vrtl/.hltr を切替）</translation>
+    </message>
+    <message>
+        <source>No verified .vrtl/.hltr profile was found; compatibility override will be used.</source>
+        <translation>検証済みの .vrtl/.hltr プロファイルがないため、互換オーバーライドを使用します。</translation>
+    </message>
+    <message>
+        <source>%1 preflight failed. No files were changed.</source>
+        <translation>%1 の事前検証に失敗しました。ファイルは変更されていません。</translation>
     </message>
     <message>
         <source>Creating checkpoint before %1...</source>

@@ -15443,6 +15443,10 @@ Single nested visual blocks preserved: %6</source>
         <translation>排版方向转换：当前未打开 EPUB。</translation>
     </message>
     <message>
+        <source>%1: EPUB layout analysis failed. No files were changed.</source>
+        <translation>%1：EPUB 排版分析失败，未修改任何文件。</translation>
+    </message>
+    <message>
         <source>%1: the book is already in the target direction.</source>
         <translation>%1：书籍已采用目标书写方向。</translation>
     </message>
@@ -15479,6 +15483,14 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
     <message>
         <source>Profile-aware structured conversion (switch .vrtl/.hltr where available)</source>
         <translation>识别模板的结构化转换（可用时切换 .vrtl/.hltr）</translation>
+    </message>
+    <message>
+        <source>No verified .vrtl/.hltr profile was found; compatibility override will be used.</source>
+        <translation>未找到经验证的 .vrtl/.hltr 模板，将使用兼容覆盖方式。</translation>
+    </message>
+    <message>
+        <source>%1 preflight failed. No files were changed.</source>
+        <translation>%1 预检失败，未修改任何文件。</translation>
     </message>
     <message>
         <source>Creating checkpoint before %1...</source>

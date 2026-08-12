@@ -1907,6 +1907,13 @@ bool MainWindow::ConvertVerticalLayoutDirection(bool to_horizontal)
     const BuiltinPlugins::VerticalToHorizontalConverter::Analysis analysis = converter.analyze(options);
     QApplication::restoreOverrideCursor();
 
+    if (!analysis.ok) {
+        m_ValidationResultsView->LoadResults(QList<ValidationResult>()
+            << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
+                                tr("%1: EPUB layout analysis failed. No files were changed.").arg(op_name)));
+        return false;
+    }
+
     const bool already_target = to_horizontal
         ? (analysis.verticalCount == 0 && analysis.reviewCount == 0)
         : (analysis.horizontalCount == 0 && analysis.reviewCount == 0);
@@ -1952,6 +1959,11 @@ bool MainWindow::ConvertVerticalLayoutDirection(bool to_horizontal)
                     .arg(analysis.skippedCount));
     QCheckBox *structured_box = new QCheckBox(
         tr("Profile-aware structured conversion (switch .vrtl/.hltr where available)"), &box);
+    structured_box->setEnabled(analysis.canSwitchHltr);
+    if (!analysis.canSwitchHltr) {
+        structured_box->setToolTip(
+            tr("No verified .vrtl/.hltr profile was found; compatibility override will be used."));
+    }
     box.setCheckBox(structured_box);
     box.addButton(QMessageBox::Ok);
     box.addButton(QMessageBox::Cancel);
@@ -1961,6 +1973,23 @@ bool MainWindow::ConvertVerticalLayoutDirection(bool to_horizontal)
     options.mode = structured_box->isChecked()
         ? BuiltinPlugins::VerticalCssTransformer::ConversionMode::ProfileAwareRewrite
         : BuiltinPlugins::VerticalCssTransformer::ConversionMode::CompatibilityOverride;
+
+    // Run the exact selected mode through the full planning and invariant
+    // pipeline before creating a checkpoint. This avoids empty checkpoints
+    // (and UUID-only OPF edits) when XML/CSS/OPF preflight fails.
+    options.dryRun = true;
+    const BuiltinPlugins::VerticalToHorizontalConverter::Result preflight =
+        converter.convert(options);
+    if (!preflight.ok) {
+        m_ValidationResultsView->LoadResults(preflight.validationResults);
+        ShowMessageOnStatusBar(tr("%1 preflight failed. No files were changed.").arg(op_name));
+        return false;
+    }
+    if (preflight.changedBookPaths.isEmpty()) {
+        m_ValidationResultsView->LoadResults(preflight.validationResults);
+        ShowMessageOnStatusBar(tr("%1 produced no changes.").arg(op_name));
+        return true;
+    }
 
     // 使用隔离式恢复 Checkpoint，避免保存/规范化资源时清空各文本资源的撤销栈。
     ShowMessageOnStatusBar(tr("Creating checkpoint before %1...").arg(op_name));

@@ -15435,6 +15435,10 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
         <translation>排版方向轉換：目前沒有開啟 EPUB。</translation>
     </message>
     <message>
+        <source>%1: EPUB layout analysis failed. No files were changed.</source>
+        <translation>%1：EPUB 排版分析失敗，未修改任何檔案。</translation>
+    </message>
+    <message>
         <source>%1: the book is already in the target direction.</source>
         <translation>%1：書籍已處於目標排版方向。</translation>
     </message>
@@ -15471,6 +15475,14 @@ EPUB %2 / 語言 [%3] / 閱讀方向 %4
     <message>
         <source>Profile-aware structured conversion (switch .vrtl/.hltr where available)</source>
         <translation>依模板結構化轉換（可用時切換 .vrtl/.hltr）</translation>
+    </message>
+    <message>
+        <source>No verified .vrtl/.hltr profile was found; compatibility override will be used.</source>
+        <translation>找不到已驗證的 .vrtl/.hltr 模板，將使用相容覆寫方式。</translation>
+    </message>
+    <message>
+        <source>%1 preflight failed. No files were changed.</source>
+        <translation>%1 預檢失敗，未修改任何檔案。</translation>
     </message>
     <message>
         <source>Creating checkpoint before %1...</source>
