@@ -51,8 +51,14 @@ public:
         QString profileName;
         QStringList reasons;
         QStringList plannedChanges;
+        VerticalLayoutAnalyzer::WritingMode writingMode =
+            VerticalLayoutAnalyzer::WritingMode::Unknown;
         bool generatedByV2h = false;
         bool generatedByH2v = false;
+        bool generatedByV2hProfile = false;
+        bool generatedByH2vProfile = false;
+        bool canSwitchLayoutClass = false;
+        bool fixedLayoutFromOpf = false;
     };
 
     struct Analysis {
@@ -65,7 +71,9 @@ public:
         double profileConfidence = 0.0;
         bool canSwitchHltr = false;
         bool fixedLayoutBook = false;
+        bool hasFixedLayoutItems = false;
         bool restoringGeneratedConversion = false;
+        QStringList fixedLayoutBookPaths;
         QList<FileAnalysis> files;
         int verticalCount = 0;
         int horizontalCount = 0;
@@ -105,8 +113,10 @@ private:
     PageContext analyzePage(TextResource* resource,
                             const QString& bookpath,
                             const QHash<QString, QString>& cssTextCache,
-                            const Analysis& bookLevel) const;
-    void classifyPage(PageContext& context, const Analysis& bookLevel) const;
+                            const Analysis& bookLevel,
+                            const Options& options) const;
+    void classifyPage(PageContext& context, const Analysis& bookLevel,
+                      const QString& bookpath) const;
     QStringList linkedStylesheetBookPaths(const QString& xhtmlSource,
                                           const QString& bookpath,
                                           const QHash<QString, QString>& cssByPath) const;

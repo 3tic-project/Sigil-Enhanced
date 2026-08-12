@@ -44,6 +44,19 @@ int runTests()
         }
     }
 
+    // ---- .vrtl/.hltr 分散在不同样式表时仍可识别成对模板 ----
+    {
+        const auto d = VerticalProfileDetector::detect(
+            QStringList() << QStringLiteral("style-standard.css")
+                          << QStringLiteral("style-advance.css"),
+            QStringList() << QStringLiteral(".vrtl { writing-mode: vertical-rl; }")
+                          << QStringLiteral(".hltr { writing-mode: horizontal-tb; }"),
+            QStringList());
+        if (!d.pairedHltr || !d.canSwitchHltr) {
+            return fail(QStringLiteral("cross-stylesheet profile pair detection failed"));
+        }
+    }
+
     // ---- Generic：仅有纵向但未命中模板 ----
     {
         const auto d = VerticalProfileDetector::detect(

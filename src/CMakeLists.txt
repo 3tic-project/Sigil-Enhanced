@@ -83,6 +83,8 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/VerticalLayoutAnalyzer.h
     BuiltinPlugins/VerticalProfileDetector.cpp
     BuiltinPlugins/VerticalProfileDetector.h
+    BuiltinPlugins/VerticalStylesheetResolver.cpp
+    BuiltinPlugins/VerticalStylesheetResolver.h
     BuiltinPlugins/VerticalToHorizontalConverter.cpp
     BuiltinPlugins/VerticalToHorizontalConverter.h
     BuiltinPlugins/RegexWorkbench/RegexWorkbenchTypes.h

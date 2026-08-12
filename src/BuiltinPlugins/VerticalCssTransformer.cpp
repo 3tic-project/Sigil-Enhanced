@@ -34,8 +34,19 @@ QString localName(const QDomNode& node)
         return QString();
     }
     const QDomElement element = node.toElement();
-    const QString local_name = element.localName();
-    return (local_name.isEmpty() ? element.tagName() : local_name).toLower();
+    QString name = element.localName().isEmpty() ? element.tagName() : element.localName();
+    const int colon = name.lastIndexOf(QLatin1Char(':'));
+    if (colon >= 0) {
+        name = name.mid(colon + 1);
+    }
+    return name.toLower();
+}
+
+QString childElementName(const QDomElement& parent, const QString& local_name)
+{
+    const QString parent_name = parent.tagName();
+    const int colon = parent_name.lastIndexOf(QLatin1Char(':'));
+    return colon >= 0 ? parent_name.left(colon + 1) + local_name : local_name;
 }
 
 QStringList classTokens(const QString& class_attr)
@@ -97,22 +108,47 @@ bool removeOverrideStyles(QDomElement& head, const QString& override_class)
     QDomNode child = head.firstChild();
     while (!child.isNull()) {
         const QDomNode next = child.nextSibling();
-        if (child.isElement() && localName(child) == QStringLiteral("style")
-            && child.toElement().text().contains(override_class)) {
-            head.removeChild(child);
-            changed = true;
+        if (child.isElement() && localName(child) == QStringLiteral("style")) {
+            const QDomElement style = child.toElement();
+            const bool tagged = style.attribute(
+                QStringLiteral("data-sigil-enhanced-layout-override")) == override_class;
+            const bool legacy_exact = style.text().trimmed()
+                == VerticalCssTransformer::buildOverrideCss(
+                       override_class == QStringLiteral("se-h2v-vertical")
+                           ? VerticalCssTransformer::ConversionDirection::HorizontalToVertical
+                           : VerticalCssTransformer::ConversionDirection::VerticalToHorizontal,
+                       override_class).trimmed();
+            if (tagged || legacy_exact) {
+                head.removeChild(child);
+                changed = true;
+            }
         }
         child = next;
     }
     return changed;
 }
 
+QString normalizedCssValue(QString value)
+{
+    value = value.trimmed().toLower();
+    static const QRegularExpression important_re(
+        QStringLiteral("\\s*!\\s*important\\s*$"),
+        QRegularExpression::CaseInsensitiveOption);
+    value.remove(important_re);
+    return value.trimmed();
+}
+
+bool hasImportantSuffix(const QString& value)
+{
+    static const QRegularExpression important_re(
+        QStringLiteral("!\\s*important\\s*$"),
+        QRegularExpression::CaseInsensitiveOption);
+    return important_re.match(value).hasMatch();
+}
+
 bool isVerticalWritingValue(const QString& value)
 {
-    QString val = value.trimmed().toLower();
-    if (val.endsWith(QStringLiteral("!important"))) {
-        val = val.left(val.length() - 10).trimmed();
-    }
+    const QString val = normalizedCssValue(value);
     return val == QStringLiteral("vertical-rl")
         || val == QStringLiteral("vertical-lr")
         || val == QStringLiteral("sideways-rl")
@@ -124,10 +160,7 @@ bool isVerticalWritingValue(const QString& value)
 
 bool isHorizontalWritingValue(const QString& value)
 {
-    QString val = value.trimmed().toLower();
-    if (val.endsWith(QStringLiteral("!important"))) {
-        val = val.left(val.length() - 10).trimmed();
-    }
+    const QString val = normalizedCssValue(value);
     return val == QStringLiteral("horizontal-tb")
         || val == QStringLiteral("horizontal")
         || val == QStringLiteral("lr")
@@ -216,7 +249,7 @@ QString rewriteStyleForDirection(const QString& style, ConversionDirection direc
         }
 
         QString important;
-        if (value.endsWith(QStringLiteral("!important"), Qt::CaseInsensitive)) {
+        if (hasImportantSuffix(value)) {
             important = QStringLiteral(" !important");
         }
         edits.append(StyleEdit {
@@ -233,38 +266,182 @@ QString rewriteStyleForDirection(const QString& style, ConversionDirection direc
     return rewritten;
 }
 
-// 在 tag 开标签的属性段中设置/新增某 XML 属性（保持其它字节不变）。
-bool setXmlAttributeInTag(QString& source, const QString& tagName,
-                          const QString& attrName, const QString& attrValue)
+struct XmlStartTag {
+    int start = -1;
+    int end = -1; // one past '>'
+};
+
+XmlStartTag findXmlStartTag(const QString& source, const QString& wanted_local_name)
 {
-    const QRegularExpression tag_re(
-        QStringLiteral("<%1\\b([^>]*)>").arg(tagName),
+    int cursor = 0;
+    while ((cursor = source.indexOf(QLatin1Char('<'), cursor)) >= 0) {
+        if (source.mid(cursor, 4) == QStringLiteral("<!--")) {
+            const int end = source.indexOf(QStringLiteral("-->"), cursor + 4);
+            cursor = end < 0 ? source.size() : end + 3;
+            continue;
+        }
+        if (source.mid(cursor, 9) == QStringLiteral("<![CDATA[")) {
+            const int end = source.indexOf(QStringLiteral("]]>") , cursor + 9);
+            cursor = end < 0 ? source.size() : end + 3;
+            continue;
+        }
+        if (source.mid(cursor, 2) == QStringLiteral("<!")) {
+            // Skip declarations such as a DOCTYPE internal subset. A quoted
+            // entity value may legally contain text resembling <spine>.
+            QChar quote;
+            int subset_depth = 0;
+            int end = cursor + 2;
+            for (; end < source.size(); ++end) {
+                const QChar ch = source.at(end);
+                if (!quote.isNull()) {
+                    if (ch == quote) {
+                        quote = QChar();
+                    }
+                } else if (ch == QLatin1Char('\'') || ch == QLatin1Char('"')) {
+                    quote = ch;
+                } else if (ch == QLatin1Char('[')) {
+                    ++subset_depth;
+                } else if (ch == QLatin1Char(']') && subset_depth > 0) {
+                    --subset_depth;
+                } else if (ch == QLatin1Char('>') && subset_depth == 0) {
+                    ++end;
+                    break;
+                }
+            }
+            cursor = end;
+            continue;
+        }
+        if (cursor + 1 >= source.size()
+            || source.at(cursor + 1) == QLatin1Char('/')
+            || source.at(cursor + 1) == QLatin1Char('!')
+            || source.at(cursor + 1) == QLatin1Char('?')) {
+            cursor++;
+            continue;
+        }
+        int name_start = cursor + 1;
+        while (name_start < source.size() && source.at(name_start).isSpace()) {
+            ++name_start;
+        }
+        int name_end = name_start;
+        while (name_end < source.size()
+               && !source.at(name_end).isSpace()
+               && source.at(name_end) != QLatin1Char('>')
+               && source.at(name_end) != QLatin1Char('/')) {
+            ++name_end;
+        }
+        QString name = source.mid(name_start, name_end - name_start).toLower();
+        const int colon = name.lastIndexOf(QLatin1Char(':'));
+        if (colon >= 0) {
+            name = name.mid(colon + 1);
+        }
+
+        QChar quote;
+        int end = name_end;
+        for (; end < source.size(); ++end) {
+            const QChar ch = source.at(end);
+            if (!quote.isNull()) {
+                if (ch == quote) {
+                    quote = QChar();
+                }
+            } else if (ch == QLatin1Char('\'') || ch == QLatin1Char('"')) {
+                quote = ch;
+            } else if (ch == QLatin1Char('>')) {
+                ++end;
+                break;
+            }
+        }
+        if (name == wanted_local_name.toLower() && end <= source.size()) {
+            return XmlStartTag { cursor, end };
+        }
+        cursor = qMax(cursor + 1, end);
+    }
+    return XmlStartTag();
+}
+
+QString xmlAttributeValue(const QString& source, const XmlStartTag& tag,
+                          const QString& attr_name, bool* present = nullptr)
+{
+    if (present) {
+        *present = false;
+    }
+    if (tag.start < 0 || tag.end <= tag.start) {
+        return QString();
+    }
+    const QString tag_text = source.mid(tag.start, tag.end - tag.start);
+    const QRegularExpression attr_re(
+        QStringLiteral("(?:^|\\s)%1\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))")
+            .arg(QRegularExpression::escape(attr_name)),
         QRegularExpression::CaseInsensitiveOption);
-    const QRegularExpressionMatch tag_match = tag_re.match(source);
-    if (!tag_match.hasMatch()) {
+    const QRegularExpressionMatch match = attr_re.match(tag_text);
+    if (!match.hasMatch()) {
+        return QString();
+    }
+    if (present) {
+        *present = true;
+    }
+    for (int i = 1; i <= 3; ++i) {
+        if (match.capturedStart(i) >= 0) {
+            return match.captured(i);
+        }
+    }
+    return QString();
+}
+
+bool setXmlAttributeInTag(QString& source, const XmlStartTag& tag,
+                          const QString& attr_name, const QString& attr_value)
+{
+    if (tag.start < 0 || tag.end <= tag.start) {
         return false;
     }
-    const int attrs_start = tag_match.capturedStart(1);
-    const int attrs_end = tag_match.capturedEnd(1);
-    const QString attrs = tag_match.captured(1);
-    // 自闭合标签（<spine/>）：属性应插在 "/" 之前
-    const int self_close_offset = attrs.trimmed().endsWith(QLatin1Char('/'))
-        ? attrs.lastIndexOf(QLatin1Char('/')) : -1;
-
+    QString tag_text = source.mid(tag.start, tag.end - tag.start);
     const QRegularExpression attr_re(
-        QStringLiteral("\\b%1\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s>]+)").arg(attrName),
+        QStringLiteral("((?:^|\\s)%1\\s*=\\s*)(\"[^\"]*\"|'[^']*'|[^\\s>]+)")
+            .arg(QRegularExpression::escape(attr_name)),
         QRegularExpression::CaseInsensitiveOption);
-    const QRegularExpressionMatch attr_match = attr_re.match(attrs);
+    const QRegularExpressionMatch attr_match = attr_re.match(tag_text);
     if (attr_match.hasMatch()) {
-        const int value_start = attrs_start + attr_match.capturedStart(1);
-        source.replace(value_start, attr_match.captured(1).length(),
-                       QStringLiteral("\"%1\"").arg(attrValue));
-    } else if (self_close_offset >= 0) {
-        source.insert(attrs_start + self_close_offset,
-                      QStringLiteral(" %1=\"%2\"").arg(attrName, attrValue));
+        const QString old_value = attr_match.captured(2);
+        QString replacement_value = attr_value;
+        if (old_value.size() >= 2
+            && ((old_value.front() == QLatin1Char('"') && old_value.back() == QLatin1Char('"'))
+                || (old_value.front() == QLatin1Char('\'') && old_value.back() == QLatin1Char('\'')))) {
+            replacement_value = old_value.left(1) + attr_value + old_value.right(1);
+        }
+        tag_text.replace(attr_match.capturedStart(0), attr_match.capturedLength(0),
+                         attr_match.captured(1) + replacement_value);
     } else {
-        source.insert(attrs_end, QStringLiteral(" %1=\"%2\"").arg(attrName, attrValue));
+        int insert_at = tag_text.lastIndexOf(QLatin1Char('>'));
+        int slash = insert_at - 1;
+        while (slash >= 0 && tag_text.at(slash).isSpace()) {
+            --slash;
+        }
+        if (slash >= 0 && tag_text.at(slash) == QLatin1Char('/')) {
+            insert_at = slash;
+        }
+        tag_text.insert(insert_at,
+                        QStringLiteral(" %1=\"%2\"").arg(attr_name, attr_value));
     }
+    source.replace(tag.start, tag.end - tag.start, tag_text);
+    return true;
+}
+
+bool removeXmlAttributeInTag(QString& source, const XmlStartTag& tag,
+                             const QString& attr_name)
+{
+    if (tag.start < 0 || tag.end <= tag.start) {
+        return false;
+    }
+    QString tag_text = source.mid(tag.start, tag.end - tag.start);
+    const QRegularExpression attr_re(
+        QStringLiteral("\\s+%1\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s>]+)")
+            .arg(QRegularExpression::escape(attr_name)),
+        QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpressionMatch match = attr_re.match(tag_text);
+    if (!match.hasMatch()) {
+        return true;
+    }
+    tag_text.remove(match.capturedStart(), match.capturedLength());
+    source.replace(tag.start, tag.end - tag.start, tag_text);
     return true;
 }
 
@@ -309,25 +486,37 @@ void walkDomElements(QDomNode node, const std::function<void(QDomElement&)>& fn)
 // 从 font-feature-settings 值中移除 vert/vrt2 特征，保留其它。
 QString cleanFontFeatureSettings(const QString& value, bool& changed)
 {
-    QStringList segments = value.split(QLatin1Char(','));
+    static const QRegularExpression important_re(
+        QStringLiteral("\\s*!\\s*important\\s*$"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression vertical_feature_re(
+        QStringLiteral("^\\s*(['\"]?)(vert|vrt2)\\1(?:\\s+(on|off|[+-]?\\d+))?\\s*$"),
+        QRegularExpression::CaseInsensitiveOption);
+
+    QString feature_value = value;
+    const bool important = important_re.match(feature_value).hasMatch();
+    feature_value.remove(important_re);
+    QStringList segments = feature_value.split(QLatin1Char(','));
     QStringList kept;
     for (const QString& segment : segments) {
         const QString trimmed = segment.trimmed();
-        const QString lower = trimmed.toLower();
-        if (lower.contains(QStringLiteral("\"vert\""))
-            || lower.contains(QStringLiteral("\"vrt2\""))
-            || lower == QStringLiteral("vert")
-            || lower == QStringLiteral("vrt2")
-            || lower.startsWith(QStringLiteral("vert 1"))
-            || lower.startsWith(QStringLiteral("vrt2 1"))
-            || lower.startsWith(QStringLiteral("vert\""))
-            || lower.startsWith(QStringLiteral("vrt2\""))) {
-            changed = true;
-            continue;
+        const QRegularExpressionMatch match = vertical_feature_re.match(trimmed);
+        if (match.hasMatch()) {
+            const QString state = match.captured(3).toLower();
+            const bool enabled = state.isEmpty() || state == QStringLiteral("on")
+                || (state != QStringLiteral("off") && state.toInt() != 0);
+            if (enabled) {
+                changed = true;
+                continue;
+            }
         }
         kept.append(trimmed);
     }
-    return kept.join(QStringLiteral(", "));
+    QString cleaned = kept.join(QStringLiteral(", "));
+    if (!cleaned.isEmpty() && important) {
+        cleaned.append(QStringLiteral(" !important"));
+    }
+    return cleaned;
 }
 
 struct CssEdit {
@@ -438,7 +627,10 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::injectOverrideSt
         for (QDomNode child = head.firstChild(); !child.isNull(); child = child.nextSibling()) {
             if (child.isElement() && localName(child) == QStringLiteral("style")
                 && ((marker.isEmpty() && child.toElement().text() == cssText)
-                    || (!marker.isEmpty() && child.toElement().text().contains(marker)))) {
+                    || (!marker.isEmpty()
+                        && (child.toElement().attribute(
+                                QStringLiteral("data-sigil-enhanced-layout-override")) == marker
+                            || child.toElement().text().trimmed() == cssText.trimmed())))) {
                 already_injected = true;
                 break;
             }
@@ -452,7 +644,7 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::injectOverrideSt
     }
 
     if (head.isNull()) {
-        head = document.createElement(QStringLiteral("head"));
+        head = document.createElement(childElementName(html, QStringLiteral("head")));
         QDomNode first = html.firstChild();
         if (first.isNull()) {
             html.appendChild(head);
@@ -461,8 +653,11 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::injectOverrideSt
         }
     }
 
-    QDomElement style = document.createElement(QStringLiteral("style"));
+    QDomElement style = document.createElement(childElementName(head, QStringLiteral("style")));
     style.setAttribute(QStringLiteral("type"), QStringLiteral("text/css"));
+    if (!marker.isEmpty()) {
+        style.setAttribute(QStringLiteral("data-sigil-enhanced-layout-override"), marker);
+    }
     style.appendChild(document.createTextNode(cssText));
     head.appendChild(style);
 
@@ -572,10 +767,29 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
     // An opposite override/marker proves that this page was changed by an
     // earlier plugin run. Reversing it must restore the original page rather
     // than applying a fresh target-direction override on top.
-    const bool reversing_generated = hasClassToken(html, opposite_cls)
-        || hasClassToken(html, opposite_marker)
-        || (!body.isNull() && (hasClassToken(body, opposite_cls)
-                               || hasClassToken(body, opposite_marker)));
+    const bool reversing_profile = hasClassToken(html, opposite_marker)
+        || (!body.isNull() && hasClassToken(body, opposite_marker));
+    const bool reversing_override = hasClassToken(html, opposite_cls)
+        || (!body.isNull() && hasClassToken(body, opposite_cls));
+    const bool reversing_generated = reversing_profile || reversing_override;
+
+    // A profile marker records a class-based conversion. If the expected
+    // current class disappeared, the page was edited after conversion; do
+    // not silently replace that manual state with a compatibility override.
+    // The provenance determines how to reverse, not the currently selected
+    // UI mode. A compatibility-generated page must be restored by removing
+    // its override even when structured mode is selected this time.
+    const bool use_profile_switch = reversing_profile
+        || (switchToTargetClass && !reversing_generated);
+    if (reversing_profile
+        && !hasClassToken(html, from_class)
+        && (body.isNull() || !hasClassToken(body, from_class))) {
+        result.ok = false;
+        result.text = source;
+        result.messages << QStringLiteral(
+            "排版方向转换：页面布局 class 在上次转换后被修改，未覆盖人工修改。");
+        return result;
+    }
 
     // Make direction changes reversible: discard an earlier override for the
     // opposite direction before applying this one.
@@ -589,8 +803,8 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
         result.changed = removeClassToken(body, opposite_marker) || result.changed;
     }
 
-    bool use_override = !switchToTargetClass && !reversing_generated;
-    if (switchToTargetClass) {
+    bool use_override = !use_profile_switch && !reversing_generated;
+    if (use_profile_switch) {
         bool class_switched = replaceClassToken(html, from_class, to_class);
         if (!body.isNull()) {
             class_switched = replaceClassToken(body, from_class, to_class)
@@ -633,35 +847,22 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
             || html.attribute(QStringLiteral("class")) != before_class;
     }
 
-    // Inline !important declarations outrank a compatibility stylesheet.
-    // Rewrite root declarations in both directions; when converting to
-    // vertical, preserve explicit horizontal descendant subflows by default.
-    {
-        walkDomElements(document, [&](QDomElement& element) {
-            const QString style = element.attribute(QStringLiteral("style"));
-            if (style.isEmpty()) {
-                return;
-            }
-            if (options.direction == ConversionDirection::HorizontalToVertical
-                && options.preserveHorizontalSubflows
-                && localName(element) != QStringLiteral("html")
-                && localName(element) != QStringLiteral("body")) {
-                return;
-            }
-            const QString rewritten = rewriteStyleForDirection(style, options.direction);
-            if (rewritten != style) {
-                element.setAttribute(QStringLiteral("style"), rewritten);
-                result.changed = true;
-            }
-        });
-    }
+    // Do not rewrite inline declarations in the automatic whole-page path.
+    // They cannot be distinguished later from an originally-opposite nested
+    // subflow, so rewriting them makes round trips lossy. The compatibility
+    // override outranks ordinary inline declarations; source-direction
+    // inline !important declarations are classified for manual review by the
+    // analyzer. transformInlineWritingMode() remains available explicitly.
 
     if (use_override) {
         bool already_injected = false;
         if (!head.isNull()) {
             for (QDomNode child = head.firstChild(); !child.isNull(); child = child.nextSibling()) {
                 if (child.isElement() && localName(child) == QStringLiteral("style")
-                    && child.toElement().text().contains(cls)) {
+                    && (child.toElement().attribute(
+                            QStringLiteral("data-sigil-enhanced-layout-override")) == cls
+                        || child.toElement().text().trimmed()
+                            == buildOverrideCss(options.direction).trimmed())) {
                     already_injected = true;
                     break;
                 }
@@ -669,7 +870,7 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
         }
         if (!already_injected) {
             if (head.isNull()) {
-                head = document.createElement(QStringLiteral("head"));
+                head = document.createElement(childElementName(html, QStringLiteral("head")));
                 QDomNode first = html.firstChild();
                 if (first.isNull()) {
                     html.appendChild(head);
@@ -677,8 +878,9 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformXhtml(
                     html.insertBefore(head, first);
                 }
             }
-            QDomElement style = document.createElement(QStringLiteral("style"));
+            QDomElement style = document.createElement(childElementName(head, QStringLiteral("style")));
             style.setAttribute(QStringLiteral("type"), QStringLiteral("text/css"));
+            style.setAttribute(QStringLiteral("data-sigil-enhanced-layout-override"), cls);
             style.appendChild(document.createTextNode(buildOverrideCss(options.direction)));
             head.appendChild(style);
             result.changed = true;
@@ -754,7 +956,7 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformCss(
             && (to_horizontal || !options.preserveHorizontalSubflows
                 || selectorTargetsRootFlow(current_selector))) {
             QString important;
-            if (token.data.endsWith(QStringLiteral("!important"))) {
+            if (hasImportantSuffix(token.data)) {
                 important = QStringLiteral(" !important");
             }
             edits.append(CssEdit { value_start, value_end, targetWritingMode(options.direction) + important });
@@ -768,7 +970,8 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformCss(
             edits.append(CssEdit { current_property_pos, declarationRemoveEnd(value_end), QString() });
         } else if (to_horizontal
                    && current_property == QStringLiteral("font-feature-settings")
-                   && (value.contains(QStringLiteral("vert")) || value.contains(QStringLiteral("vrt2")))) {
+                   && (value.contains(QStringLiteral("vert"), Qt::CaseInsensitive)
+                       || value.contains(QStringLiteral("vrt2"), Qt::CaseInsensitive))) {
             bool cleaned_changed = false;
             const QString cleaned = cleanFontFeatureSettings(value, cleaned_changed);
             if (cleaned_changed) {
@@ -804,15 +1007,98 @@ VerticalCssTransformer::TransformResult VerticalCssTransformer::transformOpfProg
     const QString& opf, bool toLtr)
 {
     TransformResult result;
+    QDomDocument document;
+    QString parse_error;
+    if (!parseXml(opf, document, parse_error)) {
+        result.ok = false;
+        result.messages << QStringLiteral("排版方向转换：OPF XML 解析失败，未修改翻页方向。%1")
+                               .arg(parse_error);
+        result.text = opf;
+        return result;
+    }
+
     QString text = opf;
     const QString target = toLtr ? QStringLiteral("ltr") : QStringLiteral("rtl");
-    if (!setXmlAttributeInTag(text, QStringLiteral("spine"),
-                              QStringLiteral("page-progression-direction"), target)) {
+    XmlStartTag spine = findXmlStartTag(text, QStringLiteral("spine"));
+    if (spine.start < 0) {
         result.ok = false;
         result.messages << QStringLiteral("排版方向转换：未找到 OPF spine 标签，未修改 page-progression-direction。");
         result.text = opf;
         return result;
     }
+
+    static const QRegularExpression marker_re(
+        QStringLiteral("<!--\\s*sigil-enhanced-layout-progression\\s+"
+                       "original=(absent|default|ltr|rtl)\\s+applied=(ltr|rtl)\\s*-->(?:\\r?\\n)?"),
+        QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpressionMatch marker_match = marker_re.match(text);
+
+    bool has_progression = false;
+    QString current = xmlAttributeValue(
+        text, spine, QStringLiteral("page-progression-direction"), &has_progression)
+                          .trimmed().toLower();
+    if (!has_progression) {
+        current = QStringLiteral("absent");
+    } else if (current != QStringLiteral("ltr")
+               && current != QStringLiteral("rtl")
+               && current != QStringLiteral("default")) {
+        result.ok = false;
+        result.messages << QStringLiteral(
+            "排版方向转换：page-progression-direction 的原值“%1”无效，未修改 OPF。")
+                               .arg(current);
+        result.text = opf;
+        return result;
+    }
+
+    if (marker_match.hasMatch()) {
+        const QString original = marker_match.captured(1).toLower();
+        const QString applied = marker_match.captured(2).toLower();
+        if (current != applied) {
+            result.ok = false;
+            result.messages << QStringLiteral(
+                "排版方向转换：翻页方向在上次转换后被改为“%1”，为避免覆盖人工修改，未修改 OPF。")
+                                   .arg(current);
+            result.text = opf;
+            return result;
+        }
+        if (target == applied) {
+            result.text = opf;
+            result.ok = true;
+            return result;
+        }
+
+        // Opposite-direction conversion restores the exact pre-conversion
+        // value, including an absent/default attribute, then removes the
+        // provenance comment. This makes repeated round trips lossless.
+        if (original == QStringLiteral("absent")) {
+            removeXmlAttributeInTag(text, spine,
+                                    QStringLiteral("page-progression-direction"));
+        } else {
+            setXmlAttributeInTag(text, spine,
+                                 QStringLiteral("page-progression-direction"), original);
+        }
+        const QRegularExpressionMatch current_marker = marker_re.match(text);
+        if (current_marker.hasMatch()) {
+            text.remove(current_marker.capturedStart(), current_marker.capturedLength());
+        }
+        result.text = text;
+        result.changed = text != opf;
+        result.ok = true;
+        return result;
+    }
+
+    const QString original = current;
+    if (!setXmlAttributeInTag(text, spine,
+                              QStringLiteral("page-progression-direction"), target)) {
+        result.ok = false;
+        result.messages << QStringLiteral("排版方向转换：无法更新 OPF spine 翻页方向。");
+        result.text = opf;
+        return result;
+    }
+    spine = findXmlStartTag(text, QStringLiteral("spine"));
+    text.insert(spine.start,
+                QStringLiteral("<!-- sigil-enhanced-layout-progression original=%1 applied=%2 -->\n")
+                    .arg(original, target));
     result.text = text;
     result.changed = text != opf;
     result.ok = true;

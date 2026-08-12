@@ -47,6 +47,19 @@ int runTests()
         }
     }
 
+    // ---- analyzeCss: 关闭的 vert/vrt2 不是纵排风险，大小写 important 可识别 ----
+    {
+        const auto disabled = VerticalLayoutAnalyzer::analyzeCss(QStringLiteral(
+            "p { font-feature-settings: 'vert' 0, \"vrt2\" off, \"vertical\" 1; }\n"));
+        const auto important = VerticalLayoutAnalyzer::analyzeCss(QStringLiteral(
+            "p { position: absolute ! IMPORTANT; writing-mode: vertical-rl !IMPORTANT; }\n"));
+        if (!disabled.ok || disabled.hasVertFeature
+            || !important.ok || !important.hasAbsolutePositioning
+            || !important.hasVerticalWritingMode) {
+            return fail(QStringLiteral("disabled vertical feature / important normalization failed"));
+        }
+    }
+
     // ---- analyzeCss: 风险信号 ----
     {
         const auto css = VerticalLayoutAnalyzer::analyzeCss(QStringLiteral(
@@ -103,6 +116,17 @@ int runTests()
         }
     }
 
+    // ---- 格式化空白不应把图片页伪装成短文本页 ----
+    {
+        const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n  <head/>\n  <body>\n    "
+            "<img src=\"cover.jpg\" alt=\"cover\"/>\n  </body>\n</html>"));
+        if (xhtml.visibleTextLength != 0
+            || xhtml.pageKind != VerticalLayoutAnalyzer::PageKind::ImageOnly) {
+            return fail(QStringLiteral("formatted image-only page classification failed"));
+        }
+    }
+
     // ---- analyzeXhtml: nav ----
     {
         const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
@@ -111,6 +135,31 @@ int runTests()
             "</body></html>"));
         if (!xhtml.isNavDocument || xhtml.pageKind != VerticalLayoutAnalyzer::PageKind::TocOrNav) {
             return fail(QStringLiteral("nav classification failed"));
+        }
+    }
+
+    // ---- 普通章节中的 HTML nav 不是 EPUB 导航文档 ----
+    {
+        const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body>"
+            "<nav aria-label=\"章节内导航\"><a href=\"#next\">下一节</a></nav>"
+            "<p id=\"next\">正文</p></body></html>"));
+        if (xhtml.isNavDocument
+            || xhtml.pageKind == VerticalLayoutAnalyzer::PageKind::TocOrNav) {
+            return fail(QStringLiteral("generic HTML nav was misclassified as EPUB navigation"));
+        }
+    }
+
+    // ---- inline !important writing-mode 风险信号 ----
+    {
+        const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body "
+            "style=\"writing-mode: horizontal-tb !IMPORTANT\"><p "
+            "style=\"-epub-writing-mode: vertical-rl !important\">正文</p>"
+            "</body></html>"));
+        if (!xhtml.hasImportantRootHorizontalStyle
+            || !xhtml.hasImportantInlineVerticalStyle) {
+            return fail(QStringLiteral("important inline writing-mode detection failed"));
         }
     }
 
@@ -196,6 +245,30 @@ int runTests()
         }
     }
 
+    // ---- 页内 style CSS 解析错误必须暴露给编排器 ----
+    {
+        const auto xhtml = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><style>"
+            "body { writing-mode: vertical-rl; @#$% }</style></head><body><p>本文</p>"
+            "</body></html>"));
+        if (!xhtml.ok || xhtml.inlineCssParseErrorCount == 0) {
+            return fail(QStringLiteral("inline CSS parse errors were not reported"));
+        }
+    }
+
+    // ---- 带命名空间前缀的 XHTML 根元素可分析；非 XHTML 根元素拒绝 ----
+    {
+        const auto prefixed = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<x:html xmlns:x=\"http://www.w3.org/1999/xhtml\"><x:head/>"
+            "<x:body style=\"writing-mode: vertical-rl\"><x:p>本文</x:p></x:body></x:html>"));
+        const auto wrong_root = VerticalLayoutAnalyzer::analyzeXhtml(QStringLiteral(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><text>本文</text></svg>"));
+        if (!prefixed.ok || !prefixed.hasVerticalWritingMode
+            || wrong_root.ok || wrong_root.pageKind != VerticalLayoutAnalyzer::PageKind::ParseError) {
+            return fail(QStringLiteral("XHTML root/namespace validation failed"));
+        }
+    }
+
     // ---- analyzeOpf ----
     {
         const auto opf = VerticalLayoutAnalyzer::analyzeOpf(QStringLiteral(
@@ -216,6 +289,82 @@ int runTests()
             opf.renditionLayout != QStringLiteral("reflowable") ||
             opf.spineItemCount != 2 || opf.imageOnlyCount != 1) {
             return fail(QStringLiteral("opf analysis failed"));
+        }
+    }
+
+    // ---- OPF itemref 局部 fixed-layout 必须映射回 manifest href ----
+    {
+        const auto opf = VerticalLayoutAnalyzer::analyzeOpf(QStringLiteral(
+            "<package xmlns=\"http://www.idpf.org/2007/opf\" version=\"3.0\">"
+            "<metadata/><manifest>"
+            "<item id=\"flow\" href=\"Text/flow.xhtml\" media-type=\"application/xhtml+xml\"/>"
+            "<item id=\"fixed\" href=\"Text/fixed.xhtml\" media-type=\"application/xhtml+xml\"/>"
+            "</manifest><spine><itemref idref=\"flow\"/>"
+            "<itemref idref=\"fixed\" properties=\"rendition:layout-pre-paginated\"/>"
+            "</spine></package>"));
+        if (!opf.ok || opf.fixedLayoutCount != 1
+            || !opf.fixedLayoutHrefs.contains(QStringLiteral("Text/fixed.xhtml"))) {
+            return fail(QStringLiteral("itemref fixed-layout href mapping failed"));
+        }
+    }
+
+    // ---- OPF rendition:layout refinement 只作用于对应 itemref ----
+    {
+        const auto opf = VerticalLayoutAnalyzer::analyzeOpf(QStringLiteral(
+            "<opf:package xmlns:opf=\"http://www.idpf.org/2007/opf\" version=\"3.0\">"
+            "<opf:metadata><opf:meta property=\"rendition:layout\">reflowable</opf:meta>"
+            "<opf:meta property=\"rendition:layout\" refines=\"#fixed-ref\">"
+            "pre-paginated</opf:meta></opf:metadata><opf:manifest>"
+            "<opf:item id=\"flow\" href=\"Text/flow.xhtml\" media-type=\"application/xhtml+xml\"/>"
+            "<opf:item id=\"fixed\" href=\"Text/fixed.xhtml\" media-type=\"application/xhtml+xml\"/>"
+            "</opf:manifest><opf:spine><opf:itemref id=\"flow-ref\" idref=\"flow\"/>"
+            "<opf:itemref id=\"fixed-ref\" idref=\"fixed\"/>"
+            "</opf:spine></opf:package>"));
+        if (!opf.ok || opf.renditionLayout != QStringLiteral("reflowable")
+            || opf.fixedLayoutCount != 1
+            || opf.fixedLayoutHrefs != QStringList { QStringLiteral("Text/fixed.xhtml") }) {
+            return fail(QStringLiteral("refined fixed-layout scoping failed"));
+        }
+    }
+
+    // ---- itemref 的 reflowable 覆盖整书 pre-paginated ----
+    {
+        const auto opf = VerticalLayoutAnalyzer::analyzeOpf(QStringLiteral(
+            "<package><metadata><meta property=\"rendition:layout\">pre-paginated</meta>"
+            "<meta property=\"rendition:layout\" refines=\"#flow-ref\">reflowable</meta>"
+            "</metadata><manifest><item id=\"flow\" href=\"flow.xhtml\" "
+            "media-type=\"application/xhtml+xml\"/><item id=\"fixed\" href=\"fixed.xhtml\" "
+            "media-type=\"application/xhtml+xml\"/></manifest><spine>"
+            "<itemref id=\"flow-ref\" idref=\"flow\"/><itemref id=\"fixed-ref\" idref=\"fixed\"/>"
+            "</spine></package>"));
+        if (!opf.ok || opf.fixedLayoutCount != 1
+            || opf.fixedLayoutHrefs != QStringList { QStringLiteral("fixed.xhtml") }) {
+            return fail(QStringLiteral("refined reflowable override failed"));
+        }
+    }
+
+    // ---- EPUB 2 / iBooks legacy fixed-layout metadata ----
+    {
+        const auto opf = VerticalLayoutAnalyzer::analyzeOpf(QStringLiteral(
+            "<package><metadata><meta name=\"fixed-layout\" content=\"true\"/>"
+            "</metadata><manifest><item id=\"p\" href=\"p.xhtml\" "
+            "media-type=\"application/xhtml+xml\"/></manifest>"
+            "<spine><itemref idref=\"p\"/></spine></package>"));
+        if (!opf.ok || opf.renditionLayout != QStringLiteral("pre-paginated")
+            || opf.fixedLayoutCount != 1) {
+            return fail(QStringLiteral("legacy fixed-layout metadata detection failed"));
+        }
+    }
+
+    // ---- 缺少 spine 或非法翻页方向的 OPF 必须分析失败 ----
+    {
+        const auto no_spine = VerticalLayoutAnalyzer::analyzeOpf(QStringLiteral(
+            "<package><metadata/><manifest/></package>"));
+        const auto bad_progression = VerticalLayoutAnalyzer::analyzeOpf(QStringLiteral(
+            "<package><metadata/><manifest/><spine page-progression-direction=\"sideways\"/>"
+            "</package>"));
+        if (no_spine.ok || bad_progression.ok) {
+            return fail(QStringLiteral("invalid OPF semantics were accepted"));
         }
     }
 

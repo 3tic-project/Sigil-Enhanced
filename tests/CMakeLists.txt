@@ -506,6 +506,26 @@ set_target_properties(vertical_profile_detector_test PROPERTIES C_STANDARD 11)
 add_test(NAME vertical_profile_detector COMMAND vertical_profile_detector_test)
 set_tests_properties(vertical_profile_detector PROPERTIES TIMEOUT 30)
 
+add_executable(vertical_stylesheet_resolver_test
+    vertical_stylesheet_resolver_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalStylesheetResolver.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalStylesheetResolver.h
+    ${CMAKE_SOURCE_DIR}/src/Parsers/CSSParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/Parsers/CSSParser.h
+    ${CMAKE_SOURCE_DIR}/src/Parsers/CSSDeNest.cpp
+    ${CMAKE_SOURCE_DIR}/src/Parsers/CSSDeNest.h
+    ${CMAKE_SOURCE_DIR}/src/Parsers/css_structure_parser.c
+    ${CMAKE_SOURCE_DIR}/src/Parsers/CSSUtils.cpp
+)
+target_include_directories(vertical_stylesheet_resolver_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/internal/lexbor
+)
+target_link_libraries(vertical_stylesheet_resolver_test PRIVATE Qt6::Core Qt6::Xml lexborcss)
+set_target_properties(vertical_stylesheet_resolver_test PROPERTIES C_STANDARD 11)
+add_test(NAME vertical_stylesheet_resolver COMMAND vertical_stylesheet_resolver_test)
+set_tests_properties(vertical_stylesheet_resolver PROPERTIES TIMEOUT 30)
+
 add_executable(vertical_css_transformer_test
     vertical_css_transformer_test.cpp
     ${V2H_TEST_SOURCES}

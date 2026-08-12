@@ -54,6 +54,8 @@ struct CssFeatures {
     bool hasTategaki = false;
     bool hasYokogaki = false;
     bool hasVerticalWriting = false;
+    bool hasVrtlClass = false;
+    bool hasHltrClass = false;
     bool hasPairedVrtlHltr = false;
     bool hasVerticalClass = false;
     int physicalSideUtilityCount = 0;
@@ -70,7 +72,8 @@ CssFeatures scanCssFeatures(const QStringList& cssTexts)
         const VerticalLayoutAnalyzer::CssAnalysis analysis = VerticalLayoutAnalyzer::analyzeCss(css);
         features.hasTcy = features.hasTcy || analysis.hasTcy;
         features.hasUprightClass = features.hasUprightClass || analysis.hasUpright;
-        features.hasPairedVrtlHltr = features.hasPairedVrtlHltr || analysis.hasPairedVrtlHltr;
+        features.hasVrtlClass = features.hasVrtlClass || analysis.hasVrtlClass;
+        features.hasHltrClass = features.hasHltrClass || analysis.hasHltrClass;
         features.hasVerticalClass = features.hasVerticalClass || analysis.hasVerticalClass;
         features.hasVerticalWriting = features.hasVerticalWriting || analysis.hasVerticalWritingMode;
         features.physicalSideUtilityCount += analysis.physicalSideUtilityCount;
@@ -95,6 +98,7 @@ CssFeatures scanCssFeatures(const QStringList& cssTexts)
             }
         }
     }
+    features.hasPairedVrtlHltr = features.hasVrtlClass && features.hasHltrClass;
 
     // .tategaki / .yokogaki 类名存在于任何样式表
     const QRegularExpression class_re(QStringLiteral("\\.[A-Za-z_][A-Za-z0-9_-]*"));

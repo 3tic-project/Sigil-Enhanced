@@ -101,6 +101,8 @@ public:
         bool hasV2hConversionMarker = false;
         bool hasH2vConversionMarker = false;
         bool hasInlineVerticalStyle = false;
+        bool hasImportantInlineVerticalStyle = false;
+        bool hasImportantRootHorizontalStyle = false;
 
         bool hasRuby = false;
         int rubyCount = 0;
@@ -114,6 +116,7 @@ public:
         int scriptCount = 0;
         int absolutePositionCount = 0;
         int transformRotateCount = 0;
+        int inlineCssParseErrorCount = 0;
         int visibleTextLength = 0;
         bool fixedViewport = false;
         bool isNavDocument = false;
@@ -132,6 +135,7 @@ public:
         int verticalCandidateCount = 0;
         int fixedLayoutCount = 0;
         int imageOnlyCount = 0;
+        QStringList fixedLayoutHrefs;
         QStringList reasons;
     };
 

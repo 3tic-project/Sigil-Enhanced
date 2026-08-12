@@ -28,7 +28,8 @@ namespace BuiltinPlugins
  * 便于单元测试。Converter 负责在 Book 上编排这些变换与 Checkpoint。
  *
  * 覆盖 PRD 第 7、8、9、11 节：兼容覆盖注入、.vrtl -> .hltr 类切换、
- * inline style 改写、CSS vertical-only 属性中和、OPF page progression。
+ * 可逆的页面覆盖、显式 inline style 改写、CSS vertical-only 属性中和、
+ * 以及可恢复原值的 OPF page progression 变换。
  */
 class VerticalCssTransformer
 {
@@ -69,7 +70,8 @@ public:
         ConversionDirection direction = ConversionDirection::VerticalToHorizontal,
         const QString& overrideClass = QString());
 
-    // 组合式 XHTML 变换：按 mode/direction 注入 override 或切换 .hltr/.vrtl、改写 inline writing-mode
+    // 组合式 XHTML 变换：按 mode/direction 注入可逆 override 或切换 .hltr/.vrtl；
+    // 自动整页转换不改写 inline writing-mode，以免往返时破坏原有嵌套子流。
     static TransformResult transformXhtml(const QString& source,
                                           const Options& options,
                                           bool switchToTargetClass = false);
@@ -95,7 +97,7 @@ public:
     //   从 font-feature-settings 中移除 vert/vrt2 但保留其它 feature。
     static TransformResult transformCss(const QString& css, const Options& options);
 
-    // OPF spine page-progression-direction -> toLtr（缺省时补写）
+    // OPF spine page-progression-direction -> toLtr；记录来源并在反向转换时精确恢复。
     static TransformResult transformOpfProgression(const QString& opf, bool toLtr);
 };
 

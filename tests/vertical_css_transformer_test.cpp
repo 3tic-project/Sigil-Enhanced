@@ -86,13 +86,33 @@ int runTests()
         const auto horizontal = VerticalCssTransformer::transformXhtml(source, v2h, true);
         VerticalCssTransformer::Options h2v = v2h;
         h2v.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
-        const auto restored = VerticalCssTransformer::transformXhtml(horizontal.text, h2v, true);
+        h2v.mode = VerticalCssTransformer::ConversionMode::CompatibilityOverride;
+        const auto restored = VerticalCssTransformer::transformXhtml(horizontal.text, h2v, false);
         if (!horizontal.ok || !restored.ok
             || !horizontal.text.contains(QStringLiteral("se-v2h-converted"))
             || !restored.text.contains(QStringLiteral("class=\"vrtl\""))
             || restored.text.contains(QStringLiteral("se-v2h-converted"))
             || restored.text.contains(QStringLiteral("se-h2v-converted"))) {
             return fail(QStringLiteral("profile conversion provenance did not restore original class"));
+        }
+    }
+
+    // ---- compatibility 来源必须按来源恢复，不受当前结构化选项影响 ----
+    {
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body><p>本文</p>"
+            "</body></html>");
+        VerticalCssTransformer::Options h2v;
+        h2v.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        const auto vertical = VerticalCssTransformer::transformXhtml(source, h2v, false);
+        VerticalCssTransformer::Options v2h;
+        v2h.mode = VerticalCssTransformer::ConversionMode::ProfileAwareRewrite;
+        const auto restored = VerticalCssTransformer::transformXhtml(vertical.text, v2h, true);
+        if (!vertical.ok || !restored.ok
+            || restored.text.contains(QStringLiteral("se-h2v-vertical"))
+            || restored.text.contains(QStringLiteral("se-v2h-horizontal"))
+            || restored.text.contains(QStringLiteral("se-v2h-converted"))) {
+            return fail(QStringLiteral("compatibility provenance was changed by current mode"));
         }
     }
 
@@ -103,12 +123,54 @@ int runTests()
         const auto first = VerticalCssTransformer::transformXhtml(source, options, false);
         if (!first.ok || !first.changed ||
             !first.text.contains(QStringLiteral("class=\"se-v2h-horizontal\"")) ||
-            !first.text.contains(QStringLiteral("<style type=\"text/css\">"))) {
+            !first.text.contains(QStringLiteral("data-sigil-enhanced-layout-override=\"se-v2h-horizontal\""))) {
             return fail(QStringLiteral("compat transform did not inject override"));
         }
         const auto second = VerticalCssTransformer::transformXhtml(first.text, options, false);
         if (!second.ok || second.changed || second.text != first.text) {
             return fail(QStringLiteral("compat transform is not idempotent"));
+        }
+    }
+
+    // ---- 自动整页转换不改写 inline style，确保局部子流可无损往返 ----
+    {
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head/><body "
+            "style=\"writing-mode: vertical-rl\"><p "
+            "style=\"writing-mode: vertical-rl; margin-left: 1em; \">x</p>"
+            "<table style=\"writing-mode: horizontal-tb\"><tr><td>y</td></tr></table>"
+            "</body></html>");
+        VerticalCssTransformer::Options v2h;
+        const auto horizontal = VerticalCssTransformer::transformXhtml(source, v2h, false);
+        VerticalCssTransformer::Options h2v;
+        h2v.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        const auto restored = VerticalCssTransformer::transformXhtml(horizontal.text, h2v, false);
+        if (!horizontal.ok || !restored.ok
+            || !horizontal.text.contains(QStringLiteral(
+                "style=\"writing-mode: vertical-rl; margin-left: 1em; \""))
+            || !restored.text.contains(QStringLiteral(
+                "style=\"writing-mode: horizontal-tb\""))
+            || restored.text.contains(QStringLiteral("se-v2h-horizontal"))
+            || restored.text.contains(QStringLiteral("se-h2v-vertical"))) {
+            return fail(QStringLiteral("automatic round trip rewrote inline subflows"));
+        }
+    }
+
+    // ---- 只删除插件精确注入的 style，不删除恰好提到类名的用户 CSS ----
+    {
+        const QString source = QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head>"
+            "<style>.note::before { content: 'se-h2v-vertical'; }</style>"
+            "</head><body><p>本文</p></body></html>");
+        VerticalCssTransformer::Options h2v;
+        h2v.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        const auto vertical = VerticalCssTransformer::transformXhtml(source, h2v, false);
+        VerticalCssTransformer::Options v2h;
+        const auto restored = VerticalCssTransformer::transformXhtml(vertical.text, v2h, false);
+        if (!vertical.ok || !restored.ok
+            || !restored.text.contains(QStringLiteral(".note::before"))
+            || !restored.text.contains(QStringLiteral("content: 'se-h2v-vertical'"))) {
+            return fail(QStringLiteral("reverse conversion removed user-authored style"));
         }
     }
 
@@ -186,6 +248,24 @@ int runTests()
         }
     }
 
+    // ---- transformCss：规范化 !important，只移除已启用的 vert/vrt2 ----
+    {
+        VerticalCssTransformer::Options options;
+        const auto result = VerticalCssTransformer::transformCss(QStringLiteral(
+            "body { writing-mode: vertical-rl ! IMPORTANT; }\n"
+            "p { font-feature-settings: 'vert' 0, \"vrt2\" off, 'kern' 1, "
+            "\"vert\" on !IMPORTANT; }\n"), options);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("writing-mode: horizontal-tb !important"))
+            || !result.text.contains(QStringLiteral("'vert' 0"))
+            || !result.text.contains(QStringLiteral("\"vrt2\" off"))
+            || !result.text.contains(QStringLiteral("'kern' 1 !important"),
+                                     Qt::CaseInsensitive)
+            || result.text.contains(QStringLiteral("\"vert\" on"))) {
+            return fail(QStringLiteral("important/font feature rewrite failed:\n%1").arg(result.text));
+        }
+    }
+
     // ---- transformCss：不触碰未知物理 margin ----
     {
         VerticalCssTransformer::Options options;
@@ -217,36 +297,125 @@ int runTests()
         }
     }
 
-    // ---- transformOpfProgression：rtl -> ltr ----
+    // ---- transformOpfProgression：rtl -> ltr，并可精确恢复 ----
     {
-        const auto result = VerticalCssTransformer::transformOpfProgression(
-            QStringLiteral("<package><spine page-progression-direction=\"rtl\"/></package>"), true);
-        if (!result.ok || !result.changed ||
-            result.text != QStringLiteral("<package><spine page-progression-direction=\"ltr\"/></package>")) {
-            return fail(QStringLiteral("opf progression rtl->ltr failed: %1").arg(result.text));
+        const QString source = QStringLiteral(
+            "<package><spine page-progression-direction=\"rtl\"/></package>");
+        const auto result = VerticalCssTransformer::transformOpfProgression(source, true);
+        const auto repeated = VerticalCssTransformer::transformOpfProgression(result.text, true);
+        const auto restored = VerticalCssTransformer::transformOpfProgression(result.text, false);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("original=rtl applied=ltr"))
+            || !result.text.contains(QStringLiteral("page-progression-direction=\"ltr\""))
+            || !repeated.ok || repeated.changed || repeated.text != result.text
+            || !restored.ok || !restored.changed || restored.text != source) {
+            return fail(QStringLiteral("opf progression rtl round trip failed: %1").arg(restored.text));
         }
     }
 
-    // ---- transformOpfProgression：缺省补写（自闭合标签） ----
+    // ---- transformOpfProgression：缺省补写后恢复为缺省 ----
     {
-        const auto result = VerticalCssTransformer::transformOpfProgression(
-            QStringLiteral("<package><spine/></package>"), true);
-        if (!result.ok || !result.changed ||
-            result.text != QStringLiteral("<package><spine page-progression-direction=\"ltr\"/></package>")) {
-            return fail(QStringLiteral("opf progression add-on-self-closing failed: %1").arg(result.text));
+        const QString source = QStringLiteral("<package><spine/></package>");
+        const auto result = VerticalCssTransformer::transformOpfProgression(source, true);
+        const auto restored = VerticalCssTransformer::transformOpfProgression(result.text, false);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("original=absent applied=ltr"))
+            || !restored.ok || restored.text != source) {
+            return fail(QStringLiteral("opf absent progression round trip failed: %1").arg(restored.text));
         }
     }
 
-    // ---- transformOpfProgression：已 ltr 时无变化 ----
+    // ---- default 翻页方向可精确恢复；人工改动不得被覆盖 ----
+    {
+        const QString source = QStringLiteral(
+            "<package><spine page-progression-direction='default'/></package>");
+        const auto result = VerticalCssTransformer::transformOpfProgression(source, true);
+        const auto restored = VerticalCssTransformer::transformOpfProgression(result.text, false);
+        QString manually_changed = result.text;
+        manually_changed.replace(QStringLiteral("page-progression-direction='ltr'"),
+                                 QStringLiteral("page-progression-direction='rtl'"));
+        const auto protected_result = VerticalCssTransformer::transformOpfProgression(
+            manually_changed, false);
+        if (!result.ok || !restored.ok || restored.text != source
+            || protected_result.ok || protected_result.text != manually_changed) {
+            return fail(QStringLiteral("default progression/manual edit protection failed"));
+        }
+    }
+
+    // ---- 已是目标值也记录来源，反向转换恢复原值 ----
     {
         const auto result = VerticalCssTransformer::transformOpfProgression(
             QStringLiteral("<package><spine page-progression-direction=\"ltr\"/></package>"), true);
-        if (!result.ok || result.changed) {
-            return fail(QStringLiteral("opf progression already-ltr should be a no-op"));
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("original=ltr applied=ltr"))) {
+            return fail(QStringLiteral("opf original target progression was not tracked"));
+        }
+    }
+
+    // ---- 注释中的伪 spine 不得被修改 ----
+    {
+        const QString source = QStringLiteral(
+            "<package><!-- <spine page-progression-direction=\"rtl\"/> -->"
+            "<opf:spine xmlns:opf=\"urn:oebps\"/></package>");
+        const auto result = VerticalCssTransformer::transformOpfProgression(source, true);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral(
+                "<!-- <spine page-progression-direction=\"rtl\"/> -->"))
+            || !result.text.contains(QStringLiteral(
+                "<opf:spine xmlns:opf=\"urn:oebps\" page-progression-direction=\"ltr\"/>"))) {
+            return fail(QStringLiteral("OPF scanner modified a commented spine"));
+        }
+    }
+
+    // ---- DOCTYPE 内部子集中的伪 spine 不得被修改 ----
+    {
+        const QString source = QStringLiteral(
+            "<!DOCTYPE package [<!ENTITY fake '<spine page-progression-direction=\"rtl\"/>'>]>")
+            + QStringLiteral("<package><spine/></package>");
+        const auto result = VerticalCssTransformer::transformOpfProgression(source, true);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral(
+                "<!ENTITY fake '<spine page-progression-direction=\"rtl\"/>'>"))
+            || !result.text.contains(QStringLiteral(
+                "<spine page-progression-direction=\"ltr\"/>"))) {
+            return fail(QStringLiteral("OPF scanner modified a DOCTYPE entity"));
         }
     }
 
     // ================ 反向：横排 → 竖排（H2V） ================
+
+    // ---- 带前缀 XHTML 注入同前缀 style，保持 XHTML 命名空间 ----
+    {
+        const QString source = QStringLiteral(
+            "<x:html xmlns:x=\"http://www.w3.org/1999/xhtml\"><x:head/>"
+            "<x:body><x:p>本文</x:p></x:body></x:html>");
+        VerticalCssTransformer::Options options;
+        const auto result = VerticalCssTransformer::transformXhtml(source, options, false);
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("<x:style"))
+            || result.text.contains(QStringLiteral("<style"))) {
+            return fail(QStringLiteral("prefixed XHTML override namespace was lost"));
+        }
+    }
+
+    // ---- profile 反向转换遇到人工 class 改动必须拒绝覆盖 ----
+    {
+        VerticalCssTransformer::Options v2h;
+        v2h.mode = VerticalCssTransformer::ConversionMode::ProfileAwareRewrite;
+        const auto converted = VerticalCssTransformer::transformXhtml(QStringLiteral(
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\" class=\"vrtl\"><head/>"
+            "<body><p>本文</p></body></html>"), v2h, true);
+        QString manually_changed = converted.text;
+        manually_changed.replace(QStringLiteral("hltr"), QStringLiteral("manual-layout"));
+        VerticalCssTransformer::Options h2v = v2h;
+        h2v.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
+        const auto protected_result = VerticalCssTransformer::transformXhtml(
+            manually_changed, h2v, true);
+        if (!converted.ok || protected_result.ok
+            || protected_result.text != manually_changed) {
+            return fail(QStringLiteral("profile manual class edit was overwritten"));
+        }
+    }
 
     // ---- buildOverrideCss(H2V) ----
     {
@@ -300,7 +469,7 @@ int runTests()
         }
     }
 
-    // ---- transformXhtml(H2V)：root inline 改写但保留子流 inline ----
+    // ---- transformXhtml(H2V)：保留所有 inline，由可逆 override 控制根流 ----
     {
         VerticalCssTransformer::Options options;
         options.direction = VerticalCssTransformer::ConversionDirection::HorizontalToVertical;
@@ -310,9 +479,8 @@ int runTests()
             "style=\"writing-mode: horizontal-tb\"><tr><td>x</td></tr></table>"
             "</body></html>"), options, false);
         if (!result.ok || !result.changed
-            || !result.text.contains(QStringLiteral("style=\"writing-mode: vertical-rl\""))
-            || !result.text.contains(QStringLiteral("style=\"writing-mode: horizontal-tb\""))) {
-            return fail(QStringLiteral("h2v inline subflow preservation failed"));
+            || result.text.count(QStringLiteral("style=\"writing-mode: horizontal-tb\"")) != 2) {
+            return fail(QStringLiteral("h2v automatic conversion rewrote inline style"));
         }
     }
 
@@ -351,8 +519,9 @@ int runTests()
     {
         const auto result = VerticalCssTransformer::transformOpfProgression(
             QStringLiteral("<package><spine page-progression-direction=\"ltr\"/></package>"), false);
-        if (!result.ok || !result.changed ||
-            result.text != QStringLiteral("<package><spine page-progression-direction=\"rtl\"/></package>")) {
+        if (!result.ok || !result.changed
+            || !result.text.contains(QStringLiteral("original=ltr applied=rtl"))
+            || !result.text.contains(QStringLiteral("page-progression-direction=\"rtl\""))) {
             return fail(QStringLiteral("opf progression ltr->rtl failed"));
         }
     }

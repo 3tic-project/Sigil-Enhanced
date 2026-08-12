@@ -38,8 +38,12 @@ QString localName(const QDomNode& node)
         return QString();
     }
     const QDomElement element = node.toElement();
-    const QString local_name = element.localName();
-    return (local_name.isEmpty() ? element.tagName() : local_name).toLower();
+    QString name = element.localName().isEmpty() ? element.tagName() : element.localName();
+    const int colon = name.lastIndexOf(QLatin1Char(':'));
+    if (colon >= 0) {
+        name = name.mid(colon + 1);
+    }
+    return name.toLower();
 }
 
 // 关闭 namespace processing 时，带前缀元素（如 dc:language）的 localName
@@ -64,12 +68,27 @@ bool elementHasClass(const QDomElement& element, const QString& class_name)
     return classTokens(element.attribute(QStringLiteral("class"))).contains(class_name);
 }
 
+QString normalizedCssValue(QString value)
+{
+    value = value.trimmed().toLower();
+    static const QRegularExpression important_re(
+        QStringLiteral("\\s*!\\s*important\\s*$"),
+        QRegularExpression::CaseInsensitiveOption);
+    value.remove(important_re);
+    return value.trimmed();
+}
+
+bool hasImportantSuffix(const QString& value)
+{
+    static const QRegularExpression important_re(
+        QStringLiteral("!\\s*important\\s*$"),
+        QRegularExpression::CaseInsensitiveOption);
+    return important_re.match(value).hasMatch();
+}
+
 bool isVerticalWritingValue(const QString& value)
 {
-    QString val = value.trimmed().toLower();
-    if (val.endsWith(QStringLiteral("!important"))) {
-        val = val.left(val.length() - 10).trimmed();
-    }
+    const QString val = normalizedCssValue(value);
     return val == QStringLiteral("vertical-rl")
         || val == QStringLiteral("vertical-lr")
         || val == QStringLiteral("sideways-rl")
@@ -81,10 +100,7 @@ bool isVerticalWritingValue(const QString& value)
 
 bool isHorizontalWritingValue(const QString& value)
 {
-    QString val = value.trimmed().toLower();
-    if (val.endsWith(QStringLiteral("!important"))) {
-        val = val.left(val.length() - 10).trimmed();
-    }
+    const QString val = normalizedCssValue(value);
     return val == QStringLiteral("horizontal-tb")
         || val == QStringLiteral("horizontal")
         || val == QStringLiteral("lr")
@@ -102,6 +118,28 @@ bool isWritingModeProperty(const QString& property)
         || property == QStringLiteral("writing-mode-css3");
 }
 
+bool isEnabledVerticalFontFeature(const QString& value)
+{
+    static const QRegularExpression feature_re(
+        QStringLiteral("^\\s*(['\"]?)(vert|vrt2)\\1(?:\\s+(on|off|[+-]?\\d+))?\\s*$"),
+        QRegularExpression::CaseInsensitiveOption);
+    const QStringList segments = normalizedCssValue(value).split(QLatin1Char(','));
+    for (const QString& segment : segments) {
+        const QRegularExpressionMatch match = feature_re.match(segment);
+        if (!match.hasMatch()) {
+            continue;
+        }
+        const QString state = match.captured(3).toLower();
+        if (state.isEmpty() || state == QStringLiteral("on")) {
+            return true;
+        }
+        if (state != QStringLiteral("off") && state.toInt() != 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // 把 inline style / style 属性拆成 (property, value) 声明。
 // 只解析声明级结构，不做任何级联语义推断。
 QList<QPair<QString, QString>> parseStyleDeclarations(const QString& style)
@@ -114,15 +152,28 @@ QList<QPair<QString, QString>> parseStyleDeclarations(const QString& style)
             continue;
         }
         const QString prop = part.left(colon).trimmed().toLower();
-        QString value = part.mid(colon + 1).trimmed();
-        if (value.endsWith(QStringLiteral("!important"))) {
-            value = value.left(value.length() - 10).trimmed();
-        }
+        const QString value = normalizedCssValue(part.mid(colon + 1));
         if (!prop.isEmpty() && !value.isEmpty()) {
             declarations.append(qMakePair(prop, value));
         }
     }
     return declarations;
+}
+
+void detectImportantWritingMode(const QString& style, bool& vertical, bool& horizontal)
+{
+    static const QRegularExpression writing_mode_re(
+        QStringLiteral("(^|;)\\s*(?:-(?:webkit|epub|ms)-)?writing-mode\\s*:\\s*([^;]*)"),
+        QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatchIterator matches = writing_mode_re.globalMatch(style);
+    while (matches.hasNext()) {
+        const QString value = matches.next().captured(2).trimmed();
+        if (!hasImportantSuffix(value)) {
+            continue;
+        }
+        vertical = vertical || isVerticalWritingValue(value);
+        horizontal = horizontal || isHorizontalWritingValue(value);
+    }
 }
 
 void detectStyleSignals(const QString& style, bool& vertical, bool& horizontal,
@@ -148,13 +199,14 @@ void detectStyleSignals(const QString& style, bool& vertical, bool& horizontal,
 
 // 递归扫描样式表源码（内联 <style> 文本），复用一个轻量属性检测器。
 void scanCssText(const QString& css, bool& vertical, bool& horizontal,
-                 int& absolute_count, int& rotate_count)
+                 int& absolute_count, int& rotate_count, int& parse_error_count)
 {
     if (css.isEmpty()) {
         return;
     }
     CSSParser parser;
     parser.parse_css(css);
+    parse_error_count += parser.get_parse_errors().size();
     QString current_property;
     while (true) {
         CSSParser::csstoken token = parser.get_next_token();
@@ -171,7 +223,7 @@ void scanCssText(const QString& css, bool& vertical, bool& horizontal,
                     horizontal = true;
                 }
             } else if (current_property == QStringLiteral("position")
-                       && token.data.trimmed().toLower() == QStringLiteral("absolute")) {
+                       && normalizedCssValue(token.data) == QStringLiteral("absolute")) {
                 absolute_count++;
             } else if (current_property == QStringLiteral("transform")
                        && token.data.contains(QStringLiteral("rotate"), Qt::CaseInsensitive)) {
@@ -244,7 +296,10 @@ int countElementsByName(const QDomNode& node, const QString& name)
 int visibleTextLength(const QDomNode& node)
 {
     if (node.isText() || node.isCDATASection()) {
-        return node.nodeValue().length();
+        // Formatting indentation is not visible content. Counting it causes
+        // pretty-printed cover/image pages to be mistaken for short text
+        // pages and converted by H2V.
+        return node.nodeValue().trimmed().length();
     }
     if (!node.isElement()) {
         return 0;
@@ -262,18 +317,20 @@ int visibleTextLength(const QDomNode& node)
 
 bool isNavDocument(const QDomElement& html)
 {
-    // epub:type="nav" 或 role="doc-toc" 或第一个导航元素
-    QString epub_type = html.attribute(QStringLiteral("epub:type"));
-    if (epub_type.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts).contains(QStringLiteral("nav"))) {
-        return true;
-    }
-    if (html.attribute(QStringLiteral("role")) == QStringLiteral("doc-toc")) {
-        return true;
-    }
+    // A generic HTML <nav> can occur inside an ordinary chapter. Only EPUB
+    // navigation semantics identify the publication navigation document.
     bool found_nav = false;
     walkElements(html, [&found_nav](const QDomElement& element) {
-        const QString name = localName(element);
-        if (name == QStringLiteral("nav")) {
+        const QStringList epub_types = element.attribute(QStringLiteral("epub:type"))
+            .toLower().split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        const QString role = element.attribute(QStringLiteral("role")).toLower();
+        if ((localName(element) == QStringLiteral("nav")
+             && (epub_types.contains(QStringLiteral("toc"))
+                 || epub_types.contains(QStringLiteral("landmarks"))
+                 || epub_types.contains(QStringLiteral("page-list"))
+                 || epub_types.contains(QStringLiteral("loi"))
+                 || epub_types.contains(QStringLiteral("lot"))))
+            || role == QStringLiteral("doc-toc")) {
             found_nav = true;
         }
     });
@@ -285,9 +342,10 @@ QString metaViewportFixed(const QDomElement& html)
     QStringList found;
     walkElements(html, [&found](const QDomElement& element) {
         const QString name = localName(element);
+        const QString meta_name = element.attribute(QStringLiteral("name")).toLower();
         if ((name == QStringLiteral("meta")) &&
-            (element.attribute(QStringLiteral("name")) == QStringLiteral("viewport")
-             || element.attribute(QStringLiteral("name")) == QStringLiteral("-epub-viewport"))) {
+            (meta_name == QStringLiteral("viewport")
+             || meta_name == QStringLiteral("-epub-viewport"))) {
             found.append(element.attribute(QStringLiteral("content")));
         }
     });
@@ -382,7 +440,7 @@ VerticalLayoutAnalyzer::CssAnalysis VerticalLayoutAnalyzer::analyzeCss(const QSt
             current_property = token.data.trimmed().toLower();
             break;
         case TKN_PROPERTY_VALUE: {
-            const QString value = token.data.trimmed().toLower();
+            const QString value = normalizedCssValue(token.data);
             if (isWritingModeProperty(current_property)) {
                 if (isVerticalWritingValue(value)) {
                     analysis.hasVerticalWritingMode = true;
@@ -400,7 +458,7 @@ VerticalLayoutAnalyzer::CssAnalysis VerticalLayoutAnalyzer::analyzeCss(const QSt
                        || current_property == QStringLiteral("-webkit-text-combine")) {
                 analysis.hasTextCombine = true;
             } else if (current_property == QStringLiteral("font-feature-settings")
-                       && (value.contains(QStringLiteral("vert")) || value.contains(QStringLiteral("vrt2")))) {
+                       && isEnabledVerticalFontFeature(value)) {
                 analysis.hasVertFeature = true;
             } else if (current_property == QStringLiteral("position")
                        && value == QStringLiteral("absolute")) {
@@ -474,9 +532,12 @@ VerticalLayoutAnalyzer::XhtmlAnalysis VerticalLayoutAnalyzer::analyzeXhtml(const
         analysis.pageKind = PageKind::ParseError;
         return analysis;
     }
-    analysis.ok = true;
-
     const QDomElement html = document.documentElement();
+    if (localName(html) != QStringLiteral("html")) {
+        analysis.reasons << QStringLiteral("根元素不是 html");
+        return analysis;
+    }
+    analysis.ok = true;
     const QString html_class = html.attribute(QStringLiteral("class"));
     const QStringList html_classes = classTokens(html_class);
     analysis.htmlHasVrtlClass = html_classes.contains(QStringLiteral("vrtl"));
@@ -521,6 +582,16 @@ VerticalLayoutAnalyzer::XhtmlAnalysis VerticalLayoutAnalyzer::analyzeXhtml(const
         detectStyleSignals(body.attribute(QStringLiteral("style")), body_vertical, body_horizontal,
                            root_absolute, root_rotate);
     }
+    bool important_root_vertical = false;
+    bool important_root_horizontal = false;
+    detectImportantWritingMode(html.attribute(QStringLiteral("style")),
+                               important_root_vertical, important_root_horizontal);
+    if (!body.isNull()) {
+        detectImportantWritingMode(body.attribute(QStringLiteral("style")),
+                                   important_root_vertical, important_root_horizontal);
+    }
+    analysis.hasImportantInlineVerticalStyle = important_root_vertical;
+    analysis.hasImportantRootHorizontalStyle = important_root_horizontal;
     analysis.absolutePositionCount += root_absolute;
     analysis.transformRotateCount += root_rotate;
 
@@ -533,7 +604,8 @@ VerticalLayoutAnalyzer::XhtmlAnalysis VerticalLayoutAnalyzer::analyzeXhtml(const
     });
     bool style_vertical = false, style_horizontal = false;
     int style_absolute = 0, style_rotate = 0;
-    scanCssText(inline_style_text, style_vertical, style_horizontal, style_absolute, style_rotate);
+    scanCssText(inline_style_text, style_vertical, style_horizontal,
+                style_absolute, style_rotate, analysis.inlineCssParseErrorCount);
     analysis.absolutePositionCount += style_absolute;
     analysis.transformRotateCount += style_rotate;
 
@@ -547,6 +619,11 @@ VerticalLayoutAnalyzer::XhtmlAnalysis VerticalLayoutAnalyzer::analyzeXhtml(const
         bool v = false, h = false;
         int abs_count = 0, rotate_count = 0;
         detectStyleSignals(style, v, h, abs_count, rotate_count);
+        bool important_vertical = false;
+        bool important_horizontal = false;
+        detectImportantWritingMode(style, important_vertical, important_horizontal);
+        analysis.hasImportantInlineVerticalStyle =
+            analysis.hasImportantInlineVerticalStyle || important_vertical;
         analysis.absolutePositionCount += abs_count;
         analysis.transformRotateCount += rotate_count;
         if (v) {
@@ -655,8 +732,6 @@ VerticalLayoutAnalyzer::OpfAnalysis VerticalLayoutAnalyzer::analyzeOpf(const QSt
         analysis.reasons << QStringLiteral("OPF 解析失败：%1:%2 %3").arg(line).arg(column).arg(parse_error);
         return analysis;
     }
-    analysis.ok = true;
-
     const QDomElement package = document.documentElement();
     if (localName(package) != QStringLiteral("package")) {
         analysis.reasons << QStringLiteral("根元素不是 package");
@@ -665,6 +740,7 @@ VerticalLayoutAnalyzer::OpfAnalysis VerticalLayoutAnalyzer::analyzeOpf(const QSt
     analysis.epubVersion = package.attribute(QStringLiteral("version")).trimmed();
 
     // metadata
+    QHash<QString, QString> refined_layout_by_id;
     QDomElement metadata;
     walkElements(package, [&metadata](const QDomElement& element) {
         if (metadata.isNull() && localName(element) == QStringLiteral("metadata")) {
@@ -672,7 +748,7 @@ VerticalLayoutAnalyzer::OpfAnalysis VerticalLayoutAnalyzer::analyzeOpf(const QSt
         }
     });
     if (!metadata.isNull()) {
-        walkElements(metadata, [&analysis](const QDomElement& element) {
+        walkElements(metadata, [&analysis, &refined_layout_by_id](const QDomElement& element) {
             const QString name = unprefixedName(element);
             if (name == QStringLiteral("language")
                 && (element.namespaceURI() == QStringLiteral("http://purl.org/dc/elements/1.1/")
@@ -681,20 +757,37 @@ VerticalLayoutAnalyzer::OpfAnalysis VerticalLayoutAnalyzer::analyzeOpf(const QSt
                 if (!lang.isEmpty() && !analysis.languages.contains(lang)) {
                     analysis.languages.append(lang);
                 }
-            } else if (name == QStringLiteral("meta")
-                       && element.attribute(QStringLiteral("property")) == QStringLiteral("rendition:layout")) {
-                QString layout = element.text().trimmed();
-                if (layout.isEmpty()) {
-                    layout = element.attribute(QStringLiteral("content")).trimmed();
+            } else if (name == QStringLiteral("meta")) {
+                const QString property = element.attribute(QStringLiteral("property")).toLower();
+                const QString meta_name = element.attribute(QStringLiteral("name")).toLower();
+                QString value = element.text().trimmed();
+                if (value.isEmpty()) {
+                    value = element.attribute(QStringLiteral("content")).trimmed();
                 }
-                analysis.renditionLayout = layout.toLower();
+                value = value.toLower();
+                if (property == QStringLiteral("rendition:layout")) {
+                    QString refines = element.attribute(QStringLiteral("refines")).trimmed();
+                    if (refines.startsWith(QLatin1Char('#'))) {
+                        refines.remove(0, 1);
+                    }
+                    if (refines.isEmpty()) {
+                        analysis.renditionLayout = value;
+                    } else if (!value.isEmpty()) {
+                        refined_layout_by_id.insert(refines, value);
+                    }
+                } else if ((meta_name == QStringLiteral("fixed-layout")
+                            || property == QStringLiteral("ibooks:fixed-layout"))
+                           && (value == QStringLiteral("true")
+                               || value == QStringLiteral("yes"))) {
+                    analysis.renditionLayout = QStringLiteral("pre-paginated");
+                }
             }
         });
     }
 
     // manifest
     QHash<QString, QString> manifest_id_to_media_type;
-    QHash<QString, QString> manifest_id_to_properties;
+    QHash<QString, QString> manifest_id_to_href;
     walkElements(package, [&](const QDomElement& element) {
         if (localName(element) != QStringLiteral("manifest")) {
             return;
@@ -707,7 +800,7 @@ VerticalLayoutAnalyzer::OpfAnalysis VerticalLayoutAnalyzer::analyzeOpf(const QSt
             const QString media_type = item.attribute(QStringLiteral("media-type")).toLower();
             if (!id.isEmpty()) {
                 manifest_id_to_media_type.insert(id, media_type);
-                manifest_id_to_properties.insert(id, item.attribute(QStringLiteral("properties")));
+                manifest_id_to_href.insert(id, item.attribute(QStringLiteral("href")));
             }
         });
     });
@@ -721,22 +814,53 @@ VerticalLayoutAnalyzer::OpfAnalysis VerticalLayoutAnalyzer::analyzeOpf(const QSt
             spine = element;
         }
     });
-    if (!spine.isNull()) {
-        const QString progression = spine.attribute(QStringLiteral("page-progression-direction")).trimmed().toLower();
-        analysis.pageProgression = progression.isEmpty() ? QStringLiteral("absent") : progression;
+    if (spine.isNull()) {
+        analysis.reasons << QStringLiteral("未找到 spine");
+        return analysis;
+    }
+    const QString progression = spine.attribute(QStringLiteral("page-progression-direction")).trimmed().toLower();
+    analysis.pageProgression = progression.isEmpty() ? QStringLiteral("absent") : progression;
+    if (analysis.pageProgression != QStringLiteral("absent")
+        && analysis.pageProgression != QStringLiteral("default")
+        && analysis.pageProgression != QStringLiteral("ltr")
+        && analysis.pageProgression != QStringLiteral("rtl")) {
+        analysis.reasons << QStringLiteral("page-progression-direction 的值无效：%1")
+                                .arg(analysis.pageProgression);
+        return analysis;
+    }
+    analysis.ok = true;
+    {
         walkElements(spine, [&](const QDomElement& itemref) {
             if (localName(itemref) != QStringLiteral("itemref")) {
                 return;
             }
             analysis.spineItemCount++;
             const QString idref = itemref.attribute(QStringLiteral("idref"));
+            const QString itemref_id = itemref.attribute(QStringLiteral("id"));
             const QString media_type = manifest_id_to_media_type.value(idref);
-            const QString properties = manifest_id_to_properties.value(idref);
-            const bool is_pre_paginated = global_pre_paginated
-                || properties.contains(QStringLiteral("rendition:layout-pre-paginated"))
-                || itemref.attribute(QStringLiteral("rendition:layout")) == QStringLiteral("pre-paginated");
+            const QStringList properties = itemref.attribute(QStringLiteral("properties"))
+                .toLower().split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+            QString item_layout = refined_layout_by_id.value(itemref_id);
+            if (item_layout.isEmpty()) {
+                item_layout = refined_layout_by_id.value(idref);
+            }
+            if (item_layout.isEmpty()) {
+                item_layout = itemref.attribute(QStringLiteral("rendition:layout")).toLower();
+            }
+            if (properties.contains(QStringLiteral("rendition:layout-pre-paginated"))) {
+                item_layout = QStringLiteral("pre-paginated");
+            } else if (properties.contains(QStringLiteral("rendition:layout-reflowable"))) {
+                item_layout = QStringLiteral("reflowable");
+            }
+            const bool is_pre_paginated = item_layout.isEmpty()
+                ? global_pre_paginated
+                : item_layout == QStringLiteral("pre-paginated");
             if (is_pre_paginated) {
                 analysis.fixedLayoutCount++;
+                const QString href = manifest_id_to_href.value(idref);
+                if (!href.isEmpty() && !analysis.fixedLayoutHrefs.contains(href)) {
+                    analysis.fixedLayoutHrefs.append(href);
+                }
             }
             if (media_type.startsWith(QStringLiteral("image/"))) {
                 analysis.imageOnlyCount++;

@@ -17,7 +17,6 @@
 #include <QDomDocument>
 #include <QDomElement>
 #include <QRegularExpression>
-#include <QSet>
 #include <QWriteLocker>
 
 #include "BookManipulation/Book.h"
@@ -29,6 +28,8 @@
 #include "ResourceObjects/TextResource.h"
 
 #include "BuiltinPlugins/VerticalProfileDetector.h"
+#include "BuiltinPlugins/VerticalStylesheetResolver.h"
+#include "Misc/Utility.h"
 
 namespace BuiltinPlugins
 {
@@ -42,8 +43,12 @@ QString localName(const QDomNode& node)
         return QString();
     }
     const QDomElement element = node.toElement();
-    const QString local_name = element.localName();
-    return (local_name.isEmpty() ? element.tagName() : local_name).toLower();
+    QString name = element.localName().isEmpty() ? element.tagName() : element.localName();
+    const int colon = name.lastIndexOf(QLatin1Char(':'));
+    if (colon >= 0) {
+        name = name.mid(colon + 1);
+    }
+    return name.toLower();
 }
 
 QString resolveRelativeHref(const QString& baseBookPath, QString href)
@@ -56,22 +61,52 @@ QString resolveRelativeHref(const QString& baseBookPath, QString href)
     if (query >= 0) {
         href = href.left(query);
     }
-    if (href.isEmpty() || href.startsWith(QLatin1Char('/'))) {
+    static const QRegularExpression scheme_re(
+        QStringLiteral("^[A-Za-z][A-Za-z0-9+.-]*:"));
+    if (href.isEmpty() || href.startsWith(QLatin1Char('/'))
+        || scheme_re.match(href).hasMatch()) {
         return QString();
     }
-    if (href.startsWith(QStringLiteral("http:"), Qt::CaseInsensitive)
-        || href.startsWith(QStringLiteral("https:"), Qt::CaseInsensitive)
-        || href.startsWith(QStringLiteral("data:"), Qt::CaseInsensitive)
-        || href.startsWith(QStringLiteral("file:"), Qt::CaseInsensitive)) {
-        return QString();
-    }
+    href = Utility::URLDecodePath(href);
     const int slash = baseBookPath.lastIndexOf(QLatin1Char('/'));
     const QString dir = (slash >= 0) ? baseBookPath.left(slash) : QString();
     QString full = QDir::cleanPath(dir.isEmpty() ? href : dir + QLatin1Char('/') + href);
-    if (full.startsWith(QLatin1Char('/')) || full.startsWith(QStringLiteral("../"))) {
+    if (full.startsWith(QLatin1Char('/')) || full == QStringLiteral("..")
+        || full.startsWith(QStringLiteral("../"))) {
         return QString();
     }
     return full;
+}
+
+VerticalLayoutAnalyzer::CssAnalysis mergeCssAnalyses(
+    const QStringList& paths, const QHash<QString, QString>& css_by_path)
+{
+    VerticalLayoutAnalyzer::CssAnalysis merged;
+    merged.ok = true;
+    for (const QString& path : paths) {
+        const VerticalLayoutAnalyzer::CssAnalysis item =
+            VerticalLayoutAnalyzer::analyzeCss(css_by_path.value(path));
+        merged.ok = merged.ok && item.ok;
+        merged.parseErrorCount += item.parseErrorCount;
+        merged.hasVerticalWritingMode = merged.hasVerticalWritingMode || item.hasVerticalWritingMode;
+        merged.hasHorizontalWritingMode = merged.hasHorizontalWritingMode || item.hasHorizontalWritingMode;
+        merged.verticalWritingModeCount += item.verticalWritingModeCount;
+        merged.hasVrtlClass = merged.hasVrtlClass || item.hasVrtlClass;
+        merged.hasHltrClass = merged.hasHltrClass || item.hasHltrClass;
+        merged.hasVerticalClass = merged.hasVerticalClass || item.hasVerticalClass;
+        merged.hasTcy = merged.hasTcy || item.hasTcy;
+        merged.hasUpright = merged.hasUpright || item.hasUpright;
+        merged.hasTextCombine = merged.hasTextCombine || item.hasTextCombine;
+        merged.hasTextOrientation = merged.hasTextOrientation || item.hasTextOrientation;
+        merged.hasVertFeature = merged.hasVertFeature || item.hasVertFeature;
+        merged.hasAbsolutePositioning = merged.hasAbsolutePositioning || item.hasAbsolutePositioning;
+        merged.hasTransformRotate = merged.hasTransformRotate || item.hasTransformRotate;
+        merged.hasFixedViewport = merged.hasFixedViewport || item.hasFixedViewport;
+        merged.physicalSideUtilityCount += item.physicalSideUtilityCount;
+        merged.reasons.append(item.reasons);
+    }
+    merged.hasPairedVrtlHltr = merged.hasVrtlClass && merged.hasHltrClass;
+    return merged;
 }
 
 QString semanticText(const QDomNode& node)
@@ -222,9 +257,19 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
     analysis.epubVersion = opf_analysis.epubVersion;
     analysis.languages = opf_analysis.languages;
     analysis.pageProgression = opf_analysis.pageProgression;
-    analysis.fixedLayoutBook = (opf_analysis.renditionLayout == QStringLiteral("pre-paginated"))
-        || (opf_analysis.spineItemCount > 0
-            && opf_analysis.fixedLayoutCount >= opf_analysis.spineItemCount);
+    analysis.fixedLayoutBook = opf_analysis.spineItemCount > 0
+        && opf_analysis.fixedLayoutCount >= opf_analysis.spineItemCount;
+    analysis.hasFixedLayoutItems = opf_analysis.fixedLayoutCount > 0;
+    for (const QString& href : opf_analysis.fixedLayoutHrefs) {
+        const QString fixed_path = resolveRelativeHref(opf->GetRelativePath(), href);
+        if (!fixed_path.isEmpty() && !analysis.fixedLayoutBookPaths.contains(fixed_path)) {
+            analysis.fixedLayoutBookPaths.append(fixed_path);
+        }
+    }
+    if (!analysis.ok) {
+        analysis.reasons = opf_analysis.reasons;
+        return analysis;
+    }
 
     // CSS 文本缓存
     QHash<QString, QString> css_text_cache;
@@ -284,7 +329,7 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
         if (!options.selectedBookPaths.isEmpty() && !options.selectedBookPaths.contains(bookpath)) {
             continue;
         }
-        const PageContext context = analyzePage(resource, bookpath, css_text_cache, analysis);
+        const PageContext context = analyzePage(resource, bookpath, css_text_cache, analysis, options);
 
         FileAnalysis file;
         file.bookpath = bookpath;
@@ -293,13 +338,28 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
         file.profileConfidence = analysis.profileConfidence;
         file.profileName = analysis.profileName;
         file.reasons = context.reasons;
+        file.writingMode = context.writingMode;
         file.generatedByV2h = context.xhtml.hasV2hOverrideClass
             || context.xhtml.hasV2hConversionMarker;
         file.generatedByH2v = context.xhtml.hasH2vOverrideClass
             || context.xhtml.hasH2vConversionMarker;
+        file.generatedByV2hProfile = context.xhtml.hasV2hConversionMarker;
+        file.generatedByH2vProfile = context.xhtml.hasH2vConversionMarker;
+        file.canSwitchLayoutClass = analysis.canSwitchHltr
+            && context.css.hasPairedVrtlHltr;
+        if ((to_horizontal && file.generatedByH2vProfile)
+            || (!to_horizontal && file.generatedByV2hProfile)) {
+            file.canSwitchLayoutClass = true;
+        }
+        file.fixedLayoutFromOpf = analysis.fixedLayoutBookPaths.contains(bookpath);
 
         const bool in_conversion_scope = !analysis.restoringGeneratedConversion
             || (to_horizontal ? file.generatedByH2v : file.generatedByV2h);
+        const bool nav_candidate = file.kind == PageKind::TocOrNav
+            && file.riskScore < 50
+            && (to_horizontal
+                    ? file.writingMode == VerticalLayoutAnalyzer::WritingMode::Vertical
+                    : file.writingMode == VerticalLayoutAnalyzer::WritingMode::Horizontal);
 
         if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Vertical) {
             analysis.verticalCount++;
@@ -317,9 +377,11 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
             analysis.skippedCount++;
             file.plannedChanges << QStringLiteral("不属于上次方向转换，跳过");
         } else if (to_horizontal) {
-            if (isConvertibleKind(context.kind, context.riskScore)) {
+            if (isConvertibleKind(context.kind, context.riskScore) || nav_candidate) {
                 analysis.safeCount++;
-                file.plannedChanges << QStringLiteral("写入横排覆盖样式");
+                file.plannedChanges << (nav_candidate
+                    ? QStringLiteral("转换导航文档布局并保留链接")
+                    : QStringLiteral("写入横排覆盖样式"));
             } else if (isVerticalKind(context.kind) && context.riskScore < 75) {
                 analysis.reviewCount++;
                 file.plannedChanges << QStringLiteral("人工复核（风险 %1）").arg(context.riskScore);
@@ -333,9 +395,11 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
             const bool horizontal_candidate =
                 context.kind == VerticalLayoutAnalyzer::PageKind::AlreadyHorizontal
                 || context.kind == VerticalLayoutAnalyzer::PageKind::TitleOrColophon;
-            if (horizontal_candidate && context.riskScore < 50) {
+            if ((horizontal_candidate && context.riskScore < 50) || nav_candidate) {
                 analysis.safeCount++;
-                file.plannedChanges << QStringLiteral("写入竖排覆盖样式");
+                file.plannedChanges << (nav_candidate
+                    ? QStringLiteral("转换导航文档布局并保留链接")
+                    : QStringLiteral("写入竖排覆盖样式"));
             } else if (horizontal_candidate) {
                 analysis.reviewCount++;
                 file.plannedChanges << QStringLiteral("人工复核（风险 %1）").arg(context.riskScore);
@@ -362,6 +426,8 @@ VerticalToHorizontalConverter::Analysis VerticalToHorizontalConverter::analyze(c
     analysis.reasons = opf_analysis.reasons;
     if (analysis.fixedLayoutBook) {
         analysis.reasons << QStringLiteral("整书为固定版式（pre-paginated），默认禁止自动重排");
+    } else if (analysis.hasFixedLayoutItems) {
+        analysis.reasons << QStringLiteral("书中含局部固定版式页面；这些页面不会转换，且不会自动修改全局翻页方向");
     }
     return analysis;
 }
@@ -370,24 +436,15 @@ VerticalToHorizontalConverter::PageContext VerticalToHorizontalConverter::analyz
     TextResource* resource,
     const QString& bookpath,
     const QHash<QString, QString>& css_text_cache,
-    const Analysis& bookLevel) const
+    const Analysis& bookLevel,
+    const Options& options) const
 {
     PageContext context;
     const QString source = resource->GetText();
     context.xhtml = VerticalLayoutAnalyzer::analyzeXhtml(source);
 
-    QStringList css_texts;
     const QStringList linked = linkedStylesheetBookPaths(source, bookpath, css_text_cache);
-    for (const QString& css_path : linked) {
-        if (css_text_cache.contains(css_path)) {
-            css_texts.append(css_text_cache.value(css_path));
-        }
-    }
-    QString joined;
-    for (const QString& text : css_texts) {
-        joined += text + QStringLiteral("\n");
-    }
-    context.css = VerticalLayoutAnalyzer::analyzeCss(joined);
+    context.css = mergeCssAnalyses(linked, css_text_cache);
 
     context.writingMode =
         VerticalLayoutAnalyzer::effectiveWritingMode(context.css, context.xhtml);
@@ -395,14 +452,25 @@ VerticalToHorizontalConverter::PageContext VerticalToHorizontalConverter::analyz
         || context.writingMode == VerticalLayoutAnalyzer::WritingMode::Mixed;
 
     context.riskScore = VerticalLayoutAnalyzer::combinedRiskScore(
-        context.css, context.xhtml, bookLevel.canSwitchHltr);
+        context.css, context.xhtml,
+        bookLevel.canSwitchHltr && context.css.hasPairedVrtlHltr);
 
-    classifyPage(context, bookLevel);
+    const bool blocked_by_important_inline =
+        options.direction == VerticalCssTransformer::ConversionDirection::VerticalToHorizontal
+            ? context.xhtml.hasImportantInlineVerticalStyle
+            : context.xhtml.hasImportantRootHorizontalStyle;
+    if (blocked_by_important_inline) {
+        context.riskScore = qMax(50, context.riskScore);
+        context.reasons << QStringLiteral("inline !important writing-mode 会覆盖转换样式，需人工复核");
+    }
+
+    classifyPage(context, bookLevel, bookpath);
     return context;
 }
 
 void VerticalToHorizontalConverter::classifyPage(PageContext& context,
-                                                 const Analysis& bookLevel) const
+                                                 const Analysis& bookLevel,
+                                                 const QString& bookpath) const
 {
     const VerticalLayoutAnalyzer::XhtmlAnalysis& x = context.xhtml;
     if (!x.ok) {
@@ -413,6 +481,21 @@ void VerticalToHorizontalConverter::classifyPage(PageContext& context,
     if (bookLevel.fixedLayoutBook) {
         context.kind = PageKind::FixedLayout;
         context.reasons << QStringLiteral("整书固定版式，默认跳过");
+        return;
+    }
+    if (bookLevel.fixedLayoutBookPaths.contains(bookpath)) {
+        context.kind = PageKind::FixedLayout;
+        context.reasons << QStringLiteral("OPF itemref 声明局部固定版式");
+        return;
+    }
+    if (!context.css.ok) {
+        context.kind = PageKind::ParseError;
+        context.reasons << QStringLiteral("关联 CSS 解析失败，禁止自动改写");
+        return;
+    }
+    if (x.inlineCssParseErrorCount > 0) {
+        context.kind = PageKind::ParseError;
+        context.reasons << QStringLiteral("页内 style CSS 解析失败，禁止自动改写");
         return;
     }
     if (x.fixedViewport) {
@@ -435,9 +518,9 @@ void VerticalToHorizontalConverter::classifyPage(PageContext& context,
         context.reasons << QStringLiteral("脚本注入布局");
         return;
     }
-    if (x.hasSvgText && context.vertical) {
+    if (x.hasSvgText) {
         context.kind = PageKind::SvgTextLayout;
-        context.reasons << QStringLiteral("SVG 内含纵排文本");
+        context.reasons << QStringLiteral("SVG 内含文本，默认跳过自动重排");
         return;
     }
     if (context.writingMode == VerticalLayoutAnalyzer::WritingMode::Unknown) {
@@ -481,24 +564,7 @@ QStringList VerticalToHorizontalConverter::linkedStylesheetBookPaths(
     const QString& bookpath,
     const QHash<QString, QString>& css_by_path) const
 {
-    QStringList result;
-    QDomDocument document;
-    if (!document.setContent(xhtmlSource, false)) {
-        return result;
-    }
-    const QDomNodeList links = document.elementsByTagName(QStringLiteral("link"));
-    for (int i = 0; i < links.count(); ++i) {
-        QDomElement link = links.at(i).toElement();
-        const QString rel = link.attribute(QStringLiteral("rel")).toLower();
-        if (!rel.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts).contains(QStringLiteral("stylesheet"))) {
-            continue;
-        }
-        const QString resolved = resolveRelativeHref(bookpath, link.attribute(QStringLiteral("href")));
-        if (!resolved.isEmpty() && css_by_path.contains(resolved) && !result.contains(resolved)) {
-            result.append(resolved);
-        }
-    }
-    return result;
+    return VerticalStylesheetResolver::resolve(xhtmlSource, bookpath, css_by_path);
 }
 
 QStringList VerticalToHorizontalConverter::generatorMetadata(const QString& opfSource) const
@@ -508,9 +574,16 @@ QStringList VerticalToHorizontalConverter::generatorMetadata(const QString& opfS
     if (!document.setContent(opfSource, false)) {
         return generators;
     }
-    const QDomNodeList metas = document.elementsByTagName(QStringLiteral("meta"));
-    for (int i = 0; i < metas.count(); ++i) {
-        QDomElement meta = metas.at(i).toElement();
+    QList<QDomNode> nodes { document.documentElement() };
+    while (!nodes.isEmpty()) {
+        const QDomNode node = nodes.takeLast();
+        if (!node.isElement() || localName(node) != QStringLiteral("meta")) {
+            for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+                nodes.append(child);
+            }
+            continue;
+        }
+        const QDomElement meta = node.toElement();
         const QString name = meta.attribute(QStringLiteral("name")).toLower();
         const QString property = meta.attribute(QStringLiteral("property")).toLower();
         if (name == QStringLiteral("generator") || property == QStringLiteral("generator")) {
@@ -521,6 +594,9 @@ QStringList VerticalToHorizontalConverter::generatorMetadata(const QString& opfS
             if (!value.isEmpty()) {
                 generators.append(value);
             }
+        }
+        for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+            nodes.append(child);
         }
     }
     return generators;
@@ -567,9 +643,6 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         return result;
     }
 
-    const bool switch_target_class = result.before.canSwitchHltr
-        && options.mode == VerticalCssTransformer::ConversionMode::ProfileAwareRewrite;
-
     struct PlannedPage {
         TextResource* resource = nullptr;
         QString bookpath;
@@ -577,6 +650,7 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         QString transformed;
     };
     QList<PlannedPage> pages;
+    bool planning_failed = false;
 
     const bool restoring_generated = result.before.restoringGeneratedConversion;
     const auto isConvertible = [to_horizontal, restoring_generated](const FileAnalysis& file) {
@@ -585,11 +659,17 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
             return false;
         }
         if (to_horizontal) {
-            return isConvertibleKind(file.kind, file.riskScore);
+            return isConvertibleKind(file.kind, file.riskScore)
+                || (file.kind == PageKind::TocOrNav
+                    && file.writingMode == VerticalLayoutAnalyzer::WritingMode::Vertical
+                    && file.riskScore < 50);
         }
-        return (file.kind == PageKind::AlreadyHorizontal
-                || file.kind == PageKind::TitleOrColophon)
-            && file.riskScore < 50;
+        return ((file.kind == PageKind::AlreadyHorizontal
+                 || file.kind == PageKind::TitleOrColophon)
+                && file.riskScore < 50)
+            || (file.kind == PageKind::TocOrNav
+                && file.writingMode == VerticalLayoutAnalyzer::WritingMode::Horizontal
+                && file.riskScore < 50);
     };
 
     for (const FileAnalysis& file : result.before.files) {
@@ -603,11 +683,14 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         }
         text_resource->InitialLoad();
         const QString source = text_resource->GetText();
+        const bool switch_target_class = file.canSwitchLayoutClass
+            && options.mode == VerticalCssTransformer::ConversionMode::ProfileAwareRewrite;
         const VerticalCssTransformer::TransformResult transform =
             VerticalCssTransformer::transformXhtml(source, options, switch_target_class);
         if (!transform.ok) {
             addResult(result, ValidationResult::ResType_Error, file.bookpath,
                       QStringLiteral("%1：转换失败，未写回。%2").arg(op_name, transform.messages.join(QLatin1Char(' '))));
+            planning_failed = true;
             continue;
         }
         if (options.validateAfterConversion) {
@@ -615,6 +698,7 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
             if (!validateXhtmlInvariants(source, transform.text, error)) {
                 addResult(result, ValidationResult::ResType_Error, file.bookpath,
                           QStringLiteral("%1：不变量校验失败（%2），未写回该文件。").arg(op_name, error));
+                planning_failed = true;
                 continue;
             }
         }
@@ -628,6 +712,12 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         }
     }
 
+    if (planning_failed) {
+        addResult(result, ValidationResult::ResType_Error, QString(),
+                  QStringLiteral("%1：预检失败，未写回任何文件。").arg(op_name));
+        return result;
+    }
+
     if (pages.isEmpty()) {
         addResult(result, ValidationResult::ResType_Info, QString(),
                   QStringLiteral("%1：没有可自动转换的正文页（其余页面需人工复核或已跳过）。").arg(op_name));
@@ -635,37 +725,11 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         return result;
     }
 
-    // 结构化模式：改写被转换页面引用的 CSS
-    QHash<QString, QString> css_text_cache;
-    const QList<CSSResource*> css_resources = m_Book->GetFolderKeeper()->GetResourceTypeList<CSSResource>(true);
-    for (CSSResource* css : css_resources) {
-        css->InitialLoad();
-        css_text_cache.insert(css->GetRelativePath(), css->GetText());
-    }
-    QList<QPair<CSSResource*, QString>> css_changes; // resource + new text
-    if (options.mode == VerticalCssTransformer::ConversionMode::ProfileAwareRewrite
-        && !switch_target_class) {
-        QSet<QString> linked_css_paths;
-        for (const PlannedPage& page : pages) {
-            const QStringList linked = linkedStylesheetBookPaths(page.source, page.bookpath, css_text_cache);
-            for (const QString& css_path : linked) {
-                linked_css_paths.insert(css_path);
-            }
-        }
-        for (const QString& css_path : linked_css_paths) {
-            Resource* resource = m_Book->GetFolderKeeper()->GetResourceByBookPath(css_path);
-            CSSResource* css_resource = qobject_cast<CSSResource*>(resource);
-            if (!css_resource) {
-                continue;
-            }
-            const QString css_text = css_resource->GetText();
-            const VerticalCssTransformer::TransformResult transform =
-                VerticalCssTransformer::transformCss(css_text, options);
-            if (transform.ok && transform.changed) {
-                css_changes.append(qMakePair(css_resource, transform.text));
-            }
-        }
-    }
+    // Unknown/unpaired stylesheets are never rewritten by the book-level
+    // workflow. Structured mode switches a proven .vrtl/.hltr page class;
+    // every other page falls back to the reversible compatibility override.
+    // transformCss() remains available as a pure lower-level primitive, but
+    // destructive generic CSS cleanup is not safe for automatic round trips.
 
     // OPF page progression（V2H -> ltr，H2V -> rtl）
     OPFResource* opf = m_Book->GetOPF();
@@ -673,13 +737,30 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
     const QString opf_source = opf->GetText();
     QString opf_text = opf_source;
     bool opf_changed = false;
-    if (options.updatePageProgression) {
+    const bool restoring_tracked_progression = result.before.restoringGeneratedConversion
+        && opf_source.contains(QStringLiteral("sigil-enhanced-layout-progression"));
+    const bool can_update_global_progression = options.selectedBookPaths.isEmpty()
+        && (!result.before.hasFixedLayoutItems || restoring_tracked_progression);
+    if (options.updatePageProgression && can_update_global_progression) {
         const VerticalCssTransformer::TransformResult transform =
             VerticalCssTransformer::transformOpfProgression(opf_text, to_horizontal);
-        if (transform.ok && transform.changed) {
+        if (!transform.ok) {
+            addResult(result, ValidationResult::ResType_Error, opf->GetRelativePath(),
+                      QStringLiteral("%1：%2").arg(op_name, transform.messages.join(QLatin1Char(' '))));
+            return result;
+        }
+        if (transform.changed) {
             opf_text = transform.text;
             opf_changed = true;
         }
+    } else if (options.updatePageProgression && result.before.hasFixedLayoutItems) {
+        addResult(result, ValidationResult::ResType_Warn, opf->GetRelativePath(),
+                  QStringLiteral("%1：书中含局部固定版式页面，已保留全局 page-progression-direction。")
+                      .arg(op_name));
+    } else if (options.updatePageProgression && !options.selectedBookPaths.isEmpty()) {
+        addResult(result, ValidationResult::ResType_Info, opf->GetRelativePath(),
+                  QStringLiteral("%1：仅转换部分文件，已保留全局 page-progression-direction。")
+                      .arg(op_name));
     }
 
     // stale-source 校验
@@ -694,13 +775,6 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         addResult(result, ValidationResult::ResType_Error, opf->GetRelativePath(),
                   QStringLiteral("%1：OPF 在分析后被修改，未写回任何文件。").arg(op_name));
         return result;
-    }
-    for (const QPair<CSSResource*, QString>& change : css_changes) {
-        if (change.first->GetText() != css_text_cache.value(change.first->GetRelativePath())) {
-            addResult(result, ValidationResult::ResType_Error, change.first->GetRelativePath(),
-                      QStringLiteral("%1：CSS 在分析后被修改，未写回任何文件。").arg(op_name));
-            return result;
-        }
     }
 
     // 写回（调用方已先创建 Checkpoint；dryRun 时只报告计划）
@@ -719,19 +793,6 @@ VerticalToHorizontalConverter::Result VerticalToHorizontalConverter::convert(con
         changed_resources++;
         addResult(result, ValidationResult::ResType_Info, page.bookpath,
                   QStringLiteral("%1将%2。").arg(prefix, target_label));
-    }
-    for (const QPair<CSSResource*, QString>& change : css_changes) {
-        if (!options.dryRun) {
-            QWriteLocker locker(&change.first->GetLock());
-            change.first->SetTextAsUndoableEdit(change.second);
-            result.modified = true;
-        }
-        result.changedBookPaths.append(change.first->GetRelativePath());
-        changed_resources++;
-        addResult(result, ValidationResult::ResType_Info, change.first->GetRelativePath(),
-                  to_horizontal
-                      ? QStringLiteral("%1将中和纵向专属 CSS 声明。").arg(prefix)
-                      : QStringLiteral("%1将改写 writing-mode 为纵向。").arg(prefix));
     }
     if (opf_changed) {
         if (!options.dryRun) {
