@@ -53,6 +53,7 @@ private:
 	QLabel* imagePreviewPopup;
 	QTimer* imagePreviewTimer;
 	ImagePreviewService* imagePreviewService;
+	int imagePreviewDelayMs;
 	quint64 imagePreviewRequestId;
 	QString imagePreviewPath;
 
