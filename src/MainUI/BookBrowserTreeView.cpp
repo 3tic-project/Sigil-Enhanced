@@ -204,12 +204,10 @@ void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
 	}
 
 	if (imagePreviewIndex == index) {
-		if (imagePreviewPopup->isVisible() || imagePreviewRequestId != 0) {
-			return;
-		}
-		if (imagePreviewTimer->isActive()) {
-			// Require the pointer to remain still for a full hover interval.
-			imagePreviewTimer->start(imagePreviewDelayMs);
+		if (imagePreviewPopup->isVisible() || imagePreviewRequestId != 0 ||
+		    imagePreviewTimer->isActive()) {
+			// Dwell is measured per item; small pointer movements within the
+			// same row must not postpone the preview indefinitely.
 			return;
 		}
 	}
