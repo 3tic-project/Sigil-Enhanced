@@ -69,6 +69,12 @@ void BookBrowserTreeView::refreshImagePreviewSettings()
 	imagePreviewService->setMaximumPreviewSide(settings.bookBrowserImagePreviewSize());
 }
 
+void BookBrowserTreeView::resetImagePreviewState()
+{
+	hideImagePreview();
+	imagePreviewService->reset();
+}
+
 Resource* BookBrowserTreeView::resourceForIndex(const QModelIndex& index) const
 {
 	if (!index.isValid()) {
@@ -213,6 +219,7 @@ void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
 	imagePreviewPath.clear();
 	imagePreviewIndex = index;
 	imagePreviewPopup->hide();
+	imagePreviewPopup->clear();
 	imagePreviewTimer->start(imagePreviewDelayMs);
 }
 
@@ -272,6 +279,7 @@ void BookBrowserTreeView::hideImagePreview()
 	imagePreviewIndex = QPersistentModelIndex();
 	if (imagePreviewPopup) {
 		imagePreviewPopup->hide();
+		imagePreviewPopup->clear();
 	}
 }
 

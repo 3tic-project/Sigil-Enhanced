@@ -239,10 +239,86 @@ bool testBoundedLru(const QString& root)
             return false;
         }
     }
-    return expect(service.cacheBytes() <= service.cacheLimitBytes(),
-                  "LRU cache exceeded its byte budget") &&
-           expect(service.cacheEntryCount() < colors.size(),
-                  "LRU cache did not evict old previews");
+    if (!expect(service.cacheBytes() <= service.cacheLimitBytes(),
+                "LRU cache exceeded its byte budget") ||
+        !expect(service.cacheEntryCount() < colors.size(),
+                "LRU cache did not evict old previews")) {
+        return false;
+    }
+    service.reset();
+    return expect(service.cacheEntryCount() == 0,
+                  "reset did not release cached previews") &&
+           expect(service.cacheBytes() == 0,
+                  "reset did not release cached preview bytes");
+}
+
+bool testCoalescedDecodeQueue(const QString& root)
+{
+    const QString firstPath = root + "/queue-first.svg";
+    const QString skippedPath = root + "/queue-skipped.svg";
+    const QString latestPath = root + "/queue-latest.svg";
+    if (!expect(writeSvg(firstPath, QSize(20000, 20000)),
+                "could not create first queue fixture") ||
+        !expect(writeSvg(skippedPath, QSize(20000, 20000)),
+                "could not create skipped queue fixture") ||
+        !expect(writeSvg(latestPath, QSize(20000, 20000)),
+                "could not create latest queue fixture")) {
+        return false;
+    }
+
+    ImagePreviewService service;
+    QList<quint64> delivered;
+    if (!expect(service.cacheLimitBytes() == 8LL * 1024 * 1024,
+                "default cache limit is not 8 MiB")) {
+        return false;
+    }
+    QObject::connect(&service, &ImagePreviewService::previewReady, &service,
+                     [&](quint64 requestId, const ImagePreviewData&) {
+                         delivered.append(requestId);
+                     });
+
+    service.request(firstPath, ImagePreviewService::Format::Svg);
+    if (!expect(service.activeDecodeCount() == 1,
+                "first decode did not start")) {
+        return false;
+    }
+    service.cancelPending();
+    service.request(skippedPath, ImagePreviewService::Format::Svg);
+    if (!expect(service.activeDecodeCount() == 1,
+                "cancelled decode was allowed to run concurrently") ||
+        !expect(service.queuedRequestCount() == 1,
+                "replacement decode was not queued")) {
+        return false;
+    }
+    service.cancelPending();
+    const quint64 latestId =
+        service.request(latestPath, ImagePreviewService::Format::Svg);
+    if (!expect(service.queuedRequestCount() == 1,
+                "decode queue retained more than the latest request")) {
+        return false;
+    }
+
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    timeout.start(5000);
+    QObject::connect(&service, &ImagePreviewService::previewReady, &loop,
+                     [&](quint64 requestId, const ImagePreviewData&) {
+                         if (requestId == latestId) {
+                             loop.quit();
+                         }
+                     });
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    loop.exec();
+
+    return expect(delivered == QList<quint64>{latestId},
+                  "a stale queued preview was delivered") &&
+           expect(service.activeDecodeCount() == 0,
+                  "decode remained active after the latest result") &&
+           expect(service.queuedRequestCount() == 0,
+                  "decode queue was not drained") &&
+           expect(service.cacheEntryCount() == 1,
+                  "cancelled previews remained in the cache");
 }
 
 } // namespace
@@ -255,7 +331,8 @@ int main(int argc, char* argv[])
                     testScaledBitmapAndCache(workspace.path()) &&
                     testNaturalBitmapSizeAndConfiguredLimit(workspace.path()) &&
                     testLargeSvgRequestAndCancellation(workspace.path()) &&
-                    testBoundedLru(workspace.path());
+                    testBoundedLru(workspace.path()) &&
+                    testCoalescedDecodeQueue(workspace.path());
     if (ok) {
         fprintf(stdout, "All image preview service tests passed.\n");
     }

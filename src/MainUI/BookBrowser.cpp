@@ -160,6 +160,7 @@ void BookBrowser::showEvent(QShowEvent *event)
 
 void BookBrowser::SetBook(QSharedPointer<Book> book)
 {
+    m_TreeView->resetImagePreviewState();
     m_Book = book;
     m_OPFModel->SetBook(book);
     connect(this, SIGNAL(BookContentModified()), m_Book.data(), SLOT(SetModified()));

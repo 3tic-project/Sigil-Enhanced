@@ -137,24 +137,44 @@ quint64 ImagePreviewService::request(const QString& filePath, Format format)
         return requestId;
     }
 
+    const PreviewRequest request = {
+        requestId, key, filePath, format, maximumPreviewSide
+    };
+    if (m_RunningWatcher) {
+        if (m_HasQueuedRequest) {
+            m_ActiveRequests.remove(m_QueuedRequest.requestId);
+        }
+        m_QueuedRequest = request;
+        m_HasQueuedRequest = true;
+        return requestId;
+    }
+
+    startRequest(request);
+    return requestId;
+}
+
+void ImagePreviewService::startRequest(const PreviewRequest& request)
+{
     auto cancelled = std::make_shared<std::atomic_bool>(false);
     auto* watcher = new QFutureWatcher<ImagePreviewData>(this);
-    m_Pending.insert(requestId, {watcher, cancelled});
+    m_RunningWatcher = watcher;
+    m_RunningCancelled = cancelled;
     connect(watcher, &QFutureWatcher<ImagePreviewData>::finished, this,
-            [this, requestId, key, watcher, cancelled]() {
-                finishRequest(requestId, key, watcher, cancelled);
+            [this, request, watcher, cancelled]() {
+                finishRequest(request, watcher, cancelled);
             });
-    watcher->setFuture(QtConcurrent::run([filePath, format, maximumPreviewSide, cancelled]() {
+    watcher->setFuture(QtConcurrent::run([request, cancelled]() {
         if (cancelled->load()) {
             return ImagePreviewData();
         }
-        ImagePreviewData preview = decode(filePath, format, maximumPreviewSide);
+        ImagePreviewData preview = decode(request.filePath,
+                                          request.format,
+                                          request.maximumPreviewSide);
         if (cancelled->load()) {
             preview.image = QImage();
         }
         return preview;
     }));
-    return requestId;
 }
 
 void ImagePreviewService::setMaximumPreviewSide(int maximumPreviewSide)
@@ -163,8 +183,7 @@ void ImagePreviewService::setMaximumPreviewSide(int maximumPreviewSide)
     if (m_MaximumPreviewSide == normalized) {
         return;
     }
-    cancelPending();
-    m_Cache.clear();
+    reset();
     m_MaximumPreviewSide = normalized;
 }
 
@@ -176,9 +195,17 @@ int ImagePreviewService::maximumPreviewSide() const
 void ImagePreviewService::cancelPending()
 {
     m_ActiveRequests.clear();
-    for (auto it = m_Pending.begin(); it != m_Pending.end(); ++it) {
-        it->cancelled->store(true);
+    if (m_RunningCancelled) {
+        m_RunningCancelled->store(true);
     }
+    m_HasQueuedRequest = false;
+    m_QueuedRequest = PreviewRequest();
+}
+
+void ImagePreviewService::reset()
+{
+    cancelPending();
+    m_Cache.clear();
 }
 
 int ImagePreviewService::cacheEntryCount() const
@@ -199,6 +226,16 @@ qint64 ImagePreviewService::cacheLimitBytes() const
 quint64 ImagePreviewService::cacheHits() const
 {
     return m_CacheHits;
+}
+
+int ImagePreviewService::activeDecodeCount() const
+{
+    return m_RunningWatcher ? 1 : 0;
+}
+
+int ImagePreviewService::queuedRequestCount() const
+{
+    return m_HasQueuedRequest ? 1 : 0;
 }
 
 ImagePreviewData ImagePreviewService::decode(const QString& filePath,
@@ -224,19 +261,37 @@ QString ImagePreviewService::cacheKey(const QString& filePath,
 }
 
 void ImagePreviewService::finishRequest(
-    quint64 requestId,
-    const QString& key,
+    const PreviewRequest& request,
     QFutureWatcher<ImagePreviewData>* watcher,
     const std::shared_ptr<std::atomic_bool>& cancelled)
 {
     const ImagePreviewData preview = watcher->result();
-    m_Pending.remove(requestId);
+    m_RunningWatcher = nullptr;
+    m_RunningCancelled.reset();
     watcher->deleteLater();
-    if (cancelled->load() || !m_ActiveRequests.remove(requestId)) {
+
+    const bool shouldDeliver = !cancelled->load() &&
+                               m_ActiveRequests.remove(request.requestId);
+    if (shouldDeliver && !preview.image.isNull()) {
+        m_Cache.insert(request.key,
+                       new ImagePreviewData(preview),
+                       imageCostKiB(preview.image));
+    }
+    startQueuedRequest();
+    if (shouldDeliver) {
+        emit previewReady(request.requestId, preview);
+    }
+}
+
+void ImagePreviewService::startQueuedRequest()
+{
+    if (!m_HasQueuedRequest) {
         return;
     }
-    if (!preview.image.isNull()) {
-        m_Cache.insert(key, new ImagePreviewData(preview), imageCostKiB(preview.image));
+    const PreviewRequest request = m_QueuedRequest;
+    m_QueuedRequest = PreviewRequest();
+    m_HasQueuedRequest = false;
+    if (m_ActiveRequests.contains(request.requestId)) {
+        startRequest(request);
     }
-    emit previewReady(requestId, preview);
 }

@@ -31,6 +31,7 @@ public:
 	BookBrowserTreeView(QWidget* parent = nullptr);
 	~BookBrowserTreeView();
 	void refreshImagePreviewSettings();
+	void resetImagePreviewState();
 
 protected:
 	void mousePressEvent(QMouseEvent* event);
