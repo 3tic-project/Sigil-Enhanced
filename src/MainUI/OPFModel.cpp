@@ -26,10 +26,12 @@
 #include <QtWidgets/QFileIconProvider>
 #include <QMessageBox>
 #include <QDebug>
+#include <QMimeData>
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "MainUI/OPFModel.h"
 #include "MainUI/OPFModelItem.h"
+#include "Misc/ResourceInsertion.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "ResourceObjects/Resource.h"
@@ -281,6 +283,72 @@ void OPFModel::sort(int column, Qt::SortOrder order)
 Qt::DropActions OPFModel::supportedDropActions() const
 {
     return Qt::MoveAction;
+}
+
+
+Qt::DropActions OPFModel::supportedDragActions() const
+{
+    return Qt::CopyAction | Qt::MoveAction;
+}
+
+
+QMimeData *OPFModel::mimeData(const QModelIndexList &indexes) const
+{
+    QMimeData *mime_data = QStandardItemModel::mimeData(indexes);
+    if (!mime_data) {
+        mime_data = new QMimeData;
+    }
+
+    QStringList identifiers;
+    foreach(const QModelIndex &index, indexes) {
+        if (!index.isValid()) {
+            continue;
+        }
+        const QString identifier = index.data(Qt::UserRole + 1).toString();
+        if (!identifier.isEmpty() && !identifiers.contains(identifier)) {
+            identifiers.append(identifier);
+        }
+    }
+    if (!identifiers.isEmpty()) {
+        mime_data->setData(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME,
+                           identifiers.join('\n').toUtf8());
+    }
+
+    return mime_data;
+}
+
+
+bool OPFModel::canDropMimeData(const QMimeData *data,
+                               Qt::DropAction action,
+                               int row,
+                               int column,
+                               const QModelIndex &parent) const
+{
+    if (!data || !data->hasFormat(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME)) {
+        return QStandardItemModel::canDropMimeData(data, action, row, column, parent);
+    }
+
+    // Copy is useful when a resource is dropped into an editor, but accepting
+    // it here would create a second model item for the same book resource.
+    if (action != Qt::MoveAction || !m_Book || itemFromIndex(parent) != m_TextFolderItem) {
+        return false;
+    }
+
+    const QStringList identifiers =
+        QString::fromUtf8(data->data(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME))
+            .split('\n', Qt::SkipEmptyParts);
+    if (identifiers.isEmpty()) {
+        return false;
+    }
+
+    foreach(const QString &identifier, identifiers) {
+        Resource *resource = m_Book->GetFolderKeeper()->GetResourceByIdentifier(identifier);
+        if (!resource || resource->Type() != Resource::HTMLResourceType) {
+            return false;
+        }
+    }
+
+    return QStandardItemModel::canDropMimeData(data, action, row, column, parent);
 }
 
 
@@ -567,6 +635,10 @@ void OPFModel::InitializeModel()
             item = new AlphanumericItem(fileicon, resource->ShortPathName());
         }
         item->setDropEnabled(false);
+        item->setDragEnabled(
+            resource->Type() == Resource::HTMLResourceType ||
+            ResourceInsertion::CanInsertResource(resource, ResourceInsertion::Context::HTML) ||
+            ResourceInsertion::CanInsertResource(resource, ResourceInsertion::Context::CSS));
         item->setData(resource->GetIdentifier());
         QString tooltip = resource->GetRelativePath();
         QString path = resource->GetRelativePath();
@@ -603,33 +675,25 @@ void OPFModel::InitializeModel()
             item->setData(name, ALPHANUMERIC_ORDER_ROLE);
             text_items.append(item);
         } else if (resource->Type() == Resource::CSSResourceType) {
-            item->setDragEnabled(false);
             style_items.append(item);
         } else if (resource->Type() == Resource::ImageResourceType ||
                    resource->Type() == Resource::SVGResourceType
                   ) {
-            item->setDragEnabled(false);
             image_items.append(item);
         } else if (resource->Type() == Resource::FontResourceType) {
-            item->setDragEnabled(false);
             font_items.append(item);
         } else if (resource->Type() == Resource::AudioResourceType) {
-            item->setDragEnabled(false);
             audio_items.append(item);
         } else if (resource->Type() == Resource::VideoResourceType) {
-            item->setDragEnabled(false);
             video_items.append(item);
         } else if (resource->Type() == Resource::PdfResourceType) {
-            item->setDragEnabled(false);
             misc_items.append(item);
         } else if (resource->Type() == Resource::OPFResourceType ||
                    resource->Type() == Resource::NCXResourceType) {
             item->setEditable(true);
-            item->setDragEnabled(false);
             item->setToolTip(resource->GetRelativePath());
             root_items.append(item);
         } else {
-            item->setDragEnabled(false);
             misc_items.append(item);
         }
     }
