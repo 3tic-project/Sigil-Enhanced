@@ -31,7 +31,7 @@ public:
     };
 
     explicit ImagePreviewService(QObject* parent = nullptr,
-                                 qint64 maxCacheBytes = 8LL * 1024 * 1024,
+                                 qint64 maxCacheBytes = 32LL * 1024 * 1024,
                                  int maximumPreviewSide = ImagePreviewPolicy::DEFAULT_MAXIMUM_SIDE);
     ~ImagePreviewService() override;
 

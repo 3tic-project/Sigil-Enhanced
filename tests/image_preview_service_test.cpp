@@ -268,8 +268,8 @@ bool testCoalescedDecodeQueue(const QString& root)
 
     ImagePreviewService service;
     QList<quint64> delivered;
-    if (!expect(service.cacheLimitBytes() == 8LL * 1024 * 1024,
-                "default cache limit is not 8 MiB")) {
+    if (!expect(service.cacheLimitBytes() == 32LL * 1024 * 1024,
+                "default cache limit is not 32 MiB")) {
         return false;
     }
     QObject::connect(&service, &ImagePreviewService::previewReady, &service,
