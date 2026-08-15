@@ -197,6 +197,7 @@ void BookBrowser::RefreshCounts()
 
 void BookBrowser::Refresh()
 {
+    m_TreeView->refreshImagePreviewSettings();
     m_OPFModel->Refresh();
     RefreshCounts();
     emit UpdateBrowserSelection();

@@ -17,6 +17,7 @@
 #include "MainUI/MainWindow.h"
 #include "Misc/ImagePreviewPolicy.h"
 #include "Misc/ImagePreviewService.h"
+#include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "ResourceObjects/Resource.h"
 
@@ -52,12 +53,20 @@ BookBrowserTreeView::BookBrowserTreeView(QWidget* parent)
 	connect(imagePreviewTimer, &QTimer::timeout, this, [this]() { showImagePreview(); });
 	connect(imagePreviewService, &ImagePreviewService::previewReady,
 	        this, &BookBrowserTreeView::imagePreviewReady);
+	refreshImagePreviewSettings();
 }
 
 
 BookBrowserTreeView::~BookBrowserTreeView()
 {
 	delete imagePreviewPopup;
+}
+
+void BookBrowserTreeView::refreshImagePreviewSettings()
+{
+	SettingsStore settings;
+	hideImagePreview();
+	imagePreviewService->setMaximumPreviewSide(settings.bookBrowserImagePreviewSize());
 }
 
 Resource* BookBrowserTreeView::resourceForIndex(const QModelIndex& index) const

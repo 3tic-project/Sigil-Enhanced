@@ -26,7 +26,13 @@ int main()
         expect(ImagePreviewPolicy::hoverDelayMs(150, true) == 300,
                "macOS arm64 delay was not raised to its safe minimum") &&
         expect(ImagePreviewPolicy::hoverDelayMs(700, true) == 700,
-               "macOS arm64 delay unexpectedly shortened a platform delay");
+               "macOS arm64 delay unexpectedly shortened a platform delay") &&
+        expect(ImagePreviewPolicy::normalizedMaximumSide(20) == 50,
+               "preview size was not clamped to the minimum") &&
+        expect(ImagePreviewPolicy::normalizedMaximumSide(300) == 300,
+               "valid preview size was not preserved") &&
+        expect(ImagePreviewPolicy::normalizedMaximumSide(900) == 600,
+               "preview size was not clamped to the maximum");
     if (ok) {
         std::fprintf(stdout, "All image preview policy tests passed.\n");
     }

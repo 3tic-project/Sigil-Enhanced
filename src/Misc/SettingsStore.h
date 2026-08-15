@@ -154,6 +154,8 @@ public:
 
     int showFullPathOn();
 
+    int bookBrowserImagePreviewSize();
+
     bool disableGPU();
 
     /**
@@ -389,6 +391,8 @@ public slots:
     void setJavascriptOn(int on);
 
     void setShowFullPathOn(int on);
+
+    void setBookBrowserImagePreviewSize(int size);
 
     void setDisableGPU(bool value);
 

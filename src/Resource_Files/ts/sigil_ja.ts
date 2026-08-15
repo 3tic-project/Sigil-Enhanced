@@ -732,8 +732,8 @@ if a sans-serif font-family specified in your CSS</source>
     </message>
     <message>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="715"/>
-        <source>Determine if the BookBrowser should show full paths</source>
-        <translation>ブックブラウザーにフルパスを表示するかどうかを決定します。</translation>
+        <source>Control how the Book Browser displays paths and image previews</source>
+        <translation>ブックブラウザーのパスと画像プレビューの表示方法を設定します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="718"/>
@@ -749,6 +749,16 @@ if a sans-serif font-family specified in your CSS</source>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="733"/>
         <source>BookBrowser should show full paths.</source>
         <translation>ブックブラウザーでフルパス表示する</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="743"/>
+        <source>Maximum image preview size (px):</source>
+        <translation>画像プレビューの最大サイズ (px):</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="753"/>
+        <source>Set the longest side of image hover previews. Smaller images keep their original size.</source>
+        <translation>画像ホバープレビューの長辺を設定します。小さい画像は元のサイズを維持します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="746"/>

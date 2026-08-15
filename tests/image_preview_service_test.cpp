@@ -119,6 +119,53 @@ bool testScaledBitmapAndCache(const QString& root)
            expect(cached.image == preview.image, "cached preview content changed");
 }
 
+bool testNaturalBitmapSizeAndConfiguredLimit(const QString& root)
+{
+    const QString smallPath = root + "/small.png";
+    if (!expect(writeBitmap(smallPath, QColor("#9333ea"), QSize(48, 32)),
+                "could not create small bitmap fixture")) {
+        return false;
+    }
+
+    ImagePreviewService service(nullptr, 4LL * 1024 * 1024, 150);
+    ImagePreviewData smallPreview;
+    if (!expect(waitForPreview(service, smallPath, ImagePreviewService::Format::Bitmap,
+                               &smallPreview),
+                "small bitmap preview timed out") ||
+        !expect(smallPreview.image.size() == QSize(48, 32),
+                "small bitmap was enlarged")) {
+        return false;
+    }
+
+    const QString largePath = root + "/configured-limit.png";
+    if (!expect(writeBitmap(largePath, QColor("#0f766e"), QSize(1200, 800)),
+                "could not create configured-size fixture")) {
+        return false;
+    }
+    ImagePreviewData limitedPreview;
+    if (!expect(waitForPreview(service, largePath, ImagePreviewService::Format::Bitmap,
+                               &limitedPreview),
+                "configured-size preview timed out") ||
+        !expect(limitedPreview.image.size() == QSize(150, 100),
+                "configured preview limit was not applied")) {
+        return false;
+    }
+
+    service.setMaximumPreviewSide(500);
+    if (!expect(service.maximumPreviewSide() == 500,
+                "configured preview limit was not stored") ||
+        !expect(service.cacheEntryCount() == 0,
+                "changing preview size did not invalidate cached variants")) {
+        return false;
+    }
+    ImagePreviewData enlargedLimitPreview;
+    return expect(waitForPreview(service, largePath, ImagePreviewService::Format::Bitmap,
+                                 &enlargedLimitPreview),
+                  "updated-size preview timed out") &&
+           expect(enlargedLimitPreview.image.size() == QSize(500, 333),
+                  "updated preview limit was not applied");
+}
+
 bool testLargeSvgRequestAndCancellation(const QString& root)
 {
     const QString path = root + "/large.svg";
@@ -206,6 +253,7 @@ int main(int argc, char* argv[])
     QTemporaryDir workspace;
     const bool ok = expect(workspace.isValid(), "temporary directory unavailable") &&
                     testScaledBitmapAndCache(workspace.path()) &&
+                    testNaturalBitmapSizeAndConfiguredLimit(workspace.path()) &&
                     testLargeSvgRequestAndCancellation(workspace.path()) &&
                     testBoundedLru(workspace.path());
     if (ok) {

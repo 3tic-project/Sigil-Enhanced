@@ -30,6 +30,7 @@ signals:
 public:
 	BookBrowserTreeView(QWidget* parent = nullptr);
 	~BookBrowserTreeView();
+	void refreshImagePreviewSettings();
 
 protected:
 	void mousePressEvent(QMouseEvent* event);
