@@ -41,7 +41,6 @@ protected:
 	void paintEvent(QPaintEvent* event);
 	void leaveEvent(QEvent* event);
 	void scrollContentsBy(int dx, int dy);
-	void startDrag(Qt::DropActions supportedActions);
 
 private:
 	struct Line {
@@ -50,8 +49,6 @@ private:
 	};
 	bool dropIndicatorEnabled;
 	Line dropIndicatorLine;
-	QPoint dragStartPosition;
-	QModelIndex dragStartIndex;
 	QPersistentModelIndex imagePreviewIndex;
 	QLabel* imagePreviewPopup;
 	QTimer* imagePreviewTimer;

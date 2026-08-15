@@ -31,6 +31,7 @@
 #include "ResourceObjects/Resource.h"
 
 class AlphanumericItem;
+class QMimeData;
 class QModelIndex;
 class QStandardItem;
 
@@ -142,14 +143,34 @@ public:
      * @param column The column to sort.
      * @param order The type of sorting needed.
      */
-    virtual void sort(int column, Qt::SortOrder order = Qt::AscendingOrder);
+    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
 
     /**
      * Specifies the supported drop actions in the model.
      *
      * @return The drop actions supported.
      */
-    virtual Qt::DropActions supportedDropActions() const;
+    Qt::DropActions supportedDropActions() const override;
+
+    /**
+     * Allows Book Browser resources to be copied into editors while keeping
+     * XHTML reordering as a move operation.
+     */
+    Qt::DropActions supportedDragActions() const override;
+
+    /**
+     * Adds stable resource identifiers to the standard item-model payload.
+     */
+    QMimeData *mimeData(const QModelIndexList &indexes) const override;
+
+    /**
+     * Restricts internal model drops to XHTML moves inside the Text folder.
+     */
+    bool canDropMimeData(const QMimeData *data,
+                         Qt::DropAction action,
+                         int row,
+                         int column,
+                         const QModelIndex &parent) const override;
 
     /**
      * Renames the selected resource

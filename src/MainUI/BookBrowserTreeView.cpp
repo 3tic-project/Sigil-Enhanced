@@ -3,11 +3,8 @@
 #include <QPainter>
 #include <QModelIndex>
 #include <QMimeData>
-#include <QApplication>
-#include <QDrag>
 #include <QFontMetrics>
 #include <QGuiApplication>
-#include <QItemSelectionModel>
 #include <QLabel>
 #include <QPixmap>
 #include <QScreen>
@@ -18,7 +15,6 @@
 #include "BookManipulation/FolderKeeper.h"
 #include "MainUI/MainWindow.h"
 #include "Misc/ImagePreviewService.h"
-#include "Misc/ResourceInsertion.h"
 #include "Misc/Utility.h"
 #include "ResourceObjects/Resource.h"
 
@@ -31,8 +27,6 @@ BookBrowserTreeView::BookBrowserTreeView(QWidget* parent)
 	:
 	QTreeView(parent),
 	dropIndicatorEnabled(false),
-	dragStartPosition(QPoint()),
-	dragStartIndex(QModelIndex()),
 	imagePreviewIndex(QModelIndex()),
 	imagePreviewPopup(new QLabel(nullptr, Qt::ToolTip)),
 	imagePreviewTimer(new QTimer(this)),
@@ -295,69 +289,15 @@ void BookBrowserTreeView::mousePressEvent(QMouseEvent* e)
 {
 	hideImagePreview();
 	QTreeView::mousePressEvent(e);
-
-	if (e->button() == Qt::LeftButton) {
-		QModelIndex index = indexAt(e->position().toPoint());
-		if (index.isValid() && !index.data(Qt::UserRole + 1).toString().isEmpty()) {
-			dragStartPosition = e->position().toPoint();
-			dragStartIndex = index;
-		} else {
-			dragStartIndex = QModelIndex();
-		}
-	}
 }
 
 void BookBrowserTreeView::mouseMoveEvent(QMouseEvent* e)
 {
-	if ((e->buttons() & Qt::LeftButton) &&
-		dragStartIndex.isValid() &&
-		(e->position().toPoint() - dragStartPosition).manhattanLength() >= QApplication::startDragDistance()) {
-		hideImagePreview();
-		startDrag(Qt::CopyAction | Qt::MoveAction);
-		dragStartIndex = QModelIndex();
-		e->accept();
-		return;
-	}
-
 	QTreeView::mouseMoveEvent(e);
 
 	if (e->buttons() == Qt::NoButton) {
 		scheduleImagePreview(indexAt(e->position().toPoint()));
 	}
-}
-
-void BookBrowserTreeView::startDrag(Qt::DropActions supportedActions)
-{
-	QModelIndexList indexes;
-	if (selectionModel()) {
-		indexes = selectionModel()->selectedRows(0);
-	}
-	if (indexes.isEmpty()) {
-		indexes = selectedIndexes();
-	}
-
-	QMimeData* mime_data = model() ? model()->mimeData(indexes) : nullptr;
-	if (!mime_data) {
-		mime_data = new QMimeData;
-	}
-
-	QStringList identifiers;
-	foreach(QModelIndex index, indexes) {
-		if (!index.isValid()) {
-			continue;
-		}
-		const QString identifier = index.data(Qt::UserRole + 1).toString();
-		if (!identifier.isEmpty()) {
-			identifiers << identifier;
-		}
-	}
-	if (!identifiers.isEmpty()) {
-		mime_data->setData(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME, identifiers.join("\n").toUtf8());
-	}
-
-	QDrag* drag = new QDrag(this);
-	drag->setMimeData(mime_data);
-	drag->exec(supportedActions | Qt::CopyAction, Qt::MoveAction);
 }
 
 

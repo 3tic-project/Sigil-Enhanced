@@ -2174,6 +2174,7 @@ void BookBrowser::SetupTreeView()
     m_TreeView->setAcceptDrops(false);
     m_TreeView->setDropIndicatorShown(true);
     m_TreeView->setDragDropMode(QAbstractItemView::InternalMove);
+    m_TreeView->setDefaultDropAction(Qt::MoveAction);
     m_TreeView->setContextMenuPolicy(Qt::CustomContextMenu);
     m_TreeView->setItemDelegate(new FilenameDelegate);
     m_TreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
