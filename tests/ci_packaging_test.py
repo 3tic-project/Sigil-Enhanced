@@ -83,6 +83,12 @@ class CiPackagingTest(unittest.TestCase):
         self.assertEqual(self.workflow.count("-DPACKAGE_PYSIDE6=1"), 2)
         self.assertIn("'winvirtpy.cmake'", self.workflow)
 
+    def test_windows_qt_install_requires_webengine_positioning(self):
+        self.assertIn("-m qt5compat qtwebengine qtwebchannel qtpositioning", self.workflow)
+        self.assertIn("Qt6PositioningConfig.cmake", self.workflow)
+        self.assertIn("Qt6WebEngineCoreConfig.cmake", self.workflow)
+        self.assertIn("Get-MissingQtConfigs", self.workflow)
+
     def test_bundled_pcre2_exports_generated_and_source_headers(self):
         cmake = PCRE2_CMAKE.read_text(encoding="utf-8")
         include_dirs = re.search(

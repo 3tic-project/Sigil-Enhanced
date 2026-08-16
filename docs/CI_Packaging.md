@@ -108,6 +108,13 @@ Windows x64 uses the official Qt online repository through `aqtinstall`:
 
 `aqt install-qt windows desktop 6.10.2 win64_msvc2022_64 -m qt5compat qtwebengine qtwebchannel qtpositioning`
 
+Qt 6.10 `WebEngineCore` requires `Qt6Positioning` at CMake configure time. The
+Windows job therefore treats a cache that only contains `Qt6Config.cmake` as
+incomplete: it also requires `Qt6Positioning`, `Qt6WebEngineCore`,
+`Qt6WebEngineWidgets`, `Qt6WebChannel`, and `Qt6Core5Compat` before skipping
+`aqtinstall`. Bump `.github/workflows/reset-win-caches.txt` after changing the
+required Qt module set.
+
 macOS Intel uses:
 
 `https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Qt6102.tar.xz`

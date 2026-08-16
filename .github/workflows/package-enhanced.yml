@@ -123,12 +123,28 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $qtRoot = $env:QT_ROOT
+          $requiredConfigs = @(
+            'Qt6Config.cmake',
+            'Qt6Core5CompatConfig.cmake',
+            'Qt6WebChannelConfig.cmake',
+            'Qt6WebEngineCoreConfig.cmake',
+            'Qt6WebEngineWidgetsConfig.cmake',
+            'Qt6PositioningConfig.cmake'
+          )
 
-          $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match '\\lib\\cmake\\Qt6\\Qt6Config\.cmake$' } |
-            Select-Object -First 1
+          function Get-QtConfig([string]$name) {
+            Get-ChildItem -Path $qtRoot -Filter $name -Recurse -ErrorAction SilentlyContinue |
+              Where-Object { $_.FullName -match "\\lib\\cmake\\[^\\]+\\$([regex]::Escape($name))$" } |
+              Select-Object -First 1
+          }
 
-          if (-not $qtConfig) {
+          function Get-MissingQtConfigs {
+            $requiredConfigs | Where-Object { -not (Get-QtConfig $_) }
+          }
+
+          $missing = @(Get-MissingQtConfigs)
+          if ($missing.Count -gt 0) {
+            Write-Host "Cached Qt is incomplete or missing. Absent CMake packages: $($missing -join ', ')"
             Remove-Item -Recurse -Force $qtRoot -ErrorAction SilentlyContinue
             New-Item -ItemType Directory -Force -Path $qtRoot | Out-Null
             python -m pip install --upgrade pip
@@ -161,9 +177,12 @@ jobs:
             Remove-Item -Force $archivePath -ErrorAction SilentlyContinue
           }
 
-          $qtConfig = Get-ChildItem -Path $qtRoot -Filter Qt6Config.cmake -Recurse |
-            Where-Object { $_.FullName -match '\\lib\\cmake\\Qt6\\Qt6Config\.cmake$' } |
-            Select-Object -First 1
+          $missing = @(Get-MissingQtConfigs)
+          if ($missing.Count -gt 0) {
+            throw "Qt install under $qtRoot is missing required CMake packages: $($missing -join ', ')."
+          }
+
+          $qtConfig = Get-QtConfig 'Qt6Config.cmake'
           if (-not $qtConfig) {
             throw "Qt6Config.cmake was not found under $qtRoot."
           }
