@@ -9,8 +9,8 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 关于本项目的讨论、建议：https://t.me/+bUUc3T1rwVZmNWE9
 
-> 当前开发版本：**2.8.1E7**。相对 `v2.8.1E6` 的变化见
-> [2.8.1E7 更新说明](docs/ReleaseNotes-2.8.1E7.md)，完整历史见
+> 当前开发版本：**2.8.1E8**。相对 `v2.8.1E7` 的变化见
+> [2.8.1E8 更新说明](docs/ReleaseNotes-2.8.1E8.md)，完整历史见
 > [ChangeLog.txt](ChangeLog.txt)。
 
 ## 增强功能

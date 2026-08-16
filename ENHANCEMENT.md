@@ -145,6 +145,27 @@
 
 使用说明与安全边界见 `docs/AdvancedRegexWorkbench.md`。
 
+### Vertical / Horizontal Layout Conversion
+
+入口:
+
+- `Enhancement > Analyze Vertical Layout...`
+- `Enhancement > Convert Vertical Book to Horizontal...`
+- `Enhancement > Convert Horizontal Book to Vertical...`
+- Automate 命令: `AnalyzeVerticalLayout`
+- Automate 命令: `ConvertVerticalToHorizontal`
+- Automate 命令: `ConvertHorizontalToVertical`
+
+职责:
+
+- 逐页分析可重排 EPUB 的实际书写方向、关联 CSS、固定版式和转换风险。
+- 经验证的 `.vrtl/.hltr` 页面只切换根 class；其它模板使用可逆兼容覆盖，不改写共享样式表。
+- 整书转换可同步并精确恢复 `spine` 的 `page-progression-direction`；部分文件或混合固定版式不改全局翻页方向。
+- 固定版式、图片页、含文本 SVG、脚本绝对定位和高风险页默认跳过。
+- 写回前执行完整预检与不变量校验，成功后创建恢复 Checkpoint，再对每个变化资源写回一次。
+
+使用说明与安全边界见 `docs/VerticalLayoutConversion.md`。
+
 ## 测试要求
 
 - 至少验证 Debug 构建能通过 `cmake --build cmake-build-debug --target Sigil -j 4`。
@@ -155,4 +176,5 @@
 - 对 KFX 段落规范化类功能，必须覆盖正文候选、目录页跳过、版权/出版信息页人工确认、`height:0` spacer 移除、`height:1em` spacer 保留、章节锚点/插图/inline span 保留。
 - 对 BookLive 段落规范化类功能，必须覆盖两本真实 EBPAJ 样本、标题/署名不误分类、原 class/style 与布局 wrapper 保留、空行不删除、复杂嵌套 fail-closed、ruby/锚点/图片保持和幂等。
 - 对高级正则工作台，必须覆盖二级模式、递归终止、变量时序、Recipe schema、Dry Run/Apply 独立 restage、staged XML 校验、报告坐标门控、Cancel、每资源一次可撤销提交、Automate 接线和三语目录。
+- 对纵横排转换，必须覆盖页面方向与 PPD 分离、`.vrtl/.hltr` 只切换 class、兼容覆盖可逆、固定版跳过、不变量失败整批不写回、缺 UUID 的 Checkpoint、反向转换不扰动原本目标方向页面，以及 Automate 接线。
 - 对 Automate 命令，需确认命令列表可见且执行行为与菜单入口一致。

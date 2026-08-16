@@ -1,3 +1,22 @@
+Sigil-Enhanced-2.8.1.E8
+   Bug Fixes
+     - Fixed Book Browser reading-order drag so spine reordering no longer depends on stale TreeView selection handling.
+     - Avoided rewriting HTML and other text resources during Find/Replace when the replacement text is unchanged, including Python function replacements.
+     - Made recovery checkpoints succeed on EPUBs that lack a usable unique-identifier by preparing a UUID in an isolated snapshot and applying it as one undoable OPF edit only after the checkpoint commits.
+     - Prevented cumulative drift when converting the same book between vertical and horizontal layouts more than once, and refused to overwrite page-progression or class state that the user had edited after the last conversion.
+     - Fixed TOC multi-selection move-up/move-down to treat selected entries as a contiguous block, and fixed a crash when moving TOC entries right because QPersistentIndex was not updated.
+     - Added the missing translations in the Resize Image dialog.
+
+   New Features
+     - Added built-in vertical/horizontal layout conversion: analyze writing direction per page, convert vertical-rl books to horizontal-tb or the reverse, skip fixed-layout and high-risk pages, validate invariants before writing, create a recovery Checkpoint, and keep per-resource undo.
+     - For verified DPFJ/EBPAJ .vrtl/.hltr pages, conversion only switches the page root class; other templates receive a reversible compatibility overlay without rewriting shared stylesheets.
+     - Whole-book conversion can restore the exact previous spine page-progression-direction, including the absent/default/ltr/rtl states, and records conversion provenance so reverse conversion does not disturb pages that were already in the target direction.
+     - Image adjust/preview tabs now show the current file size in KB and refresh that size after a successful save.
+
+   Build/Testing
+     - Merged late upstream Sigil TOC selection, ImageTab, and Resize Image i18n fixes.
+     - Added CTest coverage for layout analysis, profile detection, stylesheet resolution, CSS transforms, conversion invariants, converter menu/Automate contracts, checkpoint UUID preparation, and Book Browser reading-order drag.
+
 Sigil-Enhanced-2.8.1.E7
    Bug Fixes
      - Fixed fresh Windows and macOS package builds by exporting the generated bundled PCRE2 header and removing a stale unresolved Plus dry-run constructor reference.
