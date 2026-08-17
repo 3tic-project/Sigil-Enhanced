@@ -64,6 +64,7 @@ public:
     void SetKeepLastTab(bool keep);
     bool KeepLastTab() const;
     bool CanMoveTab(int index) const;
+    void SetActiveAppearance(bool active);
 
 signals:
     void TabBarClicked();

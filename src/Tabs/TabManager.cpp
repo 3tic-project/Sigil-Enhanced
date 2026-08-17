@@ -26,6 +26,7 @@
 #include <QVBoxLayout>
 #include <QSplitter>
 #include <QLabel>
+#include <QPair>
 #include <QStackedLayout>
 #include "BookManipulation/CleanSource.h"
 #include "ResourceObjects/Resource.h"
@@ -54,6 +55,7 @@
 #include "Tabs/TabGroup.h"
 #include "Tabs/WellFormedContent.h"
 #include "Misc/SettingsStoreExtend.h"
+#include "Misc/SettingsStore.h"
 
 
 TabManager::TabManager(QWidget *parent)
@@ -85,6 +87,9 @@ TabManager::TabManager(QWidget *parent)
     layout->addWidget(m_Splitter, 1);
 
     ConnectGroup(m_Primary);
+    connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
+            this, SLOT(OnApplicationFocusChanged(QWidget *, QWidget *)));
+    UpdateGroupAppearance();
 }
 
 
@@ -191,12 +196,44 @@ void TabManager::ReloadTabDataForResources(const QList<Resource *> &resources)
 void TabManager::ReopenTabs()
 {
     ContentTab *currentTab = GetCurrentContentTab();
-    QList<Resource *> resources = GetTabResources();
-    foreach(Resource *resource, resources) {
-        CloseTabForResource(resource, true);
-        OpenResource(resource, -1, -1, QString());
+    Resource *current_resource = currentTab ? currentTab->GetLoadedResource() : 0;
+    TabGroup *current_group = currentTab ? GroupContaining(currentTab) : m_Primary;
+
+    QList<QPair<Resource *, bool> > items;
+    foreach(ContentTab *tab, m_Primary->Tabs()) {
+        if (tab && tab->GetLoadedResource()) {
+            items.append(qMakePair(tab->GetLoadedResource(), false));
+        }
     }
-    OpenResource(currentTab->GetLoadedResource(), -1, -1, QString());
+    if (m_Secondary) {
+        foreach(ContentTab *tab, m_Secondary->Tabs()) {
+            if (tab && tab->GetLoadedResource()) {
+                items.append(qMakePair(tab->GetLoadedResource(), true));
+            }
+        }
+    }
+
+    for (const auto &item : items) {
+        CloseTabForResource(item.first, true);
+    }
+
+    for (const auto &item : items) {
+        if (!item.first) {
+            continue;
+        }
+        TabGroup *target = (item.second && m_Secondary) ? m_Secondary : m_Primary;
+        ContentTab *new_tab = CreateTabForResource(item.first, -1, -1, QString(), QUrl(), false, target);
+        if (new_tab) {
+            AddNewContentTab(new_tab, false, target);
+        }
+    }
+
+    if (current_resource) {
+        SwitchedToExistingTab(current_resource, -1, -1, QString(), QUrl());
+        if (current_group) {
+            SetActiveGroup(current_group);
+        }
+    }
 }
 
 void TabManager::PerformThemeChangeRefresh()
@@ -311,7 +348,7 @@ void TabManager::OpenWithDisposition(Resource *resource,
             m_newTab = new_tab;
         }
         AddNewContentTab(new_tab, precede_current_tab, target);
-        m_Active = target;
+        SetActiveGroup(target);
         emit ShowStatusMessageRequest("");
     } else {
         QString message = tr("Cannot edit file") + ": " + resource->ShortPathName();
@@ -363,7 +400,7 @@ void TabManager::MakeCentralTab(ContentTab *tab)
     if (!group) {
         return;
     }
-    m_Active = group;
+    SetActiveGroup(group);
     group->ActivateTab(tab);
 }
 
@@ -384,7 +421,11 @@ void TabManager::MakeCentralTab(ContentTab *tab)
 void TabManager::EmitTabChanged(int new_index)
 {
     Q_UNUSED(new_index);
-    ContentTab *current_tab = m_Primary->CurrentTab();
+    TabGroup *from = qobject_cast<TabGroup *>(sender());
+    if (from && from != m_Active) {
+        return;
+    }
+    ContentTab *current_tab = GetCurrentContentTab();
     // the result of the qobject_cast can be NULL and that is okay
     if (m_LastContentTab != current_tab) {
         // qDebug() << "Emitting TabChanged Signal";
@@ -556,7 +597,7 @@ bool TabManager::SwitchedToExistingTab(const Resource *resource,
 
     TabGroup *group = GroupContaining(tab);
     if (group) {
-        m_Active = group;
+        SetActiveGroup(group);
         group->ActivateTab(tab);
     }
     ApplyExistingTabLocation(tab, line_to_scroll_to, position_to_scroll_to,
@@ -732,6 +773,7 @@ void TabManager::SplitEditorDown()
     UpdateEmptyState();
     const int total = qMax(m_Splitter->height(), 200);
     m_Splitter->setSizes(QList<int>() << (total / 2) << (total / 2));
+    UpdateGroupAppearance();
     emit SplitChanged();
 }
 
@@ -741,6 +783,9 @@ void TabManager::JoinEditorGroups()
         return;
     }
 
+    ContentTab *keep = GetCurrentContentTab();
+
+    disconnect(m_Primary, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
     disconnect(m_Secondary, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
     const QList<ContentTab *> moving = m_Secondary->Tabs();
     foreach(ContentTab *tab, moving) {
@@ -750,10 +795,14 @@ void TabManager::JoinEditorGroups()
         m_Secondary->TakeTab(tab);
         m_Primary->AddContentTab(tab, false);
     }
+    connect(m_Primary, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
     connect(m_Secondary, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
 
     HideSecondary();
-    m_Active = m_Primary;
+    SetActiveGroup(m_Primary);
+    if (keep && GroupContaining(keep) == m_Primary) {
+        m_Primary->ActivateTab(keep);
+    }
     emit SplitChanged();
     emit TabCountChanged();
 }
@@ -780,6 +829,7 @@ void TabManager::EnsureSecondary()
     m_EmptyLabel = new QLabel(tr("Open a file from Book Browser"), m_SecondaryPane);
     m_EmptyLabel->setAlignment(Qt::AlignCenter);
     m_EmptyLabel->setWordWrap(true);
+    m_EmptyLabel->setFocusPolicy(Qt::ClickFocus);
     m_Secondary->setMinimumHeight(80);
     m_SecondaryPane->setMinimumHeight(80);
 
@@ -929,10 +979,7 @@ void TabManager::ApplyExistingTabLocation(ContentTab *tab,
 
 void TabManager::OnGroupActivated()
 {
-    TabGroup *group = qobject_cast<TabGroup *>(sender());
-    if (group) {
-        m_Active = group;
-    }
+    SetActiveGroup(qobject_cast<TabGroup *>(sender()));
     SetFocusInTab();
 }
 
@@ -1001,7 +1048,7 @@ bool TabManager::MoveTabToOtherGroup(ContentTab *tab)
     TabGroup *dest = (source == m_Primary) ? m_Secondary : m_Primary;
     source->TakeTab(tab);
     dest->AddContentTab(tab, false);
-    m_Active = dest;
+    SetActiveGroup(dest);
     dest->ActivateTab(tab);
     UpdateEmptyState();
     emit TabCountChanged();
@@ -1015,4 +1062,103 @@ void TabManager::OnMoveToOtherGroupRequested(int tab_index)
         return;
     }
     MoveTabToOtherGroup(group->TabAt(tab_index));
+}
+
+void TabManager::SetActiveGroup(TabGroup *group)
+{
+    if (!group || group == m_Active) {
+        return;
+    }
+    ContentTab *old_tab = GetCurrentContentTab();
+    m_Active = group;
+    UpdateGroupAppearance();
+    ContentTab *new_tab = GetCurrentContentTab();
+    if (old_tab != new_tab) {
+        m_LastContentTab = new_tab;
+        emit TabChanged(old_tab, new_tab);
+        emit UpdatePreviewAfterExistingTabSwitch();
+    }
+}
+
+TabGroup *TabManager::GroupFromWidget(QWidget *widget) const
+{
+    while (widget) {
+        if (widget == m_Primary) {
+            return m_Primary;
+        }
+        if (m_Secondary && (widget == m_Secondary || widget == m_SecondaryPane || widget == m_EmptyLabel)) {
+            return m_Secondary;
+        }
+        widget = widget->parentWidget();
+    }
+    return 0;
+}
+
+void TabManager::UpdateGroupAppearance()
+{
+    m_Primary->SetActiveAppearance(m_Active == m_Primary);
+    if (m_Secondary) {
+        m_Secondary->SetActiveAppearance(m_Active == m_Secondary);
+    }
+}
+
+void TabManager::OnApplicationFocusChanged(QWidget *old_widget, QWidget *now)
+{
+    Q_UNUSED(old_widget);
+    TabGroup *group = GroupFromWidget(now);
+    if (group) {
+        SetActiveGroup(group);
+    }
+}
+
+void TabManager::FocusUpperEditorGroup()
+{
+    SetActiveGroup(m_Primary);
+    SetFocusInTab();
+}
+
+void TabManager::FocusLowerEditorGroup()
+{
+    if (!IsSplit()) {
+        return;
+    }
+    EnsureSecondary();
+    SetActiveGroup(m_Secondary);
+    if (ContentTab *tab = m_Secondary->CurrentTab()) {
+        tab->setFocus();
+    } else if (m_EmptyLabel) {
+        m_EmptyLabel->setFocus();
+    }
+}
+
+void TabManager::SaveLayoutSettings()
+{
+    SettingsStore settings;
+    settings.beginGroup(QStringLiteral("editorGroups"));
+    settings.setValue(QStringLiteral("enabled"), IsSplit());
+    if (IsSplit()) {
+        settings.setValue(QStringLiteral("splitterState"), m_Splitter->saveState());
+    }
+    settings.setValue(QStringLiteral("activeGroup"),
+                      (m_Active == m_Secondary) ? QStringLiteral("secondary")
+                                                : QStringLiteral("primary"));
+    settings.endGroup();
+}
+
+void TabManager::RestoreLayoutSettings()
+{
+    SettingsStore settings;
+    settings.beginGroup(QStringLiteral("editorGroups"));
+    const bool enabled = settings.value(QStringLiteral("enabled"), false).toBool();
+    const QByteArray state = settings.value(QStringLiteral("splitterState")).toByteArray();
+    settings.endGroup();
+
+    if (enabled) {
+        SplitEditorDown();
+        if (!state.isEmpty()) {
+            m_Splitter->restoreState(state);
+        }
+    }
+    // Files are not restored. Keep the first opened HTML in the primary group.
+    SetActiveGroup(m_Primary);
 }

@@ -222,6 +222,17 @@ bool TabGroup::CanMoveTab(int index) const
     return true;
 }
 
+void TabGroup::SetActiveAppearance(bool active)
+{
+    if (active) {
+        tabBar()->setStyleSheet(QString());
+    } else {
+        tabBar()->setStyleSheet(QStringLiteral(
+            "QTabBar::tab { color: palette(mid); }"
+            "QTabBar::tab:selected { color: palette(window-text); }"));
+    }
+}
+
 void TabGroup::tabInserted(int index)
 {
     QTabWidget::tabInserted(index);

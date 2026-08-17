@@ -41,8 +41,8 @@ class QWidget;
 /**
  * Manages the tabs shown in the main UI.
  * Handles open resource requests, tab switching, closing etc.
- * Presentation lives in TabGroup; this class owns the open-resource
- * routing. V1 has a single primary group.
+ * Presentation lives in TabGroup; this class owns one or two groups
+ * and the open-resource routing.
  */
 class TabManager : public QWidget
 {
@@ -119,6 +119,10 @@ public:
                                   const QUrl &fragment = QUrl());
     bool MoveTabToOtherGroup(ContentTab *tab);
     bool CanMoveTabToOtherGroup(const ContentTab *tab) const;
+    void FocusUpperEditorGroup();
+    void FocusLowerEditorGroup();
+    void SaveLayoutSettings();
+    void RestoreLayoutSettings();
 
 public slots:
 
@@ -249,6 +253,7 @@ private slots:
     void OnCloseOtherTabsRequested(int tab_index);
     void OnTabInserted();
     void OnMoveToOtherGroupRequested(int tab_index);
+    void OnApplicationFocusChanged(QWidget *old_widget, QWidget *now);
 
 private:
 
@@ -312,6 +317,9 @@ private:
      */
     bool AddNewContentTab(ContentTab *new_tab, bool precede_current_tab, TabGroup *target = 0);
     TabGroup *ResolveTargetGroup(OpenDisposition disposition);
+    void SetActiveGroup(TabGroup *group);
+    TabGroup *GroupFromWidget(QWidget *widget) const;
+    void UpdateGroupAppearance();
     void OpenWithDisposition(Resource *resource,
                              int line_to_scroll_to,
                              int position_to_scroll_to,
