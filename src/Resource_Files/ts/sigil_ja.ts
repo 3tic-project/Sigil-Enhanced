@@ -2139,6 +2139,10 @@ There always has to be at least one.</source>
         <translation>既存のファイルを追加...</translation>
     </message>
     <message>
+        <source>Open in Other Editor Group</source>
+        <translation>他のエディターグループで開く</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="2208"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="2209"/>
         <source>Add Copy</source>
@@ -6860,14 +6864,6 @@ Do you want to save your changes?</source>
         <location filename="../../MiscEditors/IndexEditorModel.cpp" line="349"/>
         <source>Unable to create file %1</source>
         <translation>ファイル %1 を作成できません</translation>
-    </message>
-</context>
-<context>
-    <name>Inspector</name>
-    <message>
-        <location filename="../../Dialogs/Inspector.cpp" line="57"/>
-        <source>Inspect Page or Element</source>
-        <translation>ページまたは要素の検査</translation>
     </message>
 </context>
 <context>
@@ -13612,6 +13608,30 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>ブックブラウザーにフォーカス</translation>
     </message>
     <message>
+        <source>Developer Tools</source>
+        <translation>デベロッパーツール</translation>
+    </message>
+    <message>
+        <source>Editor Layout</source>
+        <translation>エディターレイアウト</translation>
+    </message>
+    <message>
+        <source>Split Editor Down</source>
+        <translation>エディターを下に分割</translation>
+    </message>
+    <message>
+        <source>Join Editor Groups</source>
+        <translation>エディターグループを結合</translation>
+    </message>
+    <message>
+        <source>Focus Upper Editor Group</source>
+        <translation>上のエディターグループにフォーカス</translation>
+    </message>
+    <message>
+        <source>Focus Lower Editor Group</source>
+        <translation>下のエディターグループにフォーカス</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/main.ui" line="3439"/>
         <source>Focus on Preview</source>
         <translation>プレビューにフォーカス</translation>
@@ -20137,6 +20157,22 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <translation>オリジナルモード</translation>
     </message>
     <message>
+        <source>Open in Other Editor Group:</source>
+        <translation>他のエディターグループで開く:</translation>
+    </message>
+    <message>
+        <source>Inactive group</source>
+        <translation>非アクティブなグループ</translation>
+    </message>
+    <message>
+        <source>Always lower group</source>
+        <translation>常に下のグループ</translation>
+    </message>
+    <message>
+        <source>Always upper group</source>
+        <translation>常に上のグループ</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="131"/>
         <source>XHTML Format</source>
         <translation>XHTML 形式</translation>
@@ -20805,6 +20841,26 @@ Entities can be separated by lines, commas, or spaces.</source>
         <location filename="../../MainUI/PreviewWindow.cpp" line="273"/>
         <source>Inspect Page</source>
         <translation>ページの検査</translation>
+    </message>
+    <message>
+        <source>Detach Developer Tools</source>
+        <translation>デベロッパーツールを別ウィンドウに分離</translation>
+    </message>
+    <message>
+        <source>Dock Developer Tools</source>
+        <translation>デベロッパーツールをプレビューに戻す</translation>
+    </message>
+    <message>
+        <source>Developer Tools</source>
+        <translation>デベロッパーツール</translation>
+    </message>
+    <message>
+        <source>Inspect Element</source>
+        <translation>要素を検査</translation>
+    </message>
+    <message>
+        <source>Copy Link</source>
+        <translation>リンクをコピー</translation>
     </message>
     <message>
         <location filename="../../MainUI/PreviewWindow.cpp" line="279"/>
@@ -24791,6 +24847,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <source>Close Other Tabs</source>
         <translation>他のタブを閉じる</translation>
     </message>
+    <message>
+        <source>Move Editor to Other Group</source>
+        <translation>エディターを他のグループへ移動</translation>
+    </message>
 </context>
 <context>
     <name>TabManager</name>
@@ -24798,6 +24858,18 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <location filename="../../Tabs/TabManager.cpp" line="276"/>
         <source>Cannot edit file</source>
         <translation>ファイルを編集できません</translation>
+    </message>
+    <message>
+        <source>Open a file from Book Browser, or drop an editor tab here</source>
+        <translation>ブックブラウザーからファイルを開くか、エディタータブをここにドロップ</translation>
+    </message>
+    <message>
+        <source>Close This Editor Group</source>
+        <translation>このエディターグループを閉じる</translation>
+    </message>
+    <message>
+        <source>%1 is already open in the other editor group.</source>
+        <translation>%1 は他のエディターグループで既に開いています。</translation>
     </message>
 </context>
 <context>

@@ -1,6 +1,6 @@
 /************************************************************************
  **
- **  Copyright (C) 2019-2020 Kevin B. Hendricks, Stratford Ontario Canada
+ **  Copyright (C) 2019-2026 Kevin B. Hendricks, Stratford Ontario Canada
  **
  **  This file is part of Sigil.
  **
@@ -22,9 +22,7 @@
 #ifndef INSPECTOR_H
 #define INSPECTOR_H
 
-#include <QDialog>
-#include <QEvent>
-#include <QCloseEvent>
+#include <QWidget>
 #include <QSize>
 #include <QVBoxLayout>
 #include <QtWebEngineWidgets>
@@ -34,22 +32,18 @@
 
 class QWebEnginePage;
 
-class Inspector : public QDialog
+class Inspector : public QWidget
 {
     Q_OBJECT
 
 public:
-    Inspector(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
+    Inspector(QWidget *parent = nullptr);
     ~Inspector();
-
-    void closeEvent(QCloseEvent* event);
 
     bool IsLoadingFinished() { return m_LoadingFinished; }
     bool WasLoadOkay() { return m_LoadOkay; }
 
-    QSize sizeHint();
-    void  SaveSettings();
-    void  LoadSettings();
+    QSize sizeHint() const override;
 
     void SetZoomFactor(float factor);
     void SetCurrentZoomFactor(float factor);
@@ -58,7 +52,7 @@ public:
     void ZoomByStep(bool zoom_in);
 
 public slots:
-    void InspectPageofView(QWebEngineView * view);
+    void InspectPageofView(QWebEngineView *view);
     void StopInspection();
 
     void ZoomIn();
@@ -70,17 +64,18 @@ protected slots:
     void LoadingStarted();
 
 private:
-    QVBoxLayout* m_Layout;
-    QWebEngineView* m_inspectView;
-    QWebEngineView* m_view;
+    void LoadSettings();
+
+    QVBoxLayout *m_Layout;
+    QWebEngineView *m_inspectView;
+    QWebEngineView *m_view;
     bool m_LoadingFinished;
     bool m_LoadOkay;
 
     float m_CurrentZoomFactor;
-    QShortcut * m_ZoomIn;
-    QShortcut * m_ZoomOut;
-    QShortcut * m_ZoomReset;
-
+    QShortcut *m_ZoomIn;
+    QShortcut *m_ZoomOut;
+    QShortcut *m_ZoomReset;
 };
 
 #endif // INSPECTOR_H

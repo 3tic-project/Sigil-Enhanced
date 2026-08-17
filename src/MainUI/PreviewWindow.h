@@ -45,6 +45,7 @@ class WebViewPrinter;
 class QToolButton;
 class QWidget;
 class QFocusFrame;
+class QSplitter;
 
 class PreviewWindow : public QDockWidget
 {
@@ -62,6 +63,11 @@ public:
     void setMathJaxURL(QString mathjaxurl) { m_mathjaxurl = mathjaxurl; };
     void setUserCSSURLs(const QStringList&  usercssurls);
     void setCacheClearNeeded();
+    bool IsDevToolsVisible() const;
+    void SetDevToolsVisible(bool visible);
+    bool IsDevToolsDetached() const;
+    QAction *DetachAction() const;
+    void SaveLayoutSettings();
 
 public slots:
     bool UpdatePage(QString filename, QString text, QList<ElementIndex> location);
@@ -72,10 +78,11 @@ public slots:
     void LinkClicked(const QUrl &url);
     void EmitGoToPreviewLocationRequest();
     void InspectPreviewPage();
+    void SetDevToolsDetached(bool detached);
     void SelectAllPreview();
     void CopyPreview();
     void ReloadPreview();
-    void InspectorClosed(int);
+    void ShowPreviewContextMenu(const QPoint &pos);
     void setProgress(int);
     
     /**
@@ -95,6 +102,8 @@ signals:
     void ZoomFactorChanged(float factor);
     void GoToPreviewLocationRequest();
     void RequestPreviewReload();
+    void DevToolsVisibilityChanged(bool visible);
+    void DevToolsDetachedChanged(bool detached);
 
     /**
      * Emitted whenever Preview wants to open an URL.
@@ -127,23 +136,32 @@ private:
     void LoadSettings();
     void ConnectSignalsToSlots();
     void UpdateWindowTitle();
+    void ApplyDevToolsSplitter();
+    void CollapseDevToolsSplitter();
+    void EnsureDevToolsWindow();
+    void PlaceDevTools();
+    void UpdateDetachAction();
     bool fixup_fullscreen_svg_images(const QString &text);
     
     const QString titleText();
 
     QWidget *m_MainWidget;
     QToolButton * m_binspect;
+    QToolButton * m_bdetach;
     QToolButton * m_bselect;
     QToolButton * m_bcopy;
     QToolButton * m_breload;
     QToolButton * m_bcycle;
     QToolButton * m_bprint;
     QFrame *m_wrapper;
+    QSplitter *m_Splitter;
     QVBoxLayout *m_Layout;
     QHBoxLayout *m_buttons;
     OverlayHelperWidget *m_overlayBase;
 
     ViewPreview *m_Preview;
+    QWidget *m_DevToolsPane;
+    QWidget *m_DevToolsWindow;
     Inspector *m_Inspector;
     QProgressBar* m_progress;
 
@@ -154,6 +172,7 @@ private:
     QStringList m_usercssurls;
 
     QAction * m_inspectAction;
+    QAction * m_detachAction;
     QAction * m_selectAction;
     QAction * m_copyAction;
     QAction * m_reloadAction;
@@ -170,6 +189,10 @@ private:
     WebViewPrinter *m_WebViewPrinter;
     bool m_use_focus_highlight;
     bool m_cache_clear_needed = false;
+    bool m_restore_devtools_visible = false;
+    bool m_devToolsDetached = false;
+    QByteArray m_devToolsSplitterState;
+    QByteArray m_devToolsWindowGeometry;
 
 };
 

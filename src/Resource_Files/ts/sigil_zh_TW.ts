@@ -2138,6 +2138,10 @@ There always has to be at least one.</source>
         <translation>增加已存在的檔案...</translation>
     </message>
     <message>
+        <source>Open in Other Editor Group</source>
+        <translation>在另一個編輯器群組中開啟</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="2208"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="2209"/>
         <source>Add Copy</source>
@@ -6855,14 +6859,6 @@ Do you want to save your changes?</source>
         <location filename="../../MiscEditors/IndexEditorModel.cpp" line="349"/>
         <source>Unable to create file %1</source>
         <translation>無法建立檔案 %1</translation>
-    </message>
-</context>
-<context>
-    <name>Inspector</name>
-    <message>
-        <location filename="../../Dialogs/Inspector.cpp" line="57"/>
-        <source>Inspect Page or Element</source>
-        <translation>檢查頁面或元素</translation>
     </message>
 </context>
 <context>
@@ -13607,6 +13603,30 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>聚焦書籍瀏覽器</translation>
     </message>
     <message>
+        <source>Developer Tools</source>
+        <translation>開發者工具</translation>
+    </message>
+    <message>
+        <source>Editor Layout</source>
+        <translation>編輯器配置</translation>
+    </message>
+    <message>
+        <source>Split Editor Down</source>
+        <translation>向下分割編輯器</translation>
+    </message>
+    <message>
+        <source>Join Editor Groups</source>
+        <translation>合併編輯器群組</translation>
+    </message>
+    <message>
+        <source>Focus Upper Editor Group</source>
+        <translation>聚焦上方編輯器群組</translation>
+    </message>
+    <message>
+        <source>Focus Lower Editor Group</source>
+        <translation>聚焦下方編輯器群組</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/main.ui" line="3439"/>
         <source>Focus on Preview</source>
         <translation>聚焦預覽</translation>
@@ -20133,6 +20153,22 @@ EPUB %2 / 語言 [%3] / 閱讀方向 %4
         <translation>原始模式</translation>
     </message>
     <message>
+        <source>Open in Other Editor Group:</source>
+        <translation>在另一個編輯器群組中開啟：</translation>
+    </message>
+    <message>
+        <source>Inactive group</source>
+        <translation>非使用中群組</translation>
+    </message>
+    <message>
+        <source>Always lower group</source>
+        <translation>一律使用下方群組</translation>
+    </message>
+    <message>
+        <source>Always upper group</source>
+        <translation>一律使用上方群組</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="131"/>
         <source>XHTML Format</source>
         <translation>XHTML 格式</translation>
@@ -20800,6 +20836,26 @@ Entities can be separated by lines, commas, or spaces.</source>
         <location filename="../../MainUI/PreviewWindow.cpp" line="273"/>
         <source>Inspect Page</source>
         <translation>檢查頁面</translation>
+    </message>
+    <message>
+        <source>Detach Developer Tools</source>
+        <translation>將開發者工具拆成獨立視窗</translation>
+    </message>
+    <message>
+        <source>Dock Developer Tools</source>
+        <translation>將開發者工具停靠回預覽</translation>
+    </message>
+    <message>
+        <source>Developer Tools</source>
+        <translation>開發者工具</translation>
+    </message>
+    <message>
+        <source>Inspect Element</source>
+        <translation>檢查元素</translation>
+    </message>
+    <message>
+        <source>Copy Link</source>
+        <translation>複製連結</translation>
     </message>
     <message>
         <location filename="../../MainUI/PreviewWindow.cpp" line="279"/>
@@ -24776,6 +24832,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <source>Close Other Tabs</source>
         <translation>關閉其他分頁</translation>
     </message>
+    <message>
+        <source>Move Editor to Other Group</source>
+        <translation>將編輯器移到另一群組</translation>
+    </message>
 </context>
 <context>
     <name>TabManager</name>
@@ -24783,6 +24843,18 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <location filename="../../Tabs/TabManager.cpp" line="276"/>
         <source>Cannot edit file</source>
         <translation>無法編輯檔案</translation>
+    </message>
+    <message>
+        <source>Open a file from Book Browser, or drop an editor tab here</source>
+        <translation>從書籍瀏覽器開啟檔案，或將編輯器分頁拖到這裡</translation>
+    </message>
+    <message>
+        <source>Close This Editor Group</source>
+        <translation>關閉此編輯器群組</translation>
+    </message>
+    <message>
+        <source>%1 is already open in the other editor group.</source>
+        <translation>%1 已在另一個編輯器群組中開啟。</translation>
     </message>
 </context>
 <context>

@@ -26,33 +26,58 @@
 #ifndef TABBAR_H
 #define TABBAR_H
 
+#include <QtCore/QByteArray>
+#include <QtCore/QPoint>
 #include <QtWidgets/QTabBar>
 
 class QContextMenuEvent;
+class QDragEnterEvent;
+class QDragMoveEvent;
+class QDropEvent;
+class QMimeData;
+class QWidget;
 
 class TabBar : public QTabBar
 {
     Q_OBJECT
 
 public:
+    static const char EditorTabMimeType[];
+
     TabBar(QWidget *parent = 0);
+    void SetMoveLastTabAllowed(bool allowed);
+
+    static QByteArray EncodeTab(QWidget *tab);
+    static QWidget *DecodeTab(const QMimeData *mime);
 
 signals:
     void TabBarClicked();
     void TabBarDoubleClicked();
     void CloseOtherTabsRequest(int tab_index);
+    void MoveToOtherGroupRequest(int tab_index);
+    void TabDropRequest(QWidget *tab, int insert_index);
 
 protected:
     void mouseDoubleClickEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dragMoveEvent(QDragMoveEvent *event);
+    void dropEvent(QDropEvent *event);
 
 private slots:
     void EmitCloseOtherTabs();
+    void EmitMoveToOtherGroup();
 
 private:
     void ShowContextMenu(QMouseEvent *event, int tab_index);
+    void StartTabDrag(int index);
+    int InsertIndexAt(const QPoint &pos) const;
 
     int m_TabIndex;
+    int m_PressIndex;
+    QPoint m_PressPos;
+    bool m_MoveLastTabAllowed;
 };
 
 #endif // TABBAR_H

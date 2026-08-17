@@ -1,6 +1,6 @@
 /************************************************************************
  **
- **  Copyright (C) 2019-2025 Kevin B. Hendricks, Stratford Ontario Canada
+ **  Copyright (C) 2019-2026 Kevin B. Hendricks, Stratford Ontario Canada
  **
  **  This file is part of Sigil.
  **
@@ -19,31 +19,24 @@
  **
  *************************************************************************/
 
-#include <QByteArray>
 #include <QKeySequence>
 #include <QtWebEngineWidgets>
 #include <QtWebEngineCore>
 #include <QWebEngineView>
 #include <QWebEnginePage>
-#include <QWebEngineSettings>
-#include <QWebEngineProfile>
-#include <QApplication>
-#include <QDir>
 
 #include "Misc/WebProfileMgr.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "Dialogs/Inspector.h"
 
-static const QString SETTINGS_GROUP = "inspect_dialog";
-
 const float ZOOM_STEP               = 0.1f;
 const float ZOOM_MIN                = 0.09f;
 const float ZOOM_MAX                = 5.0f;
 const float ZOOM_NORMAL             = 1.0f;
 
-Inspector::Inspector(QWidget *parent, Qt::WindowFlags flags) :
-    QDialog(parent, flags),
+Inspector::Inspector(QWidget *parent) :
+    QWidget(parent),
     m_Layout(new QVBoxLayout(this)),
     m_view(nullptr),
     m_LoadingFinished(false),
@@ -54,11 +47,14 @@ Inspector::Inspector(QWidget *parent, Qt::WindowFlags flags) :
 {
     m_inspectView = new QWebEngineView(WebProfileMgr::instance().GetInspectorProfile(), this);
     setAttribute(Qt::WA_DeleteOnClose, false);
-    setWindowTitle(tr("Inspect Page or Element"));
-    setMinimumSize(QSize(200, 200));
-    m_Layout->addWidget(m_inspectView);
+    setMinimumSize(QSize(200, 80));
+
+    m_Layout->setContentsMargins(0, 0, 0, 0);
+    m_Layout->setSpacing(0);
+    m_Layout->addWidget(m_inspectView, 1);
     // QtWebEngine WebInspector needs to run javascript in MainWorld
     // See WebProfileMgr for profile settings
+    // Toggle visibility from Preview's inspect button; no extra title bar.
 
     LoadSettings();
     connect(m_inspectView->page(), SIGNAL(loadFinished(bool)), this, SLOT(UpdateFinishedState(bool)));
@@ -67,20 +63,21 @@ Inspector::Inspector(QWidget *parent, Qt::WindowFlags flags) :
     connect(m_ZoomOut,             SIGNAL(activated()),        this, SLOT(ZoomOut()));
     connect(m_ZoomReset,           SIGNAL(activated()),        this, SLOT(ZoomReset()));
 }
-       
+
 
 Inspector::~Inspector()
 {
     if (m_inspectView) {
         m_inspectView->close();
-        m_inspectView->page()->setInspectedPage(nullptr);
+        if (m_inspectView->page()) {
+            m_inspectView->page()->setInspectedPage(nullptr);
+        }
         m_view = nullptr;
         delete m_inspectView;
         m_inspectView = nullptr;
     }
 }
 
-// Start of Zoom Related Routines
 void Inspector::SetZoomFactor(float factor)
 {
     if (factor > ZOOM_MAX) factor = ZOOM_MAX;
@@ -100,7 +97,9 @@ float Inspector::GetZoomFactor() const              { return m_CurrentZoomFactor
 
 void Inspector::Zoom()
 {
-    m_inspectView->setZoomFactor(m_CurrentZoomFactor);
+    if (m_inspectView) {
+        m_inspectView->setZoomFactor(m_CurrentZoomFactor);
+    }
 }
 
 void Inspector::ZoomByStep(bool zoom_in)
@@ -116,8 +115,6 @@ void Inspector::ZoomByStep(bool zoom_in)
         SetZoomFactor(rounded_zoom_factor);
     }
 }
-// End of Zoom Related Routines
-
 
 void Inspector::LoadingStarted()
 {
@@ -135,52 +132,27 @@ void Inspector::InspectPageofView(QWebEngineView* view)
 {
     m_view = view;
 
-    if (m_view) {
+    if (m_inspectView && m_inspectView->page() && m_view) {
         m_inspectView->page()->setInspectedPage(m_view->page());
     }
 }
 
 void Inspector::StopInspection()
 {
-    SaveSettings();
     m_view = nullptr;
-    m_inspectView->page()->setInspectedPage(nullptr);
+    if (m_inspectView && m_inspectView->page()) {
+        m_inspectView->page()->setInspectedPage(nullptr);
+    }
 }
 
-QSize Inspector::sizeHint()
+QSize Inspector::sizeHint() const
 {
-  return QSize(450,250);
-}
-
-void Inspector::closeEvent(QCloseEvent* event)
-{
-    StopInspection();
-    QDialog::closeEvent(event);
+    return QSize(450, 250);
 }
 
 void Inspector::LoadSettings()
 {
     SettingsStore settings;
-
-    // The zoom inspector setting is in the user preference group
     SetCurrentZoomFactor(settings.zoomInspector());
-
-    settings.beginGroup(SETTINGS_GROUP);
-    QByteArray geometry = settings.value("geometry").toByteArray();
-    if (!geometry.isNull()) {
-        restoreGeometry(geometry);
-    } else {
-        resize(sizeHint());
-    }
-    settings.endGroup();
-}
-
-void Inspector::SaveSettings()
-{
-    SettingsStore settings;
-    settings.beginGroup(SETTINGS_GROUP);
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    settings.setValue("geometry", saveGeometry());
-    QApplication::restoreOverrideCursor();
-    settings.endGroup();
+    Zoom();
 }

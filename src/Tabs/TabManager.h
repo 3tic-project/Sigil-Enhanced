@@ -25,22 +25,38 @@
 #define TABMANAGER_H
 
 #include <QtCore/QUrl>
-#include <QtWidgets/QTabWidget>
+#include <QtWidgets/QWidget>
 
 #include "MainUI/MainWindow.h"
 #include "Tabs/ContentTab.h"
 
 class Resource;
 class HTMLResource;
+class TabGroup;
 class WellFormedContent;
+class QSplitter;
+class QLabel;
+class QPushButton;
+class QWidget;
+class QEvent;
+class QMimeData;
+class QPoint;
 
 /**
  * Manages the tabs shown in the main UI.
  * Handles open resource requests, tab switching, closing etc.
+ * Presentation lives in TabGroup; this class owns one or two groups
+ * and the open-resource routing.
  */
-class TabManager : public QTabWidget
+class TabManager : public QWidget
 {
     Q_OBJECT
+
+public:
+    enum class OpenDisposition {
+        ActiveGroup,
+        OtherGroup
+    };
 
 public:
 
@@ -96,6 +112,22 @@ public:
      * Returns true if the OPF had to be closed.
      */
     bool CloseOPFTabIfOpen();
+
+    bool IsSplit() const;
+    void SplitEditorDown();
+    void JoinEditorGroups();
+    void OpenResourceInOtherGroup(Resource *resource,
+                                  int line_to_scroll_to = -1,
+                                  int position_to_scroll_to = -1,
+                                  const QString &caret_location_to_scroll_to = QString(),
+                                  const QUrl &fragment = QUrl());
+    bool MoveTabToOtherGroup(ContentTab *tab);
+    bool CanMoveTabToOtherGroup(const ContentTab *tab) const;
+    void FocusUpperEditorGroup();
+    void FocusLowerEditorGroup();
+    void SaveLayoutSettings();
+    void RestoreLayoutSettings();
+    bool eventFilter(QObject *object, QEvent *event);
 
 public slots:
 
@@ -188,9 +220,7 @@ signals:
     void OldTabRequest(QString content, HTMLResource *originating_resource);
 
     void ShowStatusMessageRequest(const QString &message, int duration = 5000);
-
-protected:
-    virtual void tabInserted(int index);
+    void SplitChanged();
 
 private slots:
 
@@ -223,6 +253,15 @@ private slots:
     void UpdateTabName(ContentTab *renamed_tab);
 
     void SetFocusInTab();
+    void OnGroupActivated();
+    void OnTabCloseRequested(int tab_index);
+    void OnCloseOtherTabsRequested(int tab_index);
+    void OnTabInserted();
+    void OnMoveToOtherGroupRequested(int tab_index);
+    void OnTabDropRequested(QWidget *tab_widget, int insert_index);
+    void OnApplicationFocusChanged(QWidget *old_widget, QWidget *now);
+    void CloseEmptySecondary();
+    void OnEmptyGroupContextMenu(const QPoint &pos);
 
 private:
 
@@ -271,7 +310,8 @@ private:
                                      int position_to_scroll_to,
                                      const QString &caret_location_to_scroll_to,
                                      const QUrl &fragment,
-                                     bool grab_focus = true);
+                                     bool grab_focus = true,
+                                     QWidget *tab_parent = 0);
 
     /**
      * Adds a new content tab to the displayed tabs.
@@ -283,16 +323,49 @@ private:
      * @param precede_current_tab Should the new tab precede the current one.
      * @return \c true if the tab was successfully added.
      */
-    bool AddNewContentTab(ContentTab *new_tab, bool precede_current_tab);
+    bool AddNewContentTab(ContentTab *new_tab, bool precede_current_tab, TabGroup *target = 0);
+    TabGroup *ResolveTargetGroup(OpenDisposition disposition);
+    void SetActiveGroup(TabGroup *group);
+    TabGroup *GroupFromWidget(QWidget *widget) const;
+    void UpdateGroupAppearance();
+    void OpenWithDisposition(Resource *resource,
+                             int line_to_scroll_to,
+                             int position_to_scroll_to,
+                             const QString &caret_location_to_scroll_to,
+                             const QUrl &fragment,
+                             bool precede_current_tab,
+                             OpenDisposition disposition);
+
+    void ConnectGroup(TabGroup *group);
+    void EnsureSecondary();
+    void HideSecondary();
+    void UpdateEmptyState();
+    TabGroup *ActiveGroup() const;
+    TabGroup *GroupContaining(const ContentTab *tab) const;
+    ContentTab *FindTab(const Resource *resource) const;
+    bool MoveTabToGroup(ContentTab *tab, TabGroup *dest, int dest_index);
+    bool AcceptsEditorTabDrop(const QMimeData *mime) const;
+    void CloseTabAt(TabGroup *group, int tab_index, bool force);
+    void CloseAllTabsExcept(ContentTab *keep);
+    void ApplyExistingTabLocation(ContentTab *tab,
+                                  int line_to_scroll_to,
+                                  int position_to_scroll_to,
+                                  const QString &caret_location_to_scroll_to,
+                                  const QUrl &fragment);
 
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES
     ///////////////////////////////
 
-    /**
-     * Stores a reference to the tab used before the current one.
-     * Needed for the TabChanged signal.
-     */
+    QSplitter *m_Splitter;
+    TabGroup *m_Primary;
+    QWidget *m_SecondaryPane;
+    TabGroup *m_Secondary;
+    QWidget *m_EmptyPane;
+    QLabel *m_EmptyLabel;
+    QPushButton *m_CloseEmptyGroupButton;
+    TabGroup *m_Active;
+
     ContentTab* m_LastContentTab;
 
     bool m_CheckWellFormedErrors;

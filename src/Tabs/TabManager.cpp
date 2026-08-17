@@ -23,6 +23,20 @@
 #include <QPalette>
 #include <QApplication>
 #include <QDebug>
+#include <QVBoxLayout>
+#include <QSplitter>
+#include <QLabel>
+#include <QAction>
+#include <QPushButton>
+#include <QMenu>
+#include <QPair>
+#include <QStackedLayout>
+#include <QMimeData>
+#include <QEvent>
+#include <QContextMenuEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QTabBar>
 #include "BookManipulation/CleanSource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/CSSResource.h"
@@ -38,6 +52,7 @@
 #include "Tabs/AVTab.h"
 #include "Tabs/FontTab.h"
 #include "Tabs/CSSTab.h"
+#include "Tabs/TextTab.h"
 #include "Tabs/FlowTab.h"
 #include "Tabs/ImageTab.h"
 #include "Tabs/MiscTextTab.h"
@@ -46,52 +61,64 @@
 #include "Tabs/NCXTab.h"
 #include "Tabs/OPFTab.h"
 #include "Tabs/TabManager.h"
-#include "Tabs/WellFormedContent.h"
+#include "Tabs/TabGroup.h"
 #include "Tabs/TabBar.h"
+#include "Tabs/WellFormedContent.h"
+#include "Misc/SettingsStoreExtend.h"
+#include "Misc/SettingsStore.h"
 
 
 TabManager::TabManager(QWidget *parent)
     :
-    QTabWidget(parent),
+    QWidget(parent),
+    m_Splitter(new QSplitter(Qt::Vertical, this)),
+    m_Primary(new TabGroup(this)),
+    m_SecondaryPane(0),
+    m_Secondary(0),
+    m_EmptyPane(0),
+    m_EmptyLabel(0),
+    m_CloseEmptyGroupButton(0),
+    m_Active(0),
     m_LastContentTab(NULL),
     m_TabsToDelete(QList<ContentTab*>()),
     m_tabs_deletion_in_use(false),
     m_newTab(NULL)
 {
-    QTabBar *tab_bar = new TabBar(this);
-    setTabBar(tab_bar);
-    connect(tab_bar, SIGNAL(TabBarClicked()),            this, SLOT(SetFocusInTab()));
-    connect(tab_bar, SIGNAL(CloseOtherTabsRequest(int)), this, SLOT(CloseOtherTabs(int)));
-    connect(this, SIGNAL(currentChanged(int)),           this, SLOT(EmitTabChanged(int)));
-    connect(this, SIGNAL(tabCloseRequested(int)),        this, SLOT(CloseTab(int)));
-    setDocumentMode(true);
+    m_Active = m_Primary;
+    m_Primary->setMinimumHeight(80);
+    m_Primary->SetKeepLastTab(true);
 
-    // re-enable tab drag and drop as a test to see if last commit helped
-    setMovable(true);
-    setTabsClosable(true);
-    // setElideMode(Qt::ElideRight); this is the default after qt-5.6
-    setUsesScrollButtons(true);
+    m_Splitter->setObjectName(QStringLiteral("editorGroupSplitter"));
+    m_Splitter->setChildrenCollapsible(false);
+    m_Splitter->addWidget(m_Primary);
+    m_Splitter->setStretchFactor(0, 1);
+
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(m_Splitter, 1);
+
+    ConnectGroup(m_Primary);
+    connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
+            this, SLOT(OnApplicationFocusChanged(QWidget *, QWidget *)));
+    UpdateGroupAppearance();
 }
 
 
 ContentTab *TabManager::GetCurrentContentTab()
 {
-    QWidget *widget = currentWidget();
-    // TODO: turn on this assert after you make sure a tab
-    // is created before this is called in MainWindow constructor
-    //Q_ASSERT( widget != NULL );
-    return qobject_cast<ContentTab *>(widget);
+    if (m_Active && m_Active->CurrentTab()) {
+        return m_Active->CurrentTab();
+    }
+    return m_Primary->CurrentTab();
 }
 
 QList<ContentTab *> TabManager::GetContentTabs()
 {
-    QList <ContentTab *> tabs;
-
-    for (int i = 0; i < count(); ++i) {
-        ContentTab *tab = qobject_cast<ContentTab *>(widget(i));
-        tabs.append(tab);
+    QList<ContentTab *> tabs = m_Primary->Tabs();
+    if (m_Secondary) {
+        tabs.append(m_Secondary->Tabs());
     }
-
     return tabs;
 }
 
@@ -118,41 +145,48 @@ QList<Resource *> TabManager::GetTabResourcesOfType(Resource::ResourceType resou
     return tab_resources;
 }
 
-void TabManager::tabInserted(int index)
-{
-    emit TabCountChanged();
-}
-
 int TabManager::GetTabCount()
 {
-    return count();
+    int count = m_Primary->TabCount();
+    if (m_Secondary) {
+        count += m_Secondary->TabCount();
+    }
+    return count;
 }
 
 void TabManager::CloseAllTabs(bool all)
 {
-    while (count() > 0) {
-        CloseTab(0, all);
+    while (true) {
+        const int before = GetTabCount();
+        if (m_Secondary && m_Secondary->TabCount() > 0) {
+            CloseTabAt(m_Secondary, 0, all);
+        } else if (m_Primary->TabCount() > 0) {
+            CloseTabAt(m_Primary, 0, all);
+        }
+        if (GetTabCount() >= before) {
+            break;
+        }
     }
 }
 
 void TabManager::CloseTabForResource(const Resource *resource, bool force)
 {
-    int index = ResourceTabIndex(resource);
-
-    if (index != -1) {
-        CloseTab(index, force);
+    ContentTab *tab = FindTab(resource);
+    TabGroup *group = GroupContaining(tab);
+    if (!tab || !group) {
+        return;
     }
+    CloseTabAt(group, group->IndexOfTab(tab), force);
 }
 
 bool TabManager::IsAllTabDataWellFormed()
 {
-    QList<Resource *> resources = GetTabResources();
-    foreach(Resource *resource, resources) {
-        int index = ResourceTabIndex(resource);
-        WellFormedContent *content = dynamic_cast<WellFormedContent *>(widget(index));
-
-        // Only check Xhtml for now.
-        if (content && resource->Type() == Resource::HTMLResourceType) {
+    foreach(ContentTab *tab, GetContentTabs()) {
+        if (!tab || !tab->GetLoadedResource()) {
+            continue;
+        }
+        WellFormedContent *content = dynamic_cast<WellFormedContent *>(tab);
+        if (content && tab->GetLoadedResource()->Type() == Resource::HTMLResourceType) {
             if (!content->IsDataWellFormed()) {
                 return false;
             }
@@ -164,14 +198,9 @@ bool TabManager::IsAllTabDataWellFormed()
 void TabManager::ReloadTabDataForResources(const QList<Resource *> &resources)
 {
     foreach(Resource *resource, resources) {
-        int index = ResourceTabIndex(resource);
-
-        if (index != -1) {
-            FlowTab *flow_tab = qobject_cast<FlowTab *>(widget(index));
-
-            if (flow_tab) {
-                flow_tab->LoadTabContent();
-            }
+        FlowTab *flow_tab = qobject_cast<FlowTab *>(FindTab(resource));
+        if (flow_tab) {
+            flow_tab->LoadTabContent();
         }
     }
 }
@@ -179,18 +208,49 @@ void TabManager::ReloadTabDataForResources(const QList<Resource *> &resources)
 void TabManager::ReopenTabs()
 {
     ContentTab *currentTab = GetCurrentContentTab();
-    QList<Resource *> resources = GetTabResources();
-    foreach(Resource *resource, resources) {
-        CloseTabForResource(resource, true);
-        OpenResource(resource, -1, -1, QString());
+    Resource *current_resource = currentTab ? currentTab->GetLoadedResource() : 0;
+    TabGroup *current_group = currentTab ? GroupContaining(currentTab) : m_Primary;
+
+    QList<QPair<Resource *, bool> > items;
+    foreach(ContentTab *tab, m_Primary->Tabs()) {
+        if (tab && tab->GetLoadedResource()) {
+            items.append(qMakePair(tab->GetLoadedResource(), false));
+        }
     }
-    OpenResource(currentTab->GetLoadedResource(), -1, -1, QString());
+    if (m_Secondary) {
+        foreach(ContentTab *tab, m_Secondary->Tabs()) {
+            if (tab && tab->GetLoadedResource()) {
+                items.append(qMakePair(tab->GetLoadedResource(), true));
+            }
+        }
+    }
+
+    for (const auto &item : items) {
+        CloseTabForResource(item.first, true);
+    }
+
+    for (const auto &item : items) {
+        if (!item.first) {
+            continue;
+        }
+        TabGroup *target = (item.second && m_Secondary) ? m_Secondary : m_Primary;
+        ContentTab *new_tab = CreateTabForResource(item.first, -1, -1, QString(), QUrl(), false, target);
+        if (new_tab) {
+            AddNewContentTab(new_tab, false, target);
+        }
+    }
+
+    if (current_resource) {
+        SwitchedToExistingTab(current_resource, -1, -1, QString(), QUrl());
+        if (current_group) {
+            SetActiveGroup(current_group);
+        }
+    }
 }
 
 void TabManager::PerformThemeChangeRefresh()
 {
-    for (int i = 0; i < count(); ++i) {
-        ContentTab *tab = qobject_cast<ContentTab *>(widget(i));
+    foreach(ContentTab *tab, GetContentTabs()) {
         if (tab) {
             tab->ThemeChangeRefresh();
         }
@@ -199,9 +259,7 @@ void TabManager::PerformThemeChangeRefresh()
 
 void TabManager::SaveTabData()
 {
-    for (int i = 0; i < count(); ++i) {
-        ContentTab *tab = qobject_cast<ContentTab *>(widget(i));
-
+    foreach(ContentTab *tab, GetContentTabs()) {
         if (tab) {
             tab->SaveTabContent();
         }
@@ -255,112 +313,107 @@ void TabManager::OpenResource(Resource *resource,
                               const QUrl &fragment,
                               bool precede_current_tab)
 {
-    if (SwitchedToExistingTab(resource, line_to_scroll_to, position_to_scroll_to, caret_location_to_scroll_to, fragment)) {
+    OpenWithDisposition(resource, line_to_scroll_to, position_to_scroll_to,
+                        caret_location_to_scroll_to, fragment, precede_current_tab,
+                        OpenDisposition::ActiveGroup);
+}
+
+void TabManager::OpenResourceInOtherGroup(Resource *resource,
+                                          int line_to_scroll_to,
+                                          int position_to_scroll_to,
+                                          const QString &caret_location_to_scroll_to,
+                                          const QUrl &fragment)
+{
+    OpenWithDisposition(resource, line_to_scroll_to, position_to_scroll_to,
+                        caret_location_to_scroll_to, fragment, false,
+                        OpenDisposition::OtherGroup);
+}
+
+void TabManager::OpenWithDisposition(Resource *resource,
+                                     int line_to_scroll_to,
+                                     int position_to_scroll_to,
+                                     const QString &caret_location_to_scroll_to,
+                                     const QUrl &fragment,
+                                     bool precede_current_tab,
+                                     OpenDisposition disposition)
+{
+    ContentTab *existing = FindTab(resource);
+    if (existing) {
+        const bool in_other = GroupContaining(existing) &&
+                              GroupContaining(existing) != ActiveGroup();
+        SwitchedToExistingTab(resource, line_to_scroll_to, position_to_scroll_to,
+                              caret_location_to_scroll_to, fragment);
+        if (disposition == OpenDisposition::OtherGroup && in_other) {
+            emit ShowStatusMessageRequest(
+                tr("%1 is already open in the other editor group.").arg(resource->ShortPathName()));
+        }
         return;
     }
 
+    TabGroup *target = ResolveTargetGroup(disposition);
     bool grab_focus = !precede_current_tab;
     ContentTab *new_tab = CreateTabForResource(resource, line_to_scroll_to, position_to_scroll_to,
-                          caret_location_to_scroll_to, fragment, grab_focus);
+                          caret_location_to_scroll_to, fragment, grab_focus, target);
 
     if (new_tab) {
-        // only set m_newTab if going to be current tab (ie focus was grabbed)
-        // otherwise after injection of new tab preceding_current_tab will prevent
-        // proper updating of preview
         if (grab_focus) {
             m_newTab = new_tab;
         }
-        AddNewContentTab(new_tab, precede_current_tab);
+        AddNewContentTab(new_tab, precede_current_tab, target);
+        SetActiveGroup(target);
         emit ShowStatusMessageRequest("");
     } else {
         QString message = tr("Cannot edit file") + ": " + resource->ShortPathName();
         emit ShowStatusMessageRequest(message);
     }
-
-    // do not Scroll the Preview in response as new Flow Tabs have
-    // delayed initialization.  Instead FlowTab itself will handle this
 }
 
 
 void TabManager::NextTab()
 {
-    int current_index = currentIndex();
-
-    // No tabs present
-    if (current_index == -1) {
-        return;
-    }
-
-    // Wrap around
-    int next_index = current_index != count() - 1 ? current_index + 1 : 0;
-
-    if (widget(next_index) != 0 &&
-        current_index != next_index) {
-        setCurrentIndex(next_index);
-    }
+    ActiveGroup()->NextTab();
 }
 
 
 void TabManager::PreviousTab()
 {
-    int current_index = currentIndex();
-
-    // No tabs present
-    if (current_index == -1) {
-        return;
-    }
-
-    // Wrap around
-    int previous_index = current_index != 0 ? current_index - 1 : count() - 1;
-
-    if (widget(previous_index) != 0 &&
-        current_index != previous_index) {
-        setCurrentIndex(previous_index);
-    }
+    ActiveGroup()->PreviousTab();
 }
 
 
 void TabManager::RemoveTab()
 {
     // Can leave window with no tabs, so re-open a tab asap
-    removeTab(currentIndex());
+    ActiveGroup()->RemoveCurrentTabWidget();
 }
 
 
 void TabManager::CloseTab()
 {
-    CloseTab(currentIndex());
+    TabGroup *group = ActiveGroup();
+    CloseTabAt(group, group->currentIndex(), false);
 }
 
 void TabManager::CloseOtherTabs()
 {
-    CloseOtherTabs(currentIndex());
+    CloseAllTabsExcept(GetCurrentContentTab());
 }
 
 void TabManager::CloseOtherTabs(int index)
 {
-    if (count() <= 1 || index < 0 || index >= count()) {
-        return;
-    }
-
-    int max_index = count() - 1;
-
-    // Close all tabs after the tab
-    for (int i = index + 1; i <= max_index; i++) {
-        CloseTab(index + 1);
-    }
-
-    // Close all tabs before the tab
-    for (int i = 0; i < index; i++) {
-        CloseTab(0);
-    }
+    CloseAllTabsExcept(m_Primary->TabAt(index));
 }
 
 
 void TabManager::MakeCentralTab(ContentTab *tab)
 {
     Q_ASSERT(tab);
-    setCurrentIndex(indexOf(tab));
+    TabGroup *group = GroupContaining(tab);
+    if (!group) {
+        return;
+    }
+    SetActiveGroup(group);
+    group->ActivateTab(tab);
 }
 
 // Note: m_LastContentTab was previously declared as follows:
@@ -379,7 +432,12 @@ void TabManager::MakeCentralTab(ContentTab *tab)
 
 void TabManager::EmitTabChanged(int new_index)
 {
-    ContentTab *current_tab = qobject_cast<ContentTab *>(currentWidget());
+    Q_UNUSED(new_index);
+    TabGroup *from = qobject_cast<TabGroup *>(sender());
+    if (from && from != m_Active) {
+        return;
+    }
+    ContentTab *current_tab = GetCurrentContentTab();
     // the result of the qobject_cast can be NULL and that is okay
     if (m_LastContentTab != current_tab) {
         // qDebug() << "Emitting TabChanged Signal";
@@ -467,14 +525,19 @@ void TabManager::DeleteTab(ContentTab *tab_to_delete)
         // completes because QTabBar::setCurrentIndex(int) **somehow** invokes processEvents()
         // ***BEFORE*** properly setting the current index
         // this helps to prevent reentrancy.
-        disconnect(this, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
-        removeTab(indexOf(tab));
-        connect(this, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
+        TabGroup *group = GroupContaining(tab);
+        if (!group) {
+            group = m_Primary;
+        }
+        disconnect(group, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
+        group->TakeTab(tab);
+        connect(group, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
+        UpdateEmptyState();
 
         // Only the current tab is ever connected to the main ui
         // so do our own version of EmitTabChanged() only if needed
         // to disconnect and reconnect ui signals
-        ContentTab *next_tab = qobject_cast<ContentTab *>(currentWidget());
+        ContentTab *next_tab = GetCurrentContentTab();
         if (m_LastContentTab != next_tab) {
             // move updating of m_LastContentTab to be upfront *before* emitting the signal
             ContentTab* prevtab = m_LastContentTab;
@@ -492,27 +555,17 @@ void TabManager::DeleteTab(ContentTab *tab_to_delete)
 
 void TabManager::CloseTab(int tab_index, bool force)
 {
-    if (count() == 0) {
-        return;
-    }
-    if (!force && count() <= 1) {
-        return;
-    }
-
-    ContentTab *tab = qobject_cast<ContentTab *>(widget(tab_index));
-    if (tab) tab->Close();
-    emit TabCountChanged();
+    CloseTabAt(m_Primary, tab_index, force);
 }
 
 
 void TabManager::UpdateTabName(ContentTab *renamed_tab)
 {
     Q_ASSERT(renamed_tab);
-    int idx = indexOf(renamed_tab);
-    QString rawName = renamed_tab->GetShortPathName();
-    setTabToolTip(idx, rawName);
-    QString safeName = rawName.replace("&", "&&");
-    setTabText(idx, safeName);
+    TabGroup *group = GroupContaining(renamed_tab);
+    if (group) {
+        group->UpdateTabName(renamed_tab);
+    }
 }
 
 void TabManager::SetFocusInTab()
@@ -527,27 +580,19 @@ void TabManager::SetFocusInTab()
 
 WellFormedContent *TabManager::GetWellFormedContent(int index)
 {
-    return dynamic_cast<WellFormedContent *>(widget(index));
+    return m_Primary->WellFormedAt(index);
 }
 
 
 
-// Returns the index of the tab the index is loaded in, -1 if it isn't
+// Returns the index of the tab in the primary group, -1 if it isn't there.
 int TabManager::ResourceTabIndex(const Resource *resource) const
 {
-    QString identifier(resource->GetIdentifier());
-    int index = -1;
-
-    for (int i = 0; i < count(); ++i) {
-        ContentTab *tab = qobject_cast<ContentTab *>(widget(i));
-
-        if (tab && tab->GetLoadedResource()->GetIdentifier() == identifier) {
-            index = i;
-            break;
-        }
+    ContentTab *tab = FindTab(resource);
+    if (!tab) {
+        return -1;
     }
-
-    return index;
+    return m_Primary->IndexOfTab(tab);
 }
 
 
@@ -557,77 +602,19 @@ bool TabManager::SwitchedToExistingTab(const Resource *resource,
                                        const QString &caret_location_to_scroll_to,
                                        const QUrl &fragment)
 {
-    int resource_index = ResourceTabIndex(resource);
-
-    // If the resource is already opened in
-    // some tab, then we just switch to it
-    if (resource_index != -1) {
-        // the next line will cause TabChanged to be emitted which will update Preview
-        // but to whatever location this tab has now now after scrolling
-        setCurrentIndex(resource_index);
-        QWidget *tab = widget(resource_index);
-        Q_ASSERT(tab);
-        tab->setFocus();
-
-        FlowTab *flow_tab = qobject_cast<FlowTab *>(tab);
-
-        if (flow_tab != NULL) {
-            if (!caret_location_to_scroll_to.isEmpty()) {
-                flow_tab->ScrollToCaretLocation(caret_location_to_scroll_to);
-            } else if (position_to_scroll_to >= 0) {
-                flow_tab->ScrollToPosition(position_to_scroll_to);
-            } else if (!fragment.toString().isEmpty()) {
-                flow_tab->ScrollToFragment(fragment.toString());
-            } else if (line_to_scroll_to > 0) {
-                flow_tab->ScrollToLine(line_to_scroll_to);
-            }
-
-
-            // manually update the Preview Location
-            flow_tab->EmitScrollPreviewImmediately();
-
-            return true;
-        }
-
-        TextTab *text_tab = qobject_cast<TextTab *>(tab);
-
-        if (text_tab != NULL) {
-            if (position_to_scroll_to >= 0) {
-                text_tab->ScrollToPosition(position_to_scroll_to);
-            } else {
-                text_tab->ScrollToLine(line_to_scroll_to);
-            }
-            return true;
-        }
-
-        ImageTab *image_tab = qobject_cast<ImageTab *>(tab);
-
-        if (image_tab != NULL) {
-            return true;
-        }
-
-        AVTab *av_tab = qobject_cast<AVTab *>(tab);
-
-        if (av_tab != NULL) {
-            return true;
-        }
-
-        PdfTab *pdf_tab = qobject_cast<PdfTab *>(tab);
-
-        if (pdf_tab != NULL) {
-            return true;
-        }
-
-        FontTab *font_tab = qobject_cast<FontTab *>(tab);
-
-        if (font_tab != NULL) {
-            return true;
-        }
-
-
+    ContentTab *tab = FindTab(resource);
+    if (!tab) {
+        return false;
     }
 
-    return false;
+    TabGroup *group = GroupContaining(tab);
+    if (group) {
+        SetActiveGroup(group);
+        group->ActivateTab(tab);
+    }
+    ApplyExistingTabLocation(tab, line_to_scroll_to, position_to_scroll_to,
+                             caret_location_to_scroll_to, fragment);
+    return true;
 }
 
 
@@ -636,9 +623,13 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
         int position_to_scroll_to,
         const QString &caret_location_to_scroll_to,
         const QUrl &fragment,
-        bool grab_focus)
+        bool grab_focus,
+        QWidget *tab_parent)
 {
     ContentTab *tab = NULL;
+    if (!tab_parent) {
+        tab_parent = m_Primary;
+    }
 
     switch (resource->Type()) {
         case Resource::HTMLResourceType: {
@@ -652,7 +643,7 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
                               position_to_scroll_to,
                               caret_location_to_scroll_to,
                               grab_focus,
-                              this);
+                              tab_parent);
             connect(tab,  SIGNAL(LinkClicked(const QUrl &)), this, SLOT(LinkClicked(const QUrl &)));
             connect(tab,  SIGNAL(OldTabRequest(QString, HTMLResource *)),
                     this, SIGNAL(OldTabRequest(QString, HTMLResource *)));
@@ -660,59 +651,59 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
         }
 
         case Resource::CSSResourceType: {
-            tab = new CSSTab(qobject_cast<CSSResource *>(resource), line_to_scroll_to, position_to_scroll_to, this);
+            tab = new CSSTab(qobject_cast<CSSResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::ImageResourceType: {
-            tab = new ImageTab(qobject_cast<ImageResource *>(resource), this);
+            tab = new ImageTab(qobject_cast<ImageResource *>(resource), tab_parent);
             break;
         }
 
         case Resource::MiscTextResourceType: {
-            tab = new MiscTextTab(qobject_cast<MiscTextResource *>(resource), line_to_scroll_to, position_to_scroll_to, this);
+            tab = new MiscTextTab(qobject_cast<MiscTextResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::SVGResourceType: {
-            tab = new SVGTab(qobject_cast<SVGResource *>(resource), line_to_scroll_to, position_to_scroll_to, this);
+            tab = new SVGTab(qobject_cast<SVGResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::OPFResourceType: {
-            tab = new OPFTab(qobject_cast<OPFResource *>(resource), line_to_scroll_to, position_to_scroll_to, this);
+            tab = new OPFTab(qobject_cast<OPFResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::NCXResourceType: {
-            tab = new NCXTab(qobject_cast<NCXResource *>(resource), line_to_scroll_to, position_to_scroll_to, this);
+            tab = new NCXTab(qobject_cast<NCXResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::XMLResourceType: {
-            tab = new XMLTab(qobject_cast<XMLResource *>(resource), line_to_scroll_to, position_to_scroll_to, this);
+            tab = new XMLTab(qobject_cast<XMLResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::TextResourceType: {
             tab = new TextTab(qobject_cast<TextResource *>(resource), CodeViewEditor::Highlight_NONE, 
-                              line_to_scroll_to, position_to_scroll_to, this);
+                              line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::AudioResourceType:
         case Resource::VideoResourceType: {
-            tab = new AVTab(qobject_cast<Resource *>(resource), this);
+            tab = new AVTab(qobject_cast<Resource *>(resource), tab_parent);
             break;
         }
 
         case Resource::PdfResourceType: {
-            tab = new PdfTab(qobject_cast<Resource *>(resource), this);
+            tab = new PdfTab(qobject_cast<Resource *>(resource), tab_parent);
             break;
         }
 
         case Resource::FontResourceType: {
-            tab = new FontTab(qobject_cast<Resource *>(resource), this);
+            tab = new FontTab(qobject_cast<Resource *>(resource), tab_parent);
             break;
         }
 
@@ -733,51 +724,22 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
 }
 
 
-bool TabManager::AddNewContentTab(ContentTab *new_tab, bool precede_current_tab)
+bool TabManager::AddNewContentTab(ContentTab *new_tab, bool precede_current_tab, TabGroup *target)
 {
     if (new_tab == NULL) {
         return false;
     }
+    if (!target) {
+        target = m_Primary;
+    }
 
     // before adding a tab make sure m_LastContentTab has been
     // properly updated to reflect the current tab
-    ContentTab *old_tab = qobject_cast<ContentTab *>(currentWidget());
-    m_LastContentTab = old_tab;
+    m_LastContentTab = GetCurrentContentTab();
 
-    int idx = -1;
-    QString rawName = new_tab->GetShortPathName();
-    QString safeName = rawName.replace("&", "&&");
-
-    if (!precede_current_tab) {
-
-#if defined(Q_OS_MAC)
-        // drop use of icons to workaround Qt Bugs: QTBUG-61235, QTBUG-61742, QTBUG-63445, QTBUG-64630
-        // This is still broken in Qt 5.12.2 
-        // elided text is wrong when icon image present (hides most of elided text)
-        // icon image still overlaps with name of tab if ElideNone is used
-        idx = addTab(new_tab, safeName);
-#else
-        idx = addTab(new_tab, new_tab->GetIcon(), safeName);
-#endif
-
-        setCurrentWidget(new_tab);
-
-        new_tab->setFocus();
-
-    } else {
-
-#if defined(Q_OS_MAC)
-        // drop use of icons to workaround Qt Bugs: QTBUG-61235, QTBUG-61742, QTBUG-63445, QTBUG-64630
-        // This is still broken in Qt 5.12.2
-        // elided text is wrong when icon image present image (hides most of elided text)
-        // icon image still overlaps with name of tab if ElideNone is used
-        idx = insertTab(currentIndex(), new_tab, safeName);
-#else
-        idx = insertTab(currentIndex(), new_tab, new_tab->GetIcon(), safeName);
-#endif
-
+    if (target->AddContentTab(new_tab, precede_current_tab) < 0) {
+        return false;
     }
-    setTabToolTip(idx, new_tab->GetShortPathName());
 
     connect(new_tab, SIGNAL(DeleteMe(ContentTab *)), this, SLOT(DeleteTab(ContentTab *)));
     connect(new_tab, SIGNAL(TabRenamed(ContentTab *)), this, SLOT(UpdateTabName(ContentTab *)));
@@ -786,9 +748,7 @@ bool TabManager::AddNewContentTab(ContentTab *new_tab, bool precede_current_tab)
 
 void TabManager::UpdateTabDisplay()
 {
-    for (int i = 0; i < count(); ++i) {
-        ContentTab *tab = qobject_cast<ContentTab *>(widget(i));
-
+    foreach(ContentTab *tab, GetContentTabs()) {
         if (tab) {
             tab->UpdateDisplay();
         }
@@ -797,13 +757,557 @@ void TabManager::UpdateTabDisplay()
 
 bool TabManager::CloseOPFTabIfOpen()
 {
-    QList<Resource *> resources = GetTabResources();
-    foreach(Resource *resource, resources) {
-        int index = ResourceTabIndex(resource);
-        if (resource->Type() == Resource::OPFResourceType) {
-            CloseTab(index);
+    foreach(ContentTab *tab, GetContentTabs()) {
+        if (tab && tab->GetLoadedResource() &&
+            tab->GetLoadedResource()->Type() == Resource::OPFResourceType) {
+            TabGroup *group = GroupContaining(tab);
+            if (group) {
+                CloseTabAt(group, group->IndexOfTab(tab), false);
+            }
             return true;
         }
     }
     return false;
+}
+
+bool TabManager::IsSplit() const
+{
+    return m_SecondaryPane && m_SecondaryPane->isVisible();
+}
+
+void TabManager::SplitEditorDown()
+{
+    if (IsSplit()) {
+        return;
+    }
+    EnsureSecondary();
+    m_SecondaryPane->show();
+    UpdateEmptyState();
+    const int total = qMax(m_Splitter->height(), 200);
+    m_Splitter->setSizes(QList<int>() << (total / 2) << (total / 2));
+    UpdateGroupAppearance();
+    emit SplitChanged();
+}
+
+void TabManager::JoinEditorGroups()
+{
+    if (!IsSplit() || !m_Secondary) {
+        return;
+    }
+
+    ContentTab *keep = GetCurrentContentTab();
+
+    disconnect(m_Primary, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
+    disconnect(m_Secondary, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
+    const QList<ContentTab *> moving = m_Secondary->Tabs();
+    foreach(ContentTab *tab, moving) {
+        if (!tab) {
+            continue;
+        }
+        m_Secondary->TakeTab(tab);
+        m_Primary->AddContentTab(tab, false);
+    }
+    connect(m_Primary, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
+    connect(m_Secondary, SIGNAL(currentChanged(int)), this, SLOT(EmitTabChanged(int)));
+
+    HideSecondary();
+    SetActiveGroup(m_Primary);
+    if (keep && GroupContaining(keep) == m_Primary) {
+        m_Primary->ActivateTab(keep);
+    }
+    emit SplitChanged();
+    emit TabCountChanged();
+}
+
+void TabManager::ConnectGroup(TabGroup *group)
+{
+    connect(group, SIGNAL(TabBarClicked()),            this, SLOT(OnGroupActivated()));
+    connect(group, SIGNAL(CloseOtherTabsRequest(int)), this, SLOT(OnCloseOtherTabsRequested(int)));
+    connect(group, SIGNAL(currentChanged(int)),        this, SLOT(EmitTabChanged(int)));
+    connect(group, SIGNAL(tabCloseRequested(int)),     this, SLOT(OnTabCloseRequested(int)));
+    connect(group, SIGNAL(TabInserted()),              this, SLOT(OnTabInserted()));
+    connect(group, SIGNAL(MoveToOtherGroupRequest(int)), this, SLOT(OnMoveToOtherGroupRequested(int)));
+    connect(group, SIGNAL(TabDropRequest(QWidget *, int)),
+            this, SLOT(OnTabDropRequested(QWidget *, int)));
+}
+
+void TabManager::EnsureSecondary()
+{
+    if (m_SecondaryPane) {
+        return;
+    }
+
+    m_SecondaryPane = new QWidget(this);
+    m_Secondary = new TabGroup(m_SecondaryPane);
+    m_Secondary->SetKeepLastTab(false);
+    m_EmptyPane = new QWidget(m_SecondaryPane);
+    m_EmptyPane->setFocusPolicy(Qt::ClickFocus);
+    m_EmptyPane->setAcceptDrops(true);
+    m_EmptyPane->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_EmptyPane->installEventFilter(this);
+
+    m_EmptyLabel = new QLabel(tr("Open a file from Book Browser, or drop an editor tab here"), m_EmptyPane);
+    m_EmptyLabel->setAlignment(Qt::AlignCenter);
+    m_EmptyLabel->setWordWrap(true);
+    m_EmptyLabel->setFocusPolicy(Qt::ClickFocus);
+    m_EmptyLabel->setContextMenuPolicy(Qt::NoContextMenu);
+    m_EmptyLabel->installEventFilter(this);
+
+    m_CloseEmptyGroupButton = new QPushButton(tr("Close This Editor Group"), m_EmptyPane);
+    m_CloseEmptyGroupButton->setAutoDefault(false);
+    m_CloseEmptyGroupButton->setDefault(false);
+    m_CloseEmptyGroupButton->setCursor(Qt::PointingHandCursor);
+    m_CloseEmptyGroupButton->setContextMenuPolicy(Qt::NoContextMenu);
+    m_CloseEmptyGroupButton->installEventFilter(this);
+
+    QVBoxLayout *empty_layout = new QVBoxLayout(m_EmptyPane);
+    empty_layout->addStretch(1);
+    empty_layout->addWidget(m_EmptyLabel);
+    empty_layout->addWidget(m_CloseEmptyGroupButton, 0, Qt::AlignHCenter);
+    empty_layout->addStretch(1);
+
+    m_SecondaryPane->setAcceptDrops(true);
+    m_SecondaryPane->installEventFilter(this);
+    m_Secondary->setMinimumHeight(80);
+    m_SecondaryPane->setMinimumHeight(80);
+
+    QStackedLayout *stack = new QStackedLayout(m_SecondaryPane);
+    stack->setContentsMargins(0, 0, 0, 0);
+    stack->addWidget(m_Secondary);
+    stack->addWidget(m_EmptyPane);
+
+    connect(m_CloseEmptyGroupButton, SIGNAL(clicked()), this, SLOT(CloseEmptySecondary()));
+
+    ConnectGroup(m_Secondary);
+    m_Splitter->addWidget(m_SecondaryPane);
+    m_Splitter->setStretchFactor(1, 1);
+}
+
+void TabManager::HideSecondary()
+{
+    if (m_SecondaryPane) {
+        m_SecondaryPane->hide();
+    }
+    UpdateEmptyState();
+}
+
+void TabManager::UpdateEmptyState()
+{
+    if (!m_SecondaryPane || !m_Secondary || !m_EmptyPane) {
+        return;
+    }
+    QStackedLayout *stack = qobject_cast<QStackedLayout *>(m_SecondaryPane->layout());
+    if (!stack) {
+        return;
+    }
+    if (m_Secondary->TabCount() == 0) {
+        stack->setCurrentWidget(m_EmptyPane);
+    } else {
+        stack->setCurrentWidget(m_Secondary);
+    }
+}
+
+TabGroup *TabManager::ActiveGroup() const
+{
+    return m_Active ? m_Active : m_Primary;
+}
+
+TabGroup *TabManager::GroupContaining(const ContentTab *tab) const
+{
+    if (!tab) {
+        return 0;
+    }
+    if (m_Primary->IndexOfTab(tab) != -1) {
+        return m_Primary;
+    }
+    if (m_Secondary && m_Secondary->IndexOfTab(tab) != -1) {
+        return m_Secondary;
+    }
+    return 0;
+}
+
+ContentTab *TabManager::FindTab(const Resource *resource) const
+{
+    ContentTab *tab = m_Primary->TabForResource(resource);
+    if (tab) {
+        return tab;
+    }
+    if (m_Secondary) {
+        return m_Secondary->TabForResource(resource);
+    }
+    return 0;
+}
+
+void TabManager::CloseTabAt(TabGroup *group, int tab_index, bool force)
+{
+    if (!group || group->TabCount() == 0) {
+        return;
+    }
+    const bool last_primary = (group == m_Primary && group->TabCount() <= 1);
+    if (!force && last_primary) {
+        return;
+    }
+
+    ContentTab *tab = group->TabAt(tab_index);
+    if (tab) {
+        tab->Close();
+    }
+    UpdateEmptyState();
+    emit TabCountChanged();
+}
+
+void TabManager::CloseAllTabsExcept(ContentTab *keep)
+{
+    if (!keep) {
+        return;
+    }
+
+    QList<ContentTab *> closing;
+    foreach(ContentTab *tab, GetContentTabs()) {
+        if (tab && tab != keep) {
+            if (GroupContaining(tab) == m_Primary && m_Primary->TabCount() <= 1) {
+                continue;
+            }
+            closing.append(tab);
+        }
+    }
+    foreach(ContentTab *tab, closing) {
+        TabGroup *group = GroupContaining(tab);
+        if (!group) {
+            continue;
+        }
+        const bool last_primary = (group == m_Primary && group->TabCount() <= 1);
+        if (last_primary) {
+            continue;
+        }
+        tab->Close();
+    }
+    UpdateEmptyState();
+    emit TabCountChanged();
+}
+
+void TabManager::ApplyExistingTabLocation(ContentTab *tab,
+                                          int line_to_scroll_to,
+                                          int position_to_scroll_to,
+                                          const QString &caret_location_to_scroll_to,
+                                          const QUrl &fragment)
+{
+    FlowTab *flow_tab = qobject_cast<FlowTab *>(tab);
+    if (flow_tab) {
+        if (!caret_location_to_scroll_to.isEmpty()) {
+            flow_tab->ScrollToCaretLocation(caret_location_to_scroll_to);
+        } else if (position_to_scroll_to >= 0) {
+            flow_tab->ScrollToPosition(position_to_scroll_to);
+        } else if (!fragment.toString().isEmpty()) {
+            flow_tab->ScrollToFragment(fragment.toString());
+        } else if (line_to_scroll_to > 0) {
+            flow_tab->ScrollToLine(line_to_scroll_to);
+        }
+        flow_tab->EmitScrollPreviewImmediately();
+        return;
+    }
+
+    TextTab *text_tab = qobject_cast<TextTab *>(tab);
+    if (text_tab) {
+        if (position_to_scroll_to >= 0) {
+            text_tab->ScrollToPosition(position_to_scroll_to);
+        } else {
+            text_tab->ScrollToLine(line_to_scroll_to);
+        }
+    }
+}
+
+void TabManager::OnGroupActivated()
+{
+    SetActiveGroup(qobject_cast<TabGroup *>(sender()));
+    SetFocusInTab();
+}
+
+void TabManager::OnTabCloseRequested(int tab_index)
+{
+    TabGroup *group = qobject_cast<TabGroup *>(sender());
+    CloseTabAt(group ? group : m_Primary, tab_index, false);
+}
+
+void TabManager::OnCloseOtherTabsRequested(int tab_index)
+{
+    TabGroup *group = qobject_cast<TabGroup *>(sender());
+    if (!group) {
+        group = m_Primary;
+    }
+    CloseAllTabsExcept(group->TabAt(tab_index));
+}
+
+void TabManager::OnTabInserted()
+{
+    UpdateEmptyState();
+    emit TabCountChanged();
+}
+
+TabGroup *TabManager::ResolveTargetGroup(OpenDisposition disposition)
+{
+    if (disposition == OpenDisposition::ActiveGroup) {
+        return ActiveGroup();
+    }
+
+    if (!IsSplit()) {
+        SplitEditorDown();
+        EnsureSecondary();
+        return m_Secondary;
+    }
+
+    SettingsStoreExtend settings;
+    const QString target = settings.getOtherGroupTarget();
+    if (target == QLatin1String("lower")) {
+        return m_Secondary;
+    }
+    if (target == QLatin1String("upper")) {
+        return m_Primary;
+    }
+    return (ActiveGroup() == m_Primary) ? m_Secondary : m_Primary;
+}
+
+bool TabManager::CanMoveTabToOtherGroup(const ContentTab *tab) const
+{
+    TabGroup *group = GroupContaining(tab);
+    if (!group) {
+        return false;
+    }
+    return group->CanMoveTab(group->IndexOfTab(tab));
+}
+
+bool TabManager::MoveTabToOtherGroup(ContentTab *tab)
+{
+    if (!CanMoveTabToOtherGroup(tab)) {
+        return false;
+    }
+    TabGroup *source = GroupContaining(tab);
+    if (!IsSplit()) {
+        SplitEditorDown();
+    }
+    EnsureSecondary();
+    TabGroup *dest = (source == m_Primary) ? m_Secondary : m_Primary;
+    return MoveTabToGroup(tab, dest, dest->TabCount());
+}
+
+bool TabManager::MoveTabToGroup(ContentTab *tab, TabGroup *dest, int dest_index)
+{
+    TabGroup *source = GroupContaining(tab);
+    if (!tab || !source || !dest) {
+        return false;
+    }
+
+    if (source == dest) {
+        const int from = source->IndexOfTab(tab);
+        if (from < 0) {
+            return false;
+        }
+        if (dest_index > from) {
+            dest_index--;
+        }
+        if (dest_index < 0) {
+            dest_index = 0;
+        }
+        if (dest_index >= source->TabCount()) {
+            dest_index = source->TabCount() - 1;
+        }
+        if (from != dest_index) {
+            source->tabBar()->moveTab(from, dest_index);
+        }
+        SetActiveGroup(dest);
+        dest->ActivateTab(tab);
+        return true;
+    }
+
+    if (!source->CanMoveTab(source->IndexOfTab(tab))) {
+        return false;
+    }
+
+    if (!IsSplit()) {
+        SplitEditorDown();
+        EnsureSecondary();
+        dest = m_Secondary;
+        dest_index = dest->TabCount();
+    }
+
+    source->TakeTab(tab);
+    dest->InsertContentTab(tab, dest_index);
+    SetActiveGroup(dest);
+    dest->ActivateTab(tab);
+    UpdateEmptyState();
+    emit TabCountChanged();
+    return true;
+}
+
+void TabManager::OnMoveToOtherGroupRequested(int tab_index)
+{
+    TabGroup *group = qobject_cast<TabGroup *>(sender());
+    if (!group) {
+        return;
+    }
+    MoveTabToOtherGroup(group->TabAt(tab_index));
+}
+
+void TabManager::OnTabDropRequested(QWidget *tab_widget, int insert_index)
+{
+    TabGroup *dest = qobject_cast<TabGroup *>(sender());
+    MoveTabToGroup(qobject_cast<ContentTab *>(tab_widget), dest, insert_index);
+}
+
+bool TabManager::AcceptsEditorTabDrop(const QMimeData *mime) const
+{
+    ContentTab *tab = qobject_cast<ContentTab *>(TabBar::DecodeTab(mime));
+    return tab && CanMoveTabToOtherGroup(tab);
+}
+
+bool TabManager::eventFilter(QObject *object, QEvent *event)
+{
+    const bool empty_chrome = (object == m_EmptyPane || object == m_EmptyLabel
+                               || object == m_CloseEmptyGroupButton || object == m_SecondaryPane);
+    if (!empty_chrome) {
+        return QWidget::eventFilter(object, event);
+    }
+
+    if (event->type() == QEvent::DragEnter || event->type() == QEvent::DragMove) {
+        QDropEvent *drag = static_cast<QDropEvent *>(event);
+        if (AcceptsEditorTabDrop(drag->mimeData())) {
+            drag->acceptProposedAction();
+            return true;
+        }
+    } else if (event->type() == QEvent::Drop) {
+        QDropEvent *drop = static_cast<QDropEvent *>(event);
+        ContentTab *tab = qobject_cast<ContentTab *>(TabBar::DecodeTab(drop->mimeData()));
+        if (tab && m_Secondary && MoveTabToGroup(tab, m_Secondary, m_Secondary->TabCount())) {
+            drop->acceptProposedAction();
+            return true;
+        }
+    } else if (event->type() == QEvent::ContextMenu
+               && m_Secondary && m_Secondary->TabCount() == 0) {
+        QContextMenuEvent *menu_event = static_cast<QContextMenuEvent *>(event);
+        OnEmptyGroupContextMenu(menu_event->globalPos());
+        return true;
+    }
+    return QWidget::eventFilter(object, event);
+}
+
+void TabManager::CloseEmptySecondary()
+{
+    if (!IsSplit() || (m_Secondary && m_Secondary->TabCount() > 0)) {
+        return;
+    }
+    JoinEditorGroups();
+}
+
+void TabManager::OnEmptyGroupContextMenu(const QPoint &pos)
+{
+    if (!IsSplit() || !m_Secondary || m_Secondary->TabCount() > 0) {
+        return;
+    }
+    QMenu menu;
+    QAction *close_action = menu.addAction(tr("Close This Editor Group"));
+    QAction *chosen = menu.exec(pos);
+    if (chosen == close_action) {
+        CloseEmptySecondary();
+    }
+}
+
+void TabManager::SetActiveGroup(TabGroup *group)
+{
+    if (!group || group == m_Active) {
+        return;
+    }
+    ContentTab *old_tab = GetCurrentContentTab();
+    m_Active = group;
+    UpdateGroupAppearance();
+    ContentTab *new_tab = GetCurrentContentTab();
+    if (old_tab != new_tab) {
+        m_LastContentTab = new_tab;
+        emit TabChanged(old_tab, new_tab);
+        emit UpdatePreviewAfterExistingTabSwitch();
+    }
+}
+
+TabGroup *TabManager::GroupFromWidget(QWidget *widget) const
+{
+    while (widget) {
+        if (widget == m_Primary) {
+            return m_Primary;
+        }
+        if (m_Secondary && (widget == m_Secondary || widget == m_SecondaryPane
+                            || widget == m_EmptyPane || widget == m_EmptyLabel
+                            || widget == m_CloseEmptyGroupButton)) {
+            return m_Secondary;
+        }
+        widget = widget->parentWidget();
+    }
+    return 0;
+}
+
+void TabManager::UpdateGroupAppearance()
+{
+    m_Primary->SetActiveAppearance(m_Active == m_Primary);
+    if (m_Secondary) {
+        m_Secondary->SetActiveAppearance(m_Active == m_Secondary);
+    }
+}
+
+void TabManager::OnApplicationFocusChanged(QWidget *old_widget, QWidget *now)
+{
+    Q_UNUSED(old_widget);
+    TabGroup *group = GroupFromWidget(now);
+    if (group) {
+        SetActiveGroup(group);
+    }
+}
+
+void TabManager::FocusUpperEditorGroup()
+{
+    SetActiveGroup(m_Primary);
+    SetFocusInTab();
+}
+
+void TabManager::FocusLowerEditorGroup()
+{
+    if (!IsSplit()) {
+        return;
+    }
+    EnsureSecondary();
+    SetActiveGroup(m_Secondary);
+    if (ContentTab *tab = m_Secondary->CurrentTab()) {
+        tab->setFocus();
+    } else if (m_EmptyLabel) {
+        m_EmptyLabel->setFocus();
+    }
+}
+
+void TabManager::SaveLayoutSettings()
+{
+    SettingsStore settings;
+    settings.beginGroup(QStringLiteral("editorGroups"));
+    settings.setValue(QStringLiteral("enabled"), IsSplit());
+    if (IsSplit()) {
+        settings.setValue(QStringLiteral("splitterState"), m_Splitter->saveState());
+    }
+    settings.setValue(QStringLiteral("activeGroup"),
+                      (m_Active == m_Secondary) ? QStringLiteral("secondary")
+                                                : QStringLiteral("primary"));
+    settings.endGroup();
+}
+
+void TabManager::RestoreLayoutSettings()
+{
+    SettingsStore settings;
+    settings.beginGroup(QStringLiteral("editorGroups"));
+    const bool enabled = settings.value(QStringLiteral("enabled"), false).toBool();
+    const QByteArray state = settings.value(QStringLiteral("splitterState")).toByteArray();
+    settings.endGroup();
+
+    if (enabled) {
+        SplitEditorDown();
+        if (!state.isEmpty()) {
+            m_Splitter->restoreState(state);
+        }
+    }
+    // Files are not restored. Keep the first opened HTML in the primary group.
+    SetActiveGroup(m_Primary);
 }

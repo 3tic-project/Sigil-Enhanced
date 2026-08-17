@@ -693,6 +693,8 @@ set( MAINUI_FILES
 set( TAB_FILES
     Tabs/TabBar.cpp
     Tabs/TabBar.h
+    Tabs/TabGroup.cpp
+    Tabs/TabGroup.h
     Tabs/TabManager.cpp
     Tabs/TabManager.h
     Tabs/FlowTab.cpp

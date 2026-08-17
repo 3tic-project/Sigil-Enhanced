@@ -268,6 +268,7 @@ public slots:
                       const QString &caret_location_to_scroll_to = QString(),
                       const QUrl &fragment = QUrl(),
                       bool precede_current_tab = false);
+    void OpenResourceInOtherGroup(Resource *resource);
 
     void OpenResourceAndWaitUntilLoaded(Resource *resource,
                                         int line_to_scroll_to = -1,
@@ -586,6 +587,11 @@ private slots:
     void ScrollPreview();
     void UpdatePreview();
     void InspectHTML();
+    void ToggleDeveloperTools(bool show);
+    void SplitEditorDown();
+    void JoinEditorGroups();
+    void FocusUpperEditorGroup();
+    void FocusLowerEditorGroup();
 
     /**
      * Updates the cursor postion label to refelect the position of the
@@ -1009,6 +1015,11 @@ private:
     ValidationResultsView *m_ValidationResultsView;
 
     PreviewWindow *m_PreviewWindow;
+    QAction *m_DeveloperToolsAction;
+    QAction *m_SplitEditorDownAction;
+    QAction *m_JoinEditorGroupsAction;
+    QAction *m_FocusUpperEditorGroupAction;
+    QAction *m_FocusLowerEditorGroupAction;
 
     /**
      * The lable that displays the cursor position.
