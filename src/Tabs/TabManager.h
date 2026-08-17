@@ -37,6 +37,8 @@ class WellFormedContent;
 class QSplitter;
 class QLabel;
 class QWidget;
+class QEvent;
+class QMimeData;
 
 /**
  * Manages the tabs shown in the main UI.
@@ -123,6 +125,7 @@ public:
     void FocusLowerEditorGroup();
     void SaveLayoutSettings();
     void RestoreLayoutSettings();
+    bool eventFilter(QObject *object, QEvent *event);
 
 public slots:
 
@@ -253,6 +256,7 @@ private slots:
     void OnCloseOtherTabsRequested(int tab_index);
     void OnTabInserted();
     void OnMoveToOtherGroupRequested(int tab_index);
+    void OnTabDropRequested(QWidget *tab_widget, int insert_index);
     void OnApplicationFocusChanged(QWidget *old_widget, QWidget *now);
 
 private:
@@ -335,6 +339,8 @@ private:
     TabGroup *ActiveGroup() const;
     TabGroup *GroupContaining(const ContentTab *tab) const;
     ContentTab *FindTab(const Resource *resource) const;
+    bool MoveTabToGroup(ContentTab *tab, TabGroup *dest, int dest_index);
+    bool AcceptsEditorTabDrop(const QMimeData *mime) const;
     void CloseTabAt(TabGroup *group, int tab_index, bool force);
     void CloseAllTabsExcept(ContentTab *keep);
     void ApplyExistingTabLocation(ContentTab *tab,

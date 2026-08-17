@@ -22,20 +22,33 @@
 **
 *************************************************************************/
 
+#include <QtCore/QDataStream>
 #include <QtGui/QContextMenuEvent>
+#include <QtGui/QDrag>
+#include <QtGui/QDragEnterEvent>
+#include <QtGui/QDragMoveEvent>
+#include <QtGui/QDropEvent>
 #include <QtGui/QMouseEvent>
 #include <QAction>
+#include <QApplication>
 #include <QtWidgets/QMenu>
+#include <QtWidgets/QTabWidget>
+#include <QMimeData>
 #include <QPointer>
 
 #include "Misc/Utility.h"
 #include "Tabs/TabBar.h"
 
+const char TabBar::EditorTabMimeType[] = "application/x-sigil-editortab";
+
 TabBar::TabBar(QWidget *parent)
     : QTabBar(parent),
       m_TabIndex(-1),
+      m_PressIndex(-1),
+      m_PressPos(),
       m_MoveLastTabAllowed(true)
 {
+    setAcceptDrops(true);
 #if defined(Q_OS_MAC)
     // Qt MacOSX missing tab close icon - https://bugreports.qt.io/browse/QTBUG-61092
     // and prevent the silly show only when cursor is near it that came after
@@ -79,10 +92,113 @@ void TabBar::mousePressEvent(QMouseEvent *event)
             }
         }
     } else if (event->button() == Qt::LeftButton) {
+        m_PressIndex = tabAt(event->pos());
+        m_PressPos = event->pos();
         emit TabBarClicked();
     }
 
     QTabBar::mousePressEvent(event);
+}
+
+void TabBar::mouseMoveEvent(QMouseEvent *event)
+{
+    if (!(event->buttons() & Qt::LeftButton) || m_PressIndex < 0) {
+        QTabBar::mouseMoveEvent(event);
+        return;
+    }
+    if ((event->pos() - m_PressPos).manhattanLength() < QApplication::startDragDistance()) {
+        QTabBar::mouseMoveEvent(event);
+        return;
+    }
+    StartTabDrag(m_PressIndex);
+    m_PressIndex = -1;
+}
+
+void TabBar::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData() && event->mimeData()->hasFormat(QLatin1String(EditorTabMimeType))) {
+        event->acceptProposedAction();
+        return;
+    }
+    event->ignore();
+}
+
+void TabBar::dragMoveEvent(QDragMoveEvent *event)
+{
+    if (event->mimeData() && event->mimeData()->hasFormat(QLatin1String(EditorTabMimeType))) {
+        event->acceptProposedAction();
+        return;
+    }
+    event->ignore();
+}
+
+void TabBar::dropEvent(QDropEvent *event)
+{
+    QWidget *tab = DecodeTab(event->mimeData());
+    if (!tab) {
+        event->ignore();
+        return;
+    }
+    emit TabDropRequest(tab, InsertIndexAt(event->position().toPoint()));
+    event->acceptProposedAction();
+}
+
+QByteArray TabBar::EncodeTab(QWidget *tab)
+{
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+    stream << reinterpret_cast<quintptr>(tab);
+    return data;
+}
+
+QWidget *TabBar::DecodeTab(const QMimeData *mime)
+{
+    if (!mime || !mime->hasFormat(QLatin1String(EditorTabMimeType))) {
+        return 0;
+    }
+    QByteArray data = mime->data(QLatin1String(EditorTabMimeType));
+    QDataStream stream(&data, QIODevice::ReadOnly);
+    quintptr pointer = 0;
+    stream >> pointer;
+    return reinterpret_cast<QWidget *>(pointer);
+}
+
+void TabBar::StartTabDrag(int index)
+{
+    QTabWidget *tabs = qobject_cast<QTabWidget *>(parentWidget());
+    if (!tabs || index < 0 || index >= tabs->count()) {
+        return;
+    }
+    QWidget *tab = tabs->widget(index);
+    if (!tab) {
+        return;
+    }
+
+    QMimeData *mime = new QMimeData;
+    mime->setData(QLatin1String(EditorTabMimeType), EncodeTab(tab));
+    mime->setText(tabs->tabText(index));
+
+    QDrag *drag = new QDrag(this);
+    drag->setMimeData(mime);
+    const QRect rect = tabRect(index);
+    if (rect.isValid()) {
+        drag->setPixmap(grab(rect));
+        drag->setHotSpot(QPoint(rect.width() / 2, rect.height() / 2));
+    }
+    drag->exec(Qt::MoveAction);
+}
+
+int TabBar::InsertIndexAt(const QPoint &pos) const
+{
+    const int hovered = tabAt(pos);
+    if (hovered < 0) {
+        return count();
+    }
+    const QRect rect = tabRect(hovered);
+    if (pos.x() > rect.center().x()) {
+        return hovered + 1;
+    }
+    return hovered;
 }
 
 void TabBar::ShowContextMenu(QMouseEvent *event, int tab_index)

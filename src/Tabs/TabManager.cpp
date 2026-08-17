@@ -28,6 +28,11 @@
 #include <QLabel>
 #include <QPair>
 #include <QStackedLayout>
+#include <QMimeData>
+#include <QEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QTabBar>
 #include "BookManipulation/CleanSource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/CSSResource.h"
@@ -53,6 +58,7 @@
 #include "Tabs/OPFTab.h"
 #include "Tabs/TabManager.h"
 #include "Tabs/TabGroup.h"
+#include "Tabs/TabBar.h"
 #include "Tabs/WellFormedContent.h"
 #include "Misc/SettingsStoreExtend.h"
 #include "Misc/SettingsStore.h"
@@ -815,6 +821,8 @@ void TabManager::ConnectGroup(TabGroup *group)
     connect(group, SIGNAL(tabCloseRequested(int)),     this, SLOT(OnTabCloseRequested(int)));
     connect(group, SIGNAL(TabInserted()),              this, SLOT(OnTabInserted()));
     connect(group, SIGNAL(MoveToOtherGroupRequest(int)), this, SLOT(OnMoveToOtherGroupRequested(int)));
+    connect(group, SIGNAL(TabDropRequest(QWidget *, int)),
+            this, SLOT(OnTabDropRequested(QWidget *, int)));
 }
 
 void TabManager::EnsureSecondary()
@@ -826,10 +834,14 @@ void TabManager::EnsureSecondary()
     m_SecondaryPane = new QWidget(this);
     m_Secondary = new TabGroup(m_SecondaryPane);
     m_Secondary->SetKeepLastTab(false);
-    m_EmptyLabel = new QLabel(tr("Open a file from Book Browser"), m_SecondaryPane);
+    m_EmptyLabel = new QLabel(tr("Open a file from Book Browser, or drop an editor tab here"), m_SecondaryPane);
     m_EmptyLabel->setAlignment(Qt::AlignCenter);
     m_EmptyLabel->setWordWrap(true);
     m_EmptyLabel->setFocusPolicy(Qt::ClickFocus);
+    m_EmptyLabel->setAcceptDrops(true);
+    m_EmptyLabel->installEventFilter(this);
+    m_SecondaryPane->setAcceptDrops(true);
+    m_SecondaryPane->installEventFilter(this);
     m_Secondary->setMinimumHeight(80);
     m_SecondaryPane->setMinimumHeight(80);
 
@@ -1012,8 +1024,9 @@ TabGroup *TabManager::ResolveTargetGroup(OpenDisposition disposition)
 
     if (!IsSplit()) {
         SplitEditorDown();
+        EnsureSecondary();
+        return m_Secondary;
     }
-    EnsureSecondary();
 
     SettingsStoreExtend settings;
     const QString target = settings.getOtherGroupTarget();
@@ -1046,8 +1059,51 @@ bool TabManager::MoveTabToOtherGroup(ContentTab *tab)
     }
     EnsureSecondary();
     TabGroup *dest = (source == m_Primary) ? m_Secondary : m_Primary;
+    return MoveTabToGroup(tab, dest, dest->TabCount());
+}
+
+bool TabManager::MoveTabToGroup(ContentTab *tab, TabGroup *dest, int dest_index)
+{
+    TabGroup *source = GroupContaining(tab);
+    if (!tab || !source || !dest) {
+        return false;
+    }
+
+    if (source == dest) {
+        const int from = source->IndexOfTab(tab);
+        if (from < 0) {
+            return false;
+        }
+        if (dest_index > from) {
+            dest_index--;
+        }
+        if (dest_index < 0) {
+            dest_index = 0;
+        }
+        if (dest_index >= source->TabCount()) {
+            dest_index = source->TabCount() - 1;
+        }
+        if (from != dest_index) {
+            source->tabBar()->moveTab(from, dest_index);
+        }
+        SetActiveGroup(dest);
+        dest->ActivateTab(tab);
+        return true;
+    }
+
+    if (!source->CanMoveTab(source->IndexOfTab(tab))) {
+        return false;
+    }
+
+    if (!IsSplit()) {
+        SplitEditorDown();
+        EnsureSecondary();
+        dest = m_Secondary;
+        dest_index = dest->TabCount();
+    }
+
     source->TakeTab(tab);
-    dest->AddContentTab(tab, false);
+    dest->InsertContentTab(tab, dest_index);
     SetActiveGroup(dest);
     dest->ActivateTab(tab);
     UpdateEmptyState();
@@ -1062,6 +1118,41 @@ void TabManager::OnMoveToOtherGroupRequested(int tab_index)
         return;
     }
     MoveTabToOtherGroup(group->TabAt(tab_index));
+}
+
+void TabManager::OnTabDropRequested(QWidget *tab_widget, int insert_index)
+{
+    TabGroup *dest = qobject_cast<TabGroup *>(sender());
+    MoveTabToGroup(qobject_cast<ContentTab *>(tab_widget), dest, insert_index);
+}
+
+bool TabManager::AcceptsEditorTabDrop(const QMimeData *mime) const
+{
+    ContentTab *tab = qobject_cast<ContentTab *>(TabBar::DecodeTab(mime));
+    return tab && CanMoveTabToOtherGroup(tab);
+}
+
+bool TabManager::eventFilter(QObject *object, QEvent *event)
+{
+    if (object != m_EmptyLabel && object != m_SecondaryPane) {
+        return QWidget::eventFilter(object, event);
+    }
+
+    if (event->type() == QEvent::DragEnter || event->type() == QEvent::DragMove) {
+        QDropEvent *drag = static_cast<QDropEvent *>(event);
+        if (AcceptsEditorTabDrop(drag->mimeData())) {
+            drag->acceptProposedAction();
+            return true;
+        }
+    } else if (event->type() == QEvent::Drop) {
+        QDropEvent *drop = static_cast<QDropEvent *>(event);
+        ContentTab *tab = qobject_cast<ContentTab *>(TabBar::DecodeTab(drop->mimeData()));
+        if (tab && m_Secondary && MoveTabToGroup(tab, m_Secondary, m_Secondary->TabCount())) {
+            drop->acceptProposedAction();
+            return true;
+        }
+    }
+    return QWidget::eventFilter(object, event);
 }
 
 void TabManager::SetActiveGroup(TabGroup *group)

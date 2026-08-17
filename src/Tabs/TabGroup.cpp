@@ -22,6 +22,11 @@
 
 #include "Tabs/TabGroup.h"
 
+#include <QtGui/QDragEnterEvent>
+#include <QtGui/QDragMoveEvent>
+#include <QtGui/QDropEvent>
+#include <QMimeData>
+
 #include "ResourceObjects/Resource.h"
 #include "Tabs/ContentTab.h"
 #include "Tabs/TabBar.h"
@@ -36,9 +41,12 @@ TabGroup::TabGroup(QWidget *parent)
     connect(tab_bar, SIGNAL(TabBarClicked()),            this, SIGNAL(TabBarClicked()));
     connect(tab_bar, SIGNAL(CloseOtherTabsRequest(int)), this, SIGNAL(CloseOtherTabsRequest(int)));
     connect(tab_bar, SIGNAL(MoveToOtherGroupRequest(int)), this, SIGNAL(MoveToOtherGroupRequest(int)));
+    connect(tab_bar, SIGNAL(TabDropRequest(QWidget *, int)),
+            this, SIGNAL(TabDropRequest(QWidget *, int)));
     tab_bar->SetMoveLastTabAllowed(!m_KeepLastTab);
     setDocumentMode(true);
-    setMovable(true);
+    setMovable(false);
+    setAcceptDrops(true);
     setTabsClosable(true);
     setUsesScrollButtons(true);
 }
@@ -129,6 +137,56 @@ int TabGroup::AddContentTab(ContentTab *new_tab, bool precede_current_tab)
     }
     setTabToolTip(idx, new_tab->GetShortPathName());
     return idx;
+}
+
+int TabGroup::InsertContentTab(ContentTab *new_tab, int index)
+{
+    if (!new_tab) {
+        return -1;
+    }
+    QString safeName = new_tab->GetShortPathName();
+    safeName.replace("&", "&&");
+    if (index < 0 || index > count()) {
+        index = count();
+    }
+#if defined(Q_OS_MAC)
+    const int idx = insertTab(index, new_tab, safeName);
+#else
+    const int idx = insertTab(index, new_tab, new_tab->GetIcon(), safeName);
+#endif
+    setTabToolTip(idx, new_tab->GetShortPathName());
+    setCurrentWidget(new_tab);
+    new_tab->setFocus();
+    return idx;
+}
+
+void TabGroup::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData() && event->mimeData()->hasFormat(QLatin1String(TabBar::EditorTabMimeType))) {
+        event->acceptProposedAction();
+        return;
+    }
+    event->ignore();
+}
+
+void TabGroup::dragMoveEvent(QDragMoveEvent *event)
+{
+    if (event->mimeData() && event->mimeData()->hasFormat(QLatin1String(TabBar::EditorTabMimeType))) {
+        event->acceptProposedAction();
+        return;
+    }
+    event->ignore();
+}
+
+void TabGroup::dropEvent(QDropEvent *event)
+{
+    QWidget *tab = TabBar::DecodeTab(event->mimeData());
+    if (!tab) {
+        event->ignore();
+        return;
+    }
+    emit TabDropRequest(tab, count());
+    event->acceptProposedAction();
 }
 
 void TabGroup::TakeTab(ContentTab *tab)

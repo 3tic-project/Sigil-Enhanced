@@ -30,6 +30,10 @@
 class ContentTab;
 class Resource;
 class WellFormedContent;
+class QDragEnterEvent;
+class QDragMoveEvent;
+class QDropEvent;
+class QWidget;
 
 /**
  * One editor tab strip. TabManager owns one or more groups and keeps
@@ -53,6 +57,7 @@ public:
     WellFormedContent *WellFormedAt(int index) const;
 
     int AddContentTab(ContentTab *tab, bool precede_current_tab);
+    int InsertContentTab(ContentTab *tab, int index);
     void TakeTab(ContentTab *tab);
     void ActivateTab(ContentTab *tab);
     void UpdateTabName(ContentTab *tab);
@@ -70,10 +75,14 @@ signals:
     void TabBarClicked();
     void CloseOtherTabsRequest(int tab_index);
     void MoveToOtherGroupRequest(int tab_index);
+    void TabDropRequest(QWidget *tab, int insert_index);
     void TabInserted();
 
 protected:
     void tabInserted(int index) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 private:
     bool m_KeepLastTab;
