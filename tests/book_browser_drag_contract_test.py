@@ -64,3 +64,37 @@ require(
     "resource->Type() != Resource::HTMLResourceType" in model,
     "only XHTML resources may be reordered in the Text folder",
 )
+require(
+    "External file URLs are imported by BookBrowserTreeView" in model,
+    "OPFModel must reject Finder/Explorer URL drops so they do not create fake rows",
+)
+
+require(
+    "SIGNAL(addFilesRequest(QStringList&))" in book_browser
+    and "SLOT(AddFiles(QStringList&))" in book_browser,
+    "external file drops must call BookBrowser::AddFiles",
+)
+require(
+    "SIGNAL(insertHtmlRequest(QString&, const QPoint&))" in book_browser
+    and "SLOT(InsertHtmlToTextGroup(QString&, const QPoint&))" in book_browser,
+    "positioned XHTML drops must call InsertHtmlToTextGroup",
+)
+require(
+    "SIGNAL(insertTXTRequest(QString&, const QPoint&))" in book_browser
+    and "SLOT(InsertTxtToTextGroup(QString&, const QPoint&))" in book_browser,
+    "positioned TXT drops must call InsertTxtToTextGroup",
+)
+require(
+    "m_TreeView->setAcceptDrops(true);" in book_browser,
+    "Book Browser must accept external drops after InternalMove is configured",
+)
+
+require(
+    "allDroppedUrlsAreEpub" in tree_view
+    and "acceptProposedAction()" in tree_view,
+    "external file drags must be accepted by the view, not the OPF model",
+)
+require(
+    "Do not ask OPFModel to accept URL mime" in tree_view,
+    "URL dragMove must not fall through to InternalMove canDropMimeData",
+)
