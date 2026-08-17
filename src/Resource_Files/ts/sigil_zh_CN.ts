@@ -24866,6 +24866,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <translation>从书籍浏览器打开文件，或将编辑器标签拖到这里</translation>
     </message>
     <message>
+        <source>Close This Editor Group</source>
+        <translation>关闭此编辑器组</translation>
+    </message>
+    <message>
         <source>%1 is already open in the other editor group.</source>
         <translation>%1 已在另一编辑器组中打开。</translation>
     </message>

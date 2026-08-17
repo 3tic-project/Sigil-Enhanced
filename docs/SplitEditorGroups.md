@@ -26,7 +26,7 @@ Join with `Join Editor Groups` — tabs move; they are not reloaded.
 
 - One Resource still has one editor.
 - The upper group cannot close its last tab.
-- Closing the last tab in the lower group leaves the empty group in place.
+- Closing the last tab in the lower group leaves the empty group in place. Close that empty view with the **Close This Editor Group** button or by right-clicking the empty area.
 - `Close Other Tabs` is still window-wide: every tab except the current one, in both groups.
 - Restart restores whether the editor was split and the splitter ratio, not which files were open.
 - Clicking into a group makes it active. Undo, Cut, and other edit commands follow the active group, even if that group's current tab did not change.

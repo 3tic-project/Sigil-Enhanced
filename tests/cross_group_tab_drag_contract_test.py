@@ -36,7 +36,7 @@ require(
 )
 require(
     "AcceptsEditorTabDrop" in tab_manager
-    and "m_EmptyLabel->setAcceptDrops(true)" in tab_manager,
+    and "m_EmptyPane->setAcceptDrops(true)" in tab_manager,
     "an empty lower group is a drop target",
 )
 

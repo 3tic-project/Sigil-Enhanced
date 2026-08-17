@@ -28,8 +28,11 @@ require(
 )
 require(
     'tr("Open a file from Book Browser, or drop an editor tab here")' in tab_manager
+    and 'tr("Close This Editor Group")' in tab_manager
+    and "CloseEmptySecondary" in tab_manager
+    and "OnEmptyGroupContextMenu" in tab_manager
     and "QStackedLayout" in tab_manager,
-    "an empty secondary group shows a lightweight prompt instead of joining",
+    "an empty secondary group can be closed from a button or the area context menu",
 )
 require(
     "m_Secondary->TakeTab(tab)" in tab_manager

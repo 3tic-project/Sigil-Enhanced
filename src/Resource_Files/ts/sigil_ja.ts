@@ -24864,6 +24864,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <translation>ブックブラウザーからファイルを開くか、エディタータブをここにドロップ</translation>
     </message>
     <message>
+        <source>Close This Editor Group</source>
+        <translation>このエディターグループを閉じる</translation>
+    </message>
+    <message>
         <source>%1 is already open in the other editor group.</source>
         <translation>%1 は他のエディターグループで既に開いています。</translation>
     </message>
