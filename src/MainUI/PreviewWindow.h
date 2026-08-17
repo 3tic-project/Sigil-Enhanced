@@ -133,6 +133,7 @@ private:
     void ConnectSignalsToSlots();
     void UpdateWindowTitle();
     void ApplyDevToolsSplitter();
+    void CollapseDevToolsSplitter();
     bool fixup_fullscreen_svg_images(const QString &text);
     
     const QString titleText();

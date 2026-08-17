@@ -10,7 +10,7 @@
 
 关闭面板上的 × 或再次点检查按钮会**隐藏** DevTools，不销毁 Chromium 页面。再次打开仍是同一实例。
 
-Preview Dock 浮动或重新停靠时，DevTools 跟着 Preview 走。Preview 与目录叠在同一 dock 区域时，切走 Preview 不会拆掉 inspected 绑定。
+Preview Dock 浮动或重新停靠时，DevTools 跟着 Preview 走。检查/复制/刷新按钮始终在 Preview 窗口底部，不夹在预览和 DevTools 中间。Preview 与目录叠在同一 dock 区域时，切走 Preview 不会拆掉 inspected 绑定。
 
 ## 重启后恢复什么
 

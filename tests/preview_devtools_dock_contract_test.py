@@ -34,8 +34,16 @@ require(
 require(
     "QSplitter(Qt::Vertical" in preview
     and "previewDevToolsSplitter" in preview
-    and "setChildrenCollapsible(false)" in preview,
-    "Preview must host DevTools in a non-collapsible vertical splitter",
+    and "setChildrenCollapsible(false)" in preview
+    and "m_Layout->addWidget(m_Splitter, 1)" in preview
+    and "m_Layout->addLayout(m_buttons)" in preview,
+    "Preview must host DevTools in a splitter above the toolbar so the preview fills leftover space",
+)
+require(
+    "setStretchFactor(0, 1)" in preview
+    and "setCollapsible(1, true)" in preview
+    and "CollapseDevToolsSplitter" in preview,
+    "hidden DevTools must collapse to zero height instead of leaving a blank pane",
 )
 require(
     "Do not StopInspection() when the Preview dock is hidden or tabified." in preview,

@@ -42,6 +42,8 @@
 #include <QWidget>
 #include <QSplitter>
 #include <QMenu>
+#include <QTimer>
+#include <QSizePolicy>
 
 #include "MainUI/PreviewWindow.h"
 #include "Dialogs/Inspector.h"
@@ -192,6 +194,16 @@ void PreviewWindow::showEvent(QShowEvent * event)
 
     QDockWidget::showEvent(event);
     raise();
+    if (IsDevToolsVisible()) {
+        QTimer::singleShot(0, this, [this]() {
+            if (IsDevToolsVisible()) {
+                ApplyDevToolsSplitter();
+                if (m_Inspector) {
+                    m_Inspector->InspectPageofView(m_Preview);
+                }
+            }
+        });
+    }
     emit Shown();
 }
 
@@ -263,7 +275,8 @@ void PreviewWindow::SetupView()
     QVBoxLayout * wl = new QVBoxLayout(m_wrapper);
     wl->setContentsMargins(0,0,0,0);
     wl->addWidget(m_Preview);
-    m_Layout->addWidget(m_wrapper);
+    m_wrapper->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_Preview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     m_inspectAction = new QAction(QIcon(":/main/inspect.svg"),"", this);
     m_inspectAction->setEnabled(true);
@@ -314,22 +327,22 @@ void PreviewWindow::SetupView()
     m_buttons->addWidget(m_bprint);
     m_buttons->addWidget(m_progress);
 
-    QWidget *preview_pane = new QWidget(m_MainWidget);
-    QVBoxLayout *preview_layout = new QVBoxLayout(preview_pane);
-    preview_layout->setContentsMargins(0, 0, 0, 0);
-    preview_layout->setSpacing(0);
-    preview_layout->addWidget(m_wrapper);
-    preview_layout->addLayout(m_buttons);
-    preview_pane->setMinimumHeight(80);
-
+    // Splitter holds only Preview and DevTools. The inspect/copy/reload
+    // row stays at the bottom of the dock so it is never stranded between
+    // a short preview and a blank pane.
     m_Splitter->setObjectName(QStringLiteral("previewDevToolsSplitter"));
     m_Splitter->setChildrenCollapsible(false);
-    m_Splitter->addWidget(preview_pane);
+    m_Splitter->addWidget(m_wrapper);
     m_Splitter->addWidget(m_Inspector);
-    m_Inspector->setMinimumHeight(80);
+    m_Splitter->setStretchFactor(0, 1);
+    m_Splitter->setStretchFactor(1, 0);
+    m_Splitter->setCollapsible(0, false);
+    m_Splitter->setCollapsible(1, true);
+    m_Inspector->setMinimumHeight(0);
     m_Inspector->hide();
 
-    m_Layout->addWidget(m_Splitter);
+    m_Layout->addWidget(m_Splitter, 1);
+    m_Layout->addLayout(m_buttons);
 
     m_MainWidget->setLayout(m_Layout);
 
@@ -696,13 +709,24 @@ void PreviewWindow::ApplyDevToolsSplitter()
     if (!m_Splitter || !m_Inspector || !m_Inspector->isVisible()) {
         return;
     }
-    if (!m_devToolsSplitterState.isEmpty()) {
-        m_Splitter->restoreState(m_devToolsSplitterState);
-        return;
+    if (!m_devToolsSplitterState.isEmpty() && m_Splitter->restoreState(m_devToolsSplitterState)) {
+        const QList<int> sizes = m_Splitter->sizes();
+        if (sizes.size() == 2 && sizes.at(0) >= 40 && sizes.at(1) >= 40) {
+            return;
+        }
     }
     const int total = qMax(m_Splitter->height(), 200);
-    const int tools = qBound(80, total * 35 / 100, total - 80);
+    const int tools = qBound(120, total * 35 / 100, total - 120);
     m_Splitter->setSizes(QList<int>() << (total - tools) << tools);
+}
+
+void PreviewWindow::CollapseDevToolsSplitter()
+{
+    if (!m_Splitter) {
+        return;
+    }
+    const int total = qMax(m_Splitter->height(), 1);
+    m_Splitter->setSizes(QList<int>() << total << 0);
 }
 
 void PreviewWindow::SetDevToolsVisible(bool visible)
@@ -722,14 +746,25 @@ void PreviewWindow::SetDevToolsVisible(bool visible)
     }
 
     if (visible) {
+        m_Inspector->setMinimumHeight(120);
         m_Inspector->show();
-        ApplyDevToolsSplitter();
-        m_Inspector->InspectPageofView(m_Preview);
+        // Wait until the splitter has a real height before sizing or
+        // attaching the inspected page. Doing this in the constructor
+        // or while the widget is still hidden leaves a blank pane.
+        QTimer::singleShot(0, this, [this]() {
+            if (!m_Inspector || !m_Inspector->isVisible()) {
+                return;
+            }
+            ApplyDevToolsSplitter();
+            m_Inspector->InspectPageofView(m_Preview);
+        });
     } else {
         if (m_Splitter) {
             m_devToolsSplitterState = m_Splitter->saveState();
         }
         m_Inspector->hide();
+        m_Inspector->setMinimumHeight(0);
+        CollapseDevToolsSplitter();
         // Hide keeps the WebEngine page and inspected binding.
     }
     if (m_inspectAction) {
