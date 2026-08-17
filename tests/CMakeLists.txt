@@ -890,6 +890,13 @@ add_test(NAME python_live_sdk
 )
 set_tests_properties(python_live_sdk PROPERTIES TIMEOUT 30)
 
+add_test(NAME metaproc3_alternate_script
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/metaproc3_alternate_script_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(metaproc3_alternate_script PROPERTIES TIMEOUT 30)
+
 add_test(NAME python_package_sync
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_package_sync_test.py
 )
