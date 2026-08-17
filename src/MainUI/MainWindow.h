@@ -590,6 +590,8 @@ private slots:
     void ToggleDeveloperTools(bool show);
     void SplitEditorDown();
     void JoinEditorGroups();
+    void FocusUpperEditorGroup();
+    void FocusLowerEditorGroup();
 
     /**
      * Updates the cursor postion label to refelect the position of the
@@ -1016,6 +1018,8 @@ private:
     QAction *m_DeveloperToolsAction;
     QAction *m_SplitEditorDownAction;
     QAction *m_JoinEditorGroupsAction;
+    QAction *m_FocusUpperEditorGroupAction;
+    QAction *m_FocusLowerEditorGroupAction;
 
     /**
      * The lable that displays the cursor position.

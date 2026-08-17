@@ -13435,6 +13435,14 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>合并编辑器组</translation>
     </message>
     <message>
+        <source>Focus Upper Editor Group</source>
+        <translation>聚焦上方编辑器组</translation>
+    </message>
+    <message>
+        <source>Focus Lower Editor Group</source>
+        <translation>聚焦下方编辑器组</translation>
+    </message>
+    <message>
         <source>Focus on Preview</source>
         <translation>聚焦预览</translation>
     </message>

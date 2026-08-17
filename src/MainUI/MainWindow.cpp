@@ -301,6 +301,8 @@ MainWindow::MainWindow(const QString &openfilepath,
     m_DeveloperToolsAction(NULL),
     m_SplitEditorDownAction(NULL),
     m_JoinEditorGroupsAction(NULL),
+    m_FocusUpperEditorGroupAction(NULL),
+    m_FocusLowerEditorGroupAction(NULL),
     m_slZoomSlider(NULL),
     m_lbZoomLabel(NULL),
     c_SaveFilters(GetSaveFiltersMap()),
@@ -5232,6 +5234,9 @@ void MainWindow::UpdateUIOnTabCountChange()
     if (m_JoinEditorGroupsAction) {
         m_JoinEditorGroupsAction->setEnabled(m_TabManager->IsSplit());
     }
+    if (m_FocusLowerEditorGroupAction) {
+        m_FocusLowerEditorGroupAction->setEnabled(m_TabManager->IsSplit());
+    }
 }
 
 
@@ -5646,6 +5651,20 @@ void MainWindow::JoinEditorGroups()
     }
 }
 
+void MainWindow::FocusUpperEditorGroup()
+{
+    if (m_TabManager) {
+        m_TabManager->FocusUpperEditorGroup();
+    }
+}
+
+void MainWindow::FocusLowerEditorGroup()
+{
+    if (m_TabManager) {
+        m_TabManager->FocusLowerEditorGroup();
+    }
+}
+
 void MainWindow::UpdateCursorPositionLabel(int line, int column, int codepoint)
 {
     QString name = "";
@@ -5978,6 +5997,11 @@ void MainWindow::ReadSettings()
         m_findReplaceMode = FindReplaceMode::OriginalMode;
     }
     //---------------------------------------
+    if (m_TabManager) {
+        m_TabManager->RestoreLayoutSettings();
+    }
+    // Restore runs before SplitChanged is connected; sync the menu state now.
+    UpdateUIOnTabCountChange();
 }
 
 
@@ -6023,6 +6047,9 @@ void MainWindow::WriteSettings()
     settings.setClipboardHistoryLimit(m_ClipboardHistoryLimit);
     if (m_PreviewWindow) {
         m_PreviewWindow->SaveLayoutSettings();
+    }
+    if (m_TabManager) {
+        m_TabManager->SaveLayoutSettings();
     }
 }
 
@@ -6889,7 +6916,16 @@ void MainWindow::ExtendUI()
     m_JoinEditorGroupsAction->setObjectName(QStringLiteral("actionJoinEditorGroups"));
     editor_layout->addAction(m_SplitEditorDownAction);
     editor_layout->addAction(m_JoinEditorGroupsAction);
-    m_JoinEditorGroupsAction->setEnabled(false);
+    m_FocusUpperEditorGroupAction = new QAction(tr("Focus Upper Editor Group"), this);
+    m_FocusUpperEditorGroupAction->setObjectName(QStringLiteral("actionFocusUpperEditorGroup"));
+    m_FocusLowerEditorGroupAction = new QAction(tr("Focus Lower Editor Group"), this);
+    m_FocusLowerEditorGroupAction->setObjectName(QStringLiteral("actionFocusLowerEditorGroup"));
+    editor_layout->addSeparator();
+    editor_layout->addAction(m_FocusUpperEditorGroupAction);
+    editor_layout->addAction(m_FocusLowerEditorGroupAction);
+    m_JoinEditorGroupsAction->setEnabled(m_TabManager->IsSplit());
+    m_SplitEditorDownAction->setEnabled(!m_TabManager->IsSplit());
+    m_FocusLowerEditorGroupAction->setEnabled(m_TabManager->IsSplit());
     ui.menuView->addAction(m_TableOfContents->toggleViewAction());
     m_TableOfContents->toggleViewAction()->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F3));
     ui.menuView->addAction(m_ValidationResultsView->toggleViewAction());
@@ -7102,6 +7138,8 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, m_DeveloperToolsAction, "MainWindow.DeveloperTools");
     KeyboardShortcutManager::instance().registerAction(this, m_SplitEditorDownAction, "MainWindow.SplitEditorDown");
     KeyboardShortcutManager::instance().registerAction(this, m_JoinEditorGroupsAction, "MainWindow.JoinEditorGroups");
+    KeyboardShortcutManager::instance().registerAction(this, m_FocusUpperEditorGroupAction, "MainWindow.FocusUpperEditorGroup");
+    KeyboardShortcutManager::instance().registerAction(this, m_FocusLowerEditorGroupAction, "MainWindow.FocusLowerEditorGroup");
     KeyboardShortcutManager::instance().registerAction(this, m_TableOfContents->toggleViewAction(), "MainWindow.TableOfContents");
     KeyboardShortcutManager::instance().registerAction(this, m_ValidationResultsView->toggleViewAction(), "MainWindow.ValidationResults");
     // Window
@@ -7314,6 +7352,8 @@ void MainWindow::ConnectSignalsToSlots()
 {
     connect(m_SplitEditorDownAction, SIGNAL(triggered()), this, SLOT(SplitEditorDown()));
     connect(m_JoinEditorGroupsAction, SIGNAL(triggered()), this, SLOT(JoinEditorGroups()));
+    connect(m_FocusUpperEditorGroupAction, SIGNAL(triggered()), this, SLOT(FocusUpperEditorGroup()));
+    connect(m_FocusLowerEditorGroupAction, SIGNAL(triggered()), this, SLOT(FocusLowerEditorGroup()));
     connect(m_TabManager, SIGNAL(SplitChanged()), this, SLOT(UpdateUIOnTabCountChange()));
     connect(m_DeveloperToolsAction, SIGNAL(toggled(bool)), this, SLOT(ToggleDeveloperTools(bool)));
     connect(m_PreviewWindow, SIGNAL(DevToolsVisibilityChanged(bool)),

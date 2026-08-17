@@ -13619,6 +13619,14 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>合併編輯器群組</translation>
     </message>
     <message>
+        <source>Focus Upper Editor Group</source>
+        <translation>聚焦上方編輯器群組</translation>
+    </message>
+    <message>
+        <source>Focus Lower Editor Group</source>
+        <translation>聚焦下方編輯器群組</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/main.ui" line="3439"/>
         <source>Focus on Preview</source>
         <translation>聚焦預覽</translation>
