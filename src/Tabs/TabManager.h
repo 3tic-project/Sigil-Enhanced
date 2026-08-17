@@ -49,6 +49,12 @@ class TabManager : public QWidget
     Q_OBJECT
 
 public:
+    enum class OpenDisposition {
+        ActiveGroup,
+        OtherGroup
+    };
+
+public:
 
     /**
      * Constructor.
@@ -106,6 +112,13 @@ public:
     bool IsSplit() const;
     void SplitEditorDown();
     void JoinEditorGroups();
+    void OpenResourceInOtherGroup(Resource *resource,
+                                  int line_to_scroll_to = -1,
+                                  int position_to_scroll_to = -1,
+                                  const QString &caret_location_to_scroll_to = QString(),
+                                  const QUrl &fragment = QUrl());
+    bool MoveTabToOtherGroup(ContentTab *tab);
+    bool CanMoveTabToOtherGroup(const ContentTab *tab) const;
 
 public slots:
 
@@ -235,6 +248,7 @@ private slots:
     void OnTabCloseRequested(int tab_index);
     void OnCloseOtherTabsRequested(int tab_index);
     void OnTabInserted();
+    void OnMoveToOtherGroupRequested(int tab_index);
 
 private:
 
@@ -283,7 +297,8 @@ private:
                                      int position_to_scroll_to,
                                      const QString &caret_location_to_scroll_to,
                                      const QUrl &fragment,
-                                     bool grab_focus = true);
+                                     bool grab_focus = true,
+                                     QWidget *tab_parent = 0);
 
     /**
      * Adds a new content tab to the displayed tabs.
@@ -295,7 +310,15 @@ private:
      * @param precede_current_tab Should the new tab precede the current one.
      * @return \c true if the tab was successfully added.
      */
-    bool AddNewContentTab(ContentTab *new_tab, bool precede_current_tab);
+    bool AddNewContentTab(ContentTab *new_tab, bool precede_current_tab, TabGroup *target = 0);
+    TabGroup *ResolveTargetGroup(OpenDisposition disposition);
+    void OpenWithDisposition(Resource *resource,
+                             int line_to_scroll_to,
+                             int position_to_scroll_to,
+                             const QString &caret_location_to_scroll_to,
+                             const QUrl &fragment,
+                             bool precede_current_tab,
+                             OpenDisposition disposition);
 
     void ConnectGroup(TabGroup *group);
     void EnsureSecondary();

@@ -36,11 +36,13 @@ class TabBar : public QTabBar
 
 public:
     TabBar(QWidget *parent = 0);
+    void SetMoveLastTabAllowed(bool allowed);
 
 signals:
     void TabBarClicked();
     void TabBarDoubleClicked();
     void CloseOtherTabsRequest(int tab_index);
+    void MoveToOtherGroupRequest(int tab_index);
 
 protected:
     void mouseDoubleClickEvent(QMouseEvent *event);
@@ -48,11 +50,13 @@ protected:
 
 private slots:
     void EmitCloseOtherTabs();
+    void EmitMoveToOtherGroup();
 
 private:
     void ShowContextMenu(QMouseEvent *event, int tab_index);
 
     int m_TabIndex;
+    bool m_MoveLastTabAllowed;
 };
 
 #endif // TABBAR_H

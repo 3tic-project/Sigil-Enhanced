@@ -61,13 +61,21 @@ public:
     void PreviousTab();
     void RemoveCurrentTabWidget();
 
+    void SetKeepLastTab(bool keep);
+    bool KeepLastTab() const;
+    bool CanMoveTab(int index) const;
+
 signals:
     void TabBarClicked();
     void CloseOtherTabsRequest(int tab_index);
+    void MoveToOtherGroupRequest(int tab_index);
     void TabInserted();
 
 protected:
     void tabInserted(int index) override;
+
+private:
+    bool m_KeepLastTab;
 };
 
 #endif // TABGROUP_H

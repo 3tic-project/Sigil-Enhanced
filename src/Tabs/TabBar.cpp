@@ -33,7 +33,8 @@
 
 TabBar::TabBar(QWidget *parent)
     : QTabBar(parent),
-      m_TabIndex(-1)
+      m_TabIndex(-1),
+      m_MoveLastTabAllowed(true)
 {
 #if defined(Q_OS_MAC)
     // Qt MacOSX missing tab close icon - https://bugreports.qt.io/browse/QTBUG-61092
@@ -66,7 +67,7 @@ void TabBar::mousePressEvent(QMouseEvent *event)
     } else if (event->button() == Qt::RightButton) {
         int tabCount = count();
 
-        if (tabCount <= 1) {
+        if (tabCount < 1) {
             return;
         }
 
@@ -87,6 +88,10 @@ void TabBar::mousePressEvent(QMouseEvent *event)
 void TabBar::ShowContextMenu(QMouseEvent *event, int tab_index)
 {
     QPointer<QMenu> menu = new QMenu();
+    QAction *moveAction = new QAction(tr("Move Editor to Other Group"), menu);
+    moveAction->setEnabled(count() > 1 || m_MoveLastTabAllowed);
+    menu->addAction(moveAction);
+    connect(moveAction, SIGNAL(triggered()), this, SLOT(EmitMoveToOtherGroup()));
     QAction *closeOtherTabsAction = new QAction(tr("Close Other Tabs"), menu);
     menu->addAction(closeOtherTabsAction);
     connect(closeOtherTabsAction, SIGNAL(triggered()), this, SLOT(EmitCloseOtherTabs()));
@@ -107,4 +112,14 @@ void TabBar::ShowContextMenu(QMouseEvent *event, int tab_index)
 void TabBar::EmitCloseOtherTabs()
 {
     emit CloseOtherTabsRequest(m_TabIndex);
+}
+
+void TabBar::SetMoveLastTabAllowed(bool allowed)
+{
+    m_MoveLastTabAllowed = allowed;
+}
+
+void TabBar::EmitMoveToOtherGroup()
+{
+    emit MoveToOtherGroupRequest(m_TabIndex);
 }

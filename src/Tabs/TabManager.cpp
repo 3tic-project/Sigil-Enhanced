@@ -53,6 +53,7 @@
 #include "Tabs/TabManager.h"
 #include "Tabs/TabGroup.h"
 #include "Tabs/WellFormedContent.h"
+#include "Misc/SettingsStoreExtend.h"
 
 
 TabManager::TabManager(QWidget *parent)
@@ -71,6 +72,7 @@ TabManager::TabManager(QWidget *parent)
 {
     m_Active = m_Primary;
     m_Primary->setMinimumHeight(80);
+    m_Primary->SetKeepLastTab(true);
 
     m_Splitter->setObjectName(QStringLiteral("editorGroupSplitter"));
     m_Splitter->setChildrenCollapsible(false);
@@ -262,30 +264,59 @@ void TabManager::OpenResource(Resource *resource,
                               const QUrl &fragment,
                               bool precede_current_tab)
 {
-    if (SwitchedToExistingTab(resource, line_to_scroll_to, position_to_scroll_to, caret_location_to_scroll_to, fragment)) {
+    OpenWithDisposition(resource, line_to_scroll_to, position_to_scroll_to,
+                        caret_location_to_scroll_to, fragment, precede_current_tab,
+                        OpenDisposition::ActiveGroup);
+}
+
+void TabManager::OpenResourceInOtherGroup(Resource *resource,
+                                          int line_to_scroll_to,
+                                          int position_to_scroll_to,
+                                          const QString &caret_location_to_scroll_to,
+                                          const QUrl &fragment)
+{
+    OpenWithDisposition(resource, line_to_scroll_to, position_to_scroll_to,
+                        caret_location_to_scroll_to, fragment, false,
+                        OpenDisposition::OtherGroup);
+}
+
+void TabManager::OpenWithDisposition(Resource *resource,
+                                     int line_to_scroll_to,
+                                     int position_to_scroll_to,
+                                     const QString &caret_location_to_scroll_to,
+                                     const QUrl &fragment,
+                                     bool precede_current_tab,
+                                     OpenDisposition disposition)
+{
+    ContentTab *existing = FindTab(resource);
+    if (existing) {
+        const bool in_other = GroupContaining(existing) &&
+                              GroupContaining(existing) != ActiveGroup();
+        SwitchedToExistingTab(resource, line_to_scroll_to, position_to_scroll_to,
+                              caret_location_to_scroll_to, fragment);
+        if (disposition == OpenDisposition::OtherGroup && in_other) {
+            emit ShowStatusMessageRequest(
+                tr("%1 is already open in the other editor group.").arg(resource->ShortPathName()));
+        }
         return;
     }
 
+    TabGroup *target = ResolveTargetGroup(disposition);
     bool grab_focus = !precede_current_tab;
     ContentTab *new_tab = CreateTabForResource(resource, line_to_scroll_to, position_to_scroll_to,
-                          caret_location_to_scroll_to, fragment, grab_focus);
+                          caret_location_to_scroll_to, fragment, grab_focus, target);
 
     if (new_tab) {
-        // only set m_newTab if going to be current tab (ie focus was grabbed)
-        // otherwise after injection of new tab preceding_current_tab will prevent
-        // proper updating of preview
         if (grab_focus) {
             m_newTab = new_tab;
         }
-        AddNewContentTab(new_tab, precede_current_tab);
+        AddNewContentTab(new_tab, precede_current_tab, target);
+        m_Active = target;
         emit ShowStatusMessageRequest("");
     } else {
         QString message = tr("Cannot edit file") + ": " + resource->ShortPathName();
         emit ShowStatusMessageRequest(message);
     }
-
-    // do not Scroll the Preview in response as new Flow Tabs have
-    // delayed initialization.  Instead FlowTab itself will handle this
 }
 
 
@@ -539,9 +570,13 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
         int position_to_scroll_to,
         const QString &caret_location_to_scroll_to,
         const QUrl &fragment,
-        bool grab_focus)
+        bool grab_focus,
+        QWidget *tab_parent)
 {
     ContentTab *tab = NULL;
+    if (!tab_parent) {
+        tab_parent = m_Primary;
+    }
 
     switch (resource->Type()) {
         case Resource::HTMLResourceType: {
@@ -555,7 +590,7 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
                               position_to_scroll_to,
                               caret_location_to_scroll_to,
                               grab_focus,
-                              m_Primary);
+                              tab_parent);
             connect(tab,  SIGNAL(LinkClicked(const QUrl &)), this, SLOT(LinkClicked(const QUrl &)));
             connect(tab,  SIGNAL(OldTabRequest(QString, HTMLResource *)),
                     this, SIGNAL(OldTabRequest(QString, HTMLResource *)));
@@ -563,59 +598,59 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
         }
 
         case Resource::CSSResourceType: {
-            tab = new CSSTab(qobject_cast<CSSResource *>(resource), line_to_scroll_to, position_to_scroll_to, m_Primary);
+            tab = new CSSTab(qobject_cast<CSSResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::ImageResourceType: {
-            tab = new ImageTab(qobject_cast<ImageResource *>(resource), m_Primary);
+            tab = new ImageTab(qobject_cast<ImageResource *>(resource), tab_parent);
             break;
         }
 
         case Resource::MiscTextResourceType: {
-            tab = new MiscTextTab(qobject_cast<MiscTextResource *>(resource), line_to_scroll_to, position_to_scroll_to, m_Primary);
+            tab = new MiscTextTab(qobject_cast<MiscTextResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::SVGResourceType: {
-            tab = new SVGTab(qobject_cast<SVGResource *>(resource), line_to_scroll_to, position_to_scroll_to, m_Primary);
+            tab = new SVGTab(qobject_cast<SVGResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::OPFResourceType: {
-            tab = new OPFTab(qobject_cast<OPFResource *>(resource), line_to_scroll_to, position_to_scroll_to, m_Primary);
+            tab = new OPFTab(qobject_cast<OPFResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::NCXResourceType: {
-            tab = new NCXTab(qobject_cast<NCXResource *>(resource), line_to_scroll_to, position_to_scroll_to, m_Primary);
+            tab = new NCXTab(qobject_cast<NCXResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::XMLResourceType: {
-            tab = new XMLTab(qobject_cast<XMLResource *>(resource), line_to_scroll_to, position_to_scroll_to, m_Primary);
+            tab = new XMLTab(qobject_cast<XMLResource *>(resource), line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::TextResourceType: {
             tab = new TextTab(qobject_cast<TextResource *>(resource), CodeViewEditor::Highlight_NONE, 
-                              line_to_scroll_to, position_to_scroll_to, m_Primary);
+                              line_to_scroll_to, position_to_scroll_to, tab_parent);
             break;
         }
 
         case Resource::AudioResourceType:
         case Resource::VideoResourceType: {
-            tab = new AVTab(qobject_cast<Resource *>(resource), m_Primary);
+            tab = new AVTab(qobject_cast<Resource *>(resource), tab_parent);
             break;
         }
 
         case Resource::PdfResourceType: {
-            tab = new PdfTab(qobject_cast<Resource *>(resource), m_Primary);
+            tab = new PdfTab(qobject_cast<Resource *>(resource), tab_parent);
             break;
         }
 
         case Resource::FontResourceType: {
-            tab = new FontTab(qobject_cast<Resource *>(resource), m_Primary);
+            tab = new FontTab(qobject_cast<Resource *>(resource), tab_parent);
             break;
         }
 
@@ -636,17 +671,20 @@ ContentTab *TabManager::CreateTabForResource(Resource *resource,
 }
 
 
-bool TabManager::AddNewContentTab(ContentTab *new_tab, bool precede_current_tab)
+bool TabManager::AddNewContentTab(ContentTab *new_tab, bool precede_current_tab, TabGroup *target)
 {
     if (new_tab == NULL) {
         return false;
     }
+    if (!target) {
+        target = m_Primary;
+    }
 
     // before adding a tab make sure m_LastContentTab has been
     // properly updated to reflect the current tab
-    m_LastContentTab = m_Primary->CurrentTab();
+    m_LastContentTab = GetCurrentContentTab();
 
-    if (m_Primary->AddContentTab(new_tab, precede_current_tab) < 0) {
+    if (target->AddContentTab(new_tab, precede_current_tab) < 0) {
         return false;
     }
 
@@ -727,6 +765,7 @@ void TabManager::ConnectGroup(TabGroup *group)
     connect(group, SIGNAL(currentChanged(int)),        this, SLOT(EmitTabChanged(int)));
     connect(group, SIGNAL(tabCloseRequested(int)),     this, SLOT(OnTabCloseRequested(int)));
     connect(group, SIGNAL(TabInserted()),              this, SLOT(OnTabInserted()));
+    connect(group, SIGNAL(MoveToOtherGroupRequest(int)), this, SLOT(OnMoveToOtherGroupRequested(int)));
 }
 
 void TabManager::EnsureSecondary()
@@ -737,6 +776,7 @@ void TabManager::EnsureSecondary()
 
     m_SecondaryPane = new QWidget(this);
     m_Secondary = new TabGroup(m_SecondaryPane);
+    m_Secondary->SetKeepLastTab(false);
     m_EmptyLabel = new QLabel(tr("Open a file from Book Browser"), m_SecondaryPane);
     m_EmptyLabel->setAlignment(Qt::AlignCenter);
     m_EmptyLabel->setWordWrap(true);
@@ -915,4 +955,64 @@ void TabManager::OnTabInserted()
 {
     UpdateEmptyState();
     emit TabCountChanged();
+}
+
+TabGroup *TabManager::ResolveTargetGroup(OpenDisposition disposition)
+{
+    if (disposition == OpenDisposition::ActiveGroup) {
+        return ActiveGroup();
+    }
+
+    if (!IsSplit()) {
+        SplitEditorDown();
+    }
+    EnsureSecondary();
+
+    SettingsStoreExtend settings;
+    const QString target = settings.getOtherGroupTarget();
+    if (target == QLatin1String("lower")) {
+        return m_Secondary;
+    }
+    if (target == QLatin1String("upper")) {
+        return m_Primary;
+    }
+    return (ActiveGroup() == m_Primary) ? m_Secondary : m_Primary;
+}
+
+bool TabManager::CanMoveTabToOtherGroup(const ContentTab *tab) const
+{
+    TabGroup *group = GroupContaining(tab);
+    if (!group) {
+        return false;
+    }
+    return group->CanMoveTab(group->IndexOfTab(tab));
+}
+
+bool TabManager::MoveTabToOtherGroup(ContentTab *tab)
+{
+    if (!CanMoveTabToOtherGroup(tab)) {
+        return false;
+    }
+    TabGroup *source = GroupContaining(tab);
+    if (!IsSplit()) {
+        SplitEditorDown();
+    }
+    EnsureSecondary();
+    TabGroup *dest = (source == m_Primary) ? m_Secondary : m_Primary;
+    source->TakeTab(tab);
+    dest->AddContentTab(tab, false);
+    m_Active = dest;
+    dest->ActivateTab(tab);
+    UpdateEmptyState();
+    emit TabCountChanged();
+    return true;
+}
+
+void TabManager::OnMoveToOtherGroupRequested(int tab_index)
+{
+    TabGroup *group = qobject_cast<TabGroup *>(sender());
+    if (!group) {
+        return;
+    }
+    MoveTabToOtherGroup(group->TabAt(tab_index));
 }

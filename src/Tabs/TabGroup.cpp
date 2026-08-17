@@ -28,12 +28,15 @@
 #include "Tabs/WellFormedContent.h"
 
 TabGroup::TabGroup(QWidget *parent)
-    : QTabWidget(parent)
+    : QTabWidget(parent),
+      m_KeepLastTab(false)
 {
     TabBar *tab_bar = new TabBar(this);
     setTabBar(tab_bar);
     connect(tab_bar, SIGNAL(TabBarClicked()),            this, SIGNAL(TabBarClicked()));
     connect(tab_bar, SIGNAL(CloseOtherTabsRequest(int)), this, SIGNAL(CloseOtherTabsRequest(int)));
+    connect(tab_bar, SIGNAL(MoveToOtherGroupRequest(int)), this, SIGNAL(MoveToOtherGroupRequest(int)));
+    tab_bar->SetMoveLastTabAllowed(!m_KeepLastTab);
     setDocumentMode(true);
     setMovable(true);
     setTabsClosable(true);
@@ -193,6 +196,30 @@ void TabGroup::PreviousTab()
 void TabGroup::RemoveCurrentTabWidget()
 {
     removeTab(currentIndex());
+}
+
+void TabGroup::SetKeepLastTab(bool keep)
+{
+    m_KeepLastTab = keep;
+    if (TabBar *bar = qobject_cast<TabBar *>(tabBar())) {
+        bar->SetMoveLastTabAllowed(!keep);
+    }
+}
+
+bool TabGroup::KeepLastTab() const
+{
+    return m_KeepLastTab;
+}
+
+bool TabGroup::CanMoveTab(int index) const
+{
+    if (index < 0 || index >= count()) {
+        return false;
+    }
+    if (m_KeepLastTab && count() <= 1) {
+        return false;
+    }
+    return true;
 }
 
 void TabGroup::tabInserted(int index)
