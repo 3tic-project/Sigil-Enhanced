@@ -139,18 +139,19 @@ class MetadataProcessor(object):
                 if mname == "dc:language":
                     if not mcontent:
                         mcontent = ""
-                    if not "-" in mcontent:
+                    if "-" not in mcontent:
                         mcontent = mcontent.lower()
                     else:
-                        lang, region = mcontent.split("-")
+                        lang, region = mcontent.split("-", 1)
                         lang = lang.lower()
                         region = region.upper()
-                        mcontent = lang + "-" + region;
+                        mcontent = lang + "-" + region
                 self.rec.append((mname, mcontent, mattr))
-                id = mattr.get("id",None)
-                if id is not None:
-                    self.id2rec[id] = numrec
-                    self.idlst.remove(id)
+                ident = mattr.get("id",None)
+                if ident is not None:
+                    self.id2rec[ident] = numrec
+                    if ident in self.idlst:
+                        self.idlst.remove(ident)
                 numrec += 1
 
             elif mname == "meta" and "name" in mattr and mattr["name"] not in _skip_meta:
@@ -161,10 +162,11 @@ class MetadataProcessor(object):
                 del mattr["content"]
                 mentry = (mname, mcontent, mattr)
                 self.rec.append(mentry)
-                id = mattr.get("id",None)
-                if id is not None:
-                    self.id2rec[id] = numrec
-                    self.idlst.remove(id)
+                ident = mattr.get("id",None)
+                if ident is not None:
+                    self.id2rec[ident] = numrec
+                    if ident in self.idlst:
+                        self.idlst.remove(ident)
                 numrec += 1
 
             else:

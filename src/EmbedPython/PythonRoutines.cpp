@@ -68,10 +68,13 @@ MetadataPieces PythonRoutines::GetMetadataInPython(const QString& opfdata, const
     QList<QVariant> args;
     args.append(QVariant(opfdata));
     QVariant res = EmbeddedPython::instance().runInPython(module, QString("process_metadata"), args, &rv, traceback, true);
-    if (rv) {
-        fprintf(stderr, "process_meta error %d traceback %s\n",rv, traceback.toStdString().c_str());
-    }
     PyObjectPtr mpo = PyObjectPtr(res);
+    if (rv || mpo.isNull() || mpo.object() == Py_None) {
+        if (rv) {
+            fprintf(stderr, "process_meta error %d traceback %s\n",rv, traceback.toStdString().c_str());
+        }
+        return mdp;
+    }
     args.clear();
     res = EmbeddedPython::instance().callPyObjMethod(mpo, QString("get_recognized_metadata"), args, &rv, traceback);
     if (rv) {

@@ -139,18 +139,19 @@ class MetadataProcessor(object):
                 if mname == "dc:language":
                     if not mcontent:
                         mcontent = ""
-                    if not "-" in mcontent:
+                    if "-" not in mcontent:
                         mcontent = mcontent.lower()
                     else:
-                        lang, region = mcontent.split("-")
+                        lang, region = mcontent.split("-", 1)
                         lang = lang.lower()
                         region = region.upper()
-                        mcontent = lang + "-" + region;
+                        mcontent = lang + "-" + region
                 self.rec.append((mname, mcontent, mattr))
-                id = mattr.get("id",None)
-                if id is not None:
-                    self.id2rec[id] = numrec
-                    self.idlst.remove(id)
+                ident = mattr.get("id",None)
+                if ident is not None:
+                    self.id2rec[ident] = numrec
+                    if ident in self.idlst:
+                        self.idlst.remove(ident)
                 numrec += 1
             elif mname == "meta" and "refines" in mattr:
                 self.refines.append(mentry)
@@ -163,10 +164,11 @@ class MetadataProcessor(object):
                     mname = property
                 mentry = (mname, mcontent, mattr)
                 self.rec.append(mentry)
-                id = mattr.get("id",None)
-                if id is not None:
-                    self.id2rec[id] = numrec
-                    self.idlst.remove(id)
+                ident = mattr.get("id",None)
+                if ident is not None:
+                    self.id2rec[ident] = numrec
+                    if ident in self.idlst:
+                        self.idlst.remove(ident)
                 numrec += 1
             else:
                 self.other.append(mentry)
@@ -176,10 +178,13 @@ class MetadataProcessor(object):
         for mentry in self.refines:
             (rname, rcontent, rattr) = mentry
             rid = rattr.get("id",None)
-            tid = rattr["refines"]
-            prop = rattr["property"]
+            tid = rattr.get("refines")
+            prop = rattr.get("property")
             scheme = rattr.get("scheme", None)
             propval = rcontent
+            if not tid or not prop:
+                self.other.append(mentry)
+                continue
             if tid.startswith("#"):
                 tid = tid[1:]
                 if tid in self.id2rec:
@@ -188,10 +193,12 @@ class MetadataProcessor(object):
                     dattr[prop] = propval
                     if scheme is not None:
                         dattr["scheme"] = scheme
-                    if prop == "alternate-script":
+                    # Kindle/KADOKAWA books often omit xml:lang on
+                    # alternate-script. Missing it must not empty the editor.
+                    if prop == "alternate-script" and "xml:lang" in rattr:
                         dattr["altlang"] = rattr["xml:lang"]
                     self.rec[pos] = (dname, dcontent, dattr)
-                    if rid is not None:
+                    if rid is not None and rid in self.idlst:
                         self.idlst.remove(rid) 
                 else:
                     # these refines refer to something that is not recognized metadata
