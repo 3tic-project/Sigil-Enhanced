@@ -2094,6 +2094,13 @@ void MainWindow::OpenResource(Resource *resource,
                               fragment, precede_current_tab);
 }
 
+void MainWindow::OpenResourceInOtherGroup(Resource *resource)
+{
+    if (m_TabManager && resource) {
+        m_TabManager->OpenResourceInOtherGroup(resource);
+    }
+}
+
 void MainWindow::OpenResourceAndWaitUntilLoaded(Resource *resource,
         int line_to_scroll_to,
         int position_to_scroll_to,
@@ -7480,6 +7487,8 @@ void MainWindow::ConnectSignalsToSlots()
             m_TabManager, SLOT(RemoveTab()));
     connect(m_BookBrowser, SIGNAL(ResourceActivated(Resource *)),
             this, SLOT(OpenResource(Resource *)));
+    connect(m_BookBrowser, SIGNAL(OpenInOtherEditorGroupRequest(Resource *)),
+            this, SLOT(OpenResourceInOtherGroup(Resource *)));
     connect(m_BookBrowser, SIGNAL(MergeResourcesRequest(QList<Resource *>)), this, SLOT(MergeResources(QList<Resource *>)));
     connect(m_BookBrowser, SIGNAL(LinkStylesheetsToResourcesRequest(QList<Resource *>)), this, SLOT(LinkStylesheetsToResources(QList<Resource *>)));
     connect(m_BookBrowser, SIGNAL(LinkJavascriptsToResourcesRequest(QList<Resource *>)), this, SLOT(LinkJavascriptsToResources(QList<Resource *>)));

@@ -402,6 +402,15 @@ void BookBrowser::EmitResourceActivated(const QModelIndex &index)
     }
 }
 
+void BookBrowser::OpenInOtherEditorGroup()
+{
+    foreach(Resource *resource, ValidSelectedResources()) {
+        if (resource) {
+            emit OpenInOtherEditorGroupRequest(resource);
+        }
+    }
+}
+
 
 void BookBrowser::OpenContextMenu(const QPoint &point)
 {
@@ -2228,6 +2237,7 @@ void BookBrowser::CreateContextMenuActions()
     m_OpenWithEditor4         = new QAction("",                                 this);
     m_OpenWithOtherApp        = new QAction(tr("Other Application")+"...",      this);
     m_OpenWithClear           = new QAction(tr("Clear Editor List"),            this);
+    m_OpenInOtherGroup        = new QAction(tr("Open in Other Editor Group"),   this);
     m_CoverImage             ->setCheckable(true);
     m_NoObfuscationMethod    ->setCheckable(true);
     m_AdobesObfuscationMethod->setCheckable(true);
@@ -2291,6 +2301,7 @@ bool BookBrowser::SuccessfullySetupContextMenu(const QPoint &point)
 
     if (resource) {
         m_ContextMenu->addSeparator();
+        m_ContextMenu->addAction(m_OpenInOtherGroup);
 
         // Normal case handle Delete, Rename, and Move
         if (m_LastContextMenuType != Resource::OPFResourceType &&
@@ -2504,6 +2515,8 @@ void BookBrowser::SetFontObfuscationActionCheckState()
 
 void BookBrowser::ConnectSignalsToSlots()
 {
+    connect(m_OpenInOtherGroup, SIGNAL(triggered()),
+            this, SLOT(OpenInOtherEditorGroup()));
     connect(m_TreeView, SIGNAL(activated(const QModelIndex &)),
             this,         SLOT(EmitResourceActivated(const QModelIndex &)));
     connect(m_TreeView, SIGNAL(customContextMenuRequested(const QPoint &)),

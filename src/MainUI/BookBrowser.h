@@ -236,6 +236,7 @@ signals:
      * @param resource The selected resource.
      */
     void ResourceActivated(Resource *resource);
+    void OpenInOtherEditorGroupRequest(Resource *resource);
 
     /**
      * Emitted when the user wants to view an image in the browser.
@@ -300,6 +301,7 @@ private slots:
      * @param point The point at which the menu should be opened.
      */
     void OpenContextMenu(const QPoint &point);
+    void OpenInOtherEditorGroup();
 
     /**
      * Implements the Add New context menu action functionality.
@@ -569,6 +571,7 @@ private:
     QMenu *m_OpenWithContextMenu;
     QAction *m_OpenWithOtherApp;
     QAction *m_OpenWithClear;
+    QAction *m_OpenInOtherGroup;
     QAction *m_OpenWithEditor0;
     QAction *m_OpenWithEditor1;
     QAction *m_OpenWithEditor2;

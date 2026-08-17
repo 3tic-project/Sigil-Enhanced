@@ -268,6 +268,7 @@ public slots:
                       const QString &caret_location_to_scroll_to = QString(),
                       const QUrl &fragment = QUrl(),
                       bool precede_current_tab = false);
+    void OpenResourceInOtherGroup(Resource *resource);
 
     void OpenResourceAndWaitUntilLoaded(Resource *resource,
                                         int line_to_scroll_to = -1,
