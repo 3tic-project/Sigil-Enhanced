@@ -41,6 +41,14 @@ PreferencesWidget::ResultActions ModifiedVerPrefsWidget::saveSettings()
         results = results | PreferencesWidget::ResultAction_RefreshFindRepWidget;
         sse.setFindReplaceEnhancedMode(isFindReplaceEnhancedMode);
 
+    QString other_group_target = QStringLiteral("inactive");
+    if (ui.rbOtherGroupLower->isChecked()) {
+        other_group_target = QStringLiteral("lower");
+    } else if (ui.rbOtherGroupUpper->isChecked()) {
+        other_group_target = QStringLiteral("upper");
+    }
+    sse.setOtherGroupTarget(other_group_target);
+
 	return results;
 }
 
@@ -70,6 +78,15 @@ void ModifiedVerPrefsWidget::readSettings()
     }
     else {
         ui.rbOriginalMode->setChecked(true);
+    }
+
+    const QString other_group_target = sse.getOtherGroupTarget();
+    if (other_group_target == QLatin1String("lower")) {
+        ui.rbOtherGroupLower->setChecked(true);
+    } else if (other_group_target == QLatin1String("upper")) {
+        ui.rbOtherGroupUpper->setChecked(true);
+    } else {
+        ui.rbOtherGroupInactive->setChecked(true);
     }
 
 }

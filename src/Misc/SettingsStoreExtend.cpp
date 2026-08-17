@@ -142,3 +142,17 @@ bool SettingsStoreExtend::getFindReplaceEnhancedMode() {
     }
     return isEnhancedMode;
 }
+
+void SettingsStoreExtend::setOtherGroupTarget(const QString &target)
+{
+    setValue("editorGroups/otherGroupTarget", target);
+}
+
+QString SettingsStoreExtend::getOtherGroupTarget()
+{
+    const QString target = value("editorGroups/otherGroupTarget", QStringLiteral("inactive")).toString();
+    if (target == QLatin1String("lower") || target == QLatin1String("upper")) {
+        return target;
+    }
+    return QStringLiteral("inactive");
+}

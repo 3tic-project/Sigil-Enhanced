@@ -112,6 +112,39 @@
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="Group_otherGroup">
+         <property name="title">
+          <string>Open in Other Editor Group:</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_otherGroup">
+          <item>
+           <widget class="QRadioButton" name="rbOtherGroupInactive">
+            <property name="text">
+             <string>Inactive group</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="rbOtherGroupLower">
+            <property name="text">
+             <string>Always lower group</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="rbOtherGroupUpper">
+            <property name="text">
+             <string>Always upper group</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>

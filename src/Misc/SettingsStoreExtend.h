@@ -29,6 +29,8 @@ public:
     bool getIgnoreBlankLine();
     void setFindReplaceEnhancedMode(bool isEnhancedMode);
     bool getFindReplaceEnhancedMode();
+    void setOtherGroupTarget(const QString &target);
+    QString getOtherGroupTarget();
 };
 
 #endif // SETTINGSSTOREEXTEND_H
