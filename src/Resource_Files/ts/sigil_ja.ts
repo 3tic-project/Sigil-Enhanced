@@ -2139,6 +2139,10 @@ There always has to be at least one.</source>
         <translation>既存のファイルを追加...</translation>
     </message>
     <message>
+        <source>Open in Other Editor Group</source>
+        <translation>他のエディターグループで開く</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="2208"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="2209"/>
         <source>Add Copy</source>
@@ -20145,6 +20149,22 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <translation>オリジナルモード</translation>
     </message>
     <message>
+        <source>Open in Other Editor Group:</source>
+        <translation>他のエディターグループで開く:</translation>
+    </message>
+    <message>
+        <source>Inactive group</source>
+        <translation>非アクティブなグループ</translation>
+    </message>
+    <message>
+        <source>Always lower group</source>
+        <translation>常に下のグループ</translation>
+    </message>
+    <message>
+        <source>Always upper group</source>
+        <translation>常に上のグループ</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="131"/>
         <source>XHTML Format</source>
         <translation>XHTML 形式</translation>
@@ -24807,6 +24827,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <source>Close Other Tabs</source>
         <translation>他のタブを閉じる</translation>
     </message>
+    <message>
+        <source>Move Editor to Other Group</source>
+        <translation>エディターを他のグループへ移動</translation>
+    </message>
 </context>
 <context>
     <name>TabManager</name>
@@ -24818,6 +24842,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
     <message>
         <source>Open a file from Book Browser</source>
         <translation>ブックブラウザーからファイルを開く</translation>
+    </message>
+    <message>
+        <source>%1 is already open in the other editor group.</source>
+        <translation>%1 は他のエディターグループで既に開いています。</translation>
     </message>
 </context>
 <context>

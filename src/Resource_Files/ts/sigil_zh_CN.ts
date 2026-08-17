@@ -2139,6 +2139,10 @@ There always has to be at least one.</source>
         <translation>添加现有文件...</translation>
     </message>
     <message>
+        <source>Open in Other Editor Group</source>
+        <translation>在另一编辑器组中打开</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="2208"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="2209"/>
         <source>Add Copy</source>
@@ -20148,6 +20152,22 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
         <translation>原始模式</translation>
     </message>
     <message>
+        <source>Open in Other Editor Group:</source>
+        <translation>在另一编辑器组中打开：</translation>
+    </message>
+    <message>
+        <source>Inactive group</source>
+        <translation>非活动组</translation>
+    </message>
+    <message>
+        <source>Always lower group</source>
+        <translation>始终使用下方组</translation>
+    </message>
+    <message>
+        <source>Always upper group</source>
+        <translation>始终使用上方组</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="131"/>
         <source>XHTML Format</source>
         <translation>XHTML 格式</translation>
@@ -24809,6 +24829,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <source>Close Other Tabs</source>
         <translation>关闭其他标签</translation>
     </message>
+    <message>
+        <source>Move Editor to Other Group</source>
+        <translation>将编辑器移到另一组</translation>
+    </message>
 </context>
 <context>
     <name>TabManager</name>
@@ -24820,6 +24844,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
     <message>
         <source>Open a file from Book Browser</source>
         <translation>从书籍浏览器打开文件</translation>
+    </message>
+    <message>
+        <source>%1 is already open in the other editor group.</source>
+        <translation>%1 已在另一编辑器组中打开。</translation>
     </message>
 </context>
 <context>

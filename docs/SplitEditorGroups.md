@@ -8,7 +8,17 @@ The editor area can split into two vertical groups so two different EPUB resourc
 
 This only creates an empty lower group. It does not clone the current file.
 
-Open another file from Book Browser into the **active** group (still the upper group until “Open in Other Editor Group” lands). Join with `Join Editor Groups` — tabs move; they are not reloaded.
+Typical CSS workflow: right-click a stylesheet in Book Browser → **Open in Other Editor Group**. If the window is not split yet, Sigil splits first. A file that is already open is focused in its existing group, not cloned.
+
+Tab context menu **Move Editor to Other Group** moves the same editor widget (undo/dirty/cursor stay). The last tab in the upper group cannot be moved.
+
+**Open in Other Editor Group** target (Preferences → Enhanced):
+
+- Inactive group (default): opens in the group that is not focused
+- Always lower group
+- Always upper group
+
+Join with `Join Editor Groups` — tabs move; they are not reloaded.
 
 ## Rules
 
