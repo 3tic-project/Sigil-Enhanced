@@ -34,6 +34,9 @@ class Resource;
 class HTMLResource;
 class TabGroup;
 class WellFormedContent;
+class QSplitter;
+class QLabel;
+class QWidget;
 
 /**
  * Manages the tabs shown in the main UI.
@@ -99,6 +102,10 @@ public:
      * Returns true if the OPF had to be closed.
      */
     bool CloseOPFTabIfOpen();
+
+    bool IsSplit() const;
+    void SplitEditorDown();
+    void JoinEditorGroups();
 
 public slots:
 
@@ -191,6 +198,7 @@ signals:
     void OldTabRequest(QString content, HTMLResource *originating_resource);
 
     void ShowStatusMessageRequest(const QString &message, int duration = 5000);
+    void SplitChanged();
 
 private slots:
 
@@ -223,6 +231,10 @@ private slots:
     void UpdateTabName(ContentTab *renamed_tab);
 
     void SetFocusInTab();
+    void OnGroupActivated();
+    void OnTabCloseRequested(int tab_index);
+    void OnCloseOtherTabsRequested(int tab_index);
+    void OnTabInserted();
 
 private:
 
@@ -285,15 +297,31 @@ private:
      */
     bool AddNewContentTab(ContentTab *new_tab, bool precede_current_tab);
 
+    void ConnectGroup(TabGroup *group);
+    void EnsureSecondary();
+    void HideSecondary();
+    void UpdateEmptyState();
+    TabGroup *ActiveGroup() const;
+    TabGroup *GroupContaining(const ContentTab *tab) const;
+    ContentTab *FindTab(const Resource *resource) const;
+    void CloseTabAt(TabGroup *group, int tab_index, bool force);
+    void CloseAllTabsExcept(ContentTab *keep);
+    void ApplyExistingTabLocation(ContentTab *tab,
+                                  int line_to_scroll_to,
+                                  int position_to_scroll_to,
+                                  const QString &caret_location_to_scroll_to,
+                                  const QUrl &fragment);
+
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES
     ///////////////////////////////
 
-    /**
-     * Stores a reference to the tab used before the current one.
-     * Needed for the TabChanged signal.
-     */
+    QSplitter *m_Splitter;
     TabGroup *m_Primary;
+    QWidget *m_SecondaryPane;
+    TabGroup *m_Secondary;
+    QLabel *m_EmptyLabel;
+    TabGroup *m_Active;
 
     ContentTab* m_LastContentTab;
 
