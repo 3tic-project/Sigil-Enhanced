@@ -732,8 +732,8 @@ if a sans-serif font-family specified in your CSS</source>
     </message>
     <message>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="715"/>
-        <source>Determine if the BookBrowser should show full paths</source>
-        <translation>确定书籍浏览器是否需要显示完整路径</translation>
+        <source>Control how the Book Browser displays paths and image previews</source>
+        <translation>控制书籍浏览器显示路径与图像预览的方式</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="718"/>
@@ -749,6 +749,16 @@ if a sans-serif font-family specified in your CSS</source>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="733"/>
         <source>BookBrowser should show full paths.</source>
         <translation>书籍浏览器将显示完整路径。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="743"/>
+        <source>Maximum image preview size (px):</source>
+        <translation>图像预览最大尺寸（像素）：</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="753"/>
+        <source>Set the longest side of image hover previews. Smaller images keep their original size.</source>
+        <translation>设置图像悬停预览的最长边。较小的图像会保持原始尺寸。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PAppearanceWidget.ui" line="746"/>

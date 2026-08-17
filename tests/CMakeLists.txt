@@ -741,6 +741,18 @@ target_link_libraries(image_preview_service_test PRIVATE
 add_test(NAME image_preview_service COMMAND image_preview_service_test)
 set_tests_properties(image_preview_service PROPERTIES TIMEOUT 30)
 
+add_executable(image_preview_policy_test
+    image_preview_policy_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/ImagePreviewPolicy.h
+)
+
+target_include_directories(image_preview_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+add_test(NAME image_preview_policy COMMAND image_preview_policy_test)
+set_tests_properties(image_preview_policy PROPERTIES TIMEOUT 10)
+
 add_executable(opf_model_clear_benchmark
     opf_model_clear_benchmark.cpp
 )

@@ -119,6 +119,53 @@ bool testScaledBitmapAndCache(const QString& root)
            expect(cached.image == preview.image, "cached preview content changed");
 }
 
+bool testNaturalBitmapSizeAndConfiguredLimit(const QString& root)
+{
+    const QString smallPath = root + "/small.png";
+    if (!expect(writeBitmap(smallPath, QColor("#9333ea"), QSize(48, 32)),
+                "could not create small bitmap fixture")) {
+        return false;
+    }
+
+    ImagePreviewService service(nullptr, 4LL * 1024 * 1024, 150);
+    ImagePreviewData smallPreview;
+    if (!expect(waitForPreview(service, smallPath, ImagePreviewService::Format::Bitmap,
+                               &smallPreview),
+                "small bitmap preview timed out") ||
+        !expect(smallPreview.image.size() == QSize(48, 32),
+                "small bitmap was enlarged")) {
+        return false;
+    }
+
+    const QString largePath = root + "/configured-limit.png";
+    if (!expect(writeBitmap(largePath, QColor("#0f766e"), QSize(1200, 800)),
+                "could not create configured-size fixture")) {
+        return false;
+    }
+    ImagePreviewData limitedPreview;
+    if (!expect(waitForPreview(service, largePath, ImagePreviewService::Format::Bitmap,
+                               &limitedPreview),
+                "configured-size preview timed out") ||
+        !expect(limitedPreview.image.size() == QSize(150, 100),
+                "configured preview limit was not applied")) {
+        return false;
+    }
+
+    service.setMaximumPreviewSide(500);
+    if (!expect(service.maximumPreviewSide() == 500,
+                "configured preview limit was not stored") ||
+        !expect(service.cacheEntryCount() == 0,
+                "changing preview size did not invalidate cached variants")) {
+        return false;
+    }
+    ImagePreviewData enlargedLimitPreview;
+    return expect(waitForPreview(service, largePath, ImagePreviewService::Format::Bitmap,
+                                 &enlargedLimitPreview),
+                  "updated-size preview timed out") &&
+           expect(enlargedLimitPreview.image.size() == QSize(500, 333),
+                  "updated preview limit was not applied");
+}
+
 bool testLargeSvgRequestAndCancellation(const QString& root)
 {
     const QString path = root + "/large.svg";
@@ -192,10 +239,86 @@ bool testBoundedLru(const QString& root)
             return false;
         }
     }
-    return expect(service.cacheBytes() <= service.cacheLimitBytes(),
-                  "LRU cache exceeded its byte budget") &&
-           expect(service.cacheEntryCount() < colors.size(),
-                  "LRU cache did not evict old previews");
+    if (!expect(service.cacheBytes() <= service.cacheLimitBytes(),
+                "LRU cache exceeded its byte budget") ||
+        !expect(service.cacheEntryCount() < colors.size(),
+                "LRU cache did not evict old previews")) {
+        return false;
+    }
+    service.reset();
+    return expect(service.cacheEntryCount() == 0,
+                  "reset did not release cached previews") &&
+           expect(service.cacheBytes() == 0,
+                  "reset did not release cached preview bytes");
+}
+
+bool testCoalescedDecodeQueue(const QString& root)
+{
+    const QString firstPath = root + "/queue-first.svg";
+    const QString skippedPath = root + "/queue-skipped.svg";
+    const QString latestPath = root + "/queue-latest.svg";
+    if (!expect(writeSvg(firstPath, QSize(20000, 20000)),
+                "could not create first queue fixture") ||
+        !expect(writeSvg(skippedPath, QSize(20000, 20000)),
+                "could not create skipped queue fixture") ||
+        !expect(writeSvg(latestPath, QSize(20000, 20000)),
+                "could not create latest queue fixture")) {
+        return false;
+    }
+
+    ImagePreviewService service;
+    QList<quint64> delivered;
+    if (!expect(service.cacheLimitBytes() == 32LL * 1024 * 1024,
+                "default cache limit is not 32 MiB")) {
+        return false;
+    }
+    QObject::connect(&service, &ImagePreviewService::previewReady, &service,
+                     [&](quint64 requestId, const ImagePreviewData&) {
+                         delivered.append(requestId);
+                     });
+
+    service.request(firstPath, ImagePreviewService::Format::Svg);
+    if (!expect(service.activeDecodeCount() == 1,
+                "first decode did not start")) {
+        return false;
+    }
+    service.cancelPending();
+    service.request(skippedPath, ImagePreviewService::Format::Svg);
+    if (!expect(service.activeDecodeCount() == 1,
+                "cancelled decode was allowed to run concurrently") ||
+        !expect(service.queuedRequestCount() == 1,
+                "replacement decode was not queued")) {
+        return false;
+    }
+    service.cancelPending();
+    const quint64 latestId =
+        service.request(latestPath, ImagePreviewService::Format::Svg);
+    if (!expect(service.queuedRequestCount() == 1,
+                "decode queue retained more than the latest request")) {
+        return false;
+    }
+
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    timeout.start(5000);
+    QObject::connect(&service, &ImagePreviewService::previewReady, &loop,
+                     [&](quint64 requestId, const ImagePreviewData&) {
+                         if (requestId == latestId) {
+                             loop.quit();
+                         }
+                     });
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    loop.exec();
+
+    return expect(delivered == QList<quint64>{latestId},
+                  "a stale queued preview was delivered") &&
+           expect(service.activeDecodeCount() == 0,
+                  "decode remained active after the latest result") &&
+           expect(service.queuedRequestCount() == 0,
+                  "decode queue was not drained") &&
+           expect(service.cacheEntryCount() == 1,
+                  "cancelled previews remained in the cache");
 }
 
 } // namespace
@@ -206,8 +329,10 @@ int main(int argc, char* argv[])
     QTemporaryDir workspace;
     const bool ok = expect(workspace.isValid(), "temporary directory unavailable") &&
                     testScaledBitmapAndCache(workspace.path()) &&
+                    testNaturalBitmapSizeAndConfiguredLimit(workspace.path()) &&
                     testLargeSvgRequestAndCancellation(workspace.path()) &&
-                    testBoundedLru(workspace.path());
+                    testBoundedLru(workspace.path()) &&
+                    testCoalescedDecodeQueue(workspace.path());
     if (ok) {
         fprintf(stdout, "All image preview service tests passed.\n");
     }

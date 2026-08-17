@@ -60,6 +60,7 @@ private:
     SettingsStore::CodeViewAppearance m_codeViewAppearance;
     QColor m_currentColor;
     int m_ShowFullPathOn;
+    int m_BookBrowserImagePreviewSize;
     bool m_ShowWidgetFocus;
     bool m_DoubleWidthCursor;
     bool m_UseCustomSigilDarkTheme;

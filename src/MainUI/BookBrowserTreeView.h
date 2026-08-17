@@ -30,6 +30,8 @@ signals:
 public:
 	BookBrowserTreeView(QWidget* parent = nullptr);
 	~BookBrowserTreeView();
+	void refreshImagePreviewSettings();
+	void resetImagePreviewState();
 
 protected:
 	void mousePressEvent(QMouseEvent* event);
@@ -53,6 +55,7 @@ private:
 	QLabel* imagePreviewPopup;
 	QTimer* imagePreviewTimer;
 	ImagePreviewService* imagePreviewService;
+	int imagePreviewDelayMs;
 	quint64 imagePreviewRequestId;
 	QString imagePreviewPath;
 

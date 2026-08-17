@@ -8,18 +8,20 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QScreen>
+#include <QStyle>
 #include <QTimer>
 #include <QStringList>
 
 #include "BookBrowserTreeView.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "MainUI/MainWindow.h"
+#include "Misc/ImagePreviewPolicy.h"
 #include "Misc/ImagePreviewService.h"
+#include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "ResourceObjects/Resource.h"
 
 QStringList IMPORT_SUFFIX = { "xhtml","html","htm","txt" };
-static const int IMAGE_PREVIEW_DELAY_MS = 150;
 
 //------------------- modified: BookBrowserTreeView -----------------------
 
@@ -31,6 +33,14 @@ BookBrowserTreeView::BookBrowserTreeView(QWidget* parent)
 	imagePreviewPopup(new QLabel(nullptr, Qt::ToolTip)),
 	imagePreviewTimer(new QTimer(this)),
 	imagePreviewService(new ImagePreviewService(this)),
+	imagePreviewDelayMs(ImagePreviewPolicy::hoverDelayMs(
+		style()->styleHint(QStyle::SH_ToolTip_WakeUpDelay, nullptr, this),
+#if defined(Q_OS_MAC) && defined(Q_PROCESSOR_ARM_64)
+		true
+#else
+		false
+#endif
+	)),
 	imagePreviewRequestId(0)
 {
 	setMouseTracking(true);
@@ -43,12 +53,26 @@ BookBrowserTreeView::BookBrowserTreeView(QWidget* parent)
 	connect(imagePreviewTimer, &QTimer::timeout, this, [this]() { showImagePreview(); });
 	connect(imagePreviewService, &ImagePreviewService::previewReady,
 	        this, &BookBrowserTreeView::imagePreviewReady);
+	refreshImagePreviewSettings();
 }
 
 
 BookBrowserTreeView::~BookBrowserTreeView()
 {
 	delete imagePreviewPopup;
+}
+
+void BookBrowserTreeView::refreshImagePreviewSettings()
+{
+	SettingsStore settings;
+	hideImagePreview();
+	imagePreviewService->setMaximumPreviewSide(settings.bookBrowserImagePreviewSize());
+}
+
+void BookBrowserTreeView::resetImagePreviewState()
+{
+	hideImagePreview();
+	imagePreviewService->reset();
 }
 
 Resource* BookBrowserTreeView::resourceForIndex(const QModelIndex& index) const
@@ -179,10 +203,13 @@ void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
 		return;
 	}
 
-	if (imagePreviewIndex == index &&
-	    (imagePreviewPopup->isVisible() || imagePreviewTimer->isActive() ||
-	     imagePreviewRequestId != 0)) {
-		return;
+	if (imagePreviewIndex == index) {
+		if (imagePreviewPopup->isVisible() || imagePreviewRequestId != 0 ||
+		    imagePreviewTimer->isActive()) {
+			// Dwell is measured per item; small pointer movements within the
+			// same row must not postpone the preview indefinitely.
+			return;
+		}
 	}
 
 	imagePreviewService->cancelPending();
@@ -190,7 +217,8 @@ void BookBrowserTreeView::scheduleImagePreview(const QModelIndex& index)
 	imagePreviewPath.clear();
 	imagePreviewIndex = index;
 	imagePreviewPopup->hide();
-	imagePreviewTimer->start(IMAGE_PREVIEW_DELAY_MS);
+	imagePreviewPopup->clear();
+	imagePreviewTimer->start(imagePreviewDelayMs);
 }
 
 void BookBrowserTreeView::showImagePreview()
@@ -249,6 +277,7 @@ void BookBrowserTreeView::hideImagePreview()
 	imagePreviewIndex = QPersistentModelIndex();
 	if (imagePreviewPopup) {
 		imagePreviewPopup->hide();
+		imagePreviewPopup->clear();
 	}
 }
 

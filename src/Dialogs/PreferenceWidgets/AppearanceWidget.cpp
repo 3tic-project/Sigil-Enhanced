@@ -123,6 +123,7 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
     SettingsStore settings;
     settings.setAppearancePrefsTabIndex(ui.tabAppearance->currentIndex());
     settings.setShowFullPathOn(ui.ShowFullPath->isChecked() ? 1 : 0);
+    settings.setBookBrowserImagePreviewSize(ui.bookBrowserImagePreviewSizeSpin->value());
     settings.setPreviewDark(ui.PreviewDarkInDM->isChecked() ? 1 : 0);
     settings.setUIHighlightFocusWidget(ui.chkFocusDec->isChecked() ? 1 : 0);
     settings.setAutomateShowMenu(ui.chkShowAuto->isChecked() ? 1 : 0);
@@ -224,6 +225,9 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
     if (m_ShowFullPathOn != (ui.ShowFullPath->isChecked() ? 1 : 0)) {
         results = results | PreferencesWidget::ResultAction_RefreshBookBrowser;
     }
+    if (m_BookBrowserImagePreviewSize != ui.bookBrowserImagePreviewSizeSpin->value()) {
+        results = results | PreferencesWidget::ResultAction_RefreshBookBrowser;
+    }
     if (m_PreviewDark != (ui.PreviewDarkInDM->isChecked() ? 1 : 0)) {
         results = results | PreferencesWidget::ResultAction_ReloadPreview;
     }
@@ -260,6 +264,8 @@ SettingsStore::CodeViewAppearance AppearanceWidget::readSettings()
     ui.tabAppearance->setCurrentIndex(settings.appearancePrefsTabIndex());
     m_ShowFullPathOn = settings.showFullPathOn();
     ui.ShowFullPath->setChecked(settings.showFullPathOn());
+    m_BookBrowserImagePreviewSize = settings.bookBrowserImagePreviewSize();
+    ui.bookBrowserImagePreviewSizeSpin->setValue(m_BookBrowserImagePreviewSize);
     m_ShowWidgetFocus = settings.uiHighlightFocusWidgetEnabled();
     ui.chkFocusDec->setChecked(settings.uiHighlightFocusWidgetEnabled());
     ui.chkShowAuto->setChecked(settings.automateShowMenu());

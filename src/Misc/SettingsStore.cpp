@@ -30,6 +30,7 @@
 
 #include "Misc/SettingsStore.h"
 #include "Misc/PluginDB.h"
+#include "Misc/ImagePreviewPolicy.h"
 #include "Misc/Utility.h"
 
 #include "sigil_constants.h"
@@ -65,6 +66,7 @@ static QString KEY_CLEAN_ON = SETTINGS_GROUP + "/" + "clean_on";
 static QString KEY_REMOTE_ON = SETTINGS_GROUP + "/" + "remote_on";
 static QString KEY_JAVASCRIPT_ON = SETTINGS_GROUP + "/" + "javascript_on";
 static QString KEY_SHOWFULLPATH_ON = SETTINGS_GROUP + "/" + "showfullpath_on";
+static QString KEY_BOOK_BROWSER_IMAGE_PREVIEW_SIZE = SETTINGS_GROUP + "/" + "book_browser_image_preview_size";
 static QString KEY_DISABLEGPU_SETTING = SETTINGS_GROUP + "/" + "disable_gpu";
 static QString KEY_PRINT_PREVIEW_DPI_SETTING = SETTINGS_GROUP + "/" + "print_preview_dpi";
 static QString KEY_PRINT_DPI_SETTING = SETTINGS_GROUP + "/" + "print_dpi";
@@ -320,6 +322,14 @@ int SettingsStore::showFullPathOn()
 {
     clearSettingsGroup();
     return value(KEY_SHOWFULLPATH_ON, 1).toInt();
+}
+
+int SettingsStore::bookBrowserImagePreviewSize()
+{
+    clearSettingsGroup();
+    return ImagePreviewPolicy::normalizedMaximumSide(
+        value(KEY_BOOK_BROWSER_IMAGE_PREVIEW_SIZE,
+              ImagePreviewPolicy::DEFAULT_MAXIMUM_SIDE).toInt());
 }
 
 bool SettingsStore::disableGPU()
@@ -740,6 +750,13 @@ void SettingsStore::setShowFullPathOn(int on)
     setValue(KEY_SHOWFULLPATH_ON, on);
 }
 
+void SettingsStore::setBookBrowserImagePreviewSize(int size)
+{
+    clearSettingsGroup();
+    setValue(KEY_BOOK_BROWSER_IMAGE_PREVIEW_SIZE,
+             ImagePreviewPolicy::normalizedMaximumSide(size));
+}
+
 void SettingsStore::setDisableGPU(bool value)
 {
     clearSettingsGroup();
@@ -1026,6 +1043,7 @@ void SettingsStore::clearAppearanceSettings()
     remove(KEY_SPECIAL_CHARACTER_FONT_SIZE);
     remove(KEY_MAIN_MENU_ICON_SIZE);
     remove(KEY_SHOWFULLPATH_ON);
+    remove(KEY_BOOK_BROWSER_IMAGE_PREVIEW_SIZE);
     remove(KEY_UI_FONT);
     remove(KEY_UI_ICON_THEME);
     remove(KEY_PREVIEW_DARK_IN_DM);

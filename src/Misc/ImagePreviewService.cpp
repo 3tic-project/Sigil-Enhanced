@@ -25,7 +25,6 @@
 namespace
 {
 
-constexpr int PREVIEW_MAX_SIDE = 300;
 constexpr qint64 MAX_SOURCE_FILE_BYTES = 128LL * 1024 * 1024;
 
 int cacheLimitKiB(qint64 bytes)
@@ -39,17 +38,20 @@ int imageCostKiB(const QImage& image)
     return qMax(1, static_cast<int>((image.sizeInBytes() + 1023) / 1024));
 }
 
-QSize previewSize(const QSize& source)
+QSize previewSize(const QSize& source, int maximumSide)
 {
     if (source.isEmpty()) {
         return QSize();
     }
+    if (source.width() <= maximumSide && source.height() <= maximumSide) {
+        return source;
+    }
     QSize scaled = source;
-    scaled.scale(QSize(PREVIEW_MAX_SIDE, PREVIEW_MAX_SIDE), Qt::KeepAspectRatio);
+    scaled.scale(QSize(maximumSide, maximumSide), Qt::KeepAspectRatio);
     return scaled;
 }
 
-ImagePreviewData decodeBitmap(const QString& filePath)
+ImagePreviewData decodeBitmap(const QString& filePath, int maximumSide)
 {
     ImagePreviewData preview;
     preview.fileSize = QFileInfo(filePath).size();
@@ -60,22 +62,22 @@ ImagePreviewData decodeBitmap(const QString& filePath)
     QImageReader reader(filePath);
     reader.setAutoTransform(true);
     preview.pixelSize = reader.size();
-    const QSize targetSize = previewSize(preview.pixelSize);
+    const QSize targetSize = previewSize(preview.pixelSize, maximumSide);
     if (targetSize.isEmpty()) {
         return preview;
     }
     reader.setScaledSize(targetSize);
     preview.image = reader.read();
     if (!preview.image.isNull() &&
-        (preview.image.width() > PREVIEW_MAX_SIDE ||
-         preview.image.height() > PREVIEW_MAX_SIDE)) {
+        (preview.image.width() > maximumSide ||
+         preview.image.height() > maximumSide)) {
         preview.image = preview.image.scaled(targetSize, Qt::KeepAspectRatio,
                                              Qt::SmoothTransformation);
     }
     return preview;
 }
 
-ImagePreviewData decodeSvg(const QString& filePath)
+ImagePreviewData decodeSvg(const QString& filePath, int maximumSide)
 {
     ImagePreviewData preview;
     preview.fileSize = QFileInfo(filePath).size();
@@ -88,9 +90,9 @@ ImagePreviewData decodeSvg(const QString& filePath)
         return preview;
     }
     preview.pixelSize = renderer.defaultSize();
-    QSize targetSize = previewSize(preview.pixelSize);
+    QSize targetSize = previewSize(preview.pixelSize, maximumSide);
     if (targetSize.isEmpty()) {
-        targetSize = QSize(PREVIEW_MAX_SIDE, PREVIEW_MAX_SIDE);
+        targetSize = QSize(maximumSide, maximumSide);
     }
 
     QImage image(targetSize, QImage::Format_ARGB32_Premultiplied);
@@ -103,10 +105,13 @@ ImagePreviewData decodeSvg(const QString& filePath)
 
 } // namespace
 
-ImagePreviewService::ImagePreviewService(QObject* parent, qint64 maxCacheBytes)
+ImagePreviewService::ImagePreviewService(QObject* parent,
+                                         qint64 maxCacheBytes,
+                                         int maximumPreviewSide)
     : QObject(parent),
       m_Cache(cacheLimitKiB(maxCacheBytes)),
-      m_CacheLimitBytes(static_cast<qint64>(cacheLimitKiB(maxCacheBytes)) * 1024)
+      m_CacheLimitBytes(static_cast<qint64>(cacheLimitKiB(maxCacheBytes)) * 1024),
+      m_MaximumPreviewSide(ImagePreviewPolicy::normalizedMaximumSide(maximumPreviewSide))
 {
 }
 
@@ -119,7 +124,8 @@ quint64 ImagePreviewService::request(const QString& filePath, Format format)
 {
     const quint64 requestId = ++m_NextRequestId;
     m_ActiveRequests.insert(requestId);
-    const QString key = cacheKey(filePath, format);
+    const int maximumPreviewSide = m_MaximumPreviewSide;
+    const QString key = cacheKey(filePath, format, maximumPreviewSide);
     if (const ImagePreviewData* cached = m_Cache.object(key)) {
         const ImagePreviewData preview = *cached;
         ++m_CacheHits;
@@ -131,32 +137,75 @@ quint64 ImagePreviewService::request(const QString& filePath, Format format)
         return requestId;
     }
 
+    const PreviewRequest request = {
+        requestId, key, filePath, format, maximumPreviewSide
+    };
+    if (m_RunningWatcher) {
+        if (m_HasQueuedRequest) {
+            m_ActiveRequests.remove(m_QueuedRequest.requestId);
+        }
+        m_QueuedRequest = request;
+        m_HasQueuedRequest = true;
+        return requestId;
+    }
+
+    startRequest(request);
+    return requestId;
+}
+
+void ImagePreviewService::startRequest(const PreviewRequest& request)
+{
     auto cancelled = std::make_shared<std::atomic_bool>(false);
     auto* watcher = new QFutureWatcher<ImagePreviewData>(this);
-    m_Pending.insert(requestId, {watcher, cancelled});
+    m_RunningWatcher = watcher;
+    m_RunningCancelled = cancelled;
     connect(watcher, &QFutureWatcher<ImagePreviewData>::finished, this,
-            [this, requestId, key, watcher, cancelled]() {
-                finishRequest(requestId, key, watcher, cancelled);
+            [this, request, watcher, cancelled]() {
+                finishRequest(request, watcher, cancelled);
             });
-    watcher->setFuture(QtConcurrent::run([filePath, format, cancelled]() {
+    watcher->setFuture(QtConcurrent::run([request, cancelled]() {
         if (cancelled->load()) {
             return ImagePreviewData();
         }
-        ImagePreviewData preview = decode(filePath, format);
+        ImagePreviewData preview = decode(request.filePath,
+                                          request.format,
+                                          request.maximumPreviewSide);
         if (cancelled->load()) {
             preview.image = QImage();
         }
         return preview;
     }));
-    return requestId;
+}
+
+void ImagePreviewService::setMaximumPreviewSide(int maximumPreviewSide)
+{
+    const int normalized = ImagePreviewPolicy::normalizedMaximumSide(maximumPreviewSide);
+    if (m_MaximumPreviewSide == normalized) {
+        return;
+    }
+    reset();
+    m_MaximumPreviewSide = normalized;
+}
+
+int ImagePreviewService::maximumPreviewSide() const
+{
+    return m_MaximumPreviewSide;
 }
 
 void ImagePreviewService::cancelPending()
 {
     m_ActiveRequests.clear();
-    for (auto it = m_Pending.begin(); it != m_Pending.end(); ++it) {
-        it->cancelled->store(true);
+    if (m_RunningCancelled) {
+        m_RunningCancelled->store(true);
     }
+    m_HasQueuedRequest = false;
+    m_QueuedRequest = PreviewRequest();
+}
+
+void ImagePreviewService::reset()
+{
+    cancelPending();
+    m_Cache.clear();
 }
 
 int ImagePreviewService::cacheEntryCount() const
@@ -179,35 +228,70 @@ quint64 ImagePreviewService::cacheHits() const
     return m_CacheHits;
 }
 
-ImagePreviewData ImagePreviewService::decode(const QString& filePath, Format format)
+int ImagePreviewService::activeDecodeCount() const
 {
-    return format == Format::Svg ? decodeSvg(filePath) : decodeBitmap(filePath);
+    return m_RunningWatcher ? 1 : 0;
 }
 
-QString ImagePreviewService::cacheKey(const QString& filePath, Format format)
+int ImagePreviewService::queuedRequestCount() const
+{
+    return m_HasQueuedRequest ? 1 : 0;
+}
+
+ImagePreviewData ImagePreviewService::decode(const QString& filePath,
+                                             Format format,
+                                             int maximumPreviewSide)
+{
+    const int normalized = ImagePreviewPolicy::normalizedMaximumSide(maximumPreviewSide);
+    return format == Format::Svg ?
+           decodeSvg(filePath, normalized) : decodeBitmap(filePath, normalized);
+}
+
+QString ImagePreviewService::cacheKey(const QString& filePath,
+                                      Format format,
+                                      int maximumPreviewSide)
 {
     const QFileInfo info(filePath);
-    return QStringLiteral("%1|%2|%3|%4")
+    return QStringLiteral("%1|%2|%3|%4|%5")
         .arg(QDir::cleanPath(info.absoluteFilePath()))
         .arg(info.size())
         .arg(info.lastModified().toMSecsSinceEpoch())
-        .arg(format == Format::Svg ? QLatin1String("svg") : QLatin1String("bitmap"));
+        .arg(format == Format::Svg ? QLatin1String("svg") : QLatin1String("bitmap"))
+        .arg(maximumPreviewSide);
 }
 
 void ImagePreviewService::finishRequest(
-    quint64 requestId,
-    const QString& key,
+    const PreviewRequest& request,
     QFutureWatcher<ImagePreviewData>* watcher,
     const std::shared_ptr<std::atomic_bool>& cancelled)
 {
     const ImagePreviewData preview = watcher->result();
-    m_Pending.remove(requestId);
+    m_RunningWatcher = nullptr;
+    m_RunningCancelled.reset();
     watcher->deleteLater();
-    if (cancelled->load() || !m_ActiveRequests.remove(requestId)) {
+
+    const bool shouldDeliver = !cancelled->load() &&
+                               m_ActiveRequests.remove(request.requestId);
+    if (shouldDeliver && !preview.image.isNull()) {
+        m_Cache.insert(request.key,
+                       new ImagePreviewData(preview),
+                       imageCostKiB(preview.image));
+    }
+    startQueuedRequest();
+    if (shouldDeliver) {
+        emit previewReady(request.requestId, preview);
+    }
+}
+
+void ImagePreviewService::startQueuedRequest()
+{
+    if (!m_HasQueuedRequest) {
         return;
     }
-    if (!preview.image.isNull()) {
-        m_Cache.insert(key, new ImagePreviewData(preview), imageCostKiB(preview.image));
+    const PreviewRequest request = m_QueuedRequest;
+    m_QueuedRequest = PreviewRequest();
+    m_HasQueuedRequest = false;
+    if (m_ActiveRequests.contains(request.requestId)) {
+        startRequest(request);
     }
-    emit previewReady(requestId, preview);
 }
