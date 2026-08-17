@@ -25,20 +25,23 @@
 #define TABMANAGER_H
 
 #include <QtCore/QUrl>
-#include <QtWidgets/QTabWidget>
+#include <QtWidgets/QWidget>
 
 #include "MainUI/MainWindow.h"
 #include "Tabs/ContentTab.h"
 
 class Resource;
 class HTMLResource;
+class TabGroup;
 class WellFormedContent;
 
 /**
  * Manages the tabs shown in the main UI.
  * Handles open resource requests, tab switching, closing etc.
+ * Presentation lives in TabGroup; this class owns the open-resource
+ * routing. V1 has a single primary group.
  */
-class TabManager : public QTabWidget
+class TabManager : public QWidget
 {
     Q_OBJECT
 
@@ -189,9 +192,6 @@ signals:
 
     void ShowStatusMessageRequest(const QString &message, int duration = 5000);
 
-protected:
-    virtual void tabInserted(int index);
-
 private slots:
 
     /**
@@ -293,6 +293,8 @@ private:
      * Stores a reference to the tab used before the current one.
      * Needed for the TabChanged signal.
      */
+    TabGroup *m_Primary;
+
     ContentTab* m_LastContentTab;
 
     bool m_CheckWellFormedErrors;
