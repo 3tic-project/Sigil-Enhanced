@@ -2171,10 +2171,12 @@ void BookBrowser::SetupTreeView()
     m_TreeView->sortByColumn(-1, Qt::AscendingOrder);
     m_TreeView->setUniformRowHeights(true);
     m_TreeView->setDragEnabled(true);
-    m_TreeView->setAcceptDrops(false);
-    m_TreeView->setDropIndicatorShown(true);
     m_TreeView->setDragDropMode(QAbstractItemView::InternalMove);
     m_TreeView->setDefaultDropAction(Qt::MoveAction);
+    // InternalMove enables drops for reading-order moves. Keep them on so
+    // external files can also be added by dropping onto Book Browser.
+    m_TreeView->setAcceptDrops(true);
+    m_TreeView->setDropIndicatorShown(true);
     m_TreeView->setContextMenuPolicy(Qt::CustomContextMenu);
     m_TreeView->setItemDelegate(new FilenameDelegate);
     m_TreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -2506,6 +2508,12 @@ void BookBrowser::ConnectSignalsToSlots()
             this,         SLOT(EmitResourceActivated(const QModelIndex &)));
     connect(m_TreeView, SIGNAL(customContextMenuRequested(const QPoint &)),
             this,        SLOT(OpenContextMenu(const QPoint &)));
+    connect(m_TreeView, SIGNAL(addFilesRequest(QStringList&)),
+            this,        SLOT(AddFiles(QStringList&)));
+    connect(m_TreeView, SIGNAL(insertHtmlRequest(QString&, const QPoint&)),
+            this,        SLOT(InsertHtmlToTextGroup(QString&, const QPoint&)));
+    connect(m_TreeView, SIGNAL(insertTXTRequest(QString&, const QPoint&)),
+            this,        SLOT(InsertTxtToTextGroup(QString&, const QPoint&)));
     connect(m_OPFModel, SIGNAL(ResourceRenamed()),
             this,        SLOT(SelectRenamedResource()));
     connect(m_OPFModel, SIGNAL(ResourceMoved()),

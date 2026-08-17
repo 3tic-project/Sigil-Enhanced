@@ -325,7 +325,9 @@ bool OPFModel::canDropMimeData(const QMimeData *data,
                                const QModelIndex &parent) const
 {
     if (!data || !data->hasFormat(ResourceInsertion::BOOK_BROWSER_RESOURCE_MIME)) {
-        return QStandardItemModel::canDropMimeData(data, action, row, column, parent);
+        // External file URLs are imported by BookBrowserTreeView, not by
+        // creating model rows from Finder/Explorer mime data.
+        return false;
     }
 
     // Copy is useful when a resource is dropped into an editor, but accepting

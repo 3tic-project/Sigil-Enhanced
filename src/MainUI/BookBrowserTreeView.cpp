@@ -301,54 +301,94 @@ void BookBrowserTreeView::mouseMoveEvent(QMouseEvent* e)
 }
 
 
+static bool isExternalFileDrop(const QMimeData *mime_data)
+{
+	return mime_data && mime_data->hasUrls();
+}
+
+static bool allDroppedUrlsAreLocalFiles(const QList<QUrl> &urls)
+{
+	if (urls.isEmpty()) {
+		return false;
+	}
+
+	foreach(const QUrl &url, urls) {
+		if (!url.isLocalFile()) {
+			return false;
+		}
+		const QFileInfo info(url.toLocalFile());
+		if (url.toLocalFile().isEmpty() || !info.isFile() || info.isDir()) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool allDroppedUrlsAreEpub(const QList<QUrl> &urls)
+{
+	if (urls.isEmpty()) {
+		return false;
+	}
+
+	foreach(const QUrl &url, urls) {
+		if (QFileInfo(url.toLocalFile()).suffix().compare(QLatin1String("epub"), Qt::CaseInsensitive) != 0) {
+			return false;
+		}
+	}
+	return true;
+}
+
+
 void BookBrowserTreeView::dragEnterEvent(QDragEnterEvent* e)
 {
 	hideImagePreview();
-	if (e->mimeData()->hasUrls()) {
-		QList<QUrl> urls = e->mimeData()->urls();
-		bool no_directory = true;
-		foreach(QUrl url, urls) {
-			QString filepath = url.toLocalFile();
-			if (QFileInfo(filepath).isDir()) {
-				no_directory = false;
-				break;
-			}
+	if (isExternalFileDrop(e->mimeData())) {
+		const QList<QUrl> urls = e->mimeData()->urls();
+		// Let MainWindow handle all-EPUB drops (add vs open-in-new-window).
+		if (allDroppedUrlsAreLocalFiles(urls) && !allDroppedUrlsAreEpub(urls)) {
+			e->acceptProposedAction();
+			return;
 		}
-		if (no_directory) {
-			e->accept();
-		}
-		else {
-			e->ignore();
-		}
+		e->ignore();
+		return;
 	}
-	else {
-		QTreeView::dragEnterEvent(e);
-	}
+
+	QTreeView::dragEnterEvent(e);
 }
 
 
 void BookBrowserTreeView::dragMoveEvent(QDragMoveEvent* e)
 {
-	QList<QUrl>urls = e->mimeData()->urls();
-	if (urls.size() == 1) {
-		QString url = urls.at(0).toLocalFile();
-		QString ext = QFileInfo(url).suffix().toLower();
-		if (!IMPORT_SUFFIX.contains(ext))
-			return QTreeView::dragMoveEvent(e);
-		QPoint pos = e->position().toPoint();
-		QModelIndex mindex = indexAt(pos);
-		if (mindex.parent().data(0) != "Text") {
-			if (dropIndicatorEnabled == true) {
-				dropIndicatorEnabled = false;
-				viewport()->update();
+	if (isExternalFileDrop(e->mimeData())) {
+		const QList<QUrl> urls = e->mimeData()->urls();
+		if (!allDroppedUrlsAreLocalFiles(urls) || allDroppedUrlsAreEpub(urls)) {
+			dropIndicatorEnabled = false;
+			e->ignore();
+			return;
+		}
+
+		bool show_insert_indicator = false;
+		if (urls.size() == 1) {
+			const QString ext = QFileInfo(urls.at(0).toLocalFile()).suffix().toLower();
+			const QPoint pos = e->position().toPoint();
+			const QModelIndex mindex = indexAt(pos);
+			if (IMPORT_SUFFIX.contains(ext) && mindex.parent().data(0) == "Text") {
+				show_insert_indicator = true;
+				QPoint indicator_pos = pos;
+				drawOtherDropIndicator(indicator_pos);
 			}
-			return QTreeView::dragMoveEvent(e);
 		}
-		else {
-			dropIndicatorEnabled = true;
-			drawOtherDropIndicator(pos);
+		if (!show_insert_indicator && dropIndicatorEnabled) {
+			viewport()->update();
 		}
+		dropIndicatorEnabled = show_insert_indicator;
+
+		// Do not ask OPFModel to accept URL mime. InternalMove only
+		// understands XHTML reading-order payloads.
+		e->acceptProposedAction();
+		return;
 	}
+
 	QTreeView::dragMoveEvent(e);
 }
 
@@ -364,30 +404,37 @@ void BookBrowserTreeView::dragLeaveEvent(QDragLeaveEvent* e)
 void BookBrowserTreeView::dropEvent(QDropEvent* e)
 {
 	hideImagePreview();
-	QList<QUrl> urls = e->mimeData()->urls();
-	QStringList filepaths;
-	bool requestEmitted = false;
-	foreach(QUrl url, urls) {
-		filepaths << url.toLocalFile();
-	}
-	if (dropIndicatorEnabled && filepaths.size() == 1) {
-		QString url = filepaths[0];
-		if (IMPORT_SUFFIX.contains(QFileInfo(url).suffix().toLower())) {
-			if (QFileInfo(url).suffix().toLower() == "txt") {
-				emit insertTXTRequest(url, e->position().toPoint());
-				requestEmitted = true;
-			}
-			else {
-				emit insertHtmlRequest(url,e->position().toPoint());
-				requestEmitted = true;
+	if (isExternalFileDrop(e->mimeData())) {
+		const QList<QUrl> urls = e->mimeData()->urls();
+		QStringList filepaths;
+		foreach(const QUrl &url, urls) {
+			filepaths << url.toLocalFile();
+		}
+
+		bool requestEmitted = false;
+		if (dropIndicatorEnabled && filepaths.size() == 1) {
+			QString url = filepaths[0];
+			if (IMPORT_SUFFIX.contains(QFileInfo(url).suffix().toLower())) {
+				if (QFileInfo(url).suffix().toLower() == "txt") {
+					emit insertTXTRequest(url, e->position().toPoint());
+					requestEmitted = true;
+				} else {
+					emit insertHtmlRequest(url, e->position().toPoint());
+					requestEmitted = true;
+				}
 			}
 		}
+
+		dropIndicatorEnabled = false;
+		viewport()->update();
+		if (!requestEmitted && !filepaths.isEmpty()) {
+			emit addFilesRequest(filepaths);
+		}
+		e->acceptProposedAction();
+		return;
 	}
 
 	dropIndicatorEnabled = false;
-	if (!requestEmitted)
-		emit addFilesRequest(filepaths);
-
 	QTreeView::dropEvent(e);
 }
 
