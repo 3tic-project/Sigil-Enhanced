@@ -26,10 +26,14 @@
 #include <QVBoxLayout>
 #include <QSplitter>
 #include <QLabel>
+#include <QAction>
+#include <QPushButton>
+#include <QMenu>
 #include <QPair>
 #include <QStackedLayout>
 #include <QMimeData>
 #include <QEvent>
+#include <QContextMenuEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QTabBar>
@@ -71,7 +75,9 @@ TabManager::TabManager(QWidget *parent)
     m_Primary(new TabGroup(this)),
     m_SecondaryPane(0),
     m_Secondary(0),
+    m_EmptyPane(0),
     m_EmptyLabel(0),
+    m_CloseEmptyGroupButton(0),
     m_Active(0),
     m_LastContentTab(NULL),
     m_TabsToDelete(QList<ContentTab*>()),
@@ -834,12 +840,32 @@ void TabManager::EnsureSecondary()
     m_SecondaryPane = new QWidget(this);
     m_Secondary = new TabGroup(m_SecondaryPane);
     m_Secondary->SetKeepLastTab(false);
-    m_EmptyLabel = new QLabel(tr("Open a file from Book Browser, or drop an editor tab here"), m_SecondaryPane);
+    m_EmptyPane = new QWidget(m_SecondaryPane);
+    m_EmptyPane->setFocusPolicy(Qt::ClickFocus);
+    m_EmptyPane->setAcceptDrops(true);
+    m_EmptyPane->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_EmptyPane->installEventFilter(this);
+
+    m_EmptyLabel = new QLabel(tr("Open a file from Book Browser, or drop an editor tab here"), m_EmptyPane);
     m_EmptyLabel->setAlignment(Qt::AlignCenter);
     m_EmptyLabel->setWordWrap(true);
     m_EmptyLabel->setFocusPolicy(Qt::ClickFocus);
-    m_EmptyLabel->setAcceptDrops(true);
+    m_EmptyLabel->setContextMenuPolicy(Qt::NoContextMenu);
     m_EmptyLabel->installEventFilter(this);
+
+    m_CloseEmptyGroupButton = new QPushButton(tr("Close This Editor Group"), m_EmptyPane);
+    m_CloseEmptyGroupButton->setAutoDefault(false);
+    m_CloseEmptyGroupButton->setDefault(false);
+    m_CloseEmptyGroupButton->setCursor(Qt::PointingHandCursor);
+    m_CloseEmptyGroupButton->setContextMenuPolicy(Qt::NoContextMenu);
+    m_CloseEmptyGroupButton->installEventFilter(this);
+
+    QVBoxLayout *empty_layout = new QVBoxLayout(m_EmptyPane);
+    empty_layout->addStretch(1);
+    empty_layout->addWidget(m_EmptyLabel);
+    empty_layout->addWidget(m_CloseEmptyGroupButton, 0, Qt::AlignHCenter);
+    empty_layout->addStretch(1);
+
     m_SecondaryPane->setAcceptDrops(true);
     m_SecondaryPane->installEventFilter(this);
     m_Secondary->setMinimumHeight(80);
@@ -848,7 +874,9 @@ void TabManager::EnsureSecondary()
     QStackedLayout *stack = new QStackedLayout(m_SecondaryPane);
     stack->setContentsMargins(0, 0, 0, 0);
     stack->addWidget(m_Secondary);
-    stack->addWidget(m_EmptyLabel);
+    stack->addWidget(m_EmptyPane);
+
+    connect(m_CloseEmptyGroupButton, SIGNAL(clicked()), this, SLOT(CloseEmptySecondary()));
 
     ConnectGroup(m_Secondary);
     m_Splitter->addWidget(m_SecondaryPane);
@@ -865,7 +893,7 @@ void TabManager::HideSecondary()
 
 void TabManager::UpdateEmptyState()
 {
-    if (!m_SecondaryPane || !m_Secondary || !m_EmptyLabel) {
+    if (!m_SecondaryPane || !m_Secondary || !m_EmptyPane) {
         return;
     }
     QStackedLayout *stack = qobject_cast<QStackedLayout *>(m_SecondaryPane->layout());
@@ -873,7 +901,7 @@ void TabManager::UpdateEmptyState()
         return;
     }
     if (m_Secondary->TabCount() == 0) {
-        stack->setCurrentWidget(m_EmptyLabel);
+        stack->setCurrentWidget(m_EmptyPane);
     } else {
         stack->setCurrentWidget(m_Secondary);
     }
@@ -1134,7 +1162,9 @@ bool TabManager::AcceptsEditorTabDrop(const QMimeData *mime) const
 
 bool TabManager::eventFilter(QObject *object, QEvent *event)
 {
-    if (object != m_EmptyLabel && object != m_SecondaryPane) {
+    const bool empty_chrome = (object == m_EmptyPane || object == m_EmptyLabel
+                               || object == m_CloseEmptyGroupButton || object == m_SecondaryPane);
+    if (!empty_chrome) {
         return QWidget::eventFilter(object, event);
     }
 
@@ -1151,8 +1181,34 @@ bool TabManager::eventFilter(QObject *object, QEvent *event)
             drop->acceptProposedAction();
             return true;
         }
+    } else if (event->type() == QEvent::ContextMenu
+               && m_Secondary && m_Secondary->TabCount() == 0) {
+        QContextMenuEvent *menu_event = static_cast<QContextMenuEvent *>(event);
+        OnEmptyGroupContextMenu(menu_event->globalPos());
+        return true;
     }
     return QWidget::eventFilter(object, event);
+}
+
+void TabManager::CloseEmptySecondary()
+{
+    if (!IsSplit() || (m_Secondary && m_Secondary->TabCount() > 0)) {
+        return;
+    }
+    JoinEditorGroups();
+}
+
+void TabManager::OnEmptyGroupContextMenu(const QPoint &pos)
+{
+    if (!IsSplit() || !m_Secondary || m_Secondary->TabCount() > 0) {
+        return;
+    }
+    QMenu menu;
+    QAction *close_action = menu.addAction(tr("Close This Editor Group"));
+    QAction *chosen = menu.exec(pos);
+    if (chosen == close_action) {
+        CloseEmptySecondary();
+    }
 }
 
 void TabManager::SetActiveGroup(TabGroup *group)
@@ -1177,7 +1233,9 @@ TabGroup *TabManager::GroupFromWidget(QWidget *widget) const
         if (widget == m_Primary) {
             return m_Primary;
         }
-        if (m_Secondary && (widget == m_Secondary || widget == m_SecondaryPane || widget == m_EmptyLabel)) {
+        if (m_Secondary && (widget == m_Secondary || widget == m_SecondaryPane
+                            || widget == m_EmptyPane || widget == m_EmptyLabel
+                            || widget == m_CloseEmptyGroupButton)) {
             return m_Secondary;
         }
         widget = widget->parentWidget();

@@ -36,9 +36,11 @@ class TabGroup;
 class WellFormedContent;
 class QSplitter;
 class QLabel;
+class QPushButton;
 class QWidget;
 class QEvent;
 class QMimeData;
+class QPoint;
 
 /**
  * Manages the tabs shown in the main UI.
@@ -258,6 +260,8 @@ private slots:
     void OnMoveToOtherGroupRequested(int tab_index);
     void OnTabDropRequested(QWidget *tab_widget, int insert_index);
     void OnApplicationFocusChanged(QWidget *old_widget, QWidget *now);
+    void CloseEmptySecondary();
+    void OnEmptyGroupContextMenu(const QPoint &pos);
 
 private:
 
@@ -357,7 +361,9 @@ private:
     TabGroup *m_Primary;
     QWidget *m_SecondaryPane;
     TabGroup *m_Secondary;
+    QWidget *m_EmptyPane;
     QLabel *m_EmptyLabel;
+    QPushButton *m_CloseEmptyGroupButton;
     TabGroup *m_Active;
 
     ContentTab* m_LastContentTab;
