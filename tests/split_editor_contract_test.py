@@ -27,7 +27,7 @@ require(
     "editor groups use a non-collapsible vertical splitter",
 )
 require(
-    'tr("Open a file from Book Browser")' in tab_manager
+    'tr("Open a file from Book Browser, or drop an editor tab here")' in tab_manager
     and "QStackedLayout" in tab_manager,
     "an empty secondary group shows a lightweight prompt instead of joining",
 )

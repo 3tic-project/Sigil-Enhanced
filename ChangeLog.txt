@@ -10,7 +10,9 @@ Sigil-Enhanced-2.8.1.E8
 
    New Features
      - Docked Preview Developer Tools under the Preview pane by embedding the existing Inspector; visibility and splitter ratio restore on restart, not open files.
+     - Developer Tools can detach into a separate window and dock back without destroying the Inspector.
      - Split the editor into two vertical groups so two resources stay visible; Open in Other Group, Move, and restart restore the split layout only.
+     - Dragging a tab between editor groups moves the same editor; Open/Move before a manual split opens the lower group.
      - Added built-in vertical/horizontal layout conversion: analyze writing direction per page, convert vertical-rl books to horizontal-tb or the reverse, skip fixed-layout and high-risk pages, validate invariants before writing, create a recovery Checkpoint, and keep per-resource undo.
      - For verified DPFJ/EBPAJ .vrtl/.hltr pages, conversion only switches the page root class; other templates receive a reversible compatibility overlay without rewriting shared stylesheets.
      - Whole-book conversion can restore the exact previous spine page-progression-direction, including the absent/default/ltr/rtl states, and records conversion provenance so reverse conversion does not disturb pages that were already in the target direction.

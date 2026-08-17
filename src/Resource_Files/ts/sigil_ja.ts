@@ -20843,6 +20843,18 @@ Entities can be separated by lines, commas, or spaces.</source>
         <translation>ページの検査</translation>
     </message>
     <message>
+        <source>Detach Developer Tools</source>
+        <translation>デベロッパーツールを別ウィンドウに分離</translation>
+    </message>
+    <message>
+        <source>Dock Developer Tools</source>
+        <translation>デベロッパーツールをプレビューに戻す</translation>
+    </message>
+    <message>
+        <source>Developer Tools</source>
+        <translation>デベロッパーツール</translation>
+    </message>
+    <message>
         <source>Inspect Element</source>
         <translation>要素を検査</translation>
     </message>
@@ -24848,8 +24860,8 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <translation>ファイルを編集できません</translation>
     </message>
     <message>
-        <source>Open a file from Book Browser</source>
-        <translation>ブックブラウザーからファイルを開く</translation>
+        <source>Open a file from Book Browser, or drop an editor tab here</source>
+        <translation>ブックブラウザーからファイルを開くか、エディタータブをここにドロップ</translation>
     </message>
     <message>
         <source>%1 is already open in the other editor group.</source>

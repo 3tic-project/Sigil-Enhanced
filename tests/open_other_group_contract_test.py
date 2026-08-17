@@ -38,9 +38,13 @@ require(
 require(
     "MoveTabToOtherGroup" in tab_manager
     and "source->TakeTab(tab)" in tab_manager
-    and "dest->AddContentTab(tab, false)" in tab_manager
+    and "InsertContentTab" in tab_manager
     and "CanMoveTab" in tab_manager,
     "Move takes the same ContentTab; last primary tab cannot move",
+)
+require(
+    "return m_Secondary;" in tab_manager.split("if (!IsSplit())")[1][:220],
+    "Open/Move before a manual split must create and use the lower group",
 )
 require(
     'tr("Open in Other Editor Group")' in book_browser

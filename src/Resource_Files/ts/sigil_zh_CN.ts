@@ -20845,6 +20845,18 @@ Entities can be separated by lines, commas, or spaces.</source>
         <translation>检查页面</translation>
     </message>
     <message>
+        <source>Detach Developer Tools</source>
+        <translation>将开发者工具拆成独立窗口</translation>
+    </message>
+    <message>
+        <source>Dock Developer Tools</source>
+        <translation>将开发者工具停靠回预览</translation>
+    </message>
+    <message>
+        <source>Developer Tools</source>
+        <translation>开发者工具</translation>
+    </message>
+    <message>
         <source>Inspect Element</source>
         <translation>检查元素</translation>
     </message>
@@ -24850,8 +24862,8 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <translation>无法编辑文件</translation>
     </message>
     <message>
-        <source>Open a file from Book Browser</source>
-        <translation>从书籍浏览器打开文件</translation>
+        <source>Open a file from Book Browser, or drop an editor tab here</source>
+        <translation>从书籍浏览器打开文件，或将编辑器标签拖到这里</translation>
     </message>
     <message>
         <source>%1 is already open in the other editor group.</source>

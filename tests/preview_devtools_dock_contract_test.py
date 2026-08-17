@@ -38,7 +38,8 @@ require(
     and "previewDevToolsSplitter" in preview
     and "setChildrenCollapsible(false)" in preview
     and "m_Layout->addWidget(m_Splitter, 1)" in preview
-    and "m_Layout->addLayout(m_buttons)" in preview,
+    and "m_Layout->addLayout(m_buttons)" in preview
+    and "m_Splitter->addWidget(m_DevToolsPane)" in preview,
     "Preview must host DevTools in a splitter above the toolbar so the preview fills leftover space",
 )
 require(
@@ -58,8 +59,10 @@ require(
 )
 require(
     'settings.setValue("devToolsVisible"' in preview
-    and 'settings.setValue("devToolsSplitterState"' in preview,
-    "Preview must persist DevTools visibility and splitter state only",
+    and 'settings.setValue("devToolsSplitterState"' in preview
+    and 'settings.setValue("devToolsDetached"' in preview
+    and 'settings.setValue("devToolsWindowGeometry"' in preview,
+    "Preview must persist DevTools visibility, splitter, and detached window state only",
 )
 require(
     "void SetDevToolsVisible(bool visible);" in preview_h
@@ -91,6 +94,13 @@ require(
 require(
     '"MainWindow.DeveloperTools"' in main_window,
     "Developer Tools must register with KeyboardShortcutManager without a default shortcut",
+)
+require(
+    "void SetDevToolsDetached(bool detached);" in preview_h
+    and "m_DevToolsWindow = new QWidget(this, Qt::Window)" in preview
+    and 'tr("Detach Developer Tools")' in preview
+    and '"MainWindow.DetachDeveloperTools"' in main_window,
+    "DevTools can detach into an independent window and dock back without destroying the Inspector",
 )
 
 print("preview_devtools_dock_contract: ok")
