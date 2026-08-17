@@ -40,6 +40,8 @@
 #include <QDebug>
 #include <QFrame>
 #include <QWidget>
+#include <QSplitter>
+#include <QMenu>
 
 #include "MainUI/PreviewWindow.h"
 #include "Dialogs/Inspector.h"
@@ -79,6 +81,7 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     m_bcycle(new QToolButton(m_MainWidget)),
     m_bprint(new QToolButton(m_MainWidget)),
     m_wrapper(new QFrame(m_MainWidget)),
+    m_Splitter(new QSplitter(Qt::Vertical, m_MainWidget)),
     m_Layout(new QVBoxLayout()),
     m_buttons(new QHBoxLayout()),
     m_overlayBase(new OverlayHelperWidget(this)),
@@ -130,13 +133,13 @@ PreviewWindow::PreviewWindow(QWidget *parent)
 
 PreviewWindow::~PreviewWindow()
 {
-    // BookViewPreview must be deleted before QWebInspector.
-    // BookViewPreview's QWebPage is linked to the QWebInspector
-    // and when deleted it will send a message to the linked QWebInspector
-    // to remove the association. If QWebInspector is deleted before
-    // BookViewPreview, BookViewPreview will try to access the deleted
-    // QWebInspector and the application will SegFault. This is an issue
-    // with how QWebPages interface with QWebInspector.
+    // Disconnect DevTools from the Preview page before either WebEngine
+    // view is destroyed. Hide only unbinds when the book or window closes.
+    SaveLayoutSettings();
+
+    if (m_Inspector) {
+        m_Inspector->StopInspection();
+    }
 
     if (m_Preview) {
         delete m_Preview;
@@ -144,10 +147,6 @@ PreviewWindow::~PreviewWindow()
     }
 
     if (m_Inspector) {
-        if (m_Inspector->isVisible()) {
-            m_Inspector->StopInspection();
-            m_Inspector->close();
-        }
         delete m_Inspector;
         m_Inspector = nullptr;
     }
@@ -175,11 +174,9 @@ void PreviewWindow::resizeEvent(QResizeEvent *event)
 
 void PreviewWindow::hideEvent(QHideEvent * event)
 {
-    if (m_Inspector) {
-        m_Inspector->StopInspection();
-        m_Inspector->close();
-    }
-
+    // Do not StopInspection() when the Preview dock is hidden or tabified.
+    // DevTools belongs to Preview and must stay bound so tabifying with TOC
+    // does not tear down the inspected page connection.
     if ((m_Preview) && m_Preview->isVisible()) {
         m_Preview->hide();
     }
@@ -269,7 +266,8 @@ void PreviewWindow::SetupView()
     m_Layout->addWidget(m_wrapper);
 
     m_inspectAction = new QAction(QIcon(":/main/inspect.svg"),"", this);
-    m_inspectAction ->setEnabled(true);
+    m_inspectAction->setEnabled(true);
+    m_inspectAction->setCheckable(true);
     m_inspectAction->setToolTip(tr("Inspect Page"));
     m_binspect->setDefaultAction(m_inspectAction);
     m_binspect->setAutoRaise(true);
@@ -316,7 +314,22 @@ void PreviewWindow::SetupView()
     m_buttons->addWidget(m_bprint);
     m_buttons->addWidget(m_progress);
 
-    m_Layout->addLayout(m_buttons);
+    QWidget *preview_pane = new QWidget(m_MainWidget);
+    QVBoxLayout *preview_layout = new QVBoxLayout(preview_pane);
+    preview_layout->setContentsMargins(0, 0, 0, 0);
+    preview_layout->setSpacing(0);
+    preview_layout->addWidget(m_wrapper);
+    preview_layout->addLayout(m_buttons);
+    preview_pane->setMinimumHeight(80);
+
+    m_Splitter->setObjectName(QStringLiteral("previewDevToolsSplitter"));
+    m_Splitter->setChildrenCollapsible(false);
+    m_Splitter->addWidget(preview_pane);
+    m_Splitter->addWidget(m_Inspector);
+    m_Inspector->setMinimumHeight(80);
+    m_Inspector->hide();
+
+    m_Layout->addWidget(m_Splitter);
 
     m_MainWidget->setLayout(m_Layout);
 
@@ -673,24 +686,93 @@ void PreviewWindow::LinkClicked(const QUrl &url)
     emit OpenUrlRequest(QUrl(url_string));
 }
 
-void PreviewWindow::InspectorClosed(int i)
+bool PreviewWindow::IsDevToolsVisible() const
 {
-    DBG qDebug() << "received finished with argument: " << i;
+    return m_Inspector && m_Inspector->isVisible();
+}
+
+void PreviewWindow::ApplyDevToolsSplitter()
+{
+    if (!m_Splitter || !m_Inspector || !m_Inspector->isVisible()) {
+        return;
+    }
+    if (!m_devToolsSplitterState.isEmpty()) {
+        m_Splitter->restoreState(m_devToolsSplitterState);
+        return;
+    }
+    const int total = qMax(m_Splitter->height(), 200);
+    const int tools = qBound(80, total * 35 / 100, total - 80);
+    m_Splitter->setSizes(QList<int>() << (total - tools) << tools);
+}
+
+void PreviewWindow::SetDevToolsVisible(bool visible)
+{
+    if (!m_Inspector) {
+        return;
+    }
+    if (visible == m_Inspector->isVisible()) {
+        if (visible) {
+            m_Inspector->InspectPageofView(m_Preview);
+        }
+        if (m_inspectAction) {
+            m_inspectAction->setChecked(visible);
+        }
+        emit DevToolsVisibilityChanged(visible);
+        return;
+    }
+
+    if (visible) {
+        m_Inspector->show();
+        ApplyDevToolsSplitter();
+        m_Inspector->InspectPageofView(m_Preview);
+    } else {
+        if (m_Splitter) {
+            m_devToolsSplitterState = m_Splitter->saveState();
+        }
+        m_Inspector->hide();
+        // Hide keeps the WebEngine page and inspected binding.
+    }
+    if (m_inspectAction) {
+        m_inspectAction->setChecked(visible);
+    }
+    emit DevToolsVisibilityChanged(visible);
+}
+
+void PreviewWindow::SaveLayoutSettings()
+{
+    if (m_Splitter && m_Inspector && m_Inspector->isVisible()) {
+        m_devToolsSplitterState = m_Splitter->saveState();
+    }
+    SettingsStore settings;
+    settings.beginGroup(SETTINGS_GROUP);
+    settings.setValue("devToolsVisible", IsDevToolsVisible());
+    settings.setValue("devToolsSplitterState", m_devToolsSplitterState);
+    settings.endGroup();
 }
 
 void PreviewWindow::InspectPreviewPage()
 {
-    // non-modal dialog
-    if (!m_Inspector->isVisible()) {
-        DBG qDebug() << "inspecting";
-        m_Inspector->InspectPageofView(m_Preview);
-        m_Inspector->show();
-        m_Inspector->raise();
-        m_Inspector->activateWindow();
-        return;
+    SetDevToolsVisible(!IsDevToolsVisible());
+}
+
+void PreviewWindow::ShowPreviewContextMenu(const QPoint &pos)
+{
+    QMenu menu(this);
+    QAction *inspect = menu.addAction(tr("Inspect Element"));
+    const QString hoverurl = m_Preview ? m_Preview->GetHoverUrl() : QString();
+    QAction *copy_link = nullptr;
+    if (!hoverurl.isEmpty()) {
+        copy_link = menu.addAction(tr("Copy Link"));
     }
-    m_Inspector->StopInspection();
-    m_Inspector->close();
+    QAction *chosen = menu.exec(m_Preview->mapToGlobal(pos));
+    if (chosen == inspect) {
+        SetDevToolsVisible(true);
+        if (m_Preview) {
+            m_Preview->triggerPageAction(QWebEnginePage::InspectElement);
+        }
+    } else if (copy_link && chosen == copy_link) {
+        QApplication::clipboard()->setText(hoverurl);
+    }
 }
 
 
@@ -742,9 +824,13 @@ void PreviewWindow::LoadSettings()
 {
     SettingsStore settings;
     m_use_focus_highlight = settings.uiHighlightFocusWidgetEnabled();
-    // settings.beginGroup(SETTINGS_GROUP);
-    // m_Layout->restoreState(settings.value("layout").toByteArray());
-    // settings.endGroup();
+    settings.beginGroup(SETTINGS_GROUP);
+    m_restore_devtools_visible = settings.value("devToolsVisible", false).toBool();
+    m_devToolsSplitterState = settings.value("devToolsSplitterState").toByteArray();
+    settings.endGroup();
+    if (m_restore_devtools_visible) {
+        SetDevToolsVisible(true);
+    }
 }
 
 void PreviewWindow::ConnectSignalsToSlots()
@@ -761,7 +847,9 @@ void PreviewWindow::ConnectSignalsToSlots()
     connect(m_webviewPrint,   SIGNAL(triggered()),          this, SLOT(PrintRendered()));
     connect(m_WebViewPrinter, SIGNAL(printStarted()),       this, SLOT(PrintStarted()));
     connect(m_WebViewPrinter, SIGNAL(printEnded()),         this, SLOT(PrintEnded()));
-    connect(m_Inspector,      SIGNAL(finished(int)),        this, SLOT(InspectorClosed(int)));
+    connect(m_Inspector,      SIGNAL(CloseRequested()),     this, SLOT(InspectPreviewPage()));
+    connect(m_Preview,        SIGNAL(customContextMenuRequested(const QPoint &)),
+            this,             SLOT(ShowPreviewContextMenu(const QPoint &)));
     connect(this,     SIGNAL(topLevelChanged(bool)),        this, SLOT(previewFloated(bool)));
 }
 

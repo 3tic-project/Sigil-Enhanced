@@ -6871,6 +6871,10 @@ Do you want to save your changes?</source>
         <source>Inspect Page or Element</source>
         <translation>检查页面或元素</translation>
     </message>
+    <message>
+        <source>Close</source>
+        <translation>关闭</translation>
+    </message>
 </context>
 <context>
     <name>KeyboardShortcutsWidget</name>
@@ -13423,6 +13427,10 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="3439"/>
+        <source>Developer Tools</source>
+        <translation>开发者工具</translation>
+    </message>
+    <message>
         <source>Focus on Preview</source>
         <translation>聚焦预览</translation>
     </message>
@@ -20807,6 +20815,14 @@ Entities can be separated by lines, commas, or spaces.</source>
         <location filename="../../MainUI/PreviewWindow.cpp" line="273"/>
         <source>Inspect Page</source>
         <translation>检查页面</translation>
+    </message>
+    <message>
+        <source>Inspect Element</source>
+        <translation>检查元素</translation>
+    </message>
+    <message>
+        <source>Copy Link</source>
+        <translation>复制链接</translation>
     </message>
     <message>
         <location filename="../../MainUI/PreviewWindow.cpp" line="279"/>

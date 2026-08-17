@@ -586,6 +586,7 @@ private slots:
     void ScrollPreview();
     void UpdatePreview();
     void InspectHTML();
+    void ToggleDeveloperTools(bool show);
 
     /**
      * Updates the cursor postion label to refelect the position of the
@@ -1009,6 +1010,7 @@ private:
     ValidationResultsView *m_ValidationResultsView;
 
     PreviewWindow *m_PreviewWindow;
+    QAction *m_DeveloperToolsAction;
 
     /**
      * The lable that displays the cursor position.

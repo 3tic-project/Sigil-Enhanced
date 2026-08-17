@@ -6869,6 +6869,10 @@ Do you want to save your changes?</source>
         <source>Inspect Page or Element</source>
         <translation>ページまたは要素の検査</translation>
     </message>
+    <message>
+        <source>Close</source>
+        <translation>閉じる</translation>
+    </message>
 </context>
 <context>
     <name>KeyboardShortcutsWidget</name>
@@ -13610,6 +13614,10 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <location filename="../../Form_Files/main.ui" line="3434"/>
         <source>Focus on BookBrowser</source>
         <translation>ブックブラウザーにフォーカス</translation>
+    </message>
+    <message>
+        <source>Developer Tools</source>
+        <translation>デベロッパーツール</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="3439"/>
@@ -20805,6 +20813,14 @@ Entities can be separated by lines, commas, or spaces.</source>
         <location filename="../../MainUI/PreviewWindow.cpp" line="273"/>
         <source>Inspect Page</source>
         <translation>ページの検査</translation>
+    </message>
+    <message>
+        <source>Inspect Element</source>
+        <translation>要素を検査</translation>
+    </message>
+    <message>
+        <source>Copy Link</source>
+        <translation>リンクをコピー</translation>
     </message>
     <message>
         <location filename="../../MainUI/PreviewWindow.cpp" line="279"/>

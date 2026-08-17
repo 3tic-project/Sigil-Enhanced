@@ -27,6 +27,12 @@
 - 修复 Book Browser 阅读顺序拖拽，spine 重排不再依赖容易过期的 TreeView 选择状态。
 - 恢复从 Finder/资源管理器把文件拖到 Book Browser 以添加资源；阅读顺序拖拽改写后外部 URL 放置被忽略。
 
+### Preview 开发者工具
+
+- 现有 Inspect 不再弹出独立窗口，而是停靠在 Preview 下方，随 Preview Dock 一起浮动或重新停靠。
+- `查看 → 开发者工具` 会显示 Preview 并打开嵌入的 Inspector。关闭面板只隐藏，不销毁 WebEngine 页。
+- 重启只恢复 DevTools 是否打开和 splitter 比例，不恢复打开过的 EPUB 文件。
+
 ### 上游同步与界面
 
 - 同步上游 Sigil 的 TOC 多选移动：选中项按连续块上移/下移，并修复右移时 `QPersistentIndex` 未更新导致的崩溃。

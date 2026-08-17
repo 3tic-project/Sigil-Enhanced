@@ -45,6 +45,7 @@ class WebViewPrinter;
 class QToolButton;
 class QWidget;
 class QFocusFrame;
+class QSplitter;
 
 class PreviewWindow : public QDockWidget
 {
@@ -62,6 +63,9 @@ public:
     void setMathJaxURL(QString mathjaxurl) { m_mathjaxurl = mathjaxurl; };
     void setUserCSSURLs(const QStringList&  usercssurls);
     void setCacheClearNeeded();
+    bool IsDevToolsVisible() const;
+    void SetDevToolsVisible(bool visible);
+    void SaveLayoutSettings();
 
 public slots:
     bool UpdatePage(QString filename, QString text, QList<ElementIndex> location);
@@ -75,7 +79,7 @@ public slots:
     void SelectAllPreview();
     void CopyPreview();
     void ReloadPreview();
-    void InspectorClosed(int);
+    void ShowPreviewContextMenu(const QPoint &pos);
     void setProgress(int);
     
     /**
@@ -95,6 +99,7 @@ signals:
     void ZoomFactorChanged(float factor);
     void GoToPreviewLocationRequest();
     void RequestPreviewReload();
+    void DevToolsVisibilityChanged(bool visible);
 
     /**
      * Emitted whenever Preview wants to open an URL.
@@ -127,6 +132,7 @@ private:
     void LoadSettings();
     void ConnectSignalsToSlots();
     void UpdateWindowTitle();
+    void ApplyDevToolsSplitter();
     bool fixup_fullscreen_svg_images(const QString &text);
     
     const QString titleText();
@@ -139,6 +145,7 @@ private:
     QToolButton * m_bcycle;
     QToolButton * m_bprint;
     QFrame *m_wrapper;
+    QSplitter *m_Splitter;
     QVBoxLayout *m_Layout;
     QHBoxLayout *m_buttons;
     OverlayHelperWidget *m_overlayBase;
@@ -170,6 +177,8 @@ private:
     WebViewPrinter *m_WebViewPrinter;
     bool m_use_focus_highlight;
     bool m_cache_clear_needed = false;
+    bool m_restore_devtools_visible = false;
+    QByteArray m_devToolsSplitterState;
 
 };
 

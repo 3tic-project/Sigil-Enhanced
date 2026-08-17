@@ -462,6 +462,13 @@ add_test(NAME book_browser_drag_contract
 )
 set_tests_properties(book_browser_drag_contract PROPERTIES TIMEOUT 30)
 
+add_test(NAME preview_devtools_dock_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/preview_devtools_dock_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(preview_devtools_dock_contract PROPERTIES TIMEOUT 30)
+
 add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp

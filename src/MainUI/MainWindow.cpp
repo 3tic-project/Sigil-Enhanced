@@ -298,6 +298,7 @@ MainWindow::MainWindow(const QString &openfilepath,
     m_TableOfContents(NULL),
     m_ValidationResultsView(NULL),
     m_PreviewWindow(NULL),
+    m_DeveloperToolsAction(NULL),
     m_slZoomSlider(NULL),
     m_lbZoomLabel(NULL),
     c_SaveFilters(GetSaveFiltersMap()),
@@ -5600,9 +5601,20 @@ void MainWindow::UpdatePreview()
 
 void MainWindow::InspectHTML()
 {
-    m_PreviewWindow->show();
-    m_PreviewWindow->raise();
-    UpdatePreview();
+    ToggleDeveloperTools(true);
+}
+
+void MainWindow::ToggleDeveloperTools(bool show)
+{
+    if (!m_PreviewWindow) {
+        return;
+    }
+    if (show) {
+        m_PreviewWindow->show();
+        m_PreviewWindow->raise();
+        UpdatePreview();
+    }
+    m_PreviewWindow->SetDevToolsVisible(show);
 }
 
 void MainWindow::UpdateCursorPositionLabel(int line, int column, int codepoint)
@@ -5980,6 +5992,9 @@ void MainWindow::WriteSettings()
     KeyboardShortcutManager::instance().writeSettings();
     settings.endGroup();
     settings.setClipboardHistoryLimit(m_ClipboardHistoryLimit);
+    if (m_PreviewWindow) {
+        m_PreviewWindow->SaveLayoutSettings();
+    }
 }
 
 bool MainWindow::MaybeSaveDialogSaysProceed()
@@ -6833,6 +6848,11 @@ void MainWindow::ExtendUI()
     ui.menuView->addAction(m_Clips->toggleViewAction());
     ui.menuView->addAction(m_PreviewWindow->toggleViewAction());
     m_PreviewWindow->toggleViewAction()->setShortcut(QKeySequence(Qt::Key_F10));
+    m_DeveloperToolsAction = new QAction(tr("Developer Tools"), this);
+    m_DeveloperToolsAction->setObjectName(QStringLiteral("actionDeveloperTools"));
+    m_DeveloperToolsAction->setCheckable(true);
+    m_DeveloperToolsAction->setChecked(m_PreviewWindow->IsDevToolsVisible());
+    ui.menuView->addAction(m_DeveloperToolsAction);
     ui.menuView->addAction(m_TableOfContents->toggleViewAction());
     m_TableOfContents->toggleViewAction()->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F3));
     ui.menuView->addAction(m_ValidationResultsView->toggleViewAction());
@@ -7042,6 +7062,7 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, m_BookBrowser->toggleViewAction(), "MainWindow.BookBrowser");
     KeyboardShortcutManager::instance().registerAction(this, m_Clips->toggleViewAction(), "MainWindow.ClipsWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->toggleViewAction(), "MainWindow.PreviewWindow");
+    KeyboardShortcutManager::instance().registerAction(this, m_DeveloperToolsAction, "MainWindow.DeveloperTools");
     KeyboardShortcutManager::instance().registerAction(this, m_TableOfContents->toggleViewAction(), "MainWindow.TableOfContents");
     KeyboardShortcutManager::instance().registerAction(this, m_ValidationResultsView->toggleViewAction(), "MainWindow.ValidationResults");
     // Window
@@ -7252,6 +7273,9 @@ void MainWindow::changeEvent(QEvent *e)
 
 void MainWindow::ConnectSignalsToSlots()
 {
+    connect(m_DeveloperToolsAction, SIGNAL(toggled(bool)), this, SLOT(ToggleDeveloperTools(bool)));
+    connect(m_PreviewWindow, SIGNAL(DevToolsVisibilityChanged(bool)),
+            m_DeveloperToolsAction, SLOT(setChecked(bool)));
     connect(m_PreviewWindow, SIGNAL(Shown()), this, SLOT(UpdatePreview()));
     connect(m_PreviewWindow, SIGNAL(ZoomFactorChanged(float)),     this, SLOT(UpdateZoomLabel(float)));
     connect(m_PreviewWindow, SIGNAL(ZoomFactorChanged(float)),     this, SLOT(UpdateZoomSlider(float)));
