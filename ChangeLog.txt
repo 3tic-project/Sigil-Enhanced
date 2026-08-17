@@ -8,6 +8,7 @@ Sigil-Enhanced-2.8.1.E8
      - Prevented cumulative drift when converting the same book between vertical and horizontal layouts more than once, and refused to overwrite page-progression or class state that the user had edited after the last conversion.
      - Fixed TOC multi-selection move-up/move-down to treat selected entries as a contiguous block, and fixed a crash when moving TOC entries right because QPersistentIndex was not updated.
      - Added the missing translations in the Resize Image dialog.
+     - Made newly created empty XHTML and CSS files write template content to disk, so custom templates survive subsequent imports instead of being replaced by empty files.
 
    New Features
      - Docked Preview Developer Tools under the Preview pane by embedding the existing Inspector; visibility and splitter ratio restore on restart, not open files.

@@ -1,6 +1,7 @@
 /************************************************************************
 **
 **  Copyright (C) 2015-2026  Kevin B. Hendricks Stratford, ON, Canada
+**  Copyright (C) 2026       Doug Massay
 **  Copyright (C) 2009-2011  Strahinja Markovic  <strahinja.markovic@gmail.com>
 **
 **  This file is part of Sigil.
@@ -366,6 +367,7 @@ HTMLResource *Book::CreateEmptyHTMLFile(const QString &folderpath)
         data = CleanSource::Mend(Utility::ReadUnicodeTextFile(template_path), version);
     }
     html_resource->SetText(data);
+    html_resource->SaveToDisk();
     SetModified(true);
     return html_resource;
 }
@@ -522,6 +524,7 @@ CSSResource *Book::CreateEmptyCSSFile(const QString &folderpath)
         data = Utility::ReadUnicodeTextFile(template_path);
     }
     css_resource->SetText(data);
+    css_resource->SaveToDisk();
     SetModified(true);
     return css_resource;
 }
