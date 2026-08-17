@@ -13603,6 +13603,18 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
         <translation>開發者工具</translation>
     </message>
     <message>
+        <source>Editor Layout</source>
+        <translation>編輯器配置</translation>
+    </message>
+    <message>
+        <source>Split Editor Down</source>
+        <translation>向下分割編輯器</translation>
+    </message>
+    <message>
+        <source>Join Editor Groups</source>
+        <translation>合併編輯器群組</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/main.ui" line="3439"/>
         <source>Focus on Preview</source>
         <translation>聚焦預覽</translation>
@@ -24787,6 +24799,10 @@ Use if you edit any HTML files while Spellcheck is open.</source>
         <location filename="../../Tabs/TabManager.cpp" line="276"/>
         <source>Cannot edit file</source>
         <translation>無法編輯檔案</translation>
+    </message>
+    <message>
+        <source>Open a file from Book Browser</source>
+        <translation>從書籍瀏覽器開啟檔案</translation>
     </message>
 </context>
 <context>

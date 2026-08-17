@@ -299,6 +299,8 @@ MainWindow::MainWindow(const QString &openfilepath,
     m_ValidationResultsView(NULL),
     m_PreviewWindow(NULL),
     m_DeveloperToolsAction(NULL),
+    m_SplitEditorDownAction(NULL),
+    m_JoinEditorGroupsAction(NULL),
     m_slZoomSlider(NULL),
     m_lbZoomLabel(NULL),
     c_SaveFilters(GetSaveFiltersMap()),
@@ -5217,6 +5219,12 @@ void MainWindow::UpdateUIOnTabCountChange()
     ui.actionPreviousTab   ->setEnabled(m_TabManager->GetTabCount() > 1);
     ui.actionCloseTab      ->setEnabled(m_TabManager->GetTabCount() > 1);
     ui.actionCloseOtherTabs->setEnabled(m_TabManager->GetTabCount() > 1);
+    if (m_SplitEditorDownAction) {
+        m_SplitEditorDownAction->setEnabled(!m_TabManager->IsSplit());
+    }
+    if (m_JoinEditorGroupsAction) {
+        m_JoinEditorGroupsAction->setEnabled(m_TabManager->IsSplit());
+    }
 }
 
 
@@ -5615,6 +5623,20 @@ void MainWindow::ToggleDeveloperTools(bool show)
         UpdatePreview();
     }
     m_PreviewWindow->SetDevToolsVisible(show);
+}
+
+void MainWindow::SplitEditorDown()
+{
+    if (m_TabManager) {
+        m_TabManager->SplitEditorDown();
+    }
+}
+
+void MainWindow::JoinEditorGroups()
+{
+    if (m_TabManager) {
+        m_TabManager->JoinEditorGroups();
+    }
 }
 
 void MainWindow::UpdateCursorPositionLabel(int line, int column, int codepoint)
@@ -6853,6 +6875,14 @@ void MainWindow::ExtendUI()
     m_DeveloperToolsAction->setCheckable(true);
     m_DeveloperToolsAction->setChecked(m_PreviewWindow->IsDevToolsVisible());
     ui.menuView->addAction(m_DeveloperToolsAction);
+    QMenu *editor_layout = ui.menuView->addMenu(tr("Editor Layout"));
+    m_SplitEditorDownAction = new QAction(tr("Split Editor Down"), this);
+    m_SplitEditorDownAction->setObjectName(QStringLiteral("actionSplitEditorDown"));
+    m_JoinEditorGroupsAction = new QAction(tr("Join Editor Groups"), this);
+    m_JoinEditorGroupsAction->setObjectName(QStringLiteral("actionJoinEditorGroups"));
+    editor_layout->addAction(m_SplitEditorDownAction);
+    editor_layout->addAction(m_JoinEditorGroupsAction);
+    m_JoinEditorGroupsAction->setEnabled(false);
     ui.menuView->addAction(m_TableOfContents->toggleViewAction());
     m_TableOfContents->toggleViewAction()->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F3));
     ui.menuView->addAction(m_ValidationResultsView->toggleViewAction());
@@ -7063,6 +7093,8 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, m_Clips->toggleViewAction(), "MainWindow.ClipsWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->toggleViewAction(), "MainWindow.PreviewWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_DeveloperToolsAction, "MainWindow.DeveloperTools");
+    KeyboardShortcutManager::instance().registerAction(this, m_SplitEditorDownAction, "MainWindow.SplitEditorDown");
+    KeyboardShortcutManager::instance().registerAction(this, m_JoinEditorGroupsAction, "MainWindow.JoinEditorGroups");
     KeyboardShortcutManager::instance().registerAction(this, m_TableOfContents->toggleViewAction(), "MainWindow.TableOfContents");
     KeyboardShortcutManager::instance().registerAction(this, m_ValidationResultsView->toggleViewAction(), "MainWindow.ValidationResults");
     // Window
@@ -7273,6 +7305,9 @@ void MainWindow::changeEvent(QEvent *e)
 
 void MainWindow::ConnectSignalsToSlots()
 {
+    connect(m_SplitEditorDownAction, SIGNAL(triggered()), this, SLOT(SplitEditorDown()));
+    connect(m_JoinEditorGroupsAction, SIGNAL(triggered()), this, SLOT(JoinEditorGroups()));
+    connect(m_TabManager, SIGNAL(SplitChanged()), this, SLOT(UpdateUIOnTabCountChange()));
     connect(m_DeveloperToolsAction, SIGNAL(toggled(bool)), this, SLOT(ToggleDeveloperTools(bool)));
     connect(m_PreviewWindow, SIGNAL(DevToolsVisibilityChanged(bool)),
             m_DeveloperToolsAction, SLOT(setChecked(bool)));
