@@ -31,8 +31,6 @@
 #include <QShortcut>
 
 class QWebEnginePage;
-class QLabel;
-class QToolButton;
 
 class Inspector : public QWidget
 {
@@ -60,9 +58,6 @@ public slots:
     void ZoomIn();
     void ZoomOut();
     void ZoomReset();
-
-signals:
-    void CloseRequested();
 
 protected slots:
     void UpdateFinishedState(bool okay);

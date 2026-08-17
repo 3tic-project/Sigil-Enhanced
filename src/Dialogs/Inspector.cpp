@@ -24,11 +24,6 @@
 #include <QtWebEngineCore>
 #include <QWebEngineView>
 #include <QWebEnginePage>
-#include <QApplication>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QStyle>
-#include <QToolButton>
 
 #include "Misc/WebProfileMgr.h"
 #include "Misc/SettingsStore.h"
@@ -54,28 +49,14 @@ Inspector::Inspector(QWidget *parent) :
     setAttribute(Qt::WA_DeleteOnClose, false);
     setMinimumSize(QSize(200, 80));
 
-    QWidget *header = new QWidget(this);
-    QHBoxLayout *header_layout = new QHBoxLayout(header);
-    header_layout->setContentsMargins(6, 2, 2, 2);
-    header_layout->setSpacing(4);
-    QLabel *title = new QLabel(tr("Inspect Page or Element"), header);
-    QToolButton *close_button = new QToolButton(header);
-    close_button->setAutoRaise(true);
-    close_button->setFocusPolicy(Qt::TabFocus);
-    close_button->setIcon(style()->standardIcon(QStyle::SP_DockWidgetCloseButton));
-    close_button->setToolTip(tr("Close"));
-    header_layout->addWidget(title, 1);
-    header_layout->addWidget(close_button);
-
     m_Layout->setContentsMargins(0, 0, 0, 0);
     m_Layout->setSpacing(0);
-    m_Layout->addWidget(header);
     m_Layout->addWidget(m_inspectView, 1);
     // QtWebEngine WebInspector needs to run javascript in MainWorld
     // See WebProfileMgr for profile settings
+    // Toggle visibility from Preview's inspect button; no extra title bar.
 
     LoadSettings();
-    connect(close_button,          SIGNAL(clicked()),          this, SIGNAL(CloseRequested()));
     connect(m_inspectView->page(), SIGNAL(loadFinished(bool)), this, SLOT(UpdateFinishedState(bool)));
     connect(m_inspectView->page(), SIGNAL(loadStarted()),      this, SLOT(LoadingStarted()));
     connect(m_ZoomIn,              SIGNAL(activated()),        this, SLOT(ZoomIn()));

@@ -8,7 +8,7 @@
 - `查看 → 开发者工具`
 - Preview 上右键 **Inspect Element**（若当前 Qt WebEngine 支持该动作）
 
-关闭面板上的 × 或再次点检查按钮会**隐藏** DevTools，不销毁 Chromium 页面。再次打开仍是同一实例。
+再次点检查按钮或关掉 `查看 → 开发者工具` 会**隐藏** DevTools，不销毁 Chromium 页面。再次打开仍是同一实例。面板本身没有标题栏或关闭按钮。
 
 Preview Dock 浮动或重新停靠时，DevTools 跟着 Preview 走。检查/复制/刷新按钮始终在 Preview 窗口底部，不夹在预览和 DevTools 中间。Preview 与目录叠在同一 dock 区域时，切走 Preview 不会拆掉 inspected 绑定。
 

@@ -6858,18 +6858,6 @@ Do you want to save your changes?</source>
     </message>
 </context>
 <context>
-    <name>Inspector</name>
-    <message>
-        <location filename="../../Dialogs/Inspector.cpp" line="57"/>
-        <source>Inspect Page or Element</source>
-        <translation>檢查頁面或元素</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>關閉</translation>
-    </message>
-</context>
-<context>
     <name>KeyboardShortcutsWidget</name>
     <message>
         <location filename="../../Form_Files/PKeyboardShortcutsWidget.ui" line="14"/>

@@ -23,8 +23,10 @@ require(
     "Inspector must be an embeddable QWidget, not a floating QDialog",
 )
 require(
-    "void CloseRequested();" in inspector_h,
-    "Inspector close must ask Preview to hide the pane",
+    "CloseRequested" not in inspector_h
+    and "QLabel" not in inspector_cpp
+    and "Inspect Page or Element" not in inspector_cpp,
+    "embedded Inspector has no title bar or close button; Preview's inspect button toggles it",
 )
 require(
     "void Inspector::StopInspection()" in inspector_cpp

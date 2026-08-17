@@ -882,7 +882,6 @@ void PreviewWindow::ConnectSignalsToSlots()
     connect(m_webviewPrint,   SIGNAL(triggered()),          this, SLOT(PrintRendered()));
     connect(m_WebViewPrinter, SIGNAL(printStarted()),       this, SLOT(PrintStarted()));
     connect(m_WebViewPrinter, SIGNAL(printEnded()),         this, SLOT(PrintEnded()));
-    connect(m_Inspector,      SIGNAL(CloseRequested()),     this, SLOT(InspectPreviewPage()));
     connect(m_Preview,        SIGNAL(customContextMenuRequested(const QPoint &)),
             this,             SLOT(ShowPreviewContextMenu(const QPoint &)));
     connect(this,     SIGNAL(topLevelChanged(bool)),        this, SLOT(previewFloated(bool)));
