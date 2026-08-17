@@ -29,6 +29,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 * 内置[纵横排版转换](docs/VerticalLayoutConversion.md)：逐页分析可重排 EPUB 的实际书写方向、关联 CSS 和转换风险，支持竖排转横排及横排转竖排；经验证的 `.vrtl/.hltr` 页面只切换 class，其它模板使用可逆兼容覆盖；固定版式和高风险页面默认跳过，批量写回前执行完整预检并创建整书恢复 Checkpoint
 * 内置[高级正则工作台](docs/AdvancedRegexWorkbench.md)：支持二级正则筛选、递归替换、命名捕获变量、仅捕获规则、可保存方案、试运行定位和 OPF/NCX 等特殊文本资源
 * Preview 开发者工具停靠在预览区域下方，随 Preview 一起浮动；`查看 → 开发者工具` 打开。详见 [Preview 开发者工具](docs/PreviewDeveloperTools.md)
+* 编辑区可 `查看 → 编辑器布局 → 向下拆分编辑器`，上下两组同时打开不同资源。详见 [拆分编辑器](docs/SplitEditorGroups.md)
 * 编辑标签栏支持使用鼠标中键直接关闭所指向的标签页
 * 搜索模板批处理先在内存中完成全部规则并校验，再对每个变化资源统一写回一次，减少重复渲染和写盘，同时保留撤销与 Checkpoint 恢复能力
 * 内置中文简繁与地区转换：支持当前选区、当前XHTML/SVG、选中文件和全书正文，提供结构安全白名单、逐项预览、单步撤销和批量Checkpoint。详见 [中文转换文档](docs/ChineseConversion.md)

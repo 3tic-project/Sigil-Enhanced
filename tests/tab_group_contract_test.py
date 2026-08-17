@@ -37,17 +37,17 @@ require(
 )
 require(
     "m_Primary(new TabGroup(this))" in tab_manager
-    and "layout->addWidget(m_Primary, 1)" in tab_manager,
-    "TabManager owns a single primary TabGroup",
+    and "m_Splitter->addWidget(m_Primary)" in tab_manager,
+    "TabManager owns a primary TabGroup in the editor splitter",
 )
 require(
     "void OpenResource(Resource *resource," in tab_manager_h
     and "SwitchedToExistingTab" in tab_manager
-    and "m_Primary->ResourceTabIndex(resource)" in tab_manager,
-    "OpenResource stays on TabManager and still de-duplicates via the group index",
+    and "FindTab(resource)" in tab_manager,
+    "OpenResource stays on TabManager and still de-duplicates by resource identifier",
 )
 require(
-    "if (!force && m_Primary->TabCount() <= 1)" in tab_manager,
+    "group == m_Primary && group->TabCount() <= 1" in tab_manager,
     "the primary group still refuses to close its last tab unless forced",
 )
 require(
