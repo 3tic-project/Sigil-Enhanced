@@ -44,6 +44,7 @@
 #include <QMenu>
 #include <QTimer>
 #include <QSizePolicy>
+#include <QSignalBlocker>
 
 #include "MainUI/PreviewWindow.h"
 #include "Dialogs/Inspector.h"
@@ -77,6 +78,7 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     QDockWidget(tr("Preview"), parent),
     m_MainWidget(new QWidget(this)),
     m_binspect(new QToolButton(m_MainWidget)),
+    m_bdetach(new QToolButton(m_MainWidget)),
     m_bselect(new QToolButton(m_MainWidget)),
     m_bcopy(new QToolButton(m_MainWidget)),
     m_breload(new QToolButton(m_MainWidget)),
@@ -88,6 +90,8 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     m_buttons(new QHBoxLayout()),
     m_overlayBase(new OverlayHelperWidget(this)),
     m_Preview(new ViewPreview(m_overlayBase)),
+    m_DevToolsPane(0),
+    m_DevToolsWindow(0),
     m_Inspector(new Inspector(this)),
     m_progress(new QProgressBar(this)),
     m_Filepath(QString()),
@@ -119,13 +123,15 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     m_Preview->setFocusPolicy(Qt::StrongFocus);
 
     m_binspect->setFocusPolicy(Qt::TabFocus);
+    m_bdetach->setFocusPolicy(Qt::TabFocus);
     m_bselect->setFocusPolicy(Qt::TabFocus);
     m_bcopy->setFocusPolicy(Qt::TabFocus);
     m_breload->setFocusPolicy(Qt::TabFocus);
     m_bcycle->setFocusPolicy(Qt::TabFocus);
     m_bprint->setFocusPolicy(Qt::TabFocus);
 
-    setTabOrder(m_binspect, m_bselect);
+    setTabOrder(m_binspect, m_bdetach);
+    setTabOrder(m_bdetach, m_bselect);
     setTabOrder(m_bselect, m_bcopy);
     setTabOrder(m_bcopy, m_breload);
     setTabOrder(m_breload, m_bcycle);
@@ -196,11 +202,14 @@ void PreviewWindow::showEvent(QShowEvent * event)
     raise();
     if (IsDevToolsVisible()) {
         QTimer::singleShot(0, this, [this]() {
-            if (IsDevToolsVisible()) {
+            if (!IsDevToolsVisible()) {
+                return;
+            }
+            if (!m_devToolsDetached) {
                 ApplyDevToolsSplitter();
-                if (m_Inspector) {
-                    m_Inspector->InspectPageofView(m_Preview);
-                }
+            }
+            if (m_Inspector) {
+                m_Inspector->InspectPageofView(m_Preview);
             }
         });
     }
@@ -285,6 +294,13 @@ void PreviewWindow::SetupView()
     m_binspect->setDefaultAction(m_inspectAction);
     m_binspect->setAutoRaise(true);
 
+    m_detachAction = new QAction(QIcon(":/main/zoom-to-window.svg"), tr("Detach Developer Tools"), this);
+    m_detachAction->setObjectName(QStringLiteral("actionDetachDeveloperTools"));
+    m_detachAction->setCheckable(true);
+    m_detachAction->setToolTip(tr("Detach Developer Tools"));
+    m_bdetach->setDefaultAction(m_detachAction);
+    m_bdetach->setAutoRaise(true);
+
     m_selectAction  = new QAction(QIcon(":/main/edit-select-all.svg"),"", this);
     m_selectAction ->setEnabled(true);
     m_selectAction->setToolTip(tr("Select-All"));
@@ -320,6 +336,7 @@ void PreviewWindow::SetupView()
 
     m_buttons->setContentsMargins(1,1,1,1);
     m_buttons->addWidget(m_binspect);
+    m_buttons->addWidget(m_bdetach);
     m_buttons->addWidget(m_bselect);
     m_buttons->addWidget(m_bcopy);
     m_buttons->addWidget(m_breload);
@@ -332,13 +349,19 @@ void PreviewWindow::SetupView()
     // a short preview and a blank pane.
     m_Splitter->setObjectName(QStringLiteral("previewDevToolsSplitter"));
     m_Splitter->setChildrenCollapsible(false);
+    m_DevToolsPane = new QWidget(m_Splitter);
+    QVBoxLayout *devtools_layout = new QVBoxLayout(m_DevToolsPane);
+    devtools_layout->setContentsMargins(0, 0, 0, 0);
+    devtools_layout->setSpacing(0);
+    devtools_layout->addWidget(m_Inspector);
     m_Splitter->addWidget(m_wrapper);
-    m_Splitter->addWidget(m_Inspector);
+    m_Splitter->addWidget(m_DevToolsPane);
     m_Splitter->setStretchFactor(0, 1);
     m_Splitter->setStretchFactor(1, 0);
     m_Splitter->setCollapsible(0, false);
     m_Splitter->setCollapsible(1, true);
     m_Inspector->setMinimumHeight(0);
+    m_DevToolsPane->hide();
     m_Inspector->hide();
 
     m_Layout->addWidget(m_Splitter, 1);
@@ -570,6 +593,14 @@ void PreviewWindow::EmitGoToPreviewLocationRequest()
 
 bool PreviewWindow::eventFilter(QObject *object, QEvent *event)
 {
+  if (object == m_DevToolsWindow && event->type() == QEvent::Close) {
+      if (m_DevToolsWindow) {
+          m_devToolsWindowGeometry = m_DevToolsWindow->saveGeometry();
+      }
+      SetDevToolsVisible(false);
+      event->ignore();
+      return true;
+  }
   switch (event->type()) {
     case QEvent::FocusIn:
       // track focus in change events of m_Preview (or one of its child focus proxies)
@@ -701,7 +732,20 @@ void PreviewWindow::LinkClicked(const QUrl &url)
 
 bool PreviewWindow::IsDevToolsVisible() const
 {
+    if (m_devToolsDetached && m_DevToolsWindow) {
+        return m_DevToolsWindow->isVisible();
+    }
     return m_Inspector && m_Inspector->isVisible();
+}
+
+bool PreviewWindow::IsDevToolsDetached() const
+{
+    return m_devToolsDetached;
+}
+
+QAction *PreviewWindow::DetachAction() const
+{
+    return m_detachAction;
 }
 
 void PreviewWindow::ApplyDevToolsSplitter()
@@ -729,14 +773,114 @@ void PreviewWindow::CollapseDevToolsSplitter()
     m_Splitter->setSizes(QList<int>() << total << 0);
 }
 
+void PreviewWindow::EnsureDevToolsWindow()
+{
+    if (m_DevToolsWindow) {
+        return;
+    }
+    m_DevToolsWindow = new QWidget(this, Qt::Window);
+    m_DevToolsWindow->setObjectName(QStringLiteral("devToolsWindow"));
+    m_DevToolsWindow->setWindowTitle(tr("Developer Tools"));
+    m_DevToolsWindow->setMinimumSize(400, 250);
+    QVBoxLayout *layout = new QVBoxLayout(m_DevToolsWindow);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    m_DevToolsWindow->installEventFilter(this);
+}
+
+void PreviewWindow::UpdateDetachAction()
+{
+    if (!m_detachAction) {
+        return;
+    }
+    const QSignalBlocker blocker(m_detachAction);
+    m_detachAction->setChecked(m_devToolsDetached);
+    const QString label = m_devToolsDetached
+                          ? tr("Dock Developer Tools")
+                          : tr("Detach Developer Tools");
+    m_detachAction->setText(label);
+    m_detachAction->setToolTip(label);
+}
+
+void PreviewWindow::PlaceDevTools()
+{
+    if (!m_Inspector) {
+        return;
+    }
+    if (m_devToolsDetached) {
+        EnsureDevToolsWindow();
+        if (m_Inspector->parentWidget() != m_DevToolsWindow) {
+            m_DevToolsWindow->layout()->addWidget(m_Inspector);
+        }
+        m_Inspector->setMinimumHeight(0);
+        m_Inspector->show();
+        if (m_DevToolsPane) {
+            m_DevToolsPane->hide();
+        }
+        CollapseDevToolsSplitter();
+        if (!m_devToolsWindowGeometry.isEmpty()) {
+            m_DevToolsWindow->restoreGeometry(m_devToolsWindowGeometry);
+        } else {
+            m_DevToolsWindow->resize(720, 420);
+        }
+        m_DevToolsWindow->show();
+        m_DevToolsWindow->raise();
+        m_DevToolsWindow->activateWindow();
+        m_Inspector->InspectPageofView(m_Preview);
+    } else {
+        if (m_DevToolsWindow && m_DevToolsWindow->isVisible()) {
+            m_devToolsWindowGeometry = m_DevToolsWindow->saveGeometry();
+            m_DevToolsWindow->hide();
+        }
+        if (m_DevToolsPane) {
+            if (m_Inspector->parentWidget() != m_DevToolsPane) {
+                m_DevToolsPane->layout()->addWidget(m_Inspector);
+            }
+            m_DevToolsPane->show();
+        }
+        m_Inspector->setMinimumHeight(120);
+        m_Inspector->show();
+        ApplyDevToolsSplitter();
+        m_Inspector->InspectPageofView(m_Preview);
+    }
+    UpdateDetachAction();
+}
+
+void PreviewWindow::SetDevToolsDetached(bool detached)
+{
+    if (m_devToolsDetached == detached) {
+        UpdateDetachAction();
+        return;
+    }
+    const bool visible = IsDevToolsVisible();
+    if (visible && !m_devToolsDetached && m_Splitter) {
+        m_devToolsSplitterState = m_Splitter->saveState();
+    }
+    if (visible && m_devToolsDetached && m_DevToolsWindow) {
+        m_devToolsWindowGeometry = m_DevToolsWindow->saveGeometry();
+    }
+    m_devToolsDetached = detached;
+    if (visible) {
+        PlaceDevTools();
+    } else if (detached) {
+        SetDevToolsVisible(true);
+    } else {
+        UpdateDetachAction();
+    }
+    emit DevToolsDetachedChanged(m_devToolsDetached);
+}
+
 void PreviewWindow::SetDevToolsVisible(bool visible)
 {
     if (!m_Inspector) {
         return;
     }
-    if (visible == m_Inspector->isVisible()) {
+    if (visible == IsDevToolsVisible()) {
         if (visible) {
             m_Inspector->InspectPageofView(m_Preview);
+            if (m_devToolsDetached && m_DevToolsWindow) {
+                m_DevToolsWindow->raise();
+            }
         }
         if (m_inspectAction) {
             m_inspectAction->setChecked(visible);
@@ -746,26 +890,35 @@ void PreviewWindow::SetDevToolsVisible(bool visible)
     }
 
     if (visible) {
-        m_Inspector->setMinimumHeight(120);
-        m_Inspector->show();
+        PlaceDevTools();
         // Wait until the splitter has a real height before sizing or
         // attaching the inspected page. Doing this in the constructor
         // or while the widget is still hidden leaves a blank pane.
         QTimer::singleShot(0, this, [this]() {
-            if (!m_Inspector || !m_Inspector->isVisible()) {
+            if (!IsDevToolsVisible()) {
                 return;
             }
-            ApplyDevToolsSplitter();
+            if (!m_devToolsDetached) {
+                ApplyDevToolsSplitter();
+            }
             m_Inspector->InspectPageofView(m_Preview);
         });
     } else {
-        if (m_Splitter) {
-            m_devToolsSplitterState = m_Splitter->saveState();
+        if (m_devToolsDetached && m_DevToolsWindow) {
+            m_devToolsWindowGeometry = m_DevToolsWindow->saveGeometry();
+            m_DevToolsWindow->hide();
+        } else {
+            if (m_Splitter) {
+                m_devToolsSplitterState = m_Splitter->saveState();
+            }
+            m_Inspector->hide();
+            m_Inspector->setMinimumHeight(0);
+            if (m_DevToolsPane) {
+                m_DevToolsPane->hide();
+            }
+            CollapseDevToolsSplitter();
+            // Hide keeps the WebEngine page and inspected binding.
         }
-        m_Inspector->hide();
-        m_Inspector->setMinimumHeight(0);
-        CollapseDevToolsSplitter();
-        // Hide keeps the WebEngine page and inspected binding.
     }
     if (m_inspectAction) {
         m_inspectAction->setChecked(visible);
@@ -775,13 +928,17 @@ void PreviewWindow::SetDevToolsVisible(bool visible)
 
 void PreviewWindow::SaveLayoutSettings()
 {
-    if (m_Splitter && m_Inspector && m_Inspector->isVisible()) {
+    if (m_devToolsDetached && m_DevToolsWindow) {
+        m_devToolsWindowGeometry = m_DevToolsWindow->saveGeometry();
+    } else if (m_Splitter && m_Inspector && m_Inspector->isVisible()) {
         m_devToolsSplitterState = m_Splitter->saveState();
     }
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     settings.setValue("devToolsVisible", IsDevToolsVisible());
     settings.setValue("devToolsSplitterState", m_devToolsSplitterState);
+    settings.setValue("devToolsDetached", m_devToolsDetached);
+    settings.setValue("devToolsWindowGeometry", m_devToolsWindowGeometry);
     settings.endGroup();
 }
 
@@ -862,7 +1019,10 @@ void PreviewWindow::LoadSettings()
     settings.beginGroup(SETTINGS_GROUP);
     m_restore_devtools_visible = settings.value("devToolsVisible", false).toBool();
     m_devToolsSplitterState = settings.value("devToolsSplitterState").toByteArray();
+    m_devToolsDetached = settings.value("devToolsDetached", false).toBool();
+    m_devToolsWindowGeometry = settings.value("devToolsWindowGeometry").toByteArray();
     settings.endGroup();
+    UpdateDetachAction();
     if (m_restore_devtools_visible) {
         SetDevToolsVisible(true);
     }
@@ -875,6 +1035,7 @@ void PreviewWindow::ConnectSignalsToSlots()
     connect(m_Preview,   SIGNAL(DocumentLoaded()),          this, SLOT(UpdatePageDone()));
     connect(m_Preview,   SIGNAL(ViewProgress(int)),         this, SLOT(setProgress(int)));
     connect(m_inspectAction,  SIGNAL(triggered()),          this, SLOT(InspectPreviewPage()));
+    connect(m_detachAction,   SIGNAL(toggled(bool)),        this, SLOT(SetDevToolsDetached(bool)));
     connect(m_selectAction,   SIGNAL(triggered()),          this, SLOT(SelectAllPreview()));
     connect(m_copyAction,     SIGNAL(triggered()),          this, SLOT(CopyPreview()));
     connect(m_reloadAction,   SIGNAL(triggered()),          this, SLOT(ReloadPreview()));

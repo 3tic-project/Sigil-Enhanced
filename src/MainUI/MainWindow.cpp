@@ -6909,6 +6909,9 @@ void MainWindow::ExtendUI()
     m_DeveloperToolsAction->setCheckable(true);
     m_DeveloperToolsAction->setChecked(m_PreviewWindow->IsDevToolsVisible());
     ui.menuView->addAction(m_DeveloperToolsAction);
+    if (m_PreviewWindow && m_PreviewWindow->DetachAction()) {
+        ui.menuView->addAction(m_PreviewWindow->DetachAction());
+    }
     QMenu *editor_layout = ui.menuView->addMenu(tr("Editor Layout"));
     m_SplitEditorDownAction = new QAction(tr("Split Editor Down"), this);
     m_SplitEditorDownAction->setObjectName(QStringLiteral("actionSplitEditorDown"));
@@ -7136,6 +7139,9 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, m_Clips->toggleViewAction(), "MainWindow.ClipsWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->toggleViewAction(), "MainWindow.PreviewWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_DeveloperToolsAction, "MainWindow.DeveloperTools");
+    if (m_PreviewWindow && m_PreviewWindow->DetachAction()) {
+        KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->DetachAction(), "MainWindow.DetachDeveloperTools");
+    }
     KeyboardShortcutManager::instance().registerAction(this, m_SplitEditorDownAction, "MainWindow.SplitEditorDown");
     KeyboardShortcutManager::instance().registerAction(this, m_JoinEditorGroupsAction, "MainWindow.JoinEditorGroups");
     KeyboardShortcutManager::instance().registerAction(this, m_FocusUpperEditorGroupAction, "MainWindow.FocusUpperEditorGroup");
