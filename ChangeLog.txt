@@ -1,6 +1,7 @@
 Sigil-Enhanced-2.8.1.E8
    Bug Fixes
      - Fixed Book Browser reading-order drag so spine reordering no longer depends on stale TreeView selection handling.
+     - Restored adding files by dropping them onto Book Browser after the reading-order drag rewrite ignored Finder/Explorer URL drops.
      - Avoided rewriting HTML and other text resources during Find/Replace when the replacement text is unchanged, including Python function replacements.
      - Made recovery checkpoints succeed on EPUBs that lack a usable unique-identifier by preparing a UUID in an isolated snapshot and applying it as one undoable OPF edit only after the checkpoint commits.
      - Prevented cumulative drift when converting the same book between vertical and horizontal layouts more than once, and refused to overwrite page-progression or class state that the user had edited after the last conversion.
@@ -15,7 +16,7 @@ Sigil-Enhanced-2.8.1.E8
 
    Build/Testing
      - Merged late upstream Sigil TOC selection, ImageTab, and Resize Image i18n fixes.
-     - Added CTest coverage for layout analysis, profile detection, stylesheet resolution, CSS transforms, conversion invariants, converter menu/Automate contracts, checkpoint UUID preparation, and Book Browser reading-order drag.
+     - Added CTest coverage for layout analysis, profile detection, stylesheet resolution, CSS transforms, conversion invariants, converter menu/Automate contracts, checkpoint UUID preparation, Book Browser reading-order drag, and external Book Browser file drops.
 
 Sigil-Enhanced-2.8.1.E7
    Bug Fixes
