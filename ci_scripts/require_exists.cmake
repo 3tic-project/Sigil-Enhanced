@@ -1,0 +1,6 @@
+if(NOT DEFINED SIGIL_REQUIRED_FILE OR SIGIL_REQUIRED_FILE STREQUAL "")
+    message(FATAL_ERROR "SIGIL_REQUIRED_FILE is not set.")
+endif()
+if(NOT EXISTS "${SIGIL_REQUIRED_FILE}")
+    message(FATAL_ERROR "Required package file is missing: ${SIGIL_REQUIRED_FILE}")
+endif()

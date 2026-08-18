@@ -122,4 +122,7 @@ PNG 能开、WebP 不能，就是解码器问题。
 
 - 读图统一走 `LoadRasterImage`：先普通 `QImage`，失败再丢掉 `PSAI` 这类非标准块重试。
 - 失败时写出是否缺少 WebP 插件，以及当前 Qt 认的格式列表。
-- Windows 打包在 `windeployqt` 之后再强制拷一次 `qwebp.dll`。
+- Windows 打包在 `windeployqt` 之后再强制拷一次 `qwebp.dll`。  
+CI 必须用 `aqt ... -m ... qtimageformats` 装 Qt；只装 qtbase 时插件文件不存在，
+以前的 `if (EXISTS qwebp.dll)` 会静默跳过拷贝，安装目录就只剩 gif/ico/jpeg/svg。
+现在缺插件会在配置期和 `makeinstaller` 前直接失败。

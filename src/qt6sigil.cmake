@@ -460,16 +460,29 @@ elseif (MSVC)
     endif()
 
     # ImageTab/AdjustImage decode WebP via Qt's qwebp plugin, not WebEngine.
-    # windeployqt usually copies it, but a missing plugin makes valid WebP
-    # files fail only on Windows with "Cannot load ...".
-    if ( DEFINED QT_PLUGINS_DIR AND EXISTS "${QT_PLUGINS_DIR}/imageformats/qwebp.dll" )
-        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
-            COMMAND cmake -E make_directory "${MAIN_PACKAGE_DIR}/imageformats"
-            COMMAND cmake -E copy_if_different
-                "${QT_PLUGINS_DIR}/imageformats/qwebp.dll"
-                "${MAIN_PACKAGE_DIR}/imageformats/qwebp.dll" )
-        message( STATUS "Bundling Qt WebP image plugin from ${QT_PLUGINS_DIR}/imageformats." )
+    # qtbase only ships gif/ico/jpeg; qwebp comes from the qtimageformats
+    # module. A configure-time EXISTS skip used to hide a Qt install that
+    # never had the plugin, and the Windows package then reported
+    # "The Qt WebP plugin is not available."
+    set( SIGIL_QT_WEBP_PLUGIN "${QT_PLUGINS_DIR}/imageformats/qwebp.dll" )
+    if ( NOT EXISTS "${SIGIL_QT_WEBP_PLUGIN}" )
+        message( FATAL_ERROR
+            "Qt WebP plugin not found at ${SIGIL_QT_WEBP_PLUGIN}. "
+            "Install the qtimageformats module "
+            "(aqt install-qt ... -m qtimageformats) before building the Windows package." )
     endif()
+    add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
+        COMMAND cmake -E make_directory "${MAIN_PACKAGE_DIR}/imageformats"
+        COMMAND cmake -E copy_if_different
+            "${SIGIL_QT_WEBP_PLUGIN}"
+            "${MAIN_PACKAGE_DIR}/imageformats/qwebp.dll"
+        COMMENT "Copying Qt WebP image plugin into the Windows package" )
+    add_custom_command( TARGET makeinstaller PRE_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            -D "SIGIL_REQUIRED_FILE=${MAIN_PACKAGE_DIR}/imageformats/qwebp.dll"
+            -P "${CMAKE_SOURCE_DIR}/ci_scripts/require_exists.cmake"
+        COMMENT "Verifying qwebp.dll is staged for the Windows installer" )
+    message( STATUS "Bundling Qt WebP image plugin from ${QT_PLUGINS_DIR}/imageformats." )
 
     # Because PySide6 needs Q6tUiTools, but windeploy can't deploy it for some stupid reason when Sigil doesn't need it!!
     set( UITOOLS ${QT_INSTALL_BINS}/Qt6UiTools.dll )
