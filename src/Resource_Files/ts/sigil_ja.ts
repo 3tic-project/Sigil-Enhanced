@@ -311,6 +311,22 @@
         <translation>%1 を読み込めません。</translation>
     </message>
     <message>
+        <source>Cannot open %1.</source>
+        <translation>%1 を開けません。</translation>
+    </message>
+    <message>
+        <source>The Qt WebP plugin is not available.</source>
+        <translation>Qt の WebP プラグインがありません。</translation>
+    </message>
+    <message>
+        <source>Unsupported or damaged image data.</source>
+        <translation>未対応または破損した画像データです。</translation>
+    </message>
+    <message>
+        <source>Cannot load %1 (%2). Supported formats: %3.</source>
+        <translation>%1 を読み込めません（%2）。対応形式: %3。</translation>
+    </message>
+    <message>
         <location filename="../../Widgets/AdjustImage.cpp" line="201"/>
         <source>shades</source>
         <translation>階調</translation>

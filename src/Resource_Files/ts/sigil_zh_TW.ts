@@ -311,6 +311,22 @@
         <translation>無法載入 %1。</translation>
     </message>
     <message>
+        <source>Cannot open %1.</source>
+        <translation>無法開啟 %1。</translation>
+    </message>
+    <message>
+        <source>The Qt WebP plugin is not available.</source>
+        <translation>找不到 Qt WebP 影像外掛程式。</translation>
+    </message>
+    <message>
+        <source>Unsupported or damaged image data.</source>
+        <translation>影像資料不受支援或已損壞。</translation>
+    </message>
+    <message>
+        <source>Cannot load %1 (%2). Supported formats: %3.</source>
+        <translation>無法載入 %1（%2）。已支援的格式：%3。</translation>
+    </message>
+    <message>
         <location filename="../../Widgets/AdjustImage.cpp" line="201"/>
         <source>shades</source>
         <translation>陰影</translation>
