@@ -723,6 +723,8 @@ add_executable(image_preview_service_test
     image_preview_service_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/ImagePreviewService.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/ImagePreviewService.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/WebpSupport.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/WebpSupport.h
 )
 
 set_target_properties(image_preview_service_test PROPERTIES AUTOMOC ON)
@@ -752,6 +754,16 @@ target_include_directories(image_preview_policy_test PRIVATE
 
 add_test(NAME image_preview_policy COMMAND image_preview_policy_test)
 set_tests_properties(image_preview_policy PROPERTIES TIMEOUT 10)
+
+add_executable(webp_sanitize_test
+    webp_sanitize_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/WebpSupport.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/WebpSupport.h
+)
+target_include_directories(webp_sanitize_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(webp_sanitize_test PRIVATE Qt6::Core Qt6::Gui)
+add_test(NAME webp_sanitize COMMAND webp_sanitize_test)
+set_tests_properties(webp_sanitize PROPERTIES TIMEOUT 10)
 
 add_executable(opf_model_clear_benchmark
     opf_model_clear_benchmark.cpp
