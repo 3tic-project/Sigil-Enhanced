@@ -459,6 +459,18 @@ elseif (MSVC)
             --libdir ${MAIN_PACKAGE_DIR} ${MAIN_PACKAGE_DIR}/${PROJECT_NAME}${CMAKE_EXECUTABLE_SUFFIX} )
     endif()
 
+    # ImageTab/AdjustImage decode WebP via Qt's qwebp plugin, not WebEngine.
+    # windeployqt usually copies it, but a missing plugin makes valid WebP
+    # files fail only on Windows with "Cannot load ...".
+    if ( DEFINED QT_PLUGINS_DIR AND EXISTS "${QT_PLUGINS_DIR}/imageformats/qwebp.dll" )
+        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
+            COMMAND cmake -E make_directory "${MAIN_PACKAGE_DIR}/imageformats"
+            COMMAND cmake -E copy_if_different
+                "${QT_PLUGINS_DIR}/imageformats/qwebp.dll"
+                "${MAIN_PACKAGE_DIR}/imageformats/qwebp.dll" )
+        message( STATUS "Bundling Qt WebP image plugin from ${QT_PLUGINS_DIR}/imageformats." )
+    endif()
+
     # Because PySide6 needs Q6tUiTools, but windeploy can't deploy it for some stupid reason when Sigil doesn't need it!!
     set( UITOOLS ${QT_INSTALL_BINS}/Qt6UiTools.dll )
     if ( EXISTS ${UITOOLS} )

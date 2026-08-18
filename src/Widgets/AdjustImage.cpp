@@ -41,6 +41,7 @@
 #include <QKeySequence>
 #include <QWheelEvent>
 #include "Misc/SettingsStore.h"
+#include "Misc/WebpSupport.h"
 #include "Dialogs/ImageResizeDialog.h"
 #include "Widgets/AdjustImage.h"
 #include "ui_AdjustImage.h"
@@ -114,11 +115,14 @@ AdjustImage::AdjustImage(const QString filepath, const QString& mediatype,  QWid
         m_fileName = filepath;
         m_ffsize = QFile(m_fileName).size() / 1024.0;
         m_fsize =  QLocale().toString(m_ffsize, 'f', 2);
-        m_image = QImage(m_fileName);
+        QString load_error;
+        m_image = LoadRasterImage(m_fileName, &load_error);
         if (m_image.isNull()) {
              QMessageBox::information(this,
                                       tr("Adjust Image"),
-                                      tr("Cannot load %1.").arg(m_fileName));
+                                      load_error.isEmpty()
+                                          ? tr("Cannot load %1.").arg(m_fileName)
+                                          : load_error);
              return;
         }
         m_scaleFactor = 1.0;

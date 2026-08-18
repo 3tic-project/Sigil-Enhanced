@@ -43,6 +43,7 @@
 #include "Misc/SettingsStore.h"
 #include "Misc/WebProfileMgr.h"
 #include "Misc/Utility.h"
+#include "Misc/WebpSupport.h"
 #include "Misc/webviewprinter.h"
 #include "ResourceObjects/ImageResource.h"
 #include "sigil_constants.h"
@@ -203,7 +204,7 @@ void ImageTab::saveAs()
 
 void ImageTab::copyImage()
 {
-    const QImage img(m_Resource->GetFullPath());
+    const QImage img = LoadRasterImage(m_Resource->GetFullPath());
     QApplication::clipboard()->setImage(img);
 }
 
