@@ -15,25 +15,40 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 ## 增强功能
 
-* 改进EPUB文件拖入：当从外部拖入EPUB到Sigil时，会提示选择是将文件添加到当前EPUB中，还是在新窗口编辑
-* 优化撤销逻辑
-* 内置Python3运行时以及必要的库
-* 支持从文件浏览器直接将图片拖入编辑器并自动生成img标签或CSS url()链接
-* 支持从剪贴板粘贴非本地文件
-* 加入图片预览器：当光标停留在文件浏览器的图片文件上方时，会显示该图片的预览图，以及尺寸和体积
-* 内置插件：规范化EPUB文件，包括文件结构、XHTML、CSS、OPF、NCX、文件格式正确性等等（感谢：Sigil吧@遥遥心航，本插件基于“重构epub为规范格式_v2.8.4”重构和优化；部分规则来自 https://github.com/w3c/epubcheck https://github.com/paginagmbh/EPUB-Checker ）
-* 内置插件：增强的代码格式化，用于将所有XHTML/CSS文件格式化为统一风格
-* 内置插件：Kobo BR 段落规范化，修正正文仅用 br 换行、段落没有 p 标签包围的 EPUB；菜单明确区分当前文件与全书操作
-* 内置插件：Kindle KFX 段落规范化，修正 KFX 来源 EPUB 中由 spacer p 分隔裸文本的结构；菜单明确区分当前文件与全书操作
-* 内置插件：BookLive/EBPAJ Div 段落规范化，将正文中的 div 伪段落安全拍平为保留原样式的 p 元素；菜单明确区分当前文件与全书操作
-* 内置[纵横排版转换](docs/VerticalLayoutConversion.md)：逐页分析可重排 EPUB 的实际书写方向、关联 CSS 和转换风险，支持竖排转横排及横排转竖排；经验证的 `.vrtl/.hltr` 页面只切换 class，其它模板使用可逆兼容覆盖；固定版式和高风险页面默认跳过，批量写回前执行完整预检并创建整书恢复 Checkpoint
-* 内置[高级正则工作台](docs/AdvancedRegexWorkbench.md)：支持二级正则筛选、递归替换、命名捕获变量、仅捕获规则、可保存方案、试运行定位和 OPF/NCX 等特殊文本资源
-* Preview 开发者工具停靠在预览区域下方，随 Preview 一起浮动；也可拆成独立窗口。`查看 → 开发者工具` 打开。详见 [Preview 开发者工具](docs/PreviewDeveloperTools.md)
-* 编辑区可 `查看 → 编辑器布局 → 向下拆分编辑器`，上下两组同时打开不同资源；标签可跨组拖动。详见 [拆分编辑器](docs/SplitEditorGroups.md)
-* 编辑标签栏支持使用鼠标中键直接关闭所指向的标签页
-* 搜索模板批处理先在内存中完成全部规则并校验，再对每个变化资源统一写回一次，减少重复渲染和写盘，同时保留撤销与 Checkpoint 恢复能力
-* 内置中文简繁与地区转换：支持当前选区、当前XHTML/SVG、选中文件和全书正文，提供结构安全白名单、逐项预览、单步撤销和批量Checkpoint。详见 [中文转换文档](docs/ChineseConversion.md)
-* 内置 HarfBuzz 字体子集化：HarfBuzz 随 Sigil 静态构建，不依赖系统安装；支持 TTF/OTF 字体许可与风险检查、全书字符收集、后台 dry-run、逐字体报告、shaping 验证、Checkpoint 和事务式原位替换。详见 [字体子集化文档](docs/FontSubsetting.md)
+### 导入与预览
+
+- **拖入 EPUB**：从外部拖入 EPUB 时，可选择「添加到当前书籍」或「在新窗口打开」。
+- **拖入文件**：图片、字体、XHTML、TXT 等文件拖到 Book Browser 自动归类入库；单个 XHTML/TXT 还可拖到列表中的指定位置插入。
+- **编辑器内插图**：图片拖入编辑器自动生成 `<img>` 标签或 CSS `url()` 链接；剪贴板中的图片和非本地文件也可直接粘贴导入。
+- **图片悬停预览**：光标停留在 Book Browser 图片上即显示预览图、尺寸和体积；预览大小可配置，内存占用有上限。
+
+### 编辑器与工作区
+
+- **拆分编辑器**：可拆成上下两组同时打开不同资源，标签可在组间拖动；详见 [拆分编辑器](docs/SplitEditorGroups.md)。
+- **开发者工具**：停靠在预览区下方、随 Preview 一起浮动，也可拆成独立窗口；详见 [Preview 开发者工具](docs/PreviewDeveloperTools.md)。
+- **中键关闭标签**：鼠标中键直接关闭所指向的标签页，不会激活后台标签或误关空白区域。
+- **撤销与恢复**：搜索、正则等批量替换先在内存中完成全部规则并校验，再对每个变化资源统一写回一次；未变化的资源不再重写，单步撤销和整书 Checkpoint 恢复能力均保留。
+
+### 内置工具（`Enhancement` 菜单，多数可接入 Automate 批处理）
+
+- **EPUB 结构规范化**：修复 OPF Manifest 的重复/无效 ID 与 href、未登记资源和链接大小写问题，并把资源整理为 Sigil 标准目录结构（由 sigil-modified 的规范化插件重构而来，感谢 Sigil 吧 @遥遥心航）。
+- **源码格式化**：批量把全部 XHTML/CSS 格式化为统一风格；格式不合法的文件先跳过，并在结果面板报告原因。
+- **段落规范化 ×3**：Kobo BR（顶层 `<br/>` 换行）、Kindle KFX（spacer `<p>` 分隔裸文本）、BookLive/EBPAJ（div 伪段落拍平成保留原样式的 `<p>`）；均区分当前文件与全书操作，高风险页只报告不转换。
+- **[纵横排版转换](docs/VerticalLayoutConversion.md)**：逐页分析书写方向与关联 CSS，支持竖排转横排、横排转竖排；经验证页面只切换 class，其它模板用可逆兼容覆盖；固定版式和高风险页默认跳过，写回前完整预检并创建整书 Checkpoint。
+- **[高级正则工作台](docs/AdvancedRegexWorkbench.md)**：二级正则筛选、递归替换、命名捕获变量、仅捕获规则、可保存方案；试运行不改动书籍，应用时一次可撤销提交。
+- **[中文简繁与地区转换](docs/ChineseConversion.md)**：内置 OpenCC，提供 12 个转换方向；支持当前选区、当前文件、选中文件和全书，带结构安全白名单、逐项预览、单步撤销与批量 Checkpoint。
+- **[HarfBuzz 字体子集化](docs/FontSubsetting.md)**：静态内置 HarfBuzz，不依赖系统安装；支持 TTF/OTF 许可与风险检查、全书字符收集、后台 dry-run、逐字体报告和事务式原位替换。
+
+### 插件与自动化
+
+- **内置 Python3 运行时**：随程序分发常用库，插件开箱即用。
+- **Live 插件 API v2**：本地 socket RPC，无模态地直连内存书籍与当前编辑器，失败自动回滚；详见 [LivePythonPluginAPI](docs/LivePythonPluginAPI.md)。
+- **MCP 系统**：以可安装 Live 插件形式提供 38 个 MCP 工具，让支持 MCP 的 LLM 客户端读取、编辑当前打开的 EPUB（含未保存内容），支持校验、事务提交与回滚；详见 [MCP 使用指南](docs/MCPUserGuide_zh-CN.md)。
+- **Automate 批处理**：结构规范化、格式化、段落规范化、纵横转换、正则工作台等均提供 Automate 命令，可与菜单入口配合批量使用。
+
+### 本地化
+
+- 简体中文、繁体中文和日文界面翻译完整覆盖；其余语言目录与 Transifex 保持同步，已新增瑞典语。
 
 
 # =========
