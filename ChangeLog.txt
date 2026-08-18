@@ -1,14 +1,8 @@
-Sigil-Enhanced-2.8.1.E8
+Sigil-Enhanced-2.8.5.E9
    Bug Fixes
      - Opened Photoshop-exported WebP images that Windows QImage rejected, and always ship qwebp.dll with the Windows package.
      - Opened the Metadata Editor for EPUB 3 books whose alternate-script refinements omit xml:lang, instead of failing four Python calls and showing an empty editor.
-     - Fixed Book Browser reading-order drag so spine reordering no longer depends on stale TreeView selection handling.
      - Restored adding files by dropping them onto Book Browser after the reading-order drag rewrite ignored Finder/Explorer URL drops.
-     - Avoided rewriting HTML and other text resources during Find/Replace when the replacement text is unchanged, including Python function replacements.
-     - Made recovery checkpoints succeed on EPUBs that lack a usable unique-identifier by preparing a UUID in an isolated snapshot and applying it as one undoable OPF edit only after the checkpoint commits.
-     - Prevented cumulative drift when converting the same book between vertical and horizontal layouts more than once, and refused to overwrite page-progression or class state that the user had edited after the last conversion.
-     - Fixed TOC multi-selection move-up/move-down to treat selected entries as a contiguous block, and fixed a crash when moving TOC entries right because QPersistentIndex was not updated.
-     - Added the missing translations in the Resize Image dialog.
      - Made newly created empty XHTML and CSS files write template content to disk, so custom templates survive subsequent imports instead of being replaced by empty files.
 
    New Features
@@ -16,6 +10,21 @@ Sigil-Enhanced-2.8.1.E8
      - Developer Tools can detach into a separate window and dock back without destroying the Inspector.
      - Split the editor into two vertical groups so two resources stay visible; Open in Other Group, Move, and restart restore the split layout only.
      - Dragging a tab between editor groups moves the same editor; Open/Move before a manual split opens the lower group.
+
+   Build/Testing
+     - Rebased on upstream Sigil 2.8.5 and synced all translations from Transifex, including a new Swedish catalog.
+     - Extended CTest coverage for external Book Browser file drops, Preview DevTools docking, and split editor groups.
+
+Sigil-Enhanced-2.8.1.E8
+   Bug Fixes
+     - Fixed Book Browser reading-order drag so spine reordering no longer depends on stale TreeView selection handling.
+     - Avoided rewriting HTML and other text resources during Find/Replace when the replacement text is unchanged, including Python function replacements.
+     - Made recovery checkpoints succeed on EPUBs that lack a usable unique-identifier by preparing a UUID in an isolated snapshot and applying it as one undoable OPF edit only after the checkpoint commits.
+     - Prevented cumulative drift when converting the same book between vertical and horizontal layouts more than once, and refused to overwrite page-progression or class state that the user had edited after the last conversion.
+     - Fixed TOC multi-selection move-up/move-down to treat selected entries as a contiguous block, and fixed a crash when moving TOC entries right because QPersistentIndex was not updated.
+     - Added the missing translations in the Resize Image dialog.
+
+   New Features
      - Added built-in vertical/horizontal layout conversion: analyze writing direction per page, convert vertical-rl books to horizontal-tb or the reverse, skip fixed-layout and high-risk pages, validate invariants before writing, create a recovery Checkpoint, and keep per-resource undo.
      - For verified DPFJ/EBPAJ .vrtl/.hltr pages, conversion only switches the page root class; other templates receive a reversible compatibility overlay without rewriting shared stylesheets.
      - Whole-book conversion can restore the exact previous spine page-progression-direction, including the absent/default/ltr/rtl states, and records conversion provenance so reverse conversion does not disturb pages that were already in the target direction.
@@ -23,7 +32,7 @@ Sigil-Enhanced-2.8.1.E8
 
    Build/Testing
      - Merged late upstream Sigil TOC selection, ImageTab, and Resize Image i18n fixes.
-     - Added CTest coverage for layout analysis, profile detection, stylesheet resolution, CSS transforms, conversion invariants, converter menu/Automate contracts, checkpoint UUID preparation, Book Browser reading-order drag, external Book Browser file drops, Preview DevTools docking, and split editor groups.
+     - Added CTest coverage for layout analysis, profile detection, stylesheet resolution, CSS transforms, conversion invariants, converter menu/Automate contracts, checkpoint UUID preparation, and Book Browser reading-order drag.
 
 Sigil-Enhanced-2.8.1.E7
    Bug Fixes
