@@ -519,6 +519,8 @@ set( MISC_FILES
     Misc/ImagePreviewService.cpp
     Misc/ImagePreviewService.h
     Misc/ImagePreviewPolicy.h
+    Misc/WebpSupport.cpp
+    Misc/WebpSupport.h
     Misc/HTMLSpellCheck.cpp
     Misc/HTMLSpellCheck.h
     Misc/HTMLSpellCheckML.cpp

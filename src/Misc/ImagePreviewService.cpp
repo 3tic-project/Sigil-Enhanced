@@ -21,6 +21,7 @@
 #include <QtSvg/QSvgRenderer>
 
 #include "Misc/ImagePreviewService.h"
+#include "Misc/WebpSupport.h"
 
 namespace
 {
@@ -64,10 +65,28 @@ ImagePreviewData decodeBitmap(const QString& filePath, int maximumSide)
     preview.pixelSize = reader.size();
     const QSize targetSize = previewSize(preview.pixelSize, maximumSide);
     if (targetSize.isEmpty()) {
+        QImage fallback = LoadRasterImage(filePath);
+        if (fallback.isNull()) {
+            return preview;
+        }
+        preview.pixelSize = fallback.size();
+        const QSize scaled = previewSize(preview.pixelSize, maximumSide);
+        preview.image = fallback.scaled(scaled, Qt::KeepAspectRatio,
+                                        Qt::SmoothTransformation);
         return preview;
     }
     reader.setScaledSize(targetSize);
     preview.image = reader.read();
+    if (preview.image.isNull()) {
+        QImage fallback = LoadRasterImage(filePath);
+        if (!fallback.isNull()) {
+            preview.pixelSize = fallback.size();
+            const QSize scaled = previewSize(preview.pixelSize, maximumSide);
+            preview.image = fallback.scaled(scaled, Qt::KeepAspectRatio,
+                                            Qt::SmoothTransformation);
+            return preview;
+        }
+    }
     if (!preview.image.isNull() &&
         (preview.image.width() > maximumSide ||
          preview.image.height() > maximumSide)) {
