@@ -13,7 +13,7 @@
 
 ### 修复
 
-- Windows 下打开 Photoshop 导出的 WebP 图片不再失败，Windows 包始终随包携带 `qwebp.dll`。
+- Windows 下打开 Photoshop 导出的 WebP 图片不再失败；CI 会安装 `qtimageformats`，Windows 包必须带上 `qwebp.dll`，缺少插件时打包失败。
 - EPUB 3 书籍 alternate-script 精炼缺少 `xml:lang` 时，Metadata Editor 仍能打开，不再因四次 Python 调用失败而显示空编辑器。
 - 恢复从 Finder/资源管理器把文件拖到 Book Browser 以添加资源。
 - 新建空 XHTML/CSS 文件时把模板内容写入磁盘，自定义模板在后续导入其它文件后仍然保留，不会被空文件覆盖。

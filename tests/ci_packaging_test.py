@@ -84,10 +84,29 @@ class CiPackagingTest(unittest.TestCase):
         self.assertIn("'winvirtpy.cmake'", self.workflow)
 
     def test_windows_qt_install_requires_webengine_positioning(self):
-        self.assertIn("-m qt5compat qtwebengine qtwebchannel qtpositioning", self.workflow)
+        self.assertIn(
+            "-m qt5compat qtwebengine qtwebchannel qtpositioning qtimageformats",
+            self.workflow,
+        )
         self.assertIn("Qt6PositioningConfig.cmake", self.workflow)
         self.assertIn("Qt6WebEngineCoreConfig.cmake", self.workflow)
         self.assertIn("Get-MissingQtConfigs", self.workflow)
+        self.assertIn("Get-QtWebpPlugin", self.workflow)
+        self.assertIn("name: Verify Qt WebP plugin", self.workflow)
+
+    def test_windows_package_requires_qwebp_plugin(self):
+        cmake = (ROOT / "src" / "qt6sigil.cmake").read_text(encoding="utf-8")
+        self.assertIn("imageformats/qwebp.dll", cmake)
+        self.assertIn("qtimageformats", cmake)
+        self.assertIn(
+            "Qt WebP plugin not found at ${SIGIL_QT_WEBP_PLUGIN}",
+            cmake,
+        )
+        self.assertIn("ci_scripts/require_exists.cmake", cmake)
+        self.assertNotRegex(
+            cmake,
+            r"if\s*\(\s*DEFINED QT_PLUGINS_DIR AND EXISTS \"\$\{QT_PLUGINS_DIR\}/imageformats/qwebp\.dll\"\s*\)",
+        )
 
     def test_bundled_pcre2_exports_generated_and_source_headers(self):
         cmake = PCRE2_CMAKE.read_text(encoding="utf-8")

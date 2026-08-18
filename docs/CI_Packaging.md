@@ -106,14 +106,19 @@ The workflow currently pins Qt to `6.10.2`.
 
 Windows x64 uses the official Qt online repository through `aqtinstall`:
 
-`aqt install-qt windows desktop 6.10.2 win64_msvc2022_64 -m qt5compat qtwebengine qtwebchannel qtpositioning`
+`aqt install-qt windows desktop 6.10.2 win64_msvc2022_64 -m qt5compat qtwebengine qtwebchannel qtpositioning qtimageformats`
 
-Qt 6.10 `WebEngineCore` requires `Qt6Positioning` at CMake configure time. The
-Windows job therefore treats a cache that only contains `Qt6Config.cmake` as
-incomplete: it also requires `Qt6Positioning`, `Qt6WebEngineCore`,
-`Qt6WebEngineWidgets`, `Qt6WebChannel`, and `Qt6Core5Compat` before skipping
-`aqtinstall`. Bump `.github/workflows/reset-win-caches.txt` after changing the
-required Qt module set.
+Qt 6.10 `WebEngineCore` requires `Qt6Positioning` at CMake configure time.
+ImageTab / Adjust Image decode WebP through Qt's `qwebp.dll` plugin, which
+lives in the `qtimageformats` module rather than qtbase. Without that module
+the Windows package only ships `qgif`/`qico`/`qjpeg`/`qsvg` and reports
+`The Qt WebP plugin is not available.` The Windows job therefore treats a
+cache as incomplete unless it has `Qt6Positioning`, `Qt6WebEngineCore`,
+`Qt6WebEngineWidgets`, `Qt6WebChannel`, `Qt6Core5Compat`, **and**
+`plugins/imageformats/qwebp.dll` before skipping `aqtinstall`. CMake
+configuration of the Windows installer fails if the plugin is still missing.
+Bump `.github/workflows/reset-win-caches.txt` after changing the required
+Qt module set.
 
 macOS Intel uses:
 
