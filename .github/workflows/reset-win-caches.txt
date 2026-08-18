@@ -17,3 +17,4 @@ Reset Cache 0n 6-October-2025
 Reset Cache on 8-February-2026
 Reset Cache on 18-February-2026
 Reset cache on 16-August-2026 for Qt6Positioning/WebEngine completeness
+Reset cache on 18-August-2026 for qtimageformats/qwebp.dll

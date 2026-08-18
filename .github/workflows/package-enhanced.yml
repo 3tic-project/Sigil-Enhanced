@@ -142,16 +142,28 @@ jobs:
             $requiredConfigs | Where-Object { -not (Get-QtConfig $_) }
           }
 
+          function Get-QtWebpPlugin {
+            Get-ChildItem -Path $qtRoot -Filter qwebp.dll -Recurse -ErrorAction SilentlyContinue |
+              Where-Object { $_.FullName -match '\\plugins\\imageformats\\qwebp\.dll$' } |
+              Select-Object -First 1
+          }
+
           $missing = @(Get-MissingQtConfigs)
-          if ($missing.Count -gt 0) {
-            Write-Host "Cached Qt is incomplete or missing. Absent CMake packages: $($missing -join ', ')"
+          $webpPlugin = Get-QtWebpPlugin
+          if ($missing.Count -gt 0 -or -not $webpPlugin) {
+            if ($missing.Count -gt 0) {
+              Write-Host "Cached Qt is incomplete or missing. Absent CMake packages: $($missing -join ', ')"
+            }
+            if (-not $webpPlugin) {
+              Write-Host "Cached Qt is missing plugins/imageformats/qwebp.dll (qtimageformats)."
+            }
             Remove-Item -Recurse -Force $qtRoot -ErrorAction SilentlyContinue
             New-Item -ItemType Directory -Force -Path $qtRoot | Out-Null
             python -m pip install --upgrade pip
             python -m pip install aqtinstall
             python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
               -O $qtRoot `
-              -m qt5compat qtwebengine qtwebchannel qtpositioning
+              -m qt5compat qtwebengine qtwebchannel qtpositioning qtimageformats
 
             # aqtinstall's MSVC Qt is built without ICU, but Sigil's Qt build
             # expects the ICU runtime DLLs. Harvest them from the custom Sigil
@@ -181,6 +193,10 @@ jobs:
           if ($missing.Count -gt 0) {
             throw "Qt install under $qtRoot is missing required CMake packages: $($missing -join ', ')."
           }
+          $webpPlugin = Get-QtWebpPlugin
+          if (-not $webpPlugin) {
+            throw "Qt install under $qtRoot is missing plugins/imageformats/qwebp.dll. Install the qtimageformats module."
+          }
 
           $qtConfig = Get-QtConfig 'Qt6Config.cmake'
           if (-not $qtConfig) {
@@ -190,6 +206,17 @@ jobs:
           $qtDir = (Resolve-Path (Join-Path $qtConfig.Directory.FullName '..\..\..')).Path
           "QT_DIR=$qtDir" | Out-File -FilePath $env:GITHUB_ENV -Append
           "$qtDir\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Verify Qt WebP plugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pluginDir = Join-Path $env:QT_DIR 'plugins\imageformats'
+          $plugin = Join-Path $pluginDir 'qwebp.dll'
+          if (-not (Test-Path $plugin)) {
+            throw "Qt WebP plugin missing at $plugin. The Windows package cannot decode .webp without qtimageformats."
+          }
+          Get-ChildItem $pluginDir | Format-Table Name, Length
 
       - name: Install Inno Setup
         shell: pwsh
