@@ -6979,6 +6979,89 @@ Do you want to save your changes?</source>
     </message>
 </context>
 <context>
+    <name>KfxImportController</name>
+    <message>
+        <source>Checking KFX input...</source>
+        <translation>正在检查 KFX 输入...</translation>
+    </message>
+    <message>
+        <source>Reading KFX data...</source>
+        <translation>正在读取 KFX 数据...</translation>
+    </message>
+    <message>
+        <source>Converting KFX to EPUB...</source>
+        <translation>正在将 KFX 转换为 EPUB...</translation>
+    </message>
+    <message>
+        <source>Writing temporary EPUB...</source>
+        <translation>正在写入临时 EPUB...</translation>
+    </message>
+    <message>
+        <source>Validating converted EPUB...</source>
+        <translation>正在验证转换后的 EPUB...</translation>
+    </message>
+    <message>
+        <source>The selected KFX file cannot be read safely.</source>
+        <translation>无法安全读取所选 KFX 文件。</translation>
+    </message>
+    <message>
+        <source>This KFX container uses an unsupported feature.</source>
+        <translation>此 KFX 容器使用了不受支持的功能。</translation>
+    </message>
+    <message>
+        <source>This KFX file is DRM-protected and cannot be converted.</source>
+        <translation>此 KFX 文件受 DRM 保护，无法转换。</translation>
+    </message>
+    <message>
+        <source>There is not enough free disk space to create the EPUB.</source>
+        <translation>可用磁盘空间不足，无法创建 EPUB。</translation>
+    </message>
+    <message>
+        <source>The KFX file is malformed or incomplete.</source>
+        <translation>KFX 文件格式错误或内容不完整。</translation>
+    </message>
+    <message>
+        <source>The converted file did not pass EPUB validation and was discarded.</source>
+        <translation>转换后的文件未通过 EPUB 验证，已丢弃。</translation>
+    </message>
+    <message>
+        <source>The KFX converter returned an invalid response.</source>
+        <translation>KFX 转换器返回了无效响应。</translation>
+    </message>
+    <message>
+        <source>No usable Python 3 interpreter could be found for the KFX converter.</source>
+        <translation>找不到可供 KFX 转换器使用的 Python 3 解释器。</translation>
+    </message>
+    <message>
+        <source>KFX conversion failed.</source>
+        <translation>KFX 转换失败。</translation>
+    </message>
+    <message>
+        <source>The built-in KFX converter is missing from this installation.</source>
+        <translation>此安装中缺少内置 KFX 转换器。</translation>
+    </message>
+    <message>
+        <source>Cannot create a temporary EPUB file: %1</source>
+        <translation>无法创建临时 EPUB 文件：%1</translation>
+    </message>
+    <message>
+        <source>Starting KFX conversion...</source>
+        <translation>正在启动 KFX 转换...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB</source>
+        <translation>将 KFX 转换为 EPUB</translation>
+    </message>
+    <message>
+        <source>The KFX converter could not start: %1</source>
+        <translation>无法启动 KFX 转换器：%1</translation>
+    </message>
+</context>
+<context>
     <name>Landmarks</name>
     <message>
         <location filename="../../Misc/Landmarks.cpp" line="164"/>
@@ -15553,6 +15636,114 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
     <message>
         <source>%1 produced no changes.</source>
         <translation>%1 未产生任何修改。</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB...</source>
+        <translation>将 KFX 转换为 EPUB...</translation>
+    </message>
+    <message>
+        <source>Convert a DRM-free KFX or KFX-ZIP book, then save it or open it in a new window</source>
+        <translation>转换无 DRM 的 KFX 或 KFX-ZIP 书籍，然后另存或在新窗口中打开</translation>
+    </message>
+    <message>
+        <source>The dropped file is a KFX book.</source>
+        <translation>拖入的文件是一本 KFX 书籍。</translation>
+    </message>
+    <message>
+        <source>The dropped files include %1 KFX books.</source>
+        <translation>拖入的文件中包含 %1 本 KFX 书籍。</translation>
+    </message>
+    <message>
+        <source>Only DRM-free KFX files can be converted; DRM-protected files are rejected. Convert the KFX book(s) to EPUB and open each result in a new window?</source>
+        <translation>只能转换无 DRM 的 KFX 文件；受 DRM 保护的文件将被拒绝。是否将 KFX 书籍转换为 EPUB，并在新窗口中分别打开结果？</translation>
+    </message>
+    <message>
+        <source>Convert and Open</source>
+        <translation>转换并打开</translation>
+    </message>
+    <message>
+        <source>Convert and Open All</source>
+        <translation>全部转换并打开</translation>
+    </message>
+    <message>
+        <source>Converted KFX loaded. Use Save to choose an EPUB filename.</source>
+        <translation>已载入由 KFX 转换的内容。请使用“保存”选择 EPUB 文件名。</translation>
+    </message>
+    <message>
+        <source>Cannot preserve the unchanged EPUB.</source>
+        <translation>无法保留未修改的 EPUB。</translation>
+    </message>
+    <message>
+        <source>No changes to save.</source>
+        <translation>没有需要保存的更改。</translation>
+    </message>
+    <message>
+        <source>The source EPUB changed outside Sigil-Enhanced. The file was not overwritten.</source>
+        <translation>源 EPUB 已在 Sigil-Enhanced 外部发生更改，未覆盖该文件。</translation>
+    </message>
+    <message>
+        <source>Select KFX File</source>
+        <translation>选择 KFX 文件</translation>
+    </message>
+    <message>
+        <source>KFX files (*.kfx *.kfx-zip);;All files (*.*)</source>
+        <translation>KFX 文件 (*.kfx *.kfx-zip);;所有文件 (*.*)</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB</source>
+        <translation>将 KFX 转换为 EPUB</translation>
+    </message>
+    <message>
+        <source>How would you like to use the converted EPUB?</source>
+        <translation>要如何使用转换后的 EPUB？</translation>
+    </message>
+    <message>
+        <source>Only DRM-free KFX files can be converted. DRM-protected files are rejected.</source>
+        <translation>只能转换无 DRM 的 KFX 文件。受 DRM 保护的文件将被拒绝。</translation>
+    </message>
+    <message>
+        <source>Save EPUB As...</source>
+        <translation>EPUB 另存为...</translation>
+    </message>
+    <message>
+        <source>Cannot convert KFX</source>
+        <translation>无法转换 KFX</translation>
+    </message>
+    <message>
+        <source>Please select a file whose name ends in .kfx or .kfx-zip.</source>
+        <translation>请选择文件名以 .kfx 或 .kfx-zip 结尾的文件。</translation>
+    </message>
+    <message>
+        <source>Save Converted EPUB As</source>
+        <translation>转换后的 EPUB 另存为</translation>
+    </message>
+    <message>
+        <source>KFX conversion cancelled.</source>
+        <translation>KFX 转换已取消。</translation>
+    </message>
+    <message>
+        <source>KFX Conversion Failed</source>
+        <translation>KFX 转换失败</translation>
+    </message>
+    <message>
+        <source>KFX converted and opened in a new window.</source>
+        <translation>KFX 已转换并在新窗口中打开。</translation>
+    </message>
+    <message>
+        <source>Cannot save converted EPUB: %1</source>
+        <translation>无法保存转换后的 EPUB：%1</translation>
+    </message>
+    <message>
+        <source>KFX converted to %1.</source>
+        <translation>KFX 已转换为 %1。</translation>
+    </message>
+    <message>
+        <source>KFX Conversion Completed with Warnings</source>
+        <translation>KFX 转换完成，但有警告</translation>
+    </message>
+    <message>
+        <source>The EPUB was saved, but the converter reported %1 warning(s).</source>
+        <translation>EPUB 已保存，但转换器报告了 %1 条警告。</translation>
     </message>
 </context>
 <context>

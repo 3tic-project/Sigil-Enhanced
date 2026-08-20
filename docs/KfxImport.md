@@ -7,8 +7,8 @@
 | 产品名称 | KFX 导入与转换 |
 | 英文代号 | KFX Import & Convert |
 | 类型 | Sigil-Enhanced 内置原生插件与文件工作流增强 |
-| 文档版本 | 0.1 |
-| 文档状态 | 待开发评审 |
+| 文档版本 | 0.2 |
+| 文档状态 | 首版实现完成，待三平台打包与完整私有语料验收 |
 | 目标分支 | `kfx-import-plugin` |
 | 目标平台 | macOS、Windows、Linux |
 | 输入范围 | 无 DRM 的 `.kfx`、`.kfx-zip` |
@@ -31,6 +31,22 @@
 拖放 KFX 时必须先提示用户，默认操作为“转换并在新窗口打开”，不得把 KFX 当作普通资源加入当前 EPUB，也不得静默转换。
 
 本需求同时调整 Sigil-Enhanced 的默认保存行为：默认不添加或更新 `Sigil version` 元数据。对于一本成功加载、未发生任何编辑或自动修复的 EPUB，普通“保存”必须成为真正的 no-op；“另存为”和“保存副本”必须直接复制原始 EPUB。由此保证未修改 EPUB 在打开再保存后不被写入额外内容，并在可满足条件时保持整个文件字节级一致。
+
+### 2.1 当前使用方式
+
+菜单入口为 `Enhancement > Convert KFX to EPUB...`。选择一个 `.kfx` 或
+`.kfx-zip` 后，可选择：
+
+- `Save EPUB As...`：先选择目标，再启动转换；当前窗口的书籍不变；
+- `Open in New Window`：转换后载入独立新窗口，首次保存进入标准另存为流程。
+
+将一个或多个 KFX 文件拖入主窗口或 Book Browser 时，会先显示 DRM 边界与
+确认提示，默认操作为转换并在新窗口打开。KFX 不会进入当前 EPUB 的
+`AddExisting` 资源导入路径。
+
+转换后的新窗口保留已验证 EPUB 的临时基线，但不把临时路径显示为当前文件，
+也不加入最近文件。用户未继续编辑时，第一次保存直接复制该基线；发生编辑后
+才走正常 EPUB 导出。
 
 ## 3. 背景与问题
 
@@ -791,3 +807,45 @@ Phase 1–4 均为首版需求，不能只交付菜单转换而推迟未修改�
 - worker 取消时先发送协议取消还是直接终止进程，以及各阶段的宽限时间。
 
 这些技术项完成后应形成独立设计文档，并回填本 PRD 的实现映射与测试编号。
+
+## 19. 首版实现映射与验证状态
+
+### 19.1 代码映射
+
+| 需求边界 | 实现 |
+| --- | --- |
+| 单一增强菜单入口、另存为/新窗口选择 | `src/Form_Files/main.ui`、`MainWindowExt.cpp` |
+| 主窗口及 Book Browser 拖放分类 | `MainWindow::AddDroppedFiles()`、`BookBrowser::AddFiles()` |
+| 独立进程、进度、取消、稳定错误 | `BuiltinPlugins/KfxImportController` |
+| JSON Lines v1 协议与扩展名分类 | `BuiltinPlugins/KfxImportProtocol` |
+| KFX/KFX-ZIP 预检、转换、原子临时输出、EPUB 门禁 | `python3lib/sigil_kfx_import/worker.py` |
+| KFX 转换核心及第三方声明 | `python3lib/sigil_kfx_import/kfxlib`、`THIRD_PARTY_NOTICES.md` |
+| 未修改 EPUB no-op/字节复制及外部变更保护 | `Misc/EpubFileSnapshot`、`MainWindow::SaveFile()` |
+| 默认版本元数据和修改日期策略 | `Exporters/ExportMetadataPolicy`、`ExportEPUB.cpp` |
+
+worker 当前集中使用以下安全阈值：输入最大 2 GiB、ZIP 项最多 100,000、
+声明总解压大小最大 4 GiB、单项压缩比最大 1000。ZIP 绝对路径、反斜杠、
+`..` 穿越和加密成员在转换前拒绝。输出必须满足 `mimetype` 首项且不压缩、
+`container.xml`/OPF 可解析、manifest 资源存在、spine 非空，以及 EPUB 3
+恰有一个 nav 文档等门禁，失败输出不会交付。
+
+`Sigil version` 现在默认不写。仅用于兼容/诊断的显式环境变量
+`SIGIL_ENABLE_VERSION_META=1` 可对实际修改后的导出重新启用；旧的
+`SIGIL_DISABLE_VERSION_META` 仍具有更高优先级。
+
+### 19.2 自动化验证
+
+- `kfx_worker_test.py`：EPUB 输出门禁、压缩 mimetype、ZIP 路径穿越和
+  JSON Lines 单行协议；
+- `kfx_import_protocol_test`：扩展名、建议文件名、协议版本、进度与结果解析；
+- `kfx_import_ui_contract`：单一菜单入口、两种输出方式、拖放路由、进程隔离
+  环境、临时交付和派生文档身份；
+- `epub_file_snapshot_test`：来源身份、原子字节复制和外部变更检测；
+- `export_metadata_policy_test`：默认禁用版本元数据、显式 opt-in 和修改日期；
+- 简体中文、繁体中文、日文覆盖率测试及 `lrelease` 均要求零 unfinished。
+
+macOS Debug 应用已使用打包后的 `Sigil.app/Contents/python3lib` 串行完成六本
+真实 `.kfx-zip` 私有语料回归，六本均转换成功并通过 worker 门禁；输出覆盖
+19–195 个 spine 项、9–195 张图片以及 0–7 条非致命警告。商业 KFX 语料和
+转换产物只在本地使用，不进入提交或发行包。Windows、Linux 安装包仍属于
+发布前验收，不得因单个平台语料通过而视为三平台已完成。

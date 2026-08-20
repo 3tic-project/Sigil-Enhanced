@@ -6977,6 +6977,89 @@ Do you want to save your changes?</source>
     </message>
 </context>
 <context>
+    <name>KfxImportController</name>
+    <message>
+        <source>Checking KFX input...</source>
+        <translation>KFX 入力を確認しています...</translation>
+    </message>
+    <message>
+        <source>Reading KFX data...</source>
+        <translation>KFX データを読み込んでいます...</translation>
+    </message>
+    <message>
+        <source>Converting KFX to EPUB...</source>
+        <translation>KFX を EPUB に変換しています...</translation>
+    </message>
+    <message>
+        <source>Writing temporary EPUB...</source>
+        <translation>一時 EPUB を書き込んでいます...</translation>
+    </message>
+    <message>
+        <source>Validating converted EPUB...</source>
+        <translation>変換後の EPUB を検証しています...</translation>
+    </message>
+    <message>
+        <source>The selected KFX file cannot be read safely.</source>
+        <translation>選択した KFX ファイルを安全に読み込めません。</translation>
+    </message>
+    <message>
+        <source>This KFX container uses an unsupported feature.</source>
+        <translation>この KFX コンテナでは未対応の機能が使用されています。</translation>
+    </message>
+    <message>
+        <source>This KFX file is DRM-protected and cannot be converted.</source>
+        <translation>この KFX ファイルは DRM で保護されているため変換できません。</translation>
+    </message>
+    <message>
+        <source>There is not enough free disk space to create the EPUB.</source>
+        <translation>EPUB を作成するための空きディスク容量が不足しています。</translation>
+    </message>
+    <message>
+        <source>The KFX file is malformed or incomplete.</source>
+        <translation>KFX ファイルが不正か不完全です。</translation>
+    </message>
+    <message>
+        <source>The converted file did not pass EPUB validation and was discarded.</source>
+        <translation>変換後のファイルが EPUB 検証に合格しなかったため破棄しました。</translation>
+    </message>
+    <message>
+        <source>The KFX converter returned an invalid response.</source>
+        <translation>KFX 変換器から無効な応答が返されました。</translation>
+    </message>
+    <message>
+        <source>No usable Python 3 interpreter could be found for the KFX converter.</source>
+        <translation>KFX 変換器で使用できる Python 3 インタープリターが見つかりません。</translation>
+    </message>
+    <message>
+        <source>KFX conversion failed.</source>
+        <translation>KFX の変換に失敗しました。</translation>
+    </message>
+    <message>
+        <source>The built-in KFX converter is missing from this installation.</source>
+        <translation>このインストールには組み込み KFX 変換器が含まれていません。</translation>
+    </message>
+    <message>
+        <source>Cannot create a temporary EPUB file: %1</source>
+        <translation>一時 EPUB ファイルを作成できません：%1</translation>
+    </message>
+    <message>
+        <source>Starting KFX conversion...</source>
+        <translation>KFX 変換を開始しています...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB</source>
+        <translation>KFX を EPUB に変換</translation>
+    </message>
+    <message>
+        <source>The KFX converter could not start: %1</source>
+        <translation>KFX 変換器を起動できません：%1</translation>
+    </message>
+</context>
+<context>
     <name>Landmarks</name>
     <message>
         <location filename="../../Misc/Landmarks.cpp" line="164"/>
@@ -15550,6 +15633,114 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
     <message>
         <source>%1 produced no changes.</source>
         <translation>%1 は変更を生成しませんでした。</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB...</source>
+        <translation>KFX を EPUB に変換...</translation>
+    </message>
+    <message>
+        <source>Convert a DRM-free KFX or KFX-ZIP book, then save it or open it in a new window</source>
+        <translation>DRM なしの KFX または KFX-ZIP 書籍を変換し、保存するか新しいウィンドウで開きます</translation>
+    </message>
+    <message>
+        <source>The dropped file is a KFX book.</source>
+        <translation>ドロップされたファイルは KFX 書籍です。</translation>
+    </message>
+    <message>
+        <source>The dropped files include %1 KFX books.</source>
+        <translation>ドロップされたファイルには %1 冊の KFX 書籍が含まれています。</translation>
+    </message>
+    <message>
+        <source>Only DRM-free KFX files can be converted; DRM-protected files are rejected. Convert the KFX book(s) to EPUB and open each result in a new window?</source>
+        <translation>DRM なしの KFX ファイルのみ変換できます。DRM で保護されたファイルは拒否されます。KFX 書籍を EPUB に変換し、それぞれ新しいウィンドウで開きますか？</translation>
+    </message>
+    <message>
+        <source>Convert and Open</source>
+        <translation>変換して開く</translation>
+    </message>
+    <message>
+        <source>Convert and Open All</source>
+        <translation>すべて変換して開く</translation>
+    </message>
+    <message>
+        <source>Converted KFX loaded. Use Save to choose an EPUB filename.</source>
+        <translation>KFX から変換した内容を読み込みました。「保存」で EPUB のファイル名を選択してください。</translation>
+    </message>
+    <message>
+        <source>Cannot preserve the unchanged EPUB.</source>
+        <translation>未変更の EPUB を保持できません。</translation>
+    </message>
+    <message>
+        <source>No changes to save.</source>
+        <translation>保存する変更はありません。</translation>
+    </message>
+    <message>
+        <source>The source EPUB changed outside Sigil-Enhanced. The file was not overwritten.</source>
+        <translation>元の EPUB が Sigil-Enhanced の外部で変更されたため、ファイルを上書きしませんでした。</translation>
+    </message>
+    <message>
+        <source>Select KFX File</source>
+        <translation>KFX ファイルを選択</translation>
+    </message>
+    <message>
+        <source>KFX files (*.kfx *.kfx-zip);;All files (*.*)</source>
+        <translation>KFX ファイル (*.kfx *.kfx-zip);;すべてのファイル (*.*)</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB</source>
+        <translation>KFX を EPUB に変換</translation>
+    </message>
+    <message>
+        <source>How would you like to use the converted EPUB?</source>
+        <translation>変換後の EPUB をどのように使用しますか？</translation>
+    </message>
+    <message>
+        <source>Only DRM-free KFX files can be converted. DRM-protected files are rejected.</source>
+        <translation>DRM なしの KFX ファイルのみ変換できます。DRM で保護されたファイルは拒否されます。</translation>
+    </message>
+    <message>
+        <source>Save EPUB As...</source>
+        <translation>EPUB に名前を付けて保存...</translation>
+    </message>
+    <message>
+        <source>Cannot convert KFX</source>
+        <translation>KFX を変換できません</translation>
+    </message>
+    <message>
+        <source>Please select a file whose name ends in .kfx or .kfx-zip.</source>
+        <translation>ファイル名が .kfx または .kfx-zip で終わるファイルを選択してください。</translation>
+    </message>
+    <message>
+        <source>Save Converted EPUB As</source>
+        <translation>変換後の EPUB に名前を付けて保存</translation>
+    </message>
+    <message>
+        <source>KFX conversion cancelled.</source>
+        <translation>KFX の変換をキャンセルしました。</translation>
+    </message>
+    <message>
+        <source>KFX Conversion Failed</source>
+        <translation>KFX の変換に失敗しました</translation>
+    </message>
+    <message>
+        <source>KFX converted and opened in a new window.</source>
+        <translation>KFX を変換し、新しいウィンドウで開きました。</translation>
+    </message>
+    <message>
+        <source>Cannot save converted EPUB: %1</source>
+        <translation>変換後の EPUB を保存できません：%1</translation>
+    </message>
+    <message>
+        <source>KFX converted to %1.</source>
+        <translation>KFX を %1 に変換しました。</translation>
+    </message>
+    <message>
+        <source>KFX Conversion Completed with Warnings</source>
+        <translation>KFX の変換は警告付きで完了しました</translation>
+    </message>
+    <message>
+        <source>The EPUB was saved, but the converter reported %1 warning(s).</source>
+        <translation>EPUB は保存されましたが、変換器から %1 件の警告が報告されました。</translation>
     </message>
 </context>
 <context>
