@@ -477,6 +477,12 @@ add_test(NAME paragraph_normalizer_menu_contract
 )
 set_tests_properties(paragraph_normalizer_menu_contract PROPERTIES TIMEOUT 30)
 
+add_test(NAME kfx_worker
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/kfx_worker_test.py
+)
+set_tests_properties(kfx_worker PROPERTIES TIMEOUT 30)
+
 add_test(NAME book_browser_drag_contract
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/book_browser_drag_contract_test.py
