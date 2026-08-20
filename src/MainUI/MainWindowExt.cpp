@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QObject>
 #include <QSet>
+#include <QTemporaryFile>
 #include <QWriteLocker>
 
 #include "MainUI/MainWindow.h"
@@ -189,21 +190,31 @@ bool MainWindow::ConvertKfx()
     choice.setText(tr("How would you like to use the converted EPUB?"));
     choice.setInformativeText(
         tr("Only DRM-free KFX files can be converted. DRM-protected files are rejected."));
+    QCheckBox* normalize_checkbox = new QCheckBox(
+        tr("Also normalize EPUB structure after conversion"), &choice);
+    normalize_checkbox->setToolTip(
+        tr("Repair OPF and link-case issues, then move resources to Sigil's standard folders."));
+    normalize_checkbox->setChecked(false);
+    choice.setCheckBox(normalize_checkbox);
     QPushButton* save_button = choice.addButton(tr("Save EPUB As..."), QMessageBox::AcceptRole);
     QPushButton* open_button = choice.addButton(tr("Open in New Window"), QMessageBox::ActionRole);
     choice.addButton(QMessageBox::Cancel);
     choice.setDefaultButton(open_button);
+    choice.setMinimumSize(680, 220);
     choice.exec();
+    const bool normalize_structure = normalize_checkbox->isChecked();
     if (choice.clickedButton() == save_button) {
-        return ConvertKfxFile(source, false);
+        return ConvertKfxFile(source, false, normalize_structure);
     }
     if (choice.clickedButton() == open_button) {
-        return ConvertKfxFile(source, true);
+        return ConvertKfxFile(source, true, normalize_structure);
     }
     return false;
 }
 
-bool MainWindow::ConvertKfxFile(const QString& sourcePath, bool openInNewWindow)
+bool MainWindow::ConvertKfxFile(const QString& sourcePath,
+                                bool openInNewWindow,
+                                bool normalizeStructure)
 {
     using BuiltinPlugins::KfxImportController;
     using BuiltinPlugins::KfxImportProtocol;
@@ -257,18 +268,57 @@ bool MainWindow::ConvertKfxFile(const QString& sourcePath, bool openInNewWindow)
             QFile::remove(result.outputPath);
             return false;
         }
+        if (normalizeStructure && !new_window->RunEpubStructureNormalization()) {
+            delete new_window;
+            QFile::remove(result.outputPath);
+            return false;
+        }
         new_window->show();
         new_window->raise();
         new_window->activateWindow();
         qApp->processEvents();
-        ShowMessageOnStatusBar(tr("KFX converted and opened in a new window."));
+        ShowMessageOnStatusBar(normalizeStructure ?
+                               tr("KFX converted, normalized, and opened in a new window.") :
+                               tr("KFX converted and opened in a new window."));
         return true;
     }
 
-    const EpubFileSnapshot converted = EpubFileSnapshot::capture(result.outputPath);
     QString copy_error;
-    const bool copied = converted.isValid() && converted.copyTo(destination, &copy_error);
-    QFile::remove(result.outputPath);
+    bool copied = false;
+    if (normalizeStructure) {
+        QTemporaryFile normalized_output(
+            QDir::tempPath() + QStringLiteral("/sigil-kfx-normalized-XXXXXX.epub"));
+        if (!normalized_output.open()) {
+            QFile::remove(result.outputPath);
+            Utility::DisplayStdErrorDialog(
+                tr("Cannot save converted EPUB: %1")
+                    .arg(QDir::toNativeSeparators(destination)),
+                normalized_output.errorString());
+            return false;
+        }
+        const QString normalized_path = normalized_output.fileName();
+        normalized_output.close();
+
+        MainWindow* staging_window = new MainWindow();
+        const bool loaded = staging_window->LoadConvertedEpub(
+            result.outputPath, suggested_name);
+        const bool normalized = loaded && staging_window->RunEpubStructureNormalization();
+        const bool exported = normalized && staging_window->ExportCurrentBookCopy(normalized_path);
+        delete staging_window;
+        QFile::remove(result.outputPath);
+        if (!exported) {
+            return false;
+        }
+
+        const EpubFileSnapshot normalized_epub = EpubFileSnapshot::capture(
+            normalized_path, &copy_error);
+        copied = normalized_epub.isValid() && normalized_epub.copyTo(destination, &copy_error);
+    } else {
+        const EpubFileSnapshot converted = EpubFileSnapshot::capture(
+            result.outputPath, &copy_error);
+        copied = converted.isValid() && converted.copyTo(destination, &copy_error);
+        QFile::remove(result.outputPath);
+    }
     if (!copied) {
         Utility::DisplayStdErrorDialog(
             tr("Cannot save converted EPUB: %1").arg(QDir::toNativeSeparators(destination)),
@@ -276,7 +326,10 @@ bool MainWindow::ConvertKfxFile(const QString& sourcePath, bool openInNewWindow)
         return false;
     }
 
-    ShowMessageOnStatusBar(tr("KFX converted to %1.").arg(QDir::toNativeSeparators(destination)));
+    ShowMessageOnStatusBar(normalizeStructure ?
+                           tr("KFX converted and normalized to %1.")
+                               .arg(QDir::toNativeSeparators(destination)) :
+                           tr("KFX converted to %1.").arg(QDir::toNativeSeparators(destination)));
     if (!result.warnings.isEmpty()) {
         QMessageBox warning(QMessageBox::Warning,
                             tr("KFX Conversion Completed with Warnings"),
@@ -342,6 +395,11 @@ bool MainWindow::NormalizeEpubStructure()
         return false;
     }
 
+    return RunEpubStructureNormalization();
+}
+
+bool MainWindow::RunEpubStructureNormalization()
+{
     QApplication::setOverrideCursor(Qt::WaitCursor);
     if (!CanStandardizeEpubLayout(tr("Normalize EPUB structure"))) {
         QApplication::restoreOverrideCursor();

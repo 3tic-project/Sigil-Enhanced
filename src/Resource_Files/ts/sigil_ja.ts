@@ -15655,6 +15655,14 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <translation>DRM なしの KFX ファイルのみ変換できます。DRM で保護されたファイルは拒否されます。KFX 書籍を EPUB に変換し、それぞれ新しいウィンドウで開きますか？</translation>
     </message>
     <message>
+        <source>Also normalize EPUB structure after conversion</source>
+        <translation>変換後に EPUB 構造も正規化する</translation>
+    </message>
+    <message>
+        <source>Repair OPF and link-case issues, then move resources to Sigil's standard folders.</source>
+        <translation>OPF とリンクパスの大文字小文字の問題を修復し、リソースを Sigil の標準フォルダーへ移動します。</translation>
+    </message>
+    <message>
         <source>Convert and Open</source>
         <translation>変換して開く</translation>
     </message>
@@ -15727,12 +15735,20 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <translation>KFX を変換し、新しいウィンドウで開きました。</translation>
     </message>
     <message>
+        <source>KFX converted, normalized, and opened in a new window.</source>
+        <translation>KFX を変換・正規化し、新しいウィンドウで開きました。</translation>
+    </message>
+    <message>
         <source>Cannot save converted EPUB: %1</source>
         <translation>変換後の EPUB を保存できません：%1</translation>
     </message>
     <message>
         <source>KFX converted to %1.</source>
         <translation>KFX を %1 に変換しました。</translation>
+    </message>
+    <message>
+        <source>KFX converted and normalized to %1.</source>
+        <translation>KFX を変換して正規化し、%1 に保存しました。</translation>
     </message>
     <message>
         <source>KFX Conversion Completed with Warnings</source>

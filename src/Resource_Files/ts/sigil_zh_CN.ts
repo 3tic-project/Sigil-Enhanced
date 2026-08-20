@@ -15658,6 +15658,14 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
         <translation>只能转换无 DRM 的 KFX 文件；受 DRM 保护的文件将被拒绝。是否将 KFX 书籍转换为 EPUB，并在新窗口中分别打开结果？</translation>
     </message>
     <message>
+        <source>Also normalize EPUB structure after conversion</source>
+        <translation>同时规范化 EPUB 结构</translation>
+    </message>
+    <message>
+        <source>Repair OPF and link-case issues, then move resources to Sigil's standard folders.</source>
+        <translation>修复 OPF 和链接路径大小写问题，然后将资源移动到 Sigil 标准文件夹。</translation>
+    </message>
+    <message>
         <source>Convert and Open</source>
         <translation>转换并打开</translation>
     </message>
@@ -15730,12 +15738,20 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
         <translation>KFX 已转换并在新窗口中打开。</translation>
     </message>
     <message>
+        <source>KFX converted, normalized, and opened in a new window.</source>
+        <translation>KFX 已转换、规范化，并在新窗口中打开。</translation>
+    </message>
+    <message>
         <source>Cannot save converted EPUB: %1</source>
         <translation>无法保存转换后的 EPUB：%1</translation>
     </message>
     <message>
         <source>KFX converted to %1.</source>
         <translation>KFX 已转换为 %1。</translation>
+    </message>
+    <message>
+        <source>KFX converted and normalized to %1.</source>
+        <translation>KFX 已转换并规范化为 %1。</translation>
     </message>
     <message>
         <source>KFX Conversion Completed with Warnings</source>

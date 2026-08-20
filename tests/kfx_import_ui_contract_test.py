@@ -37,11 +37,30 @@ require(
     and 'tr("Open in New Window")' in main_window_ext,
     "the single menu workflow must offer Save As and Open in New Window",
 )
+require(
+    main_window_ext.count('tr("Also normalize EPUB structure after conversion")') == 1
+    and "choice.setCheckBox(normalize_checkbox)" in main_window_ext
+    and "normalize_checkbox->setChecked(false)" in main_window_ext
+    and "choice.setMinimumSize(680, 220)" in main_window_ext,
+    "the menu prompt must offer optional structure normalization without crowding",
+)
+require(
+    "ConvertKfxFile(source, false, normalize_structure)" in main_window_ext
+    and "ConvertKfxFile(source, true, normalize_structure)" in main_window_ext,
+    "both menu delivery modes must preserve the normalization choice",
+)
 
 require(
     "KfxImportProtocol::isKfxPath(filepath)" in main_window
-    and "ConvertKfxFile(filepath, true)" in main_window,
+    and "ConvertKfxFile(filepath, true, normalize_structure)" in main_window,
     "top-level drops must classify KFX and default to opening converted EPUBs",
+)
+require(
+    'tr("Also normalize EPUB structure after conversion")' in main_window
+    and "msgbox.setCheckBox(normalize_checkbox)" in main_window
+    and "normalize_checkbox->setChecked(false)" in main_window
+    and "msgbox.setMinimumSize(680, 240)" in main_window,
+    "the drop prompt must offer the same roomy normalization option",
 )
 require(
     "KfxImportProtocol::isKfxPath(filepath)" in book_browser_ext
@@ -52,6 +71,23 @@ require(
     "LoadConvertedEpub(result.outputPath, suggested_name, result.warnings)"
     in main_window_ext,
     "open-in-new-window must use the derived EPUB loader",
+)
+load_converted = main_window_ext.index(
+    "new_window->LoadConvertedEpub(result.outputPath, suggested_name, result.warnings)"
+)
+normalize_converted = main_window_ext.index(
+    "new_window->RunEpubStructureNormalization()", load_converted
+)
+show_converted = main_window_ext.index("new_window->show()", normalize_converted)
+require(
+    load_converted < normalize_converted < show_converted,
+    "selected structure normalization must finish before the converted window is shown",
+)
+require(
+    "staging_window->RunEpubStructureNormalization()" in main_window_ext
+    and "staging_window->ExportCurrentBookCopy(normalized_path)" in main_window_ext
+    and "normalized_epub.copyTo(destination, &copy_error)" in main_window_ext,
+    "Save As normalization must reuse the built-in implementation and atomically deliver its EPUB",
 )
 require(
     "m_SourceEpubSnapshot = EpubFileSnapshot::capture(temporaryEpub)" in main_window
@@ -81,7 +117,8 @@ require(
 )
 require(
     "QTemporaryFile output" in controller
-    and "EpubFileSnapshot::capture(result.outputPath)" in main_window_ext,
+    and "const EpubFileSnapshot converted = EpubFileSnapshot::capture(" in main_window_ext
+    and "converted.copyTo(destination, &copy_error)" in main_window_ext,
     "conversion must stage output before atomically copying it to Save As destinations",
 )
 cancel_handler = controller.index(

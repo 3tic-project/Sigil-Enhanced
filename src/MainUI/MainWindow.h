@@ -1197,7 +1197,10 @@ public slots:
     bool ConvertVerticalLayoutDirection(bool to_horizontal); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
-    bool ConvertKfxFile(const QString& sourcePath, bool openInNewWindow);
+    bool ConvertKfxFile(const QString& sourcePath,
+                        bool openInNewWindow,
+                        bool normalizeStructure);
+    bool RunEpubStructureNormalization();
     void ClearTransientSource();
     bool ExecutePluginByName(const QString &plugin_name, bool wait_for_completion,
                              QString *plugin_type = nullptr,

@@ -35,6 +35,7 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QFileDialog>
+#include <QCheckBox>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QPushButton>
@@ -2884,15 +2885,23 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
         msgbox.setInformativeText(
             tr("Only DRM-free KFX files can be converted; DRM-protected files are rejected. "
                "Convert the KFX book(s) to EPUB and open each result in a new window?"));
+        QCheckBox* normalize_checkbox = new QCheckBox(
+            tr("Also normalize EPUB structure after conversion"), &msgbox);
+        normalize_checkbox->setToolTip(
+            tr("Repair OPF and link-case issues, then move resources to Sigil's standard folders."));
+        normalize_checkbox->setChecked(false);
+        msgbox.setCheckBox(normalize_checkbox);
         QPushButton* convert_button = msgbox.addButton(
             kfx_paths.count() == 1 ? tr("Convert and Open") : tr("Convert and Open All"),
             QMessageBox::AcceptRole);
         msgbox.addButton(QMessageBox::Cancel);
         msgbox.setDefaultButton(convert_button);
+        msgbox.setMinimumSize(680, 240);
         msgbox.exec();
         if (msgbox.clickedButton() == convert_button) {
+            const bool normalize_structure = normalize_checkbox->isChecked();
             foreach(const QString& filepath, kfx_paths) {
-                ConvertKfxFile(filepath, true);
+                ConvertKfxFile(filepath, true, normalize_structure);
             }
         }
     }
