@@ -6153,6 +6153,7 @@ void MainWindow::ResourcesAddedOrDeletedOrMoved()
 
 void MainWindow::CreateNewBook(const QString version, const QStringList &book_paths)
 {
+    m_SourceEpubSnapshot.clear();
     QString epubversion = version;
     if (epubversion.isEmpty()) {
         SettingsStore ss;
@@ -6327,7 +6328,14 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
                 // Clear the last inserted file
                 m_LastInsertedFile = "";
                 UpdateUiWithCurrentFile(fullfilepath);
+                if (QFileInfo(fullfilepath).suffix().compare(QStringLiteral("epub"), Qt::CaseInsensitive) == 0
+                    && !m_Book->IsModified()) {
+                    m_SourceEpubSnapshot = EpubFileSnapshot::capture(fullfilepath);
+                } else {
+                    m_SourceEpubSnapshot.clear();
+                }
             } else {
+                m_SourceEpubSnapshot.clear();
                 UpdateUiWithCurrentFile(QFileInfo(fullfilepath).fileName(), true);
                 m_Book->SetModified();
             }
@@ -6407,6 +6415,33 @@ bool MainWindow::SaveFile(const QString &fullfilepath, bool update_current_filen
             return false;
         }
 
+        if (m_SourceEpubSnapshot.isValid()) {
+            QString snapshot_error;
+            if (!m_Book->IsModified()) {
+                if (!m_SourceEpubSnapshot.copyTo(fullfilepath, &snapshot_error)) {
+                    ShowMessageOnStatusBar();
+                    Utility::DisplayStdErrorDialog(
+                        tr("Cannot preserve the unchanged EPUB."), snapshot_error);
+                    return false;
+                }
+                if (update_current_filename) {
+                    m_SourceEpubSnapshot = EpubFileSnapshot::capture(fullfilepath);
+                    m_Book->SetModified(false);
+                    UpdateUiWithCurrentFile(fullfilepath);
+                }
+                ShowMessageOnStatusBar(tr("No changes to save."));
+                return true;
+            }
+
+            if (!m_SourceEpubSnapshot.matchesSource(&snapshot_error)) {
+                ShowMessageOnStatusBar();
+                Utility::DisplayStdErrorDialog(
+                    tr("The source EPUB changed outside Sigil-Enhanced. The file was not overwritten."),
+                    snapshot_error);
+                return false;
+            }
+        }
+
         QApplication::setOverrideCursor(Qt::WaitCursor);
 
         QList <HTMLResource *> broken_resources;
@@ -6452,6 +6487,7 @@ bool MainWindow::SaveFile(const QString &fullfilepath, bool update_current_filen
         if (update_current_filename) {
             m_Book->SetModified(false);
             UpdateUiWithCurrentFile(fullfilepath);
+            m_SourceEpubSnapshot = EpubFileSnapshot::capture(fullfilepath);
         }
 
         if (not_well_formed) {

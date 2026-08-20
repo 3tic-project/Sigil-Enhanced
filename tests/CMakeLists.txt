@@ -34,6 +34,28 @@ target_compile_features(checkpoint_identifier_test PRIVATE cxx_std_17)
 add_test(NAME checkpoint_identifier COMMAND checkpoint_identifier_test)
 set_tests_properties(checkpoint_identifier PROPERTIES TIMEOUT 30)
 
+add_executable(epub_file_snapshot_test
+    epub_file_snapshot_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.h
+)
+target_include_directories(epub_file_snapshot_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(epub_file_snapshot_test PRIVATE Qt6::Core)
+target_compile_features(epub_file_snapshot_test PRIVATE cxx_std_17)
+add_test(NAME epub_file_snapshot COMMAND epub_file_snapshot_test)
+set_tests_properties(epub_file_snapshot PROPERTIES TIMEOUT 30)
+
+add_executable(export_metadata_policy_test
+    export_metadata_policy_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Exporters/ExportMetadataPolicy.cpp
+    ${CMAKE_SOURCE_DIR}/src/Exporters/ExportMetadataPolicy.h
+)
+target_include_directories(export_metadata_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(export_metadata_policy_test PRIVATE Qt6::Core)
+target_compile_features(export_metadata_policy_test PRIVATE cxx_std_17)
+add_test(NAME export_metadata_policy COMMAND export_metadata_policy_test)
+set_tests_properties(export_metadata_policy PROPERTIES TIMEOUT 30)
+
 add_executable(regex_match_enumerator_test
     regex_match_enumerator_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp

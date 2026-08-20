@@ -386,6 +386,8 @@ set( WIDGET_FILES
 set( EXPORTER_FILES
     Exporters/ExportEPUB.cpp
     Exporters/ExportEPUB.h
+    Exporters/ExportMetadataPolicy.cpp
+    Exporters/ExportMetadataPolicy.h
     Exporters/Exporter.h
     Exporters/ExporterFactory.cpp
     Exporters/ExporterFactory.h
@@ -494,6 +496,8 @@ set( MISC_FILES
     Misc/SafeArchiveExtractor.h
     Misc/CheckpointIdentifier.cpp
     Misc/CheckpointIdentifier.h
+    Misc/EpubFileSnapshot.cpp
+    Misc/EpubFileSnapshot.h
     Misc/Utility.cpp
     Misc/UtilityExt.cpp
     Misc/Utility.h

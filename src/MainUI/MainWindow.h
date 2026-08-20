@@ -43,6 +43,7 @@
 #include "MainUI/TOCModel.h"
 #include "Parsers/CSSInfo.h"
 #include "Misc/PasteTarget.h"
+#include "Misc/EpubFileSnapshot.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/ValidationResult.h"
 #include "MiscEditors/ClipEditorModel.h"
@@ -952,6 +953,12 @@ private:
      * The name of the current file loaded.
      */
     QString m_CurrentFileName;
+
+    /**
+     * Identity of the clean EPUB loaded from disk. It permits a true no-op
+     * save and byte-identical Save As/Save a Copy without running exporters.
+     */
+    EpubFileSnapshot m_SourceEpubSnapshot;
 
     /**
      * The book currently being worked on.
