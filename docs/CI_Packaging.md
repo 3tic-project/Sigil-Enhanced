@@ -73,11 +73,11 @@ Useful references:
 ## Python Dependency Lock And Verification
 
 `src/Resource_Files/python_pkg/requirements-core.txt` is the canonical lock for
-the 40 platform-neutral distributions used by Sigil's bundled Python features.
+the 42 platform-neutral distributions used by Sigil's bundled Python features.
 It includes direct requirements and every platform-neutral transitive
 dependency, all with exact versions. `requirements-windows.txt` adds the locked
 Windows-only transitive dependencies `colorama==0.4.6` and `pywin32==312`.
-`winreqs.txt` contains that 42-distribution Windows runtime lock plus
+`winreqs.txt` contains that 44-distribution Windows runtime lock plus
 `PySide6==${QTVER}`. The CI helper lock at
 `.github/workflows/requirements.txt` contains the core set plus the Qt version
 selected by that workflow.

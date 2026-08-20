@@ -11,6 +11,13 @@
 The complete GNU GPL version 3 text is distributed as the repository and
 application `COPYING.txt`.
 
+## Beautiful Soup 4.13.4 and Soup Sieve 2.7
+
+The isolated KFX runtime uses Beautiful Soup 4.13.4 and its Soup Sieve 2.7
+dependency for `lxml.html.soupparser` fallback parsing. Both are distributed
+under the MIT License. Their package metadata and license files are preserved
+in the synchronized application `python3lib` tree.
+
 ## typing_extensions 4.13.2
 
 The bundled `kfxlib/calibre-plugin-modules/typing_extensions.py` module is

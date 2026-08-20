@@ -53,6 +53,8 @@ class PythonPackageSyncTest(unittest.TestCase):
         self.assertEqual(appimage[-1], "PySide6==6.10.2")
         self.assertIn("mcp==1.28.1", core)
         self.assertIn("cryptography==48.0.0", core)
+        self.assertIn("beautifulsoup4==4.13.4", core)
+        self.assertIn("soupsieve==2.7", core)
         self.assertTrue(all("==" in requirement for requirement in core))
 
     def test_windows_package_sync_preserves_the_curated_pyside_runtime(self):
