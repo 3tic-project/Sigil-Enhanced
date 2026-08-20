@@ -671,6 +671,8 @@ set( VIEW_EDITOR_FILES
     ViewEditors/Overlay.h
     ViewEditors/PreviewLayoutMetrics.cpp
     ViewEditors/PreviewLayoutMetrics.h
+    ViewEditors/PreviewMetricsJavascript.cpp
+    ViewEditors/PreviewMetricsJavascript.h
     ViewEditors/PreviewMetricsProbe.cpp
     ViewEditors/PreviewMetricsProbe.h
     ViewEditors/XhtmlFormatEditor.cpp

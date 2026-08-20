@@ -175,6 +175,7 @@ ResourceObjects 或 modified-state 接口：
 | `BaselineGridOverlay` | 输入透明的 QPainter 屏幕层 |
 | `BaselineGridSettingsStore` | `preview/visual_aids` 用户设置 |
 | `PreviewMetricsProbe` | 异步 DOM/computed-style 查询和旧请求淘汰 |
+| `PreviewMetricsJavascript` | 可独立集成测试的 WebEngine 查询协议 |
 | `PreviewLayoutMetrics` | 结构化解析结果，不包含 UI 拼接文本 |
 | `VisualTypesettingController` | 动作、会话状态、网格、探针和状态栏协调 |
 | `BaselineGridSettingsDialog` | 完整参数设置、当前元素取样和恢复默认值 |
@@ -189,7 +190,7 @@ Developer Tools。
 
 ```sh
 ctest --test-dir cmake-build-debug \
-  -R '^(baseline_grid_model|baseline_grid_overlay|visual_typesetting_aids_contract)$' \
+  -R '^(baseline_grid_model|baseline_grid_overlay|preview_metrics_webengine|visual_typesetting_aids_contract)$' \
   --output-on-failure
 ```
 
@@ -198,6 +199,7 @@ ctest --test-dir cmake-build-debug \
 - 正负滚动相位、zoom 只乘一次、主线索引和低缩放阈值；
 - 固定 em 换算、设置往返和损坏设置恢复；
 - `line-height: normal` 协议与数字 line-height；
+- 真实 WebEngine 页面中的 computed font/line-height/margin/padding 与 body 原点；
 - Overlay 尺寸同步、鼠标透明、Clean Preview 恢复；
 - 菜单、快捷键、持久／会话状态边界、异步探针和非侵入依赖合同；
 - 简体中文、繁体中文、日文翻译目录完整性。
@@ -205,4 +207,3 @@ ctest --test-dir cmake-build-debug \
 跨平台发布前仍应按照原 PRD 的 Windows/macOS/Linux、DPI、Preview Zoom 与
 横排／竖排 XHTML 矩阵执行人工视觉检查；自动测试证明坐标公式和组件合同，不能
 替代所有 GPU/WebEngine 组合的目视确认。
-

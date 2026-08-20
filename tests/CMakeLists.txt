@@ -1,4 +1,4 @@
-find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Widgets Xml REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg WebEngineCore Widgets Xml REQUIRED)
 
 add_executable(baseline_grid_model_test
     baseline_grid_model_test.cpp
@@ -31,6 +31,27 @@ add_test(NAME baseline_grid_overlay COMMAND baseline_grid_overlay_test)
 set_tests_properties(baseline_grid_overlay PROPERTIES
     TIMEOUT 30
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
+add_executable(preview_metrics_webengine_test
+    preview_metrics_webengine_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewMetricsJavascript.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewMetricsJavascript.h
+)
+target_include_directories(preview_metrics_webengine_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(preview_metrics_webengine_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::WebEngineCore
+)
+target_compile_features(preview_metrics_webengine_test PRIVATE cxx_std_17)
+add_test(NAME preview_metrics_webengine COMMAND preview_metrics_webengine_test)
+set_tests_properties(preview_metrics_webengine PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --no-sandbox"
 )
 
 add_executable(tab_bar_middle_click_test

@@ -16,7 +16,7 @@ Sigil-Enhanced-2.8.5.E9
      - Dragging a tab between editor groups moves the same editor; Open/Move before a manual split opens the lower group.
 
    Build/Testing
-     - Added geometry, settings, metrics-protocol, overlay-lifecycle, UI-contract, and complete Simplified Chinese, Traditional Chinese, and Japanese coverage for Visual Typesetting Aids.
+     - Added geometry, settings, real-WebEngine computed-style, overlay-lifecycle, UI-contract, and complete Simplified Chinese, Traditional Chinese, and Japanese coverage for Visual Typesetting Aids.
      - Rebased on upstream Sigil 2.8.5 and synced all translations from Transifex, including a new Swedish catalog.
      - Extended CTest coverage for external Book Browser file drops, Preview DevTools docking, and split editor groups.
 

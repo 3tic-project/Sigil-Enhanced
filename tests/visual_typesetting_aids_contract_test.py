@@ -16,6 +16,7 @@ overlay = (repo / "src/ViewEditors/BaselineGridOverlay.cpp").read_text(encoding=
 overlay_base = (repo / "src/ViewEditors/Overlay.h").read_text(encoding="utf-8")
 store = (repo / "src/ViewEditors/BaselineGridSettingsStore.cpp").read_text(encoding="utf-8")
 probe = (repo / "src/ViewEditors/PreviewMetricsProbe.cpp").read_text(encoding="utf-8")
+probe_javascript = (repo / "src/ViewEditors/PreviewMetricsJavascript.cpp").read_text(encoding="utf-8")
 metrics = (repo / "src/ViewEditors/PreviewLayoutMetrics.cpp").read_text(encoding="utf-8")
 controller = (repo / "src/MainUI/VisualTypesettingController.cpp").read_text(encoding="utf-8")
 preview = (repo / "src/MainUI/PreviewWindow.cpp").read_text(encoding="utf-8")
@@ -88,11 +89,11 @@ for computed_property in (
     "writingMode",
     "display",
 ):
-    require(computed_property in probe, f"metrics probe omits {computed_property}")
+    require(computed_property in probe_javascript, f"metrics probe omits {computed_property}")
 require(
-    "lineHeight === 'normal'" in probe
+    "lineHeight === 'normal'" in probe_javascript
     and "lineHeightNormal" in metrics
-    and "1.2" not in probe,
+    and "1.2" not in probe_javascript,
     "line-height normal must not be replaced by an invented value",
 )
 require(
