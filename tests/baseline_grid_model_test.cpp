@@ -1,6 +1,11 @@
 #include "ViewEditors/BaselineGridModel.h"
+#include "ViewEditors/BaselineGridSettingsStore.h"
+#include "ViewEditors/PreviewLayoutMetrics.h"
 
 #include <QCoreApplication>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QVariantMap>
 
 #include <cmath>
 #include <iostream>
@@ -72,6 +77,73 @@ int main(int argc, char *argv[])
     okay &= expect(!settings.isValid(), "resolved steps below 0.25px must be rejected");
     okay &= expect(BaselineGridModel::linesForViewport(100.0, 0.0, 1.0, 0.0, settings).isEmpty(),
                    "invalid settings must never reach painting");
+
+    QTemporaryDir temporaryDirectory;
+    okay &= expect(temporaryDirectory.isValid(), "temporary settings directory must be available");
+    QSettings persisted(temporaryDirectory.filePath(QStringLiteral("visual-aids.ini")), QSettings::IniFormat);
+    BaselineGridSettings saved = BaselineGridSettings::defaults(false);
+    saved.enabled = true;
+    saved.metricsEnabled = true;
+    saved.unit = BaselineGridUnit::Em;
+    saved.step = 0.5;
+    saved.referenceFontPx = 18.0;
+    saved.origin = BaselineGridOrigin::BodyContentTop;
+    saved.offsetCssPx = 3.5;
+    saved.majorEvery = 4;
+    BaselineGridSettingsStore::save(persisted, saved);
+    persisted.sync();
+    const BaselineGridSettings restored = BaselineGridSettingsStore::load(persisted, false);
+    okay &= expect(restored.enabled && restored.metricsEnabled,
+                   "grid and metrics enabled states must persist independently");
+    okay &= expect(restored.unit == BaselineGridUnit::Em && near(restored.resolvedStepCssPx(), 9.0),
+                   "fixed em reference must round-trip through settings");
+    okay &= expect(restored.origin == BaselineGridOrigin::BodyContentTop
+                       && near(restored.offsetCssPx, 3.5) && restored.majorEvery == 4,
+                   "origin, offset, and major cadence must persist");
+
+    persisted.beginGroup(QStringLiteral("preview/visual_aids"));
+    persisted.setValue(QStringLiteral("grid_unit"), QStringLiteral("em"));
+    persisted.setValue(QStringLiteral("grid_step"), 1000.0);
+    persisted.setValue(QStringLiteral("grid_reference_font_px"), 1000.0);
+    persisted.endGroup();
+    const BaselineGridSettings recovered = BaselineGridSettingsStore::load(persisted, false);
+    okay &= expect(recovered.isValid() && recovered.unit == BaselineGridUnit::Pixels
+                       && near(recovered.resolvedStepCssPx(), 8.0),
+                   "corrupt resolved em settings must recover to a complete valid default");
+
+    QVariantMap style;
+    style.insert(QStringLiteral("fontSizePx"), 16.0);
+    style.insert(QStringLiteral("lineHeightPx"), QVariant());
+    style.insert(QStringLiteral("lineHeightNormal"), true);
+    style.insert(QStringLiteral("marginBlockStartPx"), 0.0);
+    style.insert(QStringLiteral("marginBlockEndPx"), 8.0);
+    style.insert(QStringLiteral("paddingBlockStartPx"), 0.0);
+    style.insert(QStringLiteral("paddingBlockEndPx"), 0.0);
+    style.insert(QStringLiteral("display"), QStringLiteral("block"));
+    style.insert(QStringLiteral("writingMode"), QStringLiteral("horizontal-tb"));
+    QVariantMap rect;
+    rect.insert(QStringLiteral("x"), 10.0);
+    rect.insert(QStringLiteral("y"), 20.0);
+    rect.insert(QStringLiteral("width"), 300.0);
+    rect.insert(QStringLiteral("height"), 48.0);
+    QVariantMap result;
+    result.insert(QStringLiteral("tag"), QStringLiteral("P"));
+    result.insert(QStringLiteral("path"), QStringLiteral("html>body>p"));
+    result.insert(QStringLiteral("style"), style);
+    result.insert(QStringLiteral("rect"), rect);
+    const PreviewLayoutMetrics normalMetrics = PreviewLayoutMetrics::fromVariant(result);
+    okay &= expect(normalMetrics.valid && normalMetrics.tagName == QStringLiteral("p"),
+                   "computed metrics protocol must parse a layout element");
+    okay &= expect(normalMetrics.lineHeightNormal && !normalMetrics.hasLineHeightPx,
+                   "line-height normal must remain semantic rather than inventing a pixel value");
+
+    style.insert(QStringLiteral("lineHeightNormal"), false);
+    style.insert(QStringLiteral("lineHeightPx"), 24.0);
+    result.insert(QStringLiteral("style"), style);
+    const PreviewLayoutMetrics numericMetrics = PreviewLayoutMetrics::fromVariant(result);
+    okay &= expect(numericMetrics.valid && numericMetrics.hasLineHeightPx
+                       && near(numericMetrics.lineHeightPx, 24.0),
+                   "numeric computed line-height must preserve the browser result");
 
     return okay ? 0 : 1;
 }

@@ -58,6 +58,7 @@
 #include <QWindowStateChangeEvent>
 #include <QStyleFactory>
 #include <QStyle>
+#include <QSizePolicy>
 #include <QDirIterator>
 #include <QDebug>
 #include <QReadLocker>
@@ -305,6 +306,9 @@ MainWindow::MainWindow(const QString &openfilepath,
     m_JoinEditorGroupsAction(NULL),
     m_FocusUpperEditorGroupAction(NULL),
     m_FocusLowerEditorGroupAction(NULL),
+    m_lbCursorPosition(NULL),
+    m_lbLayoutMetrics(NULL),
+    m_lbDropZone(NULL),
     m_slZoomSlider(NULL),
     m_lbZoomLabel(NULL),
     c_SaveFilters(GetSaveFiltersMap()),
@@ -2152,6 +2156,18 @@ void MainWindow::ShowMessageOnStatusBar(const QString &message,
         if (m_UsingAutomate) m_AutomateLog << message;
         statusBar()->showMessage(message, millisecond_duration);
     }
+}
+
+void MainWindow::UpdateLayoutMetricsLabel(const QString &text)
+{
+    if (!m_lbLayoutMetrics) {
+        return;
+    }
+    m_lbLayoutMetrics->setText(text);
+    m_lbLayoutMetrics->setToolTip(text.isEmpty() ? QString() :
+        text + QStringLiteral("\n")
+            + tr("Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding."));
+    m_lbLayoutMetrics->setVisible(!text.isEmpty());
 }
 
 void MainWindow::ShowLastOpenFileWarnings()
@@ -4028,6 +4044,9 @@ void MainWindow::ApplicationPaletteChanged()
     // css.  Same for our Preview Window.
     DBG qDebug() << "ApplicationPaletteChanged";
     m_TabManager->PerformThemeChangeRefresh();
+    if (m_PreviewWindow) {
+        m_PreviewWindow->RefreshVisualTypesettingTheme();
+    }
     UpdatePreview();
 }
 
@@ -7032,6 +7051,9 @@ void MainWindow::ExtendUI()
     if (m_PreviewWindow && m_PreviewWindow->DetachAction()) {
         ui.menuView->addAction(m_PreviewWindow->DetachAction());
     }
+    if (m_PreviewWindow && m_PreviewWindow->VisualTypesettingMenu()) {
+        ui.menuView->addMenu(m_PreviewWindow->VisualTypesettingMenu());
+    }
     QMenu *editor_layout = ui.menuView->addMenu(tr("Editor Layout"));
     m_SplitEditorDownAction = new QAction(tr("Split Editor Down"), this);
     m_SplitEditorDownAction->setObjectName(QStringLiteral("actionSplitEditorDown"));
@@ -7087,6 +7109,14 @@ void MainWindow::ExtendUI()
     ui.menuToolbars->addAction(ui.toolBarIndexActions->toggleViewAction());
     ui.menuToolbars->addAction(ui.toolBarAutomate->toggleViewAction());
     ui.toolBarClips->setVisible(false);
+    m_lbLayoutMetrics = new QLabel(QString(), statusBar());
+    m_lbLayoutMetrics->setObjectName(QStringLiteral("layoutMetricsStatus"));
+    m_lbLayoutMetrics->setAccessibleName(tr("Current layout metrics"));
+    m_lbLayoutMetrics->setToolTip(
+        tr("Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding."));
+    m_lbLayoutMetrics->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    m_lbLayoutMetrics->hide();
+    statusBar()->addPermanentWidget(m_lbLayoutMetrics, 1);
     m_lbCursorPosition = new QLabel(QString(""), statusBar());
     statusBar()->addPermanentWidget(m_lbCursorPosition);
     UpdateCursorPositionLabel(0, 0, -1);
@@ -7259,6 +7289,17 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, m_Clips->toggleViewAction(), "MainWindow.ClipsWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->toggleViewAction(), "MainWindow.PreviewWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_DeveloperToolsAction, "MainWindow.DeveloperTools");
+    KeyboardShortcutManager::instance().registerAction(
+        this, m_PreviewWindow->ShowBaselineGridAction(), "MainWindow.ShowBaselineGrid");
+    KeyboardShortcutManager::instance().registerAction(
+        this, m_PreviewWindow->ShowLayoutMetricsAction(), "MainWindow.ShowLayoutMetrics");
+    KeyboardShortcutManager::instance().registerAction(
+        this, m_PreviewWindow->UseCurrentElementAsGridReferenceAction(),
+        "MainWindow.UseCurrentElementAsGridReference");
+    KeyboardShortcutManager::instance().registerAction(
+        this, m_PreviewWindow->BaselineGridSettingsAction(), "MainWindow.BaselineGridSettings");
+    KeyboardShortcutManager::instance().registerAction(
+        this, m_PreviewWindow->CleanPreviewAction(), "MainWindow.CleanPreview");
     if (m_PreviewWindow && m_PreviewWindow->DetachAction()) {
         KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->DetachAction(), "MainWindow.DetachDeveloperTools");
     }
@@ -7492,6 +7533,10 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_PreviewWindow, SIGNAL(RequestPreviewReload()),       this, SLOT(UpdatePreview()));
     connect(m_PreviewWindow, SIGNAL(OpenUrlRequest(const QUrl &)), this, SLOT(OpenUrl(const QUrl &)));
     connect(m_PreviewWindow, SIGNAL(ScrollToFragmentRequest(const QString &)), this, SLOT(ScrollCVToFragment(const QString &)));
+    connect(m_PreviewWindow, SIGNAL(LayoutMetricsTextChanged(const QString &)),
+            this, SLOT(UpdateLayoutMetricsLabel(const QString &)));
+    connect(m_PreviewWindow, SIGNAL(ShowStatusMessageRequest(const QString &)),
+            this, SLOT(ShowMessageOnStatusBar(const QString &)));
     connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)), this, SLOT(ApplicationFocusChanged(QWidget *, QWidget *)));
     MainApplication *mainApplication = qobject_cast<MainApplication *>(qApp);
     connect(mainApplication, SIGNAL(applicationPaletteChanged()), this, SLOT(ApplicationPaletteChanged()));

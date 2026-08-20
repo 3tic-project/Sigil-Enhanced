@@ -46,6 +46,8 @@ class QToolButton;
 class QWidget;
 class QFocusFrame;
 class QSplitter;
+class QMenu;
+class VisualTypesettingController;
 
 class PreviewWindow : public QDockWidget
 {
@@ -67,6 +69,13 @@ public:
     void SetDevToolsVisible(bool visible);
     bool IsDevToolsDetached() const;
     QAction *DetachAction() const;
+    QMenu *VisualTypesettingMenu() const;
+    QAction *ShowBaselineGridAction() const;
+    QAction *ShowLayoutMetricsAction() const;
+    QAction *UseCurrentElementAsGridReferenceAction() const;
+    QAction *BaselineGridSettingsAction() const;
+    QAction *CleanPreviewAction() const;
+    void RefreshVisualTypesettingTheme();
     void SaveLayoutSettings();
 
 public slots:
@@ -104,6 +113,8 @@ signals:
     void RequestPreviewReload();
     void DevToolsVisibilityChanged(bool visible);
     void DevToolsDetachedChanged(bool detached);
+    void LayoutMetricsTextChanged(const QString &text);
+    void ShowStatusMessageRequest(const QString &message);
 
     /**
      * Emitted whenever Preview wants to open an URL.
@@ -160,6 +171,7 @@ private:
     OverlayHelperWidget *m_overlayBase;
 
     ViewPreview *m_Preview;
+    VisualTypesettingController *m_VisualTypesetting;
     QWidget *m_DevToolsPane;
     QWidget *m_DevToolsWindow;
     Inspector *m_Inspector;

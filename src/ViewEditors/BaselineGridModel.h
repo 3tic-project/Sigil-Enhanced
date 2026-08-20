@@ -43,6 +43,7 @@ struct BaselineGridSettings
     qreal minorOpacity = 0.18;
     QColor majorColor = QColor(QStringLiteral("#364fc7"));
     qreal majorOpacity = 0.34;
+    bool colorsCustomized = false;
     int minimumZoomPercent = 60;
 
     qreal resolvedStepCssPx() const;

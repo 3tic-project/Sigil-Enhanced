@@ -94,6 +94,10 @@ public:
     QList<ElementIndex> ConvertQWebPathToHierarchy(const QString & webpath) const;
     QString ConvertHierarchyToQWebPath(const QList<ElementIndex>& hierarchy);
 
+    // Returns an ApplicationWorld expression resolving a CodeView hierarchy
+    // to its corresponding Preview DOM element.
+    QString ElementSelectingJavascript(const QList<ElementIndex> &hierarchy) const;
+
     // inherited
     void StoreCaretLocationUpdate(const QList<ElementIndex> &hierarchy);
 

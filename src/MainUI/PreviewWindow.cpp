@@ -47,6 +47,7 @@
 #include <QSignalBlocker>
 
 #include "MainUI/PreviewWindow.h"
+#include "MainUI/VisualTypesettingController.h"
 #include "Dialogs/Inspector.h"
 #include "Parsers/GumboInterface.h"
 #include "Misc/SleepFunctions.h"
@@ -90,6 +91,7 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     m_buttons(new QHBoxLayout()),
     m_overlayBase(new OverlayHelperWidget(this)),
     m_Preview(new ViewPreview(m_overlayBase)),
+    m_VisualTypesetting(new VisualTypesettingController(m_Preview, m_overlayBase, this, this)),
     m_DevToolsPane(0),
     m_DevToolsWindow(0),
     m_Inspector(new Inspector(this)),
@@ -283,8 +285,11 @@ void PreviewWindow::SetupView()
     // with a single pixel margin to use as focus indicator
     QVBoxLayout * wl = new QVBoxLayout(m_wrapper);
     wl->setContentsMargins(0,0,0,0);
-    wl->addWidget(m_Preview);
+    // Keep Preview and its screen-only overlays as siblings in one helper
+    // so overlays survive WebEngine resize/reparent operations.
+    wl->addWidget(m_overlayBase);
     m_wrapper->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_overlayBase->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     m_Preview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     m_inspectAction = new QAction(QIcon(":/main/inspect.svg"),"", this);
@@ -576,6 +581,9 @@ void PreviewWindow::SetCaretLocation(const QList<ElementIndex> &loc)
         DBG qDebug() << "name: " << ei.name << " index: " << ei.index;
     }
     m_location = hierarchy;
+    if (m_VisualTypesetting) {
+        m_VisualTypesetting->setCurrentElement(m_location);
+    }
     // Any Zoom must come *before* we do any caret updating
     // *BUT* Zoom() does not complete instantaneously/synchronously
 }
@@ -746,6 +754,43 @@ bool PreviewWindow::IsDevToolsDetached() const
 QAction *PreviewWindow::DetachAction() const
 {
     return m_detachAction;
+}
+
+QMenu *PreviewWindow::VisualTypesettingMenu() const
+{
+    return m_VisualTypesetting ? m_VisualTypesetting->menu() : nullptr;
+}
+
+QAction *PreviewWindow::ShowBaselineGridAction() const
+{
+    return m_VisualTypesetting ? m_VisualTypesetting->showGridAction() : nullptr;
+}
+
+QAction *PreviewWindow::ShowLayoutMetricsAction() const
+{
+    return m_VisualTypesetting ? m_VisualTypesetting->showMetricsAction() : nullptr;
+}
+
+QAction *PreviewWindow::UseCurrentElementAsGridReferenceAction() const
+{
+    return m_VisualTypesetting ? m_VisualTypesetting->useCurrentElementAction() : nullptr;
+}
+
+QAction *PreviewWindow::BaselineGridSettingsAction() const
+{
+    return m_VisualTypesetting ? m_VisualTypesetting->settingsAction() : nullptr;
+}
+
+QAction *PreviewWindow::CleanPreviewAction() const
+{
+    return m_VisualTypesetting ? m_VisualTypesetting->cleanPreviewAction() : nullptr;
+}
+
+void PreviewWindow::RefreshVisualTypesettingTheme()
+{
+    if (m_VisualTypesetting) {
+        m_VisualTypesetting->refreshThemeDefaults();
+    }
 }
 
 void PreviewWindow::ApplyDevToolsSplitter()
@@ -956,6 +1001,8 @@ void PreviewWindow::ShowPreviewContextMenu(const QPoint &pos)
     if (!hoverurl.isEmpty()) {
         copy_link = menu.addAction(tr("Copy Link"));
     }
+    menu.addSeparator();
+    QAction *use_grid_reference = menu.addAction(tr("Use This Element as Grid Reference"));
     QAction *chosen = menu.exec(m_Preview->mapToGlobal(pos));
     if (chosen == inspect) {
         SetDevToolsVisible(true);
@@ -964,6 +1011,8 @@ void PreviewWindow::ShowPreviewContextMenu(const QPoint &pos)
         }
     } else if (copy_link && chosen == copy_link) {
         QApplication::clipboard()->setText(hoverurl);
+    } else if (chosen == use_grid_reference && m_VisualTypesetting) {
+        m_VisualTypesetting->useElementAtPreviewPosition(pos);
     }
 }
 
@@ -1045,6 +1094,10 @@ void PreviewWindow::ConnectSignalsToSlots()
     connect(m_WebViewPrinter, SIGNAL(printEnded()),         this, SLOT(PrintEnded()));
     connect(m_Preview,        SIGNAL(customContextMenuRequested(const QPoint &)),
             this,             SLOT(ShowPreviewContextMenu(const QPoint &)));
+    connect(m_VisualTypesetting, &VisualTypesettingController::metricsTextChanged,
+            this, &PreviewWindow::LayoutMetricsTextChanged);
+    connect(m_VisualTypesetting, &VisualTypesettingController::notificationRequested,
+            this, &PreviewWindow::ShowStatusMessageRequest);
     connect(this,     SIGNAL(topLevelChanged(bool)),        this, SLOT(previewFloated(bool)));
 }
 

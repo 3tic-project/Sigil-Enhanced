@@ -393,6 +393,8 @@ private slots:
 
     void ShowMessageOnStatusBar(const QString &message = "", int millisecond_duration = STATUSBAR_MSG_DISPLAY_TIME);
 
+    void UpdateLayoutMetricsLabel(const QString &text);
+
     void ShowLastOpenFileWarnings();
 
     /**
@@ -1036,6 +1038,8 @@ private:
      * Line and column.
      */
     QLabel *m_lbCursorPosition;
+
+    QLabel *m_lbLayoutMetrics;
 
     FileDropZone * m_lbDropZone;
 

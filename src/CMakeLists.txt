@@ -163,6 +163,8 @@ set( RESOURCE_OBJECT_FILES
 set( DIALOG_FILES
     Dialogs/About.cpp
     Dialogs/About.h
+    Dialogs/BaselineGridSettingsDialog.cpp
+    Dialogs/BaselineGridSettingsDialog.h
     Dialogs/AddClips.cpp
     Dialogs/AddClips.h
     Dialogs/AddRoles.cpp
@@ -647,6 +649,8 @@ set( VIEW_EDITOR_FILES
     ViewEditors/BaselineGridModel.h
     ViewEditors/BaselineGridOverlay.cpp
     ViewEditors/BaselineGridOverlay.h
+    ViewEditors/BaselineGridSettingsStore.cpp
+    ViewEditors/BaselineGridSettingsStore.h
     ViewEditors/CodeViewEditor.cpp
     ViewEditors/CodeViewEditorExt.cpp
     ViewEditors/CodeViewEditor.h
@@ -665,6 +669,10 @@ set( VIEW_EDITOR_FILES
     ViewEditors/ViewEditor.h
     ViewEditors/Viewer.h
     ViewEditors/Overlay.h
+    ViewEditors/PreviewLayoutMetrics.cpp
+    ViewEditors/PreviewLayoutMetrics.h
+    ViewEditors/PreviewMetricsProbe.cpp
+    ViewEditors/PreviewMetricsProbe.h
     ViewEditors/XhtmlFormatEditor.cpp
     ViewEditors/XhtmlFormatEditor.h
      )
@@ -703,6 +711,8 @@ set( MAINUI_FILES
     MainUI/ValidationResultsView.cpp
     MainUI/ValidationResultsViewExt.cpp
     MainUI/ValidationResultsView.h
+    MainUI/VisualTypesettingController.cpp
+    MainUI/VisualTypesettingController.h
     )
 
 set( TAB_FILES

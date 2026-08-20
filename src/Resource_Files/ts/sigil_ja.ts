@@ -15758,6 +15758,14 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <source>The EPUB was saved, but the converter reported %1 warning(s).</source>
         <translation>EPUB は保存されましたが、変換器から %1 件の警告が報告されました。</translation>
     </message>
+    <message>
+        <source>Current layout metrics</source>
+        <translation>現在のレイアウト計測値</translation>
+    </message>
+    <message>
+        <source>Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding.</source>
+        <translation>プレビューの計算値です。MBS/MBE はブロック方向の前後マージン、PBS/PBE は前後パディングを示します。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -21119,6 +21127,10 @@ Entities can be separated by lines, commas, or spaces.</source>
         <location filename="../../MainUI/PreviewWindow.cpp" line="306"/>
         <source>Print Preview View</source>
         <translation>印刷プレビューの表示</translation>
+    </message>
+    <message>
+        <source>Use This Element as Grid Reference</source>
+        <translation>この要素をグリッドの文字サイズ基準に使用</translation>
     </message>
 </context>
 <context>
@@ -26779,5 +26791,66 @@ Continue using the requested filename?</source>
 <message><source>The book changed while the recipe was running; the staged result was discarded.</source><translation>レシピの実行中にブックが切り替わったため、ステージ済み結果を破棄しました。</translation></message>
 <message><source>This result refers to a resource that is no longer available.</source><translation>この結果が参照するリソースは利用できなくなりました。</translation></message>
 <message><source>The resource changed after this report was created; opening the nearest recorded line without highlighting.</source><translation>このレポートの作成後にリソースが変更されました。強調表示せず、記録された最寄りの行を開きます。</translation></message>
+</context>
+<context>
+    <name>BaselineGridSettingsDialog</name>
+    <message><source>Show baseline grid</source><translation>ベースライングリッドを表示</translation></message>
+    <message><source>Show layout metrics</source><translation>レイアウト計測値を表示</translation></message>
+    <message><source>Use Current Element</source><translation>現在の要素を使用</translation></message>
+    <message><source>Baseline / Rhythm Grid</source><translation>ベースライン／リズムグリッド</translation></message>
+    <message><source>Pixels (px)</source><translation>ピクセル（px）</translation></message>
+    <message><source>Fixed reference em</source><translation>固定参照 em</translation></message>
+    <message><source>Document Top</source><translation>文書の先頭</translation></message>
+    <message><source>Body Content Top</source><translation>本文コンテンツの先頭</translation></message>
+    <message><source> px</source><translation> px</translation></message>
+    <message><source>%</source><translation>%</translation></message>
+    <message><source>Unit:</source><translation>単位：</translation></message>
+    <message><source>Grid step:</source><translation>グリッド間隔：</translation></message>
+    <message><source>Reference font size:</source><translation>参照文字サイズ：</translation></message>
+    <message><source>Resolved step:</source><translation>換算後の間隔：</translation></message>
+    <message><source>Grid origin:</source><translation>グリッド原点：</translation></message>
+    <message><source>Grid offset:</source><translation>グリッドオフセット：</translation></message>
+    <message><source>Major line every:</source><translation>主線の間隔：</translation></message>
+    <message><source>Geometry</source><translation>ジオメトリ</translation></message>
+    <message><source>Minor line color:</source><translation>補助線の色：</translation></message>
+    <message><source>Minor line opacity:</source><translation>補助線の不透明度：</translation></message>
+    <message><source>Major line color:</source><translation>主線の色：</translation></message>
+    <message><source>Major line opacity:</source><translation>主線の不透明度：</translation></message>
+    <message><source>Minimum zoom for minor lines:</source><translation>補助線を表示する最小ズーム：</translation></message>
+    <message><source>Appearance</source><translation>外観</translation></message>
+    <message><source>Invalid Grid Settings</source><translation>無効なグリッド設定</translation></message>
+    <message><source>The resolved grid step must be between 0.25 px and 1000 px.</source><translation>換算後のグリッド間隔は 0.25 px から 1000 px の範囲にしてください。</translation></message>
+    <message><source>Choose Minor Grid Color</source><translation>補助線の色を選択</translation></message>
+    <message><source>Choose Major Grid Color</source><translation>主線の色を選択</translation></message>
+    <message><source>%1 CSS px</source><translation>%1 CSS px</translation></message>
+    <message><source>Grid color %1</source><translation>グリッドの色 %1</translation></message>
+</context>
+<context>
+    <name>VisualTypesettingController</name>
+    <message><source>Visual Typesetting Aids</source><translation>組版視覚補助</translation></message>
+    <message><source>Show Baseline Grid</source><translation>ベースライングリッドを表示</translation></message>
+    <message><source>Show Layout Metrics</source><translation>レイアウト計測値を表示</translation></message>
+    <message><source>Use Current Element as Grid Reference</source><translation>現在の要素をグリッドの文字サイズ基準に使用</translation></message>
+    <message><source>Baseline Grid Settings…</source><translation>ベースライングリッド設定…</translation></message>
+    <message><source>Clean Preview</source><translation>クリーンプレビュー</translation></message>
+    <message><source>Show a non-exported rhythm grid anchored to the Preview document.</source><translation>プレビュー文書に固定され、書き出されないリズムグリッドを表示します。</translation></message>
+    <message><source>Show computed typography and spacing for the current element.</source><translation>現在の要素について計算済みの文字組みと間隔を表示します。</translation></message>
+    <message><source>Temporarily hide all visual typesetting aids.</source><translation>すべての組版視覚補助を一時的に隠します。</translation></message>
+    <message><source>No current Preview element is available for grid calibration.</source><translation>グリッドの調整に使用できる現在のプレビュー要素がありません。</translation></message>
+    <message><source>Grid reference font set to %1 px.</source><translation>グリッドの参照文字サイズを %1 px に設定しました。</translation></message>
+    <message><source>The current element&apos;s font size could not be measured.</source><translation>現在の要素の文字サイズを計測できませんでした。</translation></message>
+    <message><source>Horizontal Grid</source><translation>水平参照グリッド</translation></message>
+    <message><source>Grid</source><translation>グリッド</translation></message>
+    <message><source>%1 %2px (%3em @ %4px)</source><translation>%1 %2px（%3em @ %4px）</translation></message>
+    <message><source>%1 %2px</source><translation>%1 %2px</translation></message>
+    <message><source>Font %1px</source><translation>文字サイズ %1px</translation></message>
+    <message><source>LH normal</source><translation>行の高さ normal</translation></message>
+    <message><source>LH %1</source><translation>行の高さ %1</translation></message>
+    <message><source>MBS %1</source><translation>ブロック前マージン %1</translation></message>
+    <message><source>MBE %1</source><translation>ブロック後マージン %1</translation></message>
+    <message><source>PBS %1</source><translation>ブロック前パディング %1</translation></message>
+    <message><source>PBE %1</source><translation>ブロック後パディング %1</translation></message>
+    <message><source>WM %1</source><translation>書字方向 %1</translation></message>
+    <message><source>Layout metrics unavailable</source><translation>レイアウト計測値を取得できません</translation></message>
 </context>
 </TS>

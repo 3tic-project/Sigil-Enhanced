@@ -4,12 +4,34 @@ add_executable(baseline_grid_model_test
     baseline_grid_model_test.cpp
     ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.cpp
     ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridSettingsStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridSettingsStore.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.h
 )
 target_include_directories(baseline_grid_model_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(baseline_grid_model_test PRIVATE Qt6::Core Qt6::Gui)
 target_compile_features(baseline_grid_model_test PRIVATE cxx_std_17)
 add_test(NAME baseline_grid_model COMMAND baseline_grid_model_test)
 set_tests_properties(baseline_grid_model PROPERTIES TIMEOUT 30)
+
+add_executable(baseline_grid_overlay_test
+    baseline_grid_overlay_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridOverlay.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridOverlay.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/Overlay.h
+)
+target_include_directories(baseline_grid_overlay_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(baseline_grid_overlay_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(baseline_grid_overlay_test PRIVATE cxx_std_17)
+set_target_properties(baseline_grid_overlay_test PROPERTIES AUTOMOC ON)
+add_test(NAME baseline_grid_overlay COMMAND baseline_grid_overlay_test)
+set_tests_properties(baseline_grid_overlay PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
 
 add_executable(tab_bar_middle_click_test
     tab_bar_middle_click_test.cpp
@@ -552,6 +574,13 @@ add_test(NAME preview_devtools_dock_contract
             ${CMAKE_SOURCE_DIR}
 )
 set_tests_properties(preview_devtools_dock_contract PROPERTIES TIMEOUT 30)
+
+add_test(NAME visual_typesetting_aids_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/visual_typesetting_aids_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(visual_typesetting_aids_contract PROPERTIES TIMEOUT 30)
 
 add_test(NAME tab_group_contract
     COMMAND ${Python3_EXECUTABLE}

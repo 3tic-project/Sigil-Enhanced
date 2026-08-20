@@ -15753,6 +15753,14 @@ EPUB %2 / 語言 [%3] / 閱讀方向 %4
         <source>The EPUB was saved, but the converter reported %1 warning(s).</source>
         <translation>EPUB 已儲存，但轉換器回報了 %1 條警告。</translation>
     </message>
+    <message>
+        <source>Current layout metrics</source>
+        <translation>目前排版度量</translation>
+    </message>
+    <message>
+        <source>Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding.</source>
+        <translation>預覽中的計算值。MBS/MBE 表示區塊起始／結束外距；PBS/PBE 表示區塊起始／結束內距。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -21114,6 +21122,10 @@ Entities can be separated by lines, commas, or spaces.</source>
         <location filename="../../MainUI/PreviewWindow.cpp" line="306"/>
         <source>Print Preview View</source>
         <translation>列印預覽檢視</translation>
+    </message>
+    <message>
+        <source>Use This Element as Grid Reference</source>
+        <translation>以此元素作為網格字級基準</translation>
     </message>
 </context>
 <context>
@@ -26764,5 +26776,66 @@ Continue using the requested filename?</source>
 <message><source>The book changed while the recipe was running; the staged result was discarded.</source><translation>方案執行期間書籍已切換；暫存結果已捨棄。</translation></message>
 <message><source>This result refers to a resource that is no longer available.</source><translation>此結果參照的資源已無法使用。</translation></message>
 <message><source>The resource changed after this report was created; opening the nearest recorded line without highlighting.</source><translation>此報告建立後資源已變更；將開啟最接近的記錄行，但不反白顯示。</translation></message>
+</context>
+<context>
+    <name>BaselineGridSettingsDialog</name>
+    <message><source>Show baseline grid</source><translation>顯示基線網格</translation></message>
+    <message><source>Show layout metrics</source><translation>顯示排版度量</translation></message>
+    <message><source>Use Current Element</source><translation>使用目前元素</translation></message>
+    <message><source>Baseline / Rhythm Grid</source><translation>基線／節奏網格</translation></message>
+    <message><source>Pixels (px)</source><translation>像素（px）</translation></message>
+    <message><source>Fixed reference em</source><translation>固定參考 em</translation></message>
+    <message><source>Document Top</source><translation>文件頂端</translation></message>
+    <message><source>Body Content Top</source><translation>正文內容頂端</translation></message>
+    <message><source> px</source><translation> px</translation></message>
+    <message><source>%</source><translation>%</translation></message>
+    <message><source>Unit:</source><translation>單位：</translation></message>
+    <message><source>Grid step:</source><translation>網格步長：</translation></message>
+    <message><source>Reference font size:</source><translation>參考字級：</translation></message>
+    <message><source>Resolved step:</source><translation>換算步長：</translation></message>
+    <message><source>Grid origin:</source><translation>網格原點：</translation></message>
+    <message><source>Grid offset:</source><translation>網格偏移：</translation></message>
+    <message><source>Major line every:</source><translation>主網格線間隔：</translation></message>
+    <message><source>Geometry</source><translation>幾何</translation></message>
+    <message><source>Minor line color:</source><translation>次網格線色彩：</translation></message>
+    <message><source>Minor line opacity:</source><translation>次網格線不透明度：</translation></message>
+    <message><source>Major line color:</source><translation>主網格線色彩：</translation></message>
+    <message><source>Major line opacity:</source><translation>主網格線不透明度：</translation></message>
+    <message><source>Minimum zoom for minor lines:</source><translation>顯示次網格線的最小縮放：</translation></message>
+    <message><source>Appearance</source><translation>外觀</translation></message>
+    <message><source>Invalid Grid Settings</source><translation>無效的網格設定</translation></message>
+    <message><source>The resolved grid step must be between 0.25 px and 1000 px.</source><translation>換算後的網格步長必須介於 0.25 px 與 1000 px 之間。</translation></message>
+    <message><source>Choose Minor Grid Color</source><translation>選擇次網格線色彩</translation></message>
+    <message><source>Choose Major Grid Color</source><translation>選擇主網格線色彩</translation></message>
+    <message><source>%1 CSS px</source><translation>%1 CSS px</translation></message>
+    <message><source>Grid color %1</source><translation>網格色彩 %1</translation></message>
+</context>
+<context>
+    <name>VisualTypesettingController</name>
+    <message><source>Visual Typesetting Aids</source><translation>排版視覺輔助</translation></message>
+    <message><source>Show Baseline Grid</source><translation>顯示基線網格</translation></message>
+    <message><source>Show Layout Metrics</source><translation>顯示排版度量</translation></message>
+    <message><source>Use Current Element as Grid Reference</source><translation>以目前元素作為網格字級基準</translation></message>
+    <message><source>Baseline Grid Settings…</source><translation>基線網格設定…</translation></message>
+    <message><source>Clean Preview</source><translation>純淨預覽</translation></message>
+    <message><source>Show a non-exported rhythm grid anchored to the Preview document.</source><translation>顯示錨定至預覽文件且不會匯出的節奏網格。</translation></message>
+    <message><source>Show computed typography and spacing for the current element.</source><translation>顯示目前元素計算後的字級、行高與間距。</translation></message>
+    <message><source>Temporarily hide all visual typesetting aids.</source><translation>暫時隱藏所有排版視覺輔助。</translation></message>
+    <message><source>No current Preview element is available for grid calibration.</source><translation>目前沒有可用於校準網格的預覽元素。</translation></message>
+    <message><source>Grid reference font set to %1 px.</source><translation>網格參考字級已設為 %1 px。</translation></message>
+    <message><source>The current element&apos;s font size could not be measured.</source><translation>無法測量目前元素的字級。</translation></message>
+    <message><source>Horizontal Grid</source><translation>水平參考網格</translation></message>
+    <message><source>Grid</source><translation>網格</translation></message>
+    <message><source>%1 %2px (%3em @ %4px)</source><translation>%1 %2px（%3em @ %4px）</translation></message>
+    <message><source>%1 %2px</source><translation>%1 %2px</translation></message>
+    <message><source>Font %1px</source><translation>字級 %1px</translation></message>
+    <message><source>LH normal</source><translation>行高 normal</translation></message>
+    <message><source>LH %1</source><translation>行高 %1</translation></message>
+    <message><source>MBS %1</source><translation>區塊前距 %1</translation></message>
+    <message><source>MBE %1</source><translation>區塊後距 %1</translation></message>
+    <message><source>PBS %1</source><translation>區塊前內距 %1</translation></message>
+    <message><source>PBE %1</source><translation>區塊後內距 %1</translation></message>
+    <message><source>WM %1</source><translation>書寫模式 %1</translation></message>
+    <message><source>Layout metrics unavailable</source><translation>暫無排版度量</translation></message>
 </context>
 </TS>

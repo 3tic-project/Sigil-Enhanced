@@ -446,6 +446,11 @@ QString ViewPreview::ConvertHierarchyToQWebPath(const QList<ElementIndex>& hiera
     return pathparts.join(",");
 }
 
+QString ViewPreview::ElementSelectingJavascript(const QList<ElementIndex> &hierarchy) const
+{
+    return GetElementSelectingJS_NoTextNodes(hierarchy);
+}
+
 void ViewPreview::StoreCurrentCaretLocation()
 {
     // Only overwrite the current location stored if it is empty, in case we specifically
@@ -613,4 +618,3 @@ void ViewPreview::ConnectSignalsToSlots()
     connect(page()->profile(), SIGNAL(clearHttpCacheCompleted()), this, SLOT(ContinueCustomLoadAfterClear()));
 #endif
 }
-
