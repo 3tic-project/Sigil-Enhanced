@@ -260,6 +260,12 @@ KfxImportController::Result KfxImportController::convert(const QString& sourcePa
         }
     });
     QObject::connect(&progress, &QProgressDialog::canceled, &process, [&]() {
+        // QProgressDialog::close() emits canceled() on some Qt platforms. Once
+        // the worker has stopped, closing our own progress dialog must not turn
+        // an already completed conversion into a user cancellation.
+        if (process.state() == QProcess::NotRunning) {
+            return;
+        }
         result.cancelled = true;
         process.terminate();
         kill_timer.start(3000);

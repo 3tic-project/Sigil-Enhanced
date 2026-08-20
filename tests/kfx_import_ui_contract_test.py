@@ -73,3 +73,14 @@ require(
     and "EpubFileSnapshot::capture(result.outputPath)" in main_window_ext,
     "conversion must stage output before atomically copying it to Save As destinations",
 )
+cancel_handler = controller.index(
+    "QObject::connect(&progress, &QProgressDialog::canceled"
+)
+cancel_guard = controller.index(
+    "if (process.state() == QProcess::NotRunning)", cancel_handler
+)
+cancel_assignment = controller.index("result.cancelled = true", cancel_handler)
+require(
+    cancel_guard < cancel_assignment,
+    "programmatic progress-dialog close after worker completion must not report cancellation",
+)
