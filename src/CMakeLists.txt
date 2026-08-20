@@ -643,6 +643,10 @@ set( SPCRE_FILES
     )
 
 set( VIEW_EDITOR_FILES
+    ViewEditors/BaselineGridModel.cpp
+    ViewEditors/BaselineGridModel.h
+    ViewEditors/BaselineGridOverlay.cpp
+    ViewEditors/BaselineGridOverlay.h
     ViewEditors/CodeViewEditor.cpp
     ViewEditors/CodeViewEditorExt.cpp
     ViewEditors/CodeViewEditor.h

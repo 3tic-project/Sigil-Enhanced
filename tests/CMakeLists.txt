@@ -1,5 +1,16 @@
 find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Widgets Xml REQUIRED)
 
+add_executable(baseline_grid_model_test
+    baseline_grid_model_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.h
+)
+target_include_directories(baseline_grid_model_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(baseline_grid_model_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(baseline_grid_model_test PRIVATE cxx_std_17)
+add_test(NAME baseline_grid_model COMMAND baseline_grid_model_test)
+set_tests_properties(baseline_grid_model PROPERTIES TIMEOUT 30)
+
 add_executable(tab_bar_middle_click_test
     tab_bar_middle_click_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Tabs/TabBar.cpp
