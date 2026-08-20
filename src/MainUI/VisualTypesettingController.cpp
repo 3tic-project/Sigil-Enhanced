@@ -118,6 +118,12 @@ VisualTypesettingController::VisualTypesettingController(
     applySettings(m_settings, false);
 }
 
+VisualTypesettingController::~VisualTypesettingController()
+{
+    delete m_overlay;
+    m_overlay = nullptr;
+}
+
 QMenu *VisualTypesettingController::menu() const
 {
     return m_menu;

@@ -151,6 +151,11 @@ PreviewWindow::~PreviewWindow()
         m_Inspector->StopInspection();
     }
 
+    if (m_VisualTypesetting) {
+        delete m_VisualTypesetting;
+        m_VisualTypesetting = nullptr;
+    }
+
     if (m_Preview) {
         delete m_Preview;
         m_Preview = nullptr;

@@ -15,6 +15,7 @@
 
 #include <QObject>
 #include <QPointF>
+#include <QPointer>
 
 class ViewPreview;
 
@@ -39,7 +40,7 @@ private:
     void requestMetricsForSelector(const QString &selector);
     QString metricsJavascript(const QString &selector) const;
 
-    ViewPreview *m_preview;
+    QPointer<ViewPreview> m_preview;
     quint64 m_metricsGeneration = 0;
     quint64 m_originGeneration = 0;
 };

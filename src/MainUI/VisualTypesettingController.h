@@ -35,6 +35,7 @@ public:
                                 OverlayHelperWidget *overlayParent,
                                 QWidget *dialogParent,
                                 QObject *parent = nullptr);
+    ~VisualTypesettingController() override;
 
     QMenu *menu() const;
     QAction *showGridAction() const;
