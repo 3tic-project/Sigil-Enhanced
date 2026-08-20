@@ -833,13 +833,23 @@ worker 当前集中使用以下安全阈值：输入最大 2 GiB、ZIP 项最多
 `SIGIL_ENABLE_VERSION_META=1` 可对实际修改后的导出重新启用；旧的
 `SIGIL_DISABLE_VERSION_META` 仍具有更高优先级。
 
+KFX worker 以 Python 的 `-I -S` 模式通过内置 bootstrap 启动，模块根目录只
+来自应用包中的 `python3lib`；用户 `PYTHONPATH`、user site-packages 和插件
+偏好中的解释器不会覆盖转换依赖。正式 macOS 包使用完整随包
+`Python.framework`。未启用 `PKG_SYSTEM_PYTHON` 的 macOS Debug 构建默认在
+`Contents/python-runtime/bin/python3` 创建指向 CMake 所选 Python 的开发机
+链接，使解释器 ABI 与同步进应用包的原生扩展严格一致；该链接只用于本机调试，
+不属于可分发运行时，也不会占用正式 `Python.framework` 的目标路径。
+
 ### 19.2 自动化验证
 
 - `kfx_worker_test.py`：EPUB 输出门禁、压缩 mimetype、ZIP 路径穿越和
   JSON Lines 单行协议；
 - `kfx_import_protocol_test`：扩展名、建议文件名、协议版本、进度与结果解析；
 - `kfx_import_ui_contract`：单一菜单入口、两种输出方式、拖放路由、进程隔离
-  环境、临时交付和派生文档身份；
+  环境、Debug 内置运行入口、临时交付和派生文档身份；
+- `kfx_internal_runtime`：macOS Debug 应用内解释器入口及 Pillow、lxml、regex、
+  KFX 核心均从应用包 `python3lib` 加载；
 - `epub_file_snapshot_test`：来源身份、原子字节复制和外部变更检测；
 - `export_metadata_policy_test`：默认禁用版本元数据、显式 opt-in 和修改日期；
 - 简体中文、繁体中文、日文覆盖率测试及 `lrelease` 均要求零 unfinished。

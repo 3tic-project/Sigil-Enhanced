@@ -214,6 +214,7 @@ list( APPEND LIBS_TO_LINK Python3::Python )
 set( SIGIL_CORE_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-core.txt )
 set( SIGIL_WINDOWS_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-windows.txt )
 set( SIGIL_CORE_PYTHON_CACHE_DIR ${SIGIL_PYTHON_CACHE_DIR}/core )
+set_property( TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_DEPENDS ${SIGIL_CORE_PYTHON_REQUIREMENTS} )
 # QtUiTools needed for PySide plugins
 if ( APPLE )
     list( APPEND LIBS_TO_LINK Qt6::UiTools )
@@ -342,6 +343,26 @@ if( APPLE )
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp ${CMAKE_SOURCE_DIR}/src/Resource_Files/dictionaries/* ${WORK_DIR}/Sigil.app/Contents/hunspell_dictionaries )
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp -r ${CMAKE_SOURCE_DIR}/src/Resource_Files/plugin_launchers/python/* ${WORK_DIR}/Sigil.app/Contents/plugin_launchers/python )
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp -r ${CMAKE_SOURCE_DIR}/src/Resource_Files/python3lib/* ${WORK_DIR}/Sigil.app/Contents/python3lib )
+
+    # A normal macOS Debug build does not copy the release Python.framework.
+    # Give the KFX worker a dedicated in-bundle development entry, backed by
+    # the exact interpreter CMake selected, so native modules in python3lib
+    # cannot be loaded by an unrelated Python from preferences or PATH.
+    if ( NOT PKG_SYSTEM_PYTHON )
+        set( SIGIL_DEBUG_PYTHON_BIN
+             ${WORK_DIR}/Sigil.app/Contents/python-runtime/bin/python3 )
+        add_custom_command(
+            TARGET ${PROJECT_NAME}
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND}
+                    -DSIGIL_CONFIG=$<CONFIG>
+                    -DSIGIL_SOURCE_PYTHON=${Python3_EXECUTABLE}
+                    -DSIGIL_DESTINATION_PYTHON=${SIGIL_DEBUG_PYTHON_BIN}
+                    -P ${CMAKE_SOURCE_DIR}/ci_scripts/link_debug_python.cmake
+            COMMENT "Preparing the macOS Debug internal Python runtime entry"
+            VERBATIM
+        )
+    endif()
 
     if ( PKG_SYSTEM_PYTHON )
         set( PY_INTERP ${Python3_EXECUTABLE} )

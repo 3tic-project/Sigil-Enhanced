@@ -1,7 +1,9 @@
 import contextlib
 import io
 import json
+import os
 import pathlib
+import subprocess
 import tempfile
 import unittest
 import zipfile
@@ -41,6 +43,43 @@ def make_epub(path: pathlib.Path) -> None:
 
 
 class KfxWorkerTest(unittest.TestCase):
+    def test_isolated_bootstrap_ignores_pythonpath(self):
+        bootstrap = PYTHON_ROOT / "sigil_kfx_import" / "bootstrap.py"
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            source = root / "invalid.kfx"
+            source.write_bytes(b"not-kfx")
+            output = root / "output.epub"
+            poison = root / "poison"
+            poison.mkdir()
+            (poison / "sigil_kfx_import.py").write_text(
+                "raise RuntimeError('PYTHONPATH was not isolated')\n",
+                encoding="utf-8",
+            )
+            environment = dict(os.environ)
+            environment["PYTHONPATH"] = str(poison)
+            process = subprocess.run(
+                [
+                    sys.executable,
+                    "-I",
+                    "-S",
+                    str(bootstrap),
+                    "--input",
+                    str(source),
+                    "--output",
+                    str(output),
+                ],
+                env=environment,
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+        events = [json.loads(line) for line in process.stdout.splitlines()]
+        self.assertEqual(process.returncode, 2)
+        self.assertEqual(events[-1]["code"], "KFX-E-INPUT")
+        self.assertNotIn("PYTHONPATH was not isolated", process.stderr)
+
     def test_generated_epub_gate_reports_structure(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "fixture.epub"

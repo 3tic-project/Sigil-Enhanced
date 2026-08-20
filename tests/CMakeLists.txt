@@ -504,6 +504,15 @@ add_test(NAME kfx_import_ui_contract
 )
 set_tests_properties(kfx_import_ui_contract PROPERTIES TIMEOUT 30)
 
+if ( APPLE AND CMAKE_BUILD_TYPE STREQUAL "Debug" )
+    add_test(NAME kfx_internal_runtime
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/kfx_internal_runtime_test.py
+                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sigil.app
+    )
+    set_tests_properties(kfx_internal_runtime PROPERTIES TIMEOUT 30)
+endif()
+
 add_test(NAME book_browser_drag_contract
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/book_browser_drag_contract_test.py

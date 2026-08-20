@@ -13,6 +13,7 @@
 
 #include "BuiltinPlugins/KfxImportController.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
@@ -78,6 +79,15 @@ QString KfxImportController::pythonInterpreter()
         return bundled;
     }
 
+#if defined(Q_OS_MAC) && !defined(NDEBUG)
+    const QString debug_runtime = QDir(QCoreApplication::applicationDirPath()).filePath(
+        QStringLiteral("../python-runtime/bin/python3"));
+    if (isUsableInterpreter(debug_runtime)) {
+        return debug_runtime;
+    }
+    return QString();
+#endif
+
     const QString configured = PluginDB::instance().get_engine_path(QStringLiteral("python3.4"));
     if (isUsableInterpreter(configured)) {
         return configured;
@@ -132,7 +142,9 @@ KfxImportController::Result KfxImportController::convert(const QString& sourcePa
     const QString python_root = EmbeddedPython::instance().embeddedRoot();
     const QString worker_module = QDir(python_root).filePath(
         QStringLiteral("sigil_kfx_import/worker.py"));
-    if (!QFileInfo(worker_module).isFile()) {
+    const QString worker_bootstrap = QDir(python_root).filePath(
+        QStringLiteral("sigil_kfx_import/bootstrap.py"));
+    if (!QFileInfo(worker_module).isFile() || !QFileInfo(worker_bootstrap).isFile()) {
         result.errorCode = QStringLiteral("KFX-E-RUNTIME");
         result.errorMessage = tr("The built-in KFX converter is missing from this installation.");
         return result;
@@ -166,7 +178,6 @@ KfxImportController::Result KfxImportController::convert(const QString& sourcePa
         environment.insert(QStringLiteral("PYTHONHOME"), QFileInfo(interpreter).absolutePath());
     }
 #endif
-    environment.insert(QStringLiteral("PYTHONPATH"), python_root);
     environment.insert(QStringLiteral("PYTHONNOUSERSITE"), QStringLiteral("1"));
     environment.insert(QStringLiteral("PYTHONUTF8"), QStringLiteral("1"));
     environment.insert(QStringLiteral("PYTHONIOENCODING"), QStringLiteral("UTF-8"));
@@ -176,8 +187,9 @@ KfxImportController::Result KfxImportController::convert(const QString& sourcePa
     const QStringList arguments = QStringList()
         << QStringLiteral("-u")
         << QStringLiteral("-B")
-        << QStringLiteral("-m")
-        << QStringLiteral("sigil_kfx_import.worker")
+        << QStringLiteral("-I")
+        << QStringLiteral("-S")
+        << worker_bootstrap
         << QStringLiteral("--input") << QFileInfo(sourcePath).absoluteFilePath()
         << QStringLiteral("--output") << result.outputPath
         << QStringLiteral("--job-id") << QUuid::createUuid().toString(QUuid::WithoutBraces);

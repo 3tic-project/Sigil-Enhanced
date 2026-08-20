@@ -16,6 +16,7 @@ main_window = (repo / "src/MainUI/MainWindow.cpp").read_text(encoding="utf-8")
 main_window_ext = (repo / "src/MainUI/MainWindowExt.cpp").read_text(encoding="utf-8")
 book_browser_ext = (repo / "src/MainUI/BookBrowserExt.cpp").read_text(encoding="utf-8")
 controller = (repo / "src/BuiltinPlugins/KfxImportController.cpp").read_text(encoding="utf-8")
+cmake = (repo / "src/qt6sigil.cmake").read_text(encoding="utf-8")
 
 action_name = "actionConvertKfx"
 enhancement_menu = main_ui.find(".//widget[@name='menuEnhancement']")
@@ -59,14 +60,24 @@ require(
 )
 
 require(
-    'QStringLiteral("-m")' in controller
-    and 'QStringLiteral("sigil_kfx_import.worker")' in controller,
-    "the converter must run through the isolated worker module",
+    'QStringLiteral("-I")' in controller
+    and 'QStringLiteral("-S")' in controller
+    and "worker_bootstrap" in controller,
+    "the converter must run through the isolated internal bootstrap",
 )
 require(
-    'environment.insert(QStringLiteral("PYTHONPATH"), python_root)' in controller
-    and "inherited_python_path" not in controller,
-    "the worker must not inherit user-controlled Python module paths",
+    '<< QStringLiteral("PYTHONPATH")' in controller
+    and 'environment.insert(QStringLiteral("PYTHONPATH")' not in controller,
+    "the worker must remove and not restore user-controlled Python module paths",
+)
+require(
+    "link_debug_python.cmake" in cmake
+    and "SIGIL_DEBUG_PYTHON_BIN" in cmake,
+    "macOS Debug builds must expose the CMake interpreter through the app bundle",
+)
+require(
+    'QStringLiteral("../python-runtime/bin/python3")' in controller,
+    "the KFX controller must prefer the Debug app's internal runtime entry",
 )
 require(
     "QTemporaryFile output" in controller
