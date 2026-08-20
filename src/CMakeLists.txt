@@ -77,6 +77,10 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/FormatterEnhancer.h
     BuiltinPlugins/KfxParagraphNormalizer.cpp
     BuiltinPlugins/KfxParagraphNormalizer.h
+    BuiltinPlugins/KfxImportController.cpp
+    BuiltinPlugins/KfxImportController.h
+    BuiltinPlugins/KfxImportProtocol.cpp
+    BuiltinPlugins/KfxImportProtocol.h
     BuiltinPlugins/VerticalCssTransformer.cpp
     BuiltinPlugins/VerticalCssTransformer.h
     BuiltinPlugins/VerticalLayoutAnalyzer.cpp

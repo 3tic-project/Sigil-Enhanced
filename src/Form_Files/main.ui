@@ -430,6 +430,8 @@
     </property>
     <addaction name="actionNormalizeEpubStructure"/>
     <addaction name="actionEnhanceSourceFormatting"/>
+    <addaction name="actionConvertKfx"/>
+    <addaction name="separator"/>
     <addaction name="actionChineseConversion"/>
     <addaction name="actionSubsetEmbeddedFonts"/>
     <addaction name="actionOpenRegexWorkbench"/>
@@ -1967,6 +1969,14 @@
     </property>
     <property name="toolTip">
       <string>Format all XHTML and CSS resources with the built-in EPUB-safe formatter backend</string>
+    </property>
+  </action>
+  <action name="actionConvertKfx">
+    <property name="text">
+      <string>Convert KFX to EPUB...</string>
+    </property>
+    <property name="toolTip">
+      <string>Convert a DRM-free KFX or KFX-ZIP book, then save it or open it in a new window</string>
     </property>
   </action>
   <action name="actionChineseConversion">

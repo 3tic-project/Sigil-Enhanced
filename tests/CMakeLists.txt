@@ -481,7 +481,28 @@ add_test(NAME kfx_worker
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/kfx_worker_test.py
 )
-set_tests_properties(kfx_worker PROPERTIES TIMEOUT 30)
+set_tests_properties(kfx_worker PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1"
+)
+
+add_executable(kfx_import_protocol_test
+    kfx_import_protocol_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/KfxImportProtocol.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/KfxImportProtocol.h
+)
+target_include_directories(kfx_import_protocol_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(kfx_import_protocol_test PRIVATE Qt6::Core)
+target_compile_features(kfx_import_protocol_test PRIVATE cxx_std_17)
+add_test(NAME kfx_import_protocol COMMAND kfx_import_protocol_test)
+set_tests_properties(kfx_import_protocol PROPERTIES TIMEOUT 30)
+
+add_test(NAME kfx_import_ui_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/kfx_import_ui_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(kfx_import_ui_contract PROPERTIES TIMEOUT 30)
 
 add_test(NAME book_browser_drag_contract
     COMMAND ${Python3_EXECUTABLE}

@@ -65,6 +65,7 @@
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/Index.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "BuiltinPlugins/KfxImportProtocol.h"
 #include "Dialogs/About.h"
 #include "Dialogs/AddClips.h"
 #include "Dialogs/AddRoles.h"
@@ -375,6 +376,7 @@ MainWindow::MainWindow(const QString &openfilepath,
 
 MainWindow::~MainWindow()
 {
+    ClearTransientSource();
     if (m_RegexWorkbenchDialog) {
         delete m_RegexWorkbenchDialog.data();
     }
@@ -2862,20 +2864,57 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
         return;
     }
 
-    if (AreAllDroppedFilesEpub(filepaths)) {
+    QStringList kfx_paths;
+    QStringList other_paths;
+    foreach(const QString& filepath, filepaths) {
+        if (BuiltinPlugins::KfxImportProtocol::isKfxPath(filepath)) {
+            kfx_paths << filepath;
+        } else {
+            other_paths << filepath;
+        }
+    }
+
+    if (!kfx_paths.isEmpty()) {
         QMessageBox msgbox(this);
         msgbox.setIcon(QMessageBox::Question);
         msgbox.setWindowTitle(APP_DISPLAY_NAME);
-        msgbox.setText(filepaths.count() == 1 ?
+        msgbox.setText(kfx_paths.count() == 1
+                           ? tr("The dropped file is a KFX book.")
+                           : tr("The dropped files include %1 KFX books.").arg(kfx_paths.count()));
+        msgbox.setInformativeText(
+            tr("Only DRM-free KFX files can be converted; DRM-protected files are rejected. "
+               "Convert the KFX book(s) to EPUB and open each result in a new window?"));
+        QPushButton* convert_button = msgbox.addButton(
+            kfx_paths.count() == 1 ? tr("Convert and Open") : tr("Convert and Open All"),
+            QMessageBox::AcceptRole);
+        msgbox.addButton(QMessageBox::Cancel);
+        msgbox.setDefaultButton(convert_button);
+        msgbox.exec();
+        if (msgbox.clickedButton() == convert_button) {
+            foreach(const QString& filepath, kfx_paths) {
+                ConvertKfxFile(filepath, true);
+            }
+        }
+    }
+
+    if (other_paths.isEmpty()) {
+        return;
+    }
+
+    if (AreAllDroppedFilesEpub(other_paths)) {
+        QMessageBox msgbox(this);
+        msgbox.setIcon(QMessageBox::Question);
+        msgbox.setWindowTitle(APP_DISPLAY_NAME);
+        msgbox.setText(other_paths.count() == 1 ?
                        tr("The dropped file is an EPUB.") :
                        tr("The dropped files are EPUB files."));
-        msgbox.setInformativeText(filepaths.count() == 1 ?
+        msgbox.setInformativeText(other_paths.count() == 1 ?
                                   tr("Do you want to add it to the current book, or open it for editing in a new window?\n\n%1")
-                                  .arg(QDir::toNativeSeparators(filepaths.at(0))) :
+                                  .arg(QDir::toNativeSeparators(other_paths.at(0))) :
                                   tr("Do you want to add them to the current book, or open them for editing in new windows?\n\n%1")
-                                  .arg(QDir::toNativeSeparators(filepaths.join("\n"))));
+                                  .arg(QDir::toNativeSeparators(other_paths.join("\n"))));
         QPushButton *add_button = msgbox.addButton(tr("Add to Current Book"), QMessageBox::AcceptRole);
-        QPushButton *open_button = msgbox.addButton(filepaths.count() == 1 ?
+        QPushButton *open_button = msgbox.addButton(other_paths.count() == 1 ?
                                                     tr("Open in New Window") :
                                                     tr("Open in New Windows"),
                                                     QMessageBox::ActionRole);
@@ -2885,7 +2924,7 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
 
         if (msgbox.clickedButton() == open_button) {
             MainWindow *last_window = nullptr;
-            foreach(const QString &filepath, filepaths) {
+            foreach(const QString &filepath, other_paths) {
                 MainWindow *new_window = new MainWindow(filepath);
                 new_window->show();
                 last_window = new_window;
@@ -2901,7 +2940,7 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
         }
     }
 
-    QStringList added_book_paths = m_BookBrowser->AddExisting(false, false, filepaths);
+    QStringList added_book_paths = m_BookBrowser->AddExisting(false, false, other_paths);
     if (!added_book_paths.isEmpty()) {
         m_BookBrowser->Refresh();
         m_Book->SetModified();
@@ -6153,6 +6192,7 @@ void MainWindow::ResourcesAddedOrDeletedOrMoved()
 
 void MainWindow::CreateNewBook(const QString version, const QStringList &book_paths)
 {
+    ClearTransientSource();
     m_SourceEpubSnapshot.clear();
     QString epubversion = version;
     if (epubversion.isEmpty()) {
@@ -6302,6 +6342,7 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
             ShowMessageOnStatusBar(tr("Loading file..."), 0);
             QSharedPointer<Book> imported_book = importer->GetBook();
             m_Book->SetModified(false);
+            ClearTransientSource();
             SetNewBook(imported_book);
 
             // The m_IsModified state variable is set in GetBook() to indicate whether the OPF
@@ -6375,6 +6416,37 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
     return false;
 }
 
+bool MainWindow::LoadConvertedEpub(const QString& temporaryEpub,
+                                   const QString& displayName,
+                                   const QStringList& conversionWarnings)
+{
+    if (!LoadFile(temporaryEpub, true, true)) {
+        return false;
+    }
+
+    m_Book->SetModified(false);
+    m_SourceEpubSnapshot = EpubFileSnapshot::capture(temporaryEpub);
+    if (!m_SourceEpubSnapshot.isValid()) {
+        return false;
+    }
+    m_TransientSourcePath = temporaryEpub;
+    m_LastOpenFileWarnings.append(conversionWarnings);
+    UpdateUiWithCurrentFile(displayName, true);
+    setWindowModified(true);
+    ShowMessageOnStatusBar(tr("Converted KFX loaded. Use Save to choose an EPUB filename."));
+    return true;
+}
+
+void MainWindow::ClearTransientSource()
+{
+    if (m_TransientSourcePath.isEmpty()) {
+        return;
+    }
+    const QString path = m_TransientSourcePath;
+    m_TransientSourcePath.clear();
+    QFile::remove(path);
+}
+
 
 bool MainWindow::ExportCurrentBookCopy(const QString &fullfilepath)
 {
@@ -6428,6 +6500,8 @@ bool MainWindow::SaveFile(const QString &fullfilepath, bool update_current_filen
                     m_SourceEpubSnapshot = EpubFileSnapshot::capture(fullfilepath);
                     m_Book->SetModified(false);
                     UpdateUiWithCurrentFile(fullfilepath);
+                    ClearTransientSource();
+                    setWindowModified(false);
                 }
                 ShowMessageOnStatusBar(tr("No changes to save."));
                 return true;
@@ -6488,6 +6562,7 @@ bool MainWindow::SaveFile(const QString &fullfilepath, bool update_current_filen
             m_Book->SetModified(false);
             UpdateUiWithCurrentFile(fullfilepath);
             m_SourceEpubSnapshot = EpubFileSnapshot::capture(fullfilepath);
+            ClearTransientSource();
         }
 
         if (not_well_formed) {
@@ -7241,6 +7316,7 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeEpubStructure, "MainWindow.NormalizeEpubStructure"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionEnhanceSourceFormatting, "MainWindow.EnhanceSourceFormatting"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertKfx, "MainWindow.ConvertKfx"); // modified: Builtin KFX import plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionChineseConversion, "MainWindow.ConvertChineseText"); // modified: Chinese conversion
     KeyboardShortcutManager::instance().registerAction(this, ui.actionSubsetEmbeddedFonts, "MainWindow.SubsetEmbeddedFonts"); // modified: font subsetting
     KeyboardShortcutManager::instance().registerAction(this, ui.actionOpenRegexWorkbench, "MainWindow.OpenRegexWorkbench"); // modified: Advanced Regex Workbench
@@ -7642,6 +7718,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(ui.actionNormalizeEpubStructure, SIGNAL(triggered()), this, SLOT(NormalizeEpubStructure())); // modified: Builtin native plugin
     connect(ui.actionEnhanceSourceFormatting, SIGNAL(triggered()), this, SLOT(EnhanceSourceFormatting())); // modified: Builtin native plugin
+    connect(ui.actionConvertKfx, SIGNAL(triggered()), this, SLOT(ConvertKfx())); // modified: Builtin KFX import plugin
     connect(ui.actionChineseConversion, SIGNAL(triggered()), this, SLOT(ConvertChineseText())); // modified: Chinese conversion
     connect(ui.actionSubsetEmbeddedFonts, SIGNAL(triggered()), this, SLOT(SubsetEmbeddedFonts())); // modified: font subsetting
     connect(ui.actionOpenRegexWorkbench, SIGNAL(triggered()), this, SLOT(OpenRegexWorkbench())); // modified: Advanced Regex Workbench

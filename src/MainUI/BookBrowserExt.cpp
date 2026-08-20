@@ -12,6 +12,7 @@
 #include "sigil_constants.h"
 #include "Misc/Utility.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "BuiltinPlugins/KfxImportProtocol.h"
 #include "sigil_exception.h"
 #include "Importers/ImportHTML.h"
 #include "Importers/ImportTXT.h" // modified: BookBrowserTreeView
@@ -24,6 +25,15 @@ QStringList BookBrowser::AddFiles(QStringList &filepaths)
 
     if (filepaths.isEmpty()) {
         return added_book_paths;
+    }
+
+    foreach(const QString& filepath, filepaths) {
+        if (BuiltinPlugins::KfxImportProtocol::isKfxPath(filepath)) {
+            if (MainWindow* main_window = qobject_cast<MainWindow*>(window())) {
+                main_window->AddDroppedFiles(filepaths);
+            }
+            return added_book_paths;
+        }
     }
 
     filepaths.sort(); // Sort the filepath list in ascending order.

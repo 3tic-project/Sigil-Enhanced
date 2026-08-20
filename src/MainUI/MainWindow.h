@@ -223,6 +223,9 @@ public:
      */
     bool LoadFile(const QString &fullfilepath, bool is_internal = false,
                   bool preserve_current_on_error = false);
+    bool LoadConvertedEpub(const QString& temporaryEpub,
+                           const QString& displayName,
+                           const QStringList& conversionWarnings = QStringList());
     bool SaveCurrentBook();
     bool ExportCurrentBookCopy(const QString &fullfilepath);
 
@@ -1174,6 +1177,7 @@ public slots:
     bool NormalizedOPF(); //modified: NormalizedOPF
     bool NormalizeEpubStructure(); // modified: Builtin native plugin
     bool EnhanceSourceFormatting(); // modified: Builtin native plugin
+    bool ConvertKfx(); // modified: Builtin KFX import plugin
     bool ConvertChineseText(); // modified: Chinese conversion
     bool SubsetEmbeddedFonts(); // modified: HarfBuzz font subsetting
     bool OpenRegexWorkbench(); // modified: Advanced Regex Workbench
@@ -1193,6 +1197,8 @@ public slots:
     bool ConvertVerticalLayoutDirection(bool to_horizontal); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
+    bool ConvertKfxFile(const QString& sourcePath, bool openInNewWindow);
+    void ClearTransientSource();
     bool ExecutePluginByName(const QString &plugin_name, bool wait_for_completion,
                              QString *plugin_type = nullptr,
                              int *validation_error_count = nullptr,
@@ -1201,6 +1207,7 @@ private:
     FindReplaceMode m_findReplaceMode;
     FindReplacePlus* m_FindReplacePlus;
     QPointer<RegexWorkbenchDialog> m_RegexWorkbenchDialog;
+    QString m_TransientSourcePath;
     void changeFindReplaceMode();
     void ConnectSignalsToSearchEditor();
     void ConnectSignalsToFindReplace();

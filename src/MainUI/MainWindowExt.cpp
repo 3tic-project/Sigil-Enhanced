@@ -1,5 +1,9 @@
 #include <QApplication>
 #include <QCheckBox>
+#include <QDir>
+#include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QHash>
 #include <QLocale>
 #include <QMessageBox>
@@ -16,6 +20,8 @@
 #include "BuiltinPlugins/BookLiveParagraphNormalizer.h"
 #include "BuiltinPlugins/BrParagraphNormalizer.h"
 #include "BuiltinPlugins/KfxParagraphNormalizer.h"
+#include "BuiltinPlugins/KfxImportController.h"
+#include "BuiltinPlugins/KfxImportProtocol.h"
 #include "BuiltinPlugins/VerticalToHorizontalConverter.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/HTMLResource.h"
@@ -163,6 +169,125 @@ void ApplyBookLivePostFormat(HTMLResource* resource,
     }
 }
 
+}
+
+bool MainWindow::ConvertKfx()
+{
+    const QString source = QFileDialog::getOpenFileName(
+        this,
+        tr("Select KFX File"),
+        m_LastFolderOpen,
+        tr("KFX files (*.kfx *.kfx-zip);;All files (*.*)"));
+    if (source.isEmpty()) {
+        return false;
+    }
+    m_LastFolderOpen = QFileInfo(source).absolutePath();
+
+    QMessageBox choice(this);
+    choice.setIcon(QMessageBox::Question);
+    choice.setWindowTitle(tr("Convert KFX to EPUB"));
+    choice.setText(tr("How would you like to use the converted EPUB?"));
+    choice.setInformativeText(
+        tr("Only DRM-free KFX files can be converted. DRM-protected files are rejected."));
+    QPushButton* save_button = choice.addButton(tr("Save EPUB As..."), QMessageBox::AcceptRole);
+    QPushButton* open_button = choice.addButton(tr("Open in New Window"), QMessageBox::ActionRole);
+    choice.addButton(QMessageBox::Cancel);
+    choice.setDefaultButton(open_button);
+    choice.exec();
+    if (choice.clickedButton() == save_button) {
+        return ConvertKfxFile(source, false);
+    }
+    if (choice.clickedButton() == open_button) {
+        return ConvertKfxFile(source, true);
+    }
+    return false;
+}
+
+bool MainWindow::ConvertKfxFile(const QString& sourcePath, bool openInNewWindow)
+{
+    using BuiltinPlugins::KfxImportController;
+    using BuiltinPlugins::KfxImportProtocol;
+
+    if (!KfxImportProtocol::isKfxPath(sourcePath)) {
+        Utility::DisplayStdErrorDialog(
+            tr("Cannot convert KFX"),
+            tr("Please select a file whose name ends in .kfx or .kfx-zip."));
+        return false;
+    }
+
+    QString destination;
+    const QString suggested_name = KfxImportProtocol::suggestedEpubName(sourcePath);
+    if (!openInNewWindow) {
+        destination = QFileDialog::getSaveFileName(
+            this,
+            tr("Save Converted EPUB As"),
+            QDir(QFileInfo(sourcePath).absolutePath()).filePath(suggested_name),
+            tr("EPUB file (*.epub)"));
+        if (destination.isEmpty()) {
+            return false;
+        }
+        if (QFileInfo(destination).suffix().isEmpty()) {
+            destination += QStringLiteral(".epub");
+        }
+    }
+
+    const KfxImportController::Result result = KfxImportController::convert(sourcePath, this);
+    if (result.cancelled) {
+        ShowMessageOnStatusBar(tr("KFX conversion cancelled."));
+        return false;
+    }
+    if (!result.succeeded) {
+        QMessageBox message(QMessageBox::Critical,
+                            tr("KFX Conversion Failed"),
+                            result.errorMessage,
+                            QMessageBox::Ok,
+                            this);
+        message.setInformativeText(result.errorCode);
+        if (!result.diagnosticDetails.isEmpty()) {
+            message.setDetailedText(result.diagnosticDetails);
+        }
+        message.exec();
+        return false;
+    }
+
+    if (openInNewWindow) {
+        MainWindow* new_window = new MainWindow();
+        if (!new_window->LoadConvertedEpub(result.outputPath, suggested_name, result.warnings)) {
+            delete new_window;
+            QFile::remove(result.outputPath);
+            return false;
+        }
+        new_window->show();
+        new_window->raise();
+        new_window->activateWindow();
+        qApp->processEvents();
+        ShowMessageOnStatusBar(tr("KFX converted and opened in a new window."));
+        return true;
+    }
+
+    const EpubFileSnapshot converted = EpubFileSnapshot::capture(result.outputPath);
+    QString copy_error;
+    const bool copied = converted.isValid() && converted.copyTo(destination, &copy_error);
+    QFile::remove(result.outputPath);
+    if (!copied) {
+        Utility::DisplayStdErrorDialog(
+            tr("Cannot save converted EPUB: %1").arg(QDir::toNativeSeparators(destination)),
+            copy_error);
+        return false;
+    }
+
+    ShowMessageOnStatusBar(tr("KFX converted to %1.").arg(QDir::toNativeSeparators(destination)));
+    if (!result.warnings.isEmpty()) {
+        QMessageBox warning(QMessageBox::Warning,
+                            tr("KFX Conversion Completed with Warnings"),
+                            tr("The EPUB was saved, but the converter reported %1 warning(s).")
+                                .arg(result.warnings.size()),
+                            QMessageBox::Ok,
+                            this);
+        warning.setDetailedText(result.warnings.join(QLatin1Char('\n')));
+        warning.exec();
+    }
+    return true;
 }
 
 //-----modified: Epub3ToEpub2------
