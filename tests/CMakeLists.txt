@@ -513,6 +513,21 @@ if ( APPLE AND CMAKE_BUILD_TYPE STREQUAL "Debug" )
     set_tests_properties(kfx_internal_runtime PROPERTIES TIMEOUT 30)
 endif()
 
+add_executable(highlighter_teardown_test
+    highlighter_teardown_test.cpp
+)
+target_link_libraries(highlighter_teardown_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(highlighter_teardown_test PRIVATE cxx_std_17)
+add_test(NAME highlighter_teardown COMMAND highlighter_teardown_test)
+set_tests_properties(highlighter_teardown PROPERTIES TIMEOUT 30)
+
+add_test(NAME flow_tab_teardown_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/flow_tab_teardown_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(flow_tab_teardown_contract PROPERTIES TIMEOUT 30)
+
 add_test(NAME book_browser_drag_contract
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/book_browser_drag_contract_test.py

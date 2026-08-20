@@ -123,8 +123,10 @@ FlowTab::~FlowTab()
     m_WellFormedCheckComponent->deleteLater();
 
     if (m_wCodeView) {
-        delete m_wCodeView;
-        m_wCodeView = 0;
+        CodeViewEditor* code_view = m_wCodeView;
+        m_wCodeView = NULL;
+        disconnect(code_view, 0, this, 0);
+        delete code_view;
     }
 
     m_HTMLResource = NULL;
@@ -255,6 +257,13 @@ void FlowTab::SaveTabContent()
 
 void FlowTab::ResourceModified()
 {
+    // Resource-owned QTextDocuments can notify during editor/highlighter
+    // teardown. The editor pointer is cleared before deletion so re-entrant
+    // notifications cannot access a partially destroyed CodeViewEditor.
+    if (!m_wCodeView) {
+        return;
+    }
+
     // This slot tells us that the underlying HTML resource has been changed
     // It could be the user has done a Replace All on underlying resource, so reset our well formed check.
     m_safeToLoad = false;

@@ -1,5 +1,6 @@
 Sigil-Enhanced-2.8.5.E9
    Bug Fixes
+     - Prevented Code View teardown from re-entering a partially destroyed FlowTab when syntax highlighters detach from resource-owned documents.
      - Opened Photoshop-exported WebP images that Windows QImage rejected, and always ship qwebp.dll with the Windows package.
      - Installed qtimageformats in the Windows CI Qt set so qwebp.dll actually exists to ship; packaging now fails if the plugin is missing instead of silently omitting it.
      - Opened the Metadata Editor for EPUB 3 books whose alternate-script refinements omit xml:lang, instead of failing four Python calls and showing an empty editor.
