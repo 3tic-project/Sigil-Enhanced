@@ -25,6 +25,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 ### 编辑器与工作区
 
+- **[排版视觉辅助](docs/VisualTypesettingAids.md)**：在 Preview 上显示非输出的基线／节奏网格，并在状态栏给出当前元素计算后的字号、行高、逻辑 margin/padding 与网格比率；支持固定 `em` 基准、文档/正文原点、主次线、缩放阈值和纯净预览。
 - **拆分编辑器**：可拆成上下两组同时打开不同资源，标签可在组间拖动；详见 [拆分编辑器](docs/SplitEditorGroups.md)。
 - **开发者工具**：停靠在预览区下方、随 Preview 一起浮动，也可拆成独立窗口；详见 [Preview 开发者工具](docs/PreviewDeveloperTools.md)。
 - **中键关闭标签**：鼠标中键直接关闭所指向的标签页，不会激活后台标签或误关空白区域。
