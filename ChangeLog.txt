@@ -8,6 +8,7 @@ Sigil-Enhanced-2.8.5.E9
      - Made newly created empty XHTML and CSS files write template content to disk, so custom templates survive subsequent imports instead of being replaced by empty files.
 
    New Features
+     - Added an optional post-conversion EPUB structure normalization checkbox to the roomier KFX menu and drop prompts, reusing the built-in normalizer before Save As or opening a new window.
      - Docked Preview Developer Tools under the Preview pane by embedding the existing Inspector; visibility and splitter ratio restore on restart, not open files.
      - Developer Tools can detach into a separate window and dock back without destroying the Inspector.
      - Split the editor into two vertical groups so two resources stay visible; Open in Other Group, Move, and restart restore the split layout only.
