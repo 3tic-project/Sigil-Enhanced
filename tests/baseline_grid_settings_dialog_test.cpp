@@ -63,6 +63,9 @@ int main(int argc, char *argv[])
     okay &= expect(settingsColumns && settingsColumns->count() == 2
                        && dialog.minimumWidth() > dialog.minimumHeight(),
                    "grid settings must use a two-column landscape layout");
+    okay &= expect((geometryGroup->layout()->alignment() & Qt::AlignTop)
+                       && (appearanceGroup->layout()->alignment() & Qt::AlignTop),
+                   "setting rows must stay top-aligned when the dialog grows");
     if (!okay) {
         return 1;
     }

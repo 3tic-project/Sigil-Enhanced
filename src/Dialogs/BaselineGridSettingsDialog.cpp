@@ -52,8 +52,8 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
       m_minimumZoom(new QSpinBox(this))
 {
     setWindowTitle(tr("Grid Settings"));
-    setMinimumSize(760, 440);
-    resize(800, 460);
+    setMinimumSize(760, 360);
+    resize(800, 390);
 
     m_showGrid->setObjectName(QStringLiteral("showGrid"));
     m_horizontalGrid->setObjectName(QStringLiteral("horizontalGrid"));
@@ -93,6 +93,7 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     m_useCurrent->setVisible(false);
 
     QGridLayout *geometryLayout = new QGridLayout;
+    geometryLayout->setAlignment(Qt::AlignTop);
     geometryLayout->setHorizontalSpacing(12);
     geometryLayout->setVerticalSpacing(8);
     geometryLayout->addWidget(new QLabel(tr("Unit:"), this), 0, 0);
@@ -128,6 +129,7 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     geometryGroup->setLayout(geometryLayout);
 
     QGridLayout *appearanceLayout = new QGridLayout;
+    appearanceLayout->setAlignment(Qt::AlignTop);
     appearanceLayout->setHorizontalSpacing(12);
     appearanceLayout->setVerticalSpacing(8);
     QLabel *minorHeading = new QLabel(tr("Minor lines"), this);
@@ -165,7 +167,8 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     settingsColumns->setObjectName(QStringLiteral("gridSettingsColumns"));
     settingsColumns->addWidget(geometryGroup, 3);
     settingsColumns->addWidget(appearanceGroup, 2);
-    layout->addLayout(settingsColumns, 1);
+    layout->addLayout(settingsColumns);
+    layout->addStretch(1);
     layout->addWidget(buttons);
 
     connect(m_unit, qOverload<int>(&QComboBox::currentIndexChanged),

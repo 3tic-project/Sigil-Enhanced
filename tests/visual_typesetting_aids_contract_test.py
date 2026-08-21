@@ -182,10 +182,14 @@ require(
     and "m_verticalGrid" in dialog
     and "m_verticalStep" in dialog
     and "settings.metricsEnabled = false" in dialog
-    and "setMinimumSize(760, 440)" in dialog
+    and "setMinimumSize(760, 360)" in dialog
     and 'QStringLiteral("gridSettingsColumns")' in dialog
     and "settingsColumns->addWidget(geometryGroup, 3)" in dialog
     and "settingsColumns->addWidget(appearanceGroup, 2)" in dialog
+    and "geometryLayout->setAlignment(Qt::AlignTop)" in dialog
+    and "appearanceLayout->setAlignment(Qt::AlignTop)" in dialog
+    and "layout->addLayout(settingsColumns);" in dialog
+    and "layout->addStretch(1);" in dialog
     and "QDialogButtonBox::RestoreDefaults" in dialog,
     "grid settings must use readable columns while preserving independent axis controls",
 )
