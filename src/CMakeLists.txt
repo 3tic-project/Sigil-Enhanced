@@ -39,6 +39,9 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/CleanSource.h
     BookManipulation/EpubVersionConv.cpp
     BookManipulation/EpubVersionConv.h
+    BookManipulation/HtmlNamedEntity.h
+    BookManipulation/NcxNavigation.cpp
+    BookManipulation/NcxNavigation.h
     BookManipulation/FolderKeeper.cpp
     BookManipulation/FolderKeeperExt.cpp
     BookManipulation/FolderKeeper.h

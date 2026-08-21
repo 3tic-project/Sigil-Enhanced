@@ -2,6 +2,8 @@
 #include <QRegExp>
 
 #include "BookManipulation/EpubVersionConv.h"
+#include "BookManipulation/HtmlNamedEntity.h"
+#include "BookManipulation/NcxNavigation.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/NCXResource.h"
@@ -359,9 +361,27 @@ void EpubVersionConv::convert_opf_to3() {
 
 void EpubVersionConv::build_nav() {
 	NCXResource * ncx = m_Book->GetNCX();
-	QString ncx_text = ncx->GetText();
-	parse_ncx(ncx_text);
-	QString indent(2, ' '), indent2(4, ' '), indent3(6, ' ');
+	if (ncx) {
+		parse_ncx(ncx->GetText());
+	}
+	if (doctitle.isEmpty()) {
+		const QStringList titles = m_Book->GetOPF()->GetDCMetadataValues("dc:title");
+		if (!titles.isEmpty()) {
+			doctitle = titles.at(0);
+		}
+	}
+
+	QString navdir = "OEBPS/Text";
+	QString first_textdir = "OEBPS/Text";
+	QString navfile = valid_id("nav.xhtml");
+	HTMLResource * nav_resource = m_Book->CreateEmptyNavFile(true, navdir, navfile, first_textdir);
+	const QString nav_bookpath = nav_resource->GetRelativePath();
+	QString opf_folder;
+	if (OPFResource *opf = m_Book->GetOPF()) {
+		opf_folder = opf->GetFolder();
+	}
+
+	QString indent(2, ' '), indent2(4, ' ');
 	QString lang = m_Book->GetOPF()->GetPrimaryBookLanguage();
 	QString new_text = "";
 	new_text += "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
@@ -374,21 +394,21 @@ void EpubVersionConv::build_nav() {
 	new_text += indent % "<link href=\"../Styles/sgc-nav.css\" type=\"text/css\" rel=\"stylesheet\"/>\n";
 	new_text += "</head>\n\n";
 	new_text += "<body epub:type=\"frontmatter\">\n";
-	// start with the toc
 	new_text += indent % "<nav epub:type=\"toc\" id=\"toc\">\n";
-	new_text += indent2 % QString("<h1>%1</h1>\n").arg(doctitle);
+	new_text += indent2 % QString("<h1>%1</h1>\n").arg(doctitle.toHtmlEscaped());
 	new_text += indent2 % "<ol>\n";
 
 	int curlvl = 1;
 	bool initial = true;
 	foreach(NavPointInfo ni, toclist) {
-		QString href = ni.bookhref.mid(11);
+		QString href = NcxNavigation::bookPathToNavHref(ni.bookhref, nav_bookpath).toHtmlEscaped();
+		QString label = ni.navlabel.toHtmlEscaped();
 		if (ni.lvl > curlvl) {
 			while (ni.lvl > curlvl) {
 				QString indent_ = indent2 + QString(4 * curlvl, ' ');
 				new_text += indent_ % "<ol>\n";
 				new_text += indent_ % indent % "<li>\n";
-				new_text += indent_ % indent2 % QString("<a href=\"%1\">%2</a>\n").arg(href, ni.navlabel);
+				new_text += indent_ % indent2 % QString("<a href=\"%1\">%2</a>\n").arg(href, label);
 				curlvl += 1;
 			}
 		}
@@ -402,7 +422,7 @@ void EpubVersionConv::build_nav() {
 			QString indent_ = indent2 + QString(4 * (curlvl - 1), ' ');
 			new_text += indent_ + indent + "</li>\n";
 			new_text += indent_ + indent + "<li>\n";
-			new_text += indent_ + indent2 + QString("<a href=\"%1\">%2</a>\n").arg(href, ni.navlabel);
+			new_text += indent_ + indent2 + QString("<a href=\"%1\">%2</a>\n").arg(href, label);
 		}
 		else {
 			QString indent_ = indent2 + QString(4 * (ni.lvl - 1), ' ');
@@ -410,7 +430,7 @@ void EpubVersionConv::build_nav() {
 				new_text += indent_ + indent + "</li>\n";
 			}
 			new_text += indent_ + indent + "<li>\n";
-			new_text += indent_ + indent2 + QString("<a href=\"%1\">%2</a>\n").arg(href, ni.navlabel);
+			new_text += indent_ + indent2 + QString("<a href=\"%1\">%2</a>\n").arg(href, label);
 		}
 		initial = false;
 		curlvl = ni.lvl;
@@ -423,113 +443,67 @@ void EpubVersionConv::build_nav() {
 	}
 	new_text += indent % "</nav>\n";
 
-	// add any existing page-list if need be
 	if (pagelist.size() > 0) {
 		new_text += indent % "<nav epub:type=\"page-list\" id=\"page-list\" hidden=\"\">\n";
 		new_text += indent2 % "<ol>\n";
 		foreach (PageInfo pi, pagelist) {
-			QString href = pi.bookhref.mid(6);
-			new_text += QString(8, ' ') + QString("<li><a href=\"%1\">%2</a></li>\n").arg(href).arg(pi.pagenum);
+			QString href = NcxNavigation::bookPathToNavHref(pi.bookhref, nav_bookpath).toHtmlEscaped();
+			new_text += QString(8, ' ') + QString("<li><a href=\"%1\">%2</a></li>\n").arg(href, pi.pagenum.toHtmlEscaped());
 		}
 		new_text += indent2 + "</ol>\n";
 		new_text += indent + "</nav>\n";
 	}
-	// create landmark section
 	new_text += indent + "<nav epub:type=\"landmarks\" id=\"landmarks\" hidden=\"\">\n";
 	new_text += indent2 + "<h2>Guide</h2>\n";
 	new_text += indent2 + "<ol>\n";
 	foreach (GuideEntry ge, guide_res) {
-		QString href = ge.m_href;
 		QString etype = "";
-		if (href.length() > 5)
-			href = href.mid(5);
 		if (_guide_epubtype_map.contains(ge.m_type))
 			etype = _guide_epubtype_map.value(ge.m_type);
 		if (etype != "") {
+			QString href = NcxNavigation::bookPathToNavHref(
+				NcxNavigation::srcToBookPath(ge.m_href, opf_folder), nav_bookpath).toHtmlEscaped();
 			new_text += QString(6, ' ') + "<li>\n";
-			new_text += QString(8, ' ') + QString("<a epub:type=\"%1\" href=\"%2\">%3</a>\n").arg(etype, href, ge.m_title);
+			new_text += QString(8, ' ') + QString("<a epub:type=\"%1\" href=\"%2\">%3</a>\n")
+				.arg(etype, href, ge.m_title.toHtmlEscaped());
 			new_text += QString(6, ' ') + "</li>\n";
 		}
 	}
 	new_text += indent2 + "</ol>\n";
 	new_text += indent + "</nav>\n";
-	// now close it off
 	new_text += "</body>\n";
 	new_text += "</html>\n";
 	new_text = format_nav_text(new_text);
 
-	// add new nav file;
-	QString navdir = "OEBPS/Text",
-		first_textdir = "OEBPS/Text",
-		navfile = valid_id("nav.xhtml");
-
-	bool is_update_opf = true;
-	HTMLResource * nav_resource = m_Book->CreateEmptyNavFile(is_update_opf, navdir, navfile, first_textdir);
 	nav_resource->SetText(new_text);
 	m_Book->GetOPF()->SetNavResource(nav_resource);
 	m_Book->GetOPF()->SetItemRefLinear(nav_resource, false);
 	m_Book->GetOPF()->UpdateNCXOnSpine(navfile);
-	FolderKeeper *folder = m_Book->GetFolderKeeper();
-
 }
 
 void EpubVersionConv::parse_ncx(QString ncx_text) {
+	const NcxNavigation parsed = NcxNavigation::parse(ncx_text);
+	doctitle = parsed.doctitle;
 
-	TagLister taglist(ncx_text);
+	QString ncx_folder;
+	if (NCXResource *ncx = m_Book->GetNCX()) {
+		ncx_folder = ncx->GetFolder();
+	}
 
-	QString navlabel = "",
-		pagenum = "";
-	int lvl = 0;
-
-	int offset = 0;
-	for (int i = 0; i < taglist.size(); i++) {
-		TagLister::TagInfo ti = taglist.at(i);
-		if (ti.tname.toLower() == "text" && ti.ttype == "end") {
-			QString txt = ncx_text.mid(ti.open_pos + ti.open_len, ti.pos - ti.open_pos - ti.open_len);
-			if (txt != "") {
-				if (ti.tpath.toLower().endsWith(".doctitle")) {
-					doctitle = txt;
-				}
-				else if (ti.tpath.toLower().endsWith(".navpoint.navlabel")) {
-					navlabel = txt;
-				}
-			}
-			continue;
-		}
-		if (ti.tname.toLower() == "navpoint") {
-			if (ti.ttype == "begin") {
-				lvl += 1;
-			}
-			else if (ti.ttype == "end") {
-				lvl -= 1;
-			}
-			continue;
-		}
-		if (ti.tname == "content") {
-			QString tagstring = ncx_text.mid(ti.pos, ti.len);
-			OpenTagInfo opentaginfo = parseAttribute(tagstring);
-			if (opentaginfo.atts.contains("src")) {
-				if (ti.tpath.toLower().endsWith("navpoint")) {
-					QString href = opentaginfo.atts["src"];
-					QString bookhref = "OEBPS/" + href;
-					toclist.append(NavPointInfo({ lvl, navlabel, bookhref }));
-					navlabel = "";
-				}
-				else if (ti.tpath.toLower().endsWith("pagetarget")) {
-					QString pagehref = opentaginfo.atts["src"];
-					QString bookhref = "OEBPS/" + pagehref;
-					pagelist.append(PageInfo({ pagenum, bookhref }));
-					pagenum = "";
-				}
-			}
-			continue;
-		}
-		if (ti.tname.toLower() == "pagetarget" && ti.ttype == "begin") {
-			QString tagstring = ncx_text.mid(ti.pos, ti.len);
-			OpenTagInfo opentaginfo = parseAttribute(tagstring);
-			if (opentaginfo.atts.contains("value")) pagenum = opentaginfo.atts["value"];
-			continue;
-		}
+	toclist.clear();
+	pagelist.clear();
+	for (const NcxNavPoint &pt : parsed.toc) {
+		NavPointInfo info;
+		info.lvl = pt.level;
+		info.navlabel = pt.label;
+		info.bookhref = NcxNavigation::srcToBookPath(pt.src, ncx_folder);
+		toclist.append(info);
+	}
+	for (const NcxPageTarget &pg : parsed.pages) {
+		PageInfo info;
+		info.pagenum = pg.value;
+		info.bookhref = NcxNavigation::srcToBookPath(pg.src, ncx_folder);
+		pagelist.append(info);
 	}
 }
 
@@ -1010,11 +984,8 @@ QString EpubVersionConv::convert_named_entities(QString text) {
 		if (named_entities.contains(entity)) {
 			sval = named_entities.value(entity);
 		}
-		if (sval.size() > 0) {
-			for (int i = 0; i < sval.size(); i++) {
-				QChar ch = sval.at(i);
-				rep += "&#x"+QString::number(ch.unicode(),16)+";";
-			}
+		if (!sval.isEmpty()) {
+			rep = HtmlNamedEntityToNumericReferences(sval);
 		}
 		if (rep.size() > 0) {
 			new_text += rep;
@@ -1108,18 +1079,18 @@ void EpubVersionConv::init_members() {
 	{ "Acirc", QChar(0xc2) },
 	{ "Acirc;", QChar(0xc2) },
 	{ "Acy;", QChar(0x0410) },
-	{ "Afr;", QChar(0x0001d504) },
+	{ "Afr;", HtmlNamedEntityFromCodepoint(0x0001d504) },
 	{ "Agrave", QChar(0xc0) },
 	{ "Agrave;", QChar(0xc0) },
 	{ "Alpha;", QChar(0x0391) },
 	{ "Amacr;", QChar(0x0100) },
 	{ "And;", QChar(0x2a53) },
 	{ "Aogon;", QChar(0x0104) },
-	{ "Aopf;", QChar(0x0001d538) },
+	{ "Aopf;", HtmlNamedEntityFromCodepoint(0x0001d538) },
 	{ "ApplyFunction;", QChar(0x2061) },
 	{ "Aring", QChar(0xc5) },
 	{ "Aring;", QChar(0xc5) },
-	{ "Ascr;", QChar(0x0001d49c) },
+	{ "Ascr;", HtmlNamedEntityFromCodepoint(0x0001d49c) },
 	{ "Assign;", QChar(0x2254) },
 	{ "Atilde", QChar(0xc3) },
 	{ "Atilde;", QChar(0xc3) },
@@ -1132,8 +1103,8 @@ void EpubVersionConv::init_members() {
 	{ "Because;", QChar(0x2235) },
 	{ "Bernoullis;", QChar(0x212c) },
 	{ "Beta;", QChar(0x0392) },
-	{ "Bfr;", QChar(0x0001d505) },
-	{ "Bopf;", QChar(0x0001d539) },
+	{ "Bfr;", HtmlNamedEntityFromCodepoint(0x0001d505) },
+	{ "Bopf;", HtmlNamedEntityFromCodepoint(0x0001d539) },
 	{ "Breve;", QChar(0x02d8) },
 	{ "Bscr;", QChar(0x212c) },
 	{ "Bumpeq;", QChar(0x224e) },
@@ -1170,7 +1141,7 @@ void EpubVersionConv::init_members() {
 	{ "Coproduct;", QChar(0x2210) },
 	{ "CounterClockwiseContourIntegral;", QChar(0x2233) },
 	{ "Cross;", QChar(0x2a2f) },
-	{ "Cscr;", QChar(0x0001d49e) },
+	{ "Cscr;", HtmlNamedEntityFromCodepoint(0x0001d49e) },
 	{ "Cup;", QChar(0x22d3) },
 	{ "CupCap;", QChar(0x224d) },
 	{ "DD;", QChar(0x2145) },
@@ -1185,7 +1156,7 @@ void EpubVersionConv::init_members() {
 	{ "Dcy;", QChar(0x0414) },
 	{ "Del;", QChar(0x2207) },
 	{ "Delta;", QChar(0x0394) },
-	{ "Dfr;", QChar(0x0001d507) },
+	{ "Dfr;", HtmlNamedEntityFromCodepoint(0x0001d507) },
 	{ "DiacriticalAcute;", QChar(0xb4) },
 	{ "DiacriticalDot;", QChar(0x02d9) },
 	{ "DiacriticalDoubleAcute;", QChar(0x02dd) },
@@ -1193,7 +1164,7 @@ void EpubVersionConv::init_members() {
 	{ "DiacriticalTilde;", QChar(0x02dc) },
 	{ "Diamond;", QChar(0x22c4) },
 	{ "DifferentialD;", QChar(0x2146) },
-	{ "Dopf;", QChar(0x0001d53b) },
+	{ "Dopf;", HtmlNamedEntityFromCodepoint(0x0001d53b) },
 	{ "Dot;", QChar(0xa8) },
 	{ "DotDot;", QChar(0x20dc) },
 	{ "DotEqual;", QChar(0x2250) },
@@ -1225,7 +1196,7 @@ void EpubVersionConv::init_members() {
 	{ "DownTee;", QChar(0x22a4) },
 	{ "DownTeeArrow;", QChar(0x21a7) },
 	{ "Downarrow;", QChar(0x21d3) },
-	{ "Dscr;", QChar(0x0001d49f) },
+	{ "Dscr;", HtmlNamedEntityFromCodepoint(0x0001d49f) },
 	{ "Dstrok;", QChar(0x0110) },
 	{ "ENG;", QChar(0x014a) },
 	{ "ETH", QChar(0xd0) },
@@ -1237,7 +1208,7 @@ void EpubVersionConv::init_members() {
 	{ "Ecirc;", QChar(0xca) },
 	{ "Ecy;", QChar(0x042d) },
 	{ "Edot;", QChar(0x0116) },
-	{ "Efr;", QChar(0x0001d508) },
+	{ "Efr;", HtmlNamedEntityFromCodepoint(0x0001d508) },
 	{ "Egrave", QChar(0xc8) },
 	{ "Egrave;", QChar(0xc8) },
 	{ "Element;", QChar(0x2208) },
@@ -1245,7 +1216,7 @@ void EpubVersionConv::init_members() {
 	{ "EmptySmallSquare;", QChar(0x25fb) },
 	{ "EmptyVerySmallSquare;", QChar(0x25ab) },
 	{ "Eogon;", QChar(0x0118) },
-	{ "Eopf;", QChar(0x0001d53c) },
+	{ "Eopf;", HtmlNamedEntityFromCodepoint(0x0001d53c) },
 	{ "Epsilon;", QChar(0x0395) },
 	{ "Equal;", QChar(0x2a75) },
 	{ "EqualTilde;", QChar(0x2242) },
@@ -1258,10 +1229,10 @@ void EpubVersionConv::init_members() {
 	{ "Exists;", QChar(0x2203) },
 	{ "ExponentialE;", QChar(0x2147) },
 	{ "Fcy;", QChar(0x0424) },
-	{ "Ffr;", QChar(0x0001d509) },
+	{ "Ffr;", HtmlNamedEntityFromCodepoint(0x0001d509) },
 	{ "FilledSmallSquare;", QChar(0x25fc) },
 	{ "FilledVerySmallSquare;", QChar(0x25aa) },
-	{ "Fopf;", QChar(0x0001d53d) },
+	{ "Fopf;", HtmlNamedEntityFromCodepoint(0x0001d53d) },
 	{ "ForAll;", QChar(0x2200) },
 	{ "Fouriertrf;", QChar(0x2131) },
 	{ "Fscr;", QChar(0x2131) },
@@ -1275,9 +1246,9 @@ void EpubVersionConv::init_members() {
 	{ "Gcirc;", QChar(0x011c) },
 	{ "Gcy;", QChar(0x0413) },
 	{ "Gdot;", QChar(0x0120) },
-	{ "Gfr;", QChar(0x0001d50a) },
+	{ "Gfr;", HtmlNamedEntityFromCodepoint(0x0001d50a) },
 	{ "Gg;", QChar(0x22d9) },
-	{ "Gopf;", QChar(0x0001d53e) },
+	{ "Gopf;", HtmlNamedEntityFromCodepoint(0x0001d53e) },
 	{ "GreaterEqual;", QChar(0x2265) },
 	{ "GreaterEqualLess;", QChar(0x22db) },
 	{ "GreaterFullEqual;", QChar(0x2267) },
@@ -1285,7 +1256,7 @@ void EpubVersionConv::init_members() {
 	{ "GreaterLess;", QChar(0x2277) },
 	{ "GreaterSlantEqual;", QChar(0x2a7e) },
 	{ "GreaterTilde;", QChar(0x2273) },
-	{ "Gscr;", QChar(0x0001d4a2) },
+	{ "Gscr;", HtmlNamedEntityFromCodepoint(0x0001d4a2) },
 	{ "Gt;", QChar(0x226b) },
 	{ "HARDcy;", QChar(0x042a) },
 	{ "Hacek;", QChar(0x02c7) },
@@ -1321,7 +1292,7 @@ void EpubVersionConv::init_members() {
 	{ "InvisibleComma;", QChar(0x2063) },
 	{ "InvisibleTimes;", QChar(0x2062) },
 	{ "Iogon;", QChar(0x012e) },
-	{ "Iopf;", QChar(0x0001d540) },
+	{ "Iopf;", HtmlNamedEntityFromCodepoint(0x0001d540) },
 	{ "Iota;", QChar(0x0399) },
 	{ "Iscr;", QChar(0x2110) },
 	{ "Itilde;", QChar(0x0128) },
@@ -1330,9 +1301,9 @@ void EpubVersionConv::init_members() {
 	{ "Iuml;", QChar(0xcf) },
 	{ "Jcirc;", QChar(0x0134) },
 	{ "Jcy;", QChar(0x0419) },
-	{ "Jfr;", QChar(0x0001d50d) },
-	{ "Jopf;", QChar(0x0001d541) },
-	{ "Jscr;", QChar(0x0001d4a5) },
+	{ "Jfr;", HtmlNamedEntityFromCodepoint(0x0001d50d) },
+	{ "Jopf;", HtmlNamedEntityFromCodepoint(0x0001d541) },
+	{ "Jscr;", HtmlNamedEntityFromCodepoint(0x0001d4a5) },
 	{ "Jsercy;", QChar(0x0408) },
 	{ "Jukcy;", QChar(0x0404) },
 	{ "KHcy;", QChar(0x0425) },
@@ -1340,9 +1311,9 @@ void EpubVersionConv::init_members() {
 	{ "Kappa;", QChar(0x039a) },
 	{ "Kcedil;", QChar(0x0136) },
 	{ "Kcy;", QChar(0x041a) },
-	{ "Kfr;", QChar(0x0001d50e) },
-	{ "Kopf;", QChar(0x0001d542) },
-	{ "Kscr;", QChar(0x0001d4a6) },
+	{ "Kfr;", HtmlNamedEntityFromCodepoint(0x0001d50e) },
+	{ "Kopf;", HtmlNamedEntityFromCodepoint(0x0001d542) },
+	{ "Kscr;", HtmlNamedEntityFromCodepoint(0x0001d4a6) },
 	{ "LJcy;", QChar(0x0409) },
 	{ "LT", "<" },
 	{ "LT;", "<" },
@@ -1386,7 +1357,7 @@ void EpubVersionConv::init_members() {
 	{ "LessLess;", QChar(0x2aa1) },
 	{ "LessSlantEqual;", QChar(0x2a7d) },
 	{ "LessTilde;", QChar(0x2272) },
-	{ "Lfr;", QChar(0x0001d50f) },
+	{ "Lfr;", HtmlNamedEntityFromCodepoint(0x0001d50f) },
 	{ "Ll;", QChar(0x22d8) },
 	{ "Lleftarrow;", QChar(0x21da) },
 	{ "Lmidot;", QChar(0x013f) },
@@ -1396,7 +1367,7 @@ void EpubVersionConv::init_members() {
 	{ "Longleftarrow;", QChar(0x27f8) },
 	{ "Longleftrightarrow;", QChar(0x27fa) },
 	{ "Longrightarrow;", QChar(0x27f9) },
-	{ "Lopf;", QChar(0x0001d543) },
+	{ "Lopf;", HtmlNamedEntityFromCodepoint(0x0001d543) },
 	{ "LowerLeftArrow;", QChar(0x2199) },
 	{ "LowerRightArrow;", QChar(0x2198) },
 	{ "Lscr;", QChar(0x2112) },
@@ -1407,9 +1378,9 @@ void EpubVersionConv::init_members() {
 	{ "Mcy;", QChar(0x041c) },
 	{ "MediumSpace;", QChar(0x205f) },
 	{ "Mellintrf;", QChar(0x2133) },
-	{ "Mfr;", QChar(0x0001d510) },
+	{ "Mfr;", HtmlNamedEntityFromCodepoint(0x0001d510) },
 	{ "MinusPlus;", QChar(0x2213) },
-	{ "Mopf;", QChar(0x0001d544) },
+	{ "Mopf;", HtmlNamedEntityFromCodepoint(0x0001d544) },
 	{ "Mscr;", QChar(0x2133) },
 	{ "Mu;", QChar(0x039c) },
 	{ "NJcy;", QChar(0x040a) },
@@ -1424,7 +1395,7 @@ void EpubVersionConv::init_members() {
 	{ "NestedGreaterGreater;", QChar(0x226b) },
 	{ "NestedLessLess;", QChar(0x226a) },
 	{ "NewLine;", "\n" },
-	{ "Nfr;", QChar(0x0001d511) },
+	{ "Nfr;", HtmlNamedEntityFromCodepoint(0x0001d511) },
 	{ "NoBreak;", QChar(0x2060) },
 	{ "NonBreakingSpace;", QChar(0xa0) },
 	{ "Nopf;", QChar(0x2115) },
@@ -1480,7 +1451,7 @@ void EpubVersionConv::init_members() {
 	{ "NotTildeFullEqual;", QChar(0x2247) },
 	{ "NotTildeTilde;", QChar(0x2249) },
 	{ "NotVerticalBar;", QChar(0x2224) },
-	{ "Nscr;", QChar(0x0001d4a9) },
+	{ "Nscr;", HtmlNamedEntityFromCodepoint(0x0001d4a9) },
 	{ "Ntilde", QChar(0xd1) },
 	{ "Ntilde;", QChar(0xd1) },
 	{ "Nu;", QChar(0x039d) },
@@ -1491,17 +1462,17 @@ void EpubVersionConv::init_members() {
 	{ "Ocirc;", QChar(0xd4) },
 	{ "Ocy;", QChar(0x041e) },
 	{ "Odblac;", QChar(0x0150) },
-	{ "Ofr;", QChar(0x0001d512) },
+	{ "Ofr;", HtmlNamedEntityFromCodepoint(0x0001d512) },
 	{ "Ograve", QChar(0xd2) },
 	{ "Ograve;", QChar(0xd2) },
 	{ "Omacr;", QChar(0x014c) },
 	{ "Omega;", QChar(0x03a9) },
 	{ "Omicron;", QChar(0x039f) },
-	{ "Oopf;", QChar(0x0001d546) },
+	{ "Oopf;", HtmlNamedEntityFromCodepoint(0x0001d546) },
 	{ "OpenCurlyDoubleQuote;", QChar(0x201c) },
 	{ "OpenCurlyQuote;", QChar(0x2018) },
 	{ "Or;", QChar(0x2a54) },
-	{ "Oscr;", QChar(0x0001d4aa) },
+	{ "Oscr;", HtmlNamedEntityFromCodepoint(0x0001d4aa) },
 	{ "Oslash", QChar(0xd8) },
 	{ "Oslash;", QChar(0xd8) },
 	{ "Otilde", QChar(0xd5) },
@@ -1515,7 +1486,7 @@ void EpubVersionConv::init_members() {
 	{ "OverParenthesis;", QChar(0x23dc) },
 	{ "PartialD;", QChar(0x2202) },
 	{ "Pcy;", QChar(0x041f) },
-	{ "Pfr;", QChar(0x0001d513) },
+	{ "Pfr;", HtmlNamedEntityFromCodepoint(0x0001d513) },
 	{ "Phi;", QChar(0x03a6) },
 	{ "Pi;", QChar(0x03a0) },
 	{ "PlusMinus;", QChar(0xb1) },
@@ -1530,13 +1501,13 @@ void EpubVersionConv::init_members() {
 	{ "Product;", QChar(0x220f) },
 	{ "Proportion;", QChar(0x2237) },
 	{ "Proportional;", QChar(0x221d) },
-	{ "Pscr;", QChar(0x0001d4ab) },
+	{ "Pscr;", HtmlNamedEntityFromCodepoint(0x0001d4ab) },
 	{ "Psi;", QChar(0x03a8) },
 	{ "QUOT", "\"" },
 	{ "QUOT;", "\"" },
-	{ "Qfr;", QChar(0x0001d514) },
+	{ "Qfr;", HtmlNamedEntityFromCodepoint(0x0001d514) },
 	{ "Qopf;", QChar(0x211a) },
-	{ "Qscr;", QChar(0x0001d4ac) },
+	{ "Qscr;", HtmlNamedEntityFromCodepoint(0x0001d4ac) },
 	{ "RBarr;", QChar(0x2910) },
 	{ "REG", QChar(0xae) },
 	{ "REG;", QChar(0xae) },
@@ -1591,14 +1562,14 @@ void EpubVersionConv::init_members() {
 	{ "Scedil;", QChar(0x015e) },
 	{ "Scirc;", QChar(0x015c) },
 	{ "Scy;", QChar(0x0421) },
-	{ "Sfr;", QChar(0x0001d516) },
+	{ "Sfr;", HtmlNamedEntityFromCodepoint(0x0001d516) },
 	{ "ShortDownArrow;", QChar(0x2193) },
 	{ "ShortLeftArrow;", QChar(0x2190) },
 	{ "ShortRightArrow;", QChar(0x2192) },
 	{ "ShortUpArrow;", QChar(0x2191) },
 	{ "Sigma;", QChar(0x03a3) },
 	{ "SmallCircle;", QChar(0x2218) },
-	{ "Sopf;", QChar(0x0001d54a) },
+	{ "Sopf;", HtmlNamedEntityFromCodepoint(0x0001d54a) },
 	{ "Sqrt;", QChar(0x221a) },
 	{ "Square;", QChar(0x25a1) },
 	{ "SquareIntersection;", QChar(0x2293) },
@@ -1607,7 +1578,7 @@ void EpubVersionConv::init_members() {
 	{ "SquareSuperset;", QChar(0x2290) },
 	{ "SquareSupersetEqual;", QChar(0x2292) },
 	{ "SquareUnion;", QChar(0x2294) },
-	{ "Sscr;", QChar(0x0001d4ae) },
+	{ "Sscr;", HtmlNamedEntityFromCodepoint(0x0001d4ae) },
 	{ "Star;", QChar(0x22c6) },
 	{ "Sub;", QChar(0x22d0) },
 	{ "Subset;", QChar(0x22d0) },
@@ -1632,7 +1603,7 @@ void EpubVersionConv::init_members() {
 	{ "Tcaron;", QChar(0x0164) },
 	{ "Tcedil;", QChar(0x0162) },
 	{ "Tcy;", QChar(0x0422) },
-	{ "Tfr;", QChar(0x0001d517) },
+	{ "Tfr;", HtmlNamedEntityFromCodepoint(0x0001d517) },
 	{ "Therefore;", QChar(0x2234) },
 	{ "Theta;", QChar(0x0398) },
 	{ "ThickSpace;", QChar(0x205f) % QChar(0x200a) },
@@ -1641,9 +1612,9 @@ void EpubVersionConv::init_members() {
 	{ "TildeEqual;", QChar(0x2243) },
 	{ "TildeFullEqual;", QChar(0x2245) },
 	{ "TildeTilde;", QChar(0x2248) },
-	{ "Topf;", QChar(0x0001d54b) },
+	{ "Topf;", HtmlNamedEntityFromCodepoint(0x0001d54b) },
 	{ "TripleDot;", QChar(0x20db) },
-	{ "Tscr;", QChar(0x0001d4af) },
+	{ "Tscr;", HtmlNamedEntityFromCodepoint(0x0001d4af) },
 	{ "Tstrok;", QChar(0x0166) },
 	{ "Uacute", QChar(0xda) },
 	{ "Uacute;", QChar(0xda) },
@@ -1655,7 +1626,7 @@ void EpubVersionConv::init_members() {
 	{ "Ucirc;", QChar(0xdb) },
 	{ "Ucy;", QChar(0x0423) },
 	{ "Udblac;", QChar(0x0170) },
-	{ "Ufr;", QChar(0x0001d518) },
+	{ "Ufr;", HtmlNamedEntityFromCodepoint(0x0001d518) },
 	{ "Ugrave", QChar(0xd9) },
 	{ "Ugrave;", QChar(0xd9) },
 	{ "Umacr;", QChar(0x016a) },
@@ -1666,7 +1637,7 @@ void EpubVersionConv::init_members() {
 	{ "Union;", QChar(0x22c3) },
 	{ "UnionPlus;", QChar(0x228e) },
 	{ "Uogon;", QChar(0x0172) },
-	{ "Uopf;", QChar(0x0001d54c) },
+	{ "Uopf;", HtmlNamedEntityFromCodepoint(0x0001d54c) },
 	{ "UpArrow;", QChar(0x2191) },
 	{ "UpArrowBar;", QChar(0x2912) },
 	{ "UpArrowDownArrow;", QChar(0x21c5) },
@@ -1681,7 +1652,7 @@ void EpubVersionConv::init_members() {
 	{ "Upsi;", QChar(0x03d2) },
 	{ "Upsilon;", QChar(0x03a5) },
 	{ "Uring;", QChar(0x016e) },
-	{ "Uscr;", QChar(0x0001d4b0) },
+	{ "Uscr;", HtmlNamedEntityFromCodepoint(0x0001d4b0) },
 	{ "Utilde;", QChar(0x0168) },
 	{ "Uuml", QChar(0xdc) },
 	{ "Uuml;", QChar(0xdc) },
@@ -1698,19 +1669,19 @@ void EpubVersionConv::init_members() {
 	{ "VerticalSeparator;", QChar(0x2758) },
 	{ "VerticalTilde;", QChar(0x2240) },
 	{ "VeryThinSpace;", QChar(0x200a) },
-	{ "Vfr;", QChar(0x0001d519) },
-	{ "Vopf;", QChar(0x0001d54d) },
-	{ "Vscr;", QChar(0x0001d4b1) },
+	{ "Vfr;", HtmlNamedEntityFromCodepoint(0x0001d519) },
+	{ "Vopf;", HtmlNamedEntityFromCodepoint(0x0001d54d) },
+	{ "Vscr;", HtmlNamedEntityFromCodepoint(0x0001d4b1) },
 	{ "Vvdash;", QChar(0x22aa) },
 	{ "Wcirc;", QChar(0x0174) },
 	{ "Wedge;", QChar(0x22c0) },
-	{ "Wfr;", QChar(0x0001d51a) },
-	{ "Wopf;", QChar(0x0001d54e) },
-	{ "Wscr;", QChar(0x0001d4b2) },
-	{ "Xfr;", QChar(0x0001d51b) },
+	{ "Wfr;", HtmlNamedEntityFromCodepoint(0x0001d51a) },
+	{ "Wopf;", HtmlNamedEntityFromCodepoint(0x0001d54e) },
+	{ "Wscr;", HtmlNamedEntityFromCodepoint(0x0001d4b2) },
+	{ "Xfr;", HtmlNamedEntityFromCodepoint(0x0001d51b) },
 	{ "Xi;", QChar(0x039e) },
-	{ "Xopf;", QChar(0x0001d54f) },
-	{ "Xscr;", QChar(0x0001d4b3) },
+	{ "Xopf;", HtmlNamedEntityFromCodepoint(0x0001d54f) },
+	{ "Xscr;", HtmlNamedEntityFromCodepoint(0x0001d4b3) },
 	{ "YAcy;", QChar(0x042f) },
 	{ "YIcy;", QChar(0x0407) },
 	{ "YUcy;", QChar(0x042e) },
@@ -1718,9 +1689,9 @@ void EpubVersionConv::init_members() {
 	{ "Yacute;", QChar(0xdd) },
 	{ "Ycirc;", QChar(0x0176) },
 	{ "Ycy;", QChar(0x042b) },
-	{ "Yfr;", QChar(0x0001d51c) },
-	{ "Yopf;", QChar(0x0001d550) },
-	{ "Yscr;", QChar(0x0001d4b4) },
+	{ "Yfr;", HtmlNamedEntityFromCodepoint(0x0001d51c) },
+	{ "Yopf;", HtmlNamedEntityFromCodepoint(0x0001d550) },
+	{ "Yscr;", HtmlNamedEntityFromCodepoint(0x0001d4b4) },
 	{ "Yuml;", QChar(0x0178) },
 	{ "ZHcy;", QChar(0x0416) },
 	{ "Zacute;", QChar(0x0179) },
@@ -1731,7 +1702,7 @@ void EpubVersionConv::init_members() {
 	{ "Zeta;", QChar(0x0396) },
 	{ "Zfr;", QChar(0x2128) },
 	{ "Zopf;", QChar(0x2124) },
-	{ "Zscr;", QChar(0x0001d4b5) },
+	{ "Zscr;", HtmlNamedEntityFromCodepoint(0x0001d4b5) },
 	{ "aacute", QChar(0xe1) },
 	{ "aacute;", QChar(0xe1) },
 	{ "abreve;", QChar(0x0103) },
@@ -1746,7 +1717,7 @@ void EpubVersionConv::init_members() {
 	{ "aelig", QChar(0xe6) },
 	{ "aelig;", QChar(0xe6) },
 	{ "af;", QChar(0x2061) },
-	{ "afr;", QChar(0x0001d51e) },
+	{ "afr;", HtmlNamedEntityFromCodepoint(0x0001d51e) },
 	{ "agrave", QChar(0xe0) },
 	{ "agrave;", QChar(0xe0) },
 	{ "alefsym;", QChar(0x2135) },
@@ -1780,7 +1751,7 @@ void EpubVersionConv::init_members() {
 	{ "angst;", QChar(0xc5) },
 	{ "angzarr;", QChar(0x237c) },
 	{ "aogon;", QChar(0x0105) },
-	{ "aopf;", QChar(0x0001d552) },
+	{ "aopf;", HtmlNamedEntityFromCodepoint(0x0001d552) },
 	{ "ap;", QChar(0x2248) },
 	{ "apE;", QChar(0x2a70) },
 	{ "apacir;", QChar(0x2a6f) },
@@ -1791,7 +1762,7 @@ void EpubVersionConv::init_members() {
 	{ "approxeq;", QChar(0x224a) },
 	{ "aring", QChar(0xe5) },
 	{ "aring;", QChar(0xe5) },
-	{ "ascr;", QChar(0x0001d4b6) },
+	{ "ascr;", HtmlNamedEntityFromCodepoint(0x0001d4b6) },
 	{ "ast;", "*" },
 	{ "asymp;", QChar(0x2248) },
 	{ "asympeq;", QChar(0x224d) },
@@ -1823,7 +1794,7 @@ void EpubVersionConv::init_members() {
 	{ "beta;", QChar(0x03b2) },
 	{ "beth;", QChar(0x2136) },
 	{ "between;", QChar(0x226c) },
-	{ "bfr;", QChar(0x0001d51f) },
+	{ "bfr;", HtmlNamedEntityFromCodepoint(0x0001d51f) },
 	{ "bigcap;", QChar(0x22c2) },
 	{ "bigcirc;", QChar(0x25ef) },
 	{ "bigcup;", QChar(0x22c3) },
@@ -1852,7 +1823,7 @@ void EpubVersionConv::init_members() {
 	{ "bne;", "=QChar(0x20e5)" },
 	{ "bnequiv;", QChar(0x2261) % QChar(0x20e5) },
 	{ "bnot;", QChar(0x2310) },
-	{ "bopf;", QChar(0x0001d553) },
+	{ "bopf;", HtmlNamedEntityFromCodepoint(0x0001d553) },
 	{ "bot;", QChar(0x22a5) },
 	{ "bottom;", QChar(0x22a5) },
 	{ "bowtie;", QChar(0x22c8) },
@@ -1904,7 +1875,7 @@ void EpubVersionConv::init_members() {
 	{ "breve;", QChar(0x02d8) },
 	{ "brvbar", QChar(0xa6) },
 	{ "brvbar;", QChar(0xa6) },
-	{ "bscr;", QChar(0x0001d4b7) },
+	{ "bscr;", HtmlNamedEntityFromCodepoint(0x0001d4b7) },
 	{ "bsemi;", QChar(0x204f) },
 	{ "bsim;", QChar(0x223d) },
 	{ "bsime;", QChar(0x22cd) },
@@ -1941,7 +1912,7 @@ void EpubVersionConv::init_members() {
 	{ "cent", QChar(0xa2) },
 	{ "cent;", QChar(0xa2) },
 	{ "centerdot;", QChar(0xb7) },
-	{ "cfr;", QChar(0x0001d520) },
+	{ "cfr;", HtmlNamedEntityFromCodepoint(0x0001d520) },
 	{ "chcy;", QChar(0x0447) },
 	{ "check;", QChar(0x2713) },
 	{ "checkmark;", QChar(0x2713) },
@@ -1975,14 +1946,14 @@ void EpubVersionConv::init_members() {
 	{ "cong;", QChar(0x2245) },
 	{ "congdot;", QChar(0x2a6d) },
 	{ "conint;", QChar(0x222e) },
-	{ "copf;", QChar(0x0001d554) },
+	{ "copf;", HtmlNamedEntityFromCodepoint(0x0001d554) },
 	{ "coprod;", QChar(0x2210) },
 	{ "copy", QChar(0xa9) },
 	{ "copy;", QChar(0xa9) },
 	{ "copysr;", QChar(0x2117) },
 	{ "crarr;", QChar(0x21b5) },
 	{ "cross;", QChar(0x2717) },
-	{ "cscr;", QChar(0x0001d4b8) },
+	{ "cscr;", HtmlNamedEntityFromCodepoint(0x0001d4b8) },
 	{ "csub;", QChar(0x2acf) },
 	{ "csube;", QChar(0x2ad1) },
 	{ "csup;", QChar(0x2ad0) },
@@ -2036,7 +2007,7 @@ void EpubVersionConv::init_members() {
 	{ "delta;", QChar(0x03b4) },
 	{ "demptyv;", QChar(0x29b1) },
 	{ "dfisht;", QChar(0x297f) },
-	{ "dfr;", QChar(0x0001d521) },
+	{ "dfr;", HtmlNamedEntityFromCodepoint(0x0001d521) },
 	{ "dharl;", QChar(0x21c3) },
 	{ "dharr;", QChar(0x21c2) },
 	{ "diam;", QChar(0x22c4) },
@@ -2055,7 +2026,7 @@ void EpubVersionConv::init_members() {
 	{ "dlcorn;", QChar(0x231e) },
 	{ "dlcrop;", QChar(0x230d) },
 	{ "dollar;", "$" },
-	{ "dopf;", QChar(0x0001d555) },
+	{ "dopf;", HtmlNamedEntityFromCodepoint(0x0001d555) },
 	{ "dot;", QChar(0x02d9) },
 	{ "doteq;", QChar(0x2250) },
 	{ "doteqdot;", QChar(0x2251) },
@@ -2070,7 +2041,7 @@ void EpubVersionConv::init_members() {
 	{ "drbkarow;", QChar(0x2910) },
 	{ "drcorn;", QChar(0x231f) },
 	{ "drcrop;", QChar(0x230c) },
-	{ "dscr;", QChar(0x0001d4b9) },
+	{ "dscr;", HtmlNamedEntityFromCodepoint(0x0001d4b9) },
 	{ "dscy;", QChar(0x0455) },
 	{ "dsol;", QChar(0x29f6) },
 	{ "dstrok;", QChar(0x0111) },
@@ -2096,7 +2067,7 @@ void EpubVersionConv::init_members() {
 	{ "edot;", QChar(0x0117) },
 	{ "ee;", QChar(0x2147) },
 	{ "efDot;", QChar(0x2252) },
-	{ "efr;", QChar(0x0001d522) },
+	{ "efr;", HtmlNamedEntityFromCodepoint(0x0001d522) },
 	{ "eg;", QChar(0x2a9a) },
 	{ "egrave", QChar(0xe8) },
 	{ "egrave;", QChar(0xe8) },
@@ -2117,7 +2088,7 @@ void EpubVersionConv::init_members() {
 	{ "eng;", QChar(0x014b) },
 	{ "ensp;", QChar(0x2002) },
 	{ "eogon;", QChar(0x0119) },
-	{ "eopf;", QChar(0x0001d556) },
+	{ "eopf;", HtmlNamedEntityFromCodepoint(0x0001d556) },
 	{ "epar;", QChar(0x22d5) },
 	{ "eparsl;", QChar(0x29e3) },
 	{ "eplus;", QChar(0x2a71) },
@@ -2155,14 +2126,14 @@ void EpubVersionConv::init_members() {
 	{ "ffilig;", QChar(0xfb03) },
 	{ "fflig;", QChar(0xfb00) },
 	{ "ffllig;", QChar(0xfb04) },
-	{ "ffr;", QChar(0x0001d523) },
+	{ "ffr;", HtmlNamedEntityFromCodepoint(0x0001d523) },
 	{ "filig;", QChar(0xfb01) },
 	{ "fjlig;", "fj" },
 	{ "flat;", QChar(0x266d) },
 	{ "fllig;", QChar(0xfb02) },
 	{ "fltns;", QChar(0x25b1) },
 	{ "fnof;", QChar(0x0192) },
-	{ "fopf;", QChar(0x0001d557) },
+	{ "fopf;", HtmlNamedEntityFromCodepoint(0x0001d557) },
 	{ "forall;", QChar(0x2200) },
 	{ "fork;", QChar(0x22d4) },
 	{ "forkv;", QChar(0x2ad9) },
@@ -2187,7 +2158,7 @@ void EpubVersionConv::init_members() {
 	{ "frac78;", QChar(0x215e) },
 	{ "frasl;", QChar(0x2044) },
 	{ "frown;", QChar(0x2322) },
-	{ "fscr;", QChar(0x0001d4bb) },
+	{ "fscr;", HtmlNamedEntityFromCodepoint(0x0001d4bb) },
 	{ "gE;", QChar(0x2267) },
 	{ "gEl;", QChar(0x2a8c) },
 	{ "gacute;", QChar(0x01f5) },
@@ -2210,7 +2181,7 @@ void EpubVersionConv::init_members() {
 	{ "gesdotol;", QChar(0x2a84) },
 	{ "gesl;", QChar(0x22db) % QChar(0xfe00) },
 	{ "gesles;", QChar(0x2a94) },
-	{ "gfr;", QChar(0x0001d524) },
+	{ "gfr;", HtmlNamedEntityFromCodepoint(0x0001d524) },
 	{ "gg;", QChar(0x226b) },
 	{ "ggg;", QChar(0x22d9) },
 	{ "gimel;", QChar(0x2137) },
@@ -2226,7 +2197,7 @@ void EpubVersionConv::init_members() {
 	{ "gneq;", QChar(0x2a88) },
 	{ "gneqq;", QChar(0x2269) },
 	{ "gnsim;", QChar(0x22e7) },
-	{ "gopf;", QChar(0x0001d558) },
+	{ "gopf;", HtmlNamedEntityFromCodepoint(0x0001d558) },
 	{ "grave;", "`" },
 	{ "gscr;", QChar(0x210a) },
 	{ "gsim;", QChar(0x2273) },
@@ -2262,16 +2233,16 @@ void EpubVersionConv::init_members() {
 	{ "heartsuit;", QChar(0x2665) },
 	{ "hellip;", QChar(0x2026) },
 	{ "hercon;", QChar(0x22b9) },
-	{ "hfr;", QChar(0x0001d525) },
+	{ "hfr;", HtmlNamedEntityFromCodepoint(0x0001d525) },
 	{ "hksearow;", QChar(0x2925) },
 	{ "hkswarow;", QChar(0x2926) },
 	{ "hoarr;", QChar(0x21ff) },
 	{ "homtht;", QChar(0x223b) },
 	{ "hookleftarrow;", QChar(0x21a9) },
 	{ "hookrightarrow;", QChar(0x21aa) },
-	{ "hopf;", QChar(0x0001d559) },
+	{ "hopf;", HtmlNamedEntityFromCodepoint(0x0001d559) },
 	{ "horbar;", QChar(0x2015) },
-	{ "hscr;", QChar(0x0001d4bd) },
+	{ "hscr;", HtmlNamedEntityFromCodepoint(0x0001d4bd) },
 	{ "hslash;", QChar(0x210f) },
 	{ "hstrok;", QChar(0x0127) },
 	{ "hybull;", QChar(0x2043) },
@@ -2286,7 +2257,7 @@ void EpubVersionConv::init_members() {
 	{ "iexcl", QChar(0xa1) },
 	{ "iexcl;", QChar(0xa1) },
 	{ "iff;", QChar(0x21d4) },
-	{ "ifr;", QChar(0x0001d526) },
+	{ "ifr;", HtmlNamedEntityFromCodepoint(0x0001d526) },
 	{ "igrave", QChar(0xec) },
 	{ "igrave;", QChar(0xec) },
 	{ "ii;", QChar(0x2148) },
@@ -2315,12 +2286,12 @@ void EpubVersionConv::init_members() {
 	{ "intprod;", QChar(0x2a3c) },
 	{ "iocy;", QChar(0x0451) },
 	{ "iogon;", QChar(0x012f) },
-	{ "iopf;", QChar(0x0001d55a) },
+	{ "iopf;", HtmlNamedEntityFromCodepoint(0x0001d55a) },
 	{ "iota;", QChar(0x03b9) },
 	{ "iprod;", QChar(0x2a3c) },
 	{ "iquest", QChar(0xbf) },
 	{ "iquest;", QChar(0xbf) },
-	{ "iscr;", QChar(0x0001d4be) },
+	{ "iscr;", HtmlNamedEntityFromCodepoint(0x0001d4be) },
 	{ "isin;", QChar(0x2208) },
 	{ "isinE;", QChar(0x22f9) },
 	{ "isindot;", QChar(0x22f5) },
@@ -2334,22 +2305,22 @@ void EpubVersionConv::init_members() {
 	{ "iuml;", QChar(0xef) },
 	{ "jcirc;", QChar(0x0135) },
 	{ "jcy;", QChar(0x0439) },
-	{ "jfr;", QChar(0x0001d527) },
+	{ "jfr;", HtmlNamedEntityFromCodepoint(0x0001d527) },
 	{ "jmath;", QChar(0x0237) },
-	{ "jopf;", QChar(0x0001d55b) },
-	{ "jscr;", QChar(0x0001d4bf) },
+	{ "jopf;", HtmlNamedEntityFromCodepoint(0x0001d55b) },
+	{ "jscr;", HtmlNamedEntityFromCodepoint(0x0001d4bf) },
 	{ "jsercy;", QChar(0x0458) },
 	{ "jukcy;", QChar(0x0454) },
 	{ "kappa;", QChar(0x03ba) },
 	{ "kappav;", QChar(0x03f0) },
 	{ "kcedil;", QChar(0x0137) },
 	{ "kcy;", QChar(0x043a) },
-	{ "kfr;", QChar(0x0001d528) },
+	{ "kfr;", HtmlNamedEntityFromCodepoint(0x0001d528) },
 	{ "kgreen;", QChar(0x0138) },
 	{ "khcy;", QChar(0x0445) },
 	{ "kjcy;", QChar(0x045c) },
-	{ "kopf;", QChar(0x0001d55c) },
-	{ "kscr;", QChar(0x0001d4c0) },
+	{ "kopf;", HtmlNamedEntityFromCodepoint(0x0001d55c) },
+	{ "kscr;", HtmlNamedEntityFromCodepoint(0x0001d4c0) },
 	{ "lAarr;", QChar(0x21da) },
 	{ "lArr;", QChar(0x21d0) },
 	{ "lAtail;", QChar(0x291b) },
@@ -2428,7 +2399,7 @@ void EpubVersionConv::init_members() {
 	{ "lesssim;", QChar(0x2272) },
 	{ "lfisht;", QChar(0x297c) },
 	{ "lfloor;", QChar(0x230a) },
-	{ "lfr;", QChar(0x0001d529) },
+	{ "lfr;", HtmlNamedEntityFromCodepoint(0x0001d529) },
 	{ "lg;", QChar(0x2276) },
 	{ "lgE;", QChar(0x2a91) },
 	{ "lhard;", QChar(0x21bd) },
@@ -2461,7 +2432,7 @@ void EpubVersionConv::init_members() {
 	{ "looparrowleft;", QChar(0x21ab) },
 	{ "looparrowright;", QChar(0x21ac) },
 	{ "lopar;", QChar(0x2985) },
-	{ "lopf;", QChar(0x0001d55d) },
+	{ "lopf;", HtmlNamedEntityFromCodepoint(0x0001d55d) },
 	{ "loplus;", QChar(0x2a2d) },
 	{ "lotimes;", QChar(0x2a34) },
 	{ "lowast;", QChar(0x2217) },
@@ -2478,7 +2449,7 @@ void EpubVersionConv::init_members() {
 	{ "lrm;", QChar(0x200e) },
 	{ "lrtri;", QChar(0x22bf) },
 	{ "lsaquo;", QChar(0x2039) },
-	{ "lscr;", QChar(0x0001d4c1) },
+	{ "lscr;", HtmlNamedEntityFromCodepoint(0x0001d4c1) },
 	{ "lsh;", QChar(0x21b0) },
 	{ "lsim;", QChar(0x2272) },
 	{ "lsime;", QChar(0x2a8d) },
@@ -2520,7 +2491,7 @@ void EpubVersionConv::init_members() {
 	{ "mcy;", QChar(0x043c) },
 	{ "mdash;", QChar(0x2014) },
 	{ "measuredangle;", QChar(0x2221) },
-	{ "mfr;", QChar(0x0001d52a) },
+	{ "mfr;", HtmlNamedEntityFromCodepoint(0x0001d52a) },
 	{ "mho;", QChar(0x2127) },
 	{ "micro", QChar(0xb5) },
 	{ "micro;", QChar(0xb5) },
@@ -2537,9 +2508,9 @@ void EpubVersionConv::init_members() {
 	{ "mldr;", QChar(0x2026) },
 	{ "mnplus;", QChar(0x2213) },
 	{ "models;", QChar(0x22a7) },
-	{ "mopf;", QChar(0x0001d55e) },
+	{ "mopf;", HtmlNamedEntityFromCodepoint(0x0001d55e) },
 	{ "mp;", QChar(0x2213) },
-	{ "mscr;", QChar(0x0001d4c2) },
+	{ "mscr;", HtmlNamedEntityFromCodepoint(0x0001d4c2) },
 	{ "mstpos;", QChar(0x223e) },
 	{ "mu;", QChar(0x03bc) },
 	{ "multimap;", QChar(0x22b8) },
@@ -2589,7 +2560,7 @@ void EpubVersionConv::init_members() {
 	{ "nesim;", QChar(0x2242) % QChar(0x0338) },
 	{ "nexist;", QChar(0x2204) },
 	{ "nexists;", QChar(0x2204) },
-	{ "nfr;", QChar(0x0001d52b) },
+	{ "nfr;", HtmlNamedEntityFromCodepoint(0x0001d52b) },
 	{ "ngE;", QChar(0x2267) % QChar(0x0338) },
 	{ "nge;", QChar(0x2271) },
 	{ "ngeq;", QChar(0x2271) },
@@ -2624,7 +2595,7 @@ void EpubVersionConv::init_members() {
 	{ "nltri;", QChar(0x22ea) },
 	{ "nltrie;", QChar(0x22ec) },
 	{ "nmid;", QChar(0x2224) },
-	{ "nopf;", QChar(0x0001d55f) },
+	{ "nopf;", HtmlNamedEntityFromCodepoint(0x0001d55f) },
 	{ "not", QChar(0xac) },
 	{ "not;", QChar(0xac) },
 	{ "notin;", QChar(0x2209) },
@@ -2657,7 +2628,7 @@ void EpubVersionConv::init_members() {
 	{ "nsc;", QChar(0x2281) },
 	{ "nsccue;", QChar(0x22e1) },
 	{ "nsce;", QChar(0x2ab0) % QChar(0x0338) },
-	{ "nscr;", QChar(0x0001d4c3) },
+	{ "nscr;", HtmlNamedEntityFromCodepoint(0x0001d4c3) },
 	{ "nshortmid;", QChar(0x2224) },
 	{ "nshortparallel;", QChar(0x2226) },
 	{ "nsim;", QChar(0x2241) },
@@ -2727,7 +2698,7 @@ void EpubVersionConv::init_members() {
 	{ "odsold;", QChar(0x29bc) },
 	{ "oelig;", QChar(0x0153) },
 	{ "ofcir;", QChar(0x29bf) },
-	{ "ofr;", QChar(0x0001d52c) },
+	{ "ofr;", HtmlNamedEntityFromCodepoint(0x0001d52c) },
 	{ "ogon;", QChar(0x02db) },
 	{ "ograve", QChar(0xf2) },
 	{ "ograve;", QChar(0xf2) },
@@ -2745,7 +2716,7 @@ void EpubVersionConv::init_members() {
 	{ "omicron;", QChar(0x03bf) },
 	{ "omid;", QChar(0x29b6) },
 	{ "ominus;", QChar(0x2296) },
-	{ "oopf;", QChar(0x0001d560) },
+	{ "oopf;", HtmlNamedEntityFromCodepoint(0x0001d560) },
 	{ "opar;", QChar(0x29b7) },
 	{ "operp;", QChar(0x29b9) },
 	{ "oplus;", QChar(0x2295) },
@@ -2786,7 +2757,7 @@ void EpubVersionConv::init_members() {
 	{ "permil;", QChar(0x2030) },
 	{ "perp;", QChar(0x22a5) },
 	{ "pertenk;", QChar(0x2031) },
-	{ "pfr;", QChar(0x0001d52d) },
+	{ "pfr;", HtmlNamedEntityFromCodepoint(0x0001d52d) },
 	{ "phi;", QChar(0x03c6) },
 	{ "phiv;", QChar(0x03d5) },
 	{ "phmmat;", QChar(0x2133) },
@@ -2810,7 +2781,7 @@ void EpubVersionConv::init_members() {
 	{ "plustwo;", QChar(0x2a27) },
 	{ "pm;", QChar(0xb1) },
 	{ "pointint;", QChar(0x2a15) },
-	{ "popf;", QChar(0x0001d561) },
+	{ "popf;", HtmlNamedEntityFromCodepoint(0x0001d561) },
 	{ "pound", QChar(0xa3) },
 	{ "pound;", QChar(0xa3) },
 	{ "pr;", QChar(0x227a) },
@@ -2839,14 +2810,14 @@ void EpubVersionConv::init_members() {
 	{ "propto;", QChar(0x221d) },
 	{ "prsim;", QChar(0x227e) },
 	{ "prurel;", QChar(0x22b0) },
-	{ "pscr;", QChar(0x0001d4c5) },
+	{ "pscr;", HtmlNamedEntityFromCodepoint(0x0001d4c5) },
 	{ "psi;", QChar(0x03c8) },
 	{ "puncsp;", QChar(0x2008) },
-	{ "qfr;", QChar(0x0001d52e) },
+	{ "qfr;", HtmlNamedEntityFromCodepoint(0x0001d52e) },
 	{ "qint;", QChar(0x2a0c) },
-	{ "qopf;", QChar(0x0001d562) },
+	{ "qopf;", HtmlNamedEntityFromCodepoint(0x0001d562) },
 	{ "qprime;", QChar(0x2057) },
-	{ "qscr;", QChar(0x0001d4c6) },
+	{ "qscr;", HtmlNamedEntityFromCodepoint(0x0001d4c6) },
 	{ "quaternions;", QChar(0x210d) },
 	{ "quatint;", QChar(0x2a16) },
 	{ "quest;", "?" },
@@ -2909,7 +2880,7 @@ void EpubVersionConv::init_members() {
 	{ "reg;", QChar(0xae) },
 	{ "rfisht;", QChar(0x297d) },
 	{ "rfloor;", QChar(0x230b) },
-	{ "rfr;", QChar(0x0001d52f) },
+	{ "rfr;", HtmlNamedEntityFromCodepoint(0x0001d52f) },
 	{ "rhard;", QChar(0x21c1) },
 	{ "rharu;", QChar(0x21c0) },
 	{ "rharul;", QChar(0x296c) },
@@ -2936,7 +2907,7 @@ void EpubVersionConv::init_members() {
 	{ "roarr;", QChar(0x21fe) },
 	{ "robrk;", QChar(0x27e7) },
 	{ "ropar;", QChar(0x2986) },
-	{ "ropf;", QChar(0x0001d563) },
+	{ "ropf;", HtmlNamedEntityFromCodepoint(0x0001d563) },
 	{ "roplus;", QChar(0x2a2e) },
 	{ "rotimes;", QChar(0x2a35) },
 	{ "rpar;", ")" },
@@ -2944,7 +2915,7 @@ void EpubVersionConv::init_members() {
 	{ "rppolint;", QChar(0x2a12) },
 	{ "rrarr;", QChar(0x21c9) },
 	{ "rsaquo;", QChar(0x203a) },
-	{ "rscr;", QChar(0x0001d4c7) },
+	{ "rscr;", HtmlNamedEntityFromCodepoint(0x0001d4c7) },
 	{ "rsh;", QChar(0x21b1) },
 	{ "rsqb;", "]" },
 	{ "rsquo;", QChar(0x2019) },
@@ -2987,7 +2958,7 @@ void EpubVersionConv::init_members() {
 	{ "setminus;", QChar(0x2216) },
 	{ "setmn;", QChar(0x2216) },
 	{ "sext;", QChar(0x2736) },
-	{ "sfr;", QChar(0x0001d530) },
+	{ "sfr;", HtmlNamedEntityFromCodepoint(0x0001d530) },
 	{ "sfrown;", QChar(0x2322) },
 	{ "sharp;", QChar(0x266f) },
 	{ "shchcy;", QChar(0x0449) },
@@ -3023,7 +2994,7 @@ void EpubVersionConv::init_members() {
 	{ "sol;", "/" },
 	{ "solb;", QChar(0x29c4) },
 	{ "solbar;", QChar(0x233f) },
-	{ "sopf;", QChar(0x0001d564) },
+	{ "sopf;", HtmlNamedEntityFromCodepoint(0x0001d564) },
 	{ "spades;", QChar(0x2660) },
 	{ "spadesuit;", QChar(0x2660) },
 	{ "spar;", QChar(0x2225) },
@@ -3044,7 +3015,7 @@ void EpubVersionConv::init_members() {
 	{ "squarf;", QChar(0x25aa) },
 	{ "squf;", QChar(0x25aa) },
 	{ "srarr;", QChar(0x2192) },
-	{ "sscr;", QChar(0x0001d4c8) },
+	{ "sscr;", HtmlNamedEntityFromCodepoint(0x0001d4c8) },
 	{ "ssetmn;", QChar(0x2216) },
 	{ "ssmile;", QChar(0x2323) },
 	{ "sstarf;", QChar(0x22c6) },
@@ -3123,7 +3094,7 @@ void EpubVersionConv::init_members() {
 	{ "tcy;", QChar(0x0442) },
 	{ "tdot;", QChar(0x20db) },
 	{ "telrec;", QChar(0x2315) },
-	{ "tfr;", QChar(0x0001d531) },
+	{ "tfr;", HtmlNamedEntityFromCodepoint(0x0001d531) },
 	{ "there4;", QChar(0x2234) },
 	{ "therefore;", QChar(0x2234) },
 	{ "theta;", QChar(0x03b8) },
@@ -3147,7 +3118,7 @@ void EpubVersionConv::init_members() {
 	{ "top;", QChar(0x22a4) },
 	{ "topbot;", QChar(0x2336) },
 	{ "topcir;", QChar(0x2af1) },
-	{ "topf;", QChar(0x0001d565) },
+	{ "topf;", HtmlNamedEntityFromCodepoint(0x0001d565) },
 	{ "topfork;", QChar(0x2ada) },
 	{ "tosa;", QChar(0x2929) },
 	{ "tprime;", QChar(0x2034) },
@@ -3166,7 +3137,7 @@ void EpubVersionConv::init_members() {
 	{ "trisb;", QChar(0x29cd) },
 	{ "tritime;", QChar(0x2a3b) },
 	{ "trpezium;", QChar(0x23e2) },
-	{ "tscr;", QChar(0x0001d4c9) },
+	{ "tscr;", HtmlNamedEntityFromCodepoint(0x0001d4c9) },
 	{ "tscy;", QChar(0x0446) },
 	{ "tshcy;", QChar(0x045b) },
 	{ "tstrok;", QChar(0x0167) },
@@ -3187,7 +3158,7 @@ void EpubVersionConv::init_members() {
 	{ "udblac;", QChar(0x0171) },
 	{ "udhar;", QChar(0x296e) },
 	{ "ufisht;", QChar(0x297e) },
-	{ "ufr;", QChar(0x0001d532) },
+	{ "ufr;", HtmlNamedEntityFromCodepoint(0x0001d532) },
 	{ "ugrave", QChar(0xf9) },
 	{ "ugrave;", QChar(0xf9) },
 	{ "uharl;", QChar(0x21bf) },
@@ -3201,7 +3172,7 @@ void EpubVersionConv::init_members() {
 	{ "uml", QChar(0xa8) },
 	{ "uml;", QChar(0xa8) },
 	{ "uogon;", QChar(0x0173) },
-	{ "uopf;", QChar(0x0001d566) },
+	{ "uopf;", HtmlNamedEntityFromCodepoint(0x0001d566) },
 	{ "uparrow;", QChar(0x2191) },
 	{ "updownarrow;", QChar(0x2195) },
 	{ "upharpoonleft;", QChar(0x21bf) },
@@ -3216,7 +3187,7 @@ void EpubVersionConv::init_members() {
 	{ "urcrop;", QChar(0x230e) },
 	{ "uring;", QChar(0x016f) },
 	{ "urtri;", QChar(0x25f9) },
-	{ "uscr;", QChar(0x0001d4ca) },
+	{ "uscr;", HtmlNamedEntityFromCodepoint(0x0001d4ca) },
 	{ "utdot;", QChar(0x22f0) },
 	{ "utilde;", QChar(0x0169) },
 	{ "utri;", QChar(0x25b5) },
@@ -3254,14 +3225,14 @@ void EpubVersionConv::init_members() {
 	{ "vellip;", QChar(0x22ee) },
 	{ "verbar;", "|" },
 	{ "vert;", "|" },
-	{ "vfr;", QChar(0x0001d533) },
+	{ "vfr;", HtmlNamedEntityFromCodepoint(0x0001d533) },
 	{ "vltri;", QChar(0x22b2) },
 	{ "vnsub;", QChar(0x2282) % QChar(0x20d2) },
 	{ "vnsup;", QChar(0x2283) % QChar(0x20d2) },
-	{ "vopf;", QChar(0x0001d567) },
+	{ "vopf;", HtmlNamedEntityFromCodepoint(0x0001d567) },
 	{ "vprop;", QChar(0x221d) },
 	{ "vrtri;", QChar(0x22b3) },
-	{ "vscr;", QChar(0x0001d4cb) },
+	{ "vscr;", HtmlNamedEntityFromCodepoint(0x0001d4cb) },
 	{ "vsubnE;", QChar(0x2acb) % QChar(0xfe00) },
 	{ "vsubne;", QChar(0x228a) % QChar(0xfe00) },
 	{ "vsupnE;", QChar(0x2acc) % QChar(0xfe00) },
@@ -3272,17 +3243,17 @@ void EpubVersionConv::init_members() {
 	{ "wedge;", QChar(0x2227) },
 	{ "wedgeq;", QChar(0x2259) },
 	{ "weierp;", QChar(0x2118) },
-	{ "wfr;", QChar(0x0001d534) },
-	{ "wopf;", QChar(0x0001d568) },
+	{ "wfr;", HtmlNamedEntityFromCodepoint(0x0001d534) },
+	{ "wopf;", HtmlNamedEntityFromCodepoint(0x0001d568) },
 	{ "wp;", QChar(0x2118) },
 	{ "wr;", QChar(0x2240) },
 	{ "wreath;", QChar(0x2240) },
-	{ "wscr;", QChar(0x0001d4cc) },
+	{ "wscr;", HtmlNamedEntityFromCodepoint(0x0001d4cc) },
 	{ "xcap;", QChar(0x22c2) },
 	{ "xcirc;", QChar(0x25ef) },
 	{ "xcup;", QChar(0x22c3) },
 	{ "xdtri;", QChar(0x25bd) },
-	{ "xfr;", QChar(0x0001d535) },
+	{ "xfr;", HtmlNamedEntityFromCodepoint(0x0001d535) },
 	{ "xhArr;", QChar(0x27fa) },
 	{ "xharr;", QChar(0x27f7) },
 	{ "xi;", QChar(0x03be) },
@@ -3291,12 +3262,12 @@ void EpubVersionConv::init_members() {
 	{ "xmap;", QChar(0x27fc) },
 	{ "xnis;", QChar(0x22fb) },
 	{ "xodot;", QChar(0x2a00) },
-	{ "xopf;", QChar(0x0001d569) },
+	{ "xopf;", HtmlNamedEntityFromCodepoint(0x0001d569) },
 	{ "xoplus;", QChar(0x2a01) },
 	{ "xotime;", QChar(0x2a02) },
 	{ "xrArr;", QChar(0x27f9) },
 	{ "xrarr;", QChar(0x27f6) },
-	{ "xscr;", QChar(0x0001d4cd) },
+	{ "xscr;", HtmlNamedEntityFromCodepoint(0x0001d4cd) },
 	{ "xsqcup;", QChar(0x2a06) },
 	{ "xuplus;", QChar(0x2a04) },
 	{ "xutri;", QChar(0x25b3) },
@@ -3309,10 +3280,10 @@ void EpubVersionConv::init_members() {
 	{ "ycy;", QChar(0x044b) },
 	{ "yen", QChar(0xa5) },
 	{ "yen;", QChar(0xa5) },
-	{ "yfr;", QChar(0x0001d536) },
+	{ "yfr;", HtmlNamedEntityFromCodepoint(0x0001d536) },
 	{ "yicy;", QChar(0x0457) },
-	{ "yopf;", QChar(0x0001d56a) },
-	{ "yscr;", QChar(0x0001d4ce) },
+	{ "yopf;", HtmlNamedEntityFromCodepoint(0x0001d56a) },
+	{ "yscr;", HtmlNamedEntityFromCodepoint(0x0001d4ce) },
 	{ "yucy;", QChar(0x044e) },
 	{ "yuml", QChar(0xff) },
 	{ "yuml;", QChar(0xff) },
@@ -3322,11 +3293,11 @@ void EpubVersionConv::init_members() {
 	{ "zdot;", QChar(0x017c) },
 	{ "zeetrf;", QChar(0x2128) },
 	{ "zeta;", QChar(0x03b6) },
-	{ "zfr;", QChar(0x0001d537) },
+	{ "zfr;", HtmlNamedEntityFromCodepoint(0x0001d537) },
 	{ "zhcy;", QChar(0x0436) },
 	{ "zigrarr;", QChar(0x21dd) },
-	{ "zopf;", QChar(0x0001d56b) },
-	{ "zscr;", QChar(0x0001d4cf) },
+	{ "zopf;", HtmlNamedEntityFromCodepoint(0x0001d56b) },
+	{ "zscr;", HtmlNamedEntityFromCodepoint(0x0001d4cf) },
 	{ "zwj;", QChar(0x200d) },
 	{ "zwnj;", QChar(0x200c) },
 	};
