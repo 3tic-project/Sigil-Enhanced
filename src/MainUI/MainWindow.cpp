@@ -6147,6 +6147,7 @@ void MainWindow::ResourcesAddedOrDeletedOrMoved()
     } else {
         setWindowTitle(tr("%1[*] - epub%2 - %3").arg(m_CurrentFileName).arg(epubversion).arg(APP_DISPLAY_NAME));
     }
+    UpdateEpub3ToolsEnabled(epubversion);
 
 }
 
@@ -6614,6 +6615,25 @@ const QMap<QString, QString> MainWindow::GetSaveFiltersMap()
 }
 
 
+void MainWindow::UpdateEpub3ToolsEnabled(const QString &epubversion)
+{
+    const bool is_epub3 = epubversion.startsWith("3");
+    const bool is_epub2 = epubversion.startsWith("2");
+
+    // Keep the menu reachable on EPUB2 so "Epub2 to Epub3" remains usable.
+    ui.menuEPUB3Tools->setEnabled(true);
+
+    ui.actionUpdateManifestProperties->setEnabled(is_epub3);
+    ui.actionNCXGuideFromNav->setEnabled(is_epub3);
+    ui.actionRemoveNCXGuide->setEnabled(is_epub3);
+    ui.actionRemoveNavFromSpine->setEnabled(is_epub3);
+    ui.actionAddNavToSpine->setEnabled(is_epub3);
+    ui.actionAddNavToSpineNonLinear->setEnabled(is_epub3);
+    ui.actionEpub3To2->setEnabled(is_epub3);
+    ui.actionEpub2To3->setEnabled(is_epub2);
+}
+
+
 void MainWindow::UpdateUiWithCurrentFile(const QString &fullfilepath, bool just_name)
 {
     if (just_name) {
@@ -6632,8 +6652,7 @@ void MainWindow::UpdateUiWithCurrentFile(const QString &fullfilepath, bool just_
         setWindowTitle(tr("%1[*] - epub%2 - %3").arg(m_CurrentFileName).arg(epubversion).arg(APP_DISPLAY_NAME));
     }
 
-    // disable epub3 tools menu on epub2
-    ui.menuEPUB3Tools->setEnabled(epubversion.startsWith("3"));
+    UpdateEpub3ToolsEnabled(epubversion);
 
     if (m_CurrentFilePath.isEmpty()) {
         return;

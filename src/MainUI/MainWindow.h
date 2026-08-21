@@ -847,6 +847,9 @@ private:
      */
     void UpdateUiWithCurrentFile(const QString &fullfilepath, bool just_name = false);
 
+    // Keep Tools > Epub3 Tools reachable on EPUB2 so Epub2 to Epub3 stays usable.
+    void UpdateEpub3ToolsEnabled(const QString &epubversion);
+
     /**
      * Selects the appropriate entry in the heading combo box
      * based on the provided name of the element.
