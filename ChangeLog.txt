@@ -1,5 +1,6 @@
 Sigil-Enhanced-2.8.5.E9
    Bug Fixes
+     - Synchronized regenerated translation catalogs into the runnable macOS app during incremental builds instead of waiting for an executable relink.
      - Kept legacy Preview layout-metrics preferences dormant while the simplified grid-only interface is active.
      - Prevented Code View teardown from re-entering a partially destroyed FlowTab when syntax highlighters detach from resource-owned documents.
      - Opened Photoshop-exported WebP images that Windows QImage rejected, and always ship qwebp.dll with the Windows package.
@@ -9,6 +10,7 @@ Sigil-Enhanced-2.8.5.E9
      - Made newly created empty XHTML and CSS files write template content to disk, so custom templates survive subsequent imports instead of being replaced by empty files.
 
    New Features
+     - Made valid Preview grid setting changes apply live, while Cancel restores the complete opening state and only OK persists changes.
      - Added a non-exported Preview grid with independently enabled and spaced horizontal and vertical lines, document-anchored scrolling, fixed px/em sizing, appearance controls, and zoom thresholds.
      - Placed the two grid commands under Enhancement and added a matching enable/disable command to the Preview context menu; layout inspection, element calibration, metrics, and Clean Preview remain hidden.
      - Added an optional post-conversion EPUB structure normalization checkbox to the roomier KFX menu and drop prompts, reusing the built-in normalizer before Save As or opening a new window.
@@ -18,6 +20,7 @@ Sigil-Enhanced-2.8.5.E9
      - Dragging a tab between editor groups moves the same editor; Open/Move before a manual split opens the lower group.
 
    Build/Testing
+     - Added dialog live-preview coverage and a packaging contract for incremental macOS translation synchronization.
      - Added geometry, persistence, overlay-lifecycle, simplified-menu UI-contract, and complete Simplified Chinese, Traditional Chinese, and Japanese coverage for the Preview grid.
      - Rebased on upstream Sigil 2.8.5 and synced all translations from Transifex, including a new Swedish catalog.
      - Extended CTest coverage for external Book Browser file drops, Preview DevTools docking, and split editor groups.
