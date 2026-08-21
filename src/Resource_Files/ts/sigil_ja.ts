@@ -26802,7 +26802,6 @@ Continue using the requested filename?</source>
     <message><source>Use Current Element</source><translation>現在の要素を使用</translation></message>
     <message><source>Horizontal lines</source><translation>水平線</translation></message>
     <message><source>Vertical lines</source><translation>垂直線</translation></message>
-    <message><source>Enabled</source><translation>有効</translation></message>
     <message><source>Spacing:</source><translation>間隔：</translation></message>
     <message><source>Resolved spacing:</source><translation>換算後の間隔：</translation></message>
     <message><source>Minor lines</source><translation>補助線</translation></message>

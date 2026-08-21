@@ -26804,7 +26804,6 @@ Continue using the requested filename?</source>
     <message><source>Use Current Element</source><translation>使用当前元素</translation></message>
     <message><source>Horizontal lines</source><translation>横向线</translation></message>
     <message><source>Vertical lines</source><translation>纵向线</translation></message>
-    <message><source>Enabled</source><translation>启用</translation></message>
     <message><source>Spacing:</source><translation>间距：</translation></message>
     <message><source>Resolved spacing:</source><translation>换算后间距：</translation></message>
     <message><source>Minor lines</source><translation>次网格线</translation></message>

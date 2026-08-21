@@ -33,8 +33,8 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
       m_darkTheme(darkTheme),
       m_showGrid(new QCheckBox(tr("Show grid"), this)),
       m_showMetrics(new QCheckBox(tr("Show layout metrics"), this)),
-      m_horizontalGrid(new QCheckBox(tr("Enabled"), this)),
-      m_verticalGrid(new QCheckBox(tr("Enabled"), this)),
+      m_horizontalGrid(new QCheckBox(tr("Horizontal lines"), this)),
+      m_verticalGrid(new QCheckBox(tr("Vertical lines"), this)),
       m_unit(new QComboBox(this)),
       m_step(new QDoubleSpinBox(this)),
       m_verticalStep(new QDoubleSpinBox(this)),
@@ -101,27 +101,21 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     geometryLayout->addWidget(new QLabel(tr("Reference font size:"), this), 0, 2);
     geometryLayout->addWidget(m_referenceFont, 0, 3);
 
-    QLabel *horizontalHeading = new QLabel(tr("Horizontal lines"), this);
-    QLabel *verticalHeading = new QLabel(tr("Vertical lines"), this);
-    horizontalHeading->setAlignment(Qt::AlignCenter);
-    verticalHeading->setAlignment(Qt::AlignCenter);
-    geometryLayout->addWidget(horizontalHeading, 1, 1);
-    geometryLayout->addWidget(verticalHeading, 1, 3);
-    geometryLayout->addWidget(m_horizontalGrid, 2, 1, Qt::AlignCenter);
-    geometryLayout->addWidget(m_verticalGrid, 2, 3, Qt::AlignCenter);
-    geometryLayout->addWidget(new QLabel(tr("Spacing:"), this), 3, 0);
-    geometryLayout->addWidget(m_step, 3, 1);
-    geometryLayout->addWidget(m_verticalStep, 3, 3);
-    geometryLayout->addWidget(new QLabel(tr("Resolved spacing:"), this), 4, 0);
-    geometryLayout->addWidget(m_resolvedStep, 4, 1);
-    geometryLayout->addWidget(m_verticalResolvedStep, 4, 3);
+    geometryLayout->addWidget(m_horizontalGrid, 1, 1, Qt::AlignCenter);
+    geometryLayout->addWidget(m_verticalGrid, 1, 3, Qt::AlignCenter);
+    geometryLayout->addWidget(new QLabel(tr("Spacing:"), this), 2, 0);
+    geometryLayout->addWidget(m_step, 2, 1);
+    geometryLayout->addWidget(m_verticalStep, 2, 3);
+    geometryLayout->addWidget(new QLabel(tr("Resolved spacing:"), this), 3, 0);
+    geometryLayout->addWidget(m_resolvedStep, 3, 1);
+    geometryLayout->addWidget(m_verticalResolvedStep, 3, 3);
 
-    geometryLayout->addWidget(new QLabel(tr("Grid origin:"), this), 5, 0);
-    geometryLayout->addWidget(m_origin, 5, 1);
-    geometryLayout->addWidget(new QLabel(tr("Grid offset:"), this), 5, 2);
-    geometryLayout->addWidget(m_offset, 5, 3);
-    geometryLayout->addWidget(new QLabel(tr("Major line every:"), this), 6, 0);
-    geometryLayout->addWidget(m_majorEvery, 6, 1);
+    geometryLayout->addWidget(new QLabel(tr("Grid origin:"), this), 4, 0);
+    geometryLayout->addWidget(m_origin, 4, 1);
+    geometryLayout->addWidget(new QLabel(tr("Grid offset:"), this), 4, 2);
+    geometryLayout->addWidget(m_offset, 4, 3);
+    geometryLayout->addWidget(new QLabel(tr("Major line every:"), this), 5, 0);
+    geometryLayout->addWidget(m_majorEvery, 5, 1);
     geometryLayout->setColumnStretch(1, 1);
     geometryLayout->setColumnStretch(3, 1);
     QGroupBox *geometryGroup = new QGroupBox(tr("Geometry"), this);

@@ -181,6 +181,11 @@ require(
     "m_horizontalGrid" in dialog
     and "m_verticalGrid" in dialog
     and "m_verticalStep" in dialog
+    and 'new QCheckBox(tr("Horizontal lines"), this)' in dialog
+    and 'new QCheckBox(tr("Vertical lines"), this)' in dialog
+    and 'new QCheckBox(tr("Enabled"), this)' not in dialog
+    and "geometryLayout->addWidget(m_horizontalGrid, 1, 1, Qt::AlignCenter)" in dialog
+    and "geometryLayout->addWidget(m_verticalGrid, 1, 3, Qt::AlignCenter)" in dialog
     and "settings.metricsEnabled = false" in dialog
     and "setMinimumSize(760, 360)" in dialog
     and 'QStringLiteral("gridSettingsColumns")' in dialog
