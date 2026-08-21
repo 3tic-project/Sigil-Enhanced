@@ -70,6 +70,7 @@ for object_name in (
     "regexEditingSplitter",
     "regexDryRunButton",
     "regexApplyButton",
+    "regexCreateCheckpoint",
     "regexReportTable",
     "regexVariablesPanel",
     "regexVariablesTitle",
@@ -103,6 +104,12 @@ require(
 require(
     "m_ApplyButton->setDefault(true);" in dialog,
     "Apply must use the dialog's prominent confirmation-button styling",
+)
+require(
+    'tr("Create recovery checkpoint before applying")' in dialog
+    and "m_CreateCheckpoint->setChecked(true);" in dialog
+    and "m_CreateCheckpoint->setEnabled(!busy);" in dialog,
+    "interactive Apply must expose a safe-default checkpoint choice",
 )
 require(
     "bool RegexWorkbenchDialog::IsPristineNewRecipe()" in dialog
@@ -204,6 +211,12 @@ require(
     < commit,
     "the UI must announce the checkpoint/commit boundary before writing",
 )
+require(
+    "m_RunCreateCheckpoint = createCheckpoint;" in dialog[start_run:finished]
+    and "Committing staged changes without a recovery checkpoint" in dialog[finished:commit]
+    and "m_Store, m_RunCreateCheckpoint" in dialog[commit:],
+    "the checkpoint choice must be captured per run and passed to the commit boundary",
+)
 
 open_start = main_window_ext.index("bool MainWindow::OpenRegexWorkbench()")
 open_end = main_window_ext.index("bool MainWindow::RunRegexWorkbenchRecipe", open_start)
@@ -249,8 +262,9 @@ require(
     "Automate recipes must load, snapshot, stage in memory, then commit",
 )
 require(
-    "targets.allTextPaths" in automation_body,
-    "Automate recipes must have a deterministic all-text target scope",
+    "targets.allTextPaths" in automation_body
+    and "this, targets.resources, snapshot, batch, store, true" in automation_body,
+    "Automate recipes must use all text targets and keep mandatory checkpoints",
 )
 require(
     "m_LastRecipePath" in dialog
@@ -302,6 +316,7 @@ for documented_contract in (
     "${var:name}",
     "RunRegexWorkbenchRecipe",
     "检查点",
+    "创建恢复检查点",
     "撤销",
 ):
     require(

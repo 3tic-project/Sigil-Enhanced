@@ -26782,9 +26782,14 @@ Continue using the requested filename?</source>
 <message><source>Variable scope:</source><translation>变量作用域：</translation></message>
 <message><source>Variables</source><translation>变量</translation></message>
 <message><source>Write policy:</source><translation>写入策略：</translation></message>
+<message><source>Create recovery checkpoint before applying</source><translation>应用前创建恢复检查点</translation></message>
+<message><source>Recommended for whole-book changes. Clear this only when per-file Undo is sufficient.</source><translation>建议用于整书更改。仅当逐文件撤销已经足够时取消勾选。</translation></message>
 <message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（可选允许列表）</translation></message>
 <message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>要将此方案应用到 %1 个文本资源吗？将重新创建快照；若产生文本更改，则会在写入前创建恢复检查点。</translation></message>
+<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created. No recovery checkpoint will be created; each changed file can still be undone separately.</source><translation>要将此方案应用到 %1 个文本资源吗？将重新创建快照。不会创建恢复检查点；每个已更改文件仍可分别撤销。</translation></message>
 <message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>正在创建恢复检查点并提交暂存更改...</translation></message>
+<message><source>Committing staged changes without a recovery checkpoint...</source><translation>正在提交暂存更改，不创建恢复检查点...</translation></message>
+<message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; no recovery checkpoint was created.</source><translation>已从 %2 个匹配执行 %1 次替换，修改了 %3 个资源。每个文件可分别撤销；未创建恢复检查点。</translation></message>
 <message><source>Publishing captured variables without changing document text...</source><translation>正在发布捕获变量，不更改文档文本...</translation></message>
 <message><source>Advanced Regex Workbench — %1</source><translation>高级正则工作台 — %1</translation></message>
 <message><source>This workbench belongs to a book that is no longer open. Close it and reopen the workbench for the current book.</source><translation>此工作台属于一本已不再打开的书籍。请关闭它，并为当前书籍重新打开工作台。</translation></message>

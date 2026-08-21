@@ -26780,9 +26780,14 @@ Continue using the requested filename?</source>
 <message><source>Variable scope:</source><translation>変数スコープ：</translation></message>
 <message><source>Variables</source><translation>変数</translation></message>
 <message><source>Write policy:</source><translation>書き込みポリシー：</translation></message>
+<message><source>Create recovery checkpoint before applying</source><translation>適用前に復元チェックポイントを作成</translation></message>
+<message><source>Recommended for whole-book changes. Clear this only when per-file Undo is sufficient.</source><translation>書籍全体を変更する場合に推奨します。ファイルごとの元に戻す操作で十分な場合にのみオフにしてください。</translation></message>
 <message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（任意の許可リスト）</translation></message>
 <message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>このレシピを %1 個のテキストリソースに適用しますか？新しいスナップショットを作成し、テキスト変更が生じた場合は書き込み前にリカバリーチェックポイントを作成します。</translation></message>
+<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created. No recovery checkpoint will be created; each changed file can still be undone separately.</source><translation>このレシピを %1 個のテキストリソースに適用しますか？新しいスナップショットを作成します。復元チェックポイントは作成されませんが、変更した各ファイルは個別に元に戻せます。</translation></message>
 <message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>リカバリーチェックポイントを作成し、ステージ済みの変更をコミットしています...</translation></message>
+<message><source>Committing staged changes without a recovery checkpoint...</source><translation>復元チェックポイントを作成せずにステージ済み変更をコミットしています...</translation></message>
+<message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; no recovery checkpoint was created.</source><translation>%2 件の一致から %1 件を置換し、%3 個のリソースを変更しました。各ファイルは個別に元に戻せます。復元チェックポイントは作成されませんでした。</translation></message>
 <message><source>Publishing captured variables without changing document text...</source><translation>文書テキストを変更せず、キャプチャした変数を反映しています...</translation></message>
 <message><source>Advanced Regex Workbench — %1</source><translation>高度な正規表現ワークベンチ — %1</translation></message>
 <message><source>This workbench belongs to a book that is no longer open. Close it and reopen the workbench for the current book.</source><translation>このワークベンチが属するブックは既に閉じられています。閉じてから、現在のブック用にワークベンチを開き直してください。</translation></message>

@@ -155,6 +155,7 @@ private:
     bool m_Busy;
     bool m_CloseWhenIdle;
     bool m_ReportApplied;
+    bool m_RunCreateCheckpoint;
 
     QWidget* m_EditingPanel;
     QLineEdit* m_RecipeName;
@@ -184,6 +185,7 @@ private:
     QComboBox* m_TargetScope;
     QComboBox* m_VariableScope;
     QComboBox* m_WritePolicy;
+    QCheckBox* m_CreateCheckpoint;
     QPushButton* m_DryRunButton;
     QPushButton* m_ApplyButton;
     QPushButton* m_CancelButton;

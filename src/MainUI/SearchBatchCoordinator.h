@@ -33,13 +33,16 @@ public:
                                 Snapshot& snapshot,
                                 QString* error = nullptr);
 
-    // GUI-thread boundary: conflict check, one checkpoint, then one undoable
-    // write per changed resource. The staged result is never recomputed here.
+    // GUI-thread boundary: conflict check, an optional checkpoint, then one
+    // undoable write per changed resource. The staged result is never
+    // recomputed here. Callers other than the interactive Regex Workbench keep
+    // the safe default and always create a checkpoint.
     static SearchBatch::Result CommitStagedResult(
         MainWindow* main_window,
         const QHash<QString, TextResource*>& resources,
         const Snapshot& snapshot,
-        const SearchBatch::Result& staged_result);
+        const SearchBatch::Result& staged_result,
+        bool create_recovery_checkpoint = true);
 
     // Verify that a worker result still describes the current resource set.
     // Capture-only workbench runs use this without creating a checkpoint.

@@ -49,6 +49,10 @@ require(
     capture_call < stage_call < commit_call,
     "saved-search compatibility wrapper must snapshot, stage in memory, then commit",
 )
+require(
+    "CommitStagedResult(main_window, resources, snapshot, staged, true)" in coordinator,
+    "saved-search batches must continue to request a recovery checkpoint explicitly",
+)
 checkpoint_call = coordinator.index("CreateRecoveryCheckpoint()", commit_call)
 undoable_write = coordinator.index(
     "SetTextAsUndoableEdit(result.changedTexts.value(path))", checkpoint_call
@@ -56,6 +60,13 @@ undoable_write = coordinator.index(
 require(
     checkpoint_call < undoable_write,
     "recovery checkpoint must succeed before the first staged resource write",
+)
+require(
+    "bool create_recovery_checkpoint = true" in coordinator_header
+    and "if (create_recovery_checkpoint) {" in coordinator[commit_call:commit_start]
+    and "bool create_recovery_checkpoint" in workbench_committer
+    and "result, create_recovery_checkpoint" in workbench_committer,
+    "only an explicit workbench choice may bypass the safe-default checkpoint",
 )
 workbench_commit_call = workbench_committer.index(
     "SearchBatchCoordinator::CommitStagedResult("

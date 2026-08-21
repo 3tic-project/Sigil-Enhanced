@@ -993,7 +993,7 @@ bool MainWindow::RunRegexWorkbenchRecipe(const QString& identifier)
     }
 
     const SearchBatch::Result commit = RegexWorkbenchBatchCommitter::Commit(
-        this, targets.resources, snapshot, batch, store);
+        this, targets.resources, snapshot, batch, store, true);
     if (!commit.success) {
         ShowMessageOnStatusBar(tr("Regex recipe failed: %1").arg(commit.error));
         return false;

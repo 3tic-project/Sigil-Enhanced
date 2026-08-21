@@ -199,6 +199,7 @@ RegexWorkbenchDialog::RegexWorkbenchDialog(MainWindow* mainWindow,
       m_Busy(false),
       m_CloseWhenIdle(false),
       m_ReportApplied(false),
+      m_RunCreateCheckpoint(true),
       m_EditingPanel(nullptr),
       m_RecipeName(nullptr),
       m_RuleList(nullptr),
@@ -227,6 +228,7 @@ RegexWorkbenchDialog::RegexWorkbenchDialog(MainWindow* mainWindow,
       m_TargetScope(nullptr),
       m_VariableScope(nullptr),
       m_WritePolicy(nullptr),
+      m_CreateCheckpoint(nullptr),
       m_DryRunButton(nullptr),
       m_ApplyButton(nullptr),
       m_CancelButton(nullptr),
@@ -405,6 +407,12 @@ void RegexWorkbenchDialog::BuildUi()
     m_WritePolicy->addItem(tr("Last value wins"), static_cast<int>(WritePolicy::LastWins));
     m_WritePolicy->addItem(tr("Keep first value"), static_cast<int>(WritePolicy::FirstOnly));
     m_WritePolicy->addItem(tr("Append values"), static_cast<int>(WritePolicy::Append));
+    m_CreateCheckpoint = new QCheckBox(
+        tr("Create recovery checkpoint before applying"), runBox);
+    m_CreateCheckpoint->setObjectName(QStringLiteral("regexCreateCheckpoint"));
+    m_CreateCheckpoint->setChecked(true);
+    m_CreateCheckpoint->setToolTip(
+        tr("Recommended for whole-book changes. Clear this only when per-file Undo is sufficient."));
     m_DryRunButton = new QPushButton(tr("Dry Run"), runBox);
     m_DryRunButton->setObjectName(QStringLiteral("regexDryRunButton"));
     m_ApplyButton = new QPushButton(tr("Apply"), runBox);
@@ -416,6 +424,7 @@ void RegexWorkbenchDialog::BuildUi()
     runForm->addRow(tr("Variable scope:"), m_VariableScope);
     runForm->addRow(tr("Write policy:"), m_WritePolicy);
     runLayout->addLayout(runForm);
+    runLayout->addWidget(m_CreateCheckpoint);
     auto* runButtons = new QHBoxLayout;
     runButtons->addWidget(m_DryRunButton);
     runButtons->addWidget(m_ApplyButton);
@@ -1106,16 +1115,24 @@ void RegexWorkbenchDialog::StartRun(RunMode mode)
                              tr("The selected scope contains no text resources."));
         return;
     }
-    if (mode == RunMode::Apply &&
-        QMessageBox::question(
-            this, tr("Advanced Regex Workbench"),
-            tr("Apply this recipe to %1 text resource(s)? A fresh snapshot will be "
-               "created; if text changes are produced, a recovery checkpoint will be "
-               "created before they are written.")
-                .arg(paths.size()),
-            QMessageBox::Apply | QMessageBox::Cancel,
-            QMessageBox::Cancel) != QMessageBox::Apply) {
-        return;
+    if (mode == RunMode::Apply) {
+        const bool createCheckpoint = m_CreateCheckpoint->isChecked();
+        const QString confirmation = createCheckpoint
+            ? tr("Apply this recipe to %1 text resource(s)? A fresh snapshot will be "
+                 "created; if text changes are produced, a recovery checkpoint will be "
+                 "created before they are written.")
+                  .arg(paths.size())
+            : tr("Apply this recipe to %1 text resource(s)? A fresh snapshot will be "
+                 "created. No recovery checkpoint will be created; each changed file "
+                 "can still be undone separately.")
+                  .arg(paths.size());
+        if (QMessageBox::question(
+                this, tr("Advanced Regex Workbench"), confirmation,
+                QMessageBox::Apply | QMessageBox::Cancel,
+                QMessageBox::Cancel) != QMessageBox::Apply) {
+            return;
+        }
+        m_RunCreateCheckpoint = createCheckpoint;
     }
     const QHash<QString, TextResource*> resources = LiveResources();
     if (!SearchBatchCoordinator::CaptureSnapshot(
@@ -1205,12 +1222,16 @@ void RegexWorkbenchDialog::RunFinished()
     }
 
     if (completedMode == RunMode::Apply) {
-        SetStatus(m_LastResult.report.changedResourceCount > 0
-                      ? tr("Creating the recovery checkpoint and committing staged changes...")
-                      : tr("Publishing captured variables without changing document text..."));
+        if (m_LastResult.report.changedResourceCount == 0) {
+            SetStatus(tr("Publishing captured variables without changing document text..."));
+        } else if (m_RunCreateCheckpoint) {
+            SetStatus(tr("Creating the recovery checkpoint and committing staged changes..."));
+        } else {
+            SetStatus(tr("Committing staged changes without a recovery checkpoint..."));
+        }
         const SearchBatch::Result commit = RegexWorkbenchBatchCommitter::Commit(
             m_MainWindow, LiveResources(), m_RunSnapshot, m_LastResult,
-            m_Store);
+            m_Store, m_RunCreateCheckpoint);
         if (!commit.success) {
             SetStatus(commit.error, true);
             QMessageBox::warning(this, tr("Advanced Regex Workbench"), commit.error);
@@ -1223,10 +1244,16 @@ void RegexWorkbenchDialog::RunFinished()
                          "document text was changed.")
                           .arg(m_LastResult.report.totalMatches)
                           .arg(m_LastResult.report.totalReplacements));
-        } else {
+        } else if (m_RunCreateCheckpoint) {
             SetStatus(tr("Applied %1 replacement(s) from %2 match(es) to %3 resource(s). "
                          "Each file can be undone separately; use the recovery checkpoint "
                          "to restore the entire batch.")
+                          .arg(m_LastResult.report.totalReplacements)
+                          .arg(m_LastResult.report.totalMatches)
+                          .arg(m_LastResult.report.changedResourceCount));
+        } else {
+            SetStatus(tr("Applied %1 replacement(s) from %2 match(es) to %3 resource(s). "
+                         "Each file can be undone separately; no recovery checkpoint was created.")
                           .arg(m_LastResult.report.totalReplacements)
                           .arg(m_LastResult.report.totalMatches)
                           .arg(m_LastResult.report.changedResourceCount));
@@ -1278,6 +1305,7 @@ void RegexWorkbenchDialog::SetBusy(bool busy)
     m_TargetScope->setEnabled(!busy);
     m_VariableScope->setEnabled(!busy);
     m_WritePolicy->setEnabled(!busy);
+    m_CreateCheckpoint->setEnabled(!busy);
     m_DryRunButton->setEnabled(!busy);
     m_ApplyButton->setEnabled(!busy);
     m_ClearVariablesButton->setEnabled(!busy);

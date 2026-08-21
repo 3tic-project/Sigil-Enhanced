@@ -46,7 +46,7 @@ SearchBatch::Result SearchBatchCoordinator::Run(
 
     const SearchBatch::Result staged = SearchBatch::Runner::Run(
         rules, snapshot.originalTexts, apply);
-    return CommitStagedResult(main_window, resources, snapshot, staged);
+    return CommitStagedResult(main_window, resources, snapshot, staged, true);
 }
 
 bool SearchBatchCoordinator::CaptureSnapshot(
@@ -113,7 +113,8 @@ SearchBatch::Result SearchBatchCoordinator::CommitStagedResult(
     MainWindow* main_window,
     const QHash<QString, TextResource*>& resources,
     const Snapshot& snapshot,
-    const SearchBatch::Result& staged_result)
+    const SearchBatch::Result& staged_result,
+    bool create_recovery_checkpoint)
 {
     SearchBatch::Result result = staged_result;
     if (!result.success || result.changedTexts.isEmpty()) {
@@ -154,21 +155,23 @@ SearchBatch::Result SearchBatchCoordinator::CommitStagedResult(
         return result;
     }
 
-    if (!main_window->CreateRecoveryCheckpoint()) {
-        result.success = false;
-        result.error = QCoreApplication::translate(
-            "RegexWorkbenchCore",
-            "Could not create the recovery checkpoint; no replacements were written.");
-        return result;
-    }
+    if (create_recovery_checkpoint) {
+        if (!main_window->CreateRecoveryCheckpoint()) {
+            result.success = false;
+            result.error = QCoreApplication::translate(
+                "RegexWorkbenchCore",
+                "Could not create the recovery checkpoint; no replacements were written.");
+            return result;
+        }
 
-    if (!ResourcesMatchSnapshot(resources, snapshot, &conflictPath)) {
-        result.success = false;
-        result.error = QCoreApplication::translate(
-                           "RegexWorkbenchCore",
-                           "Search batch target changed while creating the checkpoint: %1")
-                           .arg(conflictPath);
-        return result;
+        if (!ResourcesMatchSnapshot(resources, snapshot, &conflictPath)) {
+            result.success = false;
+            result.error = QCoreApplication::translate(
+                               "RegexWorkbenchCore",
+                               "Search batch target changed while creating the checkpoint: %1")
+                               .arg(conflictPath);
+            return result;
+        }
     }
 
     QStringList commitOrder;

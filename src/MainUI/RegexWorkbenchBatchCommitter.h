@@ -26,7 +26,8 @@ public:
         const QHash<QString, TextResource*>& resources,
         const SearchBatchCoordinator::Snapshot& snapshot,
         const BuiltinPlugins::RegexWorkbench::RegexWorkbenchBatchResult& batch_result,
-        BuiltinPlugins::RegexWorkbench::SearchVariableStore& store);
+        BuiltinPlugins::RegexWorkbench::SearchVariableStore& store,
+        bool create_recovery_checkpoint = true);
 };
 
 #endif // REGEX_WORKBENCH_BATCH_COMMITTER_H

@@ -15,7 +15,8 @@ SearchBatch::Result RegexWorkbenchBatchCommitter::Commit(
     const QHash<QString, TextResource*>& resources,
     const SearchBatchCoordinator::Snapshot& snapshot,
     const BuiltinPlugins::RegexWorkbench::RegexWorkbenchBatchResult& batch_result,
-    BuiltinPlugins::RegexWorkbench::SearchVariableStore& store)
+    BuiltinPlugins::RegexWorkbench::SearchVariableStore& store,
+    bool create_recovery_checkpoint)
 {
     SearchBatch::Result result = batch_result.staged;
     if (!result.success) {
@@ -56,7 +57,7 @@ SearchBatch::Result RegexWorkbenchBatchCommitter::Commit(
     }
 
     result = SearchBatchCoordinator::CommitStagedResult(
-        main_window, resources, snapshot, result);
+        main_window, resources, snapshot, result, create_recovery_checkpoint);
     if (result.success) {
         store = pendingStore;
     }

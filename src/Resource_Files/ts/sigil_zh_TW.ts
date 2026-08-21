@@ -26765,9 +26765,14 @@ Continue using the requested filename?</source>
 <message><source>Variable scope:</source><translation>變數範圍：</translation></message>
 <message><source>Variables</source><translation>變數</translation></message>
 <message><source>Write policy:</source><translation>寫入策略：</translation></message>
+<message><source>Create recovery checkpoint before applying</source><translation>套用前建立復原檢查點</translation></message>
+<message><source>Recommended for whole-book changes. Clear this only when per-file Undo is sufficient.</source><translation>建議用於整書變更。僅在逐檔復原已足夠時取消勾選。</translation></message>
 <message><source>name1, name2 (optional allowlist)</source><translation>name1, name2（選用允許清單）</translation></message>
 <message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created; if text changes are produced, a recovery checkpoint will be created before they are written.</source><translation>要將此方案套用到 %1 個文字資源嗎？將重新建立快照；若產生文字變更，則會在寫入前建立復原檢查點。</translation></message>
+<message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created. No recovery checkpoint will be created; each changed file can still be undone separately.</source><translation>要將此方案套用到 %1 個文字資源嗎？將重新建立快照。不會建立復原檢查點；每個已變更檔案仍可分別復原。</translation></message>
 <message><source>Creating the recovery checkpoint and committing staged changes...</source><translation>正在建立復原檢查點並提交暫存變更...</translation></message>
+<message><source>Committing staged changes without a recovery checkpoint...</source><translation>正在提交暫存變更，不建立復原檢查點...</translation></message>
+<message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; no recovery checkpoint was created.</source><translation>已從 %2 個符合項目執行 %1 次取代，修改了 %3 個資源。每個檔案可分別復原；未建立復原檢查點。</translation></message>
 <message><source>Publishing captured variables without changing document text...</source><translation>正在發佈擷取變數，不變更文件文字...</translation></message>
 <message><source>Advanced Regex Workbench — %1</source><translation>進階正規表示式工作台 — %1</translation></message>
 <message><source>This workbench belongs to a book that is no longer open. Close it and reopen the workbench for the current book.</source><translation>此工作台屬於一本已不再開啟的書籍。請關閉它，並為目前書籍重新開啟工作台。</translation></message>

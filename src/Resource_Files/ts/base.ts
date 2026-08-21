@@ -22329,6 +22329,11 @@ Line: %1 Column %2 - %3</source>
         <source>Write policy:</source>
         <translation type="unfinished"></translation>
     </message>
+    <message><source>Create recovery checkpoint before applying</source><translation type="unfinished"></translation></message>
+    <message><source>Recommended for whole-book changes. Clear this only when per-file Undo is sufficient.</source><translation type="unfinished"></translation></message>
+    <message><source>Apply this recipe to %1 text resource(s)? A fresh snapshot will be created. No recovery checkpoint will be created; each changed file can still be undone separately.</source><translation type="unfinished"></translation></message>
+    <message><source>Committing staged changes without a recovery checkpoint...</source><translation type="unfinished"></translation></message>
+    <message><source>Applied %1 replacement(s) from %2 match(es) to %3 resource(s). Each file can be undone separately; no recovery checkpoint was created.</source><translation type="unfinished"></translation></message>
     <message>
         <location filename="../../Dialogs/RegexWorkbenchDialog.cpp" line="428"/>
         <source>Clear Variables</source>
