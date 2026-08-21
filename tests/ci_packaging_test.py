@@ -172,11 +172,16 @@ class CiPackagingTest(unittest.TestCase):
         )
         readme = README.read_text(encoding="utf-8")
         self.assertIn(
-            "当前开发版本：**{0}**".format(release_version), readme
+            "最近发布版本：**{0}**".format(release_version), readme
         )
         self.assertIn(
             "docs/ReleaseNotes-{0}.md".format(release_version), readme
         )
+        self.assertIn(
+            "## 相对 {0} 的开发中变化".format(release_version), readme
+        )
+        self.assertIn("QQ 群：`796723288`", readme)
+        self.assertIn("入群问题答案：`3tic`", readme)
 
 
 if __name__ == "__main__":
