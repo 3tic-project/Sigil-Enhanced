@@ -12104,8 +12104,8 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1963"/>
-        <source>Enhance Source Formatting...</source>
-        <translation>ソース整形を強化...</translation>
+        <source>Format XHTML and CSS...</source>
+        <translation>XHTML と CSS を整形...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1966"/>
@@ -26833,7 +26833,7 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>VisualTypesettingController</name>
-    <message><source>Visual Typesetting Aids</source><translation>組版視覚補助</translation></message>
+    <message><source>Preview Grid</source><translation>プレビューグリッド</translation></message>
     <message><source>Show Grid</source><translation>グリッドを表示</translation></message>
     <message><source>Show Layout Metrics</source><translation>レイアウト計測値を表示</translation></message>
     <message><source>Use Current Element Font Size as Grid Reference</source><translation>現在の要素の文字サイズをグリッド基準に使用</translation></message>

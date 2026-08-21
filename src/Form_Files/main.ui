@@ -1965,7 +1965,7 @@
   </action>
   <action name="actionEnhanceSourceFormatting">
     <property name="text">
-      <string>Enhance Source Formatting...</string>
+      <string>Format XHTML and CSS...</string>
     </property>
     <property name="toolTip">
       <string>Format all XHTML and CSS resources with the built-in EPUB-safe formatter backend</string>

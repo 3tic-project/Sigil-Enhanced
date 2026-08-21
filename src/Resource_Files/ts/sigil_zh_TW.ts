@@ -12099,8 +12099,8 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1963"/>
-        <source>Enhance Source Formatting...</source>
-        <translation>增強原始碼格式化...</translation>
+        <source>Format XHTML and CSS...</source>
+        <translation>格式化 XHTML 與 CSS...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1966"/>
@@ -26818,7 +26818,7 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>VisualTypesettingController</name>
-    <message><source>Visual Typesetting Aids</source><translation>排版視覺輔助</translation></message>
+    <message><source>Preview Grid</source><translation>預覽區網格</translation></message>
     <message><source>Show Grid</source><translation>顯示網格</translation></message>
     <message><source>Show Layout Metrics</source><translation>顯示排版度量</translation></message>
     <message><source>Use Current Element Font Size as Grid Reference</source><translation>以目前元素字級作為網格參考</translation></message>

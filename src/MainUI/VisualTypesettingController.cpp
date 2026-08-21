@@ -59,7 +59,7 @@ VisualTypesettingController::VisualTypesettingController(
       m_overlay(new BaselineGridOverlay(overlayParent)),
       m_probe(new PreviewMetricsProbe(preview, this)),
       m_metricsTimer(new QTimer(this)),
-      m_menu(new QMenu(tr("Visual Typesetting Aids"), dialogParent)),
+      m_menu(new QMenu(tr("Preview Grid"), dialogParent)),
       m_showGridAction(new QAction(tr("Show Grid"), this)),
       m_showMetricsAction(new QAction(tr("Show Layout Metrics"), this)),
       m_useCurrentElementAction(new QAction(

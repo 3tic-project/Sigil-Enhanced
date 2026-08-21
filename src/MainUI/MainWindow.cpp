@@ -7071,6 +7071,7 @@ void MainWindow::ExtendUI()
         ui.menuView->addAction(m_PreviewWindow->DetachAction());
     }
     if (m_PreviewWindow && m_PreviewWindow->VisualTypesettingMenu()) {
+        ui.menuEnhancement->addSeparator();
         ui.menuEnhancement->addMenu(m_PreviewWindow->VisualTypesettingMenu());
     }
     QMenu *editor_layout = ui.menuView->addMenu(tr("Editor Layout"));

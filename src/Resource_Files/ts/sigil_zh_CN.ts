@@ -14733,8 +14733,8 @@ Do you want to automatically mend the files before saving? Or cancel the Save?</
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1963"/>
-        <source>Enhance Source Formatting...</source>
-        <translation>增强源码格式化...</translation>
+        <source>Format XHTML and CSS...</source>
+        <translation>格式化 XHTML 和 CSS...</translation>
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1966"/>
@@ -26835,7 +26835,7 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>VisualTypesettingController</name>
-    <message><source>Visual Typesetting Aids</source><translation>排版视觉辅助</translation></message>
+    <message><source>Preview Grid</source><translation>预览区网格</translation></message>
     <message><source>Show Grid</source><translation>显示网格</translation></message>
     <message><source>Show Layout Metrics</source><translation>显示排版度量</translation></message>
     <message><source>Use Current Element Font Size as Grid Reference</source><translation>以当前元素字号作为网格参考</translation></message>

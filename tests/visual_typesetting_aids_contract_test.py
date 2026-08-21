@@ -153,8 +153,14 @@ require(
 )
 require(
     "ui.menuEnhancement->addMenu" in main_window
+    and "ui.menuEnhancement->addSeparator();\n        ui.menuEnhancement->addMenu(m_PreviewWindow->VisualTypesettingMenu())" in main_window
     and "ui.menuView->addMenu(m_PreviewWindow->VisualTypesettingMenu())" not in main_window,
-    "visual grid actions must live under Enhancement instead of View",
+    "Preview Grid must be separated under Enhancement instead of View",
+)
+require(
+    'tr("Preview Grid")' in controller
+    and 'tr("Visual Typesetting Aids")' not in controller,
+    "the grid submenu must use the concise Preview Grid title",
 )
 require(
     "MainWindow.ShowBaselineGrid" in main_window

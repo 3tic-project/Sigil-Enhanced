@@ -52,7 +52,7 @@
 
 入口:
 
-- `Enhancement > Enhance Source Formatting...`
+- `Enhancement > Format XHTML and CSS...`
 - Automate 命令: `EnhanceSourceFormatting`
 
 职责:

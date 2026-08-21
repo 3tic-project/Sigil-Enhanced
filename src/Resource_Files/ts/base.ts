@@ -11845,7 +11845,7 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
     </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="1966"/>
-        <source>Enhance Source Formatting...</source>
+        <source>Format XHTML and CSS...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
