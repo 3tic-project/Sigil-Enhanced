@@ -34,6 +34,15 @@ target_compile_features(checkpoint_identifier_test PRIVATE cxx_std_17)
 add_test(NAME checkpoint_identifier COMMAND checkpoint_identifier_test)
 set_tests_properties(checkpoint_identifier PROPERTIES TIMEOUT 30)
 
+add_executable(html_named_entity_codepoint_test
+    html_named_entity_codepoint_test.cpp
+)
+target_include_directories(html_named_entity_codepoint_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(html_named_entity_codepoint_test PRIVATE Qt6::Core)
+target_compile_features(html_named_entity_codepoint_test PRIVATE cxx_std_17)
+add_test(NAME html_named_entity_codepoint COMMAND html_named_entity_codepoint_test)
+set_tests_properties(html_named_entity_codepoint PROPERTIES TIMEOUT 30)
+
 add_executable(regex_match_enumerator_test
     regex_match_enumerator_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/RegexMatchEnumerator.cpp
@@ -461,6 +470,13 @@ add_test(NAME epub3_tools_menu_contract
             ${CMAKE_SOURCE_DIR}
 )
 set_tests_properties(epub3_tools_menu_contract PROPERTIES TIMEOUT 30)
+
+add_test(NAME epub_version_conv_entities_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/epub_version_conv_entities_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(epub_version_conv_entities_contract PROPERTIES TIMEOUT 30)
 
 add_test(NAME book_browser_drag_contract
     COMMAND ${Python3_EXECUTABLE}
