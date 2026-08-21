@@ -54,6 +54,17 @@ set_tests_properties(preview_metrics_webengine PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --no-sandbox"
 )
 
+add_executable(preview_metrics_request_tracker_test
+    preview_metrics_request_tracker_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewMetricsRequestTracker.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewMetricsRequestTracker.h
+)
+target_include_directories(preview_metrics_request_tracker_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(preview_metrics_request_tracker_test PRIVATE Qt6::Core)
+target_compile_features(preview_metrics_request_tracker_test PRIVATE cxx_std_17)
+add_test(NAME preview_metrics_request_tracker COMMAND preview_metrics_request_tracker_test)
+set_tests_properties(preview_metrics_request_tracker PROPERTIES TIMEOUT 30)
+
 add_executable(tab_bar_middle_click_test
     tab_bar_middle_click_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Tabs/TabBar.cpp

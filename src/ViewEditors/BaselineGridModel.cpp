@@ -41,7 +41,8 @@ bool BaselineGridSettings::isValid() const
         && qIsFinite(offsetCssPx)
         && qIsFinite(resolved)
         && step > 0.0
-        && referenceFontPx > 0.0
+        && referenceFontPx >= 0.25
+        && referenceFontPx <= 1000.0
         && resolved >= 0.25
         && resolved <= 1000.0
         && majorEvery >= 1

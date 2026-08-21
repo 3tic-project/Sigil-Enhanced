@@ -71,7 +71,7 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     m_majorOpacity->setSuffix(tr("%"));
     m_minimumZoom->setRange(10, 400);
     m_minimumZoom->setSuffix(tr("%"));
-    m_useCurrent->setEnabled(qIsFinite(m_currentElementFontPx) && m_currentElementFontPx > 0.0);
+    m_useCurrent->setEnabled(false);
 
     QHBoxLayout *referenceLayout = new QHBoxLayout;
     referenceLayout->setContentsMargins(0, 0, 0, 0);
@@ -125,6 +125,7 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     connect(m_majorColorButton, &QPushButton::clicked, this, &BaselineGridSettingsDialog::chooseMajorColor);
 
     populate(settings);
+    setCurrentElementFontPx(m_currentElementFontPx);
 }
 
 void BaselineGridSettingsDialog::populate(const BaselineGridSettings &settings)
@@ -168,6 +169,20 @@ BaselineGridSettings BaselineGridSettingsDialog::gridSettings() const
     return settings;
 }
 
+void BaselineGridSettingsDialog::setCurrentElementFontPx(qreal currentElementFontPx)
+{
+    m_currentElementFontPx = currentElementFontPx;
+    updateResolvedStep();
+    if (qIsFinite(currentElementFontPx) && currentElementFontPx >= 0.25
+            && currentElementFontPx <= 1000.0) {
+        m_useCurrent->setToolTip(
+            tr("Use the measured current element font size (%1 px).")
+                .arg(currentElementFontPx, 0, 'f', 2));
+    } else {
+        m_useCurrent->setToolTip(tr("The current element font size is unavailable."));
+    }
+}
+
 void BaselineGridSettingsDialog::accept()
 {
     if (!gridSettings().isValid()) {
@@ -200,7 +215,8 @@ void BaselineGridSettingsDialog::chooseMajorColor()
 
 void BaselineGridSettingsDialog::useCurrentElement()
 {
-    if (qIsFinite(m_currentElementFontPx) && m_currentElementFontPx > 0.0) {
+    if (qIsFinite(m_currentElementFontPx) && m_currentElementFontPx >= 0.25
+            && m_currentElementFontPx <= 1000.0) {
         m_referenceFont->setValue(m_currentElementFontPx);
     }
 }
@@ -216,7 +232,8 @@ void BaselineGridSettingsDialog::updateResolvedStep()
     const bool usesReference = unit == BaselineGridUnit::Em;
     m_referenceFont->setEnabled(usesReference);
     m_useCurrent->setEnabled(usesReference && qIsFinite(m_currentElementFontPx)
-                             && m_currentElementFontPx > 0.0);
+                             && m_currentElementFontPx >= 0.25
+                             && m_currentElementFontPx <= 1000.0);
     const qreal resolved = usesReference ? m_step->value() * m_referenceFont->value() : m_step->value();
     m_resolvedStep->setText(tr("%1 CSS px").arg(resolved, 0, 'f', 2));
 }

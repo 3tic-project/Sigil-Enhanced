@@ -24,49 +24,52 @@ PreviewMetricsProbe::PreviewMetricsProbe(ViewPreview *preview, QObject *parent)
 
 void PreviewMetricsProbe::invalidatePendingRequests()
 {
-    ++m_metricsGeneration;
+    ++m_pageGeneration;
     ++m_originGeneration;
 }
 
-void PreviewMetricsProbe::requestMetrics(const QList<ElementIndex> &hierarchy)
+quint64 PreviewMetricsProbe::requestMetrics(const QList<ElementIndex> &hierarchy)
 {
     if (!m_preview || hierarchy.isEmpty()) {
-        emit metricsUnavailable();
-        return;
+        return 0;
     }
-    requestMetricsForSelector(m_preview->ElementSelectingJavascript(hierarchy));
+    return requestMetricsForSelector(m_preview->ElementSelectingJavascript(hierarchy));
 }
 
-void PreviewMetricsProbe::requestMetricsAtViewportPoint(const QPointF &cssPoint)
+quint64 PreviewMetricsProbe::requestMetricsAtViewportPoint(const QPointF &cssPoint)
 {
     const QString selector = QStringLiteral("document.elementFromPoint(%1, %2)")
         .arg(cssPoint.x(), 0, 'f', 3)
         .arg(cssPoint.y(), 0, 'f', 3);
-    requestMetricsForSelector(selector);
+    return requestMetricsForSelector(selector);
 }
 
-void PreviewMetricsProbe::requestMetricsForSelector(const QString &selector)
+quint64 PreviewMetricsProbe::requestMetricsForSelector(const QString &selector)
 {
     if (!m_preview || !m_preview->IsLoadingFinished()) {
-        emit metricsUnavailable();
-        return;
+        return 0;
     }
 
-    const quint64 generation = ++m_metricsGeneration;
+    if (++m_nextRequestId == 0) {
+        ++m_nextRequestId;
+    }
+    const quint64 requestId = m_nextRequestId;
+    const quint64 pageGeneration = m_pageGeneration;
     const QPointer<PreviewMetricsProbe> guard(this);
     m_preview->page()->runJavaScript(metricsJavascript(selector),
         QWebEngineScript::ApplicationWorld,
-        [guard, generation](const QVariant &value) {
-            if (!guard || generation != guard->m_metricsGeneration) {
+        [guard, requestId, pageGeneration](const QVariant &value) {
+            if (!guard || pageGeneration != guard->m_pageGeneration) {
                 return;
             }
             const PreviewLayoutMetrics metrics = PreviewLayoutMetrics::fromVariant(value);
             if (metrics.valid) {
-                emit guard->metricsReady(metrics);
+                emit guard->metricsReady(requestId, metrics);
             } else {
-                emit guard->metricsUnavailable();
+                emit guard->metricsUnavailable(requestId);
             }
         });
+    return requestId;
 }
 
 QString PreviewMetricsProbe::metricsJavascript(const QString &selector) const

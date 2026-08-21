@@ -26,22 +26,23 @@ class PreviewMetricsProbe : public QObject
 public:
     explicit PreviewMetricsProbe(ViewPreview *preview, QObject *parent = nullptr);
 
-    void requestMetrics(const QList<ElementIndex> &hierarchy);
-    void requestMetricsAtViewportPoint(const QPointF &cssPoint);
+    quint64 requestMetrics(const QList<ElementIndex> &hierarchy);
+    quint64 requestMetricsAtViewportPoint(const QPointF &cssPoint);
     void requestBodyContentOrigin();
     void invalidatePendingRequests();
 
 signals:
-    void metricsReady(const PreviewLayoutMetrics &metrics);
-    void metricsUnavailable();
+    void metricsReady(quint64 requestId, const PreviewLayoutMetrics &metrics);
+    void metricsUnavailable(quint64 requestId);
     void bodyContentOriginReady(qreal originCssPx, const QString &writingMode);
 
 private:
-    void requestMetricsForSelector(const QString &selector);
+    quint64 requestMetricsForSelector(const QString &selector);
     QString metricsJavascript(const QString &selector) const;
 
     QPointer<ViewPreview> m_preview;
-    quint64 m_metricsGeneration = 0;
+    quint64 m_nextRequestId = 0;
+    quint64 m_pageGeneration = 0;
     quint64 m_originGeneration = 0;
 };
 

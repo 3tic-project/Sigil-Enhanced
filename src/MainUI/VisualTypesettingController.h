@@ -12,12 +12,14 @@
 
 #include "ViewEditors/BaselineGridModel.h"
 #include "ViewEditors/PreviewLayoutMetrics.h"
+#include "ViewEditors/PreviewMetricsRequestTracker.h"
 #include "ViewEditors/Viewer.h"
 
 #include <QObject>
 #include <QPoint>
 
 class QAction;
+class BaselineGridSettingsDialog;
 class BaselineGridOverlay;
 class OverlayHelperWidget;
 class PreviewMetricsProbe;
@@ -45,6 +47,7 @@ public:
     QAction *cleanPreviewAction() const;
 
     void setCurrentElement(const QList<ElementIndex> &hierarchy);
+    void inspectElementAtPreviewPosition(const QPoint &viewportPosition);
     void useElementAtPreviewPosition(const QPoint &viewportPosition);
     void refreshThemeDefaults();
 
@@ -59,19 +62,28 @@ private slots:
     void showSettings();
     void setCleanPreviewActive(bool active);
     void requestCurrentMetrics();
+    void documentLoading();
     void documentLoaded();
-    void metricsReady(const PreviewLayoutMetrics &metrics);
-    void metricsUnavailable();
+    void metricsReady(quint64 requestId, const PreviewLayoutMetrics &metrics);
+    void metricsUnavailable(quint64 requestId);
     void bodyContentOriginReady(qreal originCssPx, const QString &writingMode);
 
 private:
     void applySettings(const BaselineGridSettings &settings, bool persist);
+    bool beginCurrentElementRequest(PreviewMetricsRequestPurpose purpose);
+    bool beginPreviewPointRequest(const QPoint &viewportPosition,
+                                  PreviewMetricsRequestPurpose purpose);
+    void handleUnavailableRequest(const PreviewMetricsRequestToken &token);
+    bool hasFreshCurrentMetrics() const;
+    bool tryApplyReferenceFont(const PreviewLayoutMetrics &metrics);
+    bool usesDarkPreviewTheme() const;
     void persistSettings();
     void updateActions();
     void updateOverlayOrigin();
     void updateMetricsText();
     QString gridSummary() const;
     QString metricsSummary(const PreviewLayoutMetrics &metrics) const;
+    static QString hierarchyKey(const QList<ElementIndex> &hierarchy);
 
     ViewPreview *m_preview;
     QWidget *m_dialogParent;
@@ -84,13 +96,17 @@ private:
     QAction *m_useCurrentElementAction;
     QAction *m_settingsAction;
     QAction *m_cleanPreviewAction;
+    PreviewMetricsRequestTracker m_requests;
     BaselineGridSettings m_settings;
     QList<ElementIndex> m_currentHierarchy;
+    QString m_currentHierarchyKey;
     PreviewLayoutMetrics m_lastMetrics;
+    QString m_lastMetricsKey;
+    BaselineGridSettingsDialog *m_activeSettingsDialog = nullptr;
     qreal m_bodyOriginCssPx = 0.0;
     QString m_documentWritingMode;
     bool m_cleanPreviewActive = false;
-    bool m_calibrationPending = false;
+    bool m_transientInspectionActive = false;
 };
 
 #endif // VISUALTYPESETTINGCONTROLLER_H

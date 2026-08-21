@@ -33,6 +33,7 @@ public:
                                QWidget *parent = nullptr);
 
     BaselineGridSettings gridSettings() const;
+    void setCurrentElementFontPx(qreal currentElementFontPx);
 
 protected:
     void accept() override;

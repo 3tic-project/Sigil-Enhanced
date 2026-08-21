@@ -1007,7 +1007,9 @@ void PreviewWindow::ShowPreviewContextMenu(const QPoint &pos)
         copy_link = menu.addAction(tr("Copy Link"));
     }
     menu.addSeparator();
-    QAction *use_grid_reference = menu.addAction(tr("Use This Element as Grid Reference"));
+    QAction *inspect_layout = menu.addAction(tr("Inspect Layout"));
+    QAction *use_grid_reference = menu.addAction(
+        tr("Use This Element's Font Size as Grid Reference"));
     QAction *chosen = menu.exec(m_Preview->mapToGlobal(pos));
     if (chosen == inspect) {
         SetDevToolsVisible(true);
@@ -1016,6 +1018,8 @@ void PreviewWindow::ShowPreviewContextMenu(const QPoint &pos)
         }
     } else if (copy_link && chosen == copy_link) {
         QApplication::clipboard()->setText(hoverurl);
+    } else if (chosen == inspect_layout && m_VisualTypesetting) {
+        m_VisualTypesetting->inspectElementAtPreviewPosition(pos);
     } else if (chosen == use_grid_reference && m_VisualTypesetting) {
         m_VisualTypesetting->useElementAtPreviewPosition(pos);
     }

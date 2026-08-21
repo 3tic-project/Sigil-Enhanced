@@ -16,6 +16,9 @@ overlay = (repo / "src/ViewEditors/BaselineGridOverlay.cpp").read_text(encoding=
 overlay_base = (repo / "src/ViewEditors/Overlay.h").read_text(encoding="utf-8")
 store = (repo / "src/ViewEditors/BaselineGridSettingsStore.cpp").read_text(encoding="utf-8")
 probe = (repo / "src/ViewEditors/PreviewMetricsProbe.cpp").read_text(encoding="utf-8")
+request_tracker = (
+    repo / "src/ViewEditors/PreviewMetricsRequestTracker.cpp"
+).read_text(encoding="utf-8")
 probe_javascript = (repo / "src/ViewEditors/PreviewMetricsJavascript.cpp").read_text(encoding="utf-8")
 metrics = (repo / "src/ViewEditors/PreviewLayoutMetrics.cpp").read_text(encoding="utf-8")
 controller = (repo / "src/MainUI/VisualTypesettingController.cpp").read_text(encoding="utf-8")
@@ -100,8 +103,23 @@ require(
     "runJavaScript" in probe
     and "QWebEngineScript::ApplicationWorld" in probe
     and "QPointer<PreviewMetricsProbe>" in probe
-    and "m_metricsGeneration" in probe,
+    and "m_pageGeneration" in probe
+    and "requestId" in probe,
     "computed metrics must use cancellable asynchronous ApplicationWorld queries",
+)
+require(
+    "PreviewMetricsRequestPurpose::Calibration" in controller
+    and "PreviewMetricsRequestPurpose::Status" in controller
+    and "m_requests.take(requestId)" in controller
+    and "m_requests.clear()" in controller
+    and "token.id == id" in request_tracker,
+    "status, calibration, inspection, and settings results must retain request identity",
+)
+require(
+    "QWebEnginePage::loadStarted" in controller
+    and "documentLoading" in controller
+    and "m_activeSettingsDialog->setCurrentElementFontPx(qQNaN())" in controller,
+    "navigation must invalidate pending metrics before the replacement document finishes loading",
 )
 require(
     "setInterval(75)" in controller
@@ -112,15 +130,27 @@ require(
 for action in (
     "Show Baseline Grid",
     "Show Layout Metrics",
-    "Use Current Element as Grid Reference",
+    "Use Current Element Font Size as Grid Reference",
     "Baseline Grid Settings…",
     "Clean Preview",
 ):
     require(action in controller, f"View menu is missing {action}")
 require(
-    "Use This Element as Grid Reference" in preview
+    "Use This Element's Font Size as Grid Reference" in preview
     and "useElementAtPreviewPosition(pos)" in preview,
     "Preview context menu must support one-shot element calibration",
+)
+require(
+    'tr("Inspect Layout")' in preview
+    and "inspectElementAtPreviewPosition(pos)" in preview
+    and "m_transientInspectionActive" in controller,
+    "Preview context inspection must show metrics without changing the persistent toggle",
+)
+require(
+    "key == m_currentHierarchyKey" in controller
+    and "hasFreshCurrentMetrics()" in controller
+    and "setCurrentElementFontPx" in dialog,
+    "same-element metrics must be reused and the settings dialog must reject stale values",
 )
 require(
     "MainWindow.ShowBaselineGrid" in main_window
@@ -142,7 +172,7 @@ require(
     "grid settings dialog must be readable and provide defaults restoration",
 )
 
-for source in (model, overlay, store, probe, metrics, controller, dialog):
+for source in (model, overlay, store, probe, request_tracker, metrics, controller, dialog):
     require(
         "BookManipulation" not in source
         and "ResourceObjects" not in source

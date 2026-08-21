@@ -78,6 +78,17 @@ int main(int argc, char *argv[])
     okay &= expect(BaselineGridModel::linesForViewport(100.0, 0.0, 1.0, 0.0, settings).isEmpty(),
                    "invalid settings must never reach painting");
 
+    BaselineGridSettings invalidReference = BaselineGridSettings::defaults(false);
+    invalidReference.referenceFontPx = 0.0;
+    okay &= expect(!invalidReference.isValid(),
+                   "a zero-size element must never become a valid grid reference");
+    invalidReference.referenceFontPx = 0.1;
+    okay &= expect(!invalidReference.isValid(),
+                   "a subminimum element must never become a valid grid reference");
+    invalidReference.referenceFontPx = 1001.0;
+    okay &= expect(!invalidReference.isValid(),
+                   "runtime calibration must honor the persisted reference-font range");
+
     QTemporaryDir temporaryDirectory;
     okay &= expect(temporaryDirectory.isValid(), "temporary settings directory must be available");
     QSettings persisted(temporaryDirectory.filePath(QStringLiteral("visual-aids.ini")), QSettings::IniFormat);
