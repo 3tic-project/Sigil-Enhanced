@@ -13,7 +13,7 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
-#include <QFormLayout>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -33,8 +33,8 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
       m_darkTheme(darkTheme),
       m_showGrid(new QCheckBox(tr("Show grid"), this)),
       m_showMetrics(new QCheckBox(tr("Show layout metrics"), this)),
-      m_horizontalGrid(new QCheckBox(tr("Horizontal lines"), this)),
-      m_verticalGrid(new QCheckBox(tr("Vertical lines"), this)),
+      m_horizontalGrid(new QCheckBox(tr("Enabled"), this)),
+      m_verticalGrid(new QCheckBox(tr("Enabled"), this)),
       m_unit(new QComboBox(this)),
       m_step(new QDoubleSpinBox(this)),
       m_verticalStep(new QDoubleSpinBox(this)),
@@ -52,11 +52,14 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
       m_minimumZoom(new QSpinBox(this))
 {
     setWindowTitle(tr("Grid Settings"));
-    setMinimumSize(560, 560);
+    setMinimumSize(760, 440);
+    resize(800, 460);
 
     m_showGrid->setObjectName(QStringLiteral("showGrid"));
     m_horizontalGrid->setObjectName(QStringLiteral("horizontalGrid"));
     m_verticalGrid->setObjectName(QStringLiteral("verticalGrid"));
+    m_horizontalGrid->setAccessibleName(tr("Horizontal lines"));
+    m_verticalGrid->setAccessibleName(tr("Vertical lines"));
     m_step->setObjectName(QStringLiteral("horizontalSpacing"));
     m_verticalStep->setObjectName(QStringLiteral("verticalSpacing"));
 
@@ -89,32 +92,63 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     m_showMetrics->setVisible(false);
     m_useCurrent->setVisible(false);
 
-    QHBoxLayout *referenceLayout = new QHBoxLayout;
-    referenceLayout->setContentsMargins(0, 0, 0, 0);
-    referenceLayout->addWidget(m_referenceFont, 1);
+    QGridLayout *geometryLayout = new QGridLayout;
+    geometryLayout->setHorizontalSpacing(12);
+    geometryLayout->setVerticalSpacing(8);
+    geometryLayout->addWidget(new QLabel(tr("Unit:"), this), 0, 0);
+    geometryLayout->addWidget(m_unit, 0, 1);
+    geometryLayout->addWidget(new QLabel(tr("Reference font size:"), this), 0, 2);
+    geometryLayout->addWidget(m_referenceFont, 0, 3);
 
-    QFormLayout *geometryLayout = new QFormLayout;
-    geometryLayout->addRow(tr("Unit:"), m_unit);
-    geometryLayout->addRow(tr("Horizontal grid:"), m_horizontalGrid);
-    geometryLayout->addRow(tr("Horizontal spacing:"), m_step);
-    geometryLayout->addRow(tr("Resolved horizontal spacing:"), m_resolvedStep);
-    geometryLayout->addRow(tr("Vertical grid:"), m_verticalGrid);
-    geometryLayout->addRow(tr("Vertical spacing:"), m_verticalStep);
-    geometryLayout->addRow(tr("Resolved vertical spacing:"), m_verticalResolvedStep);
-    geometryLayout->addRow(tr("Reference font size:"), referenceLayout);
-    geometryLayout->addRow(tr("Grid origin:"), m_origin);
-    geometryLayout->addRow(tr("Grid offset:"), m_offset);
-    geometryLayout->addRow(tr("Major line every:"), m_majorEvery);
+    QLabel *horizontalHeading = new QLabel(tr("Horizontal lines"), this);
+    QLabel *verticalHeading = new QLabel(tr("Vertical lines"), this);
+    horizontalHeading->setAlignment(Qt::AlignCenter);
+    verticalHeading->setAlignment(Qt::AlignCenter);
+    geometryLayout->addWidget(horizontalHeading, 1, 1);
+    geometryLayout->addWidget(verticalHeading, 1, 3);
+    geometryLayout->addWidget(m_horizontalGrid, 2, 1, Qt::AlignCenter);
+    geometryLayout->addWidget(m_verticalGrid, 2, 3, Qt::AlignCenter);
+    geometryLayout->addWidget(new QLabel(tr("Spacing:"), this), 3, 0);
+    geometryLayout->addWidget(m_step, 3, 1);
+    geometryLayout->addWidget(m_verticalStep, 3, 3);
+    geometryLayout->addWidget(new QLabel(tr("Resolved spacing:"), this), 4, 0);
+    geometryLayout->addWidget(m_resolvedStep, 4, 1);
+    geometryLayout->addWidget(m_verticalResolvedStep, 4, 3);
+
+    geometryLayout->addWidget(new QLabel(tr("Grid origin:"), this), 5, 0);
+    geometryLayout->addWidget(m_origin, 5, 1);
+    geometryLayout->addWidget(new QLabel(tr("Grid offset:"), this), 5, 2);
+    geometryLayout->addWidget(m_offset, 5, 3);
+    geometryLayout->addWidget(new QLabel(tr("Major line every:"), this), 6, 0);
+    geometryLayout->addWidget(m_majorEvery, 6, 1);
+    geometryLayout->setColumnStretch(1, 1);
+    geometryLayout->setColumnStretch(3, 1);
     QGroupBox *geometryGroup = new QGroupBox(tr("Geometry"), this);
+    geometryGroup->setObjectName(QStringLiteral("gridGeometryGroup"));
     geometryGroup->setLayout(geometryLayout);
 
-    QFormLayout *appearanceLayout = new QFormLayout;
-    appearanceLayout->addRow(tr("Minor line color:"), m_minorColorButton);
-    appearanceLayout->addRow(tr("Minor line opacity:"), m_minorOpacity);
-    appearanceLayout->addRow(tr("Major line color:"), m_majorColorButton);
-    appearanceLayout->addRow(tr("Major line opacity:"), m_majorOpacity);
-    appearanceLayout->addRow(tr("Minimum zoom for minor lines:"), m_minimumZoom);
+    QGridLayout *appearanceLayout = new QGridLayout;
+    appearanceLayout->setHorizontalSpacing(12);
+    appearanceLayout->setVerticalSpacing(8);
+    QLabel *minorHeading = new QLabel(tr("Minor lines"), this);
+    QLabel *majorHeading = new QLabel(tr("Major lines"), this);
+    minorHeading->setAlignment(Qt::AlignCenter);
+    majorHeading->setAlignment(Qt::AlignCenter);
+    appearanceLayout->addWidget(minorHeading, 0, 1);
+    appearanceLayout->addWidget(majorHeading, 0, 2);
+    appearanceLayout->addWidget(new QLabel(tr("Color:"), this), 1, 0);
+    appearanceLayout->addWidget(m_minorColorButton, 1, 1);
+    appearanceLayout->addWidget(m_majorColorButton, 1, 2);
+    appearanceLayout->addWidget(new QLabel(tr("Opacity:"), this), 2, 0);
+    appearanceLayout->addWidget(m_minorOpacity, 2, 1);
+    appearanceLayout->addWidget(m_majorOpacity, 2, 2);
+    appearanceLayout->addWidget(
+        new QLabel(tr("Minimum zoom for minor lines:"), this), 3, 0, 1, 2);
+    appearanceLayout->addWidget(m_minimumZoom, 3, 2);
+    appearanceLayout->setColumnStretch(1, 1);
+    appearanceLayout->setColumnStretch(2, 1);
     QGroupBox *appearanceGroup = new QGroupBox(tr("Appearance"), this);
+    appearanceGroup->setObjectName(QStringLiteral("gridAppearanceGroup"));
     appearanceGroup->setLayout(appearanceLayout);
 
     QDialogButtonBox *buttons = new QDialogButtonBox(
@@ -127,9 +161,11 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(m_showGrid);
-    layout->addWidget(geometryGroup);
-    layout->addWidget(appearanceGroup);
-    layout->addStretch();
+    QHBoxLayout *settingsColumns = new QHBoxLayout;
+    settingsColumns->setObjectName(QStringLiteral("gridSettingsColumns"));
+    settingsColumns->addWidget(geometryGroup, 3);
+    settingsColumns->addWidget(appearanceGroup, 2);
+    layout->addLayout(settingsColumns, 1);
     layout->addWidget(buttons);
 
     connect(m_unit, qOverload<int>(&QComboBox::currentIndexChanged),

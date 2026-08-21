@@ -26802,6 +26802,13 @@ Continue using the requested filename?</source>
     <message><source>Use Current Element</source><translation>現在の要素を使用</translation></message>
     <message><source>Horizontal lines</source><translation>水平線</translation></message>
     <message><source>Vertical lines</source><translation>垂直線</translation></message>
+    <message><source>Enabled</source><translation>有効</translation></message>
+    <message><source>Spacing:</source><translation>間隔：</translation></message>
+    <message><source>Resolved spacing:</source><translation>換算後の間隔：</translation></message>
+    <message><source>Minor lines</source><translation>補助線</translation></message>
+    <message><source>Major lines</source><translation>主線</translation></message>
+    <message><source>Color:</source><translation>色：</translation></message>
+    <message><source>Opacity:</source><translation>不透明度：</translation></message>
     <message><source>Grid Settings</source><translation>グリッド設定</translation></message>
     <message><source>Pixels (px)</source><translation>ピクセル（px）</translation></message>
     <message><source>Fixed reference em</source><translation>固定参照 em</translation></message>
@@ -26810,21 +26817,11 @@ Continue using the requested filename?</source>
     <message><source> px</source><translation> px</translation></message>
     <message><source>%</source><translation>%</translation></message>
     <message><source>Unit:</source><translation>単位：</translation></message>
-    <message><source>Horizontal grid:</source><translation>水平グリッド：</translation></message>
-    <message><source>Horizontal spacing:</source><translation>水平間隔：</translation></message>
-    <message><source>Resolved horizontal spacing:</source><translation>換算後の水平間隔：</translation></message>
-    <message><source>Vertical grid:</source><translation>垂直グリッド：</translation></message>
-    <message><source>Vertical spacing:</source><translation>垂直間隔：</translation></message>
-    <message><source>Resolved vertical spacing:</source><translation>換算後の垂直間隔：</translation></message>
     <message><source>Reference font size:</source><translation>参照文字サイズ：</translation></message>
     <message><source>Grid origin:</source><translation>グリッド原点：</translation></message>
     <message><source>Grid offset:</source><translation>グリッドオフセット：</translation></message>
     <message><source>Major line every:</source><translation>主線の間隔：</translation></message>
     <message><source>Geometry</source><translation>ジオメトリ</translation></message>
-    <message><source>Minor line color:</source><translation>補助線の色：</translation></message>
-    <message><source>Minor line opacity:</source><translation>補助線の不透明度：</translation></message>
-    <message><source>Major line color:</source><translation>主線の色：</translation></message>
-    <message><source>Major line opacity:</source><translation>主線の不透明度：</translation></message>
     <message><source>Minimum zoom for minor lines:</source><translation>補助線を表示する最小ズーム：</translation></message>
     <message><source>Appearance</source><translation>外観</translation></message>
     <message><source>Invalid Grid Settings</source><translation>無効なグリッド設定</translation></message>

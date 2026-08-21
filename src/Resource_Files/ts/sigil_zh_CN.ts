@@ -26804,6 +26804,13 @@ Continue using the requested filename?</source>
     <message><source>Use Current Element</source><translation>使用当前元素</translation></message>
     <message><source>Horizontal lines</source><translation>横向线</translation></message>
     <message><source>Vertical lines</source><translation>纵向线</translation></message>
+    <message><source>Enabled</source><translation>启用</translation></message>
+    <message><source>Spacing:</source><translation>间距：</translation></message>
+    <message><source>Resolved spacing:</source><translation>换算后间距：</translation></message>
+    <message><source>Minor lines</source><translation>次网格线</translation></message>
+    <message><source>Major lines</source><translation>主网格线</translation></message>
+    <message><source>Color:</source><translation>颜色：</translation></message>
+    <message><source>Opacity:</source><translation>不透明度：</translation></message>
     <message><source>Grid Settings</source><translation>网格设置</translation></message>
     <message><source>Pixels (px)</source><translation>像素（px）</translation></message>
     <message><source>Fixed reference em</source><translation>固定参考 em</translation></message>
@@ -26812,21 +26819,11 @@ Continue using the requested filename?</source>
     <message><source> px</source><translation> px</translation></message>
     <message><source>%</source><translation>%</translation></message>
     <message><source>Unit:</source><translation>单位：</translation></message>
-    <message><source>Horizontal grid:</source><translation>横向网格：</translation></message>
-    <message><source>Horizontal spacing:</source><translation>横向间距：</translation></message>
-    <message><source>Resolved horizontal spacing:</source><translation>换算后的横向间距：</translation></message>
-    <message><source>Vertical grid:</source><translation>纵向网格：</translation></message>
-    <message><source>Vertical spacing:</source><translation>纵向间距：</translation></message>
-    <message><source>Resolved vertical spacing:</source><translation>换算后的纵向间距：</translation></message>
     <message><source>Reference font size:</source><translation>参考字号：</translation></message>
     <message><source>Grid origin:</source><translation>网格原点：</translation></message>
     <message><source>Grid offset:</source><translation>网格偏移：</translation></message>
     <message><source>Major line every:</source><translation>主网格线间隔：</translation></message>
     <message><source>Geometry</source><translation>几何</translation></message>
-    <message><source>Minor line color:</source><translation>次网格线颜色：</translation></message>
-    <message><source>Minor line opacity:</source><translation>次网格线不透明度：</translation></message>
-    <message><source>Major line color:</source><translation>主网格线颜色：</translation></message>
-    <message><source>Major line opacity:</source><translation>主网格线不透明度：</translation></message>
     <message><source>Minimum zoom for minor lines:</source><translation>显示次网格线的最小缩放：</translation></message>
     <message><source>Appearance</source><translation>外观</translation></message>
     <message><source>Invalid Grid Settings</source><translation>无效的网格设置</translation></message>

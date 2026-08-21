@@ -182,9 +182,12 @@ require(
     and "m_verticalGrid" in dialog
     and "m_verticalStep" in dialog
     and "settings.metricsEnabled = false" in dialog
-    and "setMinimumSize(560, 560)" in dialog
+    and "setMinimumSize(760, 440)" in dialog
+    and 'QStringLiteral("gridSettingsColumns")' in dialog
+    and "settingsColumns->addWidget(geometryGroup, 3)" in dialog
+    and "settingsColumns->addWidget(appearanceGroup, 2)" in dialog
     and "QDialogButtonBox::RestoreDefaults" in dialog,
-    "grid settings must independently enable and adjust horizontal and vertical lines",
+    "grid settings must use readable columns while preserving independent axis controls",
 )
 require(
     "previewSettingsChanged" in dialog

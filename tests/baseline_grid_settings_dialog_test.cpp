@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QDoubleSpinBox>
+#include <QGroupBox>
+#include <QHBoxLayout>
 #include <QtMath>
 
 #include <cmath>
@@ -47,10 +49,20 @@ int main(int argc, char *argv[])
         dialog.findChild<QDoubleSpinBox *>(QStringLiteral("horizontalSpacing"));
     QDoubleSpinBox *verticalSpacing =
         dialog.findChild<QDoubleSpinBox *>(QStringLiteral("verticalSpacing"));
+    QGroupBox *geometryGroup =
+        dialog.findChild<QGroupBox *>(QStringLiteral("gridGeometryGroup"));
+    QGroupBox *appearanceGroup =
+        dialog.findChild<QGroupBox *>(QStringLiteral("gridAppearanceGroup"));
+    QHBoxLayout *settingsColumns =
+        dialog.findChild<QHBoxLayout *>(QStringLiteral("gridSettingsColumns"));
 
     bool okay = true;
-    okay &= expect(showGrid && verticalGrid && horizontalSpacing && verticalSpacing,
-                   "live-preview controls must be discoverable");
+    okay &= expect(showGrid && verticalGrid && horizontalSpacing && verticalSpacing
+                       && geometryGroup && appearanceGroup && settingsColumns,
+                   "live-preview controls and setting columns must be discoverable");
+    okay &= expect(settingsColumns && settingsColumns->count() == 2
+                       && dialog.minimumWidth() > dialog.minimumHeight(),
+                   "grid settings must use a two-column landscape layout");
     if (!okay) {
         return 1;
     }
