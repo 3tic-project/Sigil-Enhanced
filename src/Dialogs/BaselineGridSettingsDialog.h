@@ -35,6 +35,9 @@ public:
     BaselineGridSettings gridSettings() const;
     void setCurrentElementFontPx(qreal currentElementFontPx);
 
+signals:
+    void previewSettingsChanged(const BaselineGridSettings &settings);
+
 protected:
     void accept() override;
 
@@ -47,6 +50,7 @@ private slots:
 
 private:
     void populate(const BaselineGridSettings &settings);
+    void emitPreviewSettings();
     void updateColorButton(QPushButton *button, const QColor &color);
 
     qreal m_currentElementFontPx;
@@ -54,6 +58,7 @@ private:
     QColor m_minorColor;
     QColor m_majorColor;
     bool m_colorsCustomized = false;
+    bool m_populating = false;
     QCheckBox *m_showGrid;
     QCheckBox *m_showMetrics;
     QCheckBox *m_horizontalGrid;

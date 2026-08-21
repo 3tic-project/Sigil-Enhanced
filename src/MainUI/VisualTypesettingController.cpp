@@ -247,11 +247,18 @@ void VisualTypesettingController::inspectElementAtPreviewPosition(
 
 void VisualTypesettingController::showSettings()
 {
+    const BaselineGridSettings originalSettings = m_settings;
     BaselineGridSettingsDialog dialog(
         m_settings, qQNaN(), usesDarkPreviewTheme(), m_dialogParent);
+    connect(&dialog, &BaselineGridSettingsDialog::previewSettingsChanged,
+            this, [this](const BaselineGridSettings &previewSettings) {
+                applySettings(previewSettings, false);
+            });
     const int result = dialog.exec();
     if (result == QDialog::Accepted) {
         applySettings(dialog.gridSettings(), true);
+    } else {
+        applySettings(originalSettings, false);
     }
 }
 

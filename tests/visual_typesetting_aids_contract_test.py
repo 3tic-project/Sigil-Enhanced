@@ -180,6 +180,14 @@ require(
     and "QDialogButtonBox::RestoreDefaults" in dialog,
     "grid settings must independently enable and adjust horizontal and vertical lines",
 )
+require(
+    "previewSettingsChanged" in dialog
+    and "emitPreviewSettings" in dialog
+    and "applySettings(previewSettings, false)" in controller
+    and "applySettings(originalSettings, false)" in controller
+    and "applySettings(dialog.gridSettings(), true)" in controller,
+    "grid edits must preview without persistence, restore on Cancel, and save only on acceptance",
+)
 
 for source in (model, overlay, store, probe, request_tracker, metrics, controller, dialog):
     require(

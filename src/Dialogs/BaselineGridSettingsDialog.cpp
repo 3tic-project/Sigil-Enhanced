@@ -54,6 +54,12 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     setWindowTitle(tr("Grid Settings"));
     setMinimumSize(560, 560);
 
+    m_showGrid->setObjectName(QStringLiteral("showGrid"));
+    m_horizontalGrid->setObjectName(QStringLiteral("horizontalGrid"));
+    m_verticalGrid->setObjectName(QStringLiteral("verticalGrid"));
+    m_step->setObjectName(QStringLiteral("horizontalSpacing"));
+    m_verticalStep->setObjectName(QStringLiteral("verticalSpacing"));
+
     m_unit->addItem(tr("Pixels (px)"), static_cast<int>(BaselineGridUnit::Pixels));
     m_unit->addItem(tr("Fixed reference em"), static_cast<int>(BaselineGridUnit::Em));
     m_origin->addItem(tr("Document Top"), static_cast<int>(BaselineGridOrigin::DocumentTop));
@@ -128,6 +134,8 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
 
     connect(m_unit, qOverload<int>(&QComboBox::currentIndexChanged),
             this, &BaselineGridSettingsDialog::updateResolvedStep);
+    connect(m_showGrid, &QCheckBox::toggled,
+            this, &BaselineGridSettingsDialog::emitPreviewSettings);
     connect(m_step, qOverload<double>(&QDoubleSpinBox::valueChanged),
             this, &BaselineGridSettingsDialog::updateResolvedStep);
     connect(m_verticalStep, qOverload<double>(&QDoubleSpinBox::valueChanged),
@@ -138,6 +146,18 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
             this, &BaselineGridSettingsDialog::updateResolvedStep);
     connect(m_referenceFont, qOverload<double>(&QDoubleSpinBox::valueChanged),
             this, &BaselineGridSettingsDialog::updateResolvedStep);
+    connect(m_origin, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, &BaselineGridSettingsDialog::emitPreviewSettings);
+    connect(m_offset, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &BaselineGridSettingsDialog::emitPreviewSettings);
+    connect(m_majorEvery, qOverload<int>(&QSpinBox::valueChanged),
+            this, &BaselineGridSettingsDialog::emitPreviewSettings);
+    connect(m_minorOpacity, qOverload<int>(&QSpinBox::valueChanged),
+            this, &BaselineGridSettingsDialog::emitPreviewSettings);
+    connect(m_majorOpacity, qOverload<int>(&QSpinBox::valueChanged),
+            this, &BaselineGridSettingsDialog::emitPreviewSettings);
+    connect(m_minimumZoom, qOverload<int>(&QSpinBox::valueChanged),
+            this, &BaselineGridSettingsDialog::emitPreviewSettings);
     connect(m_useCurrent, &QPushButton::clicked, this, &BaselineGridSettingsDialog::useCurrentElement);
     connect(m_minorColorButton, &QPushButton::clicked, this, &BaselineGridSettingsDialog::chooseMinorColor);
     connect(m_majorColorButton, &QPushButton::clicked, this, &BaselineGridSettingsDialog::chooseMajorColor);
@@ -148,6 +168,7 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
 
 void BaselineGridSettingsDialog::populate(const BaselineGridSettings &settings)
 {
+    m_populating = true;
     m_showGrid->setChecked(settings.enabled);
     m_showMetrics->setChecked(false);
     m_horizontalGrid->setChecked(settings.horizontalEnabled);
@@ -167,6 +188,7 @@ void BaselineGridSettingsDialog::populate(const BaselineGridSettings &settings)
     m_minimumZoom->setValue(settings.minimumZoomPercent);
     updateColorButton(m_minorColorButton, m_minorColor);
     updateColorButton(m_majorColorButton, m_majorColor);
+    m_populating = false;
     updateResolvedStep();
 }
 
@@ -224,6 +246,7 @@ void BaselineGridSettingsDialog::chooseMinorColor()
         m_minorColor = color;
         m_colorsCustomized = true;
         updateColorButton(m_minorColorButton, color);
+        emitPreviewSettings();
     }
 }
 
@@ -234,6 +257,7 @@ void BaselineGridSettingsDialog::chooseMajorColor()
         m_majorColor = color;
         m_colorsCustomized = true;
         updateColorButton(m_majorColorButton, color);
+        emitPreviewSettings();
     }
 }
 
@@ -265,6 +289,18 @@ void BaselineGridSettingsDialog::updateResolvedStep()
     const qreal verticalResolved = usesReference
         ? m_verticalStep->value() * m_referenceFont->value() : m_verticalStep->value();
     m_verticalResolvedStep->setText(tr("%1 CSS px").arg(verticalResolved, 0, 'f', 2));
+    emitPreviewSettings();
+}
+
+void BaselineGridSettingsDialog::emitPreviewSettings()
+{
+    if (m_populating) {
+        return;
+    }
+    const BaselineGridSettings settings = gridSettings();
+    if (settings.isValid()) {
+        emit previewSettingsChanged(settings);
+    }
 }
 
 void BaselineGridSettingsDialog::updateColorButton(QPushButton *button, const QColor &color)

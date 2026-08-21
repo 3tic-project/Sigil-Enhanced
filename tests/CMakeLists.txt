@@ -33,6 +33,23 @@ set_tests_properties(baseline_grid_overlay PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
+add_executable(baseline_grid_settings_dialog_test
+    baseline_grid_settings_dialog_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/BaselineGridSettingsDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/BaselineGridSettingsDialog.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.h
+)
+target_include_directories(baseline_grid_settings_dialog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(baseline_grid_settings_dialog_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(baseline_grid_settings_dialog_test PRIVATE cxx_std_17)
+set_target_properties(baseline_grid_settings_dialog_test PROPERTIES AUTOMOC ON)
+add_test(NAME baseline_grid_settings_dialog COMMAND baseline_grid_settings_dialog_test)
+set_tests_properties(baseline_grid_settings_dialog PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(preview_metrics_webengine_test
     preview_metrics_webengine_test.cpp
     ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.cpp
