@@ -7,11 +7,22 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 * Sigil：感谢 Sigil 项目的原作者、维护者和所有贡献者提供长期维护的开源 EPUB 编辑器基础。
 * sigil-modified：感谢原 sigil-modified 作者 ichigo250 对批量操作效率、代码编辑体验、插件管理和 EPUB 检查等功能所做的改进。
 
-关于本项目的讨论、建议：https://t.me/+bUUc3T1rwVZmNWE9
+关于本项目的讨论、建议：
 
-> 当前开发版本：**2.8.5E9**。相对 `v2.8.1E8` 的变化见
-> [2.8.5E9 更新说明](docs/ReleaseNotes-2.8.5E9.md)，完整历史见
-> [ChangeLog.txt](ChangeLog.txt)。
+- Telegram：https://t.me/+bUUc3T1rwVZmNWE9
+- QQ 群：`796723288`（入群问题答案：`3tic`）
+
+> 最近发布版本：**2.8.5E9**。该版本相对 `v2.8.1E8` 的变化见
+> [2.8.5E9 更新说明](docs/ReleaseNotes-2.8.5E9.md)；当前 `master` 在此基础上继续开发，
+> 完整历史见 [ChangeLog.txt](ChangeLog.txt)。
+
+## 相对 2.8.5E9 的开发中变化
+
+- 新增内置 KFX 转 EPUB，可手动选择或拖入无 DRM 的 `.kfx`/`.kfx-zip`，转换后可另存为 EPUB 或在新窗口打开，并可选择自动规范化 EPUB 结构。
+- 新增预览区网格：横线和竖线可分别启用、设置间距，设置变化实时显示，Preview 右键菜单也可快速开关。
+- 未修改的 EPUB 保存时保持原文件字节不变；默认不写入 Sigil 版本元数据，也不会无故更新 EPUB 3 的修改时间。
+- 修复 EPUB 2 转 EPUB 3 时补充平面命名实体导致的崩溃，并从 NCX 恢复 EPUB 3 导航；EPUB 2 下相关工具菜单保持可用。
+- 修复关闭代码视图时语法高亮器可能触发的 FlowTab 重入崩溃，并让 Debug 构建使用、验证与发布包一致的内置 Python 依赖。
 
 ## 增强功能
 
@@ -25,7 +36,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 ### 编辑器与工作区
 
-- **[排版视觉辅助](docs/VisualTypesettingAids.md)**：在 Preview 上显示非输出的基线／节奏网格，并在状态栏给出当前元素计算后的字号、行高、逻辑 margin/padding 与网格比率；支持固定 `em` 基准、文档/正文原点、主次线、缩放阈值和纯净预览。
+- **[预览区网格](docs/VisualTypesettingAids.md)**：在 Preview 上显示不会写入 EPUB 的横向／纵向网格；两种线可独立启用并设置间距，支持固定 `px`/`em`、文档／正文原点、主次线、缩放阈值和实时设置预览。
 - **拆分编辑器**：可拆成上下两组同时打开不同资源，标签可在组间拖动；详见 [拆分编辑器](docs/SplitEditorGroups.md)。
 - **开发者工具**：停靠在预览区下方、随 Preview 一起浮动，也可拆成独立窗口；详见 [Preview 开发者工具](docs/PreviewDeveloperTools.md)。
 - **中键关闭标签**：鼠标中键直接关闭所指向的标签页，不会激活后台标签或误关空白区域。
@@ -34,7 +45,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 ### 内置工具（`Enhancement` 菜单，多数可接入 Automate 批处理）
 
 - **EPUB 结构规范化**：修复 OPF Manifest 的重复/无效 ID 与 href、未登记资源和链接大小写问题，并把资源整理为 Sigil 标准目录结构（由 sigil-modified 的规范化插件重构而来，感谢 Sigil 吧 @遥遥心航）。
-- **源码格式化**：批量把全部 XHTML/CSS 格式化为统一风格；格式不合法的文件先跳过，并在结果面板报告原因。
+- **格式化 XHTML 和 CSS**：批量把全部 XHTML/CSS 格式化为统一风格；格式不合法的文件先跳过，并在结果面板报告原因。
 - **段落规范化 ×3**：Kobo BR（顶层 `<br/>` 换行）、Kindle KFX（spacer `<p>` 分隔裸文本）、BookLive/EBPAJ（div 伪段落拍平成保留原样式的 `<p>`）；均区分当前文件与全书操作，高风险页只报告不转换。
 - **[纵横排版转换](docs/VerticalLayoutConversion.md)**：逐页分析书写方向与关联 CSS，支持竖排转横排、横排转竖排；经验证页面只切换 class，其它模板用可逆兼容覆盖；固定版式和高风险页默认跳过，写回前完整预检并创建整书 Checkpoint。
 - **[高级正则工作台](docs/AdvancedRegexWorkbench.md)**：二级正则筛选、递归替换、命名捕获变量、仅捕获规则、可保存方案；试运行不改动书籍，应用时一次可撤销提交。
