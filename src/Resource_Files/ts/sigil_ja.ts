@@ -21128,9 +21128,10 @@ Entities can be separated by lines, commas, or spaces.</source>
         <source>Print Preview View</source>
         <translation>印刷プレビューの表示</translation>
     </message>
+    <message><source>Inspect Layout</source><translation>レイアウトを検査</translation></message>
     <message>
-        <source>Use This Element as Grid Reference</source>
-        <translation>この要素をグリッドの文字サイズ基準に使用</translation>
+        <source>Use This Element&apos;s Font Size as Grid Reference</source>
+        <translation>この要素の文字サイズをグリッド基準に使用</translation>
     </message>
 </context>
 <context>
@@ -26824,21 +26825,27 @@ Continue using the requested filename?</source>
     <message><source>Choose Major Grid Color</source><translation>主線の色を選択</translation></message>
     <message><source>%1 CSS px</source><translation>%1 CSS px</translation></message>
     <message><source>Grid color %1</source><translation>グリッドの色 %1</translation></message>
+    <message><source>Use the measured current element font size (%1 px).</source><translation>計測した現在の要素の文字サイズ（%1 px）を使用します。</translation></message>
+    <message><source>The current element font size is unavailable.</source><translation>現在の要素の文字サイズを取得できません。</translation></message>
 </context>
 <context>
     <name>VisualTypesettingController</name>
     <message><source>Visual Typesetting Aids</source><translation>組版視覚補助</translation></message>
     <message><source>Show Baseline Grid</source><translation>ベースライングリッドを表示</translation></message>
     <message><source>Show Layout Metrics</source><translation>レイアウト計測値を表示</translation></message>
-    <message><source>Use Current Element as Grid Reference</source><translation>現在の要素をグリッドの文字サイズ基準に使用</translation></message>
+    <message><source>Use Current Element Font Size as Grid Reference</source><translation>現在の要素の文字サイズをグリッド基準に使用</translation></message>
     <message><source>Baseline Grid Settings…</source><translation>ベースライングリッド設定…</translation></message>
     <message><source>Clean Preview</source><translation>クリーンプレビュー</translation></message>
     <message><source>Show a non-exported rhythm grid anchored to the Preview document.</source><translation>プレビュー文書に固定され、書き出されないリズムグリッドを表示します。</translation></message>
     <message><source>Show computed typography and spacing for the current element.</source><translation>現在の要素について計算済みの文字組みと間隔を表示します。</translation></message>
     <message><source>Temporarily hide all visual typesetting aids.</source><translation>すべての組版視覚補助を一時的に隠します。</translation></message>
+    <message><source>Measure the current element once and use its font size as the fixed em reference.</source><translation>現在の要素を一度計測し、その文字サイズを固定 em の基準値として使用します。</translation></message>
     <message><source>No current Preview element is available for grid calibration.</source><translation>グリッドの調整に使用できる現在のプレビュー要素がありません。</translation></message>
     <message><source>Grid reference font set to %1 px.</source><translation>グリッドの参照文字サイズを %1 px に設定しました。</translation></message>
     <message><source>The current element&apos;s font size could not be measured.</source><translation>現在の要素の文字サイズを計測できませんでした。</translation></message>
+    <message><source>The selected element&apos;s font size could not be measured.</source><translation>選択した要素の文字サイズを計測できませんでした。</translation></message>
+    <message><source>Layout metrics are unavailable for the selected element.</source><translation>選択した要素のレイアウト計測値を取得できません。</translation></message>
+    <message><source>The measured font size %1 px cannot be used with the current grid settings.</source><translation>計測した文字サイズ %1 px は現在のグリッド設定では使用できません。</translation></message>
     <message><source>Horizontal Grid</source><translation>水平参照グリッド</translation></message>
     <message><source>Grid</source><translation>グリッド</translation></message>
     <message><source>%1 %2px (%3em @ %4px)</source><translation>%1 %2px（%3em @ %4px）</translation></message>

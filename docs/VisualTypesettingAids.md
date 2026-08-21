@@ -19,6 +19,7 @@
 - 主／次网格线、颜色、不透明度和低缩放阈值；
 - 基于文档坐标的滚动相位，以及与 Preview 相同的缩放；
 - 当前元素的 computed font、line-height、逻辑 margin/padding 和 writing-mode；
+- Preview 右键单次检查元素，不必长期打开状态栏度量；
 - 数值相对于当前网格步长的精确比率；
 - 一次性用当前元素字号校准固定 `em` 参考值；
 - 一键暂时隐藏所有辅助的 Clean Preview；
@@ -43,7 +44,7 @@
    ├─ 显示基线网格
    ├─ 显示排版度量
    ├─ ─────────────────────
-   ├─ 以当前元素作为网格字号基准
+   ├─ 以当前元素字号作为网格参考
    ├─ 基线网格设置…
    ├─ ─────────────────────
    └─ 纯净预览
@@ -51,8 +52,10 @@
 
 所有动作都已注册到“首选项 → 键盘快捷键”，默认不抢占现有快捷键。
 
-Preview 右键菜单还提供“以此元素作为网格字号基准”。此动作按照右键位置读取
-元素，而顶部菜单动作按照 Code View 当前光标对应的元素读取。
+Preview 右键菜单还提供“检查排版”和“以此元素的字号作为网格参考”。两个动作都
+按照右键位置读取元素；顶部菜单动作则按照 Code View 当前光标对应的元素读取。
+“检查排版”是一次性的：结果显示在状态栏，但不会打开或改写“显示排版度量”的
+持久设置。光标移到另一个 Code View 元素后，临时结果会被清除。
 
 ### 建立 8 px 节奏
 
@@ -64,7 +67,7 @@ Preview 右键菜单还提供“以此元素作为网格字号基准”。此动
 ### 建立固定 0.5 em 节奏
 
 1. 把 Code View 光标放在正文段落，或在 Preview 中对正文右键；
-2. 执行“以当前元素作为网格字号基准”；
+2. 执行“以当前元素字号作为网格参考”；
 3. 在设置中选择 Fixed reference em，Grid step 填 `0.5`；
 4. 若参考字号为 `18 px`，Resolved step 将固定为 `9 CSS px`。
 
@@ -85,12 +88,17 @@ Preview 右键菜单还提供“以此元素作为网格字号基准”。此动
 | Grid origin | 从文档顶部或 body 实际内容 box 顶部开始 |
 | Grid offset | 在原点基础上增加正负 CSS px 偏移 |
 | Major line every | 每 N 条线绘制一条主线，最小值为 1 |
-| Minor/Major color | 默认颜色随应用浅色／深色主题变化；用户选色后固定为自定义值 |
+| Minor/Major color | 默认颜色随 Preview 实际浅色／深色外观变化；用户选色后固定为自定义值 |
 | Minor/Major opacity | 独立控制主线和次线的透明度 |
 | Minimum zoom | 低于阈值时只显示主线，避免密集次线形成摩尔纹 |
 
-换算后的网格步长必须处于 `0.25–1000 CSS px`。若首选项文件中的组合损坏或
-越界，加载时恢复为完整、有效的默认 px 配置。
+参考字号和换算后的网格步长都必须处于 `0.25–1000 CSS px`。从当前元素取样后，
+系统会先验证整组候选设置再应用；若首选项文件中的组合损坏或越界，加载时恢复为
+完整、有效的默认 px 配置。
+
+“基线网格设置…”只复用与当前元素严格匹配的缓存；没有匹配值时会异步重新测量。
+测量完成前“使用当前元素”保持禁用；测量有效后按钮显示实际 px 值，避免使用来自
+旧页面或旧光标位置的缓存。
 
 ## 状态栏度量
 
@@ -149,8 +157,13 @@ VisualTypesettingController
 status bar / one-shot em calibration
 ```
 
-每个异步请求带 generation。页面重新加载或出现更新请求时，旧回调被丢弃，
-不会用上一页结果覆盖当前页。探针失败只隐藏度量或显示不可用状态，不阻止 Preview。
+每个异步请求都有唯一 ID 和页面 generation。状态栏刷新、菜单校准、右键检查和
+设置对话框测量分别跟踪；同一用途的新请求只淘汰自己的旧请求，不会误取消其它
+用途仍在等待的结果。页面重新加载后，旧页面的全部回调都会被丢弃。
+
+Code View 连续发出相同元素层级时不会重复查询；状态栏结果还必须匹配当前元素键，
+所以较慢的旧元素回调不能覆盖较新的选择。探针失败只隐藏相应用途的度量或显示
+不可用状态，不阻止 Preview。
 
 ## 非侵入保证
 
@@ -174,7 +187,8 @@ ResourceObjects 或 modified-state 接口：
 | `BaselineGridModel` | 纯几何、固定 em 换算、相位、主次线和阈值 |
 | `BaselineGridOverlay` | 输入透明的 QPainter 屏幕层 |
 | `BaselineGridSettingsStore` | `preview/visual_aids` 用户设置 |
-| `PreviewMetricsProbe` | 异步 DOM/computed-style 查询和旧请求淘汰 |
+| `PreviewMetricsProbe` | 异步 DOM/computed-style 查询、请求 ID 和页面 generation |
+| `PreviewMetricsRequestTracker` | 按状态、校准、检查、设置四种用途隔离请求生命周期 |
 | `PreviewMetricsJavascript` | 可独立集成测试的 WebEngine 查询协议 |
 | `PreviewLayoutMetrics` | 结构化解析结果，不包含 UI 拼接文本 |
 | `VisualTypesettingController` | 动作、会话状态、网格、探针和状态栏协调 |
@@ -190,7 +204,7 @@ Developer Tools。
 
 ```sh
 ctest --test-dir cmake-build-debug \
-  -R '^(baseline_grid_model|baseline_grid_overlay|preview_metrics_webengine|visual_typesetting_aids_contract)$' \
+  -R '^(baseline_grid_model|baseline_grid_overlay|preview_metrics_webengine|preview_metrics_request_tracker|visual_typesetting_aids_contract)$' \
   --output-on-failure
 ```
 
@@ -200,8 +214,9 @@ ctest --test-dir cmake-build-debug \
 - 固定 em 换算、设置往返和损坏设置恢复；
 - `line-height: normal` 协议与数字 line-height；
 - 真实 WebEngine 页面中的 computed font/line-height/margin/padding 与 body 原点；
+- 不同用途请求可并存、同用途替换、过期结果拒绝和页面切换清理；
 - Overlay 尺寸同步、鼠标透明、Clean Preview 恢复；
-- 菜单、快捷键、持久／会话状态边界、异步探针和非侵入依赖合同；
+- 菜单、右键单次检查、快捷键、持久／会话状态边界、异步探针和非侵入依赖合同；
 - 简体中文、繁体中文、日文翻译目录完整性。
 
 跨平台发布前仍应按照原 PRD 的 Windows/macOS/Linux、DPI、Preview Zoom 与

@@ -21123,9 +21123,10 @@ Entities can be separated by lines, commas, or spaces.</source>
         <source>Print Preview View</source>
         <translation>列印預覽檢視</translation>
     </message>
+    <message><source>Inspect Layout</source><translation>檢查排版</translation></message>
     <message>
-        <source>Use This Element as Grid Reference</source>
-        <translation>以此元素作為網格字級基準</translation>
+        <source>Use This Element&apos;s Font Size as Grid Reference</source>
+        <translation>以此元素的字級作為網格參考</translation>
     </message>
 </context>
 <context>
@@ -26809,21 +26810,27 @@ Continue using the requested filename?</source>
     <message><source>Choose Major Grid Color</source><translation>選擇主網格線色彩</translation></message>
     <message><source>%1 CSS px</source><translation>%1 CSS px</translation></message>
     <message><source>Grid color %1</source><translation>網格色彩 %1</translation></message>
+    <message><source>Use the measured current element font size (%1 px).</source><translation>使用測得的目前元素字級（%1 px）。</translation></message>
+    <message><source>The current element font size is unavailable.</source><translation>目前元素字級無法使用。</translation></message>
 </context>
 <context>
     <name>VisualTypesettingController</name>
     <message><source>Visual Typesetting Aids</source><translation>排版視覺輔助</translation></message>
     <message><source>Show Baseline Grid</source><translation>顯示基線網格</translation></message>
     <message><source>Show Layout Metrics</source><translation>顯示排版度量</translation></message>
-    <message><source>Use Current Element as Grid Reference</source><translation>以目前元素作為網格字級基準</translation></message>
+    <message><source>Use Current Element Font Size as Grid Reference</source><translation>以目前元素字級作為網格參考</translation></message>
     <message><source>Baseline Grid Settings…</source><translation>基線網格設定…</translation></message>
     <message><source>Clean Preview</source><translation>純淨預覽</translation></message>
     <message><source>Show a non-exported rhythm grid anchored to the Preview document.</source><translation>顯示錨定至預覽文件且不會匯出的節奏網格。</translation></message>
     <message><source>Show computed typography and spacing for the current element.</source><translation>顯示目前元素計算後的字級、行高與間距。</translation></message>
     <message><source>Temporarily hide all visual typesetting aids.</source><translation>暫時隱藏所有排版視覺輔助。</translation></message>
+    <message><source>Measure the current element once and use its font size as the fixed em reference.</source><translation>測量一次目前元素，並將其字級用作固定的 em 參考值。</translation></message>
     <message><source>No current Preview element is available for grid calibration.</source><translation>目前沒有可用於校準網格的預覽元素。</translation></message>
     <message><source>Grid reference font set to %1 px.</source><translation>網格參考字級已設為 %1 px。</translation></message>
     <message><source>The current element&apos;s font size could not be measured.</source><translation>無法測量目前元素的字級。</translation></message>
+    <message><source>The selected element&apos;s font size could not be measured.</source><translation>無法測量所選元素的字級。</translation></message>
+    <message><source>Layout metrics are unavailable for the selected element.</source><translation>無法取得所選元素的排版度量。</translation></message>
+    <message><source>The measured font size %1 px cannot be used with the current grid settings.</source><translation>測得的字級 %1 px 無法用於目前的網格設定。</translation></message>
     <message><source>Horizontal Grid</source><translation>水平參考網格</translation></message>
     <message><source>Grid</source><translation>網格</translation></message>
     <message><source>%1 %2px (%3em @ %4px)</source><translation>%1 %2px（%3em @ %4px）</translation></message>
