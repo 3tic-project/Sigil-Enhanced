@@ -1,6 +1,6 @@
 Sigil-Enhanced-2.8.5.E9
    Bug Fixes
-     - Isolated Preview typography measurements by request purpose and page generation, preventing stale element, calibration, or settings callbacks from overwriting newer state.
+     - Kept legacy Preview layout-metrics preferences dormant while the simplified grid-only interface is active.
      - Prevented Code View teardown from re-entering a partially destroyed FlowTab when syntax highlighters detach from resource-owned documents.
      - Opened Photoshop-exported WebP images that Windows QImage rejected, and always ship qwebp.dll with the Windows package.
      - Installed qtimageformats in the Windows CI Qt set so qwebp.dll actually exists to ship; packaging now fails if the plugin is missing instead of silently omitting it.
@@ -9,8 +9,8 @@ Sigil-Enhanced-2.8.5.E9
      - Made newly created empty XHTML and CSS files write template content to disk, so custom templates survive subsequent imports instead of being replaced by empty files.
 
    New Features
-     - Added one-shot Inspect Layout to the Preview context menu, with fresh asynchronous current-element sampling in baseline-grid settings and bounded font-reference validation.
-     - Added non-exported Visual Typesetting Aids for Preview: a document-anchored baseline/rhythm grid, fixed-reference px/em sizing, major/minor lines, origins, offsets, zoom threshold, computed element metrics, one-shot font calibration, and Clean Preview.
+     - Added a non-exported Preview grid with independently enabled and spaced horizontal and vertical lines, document-anchored scrolling, fixed px/em sizing, appearance controls, and zoom thresholds.
+     - Placed the two grid commands under Enhancement and added a matching enable/disable command to the Preview context menu; layout inspection, element calibration, metrics, and Clean Preview remain hidden.
      - Added an optional post-conversion EPUB structure normalization checkbox to the roomier KFX menu and drop prompts, reusing the built-in normalizer before Save As or opening a new window.
      - Docked Preview Developer Tools under the Preview pane by embedding the existing Inspector; visibility and splitter ratio restore on restart, not open files.
      - Developer Tools can detach into a separate window and dock back without destroying the Inspector.
@@ -18,8 +18,7 @@ Sigil-Enhanced-2.8.5.E9
      - Dragging a tab between editor groups moves the same editor; Open/Move before a manual split opens the lower group.
 
    Build/Testing
-     - Added request-lifecycle and UI-contract coverage for concurrent Preview metrics, stale-result rejection, contextual inspection, deduplication, and settings-dialog refresh.
-     - Added geometry, settings, real-WebEngine computed-style, overlay-lifecycle, UI-contract, and complete Simplified Chinese, Traditional Chinese, and Japanese coverage for Visual Typesetting Aids.
+     - Added geometry, persistence, overlay-lifecycle, simplified-menu UI-contract, and complete Simplified Chinese, Traditional Chinese, and Japanese coverage for the Preview grid.
      - Rebased on upstream Sigil 2.8.5 and synced all translations from Transifex, including a new Swedish catalog.
      - Extended CTest coverage for external Book Browser file drops, Preview DevTools docking, and split editor groups.
 
