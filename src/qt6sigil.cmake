@@ -327,7 +327,26 @@ if( APPLE )
                             DEPENDS ${PROJECT_NAME} )
     endif()
 
-    add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp ${PROJECT_BINARY_DIR}/*.qm ${WORK_DIR}/Sigil.app/Contents/translations/ )
+    # Keep the runnable app's catalogs synchronized even when a translation is
+    # the only changed input. A POST_BUILD command on Sigil does not run when
+    # Ninja regenerates a .qm without relinking the executable.
+    set( SIGIL_APP_QM_FILES )
+    foreach( QM IN LISTS QM_FILES )
+        get_filename_component( QM_FILENAME "${QM}" NAME )
+        set( APP_QM "${WORK_DIR}/Sigil.app/Contents/translations/${QM_FILENAME}" )
+        add_custom_command(
+            OUTPUT "${APP_QM}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+                    "${WORK_DIR}/Sigil.app/Contents/translations"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QM}" "${APP_QM}"
+            DEPENDS "${QM}"
+            COMMENT "Syncing ${QM_FILENAME} into Sigil.app"
+            VERBATIM
+        )
+        list( APPEND SIGIL_APP_QM_FILES "${APP_QM}" )
+    endforeach()
+    add_custom_target( sigil_app_translations ALL DEPENDS ${SIGIL_APP_QM_FILES} )
+    add_dependencies( ${PROJECT_NAME} sigil_app_translations )
     foreach( QM ${QM_FILES} )
         # Copy Qt's qm files that coincide with the above
         # message( "QM = ${QM}")

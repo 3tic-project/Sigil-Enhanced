@@ -108,6 +108,16 @@ class CiPackagingTest(unittest.TestCase):
             r"if\s*\(\s*DEFINED QT_PLUGINS_DIR AND EXISTS \"\$\{QT_PLUGINS_DIR\}/imageformats/qwebp\.dll\"\s*\)",
         )
 
+    def test_macos_incremental_build_syncs_application_translations(self):
+        cmake = (ROOT / "src" / "qt6sigil.cmake").read_text(encoding="utf-8")
+        self.assertIn("add_custom_target( sigil_app_translations ALL", cmake)
+        self.assertIn("add_dependencies( ${PROJECT_NAME} sigil_app_translations )", cmake)
+        self.assertIn(
+            '${CMAKE_COMMAND} -E copy_if_different "${QM}" "${APP_QM}"',
+            cmake,
+        )
+        self.assertIn('DEPENDS "${QM}"', cmake)
+
     def test_bundled_pcre2_exports_generated_and_source_headers(self):
         cmake = PCRE2_CMAKE.read_text(encoding="utf-8")
         include_dirs = re.search(
