@@ -57,6 +57,19 @@ int main(int argc, char *argv[])
         okay &= expect(line.major, "minor lines must be hidden below the zoom threshold");
     }
 
+    settings.horizontalEnabled = false;
+    settings.verticalEnabled = true;
+    settings.verticalStep = 12.0;
+    lines = BaselineGridModel::linesForViewport(
+        50.0, 13.0, 1.0, 0.0, settings, BaselineGridAxis::Vertical);
+    okay &= expect(lines.size() == 4 && near(lines.at(0).position, 11.0),
+                   "vertical lines must use their own spacing and horizontal scroll phase");
+    okay &= expect(BaselineGridModel::linesForViewport(
+                       50.0, 13.0, 1.0, 0.0, settings,
+                       BaselineGridAxis::Horizontal).isEmpty(),
+                   "horizontal and vertical line visibility must be independent");
+    settings.horizontalEnabled = true;
+
     settings.unit = BaselineGridUnit::Em;
     settings.step = 0.5;
     settings.referenceFontPx = 18.0;
@@ -95,8 +108,11 @@ int main(int argc, char *argv[])
     BaselineGridSettings saved = BaselineGridSettings::defaults(false);
     saved.enabled = true;
     saved.metricsEnabled = true;
+    saved.horizontalEnabled = false;
+    saved.verticalEnabled = true;
     saved.unit = BaselineGridUnit::Em;
     saved.step = 0.5;
+    saved.verticalStep = 0.75;
     saved.referenceFontPx = 18.0;
     saved.origin = BaselineGridOrigin::BodyContentTop;
     saved.offsetCssPx = 3.5;
@@ -104,8 +120,11 @@ int main(int argc, char *argv[])
     BaselineGridSettingsStore::save(persisted, saved);
     persisted.sync();
     const BaselineGridSettings restored = BaselineGridSettingsStore::load(persisted, false);
-    okay &= expect(restored.enabled && restored.metricsEnabled,
-                   "grid and metrics enabled states must persist independently");
+    okay &= expect(restored.enabled && !restored.metricsEnabled,
+                   "the grid must persist while dormant layout metrics stay disabled");
+    okay &= expect(!restored.horizontalEnabled && restored.verticalEnabled
+                       && near(restored.resolvedVerticalStepCssPx(), 13.5),
+                   "horizontal and vertical grid controls must round-trip independently");
     okay &= expect(restored.unit == BaselineGridUnit::Em && near(restored.resolvedStepCssPx(), 9.0),
                    "fixed em reference must round-trip through settings");
     okay &= expect(restored.origin == BaselineGridOrigin::BodyContentTop

@@ -28,12 +28,13 @@ dialog = (repo / "src/Dialogs/BaselineGridSettingsDialog.cpp").read_text(encodin
 
 require(
     "resolvedStepCssPx" in model
+    and "resolvedVerticalStepCssPx" in model
     and "step * referenceFontPx" in model
     and "currentElement" not in model,
     "em grids must resolve only from the fixed reference font",
 )
 require(
-    "originCssPx + settings.offsetCssPx - scrollCssPx" in model
+    "originCssPx + axisOffset - scrollCssPx" in model
     and "* zoomFactor" in model
     and "devicePixelRatio" not in model,
     "grid phase must be document-anchored, zoom once, and leave DPR to QPainter",
@@ -51,6 +52,14 @@ require(
     "grid overlay must be screen-only, input-transparent, and HiDPI-safe",
 )
 require(
+    "BaselineGridAxis::Horizontal" in overlay
+    and "BaselineGridAxis::Vertical" in overlay
+    and "m_scrollCssPx.x()" in overlay
+    and "m_scrollCssPx.y()" in overlay
+    and "QPointF(line.position, 0.0)" in overlay,
+    "the overlay must draw independently spaced horizontal and vertical document grids",
+)
+require(
     "wl->addWidget(m_overlayBase)" in preview
     and "m_Preview(new ViewPreview(m_overlayBase))" in preview
     and "new BaselineGridOverlay(overlayParent)" in controller,
@@ -60,8 +69,11 @@ require(
 for key in (
     "baseline_grid_enabled",
     "layout_metrics_enabled",
+    "horizontal_grid_enabled",
+    "vertical_grid_enabled",
     "grid_unit",
     "grid_step",
+    "vertical_grid_step",
     "grid_reference_font_px",
     "grid_origin",
     "grid_offset_px",
@@ -73,10 +85,6 @@ for key in (
     "grid_view_threshold",
 ):
     require(key in store, f"missing persistent visual-aids setting: {key}")
-require(
-    "cleanPreview" not in store and "clean_preview" not in store,
-    "Clean Preview must remain session state and preserve enabled preferences",
-)
 require(
     "grid_colors_customized" in store and "defaults(darkTheme)" in store,
     "default grid colors must follow the application theme until customized",
@@ -127,49 +135,50 @@ require(
     "caret-driven metrics must be debounced within the PRD's 50-100ms range",
 )
 
-for action in (
-    "Show Baseline Grid",
-    "Show Layout Metrics",
-    "Use Current Element Font Size as Grid Reference",
-    "Baseline Grid Settings…",
-    "Clean Preview",
-):
-    require(action in controller, f"View menu is missing {action}")
 require(
-    "Use This Element's Font Size as Grid Reference" in preview
-    and "useElementAtPreviewPosition(pos)" in preview,
-    "Preview context menu must support one-shot element calibration",
+    "m_menu->addAction(m_showGridAction)" in controller
+    and "m_menu->addAction(m_settingsAction)" in controller
+    and "m_menu->addAction(m_showMetricsAction)" not in controller
+    and "m_menu->addAction(m_useCurrentElementAction)" not in controller
+    and "m_menu->addAction(m_cleanPreviewAction)" not in controller,
+    "the visual-aids menu must expose only Show Grid and Grid Settings",
 )
 require(
-    'tr("Inspect Layout")' in preview
-    and "inspectElementAtPreviewPosition(pos)" in preview
-    and "m_transientInspectionActive" in controller,
-    "Preview context inspection must show metrics without changing the persistent toggle",
+    'tr("Enable Grid")' in preview
+    and 'tr("Disable Grid")' in preview
+    and "grid_action->setChecked(!grid_action->isChecked())" in preview
+    and 'tr("Inspect Layout")' not in preview
+    and "useElementAtPreviewPosition(pos)" not in preview,
+    "Preview context menu must toggle the grid without exposing dormant element tools",
 )
 require(
-    "key == m_currentHierarchyKey" in controller
-    and "hasFreshCurrentMetrics()" in controller
-    and "setCurrentElementFontPx" in dialog,
-    "same-element metrics must be reused and the settings dialog must reject stale values",
+    "ui.menuEnhancement->addMenu" in main_window
+    and "ui.menuView->addMenu(m_PreviewWindow->VisualTypesettingMenu())" not in main_window,
+    "visual grid actions must live under Enhancement instead of View",
 )
 require(
     "MainWindow.ShowBaselineGrid" in main_window
-    and "MainWindow.ShowLayoutMetrics" in main_window
-    and "MainWindow.UseCurrentElementAsGridReference" in main_window
     and "MainWindow.BaselineGridSettings" in main_window
-    and "MainWindow.CleanPreview" in main_window,
-    "all visual-aids actions must be user-shortcut configurable",
+    and '"MainWindow.ShowLayoutMetrics"' not in main_window
+    and '"MainWindow.UseCurrentElementAsGridReference"' not in main_window
+    and '"MainWindow.CleanPreview"' not in main_window,
+    "only the two visible grid actions should be shortcut configurable",
 )
 require(
-    "layoutMetricsStatus" in main_window
-    and "metricsTextChanged" in controller
-    and "LayoutMetricsTextChanged" in preview,
-    "computed metrics must reach an accessible persistent status-bar label",
+    "m_settings.metricsEnabled = false" in controller
+    and "loaded.metricsEnabled = false" in store
+    and "m_showMetricsAction->setEnabled(false)" in controller
+    and "m_cleanPreviewAction->setEnabled(false)" in controller,
+    "layout metrics and Clean Preview must remain disabled behind the grid-only interface",
 )
 require(
-    "setMinimumSize(560, 520)" in dialog
+    "m_horizontalGrid" in dialog
+    and "m_verticalGrid" in dialog
+    and "m_verticalStep" in dialog
+    and "settings.metricsEnabled = false" in dialog
+    and "setMinimumSize(560, 560)" in dialog
     and "QDialogButtonBox::RestoreDefaults" in dialog,
-    "grid settings dialog must be readable and provide defaults restoration",
+    "grid settings must independently enable and adjust horizontal and vertical lines",
 )
 
 for source in (model, overlay, store, probe, request_tracker, metrics, controller, dialog):

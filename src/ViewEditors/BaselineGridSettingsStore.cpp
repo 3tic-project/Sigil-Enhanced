@@ -46,13 +46,21 @@ BaselineGridSettings BaselineGridSettingsStore::load(QSettings &settings, bool d
 
     settings.beginGroup(SETTINGS_GROUP);
     loaded.enabled = settings.value(QStringLiteral("baseline_grid_enabled"), defaults.enabled).toBool();
-    loaded.metricsEnabled = settings.value(QStringLiteral("layout_metrics_enabled"), defaults.metricsEnabled).toBool();
+    // Layout metrics are intentionally dormant while the grid-only interface is active.
+    loaded.metricsEnabled = false;
+    loaded.horizontalEnabled = settings.value(
+        QStringLiteral("horizontal_grid_enabled"), defaults.horizontalEnabled).toBool();
+    loaded.verticalEnabled = settings.value(
+        QStringLiteral("vertical_grid_enabled"), defaults.verticalEnabled).toBool();
 
     const QString unit = settings.value(QStringLiteral("grid_unit"), QStringLiteral("px")).toString();
     loaded.unit = unit == QStringLiteral("em") ? BaselineGridUnit::Em : BaselineGridUnit::Pixels;
 
     loaded.step = finiteValue(settings.value(QStringLiteral("grid_step"), defaults.step),
                               defaults.step, 0.00025, 1000.0);
+    loaded.verticalStep = finiteValue(
+        settings.value(QStringLiteral("vertical_grid_step"), defaults.verticalStep),
+        defaults.verticalStep, 0.00025, 1000.0);
     loaded.referenceFontPx = finiteValue(
         settings.value(QStringLiteral("grid_reference_font_px"), defaults.referenceFontPx),
         defaults.referenceFontPx, 0.25, 1000.0);
@@ -89,6 +97,7 @@ BaselineGridSettings BaselineGridSettingsStore::load(QSettings &settings, bool d
     if (!loaded.isValid()) {
         loaded.unit = defaults.unit;
         loaded.step = defaults.step;
+        loaded.verticalStep = defaults.verticalStep;
         loaded.referenceFontPx = defaults.referenceFontPx;
     }
     return loaded;
@@ -102,9 +111,12 @@ void BaselineGridSettingsStore::save(QSettings &settings, const BaselineGridSett
 
     settings.beginGroup(SETTINGS_GROUP);
     settings.setValue(QStringLiteral("baseline_grid_enabled"), gridSettings.enabled);
-    settings.setValue(QStringLiteral("layout_metrics_enabled"), gridSettings.metricsEnabled);
+    settings.setValue(QStringLiteral("layout_metrics_enabled"), false);
+    settings.setValue(QStringLiteral("horizontal_grid_enabled"), gridSettings.horizontalEnabled);
+    settings.setValue(QStringLiteral("vertical_grid_enabled"), gridSettings.verticalEnabled);
     settings.setValue(QStringLiteral("grid_unit"), BaselineGridUnitName(gridSettings.unit));
     settings.setValue(QStringLiteral("grid_step"), gridSettings.step);
+    settings.setValue(QStringLiteral("vertical_grid_step"), gridSettings.verticalStep);
     settings.setValue(QStringLiteral("grid_reference_font_px"), gridSettings.referenceFontPx);
     settings.setValue(QStringLiteral("grid_origin"), BaselineGridOriginName(gridSettings.origin));
     settings.setValue(QStringLiteral("grid_offset_px"), gridSettings.offsetCssPx);

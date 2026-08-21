@@ -29,12 +29,20 @@ enum class BaselineGridOrigin {
     BodyContentTop
 };
 
+enum class BaselineGridAxis {
+    Horizontal,
+    Vertical
+};
+
 struct BaselineGridSettings
 {
     bool enabled = false;
     bool metricsEnabled = false;
+    bool horizontalEnabled = true;
+    bool verticalEnabled = false;
     BaselineGridUnit unit = BaselineGridUnit::Pixels;
     qreal step = 8.0;
+    qreal verticalStep = 8.0;
     qreal referenceFontPx = 16.0;
     BaselineGridOrigin origin = BaselineGridOrigin::DocumentTop;
     qreal offsetCssPx = 0.0;
@@ -47,6 +55,7 @@ struct BaselineGridSettings
     int minimumZoomPercent = 60;
 
     qreal resolvedStepCssPx() const;
+    qreal resolvedVerticalStepCssPx() const;
     bool isValid() const;
 
     static BaselineGridSettings defaults(bool darkTheme);
@@ -66,7 +75,8 @@ public:
         qreal scrollCssPx,
         qreal zoomFactor,
         qreal originCssPx,
-        const BaselineGridSettings &settings);
+        const BaselineGridSettings &settings,
+        BaselineGridAxis axis = BaselineGridAxis::Horizontal);
 };
 
 QString BaselineGridUnitName(BaselineGridUnit unit);

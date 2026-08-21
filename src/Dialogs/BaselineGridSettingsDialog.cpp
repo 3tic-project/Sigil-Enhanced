@@ -31,13 +31,17 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     : QDialog(parent),
       m_currentElementFontPx(currentElementFontPx),
       m_darkTheme(darkTheme),
-      m_showGrid(new QCheckBox(tr("Show baseline grid"), this)),
+      m_showGrid(new QCheckBox(tr("Show grid"), this)),
       m_showMetrics(new QCheckBox(tr("Show layout metrics"), this)),
+      m_horizontalGrid(new QCheckBox(tr("Horizontal lines"), this)),
+      m_verticalGrid(new QCheckBox(tr("Vertical lines"), this)),
       m_unit(new QComboBox(this)),
       m_step(new QDoubleSpinBox(this)),
+      m_verticalStep(new QDoubleSpinBox(this)),
       m_referenceFont(new QDoubleSpinBox(this)),
       m_useCurrent(new QPushButton(tr("Use Current Element"), this)),
       m_resolvedStep(new QLabel(this)),
+      m_verticalResolvedStep(new QLabel(this)),
       m_origin(new QComboBox(this)),
       m_offset(new QDoubleSpinBox(this)),
       m_majorEvery(new QSpinBox(this)),
@@ -47,8 +51,8 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
       m_majorOpacity(new QSpinBox(this)),
       m_minimumZoom(new QSpinBox(this))
 {
-    setWindowTitle(tr("Baseline / Rhythm Grid"));
-    setMinimumSize(560, 520);
+    setWindowTitle(tr("Grid Settings"));
+    setMinimumSize(560, 560);
 
     m_unit->addItem(tr("Pixels (px)"), static_cast<int>(BaselineGridUnit::Pixels));
     m_unit->addItem(tr("Fixed reference em"), static_cast<int>(BaselineGridUnit::Em));
@@ -58,6 +62,9 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     m_step->setDecimals(3);
     m_step->setRange(0.001, 1000.0);
     m_step->setSingleStep(0.25);
+    m_verticalStep->setDecimals(3);
+    m_verticalStep->setRange(0.001, 1000.0);
+    m_verticalStep->setSingleStep(0.25);
     m_referenceFont->setDecimals(2);
     m_referenceFont->setRange(0.25, 1000.0);
     m_referenceFont->setSuffix(tr(" px"));
@@ -72,17 +79,23 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     m_minimumZoom->setRange(10, 400);
     m_minimumZoom->setSuffix(tr("%"));
     m_useCurrent->setEnabled(false);
+    m_showMetrics->setChecked(false);
+    m_showMetrics->setVisible(false);
+    m_useCurrent->setVisible(false);
 
     QHBoxLayout *referenceLayout = new QHBoxLayout;
     referenceLayout->setContentsMargins(0, 0, 0, 0);
     referenceLayout->addWidget(m_referenceFont, 1);
-    referenceLayout->addWidget(m_useCurrent);
 
     QFormLayout *geometryLayout = new QFormLayout;
     geometryLayout->addRow(tr("Unit:"), m_unit);
-    geometryLayout->addRow(tr("Grid step:"), m_step);
+    geometryLayout->addRow(tr("Horizontal grid:"), m_horizontalGrid);
+    geometryLayout->addRow(tr("Horizontal spacing:"), m_step);
+    geometryLayout->addRow(tr("Resolved horizontal spacing:"), m_resolvedStep);
+    geometryLayout->addRow(tr("Vertical grid:"), m_verticalGrid);
+    geometryLayout->addRow(tr("Vertical spacing:"), m_verticalStep);
+    geometryLayout->addRow(tr("Resolved vertical spacing:"), m_verticalResolvedStep);
     geometryLayout->addRow(tr("Reference font size:"), referenceLayout);
-    geometryLayout->addRow(tr("Resolved step:"), m_resolvedStep);
     geometryLayout->addRow(tr("Grid origin:"), m_origin);
     geometryLayout->addRow(tr("Grid offset:"), m_offset);
     geometryLayout->addRow(tr("Major line every:"), m_majorEvery);
@@ -108,7 +121,6 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(m_showGrid);
-    layout->addWidget(m_showMetrics);
     layout->addWidget(geometryGroup);
     layout->addWidget(appearanceGroup);
     layout->addStretch();
@@ -117,6 +129,12 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
     connect(m_unit, qOverload<int>(&QComboBox::currentIndexChanged),
             this, &BaselineGridSettingsDialog::updateResolvedStep);
     connect(m_step, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &BaselineGridSettingsDialog::updateResolvedStep);
+    connect(m_verticalStep, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &BaselineGridSettingsDialog::updateResolvedStep);
+    connect(m_horizontalGrid, &QCheckBox::toggled,
+            this, &BaselineGridSettingsDialog::updateResolvedStep);
+    connect(m_verticalGrid, &QCheckBox::toggled,
             this, &BaselineGridSettingsDialog::updateResolvedStep);
     connect(m_referenceFont, qOverload<double>(&QDoubleSpinBox::valueChanged),
             this, &BaselineGridSettingsDialog::updateResolvedStep);
@@ -131,9 +149,12 @@ BaselineGridSettingsDialog::BaselineGridSettingsDialog(
 void BaselineGridSettingsDialog::populate(const BaselineGridSettings &settings)
 {
     m_showGrid->setChecked(settings.enabled);
-    m_showMetrics->setChecked(settings.metricsEnabled);
+    m_showMetrics->setChecked(false);
+    m_horizontalGrid->setChecked(settings.horizontalEnabled);
+    m_verticalGrid->setChecked(settings.verticalEnabled);
     m_unit->setCurrentIndex(m_unit->findData(static_cast<int>(settings.unit)));
     m_step->setValue(settings.step);
+    m_verticalStep->setValue(settings.verticalStep);
     m_referenceFont->setValue(settings.referenceFontPx);
     m_origin->setCurrentIndex(m_origin->findData(static_cast<int>(settings.origin)));
     m_offset->setValue(settings.offsetCssPx);
@@ -153,9 +174,12 @@ BaselineGridSettings BaselineGridSettingsDialog::gridSettings() const
 {
     BaselineGridSettings settings;
     settings.enabled = m_showGrid->isChecked();
-    settings.metricsEnabled = m_showMetrics->isChecked();
+    settings.metricsEnabled = false;
+    settings.horizontalEnabled = m_horizontalGrid->isChecked();
+    settings.verticalEnabled = m_verticalGrid->isChecked();
     settings.unit = static_cast<BaselineGridUnit>(m_unit->currentData().toInt());
     settings.step = m_step->value();
+    settings.verticalStep = m_verticalStep->value();
     settings.referenceFontPx = m_referenceFont->value();
     settings.origin = static_cast<BaselineGridOrigin>(m_origin->currentData().toInt());
     settings.offsetCssPx = m_offset->value();
@@ -187,7 +211,7 @@ void BaselineGridSettingsDialog::accept()
 {
     if (!gridSettings().isValid()) {
         QMessageBox::warning(this, tr("Invalid Grid Settings"),
-                             tr("The resolved grid step must be between 0.25 px and 1000 px."));
+                             tr("The resolved horizontal and vertical spacing must each be between 0.25 px and 1000 px."));
         return;
     }
     QDialog::accept();
@@ -230,12 +254,17 @@ void BaselineGridSettingsDialog::updateResolvedStep()
 {
     const BaselineGridUnit unit = static_cast<BaselineGridUnit>(m_unit->currentData().toInt());
     const bool usesReference = unit == BaselineGridUnit::Em;
+    m_step->setEnabled(m_horizontalGrid->isChecked());
+    m_verticalStep->setEnabled(m_verticalGrid->isChecked());
     m_referenceFont->setEnabled(usesReference);
     m_useCurrent->setEnabled(usesReference && qIsFinite(m_currentElementFontPx)
                              && m_currentElementFontPx >= 0.25
                              && m_currentElementFontPx <= 1000.0);
     const qreal resolved = usesReference ? m_step->value() * m_referenceFont->value() : m_step->value();
     m_resolvedStep->setText(tr("%1 CSS px").arg(resolved, 0, 'f', 2));
+    const qreal verticalResolved = usesReference
+        ? m_verticalStep->value() * m_referenceFont->value() : m_verticalStep->value();
+    m_verticalResolvedStep->setText(tr("%1 CSS px").arg(verticalResolved, 0, 'f', 2));
 }
 
 void BaselineGridSettingsDialog::updateColorButton(QPushButton *button, const QColor &color)

@@ -58,6 +58,17 @@ int main(int argc, char *argv[])
     okay &= expect(overlay.isVisible(),
                    "leaving Clean Preview must restore the previous grid state");
 
+    settings.horizontalEnabled = false;
+    settings.verticalEnabled = false;
+    overlay.setGridSettings(settings);
+    QCoreApplication::processEvents();
+    okay &= expect(!overlay.isVisible(), "a grid with both line directions disabled must stay hidden");
+
+    settings.verticalEnabled = true;
+    overlay.setGridSettings(settings);
+    QCoreApplication::processEvents();
+    okay &= expect(overlay.isVisible(), "a vertical-only grid must remain visible");
+
     settings.enabled = false;
     overlay.setGridSettings(settings);
     QCoreApplication::processEvents();

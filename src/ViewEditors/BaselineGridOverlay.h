@@ -13,6 +13,8 @@
 #include "ViewEditors/BaselineGridModel.h"
 #include "ViewEditors/Overlay.h"
 
+#include <QPointF>
+
 class BaselineGridOverlay : public OverlayWidget
 {
     Q_OBJECT
@@ -21,7 +23,7 @@ public:
     explicit BaselineGridOverlay(QWidget *parent = nullptr);
 
     void setGridSettings(const BaselineGridSettings &settings);
-    void setScrollPositionCssPx(qreal scrollCssPx);
+    void setScrollPositionCssPx(const QPointF &scrollCssPx);
     void setZoomFactor(qreal zoomFactor);
     void setOriginPositionCssPx(qreal originCssPx);
     void setCleanPreviewActive(bool active);
@@ -33,7 +35,7 @@ private:
     void updateVisibility();
 
     BaselineGridSettings m_settings;
-    qreal m_scrollCssPx = 0.0;
+    QPointF m_scrollCssPx;
     qreal m_zoomFactor = 1.0;
     qreal m_originCssPx = 0.0;
     bool m_cleanPreviewActive = false;

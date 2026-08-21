@@ -56,11 +56,15 @@ private:
     bool m_colorsCustomized = false;
     QCheckBox *m_showGrid;
     QCheckBox *m_showMetrics;
+    QCheckBox *m_horizontalGrid;
+    QCheckBox *m_verticalGrid;
     QComboBox *m_unit;
     QDoubleSpinBox *m_step;
+    QDoubleSpinBox *m_verticalStep;
     QDoubleSpinBox *m_referenceFont;
     QPushButton *m_useCurrent;
     QLabel *m_resolvedStep;
+    QLabel *m_verticalResolvedStep;
     QComboBox *m_origin;
     QDoubleSpinBox *m_offset;
     QSpinBox *m_majorEvery;

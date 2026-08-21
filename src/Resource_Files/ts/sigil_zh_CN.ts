@@ -21130,11 +21130,8 @@ Entities can be separated by lines, commas, or spaces.</source>
         <source>Print Preview View</source>
         <translation>打印预览视图</translation>
     </message>
-    <message><source>Inspect Layout</source><translation>检查排版</translation></message>
-    <message>
-        <source>Use This Element&apos;s Font Size as Grid Reference</source>
-        <translation>以此元素的字号作为网格参考</translation>
-    </message>
+    <message><source>Enable Grid</source><translation>启用网格</translation></message>
+    <message><source>Disable Grid</source><translation>禁用网格</translation></message>
 </context>
 <context>
     <name>PythonFunctionEditor</name>
@@ -26797,10 +26794,12 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>BaselineGridSettingsDialog</name>
-    <message><source>Show baseline grid</source><translation>显示基线网格</translation></message>
+    <message><source>Show grid</source><translation>显示网格</translation></message>
     <message><source>Show layout metrics</source><translation>显示排版度量</translation></message>
     <message><source>Use Current Element</source><translation>使用当前元素</translation></message>
-    <message><source>Baseline / Rhythm Grid</source><translation>基线／节奏网格</translation></message>
+    <message><source>Horizontal lines</source><translation>横向线</translation></message>
+    <message><source>Vertical lines</source><translation>纵向线</translation></message>
+    <message><source>Grid Settings</source><translation>网格设置</translation></message>
     <message><source>Pixels (px)</source><translation>像素（px）</translation></message>
     <message><source>Fixed reference em</source><translation>固定参考 em</translation></message>
     <message><source>Document Top</source><translation>文档顶部</translation></message>
@@ -26808,9 +26807,13 @@ Continue using the requested filename?</source>
     <message><source> px</source><translation> px</translation></message>
     <message><source>%</source><translation>%</translation></message>
     <message><source>Unit:</source><translation>单位：</translation></message>
-    <message><source>Grid step:</source><translation>网格步长：</translation></message>
+    <message><source>Horizontal grid:</source><translation>横向网格：</translation></message>
+    <message><source>Horizontal spacing:</source><translation>横向间距：</translation></message>
+    <message><source>Resolved horizontal spacing:</source><translation>换算后的横向间距：</translation></message>
+    <message><source>Vertical grid:</source><translation>纵向网格：</translation></message>
+    <message><source>Vertical spacing:</source><translation>纵向间距：</translation></message>
+    <message><source>Resolved vertical spacing:</source><translation>换算后的纵向间距：</translation></message>
     <message><source>Reference font size:</source><translation>参考字号：</translation></message>
-    <message><source>Resolved step:</source><translation>换算步长：</translation></message>
     <message><source>Grid origin:</source><translation>网格原点：</translation></message>
     <message><source>Grid offset:</source><translation>网格偏移：</translation></message>
     <message><source>Major line every:</source><translation>主网格线间隔：</translation></message>
@@ -26822,7 +26825,7 @@ Continue using the requested filename?</source>
     <message><source>Minimum zoom for minor lines:</source><translation>显示次网格线的最小缩放：</translation></message>
     <message><source>Appearance</source><translation>外观</translation></message>
     <message><source>Invalid Grid Settings</source><translation>无效的网格设置</translation></message>
-    <message><source>The resolved grid step must be between 0.25 px and 1000 px.</source><translation>换算后的网格步长必须介于 0.25 px 和 1000 px 之间。</translation></message>
+    <message><source>The resolved horizontal and vertical spacing must each be between 0.25 px and 1000 px.</source><translation>换算后的横向和纵向间距必须分别介于 0.25 px 和 1000 px 之间。</translation></message>
     <message><source>Choose Minor Grid Color</source><translation>选择次网格线颜色</translation></message>
     <message><source>Choose Major Grid Color</source><translation>选择主网格线颜色</translation></message>
     <message><source>%1 CSS px</source><translation>%1 CSS px</translation></message>
@@ -26833,10 +26836,10 @@ Continue using the requested filename?</source>
 <context>
     <name>VisualTypesettingController</name>
     <message><source>Visual Typesetting Aids</source><translation>排版视觉辅助</translation></message>
-    <message><source>Show Baseline Grid</source><translation>显示基线网格</translation></message>
+    <message><source>Show Grid</source><translation>显示网格</translation></message>
     <message><source>Show Layout Metrics</source><translation>显示排版度量</translation></message>
     <message><source>Use Current Element Font Size as Grid Reference</source><translation>以当前元素字号作为网格参考</translation></message>
-    <message><source>Baseline Grid Settings…</source><translation>基线网格设置…</translation></message>
+    <message><source>Grid Settings…</source><translation>网格设置…</translation></message>
     <message><source>Clean Preview</source><translation>纯净预览</translation></message>
     <message><source>Show a non-exported rhythm grid anchored to the Preview document.</source><translation>显示锚定到预览文档且不会导出的节奏网格。</translation></message>
     <message><source>Show computed typography and spacing for the current element.</source><translation>显示当前元素计算后的字号、行高和间距。</translation></message>

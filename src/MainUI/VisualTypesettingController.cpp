@@ -60,37 +60,39 @@ VisualTypesettingController::VisualTypesettingController(
       m_probe(new PreviewMetricsProbe(preview, this)),
       m_metricsTimer(new QTimer(this)),
       m_menu(new QMenu(tr("Visual Typesetting Aids"), dialogParent)),
-      m_showGridAction(new QAction(tr("Show Baseline Grid"), this)),
+      m_showGridAction(new QAction(tr("Show Grid"), this)),
       m_showMetricsAction(new QAction(tr("Show Layout Metrics"), this)),
       m_useCurrentElementAction(new QAction(
           tr("Use Current Element Font Size as Grid Reference"), this)),
-      m_settingsAction(new QAction(tr("Baseline Grid Settings…"), this)),
+      m_settingsAction(new QAction(tr("Grid Settings…"), this)),
       m_cleanPreviewAction(new QAction(tr("Clean Preview"), this))
 {
     SettingsStore preferences;
     m_settings = BaselineGridSettingsStore::load(preferences, usesDarkPreviewTheme());
+    m_settings.metricsEnabled = false;
 
     m_showGridAction->setObjectName(QStringLiteral("actionShowBaselineGrid"));
     m_showGridAction->setCheckable(true);
     m_showGridAction->setToolTip(tr("Show a non-exported rhythm grid anchored to the Preview document."));
     m_showMetricsAction->setObjectName(QStringLiteral("actionShowLayoutMetrics"));
     m_showMetricsAction->setCheckable(true);
+    m_showMetricsAction->setVisible(false);
+    m_showMetricsAction->setEnabled(false);
     m_showMetricsAction->setToolTip(tr("Show computed typography and spacing for the current element."));
     m_useCurrentElementAction->setObjectName(QStringLiteral("actionUseCurrentElementAsGridReference"));
+    m_useCurrentElementAction->setVisible(false);
+    m_useCurrentElementAction->setEnabled(false);
     m_useCurrentElementAction->setToolTip(
         tr("Measure the current element once and use its font size as the fixed em reference."));
     m_settingsAction->setObjectName(QStringLiteral("actionBaselineGridSettings"));
     m_cleanPreviewAction->setObjectName(QStringLiteral("actionCleanPreview"));
     m_cleanPreviewAction->setCheckable(true);
+    m_cleanPreviewAction->setVisible(false);
+    m_cleanPreviewAction->setEnabled(false);
     m_cleanPreviewAction->setToolTip(tr("Temporarily hide all visual typesetting aids."));
 
     m_menu->addAction(m_showGridAction);
-    m_menu->addAction(m_showMetricsAction);
-    m_menu->addSeparator();
-    m_menu->addAction(m_useCurrentElementAction);
     m_menu->addAction(m_settingsAction);
-    m_menu->addSeparator();
-    m_menu->addAction(m_cleanPreviewAction);
 
     m_metricsTimer->setSingleShot(true);
     m_metricsTimer->setInterval(75);
@@ -110,7 +112,7 @@ VisualTypesettingController::VisualTypesettingController(
         m_overlay->setZoomFactor(factor);
     });
     connect(m_preview->page(), &QWebEnginePage::scrollPositionChanged, this, [this](const QPointF &position) {
-        m_overlay->setScrollPositionCssPx(position.y());
+        m_overlay->setScrollPositionCssPx(position);
     });
     connect(m_probe, &PreviewMetricsProbe::metricsReady,
             this, &VisualTypesettingController::metricsReady);
@@ -174,7 +176,7 @@ void VisualTypesettingController::setCurrentElement(const QList<ElementIndex> &h
         m_lastMetrics = PreviewLayoutMetrics();
         m_lastMetricsKey.clear();
     }
-    m_useCurrentElementAction->setEnabled(!hierarchy.isEmpty());
+    m_useCurrentElementAction->setEnabled(false);
     if (m_settings.metricsEnabled && !m_cleanPreviewActive) {
         m_metricsTimer->start();
     }
@@ -245,16 +247,9 @@ void VisualTypesettingController::inspectElementAtPreviewPosition(
 
 void VisualTypesettingController::showSettings()
 {
-    const qreal currentFont = hasFreshCurrentMetrics() ? m_lastMetrics.fontSizePx : qQNaN();
     BaselineGridSettingsDialog dialog(
-        m_settings, currentFont, usesDarkPreviewTheme(), m_dialogParent);
-    m_activeSettingsDialog = &dialog;
-    if (!hasFreshCurrentMetrics() && !m_currentHierarchy.isEmpty()) {
-        beginCurrentElementRequest(PreviewMetricsRequestPurpose::Settings);
-    }
+        m_settings, qQNaN(), usesDarkPreviewTheme(), m_dialogParent);
     const int result = dialog.exec();
-    m_activeSettingsDialog = nullptr;
-    m_requests.cancel(PreviewMetricsRequestPurpose::Settings);
     if (result == QDialog::Accepted) {
         applySettings(dialog.gridSettings(), true);
     }
@@ -314,7 +309,7 @@ void VisualTypesettingController::documentLoaded()
     m_transientInspectionActive = false;
     m_bodyOriginCssPx = 0.0;
     m_documentWritingMode.clear();
-    m_overlay->setScrollPositionCssPx(m_preview->page()->scrollPosition().y());
+    m_overlay->setScrollPositionCssPx(m_preview->page()->scrollPosition());
     updateOverlayOrigin();
     m_probe->requestBodyContentOrigin();
     if (m_settings.metricsEnabled && !m_cleanPreviewActive) {
@@ -517,9 +512,9 @@ void VisualTypesettingController::updateActions()
     const QSignalBlocker metricsBlocker(m_showMetricsAction);
     const QSignalBlocker cleanBlocker(m_cleanPreviewAction);
     m_showGridAction->setChecked(m_settings.enabled);
-    m_showMetricsAction->setChecked(m_settings.metricsEnabled);
-    m_cleanPreviewAction->setChecked(m_cleanPreviewActive);
-    m_useCurrentElementAction->setEnabled(!m_currentHierarchy.isEmpty());
+    m_showMetricsAction->setChecked(false);
+    m_cleanPreviewAction->setChecked(false);
+    m_useCurrentElementAction->setEnabled(false);
 }
 
 void VisualTypesettingController::updateOverlayOrigin()
@@ -569,14 +564,12 @@ QString VisualTypesettingController::metricsSummary(const PreviewLayoutMetrics &
 void VisualTypesettingController::updateMetricsText()
 {
     const bool showMetrics = m_settings.metricsEnabled || m_transientInspectionActive;
-    if (m_cleanPreviewActive || (!m_settings.enabled && !showMetrics)) {
+    if (m_cleanPreviewActive || !showMetrics) {
         emit metricsTextChanged(QString());
         return;
     }
     if (showMetrics && m_lastMetrics.valid) {
         emit metricsTextChanged(metricsSummary(m_lastMetrics));
-    } else if (m_settings.enabled) {
-        emit metricsTextChanged(gridSummary());
     } else {
         emit metricsTextChanged(tr("Layout metrics unavailable"));
     }

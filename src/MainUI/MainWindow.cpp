@@ -7052,7 +7052,7 @@ void MainWindow::ExtendUI()
         ui.menuView->addAction(m_PreviewWindow->DetachAction());
     }
     if (m_PreviewWindow && m_PreviewWindow->VisualTypesettingMenu()) {
-        ui.menuView->addMenu(m_PreviewWindow->VisualTypesettingMenu());
+        ui.menuEnhancement->addMenu(m_PreviewWindow->VisualTypesettingMenu());
     }
     QMenu *editor_layout = ui.menuView->addMenu(tr("Editor Layout"));
     m_SplitEditorDownAction = new QAction(tr("Split Editor Down"), this);
@@ -7292,14 +7292,7 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(
         this, m_PreviewWindow->ShowBaselineGridAction(), "MainWindow.ShowBaselineGrid");
     KeyboardShortcutManager::instance().registerAction(
-        this, m_PreviewWindow->ShowLayoutMetricsAction(), "MainWindow.ShowLayoutMetrics");
-    KeyboardShortcutManager::instance().registerAction(
-        this, m_PreviewWindow->UseCurrentElementAsGridReferenceAction(),
-        "MainWindow.UseCurrentElementAsGridReference");
-    KeyboardShortcutManager::instance().registerAction(
         this, m_PreviewWindow->BaselineGridSettingsAction(), "MainWindow.BaselineGridSettings");
-    KeyboardShortcutManager::instance().registerAction(
-        this, m_PreviewWindow->CleanPreviewAction(), "MainWindow.CleanPreview");
     if (m_PreviewWindow && m_PreviewWindow->DetachAction()) {
         KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->DetachAction(), "MainWindow.DetachDeveloperTools");
     }

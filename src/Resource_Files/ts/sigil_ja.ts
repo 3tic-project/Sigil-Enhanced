@@ -21128,11 +21128,8 @@ Entities can be separated by lines, commas, or spaces.</source>
         <source>Print Preview View</source>
         <translation>印刷プレビューの表示</translation>
     </message>
-    <message><source>Inspect Layout</source><translation>レイアウトを検査</translation></message>
-    <message>
-        <source>Use This Element&apos;s Font Size as Grid Reference</source>
-        <translation>この要素の文字サイズをグリッド基準に使用</translation>
-    </message>
+    <message><source>Enable Grid</source><translation>グリッドを有効にする</translation></message>
+    <message><source>Disable Grid</source><translation>グリッドを無効にする</translation></message>
 </context>
 <context>
     <name>PythonFunctionEditor</name>
@@ -26795,10 +26792,12 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>BaselineGridSettingsDialog</name>
-    <message><source>Show baseline grid</source><translation>ベースライングリッドを表示</translation></message>
+    <message><source>Show grid</source><translation>グリッドを表示</translation></message>
     <message><source>Show layout metrics</source><translation>レイアウト計測値を表示</translation></message>
     <message><source>Use Current Element</source><translation>現在の要素を使用</translation></message>
-    <message><source>Baseline / Rhythm Grid</source><translation>ベースライン／リズムグリッド</translation></message>
+    <message><source>Horizontal lines</source><translation>水平線</translation></message>
+    <message><source>Vertical lines</source><translation>垂直線</translation></message>
+    <message><source>Grid Settings</source><translation>グリッド設定</translation></message>
     <message><source>Pixels (px)</source><translation>ピクセル（px）</translation></message>
     <message><source>Fixed reference em</source><translation>固定参照 em</translation></message>
     <message><source>Document Top</source><translation>文書の先頭</translation></message>
@@ -26806,9 +26805,13 @@ Continue using the requested filename?</source>
     <message><source> px</source><translation> px</translation></message>
     <message><source>%</source><translation>%</translation></message>
     <message><source>Unit:</source><translation>単位：</translation></message>
-    <message><source>Grid step:</source><translation>グリッド間隔：</translation></message>
+    <message><source>Horizontal grid:</source><translation>水平グリッド：</translation></message>
+    <message><source>Horizontal spacing:</source><translation>水平間隔：</translation></message>
+    <message><source>Resolved horizontal spacing:</source><translation>換算後の水平間隔：</translation></message>
+    <message><source>Vertical grid:</source><translation>垂直グリッド：</translation></message>
+    <message><source>Vertical spacing:</source><translation>垂直間隔：</translation></message>
+    <message><source>Resolved vertical spacing:</source><translation>換算後の垂直間隔：</translation></message>
     <message><source>Reference font size:</source><translation>参照文字サイズ：</translation></message>
-    <message><source>Resolved step:</source><translation>換算後の間隔：</translation></message>
     <message><source>Grid origin:</source><translation>グリッド原点：</translation></message>
     <message><source>Grid offset:</source><translation>グリッドオフセット：</translation></message>
     <message><source>Major line every:</source><translation>主線の間隔：</translation></message>
@@ -26820,7 +26823,7 @@ Continue using the requested filename?</source>
     <message><source>Minimum zoom for minor lines:</source><translation>補助線を表示する最小ズーム：</translation></message>
     <message><source>Appearance</source><translation>外観</translation></message>
     <message><source>Invalid Grid Settings</source><translation>無効なグリッド設定</translation></message>
-    <message><source>The resolved grid step must be between 0.25 px and 1000 px.</source><translation>換算後のグリッド間隔は 0.25 px から 1000 px の範囲にしてください。</translation></message>
+    <message><source>The resolved horizontal and vertical spacing must each be between 0.25 px and 1000 px.</source><translation>換算後の水平間隔と垂直間隔は、それぞれ 0.25 px から 1000 px の範囲にしてください。</translation></message>
     <message><source>Choose Minor Grid Color</source><translation>補助線の色を選択</translation></message>
     <message><source>Choose Major Grid Color</source><translation>主線の色を選択</translation></message>
     <message><source>%1 CSS px</source><translation>%1 CSS px</translation></message>
@@ -26831,10 +26834,10 @@ Continue using the requested filename?</source>
 <context>
     <name>VisualTypesettingController</name>
     <message><source>Visual Typesetting Aids</source><translation>組版視覚補助</translation></message>
-    <message><source>Show Baseline Grid</source><translation>ベースライングリッドを表示</translation></message>
+    <message><source>Show Grid</source><translation>グリッドを表示</translation></message>
     <message><source>Show Layout Metrics</source><translation>レイアウト計測値を表示</translation></message>
     <message><source>Use Current Element Font Size as Grid Reference</source><translation>現在の要素の文字サイズをグリッド基準に使用</translation></message>
-    <message><source>Baseline Grid Settings…</source><translation>ベースライングリッド設定…</translation></message>
+    <message><source>Grid Settings…</source><translation>グリッド設定…</translation></message>
     <message><source>Clean Preview</source><translation>クリーンプレビュー</translation></message>
     <message><source>Show a non-exported rhythm grid anchored to the Preview document.</source><translation>プレビュー文書に固定され、書き出されないリズムグリッドを表示します。</translation></message>
     <message><source>Show computed typography and spacing for the current element.</source><translation>現在の要素について計算済みの文字組みと間隔を表示します。</translation></message>

@@ -26,9 +26,9 @@ void BaselineGridOverlay::setGridSettings(const BaselineGridSettings &settings)
     update();
 }
 
-void BaselineGridOverlay::setScrollPositionCssPx(qreal scrollCssPx)
+void BaselineGridOverlay::setScrollPositionCssPx(const QPointF &scrollCssPx)
 {
-    if (qFuzzyCompare(m_scrollCssPx, scrollCssPx)) {
+    if (m_scrollCssPx == scrollCssPx) {
         return;
     }
     m_scrollCssPx = scrollCssPx;
@@ -65,7 +65,9 @@ void BaselineGridOverlay::setCleanPreviewActive(bool active)
 
 void BaselineGridOverlay::updateVisibility()
 {
-    setVisible(m_settings.enabled && !m_cleanPreviewActive);
+    setVisible(m_settings.enabled
+               && (m_settings.horizontalEnabled || m_settings.verticalEnabled)
+               && !m_cleanPreviewActive);
     if (isVisible()) {
         raise();
     }
@@ -78,9 +80,13 @@ void BaselineGridOverlay::paintEvent(QPaintEvent *event)
         return;
     }
 
-    const QVector<BaselineGridLine> lines = BaselineGridModel::linesForViewport(
-        height(), m_scrollCssPx, m_zoomFactor, m_originCssPx, m_settings);
-    if (lines.isEmpty()) {
+    const QVector<BaselineGridLine> horizontalLines = BaselineGridModel::linesForViewport(
+        height(), m_scrollCssPx.y(), m_zoomFactor, m_originCssPx, m_settings,
+        BaselineGridAxis::Horizontal);
+    const QVector<BaselineGridLine> verticalLines = BaselineGridModel::linesForViewport(
+        width(), m_scrollCssPx.x(), m_zoomFactor, 0.0, m_settings,
+        BaselineGridAxis::Vertical);
+    if (horizontalLines.isEmpty() && verticalLines.isEmpty()) {
         return;
     }
 
@@ -91,11 +97,18 @@ void BaselineGridOverlay::paintEvent(QPaintEvent *event)
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, false);
-    for (const BaselineGridLine &line : lines) {
+    for (const BaselineGridLine &line : horizontalLines) {
         QPen pen(line.major ? major : minor);
         pen.setWidthF(1.0);
         pen.setCosmetic(true);
         painter.setPen(pen);
         painter.drawLine(QPointF(0.0, line.position), QPointF(width(), line.position));
+    }
+    for (const BaselineGridLine &line : verticalLines) {
+        QPen pen(line.major ? major : minor);
+        pen.setWidthF(1.0);
+        pen.setCosmetic(true);
+        painter.setPen(pen);
+        painter.drawLine(QPointF(line.position, 0.0), QPointF(line.position, height()));
     }
 }

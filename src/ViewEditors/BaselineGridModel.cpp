@@ -33,18 +33,29 @@ qreal BaselineGridSettings::resolvedStepCssPx() const
     return unit == BaselineGridUnit::Em ? step * referenceFontPx : step;
 }
 
+qreal BaselineGridSettings::resolvedVerticalStepCssPx() const
+{
+    return unit == BaselineGridUnit::Em ? verticalStep * referenceFontPx : verticalStep;
+}
+
 bool BaselineGridSettings::isValid() const
 {
     const qreal resolved = resolvedStepCssPx();
+    const qreal verticalResolved = resolvedVerticalStepCssPx();
     return qIsFinite(step)
+        && qIsFinite(verticalStep)
         && qIsFinite(referenceFontPx)
         && qIsFinite(offsetCssPx)
         && qIsFinite(resolved)
+        && qIsFinite(verticalResolved)
         && step > 0.0
+        && verticalStep > 0.0
         && referenceFontPx >= 0.25
         && referenceFontPx <= 1000.0
         && resolved >= 0.25
         && resolved <= 1000.0
+        && verticalResolved >= 0.25
+        && verticalResolved <= 1000.0
         && majorEvery >= 1
         && minorOpacity >= 0.0
         && minorOpacity <= 1.0
@@ -71,17 +82,22 @@ QVector<BaselineGridLine> BaselineGridModel::linesForViewport(
     qreal scrollCssPx,
     qreal zoomFactor,
     qreal originCssPx,
-    const BaselineGridSettings &settings)
+    const BaselineGridSettings &settings,
+    BaselineGridAxis axis)
 {
     QVector<BaselineGridLine> lines;
-    if (!settings.enabled || !settings.isValid() || viewportExtent <= 0.0
+    const bool axisEnabled = axis == BaselineGridAxis::Horizontal
+        ? settings.horizontalEnabled : settings.verticalEnabled;
+    if (!settings.enabled || !axisEnabled || !settings.isValid() || viewportExtent <= 0.0
             || !qIsFinite(viewportExtent) || zoomFactor <= 0.0
             || !qIsFinite(zoomFactor) || !qIsFinite(scrollCssPx)
             || !qIsFinite(originCssPx)) {
         return lines;
     }
 
-    const qreal stepPaint = settings.resolvedStepCssPx() * zoomFactor;
+    const qreal resolvedStep = axis == BaselineGridAxis::Horizontal
+        ? settings.resolvedStepCssPx() : settings.resolvedVerticalStepCssPx();
+    const qreal stepPaint = resolvedStep * zoomFactor;
     if (stepPaint <= 0.0 || !qIsFinite(stepPaint)) {
         return lines;
     }
@@ -93,7 +109,8 @@ QVector<BaselineGridLine> BaselineGridModel::linesForViewport(
         return lines;
     }
 
-    const qreal basePaint = (originCssPx + settings.offsetCssPx - scrollCssPx) * zoomFactor;
+    const qreal axisOffset = axis == BaselineGridAxis::Horizontal ? settings.offsetCssPx : 0.0;
+    const qreal basePaint = (originCssPx + axisOffset - scrollCssPx) * zoomFactor;
     qint64 firstIndex = static_cast<qint64>(qCeil(-basePaint / stepPaint));
     if (!showMinor) {
         const int remainder = positiveModulo(firstIndex, settings.majorEvery);
