@@ -3,6 +3,7 @@
 
 #include "BookManipulation/EpubVersionConv.h"
 #include "BookManipulation/HtmlNamedEntity.h"
+#include "BookManipulation/NcxNavigation.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/NCXResource.h"
@@ -360,9 +361,27 @@ void EpubVersionConv::convert_opf_to3() {
 
 void EpubVersionConv::build_nav() {
 	NCXResource * ncx = m_Book->GetNCX();
-	QString ncx_text = ncx->GetText();
-	parse_ncx(ncx_text);
-	QString indent(2, ' '), indent2(4, ' '), indent3(6, ' ');
+	if (ncx) {
+		parse_ncx(ncx->GetText());
+	}
+	if (doctitle.isEmpty()) {
+		const QStringList titles = m_Book->GetOPF()->GetDCMetadataValues("dc:title");
+		if (!titles.isEmpty()) {
+			doctitle = titles.at(0);
+		}
+	}
+
+	QString navdir = "OEBPS/Text";
+	QString first_textdir = "OEBPS/Text";
+	QString navfile = valid_id("nav.xhtml");
+	HTMLResource * nav_resource = m_Book->CreateEmptyNavFile(true, navdir, navfile, first_textdir);
+	const QString nav_bookpath = nav_resource->GetRelativePath();
+	QString opf_folder;
+	if (OPFResource *opf = m_Book->GetOPF()) {
+		opf_folder = opf->GetFolder();
+	}
+
+	QString indent(2, ' '), indent2(4, ' ');
 	QString lang = m_Book->GetOPF()->GetPrimaryBookLanguage();
 	QString new_text = "";
 	new_text += "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
@@ -375,21 +394,21 @@ void EpubVersionConv::build_nav() {
 	new_text += indent % "<link href=\"../Styles/sgc-nav.css\" type=\"text/css\" rel=\"stylesheet\"/>\n";
 	new_text += "</head>\n\n";
 	new_text += "<body epub:type=\"frontmatter\">\n";
-	// start with the toc
 	new_text += indent % "<nav epub:type=\"toc\" id=\"toc\">\n";
-	new_text += indent2 % QString("<h1>%1</h1>\n").arg(doctitle);
+	new_text += indent2 % QString("<h1>%1</h1>\n").arg(doctitle.toHtmlEscaped());
 	new_text += indent2 % "<ol>\n";
 
 	int curlvl = 1;
 	bool initial = true;
 	foreach(NavPointInfo ni, toclist) {
-		QString href = ni.bookhref.mid(11);
+		QString href = NcxNavigation::bookPathToNavHref(ni.bookhref, nav_bookpath).toHtmlEscaped();
+		QString label = ni.navlabel.toHtmlEscaped();
 		if (ni.lvl > curlvl) {
 			while (ni.lvl > curlvl) {
 				QString indent_ = indent2 + QString(4 * curlvl, ' ');
 				new_text += indent_ % "<ol>\n";
 				new_text += indent_ % indent % "<li>\n";
-				new_text += indent_ % indent2 % QString("<a href=\"%1\">%2</a>\n").arg(href, ni.navlabel);
+				new_text += indent_ % indent2 % QString("<a href=\"%1\">%2</a>\n").arg(href, label);
 				curlvl += 1;
 			}
 		}
@@ -403,7 +422,7 @@ void EpubVersionConv::build_nav() {
 			QString indent_ = indent2 + QString(4 * (curlvl - 1), ' ');
 			new_text += indent_ + indent + "</li>\n";
 			new_text += indent_ + indent + "<li>\n";
-			new_text += indent_ + indent2 + QString("<a href=\"%1\">%2</a>\n").arg(href, ni.navlabel);
+			new_text += indent_ + indent2 + QString("<a href=\"%1\">%2</a>\n").arg(href, label);
 		}
 		else {
 			QString indent_ = indent2 + QString(4 * (ni.lvl - 1), ' ');
@@ -411,7 +430,7 @@ void EpubVersionConv::build_nav() {
 				new_text += indent_ + indent + "</li>\n";
 			}
 			new_text += indent_ + indent + "<li>\n";
-			new_text += indent_ + indent2 + QString("<a href=\"%1\">%2</a>\n").arg(href, ni.navlabel);
+			new_text += indent_ + indent2 + QString("<a href=\"%1\">%2</a>\n").arg(href, label);
 		}
 		initial = false;
 		curlvl = ni.lvl;
@@ -424,113 +443,67 @@ void EpubVersionConv::build_nav() {
 	}
 	new_text += indent % "</nav>\n";
 
-	// add any existing page-list if need be
 	if (pagelist.size() > 0) {
 		new_text += indent % "<nav epub:type=\"page-list\" id=\"page-list\" hidden=\"\">\n";
 		new_text += indent2 % "<ol>\n";
 		foreach (PageInfo pi, pagelist) {
-			QString href = pi.bookhref.mid(6);
-			new_text += QString(8, ' ') + QString("<li><a href=\"%1\">%2</a></li>\n").arg(href).arg(pi.pagenum);
+			QString href = NcxNavigation::bookPathToNavHref(pi.bookhref, nav_bookpath).toHtmlEscaped();
+			new_text += QString(8, ' ') + QString("<li><a href=\"%1\">%2</a></li>\n").arg(href, pi.pagenum.toHtmlEscaped());
 		}
 		new_text += indent2 + "</ol>\n";
 		new_text += indent + "</nav>\n";
 	}
-	// create landmark section
 	new_text += indent + "<nav epub:type=\"landmarks\" id=\"landmarks\" hidden=\"\">\n";
 	new_text += indent2 + "<h2>Guide</h2>\n";
 	new_text += indent2 + "<ol>\n";
 	foreach (GuideEntry ge, guide_res) {
-		QString href = ge.m_href;
 		QString etype = "";
-		if (href.length() > 5)
-			href = href.mid(5);
 		if (_guide_epubtype_map.contains(ge.m_type))
 			etype = _guide_epubtype_map.value(ge.m_type);
 		if (etype != "") {
+			QString href = NcxNavigation::bookPathToNavHref(
+				NcxNavigation::srcToBookPath(ge.m_href, opf_folder), nav_bookpath).toHtmlEscaped();
 			new_text += QString(6, ' ') + "<li>\n";
-			new_text += QString(8, ' ') + QString("<a epub:type=\"%1\" href=\"%2\">%3</a>\n").arg(etype, href, ge.m_title);
+			new_text += QString(8, ' ') + QString("<a epub:type=\"%1\" href=\"%2\">%3</a>\n")
+				.arg(etype, href, ge.m_title.toHtmlEscaped());
 			new_text += QString(6, ' ') + "</li>\n";
 		}
 	}
 	new_text += indent2 + "</ol>\n";
 	new_text += indent + "</nav>\n";
-	// now close it off
 	new_text += "</body>\n";
 	new_text += "</html>\n";
 	new_text = format_nav_text(new_text);
 
-	// add new nav file;
-	QString navdir = "OEBPS/Text",
-		first_textdir = "OEBPS/Text",
-		navfile = valid_id("nav.xhtml");
-
-	bool is_update_opf = true;
-	HTMLResource * nav_resource = m_Book->CreateEmptyNavFile(is_update_opf, navdir, navfile, first_textdir);
 	nav_resource->SetText(new_text);
 	m_Book->GetOPF()->SetNavResource(nav_resource);
 	m_Book->GetOPF()->SetItemRefLinear(nav_resource, false);
 	m_Book->GetOPF()->UpdateNCXOnSpine(navfile);
-	FolderKeeper *folder = m_Book->GetFolderKeeper();
-
 }
 
 void EpubVersionConv::parse_ncx(QString ncx_text) {
+	const NcxNavigation parsed = NcxNavigation::parse(ncx_text);
+	doctitle = parsed.doctitle;
 
-	TagLister taglist(ncx_text);
+	QString ncx_folder;
+	if (NCXResource *ncx = m_Book->GetNCX()) {
+		ncx_folder = ncx->GetFolder();
+	}
 
-	QString navlabel = "",
-		pagenum = "";
-	int lvl = 0;
-
-	int offset = 0;
-	for (int i = 0; i < taglist.size(); i++) {
-		TagLister::TagInfo ti = taglist.at(i);
-		if (ti.tname.toLower() == "text" && ti.ttype == "end") {
-			QString txt = ncx_text.mid(ti.open_pos + ti.open_len, ti.pos - ti.open_pos - ti.open_len);
-			if (txt != "") {
-				if (ti.tpath.toLower().endsWith(".doctitle")) {
-					doctitle = txt;
-				}
-				else if (ti.tpath.toLower().endsWith(".navpoint.navlabel")) {
-					navlabel = txt;
-				}
-			}
-			continue;
-		}
-		if (ti.tname.toLower() == "navpoint") {
-			if (ti.ttype == "begin") {
-				lvl += 1;
-			}
-			else if (ti.ttype == "end") {
-				lvl -= 1;
-			}
-			continue;
-		}
-		if (ti.tname == "content") {
-			QString tagstring = ncx_text.mid(ti.pos, ti.len);
-			OpenTagInfo opentaginfo = parseAttribute(tagstring);
-			if (opentaginfo.atts.contains("src")) {
-				if (ti.tpath.toLower().endsWith("navpoint")) {
-					QString href = opentaginfo.atts["src"];
-					QString bookhref = "OEBPS/" + href;
-					toclist.append(NavPointInfo({ lvl, navlabel, bookhref }));
-					navlabel = "";
-				}
-				else if (ti.tpath.toLower().endsWith("pagetarget")) {
-					QString pagehref = opentaginfo.atts["src"];
-					QString bookhref = "OEBPS/" + pagehref;
-					pagelist.append(PageInfo({ pagenum, bookhref }));
-					pagenum = "";
-				}
-			}
-			continue;
-		}
-		if (ti.tname.toLower() == "pagetarget" && ti.ttype == "begin") {
-			QString tagstring = ncx_text.mid(ti.pos, ti.len);
-			OpenTagInfo opentaginfo = parseAttribute(tagstring);
-			if (opentaginfo.atts.contains("value")) pagenum = opentaginfo.atts["value"];
-			continue;
-		}
+	toclist.clear();
+	pagelist.clear();
+	for (const NcxNavPoint &pt : parsed.toc) {
+		NavPointInfo info;
+		info.lvl = pt.level;
+		info.navlabel = pt.label;
+		info.bookhref = NcxNavigation::srcToBookPath(pt.src, ncx_folder);
+		toclist.append(info);
+	}
+	for (const NcxPageTarget &pg : parsed.pages) {
+		PageInfo info;
+		info.pagenum = pg.value;
+		info.bookhref = NcxNavigation::srcToBookPath(pg.src, ncx_folder);
+		pagelist.append(info);
 	}
 }
 
