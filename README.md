@@ -17,6 +17,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 ### 导入与预览
 
+- **[KFX 转 EPUB](docs/KfxImport.md)**：在 `Enhancement` 菜单转换无 DRM 的 `.kfx`/`.kfx-zip`，可另存为 EPUB 或作为未保存文档在新窗口打开；拖入 KFX 时会先提示，转换在独立进程中执行并经过 EPUB 结构门禁。
 - **拖入 EPUB**：从外部拖入 EPUB 时，可选择「添加到当前书籍」或「在新窗口打开」。
 - **拖入文件**：图片、字体、XHTML、TXT 等文件拖到 Book Browser 自动归类入库；单个 XHTML/TXT 还可拖到列表中的指定位置插入。
 - **编辑器内插图**：图片拖入编辑器自动生成 `<img>` 标签或 CSS `url()` 链接；剪贴板中的图片和非本地文件也可直接粘贴导入。
@@ -24,6 +25,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 ### 编辑器与工作区
 
+- **[排版视觉辅助](docs/VisualTypesettingAids.md)**：在 Preview 上显示非输出的基线／节奏网格，并在状态栏给出当前元素计算后的字号、行高、逻辑 margin/padding 与网格比率；支持固定 `em` 基准、文档/正文原点、主次线、缩放阈值和纯净预览。
 - **拆分编辑器**：可拆成上下两组同时打开不同资源，标签可在组间拖动；详见 [拆分编辑器](docs/SplitEditorGroups.md)。
 - **开发者工具**：停靠在预览区下方、随 Preview 一起浮动，也可拆成独立窗口；详见 [Preview 开发者工具](docs/PreviewDeveloperTools.md)。
 - **中键关闭标签**：鼠标中键直接关闭所指向的标签页，不会激活后台标签或误关空白区域。
@@ -38,6 +40,11 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 - **[高级正则工作台](docs/AdvancedRegexWorkbench.md)**：二级正则筛选、递归替换、命名捕获变量、仅捕获规则、可保存方案；试运行不改动书籍，应用时一次可撤销提交。
 - **[中文简繁与地区转换](docs/ChineseConversion.md)**：内置 OpenCC，提供 12 个转换方向；支持当前选区、当前文件、选中文件和全书，带结构安全白名单、逐项预览、单步撤销与批量 Checkpoint。
 - **[HarfBuzz 字体子集化](docs/FontSubsetting.md)**：静态内置 HarfBuzz，不依赖系统安装；支持 TTF/OTF 许可与风险检查、全书字符收集、后台 dry-run、逐字体报告和事务式原位替换。
+
+### 保存保真
+
+- 未修改 EPUB 的普通保存不再重新打包；另存为和保存副本直接复制源文件，保持字节一致。
+- 默认不新增或更新 `Sigil version` 元数据；EPUB 3 的 `dcterms:modified` 只在实际修改后导出时更新。
 
 ### 插件与自动化
 

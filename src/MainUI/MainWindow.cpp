@@ -35,6 +35,7 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QFileDialog>
+#include <QCheckBox>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QPushButton>
@@ -57,6 +58,7 @@
 #include <QWindowStateChangeEvent>
 #include <QStyleFactory>
 #include <QStyle>
+#include <QSizePolicy>
 #include <QDirIterator>
 #include <QDebug>
 #include <QReadLocker>
@@ -65,6 +67,7 @@
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/Index.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "BuiltinPlugins/KfxImportProtocol.h"
 #include "Dialogs/About.h"
 #include "Dialogs/AddClips.h"
 #include "Dialogs/AddRoles.h"
@@ -303,6 +306,9 @@ MainWindow::MainWindow(const QString &openfilepath,
     m_JoinEditorGroupsAction(NULL),
     m_FocusUpperEditorGroupAction(NULL),
     m_FocusLowerEditorGroupAction(NULL),
+    m_lbCursorPosition(NULL),
+    m_lbLayoutMetrics(NULL),
+    m_lbDropZone(NULL),
     m_slZoomSlider(NULL),
     m_lbZoomLabel(NULL),
     c_SaveFilters(GetSaveFiltersMap()),
@@ -375,6 +381,7 @@ MainWindow::MainWindow(const QString &openfilepath,
 
 MainWindow::~MainWindow()
 {
+    ClearTransientSource();
     if (m_RegexWorkbenchDialog) {
         delete m_RegexWorkbenchDialog.data();
     }
@@ -2151,6 +2158,18 @@ void MainWindow::ShowMessageOnStatusBar(const QString &message,
     }
 }
 
+void MainWindow::UpdateLayoutMetricsLabel(const QString &text)
+{
+    if (!m_lbLayoutMetrics) {
+        return;
+    }
+    m_lbLayoutMetrics->setText(text);
+    m_lbLayoutMetrics->setToolTip(text.isEmpty() ? QString() :
+        text + QStringLiteral("\n")
+            + tr("Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding."));
+    m_lbLayoutMetrics->setVisible(!text.isEmpty());
+}
+
 void MainWindow::ShowLastOpenFileWarnings()
 {
     if (m_inShowLastOpenWarnings) return;
@@ -2862,20 +2881,65 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
         return;
     }
 
-    if (AreAllDroppedFilesEpub(filepaths)) {
+    QStringList kfx_paths;
+    QStringList other_paths;
+    foreach(const QString& filepath, filepaths) {
+        if (BuiltinPlugins::KfxImportProtocol::isKfxPath(filepath)) {
+            kfx_paths << filepath;
+        } else {
+            other_paths << filepath;
+        }
+    }
+
+    if (!kfx_paths.isEmpty()) {
         QMessageBox msgbox(this);
         msgbox.setIcon(QMessageBox::Question);
         msgbox.setWindowTitle(APP_DISPLAY_NAME);
-        msgbox.setText(filepaths.count() == 1 ?
+        msgbox.setText(kfx_paths.count() == 1
+                           ? tr("The dropped file is a KFX book.")
+                           : tr("The dropped files include %1 KFX books.").arg(kfx_paths.count()));
+        msgbox.setInformativeText(
+            tr("Only DRM-free KFX files can be converted; DRM-protected files are rejected. "
+               "Convert the KFX book(s) to EPUB and open each result in a new window?"));
+        QCheckBox* normalize_checkbox = new QCheckBox(
+            tr("Also normalize EPUB structure after conversion"), &msgbox);
+        normalize_checkbox->setToolTip(
+            tr("Repair OPF and link-case issues, then move resources to Sigil's standard folders."));
+        normalize_checkbox->setChecked(false);
+        msgbox.setCheckBox(normalize_checkbox);
+        QPushButton* convert_button = msgbox.addButton(
+            kfx_paths.count() == 1 ? tr("Convert and Open") : tr("Convert and Open All"),
+            QMessageBox::AcceptRole);
+        msgbox.addButton(QMessageBox::Cancel);
+        msgbox.setDefaultButton(convert_button);
+        msgbox.setMinimumSize(680, 240);
+        msgbox.exec();
+        if (msgbox.clickedButton() == convert_button) {
+            const bool normalize_structure = normalize_checkbox->isChecked();
+            foreach(const QString& filepath, kfx_paths) {
+                ConvertKfxFile(filepath, true, normalize_structure);
+            }
+        }
+    }
+
+    if (other_paths.isEmpty()) {
+        return;
+    }
+
+    if (AreAllDroppedFilesEpub(other_paths)) {
+        QMessageBox msgbox(this);
+        msgbox.setIcon(QMessageBox::Question);
+        msgbox.setWindowTitle(APP_DISPLAY_NAME);
+        msgbox.setText(other_paths.count() == 1 ?
                        tr("The dropped file is an EPUB.") :
                        tr("The dropped files are EPUB files."));
-        msgbox.setInformativeText(filepaths.count() == 1 ?
+        msgbox.setInformativeText(other_paths.count() == 1 ?
                                   tr("Do you want to add it to the current book, or open it for editing in a new window?\n\n%1")
-                                  .arg(QDir::toNativeSeparators(filepaths.at(0))) :
+                                  .arg(QDir::toNativeSeparators(other_paths.at(0))) :
                                   tr("Do you want to add them to the current book, or open them for editing in new windows?\n\n%1")
-                                  .arg(QDir::toNativeSeparators(filepaths.join("\n"))));
+                                  .arg(QDir::toNativeSeparators(other_paths.join("\n"))));
         QPushButton *add_button = msgbox.addButton(tr("Add to Current Book"), QMessageBox::AcceptRole);
-        QPushButton *open_button = msgbox.addButton(filepaths.count() == 1 ?
+        QPushButton *open_button = msgbox.addButton(other_paths.count() == 1 ?
                                                     tr("Open in New Window") :
                                                     tr("Open in New Windows"),
                                                     QMessageBox::ActionRole);
@@ -2885,7 +2949,7 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
 
         if (msgbox.clickedButton() == open_button) {
             MainWindow *last_window = nullptr;
-            foreach(const QString &filepath, filepaths) {
+            foreach(const QString &filepath, other_paths) {
                 MainWindow *new_window = new MainWindow(filepath);
                 new_window->show();
                 last_window = new_window;
@@ -2901,7 +2965,7 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
         }
     }
 
-    QStringList added_book_paths = m_BookBrowser->AddExisting(false, false, filepaths);
+    QStringList added_book_paths = m_BookBrowser->AddExisting(false, false, other_paths);
     if (!added_book_paths.isEmpty()) {
         m_BookBrowser->Refresh();
         m_Book->SetModified();
@@ -3980,6 +4044,9 @@ void MainWindow::ApplicationPaletteChanged()
     // css.  Same for our Preview Window.
     DBG qDebug() << "ApplicationPaletteChanged";
     m_TabManager->PerformThemeChangeRefresh();
+    if (m_PreviewWindow) {
+        m_PreviewWindow->RefreshVisualTypesettingTheme();
+    }
     UpdatePreview();
 }
 
@@ -6154,6 +6221,8 @@ void MainWindow::ResourcesAddedOrDeletedOrMoved()
 
 void MainWindow::CreateNewBook(const QString version, const QStringList &book_paths)
 {
+    ClearTransientSource();
+    m_SourceEpubSnapshot.clear();
     QString epubversion = version;
     if (epubversion.isEmpty()) {
         SettingsStore ss;
@@ -6302,6 +6371,7 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
             ShowMessageOnStatusBar(tr("Loading file..."), 0);
             QSharedPointer<Book> imported_book = importer->GetBook();
             m_Book->SetModified(false);
+            ClearTransientSource();
             SetNewBook(imported_book);
 
             // The m_IsModified state variable is set in GetBook() to indicate whether the OPF
@@ -6328,7 +6398,14 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
                 // Clear the last inserted file
                 m_LastInsertedFile = "";
                 UpdateUiWithCurrentFile(fullfilepath);
+                if (QFileInfo(fullfilepath).suffix().compare(QStringLiteral("epub"), Qt::CaseInsensitive) == 0
+                    && !m_Book->IsModified()) {
+                    m_SourceEpubSnapshot = EpubFileSnapshot::capture(fullfilepath);
+                } else {
+                    m_SourceEpubSnapshot.clear();
+                }
             } else {
+                m_SourceEpubSnapshot.clear();
                 UpdateUiWithCurrentFile(QFileInfo(fullfilepath).fileName(), true);
                 m_Book->SetModified();
             }
@@ -6366,6 +6443,37 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
     // and potentially has left the GUI in a nasty state (like on initial startup)
     // Fallback to displaying a new book instead so GUI integrity is maintained.
     return false;
+}
+
+bool MainWindow::LoadConvertedEpub(const QString& temporaryEpub,
+                                   const QString& displayName,
+                                   const QStringList& conversionWarnings)
+{
+    if (!LoadFile(temporaryEpub, true, true)) {
+        return false;
+    }
+
+    m_Book->SetModified(false);
+    m_SourceEpubSnapshot = EpubFileSnapshot::capture(temporaryEpub);
+    if (!m_SourceEpubSnapshot.isValid()) {
+        return false;
+    }
+    m_TransientSourcePath = temporaryEpub;
+    m_LastOpenFileWarnings.append(conversionWarnings);
+    UpdateUiWithCurrentFile(displayName, true);
+    setWindowModified(true);
+    ShowMessageOnStatusBar(tr("Converted KFX loaded. Use Save to choose an EPUB filename."));
+    return true;
+}
+
+void MainWindow::ClearTransientSource()
+{
+    if (m_TransientSourcePath.isEmpty()) {
+        return;
+    }
+    const QString path = m_TransientSourcePath;
+    m_TransientSourcePath.clear();
+    QFile::remove(path);
 }
 
 
@@ -6406,6 +6514,35 @@ bool MainWindow::SaveFile(const QString &fullfilepath, bool update_current_filen
                 .arg(APP_DISPLAY_NAME, extension)
             );
             return false;
+        }
+
+        if (m_SourceEpubSnapshot.isValid()) {
+            QString snapshot_error;
+            if (!m_Book->IsModified()) {
+                if (!m_SourceEpubSnapshot.copyTo(fullfilepath, &snapshot_error)) {
+                    ShowMessageOnStatusBar();
+                    Utility::DisplayStdErrorDialog(
+                        tr("Cannot preserve the unchanged EPUB."), snapshot_error);
+                    return false;
+                }
+                if (update_current_filename) {
+                    m_SourceEpubSnapshot = EpubFileSnapshot::capture(fullfilepath);
+                    m_Book->SetModified(false);
+                    UpdateUiWithCurrentFile(fullfilepath);
+                    ClearTransientSource();
+                    setWindowModified(false);
+                }
+                ShowMessageOnStatusBar(tr("No changes to save."));
+                return true;
+            }
+
+            if (!m_SourceEpubSnapshot.matchesSource(&snapshot_error)) {
+                ShowMessageOnStatusBar();
+                Utility::DisplayStdErrorDialog(
+                    tr("The source EPUB changed outside Sigil-Enhanced. The file was not overwritten."),
+                    snapshot_error);
+                return false;
+            }
         }
 
         QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -6453,6 +6590,8 @@ bool MainWindow::SaveFile(const QString &fullfilepath, bool update_current_filen
         if (update_current_filename) {
             m_Book->SetModified(false);
             UpdateUiWithCurrentFile(fullfilepath);
+            m_SourceEpubSnapshot = EpubFileSnapshot::capture(fullfilepath);
+            ClearTransientSource();
         }
 
         if (not_well_formed) {
@@ -6931,6 +7070,9 @@ void MainWindow::ExtendUI()
     if (m_PreviewWindow && m_PreviewWindow->DetachAction()) {
         ui.menuView->addAction(m_PreviewWindow->DetachAction());
     }
+    if (m_PreviewWindow && m_PreviewWindow->VisualTypesettingMenu()) {
+        ui.menuEnhancement->addMenu(m_PreviewWindow->VisualTypesettingMenu());
+    }
     QMenu *editor_layout = ui.menuView->addMenu(tr("Editor Layout"));
     m_SplitEditorDownAction = new QAction(tr("Split Editor Down"), this);
     m_SplitEditorDownAction->setObjectName(QStringLiteral("actionSplitEditorDown"));
@@ -6986,6 +7128,14 @@ void MainWindow::ExtendUI()
     ui.menuToolbars->addAction(ui.toolBarIndexActions->toggleViewAction());
     ui.menuToolbars->addAction(ui.toolBarAutomate->toggleViewAction());
     ui.toolBarClips->setVisible(false);
+    m_lbLayoutMetrics = new QLabel(QString(), statusBar());
+    m_lbLayoutMetrics->setObjectName(QStringLiteral("layoutMetricsStatus"));
+    m_lbLayoutMetrics->setAccessibleName(tr("Current layout metrics"));
+    m_lbLayoutMetrics->setToolTip(
+        tr("Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding."));
+    m_lbLayoutMetrics->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    m_lbLayoutMetrics->hide();
+    statusBar()->addPermanentWidget(m_lbLayoutMetrics, 1);
     m_lbCursorPosition = new QLabel(QString(""), statusBar());
     statusBar()->addPermanentWidget(m_lbCursorPosition);
     UpdateCursorPositionLabel(0, 0, -1);
@@ -7158,6 +7308,10 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, m_Clips->toggleViewAction(), "MainWindow.ClipsWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->toggleViewAction(), "MainWindow.PreviewWindow");
     KeyboardShortcutManager::instance().registerAction(this, m_DeveloperToolsAction, "MainWindow.DeveloperTools");
+    KeyboardShortcutManager::instance().registerAction(
+        this, m_PreviewWindow->ShowBaselineGridAction(), "MainWindow.ShowBaselineGrid");
+    KeyboardShortcutManager::instance().registerAction(
+        this, m_PreviewWindow->BaselineGridSettingsAction(), "MainWindow.BaselineGridSettings");
     if (m_PreviewWindow && m_PreviewWindow->DetachAction()) {
         KeyboardShortcutManager::instance().registerAction(this, m_PreviewWindow->DetachAction(), "MainWindow.DetachDeveloperTools");
     }
@@ -7224,6 +7378,7 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizedOPF, "MainWindow.NormalizedOPF"); // modified: NormalizedOPF
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeEpubStructure, "MainWindow.NormalizeEpubStructure"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionEnhanceSourceFormatting, "MainWindow.EnhanceSourceFormatting"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertKfx, "MainWindow.ConvertKfx"); // modified: Builtin KFX import plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionChineseConversion, "MainWindow.ConvertChineseText"); // modified: Chinese conversion
     KeyboardShortcutManager::instance().registerAction(this, ui.actionSubsetEmbeddedFonts, "MainWindow.SubsetEmbeddedFonts"); // modified: font subsetting
     KeyboardShortcutManager::instance().registerAction(this, ui.actionOpenRegexWorkbench, "MainWindow.OpenRegexWorkbench"); // modified: Advanced Regex Workbench
@@ -7390,6 +7545,10 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_PreviewWindow, SIGNAL(RequestPreviewReload()),       this, SLOT(UpdatePreview()));
     connect(m_PreviewWindow, SIGNAL(OpenUrlRequest(const QUrl &)), this, SLOT(OpenUrl(const QUrl &)));
     connect(m_PreviewWindow, SIGNAL(ScrollToFragmentRequest(const QString &)), this, SLOT(ScrollCVToFragment(const QString &)));
+    connect(m_PreviewWindow, SIGNAL(LayoutMetricsTextChanged(const QString &)),
+            this, SLOT(UpdateLayoutMetricsLabel(const QString &)));
+    connect(m_PreviewWindow, SIGNAL(ShowStatusMessageRequest(const QString &)),
+            this, SLOT(ShowMessageOnStatusBar(const QString &)));
     connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)), this, SLOT(ApplicationFocusChanged(QWidget *, QWidget *)));
     MainApplication *mainApplication = qobject_cast<MainApplication *>(qApp);
     connect(mainApplication, SIGNAL(applicationPaletteChanged()), this, SLOT(ApplicationPaletteChanged()));
@@ -7625,6 +7784,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionNormalizedOPF, SIGNAL(triggered()), this, SLOT(NormalizedOPF())); // modified: NormalizedOPF
     connect(ui.actionNormalizeEpubStructure, SIGNAL(triggered()), this, SLOT(NormalizeEpubStructure())); // modified: Builtin native plugin
     connect(ui.actionEnhanceSourceFormatting, SIGNAL(triggered()), this, SLOT(EnhanceSourceFormatting())); // modified: Builtin native plugin
+    connect(ui.actionConvertKfx, SIGNAL(triggered()), this, SLOT(ConvertKfx())); // modified: Builtin KFX import plugin
     connect(ui.actionChineseConversion, SIGNAL(triggered()), this, SLOT(ConvertChineseText())); // modified: Chinese conversion
     connect(ui.actionSubsetEmbeddedFonts, SIGNAL(triggered()), this, SLOT(SubsetEmbeddedFonts())); // modified: font subsetting
     connect(ui.actionOpenRegexWorkbench, SIGNAL(triggered()), this, SLOT(OpenRegexWorkbench())); // modified: Advanced Regex Workbench

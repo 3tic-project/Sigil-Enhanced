@@ -1,4 +1,86 @@
-find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg Widgets Xml REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg WebEngineCore Widgets Xml REQUIRED)
+
+add_executable(baseline_grid_model_test
+    baseline_grid_model_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridSettingsStore.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridSettingsStore.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.h
+)
+target_include_directories(baseline_grid_model_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(baseline_grid_model_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(baseline_grid_model_test PRIVATE cxx_std_17)
+add_test(NAME baseline_grid_model COMMAND baseline_grid_model_test)
+set_tests_properties(baseline_grid_model PROPERTIES TIMEOUT 30)
+
+add_executable(baseline_grid_overlay_test
+    baseline_grid_overlay_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridOverlay.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridOverlay.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/Overlay.h
+)
+target_include_directories(baseline_grid_overlay_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(baseline_grid_overlay_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(baseline_grid_overlay_test PRIVATE cxx_std_17)
+set_target_properties(baseline_grid_overlay_test PROPERTIES AUTOMOC ON)
+add_test(NAME baseline_grid_overlay COMMAND baseline_grid_overlay_test)
+set_tests_properties(baseline_grid_overlay PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
+add_executable(baseline_grid_settings_dialog_test
+    baseline_grid_settings_dialog_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/BaselineGridSettingsDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/BaselineGridSettingsDialog.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/BaselineGridModel.h
+)
+target_include_directories(baseline_grid_settings_dialog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(baseline_grid_settings_dialog_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(baseline_grid_settings_dialog_test PRIVATE cxx_std_17)
+set_target_properties(baseline_grid_settings_dialog_test PROPERTIES AUTOMOC ON)
+add_test(NAME baseline_grid_settings_dialog COMMAND baseline_grid_settings_dialog_test)
+set_tests_properties(baseline_grid_settings_dialog PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
+add_executable(preview_metrics_webengine_test
+    preview_metrics_webengine_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewLayoutMetrics.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewMetricsJavascript.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewMetricsJavascript.h
+)
+target_include_directories(preview_metrics_webengine_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(preview_metrics_webengine_test PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::WebEngineCore
+)
+target_compile_features(preview_metrics_webengine_test PRIVATE cxx_std_17)
+add_test(NAME preview_metrics_webengine COMMAND preview_metrics_webengine_test)
+set_tests_properties(preview_metrics_webengine PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --no-sandbox"
+)
+
+add_executable(preview_metrics_request_tracker_test
+    preview_metrics_request_tracker_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewMetricsRequestTracker.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/PreviewMetricsRequestTracker.h
+)
+target_include_directories(preview_metrics_request_tracker_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(preview_metrics_request_tracker_test PRIVATE Qt6::Core)
+target_compile_features(preview_metrics_request_tracker_test PRIVATE cxx_std_17)
+add_test(NAME preview_metrics_request_tracker COMMAND preview_metrics_request_tracker_test)
+set_tests_properties(preview_metrics_request_tracker PROPERTIES TIMEOUT 30)
 
 add_executable(tab_bar_middle_click_test
     tab_bar_middle_click_test.cpp
@@ -53,6 +135,28 @@ target_link_libraries(ncx_navigation_test PRIVATE Qt6::Core)
 target_compile_features(ncx_navigation_test PRIVATE cxx_std_17)
 add_test(NAME ncx_navigation COMMAND ncx_navigation_test)
 set_tests_properties(ncx_navigation PROPERTIES TIMEOUT 30)
+
+add_executable(epub_file_snapshot_test
+    epub_file_snapshot_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.h
+)
+target_include_directories(epub_file_snapshot_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(epub_file_snapshot_test PRIVATE Qt6::Core)
+target_compile_features(epub_file_snapshot_test PRIVATE cxx_std_17)
+add_test(NAME epub_file_snapshot COMMAND epub_file_snapshot_test)
+set_tests_properties(epub_file_snapshot PROPERTIES TIMEOUT 30)
+
+add_executable(export_metadata_policy_test
+    export_metadata_policy_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Exporters/ExportMetadataPolicy.cpp
+    ${CMAKE_SOURCE_DIR}/src/Exporters/ExportMetadataPolicy.h
+)
+target_include_directories(export_metadata_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(export_metadata_policy_test PRIVATE Qt6::Core)
+target_compile_features(export_metadata_policy_test PRIVATE cxx_std_17)
+add_test(NAME export_metadata_policy COMMAND export_metadata_policy_test)
+set_tests_properties(export_metadata_policy PROPERTIES TIMEOUT 30)
 
 add_executable(regex_match_enumerator_test
     regex_match_enumerator_test.cpp
@@ -496,6 +600,57 @@ add_test(NAME epub_version_conv_nav_contract
 )
 set_tests_properties(epub_version_conv_nav_contract PROPERTIES TIMEOUT 30)
 
+add_test(NAME kfx_worker
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/kfx_worker_test.py
+)
+set_tests_properties(kfx_worker PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1"
+)
+
+add_executable(kfx_import_protocol_test
+    kfx_import_protocol_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/KfxImportProtocol.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/KfxImportProtocol.h
+)
+target_include_directories(kfx_import_protocol_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(kfx_import_protocol_test PRIVATE Qt6::Core)
+target_compile_features(kfx_import_protocol_test PRIVATE cxx_std_17)
+add_test(NAME kfx_import_protocol COMMAND kfx_import_protocol_test)
+set_tests_properties(kfx_import_protocol PROPERTIES TIMEOUT 30)
+
+add_test(NAME kfx_import_ui_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/kfx_import_ui_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(kfx_import_ui_contract PROPERTIES TIMEOUT 30)
+
+if ( APPLE AND CMAKE_BUILD_TYPE STREQUAL "Debug" )
+    add_test(NAME kfx_internal_runtime
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/kfx_internal_runtime_test.py
+                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sigil.app
+    )
+    set_tests_properties(kfx_internal_runtime PROPERTIES TIMEOUT 30)
+endif()
+
+add_executable(highlighter_teardown_test
+    highlighter_teardown_test.cpp
+)
+target_link_libraries(highlighter_teardown_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(highlighter_teardown_test PRIVATE cxx_std_17)
+add_test(NAME highlighter_teardown COMMAND highlighter_teardown_test)
+set_tests_properties(highlighter_teardown PROPERTIES TIMEOUT 30)
+
+add_test(NAME flow_tab_teardown_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/flow_tab_teardown_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(flow_tab_teardown_contract PROPERTIES TIMEOUT 30)
+
 add_test(NAME book_browser_drag_contract
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/book_browser_drag_contract_test.py
@@ -509,6 +664,13 @@ add_test(NAME preview_devtools_dock_contract
             ${CMAKE_SOURCE_DIR}
 )
 set_tests_properties(preview_devtools_dock_contract PROPERTIES TIMEOUT 30)
+
+add_test(NAME visual_typesetting_aids_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/visual_typesetting_aids_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(visual_typesetting_aids_contract PROPERTIES TIMEOUT 30)
 
 add_test(NAME tab_group_contract
     COMMAND ${Python3_EXECUTABLE}

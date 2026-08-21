@@ -80,6 +80,10 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/FormatterEnhancer.h
     BuiltinPlugins/KfxParagraphNormalizer.cpp
     BuiltinPlugins/KfxParagraphNormalizer.h
+    BuiltinPlugins/KfxImportController.cpp
+    BuiltinPlugins/KfxImportController.h
+    BuiltinPlugins/KfxImportProtocol.cpp
+    BuiltinPlugins/KfxImportProtocol.h
     BuiltinPlugins/VerticalCssTransformer.cpp
     BuiltinPlugins/VerticalCssTransformer.h
     BuiltinPlugins/VerticalLayoutAnalyzer.cpp
@@ -162,6 +166,8 @@ set( RESOURCE_OBJECT_FILES
 set( DIALOG_FILES
     Dialogs/About.cpp
     Dialogs/About.h
+    Dialogs/BaselineGridSettingsDialog.cpp
+    Dialogs/BaselineGridSettingsDialog.h
     Dialogs/AddClips.cpp
     Dialogs/AddClips.h
     Dialogs/AddRoles.cpp
@@ -389,6 +395,8 @@ set( WIDGET_FILES
 set( EXPORTER_FILES
     Exporters/ExportEPUB.cpp
     Exporters/ExportEPUB.h
+    Exporters/ExportMetadataPolicy.cpp
+    Exporters/ExportMetadataPolicy.h
     Exporters/Exporter.h
     Exporters/ExporterFactory.cpp
     Exporters/ExporterFactory.h
@@ -497,6 +505,8 @@ set( MISC_FILES
     Misc/SafeArchiveExtractor.h
     Misc/CheckpointIdentifier.cpp
     Misc/CheckpointIdentifier.h
+    Misc/EpubFileSnapshot.cpp
+    Misc/EpubFileSnapshot.h
     Misc/Utility.cpp
     Misc/UtilityExt.cpp
     Misc/Utility.h
@@ -638,6 +648,12 @@ set( SPCRE_FILES
     )
 
 set( VIEW_EDITOR_FILES
+    ViewEditors/BaselineGridModel.cpp
+    ViewEditors/BaselineGridModel.h
+    ViewEditors/BaselineGridOverlay.cpp
+    ViewEditors/BaselineGridOverlay.h
+    ViewEditors/BaselineGridSettingsStore.cpp
+    ViewEditors/BaselineGridSettingsStore.h
     ViewEditors/CodeViewEditor.cpp
     ViewEditors/CodeViewEditorExt.cpp
     ViewEditors/CodeViewEditor.h
@@ -656,6 +672,14 @@ set( VIEW_EDITOR_FILES
     ViewEditors/ViewEditor.h
     ViewEditors/Viewer.h
     ViewEditors/Overlay.h
+    ViewEditors/PreviewLayoutMetrics.cpp
+    ViewEditors/PreviewLayoutMetrics.h
+    ViewEditors/PreviewMetricsJavascript.cpp
+    ViewEditors/PreviewMetricsJavascript.h
+    ViewEditors/PreviewMetricsProbe.cpp
+    ViewEditors/PreviewMetricsProbe.h
+    ViewEditors/PreviewMetricsRequestTracker.cpp
+    ViewEditors/PreviewMetricsRequestTracker.h
     ViewEditors/XhtmlFormatEditor.cpp
     ViewEditors/XhtmlFormatEditor.h
      )
@@ -694,6 +718,8 @@ set( MAINUI_FILES
     MainUI/ValidationResultsView.cpp
     MainUI/ValidationResultsViewExt.cpp
     MainUI/ValidationResultsView.h
+    MainUI/VisualTypesettingController.cpp
+    MainUI/VisualTypesettingController.h
     )
 
 set( TAB_FILES

@@ -45,6 +45,7 @@
 #include "BookManipulation/XhtmlDoc.h"
 #include "Exporters/EncryptionXmlWriter.h"
 #include "Exporters/ExportEPUB.h"
+#include "Exporters/ExportMetadataPolicy.h"
 #include "Misc/Utility.h"
 #include "Misc/TempFolder.h"
 #include "Misc/FontObfuscation.h"
@@ -92,10 +93,13 @@ void ExportEPUB::WriteBook()
         m_Book->GetOPF()->EnsureUUIDIdentifierPresent();
     }
 
-    if (Utility::GetEnvironmentVar("SIGIL_DISABLE_VERSION_META").isEmpty()) {
+    const bool publication_modified = m_Book->IsModified();
+    if (ExportMetadataPolicy::shouldWriteSigilVersion(publication_modified)) {
         m_Book->GetOPF()->AddSigilVersionMeta();
     }
-    m_Book->GetOPF()->AddModificationDateMeta();
+    if (ExportMetadataPolicy::shouldUpdateModificationDate(publication_modified)) {
+        m_Book->GetOPF()->AddModificationDateMeta();
+    }
     m_Book->SaveAllResourcesToDisk();
     TempFolder tempfolder;
     CreatePublication(tempfolder.GetPath());

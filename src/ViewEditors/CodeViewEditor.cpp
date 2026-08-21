@@ -36,6 +36,7 @@
 #include <QColor>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSignalBlocker>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 #include <QRegularExpressionMatchIterator>
@@ -183,6 +184,20 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
 
 CodeViewEditor::~CodeViewEditor()
 {
+    // QSyntaxHighlighter detaches itself from its QTextDocument during QObject
+    // child destruction. Detaching marks document contents dirty and can emit
+    // contentsChanged(). Code View commonly shares a Resource-owned document,
+    // so prevent that teardown-only notification from re-entering a FlowTab
+    // that is already being destroyed.
+    if (m_Highlighter) {
+        QTextDocument* highlighted_document = m_Highlighter->document();
+        if (highlighted_document) {
+            const QSignalBlocker blocker(highlighted_document);
+            m_Highlighter->setDocument(nullptr);
+        }
+        delete m_Highlighter;
+        m_Highlighter = nullptr;
+    }
     m_ScrollOneLineUp->deleteLater();
     m_ScrollOneLineDown->deleteLater();
 }

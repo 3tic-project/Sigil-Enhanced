@@ -12,6 +12,7 @@ from collections import Counter
 
 
 IMPORT_NAMES = {
+    "beautifulsoup4": "bs4",
     "css-parser": "css_parser",
     "httpx-sse": "httpx_sse",
     "jsonschema-specifications": "jsonschema_specifications",

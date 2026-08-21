@@ -6979,6 +6979,89 @@ Do you want to save your changes?</source>
     </message>
 </context>
 <context>
+    <name>KfxImportController</name>
+    <message>
+        <source>Checking KFX input...</source>
+        <translation>正在检查 KFX 输入...</translation>
+    </message>
+    <message>
+        <source>Reading KFX data...</source>
+        <translation>正在读取 KFX 数据...</translation>
+    </message>
+    <message>
+        <source>Converting KFX to EPUB...</source>
+        <translation>正在将 KFX 转换为 EPUB...</translation>
+    </message>
+    <message>
+        <source>Writing temporary EPUB...</source>
+        <translation>正在写入临时 EPUB...</translation>
+    </message>
+    <message>
+        <source>Validating converted EPUB...</source>
+        <translation>正在验证转换后的 EPUB...</translation>
+    </message>
+    <message>
+        <source>The selected KFX file cannot be read safely.</source>
+        <translation>无法安全读取所选 KFX 文件。</translation>
+    </message>
+    <message>
+        <source>This KFX container uses an unsupported feature.</source>
+        <translation>此 KFX 容器使用了不受支持的功能。</translation>
+    </message>
+    <message>
+        <source>This KFX file is DRM-protected and cannot be converted.</source>
+        <translation>此 KFX 文件受 DRM 保护，无法转换。</translation>
+    </message>
+    <message>
+        <source>There is not enough free disk space to create the EPUB.</source>
+        <translation>可用磁盘空间不足，无法创建 EPUB。</translation>
+    </message>
+    <message>
+        <source>The KFX file is malformed or incomplete.</source>
+        <translation>KFX 文件格式错误或内容不完整。</translation>
+    </message>
+    <message>
+        <source>The converted file did not pass EPUB validation and was discarded.</source>
+        <translation>转换后的文件未通过 EPUB 验证，已丢弃。</translation>
+    </message>
+    <message>
+        <source>The KFX converter returned an invalid response.</source>
+        <translation>KFX 转换器返回了无效响应。</translation>
+    </message>
+    <message>
+        <source>No usable Python 3 interpreter could be found for the KFX converter.</source>
+        <translation>找不到可供 KFX 转换器使用的 Python 3 解释器。</translation>
+    </message>
+    <message>
+        <source>KFX conversion failed.</source>
+        <translation>KFX 转换失败。</translation>
+    </message>
+    <message>
+        <source>The built-in KFX converter is missing from this installation.</source>
+        <translation>此安装中缺少内置 KFX 转换器。</translation>
+    </message>
+    <message>
+        <source>Cannot create a temporary EPUB file: %1</source>
+        <translation>无法创建临时 EPUB 文件：%1</translation>
+    </message>
+    <message>
+        <source>Starting KFX conversion...</source>
+        <translation>正在启动 KFX 转换...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB</source>
+        <translation>将 KFX 转换为 EPUB</translation>
+    </message>
+    <message>
+        <source>The KFX converter could not start: %1</source>
+        <translation>无法启动 KFX 转换器：%1</translation>
+    </message>
+</context>
+<context>
     <name>Landmarks</name>
     <message>
         <location filename="../../Misc/Landmarks.cpp" line="164"/>
@@ -15554,6 +15637,138 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
         <source>%1 produced no changes.</source>
         <translation>%1 未产生任何修改。</translation>
     </message>
+    <message>
+        <source>Convert KFX to EPUB...</source>
+        <translation>将 KFX 转换为 EPUB...</translation>
+    </message>
+    <message>
+        <source>Convert a DRM-free KFX or KFX-ZIP book, then save it or open it in a new window</source>
+        <translation>转换无 DRM 的 KFX 或 KFX-ZIP 书籍，然后另存或在新窗口中打开</translation>
+    </message>
+    <message>
+        <source>The dropped file is a KFX book.</source>
+        <translation>拖入的文件是一本 KFX 书籍。</translation>
+    </message>
+    <message>
+        <source>The dropped files include %1 KFX books.</source>
+        <translation>拖入的文件中包含 %1 本 KFX 书籍。</translation>
+    </message>
+    <message>
+        <source>Only DRM-free KFX files can be converted; DRM-protected files are rejected. Convert the KFX book(s) to EPUB and open each result in a new window?</source>
+        <translation>只能转换无 DRM 的 KFX 文件；受 DRM 保护的文件将被拒绝。是否将 KFX 书籍转换为 EPUB，并在新窗口中分别打开结果？</translation>
+    </message>
+    <message>
+        <source>Also normalize EPUB structure after conversion</source>
+        <translation>同时规范化 EPUB 结构</translation>
+    </message>
+    <message>
+        <source>Repair OPF and link-case issues, then move resources to Sigil's standard folders.</source>
+        <translation>修复 OPF 和链接路径大小写问题，然后将资源移动到 Sigil 标准文件夹。</translation>
+    </message>
+    <message>
+        <source>Convert and Open</source>
+        <translation>转换并打开</translation>
+    </message>
+    <message>
+        <source>Convert and Open All</source>
+        <translation>全部转换并打开</translation>
+    </message>
+    <message>
+        <source>Converted KFX loaded. Use Save to choose an EPUB filename.</source>
+        <translation>已载入由 KFX 转换的内容。请使用“保存”选择 EPUB 文件名。</translation>
+    </message>
+    <message>
+        <source>Cannot preserve the unchanged EPUB.</source>
+        <translation>无法保留未修改的 EPUB。</translation>
+    </message>
+    <message>
+        <source>No changes to save.</source>
+        <translation>没有需要保存的更改。</translation>
+    </message>
+    <message>
+        <source>The source EPUB changed outside Sigil-Enhanced. The file was not overwritten.</source>
+        <translation>源 EPUB 已在 Sigil-Enhanced 外部发生更改，未覆盖该文件。</translation>
+    </message>
+    <message>
+        <source>Select KFX File</source>
+        <translation>选择 KFX 文件</translation>
+    </message>
+    <message>
+        <source>KFX files (*.kfx *.kfx-zip);;All files (*.*)</source>
+        <translation>KFX 文件 (*.kfx *.kfx-zip);;所有文件 (*.*)</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB</source>
+        <translation>将 KFX 转换为 EPUB</translation>
+    </message>
+    <message>
+        <source>How would you like to use the converted EPUB?</source>
+        <translation>要如何使用转换后的 EPUB？</translation>
+    </message>
+    <message>
+        <source>Only DRM-free KFX files can be converted. DRM-protected files are rejected.</source>
+        <translation>只能转换无 DRM 的 KFX 文件。受 DRM 保护的文件将被拒绝。</translation>
+    </message>
+    <message>
+        <source>Save EPUB As...</source>
+        <translation>EPUB 另存为...</translation>
+    </message>
+    <message>
+        <source>Cannot convert KFX</source>
+        <translation>无法转换 KFX</translation>
+    </message>
+    <message>
+        <source>Please select a file whose name ends in .kfx or .kfx-zip.</source>
+        <translation>请选择文件名以 .kfx 或 .kfx-zip 结尾的文件。</translation>
+    </message>
+    <message>
+        <source>Save Converted EPUB As</source>
+        <translation>转换后的 EPUB 另存为</translation>
+    </message>
+    <message>
+        <source>KFX conversion cancelled.</source>
+        <translation>KFX 转换已取消。</translation>
+    </message>
+    <message>
+        <source>KFX Conversion Failed</source>
+        <translation>KFX 转换失败</translation>
+    </message>
+    <message>
+        <source>KFX converted and opened in a new window.</source>
+        <translation>KFX 已转换并在新窗口中打开。</translation>
+    </message>
+    <message>
+        <source>KFX converted, normalized, and opened in a new window.</source>
+        <translation>KFX 已转换、规范化，并在新窗口中打开。</translation>
+    </message>
+    <message>
+        <source>Cannot save converted EPUB: %1</source>
+        <translation>无法保存转换后的 EPUB：%1</translation>
+    </message>
+    <message>
+        <source>KFX converted to %1.</source>
+        <translation>KFX 已转换为 %1。</translation>
+    </message>
+    <message>
+        <source>KFX converted and normalized to %1.</source>
+        <translation>KFX 已转换并规范化为 %1。</translation>
+    </message>
+    <message>
+        <source>KFX Conversion Completed with Warnings</source>
+        <translation>KFX 转换完成，但有警告</translation>
+    </message>
+    <message>
+        <source>The EPUB was saved, but the converter reported %1 warning(s).</source>
+        <translation>EPUB 已保存，但转换器报告了 %1 条警告。</translation>
+    </message>
+    <message>
+        <source>Current layout metrics</source>
+        <translation>当前排版度量</translation>
+    </message>
+    <message>
+        <source>Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding.</source>
+        <translation>预览中的计算值。MBS/MBE 表示块级起始/结束外边距；PBS/PBE 表示块级起始/结束内边距。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -20915,6 +21130,8 @@ Entities can be separated by lines, commas, or spaces.</source>
         <source>Print Preview View</source>
         <translation>打印预览视图</translation>
     </message>
+    <message><source>Enable Grid</source><translation>启用网格</translation></message>
+    <message><source>Disable Grid</source><translation>禁用网格</translation></message>
 </context>
 <context>
     <name>PythonFunctionEditor</name>
@@ -26574,5 +26791,78 @@ Continue using the requested filename?</source>
 <message><source>The book changed while the recipe was running; the staged result was discarded.</source><translation>方案运行期间书籍已切换；暂存结果已丢弃。</translation></message>
 <message><source>This result refers to a resource that is no longer available.</source><translation>此结果引用的资源已不可用。</translation></message>
 <message><source>The resource changed after this report was created; opening the nearest recorded line without highlighting.</source><translation>此报告生成后资源已发生变化；将打开记录位置附近的行，但不高亮。</translation></message>
+</context>
+<context>
+    <name>BaselineGridSettingsDialog</name>
+    <message><source>Show grid</source><translation>显示网格</translation></message>
+    <message><source>Show layout metrics</source><translation>显示排版度量</translation></message>
+    <message><source>Use Current Element</source><translation>使用当前元素</translation></message>
+    <message><source>Horizontal lines</source><translation>横向线</translation></message>
+    <message><source>Vertical lines</source><translation>纵向线</translation></message>
+    <message><source>Grid Settings</source><translation>网格设置</translation></message>
+    <message><source>Pixels (px)</source><translation>像素（px）</translation></message>
+    <message><source>Fixed reference em</source><translation>固定参考 em</translation></message>
+    <message><source>Document Top</source><translation>文档顶部</translation></message>
+    <message><source>Body Content Top</source><translation>正文内容顶部</translation></message>
+    <message><source> px</source><translation> px</translation></message>
+    <message><source>%</source><translation>%</translation></message>
+    <message><source>Unit:</source><translation>单位：</translation></message>
+    <message><source>Horizontal grid:</source><translation>横向网格：</translation></message>
+    <message><source>Horizontal spacing:</source><translation>横向间距：</translation></message>
+    <message><source>Resolved horizontal spacing:</source><translation>换算后的横向间距：</translation></message>
+    <message><source>Vertical grid:</source><translation>纵向网格：</translation></message>
+    <message><source>Vertical spacing:</source><translation>纵向间距：</translation></message>
+    <message><source>Resolved vertical spacing:</source><translation>换算后的纵向间距：</translation></message>
+    <message><source>Reference font size:</source><translation>参考字号：</translation></message>
+    <message><source>Grid origin:</source><translation>网格原点：</translation></message>
+    <message><source>Grid offset:</source><translation>网格偏移：</translation></message>
+    <message><source>Major line every:</source><translation>主网格线间隔：</translation></message>
+    <message><source>Geometry</source><translation>几何</translation></message>
+    <message><source>Minor line color:</source><translation>次网格线颜色：</translation></message>
+    <message><source>Minor line opacity:</source><translation>次网格线不透明度：</translation></message>
+    <message><source>Major line color:</source><translation>主网格线颜色：</translation></message>
+    <message><source>Major line opacity:</source><translation>主网格线不透明度：</translation></message>
+    <message><source>Minimum zoom for minor lines:</source><translation>显示次网格线的最小缩放：</translation></message>
+    <message><source>Appearance</source><translation>外观</translation></message>
+    <message><source>Invalid Grid Settings</source><translation>无效的网格设置</translation></message>
+    <message><source>The resolved horizontal and vertical spacing must each be between 0.25 px and 1000 px.</source><translation>换算后的横向和纵向间距必须分别介于 0.25 px 和 1000 px 之间。</translation></message>
+    <message><source>Choose Minor Grid Color</source><translation>选择次网格线颜色</translation></message>
+    <message><source>Choose Major Grid Color</source><translation>选择主网格线颜色</translation></message>
+    <message><source>%1 CSS px</source><translation>%1 CSS px</translation></message>
+    <message><source>Grid color %1</source><translation>网格颜色 %1</translation></message>
+    <message><source>Use the measured current element font size (%1 px).</source><translation>使用测得的当前元素字号（%1 px）。</translation></message>
+    <message><source>The current element font size is unavailable.</source><translation>当前元素字号不可用。</translation></message>
+</context>
+<context>
+    <name>VisualTypesettingController</name>
+    <message><source>Visual Typesetting Aids</source><translation>排版视觉辅助</translation></message>
+    <message><source>Show Grid</source><translation>显示网格</translation></message>
+    <message><source>Show Layout Metrics</source><translation>显示排版度量</translation></message>
+    <message><source>Use Current Element Font Size as Grid Reference</source><translation>以当前元素字号作为网格参考</translation></message>
+    <message><source>Grid Settings…</source><translation>网格设置…</translation></message>
+    <message><source>Clean Preview</source><translation>纯净预览</translation></message>
+    <message><source>Show a non-exported rhythm grid anchored to the Preview document.</source><translation>显示锚定到预览文档且不会导出的节奏网格。</translation></message>
+    <message><source>Show computed typography and spacing for the current element.</source><translation>显示当前元素计算后的字号、行高和间距。</translation></message>
+    <message><source>Temporarily hide all visual typesetting aids.</source><translation>临时隐藏全部排版视觉辅助。</translation></message>
+    <message><source>Measure the current element once and use its font size as the fixed em reference.</source><translation>测量一次当前元素，并将其字号用作固定的 em 参考值。</translation></message>
+    <message><source>No current Preview element is available for grid calibration.</source><translation>当前没有可用于校准网格的预览元素。</translation></message>
+    <message><source>Grid reference font set to %1 px.</source><translation>网格参考字号已设为 %1 px。</translation></message>
+    <message><source>The current element&apos;s font size could not be measured.</source><translation>无法测量当前元素的字号。</translation></message>
+    <message><source>The selected element&apos;s font size could not be measured.</source><translation>无法测量所选元素的字号。</translation></message>
+    <message><source>Layout metrics are unavailable for the selected element.</source><translation>无法取得所选元素的排版度量。</translation></message>
+    <message><source>The measured font size %1 px cannot be used with the current grid settings.</source><translation>测得的字号 %1 px 无法用于当前网格设置。</translation></message>
+    <message><source>Horizontal Grid</source><translation>水平参考网格</translation></message>
+    <message><source>Grid</source><translation>网格</translation></message>
+    <message><source>%1 %2px (%3em @ %4px)</source><translation>%1 %2px（%3em @ %4px）</translation></message>
+    <message><source>%1 %2px</source><translation>%1 %2px</translation></message>
+    <message><source>Font %1px</source><translation>字号 %1px</translation></message>
+    <message><source>LH normal</source><translation>行高 normal</translation></message>
+    <message><source>LH %1</source><translation>行高 %1</translation></message>
+    <message><source>MBS %1</source><translation>块前距 %1</translation></message>
+    <message><source>MBE %1</source><translation>块后距 %1</translation></message>
+    <message><source>PBS %1</source><translation>块前内距 %1</translation></message>
+    <message><source>PBE %1</source><translation>块后内距 %1</translation></message>
+    <message><source>WM %1</source><translation>书写模式 %1</translation></message>
+    <message><source>Layout metrics unavailable</source><translation>暂无排版度量</translation></message>
 </context>
 </TS>

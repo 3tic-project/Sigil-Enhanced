@@ -11,6 +11,24 @@
 - 复用当前 C++ 资源模型、OPF 解析器、FolderKeeper、UniversalUpdates，而不是照搬外部脚本。
 - 将“分析/计划/执行/报告”拆开，避免大范围自动修改时缺少可见结果。
 
+## KFX Import & Convert
+
+KFX 导入采用“原生 Qt 编排层 + 独立 Python worker”的内置插件边界：
+
+- `KfxImportController` 定位随包 Python、以 `-I -S` 启动只加载应用内
+  `python3lib` 的隔离进程、显示阶段/进度并处理取消；macOS Debug 构建会在
+  应用包的专用开发运行目录链接 CMake 选定的同 ABI Python，避免回退到用户配置；
+- `KfxImportProtocol` 解析版本化 JSON Lines 事件，并提供 `.kfx`/`.kfx-zip` 统一分类；
+- `sigil_kfx_import.worker` 对输入做签名与归档安全预检，调用命名隔离的转换核心，再执行 OCF/OPF/spine/资源输出门禁；
+- 转换结果先写入私有临时 EPUB。另存为使用原子字节复制交付；新窗口模式将其作为未绑定临时路径的未保存文档载入；
+- 菜单和拖放提示提供默认关闭的“同时规范化 EPUB 结构”选项；勾选后在交付前
+  复用 `EpubStructureNormalizer` 与标准目录整理，另存为模式通过隔离的临时
+  `MainWindow`/Book 执行，避免污染当前书籍；
+- DRM 内容只识别和拒绝，不加载 DeDRM、Calibre 或 Kindle 凭据；
+- vendored KFX 核心和依赖的来源、版本及许可证见 `src/Resource_Files/python3lib/sigil_kfx_import/THIRD_PARTY_NOTICES.md`。
+
+用户入口、保存保真语义、验收标准和测试命令见 `docs/KfxImport.md`。
+
 ## 当前首个内置插件: EPUB Structure Normalizer
 
 目标是吸收“重构 epub 为规范格式”插件的思路，将 EPUB 目录结构、OPF Manifest、资源链接规范化能力内置到 Sigil-Enhanced。
@@ -48,7 +66,8 @@
 
 1. 显式执行
    - 默认不在打开 EPUB 时静默重构目录。
-   - 先通过 `Enhancement` 菜单或现有 `Normalized OPF` 入口执行。
+   - 通过 `Enhancement` 菜单、现有 `Normalized OPF` 入口，或 KFX 转换提示中
+     默认关闭的复选框显式执行。
    - 后续可增加打开时检测提示，但不自动修改。
 
 2. 分阶段实现

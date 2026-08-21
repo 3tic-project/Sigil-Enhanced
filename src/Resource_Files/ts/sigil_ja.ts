@@ -6977,6 +6977,89 @@ Do you want to save your changes?</source>
     </message>
 </context>
 <context>
+    <name>KfxImportController</name>
+    <message>
+        <source>Checking KFX input...</source>
+        <translation>KFX 入力を確認しています...</translation>
+    </message>
+    <message>
+        <source>Reading KFX data...</source>
+        <translation>KFX データを読み込んでいます...</translation>
+    </message>
+    <message>
+        <source>Converting KFX to EPUB...</source>
+        <translation>KFX を EPUB に変換しています...</translation>
+    </message>
+    <message>
+        <source>Writing temporary EPUB...</source>
+        <translation>一時 EPUB を書き込んでいます...</translation>
+    </message>
+    <message>
+        <source>Validating converted EPUB...</source>
+        <translation>変換後の EPUB を検証しています...</translation>
+    </message>
+    <message>
+        <source>The selected KFX file cannot be read safely.</source>
+        <translation>選択した KFX ファイルを安全に読み込めません。</translation>
+    </message>
+    <message>
+        <source>This KFX container uses an unsupported feature.</source>
+        <translation>この KFX コンテナでは未対応の機能が使用されています。</translation>
+    </message>
+    <message>
+        <source>This KFX file is DRM-protected and cannot be converted.</source>
+        <translation>この KFX ファイルは DRM で保護されているため変換できません。</translation>
+    </message>
+    <message>
+        <source>There is not enough free disk space to create the EPUB.</source>
+        <translation>EPUB を作成するための空きディスク容量が不足しています。</translation>
+    </message>
+    <message>
+        <source>The KFX file is malformed or incomplete.</source>
+        <translation>KFX ファイルが不正か不完全です。</translation>
+    </message>
+    <message>
+        <source>The converted file did not pass EPUB validation and was discarded.</source>
+        <translation>変換後のファイルが EPUB 検証に合格しなかったため破棄しました。</translation>
+    </message>
+    <message>
+        <source>The KFX converter returned an invalid response.</source>
+        <translation>KFX 変換器から無効な応答が返されました。</translation>
+    </message>
+    <message>
+        <source>No usable Python 3 interpreter could be found for the KFX converter.</source>
+        <translation>KFX 変換器で使用できる Python 3 インタープリターが見つかりません。</translation>
+    </message>
+    <message>
+        <source>KFX conversion failed.</source>
+        <translation>KFX の変換に失敗しました。</translation>
+    </message>
+    <message>
+        <source>The built-in KFX converter is missing from this installation.</source>
+        <translation>このインストールには組み込み KFX 変換器が含まれていません。</translation>
+    </message>
+    <message>
+        <source>Cannot create a temporary EPUB file: %1</source>
+        <translation>一時 EPUB ファイルを作成できません：%1</translation>
+    </message>
+    <message>
+        <source>Starting KFX conversion...</source>
+        <translation>KFX 変換を開始しています...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB</source>
+        <translation>KFX を EPUB に変換</translation>
+    </message>
+    <message>
+        <source>The KFX converter could not start: %1</source>
+        <translation>KFX 変換器を起動できません：%1</translation>
+    </message>
+</context>
+<context>
     <name>Landmarks</name>
     <message>
         <location filename="../../Misc/Landmarks.cpp" line="164"/>
@@ -15551,6 +15634,138 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <source>%1 produced no changes.</source>
         <translation>%1 は変更を生成しませんでした。</translation>
     </message>
+    <message>
+        <source>Convert KFX to EPUB...</source>
+        <translation>KFX を EPUB に変換...</translation>
+    </message>
+    <message>
+        <source>Convert a DRM-free KFX or KFX-ZIP book, then save it or open it in a new window</source>
+        <translation>DRM なしの KFX または KFX-ZIP 書籍を変換し、保存するか新しいウィンドウで開きます</translation>
+    </message>
+    <message>
+        <source>The dropped file is a KFX book.</source>
+        <translation>ドロップされたファイルは KFX 書籍です。</translation>
+    </message>
+    <message>
+        <source>The dropped files include %1 KFX books.</source>
+        <translation>ドロップされたファイルには %1 冊の KFX 書籍が含まれています。</translation>
+    </message>
+    <message>
+        <source>Only DRM-free KFX files can be converted; DRM-protected files are rejected. Convert the KFX book(s) to EPUB and open each result in a new window?</source>
+        <translation>DRM なしの KFX ファイルのみ変換できます。DRM で保護されたファイルは拒否されます。KFX 書籍を EPUB に変換し、それぞれ新しいウィンドウで開きますか？</translation>
+    </message>
+    <message>
+        <source>Also normalize EPUB structure after conversion</source>
+        <translation>変換後に EPUB 構造も正規化する</translation>
+    </message>
+    <message>
+        <source>Repair OPF and link-case issues, then move resources to Sigil's standard folders.</source>
+        <translation>OPF とリンクパスの大文字小文字の問題を修復し、リソースを Sigil の標準フォルダーへ移動します。</translation>
+    </message>
+    <message>
+        <source>Convert and Open</source>
+        <translation>変換して開く</translation>
+    </message>
+    <message>
+        <source>Convert and Open All</source>
+        <translation>すべて変換して開く</translation>
+    </message>
+    <message>
+        <source>Converted KFX loaded. Use Save to choose an EPUB filename.</source>
+        <translation>KFX から変換した内容を読み込みました。「保存」で EPUB のファイル名を選択してください。</translation>
+    </message>
+    <message>
+        <source>Cannot preserve the unchanged EPUB.</source>
+        <translation>未変更の EPUB を保持できません。</translation>
+    </message>
+    <message>
+        <source>No changes to save.</source>
+        <translation>保存する変更はありません。</translation>
+    </message>
+    <message>
+        <source>The source EPUB changed outside Sigil-Enhanced. The file was not overwritten.</source>
+        <translation>元の EPUB が Sigil-Enhanced の外部で変更されたため、ファイルを上書きしませんでした。</translation>
+    </message>
+    <message>
+        <source>Select KFX File</source>
+        <translation>KFX ファイルを選択</translation>
+    </message>
+    <message>
+        <source>KFX files (*.kfx *.kfx-zip);;All files (*.*)</source>
+        <translation>KFX ファイル (*.kfx *.kfx-zip);;すべてのファイル (*.*)</translation>
+    </message>
+    <message>
+        <source>Convert KFX to EPUB</source>
+        <translation>KFX を EPUB に変換</translation>
+    </message>
+    <message>
+        <source>How would you like to use the converted EPUB?</source>
+        <translation>変換後の EPUB をどのように使用しますか？</translation>
+    </message>
+    <message>
+        <source>Only DRM-free KFX files can be converted. DRM-protected files are rejected.</source>
+        <translation>DRM なしの KFX ファイルのみ変換できます。DRM で保護されたファイルは拒否されます。</translation>
+    </message>
+    <message>
+        <source>Save EPUB As...</source>
+        <translation>EPUB に名前を付けて保存...</translation>
+    </message>
+    <message>
+        <source>Cannot convert KFX</source>
+        <translation>KFX を変換できません</translation>
+    </message>
+    <message>
+        <source>Please select a file whose name ends in .kfx or .kfx-zip.</source>
+        <translation>ファイル名が .kfx または .kfx-zip で終わるファイルを選択してください。</translation>
+    </message>
+    <message>
+        <source>Save Converted EPUB As</source>
+        <translation>変換後の EPUB に名前を付けて保存</translation>
+    </message>
+    <message>
+        <source>KFX conversion cancelled.</source>
+        <translation>KFX の変換をキャンセルしました。</translation>
+    </message>
+    <message>
+        <source>KFX Conversion Failed</source>
+        <translation>KFX の変換に失敗しました</translation>
+    </message>
+    <message>
+        <source>KFX converted and opened in a new window.</source>
+        <translation>KFX を変換し、新しいウィンドウで開きました。</translation>
+    </message>
+    <message>
+        <source>KFX converted, normalized, and opened in a new window.</source>
+        <translation>KFX を変換・正規化し、新しいウィンドウで開きました。</translation>
+    </message>
+    <message>
+        <source>Cannot save converted EPUB: %1</source>
+        <translation>変換後の EPUB を保存できません：%1</translation>
+    </message>
+    <message>
+        <source>KFX converted to %1.</source>
+        <translation>KFX を %1 に変換しました。</translation>
+    </message>
+    <message>
+        <source>KFX converted and normalized to %1.</source>
+        <translation>KFX を変換して正規化し、%1 に保存しました。</translation>
+    </message>
+    <message>
+        <source>KFX Conversion Completed with Warnings</source>
+        <translation>KFX の変換は警告付きで完了しました</translation>
+    </message>
+    <message>
+        <source>The EPUB was saved, but the converter reported %1 warning(s).</source>
+        <translation>EPUB は保存されましたが、変換器から %1 件の警告が報告されました。</translation>
+    </message>
+    <message>
+        <source>Current layout metrics</source>
+        <translation>現在のレイアウト計測値</translation>
+    </message>
+    <message>
+        <source>Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding.</source>
+        <translation>プレビューの計算値です。MBS/MBE はブロック方向の前後マージン、PBS/PBE は前後パディングを示します。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -20913,6 +21128,8 @@ Entities can be separated by lines, commas, or spaces.</source>
         <source>Print Preview View</source>
         <translation>印刷プレビューの表示</translation>
     </message>
+    <message><source>Enable Grid</source><translation>グリッドを有効にする</translation></message>
+    <message><source>Disable Grid</source><translation>グリッドを無効にする</translation></message>
 </context>
 <context>
     <name>PythonFunctionEditor</name>
@@ -26572,5 +26789,78 @@ Continue using the requested filename?</source>
 <message><source>The book changed while the recipe was running; the staged result was discarded.</source><translation>レシピの実行中にブックが切り替わったため、ステージ済み結果を破棄しました。</translation></message>
 <message><source>This result refers to a resource that is no longer available.</source><translation>この結果が参照するリソースは利用できなくなりました。</translation></message>
 <message><source>The resource changed after this report was created; opening the nearest recorded line without highlighting.</source><translation>このレポートの作成後にリソースが変更されました。強調表示せず、記録された最寄りの行を開きます。</translation></message>
+</context>
+<context>
+    <name>BaselineGridSettingsDialog</name>
+    <message><source>Show grid</source><translation>グリッドを表示</translation></message>
+    <message><source>Show layout metrics</source><translation>レイアウト計測値を表示</translation></message>
+    <message><source>Use Current Element</source><translation>現在の要素を使用</translation></message>
+    <message><source>Horizontal lines</source><translation>水平線</translation></message>
+    <message><source>Vertical lines</source><translation>垂直線</translation></message>
+    <message><source>Grid Settings</source><translation>グリッド設定</translation></message>
+    <message><source>Pixels (px)</source><translation>ピクセル（px）</translation></message>
+    <message><source>Fixed reference em</source><translation>固定参照 em</translation></message>
+    <message><source>Document Top</source><translation>文書の先頭</translation></message>
+    <message><source>Body Content Top</source><translation>本文コンテンツの先頭</translation></message>
+    <message><source> px</source><translation> px</translation></message>
+    <message><source>%</source><translation>%</translation></message>
+    <message><source>Unit:</source><translation>単位：</translation></message>
+    <message><source>Horizontal grid:</source><translation>水平グリッド：</translation></message>
+    <message><source>Horizontal spacing:</source><translation>水平間隔：</translation></message>
+    <message><source>Resolved horizontal spacing:</source><translation>換算後の水平間隔：</translation></message>
+    <message><source>Vertical grid:</source><translation>垂直グリッド：</translation></message>
+    <message><source>Vertical spacing:</source><translation>垂直間隔：</translation></message>
+    <message><source>Resolved vertical spacing:</source><translation>換算後の垂直間隔：</translation></message>
+    <message><source>Reference font size:</source><translation>参照文字サイズ：</translation></message>
+    <message><source>Grid origin:</source><translation>グリッド原点：</translation></message>
+    <message><source>Grid offset:</source><translation>グリッドオフセット：</translation></message>
+    <message><source>Major line every:</source><translation>主線の間隔：</translation></message>
+    <message><source>Geometry</source><translation>ジオメトリ</translation></message>
+    <message><source>Minor line color:</source><translation>補助線の色：</translation></message>
+    <message><source>Minor line opacity:</source><translation>補助線の不透明度：</translation></message>
+    <message><source>Major line color:</source><translation>主線の色：</translation></message>
+    <message><source>Major line opacity:</source><translation>主線の不透明度：</translation></message>
+    <message><source>Minimum zoom for minor lines:</source><translation>補助線を表示する最小ズーム：</translation></message>
+    <message><source>Appearance</source><translation>外観</translation></message>
+    <message><source>Invalid Grid Settings</source><translation>無効なグリッド設定</translation></message>
+    <message><source>The resolved horizontal and vertical spacing must each be between 0.25 px and 1000 px.</source><translation>換算後の水平間隔と垂直間隔は、それぞれ 0.25 px から 1000 px の範囲にしてください。</translation></message>
+    <message><source>Choose Minor Grid Color</source><translation>補助線の色を選択</translation></message>
+    <message><source>Choose Major Grid Color</source><translation>主線の色を選択</translation></message>
+    <message><source>%1 CSS px</source><translation>%1 CSS px</translation></message>
+    <message><source>Grid color %1</source><translation>グリッドの色 %1</translation></message>
+    <message><source>Use the measured current element font size (%1 px).</source><translation>計測した現在の要素の文字サイズ（%1 px）を使用します。</translation></message>
+    <message><source>The current element font size is unavailable.</source><translation>現在の要素の文字サイズを取得できません。</translation></message>
+</context>
+<context>
+    <name>VisualTypesettingController</name>
+    <message><source>Visual Typesetting Aids</source><translation>組版視覚補助</translation></message>
+    <message><source>Show Grid</source><translation>グリッドを表示</translation></message>
+    <message><source>Show Layout Metrics</source><translation>レイアウト計測値を表示</translation></message>
+    <message><source>Use Current Element Font Size as Grid Reference</source><translation>現在の要素の文字サイズをグリッド基準に使用</translation></message>
+    <message><source>Grid Settings…</source><translation>グリッド設定…</translation></message>
+    <message><source>Clean Preview</source><translation>クリーンプレビュー</translation></message>
+    <message><source>Show a non-exported rhythm grid anchored to the Preview document.</source><translation>プレビュー文書に固定され、書き出されないリズムグリッドを表示します。</translation></message>
+    <message><source>Show computed typography and spacing for the current element.</source><translation>現在の要素について計算済みの文字組みと間隔を表示します。</translation></message>
+    <message><source>Temporarily hide all visual typesetting aids.</source><translation>すべての組版視覚補助を一時的に隠します。</translation></message>
+    <message><source>Measure the current element once and use its font size as the fixed em reference.</source><translation>現在の要素を一度計測し、その文字サイズを固定 em の基準値として使用します。</translation></message>
+    <message><source>No current Preview element is available for grid calibration.</source><translation>グリッドの調整に使用できる現在のプレビュー要素がありません。</translation></message>
+    <message><source>Grid reference font set to %1 px.</source><translation>グリッドの参照文字サイズを %1 px に設定しました。</translation></message>
+    <message><source>The current element&apos;s font size could not be measured.</source><translation>現在の要素の文字サイズを計測できませんでした。</translation></message>
+    <message><source>The selected element&apos;s font size could not be measured.</source><translation>選択した要素の文字サイズを計測できませんでした。</translation></message>
+    <message><source>Layout metrics are unavailable for the selected element.</source><translation>選択した要素のレイアウト計測値を取得できません。</translation></message>
+    <message><source>The measured font size %1 px cannot be used with the current grid settings.</source><translation>計測した文字サイズ %1 px は現在のグリッド設定では使用できません。</translation></message>
+    <message><source>Horizontal Grid</source><translation>水平参照グリッド</translation></message>
+    <message><source>Grid</source><translation>グリッド</translation></message>
+    <message><source>%1 %2px (%3em @ %4px)</source><translation>%1 %2px（%3em @ %4px）</translation></message>
+    <message><source>%1 %2px</source><translation>%1 %2px</translation></message>
+    <message><source>Font %1px</source><translation>文字サイズ %1px</translation></message>
+    <message><source>LH normal</source><translation>行の高さ normal</translation></message>
+    <message><source>LH %1</source><translation>行の高さ %1</translation></message>
+    <message><source>MBS %1</source><translation>ブロック前マージン %1</translation></message>
+    <message><source>MBE %1</source><translation>ブロック後マージン %1</translation></message>
+    <message><source>PBS %1</source><translation>ブロック前パディング %1</translation></message>
+    <message><source>PBE %1</source><translation>ブロック後パディング %1</translation></message>
+    <message><source>WM %1</source><translation>書字方向 %1</translation></message>
+    <message><source>Layout metrics unavailable</source><translation>レイアウト計測値を取得できません</translation></message>
 </context>
 </TS>
