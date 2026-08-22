@@ -48,9 +48,20 @@ bool KfxImportProtocol::parseLine(const QByteArray& line, KfxWorkerEvent* event,
         return false;
     }
     *event = KfxWorkerEvent();
+    const QByteArray trimmed = line.trimmed();
+    if (trimmed.isEmpty()) {
+        event->type = KfxWorkerEvent::Ignored;
+        return true;
+    }
+    if (!trimmed.startsWith('{')) {
+        event->type = KfxWorkerEvent::Ignored;
+        event->message = QString::fromUtf8(trimmed);
+        return true;
+    }
 
     QJsonParseError parse_error;
-    const QJsonDocument document = QJsonDocument::fromJson(line.trimmed(), &parse_error);
+    const QByteArray utf8 = QString::fromUtf8(trimmed).toUtf8();
+    const QJsonDocument document = QJsonDocument::fromJson(utf8, &parse_error);
     if (parse_error.error != QJsonParseError::NoError || !document.isObject()) {
         if (error) *error = QStringLiteral("Invalid JSON event: %1").arg(parse_error.errorString());
         return false;

@@ -132,6 +132,17 @@ require(
     cancel_guard < cancel_assignment,
     "programmatic progress-dialog close after worker completion must not report cancellation",
 )
+protocol = (repo / "src/BuiltinPlugins/KfxImportProtocol.cpp").read_text(encoding="utf-8")
+require(
+    "KfxWorkerEvent::Ignored" in (repo / "src/BuiltinPlugins/KfxImportController.cpp").read_text(encoding="utf-8")
+    and "trimmed.startsWith('{')" in protocol,
+    "KFX protocol must ignore converter log lines that are not JSON events",
+)
+require(
+    "PROTOCOL_STDOUT" in (repo / "src/Resource_Files/python3lib/sigil_kfx_import/worker.py").read_text(encoding="utf-8")
+    and "ensure_ascii=True" in (repo / "src/Resource_Files/python3lib/sigil_kfx_import/worker.py").read_text(encoding="utf-8"),
+    "KFX worker protocol JSON must stay ASCII on a dedicated stdout stream",
+)
 
 bootstrap = (repo / "src/Resource_Files/python3lib/sigil_kfx_import/bootstrap.py").read_text(
     encoding="utf-8"

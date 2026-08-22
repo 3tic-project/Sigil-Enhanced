@@ -53,5 +53,20 @@ int main()
                 &event, &error),
             "unsupported protocol versions must be rejected");
     require(!error.isEmpty(), "protocol rejection must include a diagnostic");
+
+    require(KfxImportProtocol::parseLine(
+                QByteArrayLiteral("Missing font family names: JA"),
+                &event, &error),
+            "converter log lines must not be treated as protocol failures");
+    require(event.type == KfxWorkerEvent::Ignored
+                && event.message.contains(QStringLiteral("Missing font family names")),
+            "stray converter logs must be preserved as ignored diagnostics");
+
+    QByteArray dirty_json = QByteArrayLiteral(
+        "{\"protocol\":1,\"event\":\"warning\",\"code\":\"KFX-W-CONVERTER\",\"message\":\"JA\"}");
+    dirty_json[dirty_json.lastIndexOf('J')] = static_cast<char>('\xff');
+    require(KfxImportProtocol::parseLine(dirty_json, &event, &error),
+            "invalid UTF-8 inside a JSON event must be replaced and parsed");
+    require(event.type == KfxWorkerEvent::Warning, "sanitized JSON warning must parse");
     return 0;
 }

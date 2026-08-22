@@ -26,6 +26,7 @@ struct KfxWorkerEvent
 {
     enum Type {
         Invalid,
+        Ignored,
         Started,
         Phase,
         Progress,

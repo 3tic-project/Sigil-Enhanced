@@ -30,12 +30,43 @@ MAX_ARCHIVE_ENTRIES = 100_000
 MAX_ARCHIVE_UNCOMPRESSED_BYTES = 4 * 1024 * 1024 * 1024
 MAX_COMPRESSION_RATIO = 1_000
 
+# JSON Lines protocol must never share a stream with converter prints/logs.
+PROTOCOL_STDOUT = sys.__stdout__
+
+
+def _safe_text(value) -> str:
+    return str(value).encode("utf-8", "replace").decode("utf-8")
+
+
+def _json_safe(value):
+    if isinstance(value, str):
+        return _safe_text(value)
+    if isinstance(value, dict):
+        return {_safe_text(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
+
 
 def emit(event: str, **payload) -> None:
     record = {"protocol": PROTOCOL_VERSION, "event": event}
-    record.update(payload)
-    sys.stdout.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
-    sys.stdout.flush()
+    record.update(_json_safe(payload))
+    PROTOCOL_STDOUT.write(json.dumps(record, ensure_ascii=True, separators=(",", ":")) + "\n")
+    PROTOCOL_STDOUT.flush()
+
+
+def configure_worker_logging() -> None:
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(logging.WARNING)
+    kfx_logger = logging.getLogger("sigil-kfx")
+    kfx_logger.handlers.clear()
+    kfx_logger.addHandler(handler)
+    kfx_logger.setLevel(logging.INFO)
+    kfx_logger.propagate = False
 
 
 def _safe_archive_name(name: str) -> bool:
@@ -203,7 +234,7 @@ class ProtocolLogger:
         logging.getLogger("sigil-kfx").info(message, *args, **kwargs)
 
     def _warning(self, message) -> None:
-        rendered = str(message)
+        rendered = _safe_text(message)
         if rendered in self._seen:
             return
         self._seen.add(rendered)
@@ -245,6 +276,7 @@ def _error_from_exception(exc: Exception) -> WorkerError:
 
 
 def convert(source: Path, output: Path, job_id: str) -> dict:
+    configure_worker_logging()
     emit("started", jobId=job_id)
     emit("phase", name="preflight")
     input_kind = preflight_input(source)
@@ -272,7 +304,12 @@ def convert(source: Path, output: Path, job_id: str) -> dict:
         kfxlib.set_logger(logger)
         book = kfxlib.YJ_Book(str(source))
         emit("phase", name="convert")
-        epub_data = book.convert_to_epub(progress_fn=progress)
+        saved_stdout = sys.stdout
+        sys.stdout = sys.stderr
+        try:
+            epub_data = book.convert_to_epub(progress_fn=progress)
+        finally:
+            sys.stdout = saved_stdout
         if not epub_data:
             raise WorkerError("KFX-E-CONVERT", "The converter returned an empty EPUB.")
 

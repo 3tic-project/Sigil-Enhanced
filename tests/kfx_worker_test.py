@@ -1,4 +1,3 @@
-import contextlib
 import io
 import json
 import os
@@ -111,11 +110,32 @@ class KfxWorkerTest(unittest.TestCase):
 
     def test_protocol_events_are_single_line_json(self):
         stream = io.StringIO()
-        with contextlib.redirect_stdout(stream):
+        original = worker.PROTOCOL_STDOUT
+        worker.PROTOCOL_STDOUT = stream
+        try:
             worker.emit("phase", name="parse")
+            worker.emit("warning", code="KFX-W-CONVERTER", message="Missing font family names: JA")
+        finally:
+            worker.PROTOCOL_STDOUT = original
         lines = stream.getvalue().splitlines()
-        self.assertEqual(len(lines), 1)
+        self.assertEqual(len(lines), 2)
         self.assertEqual(json.loads(lines[0]), {"protocol": 1, "event": "phase", "name": "parse"})
+        warning = json.loads(lines[1])
+        self.assertEqual(warning["event"], "warning")
+        self.assertEqual(warning["message"], "Missing font family names: JA")
+        self.assertTrue(lines[1].isascii())
+
+    def test_protocol_json_survives_non_utf8_warning_text(self):
+        stream = io.StringIO()
+        original = worker.PROTOCOL_STDOUT
+        worker.PROTOCOL_STDOUT = stream
+        try:
+            worker.emit("warning", code="KFX-W-CONVERTER", message="JA\udcff")
+        finally:
+            worker.PROTOCOL_STDOUT = original
+        payload = json.loads(stream.getvalue())
+        self.assertEqual(payload["event"], "warning")
+        self.assertIn("JA", payload["message"])
 
 
 if __name__ == "__main__":

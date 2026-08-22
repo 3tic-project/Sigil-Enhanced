@@ -223,6 +223,12 @@ KfxImportController::Result KfxImportController::convert(const QString& sourcePa
             }
             return;
         }
+        if (event.type == KfxWorkerEvent::Ignored) {
+            if (!event.message.isEmpty() && result.diagnosticDetails.size() < 32768) {
+                result.diagnosticDetails += event.message + QLatin1Char('\n');
+            }
+            return;
+        }
         switch (event.type) {
         case KfxWorkerEvent::Phase:
             progress.setLabelText(phaseText(event.name));
@@ -321,8 +327,11 @@ KfxImportController::Result KfxImportController::convert(const QString& sourcePa
         result.outputPath.clear();
         return result;
     }
-    if (protocol_error || !received_result) {
+    if (!received_result) {
         result.succeeded = false;
+        result.errorCode = QStringLiteral("KFX-E-PROTOCOL");
+        result.errorMessage = userFacingError(result.errorCode, QString());
+    } else if (protocol_error && !result.succeeded) {
         result.errorCode = QStringLiteral("KFX-E-PROTOCOL");
         result.errorMessage = userFacingError(result.errorCode, QString());
     }
