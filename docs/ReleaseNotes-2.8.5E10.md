@@ -14,7 +14,7 @@
 - 转完可以另存为 EPUB，或在新窗口打开继续改。
 - 想顺便整理目录结构，转换时勾选即可，默认不勾。
 
-详见 [KFX 转 EPUB](KfxImport.md)。
+转换核心来自 [kfx2epub](https://github.com/2778995958/kfx2epub)，感谢原作者。用法见 [KFX 转 EPUB](KfxImport.md)。
 
 ### 预览里看网格
 

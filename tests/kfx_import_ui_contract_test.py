@@ -132,3 +132,13 @@ require(
     cancel_guard < cancel_assignment,
     "programmatic progress-dialog close after worker completion must not report cancellation",
 )
+
+kfx_guide = (repo / "docs/KfxImport.md").read_text(encoding="utf-8")
+require(
+    "https://github.com/2778995958/kfx2epub" in kfx_guide,
+    "KFX user guide must credit kfx2epub",
+)
+require(
+    not kfx_guide.lstrip().startswith("# ") or "PRD" not in kfx_guide.splitlines()[0],
+    "KFX user guide must not be a PRD",
+)

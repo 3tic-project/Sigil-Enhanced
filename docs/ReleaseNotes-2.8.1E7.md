@@ -27,9 +27,6 @@
 - 普通、Plus、Python 函数替换和批量暂存写回均保留 Code View 撤销历史；每个成功资源写入对应一个撤销步骤。
 - 查找替换进度更新不再接收递归按钮点击或关闭主窗口输入，修复跨文件 Plus Replace All 期间可能发生的崩溃。
 
-实现边界与审计记录见
-[搜索模板批处理优化审计](SearchTemplateBatchOptimizationAuditDesign.md)。
-
 ### 段落规范化工具
 
 - 新增 BookLive/EBPAJ Div 段落分析与规范化，将安全识别的 `div` 伪段落原位转换为语义化 `p`。

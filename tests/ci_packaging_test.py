@@ -177,9 +177,7 @@ class CiPackagingTest(unittest.TestCase):
         self.assertIn(
             "docs/ReleaseNotes-{0}.md".format(release_version), readme
         )
-        self.assertIn(
-            "## 相对 {0} 的开发中变化".format(release_version), readme
-        )
+        self.assertNotIn("的开发中变化", readme)
         self.assertIn("QQ 群：`796723288`", readme)
         self.assertIn("入群问题答案：`3tic`", readme)
 

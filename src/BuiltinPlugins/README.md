@@ -27,7 +27,8 @@ KFX 导入采用“原生 Qt 编排层 + 独立 Python worker”的内置插件�
 - DRM 内容只识别和拒绝，不加载 DeDRM、Calibre 或 Kindle 凭据；
 - vendored KFX 核心和依赖的来源、版本及许可证见 `src/Resource_Files/python3lib/sigil_kfx_import/THIRD_PARTY_NOTICES.md`。
 
-用户入口、保存保真语义、验收标准和测试命令见 `docs/KfxImport.md`。
+用户入口见 `docs/KfxImport.md`。来源与许可证见
+`src/Resource_Files/python3lib/sigil_kfx_import/THIRD_PARTY_NOTICES.md`。
 
 ## 当前首个内置插件: EPUB Structure Normalizer
 

@@ -6,6 +6,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 * Sigil：感谢 Sigil 项目的原作者、维护者和所有贡献者提供长期维护的开源 EPUB 编辑器基础。
 * sigil-modified：感谢原 sigil-modified 作者 ichigo250 对批量操作效率、代码编辑体验、插件管理和 EPUB 检查等功能所做的改进。
+* [kfx2epub](https://github.com/2778995958/kfx2epub)：KFX 转 EPUB 的转换核心来自该项目。
 
 关于本项目的讨论、建议：
 
@@ -16,15 +17,11 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 > [2.8.5E10 更新说明](docs/ReleaseNotes-2.8.5E10.md)；当前 `master` 在此基础上继续开发，
 > 完整历史见 [ChangeLog.txt](ChangeLog.txt)。
 
-## 相对 2.8.5E10 的开发中变化
-
-暂无。
-
 ## 增强功能
 
 ### 导入与预览
 
-- **[KFX 转 EPUB](docs/KfxImport.md)**：在 `Enhancement` 菜单转换无 DRM 的 `.kfx`/`.kfx-zip`，可另存为 EPUB 或作为未保存文档在新窗口打开；拖入 KFX 时会先提示，转换在独立进程中执行并经过 EPUB 结构门禁。
+- **[KFX 转 EPUB](docs/KfxImport.md)**：在「增强」菜单转换无 DRM 的 `.kfx`/`.kfx-zip`，可另存为 EPUB 或在新窗口打开；拖入时会先提示。转换核心来自 [kfx2epub](https://github.com/2778995958/kfx2epub)。
 - **拖入 EPUB**：从外部拖入 EPUB 时，可选择「添加到当前书籍」或「在新窗口打开」。
 - **拖入文件**：图片、字体、XHTML、TXT 等文件拖到 Book Browser 自动归类入库；单个 XHTML/TXT 还可拖到列表中的指定位置插入。
 - **编辑器内插图**：图片拖入编辑器自动生成 `<img>` 标签或 CSS `url()` 链接；剪贴板中的图片和非本地文件也可直接粘贴导入。

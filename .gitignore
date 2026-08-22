@@ -91,3 +91,6 @@ squashfs-root/
 .idea/
 todo/
 !3rdparty/harfbuzz/meson.build
+
+# Product requirement drafts stay out of shipped docs.
+docs/**/*PRD*
