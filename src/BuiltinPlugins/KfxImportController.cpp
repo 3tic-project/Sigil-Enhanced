@@ -22,7 +22,6 @@
 #include <QProcessEnvironment>
 #include <QProgressDialog>
 #include <QStandardPaths>
-#include <QTemporaryFile>
 #include <QTimer>
 #include <QUuid>
 
@@ -150,15 +149,11 @@ KfxImportController::Result KfxImportController::convert(const QString& sourcePa
         return result;
     }
 
-    QTemporaryFile output(QDir::tempPath() + QStringLiteral("/sigil-kfx-import-XXXXXX.epub"));
-    output.setAutoRemove(false);
-    if (!output.open()) {
-        result.errorCode = QStringLiteral("KFX-E-NOSPACE");
-        result.errorMessage = tr("Cannot create a temporary EPUB file: %1").arg(output.errorString());
-        return result;
-    }
-    result.outputPath = output.fileName();
-    output.close();
+    // Do not pre-create the destination file. On Windows, os.replace() cannot
+    // overwrite a path that Qt, Search Indexer, or antivirus still has open.
+    result.outputPath = QDir::toNativeSeparators(
+        QDir::tempPath() + QLatin1Char('/') + QStringLiteral("sigil-kfx-import-")
+        + QUuid::createUuid().toString(QUuid::WithoutBraces) + QStringLiteral(".epub"));
 
     QProcess process;
     process.setProcessChannelMode(QProcess::SeparateChannels);

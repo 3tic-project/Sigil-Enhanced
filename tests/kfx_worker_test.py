@@ -125,6 +125,15 @@ class KfxWorkerTest(unittest.TestCase):
         self.assertEqual(warning["message"], "Missing font family names: JA")
         self.assertTrue(lines[1].isascii())
 
+    def test_atomic_write_replaces_an_existing_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dest = pathlib.Path(directory) / "book.epub"
+            dest.write_bytes(b"old")
+            worker.atomic_write_bytes(b"new-epub-bytes", dest)
+            self.assertEqual(dest.read_bytes(), b"new-epub-bytes")
+            leftovers = list(pathlib.Path(directory).glob("*.part"))
+            self.assertEqual(leftovers, [])
+
     def test_protocol_json_survives_non_utf8_warning_text(self):
         stream = io.StringIO()
         original = worker.PROTOCOL_STDOUT

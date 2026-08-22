@@ -275,6 +275,38 @@ def _error_from_exception(exc: Exception) -> WorkerError:
     return WorkerError("KFX-E-CONVERT", str(exc) or exc.__class__.__name__)
 
 
+def atomic_write_bytes(data: bytes, dest: Path, attempts: int = 12) -> None:
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary_name = tempfile.mkstemp(prefix=dest.name + ".", suffix=".part", dir=str(dest.parent))
+    temporary_path = Path(temporary_name)
+    last_error = None
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        for attempt in range(attempts):
+            try:
+                try:
+                    dest.unlink()
+                except FileNotFoundError:
+                    pass
+                os.replace(str(temporary_path), str(dest))
+                return
+            except PermissionError as exc:
+                last_error = exc
+                time.sleep(0.05 * (attempt + 1))
+        if last_error is not None:
+            raise last_error
+    except Exception:
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
 def convert(source: Path, output: Path, job_id: str) -> dict:
     configure_worker_logging()
     emit("started", jobId=job_id)
@@ -318,20 +350,7 @@ def convert(source: Path, output: Path, job_id: str) -> dict:
             raise WorkerError("KFX-E-INPUT", "The source KFX changed during conversion.")
 
         emit("phase", name="write")
-        output.parent.mkdir(parents=True, exist_ok=True)
-        fd, temporary_name = tempfile.mkstemp(prefix=output.name + ".", suffix=".part", dir=output.parent)
-        try:
-            with os.fdopen(fd, "wb") as stream:
-                stream.write(epub_data)
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(temporary_name, output)
-        except Exception:
-            try:
-                os.unlink(temporary_name)
-            except OSError:
-                pass
-            raise
+        atomic_write_bytes(epub_data, output)
 
         emit("phase", name="validate")
         summary = validate_epub(output)

@@ -116,10 +116,12 @@ require(
     "the KFX controller must prefer the Debug app's internal runtime entry",
 )
 require(
-    "QTemporaryFile output" in controller
+    "sigil-kfx-import-" in controller
+    and "QUuid::createUuid" in controller
+    and "QTemporaryFile output" not in controller
     and "const EpubFileSnapshot converted = EpubFileSnapshot::capture(" in main_window_ext
     and "converted.copyTo(destination, &copy_error)" in main_window_ext,
-    "conversion must stage output before atomically copying it to Save As destinations",
+    "conversion must choose an unused temp path and atomically copy Save As destinations",
 )
 cancel_handler = controller.index(
     "QObject::connect(&progress, &QProgressDialog::canceled"
