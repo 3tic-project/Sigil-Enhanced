@@ -1,8 +1,23 @@
+Sigil-Enhanced-2.8.5.E10
+   Bug Fixes
+     - Kept the Epub3 Tools menu enabled for EPUB 2 so Epub2 to Epub3 remains reachable.
+     - Stopped EPUB 2 to EPUB 3 conversion from aborting on supplementary-plane HTML named entities, and copied NCX table-of-contents entries into the generated EPUB 3 nav.
+     - Prevented Code View teardown from re-entering a partially destroyed FlowTab when syntax highlighters detach from resource-owned documents.
+     - Stopped completed KFX imports from being reported as cancelled, and isolated the converter in the Debug Python runtime with its HTML parser dependencies.
+     - Made ordinary Save a no-op for an unmodified EPUB; Save As and Save a Copy copy the original file; Sigil version metadata and EPUB 3 modification dates are written only when the book actually changed.
+     - Made Regex Workbench checkpoints optional instead of creating one on every apply.
+     - Clarified Enhancement menu labels.
+
+   New Features
+     - Added built-in DRM-free KFX to EPUB conversion from the Enhancement menu or by dropping .kfx/.kfx-zip, with Save As or Open in New Window and optional EPUB structure normalization.
+     - Added a Preview-only grid with independently enabled and spaced horizontal and vertical lines, live setting preview, document-anchored scrolling, fixed px/em sizing, appearance controls, zoom thresholds, and a Preview context-menu toggle. Layout inspection, element calibration, metrics, and Clean Preview remain hidden.
+
+   Build/Testing
+     - Synchronized regenerated translation catalogs into the runnable macOS app during incremental builds.
+     - Added CTest coverage for KFX import, lossless save, FlowTab teardown, named-entity conversion, NCX-to-nav parsing, and the Preview grid.
+
 Sigil-Enhanced-2.8.5.E9
    Bug Fixes
-     - Synchronized regenerated translation catalogs into the runnable macOS app during incremental builds instead of waiting for an executable relink.
-     - Kept legacy Preview layout-metrics preferences dormant while the simplified grid-only interface is active.
-     - Prevented Code View teardown from re-entering a partially destroyed FlowTab when syntax highlighters detach from resource-owned documents.
      - Opened Photoshop-exported WebP images that Windows QImage rejected, and always ship qwebp.dll with the Windows package.
      - Installed qtimageformats in the Windows CI Qt set so qwebp.dll actually exists to ship; packaging now fails if the plugin is missing instead of silently omitting it.
      - Opened the Metadata Editor for EPUB 3 books whose alternate-script refinements omit xml:lang, instead of failing four Python calls and showing an empty editor.
@@ -10,18 +25,12 @@ Sigil-Enhanced-2.8.5.E9
      - Made newly created empty XHTML and CSS files write template content to disk, so custom templates survive subsequent imports instead of being replaced by empty files.
 
    New Features
-     - Made valid Preview grid setting changes apply live, while Cancel restores the complete opening state and only OK persists changes.
-     - Added a non-exported Preview grid with independently enabled and spaced horizontal and vertical lines, document-anchored scrolling, fixed px/em sizing, appearance controls, and zoom thresholds.
-     - Placed the two grid commands under Enhancement and added a matching enable/disable command to the Preview context menu; layout inspection, element calibration, metrics, and Clean Preview remain hidden.
-     - Added an optional post-conversion EPUB structure normalization checkbox to the roomier KFX menu and drop prompts, reusing the built-in normalizer before Save As or opening a new window.
      - Docked Preview Developer Tools under the Preview pane by embedding the existing Inspector; visibility and splitter ratio restore on restart, not open files.
      - Developer Tools can detach into a separate window and dock back without destroying the Inspector.
      - Split the editor into two vertical groups so two resources stay visible; Open in Other Group, Move, and restart restore the split layout only.
      - Dragging a tab between editor groups moves the same editor; Open/Move before a manual split opens the lower group.
 
    Build/Testing
-     - Added dialog live-preview coverage and a packaging contract for incremental macOS translation synchronization.
-     - Added geometry, persistence, overlay-lifecycle, simplified-menu UI-contract, and complete Simplified Chinese, Traditional Chinese, and Japanese coverage for the Preview grid.
      - Rebased on upstream Sigil 2.8.5 and synced all translations from Transifex, including a new Swedish catalog.
      - Extended CTest coverage for external Book Browser file drops, Preview DevTools docking, and split editor groups.
 

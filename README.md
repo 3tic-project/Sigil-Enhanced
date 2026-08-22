@@ -12,17 +12,13 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 - Telegram：https://t.me/+bUUc3T1rwVZmNWE9
 - QQ 群：`796723288`（入群问题答案：`3tic`）
 
-> 最近发布版本：**2.8.5E9**。该版本相对 `v2.8.1E8` 的变化见
-> [2.8.5E9 更新说明](docs/ReleaseNotes-2.8.5E9.md)；当前 `master` 在此基础上继续开发，
+> 最近发布版本：**2.8.5E10**。该版本相对 `v2.8.5E9` 的变化见
+> [2.8.5E10 更新说明](docs/ReleaseNotes-2.8.5E10.md)；当前 `master` 在此基础上继续开发，
 > 完整历史见 [ChangeLog.txt](ChangeLog.txt)。
 
-## 相对 2.8.5E9 的开发中变化
+## 相对 2.8.5E10 的开发中变化
 
-- 新增内置 KFX 转 EPUB，可手动选择或拖入无 DRM 的 `.kfx`/`.kfx-zip`，转换后可另存为 EPUB 或在新窗口打开，并可选择自动规范化 EPUB 结构。
-- 新增预览区网格：横线和竖线可分别启用、设置间距，设置变化实时显示，Preview 右键菜单也可快速开关。
-- 未修改的 EPUB 保存时保持原文件字节不变；默认不写入 Sigil 版本元数据，也不会无故更新 EPUB 3 的修改时间。
-- 修复 EPUB 2 转 EPUB 3 时补充平面命名实体导致的崩溃，并从 NCX 恢复 EPUB 3 导航；EPUB 2 下相关工具菜单保持可用。
-- 修复关闭代码视图时语法高亮器可能触发的 FlowTab 重入崩溃，并让 Debug 构建使用、验证与发布包一致的内置 Python 依赖。
+暂无。
 
 ## 增强功能
 
