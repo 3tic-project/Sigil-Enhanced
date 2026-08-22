@@ -133,6 +133,43 @@ require(
     "programmatic progress-dialog close after worker completion must not report cancellation",
 )
 
+bootstrap = (repo / "src/Resource_Files/python3lib/sigil_kfx_import/bootstrap.py").read_text(
+    encoding="utf-8"
+)
+require(
+    'prefix / "Lib" / "site-packages"' in bootstrap
+    and 'prefix / "lib" / version / "site-packages"' in bootstrap,
+    "KFX bootstrap must load the bundled interpreter site-packages",
+)
+require(
+    '"PIL"' in bootstrap and '"lxml"' in bootstrap and '"bs4"' in bootstrap,
+    "KFX bootstrap must probe PIL, lxml, and bs4",
+)
+require(
+    "--probe-imports" in cmake
+    and "sigil_kfx_import/bootstrap.py" in cmake,
+    "package builds must fail if the KFX worker cannot import bundled PIL",
+)
+osx_gather = (
+    repo / "src/Resource_Files/python_pkg/osx_add_python_framework6.py"
+).read_text(encoding="utf-8")
+win_gather = (
+    repo / "src/Resource_Files/python_pkg/windows_python_gather6.py"
+).read_text(encoding="utf-8")
+core_requirements = (
+    repo / "src/Resource_Files/python_pkg/requirements-core.txt"
+).read_text(encoding="utf-8")
+require(
+    "('PIL', 'd')" in osx_gather and "('PIL', 'd')" in win_gather,
+    "macOS and Windows gather scripts must still copy PIL",
+)
+require(
+    "pillow==12.1.0" in core_requirements
+    and "lxml==6.0.2" in core_requirements
+    and "beautifulsoup4==4.13.4" in core_requirements,
+    "core requirements must pin Pillow, lxml, and Beautiful Soup",
+)
+
 kfx_guide = (repo / "docs/KfxImport.md").read_text(encoding="utf-8")
 require(
     "https://github.com/2778995958/kfx2epub" in kfx_guide,

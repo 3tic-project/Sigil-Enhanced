@@ -245,6 +245,9 @@ build_sigil() {
     -DCMAKE_SKIP_RPATH=ON
   ninja -j$(getconf _NPROCESSORS_ONLN)
   DESTDIR=sigil.AppDir ninja install
+  /build/sigil.AppDir/usr/bin/python3 -I -S \
+    /build/sigil.AppDir/usr/share/sigil/python3lib/sigil_kfx_import/bootstrap.py \
+    --probe-imports
 }
 
 build_appimage() {

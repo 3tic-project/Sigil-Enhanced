@@ -413,6 +413,20 @@ if( APPLE )
                                     ${SIGIL_PYTHON_VERIFY_ARGS}
                             COMMENT "Verifying bundled Python runtime packages"
                             VERBATIM )
+        if ( PKG_SYSTEM_PYTHON )
+            set( SIGIL_KFX_PROBE_PYTHON
+                 ${WORK_DIR}/Sigil.app/Contents/Frameworks/Python.framework/Versions/${_BUNDLED_PYVER}/bin/python3 )
+        else()
+            set( SIGIL_KFX_PROBE_PYTHON ${SIGIL_DEBUG_PYTHON_BIN} )
+        endif()
+        if ( SIGIL_KFX_PROBE_PYTHON )
+            add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
+                                COMMAND ${SIGIL_KFX_PROBE_PYTHON} -I -S
+                                        ${WORK_DIR}/Sigil.app/Contents/python3lib/sigil_kfx_import/bootstrap.py
+                                        --probe-imports
+                                COMMENT "Verifying KFX worker can import bundled PIL/lxml/bs4"
+                                VERBATIM )
+        endif()
     endif()
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp ${PROJECT_BINARY_DIR}/*.rcc ${WORK_DIR}/Sigil.app/Contents/Resources/ )
     add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD COMMAND cp ${CMAKE_SOURCE_DIR}/src/Resource_Files/examples/* ${WORK_DIR}/Sigil.app/Contents/examples )
@@ -629,6 +643,12 @@ elseif (MSVC)
                                     ${CMAKE_SOURCE_DIR}/ci_scripts/verify_bundled_python.py
                                     ${SIGIL_WINDOWS_PYTHON_VERIFY_ARGS}
                             COMMENT "Verifying bundled Python runtime packages"
+                            VERBATIM )
+        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
+                            COMMAND ${MAIN_PACKAGE_DIR}/python3.exe -I -S
+                                    ${MAIN_PACKAGE_DIR}/python3lib/sigil_kfx_import/bootstrap.py
+                                    --probe-imports
+                            COMMENT "Verifying KFX worker can import bundled PIL/lxml/bs4"
                             VERBATIM )
     endif()
 
