@@ -79,6 +79,10 @@ set( AGENT_FILES
     Agent/Core/AgentSession.h
     Agent/Core/PromptAssembler.cpp
     Agent/Core/PromptAssembler.h
+    Agent/Model/AgentModelCatalog.cpp
+    Agent/Model/AgentModelCatalog.h
+    Agent/Model/AgentProviderPreset.cpp
+    Agent/Model/AgentProviderPreset.h
     Agent/Model/HistoryAssembler.cpp
     Agent/Model/HistoryAssembler.h
     Agent/Model/IModelProvider.h
@@ -102,6 +106,8 @@ set( AGENT_FILES
     Agent/Core/AgentController.h
     Agent/Execution/SigilBookWorkspace.cpp
     Agent/Execution/SigilBookWorkspace.h
+    Agent/Persistence/AgentSessionExport.cpp
+    Agent/Persistence/AgentSessionExport.h
     Agent/Persistence/AgentSettings.cpp
     Agent/Persistence/AgentSettings.h
     Agent/UI/AgentDock.cpp

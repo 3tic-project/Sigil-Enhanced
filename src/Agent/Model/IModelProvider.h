@@ -16,6 +16,12 @@
 namespace SigilAgent
 {
 
+enum class ReasoningProtocol {
+    None,
+    DeepSeek,
+    OpenRouter
+};
+
 struct ModelCapabilities {
     bool streaming = true;
     bool toolCalling = true;
@@ -31,6 +37,7 @@ struct ModelRequest {
     QJsonArray tools;
     bool thinking = true;
     QString reasoningEffort = QStringLiteral("medium");
+    ReasoningProtocol reasoningProtocol = ReasoningProtocol::DeepSeek;
     bool stream = true;
 };
 
@@ -50,6 +57,7 @@ public:
     virtual ~IModelProvider() = default;
     virtual ModelCapabilities capabilities() const = 0;
     virtual ModelTurn stream(const ModelRequest &request, ModelStreamSink &sink) = 0;
+    virtual QJsonArray debugTraces() const { return QJsonArray(); }
 };
 
 } // namespace SigilAgent

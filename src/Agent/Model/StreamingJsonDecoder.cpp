@@ -135,7 +135,15 @@ void StreamingJsonDecoder::parsePayload(const QJsonObject &payload)
     }
 
     StreamDelta emitted;
-    const QString reasoning = delta.value(QStringLiteral("reasoning_content")).toString();
+    QString reasoning = delta.value(QStringLiteral("reasoning_content")).toString();
+    if (reasoning.isEmpty()) {
+        const QJsonValue reasoning_value = delta.value(QStringLiteral("reasoning"));
+        if (reasoning_value.isString()) {
+            reasoning = reasoning_value.toString();
+        } else if (reasoning_value.isObject()) {
+            reasoning = reasoning_value.toObject().value(QStringLiteral("content")).toString();
+        }
+    }
     const QString content = delta.value(QStringLiteral("content")).toString();
     if (!reasoning.isEmpty()) {
         m_reasoning += reasoning;

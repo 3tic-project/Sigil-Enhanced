@@ -6,6 +6,7 @@
 
 #include "Agent/Model/OpenAICompatibleProvider.h"
 
+#include <QElapsedTimer>
 #include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -21,6 +22,17 @@
 
 namespace SigilAgent
 {
+
+namespace
+{
+
+QString clipBody(const QByteArray &data, int max_bytes = 16000)
+{
+    if (data.size() <= max_bytes) return QString::fromUtf8(data);
+    return QString::fromUtf8(data.left(max_bytes)) + QStringLiteral("…");
+}
+
+} // namespace
 
 OpenAICompatibleProvider::OpenAICompatibleProvider(OpenAIProviderConfig config) :
     m_config(std::move(config))
@@ -40,9 +52,20 @@ OpenAIProviderConfig OpenAICompatibleProvider::config() const
 ModelCapabilities OpenAICompatibleProvider::capabilities() const
 {
     ModelCapabilities caps;
-    caps.reasoning = true;
+    caps.reasoning = m_config.reasoningProtocol != ReasoningProtocol::None;
     caps.toolCalling = true;
     return caps;
+}
+
+QJsonArray OpenAICompatibleProvider::debugTraces() const
+{
+    return m_traces;
+}
+
+void OpenAICompatibleProvider::recordTrace(const QJsonObject &trace)
+{
+    m_traces.append(trace);
+    while (m_traces.size() > 16) m_traces.removeFirst();
 }
 
 QJsonObject OpenAICompatibleProvider::buildChatBody(const ModelRequest &request)
@@ -53,17 +76,26 @@ QJsonObject OpenAICompatibleProvider::buildChatBody(const ModelRequest &request)
     body.insert(QStringLiteral("stream"), request.stream);
     body.insert(QStringLiteral("messages"),
                 assembler.toOpenAIMessages(request.messages, !request.tools.isEmpty()));
-    if (request.thinking) {
-        body.insert(QStringLiteral("thinking"), QJsonObject {
-            { QStringLiteral("type"), QStringLiteral("enabled") }
-        });
-    } else {
-        body.insert(QStringLiteral("thinking"), QJsonObject {
-            { QStringLiteral("type"), QStringLiteral("disabled") }
-        });
-    }
-    if (!request.reasoningEffort.isEmpty()) {
-        body.insert(QStringLiteral("reasoning_effort"), request.reasoningEffort);
+    if (request.reasoningProtocol == ReasoningProtocol::DeepSeek) {
+        if (request.thinking) {
+            body.insert(QStringLiteral("thinking"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("enabled") }
+            });
+        } else {
+            body.insert(QStringLiteral("thinking"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("disabled") }
+            });
+        }
+        if (!request.reasoningEffort.isEmpty()) {
+            body.insert(QStringLiteral("reasoning_effort"), request.reasoningEffort);
+        }
+    } else if (request.reasoningProtocol == ReasoningProtocol::OpenRouter && request.thinking) {
+        QJsonObject reasoning;
+        if (!request.reasoningEffort.isEmpty()) {
+            reasoning.insert(QStringLiteral("effort"), request.reasoningEffort);
+        }
+        reasoning.insert(QStringLiteral("exclude"), false);
+        body.insert(QStringLiteral("reasoning"), reasoning);
     }
     if (!request.tools.isEmpty()) {
         body.insert(QStringLiteral("tools"), request.tools);
@@ -85,8 +117,13 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
 
     ModelRequest outgoing = request;
     if (outgoing.model.isEmpty()) outgoing.model = m_config.model;
+    if (outgoing.model.isEmpty()) {
+        turn.error = QStringLiteral("Model is not configured. Choose one in Preferences → Native Agent.");
+        return turn;
+    }
     outgoing.thinking = m_config.thinking && request.thinking;
     if (outgoing.reasoningEffort.isEmpty()) outgoing.reasoningEffort = m_config.reasoningEffort;
+    outgoing.reasoningProtocol = m_config.reasoningProtocol;
 
     const QJsonObject body = buildChatBody(outgoing);
     const QByteArray payload = QJsonDocument(body).toJson(QJsonDocument::Compact);
@@ -95,11 +132,19 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     http.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
     http.setRawHeader("Authorization", QByteArray("Bearer ") + m_config.apiKey.toUtf8());
     http.setRawHeader("Accept", "text/event-stream");
+    if (!m_config.httpReferer.isEmpty()) {
+        http.setRawHeader("HTTP-Referer", m_config.httpReferer.toUtf8());
+    }
+    if (!m_config.httpTitle.isEmpty()) {
+        http.setRawHeader("X-Title", m_config.httpTitle.toUtf8());
+    }
 
     QNetworkAccessManager manager;
     QNetworkReply *reply = manager.post(http, payload);
     StreamingJsonDecoder decoder;
     QByteArray raw;
+    QElapsedTimer timer;
+    timer.start();
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::readyRead, reply, [reply, &decoder, &sink, &turn, &raw]() {
         if (sink.isCancelled()) {
@@ -141,6 +186,15 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     if (sink.isCancelled()) {
         turn.error = QStringLiteral("cancelled");
         turn.finishReason = QStringLiteral("cancelled");
+        recordTrace(QJsonObject {
+            { QStringLiteral("method"), QStringLiteral("POST") },
+            { QStringLiteral("url"), m_config.baseUrl },
+            { QStringLiteral("model"), outgoing.model },
+            { QStringLiteral("request_body"), clipBody(payload) },
+            { QStringLiteral("status"), reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() },
+            { QStringLiteral("elapsed_ms"), timer.elapsed() },
+            { QStringLiteral("error"), QStringLiteral("cancelled") }
+        });
         reply->deleteLater();
         return turn;
     }
@@ -171,6 +225,16 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     if (turn.error.isEmpty()) {
         turn = decoder.finish();
     }
+    recordTrace(QJsonObject {
+        { QStringLiteral("method"), QStringLiteral("POST") },
+        { QStringLiteral("url"), m_config.baseUrl },
+        { QStringLiteral("model"), outgoing.model },
+        { QStringLiteral("request_body"), clipBody(payload) },
+        { QStringLiteral("status"), status },
+        { QStringLiteral("elapsed_ms"), timer.elapsed() },
+        { QStringLiteral("response_body"), clipBody(raw) },
+        { QStringLiteral("error"), turn.error }
+    });
     reply->deleteLater();
     return turn;
 }
