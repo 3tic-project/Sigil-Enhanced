@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
+#include <QSslSocket>
 
 #include "Agent/Model/HistoryAssembler.h"
 #include "Agent/Model/IModelProvider.h"
@@ -65,6 +66,7 @@ int main(int argc, char *argv[])
     logLine(QStringLiteral("url_configured=1"));
     logLine(QStringLiteral("model=%1").arg(model));
     logLine(QStringLiteral("key_redacted=1"));
+    logLine(QStringLiteral("qt_ssl_supported=%1").arg(QSslSocket::supportsSsl() ? 1 : 0));
 
     SigilAgent::OpenAIProviderConfig config;
     config.baseUrl = url;
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("function") },
             { QStringLiteral("function"), QJsonObject {
-                { QStringLiteral("name"), QStringLiteral("book.summary") },
+                { QStringLiteral("name"), QStringLiteral("book_summary") },
                 { QStringLiteral("description"), QStringLiteral("Summarize the open book") },
                 { QStringLiteral("parameters"), QJsonObject {
                     { QStringLiteral("type"), QStringLiteral("object") },

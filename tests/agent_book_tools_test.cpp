@@ -35,6 +35,22 @@ int main()
         return tool->execute(arguments);
     };
 
+    const QJsonArray schemas = registry.openaiToolSchemas();
+    Require(!schemas.isEmpty(), "openai tool schemas must be published");
+    for (const QJsonValue &value : schemas) {
+        const QString wire = value.toObject()
+                                 .value(QStringLiteral("function")).toObject()
+                                 .value(QStringLiteral("name")).toString();
+        Require(ToolRegistry::isValidWireName(wire),
+                "OpenAI/DeepSeek tool names must match ^[a-zA-Z0-9_-]+$");
+        Require(!wire.contains(QLatin1Char('.')),
+                "dots are invalid in the Chat Completions tool name");
+    }
+    Require(registry.find(QStringLiteral("book_summary")) == registry.find(QStringLiteral("book.summary")),
+            "wire names must resolve to the same shipped tool as dotted names");
+    Require(ToolRegistry::toWireName(QStringLiteral("book.summary")) == QStringLiteral("book_summary"),
+            "book.summary must be sent as book_summary");
+
     const ToolResult summary = run(QStringLiteral("book.summary"), QJsonObject());
     Require(summary.ok && summary.data.value(QStringLiteral("title")).toString() == QStringLiteral("Junior Physics"),
             "book.summary must return the fixture title");

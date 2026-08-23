@@ -7,9 +7,23 @@
 #include "Agent/Tools/ToolRegistry.h"
 
 #include <QJsonObject>
+#include <QRegularExpression>
 
 namespace SigilAgent
 {
+
+QString ToolRegistry::toWireName(const QString &name)
+{
+    QString wire = name;
+    wire.replace(QLatin1Char('.'), QLatin1Char('_'));
+    return wire;
+}
+
+bool ToolRegistry::isValidWireName(const QString &name)
+{
+    static const QRegularExpression pattern(QStringLiteral("^[a-zA-Z0-9_-]+$"));
+    return pattern.match(name).hasMatch();
+}
 
 void ToolRegistry::add(std::unique_ptr<IAgentTool> tool)
 {
@@ -17,12 +31,14 @@ void ToolRegistry::add(std::unique_ptr<IAgentTool> tool)
     IAgentTool *raw = tool.get();
     const QString name = raw->descriptor().name;
     m_byName.insert(name, raw);
+    m_byWireName.insert(toWireName(name), raw);
     m_tools.push_back(std::move(tool));
 }
 
 IAgentTool *ToolRegistry::find(const QString &name) const
 {
-    return m_byName.value(name, nullptr);
+    if (IAgentTool *tool = m_byName.value(name, nullptr)) return tool;
+    return m_byWireName.value(name, nullptr);
 }
 
 QList<AgentToolDescriptor> ToolRegistry::descriptors() const
@@ -42,7 +58,7 @@ QJsonArray ToolRegistry::openaiToolSchemas() const
         array.append(QJsonObject {
             { QStringLiteral("type"), QStringLiteral("function") },
             { QStringLiteral("function"), QJsonObject {
-                { QStringLiteral("name"), descriptor.name },
+                { QStringLiteral("name"), toWireName(descriptor.name) },
                 { QStringLiteral("description"), descriptor.description },
                 { QStringLiteral("parameters"), descriptor.inputSchema }
             } }

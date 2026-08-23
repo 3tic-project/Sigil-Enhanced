@@ -33,7 +33,11 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.patch_fragment`、`css.update_rules`、`metadata.update`、`checkpoint.create` / `list` / `restore`。
 
+发给模型的 function 名会把点换成下划线（`book.summary` → `book_summary`），因为 DeepSeek/OpenAI 只接受 `^[a-zA-Z0-9_-]+$`。内部仍用带点的名字。
+
 没有 shell，没有技能脚本，不会把字体二进制或整本书 XHTML 送给模型。若提交时的 `expected_revision` 与当前书籍 revision 不一致，会返回 `BOOK_REVISION_CONFLICT`，不会改书。
+
+HTTP 出错时会带上状态码和服务器返回的 `error.message`（不会把 API Key 写进 transcript）。
 
 ## 模型与 Thinking
 

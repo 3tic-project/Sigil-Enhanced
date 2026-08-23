@@ -158,10 +158,12 @@ void AgentRunner::publishToolOutcome(const ToolCall &call, const ToolResult &res
 ToolResult AgentRunner::executeTool(const ToolCall &call)
 {
     IAgentTool *tool = m_tools ? m_tools->find(call.name) : nullptr;
+    ToolCall local = call;
+    if (tool) local.name = tool->descriptor().name;
     if (!tool) {
         const ToolResult missing = ToolResult::failure(QStringLiteral("UNKNOWN_TOOL"),
                                                        QStringLiteral("Unknown tool %1").arg(call.name));
-        publishToolOutcome(call, missing);
+        publishToolOutcome(local, missing);
         return missing;
     }
     const AgentToolDescriptor descriptor = tool->descriptor();
@@ -170,8 +172,8 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
         ? m_policy->evaluate(m_mode, descriptor) : PermissionAction::Deny;
 
     m_session->append(AgentEventType::ToolRequested, QJsonObject {
-        { QStringLiteral("tool_call_id"), call.id },
-        { QStringLiteral("name"), call.name },
+        { QStringLiteral("tool_call_id"), local.id },
+        { QStringLiteral("name"), local.name },
         { QStringLiteral("arguments"), arguments },
         { QStringLiteral("risk"), toolRiskName(descriptor.risk) }
     });
@@ -179,60 +181,60 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
     if (permission == PermissionAction::Deny) {
         const QString reason = m_policy->denyReason(m_mode, descriptor);
         m_session->append(AgentEventType::ToolRejected, QJsonObject {
-            { QStringLiteral("tool_call_id"), call.id },
-            { QStringLiteral("name"), call.name },
+            { QStringLiteral("tool_call_id"), local.id },
+            { QStringLiteral("name"), local.name },
             { QStringLiteral("reason"), reason }
         });
         const ToolResult denied = ToolResult::denied(reason);
-        publishToolOutcome(call, denied);
+        publishToolOutcome(local, denied);
         return denied;
     }
 
     if (permission == PermissionAction::Ask) {
-        const QString impact = humanReadableImpact(call.name, arguments);
+        const QString impact = humanReadableImpact(local.name, arguments);
         setState(AgentRunState::AwaitingApproval);
         m_session->append(AgentEventType::ToolApprovalRequested, QJsonObject {
-            { QStringLiteral("tool_call_id"), call.id },
-            { QStringLiteral("name"), call.name },
+            { QStringLiteral("tool_call_id"), local.id },
+            { QStringLiteral("name"), local.name },
             { QStringLiteral("impact"), impact },
             { QStringLiteral("arguments"), arguments }
         });
-        const bool approved = m_gate && m_gate->waitForApproval(call.id, call.name, arguments, impact);
+        const bool approved = m_gate && m_gate->waitForApproval(local.id, local.name, arguments, impact);
         if (m_cancellation && m_cancellation->isCancelled()) {
             const ToolResult cancelled = ToolResult::cancelled();
-            publishToolOutcome(call, cancelled);
+            publishToolOutcome(local, cancelled);
             return cancelled;
         }
         if (!approved) {
             m_session->append(AgentEventType::ToolRejected, QJsonObject {
-                { QStringLiteral("tool_call_id"), call.id },
-                { QStringLiteral("name"), call.name },
+                { QStringLiteral("tool_call_id"), local.id },
+                { QStringLiteral("name"), local.name },
                 { QStringLiteral("reason"), QStringLiteral("User denied the tool") }
             });
             const ToolResult denied = ToolResult::denied(QStringLiteral("User denied the tool"));
-            publishToolOutcome(call, denied);
+            publishToolOutcome(local, denied);
             return denied;
         }
         m_session->append(AgentEventType::ToolApproved, QJsonObject {
-            { QStringLiteral("tool_call_id"), call.id },
-            { QStringLiteral("name"), call.name }
+            { QStringLiteral("tool_call_id"), local.id },
+            { QStringLiteral("name"), local.name }
         });
         setState(AgentRunState::ExecutingTools);
     }
 
     if (m_cancellation && m_cancellation->isCancelled()) {
         const ToolResult cancelled = ToolResult::cancelled();
-        publishToolOutcome(call, cancelled);
+        publishToolOutcome(local, cancelled);
         return cancelled;
     }
 
     setState(AgentRunState::ExecutingTools);
     m_session->append(AgentEventType::ToolStarted, QJsonObject {
-        { QStringLiteral("tool_call_id"), call.id },
-        { QStringLiteral("name"), call.name }
+        { QStringLiteral("tool_call_id"), local.id },
+        { QStringLiteral("name"), local.name }
     });
     ToolResult result = tool->execute(arguments);
-    publishToolOutcome(call, result);
+    publishToolOutcome(local, result);
     return result;
 }
 
@@ -324,7 +326,8 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
 
         setState(AgentRunState::ExecutingTools);
         for (const ToolCall &call : turn.toolCalls) {
-            result.toolNames.append(call.name);
+            IAgentTool *resolved = m_tools->find(call.name);
+            result.toolNames.append(resolved ? resolved->descriptor().name : call.name);
             if (m_cancellation && m_cancellation->isCancelled()) {
                 publishToolOutcome(call, ToolResult::cancelled());
                 continue;

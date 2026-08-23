@@ -9,6 +9,8 @@
 #include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -97,13 +99,16 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     QNetworkAccessManager manager;
     QNetworkReply *reply = manager.post(http, payload);
     StreamingJsonDecoder decoder;
+    QByteArray raw;
     QEventLoop loop;
-    QObject::connect(reply, &QNetworkReply::readyRead, reply, [reply, &decoder, &sink, &turn]() {
+    QObject::connect(reply, &QNetworkReply::readyRead, reply, [reply, &decoder, &sink, &turn, &raw]() {
         if (sink.isCancelled()) {
             reply->abort();
             return;
         }
-        decoder.feed(reply->readAll());
+        const QByteArray chunk = reply->readAll();
+        raw += chunk;
+        decoder.feed(chunk);
         const QList<StreamDelta> deltas = decoder.takeDeltas();
         for (const StreamDelta &delta : deltas) {
             if (!delta.reasoning.isEmpty()) sink.onReasoningDelta(delta.reasoning);
@@ -140,14 +145,30 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
         return turn;
     }
 
-    if (reply->error() != QNetworkReply::NoError && turn.error.isEmpty()
-        && reply->error() != QNetworkReply::OperationCanceledError) {
-        const QByteArray err_body = reply->readAll();
-        turn.error = QStringLiteral("HTTP error: %1").arg(reply->errorString());
-        Q_UNUSED(err_body);
+    const QByteArray leftover = reply->readAll();
+    if (!leftover.isEmpty()) {
+        raw += leftover;
+        decoder.feed(leftover);
+        if (turn.error.isEmpty() && !decoder.error().isEmpty()) turn.error = decoder.error();
+    }
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (reply->error() != QNetworkReply::NoError
+        && reply->error() != QNetworkReply::OperationCanceledError
+        && turn.error.isEmpty()) {
+        QString snippet = QString::fromUtf8(raw.left(800)).simplified();
+        QJsonParseError parse_error;
+        const QJsonDocument document = QJsonDocument::fromJson(raw, &parse_error);
+        if (parse_error.error == QJsonParseError::NoError) {
+            const QString message = document.object().value(QStringLiteral("error")).toObject()
+                                        .value(QStringLiteral("message")).toString();
+            if (!message.isEmpty()) snippet = message;
+        }
+        turn.error = status > 0
+            ? QStringLiteral("HTTP %1: %2").arg(status).arg(
+                  snippet.isEmpty() ? reply->errorString() : snippet)
+            : QStringLiteral("HTTP error: %1 %2").arg(reply->errorString(), snippet);
     }
     if (turn.error.isEmpty()) {
-        decoder.feed(reply->readAll());
         turn = decoder.finish();
     }
     reply->deleteLater();
