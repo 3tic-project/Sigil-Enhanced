@@ -6210,6 +6210,7 @@ void MainWindow::CreateAgentDock()
         }
         if (event.type == SigilAgent::AgentEventType::TransactionCommitted && m_BookBrowser) {
             m_BookBrowser->Refresh();
+            UpdateAgentContext();
         }
     });
 
@@ -6227,6 +6228,30 @@ void MainWindow::CreateAgentDock()
             [this](const QString &id, bool ok) {
                 if (m_AgentController) m_AgentController->resolveApproval(id, ok);
             });
+    UpdateAgentContext();
+}
+
+void MainWindow::UpdateAgentContext()
+{
+    if (!m_AgentDock) return;
+    QString title;
+    if (m_Book) {
+        const QStringList titles = m_Book->GetMetadataValues(QStringLiteral("dc:title"));
+        if (!titles.isEmpty()) title = titles.first();
+    }
+    const quint64 revision = m_AgentWorkspace ? m_AgentWorkspace->revision() : 1;
+    m_AgentDock->setBookContext(title, revision);
+    ContentTab *tab = GetCurrentContentTab();
+    Resource *resource = tab ? tab->GetLoadedResource() : nullptr;
+    if (resource) {
+        m_AgentDock->setCurrentFile(resource->GetRelativePath(), resource->GetIdentifier());
+        const int cursor = tab->GetCursorPosition();
+        m_AgentDock->setSelection(resource->GetIdentifier(), qMax(0, cursor), qMax(cursor, cursor),
+                                  QString());
+    } else {
+        m_AgentDock->setCurrentFile(QString(), QString());
+        m_AgentDock->setSelection(QString(), 0, 0, QString());
+    }
 }
 
 void MainWindow::AgentSendRequested(const QString &text, const QStringList &handles)
@@ -7806,6 +7831,8 @@ void MainWindow::ConnectSignalsToSlots()
             this,                   SLOT(UpdateUIWhenTabsSwitch()));
     connect(m_TabManager,          SIGNAL(TabChanged(ContentTab *, ContentTab *)),
             this,                    SLOT(UpdateBrowserSelectionToTab()));
+    connect(m_TabManager, &TabManager::TabChanged, this,
+            [this](ContentTab *, ContentTab *) { UpdateAgentContext(); });
     connect(m_TabManager,          SIGNAL(UpdatePreviewAfterExistingTabSwitch()),
             this,                    SLOT(UpdatePreview()));
     connect(m_BookBrowser,          SIGNAL(UpdateBrowserSelection()),

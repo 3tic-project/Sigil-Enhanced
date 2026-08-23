@@ -8,6 +8,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QToolButton>
 
 #include "Agent/UI/AgentDock.h"
 
@@ -47,6 +48,12 @@ int main(int argc, char *argv[])
             "New Session control is missing");
     Require(composer, "composer is missing");
     Require(transcript, "transcript surface is missing");
+    Require(dock.findChild<QToolButton *>(QStringLiteral("agentChipBook")),
+            "book context chip is missing");
+    Require(dock.findChild<QToolButton *>(QStringLiteral("agentChipFile")),
+            "file context chip is missing");
+    Require(dock.findChild<QToolButton *>(QStringLiteral("agentChipSelection")),
+            "selection context chip is missing");
 
     SigilAgent::AgentEvent thinking;
     thinking.type = SigilAgent::AgentEventType::AssistantDelta;
@@ -77,5 +84,41 @@ int main(int argc, char *argv[])
             "answer card must show the user-visible content");
     Require(!thinking_body->isVisible(), "thinking card must start collapsed");
     Require(answer_body->isVisible(), "answer card must be visible");
+
+    dock.resetTranscript();
+    SigilAgent::AgentEvent first_user;
+    first_user.type = SigilAgent::AgentEventType::UserMessage;
+    first_user.payload = QJsonObject { { QStringLiteral("text"), QStringLiteral("one") } };
+    dock.appendEvent(first_user);
+    SigilAgent::AgentEvent first_answer;
+    first_answer.type = SigilAgent::AgentEventType::AssistantDelta;
+    first_answer.payload = QJsonObject {
+        { QStringLiteral("kind"), QStringLiteral("content") },
+        { QStringLiteral("text"), QStringLiteral("first answer") }
+    };
+    dock.appendEvent(first_answer);
+    SigilAgent::AgentEvent second_user;
+    second_user.type = SigilAgent::AgentEventType::UserMessage;
+    second_user.payload = QJsonObject { { QStringLiteral("text"), QStringLiteral("two") } };
+    dock.appendEvent(second_user);
+    SigilAgent::AgentEvent second_answer;
+    second_answer.type = SigilAgent::AgentEventType::AssistantDelta;
+    second_answer.payload = QJsonObject {
+        { QStringLiteral("kind"), QStringLiteral("content") },
+        { QStringLiteral("text"), QStringLiteral("second answer") }
+    };
+    dock.appendEvent(second_answer);
+    application.processEvents();
+
+    QWidget *answer1 = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard"));
+    QWidget *answer2 = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard2"));
+    Require(answer1 && answer2 && answer1 != answer2,
+            "each user turn must keep its own answer card");
+    auto *body1 = answer1->findChild<QLabel *>(QStringLiteral("agentAnswerCardBody"));
+    auto *body2 = answer2->findChild<QLabel *>(QStringLiteral("agentAnswerCard2Body"));
+    Require(body1 && body1->text().contains(QStringLiteral("first answer")),
+            "the first answer card must not be overwritten by a later turn");
+    Require(body2 && body2->text().contains(QStringLiteral("second answer")),
+            "the second turn must render on a new answer card");
     return EXIT_SUCCESS;
 }

@@ -880,6 +880,7 @@ private:
     void AgentSendRequested(const QString &text, const QStringList &handles);
     void AgentStopRequested();
     void AgentNewSessionRequested();
+    void UpdateAgentContext();
 
     /**
      * Updates the recent files actions when the

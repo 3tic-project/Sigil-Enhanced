@@ -10,19 +10,19 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 
 - 模式：**Ask** / **Plan** / **Edit**
 - 模型名
-- 当前上下文范围（默认：书籍结构 + 抽样片段）
-- 输入框，可附带书籍路径 / 资源 id / 选区句柄
-- **Stop**、**New Session**
-- 事件卡片：用户、折叠的 Thinking、回答、工具、带影响说明的批准、预览、错误
+- 上下文芯片：当前书、当前文件、选区（可开关，范围会显示在状态行）
+- 输入框：**Enter 发送**，Shift+Enter 换行
+- **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
+- 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；批准带影响说明；预览列出暂存资源；错误
 
-Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；答案只在 Answer 卡片里。
+Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；答案只在 Answer 卡片里。新的一轮不会覆盖上一轮的回答。
 
 ## 模式
 
 | 模式 | 能做什么 |
 |---|---|
 | **Ask** | 只读。可摘要、搜索、读片段、列字体、校验。不能改书。 |
-| **Plan** | 只读 + 预览。可以 `transaction.preview`，不能 commit。 |
+| **Plan** | 可以 `transaction.begin`、暂存 patch/CSS/metadata，并 `preview`。不能 `commit` / `restore`。活书保持不变。 |
 | **Edit** | 可通过工具改书。可逆编辑默认要你点 **Approve**。提交后可用 Sigil 的撤销。 |
 
 **Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤仍可撤销，并标为 Applied。
@@ -56,6 +56,7 @@ Agent 循环在 `AgentRunner` 里，不在 UI 类中：
 2. 流式请求模型
 3. 按权限 allow / ask / deny 处理工具
 4. ask 时先发批准卡片，批准后才执行
-5. 把事件追加到会话日志（transcript 的唯一来源）
+5. deny / 用户拒绝 / 取消时仍写入一条 tool-role 结果（`PERMISSION_DENIED` 或 `CANCELLED`），避免下一次请求因缺 tool 消息而 400
+6. 把事件追加到会话日志（transcript 的唯一来源）
 
 书籍写入走现有 Book / 事务 / 撤销机制。
