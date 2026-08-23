@@ -40,9 +40,19 @@ int main()
     MemoryBookWorkspace book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry registry;
     registerBookTools(&registry, &book);
+    IAgentTool *python_tool = registry.find(QStringLiteral("python.run"));
+    Require(python_tool != nullptr, "python.run must be registered");
+    PermissionPolicy policy;
+    Require(policy.evaluate(AgentMode::Ask, python_tool->descriptor()) == PermissionAction::Deny,
+            "Ask must deny python.run");
+    Require(policy.evaluate(AgentMode::Plan, python_tool->descriptor()) == PermissionAction::Deny,
+            "Plan must deny python.run (applies immediately, no preview)");
+    Require(policy.evaluate(AgentMode::Edit, python_tool->descriptor()) == PermissionAction::Ask,
+            "Edit must ask before python.run");
+    Require(policy.evaluate(AgentMode::Auto, python_tool->descriptor()) == PermissionAction::Allow,
+            "Auto must allow python.run");
     AgentSession session;
     AgentCancellation cancellation;
-    PermissionPolicy policy;
     AutoApprovalGate approve(true);
     MockModelProvider provider;
     provider.setScript([](const ModelRequest &request) {

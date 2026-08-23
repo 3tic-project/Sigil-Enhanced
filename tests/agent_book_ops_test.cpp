@@ -7,6 +7,7 @@
 #include "Agent/Core/AgentSession.h"
 #include "Agent/Execution/ContentOps.h"
 #include "Agent/Execution/MemoryBookWorkspace.h"
+#include "Agent/Execution/ResourceMutations.h"
 #include "Agent/Tools/BookTools.h"
 #include "Agent/Tools/ToolRegistry.h"
 #include "Agent/Typeset/ManuscriptParser.h"
@@ -219,6 +220,99 @@ int main()
                 .data.value(QStringLiteral("tasks")).toArray().first().toObject()
                 .value(QStringLiteral("status")).toString() == QStringLiteral("done"),
             "task done");
+
+    Require(registry.find(QStringLiteral("resource_rename")) != nullptr, "rename registered");
+    Require(registry.find(QStringLiteral("spine_sort")) != nullptr, "spine.sort registered");
+    Require(registry.find(QStringLiteral("style_link")) != nullptr, "style.link registered");
+    Require(registry.find(QStringLiteral("python_run")) != nullptr, "python.run registered");
+
+    Require(resolveRenameTarget(QStringLiteral("OEBPS/Text/ch1.xhtml"), QStringLiteral("Heat"))
+                == QStringLiteral("OEBPS/Text/Heat.xhtml"),
+            "filename-only rename keeps folder and suffix");
+    Require(resolveRenameTarget(QStringLiteral("OEBPS/Text/ch1.xhtml"),
+                                QStringLiteral("OEBPS/Misc/ch1.xhtml"))
+                == QStringLiteral("OEBPS/Misc/ch1.xhtml"),
+            "full-path rename is used as-is");
+    Require(rewriteHrefsForMove(QStringLiteral("<link href=\"../Styles/style.css\"/>"),
+                                QStringLiteral("OEBPS/Text/ch1.xhtml"),
+                                QStringLiteral("OEBPS/Styles/style.css"),
+                                QStringLiteral("OEBPS/Styles/theme.css"))
+                .contains(QStringLiteral("../Styles/theme.css")),
+            "href rewrite follows a stylesheet rename");
+
+    const ToolResult python_missing = run(QStringLiteral("python.run"), QJsonObject {
+        { QStringLiteral("script"), QStringLiteral("print(plugin.book.summary())") }
+    });
+    Require(!python_missing.ok && python_missing.code == QStringLiteral("LIVE_PYTHON_UNAVAILABLE"),
+            "Memory workspace cannot snapshot-run Python");
+
+    Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "sort begin");
+    Require(run(QStringLiteral("spine.set"), QJsonObject {
+        { QStringLiteral("resource_ids"), QJsonArray { QStringLiteral("ch2"), QStringLiteral("ch1") } }
+    }).ok, "unsort spine");
+    Require(run(QStringLiteral("spine.sort"), QJsonObject()).ok, "spine.sort");
+    Require(run(QStringLiteral("transaction.commit"), QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(book.revision()) }
+    }).applied, "sort commit");
+    Require(book.spine().first().toObject().value(QStringLiteral("resource_id")).toString()
+                == QStringLiteral("ch1"),
+            "numeric path sort puts ch1 before ch2");
+
+    Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "rename begin");
+    const ToolResult renamed = run(QStringLiteral("resource.rename"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("css") },
+        { QStringLiteral("book_path"), QStringLiteral("theme.css") }
+    });
+    Require(renamed.ok, "rename css");
+    Require(book.workingText(QStringLiteral("ch1")).contains(QStringLiteral("../Styles/theme.css")),
+            "rename rewrites stylesheet hrefs while staged");
+    Require(run(QStringLiteral("resource.rename"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("ch1") },
+        { QStringLiteral("book_path"), QStringLiteral("OEBPS/ch1.xhtml") }
+    }).ok, "move chapter");
+    Require(book.workingText(QStringLiteral("ch1")).contains(QStringLiteral("href=\"Styles/theme.css\"")),
+            "move rewrites outgoing hrefs for the new folder");
+    const ToolResult previewed = run(QStringLiteral("transaction.preview"), QJsonObject());
+    Require(previewed.ok, "rename preview");
+    bool saw_renamed = false;
+    for (const QJsonValue &value : previewed.data.value(QStringLiteral("changes")).toArray()) {
+        if (value.toObject().value(QStringLiteral("renamed")).toBool()) saw_renamed = true;
+    }
+    Require(saw_renamed, "preview lists renamed resources");
+    Require(run(QStringLiteral("transaction.commit"), QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(book.revision()) }
+    }).applied, "rename commit");
+    Require(book.resourceText(QStringLiteral("ch1")).contains(QStringLiteral("Styles/theme.css")),
+            "committed move keeps rewritten hrefs");
+    QString css_path;
+    for (const QJsonValue &value : book.resources()) {
+        if (value.toObject().value(QStringLiteral("resource_id")).toString() == QLatin1String("css")) {
+            css_path = value.toObject().value(QStringLiteral("book_path")).toString();
+        }
+    }
+    Require(css_path == QStringLiteral("OEBPS/Styles/theme.css"), "css path after rename");
+
+    MemoryResource extra_css;
+    extra_css.id = QStringLiteral("css2");
+    extra_css.bookPath = QStringLiteral("OEBPS/Styles/extra.css");
+    extra_css.kind = QStringLiteral("css");
+    extra_css.mediaType = QStringLiteral("text/css");
+    extra_css.text = QStringLiteral("p { color: red; }");
+    book.addResource(extra_css);
+    Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "link begin");
+    Require(run(QStringLiteral("style.link"), QJsonObject {
+        { QStringLiteral("html_ids"), QJsonArray { QStringLiteral("ch1") } },
+        { QStringLiteral("css_ids"), QJsonArray { QStringLiteral("css"), QStringLiteral("css2") } }
+    }).ok, "style.link");
+    Require(run(QStringLiteral("transaction.commit"), QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(book.revision()) }
+    }).applied, "link commit");
+    const QString linked = book.resourceText(QStringLiteral("ch1"));
+    Require(linked.contains(QStringLiteral("Styles/theme.css")), "primary stylesheet linked");
+    Require(linked.contains(QStringLiteral("Styles/extra.css")), "second stylesheet linked");
+
+    const ToolResult check_wellformed = run(QStringLiteral("book.check"), QJsonObject());
+    Require(check_wellformed.data.contains(QStringLiteral("wellformed")), "book.check wellformed");
 
     Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "plain begin");
     MemoryResource txt;

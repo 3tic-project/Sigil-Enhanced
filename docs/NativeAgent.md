@@ -2,7 +2,7 @@
 
 Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手。它理解这本书的结构、资源、样式、字体、Spine、目录和元数据，可以用自然语言查询、规划，并在你批准后做可撤销的修改。
 
-它不是编程 Agent，也不会操作整台电脑。它不调用 MCP，也不走 Python 插件。
+它不是编程 Agent，也不会操作整台电脑。它不调用 MCP。需要 typed 工具表达不了的批量逻辑时，可以用 `python.run`：通过 **Live Python v2** 在当前内存中的 Book 上跑一段临时脚本（`plugin.book` / `def run(plugin)`），**不是**旧插件那种把书拍成 ZIP 快照再导入。
 
 ## 打开方式
 
@@ -23,7 +23,7 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 | 模式 | 能做什么 |
 |---|---|
 | **Ask** | 只读。可摘要、搜索、读片段、列字体、校验。不能改书。 |
-| **Plan** | 可以 `transaction.begin`、暂存 create/copy/patch/CSS/metadata，并 `preview`。不能 `commit` / `restore`。活书保持不变。 |
+| **Plan** | 可以 `transaction.begin`、暂存 create/copy/rename/patch/CSS/metadata，并 `preview`。不能 `commit` / `restore` / `python.run`。活书保持不变。 |
 | **Edit** | 可通过工具改书。可逆编辑默认要你点 **Approve**。提交后可用 Sigil 的撤销。 |
 | **Auto** | 与 Edit 相同的写入工具，但默认全部允许，不再弹出 Approve。 |
 
@@ -33,7 +33,9 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`session.recall` / `session.tasks`。
 
-写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set`、`toc.generate`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`checkpoint.create` / `list` / `restore`。
+写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`checkpoint.create` / `list` / `restore`。
+
+立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。
 
 会话级（不改书，New Session 会清空）：`session.remember`、`session.task_add`、`session.task_update`。
 
@@ -41,7 +43,9 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 批量套标签用 `content.wrap`，全书查找替换用 `content.replace_regex`（`$1` 捕获组）。图片必须先拖进 Images，再用 `image.insert` 按锚点插入 `<img>`。`book.check` 会报损坏的图片链接和未引用图片。
 
-`spine.set` 重排阅读顺序；`resource.delete` 不能删 OPF/NCX/Nav 或最后一份 XHTML；`toc.generate` 按标题正则生成 TOC；`metadata.update` 支持任意 DC 字段，`_remove` 删除字段。
+`spine.set` 重排阅读顺序；`spine.sort` 按路径字母数字排序；`resource.rename` 可改文件名或换目录（提交时改 href）；`style.link` 重写 XHTML 的 stylesheet `<link>`；`resource.delete` 不能删 OPF/NCX/Nav 或最后一份 XHTML；`toc.generate` 按标题正则生成 TOC；`metadata.update` 支持任意 DC 字段，`_remove` 删除字段。
+
+`python.run` 会写一份临时 Live v2 命令插件（`plugin.xml` + `plugin.py`，`api=2 interface=live`，`lifetime=command`），通过现有 `PluginSession` 本地 socket 打到**当前打开的 Book**。若 Agent 还有未提交事务，会先要求 `commit` / `rollback`。Memory 测试工作区返回 `LIVE_PYTHON_UNAVAILABLE`。脚本上限 64KiB，输出截到 8KiB。优先用 typed 工具；Python 只补工具盖不到的逻辑。
 
 格式不是固定的：标题/插图标记都通过工具参数里的 regex 传入。`ln-template-typeset` 只是一套可选默认启发式；通用流程见 skill `book-structure`。目前仍不能把字体/图片二进制塞进模型，也不能改 EPUB3 nav 地标树。
 
