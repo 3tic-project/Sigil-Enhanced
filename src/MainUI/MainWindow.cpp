@@ -6191,6 +6191,7 @@ void MainWindow::CreateAgentDock()
 {
     m_AgentWorkspace = std::make_unique<SigilAgent::SigilBookWorkspace>();
     m_AgentWorkspace->setBook(m_Book);
+    m_AgentWorkspace->setPluginSessionManager(m_PluginSessionManager);
     m_AgentController = std::make_unique<SigilAgent::AgentController>();
     m_AgentController->setWorkspace(m_AgentWorkspace.get());
     m_AgentDock = new SigilAgent::AgentDock(this);
@@ -6211,7 +6212,10 @@ void MainWindow::CreateAgentDock()
                                          ? m_AgentController->runner()->state()
                                          : SigilAgent::AgentRunState::Idle);
         }
-        if (event.type == SigilAgent::AgentEventType::TransactionCommitted && m_BookBrowser) {
+        const bool applied_live = event.type == SigilAgent::AgentEventType::TransactionCommitted
+            || (event.type == SigilAgent::AgentEventType::ToolCompleted
+                && event.payload.value(QStringLiteral("applied")).toBool());
+        if (applied_live && m_BookBrowser) {
             m_BookBrowser->Refresh();
             UpdateAgentContext();
         }

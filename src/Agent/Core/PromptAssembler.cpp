@@ -31,11 +31,12 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
         "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
         "- A patch must not cut through a markup tag.\n"
         "- Mutations must go through transaction.begin → staged edits → transaction.preview → transaction.commit.\n"
-        "- To add a new HTML/CSS file use resource.copy or resource.create. To remove a file use resource.delete. To reorder reading order use spine.set.\n"
+        "- To add a new HTML/CSS file use resource.copy or resource.create. To remove a file use resource.delete. To rename or move a file use resource.rename (filename or full EPUB path). To reorder reading order use spine.set or spine.sort. To attach CSS use style.link.\n"
         "- Long text already in the book (dropped TXT/HTML) must stay there: content.wrap_plain, content.replace_body (source_resource_id), content.split/merge. Never paste chapter bodies through patch_fragment or replace_text. Never tell the user to paste into Book View.\n"
         "- Batch markup: content.wrap and content.replace_regex (patterns supplied by the user or inferred, never assume a fixed novel format).\n"
         "- Insert an already-imported image with image.insert. Check broken/unused images with book.check.\n"
         "- toc.generate builds a TOC from heading regex. metadata.update/_remove edits Dublin Core fields.\n"
+        "- python.run runs a temporary Live Python v2 command on the in-memory Book (`plugin.book`, `def run(plugin)`). It is not a ZIP snapshot. Commit or rollback the Agent transaction first. Prefer typed tools; use Python for logic typed tools cannot express.\n"
         "- Keep a plan with session.task_add / session.task_update and session.remember for constraints (heading regex, class names) across turns.\n"
         "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n"
         "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n");

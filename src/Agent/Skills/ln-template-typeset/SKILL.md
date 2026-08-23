@@ -60,4 +60,4 @@ Template ships seven `Section` pages. If the manuscript has more, `content.types
 
 ## Afterward
 
-If `retired_source` is true, a leftover ImportTXT page in Text is a stub and can be deleted in Book Browser (Agent has no delete tool yet). Mention missing images so the user can rename or drop the file.
+If `retired_source` is true, a leftover ImportTXT page in Text is a stub; `resource.delete` can remove it after commit. Mention missing images so the user can rename or drop the file.

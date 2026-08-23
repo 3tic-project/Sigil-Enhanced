@@ -1,6 +1,6 @@
 ---
 name: book-structure
-description: Restructure the open EPUB with general tools — split/merge chapters, wrap tags, regex replace, spine order, TOC generation, resource delete, image insert. Use when the user asks to 拆分, 合并, reorder, generate 目录, wrap paragraphs, regex replace, or delete files. Do not assume a fixed novel template.
+description: Restructure the open EPUB with general tools — split/merge chapters, wrap tags, regex replace, rename/move files, spine order, stylesheet linking, TOC generation, resource delete, image insert, Live Python. Use when the user asks to 拆分, 合并, 重命名, reorder, link CSS, generate 目录, wrap paragraphs, regex replace, delete files, or run a Python script on the book. Do not assume a fixed novel template.
 compatibility: Native Sigil-Enhanced Agent.
 metadata:
   sigil.skill-version: "1"
@@ -11,8 +11,8 @@ allowed-tools: >
   book.summary book.resources book.spine book.search_regex book.check book.validate
   content.wrap_plain content.wrap content.replace_regex content.replace_body
   content.insert content.split content.merge image.insert
-  resource.copy resource.create resource.delete resource.replace_text
-  spine.set toc.generate metadata.update
+  resource.copy resource.create resource.delete resource.rename resource.replace_text
+  spine.set spine.sort style.link toc.generate metadata.update python.run
   transaction.begin transaction.preview transaction.commit
   session.task_add session.task_update session.remember
 ---
@@ -46,10 +46,14 @@ Images must already be in the book (Book Browser drop). `image.insert` writes an
 ## Structure
 
 - `resource.delete` — not OPF/NCX/Nav, not the last XHTML
+- `resource.rename` — filename in the same folder or a full EPUB path (move)
 - `spine.set` — full new reading order
+- `spine.sort` — alphanumeric book_path order
+- `style.link` — replace `<link rel="stylesheet">` tags
 - `content.merge` — concatenate files into the first
 - `toc.generate` — headings in spine order
 - `metadata.update` — any DC field; `_remove` deletes
+- `python.run` — Live Python v2 on the in-memory Book (`plugin.book`). Not a ZIP snapshot. Commit/rollback the Agent transaction first. Prefer typed tools.
 
 ## Session
 

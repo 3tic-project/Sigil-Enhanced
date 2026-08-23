@@ -29,7 +29,8 @@ PermissionAction PermissionPolicy::evaluate(AgentMode mode, const AgentToolDescr
     }
     if (mode == AgentMode::Plan) {
         const bool is_commit = tool.name == QLatin1String("transaction.commit")
-            || tool.name == QLatin1String("checkpoint.restore");
+            || tool.name == QLatin1String("checkpoint.restore")
+            || tool.name == QLatin1String("python.run");
         if (is_commit) return PermissionAction::Deny;
         if (is_preview || is_begin_or_rollback || is_checkpoint_read) return PermissionAction::Allow;
         if (tool.supportsPreview) return PermissionAction::Allow;
@@ -50,8 +51,9 @@ QString PermissionPolicy::denyReason(AgentMode mode, const AgentToolDescriptor &
     }
     if (mode == AgentMode::Plan
         && (tool.name == QLatin1String("transaction.commit")
-            || tool.name == QLatin1String("checkpoint.restore"))) {
-        return QStringLiteral("Plan mode can stage and preview but cannot commit %1").arg(tool.name);
+            || tool.name == QLatin1String("checkpoint.restore")
+            || tool.name == QLatin1String("python.run"))) {
+        return QStringLiteral("Plan mode can stage and preview but cannot apply %1").arg(tool.name);
     }
     if (mode == AgentMode::Plan && tool.mutatesBook && !tool.supportsPreview
         && tool.name != QLatin1String("transaction.begin")

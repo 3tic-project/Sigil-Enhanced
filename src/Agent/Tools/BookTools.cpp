@@ -121,8 +121,19 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
         return QStringLiteral("Delete %1. Staged until commit.")
             .arg(arguments.value(QStringLiteral("resource_id")).toString());
     }
-    if (name == QLatin1String("spine.set")) {
+    if (name == QLatin1String("resource.rename")) {
+        return QStringLiteral("Rename %1 to %2. Staged until commit.")
+            .arg(arguments.value(QStringLiteral("resource_id")).toString(),
+                 arguments.value(QStringLiteral("book_path")).toString());
+    }
+    if (name == QLatin1String("spine.set") || name == QLatin1String("spine.sort")) {
         return QStringLiteral("Reorder the spine. Staged until commit.");
+    }
+    if (name == QLatin1String("style.link")) {
+        return QStringLiteral("Link stylesheets. Staged until commit.");
+    }
+    if (name == QLatin1String("python.run")) {
+        return QStringLiteral("Run a Live Python v2 script on the open book. Applies immediately (not staged).");
     }
     if (name == QLatin1String("content.split") || name == QLatin1String("content.merge")) {
         return QStringLiteral("Restructure chapters. Staged until commit.");
@@ -786,6 +797,25 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                 arguments.value(QStringLiteral("resource_id")).toString()));
         });
 
+    add(registry, QStringLiteral("resource.rename"),
+        QStringLiteral("Stage a rename or move. book_path may be a new filename in the same folder (Heat.xhtml) or a full EPUB-relative path (OEBPS/Text/Heat.xhtml, OEBPS/Misc/ch1.xhtml). OPF/NCX/Nav cannot be renamed. Href updates are applied on commit. Live book unchanged until transaction.commit."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("book_path"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("resource_id"), QStringLiteral("book_path")
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(workspace->renameResource(
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                arguments.value(QStringLiteral("book_path")).toString()));
+        });
+
     add(registry, QStringLiteral("spine.set"),
         QStringLiteral("Stage a new spine order. resource_ids is the full XHTML reading order. Files omitted are removed from the spine (not deleted)."),
         ToolRisk::Bulk, true, true,
@@ -805,6 +835,65 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                 ids.append(value.toString());
             }
             return fromBook(workspace->updateSpine(ids));
+        });
+
+    add(registry, QStringLiteral("spine.sort"),
+        QStringLiteral("Stage an alphanumeric spine order by book_path (numeric-aware, same as Book Browser Sort). Live book unchanged until transaction.commit."),
+        ToolRisk::Bulk, true, true, emptyObjectSchema(),
+        [workspace](const QJsonObject &) {
+            return fromBook(sortSpine(workspace));
+        });
+
+    add(registry, QStringLiteral("style.link"),
+        QStringLiteral("Replace stylesheet <link> tags in XHTML files with the given CSS resources (same as Link Stylesheets). Omit html_ids to apply to every XHTML file. css_ids is the new link order. Live book unchanged until transaction.commit."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("html_ids"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("items"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                } },
+                { QStringLiteral("css_ids"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("items"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("css_ids") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            QStringList html_ids;
+            QStringList css_ids;
+            for (const QJsonValue &value : arguments.value(QStringLiteral("html_ids")).toArray()) {
+                html_ids.append(value.toString());
+            }
+            for (const QJsonValue &value : arguments.value(QStringLiteral("css_ids")).toArray()) {
+                css_ids.append(value.toString());
+            }
+            if (css_ids.isEmpty()) {
+                return ToolResult::failure(QStringLiteral("CSS_REQUIRED"),
+                                           QStringLiteral("css_ids must list at least one stylesheet"));
+            }
+            return fromBook(linkStylesheets(workspace, html_ids, css_ids));
+        });
+
+    add(registry, QStringLiteral("python.run"),
+        QStringLiteral("Run a temporary Live Python v2 command against the in-memory Book (plugin.book / plugin.editor), not a ZIP snapshot. Applies immediately; commit or rollback any Agent transaction first. Script may define def run(plugin) or use the `plugin` global. stdout/stderr are returned (truncated). Unavailable outside the Sigil GUI (LIVE_PYTHON_UNAVAILABLE). Capped at 64KiB."),
+        ToolRisk::Bulk, true, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("script"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("timeout_ms"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("script") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            int timeout_ms = arguments.value(QStringLiteral("timeout_ms")).toInt(30000);
+            if (timeout_ms < 1000) timeout_ms = 1000;
+            if (timeout_ms > 300000) timeout_ms = 300000;
+            return fromBook(workspace->runLivePython(
+                arguments.value(QStringLiteral("script")).toString(), timeout_ms));
         });
 
     add(registry, QStringLiteral("toc.generate"),
