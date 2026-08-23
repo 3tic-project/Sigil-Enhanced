@@ -1356,6 +1356,7 @@ set(AGENT_CORE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentRunner.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSkills.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/PromptAssembler.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/MockModelProvider.cpp
@@ -1366,6 +1367,8 @@ set(AGENT_CORE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/TypesetEngine.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
 )
@@ -1388,6 +1391,8 @@ add_executable(agent_book_tools_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/TypesetEngine.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
 )
@@ -1396,6 +1401,29 @@ target_link_libraries(agent_book_tools_test PRIVATE Qt6::Core Qt6::Gui)
 target_compile_features(agent_book_tools_test PRIVATE cxx_std_17)
 add_test(NAME agent_book_tools COMMAND agent_book_tools_test)
 set_tests_properties(agent_book_tools PROPERTIES TIMEOUT 30)
+
+add_executable(agent_typeset_test
+    agent_typeset_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSkills.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/PromptAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/BookTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/TypesetEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
+)
+target_include_directories(agent_typeset_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_typeset_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(agent_typeset_test PRIVATE cxx_std_17)
+add_test(NAME agent_typeset COMMAND agent_typeset_test)
+set_tests_properties(agent_typeset PROPERTIES TIMEOUT 30)
 
 add_executable(agent_launch_test
     agent_launch_test.cpp

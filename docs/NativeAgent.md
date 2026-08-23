@@ -33,9 +33,21 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`。
 
-写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create`、`resource.copy`、`resource.patch_fragment`、`css.update_rules`、`metadata.update`、`checkpoint.create` / `list` / `restore`。
+写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create`、`resource.copy`、`resource.replace_text`、`resource.patch_fragment`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`checkpoint.create` / `list` / `restore`。
 
 复制一章（如 Section0001 → Section0002）用 `resource.copy`，不要让用户去 Book Browser 里手工复制。`book_path` 可省略，工具会在同目录生成不冲突的下一序号。目前不能增删字体/图片二进制，也不能改 nav/NCX 目录树结构。
+
+## 按轻小说模板自动排版
+
+打开 `轻小说模板.epub`，把一本书的 TXT 和图片拖进 Book Browser，然后在 Agent 里说「按模板排版」（Auto 模式可少点批准）：
+
+1. `manuscript.parse` 只返回标题、制作信息、简介、目录、章节列表和插图名，**不会**把 10 万字正文塞进模型。
+2. `content.typeset_from_manuscript` 在 C++ 里灌版：给不足的 `Section` 做 copy，把每一话写成 `<h1>` + `<p>`，把 `［插图：name］` 写成模板的 `.illus` 图，并把 `illus1` 里写死的 `co1.jpg` 改成拖进来的 `color1.jpg` / `kuchie-001.jpg` 等；同时填 title / 制作信息 / 简介 / 目录和 metadata。
+3. 模型**禁止**用 `resource.patch_fragment` 粘贴整章，也禁止让你去书籍视图里全选粘贴。`resource.replace_text` 对模型上限 64KiB，整章灌入走 typeset 工具。
+
+内置 skill `ln-template-typeset`（`src/Agent/Skills/ln-template-typeset/SKILL.md`）会在打开该模板或用户提到排版/模板时注入。Skill 只是说明，不执行脚本。
+
+局限：不能删掉 ImportTXT 留下来的整本导入页（会改成一行提示）；没有插图标记的 TXT 只会把剩余图片铺到彩页，文内位置仍需手补；完整 CSS 语义迁移（`style.profile_apply`）尚未实现。
 
 `resource.patch_fragment` 用 **当前原文子串** 定位，不要让模型数字符偏移。必填 `expected_text`（从 `read_fragment` 的 `text` 原样复制，可以是一整行）。子串出现多次时用 `start_line`（来自 `read_fragment.lines` 的 1-based 行号）消歧。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带 staged excerpt。
 
