@@ -23,6 +23,7 @@ public:
     explicit PluginSessionConsole(const QString &plugin_name, QWidget *parent = nullptr);
 
     void AppendOutput(const QString &text);
+    QString OutputText() const;
     void SetStatus(const QString &status);
     void SetProgress(const QString &label, int value, int maximum);
     void ClearProgress();

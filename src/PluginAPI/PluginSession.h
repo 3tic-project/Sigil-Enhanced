@@ -59,6 +59,8 @@ public:
     QString PendingInputEpubPath() const;
     bool Start(QString *error);
     void Cancel();
+    void setQuiet(bool quiet);
+    QString CapturedOutput() const;
 
 signals:
     void Ended();
@@ -180,6 +182,8 @@ private:
     int m_RequestsInWindow;
     std::unique_ptr<PluginApi::TextTransaction> m_Transaction;
     QPointer<PluginSessionConsole> m_Console;
+    bool m_Quiet = false;
+    QString m_CapturedOutput;
 };
 
 #endif // PLUGINSESSION_H

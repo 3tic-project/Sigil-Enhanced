@@ -305,6 +305,16 @@ void Plugin::set_lifetime(const QString &val)
     }
 }
 
+void Plugin::set_root_path(const QString &val)
+{
+    m_rootPath = val;
+}
+
+QString Plugin::get_root_path() const
+{
+    return m_rootPath;
+}
+
 void Plugin::add_permission(const QString &val)
 {
     const QString permission = val.trimmed();

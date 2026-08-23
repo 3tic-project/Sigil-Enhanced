@@ -53,6 +53,11 @@ void PluginSessionConsole::AppendOutput(const QString &text)
     }
 }
 
+QString PluginSessionConsole::OutputText() const
+{
+    return m_Output ? m_Output->toPlainText() : QString();
+}
+
 void PluginSessionConsole::SetStatus(const QString &status)
 {
     m_StatusLabel->setText(status);

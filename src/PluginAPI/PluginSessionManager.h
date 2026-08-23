@@ -30,7 +30,8 @@ public:
     bool StartPlugin(const Plugin &plugin, QString *error = nullptr);
     bool RunPluginAndWait(const Plugin &plugin, QString *status, QString *plugin_type,
                           int *validation_error_count, QString *error = nullptr,
-                          int timeout_ms = 30 * 60 * 1000);
+                          int timeout_ms = 30 * 60 * 1000,
+                          QString *output = nullptr, bool quiet = false);
     bool AcquireWriter(const QUuid &session_id);
     void ReleaseWriter(const QUuid &session_id);
     void StopAll();
@@ -38,7 +39,7 @@ public:
     bool HasWriter() const;
 
 private:
-    PluginSession *StartSession(const Plugin &plugin, QString *error);
+    PluginSession *StartSession(const Plugin &plugin, QString *error, bool quiet = false);
 
     MainWindow *m_MainWindow;
     TabManager *m_TabManager;

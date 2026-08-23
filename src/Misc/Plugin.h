@@ -59,6 +59,7 @@ public:
     int get_api_version() const;
     QString get_api_interface() const;
     QString get_lifetime() const;
+    QString get_root_path() const;
     QStringList get_permissions() const;
     QStringList get_events() const;
     RuntimeMode get_declared_runtime() const;
@@ -77,6 +78,7 @@ public:
     void set_iconpath(const QString &val);
     void set_api(int version, const QString &interface_name);
     void set_lifetime(const QString &val);
+    void set_root_path(const QString &val);
     void add_permission(const QString &val);
     void add_event(const QString &val);
 
@@ -95,6 +97,7 @@ private:
     int m_apiVersion = 1;
     QString m_apiInterface;
     QString m_lifetime;
+    QString m_rootPath;
     QStringList m_permissions;
     QStringList m_events;
 };

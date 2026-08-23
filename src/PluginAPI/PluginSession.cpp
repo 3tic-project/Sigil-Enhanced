@@ -681,9 +681,10 @@ bool PluginSession::Start(QString *error)
     }
 
     const QString launcher = PluginDB::launcherRoot() + QStringLiteral("/python/live_launcher.py");
-    // Use install directory (dirname), not display name — they may differ.
-    const QString plugin_path = PluginDB::pluginsPath() + QLatin1Char('/')
-        + m_Plugin.get_dirname() + QStringLiteral("/plugin.py");
+    const QString plugin_dir = m_Plugin.get_root_path().isEmpty()
+        ? PluginDB::pluginsPath() + QLatin1Char('/') + m_Plugin.get_dirname()
+        : m_Plugin.get_root_path();
+    const QString plugin_path = plugin_dir + QStringLiteral("/plugin.py");
     if (!QFileInfo::exists(launcher) || !QFileInfo::exists(plugin_path)) {
         if (error) {
             *error = tr("The live plugin launcher or plugin entry point does not exist.");
@@ -758,19 +759,21 @@ bool PluginSession::Start(QString *error)
         });
     });
 
-    m_Console = new PluginSessionConsole(m_Plugin.get_name(), m_MainWindow);
-    connect(m_Console, &PluginSessionConsole::CancelRequested, this, &PluginSession::Cancel);
-    m_Console->show();
+    if (!m_Quiet) {
+        m_Console = new PluginSessionConsole(m_Plugin.get_name(), m_MainWindow);
+        connect(m_Console, &PluginSessionConsole::CancelRequested, this, &PluginSession::Cancel);
+        m_Console->show();
+    }
 
     connect(m_Process, &QProcess::readyReadStandardOutput, this, [this]() {
-        if (m_Console) {
-            m_Console->AppendOutput(QString::fromUtf8(m_Process->readAllStandardOutput()));
-        }
+        const QString text = QString::fromUtf8(m_Process->readAllStandardOutput());
+        m_CapturedOutput += text;
+        if (m_Console) m_Console->AppendOutput(text);
     });
     connect(m_Process, &QProcess::readyReadStandardError, this, [this]() {
-        if (m_Console) {
-            m_Console->AppendOutput(QString::fromUtf8(m_Process->readAllStandardError()));
-        }
+        const QString text = QString::fromUtf8(m_Process->readAllStandardError());
+        m_CapturedOutput += text;
+        if (m_Console) m_Console->AppendOutput(text);
     });
     connect(m_Process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError) {
         Finish(QStringLiteral("failed"), m_Process->errorString());
@@ -796,7 +799,7 @@ bool PluginSession::Start(QString *error)
         });
     }
     m_Process->setArguments(arguments);
-    m_Process->setWorkingDirectory(QFileInfo(plugin_path).absolutePath());
+    m_Process->setWorkingDirectory(plugin_dir);
     m_Process->start();
 
     QTimer::singleShot(10000, this, [this]() {
@@ -806,6 +809,20 @@ bool PluginSession::Start(QString *error)
         }
     });
     return true;
+}
+
+void PluginSession::setQuiet(bool quiet)
+{
+    m_Quiet = quiet;
+}
+
+QString PluginSession::CapturedOutput() const
+{
+    if (m_Console) {
+        const QString console = m_Console->OutputText();
+        if (!console.isEmpty()) return console;
+    }
+    return m_CapturedOutput;
 }
 
 void PluginSession::Cancel()
