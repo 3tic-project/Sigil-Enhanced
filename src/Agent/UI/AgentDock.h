@@ -15,7 +15,6 @@
 
 class QComboBox;
 class QLabel;
-class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 class QScrollArea;
@@ -51,6 +50,8 @@ signals:
     void sendRequested(const QString &text, const QStringList &handles);
     void stopRequested();
     void newSessionRequested();
+    void exportConversationRequested();
+    void exportDebugLogRequested();
     void modeChanged(AgentMode mode);
     void approvalResponded(const QString &toolCallId, bool approved);
 
@@ -75,7 +76,7 @@ private:
     QString previewBody(const QJsonObject &payload) const;
 
     QComboBox *m_modeCombo = nullptr;
-    QLineEdit *m_modelEdit = nullptr;
+    QLabel *m_modelLabel = nullptr;
     QLabel *m_contextScope = nullptr;
     QLabel *m_runState = nullptr;
     QLabel *m_composerHint = nullptr;

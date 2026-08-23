@@ -25,6 +25,8 @@
 
 #include <memory>
 
+#include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QThread>
 #include <QTimer>
@@ -107,8 +109,10 @@
 #include "MainUI/PreviewWindow.h"
 #include "Agent/Core/AgentController.h"
 #include "Agent/Execution/SigilBookWorkspace.h"
+#include "Agent/Model/AgentProviderPreset.h"
 #include "Agent/Model/OpenAICompatibleProvider.h"
 #include "Agent/Persistence/AgentSettings.h"
+#include "Agent/Persistence/AgentSessionExport.h"
 #include "Agent/UI/AgentDock.h"
 #include "MainUI/TableOfContents.h"
 #include "MainUI/ValidationResultsView.h"
@@ -5045,6 +5049,7 @@ void MainWindow::PreferencesDialog()
     }
     loadPluginsMenu();
     UpdateAutomationMenu();
+    ConfigureAgentProvider();
 }
 
 
@@ -5085,6 +5090,7 @@ void MainWindow::ManagePluginsDialog()
     }
     loadPluginsMenu();
     UpdateAutomationMenu();
+    ConfigureAgentProvider();
 }
 
 void MainWindow::updateToolTipsOnPluginIcons()
@@ -6177,10 +6183,7 @@ void MainWindow::ConfigureAgentProvider()
     m_AgentController->setThinking(settings.thinkingEnabled(), settings.reasoningEffort());
     if (m_AgentDock) {
         m_AgentController->setMode(m_AgentDock->mode());
-        if (QLineEdit *model = m_AgentDock->findChild<QLineEdit *>(QStringLiteral("agentModelEdit"))) {
-            const QString name = model->text().trimmed();
-            if (!name.isEmpty()) m_AgentController->setModel(name);
-        }
+        m_AgentDock->setModelName(settings.model());
     }
 }
 
@@ -6220,6 +6223,10 @@ void MainWindow::CreateAgentDock()
             this, &MainWindow::AgentStopRequested);
     connect(m_AgentDock, &SigilAgent::AgentDock::newSessionRequested,
             this, &MainWindow::AgentNewSessionRequested);
+    connect(m_AgentDock, &SigilAgent::AgentDock::exportConversationRequested,
+            this, &MainWindow::AgentExportConversationRequested);
+    connect(m_AgentDock, &SigilAgent::AgentDock::exportDebugLogRequested,
+            this, &MainWindow::AgentExportDebugLogRequested);
     connect(m_AgentDock, &SigilAgent::AgentDock::modeChanged, this,
             [this](SigilAgent::AgentMode mode) {
                 if (m_AgentController) m_AgentController->setMode(mode);
@@ -6276,6 +6283,89 @@ void MainWindow::AgentNewSessionRequested()
         m_AgentDock->resetTranscript();
         m_AgentDock->setRunState(SigilAgent::AgentRunState::Idle);
     }
+}
+
+namespace
+{
+
+SigilAgent::SessionExportContext MakeAgentExportContext(SigilAgent::AgentController *controller,
+                                                        SigilAgent::AgentDock *dock)
+{
+    SigilAgent::AgentSettings settings;
+    SigilAgent::SessionExportContext context;
+    context.sessionId = controller ? controller->session()->id() : QString();
+    context.provider = settings.provider();
+    context.chatUrl = settings.providerConfig().baseUrl;
+    context.modelsUrl = SigilAgent::modelsUrl(settings.providerKind(), settings.baseUrl());
+    context.model = settings.model();
+    context.thinking = settings.thinkingEnabled();
+    context.reasoningEffort = settings.reasoningEffort();
+    context.apiKeyPresent = !settings.apiKey().isEmpty();
+    if (!settings.apiKey().isEmpty()) context.secrets.append(settings.apiKey());
+    context.mode = SigilAgent::modeName(dock ? dock->mode() : settings.defaultMode());
+    if (controller && controller->runner()) {
+        context.runState = SigilAgent::runStateName(controller->runner()->state());
+    } else {
+        context.runState = QStringLiteral("idle");
+    }
+    if (controller) context.httpTraces = controller->debugTraces();
+    return context;
+}
+
+QString AgentExportSuggestedPath(const QString &folder, const QString &session_id, const QString &suffix)
+{
+    const QString id = session_id.isEmpty() ? QStringLiteral("session") : session_id.left(8);
+    const QString directory = folder.isEmpty() ? QDir::homePath() : folder;
+    return QDir(directory).filePath(QStringLiteral("agent-%1.%2").arg(id, suffix));
+}
+
+bool WriteAgentExportFile(QWidget *parent, const QString &path, const QByteArray &bytes)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        Utility::critical(parent, QObject::tr("Export failed"), file.errorString());
+        return false;
+    }
+    if (file.write(bytes) != bytes.size()) {
+        Utility::critical(parent, QObject::tr("Export failed"), file.errorString());
+        return false;
+    }
+    return true;
+}
+
+} // namespace
+
+void MainWindow::AgentExportConversationRequested()
+{
+    if (!m_AgentController) return;
+    const SigilAgent::SessionExportContext context = MakeAgentExportContext(m_AgentController.get(), m_AgentDock);
+    QString filter = tr("Markdown (*.md);;All files (*)");
+    const QString path = QFileDialog::getSaveFileName(
+        this,
+        tr("Export conversation"),
+        AgentExportSuggestedPath(m_LastFolderOpen, context.sessionId, QStringLiteral("md")),
+        filter,
+        nullptr,
+        Utility::DlgOptions(QStringLiteral("LinuxUseNonNative")));
+    if (path.isEmpty()) return;
+    const QString markdown = SigilAgent::exportConversationMarkdown(*m_AgentController->session(), context);
+    WriteAgentExportFile(this, path, markdown.toUtf8());
+}
+
+void MainWindow::AgentExportDebugLogRequested()
+{
+    if (!m_AgentController) return;
+    const SigilAgent::SessionExportContext context = MakeAgentExportContext(m_AgentController.get(), m_AgentDock);
+    QString filter = tr("JSON (*.json);;All files (*)");
+    const QString path = QFileDialog::getSaveFileName(
+        this,
+        tr("Export debug log"),
+        AgentExportSuggestedPath(m_LastFolderOpen, context.sessionId, QStringLiteral("json")),
+        filter,
+        nullptr,
+        Utility::DlgOptions(QStringLiteral("LinuxUseNonNative")));
+    if (path.isEmpty()) return;
+    WriteAgentExportFile(this, path, SigilAgent::exportDebugJson(*m_AgentController->session(), context));
 }
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)

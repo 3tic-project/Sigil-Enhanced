@@ -108,4 +108,9 @@ void AgentController::resolveApproval(const QString &toolCallId, bool approved)
     m_gate.resolve(toolCallId, approved);
 }
 
+QJsonArray AgentController::debugTraces() const
+{
+    return m_provider ? m_provider->debugTraces() : QJsonArray();
+}
+
 } // namespace SigilAgent

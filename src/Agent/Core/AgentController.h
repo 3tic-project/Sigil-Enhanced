@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include <QJsonArray>
+
 #include "Agent/Core/AgentCancellation.h"
 #include "Agent/Core/AgentRunner.h"
 #include "Agent/Core/AgentSession.h"
@@ -44,6 +46,7 @@ public:
     void stop();
     void newSession();
     void resolveApproval(const QString &toolCallId, bool approved);
+    QJsonArray debugTraces() const;
 
 private:
     void rebuildTools();

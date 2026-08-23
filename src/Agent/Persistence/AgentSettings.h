@@ -8,9 +8,11 @@
 #ifndef SIGIL_AGENT_SETTINGS_H
 #define SIGIL_AGENT_SETTINGS_H
 
+#include <QJsonObject>
 #include <QString>
 
 #include "Agent/AgentTypes.h"
+#include "Agent/Model/AgentProviderPreset.h"
 #include "Agent/Model/OpenAICompatibleProvider.h"
 
 namespace SigilAgent
@@ -20,6 +22,10 @@ class AgentSettings
 {
 public:
     static const char *groupName();
+
+    QString provider() const;
+    void setProvider(const QString &provider);
+    AgentProviderKind providerKind() const;
 
     QString baseUrl() const;
     void setBaseUrl(const QString &url);
@@ -38,6 +44,25 @@ public:
 
     AgentMode defaultMode() const;
     void setDefaultMode(AgentMode mode);
+
+    bool modelSupportsReasoning() const;
+    void setModelSupportsReasoning(bool enabled);
+    bool modelSupportsTools() const;
+    void setModelSupportsTools(bool enabled);
+    qint64 modelContextLength() const;
+    void setModelContextLength(qint64 tokens);
+
+    QString catalogJson() const;
+    void setCatalogJson(const QString &json);
+
+    QJsonObject providerSecrets() const;
+    void setProviderSecrets(const QJsonObject &secrets);
+    QJsonObject providerModels() const;
+    void setProviderModels(const QJsonObject &models);
+    QJsonObject providerUrls() const;
+    void setProviderUrls(const QJsonObject &urls);
+    QJsonObject providerCatalogs() const;
+    void setProviderCatalogs(const QJsonObject &catalogs);
 
     OpenAIProviderConfig providerConfig() const;
 

@@ -6,6 +6,7 @@
 
 #include "Agent/UI/AgentDock.h"
 
+#include <QAction>
 #include <QComboBox>
 #include <QEvent>
 #include <QFrame>
@@ -14,7 +15,7 @@
 #include <QJsonDocument>
 #include <QKeyEvent>
 #include <QLabel>
-#include <QLineEdit>
+#include <QMenu>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
@@ -48,10 +49,16 @@ AgentDock::AgentDock(QWidget *parent) :
     m_modeCombo->addItem(tr("Edit"), QStringLiteral("edit"));
     m_modeCombo->setToolTip(tr("Ask is read-only. Plan can stage a preview. Edit can commit after approval."));
 
-    m_modelEdit = new QLineEdit(header);
-    m_modelEdit->setObjectName(QStringLiteral("agentModelEdit"));
-    m_modelEdit->setPlaceholderText(tr("model"));
-    m_modelEdit->setText(QStringLiteral("deepseek-v4-flash"));
+    auto *export_button = new QToolButton(header);
+    export_button->setObjectName(QStringLiteral("agentExportButton"));
+    export_button->setText(tr("Export"));
+    export_button->setPopupMode(QToolButton::InstantPopup);
+    auto *export_menu = new QMenu(export_button);
+    QAction *export_conversation = export_menu->addAction(tr("Conversation…"));
+    export_conversation->setObjectName(QStringLiteral("agentExportConversationAction"));
+    QAction *export_debug = export_menu->addAction(tr("Debug log…"));
+    export_debug->setObjectName(QStringLiteral("agentExportDebugAction"));
+    export_button->setMenu(export_menu);
 
     m_stopButton = new QPushButton(tr("Stop"), header);
     m_stopButton->setObjectName(QStringLiteral("agentStopButton"));
@@ -60,7 +67,8 @@ AgentDock::AgentDock(QWidget *parent) :
     m_newSessionButton->setObjectName(QStringLiteral("agentNewSessionButton"));
 
     header_layout->addWidget(m_modeCombo);
-    header_layout->addWidget(m_modelEdit, 1);
+    header_layout->addStretch(1);
+    header_layout->addWidget(export_button);
     header_layout->addWidget(m_stopButton);
     header_layout->addWidget(m_newSessionButton);
 
@@ -69,10 +77,15 @@ AgentDock::AgentDock(QWidget *parent) :
     status_layout->setContentsMargins(0, 0, 0, 0);
     m_runState = new QLabel(tr("Idle"), status);
     m_runState->setObjectName(QStringLiteral("agentRunState"));
+    m_modelLabel = new QLabel(status);
+    m_modelLabel->setObjectName(QStringLiteral("agentModelLabel"));
+    m_modelLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_modelLabel->setToolTip(tr("Model is chosen in Preferences → Native Agent"));
     m_contextScope = new QLabel(status);
     m_contextScope->setObjectName(QStringLiteral("agentContextScope"));
     m_contextScope->setWordWrap(true);
     status_layout->addWidget(m_runState);
+    status_layout->addWidget(m_modelLabel);
     status_layout->addWidget(m_contextScope, 1);
 
     auto *chips = new QWidget(root);
@@ -138,6 +151,8 @@ AgentDock::AgentDock(QWidget *parent) :
     connect(m_sendButton, &QPushButton::clicked, this, &AgentDock::onSend);
     connect(m_stopButton, &QPushButton::clicked, this, &AgentDock::stopRequested);
     connect(m_newSessionButton, &QPushButton::clicked, this, &AgentDock::newSessionRequested);
+    connect(export_conversation, &QAction::triggered, this, &AgentDock::exportConversationRequested);
+    connect(export_debug, &QAction::triggered, this, &AgentDock::exportDebugLogRequested);
     connect(m_modeCombo, &QComboBox::currentIndexChanged, this, &AgentDock::onModeChanged);
     connect(m_chipBook, &QToolButton::toggled, this, [this](bool) { refreshScopeLabel(); });
     connect(m_chipFile, &QToolButton::toggled, this, [this](bool) { refreshScopeLabel(); });
@@ -163,7 +178,11 @@ void AgentDock::setContextScope(const QString &scope)
 
 void AgentDock::setModelName(const QString &model)
 {
-    m_modelEdit->setText(model);
+    if (!m_modelLabel) return;
+    m_modelLabel->setText(model.isEmpty()
+                              ? tr("No model (set in Preferences)")
+                              : model);
+    m_modelLabel->setToolTip(tr("Model is chosen in Preferences → Native Agent"));
 }
 
 void AgentDock::setRunState(AgentRunState state)
