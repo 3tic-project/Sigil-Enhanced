@@ -257,6 +257,7 @@ void AgentDock::resetTranscript()
     m_currentThinking = nullptr;
     m_currentAnswer = nullptr;
     m_turn = 0;
+    m_step = 0;
 }
 
 QString AgentDock::composerText() const
@@ -282,10 +283,12 @@ QStringList AgentDock::contextHandles() const
 
 void AgentDock::onSend()
 {
+    if (m_sendButton && !m_sendButton->isEnabled()) return;
     const QString text = composerText();
     if (text.isEmpty()) return;
-    emit sendRequested(text, contextHandles());
     m_composer->clear();
+    if (m_sendButton) m_sendButton->setEnabled(false);
+    emit sendRequested(text, contextHandles());
 }
 
 void AgentDock::onModeChanged()
@@ -308,14 +311,20 @@ bool AgentDock::eventFilter(QObject *watched, QEvent *event)
 
 QString AgentDock::thinkingCardName() const
 {
-    return m_turn <= 1 ? QStringLiteral("agentThinkingCard")
-                       : QStringLiteral("agentThinkingCard%1").arg(m_turn);
+    const int turn = qMax(1, m_turn);
+    const int step = qMax(1, m_step);
+    if (turn == 1 && step == 1) return QStringLiteral("agentThinkingCard");
+    if (step == 1) return QStringLiteral("agentThinkingCard%1").arg(turn);
+    return QStringLiteral("agentThinkingCard%1-%2").arg(turn).arg(step);
 }
 
 QString AgentDock::answerCardName() const
 {
-    return m_turn <= 1 ? QStringLiteral("agentAnswerCard")
-                       : QStringLiteral("agentAnswerCard%1").arg(m_turn);
+    const int turn = qMax(1, m_turn);
+    const int step = qMax(1, m_step);
+    if (turn == 1 && step == 1) return QStringLiteral("agentAnswerCard");
+    if (step == 1) return QStringLiteral("agentAnswerCard%1").arg(turn);
+    return QStringLiteral("agentAnswerCard%1-%2").arg(turn).arg(step);
 }
 
 QWidget *AgentDock::makeCard(const QString &object_name,
@@ -359,8 +368,36 @@ void AgentDock::appendCard(QWidget *card)
 void AgentDock::beginUserTurn()
 {
     ++m_turn;
+    m_step = 0;
     m_currentThinking = nullptr;
     m_currentAnswer = nullptr;
+}
+
+void AgentDock::beginModelStep()
+{
+    if (m_currentAnswer || m_currentThinking || m_step >= 1) {
+        m_step = qMax(2, m_step + 1);
+        m_currentThinking = nullptr;
+        m_currentAnswer = nullptr;
+        return;
+    }
+    m_step = 1;
+}
+
+void AgentDock::settleApproval(const QString &toolCallId, bool approved)
+{
+    QWidget *card = m_approvalCards.value(toolCallId);
+    if (!card) return;
+    if (auto *approve = card->findChild<QPushButton *>(
+            QStringLiteral("agentApproveButton-%1").arg(toolCallId))) {
+        approve->setEnabled(false);
+        if (approved) approve->setText(tr("Approved"));
+    }
+    if (auto *deny = card->findChild<QPushButton *>(
+            QStringLiteral("agentDenyButton-%1").arg(toolCallId))) {
+        deny->setEnabled(false);
+        if (!approved) deny->setText(tr("Denied"));
+    }
 }
 
 void AgentDock::setThinkingText(const QString &text, bool append)
@@ -414,6 +451,9 @@ void AgentDock::appendEvent(const AgentEvent &event)
                                 tr("You"),
                                 event.payload.value(QStringLiteral("text")).toString(),
                                 false));
+            break;
+        case AgentEventType::ModelRequestStarted:
+            beginModelStep();
             break;
         case AgentEventType::AssistantDelta:
             if (event.payload.value(QStringLiteral("kind")).toString() == QLatin1String("reasoning")) {
@@ -470,7 +510,7 @@ void AgentDock::appendEvent(const AgentEvent &event)
             const QString name = event.payload.value(QStringLiteral("name")).toString();
             const QString impact = event.payload.value(QStringLiteral("impact")).toString();
             auto *frame = new QFrame(m_transcriptContents);
-            frame->setObjectName(QStringLiteral("agentApprovalCard"));
+            frame->setObjectName(QStringLiteral("agentApprovalCard-%1").arg(id));
             auto *layout = new QVBoxLayout(frame);
             layout->addWidget(new QLabel(tr("Approve %1?").arg(name), frame));
             auto *impact_label = new QLabel(impact, frame);
@@ -479,20 +519,30 @@ void AgentDock::appendEvent(const AgentEvent &event)
             layout->addWidget(impact_label);
             auto *buttons = new QHBoxLayout();
             auto *approve = new QPushButton(tr("Approve"), frame);
+            approve->setObjectName(QStringLiteral("agentApproveButton-%1").arg(id));
             auto *deny = new QPushButton(tr("Deny"), frame);
+            deny->setObjectName(QStringLiteral("agentDenyButton-%1").arg(id));
             buttons->addWidget(approve);
             buttons->addWidget(deny);
             layout->addLayout(buttons);
             connect(approve, &QPushButton::clicked, this, [this, id]() {
+                settleApproval(id, true);
                 emit approvalResponded(id, true);
             });
             connect(deny, &QPushButton::clicked, this, [this, id]() {
+                settleApproval(id, false);
                 emit approvalResponded(id, false);
             });
             appendCard(frame);
             m_approvalCards.insert(id, frame);
             break;
         }
+        case AgentEventType::ToolApproved:
+            settleApproval(event.payload.value(QStringLiteral("tool_call_id")).toString(), true);
+            break;
+        case AgentEventType::ToolRejected:
+            settleApproval(event.payload.value(QStringLiteral("tool_call_id")).toString(), false);
+            break;
         case AgentEventType::TransactionPreviewed:
             appendCard(makeCard(QStringLiteral("agentPreviewCard"),
                                 tr("Preview"),

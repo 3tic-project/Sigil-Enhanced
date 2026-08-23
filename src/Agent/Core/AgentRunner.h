@@ -81,7 +81,7 @@ private:
     QString m_model;
     bool m_thinking = true;
     QString m_effort = QStringLiteral("medium");
-    int m_maxSteps = 12;
+    int m_maxSteps = 24;
 };
 
 } // namespace SigilAgent

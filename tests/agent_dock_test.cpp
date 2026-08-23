@@ -131,5 +131,80 @@ int main(int argc, char *argv[])
             "the first answer card must not be overwritten by a later turn");
     Require(body2 && body2->text().contains(QStringLiteral("second answer")),
             "the second turn must render on a new answer card");
+
+    dock.resetTranscript();
+    SigilAgent::AgentEvent user;
+    user.type = SigilAgent::AgentEventType::UserMessage;
+    user.payload = QJsonObject { { QStringLiteral("text"), QStringLiteral("fix title") } };
+    dock.appendEvent(user);
+    SigilAgent::AgentEvent step1;
+    step1.type = SigilAgent::AgentEventType::ModelRequestStarted;
+    dock.appendEvent(step1);
+    SigilAgent::AgentEvent first_content;
+    first_content.type = SigilAgent::AgentEventType::AssistantMessage;
+    first_content.payload = QJsonObject {
+        { QStringLiteral("content"), QStringLiteral("I'll patch the title.") }
+    };
+    dock.appendEvent(first_content);
+    SigilAgent::AgentEvent step2;
+    step2.type = SigilAgent::AgentEventType::ModelRequestStarted;
+    dock.appendEvent(step2);
+    SigilAgent::AgentEvent second_content;
+    second_content.type = SigilAgent::AgentEventType::AssistantMessage;
+    second_content.payload = QJsonObject {
+        { QStringLiteral("content"), QStringLiteral("长度保持不变（216→216），符合预期。提交修复：") }
+    };
+    dock.appendEvent(second_content);
+    application.processEvents();
+    auto *step1_body = dock.findChild<QLabel *>(QStringLiteral("agentAnswerCardBody"));
+    auto *step2_card = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard1-2"));
+    auto *step2_body = step2_card
+        ? step2_card->findChild<QLabel *>(QStringLiteral("agentAnswerCard1-2Body"))
+        : nullptr;
+    Require(step1_body && step1_body->text().contains(QStringLiteral("I'll patch the title.")),
+            "later model steps must not overwrite the earlier answer card");
+    Require(step2_body && step2_body->text().contains(QStringLiteral("提交修复")),
+            "each model step must keep its own answer card");
+
+    SigilAgent::AgentEvent approval;
+    approval.type = SigilAgent::AgentEventType::ToolApprovalRequested;
+    approval.payload = QJsonObject {
+        { QStringLiteral("tool_call_id"), QStringLiteral("call-1") },
+        { QStringLiteral("name"), QStringLiteral("transaction.commit") },
+        { QStringLiteral("impact"), QStringLiteral("Commit staged edits") }
+    };
+    dock.appendEvent(approval);
+    application.processEvents();
+    auto *approve = dock.findChild<QPushButton *>(QStringLiteral("agentApproveButton-call-1"));
+    auto *deny = dock.findChild<QPushButton *>(QStringLiteral("agentDenyButton-call-1"));
+    Require(approve && deny && approve->isEnabled() && deny->isEnabled(),
+            "approval buttons must start enabled");
+    bool approved = false;
+    QObject::connect(&dock, &SigilAgent::AgentDock::approvalResponded,
+                     [&approved](const QString &id, bool ok) {
+                         approved = ok && id == QStringLiteral("call-1");
+                     });
+    approve->click();
+    application.processEvents();
+    Require(approved, "Approve must emit approvalResponded");
+    Require(!approve->isEnabled() && !deny->isEnabled(),
+            "Approve/Deny must disable after a decision");
+    Require(approve->text().contains(QStringLiteral("Approved")),
+            "Approve must show it was accepted");
+
+    composer->setPlainText(QStringLiteral("hello from enter"));
+    QString seen;
+    QObject::connect(&dock, &SigilAgent::AgentDock::sendRequested,
+                     [&](const QString &text, const QStringList &) {
+                         seen = text;
+                         Require(composer->toPlainText().isEmpty(),
+                                 "composer must already be empty when sendRequested fires");
+                     });
+    auto *send = dock.findChild<QPushButton *>(QStringLiteral("agentSendButton"));
+    Require(send && send->isEnabled(), "Send must be enabled while idle");
+    send->click();
+    application.processEvents();
+    Require(seen == QStringLiteral("hello from enter"), "Send must emit the composer text");
+    Require(composer->toPlainText().isEmpty(), "composer must stay empty after Send");
     return EXIT_SUCCESS;
 }

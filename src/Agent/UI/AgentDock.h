@@ -70,6 +70,8 @@ private:
     QWidget *findCard(const QString &object_name) const;
     void appendCard(QWidget *card);
     void beginUserTurn();
+    void beginModelStep();
+    void settleApproval(const QString &toolCallId, bool approved);
     void setThinkingText(const QString &text, bool append);
     void setAnswerText(const QString &text, bool append);
     void refreshScopeLabel();
@@ -94,6 +96,7 @@ private:
     QWidget *m_currentThinking = nullptr;
     QWidget *m_currentAnswer = nullptr;
     int m_turn = 0;
+    int m_step = 0;
     QString m_bookTitle;
     quint64 m_bookRevision = 0;
     QString m_filePath;
