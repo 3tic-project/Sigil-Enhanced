@@ -13,6 +13,7 @@
 
 #include <QHash>
 #include <QSharedPointer>
+#include <QStringList>
 
 #include "Agent/Execution/IBookWorkspace.h"
 #include "PluginAPI/PluginTextTransaction.h"
@@ -58,6 +59,14 @@ public:
                            const QString &text,
                            quint64 expected_resource_revision) override;
     BookOpResult updateMetadata(const QJsonObject &patch) override;
+    BookOpResult createResource(const QString &book_path,
+                                const QString &kind,
+                                const QString &text,
+                                bool add_to_spine,
+                                const QString &after_resource_id) override;
+    BookOpResult copyResource(const QString &source_id,
+                              const QString &book_path,
+                              bool add_to_spine) override;
     BookOpResult createCheckpoint(const QString &label) override;
     QJsonArray listCheckpoints() const override;
     BookOpResult restoreCheckpoint(const QString &checkpoint_id) override;
@@ -91,6 +100,12 @@ private:
     BookOpResult ensureTransaction();
     QStringList extractFontFamilies(const QString &css) const;
     QJsonObject resourceJson(Resource *resource) const;
+    QStringList allBookPaths() const;
+    BookOpResult stageAddition(const QString &book_path,
+                               const QString &kind,
+                               const QString &text,
+                               bool add_to_spine,
+                               const QString &after_resource_id);
 
     QSharedPointer<Book> m_book;
     quint64 m_revision = 1;
@@ -99,6 +114,7 @@ private:
     QList<Checkpoint> m_checkpoints;
     QJsonObject m_stagedMetadata;
     bool m_hasStagedMetadata = false;
+    QHash<QString, QString> m_stagedAfterIds;
 };
 
 } // namespace SigilAgent

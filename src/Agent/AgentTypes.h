@@ -20,7 +20,8 @@ namespace SigilAgent
 enum class AgentMode {
     Ask,
     Plan,
-    Edit
+    Edit,
+    Auto
 };
 
 enum class AgentRunState {

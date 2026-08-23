@@ -358,5 +358,35 @@ int main()
     Require(lined_text.contains(QStringLiteral("<p>alpha</p>")) && lined_text.contains(QStringLiteral("<p>beta</p>")),
             "start_line must change only the chosen occurrence");
 
+    MemoryBookWorkspace copy_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry copy_registry;
+    registerBookTools(&copy_registry, &copy_book);
+    auto run_copy = [&](const QString &name, const QJsonObject &arguments) {
+        return copy_registry.find(name)->execute(arguments);
+    };
+    Require(run_copy(QStringLiteral("transaction.begin"), QJsonObject()).ok, "copy begin failed");
+    const ToolResult copied = run_copy(QStringLiteral("resource.copy"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("ch1") }
+    });
+    Require(copied.ok && copied.previewOnly, "resource.copy must stage a new file");
+    Require(copied.data.value(QStringLiteral("book_path")).toString()
+                == QStringLiteral("OEBPS/Text/ch3.xhtml"),
+            "copy of ch1.xhtml must pick the next unique sibling path");
+    const QString staging_id = copied.data.value(QStringLiteral("resource_id")).toString();
+    Require(copy_book.resourceText(QStringLiteral("ch1")).contains(QStringLiteral("Heat")),
+            "copy must not change the live source before commit");
+    Require(run_copy(QStringLiteral("transaction.commit"), QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(copy_book.revision()) }
+    }).applied, "copy commit must apply");
+    Require(copy_book.resourceText(staging_id).contains(QStringLiteral("Heat")),
+            "committed copy must contain the source XHTML");
+    bool in_spine = false;
+    for (const QJsonValue &value : copy_book.spine()) {
+        if (value.toObject().value(QStringLiteral("resource_id")).toString() == staging_id) {
+            in_spine = true;
+        }
+    }
+    Require(in_spine, "copied XHTML must be inserted in the spine");
+
     return EXIT_SUCCESS;
 }

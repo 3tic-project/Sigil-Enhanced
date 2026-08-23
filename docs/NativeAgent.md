@@ -8,7 +8,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 
 在主窗口 **查看** 菜单中打开 **Agent** 停靠栏（与 Book Browser、Preview 同类）。停靠栏包含：
 
-- 模式：**Ask** / **Plan** / **Edit**
+- 模式：**Ask** / **Plan** / **Edit** / **Auto**
 - 当前模型（只读，来自偏好设置）
 - 上下文芯片：当前书、当前文件、选区（可开关，范围会显示在状态行）
 - 输入框：**Enter 发送**，Shift+Enter 换行
@@ -23,8 +23,9 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 | 模式 | 能做什么 |
 |---|---|
 | **Ask** | 只读。可摘要、搜索、读片段、列字体、校验。不能改书。 |
-| **Plan** | 可以 `transaction.begin`、暂存 patch/CSS/metadata，并 `preview`。不能 `commit` / `restore`。活书保持不变。 |
+| **Plan** | 可以 `transaction.begin`、暂存 create/copy/patch/CSS/metadata，并 `preview`。不能 `commit` / `restore`。活书保持不变。 |
 | **Edit** | 可通过工具改书。可逆编辑默认要你点 **Approve**。提交后可用 Sigil 的撤销。 |
+| **Auto** | 与 Edit 相同的写入工具，但默认全部允许，不再弹出 Approve。 |
 
 **Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤仍可撤销，并标为 Applied。
 
@@ -32,7 +33,9 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`。
 
-写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.patch_fragment`、`css.update_rules`、`metadata.update`、`checkpoint.create` / `list` / `restore`。
+写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create`、`resource.copy`、`resource.patch_fragment`、`css.update_rules`、`metadata.update`、`checkpoint.create` / `list` / `restore`。
+
+复制一章（如 Section0001 → Section0002）用 `resource.copy`，不要让用户去 Book Browser 里手工复制。`book_path` 可省略，工具会在同目录生成不冲突的下一序号。目前不能增删字体/图片二进制，也不能改 nav/NCX 目录树结构。
 
 `resource.patch_fragment` 用 **当前原文子串** 定位，不要让模型数字符偏移。必填 `expected_text`（从 `read_fragment` 的 `text` 原样复制，可以是一整行）。子串出现多次时用 `start_line`（来自 `read_fragment.lines` 的 1-based 行号）消歧。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带 staged excerpt。
 

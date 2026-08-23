@@ -39,6 +39,10 @@ require(
     "dock must expose Ask/Plan/Edit",
 )
 require(
+    'addItem(tr("Auto"), QStringLiteral("auto"))' in dock_cpp,
+    "dock must expose Auto mode",
+)
+require(
     "agentModelEdit" not in dock_cpp,
     "model name must not be typed in the Agent dock",
 )

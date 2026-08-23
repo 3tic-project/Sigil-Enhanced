@@ -7,6 +7,7 @@
 #include "Agent/Execution/MemoryBookWorkspace.h"
 
 #include <QCryptographicHash>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QRegularExpression>
@@ -14,6 +15,7 @@
 #include <QUuid>
 
 #include "Agent/Execution/PatchRange.h"
+#include "Agent/Execution/ResourceMutations.h"
 #include "PluginAPI/PluginTextEdit.h"
 
 namespace SigilAgent
@@ -247,23 +249,31 @@ QJsonArray MemoryBookWorkspace::search(const QString &query, int max_matches) co
 BookOpResult MemoryBookWorkspace::readFragment(const QString &resource_id, int offset, int limit) const
 {
     const MemoryResource *resource = findResource(resource_id);
-    if (!resource) {
+    QString staged_added;
+    quint64 staged_rev = 0;
+    QString staged_path;
+    if (!resource && m_transaction
+        && m_transaction->ReadAddedText(resource_id, &staged_added, &staged_rev)) {
+        for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+            if (addition.stagingId == resource_id) staged_path = addition.bookPath;
+        }
+    } else if (!resource) {
         return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"),
                                    QStringLiteral("Unknown resource"));
     }
-    if (resource->kind == QLatin1String("font") || resource->kind == QLatin1String("image")) {
+    if (resource && (resource->kind == QLatin1String("font") || resource->kind == QLatin1String("image"))) {
         return BookOpResult::error(QStringLiteral("BINARY_NOT_IN_CONTEXT"),
                                    QStringLiteral("Font and image binaries are never returned to the model"));
     }
-    const QString text = currentText(*resource);
+    const QString text = resource ? currentText(*resource) : staged_added;
     const int start = qMax(0, offset);
     int count = limit <= 0 ? 2048 : limit;
     count = qMin(count, kMaxFragment);
     const QString fragment = text.mid(start, count);
     const bool truncated = start + fragment.size() < text.size();
     QJsonObject data {
-        { QStringLiteral("resource_id"), resource->id },
-        { QStringLiteral("book_path"), resource->bookPath },
+        { QStringLiteral("resource_id"), resource ? resource->id : resource_id },
+        { QStringLiteral("book_path"), resource ? resource->bookPath : staged_path },
         { QStringLiteral("offset"), start },
         { QStringLiteral("end"), start + fragment.size() },
         { QStringLiteral("length"), fragment.size() },
@@ -271,7 +281,7 @@ BookOpResult MemoryBookWorkspace::readFragment(const QString &resource_id, int o
         { QStringLiteral("truncated"), truncated },
         { QStringLiteral("continuation"), truncated ? start + fragment.size() : QJsonValue() },
         { QStringLiteral("hash"), sha256Text(text) },
-        { QStringLiteral("revision"), static_cast<qint64>(resource->revision) },
+        { QStringLiteral("revision"), static_cast<qint64>(resource ? resource->revision : staged_rev) },
         { QStringLiteral("text"), fragment }
     };
     addFragmentLineMetadata(&data, text, start, fragment.size());
@@ -399,6 +409,7 @@ BookOpResult MemoryBookWorkspace::beginTransaction(const QString &label)
         m_revision);
     m_hasStagedMetadata = false;
     m_stagedMetadata = QJsonObject();
+    m_stagedAfterIds.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), m_transaction->Id() },
         { QStringLiteral("base_book_revision"), static_cast<qint64>(m_revision) }
@@ -424,6 +435,14 @@ BookOpResult MemoryBookWorkspace::previewTransaction() const
             { QStringLiteral("changed"), change.originalText != change.stagedText },
             { QStringLiteral("original_excerpt"), change.originalText.mid(excerpt_from, 80) },
             { QStringLiteral("staged_excerpt"), change.stagedText.mid(excerpt_from, 80) }
+        });
+    }
+    for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+        changes.append(QJsonObject {
+            { QStringLiteral("resource_id"), addition.stagingId },
+            { QStringLiteral("book_path"), addition.bookPath },
+            { QStringLiteral("added"), true },
+            { QStringLiteral("staged_length"), addition.data.size() }
         });
     }
     QJsonObject data {
@@ -452,8 +471,30 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
     QHash<QString, QString> originals;
     QList<PluginApi::StagedTextChange> changes = m_transaction->Changes();
     QJsonObject original_metadata = m_metadata;
+    QStringList original_spine = m_spineIds;
+    QHash<QString, MemoryResource> added_live;
     int applied = 0;
     QString fail_message;
+
+    for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+        MemoryResource resource;
+        resource.id = addition.stagingId;
+        resource.bookPath = addition.bookPath;
+        resource.mediaType = addition.mediaType;
+        resource.kind = kindFromPathOrType(addition.bookPath, QString());
+        if (addition.mediaType.contains(QLatin1String("css"))) resource.kind = QStringLiteral("css");
+        resource.text = addition.isText ? QString::fromUtf8(addition.data) : QString();
+        resource.binary = addition.isText ? QByteArray() : addition.data;
+        addResource(resource);
+        added_live.insert(resource.id, resource);
+        if (addition.addToSpine && resource.kind == QLatin1String("xhtml")) {
+            const QString after = m_stagedAfterIds.value(addition.stagingId);
+            const int index = m_spineIds.indexOf(after);
+            if (index >= 0) m_spineIds.insert(index + 1, resource.id);
+            else m_spineIds.append(resource.id);
+        }
+        ++applied;
+    }
 
     for (const PluginApi::StagedTextChange &change : changes) {
         MemoryResource *resource = findResource(change.resourceId);
@@ -488,9 +529,14 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
             }
         }
         m_metadata = original_metadata;
+        m_spineIds = original_spine;
+        for (auto it = added_live.constBegin(); it != added_live.constEnd(); ++it) {
+            m_resources.remove(it.key());
+        }
         m_transaction.reset();
         m_hasStagedMetadata = false;
         m_stagedMetadata = QJsonObject();
+        m_stagedAfterIds.clear();
         return BookOpResult::error(QStringLiteral("TRANSACTION_ROLLED_BACK"), fail_message);
     }
 
@@ -498,6 +544,7 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
     m_transaction.reset();
     m_hasStagedMetadata = false;
     m_stagedMetadata = QJsonObject();
+    m_stagedAfterIds.clear();
     ++m_revision;
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), txid },
@@ -518,6 +565,7 @@ BookOpResult MemoryBookWorkspace::rollbackTransaction()
     m_transaction.reset();
     m_hasStagedMetadata = false;
     m_stagedMetadata = QJsonObject();
+    m_stagedAfterIds.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), txid },
         { QStringLiteral("rolled_back"), true },
@@ -536,12 +584,17 @@ BookOpResult MemoryBookWorkspace::patchFragment(const QString &resource_id,
     BookOpResult ensured = ensureTransaction();
     if (!ensured.ok) return ensured;
     MemoryResource *resource = findResource(resource_id);
-    if (!resource) {
+    QString added_source;
+    quint64 added_revision = 0;
+    const bool staged_new = !resource && m_transaction
+        && m_transaction->ReadAddedText(resource_id, &added_source, &added_revision);
+    if (!resource && !staged_new) {
         return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"),
                                    QStringLiteral("Unknown resource"));
     }
+    const QString source = resource ? currentText(*resource) : added_source;
     const PatchRangeResolution resolved = resolvePatchRange(
-        currentText(*resource), start, end, expected_text, start_line);
+        source, start, end, expected_text, start_line);
     if (!resolved.ok) {
         return BookOpResult::error(resolved.code, resolved.message, resolved.data);
     }
@@ -553,14 +606,17 @@ BookOpResult MemoryBookWorkspace::patchFragment(const QString &resource_id,
             { QStringLiteral("text"), text }
         }
     };
-    if (!m_transaction->ApplyEdits(resource->id, resource->text, resource->revision,
-                                   expected_resource_revision, edits, &error)) {
+    const bool applied_edits = staged_new
+        ? m_transaction->ApplyAddedTextEdits(resource_id, expected_resource_revision, edits, &error)
+        : m_transaction->ApplyEdits(resource->id, resource->text, resource->revision,
+                                    expected_resource_revision, edits, &error);
+    if (!applied_edits) {
         const QString code = error.contains(QLatin1String("Revision"))
             ? QStringLiteral("BOOK_REVISION_CONFLICT") : QStringLiteral("PATCH_FAILED");
         return BookOpResult::error(code, error);
     }
     QJsonObject data = resolved.data;
-    data.insert(QStringLiteral("resource_id"), resource->id);
+    data.insert(QStringLiteral("resource_id"), resource ? resource->id : resource_id);
     data.insert(QStringLiteral("staged"), true);
     data.insert(QStringLiteral("live_unchanged"), true);
     data.insert(QStringLiteral("replacement_length"), text.size());
@@ -605,6 +661,111 @@ BookOpResult MemoryBookWorkspace::updateMetadata(const QJsonObject &patch)
         { QStringLiteral("staged"), true },
         { QStringLiteral("metadata"), next }
     }, false, true);
+}
+
+QStringList MemoryBookWorkspace::allBookPaths() const
+{
+    QStringList paths;
+    for (const MemoryResource &resource : m_resources) paths.append(resource.bookPath);
+    if (m_transaction) {
+        for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+            paths.append(addition.bookPath);
+        }
+    }
+    return paths;
+}
+
+BookOpResult MemoryBookWorkspace::stageAddition(const QString &book_path,
+                                                const QString &kind,
+                                                const QString &text,
+                                                bool add_to_spine,
+                                                const QString &after_resource_id)
+{
+    BookOpResult ensured = ensureTransaction();
+    if (!ensured.ok) return ensured;
+    const QString resolved_kind = kindFromPathOrType(book_path, kind);
+    if (resolved_kind != QLatin1String("xhtml") && resolved_kind != QLatin1String("css")) {
+        return BookOpResult::error(QStringLiteral("UNSUPPORTED_KIND"),
+                                   QStringLiteral("Only xhtml and css resources can be created"));
+    }
+    if (book_path.trimmed().isEmpty()) {
+        return BookOpResult::error(QStringLiteral("BOOK_PATH_REQUIRED"),
+                                   QStringLiteral("book_path is required"));
+    }
+    if (bookPathTaken(book_path, allBookPaths())) {
+        return BookOpResult::error(QStringLiteral("BOOK_PATH_EXISTS"),
+                                   QStringLiteral("A resource already uses %1").arg(book_path));
+    }
+    PluginApi::StagedResourceAddition addition;
+    addition.stagingId = QStringLiteral("new:") + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    addition.bookPath = book_path.trimmed();
+    addition.mediaType = mediaTypeForKind(resolved_kind);
+    addition.manifestId = QFileInfo(addition.bookPath).completeBaseName();
+    addition.data = text.toUtf8();
+    addition.stagedRevision = 1;
+    addition.manifested = true;
+    addition.addToSpine = add_to_spine && resolved_kind == QLatin1String("xhtml");
+    addition.isText = true;
+    QString error;
+    if (!m_transaction->AddResource(addition, &error)) {
+        return BookOpResult::error(QStringLiteral("ADD_RESOURCE_FAILED"), error);
+    }
+    if (!after_resource_id.isEmpty()) m_stagedAfterIds.insert(addition.stagingId, after_resource_id);
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("staging_id"), addition.stagingId },
+        { QStringLiteral("resource_id"), addition.stagingId },
+        { QStringLiteral("book_path"), addition.bookPath },
+        { QStringLiteral("kind"), resolved_kind },
+        { QStringLiteral("add_to_spine"), addition.addToSpine },
+        { QStringLiteral("revision"), static_cast<qint64>(addition.stagedRevision) },
+        { QStringLiteral("staged"), true },
+        { QStringLiteral("live_unchanged"), true }
+    }, false, true);
+}
+
+BookOpResult MemoryBookWorkspace::createResource(const QString &book_path,
+                                                 const QString &kind,
+                                                 const QString &text,
+                                                 bool add_to_spine,
+                                                 const QString &after_resource_id)
+{
+    const QString resolved_kind = kindFromPathOrType(book_path, kind);
+    const QString body = text.isEmpty() && resolved_kind == QLatin1String("xhtml")
+        ? defaultXhtmlTemplate() : text;
+    return stageAddition(book_path, resolved_kind, body, add_to_spine, after_resource_id);
+}
+
+BookOpResult MemoryBookWorkspace::copyResource(const QString &source_id,
+                                               const QString &book_path,
+                                               bool add_to_spine)
+{
+    const MemoryResource *source = findResource(source_id);
+    QString staged_text;
+    quint64 staged_rev = 0;
+    QString source_path;
+    QString source_kind;
+    if (source) {
+        source_path = source->bookPath;
+        source_kind = source->kind;
+        staged_text = currentText(*source);
+    } else if (m_transaction && m_transaction->ReadAddedText(source_id, &staged_text, &staged_rev)) {
+        for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+            if (addition.stagingId == source_id) {
+                source_path = addition.bookPath;
+                source_kind = kindFromPathOrType(addition.bookPath, QString());
+            }
+        }
+    } else {
+        return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"),
+                                   QStringLiteral("Unknown source resource"));
+    }
+    if (source_kind == QLatin1String("font") || source_kind == QLatin1String("image")) {
+        return BookOpResult::error(QStringLiteral("BINARY_NOT_IN_CONTEXT"),
+                                   QStringLiteral("Copying font/image binaries is not supported"));
+    }
+    QString target = book_path.trimmed();
+    if (target.isEmpty()) target = suggestCopyBookPath(source_path, allBookPaths());
+    return stageAddition(target, source_kind, staged_text, add_to_spine, source ? source->id : source_id);
 }
 
 BookOpResult MemoryBookWorkspace::createCheckpoint(const QString &label)

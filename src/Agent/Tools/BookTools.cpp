@@ -94,6 +94,14 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
         return QStringLiteral("Restore checkpoint %1, replacing live book content.")
             .arg(arguments.value(QStringLiteral("checkpoint_id")).toString());
     }
+    if (name == QLatin1String("resource.create")) {
+        return QStringLiteral("Create %1. Staged until commit; reversible via Undo after apply.")
+            .arg(arguments.value(QStringLiteral("book_path")).toString());
+    }
+    if (name == QLatin1String("resource.copy")) {
+        return QStringLiteral("Copy %1 to a new resource. Staged until commit; reversible via Undo after apply.")
+            .arg(arguments.value(QStringLiteral("resource_id")).toString());
+    }
     return QStringLiteral("Run %1 on the current book.").arg(name);
 }
 
@@ -305,6 +313,52 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
         [workspace](const QJsonObject &arguments) {
             return fromBook(workspace->updateMetadata(
                 arguments.value(QStringLiteral("patch")).toObject()));
+        });
+
+    add(registry, QStringLiteral("resource.create"),
+        QStringLiteral("Stage a new XHTML or CSS file. book_path is the EPUB-relative path (e.g. OEBPS/Text/Section0002.xhtml). Optional text is the full file contents; XHTML defaults to an empty HTML5 document. add_to_spine defaults true for XHTML. Live book unchanged until transaction.commit."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("book_path"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("kind"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("text"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("add_to_spine"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } },
+                { QStringLiteral("after_resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("book_path") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const bool add_to_spine = arguments.contains(QStringLiteral("add_to_spine"))
+                ? arguments.value(QStringLiteral("add_to_spine")).toBool() : true;
+            return fromBook(workspace->createResource(
+                arguments.value(QStringLiteral("book_path")).toString(),
+                arguments.value(QStringLiteral("kind")).toString(),
+                arguments.value(QStringLiteral("text")).toString(),
+                add_to_spine,
+                arguments.value(QStringLiteral("after_resource_id")).toString()));
+        });
+
+    add(registry, QStringLiteral("resource.copy"),
+        QStringLiteral("Stage a copy of an existing XHTML or CSS resource (same as Book Browser Add Copy). If book_path is omitted, a unique sibling path is chosen (Section0001.xhtml → Section0002.xhtml). The copy is inserted in the spine after the source when add_to_spine is true. Live book unchanged until transaction.commit."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("book_path"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("add_to_spine"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const bool add_to_spine = arguments.contains(QStringLiteral("add_to_spine"))
+                ? arguments.value(QStringLiteral("add_to_spine")).toBool() : true;
+            return fromBook(workspace->copyResource(
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                arguments.value(QStringLiteral("book_path")).toString(),
+                add_to_spine));
         });
 
     add(registry, QStringLiteral("checkpoint.create"),

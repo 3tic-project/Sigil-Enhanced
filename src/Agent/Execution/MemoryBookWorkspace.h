@@ -80,6 +80,14 @@ public:
                            const QString &text,
                            quint64 expected_resource_revision) override;
     BookOpResult updateMetadata(const QJsonObject &patch) override;
+    BookOpResult createResource(const QString &book_path,
+                                const QString &kind,
+                                const QString &text,
+                                bool add_to_spine,
+                                const QString &after_resource_id) override;
+    BookOpResult copyResource(const QString &source_id,
+                              const QString &book_path,
+                              bool add_to_spine) override;
     BookOpResult createCheckpoint(const QString &label) override;
     QJsonArray listCheckpoints() const override;
     BookOpResult restoreCheckpoint(const QString &checkpoint_id) override;
@@ -94,6 +102,12 @@ private:
     QString currentText(const MemoryResource &resource) const;
     QJsonObject resourceJson(const MemoryResource &resource) const;
     QStringList extractFontFamilies(const QString &css) const;
+    QStringList allBookPaths() const;
+    BookOpResult stageAddition(const QString &book_path,
+                               const QString &kind,
+                               const QString &text,
+                               bool add_to_spine,
+                               const QString &after_resource_id);
 
     quint64 m_revision = 1;
     QString m_epubVersion = QStringLiteral("3.0");
@@ -106,6 +120,7 @@ private:
     bool m_hasStagedMetadata = false;
     QList<MemoryCheckpoint> m_checkpoints;
     int m_failAfter = -1;
+    QHash<QString, QString> m_stagedAfterIds;
 };
 
 } // namespace SigilAgent

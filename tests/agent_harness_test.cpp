@@ -280,6 +280,65 @@ int main()
     Require(hasEvent(edit_session, AgentEventType::TransactionCommitted),
             "commit must be labeled as applied in the session");
 
+    MemoryBookWorkspace auto_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry auto_registry;
+    registerBookTools(&auto_registry, &auto_book);
+    AgentSession auto_session;
+    AutoApprovalGate auto_gate(false);
+    MockModelProvider auto_provider;
+    auto_provider.setScript([&](const ModelRequest &request) {
+        bool began = false;
+        bool copied = false;
+        bool committed = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role != QLatin1String("tool")) continue;
+            if (message.content.contains(QStringLiteral("base_book_revision"))) began = true;
+            if (message.content.contains(QStringLiteral("staging_id"))
+                || message.content.contains(QStringLiteral("book_path"))) copied = true;
+            if (message.content.contains(QStringLiteral("applied_changes"))) committed = true;
+        }
+        ModelTurn turn;
+        if (!began) {
+            ToolCall call;
+            call.id = QStringLiteral("auto-begin");
+            call.name = QStringLiteral("transaction.begin");
+            call.argumentsJson = QStringLiteral("{}");
+            turn.toolCalls.append(call);
+            return turn;
+        }
+        if (!copied) {
+            ToolCall call;
+            call.id = QStringLiteral("auto-copy");
+            call.name = QStringLiteral("resource.copy");
+            call.argumentsJson = QStringLiteral("{\"resource_id\":\"ch1\"}");
+            turn.toolCalls.append(call);
+            return turn;
+        }
+        if (!committed) {
+            ToolCall call;
+            call.id = QStringLiteral("auto-commit");
+            call.name = QStringLiteral("transaction.commit");
+            call.argumentsJson = QStringLiteral("{\"expected_revision\":%1}")
+                                     .arg(auto_book.revision());
+            turn.toolCalls.append(call);
+            return turn;
+        }
+        turn.content = QStringLiteral("Copied chapter 1.");
+        return turn;
+    });
+    AgentCancellation auto_cancel;
+    AgentRunner auto_runner(&auto_session, &auto_provider, &auto_registry, &auto_book,
+                            &ask_policy, &auto_gate, &auto_cancel);
+    auto_runner.setMode(AgentMode::Auto);
+    const AgentRunResult auto_result = auto_runner.runTurn(QStringLiteral("copy chapter 1"));
+    Require(auto_result.state == AgentRunState::Completed, "Auto copy loop failed");
+    Require(auto_gate.requestCount() == 0, "Auto mode must not ask for approval");
+    Require(!hasEvent(auto_session, AgentEventType::ToolApprovalRequested),
+            "Auto mode must not emit approval cards");
+    Require(hasEvent(auto_session, AgentEventType::TransactionCommitted),
+            "Auto copy must commit");
+    Require(auto_book.spine().size() == 3, "Auto copy must add a spine item");
+
     MemoryBookWorkspace plan_book = MemoryBookWorkspace::samplePhysicsBook();
     const QString plan_original = plan_book.resourceText(QStringLiteral("ch1"));
     ToolRegistry plan_registry;

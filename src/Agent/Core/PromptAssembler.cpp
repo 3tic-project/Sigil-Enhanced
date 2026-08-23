@@ -28,13 +28,16 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
         "- The book map and attached samples are already in context. For greetings or high-level questions, answer from that. Call extra read tools only for a fact you do not already have.\n"
         "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
         "- A patch must not cut through a markup tag.\n"
-        "- Mutations must go through transaction.begin → staged patch/css/metadata → transaction.preview → transaction.commit.\n"
+        "- Mutations must go through transaction.begin → staged create/copy/patch/css/metadata → transaction.preview → transaction.commit.\n"
+        "- To add a new HTML/CSS file use resource.copy (duplicate an existing file) or resource.create. Do not tell the user to copy files in the Sigil UI when those tools are available.\n"
         "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n"
         "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n");
     if (mode == AgentMode::Ask) {
         prompt += QStringLiteral("Mode: Ask. Read-only. Do not call mutating tools.\n");
     } else if (mode == AgentMode::Plan) {
         prompt += QStringLiteral("Mode: Plan. You may preview staged work but must not commit.\n");
+    } else if (mode == AgentMode::Auto) {
+        prompt += QStringLiteral("Mode: Auto. You may mutate the book; tools run without asking the user. Keep edits reversible.\n");
     } else {
         prompt += QStringLiteral("Mode: Edit. You may mutate the book after policy/approval. Keep edits reversible.\n");
     }

@@ -104,6 +104,8 @@ set( AGENT_FILES
     Agent/Execution/MemoryBookWorkspace.h
     Agent/Execution/PatchRange.cpp
     Agent/Execution/PatchRange.h
+    Agent/Execution/ResourceMutations.cpp
+    Agent/Execution/ResourceMutations.h
     Agent/Core/AgentController.cpp
     Agent/Core/AgentController.h
     Agent/Execution/SigilBookWorkspace.cpp

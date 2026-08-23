@@ -47,6 +47,7 @@ QString modeName(AgentMode mode)
         case AgentMode::Ask: return QStringLiteral("ask");
         case AgentMode::Plan: return QStringLiteral("plan");
         case AgentMode::Edit: return QStringLiteral("edit");
+        case AgentMode::Auto: return QStringLiteral("auto");
     }
     return QStringLiteral("ask");
 }
@@ -84,6 +85,7 @@ AgentMode modeFromName(const QString &name)
     const QString lowered = name.trimmed().toLower();
     if (lowered == QLatin1String("plan")) return AgentMode::Plan;
     if (lowered == QLatin1String("edit")) return AgentMode::Edit;
+    if (lowered == QLatin1String("auto")) return AgentMode::Auto;
     return AgentMode::Ask;
 }
 

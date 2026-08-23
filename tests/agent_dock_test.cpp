@@ -49,11 +49,12 @@ int main(int argc, char *argv[])
     auto *model_label = dock.findChild<QLabel *>(QStringLiteral("agentModelLabel"));
     Require(model_label && model_label->text().contains(QStringLiteral("deepseek-chat")),
             "dock model label must show the settings model");
-    Require(mode && mode->count() == 3, "mode combo must offer Ask/Plan/Edit");
+    Require(mode && mode->count() == 4, "mode combo must offer Ask/Plan/Edit/Auto");
     Require(mode->itemData(0).toString() == QStringLiteral("ask")
                 && mode->itemData(1).toString() == QStringLiteral("plan")
-                && mode->itemData(2).toString() == QStringLiteral("edit"),
-            "mode combo values must be ask/plan/edit");
+                && mode->itemData(2).toString() == QStringLiteral("edit")
+                && mode->itemData(3).toString() == QStringLiteral("auto"),
+            "mode combo values must be ask/plan/edit/auto");
     Require(stop && stop->text().contains(QStringLiteral("Stop")), "Stop control is missing");
     Require(fresh && fresh->text().contains(QStringLiteral("New Session")),
             "New Session control is missing");

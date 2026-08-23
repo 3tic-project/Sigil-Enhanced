@@ -24,6 +24,9 @@ PermissionAction PermissionPolicy::evaluate(AgentMode mode, const AgentToolDescr
     if (mode == AgentMode::Ask) {
         return tool.mutatesBook ? PermissionAction::Deny : PermissionAction::Allow;
     }
+    if (mode == AgentMode::Auto) {
+        return PermissionAction::Allow;
+    }
     if (mode == AgentMode::Plan) {
         const bool is_commit = tool.name == QLatin1String("transaction.commit")
             || tool.name == QLatin1String("checkpoint.restore");

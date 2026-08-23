@@ -7,14 +7,17 @@
 #include "Agent/Execution/SigilBookWorkspace.h"
 
 #include <QCryptographicHash>
+#include <QFileInfo>
 #include <QMetaObject>
 #include <QRegularExpression>
 #include <QSet>
+#include <QTemporaryFile>
 #include <QThread>
 #include <QUuid>
 #include <QXmlStreamReader>
 
 #include "Agent/Execution/PatchRange.h"
+#include "Agent/Execution/ResourceMutations.h"
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/NcxNavigation.h"
@@ -25,6 +28,7 @@
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
+#include "Misc/Utility.h"
 
 namespace SigilAgent
 {
@@ -378,31 +382,39 @@ BookOpResult SigilBookWorkspace::readFragment(const QString &resource_id, int of
 {
     return invokeOp([this, resource_id, offset, limit]() {
         Resource *resource = findResource(resource_id);
-        if (!resource) {
+        QString staged_added;
+        quint64 staged_rev = 0;
+        QString staged_path;
+        if (!resource && m_transaction
+            && m_transaction->ReadAddedText(resource_id, &staged_added, &staged_rev)) {
+            for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+                if (addition.stagingId == resource_id) staged_path = addition.bookPath;
+            }
+        } else if (!resource) {
             return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
         }
-        if (kindOf(resource) == QLatin1String("font") || kindOf(resource) == QLatin1String("image")) {
+        if (resource && (kindOf(resource) == QLatin1String("font") || kindOf(resource) == QLatin1String("image"))) {
             return BookOpResult::error(QStringLiteral("BINARY_NOT_IN_CONTEXT"),
                                        QStringLiteral("Font and image binaries are never returned to the model"));
         }
         TextResource *text = qobject_cast<TextResource *>(resource);
-        if (!text) {
+        if (resource && !text) {
             return BookOpResult::error(QStringLiteral("NOT_TEXT"), QStringLiteral("Resource is not text"));
         }
-        const QString all = currentText(text);
+        const QString all = text ? currentText(text) : staged_added;
         const int start = qMax(0, offset);
         int count = limit <= 0 ? 2048 : qMin(limit, kMaxFragment);
         const QString fragment = all.mid(start, count);
         QJsonObject data {
-            { QStringLiteral("resource_id"), resource->GetIdentifier() },
-            { QStringLiteral("book_path"), resource->GetRelativePath() },
+            { QStringLiteral("resource_id"), resource ? resource->GetIdentifier() : resource_id },
+            { QStringLiteral("book_path"), resource ? resource->GetRelativePath() : staged_path },
             { QStringLiteral("offset"), start },
             { QStringLiteral("end"), start + fragment.size() },
             { QStringLiteral("length"), fragment.size() },
             { QStringLiteral("total"), all.size() },
             { QStringLiteral("truncated"), start + fragment.size() < all.size() },
             { QStringLiteral("hash"), sha256Text(all) },
-            { QStringLiteral("revision"), static_cast<qint64>(trackedRevision(resource)) },
+            { QStringLiteral("revision"), static_cast<qint64>(resource ? trackedRevision(resource) : staged_rev) },
             { QStringLiteral("text"), fragment }
         };
         addFragmentLineMetadata(&data, all, start, fragment.size());
@@ -518,6 +530,7 @@ BookOpResult SigilBookWorkspace::beginTransaction(const QString &label)
             QStringLiteral("auto"),
             m_revision);
         m_hasStagedMetadata = false;
+        m_stagedAfterIds.clear();
         return BookOpResult::success(QJsonObject {
             { QStringLiteral("transaction_id"), m_transaction->Id() },
             { QStringLiteral("base_book_revision"), static_cast<qint64>(m_revision) }
@@ -545,6 +558,14 @@ BookOpResult SigilBookWorkspace::previewTransaction() const
             { QStringLiteral("staged_excerpt"), change.stagedText.mid(excerpt_from, 80) }
         });
     }
+    for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+        changes.append(QJsonObject {
+            { QStringLiteral("resource_id"), addition.stagingId },
+            { QStringLiteral("book_path"), addition.bookPath },
+            { QStringLiteral("added"), true },
+            { QStringLiteral("staged_length"), addition.data.size() }
+        });
+    }
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), m_transaction->Id() },
         { QStringLiteral("live_book_revision"), static_cast<qint64>(m_revision) },
@@ -567,6 +588,60 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
         QHash<QString, QString> originals;
         int applied = 0;
         QString fail;
+        for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+            const QString kind = kindFromPathOrType(addition.bookPath, QString());
+            const QString text = addition.isText ? QString::fromUtf8(addition.data) : QString();
+            const QString folder = Utility::startingDir(addition.bookPath);
+            Resource *resource = nullptr;
+            try {
+                if (kind == QLatin1String("xhtml") && addition.bookPath.isEmpty()) {
+                    HTMLResource *html = m_book->CreateEmptyHTMLFile(folder);
+                    if (html && !text.isEmpty()) html->SetTextAsUndoableEdit(text);
+                    resource = html;
+                } else if (kind == QLatin1String("css") && addition.bookPath.isEmpty()) {
+                    CSSResource *css = m_book->CreateEmptyCSSFile(folder);
+                    if (css && !text.isEmpty()) css->SetText(text);
+                    resource = css;
+                } else {
+                    QTemporaryFile staged_file;
+                    if (!staged_file.open()
+                        || staged_file.write(addition.data) != addition.data.size()
+                        || !staged_file.flush()) {
+                        fail = QStringLiteral("Could not materialize added resource");
+                        break;
+                    }
+                    staged_file.close();
+                    resource = m_book->GetFolderKeeper()->AddContentFileToFolder(
+                        staged_file.fileName(), true, addition.mediaType, addition.bookPath);
+                    if (auto *text_resource = qobject_cast<TextResource *>(resource)) {
+                        text_resource->InitialLoad();
+                        if (!text.isEmpty()) text_resource->SetTextAsUndoableEdit(text);
+                    }
+                }
+            } catch (...) {
+                fail = QStringLiteral("Could not add resource %1").arg(addition.bookPath);
+                break;
+            }
+            if (!resource) {
+                fail = QStringLiteral("Could not add resource %1").arg(addition.bookPath);
+                break;
+            }
+            if (addition.addToSpine) {
+                if (auto *html = qobject_cast<HTMLResource *>(resource)) {
+                    const QString after_id = m_stagedAfterIds.value(addition.stagingId);
+                    if (auto *after = qobject_cast<HTMLResource *>(findResource(after_id))) {
+                        m_book->MoveResourceAfter(html, after);
+                    }
+                }
+            }
+            ++applied;
+        }
+        if (!fail.isEmpty()) {
+            m_transaction.reset();
+            m_hasStagedMetadata = false;
+            m_stagedAfterIds.clear();
+            return BookOpResult::error(QStringLiteral("TRANSACTION_ROLLED_BACK"), fail);
+        }
         for (const PluginApi::StagedTextChange &change : m_transaction->Changes()) {
             TextResource *resource = textResource(change.resourceId);
             if (!resource) {
@@ -611,6 +686,7 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
         const QString txid = m_transaction->Id();
         m_transaction.reset();
         m_hasStagedMetadata = false;
+        m_stagedAfterIds.clear();
         ++m_revision;
         return BookOpResult::success(QJsonObject {
             { QStringLiteral("transaction_id"), txid },
@@ -629,6 +705,7 @@ BookOpResult SigilBookWorkspace::rollbackTransaction()
     m_transaction->Clear();
     m_transaction.reset();
     m_hasStagedMetadata = false;
+    m_stagedAfterIds.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), txid },
         { QStringLiteral("rolled_back"), true }
@@ -647,11 +724,16 @@ BookOpResult SigilBookWorkspace::patchFragment(const QString &resource_id,
         BookOpResult ensured = ensureTransaction();
         if (!ensured.ok) return ensured;
         TextResource *resource = textResource(resource_id);
-        if (!resource) {
+        QString added_source;
+        quint64 added_revision = 0;
+        const bool staged_new = !resource && m_transaction
+            && m_transaction->ReadAddedText(resource_id, &added_source, &added_revision);
+        if (!resource && !staged_new) {
             return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
         }
+        const QString source = resource ? currentText(resource) : added_source;
         const PatchRangeResolution resolved = resolvePatchRange(
-            currentText(resource), start, end, expected_text, start_line);
+            source, start, end, expected_text, start_line);
         if (!resolved.ok) {
             return BookOpResult::error(resolved.code, resolved.message, resolved.data);
         }
@@ -663,15 +745,18 @@ BookOpResult SigilBookWorkspace::patchFragment(const QString &resource_id,
                 { QStringLiteral("text"), text }
             }
         };
-        if (!m_transaction->ApplyEdits(resource->GetIdentifier(), resource->GetText(),
-                                       trackedRevision(resource), expected_resource_revision,
-                                       edits, &error)) {
+        const bool applied_edits = staged_new
+            ? m_transaction->ApplyAddedTextEdits(resource_id, expected_resource_revision, edits, &error)
+            : m_transaction->ApplyEdits(resource->GetIdentifier(), resource->GetText(),
+                                        trackedRevision(resource), expected_resource_revision,
+                                        edits, &error);
+        if (!applied_edits) {
             const QString code = error.contains(QLatin1String("Revision"))
                 ? QStringLiteral("BOOK_REVISION_CONFLICT") : QStringLiteral("PATCH_FAILED");
             return BookOpResult::error(code, error);
         }
         QJsonObject data = resolved.data;
-        data.insert(QStringLiteral("resource_id"), resource->GetIdentifier());
+        data.insert(QStringLiteral("resource_id"), resource ? resource->GetIdentifier() : resource_id);
         data.insert(QStringLiteral("staged"), true);
         data.insert(QStringLiteral("live_unchanged"), true);
         data.insert(QStringLiteral("replacement_length"), text.size());
@@ -715,6 +800,121 @@ BookOpResult SigilBookWorkspace::updateMetadata(const QJsonObject &patch)
         { QStringLiteral("staged"), true },
         { QStringLiteral("metadata"), next }
     }, false, true);
+}
+
+QStringList SigilBookWorkspace::allBookPaths() const
+{
+    QStringList paths;
+    if (!m_book) return paths;
+    for (Resource *resource : m_book->GetFolderKeeper()->GetResourceList()) {
+        if (resource) paths.append(resource->GetRelativePath());
+    }
+    if (m_transaction) {
+        for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+            paths.append(addition.bookPath);
+        }
+    }
+    return paths;
+}
+
+BookOpResult SigilBookWorkspace::stageAddition(const QString &book_path,
+                                               const QString &kind,
+                                               const QString &text,
+                                               bool add_to_spine,
+                                               const QString &after_resource_id)
+{
+    return invokeOp([this, book_path, kind, text, add_to_spine, after_resource_id]() {
+        BookOpResult ensured = ensureTransaction();
+        if (!ensured.ok) return ensured;
+        const QString resolved_kind = kindFromPathOrType(book_path, kind);
+        if (resolved_kind != QLatin1String("xhtml") && resolved_kind != QLatin1String("css")) {
+            return BookOpResult::error(QStringLiteral("UNSUPPORTED_KIND"),
+                                       QStringLiteral("Only xhtml and css resources can be created"));
+        }
+        QString path = book_path.trimmed();
+        if (path.isEmpty()) {
+            return BookOpResult::error(QStringLiteral("BOOK_PATH_REQUIRED"),
+                                       QStringLiteral("book_path is required"));
+        }
+        if (bookPathTaken(path, allBookPaths())) {
+            return BookOpResult::error(QStringLiteral("BOOK_PATH_EXISTS"),
+                                       QStringLiteral("A resource already uses %1").arg(path));
+        }
+        PluginApi::StagedResourceAddition addition;
+        addition.stagingId = QStringLiteral("new:") + QUuid::createUuid().toString(QUuid::WithoutBraces);
+        addition.bookPath = path;
+        addition.mediaType = mediaTypeForKind(resolved_kind);
+        addition.manifestId = QFileInfo(path).completeBaseName();
+        addition.data = text.toUtf8();
+        addition.stagedRevision = 1;
+        addition.manifested = true;
+        addition.addToSpine = add_to_spine && resolved_kind == QLatin1String("xhtml");
+        addition.isText = true;
+        QString error;
+        if (!m_transaction->AddResource(addition, &error)) {
+            return BookOpResult::error(QStringLiteral("ADD_RESOURCE_FAILED"), error);
+        }
+        if (!after_resource_id.isEmpty()) m_stagedAfterIds.insert(addition.stagingId, after_resource_id);
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("staging_id"), addition.stagingId },
+            { QStringLiteral("resource_id"), addition.stagingId },
+            { QStringLiteral("book_path"), addition.bookPath },
+            { QStringLiteral("kind"), resolved_kind },
+            { QStringLiteral("add_to_spine"), addition.addToSpine },
+            { QStringLiteral("revision"), static_cast<qint64>(addition.stagedRevision) },
+            { QStringLiteral("staged"), true },
+            { QStringLiteral("live_unchanged"), true }
+        }, false, true);
+    });
+}
+
+BookOpResult SigilBookWorkspace::createResource(const QString &book_path,
+                                                const QString &kind,
+                                                const QString &text,
+                                                bool add_to_spine,
+                                                const QString &after_resource_id)
+{
+    const QString resolved_kind = kindFromPathOrType(book_path, kind);
+    const QString body = text.isEmpty() && resolved_kind == QLatin1String("xhtml")
+        ? defaultXhtmlTemplate() : text;
+    return stageAddition(book_path, resolved_kind, body, add_to_spine, after_resource_id);
+}
+
+BookOpResult SigilBookWorkspace::copyResource(const QString &source_id,
+                                              const QString &book_path,
+                                              bool add_to_spine)
+{
+    return invokeOp([this, source_id, book_path, add_to_spine]() {
+        TextResource *source = textResource(source_id);
+        QString staged_text;
+        quint64 staged_rev = 0;
+        QString source_path;
+        QString source_kind;
+        QString after_id = source_id;
+        if (source) {
+            source_path = source->GetRelativePath();
+            source_kind = kindOf(source);
+            staged_text = currentText(source);
+            after_id = source->GetIdentifier();
+        } else if (m_transaction && m_transaction->ReadAddedText(source_id, &staged_text, &staged_rev)) {
+            for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
+                if (addition.stagingId == source_id) {
+                    source_path = addition.bookPath;
+                    source_kind = kindFromPathOrType(addition.bookPath, QString());
+                }
+            }
+        } else {
+            return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"),
+                                       QStringLiteral("Unknown source resource"));
+        }
+        if (source_kind == QLatin1String("font") || source_kind == QLatin1String("image")) {
+            return BookOpResult::error(QStringLiteral("BINARY_NOT_IN_CONTEXT"),
+                                       QStringLiteral("Copying font/image binaries is not supported"));
+        }
+        QString target = book_path.trimmed();
+        if (target.isEmpty()) target = suggestCopyBookPath(source_path, allBookPaths());
+        return stageAddition(target, source_kind, staged_text, add_to_spine, after_id);
+    });
 }
 
 BookOpResult SigilBookWorkspace::createCheckpoint(const QString &label)

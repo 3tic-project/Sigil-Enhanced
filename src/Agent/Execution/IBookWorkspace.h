@@ -77,6 +77,14 @@ public:
                                    const QString &text,
                                    quint64 expected_resource_revision) = 0;
     virtual BookOpResult updateMetadata(const QJsonObject &patch) = 0;
+    virtual BookOpResult createResource(const QString &book_path,
+                                        const QString &kind,
+                                        const QString &text,
+                                        bool add_to_spine,
+                                        const QString &after_resource_id) = 0;
+    virtual BookOpResult copyResource(const QString &source_id,
+                                      const QString &book_path,
+                                      bool add_to_spine) = 0;
     virtual BookOpResult createCheckpoint(const QString &label) = 0;
     virtual QJsonArray listCheckpoints() const = 0;
     virtual BookOpResult restoreCheckpoint(const QString &checkpoint_id) = 0;
