@@ -50,6 +50,10 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 - 未修改 EPUB 的普通保存不再重新打包；另存为和保存副本直接复制源文件，保持字节一致。
 - 默认不新增或更新 `Sigil version` 元数据；EPUB 3 的 `dcterms:modified` 只在实际修改后导出时更新。
 
+### Native Agent
+
+- **[Native Agent](docs/NativeAgent.md)**：主窗口停靠栏里的 EPUB 助手（Ask / Plan / Edit）。直接调用 OpenAI 兼容接口，支持 thinking/`reasoning_content`、工具批准和可撤销事务；不调用 MCP，也没有 shell。
+
 ### 插件与自动化
 
 - **内置 Python3 运行时**：随程序分发常用库，插件开箱即用。
