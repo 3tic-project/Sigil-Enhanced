@@ -66,6 +66,16 @@ struct ToolResult {
         return result;
     }
 
+    static ToolResult cancelled()
+    {
+        ToolResult result;
+        result.ok = false;
+        result.code = QStringLiteral("CANCELLED");
+        result.message = QStringLiteral("cancelled");
+        result.executed = false;
+        return result;
+    }
+
     QJsonObject toJson() const
     {
         QJsonObject object;

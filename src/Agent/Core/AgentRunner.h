@@ -64,6 +64,7 @@ private:
 
     void setState(AgentRunState state);
     ToolResult executeTool(const ToolCall &call);
+    void publishToolOutcome(const ToolCall &call, const ToolResult &result);
     void rollbackOpenWork();
     QJsonObject parseArguments(const QString &json) const;
 

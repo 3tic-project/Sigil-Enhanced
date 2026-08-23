@@ -127,12 +127,42 @@ void AgentRunner::rollbackOpenWork()
     }
 }
 
+void AgentRunner::publishToolOutcome(const ToolCall &call, const ToolResult &result)
+{
+    if (!m_session) return;
+    QJsonObject payload = result.toJson();
+    payload.insert(QStringLiteral("tool_call_id"), call.id);
+    payload.insert(QStringLiteral("name"), call.name);
+    payload.insert(QStringLiteral("id"), call.id);
+    if (result.ok) {
+        m_session->append(AgentEventType::ToolCompleted, payload);
+        if (call.name == QLatin1String("transaction.preview")) {
+            m_session->append(AgentEventType::TransactionPreviewed, result.data);
+        } else if (call.name == QLatin1String("transaction.commit") && result.applied) {
+            m_session->append(AgentEventType::TransactionCommitted, result.data);
+        } else if (call.name == QLatin1String("transaction.rollback")) {
+            m_session->append(AgentEventType::TransactionRolledBack, result.data);
+        } else if (call.name == QLatin1String("checkpoint.create")) {
+            m_session->append(AgentEventType::CheckpointCreated, result.data);
+        }
+    } else {
+        m_session->append(AgentEventType::ToolFailed, payload);
+    }
+    if (m_workspace) {
+        m_session->append(AgentEventType::BookRevisionObserved, QJsonObject {
+            { QStringLiteral("book_revision"), static_cast<qint64>(m_workspace->revision()) }
+        });
+    }
+}
+
 ToolResult AgentRunner::executeTool(const ToolCall &call)
 {
     IAgentTool *tool = m_tools ? m_tools->find(call.name) : nullptr;
     if (!tool) {
-        return ToolResult::failure(QStringLiteral("UNKNOWN_TOOL"),
-                                   QStringLiteral("Unknown tool %1").arg(call.name));
+        const ToolResult missing = ToolResult::failure(QStringLiteral("UNKNOWN_TOOL"),
+                                                       QStringLiteral("Unknown tool %1").arg(call.name));
+        publishToolOutcome(call, missing);
+        return missing;
     }
     const AgentToolDescriptor descriptor = tool->descriptor();
     const QJsonObject arguments = parseArguments(call.argumentsJson);
@@ -153,7 +183,9 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
             { QStringLiteral("name"), call.name },
             { QStringLiteral("reason"), reason }
         });
-        return ToolResult::denied(reason);
+        const ToolResult denied = ToolResult::denied(reason);
+        publishToolOutcome(call, denied);
+        return denied;
     }
 
     if (permission == PermissionAction::Ask) {
@@ -167,7 +199,9 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
         });
         const bool approved = m_gate && m_gate->waitForApproval(call.id, call.name, arguments, impact);
         if (m_cancellation && m_cancellation->isCancelled()) {
-            return ToolResult::denied(QStringLiteral("cancelled"));
+            const ToolResult cancelled = ToolResult::cancelled();
+            publishToolOutcome(call, cancelled);
+            return cancelled;
         }
         if (!approved) {
             m_session->append(AgentEventType::ToolRejected, QJsonObject {
@@ -175,7 +209,9 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
                 { QStringLiteral("name"), call.name },
                 { QStringLiteral("reason"), QStringLiteral("User denied the tool") }
             });
-            return ToolResult::denied(QStringLiteral("User denied the tool"));
+            const ToolResult denied = ToolResult::denied(QStringLiteral("User denied the tool"));
+            publishToolOutcome(call, denied);
+            return denied;
         }
         m_session->append(AgentEventType::ToolApproved, QJsonObject {
             { QStringLiteral("tool_call_id"), call.id },
@@ -185,7 +221,9 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
     }
 
     if (m_cancellation && m_cancellation->isCancelled()) {
-        return ToolResult::denied(QStringLiteral("cancelled"));
+        const ToolResult cancelled = ToolResult::cancelled();
+        publishToolOutcome(call, cancelled);
+        return cancelled;
     }
 
     setState(AgentRunState::ExecutingTools);
@@ -194,30 +232,7 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
         { QStringLiteral("name"), call.name }
     });
     ToolResult result = tool->execute(arguments);
-    QJsonObject payload = result.toJson();
-    payload.insert(QStringLiteral("tool_call_id"), call.id);
-    payload.insert(QStringLiteral("name"), call.name);
-    payload.insert(QStringLiteral("id"), call.id);
-    if (result.ok) {
-        m_session->append(AgentEventType::ToolCompleted, payload);
-        if (call.name == QLatin1String("transaction.preview")) {
-            m_session->append(AgentEventType::TransactionPreviewed, result.data);
-        } else if (call.name == QLatin1String("transaction.commit") && result.applied) {
-            payload.insert(QStringLiteral("applied"), true);
-            m_session->append(AgentEventType::TransactionCommitted, result.data);
-        } else if (call.name == QLatin1String("transaction.rollback")) {
-            m_session->append(AgentEventType::TransactionRolledBack, result.data);
-        } else if (call.name == QLatin1String("checkpoint.create")) {
-            m_session->append(AgentEventType::CheckpointCreated, result.data);
-        }
-    } else {
-        m_session->append(AgentEventType::ToolFailed, payload);
-    }
-    if (m_workspace) {
-        m_session->append(AgentEventType::BookRevisionObserved, QJsonObject {
-            { QStringLiteral("book_revision"), static_cast<qint64>(m_workspace->revision()) }
-        });
-    }
+    publishToolOutcome(call, result);
     return result;
 }
 
@@ -311,15 +326,19 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         for (const ToolCall &call : turn.toolCalls) {
             result.toolNames.append(call.name);
             if (m_cancellation && m_cancellation->isCancelled()) {
-                rollbackOpenWork();
-                setState(AgentRunState::Cancelled);
-                m_session->append(AgentEventType::SessionCancelled, QJsonObject {
-                    { QStringLiteral("reason"), QStringLiteral("stop") }
-                });
-                result.state = AgentRunState::Cancelled;
-                return result;
+                publishToolOutcome(call, ToolResult::cancelled());
+                continue;
             }
             executeTool(call);
+        }
+        if (m_cancellation && m_cancellation->isCancelled()) {
+            rollbackOpenWork();
+            setState(AgentRunState::Cancelled);
+            m_session->append(AgentEventType::SessionCancelled, QJsonObject {
+                { QStringLiteral("reason"), QStringLiteral("stop") }
+            });
+            result.state = AgentRunState::Cancelled;
+            return result;
         }
     }
 

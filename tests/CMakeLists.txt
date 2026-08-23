@@ -1321,6 +1321,20 @@ target_compile_features(agent_stream_decoder_test PRIVATE cxx_std_17)
 add_test(NAME agent_stream_decoder COMMAND agent_stream_decoder_test)
 set_tests_properties(agent_stream_decoder PROPERTIES TIMEOUT 30)
 
+add_executable(agent_provider_cancel_test
+    agent_provider_cancel_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/OpenAICompatibleProvider.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/StreamingJsonDecoder.cpp
+)
+target_include_directories(agent_provider_cancel_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_provider_cancel_test PRIVATE Qt6::Core Qt6::Network)
+target_compile_features(agent_provider_cancel_test PRIVATE cxx_std_17)
+add_test(NAME agent_provider_cancel COMMAND agent_provider_cancel_test)
+set_tests_properties(agent_provider_cancel PROPERTIES TIMEOUT 15)
+
 set(AGENT_CORE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp

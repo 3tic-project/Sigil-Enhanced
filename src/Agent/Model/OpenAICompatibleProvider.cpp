@@ -121,7 +121,16 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     timeout.setSingleShot(true);
     QObject::connect(&timeout, &QTimer::timeout, reply, [reply]() { reply->abort(); });
     timeout.start(120000);
+
+    QTimer cancel_poll;
+    cancel_poll.setInterval(50);
+    QObject::connect(&cancel_poll, &QTimer::timeout, reply, [reply, &sink]() {
+        if (sink.isCancelled()) reply->abort();
+    });
+    cancel_poll.start();
+    if (sink.isCancelled()) reply->abort();
     loop.exec();
+    cancel_poll.stop();
     timeout.stop();
 
     if (sink.isCancelled()) {

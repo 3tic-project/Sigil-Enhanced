@@ -110,21 +110,35 @@ int main()
     AgentSession ask_session;
     AutoApprovalGate ask_gate(true);
     MockModelProvider ask_provider;
-    ask_provider.addTurn([]() {
+    bool ask_saw_tool_role = false;
+    QString ask_tool_blob;
+    ask_provider.setScript([&](const ModelRequest &request) {
+        bool already = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role == QLatin1String("tool")
+                && message.toolCallId == QLatin1String("call_patch")) {
+                ask_saw_tool_role = true;
+                ask_tool_blob = message.content;
+            }
+            if (message.role == QLatin1String("assistant")) {
+                for (const ToolCall &call : message.toolCalls) {
+                    if (call.id == QLatin1String("call_patch")) already = true;
+                }
+            }
+        }
         ModelTurn turn;
-        ToolCall call;
-        call.id = QStringLiteral("call_patch");
-        call.name = QStringLiteral("resource.patch_fragment");
-        call.argumentsJson = QStringLiteral(
-            "{\"resource_id\":\"ch1\",\"start\":0,\"end\":1,\"text\":\"X\",\"expected_revision\":1}");
-        turn.toolCalls.append(call);
-        return turn;
-    }());
-    ask_provider.addTurn([]() {
-        ModelTurn turn;
+        if (!already) {
+            ToolCall call;
+            call.id = QStringLiteral("call_patch");
+            call.name = QStringLiteral("resource.patch_fragment");
+            call.argumentsJson = QStringLiteral(
+                "{\"resource_id\":\"ch1\",\"start\":0,\"end\":1,\"text\":\"X\",\"expected_revision\":1}");
+            turn.toolCalls.append(call);
+            return turn;
+        }
         turn.content = QStringLiteral("Ask mode cannot edit.");
         return turn;
-    }());
+    });
     AgentCancellation ask_cancel;
     PermissionPolicy ask_policy;
     AgentRunner ask_runner(&ask_session, &ask_provider, &ask_registry, &ask_book,
@@ -139,6 +153,12 @@ int main()
     Require(ask_book.resourceText(QStringLiteral("ch1")) == original,
             "Ask mode must not mutate the live book");
     Require(ask_gate.requestCount() == 0, "Ask deny must not go through the approval gate");
+    Require(ask_saw_tool_role,
+            "next model request after Ask-deny must include a tool-role message");
+    Require(ask_tool_blob.contains(QStringLiteral("PERMISSION_DENIED")),
+            "tool-role deny payload must carry PERMISSION_DENIED");
+    Require(ask_provider.lastRequest().messages.size() > 0,
+            "Ask-deny follow-up must inspect the real next ModelRequest");
 
     MemoryBookWorkspace deny_book = MemoryBookWorkspace::samplePhysicsBook();
     const QString deny_original = deny_book.resourceText(QStringLiteral("ch1"));
@@ -147,21 +167,35 @@ int main()
     AgentSession deny_session;
     AutoApprovalGate deny_gate(false);
     MockModelProvider deny_provider;
-    deny_provider.addTurn([]() {
+    bool deny_saw_tool_role = false;
+    QString deny_tool_blob;
+    deny_provider.setScript([&](const ModelRequest &request) {
+        bool already = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role == QLatin1String("tool")
+                && message.toolCallId == QLatin1String("call_patch2")) {
+                deny_saw_tool_role = true;
+                deny_tool_blob = message.content;
+            }
+            if (message.role == QLatin1String("assistant")) {
+                for (const ToolCall &call : message.toolCalls) {
+                    if (call.id == QLatin1String("call_patch2")) already = true;
+                }
+            }
+        }
         ModelTurn turn;
-        ToolCall call;
-        call.id = QStringLiteral("call_patch2");
-        call.name = QStringLiteral("resource.patch_fragment");
-        call.argumentsJson = QStringLiteral(
-            "{\"resource_id\":\"ch1\",\"start\":0,\"end\":1,\"text\":\"X\",\"expected_revision\":1}");
-        turn.toolCalls.append(call);
-        return turn;
-    }());
-    deny_provider.addTurn([]() {
-        ModelTurn turn;
+        if (!already) {
+            ToolCall call;
+            call.id = QStringLiteral("call_patch2");
+            call.name = QStringLiteral("resource.patch_fragment");
+            call.argumentsJson = QStringLiteral(
+                "{\"resource_id\":\"ch1\",\"start\":0,\"end\":1,\"text\":\"X\",\"expected_revision\":1}");
+            turn.toolCalls.append(call);
+            return turn;
+        }
         turn.content = QStringLiteral("User denied the edit.");
         return turn;
-    }());
+    });
     AgentCancellation deny_cancel;
     AgentRunner deny_runner(&deny_session, &deny_provider, &deny_registry, &deny_book,
                             &ask_policy, &deny_gate, &deny_cancel);
@@ -177,6 +211,10 @@ int main()
             "denied edit must leave the live book unchanged");
     Require(deny_gate.requestCount() == 1 && !deny_gate.lastImpact().isEmpty(),
             "approval request must include a human-readable impact");
+    Require(deny_saw_tool_role,
+            "next model request after user-deny must include a tool-role message");
+    Require(deny_tool_blob.contains(QStringLiteral("PERMISSION_DENIED")),
+            "user-deny tool payload must carry PERMISSION_DENIED");
 
     MemoryBookWorkspace edit_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry edit_registry;
@@ -241,6 +279,84 @@ int main()
             "approved commit must change the live book");
     Require(hasEvent(edit_session, AgentEventType::TransactionCommitted),
             "commit must be labeled as applied in the session");
+
+    MemoryBookWorkspace plan_book = MemoryBookWorkspace::samplePhysicsBook();
+    const QString plan_original = plan_book.resourceText(QStringLiteral("ch1"));
+    ToolRegistry plan_registry;
+    registerBookTools(&plan_registry, &plan_book);
+    AgentSession plan_session;
+    AutoApprovalGate plan_gate(true);
+    MockModelProvider plan_provider;
+    bool plan_commit_denied = false;
+    plan_provider.setScript([&](const ModelRequest &request) {
+        bool began = false;
+        bool patched = false;
+        bool previewed = false;
+        bool saw_commit = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role != QLatin1String("tool")) continue;
+            if (message.toolCallId == QLatin1String("plan-commit")) {
+                saw_commit = true;
+                plan_commit_denied = message.content.contains(QStringLiteral("PERMISSION_DENIED"));
+            }
+            if (message.content.contains(QStringLiteral("base_book_revision"))) began = true;
+            if (message.content.contains(QStringLiteral("staged"))) patched = true;
+            if (message.content.contains(QStringLiteral("live_book_revision"))) previewed = true;
+        }
+        ModelTurn turn;
+        if (!began) {
+            ToolCall call;
+            call.id = QStringLiteral("plan-begin");
+            call.name = QStringLiteral("transaction.begin");
+            call.argumentsJson = QStringLiteral("{}");
+            turn.toolCalls.append(call);
+            return turn;
+        }
+        if (!patched) {
+            ToolCall call;
+            call.id = QStringLiteral("plan-patch");
+            call.name = QStringLiteral("resource.patch_fragment");
+            call.argumentsJson = QStringLiteral(
+                "{\"resource_id\":\"ch1\",\"start\":0,\"end\":5,\"text\":\"HELLO\",\"expected_revision\":1}");
+            turn.toolCalls.append(call);
+            return turn;
+        }
+        if (!previewed) {
+            ToolCall call;
+            call.id = QStringLiteral("plan-preview");
+            call.name = QStringLiteral("transaction.preview");
+            call.argumentsJson = QStringLiteral("{}");
+            turn.toolCalls.append(call);
+            return turn;
+        }
+        if (!saw_commit) {
+            ToolCall call;
+            call.id = QStringLiteral("plan-commit");
+            call.name = QStringLiteral("transaction.commit");
+            call.argumentsJson = QStringLiteral("{\"expected_revision\":%1}")
+                                     .arg(plan_book.revision());
+            turn.toolCalls.append(call);
+            return turn;
+        }
+        turn.content = QStringLiteral("Plan staged a preview and did not commit.");
+        return turn;
+    });
+    AgentCancellation plan_cancel;
+    AgentRunner plan_runner(&plan_session, &plan_provider, &plan_registry, &plan_book,
+                            &ask_policy, &plan_gate, &plan_cancel);
+    plan_runner.setMode(AgentMode::Plan);
+    const AgentRunResult plan_result = plan_runner.runTurn(QStringLiteral("draft a heading patch"));
+    Require(plan_result.state == AgentRunState::Completed, "Plan turn must complete");
+    Require(hasEvent(plan_session, AgentEventType::TransactionPreviewed),
+            "Plan must be able to preview staged work");
+    Require(!hasEvent(plan_session, AgentEventType::TransactionCommitted),
+            "Plan must not commit");
+    Require(plan_book.resourceText(QStringLiteral("ch1")) == plan_original,
+            "Plan staging plus denied commit must leave the live book unchanged");
+    Require(plan_commit_denied,
+            "Plan commit must come back as a tool-role PERMISSION_DENIED");
+    Require(plan_result.finalText.contains(QStringLiteral("did not commit")),
+            "final Plan text must reflect the tool-role deny, not a canned skip");
 
     MemoryBookWorkspace cancel_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry cancel_registry;
