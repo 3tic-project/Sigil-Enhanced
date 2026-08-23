@@ -72,15 +72,32 @@ list(APPEND BOOK_MANIPULATION_FILES
 set( AGENT_FILES
     Agent/AgentTypes.cpp
     Agent/AgentTypes.h
+    Agent/Core/AgentCancellation.h
+    Agent/Core/AgentRunner.cpp
+    Agent/Core/AgentRunner.h
     Agent/Core/AgentSession.cpp
     Agent/Core/AgentSession.h
+    Agent/Core/PromptAssembler.cpp
+    Agent/Core/PromptAssembler.h
     Agent/Model/HistoryAssembler.cpp
     Agent/Model/HistoryAssembler.h
     Agent/Model/IModelProvider.h
+    Agent/Model/MockModelProvider.cpp
+    Agent/Model/MockModelProvider.h
     Agent/Model/OpenAICompatibleProvider.cpp
     Agent/Model/OpenAICompatibleProvider.h
     Agent/Model/StreamingJsonDecoder.cpp
     Agent/Model/StreamingJsonDecoder.h
+    Agent/Security/PermissionPolicy.cpp
+    Agent/Security/PermissionPolicy.h
+    Agent/Tools/BookTools.cpp
+    Agent/Tools/BookTools.h
+    Agent/Tools/IAgentTool.h
+    Agent/Tools/ToolRegistry.cpp
+    Agent/Tools/ToolRegistry.h
+    Agent/Execution/IBookWorkspace.h
+    Agent/Execution/MemoryBookWorkspace.cpp
+    Agent/Execution/MemoryBookWorkspace.h
 )
 
 set( BUILTIN_PLUGIN_FILES

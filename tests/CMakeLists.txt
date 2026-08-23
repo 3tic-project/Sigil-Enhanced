@@ -1320,3 +1320,65 @@ target_link_libraries(agent_stream_decoder_test PRIVATE Qt6::Core Qt6::Network)
 target_compile_features(agent_stream_decoder_test PRIVATE cxx_std_17)
 add_test(NAME agent_stream_decoder COMMAND agent_stream_decoder_test)
 set_tests_properties(agent_stream_decoder PROPERTIES TIMEOUT 30)
+
+set(AGENT_CORE_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentRunner.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/PromptAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/MockModelProvider.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/StreamingJsonDecoder.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/BookTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
+)
+
+add_executable(agent_harness_test
+    agent_harness_test.cpp
+    ${AGENT_CORE_SOURCES}
+)
+target_include_directories(agent_harness_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_harness_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(agent_harness_test PRIVATE cxx_std_17)
+add_test(NAME agent_harness COMMAND agent_harness_test)
+set_tests_properties(agent_harness PROPERTIES TIMEOUT 30)
+
+add_executable(agent_book_tools_test
+    agent_book_tools_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/BookTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
+)
+target_include_directories(agent_book_tools_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_book_tools_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(agent_book_tools_test PRIVATE cxx_std_17)
+add_test(NAME agent_book_tools COMMAND agent_book_tools_test)
+set_tests_properties(agent_book_tools PROPERTIES TIMEOUT 30)
+
+add_executable(agent_launch_test
+    agent_launch_test.cpp
+    ${AGENT_CORE_SOURCES}
+)
+target_include_directories(agent_launch_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_launch_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(agent_launch_test PRIVATE cxx_std_17)
+add_test(NAME agent_launch COMMAND agent_launch_test)
+set_tests_properties(agent_launch PROPERTIES TIMEOUT 30)
+
+add_executable(agent_live_deepseek EXCLUDE_FROM_ALL
+    agent_live_deepseek.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/OpenAICompatibleProvider.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/StreamingJsonDecoder.cpp
+)
+target_include_directories(agent_live_deepseek PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_live_deepseek PRIVATE Qt6::Core Qt6::Network)
+target_compile_features(agent_live_deepseek PRIVATE cxx_std_17)
