@@ -6228,14 +6228,13 @@ void MainWindow::CreateAgentDock()
             [this](const QString &id, bool ok) {
                 if (m_AgentController) m_AgentController->resolveApproval(id, ok);
             });
-    UpdateAgentContext();
 }
 
 void MainWindow::UpdateAgentContext()
 {
     if (!m_AgentDock) return;
     QString title;
-    if (m_Book) {
+    if (m_Book && m_Book->GetFolderKeeper() && m_Book->GetConstOPF()) {
         const QStringList titles = m_Book->GetMetadataValues(QStringLiteral("dc:title"));
         if (!titles.isEmpty()) title = titles.first();
     }
@@ -6317,6 +6316,7 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
     connect(m_BookBrowser,     SIGNAL(ResourcesDeleted()), this, SLOT(ResourcesAddedOrDeletedOrMoved()));
     connect(m_BookBrowser,     SIGNAL(ResourcesAdded()), this, SLOT(ResourcesAddedOrDeletedOrMoved()));
     connect(m_BookBrowser,     SIGNAL(ResourcesMoved()), this, SLOT(ResourcesAddedOrDeletedOrMoved()));
+    UpdateAgentContext();
 }
 
 void MainWindow::ResourcesAddedOrDeletedOrMoved()

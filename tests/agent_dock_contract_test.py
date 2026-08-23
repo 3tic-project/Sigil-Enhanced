@@ -34,5 +34,22 @@ require(
     "agentModeCombo" in (repo / "src/Agent/UI/AgentDock.cpp").read_text(encoding="utf-8"),
     "dock must expose Ask/Plan/Edit",
 )
+require(
+    "m_Book && m_Book->GetFolderKeeper() && m_Book->GetConstOPF()" in main_window,
+    "UpdateAgentContext must not read metadata until OPF exists; empty Book::GetOPF() is null",
+)
+create_dock = main_window.split("void MainWindow::CreateAgentDock()", 1)[1].split(
+    "void MainWindow::UpdateAgentContext()", 1
+)[0]
+require(
+    "GetMetadataValues" not in create_dock,
+    "CreateAgentDock runs during ExtendUI before LoadInitialFile; it must not read OPF metadata",
+)
+require(
+    "UpdateAgentContext();" in main_window.split("void MainWindow::SetNewBook", 1)[1].split(
+        "void MainWindow::ResourcesAddedOrDeletedOrMoved", 1
+    )[0],
+    "context chips must refresh after a real book is assigned",
+)
 
 print("agent dock contract ok")

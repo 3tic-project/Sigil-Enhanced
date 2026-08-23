@@ -216,9 +216,11 @@ QJsonObject SigilBookWorkspace::summary() const
         }
         QString title;
         QString language;
-        for (const MetaEntry &entry : m_book->GetMetadata()) {
-            if (entry.m_name.endsWith(QLatin1String("title")) && title.isEmpty()) title = entry.m_content;
-            if (entry.m_name.endsWith(QLatin1String("language")) && language.isEmpty()) language = entry.m_content;
+        if (m_book->GetConstOPF()) {
+            for (const MetaEntry &entry : m_book->GetMetadata()) {
+                if (entry.m_name.endsWith(QLatin1String("title")) && title.isEmpty()) title = entry.m_content;
+                if (entry.m_name.endsWith(QLatin1String("language")) && language.isEmpty()) language = entry.m_content;
+            }
         }
         return QJsonObject {
             { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
