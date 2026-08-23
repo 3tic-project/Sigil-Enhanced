@@ -77,6 +77,8 @@ set( AGENT_FILES
     Agent/Core/AgentRunner.h
     Agent/Core/AgentSession.cpp
     Agent/Core/AgentSession.h
+    Agent/Core/AgentSkills.cpp
+    Agent/Core/AgentSkills.h
     Agent/Core/PromptAssembler.cpp
     Agent/Core/PromptAssembler.h
     Agent/Model/AgentModelCatalog.cpp
@@ -106,6 +108,10 @@ set( AGENT_FILES
     Agent/Execution/PatchRange.h
     Agent/Execution/ResourceMutations.cpp
     Agent/Execution/ResourceMutations.h
+    Agent/Typeset/ManuscriptParser.cpp
+    Agent/Typeset/ManuscriptParser.h
+    Agent/Typeset/TypesetEngine.cpp
+    Agent/Typeset/TypesetEngine.h
     Agent/Core/AgentController.cpp
     Agent/Core/AgentController.h
     Agent/Execution/SigilBookWorkspace.cpp
@@ -912,6 +918,7 @@ set( QRC_FILES
     Resource_Files/javascript/javascript.qrc
     Resource_Files/icon/icon.qrc
     Resource_Files/dark/dark.qrc
+    Agent/Skills/agent_skills.qrc
     )
 
 set( MAIN_BINARY_QRC_FILES

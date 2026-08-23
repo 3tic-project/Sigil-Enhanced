@@ -9,6 +9,8 @@
 #include <QJsonArray>
 #include <functional>
 
+#include "Agent/Typeset/TypesetEngine.h"
+
 namespace SigilAgent
 {
 
@@ -100,6 +102,17 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
     }
     if (name == QLatin1String("resource.copy")) {
         return QStringLiteral("Copy %1 to a new resource. Staged until commit; reversible via Undo after apply.")
+            .arg(arguments.value(QStringLiteral("resource_id")).toString());
+    }
+    if (name == QLatin1String("resource.replace_text")) {
+        return QStringLiteral("Replace all text of %1. Staged until commit; reversible via Undo after apply.")
+            .arg(arguments.value(QStringLiteral("resource_id")).toString());
+    }
+    if (name == QLatin1String("content.typeset_from_manuscript")) {
+        return QStringLiteral("Fill the open light-novel template from the dropped manuscript. Staged until commit.");
+    }
+    if (name == QLatin1String("content.fill_section")) {
+        return QStringLiteral("Fill %1 from the parsed manuscript. Staged until commit.")
             .arg(arguments.value(QStringLiteral("resource_id")).toString());
     }
     return QStringLiteral("Run %1 on the current book.").arg(name);
@@ -338,6 +351,102 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
                 arguments.value(QStringLiteral("text")).toString(),
                 add_to_spine,
                 arguments.value(QStringLiteral("after_resource_id")).toString()));
+        });
+
+    add(registry, QStringLiteral("resource.replace_text"),
+        QStringLiteral("Stage a full-file replacement of an XHTML or CSS resource. For chapter-length bodies use content.typeset_from_manuscript instead; this tool rejects replacements larger than 64KiB so the model cannot dump a novel into the prompt. Live book unchanged until transaction.commit."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("text"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("expected_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("resource_id"), QStringLiteral("text"), QStringLiteral("expected_revision")
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const QString text = arguments.value(QStringLiteral("text")).toString();
+            if (text.size() > 65536) {
+                return ToolResult::failure(
+                    QStringLiteral("REPLACE_TOO_LARGE"),
+                    QStringLiteral("resource.replace_text is capped at 65536 characters. Use content.typeset_from_manuscript or content.fill_section so chapter bodies never enter the model context."));
+            }
+            return fromBook(workspace->replaceText(
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                text,
+                static_cast<quint64>(arguments.value(QStringLiteral("expected_revision")).toInteger())));
+        });
+
+    add(registry, QStringLiteral("manuscript.parse"),
+        QStringLiteral("Parse a dropped light-novel TXT (or ImportTXT HTML) into title, credits, synopsis, TOC, chapter list, and illustration names. Returns a compact summary only — never chapter bodies. Omit manuscript_id to auto-detect. Call this before content.typeset_from_manuscript."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("manuscript_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const QJsonObject summary = parseManuscriptInBook(
+                workspace, arguments.value(QStringLiteral("manuscript_id")).toString());
+            if (!summary.value(QStringLiteral("ok")).toBool()
+                && summary.contains(QStringLiteral("code"))) {
+                return ToolResult::failure(
+                    summary.value(QStringLiteral("code")).toString(),
+                    summary.value(QStringLiteral("message")).toString(),
+                    summary);
+            }
+            return ToolResult::success(summary);
+        });
+
+    add(registry, QStringLiteral("content.fill_section"),
+        QStringLiteral("Fill one template page from the parsed manuscript (chapter, credits, synopsis, toc, title, illustration, cover, start). Pass chapter_index for Section pages or image_name for illus/cover/start. Does not send chapter text through the model. Live book unchanged until transaction.commit."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("role"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("manuscript_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("chapter_index"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("image_name"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(fillTemplateSection(
+                workspace,
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                arguments.value(QStringLiteral("role")).toString(),
+                arguments.value(QStringLiteral("manuscript_id")).toString(),
+                arguments.value(QStringLiteral("chapter_index")).toInt(-1),
+                arguments.value(QStringLiteral("image_name")).toString()));
+        });
+
+    add(registry, QStringLiteral("content.typeset_from_manuscript"),
+        QStringLiteral("Fill the open 轻小说模板 from a dropped manuscript: parse TXT, copy extra Section pages, wrap every chapter, rewrite illus/cover/start image hrefs, and fill title/credits/synopsis/contents/metadata. Never dumps chapter bodies into the model. Call transaction.begin first (or the tool will). Preview with transaction.preview, then transaction.commit. retire_source defaults true for imported HTML that is not a template page."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("manuscript_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("retire_source"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } },
+                { QStringLiteral("update_metadata"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } }
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            TypesetOptions options;
+            options.manuscriptId = arguments.value(QStringLiteral("manuscript_id")).toString();
+            if (arguments.contains(QStringLiteral("retire_source"))) {
+                options.retireSource = arguments.value(QStringLiteral("retire_source")).toBool();
+            }
+            if (arguments.contains(QStringLiteral("update_metadata"))) {
+                options.updateMetadata = arguments.value(QStringLiteral("update_metadata")).toBool();
+            }
+            return fromBook(typesetFromManuscript(workspace, options));
         });
 
     add(registry, QStringLiteral("resource.copy"),

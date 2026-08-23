@@ -6,9 +6,11 @@
 
 #include "Agent/Core/PromptAssembler.h"
 
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 
+#include "Agent/Core/AgentSkills.h"
 #include "Agent/Model/HistoryAssembler.h"
 
 namespace SigilAgent
@@ -31,7 +33,8 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
         "- Mutations must go through transaction.begin → staged create/copy/patch/css/metadata → transaction.preview → transaction.commit.\n"
         "- To add a new HTML/CSS file use resource.copy (duplicate an existing file) or resource.create. Do not tell the user to copy files in the Sigil UI when those tools are available.\n"
         "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n"
-        "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n");
+        "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n"
+        "- Light-novel template fill: if the open book is 轻小说模板 (cover/start/title/message/summary/illus/Section) and the user dropped a TXT plus images, call manuscript.parse then content.typeset_from_manuscript. Never paste chapter bodies through patch_fragment or replace_text. Never tell the user to paste into Book View.\n");
     if (mode == AgentMode::Ask) {
         prompt += QStringLiteral("Mode: Ask. Read-only. Do not call mutating tools.\n");
     } else if (mode == AgentMode::Plan) {
@@ -50,15 +53,34 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
     QString block = QStringLiteral("Current book map:\n");
     block += QString::fromUtf8(QJsonDocument(workspace->summary()).toJson(QJsonDocument::Compact));
     block += QLatin1Char('\n');
+    block += QStringLiteral("Resources:\n");
+    const QJsonArray resources = workspace->resources();
+    int listed = 0;
+    for (const QJsonValue &value : resources) {
+        if (listed >= 60) {
+            block += QStringLiteral("- …\n");
+            break;
+        }
+        const QJsonObject object = value.toObject();
+        block += QStringLiteral("- %1 (%2, %3 chars)\n")
+                     .arg(object.value(QStringLiteral("book_path")).toString(),
+                          object.value(QStringLiteral("kind")).toString())
+                     .arg(object.value(QStringLiteral("text_length")).toInt());
+        ++listed;
+    }
     const QJsonArray spine = workspace->spine();
     int sampled = 0;
     for (const QJsonValue &value : spine) {
         if (sampled >= 2) break;
+        const QString path = value.toObject().value(QStringLiteral("book_path")).toString();
+        const QString stem = QFileInfo(path).completeBaseName().toLower();
+        if (stem == QLatin1String("cover") || stem.startsWith(QLatin1String("illus"))) continue;
         const QString id = value.toObject().value(QStringLiteral("resource_id")).toString();
         const BookOpResult fragment = workspace->readFragment(id, 0, 400);
         if (!fragment.ok) continue;
-        block += QStringLiteral("\nSample %1:\n%2\n")
-                     .arg(id, fragment.data.value(QStringLiteral("text")).toString());
+        const QString sample = fragment.data.value(QStringLiteral("text")).toString();
+        if (sample.contains(QLatin1String("<svg")) && sample.contains(QLatin1String("image"))) continue;
+        block += QStringLiteral("\nSample %1:\n%2\n").arg(id, sample);
         ++sampled;
     }
     if (!handles.isEmpty()) {
@@ -91,9 +113,20 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
     request.stream = true;
     request.tools = tools.openaiToolSchemas();
 
+    QString last_user;
+    for (int i = session.events().size() - 1; i >= 0; --i) {
+        if (session.events().at(i).type == AgentEventType::UserMessage) {
+            last_user = session.events().at(i).payload.value(QStringLiteral("text")).toString();
+            break;
+        }
+    }
+    const QList<AgentSkill> skills = loadAgentSkills();
     ChatMessage system;
     system.role = QStringLiteral("system");
     system.content = systemPrompt(mode);
+    system.content += QLatin1Char('\n');
+    system.content += skillCatalogPrompt(skills);
+    system.content += matchedSkillBodies(skills, last_user, workspace);
     request.messages.append(system);
 
     ChatMessage context;
