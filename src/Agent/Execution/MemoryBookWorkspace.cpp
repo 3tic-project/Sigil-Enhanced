@@ -156,11 +156,13 @@ QJsonObject MemoryBookWorkspace::summary() const
     int css = 0;
     int fonts = 0;
     int images = 0;
+    int text = 0;
     for (const MemoryResource &resource : m_resources) {
         if (resource.kind == QLatin1String("xhtml")) ++xhtml;
         else if (resource.kind == QLatin1String("css")) ++css;
         else if (resource.kind == QLatin1String("font")) ++fonts;
         else if (resource.kind == QLatin1String("image")) ++images;
+        else if (resource.kind == QLatin1String("text")) ++text;
     }
     return QJsonObject {
         { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
@@ -174,6 +176,7 @@ QJsonObject MemoryBookWorkspace::summary() const
             { QStringLiteral("css"), css },
             { QStringLiteral("fonts"), fonts },
             { QStringLiteral("images"), images },
+            { QStringLiteral("text"), text },
             { QStringLiteral("total"), m_resources.size() }
         } }
     };
@@ -623,28 +626,48 @@ BookOpResult MemoryBookWorkspace::patchFragment(const QString &resource_id,
     return BookOpResult::success(data, false, true);
 }
 
-BookOpResult MemoryBookWorkspace::updateCss(const QString &resource_id,
-                                            const QString &text,
-                                            quint64 expected_resource_revision)
+BookOpResult MemoryBookWorkspace::replaceText(const QString &resource_id,
+                                              const QString &text,
+                                              quint64 expected_resource_revision)
 {
     BookOpResult ensured = ensureTransaction();
     if (!ensured.ok) return ensured;
     MemoryResource *resource = findResource(resource_id);
-    if (!resource) {
+    QString added_source;
+    quint64 added_revision = 0;
+    const bool staged_new = !resource && m_transaction
+        && m_transaction->ReadAddedText(resource_id, &added_source, &added_revision);
+    if (!resource && !staged_new) {
         return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"),
                                    QStringLiteral("Unknown resource"));
     }
+    if (resource && (resource->kind == QLatin1String("font") || resource->kind == QLatin1String("image"))) {
+        return BookOpResult::error(QStringLiteral("BINARY_NOT_IN_CONTEXT"),
+                                   QStringLiteral("Font and image binaries cannot be replaced as text"));
+    }
     QString error;
-    if (!m_transaction->ReplaceText(resource->id, resource->text, resource->revision,
-                                    expected_resource_revision, text, &error)) {
+    const bool replaced = staged_new
+        ? m_transaction->ReplaceAddedText(resource_id, expected_resource_revision, text, &error)
+        : m_transaction->ReplaceText(resource->id, resource->text, resource->revision,
+                                     expected_resource_revision, text, &error);
+    if (!replaced) {
         const QString code = error.contains(QLatin1String("Revision"))
-            ? QStringLiteral("BOOK_REVISION_CONFLICT") : QStringLiteral("CSS_UPDATE_FAILED");
+            ? QStringLiteral("BOOK_REVISION_CONFLICT") : QStringLiteral("REPLACE_FAILED");
         return BookOpResult::error(code, error);
     }
     return BookOpResult::success(QJsonObject {
-        { QStringLiteral("resource_id"), resource->id },
-        { QStringLiteral("staged"), true }
+        { QStringLiteral("resource_id"), resource ? resource->id : resource_id },
+        { QStringLiteral("staged"), true },
+        { QStringLiteral("live_unchanged"), true },
+        { QStringLiteral("replacement_length"), text.size() }
     }, false, true);
+}
+
+BookOpResult MemoryBookWorkspace::updateCss(const QString &resource_id,
+                                            const QString &text,
+                                            quint64 expected_resource_revision)
+{
+    return replaceText(resource_id, text, expected_resource_revision);
 }
 
 BookOpResult MemoryBookWorkspace::updateMetadata(const QJsonObject &patch)

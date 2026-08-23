@@ -142,6 +142,7 @@ QString SigilBookWorkspace::kindOf(Resource *resource) const
         case Resource::FontResourceType: return QStringLiteral("font");
         case Resource::ImageResourceType:
         case Resource::SVGResourceType: return QStringLiteral("image");
+        case Resource::MiscTextResourceType: return QStringLiteral("text");
         case Resource::OPFResourceType: return QStringLiteral("opf");
         case Resource::NCXResourceType: return QStringLiteral("ncx");
         default: return QStringLiteral("other");
@@ -211,13 +212,14 @@ quint64 SigilBookWorkspace::revision() const
 QJsonObject SigilBookWorkspace::summary() const
 {
     return invokeJson([this]() {
-        int xhtml = 0, css = 0, fonts = 0, images = 0;
+        int xhtml = 0, css = 0, fonts = 0, images = 0, text = 0;
         for (Resource *resource : m_book->GetFolderKeeper()->GetResourceList()) {
             const QString kind = kindOf(resource);
             if (kind == QLatin1String("xhtml")) ++xhtml;
             else if (kind == QLatin1String("css")) ++css;
             else if (kind == QLatin1String("font")) ++fonts;
             else if (kind == QLatin1String("image")) ++images;
+            else if (kind == QLatin1String("text")) ++text;
         }
         QString title;
         QString language;
@@ -239,6 +241,7 @@ QJsonObject SigilBookWorkspace::summary() const
                 { QStringLiteral("css"), css },
                 { QStringLiteral("fonts"), fonts },
                 { QStringLiteral("images"), images },
+                { QStringLiteral("text"), text },
                 { QStringLiteral("total"), m_book->GetFolderKeeper()->GetResourceList().size() }
             } }
         };
@@ -681,6 +684,9 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
             if (m_stagedMetadata.contains(QStringLiteral("language"))) {
                 upsert(QStringLiteral("language"), m_stagedMetadata.value(QStringLiteral("language")).toString());
             }
+            if (m_stagedMetadata.contains(QStringLiteral("creator"))) {
+                upsert(QStringLiteral("creator"), m_stagedMetadata.value(QStringLiteral("creator")).toString());
+            }
             m_book->SetMetadata(entries);
         }
         const QString txid = m_transaction->Id();
@@ -764,28 +770,51 @@ BookOpResult SigilBookWorkspace::patchFragment(const QString &resource_id,
     });
 }
 
-BookOpResult SigilBookWorkspace::updateCss(const QString &resource_id,
-                                           const QString &text,
-                                           quint64 expected_resource_revision)
+BookOpResult SigilBookWorkspace::replaceText(const QString &resource_id,
+                                             const QString &text,
+                                             quint64 expected_resource_revision)
 {
     return invokeOp([this, resource_id, text, expected_resource_revision]() {
         BookOpResult ensured = ensureTransaction();
         if (!ensured.ok) return ensured;
         TextResource *resource = textResource(resource_id);
-        if (!resource) {
+        QString added_source;
+        quint64 added_revision = 0;
+        const bool staged_new = !resource && m_transaction
+            && m_transaction->ReadAddedText(resource_id, &added_source, &added_revision);
+        if (!resource && !staged_new) {
             return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
         }
+        if (resource && (kindOf(resource) == QLatin1String("font")
+                         || kindOf(resource) == QLatin1String("image"))) {
+            return BookOpResult::error(QStringLiteral("BINARY_NOT_IN_CONTEXT"),
+                                       QStringLiteral("Font and image binaries cannot be replaced as text"));
+        }
         QString error;
-        if (!m_transaction->ReplaceText(resource->GetIdentifier(), resource->GetText(),
-                                        trackedRevision(resource), expected_resource_revision,
-                                        text, &error)) {
-            return BookOpResult::error(QStringLiteral("BOOK_REVISION_CONFLICT"), error);
+        const bool replaced = staged_new
+            ? m_transaction->ReplaceAddedText(resource_id, expected_resource_revision, text, &error)
+            : m_transaction->ReplaceText(resource->GetIdentifier(), resource->GetText(),
+                                         trackedRevision(resource), expected_resource_revision,
+                                         text, &error);
+        if (!replaced) {
+            const QString code = error.contains(QLatin1String("Revision"))
+                ? QStringLiteral("BOOK_REVISION_CONFLICT") : QStringLiteral("REPLACE_FAILED");
+            return BookOpResult::error(code, error);
         }
         return BookOpResult::success(QJsonObject {
-            { QStringLiteral("resource_id"), resource->GetIdentifier() },
-            { QStringLiteral("staged"), true }
+            { QStringLiteral("resource_id"), resource ? resource->GetIdentifier() : resource_id },
+            { QStringLiteral("staged"), true },
+            { QStringLiteral("live_unchanged"), true },
+            { QStringLiteral("replacement_length"), text.size() }
         }, false, true);
     });
+}
+
+BookOpResult SigilBookWorkspace::updateCss(const QString &resource_id,
+                                           const QString &text,
+                                           quint64 expected_resource_revision)
+{
+    return replaceText(resource_id, text, expected_resource_revision);
 }
 
 BookOpResult SigilBookWorkspace::updateMetadata(const QJsonObject &patch)

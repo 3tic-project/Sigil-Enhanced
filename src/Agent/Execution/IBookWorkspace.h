@@ -73,6 +73,9 @@ public:
                                        quint64 expected_resource_revision,
                                        const QString &expected_text,
                                        int start_line = -1) = 0;
+    virtual BookOpResult replaceText(const QString &resource_id,
+                                     const QString &text,
+                                     quint64 expected_resource_revision) = 0;
     virtual BookOpResult updateCss(const QString &resource_id,
                                    const QString &text,
                                    quint64 expected_resource_revision) = 0;
