@@ -19,7 +19,7 @@ AgentController::AgentController() :
 void AgentController::rebuildTools()
 {
     m_tools = ToolRegistry();
-    if (m_workspace) registerBookTools(&m_tools, m_workspace);
+    if (m_workspace) registerBookTools(&m_tools, m_workspace, &m_session);
     m_runner = std::make_unique<AgentRunner>(
         &m_session, m_provider.get(), &m_tools, m_workspace, &m_policy, &m_gate, &m_cancellation);
 }

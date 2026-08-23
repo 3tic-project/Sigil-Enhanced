@@ -23,7 +23,8 @@ class PromptAssembler
 {
 public:
     QString systemPrompt(AgentMode mode) const;
-    QString contextBlock(IBookWorkspace *workspace, const QStringList &handles) const;
+    QString contextBlock(IBookWorkspace *workspace, const QStringList &handles,
+                         const AgentSession *session = nullptr) const;
     ModelRequest build(const AgentSession &session,
                        IBookWorkspace *workspace,
                        const ToolRegistry &tools,

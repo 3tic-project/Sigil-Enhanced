@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/agent/skills">
         <file alias="ln-template-typeset/SKILL.md">ln-template-typeset/SKILL.md</file>
+        <file alias="book-structure/SKILL.md">book-structure/SKILL.md</file>
     </qresource>
 </RCC>

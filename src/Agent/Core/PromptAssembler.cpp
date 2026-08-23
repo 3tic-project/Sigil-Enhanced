@@ -30,11 +30,15 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
         "- The book map and attached samples are already in context. For greetings or high-level questions, answer from that. Call extra read tools only for a fact you do not already have.\n"
         "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
         "- A patch must not cut through a markup tag.\n"
-        "- Mutations must go through transaction.begin → staged create/copy/patch/css/metadata → transaction.preview → transaction.commit.\n"
-        "- To add a new HTML/CSS file use resource.copy (duplicate an existing file) or resource.create. Do not tell the user to copy files in the Sigil UI when those tools are available.\n"
+        "- Mutations must go through transaction.begin → staged edits → transaction.preview → transaction.commit.\n"
+        "- To add a new HTML/CSS file use resource.copy or resource.create. To remove a file use resource.delete. To reorder reading order use spine.set.\n"
+        "- Long text already in the book (dropped TXT/HTML) must stay there: content.wrap_plain, content.replace_body (source_resource_id), content.split/merge. Never paste chapter bodies through patch_fragment or replace_text. Never tell the user to paste into Book View.\n"
+        "- Batch markup: content.wrap and content.replace_regex (patterns supplied by the user or inferred, never assume a fixed novel format).\n"
+        "- Insert an already-imported image with image.insert. Check broken/unused images with book.check.\n"
+        "- toc.generate builds a TOC from heading regex. metadata.update/_remove edits Dublin Core fields.\n"
+        "- Keep a plan with session.task_add / session.task_update and session.remember for constraints (heading regex, class names) across turns.\n"
         "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n"
-        "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n"
-        "- Light-novel template fill: if the open book is 轻小说模板 (cover/start/title/message/summary/illus/Section) and the user dropped a TXT plus images, call manuscript.parse then content.typeset_from_manuscript. Never paste chapter bodies through patch_fragment or replace_text. Never tell the user to paste into Book View.\n");
+        "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n");
     if (mode == AgentMode::Ask) {
         prompt += QStringLiteral("Mode: Ask. Read-only. Do not call mutating tools.\n");
     } else if (mode == AgentMode::Plan) {
@@ -47,7 +51,8 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
     return prompt;
 }
 
-QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringList &handles) const
+QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringList &handles,
+                                      const AgentSession *session) const
 {
     if (!workspace) return QString();
     QString block = QStringLiteral("Current book map:\n");
@@ -94,6 +99,20 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
             }
         }
     }
+    if (session) {
+        const QJsonArray tasks = session->tasks();
+        if (!tasks.isEmpty()) {
+            block += QStringLiteral("\nSession tasks:\n");
+            block += QString::fromUtf8(QJsonDocument(tasks).toJson(QJsonDocument::Compact));
+            block += QLatin1Char('\n');
+        }
+        const QJsonObject memory = session->memory();
+        if (!memory.isEmpty()) {
+            block += QStringLiteral("\nSession memory:\n");
+            block += QString::fromUtf8(QJsonDocument(memory).toJson(QJsonDocument::Compact));
+            block += QLatin1Char('\n');
+        }
+    }
     return block;
 }
 
@@ -131,7 +150,7 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
 
     ChatMessage context;
     context.role = QStringLiteral("user");
-    context.content = contextBlock(workspace, handles);
+    context.content = contextBlock(workspace, handles, &session);
     request.messages.append(context);
 
     HistoryAssembler assembler;

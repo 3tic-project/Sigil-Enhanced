@@ -170,31 +170,34 @@ QString matchedSkillBodies(const QList<AgentSkill> &skills,
                            const QString &user_text,
                            IBookWorkspace *workspace)
 {
+    Q_UNUSED(workspace);
     const QString lowered = user_text.toLower();
-    const bool template_book = looksLikeLightNovelTemplate(workspace);
     const bool keyword = lowered.contains(QStringLiteral("排版"))
         || lowered.contains(QStringLiteral("模板"))
         || lowered.contains(QStringLiteral("typeset"))
         || lowered.contains(QStringLiteral("轻小说"))
         || lowered.contains(QStringLiteral("輕小說"))
         || lowered.contains(QStringLiteral("文稿"))
-        || lowered.contains(QStringLiteral("导入"))
-        || lowered.contains(QStringLiteral("導入"))
-        || lowered.contains(QStringLiteral("插图"))
-        || lowered.contains(QStringLiteral("插圖"))
         || lowered.contains(QStringLiteral("manuscript"))
-        || lowered.contains(QStringLiteral("套用"))
         || lowered.contains(QLatin1String("ln-template"));
+    const bool structure = lowered.contains(QStringLiteral("拆分"))
+        || lowered.contains(QStringLiteral("合并"))
+        || lowered.contains(QStringLiteral("合併"))
+        || lowered.contains(QStringLiteral("spine"))
+        || lowered.contains(QStringLiteral("目录"))
+        || lowered.contains(QStringLiteral("目錄"))
+        || lowered.contains(QStringLiteral("split"))
+        || lowered.contains(QStringLiteral("merge"))
+        || lowered.contains(QStringLiteral("regex"))
+        || lowered.contains(QStringLiteral("正则"))
+        || lowered.contains(QStringLiteral("正則"));
     QString block;
     for (const AgentSkill &skill : skills) {
         const bool named = lowered.contains(skill.name.toLower());
         const bool typeset_skill = skill.name == QLatin1String("ln-template-typeset");
-        if (named || keyword || (typeset_skill && template_book)) {
+        const bool structure_skill = skill.name == QLatin1String("book-structure");
+        if (named || (typeset_skill && keyword) || (structure_skill && structure)) {
             block += QStringLiteral("\n# Skill: %1\n%2\n").arg(skill.name, skill.body);
-            if (typeset_skill && (named || keyword || template_book)) {
-                // One skill is enough for this cut; continue only for explicit names.
-                if (!named && !keyword && template_book) break;
-            }
         }
     }
     return block;

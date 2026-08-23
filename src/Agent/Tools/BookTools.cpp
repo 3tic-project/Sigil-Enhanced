@@ -9,6 +9,8 @@
 #include <QJsonArray>
 #include <functional>
 
+#include "Agent/Execution/BookEdits.h"
+#include "Agent/Typeset/ManuscriptParser.h"
 #include "Agent/Typeset/TypesetEngine.h"
 
 namespace SigilAgent
@@ -115,10 +117,23 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
         return QStringLiteral("Fill %1 from the parsed manuscript. Staged until commit.")
             .arg(arguments.value(QStringLiteral("resource_id")).toString());
     }
+    if (name == QLatin1String("resource.delete")) {
+        return QStringLiteral("Delete %1. Staged until commit.")
+            .arg(arguments.value(QStringLiteral("resource_id")).toString());
+    }
+    if (name == QLatin1String("spine.set")) {
+        return QStringLiteral("Reorder the spine. Staged until commit.");
+    }
+    if (name == QLatin1String("content.split") || name == QLatin1String("content.merge")) {
+        return QStringLiteral("Restructure chapters. Staged until commit.");
+    }
+    if (name == QLatin1String("content.replace_regex") || name == QLatin1String("content.wrap")) {
+        return QStringLiteral("Batch edit matching text. Staged until commit.");
+    }
     return QStringLiteral("Run %1 on the current book.").arg(name);
 }
 
-void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
+void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentSession *session)
 {
     if (!registry || !workspace) return;
 
@@ -314,7 +329,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
         });
 
     add(registry, QStringLiteral("metadata.update"),
-        QStringLiteral("Stage package metadata updates such as title or language."),
+        QStringLiteral("Stage package metadata. patch is a map of Dublin Core fields (title, language, creator, contributor, publisher, description, subject, date, identifier, rights, …). Pass _remove: [\"subject\"] to delete fields."),
         ToolRisk::ReversibleEdit, true, true,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
@@ -372,7 +387,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
             if (text.size() > 65536) {
                 return ToolResult::failure(
                     QStringLiteral("REPLACE_TOO_LARGE"),
-                    QStringLiteral("resource.replace_text is capped at 65536 characters. Use content.typeset_from_manuscript or content.fill_section so chapter bodies never enter the model context."));
+                    QStringLiteral("resource.replace_text is capped at 65536 characters. For long text already in the book, use content.replace_body with source_resource_id, content.wrap_plain, or content.split."));
             }
             return fromBook(workspace->replaceText(
                 arguments.value(QStringLiteral("resource_id")).toString(),
@@ -381,24 +396,42 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
         });
 
     add(registry, QStringLiteral("manuscript.parse"),
-        QStringLiteral("Parse a dropped light-novel TXT (or ImportTXT HTML) into title, credits, synopsis, TOC, chapter list, and illustration names. Returns a compact summary only — never chapter bodies. Omit manuscript_id to auto-detect. Call this before content.typeset_from_manuscript."),
+        QStringLiteral("Parse a text/HTML resource already in the book into a compact structure (title, credits, chapter list, illustration names). Never returns chapter bodies. Optional heading_pattern and illustration_pattern are regexes (capture group 1 = name). Omit them to use built-in East-Asian volume heuristics. Omit manuscript_id to auto-detect the largest dropped text."),
         ToolRisk::Read, false, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
-                { QStringLiteral("manuscript_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                { QStringLiteral("manuscript_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("heading_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("illustration_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
             } }
         },
         [workspace](const QJsonObject &arguments) {
-            const QJsonObject summary = parseManuscriptInBook(
-                workspace, arguments.value(QStringLiteral("manuscript_id")).toString());
-            if (!summary.value(QStringLiteral("ok")).toBool()
-                && summary.contains(QStringLiteral("code"))) {
-                return ToolResult::failure(
-                    summary.value(QStringLiteral("code")).toString(),
-                    summary.value(QStringLiteral("message")).toString(),
-                    summary);
+            ParseOptions options;
+            options.headingRegex = arguments.value(QStringLiteral("heading_pattern")).toString();
+            options.illustrationRegex = arguments.value(QStringLiteral("illustration_pattern")).toString();
+            if (options.headingRegex.isEmpty() && options.illustrationRegex.isEmpty()) {
+                const QJsonObject summary = parseManuscriptInBook(
+                    workspace, arguments.value(QStringLiteral("manuscript_id")).toString());
+                if (!summary.value(QStringLiteral("ok")).toBool()
+                    && summary.contains(QStringLiteral("code"))) {
+                    return ToolResult::failure(
+                        summary.value(QStringLiteral("code")).toString(),
+                        summary.value(QStringLiteral("message")).toString(),
+                        summary);
+                }
+                return ToolResult::success(summary);
             }
+            const QString id = findManuscriptResourceId(
+                workspace, arguments.value(QStringLiteral("manuscript_id")).toString());
+            if (id.isEmpty()) {
+                return ToolResult::failure(QStringLiteral("MANUSCRIPT_NOT_FOUND"),
+                                           QStringLiteral("No text resource found to parse"));
+            }
+            const ParsedManuscript parsed = parseManuscriptText(workspace->workingText(id), QString(), options);
+            QJsonObject summary = manuscriptSummaryJson(parsed);
+            summary.insert(QStringLiteral("ok"), true);
+            summary.insert(QStringLiteral("resource_id"), id);
             return ToolResult::success(summary);
         });
 
@@ -507,6 +540,377 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
             return fromBook(workspace->restoreCheckpoint(
                 arguments.value(QStringLiteral("checkpoint_id")).toString()));
         });
+
+    add(registry, QStringLiteral("book.search_regex"),
+        QStringLiteral("Regex search over text resources. Returns offsets, lines, and capture groups. Never returns whole files. Optional resource_id limits the search."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("max_matches"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("pattern") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const QJsonObject data = regexSearchInBook(
+                workspace,
+                arguments.value(QStringLiteral("pattern")).toString(),
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                arguments.value(QStringLiteral("max_matches")).toInt(40));
+            if (data.value(QStringLiteral("ok")).toBool() == false
+                && data.contains(QStringLiteral("code"))) {
+                return ToolResult::failure(data.value(QStringLiteral("code")).toString(),
+                                           data.value(QStringLiteral("message")).toString(), data);
+            }
+            return ToolResult::success(data);
+        });
+
+    add(registry, QStringLiteral("book.check"),
+        QStringLiteral("Structural QA: validation issues, broken image hrefs, unused images. Prefer this over claiming the book is fine from memory."),
+        ToolRisk::Read, false, false, emptyObjectSchema(),
+        [workspace](const QJsonObject &) {
+            return ToolResult::success(inspectBook(workspace));
+        });
+
+    add(registry, QStringLiteral("content.replace_body"),
+        QStringLiteral("Replace the <body> inner HTML of an XHTML resource. Prefer source_resource_id pointing at text already in the book (uncapped). Direct `inner` is capped at 16KiB so novels are not pasted through the model."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("inner"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("source_resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const QString inner = arguments.value(QStringLiteral("inner")).toString();
+            const QString source = arguments.value(QStringLiteral("source_resource_id")).toString();
+            if (source.isEmpty() && inner.size() > 16384) {
+                return ToolResult::failure(QStringLiteral("REPLACE_TOO_LARGE"),
+                                           QStringLiteral("inner is capped at 16384. Put the text in a book resource and pass source_resource_id."));
+            }
+            return fromBook(replaceBody(workspace,
+                                        arguments.value(QStringLiteral("resource_id")).toString(),
+                                        inner, source));
+        });
+
+    add(registry, QStringLiteral("content.insert"),
+        QStringLiteral("Insert HTML before or after a unique anchor substring copied from the current file. Use for img tags, wrappers, or short markup. html is capped at 8KiB."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("anchor"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("html"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("before"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("resource_id"), QStringLiteral("anchor"), QStringLiteral("html")
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const QString html = arguments.value(QStringLiteral("html")).toString();
+            if (html.size() > 8192) {
+                return ToolResult::failure(QStringLiteral("INSERT_TOO_LARGE"),
+                                           QStringLiteral("html is capped at 8192. Use content.replace_body with source_resource_id for large inserts."));
+            }
+            return fromBook(insertHtml(workspace,
+                                       arguments.value(QStringLiteral("resource_id")).toString(),
+                                       arguments.value(QStringLiteral("anchor")).toString(),
+                                       html,
+                                       arguments.value(QStringLiteral("before")).toBool(false)));
+        });
+
+    add(registry, QStringLiteral("content.wrap"),
+        QStringLiteral("Wrap every regex match with open/close tags (batch class/tag application). Omit resource_id to apply to all text resources. Pattern is regex. Example: wrap ^\\s*<p> lines or a phrase with <span class=\"em\">."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("open"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("close"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("max_matches"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("pattern"), QStringLiteral("open"), QStringLiteral("close")
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(wrapInResource(
+                workspace,
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                arguments.value(QStringLiteral("pattern")).toString(),
+                arguments.value(QStringLiteral("open")).toString(),
+                arguments.value(QStringLiteral("close")).toString(),
+                arguments.value(QStringLiteral("max_matches")).toInt(0)));
+        });
+
+    add(registry, QStringLiteral("content.replace_regex"),
+        QStringLiteral("Regex replace in one resource or every text resource. Replacement may use $1 capture refs. Long-form rewrite of text already in the book; do not put novel bodies in the replacement string."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("replacement"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("max_matches"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("pattern"), QStringLiteral("replacement")
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const QString replacement = arguments.value(QStringLiteral("replacement")).toString();
+            if (replacement.size() > 8192) {
+                return ToolResult::failure(QStringLiteral("REPLACE_TOO_LARGE"),
+                                           QStringLiteral("replacement is capped at 8192 characters"));
+            }
+            return fromBook(regexReplaceInBook(
+                workspace,
+                arguments.value(QStringLiteral("pattern")).toString(),
+                replacement,
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                arguments.value(QStringLiteral("max_matches")).toInt(0)));
+        });
+
+    add(registry, QStringLiteral("content.wrap_plain"),
+        QStringLiteral("Turn a plain-text (or ImportTXT) resource already in the book into tagged XHTML using caller-supplied regexes. rules: heading_pattern, heading_open/close, paragraph_open/close, illustration_pattern, illustration_html ($1 = capture), keep_blank, title. Writes into target_id (defaults to source). Never send the novel through the model."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("source_resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("target_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("rules"), QJsonObject { { QStringLiteral("type"), QStringLiteral("object") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("source_resource_id") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(wrapPlainResource(
+                workspace,
+                arguments.value(QStringLiteral("source_resource_id")).toString(),
+                arguments.value(QStringLiteral("target_id")).toString(),
+                arguments.value(QStringLiteral("rules")).toObject()));
+        });
+
+    add(registry, QStringLiteral("content.split"),
+        QStringLiteral("Split one XHTML file into multiple spine items on a heading regex (default: h1–h6 tags). Copies follow the source. Heading text becomes each file's title. Use after wrap_plain when one imported file holds every chapter."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("heading_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(splitResourceByHeading(
+                workspace,
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                arguments.value(QStringLiteral("heading_pattern")).toString()));
+        });
+
+    add(registry, QStringLiteral("content.merge"),
+        QStringLiteral("Merge two or more XHTML resources in listed order into the first. delete_sources defaults true (staged delete of the rest)."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_ids"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("items"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                } },
+                { QStringLiteral("delete_sources"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_ids") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            QStringList ids;
+            for (const QJsonValue &value : arguments.value(QStringLiteral("resource_ids")).toArray()) {
+                ids.append(value.toString());
+            }
+            const bool del = arguments.contains(QStringLiteral("delete_sources"))
+                ? arguments.value(QStringLiteral("delete_sources")).toBool() : true;
+            return fromBook(mergeResources(workspace, ids, del));
+        });
+
+    add(registry, QStringLiteral("image.insert"),
+        QStringLiteral("Insert an <img> for an image already in the book (dropped into Images). page_id is the XHTML file; image_id is the image resource. Unique `anchor` text locates the insert point. Optional class and alt."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("page_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("image_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("anchor"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("before"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } },
+                { QStringLiteral("class"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("alt"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("page_id"), QStringLiteral("image_id"), QStringLiteral("anchor")
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(insertImageTag(
+                workspace,
+                arguments.value(QStringLiteral("page_id")).toString(),
+                arguments.value(QStringLiteral("image_id")).toString(),
+                arguments.value(QStringLiteral("anchor")).toString(),
+                arguments.value(QStringLiteral("before")).toBool(false),
+                arguments.value(QStringLiteral("class")).toString(),
+                arguments.value(QStringLiteral("alt")).toString()));
+        });
+
+    add(registry, QStringLiteral("resource.delete"),
+        QStringLiteral("Stage deletion of a resource (not OPF/NCX/Nav, not the last XHTML). Live book unchanged until commit. Undo after apply via Sigil."),
+        ToolRisk::Destructive, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(workspace->deleteResource(
+                arguments.value(QStringLiteral("resource_id")).toString()));
+        });
+
+    add(registry, QStringLiteral("spine.set"),
+        QStringLiteral("Stage a new spine order. resource_ids is the full XHTML reading order. Files omitted are removed from the spine (not deleted)."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_ids"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("items"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_ids") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            QStringList ids;
+            for (const QJsonValue &value : arguments.value(QStringLiteral("resource_ids")).toArray()) {
+                ids.append(value.toString());
+            }
+            return fromBook(workspace->updateSpine(ids));
+        });
+
+    add(registry, QStringLiteral("toc.generate"),
+        QStringLiteral("Build TOC entries from headings in spine order. heading_pattern is regex (default h1–h6). Stages NCX/toc; commit to apply."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("heading_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(generateTocFromHeadings(
+                workspace, arguments.value(QStringLiteral("heading_pattern")).toString()));
+        });
+
+    if (session) {
+        add(registry, QStringLiteral("session.remember"),
+            QStringLiteral("Store a small note for this Agent session (user preferences, chosen heading regex, unfinished mapping). Value should be short JSON or a string. Cleared on New Session."),
+            ToolRisk::Read, false, false,
+            QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("object") },
+                { QStringLiteral("properties"), QJsonObject {
+                    { QStringLiteral("key"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                    { QStringLiteral("value"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                } },
+                { QStringLiteral("required"), QJsonArray { QStringLiteral("key"), QStringLiteral("value") } }
+            },
+            [session](const QJsonObject &arguments) {
+                const QString key = arguments.value(QStringLiteral("key")).toString();
+                session->remember(key, arguments.value(QStringLiteral("value")));
+                return ToolResult::success(QJsonObject {
+                    { QStringLiteral("key"), key },
+                    { QStringLiteral("memory"), session->memory() }
+                });
+            });
+
+        add(registry, QStringLiteral("session.recall"),
+            QStringLiteral("Read session memory. Omit key to return all notes."),
+            ToolRisk::Read, false, false,
+            QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("object") },
+                { QStringLiteral("properties"), QJsonObject {
+                    { QStringLiteral("key"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                } }
+            },
+            [session](const QJsonObject &arguments) {
+                const QString key = arguments.value(QStringLiteral("key")).toString();
+                if (key.isEmpty()) {
+                    return ToolResult::success(QJsonObject { { QStringLiteral("memory"), session->memory() } });
+                }
+                return ToolResult::success(QJsonObject {
+                    { QStringLiteral("key"), key },
+                    { QStringLiteral("value"), session->recall(key) }
+                });
+            });
+
+        add(registry, QStringLiteral("session.task_add"),
+            QStringLiteral("Add an item to this session's task list (plan/progress). Returns id."),
+            ToolRisk::Read, false, false,
+            QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("object") },
+                { QStringLiteral("properties"), QJsonObject {
+                    { QStringLiteral("title"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                    { QStringLiteral("note"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                } },
+                { QStringLiteral("required"), QJsonArray { QStringLiteral("title") } }
+            },
+            [session](const QJsonObject &arguments) {
+                const QString id = session->addTask(arguments.value(QStringLiteral("title")).toString(),
+                                                    arguments.value(QStringLiteral("note")).toString());
+                return ToolResult::success(QJsonObject {
+                    { QStringLiteral("id"), id },
+                    { QStringLiteral("tasks"), session->tasks() }
+                });
+            });
+
+        add(registry, QStringLiteral("session.task_update"),
+            QStringLiteral("Update a session task. status: pending | in_progress | done | cancelled."),
+            ToolRisk::Read, false, false,
+            QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("object") },
+                { QStringLiteral("properties"), QJsonObject {
+                    { QStringLiteral("id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                    { QStringLiteral("status"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                    { QStringLiteral("note"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                } },
+                { QStringLiteral("required"), QJsonArray { QStringLiteral("id") } }
+            },
+            [session](const QJsonObject &arguments) {
+                if (!session->updateTask(arguments.value(QStringLiteral("id")).toString(),
+                                         arguments.value(QStringLiteral("status")).toString(),
+                                         arguments.value(QStringLiteral("note")).toString())) {
+                    return ToolResult::failure(QStringLiteral("TASK_NOT_FOUND"),
+                                               QStringLiteral("Unknown task id"));
+                }
+                return ToolResult::success(QJsonObject { { QStringLiteral("tasks"), session->tasks() } });
+            });
+
+        add(registry, QStringLiteral("session.tasks"),
+            QStringLiteral("List this session's task checklist."),
+            ToolRisk::Read, false, false, emptyObjectSchema(),
+            [session](const QJsonObject &) {
+                return ToolResult::success(QJsonObject { { QStringLiteral("tasks"), session->tasks() } });
+            });
+    }
 }
 
 } // namespace SigilAgent
