@@ -98,6 +98,15 @@ set( AGENT_FILES
     Agent/Execution/IBookWorkspace.h
     Agent/Execution/MemoryBookWorkspace.cpp
     Agent/Execution/MemoryBookWorkspace.h
+    Agent/Core/AgentController.cpp
+    Agent/Core/AgentController.h
+    Agent/Execution/SigilBookWorkspace.cpp
+    Agent/Execution/SigilBookWorkspace.h
+    Agent/Persistence/AgentSettings.cpp
+    Agent/Persistence/AgentSettings.h
+    Agent/UI/AgentDock.cpp
+    Agent/UI/AgentDock.h
+    Agent/UI/GuiApprovalGate.h
 )
 
 set( BUILTIN_PLUGIN_FILES

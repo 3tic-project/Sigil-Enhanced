@@ -38,6 +38,7 @@
 #include <QCheckBox>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QProgressDialog>
 #include <QToolBar>
@@ -104,6 +105,11 @@
 #include "MainUI/MainWindow.h"
 #include "MainUI/FindReplace.h"
 #include "MainUI/PreviewWindow.h"
+#include "Agent/Core/AgentController.h"
+#include "Agent/Execution/SigilBookWorkspace.h"
+#include "Agent/Model/OpenAICompatibleProvider.h"
+#include "Agent/Persistence/AgentSettings.h"
+#include "Agent/UI/AgentDock.h"
 #include "MainUI/TableOfContents.h"
 #include "MainUI/ValidationResultsView.h"
 #include "Misc/HTMLSpellCheck.h"
@@ -301,6 +307,7 @@ MainWindow::MainWindow(const QString &openfilepath,
     m_TableOfContents(NULL),
     m_ValidationResultsView(NULL),
     m_PreviewWindow(NULL),
+    m_AgentDock(NULL),
     m_DeveloperToolsAction(NULL),
     m_SplitEditorDownAction(NULL),
     m_JoinEditorGroupsAction(NULL),
@@ -420,6 +427,7 @@ MainWindow::~MainWindow()
     if (m_BookBrowser) delete m_BookBrowser;
     if (m_TabManager) delete m_TabManager;
     if (m_PreviewWindow) delete m_PreviewWindow;
+    if (m_AgentDock) delete m_AgentDock;
 #endif
 }
 
@@ -6159,6 +6167,93 @@ bool MainWindow::ProceedToOverwrite(const QString& msg, const QString &filename)
     return false;
 }
 
+void MainWindow::ConfigureAgentProvider()
+{
+    if (!m_AgentController) return;
+    SigilAgent::AgentSettings settings;
+    auto provider = std::make_unique<SigilAgent::OpenAICompatibleProvider>(settings.providerConfig());
+    m_AgentController->setProvider(std::move(provider));
+    m_AgentController->setModel(settings.model());
+    m_AgentController->setThinking(settings.thinkingEnabled(), settings.reasoningEffort());
+    if (m_AgentDock) {
+        m_AgentController->setMode(m_AgentDock->mode());
+        if (QLineEdit *model = m_AgentDock->findChild<QLineEdit *>(QStringLiteral("agentModelEdit"))) {
+            const QString name = model->text().trimmed();
+            if (!name.isEmpty()) m_AgentController->setModel(name);
+        }
+    }
+}
+
+void MainWindow::CreateAgentDock()
+{
+    m_AgentWorkspace = std::make_unique<SigilAgent::SigilBookWorkspace>();
+    m_AgentWorkspace->setBook(m_Book);
+    m_AgentController = std::make_unique<SigilAgent::AgentController>();
+    m_AgentController->setWorkspace(m_AgentWorkspace.get());
+    m_AgentDock = new SigilAgent::AgentDock(this);
+    m_AgentDock->setObjectName(QStringLiteral("agentDock"));
+    addDockWidget(Qt::RightDockWidgetArea, m_AgentDock);
+    tabifyDockWidget(m_PreviewWindow, m_AgentDock);
+
+    SigilAgent::AgentSettings settings;
+    m_AgentDock->setModelName(settings.model());
+    m_AgentDock->setMode(settings.defaultMode());
+    m_AgentController->setMode(settings.defaultMode());
+    ConfigureAgentProvider();
+
+    m_AgentController->session()->setListener([this](const SigilAgent::AgentEvent &event) {
+        if (m_AgentDock) {
+            m_AgentDock->appendEvent(event);
+            m_AgentDock->setRunState(m_AgentController && m_AgentController->runner()
+                                         ? m_AgentController->runner()->state()
+                                         : SigilAgent::AgentRunState::Idle);
+        }
+        if (event.type == SigilAgent::AgentEventType::TransactionCommitted && m_BookBrowser) {
+            m_BookBrowser->Refresh();
+        }
+    });
+
+    connect(m_AgentDock, &SigilAgent::AgentDock::sendRequested,
+            this, &MainWindow::AgentSendRequested);
+    connect(m_AgentDock, &SigilAgent::AgentDock::stopRequested,
+            this, &MainWindow::AgentStopRequested);
+    connect(m_AgentDock, &SigilAgent::AgentDock::newSessionRequested,
+            this, &MainWindow::AgentNewSessionRequested);
+    connect(m_AgentDock, &SigilAgent::AgentDock::modeChanged, this,
+            [this](SigilAgent::AgentMode mode) {
+                if (m_AgentController) m_AgentController->setMode(mode);
+            });
+    connect(m_AgentDock, &SigilAgent::AgentDock::approvalResponded, this,
+            [this](const QString &id, bool ok) {
+                if (m_AgentController) m_AgentController->resolveApproval(id, ok);
+            });
+}
+
+void MainWindow::AgentSendRequested(const QString &text, const QStringList &handles)
+{
+    if (!m_AgentController || !m_AgentDock) return;
+    ConfigureAgentProvider();
+    m_AgentDock->setRunState(SigilAgent::AgentRunState::RequestingModel);
+    m_AgentController->send(text, handles);
+    if (m_AgentController->runner()) {
+        m_AgentDock->setRunState(m_AgentController->runner()->state());
+    }
+}
+
+void MainWindow::AgentStopRequested()
+{
+    if (m_AgentController) m_AgentController->stop();
+}
+
+void MainWindow::AgentNewSessionRequested()
+{
+    if (m_AgentController) m_AgentController->newSession();
+    if (m_AgentDock) {
+        m_AgentDock->resetTranscript();
+        m_AgentDock->setRunState(SigilAgent::AgentRunState::Idle);
+    }
+}
+
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
     if (m_RegexWorkbenchDialog) {
@@ -6178,6 +6273,9 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
     }
 #endif
     m_Book = new_book;
+    if (m_AgentWorkspace) {
+        m_AgentWorkspace->setBook(m_Book);
+    }
     m_BookBrowser->SetBook(m_Book);
     m_TableOfContents->SetBook(m_Book);
     m_ValidationResultsView->SetBook(m_Book);
@@ -7051,6 +7149,8 @@ void MainWindow::ExtendUI()
     // tabified with the TOC widget in the RightDockWidgetArea
     tabifyDockWidget(m_TableOfContents, m_PreviewWindow);
 
+    CreateAgentDock();
+
     m_Clips = new ClipsWindow(this);
     m_Clips->setObjectName(CLIPS_WINDOW_NAME);
     addDockWidget(Qt::LeftDockWidgetArea, m_Clips);
@@ -7062,6 +7162,10 @@ void MainWindow::ExtendUI()
     ui.menuView->addAction(m_Clips->toggleViewAction());
     ui.menuView->addAction(m_PreviewWindow->toggleViewAction());
     m_PreviewWindow->toggleViewAction()->setShortcut(QKeySequence(Qt::Key_F10));
+    if (m_AgentDock) {
+        ui.menuView->addAction(m_AgentDock->toggleViewAction());
+        m_AgentDock->toggleViewAction()->setShortcut(QKeySequence(Qt::ALT | Qt::Key_A));
+    }
     m_DeveloperToolsAction = new QAction(tr("Developer Tools"), this);
     m_DeveloperToolsAction->setObjectName(QStringLiteral("actionDeveloperTools"));
     m_DeveloperToolsAction->setCheckable(true);

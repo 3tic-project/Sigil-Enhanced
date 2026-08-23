@@ -27,6 +27,7 @@
 #ifndef SIGIL_H
 #define SIGIL_H
 
+#include <memory>
 #include <QSharedPointer>
 #include <QMainWindow>
 #include <QPointer>
@@ -78,6 +79,11 @@ class RegexWorkbenchDialog;
 class SearchEditor;
 class ClipEditor;
 class ClipsWindow;
+namespace SigilAgent {
+class AgentDock;
+class AgentController;
+class SigilBookWorkspace;
+}
 class SelectCharacter;
 class ViewImage;
 class FlowTab;
@@ -869,6 +875,11 @@ private:
      * to the File menu.
      */
     void CreateRecentFilesActions();
+    void CreateAgentDock();
+    void ConfigureAgentProvider();
+    void AgentSendRequested(const QString &text, const QStringList &handles);
+    void AgentStopRequested();
+    void AgentNewSessionRequested();
 
     /**
      * Updates the recent files actions when the
@@ -1030,6 +1041,9 @@ private:
     ValidationResultsView *m_ValidationResultsView;
 
     PreviewWindow *m_PreviewWindow;
+    SigilAgent::AgentDock *m_AgentDock;
+    std::unique_ptr<SigilAgent::SigilBookWorkspace> m_AgentWorkspace;
+    std::unique_ptr<SigilAgent::AgentController> m_AgentController;
     QAction *m_DeveloperToolsAction;
     QAction *m_SplitEditorDownAction;
     QAction *m_JoinEditorGroupsAction;

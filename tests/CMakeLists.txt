@@ -1382,3 +1382,26 @@ add_executable(agent_live_deepseek EXCLUDE_FROM_ALL
 target_include_directories(agent_live_deepseek PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(agent_live_deepseek PRIVATE Qt6::Core Qt6::Network)
 target_compile_features(agent_live_deepseek PRIVATE cxx_std_17)
+
+add_executable(agent_dock_test
+    agent_dock_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentDock.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentDock.h
+)
+target_include_directories(agent_dock_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_dock_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(agent_dock_test PRIVATE cxx_std_17)
+set_target_properties(agent_dock_test PROPERTIES AUTOMOC ON)
+add_test(NAME agent_dock COMMAND agent_dock_test)
+set_tests_properties(agent_dock PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
+add_test(NAME agent_dock_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/agent_dock_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(agent_dock_contract PROPERTIES TIMEOUT 30)

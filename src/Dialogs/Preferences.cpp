@@ -38,6 +38,7 @@
 #include "PreferenceWidgets/SpellCheckWidget.h"
 #include "PreferenceWidgets/PreserveEntitiesWidget.h"
 #include "PreferenceWidgets/PluginWidget.h"
+#include "PreferenceWidgets/AgentSettingsWidget.h"
 #include "PreferenceWidgets/ModifiedVerPrefsWidget.h" // modified: ModifiedVerPrefsWidget
 
 static const QString SETTINGS_GROUP = "preferences_dialog";
@@ -67,6 +68,7 @@ Preferences::Preferences(QWidget *parent) :
     appendPreferenceWidget(new SpellCheckWidget);
     appendPreferenceWidget(new PreserveEntitiesWidget);
     appendPreferenceWidget(new PluginWidget);
+    appendPreferenceWidget(new AgentSettingsWidget);
     connectSignalsSlots();
     QApplication::setOverrideCursor(Qt::WaitCursor);
     readSettings();
