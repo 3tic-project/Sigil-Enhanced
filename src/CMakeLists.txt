@@ -69,6 +69,20 @@ list(APPEND BOOK_MANIPULATION_FILES
     BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp
 )
 
+set( AGENT_FILES
+    Agent/AgentTypes.cpp
+    Agent/AgentTypes.h
+    Agent/Core/AgentSession.cpp
+    Agent/Core/AgentSession.h
+    Agent/Model/HistoryAssembler.cpp
+    Agent/Model/HistoryAssembler.h
+    Agent/Model/IModelProvider.h
+    Agent/Model/OpenAICompatibleProvider.cpp
+    Agent/Model/OpenAICompatibleProvider.h
+    Agent/Model/StreamingJsonDecoder.cpp
+    Agent/Model/StreamingJsonDecoder.h
+)
+
 set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     BuiltinPlugins/BookLiveParagraphNormalizer.h
@@ -290,6 +304,8 @@ set( DIALOG_FILES
     Dialogs/PreferenceWidgets/PluginWidget.cpp
     Dialogs/PreferenceWidgets/PluginWidgetExt.cpp
     Dialogs/PreferenceWidgets/PluginWidget.h
+    Dialogs/PreferenceWidgets/AgentSettingsWidget.cpp
+    Dialogs/PreferenceWidgets/AgentSettingsWidget.h
     Dialogs/PreviewFileDialog.cpp
     Dialogs/PreviewFileDialog.h
     Dialogs/RenameTemplate.cpp
