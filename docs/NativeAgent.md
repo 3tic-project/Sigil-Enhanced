@@ -31,23 +31,25 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
-只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`。
+只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`session.recall` / `session.tasks`。
 
-写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create`、`resource.copy`、`resource.replace_text`、`resource.patch_fragment`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`checkpoint.create` / `list` / `restore`。
+写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set`、`toc.generate`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`checkpoint.create` / `list` / `restore`。
 
-复制一章（如 Section0001 → Section0002）用 `resource.copy`，不要让用户去 Book Browser 里手工复制。`book_path` 可省略，工具会在同目录生成不冲突的下一序号。目前不能增删字体/图片二进制，也不能改 nav/NCX 目录树结构。
+会话级（不改书，New Session 会清空）：`session.remember`、`session.task_add`、`session.task_update`。
 
-## 按轻小说模板自动排版
+长文本必须已经在书里（拖进 Book Browser 的 TXT/HTML）。`content.wrap_plain` 用你提供的 heading/illustration **正则**套标签；`content.split` 按标题拆章；`content.replace_body` 用 `source_resource_id` 搬运整段 body。不要把小说正文贴进 `patch_fragment` / `replace_text`（后两者对模型有大小上限）。
 
-打开 `轻小说模板.epub`，把一本书的 TXT 和图片拖进 Book Browser，然后在 Agent 里说「按模板排版」（Auto 模式可少点批准）：
+批量套标签用 `content.wrap`，全书查找替换用 `content.replace_regex`（`$1` 捕获组）。图片必须先拖进 Images，再用 `image.insert` 按锚点插入 `<img>`。`book.check` 会报损坏的图片链接和未引用图片。
 
-1. `manuscript.parse` 只返回标题、制作信息、简介、目录、章节列表和插图名，**不会**把 10 万字正文塞进模型。
-2. `content.typeset_from_manuscript` 在 C++ 里灌版：给不足的 `Section` 做 copy，把每一话写成 `<h1>` + `<p>`，把 `［插图：name］` 写成模板的 `.illus` 图，并把 `illus1` 里写死的 `co1.jpg` 改成拖进来的 `color1.jpg` / `kuchie-001.jpg` 等；同时填 title / 制作信息 / 简介 / 目录和 metadata。
-3. 模型**禁止**用 `resource.patch_fragment` 粘贴整章，也禁止让你去书籍视图里全选粘贴。`resource.replace_text` 对模型上限 64KiB，整章灌入走 typeset 工具。
+`spine.set` 重排阅读顺序；`resource.delete` 不能删 OPF/NCX/Nav 或最后一份 XHTML；`toc.generate` 按标题正则生成 TOC；`metadata.update` 支持任意 DC 字段，`_remove` 删除字段。
 
-内置 skill `ln-template-typeset`（`src/Agent/Skills/ln-template-typeset/SKILL.md`）会在打开该模板或用户提到排版/模板时注入。Skill 只是说明，不执行脚本。
+格式不是固定的：标题/插图标记都通过工具参数里的 regex 传入。`ln-template-typeset` 只是一套可选默认启发式；通用流程见 skill `book-structure`。目前仍不能把字体/图片二进制塞进模型，也不能改 EPUB3 nav 地标树。
 
-局限：不能删掉 ImportTXT 留下来的整本导入页（会改成一行提示）；没有插图标记的 TXT 只会把剩余图片铺到彩页，文内位置仍需手补；完整 CSS 语义迁移（`style.profile_apply`）尚未实现。
+## 按模板灌文稿（可选捷径）
+
+若当前书碰巧是「封面/彩页/Section」那类轻小说模板，仍可用 `manuscript.parse` + `content.typeset_from_manuscript`。更稳妥的通用做法是：`content.wrap_plain`（自带 heading_pattern）→ `content.split` → `image.insert` / `spine.set` / `toc.generate`。
+
+模型**禁止**让你去书籍视图里全选粘贴。
 
 `resource.patch_fragment` 用 **当前原文子串** 定位，不要让模型数字符偏移。必填 `expected_text`（从 `read_fragment` 的 `text` 原样复制，可以是一整行）。子串出现多次时用 `start_line`（来自 `read_fragment.lines` 的 1-based 行号）消歧。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带 staged excerpt。
 
