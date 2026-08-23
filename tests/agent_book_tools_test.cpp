@@ -217,6 +217,44 @@ int main()
         return title_registry.find(name)->execute(arguments);
     };
     Require(run_title(QStringLiteral("transaction.begin"), QJsonObject()).ok, "title book begin failed");
+
+    const ToolResult titled_fragment = run_title(QStringLiteral("resource.read_fragment"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("s1") },
+        { QStringLiteral("offset"), 0 },
+        { QStringLiteral("limit"), 400 }
+    });
+    Require(titled_fragment.data.value(QStringLiteral("text")).toString().contains(QStringLiteral("<title></title>")),
+            "read_fragment text must be copyable expected_text without line prefixes");
+    Require(titled_fragment.data.value(QStringLiteral("start_line")).toInt() == 1,
+            "read_fragment must report 1-based start_line");
+    Require(!titled_fragment.data.value(QStringLiteral("lines")).toArray().isEmpty(),
+            "read_fragment must list line identity for start_line");
+
+    MemoryBookWorkspace unique_book;
+    MemoryResource unique_page = page;
+    unique_book.addResource(unique_page);
+    unique_book.setSpine({ QStringLiteral("s1") });
+    ToolRegistry unique_registry;
+    registerBookTools(&unique_registry, &unique_book);
+    auto run_unique = [&](const QString &name, const QJsonObject &arguments) {
+        return unique_registry.find(name)->execute(arguments);
+    };
+    Require(run_unique(QStringLiteral("transaction.begin"), QJsonObject()).ok, "unique-text book begin failed");
+    const ToolResult no_offsets = run_unique(QStringLiteral("resource.patch_fragment"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("s1") },
+        { QStringLiteral("expected_text"), QStringLiteral("<title></title>") },
+        { QStringLiteral("text"), QStringLiteral("<title>测试</title>") },
+        { QStringLiteral("expected_revision"), static_cast<qint64>(unique_book.resourceRevision(QStringLiteral("s1"))) }
+    });
+    Require(no_offsets.ok, "unique expected_text must locate the title without start/end offsets");
+    Require(run_unique(QStringLiteral("transaction.commit"), QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(unique_book.revision()) }
+    }).applied, "unique-text patch must commit");
+    Require(unique_book.resourceText(QStringLiteral("s1")).contains(QStringLiteral("<title>测试</title>")),
+            "committed title must be 测试 when located only by expected_text");
+    Require(!unique_book.resourceText(QStringLiteral("s1")).contains(QStringLiteral("</title>e>")),
+            "unique-text commit must not leave </title>e>");
+
     const ToolResult missing = run_title(QStringLiteral("resource.patch_fragment"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("s1") },
         { QStringLiteral("start"), 149 },
@@ -277,6 +315,48 @@ int main()
     Require(rangeSplitsMarkup(skeleton, 149, 164), "the live off-by-two title range must be detected as a tag split");
     const PatchRangeResolution resolved = resolvePatchRange(skeleton, 149, 164, QStringLiteral("<title></title>"));
     Require(resolved.ok && resolved.rangeCorrected, "resolvePatchRange must unique-match <title></title>");
+    const PatchRangeResolution by_text_only = resolvePatchRange(
+        skeleton, -1, -1, QStringLiteral("<title></title>"));
+    Require(by_text_only.ok, "resolvePatchRange must work with no character offsets");
+
+    MemoryBookWorkspace lines_book;
+    MemoryResource twice;
+    twice.id = QStringLiteral("s2");
+    twice.bookPath = QStringLiteral("OEBPS/Text/twice.xhtml");
+    twice.mediaType = QStringLiteral("application/xhtml+xml");
+    twice.kind = QStringLiteral("xhtml");
+    twice.text = QStringLiteral(
+        "<html><body>\n<p>alpha</p>\n<p>alpha</p>\n</body></html>");
+    lines_book.addResource(twice);
+    lines_book.setSpine({ QStringLiteral("s2") });
+    ToolRegistry lines_registry;
+    registerBookTools(&lines_registry, &lines_book);
+    auto run_lines = [&](const QString &name, const QJsonObject &arguments) {
+        return lines_registry.find(name)->execute(arguments);
+    };
+    Require(run_lines(QStringLiteral("transaction.begin"), QJsonObject()).ok, "line-disambiguation begin failed");
+    const ToolResult ambiguous = run_lines(QStringLiteral("resource.patch_fragment"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("s2") },
+        { QStringLiteral("expected_text"), QStringLiteral("<p>alpha</p>") },
+        { QStringLiteral("text"), QStringLiteral("<p>beta</p>") },
+        { QStringLiteral("expected_revision"), static_cast<qint64>(lines_book.resourceRevision(QStringLiteral("s2"))) }
+    });
+    Require(!ambiguous.ok && ambiguous.code == QStringLiteral("PATCH_TEXT_AMBIGUOUS"),
+            "repeated expected_text without start_line must be ambiguous");
+    const ToolResult lined = run_lines(QStringLiteral("resource.patch_fragment"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("s2") },
+        { QStringLiteral("expected_text"), QStringLiteral("<p>alpha</p>") },
+        { QStringLiteral("start_line"), 3 },
+        { QStringLiteral("text"), QStringLiteral("<p>beta</p>") },
+        { QStringLiteral("expected_revision"), static_cast<qint64>(lines_book.resourceRevision(QStringLiteral("s2"))) }
+    });
+    Require(lined.ok, "start_line must pick one of several identical substrings");
+    Require(run_lines(QStringLiteral("transaction.commit"), QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(lines_book.revision()) }
+    }).applied, "line-disambiguated patch must commit");
+    const QString lined_text = lines_book.resourceText(QStringLiteral("s2"));
+    Require(lined_text.contains(QStringLiteral("<p>alpha</p>")) && lined_text.contains(QStringLiteral("<p>beta</p>")),
+            "start_line must change only the chosen occurrence");
 
     return EXIT_SUCCESS;
 }

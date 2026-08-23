@@ -75,11 +75,9 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
     if (name == QLatin1String("resource.patch_fragment")) {
         const QString expected = arguments.value(QStringLiteral("expected_text")).toString();
         const QString snippet = expected.size() > 40 ? expected.left(40) + QStringLiteral("…") : expected;
-        return QStringLiteral("Replace %1 in %2 (characters %3–%4). Staged until transaction.commit; reversible via Undo after apply.")
+        return QStringLiteral("Replace %1 in %2. Staged until transaction.commit; reversible via Undo after apply.")
             .arg(snippet.isEmpty() ? QStringLiteral("a fragment") : QStringLiteral("“%1”").arg(snippet),
-                 arguments.value(QStringLiteral("resource_id")).toString(),
-                 QString::number(arguments.value(QStringLiteral("start")).toInt()),
-                 QString::number(arguments.value(QStringLiteral("end")).toInt()));
+                 arguments.value(QStringLiteral("resource_id")).toString());
     }
     if (name == QLatin1String("css.update_rules")) {
         return QStringLiteral("Replace stylesheet %1. Staged until commit; reversible via Undo.")
@@ -167,7 +165,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
         { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
     };
     add(registry, QStringLiteral("resource.read_fragment"),
-        QStringLiteral("Read a bounded text fragment of an XHTML or CSS resource. Offsets are 0-based UTF-16 units, end exclusive. Copy text from this result into patch_fragment.expected_text. Fonts and images are refused."),
+        QStringLiteral("Read a bounded text fragment of an XHTML or CSS resource. Copy the `text` field into patch_fragment.expected_text (no line-number prefixes). `lines` gives 1-based line identity for start_line when the substring is not unique. Fonts and images are refused."),
         ToolRisk::Read, false, false, fragment_schema,
         [workspace](const QJsonObject &arguments) {
             return fromBook(workspace->readFragment(
@@ -244,17 +242,18 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
         });
 
     add(registry, QStringLiteral("resource.patch_fragment"),
-        QStringLiteral("Stage a replacement of an exact current substring in an XHTML/CSS resource. expected_text is required and must match the live/staged text (copy it from read_fragment). start/end are 0-based UTF-16 hints; if they disagree and expected_text occurs once, the range is corrected. The range must not cut through a markup tag. Live book unchanged until transaction.commit."),
+        QStringLiteral("Stage a replacement of an exact current substring. expected_text is required and must be copied from read_fragment.text (never invent UTF-16 offsets). If that substring appears more than once, pass start_line from read_fragment.lines. Optional start/end are ignored unless they exactly equal expected_text. Must not cut through a markup tag. Live book unchanged until transaction.commit."),
         ToolRisk::ReversibleEdit, true, true,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
                 { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                { QStringLiteral("start"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
-                { QStringLiteral("end"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
                 { QStringLiteral("expected_text"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
                 { QStringLiteral("text"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                { QStringLiteral("expected_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+                { QStringLiteral("expected_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("start_line"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("start"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("end"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
             } },
             { QStringLiteral("required"), QJsonArray {
                 QStringLiteral("resource_id"), QStringLiteral("expected_text"),
@@ -268,7 +267,8 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace)
                 arguments.value(QStringLiteral("end")).toInt(-1),
                 arguments.value(QStringLiteral("text")).toString(),
                 static_cast<quint64>(arguments.value(QStringLiteral("expected_revision")).toInteger()),
-                arguments.value(QStringLiteral("expected_text")).toString()));
+                arguments.value(QStringLiteral("expected_text")).toString(),
+                arguments.value(QStringLiteral("start_line")).toInt(-1)));
         });
 
     add(registry, QStringLiteral("css.update_rules"),

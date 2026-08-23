@@ -261,7 +261,7 @@ BookOpResult MemoryBookWorkspace::readFragment(const QString &resource_id, int o
     count = qMin(count, kMaxFragment);
     const QString fragment = text.mid(start, count);
     const bool truncated = start + fragment.size() < text.size();
-    return BookOpResult::success(QJsonObject {
+    QJsonObject data {
         { QStringLiteral("resource_id"), resource->id },
         { QStringLiteral("book_path"), resource->bookPath },
         { QStringLiteral("offset"), start },
@@ -273,7 +273,9 @@ BookOpResult MemoryBookWorkspace::readFragment(const QString &resource_id, int o
         { QStringLiteral("hash"), sha256Text(text) },
         { QStringLiteral("revision"), static_cast<qint64>(resource->revision) },
         { QStringLiteral("text"), fragment }
-    });
+    };
+    addFragmentLineMetadata(&data, text, start, fragment.size());
+    return BookOpResult::success(data);
 }
 
 QJsonArray MemoryBookWorkspace::stylesheets() const
@@ -528,7 +530,8 @@ BookOpResult MemoryBookWorkspace::patchFragment(const QString &resource_id,
                                                 int end,
                                                 const QString &text,
                                                 quint64 expected_resource_revision,
-                                                const QString &expected_text)
+                                                const QString &expected_text,
+                                                int start_line)
 {
     BookOpResult ensured = ensureTransaction();
     if (!ensured.ok) return ensured;
@@ -537,7 +540,8 @@ BookOpResult MemoryBookWorkspace::patchFragment(const QString &resource_id,
         return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"),
                                    QStringLiteral("Unknown resource"));
     }
-    const PatchRangeResolution resolved = resolvePatchRange(currentText(*resource), start, end, expected_text);
+    const PatchRangeResolution resolved = resolvePatchRange(
+        currentText(*resource), start, end, expected_text, start_line);
     if (!resolved.ok) {
         return BookOpResult::error(resolved.code, resolved.message, resolved.data);
     }

@@ -393,7 +393,7 @@ BookOpResult SigilBookWorkspace::readFragment(const QString &resource_id, int of
         const int start = qMax(0, offset);
         int count = limit <= 0 ? 2048 : qMin(limit, kMaxFragment);
         const QString fragment = all.mid(start, count);
-        return BookOpResult::success(QJsonObject {
+        QJsonObject data {
             { QStringLiteral("resource_id"), resource->GetIdentifier() },
             { QStringLiteral("book_path"), resource->GetRelativePath() },
             { QStringLiteral("offset"), start },
@@ -404,7 +404,9 @@ BookOpResult SigilBookWorkspace::readFragment(const QString &resource_id, int of
             { QStringLiteral("hash"), sha256Text(all) },
             { QStringLiteral("revision"), static_cast<qint64>(trackedRevision(resource)) },
             { QStringLiteral("text"), fragment }
-        });
+        };
+        addFragmentLineMetadata(&data, all, start, fragment.size());
+        return BookOpResult::success(data);
     });
 }
 
@@ -638,16 +640,18 @@ BookOpResult SigilBookWorkspace::patchFragment(const QString &resource_id,
                                                int end,
                                                const QString &text,
                                                quint64 expected_resource_revision,
-                                               const QString &expected_text)
+                                               const QString &expected_text,
+                                               int start_line)
 {
-    return invokeOp([this, resource_id, start, end, text, expected_resource_revision, expected_text]() {
+    return invokeOp([this, resource_id, start, end, text, expected_resource_revision, expected_text, start_line]() {
         BookOpResult ensured = ensureTransaction();
         if (!ensured.ok) return ensured;
         TextResource *resource = textResource(resource_id);
         if (!resource) {
             return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
         }
-        const PatchRangeResolution resolved = resolvePatchRange(currentText(resource), start, end, expected_text);
+        const PatchRangeResolution resolved = resolvePatchRange(
+            currentText(resource), start, end, expected_text, start_line);
         if (!resolved.ok) {
             return BookOpResult::error(resolved.code, resolved.message, resolved.data);
         }

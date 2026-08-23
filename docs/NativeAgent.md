@@ -34,7 +34,7 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.patch_fragment`、`css.update_rules`、`metadata.update`、`checkpoint.create` / `list` / `restore`。
 
-`resource.patch_fragment` 必须带 `expected_text`（从 `resource.read_fragment` 原样复制要替换的当前子串）。不要手算偏移；如果 `start`/`end` 对不上且该子串只出现一次，工具会改到正确区间。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带上 staged excerpt，便于核对。
+`resource.patch_fragment` 用 **当前原文子串** 定位，不要让模型数字符偏移。必填 `expected_text`（从 `read_fragment` 的 `text` 原样复制，可以是一整行）。子串出现多次时用 `start_line`（来自 `read_fragment.lines` 的 1-based 行号）消歧。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带 staged excerpt。
 
 发给模型的 function 名会把点换成下划线（`book.summary` → `book_summary`），因为 DeepSeek/OpenAI 只接受 `^[a-zA-Z0-9_-]+$`。内部仍用带点的名字。
 
