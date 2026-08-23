@@ -14,6 +14,7 @@
 #include <QSet>
 #include <QUuid>
 
+#include "Agent/Execution/ContentOps.h"
 #include "Agent/Execution/PatchRange.h"
 #include "Agent/Execution/ResourceMutations.h"
 #include "PluginAPI/PluginTextEdit.h"
@@ -387,8 +388,29 @@ QJsonObject MemoryBookWorkspace::validate() const
             }
         }
     }
+    QStringList image_names;
+    for (const MemoryResource &resource : m_resources) {
+        if (resource.kind == QLatin1String("image")) image_names.append(resource.bookPath);
+    }
+    for (const MemoryResource &resource : m_resources) {
+        if (resource.kind != QLatin1String("xhtml")) continue;
+        const QJsonArray missing = brokenImageRefs(currentText(resource), image_names);
+        for (const QJsonValue &value : missing) {
+            QJsonObject issue = value.toObject();
+            issue.insert(QStringLiteral("severity"), QStringLiteral("warning"));
+            issue.insert(QStringLiteral("code"), QStringLiteral("BROKEN_IMAGE"));
+            issue.insert(QStringLiteral("resource_id"), resource.id);
+            issues.append(issue);
+        }
+    }
+    bool has_error = false;
+    for (const QJsonValue &value : issues) {
+        if (value.toObject().value(QStringLiteral("severity")).toString() == QLatin1String("error")) {
+            has_error = true;
+        }
+    }
     return QJsonObject {
-        { QStringLiteral("ok"), issues.isEmpty() },
+        { QStringLiteral("ok"), !has_error },
         { QStringLiteral("issue_count"), issues.size() },
         { QStringLiteral("issues"), issues }
     };
@@ -412,6 +434,12 @@ BookOpResult MemoryBookWorkspace::beginTransaction(const QString &label)
         m_revision);
     m_hasStagedMetadata = false;
     m_stagedMetadata = QJsonObject();
+    m_stagedMetadataRemove.clear();
+    m_stagedRemovals.clear();
+    m_hasStagedSpine = false;
+    m_stagedSpine.clear();
+    m_hasStagedToc = false;
+    m_stagedToc = QJsonArray();
     m_stagedAfterIds.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), m_transaction->Id() },
@@ -453,7 +481,10 @@ BookOpResult MemoryBookWorkspace::previewTransaction() const
         { QStringLiteral("base_book_revision"), static_cast<qint64>(m_transaction->BaseBookRevision()) },
         { QStringLiteral("live_book_revision"), static_cast<qint64>(m_revision) },
         { QStringLiteral("changes"), changes },
-        { QStringLiteral("metadata_changed"), m_hasStagedMetadata }
+        { QStringLiteral("metadata_changed"), m_hasStagedMetadata },
+        { QStringLiteral("removed"), QJsonArray::fromStringList(m_stagedRemovals) },
+        { QStringLiteral("spine_changed"), m_hasStagedSpine },
+        { QStringLiteral("toc_changed"), m_hasStagedToc }
     };
     BookOpResult result = BookOpResult::success(data, false, true);
     return result;
@@ -520,6 +551,22 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
             fail_message = QStringLiteral("injected mid-batch failure");
         } else {
             m_metadata = m_stagedMetadata;
+            for (const QString &key : m_stagedMetadataRemove) m_metadata.remove(key);
+            ++applied;
+        }
+    }
+    if (fail_message.isEmpty() && m_hasStagedSpine) {
+        m_spineIds = m_stagedSpine;
+        ++applied;
+    }
+    if (fail_message.isEmpty() && m_hasStagedToc) {
+        m_toc = m_stagedToc;
+        ++applied;
+    }
+    if (fail_message.isEmpty()) {
+        for (const QString &id : m_stagedRemovals) {
+            m_spineIds.removeAll(id);
+            m_resources.remove(id);
             ++applied;
         }
     }
@@ -539,6 +586,12 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
         m_transaction.reset();
         m_hasStagedMetadata = false;
         m_stagedMetadata = QJsonObject();
+        m_stagedMetadataRemove.clear();
+        m_stagedRemovals.clear();
+        m_hasStagedSpine = false;
+        m_stagedSpine.clear();
+        m_hasStagedToc = false;
+        m_stagedToc = QJsonArray();
         m_stagedAfterIds.clear();
         return BookOpResult::error(QStringLiteral("TRANSACTION_ROLLED_BACK"), fail_message);
     }
@@ -547,6 +600,12 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
     m_transaction.reset();
     m_hasStagedMetadata = false;
     m_stagedMetadata = QJsonObject();
+    m_stagedMetadataRemove.clear();
+    m_stagedRemovals.clear();
+    m_hasStagedSpine = false;
+    m_stagedSpine.clear();
+    m_hasStagedToc = false;
+    m_stagedToc = QJsonArray();
     m_stagedAfterIds.clear();
     ++m_revision;
     return BookOpResult::success(QJsonObject {
@@ -568,6 +627,12 @@ BookOpResult MemoryBookWorkspace::rollbackTransaction()
     m_transaction.reset();
     m_hasStagedMetadata = false;
     m_stagedMetadata = QJsonObject();
+    m_stagedMetadataRemove.clear();
+    m_stagedRemovals.clear();
+    m_hasStagedSpine = false;
+    m_stagedSpine.clear();
+    m_hasStagedToc = false;
+    m_stagedToc = QJsonArray();
     m_stagedAfterIds.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), txid },
@@ -676,7 +741,15 @@ BookOpResult MemoryBookWorkspace::updateMetadata(const QJsonObject &patch)
     if (!ensured.ok) return ensured;
     QJsonObject next = m_hasStagedMetadata ? m_stagedMetadata : m_metadata;
     for (auto it = patch.begin(); it != patch.end(); ++it) {
+        if (it.key() == QLatin1String("_remove")) continue;
         next.insert(it.key(), it.value());
+    }
+    if (patch.contains(QStringLiteral("_remove"))) {
+        for (const QJsonValue &value : patch.value(QStringLiteral("_remove")).toArray()) {
+            const QString key = value.toString();
+            next.remove(key);
+            if (!m_stagedMetadataRemove.contains(key)) m_stagedMetadataRemove.append(key);
+        }
     }
     m_stagedMetadata = next;
     m_hasStagedMetadata = true;
@@ -791,6 +864,75 @@ BookOpResult MemoryBookWorkspace::copyResource(const QString &source_id,
     return stageAddition(target, source_kind, staged_text, add_to_spine, source ? source->id : source_id);
 }
 
+BookOpResult MemoryBookWorkspace::deleteResource(const QString &resource_id)
+{
+    BookOpResult ensured = ensureTransaction();
+    if (!ensured.ok) return ensured;
+    const MemoryResource *resource = findResource(resource_id);
+    if (!resource) {
+        return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
+    }
+    if (resource->kind == QLatin1String("opf") || resource->kind == QLatin1String("ncx")) {
+        return BookOpResult::error(QStringLiteral("PROTECTED_RESOURCE"),
+                                   QStringLiteral("OPF and NCX cannot be deleted"));
+    }
+    int xhtml = 0;
+    for (const MemoryResource &candidate : m_resources) {
+        if (candidate.kind == QLatin1String("xhtml") && !m_stagedRemovals.contains(candidate.id)) ++xhtml;
+    }
+    if (resource->kind == QLatin1String("xhtml") && xhtml <= 1) {
+        return BookOpResult::error(QStringLiteral("LAST_XHTML"),
+                                   QStringLiteral("Cannot delete the last XHTML resource"));
+    }
+    if (!m_stagedRemovals.contains(resource->id)) m_stagedRemovals.append(resource->id);
+    if (m_hasStagedSpine) m_stagedSpine.removeAll(resource->id);
+    QString error;
+    m_transaction->RemoveResource(resource->id, resource->revision, &error);
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("resource_id"), resource->id },
+        { QStringLiteral("book_path"), resource->bookPath },
+        { QStringLiteral("staged"), true },
+        { QStringLiteral("removed"), true }
+    }, false, true);
+}
+
+BookOpResult MemoryBookWorkspace::updateSpine(const QStringList &resource_ids)
+{
+    BookOpResult ensured = ensureTransaction();
+    if (!ensured.ok) return ensured;
+    QStringList next;
+    for (const QString &id : resource_ids) {
+        const MemoryResource *resource = findResource(id);
+        QString added;
+        quint64 rev = 0;
+        const bool staged = m_transaction && m_transaction->ReadAddedText(id, &added, &rev);
+        if (!resource && !staged) {
+            return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"),
+                                       QStringLiteral("Unknown spine resource %1").arg(id));
+        }
+        next.append(resource ? resource->id : id);
+    }
+    m_stagedSpine = next;
+    m_hasStagedSpine = true;
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("staged"), true },
+        { QStringLiteral("spine"), QJsonArray::fromStringList(next) }
+    }, false, true);
+}
+
+BookOpResult MemoryBookWorkspace::updateToc(const QJsonArray &entries)
+{
+    BookOpResult ensured = ensureTransaction();
+    if (!ensured.ok) return ensured;
+    m_stagedToc = entries;
+    m_hasStagedToc = true;
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("staged"), true },
+        { QStringLiteral("toc"), entries },
+        { QStringLiteral("entry_count"), entries.size() }
+    }, false, true);
+}
+
 BookOpResult MemoryBookWorkspace::createCheckpoint(const QString &label)
 {
     MemoryCheckpoint checkpoint;
@@ -844,6 +986,15 @@ QString MemoryBookWorkspace::resourceText(const QString &resource_id) const
 {
     const MemoryResource *resource = findResource(resource_id);
     return resource ? resource->text : QString();
+}
+
+QString MemoryBookWorkspace::workingText(const QString &resource_id) const
+{
+    QString added;
+    quint64 revision = 0;
+    if (m_transaction && m_transaction->ReadAddedText(resource_id, &added, &revision)) return added;
+    const MemoryResource *resource = findResource(resource_id);
+    return resource ? currentText(*resource) : QString();
 }
 
 quint64 MemoryBookWorkspace::resourceRevision(const QString &resource_id) const

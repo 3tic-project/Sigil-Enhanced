@@ -108,6 +108,10 @@ set( AGENT_FILES
     Agent/Execution/PatchRange.h
     Agent/Execution/ResourceMutations.cpp
     Agent/Execution/ResourceMutations.h
+    Agent/Execution/ContentOps.cpp
+    Agent/Execution/ContentOps.h
+    Agent/Execution/BookEdits.cpp
+    Agent/Execution/BookEdits.h
     Agent/Typeset/ManuscriptParser.cpp
     Agent/Typeset/ManuscriptParser.h
     Agent/Typeset/TypesetEngine.cpp

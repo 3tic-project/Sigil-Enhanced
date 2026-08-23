@@ -59,8 +59,14 @@ struct ParsedManuscript {
     int sourceChars = 0;
 };
 
+struct ParseOptions {
+    QString headingRegex;
+    QString illustrationRegex;
+};
+
 QString manuscriptPlainText(const QString &text);
-ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_title = QString());
+ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_title = QString(),
+                                     const ParseOptions &options = ParseOptions());
 QJsonObject manuscriptSummaryJson(const ParsedManuscript &parsed, int synopsis_limit = 800);
 bool lineLooksLikeChapterHeading(const QString &line);
 QString normalizeHeadingKey(const QString &line);

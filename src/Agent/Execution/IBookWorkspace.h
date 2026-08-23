@@ -88,10 +88,14 @@ public:
     virtual BookOpResult copyResource(const QString &source_id,
                                       const QString &book_path,
                                       bool add_to_spine) = 0;
+    virtual BookOpResult deleteResource(const QString &resource_id) = 0;
+    virtual BookOpResult updateSpine(const QStringList &resource_ids) = 0;
+    virtual BookOpResult updateToc(const QJsonArray &entries) = 0;
     virtual BookOpResult createCheckpoint(const QString &label) = 0;
     virtual QJsonArray listCheckpoints() const = 0;
     virtual BookOpResult restoreCheckpoint(const QString &checkpoint_id) = 0;
     virtual QString resourceText(const QString &resource_id) const = 0;
+    virtual QString workingText(const QString &resource_id) const = 0;
     virtual quint64 resourceRevision(const QString &resource_id) const = 0;
 
     virtual void setInjectedFailureIndex(int index) { Q_UNUSED(index); }

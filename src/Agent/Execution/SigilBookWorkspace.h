@@ -70,10 +70,14 @@ public:
     BookOpResult copyResource(const QString &source_id,
                               const QString &book_path,
                               bool add_to_spine) override;
+    BookOpResult deleteResource(const QString &resource_id) override;
+    BookOpResult updateSpine(const QStringList &resource_ids) override;
+    BookOpResult updateToc(const QJsonArray &entries) override;
     BookOpResult createCheckpoint(const QString &label) override;
     QJsonArray listCheckpoints() const override;
     BookOpResult restoreCheckpoint(const QString &checkpoint_id) override;
     QString resourceText(const QString &resource_id) const override;
+    QString workingText(const QString &resource_id) const override;
     quint64 resourceRevision(const QString &resource_id) const override;
 
 private:
@@ -117,6 +121,12 @@ private:
     QList<Checkpoint> m_checkpoints;
     QJsonObject m_stagedMetadata;
     bool m_hasStagedMetadata = false;
+    QStringList m_stagedMetadataRemove;
+    QStringList m_stagedRemovals;
+    QStringList m_stagedSpine;
+    bool m_hasStagedSpine = false;
+    QJsonArray m_stagedToc;
+    bool m_hasStagedToc = false;
     QHash<QString, QString> m_stagedAfterIds;
 };
 

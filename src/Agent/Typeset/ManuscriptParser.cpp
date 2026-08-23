@@ -315,7 +315,8 @@ QString chineseTalkLabel(int number)
     return QStringLiteral("第") + body + QStringLiteral("话");
 }
 
-ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_title)
+ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_title,
+                                     const ParseOptions &options)
 {
     ParsedManuscript parsed;
     const QString plain = manuscriptPlainText(text);
@@ -324,6 +325,16 @@ ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_ti
     parsed.sourceChars = plain.size();
     parsed.title = hint_title;
 
+    QRegularExpression heading_re;
+    if (!options.headingRegex.isEmpty()) {
+        heading_re = QRegularExpression(options.headingRegex, QRegularExpression::UseUnicodePropertiesOption);
+    }
+    QRegularExpression illustration_re;
+    if (!options.illustrationRegex.isEmpty()) {
+        illustration_re = QRegularExpression(options.illustrationRegex,
+                                             QRegularExpression::UseUnicodePropertiesOption);
+    }
+
     struct HeadingHit {
         int line = 0;
         QString raw;
@@ -331,17 +342,28 @@ ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_ti
     };
     QList<HeadingHit> headings;
     for (int i = 0; i < lines.size(); ++i) {
-        if (lineLooksLikeChapterHeading(lines.at(i))) {
+        const bool is_heading = heading_re.isValid() && !options.headingRegex.isEmpty()
+            ? heading_re.match(foldSpaces(lines.at(i))).hasMatch()
+            : lineLooksLikeChapterHeading(lines.at(i));
+        if (is_heading) {
             HeadingHit hit;
             hit.line = i;
             hit.raw = foldSpaces(lines.at(i));
             hit.key = normalizeHeadingKey(hit.raw);
             headings.append(hit);
         }
-        const QString illus = illustrationNameInLine(lines.at(i));
+        QString illus;
+        if (illustration_re.isValid() && !options.illustrationRegex.isEmpty()) {
+            const QRegularExpressionMatch match = illustration_re.match(lines.at(i));
+            if (match.hasMatch()) {
+                illus = match.lastCapturedIndex() >= 1 ? match.captured(1) : match.captured();
+            }
+        } else {
+            illus = illustrationNameInLine(lines.at(i));
+        }
         if (!illus.isEmpty()) {
             ManuscriptIllustration marker;
-            marker.name = illus;
+            marker.name = illus.trimmed();
             marker.line = i;
             parsed.illustrations.append(marker);
         }
@@ -384,8 +406,6 @@ ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_ti
         QStringList body_lines;
         for (int line = chapter.startLine + 1; line < chapter.endLine; ++line) {
             const QString raw = lines.at(line);
-            const QString illus = illustrationNameInLine(raw);
-            if (!illus.isEmpty()) chapter.illustrationNames.append(illus);
             if (!foldSpaces(raw).isEmpty()) ++chapter.paragraphCount;
             body_lines.append(raw);
         }
@@ -397,6 +417,12 @@ ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_ti
     for (ManuscriptIllustration &marker : parsed.illustrations) {
         marker.inFrontMatter = marker.line < body_start;
         if (marker.inFrontMatter) parsed.frontIllustrationNames.append(marker.name);
+        for (ManuscriptChapter &chapter : parsed.chapters) {
+            if (marker.line > chapter.startLine && marker.line < chapter.endLine) {
+                chapter.illustrationNames.append(marker.name);
+                break;
+            }
+        }
     }
 
     static const QStringList author_keys = { QStringLiteral("作者") };

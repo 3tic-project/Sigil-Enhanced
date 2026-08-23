@@ -16,6 +16,7 @@
 #include <QUuid>
 #include <QXmlStreamReader>
 
+#include "Agent/Execution/ContentOps.h"
 #include "Agent/Execution/PatchRange.h"
 #include "Agent/Execution/ResourceMutations.h"
 #include "BookManipulation/Book.h"
@@ -57,6 +58,12 @@ void SigilBookWorkspace::setBook(QSharedPointer<Book> book)
     m_checkpoints.clear();
     m_hasStagedMetadata = false;
     m_stagedMetadata = QJsonObject();
+    m_stagedMetadataRemove.clear();
+    m_stagedRemovals.clear();
+    m_hasStagedSpine = false;
+    m_stagedSpine.clear();
+    m_hasStagedToc = false;
+    m_stagedToc = QJsonArray();
     m_revision = 1;
 }
 
@@ -488,6 +495,10 @@ QJsonObject SigilBookWorkspace::validate() const
                 { QStringLiteral("message"), QStringLiteral("Spine has no items") }
             });
         }
+        QStringList image_names;
+        for (Resource *resource : m_book->GetFolderKeeper()->GetResourceList()) {
+            if (kindOf(resource) == QLatin1String("image")) image_names.append(resource->GetRelativePath());
+        }
         for (HTMLResource *html : m_book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true)) {
             if (!currentText(html).contains(QLatin1String("<body"))) {
                 issues.append(QJsonObject {
@@ -496,9 +507,23 @@ QJsonObject SigilBookWorkspace::validate() const
                     { QStringLiteral("resource_id"), html->GetIdentifier() }
                 });
             }
+            const QJsonArray missing = brokenImageRefs(currentText(html), image_names);
+            for (const QJsonValue &value : missing) {
+                QJsonObject issue = value.toObject();
+                issue.insert(QStringLiteral("severity"), QStringLiteral("warning"));
+                issue.insert(QStringLiteral("code"), QStringLiteral("BROKEN_IMAGE"));
+                issue.insert(QStringLiteral("resource_id"), html->GetIdentifier());
+                issues.append(issue);
+            }
+        }
+        bool has_error = false;
+        for (const QJsonValue &value : issues) {
+            if (value.toObject().value(QStringLiteral("severity")).toString() == QLatin1String("error")) {
+                has_error = true;
+            }
         }
         return QJsonObject {
-            { QStringLiteral("ok"), issues.isEmpty() },
+            { QStringLiteral("ok"), !has_error },
             { QStringLiteral("issue_count"), issues.size() },
             { QStringLiteral("issues"), issues }
         };
@@ -533,6 +558,12 @@ BookOpResult SigilBookWorkspace::beginTransaction(const QString &label)
             QStringLiteral("auto"),
             m_revision);
         m_hasStagedMetadata = false;
+        m_stagedMetadataRemove.clear();
+        m_stagedRemovals.clear();
+        m_hasStagedSpine = false;
+        m_stagedSpine.clear();
+        m_hasStagedToc = false;
+        m_stagedToc = QJsonArray();
         m_stagedAfterIds.clear();
         return BookOpResult::success(QJsonObject {
             { QStringLiteral("transaction_id"), m_transaction->Id() },
@@ -573,7 +604,10 @@ BookOpResult SigilBookWorkspace::previewTransaction() const
         { QStringLiteral("transaction_id"), m_transaction->Id() },
         { QStringLiteral("live_book_revision"), static_cast<qint64>(m_revision) },
         { QStringLiteral("changes"), changes },
-        { QStringLiteral("metadata_changed"), m_hasStagedMetadata }
+        { QStringLiteral("metadata_changed"), m_hasStagedMetadata },
+        { QStringLiteral("removed"), QJsonArray::fromStringList(m_stagedRemovals) },
+        { QStringLiteral("spine_changed"), m_hasStagedSpine },
+        { QStringLiteral("toc_changed"), m_hasStagedToc }
     }, false, true);
 }
 
@@ -684,14 +718,70 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
             if (m_stagedMetadata.contains(QStringLiteral("language"))) {
                 upsert(QStringLiteral("language"), m_stagedMetadata.value(QStringLiteral("language")).toString());
             }
-            if (m_stagedMetadata.contains(QStringLiteral("creator"))) {
-                upsert(QStringLiteral("creator"), m_stagedMetadata.value(QStringLiteral("creator")).toString());
+            const QStringList fields = {
+                QStringLiteral("title"), QStringLiteral("language"), QStringLiteral("creator"),
+                QStringLiteral("contributor"), QStringLiteral("publisher"), QStringLiteral("description"),
+                QStringLiteral("subject"), QStringLiteral("date"), QStringLiteral("identifier"),
+                QStringLiteral("rights"), QStringLiteral("source"), QStringLiteral("coverage"),
+                QStringLiteral("type"), QStringLiteral("format"), QStringLiteral("relation")
+            };
+            for (const QString &field : fields) {
+                if (m_stagedMetadata.contains(field) && field != QLatin1String("_remove")) {
+                    upsert(field, m_stagedMetadata.value(field).toString());
+                }
+            }
+            for (const QString &key : m_stagedMetadataRemove) {
+                for (int i = entries.size() - 1; i >= 0; --i) {
+                    if (entries.at(i).m_name.endsWith(key)) entries.removeAt(i);
+                }
             }
             m_book->SetMetadata(entries);
+        }
+        if (m_hasStagedSpine) {
+            OPFResource *opf = m_book->GetOPF();
+            QStringList wanted;
+            QList<HTMLResource *> htmls;
+            for (const QString &id : m_stagedSpine) {
+                HTMLResource *html = qobject_cast<HTMLResource *>(findResource(id));
+                if (!html) continue;
+                wanted.append(html->GetIdentifier());
+                htmls.append(html);
+            }
+            const QStringList current = opf->GetSpineOrderBookPaths();
+            for (const QString &path : current) {
+                Resource *resource = m_book->GetFolderKeeper()->GetResourceByBookPathNoThrow(path);
+                if (!resource) continue;
+                if (!wanted.contains(resource->GetIdentifier())) {
+                    opf->RemoveResourceFromSpine(resource);
+                }
+            }
+            for (HTMLResource *html : htmls) {
+                if (opf->GetReadingOrder(html) < 0) opf->AppendResourceToSpine(html, false);
+            }
+            for (int i = 0; i + 1 < htmls.size(); ++i) {
+                m_book->MoveResourceAfter(htmls.at(i + 1), htmls.at(i));
+            }
+        }
+        if (m_hasStagedToc) {
+            if (NCXResource *ncx = m_book->GetNCX()) {
+                const QString title = m_book->GetMetadataValues(QStringLiteral("title")).isEmpty()
+                    ? QStringLiteral("Untitled")
+                    : m_book->GetMetadataValues(QStringLiteral("title")).first();
+                ncx->SetTextAsUndoableEdit(ncxFromEntries(m_stagedToc, title));
+            }
+        }
+        for (const QString &id : m_stagedRemovals) {
+            if (Resource *resource = findResource(id)) resource->Delete();
         }
         const QString txid = m_transaction->Id();
         m_transaction.reset();
         m_hasStagedMetadata = false;
+        m_stagedMetadataRemove.clear();
+        m_stagedRemovals.clear();
+        m_hasStagedSpine = false;
+        m_stagedSpine.clear();
+        m_hasStagedToc = false;
+        m_stagedToc = QJsonArray();
         m_stagedAfterIds.clear();
         ++m_revision;
         return BookOpResult::success(QJsonObject {
@@ -711,6 +801,12 @@ BookOpResult SigilBookWorkspace::rollbackTransaction()
     m_transaction->Clear();
     m_transaction.reset();
     m_hasStagedMetadata = false;
+    m_stagedMetadataRemove.clear();
+    m_stagedRemovals.clear();
+    m_hasStagedSpine = false;
+    m_stagedSpine.clear();
+    m_hasStagedToc = false;
+    m_stagedToc = QJsonArray();
     m_stagedAfterIds.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), txid },
@@ -822,7 +918,17 @@ BookOpResult SigilBookWorkspace::updateMetadata(const QJsonObject &patch)
     BookOpResult ensured = ensureTransaction();
     if (!ensured.ok) return ensured;
     QJsonObject next = m_hasStagedMetadata ? m_stagedMetadata : QJsonObject();
-    for (auto it = patch.begin(); it != patch.end(); ++it) next.insert(it.key(), it.value());
+    for (auto it = patch.begin(); it != patch.end(); ++it) {
+        if (it.key() == QLatin1String("_remove")) continue;
+        next.insert(it.key(), it.value());
+    }
+    if (patch.contains(QStringLiteral("_remove"))) {
+        for (const QJsonValue &value : patch.value(QStringLiteral("_remove")).toArray()) {
+            const QString key = value.toString();
+            next.remove(key);
+            if (!m_stagedMetadataRemove.contains(key)) m_stagedMetadataRemove.append(key);
+        }
+    }
     m_stagedMetadata = next;
     m_hasStagedMetadata = true;
     return BookOpResult::success(QJsonObject {
@@ -946,6 +1052,82 @@ BookOpResult SigilBookWorkspace::copyResource(const QString &source_id,
     });
 }
 
+BookOpResult SigilBookWorkspace::deleteResource(const QString &resource_id)
+{
+    return invokeOp([this, resource_id]() {
+        BookOpResult ensured = ensureTransaction();
+        if (!ensured.ok) return ensured;
+        Resource *resource = findResource(resource_id);
+        if (!resource) {
+            return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
+        }
+        const QString kind = kindOf(resource);
+        if (kind == QLatin1String("opf") || kind == QLatin1String("ncx")) {
+            return BookOpResult::error(QStringLiteral("PROTECTED_RESOURCE"),
+                                       QStringLiteral("OPF and NCX cannot be deleted"));
+        }
+        if (resource == m_book->GetOPF()->GetNavResource()) {
+            return BookOpResult::error(QStringLiteral("PROTECTED_RESOURCE"),
+                                       QStringLiteral("The Nav document cannot be deleted"));
+        }
+        if (kind == QLatin1String("xhtml")) {
+            int xhtml = 0;
+            for (HTMLResource *html : m_book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true)) {
+                if (!m_stagedRemovals.contains(html->GetIdentifier())) ++xhtml;
+            }
+            if (xhtml <= 1) {
+                return BookOpResult::error(QStringLiteral("LAST_XHTML"),
+                                           QStringLiteral("Cannot delete the last XHTML resource"));
+            }
+        }
+        const QString id = resource->GetIdentifier();
+        if (!m_stagedRemovals.contains(id)) m_stagedRemovals.append(id);
+        if (m_hasStagedSpine) m_stagedSpine.removeAll(id);
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("resource_id"), id },
+            { QStringLiteral("book_path"), resource->GetRelativePath() },
+            { QStringLiteral("staged"), true },
+            { QStringLiteral("removed"), true }
+        }, false, true);
+    });
+}
+
+BookOpResult SigilBookWorkspace::updateSpine(const QStringList &resource_ids)
+{
+    return invokeOp([this, resource_ids]() {
+        BookOpResult ensured = ensureTransaction();
+        if (!ensured.ok) return ensured;
+        QStringList next;
+        for (const QString &id : resource_ids) {
+            HTMLResource *html = qobject_cast<HTMLResource *>(findResource(id));
+            if (!html) {
+                return BookOpResult::error(QStringLiteral("NOT_XHTML"),
+                                           QStringLiteral("Spine entries must be XHTML: %1").arg(id));
+            }
+            next.append(html->GetIdentifier());
+        }
+        m_stagedSpine = next;
+        m_hasStagedSpine = true;
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("staged"), true },
+            { QStringLiteral("spine"), QJsonArray::fromStringList(next) }
+        }, false, true);
+    });
+}
+
+BookOpResult SigilBookWorkspace::updateToc(const QJsonArray &entries)
+{
+    BookOpResult ensured = ensureTransaction();
+    if (!ensured.ok) return ensured;
+    m_stagedToc = entries;
+    m_hasStagedToc = true;
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("staged"), true },
+        { QStringLiteral("toc"), entries },
+        { QStringLiteral("entry_count"), entries.size() }
+    }, false, true);
+}
+
 BookOpResult SigilBookWorkspace::createCheckpoint(const QString &label)
 {
     return invokeOp([this, label]() {
@@ -1007,6 +1189,17 @@ QString SigilBookWorkspace::resourceText(const QString &resource_id) const
     return invokeString([this, resource_id]() {
         TextResource *resource = textResource(resource_id);
         return resource ? resource->GetText() : QString();
+    });
+}
+
+QString SigilBookWorkspace::workingText(const QString &resource_id) const
+{
+    return invokeString([this, resource_id]() {
+        QString added;
+        quint64 revision = 0;
+        if (m_transaction && m_transaction->ReadAddedText(resource_id, &added, &revision)) return added;
+        TextResource *resource = textResource(resource_id);
+        return resource ? currentText(resource) : QString();
     });
 }
 
