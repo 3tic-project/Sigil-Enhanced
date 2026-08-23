@@ -60,6 +60,7 @@ public:
     bool Start(QString *error);
     void Cancel();
     void setQuiet(bool quiet);
+    void setSnippetPath(const QString &path);
     QString CapturedOutput() const;
 
 signals:
@@ -184,6 +185,7 @@ private:
     QPointer<PluginSessionConsole> m_Console;
     bool m_Quiet = false;
     QString m_CapturedOutput;
+    QString m_SnippetPath;
 };
 
 #endif // PLUGINSESSION_H

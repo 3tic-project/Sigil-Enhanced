@@ -21,13 +21,36 @@ def load_plugin(path):
     return module
 
 
+def run_snippet(plugin, path):
+    with open(path, encoding="utf-8") as handle:
+        source = handle.read()
+    namespace = {
+        "plugin": plugin,
+        "__name__": "__agent_snippet__",
+        "__file__": path,
+    }
+    exec(compile(source, path, "exec"), namespace, namespace)
+    run = namespace.get("run")
+    if callable(run):
+        return run(plugin)
+    result = namespace.get("result", 0)
+    return 0 if result is None else result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--plugin", required=True)
+    parser.add_argument("--plugin")
+    parser.add_argument("--snippet")
     parser.add_argument("--plugin-name", required=True)
     parser.add_argument("--compat-v1", action="store_true")
     parser.add_argument("--plugin-type", choices=("edit", "validation", "output", "input"))
     args = parser.parse_args(argv)
+    if bool(args.plugin) == bool(args.snippet):
+        print("live launcher requires exactly one of --plugin or --snippet", file=sys.stderr)
+        return 2
+    if args.snippet and args.compat_v1:
+        print("snippets use live v2; --compat-v1 is not supported", file=sys.stderr)
+        return 2
 
     socket_name = os.environ.get("SIGIL_PLUGIN_SOCKET", "")
     token = os.environ.get("SIGIL_PLUGIN_TOKEN", "")
@@ -39,6 +62,11 @@ def main(argv=None):
     wrapper = None
     try:
         plugin = Plugin.connect(socket_name, token, args.plugin_name)
+        if args.snippet:
+            result = run_snippet(plugin, os.path.abspath(args.snippet))
+            status = "success" if result in (None, 0) else "failed"
+            plugin.finish(status=status, message="" if result in (None, 0) else "Snippet returned %r" % result)
+            return 0 if status == "success" else 1
         module = load_plugin(os.path.abspath(args.plugin))
         run = getattr(module, "run", None)
         if not callable(run):

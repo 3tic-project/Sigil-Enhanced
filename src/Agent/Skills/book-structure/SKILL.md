@@ -53,7 +53,7 @@ Images must already be in the book (Book Browser drop). `image.insert` writes an
 - `content.merge` — concatenate files into the first
 - `toc.generate` — headings in spine order
 - `metadata.update` — any DC field; `_remove` deletes
-- `python.run` — Live Python v2 on the in-memory Book (`plugin.book`). Not a ZIP snapshot. Commit/rollback the Agent transaction first. Prefer typed tools.
+- `python.run` — Live Python v2 snippet with `plugin` bound (`plugin.book`). Not a plugin package and not a ZIP snapshot. Commit/rollback the Agent transaction first. Prefer typed tools.
 
 ## Session
 

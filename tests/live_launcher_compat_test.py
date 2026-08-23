@@ -2,6 +2,7 @@ import io
 import os
 import pathlib
 import sys
+import tempfile
 import types
 import unittest
 from unittest import mock
@@ -130,6 +131,47 @@ class LiveLauncherCompatTest(unittest.TestCase):
         wrapper = FakeWrapper.instances[0]
         self.assertEqual(result, 0)
         self.assertEqual((wrapper.commits, wrapper.rollbacks), (0, 0))
+
+    def launch_snippet(self, source):
+        handle = tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8")
+        handle.write(source)
+        handle.close()
+        self.addCleanup(lambda: os.path.exists(handle.name) and os.unlink(handle.name))
+        with mock.patch.object(live_launcher.Plugin, "connect", return_value=self.plugin), \
+             mock.patch("sys.stderr", new_callable=io.StringIO):
+            return live_launcher.main([
+                "--snippet", handle.name,
+                "--plugin-name", "AgentSnippet",
+            ])
+
+    def test_snippet_execs_with_plugin_binding(self):
+        result = self.launch_snippet("plugin.seen = True\nresult = 0\n")
+        self.assertEqual(result, 0)
+        self.assertTrue(self.plugin.seen)
+        self.assertEqual(self.plugin.finished, [("success", "")])
+        self.assertTrue(self.plugin.closed)
+
+    def test_snippet_def_run_is_invoked(self):
+        result = self.launch_snippet(
+            "def run(plugin):\n"
+            "    plugin.via_run = True\n"
+            "    return 0\n"
+        )
+        self.assertEqual(result, 0)
+        self.assertTrue(self.plugin.via_run)
+        self.assertEqual(self.plugin.finished, [("success", "")])
+
+    def test_snippet_exception_reports_failure(self):
+        result = self.launch_snippet("raise RuntimeError('snippet boom')\n")
+        self.assertEqual(result, 1)
+        self.assertEqual(self.plugin.finished, [("failed", "snippet boom")])
+
+    def test_snippet_and_plugin_are_mutually_exclusive(self):
+        with mock.patch("sys.stderr", new_callable=io.StringIO):
+            result = live_launcher.main([
+                "--plugin-name", "AgentSnippet",
+            ])
+        self.assertEqual(result, 2)
 
 
 if __name__ == "__main__":

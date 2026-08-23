@@ -10,8 +10,10 @@
 #include "Misc/Plugin.h"
 #include "PluginAPI/PluginSession.h"
 
+#include <QDir>
 #include <QEventLoop>
 #include <QMessageBox>
+#include <QTemporaryFile>
 #include <QTimer>
 
 #include <utility>
@@ -33,7 +35,8 @@ bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
     return StartSession(plugin, error) != nullptr;
 }
 
-PluginSession *PluginSessionManager::StartSession(const Plugin &plugin, QString *error, bool quiet)
+PluginSession *PluginSessionManager::StartSession(const Plugin &plugin, QString *error, bool quiet,
+                                                  const QString &snippet_path)
 {
     if (plugin.get_lifetime() == QStringLiteral("book-session")) {
         for (PluginSession *running : std::as_const(m_Sessions)) {
@@ -48,6 +51,7 @@ PluginSession *PluginSessionManager::StartSession(const Plugin &plugin, QString 
 
     auto *session = new PluginSession(plugin, m_MainWindow, m_TabManager, this);
     session->setQuiet(quiet);
+    if (!snippet_path.isEmpty()) session->setSnippetPath(snippet_path);
     const QUuid id = session->SessionId();
     connect(session, &PluginSession::Ended, this, [this, id]() {
         PluginSession *finished = m_Sessions.take(id);
@@ -90,7 +94,36 @@ bool PluginSessionManager::RunPluginAndWait(const Plugin &plugin, QString *statu
     }
     PluginSession *session = StartSession(plugin, error, quiet);
     if (!session) return false;
+    return WaitForSession(session, status, plugin_type, validation_error_count,
+                          error, timeout_ms, output);
+}
 
+bool PluginSessionManager::RunSnippetAndWait(const QString &script, QString *status, QString *error,
+                                             int timeout_ms, QString *output)
+{
+    QTemporaryFile file(QDir::temp().filePath(QStringLiteral("sigil-agent-XXXXXX.py")));
+    file.setAutoRemove(true);
+    const QByteArray bytes = script.toUtf8();
+    if (!file.open() || file.write(bytes) != bytes.size() || !file.flush()) {
+        if (error) *error = tr("Could not write a temporary Python snippet.");
+        return false;
+    }
+    file.close();
+    Plugin host;
+    host.set_name(QStringLiteral("AgentSnippet"));
+    host.set_type(QStringLiteral("edit"));
+    host.set_engine(QStringLiteral("python3"));
+    host.set_api(2, QStringLiteral("live"));
+    host.set_lifetime(QStringLiteral("command"));
+    PluginSession *session = StartSession(host, error, true, file.fileName());
+    if (!session) return false;
+    return WaitForSession(session, status, nullptr, nullptr, error, timeout_ms, output);
+}
+
+bool PluginSessionManager::WaitForSession(PluginSession *session, QString *status, QString *plugin_type,
+                                          int *validation_error_count, QString *error, int timeout_ms,
+                                          QString *output)
+{
     QEventLoop loop;
     bool timed_out = false;
     QString completed_status;

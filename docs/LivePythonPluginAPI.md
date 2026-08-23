@@ -72,6 +72,8 @@ def run(plugin):
     return 0
 ```
 
+The launcher also accepts `--snippet path.py` instead of `--plugin`. That file is `exec`'d with `plugin` bound (optional `def run(plugin)`, or a `result` value). Native Agent `python.run` uses this path: a temp `.py` snippet, not a `plugin.xml` package.
+
 `None` and `0` mean success. Other return values and uncaught exceptions fail
 the session. Standard output and standard error are displayed in the modeless
 session console.

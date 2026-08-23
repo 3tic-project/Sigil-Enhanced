@@ -13,10 +13,8 @@
 #include <QMetaObject>
 #include <QRegularExpression>
 #include <QSet>
-#include <QStringConverter>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
-#include <QTextStream>
 #include <QThread>
 #include <QUuid>
 #include <QXmlStreamReader>
@@ -27,7 +25,6 @@
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/NcxNavigation.h"
-#include "Misc/Plugin.h"
 #include "PluginAPI/PluginSessionManager.h"
 #include "SourceUpdates/UniversalUpdates.h"
 #include "ResourceObjects/CSSResource.h"
@@ -1231,60 +1228,11 @@ BookOpResult SigilBookWorkspace::runLivePython(const QString &script, int timeou
             return BookOpResult::error(QStringLiteral("SCRIPT_TOO_LARGE"),
                                        QStringLiteral("Live Python scripts are capped at 65536 characters"));
         }
-        QTemporaryDir temp;
-        if (!temp.isValid()) {
-            return BookOpResult::error(QStringLiteral("TEMP_FAILED"),
-                                       QStringLiteral("Could not create a temporary plugin directory"));
-        }
-        temp.setAutoRemove(true);
-        const QString plugin_py = QStringLiteral(
-            "from pathlib import Path\n\n"
-            "def run(plugin):\n"
-            "    source = Path(__file__).with_name('script.py').read_text(encoding='utf-8')\n"
-            "    ns = {'plugin': plugin, '__name__': '__agent_script__'}\n"
-            "    exec(compile(source, 'script.py', 'exec'), ns, ns)\n"
-            "    result = ns.get('result', 0)\n"
-            "    return 0 if result is None else result\n");
-        const QString xml = QStringLiteral(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            "<plugin>\n"
-            "  <name>AgentTempScript</name>\n"
-            "  <author>Sigil Agent</author>\n"
-            "  <description>Temporary Live Python v2 command started by Native Agent.</description>\n"
-            "  <type>edit</type>\n"
-            "  <engine>python3</engine>\n"
-            "  <version>1.0.0</version>\n"
-            "  <api version=\"2\" interface=\"live\" />\n"
-            "  <lifetime>command</lifetime>\n"
-            "</plugin>\n");
-        auto write_file = [&](const QString &name, const QString &body) {
-            QFile file(temp.filePath(name));
-            if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
-            QTextStream stream(&file);
-            stream.setEncoding(QStringConverter::Utf8);
-            stream << body;
-            return true;
-        };
-        const bool has_run = script.contains(QRegularExpression(QStringLiteral("^\\s*def\\s+run\\s*\\("),
-                                                                QRegularExpression::MultilineOption));
-        if (!write_file(QStringLiteral("plugin.xml"), xml)
-            || !write_file(QStringLiteral("plugin.py"), has_run ? script : plugin_py)
-            || (!has_run && !write_file(QStringLiteral("script.py"), script))) {
-            return BookOpResult::error(QStringLiteral("TEMP_FAILED"),
-                                       QStringLiteral("Could not write the temporary live plugin"));
-        }
-        Plugin plugin;
-        plugin.set_name(QStringLiteral("AgentTempScript"));
-        plugin.set_type(QStringLiteral("edit"));
-        plugin.set_engine(QStringLiteral("python3"));
-        plugin.set_api(2, QStringLiteral("live"));
-        plugin.set_lifetime(QStringLiteral("command"));
-        plugin.set_root_path(temp.path());
         QString status;
         QString error;
         QString output;
-        const bool ok = m_pluginSessions->RunPluginAndWait(
-            plugin, &status, nullptr, nullptr, &error, qMax(1000, timeout_ms), &output, true);
+        const bool ok = m_pluginSessions->RunSnippetAndWait(
+            script, &status, &error, qMax(1000, timeout_ms), &output);
         if (!ok) {
             return BookOpResult::error(QStringLiteral("LIVE_PYTHON_FAILED"),
                                        error.isEmpty() ? status : error,

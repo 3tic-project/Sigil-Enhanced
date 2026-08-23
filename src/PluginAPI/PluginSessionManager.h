@@ -32,6 +32,8 @@ public:
                           int *validation_error_count, QString *error = nullptr,
                           int timeout_ms = 30 * 60 * 1000,
                           QString *output = nullptr, bool quiet = false);
+    bool RunSnippetAndWait(const QString &script, QString *status, QString *error = nullptr,
+                           int timeout_ms = 30 * 1000, QString *output = nullptr);
     bool AcquireWriter(const QUuid &session_id);
     void ReleaseWriter(const QUuid &session_id);
     void StopAll();
@@ -39,7 +41,11 @@ public:
     bool HasWriter() const;
 
 private:
-    PluginSession *StartSession(const Plugin &plugin, QString *error, bool quiet = false);
+    PluginSession *StartSession(const Plugin &plugin, QString *error, bool quiet = false,
+                                const QString &snippet_path = QString());
+    bool WaitForSession(PluginSession *session, QString *status, QString *plugin_type,
+                        int *validation_error_count, QString *error, int timeout_ms,
+                        QString *output);
 
     MainWindow *m_MainWindow;
     TabManager *m_TabManager;

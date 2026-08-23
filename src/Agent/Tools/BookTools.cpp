@@ -133,7 +133,7 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
         return QStringLiteral("Link stylesheets. Staged until commit.");
     }
     if (name == QLatin1String("python.run")) {
-        return QStringLiteral("Run a Live Python v2 script on the open book. Applies immediately (not staged).");
+        return QStringLiteral("Run a Live Python v2 snippet on the open book. Applies immediately (not staged).");
     }
     if (name == QLatin1String("content.split") || name == QLatin1String("content.merge")) {
         return QStringLiteral("Restructure chapters. Staged until commit.");
@@ -878,7 +878,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("python.run"),
-        QStringLiteral("Run a temporary Live Python v2 command against the in-memory Book (plugin.book / plugin.editor), not a ZIP snapshot. Applies immediately; commit or rollback any Agent transaction first. Script may define def run(plugin) or use the `plugin` global. stdout/stderr are returned (truncated). Unavailable outside the Sigil GUI (LIVE_PYTHON_UNAVAILABLE). Capped at 64KiB."),
+        QStringLiteral("Run a Live Python v2 snippet against the in-memory Book. `plugin` is bound (plugin.book / plugin.editor); optional def run(plugin) or a `result` value. This is a code snippet, not a plugin package and not a ZIP snapshot. Applies immediately; commit or rollback any Agent transaction first. stdout/stderr are returned (truncated). Unavailable outside the Sigil GUI (LIVE_PYTHON_UNAVAILABLE). Capped at 64KiB."),
         ToolRisk::Bulk, true, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },

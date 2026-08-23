@@ -36,7 +36,7 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
         "- Batch markup: content.wrap and content.replace_regex (patterns supplied by the user or inferred, never assume a fixed novel format).\n"
         "- Insert an already-imported image with image.insert. Check broken/unused images with book.check.\n"
         "- toc.generate builds a TOC from heading regex. metadata.update/_remove edits Dublin Core fields.\n"
-        "- python.run runs a temporary Live Python v2 command on the in-memory Book (`plugin.book`, `def run(plugin)`). It is not a ZIP snapshot. Commit or rollback the Agent transaction first. Prefer typed tools; use Python for logic typed tools cannot express.\n"
+        "- python.run executes a Live Python v2 snippet with `plugin` bound (`plugin.book`, `plugin.editor`). It is not a plugin package and not a ZIP snapshot. Commit or rollback the Agent transaction first. Prefer typed tools; use Python for logic typed tools cannot express.\n"
         "- Keep a plan with session.task_add / session.task_update and session.remember for constraints (heading regex, class names) across turns.\n"
         "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n"
         "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n");

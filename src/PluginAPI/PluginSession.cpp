@@ -681,13 +681,18 @@ bool PluginSession::Start(QString *error)
     }
 
     const QString launcher = PluginDB::launcherRoot() + QStringLiteral("/python/live_launcher.py");
-    const QString plugin_dir = m_Plugin.get_root_path().isEmpty()
-        ? PluginDB::pluginsPath() + QLatin1Char('/') + m_Plugin.get_dirname()
-        : m_Plugin.get_root_path();
-    const QString plugin_path = plugin_dir + QStringLiteral("/plugin.py");
-    if (!QFileInfo::exists(launcher) || !QFileInfo::exists(plugin_path)) {
+    const bool snippet = !m_SnippetPath.isEmpty();
+    const QString plugin_dir = snippet
+        ? QFileInfo(m_SnippetPath).absolutePath()
+        : (m_Plugin.get_root_path().isEmpty()
+               ? PluginDB::pluginsPath() + QLatin1Char('/') + m_Plugin.get_dirname()
+               : m_Plugin.get_root_path());
+    const QString entry_path = snippet ? m_SnippetPath : (plugin_dir + QStringLiteral("/plugin.py"));
+    if (!QFileInfo::exists(launcher) || !QFileInfo::exists(entry_path)) {
         if (error) {
-            *error = tr("The live plugin launcher or plugin entry point does not exist.");
+            *error = snippet
+                ? tr("The live plugin launcher or snippet file does not exist.")
+                : tr("The live plugin launcher or plugin entry point does not exist.");
         }
         return false;
     }
@@ -789,10 +794,10 @@ bool PluginSession::Start(QString *error)
     m_Process->setProgram(interpreter);
     QStringList arguments {
         launcher,
-        QStringLiteral("--plugin"), plugin_path,
+        snippet ? QStringLiteral("--snippet") : QStringLiteral("--plugin"), entry_path,
         QStringLiteral("--plugin-name"), m_Plugin.get_name()
     };
-    if (m_Plugin.get_declared_runtime() != Plugin::LiveRuntime) {
+    if (!snippet && m_Plugin.get_declared_runtime() != Plugin::LiveRuntime) {
         arguments.append(QStringList {
             QStringLiteral("--compat-v1"),
             QStringLiteral("--plugin-type"), m_Plugin.get_type()
@@ -814,6 +819,11 @@ bool PluginSession::Start(QString *error)
 void PluginSession::setQuiet(bool quiet)
 {
     m_Quiet = quiet;
+}
+
+void PluginSession::setSnippetPath(const QString &path)
+{
+    m_SnippetPath = path;
 }
 
 QString PluginSession::CapturedOutput() const
