@@ -41,7 +41,7 @@ int main()
     StreamingJsonDecoder decoder;
 
     QByteArray stream;
-    stream += sseLine(QJsonObject { { QStringLiteral("reasoning_content"), QStringLiteral("Inspect the book first.") } });
+    stream += sseLine(QJsonObject { { QStringLiteral("reasoning"), QStringLiteral("Inspect the book first.") } });
     stream += sseLine(QJsonObject { { QStringLiteral("reasoning_content"), QStringLiteral(" Then list fonts.") } });
     stream += sseLine(QJsonObject { { QStringLiteral("content"), QStringLiteral("I'll inspect structure.") } });
     stream += sseLine(QJsonObject {

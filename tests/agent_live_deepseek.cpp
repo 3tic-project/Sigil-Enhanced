@@ -9,6 +9,8 @@
 #include <QMap>
 #include <QSslSocket>
 
+#include "Agent/Model/AgentModelCatalog.h"
+#include "Agent/Model/AgentProviderPreset.h"
 #include "Agent/Model/HistoryAssembler.h"
 #include "Agent/Model/IModelProvider.h"
 #include "Agent/Model/OpenAICompatibleProvider.h"
@@ -67,6 +69,24 @@ int main(int argc, char *argv[])
     logLine(QStringLiteral("model=%1").arg(model));
     logLine(QStringLiteral("key_redacted=1"));
     logLine(QStringLiteral("qt_ssl_supported=%1").arg(QSslSocket::supportsSsl() ? 1 : 0));
+
+    const QString models_url = SigilAgent::modelsUrl(
+        SigilAgent::inferProviderKind(url), url);
+    SigilAgent::CatalogResult catalog = SigilAgent::AgentModelCatalog::fetch(
+        models_url, key, QString(), QString(), 20000);
+    catalog.sourceUrl.replace(key, QStringLiteral("[redacted]"));
+    if (!catalog.error.isEmpty()) {
+        QString sanitized = catalog.error;
+        sanitized.replace(key, QStringLiteral("[redacted]"));
+        logLine(QStringLiteral("models_error=%1").arg(sanitized));
+    } else {
+        logLine(QStringLiteral("models_count=%1").arg(catalog.models.size()));
+        bool listed = false;
+        for (const SigilAgent::CatalogModel &item : catalog.models) {
+            if (item.id == model) listed = true;
+        }
+        logLine(QStringLiteral("configured_model_in_catalog=%1").arg(listed ? 1 : 0));
+    }
 
     SigilAgent::OpenAIProviderConfig config;
     config.baseUrl = url;

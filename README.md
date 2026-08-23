@@ -52,7 +52,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 ### Native Agent
 
-- **[Native Agent](docs/NativeAgent.md)**：主窗口停靠栏里的 EPUB 助手（Ask / Plan / Edit）。直接调用 OpenAI 兼容接口，支持 thinking/`reasoning_content`、工具批准和可撤销事务；不调用 MCP，也没有 shell。
+- **[Native Agent](docs/NativeAgent.md)**：主窗口停靠栏里的 EPUB 助手（Ask / Plan / Edit）。在偏好设置里选择 DeepSeek / OpenCode Go / OpenRouter，并从服务器拉取模型；支持 thinking/`reasoning_content`、工具批准、可撤销事务，以及导出对话和调试日志。不调用 MCP，也没有 shell。
 
 ### 插件与自动化
 

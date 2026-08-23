@@ -30,9 +30,28 @@ require(
     "Plugins/" not in dock_h and "PluginRunner" not in dock_h,
     "AgentDock must not live under the plugin runner",
 )
+dock_cpp = (repo / "src/Agent/UI/AgentDock.cpp").read_text(encoding="utf-8")
+settings_cpp = (repo / "src/Dialogs/PreferenceWidgets/AgentSettingsWidget.cpp").read_text(
+    encoding="utf-8"
+)
 require(
-    "agentModeCombo" in (repo / "src/Agent/UI/AgentDock.cpp").read_text(encoding="utf-8"),
+    "agentModeCombo" in dock_cpp,
     "dock must expose Ask/Plan/Edit",
+)
+require(
+    "agentModelEdit" not in dock_cpp,
+    "model name must not be typed in the Agent dock",
+)
+require(
+    "agentProviderCombo" in settings_cpp
+    and "OpenCode Go" in settings_cpp
+    and "OpenRouter" in settings_cpp
+    and "Refresh models" in settings_cpp,
+    "Native Agent settings must offer DeepSeek, OpenCode Go, OpenRouter, and a models fetch",
+)
+require(
+    "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,
+    "dock must export the conversation and a debug log",
 )
 require(
     "m_Book && m_Book->GetFolderKeeper() && m_Book->GetConstOPF()" in main_window,

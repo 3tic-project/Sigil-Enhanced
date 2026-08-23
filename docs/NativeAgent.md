@@ -9,10 +9,11 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 在主窗口 **查看** 菜单中打开 **Agent** 停靠栏（与 Book Browser、Preview 同类）。停靠栏包含：
 
 - 模式：**Ask** / **Plan** / **Edit**
-- 模型名
+- 当前模型（只读，来自偏好设置）
 - 上下文芯片：当前书、当前文件、选区（可开关，范围会显示在状态行）
 - 输入框：**Enter 发送**，Shift+Enter 换行
 - **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
+- **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
 - 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；批准带影响说明；预览列出暂存资源；错误
 
 Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；答案只在 Answer 卡片里。新的一轮不会覆盖上一轮的回答。
@@ -41,16 +42,33 @@ HTTP 出错时会带上状态码和服务器返回的 `error.message`（不会�
 
 ## 模型与 Thinking
 
-在 **偏好设置 → Native Agent** 中配置：
+在 **偏好设置 → Native Agent** 中选择提供商并配置密钥。模型在这里选定，Agent 停靠栏不再填写模型名。
 
-- Chat Completions URL（完整路径，例如 `https://api.deepseek.com/chat/completions`）
-- API Key（只存在本机 Sigil 设置里，不会进入 transcript、崩溃日志或 EPUB）
-- 模型名
-- 是否发送 `thinking`（默认开启）以及 `reasoning_effort`
+| 提供商 | Chat Completions | 模型列表 |
+|---|---|---|
+| **DeepSeek** | `https://api.deepseek.com/chat/completions` | `GET https://api.deepseek.com/models` |
+| **OpenCode Go** | `https://opencode.ai/zen/go/v1/chat/completions` | `GET https://opencode.ai/zen/go/v1/models` |
+| **OpenRouter** | `https://openrouter.ai/api/v1/chat/completions` | `GET https://openrouter.ai/api/v1/models?supported_parameters=tools` |
+| **Custom** | 你填写的 OpenAI 兼容 URL | 从同一 origin 推导 `/models` |
 
-协议是 OpenAI 兼容的 Chat Completions。流式响应里 `reasoning_content`、`content`、`tool_calls` 分开解析。当某次请求带了 `tools` 时，同一会话后续请求必须回放助手的 `reasoning_content`（否则部分推理模型会返回 400）；不带 `tools` 的请求可以省略先前的思维链。
+点 **Refresh models** 会向服务器拉取模型 id 以及它公布的参数（context length、`supported_parameters` 里的 tools / reasoning）。不要手抄模型名；列表来自服务器。密钥只存在本机 Sigil 设置里，不会进入 transcript、崩溃日志、导出文件或 EPUB。
+
+请求体按提供商区分：
+
+- DeepSeek：`thinking: {type: enabled|disabled}` 和 `reasoning_effort`
+- OpenRouter：`reasoning: {effort, exclude: false}`（且只在该模型宣称支持 reasoning 时发送）；并带 `HTTP-Referer` / `X-Title`
+- OpenCode Go / 其他：不发送 DeepSeek 的 `thinking` 字段，避免 400
+
+协议仍是 OpenAI 兼容 Chat Completions。流式响应里 `reasoning_content`（以及 OpenRouter 的 `reasoning`）、`content`、`tool_calls` 分开解析。当某次请求带了 `tools` 时，同一会话后续请求必须回放助手的 `reasoning_content`（否则部分推理模型会返回 400）；不带 `tools` 的请求可以省略先前的思维链。
 
 Native Agent 不调用 MCP，也不把 MCP 当作内部 RPC。
+
+## 导出
+
+停靠栏 **Export** 菜单：
+
+- **Conversation**：当前会话的 Markdown（用户 / Thinking / Answer / 工具），供阅读或贴给别人。
+- **Debug log**：完整 JSON，包含全部会话事件、提供商（不含密钥）、以及最近的 HTTP 追踪（请求体、状态码、响应片段）。API Key 和 `sk-…` 会被替换成 `[redacted]`。
 
 ## Harness
 

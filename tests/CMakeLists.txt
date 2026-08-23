@@ -1335,6 +1335,23 @@ target_compile_features(agent_provider_cancel_test PRIVATE cxx_std_17)
 add_test(NAME agent_provider_cancel COMMAND agent_provider_cancel_test)
 set_tests_properties(agent_provider_cancel PROPERTIES TIMEOUT 15)
 
+add_executable(agent_provider_catalog_test
+    agent_provider_catalog_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentModelCatalog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentProviderPreset.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/OpenAICompatibleProvider.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/StreamingJsonDecoder.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Persistence/AgentSessionExport.cpp
+)
+target_include_directories(agent_provider_catalog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_provider_catalog_test PRIVATE Qt6::Core Qt6::Network)
+target_compile_features(agent_provider_catalog_test PRIVATE cxx_std_17)
+add_test(NAME agent_provider_catalog COMMAND agent_provider_catalog_test)
+set_tests_properties(agent_provider_catalog PROPERTIES TIMEOUT 30)
+
 set(AGENT_CORE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
@@ -1389,6 +1406,8 @@ set_tests_properties(agent_launch PROPERTIES TIMEOUT 30)
 add_executable(agent_live_deepseek EXCLUDE_FROM_ALL
     agent_live_deepseek.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentModelCatalog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentProviderPreset.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/OpenAICompatibleProvider.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/StreamingJsonDecoder.cpp

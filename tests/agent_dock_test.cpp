@@ -5,6 +5,7 @@
 #include <QComboBox>
 #include <QJsonObject>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
@@ -38,6 +39,16 @@ int main(int argc, char *argv[])
     auto *fresh = dock.findChild<QPushButton *>(QStringLiteral("agentNewSessionButton"));
     auto *composer = dock.findChild<QPlainTextEdit *>(QStringLiteral("agentComposer"));
     auto *transcript = dock.findChild<QScrollArea *>(QStringLiteral("agentTranscript"));
+    Require(!dock.findChild<QLineEdit *>(QStringLiteral("agentModelEdit")),
+            "Agent dock must not let the user type a model name");
+    Require(dock.findChild<QLabel *>(QStringLiteral("agentModelLabel")),
+            "Agent dock must show the model chosen in Preferences");
+    Require(dock.findChild<QToolButton *>(QStringLiteral("agentExportButton")),
+            "Agent dock must offer export");
+    dock.setModelName(QStringLiteral("deepseek-chat"));
+    auto *model_label = dock.findChild<QLabel *>(QStringLiteral("agentModelLabel"));
+    Require(model_label && model_label->text().contains(QStringLiteral("deepseek-chat")),
+            "dock model label must show the settings model");
     Require(mode && mode->count() == 3, "mode combo must offer Ask/Plan/Edit");
     Require(mode->itemData(0).toString() == QStringLiteral("ask")
                 && mode->itemData(1).toString() == QStringLiteral("plan")
