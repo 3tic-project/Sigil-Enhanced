@@ -132,7 +132,7 @@ int main()
             call.id = QStringLiteral("call_patch");
             call.name = QStringLiteral("resource.patch_fragment");
             call.argumentsJson = QStringLiteral(
-                "{\"resource_id\":\"ch1\",\"start\":0,\"end\":1,\"text\":\"X\",\"expected_revision\":1}");
+                "{\"resource_id\":\"ch1\",\"expected_text\":\"<title>Heat</title>\",\"text\":\"<title>X</title>\",\"expected_revision\":1}");
             turn.toolCalls.append(call);
             return turn;
         }
@@ -189,7 +189,7 @@ int main()
             call.id = QStringLiteral("call_patch2");
             call.name = QStringLiteral("resource.patch_fragment");
             call.argumentsJson = QStringLiteral(
-                "{\"resource_id\":\"ch1\",\"start\":0,\"end\":1,\"text\":\"X\",\"expected_revision\":1}");
+                "{\"resource_id\":\"ch1\",\"expected_text\":\"<title>Heat</title>\",\"text\":\"<title>X</title>\",\"expected_revision\":1}");
             turn.toolCalls.append(call);
             return turn;
         }
@@ -247,7 +247,7 @@ int main()
             call.id = QStringLiteral("patch");
             call.name = QStringLiteral("resource.patch_fragment");
             call.argumentsJson = QStringLiteral(
-                "{\"resource_id\":\"ch1\",\"start\":0,\"end\":5,\"text\":\"HELLO\",\"expected_revision\":1}");
+                "{\"resource_id\":\"ch1\",\"expected_text\":\"<title>Heat</title>\",\"text\":\"<title>HELLO</title>\",\"expected_revision\":1}");
             turn.toolCalls.append(call);
             return turn;
         }
@@ -275,7 +275,7 @@ int main()
             "approve must be recorded");
     Require(hasEvent(edit_session, AgentEventType::ToolStarted),
             "approve must execute the tool");
-    Require(edit_book.resourceText(QStringLiteral("ch1")).startsWith(QStringLiteral("HELLO")),
+    Require(edit_book.resourceText(QStringLiteral("ch1")).contains(QStringLiteral("<title>HELLO</title>")),
             "approved commit must change the live book");
     Require(hasEvent(edit_session, AgentEventType::TransactionCommitted),
             "commit must be labeled as applied in the session");
@@ -317,7 +317,7 @@ int main()
             call.id = QStringLiteral("plan-patch");
             call.name = QStringLiteral("resource.patch_fragment");
             call.argumentsJson = QStringLiteral(
-                "{\"resource_id\":\"ch1\",\"start\":0,\"end\":5,\"text\":\"HELLO\",\"expected_revision\":1}");
+                "{\"resource_id\":\"ch1\",\"expected_text\":\"<title>Heat</title>\",\"text\":\"<title>HELLO</title>\",\"expected_revision\":1}");
             turn.toolCalls.append(call);
             return turn;
         }
@@ -391,7 +391,7 @@ int main()
         patch.id = QStringLiteral("p");
         patch.name = QStringLiteral("resource.patch_fragment");
         patch.argumentsJson = QStringLiteral(
-            "{\"resource_id\":\"ch1\",\"start\":0,\"end\":1,\"text\":\"X\",\"expected_revision\":1}");
+            "{\"resource_id\":\"ch1\",\"expected_text\":\"<title>Heat</title>\",\"text\":\"<title>X</title>\",\"expected_revision\":1}");
         turn.toolCalls << begin << patch;
         return turn;
     }());

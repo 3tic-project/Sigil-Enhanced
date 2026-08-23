@@ -1364,6 +1364,7 @@ set(AGENT_CORE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/BookTools.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
 )
@@ -1384,6 +1385,7 @@ add_executable(agent_book_tools_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/BookTools.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
 )

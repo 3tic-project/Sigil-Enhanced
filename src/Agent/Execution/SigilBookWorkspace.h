@@ -51,7 +51,8 @@ public:
                                int start,
                                int end,
                                const QString &text,
-                               quint64 expected_resource_revision) override;
+                               quint64 expected_resource_revision,
+                               const QString &expected_text) override;
     BookOpResult updateCss(const QString &resource_id,
                            const QString &text,
                            quint64 expected_resource_revision) override;

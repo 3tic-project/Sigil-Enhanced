@@ -14,6 +14,7 @@
 #include <QUuid>
 #include <QXmlStreamReader>
 
+#include "Agent/Execution/PatchRange.h"
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/NcxNavigation.h"
@@ -396,6 +397,7 @@ BookOpResult SigilBookWorkspace::readFragment(const QString &resource_id, int of
             { QStringLiteral("resource_id"), resource->GetIdentifier() },
             { QStringLiteral("book_path"), resource->GetRelativePath() },
             { QStringLiteral("offset"), start },
+            { QStringLiteral("end"), start + fragment.size() },
             { QStringLiteral("length"), fragment.size() },
             { QStringLiteral("total"), all.size() },
             { QStringLiteral("truncated"), start + fragment.size() < all.size() },
@@ -528,11 +530,17 @@ BookOpResult SigilBookWorkspace::previewTransaction() const
     }
     QJsonArray changes;
     for (const PluginApi::StagedTextChange &change : m_transaction->Changes()) {
+        int diff = 0;
+        const int limit = qMin(change.originalText.size(), change.stagedText.size());
+        while (diff < limit && change.originalText.at(diff) == change.stagedText.at(diff)) ++diff;
+        const int excerpt_from = qMax(0, diff - 24);
         changes.append(QJsonObject {
             { QStringLiteral("resource_id"), change.resourceId },
             { QStringLiteral("original_length"), change.originalText.size() },
             { QStringLiteral("staged_length"), change.stagedText.size() },
-            { QStringLiteral("changed"), change.originalText != change.stagedText }
+            { QStringLiteral("changed"), change.originalText != change.stagedText },
+            { QStringLiteral("original_excerpt"), change.originalText.mid(excerpt_from, 80) },
+            { QStringLiteral("staged_excerpt"), change.stagedText.mid(excerpt_from, 80) }
         });
     }
     return BookOpResult::success(QJsonObject {
@@ -629,20 +637,25 @@ BookOpResult SigilBookWorkspace::patchFragment(const QString &resource_id,
                                                int start,
                                                int end,
                                                const QString &text,
-                                               quint64 expected_resource_revision)
+                                               quint64 expected_resource_revision,
+                                               const QString &expected_text)
 {
-    return invokeOp([this, resource_id, start, end, text, expected_resource_revision]() {
+    return invokeOp([this, resource_id, start, end, text, expected_resource_revision, expected_text]() {
         BookOpResult ensured = ensureTransaction();
         if (!ensured.ok) return ensured;
         TextResource *resource = textResource(resource_id);
         if (!resource) {
             return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
         }
+        const PatchRangeResolution resolved = resolvePatchRange(currentText(resource), start, end, expected_text);
+        if (!resolved.ok) {
+            return BookOpResult::error(resolved.code, resolved.message, resolved.data);
+        }
         QString error;
         QJsonArray edits {
             QJsonObject {
-                { QStringLiteral("start"), start },
-                { QStringLiteral("end"), end },
+                { QStringLiteral("start"), resolved.start },
+                { QStringLiteral("end"), resolved.end },
                 { QStringLiteral("text"), text }
             }
         };
@@ -653,11 +666,12 @@ BookOpResult SigilBookWorkspace::patchFragment(const QString &resource_id,
                 ? QStringLiteral("BOOK_REVISION_CONFLICT") : QStringLiteral("PATCH_FAILED");
             return BookOpResult::error(code, error);
         }
-        return BookOpResult::success(QJsonObject {
-            { QStringLiteral("resource_id"), resource->GetIdentifier() },
-            { QStringLiteral("staged"), true },
-            { QStringLiteral("live_unchanged"), true }
-        }, false, true);
+        QJsonObject data = resolved.data;
+        data.insert(QStringLiteral("resource_id"), resource->GetIdentifier());
+        data.insert(QStringLiteral("staged"), true);
+        data.insert(QStringLiteral("live_unchanged"), true);
+        data.insert(QStringLiteral("replacement_length"), text.size());
+        return BookOpResult::success(data, false, true);
     });
 }
 

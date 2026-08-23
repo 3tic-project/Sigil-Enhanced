@@ -46,12 +46,14 @@ struct ToolResult {
         return result;
     }
 
-    static ToolResult failure(const QString &code, const QString &message)
+    static ToolResult failure(const QString &code, const QString &message,
+                              const QJsonObject &data = QJsonObject())
     {
         ToolResult result;
         result.ok = false;
         result.code = code;
         result.message = message;
+        result.data = data;
         result.executed = true;
         return result;
     }

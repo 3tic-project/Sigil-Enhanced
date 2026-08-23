@@ -32,12 +32,14 @@ struct BookOpResult {
         return result;
     }
 
-    static BookOpResult error(const QString &code, const QString &message)
+    static BookOpResult error(const QString &code, const QString &message,
+                              const QJsonObject &data = QJsonObject())
     {
         BookOpResult result;
         result.ok = false;
         result.code = code;
         result.message = message;
+        result.data = data;
         return result;
     }
 };
@@ -68,7 +70,8 @@ public:
                                        int start,
                                        int end,
                                        const QString &text,
-                                       quint64 expected_resource_revision) = 0;
+                                       quint64 expected_resource_revision,
+                                       const QString &expected_text) = 0;
     virtual BookOpResult updateCss(const QString &resource_id,
                                    const QString &text,
                                    quint64 expected_resource_revision) = 0;
