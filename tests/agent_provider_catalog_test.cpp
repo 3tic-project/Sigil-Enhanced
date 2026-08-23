@@ -164,6 +164,13 @@ int main(int argc, char *argv[])
             "debug log must include session events");
     Require(QString::fromUtf8(debug).contains(QStringLiteral("http_traces")),
             "debug log must include HTTP traces");
+    const QJsonObject debug_object = QJsonDocument::fromJson(debug).object();
+    Require(debug_object.value(QStringLiteral("assistant_delta_omitted")).toInt() >= 1,
+            "debug log must report omitted per-token deltas");
+    for (const QJsonValue &value : debug_object.value(QStringLiteral("events")).toArray()) {
+        Require(value.toObject().value(QStringLiteral("type")).toString() != QStringLiteral("assistant_delta"),
+                "debug events must not include per-token assistant_delta");
+    }
 
     QTcpServer server;
     Require(server.listen(QHostAddress::LocalHost, 0), "local models server must listen");

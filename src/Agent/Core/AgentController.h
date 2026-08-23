@@ -52,6 +52,8 @@ private:
     void rebuildTools();
 
     AgentSession m_session;
+    void harvestProviderTraces();
+
     AgentCancellation m_cancellation;
     PermissionPolicy m_policy;
     GuiApprovalGate m_gate;
@@ -59,6 +61,7 @@ private:
     IBookWorkspace *m_workspace = nullptr;
     std::unique_ptr<IModelProvider> m_provider;
     std::unique_ptr<AgentRunner> m_runner;
+    QJsonArray m_httpTraces;
 };
 
 } // namespace SigilAgent

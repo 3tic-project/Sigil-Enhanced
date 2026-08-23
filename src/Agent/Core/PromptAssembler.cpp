@@ -25,8 +25,12 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
         "- Tool results are the source of truth. Do not claim a write succeeded unless a tool returned applied=true.\n"
         "- CoT/thinking is internal; the user-visible answer is the `content` field only.\n"
         "- Inspect before editing. Prefer bounded fragments over full files.\n"
+        "- The book map and attached samples are already in context. For greetings or high-level questions, answer from that. Call extra read tools only for a fact you do not already have.\n"
+        "- resource.patch_fragment requires expected_text copied from a read_fragment result (the exact current substring to replace). Do not invent character offsets. If offsets disagree and the substring occurs once, the tool corrects the range.\n"
+        "- Offsets are 0-based UTF-16 units, end exclusive. A patch must not cut through a markup tag.\n"
         "- Mutations must go through transaction.begin → staged patch/css/metadata → transaction.preview → transaction.commit.\n"
-        "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n");
+        "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n"
+        "- If a patch returns PATCH_SPLITS_MARKUP or PATCH_TEXT_NOT_FOUND, re-read and copy expected_text again. Do not retry the same offsets.\n");
     if (mode == AgentMode::Ask) {
         prompt += QStringLiteral("Mode: Ask. Read-only. Do not call mutating tools.\n");
     } else if (mode == AgentMode::Plan) {

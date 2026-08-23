@@ -205,10 +205,18 @@ QString exportConversationMarkdown(const AgentSession &session, const SessionExp
 QByteArray exportDebugJson(const AgentSession &session, const SessionExportContext &context)
 {
     QJsonArray events;
+    QJsonObject counts;
+    int omitted_deltas = 0;
     for (const AgentEvent &event : session.events()) {
+        const QString type = eventTypeName(event.type);
+        counts.insert(type, counts.value(type).toInt() + 1);
+        if (event.type == AgentEventType::AssistantDelta) {
+            ++omitted_deltas;
+            continue;
+        }
         events.append(QJsonObject {
             { QStringLiteral("id"), event.id },
-            { QStringLiteral("type"), eventTypeName(event.type) },
+            { QStringLiteral("type"), type },
             { QStringLiteral("timestamp"), isoTime(event.timestampMs) },
             { QStringLiteral("timestamp_ms"), event.timestampMs },
             { QStringLiteral("payload"), redactJsonValue(event.payload, context.secrets) }
@@ -233,6 +241,8 @@ QByteArray exportDebugJson(const AgentSession &session, const SessionExportConte
         { QStringLiteral("run_state"), context.runState },
         { QStringLiteral("provider"), provider },
         { QStringLiteral("http_traces"), redactJsonValue(context.httpTraces, context.secrets) },
+        { QStringLiteral("event_counts"), counts },
+        { QStringLiteral("assistant_delta_omitted"), omitted_deltas },
         { QStringLiteral("events"), events }
     };
     return QJsonDocument(root).toJson(QJsonDocument::Indented);

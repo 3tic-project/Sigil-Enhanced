@@ -30,8 +30,19 @@ void AgentController::setWorkspace(IBookWorkspace *workspace)
     rebuildTools();
 }
 
+void AgentController::harvestProviderTraces()
+{
+    if (!m_provider) return;
+    const QJsonArray traces = m_provider->debugTraces();
+    for (const QJsonValue &value : traces) {
+        m_httpTraces.append(value);
+    }
+    while (m_httpTraces.size() > 32) m_httpTraces.removeFirst();
+}
+
 void AgentController::setProvider(std::unique_ptr<IModelProvider> provider)
 {
+    harvestProviderTraces();
     m_provider = std::move(provider);
     rebuildTools();
 }
@@ -101,6 +112,7 @@ void AgentController::newSession()
     }
     m_cancellation.reset();
     m_session.clear();
+    m_httpTraces = QJsonArray();
 }
 
 void AgentController::resolveApproval(const QString &toolCallId, bool approved)
@@ -110,7 +122,13 @@ void AgentController::resolveApproval(const QString &toolCallId, bool approved)
 
 QJsonArray AgentController::debugTraces() const
 {
-    return m_provider ? m_provider->debugTraces() : QJsonArray();
+    QJsonArray traces = m_httpTraces;
+    if (m_provider) {
+        for (const QJsonValue &value : m_provider->debugTraces()) {
+            traces.append(value);
+        }
+    }
+    return traces;
 }
 
 } // namespace SigilAgent

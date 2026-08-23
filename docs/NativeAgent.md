@@ -34,6 +34,8 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.patch_fragment`、`css.update_rules`、`metadata.update`、`checkpoint.create` / `list` / `restore`。
 
+`resource.patch_fragment` 必须带 `expected_text`（从 `resource.read_fragment` 原样复制要替换的当前子串）。不要手算偏移；如果 `start`/`end` 对不上且该子串只出现一次，工具会改到正确区间。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带上 staged excerpt，便于核对。
+
 发给模型的 function 名会把点换成下划线（`book.summary` → `book_summary`），因为 DeepSeek/OpenAI 只接受 `^[a-zA-Z0-9_-]+$`。内部仍用带点的名字。
 
 没有 shell，没有技能脚本，不会把字体二进制或整本书 XHTML 送给模型。若提交时的 `expected_revision` 与当前书籍 revision 不一致，会返回 `BOOK_REVISION_CONFLICT`，不会改书。
@@ -68,7 +70,7 @@ Native Agent 不调用 MCP，也不把 MCP 当作内部 RPC。
 停靠栏 **Export** 菜单：
 
 - **Conversation**：当前会话的 Markdown（用户 / Thinking / Answer / 工具），供阅读或贴给别人。
-- **Debug log**：完整 JSON，包含全部会话事件、提供商（不含密钥）、以及最近的 HTTP 追踪（请求体、状态码、响应片段）。API Key 和 `sk-…` 会被替换成 `[redacted]`。
+- **Debug log**：JSON，含会话事件（不含逐 token 的 `assistant_delta`，只保留完整 assistant/tool 事件）、提供商（不含密钥）、以及跨轮保留的 HTTP 追踪（请求体最多 64KB，响应保留头尾）。API Key 和 `sk-…` 会被替换成 `[redacted]`。
 
 ## Harness
 

@@ -26,10 +26,39 @@ namespace SigilAgent
 namespace
 {
 
-QString clipBody(const QByteArray &data, int max_bytes = 16000)
+QString clipUtf8(const QByteArray &data, int max_bytes)
 {
     if (data.size() <= max_bytes) return QString::fromUtf8(data);
     return QString::fromUtf8(data.left(max_bytes)) + QStringLiteral("…");
+}
+
+QJsonObject makeHttpTrace(const QString &url,
+                          const QString &model,
+                          const QByteArray &request,
+                          const QByteArray &response,
+                          int status,
+                          qint64 elapsed_ms,
+                          const QString &error)
+{
+    QJsonObject trace {
+        { QStringLiteral("method"), QStringLiteral("POST") },
+        { QStringLiteral("url"), url },
+        { QStringLiteral("model"), model },
+        { QStringLiteral("status"), status },
+        { QStringLiteral("elapsed_ms"), elapsed_ms },
+        { QStringLiteral("error"), error },
+        { QStringLiteral("request_bytes"), request.size() },
+        { QStringLiteral("response_bytes"), response.size() },
+        { QStringLiteral("request_body"), clipUtf8(request, 65536) },
+        { QStringLiteral("response_head"), clipUtf8(response, 8192) }
+    };
+    if (response.size() > 8192) {
+        trace.insert(QStringLiteral("response_tail"), QString::fromUtf8(response.right(8192)));
+        trace.insert(QStringLiteral("response_truncated"), true);
+    } else {
+        trace.insert(QStringLiteral("response_truncated"), false);
+    }
+    return trace;
 }
 
 } // namespace
@@ -65,7 +94,7 @@ QJsonArray OpenAICompatibleProvider::debugTraces() const
 void OpenAICompatibleProvider::recordTrace(const QJsonObject &trace)
 {
     m_traces.append(trace);
-    while (m_traces.size() > 16) m_traces.removeFirst();
+    while (m_traces.size() > 32) m_traces.removeFirst();
 }
 
 QJsonObject OpenAICompatibleProvider::buildChatBody(const ModelRequest &request)
@@ -186,15 +215,9 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     if (sink.isCancelled()) {
         turn.error = QStringLiteral("cancelled");
         turn.finishReason = QStringLiteral("cancelled");
-        recordTrace(QJsonObject {
-            { QStringLiteral("method"), QStringLiteral("POST") },
-            { QStringLiteral("url"), m_config.baseUrl },
-            { QStringLiteral("model"), outgoing.model },
-            { QStringLiteral("request_body"), clipBody(payload) },
-            { QStringLiteral("status"), reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() },
-            { QStringLiteral("elapsed_ms"), timer.elapsed() },
-            { QStringLiteral("error"), QStringLiteral("cancelled") }
-        });
+        recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
+                                  reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
+                                  timer.elapsed(), QStringLiteral("cancelled")));
         reply->deleteLater();
         return turn;
     }
@@ -225,16 +248,8 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     if (turn.error.isEmpty()) {
         turn = decoder.finish();
     }
-    recordTrace(QJsonObject {
-        { QStringLiteral("method"), QStringLiteral("POST") },
-        { QStringLiteral("url"), m_config.baseUrl },
-        { QStringLiteral("model"), outgoing.model },
-        { QStringLiteral("request_body"), clipBody(payload) },
-        { QStringLiteral("status"), status },
-        { QStringLiteral("elapsed_ms"), timer.elapsed() },
-        { QStringLiteral("response_body"), clipBody(raw) },
-        { QStringLiteral("error"), turn.error }
-    });
+    recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
+                              status, timer.elapsed(), turn.error));
     reply->deleteLater();
     return turn;
 }
