@@ -476,6 +476,14 @@ BookOpResult MemoryBookWorkspace::previewTransaction() const
             { QStringLiteral("staged_length"), addition.data.size() }
         });
     }
+    for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+        changes.append(QJsonObject {
+            { QStringLiteral("resource_id"), reloc.resourceId },
+            { QStringLiteral("from"), reloc.originalBookPath },
+            { QStringLiteral("book_path"), reloc.targetBookPath },
+            { QStringLiteral("renamed"), true }
+        });
+    }
     QJsonObject data {
         { QStringLiteral("transaction_id"), m_transaction->Id() },
         { QStringLiteral("base_book_revision"), static_cast<qint64>(m_transaction->BaseBookRevision()) },
@@ -553,6 +561,14 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
             m_metadata = m_stagedMetadata;
             for (const QString &key : m_stagedMetadataRemove) m_metadata.remove(key);
             ++applied;
+        }
+    }
+    if (fail_message.isEmpty()) {
+        for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+            if (MemoryResource *resource = findResource(reloc.resourceId)) {
+                resource->bookPath = reloc.targetBookPath;
+                ++applied;
+            }
         }
     }
     if (fail_message.isEmpty() && m_hasStagedSpine) {
@@ -762,7 +778,15 @@ BookOpResult MemoryBookWorkspace::updateMetadata(const QJsonObject &patch)
 QStringList MemoryBookWorkspace::allBookPaths() const
 {
     QStringList paths;
-    for (const MemoryResource &resource : m_resources) paths.append(resource.bookPath);
+    QHash<QString, QString> relocated;
+    if (m_transaction) {
+        for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+            relocated.insert(reloc.resourceId, reloc.targetBookPath);
+        }
+    }
+    for (const MemoryResource &resource : m_resources) {
+        paths.append(relocated.value(resource.id, resource.bookPath));
+    }
     if (m_transaction) {
         for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
             paths.append(addition.bookPath);
@@ -780,9 +804,9 @@ BookOpResult MemoryBookWorkspace::stageAddition(const QString &book_path,
     BookOpResult ensured = ensureTransaction();
     if (!ensured.ok) return ensured;
     const QString resolved_kind = kindFromPathOrType(book_path, kind);
-    if (resolved_kind != QLatin1String("xhtml") && resolved_kind != QLatin1String("css")) {
+    if (!kindIsCreatable(resolved_kind)) {
         return BookOpResult::error(QStringLiteral("UNSUPPORTED_KIND"),
-                                   QStringLiteral("Only xhtml and css resources can be created"));
+                                   QStringLiteral("Only xhtml, css, svg, js, and text resources can be created"));
     }
     if (book_path.trimmed().isEmpty()) {
         return BookOpResult::error(QStringLiteral("BOOK_PATH_REQUIRED"),
@@ -826,8 +850,9 @@ BookOpResult MemoryBookWorkspace::createResource(const QString &book_path,
                                                  const QString &after_resource_id)
 {
     const QString resolved_kind = kindFromPathOrType(book_path, kind);
-    const QString body = text.isEmpty() && resolved_kind == QLatin1String("xhtml")
-        ? defaultXhtmlTemplate() : text;
+    QString body = text;
+    if (body.isEmpty() && resolved_kind == QLatin1String("xhtml")) body = defaultXhtmlTemplate();
+    if (body.isEmpty() && resolved_kind == QLatin1String("svg")) body = defaultSvgTemplate();
     return stageAddition(book_path, resolved_kind, body, add_to_spine, after_resource_id);
 }
 
@@ -893,6 +918,67 @@ BookOpResult MemoryBookWorkspace::deleteResource(const QString &resource_id)
         { QStringLiteral("book_path"), resource->bookPath },
         { QStringLiteral("staged"), true },
         { QStringLiteral("removed"), true }
+    }, false, true);
+}
+
+BookOpResult MemoryBookWorkspace::renameResource(const QString &resource_id, const QString &book_path)
+{
+    BookOpResult ensured = ensureTransaction();
+    if (!ensured.ok) return ensured;
+    MemoryResource *resource = findResource(resource_id);
+    if (!resource) {
+        return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
+    }
+    if (resource->kind == QLatin1String("opf") || resource->kind == QLatin1String("ncx")) {
+        return BookOpResult::error(QStringLiteral("PROTECTED_RESOURCE"),
+                                   QStringLiteral("OPF and NCX cannot be renamed"));
+    }
+    QString target = resolveRenameTarget(resource->bookPath, book_path);
+    if (target.isEmpty()) {
+        return BookOpResult::error(QStringLiteral("BOOK_PATH_REQUIRED"),
+                                   QStringLiteral("book_path is required"));
+    }
+    if (bookPathTaken(target, allBookPaths()) && target != resource->bookPath) {
+        return BookOpResult::error(QStringLiteral("BOOK_PATH_EXISTS"),
+                                   QStringLiteral("A resource already uses %1").arg(target));
+    }
+    const QString old_path = resource->bookPath;
+    if (old_path == target) {
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("resource_id"), resource->id },
+            { QStringLiteral("book_path"), target },
+            { QStringLiteral("unchanged"), true }
+        }, false, true);
+    }
+    QString error;
+    if (!m_transaction->RelocateResource(resource->id, old_path, target, resource->revision, &error)) {
+        return BookOpResult::error(QStringLiteral("RENAME_FAILED"), error);
+    }
+    const QStringList targets = allBookPaths();
+    for (const MemoryResource &candidate : m_resources) {
+        if (candidate.kind == QLatin1String("font") || candidate.kind == QLatin1String("image")) continue;
+        QString text = currentText(candidate);
+        QString next = text;
+        if (candidate.id == resource->id) {
+            for (const QString &other : targets) {
+                if (other == target) continue;
+                const QString old_rel = relativeBookHref(old_path, other);
+                const QString new_rel = relativeBookHref(target, other);
+                if (old_rel != new_rel && !old_rel.isEmpty()) next.replace(old_rel, new_rel);
+            }
+        } else {
+            next = rewriteHrefsForMove(text, candidate.bookPath, old_path, target);
+        }
+        if (next != text) {
+            const BookOpResult replaced = replaceText(candidate.id, next, candidate.revision);
+            if (!replaced.ok) return replaced;
+        }
+    }
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("resource_id"), resource->id },
+        { QStringLiteral("from"), old_path },
+        { QStringLiteral("book_path"), target },
+        { QStringLiteral("staged"), true }
     }, false, true);
 }
 
@@ -1047,9 +1133,15 @@ QString MemoryBookWorkspace::currentText(const MemoryResource &resource) const
 
 QJsonObject MemoryBookWorkspace::resourceJson(const MemoryResource &resource) const
 {
+    QString path = resource.bookPath;
+    if (m_transaction) {
+        for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+            if (reloc.resourceId == resource.id) path = reloc.targetBookPath;
+        }
+    }
     return QJsonObject {
         { QStringLiteral("resource_id"), resource.id },
-        { QStringLiteral("book_path"), resource.bookPath },
+        { QStringLiteral("book_path"), path },
         { QStringLiteral("media_type"), resource.mediaType },
         { QStringLiteral("kind"), resource.kind },
         { QStringLiteral("revision"), static_cast<qint64>(resource.revision) },

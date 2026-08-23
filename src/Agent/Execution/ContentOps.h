@@ -49,6 +49,12 @@ QString wrapPlainText(const QString &plain, const QJsonObject &rules);
 QJsonArray headingsInXhtml(const QString &xhtml, const QRegularExpression &re, int default_level);
 QString ncxFromEntries(const QJsonArray &entries, const QString &title);
 QJsonArray brokenImageRefs(const QString &xhtml, const QStringList &image_names);
+QString rewriteHrefsForMove(const QString &text,
+                            const QString &from_book_path,
+                            const QString &old_target,
+                            const QString &new_target);
+QString replaceStylesheetLinks(const QString &xhtml, const QStringList &link_hrefs);
+QJsonObject wellformedReport(const QString &text, const QString &kind);
 
 } // namespace SigilAgent
 

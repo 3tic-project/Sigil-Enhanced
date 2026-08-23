@@ -92,6 +92,7 @@ public:
                               const QString &book_path,
                               bool add_to_spine) override;
     BookOpResult deleteResource(const QString &resource_id) override;
+    BookOpResult renameResource(const QString &resource_id, const QString &book_path) override;
     BookOpResult updateSpine(const QStringList &resource_ids) override;
     BookOpResult updateToc(const QJsonArray &entries) override;
     BookOpResult createCheckpoint(const QString &label) override;

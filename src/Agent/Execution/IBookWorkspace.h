@@ -89,8 +89,16 @@ public:
                                       const QString &book_path,
                                       bool add_to_spine) = 0;
     virtual BookOpResult deleteResource(const QString &resource_id) = 0;
+    virtual BookOpResult renameResource(const QString &resource_id, const QString &book_path) = 0;
     virtual BookOpResult updateSpine(const QStringList &resource_ids) = 0;
     virtual BookOpResult updateToc(const QJsonArray &entries) = 0;
+    virtual BookOpResult runLivePython(const QString &script, int timeout_ms)
+    {
+        Q_UNUSED(script);
+        Q_UNUSED(timeout_ms);
+        return BookOpResult::error(QStringLiteral("LIVE_PYTHON_UNAVAILABLE"),
+                                   QStringLiteral("Live Python v2 requires the Sigil GUI and the in-memory Book, not a snapshot."));
+    }
     virtual BookOpResult createCheckpoint(const QString &label) = 0;
     virtual QJsonArray listCheckpoints() const = 0;
     virtual BookOpResult restoreCheckpoint(const QString &checkpoint_id) = 0;

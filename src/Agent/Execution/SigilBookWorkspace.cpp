@@ -7,11 +7,16 @@
 #include "Agent/Execution/SigilBookWorkspace.h"
 
 #include <QCryptographicHash>
+#include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QMetaObject>
 #include <QRegularExpression>
 #include <QSet>
+#include <QStringConverter>
+#include <QTemporaryDir>
 #include <QTemporaryFile>
+#include <QTextStream>
 #include <QThread>
 #include <QUuid>
 #include <QXmlStreamReader>
@@ -22,6 +27,9 @@
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/NcxNavigation.h"
+#include "Misc/Plugin.h"
+#include "PluginAPI/PluginSessionManager.h"
+#include "SourceUpdates/UniversalUpdates.h"
 #include "ResourceObjects/CSSResource.h"
 #include "ResourceObjects/FontResource.h"
 #include "ResourceObjects/HTMLResource.h"
@@ -65,6 +73,11 @@ void SigilBookWorkspace::setBook(QSharedPointer<Book> book)
     m_hasStagedToc = false;
     m_stagedToc = QJsonArray();
     m_revision = 1;
+}
+
+void SigilBookWorkspace::setPluginSessionManager(PluginSessionManager *manager)
+{
+    m_pluginSessions = manager;
 }
 
 QSharedPointer<Book> SigilBookWorkspace::book() const
@@ -183,9 +196,15 @@ QJsonObject SigilBookWorkspace::resourceJson(Resource *resource) const
 {
     if (!resource) return QJsonObject();
     TextResource *text = qobject_cast<TextResource *>(resource);
+    QString path = resource->GetRelativePath();
+    if (m_transaction) {
+        for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+            if (reloc.resourceId == resource->GetIdentifier()) path = reloc.targetBookPath;
+        }
+    }
     return QJsonObject {
         { QStringLiteral("resource_id"), resource->GetIdentifier() },
-        { QStringLiteral("book_path"), resource->GetRelativePath() },
+        { QStringLiteral("book_path"), path },
         { QStringLiteral("media_type"), resource->GetMediaType() },
         { QStringLiteral("kind"), kindOf(resource) },
         { QStringLiteral("revision"), static_cast<qint64>(trackedRevision(resource)) },
@@ -600,6 +619,14 @@ BookOpResult SigilBookWorkspace::previewTransaction() const
             { QStringLiteral("staged_length"), addition.data.size() }
         });
     }
+    for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+        changes.append(QJsonObject {
+            { QStringLiteral("resource_id"), reloc.resourceId },
+            { QStringLiteral("from"), reloc.originalBookPath },
+            { QStringLiteral("book_path"), reloc.targetBookPath },
+            { QStringLiteral("renamed"), true }
+        });
+    }
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), m_transaction->Id() },
         { QStringLiteral("live_book_revision"), static_cast<qint64>(m_revision) },
@@ -762,7 +789,29 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
                 m_book->MoveResourceAfter(htmls.at(i + 1), htmls.at(i));
             }
         }
-        if (m_hasStagedToc) {
+        QList<Resource *> reloc_resources;
+        QStringList reloc_targets;
+        QHash<QString, QString> path_updates;
+        for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+            Resource *resource = findResource(reloc.resourceId);
+            if (!resource) {
+                fail = QStringLiteral("Missing resource %1").arg(reloc.resourceId);
+                break;
+            }
+            reloc_resources.append(resource);
+            reloc_targets.append(reloc.targetBookPath);
+            path_updates.insert(reloc.originalBookPath, reloc.targetBookPath);
+        }
+        if (fail.isEmpty() && !reloc_resources.isEmpty()) {
+            m_book->GetFolderKeeper()->BulkMoveResources(reloc_resources, reloc_targets, true);
+            QList<Resource *> update_resources = m_book->GetFolderKeeper()->GetResourceList();
+            update_resources.removeOne(m_book->GetOPF());
+            const QStringList update_errors = UniversalUpdates::PerformUniversalUpdates(
+                true, update_resources, path_updates);
+            if (!update_errors.isEmpty()) fail = update_errors.join(QLatin1Char('\n'));
+            else applied += reloc_resources.size();
+        }
+        if (fail.isEmpty() && m_hasStagedToc) {
             if (NCXResource *ncx = m_book->GetNCX()) {
                 const QString title = m_book->GetMetadataValues(QStringLiteral("title")).isEmpty()
                     ? QStringLiteral("Untitled")
@@ -770,8 +819,22 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
                 ncx->SetTextAsUndoableEdit(ncxFromEntries(m_stagedToc, title));
             }
         }
-        for (const QString &id : m_stagedRemovals) {
-            if (Resource *resource = findResource(id)) resource->Delete();
+        if (fail.isEmpty()) {
+            for (const QString &id : m_stagedRemovals) {
+                if (Resource *resource = findResource(id)) resource->Delete();
+            }
+        }
+        if (!fail.isEmpty()) {
+            m_transaction.reset();
+            m_hasStagedMetadata = false;
+            m_stagedMetadataRemove.clear();
+            m_stagedRemovals.clear();
+            m_hasStagedSpine = false;
+            m_stagedSpine.clear();
+            m_hasStagedToc = false;
+            m_stagedToc = QJsonArray();
+            m_stagedAfterIds.clear();
+            return BookOpResult::error(QStringLiteral("TRANSACTION_ROLLED_BACK"), fail);
         }
         const QString txid = m_transaction->Id();
         m_transaction.reset();
@@ -941,8 +1004,15 @@ QStringList SigilBookWorkspace::allBookPaths() const
 {
     QStringList paths;
     if (!m_book) return paths;
+    QHash<QString, QString> relocated;
+    if (m_transaction) {
+        for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+            relocated.insert(reloc.resourceId, reloc.targetBookPath);
+        }
+    }
     for (Resource *resource : m_book->GetFolderKeeper()->GetResourceList()) {
-        if (resource) paths.append(resource->GetRelativePath());
+        if (!resource) continue;
+        paths.append(relocated.value(resource->GetIdentifier(), resource->GetRelativePath()));
     }
     if (m_transaction) {
         for (const PluginApi::StagedResourceAddition &addition : m_transaction->Additions()) {
@@ -962,9 +1032,9 @@ BookOpResult SigilBookWorkspace::stageAddition(const QString &book_path,
         BookOpResult ensured = ensureTransaction();
         if (!ensured.ok) return ensured;
         const QString resolved_kind = kindFromPathOrType(book_path, kind);
-        if (resolved_kind != QLatin1String("xhtml") && resolved_kind != QLatin1String("css")) {
+        if (!kindIsCreatable(resolved_kind)) {
             return BookOpResult::error(QStringLiteral("UNSUPPORTED_KIND"),
-                                       QStringLiteral("Only xhtml and css resources can be created"));
+                                       QStringLiteral("Only xhtml, css, svg, js, and text resources can be created"));
         }
         QString path = book_path.trimmed();
         if (path.isEmpty()) {
@@ -1010,8 +1080,9 @@ BookOpResult SigilBookWorkspace::createResource(const QString &book_path,
                                                 const QString &after_resource_id)
 {
     const QString resolved_kind = kindFromPathOrType(book_path, kind);
-    const QString body = text.isEmpty() && resolved_kind == QLatin1String("xhtml")
-        ? defaultXhtmlTemplate() : text;
+    QString body = text;
+    if (body.isEmpty() && resolved_kind == QLatin1String("xhtml")) body = defaultXhtmlTemplate();
+    if (body.isEmpty() && resolved_kind == QLatin1String("svg")) body = defaultSvgTemplate();
     return stageAddition(book_path, resolved_kind, body, add_to_spine, after_resource_id);
 }
 
@@ -1089,6 +1160,147 @@ BookOpResult SigilBookWorkspace::deleteResource(const QString &resource_id)
             { QStringLiteral("staged"), true },
             { QStringLiteral("removed"), true }
         }, false, true);
+    });
+}
+
+BookOpResult SigilBookWorkspace::renameResource(const QString &resource_id, const QString &book_path)
+{
+    return invokeOp([this, resource_id, book_path]() {
+        BookOpResult ensured = ensureTransaction();
+        if (!ensured.ok) return ensured;
+        Resource *resource = findResource(resource_id);
+        if (!resource) {
+            return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
+        }
+        const QString kind = kindOf(resource);
+        if (kind == QLatin1String("opf") || kind == QLatin1String("ncx")) {
+            return BookOpResult::error(QStringLiteral("PROTECTED_RESOURCE"),
+                                       QStringLiteral("OPF and NCX cannot be renamed"));
+        }
+        if (resource == m_book->GetOPF()->GetNavResource()) {
+            return BookOpResult::error(QStringLiteral("PROTECTED_RESOURCE"),
+                                       QStringLiteral("The Nav document cannot be renamed"));
+        }
+        const QString old_path = resource->GetRelativePath();
+        QString target = resolveRenameTarget(old_path, book_path);
+        if (target.isEmpty()) {
+            return BookOpResult::error(QStringLiteral("BOOK_PATH_REQUIRED"),
+                                       QStringLiteral("book_path is required"));
+        }
+        if (bookPathTaken(target, allBookPaths()) && target != old_path) {
+            return BookOpResult::error(QStringLiteral("BOOK_PATH_EXISTS"),
+                                       QStringLiteral("A resource already uses %1").arg(target));
+        }
+        if (old_path == target) {
+            return BookOpResult::success(QJsonObject {
+                { QStringLiteral("resource_id"), resource->GetIdentifier() },
+                { QStringLiteral("book_path"), target },
+                { QStringLiteral("unchanged"), true }
+            }, false, true);
+        }
+        QString error;
+        if (!m_transaction->RelocateResource(resource->GetIdentifier(), old_path, target,
+                                             trackedRevision(resource), &error)) {
+            return BookOpResult::error(QStringLiteral("RENAME_FAILED"), error);
+        }
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("resource_id"), resource->GetIdentifier() },
+            { QStringLiteral("from"), old_path },
+            { QStringLiteral("book_path"), target },
+            { QStringLiteral("staged"), true }
+        }, false, true);
+    });
+}
+
+BookOpResult SigilBookWorkspace::runLivePython(const QString &script, int timeout_ms)
+{
+    return invokeOp([this, script, timeout_ms]() {
+        if (!m_pluginSessions) {
+            return BookOpResult::error(QStringLiteral("LIVE_PYTHON_UNAVAILABLE"),
+                                       QStringLiteral("Live Python v2 is only available in the Sigil GUI."));
+        }
+        if (hasOpenTransaction()) {
+            return BookOpResult::error(QStringLiteral("TRANSACTION_OPEN"),
+                                       QStringLiteral("Commit or rollback the Agent transaction first. Live Python talks to the in-memory Book, not staged Agent edits."));
+        }
+        if (script.trimmed().isEmpty()) {
+            return BookOpResult::error(QStringLiteral("SCRIPT_REQUIRED"),
+                                       QStringLiteral("script is required"));
+        }
+        if (script.size() > 65536) {
+            return BookOpResult::error(QStringLiteral("SCRIPT_TOO_LARGE"),
+                                       QStringLiteral("Live Python scripts are capped at 65536 characters"));
+        }
+        QTemporaryDir temp;
+        if (!temp.isValid()) {
+            return BookOpResult::error(QStringLiteral("TEMP_FAILED"),
+                                       QStringLiteral("Could not create a temporary plugin directory"));
+        }
+        temp.setAutoRemove(true);
+        const QString plugin_py = QStringLiteral(
+            "from pathlib import Path\n\n"
+            "def run(plugin):\n"
+            "    source = Path(__file__).with_name('script.py').read_text(encoding='utf-8')\n"
+            "    ns = {'plugin': plugin, '__name__': '__agent_script__'}\n"
+            "    exec(compile(source, 'script.py', 'exec'), ns, ns)\n"
+            "    result = ns.get('result', 0)\n"
+            "    return 0 if result is None else result\n");
+        const QString xml = QStringLiteral(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            "<plugin>\n"
+            "  <name>AgentTempScript</name>\n"
+            "  <author>Sigil Agent</author>\n"
+            "  <description>Temporary Live Python v2 command started by Native Agent.</description>\n"
+            "  <type>edit</type>\n"
+            "  <engine>python3</engine>\n"
+            "  <version>1.0.0</version>\n"
+            "  <api version=\"2\" interface=\"live\" />\n"
+            "  <lifetime>command</lifetime>\n"
+            "</plugin>\n");
+        auto write_file = [&](const QString &name, const QString &body) {
+            QFile file(temp.filePath(name));
+            if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
+            QTextStream stream(&file);
+            stream.setEncoding(QStringConverter::Utf8);
+            stream << body;
+            return true;
+        };
+        const bool has_run = script.contains(QRegularExpression(QStringLiteral("^\\s*def\\s+run\\s*\\("),
+                                                                QRegularExpression::MultilineOption));
+        if (!write_file(QStringLiteral("plugin.xml"), xml)
+            || !write_file(QStringLiteral("plugin.py"), has_run ? script : plugin_py)
+            || (!has_run && !write_file(QStringLiteral("script.py"), script))) {
+            return BookOpResult::error(QStringLiteral("TEMP_FAILED"),
+                                       QStringLiteral("Could not write the temporary live plugin"));
+        }
+        Plugin plugin;
+        plugin.set_name(QStringLiteral("AgentTempScript"));
+        plugin.set_type(QStringLiteral("edit"));
+        plugin.set_engine(QStringLiteral("python3"));
+        plugin.set_api(2, QStringLiteral("live"));
+        plugin.set_lifetime(QStringLiteral("command"));
+        plugin.set_root_path(temp.path());
+        QString status;
+        QString error;
+        QString output;
+        const bool ok = m_pluginSessions->RunPluginAndWait(
+            plugin, &status, nullptr, nullptr, &error, qMax(1000, timeout_ms), &output, true);
+        if (!ok) {
+            return BookOpResult::error(QStringLiteral("LIVE_PYTHON_FAILED"),
+                                       error.isEmpty() ? status : error,
+                                       QJsonObject {
+                                           { QStringLiteral("status"), status },
+                                           { QStringLiteral("output"), output.left(8000) }
+                                       });
+        }
+        m_tracked.clear();
+        ++m_revision;
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("status"), status.isEmpty() ? QStringLiteral("success") : status },
+            { QStringLiteral("output"), output.left(8000) },
+            { QStringLiteral("applied"), true },
+            { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) }
+        }, true);
     });
 }
 

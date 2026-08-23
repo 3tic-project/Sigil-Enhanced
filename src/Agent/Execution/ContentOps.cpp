@@ -349,6 +349,71 @@ QString ncxFromEntries(const QJsonArray &entries, const QString &title)
         .arg(xmlEscape(title.isEmpty() ? QStringLiteral("Untitled") : title), body);
 }
 
+QString rewriteHrefsForMove(const QString &text,
+                            const QString &from_book_path,
+                            const QString &old_target,
+                            const QString &new_target)
+{
+    if (old_target == new_target) return text;
+    QString out = text;
+    const QString old_rel = relativeBookHref(from_book_path, old_target);
+    const QString new_rel = relativeBookHref(from_book_path, new_target);
+    if (!old_rel.isEmpty() && old_rel != new_rel) out.replace(old_rel, new_rel);
+    const QString old_name = QFileInfo(old_target).fileName();
+    const QString new_name = QFileInfo(new_target).fileName();
+    if (old_name != new_name && !old_name.isEmpty()) {
+        out.replace(QLatin1Char('/') + old_name, QLatin1Char('/') + new_name);
+    }
+    return out;
+}
+
+QString replaceStylesheetLinks(const QString &xhtml, const QStringList &link_hrefs)
+{
+    QString links;
+    for (const QString &href : link_hrefs) {
+        links += QStringLiteral("  <link href=\"%1\" type=\"text/css\" rel=\"stylesheet\"/>\n")
+                     .arg(xmlEscape(href));
+    }
+    QRegularExpression existing(
+        QStringLiteral("\\s*<link\\b[^>]*rel=(['\"])stylesheet\\1[^>]*/?>\\s*"),
+        QRegularExpression::CaseInsensitiveOption);
+    QString out = xhtml;
+    out.replace(existing, QString());
+    const int head_close = out.lastIndexOf(QStringLiteral("</head>"), -1, Qt::CaseInsensitive);
+    if (head_close < 0) return out + links;
+    return out.left(head_close) + links + out.mid(head_close);
+}
+
+QJsonObject wellformedReport(const QString &text, const QString &kind)
+{
+    QJsonArray issues;
+    if (kind == QLatin1String("xhtml") || kind == QLatin1String("html") || kind.isEmpty()) {
+        if (!text.contains(QLatin1String("<html"), Qt::CaseInsensitive)) {
+            issues.append(QJsonObject {
+                { QStringLiteral("code"), QStringLiteral("MISSING_HTML") },
+                { QStringLiteral("message"), QStringLiteral("No <html> element") }
+            });
+        }
+        if (!text.contains(QLatin1String("<body"), Qt::CaseInsensitive)) {
+            issues.append(QJsonObject {
+                { QStringLiteral("code"), QStringLiteral("MISSING_BODY") },
+                { QStringLiteral("message"), QStringLiteral("No <body> element") }
+            });
+        }
+        if (text.contains(QLatin1String("<html"), Qt::CaseInsensitive)
+            && !text.contains(QLatin1String("</html>"), Qt::CaseInsensitive)) {
+            issues.append(QJsonObject {
+                { QStringLiteral("code"), QStringLiteral("UNCLOSED_HTML") },
+                { QStringLiteral("message"), QStringLiteral("Missing </html>") }
+            });
+        }
+    }
+    return QJsonObject {
+        { QStringLiteral("ok"), issues.isEmpty() },
+        { QStringLiteral("issues"), issues }
+    };
+}
+
 QJsonArray brokenImageRefs(const QString &xhtml, const QStringList &image_names)
 {
     QSet<QString> names;

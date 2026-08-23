@@ -6,6 +6,7 @@
 
 #include "Agent/Execution/BookEdits.h"
 
+#include <QCollator>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QSet>
@@ -368,6 +369,76 @@ BookOpResult generateTocFromHeadings(IBookWorkspace *workspace, const QString &h
     return workspace->updateToc(entries);
 }
 
+BookOpResult sortSpine(IBookWorkspace *workspace)
+{
+    QList<QPair<QString, QString>> items;
+    for (const QJsonValue &value : workspace->spine()) {
+        const QJsonObject object = value.toObject();
+        items.append({ object.value(QStringLiteral("resource_id")).toString(),
+                       object.value(QStringLiteral("book_path")).toString() });
+    }
+    QCollator collator;
+    collator.setNumericMode(true);
+    std::sort(items.begin(), items.end(), [&](const auto &left, const auto &right) {
+        return collator.compare(left.second, right.second) < 0;
+    });
+    QStringList ids;
+    for (const auto &item : items) ids.append(item.first);
+    return workspace->updateSpine(ids);
+}
+
+BookOpResult linkStylesheets(IBookWorkspace *workspace, const QStringList &html_ids,
+                             const QStringList &css_ids)
+{
+    QList<QJsonObject> pages;
+    if (html_ids.isEmpty()) {
+        for (const QJsonValue &value : workspace->resources()) {
+            const QJsonObject object = value.toObject();
+            if (object.value(QStringLiteral("kind")).toString() == QLatin1String("xhtml")) {
+                pages.append(object);
+            }
+        }
+    } else {
+        for (const QString &id : html_ids) {
+            const QJsonObject object = resourceById(workspace, id);
+            if (object.isEmpty()) {
+                return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"),
+                                           QStringLiteral("Unknown HTML resource %1").arg(id));
+            }
+            pages.append(object);
+        }
+    }
+    QList<QJsonObject> sheets;
+    for (const QString &id : css_ids) {
+        const QJsonObject object = resourceById(workspace, id);
+        if (object.isEmpty() || object.value(QStringLiteral("kind")).toString() != QLatin1String("css")) {
+            return BookOpResult::error(QStringLiteral("CSS_NOT_FOUND"),
+                                       QStringLiteral("Unknown CSS resource %1").arg(id));
+        }
+        sheets.append(object);
+    }
+    int changed = 0;
+    for (const QJsonObject &page : pages) {
+        QStringList hrefs;
+        const QString page_path = page.value(QStringLiteral("book_path")).toString();
+        for (const QJsonObject &sheet : sheets) {
+            hrefs.append(relativeBookHref(page_path, sheet.value(QStringLiteral("book_path")).toString()));
+        }
+        const QString id = page.value(QStringLiteral("resource_id")).toString();
+        const QString current = workspace->workingText(id);
+        const QString next = replaceStylesheetLinks(current, hrefs);
+        if (next == current) continue;
+        const BookOpResult replaced = stageWorkingReplace(workspace, id, next);
+        if (!replaced.ok) return replaced;
+        ++changed;
+    }
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("staged"), true },
+        { QStringLiteral("changed"), changed },
+        { QStringLiteral("stylesheet_count"), sheets.size() }
+    }, false, true);
+}
+
 QJsonObject inspectBook(IBookWorkspace *workspace)
 {
     QJsonObject report = workspace->validate();
@@ -389,6 +460,18 @@ QJsonObject inspectBook(IBookWorkspace *workspace)
     report.insert(QStringLiteral("unused_images"), unused_images);
     report.insert(QStringLiteral("image_count"), images.size());
     report.insert(QStringLiteral("spine_count"), workspace->spine().size());
+    QJsonArray wellformed;
+    for (const QJsonValue &value : workspace->resources()) {
+        const QJsonObject object = value.toObject();
+        const QString kind = object.value(QStringLiteral("kind")).toString();
+        if (kind != QLatin1String("xhtml")) continue;
+        const QString id = object.value(QStringLiteral("resource_id")).toString();
+        QJsonObject check = wellformedReport(workspace->workingText(id), kind);
+        check.insert(QStringLiteral("resource_id"), id);
+        check.insert(QStringLiteral("book_path"), object.value(QStringLiteral("book_path")).toString());
+        wellformed.append(check);
+    }
+    report.insert(QStringLiteral("wellformed"), wellformed);
     return report;
 }
 

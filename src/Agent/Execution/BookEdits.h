@@ -37,6 +37,9 @@ BookOpResult insertImageTag(IBookWorkspace *workspace, const QString &page_id,
 BookOpResult wrapPlainResource(IBookWorkspace *workspace, const QString &source_id,
                                const QString &target_id, const QJsonObject &rules);
 BookOpResult generateTocFromHeadings(IBookWorkspace *workspace, const QString &heading_pattern);
+BookOpResult sortSpine(IBookWorkspace *workspace);
+BookOpResult linkStylesheets(IBookWorkspace *workspace, const QStringList &html_ids,
+                             const QStringList &css_ids);
 QJsonObject inspectBook(IBookWorkspace *workspace);
 
 } // namespace SigilAgent

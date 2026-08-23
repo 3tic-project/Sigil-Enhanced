@@ -19,6 +19,7 @@
 #include "PluginAPI/PluginTextTransaction.h"
 
 class Book;
+class PluginSessionManager;
 class Resource;
 class TextResource;
 
@@ -29,6 +30,7 @@ class SigilBookWorkspace : public IBookWorkspace
 {
 public:
     void setBook(QSharedPointer<Book> book);
+    void setPluginSessionManager(PluginSessionManager *manager);
     QSharedPointer<Book> book() const;
 
     quint64 revision() const override;
@@ -71,7 +73,9 @@ public:
                               const QString &book_path,
                               bool add_to_spine) override;
     BookOpResult deleteResource(const QString &resource_id) override;
+    BookOpResult renameResource(const QString &resource_id, const QString &book_path) override;
     BookOpResult updateSpine(const QStringList &resource_ids) override;
+    BookOpResult runLivePython(const QString &script, int timeout_ms) override;
     BookOpResult updateToc(const QJsonArray &entries) override;
     BookOpResult createCheckpoint(const QString &label) override;
     QJsonArray listCheckpoints() const override;
@@ -115,6 +119,7 @@ private:
                                const QString &after_resource_id);
 
     QSharedPointer<Book> m_book;
+    PluginSessionManager *m_pluginSessions = nullptr;
     quint64 m_revision = 1;
     mutable QHash<QString, TrackedResource> m_tracked;
     std::unique_ptr<PluginApi::TextTransaction> m_transaction;
