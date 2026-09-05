@@ -188,6 +188,14 @@ class SourceUpdateTest(unittest.TestCase):
         after = source.replace('chapter10987.xhtml', 'renamed.xhtml')
         self.assertEqual(self.apply(after, source, source), after)
 
+    def test_carriage_return_value_survives_xml_normalization(self):
+        after = self.before.replace('A &amp; B', 'A&#13;B')
+        self.assertEqual(self.apply(after), SOURCE.replace('A &amp; B', 'A&#13;B'))
+        source = SOURCE.replace('A &amp; B', '<![CDATA[A & B]]>')
+        result = self.apply(after, source)
+        title = Document(result).root.children[0].children[1]
+        self.assertEqual(title.text, 'A\rB')
+
 
 if __name__ == '__main__':
     unittest.main()

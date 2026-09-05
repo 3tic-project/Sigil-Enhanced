@@ -174,7 +174,8 @@ def _match(old, new):
 
 
 def _escape_text(value):
-    return escape(value).encode("utf-8")
+    # XML normalizes literal CR to LF; a value containing CR needs an entity.
+    return escape(value, {"\r": "&#13;"}).encode("utf-8")
 
 
 def _escape_attribute(value, quote):
@@ -271,7 +272,8 @@ def _merge(source, actual, before, after_doc, after):
                         cursor = actual.open_end + token.end()
                     edits.append((cursor, actual.close_start, value))
                 elif interior.startswith(b"<![CDATA[") and interior.endswith(b"]]>"):
-                    value = after.text.replace("]]>", "]]]]><![CDATA[>").encode("utf-8")
+                    value = after.text.replace("]]>", "]]]]><![CDATA[>")
+                    value = value.replace("\r", "]]>&#13;<![CDATA[").encode("utf-8")
                     edits.append((actual.open_end + 9, actual.close_start - 3, value))
                 else:
                     edits.append((actual.open_end, actual.close_start, value))
