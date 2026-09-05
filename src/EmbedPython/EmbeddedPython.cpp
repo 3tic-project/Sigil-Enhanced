@@ -537,7 +537,7 @@ QVariant EmbeddedPython::PyObjectToQVariant(PyObject *po, bool ret_python_object
         res = QVariant(PyFloat_AsDouble(po));
 
     } else if (PyBytes_Check(po)) {
-        res = QVariant(QByteArray(PyBytes_AsString(po)));
+        res = QVariant(QByteArray(PyBytes_AsString(po), PyBytes_Size(po)));
 
     } else if (PyUnicode_Check(po)) {
 
@@ -619,7 +619,10 @@ PyObject* EmbeddedPython::QVariantToPyObject(const QVariant &v)
             value = Py_BuildValue("s", v.toString().toUtf8().constData());
             break;
         case QMetaType::QByteArray:
-            value = Py_BuildValue("y", v.toByteArray().constData());
+            {
+                const QByteArray bytes = v.toByteArray();
+                value = PyBytes_FromStringAndSize(bytes.constData(), bytes.size());
+            }
             break;
         case QMetaType::QStringList:
             {
