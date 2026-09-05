@@ -123,6 +123,11 @@ void TextResource::SaveToDisk(bool book_wide_save)
         }
     }
 
+    FinishSaveToDisk(book_wide_save);
+}
+
+void TextResource::FinishSaveToDisk(bool book_wide_save)
+{
     if (!book_wide_save) {
         emit ResourceUpdatedOnDisk();
     }

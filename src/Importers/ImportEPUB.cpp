@@ -488,47 +488,77 @@ void ImportEPUB::LocateOPF()
 
 void ImportEPUB::ReadOPF()
 {
-    QString opf_text = CleanSource::ProcessOPFSource(
-        PrepareOPFForReading(Utility::ReadUnicodeTextFile(m_OPFFilePath)));
+    QFile source_file(m_OPFFilePath);
+    if (!source_file.open(QIODevice::ReadOnly)) throw CannotOpenFile(source_file.errorString().toStdString());
+    m_OPFSourceBytes = source_file.readAll();
+    SettingsStore settings;
+    const QString opf_text = settings.preserveOPFSource()
+        ? OPFResource::DecodeSourceBytes(m_OPFSourceBytes)
+        : CleanSource::ProcessOPFSource(PrepareOPFForReading(Utility::ReadUnicodeTextFile(m_OPFFilePath)));
 
     QXmlStreamReader opf_reader(opf_text);
     QString ncx_id_on_spine;
+    const QString opf_namespace = "http://www.idpf.org/2007/opf";
+    const QString dc_namespace = "http://purl.org/dc/elements/1.1/";
+    QStringList element_path;
 
     while (!opf_reader.atEnd()) {
         opf_reader.readNext();
+
+        if (opf_reader.isEndElement()) {
+            if (!element_path.isEmpty()) element_path.removeLast();
+            continue;
+        }
 
         if (!opf_reader.isStartElement()) {
             continue;
         }
 
-        if (opf_reader.name().compare(QLatin1String("package")) == 0) {
+        const QString name = opf_reader.name().toString();
+        const QString namespace_uri = opf_reader.namespaceUri().toString();
+        const QString parent = element_path.isEmpty() ? QString() : element_path.last();
+        element_path.append(namespace_uri + "|" + name);
+        const bool package_child = element_path.size() == 2;
+        const bool section_child = element_path.size() == 3;
+
+        if (element_path.size() == 1) {
+            if (name != "package" || namespace_uri != opf_namespace) {
+                opf_reader.raiseError(tr("Expected a package element in the OPF namespace."));
+                break;
+            }
             m_UniqueIdentifierId = opf_reader.attributes().value("", "unique-identifier").toString();
             m_PackageVersion = opf_reader.attributes().value("", "version").toString();
             if (m_PackageVersion == "1.0") m_PackageVersion = "2.0";
         }
 
-        else if (opf_reader.name().compare(QLatin1String("identifier")) == 0) {
+        else if (section_child && parent == opf_namespace + "|metadata"
+                 && namespace_uri == dc_namespace && name == "identifier") {
             ReadIdentifierElement(&opf_reader);
+            // readElementText consumed the corresponding end element.
+            element_path.removeLast();
         }
 
         // epub3 look for linked metadata resources that are included inside the epub 
         // but that are not and must not be included in the manifest
-        else if (opf_reader.name().compare(QLatin1String("link")) == 0) {
+        else if (section_child && parent == opf_namespace + "|metadata"
+                 && namespace_uri == opf_namespace && name == "link") {
             ReadMetadataLinkElement(&opf_reader);
         }
 
         // Get the list of content files that
         // make up the publication
-        else if (opf_reader.name().compare(QLatin1String("item")) == 0) {
+        else if (section_child && parent == opf_namespace + "|manifest"
+                 && namespace_uri == opf_namespace && name == "item") {
             ReadManifestItemElement(&opf_reader);
         }
 
         // We read this just to get the NCX id
-        else if (opf_reader.name().compare(QLatin1String("spine")) == 0) {
+        else if (package_child && namespace_uri == opf_namespace && name == "spine") {
             ncx_id_on_spine = opf_reader.attributes().value("", "toc").toString();
         } 
 
-        else if (opf_reader.name().compare(QLatin1String("itemref")) == 0) {
+        else if (section_child && parent == opf_namespace + "|spine"
+                 && namespace_uri == opf_namespace && name == "itemref") {
             m_HasSpineItems = true;
         }
     }
@@ -549,7 +579,8 @@ void ImportEPUB::ReadOPF()
     QString OPFBookRelPath = m_OPFFilePath;
     OPFBookRelPath = OPFBookRelPath.remove(0,m_ExtractedFolderPath.length()+1);
     m_Book->GetOPF()->SetCurrentBookRelPath(OPFBookRelPath);
-    oresource->SetText(opf_text);
+    if (settings.preserveOPFSource()) oresource->SetSourceBytes(m_OPFSourceBytes);
+    else oresource->SetText(opf_text);
     oresource->SaveToDisk(false);
     if (m_FileInfoFromZip.contains(bookpath)) {
         std::tuple<size_t, QString, QString> ainfo = m_FileInfoFromZip[bookpath];
@@ -844,9 +875,13 @@ void ImportEPUB::LoadInfrastructureFiles()
 {
     // always SetEpubVersion before SetText in OPF as SetText will validate with it
     m_Book->GetOPF()->SetEpubVersion(m_PackageVersion);
-    QString opf_text = CleanSource::ProcessOPFSource(
-        PrepareOPFForReading(Utility::ReadUnicodeTextFile(m_OPFFilePath)));
-    m_Book->GetOPF()->SetText(opf_text);
+    SettingsStore settings;
+    if (settings.preserveOPFSource()) {
+        m_Book->GetOPF()->SetSourceBytes(m_OPFSourceBytes);
+    } else {
+        m_Book->GetOPF()->SetText(CleanSource::ProcessOPFSource(
+            PrepareOPFForReading(Utility::ReadUnicodeTextFile(m_OPFFilePath))));
+    }
     QString OPFBookRelPath = m_OPFFilePath;
     OPFBookRelPath = OPFBookRelPath.remove(0,m_ExtractedFolderPath.length()+1);
     m_Book->GetOPF()->SetCurrentBookRelPath(OPFBookRelPath);

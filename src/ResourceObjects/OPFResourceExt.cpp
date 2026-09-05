@@ -7,7 +7,7 @@
 void OPFResource::BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(), "application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     if (p.m_manifest.isEmpty()) return;
@@ -87,7 +87,7 @@ void OPFResource::BulkResourceRenamed(const QList<Resource*>resources, const QLi
 //-------------------------------- modified: BulkAddResource ----------------------------------------
 void OPFResource::BulkAddResource(const QList<Resource*>resources) {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(), "application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     foreach(Resource * resource, resources) {
@@ -117,7 +117,7 @@ bool OPFResource::ApplyResourceBatch(const QList<ManifestResourceAddition> &addi
                                      QString *error)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(), "application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
 

@@ -6678,6 +6678,10 @@ You can then check or uncheck individual headings in the list above.</source>
 <context>
     <name>ImportEPUB</name>
     <message>
+        <source>Expected a package element in the OPF namespace.</source>
+        <translation>應為 OPF 命名空間中的 package 元素。</translation>
+    </message>
+    <message>
         <location filename="../../Importers/ImportEPUB.cpp" line="138"/>
         <source>Files exist in epub that are not listed in the manifest, they will be ignored.</source>
         <translation>epub 中存在但未被列舉在清單中的檔案，這些檔案將被忽略。</translation>

@@ -12,6 +12,58 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import re
+import zipfile
+
+
+def epub_fixture(scratch):
+    source = """<?xml version='1.0' encoding='UTF-16'?>
+<package xmlns='http://www.idpf.org/2007/opf' xmlns:dc='http://purl.org/dc/elements/1.1/' xmlns:x='urn:publisher' version='3.0' unique-identifier='bookid'>
+ <!-- keep source é 𠮷 -->
+ <metadata>
+  <dc:identifier id='bookid'>urn:test:opf-source</dc:identifier>
+  <dc:title>Source regression</dc:title><dc:language>en</dc:language>
+  <meta property='dcterms:modified'>2026-09-01T00:00:00Z</meta>
+  <x:extension x:hint='a > b'><x:item href='not-a-manifest-resource.xhtml'>keep</x:item></x:extension>
+ </metadata>
+ <manifest>
+  <x:item id='extension-only' href='not-a-manifest-resource.xhtml' media-type='application/xhtml+xml'/>
+  <item id='a' href='a.xhtml' media-type='application/xhtml+xml'/>
+  <item id='nav' href='nav.xhtml' media-type='application/xhtml+xml' properties='nav'/>
+ </manifest>
+ <spine><itemref idref='a'/></spine>
+</package>
+""".replace('\n', '\r\n').replace('</metadata>\r\n', '</metadata>\n')
+    header = '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n'
+    members = {
+        'mimetype': b'application/epub+zip',
+        'META-INF/container.xml': b'<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+        'OEBPS/content.opf': b'\xff\xfe' + source.encode('utf-16-le'),
+        'OEBPS/a.xhtml': (header + '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Chapter</title></head><body><p>Original paragraph</p></body></html>').encode(),
+        'OEBPS/nav.xhtml': (header + '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>Contents</title></head><body><nav epub:type="toc"><h1>Contents</h1><ol><li><a href="a.xhtml">Chapter</a></li></ol></nav></body></html>').encode(),
+    }
+    path = scratch / 'fixture.epub'
+    with zipfile.ZipFile(path, 'w') as archive:
+        for name, data in members.items():
+            archive.writestr(name, data)
+    pathlib.Path(str(path) + '.opf').write_bytes(members['OEBPS/content.opf'])
+    return path, source, members
+
+
+def verify_epub_exports(path, source, members):
+    with zipfile.ZipFile(str(path) + '.unchanged.epub') as archive:
+        assert archive.read('OEBPS/content.opf') == members['OEBPS/content.opf'], 'Unchanged normal export modified OPF bytes'
+    with zipfile.ZipFile(str(path) + '.edited.epub') as archive:
+        data = archive.read('OEBPS/content.opf')
+        assert data.startswith(b'\xff\xfe'), 'Export lost the original UTF-16 BOM'
+        exported = data[2:].decode('utf-16-le')
+        expected = re.sub(r"(<meta property='dcterms:modified'>)[^<]*(</meta>)",
+                          r'\g<1>2026-09-01T00:00:00Z\2', exported)
+        assert expected == source, 'Body edit changed unrelated OPF bytes'
+        assert b'Changed paragraph' in archive.read('OEBPS/a.xhtml'), 'Body edit was not exported'
+        for name in ('mimetype', 'OEBPS/nav.xhtml'):
+            assert archive.read(name) == members[name], 'Export changed unrelated resource: ' + name
+    print('Native EPUB import and normal-export byte comparisons passed')
 
 
 def run(build):
@@ -34,6 +86,8 @@ def run(build):
     link_line = next(line for line in reversed(commands) if ' -o bin/Sigil.app/Contents/MacOS/Sigil ' in line)
     with tempfile.TemporaryDirectory(prefix='opf-native-') as directory:
         scratch = pathlib.Path(directory)
+        (scratch / 'workspace').mkdir()
+        fixture, source, members = epub_fixture(scratch)
         test_object = scratch / 'test.o'
         compile_args = shlex.split(compile_line)
         for flag, path in [('-o', test_object), ('-MF', scratch / 'test.d'),
@@ -58,7 +112,8 @@ def run(build):
             # executable; the embedded interpreter uses the same linked Python.
             environment['SIGIL_TEST_PYTHON_ROOT'] = str(build / 'bin/Sigil.app/Contents/python3lib')
             environment.pop('PYTHONPATH', None)
-            subprocess.run([executable, root], env=environment, check=True, timeout=30)
+            subprocess.run([executable, root, fixture], env=environment, check=True, timeout=30)
+            verify_epub_exports(fixture, source, members)
 
 
 if __name__ == '__main__':

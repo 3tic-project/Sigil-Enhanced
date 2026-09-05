@@ -80,6 +80,9 @@ public:
 
     virtual bool LoadFromDisk();
 
+    static QString DecodeSourceBytes(const QByteArray &bytes);
+    void SetSourceBytes(const QByteArray &bytes);
+
     QString GetGuideSemanticCodeForResource(const Resource *resource, QString tgt_id="") const;
     QString GetGuideSemanticNameForResource(Resource *resource, QString tgt_id="");
     QHash <QString, QStringList> GetSemanticCodeForPaths();
@@ -311,6 +314,8 @@ private:
     void UpdateText(const OPFParser &p);
 
     QString ValidatePackageVersion(const QString &source);
+    QString PreservedSourceText() const;
+    QString ModelSource() const;
 
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES
@@ -318,6 +323,9 @@ private:
 
     HTMLResource * m_NavResource;
     bool m_WarnedAboutVersion;
+    QByteArray m_OriginalSourceBytes;
+    QString m_OriginalSourceText;
+    QString m_PreservedSourceText;
 };
 
 #endif // OPFRESOURCE_H
