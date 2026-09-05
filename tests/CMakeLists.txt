@@ -1080,6 +1080,10 @@ add_test(NAME opf_source
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_test.py
 )
 set_tests_properties(opf_source PROPERTIES TIMEOUT 30)
+add_test(NAME opf_source_bytes
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_bytes_test.py
+)
+set_tests_properties(opf_source_bytes PROPERTIES TIMEOUT 30)
 
 if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_test(NAME opf_resource_integration
