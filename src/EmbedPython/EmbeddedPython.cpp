@@ -384,7 +384,8 @@ QVariant EmbeddedPython::runInPython(const QString &mname,
                                      const QVariantList &args, 
                                      int *rv, 
                                      QString &tb,
-                                     bool ret_python_object)
+                                     bool ret_python_object,
+                                     bool show_error_dialog)
 {
     EmbeddedPython::m_mutex.lock();
     PyGILState_STATE gstate = PyGILState_Ensure();
@@ -440,7 +441,7 @@ QVariant EmbeddedPython::runInPython(const QString &mname,
 cleanup:
     if (PyErr_Occurred() != NULL) {
         QString default_error = "Module Error: " + mname + " " + fname;
-        tb = getPythonErrorTraceback(default_error);
+        tb = getPythonErrorTraceback(default_error, show_error_dialog);
     }
     Py_XDECREF(pyres);
     Py_XDECREF(pyargs);
