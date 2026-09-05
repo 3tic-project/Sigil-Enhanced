@@ -34,9 +34,6 @@
 #include <QRegularExpressionMatch>
 #include <QDateTime>
 #include <QDebug>
-#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
-#include <QTimeZone>
-#endif
 
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/XhtmlDoc.h"
@@ -730,6 +727,51 @@ void OPFResource::SetDCMetadata(const QList<MetaEntry> &metadata)
     QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
     OPFParser p;
     p.parse(source);
+    SettingsStore settings;
+    if (settings.preserveOPFSource()) {
+        QList<MetaEntry> updated;
+        QSet<int> consumed;
+        const int main_identifier = GetMainIdentifier(p);
+        for (int pos = 0; pos < p.m_metadata.size(); ++pos) {
+            const MetaEntry &original = p.m_metadata.at(pos);
+            if (!original.m_name.startsWith("dc:")) {
+                updated.append(original);
+                continue;
+            }
+            int match = -1;
+            for (int i = 0; i < metadata.size(); ++i) {
+                const MetaEntry &candidate = metadata.at(i);
+                if (consumed.contains(i) || candidate.m_name != original.m_name
+                    || candidate.m_atts.value("id") != original.m_atts.value("id")) continue;
+                if (match == -1) match = i;
+                if (candidate.m_content == original.m_content
+                    || candidate.m_content == Utility::DecodeXML(original.m_content)) {
+                    match = i;
+                    break;
+                }
+            }
+            if (match >= 0) {
+                MetaEntry entry(metadata.at(match));
+                // GetDCMetadata historically returns escaped model text. Keep an
+                // unchanged value intact instead of escaping its entities again.
+                if (entry.m_content != original.m_content) entry.m_content = entry.m_content.toHtmlEscaped();
+                updated.append(entry);
+                consumed.insert(match);
+            } else if (pos == main_identifier) {
+                // Existing callers may omit the publication identifier.
+                updated.append(original);
+            }
+        }
+        for (int i = 0; i < metadata.size(); ++i) {
+            if (consumed.contains(i)) continue;
+            MetaEntry entry(metadata.at(i));
+            entry.m_content = entry.m_content.toHtmlEscaped();
+            updated.append(entry);
+        }
+        p.m_metadata = updated;
+        UpdateText(p);
+        return;
+    }
     // this will not work with refines so it needs to be fixed
     RemoveDCElements(p);
     foreach(MetaEntry book_meta, metadata) {
@@ -1619,14 +1661,7 @@ void OPFResource::WriteIdentifier(const QString &metaname, const QString &metava
 
 QString OPFResource::AddModificationDateMeta()
 {
-    QString datetime;
-    QDateTime local(QDateTime::currentDateTime());
-#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
-    local.setTimeZone(QTimeZone::UTC);
-#else
-    local.setTimeSpec(Qt::UTC);
-#endif
-    datetime = local.toString(Qt::ISODate);
+    const QString datetime = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 
     QWriteLocker locker(&GetLock());
     QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
@@ -1636,19 +1671,27 @@ QString OPFResource::AddModificationDateMeta()
     QString epubversion = GetEpubVersion();
     if (epubversion.startsWith('3')) {
 
-        // epub 3 set dcterms:modified date time in ISO 8601 format
-        // if an entry exists, update it
+        // Refined dates describe another metadata record, not the publication.
+        // Keep the first publication date in place and remove only duplicates.
+        int publication_date = -1;
         for (int i=0; i < p.m_metadata.count(); ++i) {
             MetaEntry me = p.m_metadata.at(i);
             if (me.m_name == QString("meta")) {
                 QString property = me.m_atts.value(QString("property"), QString(""));
-                if (property == QString("dcterms:modified")) {
+                if (property == QString("dcterms:modified") && me.m_atts.value("refines").isEmpty()) {
+                    if (publication_date >= 0) {
+                        p.m_metadata.removeAt(i--);
+                        continue;
+                    }
+                    publication_date = i;
                     me.m_content = datetime;
                     p.m_metadata.replace(i, me);
-                    UpdateText(p);
-                    return datetime;
                 }
             }
+        }
+        if (publication_date >= 0) {
+            UpdateText(p);
+            return datetime;
         }
         // otherwize create a new entry
         MetaEntry me;
@@ -1700,13 +1743,7 @@ QString OPFResource::GetOPFDefaultText(const QString &version)
         return TEMPLATE_TEXT.arg(Utility::CreateUUID()).arg(defaultLanguage).arg(tr("[Title here]"));
     }
     // epub 3 set dcterms:modified date time in ISO 8601 format
-    QDateTime local(QDateTime::currentDateTime());
-#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
-    local.setTimeZone(QTimeZone::UTC);
-#else
-    local.setTimeSpec(Qt::UTC);
-#endif
-    QString datetime = local.toString(Qt::ISODate);
+    const QString datetime = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
     return TEMPLATE3_TEXT.arg(Utility::CreateUUID()).arg(defaultLanguage).arg(tr("[Main title here]")).arg(datetime);
 }
 
