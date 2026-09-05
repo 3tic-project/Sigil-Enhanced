@@ -1076,6 +1076,11 @@ add_test(NAME plugin_metadata COMMAND plugin_metadata_test)
 set_tests_properties(plugin_metadata PROPERTIES TIMEOUT 30)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME opf_source
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_test.py
+)
+set_tests_properties(opf_source PROPERTIES TIMEOUT 30)
+
 add_test(NAME vendored_source_manifest
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/vendored_source_manifest_test.py
 )

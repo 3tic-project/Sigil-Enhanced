@@ -1,0 +1,193 @@
+"""Behavioral tests for the source-preserving package-model update service."""
+import pathlib
+import sys
+import unittest
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] /
+                       "src/Resource_Files/python3lib"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] /
+                       "src/Resource_Files/plugin_launchers/python"))
+from opf_source import Document, apply_model_update
+
+
+SOURCE = '''<?xml version='1.0' encoding='UTF-8'?>
+<?publisher keep="this"?>
+<package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
+ xmlns:x="urn:publisher" version='3.0' unique-identifier='bookid'>
+ <!-- metadata group -->
+ <metadata>
+  <dc:identifier id='bookid'>urn:test:本</dc:identifier>
+  <dc:title id='title'>A &amp; B</dc:title>
+  <meta property='dcterms:modified'>2026-09-01T00:00:00Z</meta>
+  <!-- publisher extension -->
+  <x:extra x:hint='a > b'><x:child>保留𠮷</x:child></x:extra>
+ </metadata>
+ <!-- manifest group -->
+ <manifest x:hint='untouched'>
+  <item media-type='application/xhtml+xml' href='a.xhtml' id='a'/>
+  <!-- chapter b -->
+  <item id='b' href='b.xhtml' media-type='application/xhtml+xml'/>
+ </manifest>
+ <spine toc='ncx'><itemref idref='a'/><!-- between --><itemref idref='b'/></spine>
+ <x:unmodeled>keep me</x:unmodeled>
+</package>
+'''.replace('\n', '\r\n')
+
+
+def model(source=SOURCE):
+    # A model may omit extensions and comments; these omissions are not edits.
+    import re
+    value = re.sub(r'<!--.*?-->|<\?.*?\?>', '', source, flags=re.S)
+    value = re.sub(r'<x:extra.*?</x:extra>|<x:unmodeled>.*?</x:unmodeled>', '', value, flags=re.S)
+    return value.replace(" x:hint='untouched'", "").replace('\r\n', '\n')
+
+
+class SourceUpdateTest(unittest.TestCase):
+    def setUp(self):
+        self.before = model()
+
+    def apply(self, after, source=SOURCE, before=None):
+        return apply_model_update(source, before or self.before, after)
+
+    def test_noop_is_exact_source(self):
+        self.assertEqual(self.apply(self.before), SOURCE)
+        reordered = self.before.replace("idref='a'", 'idref="a"')
+        self.assertEqual(self.apply(reordered), SOURCE)
+
+    def test_title_changes_only_value(self):
+        after = self.before.replace('A &amp; B', '日本𠮷 &lt; C')
+        self.assertEqual(self.apply(after), SOURCE.replace('A &amp; B', '日本𠮷 &lt; C'))
+
+    def test_modified_changes_only_unrefined_value(self):
+        extra = "<meta property='dcterms:modified' refines='#title'>old</meta>"
+        source = SOURCE.replace('</metadata>', extra + '</metadata>')
+        before = model(source)
+        after = before.replace('2026-09-01T00:00:00Z', '2026-09-05T10:00:00Z')
+        self.assertEqual(self.apply(after, source, before),
+                         source.replace('2026-09-01T00:00:00Z', '2026-09-05T10:00:00Z'))
+
+    def test_rename_keeps_quotes_attribute_order_and_comments(self):
+        self.assertEqual(self.apply(self.before.replace('a.xhtml', 'new.xhtml')),
+                         SOURCE.replace('a.xhtml', 'new.xhtml'))
+
+    def test_attribute_escape(self):
+        after = self.before.replace('a.xhtml', 'a&apos;b&amp;c.xhtml')
+        self.assertEqual(self.apply(after), SOURCE.replace('a.xhtml', 'a&apos;b&amp;c.xhtml'))
+
+    def test_spine_reorder_keeps_other_source(self):
+        after = self.before.replace("<itemref idref='a'/><itemref idref='b'/>",
+                                    "<itemref idref='b'/><itemref idref='a'/>")
+        expected = SOURCE.replace("<itemref idref='a'/><!-- between --><itemref idref='b'/>",
+                                  "<itemref idref='b'/><!-- between --><itemref idref='a'/>")
+        self.assertEqual(self.apply(after), expected)
+
+    def test_delete_does_not_delete_adjacent_comments_or_extensions(self):
+        removed = "<item id='b' href='b.xhtml' media-type='application/xhtml+xml'/>"
+        self.assertEqual(self.apply(self.before.replace(removed, '')), SOURCE.replace(removed, ''))
+
+    def test_insert_preserves_existing_nodes_and_newline_style(self):
+        item = "<item id='c' href='c.xhtml' media-type='application/xhtml+xml'/>"
+        result = self.apply(self.before.replace('</manifest>', item + '</manifest>'))
+        self.assertIn("\r\n  " + item, result)
+        self.assertEqual(result.replace('\r\n  ' + item, ''), SOURCE)
+
+    def test_new_attribute_and_namespace(self):
+        after = self.before.replace("idref='a'", "idref='a' linear='no'")
+        self.assertEqual(self.apply(after), SOURCE.replace("idref='a'", "idref='a' linear=\"no\""))
+        after = self.before.replace("<dc:title id='title'", "<dc:title id='title' xml:lang='ja'")
+        self.assertEqual(self.apply(after), SOURCE.replace("<dc:title id='title'", "<dc:title id='title' xml:lang=\"ja\""))
+
+    def test_prefixed_opf_root_and_insertion(self):
+        import re
+        source = re.sub(r'<(/?)(package|metadata|meta|manifest|item|spine|itemref)(?=[\s/>])',
+                        r'<\1o:\2', SOURCE).replace('xmlns="http://www.idpf.org/2007/opf"',
+                                                   'xmlns:o="http://www.idpf.org/2007/opf"')
+        self.assertEqual(self.apply(self.before.replace('a.xhtml', 'renamed.xhtml'), source),
+                         source.replace('a.xhtml', 'renamed.xhtml'))
+        item = "<item id='c' href='c.xhtml' media-type='application/xhtml+xml'/>"
+        result = self.apply(self.before.replace('</manifest>', item + '</manifest>'), source)
+        document = Document(result)
+        manifest = next(n for n in document.root.children if n.name.endswith('|manifest'))
+        self.assertEqual(len(manifest.children), 3)
+        self.assertTrue(all(n.name == 'http://www.idpf.org/2007/opf|item' for n in manifest.children))
+
+    def test_cdata_and_comments_in_changed_metadata(self):
+        source = SOURCE.replace('A &amp; B', '<![CDATA[A & B]]>')
+        result = self.apply(self.before.replace('A &amp; B', 'new]]&gt;value'), source)
+        self.assertEqual(result, source.replace('<![CDATA[A & B]]>', '<![CDATA[new]]]]><![CDATA[>value]]>'))
+        source = SOURCE.replace('A &amp; B', 'A<!--keep--> &amp; B')
+        result = self.apply(self.before.replace('A &amp; B', 'new'), source)
+        self.assertEqual(result, source.replace('A<!--keep--> &amp; B', 'new<!--keep-->'))
+
+    def test_self_closing_metadata_can_receive_text(self):
+        source = SOURCE.replace("<dc:title id='title'>A &amp; B</dc:title>", "<dc:title id='title'/>")
+        self.assertEqual(self.apply(self.before, source, model(source)),
+                         source.replace("<dc:title id='title'/>", "<dc:title id='title'>A &amp; B</dc:title>"))
+
+    def test_unique_title_can_gain_id_without_reserializing(self):
+        source = SOURCE.replace(" id='title'", '')
+        before = model(source)
+        after = before.replace('<dc:title>', '<dc:title id="new">')
+        self.assertEqual(self.apply(after, source, before), source.replace('<dc:title>', '<dc:title id="new">'))
+
+    def test_repeated_creators_reorder_by_content(self):
+        extra = '<dc:creator>A</dc:creator><!--authors--><dc:creator>B</dc:creator>'
+        source = SOURCE.replace('</metadata>', extra + '</metadata>')
+        before = model(source)
+        after = before.replace('<dc:creator>A</dc:creator><dc:creator>B</dc:creator>',
+                               '<dc:creator>B</dc:creator><dc:creator>A</dc:creator>')
+        self.assertEqual(self.apply(after, source, before), source.replace(extra,
+                         '<dc:creator>B</dc:creator><!--authors--><dc:creator>A</dc:creator>'))
+
+    def test_reject_malformed_output_and_unmappable_custom_entities(self):
+        with self.assertRaises(ValueError):
+            self.apply(self.before.replace('A &amp; B', '<broken>'))
+        source = SOURCE.replace("<?publisher keep=\"this\"?>", '<!DOCTYPE package [<!ENTITY e "value">]>')
+        with self.assertRaises(ValueError):
+            self.apply(self.before.replace('a.xhtml', 'new.xhtml'), source)
+
+    def test_legacy_parser_roundtrip(self):
+        # Use the real existing parser pipeline, not only synthetic models.
+        from xmlprocessor import repairXML
+        from opf_newparser import Opf_Parser
+        before = Opf_Parser(repairXML(SOURCE, 'application/oebps-package+xml')).rebuild_opfxml()
+        after = before.replace('a.xhtml', 'renamed.xhtml')
+        self.assertNotEqual(before, after)
+        self.assertEqual(self.apply(after, SOURCE, before), SOURCE.replace('a.xhtml', 'renamed.xhtml'))
+
+    def test_multiple_new_attributes_share_one_namespace_declaration(self):
+        after = self.before.replace("<dc:title id='title'",
+                                    "<dc:title id='title' xmlns:z='urn:new' z:a='1' z:b='2'")
+        result = self.apply(after)
+        self.assertEqual(result.count('xmlns:z='), 1)
+        document = Document(result)
+        title = document.root.children[0].children[1]
+        self.assertEqual(title.attrs['urn:new|a'], '1')
+        self.assertEqual(title.attrs['urn:new|b'], '2')
+
+    def test_comment_syntax_inside_cdata_is_text(self):
+        source = SOURCE.replace('A &amp; B', '<![CDATA[A <!--text--> B]]>')
+        before = self.before.replace('A &amp; B', 'A &lt;!--text--&gt; B')
+        after = before.replace('A &lt;!--text--&gt; B', 'new')
+        self.assertEqual(self.apply(after, source, before),
+                         source.replace('<![CDATA[A <!--text--> B]]>', '<![CDATA[new]]>'))
+
+    def test_populate_empty_manifest_with_namespaced_item(self):
+        source = '<package xmlns="http://www.idpf.org/2007/opf"><metadata/><manifest/><spine/></package>'
+        after = source.replace('<manifest/>', '<manifest><item id="a" href="a.xhtml" media-type="application/xhtml+xml"/></manifest>')
+        result = self.apply(after, source, source)
+        parsed = Document(result)
+        self.assertEqual(parsed.root.children[1].children[0].attrs['id'], 'a')
+        self.assertIn('<metadata/>', result)
+        self.assertIn('<spine/>', result)
+
+    def test_large_manifest_changes_only_one_attribute(self):
+        entries = ''.join('<item id="i{0}" href="chapter{0}.xhtml" media-type="application/xhtml+xml"/>\n'.format(i)
+                          for i in range(12000))
+        source = '<package xmlns="http://www.idpf.org/2007/opf"><metadata/><manifest>\n' + entries + '</manifest><spine/></package>'
+        after = source.replace('chapter10987.xhtml', 'renamed.xhtml')
+        self.assertEqual(self.apply(after, source, source), after)
+
+
+if __name__ == '__main__':
+    unittest.main()
