@@ -5530,6 +5530,14 @@ then find the Next match in Code View.&lt;/p&gt;</source>
 <context>
     <name>GeneralSettingsWidget</name>
     <message>
+        <source>Preserve OPF formatting and comments</source>
+        <translation>OPF の書式とコメントを保持する</translation>
+    </message>
+    <message>
+        <source>Keep OPF source when opening books and apply package changes locally. Turn off to use legacy automatic OPF formatting. HTML mending is configured separately.</source>
+        <translation>書籍を開く際に OPF のソースを保持し、必要な箇所だけを変更します。無効にすると従来の OPF 自動整形を使用します。HTML の修復は別途設定します。</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="14"/>
         <source>General Settings</source>
         <translation>全般の設定</translation>

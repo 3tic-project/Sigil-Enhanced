@@ -172,6 +172,8 @@ public:
 
     int cleanOn();
 
+    bool preserveOPFSource();
+
     QStringList pluginMap();
 
     QStringList automateMap();
@@ -409,6 +411,8 @@ public slots:
     void setPreviewDark(int enabled);
 
     void setCleanOn(int on);
+
+    void setPreserveOPFSource(bool enabled);
 
     void setPluginMap(const QStringList & map);
 

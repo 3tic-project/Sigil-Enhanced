@@ -5525,6 +5525,14 @@ then find the Next match in Code View.&lt;/p&gt;</source>
 <context>
     <name>GeneralSettingsWidget</name>
     <message>
+        <source>Preserve OPF formatting and comments</source>
+        <translation>保留 OPF 原始格式與註解</translation>
+    </message>
+    <message>
+        <source>Keep OPF source when opening books and apply package changes locally. Turn off to use legacy automatic OPF formatting. HTML mending is configured separately.</source>
+        <translation>開啟書籍時保留 OPF 原文，並局部套用必要修改。關閉後使用舊版自動整理 OPF 的行為。HTML 修復另行設定。</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="14"/>
         <source>General Settings</source>
         <translation>一般設定</translation>

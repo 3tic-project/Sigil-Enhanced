@@ -110,6 +110,7 @@ PreferencesWidget::ResultActions GeneralSettingsWidget::saveSettings()
 
     SettingsStore settings;
     settings.setCleanOn(new_clean_on_level);
+    settings.setPreserveOPFSource(ui.PreserveOPFSource->isChecked());
     settings.setDefaultVersion(new_epub_version);
     settings.setCssEpub2ValidationSpec(css_epub2_spec);
     settings.setCssEpub3ValidationSpec(css_epub3_spec);
@@ -151,6 +152,7 @@ void GeneralSettingsWidget::readSettings()
     int cleanOn = settings.cleanOn();
     ui.MendOnOpen->setChecked(cleanOn & CLEANON_OPEN);
     ui.MendOnSave->setChecked(cleanOn & CLEANON_SAVE);
+    ui.PreserveOPFSource->setChecked(settings.preserveOPFSource());
     int remoteOn = settings.remoteOn();
     ui.AllowRemote->setChecked(remoteOn);
     int javascriptOn = settings.javascriptOn();

@@ -158,6 +158,16 @@ when creating new or empty Epubs in Sigil.</string>
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="PreserveOPFSource">
+         <property name="text">
+          <string>Preserve OPF formatting and comments</string>
+         </property>
+         <property name="toolTip">
+          <string>Keep OPF source when opening books and apply package changes locally. Turn off to use legacy automatic OPF formatting. HTML mending is configured separately.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBoxClipLimit">
          <property name="title">
           <string>Number of clipboard history items to save (0 disables):</string>

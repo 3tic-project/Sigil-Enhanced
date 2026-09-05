@@ -63,6 +63,7 @@ static QString KEY_PLUGIN_USER_MAP = SETTINGS_GROUP + "/" + "plugin_user_map";
 static QString KEY_AUTOMATE_USER_MAP = SETTINGS_GROUP + "/" + "automate_user_map";
 static QString KEY_AUTOMATE_SHOW_MENU = SETTINGS_GROUP + "/" + "automate_show_menu";
 static QString KEY_CLEAN_ON = SETTINGS_GROUP + "/" + "clean_on";
+static QString KEY_PRESERVE_OPF_SOURCE = SETTINGS_GROUP + "/" + "preserve_opf_source";
 static QString KEY_REMOTE_ON = SETTINGS_GROUP + "/" + "remote_on";
 static QString KEY_JAVASCRIPT_ON = SETTINGS_GROUP + "/" + "javascript_on";
 static QString KEY_SHOWFULLPATH_ON = SETTINGS_GROUP + "/" + "showfullpath_on";
@@ -360,6 +361,12 @@ int SettingsStore::cleanOn()
 {
     clearSettingsGroup();
     return value(KEY_CLEAN_ON, (CLEANON_OPEN | CLEANON_SAVE)).toInt();
+}
+
+bool SettingsStore::preserveOPFSource()
+{
+    clearSettingsGroup();
+    return value(KEY_PRESERVE_OPF_SOURCE, true).toBool();
 }
 
 QStringList SettingsStore::pluginMap()
@@ -786,6 +793,12 @@ void SettingsStore::setCleanOn(int on)
 {
     clearSettingsGroup();
     setValue(KEY_CLEAN_ON, on);
+}
+
+void SettingsStore::setPreserveOPFSource(bool enabled)
+{
+    clearSettingsGroup();
+    setValue(KEY_PRESERVE_OPF_SOURCE, enabled);
 }
 
 void SettingsStore::setPluginMap(const QStringList &map)

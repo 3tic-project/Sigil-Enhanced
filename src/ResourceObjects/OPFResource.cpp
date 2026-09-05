@@ -21,6 +21,8 @@
 **
 *************************************************************************/
 
+#include "EmbedPython/EmbeddedPython.h"
+
 #include <memory>
 
 #include <QtCore/QBuffer>
@@ -350,10 +352,13 @@ QString OPFResource::GetMainIdentifierValue() const
 
 void OPFResource::SaveToDisk(bool book_wide_save)
 {
-    QString source = ValidatePackageVersion(CleanSource::ProcessXML(GetText(),"application/oebps-package+xml"));
-    // Work around for covers appearing on the Nook. Issue 942.
-    source = source.replace(QRegularExpression("<meta content=\"([^\"]+)\" name=\"cover\""), "<meta name=\"cover\" content=\"\\1\"");
-    TextResource::SetText(source);
+    QString source = ValidatePackageVersion(CleanSource::ProcessOPFSource(GetText()));
+    SettingsStore settings;
+    if (!settings.preserveOPFSource()) {
+        // Legacy Nook compatibility formatting. Issue 942.
+        source = source.replace(QRegularExpression("<meta content=\"([^\"]+)\" name=\"cover\""), "<meta name=\"cover\" content=\"\\1\"");
+    }
+    if (source != GetText()) TextResource::SetText(source);
     TextResource::SaveToDisk(book_wide_save);
 }
 
@@ -1781,7 +1786,24 @@ void OPFResource::UpdateManifestMediaTypes(const QList<Resource*> resources)
 
 void OPFResource::UpdateText(const OPFParser &p)
 {
-    TextResource::SetText(p.convert_to_xml());
+    QString updated = p.convert_to_xml();
+    SettingsStore settings;
+    if (settings.preserveOPFSource()) {
+        const QString before = p.original_model_xml();
+        if (before == updated) return;
+        const QString original = GetText();
+        int rv = 0;
+        QString error;
+        const QList<QVariant> args { original, before, updated };
+        const QVariant result = EmbeddedPython::instance().runInPython(
+            "opf_source", "apply_model_update", args, &rv, error);
+        if (rv != 0) {
+            const QString message = QStringLiteral("Cannot preserve OPF source: ") + error;
+            throw ErrorParsingXml(message.toStdString());
+        }
+        updated = result.toString();
+    }
+    if (updated != GetText()) TextResource::SetText(updated);
 }
 
 
