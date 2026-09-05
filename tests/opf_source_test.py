@@ -7,7 +7,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] /
                        "src/Resource_Files/python3lib"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] /
                        "src/Resource_Files/plugin_launchers/python"))
-from opf_source import Document, apply_model_update
+from opf_source import Document, apply_model_update, model_xml
 
 
 SOURCE = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -154,6 +154,42 @@ class SourceUpdateTest(unittest.TestCase):
         after = before.replace('a.xhtml', 'renamed.xhtml')
         self.assertNotEqual(before, after)
         self.assertEqual(self.apply(after, SOURCE, before), SOURCE.replace('a.xhtml', 'renamed.xhtml'))
+
+    def test_native_model_projection_excludes_nested_extensions(self):
+        from opf_newparser import Opf_Parser
+        before = Opf_Parser(model_xml(SOURCE)).rebuild_opfxml()
+        self.assertNotIn('x:child', before)
+        self.assertNotIn('x:extra', before)
+        after = before.replace('A &amp; B', 'Changed')
+        self.assertEqual(self.apply(after, SOURCE, before), SOURCE.replace('A &amp; B', 'Changed'))
+
+    def test_model_projection_checks_namespaces_and_direct_children(self):
+        source = SOURCE.replace('</manifest>', "<x:item id='fake' href='fake.xhtml'/>"
+                                "<x:extension><item id='nested' href='nested.xhtml'/></x:extension></manifest>")
+        before = model_xml(source)
+        self.assertNotIn('fake.xhtml', before)
+        self.assertNotIn('nested.xhtml', before)
+        self.assertEqual(self.apply(before.replace('a.xhtml', 'renamed.xhtml'), source, before),
+                         source.replace('a.xhtml', 'renamed.xhtml'))
+
+    def test_model_projection_canonicalizes_opf_and_dc_prefixes(self):
+        import re
+        source = re.sub(r'<(/?)(package|metadata|meta|manifest|item|spine|itemref)(?=[\s/>])',
+                        r'<\1p:\2', SOURCE).replace('xmlns="http://www.idpf.org/2007/opf"',
+                                                   'xmlns:p="http://www.idpf.org/2007/opf"')
+        source = source.replace('dc:', 'd:').replace('xmlns:dc=', 'xmlns:d=')
+        before = model_xml(source)
+        self.assertIn('<package ', before)
+        self.assertIn('<dc:title ', before)
+        self.assertEqual(self.apply(before.replace('A &amp; B', 'Changed'), source, before),
+                         source.replace('A &amp; B', 'Changed'))
+
+    def test_model_projection_rejects_external_entities(self):
+        source = SOURCE.replace("<?publisher keep=\"this\"?>",
+                                '<!DOCTYPE package [<!ENTITY external SYSTEM "file:///nonexistent-opf-entity">]>')
+        source = source.replace('A &amp; B', '&external;')
+        with self.assertRaises(Exception):
+            model_xml(source)
 
     def test_multiple_new_attributes_share_one_namespace_declaration(self):
         after = self.before.replace("<dc:title id='title'",

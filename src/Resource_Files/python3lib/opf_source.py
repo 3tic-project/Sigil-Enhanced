@@ -18,6 +18,51 @@ XMLNS = "http://www.w3.org/2000/xmlns/"
 _ATTR = re.compile(rb'''\s+([^\s=/>]+)\s*=\s*(["'])(.*?)\2''', re.S)
 
 
+def model_xml(source):
+    """Project supported package fields for the legacy C++ parser, never save it.
+
+    Its flat metadata representation cannot model nested extension subtrees.
+    Leave these outside both delta models so the source patcher retains them as
+    opaque XML. Namespace and parent checks also prevent lookalike extension
+    elements from being interpreted as package structure.
+    """
+    from lxml import etree
+    dc = 'http://purl.org/dc/elements/1.1/'
+    parser = etree.XMLParser(encoding='utf-8', recover=False, no_network=True,
+                             resolve_entities='internal', remove_comments=True,
+                             remove_pis=True)
+    root = etree.fromstring(source.encode('utf-8'), parser)
+    if root.tag != '{' + OPF + '}package':
+        raise ValueError('Expected an OPF package element in the OPF namespace')
+
+    def namespaces(node):
+        # Keep aliases used by CURIE-valued attributes, while providing the
+        # canonical names the legacy parser recognizes for OPF and DC nodes.
+        result = {None: OPF, 'dc': dc, 'opf': OPF}
+        result.update({prefix: uri for prefix, uri in node.nsmap.items() if prefix not in result})
+        return result
+
+    projected = etree.Element(root.tag, attrib=root.attrib, nsmap=namespaces(root))
+    sections = {'metadata': None, 'manifest': 'item', 'spine': 'itemref',
+                'guide': 'reference', 'bindings': 'mediaType'}
+    for section in root:
+        if not isinstance(section.tag, str) or not section.tag.startswith('{' + OPF + '}'):
+            continue
+        name = etree.QName(section).localname
+        if name not in sections:
+            continue
+        target = etree.SubElement(projected, section.tag, attrib=section.attrib, nsmap=namespaces(section))
+        target.text = '\n'  # The legacy parser expects explicit section end tags.
+        for node in section:
+            if not isinstance(node.tag, str) or not node.tag.startswith('{') or len(node):
+                continue
+            if name != 'metadata' and node.tag != '{' + OPF + '}' + sections[name]:
+                continue
+            leaf = etree.SubElement(target, node.tag, attrib=node.attrib, nsmap=namespaces(node))
+            leaf.text = node.text
+    return etree.tostring(projected, encoding='unicode', pretty_print=True)
+
+
 @dataclass
 class Node:
     name: str
