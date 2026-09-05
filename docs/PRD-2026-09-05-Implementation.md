@@ -68,7 +68,65 @@ ctest --test-dir build --output-on-failure -R '^opf_(source|resource_integration
 原生集成测试当前仅在 macOS + Ninja + Debug 注册。它在临时目录中替换测试
 入口并链接已构建的应用对象；独立偏好设置和合成资源，不覆盖 Sigil 可执行文件。
 
-仍未验收：原始文件编码/BOM/混合换行和 Unicode 在普通导出中的字节保真；
+第一批当时未验收（第二批进展见下）：原始文件编码/BOM/混合换行和 Unicode 在普通导出中的字节保真；
 完整 EPUB 打开/另存为；缺 nav 的只读临时模型与显式修复；诊断与 modified 分离；
 插件/MCP 的 `PluginPackageUpdate` DOM 改写旁路；跨资源失败恢复；性能预算、
 三平台 GUI、完整 EPUBCheck 和独立阅读器。不能将本批称为“OPF 完整无损编辑”。
+
+## OPF 第二批：字节读写与原生导出（2026-09-06）
+
+代码提交：`666054f45`（二进制桥接）、`e01e3d2bd`（编码/换行算法）、
+`40e251535`（无弹窗错误传播）、`26141b94a`（安全模型投影）、
+`4022a8dd4`（资源、导入与导出集成）。
+
+- OPF 保存独立于通用文本写入器，保留原始编码、BOM、混合换行与 Unicode
+  组合形式。QTextDocument 继续采用 Qt 的标准换行和 UTF-16 坐标；原文单独保存，
+  不向选区/工具 API 混入字节偏移。未修改文件直接复用原始字节。
+- 编辑行保留既有换行符，新增行采用附近风格；重复行差异先锚定共同首尾，
+  避免插入一行导致未改动后缀的混合换行被重写。
+- 保留 UTF-8、UTF-16/32 的 BOM/字节序，识别 XML 声明中的其他编码。
+  编码无法表示新字符时拒绝保存；用户明确修改编码声明可以转换为 UTF-8。
+  删除没有 BOM 的旧编码声明后按 XML 默认 UTF-8 输出。
+- 使用 QSaveFile 原子替换单个 OPF，编码失败时不覆盖旧文件、不清除编辑或 Undo。
+  Python 桥接双向传递显式二进制长度；原先零字节截断会破坏 UTF-16。
+  资源调用自行传播 Python 错误，不在保存线程或持有 Python 锁时弹出对话框。
+- 导入前读取原始 OPF 快照，避免资源构造覆盖解包路径后再取到默认内容。
+  manifest、spine、identifier 按命名空间和直接父节点识别，扩展同名节点不再
+  被误当成书籍资源。
+- 保留模式使用独立的 `model_xml` 结构投影替代旧的 OPF 整理输入：统一解析用
+  OPF/DC 前缀，嵌套扩展作为不透明 XML 留在原文，不压平成虚假元数据。
+  普通及批量资源更新均使用此投影；关闭保留选项仍走旧路径。
+
+本批验证环境同第一批。完整 Sigil 构建与 42 项打包依赖检查通过；以下
+10 项 CTest 全通过：
+
+```sh
+cmake --build build --target Sigil -j 8
+ctest --test-dir build --output-on-failure -R '^(opf_source|opf_source_bytes|opf_resource_integration|epub_file_snapshot|export_metadata_policy|plugin_package_update|plugin_text_transaction|agent_harness|agent_book_ops|python_package_sync)$'
+```
+
+- `opf_source`：25 项通过，新增真实模型投影、嵌套扩展、同名伪 manifest、
+  非标准 OPF/DC 前缀与外部实体拒绝测试。
+- `opf_source_bytes`：10 项通过，包括 UTF-8/16/32、单字节编码、NFD、非 BMP
+  字符、混合换行、插入/删除、12,000 重复行及编码失败。
+- `opf_resource_integration`：通过真实 OPFResource 与 EPUB 导入/普通导出。
+  合成 EPUB 3 结构包含 UTF-16LE+BOM、CRLF/LF、NFD 和私有扩展；无操作导出
+  OPF 字节相同，只改正文时 OPF 仅修改出版物时间戳，nav 和 mimetype 字节相同。
+  另验证原生元数据修改、手动编辑、Undo、替代前缀与编码失败后的文件/编辑状态。
+  测试遇到意外弹窗会输出内容并失败，不允许靠关闭弹窗继续通过。
+- 简中/繁中/日文覆盖检查仍各有 82 项基线失败；与原工作树比较，新增失败为 0。
+
+证明边界：这是合成样本及特定入口的字节对比，不是完整 O01–O12 验收。
+UTF-32 等编码算法可往返不代表 EPUB 规范允许所有这些编码；私有扩展样本也
+未通过 EPUBCheck 合规认证。O02 要求整包 SHA-256 一致，而普通 ExportEPUB
+仍重建 ZIP；本批只证明 OPF 成员字节一致，未满足整包及 GUI 另存/副本验收。
+跨资源事务回滚、外部冲突、多平台 GUI、阅读器与完整 EPUBCheck 仍待验证。
+
+### 下一批审计重点
+
+- O06/O07：`ImportEPUB::GetBook` 仍自动注册缺失的 nav；结束时仍将警告数量
+  直接映射为 Book modified。须把只读诊断、临时目录模型和显式修复计划分离。
+  不能只删除创建 nav 的调用：`TOCModel` 与 `NavProcessor` 当前假定 EPUB 3
+  有非空 nav，需要一并处理 NCX 查看回退及用户确认后的新增资源/节点。
+- O08：插件/MCP 的 `PluginPackageUpdate` DOM 改写仍是旁路，现有插件测试通过
+  不表示已经采用源码补丁和修订校验。
