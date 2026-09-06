@@ -298,8 +298,8 @@ QList<Resource*> OPFResource::GetSpineOrderResources( const QList<Resource *> &r
         }
     }
     // in epub 3 without nav in the spine, add it to be watched as last
-    if (version.startsWith("3") && (!nav_in_spine)) {
-        spine_order << GetNavResource();;
+    if (version.startsWith("3") && !nav_in_spine && GetNavResource()) {
+        spine_order << GetNavResource();
     }
     return spine_order;
 }
@@ -329,7 +329,7 @@ QHash <Resource *, int>  OPFResource::GetReadingOrderAll( const QList <Resource 
     }
     // Need to special case, epub version 3 without nav in the spine
     // add it in always as last
-    if (version.startsWith("3") && (!nav_in_spine)) {
+    if (version.startsWith("3") && !nav_in_spine && nav_rsc) {
         id_order[nav_id] = p.m_spine.count() - 1;
     }
     QHash<Resource *, QString> id_mapping = GetResourceManifestIDMapping(resources, p);
@@ -341,7 +341,7 @@ QHash <Resource *, int>  OPFResource::GetReadingOrderAll( const QList <Resource 
 
 bool OPFResource::isNavInSpine() const
 {
-    if (GetEpubVersion().startsWith('3')) {
+    if (GetEpubVersion().startsWith('3') && GetNavResource()) {
         return GetReadingOrder(GetNavResource()) != -1;
     }
     return false;
@@ -350,6 +350,7 @@ bool OPFResource::isNavInSpine() const
 // this is used by isNavInSpine() so do not treat is as a special case
 int OPFResource::GetReadingOrder(const HTMLResource *html_resource) const
 {
+    if (!html_resource) return -1;
     QReadLocker locker(&GetLock());
     QString source = ModelSource();
     OPFParser p;
@@ -2052,13 +2053,20 @@ HTMLResource * OPFResource::GetNavResource()const
     return m_NavResource;
 }
 
-
-void OPFResource::SetNavResource(HTMLResource * nav_resource)
+QString OPFResource::GetSourceText() const
 {
+    QReadLocker locker(&GetLock());
+    return PreservedSourceText();
+}
+
+
+void OPFResource::SetNavResource(HTMLResource * nav_resource, bool update_manifest)
+{
+    const bool changed = m_NavResource != nav_resource;
     m_NavResource = nav_resource;
     // Make sure the proper nav property is set in the opf manifest
     // but do not overwrite any other existing properties
-    if (m_NavResource) { 
+    if (m_NavResource && update_manifest) {
         QWriteLocker locker(&GetLock());
         QString source = ModelSource();
         OPFParser p;
@@ -2068,7 +2076,7 @@ void OPFResource::SetNavResource(HTMLResource * nav_resource)
         if ((pos >= 0) && (pos < p.m_manifest.count())) {
             ManifestEntry me = p.m_manifest.at(pos);
             QString props = me.m_atts.value("properties", "");
-            if (!props.contains("nav")) {
+            if (!props.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts).contains("nav")) {
                 props = props + " nav";
             }
             props = props.simplified();
@@ -2078,6 +2086,7 @@ void OPFResource::SetNavResource(HTMLResource * nav_resource)
         }
         UpdateText(p);
     }
+    if (changed) emit NavigationResourceChanged();
 }
 
 

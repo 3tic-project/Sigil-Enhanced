@@ -43,36 +43,13 @@ static const QString _RS = QString(QChar(30)); // Ascii Record Separator
 NavProcessor::NavProcessor(HTMLResource * nav_resource)
   : m_NavResource(nav_resource)
 {
+    SettingsStore ss;
+    m_language = ss.defaultMetadataLang();
+    if (!m_NavResource) return;
     QReadLocker locker(&m_NavResource->GetLock());
     QString source = m_NavResource->GetText();
-    SettingsStore ss;
-    QString lang = ss.defaultMetadataLang();
-    if (source.isEmpty()) {
-          QString newsource =
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-            "<!DOCTYPE html>\n"
-            "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" "
-            "lang=\"%1\" xml:lang=\"%2\">\n"
-            "<head>\n"
-            "  <meta charset=\"utf-8\" />\n"
-            "  <style type=\"text/css\">\n"
-            "    nav#landmarks, nav#page-list { display:none; }\n"
-            "    ol { list-style-type: none; }\n"
-            "  </style>\n"
-            "</head>\n"
-            "<body epub:type=\"frontmatter\">\n"
-            "  <nav epub:type=\"toc\" id=\"toc\" role=\"doc-toc\">\n"
-            "  </nav>\n"
-            "  <nav epub:type=\"landmarks\" id=\"landmarks\" hidden=\"\">\n"
-            "  </nav>\n"
-            "</body>\n"
-            "</html>";
-          source = newsource.arg(lang).arg(lang);
-          QWriteLocker locker(&m_NavResource->GetLock());
-          m_NavResource->SetText(source);
-          m_language = lang;
-          return;
-    }
+    if (source.isEmpty()) return; // Looking up navigation must never repair it.
+    QString lang = m_language;
     // determine the language used by the nav
     GumboInterface gi = GumboInterface(source, "3.0");
     gi.parse();
@@ -494,6 +471,7 @@ void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)
 
 void NavProcessor::AddLandmarkCode(const Resource *resource, QString new_code, bool toggle, QString tgt_id)
 {
+    if (!m_NavResource || !resource) return;
     if (new_code.isEmpty()) return;
     QList<NavLandmarkEntry> landlist = GetLandmarks();
     QWriteLocker locker(&m_NavResource->GetLock());
@@ -534,6 +512,7 @@ void NavProcessor::AddLandmarkCode(const Resource *resource, QString new_code, b
 
 void NavProcessor::RemoveLandmarkForResource(const Resource * resource, QString tgt_id)
 {
+    if (!m_NavResource || !resource) return;
     QList<NavLandmarkEntry> landlist = GetLandmarks();
     QWriteLocker locker(&m_NavResource->GetLock());
     int pos = GetResourceLandmarkPos(resource, landlist, tgt_id);
@@ -545,6 +524,7 @@ void NavProcessor::RemoveLandmarkForResource(const Resource * resource, QString 
 
 void NavProcessor::RemoveAllLandmarksForResource(const Resource * resource)
 {
+    if (!m_NavResource || !resource) return;
     QList<NavLandmarkEntry> landlist = GetLandmarks();
     QWriteLocker locker(&m_NavResource->GetLock());
     QString resource_book_path = Utility::URLEncodePath(resource->GetRelativePath());
@@ -582,6 +562,7 @@ int NavProcessor::GetResourceLandmarkPos(const Resource *resource, const QList<N
 
 QString NavProcessor::GetLandmarkCodeForResource(const Resource *resource, QString tgt_id)
 {
+    if (!m_NavResource || !resource) return QString();
     const QList<NavLandmarkEntry> landlist = GetLandmarks();
     QReadLocker locker(&m_NavResource->GetLock());
     int pos = GetResourceLandmarkPos(resource, landlist, tgt_id);
@@ -608,6 +589,7 @@ QString NavProcessor::GetLandmarkNameForResource(const Resource *resource, QStri
 // bookpath|fragment|code|title
 QStringList NavProcessor::GetAllLandmarkInfoByBookPath()
 {
+    if (!m_NavResource) return {};
     const QList<NavLandmarkEntry> landlist = GetLandmarks();
     QReadLocker locker(&m_NavResource->GetLock());
     QStringList landmark_info;
@@ -627,6 +609,7 @@ QStringList NavProcessor::GetAllLandmarkInfoByBookPath()
 // create a hash of bookpaths to a list of all landmarks names contained therein
 QHash <QString, QStringList> NavProcessor::GetLandmarkNameForPaths()
 {
+    if (!m_NavResource) return {};
     const QList<NavLandmarkEntry> landlist = GetLandmarks();
     QReadLocker locker(&m_NavResource->GetLock());
     QHash <QString, QStringList> semantic_types;
@@ -647,6 +630,7 @@ QHash <QString, QStringList> NavProcessor::GetLandmarkNameForPaths()
 // create a hash of bookpaths to a list of all landmarks names contained therein
 QHash <QString, QStringList> NavProcessor::GetLandmarkCodeForPaths()
 {
+  if (!m_NavResource) return {};
   const QList<NavLandmarkEntry> landlist = GetLandmarks();
   QReadLocker locker(&m_NavResource->GetLock());
   QHash <QString, QStringList> semantic_codes;
@@ -670,6 +654,7 @@ QHash <QString, QStringList> NavProcessor::GetLandmarkCodeForPaths()
 // That tree of headings to our flat NavTOCEntry list
 bool NavProcessor::GenerateTOCFromBookContents(const Book* book)
 {
+    if (!m_NavResource) return false;
     QString prev_xml = BuildTOC(GetTOC());
     QWriteLocker locker(&m_NavResource->GetLock());
     bool is_changed = false;
@@ -790,6 +775,7 @@ void NavProcessor::AddChildEntry(NavTOCEntry &parent, NavTOCEntry new_child)
 // So convert to flat Nav TOC Entry list and rebuild the Nav TOC Section
 void NavProcessor::GenerateNavTOCFromTOCEntries(const TOCModel::TOCEntry& root)
 {
+    if (!m_NavResource) return;
     QList<NavTOCEntry> toclist;
     foreach(TOCModel::TOCEntry entry, root.children) {
         toclist.append(AddEditTOCEntry(entry, 1));

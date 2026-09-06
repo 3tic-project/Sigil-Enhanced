@@ -7,7 +7,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] /
                        "src/Resource_Files/python3lib"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] /
                        "src/Resource_Files/plugin_launchers/python"))
-from opf_source import Document, apply_model_update, model_xml
+from opf_source import Document, apply_model_update, model_xml, add_navigation_manifest
 
 
 SOURCE = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -190,6 +190,18 @@ class SourceUpdateTest(unittest.TestCase):
         source = source.replace('A &amp; B', '&external;')
         with self.assertRaises(Exception):
             model_xml(source)
+
+    def test_navigation_preview_only_adds_one_manifest_item(self):
+        result = add_navigation_manifest(SOURCE, 'nav.xhtml', 'nav')
+        import re
+        restored, count = re.subn(r'\r\n[^\S\r\n]*<item\b[^>]*properties="nav"[^>]*/>', '', result)
+        self.assertEqual(count, 1)
+        self.assertEqual(restored, SOURCE)
+        for href, identifier in (('a.xhtml', 'new'), ('nav.xhtml', 'a')):
+            with self.assertRaises(ValueError):
+                add_navigation_manifest(SOURCE, href, identifier)
+        with self.assertRaises(ValueError):
+            add_navigation_manifest(result, 'nav2.xhtml', 'nav2')
 
     def test_multiple_new_attributes_share_one_namespace_declaration(self):
         after = self.before.replace("<dc:title id='title'",

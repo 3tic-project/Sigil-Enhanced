@@ -60,7 +60,7 @@ public:
      *
      * @param book The book whose model we will be building.
      */
-    void SetBook(QSharedPointer<Book> book);
+    void SetBook(QSharedPointer<Book> book, bool refresh = true);
 
     /**
      * Translates a model index of an item into an URL

@@ -63,6 +63,26 @@ def model_xml(source):
     return etree.tostring(projected, encoding='unicode', pretty_print=True)
 
 
+def add_navigation_manifest(source, href, identifier):
+    """Preview a new navigation item without touching reading order or files."""
+    from lxml import etree
+    before = model_xml(source)
+    root = etree.fromstring(before.encode('utf-8'))
+    manifests = root.findall('{' + OPF + '}manifest')
+    if len(manifests) != 1:
+        raise ValueError('Navigation repair requires exactly one manifest')
+    manifest = manifests[0]
+    for node in root.iter():
+        if node.get('id') == identifier:
+            raise ValueError('Navigation manifest identifier already exists')
+    for node in manifest:
+        if 'nav' in node.get('properties', '').split() or node.get('href') == href:
+            raise ValueError('Navigation manifest path or property already exists')
+    etree.SubElement(manifest, '{' + OPF + '}item', id=identifier, href=href,
+                     attrib={'media-type': 'application/xhtml+xml', 'properties': 'nav'})
+    return apply_model_update(source, before, etree.tostring(root, encoding='unicode'))
+
+
 @dataclass
 class Node:
     name: str

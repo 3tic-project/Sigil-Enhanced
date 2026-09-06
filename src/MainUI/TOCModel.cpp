@@ -44,7 +44,7 @@ TOCModel::TOCModel(QObject *parent)
 }
 
 
-void TOCModel::SetBook(QSharedPointer<Book> book)
+void TOCModel::SetBook(QSharedPointer<Book> book, bool refresh)
 {
     {
         // We need to make sure we don't step on the toes of GetNCXText
@@ -52,7 +52,7 @@ void TOCModel::SetBook(QSharedPointer<Book> book)
         m_Book = book;
         m_EpubVersion = m_Book->GetConstOPF()->GetEpubVersion();
     }
-    Refresh();
+    if (refresh) Refresh();
 }
 
 
@@ -95,7 +95,7 @@ void TOCModel::RefreshEnd()
 
 TOCModel::TOCEntry TOCModel::GetRootTOCEntry()
 {
-    if (m_EpubVersion.startsWith('3')) {
+    if (m_EpubVersion.startsWith('3') && m_Book->GetConstOPF()->GetNavResource()) {
         NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
         return navproc.GetRootTOCEntry();
     }
