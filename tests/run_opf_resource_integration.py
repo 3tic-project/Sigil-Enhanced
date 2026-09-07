@@ -66,7 +66,8 @@ def verify_epub_exports(path, source, members):
     print('Native EPUB import and normal-export byte comparisons passed')
 
 
-def run(build):
+def run(build, test_entry='opf_resource_integration_test.cpp', build_fixture=epub_fixture,
+        verify=verify_epub_exports):
     if sys.platform != 'darwin':
         raise RuntimeError('This integration runner currently supports macOS only')
     root = pathlib.Path(__file__).resolve().parents[1]
@@ -87,11 +88,13 @@ def run(build):
     with tempfile.TemporaryDirectory(prefix='opf-native-') as directory:
         scratch = pathlib.Path(directory)
         (scratch / 'workspace').mkdir()
-        fixture, source, members = epub_fixture(scratch)
+        fixture, source, members = build_fixture(scratch)
         test_object = scratch / 'test.o'
         compile_args = shlex.split(compile_line)
+        if os.environ.get('SIGIL_NATIVE_TEST_ASAN') == '1':
+            compile_args.extend(['-fsanitize=address', '-fno-omit-frame-pointer'])
         for flag, path in [('-o', test_object), ('-MF', scratch / 'test.d'),
-                           ('-MT', test_object), ('-c', root / 'tests/opf_resource_integration_test.cpp')]:
+                           ('-MT', test_object), ('-c', root / 'tests' / test_entry)]:
             compile_args[compile_args.index(flag) + 1] = str(path)
         subprocess.run(compile_args, cwd=build, check=True)
         link_args = shlex.split(link_line)
@@ -99,6 +102,8 @@ def run(build):
         start = link_args.index('&&') + 1 if link_args[0] == ':' else 0
         end = link_args.index('&&', start) if '&&' in link_args[start:] else len(link_args)
         link_args = link_args[start:end]
+        if os.environ.get('SIGIL_NATIVE_TEST_ASAN') == '1':
+            link_args.append('-fsanitize=address')
         main_object = next(i for i, value in enumerate(link_args) if value.endswith('/main.cpp.o'))
         link_args[main_object] = str(test_object)
         # Keep the harness isolated inside the build; do not replace Sigil.
@@ -113,7 +118,7 @@ def run(build):
             environment['SIGIL_TEST_PYTHON_ROOT'] = str(build / 'bin/Sigil.app/Contents/python3lib')
             environment.pop('PYTHONPATH', None)
             subprocess.run([executable, root, fixture], env=environment, check=True, timeout=30)
-            verify_epub_exports(fixture, source, members)
+            verify(fixture, source, members)
 
 
 if __name__ == '__main__':
