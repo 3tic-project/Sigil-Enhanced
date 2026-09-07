@@ -88,6 +88,7 @@ private:
     struct TrackedResource {
         QString lastText;
         quint64 revision = 1;
+        bool initialized = false;
     };
     struct Checkpoint {
         QString id;
@@ -133,6 +134,10 @@ private:
     QJsonArray m_stagedToc;
     bool m_hasStagedToc = false;
     QHash<QString, QString> m_stagedAfterIds;
+    QString m_transactionPackageResourceId;
+    QString m_transactionPackageSource;
+    QString m_transactionTocResourceId;
+    QString m_transactionTocSource;
 };
 
 } // namespace SigilAgent

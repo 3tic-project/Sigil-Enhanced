@@ -69,6 +69,10 @@ void SigilBookWorkspace::setBook(QSharedPointer<Book> book)
     m_stagedSpine.clear();
     m_hasStagedToc = false;
     m_stagedToc = QJsonArray();
+    m_transactionPackageResourceId.clear();
+    m_transactionPackageSource.clear();
+    m_transactionTocResourceId.clear();
+    m_transactionTocSource.clear();
     m_revision = 1;
 }
 
@@ -173,10 +177,13 @@ quint64 SigilBookWorkspace::trackedRevision(Resource *resource) const
     TextResource *text = qobject_cast<TextResource *>(resource);
     const QString live = text ? text->GetText() : QString();
     TrackedResource &tracked = m_tracked[id];
-    if (!tracked.lastText.isEmpty() && text && tracked.lastText != live) {
+    if (tracked.initialized && text && tracked.lastText != live) {
         tracked.revision += 1;
     }
-    if (text) tracked.lastText = live;
+    if (text) {
+        tracked.lastText = live;
+        tracked.initialized = true;
+    }
     if (tracked.revision == 0) tracked.revision = 1;
     return tracked.revision;
 }
@@ -186,6 +193,7 @@ void SigilBookWorkspace::noteText(Resource *resource, const QString &text) const
     if (!resource) return;
     TrackedResource &tracked = m_tracked[resource->GetIdentifier()];
     tracked.lastText = text;
+    tracked.initialized = true;
     tracked.revision += 1;
 }
 
@@ -581,6 +589,12 @@ BookOpResult SigilBookWorkspace::beginTransaction(const QString &label)
         m_hasStagedToc = false;
         m_stagedToc = QJsonArray();
         m_stagedAfterIds.clear();
+        OPFResource *opf = m_book->GetOPF();
+        m_transactionPackageResourceId = opf ? opf->GetIdentifier() : QString();
+        m_transactionPackageSource = opf ? opf->GetSourceText() : QString();
+        NCXResource *ncx = m_book->GetNCX();
+        m_transactionTocResourceId = ncx ? ncx->GetIdentifier() : QString();
+        m_transactionTocSource = ncx ? ncx->GetText() : QString();
         return BookOpResult::success(QJsonObject {
             { QStringLiteral("transaction_id"), m_transaction->Id() },
             { QStringLiteral("base_book_revision"), static_cast<qint64>(m_revision) }
@@ -645,6 +659,67 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
             return BookOpResult::error(QStringLiteral("BOOK_REVISION_CONFLICT"),
                                        QStringLiteral("expected %1 actual %2")
                                            .arg(expected_revision).arg(m_revision));
+        }
+        OPFResource *live_opf = m_book->GetOPF();
+        if (!live_opf || live_opf->GetIdentifier() != m_transactionPackageResourceId
+            || live_opf->GetSourceText() != m_transactionPackageSource) {
+            return BookOpResult::error(
+                QStringLiteral("BOOK_REVISION_CONFLICT"),
+                QStringLiteral("The package source changed after the transaction began"),
+                QJsonObject {
+                    { QStringLiteral("resource_id"), live_opf ? live_opf->GetIdentifier() : QString() },
+                    { QStringLiteral("reason"), QStringLiteral("package_source_changed") }
+                });
+        }
+        for (const PluginApi::StagedTextChange &change : m_transaction->Changes()) {
+            TextResource *resource = textResource(change.resourceId);
+            if (!resource || resource->GetText() != change.originalText) {
+                return BookOpResult::error(
+                    QStringLiteral("BOOK_REVISION_CONFLICT"),
+                    QStringLiteral("A staged text resource changed after it was read"),
+                    QJsonObject {
+                        { QStringLiteral("resource_id"), change.resourceId },
+                        { QStringLiteral("reason"), QStringLiteral("resource_source_changed") }
+                    });
+            }
+        }
+        for (const PluginApi::StagedResourceRemoval &removal : m_transaction->Removals()) {
+            Resource *resource = findResource(removal.resourceId);
+            if (!resource || trackedRevision(resource) != removal.baseRevision) {
+                return BookOpResult::error(
+                    QStringLiteral("BOOK_REVISION_CONFLICT"),
+                    QStringLiteral("A resource staged for removal changed"),
+                    QJsonObject {
+                        { QStringLiteral("resource_id"), removal.resourceId },
+                        { QStringLiteral("reason"), QStringLiteral("removed_resource_changed") }
+                    });
+            }
+        }
+        for (const PluginApi::StagedResourceRelocation &reloc : m_transaction->Relocations()) {
+            Resource *resource = findResource(reloc.resourceId);
+            if (!resource || resource->GetRelativePath() != reloc.originalBookPath
+                || trackedRevision(resource) != reloc.baseRevision) {
+                return BookOpResult::error(
+                    QStringLiteral("BOOK_REVISION_CONFLICT"),
+                    QStringLiteral("A resource staged for relocation changed"),
+                    QJsonObject {
+                        { QStringLiteral("resource_id"), reloc.resourceId },
+                        { QStringLiteral("reason"), QStringLiteral("relocated_resource_changed") }
+                    });
+            }
+        }
+        if (m_hasStagedToc) {
+            NCXResource *live_ncx = m_book->GetNCX();
+            if (!live_ncx || live_ncx->GetIdentifier() != m_transactionTocResourceId
+                || live_ncx->GetText() != m_transactionTocSource) {
+                return BookOpResult::error(
+                    QStringLiteral("BOOK_REVISION_CONFLICT"),
+                    QStringLiteral("The table of contents source changed after the transaction began"),
+                    QJsonObject {
+                        { QStringLiteral("resource_id"), live_ncx ? live_ncx->GetIdentifier() : QString() },
+                        { QStringLiteral("reason"), QStringLiteral("toc_source_changed") }
+                    });
+            }
         }
         QHash<QString, QString> originals;
         int applied = 0;
@@ -843,6 +918,10 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
         m_hasStagedToc = false;
         m_stagedToc = QJsonArray();
         m_stagedAfterIds.clear();
+        m_transactionPackageResourceId.clear();
+        m_transactionPackageSource.clear();
+        m_transactionTocResourceId.clear();
+        m_transactionTocSource.clear();
         ++m_revision;
         return BookOpResult::success(QJsonObject {
             { QStringLiteral("transaction_id"), txid },
@@ -868,6 +947,10 @@ BookOpResult SigilBookWorkspace::rollbackTransaction()
     m_hasStagedToc = false;
     m_stagedToc = QJsonArray();
     m_stagedAfterIds.clear();
+    m_transactionPackageResourceId.clear();
+    m_transactionPackageSource.clear();
+    m_transactionTocResourceId.clear();
+    m_transactionTocSource.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), txid },
         { QStringLiteral("rolled_back"), true }
@@ -1149,6 +1232,10 @@ BookOpResult SigilBookWorkspace::deleteResource(const QString &resource_id)
             }
         }
         const QString id = resource->GetIdentifier();
+        QString error;
+        if (!m_transaction->RemoveResource(id, trackedRevision(resource), &error)) {
+            return BookOpResult::error(QStringLiteral("REMOVE_RESOURCE_FAILED"), error);
+        }
         if (!m_stagedRemovals.contains(id)) m_stagedRemovals.append(id);
         if (m_hasStagedSpine) m_stagedSpine.removeAll(id);
         return BookOpResult::success(QJsonObject {
