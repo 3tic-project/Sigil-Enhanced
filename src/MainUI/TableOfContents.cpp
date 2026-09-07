@@ -31,6 +31,8 @@
 #include <QPaintEvent>
 #include <QStylePainter>
 #include <QApplication>
+#include <QLabel>
+#include <QPushButton>
 
 #include "BookManipulation/FolderKeeper.h"
 #include "MainUI/TableOfContents.h"
@@ -54,6 +56,21 @@ TableOfContents::TableOfContents(QWidget *parent)
 #ifdef Q_OS_MAC
     m_Layout->setSpacing(4);
 #endif
+    m_MissingNavigationNotice = new QWidget(m_MainWidget);
+    m_MissingNavigationNotice->setObjectName("missingNavigationNotice");
+    auto *noticeLayout = new QVBoxLayout(m_MissingNavigationNotice);
+    auto *notice = new QLabel(tr("Missing EPUB 3 navigation document. If available, NCX contents are shown for viewing only."), m_MissingNavigationNotice);
+    notice->setWordWrap(true);
+    noticeLayout->addWidget(notice);
+    auto *issues = new QPushButton(tr("View Issues"), m_MissingNavigationNotice);
+    auto *repair = new QPushButton(tr("Generate Navigation Document…"), m_MissingNavigationNotice);
+    repair->setObjectName("generateNavigationDocument");
+    noticeLayout->addWidget(issues);
+    noticeLayout->addWidget(repair);
+    connect(issues, &QPushButton::clicked, this, [this]() { emit OpenResourceRequest(m_Book->GetOPF()); });
+    connect(repair, &QPushButton::clicked, this, &TableOfContents::NavigationRepairRequested);
+    m_MissingNavigationNotice->hide();
+    m_Layout->addWidget(m_MissingNavigationNotice);
     m_Layout->addWidget(m_TreeView);
     m_MainWidget->setLayout(m_Layout);
     setWidget(m_MainWidget);
@@ -109,21 +126,24 @@ void TableOfContents::SetFocusOnTOC()
 
 void TableOfContents::SetBook(QSharedPointer<Book> book)
 {
+    disconnect(m_NavigationConnection);
     m_Book = book;
-    m_TOCModel->SetBook(book);
+    m_TOCModel->SetBook(book, false);
     m_EpubVersion = m_Book->GetConstOPF()->GetEpubVersion();
-    if (m_EpubVersion.startsWith('3')) {
-      connect(m_Book->GetConstOPF()->GetNavResource(), SIGNAL(Modified()), this, SLOT(StartRefreshDelay()));
-    } else {
-      // This is fine on epub2 as GetNCX() will always return a valid pointer
-      connect(m_Book->GetNCX(), SIGNAL(Modified()), this, SLOT(StartRefreshDelay()));
-    }
+    m_NavigationConnection = connect(m_Book->GetOPF(), &OPFResource::NavigationResourceChanged,
+                                    this, &TableOfContents::Refresh);
     
     Refresh();
 }
 
 void TableOfContents::Refresh()
 {
+    disconnect(m_SourceConnection);
+    Resource *source = m_Book->GetConstOPF()->GetNavResource();
+    const bool missingNav = m_EpubVersion.startsWith('3') && !source;
+    m_MissingNavigationNotice->setVisible(missingNav);
+    if (!source) source = m_Book->GetNCX();
+    if (source) m_SourceConnection = connect(source, SIGNAL(Modified()), this, SLOT(StartRefreshDelay()));
     m_TOCModel->Refresh();
 }
 

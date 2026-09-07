@@ -113,6 +113,7 @@ signals:
                              int position_to_scroll_to = -1,
                              const QString &caret_location_to_scroll_to = QString(),
                              const QUrl &fragment = QUrl());
+    void NavigationRepairRequested();
 
 private:
 
@@ -134,6 +135,9 @@ private:
      * A container widget for the TOC UI widgets.
      */
     QWidget *m_MainWidget;
+    QWidget *m_MissingNavigationNotice;
+    QMetaObject::Connection m_NavigationConnection;
+    QMetaObject::Connection m_SourceConnection;
 
     /**
      * The layout for the container widget.

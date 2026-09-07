@@ -70,6 +70,7 @@
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/Index.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "BookManipulation/NavigationRepair.h"
 #include "BuiltinPlugins/KfxImportProtocol.h"
 #include "Dialogs/About.h"
 #include "Dialogs/AddClips.h"
@@ -78,6 +79,7 @@
 #include "Dialogs/ClipboardHistorySelector.h"
 #include "Dialogs/DeleteStyles.h"
 #include "Dialogs/EditTOC.h"
+#include "Dialogs/NavigationRepairDialog.h"
 #include "Dialogs/EmptyLayout.h"
 #include "Dialogs/HeadingSelector.h"
 #include "Dialogs/LinkStylesheets.h"
@@ -2988,6 +2990,7 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
 
 bool MainWindow::AddCover()
 {
+    if (!EnsureNavigationDocument()) return false;
     QString version = m_Book->GetOPF()->GetEpubVersion();
 
     // Get the image to use.
@@ -3219,6 +3222,7 @@ bool MainWindow::RemoveNavFromSpine()
     }
     SaveTabData();
     Resource * navrsc = m_Book->GetConstOPF()->GetNavResource();
+    if (!navrsc) return false;
     m_Book->GetOPF()->RemoveResourceFromSpine(navrsc);
     ShowMessageOnStatusBar(tr("Nav removed from OPF Spine."));
     m_BookBrowser->BookContentModified();
@@ -3239,6 +3243,7 @@ bool MainWindow::AddNavToSpine(bool nonlinear)
     }
     SaveTabData();
     Resource * navrsc = m_Book->GetConstOPF()->GetNavResource();
+    if (!navrsc) return false;
     m_Book->GetOPF()->AppendResourceToSpine(navrsc, nonlinear);
     if (nonlinear) {
         ShowMessageOnStatusBar(tr("Nav added to OPF Spine with linear=\"no\""));
@@ -3383,6 +3388,7 @@ bool MainWindow::GenerateNCXGuideFromNav()
 
 void MainWindow::CreateIndex()
 {
+    if (!EnsureNavigationDocument()) return;
     SaveTabData();
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -4672,9 +4678,36 @@ void MainWindow::RemoveResources(QList<Resource *> resources)
     ShowMessageOnStatusBar(tr("File(s) deleted."));
 }
 
+bool MainWindow::EnsureNavigationDocument()
+{
+    if (!m_Book->GetOPF()->GetEpubVersion().startsWith('3') || m_Book->GetOPF()->GetNavResource()) return true;
+    return RepairMissingNavigation();
+}
+
+bool MainWindow::RepairMissingNavigation()
+{
+    SaveTabData();
+    NavigationRepair::Plan plan;
+    QString error;
+    if (!NavigationRepair::Prepare(m_Book, plan, error)) {
+        Utility::DisplayStdErrorDialog(error);
+        return false;
+    }
+    NavigationRepairDialog preview(plan, this);
+    if (preview.exec() != QDialog::Accepted) return false;
+    if (!NavigationRepair::Apply(m_Book, plan, error)) {
+        Utility::DisplayStdErrorDialog(error);
+        return false;
+    }
+    ResourcesAddedOrDeletedOrMoved();
+    ShowMessageOnStatusBar(tr("Navigation document generated."));
+    return true;
+}
+
 void MainWindow::EditTOCDialog()
 {
     SaveTabData();
+    if (!EnsureNavigationDocument()) return;
 
     QList<Resource *> resources = GetAllHTMLResources() + m_BookBrowser->AllMediaResources();
     EditTOC toc(m_Book, resources, this);
@@ -4692,6 +4725,13 @@ void MainWindow::EditTOCDialog()
 bool MainWindow::GenerateTOC(bool skip_selector)
 {
     SaveTabData();
+    if (m_Book->GetOPF()->GetEpubVersion().startsWith('3') && !m_Book->GetOPF()->GetNavResource()) {
+        if (skip_selector) {
+            ShowMessageOnStatusBar(tr("Generate a navigation document from the Table of Contents panel first."));
+            return false;
+        }
+        if (!EnsureNavigationDocument()) return false;
+    }
     QList<Resource *> resources = GetAllHTMLResources();
 
     if (resources.isEmpty()) {
@@ -4740,6 +4780,7 @@ bool MainWindow::GenerateTOC(bool skip_selector)
 
 bool MainWindow::CreateHTMLTOC()
 {
+    if (!EnsureNavigationDocument()) return false;
     SaveTabData();
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -7945,6 +7986,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_BookBrowser, SIGNAL(RemoveResourcesRequest()), this, SLOT(RemoveResources()));
     connect(m_BookBrowser, SIGNAL(OpenFileRequest(QString, int, int)), this, SLOT(OpenFile(QString, int, int)));
     connect(m_BookBrowser, SIGNAL(ViewImageRequest(const QUrl&)), this, SLOT(ViewImageDialog(const QUrl&)));
+    connect(m_TableOfContents, &TableOfContents::NavigationRepairRequested, this, &MainWindow::RepairMissingNavigation);
     connect(m_TableOfContents, SIGNAL(OpenResourceRequest(Resource *, int, int, const QString &, const QUrl &)),
             this,     SLOT(OpenResource(Resource *, int, int, const QString &, const QUrl &)));
     connect(m_ValidationResultsView, SIGNAL(OpenResourceRequest(Resource *, int, int, const QString &)),

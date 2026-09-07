@@ -1992,6 +1992,10 @@ void BookBrowser::GetInfo()
             
 void BookBrowser::AddSemanticCode()
 {
+    if (m_Book->GetOPF()->GetEpubVersion().startsWith('3') && !m_Book->GetOPF()->GetNavResource()) {
+        Utility::DisplayStdErrorDialog(tr("Generate a navigation document from the Table of Contents panel before editing landmarks."));
+        return;
+    }
     QList <Resource *> resources = ValidSelectedResources();
     int scrollY = m_TreeView->verticalScrollBar()->value();
 

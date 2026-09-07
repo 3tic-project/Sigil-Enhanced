@@ -1812,6 +1812,10 @@ if a sans-serif font-family specified in your CSS</source>
 <context>
     <name>BookBrowser</name>
     <message>
+        <source>Generate a navigation document from the Table of Contents panel before editing landmarks.</source>
+        <translation>編輯地標前，請先在目錄面板中產生導覽文件。</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="86"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="117"/>
         <source>Book Browser</source>
@@ -6678,6 +6682,14 @@ You can then check or uncheck individual headings in the list above.</source>
 <context>
     <name>ImportEPUB</name>
     <message>
+        <source>Missing EPUB 3 navigation document. No files were generated. The Table of Contents panel can display the NCX and offers an explicit navigation repair.</source>
+        <translation>缺少 EPUB 3 導覽文件。未產生任何檔案。目錄面板可顯示 NCX，並提供明確的導覽修復操作。</translation>
+    </message>
+    <message>
+        <source>The OPF has no usable spine. No automatic repair was applied.</source>
+        <translation>OPF 中沒有可用的 spine。未執行自動修復。</translation>
+    </message>
+    <message>
         <source>Expected a package element in the OPF namespace.</source>
         <translation>應為 OPF 命名空間中的 package 元素。</translation>
     </message>
@@ -10735,6 +10747,14 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <source>Generate a navigation document from the Table of Contents panel first.</source>
+        <translation>請先在目錄面板中產生導覽文件。</translation>
+    </message>
+    <message>
+        <source>Navigation document generated.</source>
+        <translation>導覽文件已產生。</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="58"/>
         <source>&amp;File</source>
@@ -25115,6 +25135,18 @@ Use if you edit any HTML files while Spellcheck is open.</source>
 <context>
     <name>TableOfContents</name>
     <message>
+        <source>Missing EPUB 3 navigation document. If available, NCX contents are shown for viewing only.</source>
+        <translation>缺少 EPUB 3 導覽文件。如有 NCX，其內容僅供檢視。</translation>
+    </message>
+    <message>
+        <source>View Issues</source>
+        <translation>檢視問題</translation>
+    </message>
+    <message>
+        <source>Generate Navigation Document…</source>
+        <translation>產生導覽文件…</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/TableOfContents.cpp" line="46"/>
         <source>Table Of Contents</source>
         <translation>目錄</translation>
@@ -26860,5 +26892,83 @@ Continue using the requested filename?</source>
     <message><source>PBE %1</source><translation>區塊後內距 %1</translation></message>
     <message><source>WM %1</source><translation>書寫模式 %1</translation></message>
     <message><source>Layout metrics unavailable</source><translation>暫無排版度量</translation></message>
+</context>
+<context>
+    <name>NavigationRepair</name>
+    <message>
+        <source>The NCX is not well-formed. Review it before generating navigation.</source>
+        <translation>NCX 格式不良構。請先檢查 NCX，再產生導覽。</translation>
+    </message>
+    <message>
+        <source>Navigation repair is only available for EPUB 3 books without a navigation document.</source>
+        <translation>導覽修復僅適用於缺少導覽文件的 EPUB 3 書籍。</translation>
+    </message>
+    <message>
+        <source>Repair requires well-formed OPF and at most one XHTML navigation declaration. Review the OPF first.</source>
+        <translation>修復要求 OPF 格式良構，且最多有一個 XHTML 導覽宣告。請先檢查 OPF。</translation>
+    </message>
+    <message>
+        <source>The declared navigation path is not a local XHTML path. Review the OPF first.</source>
+        <translation>宣告的導覽路徑不是本機 XHTML 路徑。請先檢查 OPF。</translation>
+    </message>
+    <message>
+        <source>The navigation destination must be an unused file in an existing book folder.</source>
+        <translation>導覽目標必須是書籍現有資料夾中尚未使用的檔案路徑。</translation>
+    </message>
+    <message>
+        <source>There are no NCX entries or readable spine resources to use for navigation.</source>
+        <translation>沒有可用於導覽的 NCX 項目或可讀取的 spine 資源。</translation>
+    </message>
+    <message>
+        <source>Contents</source>
+        <translation>目錄</translation>
+    </message>
+    <message>
+        <source>An NCX target is missing or is not a local publication resource. Review the NCX first.</source>
+        <translation>某個 NCX 目標缺失或不是本機出版物資源。請先檢查 NCX。</translation>
+    </message>
+    <message>
+        <source>The book or repair plan changed after preview. Review a new plan before applying it.</source>
+        <translation>預覽後書籍或修復計畫已變更。請重新預覽計畫後再套用。</translation>
+    </message>
+</context>
+<context>
+    <name>NavigationRepairDialog</name>
+    <message>
+        <source>Generate Navigation Document</source>
+        <translation>產生導覽文件</translation>
+    </message>
+    <message>
+        <source>Create %1. No CSS file or spine entry will be added.</source>
+        <translation>建立 %1。不會新增 CSS 檔案或 spine 項目。</translation>
+    </message>
+    <message>
+        <source>Navigation will use NCX entries.</source>
+        <translation>導覽將使用 NCX 項目。</translation>
+    </message>
+    <message>
+        <source>Navigation will use the current spine order.</source>
+        <translation>導覽將使用目前的 spine 閱讀順序。</translation>
+    </message>
+    <message>
+        <source>The existing manifest declaration will be used; OPF will not change.</source>
+        <translation>將使用現有 manifest 宣告；OPF 不會變更。</translation>
+    </message>
+    <message>
+        <source>One navigation item will be added to the OPF manifest.</source>
+        <translation>將向 OPF manifest 新增一個導覽項目。</translation>
+    </message>
+    <message>
+        <source>New navigation source</source>
+        <translation>新導覽原始碼</translation>
+    </message>
+    <message>
+        <source>OPF before</source>
+        <translation>修改前的 OPF</translation>
+    </message>
+    <message>
+        <source>OPF after</source>
+        <translation>修改後的 OPF</translation>
+    </message>
 </context>
 </TS>

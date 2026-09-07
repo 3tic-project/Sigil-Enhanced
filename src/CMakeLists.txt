@@ -30,6 +30,8 @@ set( MAIN_FILES
 set( BOOK_MANIPULATION_FILES
     BookManipulation/Book.cpp
     BookManipulation/Book.h
+    BookManipulation/NavigationRepair.cpp
+    BookManipulation/NavigationRepair.h
     BookManipulation/BookReports.cpp
     BookManipulation/BookReports.h
     BookManipulation/Index.cpp
@@ -246,6 +248,8 @@ set( DIALOG_FILES
     Dialogs/EditRO.h
     Dialogs/EditTOC.cpp
     Dialogs/EditTOC.h
+    Dialogs/NavigationRepairDialog.cpp
+    Dialogs/NavigationRepairDialog.h
     Dialogs/EmptyLayout.cpp
     Dialogs/EmptyLayout.h
     Dialogs/ImageResizeDialog.cpp

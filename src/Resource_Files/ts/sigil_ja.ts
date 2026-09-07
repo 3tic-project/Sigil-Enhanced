@@ -1812,6 +1812,10 @@ if a sans-serif font-family specified in your CSS</source>
 <context>
     <name>BookBrowser</name>
     <message>
+        <source>Generate a navigation document from the Table of Contents panel before editing landmarks.</source>
+        <translation>ランドマークを編集する前に、目次パネルでナビゲーション文書を生成してください。</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="86"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="117"/>
         <source>Book Browser</source>
@@ -6683,6 +6687,14 @@ You can then check or uncheck individual headings in the list above.</source>
 <context>
     <name>ImportEPUB</name>
     <message>
+        <source>Missing EPUB 3 navigation document. No files were generated. The Table of Contents panel can display the NCX and offers an explicit navigation repair.</source>
+        <translation>EPUB 3 ナビゲーション文書がありません。ファイルは生成されていません。目次パネルで NCX を表示し、明示的にナビゲーションを修復できます。</translation>
+    </message>
+    <message>
+        <source>The OPF has no usable spine. No automatic repair was applied.</source>
+        <translation>OPF に使用可能な spine がありません。自動修復は行われていません。</translation>
+    </message>
+    <message>
         <source>Expected a package element in the OPF namespace.</source>
         <translation>OPF 名前空間の package 要素が必要です。</translation>
     </message>
@@ -10740,6 +10752,14 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <source>Generate a navigation document from the Table of Contents panel first.</source>
+        <translation>先に目次パネルでナビゲーション文書を生成してください。</translation>
+    </message>
+    <message>
+        <source>Navigation document generated.</source>
+        <translation>ナビゲーション文書を生成しました。</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="58"/>
         <source>&amp;File</source>
@@ -25130,6 +25150,18 @@ Use if you edit any HTML files while Spellcheck is open.</source>
 <context>
     <name>TableOfContents</name>
     <message>
+        <source>Missing EPUB 3 navigation document. If available, NCX contents are shown for viewing only.</source>
+        <translation>EPUB 3 ナビゲーション文書がありません。NCX がある場合、その内容を閲覧用に表示します。</translation>
+    </message>
+    <message>
+        <source>View Issues</source>
+        <translation>問題を確認</translation>
+    </message>
+    <message>
+        <source>Generate Navigation Document…</source>
+        <translation>ナビゲーション文書を生成…</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/TableOfContents.cpp" line="46"/>
         <source>Table Of Contents</source>
         <translation>目次</translation>
@@ -26875,5 +26907,83 @@ Continue using the requested filename?</source>
     <message><source>PBE %1</source><translation>ブロック後パディング %1</translation></message>
     <message><source>WM %1</source><translation>書字方向 %1</translation></message>
     <message><source>Layout metrics unavailable</source><translation>レイアウト計測値を取得できません</translation></message>
+</context>
+<context>
+    <name>NavigationRepair</name>
+    <message>
+        <source>The NCX is not well-formed. Review it before generating navigation.</source>
+        <translation>NCX が整形式ではありません。ナビゲーションを生成する前に確認してください。</translation>
+    </message>
+    <message>
+        <source>Navigation repair is only available for EPUB 3 books without a navigation document.</source>
+        <translation>ナビゲーションの修復は、ナビゲーション文書のない EPUB 3 書籍でのみ使用できます。</translation>
+    </message>
+    <message>
+        <source>Repair requires well-formed OPF and at most one XHTML navigation declaration. Review the OPF first.</source>
+        <translation>修復には整形式の OPF と、最大 1 つの XHTML ナビゲーション宣言が必要です。先に OPF を確認してください。</translation>
+    </message>
+    <message>
+        <source>The declared navigation path is not a local XHTML path. Review the OPF first.</source>
+        <translation>宣言されたナビゲーションパスはローカルの XHTML パスではありません。先に OPF を確認してください。</translation>
+    </message>
+    <message>
+        <source>The navigation destination must be an unused file in an existing book folder.</source>
+        <translation>ナビゲーションの保存先には、書籍内の既存フォルダーにある未使用のファイルパスを指定する必要があります。</translation>
+    </message>
+    <message>
+        <source>There are no NCX entries or readable spine resources to use for navigation.</source>
+        <translation>ナビゲーションに使用できる NCX 項目や読み取り可能な spine リソースがありません。</translation>
+    </message>
+    <message>
+        <source>Contents</source>
+        <translation>目次</translation>
+    </message>
+    <message>
+        <source>An NCX target is missing or is not a local publication resource. Review the NCX first.</source>
+        <translation>NCX のリンク先が存在しないか、ローカルの出版物リソースではありません。先に NCX を確認してください。</translation>
+    </message>
+    <message>
+        <source>The book or repair plan changed after preview. Review a new plan before applying it.</source>
+        <translation>プレビュー後に書籍または修復計画が変更されました。新しい計画を確認してから適用してください。</translation>
+    </message>
+</context>
+<context>
+    <name>NavigationRepairDialog</name>
+    <message>
+        <source>Generate Navigation Document</source>
+        <translation>ナビゲーション文書を生成</translation>
+    </message>
+    <message>
+        <source>Create %1. No CSS file or spine entry will be added.</source>
+        <translation>%1 を作成します。CSS ファイルや spine 項目は追加されません。</translation>
+    </message>
+    <message>
+        <source>Navigation will use NCX entries.</source>
+        <translation>NCX 項目を使用してナビゲーションを作成します。</translation>
+    </message>
+    <message>
+        <source>Navigation will use the current spine order.</source>
+        <translation>現在の spine の順序を使用してナビゲーションを作成します。</translation>
+    </message>
+    <message>
+        <source>The existing manifest declaration will be used; OPF will not change.</source>
+        <translation>既存の manifest 宣言を使用します。OPF は変更されません。</translation>
+    </message>
+    <message>
+        <source>One navigation item will be added to the OPF manifest.</source>
+        <translation>OPF manifest にナビゲーション項目を 1 つ追加します。</translation>
+    </message>
+    <message>
+        <source>New navigation source</source>
+        <translation>新しいナビゲーションのソース</translation>
+    </message>
+    <message>
+        <source>OPF before</source>
+        <translation>変更前の OPF</translation>
+    </message>
+    <message>
+        <source>OPF after</source>
+        <translation>変更後の OPF</translation>
+    </message>
 </context>
 </TS>

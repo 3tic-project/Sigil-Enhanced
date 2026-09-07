@@ -95,6 +95,7 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
 {
     QList<HTMLResource *> non_well_formed;
     SettingsStore ss;
+    bool applied_changes = false;
 
     if (!Utility::IsFileReadable(m_FullFilePath)) {
         throw (EPUBLoadParseError(QString(QObject::tr("Cannot read EPUB: %1")).arg(QDir::toNativeSeparators(m_FullFilePath)).toStdString()));
@@ -182,6 +183,7 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
         if (autofix) {
             foreach(HTMLResource* htmlres, non_well_formed) {
                 QString fixed_text = CleanSource::Mend(htmlres->GetText(),htmlres->GetEpubVersion());
+                applied_changes |= fixed_text != htmlres->GetText();
                 htmlres->SetText(fixed_text);
             }
             non_well_formed.clear();
@@ -208,14 +210,11 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
                 nav_resource = qobject_cast<HTMLResource*>(m_NavResource);
             }
         }
-        if (!nav_resource) { 
-            // we need to create a nav file here because one was not found
-            // it will automatically be added to the content.opf
-            nav_resource = m_Book->CreateEmptyNavFile(true);
-            Resource * res = qobject_cast<Resource *>(nav_resource);
-            m_Book->GetOPF()->SetItemRefLinear(res, false);
+        if (!nav_resource) {
+            AddLoadWarning(tr("Missing EPUB 3 navigation document. No files were generated. "
+                              "The Table of Contents panel can display the NCX and offers an explicit navigation repair."));
         }
-        m_Book->GetOPF()->SetNavResource(nav_resource);
+        m_Book->GetOPF()->SetNavResource(nav_resource, false);
     }
 
     
@@ -227,7 +226,7 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
 
     NCXResource * ncxresource = m_Book->GetNCX();
  
-    if (ncxresource) {
+    if (ncxresource && (m_PackageVersion.startsWith('2') || !ss.preserveOPFSource())) {
         // Ensure that our spine has a <spine toc="ncx"> element on it now in case it was missing.
         m_Book->GetOPF()->UpdateNCXOnSpine(m_NCXId);
         // Make sure the <item> for the NCX in the manifest reflects correct href path
@@ -236,7 +235,9 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
 
     // If spine was not present or did not contain any items, recreate the OPF from scratch
     // preserving any important metadata elements and making a new reading order.
-    if (!m_HasSpineItems) {
+    if (!m_HasSpineItems && ss.preserveOPFSource()) {
+        AddLoadWarning(tr("The OPF has no usable spine. No automatic repair was applied."));
+    } else if (!m_HasSpineItems) {
         QList<MetaEntry> originalMetadata = m_Book->GetOPF()->GetDCMetadata();
         m_Book->GetOPF()->AutoFixWellFormedErrors();
         if (extract_metadata) {
@@ -254,8 +255,12 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
     // InitialLoad on all TextResources to make sure everything gets loaded
     m_Book->GetFolderKeeper()->PerformInitialLoads();
 
-    // If we have modified the book to add spine attribute, manifest item or NCX mark as changed.
-    m_Book->SetModified(GetLoadWarnings().count() > 0);
+    // Diagnostics alone are not publication edits. Compare the actual OPF
+    // editor projection and separately track repairs to other resources.
+    QString original_opf = OPFResource::DecodeSourceBytes(m_OPFSourceBytes);
+    original_opf.replace("\r\n", "\n").replace('\r', '\n')
+        .replace(QChar(0x2028), QChar('\n')).replace(QChar(0x2029), QChar('\n'));
+    m_Book->SetModified(applied_changes || m_NCXNotInManifest || m_Book->GetOPF()->GetText() != original_opf);
     QApplication::restoreOverrideCursor();
     return m_Book;
 }
@@ -730,7 +735,7 @@ void ImportEPUB::ReadManifestItemElement(QXmlStreamReader *opf_reader)
                 m_ManifestMediaTypes << type;
 
                 // store information about any nav document
-                if (properties.contains("nav")) {
+                if (properties.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts).contains("nav")) {
                     m_NavId = id;
                     m_NavHref = apath;
                 }

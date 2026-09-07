@@ -296,6 +296,8 @@ public slots:
     bool RemoveNCXGuideFromEpub3();
 
     bool RemoveNavFromSpine();
+    bool RepairMissingNavigation();
+    bool EnsureNavigationDocument();
     bool AddNavToSpine(bool nonlinear);
 
     void CreateIndex();
