@@ -82,7 +82,8 @@ protected:
     /**
      * The full path to the file to be imported.
      */
-    const QString &m_FullFilePath;
+    // Importers can outlive a temporary path passed to their constructor.
+    const QString m_FullFilePath;
 
     /**
      * The Book that will be created
@@ -96,5 +97,4 @@ protected:
 };
 
 #endif // IMPORTER_H
-
 
