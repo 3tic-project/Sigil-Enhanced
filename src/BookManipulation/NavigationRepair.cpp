@@ -139,6 +139,10 @@ bool NavigationRepair::Prepare(const QSharedPointer<Book> &book, Plan &plan, QSt
                  || QFileInfo::exists(folder->GetFullPathToMainFolder() + "/" + plan.navBookPath));
     }
     const QString fullPath = folder->GetFullPathToMainFolder() + "/" + plan.navBookPath;
+    if (folder->DetermineFileGroup(fullPath, "application/xhtml+xml") != QLatin1String("Text")) {
+        error = tr("The navigation destination cannot be registered as an XHTML resource.");
+        return false;
+    }
     const QString canonicalRoot = QFileInfo(folder->GetFullPathToMainFolder()).canonicalFilePath();
     const QString canonicalParent = QFileInfo(fullPath).dir().canonicalPath();
     if (plan.navBookPath.startsWith('/') || plan.navBookPath.contains('\\') || plan.navBookPath.split('/').contains("..")
@@ -247,6 +251,12 @@ bool NavigationRepair::Apply(const QSharedPointer<Book> &book, const Plan &plan,
     try {
         added = folder->AddContentFileToFolder(target, false, "application/xhtml+xml", plan.navBookPath);
         auto *nav = qobject_cast<HTMLResource *>(added);
+        if (!nav) {
+            if (added) folder->RemoveWithoutUpdatingOPF(added);
+            added = nullptr;
+            error = tr("The navigation destination cannot be registered as an XHTML resource.");
+            return false;
+        }
         nav->SetText(plan.navText);
         // All fallible parsing/planning and file creation happen before this
         // single OPF edit. No CSS or spine item is generated implicitly.

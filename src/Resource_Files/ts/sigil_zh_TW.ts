@@ -26912,6 +26912,10 @@ Continue using the requested filename?</source>
         <translation>宣告的導覽路徑不是本機 XHTML 路徑。請先檢查 OPF。</translation>
     </message>
     <message>
+        <source>The navigation destination cannot be registered as an XHTML resource.</source>
+        <translation>導航目標位置無法註冊為 XHTML 資源。</translation>
+    </message>
+    <message>
         <source>The navigation destination must be an unused file in an existing book folder.</source>
         <translation>導覽目標必須是書籍現有資料夾中尚未使用的檔案路徑。</translation>
     </message>

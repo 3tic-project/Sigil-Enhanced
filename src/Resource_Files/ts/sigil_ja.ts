@@ -26927,6 +26927,10 @@ Continue using the requested filename?</source>
         <translation>宣言されたナビゲーションパスはローカルの XHTML パスではありません。先に OPF を確認してください。</translation>
     </message>
     <message>
+        <source>The navigation destination cannot be registered as an XHTML resource.</source>
+        <translation>ナビゲーションの保存先を XHTML リソースとして登録できません。</translation>
+    </message>
+    <message>
         <source>The navigation destination must be an unused file in an existing book folder.</source>
         <translation>ナビゲーションの保存先には、書籍内の既存フォルダーにある未使用のファイルパスを指定する必要があります。</translation>
     </message>

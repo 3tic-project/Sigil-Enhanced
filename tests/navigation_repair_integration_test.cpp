@@ -245,6 +245,20 @@ int main(int argc, char **argv)
             ncx->SetText(original.left(labelOffset));
             Require(toc.GetRootTOCEntry().children.isEmpty(), "Truncated NCX returned a partial tree");
         }
+        {
+            std::cerr << "Checking reserved navigation destination\n";
+            ImportEPUB reservedImporter(base + ".declared");
+            const auto book = reservedImporter.GetBook();
+            auto *opf = book->GetOPF();
+            opf->SetText(opf->GetSourceText().replace("href='nav.xhtml'", "href='../META-INF/nav.xhtml'"));
+            const auto paths = book->GetFolderKeeper()->GetAllBookPaths();
+            const QString before = opf->GetSourceText();
+            NavigationRepair::Plan plan;
+            QString error;
+            Require(!NavigationRepair::Prepare(book, plan, error), "Repair accepted a non-XHTML resource destination");
+            Require(paths == book->GetFolderKeeper()->GetAllBookPaths() && opf->GetSourceText() == before,
+                    "Rejected reserved destination changed the publication");
+        }
         settings.setCleanOn(CLEANON_OPEN);
         std::cerr << "Checking Clean on Open modified state\n";
         ImportEPUB cleanImporter(base + ".warning");

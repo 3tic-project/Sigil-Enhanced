@@ -26929,6 +26929,10 @@ Continue using the requested filename?</source>
         <translation>声明的导航路径不是本地 XHTML 路径。请先检查 OPF。</translation>
     </message>
     <message>
+        <source>The navigation destination cannot be registered as an XHTML resource.</source>
+        <translation>导航目标位置无法注册为 XHTML 资源。</translation>
+    </message>
+    <message>
         <source>The navigation destination must be an unused file in an existing book folder.</source>
         <translation>导航目标必须是书籍现有文件夹中尚未使用的文件路径。</translation>
     </message>
