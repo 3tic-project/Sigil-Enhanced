@@ -26939,8 +26939,8 @@ Continue using the requested filename?</source>
         <translation>目次</translation>
     </message>
     <message>
-        <source>An NCX target is missing or is not a local publication resource. Review the NCX first.</source>
-        <translation>NCX のリンク先が存在しないか、ローカルの出版物リソースではありません。先に NCX を確認してください。</translation>
+        <source>An NCX entry has an empty label or an invalid local target. Review the NCX first.</source>
+        <translation>NCX の項目のラベルが空か、ローカルのリンク先が無効です。先に NCX を確認してください。</translation>
     </message>
     <message>
         <source>The book or repair plan changed after preview. Review a new plan before applying it.</source>

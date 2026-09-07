@@ -174,14 +174,10 @@ TOCModel::TOCEntry TOCModel::ParseNavPoint(QXmlStreamReader &ncx)
 
         if (ncx.isStartElement()) {
             if (ncx.name().compare(QLatin1String("text")) == 0) {
-                while (!ncx.isCharacters()) {
-                    ncx.readNext();
-                }
-
-                // The string returned from text() is unescaped
-                // (that is, XML entities have already been converted to text).
-                // Compress whitespace that pretty-print may add.
-                current.text = ncx.text().toString().simplified();
+                // Consume this element only, including adjacent CDATA/entity
+                // tokens. Waiting for a Characters token can steal a later
+                // label after <text/> or loop forever on truncated input.
+                current.text = ncx.readElementText(QXmlStreamReader::IncludeChildElements).simplified();
             } else if (ncx.name().compare(QLatin1String("content")) == 0) {
                 QString href = ncx.attributes().value("", "src").toString();
                 current.target = ConvertHREFToBookPath(href);

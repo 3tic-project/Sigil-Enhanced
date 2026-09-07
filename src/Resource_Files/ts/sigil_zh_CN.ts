@@ -26941,8 +26941,8 @@ Continue using the requested filename?</source>
         <translation>目录</translation>
     </message>
     <message>
-        <source>An NCX target is missing or is not a local publication resource. Review the NCX first.</source>
-        <translation>某个 NCX 目标缺失或不是本地出版物资源。请先检查 NCX。</translation>
+        <source>An NCX entry has an empty label or an invalid local target. Review the NCX first.</source>
+        <translation>某个 NCX 条目的标题为空或本地链接目标无效。请先检查 NCX。</translation>
     </message>
     <message>
         <source>The book or repair plan changed after preview. Review a new plan before applying it.</source>

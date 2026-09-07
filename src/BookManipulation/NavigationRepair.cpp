@@ -35,6 +35,7 @@ bool WriteEntries(QXmlStreamWriter &writer, const QList<TOCModel::TOCEntry> &ent
 {
     writer.writeStartElement("ol");
     for (const auto &entry : entries) {
+        if (entry.text.trimmed().isEmpty()) return false;
         writer.writeStartElement("li");
         const QUrl target = QUrl::fromEncoded(entry.target.toUtf8());
         if (!entry.target.isEmpty()) {
@@ -203,7 +204,7 @@ bool NavigationRepair::Prepare(const QSharedPointer<Book> &book, Plan &plan, QSt
     writer.writeTextElement("h1", tr("Contents"));
     QHash<QString, QSet<QString>> targetIds;
     if (!WriteEntries(writer, root.children, plan.navBookPath, *book, targetIds)) {
-        error = tr("An NCX target is missing or is not a local publication resource. Review the NCX first.");
+        error = tr("An NCX entry has an empty label or an invalid local target. Review the NCX first.");
         return false;
     }
     writer.writeEndDocument();

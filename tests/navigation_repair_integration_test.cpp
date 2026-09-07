@@ -221,6 +221,30 @@ int main(int argc, char **argv)
             }
             ExportEPUB(input + ".repaired.epub", book).WriteBook();
         }
+        {
+            std::cerr << "Checking empty, split-token and truncated NCX labels\n";
+            ImportEPUB labelImporter(base + ".missing");
+            const auto book = labelImporter.GetBook();
+            auto *ncx = book->GetNCX();
+            const QString original = ncx->GetText();
+            TOCModel toc;
+            toc.SetBook(book, false);
+            ncx->SetText(QString(original).replace("Chapter &amp; text", "Chapter <![CDATA[&]]> text"));
+            Require(toc.GetRootTOCEntry().children[0].text == "Chapter & text", "NCX label lost adjacent text tokens");
+            ncx->SetText(QString(original).replace("<text>Chapter &amp; text</text>", "<text/>"));
+            const auto emptyLabel = toc.GetRootTOCEntry();
+            Require(emptyLabel.children.size() == 1 && emptyLabel.children[0].text.isEmpty()
+                    && emptyLabel.children[0].children.size() == 1
+                    && emptyLabel.children[0].children[0].text == "Nested entry", "Empty NCX label consumed the next entry");
+            NavigationRepair::Plan plan;
+            QString error;
+            const auto paths = book->GetFolderKeeper()->GetAllBookPaths();
+            Require(!NavigationRepair::Prepare(book, plan, error), "Repair accepted an empty navigation label");
+            Require(paths == book->GetFolderKeeper()->GetAllBookPaths(), "Rejected empty label created resources");
+            const int labelOffset = original.indexOf("<navLabel><text>") + QString("<navLabel><text>").size();
+            ncx->SetText(original.left(labelOffset));
+            Require(toc.GetRootTOCEntry().children.isEmpty(), "Truncated NCX returned a partial tree");
+        }
         settings.setCleanOn(CLEANON_OPEN);
         std::cerr << "Checking Clean on Open modified state\n";
         ImportEPUB cleanImporter(base + ".warning");
