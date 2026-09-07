@@ -1096,6 +1096,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(navigation_repair_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME plugin_package_update_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plugin_package_update_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(plugin_package_update_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
 endif()
 
 add_test(NAME vendored_source_manifest
@@ -1311,22 +1316,9 @@ target_link_libraries(plugin_writer_lock_test PRIVATE
 add_test(NAME plugin_writer_lock COMMAND plugin_writer_lock_test)
 set_tests_properties(plugin_writer_lock PROPERTIES TIMEOUT 30)
 
-add_executable(plugin_package_update_test
-    plugin_package_update_test.cpp
-    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginPackageUpdate.cpp
-    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginPackageUpdate.h
+add_test(NAME plugin_package_update
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_package_update_test.py
 )
-
-target_include_directories(plugin_package_update_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-target_link_libraries(plugin_package_update_test PRIVATE
-    Qt6::Core
-    Qt6::Xml
-)
-
-add_test(NAME plugin_package_update COMMAND plugin_package_update_test)
 set_tests_properties(plugin_package_update PROPERTIES TIMEOUT 30)
 
 add_executable(agent_stream_decoder_test

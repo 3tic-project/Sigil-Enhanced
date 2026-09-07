@@ -6,6 +6,7 @@ avoids recompiling the application twice. No existing binary or settings are
 overwritten. Run after `cmake --build <build> --target Sigil`.
 """
 import argparse
+import contextlib
 import os
 import pathlib
 import shlex
@@ -67,7 +68,7 @@ def verify_epub_exports(path, source, members):
 
 
 def run(build, test_entry='opf_resource_integration_test.cpp', build_fixture=epub_fixture,
-        verify=verify_epub_exports):
+        verify=verify_epub_exports, direct_app_executable=False):
     if sys.platform != 'darwin':
         raise RuntimeError('This integration runner currently supports macOS only')
     root = pathlib.Path(__file__).resolve().parents[1]
@@ -108,14 +109,25 @@ def run(build, test_entry='opf_resource_integration_test.cpp', build_fixture=epu
         link_args[main_object] = str(test_object)
         # Keep the harness isolated inside the build; do not replace Sigil.
         executable_dir = build / 'bin/Sigil.app/Contents/MacOS'
-        with tempfile.TemporaryDirectory(prefix='opf-test-', dir=executable_dir) as bin_directory:
-            executable = pathlib.Path(bin_directory) / 'opf_resource_test'
+        with contextlib.ExitStack() as cleanup:
+            if direct_app_executable:
+                descriptor, name = tempfile.mkstemp(prefix='.opf-test-', dir=executable_dir)
+                os.close(descriptor)
+                os.unlink(name)
+                executable = pathlib.Path(name)
+                cleanup.callback(lambda: executable.unlink(missing_ok=True))
+            else:
+                bin_directory = cleanup.enter_context(
+                    tempfile.TemporaryDirectory(prefix='opf-test-', dir=executable_dir))
+                executable = pathlib.Path(bin_directory) / 'opf_resource_test'
             link_args[link_args.index('-o') + 1] = str(executable)
             subprocess.run(link_args, cwd=build, check=True)
             environment = dict(os.environ, QT_QPA_PLATFORM='offscreen', SIGIL_PREFS_DIR=str(scratch))
             # Use source modules plus built runtime dependencies for the nested
             # executable; the embedded interpreter uses the same linked Python.
             environment['SIGIL_TEST_PYTHON_ROOT'] = str(build / 'bin/Sigil.app/Contents/python3lib')
+            environment['SIGIL_EXTRA_ROOT'] = str(build / 'bin/Sigil.app/Contents')
+            environment['SIGIL_TEST_EXTERNAL_PYTHON'] = sys.executable
             environment.pop('PYTHONPATH', None)
             subprocess.run([executable, root, fixture], env=environment, check=True, timeout=30)
             verify(fixture, source, members)
