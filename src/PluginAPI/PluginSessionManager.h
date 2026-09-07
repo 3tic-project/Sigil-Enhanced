@@ -39,8 +39,14 @@ public:
     void StopAll();
     int SessionCount() const;
     bool HasWriter() const;
+    // Native integration tests use this one-shot hook to prove that a live
+    // commit restores already-applied mutations. Negative values disable it.
+    void SetCommitFailureAfterMutationForTesting(int successful_mutations);
 
 private:
+    friend class PluginSession;
+    bool ConsumeCommitMutationForTesting();
+
     PluginSession *StartSession(const Plugin &plugin, QString *error, bool quiet = false,
                                 const QString &snippet_path = QString());
     bool WaitForSession(PluginSession *session, QString *status, QString *plugin_type,
@@ -51,6 +57,7 @@ private:
     TabManager *m_TabManager;
     QHash<QUuid, PluginSession *> m_Sessions;
     PluginApi::WriterLock m_WriterLock;
+    int m_CommitMutationsBeforeFailure = -1;
 };
 
 #endif // PLUGINSESSIONMANAGER_H

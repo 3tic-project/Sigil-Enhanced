@@ -1106,6 +1106,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(plugin_session_package_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME plugin_session_fault_recovery_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plugin_session_fault_recovery_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(plugin_session_fault_recovery_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
     add_test(NAME agent_workspace_package_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_agent_workspace_package_integration.py
                 ${CMAKE_BINARY_DIR}

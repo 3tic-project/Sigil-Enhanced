@@ -182,3 +182,19 @@ bool PluginSessionManager::HasWriter() const
 {
     return m_WriterLock.IsHeld();
 }
+
+void PluginSessionManager::SetCommitFailureAfterMutationForTesting(int successful_mutations)
+{
+    m_CommitMutationsBeforeFailure = successful_mutations;
+}
+
+bool PluginSessionManager::ConsumeCommitMutationForTesting()
+{
+    if (m_CommitMutationsBeforeFailure < 0) return false;
+    if (m_CommitMutationsBeforeFailure == 0) {
+        m_CommitMutationsBeforeFailure = -1;
+        return true;
+    }
+    --m_CommitMutationsBeforeFailure;
+    return false;
+}
