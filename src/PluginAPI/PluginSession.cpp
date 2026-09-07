@@ -121,12 +121,14 @@ QJsonObject AttributesToJson(const TagAtts &attributes)
     return result;
 }
 
-QJsonObject PackageSections(Book *book)
+QJsonObject PackageSections(Book *book, QString *error)
 {
     OPFResource *opf = book->GetOPF();
     opf->InitialLoad();
+    QString model;
+    if (!PluginApi::ReadPackageModel(opf->GetSourceText(), &model, error)) return {};
     OPFParser parser;
-    parser.parse(opf->GetText());
+    parser.parse(model);
     FolderKeeper *folder_keeper = book->GetFolderKeeper();
 
     QJsonArray metadata;
@@ -164,6 +166,7 @@ QJsonObject PackageSections(Book *book)
         Resource *resource = folder_keeper->GetResourceByBookPathNoThrow(book_path);
         spine.append(QJsonObject {
             { QStringLiteral("idref"), entry.m_idref },
+            { QStringLiteral("id"), entry.m_atts.value(QStringLiteral("id")) },
             { QStringLiteral("book_path"), book_path },
             { QStringLiteral("linear"), entry.m_atts.value(QStringLiteral("linear")) },
             { QStringLiteral("properties"), entry.m_atts.value(QStringLiteral("properties")) },
@@ -1011,7 +1014,12 @@ void PluginSession::Dispatch(const QJsonObject &request)
                || method == QStringLiteral("book.getSpine")
                || method == QStringLiteral("book.getGuide")
                || method == QStringLiteral("book.getBindings")) {
-        const QJsonObject sections = PackageSections(m_MainWindow->GetCurrentBook().data());
+        QString package_error;
+        const QJsonObject sections = PackageSections(m_MainWindow->GetCurrentBook().data(), &package_error);
+        if (!package_error.isEmpty()) {
+            RespondError(id, PluginApi::ValidationFailed, package_error);
+            return;
+        }
         if (method == QStringLiteral("book.getMetadata")) {
             Respond(id, QJsonObject {
                 { QStringLiteral("items"), sections.value(QStringLiteral("metadata")) },
@@ -1082,7 +1090,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("package"), QJsonObject {
                 { QStringLiteral("resource"), ResourceInfo(opf) },
-                { QStringLiteral("text"), opf->GetText() },
+                { QStringLiteral("text"), opf->GetSourceText() },
                 { QStringLiteral("book_path"), opf->GetRelativePath() }
             } },
             { QStringLiteral("resources"), resources },
@@ -2523,12 +2531,14 @@ void PluginSession::Dispatch(const QJsonObject &request)
         opf->InitialLoad();
         const quint64 required_revision = transaction->HasPackageChange()
             ? transaction->PackageChange().baseRevision : Revision(opf);
-        if (expected_revision != required_revision) {
+        if (expected_revision != required_revision || Revision(opf) != required_revision
+            || (transaction->HasPackageChange()
+                && transaction->PackageChange().originalText != opf->GetSourceText())) {
             RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"));
             return;
         }
         const QString source = transaction->HasPackageChange()
-            ? transaction->PackageChange().stagedText : opf->GetText();
+            ? transaction->PackageChange().stagedText : opf->GetSourceText();
         QString package_source = source;
         QString replacement;
         QString package_error;
@@ -2592,7 +2602,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, PluginApi::ValidationFailed, package_error);
             return;
         }
-        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetText(), Revision(opf),
+        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetSourceText(), Revision(opf),
                                          expected_revision, replacement, &package_error)) {
             RespondError(id, PluginApi::RevisionConflict, package_error);
             return;
@@ -2621,7 +2631,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
         opf->InitialLoad();
         const quint64 required_revision = transaction->HasPackageChange()
             ? transaction->PackageChange().baseRevision : Revision(opf);
-        if (expected_revision != required_revision) {
+        if (expected_revision != required_revision || Revision(opf) != required_revision
+            || (transaction->HasPackageChange()
+                && transaction->PackageChange().originalText != opf->GetSourceText())) {
             RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"),
                          QJsonObject {
                              { QStringLiteral("expected"), static_cast<qint64>(expected_revision) },
@@ -2637,7 +2649,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, PluginApi::ValidationFailed, package_error);
             return;
         }
-        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetText(), Revision(opf),
+        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetSourceText(), Revision(opf),
                                          expected_revision, replacement, &package_error)) {
             RespondError(id, PluginApi::RevisionConflict, package_error);
             return;
@@ -2843,6 +2855,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             QString package_error;
             const quint64 actual = resource ? Revision(resource) : 0;
             if (!resource || actual != package.baseRevision
+                || package.originalText != m_MainWindow->GetCurrentBook()->GetOPF()->GetSourceText()
                 || !ValidatePackageTransaction(
                     transaction, m_MainWindow->GetCurrentBook()->GetFolderKeeper(),
                     m_MainWindow->GetCurrentBook()->GetOPF(), &package_error)) {
@@ -2859,7 +2872,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 opf_changes.append(QJsonObject {
                     { QStringLiteral("operation"), QStringLiteral("replace-package") },
                     { QStringLiteral("before_length"), package.originalText.size() },
-                    { QStringLiteral("after_length"), package.stagedText.size() }
+                    { QStringLiteral("after_length"), package.stagedText.size() },
+                    { QStringLiteral("before_sha256"), DataFingerprint(package.originalText.toUtf8()) },
+                    { QStringLiteral("after_sha256"), DataFingerprint(package.stagedText.toUtf8()) }
                 });
             }
         }
@@ -2925,7 +2940,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (has_package_change) {
             Resource *resource = ResolveResource(package_change.resourceId);
             const quint64 actual = resource ? Revision(resource) : 0;
-            if (!resource || actual != package_change.baseRevision) {
+            if (!resource || actual != package_change.baseRevision
+                || package_change.originalText != opf->GetSourceText()) {
                 conflicts.append(QJsonObject {
                     { QStringLiteral("resource_id"), package_change.resourceId },
                     { QStringLiteral("expected"), static_cast<qint64>(package_change.baseRevision) },
@@ -3038,7 +3054,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
             || !relocations.isEmpty();
         bool safety_checkpoint_required = dirty_changes.size() + dirty_binary_changes.size() > 1
             || !dirty_binary_changes.isEmpty() || !dirty_archive_changes.isEmpty()
-            || has_structure_changes || has_package_change;
+            || has_structure_changes
+            || (has_package_change && package_change.originalText != package_change.stagedText);
         for (const PluginApi::StagedTextChange &change : dirty_changes) {
             Resource *resource = ResolveResource(change.resourceId);
             safety_checkpoint_required = safety_checkpoint_required || (resource &&
@@ -3074,7 +3091,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     continue;
                 }
                 text->InitialLoad();
-                text_snapshots.insert(resource->GetIdentifier(), text->GetText());
+                text_snapshots.insert(resource->GetIdentifier(), resource == opf ? opf->GetSourceText() : text->GetText());
             }
         }
 
@@ -3112,7 +3129,10 @@ void PluginSession::Dispatch(const QJsonObject &request)
             }
             for (auto it = text_snapshots.cbegin(); it != text_snapshots.cend(); ++it) {
                 TextResource *resource = ResolveTextResource(it.key());
-                if (resource && resource->GetText() != it.value()) resource->SetText(it.value());
+                if (!resource) continue;
+                const bool changed = resource == opf
+                    ? opf->GetSourceText() != it.value() : resource->GetText() != it.value();
+                if (changed) resource->SetText(it.value());
             }
 
             QList<Resource *> moved_resources;

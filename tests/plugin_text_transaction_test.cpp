@@ -83,6 +83,18 @@ int main()
     Require(!transaction.ReplacePackage(QStringLiteral("opf"), QStringLiteral("<package/>"),
                                         6, 7, QStringLiteral("bad"), &error),
             "package replacement accepted a different revision");
+    const QString staged_package = transaction.PackageChange().stagedText;
+    Require(!transaction.ReplacePackage(QStringLiteral("opf"), QStringLiteral("<package/>"),
+                                        7, 6, QStringLiteral("bad"), &error),
+            "package staging ignored a newer live revision");
+    Require(!transaction.ReplacePackage(QStringLiteral("opf"), QStringLiteral("<package><!-- edit --></package>"),
+                                        6, 6, QStringLiteral("bad"), &error),
+            "package staging ignored a live source change at the same reported revision");
+    Require(!transaction.ReplacePackage(QStringLiteral("other-opf"), QStringLiteral("<package/>"),
+                                        6, 6, QStringLiteral("bad"), &error),
+            "package staging accepted a different resource identity");
+    Require(transaction.PackageChange().stagedText == staged_package,
+            "rejected package staging replaced the approved plan");
 
     Require(transaction.ReplaceArchiveFile(QStringLiteral("META-INF/metadata.xml"),
                                            QByteArray("old"), QStringLiteral("hash"),
