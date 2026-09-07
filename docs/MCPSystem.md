@@ -242,6 +242,16 @@ transaction into the staged OPF before validating idrefs. New-book generation
 therefore uses one transaction and one checkpoint rather than exposing a partial
 Book between resource and package commits.
 
+Structured metadata and spine updates preserve the original OPF source by
+patching the safe model delta, including when invoked through MCP. They retain
+unrelated comments, prefixes, quoting, line endings, and opaque extensions;
+invalid or ambiguous input fails without a full-document serialization fallback.
+The explicit `replace_package` tool remains an authoritative whole-source
+replacement. Package plans are also bound to the exact OPF source in addition
+to its resource revision, and preview exposes before/after lengths and SHA-256
+digests. Commit creates a recovery checkpoint for a changed package and returns
+its `checkpoint_book_id`.
+
 ## Resources And Prompts
 
 Stable read-only resources:

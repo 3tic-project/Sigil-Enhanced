@@ -22,6 +22,8 @@
   `/Users/parsle/Code/sigil-enhanced-opf-preservation`。
 - 导航诊断/显式修复：`feature/opf-navigation-repair`，从上述分支的
   `ba220b1df` 继续，复用该工作树。原 OPF 分支仍保留在依赖提交上。
+- 插件/MCP 与原生 Agent 的 OPF 结构化更新：`feature/opf-plugin-source-updates`，
+  从导航分支的 `d6a6871ae` 继续，复用同一工作树。
 - 其余功能分别创建分支；有依赖的分支从已验证的依赖提交继续。
 - 每项拆分为可审阅的算法/集成/验证和文档提交，未验证的项不标为完成。
 - 原工作树三处未提交的文本资源加载改动保留，不纳入本分支。
@@ -222,10 +224,76 @@ ctest --test-dir build --output-on-failure --repeat until-fail:3 -R '^(opf_resou
 - 导航新增不是单独的 OPF 文本 Undo：只撤销 manifest 会留下未登记资源。
   完整跨资源 Undo/Redo、任意提交阶段故障注入和恢复尚未实现。
   当前测试证明计划拒绝、文件创建失败与目标冲突时无变更，**不证明完整 O10/G6**。
-- O02 的 MainWindow 保存/另存/副本整包哈希，O08 插件/MCP 旁路，O09 外部冲突，
-  O11 全书状态恢复及 O12 元数据对话框取消仍需完整原生入口验证。
+- O02 的 MainWindow 保存/另存/副本整包哈希，O08 插件/MCP 进展见下一节；
+  O09 的其他外部冲突、O11 全书状态恢复及 O12 元数据对话框取消仍需完整原生入口验证。
 - 完整主窗口人工操作、Windows/Linux、真实附件、EPUBCheck、独立阅读器及
   性能预算未验证。新 nav 的局部 XML/链接检查不能证明原书全部合规。
 
-下一优先项：补 O08 统一补丁入口与修订检查、O10 跨资源恢复，再推进文本选择、
-TOC 层级编辑、Clips、div 和 Agent 的各自功能分支。原生 Agent 现有实现保留。
+## OPF 第四批：插件/MCP 与原生 Agent 结构化更新（2026-09-07）
+
+分支：`feature/opf-plugin-source-updates`。主要提交：
+`c1a6c0650`（结构化 OPF 源码补丁）、`23f744706`（源码身份/修订绑定）、
+`1bdce2bdf`（不改 live OPF 的恢复 Checkpoint）、`aff48683e`（真实 Live RPC）、
+`2e22e5899`（原生 Agent 冲突预检与真实对象测试）。
+
+### 行为与一致性
+
+- Live v2 的 `transaction.updateMetadata/updateSpine` 不再使用 DOM 全文序列化。
+  宿主在安全 `model_xml` 上完成结构变化，再调用同一 `opf_source.apply_model_update`
+  写回原始源码。严格无操作保持原文相同；局部更新保留无关注释、PI、CDATA、
+  非标准前缀、属性引号、换行和不透明嵌套扩展。歧义 ID/href、namespace 错误、
+  畸形 XML 和扩展冲突直接失败，不静默回退重建。
+- metadata/itemref 数组是模型可见子项的完整替换，因此省略已建模条目表示删除；
+  未建模的嵌套私有扩展不因此删除。spine 重排为匹配 idref 保留 API 未表达的
+  扩展属性；同事务新增 manifested 资源仍按 href 确定合并到 manifest。
+  `replacePackage` 明确保持“完整权威源码替换”语义，不承诺保留调用方已丢失的格式。
+- package 计划同时绑定 OPF resource ID、数值 revision 和精确原始源码；再次 stage、
+  preview/validate、创建 Checkpoint 后以及 commit 前都重检。即使数值 revision 尚未
+  观察到 GUI 改动，源码不同也触发冲突。preview 的 `opf_changes` 增加前后 UTF-16
+  长度与 SHA-256，方便调用方确认实际包变化。
+- package 有变化时恢复 Checkpoint 通过隔离临时树读取 OPF 源码字节，不调用会更新时间、
+  UUID 或保存编辑器的用户 `RepoCommit()`。缺 UUID 时恢复仓库使用工作区外部 ID，
+  不先插入 live OPF；commit 返回 `checkpoint_book_id`。原编码不能表示当前源码时，
+  Checkpoint 失败且 live OPF 不变。
+- Native Agent 的 `metadata.update`、`spine.set/sort` 及资源结构操作继续复用 Book/OPF
+  原生局部补丁入口。事务现额外保存 OPF/NCX 源码身份，并在任何写入前核对已暂存正文
+  原文、删除/重命名资源基线；preview 后的宿主修改不会被旧计划覆盖。
+  资源 revision 跟踪增加显式初始化状态，初始空文档变为非空时不再漏记变化。
+
+### 测试证据
+
+完整 Sigil 构建通过，42 项固定 Python 依赖和隔离导入检查通过。最终定向命令：
+
+```sh
+cmake --build build --target Sigil -j 4
+ctest --test-dir build --output-on-failure --repeat until-fail:3 -R '^(opf_source|opf_source_bytes|plugin_package_update|plugin_package_update_integration|plugin_text_transaction|plugin_session_package_integration|agent_workspace_package_integration|agent_book_ops|live_plugin_docs|sigil_mcp_docs)$'
+```
+
+上述 10 个目标各连续运行 3 次通过（30 次执行，48.78 秒）。
+
+- `plugin_package_update` 为 15 个纯 Python 用例；另一个同名原生集成目标链接实际
+  EmbeddedPython/C++ bridge，验证 no-op、metadata/spine/manifest 局部变化与负向输入。
+- `plugin_session_package_integration` 启动真实 MainWindow、PluginSessionManager、
+  外部 live launcher 和 SDK。合成 UTF-16LE+BOM/mixed-EOL/NFD/私有扩展 EPUB 中，
+  同事务 metadata+spine 更新只改变标题值；恢复仓库的 OPF 字节与提交前完全一致。
+  preview 后宿主改 OPF 会得到 `RevisionConflict`；不可编码的恢复快照失败且源码不变。
+- `agent_workspace_package_integration` 使用真实 MainWindow/Book/SigilBookWorkspace；验证
+  metadata 只改标题、spine 只改 `<spine>`，以及 preview 后宿主分别修改 OPF/XHTML
+  都被提交预检拒绝。原生 Agent、Live RPC 两项集成各连续运行 3 次通过。
+
+### 尚未关闭的门槛
+
+本批关闭的是 O08 的核心结构化旁路，并为 O09 的目标源码冲突提供合成原生证据；
+不等同于 O01–O12 或整份 PRD 完成。
+
+- Legacy v1 插件显式改写 OPF 后仍可能由兼容容器生成完整 package；只有 Live v2/MCP
+  的结构化 `update_metadata/update_spine` 与原生 Agent typed 工具走本批保证的路径。
+- 恢复 Checkpoint 对 OPF 使用源码字节；其他已加载文本仍按既有 Unicode 快照方式物化，
+  不能把此测试表述为整本 EPUB 每个成员的字节级 Checkpoint。
+- Live 提交已有进程内补偿回滚和恢复点，但进程被杀/断电级持久化原子性、任意阶段故障
+  注入、跨资源统一 Undo/Redo 仍未完成，不能据此关闭完整 O10/G6。
+- macOS Ninja Debug 之外的平台、真实大型书籍性能、完整 GUI 人工流程、EPUBCheck、
+  独立阅读器及 O02 整包哈希仍未验证。
+
+下一优先项：继续 O10 跨资源恢复与故障注入，再分别推进文本选择、TOC 层级编辑、
+Clips、div 和 Agent 功能；每项另建功能分支并保持细粒度提交。

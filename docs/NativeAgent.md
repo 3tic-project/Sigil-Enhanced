@@ -59,7 +59,12 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 发给模型的 function 名会把点换成下划线（`book.summary` → `book_summary`），因为 DeepSeek/OpenAI 只接受 `^[a-zA-Z0-9_-]+$`。内部仍用带点的名字。
 
-没有 shell，没有技能脚本，不会把字体二进制或整本书 XHTML 送给模型。若提交时的 `expected_revision` 与当前书籍 revision 不一致，会返回 `BOOK_REVISION_CONFLICT`，不会改书。
+没有 shell，没有技能脚本，不会把字体二进制或整本书 XHTML 送给模型。若提交时的
+`expected_revision` 与当前书籍 revision 不一致，会返回 `BOOK_REVISION_CONFLICT`，不会改书。
+提交前还会比较事务开始时的精确 OPF 源码、每份已暂存正文的原文、重命名/删除资源基线，
+以及需要改写的 NCX 原文；因此用户在 preview 后从 GUI 修改目标内容，即使内部书籍计数尚未
+更新，也会拒绝旧计划并保留用户改动。`metadata.update`、`spine.set/sort` 和资源结构操作最终
+走 OPF 的局部源码补丁，保留未涉及的注释、前缀、属性引号、换行和私有扩展。
 
 HTTP 出错时会带上状态码和服务器返回的 `error.message`（不会把 API Key 写进 transcript）。
 

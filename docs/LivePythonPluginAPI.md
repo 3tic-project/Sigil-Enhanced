@@ -373,6 +373,29 @@ does not generate a second manifest rewrite; it applies the package once after
 the physical structure changes. Larger reads use `open_binary()` streams;
 larger writes use Begin/Chunk/End and are length/SHA-256 checked before staging.
 
+`update_metadata()` and `update_spine()` are source-preserving structured
+operations. They build a safe package model, apply the requested model change,
+and patch that difference onto the original OPF source. An exact no-op returns
+the original source. Unrelated comments, processing instructions, CDATA,
+namespace prefixes, attribute quoting, line endings, and opaque nested extension
+elements remain in place; ambiguous IDs/hrefs, undeclared names, malformed XML,
+or unsafe extension collisions fail instead of falling back to DOM
+serialization. The supplied metadata/items arrays are still replacements for
+the modeled children, so omitting a modeled entry is an intentional removal.
+`replace_package()` is different by design: its complete `text` is authoritative
+and therefore replaces the full OPF source supplied by the caller.
+
+A staged package plan is bound to its OPF resource ID, numeric revision, and
+exact raw source. Stage, preview/validate, checkpoint creation, and commit all
+recheck that identity, so a host edit is rejected even if a numeric revision
+observer has not run yet. Package preview entries include before/after UTF-16
+lengths and SHA-256 digests. A changed package requires a recovery Checkpoint;
+its OPF member is materialized from the pre-commit source bytes without updating
+the publication timestamp or inserting a UUID into the live OPF. Commit returns
+`checkpoint_created` and `checkpoint_book_id`. If the original encoding cannot
+represent the current source, Checkpoint creation fails and the live package is
+left unchanged.
+
 `read_text_range()` uses UTF-16 offsets and returns `text`, `start`, `end`,
 `total_utf16_units`, `revision`, `staged`, and nullable `next_start`. The first
 range (`start=0`) also returns full-document `total_utf8_bytes` and `sha256`;
