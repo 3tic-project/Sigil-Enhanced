@@ -309,7 +309,8 @@ public slots:
     void launchExternalXEditor();
 
     bool RepoCommit();
-    bool CreateRecoveryCheckpoint();
+    bool CreateRecoveryCheckpoint(bool preserve_package_source = false);
+    QString RecoveryCheckpointBookId() const { return m_RecoveryCheckpointBookId; }
     void RepoCheckout(QString bookid="", QString destpath="", QString filename="", bool loadnow=true);
     void RepoDiff(QString bookid="");
     void RepoManage();
@@ -753,7 +754,8 @@ private slots:
     void unloadPluginsMenu();
 
 private:
-    bool CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data);
+    bool CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data,
+                              bool preserve_package_source = false);
 
     void updateToolTipsOnPluginIcons();
     void updateToolTipsOnAutomateIcons();
@@ -983,6 +985,7 @@ private:
      * save and byte-identical Save As/Save a Copy without running exporters.
      */
     EpubFileSnapshot m_SourceEpubSnapshot;
+    QString m_RecoveryCheckpointBookId;
 
     /**
      * The book currently being worked on.

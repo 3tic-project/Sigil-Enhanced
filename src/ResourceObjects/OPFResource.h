@@ -176,6 +176,8 @@ public:
     HTMLResource* GetNavResource() const;
     // Raw source with preserved line endings; do not use for editor offsets.
     QString GetSourceText() const;
+    // Read-only bytes for isolated recovery snapshots, without saving or normalizing.
+    QByteArray GetSourceBytes() const;
 
     void UpdateGuideAfterMerge(QList<Resource*> &merged_resources, QHash<QString,QString> &section_id_map);
     void UpdateGuideFragments(QHash<QString,QString> &idupdates);

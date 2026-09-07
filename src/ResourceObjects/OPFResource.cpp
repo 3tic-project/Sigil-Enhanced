@@ -444,6 +444,15 @@ void OPFResource::SaveToDisk(bool book_wide_save)
     m_OriginalSourceText = m_PreservedSourceText = source;
 }
 
+QByteArray OPFResource::GetSourceBytes() const
+{
+    QReadLocker locker(&GetLock());
+    const QString source = PreservedSourceText();
+    return source == m_OriginalSourceText && !m_OriginalSourceBytes.isEmpty()
+        ? m_OriginalSourceBytes
+        : RunOPFSourceBytes("encode_source", { m_OriginalSourceBytes, source }).toByteArray();
+}
+
 
 QString OPFResource::GetPackageVersion() const
 {

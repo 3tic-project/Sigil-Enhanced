@@ -1244,12 +1244,13 @@ bool MainWindow::RepoCommit()
     return CreateRepoCheckpoint(true, true);
 }
 
-bool MainWindow::CreateRecoveryCheckpoint()
+bool MainWindow::CreateRecoveryCheckpoint(bool preserve_package_source)
 {
-    return CreateRepoCheckpoint(false, false);
+    return CreateRepoCheckpoint(false, false, preserve_package_source);
 }
 
-bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data)
+bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data,
+                                      bool preserve_package_source)
 {
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -1265,6 +1266,12 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
     QString checkpointOpfText;
     QString liveOpfBeforeIdentity;
     QString bookid = opf->GetUUIDIdentifierValue(update_book_metadata);
+    if (bookid.isEmpty() && preserve_package_source) {
+        // Repository identity is outside the publication. Taking a staged
+        // transaction's backup must not insert an unreviewed UUID into OPF.
+        bookid = m_RecoveryCheckpointBookId.isEmpty()
+            ? QUuid::createUuid().toString(QUuid::WithoutBraces) : m_RecoveryCheckpointBookId;
+    }
     if (bookid.isEmpty() && !update_book_metadata) {
         // Some otherwise usable EPUBs have a dangling unique-identifier or
         // only vendor identifiers such as "none". Prepare the UUID entirely
@@ -1341,7 +1348,12 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
                 }
 
                 TextResource* textResource = qobject_cast<TextResource*>(resource);
-                if (resource == opf && !checkpointOpfText.isEmpty()) {
+                if (resource == opf && preserve_package_source) {
+                    const QByteArray bytes = opf->GetSourceBytes();
+                    QFile snapshot(destination);
+                    if (!snapshot.open(QIODevice::WriteOnly) || snapshot.write(bytes) != bytes.size()
+                        || !snapshot.flush()) throw CannotOpenFile(destination.toStdString());
+                } else if (resource == opf && !checkpointOpfText.isEmpty()) {
                     Utility::WriteUnicodeTextFile(checkpointOpfText, destination);
                 } else if (textResource && textResource->IsLoaded()) {
                     QReadLocker locker(&textResource->GetLock());
@@ -1359,7 +1371,8 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
                 !QFile::copy(containerSource, containerDestination)) {
                 throw CannotOpenFile(containerSource.toStdString());
             }
-        } catch (const CannotOpenFile&) {
+        } catch (const std::exception &exception) {
+            qWarning() << "Could not materialize recovery checkpoint:" << exception.what();
             ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
             QApplication::restoreOverrideCursor();
             return false;
@@ -1393,6 +1406,8 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
     }
 
     QApplication::restoreOverrideCursor();
+    if (update_book_metadata) m_RecoveryCheckpointBookId.clear();
+    else if (preserve_package_source) m_RecoveryCheckpointBookId = bookid;
     ShowMessageOnStatusBar(tr("Checkpoint saved."));
     return true;
 }
@@ -1412,7 +1427,8 @@ void MainWindow::RepoCheckout(QString bookid, QString destdir, QString filename,
 
     if (bookid.isEmpty()) {
         // use current epub's bookid and create one if needed
-        bookid = m_Book->GetOPF()->GetUUIDIdentifierValue();
+        bookid = m_RecoveryCheckpointBookId.isEmpty()
+            ? m_Book->GetOPF()->GetUUIDIdentifierValue() : m_RecoveryCheckpointBookId;
     }
 
     if (filename.isEmpty()) {
@@ -6415,6 +6431,7 @@ void MainWindow::AgentExportDebugLogRequested()
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
+    m_RecoveryCheckpointBookId.clear();
     if (m_RegexWorkbenchDialog) {
         ui.actionOpenRegexWorkbench->setEnabled(false);
         m_RegexWorkbenchDialog->CloseForBookChange();

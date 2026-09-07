@@ -3071,9 +3071,15 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const bool checkpoint_required = transaction->CheckpointPolicy() == QStringLiteral("required")
             || (transaction->CheckpointPolicy() == QStringLiteral("auto")
                 && safety_checkpoint_required);
-        if (checkpoint_required && !m_MainWindow->RepoCommit()) {
+        if (checkpoint_required && !m_MainWindow->CreateRecoveryCheckpoint(true)) {
             RespondError(id, PluginApi::ValidationFailed,
                          QStringLiteral("Could not create the required checkpoint"));
+            return;
+        }
+        if (has_package_change && (Revision(opf) != package_change.baseRevision
+            || opf->GetSourceText() != package_change.originalText)) {
+            RespondError(id, PluginApi::RevisionConflict,
+                         QStringLiteral("Package changed while creating its checkpoint"));
             return;
         }
         const bool book_was_modified = m_MainWindow->GetCurrentBook()->IsModified();
@@ -3425,7 +3431,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("removed"), removals.size() + archive_removed },
             { QStringLiteral("relocated"), relocations.size() },
             { QStringLiteral("archive_files"), dirty_archive_changes.size() },
-            { QStringLiteral("checkpoint_created"), checkpoint_required }
+            { QStringLiteral("checkpoint_created"), checkpoint_required },
+            { QStringLiteral("checkpoint_book_id"), checkpoint_required
+                ? m_MainWindow->RecoveryCheckpointBookId() : QString() }
         });
     } else if (method == QStringLiteral("transaction.rollback")) {
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);
