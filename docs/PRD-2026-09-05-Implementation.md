@@ -20,6 +20,8 @@
 
 - OPF：`feature/opf-source-preservation`，独立工作树
   `/Users/parsle/Code/sigil-enhanced-opf-preservation`。
+- 导航诊断/显式修复：`feature/opf-navigation-repair`，从上述分支的
+  `ba220b1df` 继续，复用该工作树。原 OPF 分支仍保留在依赖提交上。
 - 其余功能分别创建分支；有依赖的分支从已验证的依赖提交继续。
 - 每项拆分为可审阅的算法/集成/验证和文档提交，未验证的项不标为完成。
 - 原工作树三处未提交的文本资源加载改动保留，不纳入本分支。
@@ -118,11 +120,13 @@ ctest --test-dir build --output-on-failure -R '^(opf_source|opf_source_bytes|opf
 
 证明边界：这是合成样本及特定入口的字节对比，不是完整 O01–O12 验收。
 UTF-32 等编码算法可往返不代表 EPUB 规范允许所有这些编码；私有扩展样本也
-未通过 EPUBCheck 合规认证。O02 要求整包 SHA-256 一致，而普通 ExportEPUB
-仍重建 ZIP；本批只证明 OPF 成员字节一致，未满足整包及 GUI 另存/副本验收。
+未通过 EPUBCheck 合规认证。O02 的整包 SHA-256 一致要求针对 GUI 无编辑
+保存/另存为/保存副本的原始快照复制路径；PRD 允许普通 ExportEPUB 重建 ZIP。
+本批证明的是后者的 OPF 成员字节保留，没有执行前者的完整 GUI 验收；
+不能用成员字节测试代替 O02，也不能把普通导出重新压缩本身记为缺陷。
 跨资源事务回滚、外部冲突、多平台 GUI、阅读器与完整 EPUBCheck 仍待验证。
 
-### 下一批审计重点
+### 第二批结束时的后续项
 
 - O06/O07：`ImportEPUB::GetBook` 仍自动注册缺失的 nav；结束时仍将警告数量
   直接映射为 Book modified。须把只读诊断、临时目录模型和显式修复计划分离。
@@ -130,3 +134,98 @@ UTF-32 等编码算法可往返不代表 EPUB 规范允许所有这些编码；�
   有非空 nav，需要一并处理 NCX 查看回退及用户确认后的新增资源/节点。
 - O08：插件/MCP 的 `PluginPackageUpdate` DOM 改写仍是旁路，现有插件测试通过
   不表示已经采用源码补丁和修订校验。
+
+## OPF 第三批：缺导航只读查看与显式修复（2026-09-07）
+
+分支：`feature/opf-navigation-repair`。主要提交：
+`4107bbc03`（NCX 回退/manifest 预览基础）、`5ba0c7f53`（导入路径所有权）、
+`89d64313f`（异步刷新/导航绑定）、`a05f6f924`（导入诊断、修复服务与 UI）、
+`d31969fff`（原生交互及输出文件回归）、`affa21a3a`（NCX 标题边界）、
+`a53db0819`（保留目录的资源类型校验）。
+
+### 行为与入口
+
+- EPUB 3 缺少 nav 时只报告诊断，不自动创建 XHTML、CSS、manifest 或 spine 项。
+  此规则不随“保留 OPF”开关关闭而退回隐式创建；该开关只控制 OPF 格式保留。
+  导入绑定已有 nav 不再顺便规范化 manifest，`nav` 按独立属性词识别，
+  不把 `scripted-navigation` 等子串误认成导航。
+- 目录面板从 NCX 构造只读内存树，保留层级，按 NCX 所在目录解析相对链接。
+  没有 nav/NCX 时保持空视图；查询空 nav 不再创建空模板。
+  缺失提示提供“查看问题”（打开 OPF 源码）和“生成导航文档…”入口。
+- 生成操作先保存当前标签页的待写入编辑，再展示新 XHTML、OPF 前、OPF 后
+  三个只读源码页及资源/manifest/spine 摘要，默认按钮为取消。
+  预览和取消不生成文件。只有确认后才应用；尚未保存的书籍修改仍在工作副本中。
+- 有有效 NCX 时使用其目录；否则从现有 spine 生成以文件名为标题的目录。
+  已声明但文件缺失的 XHTML nav 使用原声明；否则新增唯一文件名/ID 和一项
+  manifest。修复不新增 CSS，不改变 spine 次序或 linear 属性。
+- 修复计划绑定 OPF/NCX 的身份、修订号、源码及资源路径集合；应用时重新规划，
+  比较所有预览字段，并重新检查实际链接和片段 ID。篡改计划、过期修订、
+  新占用目标、重复应用均拒绝。目标需在书籍内的已有目录，且能由 FolderKeeper
+  注册为 XHTML（拒绝 META-INF 等保留位置）；文件创建不覆盖旧目标。
+- 目录编辑、从标题生成目录、生成 HTML 目录、封面和索引操作在缺 nav 时先经过
+  修复确认；自动化的跳过选择器生成目录入口返回失败，不弹出确认或暗中修复。
+  landmarks 编辑提示先生成导航；增删 nav 的 spine 项在 nav 缺失时安全返回。
+- 保留模式下 EPUB 3 的 NCX 查看不补写 spine toc/href；无可用 spine 时只诊断，
+  不自动重建整个 OPF。加载警告不再直接设置 modified；真实 Clean on Open、
+  兼容修复或 OPF 内容变化才标记修改。未改变 XHTML 的 Clean on Open 不算修改。
+
+### 稳定性与性能
+
+- 目录刷新期间的新请求合并为一次后续解析，不发布已过时的结果；关闭模型前
+  等待现有工作线程退出。导航指针在必要 manifest 更新成功后才原子发布，
+  并通知目录面板重连新导航资源的修改信号。
+- spine 回退使用一次资源顺序查询，而不是每个条目重复解析 OPF；验证片段时
+  对同一目标文档缓存 ID 集合。本批未测量 PRD 的 2 MiB/1.2 倍性能预算。
+- 新增临时字符串导入场景复现 `Importer` 借用已释放路径参数的问题；成员改为
+  持有 QString 副本，修复偶发的错误文件名与堆损坏。
+- NCX 标题读取按元素边界消费，支持连续文本/CDATA；空 `<text/>` 不会吞掉
+  下一条标题，截断 `<text>` 不会无限等待字符。修复拒绝空标题或无效目标。
+
+### 测试证据
+
+环境同前两批；完整 Sigil 构建通过，42 项固定 Python 依赖和隔离导入检查通过。
+最终 11 项定向 CTest 各连续运行 3 次通过（33 次执行，35.17 秒）；
+此前原生 OPF 和导航集成也各连续运行 3 次通过。
+
+```sh
+cmake --build build --target Sigil -j 8
+ctest --test-dir build --output-on-failure --repeat until-fail:3 -R '^(opf_source|opf_source_bytes|opf_resource_integration|navigation_repair_integration|epub_file_snapshot|export_metadata_policy|plugin_package_update|plugin_text_transaction|agent_harness|agent_book_ops|python_package_sync)$'
+ctest --test-dir build --output-on-failure --repeat until-fail:3 -R '^(opf_resource_integration|navigation_repair_integration)$'
+```
+
+- `opf_source` 现为 26 项，覆盖纯函数 manifest 新增、重复 ID/href/nav 拒绝和
+  未涉及区域的精确字符串比较；`opf_source_bytes` 仍为 10 项。
+- `navigation_repair_integration` 链接真实应用对象，使用真实 ImportEPUB、
+  ExportEPUB、OPF/NCX/NavProcessor、目录面板和修复对话框，而非 UI 源码契约测试。
+  合成样本包括缺 nav、有/无 NCX、已声明但缺文件、错误目标/片段、仅警告、
+  EPUB 2 兼容场景。验证 NCX 层级/相对路径、空值/CDATA/截断标签、刷新合并、
+  模型销毁、点击取消/确认、篡改/过期/重放拒绝、目标冲突、保留目录拒绝和
+  只读目录创建失败。
+- 缺 nav、有/无 NCX、声明已存在三种输入的只读普通导出：资源集合不变，
+  OPF 字节一致；显式修复后的普通导出只多一个 nav.xhtml。还原必要修改时间、
+  移除唯一新 manifest 项后，OPF 与原文完全一致，保留 UTF-16LE+BOM、混合换行、
+  NFD、注释和私有扩展；除 container/OPF 外的原有成员字节相同。
+- 简中、繁中、日文新文案齐全；覆盖检查与原工作树对比仍各有 82 项既有失败，
+  新增失败为 0。不宣称全仓库的 107 项 CTest 全部通过。
+- 原生集成测试仍仅在 macOS + Ninja + Debug 注册。可选
+  `SIGIL_NATIVE_TEST_ASAN=1` 只给测试入口和链接增加 AddressSanitizer，
+  不会重新插桩应用对象，不能当作整套应用的 ASan 验收。
+
+### 尚未关闭的门槛
+
+本批为 O06/O07 提供合成样本的原生证据，不是 OPF 或 PRD 整体验收。
+
+- 既有 EPUB 2 缺 NCX 自动补建/关联仍保留，并正确标记修改；将其迁移到显式
+  修复、手工编辑 OPF 后重绑 nav、未知命名空间 NCX 等异常结构还需独立审计。
+- 目前修复拒绝重复/不合适的 nav 声明、缺失目标父目录、不良构 NCX、空标题
+  及错误本地链接；需要用户先检查源码，不做推测性批量重建。
+- 导航新增不是单独的 OPF 文本 Undo：只撤销 manifest 会留下未登记资源。
+  完整跨资源 Undo/Redo、任意提交阶段故障注入和恢复尚未实现。
+  当前测试证明计划拒绝、文件创建失败与目标冲突时无变更，**不证明完整 O10/G6**。
+- O02 的 MainWindow 保存/另存/副本整包哈希，O08 插件/MCP 旁路，O09 外部冲突，
+  O11 全书状态恢复及 O12 元数据对话框取消仍需完整原生入口验证。
+- 完整主窗口人工操作、Windows/Linux、真实附件、EPUBCheck、独立阅读器及
+  性能预算未验证。新 nav 的局部 XML/链接检查不能证明原书全部合规。
+
+下一优先项：补 O08 统一补丁入口与修订检查、O10 跨资源恢复，再推进文本选择、
+TOC 层级编辑、Clips、div 和 Agent 的各自功能分支。原生 Agent 现有实现保留。
