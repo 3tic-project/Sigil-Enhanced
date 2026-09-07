@@ -1968,7 +1968,7 @@ void OPFResource::UpdateManifestProperties(const QList<Resource*> resources)
             ManifestEntry me = p.m_manifest.at(pos);
             QStringList properties = html_resource->GetManifestProperties();
             // The nav must not lose the nav property
-            if (html_resource == m_NavResource) {
+            if (html_resource == GetNavResource()) {
                 if (!properties.contains("nav")) {
                     properties << "nav";
                 }
@@ -2050,7 +2050,7 @@ QHash <QString, QString>  OPFResource::GetManifestPropertiesForPaths()
 
 HTMLResource * OPFResource::GetNavResource()const
 {
-    return m_NavResource;
+    return m_NavResource.loadAcquire();
 }
 
 QString OPFResource::GetSourceText() const
@@ -2062,16 +2062,15 @@ QString OPFResource::GetSourceText() const
 
 void OPFResource::SetNavResource(HTMLResource * nav_resource, bool update_manifest)
 {
-    const bool changed = m_NavResource != nav_resource;
-    m_NavResource = nav_resource;
+    const bool changed = m_NavResource.loadAcquire() != nav_resource;
     // Make sure the proper nav property is set in the opf manifest
     // but do not overwrite any other existing properties
-    if (m_NavResource && update_manifest) {
+    if (nav_resource && update_manifest) {
         QWriteLocker locker(&GetLock());
         QString source = ModelSource();
         OPFParser p;
         p.parse(source);
-        QString href = Utility::URLEncodePath(GetRelativePathToResource(m_NavResource));
+        QString href = Utility::URLEncodePath(GetRelativePathToResource(nav_resource));
         int pos = p.m_hrefpos.value(href, -1);
         if ((pos >= 0) && (pos < p.m_manifest.count())) {
             ManifestEntry me = p.m_manifest.at(pos);
@@ -2086,6 +2085,7 @@ void OPFResource::SetNavResource(HTMLResource * nav_resource, bool update_manife
         }
         UpdateText(p);
     }
+    m_NavResource.storeRelease(nav_resource);
     if (changed) emit NavigationResourceChanged();
 }
 

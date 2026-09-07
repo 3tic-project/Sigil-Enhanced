@@ -54,6 +54,7 @@ public:
      * @param parent The model's parent.
      */
     TOCModel(QObject *parent = 0);
+    ~TOCModel() override;
 
     /**
      * Sets the model's book.
@@ -188,6 +189,7 @@ private:
      * If \c true, then a refresh operation is in progress.
      */
     bool m_RefreshInProgress;
+    bool m_RefreshPending = false;
 
     /**
      * Guards the use of the m_Book variable.

@@ -24,6 +24,7 @@
 #pragma once
 #ifndef OPFRESOURCE_H
 #define OPFRESOURCE_H
+#include <QAtomicPointer>
 
 #include <memory>
 #include <QStringList>
@@ -324,7 +325,7 @@ private:
     // PRIVATE MEMBER VARIABLES
     ///////////////////////////////
 
-    HTMLResource * m_NavResource;
+    QAtomicPointer<HTMLResource> m_NavResource;
     bool m_WarnedAboutVersion;
     QByteArray m_OriginalSourceBytes;
     QString m_OriginalSourceText;

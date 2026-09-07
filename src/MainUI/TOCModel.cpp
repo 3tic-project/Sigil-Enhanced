@@ -44,6 +44,13 @@ TOCModel::TOCModel(QObject *parent)
 }
 
 
+TOCModel::~TOCModel()
+{
+    // A background parse captures this model. Keep its book and parser state
+    // alive until that parse has finished, even when the dock is closing.
+    m_TocRootWatcher->waitForFinished();
+}
+
 void TOCModel::SetBook(QSharedPointer<Book> book, bool refresh)
 {
     {
@@ -77,6 +84,7 @@ void TOCModel::Refresh()
     Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
 
     if (m_RefreshInProgress) {
+        m_RefreshPending = true;
         return;
     }
 
@@ -87,14 +95,20 @@ void TOCModel::Refresh()
 
 void TOCModel::RefreshEnd()
 {
-    BuildModel(m_TocRootWatcher->result());
     m_RefreshInProgress = false;
+    if (m_RefreshPending) {
+        m_RefreshPending = false;
+        Refresh();
+        return; // Do not display results from the superseded book/nav state.
+    }
+    BuildModel(m_TocRootWatcher->result());
     emit RefreshDone();
 }
 
 
 TOCModel::TOCEntry TOCModel::GetRootTOCEntry()
 {
+    QMutexLocker book_lock(&m_UsingBookMutex);
     if (m_EpubVersion.startsWith('3') && m_Book->GetConstOPF()->GetNavResource()) {
         NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
         return navproc.GetRootTOCEntry();
@@ -105,11 +119,11 @@ TOCModel::TOCEntry TOCModel::GetRootTOCEntry()
 
 QString TOCModel::GetNCXText()
 {
-    QMutexLocker book_lock(&m_UsingBookMutex);
+    // Called only by GetRootTOCEntry while it holds m_UsingBookMutex.
     NCXResource *ncx = m_Book->GetNCX();
     if (!ncx) return QString();
     QReadLocker locker(&(ncx->GetLock()));
-    return CleanSource::ProcessXML(ncx->GetText(), "application/x-dtbncx+xml");
+    return ncx->GetText(); // The viewing model must not repair or reserialize NCX.
 }
 
 
