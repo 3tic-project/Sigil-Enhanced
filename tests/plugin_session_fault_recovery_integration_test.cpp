@@ -197,8 +197,22 @@ def run(plugin):
         manifest_id='removal-target-2',
         add_to_spine=False,
     )
+    tx.add_resource(
+        'OEBPS/binary-target.png',
+        b'\x89PNG\r\n\x1a\noriginal-binary',
+        'image/png',
+        manifest_id='binary-target',
+        add_to_spine=False,
+    )
+    tx.add_resource(
+        'OEBPS/archive-target.bin',
+        b'original-unmanaged-archive',
+        'application/octet-stream',
+        manifested=False,
+        add_to_spine=False,
+    )
     result = tx.commit()
-    assert result['added'] == 2
+    assert result['added'] == 4
     print('REMOVAL_TARGET_CREATED', flush=True)
     return 0
 )PY");
@@ -212,13 +226,131 @@ def run(plugin):
             QStringLiteral("OEBPS/removal-target.css"));
         Resource *removalTarget2 = keeper->GetResourceByBookPathNoThrow(
             QStringLiteral("OEBPS/removal-target-2.css"));
-        Require(removalTarget && removalTarget2,
+        Resource *binaryTarget = keeper->GetResourceByBookPathNoThrow(
+            QStringLiteral("OEBPS/binary-target.png"));
+        Require(removalTarget && removalTarget2 && binaryTarget,
                 "Removal targets were not added to the live Book");
-        const QString removalPackageBefore = opf->GetSourceText();
         const QByteArray removalBytesBefore = ReadFile(removalTarget->GetFullPath());
         const QByteArray removalBytesBefore2 = ReadFile(removalTarget2->GetFullPath());
+        const QByteArray binaryBytesBefore = ReadFile(binaryTarget->GetFullPath());
+        const QString archiveTargetPath = QDir(keeper->GetFullPathToMainFolder()).filePath(
+            QStringLiteral("OEBPS/archive-target.bin"));
+        const QByteArray archiveBytesBefore = ReadFile(archiveTargetPath);
+
+        sessions.SetCommitFailureAfterMutationForTesting(0);
+        const QString binaryFailure = QString::fromUtf8(R"PY(
+from sigil_live.errors import ValidationFailed
+def run(plugin):
+    target = plugin.book.resolve_path('OEBPS/binary-target.png')
+    tx = plugin.book.transaction('injected binary failure', checkpoint='auto')
+    current = tx.read_binary(target)
+    tx.write_binary(target, b'\xffstale-binary\x00', current['revision'])
+    try:
+        tx.commit()
+    except ValidationFailed as error:
+        assert 'all applied changes were rolled back' in str(error)
+        print('BINARY_ROLLED_BACK', flush=True)
+        return 0
+    return 5
+)PY");
+        output.clear();
+        error.clear();
+        Require(sessions.RunSnippetAndWait(binaryFailure, &status, &error, 30000, &output),
+                ("Injected binary plugin failed: " + error + "\n" + output).toUtf8().constData());
+        Require(output.contains(QStringLiteral("BINARY_ROLLED_BACK")) && !sessions.HasWriter(),
+                "Binary failure was not compensated or retained the writer lease");
+        Require(keeper->GetResourceByBookPathNoThrow(
+                    QStringLiteral("OEBPS/binary-target.png")) == binaryTarget
+                    && ReadFile(binaryTarget->GetFullPath()) == binaryBytesBefore,
+                "Binary failure did not restore the resource bytes");
+
+        sessions.SetCommitFailureAfterMutationForTesting(0);
+        const QString archiveFailure = QString::fromUtf8(R"PY(
+from sigil_live.errors import ValidationFailed
+def run(plugin):
+    current = plugin.book.read_archive_file('OEBPS/archive-target.bin')
+    tx = plugin.book.transaction('injected archive failure', checkpoint='auto')
+    tx.replace_archive_file(
+        'OEBPS/archive-target.bin', b'stale-unmanaged-archive', current['sha256'])
+    try:
+        tx.commit()
+    except ValidationFailed as error:
+        assert 'all applied changes were rolled back' in str(error)
+        print('ARCHIVE_ROLLED_BACK', flush=True)
+        return 0
+    return 4
+)PY");
+        output.clear();
+        error.clear();
+        Require(sessions.RunSnippetAndWait(archiveFailure, &status, &error, 30000, &output),
+                ("Injected archive plugin failed: " + error + "\n" + output).toUtf8().constData());
+        Require(output.contains(QStringLiteral("ARCHIVE_ROLLED_BACK")) && !sessions.HasWriter(),
+                "Archive failure was not compensated or retained the writer lease");
+        Require(ReadFile(archiveTargetPath) == archiveBytesBefore,
+                "Archive failure did not restore the original file bytes");
+
+        const QString addRemovalReference = QString::fromUtf8(R"PY(
+def run(plugin):
+    chapter = plugin.book.resolve_path('OEBPS/a.xhtml')
+    tx = plugin.book.transaction('add relocation reference', checkpoint='auto')
+    current = tx.read_text(chapter)
+    updated = current['text'].replace(
+        '<head>', '<head><link rel="stylesheet" href="removal-target.css"/>', 1)
+    tx.replace_text(chapter, updated, current['revision'])
+    tx.commit()
+    print('RELOCATION_REFERENCE_CREATED', flush=True)
+    return 0
+)PY");
+        output.clear();
+        error.clear();
+        Require(sessions.RunSnippetAndWait(addRemovalReference, &status, &error, 30000, &output),
+                ("Relocation-reference plugin failed: " + error + "\n" + output)
+                    .toUtf8().constData());
+        Require(output.contains(QStringLiteral("RELOCATION_REFERENCE_CREATED"))
+                    && chapter->GetText().contains(QStringLiteral("removal-target.css"))
+                    && !sessions.HasWriter(),
+                "Relocation reference was not committed");
+
+        const QString removalPackageBefore = opf->GetSourceText();
+        const QString relocationChapterBefore = chapter->GetText();
         const int removalResourcesBefore = keeper->GetResourceList().size();
         const bool removalModifiedBefore = book->IsModified();
+
+        // Permit the filesystem move and OPF patch, then fail after updating
+        // non-OPF references. Every layer must return to the original path.
+        sessions.SetCommitFailureAfterMutationForTesting(2);
+        const QString relocationFailure = QString::fromUtf8(R"PY(
+from sigil_live.errors import ValidationFailed
+def run(plugin):
+    target = plugin.book.resolve_path('OEBPS/removal-target.css')
+    tx = plugin.book.transaction('injected relocation failure', checkpoint='auto')
+    tx.move_resource(target, 'OEBPS/moved-removal-target.css')
+    try:
+        tx.commit()
+    except ValidationFailed as error:
+        assert 'all applied changes were rolled back' in str(error)
+        print('RELOCATION_ROLLED_BACK', flush=True)
+        return 0
+    return 3
+)PY");
+        output.clear();
+        error.clear();
+        Require(sessions.RunSnippetAndWait(relocationFailure, &status, &error, 30000, &output),
+                ("Injected relocation plugin failed: " + error + "\n" + output)
+                    .toUtf8().constData());
+        Require(output.contains(QStringLiteral("RELOCATION_ROLLED_BACK")) && !sessions.HasWriter(),
+                "Relocation failure was not compensated or retained the writer lease");
+        Require(keeper->GetResourceByBookPathNoThrow(
+                    QStringLiteral("OEBPS/removal-target.css")) == removalTarget
+                    && !keeper->GetResourceByBookPathNoThrow(
+                        QStringLiteral("OEBPS/moved-removal-target.css"))
+                    && ReadFile(removalTarget->GetFullPath()) == removalBytesBefore,
+                "Relocation failure did not restore the resource path and bytes");
+        Require(opf->GetSourceText() == removalPackageBefore
+                    && chapter->GetText() == relocationChapterBefore,
+                "Relocation failure did not restore package and content references");
+        Require(book->IsModified() == removalModifiedBefore,
+                "Relocation failure changed the Book modified state");
 
         // Allow the OPF removal patch, then fail after the disposable resource
         // file has been deleted. The host must restore both and keep the same
@@ -278,11 +410,22 @@ def run(plugin):
 def run(plugin):
     target = plugin.book.resolve_path('OEBPS/removal-target.css')
     target2 = plugin.book.resolve_path('OEBPS/removal-target-2.css')
+    binary_target = plugin.book.resolve_path('OEBPS/binary-target.png')
+    chapter = plugin.book.resolve_path('OEBPS/a.xhtml')
+    archive = plugin.book.read_archive_file('OEBPS/archive-target.bin')
     tx = plugin.book.transaction('successful atomic removal', checkpoint='auto')
+    current = tx.read_text(chapter)
+    tx.replace_text(
+        chapter,
+        current['text'].replace('<link rel="stylesheet" href="removal-target.css"/>', '', 1),
+        current['revision'],
+    )
     tx.remove_resource(target)
     tx.remove_resource(target2)
+    tx.remove_resource(binary_target)
+    tx.remove_archive_file('OEBPS/archive-target.bin', archive['sha256'])
     result = tx.commit()
-    assert result['removed'] == 2
+    assert result['removed'] == 4
     print('REMOVAL_COMMITTED', flush=True)
     return 0
 )PY");
@@ -295,14 +438,19 @@ def run(plugin):
         Require(!keeper->GetResourceByBookPathNoThrow(QStringLiteral("OEBPS/removal-target.css"))
                     && !keeper->GetResourceByBookPathNoThrow(
                         QStringLiteral("OEBPS/removal-target-2.css"))
+                    && !keeper->GetResourceByBookPathNoThrow(
+                        QStringLiteral("OEBPS/binary-target.png"))
                     && !QFileInfo::exists(QDir(keeper->GetFullPathToMainFolder()).filePath(
                         QStringLiteral("OEBPS/removal-target.css")))
                     && !QFileInfo::exists(QDir(keeper->GetFullPathToMainFolder()).filePath(
                         QStringLiteral("OEBPS/removal-target-2.css")))
+                    && !QFileInfo::exists(archiveTargetPath)
                     && keeper->GetResourceList().size() == resourcesBefore,
                 "Successful removal retained the Resource model entry or file");
         Require(!opf->GetSourceText().contains(QStringLiteral("removal-target")),
                 "Successful removal retained its manifest entry");
+        Require(chapter->GetText() == chapterBefore,
+                "Successful cleanup retained the temporary stylesheet reference");
         Require(book->IsModified(), "Successful removal did not mark the Book modified");
 
         std::cout << "Live transaction fault compensation checks passed\n";
