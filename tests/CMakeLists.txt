@@ -149,6 +149,17 @@ target_compile_features(code_view_selection_policy_test PRIVATE cxx_std_17)
 add_test(NAME code_view_selection_policy COMMAND code_view_selection_policy_test)
 set_tests_properties(code_view_selection_policy PROPERTIES TIMEOUT 30)
 
+add_executable(shortcut_badge_model_test
+    shortcut_badge_model_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.h
+)
+target_include_directories(shortcut_badge_model_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(shortcut_badge_model_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(shortcut_badge_model_test PRIVATE cxx_std_17)
+add_test(NAME shortcut_badge_model COMMAND shortcut_badge_model_test)
+set_tests_properties(shortcut_badge_model PROPERTIES TIMEOUT 30)
+
 add_executable(epub_file_snapshot_test
     epub_file_snapshot_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.cpp
