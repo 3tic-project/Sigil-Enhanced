@@ -26,7 +26,7 @@ Live 插件仍是**可信本地代码**，不是沙箱。插件进程与 Sigil �
 | 6 单写者 | 已修复 | `PluginSessionManager` 持有跨 Session writer lease，事务 begin 获取，commit/rollback/finish/destructor 释放。`7e033e7f6`。 |
 | 7 事件与资源压力 | 已修复主要边界 | 高频事件按 50/100ms 和资源 ID 合并；4 MiB socket backlog 丢弃并报告；限制请求率、读写流、上传、临时文件、聚合快照与控制台。`f57a653b0` 及本轮配额补充。 |
 | 8 缺失 API | 已完成 | `materializeTemporary`、readMany continuation、分块二进制/文本写、结构化 metadata/spine 更新均已接入宿主、SDK、OpenRPC 和示例；spine 更新可见同事务 staged manifest additions。 |
-| 9 测试不足 | 已改善，未达到全 GUI 自动化 | OpenRPC/dispatcher 集合锁定；SDK 聚焦测试；中英文文档与示例公共 SDK 方法覆盖清单；输入、OPF 结构更新和全局 writer 有 C++ 测试。新增真实 MainWindow/外部 launcher/SDK 故障注入，覆盖 package、多文本、结构与批量资源删除补偿。活动编辑器、进程崩溃和平台矩阵仍未自动化。 |
+| 9 测试不足 | 已改善，未达到全 GUI 自动化 | OpenRPC/dispatcher 集合锁定；SDK 聚焦测试；中英文文档与示例公共 SDK 方法覆盖清单；输入、OPF 结构更新和全局 writer 有 C++ 测试。新增真实 MainWindow/外部 launcher/SDK 故障注入，覆盖 package、多文本、结构、二进制、archive、移动/引用更新与批量资源删除补偿。活动编辑器、进程崩溃和平台矩阵仍未自动化。 |
 
 ## 防护边界
 
@@ -59,8 +59,9 @@ ctest --test-dir cmake-build-debug --output-on-failure
 - `plugin_text_edit_test`、`plugin_text_transaction_test`：UTF-16 patch、staging、rollback。
 - `plugin_package_update_test`：metadata/spine 命名空间、转义、属性、顺序和负向输入。
 - `plugin_writer_lock_test`：跨 Session writer lease。
-- `plugin_session_fault_recovery_integration`：真实宿主中在 package、跨文本、结构和批量删除
-  的中间写入后注入失败，检查源码/字节/对象/modified 回退与 writer 重新获取。
+- `plugin_session_fault_recovery_integration`：真实宿主中在 package、跨文本、结构、二进制、
+  archive、移动/引用更新和批量删除的中间写入后注入失败，检查源码/字节/对象/modified
+  回退与 writer 重新获取。
 - `python_live_sdk_test.py`：分页、流、hash、结构化事务、输出模式和自源过滤。
 - `plugin_openrpc_contract_test.py`：dispatcher 与 OpenRPC 方法集合、引用、错误码，以及 MCP 惰性读取
   不通知未就绪编辑器、新增 XHTML 保存前已加载、空 Gumbo 树安全返回。
@@ -72,7 +73,7 @@ ctest --test-dir cmake-build-debug --output-on-failure
 ## 仍未完成或不可宣称完成
 
 1. **进程崩溃/断电级原子提交**：当前是进程内补偿回滚，不是跨多个文件的持久化 WAL。
-   真实宿主故障注入已证明进程存活时的四类补偿，但 Sigil 在 commit 中途被杀死时无法执行
+   真实宿主故障注入已证明进程存活时的七类补偿，但 Sigil 在 commit 中途被杀死时无法执行
    补偿。若要求崩溃一致性，需设计 staging tree + 原子目录切换或可重放 journal。
 2. **GUI 端到端自动化**：source save、copy export、失败 input 保留当前 Book、Automate 等待和
    插件管理器 v1/v2 切换已有实现与构建覆盖，但尚无可重复的 GUI 驱动集成测试。

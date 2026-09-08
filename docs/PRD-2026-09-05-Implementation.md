@@ -298,7 +298,8 @@ ctest --test-dir build --output-on-failure --repeat until-fail:3 -R '^(opf_sourc
 ## OPF 第五批：Live 提交故障补偿与资源删除（2026-09-08）
 
 分支：`feature/transaction-fault-recovery`。主要提交：
-`06d48443f`（提交阶段故障注入与进程内补偿）、`aef09f1cf`（可恢复的批量资源删除）。
+`06d48443f`（提交阶段故障注入与进程内补偿）、`aef09f1cf`（可恢复的批量资源删除）、
+`c345e72e5`（二进制/archive/移动故障阶段的真实宿主覆盖）。
 
 ### 行为与恢复边界
 
@@ -327,9 +328,10 @@ ctest --test-dir build --output-on-failure -R '^(navigation_repair_integration|p
 ```
 
 - `plugin_session_fault_recovery_integration` 启动真实 MainWindow、PluginSessionManager、外部
-  launcher 和 SDK，连续 3 次通过（19.57 秒）。分别在结构 OPF batch 后、package source
-  写入后、两个文本的第一个写入后以及批量删除第一个文件后失败；验证原 Resource 身份、
-  文件字节、OPF 原始源码/字节、Book modified 状态与 writer lease 均恢复。
+  launcher 和 SDK。扩展后的最终目标连续 3 次通过（19.41 秒）。分别在结构 OPF batch、
+  package source、两个文本中的第一个、托管二进制、未托管 archive、移动后的引用更新，
+  以及批量删除第一个文件之后失败；验证原 Resource 身份、文件字节、OPF 原始源码/字节、
+  Book modified 状态与 writer lease 均恢复。
 - 删除用例先事务新增两个非活动 CSS，再在第一个文件删除后失败：第一个文件恢复，第二个
   从未丢失，manifest 精确回退。随后正常事务一次删除两项，确认对象、文件和 manifest
   条目全部移除。相关 6 项 package/navigation/text 回归全部通过（16.10 秒）。
@@ -338,8 +340,9 @@ ctest --test-dir build --output-on-failure -R '^(navigation_repair_integration|p
 
 ### 尚未关闭的门槛
 
-- 故障钩子已布置到二进制、archive、移动和引用更新阶段，但本批真实宿主测试只直接覆盖
-  上述四种失败场景；其他阶段仍需逐项原生注入证据。
+- 每个主要 mutation 家族已有真实宿主故障注入证据；新增资源惰性加载自身抛错、底层
+  物理写入 API 自然失败，以及补偿操作本身再次失败，仍以代码防护与错误聚合为主，
+  尚缺可重复的原生环境注入。
 - 删除失败会恢复 Book 内容与磁盘文件，但已关闭的编辑标签页不会自动重新打开；活动 XHTML
   的 UI 状态恢复尚无可重复 GUI 验收。跨资源统一 Undo/Redo 也仍未实现。
 - 强制杀进程/断电、恢复日志重放、Windows/Linux 文件占用语义、真实大型书籍、O02 整包哈希、

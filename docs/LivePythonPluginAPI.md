@@ -519,10 +519,11 @@ metadata/runtime selection, OpenRPC/dispatcher parity, the SDK, examples,
 bilingual documentation coverage, real launcher/transport handshakes, UTF-16
 patches, transactions, rollback, and the global writer lease. The macOS Debug
 suite also includes a real MainWindow/launcher/SDK integration target that
-injects failures after package, multi-text, structure, and resource-deletion
-mutations and verifies compensation plus writer reacquisition. Process-kill
-recovery, active-editor UI restoration, and the Windows/Linux matrix remain
-manual acceptance items; see `LivePythonPluginSecurityAudit.md`.
+injects failures after package, multi-text, structure, binary, archive,
+relocation/reference, and resource-deletion mutations and verifies compensation
+plus writer reacquisition. Process-kill recovery, active-editor UI restoration,
+and the Windows/Linux matrix remain manual acceptance items; see
+`LivePythonPluginSecurityAudit.md`.
 Run it with:
 
 ```sh

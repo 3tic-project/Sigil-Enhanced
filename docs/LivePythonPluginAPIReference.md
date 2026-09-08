@@ -380,6 +380,6 @@ ctest --test-dir cmake-build-debug --output-on-failure
 ```
 
 macOS Debug 还注册了真实 MainWindow/launcher/SDK 故障注入集成目标，覆盖 package、
-多文本、结构和资源删除后的补偿以及 writer 重新获取。尚未自动化的强制杀进程恢复、
-活动编辑器 UI 状态和平台矩阵范围见 `LivePythonPluginSecurityAudit.md`；不能用 SDK 方法
-覆盖替代这些端到端验收。
+多文本、结构、二进制、archive、移动/引用更新和资源删除后的补偿以及 writer 重新获取。
+尚未自动化的强制杀进程恢复、活动编辑器 UI 状态和平台矩阵范围见
+`LivePythonPluginSecurityAudit.md`；不能用 SDK 方法覆盖替代这些端到端验收。
