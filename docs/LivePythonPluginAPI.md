@@ -360,6 +360,16 @@ once through `ApplyResourceBatch`, applies `UniversalUpdates` to non-OPF
 references, then removes staged resources. Relocation cannot be combined with
 staged text writes because the latter could overwrite link corrections.
 
+If a live commit fails after applying one or more mutations, the host attempts
+to compensate every applied text, binary, archive, package, path, and resource
+change in reverse and releases the global writer lease. Managed resource
+removals are backed up as a complete batch before the first file is deleted;
+the in-memory resource objects are detached only after every deletion succeeds.
+Restoration errors are reported explicitly and are never described as a full
+rollback. This is process-local compensation, not a durable write-ahead log:
+termination or power loss inside the commit window can still require recovery
+from the pre-commit Checkpoint.
+
 Newly staged text resources are addressable by the `staging_id` returned from
 `add_resource()` or a chunked text writer. The same transaction can range-read,
 replace, or patch that ID before commit; its staged revision starts at zero and
@@ -504,13 +514,15 @@ chunked transaction binary, and a bounded 1000-block console.
 
 ## Verification
 
-The CTest suite contains 20 registered targets covering archive/input
-validation, frame limits, metadata/runtime selection, OpenRPC/dispatcher parity,
-the SDK, examples, bilingual documentation coverage, real launcher/transport
-handshakes, UTF-16 patches, transactions, rollback, and the global writer lease.
-The current macOS Debug result is 20/20. GUI save/load and
-fault-injected cross-resource recovery remain manual acceptance items; see
-`LivePythonPluginSecurityAudit.md`.
+The CTest suite covers archive/input validation, frame limits,
+metadata/runtime selection, OpenRPC/dispatcher parity, the SDK, examples,
+bilingual documentation coverage, real launcher/transport handshakes, UTF-16
+patches, transactions, rollback, and the global writer lease. The macOS Debug
+suite also includes a real MainWindow/launcher/SDK integration target that
+injects failures after package, multi-text, structure, and resource-deletion
+mutations and verifies compensation plus writer reacquisition. Process-kill
+recovery, active-editor UI restoration, and the Windows/Linux matrix remain
+manual acceptance items; see `LivePythonPluginSecurityAudit.md`.
 Run it with:
 
 ```sh

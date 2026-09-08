@@ -295,5 +295,55 @@ ctest --test-dir build --output-on-failure --repeat until-fail:3 -R '^(opf_sourc
 - macOS Ninja Debug 之外的平台、真实大型书籍性能、完整 GUI 人工流程、EPUBCheck、
   独立阅读器及 O02 整包哈希仍未验证。
 
-下一优先项：继续 O10 跨资源恢复与故障注入，再分别推进文本选择、TOC 层级编辑、
+## OPF 第五批：Live 提交故障补偿与资源删除（2026-09-08）
+
+分支：`feature/transaction-fault-recovery`。主要提交：
+`06d48443f`（提交阶段故障注入与进程内补偿）、`aef09f1cf`（可恢复的批量资源删除）。
+
+### 行为与恢复边界
+
+- Live 宿主增加仅供测试使用的一次性提交故障注入点，覆盖资源新增、移动、OPF batch、
+  引用更新、package source、逐个文本、二进制、archive 和托管资源删除之后。生产 RPC
+  不暴露该开关。异常和显式注入失败统一进入补偿路径并释放全局 writer。
+- 回滚不再因一个资源恢复异常而停止：文本、路径、资源新增清理分别逆序尝试并聚合错误；
+  已加入 live Book、但在惰性加载时抛错的新资源也会被登记并清理。只有全部恢复步骤成功时，
+  返回给插件的错误才声明“all applied changes were rolled back”。
+- 托管资源删除改为先关闭目标标签页、为整批文件建立临时备份，再挂起 watcher 并逐一删除。
+  任一删除失败会按逆序恢复已删除文件、原权限、OPF 及此前的文本/结构变化；所有磁盘删除
+  成功后才从 `FolderKeeper` 中移除对象。最终删除仍发出原有 `Resource::Deleted` 信号，
+  保持关联 XHTML 等监听者的生命周期语义。
+- 成功 commit 仍依赖提交前 Checkpoint 提供提交后恢复入口。上述保证是 **Sigil 进程仍存活时**
+  的补偿事务，不是跨多个文件的持久化 WAL；在文件删除/替换与补偿之间强制杀进程或断电，
+  仍可能留下工作目录的中间状态，需从 Checkpoint 恢复。
+
+### 测试证据
+
+完整 Sigil 构建通过，42 项固定 Python 依赖与隔离导入检查通过。最终代码执行：
+
+```sh
+cmake --build build --parallel 8
+ctest --test-dir build --output-on-failure --repeat until-fail:3 -R '^plugin_session_fault_recovery_integration$'
+ctest --test-dir build --output-on-failure -R '^(navigation_repair_integration|plugin_package_update_integration|plugin_session_package_integration|plugin_text_edit|plugin_text_transaction|plugin_package_update)$'
+```
+
+- `plugin_session_fault_recovery_integration` 启动真实 MainWindow、PluginSessionManager、外部
+  launcher 和 SDK，连续 3 次通过（19.57 秒）。分别在结构 OPF batch 后、package source
+  写入后、两个文本的第一个写入后以及批量删除第一个文件后失败；验证原 Resource 身份、
+  文件字节、OPF 原始源码/字节、Book modified 状态与 writer lease 均恢复。
+- 删除用例先事务新增两个非活动 CSS，再在第一个文件删除后失败：第一个文件恢复，第二个
+  从未丢失，manifest 精确回退。随后正常事务一次删除两项，确认对象、文件和 manifest
+  条目全部移除。相关 6 项 package/navigation/text 回归全部通过（16.10 秒）。
+- 测试还验证恢复 Checkpoint 中的 OPF 与提交前字节完全相同，以及失败后新事务可以重新
+  获取 writer。原生集成仍只在 macOS + Ninja + Debug 注册。
+
+### 尚未关闭的门槛
+
+- 故障钩子已布置到二进制、archive、移动和引用更新阶段，但本批真实宿主测试只直接覆盖
+  上述四种失败场景；其他阶段仍需逐项原生注入证据。
+- 删除失败会恢复 Book 内容与磁盘文件，但已关闭的编辑标签页不会自动重新打开；活动 XHTML
+  的 UI 状态恢复尚无可重复 GUI 验收。跨资源统一 Undo/Redo 也仍未实现。
+- 强制杀进程/断电、恢复日志重放、Windows/Linux 文件占用语义、真实大型书籍、O02 整包哈希、
+  EPUBCheck 和独立阅读器均未验证。因此本批推进 O10/G6，但不关闭完整门槛。
+
+下一优先项：继续 O10 的其余故障阶段与崩溃恢复设计，再分别推进文本选择、TOC 层级编辑、
 Clips、div 和 Agent 功能；每项另建功能分支并保持细粒度提交。

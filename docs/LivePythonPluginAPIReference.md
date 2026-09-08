@@ -205,6 +205,12 @@ package 有实际变化时必须创建恢复 Checkpoint；其中 OPF 使用提�
 也不会为缺 UUID 的书先改写 live OPF。commit 返回 `checkpoint_created` 和
 `checkpoint_book_id`。原编码不能表示当前源码时，Checkpoint 创建失败且 live package 不变。
 
+若 live commit 在一个或多个写入已经生效后失败，宿主会逆序补偿已应用的文本、二进制、
+archive、package、路径和资源变化，并释放全局 writer。托管资源删除会在删除第一个文件前
+备份整批文件，只有全部删除成功后才从内存模型移除对象；恢复中的任何错误都会明确返回，
+不会被描述成完整回滚。这是进程内补偿，不是持久化预写日志：在 commit 窗口中强制结束
+进程或断电时，仍可能需要从提交前 Checkpoint 恢复。
+
 `read_text_range()` 返回 `text`、`start`、`end`、`total_utf16_units`、`revision`、`staged`
 和可空 `next_start`；首段 `start=0` 额外返回整文 `total_utf8_bytes` 与 `sha256`，后续段省略
 这两个需要整文编码/哈希的字段。单次最多 1 Mi 个 UTF-16 code units，且不会切开代理项对。
@@ -373,5 +379,7 @@ cmake --build cmake-build-debug -j4
 ctest --test-dir cmake-build-debug --output-on-failure
 ```
 
-当前环境完整结果及尚未自动化的 GUI、崩溃恢复和平台矩阵范围见
-`LivePythonPluginSecurityAudit.md`，不能用 SDK 方法覆盖替代这些端到端验收。
+macOS Debug 还注册了真实 MainWindow/launcher/SDK 故障注入集成目标，覆盖 package、
+多文本、结构和资源删除后的补偿以及 writer 重新获取。尚未自动化的强制杀进程恢复、
+活动编辑器 UI 状态和平台矩阵范围见 `LivePythonPluginSecurityAudit.md`；不能用 SDK 方法
+覆盖替代这些端到端验收。
