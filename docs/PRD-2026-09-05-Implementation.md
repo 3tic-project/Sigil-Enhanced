@@ -348,5 +348,44 @@ ctest --test-dir build --output-on-failure -R '^(navigation_repair_integration|p
 - 强制杀进程/断电、恢复日志重放、Windows/Linux 文件占用语义、真实大型书籍、O02 整包哈希、
   EPUBCheck 和独立阅读器均未验证。因此本批推进 O10/G6，但不关闭完整门槛。
 
-下一优先项：继续 O10 的其余故障阶段与崩溃恢复设计，再分别推进文本选择、TOC 层级编辑、
-Clips、div 和 Agent 功能；每项另建功能分支并保持细粒度提交。
+## Clips 快捷键角标（2026-09-09）
+
+分支：`feature/clip-shortcut-badges`。代码提交：`ed63ead55`（纯展示模型）、
+`4c23e92ac`（QToolButton 绘制层、主窗口/设置/翻译与原生测试）。
+
+### 行为与界面
+
+- 前十个有内容的 Clip QAction 使用实际有效绑定生成角标；默认显示 1–9、0，
+  Clip 10 不显示 10。同一默认修饰键族改为其他数字时显示新数字，其他组合显示
+  平台原生完整文本或在窄按钮上降级为“Key”。清空绑定即隐藏角标。
+- 角标不从按钮视觉位置推导槽位，继续使用 QAction `data()` 与
+  `MainWindow.ClipN`；不替换动作对象，不改变 Clip 插入、重排、删除或冲突语义。
+  标准工具栏溢出菜单继续从同一 QAction 显示完整快捷键列。
+- tooltip 第一行加入片段名和实际原生快捷键，无绑定时明确说明；后续预览按字素簇
+  截断并转义 HTML。工具按钮的 accessible name 包含名称、固定槽位与完整快捷键。
+- 绘制层鼠标穿透，为按钮保留右侧 padding；响应尺寸、字体、palette、局部 stylesheet、
+  按下和禁用状态。字体不小于 9 个逻辑像素，颜色来自当前主题 token。
+- 默认开启“偏好设置 → 外观 → 主界面 → 显示 Clips 快捷键角标”，保存后实时刷新，
+  重置外观设置恢复默认值。简中、繁中、日文文案已补齐。
+
+### 测试证据与边界
+
+完整 Sigil 构建通过，42 项固定 Python 依赖与隔离导入检查通过。`shortcut_badge_model`
+和 `action_shortcut_badge` 通过；后者另以 100%、125%、150%、200% 四个 Qt 缩放因子
+逐一执行。`clip_shortcut_badge_integration` 链接真实应用对象并连续运行 3 次通过
+（16.33 秒），覆盖真实 MainWindow、QAction、KeyboardShortcutManager、AppearanceWidget、
+ClipEditorModel、标准菜单和 CodeViewEditor 插入链。
+
+实际工具栏截图确认十个按钮文字与 1–9/0 角标均可见。集成测试还验证自定义/清空
+绑定即时同步、安全 Ruby/HTML tooltip、辅助名称、设置关闭/恢复、模型只剩一项时
+其他动作隐藏且 Clip 1 不重编号，以及触发固定 QAction 后插入对应内容。
+
+四份新增翻译目录通过 XML 与 `lrelease`。简中、繁中、日文覆盖检查各仍有 82 条
+原生 Agent 历史欠账，新增 Clips 文案失败为 0。未执行 Windows/Linux 原生主题、
+真实高对比度、人工屏幕阅读器和实体快捷键键盘布局测试，因此不能把 C08–C10
+表述为全平台关闭；自动化 offscreen 缩放与菜单动作检查也不替代完整人工 GUI 验收。
+
+详细用户与工程说明见 [Clips 快捷键角标](ClipShortcutBadges.md)。
+
+下一优先项：分别推进 TOC 层级编辑、div 规范化与 Agent 工作流，并继续补齐 OPF 的
+崩溃恢复、全书 Undo/Redo 和跨平台/真实书籍验收；每项另建功能分支并保持细粒度提交。
