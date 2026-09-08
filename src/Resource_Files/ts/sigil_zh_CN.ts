@@ -926,6 +926,21 @@ if a sans-serif font-family specified in your CSS</source>
         <source>PreFind Selection</source>
         <translation>预查找选区</translation>
     </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="631"/>
+        <source>Clip Toolbar:</source>
+        <translation>Clip 工具栏：</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="637"/>
+        <source>Show the current shortcut on each of the first ten Clip buttons.</source>
+        <translation>在前十个 Clip 按钮上显示当前快捷键。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="640"/>
+        <source>Show Clips shortcut badges</source>
+        <translation>显示 Clips 快捷键角标</translation>
+    </message>
 </context>
 <context>
     <name>AriaClips</name>
@@ -27014,6 +27029,37 @@ Continue using the requested filename?</source>
     <message>
         <source>OPF after</source>
         <translation>修改后的 OPF</translation>
+    </message>
+</context>
+<context>
+    <name>ActionShortcutBadge</name>
+    <message>
+        <location filename="../../Widgets/ActionShortcutBadge.cpp" line="150"/>
+        <source>Key</source>
+        <translation>按键</translation>
+    </message>
+</context>
+<context>
+    <name>ShortcutBadgeModel</name>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="58"/>
+        <source>%1 · No shortcut assigned</source>
+        <translation>%1 · 未分配快捷键</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="60"/>
+        <source>%1, Clip %2, no shortcut assigned</source>
+        <translation>%1，Clip %2，未分配快捷键</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="64"/>
+        <source>%1 · %2</source>
+        <translation>%1 · %2</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="66"/>
+        <source>%1, Clip %2, %3</source>
+        <translation>%1，Clip %2，%3</translation>
     </message>
 </context>
 </TS>

@@ -160,6 +160,23 @@ target_compile_features(shortcut_badge_model_test PRIVATE cxx_std_17)
 add_test(NAME shortcut_badge_model COMMAND shortcut_badge_model_test)
 set_tests_properties(shortcut_badge_model PROPERTIES TIMEOUT 30)
 
+add_executable(action_shortcut_badge_test
+    action_shortcut_badge_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ActionShortcutBadge.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ActionShortcutBadge.h
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.h
+)
+target_include_directories(action_shortcut_badge_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(action_shortcut_badge_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(action_shortcut_badge_test PRIVATE cxx_std_17)
+set_target_properties(action_shortcut_badge_test PROPERTIES AUTOMOC ON)
+add_test(NAME action_shortcut_badge COMMAND action_shortcut_badge_test)
+set_tests_properties(action_shortcut_badge PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(epub_file_snapshot_test
     epub_file_snapshot_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.cpp
@@ -1145,6 +1162,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(code_view_selection_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME clip_shortcut_badge_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_clip_shortcut_badge_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(clip_shortcut_badge_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
 endif()
 
 add_test(NAME vendored_source_manifest

@@ -67,7 +67,9 @@ class QLabel;
 class QSignalMapper;
 class QSlider;
 class QTimer;
+class QToolButton;
 class QActionGroup;
+class ActionShortcutBadge;
 class FindReplace;
 class TabManager;
 class BookBrowser;
@@ -759,7 +761,9 @@ private:
 
     void updateToolTipsOnPluginIcons();
     void updateToolTipsOnAutomateIcons();
-    void UpdateClipButton(QAction *ui_action);
+    void UpdateClipButton(QAction *ui_action, bool show_shortcut_badges);
+    QToolButton *ClipToolButton(QAction *ui_action) const;
+    ActionShortcutBadge *EnsureClipShortcutBadge(QAction *ui_action);
     void InsertFiles(const QStringList &selected_images);
     void InsertFilesFromDisk();
 

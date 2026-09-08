@@ -433,6 +433,8 @@ set( WIDGET_FILES
     Widgets/ImageView.h
     Widgets/AdjustImage.cpp
     Widgets/AdjustImage.h
+    Widgets/ActionShortcutBadge.cpp
+    Widgets/ActionShortcutBadge.h
     Widgets/ShortcutBadgeModel.cpp
     Widgets/ShortcutBadgeModel.h
     Widgets/AVView.cpp

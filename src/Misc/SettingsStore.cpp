@@ -151,6 +151,7 @@ static QString KEY_CV_DARK_PRESELECTION_COLOR = SETTINGS_GROUP + "/" + "cv_dark_
 static QString KEY_SPECIAL_CHARACTER_FONT_FAMILY = SETTINGS_GROUP + "/" + "special_character_font_family";
 static QString KEY_SPECIAL_CHARACTER_FONT_SIZE = SETTINGS_GROUP + "/" + "special_character_font_size";
 static QString KEY_MAIN_MENU_ICON_SIZE = SETTINGS_GROUP + "/" + "main_menu_icon_size";
+static QString KEY_SHOW_CLIP_SHORTCUT_BADGES = SETTINGS_GROUP + "/" + "show_clip_shortcut_badges";
 static QString KEY_CLIPBOARD_HISTORY_LIMIT = SETTINGS_GROUP + "/" + "clipboard_history_limit";
 
 SettingsStore::SettingsStore()
@@ -589,6 +590,12 @@ double SettingsStore::mainMenuIconSize()
     return value(KEY_MAIN_MENU_ICON_SIZE, 1.8).toDouble();
 }
 
+bool SettingsStore::showClipShortcutBadges()
+{
+    clearSettingsGroup();
+    return value(KEY_SHOW_CLIP_SHORTCUT_BADGES, true).toBool();
+}
+
 int SettingsStore::clipboardHistoryLimit()
 {
     clearSettingsGroup();
@@ -999,6 +1006,12 @@ void SettingsStore::setMainMenuIconSize(double icon_size)
     setValue(KEY_MAIN_MENU_ICON_SIZE, icon_size);
 }
 
+void SettingsStore::setShowClipShortcutBadges(bool visible)
+{
+    clearSettingsGroup();
+    setValue(KEY_SHOW_CLIP_SHORTCUT_BADGES, visible);
+}
+
 void SettingsStore::setClipboardHistoryLimit(int limit)
 {
     clearSettingsGroup();
@@ -1071,6 +1084,7 @@ void SettingsStore::clearAppearanceSettings()
     remove(KEY_SPECIAL_CHARACTER_FONT_FAMILY);
     remove(KEY_SPECIAL_CHARACTER_FONT_SIZE);
     remove(KEY_MAIN_MENU_ICON_SIZE);
+    remove(KEY_SHOW_CLIP_SHORTCUT_BADGES);
     remove(KEY_SHOWFULLPATH_ON);
     remove(KEY_BOOK_BROWSER_IMAGE_PREVIEW_SIZE);
     remove(KEY_UI_FONT);

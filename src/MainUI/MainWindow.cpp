@@ -158,6 +158,8 @@
 #include "Tabs/TabManager.h"
 #include "MainUI/MainApplication.h"
 #include "Widgets/FileDropZone.h"
+#include "Widgets/ActionShortcutBadge.h"
+#include "Widgets/ShortcutBadgeModel.h"
 #include "Misc/SettingsStoreExtend.h" //modified: SettingsStoreExtend
 #ifdef Q_OS_MAC  // allow MacOS to build its own recent files menu in dock
 extern void addFileToRecentDocs(const QString &filePath);
@@ -365,6 +367,9 @@ MainWindow::MainWindow(const QString &openfilepath,
     // Needs to come before signals connect and after ExtendUI
     // (avoiding side-effects)
     ReadSettings();
+    // Clip shortcuts are registered while reading settings, so create and
+    // refresh their badges only after the effective bindings are available.
+    UpdateClipsUI();
     {
         SettingsStore settings;
         ui.actionOpenRegexWorkbench->setVisible(
@@ -7692,10 +7697,44 @@ void MainWindow::ExtendUI()
     ui.tbHeadings->setFocusPolicy(Qt::NoFocus);
     ui.tbCase->setFocusPolicy(Qt::NoFocus);
 
-    UpdateClipsUI();
 }
 
-void MainWindow::UpdateClipButton(QAction *ui_action)
+QToolButton *MainWindow::ClipToolButton(QAction *ui_action) const
+{
+    QToolButton *button = qobject_cast<QToolButton *>(
+        ui.toolBarClips->widgetForAction(ui_action));
+    if (!button) {
+        button = qobject_cast<QToolButton *>(
+            ui.toolBarClips2->widgetForAction(ui_action));
+    }
+    return button;
+}
+
+ActionShortcutBadge *MainWindow::EnsureClipShortcutBadge(QAction *ui_action)
+{
+    const int clip_number = ui_action->data().toInt();
+    if (clip_number < 1 || clip_number > 10) return nullptr;
+    QToolButton *button = ClipToolButton(ui_action);
+    if (!button) return nullptr;
+
+    ActionShortcutBadge *badge = button->findChild<ActionShortcutBadge *>(
+        QStringLiteral("actionShortcutBadge"), Qt::FindDirectChildrenOnly);
+    const QString shortcut_id = QStringLiteral("MainWindow.Clip%1").arg(clip_number);
+    const QKeySequence default_shortcut = KeyboardShortcutManager::instance()
+        .keyboardShortcut(shortcut_id).defaultKeySequence();
+    if (!badge) {
+        badge = new ActionShortcutBadge(button, ui_action, default_shortcut);
+        badge->setShortcutChangedCallback([this, ui_action]() {
+            SettingsStore settings;
+            UpdateClipButton(ui_action, settings.showClipShortcutBadges());
+        });
+    } else {
+        badge->setDefaultShortcut(default_shortcut);
+    }
+    return badge;
+}
+
+void MainWindow::UpdateClipButton(QAction *ui_action, bool show_shortcut_badges)
 {
     // clipEntry is a simple struct created by GetEntry with new,
     // no reference counting or smart pointers so they must be cleaned up appropriately
@@ -7704,23 +7743,32 @@ void MainWindow::UpdateClipButton(QAction *ui_action)
 
     if (clip_entry) {
         ui_action->setText(clip_entry->name);
-        QString clip_text = clip_entry->text;
-        clip_text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
-        ui_action->setToolTip(clip_text);
+        const ClipShortcutText text = ShortcutBadgeModel::FormatClipText(
+            clip_entry->name, clip_number, clip_entry->text, ui_action->shortcut());
+        ui_action->setToolTip(text.tooltip);
         ui_action->setVisible(true);
+        QToolButton *button = ClipToolButton(ui_action);
+        if (button) button->setAccessibleName(text.accessibleName);
         // prevent memory leak
         delete clip_entry;
     } else {
         ui_action->setText("");
         ui_action->setToolTip("");
         ui_action->setVisible(false);
+        QToolButton *button = ClipToolButton(ui_action);
+        if (button) button->setAccessibleName(QString());
+    }
+    if (ActionShortcutBadge *badge = EnsureClipShortcutBadge(ui_action)) {
+        badge->setBadgesVisible(show_shortcut_badges);
     }
 }
 
 void MainWindow::UpdateClipsUI()
 {
+    SettingsStore settings;
+    const bool show_shortcut_badges = settings.showClipShortcutBadges();
     foreach(QAction * clipaction, m_clactions) {
-        UpdateClipButton(clipaction);
+        UpdateClipButton(clipaction, show_shortcut_badges);
     }
 }
 

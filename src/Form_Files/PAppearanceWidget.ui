@@ -623,8 +623,27 @@ if a sans-serif font-family specified in your CSS</string>
            </widget>
           </item>
          </layout>
-        </widget>
-       </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupClipShortcutBadges">
+        <property name="title">
+         <string>Clip Toolbar:</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayoutClipShortcutBadges">
+         <item>
+          <widget class="QCheckBox" name="chkClipShortcutBadges">
+           <property name="toolTip">
+            <string>Show the current shortcut on each of the first ten Clip buttons.</string>
+           </property>
+           <property name="text">
+            <string>Show Clips shortcut badges</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
        <item>
         <widget class="QGroupBox" name="grpCustomDarkStyle">
          <property name="title">

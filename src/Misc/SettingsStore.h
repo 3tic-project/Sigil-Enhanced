@@ -266,6 +266,8 @@ public:
      * The icon size to use for the main menu.
      */
     double mainMenuIconSize();
+
+    bool showClipShortcutBadges();
     
     /**
      * How many clipboard history items to save.
@@ -455,6 +457,8 @@ public slots:
      * Set the icon size to use for the main menu.
      */
     void setMainMenuIconSize(double icon_size);
+
+    void setShowClipShortcutBadges(bool visible);
 
     /**
      * Set the number of clipboard history items to retain
