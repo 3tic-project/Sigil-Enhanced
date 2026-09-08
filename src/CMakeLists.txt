@@ -723,6 +723,8 @@ set( VIEW_EDITOR_FILES
     ViewEditors/CodeViewEditor.cpp
     ViewEditors/CodeViewEditorExt.cpp
     ViewEditors/CodeViewEditor.h
+    ViewEditors/CodeViewSelectionPolicy.cpp
+    ViewEditors/CodeViewSelectionPolicy.h
     ViewEditors/WebEngPage.cpp
     ViewEditors/WebEngPage.h
     ViewEditors/SimplePage.cpp

@@ -136,6 +136,19 @@ target_compile_features(ncx_navigation_test PRIVATE cxx_std_17)
 add_test(NAME ncx_navigation COMMAND ncx_navigation_test)
 set_tests_properties(ncx_navigation PROPERTIES TIMEOUT 30)
 
+add_executable(code_view_selection_policy_test
+    code_view_selection_policy_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Parsers/TagLister.cpp
+    ${CMAKE_SOURCE_DIR}/src/Parsers/TagLister.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/CodeViewSelectionPolicy.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/CodeViewSelectionPolicy.h
+)
+target_include_directories(code_view_selection_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(code_view_selection_policy_test PRIVATE Qt6::Core)
+target_compile_features(code_view_selection_policy_test PRIVATE cxx_std_17)
+add_test(NAME code_view_selection_policy COMMAND code_view_selection_policy_test)
+set_tests_properties(code_view_selection_policy PROPERTIES TIMEOUT 30)
+
 add_executable(epub_file_snapshot_test
     epub_file_snapshot_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.cpp
