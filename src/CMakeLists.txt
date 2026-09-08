@@ -44,6 +44,8 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/HtmlNamedEntity.h
     BookManipulation/NcxNavigation.cpp
     BookManipulation/NcxNavigation.h
+    BookManipulation/TocTreeTransform.cpp
+    BookManipulation/TocTreeTransform.h
     BookManipulation/FolderKeeper.cpp
     BookManipulation/FolderKeeperExt.cpp
     BookManipulation/FolderKeeper.h

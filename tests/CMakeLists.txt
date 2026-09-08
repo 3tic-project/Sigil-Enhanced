@@ -177,6 +177,17 @@ set_tests_properties(action_shortcut_badge PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
+add_executable(toc_tree_transform_test
+    toc_tree_transform_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.h
+)
+target_include_directories(toc_tree_transform_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(toc_tree_transform_test PRIVATE Qt6::Core)
+target_compile_features(toc_tree_transform_test PRIVATE cxx_std_17)
+add_test(NAME toc_tree_transform COMMAND toc_tree_transform_test)
+set_tests_properties(toc_tree_transform PROPERTIES TIMEOUT 30)
+
 add_executable(epub_file_snapshot_test
     epub_file_snapshot_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.cpp
