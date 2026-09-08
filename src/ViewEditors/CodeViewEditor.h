@@ -617,6 +617,7 @@ private:
     bool IsMarkedText();
 
     void MaybeRegenerateTagList();
+    void MaybeRegenerateTagList(const QString &source);
 
     QString RemoveFirstTag(const QString &text, const QString &tagname);
     QString RemoveLastTag(const QString &text, const QString &tagname);
@@ -673,6 +674,8 @@ private:
     void AddCSSClassContextMenu(QMenu *menu);
 
     void AddReformatHTMLContextMenu(QMenu *menu);
+
+    void AddTextUnitSelectionContextMenu(QMenu *menu, int position);
 
     void AddGoToLinkOrStyleContextMenu(QMenu *menu);
 

@@ -3187,6 +3187,14 @@ Do you want to save your changes?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Select Element Content</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select Whole Element</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1599"/>
         <source>Add To Default Dictionary</source>
         <translation type="unfinished"></translation>
@@ -19974,12 +19982,12 @@ A checkpoint will be created before batch changes.</source>
     <name>PModifiedVerPrefsWidget</name>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="14"/>
-        <source>ModifiedVersion Prefs</source>
+        <source>Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="24"/>
-        <source>General</source>
+        <source>Code View</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -19995,6 +20003,22 @@ A checkpoint will be created before batch changes.</source>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="43"/>
         <source>Emmet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Double-click selection:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current paragraph/tag content</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Character or word (original behavior)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Selects the content inside a paragraph; nested markup such as Ruby is included.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

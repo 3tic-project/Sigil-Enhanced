@@ -1129,6 +1129,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(agent_workspace_package_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME code_view_selection_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_code_view_selection_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(code_view_selection_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
 endif()
 
 add_test(NAME vendored_source_manifest

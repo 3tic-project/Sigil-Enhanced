@@ -3207,6 +3207,14 @@ Do you want to save your changes?</source>
         <translation>この位置に開始タグが見つかりません。</translation>
     </message>
     <message>
+        <source>Select Element Content</source>
+        <translation>要素の内容を選択</translation>
+    </message>
+    <message>
+        <source>Select Whole Element</source>
+        <translation>要素全体を選択</translation>
+    </message>
+    <message>
         <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1600"/>
         <source>Add To Default Dictionary</source>
         <translation>デフォルトの辞書に追加</translation>
@@ -20381,13 +20389,13 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
     <name>PModifiedVerPrefsWidget</name>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="14"/>
-        <source>ModifiedVersion Prefs</source>
-        <translation>拡張版の設定</translation>
+        <source>Editor</source>
+        <translation>エディター</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="24"/>
-        <source>General</source>
-        <translation>全般</translation>
+        <source>Code View</source>
+        <translation>コードビュー</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="30"/>
@@ -20403,6 +20411,22 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="43"/>
         <source>Emmet</source>
         <translation>Emmet</translation>
+    </message>
+    <message>
+        <source>Double-click selection:</source>
+        <translation>ダブルクリック選択:</translation>
+    </message>
+    <message>
+        <source>Current paragraph/tag content</source>
+        <translation>現在の段落／タグの内容</translation>
+    </message>
+    <message>
+        <source>Character or word (original behavior)</source>
+        <translation>文字または単語（従来の動作）</translation>
+    </message>
+    <message>
+        <source>Selects the content inside a paragraph; nested markup such as Ruby is included.</source>
+        <translation>段落内部の内容を選択します。Ruby などの入れ子のマークアップも選択範囲に含まれます。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="66"/>

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>ModifiedVersion Prefs</string>
+   <string>Editor</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -21,7 +21,7 @@
      </property>
      <widget class="QWidget" name="GeneralTab">
       <attribute name="title">
-       <string>General</string>
+       <string>Code View</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
@@ -56,6 +56,39 @@
              </size>
             </property>
            </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="Group_doubleClickSelection">
+         <property name="title">
+          <string>Double-click selection:</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_doubleClickSelection">
+          <item>
+           <widget class="QComboBox" name="cbDoubleClickSelection">
+            <item>
+             <property name="text">
+              <string>Current paragraph/tag content</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Character or word (original behavior)</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelDoubleClickSelectionHelp">
+            <property name="text">
+             <string>Selects the content inside a paragraph; nested markup such as Ruby is included.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

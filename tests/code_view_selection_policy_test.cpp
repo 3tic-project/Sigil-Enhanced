@@ -1,4 +1,5 @@
 #include <QElapsedTimer>
+#include <QList>
 #include <QString>
 
 #include <iostream>
@@ -149,15 +150,21 @@ static void TestUnicodeAndWarmIndexPerformance()
     large += QStringLiteral("</body></html>");
     TagLister tags(large);
     const int position = large.lastIndexOf(QStringLiteral("entry-19999"));
-    QElapsedTimer timer;
-    timer.start();
-    const Result result = CodeViewSelectionPolicy::FindTextUnit(large, tags, position);
-    const qint64 elapsed = timer.elapsed();
-    Require(result.hasSelection()
-                && large.mid(result.start, result.end - result.start)
-                    == QStringLiteral("entry-19999-abcdefghijklmnopqrstuvwxyz"),
-            "Large warm index selected the wrong paragraph");
-    Require(elapsed <= 250, "Warm 20,000-tag selection exceeded 250 ms");
+    QList<qint64> samples;
+    for (int sample = 0; sample < 20; ++sample) {
+        QElapsedTimer timer;
+        timer.start();
+        const Result result = CodeViewSelectionPolicy::FindTextUnit(large, tags, position);
+        samples.append(timer.nsecsElapsed());
+        Require(result.hasSelection()
+                    && large.mid(result.start, result.end - result.start)
+                        == QStringLiteral("entry-19999-abcdefghijklmnopqrstuvwxyz"),
+                "Large warm index selected the wrong paragraph");
+    }
+    std::sort(samples.begin(), samples.end());
+    const qint64 p95_milliseconds = samples.at(18) / 1000000;
+    Require(p95_milliseconds <= 50,
+            "Warm 20,000-tag selection P95 exceeded 50 ms");
 }
 
 int main()

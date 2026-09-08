@@ -1,21 +1,28 @@
 ﻿
 #include "ModifiedVerPrefsWidget.h"
+#include "Misc/SettingsStore.h"
 #include "Misc/SettingsStoreExtend.h"
 
 ModifiedVerPrefsWidget::ModifiedVerPrefsWidget()
 {
-	ui.setupUi(this);
+    ui.setupUi(this);
+    ui.cbDoubleClickSelection->setItemData(0, QStringLiteral("element-content"));
+    ui.cbDoubleClickSelection->setItemData(1, QStringLiteral("word"));
     readSettings();
     connectSignalsToSlots();
 }
 
 PreferencesWidget::ResultActions ModifiedVerPrefsWidget::saveSettings()
 {
-	PreferencesWidget::ResultActions results = PreferencesWidget::ResultAction_None;
+    PreferencesWidget::ResultActions results = PreferencesWidget::ResultAction_None;
 
     SettingsStoreExtend sse;
+    SettingsStore settings;
 
-	// XHTML Fomat Configure
+    settings.setCodeViewDoubleClickSelection(
+        ui.cbDoubleClickSelection->currentData().toString());
+
+    // XHTML Fomat Configure
     sse.setXhtmlFormat(ui.editXHTMLFormat->toPlainText());
 
     // modified: CodeCompleterParser
@@ -49,12 +56,17 @@ PreferencesWidget::ResultActions ModifiedVerPrefsWidget::saveSettings()
     }
     sse.setOtherGroupTarget(other_group_target);
 
-	return results;
+    return results;
 }
 
 void ModifiedVerPrefsWidget::readSettings()
 {
     SettingsStoreExtend sse;
+    SettingsStore settings;
+
+    const int double_click_index = ui.cbDoubleClickSelection->findData(
+        settings.codeViewDoubleClickSelection());
+    ui.cbDoubleClickSelection->setCurrentIndex(double_click_index >= 0 ? double_click_index : 0);
 
     // XHTML Fomat Configure
     if (sse.getXhtmlFormat().isNull()) {

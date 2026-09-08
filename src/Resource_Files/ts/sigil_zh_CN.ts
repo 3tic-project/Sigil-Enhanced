@@ -3207,6 +3207,14 @@ Do you want to save your changes?</source>
         <translation>此位置没有开放标记。</translation>
     </message>
     <message>
+        <source>Select Element Content</source>
+        <translation>选择元素内容</translation>
+    </message>
+    <message>
+        <source>Select Whole Element</source>
+        <translation>选择整个元素</translation>
+    </message>
+    <message>
         <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1600"/>
         <source>Add To Default Dictionary</source>
         <translation>添加到默认字典</translation>
@@ -20384,13 +20392,13 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
     <name>PModifiedVerPrefsWidget</name>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="14"/>
-        <source>ModifiedVersion Prefs</source>
-        <translation>增强版设置</translation>
+        <source>Editor</source>
+        <translation>编辑器</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="24"/>
-        <source>General</source>
-        <translation>常规</translation>
+        <source>Code View</source>
+        <translation>代码视图</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="30"/>
@@ -20406,6 +20414,22 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="43"/>
         <source>Emmet</source>
         <translation>Emmet</translation>
+    </message>
+    <message>
+        <source>Double-click selection:</source>
+        <translation>双击选择：</translation>
+    </message>
+    <message>
+        <source>Current paragraph/tag content</source>
+        <translation>当前段落/标签内容</translation>
+    </message>
+    <message>
+        <source>Character or word (original behavior)</source>
+        <translation>字或词（原有行为）</translation>
+    </message>
+    <message>
+        <source>Selects the content inside a paragraph; nested markup such as Ruby is included.</source>
+        <translation>选择段落内部内容；Ruby 等嵌套标记也包含在选区中。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="66"/>

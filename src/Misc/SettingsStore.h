@@ -228,6 +228,8 @@ public:
      */
     bool highlightOpenCloseTags();
 
+    QString codeViewDoubleClickSelection();
+
     /**
      * All appearance settings related to Special Characters.
      */
@@ -440,6 +442,8 @@ public slots:
      * Set whether to highlight the matching open/close tag when the cursor is in a tag
      */
     void setHighlightOpenCloseTags(bool enabled);
+
+    void setCodeViewDoubleClickSelection(const QString &mode);
 
     void setCodeViewDarkAppearance(const CodeViewAppearance &code_view_appearance);
     /**

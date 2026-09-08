@@ -117,6 +117,7 @@ static QString KEY_CODE_VIEW_XHTML_HTML_COLOR = SETTINGS_GROUP + "/" + "code_vie
 static QString KEY_CODE_VIEW_XHTML_HTML_COMMENT_COLOR = SETTINGS_GROUP + "/" + "code_view_xhtml_html_comment_color";
 
 static QString KEY_CODE_VIEW_HIGHLIGHT_OPEN_CLOSE_TAGS = SETTINGS_GROUP + "/" + "code_view_highlight_open_close_tags";
+static QString KEY_CODE_VIEW_DOUBLE_CLICK_SELECTION = SETTINGS_GROUP + "/" + "code_view_double_click_selection";
 static QString KEY_SKIP_PRINT_PREVIEW = SETTINGS_GROUP + "/" + "skipprintpreview";
 
 // Dark Appearance
@@ -536,6 +537,14 @@ bool SettingsStore::highlightOpenCloseTags()
     return static_cast<bool>(value(KEY_CODE_VIEW_HIGHLIGHT_OPEN_CLOSE_TAGS, true).toBool());
 }
 
+QString SettingsStore::codeViewDoubleClickSelection()
+{
+    clearSettingsGroup();
+    const QString mode = value(KEY_CODE_VIEW_DOUBLE_CLICK_SELECTION,
+                               QStringLiteral("element-content")).toString();
+    return mode == QLatin1String("word") ? mode : QStringLiteral("element-content");
+}
+
 SettingsStore::CodeViewAppearance SettingsStore::codeViewDarkAppearance()
 {
     clearSettingsGroup();
@@ -941,6 +950,13 @@ void SettingsStore::setHighlightOpenCloseTags(bool enabled)
 {
     clearSettingsGroup();
     setValue(KEY_CODE_VIEW_HIGHLIGHT_OPEN_CLOSE_TAGS, enabled);
+}
+
+void SettingsStore::setCodeViewDoubleClickSelection(const QString &mode)
+{
+    clearSettingsGroup();
+    setValue(KEY_CODE_VIEW_DOUBLE_CLICK_SELECTION,
+             mode == QLatin1String("word") ? mode : QStringLiteral("element-content"));
 }
 
 void SettingsStore::setCodeViewDarkAppearance(const SettingsStore::CodeViewAppearance &code_view_appearance)

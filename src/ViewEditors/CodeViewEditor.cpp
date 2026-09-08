@@ -67,6 +67,7 @@
 #include "Parsers/HTMLStyleInfo.h"
 #include "PCRE2/PCRECache.h"
 #include "ViewEditors/CodeViewEditor.h"
+#include "ViewEditors/CodeViewSelectionPolicy.h"
 #include "ViewEditors/LineNumberArea.h"
 #include "sigil_constants.h"
 #include "Parsers/XhtmlFormatParser.h" // modified: XHTML Fomat Configure
@@ -1402,31 +1403,47 @@ void CodeViewEditor::resizeEvent(QResizeEvent *event)
 
 void CodeViewEditor::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    const int hit_position = cursorForPosition(event->position().toPoint()).position();
     // Propagate to base class first then handle locally
     QPlainTextEdit::mouseDoubleClickEvent(event);
 
-    // record the initial position in case later changed by doubleclick event
     QTextCursor cursor = textCursor();
-    int pos = cursor.selectionStart();
-    bool isShift = QApplication::keyboardModifiers() & Qt::ShiftModifier;
-    bool isAlt = QApplication::keyboardModifiers() & Qt::AltModifier;
+    const Qt::KeyboardModifiers modifiers = event->modifiers();
+    const bool isShift = modifiers & Qt::ShiftModifier;
+    const bool isAlt = modifiers & Qt::AltModifier;
+    const bool isNavigationModifier = modifiers & (Qt::ControlModifier | Qt::MetaModifier);
     // qDebug() << "Modifiers: " << QApplication::keyboardModifiers();
 
     if (!isShift && !isAlt) {
+        SettingsStore settings;
+        if (m_reformatHTMLEnabled && !isNavigationModifier
+            && settings.codeViewDoubleClickSelection() == QLatin1String("element-content")) {
+            const QString source = toPlainText();
+            MaybeRegenerateTagList(source);
+            const CodeViewSelectionPolicy::Result selection =
+                CodeViewSelectionPolicy::FindTextUnit(source, m_TagList, hit_position);
+            if (selection.hasSelection()) {
+                cursor.setPosition(selection.start);
+                cursor.setPosition(selection.end, QTextCursor::KeepAnchor);
+                setTextCursor(cursor);
+                return;
+            }
+        }
         // standard select word - but workaround lack on intl support in that feature
+        const int standard_position = cursor.selectionStart();
         QString standard_selection = cursor.selectedText();
         QRegularExpression select_word("(\\w+)", QRegularExpression::UseUnicodePropertiesOption);
         QRegularExpressionMatch match = select_word.match(standard_selection);
         if (match.hasMatch()) {
             int startOffset = match.capturedStart(1);
             int endOffset = match.capturedEnd(1);
-            cursor.setPosition(pos + startOffset);
-            cursor.setPosition(pos + endOffset, QTextCursor::KeepAnchor);
+            cursor.setPosition(standard_position + startOffset);
+            cursor.setPosition(standard_position + endOffset, QTextCursor::KeepAnchor);
             setTextCursor(cursor);
         }
         return;
     }
-    if (!IsPositionInTag(pos)){
+    if (!IsPositionInTag(hit_position)){
         return;
     }
 
@@ -1436,9 +1453,9 @@ void CodeViewEditor::mouseDoubleClickEvent(QMouseEvent *event)
     int open_tag_len = -1;
     int close_tag_pos = -1;
     int close_tag_len = -1;
-    int i = m_TagList.findFirstTagOnOrAfter(pos);
+    int i = m_TagList.findFirstTagOnOrAfter(hit_position);
     TagLister::TagInfo ti = m_TagList.at(i);
-    if ((pos >= ti.pos) && (pos < ti.pos + ti.len)) {
+    if ((hit_position >= ti.pos) && (hit_position < ti.pos + ti.len)) {
         if(ti.ttype == "end") {
             open_tag_pos = ti.open_pos;
             open_tag_len = ti.open_len;
@@ -1526,6 +1543,7 @@ void CodeViewEditor::contextMenuEvent(QContextMenuEvent *event)
     }
 
     if (m_reformatHTMLEnabled) {
+        AddTextUnitSelectionContextMenu(menu, cursorForPosition(event->pos()).position());
         AddReformatHTMLContextMenu(menu);
         AddPasteRichText(menu); // modified: AddPasteRichText
     }
@@ -1547,6 +1565,33 @@ void CodeViewEditor::contextMenuEvent(QContextMenuEvent *event)
     if (!menu.isNull()) {
         delete menu.data();
     }
+}
+
+void CodeViewEditor::AddTextUnitSelectionContextMenu(QMenu *menu, int position)
+{
+    const QString source = toPlainText();
+    MaybeRegenerateTagList(source);
+    const CodeViewSelectionPolicy::Result selection =
+        CodeViewSelectionPolicy::FindTextUnit(source, m_TagList, position);
+    if (!selection.hasSelection()) return;
+
+    menu->addSeparator();
+    QAction *select_content = menu->addAction(tr("Select Element Content"));
+    connect(select_content, &QAction::triggered, this,
+            [this, start = selection.start, end = selection.end]() {
+        QTextCursor cursor(document());
+        cursor.setPosition(start);
+        cursor.setPosition(end, QTextCursor::KeepAnchor);
+        setTextCursor(cursor);
+    });
+    QAction *select_element = menu->addAction(tr("Select Whole Element"));
+    connect(select_element, &QAction::triggered, this,
+            [this, start = selection.outerStart, end = selection.outerEnd]() {
+        QTextCursor cursor(document());
+        cursor.setPosition(start);
+        cursor.setPosition(end, QTextCursor::KeepAnchor);
+        setTextCursor(cursor);
+    });
 }
 
 bool CodeViewEditor::AddSpellCheckContextMenu(QMenu *menu)
@@ -2513,13 +2558,18 @@ void CodeViewEditor::UpdateLineNumberArea(const QRect &area_to_update, int verti
 
 void CodeViewEditor::MaybeRegenerateTagList()
 {
+    MaybeRegenerateTagList(toPlainText());
+}
+
+void CodeViewEditor::MaybeRegenerateTagList(const QString &source)
+{
     // calling toPlainText before the initial load is finished causes
     // a segfault deep inside QTextDocument
     // if (!m_isLoadFinished) return;
 
     if (m_regen_taglist) {
         // qDebug() << "regenerating tag list";
-        m_TagList.reloadLister(toPlainText());
+        m_TagList.reloadLister(source);
         m_regen_taglist = false;
     }
 }
