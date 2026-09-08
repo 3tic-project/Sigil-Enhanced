@@ -274,6 +274,11 @@ public slots:
 
     void RemoveWithoutUpdatingOPF(Resource* resource);
 
+    // Finalize removal after a transaction has already deleted the file as
+    // part of an all-or-nothing filesystem batch. The caller must keep file
+    // watchers suspended and close any editor tab before the event loop runs.
+    void ForgetDeletedResourceWithoutUpdatingOPF(Resource* resource);
+
     //------------------------------------------ modified: FolderKeeperExt ------------------------------------------
     void BulkResourceRenamed(const QList<Resource*>resources, const QList<QString>old_full_paths); //modified: BulkResourceRenamed
     Resource* AddContentFromQByteArray(const QByteArray& data,

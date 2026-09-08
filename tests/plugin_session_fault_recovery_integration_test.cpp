@@ -180,6 +180,86 @@ def run(plugin):
         Require(book->IsModified() == modifiedBefore,
                 "Text failure changed the Book modified state");
 
+        const QString createRemovalTarget = QString::fromUtf8(R"PY(
+def run(plugin):
+    tx = plugin.book.transaction('create removal target', checkpoint='auto')
+    tx.add_resource(
+        'OEBPS/removal-target.css',
+        'body { color: #123456; }\n',
+        'text/css',
+        manifest_id='removal-target',
+        add_to_spine=False,
+    )
+    tx.add_resource(
+        'OEBPS/removal-target-2.css',
+        'body { background: #abcdef; }\n',
+        'text/css',
+        manifest_id='removal-target-2',
+        add_to_spine=False,
+    )
+    result = tx.commit()
+    assert result['added'] == 2
+    print('REMOVAL_TARGET_CREATED', flush=True)
+    return 0
+)PY");
+        output.clear();
+        error.clear();
+        Require(sessions.RunSnippetAndWait(createRemovalTarget, &status, &error, 30000, &output),
+                ("Removal-target plugin failed: " + error + "\n" + output).toUtf8().constData());
+        Require(output.contains(QStringLiteral("REMOVAL_TARGET_CREATED")) && !sessions.HasWriter(),
+                "Removal target was not created or retained the writer lease");
+        Resource *removalTarget = keeper->GetResourceByBookPathNoThrow(
+            QStringLiteral("OEBPS/removal-target.css"));
+        Resource *removalTarget2 = keeper->GetResourceByBookPathNoThrow(
+            QStringLiteral("OEBPS/removal-target-2.css"));
+        Require(removalTarget && removalTarget2,
+                "Removal targets were not added to the live Book");
+        const QString removalPackageBefore = opf->GetSourceText();
+        const QByteArray removalBytesBefore = ReadFile(removalTarget->GetFullPath());
+        const QByteArray removalBytesBefore2 = ReadFile(removalTarget2->GetFullPath());
+        const int removalResourcesBefore = keeper->GetResourceList().size();
+        const bool removalModifiedBefore = book->IsModified();
+
+        // Allow the OPF removal patch, then fail after the disposable resource
+        // file has been deleted. The host must restore both and keep the same
+        // Resource object in the live Book.
+        sessions.SetCommitFailureAfterMutationForTesting(1);
+        const QString removalFailure = QString::fromUtf8(R"PY(
+from sigil_live.errors import ValidationFailed
+def run(plugin):
+    target = plugin.book.resolve_path('OEBPS/removal-target.css')
+    target2 = plugin.book.resolve_path('OEBPS/removal-target-2.css')
+    tx = plugin.book.transaction('injected removal failure', checkpoint='auto')
+    tx.remove_resource(target)
+    tx.remove_resource(target2)
+    try:
+        tx.commit()
+    except ValidationFailed as error:
+        assert 'all applied changes were rolled back' in str(error)
+        print('REMOVAL_ROLLED_BACK', flush=True)
+        return 0
+    return 6
+)PY");
+        output.clear();
+        error.clear();
+        Require(sessions.RunSnippetAndWait(removalFailure, &status, &error, 30000, &output),
+                ("Injected removal plugin failed: " + error + "\n" + output).toUtf8().constData());
+        Require(output.contains(QStringLiteral("REMOVAL_ROLLED_BACK")),
+                "Removal failure was not reported as compensated");
+        Require(!sessions.HasWriter(), "Removal failure retained the global writer lease");
+        Require(keeper->GetResourceByBookPathNoThrow(
+                    QStringLiteral("OEBPS/removal-target.css")) == removalTarget
+                    && keeper->GetResourceByBookPathNoThrow(
+                        QStringLiteral("OEBPS/removal-target-2.css")) == removalTarget2
+                    && ReadFile(removalTarget->GetFullPath()) == removalBytesBefore
+                    && ReadFile(removalTarget2->GetFullPath()) == removalBytesBefore2,
+                "Removal failure did not restore every resource and file byte");
+        Require(opf->GetSourceText() == removalPackageBefore,
+                "Removal failure did not restore the package manifest/spine");
+        Require(keeper->GetResourceList().size() == removalResourcesBefore
+                    && book->IsModified() == removalModifiedBefore,
+                "Removal failure changed the Book structure or modified state");
+
         const QString writerProbe = QString::fromUtf8(R"PY(
 def run(plugin):
     tx = plugin.book.transaction('writer release probe', checkpoint='none')
@@ -193,6 +273,37 @@ def run(plugin):
                 ("Writer probe failed: " + error + "\n" + output).toUtf8().constData());
         Require(output.contains(QStringLiteral("WRITER_REACQUIRED")) && !sessions.HasWriter(),
                 "A compensated failure prevented a later transaction");
+
+        const QString successfulRemoval = QString::fromUtf8(R"PY(
+def run(plugin):
+    target = plugin.book.resolve_path('OEBPS/removal-target.css')
+    target2 = plugin.book.resolve_path('OEBPS/removal-target-2.css')
+    tx = plugin.book.transaction('successful atomic removal', checkpoint='auto')
+    tx.remove_resource(target)
+    tx.remove_resource(target2)
+    result = tx.commit()
+    assert result['removed'] == 2
+    print('REMOVAL_COMMITTED', flush=True)
+    return 0
+)PY");
+        output.clear();
+        error.clear();
+        Require(sessions.RunSnippetAndWait(successfulRemoval, &status, &error, 30000, &output),
+                ("Successful removal plugin failed: " + error + "\n" + output).toUtf8().constData());
+        Require(output.contains(QStringLiteral("REMOVAL_COMMITTED")) && !sessions.HasWriter(),
+                "Atomic removal did not commit or release its writer");
+        Require(!keeper->GetResourceByBookPathNoThrow(QStringLiteral("OEBPS/removal-target.css"))
+                    && !keeper->GetResourceByBookPathNoThrow(
+                        QStringLiteral("OEBPS/removal-target-2.css"))
+                    && !QFileInfo::exists(QDir(keeper->GetFullPathToMainFolder()).filePath(
+                        QStringLiteral("OEBPS/removal-target.css")))
+                    && !QFileInfo::exists(QDir(keeper->GetFullPathToMainFolder()).filePath(
+                        QStringLiteral("OEBPS/removal-target-2.css")))
+                    && keeper->GetResourceList().size() == resourcesBefore,
+                "Successful removal retained the Resource model entry or file");
+        Require(!opf->GetSourceText().contains(QStringLiteral("removal-target")),
+                "Successful removal retained its manifest entry");
+        Require(book->IsModified(), "Successful removal did not mark the Book modified");
 
         std::cout << "Live transaction fault compensation checks passed\n";
         return 0;

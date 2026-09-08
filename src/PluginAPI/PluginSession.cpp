@@ -3214,8 +3214,10 @@ void PluginSession::Dispatch(const QJsonObject &request)
             auto *manager = qobject_cast<PluginSessionManager *>(parent());
             return manager && manager->ConsumeCommitMutationForTesting();
         };
-        auto abort_commit = [&](const QString &message) {
-            const QStringList recovery_errors = rollback_applied_changes();
+        auto abort_commit = [&](const QString &message,
+                                const QStringList &prior_recovery_errors = QStringList()) {
+            QStringList recovery_errors = prior_recovery_errors;
+            recovery_errors.append(rollback_applied_changes());
             ClearBinaryWriteUploads();
             ClearTextWriteUploads();
             m_Transaction.reset();
@@ -3478,14 +3480,81 @@ void PluginSession::Dispatch(const QJsonObject &request)
             }
         }
         if (!removal_resources.isEmpty()) {
-            folder_keeper->SuspendWatchingResources();
+            // Tabs may publish their current document back to the Resource as
+            // they close, so close them while the backing file still exists.
             for (Resource *resource : removal_resources) {
                 m_TabManager->CloseTabForResource(resource, true);
+            }
+            struct RemovalBackup {
+                Resource *resource = nullptr;
+                QString originalPath;
+                QString backupPath;
+                QFileDevice::Permissions permissions;
+            };
+            QTemporaryDir removal_backups;
+            QList<RemovalBackup> backups;
+            QString removal_error;
+            if (!removal_backups.isValid()) {
+                removal_error = QStringLiteral("Could not create resource-removal backups");
+            }
+            for (Resource *resource : removal_resources) {
+                if (!removal_error.isEmpty()) break;
+                const QString original_path = resource ? resource->GetFullPath() : QString();
+                const QString backup_path = removal_backups.filePath(
+                    QString::number(backups.size()) + QStringLiteral(".resource"));
+                if (!resource || !QFileInfo::exists(original_path)
+                    || !QFile::copy(original_path, backup_path)) {
+                    removal_error = QStringLiteral("Could not back up resource before removal: %1")
+                        .arg(resource ? resource->GetIdentifier() : QStringLiteral("unknown"));
+                    break;
+                }
+                backups.append(RemovalBackup {
+                    resource, original_path, backup_path, QFileInfo(original_path).permissions()
+                });
+            }
+
+            folder_keeper->SuspendWatchingResources();
+            QList<RemovalBackup> deleted;
+            for (const RemovalBackup &backup : std::as_const(backups)) {
+                if (!removal_error.isEmpty()) break;
+                if (!Utility::SDeleteFile(backup.originalPath)) {
+                    removal_error = QStringLiteral("Could not delete resource %1")
+                        .arg(backup.resource->GetIdentifier());
+                    break;
+                }
+                deleted.append(backup);
+                if (inject_commit_failure()) {
+                    removal_error = QStringLiteral("Injected failure after deleting a resource file");
+                    break;
+                }
+            }
+            if (!removal_error.isEmpty()) {
+                QStringList restore_errors;
+                for (auto it = deleted.crbegin(); it != deleted.crend(); ++it) {
+                    if (QFileInfo::exists(it->originalPath)
+                        || !QFile::copy(it->backupPath, it->originalPath)) {
+                        restore_errors.append(QStringLiteral("resource %1: could not restore deleted file")
+                                                  .arg(it->resource->GetIdentifier()));
+                    } else {
+                        if (!QFile::setPermissions(it->originalPath, it->permissions)) {
+                            restore_errors.append(
+                                QStringLiteral("resource %1: could not restore file permissions")
+                                    .arg(it->resource->GetIdentifier()));
+                        }
+                    }
+                }
+                folder_keeper->ResumeWatchingResources();
+                abort_commit(QStringLiteral("Resource removal failed: %1").arg(removal_error),
+                             restore_errors);
+                return;
+            }
+            for (const RemovalBackup &backup : std::as_const(backups)) {
+                Resource *resource = backup.resource;
                 const QJsonObject removed_info {
                     { QStringLiteral("resource_id"), resource->GetIdentifier() },
                     { QStringLiteral("book_path"), resource->GetRelativePath() }
                 };
-                folder_keeper->RemoveWithoutUpdatingOPF(resource);
+                folder_keeper->ForgetDeletedResourceWithoutUpdatingOPF(resource);
                 if (m_Subscriptions.contains(QStringLiteral("book.resourceRemoved"))) {
                     Notify(QStringLiteral("book.resourceRemoved"), removed_info);
                 }

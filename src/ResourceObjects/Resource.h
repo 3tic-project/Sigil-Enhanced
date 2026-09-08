@@ -212,6 +212,10 @@ public:
      */
     virtual bool Delete();
 
+    // Complete the normal Deleted/disconnect/deleteLater lifecycle after an
+    // external transaction has already removed the backing file.
+    void FinalizeDeletionAfterFileRemoval();
+
     /**
      * Returns the resource's type.
      *
