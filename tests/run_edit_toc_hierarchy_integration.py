@@ -56,6 +56,33 @@ def fixture(scratch):
     with zipfile.ZipFile(path, 'w') as archive:
         for name, data in members.items():
             archive.writestr(name, data)
+    epub2_source = source.replace("version='3.0'", "version='2.0'")
+    epub2_source = epub2_source.replace(
+        "  <item id='nav' href='nav.xhtml' media-type='application/xhtml+xml' properties='nav'/>\r\n", '')
+    epub2_members = dict(members)
+    del epub2_members['OEBPS/nav.xhtml']
+    epub2_members['OEBPS/content.opf'] = (
+        b'\xff\xfe' + epub2_source.encode('utf-16-le'))
+    with zipfile.ZipFile(str(path) + '.epub2', 'w') as archive:
+        for name, data in epub2_members.items():
+            archive.writestr(name, data)
+    large_members = dict(members)
+    siblings = ['<li id="group"><a href="a.xhtml#a">Group</a><ol>'
+                '<li id="deep"><a href="a.xhtml#a">Deep</a></li></ol></li>']
+    siblings.extend(
+        f'<li id="n{index}"><a href="a.xhtml#a">N{index}</a></li>'
+        for index in range(4, 10000))
+    large_members['OEBPS/nav.xhtml'] = (
+        '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml" '
+        'xmlns:epub="http://www.idpf.org/2007/ops"><head><title>Large</title></head><body>'
+        '<nav epub:type="toc"><h1>Large</h1><ol><li id="a"><a href="a.xhtml#a">A</a><ol>'
+        + ''.join(siblings)
+        + '</ol></li><li id="x"><a href="a.xhtml#a">X</a></li></ol></nav></body></html>'
+    ).encode()
+    with zipfile.ZipFile(str(path) + '.large', 'w') as archive:
+        for name, data in large_members.items():
+            archive.writestr(name, data)
     return path, source, members
 
 

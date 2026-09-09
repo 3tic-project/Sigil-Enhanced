@@ -3,11 +3,13 @@
 #include <QAction>
 #include <QApplication>
 #include <QCheckBox>
+#include <QElapsedTimer>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSet>
+#include <QScrollBar>
 #include <QStandardItemModel>
 #include <QToolButton>
 #include <QTreeView>
@@ -282,6 +284,29 @@ int main(int argc, char **argv)
             Require(ModelSignature(model) == QLatin1String("A[B,C[C1],D,E,F],X"),
                     "Undo did not restore an added entry");
 
+            adopt->setChecked(false);
+            Select(view, {FindItem(model->invisibleRootItem(), QStringLiteral("C"))});
+            promote->click();
+            Require(ModelSignature(model) == QLatin1String("A[B,D,E,F],C[C1],X"),
+                    "Disabling sibling adoption did not select the explicit legacy behavior");
+            undo->trigger();
+            adopt->setChecked(true);
+            Select(view, {FindItem(model->invisibleRootItem(), QStringLiteral("X"))});
+            demote->click();
+            Require(ModelSignature(model) == QLatin1String("A[B,C[C1],D,E,F,X]"),
+                    "Demote did not append the selection after existing children");
+            undo->trigger();
+
+            Select(view, {FindItem(model->invisibleRootItem(), QStringLiteral("A")),
+                          FindItem(model->invisibleRootItem(), QStringLiteral("C"))});
+            QKeyEvent promoteBoundary(QEvent::KeyPress, Qt::Key_Left,
+                                      Qt::NoModifier);
+            QApplication::sendEvent(view, &promoteBoundary);
+            Require(ModelSignature(model) == QLatin1String("A[B,C[C1],D,E,F],X")
+                        && statusLabel->text().contains(
+                            QStringLiteral("already at the top level")),
+                    "A mixed boundary selection was not rejected atomically with feedback");
+
             dialog->reject();
         }
         Require(nav->GetText() == navBefore && ncx->GetText() == ncxBefore
@@ -291,6 +316,8 @@ int main(int argc, char **argv)
         {
             std::unique_ptr<EditTOC> dialog(MakeDialog(book));
             dialog->accept();
+            Require(!dialog->DidSaveChanges(),
+                    "An unchanged dialog reported a resource write");
         }
         Require(nav->GetText() == navBefore && ncx->GetText() == ncxBefore
                     && !book->IsModified(),
@@ -305,6 +332,8 @@ int main(int argc, char **argv)
             std::unique_ptr<EditTOC> dialog(MakeDialog(changedBook));
             PromoteCAndE(*dialog);
             dialog->accept();
+            Require(dialog->DidSaveChanges(),
+                    "A changed Nav dialog did not report its resource write");
         }
         NavProcessor changedProcessor(changedNav);
         const TOCModel::TOCEntry changedRoot = changedProcessor.GetRootTOCEntry();
@@ -317,6 +346,14 @@ int main(int argc, char **argv)
                 "Accept did not commit the promoted Nav hierarchy");
         Require(unchangedNcx->GetText() == secondaryBefore
                     && changedNav->GetText().contains(QStringLiteral("keep-between-navs"))
+                    && changedNav->GetText().contains(
+                        QStringLiteral("id=\"custom-toc\" class=\"keep\""))
+                    && changedNav->GetText().contains(
+                        QStringLiteral("<h1><span>Contents</span></h1>"))
+                    && changedNav->GetText().contains(QStringLiteral("<li id=\"c\">"))
+                    && changedNav->GetText().contains(QStringLiteral("<span>C</span>"))
+                    && changedNav->GetText().contains(QStringLiteral("<li id=\"d\">"))
+                    && changedNav->GetText().contains(QStringLiteral("<li id=\"f\">"))
                     && changedProcessor.GetLandmarks().size() == 1
                     && changedProcessor.GetPageList().size() == 1,
                 "Default EPUB 3 save changed NCX or unrelated navigation sections");
@@ -328,13 +365,79 @@ int main(int argc, char **argv)
             dialog->findChild<QCheckBox *>(QStringLiteral("SyncNcx"))->setChecked(true);
             PromoteCAndE(*dialog);
             dialog->accept();
+            Require(dialog->DidSaveChanges(),
+                    "Explicit NCX synchronization did not report its write");
         }
         const QString syncedNcx = syncedBook->GetNCX()->GetText();
         Require(ParentLabelInNcx(syncedNcx, QStringLiteral("D")) == QLatin1String("C")
-                    && ParentLabelInNcx(syncedNcx, QStringLiteral("F")) == QLatin1String("E"),
+                    && ParentLabelInNcx(syncedNcx, QStringLiteral("F")) == QLatin1String("E")
+                    && syncedNcx.contains(QStringLiteral("fixture:keep"))
+                    && syncedNcx.contains(QStringLiteral("Fixture author"))
+                    && syncedNcx.contains(QStringLiteral("<pageList>"))
+                    && syncedNcx.contains(QStringLiteral("id=\"c\""))
+                    && syncedNcx.contains(QStringLiteral("id=\"d\""))
+                    && syncedNcx.contains(QStringLiteral("id=\"f\"")),
                 "Explicit compatibility synchronization did not update NCX hierarchy");
 
-        std::cout << "EditTOC hierarchy, local undo, no-op, cancel, and dual-nav checks passed\n";
+        ImportEPUB epub2Importer(fixture + QStringLiteral(".epub2"));
+        const auto epub2Book = epub2Importer.GetBook();
+        Require(epub2Book->GetOPF()->GetEpubVersion().startsWith(QLatin1Char('2'))
+                    && !epub2Book->GetOPF()->GetNavResource()
+                    && epub2Book->GetNCX(),
+                "The EPUB 2 hierarchy fixture did not load as NCX-primary");
+        {
+            std::unique_ptr<EditTOC> dialog(MakeDialog(epub2Book));
+            Require(!dialog->findChild<QCheckBox *>(
+                        QStringLiteral("SyncNcx"))->isVisible(),
+                    "EPUB 2 exposed a redundant compatibility-sync option");
+            PromoteCAndE(*dialog);
+            dialog->accept();
+        }
+        const QString epub2Ncx = epub2Book->GetNCX()->GetText();
+        Require(ParentLabelInNcx(epub2Ncx, QStringLiteral("D")) == QLatin1String("C")
+                    && ParentLabelInNcx(epub2Ncx, QStringLiteral("F")) == QLatin1String("E")
+                    && epub2Ncx.contains(QStringLiteral("fixture:keep"))
+                    && epub2Ncx.contains(QStringLiteral("id=\"c\"")),
+                "EPUB 2 save lost the hierarchy, metadata, or navPoint identity");
+
+        ImportEPUB largeImporter(fixture + QStringLiteral(".large"));
+        const auto largeBook = largeImporter.GetBook();
+        QElapsedTimer constructionTimer;
+        constructionTimer.start();
+        std::unique_ptr<EditTOC> largeDialog(MakeDialog(largeBook));
+        const qint64 constructionMs = constructionTimer.elapsed();
+        auto *largeView = largeDialog->findChild<QTreeView *>(QStringLiteral("TOCTree"));
+        auto *largeModel = qobject_cast<QStandardItemModel *>(largeView->model());
+        QStandardItem *largeRoot = largeModel->invisibleRootItem();
+        QStandardItem *group = FindItem(largeRoot, QStringLiteral("Group"));
+        Require(largeRoot->rowCount() == 2 && group && group->rowCount() == 1
+                    && !largeView->isExpanded(group->index()),
+                "The 10,000-item dialog expanded every nested branch");
+        QStandardItem *n50 = FindItem(largeRoot, QStringLiteral("N50"));
+        Select(largeView, {n50});
+        largeView->verticalScrollBar()->setValue(37);
+        const int scrollBefore = largeView->verticalScrollBar()->value();
+        QElapsedTimer operationTimer;
+        operationTimer.start();
+        largeDialog->findChild<QToolButton *>(QStringLiteral("MoveLeft"))->click();
+        const qint64 operationMs = operationTimer.elapsed();
+        largeRoot = largeModel->invisibleRootItem();
+        n50 = FindItem(largeRoot, QStringLiteral("N50"));
+        Require(largeRoot->rowCount() == 3
+                    && largeRoot->child(1, 0)->text() == QLatin1String("N50")
+                    && n50->rowCount() == 9949
+                    && SelectedLabels(largeView) == QSet<QString>({QStringLiteral("N50")})
+                    && largeView->verticalScrollBar()->value()
+                        == qMin(scrollBefore,
+                                largeView->verticalScrollBar()->maximum()),
+                "The 10,000-item promotion lost hierarchy or view state");
+        Require(operationMs <= 300,
+                "The 10,000-item dialog promotion exceeded 300 ms");
+        std::cerr << "EditTOC timing: 10,000-item construction "
+                  << constructionMs << " ms; promotion " << operationMs << " ms\n";
+        largeDialog->reject();
+
+        std::cout << "EditTOC hierarchy, local undo, Nav, NCX, no-op, cancel, and dual-nav checks passed\n";
         return EXIT_SUCCESS;
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';
