@@ -138,6 +138,8 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/BookLiveParagraphNormalizer.h
     BuiltinPlugins/DivParagraphCssAnalyzer.cpp
     BuiltinPlugins/DivParagraphCssAnalyzer.h
+    BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    BuiltinPlugins/DivParagraphNormalizationPlan.h
     BuiltinPlugins/BrParagraphNormalizer.cpp
     BuiltinPlugins/BrParagraphNormalizer.h
     BuiltinPlugins/EpubStructureNormalizer.cpp
