@@ -38,6 +38,37 @@ QString StatusText(Plan::Status status)
     return QString();
 }
 
+QString ClassificationText(
+    BuiltinPlugins::BookLiveParagraphNormalizer::PageKind page_kind)
+{
+    using PageKind = BuiltinPlugins::BookLiveParagraphNormalizer::PageKind;
+    switch (page_kind) {
+    case PageKind::NormalBodyFlow:
+        return DivParagraphNormalizationPreviewDialog::tr("Body flow");
+    case PageKind::AlreadyNormalized:
+        return DivParagraphNormalizationPreviewDialog::tr("Already normalized");
+    case PageKind::TocLike:
+        return DivParagraphNormalizationPreviewDialog::tr("TOC-like");
+    case PageKind::NoticeOrImprint:
+        return DivParagraphNormalizationPreviewDialog::tr("Notice/imprint");
+    case PageKind::ShortFlow:
+        return DivParagraphNormalizationPreviewDialog::tr("Short flow");
+    case PageKind::CssRisk:
+        return DivParagraphNormalizationPreviewDialog::tr("CSS risk");
+    case PageKind::BlockLayout:
+        return DivParagraphNormalizationPreviewDialog::tr("Complex/fixed layout");
+    case PageKind::ImageOrTitlePage:
+        return DivParagraphNormalizationPreviewDialog::tr("Image/title page");
+    case PageKind::NoCandidate:
+        return DivParagraphNormalizationPreviewDialog::tr("No candidate");
+    case PageKind::NoBody:
+        return DivParagraphNormalizationPreviewDialog::tr("No body");
+    case PageKind::ParseError:
+        return DivParagraphNormalizationPreviewDialog::tr("Parse error");
+    }
+    return QString();
+}
+
 QString CssRiskText(const Plan::Entry& entry)
 {
     if (entry.analysis.cssDependencies.isEmpty()) {
@@ -76,11 +107,12 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
     m_Summary->setWordWrap(true);
     root->addWidget(m_Summary);
 
-    m_Table = new QTableWidget(m_Plan.entries.count(), 7, this);
+    m_Table = new QTableWidget(m_Plan.entries.count(), 8, this);
+    m_Table->setObjectName(QStringLiteral("divParagraphResourceTable"));
     m_Table->setAccessibleName(tr("DIV paragraph resource analysis"));
     m_Table->setHorizontalHeaderLabels({
         tr("Apply"), tr("File"), tr("Classification"), tr("Body candidates"),
-        tr("Blank/separator"), tr("Protected"), tr("CSS risk")
+        tr("Blank/separator"), tr("Protected"), tr("CSS risk"), tr("Status")
     });
     m_Table->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_Table->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -88,7 +120,7 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
     m_Table->verticalHeader()->setVisible(false);
     m_Table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_Table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-    for (int column = 2; column < 7; ++column) {
+    for (int column = 2; column < 8; ++column) {
         m_Table->horizontalHeader()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
     }
 
@@ -103,7 +135,8 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
         }
         auto* cssRisk = new QTableWidgetItem(CssRiskText(entry));
         cssRisk->setToolTip(CssRiskDetails(entry));
-        auto* classification = new QTableWidgetItem(StatusText(entry.status));
+        auto* classification = new QTableWidgetItem(
+            ClassificationText(entry.analysis.pageKind));
         classification->setToolTip(entry.analysis.message);
         m_Table->setItem(row, 0, enabled);
         m_Table->setItem(row, 1, new QTableWidgetItem(entry.resourceId));
@@ -117,22 +150,28 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
         m_Table->setItem(row, 5, new QTableWidgetItem(
             QString::number(entry.analysis.protectedRanges.count())));
         m_Table->setItem(row, 6, cssRisk);
+        auto* status = new QTableWidgetItem(StatusText(entry.status));
+        status->setToolTip(entry.analysis.message);
+        m_Table->setItem(row, 7, status);
     }
     root->addWidget(m_Table, 2);
 
     auto* details = new QTabWidget(this);
+    details->setObjectName(QStringLiteral("divParagraphPreviewTabs"));
     auto* sourcePage = new QWidget(details);
     auto* sourceLayout = new QVBoxLayout(sourcePage);
     auto* sourceSplitter = new QSplitter(Qt::Horizontal, sourcePage);
     auto* beforeGroup = new QGroupBox(tr("Before"), sourceSplitter);
     auto* beforeLayout = new QVBoxLayout(beforeGroup);
     m_BeforeSource = new QPlainTextEdit(beforeGroup);
+    m_BeforeSource->setAccessibleName(tr("Source before DIV paragraph normalization"));
     m_BeforeSource->setReadOnly(true);
     m_BeforeSource->setLineWrapMode(QPlainTextEdit::NoWrap);
     beforeLayout->addWidget(m_BeforeSource);
     auto* afterGroup = new QGroupBox(tr("After"), sourceSplitter);
     auto* afterLayout = new QVBoxLayout(afterGroup);
     m_AfterSource = new QPlainTextEdit(afterGroup);
+    m_AfterSource->setAccessibleName(tr("Source after DIV paragraph normalization"));
     m_AfterSource->setReadOnly(true);
     m_AfterSource->setLineWrapMode(QPlainTextEdit::NoWrap);
     afterLayout->addWidget(m_AfterSource);
@@ -153,6 +192,7 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
         m_AnalysisOnly ? QDialogButtonBox::Close : QDialogButtonBox::Cancel, this);
     if (!m_AnalysisOnly) {
         m_Apply = buttons->addButton(tr("Apply Selected Files"), QDialogButtonBox::AcceptRole);
+        m_Apply->setObjectName(QStringLiteral("divParagraphApply"));
         m_Apply->setDefault(true);
         connect(m_Apply, &QPushButton::clicked, this, &QDialog::accept);
     }

@@ -39,6 +39,9 @@ DivParagraphNormalizationDialog::DivParagraphNormalizationDialog(
     m_SelectedFiles = new QRadioButton(
         tr("Selected XHTML files (%1)").arg(selectedFileCount), scopeGroup);
     m_WholeBook = new QRadioButton(tr("All XHTML files in the book"), scopeGroup);
+    m_CurrentFile->setObjectName(QStringLiteral("divParagraphCurrentFile"));
+    m_SelectedFiles->setObjectName(QStringLiteral("divParagraphSelectedFiles"));
+    m_WholeBook->setObjectName(QStringLiteral("divParagraphWholeBook"));
     m_CurrentFile->setEnabled(currentFileAvailable);
     m_SelectedFiles->setEnabled(selectedFileCount > 0);
     scopeLayout->addWidget(m_CurrentFile);
@@ -48,7 +51,7 @@ DivParagraphNormalizationDialog::DivParagraphNormalizationDialog(
 
     if (initialScope == Scope::CurrentFile && currentFileAvailable) {
         m_CurrentFile->setChecked(true);
-    } else if (initialScope == Scope::SelectedFiles && selectedFileCount > 0) {
+    } else if (initialScope != Scope::WholeBook && selectedFileCount > 0) {
         m_SelectedFiles->setChecked(true);
     } else {
         m_WholeBook->setChecked(true);
@@ -66,6 +69,10 @@ DivParagraphNormalizationDialog::DivParagraphNormalizationDialog(
     m_SingleBlockWrappers = new QCheckBox(
         tr("Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)"),
         categoryGroup);
+    m_BlankLines->setObjectName(QStringLiteral("divParagraphBlankLines"));
+    m_SceneBreaks->setObjectName(QStringLiteral("divParagraphSceneBreaks"));
+    m_ImageWrappers->setObjectName(QStringLiteral("divParagraphImageWrappers"));
+    m_SingleBlockWrappers->setObjectName(QStringLiteral("divParagraphSingleBlockWrappers"));
     m_BlankLines->setChecked(savedOptions.convertSpacerBr);
     m_SceneBreaks->setChecked(savedOptions.convertSceneBreaks);
     m_ImageWrappers->setChecked(savedOptions.convertImageWrappers);
@@ -78,6 +85,7 @@ DivParagraphNormalizationDialog::DivParagraphNormalizationDialog(
     root->addWidget(categoryGroup);
 
     m_FormatSource = new QCheckBox(tr("Format XHTML source after conversion"), this);
+    m_FormatSource->setObjectName(QStringLiteral("divParagraphFormatSource"));
     m_FormatSource->setChecked(savedFormatSource);
     m_FormatSource->setToolTip(
         tr("Off by default. When off, only selected start/end tag names are patched."));
