@@ -765,6 +765,8 @@ add_executable(booklive_paragraph_normalizer_test
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.h
 )
 
 target_include_directories(booklive_paragraph_normalizer_test PRIVATE

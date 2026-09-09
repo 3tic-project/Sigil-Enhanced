@@ -6,9 +6,11 @@
 
 #include "BuiltinPlugins/BookLiveParagraphNormalizer.h"
 #include "BuiltinPlugins/DivParagraphCssAnalyzer.h"
+#include "BuiltinPlugins/DivParagraphNormalizationPlan.h"
 
 using BuiltinPlugins::BookLiveParagraphNormalizer;
 using BuiltinPlugins::DivParagraphCssAnalyzer;
+using BuiltinPlugins::DivParagraphNormalizationPlan;
 
 namespace
 {
@@ -283,6 +285,60 @@ int runTests()
         !BookLiveParagraphNormalizer::normalizeXhtmlText(
              css_risk_source, conservative, true).ok) {
         return fail(QStringLiteral("CSS manual-review gate failed"));
+    }
+
+    const QVector<DivParagraphCssAnalyzer::Source> safe_stylesheets = {
+        { QStringLiteral("Styles/safe.css"),
+          QStringLiteral("div.para, p.para { margin: 0; }") }
+    };
+    const QVector<DivParagraphCssAnalyzer::Source> risky_stylesheets = {
+        { QStringLiteral("Styles/risky.css"),
+          QStringLiteral("div.para { margin: 0; }") }
+    };
+    const QVector<DivParagraphNormalizationPlan::Input> plan_inputs = {
+        { QStringLiteral("Text/chapter.xhtml"), conservative_source,
+          QStringLiteral("revision-1"), safe_stylesheets },
+        { QStringLiteral("Text/review.xhtml"), conservative_source,
+          QStringLiteral("revision-2"), risky_stylesheets },
+        { QStringLiteral("Text/done.xhtml"), conservative_expected,
+          QStringLiteral("revision-3"), safe_stylesheets }
+    };
+    const DivParagraphNormalizationPlan::Result batch_plan =
+        DivParagraphNormalizationPlan::build(plan_inputs, conservative);
+    if (!batch_plan.ok || batch_plan.planId.length() != 64 ||
+        batch_plan.ruleVersion.isEmpty() ||
+        batch_plan.presetId != QStringLiteral("conservative-v2") ||
+        batch_plan.applyFiles != 1 || batch_plan.reviewFiles != 1 ||
+        batch_plan.skippedFiles != 1 || batch_plan.errorFiles != 0 ||
+        batch_plan.conversionCount != 12 || batch_plan.entries.first().output != conservative_expected ||
+        !DivParagraphNormalizationPlan::revisionConflicts(batch_plan, plan_inputs).isEmpty() ||
+        DivParagraphNormalizationPlan::build(plan_inputs, conservative).planId != batch_plan.planId) {
+        return fail(QStringLiteral("deterministic batch plan construction failed"));
+    }
+
+    QVector<DivParagraphNormalizationPlan::Input> changed_inputs = plan_inputs;
+    changed_inputs[0].text += QStringLiteral("\n");
+    const QStringList content_conflicts =
+        DivParagraphNormalizationPlan::revisionConflicts(batch_plan, changed_inputs);
+    if (content_conflicts.count() != 1 ||
+        !content_conflicts.first().contains(QStringLiteral("content changed"))) {
+        return fail(QStringLiteral("batch plan did not reject changed XHTML"));
+    }
+    changed_inputs = plan_inputs;
+    changed_inputs[0].stylesheets[0].text += QStringLiteral("\nspan { color: red; }");
+    const QStringList css_conflicts =
+        DivParagraphNormalizationPlan::revisionConflicts(batch_plan, changed_inputs);
+    if (css_conflicts.count() != 1 ||
+        !css_conflicts.first().contains(QStringLiteral("stylesheet content changed"))) {
+        return fail(QStringLiteral("batch plan did not reject changed CSS"));
+    }
+    changed_inputs = plan_inputs;
+    changed_inputs[0].baseRevision = QStringLiteral("revision-new");
+    const QStringList revision_conflicts =
+        DivParagraphNormalizationPlan::revisionConflicts(batch_plan, changed_inputs);
+    if (revision_conflicts.count() != 1 ||
+        !revision_conflicts.first().contains(QStringLiteral("revision changed"))) {
+        return fail(QStringLiteral("batch plan did not reject a revision conflict"));
     }
 
     const QString toc = xhtml(
