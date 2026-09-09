@@ -298,6 +298,13 @@ DivParagraphCssAnalyzer::analyze(const QVector<Source>& sources)
 {
     Result result;
     for (const Source& source : sources) {
+        if (!source.available) {
+            result.dependencies << Dependency {
+                source.id, QString(),
+                QStringLiteral("referenced stylesheet could not be resolved")
+            };
+            continue;
+        }
         analyzeBlock(source, 0, source.text.length(), result);
     }
     result.reviewRequired = !result.dependencies.isEmpty();

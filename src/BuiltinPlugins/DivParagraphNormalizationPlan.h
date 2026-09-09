@@ -15,6 +15,8 @@
 #ifndef DIVPARAGRAPHNORMALIZATIONPLAN_H
 #define DIVPARAGRAPHNORMALIZATIONPLAN_H
 
+#include <functional>
+
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -56,6 +58,7 @@ public:
 
     struct Result {
         bool ok = false;
+        bool cancelled = false;
         QString planId;
         QString ruleVersion;
         QString presetId;
@@ -69,10 +72,14 @@ public:
         int protectedCount = 0;
     };
 
+    using ProgressFunction = std::function<bool(int completed, int total)>;
+
     static Result build(const QVector<Input>& inputs,
-                        const BookLiveParagraphNormalizer::Options& options);
+                        const BookLiveParagraphNormalizer::Options& options,
+                        const ProgressFunction& progress = ProgressFunction());
     static QStringList revisionConflicts(const Result& plan,
                                          const QVector<Input>& currentInputs);
+    static void refreshIdentity(Result& plan);
     static QString hashText(const QString& text);
     static QString hashStylesheets(
         const QVector<DivParagraphCssAnalyzer::Source>& stylesheets);

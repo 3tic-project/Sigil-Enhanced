@@ -19,6 +19,19 @@
 namespace BuiltinPlugins
 {
 
+namespace
+{
+
+void addFramed(QCryptographicHash& hash, const QString& value)
+{
+    const QByteArray bytes = value.toUtf8();
+    hash.addData(QByteArray::number(bytes.size()));
+    hash.addData(QByteArrayLiteral(":"));
+    hash.addData(bytes);
+}
+
+}
+
 QString DivParagraphNormalizationPlan::hashText(const QString& text)
 {
     return QString::fromLatin1(QCryptographicHash::hash(
@@ -38,6 +51,8 @@ QString DivParagraphNormalizationPlan::hashStylesheets(
         hash.addData(QByteArray::number(text.size()));
         hash.addData(QByteArrayLiteral(":"));
         hash.addData(text);
+        hash.addData(stylesheet.available ? QByteArrayLiteral(":1")
+                                          : QByteArrayLiteral(":0"));
     }
     return QString::fromLatin1(hash.result().toHex());
 }
@@ -45,14 +60,21 @@ QString DivParagraphNormalizationPlan::hashStylesheets(
 DivParagraphNormalizationPlan::Result
 DivParagraphNormalizationPlan::build(
     const QVector<Input>& inputs,
-    const BookLiveParagraphNormalizer::Options& options)
+    const BookLiveParagraphNormalizer::Options& options,
+    const ProgressFunction& progress)
 {
     Result plan;
     plan.presetId = options.presetId();
-    QCryptographicHash plan_hash(QCryptographicHash::Sha256);
-    plan_hash.addData(plan.presetId.toUtf8());
 
-    for (const Input& input : inputs) {
+    for (int input_index = 0; input_index < inputs.count(); ++input_index) {
+        if (progress && !progress(input_index, inputs.count())) {
+            plan.cancelled = true;
+            plan.errors << QStringLiteral("normalization plan generation was cancelled");
+            plan.ok = false;
+            refreshIdentity(plan);
+            return plan;
+        }
+        const Input& input = inputs.at(input_index);
         Entry entry;
         entry.resourceId = input.resourceId;
         entry.baseRevision = input.baseRevision;
@@ -63,7 +85,6 @@ DivParagraphNormalizationPlan::build(
             input.text, options, input.stylesheets);
         if (plan.ruleVersion.isEmpty()) {
             plan.ruleVersion = entry.analysis.ruleVersion;
-            plan_hash.addData(plan.ruleVersion.toUtf8());
         }
 
         if (!entry.analysis.ok) {
@@ -101,17 +122,35 @@ DivParagraphNormalizationPlan::build(
             plan.skippedFiles++;
         }
 
-        plan_hash.addData(entry.resourceId.toUtf8());
-        plan_hash.addData(entry.baseRevision.toUtf8());
-        plan_hash.addData(entry.beforeHash.toUtf8());
-        plan_hash.addData(entry.cssHash.toUtf8());
-        plan_hash.addData(entry.afterHash.toUtf8());
         plan.entries << entry;
     }
 
+    if (progress && !progress(inputs.count(), inputs.count())) {
+        plan.cancelled = true;
+        plan.errors << QStringLiteral("normalization plan generation was cancelled");
+        plan.ok = false;
+        refreshIdentity(plan);
+        return plan;
+    }
     plan.ok = plan.errors.isEmpty();
-    plan.planId = QString::fromLatin1(plan_hash.result().toHex());
+    refreshIdentity(plan);
     return plan;
+}
+
+void DivParagraphNormalizationPlan::refreshIdentity(Result& plan)
+{
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    addFramed(hash, plan.ruleVersion);
+    addFramed(hash, plan.presetId);
+    for (const Entry& entry : plan.entries) {
+        addFramed(hash, entry.resourceId);
+        addFramed(hash, entry.baseRevision);
+        addFramed(hash, entry.beforeHash);
+        addFramed(hash, entry.cssHash);
+        addFramed(hash, entry.afterHash);
+        addFramed(hash, QString::number(static_cast<int>(entry.status)));
+    }
+    plan.planId = QString::fromLatin1(hash.result().toHex());
 }
 
 QStringList DivParagraphNormalizationPlan::revisionConflicts(

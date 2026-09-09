@@ -27,6 +27,7 @@ public:
     struct Source {
         QString id;
         QString text;
+        bool available = true;
     };
 
     struct Dependency {

@@ -88,6 +88,8 @@ public:
         int otherLeaves = 0;
         int linkCount = 0;
         int imageCount = 0;
+        int scriptElements = 0;
+        int fixedLayoutIndicators = 0;
         int bodyTextLength = 0;
         int contentParentChildCount = 0;
         int wrapperDepth = 0;

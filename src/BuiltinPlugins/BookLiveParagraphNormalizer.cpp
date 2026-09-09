@@ -1063,12 +1063,63 @@ bool containsAny(const QString& text, const QStringList& keywords)
 bool isTocLike(const QString& body_text, int link_count, int child_count)
 {
     const QString compact = compactText(body_text);
-    if (compact.contains(QStringLiteral("目次"), Qt::CaseInsensitive) ||
+    const bool toc_label = compact.contains(QStringLiteral("目次"), Qt::CaseInsensitive) ||
         compact.contains(QStringLiteral("TableofContents"), Qt::CaseInsensitive) ||
-        compact.contains(QStringLiteral("Contents"), Qt::CaseInsensitive)) {
+        compact.contains(QStringLiteral("Contents"), Qt::CaseInsensitive);
+    if (toc_label && (link_count >= 2 || compact.length() < 80)) {
         return true;
     }
     return link_count >= 8 && link_count * 2 >= qMax(1, child_count);
+}
+
+void collectDocumentRisk(const QDomNode& node, int& scripts, int& fixed_layout)
+{
+    if (node.isElement()) {
+        const QDomElement element = node.toElement();
+        const QString name = localName(element);
+        if (name == QLatin1String("script")) {
+            scripts++;
+        }
+        if (name == QLatin1String("meta") &&
+            element.attribute(QStringLiteral("name")).compare(
+                QStringLiteral("viewport"), Qt::CaseInsensitive) == 0) {
+            fixed_layout++;
+        }
+        const QString classes = element.attribute(QStringLiteral("class")).toLower();
+        if (classes.contains(QStringLiteral("fixed-layout")) ||
+            classes.contains(QStringLiteral("pre-paginated"))) {
+            fixed_layout++;
+        }
+        static const QRegularExpression positioned(
+            QStringLiteral("(?:^|;)\\s*position\\s*:\\s*(?:absolute|fixed)\\b"),
+            QRegularExpression::CaseInsensitiveOption);
+        if (positioned.match(element.attribute(QStringLiteral("style"))).hasMatch()) {
+            fixed_layout++;
+        }
+    }
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        collectDocumentRisk(child, scripts, fixed_layout);
+    }
+}
+
+void applyDocumentRisk(BookLiveParagraphNormalizer::Analysis& analysis,
+                       const QDomDocument& document)
+{
+    collectDocumentRisk(document, analysis.scriptElements,
+                        analysis.fixedLayoutIndicators);
+    if (!analysis.candidate ||
+        (analysis.scriptElements == 0 && analysis.fixedLayoutIndicators == 0)) {
+        return;
+    }
+    analysis.safeToNormalize = false;
+    analysis.pageKind = BookLiveParagraphNormalizer::PageKind::BlockLayout;
+    analysis.reason = QStringLiteral("scripted or fixed-layout document requires review");
+    analysis.message = QStringLiteral(
+        "DIV 段落分析：文档包含脚本或固定版式标志（script=%1，fixed=%2），"
+        "%3 个正文候选仅供检查，不自动应用。")
+        .arg(analysis.scriptElements)
+        .arg(analysis.fixedLayoutIndicators)
+        .arg(analysis.convertibleLeaves);
 }
 
 bool isNoticeOrImprint(const QString& body_text, const BookLiveParagraphNormalizer::Analysis& analysis)
@@ -1383,6 +1434,7 @@ BookLiveParagraphNormalizer::analyzeXhtmlText(
     if (elementHasClass(body, NORMALIZED_CLASS) && analysis.convertibleLeaves > 0) {
         analysis.warnings << QStringLiteral("new candidates found after an earlier normalization");
     }
+    applyDocumentRisk(analysis, document);
     if (!options.addLegacyStyleCompensation) {
         applyCssRisk(analysis, document, stylesheets);
     }
