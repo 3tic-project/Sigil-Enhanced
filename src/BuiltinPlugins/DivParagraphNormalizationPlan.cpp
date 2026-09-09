@@ -81,8 +81,10 @@ DivParagraphNormalizationPlan::build(
         entry.source = input.text;
         entry.beforeHash = hashText(input.text);
         entry.cssHash = hashStylesheets(input.stylesheets);
-        entry.analysis = BookLiveParagraphNormalizer::analyzeXhtmlText(
-            input.text, options, input.stylesheets);
+        const BookLiveParagraphNormalizer::NormalizeResult normalized =
+            BookLiveParagraphNormalizer::normalizeXhtmlText(
+                input.text, options, input.stylesheets);
+        entry.analysis = normalized.before;
         if (plan.ruleVersion.isEmpty()) {
             plan.ruleVersion = entry.analysis.ruleVersion;
         }
@@ -92,9 +94,6 @@ DivParagraphNormalizationPlan::build(
             entry.messages << entry.analysis.message;
             plan.errorFiles++;
         } else if (entry.analysis.safeToNormalize) {
-            const BookLiveParagraphNormalizer::NormalizeResult normalized =
-                BookLiveParagraphNormalizer::normalizeXhtmlText(
-                    input.text, options, input.stylesheets);
             entry.messages = normalized.messages;
             if (!normalized.ok) {
                 entry.status = Status::Error;
