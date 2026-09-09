@@ -55,5 +55,6 @@ public:
         const TocEditTree &tree, const QList<TocNodeId> &selection);
 
     static bool Validate(const TocEditTree &tree, QString *error = nullptr);
+    static bool Equal(const TocEditTree &first, const TocEditTree &second);
     static QList<TocNodeId> PreorderIds(const TocEditTree &tree);
 };

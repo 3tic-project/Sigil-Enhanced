@@ -119,8 +119,11 @@
          <item>
           <widget class="QToolButton" name="MoveLeft">
            <property name="toolTip">
-            <string>Decrease the heading level of the selected entry.
+            <string>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</string>
+           </property>
+           <property name="accessibleName">
+            <string>Promote one level</string>
            </property>
            <property name="text">
             <string/>
@@ -166,8 +169,11 @@ You can also use the left arrow key.</string>
          <item>
           <widget class="QToolButton" name="MoveRight">
            <property name="toolTip">
-            <string>Increase the heading level of the selected entry.
+            <string>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</string>
+           </property>
+           <property name="accessibleName">
+            <string>Demote one level</string>
            </property>
            <property name="text">
             <string/>
@@ -181,6 +187,45 @@ You can also use the right arrow key.</string>
           </widget>
          </item>
         </layout>
+       </item>
+       <item>
+       <widget class="QCheckBox" name="PromoteAdoptsFollowing">
+         <property name="toolTip">
+          <string>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</string>
+         </property>
+         <property name="text">
+          <string>Promotion adopts following siblings</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="SyncNcx">
+         <property name="toolTip">
+          <string>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</string>
+         </property>
+         <property name="text">
+          <string>Also sync compatibility NCX</string>
+         </property>
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="OperationStatus">
+         <property name="accessibleName">
+          <string>TOC edit status</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
        <item>
         <spacer name="verticalSpacer">

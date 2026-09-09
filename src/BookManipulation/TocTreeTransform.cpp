@@ -196,6 +196,25 @@ bool TocTreeTransform::Validate(const TocEditTree &tree, QString *error)
     return true;
 }
 
+bool TocTreeTransform::Equal(const TocEditTree &first, const TocEditTree &second)
+{
+    if (first.rootId != second.rootId || first.nodes.size() != second.nodes.size()) {
+        return false;
+    }
+    for (auto it = first.nodes.cbegin(); it != first.nodes.cend(); ++it) {
+        if (!second.nodes.contains(it.key())) return false;
+        const TocEditNode &other = second.nodes.value(it.key());
+        if (it.value().id != other.id
+            || it.value().parentId != other.parentId
+            || it.value().label != other.label
+            || it.value().target != other.target
+            || it.value().children != other.children) {
+            return false;
+        }
+    }
+    return true;
+}
+
 QList<TocNodeId> TocTreeTransform::PreorderIds(const TocEditTree &tree)
 {
     if (!Validate(tree)) return {};
