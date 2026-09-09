@@ -218,12 +218,11 @@ QString visibleText(const QDomNode& node)
     if (node.isText() || node.isCDATASection()) {
         return node.nodeValue();
     }
-    if (!node.isElement()) {
-        return QString();
-    }
-    const QString name = localName(node);
-    if (name == QStringLiteral("script") || name == QStringLiteral("style")) {
-        return QString();
+    if (node.isElement()) {
+        const QString name = localName(node);
+        if (name == QStringLiteral("script") || name == QStringLiteral("style")) {
+            return QString();
+        }
     }
     QString text;
     for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
@@ -237,12 +236,11 @@ QString semanticText(const QDomNode& node)
     if (node.isText() || node.isCDATASection()) {
         return isWhitespaceOnly(node.nodeValue()) ? QString() : node.nodeValue();
     }
-    if (!node.isElement()) {
-        return QString();
-    }
-    const QString name = localName(node);
-    if (name == QStringLiteral("script") || name == QStringLiteral("style")) {
-        return QString();
+    if (node.isElement()) {
+        const QString name = localName(node);
+        if (name == QStringLiteral("script") || name == QStringLiteral("style")) {
+            return QString();
+        }
     }
     QString text;
     for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
@@ -866,70 +864,139 @@ bool sourcePreservingTransform(const QString& source,
     return true;
 }
 
-QStringList collectAttributes(const QDomNode& node, const QStringList& names)
-{
-    QStringList values;
-    if (node.isElement()) {
-        const QDomElement element = node.toElement();
-        for (const QString& name : names) {
-            if (element.hasAttribute(name)) {
-                values << QStringLiteral("%1=%2").arg(name, element.attribute(name));
-            }
-        }
-    }
-    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
-        values << collectAttributes(child, names);
-    }
-    return values;
-}
-
-QStringList sortedAttributes(const QDomDocument& document, const QStringList& names)
-{
-    QStringList values = collectAttributes(document, names);
-    values.sort();
-    return values;
-}
-
 bool isInjectedStyle(const QDomElement& element)
 {
     return localName(element) == QStringLiteral("style") &&
            element.attribute(QStringLiteral("data-sigil-enhancement")) == STYLE_MARKER;
 }
 
-void collectLegacyPresentation(const QDomNode& node, QStringList& values)
+void collectOrderedAttributes(const QDomNode& node,
+                              const QStringList& names,
+                              int& element_index,
+                              QStringList& values)
 {
     if (node.isElement()) {
         const QDomElement element = node.toElement();
         if (isInjectedStyle(element)) {
             return;
         }
+        const int current_index = element_index++;
+        for (const QString& name : names) {
+            if (element.hasAttribute(name)) {
+                values << QStringLiteral("%1|%2=%3")
+                    .arg(current_index)
+                    .arg(name)
+                    .arg(element.attribute(name));
+            }
+        }
+    }
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        collectOrderedAttributes(child, names, element_index, values);
+    }
+}
+
+QStringList orderedAttributes(const QDomDocument& document, const QStringList& names)
+{
+    QStringList values;
+    int element_index = 0;
+    collectOrderedAttributes(document, names, element_index, values);
+    return values;
+}
+
+QString canonicalNodeSignature(const QDomNode& node)
+{
+    if (node.isText() || node.isCDATASection()) {
+        const QString value = node.nodeValue();
+        return QStringLiteral("T%1:%2").arg(value.length()).arg(value);
+    }
+    if (node.isComment()) {
+        const QString value = node.nodeValue();
+        return QStringLiteral("C%1:%2").arg(value.length()).arg(value);
+    }
+    if (!node.isElement()) {
+        return QString();
+    }
+    const QDomElement element = node.toElement();
+    QStringList attributes;
+    const QDomNamedNodeMap attribute_nodes = element.attributes();
+    for (int i = 0; i < attribute_nodes.count(); ++i) {
+        const QDomAttr attribute = attribute_nodes.item(i).toAttr();
+        attributes << QStringLiteral("%1=%2").arg(
+            attribute.name().toLower(), attribute.value());
+    }
+    attributes.sort();
+    QString signature = QStringLiteral("E%1[%2]{")
+        .arg(localName(element), attributes.join(QLatin1Char('|')));
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        signature += canonicalNodeSignature(child);
+    }
+    signature += QLatin1Char('}');
+    return signature;
+}
+
+void collectElementSignatures(const QDomNode& node,
+                              const QSet<QString>& names,
+                              QStringList& signatures)
+{
+    if (node.isElement() && names.contains(localName(node))) {
+        signatures << canonicalNodeSignature(node);
+    }
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        collectElementSignatures(child, names, signatures);
+    }
+}
+
+QStringList orderedElementSignatures(const QDomDocument& document,
+                                     const QSet<QString>& names)
+{
+    QStringList signatures;
+    collectElementSignatures(document, names, signatures);
+    return signatures;
+}
+
+void collectLegacyPresentation(const QDomNode& node,
+                               int& element_index,
+                               QStringList& values)
+{
+    if (node.isElement()) {
+        const QDomElement element = node.toElement();
+        if (isInjectedStyle(element)) {
+            return;
+        }
+        const int current_index = element_index++;
+        QStringList element_values;
         const QDomNamedNodeMap attributes = element.attributes();
         for (int i = 0; i < attributes.count(); ++i) {
             const QDomAttr attribute = attributes.item(i).toAttr();
             const QString name = attribute.name().toLower();
             if (name == QStringLiteral("class")) {
-                const QStringList classes = attribute.value().split(
+                QStringList classes = attribute.value().split(
                     QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+                classes.sort();
                 for (const QString& class_name : classes) {
                     if (!class_name.startsWith(QStringLiteral("se-bl-"))) {
-                        values << QStringLiteral("class=%1").arg(class_name);
+                        element_values << QStringLiteral("class=%1").arg(class_name);
                     }
                 }
             } else {
-                values << QStringLiteral("%1=%2").arg(name, attribute.value());
+                element_values << QStringLiteral("%1=%2").arg(name, attribute.value());
             }
+        }
+        element_values.sort();
+        for (const QString& value : element_values) {
+            values << QStringLiteral("%1|%2").arg(current_index).arg(value);
         }
     }
     for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
-        collectLegacyPresentation(child, values);
+        collectLegacyPresentation(child, element_index, values);
     }
 }
 
 QStringList legacyPresentation(const QDomDocument& document)
 {
     QStringList values;
-    collectLegacyPresentation(document, values);
-    values.sort();
+    int element_index = 0;
+    collectLegacyPresentation(document, element_index, values);
     return values;
 }
 
@@ -1520,15 +1587,19 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(
         }
     }
 
-    const QString before_text = semanticText(document);
-    const QStringList before_ids = sortedAttributes(
+    const QString before_text = options.addLegacyStyleCompensation
+        ? semanticText(document) : visibleText(document);
+    const QStringList before_ids = orderedAttributes(
         document, QStringList() << QStringLiteral("id") << QStringLiteral("name"));
-    const QStringList before_links = sortedAttributes(
+    const QStringList before_links = orderedAttributes(
         document, QStringList() << QStringLiteral("href") << QStringLiteral("src"));
     const QStringList before_presentation = legacyPresentation(document);
-    const int before_ruby = countElementsByLocalName(document, QStringLiteral("ruby"));
-    const int before_rt = countElementsByLocalName(document, QStringLiteral("rt"));
-    const int before_rp = countElementsByLocalName(document, QStringLiteral("rp"));
+    const QStringList before_ruby = orderedElementSignatures(
+        document, QSet<QString>() << QStringLiteral("ruby"));
+    const QStringList before_headings = orderedElementSignatures(
+        document, QSet<QString>() << QStringLiteral("h1") << QStringLiteral("h2")
+                                 << QStringLiteral("h3") << QStringLiteral("h4")
+                                 << QStringLiteral("h5") << QStringLiteral("h6"));
     const int before_images = countImageElements(document);
 
     int converted = 0;
@@ -1563,10 +1634,11 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(
         return result;
     }
 
-    const QString after_text = semanticText(after_document);
-    const QStringList after_ids = sortedAttributes(
+    const QString after_text = options.addLegacyStyleCompensation
+        ? semanticText(after_document) : visibleText(after_document);
+    const QStringList after_ids = orderedAttributes(
         after_document, QStringList() << QStringLiteral("id") << QStringLiteral("name"));
-    const QStringList after_links = sortedAttributes(
+    const QStringList after_links = orderedAttributes(
         after_document, QStringList() << QStringLiteral("href") << QStringLiteral("src"));
     const QStringList after_presentation = legacyPresentation(after_document);
     if (before_text != after_text) {
@@ -1574,22 +1646,26 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(
         return result;
     }
     if (before_ids != after_ids) {
-        result.messages << QStringLiteral("BookLive 段落规范化：转换后 id/name 集合不一致，已回退。");
+        result.messages << QStringLiteral("BookLive 段落规范化：转换后 id/name 有序节点映射不一致，已回退。");
         return result;
     }
     if (before_links != after_links) {
-        result.messages << QStringLiteral("BookLive 段落规范化：转换后 href/src 集合不一致，已回退。");
+        result.messages << QStringLiteral("BookLive 段落规范化：转换后 href/src 有序节点映射不一致，已回退。");
         return result;
     }
     if (before_presentation != after_presentation) {
         result.messages << QStringLiteral("BookLive 段落规范化：转换后原 class/style/属性集合不一致，已回退。");
         return result;
     }
-    if (before_ruby != countElementsByLocalName(after_document, QStringLiteral("ruby")) ||
-        before_rt != countElementsByLocalName(after_document, QStringLiteral("rt")) ||
-        before_rp != countElementsByLocalName(after_document, QStringLiteral("rp")) ||
+    const QStringList after_ruby = orderedElementSignatures(
+        after_document, QSet<QString>() << QStringLiteral("ruby"));
+    const QStringList after_headings = orderedElementSignatures(
+        after_document, QSet<QString>() << QStringLiteral("h1") << QStringLiteral("h2")
+                                       << QStringLiteral("h3") << QStringLiteral("h4")
+                                       << QStringLiteral("h5") << QStringLiteral("h6"));
+    if (before_ruby != after_ruby || before_headings != after_headings ||
         before_images != countImageElements(after_document)) {
-        result.messages << QStringLiteral("BookLive 段落规范化：转换后 ruby/图片结构计数不一致，已回退。");
+        result.messages << QStringLiteral("BookLive 段落规范化：转换后 Ruby/标题有序结构签名或图片计数不一致，已回退。");
         return result;
     }
 
