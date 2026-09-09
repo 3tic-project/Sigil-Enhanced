@@ -5,8 +5,10 @@
 #include <QTextStream>
 
 #include "BuiltinPlugins/BookLiveParagraphNormalizer.h"
+#include "BuiltinPlugins/DivParagraphCssAnalyzer.h"
 
 using BuiltinPlugins::BookLiveParagraphNormalizer;
+using BuiltinPlugins::DivParagraphCssAnalyzer;
 
 namespace
 {
@@ -242,6 +244,45 @@ int runTests()
     if (invalid_analysis.pageKind != BookLiveParagraphNormalizer::PageKind::BlockLayout ||
         invalid_analysis.candidate) {
         return fail(QStringLiteral("transparent content with a block descendant did not fail closed"));
+    }
+
+    const DivParagraphCssAnalyzer::Result safe_css = DivParagraphCssAnalyzer::analyze({
+        { QStringLiteral("safe.css"),
+          QStringLiteral("div.para, p.para { margin: 0; }\n"
+                         "@media (min-width: 10em) { body > div, body > p { text-indent: 1em; } }\n"
+                         "[data-kind='div'] { color: black; }") }
+    });
+    if (safe_css.reviewRequired || !safe_css.dependencies.isEmpty()) {
+        return fail(QStringLiteral("paired CSS selectors were reported as risky"));
+    }
+
+    const DivParagraphCssAnalyzer::Result risky_css = DivParagraphCssAnalyzer::analyze({
+        { QStringLiteral("risky.css"),
+          QStringLiteral("div.para { line-height: 1.8; }\n"
+                         "p:nth-of-type(2) { margin-top: 0; }\n"
+                         "@supports (display: block) { :is(div, p) + span { color: red; } }") }
+    });
+    if (!risky_css.reviewRequired || risky_css.dependencies.count() != 3 ||
+        risky_css.dependencies.first().sourceId != QStringLiteral("risky.css")) {
+        return fail(QStringLiteral("tag-dependent CSS selectors were not fully reported"));
+    }
+
+    QString css_risk_source = conservative_source;
+    css_risk_source.replace(
+        QStringLiteral("</head>"),
+        QStringLiteral("<style>div.para { text-indent: 1em; }</style></head>"));
+    const BookLiveParagraphNormalizer::Analysis css_risk_analysis =
+        BookLiveParagraphNormalizer::analyzeXhtmlText(css_risk_source, conservative);
+    if (!css_risk_analysis.candidate || css_risk_analysis.safeToNormalize ||
+        !css_risk_analysis.cssReviewRequired ||
+        css_risk_analysis.pageKind != BookLiveParagraphNormalizer::PageKind::CssRisk ||
+        css_risk_analysis.cssDependencies.count() != 1) {
+        return fail(QStringLiteral("CSS risk did not gate automatic normalization"));
+    }
+    if (BookLiveParagraphNormalizer::normalizeXhtmlText(css_risk_source, conservative).ok ||
+        !BookLiveParagraphNormalizer::normalizeXhtmlText(
+             css_risk_source, conservative, true).ok) {
+        return fail(QStringLiteral("CSS manual-review gate failed"));
     }
 
     const QString toc = xhtml(
