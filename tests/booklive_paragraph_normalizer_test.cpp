@@ -80,6 +80,35 @@ QString paragraphs(int count)
     return result;
 }
 
+QString taggedParagraphs(int count, const QString& tag)
+{
+    QString result;
+    for (int i = 0; i < count; ++i) {
+        result += QStringLiteral("<%1 class='para' data-order=\"%2\">"
+                                 "　正文%2\u00a0<ruby>字<rp>(</rp><rt>じ</rt><rp>)</rp></ruby>。"
+                                 "</%1>\n")
+                      .arg(tag)
+                      .arg(i);
+    }
+    return result;
+}
+
+QString conservativeBody(const QString& paragraph_tag)
+{
+    return QStringLiteral("<div class=\"main\">\n"
+                          "  <div class=\"content\">\n"
+                          "    <div class=\"chapter-title\" data-keep=\"yes\">\n"
+                          "      <!-- keep title wrapper byte-for-byte -->"
+                          "<a id=\"chapter-1\"></a><h1>第一章</h1>\n"
+                          "    </div>\n"
+                          "    <div class=\"spacer\"><br /></div>\n"
+                          "    <div class=\"scene\">◆ ◆ ◆</div>\n"
+                          "    <div class=\"image\"><img src=\"cover.jpg\" /></div>\n"
+                          "    <div class=\"styled\"><div class=\"inner\">题记</div></div>\n") +
+        taggedParagraphs(12, paragraph_tag) +
+        QStringLiteral("  </div>\n</div>");
+}
+
 QString xhtml(const QString& body, const QString& body_class = QString())
 {
     return QStringLiteral(
@@ -156,6 +185,63 @@ int runTests()
         BookLiveParagraphNormalizer::normalizeXhtmlText(result.text);
     if (!second.ok || second.changed || second.text != result.text) {
         return fail(QStringLiteral("normalization is not idempotent"));
+    }
+
+    const BookLiveParagraphNormalizer::Options conservative =
+        BookLiveParagraphNormalizer::Options::conservative();
+    const QString conservative_source = xhtml(conservativeBody(QStringLiteral("div")));
+    const QString conservative_expected = xhtml(conservativeBody(QStringLiteral("p")));
+    const BookLiveParagraphNormalizer::Analysis conservative_analysis =
+        BookLiveParagraphNormalizer::analyzeXhtmlText(conservative_source, conservative);
+    if (!conservative_analysis.safeToNormalize ||
+        conservative_analysis.presetId != QStringLiteral("conservative-v2") ||
+        conservative_analysis.ruleVersion.isEmpty() ||
+        conservative_analysis.beforeHash.length() != 64 ||
+        conservative_analysis.paragraphLeaves != 12 ||
+        conservative_analysis.convertibleLeaves != 12 ||
+        conservative_analysis.protectedHeadingBlocks != 1 ||
+        conservative_analysis.candidateRanges.count() != 12 ||
+        conservative_analysis.protectedRanges.count() != 5) {
+        return fail(QStringLiteral("conservative analysis or protected ranges failed: %1")
+                        .arg(conservative_analysis.message));
+    }
+
+    const BookLiveParagraphNormalizer::NormalizeResult conservative_result =
+        BookLiveParagraphNormalizer::normalizeXhtmlText(conservative_source, conservative);
+    if (!conservative_result.ok || !conservative_result.changed ||
+        conservative_result.text != conservative_expected ||
+        conservative_result.text.contains(QStringLiteral("se-bl-normalized")) ||
+        conservative_result.afterHash.length() != 64) {
+        return fail(QStringLiteral("source-preserving conservative conversion failed: %1")
+                        .arg(conservative_result.messages.join(QStringLiteral("; "))));
+    }
+    const BookLiveParagraphNormalizer::NormalizeResult conservative_second =
+        BookLiveParagraphNormalizer::normalizeXhtmlText(conservative_result.text, conservative);
+    if (!conservative_second.ok || conservative_second.changed ||
+        conservative_second.text != conservative_result.text ||
+        conservative_second.before.candidate ||
+        !conservative_second.before.candidateRanges.isEmpty()) {
+        return fail(QStringLiteral("conservative conversion did not produce an empty second plan"));
+    }
+
+    const QString marked_with_new_candidates = xhtml(
+        conservativeBody(QStringLiteral("div")), QStringLiteral("se-bl-normalized"));
+    const BookLiveParagraphNormalizer::Analysis marked_analysis =
+        BookLiveParagraphNormalizer::analyzeXhtmlText(marked_with_new_candidates, conservative);
+    if (!marked_analysis.candidate || marked_analysis.convertibleLeaves != 12 ||
+        marked_analysis.warnings.isEmpty()) {
+        return fail(QStringLiteral("body marker hid newly added candidates"));
+    }
+
+    const QString invalid_transparent = xhtml(
+        QStringLiteral("<div class=\"main\"><div class=\"content\">"
+                       "<div><a href=\"x\"><div>not phrasing</div></a></div>") +
+        paragraphs(12) + QStringLiteral("</div></div>"));
+    const BookLiveParagraphNormalizer::Analysis invalid_analysis =
+        BookLiveParagraphNormalizer::analyzeXhtmlText(invalid_transparent, conservative);
+    if (invalid_analysis.pageKind != BookLiveParagraphNormalizer::PageKind::BlockLayout ||
+        invalid_analysis.candidate) {
+        return fail(QStringLiteral("transparent content with a block descendant did not fail closed"));
     }
 
     const QString toc = xhtml(
