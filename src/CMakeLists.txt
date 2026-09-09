@@ -136,6 +136,8 @@ set( AGENT_FILES
 set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     BuiltinPlugins/BookLiveParagraphNormalizer.h
+    BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    BuiltinPlugins/DivParagraphCssAnalyzer.h
     BuiltinPlugins/BrParagraphNormalizer.cpp
     BuiltinPlugins/BrParagraphNormalizer.h
     BuiltinPlugins/EpubStructureNormalizer.cpp

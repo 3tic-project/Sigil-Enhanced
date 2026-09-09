@@ -974,6 +974,47 @@ void addVisualPreservationStyle(QDomDocument& document, QDomElement& body)
     }
 }
 
+void collectInlineStyles(const QDomNode& node,
+                         QVector<DivParagraphCssAnalyzer::Source>& styles,
+                         int& style_index)
+{
+    if (node.isElement()) {
+        const QDomElement element = node.toElement();
+        if (localName(element) == QStringLiteral("style") && !isInjectedStyle(element)) {
+            styles << DivParagraphCssAnalyzer::Source {
+                QStringLiteral("inline-style-%1").arg(++style_index), element.text()
+            };
+        }
+    }
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        collectInlineStyles(child, styles, style_index);
+    }
+}
+
+void applyCssRisk(BookLiveParagraphNormalizer::Analysis& analysis,
+                  const QDomDocument& document,
+                  const QVector<DivParagraphCssAnalyzer::Source>& external_stylesheets)
+{
+    QVector<DivParagraphCssAnalyzer::Source> stylesheets = external_stylesheets;
+    int style_index = 0;
+    collectInlineStyles(document, stylesheets, style_index);
+    const DivParagraphCssAnalyzer::Result css_result =
+        DivParagraphCssAnalyzer::analyze(stylesheets);
+    analysis.cssReviewRequired = css_result.reviewRequired;
+    analysis.cssDependencies = css_result.dependencies;
+    if (!analysis.candidate || !analysis.cssReviewRequired) {
+        return;
+    }
+
+    analysis.safeToNormalize = false;
+    analysis.pageKind = BookLiveParagraphNormalizer::PageKind::CssRisk;
+    analysis.reason = QStringLiteral("tag-dependent CSS selectors require review");
+    analysis.message = QStringLiteral("DIV 段落分析：需检查 %1 条标签相关 CSS 选择器；候选正文=%2，受保护块=%3。")
+        .arg(analysis.cssDependencies.count())
+        .arg(analysis.convertibleLeaves)
+        .arg(analysis.protectedRanges.count());
+}
+
 void removeRedundantXhtmlNamespaceAttributes(QDomNode node, bool is_root = true)
 {
     if (node.isElement()) {
@@ -1219,6 +1260,8 @@ QString BookLiveParagraphNormalizer::pageKindName(PageKind pageKind)
         return QStringLiteral("notice-or-imprint");
     case PageKind::ShortFlow:
         return QStringLiteral("short-flow");
+    case PageKind::CssRisk:
+        return QStringLiteral("css-risk");
     case PageKind::BlockLayout:
         return QStringLiteral("block-layout");
     case PageKind::ImageOrTitlePage:
@@ -1242,6 +1285,16 @@ BookLiveParagraphNormalizer::analyzeXhtmlText(const QString& source)
 BookLiveParagraphNormalizer::Analysis
 BookLiveParagraphNormalizer::analyzeXhtmlText(const QString& source,
                                               const Options& options)
+{
+    return analyzeXhtmlText(source, options,
+                            QVector<DivParagraphCssAnalyzer::Source>());
+}
+
+BookLiveParagraphNormalizer::Analysis
+BookLiveParagraphNormalizer::analyzeXhtmlText(
+    const QString& source,
+    const Options& options,
+    const QVector<DivParagraphCssAnalyzer::Source>& stylesheets)
 {
     Analysis analysis;
     analysis.presetId = options.presetId();
@@ -1308,6 +1361,9 @@ BookLiveParagraphNormalizer::analyzeXhtmlText(const QString& source,
     if (elementHasClass(body, NORMALIZED_CLASS) && analysis.convertibleLeaves > 0) {
         analysis.warnings << QStringLiteral("new candidates found after an earlier normalization");
     }
+    if (!options.addLegacyStyleCompensation) {
+        applyCssRisk(analysis, document, stylesheets);
+    }
     return analysis;
 }
 
@@ -1322,8 +1378,20 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(const QString& source,
                                                 const Options& options,
                                                 bool allowManualReview)
 {
+    return normalizeXhtmlText(source, options,
+                              QVector<DivParagraphCssAnalyzer::Source>(),
+                              allowManualReview);
+}
+
+BookLiveParagraphNormalizer::NormalizeResult
+BookLiveParagraphNormalizer::normalizeXhtmlText(
+    const QString& source,
+    const Options& options,
+    const QVector<DivParagraphCssAnalyzer::Source>& stylesheets,
+    bool allowManualReview)
+{
     NormalizeResult result;
-    result.before = analyzeXhtmlText(source, options);
+    result.before = analyzeXhtmlText(source, options, stylesheets);
     if (!result.before.ok) {
         result.messages << result.before.message;
         return result;
@@ -1448,7 +1516,7 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(const QString& source,
         return result;
     }
 
-    result.after = analyzeXhtmlText(result.text, options);
+    result.after = analyzeXhtmlText(result.text, options, stylesheets);
     if (result.after.candidate || result.after.convertibleLeaves != 0) {
         result.messages << QStringLiteral("BookLive 段落规范化：幂等复核仍发现同一预设的候选项，已回退。");
         return result;

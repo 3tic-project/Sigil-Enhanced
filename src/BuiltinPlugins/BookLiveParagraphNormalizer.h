@@ -19,6 +19,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include "BuiltinPlugins/DivParagraphCssAnalyzer.h"
+
 namespace BuiltinPlugins
 {
 
@@ -58,6 +60,7 @@ public:
         TocLike,
         NoticeOrImprint,
         ShortFlow,
+        CssRisk,
         BlockLayout,
         ImageOrTitlePage,
         NoCandidate,
@@ -96,6 +99,8 @@ public:
         QVector<SourceRange> candidateRanges;
         QVector<SourceRange> protectedRanges;
         QStringList warnings;
+        bool cssReviewRequired = false;
+        QVector<DivParagraphCssAnalyzer::Dependency> cssDependencies;
     };
 
     struct NormalizeResult {
@@ -111,11 +116,20 @@ public:
     // Compatibility overloads retain the behavior of the original BookLive action.
     static Analysis analyzeXhtmlText(const QString& source);
     static Analysis analyzeXhtmlText(const QString& source, const Options& options);
+    static Analysis analyzeXhtmlText(
+        const QString& source,
+        const Options& options,
+        const QVector<DivParagraphCssAnalyzer::Source>& stylesheets);
     static NormalizeResult normalizeXhtmlText(const QString& source,
                                               bool allowManualReview = false);
     static NormalizeResult normalizeXhtmlText(const QString& source,
                                               const Options& options,
                                               bool allowManualReview = false);
+    static NormalizeResult normalizeXhtmlText(
+        const QString& source,
+        const Options& options,
+        const QVector<DivParagraphCssAnalyzer::Source>& stylesheets,
+        bool allowManualReview = false);
     static QString pageKindName(PageKind pageKind);
 };
 
