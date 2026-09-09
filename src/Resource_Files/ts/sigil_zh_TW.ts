@@ -4074,10 +4074,14 @@ other end to continue searching.</source>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="122"/>
-        <source>Decrease the heading level of the selected entry.
+        <source>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</source>
-        <translation>降低選取項目的標題等級。
-您也可以使用左方向鍵。</translation>
+        <translation>提升所選項目，並將其後續同層項目移到其下；保持目錄閱讀順序。
+也可使用左方向鍵。</translation>
+    </message>
+    <message>
+        <source>Promote one level</source>
+        <translation>提升一級</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="141"/>
@@ -4087,10 +4091,38 @@ You can also use the left arrow key.</source>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="169"/>
-        <source>Increase the heading level of the selected entry.
+        <source>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</source>
-        <translation>增加選取項目的標題等級。
-您也可以使用右方向鍵。</translation>
+        <translation>將所選項目移入前一個同層項目，保留既有子目錄。
+也可使用右方向鍵。</translation>
+    </message>
+    <message>
+        <source>Demote one level</source>
+        <translation>降級一級</translation>
+    </message>
+    <message>
+        <source>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</source>
+        <translation>啟用後，提升的項目會接管後續同層項目，以保持目錄閱讀順序不變。</translation>
+    </message>
+    <message>
+        <source>Promotion adopts following siblings</source>
+        <translation>提升時接管後續同層項目</translation>
+    </message>
+    <message>
+        <source>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</source>
+        <translation>啟用後，同時將最終目錄層級套用到 EPUB 3 相容 NCX。</translation>
+    </message>
+    <message>
+        <source>Also sync compatibility NCX</source>
+        <translation>同時同步相容 NCX</translation>
+    </message>
+    <message>
+        <source>TOC edit status</source>
+        <translation>目錄編輯狀態</translation>
+    </message>
+    <message>
+        <source>This EPUB also contains an NCX. It will stay unchanged unless synchronization is enabled.</source>
+        <translation>此 EPUB 也包含 NCX。除非啟用同步，否則 NCX 將保持不變。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="99"/>
@@ -4101,6 +4133,70 @@ You can also use the right arrow key.</source>
         <location filename="../../Dialogs/EditTOC.cpp" line="100"/>
         <source>Target</source>
         <translation>目標</translation>
+    </message>
+    <message>
+        <source>Edit TOC entry</source>
+        <translation>編輯目錄項目</translation>
+    </message>
+    <message>
+        <source>Edit TOC target</source>
+        <translation>編輯目錄目標</translation>
+    </message>
+    <message>
+        <source>Cannot promote: a selected entry is already at the top level.</source>
+        <translation>無法提升：所選項目中有項目已位於頂層。</translation>
+    </message>
+    <message>
+        <source>Cannot demote: a selected range has no previous sibling.</source>
+        <translation>無法降級：所選區段沒有前一個同層項目。</translation>
+    </message>
+    <message>
+        <source>The selected hierarchy changes overlap; no entries were moved.</source>
+        <translation>所選層級變更互相重疊；未移動任何項目。</translation>
+    </message>
+    <message>
+        <source>The TOC hierarchy is inconsistent; no entries were moved.</source>
+        <translation>目錄層級不一致；未移動任何項目。</translation>
+    </message>
+    <message>
+        <source>Promote TOC entries</source>
+        <translation>提升目錄項目</translation>
+    </message>
+    <message>
+        <source>Promoted %1 item(s); reassigned %2 following item(s).</source>
+        <translation>已提升 %1 項；重新歸屬 %2 個後續項目。</translation>
+    </message>
+    <message>
+        <source>Demote TOC entries</source>
+        <translation>降級目錄項目</translation>
+    </message>
+    <message>
+        <source>Demoted %1 item(s).</source>
+        <translation>已降級 %1 項。</translation>
+    </message>
+    <message>
+        <source>Move TOC entries up</source>
+        <translation>上移目錄項目</translation>
+    </message>
+    <message>
+        <source>Move TOC entries down</source>
+        <translation>下移目錄項目</translation>
+    </message>
+    <message>
+        <source>Add TOC entry</source>
+        <translation>新增目錄項目</translation>
+    </message>
+    <message>
+        <source>Delete TOC entry</source>
+        <translation>刪除目錄項目</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>復原</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>重做</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="384"/>

@@ -4077,10 +4077,14 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="122"/>
-        <source>Decrease the heading level of the selected entry.
+        <source>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</source>
-        <translation>選択したエントリーの見出しレベルを下げます。
-左矢印キーを使用することもできます。</translation>
+        <translation>選択した項目を昇格し、後続の同階層項目をその下へ移動して目次の読み順を保ちます。
+左矢印キーも使用できます。</translation>
+    </message>
+    <message>
+        <source>Promote one level</source>
+        <translation>1 階層上げる</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="141"/>
@@ -4090,10 +4094,38 @@ You can also use the left arrow key.</source>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="169"/>
-        <source>Increase the heading level of the selected entry.
+        <source>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</source>
-        <translation>選択したエントリーの見出しレベルを上げます。
-右矢印キーを使用することもできます。</translation>
+        <translation>選択した項目を直前の同階層項目の下へ移動し、既存の子項目を保持します。
+右矢印キーも使用できます。</translation>
+    </message>
+    <message>
+        <source>Demote one level</source>
+        <translation>1 階層下げる</translation>
+    </message>
+    <message>
+        <source>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</source>
+        <translation>有効にすると、昇格した項目が後続の同階層項目を引き継ぎ、目次の読み順を維持します。</translation>
+    </message>
+    <message>
+        <source>Promotion adopts following siblings</source>
+        <translation>昇格時に後続の同階層項目を引き継ぐ</translation>
+    </message>
+    <message>
+        <source>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</source>
+        <translation>有効にすると、最終的な目次階層を EPUB 3 互換 NCX にも適用します。</translation>
+    </message>
+    <message>
+        <source>Also sync compatibility NCX</source>
+        <translation>互換 NCX も同期</translation>
+    </message>
+    <message>
+        <source>TOC edit status</source>
+        <translation>目次編集の状態</translation>
+    </message>
+    <message>
+        <source>This EPUB also contains an NCX. It will stay unchanged unless synchronization is enabled.</source>
+        <translation>この EPUB には NCX も含まれています。同期を有効にしない限り変更されません。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="99"/>
@@ -4104,6 +4136,70 @@ You can also use the right arrow key.</source>
         <location filename="../../Dialogs/EditTOC.cpp" line="100"/>
         <source>Target</source>
         <translation>ターゲット</translation>
+    </message>
+    <message>
+        <source>Edit TOC entry</source>
+        <translation>目次項目を編集</translation>
+    </message>
+    <message>
+        <source>Edit TOC target</source>
+        <translation>目次ターゲットを編集</translation>
+    </message>
+    <message>
+        <source>Cannot promote: a selected entry is already at the top level.</source>
+        <translation>昇格できません。選択した項目の中に最上位の項目があります。</translation>
+    </message>
+    <message>
+        <source>Cannot demote: a selected range has no previous sibling.</source>
+        <translation>降格できません。選択範囲に直前の同階層項目がありません。</translation>
+    </message>
+    <message>
+        <source>The selected hierarchy changes overlap; no entries were moved.</source>
+        <translation>選択した階層変更が重複しています。項目は移動されませんでした。</translation>
+    </message>
+    <message>
+        <source>The TOC hierarchy is inconsistent; no entries were moved.</source>
+        <translation>目次階層に不整合があります。項目は移動されませんでした。</translation>
+    </message>
+    <message>
+        <source>Promote TOC entries</source>
+        <translation>目次項目を昇格</translation>
+    </message>
+    <message>
+        <source>Promoted %1 item(s); reassigned %2 following item(s).</source>
+        <translation>%1 項目を昇格し、後続の %2 項目を再配置しました。</translation>
+    </message>
+    <message>
+        <source>Demote TOC entries</source>
+        <translation>目次項目を降格</translation>
+    </message>
+    <message>
+        <source>Demoted %1 item(s).</source>
+        <translation>%1 項目を降格しました。</translation>
+    </message>
+    <message>
+        <source>Move TOC entries up</source>
+        <translation>目次項目を上へ移動</translation>
+    </message>
+    <message>
+        <source>Move TOC entries down</source>
+        <translation>目次項目を下へ移動</translation>
+    </message>
+    <message>
+        <source>Add TOC entry</source>
+        <translation>目次項目を追加</translation>
+    </message>
+    <message>
+        <source>Delete TOC entry</source>
+        <translation>目次項目を削除</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>元に戻す</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>やり直す</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="384"/>

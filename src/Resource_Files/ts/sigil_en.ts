@@ -3638,10 +3638,14 @@ other end to continue searching.</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="122"/>
-        <source>Decrease the heading level of the selected entry.
+        <source>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</source>
-        <translation>Decrease the heading level of the selected entry.
+        <translation>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</translation>
+    </message>
+    <message>
+        <source>Promote one level</source>
+        <translation>Promote one level</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="141"/>
@@ -3651,10 +3655,38 @@ You can also use the left arrow key.</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="169"/>
-        <source>Increase the heading level of the selected entry.
+        <source>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</source>
-        <translation>Increase the heading level of the selected entry.
+        <translation>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</translation>
+    </message>
+    <message>
+        <source>Demote one level</source>
+        <translation>Demote one level</translation>
+    </message>
+    <message>
+        <source>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</source>
+        <translation>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</translation>
+    </message>
+    <message>
+        <source>Promotion adopts following siblings</source>
+        <translation>Promotion adopts following siblings</translation>
+    </message>
+    <message>
+        <source>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</source>
+        <translation>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</translation>
+    </message>
+    <message>
+        <source>Also sync compatibility NCX</source>
+        <translation>Also sync compatibility NCX</translation>
+    </message>
+    <message>
+        <source>TOC edit status</source>
+        <translation>TOC edit status</translation>
+    </message>
+    <message>
+        <source>This EPUB also contains an NCX. It will stay unchanged unless synchronization is enabled.</source>
+        <translation>This EPUB also contains an NCX. It will stay unchanged unless synchronization is enabled.</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="104"/>
@@ -3665,6 +3697,70 @@ You can also use the right arrow key.</translation>
         <location filename="../../Dialogs/EditTOC.cpp" line="105"/>
         <source>Target</source>
         <translation>Target</translation>
+    </message>
+    <message>
+        <source>Edit TOC entry</source>
+        <translation>Edit TOC entry</translation>
+    </message>
+    <message>
+        <source>Edit TOC target</source>
+        <translation>Edit TOC target</translation>
+    </message>
+    <message>
+        <source>Cannot promote: a selected entry is already at the top level.</source>
+        <translation>Cannot promote: a selected entry is already at the top level.</translation>
+    </message>
+    <message>
+        <source>Cannot demote: a selected range has no previous sibling.</source>
+        <translation>Cannot demote: a selected range has no previous sibling.</translation>
+    </message>
+    <message>
+        <source>The selected hierarchy changes overlap; no entries were moved.</source>
+        <translation>The selected hierarchy changes overlap; no entries were moved.</translation>
+    </message>
+    <message>
+        <source>The TOC hierarchy is inconsistent; no entries were moved.</source>
+        <translation>The TOC hierarchy is inconsistent; no entries were moved.</translation>
+    </message>
+    <message>
+        <source>Promote TOC entries</source>
+        <translation>Promote TOC entries</translation>
+    </message>
+    <message>
+        <source>Promoted %1 item(s); reassigned %2 following item(s).</source>
+        <translation>Promoted %1 item(s); reassigned %2 following item(s).</translation>
+    </message>
+    <message>
+        <source>Demote TOC entries</source>
+        <translation>Demote TOC entries</translation>
+    </message>
+    <message>
+        <source>Demoted %1 item(s).</source>
+        <translation>Demoted %1 item(s).</translation>
+    </message>
+    <message>
+        <source>Move TOC entries up</source>
+        <translation>Move TOC entries up</translation>
+    </message>
+    <message>
+        <source>Move TOC entries down</source>
+        <translation>Move TOC entries down</translation>
+    </message>
+    <message>
+        <source>Add TOC entry</source>
+        <translation>Add TOC entry</translation>
+    </message>
+    <message>
+        <source>Delete TOC entry</source>
+        <translation>Delete TOC entry</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>Undo</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>Redo</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="613"/>
