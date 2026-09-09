@@ -56,6 +56,13 @@ PreferencesWidget::ResultActions ModifiedVerPrefsWidget::saveSettings()
     }
     sse.setOtherGroupTarget(other_group_target);
 
+    sse.setDivParagraphConvertBlankLines(ui.cbDivParagraphBlankLines->isChecked());
+    sse.setDivParagraphConvertSceneBreaks(ui.cbDivParagraphSceneBreaks->isChecked());
+    sse.setDivParagraphConvertImageWrappers(ui.cbDivParagraphImageWrappers->isChecked());
+    sse.setDivParagraphConvertSingleBlockWrappers(
+        ui.cbDivParagraphSingleBlockWrappers->isChecked());
+    sse.setDivParagraphFormatSource(ui.cbDivParagraphFormatSource->isChecked());
+
     return results;
 }
 
@@ -100,6 +107,13 @@ void ModifiedVerPrefsWidget::readSettings()
     } else {
         ui.rbOtherGroupInactive->setChecked(true);
     }
+
+    ui.cbDivParagraphBlankLines->setChecked(sse.getDivParagraphConvertBlankLines());
+    ui.cbDivParagraphSceneBreaks->setChecked(sse.getDivParagraphConvertSceneBreaks());
+    ui.cbDivParagraphImageWrappers->setChecked(sse.getDivParagraphConvertImageWrappers());
+    ui.cbDivParagraphSingleBlockWrappers->setChecked(
+        sse.getDivParagraphConvertSingleBlockWrappers());
+    ui.cbDivParagraphFormatSource->setChecked(sse.getDivParagraphFormatSource());
 
 }
 
