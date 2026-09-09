@@ -2,7 +2,6 @@
 #include <QCheckBox>
 #include <QCoreApplication>
 #include <QDir>
-#include <QDomDocument>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -12,11 +11,9 @@
 #include <QObject>
 #include <QProgressDialog>
 #include <QReadLocker>
-#include <QRegularExpression>
 #include <QSet>
 #include <QTemporaryFile>
 #include <QWriteLocker>
-#include <QUrl>
 
 #include "MainUI/MainWindow.h"
 #include "MainUI/BookBrowser.h"
@@ -26,6 +23,7 @@
 #include "BuiltinPlugins/FormatterEnhancer.h"
 #include "BuiltinPlugins/BookLiveParagraphNormalizer.h"
 #include "BuiltinPlugins/DivParagraphNormalizationPlan.h"
+#include "BuiltinPlugins/DivParagraphStylesheetResolver.h"
 #include "BuiltinPlugins/BrParagraphNormalizer.h"
 #include "BuiltinPlugins/KfxParagraphNormalizer.h"
 #include "BuiltinPlugins/KfxImportController.h"
@@ -154,153 +152,6 @@ using DivPlan = BuiltinPlugins::DivParagraphNormalizationPlan;
 using DivOptions = BuiltinPlugins::BookLiveParagraphNormalizer::Options;
 using CssSource = BuiltinPlugins::DivParagraphCssAnalyzer::Source;
 
-QString ElementLocalName(const QDomElement& element)
-{
-    const QString local = element.localName();
-    if (!local.isEmpty()) {
-        return local.toLower();
-    }
-    return element.tagName().section(QLatin1Char(':'), -1).toLower();
-}
-
-QString ResolveBookReference(const QString& referrer, const QString& reference,
-                             bool* local)
-{
-    const QUrl url(reference.trimmed());
-    if (url.hasFragment() && url.path().isEmpty()) {
-        if (local) {
-            *local = true;
-        }
-        return QString();
-    }
-    if (!url.scheme().isEmpty() || !url.host().isEmpty() || reference.startsWith(QLatin1String("//"))) {
-        if (local) {
-            *local = false;
-        }
-        return reference;
-    }
-    const QString decoded = QUrl::fromPercentEncoding(url.path().toUtf8());
-    if (decoded.isEmpty() || decoded.startsWith(QLatin1Char('/'))) {
-        if (local) {
-            *local = false;
-        }
-        return reference;
-    }
-    if (local) {
-        *local = true;
-    }
-    return QDir::cleanPath(QFileInfo(referrer).dir().filePath(decoded));
-}
-
-QStringList CssImports(const QString& css)
-{
-    QStringList imports;
-    static const QRegularExpression pattern(
-        QStringLiteral("@import\\s+(?:url\\(\\s*)?(?:[\"']([^\"']+)[\"']|([^\\s\\);]+))"),
-        QRegularExpression::CaseInsensitiveOption);
-    QRegularExpressionMatchIterator matches = pattern.globalMatch(css);
-    while (matches.hasNext()) {
-        const QRegularExpressionMatch match = matches.next();
-        const QString reference = match.captured(1).isEmpty()
-            ? match.captured(2) : match.captured(1);
-        if (!reference.isEmpty()) {
-            imports << reference;
-        }
-    }
-    return imports;
-}
-
-void CollectLinkedStyles(const QDomNode& node, QStringList& links, QStringList& inline_styles)
-{
-    if (node.isElement()) {
-        const QDomElement element = node.toElement();
-        const QString name = ElementLocalName(element);
-        if (name == QLatin1String("link")) {
-            const QStringList rel = element.attribute(QStringLiteral("rel"))
-                .toLower().split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
-            if (rel.contains(QStringLiteral("stylesheet")) &&
-                element.hasAttribute(QStringLiteral("href"))) {
-                links << element.attribute(QStringLiteral("href"));
-            }
-        } else if (name == QLatin1String("style")) {
-            inline_styles << element.text();
-        }
-    }
-    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
-        CollectLinkedStyles(child, links, inline_styles);
-    }
-}
-
-void AddCssSource(const QString& path,
-                  const QHash<QString, QString>& css_by_path,
-                  QSet<QString>& visited,
-                  QVector<CssSource>& sources)
-{
-    if (path.isEmpty() || visited.contains(path)) {
-        return;
-    }
-    visited.insert(path);
-    if (!css_by_path.contains(path)) {
-        sources << CssSource { path, QString(), false };
-        return;
-    }
-
-    const QString css = css_by_path.value(path);
-    sources << CssSource { path, css, true };
-    for (const QString& import_reference : CssImports(css)) {
-        bool local = false;
-        const QString imported = ResolveBookReference(path, import_reference, &local);
-        if (!local) {
-            sources << CssSource { import_reference, QString(), false };
-        } else {
-            AddCssSource(imported, css_by_path, visited, sources);
-        }
-    }
-}
-
-QVector<CssSource> StylesForXhtml(const QString& source,
-                                  const QString& bookpath,
-                                  const QHash<QString, QString>& css_by_path)
-{
-    QStringList links;
-    QStringList inline_styles;
-    QDomDocument document;
-    if (document.setContent(source, false)) {
-        CollectLinkedStyles(document, links, inline_styles);
-    }
-    static const QRegularExpression xml_stylesheet(
-        QStringLiteral("<\\?xml-stylesheet\\b[^?]*\\bhref\\s*=\\s*[\"']([^\"']+)[\"'][^?]*\\?>"),
-        QRegularExpression::CaseInsensitiveOption);
-    QRegularExpressionMatchIterator processing_instructions =
-        xml_stylesheet.globalMatch(source);
-    while (processing_instructions.hasNext()) {
-        links << processing_instructions.next().captured(1);
-    }
-
-    QVector<CssSource> styles;
-    QSet<QString> visited;
-    for (const QString& link : links) {
-        bool local = false;
-        const QString path = ResolveBookReference(bookpath, link, &local);
-        if (!local) {
-            styles << CssSource { link, QString(), false };
-        } else {
-            AddCssSource(path, css_by_path, visited, styles);
-        }
-    }
-    for (const QString& inline_style : inline_styles) {
-        for (const QString& import_reference : CssImports(inline_style)) {
-            bool local = false;
-            const QString path = ResolveBookReference(bookpath, import_reference, &local);
-            if (!local) {
-                styles << CssSource { import_reference, QString(), false };
-            } else {
-                AddCssSource(path, css_by_path, visited, styles);
-            }
-        }
-    }
-    return styles;
-}
 
 QHash<QString, QString> CaptureCssTexts(Book* book)
 {
@@ -338,7 +189,8 @@ QVector<DivPlan::Input> CaptureDivInputs(const QList<HTMLResource*>& resources,
             path,
             text,
             DivPlan::hashText(text),
-            StylesForXhtml(text, path, css_by_path)
+            BuiltinPlugins::DivParagraphStylesheetResolver::resolve(
+                text, path, css_by_path)
         };
     }
     return inputs;
