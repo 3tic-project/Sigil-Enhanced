@@ -70,6 +70,25 @@ Clips 工具栏前十个可用按钮现在显示快捷键角标：默认依次�
 
 详见[目录层级编辑](TocHierarchyEditing.md)。
 
+### 安全整理 DIV 伪段落
+
+“增强”菜单中的旧 BookLive 段落入口已扩展为通用 DIV 段落结构工具。它可以分析
+当前文件、Book Browser 选中的 XHTML 或全书，并在写入前显示每个资源的分类、
+状态、CSS 风险、源码差异和前后预览。
+
+- 默认只把通过内容模型和 CSS 风险门的正文叶子 `div` 改为 `p`；空行、场景分隔、
+  图片包装和单层嵌套视觉块分别由设置控制，默认保持不变。
+- 标题包装、Ruby、锚点、链接、图片和复杂布局有顺序保真检查；默认只改起止标签名，
+  不重新序列化整份 XHTML。
+- 页面关联的内联 CSS、链接样式表及递归 `@import` 会进入分析；标签选择器或无法
+  证明 `div`/`p` 默认 margin 等价时，文件只供人工检查。
+- 预览绑定 XHTML 和 CSS 内容指纹；确认时重新分析选中子集。批量提交创建恢复
+  Checkpoint 和逐资源撤销，失败时回滚。
+- 原 `AnalyzeBookLiveParagraphs` / `NormalizeBookLiveParagraphs` Automate 命令名保留；
+  无界面规范化使用明确的旧版兼容预设。
+
+详见[DIV 段落结构规范化](DivParagraphNormalization.md)。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。
@@ -89,7 +108,7 @@ Clips 工具栏前十个可用按钮现在显示快捷键角标：默认依次�
 
 - Debug 版 Sigil 能完整编过、链过，内置 Python 包也校验过。
 - CTest 覆盖了 KFX 导入、无损保存、代码视图关闭、EPUB 2→3 实体与导航、预览网格、
-  代码视图选择、Clips 快捷键角标和目录层级编辑。新增三语文案可生成 `.qm`；覆盖检查仍报告
-  每种语言 82 条已有的原生 Agent 漏译，未新增本功能漏译。
+  代码视图选择、Clips 快捷键角标、目录层级编辑和 DIV 段落结构规范化。新增三语文案可生成 `.qm`；覆盖检查仍报告
+  既有的原生 Agent/KFX 目录欠账，未新增本功能漏译。
 
 本说明对应发布标签 `v2.8.5E10`。Windows / macOS 安装包、签名和校验和按[发布清单](ReleaseChecklist.md)在打标签后生成。

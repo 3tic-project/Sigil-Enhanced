@@ -435,3 +435,53 @@ Qt 6.7.3、AppleClang 17、Ninja Debug 执行；没有 Windows/Linux 原生 GUI�
 书籍、EPUBCheck、独立阅读器、人工辅助技术或强杀进程/断电测试，因此不能把 T09–T12
 及全局事务门槛表述为全平台完全关闭。详细说明见
 [目录层级编辑](TocHierarchyEditing.md)。
+
+## DIV 段落结构规范化（2026-09-09）
+
+分支：`feature/div-paragraph-normalization`。实现按源码补丁、CSS 风险、批量计划、
+设置、嵌套块兼容、样式依赖、主窗口事务、性能、对话框与翻译拆分为独立提交；
+详细历史以该分支日志为准。
+
+### 行为与安全边界
+
+- 交互入口统一为“分析/规范化 DIV 段落结构”，支持当前、Book Browser 选中和
+  全部 XHTML。通用 `conservative-v1` 只默认转换满足 `p` 内容模型的正文叶子；
+  空行、场景分隔、图片包装和单层嵌套视觉块均默认关闭并持久化。
+- 默认输出使用源范围只替换候选起止标签名，不做 DOM 全文序列化。可选嵌套块
+  同样只把外层 `div` 改为 `p`、内层直接 `div` 改为 `span`。全文格式化是独立、
+  默认关闭的设置。
+- `div > a + h1` 形式的标题包装被识别为受保护岛，不再使相邻正文全部失败；
+  `a > div`、列表、表格、SVG、MathML、脚本、固定版式和未知混合结构保守拒绝。
+  旧页面幂等标记不隐藏后来新增的候选。
+- 保真验证改为有序字符、Ruby 子树、标题子树、`id`/`name`、`href`/`src` 和旧
+  展示属性映射；修复了文档根未参与语义文本遍历及集合比较会丢失重复/顺序的问题。
+- CSS 分析覆盖页内 style、链接样式、递归 `@import`、`xml-stylesheet`、循环、
+  查询/片段及不可用样式表。标签/关系/of-type 选择器或不成对的 `div`/`p` 规则
+  转人工检查；保守自动转换还要求作者 CSS 明确提供 `div,p` margin 等价证据。
+- 批量计划记录资源 ID、内容修订指纹、XHTML/CSS 前后哈希、规则/预设、范围和
+  状态。预览后重新分析用户勾选子集，并在写入前再次核对 XHTML 与 CSS；过期计划
+  不会套用旧偏移。
+- 写回复用 `SearchBatchCoordinator`：全部结果先生成验证，再创建恢复 Checkpoint，
+  每资源产生一个撤销步骤，失败执行进程内回滚。分析、预览取消和空计划不标记 Book。
+- 旧 QAction 对象、快捷键 ID 和 Automate 命令名保持不变。无界面的
+  `NormalizeBookLiveParagraphs` 使用 `booklive-compat-v1`，保留旧类别、样式补偿
+  与格式化行为，同时改用原子批量提交。
+
+### 测试证据与未关闭项
+
+完整 Sigil 构建与 42 项固定 Python 依赖检查通过。定向 CTest 覆盖：严格正文分类、
+标题/Ruby/引用/空白保真、复杂内容拒绝、CSS selector 与默认 margin 风险、递归样式
+解析、幂等和新增候选、取消、计划身份、XHTML/CSS stale revision、主窗口事务契约、
+SearchBatch 撤销/回滚及真实 offscreen Qt 对话框状态。
+
+20.20 MiB、200 文件、66,000 个候选的 Debug 合成基线从重复分析时约 21.82 秒降至
+复用分析后的约 16.25 秒，测试门槛为 30 秒。预览对话框以 1180×760 离屏截图检查；
+最终表格独立显示分类与状态，源码双栏、三个页签、可勾选范围和 Apply 禁用状态均通过。
+
+四份 `en/zh_CN/zh_TW/ja` 目录通过 XML 和 `lrelease`；三种非英文覆盖检查没有新增
+DIV 文案失败，仍只报告继承的 Agent/KFX 目录欠账。当前证据不包括未公开的原
+Cmoa/BookLive 附件、Windows/Linux 原生 GUI、人工辅助技术、完整 EPUBCheck、独立
+阅读器或固定字体/视口的视觉对比。静态 CSS 门不能替代计算样式和跨阅读器像素验收；
+进程内回滚与 Checkpoint 也不是强杀进程/断电级 WAL。因此 D01、D06 及全局跨平台/
+真实书籍门槛仍不能标为完全关闭。用户与工程说明见
+[DIV 段落结构规范化](DivParagraphNormalization.md)。
