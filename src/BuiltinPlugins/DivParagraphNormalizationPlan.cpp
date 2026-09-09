@@ -56,6 +56,7 @@ DivParagraphNormalizationPlan::build(
         Entry entry;
         entry.resourceId = input.resourceId;
         entry.baseRevision = input.baseRevision;
+        entry.source = input.text;
         entry.beforeHash = hashText(input.text);
         entry.cssHash = hashStylesheets(input.stylesheets);
         entry.analysis = BookLiveParagraphNormalizer::analyzeXhtmlText(

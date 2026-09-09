@@ -340,6 +340,10 @@ set( DIALOG_FILES
     Dialogs/ChineseConversionDialog.h
     Dialogs/ChineseConversionPreviewDialog.cpp
     Dialogs/ChineseConversionPreviewDialog.h
+    Dialogs/DivParagraphNormalizationDialog.cpp
+    Dialogs/DivParagraphNormalizationDialog.h
+    Dialogs/DivParagraphNormalizationPreviewDialog.cpp
+    Dialogs/DivParagraphNormalizationPreviewDialog.h
     Dialogs/PreferenceWidgets/AppearanceWidget.cpp
     Dialogs/PreferenceWidgets/AppearanceWidget.h
     Dialogs/PreferenceWidgets/GeneralSettingsWidget.cpp

@@ -44,6 +44,7 @@ public:
     struct Entry {
         QString resourceId;
         QString baseRevision;
+        QString source;
         QString beforeHash;
         QString cssHash;
         QString afterHash;
