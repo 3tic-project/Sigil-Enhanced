@@ -62,9 +62,11 @@ QString CssRiskDetails(const Plan::Entry& entry)
 
 DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
     const BuiltinPlugins::DivParagraphNormalizationPlan::Result& plan,
+    bool analysisOnly,
     QWidget* parent)
     : QDialog(parent),
-      m_Plan(plan)
+      m_Plan(plan),
+      m_AnalysisOnly(analysisOnly)
 {
     setWindowTitle(tr("DIV Paragraph Normalization Preview"));
     resize(1180, 760);
@@ -95,7 +97,7 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
         auto* enabled = new QTableWidgetItem;
         enabled->setData(Qt::UserRole, entry.resourceId);
         enabled->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-        if (entry.status == Plan::Status::Apply) {
+        if (entry.status == Plan::Status::Apply && !m_AnalysisOnly) {
             enabled->setFlags(enabled->flags() | Qt::ItemIsUserCheckable);
             enabled->setCheckState(Qt::Checked);
         }
@@ -147,10 +149,13 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
     details->addTab(m_AfterPreview, tr("After Preview"));
     root->addWidget(details, 3);
 
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
-    m_Apply = buttons->addButton(tr("Apply Selected Files"), QDialogButtonBox::AcceptRole);
-    m_Apply->setDefault(true);
-    connect(m_Apply, &QPushButton::clicked, this, &QDialog::accept);
+    auto* buttons = new QDialogButtonBox(
+        m_AnalysisOnly ? QDialogButtonBox::Close : QDialogButtonBox::Cancel, this);
+    if (!m_AnalysisOnly) {
+        m_Apply = buttons->addButton(tr("Apply Selected Files"), QDialogButtonBox::AcceptRole);
+        m_Apply->setDefault(true);
+        connect(m_Apply, &QPushButton::clicked, this, &QDialog::accept);
+    }
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(m_Table, &QTableWidget::itemChanged,
             this, &DivParagraphNormalizationPreviewDialog::UpdateSelectionState);
@@ -192,7 +197,9 @@ void DivParagraphNormalizationPreviewDialog::UpdateSelectionState(QTableWidgetIt
             .arg(m_Plan.protectedCount)
             .arg(m_Plan.reviewFiles)
             .arg(m_Plan.errorFiles));
-    m_Apply->setEnabled(selected > 0 && m_Plan.ok);
+    if (m_Apply) {
+        m_Apply->setEnabled(selected > 0 && m_Plan.ok);
+    }
 }
 
 void DivParagraphNormalizationPreviewDialog::ShowEntry(

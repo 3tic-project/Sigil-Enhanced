@@ -520,7 +520,7 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "ConvertHorizontalToVertical") success = ConvertHorizontalToVertical();
             else if (cmd == "ConvertVerticalToHorizontal") success = ConvertVerticalToHorizontal();
             else if (cmd == "EnhanceSourceFormatting")    success = EnhanceSourceFormatting();
-            else if (cmd == "NormalizeBookLiveParagraphs") success = NormalizeAllBookLiveParagraphs();
+            else if (cmd == "NormalizeBookLiveParagraphs") success = RunBookLiveCompatibilityAutomation();
             else if (cmd == "NormalizeBrParagraphs")       success = NormalizeAllBrParagraphs();
             else if (cmd == "NormalizeEpubStructure")     success = NormalizeEpubStructure();
             else if (cmd == "NormalizeKfxParagraphs")      success = NormalizeAllKfxParagraphs();

@@ -2053,26 +2053,26 @@
   </action>
   <action name="actionAnalyzeBookLiveParagraphs">
     <property name="text">
-      <string>Analyze BookLive Div Paragraphs (Whole Book)...</string>
+      <string>Analyze DIV Paragraph Structure...</string>
     </property>
     <property name="toolTip">
-      <string>Report BookLive/EBPAJ XHTML files across the whole book that use nested div elements as pseudo-paragraphs</string>
+      <string>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</string>
     </property>
   </action>
   <action name="actionNormalizeCurrentBookLiveParagraphs">
     <property name="text">
-      <string>Normalize BookLive Div Paragraphs (Current File)...</string>
+      <string>Normalize DIV Paragraph Structure (Current File)...</string>
     </property>
     <property name="toolTip">
-      <string>Convert proven pseudo-paragraph div leaves in the current XHTML file into style-preserving p elements</string>
+      <string>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</string>
     </property>
   </action>
   <action name="actionNormalizeBookLiveParagraphs">
     <property name="text">
-      <string>Normalize BookLive Div Paragraphs (Whole Book)...</string>
+      <string>Normalize DIV Paragraph Structure...</string>
     </property>
     <property name="toolTip">
-      <string>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves across the whole book into style-preserving p elements</string>
+      <string>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</string>
     </property>
   </action>
   <action name="actionAnalyzeVerticalLayout">

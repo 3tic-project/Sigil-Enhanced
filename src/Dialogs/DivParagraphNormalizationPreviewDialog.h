@@ -27,6 +27,7 @@ class DivParagraphNormalizationPreviewDialog final : public QDialog
 public:
     explicit DivParagraphNormalizationPreviewDialog(
         const BuiltinPlugins::DivParagraphNormalizationPlan::Result& plan,
+        bool analysisOnly = false,
         QWidget* parent = nullptr);
 
     QSet<QString> SelectedResourceIds() const;
@@ -44,6 +45,7 @@ private:
     QTextBrowser* m_BeforePreview = nullptr;
     QTextBrowser* m_AfterPreview = nullptr;
     QPushButton* m_Apply = nullptr;
+    bool m_AnalysisOnly = false;
 };
 
 #endif
