@@ -118,7 +118,8 @@ QString xhtml(const QString& body, const QString& body_class = QString())
     return QStringLiteral(
         "<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\" class=\"vrtl\">"
         "<head><meta charset=\"UTF-8\"/><title>x</title>"
-        "<link rel=\"stylesheet\" href=\"../style/generated_styles.css\"/></head>"
+        "<link rel=\"stylesheet\" href=\"../style/generated_styles.css\"/>"
+        "<style>div, p { margin: 0; padding: 0; }</style></head>"
         "<body class=\"%1\">%2</body></html>")
         .arg(body_class, body);
 }
@@ -265,7 +266,7 @@ int runTests()
 
     const DivParagraphCssAnalyzer::Result safe_css = DivParagraphCssAnalyzer::analyze({
         { QStringLiteral("safe.css"),
-          QStringLiteral("div.para, p.para { margin: 0; }\n"
+          QStringLiteral("div, p { margin: 0; }\n"
                          "@media (min-width: 10em) { body > div, body > p { text-indent: 1em; } }\n"
                          "[data-kind='div'] { color: black; }") }
     });
@@ -275,7 +276,8 @@ int runTests()
 
     const DivParagraphCssAnalyzer::Result risky_css = DivParagraphCssAnalyzer::analyze({
         { QStringLiteral("risky.css"),
-          QStringLiteral("div.para { line-height: 1.8; }\n"
+          QStringLiteral("div, p { margin: 0; }\n"
+                         "div.para { line-height: 1.8; }\n"
                          "p:nth-of-type(2) { margin-top: 0; }\n"
                          "@supports (display: block) { :is(div, p) + span { color: red; } }") }
     });
@@ -303,7 +305,9 @@ int runTests()
     }
 
     const DivParagraphCssAnalyzer::Result missing_css = DivParagraphCssAnalyzer::analyze({
-        { QStringLiteral("Styles/missing.css"), QString(), false }
+        { QStringLiteral("Styles/missing.css"), QString(), false },
+        { QStringLiteral("Styles/reset.css"),
+          QStringLiteral("div, p { margin: 0; }"), true }
     });
     if (!missing_css.reviewRequired || missing_css.dependencies.count() != 1 ||
         !missing_css.dependencies.first().selector.isEmpty()) {
@@ -336,11 +340,11 @@ int runTests()
 
     const QVector<DivParagraphCssAnalyzer::Source> safe_stylesheets = {
         { QStringLiteral("Styles/safe.css"),
-          QStringLiteral("div.para, p.para { margin: 0; }") }
+          QStringLiteral("div, p { margin: 0; }") }
     };
     const QVector<DivParagraphCssAnalyzer::Source> risky_stylesheets = {
         { QStringLiteral("Styles/risky.css"),
-          QStringLiteral("div.para { margin: 0; }") }
+          QStringLiteral("div, p { margin: 0; } div.para { margin: 0; }") }
     };
     const QVector<DivParagraphNormalizationPlan::Input> plan_inputs = {
         { QStringLiteral("Text/chapter.xhtml"), conservative_source,
