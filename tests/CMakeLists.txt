@@ -788,6 +788,22 @@ add_test(NAME div_paragraph_normalization_contract
 )
 set_tests_properties(div_paragraph_normalization_contract PROPERTIES TIMEOUT 30)
 
+add_executable(div_paragraph_performance_test
+    div_paragraph_performance_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.h
+)
+target_include_directories(div_paragraph_performance_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+target_link_libraries(div_paragraph_performance_test PRIVATE Qt6::Core Qt6::Xml)
+add_test(NAME div_paragraph_performance COMMAND div_paragraph_performance_test)
+set_tests_properties(div_paragraph_performance PROPERTIES TIMEOUT 60)
+
 set(V2H_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.h
