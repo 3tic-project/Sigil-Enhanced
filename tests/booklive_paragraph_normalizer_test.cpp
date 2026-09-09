@@ -228,6 +228,21 @@ int runTests()
         return fail(QStringLiteral("conservative conversion did not produce an empty second plan"));
     }
 
+    BookLiveParagraphNormalizer::Options wrapped_options = conservative;
+    wrapped_options.convertSingleBlockWrappers = true;
+    QString wrapped_expected = conservative_expected;
+    wrapped_expected.replace(
+        QStringLiteral("<div class=\"styled\"><div class=\"inner\">题记</div></div>"),
+        QStringLiteral("<p class=\"styled\"><span class=\"inner\">题记</span></p>"));
+    const BookLiveParagraphNormalizer::NormalizeResult wrapped_result =
+        BookLiveParagraphNormalizer::normalizeXhtmlText(
+            conservative_source, wrapped_options);
+    if (!wrapped_result.ok || wrapped_result.text != wrapped_expected ||
+        wrapped_result.before.convertibleLeaves != 13) {
+        return fail(QStringLiteral("single-block source-range conversion failed: %1")
+                        .arg(wrapped_result.messages.join(QStringLiteral("; "))));
+    }
+
     const QString marked_with_new_candidates = xhtml(
         conservativeBody(QStringLiteral("div")), QStringLiteral("se-bl-normalized"));
     const BookLiveParagraphNormalizer::Analysis marked_analysis =
