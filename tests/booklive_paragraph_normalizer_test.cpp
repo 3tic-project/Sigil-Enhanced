@@ -302,6 +302,38 @@ int runTests()
         return fail(QStringLiteral("CSS manual-review gate failed"));
     }
 
+    const DivParagraphCssAnalyzer::Result missing_css = DivParagraphCssAnalyzer::analyze({
+        { QStringLiteral("Styles/missing.css"), QString(), false }
+    });
+    if (!missing_css.reviewRequired || missing_css.dependencies.count() != 1 ||
+        !missing_css.dependencies.first().selector.isEmpty()) {
+        return fail(QStringLiteral("an unresolved linked stylesheet did not require review"));
+    }
+
+    QString scripted_source = conservative_source;
+    scripted_source.replace(
+        QStringLiteral("</head>"),
+        QStringLiteral("<script type=\"text/javascript\">void(0);</script></head>"));
+    const BookLiveParagraphNormalizer::Analysis scripted_analysis =
+        BookLiveParagraphNormalizer::analyzeXhtmlText(scripted_source, conservative);
+    if (!scripted_analysis.candidate || scripted_analysis.safeToNormalize ||
+        scripted_analysis.scriptElements != 1 ||
+        scripted_analysis.pageKind != BookLiveParagraphNormalizer::PageKind::BlockLayout) {
+        return fail(QStringLiteral("document-level script risk was not gated"));
+    }
+
+    QString fixed_source = conservative_source;
+    fixed_source.replace(
+        QStringLiteral("<meta charset=\"UTF-8\"/>"),
+        QStringLiteral("<meta charset=\"UTF-8\"/>"
+                       "<meta name=\"viewport\" content=\"width=1200\"/>"));
+    const BookLiveParagraphNormalizer::Analysis fixed_analysis =
+        BookLiveParagraphNormalizer::analyzeXhtmlText(fixed_source, conservative);
+    if (!fixed_analysis.candidate || fixed_analysis.safeToNormalize ||
+        fixed_analysis.fixedLayoutIndicators != 1) {
+        return fail(QStringLiteral("fixed-layout indicator was not gated"));
+    }
+
     const QVector<DivParagraphCssAnalyzer::Source> safe_stylesheets = {
         { QStringLiteral("Styles/safe.css"),
           QStringLiteral("div.para, p.para { margin: 0; }") }
@@ -329,6 +361,18 @@ int runTests()
         !DivParagraphNormalizationPlan::revisionConflicts(batch_plan, plan_inputs).isEmpty() ||
         DivParagraphNormalizationPlan::build(plan_inputs, conservative).planId != batch_plan.planId) {
         return fail(QStringLiteral("deterministic batch plan construction failed"));
+    }
+
+    const DivParagraphNormalizationPlan::Result cancelled_plan =
+        DivParagraphNormalizationPlan::build(
+            plan_inputs, conservative,
+            [](int completed, int total) {
+                Q_UNUSED(total)
+                return completed < 1;
+            });
+    if (!cancelled_plan.cancelled || cancelled_plan.ok ||
+        cancelled_plan.entries.count() != 1) {
+        return fail(QStringLiteral("batch plan cancellation was not deterministic"));
     }
 
     QVector<DivParagraphNormalizationPlan::Input> changed_inputs = plan_inputs;
@@ -364,6 +408,17 @@ int runTests()
     if (BookLiveParagraphNormalizer::analyzeXhtmlText(toc).pageKind !=
         BookLiveParagraphNormalizer::PageKind::TocLike) {
         return fail(QStringLiteral("toc classification failed"));
+    }
+
+    const QString chapter_mentions_toc = xhtml(
+        QStringLiteral("<div class=\"main\"><div class=\"content\">") +
+        paragraphs(12) +
+        QStringLiteral("<div>これは目次について説明する十分に長い本文であり、"
+                       "目次ページそのものではありません。</div></div></div>"));
+    if (BookLiveParagraphNormalizer::analyzeXhtmlText(
+            chapter_mentions_toc, conservative).pageKind ==
+        BookLiveParagraphNormalizer::PageKind::TocLike) {
+        return fail(QStringLiteral("a body chapter was rejected solely for mentioning a TOC"));
     }
 
     const QString image = xhtml(

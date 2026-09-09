@@ -781,6 +781,13 @@ target_link_libraries(booklive_paragraph_normalizer_test PRIVATE
 add_test(NAME booklive_paragraph_normalizer COMMAND booklive_paragraph_normalizer_test)
 set_tests_properties(booklive_paragraph_normalizer PROPERTIES TIMEOUT 30)
 
+add_test(NAME div_paragraph_normalization_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/div_paragraph_normalization_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(div_paragraph_normalization_contract PROPERTIES TIMEOUT 30)
+
 set(V2H_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.h
