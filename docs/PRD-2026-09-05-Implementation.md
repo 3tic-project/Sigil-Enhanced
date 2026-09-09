@@ -9,7 +9,7 @@
 |---|---|---|
 | OPF | `ImportEPUB::ReadOPF/LoadInfrastructureFiles`、`OPFResource::SaveToDisk/UpdateText` 均会整理或重建；`Utility` 还会归一化换行/Unicode | 原文快照、局部补丁、诊断与修复分离、缺 nav 查看/显式修复、导出与恢复回归（O01–O12） |
 | 文本选择 | `CodeViewEditor::mouseDoubleClickEvent` 仍采用 Qt 词选区和修饰键标签选择 | 正文单元策略、设置、Unicode/分屏/真实鼠标回归（S01–S12）；句子模式按 PRD 可后置 |
-| TOC | `EditTOC::MoveLeft/MoveRight` 直接修改模型；没有对话框级历史 | 保持先序的稳定 ID 变换、多选规划、撤销、局部写回/事务、性能（T01–T12） |
+| TOC | 基线中的 `EditTOC::MoveLeft/MoveRight` 直接修改模型且没有对话框级历史；现状见下方“TOC 层级编辑” | 跨平台/真实书籍、EPUBCheck、阅读器与进程终止级事务验收 |
 | Clips | `MainWindow::UpdateClipButton` 更新文字和 tooltip，没有快捷键角标 | QAction 实际绑定提示、设置、辅助名称、主题/DPI/溢出验证（C01–C10） |
 | div | `BookLiveParagraphNormalizer` 及其测试已存在 | 标题包装保护、通用保守预设、CSS 依赖、源码范围补丁、增量幂等、整书事务（D01–D14） |
 | Agent | 原生 Agent、Memory/Sigil workspace、Live v2、工具注册、取消/事务及 UI 测试已存在 | 对照真实宿主验证范围/修订/审批绑定/恢复；复用上述原生服务完成三个任务演示（A01–A12） |
@@ -387,5 +387,51 @@ ClipEditorModel、标准菜单和 CodeViewEditor 插入链。
 
 详细用户与工程说明见 [Clips 快捷键角标](ClipShortcutBadges.md)。
 
-下一优先项：分别推进 TOC 层级编辑、div 规范化与 Agent 工作流，并继续补齐 OPF 的
+下一优先项：分别推进 div 规范化与 Agent 工作流，并继续补齐 TOC/OPF 的
 崩溃恢复、全书 Undo/Redo 和跨平台/真实书籍验收；每项另建功能分支并保持细粒度提交。
+
+## TOC 层级编辑（2026-09-09）
+
+分支：`feature/toc-hierarchy-editing`。主要提交：`25f1a42f1`（稳定 ID 纯树变换）、
+`aadbe1892`（EditTOC、局部撤销、设置与双导航 UI）、`cf6a360e8`（真实资源集成测试；
+后续写回保持、性能与文档提交见该分支历史）。
+
+### 行为、历史与写回范围
+
+- `TocTreeTransform` 以操作前快照统一规划提升/降级；同父多选分别接管到下一选中项前
+  的兄弟，父子同选规整为最高祖先，跨父项计划不重叠时原子提交。混入顶层项、无前驱
+  区段、未知 ID、无效树或重叠计划时整次失败。默认提升与降级均验证先序 ID 不变；
+  设置关闭后的旧提升模式明确允许先序变化。
+- EditTOC 初始构建、增项和占位项都分配稳定内部 ID。应用计划后按 ID 恢复选择、展开
+  和滚动位置；新范围较小时滚动值钳制到有效上限。超过 1,000 项初始只展开顶层。
+- 独立 QUndoStack 覆盖升降级、同级上下移动、增删、标题和目标编辑；快照命令精确恢复
+  父子关系、标签与目标。内联 QLineEdit 获得焦点时优先消费平台 Undo/Redo，不混用
+  主窗口正文历史。
+- “提升时接管后续同级条目”默认开启并持久化。左右箭头、tooltip、accessible name、
+  边界禁用和底部结果/失败状态已区分提升、降级与同级排序。简中、繁中、日文已补译。
+- 取消只丢弃模型；无变化确定不调用资源写回，`MainWindow` 依据实际写入结果决定是否
+  标记 Book modified。EPUB 3 默认只改 Nav；检测到 NCX 时提示其默认保持不变，并提供
+  每次默认关闭的“同时同步兼容 NCX”。EPUB 2 直接改 NCX。
+- 纯层级操作重挂原 Nav `<li>`/NCX `<navPoint>`，保留节点 id、属性、内联标记、标签、
+  target 与 source identity。Nav 只替换 toc 根列表，保留 nav 包装、标题、landmarks、
+  page-list、其他 nav 和外围注释；NCX 只替换 navMap，保留 head/docTitle/docAuthor/
+  pageList。实际增删或标签/目标变化不能映射时才回退到目录区生成器。
+- EPUB 3 缺 Nav 的入口继续复用已实现的 NavigationRepair 预览/确认，不在 EditTOC 内
+  静默创建资源。
+
+### 测试证据与边界
+
+完整 Sigil 构建与 42 项固定 Python 依赖检查通过。`toc_tree_transform` 覆盖 T01–T07、
+T11 的纯规则与不变量；1,000 项 20 次采样 P95 约 6 ms，10,000 项约 56 ms。
+`edit_toc_hierarchy_integration` 链接真实 ImportEPUB、EditTOC、NavProcessor、NCXResource
+和 Qt 控件，覆盖稳定多选/展开/滚动、完整 Undo/Redo、输入框快捷键优先、旧提升模式、
+边界反馈、取消、无变化确定、实际写入结果、EPUB 2、EPUB 3、双导航显式同步，以及
+其他 nav/NCX 外围内容与原节点 identity。真实 10,000 项 EditTOC 提升在同一 Debug
+环境测得 150 ms，构造约 1.84 s，且没有逐项 expandAll。
+
+四份翻译目录通过 XML 与 `lrelease`；简中、繁中、日文覆盖检查没有新增 EditTOC
+失败，仍继承每种语言 82 条原生 Agent 历史欠账。原生集成目前只在 macOS 15.7.7、
+Qt 6.7.3、AppleClang 17、Ninja Debug 执行；没有 Windows/Linux 原生 GUI、真实大型
+书籍、EPUBCheck、独立阅读器、人工辅助技术或强杀进程/断电测试，因此不能把 T09–T12
+及全局事务门槛表述为全平台完全关闭。详细说明见
+[目录层级编辑](TocHierarchyEditing.md)。
