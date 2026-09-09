@@ -1017,6 +1017,9 @@ void applyCssRisk(BookLiveParagraphNormalizer::Analysis& analysis,
                   const QDomDocument& document,
                   const QVector<DivParagraphCssAnalyzer::Source>& external_stylesheets)
 {
+    if (!analysis.candidate) {
+        return;
+    }
     QVector<DivParagraphCssAnalyzer::Source> stylesheets = external_stylesheets;
     int style_index = 0;
     collectInlineStyles(document, stylesheets, style_index);
@@ -1024,7 +1027,7 @@ void applyCssRisk(BookLiveParagraphNormalizer::Analysis& analysis,
         DivParagraphCssAnalyzer::analyze(stylesheets);
     analysis.cssReviewRequired = css_result.reviewRequired;
     analysis.cssDependencies = css_result.dependencies;
-    if (!analysis.candidate || !analysis.cssReviewRequired) {
+    if (!analysis.cssReviewRequired) {
         return;
     }
 

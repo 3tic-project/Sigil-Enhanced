@@ -38,6 +38,7 @@ public:
 
     struct Result {
         bool reviewRequired = false;
+        bool paragraphMarginParity = false;
         QVector<Dependency> dependencies;
     };
 

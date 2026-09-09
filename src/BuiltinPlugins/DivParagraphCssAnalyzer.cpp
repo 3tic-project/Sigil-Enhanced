@@ -180,6 +180,7 @@ SelectorTypeInfo typeInfo(const QString& selector)
 
 void analyzeRule(const DivParagraphCssAnalyzer::Source& source,
                  const QString& prelude,
+                 const QString& declarations,
                  DivParagraphCssAnalyzer::Result& result)
 {
     const QStringList selectors = splitSelectors(prelude);
@@ -200,6 +201,24 @@ void analyzeRule(const DivParagraphCssAnalyzer::Source& source,
                 variants[info.canonical].insert(QStringLiteral("p"));
             }
         }
+    }
+
+    static const QRegularExpression margin_shorthand(
+        QStringLiteral("(?:^|;)\\s*margin(?:-block)?\\s*:"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression margin_start(
+        QStringLiteral("(?:^|;)\\s*margin-(?:block-start|top)\\s*:"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression margin_end(
+        QStringLiteral("(?:^|;)\\s*margin-(?:block-end|bottom)\\s*:"),
+        QRegularExpression::CaseInsensitiveOption);
+    const bool resets_margin = margin_shorthand.match(declarations).hasMatch() ||
+        (margin_start.match(declarations).hasMatch() &&
+         margin_end.match(declarations).hasMatch());
+    if (resets_margin &&
+        variants.value(QStringLiteral("$block")).contains(QStringLiteral("div")) &&
+        variants.value(QStringLiteral("$block")).contains(QStringLiteral("p"))) {
+        result.paragraphMarginParity = true;
     }
 
     for (const QString& selector : selectors) {
@@ -283,7 +302,8 @@ void analyzeBlock(const DivParagraphCssAnalyzer::Source& source,
             if (isContainerAtRule(prelude)) {
                 analyzeBlock(source, i + 1, closing, result);
             } else if (!prelude.startsWith(QLatin1Char('@'))) {
-                analyzeRule(source, prelude, result);
+                analyzeRule(source, prelude,
+                            source.text.mid(i + 1, closing - i - 1), result);
             }
             i = closing;
             statement_start = closing + 1;
@@ -306,6 +326,13 @@ DivParagraphCssAnalyzer::analyze(const QVector<Source>& sources)
             continue;
         }
         analyzeBlock(source, 0, source.text.length(), result);
+    }
+    if (!result.paragraphMarginParity) {
+        result.dependencies << Dependency {
+            QStringLiteral("user-agent stylesheet"),
+            QStringLiteral("p"),
+            QStringLiteral("default paragraph margins are not neutralized by a paired div/p rule")
+        };
     }
     result.reviewRequired = !result.dependencies.isEmpty();
     return result;
