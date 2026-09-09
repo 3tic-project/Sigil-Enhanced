@@ -1178,6 +1178,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(clip_shortcut_badge_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME edit_toc_hierarchy_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_edit_toc_hierarchy_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(edit_toc_hierarchy_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
 endif()
 
 add_test(NAME vendored_source_manifest

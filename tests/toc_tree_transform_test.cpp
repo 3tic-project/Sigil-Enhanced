@@ -210,6 +210,17 @@ void TestInvalidInputs()
     result = TocTreeTransform::Promote(invalid, {2});
     Require(result.error == TocTransformError::InvalidTree,
             "A transform ran against an invalid tree");
+
+    Require(TocTreeTransform::Equal(tree, tree),
+            "Equal trees were reported as changed");
+    TocEditTree changed = tree;
+    changed.nodes[2].label = QStringLiteral("changed");
+    Require(!TocTreeTransform::Equal(tree, changed),
+            "A label change was omitted from exact tree comparison");
+    changed = tree;
+    changed.nodes[1].children.clear();
+    Require(!TocTreeTransform::Equal(tree, changed),
+            "A hierarchy change was omitted from exact tree comparison");
 }
 
 TocEditTree MakeWideTree(int count)
