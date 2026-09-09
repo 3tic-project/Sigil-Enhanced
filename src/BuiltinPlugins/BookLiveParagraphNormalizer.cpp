@@ -74,6 +74,7 @@ struct ParentMatch {
 };
 
 struct ElementTagRange {
+    int parentIndex = -1;
     int elementStart = -1;
     int elementEnd = -1;
     int openNameStart = -1;
@@ -728,6 +729,7 @@ QHash<int, ElementTagRange> scanElementRanges(const QString& source)
             OpenElement open;
             open.index = element_index++;
             open.qualifiedName = qualified_name;
+            open.range.parentIndex = stack.isEmpty() ? -1 : stack.constLast().index;
             open.range.elementStart = position;
             open.range.openNameStart = local_range.first;
             open.range.openNameLength = local_range.second;
@@ -810,10 +812,6 @@ bool sourcePreservingTransform(const QString& source,
     QVector<TextPatch> patches;
 
     for (auto it = candidate_indexes.constBegin(); it != candidate_indexes.constEnd(); ++it) {
-        if (it.value() == LeafKind::WrappedBlock) {
-            error = QStringLiteral("single block wrappers require the BookLive compatibility preset");
-            return false;
-        }
         if (!ranges.contains(it.key())) {
             error = QStringLiteral("candidate source range is unavailable");
             return false;
@@ -831,6 +829,30 @@ bool sourcePreservingTransform(const QString& source,
                                QStringLiteral("p") };
         patches << TextPatch { range.closeNameStart, range.closeNameLength,
                                QStringLiteral("p") };
+        if (it.value() == LeafKind::WrappedBlock) {
+            bool patched_child = false;
+            for (auto child = ranges.constBegin(); child != ranges.constEnd(); ++child) {
+                const ElementTagRange child_range = child.value();
+                if (child_range.parentIndex != it.key() ||
+                    source.mid(child_range.openNameStart, child_range.openNameLength)
+                            .compare(QStringLiteral("div"), Qt::CaseInsensitive) != 0 ||
+                    child_range.closeNameStart < 0) {
+                    continue;
+                }
+                patches << TextPatch { child_range.openNameStart,
+                                       child_range.openNameLength,
+                                       QStringLiteral("span") };
+                patches << TextPatch { child_range.closeNameStart,
+                                       child_range.closeNameLength,
+                                       QStringLiteral("span") };
+                patched_child = true;
+                break;
+            }
+            if (!patched_child) {
+                error = QStringLiteral("single block wrapper child range is unavailable");
+                return false;
+            }
+        }
         converted++;
     }
 
