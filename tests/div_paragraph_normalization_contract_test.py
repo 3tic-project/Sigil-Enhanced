@@ -26,6 +26,9 @@ preview_dialog = (
     repo / "src/Dialogs/DivParagraphNormalizationPreviewDialog.cpp"
 ).read_text(encoding="utf-8")
 settings = (repo / "src/Misc/SettingsStoreExtend.cpp").read_text(encoding="utf-8")
+stylesheet_resolver = (
+    repo / "src/BuiltinPlugins/DivParagraphStylesheetResolver.cpp"
+).read_text(encoding="utf-8")
 
 for scope_text in (
     "Current XHTML file",
@@ -94,9 +97,10 @@ require(
     "analysis must expose cancellable progress",
 )
 require(
-    "CssImports" in main_ext
-    and "AddCssSource" in main_ext
-    and "xml-stylesheet" in main_ext,
+    "DivParagraphStylesheetResolver::resolve(" in main_ext
+    and "cssImports" in stylesheet_resolver
+    and "addCssSource" in stylesheet_resolver
+    and "xml-stylesheet" in stylesheet_resolver,
     "linked, imported, inline-imported, and XML processing-instruction CSS must be resolved",
 )
 

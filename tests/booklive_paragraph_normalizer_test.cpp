@@ -7,10 +7,12 @@
 #include "BuiltinPlugins/BookLiveParagraphNormalizer.h"
 #include "BuiltinPlugins/DivParagraphCssAnalyzer.h"
 #include "BuiltinPlugins/DivParagraphNormalizationPlan.h"
+#include "BuiltinPlugins/DivParagraphStylesheetResolver.h"
 
 using BuiltinPlugins::BookLiveParagraphNormalizer;
 using BuiltinPlugins::DivParagraphCssAnalyzer;
 using BuiltinPlugins::DivParagraphNormalizationPlan;
+using BuiltinPlugins::DivParagraphStylesheetResolver;
 
 namespace
 {
@@ -312,6 +314,40 @@ int runTests()
     if (!missing_css.reviewRequired || missing_css.dependencies.count() != 1 ||
         !missing_css.dependencies.first().selector.isEmpty()) {
         return fail(QStringLiteral("an unresolved linked stylesheet did not require review"));
+    }
+
+    const QString resolver_xhtml = QStringLiteral(
+        "<?xml-stylesheet type=\"text/css\" href=\"../Styles/pi.css\"?>"
+        "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head>"
+        "<link rel=\"alternate stylesheet\" href=\"../Styles/main.css?x=1#top\"/>"
+        "<link rel=\"stylesheet\" href=\"../Styles/missing.css\"/>"
+        "<link rel=\"stylesheet\" href=\"https://example.invalid/remote.css\"/>"
+        "<style>@import url('../Styles/inline.css');</style>"
+        "</head><body/></html>");
+    const QHash<QString, QString> resolver_css = {
+        { QStringLiteral("OEBPS/Styles/main.css"),
+          QStringLiteral("@import 'reset.css'; /* @import 'ignored.css'; */") },
+        { QStringLiteral("OEBPS/Styles/reset.css"),
+          QStringLiteral("@import 'main.css'; div, p { margin: 0; }") },
+        { QStringLiteral("OEBPS/Styles/inline.css"), QStringLiteral("span { color: black; }") },
+        { QStringLiteral("OEBPS/Styles/pi.css"), QStringLiteral("em { font-style: italic; }") }
+    };
+    const QVector<DivParagraphCssAnalyzer::Source> resolved_styles =
+        DivParagraphStylesheetResolver::resolve(
+            resolver_xhtml, QStringLiteral("OEBPS/Text/chapter.xhtml"), resolver_css);
+    QHash<QString, bool> resolved_availability;
+    for (const DivParagraphCssAnalyzer::Source& resolved : resolved_styles) {
+        resolved_availability.insert(resolved.id, resolved.available);
+    }
+    if (resolved_styles.count() != 6 ||
+        !resolved_availability.value(QStringLiteral("OEBPS/Styles/main.css")) ||
+        !resolved_availability.value(QStringLiteral("OEBPS/Styles/reset.css")) ||
+        !resolved_availability.value(QStringLiteral("OEBPS/Styles/inline.css")) ||
+        !resolved_availability.value(QStringLiteral("OEBPS/Styles/pi.css")) ||
+        resolved_availability.value(QStringLiteral("OEBPS/Styles/missing.css"), true) ||
+        resolved_availability.value(QStringLiteral("https://example.invalid/remote.css"), true) ||
+        resolved_availability.contains(QStringLiteral("OEBPS/Styles/ignored.css"))) {
+        return fail(QStringLiteral("stylesheet link/import resolution failed"));
     }
 
     QString scripted_source = conservative_source;
