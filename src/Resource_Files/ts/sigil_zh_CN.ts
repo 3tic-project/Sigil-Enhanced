@@ -15498,6 +15498,7 @@ Spacing p elements to preserve: %6</source>
         <source>No KFX paragraph files were changed.</source>
         <translation>没有 KFX 段落文件被修改。</translation>
     </message>
+    <!-- Superseded by the generic DIV paragraph workflow.
     <message>
         <source>Analyze BookLive Div Paragraphs (Whole Book)...</source>
         <translation>分析 BookLive Div 段落（全书）...</translation>
@@ -15650,6 +15651,7 @@ Single nested visual blocks preserved: %6</source>
         <source>No BookLive paragraph files were changed.</source>
         <translation>没有 BookLive 段落文件被修改。</translation>
     </message>
+    -->
     <message><source>Advanced Regex Workbench</source><translation>高级正则工作台</translation></message>
     <message><source>Advanced Regex Workbench...</source><translation>高级正则工作台...</translation></message>
     <message><source>Regex recipe %1 processed %2 match(es), applied %3 replacement(s) to %4 resource(s).</source><translation>正则方案 %1 已处理 %2 个匹配，执行 %3 次替换并修改 %4 个资源。</translation></message>
@@ -21608,6 +21610,7 @@ Line: %1 Column %2 - %3</source>
         <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>KFX 段落规范化：自动 XHTML 格式化未发现进一步修改。</translation>
     </message>
+    <!-- Superseded by the generic DIV paragraph workflow.
     <message>
         <source>BookLive paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
         <translation>BookLive 段落规范化：自动 XHTML 格式化失败；将写入未经格式化器进一步修改的规范化 XHTML。%1</translation>
@@ -21620,6 +21623,7 @@ Line: %1 Column %2 - %3</source>
         <source>BookLive paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>BookLive 段落规范化：自动 XHTML 格式化未发现进一步修改。</translation>
     </message>
+    -->
     <message>
         <location filename="../../Misc/UpdateChecker.cpp" line="100"/>
         <source>&lt;p&gt;A newer version of Sigil-Enhanced is available, version &lt;b&gt;%1&lt;/b&gt;.&lt;br/&gt;&lt;p&gt;Would you like to go to the download page?&lt;/p&gt;</source>
@@ -27157,5 +27161,108 @@ Continue using the requested filename?</source>
         <source>%1, Clip %2, %3</source>
         <translation>%1，Clip %2，%3</translation>
     </message>
+</context>
+<context>
+    <name>DivParagraphNormalizationDialog</name>
+    <message><source>Normalize DIV Paragraph Structure</source><translation>规范化 DIV 段落结构</translation></message>
+    <message><source>Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves that satisfy the paragraph content model are converted automatically.</source><translation>先分析 XHTML，再预览绑定修订版本的计划。仅自动转换符合段落内容模型的 DIV 叶元素。</translation></message>
+    <message><source>Scope</source><translation>范围</translation></message>
+    <message><source>Current XHTML file</source><translation>当前 XHTML 文件</translation></message>
+    <message><source>Selected XHTML files (%1)</source><translation>选中的 XHTML 文件（%1）</translation></message>
+    <message><source>All XHTML files in the book</source><translation>书中所有 XHTML 文件</translation></message>
+    <message><source>Conversion categories</source><translation>转换类别</translation></message>
+    <message><source>Body-text paragraph DIVs</source><translation>正文段落 DIV</translation></message>
+    <message><source>The conservative content-model check is always enabled.</source><translation>始终启用保守的内容模型检查。</translation></message>
+    <message><source>Blank-line DIVs containing only BR</source><translation>仅含 BR 的空行 DIV</translation></message>
+    <message><source>Scene-separator DIVs</source><translation>场景分隔 DIV</translation></message>
+    <message><source>Image-only DIV wrappers</source><translation>仅含图片的 DIV 包装</translation></message>
+    <message><source>Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)</source><translation>单层嵌套视觉块（DIV 变为 P；内层 DIV 变为 SPAN）</translation></message>
+    <message><source>Format XHTML source after conversion</source><translation>转换后格式化 XHTML 源码</translation></message>
+    <message><source>Off by default. When off, only selected start/end tag names are patched.</source><translation>默认关闭。关闭时只修补选中的起止标签名。</translation></message>
+    <message><source>Tag-dependent CSS, scripts, fixed-layout indicators, lists, tables, SVG, MathML, and unknown mixed blocks remain review-only. No force-all mode is provided.</source><translation>依赖标签的 CSS、脚本、固定版式标记、列表、表格、SVG、MathML 和未知混合块仅供检查。本功能不提供强制全部转换模式。</translation></message>
+    <message><source>Analyze and Preview</source><translation>分析并预览</translation></message>
+</context>
+<context>
+    <name>DivParagraphNormalizationPreviewDialog</name>
+    <message><source>Ready to apply</source><translation>可应用</translation></message>
+    <message><source>Review required</source><translation>需检查</translation></message>
+    <message><source>Skipped</source><translation>已跳过</translation></message>
+    <message><source>Parse/validation error</source><translation>解析/验证错误</translation></message>
+    <message><source>Body flow</source><translation>正文流</translation></message>
+    <message><source>Already normalized</source><translation>已规范化</translation></message>
+    <message><source>TOC-like</source><translation>类似目录</translation></message>
+    <message><source>Notice/imprint</source><translation>声明/版权页</translation></message>
+    <message><source>Short flow</source><translation>短内容流</translation></message>
+    <message><source>CSS risk</source><translation>CSS 风险</translation></message>
+    <message><source>Complex/fixed layout</source><translation>复杂/固定版式</translation></message>
+    <message><source>Image/title page</source><translation>图片/扉页</translation></message>
+    <message><source>No candidate</source><translation>无候选</translation></message>
+    <message><source>No body</source><translation>无正文</translation></message>
+    <message><source>Parse error</source><translation>解析错误</translation></message>
+    <message><source>None detected</source><translation>未检测到</translation></message>
+    <message><source>%1 selector(s)</source><translation>%1 个选择器</translation></message>
+    <message><source>DIV Paragraph Normalization Preview</source><translation>DIV 段落规范化预览</translation></message>
+    <message><source>DIV paragraph resource analysis</source><translation>DIV 段落资源分析</translation></message>
+    <message><source>Apply</source><translation>应用</translation></message>
+    <message><source>File</source><translation>文件</translation></message>
+    <message><source>Classification</source><translation>分类</translation></message>
+    <message><source>Body candidates</source><translation>正文候选</translation></message>
+    <message><source>Blank/separator</source><translation>空行/分隔</translation></message>
+    <message><source>Protected</source><translation>受保护</translation></message>
+    <message><source>Status</source><translation>状态</translation></message>
+    <message><source>Before</source><translation>转换前</translation></message>
+    <message><source>Source before DIV paragraph normalization</source><translation>DIV 段落规范化前的源码</translation></message>
+    <message><source>After</source><translation>转换后</translation></message>
+    <message><source>Source after DIV paragraph normalization</source><translation>DIV 段落规范化后的源码</translation></message>
+    <message><source>Source Diff</source><translation>源码差异</translation></message>
+    <message><source>Before Preview</source><translation>转换前预览</translation></message>
+    <message><source>After Preview</source><translation>转换后预览</translation></message>
+    <message><source>Apply Selected Files</source><translation>应用选中文件</translation></message>
+    <message><source>Plan %1 · %2 of %3 ready files selected · %4 paragraph(s) planned · %5 protected block(s) · %6 review-only file(s) · %7 error(s)</source><translation>计划 %1 · 已选择 %3 个可应用文件中的 %2 个 · 计划转换 %4 个段落 · %5 个受保护块 · %6 个仅供检查文件 · %7 个错误</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Analyze DIV Paragraph Structure...</source><translation>分析 DIV 段落结构...</translation></message>
+    <message><source>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</source><translation>分析当前、选中或全部 XHTML 文件中的安全正文段落 DIV 叶元素和 CSS 风险</translation></message>
+    <message><source>Normalize DIV Paragraph Structure (Current File)...</source><translation>规范化 DIV 段落结构（当前文件）...</translation></message>
+    <message><source>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>预览并使用源码范围补丁转换当前 XHTML 文件中已确认的段落 DIV 叶元素</translation></message>
+    <message><source>Normalize DIV Paragraph Structure...</source><translation>规范化 DIV 段落结构...</translation></message>
+    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</source><translation>选择范围，预览绑定修订版本的计划，并原子转换可自动安全处理的 DIV 段落</translation></message>
+    <message><source>DIV Paragraph Normalization</source><translation>DIV 段落规范化</translation></message>
+    <message><source>The selected scope contains no XHTML files.</source><translation>所选范围不包含 XHTML 文件。</translation></message>
+    <message><source>Analyzing DIV paragraph structure...</source><translation>正在分析 DIV 段落结构...</translation></message>
+    <message><source>DIV paragraph analysis cancelled. No files were changed.</source><translation>已取消 DIV 段落分析。未修改任何文件。</translation></message>
+    <message><source>DIV paragraph analysis completed. No files were changed.</source><translation>DIV 段落分析已完成。未修改任何文件。</translation></message>
+    <message><source>No auto-safe DIV paragraph changes were found.</source><translation>未发现可自动安全处理的 DIV 段落变更。</translation></message>
+    <message><source>DIV paragraph normalization cancelled. No files were changed.</source><translation>已取消 DIV 段落规范化。未修改任何文件。</translation></message>
+    <message><source>Validating selected DIV paragraph changes...</source><translation>正在验证选中的 DIV 段落变更...</translation></message>
+    <message><source>DIV paragraph validation cancelled. No files were changed.</source><translation>已取消 DIV 段落验证。未修改任何文件。</translation></message>
+    <message><source>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</source><translation>所选内容已变化或不再可自动安全处理。请重新分析。未修改任何文件。</translation></message>
+    <message><source>Content changed after analysis. Re-run analysis. No files were changed.
+%1</source><translation>内容在分析后发生变化。请重新分析。未修改任何文件。
+%1</translation></message>
+    <message><source>DIV paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>已原子应用 DIV 段落规范化：转换 %2 个文件中的 %1 个段落。已创建恢复检查点及逐资源撤销步骤。</translation></message>
+    <message><source>DIV paragraph normalization applied: %1 changes in %2 files.</source><translation>已应用 DIV 段落规范化：%2 个文件中共 %1 项变更。</translation></message>
+</context>
+<context>
+    <name>PModifiedVerPrefsWidget</name>
+    <message><source>Paragraph Structure</source><translation>段落结构</translation></message>
+    <message><source>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</source><translation>DIV 段落规范化始终转换已确认的正文叶元素。除非在下方启用，否则可选结构类别保持不变。</translation></message>
+    <message><source>Convert blank-line DIVs containing only BR</source><translation>转换仅含 BR 的空行 DIV</translation></message>
+    <message><source>Convert scene-separator DIVs</source><translation>转换场景分隔 DIV</translation></message>
+    <message><source>Convert image-only DIV wrappers</source><translation>转换仅含图片的 DIV 包装</translation></message>
+    <message><source>Convert single nested visual blocks (legacy compatibility)</source><translation>转换单层嵌套视觉块（旧版兼容）</translation></message>
+    <message><source>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</source><translation>此类别需要旧版 BookLive 兼容转换，并可能重写周围源码的排版。</translation></message>
+    <message><source>Format XHTML source after structural conversion</source><translation>结构转换后格式化 XHTML 源码</translation></message>
+    <message><source>Off by default because formatting can change whitespace outside the selected tags.</source><translation>默认关闭，因为格式化可能改变所选标签之外的空白。</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>unresolved stylesheet</source><translation>未解析的样式表</translation></message>
+    <message><source>CSS review: %1 · %2 · %3</source><translation>CSS 检查：%1 · %2 · %3</translation></message>
+    <message><source>DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, %5 error(s), %6 conversion(s), %7 protected block(s).</source><translation>DIV 段落计划 %1：%2 个可应用文件，%3 个仅供检查，%4 个已跳过，%5 个错误，%6 项转换，%7 个受保护块。</translation></message>
+    <message><source>Formatting target is no longer available: %1</source><translation>格式化目标已不可用：%1</translation></message>
+    <message><source>XHTML formatting failed for %1: %2</source><translation>%1 的 XHTML 格式化失败：%2</translation></message>
+    <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落规范化：已应用可选的 XHTML 格式化。</translation></message>
 </context>
 </TS>

@@ -14569,6 +14569,7 @@ Spacing p elements to preserve: %6</source>
         <source>No KFX paragraph files were changed.</source>
         <translation>KFX 段落を含むファイルは変更されませんでした。</translation>
     </message>
+    <!-- Superseded by the generic DIV paragraph workflow.
     <message>
         <source>Analyze BookLive Div Paragraphs (Whole Book)...</source>
         <translation>BookLive Div 段落を解析（書籍全体）...</translation>
@@ -14721,6 +14722,7 @@ div から p への推定変換数: %4
         <source>No BookLive paragraph files were changed.</source>
         <translation>BookLive 段落を含むファイルは変更されませんでした。</translation>
     </message>
+    -->
     <message>
         <location filename="../../MainUI/MainWindow.cpp" line="850"/>
         <source>Are you sure you want to restructure this epub?
@@ -21606,6 +21608,7 @@ Line: %1 Column %2 - %3</source>
         <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>KFX 段落の正規化: XHTML の自動整形による追加の変更はありませんでした。</translation>
     </message>
+    <!-- Superseded by the generic DIV paragraph workflow.
     <message>
         <source>BookLive paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
         <translation>BookLive 段落の正規化: XHTML の自動整形に失敗しました。整形による変更を加えず、正規化済み XHTML を書き込みます。%1</translation>
@@ -21618,6 +21621,7 @@ Line: %1 Column %2 - %3</source>
         <source>BookLive paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>BookLive 段落の正規化: XHTML の自動整形による追加の変更はありませんでした。</translation>
     </message>
+    -->
     <message>
         <location filename="../../Misc/UpdateChecker.cpp" line="100"/>
         <source>&lt;p&gt;A newer version of Sigil-Enhanced is available, version &lt;b&gt;%1&lt;/b&gt;.&lt;br/&gt;&lt;p&gt;Would you like to go to the download page?&lt;/p&gt;</source>
@@ -27155,5 +27159,108 @@ Continue using the requested filename?</source>
         <source>%1, Clip %2, %3</source>
         <translation>%1、Clip %2、%3</translation>
     </message>
+</context>
+<context>
+    <name>DivParagraphNormalizationDialog</name>
+    <message><source>Normalize DIV Paragraph Structure</source><translation>DIV 段落構造を正規化</translation></message>
+    <message><source>Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves that satisfy the paragraph content model are converted automatically.</source><translation>最初に XHTML を解析し、リビジョンに結び付けられた計画をプレビューします。段落のコンテンツモデルを満たす DIV の末端要素だけが自動変換されます。</translation></message>
+    <message><source>Scope</source><translation>範囲</translation></message>
+    <message><source>Current XHTML file</source><translation>現在の XHTML ファイル</translation></message>
+    <message><source>Selected XHTML files (%1)</source><translation>選択した XHTML ファイル（%1）</translation></message>
+    <message><source>All XHTML files in the book</source><translation>書籍内のすべての XHTML ファイル</translation></message>
+    <message><source>Conversion categories</source><translation>変換カテゴリ</translation></message>
+    <message><source>Body-text paragraph DIVs</source><translation>本文段落の DIV</translation></message>
+    <message><source>The conservative content-model check is always enabled.</source><translation>保守的なコンテンツモデル検査は常に有効です。</translation></message>
+    <message><source>Blank-line DIVs containing only BR</source><translation>BR だけを含む空行 DIV</translation></message>
+    <message><source>Scene-separator DIVs</source><translation>場面区切りの DIV</translation></message>
+    <message><source>Image-only DIV wrappers</source><translation>画像だけを含む DIV ラッパー</translation></message>
+    <message><source>Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)</source><translation>単一の入れ子視覚ブロック（DIV を P に、内側の DIV を SPAN に変更）</translation></message>
+    <message><source>Format XHTML source after conversion</source><translation>変換後に XHTML ソースを整形</translation></message>
+    <message><source>Off by default. When off, only selected start/end tag names are patched.</source><translation>既定ではオフです。オフの場合、選択した開始・終了タグ名だけを修正します。</translation></message>
+    <message><source>Tag-dependent CSS, scripts, fixed-layout indicators, lists, tables, SVG, MathML, and unknown mixed blocks remain review-only. No force-all mode is provided.</source><translation>タグ依存の CSS、スクリプト、固定レイアウト指標、リスト、表、SVG、MathML、不明な混在ブロックは確認のみとなります。すべてを強制変換するモードはありません。</translation></message>
+    <message><source>Analyze and Preview</source><translation>解析してプレビュー</translation></message>
+</context>
+<context>
+    <name>DivParagraphNormalizationPreviewDialog</name>
+    <message><source>Ready to apply</source><translation>適用可能</translation></message>
+    <message><source>Review required</source><translation>確認が必要</translation></message>
+    <message><source>Skipped</source><translation>スキップ</translation></message>
+    <message><source>Parse/validation error</source><translation>解析/検証エラー</translation></message>
+    <message><source>Body flow</source><translation>本文フロー</translation></message>
+    <message><source>Already normalized</source><translation>正規化済み</translation></message>
+    <message><source>TOC-like</source><translation>目次に類似</translation></message>
+    <message><source>Notice/imprint</source><translation>注意書き/奥付</translation></message>
+    <message><source>Short flow</source><translation>短いフロー</translation></message>
+    <message><source>CSS risk</source><translation>CSS リスク</translation></message>
+    <message><source>Complex/fixed layout</source><translation>複雑/固定レイアウト</translation></message>
+    <message><source>Image/title page</source><translation>画像/タイトルページ</translation></message>
+    <message><source>No candidate</source><translation>候補なし</translation></message>
+    <message><source>No body</source><translation>本文なし</translation></message>
+    <message><source>Parse error</source><translation>解析エラー</translation></message>
+    <message><source>None detected</source><translation>検出なし</translation></message>
+    <message><source>%1 selector(s)</source><translation>%1 個のセレクター</translation></message>
+    <message><source>DIV Paragraph Normalization Preview</source><translation>DIV 段落正規化のプレビュー</translation></message>
+    <message><source>DIV paragraph resource analysis</source><translation>DIV 段落リソースの解析</translation></message>
+    <message><source>Apply</source><translation>適用</translation></message>
+    <message><source>File</source><translation>ファイル</translation></message>
+    <message><source>Classification</source><translation>分類</translation></message>
+    <message><source>Body candidates</source><translation>本文候補</translation></message>
+    <message><source>Blank/separator</source><translation>空行/区切り</translation></message>
+    <message><source>Protected</source><translation>保護対象</translation></message>
+    <message><source>Status</source><translation>状態</translation></message>
+    <message><source>Before</source><translation>変換前</translation></message>
+    <message><source>Source before DIV paragraph normalization</source><translation>DIV 段落正規化前のソース</translation></message>
+    <message><source>After</source><translation>変換後</translation></message>
+    <message><source>Source after DIV paragraph normalization</source><translation>DIV 段落正規化後のソース</translation></message>
+    <message><source>Source Diff</source><translation>ソース差分</translation></message>
+    <message><source>Before Preview</source><translation>変換前のプレビュー</translation></message>
+    <message><source>After Preview</source><translation>変換後のプレビュー</translation></message>
+    <message><source>Apply Selected Files</source><translation>選択したファイルを適用</translation></message>
+    <message><source>Plan %1 · %2 of %3 ready files selected · %4 paragraph(s) planned · %5 protected block(s) · %6 review-only file(s) · %7 error(s)</source><translation>計画 %1 · 適用可能な %3 ファイル中 %2 ファイルを選択 · 予定段落数 %4 · 保護ブロック数 %5 · 確認のみのファイル数 %6 · エラー数 %7</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Analyze DIV Paragraph Structure...</source><translation>DIV 段落構造を解析...</translation></message>
+    <message><source>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</source><translation>現在、選択、または全 XHTML ファイルについて、安全な本文段落 DIV の末端要素と CSS リスクを解析します</translation></message>
+    <message><source>Normalize DIV Paragraph Structure (Current File)...</source><translation>DIV 段落構造を正規化（現在のファイル）...</translation></message>
+    <message><source>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>現在の XHTML ファイルで確認済みの段落 DIV 末端要素をプレビューし、ソース範囲パッチで変換します</translation></message>
+    <message><source>Normalize DIV Paragraph Structure...</source><translation>DIV 段落構造を正規化...</translation></message>
+    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</source><translation>範囲を選び、リビジョンに結び付けられた計画をプレビューして、自動的に安全な DIV 段落を一括変換します</translation></message>
+    <message><source>DIV Paragraph Normalization</source><translation>DIV 段落の正規化</translation></message>
+    <message><source>The selected scope contains no XHTML files.</source><translation>選択した範囲に XHTML ファイルがありません。</translation></message>
+    <message><source>Analyzing DIV paragraph structure...</source><translation>DIV 段落構造を解析しています...</translation></message>
+    <message><source>DIV paragraph analysis cancelled. No files were changed.</source><translation>DIV 段落解析をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>DIV paragraph analysis completed. No files were changed.</source><translation>DIV 段落解析が完了しました。ファイルは変更されていません。</translation></message>
+    <message><source>No auto-safe DIV paragraph changes were found.</source><translation>自動的に安全な DIV 段落の変更は見つかりませんでした。</translation></message>
+    <message><source>DIV paragraph normalization cancelled. No files were changed.</source><translation>DIV 段落の正規化をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>Validating selected DIV paragraph changes...</source><translation>選択した DIV 段落の変更を検証しています...</translation></message>
+    <message><source>DIV paragraph validation cancelled. No files were changed.</source><translation>DIV 段落の検証をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</source><translation>選択した内容が変更されたか、自動的に安全ではなくなりました。解析をやり直してください。ファイルは変更されていません。</translation></message>
+    <message><source>Content changed after analysis. Re-run analysis. No files were changed.
+%1</source><translation>解析後に内容が変更されました。解析をやり直してください。ファイルは変更されていません。
+%1</translation></message>
+    <message><source>DIV paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>DIV 段落の正規化を一括適用しました：%2 ファイル内の %1 段落を変換しました。復元チェックポイントとリソースごとの取り消し手順を作成しました。</translation></message>
+    <message><source>DIV paragraph normalization applied: %1 changes in %2 files.</source><translation>DIV 段落の正規化を適用しました：%2 ファイル内で %1 件変更しました。</translation></message>
+</context>
+<context>
+    <name>PModifiedVerPrefsWidget</name>
+    <message><source>Paragraph Structure</source><translation>段落構造</translation></message>
+    <message><source>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</source><translation>DIV 段落の正規化は確認済みの本文末端要素を常に変換します。追加の構造カテゴリは、下で有効にしない限り変更されません。</translation></message>
+    <message><source>Convert blank-line DIVs containing only BR</source><translation>BR だけを含む空行 DIV を変換</translation></message>
+    <message><source>Convert scene-separator DIVs</source><translation>場面区切りの DIV を変換</translation></message>
+    <message><source>Convert image-only DIV wrappers</source><translation>画像だけを含む DIV ラッパーを変換</translation></message>
+    <message><source>Convert single nested visual blocks (legacy compatibility)</source><translation>単一の入れ子視覚ブロックを変換（従来互換）</translation></message>
+    <message><source>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</source><translation>このカテゴリには従来の BookLive 互換変換が必要で、周辺ソースの書式が書き換えられることがあります。</translation></message>
+    <message><source>Format XHTML source after structural conversion</source><translation>構造変換後に XHTML ソースを整形</translation></message>
+    <message><source>Off by default because formatting can change whitespace outside the selected tags.</source><translation>整形によって選択タグ外の空白が変わる可能性があるため、既定ではオフです。</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>unresolved stylesheet</source><translation>未解決のスタイルシート</translation></message>
+    <message><source>CSS review: %1 · %2 · %3</source><translation>CSS の確認：%1 · %2 · %3</translation></message>
+    <message><source>DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, %5 error(s), %6 conversion(s), %7 protected block(s).</source><translation>DIV 段落計画 %1：適用可能 %2 ファイル、確認のみ %3、スキップ %4、エラー %5、変換 %6 件、保護ブロック %7 件。</translation></message>
+    <message><source>Formatting target is no longer available: %1</source><translation>整形対象は利用できなくなりました：%1</translation></message>
+    <message><source>XHTML formatting failed for %1: %2</source><translation>%1 の XHTML 整形に失敗しました：%2</translation></message>
+    <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落の正規化：追加の XHTML 整形を適用しました。</translation></message>
 </context>
 </TS>

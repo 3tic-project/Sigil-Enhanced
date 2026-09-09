@@ -23214,4 +23214,107 @@ Continue using the requested filename?</translation>
         <translation>black diamond suit</translation>
     </message>
 </context>
+<context>
+    <name>DivParagraphNormalizationDialog</name>
+    <message><source>Normalize DIV Paragraph Structure</source><translation>Normalize DIV Paragraph Structure</translation></message>
+    <message><source>Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves that satisfy the paragraph content model are converted automatically.</source><translation>Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves that satisfy the paragraph content model are converted automatically.</translation></message>
+    <message><source>Scope</source><translation>Scope</translation></message>
+    <message><source>Current XHTML file</source><translation>Current XHTML file</translation></message>
+    <message><source>Selected XHTML files (%1)</source><translation>Selected XHTML files (%1)</translation></message>
+    <message><source>All XHTML files in the book</source><translation>All XHTML files in the book</translation></message>
+    <message><source>Conversion categories</source><translation>Conversion categories</translation></message>
+    <message><source>Body-text paragraph DIVs</source><translation>Body-text paragraph DIVs</translation></message>
+    <message><source>The conservative content-model check is always enabled.</source><translation>The conservative content-model check is always enabled.</translation></message>
+    <message><source>Blank-line DIVs containing only BR</source><translation>Blank-line DIVs containing only BR</translation></message>
+    <message><source>Scene-separator DIVs</source><translation>Scene-separator DIVs</translation></message>
+    <message><source>Image-only DIV wrappers</source><translation>Image-only DIV wrappers</translation></message>
+    <message><source>Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)</source><translation>Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)</translation></message>
+    <message><source>Format XHTML source after conversion</source><translation>Format XHTML source after conversion</translation></message>
+    <message><source>Off by default. When off, only selected start/end tag names are patched.</source><translation>Off by default. When off, only selected start/end tag names are patched.</translation></message>
+    <message><source>Tag-dependent CSS, scripts, fixed-layout indicators, lists, tables, SVG, MathML, and unknown mixed blocks remain review-only. No force-all mode is provided.</source><translation>Tag-dependent CSS, scripts, fixed-layout indicators, lists, tables, SVG, MathML, and unknown mixed blocks remain review-only. No force-all mode is provided.</translation></message>
+    <message><source>Analyze and Preview</source><translation>Analyze and Preview</translation></message>
+</context>
+<context>
+    <name>DivParagraphNormalizationPreviewDialog</name>
+    <message><source>Ready to apply</source><translation>Ready to apply</translation></message>
+    <message><source>Review required</source><translation>Review required</translation></message>
+    <message><source>Skipped</source><translation>Skipped</translation></message>
+    <message><source>Parse/validation error</source><translation>Parse/validation error</translation></message>
+    <message><source>Body flow</source><translation>Body flow</translation></message>
+    <message><source>Already normalized</source><translation>Already normalized</translation></message>
+    <message><source>TOC-like</source><translation>TOC-like</translation></message>
+    <message><source>Notice/imprint</source><translation>Notice/imprint</translation></message>
+    <message><source>Short flow</source><translation>Short flow</translation></message>
+    <message><source>CSS risk</source><translation>CSS risk</translation></message>
+    <message><source>Complex/fixed layout</source><translation>Complex/fixed layout</translation></message>
+    <message><source>Image/title page</source><translation>Image/title page</translation></message>
+    <message><source>No candidate</source><translation>No candidate</translation></message>
+    <message><source>No body</source><translation>No body</translation></message>
+    <message><source>Parse error</source><translation>Parse error</translation></message>
+    <message><source>None detected</source><translation>None detected</translation></message>
+    <message><source>%1 selector(s)</source><translation>%1 selector(s)</translation></message>
+    <message><source>DIV Paragraph Normalization Preview</source><translation>DIV Paragraph Normalization Preview</translation></message>
+    <message><source>DIV paragraph resource analysis</source><translation>DIV paragraph resource analysis</translation></message>
+    <message><source>Apply</source><translation>Apply</translation></message>
+    <message><source>File</source><translation>File</translation></message>
+    <message><source>Classification</source><translation>Classification</translation></message>
+    <message><source>Body candidates</source><translation>Body candidates</translation></message>
+    <message><source>Blank/separator</source><translation>Blank/separator</translation></message>
+    <message><source>Protected</source><translation>Protected</translation></message>
+    <message><source>Status</source><translation>Status</translation></message>
+    <message><source>Before</source><translation>Before</translation></message>
+    <message><source>Source before DIV paragraph normalization</source><translation>Source before DIV paragraph normalization</translation></message>
+    <message><source>After</source><translation>After</translation></message>
+    <message><source>Source after DIV paragraph normalization</source><translation>Source after DIV paragraph normalization</translation></message>
+    <message><source>Source Diff</source><translation>Source Diff</translation></message>
+    <message><source>Before Preview</source><translation>Before Preview</translation></message>
+    <message><source>After Preview</source><translation>After Preview</translation></message>
+    <message><source>Apply Selected Files</source><translation>Apply Selected Files</translation></message>
+    <message><source>Plan %1 · %2 of %3 ready files selected · %4 paragraph(s) planned · %5 protected block(s) · %6 review-only file(s) · %7 error(s)</source><translation>Plan %1 · %2 of %3 ready files selected · %4 paragraph(s) planned · %5 protected block(s) · %6 review-only file(s) · %7 error(s)</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Analyze DIV Paragraph Structure...</source><translation>Analyze DIV Paragraph Structure...</translation></message>
+    <message><source>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</source><translation>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</translation></message>
+    <message><source>Normalize DIV Paragraph Structure (Current File)...</source><translation>Normalize DIV Paragraph Structure (Current File)...</translation></message>
+    <message><source>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</translation></message>
+    <message><source>Normalize DIV Paragraph Structure...</source><translation>Normalize DIV Paragraph Structure...</translation></message>
+    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</source><translation>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</translation></message>
+    <message><source>DIV Paragraph Normalization</source><translation>DIV Paragraph Normalization</translation></message>
+    <message><source>The selected scope contains no XHTML files.</source><translation>The selected scope contains no XHTML files.</translation></message>
+    <message><source>Analyzing DIV paragraph structure...</source><translation>Analyzing DIV paragraph structure...</translation></message>
+    <message><source>DIV paragraph analysis cancelled. No files were changed.</source><translation>DIV paragraph analysis cancelled. No files were changed.</translation></message>
+    <message><source>DIV paragraph analysis completed. No files were changed.</source><translation>DIV paragraph analysis completed. No files were changed.</translation></message>
+    <message><source>No auto-safe DIV paragraph changes were found.</source><translation>No auto-safe DIV paragraph changes were found.</translation></message>
+    <message><source>DIV paragraph normalization cancelled. No files were changed.</source><translation>DIV paragraph normalization cancelled. No files were changed.</translation></message>
+    <message><source>Validating selected DIV paragraph changes...</source><translation>Validating selected DIV paragraph changes...</translation></message>
+    <message><source>DIV paragraph validation cancelled. No files were changed.</source><translation>DIV paragraph validation cancelled. No files were changed.</translation></message>
+    <message><source>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</source><translation>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</translation></message>
+    <message><source>Content changed after analysis. Re-run analysis. No files were changed.
+%1</source><translation>Content changed after analysis. Re-run analysis. No files were changed.
+%1</translation></message>
+    <message><source>DIV paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>DIV paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</translation></message>
+    <message><source>DIV paragraph normalization applied: %1 changes in %2 files.</source><translation>DIV paragraph normalization applied: %1 changes in %2 files.</translation></message>
+</context>
+<context>
+    <name>PModifiedVerPrefsWidget</name>
+    <message><source>Paragraph Structure</source><translation>Paragraph Structure</translation></message>
+    <message><source>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</source><translation>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</translation></message>
+    <message><source>Convert blank-line DIVs containing only BR</source><translation>Convert blank-line DIVs containing only BR</translation></message>
+    <message><source>Convert scene-separator DIVs</source><translation>Convert scene-separator DIVs</translation></message>
+    <message><source>Convert image-only DIV wrappers</source><translation>Convert image-only DIV wrappers</translation></message>
+    <message><source>Convert single nested visual blocks (legacy compatibility)</source><translation>Convert single nested visual blocks (legacy compatibility)</translation></message>
+    <message><source>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</source><translation>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</translation></message>
+    <message><source>Format XHTML source after structural conversion</source><translation>Format XHTML source after structural conversion</translation></message>
+    <message><source>Off by default because formatting can change whitespace outside the selected tags.</source><translation>Off by default because formatting can change whitespace outside the selected tags.</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>unresolved stylesheet</source><translation>unresolved stylesheet</translation></message>
+    <message><source>CSS review: %1 · %2 · %3</source><translation>CSS review: %1 · %2 · %3</translation></message>
+    <message><source>DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, %5 error(s), %6 conversion(s), %7 protected block(s).</source><translation>DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, %5 error(s), %6 conversion(s), %7 protected block(s).</translation></message>
+    <message><source>Formatting target is no longer available: %1</source><translation>Formatting target is no longer available: %1</translation></message>
+    <message><source>XHTML formatting failed for %1: %2</source><translation>XHTML formatting failed for %1: %2</translation></message>
+    <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV paragraph normalization: optional XHTML formatting was applied.</translation></message>
+</context>
 </TS>
