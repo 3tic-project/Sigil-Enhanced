@@ -806,6 +806,28 @@ target_link_libraries(div_paragraph_performance_test PRIVATE Qt6::Core Qt6::Xml)
 add_test(NAME div_paragraph_performance COMMAND div_paragraph_performance_test)
 set_tests_properties(div_paragraph_performance PROPERTIES TIMEOUT 60)
 
+add_executable(div_paragraph_dialog_test
+    div_paragraph_dialog_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/DivParagraphNormalizationDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/DivParagraphNormalizationDialog.h
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/DivParagraphNormalizationPreviewDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/DivParagraphNormalizationPreviewDialog.h
+)
+target_include_directories(div_paragraph_dialog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(div_paragraph_dialog_test PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Xml
+)
+set_target_properties(div_paragraph_dialog_test PROPERTIES AUTOMOC ON)
+add_test(NAME div_paragraph_dialog COMMAND div_paragraph_dialog_test)
+set_tests_properties(div_paragraph_dialog PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 set(V2H_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.h
