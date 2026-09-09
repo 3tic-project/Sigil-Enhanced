@@ -13,12 +13,15 @@
 
 #include "BuiltinPlugins/BookLiveParagraphNormalizer.h"
 
+#include <QCryptographicHash>
 #include <QDomDocument>
+#include <QHash>
 #include <QRegularExpression>
 #include <QSet>
 #include <QVector>
 #include <QtGlobal>
 
+#include <algorithm>
 #include <tuple>
 
 namespace BuiltinPlugins
@@ -32,6 +35,7 @@ const QString NORMALIZED_CLASS = QStringLiteral("se-bl-normalized");
 const QString PARAGRAPH_CLASS = QStringLiteral("se-bl-paragraph");
 const QString INNER_BLOCK_CLASS = QStringLiteral("se-bl-inner-block");
 const QString STYLE_MARKER = QStringLiteral("booklive-paragraph-normalizer");
+const QString RULE_VERSION = QStringLiteral("div-paragraph-normalizer-v2");
 const QString NORMALIZER_CSS =
     QStringLiteral(".se-bl-paragraph { display: block; width: auto; height: auto; margin: 0; padding: 0; border: 0; min-height: 0; text-indent: 0; }\n"
                    ".se-bl-inner-block { display: block; width: auto; height: auto; margin: 0; padding: 0; text-indent: 0; }\n");
@@ -50,6 +54,7 @@ enum class LeafKind {
     WrappedBlock,
     AnchorOnly,
     Heading,
+    ProtectedHeading,
     ExistingP,
     NestedComplex,
     Other
@@ -67,6 +72,27 @@ struct ParentMatch {
     double score = 0.0;
     bool usedShortPass = false;
 };
+
+struct ElementTagRange {
+    int elementStart = -1;
+    int elementEnd = -1;
+    int openNameStart = -1;
+    int openNameLength = 0;
+    int closeNameStart = -1;
+    int closeNameLength = 0;
+};
+
+struct OpenElement {
+    int index = -1;
+    QString qualifiedName;
+    ElementTagRange range;
+};
+
+QString sha256(const QString& text)
+{
+    return QString::fromLatin1(QCryptographicHash::hash(
+        text.toUtf8(), QCryptographicHash::Sha256).toHex());
+}
 
 QString localName(const QDomNode& node)
 {
@@ -320,6 +346,72 @@ bool isHeadingName(const QString& name)
            name.at(1) >= QLatin1Char('1') && name.at(1) <= QLatin1Char('6');
 }
 
+bool hasOnlyAllowedPhrasingContent(const QDomNode& node)
+{
+    static const QSet<QString> allowed_names = {
+        QStringLiteral("a"), QStringLiteral("abbr"), QStringLiteral("b"),
+        QStringLiteral("bdi"), QStringLiteral("bdo"), QStringLiteral("br"),
+        QStringLiteral("cite"), QStringLiteral("code"), QStringLiteral("data"),
+        QStringLiteral("del"), QStringLiteral("dfn"), QStringLiteral("em"),
+        QStringLiteral("i"), QStringLiteral("img"), QStringLiteral("ins"),
+        QStringLiteral("kbd"), QStringLiteral("mark"), QStringLiteral("q"),
+        QStringLiteral("rb"), QStringLiteral("rp"), QStringLiteral("rt"),
+        QStringLiteral("rtc"), QStringLiteral("ruby"), QStringLiteral("s"),
+        QStringLiteral("samp"), QStringLiteral("small"), QStringLiteral("span"),
+        QStringLiteral("strong"), QStringLiteral("sub"), QStringLiteral("sup"),
+        QStringLiteral("time"), QStringLiteral("u"), QStringLiteral("var"),
+        QStringLiteral("wbr")
+    };
+
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        if (child.isText() || child.isCDATASection() || child.isComment()) {
+            continue;
+        }
+        if (!child.isElement()) {
+            return false;
+        }
+        if (!allowed_names.contains(localName(child)) ||
+            !hasOnlyAllowedPhrasingContent(child)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool isProtectedHeadingWrapper(const QDomElement& element)
+{
+    if (localName(element) != QStringLiteral("div")) {
+        return false;
+    }
+
+    int heading_count = 0;
+    for (QDomNode child = element.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        if (child.isText() || child.isCDATASection()) {
+            if (!isWhitespaceOnly(child.nodeValue())) {
+                return false;
+            }
+            continue;
+        }
+        if (child.isComment()) {
+            continue;
+        }
+        if (!child.isElement()) {
+            return false;
+        }
+        const QDomElement child_element = child.toElement();
+        if (isAnchorOnly(child_element)) {
+            continue;
+        }
+        if (isHeadingName(localName(child_element)) &&
+            hasOnlyAllowedPhrasingContent(child_element)) {
+            heading_count++;
+            continue;
+        }
+        return false;
+    }
+    return heading_count == 1;
+}
+
 LeafKind classifyLeaf(const QDomElement& element)
 {
     const QString name = localName(element);
@@ -334,6 +426,10 @@ LeafKind classifyLeaf(const QDomElement& element)
     }
     if (name != QStringLiteral("div")) {
         return LeafKind::Other;
+    }
+
+    if (isProtectedHeadingWrapper(element)) {
+        return LeafKind::ProtectedHeading;
     }
 
     const QString text = visibleText(element);
@@ -355,7 +451,7 @@ LeafKind classifyLeaf(const QDomElement& element)
         if (isWhitespaceOnly(text) && countImageElements(element) > 0) {
             return LeafKind::ImageOnly;
         }
-        if (!isWhitespaceOnly(text) && !hasBlockDescendant(element)) {
+        if (!isWhitespaceOnly(text) && hasOnlyAllowedPhrasingContent(element)) {
             return LeafKind::Paragraph;
         }
         return LeafKind::Other;
@@ -379,6 +475,7 @@ bool isLeafish(LeafKind kind)
     case LeafKind::WrappedBlock:
     case LeafKind::AnchorOnly:
     case LeafKind::Heading:
+    case LeafKind::ProtectedHeading:
     case LeafKind::ExistingP:
         return true;
     case LeafKind::NestedComplex:
@@ -388,17 +485,23 @@ bool isLeafish(LeafKind kind)
     return false;
 }
 
-bool isConvertible(LeafKind kind)
+bool isConvertible(LeafKind kind,
+                   const BookLiveParagraphNormalizer::Options& options)
 {
     switch (kind) {
     case LeafKind::Paragraph:
+        return options.convertParagraphs;
     case LeafKind::SpacerBr:
+        return options.convertSpacerBr;
     case LeafKind::SceneBreak:
+        return options.convertSceneBreaks;
     case LeafKind::ImageOnly:
+        return options.convertImageWrappers;
     case LeafKind::WrappedBlock:
-        return true;
+        return options.convertSingleBlockWrappers;
     case LeafKind::AnchorOnly:
     case LeafKind::Heading:
+    case LeafKind::ProtectedHeading:
     case LeafKind::ExistingP:
     case LeafKind::NestedComplex:
     case LeafKind::Other:
@@ -421,6 +524,7 @@ QList<Leaf> classifyChildren(const QDomElement& parent)
 }
 
 void considerParent(const QDomElement& element, int depth, int min_children,
+                    const BookLiveParagraphNormalizer::Options& options,
                     ParentMatch& best)
 {
     const QVector<QDomElement> children = directElementChildren(element);
@@ -434,7 +538,7 @@ void considerParent(const QDomElement& element, int depth, int min_children,
             if (isLeafish(kind)) {
                 leafish++;
             }
-            if (isConvertible(kind)) {
+            if (isConvertible(kind, options)) {
                 convertible++;
             }
         }
@@ -453,17 +557,18 @@ void considerParent(const QDomElement& element, int depth, int min_children,
 
     for (const QDomElement& child : children) {
         if (localName(child) == QStringLiteral("div")) {
-            considerParent(child, depth + 1, min_children, best);
+            considerParent(child, depth + 1, min_children, options, best);
         }
     }
 }
 
-ParentMatch findContentParent(const QDomElement& body)
+ParentMatch findContentParent(const QDomElement& body,
+                              const BookLiveParagraphNormalizer::Options& options)
 {
     ParentMatch standard;
     for (const QDomElement& child : directElementChildren(body)) {
         if (localName(child) == QStringLiteral("div")) {
-            considerParent(child, 1, MIN_STANDARD_PARENT_CHILDREN, standard);
+            considerParent(child, 1, MIN_STANDARD_PARENT_CHILDREN, options, standard);
         }
     }
     if (!standard.element.isNull()) {
@@ -473,11 +578,270 @@ ParentMatch findContentParent(const QDomElement& body)
     ParentMatch short_match;
     for (const QDomElement& child : directElementChildren(body)) {
         if (localName(child) == QStringLiteral("div")) {
-            considerParent(child, 1, MIN_SHORT_PARENT_CHILDREN, short_match);
+            considerParent(child, 1, MIN_SHORT_PARENT_CHILDREN, options, short_match);
         }
     }
     short_match.usedShortPass = !short_match.element.isNull();
     return short_match;
+}
+
+BookLiveParagraphNormalizer::CandidateKind candidateKind(LeafKind kind)
+{
+    switch (kind) {
+    case LeafKind::SpacerBr:
+        return BookLiveParagraphNormalizer::CandidateKind::SpacerBr;
+    case LeafKind::SceneBreak:
+        return BookLiveParagraphNormalizer::CandidateKind::SceneBreak;
+    case LeafKind::ImageOnly:
+        return BookLiveParagraphNormalizer::CandidateKind::ImageWrapper;
+    case LeafKind::WrappedBlock:
+        return BookLiveParagraphNormalizer::CandidateKind::SingleBlockWrapper;
+    case LeafKind::Paragraph:
+    case LeafKind::AnchorOnly:
+    case LeafKind::Heading:
+    case LeafKind::ProtectedHeading:
+    case LeafKind::ExistingP:
+    case LeafKind::NestedComplex:
+    case LeafKind::Other:
+        return BookLiveParagraphNormalizer::CandidateKind::Paragraph;
+    }
+    return BookLiveParagraphNormalizer::CandidateKind::Paragraph;
+}
+
+void collectClassifiedIndexes(
+    const QDomNode& node,
+    const QDomElement& content_parent,
+    const BookLiveParagraphNormalizer::Options& options,
+    int& index,
+    QHash<int, LeafKind>& candidate_indexes,
+    QSet<int>& protected_indexes)
+{
+    if (node.isElement()) {
+        const int current_index = index++;
+        if (!content_parent.isNull() && node.parentNode() == content_parent) {
+            const LeafKind kind = classifyLeaf(node.toElement());
+            if (isConvertible(kind, options)) {
+                candidate_indexes.insert(current_index, kind);
+            } else if (kind != LeafKind::AnchorOnly && kind != LeafKind::ExistingP) {
+                protected_indexes.insert(current_index);
+            }
+        }
+    }
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        collectClassifiedIndexes(child, content_parent, options, index,
+                                 candidate_indexes, protected_indexes);
+    }
+}
+
+int tagEnd(const QString& source, int start, bool declaration)
+{
+    QChar quote;
+    int subset_depth = 0;
+    for (int i = start; i < source.length(); ++i) {
+        const QChar ch = source.at(i);
+        if (!quote.isNull()) {
+            if (ch == quote) {
+                quote = QChar();
+            }
+            continue;
+        }
+        if (ch == QLatin1Char('\'') || ch == QLatin1Char('"')) {
+            quote = ch;
+        } else if (declaration && ch == QLatin1Char('[')) {
+            subset_depth++;
+        } else if (declaration && ch == QLatin1Char(']') && subset_depth > 0) {
+            subset_depth--;
+        } else if (ch == QLatin1Char('>') && subset_depth == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+QPair<int, int> localNameRange(const QString& qualified_name, int name_start)
+{
+    const int colon = qualified_name.lastIndexOf(QLatin1Char(':'));
+    const int offset = colon < 0 ? 0 : colon + 1;
+    return qMakePair(name_start + offset, qualified_name.length() - offset);
+}
+
+QHash<int, ElementTagRange> scanElementRanges(const QString& source)
+{
+    QHash<int, ElementTagRange> ranges;
+    QVector<OpenElement> stack;
+    int element_index = 0;
+    int position = 0;
+    while ((position = source.indexOf(QLatin1Char('<'), position)) >= 0) {
+        if (source.mid(position, 4) == QStringLiteral("<!--")) {
+            const int end = source.indexOf(QStringLiteral("-->"), position + 4);
+            position = end < 0 ? source.length() : end + 3;
+            continue;
+        }
+        if (source.mid(position, 9) == QStringLiteral("<![CDATA[")) {
+            const int end = source.indexOf(QStringLiteral("]]>") , position + 9);
+            position = end < 0 ? source.length() : end + 3;
+            continue;
+        }
+        if (source.mid(position, 2) == QStringLiteral("<?")) {
+            const int end = source.indexOf(QStringLiteral("?>"), position + 2);
+            position = end < 0 ? source.length() : end + 2;
+            continue;
+        }
+        if (source.mid(position, 2) == QStringLiteral("<!")) {
+            const int end = tagEnd(source, position + 2, true);
+            position = end < 0 ? source.length() : end + 1;
+            continue;
+        }
+
+        const bool closing = position + 1 < source.length() &&
+                             source.at(position + 1) == QLatin1Char('/');
+        int name_start = position + (closing ? 2 : 1);
+        while (name_start < source.length() && source.at(name_start).isSpace()) {
+            name_start++;
+        }
+        int name_end = name_start;
+        while (name_end < source.length() && !source.at(name_end).isSpace() &&
+               source.at(name_end) != QLatin1Char('/') &&
+               source.at(name_end) != QLatin1Char('>')) {
+            name_end++;
+        }
+        if (name_end == name_start) {
+            position++;
+            continue;
+        }
+        const QString qualified_name = source.mid(name_start, name_end - name_start);
+        const int end = tagEnd(source, name_end, false);
+        if (end < 0) {
+            break;
+        }
+        const QPair<int, int> local_range = localNameRange(qualified_name, name_start);
+
+        if (closing) {
+            if (!stack.isEmpty()) {
+                OpenElement open = stack.takeLast();
+                open.range.closeNameStart = local_range.first;
+                open.range.closeNameLength = local_range.second;
+                open.range.elementEnd = end + 1;
+                ranges.insert(open.index, open.range);
+            }
+        } else {
+            OpenElement open;
+            open.index = element_index++;
+            open.qualifiedName = qualified_name;
+            open.range.elementStart = position;
+            open.range.openNameStart = local_range.first;
+            open.range.openNameLength = local_range.second;
+            int before_end = end - 1;
+            while (before_end > name_end && source.at(before_end).isSpace()) {
+                before_end--;
+            }
+            if (source.at(before_end) == QLatin1Char('/')) {
+                open.range.elementEnd = end + 1;
+                ranges.insert(open.index, open.range);
+            } else {
+                stack << open;
+            }
+        }
+        position = end + 1;
+    }
+    return ranges;
+}
+
+void populateSourceRanges(BookLiveParagraphNormalizer::Analysis& analysis,
+                          const QString& source,
+                          const QDomDocument& document,
+                          const QDomElement& content_parent,
+                          const BookLiveParagraphNormalizer::Options& options)
+{
+    QHash<int, LeafKind> candidate_indexes;
+    QSet<int> protected_indexes;
+    int index = 0;
+    collectClassifiedIndexes(document, content_parent, options, index,
+                             candidate_indexes, protected_indexes);
+    const QHash<int, ElementTagRange> ranges = scanElementRanges(source);
+
+    QList<int> ordered_candidates = candidate_indexes.keys();
+    std::sort(ordered_candidates.begin(), ordered_candidates.end());
+    for (int candidate_index : ordered_candidates) {
+        const ElementTagRange range = ranges.value(candidate_index);
+        if (range.elementStart < 0 || range.elementEnd < 0) {
+            analysis.warnings << QStringLiteral("source range unavailable for candidate element");
+            continue;
+        }
+        analysis.candidateRanges << BookLiveParagraphNormalizer::SourceRange {
+            range.elementStart, range.elementEnd,
+            candidateKind(candidate_indexes.value(candidate_index))
+        };
+    }
+
+    QList<int> ordered_protected = protected_indexes.values();
+    std::sort(ordered_protected.begin(), ordered_protected.end());
+    for (int protected_index : ordered_protected) {
+        const ElementTagRange range = ranges.value(protected_index);
+        if (range.elementStart >= 0 && range.elementEnd >= 0) {
+            analysis.protectedRanges << BookLiveParagraphNormalizer::SourceRange {
+                range.elementStart, range.elementEnd,
+                BookLiveParagraphNormalizer::CandidateKind::Paragraph
+            };
+        }
+    }
+}
+
+struct TextPatch {
+    int start = -1;
+    int length = 0;
+    QString replacement;
+};
+
+bool sourcePreservingTransform(const QString& source,
+                               const QDomDocument& document,
+                               const QDomElement& content_parent,
+                               const BookLiveParagraphNormalizer::Options& options,
+                               QString& output,
+                               int& converted,
+                               QString& error)
+{
+    QHash<int, LeafKind> candidate_indexes;
+    QSet<int> protected_indexes;
+    int index = 0;
+    collectClassifiedIndexes(document, content_parent, options, index,
+                             candidate_indexes, protected_indexes);
+    const QHash<int, ElementTagRange> ranges = scanElementRanges(source);
+    QVector<TextPatch> patches;
+
+    for (auto it = candidate_indexes.constBegin(); it != candidate_indexes.constEnd(); ++it) {
+        if (it.value() == LeafKind::WrappedBlock) {
+            error = QStringLiteral("single block wrappers require the BookLive compatibility preset");
+            return false;
+        }
+        if (!ranges.contains(it.key())) {
+            error = QStringLiteral("candidate source range is unavailable");
+            return false;
+        }
+        const ElementTagRange range = ranges.value(it.key());
+        if (range.openNameStart < 0 || range.closeNameStart < 0 ||
+            source.mid(range.openNameStart, range.openNameLength)
+                    .compare(QStringLiteral("div"), Qt::CaseInsensitive) != 0 ||
+            source.mid(range.closeNameStart, range.closeNameLength)
+                    .compare(QStringLiteral("div"), Qt::CaseInsensitive) != 0) {
+            error = QStringLiteral("candidate tag-name range is inconsistent");
+            return false;
+        }
+        patches << TextPatch { range.openNameStart, range.openNameLength,
+                               QStringLiteral("p") };
+        patches << TextPatch { range.closeNameStart, range.closeNameLength,
+                               QStringLiteral("p") };
+        converted++;
+    }
+
+    std::sort(patches.begin(), patches.end(), [](const TextPatch& left, const TextPatch& right) {
+        return left.start > right.start;
+    });
+    output = source;
+    for (const TextPatch& patch : patches) {
+        output.replace(patch.start, patch.length, patch.replacement);
+    }
+    return true;
 }
 
 QStringList collectAttributes(const QDomNode& node, const QStringList& names)
@@ -707,6 +1071,9 @@ void populateLeafCounts(BookLiveParagraphNormalizer::Analysis& analysis,
         case LeafKind::Heading:
             analysis.headingBlocks++;
             break;
+        case LeafKind::ProtectedHeading:
+            analysis.protectedHeadingBlocks++;
+            break;
         case LeafKind::ExistingP:
             analysis.existingParagraphs++;
             break;
@@ -717,17 +1084,20 @@ void populateLeafCounts(BookLiveParagraphNormalizer::Analysis& analysis,
             analysis.otherLeaves++;
             break;
         }
-        if (isConvertible(leaf.kind)) {
-            analysis.convertibleLeaves++;
-        }
     }
 }
 
 void classifyAnalysis(BookLiveParagraphNormalizer::Analysis& analysis,
-                      const QDomElement& body, const ParentMatch& parent)
+                      const QDomElement& body, const ParentMatch& parent,
+                      const BookLiveParagraphNormalizer::Options& options)
 {
     const QList<Leaf> leaves = classifyChildren(parent.element);
     populateLeafCounts(analysis, leaves);
+    for (const Leaf& leaf : leaves) {
+        if (isConvertible(leaf.kind, options)) {
+            analysis.convertibleLeaves++;
+        }
+    }
     analysis.contentParentChildCount = parent.childCount;
     analysis.wrapperDepth = parent.depth;
     analysis.usedShortParentPass = parent.usedShortPass;
@@ -738,9 +1108,9 @@ void classifyAnalysis(BookLiveParagraphNormalizer::Analysis& analysis,
     if (isTocLike(body_text, analysis.linkCount, analysis.contentParentChildCount)) {
         analysis.pageKind = BookLiveParagraphNormalizer::PageKind::TocLike;
         analysis.reason = QStringLiteral("toc-like nested div flow");
-    } else if (analysis.nestedComplexLeaves > 0) {
+    } else if (analysis.nestedComplexLeaves > 0 || analysis.otherLeaves > 0) {
         analysis.pageKind = BookLiveParagraphNormalizer::PageKind::BlockLayout;
-        analysis.reason = QStringLiteral("content parent contains nested complex block leaves");
+        analysis.reason = QStringLiteral("content parent contains unknown or nested complex block leaves");
     } else if (analysis.convertibleLeaves == 0) {
         analysis.pageKind = BookLiveParagraphNormalizer::PageKind::NoCandidate;
         analysis.reason = QStringLiteral("content parent has no div pseudo-paragraph leaves");
@@ -787,6 +1157,55 @@ void classifyAnalysis(BookLiveParagraphNormalizer::Analysis& analysis,
 
 }
 
+BookLiveParagraphNormalizer::Options
+BookLiveParagraphNormalizer::Options::conservative()
+{
+    return Options();
+}
+
+BookLiveParagraphNormalizer::Options
+BookLiveParagraphNormalizer::Options::bookLiveCompatibility()
+{
+    Options options;
+    options.convertSpacerBr = true;
+    options.convertSceneBreaks = true;
+    options.convertImageWrappers = true;
+    options.convertSingleBlockWrappers = true;
+    options.addLegacyStyleCompensation = true;
+    return options;
+}
+
+QString BookLiveParagraphNormalizer::Options::presetId() const
+{
+    const Options conservative_options = conservative();
+    if (convertParagraphs == conservative_options.convertParagraphs &&
+        convertSpacerBr == conservative_options.convertSpacerBr &&
+        convertSceneBreaks == conservative_options.convertSceneBreaks &&
+        convertImageWrappers == conservative_options.convertImageWrappers &&
+        convertSingleBlockWrappers == conservative_options.convertSingleBlockWrappers &&
+        addLegacyStyleCompensation == conservative_options.addLegacyStyleCompensation) {
+        return QStringLiteral("conservative-v2");
+    }
+
+    const Options compatibility_options = bookLiveCompatibility();
+    if (convertParagraphs == compatibility_options.convertParagraphs &&
+        convertSpacerBr == compatibility_options.convertSpacerBr &&
+        convertSceneBreaks == compatibility_options.convertSceneBreaks &&
+        convertImageWrappers == compatibility_options.convertImageWrappers &&
+        convertSingleBlockWrappers == compatibility_options.convertSingleBlockWrappers &&
+        addLegacyStyleCompensation == compatibility_options.addLegacyStyleCompensation) {
+        return QStringLiteral("booklive-compat-v1");
+    }
+
+    return QStringLiteral("custom-v2:%1%2%3%4%5%6")
+        .arg(convertParagraphs ? 1 : 0)
+        .arg(convertSpacerBr ? 1 : 0)
+        .arg(convertSceneBreaks ? 1 : 0)
+        .arg(convertImageWrappers ? 1 : 0)
+        .arg(convertSingleBlockWrappers ? 1 : 0)
+        .arg(addLegacyStyleCompensation ? 1 : 0);
+}
+
 QString BookLiveParagraphNormalizer::pageKindName(PageKind pageKind)
 {
     switch (pageKind) {
@@ -817,7 +1236,17 @@ QString BookLiveParagraphNormalizer::pageKindName(PageKind pageKind)
 BookLiveParagraphNormalizer::Analysis
 BookLiveParagraphNormalizer::analyzeXhtmlText(const QString& source)
 {
+    return analyzeXhtmlText(source, Options::bookLiveCompatibility());
+}
+
+BookLiveParagraphNormalizer::Analysis
+BookLiveParagraphNormalizer::analyzeXhtmlText(const QString& source,
+                                              const Options& options)
+{
     Analysis analysis;
+    analysis.presetId = options.presetId();
+    analysis.ruleVersion = RULE_VERSION;
+    analysis.beforeHash = sha256(source);
     QDomDocument document;
     QString error;
     if (!parseDocument(source, document, error)) {
@@ -838,15 +1267,6 @@ BookLiveParagraphNormalizer::analyzeXhtmlText(const QString& source)
         return analysis;
     }
 
-    if (elementHasClass(body, NORMALIZED_CLASS)) {
-        analysis.pageKind = PageKind::AlreadyNormalized;
-        analysis.reason = QStringLiteral("already normalized by BookLive paragraph normalizer");
-        analysis.existingParagraphs = countElementsByLocalName(body, QStringLiteral("p"));
-        analysis.message = QStringLiteral("BookLive 段落分析：页面已规范化，现有 %1 个 p 段落。")
-                               .arg(analysis.existingParagraphs);
-        return analysis;
-    }
-
     if (elementHasClass(body, QStringLiteral("p-image"))) {
         analysis.pageKind = PageKind::ImageOrTitlePage;
         analysis.reason = QStringLiteral("body.p-image image/title page");
@@ -854,30 +1274,56 @@ BookLiveParagraphNormalizer::analyzeXhtmlText(const QString& source)
         return analysis;
     }
 
-    if (findElementByLocalName(document, QStringLiteral("head")).isNull()) {
+    if (options.addLegacyStyleCompensation &&
+        findElementByLocalName(document, QStringLiteral("head")).isNull()) {
         analysis.pageKind = PageKind::NoCandidate;
         analysis.reason = QStringLiteral("missing head element needed for paragraph reset style");
         analysis.message = QStringLiteral("BookLive 段落分析：已跳过（缺少 head，无法安全注入 p 默认样式补偿）。");
         return analysis;
     }
 
-    ParentMatch parent = findContentParent(body);
+    ParentMatch parent = findContentParent(body, options);
     if (parent.element.isNull()) {
+        if (elementHasClass(body, NORMALIZED_CLASS)) {
+            analysis.pageKind = PageKind::AlreadyNormalized;
+            analysis.reason = QStringLiteral("no remaining candidates after BookLive normalization");
+            analysis.existingParagraphs = countElementsByLocalName(body, QStringLiteral("p"));
+            analysis.message = QStringLiteral("BookLive 段落分析：页面已规范化，现有 %1 个 p 段落。")
+                                   .arg(analysis.existingParagraphs);
+            return analysis;
+        }
         analysis.pageKind = PageKind::NoCandidate;
         analysis.reason = QStringLiteral("no div pseudo-paragraph content parent found");
         analysis.message = QStringLiteral("BookLive 段落分析：已跳过（未发现稳定的 div 伪段落正文容器）。");
         return analysis;
     }
 
-    classifyAnalysis(analysis, body, parent);
+    classifyAnalysis(analysis, body, parent, options);
+    populateSourceRanges(analysis, source, document, parent.element, options);
+    if (analysis.candidateRanges.count() != analysis.convertibleLeaves) {
+        analysis.safeToNormalize = false;
+        analysis.warnings << QStringLiteral("candidate source ranges are incomplete");
+        analysis.reason = QStringLiteral("candidate source ranges are incomplete");
+    }
+    if (elementHasClass(body, NORMALIZED_CLASS) && analysis.convertibleLeaves > 0) {
+        analysis.warnings << QStringLiteral("new candidates found after an earlier normalization");
+    }
     return analysis;
 }
 
 BookLiveParagraphNormalizer::NormalizeResult
 BookLiveParagraphNormalizer::normalizeXhtmlText(const QString& source, bool allowManualReview)
 {
+    return normalizeXhtmlText(source, Options::bookLiveCompatibility(), allowManualReview);
+}
+
+BookLiveParagraphNormalizer::NormalizeResult
+BookLiveParagraphNormalizer::normalizeXhtmlText(const QString& source,
+                                                const Options& options,
+                                                bool allowManualReview)
+{
     NormalizeResult result;
-    result.before = analyzeXhtmlText(source);
+    result.before = analyzeXhtmlText(source, options);
     if (!result.before.ok) {
         result.messages << result.before.message;
         return result;
@@ -885,11 +1331,20 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(const QString& source, bool allo
     if (result.before.pageKind == PageKind::AlreadyNormalized) {
         result.ok = true;
         result.text = source;
+        result.afterHash = result.before.beforeHash;
         result.after = result.before;
         result.messages << QStringLiteral("BookLive 段落规范化：页面已规范化，无需修改。");
         return result;
     }
     if (!result.before.candidate) {
+        if (result.before.pageKind == PageKind::NoCandidate) {
+            result.ok = true;
+            result.text = source;
+            result.after = result.before;
+            result.afterHash = result.before.beforeHash;
+            result.messages << QStringLiteral("DIV 段落规范化：当前预设没有可转换项，无需修改。");
+            return result;
+        }
         result.messages << result.before.message;
         return result;
     }
@@ -907,7 +1362,7 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(const QString& source, bool allo
     }
 
     QDomElement body = findElementByLocalName(document, QStringLiteral("body"));
-    ParentMatch parent = findContentParent(body);
+    ParentMatch parent = findContentParent(body, options);
     if (parent.element.isNull()) {
         result.messages << QStringLiteral("BookLive 段落规范化：正文容器在写回前复核时消失，已回退。");
         return result;
@@ -932,22 +1387,28 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(const QString& source, bool allo
     const int before_images = countImageElements(document);
 
     int converted = 0;
-    for (const Leaf& leaf : leaves) {
-        if (!isConvertible(leaf.kind)) {
-            continue;
+    if (options.addLegacyStyleCompensation) {
+        for (const Leaf& leaf : leaves) {
+            if (!isConvertible(leaf.kind, options)) {
+                continue;
+            }
+            const QDomElement paragraph = createParagraph(document, leaf);
+            parent.element.replaceChild(paragraph, leaf.element);
+            converted++;
         }
-        const QDomElement paragraph = createParagraph(document, leaf);
-        parent.element.replaceChild(paragraph, leaf.element);
-        converted++;
+        addVisualPreservationStyle(document, body);
+        removeRedundantXhtmlNamespaceAttributes(document.documentElement(), true);
+        result.text = document.toString(2);
+    } else if (!sourcePreservingTransform(source, document, parent.element, options,
+                                          result.text, converted, error)) {
+        result.messages << QStringLiteral("BookLive 段落规范化：源码范围补丁失败，已回退。%1")
+                               .arg(error);
+        return result;
     }
     if (converted == 0) {
         result.messages << QStringLiteral("BookLive 段落规范化：没有可转换的伪段落，已跳过。");
         return result;
     }
-
-    addVisualPreservationStyle(document, body);
-    removeRedundantXhtmlNamespaceAttributes(document.documentElement(), true);
-    result.text = document.toString(2);
 
     QDomDocument after_document;
     QString after_error;
@@ -987,14 +1448,17 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(const QString& source, bool allo
         return result;
     }
 
-    result.after = analyzeXhtmlText(result.text);
-    if (result.after.pageKind != PageKind::AlreadyNormalized) {
-        result.messages << QStringLiteral("BookLive 段落规范化：幂等标记复核失败，已回退。");
+    result.after = analyzeXhtmlText(result.text, options);
+    if (result.after.candidate || result.after.convertibleLeaves != 0) {
+        result.messages << QStringLiteral("BookLive 段落规范化：幂等复核仍发现同一预设的候选项，已回退。");
         return result;
     }
     result.ok = true;
     result.changed = result.text != source;
-    result.messages << QStringLiteral("BookLive 段落规范化：已原位转换 %1 个伪段落 div 为 p；布局 wrapper、空行、原 class/style、ruby、锚点、链接和图片均已保留。")
+    result.afterHash = sha256(result.text);
+    result.messages << (options.addLegacyStyleCompensation ?
+        QStringLiteral("BookLive 段落规范化：已按兼容预设转换 %1 个伪段落 div 为 p；布局 wrapper、原 class/style、ruby、锚点、链接和图片均已保留。") :
+        QStringLiteral("DIV 段落规范化：已用源码范围补丁转换 %1 个正文 div 为 p；未选类型和其余源码字节保持不变。"))
                            .arg(converted);
     return result;
 }

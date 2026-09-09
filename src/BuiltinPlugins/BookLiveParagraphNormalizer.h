@@ -17,6 +17,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QVector>
 
 namespace BuiltinPlugins
 {
@@ -24,6 +25,33 @@ namespace BuiltinPlugins
 class BookLiveParagraphNormalizer
 {
 public:
+    enum class CandidateKind {
+        Paragraph,
+        SpacerBr,
+        SceneBreak,
+        ImageWrapper,
+        SingleBlockWrapper
+    };
+
+    struct Options {
+        bool convertParagraphs = true;
+        bool convertSpacerBr = false;
+        bool convertSceneBreaks = false;
+        bool convertImageWrappers = false;
+        bool convertSingleBlockWrappers = false;
+        bool addLegacyStyleCompensation = false;
+
+        static Options conservative();
+        static Options bookLiveCompatibility();
+        QString presetId() const;
+    };
+
+    struct SourceRange {
+        int start = -1;
+        int end = -1;
+        CandidateKind kind = CandidateKind::Paragraph;
+    };
+
     enum class PageKind {
         NormalBodyFlow,
         AlreadyNormalized,
@@ -50,6 +78,7 @@ public:
         int imageLeaves = 0;
         int wrappedBlockLeaves = 0;
         int headingBlocks = 0;
+        int protectedHeadingBlocks = 0;
         int anchorOnly = 0;
         int existingParagraphs = 0;
         int nestedComplexLeaves = 0;
@@ -61,6 +90,12 @@ public:
         int wrapperDepth = 0;
         int convertibleLeaves = 0;
         bool usedShortParentPass = false;
+        QString presetId;
+        QString ruleVersion;
+        QString beforeHash;
+        QVector<SourceRange> candidateRanges;
+        QVector<SourceRange> protectedRanges;
+        QStringList warnings;
     };
 
     struct NormalizeResult {
@@ -70,10 +105,16 @@ public:
         QStringList messages;
         Analysis before;
         Analysis after;
+        QString afterHash;
     };
 
+    // Compatibility overloads retain the behavior of the original BookLive action.
     static Analysis analyzeXhtmlText(const QString& source);
+    static Analysis analyzeXhtmlText(const QString& source, const Options& options);
     static NormalizeResult normalizeXhtmlText(const QString& source,
+                                              bool allowManualReview = false);
+    static NormalizeResult normalizeXhtmlText(const QString& source,
+                                              const Options& options,
                                               bool allowManualReview = false);
     static QString pageKindName(PageKind pageKind);
 };
