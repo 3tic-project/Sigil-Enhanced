@@ -4738,8 +4738,12 @@ void MainWindow::EditTOCDialog()
         return;
     }
 
-    m_Book.data()->SetModified();
-    ShowMessageOnStatusBar(tr("Table Of Contents edited."));
+    if (toc.DidSaveChanges()) {
+        m_Book.data()->SetModified();
+        ShowMessageOnStatusBar(tr("Table Of Contents edited."));
+    } else {
+        ShowMessageOnStatusBar(tr("No changes to save."));
+    }
 }
 
 // For epub2 this set the NCX, for epub3 this sets the Nav TOC section

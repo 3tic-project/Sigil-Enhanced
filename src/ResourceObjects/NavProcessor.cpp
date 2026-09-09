@@ -40,6 +40,81 @@ static const QString NAV_TOC_PATTERN = "\\s*<!--\\s*SIGIL_REPLACE_TOC_HERE\\s*--
 
 static const QString _RS = QString(QChar(30)); // Ascii Record Separator
 
+namespace {
+
+GumboNode *DirectChild(GumboNode *parent, GumboTag tag)
+{
+    if (!parent || parent->type != GUMBO_NODE_ELEMENT) return nullptr;
+    const GumboVector *children = &parent->v.element.children;
+    for (unsigned int index = 0; index < children->length; ++index) {
+        GumboNode *child = static_cast<GumboNode *>(children->data[index]);
+        if (child->type == GUMBO_NODE_ELEMENT
+                && child->v.element.tag == tag) return child;
+    }
+    return nullptr;
+}
+
+void CollectListItems(GumboNode *list, const QList<TocNodeId> &preorder,
+                      int &position, QHash<TocNodeId, GumboNode *> &items,
+                      QHash<TocNodeId, GumboNode *> &childLists)
+{
+    if (!list || list->type != GUMBO_NODE_ELEMENT) return;
+    const GumboVector *children = &list->v.element.children;
+    for (unsigned int index = 0; index < children->length; ++index) {
+        GumboNode *child = static_cast<GumboNode *>(children->data[index]);
+        if (child->type != GUMBO_NODE_ELEMENT
+                || child->v.element.tag != GUMBO_TAG_LI
+                || position >= preorder.size()) continue;
+        const TocNodeId id = preorder.at(position++);
+        items.insert(id, child);
+        GumboNode *nested = DirectChild(child, GUMBO_TAG_OL);
+        if (nested) {
+            childLists.insert(id, nested);
+            CollectListItems(nested, preorder, position, items, childLists);
+        }
+    }
+}
+
+void ClearChildren(GumboNode *parent)
+{
+    if (!parent || parent->type != GUMBO_NODE_ELEMENT) return;
+    GumboVector *children = &parent->v.element.children;
+    while (children->length > 0) {
+        GumboNode *child = static_cast<GumboNode *>(children->data[0]);
+        gumbo_remove_from_parent(child);
+        gumbo_destroy_node(child);
+    }
+}
+
+void AppendHierarchy(const TocEditTree &tree, TocNodeId id, GumboNode *parentList,
+                     const QHash<TocNodeId, GumboNode *> &items,
+                     QHash<TocNodeId, GumboNode *> &childLists)
+{
+    GumboNode *item = items.value(id, nullptr);
+    if (!item) return;
+    gumbo_append_node(parentList, item);
+    const QList<TocNodeId> children = tree.nodes.value(id).children;
+    GumboNode *nested = childLists.value(id, nullptr);
+    if (children.isEmpty()) {
+        if (nested && nested->parent) {
+            gumbo_remove_from_parent(nested);
+            gumbo_destroy_node(nested);
+            childLists.remove(id);
+        }
+        return;
+    }
+    if (!nested) {
+        nested = gumbo_create_element_node(GUMBO_TAG_OL, GUMBO_NAMESPACE_HTML);
+        gumbo_append_node(item, nested);
+        childLists.insert(id, nested);
+    }
+    for (TocNodeId child : children) {
+        AppendHierarchy(tree, child, nested, items, childLists);
+    }
+}
+
+}
+
 NavProcessor::NavProcessor(HTMLResource * nav_resource)
   : m_NavResource(nav_resource)
 {
@@ -423,11 +498,114 @@ void NavProcessor::SetLandmarks(const QList<NavLandmarkEntry> & landlist)
     m_NavResource->SetText(nav_data);
 }
 
+bool NavProcessor::ReplaceTOCList(const QString &generatedSource)
+{
+    if (!m_NavResource) return false;
 
+    QString source = m_NavResource->GetText();
+    const QRegularExpression tocStart(
+        "(<\\s*nav\\s[^>]*epub:type[^>]*[\"']toc[\"'][^>]*>)",
+        QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpression olStart(
+        "(<\\s*ol\\b[^>]*>)", QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpression olEnd(
+        "</\\s*ol\\s*>", QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpressionMatch tocMatch = tocStart.match(source);
+    if (tocMatch.hasMatch()) {
+        const int navEnd = source.indexOf("</nav>", tocMatch.capturedEnd(),
+                                          Qt::CaseInsensitive);
+        const QRegularExpressionMatch oldOlStart = olStart.match(
+            source, tocMatch.capturedEnd());
+        if (navEnd >= 0 && oldOlStart.hasMatch()
+                && oldOlStart.capturedStart() < navEnd) {
+            QRegularExpressionMatch oldOlEnd;
+            auto endings = olEnd.globalMatch(
+                source.mid(oldOlStart.capturedStart(),
+                           navEnd - oldOlStart.capturedStart()));
+            while (endings.hasNext()) oldOlEnd = endings.next();
+
+            const QRegularExpressionMatch newOlStart = olStart.match(generatedSource);
+            QRegularExpressionMatch newOlEnd;
+            auto generatedEndings = olEnd.globalMatch(generatedSource);
+            while (generatedEndings.hasNext()) newOlEnd = generatedEndings.next();
+            if (oldOlEnd.hasMatch() && newOlStart.hasMatch()
+                    && newOlEnd.hasMatch()) {
+                const int oldEnd = oldOlStart.capturedStart()
+                    + oldOlEnd.capturedEnd();
+                QString newList = generatedSource.mid(
+                    newOlStart.capturedStart(),
+                    newOlEnd.capturedEnd() - newOlStart.capturedStart());
+                newList.replace(0, newOlStart.capturedLength(),
+                                oldOlStart.captured());
+                source.replace(oldOlStart.capturedStart(),
+                               oldEnd - oldOlStart.capturedStart(), newList);
+                if (source != m_NavResource->GetText()) {
+                    m_NavResource->SetText(source);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool NavProcessor::ReparentNavTOC(const TocEditTree &before,
+                                  const TocEditTree &after)
+{
+    if (!m_NavResource || !TocTreeTransform::Validate(before)
+            || !TocTreeTransform::Validate(after)
+            || before.rootId != after.rootId
+            || before.nodes.size() != after.nodes.size()) return false;
+    for (auto it = before.nodes.cbegin(); it != before.nodes.cend(); ++it) {
+        if (!after.nodes.contains(it.key())
+                || it.value().label != after.nodes.value(it.key()).label
+                || it.value().target != after.nodes.value(it.key()).target) {
+            return false;
+        }
+    }
+
+    GumboInterface gi(m_NavResource->GetText(), "3.0");
+    gi.parse();
+    GumboNode *rootList = nullptr;
+    const QList<GumboNode *> navNodes = gi.get_all_nodes_with_tag(GUMBO_TAG_NAV);
+    for (GumboNode *nav : navNodes) {
+        GumboAttribute *type = gumbo_get_attribute(
+            &nav->v.element.attributes, "epub:type");
+        if (!type || QString::fromUtf8(type->value) != QLatin1String("toc")) continue;
+        rootList = DirectChild(nav, GUMBO_TAG_OL);
+        if (!rootList) {
+            const QList<GumboNode *> lists = gi.get_nodes_with_tags(
+                nav, {GUMBO_TAG_OL});
+            if (!lists.isEmpty()) rootList = lists.first();
+        }
+        break;
+    }
+    if (!rootList) return false;
+
+    const QList<TocNodeId> preorder = TocTreeTransform::PreorderIds(before);
+    QHash<TocNodeId, GumboNode *> items;
+    QHash<TocNodeId, GumboNode *> childLists;
+    int position = 0;
+    CollectListItems(rootList, preorder, position, items, childLists);
+    if (position != preorder.size() || items.size() != preorder.size()) return false;
+
+    for (TocNodeId id : preorder) {
+        GumboNode *item = items.value(id, nullptr);
+        if (!item || !item->parent) return false;
+        gumbo_remove_from_parent(item);
+    }
+    ClearChildren(rootList);
+    for (GumboNode *list : childLists) ClearChildren(list);
+    for (TocNodeId id : after.nodes.value(after.rootId).children) {
+        AppendHierarchy(after, id, rootList, items, childLists);
+    }
+    return ReplaceTOCList(gi.getxhtml());
+}
 
 void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)
 {
     if (!m_NavResource) return;
+    if (ReplaceTOCList(BuildTOC(toclist))) return;
 
     bool found_toc = false;
     // QWriteLocker locker(&m_NavResource->GetLock());

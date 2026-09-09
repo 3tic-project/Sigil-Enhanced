@@ -63,6 +63,8 @@ public:
 
     ~EditTOC();
 
+    bool DidSaveChanges() const;
+
         
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
@@ -167,6 +169,7 @@ private:
     TocNodeId m_NextNodeId;
     QHash<TocNodeId, QStandardItem *> m_ItemsById;
     bool m_ApplyingTree;
+    bool m_SavedChanges;
 
     Ui::EditTOC ui;
 };

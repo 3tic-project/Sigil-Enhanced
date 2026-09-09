@@ -52,6 +52,7 @@
 
 static const QString SETTINGS_GROUP   = "edit_toc";
 static const int COLUMN_INDENTATION = 20;
+static const int EXPAND_ALL_ITEM_LIMIT = 1000;
 static const int NODE_ID_ROLE = Qt::UserRole + 100;
 
 namespace {
@@ -115,7 +116,8 @@ EditTOC::EditTOC(QSharedPointer<Book> book, QList<Resource *> resources, QWidget
     m_BaseResource(NULL),
     m_UndoStack(new QUndoStack(this)),
     m_NextNodeId(1),
-    m_ApplyingTree(false)
+    m_ApplyingTree(false),
+    m_SavedChanges(false)
 {
     // first determine the base resource pointer we will be working with
     //  is it the ncx or the nav
@@ -162,9 +164,18 @@ EditTOC::~EditTOC()
     WriteSettings();
 }
 
+bool EditTOC::DidSaveChanges() const
+{
+    return m_SavedChanges;
+}
+
 void EditTOC::UpdateTreeViewDisplay()
 {
-    ui.TOCTree->expandAll();
+    if (m_ItemsById.size() <= EXPAND_ALL_ITEM_LIMIT) {
+        ui.TOCTree->expandAll();
+    } else {
+        ui.TOCTree->expandToDepth(0);
+    }
 }
 
 void EditTOC::CreateTOCModel()
@@ -186,18 +197,39 @@ void EditTOC::CreateTOCModel()
 
 void EditTOC::Save()
 {
-    if (TocTreeTransform::Equal(m_InitialTree, ConvertTableToEditTree())) return;
+    const TocEditTree finalTree = ConvertTableToEditTree();
+    const bool treeChanged = !TocTreeTransform::Equal(m_InitialTree, finalTree);
+    const TOCModel::TOCEntry finalEntries = ConvertTableToEntries();
     QString version = m_Book->GetConstOPF()->GetEpubVersion();
+    const bool syncCompatibilityNcx = version.startsWith('3')
+        && ui.SyncNcx->isChecked() && m_Book->GetNCX();
+    if (!treeChanged && !syncCompatibilityNcx) return;
     if (version.startsWith('3')) {
-        NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
-        navproc.GenerateNavTOCFromTOCEntries(ConvertTableToEntries());
-        if (ui.SyncNcx->isChecked() && m_Book->GetNCX()) {
-            m_Book->GetNCX()->GenerateNCXFromTOCEntries(
-                m_Book.data(), ConvertTableToEntries());
+        if (treeChanged) {
+            HTMLResource *navResource = m_Book->GetConstOPF()->GetNavResource();
+            const QString before = navResource ? navResource->GetText() : QString();
+            NavProcessor navproc(navResource);
+            if (!navproc.ReparentNavTOC(m_InitialTree, finalTree)) {
+                navproc.GenerateNavTOCFromTOCEntries(finalEntries);
+            }
+            m_SavedChanges = navResource && navResource->GetText() != before;
+        }
+        if (syncCompatibilityNcx) {
+            NCXResource *ncx = m_Book->GetNCX();
+            const QString before = ncx->GetText();
+            if (!ncx->ReparentNCX(m_InitialTree, finalTree)) {
+                ncx->GenerateNCXFromTOCEntries(m_Book.data(), finalEntries);
+            }
+            m_SavedChanges = m_SavedChanges || ncx->GetText() != before;
         }
     } else {
         // this is safe as all epub2's must hve an ncx (if not we made one for them)
-        m_Book->GetNCX()->GenerateNCXFromTOCEntries(m_Book.data(), ConvertTableToEntries());
+        NCXResource *ncx = m_Book->GetNCX();
+        const QString before = ncx->GetText();
+        if (!ncx->ReparentNCX(m_InitialTree, finalTree)) {
+            ncx->GenerateNCXFromTOCEntries(m_Book.data(), finalEntries);
+        }
+        m_SavedChanges = ncx->GetText() != before;
     }
 }
 
@@ -344,7 +376,7 @@ void EditTOC::ApplyHierarchyTransform(const TocTransformResult &result,
         ShowTransformError(result);
         return;
     }
-    const TocEditTree before = ConvertTableToEditTree();
+    const TocEditTree before = m_CurrentTree;
     const QList<TocNodeId> beforeSelection = SelectedNodeIds();
     PushSnapshot(before, result.tree, beforeSelection,
                  result.normalizedSelection, undoText, false);
@@ -363,7 +395,10 @@ void EditTOC::PushSnapshot(const TocEditTree &before, const TocEditTree &after,
     m_UndoStack->push(new TocTreeSnapshotCommand(
         before, after, beforeSelection, afterSelection, undoText, apply,
         alreadyApplied));
-    if (alreadyApplied) m_CurrentTree = after;
+    if (alreadyApplied) {
+        m_CurrentTree = after;
+        UpdateMoveButtons();
+    }
 }
 
 void EditTOC::RecordAppliedEdit(const TocEditTree &before,
@@ -576,7 +611,7 @@ void EditTOC::MoveLeft()
     const QList<TocNodeId> selection = SelectedNodeIds();
     if (selection.isEmpty()) return;
     const TocTransformResult result = TocTreeTransform::Promote(
-        ConvertTableToEditTree(), selection,
+        m_CurrentTree, selection,
         ui.PromoteAdoptsFollowing->isChecked());
     if (!result.succeeded()) {
         ShowTransformError(result);
@@ -593,7 +628,7 @@ void EditTOC::MoveRight()
     const QList<TocNodeId> selection = SelectedNodeIds();
     if (selection.isEmpty()) return;
     const TocTransformResult result = TocTreeTransform::Demote(
-        ConvertTableToEditTree(), selection);
+        m_CurrentTree, selection);
     if (!result.succeeded()) {
         ShowTransformError(result);
         return;
@@ -609,7 +644,7 @@ void EditTOC::MoveUp()
     if (!ui.TOCTree->selectionModel()->hasSelection()) {
         return;
     }
-    const TocEditTree before = ConvertTableToEditTree();
+    const TocEditTree before = m_CurrentTree;
     const QList<TocNodeId> beforeSelection = SelectedNodeIds();
     QList<QStandardItem*> moved_items;
     StructureUserSelections();
@@ -662,7 +697,7 @@ void EditTOC::MoveDown()
     if (!ui.TOCTree->selectionModel()->hasSelection()) {
         return;
     }
-    const TocEditTree before = ConvertTableToEditTree();
+    const TocEditTree before = m_CurrentTree;
     const QList<TocNodeId> beforeSelection = SelectedNodeIds();
     QList<QStandardItem*> moved_items;
     StructureUserSelections();
@@ -728,7 +763,7 @@ void EditTOC::AddEntry(bool above)
     }
 
     QStandardItem *item = m_TableOfContents->itemFromIndex(index);
-    const TocEditTree before = ConvertTableToEditTree();
+    const TocEditTree before = m_CurrentTree;
     const QList<TocNodeId> beforeSelection = SelectedNodeIds();
 
     QStandardItem *parent_item = item->parent();
@@ -793,7 +828,7 @@ void EditTOC::DeleteEntry()
     }
 
     QStandardItem *item = m_TableOfContents->itemFromIndex(index);
-    const TocEditTree before = ConvertTableToEditTree();
+    const TocEditTree before = m_CurrentTree;
     const QList<TocNodeId> beforeSelection = SelectedNodeIds();
 
     QStandardItem *parent_item = item->parent();
@@ -1088,9 +1123,9 @@ void EditTOC::UpdateMoveButtons()
         return;
     }
 
-    const TocEditTree tree = ConvertTableToEditTree();
     ui.MoveLeft->setEnabled(TocTreeTransform::Promote(
-        tree, selection, ui.PromoteAdoptsFollowing->isChecked()).succeeded());
+        m_CurrentTree, selection,
+        ui.PromoteAdoptsFollowing->isChecked()).succeeded());
     ui.MoveRight->setEnabled(
-        TocTreeTransform::Demote(tree, selection).succeeded());
+        TocTreeTransform::Demote(m_CurrentTree, selection).succeeded());
 }

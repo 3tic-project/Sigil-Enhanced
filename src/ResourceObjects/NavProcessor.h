@@ -26,6 +26,7 @@
 #include <QStringList>
 #include "BookManipulation/Book.h"
 #include "BookManipulation/Headings.h"
+#include "BookManipulation/TocTreeTransform.h"
 #include "ResourceObjects/HTMLResource.h"
 #include "Parsers/GumboInterface.h"
 #include "MainUI/TOCModel.h"
@@ -65,6 +66,10 @@ public:
     // Set Nav Section from TOCEntry Tree
     void GenerateNavTOCFromTOCEntries(const TOCModel::TOCEntry& root);
 
+    // Reparent existing list items without rebuilding their labels, attributes,
+    // or inline markup. Returns false when the source cannot be mapped safely.
+    bool ReparentNavTOC(const TocEditTree &before, const TocEditTree &after);
+
     // Get current Nav as TOCEntry Tree
     TOCModel::TOCEntry GetRootTOCEntry();
 
@@ -83,6 +88,7 @@ private:
     QString BuildTOC(const QList<NavTOCEntry> & toclist);
     QString BuildLandmarks(const QList<NavLandmarkEntry> & landlist);
     QString BuildPageList(const QList<NavPageListEntry> & pagelist);
+    bool ReplaceTOCList(const QString &generatedSource);
 
     void SetTOC(const QList<NavTOCEntry> & toclist);
     void SetLandmarks(const QList<NavLandmarkEntry> & landlist);
