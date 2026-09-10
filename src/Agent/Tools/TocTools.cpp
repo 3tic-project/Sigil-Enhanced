@@ -52,15 +52,9 @@ private:
     Function m_function;
 };
 
-struct ParsedTree {
-    bool ok = false;
-    QString code;
-    QString message;
-    TocEditTree tree;
-};
-
 struct StoredSnapshot {
     QString id;
+    QString sourceIdentity;
     quint64 bookRevision = 0;
     TocEditTree tree;
 };
@@ -70,6 +64,7 @@ struct StoredPlan {
     QString digest;
     QString snapshotId;
     QString operation;
+    QString sourceIdentity;
     quint64 bookRevision = 0;
     TocEditTree before;
     TocEditTree after;
@@ -85,11 +80,13 @@ void addFramed(QCryptographicHash &hash, const QString &value)
 }
 
 QString treeDigest(const QString &domain,
+                   const QString &source_identity,
                    quint64 book_revision,
                    const TocEditTree &tree)
 {
     QCryptographicHash hash(QCryptographicHash::Sha256);
     addFramed(hash, domain);
+    addFramed(hash, source_identity);
     addFramed(hash, QString::number(book_revision));
     const QList<TocNodeId> preorder = TocTreeTransform::PreorderIds(tree);
     for (TocNodeId id : preorder) {
@@ -105,72 +102,6 @@ QString treeDigest(const QString &domain,
         addFramed(hash, children.join(QLatin1Char(',')));
     }
     return QString::fromLatin1(hash.result().toHex());
-}
-
-ParsedTree parseWorkspaceToc(const QJsonArray &entries,
-                             AgentCancellation *cancellation)
-{
-    ParsedTree parsed;
-    parsed.tree.rootId = 0;
-    TocEditNode root;
-    root.id = 0;
-    root.parentId = 0;
-    parsed.tree.nodes.insert(0, root);
-
-    QList<TocNodeId> last_at_level;
-    TocNodeId next_id = 1;
-    for (int index = 0; index < entries.size(); ++index) {
-        if (cancellation && cancellation->isCancelled()) {
-            parsed.code = QStringLiteral("CANCELLED");
-            parsed.message = QStringLiteral("cancelled");
-            return parsed;
-        }
-        if (!entries.at(index).isObject()) {
-            parsed.code = QStringLiteral("TOC_INVALID");
-            parsed.message = QStringLiteral("TOC entries must be objects");
-            return parsed;
-        }
-        const QJsonObject object = entries.at(index).toObject();
-        const int level = object.value(QStringLiteral("level")).toInt(1);
-        if (level < 1 || level > last_at_level.size() + 1) {
-            parsed.code = QStringLiteral("TOC_INVALID");
-            parsed.message = QStringLiteral("TOC level jumps at entry %1").arg(index);
-            return parsed;
-        }
-        const TocNodeId parent = level == 1 ? parsed.tree.rootId
-                                             : last_at_level.at(level - 2);
-        TocEditNode node;
-        node.id = next_id++;
-        node.parentId = parent;
-        node.label = object.value(QStringLiteral("label")).toString();
-        node.target = object.value(QStringLiteral("href")).toString();
-        if (node.target.isEmpty()) {
-            node.target = object.value(QStringLiteral("target")).toString();
-        }
-        if (node.target.isEmpty()) {
-            node.target = object.value(QStringLiteral("book_path")).toString();
-        }
-        parsed.tree.nodes.insert(node.id, node);
-        parsed.tree.nodes[parent].children.append(node.id);
-        while (last_at_level.size() >= level) {
-            last_at_level.removeLast();
-        }
-        last_at_level.append(node.id);
-    }
-
-    if (entries.isEmpty()) {
-        parsed.code = QStringLiteral("TOC_EMPTY");
-        parsed.message = QStringLiteral("The current book has no table of contents entries");
-        return parsed;
-    }
-    QString error;
-    if (!TocTreeTransform::Validate(parsed.tree, &error)) {
-        parsed.code = QStringLiteral("TOC_INVALID");
-        parsed.message = error;
-        return parsed;
-    }
-    parsed.ok = true;
-    return parsed;
 }
 
 QHash<TocNodeId, int> depths(const TocEditTree &tree)
@@ -278,16 +209,38 @@ public:
                 QStringLiteral("offset must be non-negative and limit must be between 1 and %1")
                     .arg(kMaxPageSize));
         }
-        const ParsedTree parsed = parseWorkspaceToc(m_workspace->toc(), m_cancellation);
-        if (!parsed.ok) {
-            if (parsed.code == QLatin1String("CANCELLED")) return ToolResult::cancelled();
-            return ToolResult::failure(parsed.code, parsed.message);
+        if (m_cancellation && m_cancellation->isCancelled()) {
+            return ToolResult::cancelled();
+        }
+        const QString source_identity_before = m_workspace->tocHierarchyIdentity();
+        const TocEditTree tree = m_workspace->tocHierarchy();
+        const QString source_identity_after = m_workspace->tocHierarchyIdentity();
+        if (m_cancellation && m_cancellation->isCancelled()) {
+            return ToolResult::cancelled();
+        }
+        if (source_identity_before.isEmpty()
+            || source_identity_before != source_identity_after) {
+            return ToolResult::failure(
+                QStringLiteral("TOC_SOURCE_CHANGED"),
+                QStringLiteral("The native Nav/NCX source changed while it was being inspected"));
+        }
+        QString validation_error;
+        if (!TocTreeTransform::Validate(tree, &validation_error)) {
+            return ToolResult::failure(
+                QStringLiteral("TOC_INVALID"), validation_error);
+        }
+        if (tree.nodes.value(tree.rootId).children.isEmpty()) {
+            return ToolResult::failure(
+                QStringLiteral("TOC_EMPTY"),
+                QStringLiteral("The current book has no table of contents entries"));
         }
         StoredSnapshot stored;
         stored.bookRevision = m_workspace->revision();
-        stored.tree = parsed.tree;
+        stored.sourceIdentity = source_identity_after;
+        stored.tree = tree;
         stored.id = treeDigest(
             QStringLiteral("sigil-agent-toc-snapshot-v1:") + m_sessionNonce,
+            stored.sourceIdentity,
             stored.bookRevision, stored.tree);
         m_snapshot = stored;
         m_plan.reset();
@@ -337,15 +290,18 @@ public:
                 QStringLiteral("TOC_SNAPSHOT_STALE"),
                 QStringLiteral("The book revision changed after TOC inspection"));
         }
-        const ParsedTree current = parseWorkspaceToc(m_workspace->toc(), m_cancellation);
-        if (!current.ok) {
-            if (current.code == QLatin1String("CANCELLED")) return ToolResult::cancelled();
-            return ToolResult::failure(current.code, current.message);
+        const QString current_identity_before = m_workspace->tocHierarchyIdentity();
+        const TocEditTree current = m_workspace->tocHierarchy();
+        const QString current_identity_after = m_workspace->tocHierarchyIdentity();
+        if (m_cancellation && m_cancellation->isCancelled()) {
+            return ToolResult::cancelled();
         }
-        if (!TocTreeTransform::Equal(current.tree, m_snapshot->tree)) {
+        if (current_identity_before != m_snapshot->sourceIdentity
+            || current_identity_after != m_snapshot->sourceIdentity
+            || !TocTreeTransform::Equal(current, m_snapshot->tree)) {
             return ToolResult::failure(
                 QStringLiteral("TOC_SNAPSHOT_STALE"),
-                QStringLiteral("The TOC hierarchy changed after inspection"));
+                QStringLiteral("The TOC source or hierarchy changed after inspection"));
         }
 
         const QString operation = arguments.value(QStringLiteral("operation")).toString();
@@ -402,12 +358,15 @@ public:
         StoredPlan stored;
         stored.snapshotId = m_snapshot->id;
         stored.operation = operation;
+        stored.sourceIdentity = m_snapshot->sourceIdentity;
         stored.bookRevision = m_snapshot->bookRevision;
         stored.before = m_snapshot->tree;
         stored.after = transform.tree;
         stored.transform = transform;
         stored.id = treeDigest(
-            QStringLiteral("sigil-agent-toc-plan-v1:") + operation,
+            QStringLiteral("sigil-agent-toc-plan-v1:") + m_sessionNonce
+                + QLatin1Char(':') + stored.snapshotId + QLatin1Char(':') + operation,
+            stored.sourceIdentity,
             stored.bookRevision, stored.after);
         QCryptographicHash digest(QCryptographicHash::Sha256);
         addFramed(digest, QStringLiteral("sigil-agent-toc-plan-digest-v1"));
@@ -458,7 +417,119 @@ public:
         }, false, true);
     }
 
+    ToolResult applyTransform(const QJsonObject &arguments)
+    {
+        if (!m_plan) {
+            return ToolResult::failure(
+                QStringLiteral("TOC_PLAN_NOT_FOUND"),
+                QStringLiteral("Create a TOC transform plan in this book session before applying it"));
+        }
+        const QJsonValue plan_id_value = arguments.value(QStringLiteral("plan_id"));
+        const QJsonValue digest_value = arguments.value(QStringLiteral("plan_digest"));
+        const QJsonValue revision_value = arguments.value(
+            QStringLiteral("expected_book_revision"));
+        const qint64 signed_revision = revision_value.toInteger(-1);
+        if (!plan_id_value.isString() || !digest_value.isString()
+            || !revision_value.isDouble() || signed_revision < 0) {
+            return ToolResult::failure(
+                QStringLiteral("INVALID_ARGUMENT"),
+                QStringLiteral("plan_id and plan_digest must be strings and expected_book_revision must be a non-negative integer"));
+        }
+        const quint64 expected_revision = static_cast<quint64>(signed_revision);
+        if (plan_id_value.toString() != m_plan->id
+            || digest_value.toString() != m_plan->digest
+            || expected_revision != m_plan->bookRevision) {
+            return ToolResult::failure(
+                QStringLiteral("TOC_PLAN_BINDING_MISMATCH"),
+                QStringLiteral("plan_id, plan_digest, and expected_book_revision must match the reviewed TOC plan"));
+        }
+        if (m_workspace->hasOpenTransaction()) {
+            return ToolResult::failure(
+                QStringLiteral("TRANSACTION_OPEN"),
+                QStringLiteral("The reviewed TOC plan requires an exclusive new transaction"));
+        }
+        if (m_cancellation && m_cancellation->isCancelled()) {
+            return ToolResult::cancelled();
+        }
+        if (m_workspace->revision() != m_plan->bookRevision) {
+            return ToolResult::failure(
+                QStringLiteral("BOOK_REVISION_CONFLICT"),
+                QStringLiteral("The book revision changed after TOC planning"));
+        }
+        const QString current_identity_before = m_workspace->tocHierarchyIdentity();
+        const TocEditTree current = m_workspace->tocHierarchy();
+        const QString current_identity_after = m_workspace->tocHierarchyIdentity();
+        if (m_cancellation && m_cancellation->isCancelled()) {
+            return ToolResult::cancelled();
+        }
+        if (current_identity_before != m_plan->sourceIdentity
+            || current_identity_after != m_plan->sourceIdentity
+            || !TocTreeTransform::Equal(current, m_plan->before)) {
+            return ToolResult::failure(
+                QStringLiteral("TOC_PLAN_STALE"),
+                QStringLiteral("The native TOC source or hierarchy changed after planning"));
+        }
+
+        const BookOpResult begun = m_workspace->beginTransaction(
+            QStringLiteral("Apply TOC hierarchy plan (%1)").arg(m_plan->id.left(12)));
+        if (!begun.ok) {
+            return ToolResult::failure(begun.code, begun.message, begun.data);
+        }
+        if (m_cancellation && m_cancellation->isCancelled()) {
+            return rollbackFailure(ToolResult::cancelled());
+        }
+        const BookOpResult staged = m_workspace->updateTocHierarchy(
+            m_plan->before, m_plan->after);
+        if (!staged.ok) {
+            return rollbackFailure(ToolResult::failure(
+                staged.code, staged.message, staged.data));
+        }
+        if (m_cancellation && m_cancellation->isCancelled()) {
+            return rollbackFailure(ToolResult::cancelled());
+        }
+
+        QJsonObject data = begun.data;
+        data.insert(QStringLiteral("plan_id"), m_plan->id);
+        data.insert(QStringLiteral("plan_digest"), m_plan->digest);
+        data.insert(QStringLiteral("book_revision"),
+                    static_cast<qint64>(m_plan->bookRevision));
+        data.insert(QStringLiteral("staged_nodes"),
+                    m_plan->transform.reparentedIds.size());
+        data.insert(QStringLiteral("staged_entries"), m_plan->after.nodes.size() - 1);
+        data.insert(QStringLiteral("preorder_preserved"), true);
+        data.insert(QStringLiteral("changes_navigation"), true);
+        data.insert(QStringLiteral("changes_xhtml_headings"), false);
+        data.insert(QStringLiteral("requires_transaction_preview"), true);
+        data.insert(QStringLiteral("requires_transaction_commit"), true);
+        data.insert(QStringLiteral("applied_to_book"), false);
+        data.insert(QStringLiteral("save_status"), QStringLiteral("not_applied"));
+        data.insert(QStringLiteral("local_validation"), QStringLiteral("passed"));
+        data.insert(QStringLiteral("full_epubcheck"), epubcheckNotRun());
+        return ToolResult::success(data, false, true);
+    }
+
 private:
+    ToolResult rollbackFailure(const ToolResult &failure)
+    {
+        const BookOpResult rolled_back = m_workspace->rollbackTransaction();
+        if (!rolled_back.ok) {
+            return ToolResult::failure(
+                QStringLiteral("STAGING_ROLLBACK_FAILED"),
+                QStringLiteral("TOC staging failed and the transaction could not be rolled back: %1")
+                    .arg(rolled_back.message),
+                QJsonObject {
+                    { QStringLiteral("original_code"), failure.code },
+                    { QStringLiteral("original_message"), failure.message }
+                });
+        }
+        if (failure.code == QLatin1String("CANCELLED")) return failure;
+        return ToolResult::failure(
+            QStringLiteral("STAGING_ROLLED_BACK"),
+            QStringLiteral("TOC staging failed; the exclusive transaction was rolled back: %1")
+                .arg(failure.message),
+            QJsonObject { { QStringLiteral("original_code"), failure.code } });
+    }
+
     IBookWorkspace *m_workspace = nullptr;
     AgentCancellation *m_cancellation = nullptr;
     const QString m_sessionNonce = QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -469,14 +540,16 @@ private:
 void addTool(ToolRegistry *registry,
              const QString &name,
              const QString &description,
+             ToolRisk risk,
+             bool mutates,
              const QJsonObject &schema,
              LambdaTool::Function function)
 {
     AgentToolDescriptor descriptor;
     descriptor.name = name;
     descriptor.description = description;
-    descriptor.risk = ToolRisk::Read;
-    descriptor.mutatesBook = false;
+    descriptor.risk = risk;
+    descriptor.mutatesBook = mutates;
     descriptor.supportsPreview = true;
     descriptor.inputSchema = schema;
     registry->add(std::make_unique<LambdaTool>(descriptor, std::move(function)));
@@ -494,6 +567,7 @@ void registerTocTools(ToolRegistry *registry,
     addTool(
         registry, QStringLiteral("toc.inspect_hierarchy"),
         QStringLiteral("Inspect the current native Nav/NCX hierarchy with stable node IDs and bounded pagination. Read-only and session-bound; never changes headings or the Book."),
+        ToolRisk::Read, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
@@ -506,6 +580,7 @@ void registerTocTools(ToolRegistry *registry,
     addTool(
         registry, QStringLiteral("toc.plan_transform"),
         QStringLiteral("Plan a native promote or demote operation for stable TOC node IDs. Preserves preorder and returns bounded parent/depth changes. Read-only: no Nav, NCX, or XHTML is changed."),
+        ToolRisk::Read, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
@@ -519,6 +594,25 @@ void registerTocTools(ToolRegistry *registry,
             } }
         },
         [service](const QJsonObject &arguments) { return service->planTransform(arguments); });
+
+    addTool(
+        registry, QStringLiteral("toc.apply_transform"),
+        QStringLiteral("Revalidate and stage exactly the reviewed native TOC hierarchy plan in an exclusive transaction. Preserves labels, targets, source attributes, inline markup, and preorder. The live Book remains unchanged until transaction.commit."),
+        ToolRisk::Bulk, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("plan_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("plan_digest"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("expected_book_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 0 } } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("plan_id"),
+                QStringLiteral("plan_digest"),
+                QStringLiteral("expected_book_revision")
+            } }
+        },
+        [service](const QJsonObject &arguments) { return service->applyTransform(arguments); });
 }
 
 } // namespace SigilAgent

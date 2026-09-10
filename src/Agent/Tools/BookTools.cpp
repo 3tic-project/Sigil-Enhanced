@@ -148,6 +148,13 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
                  arguments.value(QStringLiteral("plan_digest")).toString(),
                  QString::number(arguments.value(QStringLiteral("expected_book_revision")).toInteger()));
     }
+    if (name == QLatin1String("toc.apply_transform")) {
+        return QStringLiteral("Stage reviewed native TOC hierarchy plan %1 with digest %2 for book revision %3. "
+                              "This reparents Nav/NCX entries only; labels, targets, preorder, XHTML headings, and the live book remain unchanged until transaction.commit.")
+            .arg(arguments.value(QStringLiteral("plan_id")).toString(),
+                 arguments.value(QStringLiteral("plan_digest")).toString(),
+                 QString::number(arguments.value(QStringLiteral("expected_book_revision")).toInteger()));
+    }
     return QStringLiteral("Run %1 on the current book.").arg(name);
 }
 
