@@ -24,6 +24,8 @@
   `ba220b1df` 继续，复用该工作树。原 OPF 分支仍保留在依赖提交上。
 - 插件/MCP 与原生 Agent 的 OPF 结构化更新：`feature/opf-plugin-source-updates`，
   从导航分支的 `d6a6871ae` 继续，复用同一工作树。
+- 原生 Agent 段落计划工具：`feature/agent-native-paragraph-tools`，从已验证的 DIV
+  规范化分支继续；当前切片仅注册到 Native Agent，不宣称已进入公共 MCP catalog。
 - 其余功能分别创建分支；有依赖的分支从已验证的依赖提交继续。
 - 每项拆分为可审阅的算法/集成/验证和文档提交，未验证的项不标为完成。
 - 原工作树三处未提交的文本资源加载改动保留，不纳入本分支。
@@ -485,3 +487,54 @@ Cmoa/BookLive 附件、Windows/Linux 原生 GUI、人工辅助技术、完整 EP
 进程内回滚与 Checkpoint 也不是强杀进程/断电级 WAL。因此 D01、D06 及全局跨平台/
 真实书籍门槛仍不能标为完全关闭。用户与工程说明见
 [DIV 段落结构规范化](DivParagraphNormalization.md)。
+
+## Native Agent 段落计划工具（2026-09-10）
+
+分支：`feature/agent-native-paragraph-tools`。主要提交：`a1d918c44`（原生工具与
+controller 注册）、`efc41cd91`（计划范围输入校验）、`fce1e1759`（计划生命周期与
+回滚测试）、`58d67e52f`（工具编排 skill）、`900960cf4`（真实 Runner 审批门）。
+
+### 行为与安全边界
+
+- Native Agent 新增 `paragraphs.analyze`、`paragraphs.plan`、`paragraphs.apply`，复用
+  `BookLiveParagraphNormalizer`、`DivParagraphNormalizationPlan` 和完整 stylesheet
+  resolver，不在模型或适配层复制 C++ 规则。范围省略时分析全部 XHTML；四类可选兼容
+  转换保持默认关闭。
+- analyze/plan 均只读且可取消。响应提供候选、受保护范围、CSS 依赖、分类、状态、
+  前后哈希与有界源码差异；最多返回 128 个范围/依赖和 4,096 code unit 摘录，不把
+  整章正文作为计划响应。只有 `apply` 状态资源可进入计划。
+- 计划绑定当前 controller/Book 会话、`analysis_id`、`plan_id`、SHA-256
+  `plan_digest`、book revision、资源路径与 XHTML/CSS 源码身份。新分析废弃旧计划；
+  跨会话、摘要不符、路径/修订/源码/CSS 变化或重建结果不同均在开事务前拒绝。
+- `paragraphs.apply` 是 Bulk、可预览工具。它要求独占新事务，重验后只把完整 XHTML
+  输出暂存到 workspace，返回 `applied_to_book=false`；活书写入仍由既有
+  `transaction.preview` / `transaction.commit` 完成。中途取消或第二个文件暂存失败会
+  回滚整批事务。
+- Edit 模式在工具启动前走实际 `AgentRunner` 批准门，影响说明包含计划 ID、摘要和
+  book revision；Ask 拒绝，Plan 可暂存/预览但不能 commit，Auto 允许。提示与新内置
+  `paragraph-normalization` skill 明确禁止预先 `transaction.begin`，避免与独占事务冲突。
+- 每个响应明确 `full_epubcheck.status=not_run`；局部校验、暂存、commit 到当前 Book 和
+  用户随后保存 EPUB 是四个不同状态。工具目前仅由 `AgentController` 注册，公共 MCP
+  仍维持原 38 工具及直接 commit 兼容语义。
+
+### 测试证据与未关闭项
+
+完整 `Sigil` 构建通过，打包阶段 42 项固定 Python 依赖及隔离导入检查通过。定向测试：
+
+```sh
+ctest --test-dir build --output-on-failure \
+  -R '^(agent_(book_tools|book_ops|harness|typeset|div_paragraph_tools)|booklive_paragraph_normalizer|div_paragraph_normalization_contract)$'
+```
+
+上述 7 项通过。新增测试覆盖 alias/schema、只读分析、有界响应、CSS 风险拒绝、
+计划摘要与 book revision 绑定、仅暂存、Ruby/标题/空行保留、commit、幂等、跨会话
+拒绝、CSS 静默变化、取消及多文件暂存失败回滚；Runner 用真实工具验证 Edit 审批
+拒绝不会启动工具或留下事务。Prompt 测试验证 DIV 请求会装载专用 skill 和正确的
+独占事务顺序。
+
+本切片推进 AGENT-IM3 的 DIV 服务与 A01/A03–A07/A09/A12 自动化证据，但没有完成
+AGENT-IM1/2 或 G8：尚无独立的计划审阅面板、提交后“尚未保存”结果卡和整任务恢复
+按钮；TOC/OPF 计划服务仍未接入，段落服务也未桥接 Live v2/MCP。真实未保存编辑器
+正文、书籍关闭/超时、公开附件、完整 EPUBCheck、跨平台 GUI、阅读器视觉比较与
+提交后覆盖新人工编辑的恢复冲突仍待验收。详细协议见
+[Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。

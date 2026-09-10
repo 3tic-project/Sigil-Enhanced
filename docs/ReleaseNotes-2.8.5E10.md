@@ -89,6 +89,12 @@ Clips 工具栏前十个可用按钮现在显示快捷键角标：默认依次�
 
 详见[DIV 段落结构规范化](DivParagraphNormalization.md)。
 
+Native Agent 也可通过同一 C++ 引擎执行 `paragraphs.analyze`、
+`paragraphs.plan` 和 `paragraphs.apply`。计划绑定书籍修订、XHTML/CSS 哈希和审批摘要；
+apply 只创建独占暂存事务，仍须预览与提交，且明确报告未运行完整 EPUBCheck。该入口
+目前属于内置 Agent，不是公共 MCP 工具。详见
+[Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。

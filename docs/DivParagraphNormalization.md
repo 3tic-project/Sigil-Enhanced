@@ -82,6 +82,14 @@ Checkpoint，每个变更资源形成一个 Code View 撤销步骤；任一写�
 该功能只改 XHTML，不创建 nav、不重排 TOC、不修改 OPF/manifest/spine，也不删除
 空行、厂商 class 或纵排样式。
 
+## Native Agent
+
+内置 Agent 通过 `paragraphs.analyze`、`paragraphs.plan` 和 `paragraphs.apply` 复用
+同一分类、样式依赖和计划实现。分析/计划只返回有界摘要与源码差异；apply 重新验证
+计划绑定后只创建暂存事务，仍需 `transaction.preview` 和 `transaction.commit`。
+不要预先调用 `transaction.begin`。这组工具目前不属于公共 MCP catalog，详见
+[Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
+
 ## Automate 兼容性
 
 既有动作对象、快捷键 ID 和 Automate 命令保持不变：

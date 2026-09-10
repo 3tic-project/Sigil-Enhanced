@@ -327,6 +327,13 @@ services rather than copied into the adapter:
 Each service will use analyze/preview/commit/discard plan semantics, bind plans to
 Book and revision, and share its core implementation with the GUI workflow.
 
+The in-process Native Agent now has a first implementation of this pattern for
+DIV paragraph normalization: `paragraphs.analyze`, `paragraphs.plan`, and
+`paragraphs.apply` share the GUI C++ engine and use a revision-bound staged
+transaction. These names are **not** part of the 38-tool `sigil.*` MCP catalog.
+Exposing the same PlanRegistry boundary through Live v2/MCP, including session
+identity and compatibility behavior for direct MCP commit, remains roadmap work.
+
 ## Verification
 
 The tracked test suite must cover:

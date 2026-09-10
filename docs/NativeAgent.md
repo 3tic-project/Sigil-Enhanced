@@ -31,9 +31,9 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
-只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`session.recall` / `session.tasks`。
+只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`session.recall` / `session.tasks`。
 
-写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`checkpoint.create` / `list` / `restore`。
+写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
 
 立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。
 
@@ -44,6 +44,13 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 批量套标签用 `content.wrap`，全书查找替换用 `content.replace_regex`（`$1` 捕获组）。图片必须先拖进 Images，再用 `image.insert` 按锚点插入 `<img>`。`book.check` 会报损坏的图片链接和未引用图片。
 
 `spine.set` 重排阅读顺序；`spine.sort` 按路径字母数字排序；`resource.rename` 可改文件名或换目录（提交时改 href）；`style.link` 重写 XHTML 的 stylesheet `<link>`；`resource.delete` 不能删 OPF/NCX/Nav 或最后一份 XHTML；`toc.generate` 按标题正则生成 TOC；`metadata.update` 支持任意 DC 字段，`_remove` 删除字段。
+
+整理伪段落时使用 `paragraphs.analyze` → `paragraphs.plan` → `paragraphs.apply` →
+`transaction.preview` → `transaction.commit`。这条流程复用菜单功能的保守 DIV/CSS
+引擎；不要用正则逐段改写，也不要在 `paragraphs.apply` 前调用
+`transaction.begin`。`apply` 会核对计划 ID、摘要、书籍/XHTML/CSS 修订并自行创建
+独占暂存事务，成功也不代表已写入活书。完整协议、错误和证据见
+[Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
 
 `python.run` 只落一个临时 `.py` snippet（和其它 harness 的 `run_code` 一样），用 `live_launcher --snippet` 连上现有 `PluginSession` socket，把 `plugin` 绑进这段代码。不要写 `plugin.xml`。Snippet 顶层就能用 `plugin.book`；也可以定义 `def run(plugin)` 或设 `result`。若 Agent 还有未提交事务，会先要求 `commit` / `rollback`。Memory 测试工作区返回 `LIVE_PYTHON_UNAVAILABLE`。脚本上限 64KiB，输出截到 8KiB。优先用 typed 工具；Python 只补工具盖不到的逻辑。
 
@@ -89,7 +96,8 @@ HTTP 出错时会带上状态码和服务器返回的 `error.message`（不会�
 
 协议仍是 OpenAI 兼容 Chat Completions。流式响应里 `reasoning_content`（以及 OpenRouter 的 `reasoning`）、`content`、`tool_calls` 分开解析。当某次请求带了 `tools` 时，同一会话后续请求必须回放助手的 `reasoning_content`（否则部分推理模型会返回 400）；不带 `tools` 的请求可以省略先前的思维链。
 
-Native Agent 不调用 MCP，也不把 MCP 当作内部 RPC。
+Native Agent 不调用 MCP，也不把 MCP 当作内部 RPC。`paragraphs.*` 当前是 Native
+Agent 专用工具，不在公共 `sigil.*` MCP catalog 中。
 
 ## 导出
 
