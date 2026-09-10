@@ -102,6 +102,8 @@ set( AGENT_FILES
     Agent/Security/PermissionPolicy.h
     Agent/Tools/BookTools.cpp
     Agent/Tools/BookTools.h
+    Agent/Tools/DivParagraphTools.cpp
+    Agent/Tools/DivParagraphTools.h
     Agent/Tools/IAgentTool.h
     Agent/Tools/ToolRegistry.cpp
     Agent/Tools/ToolRegistry.h

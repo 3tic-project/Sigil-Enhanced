@@ -141,6 +141,13 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
     if (name == QLatin1String("content.replace_regex") || name == QLatin1String("content.wrap")) {
         return QStringLiteral("Batch edit matching text. Staged until commit.");
     }
+    if (name == QLatin1String("paragraphs.apply")) {
+        return QStringLiteral("Stage reviewed DIV paragraph plan %1 with digest %2 for book revision %3. "
+                              "The live book stays unchanged until transaction.commit.")
+            .arg(arguments.value(QStringLiteral("plan_id")).toString(),
+                 arguments.value(QStringLiteral("plan_digest")).toString(),
+                 QString::number(arguments.value(QStringLiteral("expected_book_revision")).toInteger()));
+    }
     return QStringLiteral("Run %1 on the current book.").arg(name);
 }
 

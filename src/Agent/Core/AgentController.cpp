@@ -7,6 +7,7 @@
 #include "Agent/Core/AgentController.h"
 
 #include "Agent/Tools/BookTools.h"
+#include "Agent/Tools/DivParagraphTools.h"
 
 namespace SigilAgent
 {
@@ -19,7 +20,10 @@ AgentController::AgentController() :
 void AgentController::rebuildTools()
 {
     m_tools = ToolRegistry();
-    if (m_workspace) registerBookTools(&m_tools, m_workspace, &m_session);
+    if (m_workspace) {
+        registerBookTools(&m_tools, m_workspace, &m_session);
+        registerDivParagraphTools(&m_tools, m_workspace, &m_cancellation);
+    }
     m_runner = std::make_unique<AgentRunner>(
         &m_session, m_provider.get(), &m_tools, m_workspace, &m_policy, &m_gate, &m_cancellation);
 }
