@@ -9,6 +9,7 @@
 #include "Agent/Execution/SigilBookWorkspace.h"
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "BookManipulation/TocTreeTransform.h"
 #include "MainUI/MainApplication.h"
 #include "MainUI/MainWindow.h"
 #include "Misc/SettingsStore.h"
@@ -173,7 +174,87 @@ int main(int argc, char **argv)
                     && tocHierarchy.at(2).toObject().value(QStringLiteral("level")).toInt() == 1,
                 "Agent workspace flattened the EPUB 3 Nav hierarchy");
 
-        std::cout << "Native agent package preservation and stale-commit checks passed\n";
+        const QString navBeforeHierarchyCommit = nav->GetText();
+        const TocEditTree beforeHierarchy = workspace.tocHierarchy();
+        Require(TocTreeTransform::Validate(beforeHierarchy)
+                    && TocTreeTransform::PreorderIds(beforeHierarchy)
+                        == QList<TocNodeId>({1, 2, 3}),
+                "Agent workspace did not expose a valid stable native TOC tree");
+        const TocTransformResult promoted = TocTreeTransform::Promote(
+            beforeHierarchy, QList<TocNodeId>({2}));
+        Require(promoted.succeeded() && promoted.preorderPreserved,
+                "Could not prepare the native TOC promotion fixture");
+        const quint64 tocRevision = workspace.revision();
+        Require(workspace.beginTransaction(
+                    QStringLiteral("native TOC source preservation")).ok,
+                "Could not begin native TOC hierarchy transaction");
+        const SigilAgent::BookOpResult tocStaged = workspace.updateTocHierarchy(
+            beforeHierarchy, promoted.tree);
+        Require(tocStaged.ok && tocStaged.previewOnly && !tocStaged.applied,
+                "Could not stage native TOC hierarchy transform");
+        const SigilAgent::BookOpResult tocPreview = workspace.previewTransaction();
+        Require(tocPreview.ok && tocPreview.previewOnly
+                    && tocPreview.data.value(QStringLiteral("toc_changed")).toBool()
+                    && nav->GetText() == navBeforeHierarchyCommit,
+                "Native TOC preview mutated the live Nav or omitted its change");
+        const SigilAgent::BookOpResult tocCommit =
+            workspace.commitTransaction(tocRevision);
+        Require(tocCommit.ok && tocCommit.applied,
+                "Could not commit native TOC hierarchy transform");
+        const QString navAfterHierarchyCommit = nav->GetText();
+        const QJsonArray promotedHierarchy = workspace.toc();
+        Require(promotedHierarchy.size() == 3
+                    && promotedHierarchy.at(0).toObject().value(
+                        QStringLiteral("level")).toInt() == 1
+                    && promotedHierarchy.at(1).toObject().value(
+                        QStringLiteral("level")).toInt() == 1
+                    && promotedHierarchy.at(2).toObject().value(
+                        QStringLiteral("level")).toInt() == 1,
+                "Native TOC commit did not apply the reviewed promotion");
+        Require(navAfterHierarchyCommit.contains(QStringLiteral("id=\"keep-a\""))
+                    && navAfterHierarchyCommit.contains(
+                        QStringLiteral("data-keep=\"child\""))
+                    && navAfterHierarchyCommit.contains(
+                        QStringLiteral("<span>Part A</span>"))
+                    && navAfterHierarchyCommit.contains(
+                        QStringLiteral("epub:type=\"landmarks\""))
+                    && navAfterHierarchyCommit.contains(
+                        QStringLiteral("epub:type=\"bodymatter\"")),
+                "Native TOC commit lost Nav attributes, inline markup, or landmarks");
+        Require(nav->GetTextDocumentForWriting().isUndoAvailable(),
+                "Native TOC commit was not recorded as an undoable edit");
+        nav->GetTextDocumentForWriting().undo();
+        Require(nav->GetText() == navBeforeHierarchyCommit,
+                "One Nav undo did not restore the exact pre-commit source");
+        nav->GetTextDocumentForWriting().redo();
+        Require(nav->GetText() == navAfterHierarchyCommit,
+                "One Nav redo did not restore the committed hierarchy source");
+
+        const TocEditTree beforeStaleCommit = workspace.tocHierarchy();
+        const TocTransformResult demoted = TocTreeTransform::Demote(
+            beforeStaleCommit, QList<TocNodeId>({3}));
+        Require(demoted.succeeded(),
+                "Could not prepare stale native TOC transaction fixture");
+        const quint64 staleTocRevision = workspace.revision();
+        Require(workspace.beginTransaction(
+                    QStringLiteral("stale native TOC source")).ok
+                    && workspace.updateTocHierarchy(
+                        beforeStaleCommit, demoted.tree).ok,
+                "Could not stage stale native TOC hierarchy transaction");
+        nav->SetText(nav->GetText() + QStringLiteral("\n<!-- host nav edit -->"));
+        const QString hostNavEdit = nav->GetText();
+        const SigilAgent::BookOpResult staleTocCommit =
+            workspace.commitTransaction(staleTocRevision);
+        Require(!staleTocCommit.ok
+                    && staleTocCommit.code == QStringLiteral("BOOK_REVISION_CONFLICT")
+                    && staleTocCommit.data.value(QStringLiteral("reason")).toString()
+                        == QStringLiteral("toc_hierarchy_source_changed")
+                    && nav->GetText() == hostNavEdit,
+                "Native TOC commit accepted a stale source or overwrote the host edit");
+        Require(workspace.rollbackTransaction().ok,
+                "Could not roll back stale native TOC hierarchy transaction");
+
+        std::cout << "Native agent package, TOC source preservation, undo, and stale-commit checks passed\n";
         return 0;
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';
