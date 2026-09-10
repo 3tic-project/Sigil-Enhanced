@@ -244,7 +244,7 @@ TextResource *SigilBookWorkspace::primaryTocResource() const
     const OPFResource *opf = m_book->GetConstOPF();
     if (!opf) return nullptr;
     if (opf->GetEpubVersion().startsWith(QLatin1Char('3'))) {
-        if (HTMLResource *nav = m_book->GetOPF()->GetNavResource()) return nav;
+        return m_book->GetOPF()->GetNavResource();
     }
     return m_book->GetNCX();
 }
@@ -448,6 +448,7 @@ TocEditTree SigilBookWorkspace::tocHierarchy() const
             if (HTMLResource *nav = m_book->GetOPF()->GetNavResource()) {
                 return tocTreeFromRootEntry(NavProcessor(nav).GetRootTOCEntry());
             }
+            return TocEditTree();
         }
         if (NCXResource *ncx = m_book->GetNCX()) {
             return tocTreeFromNcx(NcxNavigation::parse(ncx->GetText()), ncx);
@@ -461,8 +462,8 @@ TocEditTree SigilBookWorkspace::tocHierarchy() const
         if (opf->GetEpubVersion().startsWith(QLatin1Char('3'))) {
             if (HTMLResource *nav = m_book->GetOPF()->GetNavResource()) {
                 result = tocTreeFromRootEntry(NavProcessor(nav).GetRootTOCEntry());
-                return;
             }
+            return;
         }
         if (NCXResource *ncx = m_book->GetNCX()) {
             result = tocTreeFromNcx(NcxNavigation::parse(ncx->GetText()), ncx);

@@ -219,7 +219,12 @@ public:
             return ToolResult::cancelled();
         }
         if (source_identity_before.isEmpty()
-            || source_identity_before != source_identity_after) {
+            && source_identity_after.isEmpty()) {
+            return ToolResult::failure(
+                QStringLiteral("TOC_SOURCE_UNAVAILABLE"),
+                QStringLiteral("The writable EPUB 3 Nav or EPUB 2 NCX source is unavailable"));
+        }
+        if (source_identity_before != source_identity_after) {
             return ToolResult::failure(
                 QStringLiteral("TOC_SOURCE_CHANGED"),
                 QStringLiteral("The native Nav/NCX source changed while it was being inspected"));

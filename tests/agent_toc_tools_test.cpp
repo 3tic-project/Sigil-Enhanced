@@ -99,6 +99,12 @@ public:
     }
 };
 
+class MissingPrimaryTocWorkspace final : public MemoryBookWorkspace
+{
+public:
+    QString tocHierarchyIdentity() const override { return QString(); }
+};
+
 } // namespace
 
 int main()
@@ -136,6 +142,16 @@ int main()
         QJsonObject { { QStringLiteral("limit"), QStringLiteral("100") } });
     Require(!invalid_page.ok && invalid_page.code == QStringLiteral("INVALID_ARGUMENT"),
             "TOC pagination must reject string limits");
+
+    MissingPrimaryTocWorkspace missing_source_book;
+    missing_source_book.setToc(hierarchyBook().toc());
+    ToolRegistry missing_source_registry;
+    registerTocTools(&missing_source_registry, &missing_source_book);
+    const ToolResult missing_source = run(
+        missing_source_registry, QStringLiteral("toc.inspect_hierarchy"));
+    Require(!missing_source.ok
+                && missing_source.code == QStringLiteral("TOC_SOURCE_UNAVAILABLE"),
+            "native TOC planning must require a writable primary Nav or NCX source");
 
     const ToolResult first_page = run(
         registry, QStringLiteral("toc.inspect_hierarchy"),
