@@ -52,6 +52,19 @@ int main()
     Require(ToolRegistry::toWireName(QStringLiteral("book.summary")) == QStringLiteral("book_summary"),
             "book.summary must be sent as book_summary");
 
+    const QString paragraph_impact = humanReadableImpact(
+        QStringLiteral("paragraphs.apply"),
+        QJsonObject {
+            { QStringLiteral("plan_id"), QStringLiteral("plan-123") },
+            { QStringLiteral("plan_digest"), QStringLiteral("digest-456") },
+            { QStringLiteral("expected_book_revision"), 17 }
+        });
+    Require(paragraph_impact.contains(QStringLiteral("plan-123"))
+                && paragraph_impact.contains(QStringLiteral("digest-456"))
+                && paragraph_impact.contains(QStringLiteral("17"))
+                && paragraph_impact.contains(QStringLiteral("unchanged")),
+            "paragraph approval impact must identify the reviewed plan and staging boundary");
+
     const ToolResult summary = run(QStringLiteral("book.summary"), QJsonObject());
     Require(summary.ok && summary.data.value(QStringLiteral("title")).toString() == QStringLiteral("Junior Physics"),
             "book.summary must return the fixture title");

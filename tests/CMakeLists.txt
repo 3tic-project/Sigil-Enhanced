@@ -1601,6 +1601,30 @@ target_compile_features(agent_book_ops_test PRIVATE cxx_std_17)
 add_test(NAME agent_book_ops COMMAND agent_book_ops_test)
 set_tests_properties(agent_book_ops PROPERTIES TIMEOUT 30)
 
+add_executable(agent_div_paragraph_tools_test
+    agent_div_paragraph_tools_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/DivParagraphTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/BookEdits.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphStylesheetResolver.cpp
+)
+target_include_directories(agent_div_paragraph_tools_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_div_paragraph_tools_test PRIVATE Qt6::Core Qt6::Gui Qt6::Xml)
+target_compile_features(agent_div_paragraph_tools_test PRIVATE cxx_std_17)
+add_test(NAME agent_div_paragraph_tools COMMAND agent_div_paragraph_tools_test)
+set_tests_properties(agent_div_paragraph_tools PROPERTIES TIMEOUT 30)
+
 add_executable(agent_launch_test
     agent_launch_test.cpp
     ${AGENT_CORE_SOURCES}
