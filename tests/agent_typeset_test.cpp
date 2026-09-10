@@ -330,6 +330,21 @@ int main()
     Require(have_skill, "ln-template-typeset skill must load");
     Require(looksLikeLightNovelTemplate(&book), "fixture must look like the LN template");
 
+    AgentSession paragraph_session;
+    paragraph_session.append(AgentEventType::UserMessage, QJsonObject {
+        { QStringLiteral("text"), QStringLiteral("整理全书伪段落 DIV 结构") }
+    });
+    const ModelRequest paragraph_request = assembler.build(
+        paragraph_session, &book, prompt_tools, AgentMode::Edit,
+        QStringLiteral("test"), false, QString(), QStringList());
+    const QString paragraph_system = paragraph_request.messages.first().content;
+    Require(paragraph_system.contains(QStringLiteral("# Skill: paragraph-normalization")),
+            "DIV request must inject the native paragraph workflow");
+    Require(paragraph_system.contains(QStringLiteral("Do not call transaction.begin"))
+                && paragraph_system.contains(QStringLiteral("paragraphs.apply"))
+                && paragraph_system.contains(QStringLiteral("full EPUBCheck as not run")),
+            "paragraph workflow must explain exclusive staging and validation reporting");
+
     const QString asahi = QStringLiteral(
         "/Users/parsle/Code/sigil-modified/todo/Sigil-Enhanced-Native-Agent-PRD/test/"
         "[新人][关于光属性美少女朝日同学为何每周末都泡在我房间这件事][01]/"
