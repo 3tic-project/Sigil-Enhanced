@@ -104,6 +104,8 @@ set( AGENT_FILES
     Agent/Tools/BookTools.h
     Agent/Tools/DivParagraphTools.cpp
     Agent/Tools/DivParagraphTools.h
+    Agent/Tools/TocTools.cpp
+    Agent/Tools/TocTools.h
     Agent/Tools/IAgentTool.h
     Agent/Tools/ToolRegistry.cpp
     Agent/Tools/ToolRegistry.h
