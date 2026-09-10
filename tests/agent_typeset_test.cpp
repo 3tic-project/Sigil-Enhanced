@@ -345,6 +345,21 @@ int main()
                 && paragraph_system.contains(QStringLiteral("full EPUBCheck as not run")),
             "paragraph workflow must explain exclusive staging and validation reporting");
 
+    AgentSession toc_session;
+    toc_session.append(AgentEventType::UserMessage, QJsonObject {
+        { QStringLiteral("text"), QStringLiteral("把目录中的子章节提升一级，别改正文标题") }
+    });
+    const ModelRequest toc_request = assembler.build(
+        toc_session, &book, prompt_tools, AgentMode::Edit,
+        QStringLiteral("test"), false, QString(), QStringList());
+    const QString toc_system = toc_request.messages.first().content;
+    Require(toc_system.contains(QStringLiteral("# Skill: book-structure")),
+            "TOC request must inject the native structure workflow");
+    Require(toc_system.contains(QStringLiteral("toc.inspect_hierarchy → toc.plan_transform → toc.apply_transform"))
+                && toc_system.contains(QStringLiteral("Do not call transaction.begin"))
+                && toc_system.contains(QStringLiteral("never edit XHTML h1-h6")),
+            "TOC workflow must explain exclusive staging and the XHTML boundary");
+
     const QString asahi = QStringLiteral(
         "/Users/parsle/Code/sigil-modified/todo/Sigil-Enhanced-Native-Agent-PRD/test/"
         "[新人][关于光属性美少女朝日同学为何每周末都泡在我房间这件事][01]/"
