@@ -537,9 +537,12 @@ public:
                     QStringLiteral("resource_ids must be an array"));
             }
             for (const QJsonValue &value : requested.toArray()) {
-                if (!value.toString().isEmpty()) {
-                    selected.insert(value.toString());
+                if (!value.isString() || value.toString().isEmpty()) {
+                    return ToolResult::failure(
+                        QStringLiteral("INVALID_ARGUMENT"),
+                        QStringLiteral("resource_ids must contain non-empty strings"));
                 }
+                selected.insert(value.toString());
             }
         } else {
             for (const NormalizationPlan::Entry &entry : m_analysis->result.entries) {
