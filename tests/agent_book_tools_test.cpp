@@ -65,6 +65,20 @@ int main()
                 && paragraph_impact.contains(QStringLiteral("unchanged")),
             "paragraph approval impact must identify the reviewed plan and staging boundary");
 
+    const QString toc_impact = humanReadableImpact(
+        QStringLiteral("toc.apply_transform"),
+        QJsonObject {
+            { QStringLiteral("plan_id"), QStringLiteral("toc-plan-123") },
+            { QStringLiteral("plan_digest"), QStringLiteral("toc-digest-456") },
+            { QStringLiteral("expected_book_revision"), 19 }
+        });
+    Require(toc_impact.contains(QStringLiteral("toc-plan-123"))
+                && toc_impact.contains(QStringLiteral("toc-digest-456"))
+                && toc_impact.contains(QStringLiteral("19"))
+                && toc_impact.contains(QStringLiteral("XHTML headings"))
+                && toc_impact.contains(QStringLiteral("unchanged")),
+            "TOC approval impact must identify the plan and navigation-only staging boundary");
+
     const ToolResult summary = run(QStringLiteral("book.summary"), QJsonObject());
     Require(summary.ok && summary.data.value(QStringLiteral("title")).toString() == QStringLiteral("Junior Physics"),
             "book.summary must return the fixture title");
