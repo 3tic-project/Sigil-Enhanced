@@ -355,9 +355,14 @@ int main()
     MemoryBookWorkspace other_book = sampleBook(false);
     ToolRegistry other_registry;
     registerDivParagraphTools(&other_registry, &other_book);
+    const PlanBinding other_binding = analyzeAndPlan(
+        other_registry, QJsonArray { QStringLiteral("safe") });
+    Require(other_binding.planId != binding.planId,
+            "identical books in different Agent sessions must have different plan IDs");
     const ToolResult cross_session = run(
         other_registry, QStringLiteral("paragraphs.apply"), bindingArguments(binding));
-    Require(!cross_session.ok && cross_session.code == QStringLiteral("PLAN_NOT_FOUND"),
+    Require(!cross_session.ok
+                && cross_session.code == QStringLiteral("PLAN_BINDING_MISMATCH"),
             "a plan from another book session must not be accepted");
 
     MemoryBookWorkspace stale_book = sampleBook(false);

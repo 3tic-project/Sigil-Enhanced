@@ -16,6 +16,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QSet>
+#include <QUuid>
 
 #include "Agent/Core/AgentCancellation.h"
 #include "Agent/Execution/IBookWorkspace.h"
@@ -475,6 +476,7 @@ public:
 
         QStringList identity {
             QStringLiteral("sigil-agent-div-analysis-v1"),
+            m_sessionNonce,
             QString::number(m_workspace->revision()),
             result.planId
         };
@@ -795,6 +797,7 @@ private:
 
     IBookWorkspace *m_workspace = nullptr;
     AgentCancellation *m_cancellation = nullptr;
+    const QString m_sessionNonce = QUuid::createUuid().toString(QUuid::WithoutBraces);
     std::optional<StoredAnalysis> m_analysis;
     std::optional<StoredPlan> m_plan;
 };
