@@ -1639,6 +1639,7 @@ add_executable(agent_toc_tools_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/BookEdits.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
