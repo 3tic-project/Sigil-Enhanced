@@ -25,6 +25,7 @@
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/NcxNavigation.h"
+#include "ResourceObjects/NavProcessor.h"
 #include "PluginAPI/PluginSessionManager.h"
 #include "SourceUpdates/UniversalUpdates.h"
 #include "ResourceObjects/CSSResource.h"
@@ -318,25 +319,13 @@ QJsonArray SigilBookWorkspace::toc() const
         QJsonArray array;
         HTMLResource *nav = m_book->GetOPF()->GetNavResource();
         if (nav) {
-            QXmlStreamReader reader(nav->GetText());
-            QString href;
-            QString label;
-            bool in_a = false;
-            while (!reader.atEnd()) {
-                reader.readNext();
-                if (reader.isStartElement() && reader.name() == QLatin1String("a")) {
-                    href = reader.attributes().value(QStringLiteral("href")).toString();
-                    label.clear();
-                    in_a = true;
-                } else if (reader.isCharacters() && in_a) {
-                    label += reader.text();
-                } else if (reader.isEndElement() && reader.name() == QLatin1String("a") && in_a) {
-                    array.append(QJsonObject {
-                        { QStringLiteral("label"), label.trimmed() },
-                        { QStringLiteral("href"), href }
-                    });
-                    in_a = false;
-                }
+            const QList<NavTOCEntry> entries = NavProcessor(nav).GetTOC();
+            for (const NavTOCEntry &entry : entries) {
+                array.append(QJsonObject {
+                    { QStringLiteral("label"), entry.title },
+                    { QStringLiteral("href"), entry.href },
+                    { QStringLiteral("level"), entry.lvl }
+                });
             }
             if (!array.isEmpty()) return array;
         }

@@ -151,6 +151,28 @@ int main(int argc, char **argv)
         Require(chapter->GetText() == hostText, "Rejected text plan overwrote the host edit");
         Require(workspace.rollbackTransaction().ok, "Could not roll back stale text plan");
 
+        nav->SetText(QStringLiteral(
+            "<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\" "
+            "xmlns:epub=\"http://www.idpf.org/2007/ops\"><head><title>Contents</title></head>"
+            "<body><nav epub:type=\"toc\"><ol>"
+            "<li id=\"keep-a\"><a href=\"a.xhtml\"><span>Part A</span></a><ol>"
+            "<li data-keep=\"child\"><a href=\"a.xhtml#child\">Child</a></li>"
+            "</ol></li><li><a href=\"a.xhtml#next\">Part B</a></li>"
+            "</ol></nav><nav epub:type=\"landmarks\"><ol>"
+            "<li><a epub:type=\"bodymatter\" href=\"a.xhtml\">Start</a></li>"
+            "</ol></nav></body></html>"));
+        const QJsonArray tocHierarchy = workspace.toc();
+        Require(tocHierarchy.size() == 3,
+                "Agent TOC inspection included landmarks or omitted TOC entries");
+        Require(tocHierarchy.at(0).toObject().value(QStringLiteral("label")).toString()
+                    == QStringLiteral("Part A")
+                    && tocHierarchy.at(0).toObject().value(QStringLiteral("level")).toInt() == 1
+                    && tocHierarchy.at(1).toObject().value(QStringLiteral("label")).toString()
+                    == QStringLiteral("Child")
+                    && tocHierarchy.at(1).toObject().value(QStringLiteral("level")).toInt() == 2
+                    && tocHierarchy.at(2).toObject().value(QStringLiteral("level")).toInt() == 1,
+                "Agent workspace flattened the EPUB 3 Nav hierarchy");
+
         std::cout << "Native agent package preservation and stale-commit checks passed\n";
         return 0;
     } catch (const std::exception &error) {
