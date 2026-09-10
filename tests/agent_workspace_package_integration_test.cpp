@@ -3,6 +3,7 @@
 #include <QRegularExpression>
 #include <QWebEngineSettings>
 #include <QWebEngineUrlScheme>
+#include <QXmlStreamReader>
 #include <iostream>
 #include <stdexcept>
 
@@ -202,6 +203,8 @@ int main(int argc, char **argv)
         Require(tocCommit.ok && tocCommit.applied,
                 "Could not commit native TOC hierarchy transform");
         const QString navAfterHierarchyCommit = nav->GetText();
+        QXmlStreamReader navXml(navAfterHierarchyCommit);
+        while (!navXml.atEnd()) navXml.readNext();
         const QJsonArray promotedHierarchy = workspace.toc();
         Require(promotedHierarchy.size() == 3
                     && promotedHierarchy.at(0).toObject().value(
@@ -221,6 +224,12 @@ int main(int argc, char **argv)
                     && navAfterHierarchyCommit.contains(
                         QStringLiteral("epub:type=\"bodymatter\"")),
                 "Native TOC commit lost Nav attributes, inline markup, or landmarks");
+        Require(!navXml.hasError()
+                    && navAfterHierarchyCommit.count(
+                        QStringLiteral("epub:type=\"landmarks\"")) == 1
+                    && navAfterHierarchyCommit.count(
+                        QStringLiteral("epub:type=\"bodymatter\"")) == 1,
+                "Native TOC commit duplicated a non-TOC Nav region or produced invalid XML");
         Require(nav->GetTextDocumentForWriting().isUndoAvailable(),
                 "Native TOC commit was not recorded as an undoable edit");
         nav->GetTextDocumentForWriting().undo();

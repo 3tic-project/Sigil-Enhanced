@@ -524,17 +524,30 @@ bool NavProcessor::ReplaceTOCList(const QString &generatedSource, bool undoable)
                            navEnd - oldOlStart.capturedStart()));
             while (endings.hasNext()) oldOlEnd = endings.next();
 
-            const QRegularExpressionMatch newOlStart = olStart.match(generatedSource);
+            const QRegularExpressionMatch newTocMatch = tocStart.match(generatedSource);
+            const int newNavEnd = newTocMatch.hasMatch()
+                ? generatedSource.indexOf(
+                    QStringLiteral("</nav>"), newTocMatch.capturedEnd(),
+                    Qt::CaseInsensitive)
+                : -1;
+            const QRegularExpressionMatch newOlStart = newTocMatch.hasMatch()
+                ? olStart.match(generatedSource, newTocMatch.capturedEnd())
+                : QRegularExpressionMatch();
             QRegularExpressionMatch newOlEnd;
-            auto generatedEndings = olEnd.globalMatch(generatedSource);
-            while (generatedEndings.hasNext()) newOlEnd = generatedEndings.next();
-            if (oldOlEnd.hasMatch() && newOlStart.hasMatch()
-                    && newOlEnd.hasMatch()) {
+            if (newNavEnd >= 0 && newOlStart.hasMatch()
+                    && newOlStart.capturedStart() < newNavEnd) {
+                auto generatedEndings = olEnd.globalMatch(
+                    generatedSource.mid(
+                        newOlStart.capturedStart(),
+                        newNavEnd - newOlStart.capturedStart()));
+                while (generatedEndings.hasNext()) newOlEnd = generatedEndings.next();
+            }
+            if (oldOlEnd.hasMatch() && newOlStart.hasMatch() && newOlEnd.hasMatch()) {
                 const int oldEnd = oldOlStart.capturedStart()
                     + oldOlEnd.capturedEnd();
                 QString newList = generatedSource.mid(
                     newOlStart.capturedStart(),
-                    newOlEnd.capturedEnd() - newOlStart.capturedStart());
+                    newOlEnd.capturedEnd());
                 newList.replace(0, newOlStart.capturedLength(),
                                 oldOlStart.captured());
                 source.replace(oldOlStart.capturedStart(),
