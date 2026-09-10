@@ -13,6 +13,7 @@
 #include "Agent/Model/MockModelProvider.h"
 #include "Agent/Security/PermissionPolicy.h"
 #include "Agent/Tools/BookTools.h"
+#include "Agent/Tools/DivParagraphTools.h"
 #include "Agent/Tools/ToolRegistry.h"
 
 namespace
@@ -225,6 +226,98 @@ int main()
             "next model request after user-deny must include a tool-role message");
     Require(deny_tool_blob.contains(QStringLiteral("PERMISSION_DENIED")),
             "user-deny tool payload must carry PERMISSION_DENIED");
+
+    MemoryBookWorkspace paragraph_book;
+    MemoryResource paragraph_css;
+    paragraph_css.id = QStringLiteral("paragraph-css");
+    paragraph_css.bookPath = QStringLiteral("OEBPS/Styles/paragraph.css");
+    paragraph_css.kind = QStringLiteral("css");
+    paragraph_css.mediaType = QStringLiteral("text/css");
+    paragraph_css.text = QStringLiteral("div, p { margin: 0; padding: 0; }");
+    paragraph_css.revision = 1;
+    paragraph_book.addResource(paragraph_css);
+    MemoryResource paragraph_xhtml;
+    paragraph_xhtml.id = QStringLiteral("paragraph-page");
+    paragraph_xhtml.bookPath = QStringLiteral("OEBPS/Text/paragraph.xhtml");
+    paragraph_xhtml.kind = QStringLiteral("xhtml");
+    paragraph_xhtml.mediaType = QStringLiteral("application/xhtml+xml");
+    paragraph_xhtml.text = QStringLiteral(
+        "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head>"
+        "<link rel=\"stylesheet\" href=\"../Styles/paragraph.css\"/></head>"
+        "<body><div><div>第一段。</div><div>第二段。</div>"
+        "<div>第三段。</div><div>第四段。</div><div>第五段。</div>"
+        "<div>第六段。</div><div>第七段。</div><div>第八段。</div>"
+        "<div>第九段。</div><div>第十段。</div><div>第十一段。</div>"
+        "<div>第十二段。</div>"
+        "</div></body></html>");
+    paragraph_xhtml.revision = 1;
+    paragraph_book.addResource(paragraph_xhtml);
+    const QString paragraph_original = paragraph_xhtml.text;
+    ToolRegistry paragraph_registry;
+    registerBookTools(&paragraph_registry, &paragraph_book);
+    registerDivParagraphTools(&paragraph_registry, &paragraph_book);
+    const ToolResult paragraph_analysis = paragraph_registry.find(
+        QStringLiteral("paragraphs.analyze"))->execute(QJsonObject {
+            { QStringLiteral("resource_ids"), QJsonArray { paragraph_xhtml.id } }
+        });
+    Require(paragraph_analysis.ok, "paragraph approval fixture analysis failed");
+    const ToolResult paragraph_plan = paragraph_registry.find(
+        QStringLiteral("paragraphs.plan"))->execute(QJsonObject {
+            { QStringLiteral("analysis_id"),
+              paragraph_analysis.data.value(QStringLiteral("analysis_id")) }
+        });
+    Require(paragraph_plan.ok, "paragraph approval fixture plan failed");
+    const QJsonObject paragraph_apply_arguments {
+        { QStringLiteral("plan_id"), paragraph_plan.data.value(QStringLiteral("plan_id")) },
+        { QStringLiteral("plan_digest"), paragraph_plan.data.value(QStringLiteral("plan_digest")) },
+        { QStringLiteral("expected_book_revision"),
+          paragraph_plan.data.value(QStringLiteral("book_revision")) }
+    };
+    AgentSession paragraph_session;
+    AutoApprovalGate paragraph_gate(false);
+    MockModelProvider paragraph_provider;
+    paragraph_provider.setScript([paragraph_apply_arguments](const ModelRequest &request) {
+        bool already_requested = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role != QLatin1String("assistant")) continue;
+            for (const ToolCall &call : message.toolCalls) {
+                if (call.id == QLatin1String("paragraph_apply")) {
+                    already_requested = true;
+                }
+            }
+        }
+        ModelTurn turn;
+        if (!already_requested) {
+            ToolCall call;
+            call.id = QStringLiteral("paragraph_apply");
+            call.name = QStringLiteral("paragraphs_apply");
+            call.argumentsJson = QString::fromUtf8(
+                QJsonDocument(paragraph_apply_arguments).toJson(QJsonDocument::Compact));
+            turn.toolCalls.append(call);
+        } else {
+            turn.content = QStringLiteral("The reviewed paragraph plan was not staged.");
+        }
+        return turn;
+    });
+    AgentCancellation paragraph_cancel;
+    AgentRunner paragraph_runner(
+        &paragraph_session, &paragraph_provider, &paragraph_registry, &paragraph_book,
+        &ask_policy, &paragraph_gate, &paragraph_cancel);
+    paragraph_runner.setMode(AgentMode::Edit);
+    const AgentRunResult paragraph_result = paragraph_runner.runTurn(
+        QStringLiteral("apply the reviewed paragraph plan"));
+    Require(paragraph_result.state == AgentRunState::Completed,
+            "denied paragraph staging turn should complete");
+    Require(paragraph_gate.requestCount() == 1
+                && paragraph_gate.lastName() == QStringLiteral("paragraphs.apply")
+                && paragraph_gate.lastImpact().contains(
+                    paragraph_plan.data.value(QStringLiteral("plan_id")).toString())
+                && paragraph_gate.lastImpact().contains(
+                    paragraph_plan.data.value(QStringLiteral("plan_digest")).toString()),
+            "paragraph staging must reach the approval gate with the reviewed binding");
+    Require(!paragraph_book.hasOpenTransaction()
+                && paragraph_book.resourceText(paragraph_xhtml.id) == paragraph_original,
+            "denied paragraph staging must not open a transaction or change the Book");
 
     MemoryBookWorkspace edit_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry edit_registry;

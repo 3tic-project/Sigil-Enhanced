@@ -1525,9 +1525,14 @@ set(AGENT_CORE_SOURCES
 add_executable(agent_harness_test
     agent_harness_test.cpp
     ${AGENT_CORE_SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/DivParagraphTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphStylesheetResolver.cpp
 )
 target_include_directories(agent_harness_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(agent_harness_test PRIVATE Qt6::Core Qt6::Gui)
+target_link_libraries(agent_harness_test PRIVATE Qt6::Core Qt6::Gui Qt6::Xml)
 target_compile_features(agent_harness_test PRIVATE cxx_std_17)
 add_test(NAME agent_harness COMMAND agent_harness_test)
 set_tests_properties(agent_harness PROPERTIES TIMEOUT 30)
