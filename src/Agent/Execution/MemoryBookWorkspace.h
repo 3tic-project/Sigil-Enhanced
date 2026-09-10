@@ -57,6 +57,8 @@ public:
     QJsonArray resources() const override;
     QJsonArray spine() const override;
     QJsonArray toc() const override;
+    TocEditTree tocHierarchy() const override;
+    QString tocHierarchyIdentity() const override;
     QJsonObject metadata() const override;
     QJsonArray search(const QString &query, int max_matches) const override;
     BookOpResult readFragment(const QString &resource_id, int offset, int limit) const override;
@@ -95,6 +97,8 @@ public:
     BookOpResult renameResource(const QString &resource_id, const QString &book_path) override;
     BookOpResult updateSpine(const QStringList &resource_ids) override;
     BookOpResult updateToc(const QJsonArray &entries) override;
+    BookOpResult updateTocHierarchy(const TocEditTree &before,
+                                    const TocEditTree &after) override;
     BookOpResult createCheckpoint(const QString &label) override;
     QJsonArray listCheckpoints() const override;
     BookOpResult restoreCheckpoint(const QString &checkpoint_id) override;
@@ -132,6 +136,8 @@ private:
     bool m_hasStagedSpine = false;
     QJsonArray m_stagedToc;
     bool m_hasStagedToc = false;
+    bool m_hasStagedTocHierarchy = false;
+    QString m_transactionTocIdentity;
     QList<MemoryCheckpoint> m_checkpoints;
     int m_failAfter = -1;
     QHash<QString, QString> m_stagedAfterIds;

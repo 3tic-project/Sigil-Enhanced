@@ -51,6 +51,84 @@ QString sha256Text(const QString &text)
         QCryptographicHash::hash(text.toUtf8(), QCryptographicHash::Sha256).toHex());
 }
 
+TocEditTree tocTreeFromRootEntry(const TOCModel::TOCEntry &root_entry)
+{
+    TocEditTree tree;
+    tree.rootId = 0;
+    TocEditNode root;
+    root.id = 0;
+    root.parentId = 0;
+    tree.nodes.insert(0, root);
+    struct Pending {
+        TOCModel::TOCEntry entry;
+        TocNodeId parentId = 0;
+    };
+    QList<Pending> pending;
+    for (auto it = root_entry.children.crbegin(); it != root_entry.children.crend(); ++it) {
+        pending.append({*it, tree.rootId});
+    }
+    TocNodeId next_id = 1;
+    while (!pending.isEmpty()) {
+        const Pending current = pending.takeLast();
+        TocEditNode node;
+        node.id = next_id++;
+        node.parentId = current.parentId;
+        node.label = current.entry.text;
+        node.target = current.entry.target;
+        tree.nodes.insert(node.id, node);
+        tree.nodes[current.parentId].children.append(node.id);
+        for (auto it = current.entry.children.crbegin();
+             it != current.entry.children.crend(); ++it) {
+            pending.append({*it, node.id});
+        }
+    }
+    return tree;
+}
+
+QString tocBookTarget(const QString &href, const TextResource *resource)
+{
+    if (!resource || href.contains(QLatin1Char(':'))) return href;
+    const QStringList pieces = href.split(QLatin1Char('#'), Qt::KeepEmptyParts);
+    const QString decoded = Utility::URLDecodePath(pieces.value(0));
+    const QString fragment = pieces.size() > 1 ? pieces.at(1) : QString();
+    const QString path = decoded.isEmpty() || decoded == QLatin1String("./")
+        ? resource->GetRelativePath()
+        : Utility::buildBookPath(decoded, resource->GetFolder());
+    QString target = Utility::URLEncodePath(path);
+    if (!fragment.isEmpty()) target += QLatin1Char('#') + fragment;
+    return target;
+}
+
+TocEditTree tocTreeFromNcx(const NcxNavigation &navigation,
+                           const NCXResource *resource)
+{
+    TocEditTree tree;
+    tree.rootId = 0;
+    TocEditNode root;
+    root.id = 0;
+    root.parentId = 0;
+    tree.nodes.insert(0, root);
+    QList<TocNodeId> last_at_level;
+    TocNodeId next_id = 1;
+    for (const NcxNavPoint &point : navigation.toc) {
+        if (point.level < 1 || point.level > last_at_level.size() + 1) {
+            return TocEditTree();
+        }
+        const TocNodeId parent = point.level == 1 ? tree.rootId
+                                                   : last_at_level.at(point.level - 2);
+        TocEditNode node;
+        node.id = next_id++;
+        node.parentId = parent;
+        node.label = point.label;
+        node.target = tocBookTarget(point.src, resource);
+        tree.nodes.insert(node.id, node);
+        tree.nodes[parent].children.append(node.id);
+        while (last_at_level.size() >= point.level) last_at_level.removeLast();
+        last_at_level.append(node.id);
+    }
+    return tree;
+}
+
 } // namespace
 
 void SigilBookWorkspace::setBook(QSharedPointer<Book> book)
@@ -70,10 +148,15 @@ void SigilBookWorkspace::setBook(QSharedPointer<Book> book)
     m_stagedSpine.clear();
     m_hasStagedToc = false;
     m_stagedToc = QJsonArray();
+    m_hasStagedTocHierarchy = false;
+    m_stagedTocBefore = TocEditTree();
+    m_stagedTocAfter = TocEditTree();
     m_transactionPackageResourceId.clear();
     m_transactionPackageSource.clear();
     m_transactionTocResourceId.clear();
     m_transactionTocSource.clear();
+    m_transactionHierarchyTocResourceId.clear();
+    m_transactionHierarchyTocSource.clear();
     m_revision = 1;
 }
 
@@ -153,6 +236,17 @@ QString SigilBookWorkspace::currentText(TextResource *resource) const
     if (!m_transaction) return live;
     quint64 ignored = 0;
     return m_transaction->ReadText(resource->GetIdentifier(), live, trackedRevision(resource), &ignored);
+}
+
+TextResource *SigilBookWorkspace::primaryTocResource() const
+{
+    if (!m_book) return nullptr;
+    const OPFResource *opf = m_book->GetConstOPF();
+    if (!opf) return nullptr;
+    if (opf->GetEpubVersion().startsWith(QLatin1Char('3'))) {
+        if (HTMLResource *nav = m_book->GetOPF()->GetNavResource()) return nav;
+    }
+    return m_book->GetNCX();
 }
 
 QString SigilBookWorkspace::kindOf(Resource *resource) const
@@ -341,6 +435,51 @@ QJsonArray SigilBookWorkspace::toc() const
             }
         }
         return array;
+    });
+}
+
+TocEditTree SigilBookWorkspace::tocHierarchy() const
+{
+    if (!m_book) return TocEditTree();
+    if (QThread::currentThread() == m_book->thread()) {
+        const OPFResource *opf = m_book->GetConstOPF();
+        if (!opf) return TocEditTree();
+        if (opf->GetEpubVersion().startsWith(QLatin1Char('3'))) {
+            if (HTMLResource *nav = m_book->GetOPF()->GetNavResource()) {
+                return tocTreeFromRootEntry(NavProcessor(nav).GetRootTOCEntry());
+            }
+        }
+        if (NCXResource *ncx = m_book->GetNCX()) {
+            return tocTreeFromNcx(NcxNavigation::parse(ncx->GetText()), ncx);
+        }
+        return TocEditTree();
+    }
+    TocEditTree result;
+    QMetaObject::invokeMethod(m_book.data(), [this, &result]() {
+        const OPFResource *opf = m_book->GetConstOPF();
+        if (!opf) return;
+        if (opf->GetEpubVersion().startsWith(QLatin1Char('3'))) {
+            if (HTMLResource *nav = m_book->GetOPF()->GetNavResource()) {
+                result = tocTreeFromRootEntry(NavProcessor(nav).GetRootTOCEntry());
+                return;
+            }
+        }
+        if (NCXResource *ncx = m_book->GetNCX()) {
+            result = tocTreeFromNcx(NcxNavigation::parse(ncx->GetText()), ncx);
+        }
+    }, Qt::BlockingQueuedConnection);
+    return result;
+}
+
+QString SigilBookWorkspace::tocHierarchyIdentity() const
+{
+    return invokeString([this]() {
+        TextResource *resource = primaryTocResource();
+        if (!resource) return QString();
+        return sha256Text(QStringLiteral("sigil-agent-toc-source-v1") + QChar(u'\0')
+                          + resource->GetIdentifier() + QChar(u'\0')
+                          + resource->GetRelativePath() + QChar(u'\0')
+                          + resource->GetText());
     });
 }
 
@@ -577,6 +716,9 @@ BookOpResult SigilBookWorkspace::beginTransaction(const QString &label)
         m_stagedSpine.clear();
         m_hasStagedToc = false;
         m_stagedToc = QJsonArray();
+        m_hasStagedTocHierarchy = false;
+        m_stagedTocBefore = TocEditTree();
+        m_stagedTocAfter = TocEditTree();
         m_stagedAfterIds.clear();
         OPFResource *opf = m_book->GetOPF();
         m_transactionPackageResourceId = opf ? opf->GetIdentifier() : QString();
@@ -584,6 +726,11 @@ BookOpResult SigilBookWorkspace::beginTransaction(const QString &label)
         NCXResource *ncx = m_book->GetNCX();
         m_transactionTocResourceId = ncx ? ncx->GetIdentifier() : QString();
         m_transactionTocSource = ncx ? ncx->GetText() : QString();
+        TextResource *hierarchy_toc = primaryTocResource();
+        m_transactionHierarchyTocResourceId = hierarchy_toc
+            ? hierarchy_toc->GetIdentifier() : QString();
+        m_transactionHierarchyTocSource = hierarchy_toc
+            ? hierarchy_toc->GetText() : QString();
         return BookOpResult::success(QJsonObject {
             { QStringLiteral("transaction_id"), m_transaction->Id() },
             { QStringLiteral("base_book_revision"), static_cast<qint64>(m_revision) }
@@ -634,7 +781,7 @@ BookOpResult SigilBookWorkspace::previewTransaction() const
         { QStringLiteral("metadata_changed"), m_hasStagedMetadata },
         { QStringLiteral("removed"), QJsonArray::fromStringList(m_stagedRemovals) },
         { QStringLiteral("spine_changed"), m_hasStagedSpine },
-        { QStringLiteral("toc_changed"), m_hasStagedToc }
+        { QStringLiteral("toc_changed"), m_hasStagedToc || m_hasStagedTocHierarchy }
     }, false, true);
 }
 
@@ -707,6 +854,21 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
                     QJsonObject {
                         { QStringLiteral("resource_id"), live_ncx ? live_ncx->GetIdentifier() : QString() },
                         { QStringLiteral("reason"), QStringLiteral("toc_source_changed") }
+                    });
+            }
+        }
+        if (m_hasStagedTocHierarchy) {
+            TextResource *live_toc = primaryTocResource();
+            if (!live_toc
+                || live_toc->GetIdentifier() != m_transactionHierarchyTocResourceId
+                || live_toc->GetText() != m_transactionHierarchyTocSource
+                || !TocTreeTransform::Equal(tocHierarchy(), m_stagedTocBefore)) {
+                return BookOpResult::error(
+                    QStringLiteral("BOOK_REVISION_CONFLICT"),
+                    QStringLiteral("The TOC hierarchy source changed after the transaction began"),
+                    QJsonObject {
+                        { QStringLiteral("resource_id"), live_toc ? live_toc->GetIdentifier() : QString() },
+                        { QStringLiteral("reason"), QStringLiteral("toc_hierarchy_source_changed") }
                     });
             }
         }
@@ -880,6 +1042,23 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
                 ncx->SetTextAsUndoableEdit(ncxFromEntries(m_stagedToc, title));
             }
         }
+        if (fail.isEmpty() && m_hasStagedTocHierarchy) {
+            TextResource *toc_resource = primaryTocResource();
+            bool updated = false;
+            if (HTMLResource *nav = qobject_cast<HTMLResource *>(toc_resource)) {
+                updated = NavProcessor(nav).ReparentNavTOC(
+                    m_stagedTocBefore, m_stagedTocAfter, true);
+            } else if (NCXResource *ncx = qobject_cast<NCXResource *>(toc_resource)) {
+                updated = ncx->ReparentNCX(
+                    m_stagedTocBefore, m_stagedTocAfter, true);
+            }
+            if (!updated) {
+                fail = QStringLiteral("Could not apply the staged TOC hierarchy transform");
+            } else {
+                noteText(toc_resource, toc_resource->GetText());
+                ++applied;
+            }
+        }
         if (fail.isEmpty()) {
             for (const QString &id : m_stagedRemovals) {
                 if (Resource *resource = findResource(id)) resource->Delete();
@@ -894,6 +1073,9 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
             m_stagedSpine.clear();
             m_hasStagedToc = false;
             m_stagedToc = QJsonArray();
+            m_hasStagedTocHierarchy = false;
+            m_stagedTocBefore = TocEditTree();
+            m_stagedTocAfter = TocEditTree();
             m_stagedAfterIds.clear();
             return BookOpResult::error(QStringLiteral("TRANSACTION_ROLLED_BACK"), fail);
         }
@@ -906,11 +1088,16 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
         m_stagedSpine.clear();
         m_hasStagedToc = false;
         m_stagedToc = QJsonArray();
+        m_hasStagedTocHierarchy = false;
+        m_stagedTocBefore = TocEditTree();
+        m_stagedTocAfter = TocEditTree();
         m_stagedAfterIds.clear();
         m_transactionPackageResourceId.clear();
         m_transactionPackageSource.clear();
         m_transactionTocResourceId.clear();
         m_transactionTocSource.clear();
+        m_transactionHierarchyTocResourceId.clear();
+        m_transactionHierarchyTocSource.clear();
         ++m_revision;
         return BookOpResult::success(QJsonObject {
             { QStringLiteral("transaction_id"), txid },
@@ -935,11 +1122,16 @@ BookOpResult SigilBookWorkspace::rollbackTransaction()
     m_stagedSpine.clear();
     m_hasStagedToc = false;
     m_stagedToc = QJsonArray();
+    m_hasStagedTocHierarchy = false;
+    m_stagedTocBefore = TocEditTree();
+    m_stagedTocAfter = TocEditTree();
     m_stagedAfterIds.clear();
     m_transactionPackageResourceId.clear();
     m_transactionPackageSource.clear();
     m_transactionTocResourceId.clear();
     m_transactionTocSource.clear();
+    m_transactionHierarchyTocResourceId.clear();
+    m_transactionHierarchyTocSource.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), txid },
         { QStringLiteral("rolled_back"), true }
@@ -1353,15 +1545,77 @@ BookOpResult SigilBookWorkspace::updateSpine(const QStringList &resource_ids)
 
 BookOpResult SigilBookWorkspace::updateToc(const QJsonArray &entries)
 {
-    BookOpResult ensured = ensureTransaction();
-    if (!ensured.ok) return ensured;
-    m_stagedToc = entries;
-    m_hasStagedToc = true;
-    return BookOpResult::success(QJsonObject {
-        { QStringLiteral("staged"), true },
-        { QStringLiteral("toc"), entries },
-        { QStringLiteral("entry_count"), entries.size() }
-    }, false, true);
+    return invokeOp([this, entries]() {
+        BookOpResult ensured = ensureTransaction();
+        if (!ensured.ok) return ensured;
+        if (m_hasStagedTocHierarchy) {
+            return BookOpResult::error(
+                QStringLiteral("TOC_STAGE_CONFLICT"),
+                QStringLiteral("A native TOC hierarchy transform is already staged"));
+        }
+        m_stagedToc = entries;
+        m_hasStagedToc = true;
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("staged"), true },
+            { QStringLiteral("toc"), entries },
+            { QStringLiteral("entry_count"), entries.size() }
+        }, false, true);
+    });
+}
+
+BookOpResult SigilBookWorkspace::updateTocHierarchy(
+    const TocEditTree &before, const TocEditTree &after)
+{
+    return invokeOp([this, before, after]() {
+        BookOpResult ensured = ensureTransaction();
+        if (!ensured.ok) return ensured;
+        if (m_hasStagedToc) {
+            return BookOpResult::error(
+                QStringLiteral("TOC_STAGE_CONFLICT"),
+                QStringLiteral("A generated TOC replacement is already staged"));
+        }
+        if (!TocTreeTransform::Validate(before)
+            || !TocTreeTransform::Validate(after)
+            || before.rootId != after.rootId
+            || before.nodes.size() != after.nodes.size()
+            || TocTreeTransform::PreorderIds(before)
+                != TocTreeTransform::PreorderIds(after)) {
+            return BookOpResult::error(
+                QStringLiteral("TOC_TRANSFORM_INVALID"),
+                QStringLiteral("The TOC hierarchy transform is invalid or changes preorder"));
+        }
+        for (auto it = before.nodes.cbegin(); it != before.nodes.cend(); ++it) {
+            if (!after.nodes.contains(it.key())
+                || it.value().label != after.nodes.value(it.key()).label
+                || it.value().target != after.nodes.value(it.key()).target) {
+                return BookOpResult::error(
+                    QStringLiteral("TOC_TRANSFORM_INVALID"),
+                    QStringLiteral("A hierarchy-only transform cannot change TOC labels or targets"));
+            }
+        }
+        if (!TocTreeTransform::Equal(tocHierarchy(), before)) {
+            return BookOpResult::error(
+                QStringLiteral("TOC_REVISION_CONFLICT"),
+                QStringLiteral("The TOC hierarchy changed after planning"));
+        }
+        TextResource *toc_resource = primaryTocResource();
+        if (!toc_resource
+            || toc_resource->GetIdentifier() != m_transactionHierarchyTocResourceId
+            || toc_resource->GetText() != m_transactionHierarchyTocSource) {
+            return BookOpResult::error(
+                QStringLiteral("TOC_REVISION_CONFLICT"),
+                QStringLiteral("The TOC source changed after the transaction began"));
+        }
+        m_stagedTocBefore = before;
+        m_stagedTocAfter = after;
+        m_hasStagedTocHierarchy = true;
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("staged"), true },
+            { QStringLiteral("entry_count"), after.nodes.size() - 1 },
+            { QStringLiteral("preorder_preserved"), true },
+            { QStringLiteral("resource_id"), toc_resource->GetIdentifier() }
+        }, false, true);
+    });
 }
 
 BookOpResult SigilBookWorkspace::createCheckpoint(const QString &label)

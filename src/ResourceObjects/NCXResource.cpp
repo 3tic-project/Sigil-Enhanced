@@ -258,7 +258,8 @@ void NCXResource::GenerateNCXFromTOCEntries(const Book *book, TOCModel::TOCEntry
 }
 
 bool NCXResource::ReparentNCX(const TocEditTree &before,
-                              const TocEditTree &after)
+                              const TocEditTree &after,
+                              bool undoable)
 {
     if (!TocTreeTransform::Validate(before) || !TocTreeTransform::Validate(after)
             || before.rootId != after.rootId
@@ -312,7 +313,10 @@ bool NCXResource::ReparentNCX(const TocEditTree &before,
     if (!match.hasMatch() || rewrittenMap.isEmpty()) return false;
     QString updated = source;
     updated.replace(match.capturedStart(), match.capturedLength(), rewrittenMap);
-    if (updated != source) SetText(updated);
+    if (updated != source) {
+        if (undoable) SetTextAsUndoableEdit(updated);
+        else SetText(updated);
+    }
     return true;
 }
 

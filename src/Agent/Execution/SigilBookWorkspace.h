@@ -38,6 +38,8 @@ public:
     QJsonArray resources() const override;
     QJsonArray spine() const override;
     QJsonArray toc() const override;
+    TocEditTree tocHierarchy() const override;
+    QString tocHierarchyIdentity() const override;
     QJsonObject metadata() const override;
     QJsonArray search(const QString &query, int max_matches) const override;
     BookOpResult readFragment(const QString &resource_id, int offset, int limit) const override;
@@ -77,6 +79,8 @@ public:
     BookOpResult updateSpine(const QStringList &resource_ids) override;
     BookOpResult runLivePython(const QString &script, int timeout_ms) override;
     BookOpResult updateToc(const QJsonArray &entries) override;
+    BookOpResult updateTocHierarchy(const TocEditTree &before,
+                                    const TocEditTree &after) override;
     BookOpResult createCheckpoint(const QString &label) override;
     QJsonArray listCheckpoints() const override;
     BookOpResult restoreCheckpoint(const QString &checkpoint_id) override;
@@ -106,6 +110,7 @@ private:
     TextResource *textResource(const QString &id_or_path) const;
     QString liveText(TextResource *resource) const;
     QString currentText(TextResource *resource) const;
+    TextResource *primaryTocResource() const;
     QString kindOf(Resource *resource) const;
     quint64 trackedRevision(Resource *resource) const;
     void noteText(Resource *resource, const QString &text) const;
@@ -133,11 +138,16 @@ private:
     bool m_hasStagedSpine = false;
     QJsonArray m_stagedToc;
     bool m_hasStagedToc = false;
+    bool m_hasStagedTocHierarchy = false;
+    TocEditTree m_stagedTocBefore;
+    TocEditTree m_stagedTocAfter;
     QHash<QString, QString> m_stagedAfterIds;
     QString m_transactionPackageResourceId;
     QString m_transactionPackageSource;
     QString m_transactionTocResourceId;
     QString m_transactionTocSource;
+    QString m_transactionHierarchyTocResourceId;
+    QString m_transactionHierarchyTocSource;
 };
 
 } // namespace SigilAgent

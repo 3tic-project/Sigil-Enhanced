@@ -498,7 +498,7 @@ void NavProcessor::SetLandmarks(const QList<NavLandmarkEntry> & landlist)
     m_NavResource->SetText(nav_data);
 }
 
-bool NavProcessor::ReplaceTOCList(const QString &generatedSource)
+bool NavProcessor::ReplaceTOCList(const QString &generatedSource, bool undoable)
 {
     if (!m_NavResource) return false;
 
@@ -540,7 +540,8 @@ bool NavProcessor::ReplaceTOCList(const QString &generatedSource)
                 source.replace(oldOlStart.capturedStart(),
                                oldEnd - oldOlStart.capturedStart(), newList);
                 if (source != m_NavResource->GetText()) {
-                    m_NavResource->SetText(source);
+                    if (undoable) m_NavResource->SetTextAsUndoableEdit(source);
+                    else m_NavResource->SetText(source);
                 }
                 return true;
             }
@@ -550,7 +551,8 @@ bool NavProcessor::ReplaceTOCList(const QString &generatedSource)
 }
 
 bool NavProcessor::ReparentNavTOC(const TocEditTree &before,
-                                  const TocEditTree &after)
+                                  const TocEditTree &after,
+                                  bool undoable)
 {
     if (!m_NavResource || !TocTreeTransform::Validate(before)
             || !TocTreeTransform::Validate(after)
@@ -599,7 +601,7 @@ bool NavProcessor::ReparentNavTOC(const TocEditTree &before,
     for (TocNodeId id : after.nodes.value(after.rootId).children) {
         AppendHierarchy(after, id, rootList, items, childLists);
     }
-    return ReplaceTOCList(gi.getxhtml());
+    return ReplaceTOCList(gi.getxhtml(), undoable);
 }
 
 void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)

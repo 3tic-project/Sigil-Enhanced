@@ -37,6 +37,122 @@ QString sha256Text(const QString &text)
         QCryptographicHash::hash(text.toUtf8(), QCryptographicHash::Sha256).toHex());
 }
 
+TocEditTree tocTreeFromEntries(const QJsonArray &entries)
+{
+    TocEditTree tree;
+    tree.rootId = 0;
+    TocEditNode root;
+    root.id = 0;
+    root.parentId = 0;
+    tree.nodes.insert(0, root);
+    QList<TocNodeId> last_at_level;
+    TocNodeId next_id = 1;
+    for (const QJsonValue &value : entries) {
+        if (!value.isObject()) return TocEditTree();
+        const QJsonObject object = value.toObject();
+        const int level = object.value(QStringLiteral("level")).toInt(1);
+        if (level < 1 || level > last_at_level.size() + 1) {
+            return TocEditTree();
+        }
+        const TocNodeId parent = level == 1 ? tree.rootId
+                                             : last_at_level.at(level - 2);
+        TocEditNode node;
+        node.id = next_id++;
+        node.parentId = parent;
+        node.label = object.value(QStringLiteral("label")).toString();
+        node.target = object.value(QStringLiteral("href")).toString();
+        if (node.target.isEmpty()) {
+            node.target = object.value(QStringLiteral("target")).toString();
+        }
+        if (node.target.isEmpty()) {
+            node.target = object.value(QStringLiteral("book_path")).toString();
+        }
+        tree.nodes.insert(node.id, node);
+        tree.nodes[parent].children.append(node.id);
+        while (last_at_level.size() >= level) last_at_level.removeLast();
+        last_at_level.append(node.id);
+    }
+    return tree;
+}
+
+bool tocTreesEqual(const TocEditTree &first, const TocEditTree &second)
+{
+    if (first.rootId != second.rootId || first.nodes.size() != second.nodes.size()) {
+        return false;
+    }
+    for (auto it = first.nodes.cbegin(); it != first.nodes.cend(); ++it) {
+        if (!second.nodes.contains(it.key())) return false;
+        const TocEditNode other = second.nodes.value(it.key());
+        if (it.value().id != other.id || it.value().parentId != other.parentId
+            || it.value().label != other.label || it.value().target != other.target
+            || it.value().children != other.children) {
+            return false;
+        }
+    }
+    return true;
+}
+
+QList<TocNodeId> tocPreorder(const TocEditTree &tree)
+{
+    if (!tree.nodes.contains(tree.rootId)
+        || tree.nodes.value(tree.rootId).id != tree.rootId
+        || tree.nodes.value(tree.rootId).parentId != tree.rootId) {
+        return {};
+    }
+    QSet<TocNodeId> visited;
+    QList<TocNodeId> pending;
+    const QList<TocNodeId> roots = tree.nodes.value(tree.rootId).children;
+    for (auto it = roots.crbegin(); it != roots.crend(); ++it) pending.append(*it);
+    QList<TocNodeId> preorder;
+    while (!pending.isEmpty()) {
+        const TocNodeId id = pending.takeLast();
+        if (id == tree.rootId || visited.contains(id) || !tree.nodes.contains(id)) {
+            return {};
+        }
+        const TocEditNode node = tree.nodes.value(id);
+        if (node.id != id || !tree.nodes.contains(node.parentId)
+            || !tree.nodes.value(node.parentId).children.contains(id)) {
+            return {};
+        }
+        visited.insert(id);
+        preorder.append(id);
+        for (auto it = node.children.crbegin(); it != node.children.crend(); ++it) {
+            pending.append(*it);
+        }
+    }
+    if (visited.size() + 1 != tree.nodes.size()) return {};
+    return preorder;
+}
+
+QJsonArray entriesFromTocTree(const TocEditTree &tree)
+{
+    struct Pending {
+        TocNodeId id = 0;
+        int level = 1;
+    };
+    QList<Pending> pending;
+    const QList<TocNodeId> roots = tree.nodes.value(tree.rootId).children;
+    for (auto it = roots.crbegin(); it != roots.crend(); ++it) {
+        pending.append({*it, 1});
+    }
+    QJsonArray entries;
+    while (!pending.isEmpty()) {
+        const Pending current = pending.takeLast();
+        const TocEditNode node = tree.nodes.value(current.id);
+        entries.append(QJsonObject {
+            { QStringLiteral("label"), node.label },
+            { QStringLiteral("href"), node.target },
+            { QStringLiteral("level"), current.level },
+            { QStringLiteral("node_id"), static_cast<qint64>(node.id) },
+            { QStringLiteral("parent_id"), static_cast<qint64>(node.parentId) }
+        });
+        for (auto it = node.children.crbegin(); it != node.children.crend(); ++it) {
+            pending.append({*it, current.level + 1});
+        }
+    }
+    return entries;
+}
+
 } // namespace
 
 MemoryBookWorkspace::MemoryBookWorkspace()
@@ -214,6 +330,18 @@ QJsonArray MemoryBookWorkspace::spine() const
 QJsonArray MemoryBookWorkspace::toc() const
 {
     return m_toc;
+}
+
+TocEditTree MemoryBookWorkspace::tocHierarchy() const
+{
+    return tocTreeFromEntries(m_toc);
+}
+
+QString MemoryBookWorkspace::tocHierarchyIdentity() const
+{
+    return QString::fromLatin1(QCryptographicHash::hash(
+        QJsonDocument(m_toc).toJson(QJsonDocument::Compact),
+        QCryptographicHash::Sha256).toHex());
 }
 
 QJsonObject MemoryBookWorkspace::metadata() const
@@ -439,7 +567,9 @@ BookOpResult MemoryBookWorkspace::beginTransaction(const QString &label)
     m_hasStagedSpine = false;
     m_stagedSpine.clear();
     m_hasStagedToc = false;
+    m_hasStagedTocHierarchy = false;
     m_stagedToc = QJsonArray();
+    m_transactionTocIdentity = tocHierarchyIdentity();
     m_stagedAfterIds.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), m_transaction->Id() },
@@ -508,6 +638,13 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
         return BookOpResult::error(QStringLiteral("BOOK_REVISION_CONFLICT"),
                                    QStringLiteral("expected %1 actual %2")
                                        .arg(expected_revision).arg(m_revision));
+    }
+    if (m_hasStagedToc && tocHierarchyIdentity() != m_transactionTocIdentity) {
+        return BookOpResult::error(
+            QStringLiteral("BOOK_REVISION_CONFLICT"),
+            QStringLiteral("The TOC source changed after the transaction began"),
+            QJsonObject { { QStringLiteral("reason"),
+                            QStringLiteral("toc_hierarchy_source_changed") } });
     }
 
     QHash<QString, QString> originals;
@@ -607,7 +744,9 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
         m_hasStagedSpine = false;
         m_stagedSpine.clear();
         m_hasStagedToc = false;
+        m_hasStagedTocHierarchy = false;
         m_stagedToc = QJsonArray();
+        m_transactionTocIdentity.clear();
         m_stagedAfterIds.clear();
         return BookOpResult::error(QStringLiteral("TRANSACTION_ROLLED_BACK"), fail_message);
     }
@@ -621,7 +760,9 @@ BookOpResult MemoryBookWorkspace::commitTransaction(quint64 expected_revision)
     m_hasStagedSpine = false;
     m_stagedSpine.clear();
     m_hasStagedToc = false;
+    m_hasStagedTocHierarchy = false;
     m_stagedToc = QJsonArray();
+    m_transactionTocIdentity.clear();
     m_stagedAfterIds.clear();
     ++m_revision;
     return BookOpResult::success(QJsonObject {
@@ -648,7 +789,9 @@ BookOpResult MemoryBookWorkspace::rollbackTransaction()
     m_hasStagedSpine = false;
     m_stagedSpine.clear();
     m_hasStagedToc = false;
+    m_hasStagedTocHierarchy = false;
     m_stagedToc = QJsonArray();
+    m_transactionTocIdentity.clear();
     m_stagedAfterIds.clear();
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("transaction_id"), txid },
@@ -1010,12 +1153,60 @@ BookOpResult MemoryBookWorkspace::updateToc(const QJsonArray &entries)
 {
     BookOpResult ensured = ensureTransaction();
     if (!ensured.ok) return ensured;
+    if (m_hasStagedTocHierarchy) {
+        return BookOpResult::error(
+            QStringLiteral("TOC_STAGE_CONFLICT"),
+            QStringLiteral("A native TOC hierarchy transform is already staged"));
+    }
     m_stagedToc = entries;
     m_hasStagedToc = true;
     return BookOpResult::success(QJsonObject {
         { QStringLiteral("staged"), true },
         { QStringLiteral("toc"), entries },
         { QStringLiteral("entry_count"), entries.size() }
+    }, false, true);
+}
+
+BookOpResult MemoryBookWorkspace::updateTocHierarchy(
+    const TocEditTree &before, const TocEditTree &after)
+{
+    BookOpResult ensured = ensureTransaction();
+    if (!ensured.ok) return ensured;
+    if (m_hasStagedToc && !m_hasStagedTocHierarchy) {
+        return BookOpResult::error(
+            QStringLiteral("TOC_STAGE_CONFLICT"),
+            QStringLiteral("A generated TOC replacement is already staged"));
+    }
+    const QList<TocNodeId> before_preorder = tocPreorder(before);
+    const QList<TocNodeId> after_preorder = tocPreorder(after);
+    if (before.nodes.size() < 1 || before.rootId != after.rootId
+        || before.nodes.size() != after.nodes.size()
+        || before_preorder != after_preorder) {
+        return BookOpResult::error(
+            QStringLiteral("TOC_TRANSFORM_INVALID"),
+            QStringLiteral("The TOC hierarchy transform is invalid or changes preorder"));
+    }
+    for (auto it = before.nodes.cbegin(); it != before.nodes.cend(); ++it) {
+        if (!after.nodes.contains(it.key())
+            || it.value().label != after.nodes.value(it.key()).label
+            || it.value().target != after.nodes.value(it.key()).target) {
+            return BookOpResult::error(
+                QStringLiteral("TOC_TRANSFORM_INVALID"),
+                QStringLiteral("A hierarchy-only transform cannot change TOC labels or targets"));
+        }
+    }
+    if (!tocTreesEqual(tocHierarchy(), before)) {
+        return BookOpResult::error(
+            QStringLiteral("TOC_REVISION_CONFLICT"),
+            QStringLiteral("The TOC hierarchy changed after planning"));
+    }
+    m_stagedToc = entriesFromTocTree(after);
+    m_hasStagedToc = true;
+    m_hasStagedTocHierarchy = true;
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("staged"), true },
+        { QStringLiteral("toc"), m_stagedToc },
+        { QStringLiteral("entry_count"), m_stagedToc.size() }
     }, false, true);
 }
 

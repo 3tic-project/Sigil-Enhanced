@@ -12,6 +12,8 @@
 #include <QJsonObject>
 #include <QString>
 
+#include "BookManipulation/TocTreeTransform.h"
+
 namespace SigilAgent
 {
 
@@ -54,6 +56,8 @@ public:
     virtual QJsonArray resources() const = 0;
     virtual QJsonArray spine() const = 0;
     virtual QJsonArray toc() const = 0;
+    virtual TocEditTree tocHierarchy() const = 0;
+    virtual QString tocHierarchyIdentity() const = 0;
     virtual QJsonObject metadata() const = 0;
     virtual QJsonArray search(const QString &query, int max_matches) const = 0;
     virtual BookOpResult readFragment(const QString &resource_id, int offset, int limit) const = 0;
@@ -92,6 +96,8 @@ public:
     virtual BookOpResult renameResource(const QString &resource_id, const QString &book_path) = 0;
     virtual BookOpResult updateSpine(const QStringList &resource_ids) = 0;
     virtual BookOpResult updateToc(const QJsonArray &entries) = 0;
+    virtual BookOpResult updateTocHierarchy(const TocEditTree &before,
+                                            const TocEditTree &after) = 0;
     virtual BookOpResult runLivePython(const QString &script, int timeout_ms)
     {
         Q_UNUSED(script);

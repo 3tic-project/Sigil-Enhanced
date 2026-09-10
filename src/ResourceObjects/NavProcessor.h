@@ -68,7 +68,8 @@ public:
 
     // Reparent existing list items without rebuilding their labels, attributes,
     // or inline markup. Returns false when the source cannot be mapped safely.
-    bool ReparentNavTOC(const TocEditTree &before, const TocEditTree &after);
+    bool ReparentNavTOC(const TocEditTree &before, const TocEditTree &after,
+                        bool undoable = false);
 
     // Get current Nav as TOCEntry Tree
     TOCModel::TOCEntry GetRootTOCEntry();
@@ -88,7 +89,7 @@ private:
     QString BuildTOC(const QList<NavTOCEntry> & toclist);
     QString BuildLandmarks(const QList<NavLandmarkEntry> & landlist);
     QString BuildPageList(const QList<NavPageListEntry> & pagelist);
-    bool ReplaceTOCList(const QString &generatedSource);
+    bool ReplaceTOCList(const QString &generatedSource, bool undoable = false);
 
     void SetTOC(const QList<NavTOCEntry> & toclist);
     void SetLandmarks(const QList<NavLandmarkEntry> & landlist);
