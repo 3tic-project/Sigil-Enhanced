@@ -27265,4 +27265,29 @@ Continue using the requested filename?</source>
     <message><source>XHTML formatting failed for %1: %2</source><translation>%1 的 XHTML 格式化失败：%2</translation></message>
     <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落规范化：已应用可选的 XHTML 格式化。</translation></message>
 </context>
+<context>
+    <name>SigilAgent::AgentDock</name>
+    <message><source>Preview</source><translation>预览</translation></message>
+    <message><source>Applied</source><translation>已应用</translation></message>
+    <message><source>The live book is unchanged; these changes are staged only.</source><translation>当前书籍未发生更改；以下变更仅处于暂存状态。</translation></message>
+    <message><source>• Added: %1</source><translation>• 已新增：%1</translation></message>
+    <message><source>• Renamed: %1 → %2</source><translation>• 已重命名：%1 → %2</translation></message>
+    <message><source>• Text: %1 (%2 → %3)</source><translation>• 文本：%1（%2 → %3）</translation></message>
+    <message><source>• Metadata changes</source><translation>• 元数据变更</translation></message>
+    <message><source>• Reading order changes</source><translation>• 阅读顺序变更</translation></message>
+    <message><source>• TOC hierarchy changes</source><translation>• 目录层级变更</translation></message>
+    <message><source>• Removed: %1</source><translation>• 已删除：%1</translation></message>
+    <message><source>No staged differences were reported.</source><translation>未报告任何暂存差异。</translation></message>
+    <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>已应用到当前书籍。EPUB 文件尚未保存。</translation></message>
+    <message><source>Applied changes: %1</source><translation>已应用变更：%1</translation></message>
+    <message><source>Book revision: %1</source><translation>书籍修订：%1</translation></message>
+    <message><source>Full EPUBCheck: not run.</source><translation>完整 EPUBCheck：未运行。</translation></message>
+    <message><source>Full EPUBCheck: %1</source><translation>完整 EPUBCheck：%1</translation></message>
+    <message><source>Recovery: use Sigil Undo where available.</source><translation>恢复：在可用处使用 Sigil 撤销。</translation></message>
+    <message><source>This commit did not create a task-wide restore point.</source><translation>本次提交未创建整任务恢复点。</translation></message>
+    <message><source>Staged changes discarded</source><translation>已丢弃暂存变更</translation></message>
+    <message><source>No staged changes</source><translation>无暂存变更</translation></message>
+    <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>已丢弃暂存事务。本事务未更改当前书籍。</translation></message>
+    <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>没有可丢弃的暂存事务。当前书籍未发生更改。</translation></message>
+</context>
 </TS>

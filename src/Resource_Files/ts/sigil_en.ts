@@ -23317,4 +23317,29 @@ Continue using the requested filename?</translation>
     <message><source>XHTML formatting failed for %1: %2</source><translation>XHTML formatting failed for %1: %2</translation></message>
     <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV paragraph normalization: optional XHTML formatting was applied.</translation></message>
 </context>
+<context>
+    <name>SigilAgent::AgentDock</name>
+    <message><source>Preview</source><translation>Preview</translation></message>
+    <message><source>Applied</source><translation>Applied</translation></message>
+    <message><source>The live book is unchanged; these changes are staged only.</source><translation>The live book is unchanged; these changes are staged only.</translation></message>
+    <message><source>• Added: %1</source><translation>• Added: %1</translation></message>
+    <message><source>• Renamed: %1 → %2</source><translation>• Renamed: %1 → %2</translation></message>
+    <message><source>• Text: %1 (%2 → %3)</source><translation>• Text: %1 (%2 → %3)</translation></message>
+    <message><source>• Metadata changes</source><translation>• Metadata changes</translation></message>
+    <message><source>• Reading order changes</source><translation>• Reading order changes</translation></message>
+    <message><source>• TOC hierarchy changes</source><translation>• TOC hierarchy changes</translation></message>
+    <message><source>• Removed: %1</source><translation>• Removed: %1</translation></message>
+    <message><source>No staged differences were reported.</source><translation>No staged differences were reported.</translation></message>
+    <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>Applied to the current book. The EPUB file has not been saved.</translation></message>
+    <message><source>Applied changes: %1</source><translation>Applied changes: %1</translation></message>
+    <message><source>Book revision: %1</source><translation>Book revision: %1</translation></message>
+    <message><source>Full EPUBCheck: not run.</source><translation>Full EPUBCheck: not run.</translation></message>
+    <message><source>Full EPUBCheck: %1</source><translation>Full EPUBCheck: %1</translation></message>
+    <message><source>Recovery: use Sigil Undo where available.</source><translation>Recovery: use Sigil Undo where available.</translation></message>
+    <message><source>This commit did not create a task-wide restore point.</source><translation>This commit did not create a task-wide restore point.</translation></message>
+    <message><source>Staged changes discarded</source><translation>Staged changes discarded</translation></message>
+    <message><source>No staged changes</source><translation>No staged changes</translation></message>
+    <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>The staged transaction was discarded. The live book was not changed by this transaction.</translation></message>
+    <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>There was no staged transaction to discard. The live book was not changed.</translation></message>
+</context>
 </TS>

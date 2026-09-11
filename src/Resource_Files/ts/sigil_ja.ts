@@ -27263,4 +27263,29 @@ Continue using the requested filename?</source>
     <message><source>XHTML formatting failed for %1: %2</source><translation>%1 の XHTML 整形に失敗しました：%2</translation></message>
     <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落の正規化：追加の XHTML 整形を適用しました。</translation></message>
 </context>
+<context>
+    <name>SigilAgent::AgentDock</name>
+    <message><source>Preview</source><translation>プレビュー</translation></message>
+    <message><source>Applied</source><translation>適用済み</translation></message>
+    <message><source>The live book is unchanged; these changes are staged only.</source><translation>現在のブックは変更されていません。これらの変更はステージングのみです。</translation></message>
+    <message><source>• Added: %1</source><translation>• 追加：%1</translation></message>
+    <message><source>• Renamed: %1 → %2</source><translation>• 名前変更：%1 → %2</translation></message>
+    <message><source>• Text: %1 (%2 → %3)</source><translation>• テキスト：%1（%2 → %3）</translation></message>
+    <message><source>• Metadata changes</source><translation>• メタデータの変更</translation></message>
+    <message><source>• Reading order changes</source><translation>• 読み順の変更</translation></message>
+    <message><source>• TOC hierarchy changes</source><translation>• 目次階層の変更</translation></message>
+    <message><source>• Removed: %1</source><translation>• 削除：%1</translation></message>
+    <message><source>No staged differences were reported.</source><translation>ステージされた差分は報告されていません。</translation></message>
+    <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>現在のブックに適用しました。EPUB ファイルはまだ保存されていません。</translation></message>
+    <message><source>Applied changes: %1</source><translation>適用した変更：%1</translation></message>
+    <message><source>Book revision: %1</source><translation>ブックのリビジョン：%1</translation></message>
+    <message><source>Full EPUBCheck: not run.</source><translation>完全な EPUBCheck：未実行。</translation></message>
+    <message><source>Full EPUBCheck: %1</source><translation>完全な EPUBCheck：%1</translation></message>
+    <message><source>Recovery: use Sigil Undo where available.</source><translation>復元：利用可能な場合は Sigil の「元に戻す」を使用してください。</translation></message>
+    <message><source>This commit did not create a task-wide restore point.</source><translation>このコミットではタスク全体の復元ポイントは作成されていません。</translation></message>
+    <message><source>Staged changes discarded</source><translation>ステージされた変更を破棄しました</translation></message>
+    <message><source>No staged changes</source><translation>ステージされた変更はありません</translation></message>
+    <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>ステージされたトランザクションを破棄しました。このトランザクションによってブック本体は変更されていません。</translation></message>
+    <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>破棄するステージ済みトランザクションはありません。ブック本体は変更されていません。</translation></message>
+</context>
 </TS>
