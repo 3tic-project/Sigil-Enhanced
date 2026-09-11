@@ -140,6 +140,38 @@ int main()
     Require(hasEvent(session, AgentEventType::UserMessage), "session must record the user message");
     Require(hasEvent(session, AgentEventType::AssistantMessage), "session must record assistant text");
     Require(hasEvent(session, AgentEventType::ToolCompleted), "session must record the tool result");
+    Require(session.eventsOf(AgentEventType::ModelRequestCompleted).size()
+                == provider.requestCount(),
+            "every successful model request must publish a completion event");
+    Require(!hasEvent(session, AgentEventType::ModelRequestFailed),
+            "successful model requests must not publish failure events");
+
+    MemoryBookWorkspace failed_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry failed_registry;
+    registerBookTools(&failed_registry, &failed_book);
+    AgentSession failed_session;
+    AgentCancellation failed_cancellation;
+    MockModelProvider failed_provider;
+    ModelTurn failed_turn;
+    failed_turn.error = QStringLiteral("HTTP 401: invalid credentials");
+    failed_provider.addTurn(failed_turn);
+    AgentRunner failed_runner(&failed_session, &failed_provider, &failed_registry, &failed_book,
+                              &policy, &approve, &failed_cancellation);
+    failed_runner.setModel(QStringLiteral("mock"));
+    const AgentRunResult failed_result = failed_runner.runTurn(QStringLiteral("fail safely"));
+    Require(failed_result.state == AgentRunState::Failed,
+            "provider errors must fail the Agent turn");
+    Require(hasEvent(failed_session, AgentEventType::ModelRequestFailed)
+                && !hasEvent(failed_session, AgentEventType::ModelRequestCompleted),
+            "failed model requests must publish failure without a false completion");
+    const QJsonObject failed_request =
+        failed_session.eventsOf(AgentEventType::ModelRequestFailed).constLast().payload;
+    Require(failed_request.value(QStringLiteral("step")).toInt() == 1
+                && failed_request.value(QStringLiteral("model")).toString()
+                    == QStringLiteral("mock")
+                && failed_request.value(QStringLiteral("message")).toString()
+                    .contains(QStringLiteral("401")),
+            "model failure events must carry the request identity and readable error");
 
     HistoryAssembler assembler;
     const QJsonArray replay = assembler.toOpenAIMessages(assembler.assemble(session.events(), true), true);

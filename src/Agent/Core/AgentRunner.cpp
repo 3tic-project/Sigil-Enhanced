@@ -347,6 +347,11 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         }
         if (!turn.error.isEmpty()) {
             setState(AgentRunState::Failed);
+            m_session->append(AgentEventType::ModelRequestFailed, QJsonObject {
+                { QStringLiteral("step"), steps },
+                { QStringLiteral("model"), request.model },
+                { QStringLiteral("message"), turn.error }
+            });
             m_session->append(AgentEventType::Error, QJsonObject {
                 { QStringLiteral("message"), turn.error }
             });
@@ -356,6 +361,12 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             return result;
         }
 
+        m_session->append(AgentEventType::ModelRequestCompleted, QJsonObject {
+            { QStringLiteral("step"), steps },
+            { QStringLiteral("model"), request.model },
+            { QStringLiteral("finish_reason"), turn.finishReason },
+            { QStringLiteral("tool_calls"), turn.toolCalls.size() }
+        });
         QJsonArray tool_calls_json;
         for (const ToolCall &call : turn.toolCalls) {
             tool_calls_json.append(toolCallToJson(call));

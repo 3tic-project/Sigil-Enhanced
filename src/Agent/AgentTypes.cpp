@@ -19,6 +19,8 @@ QString eventTypeName(AgentEventType type)
         case AgentEventType::UserMessage: return QStringLiteral("user_message");
         case AgentEventType::ContextAttached: return QStringLiteral("context_attached");
         case AgentEventType::ModelRequestStarted: return QStringLiteral("model_request_started");
+        case AgentEventType::ModelRequestCompleted: return QStringLiteral("model_request_completed");
+        case AgentEventType::ModelRequestFailed: return QStringLiteral("model_request_failed");
         case AgentEventType::AssistantDelta: return QStringLiteral("assistant_delta");
         case AgentEventType::AssistantMessage: return QStringLiteral("assistant_message");
         case AgentEventType::ToolRequested: return QStringLiteral("tool_requested");
