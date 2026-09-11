@@ -3,6 +3,7 @@
 
 #include <QApplication>
 #include <QComboBox>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
@@ -192,6 +193,102 @@ int main(int argc, char *argv[])
             "Approve/Deny must disable after a decision");
     Require(approve->text().contains(QStringLiteral("Approved")),
             "Approve must show it was accepted");
+
+    dock.resetTranscript();
+    SigilAgent::AgentEvent preview;
+    preview.type = SigilAgent::AgentEventType::TransactionPreviewed;
+    preview.payload = QJsonObject {
+        { QStringLiteral("changes"), QJsonArray {
+            QJsonObject {
+                { QStringLiteral("resource_id"), QStringLiteral("chapter-1") },
+                { QStringLiteral("original_length"), 80 },
+                { QStringLiteral("staged_length"), 96 },
+                { QStringLiteral("changed"), true }
+            },
+            QJsonObject {
+                { QStringLiteral("resource_id"), QStringLiteral("staged-cover") },
+                { QStringLiteral("book_path"), QStringLiteral("Images/cover.jpg") },
+                { QStringLiteral("added"), true }
+            },
+            QJsonObject {
+                { QStringLiteral("resource_id"), QStringLiteral("chapter-2") },
+                { QStringLiteral("from"), QStringLiteral("Text/ch2.xhtml") },
+                { QStringLiteral("book_path"), QStringLiteral("Text/chapter-2.xhtml") },
+                { QStringLiteral("renamed"), true }
+            }
+        } },
+        { QStringLiteral("metadata_changed"), true },
+        { QStringLiteral("spine_changed"), true },
+        { QStringLiteral("toc_changed"), true },
+        { QStringLiteral("removed"), QJsonArray { QStringLiteral("old-style") } },
+        { QStringLiteral("applied_to_book"), false }
+    };
+    dock.appendEvent(preview);
+    application.processEvents();
+    auto *preview_card = dock.findChild<QWidget *>(QStringLiteral("agentPreviewCard"));
+    auto *preview_body = preview_card
+        ? preview_card->findChild<QLabel *>(QStringLiteral("agentPreviewCardBody"))
+        : nullptr;
+    Require(preview_body && preview_body->isVisible(), "preview status card must be visible");
+    Require(preview_body->text().contains(QStringLiteral("live book is unchanged"))
+                && preview_body->text().contains(QStringLiteral("Text: chapter-1 (80 → 96)")),
+            "preview card must distinguish staging from a live text edit");
+    Require(preview_body->text().contains(QStringLiteral("Added: Images/cover.jpg"))
+                && preview_body->text().contains(QStringLiteral("Renamed: Text/ch2.xhtml → Text/chapter-2.xhtml"))
+                && preview_body->text().contains(QStringLiteral("Removed: old-style")),
+            "preview card must describe structural resource changes");
+    Require(preview_body->text().contains(QStringLiteral("Metadata changes"))
+                && preview_body->text().contains(QStringLiteral("Reading order changes"))
+                && preview_body->text().contains(QStringLiteral("TOC hierarchy changes")),
+            "preview card must expose metadata, spine, and TOC changes");
+
+    SigilAgent::AgentEvent committed;
+    committed.type = SigilAgent::AgentEventType::TransactionCommitted;
+    committed.payload = QJsonObject {
+        { QStringLiteral("applied_to_book"), true },
+        { QStringLiteral("save_status"), QStringLiteral("not_saved") },
+        { QStringLiteral("applied_changes"), 4 },
+        { QStringLiteral("book_revision"), 17 },
+        { QStringLiteral("full_epubcheck"), QJsonObject {
+            { QStringLiteral("status"), QStringLiteral("not_run") }
+        } },
+        { QStringLiteral("recovery"), QJsonObject {
+            { QStringLiteral("sigil_undo"), QStringLiteral("where_available") },
+            { QStringLiteral("task_restore_point"),
+              QStringLiteral("not_created_by_commit") }
+        } }
+    };
+    dock.appendEvent(committed);
+    application.processEvents();
+    auto *applied_card = dock.findChild<QWidget *>(QStringLiteral("agentAppliedCard"));
+    auto *applied_body = applied_card
+        ? applied_card->findChild<QLabel *>(QStringLiteral("agentAppliedCardBody"))
+        : nullptr;
+    Require(applied_body && applied_body->isVisible(), "applied status card must be visible");
+    Require(applied_body->text().contains(QStringLiteral("EPUB file has not been saved"))
+                && applied_body->text().contains(QStringLiteral("Applied changes: 4"))
+                && applied_body->text().contains(QStringLiteral("Book revision: 17")),
+            "applied card must show save state, count, and book revision");
+    Require(applied_body->text().contains(QStringLiteral("Full EPUBCheck: not run"))
+                && applied_body->text().contains(QStringLiteral("Undo where available"))
+                && applied_body->text().contains(QStringLiteral("did not create a task-wide restore point")),
+            "applied card must state validation and recovery boundaries");
+
+    SigilAgent::AgentEvent rolled_back;
+    rolled_back.type = SigilAgent::AgentEventType::TransactionRolledBack;
+    rolled_back.payload = QJsonObject {
+        { QStringLiteral("rolled_back"), true },
+        { QStringLiteral("live_book_unchanged"), true }
+    };
+    dock.appendEvent(rolled_back);
+    application.processEvents();
+    auto *rollback_card = dock.findChild<QWidget *>(QStringLiteral("agentRollbackCard"));
+    auto *rollback_body = rollback_card
+        ? rollback_card->findChild<QLabel *>(QStringLiteral("agentRollbackCardBody"))
+        : nullptr;
+    Require(rollback_body && rollback_body->isVisible()
+                && rollback_body->text().contains(QStringLiteral("live book was not changed")),
+            "rollback must render a visible live-book status card");
 
     composer->setPlainText(QStringLiteral("hello from enter"));
     QString seen;
