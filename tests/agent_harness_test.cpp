@@ -38,6 +38,42 @@ int main()
 {
     using namespace SigilAgent;
 
+    MemoryBookWorkspace selection_book;
+    MemoryResource selection_resource;
+    selection_resource.id = QStringLiteral("scope:chapter");
+    selection_resource.bookPath = QStringLiteral("OEBPS/Text/selection.xhtml");
+    selection_resource.kind = QStringLiteral("xhtml");
+    selection_resource.mediaType = QStringLiteral("application/xhtml+xml");
+    const QString ruby_selection =
+        QStringLiteral("<p>本文<ruby>漢<rt>かん</rt></ruby></p>");
+    selection_resource.text = QString(5000, QLatin1Char('x'))
+        + ruby_selection + QString(1200, QLatin1Char('y'));
+    selection_book.addResource(selection_resource);
+    selection_book.setSpine(QStringList());
+    const int selection_start = selection_resource.text.indexOf(ruby_selection);
+    const int selection_end = selection_start + ruby_selection.size();
+    const QString selection_context = PromptAssembler().contextBlock(
+        &selection_book,
+        QStringList {
+            QStringLiteral("book"),
+            QStringLiteral("scope:chapter:%1-%2").arg(selection_start).arg(selection_end)
+        });
+    Require(selection_context.contains(
+                QStringLiteral("selection scope:chapter [%1,%2) UTF-16")
+                    .arg(selection_start).arg(selection_end))
+                && selection_context.contains(ruby_selection),
+            "attached selection must include the exact UTF-16 range and Ruby source");
+    Require(!selection_context.contains(QString(401, QLatin1Char('x'))),
+            "selection context must not read the resource from offset zero");
+    const QString bounded_selection_context = PromptAssembler().contextBlock(
+        &selection_book,
+        QStringList { QStringLiteral("scope:chapter:0-%1")
+                          .arg(selection_resource.text.size()) });
+    Require(bounded_selection_context.contains(
+                QStringLiteral("selection truncated after 4096 UTF-16 code units"))
+                && bounded_selection_context.size() < 12000,
+            "large attached selections must be bounded and report truncation");
+
     MemoryBookWorkspace book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry registry;
     registerBookTools(&registry, &book);

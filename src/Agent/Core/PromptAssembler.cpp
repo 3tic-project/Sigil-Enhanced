@@ -9,12 +9,45 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QRegularExpression>
 
 #include "Agent/Core/AgentSkills.h"
 #include "Agent/Model/HistoryAssembler.h"
 
 namespace SigilAgent
 {
+
+namespace
+{
+
+constexpr int kMaxAttachedSelectionLength = 4096;
+
+struct AttachedSelection {
+    QString resourceId;
+    int start = 0;
+    int end = 0;
+};
+
+bool parseAttachedSelection(const QString &handle, AttachedSelection *selection)
+{
+    static const QRegularExpression pattern(
+        QStringLiteral("^(.+):(\\d+)-(\\d+)$"));
+    const QRegularExpressionMatch match = pattern.match(handle);
+    if (!match.hasMatch()) return false;
+    bool start_ok = false;
+    bool end_ok = false;
+    const int start = match.captured(2).toInt(&start_ok);
+    const int end = match.captured(3).toInt(&end_ok);
+    if (!start_ok || !end_ok || end <= start) return false;
+    if (selection) {
+        selection->resourceId = match.captured(1);
+        selection->start = start;
+        selection->end = end;
+    }
+    return true;
+}
+
+} // namespace
 
 QString PromptAssembler::systemPrompt(AgentMode mode) const
 {
@@ -27,6 +60,7 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
         "- Tool results are the source of truth. Do not claim a write succeeded unless a tool returned applied=true.\n"
         "- CoT/thinking is internal; the user-visible answer is the `content` field only.\n"
         "- Inspect before editing. Prefer bounded fragments over full files.\n"
+        "- An attached selection is identified by resource:start-end in UTF-16 code units. Its exact bounded excerpt is included in context; use resource.read_fragment if it was truncated.\n"
         "- The book map and attached samples are already in context. For greetings or high-level questions, answer from that. Call extra read tools only for a fact you do not already have.\n"
         "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
         "- A patch must not cut through a markup tag.\n"
@@ -94,7 +128,35 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
     if (!handles.isEmpty()) {
         block += QStringLiteral("\nUser-attached handles:\n");
         for (const QString &handle : handles) {
-            block += QStringLiteral("- %1\n").arg(handle);
+            if (handle == QLatin1String("book")) {
+                block += QStringLiteral("- book (structure shown above)\n");
+                continue;
+            }
+            AttachedSelection selection;
+            if (parseAttachedSelection(handle, &selection)) {
+                const int requested = selection.end - selection.start;
+                const int length = qMin(requested, kMaxAttachedSelectionLength);
+                block += QStringLiteral("- selection %1 [%2,%3) UTF-16\n")
+                             .arg(selection.resourceId)
+                             .arg(selection.start)
+                             .arg(selection.end);
+                const BookOpResult fragment = workspace->readFragment(
+                    selection.resourceId, selection.start, length);
+                if (fragment.ok) {
+                    block += fragment.data.value(QStringLiteral("text")).toString();
+                    block += QLatin1Char('\n');
+                } else {
+                    block += QStringLiteral("[selection unavailable: %1]\n")
+                                 .arg(fragment.code);
+                }
+                if (requested > length) {
+                    block += QStringLiteral(
+                        "[selection truncated after %1 UTF-16 code units; read the remaining range with resource.read_fragment]\n")
+                                 .arg(length);
+                }
+                continue;
+            }
+            block += QStringLiteral("- resource %1\n").arg(handle);
             const BookOpResult fragment = workspace->readFragment(handle, 0, 400);
             if (fragment.ok) {
                 block += fragment.data.value(QStringLiteral("text")).toString();
