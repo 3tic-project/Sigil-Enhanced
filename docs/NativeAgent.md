@@ -31,9 +31,9 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
-只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`session.recall` / `session.tasks`。
+只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
 
-写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
+写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate` / `toc.apply_transform`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
 
 立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。
 
@@ -52,9 +52,16 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 独占暂存事务，成功也不代表已写入活书。完整协议、错误和证据见
 [Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
 
+调整既有目录层级时使用 `toc.inspect_hierarchy` → `toc.plan_transform` →
+`toc.apply_transform` → `transaction.preview` → `transaction.commit`。不要预先调用
+`transaction.begin`，也不要为目录升降级改写 XHTML 标题。计划绑定当前会话、书籍
+修订、完整目录树和 Nav/NCX 精确源码；apply 只创建暂存事务。纯层级写回保留原节点
+属性、内联标记、标题、目标、先序及非 TOC 区域。详见
+[Native Agent 原生目录层级工具](AgentNativeTocTools.md)。
+
 `python.run` 只落一个临时 `.py` snippet（和其它 harness 的 `run_code` 一样），用 `live_launcher --snippet` 连上现有 `PluginSession` socket，把 `plugin` 绑进这段代码。不要写 `plugin.xml`。Snippet 顶层就能用 `plugin.book`；也可以定义 `def run(plugin)` 或设 `result`。若 Agent 还有未提交事务，会先要求 `commit` / `rollback`。Memory 测试工作区返回 `LIVE_PYTHON_UNAVAILABLE`。脚本上限 64KiB，输出截到 8KiB。优先用 typed 工具；Python 只补工具盖不到的逻辑。
 
-格式不是固定的：标题/插图标记都通过工具参数里的 regex 传入。`ln-template-typeset` 只是一套可选默认启发式；通用流程见 skill `book-structure`。目前仍不能把字体/图片二进制塞进模型，也不能改 EPUB3 nav 地标树。
+格式不是固定的：标题/插图标记都通过工具参数里的 regex 传入。`ln-template-typeset` 只是一套可选默认启发式；通用流程见 skill `book-structure`。目前仍不能把字体/图片二进制塞进模型，也不能改 EPUB3 landmarks/page-list。
 
 ## 按模板灌文稿（可选捷径）
 
@@ -69,7 +76,7 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 没有 shell，没有技能脚本，不会把字体二进制或整本书 XHTML 送给模型。若提交时的
 `expected_revision` 与当前书籍 revision 不一致，会返回 `BOOK_REVISION_CONFLICT`，不会改书。
 提交前还会比较事务开始时的精确 OPF 源码、每份已暂存正文的原文、重命名/删除资源基线，
-以及需要改写的 NCX 原文；因此用户在 preview 后从 GUI 修改目标内容，即使内部书籍计数尚未
+以及需要改写的 Nav/NCX 原文；因此用户在 preview 后从 GUI 修改目标内容，即使内部书籍计数尚未
 更新，也会拒绝旧计划并保留用户改动。`metadata.update`、`spine.set/sort` 和资源结构操作最终
 走 OPF 的局部源码补丁，保留未涉及的注释、前缀、属性引号、换行和私有扩展。
 
@@ -96,7 +103,8 @@ HTTP 出错时会带上状态码和服务器返回的 `error.message`（不会�
 
 协议仍是 OpenAI 兼容 Chat Completions。流式响应里 `reasoning_content`（以及 OpenRouter 的 `reasoning`）、`content`、`tool_calls` 分开解析。当某次请求带了 `tools` 时，同一会话后续请求必须回放助手的 `reasoning_content`（否则部分推理模型会返回 400）；不带 `tools` 的请求可以省略先前的思维链。
 
-Native Agent 不调用 MCP，也不把 MCP 当作内部 RPC。`paragraphs.*` 当前是 Native
+Native Agent 不调用 MCP，也不把 MCP 当作内部 RPC。`paragraphs.*` 与原生
+`toc.inspect_hierarchy` / `toc.plan_transform` / `toc.apply_transform` 当前是 Native
 Agent 专用工具，不在公共 `sigil.*` MCP catalog 中。
 
 ## 导出

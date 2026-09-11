@@ -46,6 +46,17 @@ NCX，不显示此选项。
 EPUB 3 缺少 Nav 时，主窗口会先进入现有的“生成导航文档”预览与确认流程；取消预览
 不会创建资源，确认后才进入目录编辑。
 
+## Native Agent
+
+内置 Agent 可用 `toc.inspect_hierarchy`、`toc.plan_transform` 和
+`toc.apply_transform` 调用同一个 `TocTreeTransform` 与原节点重挂器。它以稳定节点
+ID 规划提升/降级，绑定 controller 会话、书籍修订和 Nav/NCX 精确源码；apply 只创建
+独占暂存事务，仍须 `transaction.preview` 和 `transaction.commit`。
+
+该流程只改变导航层级，不编辑 XHTML `h1`–`h6`，也不增删目录项或修改标题/目标。
+EPUB 3 双导航书籍默认只改主 Nav，不自动同步兼容 NCX。协议、错误和验证边界见
+[Native Agent 原生目录层级工具](AgentNativeTocTools.md)。
+
 ## 工程与性能
 
 核心规则位于 `TocTreeTransform`，只处理稳定节点 ID、`parentId`、有序孩子、标签和

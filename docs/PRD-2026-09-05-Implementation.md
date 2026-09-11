@@ -26,6 +26,8 @@
   从导航分支的 `d6a6871ae` 继续，复用同一工作树。
 - 原生 Agent 段落计划工具：`feature/agent-native-paragraph-tools`，从已验证的 DIV
   规范化分支继续；当前切片仅注册到 Native Agent，不宣称已进入公共 MCP catalog。
+- 原生 Agent 目录层级计划工具：`feature/agent-native-toc-tools`，从段落工具分支继续，
+  复用已验证的 `TocTreeTransform` 与 Nav/NCX 原节点写回器。
 - 其余功能分别创建分支；有依赖的分支从已验证的依赖提交继续。
 - 每项拆分为可审阅的算法/集成/验证和文档提交，未验证的项不标为完成。
 - 原工作树三处未提交的文本资源加载改动保留，不纳入本分支。
@@ -532,9 +534,65 @@ ctest --test-dir build --output-on-failure \
 拒绝不会启动工具或留下事务。Prompt 测试验证 DIV 请求会装载专用 skill 和正确的
 独占事务顺序。
 
-本切片推进 AGENT-IM3 的 DIV 服务与 A01/A03–A07/A09/A12 自动化证据，但没有完成
+截至该切片，已推进 AGENT-IM3 的 DIV 服务与 A01/A03–A07/A09/A12 自动化证据，但没有完成
 AGENT-IM1/2 或 G8：尚无独立的计划审阅面板、提交后“尚未保存”结果卡和整任务恢复
 按钮；TOC/OPF 计划服务仍未接入，段落服务也未桥接 Live v2/MCP。真实未保存编辑器
 正文、书籍关闭/超时、公开附件、完整 EPUBCheck、跨平台 GUI、阅读器视觉比较与
 提交后覆盖新人工编辑的恢复冲突仍待验收。详细协议见
 [Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
+
+## Native Agent 目录层级计划工具（2026-09-11）
+
+分支：`feature/agent-native-toc-tools`。主要提交：`f1b2c39b1`（EPUB3 Nav 层级读取）、
+`3874873ef`（controller 会话绑定）、`794c7bc13`（检查/计划工具）、`5cf298e96`
+（原生源码保真暂存）、`35465efe6`（真实 Nav/Undo/冲突测试）、`954482327`
+（计划重验与 apply）、`a6bf1b753`（完整计划生命周期）、`9b28236c3`（Agent 编排规则）。
+后续 `02339d0ff` 明确禁止 EPUB 3 缺 Nav 时把兼容 NCX 当作可写主导航。
+`e645fb2a3` 将列表替换范围严格限定在 TOC nav 内，防止复制 landmarks/page-list。
+
+### 行为与安全边界
+
+- `SigilBookWorkspace::toc()` 在 EPUB 3 只读取主 Nav 的 TOC 树，不再扫描所有 `<a>`；
+  层级与 landmarks 已正确分离。新增的 `tocHierarchy()` 为 EPUB 3 读取 Nav，为 EPUB 2
+  读取 NCX，并为先序节点分配当前快照内稳定 ID。
+- `toc.inspect_hierarchy` 只读分页返回节点 ID、父项、深度、标题和目标；默认 100，
+  上限 500。`toc.plan_transform` 调用与 EditTOC 相同的 `TocTreeTransform`，支持
+  `promote` / `demote` 和提升后接管兄弟，要求节点集合、标题、目标与先序均不变；
+  审阅差异最多返回 128 项。
+- snapshot 与 plan 绑定当前 controller 会话、book revision、完整目录树和主导航资源
+  的 ID/路径/精确源码 SHA-256。检查、计划和 apply 均在读树前后比较源码身份；跨会话、
+  旧摘要、修订变化或未触发 revision 的直接 Nav/NCX 修改会在开事务前拒绝。
+- `toc.apply_transform` 为 Bulk、可预览工具，要求精确 `plan_id`、`plan_digest` 和
+  `expected_book_revision`，自行创建独占暂存事务。它返回
+  `applied_to_book=false`，仍须 `transaction.preview` 与 `transaction.commit`；取消或
+  暂存失败会回滚。Edit 模式需批准，Ask 拒绝，Plan 可暂存但不能 commit。
+- commit 前再次核对事务开始时的精确导航源码和 before 树。写回重挂已有 Nav `<li>`
+  或 NCX `<navPoint>`，使用文本资源单步 Undo；Nav 保留节点属性、内联标记、landmarks
+  及其他区域，NCX 保留 navMap 外围内容。不会编辑 XHTML 标题、增删条目或改变目标。
+- EPUB 3 双导航默认只更新主 Nav，与 EditTOC 默认行为一致；不会隐式同步兼容 NCX。
+  工具和 prompt 明确禁止为目录升降级修改 `h1`–`h6`。所有结果明确报告完整
+  EPUBCheck 未运行，且 commit 到 Book 不等于 EPUB 已保存。
+
+### 测试证据与未关闭项
+
+完整 Sigil 构建通过，42 项固定 Python 依赖与隔离导入检查通过。以下 9 项定向测试
+各连续运行 3 次通过（27 次执行，38.74 秒）：
+
+```sh
+ctest --test-dir build --output-on-failure --repeat until-fail:3 \
+  -R '^(agent_toc_tools|agent_workspace_package_integration|toc_tree_transform|edit_toc_hierarchy_integration|agent_harness|agent_book_ops)$'
+```
+
+`agent_toc_tools` 覆盖层级读取、分页、稳定 ID、提升/降级、兄弟接管、参数边界、权限、
+跨会话、revision/source stale、只暂存、预览/提交、提交前宿主冲突、取消和暂存失败
+回滚。`agent_workspace_package_integration` 链接真实 MainWindow/Book/NavProcessor，验证
+预览不写活书、属性/内联 `<span>`/landmarks 保留、一次 Undo/Redo 精确往返，以及
+preview 后直接修改 Nav 不被旧事务覆盖。`edit_toc_hierarchy_integration` 已覆盖相同
+NCX 重挂器的真实 EPUB 2 路径和 Nav/NCX 外围内容。
+
+本切片推进 AGENT-IM3 的 TOC 服务与 A01/A03–A07/A09/A12 自动化证据，但不关闭
+AGENT-IM1/2 或 G8：尚无独立计划审阅面板、双导航显式同步参数、提交后结果/恢复卡，
+也未将计划边界桥接 Live v2/MCP。Native Agent 工作区自身的真实 EPUB 2 NCX 事务、
+大型 TOC 响应性能、真实未保存目录编辑器、书籍关闭/超时、完整 EPUBCheck、跨平台
+GUI、独立阅读器和进程终止级恢复仍待验收。详细协议见
+[Native Agent 原生目录层级工具](AgentNativeTocTools.md)。

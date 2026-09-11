@@ -70,6 +70,12 @@ Clips 工具栏前十个可用按钮现在显示快捷键角标：默认依次�
 
 详见[目录层级编辑](TocHierarchyEditing.md)。
 
+Native Agent 现在也能用 `toc.inspect_hierarchy`、`toc.plan_transform` 和
+`toc.apply_transform` 调用同一套原生规则。计划绑定当前会话、书籍修订和精确
+Nav/NCX 源码；apply 只创建独占暂存事务，预览后才可提交。层级写回保留原节点属性、
+内联标记、标题、目标和非 TOC 区域，不通过改写 XHTML 标题来制造层级。详见
+[Native Agent 原生目录层级工具](AgentNativeTocTools.md)。
+
 ### 安全整理 DIV 伪段落
 
 “增强”菜单中的旧 BookLive 段落入口已扩展为通用 DIV 段落结构工具。它可以分析
