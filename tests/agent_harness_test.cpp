@@ -382,6 +382,24 @@ int main()
             "approved commit must change the live book");
     Require(hasEvent(edit_session, AgentEventType::TransactionCommitted),
             "commit must be labeled as applied in the session");
+    const QJsonObject commit_status =
+        edit_session.eventsOf(AgentEventType::TransactionCommitted).constLast().payload;
+    Require(commit_status.value(QStringLiteral("applied_to_book")).toBool(),
+            "commit event must distinguish applying to the current book");
+    Require(commit_status.value(QStringLiteral("save_status")).toString()
+                == QStringLiteral("not_saved"),
+            "commit event must say the EPUB file has not been saved");
+    Require(commit_status.value(QStringLiteral("full_epubcheck")).toObject()
+                .value(QStringLiteral("status")).toString() == QStringLiteral("not_run"),
+            "commit event must not imply full EPUBCheck was run");
+    Require(commit_status.value(QStringLiteral("recovery")).toObject()
+                .value(QStringLiteral("task_restore_point")).toString()
+                == QStringLiteral("not_created_by_commit"),
+            "commit event must describe its task-wide recovery boundary");
+    Require(commit_status.value(QStringLiteral("applied_changes")).toInt() > 0
+                && commit_status.value(QStringLiteral("book_revision")).toInteger()
+                    == static_cast<qint64>(edit_book.revision()),
+            "commit status must preserve workspace counts and revision");
 
     MemoryBookWorkspace auto_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry auto_registry;
@@ -511,6 +529,15 @@ int main()
     Require(plan_result.state == AgentRunState::Completed, "Plan turn must complete");
     Require(hasEvent(plan_session, AgentEventType::TransactionPreviewed),
             "Plan must be able to preview staged work");
+    const QJsonObject preview_status =
+        plan_session.eventsOf(AgentEventType::TransactionPreviewed).constLast().payload;
+    Require(!preview_status.value(QStringLiteral("applied_to_book")).toBool()
+                && preview_status.value(QStringLiteral("save_status")).toString()
+                    == QStringLiteral("not_applied"),
+            "preview event must say the live book is unchanged");
+    Require(preview_status.value(QStringLiteral("full_epubcheck")).toObject()
+                .value(QStringLiteral("status")).toString() == QStringLiteral("not_run"),
+            "preview event must not imply full EPUBCheck was run");
     Require(!hasEvent(plan_session, AgentEventType::TransactionCommitted),
             "Plan must not commit");
     Require(plan_book.resourceText(QStringLiteral("ch1")) == plan_original,
@@ -566,5 +593,12 @@ int main()
             "cancel during tool/model step must not leave an active staged transaction");
     Require(cancel_book.resourceText(QStringLiteral("ch1")).startsWith(QStringLiteral("<?xml")),
             "cancelled uncommitted work must not change live text");
+    Require(hasEvent(cancel_session, AgentEventType::TransactionRolledBack),
+            "cancelling staged work must emit a rollback event");
+    const QJsonObject rollback_status =
+        cancel_session.eventsOf(AgentEventType::TransactionRolledBack).constLast().payload;
+    Require(rollback_status.value(QStringLiteral("live_book_unchanged")).toBool()
+                && !rollback_status.value(QStringLiteral("applied_to_book")).toBool(),
+            "rollback event must say the staged work never reached the live book");
     return EXIT_SUCCESS;
 }

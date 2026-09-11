@@ -15,6 +15,52 @@
 namespace SigilAgent
 {
 
+namespace
+{
+
+QJsonObject withEpubcheckStatus(QJsonObject payload)
+{
+    if (!payload.contains(QStringLiteral("full_epubcheck"))) {
+        payload.insert(QStringLiteral("full_epubcheck"), QJsonObject {
+            { QStringLiteral("status"), QStringLiteral("not_run") },
+            { QStringLiteral("message"),
+              QStringLiteral("Transaction handling does not run full EPUBCheck.") }
+        });
+    }
+    return payload;
+}
+
+QJsonObject previewStatus(QJsonObject payload)
+{
+    payload.insert(QStringLiteral("applied_to_book"), false);
+    payload.insert(QStringLiteral("save_status"), QStringLiteral("not_applied"));
+    return withEpubcheckStatus(payload);
+}
+
+QJsonObject commitStatus(QJsonObject payload)
+{
+    payload.insert(QStringLiteral("applied_to_book"), true);
+    payload.insert(QStringLiteral("save_status"), QStringLiteral("not_saved"));
+    if (!payload.contains(QStringLiteral("recovery"))) {
+        payload.insert(QStringLiteral("recovery"), QJsonObject {
+            { QStringLiteral("sigil_undo"), QStringLiteral("where_available") },
+            { QStringLiteral("task_restore_point"),
+              QStringLiteral("not_created_by_commit") }
+        });
+    }
+    return withEpubcheckStatus(payload);
+}
+
+QJsonObject rollbackStatus(QJsonObject payload)
+{
+    payload.insert(QStringLiteral("applied_to_book"), false);
+    payload.insert(QStringLiteral("save_status"), QStringLiteral("not_applied"));
+    payload.insert(QStringLiteral("live_book_unchanged"), true);
+    return payload;
+}
+
+} // namespace
+
 AgentRunner::SessionSink::SessionSink(AgentSession *session, AgentCancellation *cancellation) :
     m_session(session),
     m_cancellation(cancellation)
@@ -122,7 +168,8 @@ void AgentRunner::rollbackOpenWork()
     if (m_workspace && m_workspace->hasOpenTransaction()) {
         const BookOpResult rolled = m_workspace->rollbackTransaction();
         if (m_session) {
-            m_session->append(AgentEventType::TransactionRolledBack, rolled.data);
+            m_session->append(AgentEventType::TransactionRolledBack,
+                              rollbackStatus(rolled.data));
         }
     }
 }
@@ -137,11 +184,14 @@ void AgentRunner::publishToolOutcome(const ToolCall &call, const ToolResult &res
     if (result.ok) {
         m_session->append(AgentEventType::ToolCompleted, payload);
         if (call.name == QLatin1String("transaction.preview")) {
-            m_session->append(AgentEventType::TransactionPreviewed, result.data);
+            m_session->append(AgentEventType::TransactionPreviewed,
+                              previewStatus(result.data));
         } else if (call.name == QLatin1String("transaction.commit") && result.applied) {
-            m_session->append(AgentEventType::TransactionCommitted, result.data);
+            m_session->append(AgentEventType::TransactionCommitted,
+                              commitStatus(result.data));
         } else if (call.name == QLatin1String("transaction.rollback")) {
-            m_session->append(AgentEventType::TransactionRolledBack, result.data);
+            m_session->append(AgentEventType::TransactionRolledBack,
+                              rollbackStatus(result.data));
         } else if (call.name == QLatin1String("checkpoint.create")) {
             m_session->append(AgentEventType::CheckpointCreated, result.data);
         }
