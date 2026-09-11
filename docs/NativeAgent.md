@@ -10,6 +10,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 
 - 模式：**Ask** / **Plan** / **Edit** / **Auto**
 - 当前模型（只读，来自偏好设置）
+- 当前书籍状态：EPUB 文件名、元数据标题、资源数、Saved / Unsaved 和 Agent revision
 - 上下文芯片：当前书、当前文件、选区（可开关，范围会显示在状态行）
 - 输入框：**Enter 发送**，Shift+Enter 换行
 - **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
@@ -17,6 +18,27 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；批准带影响说明；预览按变更类型列出暂存内容；提交和回滚显示独立结果；错误
 
 Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；答案只在 Answer 卡片里。新的一轮不会覆盖上一轮的回答。
+
+## 当前书籍与上下文范围
+
+当前书籍状态直接读取这个 MainWindow 的内存 Book，不扫描磁盘副本。正文编辑使 Book
+变脏、保存清除 modified 状态、资源增删移动、另存为、切换标签或 Agent commit 后都会
+刷新。文件名与 `dc:title` 同时显示，便于在多窗口里确认目标；资源数来自当前 Book。
+`Agent rev` 是 Agent 工作区的协议修订号，不等同于 Saved / Unsaved，二者分开显示。
+
+上下文芯片的含义如下：
+
+- **Book**：附加全书资源表和最多两个 Spine 正文开头样本；书籍的最小身份摘要始终
+  保留，用来确认工具目标。
+- **File**：附加当前资源的有界开头片段。
+- **Selection**：编辑器存在非空选区时自动启用，显示 `start–end`。发送时用
+  `resource_id:start-end` 记录 UTF-16 code-unit 范围，并从当前内存资源读取该范围的
+  精确源码；Ruby 和内部标签不会退化成纯文本。单次自动附加最多 4096 code units，
+  超出时明确标为截断，模型必须再用 `resource.read_fragment` 读取剩余范围。
+
+只选 File 或 Selection 时不会暗中附加全书资源表和 Spine 样本。用户把全部芯片关闭时，
+沿用兼容行为，回退为“book structure + sampled fragments”，状态行会明确显示这一点。
+每个窗口有自己的 AgentDock、Book 和 workspace；范围不会从另一个窗口读取。
 
 ## 模式
 

@@ -632,3 +632,44 @@ AGENT-04、AGENT-IM2 或 A11：尚无成功/失败资源分组、整任务快照
 人工编辑的冲突预览，也没有在此测试中实际运行完整 EPUBCheck。`python.run` 等绕过暂存
 事务的立即写入工具也不产生这些事务状态卡。跨平台原生主题、屏幕阅读器和真实长会话
 人工验收仍待补充。用户说明见 [Native Agent](NativeAgent.md#预览提交与恢复状态)。
+
+## Native Agent 当前书籍与选区范围（2026-09-11）
+
+分支：`feature/agent-book-scope-status`。主要提交：`d601384e6`（书籍状态与实时编辑器
+范围）、`6ce6fab02`（精确选区源码装配）、`fb0b571e3`（四语状态文案）和
+`2e92a3e23`（按芯片限制全书上下文）。
+
+### 行为与性能边界
+
+- AgentDock 新增独立书籍状态行，显示当前 EPUB 文件名、`dc:title`、FolderKeeper
+  资源数、Book Saved/Unsaved 状态和 Agent workspace revision。状态字段同时暴露为
+  QWidget properties，供自动化在任意界面语言下核验。
+- `ModifiedStateChanged`、资源增删移动、`UpdateUiWithCurrentFile`、换书和 Agent 写入会
+  刷新完整书籍状态。标签切换刷新当前文件；FlowTab/TextTab 的 `SelectionChanged` 只
+  刷新编辑器范围，不在每次光标移动时重复枚举资源或读取 metadata。
+- 原实现把 `GetCursorPosition()` 同时作为 start/end，使 Selection 芯片永久禁用；现改为
+  读取 `GetSelectionStart/End`，只有非空选区可附加。handle 使用
+  `resource_id:start-end` 和 UTF-16 code units，与编辑器及 Live v2 一致。
+- `PromptAssembler` 不再把范围 handle 当作资源 ID。它从当前 workspace 的对应 offset
+  读取精确源码，保留 Ruby/内联标签；自动上下文上限为 4096 code units，超出时返回
+  明确截断说明。解析从最后一个范围分隔模式识别，因此资源 ID 含冒号仍可工作。
+- 当前书籍最小 identity 始终进入上下文。只有 Book handle（或无 handle 的兼容调用）
+  才附加资源表和最多两个 Spine 样本；File/Selection-only 请求不再泄漏额外全书样本。
+
+### 测试证据与未关闭项
+
+`agent_dock` 验证书名/文件名/资源数/保存状态/revision、非空与折叠选区、动态属性和
+发送 handle；`agent_dock_contract` 固定 MainWindow 的 modified、资源、真实选区和信号
+刷新链。`agent_harness` 使用冒号资源 ID、5,000 code-unit 前缀及 Ruby 源码验证精确
+offset，并验证超长选区限长和 Selection-only 不含资源表。真实
+`agent_workspace_package_integration` 链接 MainWindow/Book/ContentTab/AgentDock，验证
+导入 EPUB 身份、modified 往返和 `SetSelectionRange(1,12)` 到 handle 的完整路径。
+完整 Sigil 构建及 42 项固定 Python 依赖检查通过。四份翻译可生成 `.qm`；9 条新增
+GUI source 经实际 `lupdate` 逐项检查无本切片失败，三种非英文目录仍有 76 行继承欠账。
+
+本切片推进 AGENT-IM1 的目标书籍/未保存状态和 A02 的选区上下文，但不关闭二者：尚无
+提供商连接健康与可读错误状态、Book Browser“选中文件”范围、显式全书范围选择器或
+跨窗口人工验收。自动上下文对超长选区有意截断；测试将真实 UI handle 和内存 workspace
+源码读取分别覆盖，尚未通过实际网络模型请求做端到端 Ruby 回显。Agent workspace
+revision 也不是所有 GUI 修改的全局递增序号，工具仍依赖资源 revision、state token 和
+精确源码冲突检查。用户说明见 [Native Agent](NativeAgent.md#当前书籍与上下文范围)。

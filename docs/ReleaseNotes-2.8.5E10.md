@@ -113,6 +113,18 @@ EPUBCheck 未运行。
 任务级恢复按钮和后续人工编辑冲突处理仍未实现。Conversation Markdown 导出保留
 相同状态说明。详见 [Native Agent](NativeAgent.md#预览提交与恢复状态)。
 
+### Agent 会明确显示当前书籍和实时选区
+
+Agent 停靠栏新增当前书籍状态行，同时显示 EPUB 文件名、`dc:title`、资源数、
+Saved / Unsaved 和 Agent revision。保存、重新变脏、资源增删移动、另存为和切换书籍时
+都会刷新，便于多窗口工作时确认实际目标。
+
+Selection 芯片不再永久禁用：代码编辑器出现非空选区时，它会显示真实 UTF-16 范围并
+默认选中。发送后，Agent 上下文从当前内存资源读取该范围的精确源码，保留 Ruby/标签；
+自动附加上限为 4096 code units，超长会明确提示继续分段读取。只选择 File 或 Selection
+时不再暗中附加全书资源表和 Spine 样本。详见
+[Native Agent](NativeAgent.md#当前书籍与上下文范围)。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。
