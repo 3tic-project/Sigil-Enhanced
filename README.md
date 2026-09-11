@@ -52,7 +52,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 ### Native Agent
 
-- **[Native Agent](docs/NativeAgent.md)**：主窗口停靠栏里的 EPUB 助手（Ask / Plan / Edit）。明确显示当前文件/书名、资源数、未保存状态和实时选区范围；在偏好设置里选择 DeepSeek / OpenCode Go / OpenRouter，并从服务器拉取模型。支持 thinking/`reasoning_content`、工具批准、可撤销事务、会话导出，以及复用原生引擎的[段落分析与计划](docs/AgentNativeParagraphTools.md)和[目录层级计划](docs/AgentNativeTocTools.md)。不调用 MCP，也没有 shell。
+- **[Native Agent](docs/NativeAgent.md)**：主窗口停靠栏里的 EPUB 助手（Ask / Plan / Edit）。明确显示当前文件/书名、资源数、未保存状态、实时选区范围，以及提供商配置/最近请求状态；在偏好设置里选择 DeepSeek / OpenCode Go / OpenRouter，并从服务器拉取模型。支持 thinking/`reasoning_content`、工具批准、可撤销事务、会话导出，以及复用原生引擎的[段落分析与计划](docs/AgentNativeParagraphTools.md)和[目录层级计划](docs/AgentNativeTocTools.md)。不调用 MCP，也没有 shell。
 
 ### 插件与自动化
 

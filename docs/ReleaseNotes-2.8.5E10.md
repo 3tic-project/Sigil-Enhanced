@@ -125,6 +125,17 @@ Selection 芯片不再永久禁用：代码编辑器出现非空选区时，它�
 时不再暗中附加全书资源表和 Spine 样本。详见
 [Native Agent](NativeAgent.md#当前书籍与上下文范围)。
 
+### Agent 会区分“已配置”和“已连通”
+
+Agent 停靠栏新增提供商状态行，只显示提供商、模型和安全的 endpoint 主机。缺少
+endpoint、API Key 或模型时会明确提示 **Setup required**；设置齐全时显示
+**Configured · not tested**，不会在尚未请求服务器时声称已经连接。
+
+真实模型请求开始后，状态会更新为正在连接，并根据显式请求事件记录最近一次成功、
+失败或取消。401、403、404、408、429、5xx 与常见网络问题会显示可读摘要；完整错误仍
+保留在 Error 卡片。服务端即使在错误正文中回显 API Key，也会在进入会话和 HTTP trace
+前脱敏。详见 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。

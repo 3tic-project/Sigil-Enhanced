@@ -10,6 +10,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 
 - 模式：**Ask** / **Plan** / **Edit** / **Auto**
 - 当前模型（只读，来自偏好设置）
+- 提供商状态：配置是否完整、安全的 endpoint 主机，以及最近一次真实请求结果
 - 当前书籍状态：EPUB 文件名、元数据标题、资源数、Saved / Unsaved 和 Agent revision
 - 上下文芯片：当前书、当前文件、选区（可开关，范围会显示在状态行）
 - 输入框：**Enter 发送**，Shift+Enter 换行
@@ -39,6 +40,23 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 只选 File 或 Selection 时不会暗中附加全书资源表和 Spine 样本。用户把全部芯片关闭时，
 沿用兼容行为，回退为“book structure + sampled fragments”，状态行会明确显示这一点。
 每个窗口有自己的 AgentDock、Book 和 workspace；范围不会从另一个窗口读取。
+
+## 提供商配置与最近请求状态
+
+提供商状态行只显示提供商、模型和 endpoint 的主机名（自定义端口会保留）。URL 中的
+用户名、密码、路径和查询参数不会进入状态行，API Key 也不会显示。状态语义如下：
+
+- **Setup required**：缺少或无法识别 endpoint、API Key 或模型。此时没有尝试网络连接。
+- **Configured · not tested**：必需设置已填写，**不表示服务器可连接或凭据有效**。
+- **Contacting provider…**：已经发出一轮真实模型请求。
+- **Last request succeeded / failed / cancelled**：只由该轮请求的完成、失败或取消事件
+  更新；工具调用型响应也会产生明确的模型请求完成事件。
+
+失败状态把 401、403、404、408、429、5xx 和常见网络错误整理为简短说明，完整的
+提供商错误仍显示在 Error 卡片。若服务端在错误正文或 HTTP trace 中回显当前 API Key，
+提供商边界会先替换成 `[redacted]`，导出时还会再次脱敏。当前没有独立的“测试连接”
+按钮；**Refresh models** 的成功只证明模型列表请求成功，Chat Completions 的状态仍以
+实际对话请求为准。
 
 ## 模式
 
@@ -117,7 +135,8 @@ Conversation Markdown 导出保留同样的 Preview / Applied / Rollback 状态�
 更新，也会拒绝旧计划并保留用户改动。`metadata.update`、`spine.set/sort` 和资源结构操作最终
 走 OPF 的局部源码补丁，保留未涉及的注释、前缀、属性引号、换行和私有扩展。
 
-HTTP 出错时会带上状态码和服务器返回的 `error.message`（不会把 API Key 写进 transcript）。
+HTTP 出错时 Error 卡会带上状态码和服务器返回的 `error.message`；配置的 API Key 若被
+服务端回显，会在写入 transcript 和 HTTP trace 前替换为 `[redacted]`。
 
 ## 模型与 Thinking
 

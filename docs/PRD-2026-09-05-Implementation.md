@@ -28,6 +28,8 @@
   规范化分支继续；当前切片仅注册到 Native Agent，不宣称已进入公共 MCP catalog。
 - 原生 Agent 目录层级计划工具：`feature/agent-native-toc-tools`，从段落工具分支继续，
   复用已验证的 `TocTreeTransform` 与 Nav/NCX 原节点写回器。
+- 原生 Agent 提供商状态：`feature/agent-provider-readiness-status`，从当前书籍与选区状态
+  分支继续，区分本地配置完整性和真实请求结果。
 - 其余功能分别创建分支；有依赖的分支从已验证的依赖提交继续。
 - 每项拆分为可审阅的算法/集成/验证和文档提交，未验证的项不标为完成。
 - 原工作树三处未提交的文本资源加载改动保留，不纳入本分支。
@@ -673,3 +675,41 @@ GUI source 经实际 `lupdate` 逐项检查无本切片失败，三种非英文�
 源码读取分别覆盖，尚未通过实际网络模型请求做端到端 Ruby 回显。Agent workspace
 revision 也不是所有 GUI 修改的全局递增序号，工具仍依赖资源 revision、state token 和
 精确源码冲突检查。用户说明见 [Native Agent](NativeAgent.md#当前书籍与上下文范围)。
+
+## Native Agent 提供商就绪与请求状态（2026-09-11）
+
+分支：`feature/agent-provider-readiness-status`。主要提交：`3d95a80f6`（模型请求完成/
+失败事件）、`c7cef64fc`（安全的提供商配置与请求状态行）、`5b0981988`（服务端回显
+密钥的边界脱敏）和 `677a3f2e6`（四语状态文案）。
+
+### 行为与安全边界
+
+- `providerReadiness` 只做本地配置检查：endpoint 必须是带主机的 HTTP(S) URL，API Key
+  和模型必须非空。状态行只接收是否存在密钥，不接收密钥文本；endpoint 仅保留主机及
+  显式端口，去除 userinfo、路径与查询参数。
+- 配置完整时显示 `Configured · not tested`，不推断网络、鉴权或模型可用。只有
+  `ModelRequestStarted` 才显示正在联系提供商；每个无错误的模型轮次（包括纯工具调用
+  响应）记录 `ModelRequestCompleted`，提供商错误记录 `ModelRequestFailed`。取消独立
+  显示，不伪装为连接失败，也不会使状态停留在 requesting。
+- 请求失败状态把 401/403/404/408/429/5xx 和常见网络错误映射成固定、可翻译的安全
+  摘要；Error 卡仍保留底层可诊断信息。`OpenAICompatibleProvider` 在错误进入会话前
+  替换配置的 API Key，并对 URL、请求体、响应头尾及错误 trace 做同样处理；Debug 导出
+  继续执行第二层递归脱敏。
+- Preferences 对话框关闭和每次 Send 前都会重装配置并刷新状态，因此 provider/model/
+  endpoint 的修改无需重启应用。
+
+### 测试证据与未关闭项
+
+`agent_harness` 验证成功工具轮次逐次产生 completion、401 失败只产生 failure；
+`agent_dock` 用 offscreen Qt 验证 setup/configured/requesting/succeeded/failed/cancelled
+及安全摘要；`agent_provider_catalog` 验证无效配置、IPv6+端口、URL 敏感部分剥离，并用
+本地 HTTP 401 服务实际回显测试密钥，证明会话错误与内存 trace 均已脱敏。
+`agent_dock_contract` 固定 Preferences/Send 的刷新接线。完整 Sigil 构建与 42 项固定
+Python 依赖检查通过。四份目录的 23 条新增文本逐项匹配、占位符一致且可生成 `.qm`；
+严格非英文覆盖仍只有 76 行继承欠账，本切片没有新增缺失。
+
+本切片继续推进 AGENT-IM1，但不将其整体关闭：尚无独立 Chat Completions“测试连接”
+操作、最近请求时间/延迟、错误重试入口、跨窗口人工验收或 Windows/Linux 网络与主题
+验证。模型列表刷新成功也不等同于对话 endpoint 已验证。Book Browser“选中文件”范围、
+显式全书范围选择器及端到端真实模型 Ruby 回显仍属于上一切片列出的未关闭项。用户说明
+见 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
