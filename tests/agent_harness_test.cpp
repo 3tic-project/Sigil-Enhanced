@@ -71,6 +71,7 @@ int main()
                           .arg(selection_resource.text.size()) });
     Require(bounded_selection_context.contains(
                 QStringLiteral("selection truncated after 4096 UTF-16 code units"))
+                && !bounded_selection_context.contains(QStringLiteral("Resources:\n"))
                 && bounded_selection_context.size() < 12000,
             "large attached selections must be bounded and report truncation");
 

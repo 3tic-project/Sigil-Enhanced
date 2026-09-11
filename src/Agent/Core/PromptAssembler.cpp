@@ -92,38 +92,44 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
                                       const AgentSession *session) const
 {
     if (!workspace) return QString();
-    QString block = QStringLiteral("Current book map:\n");
+    const bool include_book_structure = handles.isEmpty()
+        || handles.contains(QStringLiteral("book"));
+    QString block = QStringLiteral("Current book identity:\n");
     block += QString::fromUtf8(QJsonDocument(workspace->summary()).toJson(QJsonDocument::Compact));
     block += QLatin1Char('\n');
-    block += QStringLiteral("Resources:\n");
-    const QJsonArray resources = workspace->resources();
-    int listed = 0;
-    for (const QJsonValue &value : resources) {
-        if (listed >= 60) {
-            block += QStringLiteral("- …\n");
-            break;
+    if (include_book_structure) {
+        block += QStringLiteral("Resources:\n");
+        const QJsonArray resources = workspace->resources();
+        int listed = 0;
+        for (const QJsonValue &value : resources) {
+            if (listed >= 60) {
+                block += QStringLiteral("- …\n");
+                break;
+            }
+            const QJsonObject object = value.toObject();
+            block += QStringLiteral("- %1 (%2, %3 chars)\n")
+                         .arg(object.value(QStringLiteral("book_path")).toString(),
+                              object.value(QStringLiteral("kind")).toString())
+                         .arg(object.value(QStringLiteral("text_length")).toInt());
+            ++listed;
         }
-        const QJsonObject object = value.toObject();
-        block += QStringLiteral("- %1 (%2, %3 chars)\n")
-                     .arg(object.value(QStringLiteral("book_path")).toString(),
-                          object.value(QStringLiteral("kind")).toString())
-                     .arg(object.value(QStringLiteral("text_length")).toInt());
-        ++listed;
-    }
-    const QJsonArray spine = workspace->spine();
-    int sampled = 0;
-    for (const QJsonValue &value : spine) {
-        if (sampled >= 2) break;
-        const QString path = value.toObject().value(QStringLiteral("book_path")).toString();
-        const QString stem = QFileInfo(path).completeBaseName().toLower();
-        if (stem == QLatin1String("cover") || stem.startsWith(QLatin1String("illus"))) continue;
-        const QString id = value.toObject().value(QStringLiteral("resource_id")).toString();
-        const BookOpResult fragment = workspace->readFragment(id, 0, 400);
-        if (!fragment.ok) continue;
-        const QString sample = fragment.data.value(QStringLiteral("text")).toString();
-        if (sample.contains(QLatin1String("<svg")) && sample.contains(QLatin1String("image"))) continue;
-        block += QStringLiteral("\nSample %1:\n%2\n").arg(id, sample);
-        ++sampled;
+        const QJsonArray spine = workspace->spine();
+        int sampled = 0;
+        for (const QJsonValue &value : spine) {
+            if (sampled >= 2) break;
+            const QString path = value.toObject().value(QStringLiteral("book_path")).toString();
+            const QString stem = QFileInfo(path).completeBaseName().toLower();
+            if (stem == QLatin1String("cover")
+                || stem.startsWith(QLatin1String("illus"))) continue;
+            const QString id = value.toObject().value(QStringLiteral("resource_id")).toString();
+            const BookOpResult fragment = workspace->readFragment(id, 0, 400);
+            if (!fragment.ok) continue;
+            const QString sample = fragment.data.value(QStringLiteral("text")).toString();
+            if (sample.contains(QLatin1String("<svg"))
+                && sample.contains(QLatin1String("image"))) continue;
+            block += QStringLiteral("\nSample %1:\n%2\n").arg(id, sample);
+            ++sampled;
+        }
     }
     if (!handles.isEmpty()) {
         block += QStringLiteral("\nUser-attached handles:\n");
