@@ -27250,6 +27250,15 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent 計畫與工具呼叫均繫結至目前開啟的書籍。</translation></message>
+    <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
+    <message><source>Untitled book</source><translation>未命名書籍</translation></message>
+    <message><source>%1 resource</source><translation>%1 個資源</translation></message>
+    <message><source>%1 resources</source><translation>%1 個資源</translation></message>
+    <message><source>Unsaved changes</source><translation>有未儲存的變更</translation></message>
+    <message><source>Saved</source><translation>已儲存</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>目前書籍：%1 · %2 · %3 · Agent 修訂 %4</translation></message>
+    <message><source>Book · %1</source><translation>書籍 · %1</translation></message>
     <message><source>Preview</source><translation>預覽</translation></message>
     <message><source>Applied</source><translation>已套用</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>目前書籍未發生變更；以下變更僅處於暫存狀態。</translation></message>

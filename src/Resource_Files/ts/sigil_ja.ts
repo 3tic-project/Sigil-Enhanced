@@ -27265,6 +27265,15 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent の計画とツール呼び出しは、現在開いているブックに紐付けられます。</translation></message>
+    <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
+    <message><source>Untitled book</source><translation>無題のブック</translation></message>
+    <message><source>%1 resource</source><translation>%1 個のリソース</translation></message>
+    <message><source>%1 resources</source><translation>%1 個のリソース</translation></message>
+    <message><source>Unsaved changes</source><translation>未保存の変更あり</translation></message>
+    <message><source>Saved</source><translation>保存済み</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>現在のブック：%1 · %2 · %3 · Agent リビジョン %4</translation></message>
+    <message><source>Book · %1</source><translation>ブック · %1</translation></message>
     <message><source>Preview</source><translation>プレビュー</translation></message>
     <message><source>Applied</source><translation>適用済み</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>現在のブックは変更されていません。これらの変更はステージングのみです。</translation></message>

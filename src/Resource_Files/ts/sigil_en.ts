@@ -23319,6 +23319,15 @@ Continue using the requested filename?</translation>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent plans and tool calls are bound to this open book.</translation></message>
+    <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
+    <message><source>Untitled book</source><translation>Untitled book</translation></message>
+    <message><source>%1 resource</source><translation>%1 resource</translation></message>
+    <message><source>%1 resources</source><translation>%1 resources</translation></message>
+    <message><source>Unsaved changes</source><translation>Unsaved changes</translation></message>
+    <message><source>Saved</source><translation>Saved</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>Current book: %1 · %2 · %3 · Agent rev %4</translation></message>
+    <message><source>Book · %1</source><translation>Book · %1</translation></message>
     <message><source>Preview</source><translation>Preview</translation></message>
     <message><source>Applied</source><translation>Applied</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>The live book is unchanged; these changes are staged only.</translation></message>
