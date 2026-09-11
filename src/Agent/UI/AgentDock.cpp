@@ -429,16 +429,82 @@ QString AgentDock::previewBody(const QJsonObject &payload) const
 {
     const QJsonArray changes = payload.value(QStringLiteral("changes")).toArray();
     QStringList lines;
-    lines.append(tr("Staged changes are not on the live book yet."));
+    lines.append(tr("The live book is unchanged; these changes are staged only."));
+    bool described_change = false;
     for (const QJsonValue &value : changes) {
         const QJsonObject change = value.toObject();
-        lines.append(QStringLiteral("• %1  %2 → %3")
-                         .arg(change.value(QStringLiteral("resource_id")).toString(),
-                              QString::number(change.value(QStringLiteral("original_length")).toInt()),
-                              QString::number(change.value(QStringLiteral("staged_length")).toInt())));
+        if (change.value(QStringLiteral("added")).toBool()) {
+            lines.append(tr("• Added: %1")
+                             .arg(change.value(QStringLiteral("book_path")).toString()));
+            described_change = true;
+            continue;
+        }
+        if (change.value(QStringLiteral("renamed")).toBool()) {
+            lines.append(tr("• Renamed: %1 → %2")
+                             .arg(change.value(QStringLiteral("from")).toString(),
+                                  change.value(QStringLiteral("book_path")).toString()));
+            described_change = true;
+            continue;
+        }
+        const bool has_text_lengths = change.contains(QStringLiteral("original_length"))
+            && change.contains(QStringLiteral("staged_length"));
+        const bool changed = !change.contains(QStringLiteral("changed"))
+            || change.value(QStringLiteral("changed")).toBool();
+        if (has_text_lengths && changed) {
+            lines.append(tr("• Text: %1 (%2 → %3)")
+                             .arg(change.value(QStringLiteral("resource_id")).toString())
+                             .arg(change.value(QStringLiteral("original_length")).toInt())
+                             .arg(change.value(QStringLiteral("staged_length")).toInt()));
+            described_change = true;
+        }
     }
     if (payload.value(QStringLiteral("metadata_changed")).toBool()) {
-        lines.append(tr("• metadata staged"));
+        lines.append(tr("• Metadata changes"));
+        described_change = true;
+    }
+    if (payload.value(QStringLiteral("spine_changed")).toBool()) {
+        lines.append(tr("• Reading order changes"));
+        described_change = true;
+    }
+    if (payload.value(QStringLiteral("toc_changed")).toBool()) {
+        lines.append(tr("• TOC hierarchy changes"));
+        described_change = true;
+    }
+    for (const QJsonValue &value : payload.value(QStringLiteral("removed")).toArray()) {
+        lines.append(tr("• Removed: %1").arg(value.toString()));
+        described_change = true;
+    }
+    if (!described_change) {
+        lines.append(tr("No staged differences were reported."));
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
+QString AgentDock::appliedBody(const QJsonObject &payload) const
+{
+    QStringList lines;
+    lines.append(tr("Applied to the current book. The EPUB file has not been saved."));
+    if (payload.value(QStringLiteral("applied_changes")).isDouble()) {
+        lines.append(tr("Applied changes: %1")
+                         .arg(payload.value(QStringLiteral("applied_changes")).toInt()));
+    }
+    if (payload.value(QStringLiteral("book_revision")).isDouble()) {
+        lines.append(tr("Book revision: %1")
+                         .arg(payload.value(QStringLiteral("book_revision")).toInteger()));
+    }
+    const QString epubcheck_status =
+        payload.value(QStringLiteral("full_epubcheck")).toObject()
+            .value(QStringLiteral("status")).toString();
+    if (epubcheck_status.isEmpty() || epubcheck_status == QLatin1String("not_run")) {
+        lines.append(tr("Full EPUBCheck: not run."));
+    } else {
+        lines.append(tr("Full EPUBCheck: %1").arg(epubcheck_status));
+    }
+    lines.append(tr("Recovery: use Sigil Undo where available."));
+    if (payload.value(QStringLiteral("recovery")).toObject()
+            .value(QStringLiteral("task_restore_point")).toString()
+        == QLatin1String("not_created_by_commit")) {
+        lines.append(tr("This commit did not create a task-wide restore point."));
     }
     return lines.join(QLatin1Char('\n'));
 }
@@ -553,9 +619,20 @@ void AgentDock::appendEvent(const AgentEvent &event)
         case AgentEventType::TransactionCommitted:
             appendCard(makeCard(QStringLiteral("agentAppliedCard"),
                                 tr("Applied"),
-                                tr("Committed to the book. Use Undo to reverse this step."),
+                                appliedBody(event.payload),
                                 false));
             break;
+        case AgentEventType::TransactionRolledBack: {
+            const bool rolled_back = event.payload.value(QStringLiteral("rolled_back")).toBool();
+            appendCard(makeCard(QStringLiteral("agentRollbackCard"),
+                                rolled_back ? tr("Staged changes discarded")
+                                            : tr("No staged changes"),
+                                rolled_back
+                                    ? tr("The staged transaction was discarded. The live book was not changed by this transaction.")
+                                    : tr("There was no staged transaction to discard. The live book was not changed."),
+                                false));
+            break;
+        }
         case AgentEventType::Error:
             appendCard(makeCard(QStringLiteral("agentErrorCard"),
                                 tr("Error"),

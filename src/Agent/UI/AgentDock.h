@@ -76,6 +76,7 @@ private:
     void setAnswerText(const QString &text, bool append);
     void refreshScopeLabel();
     QString previewBody(const QJsonObject &payload) const;
+    QString appliedBody(const QJsonObject &payload) const;
 
     QComboBox *m_modeCombo = nullptr;
     QLabel *m_modelLabel = nullptr;
