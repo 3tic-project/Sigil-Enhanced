@@ -101,6 +101,18 @@ apply 只创建独占暂存事务，仍须预览与提交，且明确报告未�
 目前属于内置 Agent，不是公共 MCP 工具。详见
 [Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
 
+### Agent 结果不再混淆“已应用”和“已保存”
+
+Native Agent 的事务状态卡现在会把暂存、写入当前 Book 和保存 EPUB 分开显示。
+Preview 按文本、新增、重命名、删除、元数据、阅读顺序和 TOC 层级列出变更，并明确
+活书未变；Applied 显示应用项数和 Book revision，同时说明 EPUB 尚未保存、完整
+EPUBCheck 未运行。
+
+提交前 rollback 会显示“已丢弃暂存变更，活书未变”，不再被误解成提交后撤销。
+提交卡只建议在可用处使用 Sigil Undo，并明确本次 commit 没有创建整任务恢复点；
+任务级恢复按钮和后续人工编辑冲突处理仍未实现。Conversation Markdown 导出保留
+相同状态说明。详见 [Native Agent](NativeAgent.md#预览提交与恢复状态)。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。

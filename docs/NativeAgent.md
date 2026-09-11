@@ -14,7 +14,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - 输入框：**Enter 发送**，Shift+Enter 换行
 - **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
 - **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
-- 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；批准带影响说明；预览列出暂存资源；错误
+- 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；批准带影响说明；预览按变更类型列出暂存内容；提交和回滚显示独立结果；错误
 
 Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；答案只在 Answer 卡片里。新的一轮不会覆盖上一轮的回答。
 
@@ -24,10 +24,25 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 |---|---|
 | **Ask** | 只读。可摘要、搜索、读片段、列字体、校验。不能改书。 |
 | **Plan** | 可以 `transaction.begin`、暂存 create/copy/rename/patch/CSS/metadata，并 `preview`。不能 `commit` / `restore` / `python.run`。活书保持不变。 |
-| **Edit** | 可通过工具改书。可逆编辑默认要你点 **Approve**。提交后可用 Sigil 的撤销。 |
+| **Edit** | 可通过工具改书。可逆编辑默认要你点 **Approve**。提交结果会说明保存、校验和可用的恢复边界。 |
 | **Auto** | 与 Edit 相同的写入工具，但默认全部允许，不再弹出 Approve。 |
 
-**Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤仍可撤销，并标为 Applied。
+**Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤不会被
+`transaction.rollback` 撤销，结果仍标为 Applied；只能使用提交卡所列的宿主恢复方式。
+
+## 预览、提交与恢复状态
+
+- **Preview** 首行明确当前 Book 未改变，并分别列出文本、新增、重命名、删除、元数据、
+  阅读顺序和 TOC 层级变更。预览事件同时记录 `applied_to_book=false`、
+  `save_status=not_applied` 和完整 EPUBCheck 未运行。
+- **Applied** 表示事务已写入当前内存 Book，不表示 EPUB 文件已保存。卡片和会话事件会
+  显示应用项数、Book revision、`save_status=not_saved`，并明确完整 EPUBCheck 未运行。
+- **Staged changes discarded** 只表示提交前暂存事务已丢弃，活书没有被该事务修改。
+  提交后恢复只能在可用处使用 Sigil Undo。`transaction.commit` 自身不会创建整任务
+  恢复点；当前也没有“撤销本次排版”按钮或能避让后续人工编辑的任务级恢复流程。
+
+因此，Agent 回答“完成”不能替代用户保存 EPUB，也不能替代完整 EPUBCheck。会话的
+Conversation Markdown 导出保留同样的 Preview / Applied / Rollback 状态边界。
 
 ## 工具（模型不能直接写 EPUB ZIP）
 

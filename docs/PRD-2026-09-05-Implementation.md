@@ -596,3 +596,39 @@ AGENT-IM1/2 或 G8：尚无独立计划审阅面板、双导航显式同步参�
 大型 TOC 响应性能、真实未保存目录编辑器、书籍关闭/超时、完整 EPUBCheck、跨平台
 GUI、独立阅读器和进程终止级恢复仍待验收。详细协议见
 [Native Agent 原生目录层级工具](AgentNativeTocTools.md)。
+
+## Native Agent 事务状态卡（2026-09-11）
+
+分支：`feature/agent-result-status-cards`。主要提交：`80f3b4352`（统一事务事件状态）、
+`1755996d4`（预览/提交/回滚卡）、`7398487ff`（真实 Qt 控件断言）、`1a2ba1979`
+（Conversation Markdown 状态导出）和 `92a00bdeb`（四语翻译）。
+
+### 行为与协议边界
+
+- `AgentRunner` 为每个成功 preview 事件记录 `applied_to_book=false`、
+  `save_status=not_applied` 和 `full_epubcheck.status=not_run`；commit 事件记录
+  `applied_to_book=true`、`save_status=not_saved`，同时保留 workspace 返回的
+  `applied_changes` 与 `book_revision`。
+- commit 的 recovery 字段明确 Sigil Undo 仅“可用处可用”，且
+  `task_restore_point=not_created_by_commit`。该表述只描述本次 commit 的能力，不推断
+  会话是否曾单独创建 checkpoint，也不把逐资源 Undo 说成整任务原子恢复。
+- Preview 卡分别显示文本长度、新增、重命名、删除、metadata、spine 和 TOC 变更；
+  首行始终说明活书未变。Applied 卡明确“已应用到当前书籍，EPUB 尚未保存”、应用数、
+  revision、完整 EPUBCheck 未运行及恢复边界。
+- `TransactionRolledBack` 现在有独立可见卡片和
+  `live_book_unchanged=true`。它只代表提交前暂存事务被丢弃；已经 commit 的内容不会被
+  rollback 卡伪装为已撤销。Markdown 会话导出使用相同语义。
+
+### 测试证据与未关闭项
+
+`agent_harness` 用真实 Memory workspace 的 Edit、Plan 与取消路径验证 commit、preview、
+rollback 三类事件字段；`agent_dock` 通过 offscreen Qt 控件验证七类预览摘要、提交状态
+及可见回滚卡；`agent_provider_catalog` 验证 Conversation Markdown 不丢失保存、校验和
+恢复边界。四份 `en/zh_CN/zh_TW/ja` 目录通过 XML、`lrelease` 与 22 条本切片文案的
+逐项占位符检查；严格全仓覆盖仍有 77 行继承欠账，本切片文案没有新增失败。
+
+本切片直接推进 A08 的“未保存提示和恢复方式”及 A12 的事务结果可见性，但不关闭完整
+AGENT-04、AGENT-IM2 或 A11：尚无成功/失败资源分组、整任务快照、恢复按钮、恢复与后续
+人工编辑的冲突预览，也没有在此测试中实际运行完整 EPUBCheck。`python.run` 等绕过暂存
+事务的立即写入工具也不产生这些事务状态卡。跨平台原生主题、屏幕阅读器和真实长会话
+人工验收仍待补充。用户说明见 [Native Agent](NativeAgent.md#预览提交与恢复状态)。
