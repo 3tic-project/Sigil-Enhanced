@@ -6311,18 +6311,29 @@ void MainWindow::UpdateAgentContext()
 {
     if (!m_AgentDock) return;
     QString title;
+    int resource_count = 0;
+    bool modified = false;
     if (m_Book && m_Book->GetFolderKeeper() && m_Book->GetConstOPF()) {
         const QStringList titles = m_Book->GetMetadataValues(QStringLiteral("dc:title"));
         if (!titles.isEmpty()) title = titles.first();
+        resource_count = m_Book->GetFolderKeeper()->GetResourceList().size();
+        modified = m_Book->IsModified();
     }
     const quint64 revision = m_AgentWorkspace ? m_AgentWorkspace->revision() : 1;
-    m_AgentDock->setBookContext(title, revision);
+    m_AgentDock->setBookContext(title, m_CurrentFileName, resource_count, modified, revision);
+    UpdateAgentEditorContext();
+}
+
+void MainWindow::UpdateAgentEditorContext()
+{
+    if (!m_AgentDock) return;
     ContentTab *tab = GetCurrentContentTab();
     Resource *resource = tab ? tab->GetLoadedResource() : nullptr;
     if (resource) {
         m_AgentDock->setCurrentFile(resource->GetRelativePath(), resource->GetIdentifier());
-        const int cursor = tab->GetCursorPosition();
-        m_AgentDock->setSelection(resource->GetIdentifier(), qMax(0, cursor), qMax(cursor, cursor),
+        const int selection_start = qMax(0, tab->GetSelectionStart());
+        const int selection_end = qMax(selection_start, tab->GetSelectionEnd());
+        m_AgentDock->setSelection(resource->GetIdentifier(), selection_start, selection_end,
                                   QString());
     } else {
         m_AgentDock->setCurrentFile(QString(), QString());
@@ -6472,6 +6483,8 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
     SettingsStore settings;
     settings.setRenameTemplate("");
     connect(m_Book.data(),     SIGNAL(ModifiedStateChanged(bool)), this, SLOT(setWindowModified(bool)));
+    connect(m_Book.data(), &Book::ModifiedStateChanged, this,
+            [this](bool) { UpdateAgentContext(); });
     connect(m_Book.data(),     SIGNAL(ResourceUpdatedFromDiskRequest(Resource *)), this, SLOT(ResourceUpdatedFromDisk(Resource *)));
     connect(m_BookBrowser,     SIGNAL(ShowStatusMessageRequest(const QString &, int)), this, SLOT(ShowMessageOnStatusBar(const QString &, int)));
     connect(m_BookBrowser,     SIGNAL(ResourcesDeleted()), this, SLOT(ResourcesAddedOrDeletedOrMoved()));
@@ -6499,6 +6512,7 @@ void MainWindow::ResourcesAddedOrDeletedOrMoved()
         setWindowTitle(tr("%1[*] - epub%2 - %3").arg(m_CurrentFileName).arg(epubversion).arg(APP_DISPLAY_NAME));
     }
     UpdateEpub3ToolsEnabled(epubversion);
+    UpdateAgentContext();
 
 }
 
@@ -7076,6 +7090,7 @@ void MainWindow::UpdateUiWithCurrentFile(const QString &fullfilepath, bool just_
     }
 
     UpdateEpub3ToolsEnabled(epubversion);
+    UpdateAgentContext();
 
     if (m_CurrentFilePath.isEmpty()) {
         return;
@@ -8157,6 +8172,14 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
     }
 
     rType = tab->GetLoadedResource()->Type();
+
+    if (FlowTab *flow_tab = qobject_cast<FlowTab *>(tab)) {
+        connect(flow_tab, &FlowTab::SelectionChanged,
+                this, &MainWindow::UpdateAgentEditorContext);
+    } else if (TextTab *text_tab = qobject_cast<TextTab *>(tab)) {
+        connect(text_tab, &TextTab::SelectionChanged,
+                this, &MainWindow::UpdateAgentEditorContext);
+    }
 
     connect(tab, SIGNAL(UndoRedoStateChanged()), this, SLOT(UpdateUIOnTabChanges()));
 

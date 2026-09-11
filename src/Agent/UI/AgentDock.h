@@ -37,7 +37,11 @@ public:
     void setContextScope(const QString &scope);
     void setModelName(const QString &model);
     void setRunState(AgentRunState state);
-    void setBookContext(const QString &title, quint64 revision);
+    void setBookContext(const QString &title,
+                        const QString &fileName,
+                        int resourceCount,
+                        bool modified,
+                        quint64 revision);
     void setCurrentFile(const QString &book_path, const QString &resource_id);
     void setSelection(const QString &resource_id, int start, int end, const QString &snippet);
     void appendEvent(const AgentEvent &event);
@@ -82,6 +86,7 @@ private:
     QLabel *m_modelLabel = nullptr;
     QLabel *m_contextScope = nullptr;
     QLabel *m_runState = nullptr;
+    QLabel *m_bookStatus = nullptr;
     QLabel *m_composerHint = nullptr;
     QPushButton *m_stopButton = nullptr;
     QPushButton *m_newSessionButton = nullptr;
@@ -99,6 +104,9 @@ private:
     int m_turn = 0;
     int m_step = 0;
     QString m_bookTitle;
+    QString m_bookFileName;
+    int m_bookResourceCount = 0;
+    bool m_bookModified = false;
     quint64 m_bookRevision = 0;
     QString m_filePath;
     QString m_fileId;

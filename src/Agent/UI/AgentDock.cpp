@@ -21,6 +21,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QToolButton>
+#include <QVariant>
 #include <QVBoxLayout>
 
 namespace SigilAgent
@@ -89,6 +90,13 @@ AgentDock::AgentDock(QWidget *parent) :
     status_layout->addWidget(m_modelLabel);
     status_layout->addWidget(m_contextScope, 1);
 
+    m_bookStatus = new QLabel(root);
+    m_bookStatus->setObjectName(QStringLiteral("agentBookStatus"));
+    m_bookStatus->setWordWrap(true);
+    m_bookStatus->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_bookStatus->setToolTip(
+        tr("Agent plans and tool calls are bound to this open book."));
+
     auto *chips = new QWidget(root);
     chips->setObjectName(QStringLiteral("agentContextChips"));
     auto *chips_layout = new QHBoxLayout(chips);
@@ -141,6 +149,7 @@ AgentDock::AgentDock(QWidget *parent) :
 
     root_layout->addWidget(header);
     root_layout->addWidget(status);
+    root_layout->addWidget(m_bookStatus);
     root_layout->addWidget(chips);
     root_layout->addWidget(m_transcript, 1);
     root_layout->addWidget(m_composer);
@@ -197,13 +206,42 @@ void AgentDock::setRunState(AgentRunState state)
     m_stopButton->setEnabled(running || state == AgentRunState::AwaitingApproval);
 }
 
-void AgentDock::setBookContext(const QString &title, quint64 revision)
+void AgentDock::setBookContext(const QString &title,
+                               const QString &file_name,
+                               int resource_count,
+                               bool modified,
+                               quint64 revision)
 {
     m_bookTitle = title;
+    m_bookFileName = file_name;
+    m_bookResourceCount = qMax(0, resource_count);
+    m_bookModified = modified;
     m_bookRevision = revision;
-    m_chipBook->setText(title.isEmpty()
-                            ? tr("Book")
-                            : tr("Book · %1 (rev %2)").arg(title).arg(revision));
+    m_bookStatus->setProperty("bookTitle", title);
+    m_bookStatus->setProperty("bookFileName", file_name);
+    m_bookStatus->setProperty("resourceCount", m_bookResourceCount);
+    m_bookStatus->setProperty("modified", modified);
+    m_bookStatus->setProperty("agentRevision", QVariant::fromValue<qulonglong>(revision));
+    QString identity;
+    if (!file_name.trimmed().isEmpty() && !title.trimmed().isEmpty()) {
+        identity = tr("%1 — %2").arg(file_name.trimmed(), title.trimmed());
+    } else if (!file_name.trimmed().isEmpty()) {
+        identity = file_name.trimmed();
+    } else if (!title.trimmed().isEmpty()) {
+        identity = title.trimmed();
+    } else {
+        identity = tr("Untitled book");
+    }
+    const QString resources = m_bookResourceCount == 1
+        ? tr("%1 resource").arg(m_bookResourceCount)
+        : tr("%1 resources").arg(m_bookResourceCount);
+    const QString save_state = modified ? tr("Unsaved changes") : tr("Saved");
+    m_bookStatus->setText(
+        tr("Current book: %1 · %2 · %3 · Agent rev %4")
+            .arg(identity, resources, save_state)
+            .arg(revision));
+    m_bookStatus->setAccessibleName(m_bookStatus->text());
+    m_chipBook->setText(tr("Book · %1").arg(identity));
     refreshScopeLabel();
 }
 
@@ -227,6 +265,9 @@ void AgentDock::setSelection(const QString &resource_id, int start, int end, con
     m_selectionStart = start;
     m_selectionEnd = end;
     m_selectionSnippet = snippet;
+    m_chipSelection->setProperty("resourceId", resource_id);
+    m_chipSelection->setProperty("selectionStart", start);
+    m_chipSelection->setProperty("selectionEnd", end);
     const bool have = !resource_id.isEmpty() && end > start;
     const bool was_enabled = m_chipSelection->isEnabled();
     m_chipSelection->setEnabled(have);

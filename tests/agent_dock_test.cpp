@@ -50,6 +50,20 @@ int main(int argc, char *argv[])
     auto *model_label = dock.findChild<QLabel *>(QStringLiteral("agentModelLabel"));
     Require(model_label && model_label->text().contains(QStringLiteral("deepseek-chat")),
             "dock model label must show the settings model");
+    dock.setBookContext(QStringLiteral("Junior Physics"),
+                        QStringLiteral("physics.epub"), 42, true, 7);
+    auto *book_status = dock.findChild<QLabel *>(QStringLiteral("agentBookStatus"));
+    Require(book_status && book_status->text().contains(QStringLiteral("physics.epub"))
+                && book_status->text().contains(QStringLiteral("Junior Physics"))
+                && book_status->text().contains(QStringLiteral("42 resources"))
+                && book_status->text().contains(QStringLiteral("Unsaved changes"))
+                && book_status->text().contains(QStringLiteral("Agent rev 7")),
+            "book status must identify the file, title, resources, save state, and revision");
+    dock.setBookContext(QStringLiteral("Junior Physics"),
+                        QStringLiteral("physics.epub"), 42, false, 7);
+    Require(book_status->text().contains(QStringLiteral("Saved"))
+                && !book_status->text().contains(QStringLiteral("Unsaved changes")),
+            "book status must update after saving");
     Require(mode && mode->count() == 4, "mode combo must offer Ask/Plan/Edit/Auto");
     Require(mode->itemData(0).toString() == QStringLiteral("ask")
                 && mode->itemData(1).toString() == QStringLiteral("plan")
@@ -67,6 +81,24 @@ int main(int argc, char *argv[])
             "file context chip is missing");
     Require(dock.findChild<QToolButton *>(QStringLiteral("agentChipSelection")),
             "selection context chip is missing");
+    auto *selection_chip =
+        dock.findChild<QToolButton *>(QStringLiteral("agentChipSelection"));
+    dock.setCurrentFile(QStringLiteral("OEBPS/Text/ch1.xhtml"), QStringLiteral("chapter-1"));
+    dock.setSelection(QStringLiteral("chapter-1"), 12, 34,
+                      QStringLiteral("<ruby>字<rt>じ</rt></ruby>"));
+    Require(selection_chip && selection_chip->isEnabled() && selection_chip->isChecked()
+                && selection_chip->text().contains(QStringLiteral("12–34")),
+            "a live editor selection must enable and select the context chip");
+    Require(selection_chip->property("resourceId").toString() == QStringLiteral("chapter-1")
+                && selection_chip->property("selectionStart").toInt() == 12
+                && selection_chip->property("selectionEnd").toInt() == 34,
+            "selection chip must expose its exact resource and UTF-16 range");
+    Require(dock.contextHandles().contains(QStringLiteral("chapter-1:12-34")),
+            "selected context must emit a bounded resource range handle");
+    dock.setSelection(QStringLiteral("chapter-1"), 34, 34, QString());
+    Require(!selection_chip->isEnabled()
+                && !dock.contextHandles().contains(QStringLiteral("chapter-1:34-34")),
+            "a collapsed cursor must not be advertised as a selection");
 
     SigilAgent::AgentEvent thinking;
     thinking.type = SigilAgent::AgentEventType::AssistantDelta;

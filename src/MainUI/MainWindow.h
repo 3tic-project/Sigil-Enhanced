@@ -891,6 +891,7 @@ private:
     void AgentExportConversationRequested();
     void AgentExportDebugLogRequested();
     void UpdateAgentContext();
+    void UpdateAgentEditorContext();
 
     /**
      * Updates the recent files actions when the

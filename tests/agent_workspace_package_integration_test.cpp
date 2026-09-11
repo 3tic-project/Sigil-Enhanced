@@ -1,6 +1,9 @@
 #include "EmbedPython/EmbeddedPython.h" // Python must precede Qt's slots macro.
 
+#include <QFileInfo>
 #include <QRegularExpression>
+#include <QLabel>
+#include <QToolButton>
 #include <QWebEngineSettings>
 #include <QWebEngineUrlScheme>
 #include <QXmlStreamReader>
@@ -8,6 +11,7 @@
 #include <stdexcept>
 
 #include "Agent/Execution/SigilBookWorkspace.h"
+#include "Agent/UI/AgentDock.h"
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/TocTreeTransform.h"
@@ -17,6 +21,7 @@
 #include "Misc/WebProfileMgr.h"
 #include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/OPFResource.h"
+#include "Tabs/ContentTab.h"
 
 static void Require(bool condition, const char *message)
 {
@@ -63,6 +68,42 @@ int main(int argc, char **argv)
         auto *nav = qobject_cast<HTMLResource *>(
             book->GetFolderKeeper()->GetResourceByBookPath("OEBPS/nav.xhtml"));
         Require(opf && chapter && nav, "Fixture package resources are missing");
+
+        auto *agentDock = window.findChild<SigilAgent::AgentDock *>(
+            QStringLiteral("agentDock"));
+        auto *bookStatus = agentDock
+            ? agentDock->findChild<QLabel *>(QStringLiteral("agentBookStatus"))
+            : nullptr;
+        Require(agentDock && bookStatus, "Native Agent book status is missing");
+        const int resourceCount = book->GetFolderKeeper()->GetResourceList().size();
+        Require(bookStatus->property("resourceCount").toInt() == resourceCount
+                    && bookStatus->property("bookFileName").toString()
+                        == QFileInfo(QString::fromLocal8Bit(argv[2])).fileName()
+                    && !bookStatus->property("modified").toBool(),
+                "Agent book status does not identify the live imported book");
+        book->SetModified(true);
+        app.processEvents();
+        Require(bookStatus->property("modified").toBool(),
+                "Agent book status did not report unsaved changes");
+        book->SetModified(false);
+        app.processEvents();
+        Require(!bookStatus->property("modified").toBool(),
+                "Agent book status did not refresh after saving");
+
+        ContentTab *activeTab = window.GetCurrentContentTab();
+        Require(activeTab && activeTab->GetLoadedResource()
+                    && activeTab->SetSelectionRange(1, 12),
+                "Could not create a live editor selection for Agent context");
+        app.processEvents();
+        auto *selectionChip = agentDock->findChild<QToolButton *>(
+            QStringLiteral("agentChipSelection"));
+        const QString expectedHandle = QStringLiteral("%1:1-12")
+            .arg(activeTab->GetLoadedResource()->GetIdentifier());
+        Require(selectionChip && selectionChip->isEnabled()
+                    && selectionChip->property("selectionStart").toInt() == 1
+                    && selectionChip->property("selectionEnd").toInt() == 12
+                    && agentDock->contextHandles().contains(expectedHandle),
+                "Live editor selection did not reach the Native Agent context chip");
 
         SigilAgent::SigilBookWorkspace workspace;
         workspace.setBook(book);

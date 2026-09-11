@@ -74,5 +74,26 @@ require(
     )[0],
     "context chips must refresh after a real book is assigned",
 )
+update_context = main_window.split("void MainWindow::UpdateAgentContext()", 1)[1].split(
+    "void MainWindow::AgentSendRequested", 1
+)[0]
+require(
+    "m_CurrentFileName" in update_context
+    and "GetResourceList().size()" in update_context
+    and "IsModified()" in update_context,
+    "Agent book identity must include the file, resource count, and unsaved state",
+)
+require(
+    "GetSelectionStart()" in update_context
+    and "GetSelectionEnd()" in update_context
+    and "qMax(cursor, cursor)" not in update_context,
+    "Agent selection context must use the live editor range",
+)
+require(
+    "&Book::ModifiedStateChanged" in main_window
+    and "&FlowTab::SelectionChanged" in main_window
+    and "&TextTab::SelectionChanged" in main_window,
+    "book save state and editor selection changes must refresh Agent context",
+)
 
 print("agent dock contract ok")
