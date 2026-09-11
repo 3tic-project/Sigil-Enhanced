@@ -185,13 +185,44 @@ QString exportConversationMarkdown(const AgentSession &session, const SessionExp
             case AgentEventType::TransactionPreviewed:
                 flushAssistant(&lines, &thinking, &answer);
                 lines.append(QStringLiteral("## Preview"));
-                lines.append(QStringLiteral("Staged changes were not committed."));
+                lines.append(QStringLiteral("Staged only. The live book was unchanged."));
                 lines.append(QString());
                 break;
-            case AgentEventType::TransactionCommitted:
+            case AgentEventType::TransactionCommitted: {
                 flushAssistant(&lines, &thinking, &answer);
                 lines.append(QStringLiteral("## Applied"));
-                lines.append(QStringLiteral("Committed to the book."));
+                lines.append(QStringLiteral("Applied to the current book. The EPUB file has not been saved."));
+                if (event.payload.value(QStringLiteral("applied_changes")).isDouble()) {
+                    lines.append(QStringLiteral("Applied changes: %1")
+                                     .arg(event.payload.value(QStringLiteral("applied_changes")).toInt()));
+                }
+                if (event.payload.value(QStringLiteral("book_revision")).isDouble()) {
+                    lines.append(QStringLiteral("Book revision: %1")
+                                     .arg(event.payload.value(QStringLiteral("book_revision")).toInteger()));
+                }
+                const QString epubcheck_status =
+                    event.payload.value(QStringLiteral("full_epubcheck")).toObject()
+                        .value(QStringLiteral("status")).toString();
+                lines.append(epubcheck_status.isEmpty() || epubcheck_status == QLatin1String("not_run")
+                                 ? QStringLiteral("Full EPUBCheck: not run.")
+                                 : QStringLiteral("Full EPUBCheck: %1").arg(epubcheck_status));
+                lines.append(QStringLiteral("Recovery: use Sigil Undo where available."));
+                if (event.payload.value(QStringLiteral("recovery")).toObject()
+                        .value(QStringLiteral("task_restore_point")).toString()
+                    == QLatin1String("not_created_by_commit")) {
+                    lines.append(QStringLiteral("This commit did not create a task-wide restore point."));
+                }
+                lines.append(QString());
+                break;
+            }
+            case AgentEventType::TransactionRolledBack:
+                flushAssistant(&lines, &thinking, &answer);
+                lines.append(event.payload.value(QStringLiteral("rolled_back")).toBool()
+                                 ? QStringLiteral("## Staged changes discarded")
+                                 : QStringLiteral("## No staged changes"));
+                lines.append(event.payload.value(QStringLiteral("rolled_back")).toBool()
+                                 ? QStringLiteral("The staged transaction was discarded. The live book was not changed by this transaction.")
+                                 : QStringLiteral("There was no staged transaction to discard. The live book was not changed."));
                 lines.append(QString());
                 break;
             default:

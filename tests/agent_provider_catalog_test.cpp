@@ -137,6 +137,27 @@ int main(int argc, char *argv[])
         { QStringLiteral("name"), QStringLiteral("book.summary") },
         { QStringLiteral("data"), QJsonObject { { QStringLiteral("title"), QStringLiteral("Junior Physics") } } }
     });
+    session.append(AgentEventType::TransactionPreviewed, QJsonObject {
+        { QStringLiteral("applied_to_book"), false },
+        { QStringLiteral("save_status"), QStringLiteral("not_applied") }
+    });
+    session.append(AgentEventType::TransactionCommitted, QJsonObject {
+        { QStringLiteral("applied_to_book"), true },
+        { QStringLiteral("save_status"), QStringLiteral("not_saved") },
+        { QStringLiteral("applied_changes"), 2 },
+        { QStringLiteral("book_revision"), 9 },
+        { QStringLiteral("full_epubcheck"), QJsonObject {
+            { QStringLiteral("status"), QStringLiteral("not_run") }
+        } },
+        { QStringLiteral("recovery"), QJsonObject {
+            { QStringLiteral("task_restore_point"),
+              QStringLiteral("not_created_by_commit") }
+        } }
+    });
+    session.append(AgentEventType::TransactionRolledBack, QJsonObject {
+        { QStringLiteral("rolled_back"), true },
+        { QStringLiteral("live_book_unchanged"), true }
+    });
 
     SessionExportContext context;
     context.sessionId = session.id();
@@ -148,6 +169,18 @@ int main(int argc, char *argv[])
     Require(markdown.contains(QStringLiteral("## You")), "conversation export must include the user turn");
     Require(markdown.contains(QStringLiteral("Two chapters.")), "conversation export must include the answer");
     Require(markdown.contains(QStringLiteral("book.summary")), "conversation export must include tools");
+    Require(markdown.contains(QStringLiteral("Staged only. The live book was unchanged.")),
+            "conversation export must distinguish preview from live-book changes");
+    Require(markdown.contains(QStringLiteral("EPUB file has not been saved"))
+                && markdown.contains(QStringLiteral("Applied changes: 2"))
+                && markdown.contains(QStringLiteral("Book revision: 9")),
+            "conversation export must preserve commit save state and counts");
+    Require(markdown.contains(QStringLiteral("Full EPUBCheck: not run"))
+                && markdown.contains(QStringLiteral("did not create a task-wide restore point")),
+            "conversation export must state validation and recovery boundaries");
+    Require(markdown.contains(QStringLiteral("## Staged changes discarded"))
+                && markdown.contains(QStringLiteral("live book was not changed")),
+            "conversation export must include rollback status");
     Require(!markdown.contains(QStringLiteral("sk-secretvalue999")),
             "conversation export must redact secrets");
 
