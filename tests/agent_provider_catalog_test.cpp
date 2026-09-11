@@ -26,6 +26,15 @@ void Require(bool condition, const char *message)
     }
 }
 
+class NullSink : public SigilAgent::ModelStreamSink
+{
+public:
+    void onReasoningDelta(const QString &) override {}
+    void onContentDelta(const QString &) override {}
+    void onToolCallsUpdated(const QList<SigilAgent::ToolCall> &) override {}
+    bool isCancelled() const override { return false; }
+};
+
 } // namespace
 
 int main(int argc, char *argv[])
@@ -266,6 +275,57 @@ int main(int argc, char *argv[])
             "GET /models must parse the live payload");
     Require(fetched.models.first().tools, "fetched supported_parameters.tools must be recorded");
     Require(!fetched.sourceUrl.contains(QStringLiteral("sk-")), "catalog result must not echo the API key");
+
+    QTcpServer error_server;
+    Require(error_server.listen(QHostAddress::LocalHost, 0),
+            "local provider error server must listen");
+    const QString provider_key = QStringLiteral("sk-provider-error-secret");
+    const QByteArray error_payload = QStringLiteral(
+        R"({"error":{"message":"credential %1 was rejected"}})")
+        .arg(provider_key).toUtf8();
+    QObject::connect(&error_server, &QTcpServer::newConnection,
+                     [&error_server, error_payload]() {
+        while (error_server.hasPendingConnections()) {
+            QTcpSocket *socket = error_server.nextPendingConnection();
+            QObject::connect(socket, &QTcpSocket::readyRead, socket,
+                             [socket, error_payload]() {
+                const QByteArray request = socket->peek(socket->bytesAvailable());
+                if (!request.contains("\r\n\r\n") && !request.contains("\n\n")) return;
+                socket->readAll();
+                QByteArray response =
+                    "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: ";
+                response += QByteArray::number(error_payload.size());
+                response += "\r\nConnection: close\r\n\r\n";
+                response += error_payload;
+                socket->write(response);
+                socket->flush();
+                socket->disconnectFromHost();
+            });
+        }
+    });
+
+    OpenAIProviderConfig error_config;
+    error_config.baseUrl = QStringLiteral("http://127.0.0.1:%1/chat/completions")
+                               .arg(error_server.serverPort());
+    error_config.apiKey = provider_key;
+    error_config.model = QStringLiteral("test-model");
+    OpenAICompatibleProvider error_provider(error_config);
+    ModelRequest error_request;
+    error_request.model = error_config.model;
+    ChatMessage error_user;
+    error_user.role = QStringLiteral("user");
+    error_user.content = QStringLiteral("hello");
+    error_request.messages.append(error_user);
+    NullSink null_sink;
+    const ModelTurn provider_error = error_provider.stream(error_request, null_sink);
+    Require(provider_error.error.contains(QStringLiteral("HTTP 401"))
+                && provider_error.error.contains(QStringLiteral("[redacted]"))
+                && !provider_error.error.contains(provider_key),
+            "provider errors must remain readable while redacting an echoed API key");
+    const QByteArray trace_json = QJsonDocument(error_provider.debugTraces()).toJson();
+    Require(!trace_json.contains(provider_key.toUtf8())
+                && trace_json.contains("[redacted]"),
+            "in-memory HTTP traces must redact an echoed API key before export");
 
     return EXIT_SUCCESS;
 }

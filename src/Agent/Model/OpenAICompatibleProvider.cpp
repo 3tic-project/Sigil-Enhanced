@@ -32,28 +32,38 @@ QString clipUtf8(const QByteArray &data, int max_bytes)
     return QString::fromUtf8(data.left(max_bytes)) + QStringLiteral("…");
 }
 
+QString redactConfiguredSecret(QString text, const QString &secret)
+{
+    if (!secret.isEmpty()) text.replace(secret, QStringLiteral("[redacted]"));
+    return text;
+}
+
 QJsonObject makeHttpTrace(const QString &url,
                           const QString &model,
                           const QByteArray &request,
                           const QByteArray &response,
                           int status,
                           qint64 elapsed_ms,
-                          const QString &error)
+                          const QString &error,
+                          const QString &secret)
 {
     QJsonObject trace {
         { QStringLiteral("method"), QStringLiteral("POST") },
-        { QStringLiteral("url"), url },
+        { QStringLiteral("url"), redactConfiguredSecret(url, secret) },
         { QStringLiteral("model"), model },
         { QStringLiteral("status"), status },
         { QStringLiteral("elapsed_ms"), elapsed_ms },
-        { QStringLiteral("error"), error },
+        { QStringLiteral("error"), redactConfiguredSecret(error, secret) },
         { QStringLiteral("request_bytes"), request.size() },
         { QStringLiteral("response_bytes"), response.size() },
-        { QStringLiteral("request_body"), clipUtf8(request, 65536) },
-        { QStringLiteral("response_head"), clipUtf8(response, 8192) }
+        { QStringLiteral("request_body"),
+          redactConfiguredSecret(clipUtf8(request, 65536), secret) },
+        { QStringLiteral("response_head"),
+          redactConfiguredSecret(clipUtf8(response, 8192), secret) }
     };
     if (response.size() > 8192) {
-        trace.insert(QStringLiteral("response_tail"), QString::fromUtf8(response.right(8192)));
+        trace.insert(QStringLiteral("response_tail"),
+                     redactConfiguredSecret(QString::fromUtf8(response.right(8192)), secret));
         trace.insert(QStringLiteral("response_truncated"), true);
     } else {
         trace.insert(QStringLiteral("response_truncated"), false);
@@ -217,7 +227,7 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
         turn.finishReason = QStringLiteral("cancelled");
         recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
                                   reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
-                                  timer.elapsed(), QStringLiteral("cancelled")));
+                                  timer.elapsed(), QStringLiteral("cancelled"), m_config.apiKey));
         reply->deleteLater();
         return turn;
     }
@@ -248,8 +258,9 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     if (turn.error.isEmpty()) {
         turn = decoder.finish();
     }
+    turn.error = redactConfiguredSecret(turn.error, m_config.apiKey);
     recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
-                              status, timer.elapsed(), turn.error));
+                              status, timer.elapsed(), turn.error, m_config.apiKey));
     reply->deleteLater();
     return turn;
 }
