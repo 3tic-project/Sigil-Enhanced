@@ -23319,6 +23319,29 @@ Continue using the requested filename?</translation>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Endpoint is not configured</source><translation>Endpoint is not configured</translation></message>
+    <message><source>API key is not configured</source><translation>API key is not configured</translation></message>
+    <message><source>Model is not configured</source><translation>Model is not configured</translation></message>
+    <message><source>Authentication failed (HTTP 401)</source><translation>Authentication failed (HTTP 401)</translation></message>
+    <message><source>Access denied (HTTP 403)</source><translation>Access denied (HTTP 403)</translation></message>
+    <message><source>Endpoint or model not found (HTTP 404)</source><translation>Endpoint or model not found (HTTP 404)</translation></message>
+    <message><source>Provider request timed out (HTTP 408)</source><translation>Provider request timed out (HTTP 408)</translation></message>
+    <message><source>Provider rate limit reached (HTTP 429)</source><translation>Provider rate limit reached (HTTP 429)</translation></message>
+    <message><source>Provider unavailable (HTTP %1)</source><translation>Provider unavailable (HTTP %1)</translation></message>
+    <message><source>Provider returned HTTP %1</source><translation>Provider returned HTTP %1</translation></message>
+    <message><source>Network connection failed</source><translation>Network connection failed</translation></message>
+    <message><source>Request failed; see the Error card</source><translation>Request failed; see the Error card</translation></message>
+    <message><source>Setup required: endpoint</source><translation>Setup required: endpoint</translation></message>
+    <message><source>Setup required: API key</source><translation>Setup required: API key</translation></message>
+    <message><source>Setup required: model</source><translation>Setup required: model</translation></message>
+    <message><source>Configured · not tested</source><translation>Configured · not tested</translation></message>
+    <message><source>Contacting provider…</source><translation>Contacting provider…</translation></message>
+    <message><source>Last request succeeded</source><translation>Last request succeeded</translation></message>
+    <message><source>Last request failed: %1</source><translation>Last request failed: %1</translation></message>
+    <message><source>Last request cancelled</source><translation>Last request cancelled</translation></message>
+    <message><source>Provider: %1 · %2</source><translation>Provider: %1 · %2</translation></message>
+    <message><source>Configured means the required settings are present. Connectivity is verified only by a real request.</source><translation>Configured means the required settings are present. Connectivity is verified only by a real request.</translation></message>
+    <message><source>Configure the provider in Preferences → Native Agent.</source><translation>Configure the provider in Preferences → Native Agent.</translation></message>
     <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent plans and tool calls are bound to this open book.</translation></message>
     <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
     <message><source>Untitled book</source><translation>Untitled book</translation></message>

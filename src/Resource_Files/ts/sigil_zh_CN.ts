@@ -27267,6 +27267,29 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Endpoint is not configured</source><translation>未配置端点</translation></message>
+    <message><source>API key is not configured</source><translation>未配置 API 密钥</translation></message>
+    <message><source>Model is not configured</source><translation>未配置模型</translation></message>
+    <message><source>Authentication failed (HTTP 401)</source><translation>身份验证失败（HTTP 401）</translation></message>
+    <message><source>Access denied (HTTP 403)</source><translation>访问被拒绝（HTTP 403）</translation></message>
+    <message><source>Endpoint or model not found (HTTP 404)</source><translation>未找到端点或模型（HTTP 404）</translation></message>
+    <message><source>Provider request timed out (HTTP 408)</source><translation>提供商请求超时（HTTP 408）</translation></message>
+    <message><source>Provider rate limit reached (HTTP 429)</source><translation>已达到提供商速率限制（HTTP 429）</translation></message>
+    <message><source>Provider unavailable (HTTP %1)</source><translation>提供商不可用（HTTP %1）</translation></message>
+    <message><source>Provider returned HTTP %1</source><translation>提供商返回 HTTP %1</translation></message>
+    <message><source>Network connection failed</source><translation>网络连接失败</translation></message>
+    <message><source>Request failed; see the Error card</source><translation>请求失败；请查看“错误”卡片</translation></message>
+    <message><source>Setup required: endpoint</source><translation>需要设置：端点</translation></message>
+    <message><source>Setup required: API key</source><translation>需要设置：API 密钥</translation></message>
+    <message><source>Setup required: model</source><translation>需要设置：模型</translation></message>
+    <message><source>Configured · not tested</source><translation>已配置 · 未测试</translation></message>
+    <message><source>Contacting provider…</source><translation>正在连接提供商…</translation></message>
+    <message><source>Last request succeeded</source><translation>最近一次请求成功</translation></message>
+    <message><source>Last request failed: %1</source><translation>最近一次请求失败：%1</translation></message>
+    <message><source>Last request cancelled</source><translation>最近一次请求已取消</translation></message>
+    <message><source>Provider: %1 · %2</source><translation>提供商：%1 · %2</translation></message>
+    <message><source>Configured means the required settings are present. Connectivity is verified only by a real request.</source><translation>“已配置”表示必需设置均已填写。仅通过实际请求验证连接。</translation></message>
+    <message><source>Configure the provider in Preferences → Native Agent.</source><translation>请在“偏好设置 → 原生 Agent”中配置提供商。</translation></message>
     <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent 计划和工具调用均绑定到当前打开的书籍。</translation></message>
     <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
     <message><source>Untitled book</source><translation>未命名书籍</translation></message>

@@ -27265,6 +27265,29 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Endpoint is not configured</source><translation>エンドポイントが設定されていません</translation></message>
+    <message><source>API key is not configured</source><translation>API キーが設定されていません</translation></message>
+    <message><source>Model is not configured</source><translation>モデルが設定されていません</translation></message>
+    <message><source>Authentication failed (HTTP 401)</source><translation>認証に失敗しました（HTTP 401）</translation></message>
+    <message><source>Access denied (HTTP 403)</source><translation>アクセスが拒否されました（HTTP 403）</translation></message>
+    <message><source>Endpoint or model not found (HTTP 404)</source><translation>エンドポイントまたはモデルが見つかりません（HTTP 404）</translation></message>
+    <message><source>Provider request timed out (HTTP 408)</source><translation>プロバイダーへのリクエストがタイムアウトしました（HTTP 408）</translation></message>
+    <message><source>Provider rate limit reached (HTTP 429)</source><translation>プロバイダーのレート制限に達しました（HTTP 429）</translation></message>
+    <message><source>Provider unavailable (HTTP %1)</source><translation>プロバイダーを利用できません（HTTP %1）</translation></message>
+    <message><source>Provider returned HTTP %1</source><translation>プロバイダーが HTTP %1 を返しました</translation></message>
+    <message><source>Network connection failed</source><translation>ネットワーク接続に失敗しました</translation></message>
+    <message><source>Request failed; see the Error card</source><translation>リクエストに失敗しました。エラーカードを確認してください</translation></message>
+    <message><source>Setup required: endpoint</source><translation>設定が必要：エンドポイント</translation></message>
+    <message><source>Setup required: API key</source><translation>設定が必要：API キー</translation></message>
+    <message><source>Setup required: model</source><translation>設定が必要：モデル</translation></message>
+    <message><source>Configured · not tested</source><translation>設定済み · 未テスト</translation></message>
+    <message><source>Contacting provider…</source><translation>プロバイダーに接続中…</translation></message>
+    <message><source>Last request succeeded</source><translation>前回のリクエストは成功しました</translation></message>
+    <message><source>Last request failed: %1</source><translation>前回のリクエストに失敗しました：%1</translation></message>
+    <message><source>Last request cancelled</source><translation>前回のリクエストはキャンセルされました</translation></message>
+    <message><source>Provider: %1 · %2</source><translation>プロバイダー：%1 · %2</translation></message>
+    <message><source>Configured means the required settings are present. Connectivity is verified only by a real request.</source><translation>「設定済み」は必須設定が入力済みであることを示します。接続性は実際のリクエストでのみ検証されます。</translation></message>
+    <message><source>Configure the provider in Preferences → Native Agent.</source><translation>「環境設定 → Native Agent」でプロバイダーを設定してください。</translation></message>
     <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent の計画とツール呼び出しは、現在開いているブックに紐付けられます。</translation></message>
     <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
     <message><source>Untitled book</source><translation>無題のブック</translation></message>
