@@ -63,6 +63,37 @@ int main(int argc, char *argv[])
     Require(reasoningProtocolFor(AgentProviderKind::OpenCodeGo, QString()) == ReasoningProtocol::None,
             "OpenCode Go must not send DeepSeek thinking fields");
 
+    const AgentProviderReadiness ready = providerReadiness(
+        AgentProviderKind::Custom,
+        QStringLiteral("https://user:password@[2001:db8::1]:8443/private/chat/completions?token=secret"),
+        true,
+        QStringLiteral("local-model"));
+    Require(ready.isConfigured()
+                && ready.endpointHost == QStringLiteral("[2001:db8::1]:8443")
+                && ready.model == QStringLiteral("local-model"),
+            "provider readiness must expose only the safe endpoint host and configured model");
+    Require(!ready.endpointHost.contains(QStringLiteral("password"))
+                && !ready.endpointHost.contains(QStringLiteral("private"))
+                && !ready.endpointHost.contains(QStringLiteral("secret")),
+            "provider readiness must not expose URL credentials, paths, or query strings");
+    const AgentProviderReadiness missing_key = providerReadiness(
+        AgentProviderKind::DeepSeek,
+        chatCompletionsUrl(AgentProviderKind::DeepSeek, QString()), false,
+        QStringLiteral("deepseek-chat"));
+    Require(missing_key.issue == AgentProviderSetupIssue::ApiKey,
+            "provider readiness must identify a missing API key without testing the network");
+    const AgentProviderReadiness invalid_endpoint = providerReadiness(
+        AgentProviderKind::Custom, QStringLiteral("not-a-network-url"), true,
+        QStringLiteral("model"));
+    Require(invalid_endpoint.issue == AgentProviderSetupIssue::Endpoint
+                && invalid_endpoint.endpointHost.isEmpty(),
+            "provider readiness must reject invalid endpoints without echoing them");
+    const AgentProviderReadiness missing_model = providerReadiness(
+        AgentProviderKind::Custom, QStringLiteral("http://127.0.0.1:11434/v1/chat/completions"),
+        true, QString());
+    Require(missing_model.issue == AgentProviderSetupIssue::Model,
+            "provider readiness must identify a missing model");
+
     const CatalogResult deepseek = AgentModelCatalog::parseModelsJson(QByteArray(
         R"({"object":"list","data":[{"id":"deepseek-chat","object":"model"},{"id":"deepseek-reasoner"}]})"));
     Require(deepseek.error.isEmpty() && deepseek.models.size() == 2, "DeepSeek /models list must parse");

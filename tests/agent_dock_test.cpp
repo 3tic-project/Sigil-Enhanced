@@ -50,6 +50,66 @@ int main(int argc, char *argv[])
     auto *model_label = dock.findChild<QLabel *>(QStringLiteral("agentModelLabel"));
     Require(model_label && model_label->text().contains(QStringLiteral("deepseek-chat")),
             "dock model label must show the settings model");
+    auto *provider_status = dock.findChild<QLabel *>(QStringLiteral("agentProviderStatus"));
+    Require(provider_status, "dock must expose provider setup and request status");
+    SigilAgent::AgentProviderReadiness setup_required;
+    setup_required.kind = SigilAgent::AgentProviderKind::DeepSeek;
+    setup_required.displayName = QStringLiteral("DeepSeek");
+    setup_required.model = QStringLiteral("deepseek-chat");
+    setup_required.endpointHost = QStringLiteral("api.deepseek.com");
+    setup_required.issue = SigilAgent::AgentProviderSetupIssue::ApiKey;
+    dock.setProviderConfiguration(setup_required);
+    Require(provider_status->text().contains(QStringLiteral("Setup required: API key"))
+                && provider_status->property("requestState").toString()
+                    == QStringLiteral("setup_required"),
+            "missing provider settings must be explicit without claiming connectivity");
+
+    SigilAgent::AgentProviderReadiness configured = setup_required;
+    configured.issue = SigilAgent::AgentProviderSetupIssue::None;
+    dock.setProviderConfiguration(configured);
+    Require(provider_status->text().contains(QStringLiteral("DeepSeek"))
+                && provider_status->text().contains(QStringLiteral("deepseek-chat"))
+                && provider_status->text().contains(QStringLiteral("api.deepseek.com"))
+                && provider_status->text().contains(QStringLiteral("Configured · not tested"))
+                && provider_status->property("requestState").toString()
+                    == QStringLiteral("configured"),
+            "complete settings must say configured but not tested");
+    SigilAgent::AgentEvent provider_started;
+    provider_started.type = SigilAgent::AgentEventType::ModelRequestStarted;
+    dock.appendEvent(provider_started);
+    Require(provider_status->text().contains(QStringLiteral("Contacting provider"))
+                && provider_status->property("requestState").toString()
+                    == QStringLiteral("requesting"),
+            "a real model request must move provider status to requesting");
+    SigilAgent::AgentEvent provider_completed;
+    provider_completed.type = SigilAgent::AgentEventType::ModelRequestCompleted;
+    dock.appendEvent(provider_completed);
+    Require(provider_status->text().contains(QStringLiteral("Last request succeeded"))
+                && provider_status->property("requestState").toString()
+                    == QStringLiteral("succeeded"),
+            "only a completed model request may report success");
+    dock.appendEvent(provider_started);
+    SigilAgent::AgentEvent provider_failed;
+    provider_failed.type = SigilAgent::AgentEventType::ModelRequestFailed;
+    provider_failed.payload = QJsonObject {
+        { QStringLiteral("message"),
+          QStringLiteral("HTTP 401: rejected sk-private-provider-key") }
+    };
+    dock.appendEvent(provider_failed);
+    Require(provider_status->text().contains(QStringLiteral("Authentication failed (HTTP 401)"))
+                && !provider_status->text().contains(QStringLiteral("sk-private-provider-key"))
+                && provider_status->property("requestState").toString()
+                    == QStringLiteral("failed"),
+            "provider failures must use a readable summary without echoing response details");
+    dock.appendEvent(provider_started);
+    SigilAgent::AgentEvent provider_cancelled;
+    provider_cancelled.type = SigilAgent::AgentEventType::SessionCancelled;
+    dock.appendEvent(provider_cancelled);
+    Require(provider_status->text().contains(QStringLiteral("Last request cancelled"))
+                && provider_status->property("requestState").toString()
+                    == QStringLiteral("cancelled"),
+            "cancelled requests must not leave provider status stuck on contacting");
+    dock.resetTranscript();
     dock.setBookContext(QStringLiteral("Junior Physics"),
                         QStringLiteral("physics.epub"), 42, true, 7);
     auto *book_status = dock.findChild<QLabel *>(QStringLiteral("agentBookStatus"));

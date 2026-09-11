@@ -58,6 +58,20 @@ require(
     "dock must export the conversation and a debug log",
 )
 require(
+    "agentProviderStatus" in dock_cpp
+    and "ModelRequestCompleted" in dock_cpp
+    and "ModelRequestFailed" in dock_cpp,
+    "dock must distinguish provider setup, request success, and request failure",
+)
+configure_provider = main_window.split("void MainWindow::ConfigureAgentProvider()", 1)[1].split(
+    "void MainWindow::CreateAgentDock()", 1
+)[0]
+require(
+    "providerReadiness" in configure_provider
+    and "setProviderConfiguration" in configure_provider,
+    "MainWindow must refresh safe provider readiness after Preferences changes and before Send",
+)
+require(
     "m_Book && m_Book->GetFolderKeeper() && m_Book->GetConstOPF()" in main_window,
     "UpdateAgentContext must not read metadata until OPF exists; empty Book::GetOPF() is null",
 )

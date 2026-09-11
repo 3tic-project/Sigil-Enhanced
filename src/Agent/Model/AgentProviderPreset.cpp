@@ -6,6 +6,8 @@
 
 #include "Agent/Model/AgentProviderPreset.h"
 
+#include <QUrl>
+
 namespace SigilAgent
 {
 
@@ -145,6 +147,42 @@ ReasoningProtocol reasoningProtocolFor(AgentProviderKind kind, const QString &ur
         }
     }
     return ReasoningProtocol::None;
+}
+
+AgentProviderReadiness providerReadiness(AgentProviderKind kind,
+                                         const QString &chat_url,
+                                         bool api_key_present,
+                                         const QString &model)
+{
+    AgentProviderReadiness readiness;
+    readiness.kind = kind;
+    readiness.displayName = presetFor(kind).displayName;
+    readiness.model = model.trimmed();
+
+    const QUrl url(chat_url.trimmed());
+    const QString scheme = url.scheme().toLower();
+    const bool valid_endpoint = url.isValid()
+        && (scheme == QLatin1String("http") || scheme == QLatin1String("https"))
+        && !url.host().isEmpty();
+    if (valid_endpoint) {
+        readiness.endpointHost = url.host();
+        if (readiness.endpointHost.contains(QLatin1Char(':'))) {
+            readiness.endpointHost = QStringLiteral("[%1]").arg(readiness.endpointHost);
+        }
+        const int port = url.port(-1);
+        if (port > 0) readiness.endpointHost += QStringLiteral(":%1").arg(port);
+    }
+
+    if (!valid_endpoint) {
+        readiness.issue = AgentProviderSetupIssue::Endpoint;
+    } else if (!api_key_present) {
+        readiness.issue = AgentProviderSetupIssue::ApiKey;
+    } else if (readiness.model.isEmpty()) {
+        readiness.issue = AgentProviderSetupIssue::Model;
+    } else {
+        readiness.issue = AgentProviderSetupIssue::None;
+    }
+    return readiness;
 }
 
 QString agentHttpReferer()

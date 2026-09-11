@@ -18,6 +18,7 @@
 #include <QMenu>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QToolButton>
@@ -90,6 +91,11 @@ AgentDock::AgentDock(QWidget *parent) :
     status_layout->addWidget(m_modelLabel);
     status_layout->addWidget(m_contextScope, 1);
 
+    m_providerStatus = new QLabel(root);
+    m_providerStatus->setObjectName(QStringLiteral("agentProviderStatus"));
+    m_providerStatus->setWordWrap(true);
+    m_providerStatus->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
     m_bookStatus = new QLabel(root);
     m_bookStatus->setObjectName(QStringLiteral("agentBookStatus"));
     m_bookStatus->setWordWrap(true);
@@ -149,6 +155,7 @@ AgentDock::AgentDock(QWidget *parent) :
 
     root_layout->addWidget(header);
     root_layout->addWidget(status);
+    root_layout->addWidget(m_providerStatus);
     root_layout->addWidget(m_bookStatus);
     root_layout->addWidget(chips);
     root_layout->addWidget(m_transcript, 1);
@@ -167,6 +174,7 @@ AgentDock::AgentDock(QWidget *parent) :
     connect(m_chipBook, &QToolButton::toggled, this, [this](bool) { refreshScopeLabel(); });
     connect(m_chipFile, &QToolButton::toggled, this, [this](bool) { refreshScopeLabel(); });
     connect(m_chipSelection, &QToolButton::toggled, this, [this](bool) { refreshScopeLabel(); });
+    refreshProviderStatus();
 }
 
 AgentMode AgentDock::mode() const
@@ -193,6 +201,15 @@ void AgentDock::setModelName(const QString &model)
                               ? tr("No model (set in Preferences)")
                               : model);
     m_modelLabel->setToolTip(tr("Model is chosen in Preferences → Native Agent"));
+}
+
+void AgentDock::setProviderConfiguration(const AgentProviderReadiness &readiness)
+{
+    m_providerReadiness = readiness;
+    m_providerRequestState = ProviderRequestState::Configured;
+    m_providerFailure.clear();
+    setModelName(readiness.model);
+    refreshProviderStatus();
 }
 
 void AgentDock::setRunState(AgentRunState state)
@@ -285,6 +302,111 @@ void AgentDock::refreshScopeLabel()
     if (m_chipSelection->isEnabled() && m_chipSelection->isChecked()) parts.append(tr("selection"));
     if (parts.isEmpty()) parts.append(tr("book structure + sampled fragments"));
     setContextScope(parts.join(QStringLiteral(" + ")));
+}
+
+QString AgentDock::providerFailureSummary(const QString &message) const
+{
+    if (message.contains(QStringLiteral("base URL is not configured"), Qt::CaseInsensitive)) {
+        return tr("Endpoint is not configured");
+    }
+    if (message.contains(QStringLiteral("API key is not configured"), Qt::CaseInsensitive)) {
+        return tr("API key is not configured");
+    }
+    if (message.contains(QStringLiteral("Model is not configured"), Qt::CaseInsensitive)) {
+        return tr("Model is not configured");
+    }
+
+    const QRegularExpressionMatch http =
+        QRegularExpression(QStringLiteral("^HTTP\\s+(\\d{3})"),
+                           QRegularExpression::CaseInsensitiveOption).match(message.trimmed());
+    if (http.hasMatch()) {
+        const int status = http.captured(1).toInt();
+        if (status == 401) return tr("Authentication failed (HTTP 401)");
+        if (status == 403) return tr("Access denied (HTTP 403)");
+        if (status == 404) return tr("Endpoint or model not found (HTTP 404)");
+        if (status == 408) return tr("Provider request timed out (HTTP 408)");
+        if (status == 429) return tr("Provider rate limit reached (HTTP 429)");
+        if (status >= 500) return tr("Provider unavailable (HTTP %1)").arg(status);
+        return tr("Provider returned HTTP %1").arg(status);
+    }
+    if (message.contains(QStringLiteral("timed out"), Qt::CaseInsensitive)
+        || message.contains(QStringLiteral("host not found"), Qt::CaseInsensitive)
+        || message.contains(QStringLiteral("connection refused"), Qt::CaseInsensitive)
+        || message.contains(QStringLiteral("network"), Qt::CaseInsensitive)
+        || message.contains(QStringLiteral("SSL"), Qt::CaseInsensitive)
+        || message.contains(QStringLiteral("TLS"), Qt::CaseInsensitive)) {
+        return tr("Network connection failed");
+    }
+    return tr("Request failed; see the Error card");
+}
+
+void AgentDock::refreshProviderStatus()
+{
+    if (!m_providerStatus) return;
+    QStringList identity;
+    if (!m_providerReadiness.displayName.isEmpty()) {
+        identity.append(m_providerReadiness.displayName);
+    }
+    if (!m_providerReadiness.model.isEmpty()) {
+        identity.append(m_providerReadiness.model);
+    }
+    if (!m_providerReadiness.endpointHost.isEmpty()) {
+        identity.append(m_providerReadiness.endpointHost);
+    }
+
+    QString state;
+    QString state_name;
+    switch (m_providerReadiness.issue) {
+        case AgentProviderSetupIssue::Endpoint:
+            state = tr("Setup required: endpoint");
+            state_name = QStringLiteral("setup_required");
+            break;
+        case AgentProviderSetupIssue::ApiKey:
+            state = tr("Setup required: API key");
+            state_name = QStringLiteral("setup_required");
+            break;
+        case AgentProviderSetupIssue::Model:
+            state = tr("Setup required: model");
+            state_name = QStringLiteral("setup_required");
+            break;
+        case AgentProviderSetupIssue::None:
+            switch (m_providerRequestState) {
+                case ProviderRequestState::Configured:
+                    state = tr("Configured · not tested");
+                    state_name = QStringLiteral("configured");
+                    break;
+                case ProviderRequestState::Requesting:
+                    state = tr("Contacting provider…");
+                    state_name = QStringLiteral("requesting");
+                    break;
+                case ProviderRequestState::Succeeded:
+                    state = tr("Last request succeeded");
+                    state_name = QStringLiteral("succeeded");
+                    break;
+                case ProviderRequestState::Failed:
+                    state = tr("Last request failed: %1").arg(m_providerFailure);
+                    state_name = QStringLiteral("failed");
+                    break;
+                case ProviderRequestState::Cancelled:
+                    state = tr("Last request cancelled");
+                    state_name = QStringLiteral("cancelled");
+                    break;
+            }
+            break;
+    }
+
+    const QString details = identity.join(QStringLiteral(" · "));
+    m_providerStatus->setText(details.isEmpty()
+                                  ? state
+                                  : tr("Provider: %1 · %2").arg(details, state));
+    m_providerStatus->setProperty("providerName", m_providerReadiness.displayName);
+    m_providerStatus->setProperty("model", m_providerReadiness.model);
+    m_providerStatus->setProperty("endpointHost", m_providerReadiness.endpointHost);
+    m_providerStatus->setProperty("requestState", state_name);
+    m_providerStatus->setAccessibleName(m_providerStatus->text());
+    m_providerStatus->setToolTip(m_providerReadiness.isConfigured()
+        ? tr("Configured means the required settings are present. Connectivity is verified only by a real request.")
+        : tr("Configure the provider in Preferences → Native Agent."));
 }
 
 void AgentDock::resetTranscript()
@@ -562,6 +684,20 @@ void AgentDock::appendEvent(const AgentEvent &event)
             break;
         case AgentEventType::ModelRequestStarted:
             beginModelStep();
+            m_providerRequestState = ProviderRequestState::Requesting;
+            m_providerFailure.clear();
+            refreshProviderStatus();
+            break;
+        case AgentEventType::ModelRequestCompleted:
+            m_providerRequestState = ProviderRequestState::Succeeded;
+            m_providerFailure.clear();
+            refreshProviderStatus();
+            break;
+        case AgentEventType::ModelRequestFailed:
+            m_providerRequestState = ProviderRequestState::Failed;
+            m_providerFailure = providerFailureSummary(
+                event.payload.value(QStringLiteral("message")).toString());
+            refreshProviderStatus();
             break;
         case AgentEventType::AssistantDelta:
             if (event.payload.value(QStringLiteral("kind")).toString() == QLatin1String("reasoning")) {
@@ -681,6 +817,11 @@ void AgentDock::appendEvent(const AgentEvent &event)
                                 false));
             break;
         case AgentEventType::SessionCancelled:
+            if (m_providerRequestState == ProviderRequestState::Requesting) {
+                m_providerRequestState = ProviderRequestState::Cancelled;
+                m_providerFailure.clear();
+                refreshProviderStatus();
+            }
             appendCard(makeCard(QStringLiteral("agentErrorCard"),
                                 tr("Stopped"),
                                 tr("Run stopped. Uncommitted staged work was rolled back."),

@@ -12,6 +12,7 @@
 #include <QHash>
 
 #include "Agent/AgentTypes.h"
+#include "Agent/Model/AgentProviderPreset.h"
 
 class QComboBox;
 class QLabel;
@@ -36,6 +37,7 @@ public:
     void setMode(AgentMode mode);
     void setContextScope(const QString &scope);
     void setModelName(const QString &model);
+    void setProviderConfiguration(const AgentProviderReadiness &readiness);
     void setRunState(AgentRunState state);
     void setBookContext(const QString &title,
                         const QString &fileName,
@@ -64,6 +66,14 @@ private slots:
     void onModeChanged();
 
 private:
+    enum class ProviderRequestState {
+        Configured,
+        Requesting,
+        Succeeded,
+        Failed,
+        Cancelled
+    };
+
     bool eventFilter(QObject *watched, QEvent *event) override;
     QString thinkingCardName() const;
     QString answerCardName() const;
@@ -79,6 +89,8 @@ private:
     void setThinkingText(const QString &text, bool append);
     void setAnswerText(const QString &text, bool append);
     void refreshScopeLabel();
+    void refreshProviderStatus();
+    QString providerFailureSummary(const QString &message) const;
     QString previewBody(const QJsonObject &payload) const;
     QString appliedBody(const QJsonObject &payload) const;
 
@@ -86,6 +98,7 @@ private:
     QLabel *m_modelLabel = nullptr;
     QLabel *m_contextScope = nullptr;
     QLabel *m_runState = nullptr;
+    QLabel *m_providerStatus = nullptr;
     QLabel *m_bookStatus = nullptr;
     QLabel *m_composerHint = nullptr;
     QPushButton *m_stopButton = nullptr;
@@ -114,6 +127,9 @@ private:
     QString m_selectionSnippet;
     int m_selectionStart = 0;
     int m_selectionEnd = 0;
+    AgentProviderReadiness m_providerReadiness;
+    ProviderRequestState m_providerRequestState = ProviderRequestState::Configured;
+    QString m_providerFailure;
 };
 
 } // namespace SigilAgent

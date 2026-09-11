@@ -6243,13 +6243,15 @@ void MainWindow::ConfigureAgentProvider()
 {
     if (!m_AgentController) return;
     SigilAgent::AgentSettings settings;
-    auto provider = std::make_unique<SigilAgent::OpenAICompatibleProvider>(settings.providerConfig());
+    const SigilAgent::OpenAIProviderConfig config = settings.providerConfig();
+    auto provider = std::make_unique<SigilAgent::OpenAICompatibleProvider>(config);
     m_AgentController->setProvider(std::move(provider));
     m_AgentController->setModel(settings.model());
     m_AgentController->setThinking(settings.thinkingEnabled(), settings.reasoningEffort());
     if (m_AgentDock) {
         m_AgentController->setMode(m_AgentDock->mode());
-        m_AgentDock->setModelName(settings.model());
+        m_AgentDock->setProviderConfiguration(SigilAgent::providerReadiness(
+            settings.providerKind(), config.baseUrl, !config.apiKey.isEmpty(), config.model));
     }
 }
 
@@ -6266,7 +6268,6 @@ void MainWindow::CreateAgentDock()
     tabifyDockWidget(m_PreviewWindow, m_AgentDock);
 
     SigilAgent::AgentSettings settings;
-    m_AgentDock->setModelName(settings.model());
     m_AgentDock->setMode(settings.defaultMode());
     m_AgentController->setMode(settings.defaultMode());
     ConfigureAgentProvider();
