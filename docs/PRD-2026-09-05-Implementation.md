@@ -965,3 +965,29 @@ XML 解析通过；四份目录均可由 `lrelease` 生成 `.qm` 且 0 unfinishe
 严格覆盖测试全部通过，每份覆盖当前 5,646 条活跃源文；此前连续记录的每种 47 条继承欠账
 已关闭。本切片只改变翻译目录，不改变 Agent 协议或运行时逻辑。真实三语言 GUI 的截断、
 字体回退、输入法、屏幕阅读器和 Windows/Linux 菜单布局仍需人工验收。
+
+## Native Agent 非阻塞连接测试（2026-09-13）
+
+分支：`feature/agent-async-connection-test`。主要提交：`8818349c9`（可取消探测协议）和
+`ed378dfee`（设置页后台执行与生命周期保护）。
+
+- `AgentConnectionProbe` 接受可选的线程安全取消标记；专用 sink 通过 Provider 既有的
+  50 ms cancel poll 中止 `QNetworkReply`，并返回失败的 `cancelled` 终态，不等满 15 秒。
+  正式 Agent 请求接口和默认超时未改变。
+- 设置页用 `QtConcurrent::run` 执行完整探测，`QFutureWatcher` 只在 GUI 线程读取结果并更新
+  控件。配置按值捕获，工作线程不读取 QWidget；测试期间仍冻结连接字段，避免结果绑定到
+  中途改变的表单。
+- 设置页析构时只设置共享原子取消标记。Future 捕获共享所有权，取消指针在工作线程退出前
+  始终有效；QObject 自动断开已销毁页面的 finished 回调。旧的全局等待光标和 GUI 线程内
+  的嵌套网络事件循环已移除；Provider 的有界事件循环只在工作线程运行。关闭窗口不会留下
+  悬空回调或卡住全局光标。
+
+`agent_provider_catalog` 用本地 SSE 服务在 Qt 线程池中完成真实 POST，并以主线程 timer
+证明事件循环仍可响应；另用无响应服务证明外部取消在 1 秒预算内返回，而不是等待 5 秒
+测试超时。`agent_dock_contract` 固定 Future watcher、线程池调用和析构取消边界。完整 Sigil
+构建通过，13 项 Agent 测试连续 3 轮共 39 次通过；简中、繁中、日文严格覆盖测试全部通过，
+四份 `.qm` 保持 0 unfinished。
+
+本切片关闭设置页 15 秒嵌套事件循环的已知风险，但请求一旦发出仍可能产生服务商计费；
+关闭窗口只能尽快中止本地请求，不能撤回服务端已经处理的内容。真实高延迟代理、DNS/TLS
+卡顿、线程池饱和、Windows/Linux 关闭窗口竞态和辅助技术人工验收仍待补充。
