@@ -10,6 +10,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
+#include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QJsonDocument>
@@ -86,7 +87,7 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_testConnection->setToolTip(
         tr("Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens."));
 
-    auto *note = new QLabel(tr("Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings."), this);
+    auto *note = new QLabel(tr("Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes."), this);
     note->setWordWrap(true);
 
     layout->addRow(tr("Provider"), m_provider);
@@ -118,6 +119,14 @@ AgentSettingsWidget::AgentSettingsWidget()
 SigilAgent::AgentProviderKind AgentSettingsWidget::currentKind() const
 {
     return SigilAgent::providerKindFromName(m_provider->currentData().toString());
+}
+
+QString AgentSettingsWidget::currentConnectionFingerprint() const
+{
+    const AgentProviderKind kind = currentKind();
+    return SigilAgent::providerConfigurationFingerprint(
+        kind, SigilAgent::chatCompletionsUrl(kind, m_baseUrl->text()),
+        m_apiKey->text(), selectedModelId());
 }
 
 void AgentSettingsWidget::rememberCurrentProvider()
@@ -249,14 +258,34 @@ void AgentSettingsWidget::invalidateConnectionTest(bool update_status)
 {
     if (m_loading || !m_status) return;
     const QString prior = m_status->property("connectionTestState").toString();
+    m_successfulConnectionFingerprint.clear();
+    m_successfulConnectionAtMs = 0;
     m_status->setProperty("connectionTestState", QStringLiteral("not_tested"));
     m_status->setProperty("connectionTestDurationMs", QVariant());
     m_status->setProperty("connectionTestHttpStatus", QVariant());
     m_status->setProperty("connectionTestEndpointHost", QVariant());
     m_status->setProperty("connectionTestModel", QVariant());
+    m_status->setProperty("connectionTestSucceededAtMs", QVariant());
     if (update_status && !prior.isEmpty() && prior != QLatin1String("not_tested")) {
         m_status->setText(tr("Chat Completions has not been tested for the current settings."));
     }
+}
+
+void AgentSettingsWidget::showRememberedConnectionTest()
+{
+    if (m_successfulConnectionAtMs <= 0
+        || m_successfulConnectionFingerprint.isEmpty()
+        || m_successfulConnectionFingerprint != currentConnectionFingerprint()) {
+        invalidateConnectionTest(false);
+        return;
+    }
+    const QString tested_at = QDateTime::fromMSecsSinceEpoch(m_successfulConnectionAtMs)
+        .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+    m_status->setProperty("connectionTestState", QStringLiteral("succeeded"));
+    m_status->setProperty("connectionTestSucceededAtMs", m_successfulConnectionAtMs);
+    m_status->setText(tr("Chat Completions was last tested successfully for these settings on %1.")
+                          .arg(tested_at));
+    m_status->setAccessibleName(m_status->text());
 }
 
 void AgentSettingsWidget::setConnectionControlsEnabled(bool enabled)
@@ -273,6 +302,7 @@ void AgentSettingsWidget::setConnectionControlsEnabled(bool enabled)
 void AgentSettingsWidget::testConnection()
 {
     rememberCurrentProvider();
+    invalidateConnectionTest(false);
     const AgentProviderKind kind = currentKind();
     const QString chat_url = SigilAgent::chatCompletionsUrl(kind, m_baseUrl->text());
     const QString model = selectedModelId();
@@ -318,7 +348,10 @@ void AgentSettingsWidget::testConnection()
     m_status->setProperty("connectionTestDurationMs", result.durationMs);
     m_status->setProperty("connectionTestHttpStatus", result.httpStatus);
     if (result.ok) {
+        m_successfulConnectionFingerprint = currentConnectionFingerprint();
+        m_successfulConnectionAtMs = QDateTime::currentMSecsSinceEpoch();
         m_status->setProperty("connectionTestState", QStringLiteral("succeeded"));
+        m_status->setProperty("connectionTestSucceededAtMs", m_successfulConnectionAtMs);
         m_status->setText(tr("Chat Completions succeeded for %1 at %2 in %3 ms.")
                               .arg(model, readiness.endpointHost)
                               .arg(result.durationMs));
@@ -366,6 +399,8 @@ void AgentSettingsWidget::readSettings()
 {
     m_loading = true;
     SigilAgent::AgentSettings settings;
+    m_successfulConnectionFingerprint = settings.connectionTestFingerprint();
+    m_successfulConnectionAtMs = settings.connectionTestSucceededAtMs();
     const QJsonObject secrets = settings.providerSecrets();
     const QJsonObject models = settings.providerModels();
     const QJsonObject urls = settings.providerUrls();
@@ -418,6 +453,7 @@ void AgentSettingsWidget::readSettings()
     m_status->clear();
     m_status->setProperty("connectionTestState", QStringLiteral("not_tested"));
     m_loading = false;
+    showRememberedConnectionTest();
 }
 
 PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
@@ -432,6 +468,13 @@ PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
     settings.setThinkingEnabled(m_thinking->isChecked());
     settings.setReasoningEffort(m_effort->currentText());
     settings.setCatalogJson(m_catalogJson);
+    if (m_successfulConnectionAtMs > 0
+        && m_successfulConnectionFingerprint == currentConnectionFingerprint()) {
+        settings.setConnectionTestVerification(m_successfulConnectionFingerprint,
+                                               m_successfulConnectionAtMs);
+    } else {
+        settings.setConnectionTestVerification(QString(), 0);
+    }
 
     const CatalogModel selected = selectedCatalogModel();
     if (!selected.id.isEmpty() && !m_models.isEmpty()) {

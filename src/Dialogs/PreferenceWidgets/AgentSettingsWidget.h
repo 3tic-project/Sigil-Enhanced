@@ -34,6 +34,7 @@ private:
     void refreshModels();
     void testConnection();
     void invalidateConnectionTest(bool update_status);
+    void showRememberedConnectionTest();
     void setConnectionControlsEnabled(bool enabled);
     void fillModelCombo();
     void updateModelInfo();
@@ -42,6 +43,7 @@ private:
     QString selectedModelId() const;
     SigilAgent::CatalogModel selectedCatalogModel() const;
     SigilAgent::AgentProviderKind currentKind() const;
+    QString currentConnectionFingerprint() const;
 
     QComboBox *m_provider = nullptr;
     QLineEdit *m_baseUrl = nullptr;
@@ -61,6 +63,8 @@ private:
     QHash<QString, QString> m_providerCatalogs;
     QList<SigilAgent::CatalogModel> m_models;
     QString m_catalogJson;
+    QString m_successfulConnectionFingerprint;
+    qint64 m_successfulConnectionAtMs = 0;
     bool m_loading = false;
 };
 

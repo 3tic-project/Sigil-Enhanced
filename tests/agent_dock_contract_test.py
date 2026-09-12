@@ -65,7 +65,9 @@ require(
 require(
     "never sends book content or tools" in settings_cpp
     and "connectionTestState" in settings_cpp
-    and "connectionTestHttpStatus" in settings_cpp,
+    and "connectionTestHttpStatus" in settings_cpp
+    and "currentConnectionFingerprint" in settings_cpp
+    and "setConnectionTestVerification" in settings_cpp,
     "connection testing must disclose its scope and publish inspectable terminal state",
 )
 require(
