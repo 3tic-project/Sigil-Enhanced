@@ -36,6 +36,13 @@ struct MemoryCheckpoint {
     QJsonObject metadata;
     QStringList spineIds;
     QJsonArray toc;
+    bool guardedTaskRestore = false;
+    bool sealed = false;
+    bool restored = false;
+    QString bookSessionId;
+    QStringList affectedResourceIds;
+    QHash<QString, QString> expectedBookPaths;
+    QHash<QString, QString> expectedPostTexts;
 };
 
 class MemoryBookWorkspace : public IBookWorkspace
@@ -104,6 +111,11 @@ public:
     BookOpResult createCheckpoint(const QString &label) override;
     QJsonArray listCheckpoints() const override;
     BookOpResult restoreCheckpoint(const QString &checkpoint_id) override;
+    BookOpResult createTaskRestorePoint(const QString &label,
+                                        const QStringList &resource_ids) override;
+    BookOpResult sealTaskRestorePoint(const QString &checkpoint_id) override;
+    BookOpResult restoreTaskRestorePoint(const QString &checkpoint_id) override;
+    BookOpResult discardTaskRestorePoint(const QString &checkpoint_id) override;
     QString resourceText(const QString &resource_id) const override;
     QString workingText(const QString &resource_id) const override;
     quint64 resourceRevision(const QString &resource_id) const override;

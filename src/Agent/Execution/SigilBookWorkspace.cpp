@@ -1656,11 +1656,19 @@ QJsonArray SigilBookWorkspace::listCheckpoints() const
 {
     QJsonArray array;
     for (const Checkpoint &checkpoint : m_checkpoints) {
-        array.append(QJsonObject {
+        QJsonObject item {
             { QStringLiteral("checkpoint_id"), checkpoint.id },
             { QStringLiteral("label"), checkpoint.label },
             { QStringLiteral("book_revision"), static_cast<qint64>(checkpoint.bookRevision) }
-        });
+        };
+        if (checkpoint.guardedTaskRestore) {
+            item.insert(QStringLiteral("task_restore_point"), true);
+            item.insert(QStringLiteral("sealed"), checkpoint.sealed);
+            item.insert(QStringLiteral("restored"), checkpoint.restored);
+            item.insert(QStringLiteral("affected_resources"),
+                        QJsonArray::fromStringList(checkpoint.affectedResourceIds));
+        }
+        array.append(item);
     }
     return array;
 }
@@ -1670,6 +1678,11 @@ BookOpResult SigilBookWorkspace::restoreCheckpoint(const QString &checkpoint_id)
     return invokeOp([this, checkpoint_id]() {
         for (const Checkpoint &checkpoint : m_checkpoints) {
             if (checkpoint.id != checkpoint_id) continue;
+            if (checkpoint.guardedTaskRestore) {
+                return BookOpResult::error(
+                    QStringLiteral("CHECKPOINT_REQUIRES_TASK_RESTORE"),
+                    QStringLiteral("Task restore points require conflict-checked restoration"));
+            }
             for (auto it = checkpoint.texts.constBegin(); it != checkpoint.texts.constEnd(); ++it) {
                 if (TextResource *resource = textResource(it.key())) {
                     resource->SetTextAsUndoableEdit(it.value());
@@ -1681,6 +1694,189 @@ BookOpResult SigilBookWorkspace::restoreCheckpoint(const QString &checkpoint_id)
                 { QStringLiteral("checkpoint_id"), checkpoint.id },
                 { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) }
             }, true);
+        }
+        return BookOpResult::error(QStringLiteral("CHECKPOINT_NOT_FOUND"),
+                                   QStringLiteral("Unknown checkpoint"));
+    });
+}
+
+BookOpResult SigilBookWorkspace::createTaskRestorePoint(
+    const QString &label, const QStringList &resource_ids)
+{
+    return invokeOp([this, label, resource_ids]() {
+        if (!m_book || !m_book->GetFolderKeeper()) {
+            return BookOpResult::error(QStringLiteral("NO_BOOK"),
+                                       QStringLiteral("No book is open"));
+        }
+        if (resource_ids.isEmpty()) {
+            return BookOpResult::error(QStringLiteral("TASK_RESTORE_EMPTY"),
+                                       QStringLiteral("No text resources were selected for recovery"));
+        }
+        Checkpoint checkpoint;
+        checkpoint.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        checkpoint.label = label.isEmpty() ? QStringLiteral("agent task") : label;
+        checkpoint.bookRevision = m_revision;
+        checkpoint.guardedTaskRestore = true;
+        checkpoint.bookSessionId = m_bookSessionId;
+        QSet<QString> seen;
+        for (const QString &id_or_path : resource_ids) {
+            TextResource *resource = textResource(id_or_path);
+            if (!resource) {
+                return BookOpResult::error(
+                    QStringLiteral("TASK_RESTORE_TEXT_ONLY"),
+                    QStringLiteral("Cannot snapshot non-text resource %1").arg(id_or_path));
+            }
+            const QString id = resource->GetIdentifier();
+            if (seen.contains(id)) continue;
+            seen.insert(id);
+            checkpoint.affectedResourceIds.append(id);
+            checkpoint.texts.insert(id, resource->GetText());
+            checkpoint.expectedBookPaths.insert(id, resource->GetRelativePath());
+        }
+        m_checkpoints.append(checkpoint);
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("checkpoint_id"), checkpoint.id },
+            { QStringLiteral("label"), checkpoint.label },
+            { QStringLiteral("book_session_id"), checkpoint.bookSessionId },
+            { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
+            { QStringLiteral("affected_resources"),
+              QJsonArray::fromStringList(checkpoint.affectedResourceIds) },
+            { QStringLiteral("status"), QStringLiteral("pending") }
+        });
+    });
+}
+
+BookOpResult SigilBookWorkspace::sealTaskRestorePoint(const QString &checkpoint_id)
+{
+    return invokeOp([this, checkpoint_id]() {
+        for (Checkpoint &checkpoint : m_checkpoints) {
+            if (checkpoint.id != checkpoint_id) continue;
+            if (!checkpoint.guardedTaskRestore) {
+                return BookOpResult::error(QStringLiteral("NOT_TASK_RESTORE_POINT"),
+                                           QStringLiteral("Checkpoint is not a task restore point"));
+            }
+            if (checkpoint.bookSessionId != m_bookSessionId) {
+                return BookOpResult::error(QStringLiteral("BOOK_TARGET_CHANGED"),
+                                           QStringLiteral("The task belongs to another book session"));
+            }
+            QJsonArray conflicts;
+            for (const QString &id : checkpoint.affectedResourceIds) {
+                TextResource *resource = textResource(id);
+                if (!resource
+                    || resource->GetRelativePath() != checkpoint.expectedBookPaths.value(id)) {
+                    conflicts.append(id);
+                    continue;
+                }
+                checkpoint.expectedPostTexts.insert(id, resource->GetText());
+            }
+            if (!conflicts.isEmpty()) {
+                return BookOpResult::error(
+                    QStringLiteral("TASK_RESTORE_SEAL_CONFLICT"),
+                    QStringLiteral("A task resource changed identity while the commit was applied"),
+                    QJsonObject { { QStringLiteral("conflicting_resources"), conflicts } });
+            }
+            checkpoint.sealed = true;
+            return BookOpResult::success(QJsonObject {
+                { QStringLiteral("checkpoint_id"), checkpoint.id },
+                { QStringLiteral("book_session_id"), checkpoint.bookSessionId },
+                { QStringLiteral("affected_resources"),
+                  QJsonArray::fromStringList(checkpoint.affectedResourceIds) },
+                { QStringLiteral("status"), QStringLiteral("available") }
+            });
+        }
+        return BookOpResult::error(QStringLiteral("CHECKPOINT_NOT_FOUND"),
+                                   QStringLiteral("Unknown checkpoint"));
+    });
+}
+
+BookOpResult SigilBookWorkspace::restoreTaskRestorePoint(const QString &checkpoint_id)
+{
+    return invokeOp([this, checkpoint_id]() {
+        if (m_transaction) {
+            return BookOpResult::error(QStringLiteral("TRANSACTION_OPEN"),
+                                       QStringLiteral("Finish or discard staged work before restoring"));
+        }
+        for (Checkpoint &checkpoint : m_checkpoints) {
+            if (checkpoint.id != checkpoint_id) continue;
+            if (!checkpoint.guardedTaskRestore) {
+                return BookOpResult::error(QStringLiteral("NOT_TASK_RESTORE_POINT"),
+                                           QStringLiteral("Checkpoint is not a task restore point"));
+            }
+            if (checkpoint.bookSessionId != m_bookSessionId) {
+                return BookOpResult::error(QStringLiteral("BOOK_TARGET_CHANGED"),
+                                           QStringLiteral("The task belongs to another book session"));
+            }
+            if (!checkpoint.sealed) {
+                return BookOpResult::error(QStringLiteral("TASK_RESTORE_NOT_SEALED"),
+                                           QStringLiteral("The task restore point was not completed"));
+            }
+            if (checkpoint.restored) {
+                return BookOpResult::error(QStringLiteral("TASK_ALREADY_RESTORED"),
+                                           QStringLiteral("This task was already restored"));
+            }
+            QJsonArray conflicts;
+            for (const QString &id : checkpoint.affectedResourceIds) {
+                TextResource *resource = textResource(id);
+                QString reason;
+                if (!resource) reason = QStringLiteral("missing");
+                else if (resource->GetRelativePath() != checkpoint.expectedBookPaths.value(id)) {
+                    reason = QStringLiteral("path_changed");
+                } else if (resource->GetText() != checkpoint.expectedPostTexts.value(id)) {
+                    reason = QStringLiteral("content_changed");
+                }
+                if (!reason.isEmpty()) {
+                    conflicts.append(QJsonObject {
+                        { QStringLiteral("resource_id"), id },
+                        { QStringLiteral("reason"), reason }
+                    });
+                }
+            }
+            if (!conflicts.isEmpty()) {
+                return BookOpResult::error(
+                    QStringLiteral("TASK_RESTORE_CONFLICT"),
+                    QStringLiteral("A resource changed after this task; nothing was restored"),
+                    QJsonObject {
+                        { QStringLiteral("checkpoint_id"), checkpoint.id },
+                        { QStringLiteral("conflicts"), conflicts },
+                        { QStringLiteral("live_book_unchanged"), true }
+                    });
+            }
+            for (const QString &id : checkpoint.affectedResourceIds) {
+                TextResource *resource = textResource(id);
+                const QString before = checkpoint.texts.value(id);
+                resource->SetTextAsUndoableEdit(before);
+                noteText(resource, before);
+            }
+            checkpoint.restored = true;
+            ++m_revision;
+            return BookOpResult::success(QJsonObject {
+                { QStringLiteral("checkpoint_id"), checkpoint.id },
+                { QStringLiteral("book_session_id"), checkpoint.bookSessionId },
+                { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
+                { QStringLiteral("affected_resources"),
+                  QJsonArray::fromStringList(checkpoint.affectedResourceIds) },
+                { QStringLiteral("restored"), true }
+            }, true);
+        }
+        return BookOpResult::error(QStringLiteral("CHECKPOINT_NOT_FOUND"),
+                                   QStringLiteral("Unknown checkpoint"));
+    });
+}
+
+BookOpResult SigilBookWorkspace::discardTaskRestorePoint(const QString &checkpoint_id)
+{
+    return invokeOp([this, checkpoint_id]() {
+        for (int i = 0; i < m_checkpoints.size(); ++i) {
+            if (m_checkpoints.at(i).id != checkpoint_id) continue;
+            if (!m_checkpoints.at(i).guardedTaskRestore) {
+                return BookOpResult::error(QStringLiteral("NOT_TASK_RESTORE_POINT"),
+                                           QStringLiteral("Checkpoint is not a task restore point"));
+            }
+            m_checkpoints.removeAt(i);
+            return BookOpResult::success(QJsonObject {
+                { QStringLiteral("checkpoint_id"), checkpoint_id },
+                { QStringLiteral("discarded"), true }
+            });
         }
         return BookOpResult::error(QStringLiteral("CHECKPOINT_NOT_FOUND"),
                                    QStringLiteral("Unknown checkpoint"));

@@ -109,6 +109,11 @@ public:
     virtual BookOpResult createCheckpoint(const QString &label) = 0;
     virtual QJsonArray listCheckpoints() const = 0;
     virtual BookOpResult restoreCheckpoint(const QString &checkpoint_id) = 0;
+    virtual BookOpResult createTaskRestorePoint(const QString &label,
+                                                const QStringList &resource_ids) = 0;
+    virtual BookOpResult sealTaskRestorePoint(const QString &checkpoint_id) = 0;
+    virtual BookOpResult restoreTaskRestorePoint(const QString &checkpoint_id) = 0;
+    virtual BookOpResult discardTaskRestorePoint(const QString &checkpoint_id) = 0;
     virtual QString resourceText(const QString &resource_id) const = 0;
     virtual QString workingText(const QString &resource_id) const = 0;
     virtual quint64 resourceRevision(const QString &resource_id) const = 0;

@@ -168,6 +168,83 @@ int main()
             "commit must write the patched text");
     Require(book.revision() != original_revision, "commit must bump book revision");
 
+    MemoryBookWorkspace recovery_book = MemoryBookWorkspace::samplePhysicsBook();
+    const QString recovery_ch1_before = recovery_book.resourceText(QStringLiteral("ch1"));
+    const QString recovery_ch2_before = recovery_book.resourceText(QStringLiteral("ch2"));
+    Require(recovery_book.beginTransaction(QStringLiteral("two chapter edit")).ok,
+            "recovery transaction begin failed");
+    Require(recovery_book.patchFragment(
+                QStringLiteral("ch1"), -1, -1, QStringLiteral("<title>RECOVER ONE</title>"),
+                recovery_book.resourceRevision(QStringLiteral("ch1")),
+                QStringLiteral("<title>Heat</title>")).ok,
+            "first recovery patch failed");
+    Require(recovery_book.patchFragment(
+                QStringLiteral("ch2"), -1, -1, QStringLiteral("<title>RECOVER TWO</title>"),
+                recovery_book.resourceRevision(QStringLiteral("ch2")),
+                QStringLiteral("<title>Light</title>")).ok,
+            "second recovery patch failed");
+    const BookOpResult recovery_created = recovery_book.createTaskRestorePoint(
+        QStringLiteral("two chapter edit"),
+        QStringList { QStringLiteral("ch1"), QStringLiteral("ch2") });
+    Require(recovery_created.ok, "guarded recovery point creation failed");
+    const QString recovery_id = recovery_created.data
+        .value(QStringLiteral("checkpoint_id")).toString();
+    Require(recovery_book.commitTransaction(recovery_book.revision()).applied,
+            "recovery transaction commit failed");
+    Require(recovery_book.sealTaskRestorePoint(recovery_id).ok,
+            "guarded recovery point sealing failed");
+    Require(!recovery_book.restoreCheckpoint(recovery_id).ok,
+            "generic checkpoint restore must not bypass task conflict guards");
+    const BookOpResult recovered = recovery_book.restoreTaskRestorePoint(recovery_id);
+    Require(recovered.ok && recovered.applied,
+            "unchanged post-task resources must be restorable");
+    Require(recovery_book.resourceText(QStringLiteral("ch1")) == recovery_ch1_before
+                && recovery_book.resourceText(QStringLiteral("ch2")) == recovery_ch2_before,
+            "task restore must restore every affected text resource");
+    Require(recovery_book.restoreTaskRestorePoint(recovery_id).code
+                == QStringLiteral("TASK_ALREADY_RESTORED"),
+            "task restore points must be one-shot");
+
+    MemoryBookWorkspace conflict_book = MemoryBookWorkspace::samplePhysicsBook();
+    Require(conflict_book.beginTransaction(QStringLiteral("conflicting task")).ok,
+            "conflict transaction begin failed");
+    Require(conflict_book.patchFragment(
+                QStringLiteral("ch1"), -1, -1, QStringLiteral("<title>TASK ONE</title>"),
+                conflict_book.resourceRevision(QStringLiteral("ch1")),
+                QStringLiteral("<title>Heat</title>")).ok,
+            "conflict first task patch failed");
+    Require(conflict_book.patchFragment(
+                QStringLiteral("ch2"), -1, -1, QStringLiteral("<title>TASK TWO</title>"),
+                conflict_book.resourceRevision(QStringLiteral("ch2")),
+                QStringLiteral("<title>Light</title>")).ok,
+            "conflict second task patch failed");
+    const QString conflict_id = conflict_book.createTaskRestorePoint(
+        QStringLiteral("conflicting task"),
+        QStringList { QStringLiteral("ch1"), QStringLiteral("ch2") })
+        .data.value(QStringLiteral("checkpoint_id")).toString();
+    Require(conflict_book.commitTransaction(conflict_book.revision()).applied,
+            "conflicting task commit failed");
+    Require(conflict_book.sealTaskRestorePoint(conflict_id).ok,
+            "conflicting task seal failed");
+    const QString committed_ch1 = conflict_book.resourceText(QStringLiteral("ch1"));
+    Require(conflict_book.beginTransaction(QStringLiteral("later manual edit")).ok,
+            "later edit begin failed");
+    Require(conflict_book.patchFragment(
+                QStringLiteral("ch2"), -1, -1, QStringLiteral("<title>MANUAL</title>"),
+                conflict_book.resourceRevision(QStringLiteral("ch2")),
+                QStringLiteral("<title>TASK TWO</title>")).ok,
+            "later manual edit failed");
+    Require(conflict_book.commitTransaction(conflict_book.revision()).applied,
+            "later manual edit commit failed");
+    const QString manual_ch2 = conflict_book.resourceText(QStringLiteral("ch2"));
+    const BookOpResult conflicted = conflict_book.restoreTaskRestorePoint(conflict_id);
+    Require(!conflicted.ok && conflicted.code == QStringLiteral("TASK_RESTORE_CONFLICT")
+                && conflicted.data.value(QStringLiteral("live_book_unchanged")).toBool(),
+            "later edits to an affected resource must block the whole restore");
+    Require(conflict_book.resourceText(QStringLiteral("ch1")) == committed_ch1
+                && conflict_book.resourceText(QStringLiteral("ch2")) == manual_ch2,
+            "a conflicted restore must not partially mutate any resource");
+
     const quint64 after_first = book.revision();
     book.bumpRevision();
     Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "second begin failed");

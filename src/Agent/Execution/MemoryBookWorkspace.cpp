@@ -270,6 +270,7 @@ void MemoryBookWorkspace::resetBookSession()
         m_transaction.reset();
     }
     m_bookSessionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_checkpoints.clear();
 }
 
 QString MemoryBookWorkspace::bookSessionId() const
@@ -1248,11 +1249,19 @@ QJsonArray MemoryBookWorkspace::listCheckpoints() const
 {
     QJsonArray array;
     for (const MemoryCheckpoint &checkpoint : m_checkpoints) {
-        array.append(QJsonObject {
+        QJsonObject item {
             { QStringLiteral("checkpoint_id"), checkpoint.id },
             { QStringLiteral("label"), checkpoint.label },
             { QStringLiteral("book_revision"), static_cast<qint64>(checkpoint.bookRevision) }
-        });
+        };
+        if (checkpoint.guardedTaskRestore) {
+            item.insert(QStringLiteral("task_restore_point"), true);
+            item.insert(QStringLiteral("sealed"), checkpoint.sealed);
+            item.insert(QStringLiteral("restored"), checkpoint.restored);
+            item.insert(QStringLiteral("affected_resources"),
+                        QJsonArray::fromStringList(checkpoint.affectedResourceIds));
+        }
+        array.append(item);
     }
     return array;
 }
@@ -1261,6 +1270,11 @@ BookOpResult MemoryBookWorkspace::restoreCheckpoint(const QString &checkpoint_id
 {
     for (const MemoryCheckpoint &checkpoint : m_checkpoints) {
         if (checkpoint.id != checkpoint_id) continue;
+        if (checkpoint.guardedTaskRestore) {
+            return BookOpResult::error(
+                QStringLiteral("CHECKPOINT_REQUIRES_TASK_RESTORE"),
+                QStringLiteral("Task restore points require conflict-checked restoration"));
+        }
         m_resources = checkpoint.resources;
         m_metadata = checkpoint.metadata;
         m_spineIds = checkpoint.spineIds;
@@ -1270,6 +1284,181 @@ BookOpResult MemoryBookWorkspace::restoreCheckpoint(const QString &checkpoint_id
             { QStringLiteral("checkpoint_id"), checkpoint.id },
             { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) }
         }, true);
+    }
+    return BookOpResult::error(QStringLiteral("CHECKPOINT_NOT_FOUND"),
+                               QStringLiteral("Unknown checkpoint"));
+}
+
+BookOpResult MemoryBookWorkspace::createTaskRestorePoint(
+    const QString &label, const QStringList &resource_ids)
+{
+    if (resource_ids.isEmpty()) {
+        return BookOpResult::error(QStringLiteral("TASK_RESTORE_EMPTY"),
+                                   QStringLiteral("No text resources were selected for recovery"));
+    }
+    MemoryCheckpoint checkpoint;
+    checkpoint.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    checkpoint.label = label.isEmpty() ? QStringLiteral("agent task") : label;
+    checkpoint.bookRevision = m_revision;
+    checkpoint.guardedTaskRestore = true;
+    checkpoint.bookSessionId = m_bookSessionId;
+    QSet<QString> seen;
+    for (const QString &id_or_path : resource_ids) {
+        const MemoryResource *resource = findResource(id_or_path);
+        if (!resource) {
+            return BookOpResult::error(
+                QStringLiteral("RESOURCE_NOT_FOUND"),
+                QStringLiteral("Cannot snapshot unknown resource %1").arg(id_or_path));
+        }
+        if (resource->kind == QLatin1String("font")
+            || resource->kind == QLatin1String("image")) {
+            return BookOpResult::error(
+                QStringLiteral("TASK_RESTORE_TEXT_ONLY"),
+                QStringLiteral("Task restore points currently support text resources only"));
+        }
+        if (seen.contains(resource->id)) continue;
+        seen.insert(resource->id);
+        checkpoint.affectedResourceIds.append(resource->id);
+        checkpoint.resources.insert(resource->id, *resource);
+        checkpoint.expectedBookPaths.insert(resource->id, resource->bookPath);
+    }
+    m_checkpoints.append(checkpoint);
+    return BookOpResult::success(QJsonObject {
+        { QStringLiteral("checkpoint_id"), checkpoint.id },
+        { QStringLiteral("label"), checkpoint.label },
+        { QStringLiteral("book_session_id"), checkpoint.bookSessionId },
+        { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
+        { QStringLiteral("affected_resources"),
+          QJsonArray::fromStringList(checkpoint.affectedResourceIds) },
+        { QStringLiteral("status"), QStringLiteral("pending") }
+    });
+}
+
+BookOpResult MemoryBookWorkspace::sealTaskRestorePoint(const QString &checkpoint_id)
+{
+    for (MemoryCheckpoint &checkpoint : m_checkpoints) {
+        if (checkpoint.id != checkpoint_id) continue;
+        if (!checkpoint.guardedTaskRestore) {
+            return BookOpResult::error(QStringLiteral("NOT_TASK_RESTORE_POINT"),
+                                       QStringLiteral("Checkpoint is not a task restore point"));
+        }
+        if (checkpoint.bookSessionId != m_bookSessionId) {
+            return BookOpResult::error(QStringLiteral("BOOK_TARGET_CHANGED"),
+                                       QStringLiteral("The task belongs to another book session"));
+        }
+        QJsonArray conflicts;
+        for (const QString &id : checkpoint.affectedResourceIds) {
+            const MemoryResource *resource = findResource(id);
+            if (!resource || resource->bookPath != checkpoint.expectedBookPaths.value(id)) {
+                conflicts.append(id);
+                continue;
+            }
+            checkpoint.expectedPostTexts.insert(id, resource->text);
+        }
+        if (!conflicts.isEmpty()) {
+            return BookOpResult::error(
+                QStringLiteral("TASK_RESTORE_SEAL_CONFLICT"),
+                QStringLiteral("A task resource changed identity while the commit was applied"),
+                QJsonObject { { QStringLiteral("conflicting_resources"), conflicts } });
+        }
+        checkpoint.sealed = true;
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("checkpoint_id"), checkpoint.id },
+            { QStringLiteral("book_session_id"), checkpoint.bookSessionId },
+            { QStringLiteral("affected_resources"),
+              QJsonArray::fromStringList(checkpoint.affectedResourceIds) },
+            { QStringLiteral("status"), QStringLiteral("available") }
+        });
+    }
+    return BookOpResult::error(QStringLiteral("CHECKPOINT_NOT_FOUND"),
+                               QStringLiteral("Unknown checkpoint"));
+}
+
+BookOpResult MemoryBookWorkspace::restoreTaskRestorePoint(const QString &checkpoint_id)
+{
+    if (m_transaction) {
+        return BookOpResult::error(QStringLiteral("TRANSACTION_OPEN"),
+                                   QStringLiteral("Finish or discard staged work before restoring"));
+    }
+    for (MemoryCheckpoint &checkpoint : m_checkpoints) {
+        if (checkpoint.id != checkpoint_id) continue;
+        if (!checkpoint.guardedTaskRestore) {
+            return BookOpResult::error(QStringLiteral("NOT_TASK_RESTORE_POINT"),
+                                       QStringLiteral("Checkpoint is not a task restore point"));
+        }
+        if (checkpoint.bookSessionId != m_bookSessionId) {
+            return BookOpResult::error(QStringLiteral("BOOK_TARGET_CHANGED"),
+                                       QStringLiteral("The task belongs to another book session"));
+        }
+        if (!checkpoint.sealed) {
+            return BookOpResult::error(QStringLiteral("TASK_RESTORE_NOT_SEALED"),
+                                       QStringLiteral("The task restore point was not completed"));
+        }
+        if (checkpoint.restored) {
+            return BookOpResult::error(QStringLiteral("TASK_ALREADY_RESTORED"),
+                                       QStringLiteral("This task was already restored"));
+        }
+        QJsonArray conflicts;
+        for (const QString &id : checkpoint.affectedResourceIds) {
+            const MemoryResource *resource = findResource(id);
+            QString reason;
+            if (!resource) reason = QStringLiteral("missing");
+            else if (resource->bookPath != checkpoint.expectedBookPaths.value(id)) {
+                reason = QStringLiteral("path_changed");
+            } else if (resource->text != checkpoint.expectedPostTexts.value(id)) {
+                reason = QStringLiteral("content_changed");
+            }
+            if (!reason.isEmpty()) {
+                conflicts.append(QJsonObject {
+                    { QStringLiteral("resource_id"), id },
+                    { QStringLiteral("reason"), reason }
+                });
+            }
+        }
+        if (!conflicts.isEmpty()) {
+            return BookOpResult::error(
+                QStringLiteral("TASK_RESTORE_CONFLICT"),
+                QStringLiteral("A resource changed after this task; nothing was restored"),
+                QJsonObject {
+                    { QStringLiteral("checkpoint_id"), checkpoint.id },
+                    { QStringLiteral("conflicts"), conflicts },
+                    { QStringLiteral("live_book_unchanged"), true }
+                });
+        }
+        for (const QString &id : checkpoint.affectedResourceIds) {
+            MemoryResource *resource = findResource(id);
+            const MemoryResource before = checkpoint.resources.value(id);
+            resource->text = before.text;
+            ++resource->revision;
+        }
+        checkpoint.restored = true;
+        ++m_revision;
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("checkpoint_id"), checkpoint.id },
+            { QStringLiteral("book_session_id"), checkpoint.bookSessionId },
+            { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
+            { QStringLiteral("affected_resources"),
+              QJsonArray::fromStringList(checkpoint.affectedResourceIds) },
+            { QStringLiteral("restored"), true }
+        }, true);
+    }
+    return BookOpResult::error(QStringLiteral("CHECKPOINT_NOT_FOUND"),
+                               QStringLiteral("Unknown checkpoint"));
+}
+
+BookOpResult MemoryBookWorkspace::discardTaskRestorePoint(const QString &checkpoint_id)
+{
+    for (int i = 0; i < m_checkpoints.size(); ++i) {
+        if (m_checkpoints.at(i).id != checkpoint_id) continue;
+        if (!m_checkpoints.at(i).guardedTaskRestore) {
+            return BookOpResult::error(QStringLiteral("NOT_TASK_RESTORE_POINT"),
+                                       QStringLiteral("Checkpoint is not a task restore point"));
+        }
+        m_checkpoints.removeAt(i);
+        return BookOpResult::success(QJsonObject {
+            { QStringLiteral("checkpoint_id"), checkpoint_id },
+            { QStringLiteral("discarded"), true }
+        });
     }
     return BookOpResult::error(QStringLiteral("CHECKPOINT_NOT_FOUND"),
                                QStringLiteral("Unknown checkpoint"));
