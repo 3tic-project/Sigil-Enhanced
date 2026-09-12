@@ -39,6 +39,7 @@ struct ModelRequest {
     QString reasoningEffort = QStringLiteral("medium");
     ReasoningProtocol reasoningProtocol = ReasoningProtocol::DeepSeek;
     bool stream = true;
+    bool includeUsage = true;
     int maxOutputTokens = 0;
     int timeoutMs = 120000;
 };

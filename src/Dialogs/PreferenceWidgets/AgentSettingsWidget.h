@@ -68,6 +68,7 @@ private:
     QLabel *m_modelInfo = nullptr;
     QLabel *m_status = nullptr;
     QCheckBox *m_thinking = nullptr;
+    QCheckBox *m_tokenUsage = nullptr;
     QComboBox *m_effort = nullptr;
 
     QString m_activeProvider;

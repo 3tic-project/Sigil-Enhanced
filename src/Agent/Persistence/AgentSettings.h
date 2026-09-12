@@ -39,6 +39,9 @@ public:
     bool thinkingEnabled() const;
     void setThinkingEnabled(bool enabled);
 
+    bool tokenUsageEnabled() const;
+    void setTokenUsageEnabled(bool enabled);
+
     QString reasoningEffort() const;
     void setReasoningEffort(const QString &effort);
 

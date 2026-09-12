@@ -81,6 +81,13 @@ require(
     "connection testing must disclose its scope and publish inspectable terminal state",
 )
 require(
+    "agentTokenUsage" in settings_cpp
+    and "stream_options.include_usage" in settings_cpp
+    and "tokenUsageEnabled" in settings_cpp
+    and "setTokenUsageEnabled" in settings_cpp,
+    "Native Agent settings must expose and persist the optional token-usage request",
+)
+require(
     "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,
     "dock must export the conversation and a debug log",
 )

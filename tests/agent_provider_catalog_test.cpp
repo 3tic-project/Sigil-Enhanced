@@ -186,6 +186,9 @@ int main(int argc, char *argv[])
             "DeepSeek body must send reasoning_effort");
     Require(!deepseek_body.contains(QStringLiteral("reasoning")),
             "DeepSeek body must not send the OpenRouter reasoning object");
+    Require(deepseek_body.value(QStringLiteral("stream_options")).toObject()
+                .value(QStringLiteral("include_usage")).toBool(),
+            "streamed requests must ask compatible providers to report exact usage");
 
     request.reasoningProtocol = ReasoningProtocol::OpenRouter;
     QJsonObject openrouter_body = OpenAICompatibleProvider::buildChatBody(request);
@@ -202,6 +205,10 @@ int main(int argc, char *argv[])
             "OpenCode Go / custom body must omit provider-specific reasoning fields");
     Require(plain_body.value(QStringLiteral("max_tokens")).toInt() == 8,
             "bounded requests must publish max_tokens");
+    request.includeUsage = false;
+    Require(!OpenAICompatibleProvider::buildChatBody(request)
+                 .contains(QStringLiteral("stream_options")),
+            "usage negotiation must be removable for endpoints that reject stream_options");
 
     AgentSession session;
     session.append(AgentEventType::UserMessage, QJsonObject {
@@ -417,8 +424,9 @@ int main(int argc, char *argv[])
                 && probe_body.value(QStringLiteral("max_tokens")).toInt() == 8
                 && probe_body.value(QStringLiteral("thinking")).toObject()
                     .value(QStringLiteral("type")).toString() == QStringLiteral("disabled")
+                && !probe_body.contains(QStringLiteral("stream_options"))
                 && !probe_body.contains(QStringLiteral("tools")),
-            "connection probe must be a tiny no-tools request with thinking disabled");
+            "connection probe must be a tiny no-tools request without optional extensions");
 
     QTcpServer error_server;
     Require(error_server.listen(QHostAddress::LocalHost, 0),

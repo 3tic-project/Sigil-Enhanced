@@ -123,6 +123,20 @@ void AgentSettings::setThinkingEnabled(bool enabled)
     store.setValue(QStringLiteral("thinking"), enabled);
 }
 
+bool AgentSettings::tokenUsageEnabled() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return store.value(QStringLiteral("request_token_usage"), true).toBool();
+}
+
+void AgentSettings::setTokenUsageEnabled(bool enabled)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("request_token_usage"), enabled);
+}
+
 QString AgentSettings::reasoningEffort() const
 {
     SettingsStore store;
@@ -296,6 +310,7 @@ OpenAIProviderConfig AgentSettings::providerConfig() const
     config.apiKey = apiKey();
     config.model = model();
     config.thinking = thinkingEnabled();
+    config.requestUsage = tokenUsageEnabled();
     config.reasoningEffort = reasoningEffort();
     config.reasoningProtocol = reasoningProtocolFor(kind, config.baseUrl);
     if (kind == AgentProviderKind::OpenRouter && !modelSupportsReasoning()) {

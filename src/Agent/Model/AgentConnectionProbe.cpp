@@ -42,10 +42,12 @@ AgentConnectionProbeResult probeAgentConnection(
 
     OpenAIProviderConfig probe_config = config;
     probe_config.thinking = false;
+    probe_config.requestUsage = false;
     OpenAICompatibleProvider provider(probe_config);
     ModelRequest request;
     request.model = result.model;
     request.thinking = false;
+    request.includeUsage = false;
     request.reasoningEffort.clear();
     request.tools = QJsonArray();
     request.maxOutputTokens = 8;

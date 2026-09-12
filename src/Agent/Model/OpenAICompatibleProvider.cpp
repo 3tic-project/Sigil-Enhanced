@@ -113,6 +113,11 @@ QJsonObject OpenAICompatibleProvider::buildChatBody(const ModelRequest &request)
     QJsonObject body;
     body.insert(QStringLiteral("model"), request.model);
     body.insert(QStringLiteral("stream"), request.stream);
+    if (request.stream && request.includeUsage) {
+        body.insert(QStringLiteral("stream_options"), QJsonObject {
+            { QStringLiteral("include_usage"), true }
+        });
+    }
     body.insert(QStringLiteral("messages"),
                 assembler.toOpenAIMessages(request.messages, !request.tools.isEmpty()));
     if (request.reasoningProtocol == ReasoningProtocol::DeepSeek) {
@@ -164,6 +169,7 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
         return turn;
     }
     outgoing.thinking = m_config.thinking && request.thinking;
+    outgoing.includeUsage = m_config.requestUsage && request.includeUsage;
     if (outgoing.reasoningEffort.isEmpty()) outgoing.reasoningEffort = m_config.reasoningEffort;
     outgoing.reasoningProtocol = m_config.reasoningProtocol;
 

@@ -78,6 +78,10 @@ AgentSettingsWidget::AgentSettingsWidget()
 
     m_thinking = new QCheckBox(tr("Send thinking (reasoning_content)"), this);
     m_thinking->setObjectName(QStringLiteral("agentThinking"));
+    m_tokenUsage = new QCheckBox(tr("Request token usage when supported"), this);
+    m_tokenUsage->setObjectName(QStringLiteral("agentTokenUsage"));
+    m_tokenUsage->setToolTip(
+        tr("Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option."));
     m_effort = new QComboBox(this);
     m_effort->setObjectName(QStringLiteral("agentReasoningEffort"));
     m_effort->addItems({ QStringLiteral("low"), QStringLiteral("medium"), QStringLiteral("high") });
@@ -91,7 +95,7 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_testConnection->setToolTip(
         tr("Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens."));
 
-    auto *note = new QLabel(tr("Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes."), this);
+    auto *note = new QLabel(tr("Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes."), this);
     note->setWordWrap(true);
 
     layout->addRow(tr("Provider"), m_provider);
@@ -100,6 +104,7 @@ AgentSettingsWidget::AgentSettingsWidget()
     layout->addRow(tr("Model"), model_row);
     layout->addRow(QString(), m_modelInfo);
     layout->addRow(m_thinking);
+    layout->addRow(m_tokenUsage);
     layout->addRow(tr("Reasoning effort"), m_effort);
     layout->addRow(QString(), m_testConnection);
     layout->addRow(m_status);
@@ -311,7 +316,7 @@ void AgentSettingsWidget::setConnectionControlsEnabled(bool enabled)
 {
     const QList<QWidget *> controls {
         m_provider, m_baseUrl, m_apiKey, m_model, m_refreshModels,
-        m_testConnection, m_thinking, m_effort
+        m_testConnection, m_thinking, m_tokenUsage, m_effort
     };
     for (QWidget *control : controls) {
         if (control) control->setEnabled(enabled);
@@ -485,6 +490,7 @@ void AgentSettingsWidget::readSettings()
     m_provider->setCurrentIndex(index);
     applyStoredProvider(m_provider->currentData().toString());
     m_thinking->setChecked(settings.thinkingEnabled());
+    m_tokenUsage->setChecked(settings.tokenUsageEnabled());
     const int effort = m_effort->findText(settings.reasoningEffort());
     m_effort->setCurrentIndex(effort >= 0 ? effort : 1);
 
@@ -523,6 +529,7 @@ PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
     settings.setApiKey(m_apiKey->text());
     settings.setModel(selectedModelId());
     settings.setThinkingEnabled(m_thinking->isChecked());
+    settings.setTokenUsageEnabled(m_tokenUsage->isChecked());
     settings.setReasoningEffort(m_effort->currentText());
     settings.setCatalogJson(m_catalogJson);
     if (m_successfulConnectionAtMs > 0
