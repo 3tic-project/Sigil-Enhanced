@@ -27305,7 +27305,7 @@ Continue using the requested filename?</source>
     <message><source>%1 resources</source><translation>%1 個のリソース</translation></message>
     <message><source>Unsaved changes</source><translation>未保存の変更あり</translation></message>
     <message><source>Saved</source><translation>保存済み</translation></message>
-    <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>現在のブック：%1 · %2 · %3 · Agent リビジョン %4</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</source><translation>現在のブック：%1 · %2 · %3 · ブックセッション %4 · Agent リビジョン %5</translation></message>
     <message><source>Preview</source><translation>プレビュー</translation></message>
     <message><source>Applied</source><translation>適用済み</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>現在のブックは変更されていません。これらの変更はステージングのみです。</translation></message>
@@ -27328,5 +27328,11 @@ Continue using the requested filename?</source>
     <message><source>No staged changes</source><translation>ステージされた変更はありません</translation></message>
     <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>ステージされたトランザクションを破棄しました。このトランザクションによってブック本体は変更されていません。</translation></message>
     <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>破棄するステージ済みトランザクションはありません。ブック本体は変更されていません。</translation></message>
+    <message><source>Book changed</source><translation>ブックが切り替わりました</translation></message>
+    <message><source>The run stopped because this window switched to another book. No old response was applied to the new book.</source><translation>このウィンドウが別のブックに切り替わったため、実行を停止しました。以前の応答は新しいブックに適用されていません。</translation></message>
+    <message><source>Closing</source><translation>終了中</translation></message>
+    <message><source>The run stopped before this window closed.</source><translation>ウィンドウを閉じる前に実行を停止しました。</translation></message>
+    <message><source>Book target changed</source><translation>対象ブックが変更されました</translation></message>
+    <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>実行中に開いているブックが変更されました。以前の応答は新しいブックに適用される前にブロックされました。</translation></message>
 </context>
 </TS>

@@ -23359,7 +23359,7 @@ Continue using the requested filename?</translation>
     <message><source>%1 resources</source><translation>%1 resources</translation></message>
     <message><source>Unsaved changes</source><translation>Unsaved changes</translation></message>
     <message><source>Saved</source><translation>Saved</translation></message>
-    <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>Current book: %1 · %2 · %3 · Agent rev %4</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</source><translation>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</translation></message>
     <message><source>Preview</source><translation>Preview</translation></message>
     <message><source>Applied</source><translation>Applied</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>The live book is unchanged; these changes are staged only.</translation></message>
@@ -23382,5 +23382,11 @@ Continue using the requested filename?</translation>
     <message><source>No staged changes</source><translation>No staged changes</translation></message>
     <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>The staged transaction was discarded. The live book was not changed by this transaction.</translation></message>
     <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>There was no staged transaction to discard. The live book was not changed.</translation></message>
+    <message><source>Book changed</source><translation>Book changed</translation></message>
+    <message><source>The run stopped because this window switched to another book. No old response was applied to the new book.</source><translation>The run stopped because this window switched to another book. No old response was applied to the new book.</translation></message>
+    <message><source>Closing</source><translation>Closing</translation></message>
+    <message><source>The run stopped before this window closed.</source><translation>The run stopped before this window closed.</translation></message>
+    <message><source>Book target changed</source><translation>Book target changed</translation></message>
+    <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>The open book changed during this run. The old response was blocked before it could be applied to the new book.</translation></message>
 </context>
 </TS>

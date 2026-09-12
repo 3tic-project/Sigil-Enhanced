@@ -27307,7 +27307,7 @@ Continue using the requested filename?</source>
     <message><source>%1 resources</source><translation>%1 个资源</translation></message>
     <message><source>Unsaved changes</source><translation>有未保存的更改</translation></message>
     <message><source>Saved</source><translation>已保存</translation></message>
-    <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>当前书籍：%1 · %2 · %3 · Agent 修订 %4</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</source><translation>当前书籍：%1 · %2 · %3 · 书籍会话 %4 · Agent 修订 %5</translation></message>
     <message><source>Preview</source><translation>预览</translation></message>
     <message><source>Applied</source><translation>已应用</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>当前书籍未发生更改；以下变更仅处于暂存状态。</translation></message>
@@ -27330,5 +27330,11 @@ Continue using the requested filename?</source>
     <message><source>No staged changes</source><translation>无暂存变更</translation></message>
     <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>已丢弃暂存事务。本事务未更改当前书籍。</translation></message>
     <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>没有可丢弃的暂存事务。当前书籍未发生更改。</translation></message>
+    <message><source>Book changed</source><translation>书籍已切换</translation></message>
+    <message><source>The run stopped because this window switched to another book. No old response was applied to the new book.</source><translation>此窗口切换到另一书籍，因此运行已停止。旧响应未应用到新书籍。</translation></message>
+    <message><source>Closing</source><translation>正在关闭</translation></message>
+    <message><source>The run stopped before this window closed.</source><translation>运行已在此窗口关闭前停止。</translation></message>
+    <message><source>Book target changed</source><translation>目标书籍已更改</translation></message>
+    <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>运行期间打开的书籍发生了更改。旧响应在应用到新书籍前已被阻止。</translation></message>
 </context>
 </TS>

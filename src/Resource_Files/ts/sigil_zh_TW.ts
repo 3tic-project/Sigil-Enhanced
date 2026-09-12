@@ -27290,7 +27290,7 @@ Continue using the requested filename?</source>
     <message><source>%1 resources</source><translation>%1 個資源</translation></message>
     <message><source>Unsaved changes</source><translation>有未儲存的變更</translation></message>
     <message><source>Saved</source><translation>已儲存</translation></message>
-    <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>目前書籍：%1 · %2 · %3 · Agent 修訂 %4</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</source><translation>目前書籍：%1 · %2 · %3 · 書籍工作階段 %4 · Agent 修訂 %5</translation></message>
     <message><source>Preview</source><translation>預覽</translation></message>
     <message><source>Applied</source><translation>已套用</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>目前書籍未發生變更；以下變更僅處於暫存狀態。</translation></message>
@@ -27313,5 +27313,11 @@ Continue using the requested filename?</source>
     <message><source>No staged changes</source><translation>沒有暫存變更</translation></message>
     <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>已捨棄暫存交易。此交易未變更目前書籍。</translation></message>
     <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>沒有可捨棄的暫存交易。目前書籍未發生變更。</translation></message>
+    <message><source>Book changed</source><translation>書籍已切換</translation></message>
+    <message><source>The run stopped because this window switched to another book. No old response was applied to the new book.</source><translation>此視窗切換到另一本書籍，因此執行已停止。舊回應未套用至新書籍。</translation></message>
+    <message><source>Closing</source><translation>正在關閉</translation></message>
+    <message><source>The run stopped before this window closed.</source><translation>執行已在此視窗關閉前停止。</translation></message>
+    <message><source>Book target changed</source><translation>目標書籍已變更</translation></message>
+    <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>執行期間開啟的書籍已變更。舊回應在套用至新書籍前已被封鎖。</translation></message>
 </context>
 </TS>
