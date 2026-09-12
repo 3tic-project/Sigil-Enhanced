@@ -27352,6 +27352,7 @@ Continue using the requested filename?</source>
     <message><source>Provider: %1 · Endpoint: %2</source><translation>プロバイダー：%1 · エンドポイント：%2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>同じスコープハンドルで直前のプロンプトを再送信します。</translation></message>
     <message><source>Retry is unavailable because the open book changed.</source><translation>開いているブックが変更されたため再試行できません。</translation></message>
+    <message><source>Retry is unavailable because this turn already executed tools.</source><translation>このターンではすでにツールを実行したため、安全に再試行できません。</translation></message>
     <message><source>Retry is available after a provider request fails.</source><translation>プロバイダーへのリクエストが失敗すると再試行できます。</translation></message>
 </context>
 </TS>

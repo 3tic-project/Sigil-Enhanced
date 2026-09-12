@@ -27354,6 +27354,7 @@ Continue using the requested filename?</source>
     <message><source>Provider: %1 · Endpoint: %2</source><translation>提供商：%1 · 端点：%2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>使用相同的范围句柄重新发送最近一次提示。</translation></message>
     <message><source>Retry is unavailable because the open book changed.</source><translation>打开的书籍已更改，无法重试。</translation></message>
+    <message><source>Retry is unavailable because this turn already executed tools.</source><translation>本轮已执行工具，无法安全重试。</translation></message>
     <message><source>Retry is available after a provider request fails.</source><translation>提供商请求失败后可重试。</translation></message>
 </context>
 </TS>

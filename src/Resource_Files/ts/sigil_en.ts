@@ -23406,6 +23406,7 @@ Continue using the requested filename?</translation>
     <message><source>Provider: %1 · Endpoint: %2</source><translation>Provider: %1 · Endpoint: %2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>Resend the last prompt with the same scope handles.</translation></message>
     <message><source>Retry is unavailable because the open book changed.</source><translation>Retry is unavailable because the open book changed.</translation></message>
+    <message><source>Retry is unavailable because this turn already executed tools.</source><translation>Retry is unavailable because this turn already executed tools.</translation></message>
     <message><source>Retry is available after a provider request fails.</source><translation>Retry is available after a provider request fails.</translation></message>
 </context>
 </TS>
