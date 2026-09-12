@@ -535,14 +535,23 @@ int main()
     Require(commit_status.value(QStringLiteral("full_epubcheck")).toObject()
                 .value(QStringLiteral("status")).toString() == QStringLiteral("not_run"),
             "commit event must not imply full EPUBCheck was run");
-    Require(commit_status.value(QStringLiteral("recovery")).toObject()
-                .value(QStringLiteral("task_restore_point")).toString()
-                == QStringLiteral("not_created_by_commit"),
-            "commit event must describe its task-wide recovery boundary");
+    const QJsonObject commit_recovery =
+        commit_status.value(QStringLiteral("recovery")).toObject();
+    Require(commit_recovery.value(QStringLiteral("task_restore_point")).toString()
+                == QStringLiteral("available")
+                && !commit_recovery.value(QStringLiteral("checkpoint_id")).toString().isEmpty()
+                && commit_recovery.value(QStringLiteral("affected_resources")).toArray().size() == 1,
+            "text-only commits must publish a guarded task restore point");
     Require(commit_status.value(QStringLiteral("applied_changes")).toInt() > 0
                 && commit_status.value(QStringLiteral("book_revision")).toInteger()
                     == static_cast<qint64>(edit_book.revision()),
             "commit status must preserve workspace counts and revision");
+    const BookOpResult edit_restored = edit_book.restoreTaskRestorePoint(
+        commit_recovery.value(QStringLiteral("checkpoint_id")).toString());
+    Require(edit_restored.ok && edit_restored.applied
+                && edit_book.resourceText(QStringLiteral("ch1")).contains(
+                    QStringLiteral("<title>Heat</title>")),
+            "the published task restore point must restore the committed text");
 
     MemoryBookWorkspace auto_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry auto_registry;
@@ -602,6 +611,14 @@ int main()
     Require(hasEvent(auto_session, AgentEventType::TransactionCommitted),
             "Auto copy must commit");
     Require(auto_book.spine().size() == 3, "Auto copy must add a spine item");
+    const QJsonObject auto_recovery = auto_session
+        .eventsOf(AgentEventType::TransactionCommitted).constLast().payload
+        .value(QStringLiteral("recovery")).toObject();
+    Require(auto_recovery.value(QStringLiteral("task_restore_point")).toString()
+                == QStringLiteral("unavailable")
+                && auto_recovery.value(QStringLiteral("reason")).toString()
+                    == QStringLiteral("structural_changes"),
+            "structural commits must not advertise a text-only restore point");
 
     MemoryBookWorkspace plan_book = MemoryBookWorkspace::samplePhysicsBook();
     const QString plan_original = plan_book.resourceText(QStringLiteral("ch1"));

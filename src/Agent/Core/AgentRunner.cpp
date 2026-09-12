@@ -61,6 +61,43 @@ QJsonObject rollbackStatus(QJsonObject payload)
     return payload;
 }
 
+QStringList taskRestoreResources(const QJsonObject &preview, QString *unavailable_reason)
+{
+    const bool structural = preview.value(QStringLiteral("metadata_changed")).toBool()
+        || preview.value(QStringLiteral("spine_changed")).toBool()
+        || preview.value(QStringLiteral("toc_changed")).toBool()
+        || !preview.value(QStringLiteral("removed")).toArray().isEmpty();
+    QStringList resources;
+    bool has_structural_change = structural;
+    for (const QJsonValue &value : preview.value(QStringLiteral("changes")).toArray()) {
+        const QJsonObject change = value.toObject();
+        if (change.value(QStringLiteral("added")).toBool()
+            || change.value(QStringLiteral("renamed")).toBool()) {
+            has_structural_change = true;
+        } else if (change.value(QStringLiteral("changed")).toBool()) {
+            const QString id = change.value(QStringLiteral("resource_id")).toString();
+            if (!id.isEmpty() && !resources.contains(id)) resources.append(id);
+        }
+    }
+    if (has_structural_change) {
+        if (unavailable_reason) *unavailable_reason = QStringLiteral("structural_changes");
+        return QStringList();
+    }
+    if (resources.isEmpty() && unavailable_reason) {
+        *unavailable_reason = QStringLiteral("no_text_changes");
+    }
+    return resources;
+}
+
+QJsonObject unavailableTaskRecovery(const QString &reason)
+{
+    return QJsonObject {
+        { QStringLiteral("sigil_undo"), QStringLiteral("where_available") },
+        { QStringLiteral("task_restore_point"), QStringLiteral("unavailable") },
+        { QStringLiteral("reason"), reason }
+    };
+}
+
 } // namespace
 
 AgentRunner::SessionSink::SessionSink(AgentSession *session, AgentCancellation *cancellation) :
@@ -337,7 +374,64 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
         { QStringLiteral("tool_call_id"), local.id },
         { QStringLiteral("name"), local.name }
     });
+    QString task_restore_id;
+    QJsonObject task_recovery;
+    if (local.name == QLatin1String("transaction.commit") && m_workspace) {
+        const BookOpResult preview = m_workspace->previewTransaction();
+        if (!preview.ok) {
+            task_recovery = unavailableTaskRecovery(QStringLiteral("preview_failed"));
+        } else {
+            QString reason;
+            const QStringList resources = taskRestoreResources(preview.data, &reason);
+            if (resources.isEmpty()) {
+                task_recovery = unavailableTaskRecovery(reason);
+            } else {
+                const QString label = QStringLiteral("Agent transaction %1")
+                    .arg(preview.data.value(QStringLiteral("transaction_id")).toString());
+                const BookOpResult created =
+                    m_workspace->createTaskRestorePoint(label, resources);
+                if (created.ok) {
+                    task_restore_id = created.data
+                        .value(QStringLiteral("checkpoint_id")).toString();
+                } else {
+                    task_recovery = unavailableTaskRecovery(
+                        QStringLiteral("checkpoint_create_failed"));
+                    task_recovery.insert(QStringLiteral("code"), created.code);
+                }
+            }
+        }
+    }
+
     ToolResult result = tool->execute(arguments);
+    if (local.name == QLatin1String("transaction.commit") && m_workspace) {
+        if (result.ok && result.applied && !task_restore_id.isEmpty()) {
+            const BookOpResult sealed = m_workspace->sealTaskRestorePoint(task_restore_id);
+            if (sealed.ok) {
+                task_recovery = QJsonObject {
+                    { QStringLiteral("sigil_undo"), QStringLiteral("where_available") },
+                    { QStringLiteral("task_restore_point"), QStringLiteral("available") },
+                    { QStringLiteral("checkpoint_id"), task_restore_id },
+                    { QStringLiteral("book_session_id"), m_runBookSessionId },
+                    { QStringLiteral("affected_resources"),
+                      sealed.data.value(QStringLiteral("affected_resources")) },
+                    { QStringLiteral("conflict_guard"),
+                      QStringLiteral("post_commit_text_and_path") }
+                };
+            } else {
+                m_workspace->discardTaskRestorePoint(task_restore_id);
+                task_recovery = unavailableTaskRecovery(QStringLiteral("checkpoint_seal_failed"));
+                task_recovery.insert(QStringLiteral("code"), sealed.code);
+            }
+        } else if (!task_restore_id.isEmpty()) {
+            m_workspace->discardTaskRestorePoint(task_restore_id);
+        }
+        if (result.ok && result.applied) {
+            if (task_recovery.isEmpty()) {
+                task_recovery = unavailableTaskRecovery(QStringLiteral("not_created_by_commit"));
+            }
+            result.data.insert(QStringLiteral("recovery"), task_recovery);
+        }
+    }
     publishToolOutcome(local, result);
     return result;
 }
