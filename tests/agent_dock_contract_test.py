@@ -107,8 +107,9 @@ configure_provider = main_window.split("void MainWindow::ConfigureAgentProvider(
 )[0]
 require(
     "providerReadiness" in configure_provider
+    and "verifiedConnectionAtMs" in configure_provider
     and "setProviderConfiguration" in configure_provider,
-    "MainWindow must refresh safe provider readiness after Preferences changes and before Send",
+    "MainWindow must refresh safe provider readiness and matching test proof after Preferences changes and before Send",
 )
 require(
     "m_AgentController->isRunning()" in configure_provider

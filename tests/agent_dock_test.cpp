@@ -75,6 +75,14 @@ int main(int argc, char *argv[])
                 && provider_status->property("requestState").toString()
                     == QStringLiteral("configured"),
             "complete settings must say configured but not tested");
+    configured.verifiedAtMs = 1700000000000;
+    dock.setProviderConfiguration(configured);
+    Require(provider_status->text().contains(QStringLiteral("Chat tested successfully"))
+                && provider_status->property("requestState").toString()
+                    == QStringLiteral("verified")
+                && provider_status->property("connectionVerifiedAtMs").toLongLong()
+                    == 1700000000000,
+            "a matching saved probe must be shown as historical verification");
     SigilAgent::AgentEvent provider_started;
     provider_started.type = SigilAgent::AgentEventType::ModelRequestStarted;
     provider_started.payload = QJsonObject {

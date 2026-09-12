@@ -44,6 +44,7 @@ struct AgentProviderReadiness {
     QString displayName;
     QString model;
     QString endpointHost;
+    qint64 verifiedAtMs = 0;
     AgentProviderSetupIssue issue = AgentProviderSetupIssue::Endpoint;
 
     bool isConfigured() const { return issue == AgentProviderSetupIssue::None; }

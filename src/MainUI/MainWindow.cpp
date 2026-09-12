@@ -6264,8 +6264,10 @@ void MainWindow::ConfigureAgentProvider()
     m_AgentController->setThinking(settings.thinkingEnabled(), settings.reasoningEffort());
     if (m_AgentDock) {
         m_AgentController->setMode(m_AgentDock->mode());
-        m_AgentDock->setProviderConfiguration(SigilAgent::providerReadiness(
-            settings.providerKind(), config.baseUrl, !config.apiKey.isEmpty(), config.model));
+        SigilAgent::AgentProviderReadiness readiness = SigilAgent::providerReadiness(
+            settings.providerKind(), config.baseUrl, !config.apiKey.isEmpty(), config.model);
+        readiness.verifiedAtMs = settings.verifiedConnectionAtMs();
+        m_AgentDock->setProviderConfiguration(readiness);
     }
 }
 

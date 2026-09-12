@@ -516,8 +516,16 @@ void AgentDock::refreshProviderStatus()
         case AgentProviderSetupIssue::None:
             switch (m_providerRequestState) {
                 case ProviderRequestState::Configured:
-                    state = tr("Configured · not tested");
-                    state_name = QStringLiteral("configured");
+                    if (m_providerReadiness.verifiedAtMs > 0) {
+                        const QString tested = QDateTime::fromMSecsSinceEpoch(
+                            m_providerReadiness.verifiedAtMs)
+                            .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+                        state = tr("Chat tested successfully · %1").arg(tested);
+                        state_name = QStringLiteral("verified");
+                    } else {
+                        state = tr("Configured · not tested");
+                        state_name = QStringLiteral("configured");
+                    }
                     break;
                 case ProviderRequestState::Requesting:
                     state = tr("Contacting provider…");
@@ -559,10 +567,17 @@ void AgentDock::refreshProviderStatus()
     m_providerStatus->setProperty("requestId", m_requestId);
     m_providerStatus->setProperty("durationMs", m_requestDurationMs);
     m_providerStatus->setProperty("finishedAtMs", m_requestFinishedAtMs);
+    m_providerStatus->setProperty("connectionVerifiedAtMs",
+                                  m_providerReadiness.verifiedAtMs);
     m_providerStatus->setAccessibleName(m_providerStatus->text());
-    m_providerStatus->setToolTip(m_providerReadiness.isConfigured()
-        ? tr("Configured means the required settings are present. Connectivity is verified only by a real request.")
-        : tr("Configure the provider in Preferences → Native Agent."));
+    if (!m_providerReadiness.isConfigured()) {
+        m_providerStatus->setToolTip(
+            tr("Configure the provider in Preferences → Native Agent."));
+    } else if (m_providerReadiness.verifiedAtMs > 0) {
+        m_providerStatus->setToolTip(tr("This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator."));
+    } else {
+        m_providerStatus->setToolTip(tr("Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them."));
+    }
 }
 
 void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &status)
