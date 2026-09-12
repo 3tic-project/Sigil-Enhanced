@@ -27439,6 +27439,7 @@ Continue using the requested filename?</source>
     <message><source>Full Chat Completions URL or API base</source><translation>完整的 Chat Completions URL 或 API 基础地址</translation></message>
     <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>已加载 %1 个缓存模型。刷新以从服务器更新。</translation></message>
     <message><source>Loaded %1 models from the server.</source><translation>已从服务器加载 %1 个模型。</translation></message>
+    <message><source>Loading models…</source><translation>正在加载模型…</translation></message>
     <message><source>Model</source><translation>模型</translation></message>
     <message><source>Native Agent</source><translation>原生 Agent</translation></message>
     <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>

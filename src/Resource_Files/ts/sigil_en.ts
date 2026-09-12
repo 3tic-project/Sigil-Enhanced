@@ -23495,6 +23495,7 @@ Continue using the requested filename?</translation>
     <message><source>Full Chat Completions URL or API base</source><translation>Full Chat Completions URL or API base</translation></message>
     <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>Loaded %1 cached models. Refresh to update from the server.</translation></message>
     <message><source>Loaded %1 models from the server.</source><translation>Loaded %1 models from the server.</translation></message>
+    <message><source>Loading models…</source><translation>Loading models…</translation></message>
     <message><source>Model</source><translation>Model</translation></message>
     <message><source>Native Agent</source><translation>Native Agent</translation></message>
     <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>

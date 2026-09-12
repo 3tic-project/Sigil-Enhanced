@@ -27422,6 +27422,7 @@ Continue using the requested filename?</source>
     <message><source>Full Chat Completions URL or API base</source><translation>完整的 Chat Completions URL 或 API 基礎位址</translation></message>
     <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>已載入 %1 個快取模型。重新整理以從伺服器更新。</translation></message>
     <message><source>Loaded %1 models from the server.</source><translation>已從伺服器載入 %1 個模型。</translation></message>
+    <message><source>Loading models…</source><translation>正在載入模型…</translation></message>
     <message><source>Model</source><translation>模型</translation></message>
     <message><source>Native Agent</source><translation>原生 Agent</translation></message>
     <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>

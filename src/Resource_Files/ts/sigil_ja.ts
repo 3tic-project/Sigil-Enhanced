@@ -27437,6 +27437,7 @@ Continue using the requested filename?</source>
     <message><source>Full Chat Completions URL or API base</source><translation>完全な Chat Completions URL または API ベース URL</translation></message>
     <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>キャッシュ済みモデル %1 件を読み込みました。サーバーから更新するには再読み込みしてください。</translation></message>
     <message><source>Loaded %1 models from the server.</source><translation>%1 件のモデルをサーバーから読み込みました。</translation></message>
+    <message><source>Loading models…</source><translation>モデルを読み込み中…</translation></message>
     <message><source>Model</source><translation>モデル</translation></message>
     <message><source>Native Agent</source><translation>ネイティブ Agent</translation></message>
     <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>
