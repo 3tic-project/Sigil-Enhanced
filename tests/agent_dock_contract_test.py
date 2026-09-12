@@ -81,6 +81,28 @@ require(
     "MainWindow must refresh safe provider readiness after Preferences changes and before Send",
 )
 require(
+    "m_AgentController->isRunning()" in configure_provider
+    and "m_AgentProviderReconfigurePending" in configure_provider,
+    "provider replacement must be deferred until an in-flight Runner has returned",
+)
+close_event = main_window.split("void MainWindow::closeEvent", 1)[1].split(
+    "void MainWindow::NewDefault", 1
+)[0]
+require(
+    "AgentCancellationReason::WindowClosing" in close_event
+    and "m_CloseAfterAgentRun" in close_event
+    and "event->ignore()" in close_event,
+    "window close must cancel and defer deletion while an Agent call is on the stack",
+)
+set_new_book = main_window.split("void MainWindow::SetNewBook", 1)[1].split(
+    "void MainWindow::ResourcesAddedOrDeletedOrMoved", 1
+)[0]
+require(
+    set_new_book.index("AgentCancellationReason::BookChanged")
+        < set_new_book.index("m_AgentWorkspace->setBook"),
+    "book replacement must cancel the bound Agent run before rebinding its workspace",
+)
+require(
     "m_Book && m_Book->GetFolderKeeper() && m_Book->GetConstOPF()" in main_window,
     "UpdateAgentContext must not read metadata until OPF exists; empty Book::GetOPF() is null",
 )

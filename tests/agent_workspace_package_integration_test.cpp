@@ -80,8 +80,9 @@ int main(int argc, char **argv)
         Require(bookStatus->property("resourceCount").toInt() == resourceCount
                     && bookStatus->property("bookFileName").toString()
                         == QFileInfo(QString::fromLocal8Bit(argv[2])).fileName()
+                    && !bookStatus->property("bookSessionId").toString().isEmpty()
                     && !bookStatus->property("modified").toBool(),
-                "Agent book status does not identify the live imported book");
+                "Agent book status does not identify the live imported book session");
         book->SetModified(true);
         app.processEvents();
         Require(bookStatus->property("modified").toBool(),
@@ -108,6 +109,14 @@ int main(int argc, char **argv)
 
         SigilAgent::SigilBookWorkspace workspace;
         workspace.setBook(book);
+        const QString firstBookSession = workspace.bookSessionId();
+        Require(!firstBookSession.isEmpty()
+                    && workspace.summary().value(QStringLiteral("book_session_id")).toString()
+                        == firstBookSession,
+                "Sigil workspace summary does not expose its bound book session");
+        workspace.setBook(book);
+        Require(workspace.bookSessionId() != firstBookSession,
+                "rebinding a Sigil workspace must invalidate plans for its previous book session");
         window.SelectResources(QList<Resource *> { chapter, nav });
         app.processEvents();
         auto *selectedFilesChip = agentDock->findChild<QToolButton *>(

@@ -1058,6 +1058,8 @@ private:
     SigilAgent::AgentDock *m_AgentDock;
     std::unique_ptr<SigilAgent::SigilBookWorkspace> m_AgentWorkspace;
     std::unique_ptr<SigilAgent::AgentController> m_AgentController;
+    bool m_CloseAfterAgentRun = false;
+    bool m_AgentProviderReconfigurePending = false;
     QAction *m_DeveloperToolsAction;
     QAction *m_SplitEditorDownAction;
     QAction *m_JoinEditorGroupsAction;

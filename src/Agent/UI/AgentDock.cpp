@@ -236,24 +236,29 @@ void AgentDock::setRunState(AgentRunState state)
         && state != AgentRunState::Failed;
     m_sendButton->setEnabled(!running);
     m_stopButton->setEnabled(running || state == AgentRunState::AwaitingApproval);
+    m_newSessionButton->setEnabled(!running);
+    m_modeCombo->setEnabled(!running);
 }
 
 void AgentDock::setBookContext(const QString &title,
                                const QString &file_name,
                                int resource_count,
                                bool modified,
-                               quint64 revision)
+                               quint64 revision,
+                               const QString &book_session_id)
 {
     m_bookTitle = title;
     m_bookFileName = file_name;
     m_bookResourceCount = qMax(0, resource_count);
     m_bookModified = modified;
     m_bookRevision = revision;
+    m_bookSessionId = book_session_id;
     m_bookStatus->setProperty("bookTitle", title);
     m_bookStatus->setProperty("bookFileName", file_name);
     m_bookStatus->setProperty("resourceCount", m_bookResourceCount);
     m_bookStatus->setProperty("modified", modified);
     m_bookStatus->setProperty("agentRevision", QVariant::fromValue<qulonglong>(revision));
+    m_bookStatus->setProperty("bookSessionId", book_session_id);
     QString identity;
     if (!file_name.trimmed().isEmpty() && !title.trimmed().isEmpty()) {
         identity = tr("%1 — %2").arg(file_name.trimmed(), title.trimmed());
@@ -269,8 +274,9 @@ void AgentDock::setBookContext(const QString &title,
         : tr("%1 resources").arg(m_bookResourceCount);
     const QString save_state = modified ? tr("Unsaved changes") : tr("Saved");
     m_bookStatus->setText(
-        tr("Current book: %1 · %2 · %3 · Agent rev %4")
+        tr("Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5")
             .arg(identity, resources, save_state)
+            .arg(book_session_id.left(8))
             .arg(revision));
     m_bookStatus->setAccessibleName(m_bookStatus->text());
     m_chipBook->setText(tr("Whole book"));
@@ -892,9 +898,29 @@ void AgentDock::appendEvent(const AgentEvent &event)
                 m_providerFailure.clear();
                 refreshProviderStatus();
             }
-            appendCard(makeCard(QStringLiteral("agentErrorCard"),
-                                tr("Stopped"),
-                                tr("Run stopped. Uncommitted staged work was rolled back."),
+            if (event.payload.value(QStringLiteral("reason")).toString()
+                == QLatin1String("book_changed")) {
+                appendCard(makeCard(QStringLiteral("agentBookChangedCard"),
+                                    tr("Book changed"),
+                                    tr("The run stopped because this window switched to another book. No old response was applied to the new book."),
+                                    false));
+            } else if (event.payload.value(QStringLiteral("reason")).toString()
+                       == QLatin1String("window_closing")) {
+                appendCard(makeCard(QStringLiteral("agentClosingCard"),
+                                    tr("Closing"),
+                                    tr("The run stopped before this window closed."),
+                                    false));
+            } else {
+                appendCard(makeCard(QStringLiteral("agentErrorCard"),
+                                    tr("Stopped"),
+                                    tr("Run stopped. Uncommitted staged work was rolled back."),
+                                    false));
+            }
+            break;
+        case AgentEventType::BookTargetChanged:
+            appendCard(makeCard(QStringLiteral("agentBookTargetChangedCard"),
+                                tr("Book target changed"),
+                                tr("The open book changed during this run. The old response was blocked before it could be applied to the new book."),
                                 false));
             break;
         default:

@@ -2317,6 +2317,12 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    if (m_AgentController && m_AgentController->isRunning()) {
+        m_CloseAfterAgentRun = true;
+        m_AgentController->stop(SigilAgent::AgentCancellationReason::WindowClosing);
+        event->ignore();
+        return;
+    }
     m_IsClosing = true;
 
 
@@ -6242,10 +6248,18 @@ bool MainWindow::ProceedToOverwrite(const QString& msg, const QString &filename)
 void MainWindow::ConfigureAgentProvider()
 {
     if (!m_AgentController) return;
+    if (m_AgentController->isRunning()) {
+        m_AgentProviderReconfigurePending = true;
+        return;
+    }
     SigilAgent::AgentSettings settings;
     const SigilAgent::OpenAIProviderConfig config = settings.providerConfig();
     auto provider = std::make_unique<SigilAgent::OpenAICompatibleProvider>(config);
-    m_AgentController->setProvider(std::move(provider));
+    if (!m_AgentController->setProvider(std::move(provider))) {
+        m_AgentProviderReconfigurePending = true;
+        return;
+    }
+    m_AgentProviderReconfigurePending = false;
     m_AgentController->setModel(settings.model());
     m_AgentController->setThinking(settings.thinkingEnabled(), settings.reasoningEffort());
     if (m_AgentDock) {
@@ -6274,10 +6288,15 @@ void MainWindow::CreateAgentDock()
 
     m_AgentController->session()->setListener([this](const SigilAgent::AgentEvent &event) {
         if (m_AgentDock) {
-            m_AgentDock->appendEvent(event);
-            m_AgentDock->setRunState(m_AgentController && m_AgentController->runner()
-                                         ? m_AgentController->runner()->state()
-                                         : SigilAgent::AgentRunState::Idle);
+            if (event.type == SigilAgent::AgentEventType::SessionCreated) {
+                m_AgentDock->resetTranscript();
+                m_AgentDock->setRunState(SigilAgent::AgentRunState::Idle);
+            } else {
+                m_AgentDock->appendEvent(event);
+                m_AgentDock->setRunState(m_AgentController && m_AgentController->runner()
+                                             ? m_AgentController->runner()->state()
+                                             : SigilAgent::AgentRunState::Idle);
+            }
         }
         const bool applied_live = event.type == SigilAgent::AgentEventType::TransactionCommitted
             || (event.type == SigilAgent::AgentEventType::ToolCompleted
@@ -6321,7 +6340,10 @@ void MainWindow::UpdateAgentContext()
         modified = m_Book->IsModified();
     }
     const quint64 revision = m_AgentWorkspace ? m_AgentWorkspace->revision() : 1;
-    m_AgentDock->setBookContext(title, m_CurrentFileName, resource_count, modified, revision);
+    const QString book_session_id = m_AgentWorkspace
+        ? m_AgentWorkspace->bookSessionId() : QString();
+    m_AgentDock->setBookContext(title, m_CurrentFileName, resource_count, modified,
+                                revision, book_session_id);
     UpdateAgentSelectedFilesContext();
     UpdateAgentEditorContext();
 }
@@ -6368,6 +6390,14 @@ void MainWindow::AgentSendRequested(const QString &text, const QStringList &hand
     if (m_AgentController->runner()) {
         m_AgentDock->setRunState(m_AgentController->runner()->state());
     }
+    if (m_CloseAfterAgentRun) {
+        m_CloseAfterAgentRun = false;
+        QTimer::singleShot(0, this, [this]() { close(); });
+        return;
+    }
+    if (m_AgentProviderReconfigurePending) {
+        ConfigureAgentProvider();
+    }
 }
 
 void MainWindow::AgentStopRequested()
@@ -6378,10 +6408,6 @@ void MainWindow::AgentStopRequested()
 void MainWindow::AgentNewSessionRequested()
 {
     if (m_AgentController) m_AgentController->newSession();
-    if (m_AgentDock) {
-        m_AgentDock->resetTranscript();
-        m_AgentDock->setRunState(SigilAgent::AgentRunState::Idle);
-    }
 }
 
 namespace
@@ -6469,6 +6495,9 @@ void MainWindow::AgentExportDebugLogRequested()
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
+    if (m_AgentController && m_AgentController->isRunning()) {
+        m_AgentController->stop(SigilAgent::AgentCancellationReason::BookChanged);
+    }
     m_RecoveryCheckpointBookId.clear();
     if (m_RegexWorkbenchDialog) {
         ui.actionOpenRegexWorkbench->setEnabled(false);

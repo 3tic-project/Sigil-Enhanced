@@ -1525,7 +1525,10 @@ set(AGENT_CORE_SOURCES
 add_executable(agent_harness_test
     agent_harness_test.cpp
     ${AGENT_CORE_SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentController.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/DivParagraphTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/TocTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp

@@ -111,16 +111,21 @@ int main(int argc, char *argv[])
             "cancelled requests must not leave provider status stuck on contacting");
     dock.resetTranscript();
     dock.setBookContext(QStringLiteral("Junior Physics"),
-                        QStringLiteral("physics.epub"), 42, true, 7);
+                        QStringLiteral("physics.epub"), 42, true, 7,
+                        QStringLiteral("12345678-abcd"));
     auto *book_status = dock.findChild<QLabel *>(QStringLiteral("agentBookStatus"));
     Require(book_status && book_status->text().contains(QStringLiteral("physics.epub"))
                 && book_status->text().contains(QStringLiteral("Junior Physics"))
                 && book_status->text().contains(QStringLiteral("42 resources"))
                 && book_status->text().contains(QStringLiteral("Unsaved changes"))
+                && book_status->text().contains(QStringLiteral("Book session 12345678"))
+                && book_status->property("bookSessionId").toString()
+                    == QStringLiteral("12345678-abcd")
                 && book_status->text().contains(QStringLiteral("Agent rev 7")),
-            "book status must identify the file, title, resources, save state, and revision");
+            "book status must identify the file, title, resources, session, save state, and revision");
     dock.setBookContext(QStringLiteral("Junior Physics"),
-                        QStringLiteral("physics.epub"), 42, false, 7);
+                        QStringLiteral("physics.epub"), 42, false, 7,
+                        QStringLiteral("12345678-abcd"));
     Require(book_status->text().contains(QStringLiteral("Saved"))
                 && !book_status->text().contains(QStringLiteral("Unsaved changes")),
             "book status must update after saving");
@@ -133,6 +138,28 @@ int main(int argc, char *argv[])
     Require(stop && stop->text().contains(QStringLiteral("Stop")), "Stop control is missing");
     Require(fresh && fresh->text().contains(QStringLiteral("New Session")),
             "New Session control is missing");
+    dock.setRunState(SigilAgent::AgentRunState::StreamingResponse);
+    Require(!mode->isEnabled() && !fresh->isEnabled() && stop->isEnabled(),
+            "mode and New Session must be locked while a run owns the Runner stack");
+    dock.setRunState(SigilAgent::AgentRunState::Completed);
+    Require(mode->isEnabled() && fresh->isEnabled() && !stop->isEnabled(),
+            "terminal run state must restore mode and New Session controls");
+    dock.resetTranscript();
+    SigilAgent::AgentEvent target_changed;
+    target_changed.type = SigilAgent::AgentEventType::BookTargetChanged;
+    dock.appendEvent(target_changed);
+    Require(dock.findChild<QWidget *>(QStringLiteral("agentBookTargetChangedCard")),
+            "a defensive book-session mismatch must have a dedicated visible result card");
+    dock.resetTranscript();
+    SigilAgent::AgentEvent book_cancelled;
+    book_cancelled.type = SigilAgent::AgentEventType::SessionCancelled;
+    book_cancelled.payload = QJsonObject {
+        { QStringLiteral("reason"), QStringLiteral("book_changed") }
+    };
+    dock.appendEvent(book_cancelled);
+    Require(dock.findChild<QWidget *>(QStringLiteral("agentBookChangedCard")),
+            "switching books must explain why the prior run stopped");
+    dock.resetTranscript();
     Require(composer, "composer is missing");
     Require(transcript, "transcript surface is missing");
     auto *whole_book_chip =

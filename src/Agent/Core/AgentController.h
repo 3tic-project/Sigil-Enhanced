@@ -30,7 +30,7 @@ public:
     AgentController();
 
     void setWorkspace(IBookWorkspace *workspace);
-    void setProvider(std::unique_ptr<IModelProvider> provider);
+    bool setProvider(std::unique_ptr<IModelProvider> provider);
     void setMode(AgentMode mode);
     void setModel(const QString &model);
     void setThinking(bool enabled, const QString &effort);
@@ -41,15 +41,17 @@ public:
     GuiApprovalGate *approvalGate();
     IBookWorkspace *workspace();
     ToolRegistry *tools();
+    bool isRunning() const;
 
     AgentRunResult send(const QString &text, const QStringList &handles);
-    void stop();
+    void stop(AgentCancellationReason reason = AgentCancellationReason::UserStop);
     void newSession();
     void resolveApproval(const QString &toolCallId, bool approved);
     QJsonArray debugTraces() const;
 
 private:
     void rebuildTools();
+    void resetSessionNow();
 
     AgentSession m_session;
     void harvestProviderTraces();
@@ -62,6 +64,11 @@ private:
     std::unique_ptr<IModelProvider> m_provider;
     std::unique_ptr<AgentRunner> m_runner;
     QJsonArray m_httpTraces;
+    AgentMode m_mode = AgentMode::Ask;
+    QString m_model;
+    bool m_thinkingEnabled = true;
+    QString m_reasoningEffort = QStringLiteral("medium");
+    bool m_resetSessionAfterRun = false;
 };
 
 } // namespace SigilAgent

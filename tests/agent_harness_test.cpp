@@ -6,6 +6,7 @@
 #include <QJsonObject>
 
 #include "Agent/Core/AgentCancellation.h"
+#include "Agent/Core/AgentController.h"
 #include "Agent/Core/AgentRunner.h"
 #include "Agent/Core/AgentSession.h"
 #include "Agent/Execution/MemoryBookWorkspace.h"
@@ -749,5 +750,39 @@ int main()
     first_reason_wins.request(AgentCancellationReason::WindowClosing);
     Require(first_reason_wins.reason() == AgentCancellationReason::BookChanged,
             "the first cancellation cause must survive later stop requests");
+
+    MemoryBookWorkspace controller_book = MemoryBookWorkspace::samplePhysicsBook();
+    AgentController controller;
+    controller.setWorkspace(&controller_book);
+    controller.setMode(AgentMode::Auto);
+    auto in_flight_provider = std::make_unique<MockModelProvider>();
+    bool provider_replacement_rejected = false;
+    in_flight_provider->setScript(
+        [&controller, &provider_replacement_rejected](const ModelRequest &) {
+            controller.newSession();
+            provider_replacement_rejected = !controller.setProvider(
+                std::make_unique<MockModelProvider>());
+            ModelTurn turn;
+            turn.content = QStringLiteral("This response belongs to the old session.");
+            return turn;
+        });
+    Require(controller.setProvider(std::move(in_flight_provider)),
+            "an idle controller must accept provider configuration");
+    const QString controller_session_before = controller.session()->id();
+    const AgentRunResult controller_result = controller.send(
+        QStringLiteral("start a run, then reset from its nested event loop"), QStringList());
+    Require(controller_result.state == AgentRunState::Cancelled
+                && provider_replacement_rejected,
+            "active provider replacement must be rejected and New Session must cancel the old run");
+    Require(controller.session()->id() != controller_session_before
+                && controller.session()->events().size() == 1
+                && controller.session()->events().first().type == AgentEventType::SessionCreated
+                && !controller.isRunning()
+                && !controller.cancellation()->isCancelled(),
+            "New Session requested in-flight must clear only after the Runner returns");
+    Require(controller.runner() && controller.runner()->mode() == AgentMode::Auto,
+            "deferred session reset must retain controller mode when rebuilding the Runner");
+    Require(controller.setProvider(std::make_unique<MockModelProvider>()),
+            "provider replacement must resume after the in-flight Runner has returned");
     return EXIT_SUCCESS;
 }

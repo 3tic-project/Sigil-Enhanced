@@ -44,7 +44,8 @@ public:
                         const QString &fileName,
                         int resourceCount,
                         bool modified,
-                        quint64 revision);
+                        quint64 revision,
+                        const QString &bookSessionId);
     void setCurrentFile(const QString &book_path, const QString &resource_id);
     void setSelectedFiles(const QStringList &book_paths, const QStringList &resource_ids);
     void setSelection(const QString &resource_id, int start, int end, const QString &snippet);
@@ -126,6 +127,7 @@ private:
     int m_bookResourceCount = 0;
     bool m_bookModified = false;
     quint64 m_bookRevision = 0;
+    QString m_bookSessionId;
     QString m_filePath;
     QString m_fileId;
     QStringList m_selectedFilePaths;
