@@ -23345,12 +23345,14 @@ Continue using the requested filename?</translation>
     <message><source>Setup required: API key</source><translation>Setup required: API key</translation></message>
     <message><source>Setup required: model</source><translation>Setup required: model</translation></message>
     <message><source>Configured · not tested</source><translation>Configured · not tested</translation></message>
+    <message><source>Chat tested successfully · %1</source><translation>Chat tested successfully · %1</translation></message>
     <message><source>Contacting provider…</source><translation>Contacting provider…</translation></message>
     <message><source>Last request succeeded</source><translation>Last request succeeded</translation></message>
     <message><source>Last request failed: %1</source><translation>Last request failed: %1</translation></message>
     <message><source>Last request cancelled</source><translation>Last request cancelled</translation></message>
     <message><source>Provider: %1 · %2</source><translation>Provider: %1 · %2</translation></message>
-    <message><source>Configured means the required settings are present. Connectivity is verified only by a real request.</source><translation>Configured means the required settings are present. Connectivity is verified only by a real request.</translation></message>
+    <message><source>This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator.</source><translation>This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator.</translation></message>
+    <message><source>Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them.</source><translation>Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them.</translation></message>
     <message><source>Configure the provider in Preferences → Native Agent.</source><translation>Configure the provider in Preferences → Native Agent.</translation></message>
     <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent plans and tool calls are bound to this open book.</translation></message>
     <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
@@ -23453,8 +23455,9 @@ Continue using the requested filename?</translation>
     <message><source>tools not advertised</source><translation>tools not advertised</translation></message>
     <message><source>Test Chat Completions</source><translation>Test Chat Completions</translation></message>
     <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</translation></message>
-    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings.</source><translation>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings.</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</translation></message>
     <message><source>Chat Completions has not been tested for the current settings.</source><translation>Chat Completions has not been tested for the current settings.</translation></message>
+    <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>Chat Completions was last tested successfully for these settings on %1.</translation></message>
     <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>Cannot test: enter a valid Chat Completions URL.</translation></message>
     <message><source>Cannot test: enter an API key.</source><translation>Cannot test: enter an API key.</translation></message>
     <message><source>Cannot test: choose or enter a model.</source><translation>Cannot test: choose or enter a model.</translation></message>

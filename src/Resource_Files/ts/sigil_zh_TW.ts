@@ -27276,12 +27276,14 @@ Continue using the requested filename?</source>
     <message><source>Setup required: API key</source><translation>需要設定：API 金鑰</translation></message>
     <message><source>Setup required: model</source><translation>需要設定：模型</translation></message>
     <message><source>Configured · not tested</source><translation>已設定 · 尚未測試</translation></message>
+    <message><source>Chat tested successfully · %1</source><translation>Chat 測試成功 · %1</translation></message>
     <message><source>Contacting provider…</source><translation>正在連線至提供者…</translation></message>
     <message><source>Last request succeeded</source><translation>上次請求成功</translation></message>
     <message><source>Last request failed: %1</source><translation>上次請求失敗：%1</translation></message>
     <message><source>Last request cancelled</source><translation>上次請求已取消</translation></message>
     <message><source>Provider: %1 · %2</source><translation>提供者：%1 · %2</translation></message>
-    <message><source>Configured means the required settings are present. Connectivity is verified only by a real request.</source><translation>「已設定」表示必要設定均已填妥。連線能力僅會由實際請求驗證。</translation></message>
+    <message><source>This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator.</source><translation>這組完全相同的已儲存供應商設定已通過 Chat Completions 測試。這是歷史測試結果，並非即時連線指示。</translation></message>
+    <message><source>Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them.</source><translation>「已設定」表示必要設定均已填妥。請在偏好設定中使用「測試 Chat Completions」加以驗證。</translation></message>
     <message><source>Configure the provider in Preferences → Native Agent.</source><translation>請在「偏好設定 → 原生 Agent」中設定提供者。</translation></message>
     <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent 計畫與工具呼叫均繫結至目前開啟的書籍。</translation></message>
     <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
@@ -27384,8 +27386,9 @@ Continue using the requested filename?</source>
     <message><source>tools not advertised</source><translation>未公布工具支援</translation></message>
     <message><source>Test Chat Completions</source><translation>測試 Chat Completions</translation></message>
     <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>傳送一個不含工具和書籍內容的小型請求。供應商最多可能收取 8 個輸出 token 的費用。</translation></message>
-    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings.</source><translation>在此選擇供應商和模型。重新整理模型會載入目錄和公布的參數。測試 Chat Completions 會傳送一個獨立的小型請求，以驗證此端點、API 金鑰和模型；它絕不會傳送書籍內容或工具，也不會儲存這些設定。</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>在此選擇供應商和模型。重新整理模型會載入目錄和公布的參數。測試 Chat Completions 會傳送一個獨立的小型請求，以驗證此端點、API 金鑰和模型；測試執行時絕不會傳送書籍內容或工具，也不會儲存這些設定。偏好設定關閉時，會為這組完全相同的設定記住成功結果。</translation></message>
     <message><source>Chat Completions has not been tested for the current settings.</source><translation>尚未針對目前設定測試 Chat Completions。</translation></message>
+    <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>這組設定上次成功通過 Chat Completions 測試的時間為 %1。</translation></message>
     <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>無法測試：請輸入有效的 Chat Completions URL。</translation></message>
     <message><source>Cannot test: enter an API key.</source><translation>無法測試：請輸入 API 金鑰。</translation></message>
     <message><source>Cannot test: choose or enter a model.</source><translation>無法測試：請選擇或輸入模型。</translation></message>

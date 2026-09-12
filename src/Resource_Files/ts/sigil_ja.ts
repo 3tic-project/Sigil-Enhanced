@@ -27291,12 +27291,14 @@ Continue using the requested filename?</source>
     <message><source>Setup required: API key</source><translation>設定が必要：API キー</translation></message>
     <message><source>Setup required: model</source><translation>設定が必要：モデル</translation></message>
     <message><source>Configured · not tested</source><translation>設定済み · 未テスト</translation></message>
+    <message><source>Chat tested successfully · %1</source><translation>Chat テスト成功 · %1</translation></message>
     <message><source>Contacting provider…</source><translation>プロバイダーに接続中…</translation></message>
     <message><source>Last request succeeded</source><translation>前回のリクエストは成功しました</translation></message>
     <message><source>Last request failed: %1</source><translation>前回のリクエストに失敗しました：%1</translation></message>
     <message><source>Last request cancelled</source><translation>前回のリクエストはキャンセルされました</translation></message>
     <message><source>Provider: %1 · %2</source><translation>プロバイダー：%1 · %2</translation></message>
-    <message><source>Configured means the required settings are present. Connectivity is verified only by a real request.</source><translation>「設定済み」は必須設定が入力済みであることを示します。接続性は実際のリクエストでのみ検証されます。</translation></message>
+    <message><source>This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator.</source><translation>この保存済みプロバイダー設定と完全に一致する構成は、Chat Completions テストに合格しています。これは過去のテスト結果であり、現在の接続状態を示すものではありません。</translation></message>
+    <message><source>Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them.</source><translation>「設定済み」は必須設定が入力済みであることを示します。確認するには、環境設定の「Chat Completions をテスト」を使用してください。</translation></message>
     <message><source>Configure the provider in Preferences → Native Agent.</source><translation>「環境設定 → Native Agent」でプロバイダーを設定してください。</translation></message>
     <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent の計画とツール呼び出しは、現在開いているブックに紐付けられます。</translation></message>
     <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
@@ -27399,8 +27401,9 @@ Continue using the requested filename?</source>
     <message><source>tools not advertised</source><translation>ツールサポートは公開されていません</translation></message>
     <message><source>Test Chat Completions</source><translation>Chat Completions をテスト</translation></message>
     <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>ツールやブック内容を含まない小さなリクエストを送信します。最大 8 出力トークン分の料金が発生する場合があります。</translation></message>
-    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings.</source><translation>ここでプロバイダーとモデルを選択します。「モデルを更新」はカタログと公開パラメーターを読み込みます。「Chat Completions をテスト」は、このエンドポイント、API キー、モデルを確認するための小さな別リクエストを送信します。ブック内容やツールは送信せず、これらの設定も保存しません。</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>ここでプロバイダーとモデルを選択します。「モデルを更新」はカタログと公開パラメーターを読み込みます。「Chat Completions をテスト」は、このエンドポイント、API キー、モデルを確認するための小さな別リクエストを送信します。テスト実行中はブック内容やツールを送信せず、これらの設定も保存しません。環境設定を閉じると、この構成と完全に一致する場合に成功結果が記録されます。</translation></message>
     <message><source>Chat Completions has not been tested for the current settings.</source><translation>現在の設定では Chat Completions はまだテストされていません。</translation></message>
+    <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>この設定で Chat Completions テストに最後に成功した日時: %1。</translation></message>
     <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>テストできません。有効な Chat Completions URL を入力してください。</translation></message>
     <message><source>Cannot test: enter an API key.</source><translation>テストできません。API キーを入力してください。</translation></message>
     <message><source>Cannot test: choose or enter a model.</source><translation>テストできません。モデルを選択または入力してください。</translation></message>
