@@ -11,7 +11,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - 模式：**Ask** / **Plan** / **Edit** / **Auto**
 - 当前模型（只读，来自偏好设置）
 - 提供商状态：配置是否完整、安全的 endpoint 主机，以及最近一次真实请求结果
-- 当前书籍状态：EPUB 文件名、元数据标题、资源数、Saved / Unsaved 和 Agent revision
+- 当前书籍状态：EPUB 文件名、元数据标题、资源数、Saved / Unsaved、书籍会话短 ID 和 Agent revision
 - 上下文芯片：选区、当前文件、Book Browser 选中文件、全书（互斥，范围会显示在状态行）
 - 输入框：**Enter 发送**，Shift+Enter 换行
 - **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
@@ -25,7 +25,9 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 当前书籍状态直接读取这个 MainWindow 的内存 Book，不扫描磁盘副本。正文编辑使 Book
 变脏、保存清除 modified 状态、资源增删移动、另存为、切换标签或 Agent commit 后都会
 刷新。文件名与 `dc:title` 同时显示，便于在多窗口里确认目标；资源数来自当前 Book。
-`Agent rev` 是 Agent 工作区的协议修订号，不等同于 Saved / Unsaved，二者分开显示。
+`Book session` 是每次把工作区绑定到一本书时生成的不透明 ID；状态行显示前 8 位，完整值
+保存在上下文事件和 `book.summary` 中。`Agent rev` 是该书籍会话内的协议修订号，不等同于
+Saved / Unsaved，三者分开显示。
 
 上下文芯片是互斥任务范围，含义如下：
 
@@ -45,6 +47,20 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 Browser 选择刷新而跳走；若该范围消失才按上述规则回退。File、Selected files 和
 Selection 均不会暗中附加全书资源表或 Spine 样本。书籍的最小身份摘要始终保留，用来
 确认工具目标。每个窗口有自己的 AgentDock、Book 和 workspace；范围不会跨窗口读取。
+
+### 运行与书籍会话绑定
+
+发送时，Runner 会冻结当时的完整 `book_session_id`。每次模型响应后、每个工具开始前和
+结束后都会复核；若工作区已绑定到另一本书，旧响应以 **Book target changed** 失败，
+不会把旧计划或工具调用重定向到新书。换书的正常 UI 路径还会主动以 `book_changed`
+原因取消请求，并清除旧书的未提交暂存事务。
+
+运行期间 **New Session** 和模式选择会锁定。即使重入代码直接请求 New Session，也只会
+先取消，等旧 Runner 完全返回后再清空会话和重建工具；不会在旧调用中途重置取消标记。
+偏好设置中的 Provider / 模型变更同样延后到本轮退栈后应用，避免替换仍在执行的对象。
+
+若在请求或审批期间关闭窗口，第一次关闭只发出 `window_closing` 取消并保持窗口对象存活；
+Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书、关闭窗口和防御性目标不匹配。
 
 ## 提供商配置与最近请求状态
 
@@ -184,6 +200,7 @@ Agent 循环在 `AgentRunner` 里，不在 UI 类中：
 3. 按权限 allow / ask / deny 处理工具
 4. ask 时先发批准卡片，批准后才执行
 5. deny / 用户拒绝 / 取消时仍写入一条 tool-role 结果（`PERMISSION_DENIED` 或 `CANCELLED`），避免下一次请求因缺 tool 消息而 400
-6. 把事件追加到会话日志（transcript 的唯一来源）
+6. 在模型与工具边界复核运行开始时冻结的 `book_session_id`
+7. 把事件追加到会话日志（transcript 的唯一来源）
 
 书籍写入走现有 Book / 事务 / 撤销机制。

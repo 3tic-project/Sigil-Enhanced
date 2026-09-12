@@ -750,3 +750,42 @@ AGENT-IM1：尚无任务开始后冻结/展示不可变范围快照、书籍关�
 独立连接测试与请求延迟信息。Selected files 自动片段有意限流，超过 60 份的任务必须让
 模型继续按 ID 读取；尚未在包含大量二进制资源的真实书籍上做性能基准。用户说明见
 [Native Agent](NativeAgent.md#当前书籍与上下文范围)。
+
+## Native Agent 运行与书籍会话绑定（2026-09-12）
+
+分支：`feature/agent-run-book-binding`。主要提交：`fdd10d22d`（书籍会话身份、取消原因及
+Runner fail-closed 检查）、`fc9270142`（Controller/MainWindow 生命周期延迟和状态卡）、
+`e7682f3f8`（四语运行状态文案）。
+
+### 安全边界
+
+- `IBookWorkspace::bookSessionId()` 为一次工作区绑定提供不透明 UUID；Memory 与真实 Sigil
+  工作区的 `summary()` 均公开 `book_session_id`。`SigilBookWorkspace::setBook()` 每次
+  重绑都换发 ID，即使宿主指针恰好相同，旧计划也不能复用。Dock 显示前 8 位，协议事件
+  保留完整值。
+- Runner 在每轮开始冻结 ID，并在 Provider 返回后、每个工具前后复核。直接重绑而没有
+  UI 取消时会产生 `book_target_changed` / `BOOK_TARGET_CHANGED` 并在首个工具请求前失败；
+  回滚只允许作用于仍匹配的工作区，绝不对替换后的书执行旧事务清理。
+- MainWindow 的正常换书路径在 `setBook()` 前以 `book_changed` 请求取消。关闭窗口若运行
+  尚在模型网络或批准门的嵌套 Qt 事件循环中，先 ignore close、请求 `window_closing`，待
+  `send()` 返回后再排队关闭，保证 `WA_DeleteOnClose` 不会释放调用栈仍在使用的对象。
+- Controller 在活动运行中拒绝 Provider/Runner 替换；Preferences 产生的新配置延后应用。
+  New Session 在 UI 中运行期间禁用，Controller 层仍做延迟清理：只先设置 `new_session`
+  取消，旧 Runner 退栈后才清除事件、取消标记和工具实例。模式、模型和 thinking 配置由
+  Controller 持有，重建 Runner 后不会丢失。
+
+### 测试证据与未关闭项
+
+`agent_harness` 在 Provider 回调内直接换发 Memory workspace 会话 ID，验证旧工具调用在
+`ToolRequested` 前被拒绝、没有事务或写入；同一回调还请求 New Session 并尝试替换
+Provider，验证替换失败且清理只发生在 Runner 返回后。`agent_dock` 覆盖运行中控件锁定、
+书籍会话状态和专用结果卡；`agent_dock_contract` 固定换书取消顺序、关闭延迟和 Provider
+延迟。`agent_workspace_package_integration` 在真实导入 EPUB 上验证 Dock ID、workspace
+summary 以及重绑换发 ID。完整 Sigil 构建与 42 个固定 Python 依赖通过。四语 7 条变更
+文案均可生成 `.qm`；严格三种非英文覆盖仍为 73 行继承欠账，本切片新增失败为 0。
+
+本切片关闭“旧模型响应被重定向到新书”和嵌套事件循环销毁 Runner/窗口的实现风险，但
+尚未做真实慢速网络请求下的人工换书/关闭压力测试，也没有 Windows/Linux 事件循环验证。
+当前范围 handle 集合在 `send()` 参数中固定且书籍身份已冻结；Dock 尚未提供可展开的完整
+技术详情面板来展示完整 UUID。用户说明见
+[Native Agent](NativeAgent.md#运行与书籍会话绑定)。
