@@ -551,6 +551,16 @@ int main(int argc, char *argv[])
     Require(!retry->isEnabled()
                 && retry->toolTip().contains(QStringLiteral("open book changed")),
             "retry must fail closed after the window binds a different book session");
+    dock.setBookContext(QStringLiteral("Junior Physics"), QStringLiteral("physics.epub"),
+                        42, false, 7, QStringLiteral("12345678-abcd"));
+    dock.appendEvent(provider_started);
+    SigilAgent::AgentEvent late_failure = provider_failed;
+    late_failure.payload.insert(QStringLiteral("step"), 2);
+    dock.appendEvent(late_failure);
+    dock.setRunState(SigilAgent::AgentRunState::Failed);
+    Require(!retry->isEnabled()
+                && retry->toolTip().contains(QStringLiteral("already executed tools")),
+            "a later model-step failure must not offer a retry that could duplicate tool effects");
     dock.setSessionId(QStringLiteral("new-session-id"));
     Require(!retry->isEnabled()
                 && retry->property("contextHandles").toStringList().isEmpty(),

@@ -76,8 +76,9 @@ require(
 require(
     "agentRetryButton" in dock_cpp
     and "m_lastSubmittedBookSessionId == m_bookSessionId" in dock_cpp
+    and "m_requestStep == 1" in dock_cpp
     and "m_lastSubmittedHandles" in dock_cpp,
-    "provider retry must reuse the submitted scope and fail closed after a book change",
+    "provider retry must reuse submitted scope and reject book changes or post-tool retries",
 )
 require(
     "agentChipSelectedFiles" in dock_cpp

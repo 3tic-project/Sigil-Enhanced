@@ -650,7 +650,8 @@ void AgentDock::refreshRetryState()
     if (!m_retryButton) return;
     const bool same_book = !m_lastSubmittedBookSessionId.isEmpty()
         && m_lastSubmittedBookSessionId == m_bookSessionId;
-    const bool enabled = m_retryAvailable && !m_runActive && same_book
+    const bool first_request = m_requestStep == 1;
+    const bool enabled = m_retryAvailable && !m_runActive && same_book && first_request
         && !m_lastSubmittedText.isEmpty();
     m_retryButton->setEnabled(enabled);
     m_retryButton->setProperty("bookSessionId", m_lastSubmittedBookSessionId);
@@ -661,6 +662,9 @@ void AgentDock::refreshRetryState()
     } else if (m_retryAvailable && !same_book) {
         m_retryButton->setToolTip(
             tr("Retry is unavailable because the open book changed."));
+    } else if (m_retryAvailable && !first_request) {
+        m_retryButton->setToolTip(
+            tr("Retry is unavailable because this turn already executed tools."));
     } else {
         m_retryButton->setToolTip(
             tr("Retry is available after a provider request fails."));
