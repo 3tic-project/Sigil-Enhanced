@@ -27267,6 +27267,16 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Whole book</source><translation>全书</translation></message>
+    <message><source>Selected files</source><translation>选中文件</translation></message>
+    <message><source>Attach the complete resource map for %1</source><translation>为 %1 附加完整资源表</translation></message>
+    <message><source>Selected file · %1</source><translation>选中文件 · %1</translation></message>
+    <message><source>Selected files · %1</source><translation>选中文件 · %1 个</translation></message>
+    <message><source>Attach %1 file(s) selected in Book Browser</source><translation>附加 Book Browser 中选中的 %1 个文件</translation></message>
+    <message><source>Select one or more files in Book Browser</source><translation>请在 Book Browser 中选择一个或多个文件</translation></message>
+    <message><source>whole book</source><translation>全书</translation></message>
+    <message><source>one selected file</source><translation>一个选中文件</translation></message>
+    <message><source>%1 selected files</source><translation>%1 个选中文件</translation></message>
     <message><source>Endpoint is not configured</source><translation>未配置端点</translation></message>
     <message><source>API key is not configured</source><translation>未配置 API 密钥</translation></message>
     <message><source>Model is not configured</source><translation>未配置模型</translation></message>
@@ -27298,7 +27308,6 @@ Continue using the requested filename?</source>
     <message><source>Unsaved changes</source><translation>有未保存的更改</translation></message>
     <message><source>Saved</source><translation>已保存</translation></message>
     <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>当前书籍：%1 · %2 · %3 · Agent 修订 %4</translation></message>
-    <message><source>Book · %1</source><translation>书籍 · %1</translation></message>
     <message><source>Preview</source><translation>预览</translation></message>
     <message><source>Applied</source><translation>已应用</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>当前书籍未发生更改；以下变更仅处于暂存状态。</translation></message>

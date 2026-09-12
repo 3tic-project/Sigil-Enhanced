@@ -27265,6 +27265,16 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Whole book</source><translation>ブック全体</translation></message>
+    <message><source>Selected files</source><translation>選択したファイル</translation></message>
+    <message><source>Attach the complete resource map for %1</source><translation>%1 の完全なリソース一覧を添付</translation></message>
+    <message><source>Selected file · %1</source><translation>選択ファイル · %1</translation></message>
+    <message><source>Selected files · %1</source><translation>選択ファイル · %1 件</translation></message>
+    <message><source>Attach %1 file(s) selected in Book Browser</source><translation>Book Browser で選択した %1 件のファイルを添付</translation></message>
+    <message><source>Select one or more files in Book Browser</source><translation>Book Browser で 1 つ以上のファイルを選択してください</translation></message>
+    <message><source>whole book</source><translation>ブック全体</translation></message>
+    <message><source>one selected file</source><translation>選択した 1 ファイル</translation></message>
+    <message><source>%1 selected files</source><translation>選択した %1 ファイル</translation></message>
     <message><source>Endpoint is not configured</source><translation>エンドポイントが設定されていません</translation></message>
     <message><source>API key is not configured</source><translation>API キーが設定されていません</translation></message>
     <message><source>Model is not configured</source><translation>モデルが設定されていません</translation></message>
@@ -27296,7 +27306,6 @@ Continue using the requested filename?</source>
     <message><source>Unsaved changes</source><translation>未保存の変更あり</translation></message>
     <message><source>Saved</source><translation>保存済み</translation></message>
     <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>現在のブック：%1 · %2 · %3 · Agent リビジョン %4</translation></message>
-    <message><source>Book · %1</source><translation>ブック · %1</translation></message>
     <message><source>Preview</source><translation>プレビュー</translation></message>
     <message><source>Applied</source><translation>適用済み</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>現在のブックは変更されていません。これらの変更はステージングのみです。</translation></message>

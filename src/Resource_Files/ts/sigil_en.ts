@@ -23319,6 +23319,16 @@ Continue using the requested filename?</translation>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Whole book</source><translation>Whole book</translation></message>
+    <message><source>Selected files</source><translation>Selected files</translation></message>
+    <message><source>Attach the complete resource map for %1</source><translation>Attach the complete resource map for %1</translation></message>
+    <message><source>Selected file · %1</source><translation>Selected file · %1</translation></message>
+    <message><source>Selected files · %1</source><translation>Selected files · %1</translation></message>
+    <message><source>Attach %1 file(s) selected in Book Browser</source><translation>Attach %1 file(s) selected in Book Browser</translation></message>
+    <message><source>Select one or more files in Book Browser</source><translation>Select one or more files in Book Browser</translation></message>
+    <message><source>whole book</source><translation>whole book</translation></message>
+    <message><source>one selected file</source><translation>one selected file</translation></message>
+    <message><source>%1 selected files</source><translation>%1 selected files</translation></message>
     <message><source>Endpoint is not configured</source><translation>Endpoint is not configured</translation></message>
     <message><source>API key is not configured</source><translation>API key is not configured</translation></message>
     <message><source>Model is not configured</source><translation>Model is not configured</translation></message>
@@ -23350,7 +23360,6 @@ Continue using the requested filename?</translation>
     <message><source>Unsaved changes</source><translation>Unsaved changes</translation></message>
     <message><source>Saved</source><translation>Saved</translation></message>
     <message><source>Current book: %1 · %2 · %3 · Agent rev %4</source><translation>Current book: %1 · %2 · %3 · Agent rev %4</translation></message>
-    <message><source>Book · %1</source><translation>Book · %1</translation></message>
     <message><source>Preview</source><translation>Preview</translation></message>
     <message><source>Applied</source><translation>Applied</translation></message>
     <message><source>The live book is unchanged; these changes are staged only.</source><translation>The live book is unchanged; these changes are staged only.</translation></message>
