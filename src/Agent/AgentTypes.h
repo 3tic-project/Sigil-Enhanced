@@ -59,6 +59,8 @@ enum class AgentEventType {
     TransactionCommitted,
     TransactionRolledBack,
     CheckpointCreated,
+    TaskRestoreCompleted,
+    TaskRestoreFailed,
     BookRevisionObserved,
     BookTargetChanged,
     RunStateChanged,

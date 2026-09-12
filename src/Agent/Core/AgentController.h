@@ -44,6 +44,8 @@ public:
     bool isRunning() const;
 
     AgentRunResult send(const QString &text, const QStringList &handles);
+    BookOpResult restoreTask(const QString &checkpointId,
+                             const QString &expectedBookSessionId);
     void stop(AgentCancellationReason reason = AgentCancellationReason::UserStop);
     void newSession();
     void resolveApproval(const QString &toolCallId, bool approved);

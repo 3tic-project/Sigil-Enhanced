@@ -135,6 +135,41 @@ AgentRunResult AgentController::send(const QString &text, const QStringList &han
     return result;
 }
 
+BookOpResult AgentController::restoreTask(const QString &checkpoint_id,
+                                          const QString &expected_book_session_id)
+{
+    BookOpResult result;
+    if (isRunning()) {
+        result = BookOpResult::error(QStringLiteral("AGENT_RUN_ACTIVE"),
+                                     QStringLiteral("Stop the active Agent run before restoring"));
+    } else if (!m_workspace) {
+        result = BookOpResult::error(QStringLiteral("NO_BOOK"),
+                                     QStringLiteral("No book is open"));
+    } else if (expected_book_session_id.isEmpty()
+               || m_workspace->bookSessionId() != expected_book_session_id) {
+        result = BookOpResult::error(QStringLiteral("BOOK_TARGET_CHANGED"),
+                                     QStringLiteral("The restore point belongs to another book"));
+    } else {
+        result = m_workspace->restoreTaskRestorePoint(checkpoint_id);
+    }
+
+    QJsonObject payload = result.data;
+    payload.insert(QStringLiteral("checkpoint_id"), checkpoint_id);
+    payload.insert(QStringLiteral("book_session_id"), expected_book_session_id);
+    if (!result.code.isEmpty()) payload.insert(QStringLiteral("code"), result.code);
+    if (!result.message.isEmpty()) payload.insert(QStringLiteral("message"), result.message);
+    m_session.append(result.ok ? AgentEventType::TaskRestoreCompleted
+                               : AgentEventType::TaskRestoreFailed,
+                     payload);
+    if (result.ok && m_workspace) {
+        m_session.append(AgentEventType::BookRevisionObserved, QJsonObject {
+            { QStringLiteral("book_revision"),
+              static_cast<qint64>(m_workspace->revision()) }
+        });
+    }
+    return result;
+}
+
 void AgentController::stop(AgentCancellationReason reason)
 {
     m_cancellation.request(reason);

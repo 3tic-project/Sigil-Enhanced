@@ -464,10 +464,14 @@ int main(int argc, char *argv[])
         } },
         { QStringLiteral("recovery"), QJsonObject {
             { QStringLiteral("sigil_undo"), QStringLiteral("where_available") },
-            { QStringLiteral("task_restore_point"),
-              QStringLiteral("not_created_by_commit") }
+            { QStringLiteral("task_restore_point"), QStringLiteral("available") },
+            { QStringLiteral("checkpoint_id"), QStringLiteral("restore-17") },
+            { QStringLiteral("book_session_id"), QStringLiteral("12345678-abcd") },
+            { QStringLiteral("affected_resources"), QJsonArray {
+                QStringLiteral("chapter-1"), QStringLiteral("chapter-2") } }
         } }
     };
+    dock.setRunState(SigilAgent::AgentRunState::Completed);
     dock.appendEvent(committed);
     application.processEvents();
     auto *applied_card = dock.findChild<QWidget *>(QStringLiteral("agentAppliedCard"));
@@ -481,8 +485,63 @@ int main(int argc, char *argv[])
             "applied card must show save state, count, and book revision");
     Require(applied_body->text().contains(QStringLiteral("Full EPUBCheck: not run"))
                 && applied_body->text().contains(QStringLiteral("Undo where available"))
-                && applied_body->text().contains(QStringLiteral("did not create a task-wide restore point")),
+                && applied_body->text().contains(QStringLiteral("2 text resource(s)"))
+                && applied_body->text().contains(QStringLiteral("conflict check")),
             "applied card must state validation and recovery boundaries");
+    auto *restore_button = dock.findChild<QPushButton *>(
+        QStringLiteral("agentTaskRestoreButton-restore-17"));
+    Require(restore_button && restore_button->isEnabled(),
+            "a guarded text commit must offer task restoration");
+    QString requested_restore;
+    QString requested_restore_book;
+    QObject::connect(&dock, &SigilAgent::AgentDock::taskRestoreRequested,
+                     [&requested_restore, &requested_restore_book](
+                         const QString &checkpoint_id, const QString &book_session_id) {
+        requested_restore = checkpoint_id;
+        requested_restore_book = book_session_id;
+    });
+    restore_button->click();
+    Require(requested_restore == QStringLiteral("restore-17")
+                && requested_restore_book == QStringLiteral("12345678-abcd")
+                && !restore_button->isEnabled(),
+            "Restore this task must emit the checkpoint and frozen book session once");
+
+    SigilAgent::AgentEvent restore_conflict;
+    restore_conflict.type = SigilAgent::AgentEventType::TaskRestoreFailed;
+    restore_conflict.payload = QJsonObject {
+        { QStringLiteral("checkpoint_id"), QStringLiteral("restore-17") },
+        { QStringLiteral("code"), QStringLiteral("TASK_RESTORE_CONFLICT") },
+        { QStringLiteral("conflicts"), QJsonArray {
+            QJsonObject {
+                { QStringLiteral("resource_id"), QStringLiteral("chapter-2") },
+                { QStringLiteral("reason"), QStringLiteral("content_changed") }
+            } } }
+    };
+    dock.appendEvent(restore_conflict);
+    application.processEvents();
+    auto *conflict_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentTaskRestoreFailedCard-restore-17"));
+    auto *conflict_body = conflict_card
+        ? conflict_card->findChild<QLabel *>(
+              QStringLiteral("agentTaskRestoreFailedCard-restore-17Body"))
+        : nullptr;
+    Require(conflict_body && conflict_body->text().contains(QStringLiteral("No book content was changed"))
+                && restore_button->isEnabled(),
+            "a restore conflict must be visible, non-mutating, and retryable after manual resolution");
+
+    SigilAgent::AgentEvent restored;
+    restored.type = SigilAgent::AgentEventType::TaskRestoreCompleted;
+    restored.payload = QJsonObject {
+        { QStringLiteral("checkpoint_id"), QStringLiteral("restore-17") },
+        { QStringLiteral("affected_resources"), QJsonArray {
+            QStringLiteral("chapter-1"), QStringLiteral("chapter-2") } },
+        { QStringLiteral("book_revision"), 18 }
+    };
+    dock.appendEvent(restored);
+    application.processEvents();
+    Require(!restore_button->isEnabled()
+                && restore_button->text().contains(QStringLiteral("Restored")),
+            "a completed task restore must permanently settle its action");
 
     SigilAgent::AgentEvent rolled_back;
     rolled_back.type = SigilAgent::AgentEventType::TransactionRolledBack;

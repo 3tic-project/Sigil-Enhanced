@@ -6302,6 +6302,7 @@ void MainWindow::CreateAgentDock()
             }
         }
         const bool applied_live = event.type == SigilAgent::AgentEventType::TransactionCommitted
+            || event.type == SigilAgent::AgentEventType::TaskRestoreCompleted
             || (event.type == SigilAgent::AgentEventType::ToolCompleted
                 && event.payload.value(QStringLiteral("applied")).toBool());
         if (applied_live && m_BookBrowser) {
@@ -6327,6 +6328,12 @@ void MainWindow::CreateAgentDock()
     connect(m_AgentDock, &SigilAgent::AgentDock::approvalResponded, this,
             [this](const QString &id, bool ok) {
                 if (m_AgentController) m_AgentController->resolveApproval(id, ok);
+            });
+    connect(m_AgentDock, &SigilAgent::AgentDock::taskRestoreRequested, this,
+            [this](const QString &checkpoint_id, const QString &book_session_id) {
+                if (m_AgentController) {
+                    m_AgentController->restoreTask(checkpoint_id, book_session_id);
+                }
             });
 }
 

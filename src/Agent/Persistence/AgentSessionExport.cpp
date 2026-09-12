@@ -207,14 +207,46 @@ QString exportConversationMarkdown(const AgentSession &session, const SessionExp
                                  ? QStringLiteral("Full EPUBCheck: not run.")
                                  : QStringLiteral("Full EPUBCheck: %1").arg(epubcheck_status));
                 lines.append(QStringLiteral("Recovery: use Sigil Undo where available."));
-                if (event.payload.value(QStringLiteral("recovery")).toObject()
-                        .value(QStringLiteral("task_restore_point")).toString()
-                    == QLatin1String("not_created_by_commit")) {
+                const QJsonObject recovery =
+                    event.payload.value(QStringLiteral("recovery")).toObject();
+                const QString restore_status = recovery
+                    .value(QStringLiteral("task_restore_point")).toString();
+                if (restore_status == QLatin1String("available")) {
+                    lines.append(QStringLiteral(
+                        "A conflict-checked task restore point is available for %1 text resource(s).")
+                                     .arg(recovery.value(QStringLiteral("affected_resources"))
+                                              .toArray().size()));
+                } else if (restore_status == QLatin1String("unavailable")
+                           && recovery.value(QStringLiteral("reason")).toString()
+                               == QLatin1String("structural_changes")) {
+                    lines.append(QStringLiteral(
+                        "A task restore point was not created because this commit changed book structure."));
+                } else if (restore_status == QLatin1String("unavailable")) {
+                    lines.append(QStringLiteral(
+                        "A task restore point could not be created for this commit."));
+                } else if (restore_status == QLatin1String("not_created_by_commit")) {
                     lines.append(QStringLiteral("This commit did not create a task-wide restore point."));
                 }
                 lines.append(QString());
                 break;
             }
+            case AgentEventType::TaskRestoreCompleted:
+                flushAssistant(&lines, &thinking, &answer);
+                lines.append(QStringLiteral("## Task restored"));
+                lines.append(QStringLiteral("Restored %1 text resource(s). Later unrelated edits were preserved.")
+                                 .arg(event.payload.value(QStringLiteral("affected_resources"))
+                                          .toArray().size()));
+                lines.append(QString());
+                break;
+            case AgentEventType::TaskRestoreFailed:
+                flushAssistant(&lines, &thinking, &answer);
+                lines.append(QStringLiteral("## Restore blocked"));
+                lines.append(event.payload.value(QStringLiteral("code")).toString()
+                                     == QLatin1String("TASK_RESTORE_CONFLICT")
+                                 ? QStringLiteral("Affected resources changed after the task. No book content was changed.")
+                                 : event.payload.value(QStringLiteral("message")).toString());
+                lines.append(QString());
+                break;
             case AgentEventType::TransactionRolledBack:
                 flushAssistant(&lines, &thinking, &answer);
                 lines.append(event.payload.value(QStringLiteral("rolled_back")).toBool()

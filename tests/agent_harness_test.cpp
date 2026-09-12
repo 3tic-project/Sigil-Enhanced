@@ -867,5 +867,40 @@ int main()
             "deferred session reset must retain controller mode when rebuilding the Runner");
     Require(controller.setProvider(std::make_unique<MockModelProvider>()),
             "provider replacement must resume after the in-flight Runner has returned");
+
+    MemoryBookWorkspace controller_restore_book = MemoryBookWorkspace::samplePhysicsBook();
+    const QString controller_restore_before =
+        controller_restore_book.resourceText(QStringLiteral("ch1"));
+    Require(controller_restore_book.beginTransaction(QStringLiteral("controller restore")).ok,
+            "controller restore transaction begin failed");
+    Require(controller_restore_book.patchFragment(
+                QStringLiteral("ch1"), -1, -1, QStringLiteral("<title>CONTROLLER</title>"),
+                controller_restore_book.resourceRevision(QStringLiteral("ch1")),
+                QStringLiteral("<title>Heat</title>")).ok,
+            "controller restore patch failed");
+    const QString controller_restore_id = controller_restore_book.createTaskRestorePoint(
+        QStringLiteral("controller restore"), QStringList { QStringLiteral("ch1") })
+        .data.value(QStringLiteral("checkpoint_id")).toString();
+    Require(controller_restore_book.commitTransaction(controller_restore_book.revision()).applied
+                && controller_restore_book.sealTaskRestorePoint(controller_restore_id).ok,
+            "controller restore point setup failed");
+    AgentController restore_controller;
+    Require(restore_controller.setWorkspace(&controller_restore_book),
+            "restore controller workspace setup failed");
+    const BookOpResult wrong_book_restore = restore_controller.restoreTask(
+        controller_restore_id, QStringLiteral("another-book"));
+    Require(!wrong_book_restore.ok
+                && wrong_book_restore.code == QStringLiteral("BOOK_TARGET_CHANGED")
+                && hasEvent(*restore_controller.session(), AgentEventType::TaskRestoreFailed)
+                && controller_restore_book.resourceText(QStringLiteral("ch1"))
+                    != controller_restore_before,
+            "controller must reject a restore card bound to another book session");
+    const BookOpResult controller_restored = restore_controller.restoreTask(
+        controller_restore_id, controller_restore_book.bookSessionId());
+    Require(controller_restored.ok
+                && hasEvent(*restore_controller.session(), AgentEventType::TaskRestoreCompleted)
+                && controller_restore_book.resourceText(QStringLiteral("ch1"))
+                    == controller_restore_before,
+            "controller must publish a completed event after a guarded restore");
     return EXIT_SUCCESS;
 }

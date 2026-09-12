@@ -223,6 +223,54 @@ int main(int argc, char **argv)
         Require(chapter->GetText() == hostText, "Rejected text plan overwrote the host edit");
         Require(workspace.rollbackTransaction().ok, "Could not roll back stale text plan");
 
+        const QString taskChapterBefore = chapter->GetText();
+        const QString taskNavBefore = nav->GetText();
+        const quint64 taskChapterRevision =
+            workspace.resourceRevision(chapter->GetIdentifier());
+        const quint64 taskNavRevision = workspace.resourceRevision(nav->GetIdentifier());
+        Require(workspace.beginTransaction(QStringLiteral("guarded task restore")).ok,
+                "Could not begin guarded task transaction");
+        Require(workspace.replaceText(
+                    chapter->GetIdentifier(),
+                    taskChapterBefore + QStringLiteral("\n<!-- agent chapter task -->"),
+                    taskChapterRevision).ok
+                    && workspace.replaceText(
+                        nav->GetIdentifier(),
+                        taskNavBefore + QStringLiteral("\n<!-- agent nav task -->"),
+                        taskNavRevision).ok,
+                "Could not stage guarded task text edits");
+        const SigilAgent::BookOpResult taskPoint = workspace.createTaskRestorePoint(
+            QStringLiteral("guarded task restore"),
+            QStringList { chapter->GetIdentifier(), nav->GetIdentifier() });
+        const QString taskPointId = taskPoint.data
+            .value(QStringLiteral("checkpoint_id")).toString();
+        Require(taskPoint.ok && !taskPointId.isEmpty(),
+                "Could not create a guarded task restore point");
+        Require(workspace.commitTransaction(workspace.revision()).applied
+                    && workspace.sealTaskRestorePoint(taskPointId).ok,
+                "Could not commit and seal the guarded task restore point");
+        const QString taskChapterAfter = chapter->GetText();
+        const QString taskNavAfter = nav->GetText();
+        Require(!workspace.restoreCheckpoint(taskPointId).ok,
+                "Generic checkpoint restore bypassed the guarded task path");
+        chapter->SetText(taskChapterAfter + QStringLiteral("\n<!-- later host edit -->"));
+        const QString laterHostChapter = chapter->GetText();
+        const SigilAgent::BookOpResult taskConflict =
+            workspace.restoreTaskRestorePoint(taskPointId);
+        Require(!taskConflict.ok
+                    && taskConflict.code == QStringLiteral("TASK_RESTORE_CONFLICT")
+                    && taskConflict.data.value(QStringLiteral("live_book_unchanged")).toBool()
+                    && chapter->GetText() == laterHostChapter
+                    && nav->GetText() == taskNavAfter,
+                "Task recovery overwrote a later host edit or partially restored the Book");
+        chapter->SetText(taskChapterAfter);
+        const SigilAgent::BookOpResult taskRestored =
+            workspace.restoreTaskRestorePoint(taskPointId);
+        Require(taskRestored.ok && taskRestored.applied
+                    && chapter->GetText() == taskChapterBefore
+                    && nav->GetText() == taskNavBefore,
+                "Guarded task recovery did not restore both reviewed text resources");
+
         nav->SetText(QStringLiteral(
             "<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\" "
             "xmlns:epub=\"http://www.idpf.org/2007/ops\"><head><title>Contents</title></head>"
@@ -333,7 +381,7 @@ int main(int argc, char **argv)
         Require(workspace.rollbackTransaction().ok,
                 "Could not roll back stale native TOC hierarchy transaction");
 
-        std::cout << "Native agent package, TOC source preservation, undo, and stale-commit checks passed\n";
+        std::cout << "Native agent package, guarded task recovery, TOC source preservation, undo, and stale-commit checks passed\n";
         return 0;
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';

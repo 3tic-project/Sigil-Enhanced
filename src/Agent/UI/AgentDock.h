@@ -64,6 +64,8 @@ signals:
     void exportDebugLogRequested();
     void modeChanged(AgentMode mode);
     void approvalResponded(const QString &toolCallId, bool approved);
+    void taskRestoreRequested(const QString &checkpointId,
+                              const QString &bookSessionId);
 
 private slots:
     void onSend();
@@ -97,6 +99,7 @@ private:
     void refreshProviderStatus();
     void refreshTechnicalDetails();
     void refreshRetryState();
+    void refreshTaskRestoreState();
     void captureRequestEvent(const AgentEvent &event, const QString &status);
     QString providerFailureSummary(const QString &message) const;
     QString previewBody(const QJsonObject &payload) const;
@@ -125,6 +128,7 @@ private:
     QWidget *m_transcriptContents = nullptr;
     QVBoxLayout *m_transcriptLayout = nullptr;
     QHash<QString, QWidget *> m_approvalCards;
+    QHash<QString, QPushButton *> m_taskRestoreButtons;
     QWidget *m_currentThinking = nullptr;
     QWidget *m_currentAnswer = nullptr;
     int m_turn = 0;

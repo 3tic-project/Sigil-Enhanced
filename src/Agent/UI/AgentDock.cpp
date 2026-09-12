@@ -301,6 +301,7 @@ void AgentDock::setRunState(AgentRunState state)
     m_newSessionButton->setEnabled(!running);
     m_modeCombo->setEnabled(!running);
     refreshRetryState();
+    refreshTaskRestoreState();
 }
 
 void AgentDock::setBookContext(const QString &title,
@@ -310,6 +311,8 @@ void AgentDock::setBookContext(const QString &title,
                                quint64 revision,
                                const QString &book_session_id)
 {
+    const bool changed_book = !m_bookSessionId.isEmpty()
+        && m_bookSessionId != book_session_id;
     m_bookTitle = title;
     m_bookFileName = file_name;
     m_bookResourceCount = qMax(0, resource_count);
@@ -347,6 +350,7 @@ void AgentDock::setBookContext(const QString &title,
     refreshScopeLabel();
     refreshTechnicalDetails();
     refreshRetryState();
+    if (changed_book) refreshTaskRestoreState();
 }
 
 void AgentDock::setCurrentFile(const QString &book_path, const QString &resource_id)
@@ -671,6 +675,26 @@ void AgentDock::refreshRetryState()
     }
 }
 
+void AgentDock::refreshTaskRestoreState()
+{
+    for (auto it = m_taskRestoreButtons.begin(); it != m_taskRestoreButtons.end(); ++it) {
+        QPushButton *button = it.value();
+        if (!button) continue;
+        const bool available = button->property("restoreAvailable").toBool();
+        const bool same_book = !m_bookSessionId.isEmpty()
+            && button->property("bookSessionId").toString() == m_bookSessionId;
+        button->setEnabled(available && same_book && !m_runActive);
+        if (!same_book) {
+            button->setToolTip(tr("Restore is unavailable because the open book changed."));
+        } else if (available && m_runActive) {
+            button->setToolTip(tr("Stop the active Agent run before restoring this task."));
+        } else if (available) {
+            button->setToolTip(
+                tr("Restore the text resources changed by this commit. Later edits to those resources will block restoration."));
+        }
+    }
+}
+
 void AgentDock::resetTranscript()
 {
     QLayoutItem *item = nullptr;
@@ -680,6 +704,7 @@ void AgentDock::resetTranscript()
     }
     m_transcriptLayout->addStretch(1);
     m_approvalCards.clear();
+    m_taskRestoreButtons.clear();
     m_currentThinking = nullptr;
     m_currentAnswer = nullptr;
     m_turn = 0;
@@ -932,9 +957,20 @@ QString AgentDock::appliedBody(const QJsonObject &payload) const
         lines.append(tr("Full EPUBCheck: %1").arg(epubcheck_status));
     }
     lines.append(tr("Recovery: use Sigil Undo where available."));
-    if (payload.value(QStringLiteral("recovery")).toObject()
-            .value(QStringLiteral("task_restore_point")).toString()
-        == QLatin1String("not_created_by_commit")) {
+    const QJsonObject recovery = payload.value(QStringLiteral("recovery")).toObject();
+    const QString restore_status =
+        recovery.value(QStringLiteral("task_restore_point")).toString();
+    if (restore_status == QLatin1String("available")) {
+        const int count = recovery.value(QStringLiteral("affected_resources")).toArray().size();
+        lines.append(tr("Task restore point: %1 text resource(s), protected by a post-commit conflict check.")
+                         .arg(count));
+    } else if (restore_status == QLatin1String("unavailable")
+               && recovery.value(QStringLiteral("reason")).toString()
+                   == QLatin1String("structural_changes")) {
+        lines.append(tr("A task restore point was not created because this commit changed book structure."));
+    } else if (restore_status == QLatin1String("unavailable")) {
+        lines.append(tr("A task restore point could not be created for this commit."));
+    } else if (restore_status == QLatin1String("not_created_by_commit")) {
         lines.append(tr("This commit did not create a task-wide restore point."));
     }
     return lines.join(QLatin1Char('\n'));
@@ -1078,12 +1114,39 @@ void AgentDock::appendEvent(const AgentEvent &event)
                                 previewBody(event.payload),
                                 false));
             break;
-        case AgentEventType::TransactionCommitted:
-            appendCard(makeCard(QStringLiteral("agentAppliedCard"),
-                                tr("Applied"),
-                                appliedBody(event.payload),
-                                false));
+        case AgentEventType::TransactionCommitted: {
+            QWidget *card = makeCard(QStringLiteral("agentAppliedCard"),
+                                     tr("Applied"),
+                                     appliedBody(event.payload),
+                                     false);
+            const QJsonObject recovery =
+                event.payload.value(QStringLiteral("recovery")).toObject();
+            const QString checkpoint_id =
+                recovery.value(QStringLiteral("checkpoint_id")).toString();
+            const QString book_session_id =
+                recovery.value(QStringLiteral("book_session_id")).toString();
+            if (recovery.value(QStringLiteral("task_restore_point")).toString()
+                    == QLatin1String("available")
+                && !checkpoint_id.isEmpty() && !book_session_id.isEmpty()) {
+                auto *restore = new QPushButton(tr("Restore this task"), card);
+                restore->setObjectName(
+                    QStringLiteral("agentTaskRestoreButton-%1").arg(checkpoint_id));
+                restore->setProperty("checkpointId", checkpoint_id);
+                restore->setProperty("bookSessionId", book_session_id);
+                restore->setProperty("restoreAvailable", true);
+                card->layout()->addWidget(restore);
+                connect(restore, &QPushButton::clicked, this,
+                        [this, restore, checkpoint_id, book_session_id]() {
+                    if (!restore->isEnabled()) return;
+                    restore->setEnabled(false);
+                    emit taskRestoreRequested(checkpoint_id, book_session_id);
+                });
+                m_taskRestoreButtons.insert(checkpoint_id, restore);
+            }
+            appendCard(card);
+            refreshTaskRestoreState();
             break;
+        }
         case AgentEventType::TransactionRolledBack: {
             const bool rolled_back = event.payload.value(QStringLiteral("rolled_back")).toBool();
             appendCard(makeCard(QStringLiteral("agentRollbackCard"),
@@ -1093,6 +1156,49 @@ void AgentDock::appendEvent(const AgentEvent &event)
                                     ? tr("The staged transaction was discarded. The live book was not changed by this transaction.")
                                     : tr("There was no staged transaction to discard. The live book was not changed."),
                                 false));
+            break;
+        }
+        case AgentEventType::TaskRestoreCompleted: {
+            const QString checkpoint_id =
+                event.payload.value(QStringLiteral("checkpoint_id")).toString();
+            if (QPushButton *button = m_taskRestoreButtons.value(checkpoint_id)) {
+                button->setProperty("restoreAvailable", false);
+                button->setEnabled(false);
+                button->setText(tr("Restored"));
+                button->setToolTip(tr("This task has already been restored."));
+            }
+            const int count = event.payload
+                .value(QStringLiteral("affected_resources")).toArray().size();
+            appendCard(makeCard(
+                QStringLiteral("agentTaskRestoreCompletedCard-%1").arg(checkpoint_id),
+                tr("Task restored"),
+                tr("Restored %1 text resource(s). Later unrelated edits were preserved.")
+                    .arg(count),
+                false));
+            break;
+        }
+        case AgentEventType::TaskRestoreFailed: {
+            const QString checkpoint_id =
+                event.payload.value(QStringLiteral("checkpoint_id")).toString();
+            if (QPushButton *button = m_taskRestoreButtons.value(checkpoint_id)) {
+                button->setProperty("restoreAvailable", true);
+            }
+            refreshTaskRestoreState();
+            const QString code = event.payload.value(QStringLiteral("code")).toString();
+            QString body;
+            if (code == QLatin1String("TASK_RESTORE_CONFLICT")) {
+                const int count = event.payload.value(QStringLiteral("conflicts")).toArray().size();
+                body = tr("Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.")
+                           .arg(count);
+            } else if (code == QLatin1String("BOOK_TARGET_CHANGED")) {
+                body = tr("Restore was blocked because this restore point belongs to another book.");
+            } else {
+                body = event.payload.value(QStringLiteral("message")).toString();
+                if (body.isEmpty()) body = tr("The task could not be restored.");
+            }
+            appendCard(makeCard(
+                QStringLiteral("agentTaskRestoreFailedCard-%1").arg(checkpoint_id),
+                tr("Restore blocked"), body, false));
             break;
         }
         case AgentEventType::Error:
