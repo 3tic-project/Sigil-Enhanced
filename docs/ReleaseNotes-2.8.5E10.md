@@ -164,6 +164,12 @@ session/request/book-session ID、目标 revision、模式和发送时冻结的�
 New Session 或本轮已经执行过工具时不会启用，避免旧范围串书或重复提交。这里没有后台
 自动重试。详见 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
 
+偏好设置现在另有 **Test Chat Completions**，不再需要拿“刷新模型列表”间接猜测聊天接口
+是否可用。它用当前尚未保存的 URL、API Key 和模型发送一个不含书籍内容和工具的小请求，
+关闭 thinking、最多生成 8 token，并在 15 秒内给出成功、鉴权/模型错误或明确超时；状态
+只显示安全主机名和脱敏错误。修改连接字段会立即使旧测试结果过期，测试本身不会保存设置，
+也不会伪造 Agent 停靠栏的最近书籍请求状态。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。

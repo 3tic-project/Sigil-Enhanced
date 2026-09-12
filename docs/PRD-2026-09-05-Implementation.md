@@ -873,3 +873,40 @@ metadata、Spine、TOC 和二进制的整包恢复仍需接入可精确寻址的
 并为其建立等价的提交后冲突清单。恢复点目前不持久化，进程崩溃、关闭后重开、跨平台
 GUI、磁盘保存后的恢复及大型书籍内存/延迟基准仍待验收。用户说明见
 [Native Agent](NativeAgent.md#预览提交与恢复状态)。
+
+## Native Agent 独立 Chat Completions 连接测试（2026-09-13）
+
+分支：`feature/agent-connection-test`。主要提交：`65c55682b`（有界探测协议与 Provider
+超时修正）、`8e8fb9fa3`（偏好设置探测入口）和 `47e7b27c8`（设置页完整四语翻译）。
+
+### 协议与界面边界
+
+- `AgentConnectionProbe` 复用生产 `OpenAICompatibleProvider`，但构造独立最小请求：只有
+  固定的 `Reply with exactly OK.` 用户消息，不附加书籍上下文或 tools，强制关闭 thinking，
+  设置 `max_tokens=8`，并把设置页等待限制为 15 秒。它只返回成功、模型、finish reason、
+  HTTP 状态和墙钟耗时，不把模型正文或 API Key 带回界面。
+- `ModelRequest` 新增可选 `maxOutputTokens` / `timeoutMs`，默认值保持正式 Agent 的既有
+  120 秒行为。Provider 现在区分用户取消和定时器中止；后者返回明确的
+  `Request timed out after … ms` 并进入脱敏 trace，不再因空 decoder 默认 finish reason
+  被误判为成功。
+- 偏好设置新增 **Test Chat Completions**。发网前用 `providerReadiness` 验证 HTTP(S)
+  endpoint、非空 API Key 和模型；运行时冻结提供商、URL、密钥、模型、刷新、thinking
+  和 effort 控件，结果状态公开 testing/succeeded/failed、HTTP status、安全 host、模型
+  和耗时。字段改变会作废旧结果；测试使用当前表单但不写 SettingsStore。
+- 探测不写 AgentSession，因此不会污染书籍对话、调试导出或把 Dock 最近请求伪造为成功。
+  提示明确披露服务商可能对最多 8 个输出 token 计费。
+
+### 测试证据与剩余项
+
+`agent_provider_catalog` 使用三个本地 TCP 服务验证成功 SSE、401 回显密钥和无响应超时；
+它逐字段断言 POST 路径、Bearer 鉴权、模型、stream、`max_tokens=8`、thinking disabled、
+无 tools，证明 401 结果脱敏且 120ms 超时为失败。`agent_dock_contract` 固定设置页本地
+校验、15 秒探测、无书籍/工具披露和可检查状态。完整 Sigil 构建与 42 个固定 Python 依赖
+通过。四份目录的 10 条新增探测文案均可生成 `.qm`；同时补齐设置页原有 25 条欠账，
+严格简中/繁中/日文覆盖从每种 73 行降至 47 行。
+
+本切片关闭此前记录的“无独立 Chat Completions 测试入口”，继续推进 AGENT-IM1，但不把
+整体连接体验关闭：测试结果尚不跨偏好设置会话持久化，Dock 仍只显示真实书籍请求状态；
+真实 DeepSeek/OpenCode Go/OpenRouter 联网、代理/证书错误、Windows/Linux、关闭偏好设置时
+的嵌套事件循环和屏幕阅读器人工验收仍待补充。用户说明见
+[Native Agent](NativeAgent.md#提供商配置与最近请求状态)。

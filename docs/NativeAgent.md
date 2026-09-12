@@ -80,9 +80,19 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 
 失败状态把 401、403、404、408、429、5xx 和常见网络错误整理为简短说明，完整的
 提供商错误仍显示在 Error 卡片。若服务端在错误正文或 HTTP trace 中回显当前 API Key，
-提供商边界会先替换成 `[redacted]`，导出时还会再次脱敏。当前没有独立的“测试连接”
-按钮；**Refresh models** 的成功只证明模型列表请求成功，Chat Completions 的状态仍以
-实际对话请求为准。
+提供商边界会先替换成 `[redacted]`，导出时还会再次脱敏。**Refresh models** 的成功只
+证明模型列表请求成功，不证明 Chat Completions 可用。
+
+偏好设置提供独立的 **Test Chat Completions**。它先在本地校验 URL、API Key 和模型，
+再向当前表单中的 endpoint 发送一条流式小请求：不含书籍内容、不含 tools、关闭 thinking，
+并把输出限制为最多 8 token、等待限制为 15 秒。提供商仍可能按这条请求计费。设置页会
+显示冻结的安全主机名、模型、HTTP 结果和耗时；401 等服务端错误继续执行密钥脱敏，超时
+明确显示失败，不会把中止误报成成功。修改 URL、API Key 或模型后，旧结果立即标为
+“当前设置未测试”。测试本身不保存表单；只有正常确认偏好设置才会保存配置。
+
+连接测试不进入书籍 Agent 会话，也不伪造 Dock 的最近请求状态。Dock 的
+**Last request succeeded / failed / cancelled** 仍只代表一次真实的书籍 Agent 请求；
+设置页测试的结果只用于在关闭偏好设置前验证当前输入。
 
 **Technical details** 默认折叠，展开后显示完整 Agent session ID、当前 book session ID、
 最近一次 request ID、该请求绑定的 book session/revision、步骤、模式、模型、终态、耗时和
@@ -199,6 +209,9 @@ HTTP 出错时 Error 卡会带上状态码和服务器返回的 `error.message`�
 | **Custom** | 你填写的 OpenAI 兼容 URL | 从同一 origin 推导 `/models` |
 
 点 **Refresh models** 会向服务器拉取模型 id 以及它公布的参数（context length、`supported_parameters` 里的 tools / reasoning）。不要手抄模型名；列表来自服务器。密钥只存在本机 Sigil 设置里，不会进入 transcript、崩溃日志、导出文件或 EPUB。
+
+若要验证所选模型能否真正接受对话请求，使用同一页的 **Test Chat Completions**，不要把
+模型列表刷新成功当作鉴权/模型可用证明。探测不会发送当前书籍或 Agent 工具定义。
 
 请求体按提供商区分：
 
