@@ -122,7 +122,12 @@ Saved / Unsaved 和 Agent revision。保存、重新变脏、资源增删移动�
 Selection 芯片不再永久禁用：代码编辑器出现非空选区时，它会显示真实 UTF-16 范围并
 默认选中。发送后，Agent 上下文从当前内存资源读取该范围的精确源码，保留 Ruby/标签；
 自动附加上限为 4096 code units，超长会明确提示继续分段读取。只选择 File 或 Selection
-时不再暗中附加全书资源表和 Spine 样本。详见
+时不再暗中附加全书资源表和 Spine 样本。
+
+范围现在是互斥的 Selection、Current file、Selected files 和 Whole book。默认优先
+明确选区，否则当前文件；Book Browser 多选会实时进入 Selected files，保持顺序并去重，
+最多自动附加 60 份片段，超出时报告省略数量。Whole book 必须显式选择，不再默认与
+当前文件叠加。详见
 [Native Agent](NativeAgent.md#当前书籍与上下文范围)。
 
 ### Agent 会区分“已配置”和“已连通”

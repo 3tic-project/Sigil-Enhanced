@@ -713,3 +713,40 @@ Python 依赖检查通过。四份目录的 23 条新增文本逐项匹配、占
 验证。模型列表刷新成功也不等同于对话 endpoint 已验证。Book Browser“选中文件”范围、
 显式全书范围选择器及端到端真实模型 Ruby 回显仍属于上一切片列出的未关闭项。用户说明
 见 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
+
+## Native Agent 显式任务范围（2026-09-12）
+
+分支：`feature/agent-selected-files-scope`。主要提交：`5baa018f3`（Book Browser 多选
+接线与互斥范围）、`a9f2481a9`（选中文件上下文限流）和 `83c29a5f0`（四语范围文案）。
+
+### 行为与性能边界
+
+- AgentDock 将原来可叠加的 Book/File/Selection 芯片改为互斥的 Selection、Current
+  file、Selected files、Whole book。Whole book 对应唯一的 `book` handle；另外三种
+  范围只附加目标资源，不再暗中包含资源表和 Spine 样本。
+- 默认规则与 PRD 一致：存在非空编辑器选区时选 Selection，否则选 Current file；两者
+  不可用时才使用 Book Browser 选择或 Whole book。用户手动选择的范围会保持，直到该
+  范围失效才重新执行默认规则，因此光标移动不会覆盖显式的全书/多文件选择。
+- BookBrowser 公开 `SelectedResourcesChanged`，其底层 selection model 通知通过零延迟
+  单次定时器合并；程序化批量选择不会为每一行重复枚举资源或刷新 Agent。MainWindow
+  读取当前资源 ID/路径，保持 Book Browser 顺序，AgentDock 再按 ID 去重。
+- Selected files 会把每份当前内存资源的开头片段加入 prompt；自动读取上限为 60 份，
+  超出时在上下文中明确写出省略数量并指向 `resource.read_fragment`。这限制了大规模
+  多选的提示词增长，同时不把未读资源说成已经附加。
+
+### 测试证据与未关闭项
+
+`agent_dock` 验证选区优先、折叠后回退当前文件、四范围互斥、去重、手动选择保持及
+handle 精确集合；`agent_harness` 用 65 个真实 Memory workspace 资源验证只附加前 60
+份、报告其余 5 份且不泄漏全书资源表。`agent_dock_contract` 固定 BookBrowser 合并信号
+和 MainWindow 接线。`agent_workspace_package_integration` 链接完整宿主，在真实导入
+EPUB 的 Book Browser 同时选择 XHTML/Nav，确认两个 ID 按序进入 Agent，并由
+`PromptAssembler` 读取当前内存源码而不附加全书表。完整 Sigil 构建和 42 项固定 Python
+依赖检查通过。四语 10 条新增文案可生成 `.qm`，旧 `Book · %1` 条目已移除；严格三种
+非英文覆盖降至 73 行继承欠账，本切片范围文案新增失败为 0。
+
+本切片补齐 AGENT-01 的四种范围和默认选择规则，并推进 A01–A03；仍不关闭完整
+AGENT-IM1：尚无任务开始后冻结/展示不可变范围快照、书籍关闭时的运行取消集成测试、
+独立连接测试与请求延迟信息。Selected files 自动片段有意限流，超过 60 份的任务必须让
+模型继续按 ID 读取；尚未在包含大量二进制资源的真实书籍上做性能基准。用户说明见
+[Native Agent](NativeAgent.md#当前书籍与上下文范围)。

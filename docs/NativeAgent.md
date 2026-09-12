@@ -12,7 +12,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - 当前模型（只读，来自偏好设置）
 - 提供商状态：配置是否完整、安全的 endpoint 主机，以及最近一次真实请求结果
 - 当前书籍状态：EPUB 文件名、元数据标题、资源数、Saved / Unsaved 和 Agent revision
-- 上下文芯片：当前书、当前文件、选区（可开关，范围会显示在状态行）
+- 上下文芯片：选区、当前文件、Book Browser 选中文件、全书（互斥，范围会显示在状态行）
 - 输入框：**Enter 发送**，Shift+Enter 换行
 - **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
 - **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
@@ -27,19 +27,24 @@ Thinking（模型的 `reasoning_content`）不是给用户看的最终答案；�
 刷新。文件名与 `dc:title` 同时显示，便于在多窗口里确认目标；资源数来自当前 Book。
 `Agent rev` 是 Agent 工作区的协议修订号，不等同于 Saved / Unsaved，二者分开显示。
 
-上下文芯片的含义如下：
+上下文芯片是互斥任务范围，含义如下：
 
-- **Book**：附加全书资源表和最多两个 Spine 正文开头样本；书籍的最小身份摘要始终
-  保留，用来确认工具目标。
-- **File**：附加当前资源的有界开头片段。
 - **Selection**：编辑器存在非空选区时自动启用，显示 `start–end`。发送时用
   `resource_id:start-end` 记录 UTF-16 code-unit 范围，并从当前内存资源读取该范围的
   精确源码；Ruby 和内部标签不会退化成纯文本。单次自动附加最多 4096 code units，
   超出时明确标为截断，模型必须再用 `resource.read_fragment` 读取剩余范围。
+- **File**：附加当前资源的有界开头片段。
+- **Selected files**：读取 Book Browser 当前选中的一个或多个资源，保持浏览器顺序并
+  去重。自动上下文最多附加 60 份资源片段；更多资源不会静默吞掉，而会报告省略数量，
+  模型可按需用 `resource.read_fragment` 继续读取。
+- **Whole book**：附加全书资源表和最多两个 Spine 正文开头样本；这是显式的全书范围，
+  不再与当前文件默认叠加。
 
-只选 File 或 Selection 时不会暗中附加全书资源表和 Spine 样本。用户把全部芯片关闭时，
-沿用兼容行为，回退为“book structure + sampled fragments”，状态行会明确显示这一点。
-每个窗口有自己的 AgentDock、Book 和 workspace；范围不会从另一个窗口读取。
+有非空编辑器选区时默认采用 Selection，否则默认 Current file；两者均不可用时才依次
+采用 Selected files 或 Whole book。用户手动选择的有效范围会保持，不因光标或 Book
+Browser 选择刷新而跳走；若该范围消失才按上述规则回退。File、Selected files 和
+Selection 均不会暗中附加全书资源表或 Spine 样本。书籍的最小身份摘要始终保留，用来
+确认工具目标。每个窗口有自己的 AgentDock、Book 和 workspace；范围不会跨窗口读取。
 
 ## 提供商配置与最近请求状态
 
