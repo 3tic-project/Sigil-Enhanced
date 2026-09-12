@@ -23408,5 +23408,20 @@ Continue using the requested filename?</translation>
     <message><source>Retry is unavailable because the open book changed.</source><translation>Retry is unavailable because the open book changed.</translation></message>
     <message><source>Retry is unavailable because this turn already executed tools.</source><translation>Retry is unavailable because this turn already executed tools.</translation></message>
     <message><source>Retry is available after a provider request fails.</source><translation>Retry is available after a provider request fails.</translation></message>
+    <message><source>A task restore point could not be created for this commit.</source><translation>A task restore point could not be created for this commit.</translation></message>
+    <message><source>A task restore point was not created because this commit changed book structure.</source><translation>A task restore point was not created because this commit changed book structure.</translation></message>
+    <message><source>Restore blocked</source><translation>Restore blocked</translation></message>
+    <message><source>Restore is unavailable because the open book changed.</source><translation>Restore is unavailable because the open book changed.</translation></message>
+    <message><source>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</source><translation>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</translation></message>
+    <message><source>Restore this task</source><translation>Restore this task</translation></message>
+    <message><source>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</source><translation>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</translation></message>
+    <message><source>Restore was blocked because this restore point belongs to another book.</source><translation>Restore was blocked because this restore point belongs to another book.</translation></message>
+    <message><source>Restored</source><translation>Restored</translation></message>
+    <message><source>Restored %1 text resource(s). Later unrelated edits were preserved.</source><translation>Restored %1 text resource(s). Later unrelated edits were preserved.</translation></message>
+    <message><source>Stop the active Agent run before restoring this task.</source><translation>Stop the active Agent run before restoring this task.</translation></message>
+    <message><source>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</source><translation>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</translation></message>
+    <message><source>Task restored</source><translation>Task restored</translation></message>
+    <message><source>The task could not be restored.</source><translation>The task could not be restored.</translation></message>
+    <message><source>This task has already been restored.</source><translation>This task has already been restored.</translation></message>
 </context>
 </TS>

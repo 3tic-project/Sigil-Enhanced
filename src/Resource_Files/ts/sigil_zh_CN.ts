@@ -27356,5 +27356,20 @@ Continue using the requested filename?</source>
     <message><source>Retry is unavailable because the open book changed.</source><translation>打开的书籍已更改，无法重试。</translation></message>
     <message><source>Retry is unavailable because this turn already executed tools.</source><translation>本轮已执行工具，无法安全重试。</translation></message>
     <message><source>Retry is available after a provider request fails.</source><translation>提供商请求失败后可重试。</translation></message>
+    <message><source>A task restore point could not be created for this commit.</source><translation>本次提交无法创建任务恢复点。</translation></message>
+    <message><source>A task restore point was not created because this commit changed book structure.</source><translation>本次提交更改了书籍结构，因此未创建任务恢复点。</translation></message>
+    <message><source>Restore blocked</source><translation>恢复已阻止</translation></message>
+    <message><source>Restore is unavailable because the open book changed.</source><translation>打开的书籍已更改，无法恢复。</translation></message>
+    <message><source>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</source><translation>恢复本次提交更改的文本资源。若这些资源后来被编辑，恢复将被阻止。</translation></message>
+    <message><source>Restore this task</source><translation>恢复此任务</translation></message>
+    <message><source>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</source><translation>恢复已阻止，因为本任务完成后有 %1 个受影响资源发生更改。未更改任何书籍内容。</translation></message>
+    <message><source>Restore was blocked because this restore point belongs to another book.</source><translation>恢复点属于另一本书籍，因此已阻止恢复。</translation></message>
+    <message><source>Restored</source><translation>已恢复</translation></message>
+    <message><source>Restored %1 text resource(s). Later unrelated edits were preserved.</source><translation>已恢复 %1 个文本资源。之后对无关资源的编辑予以保留。</translation></message>
+    <message><source>Stop the active Agent run before restoring this task.</source><translation>请先停止正在运行的 Agent，再恢复此任务。</translation></message>
+    <message><source>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</source><translation>任务恢复点：%1 个文本资源，受提交后冲突检查保护。</translation></message>
+    <message><source>Task restored</source><translation>任务已恢复</translation></message>
+    <message><source>The task could not be restored.</source><translation>无法恢复此任务。</translation></message>
+    <message><source>This task has already been restored.</source><translation>此任务已恢复过。</translation></message>
 </context>
 </TS>

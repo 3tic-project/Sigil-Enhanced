@@ -27354,5 +27354,20 @@ Continue using the requested filename?</source>
     <message><source>Retry is unavailable because the open book changed.</source><translation>開いているブックが変更されたため再試行できません。</translation></message>
     <message><source>Retry is unavailable because this turn already executed tools.</source><translation>このターンではすでにツールを実行したため、安全に再試行できません。</translation></message>
     <message><source>Retry is available after a provider request fails.</source><translation>プロバイダーへのリクエストが失敗すると再試行できます。</translation></message>
+    <message><source>A task restore point could not be created for this commit.</source><translation>このコミットのタスク復元ポイントを作成できませんでした。</translation></message>
+    <message><source>A task restore point was not created because this commit changed book structure.</source><translation>このコミットではブック構造が変更されたため、タスク復元ポイントは作成されませんでした。</translation></message>
+    <message><source>Restore blocked</source><translation>復元をブロックしました</translation></message>
+    <message><source>Restore is unavailable because the open book changed.</source><translation>開いているブックが変更されたため復元できません。</translation></message>
+    <message><source>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</source><translation>このコミットで変更されたテキストリソースを復元します。後で対象リソースが編集されている場合、復元はブロックされます。</translation></message>
+    <message><source>Restore this task</source><translation>このタスクを復元</translation></message>
+    <message><source>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</source><translation>このタスクの完了後に対象リソース %1 件が変更されたため、復元をブロックしました。ブックの内容は変更されていません。</translation></message>
+    <message><source>Restore was blocked because this restore point belongs to another book.</source><translation>この復元ポイントは別のブックに属するため、復元をブロックしました。</translation></message>
+    <message><source>Restored</source><translation>復元済み</translation></message>
+    <message><source>Restored %1 text resource(s). Later unrelated edits were preserved.</source><translation>テキストリソース %1 件を復元しました。後で行われた無関係な編集は保持されています。</translation></message>
+    <message><source>Stop the active Agent run before restoring this task.</source><translation>このタスクを復元する前に、実行中の Agent を停止してください。</translation></message>
+    <message><source>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</source><translation>タスク復元ポイント：テキストリソース %1 件（コミット後の競合チェックで保護）</translation></message>
+    <message><source>Task restored</source><translation>タスクを復元しました</translation></message>
+    <message><source>The task could not be restored.</source><translation>タスクを復元できませんでした。</translation></message>
+    <message><source>This task has already been restored.</source><translation>このタスクはすでに復元されています。</translation></message>
 </context>
 </TS>

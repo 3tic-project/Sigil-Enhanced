@@ -27339,5 +27339,20 @@ Continue using the requested filename?</source>
     <message><source>Retry is unavailable because the open book changed.</source><translation>因開啟的書籍已變更，無法重試。</translation></message>
     <message><source>Retry is unavailable because this turn already executed tools.</source><translation>本輪已執行工具，無法安全重試。</translation></message>
     <message><source>Retry is available after a provider request fails.</source><translation>供應商請求失敗後可重試。</translation></message>
+    <message><source>A task restore point could not be created for this commit.</source><translation>無法為此次提交建立任務還原點。</translation></message>
+    <message><source>A task restore point was not created because this commit changed book structure.</source><translation>此次提交變更書籍結構，因此未建立任務還原點。</translation></message>
+    <message><source>Restore blocked</source><translation>還原已封鎖</translation></message>
+    <message><source>Restore is unavailable because the open book changed.</source><translation>開啟的書籍已變更，無法還原。</translation></message>
+    <message><source>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</source><translation>還原此次提交所變更的文字資源。若之後編輯這些資源，還原將被封鎖。</translation></message>
+    <message><source>Restore this task</source><translation>還原此任務</translation></message>
+    <message><source>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</source><translation>還原已封鎖，因為此任務完成後有 %1 個受影響的資源發生變更。未變更任何書籍內容。</translation></message>
+    <message><source>Restore was blocked because this restore point belongs to another book.</source><translation>此還原點屬於另一本書籍，因此已封鎖還原。</translation></message>
+    <message><source>Restored</source><translation>已還原</translation></message>
+    <message><source>Restored %1 text resource(s). Later unrelated edits were preserved.</source><translation>已還原 %1 個文字資源。之後對無關資源的編輯均予以保留。</translation></message>
+    <message><source>Stop the active Agent run before restoring this task.</source><translation>請先停止正在執行的 Agent，再還原此任務。</translation></message>
+    <message><source>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</source><translation>任務還原點：%1 個文字資源，受提交後衝突檢查保護。</translation></message>
+    <message><source>Task restored</source><translation>任務已還原</translation></message>
+    <message><source>The task could not be restored.</source><translation>無法還原此任務。</translation></message>
+    <message><source>This task has already been restored.</source><translation>此任務已還原過。</translation></message>
 </context>
 </TS>
