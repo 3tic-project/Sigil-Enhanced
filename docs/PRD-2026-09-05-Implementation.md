@@ -789,3 +789,47 @@ summary 以及重绑换发 ID。完整 Sigil 构建与 42 个固定 Python 依�
 当前范围 handle 集合在 `send()` 参数中固定且书籍身份已冻结；Dock 尚未提供可展开的完整
 技术详情面板来展示完整 UUID。用户说明见
 [Native Agent](NativeAgent.md#运行与书籍会话绑定)。
+
+## Native Agent 请求诊断与安全重试（2026-09-12）
+
+分支：`feature/agent-request-diagnostics`。主要提交：`62c31ac38`（请求身份与耗时事件）、
+`bfa9e5d14`（折叠技术详情）、`48a5bc572`（绑定范围的失败重试）、`131813648`（四语诊断
+文案）、`b38c87c8e`（禁止工具执行后的危险重试）和 `41e16d6f7`（重试限制翻译）。
+
+### 请求可观测性
+
+- Runner 为每次模型步骤生成 UUID `request_id`。Started 事件记录 Agent session、冻结的
+  book session、当时的 book revision、step、model、mode、thinking、工具数和完整
+  context handles；Completed/Failed/Cancelled 用相同 ID 配对并记录
+  `provider.stream()` 墙钟耗时。取消不再只能从通用 SessionCancelled 推断，而有明确的
+  `model_request_cancelled` 终态。
+- Provider 状态的成功、失败、取消现在显示该模型步骤的毫秒耗时和完成时间。该数字不包含
+  prompt 组装和后续工具执行，不能解释为整轮任务耗时。
+- Dock 新增默认折叠的 Technical details，显示完整 session、request、当前/请求目标
+  book-session ID、revision、模式、模型、状态、耗时及发送时范围。安全边界仍只显示
+  endpoint host；API Key、URL 路径/查询和响应正文不会进入详情。
+
+### 重试安全边界
+
+- Dock 在 Send 时保存实际提交的用户文本、互斥范围 handles 和完整 book session ID，
+  不在失败后重新读取可能已改变的芯片。Retry 触发一轮新的 `sendRequested`，由 Runner
+  重新读取当前内存源码，不复用原 HTTP body 或旧计划。
+- Retry 只在首个 Provider 请求失败、没有活动运行且 book session 仍完全一致时启用。
+  换书或 New Session 会失效；点击后立即禁用，避免双击重入，连续失败才重新开放。
+- step 2 及更晚的模型失败不会提供 Retry，因为本轮可能已经执行或提交工具；无条件重跑
+  用户原指令可能重复已有副作用。用户必须检查已应用/回滚卡，再显式发起后续操作。
+
+### 测试证据与未关闭项
+
+`agent_harness` 验证多步请求的 started/completed ID 一一对应、session/book/revision/mode
+和非负耗时，并覆盖 Provider 内取消的独立 timed outcome。`agent_dock` 验证状态时间、
+完整技术字段、默认折叠/展开、精确文本与 handles 重试、连续失败、换书/New Session
+失效，以及 step 2 失败禁用；`agent_dock_contract` 固定这些宿主边界。完整 Sigil 构建与
+42 个固定 Python 依赖通过。四语 20 条新增文案均可生成 `.qm`；严格三种非英文覆盖仍为
+73 行继承欠账，本切片新增失败为 0。
+
+本切片补齐 AGENT-IM1 中最近请求时间/延迟、技术详情和受限错误重试，但仍没有独立的
+Chat Completions“测试连接”操作，也没有全任务阶段耗时、token 用量或网络分段指标。
+真实慢速/断网 Provider、Windows/Linux 本地化时间显示、屏幕阅读器和长 ID/大量 handles
+的人工布局仍待验收。用户说明见
+[Native Agent](NativeAgent.md#提供商配置与最近请求状态)。

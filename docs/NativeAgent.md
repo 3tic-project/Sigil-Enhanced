@@ -10,11 +10,13 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 
 - 模式：**Ask** / **Plan** / **Edit** / **Auto**
 - 当前模型（只读，来自偏好设置）
-- 提供商状态：配置是否完整、安全的 endpoint 主机，以及最近一次真实请求结果
+- 提供商状态：配置是否完整、安全的 endpoint 主机，以及最近一次真实请求结果、耗时和时间
 - 当前书籍状态：EPUB 文件名、元数据标题、资源数、Saved / Unsaved、书籍会话短 ID 和 Agent revision
 - 上下文芯片：选区、当前文件、Book Browser 选中文件、全书（互斥，范围会显示在状态行）
 - 输入框：**Enter 发送**，Shift+Enter 换行
 - **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
+- **Retry**：仅在可以安全重跑的首个 Provider 请求失败后启用
+- 默认折叠的 **Technical details**：完整会话/请求/书籍 ID、revision、模式与冻结范围
 - **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
 - 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；批准带影响说明；预览按变更类型列出暂存内容；提交和回滚显示独立结果；错误
 
@@ -72,13 +74,24 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 - **Configured · not tested**：必需设置已填写，**不表示服务器可连接或凭据有效**。
 - **Contacting provider…**：已经发出一轮真实模型请求。
 - **Last request succeeded / failed / cancelled**：只由该轮请求的完成、失败或取消事件
-  更新；工具调用型响应也会产生明确的模型请求完成事件。
+  更新；工具调用型响应也会产生明确的模型请求完成事件。终态同时显示该次
+  `provider.stream()` 的耗时和完成时间，不把整个多步骤 Agent 任务时长冒充网络耗时。
 
 失败状态把 401、403、404、408、429、5xx 和常见网络错误整理为简短说明，完整的
 提供商错误仍显示在 Error 卡片。若服务端在错误正文或 HTTP trace 中回显当前 API Key，
 提供商边界会先替换成 `[redacted]`，导出时还会再次脱敏。当前没有独立的“测试连接”
 按钮；**Refresh models** 的成功只证明模型列表请求成功，Chat Completions 的状态仍以
 实际对话请求为准。
+
+**Technical details** 默认折叠，展开后显示完整 Agent session ID、当前 book session ID、
+最近一次 request ID、该请求绑定的 book session/revision、步骤、模式、模型、终态、耗时和
+发送时冻结的 scope handles。这里只有安全的 endpoint 主机，不显示 API Key、URL 路径、
+查询参数或响应正文。
+
+**Retry** 不是底层 HTTP 自动重试。它会作为新一轮，重新发送用户上次实际提交的文本和
+同一组 scope handles，并重新组装当前内存内容。仅当首个模型请求失败、当前仍是同一
+book session 且没有活动运行时启用；换书或 New Session 后失效。第二步及更晚的请求失败
+意味着本轮可能已经执行过工具，因此 Retry 明确禁用，防止重复提交已有操作。
 
 ## 模式
 
@@ -201,7 +214,8 @@ Agent 循环在 `AgentRunner` 里，不在 UI 类中：
 3. 按权限 allow / ask / deny 处理工具
 4. ask 时先发批准卡片，批准后才执行
 5. deny / 用户拒绝 / 取消时仍写入一条 tool-role 结果（`PERMISSION_DENIED` 或 `CANCELLED`），避免下一次请求因缺 tool 消息而 400
-6. 在模型与工具边界复核运行开始时冻结的 `book_session_id`
-7. 把事件追加到会话日志（transcript 的唯一来源）
+6. 用 `request_id` 配对模型请求开始/成功/失败/取消事件，并记录真实流式调用耗时
+7. 在模型与工具边界复核运行开始时冻结的 `book_session_id`
+8. 把事件追加到会话日志（transcript 的唯一来源）
 
 书籍写入走现有 Book / 事务 / 撤销机制。

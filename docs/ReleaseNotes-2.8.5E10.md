@@ -152,6 +152,14 @@ endpoint、API Key 或模型时会明确提示 **Setup required**；设置齐全
 保留在 Error 卡片。服务端即使在错误正文中回显 API Key，也会在进入会话和 HTTP trace
 前脱敏。详见 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
 
+最近请求终态现在还显示耗时和完成时间。默认折叠的 **Technical details** 提供完整
+session/request/book-session ID、目标 revision、模式和发送时冻结的范围句柄，同时继续只
+展示安全的 endpoint 主机。
+
+首个 Provider 请求失败时可点 **Retry**，它用原始文本和同一范围重新建立新请求；换书、
+New Session 或本轮已经执行过工具时不会启用，避免旧范围串书或重复提交。这里没有后台
+自动重试。详见 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。
