@@ -93,10 +93,19 @@ AgentDock::AgentDock(QWidget *parent) :
     status_layout->addWidget(m_modelLabel);
     status_layout->addWidget(m_contextScope, 1);
 
-    m_providerStatus = new QLabel(root);
+    auto *provider_row = new QWidget(root);
+    provider_row->setObjectName(QStringLiteral("agentProviderRow"));
+    auto *provider_layout = new QHBoxLayout(provider_row);
+    provider_layout->setContentsMargins(0, 0, 0, 0);
+    m_providerStatus = new QLabel(provider_row);
     m_providerStatus->setObjectName(QStringLiteral("agentProviderStatus"));
     m_providerStatus->setWordWrap(true);
     m_providerStatus->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_retryButton = new QPushButton(tr("Retry"), provider_row);
+    m_retryButton->setObjectName(QStringLiteral("agentRetryButton"));
+    m_retryButton->setEnabled(false);
+    provider_layout->addWidget(m_providerStatus, 1);
+    provider_layout->addWidget(m_retryButton);
 
     m_bookStatus = new QLabel(root);
     m_bookStatus->setObjectName(QStringLiteral("agentBookStatus"));
@@ -181,7 +190,7 @@ AgentDock::AgentDock(QWidget *parent) :
 
     root_layout->addWidget(header);
     root_layout->addWidget(status);
-    root_layout->addWidget(m_providerStatus);
+    root_layout->addWidget(provider_row);
     root_layout->addWidget(m_bookStatus);
     root_layout->addWidget(m_technicalDetailsToggle);
     root_layout->addWidget(m_technicalDetails);
@@ -194,6 +203,12 @@ AgentDock::AgentDock(QWidget *parent) :
     refreshScopeLabel();
 
     connect(m_sendButton, &QPushButton::clicked, this, &AgentDock::onSend);
+    connect(m_retryButton, &QPushButton::clicked, this, [this]() {
+        if (!m_retryButton->isEnabled()) return;
+        m_retryAvailable = false;
+        refreshRetryState();
+        emit sendRequested(m_lastSubmittedText, m_lastSubmittedHandles);
+    });
     connect(m_stopButton, &QPushButton::clicked, this, &AgentDock::stopRequested);
     connect(m_newSessionButton, &QPushButton::clicked, this, &AgentDock::newSessionRequested);
     connect(m_technicalDetailsToggle, &QToolButton::toggled, this, [this](bool expanded) {
@@ -212,6 +227,7 @@ AgentDock::AgentDock(QWidget *parent) :
     chooseDefaultScope();
     refreshProviderStatus();
     refreshTechnicalDetails();
+    refreshRetryState();
 }
 
 AgentMode AgentDock::mode() const
@@ -245,7 +261,12 @@ void AgentDock::setSessionId(const QString &session_id)
     m_requestStep = 0;
     m_requestDurationMs = -1;
     m_requestFinishedAtMs = 0;
+    m_lastSubmittedText.clear();
+    m_lastSubmittedHandles.clear();
+    m_lastSubmittedBookSessionId.clear();
+    m_retryAvailable = false;
     refreshTechnicalDetails();
+    refreshRetryState();
 }
 
 void AgentDock::setModelName(const QString &model)
@@ -274,10 +295,12 @@ void AgentDock::setRunState(AgentRunState state)
         && state != AgentRunState::Completed
         && state != AgentRunState::Cancelled
         && state != AgentRunState::Failed;
+    m_runActive = running;
     m_sendButton->setEnabled(!running);
     m_stopButton->setEnabled(running || state == AgentRunState::AwaitingApproval);
     m_newSessionButton->setEnabled(!running);
     m_modeCombo->setEnabled(!running);
+    refreshRetryState();
 }
 
 void AgentDock::setBookContext(const QString &title,
@@ -323,6 +346,7 @@ void AgentDock::setBookContext(const QString &title,
     m_chipBook->setToolTip(tr("Attach the complete resource map for %1").arg(identity));
     refreshScopeLabel();
     refreshTechnicalDetails();
+    refreshRetryState();
 }
 
 void AgentDock::setCurrentFile(const QString &book_path, const QString &resource_id)
@@ -621,6 +645,28 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setAccessibleName(m_technicalDetails->text());
 }
 
+void AgentDock::refreshRetryState()
+{
+    if (!m_retryButton) return;
+    const bool same_book = !m_lastSubmittedBookSessionId.isEmpty()
+        && m_lastSubmittedBookSessionId == m_bookSessionId;
+    const bool enabled = m_retryAvailable && !m_runActive && same_book
+        && !m_lastSubmittedText.isEmpty();
+    m_retryButton->setEnabled(enabled);
+    m_retryButton->setProperty("bookSessionId", m_lastSubmittedBookSessionId);
+    m_retryButton->setProperty("contextHandles", m_lastSubmittedHandles);
+    if (enabled) {
+        m_retryButton->setToolTip(
+            tr("Resend the last prompt with the same scope handles."));
+    } else if (m_retryAvailable && !same_book) {
+        m_retryButton->setToolTip(
+            tr("Retry is unavailable because the open book changed."));
+    } else {
+        m_retryButton->setToolTip(
+            tr("Retry is available after a provider request fails."));
+    }
+}
+
 void AgentDock::resetTranscript()
 {
     QLayoutItem *item = nullptr;
@@ -663,9 +709,14 @@ void AgentDock::onSend()
     if (m_sendButton && !m_sendButton->isEnabled()) return;
     const QString text = composerText();
     if (text.isEmpty()) return;
+    m_lastSubmittedText = text;
+    m_lastSubmittedHandles = contextHandles();
+    m_lastSubmittedBookSessionId = m_bookSessionId;
+    m_retryAvailable = false;
     m_composer->clear();
     if (m_sendButton) m_sendButton->setEnabled(false);
-    emit sendRequested(text, contextHandles());
+    refreshRetryState();
+    emit sendRequested(text, m_lastSubmittedHandles);
 }
 
 void AgentDock::onModeChanged()
@@ -899,27 +950,35 @@ void AgentDock::appendEvent(const AgentEvent &event)
             beginModelStep();
             m_providerRequestState = ProviderRequestState::Requesting;
             m_providerFailure.clear();
+            m_retryAvailable = false;
             captureRequestEvent(event, QStringLiteral("requesting"));
             refreshProviderStatus();
+            refreshRetryState();
             break;
         case AgentEventType::ModelRequestCompleted:
             m_providerRequestState = ProviderRequestState::Succeeded;
             m_providerFailure.clear();
+            m_retryAvailable = false;
             captureRequestEvent(event, QStringLiteral("succeeded"));
             refreshProviderStatus();
+            refreshRetryState();
             break;
         case AgentEventType::ModelRequestFailed:
             m_providerRequestState = ProviderRequestState::Failed;
             m_providerFailure = providerFailureSummary(
                 event.payload.value(QStringLiteral("message")).toString());
+            m_retryAvailable = true;
             captureRequestEvent(event, QStringLiteral("failed"));
             refreshProviderStatus();
+            refreshRetryState();
             break;
         case AgentEventType::ModelRequestCancelled:
             m_providerRequestState = ProviderRequestState::Cancelled;
             m_providerFailure.clear();
+            m_retryAvailable = false;
             captureRequestEvent(event, QStringLiteral("cancelled"));
             refreshProviderStatus();
+            refreshRetryState();
             break;
         case AgentEventType::AssistantDelta:
             if (event.payload.value(QStringLiteral("kind")).toString() == QLatin1String("reasoning")) {

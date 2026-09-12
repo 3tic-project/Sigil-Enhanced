@@ -74,6 +74,12 @@ require(
     "protocol identifiers and immutable scope must live in expandable technical details",
 )
 require(
+    "agentRetryButton" in dock_cpp
+    and "m_lastSubmittedBookSessionId == m_bookSessionId" in dock_cpp
+    and "m_lastSubmittedHandles" in dock_cpp,
+    "provider retry must reuse the submitted scope and fail closed after a book change",
+)
+require(
     "agentChipSelectedFiles" in dock_cpp
     and "QButtonGroup" in dock_cpp
     and "setExclusive(true)" in dock_cpp

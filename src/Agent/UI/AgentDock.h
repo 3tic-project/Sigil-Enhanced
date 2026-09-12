@@ -96,6 +96,7 @@ private:
     void refreshScopeLabel();
     void refreshProviderStatus();
     void refreshTechnicalDetails();
+    void refreshRetryState();
     void captureRequestEvent(const AgentEvent &event, const QString &status);
     QString providerFailureSummary(const QString &message) const;
     QString previewBody(const QJsonObject &payload) const;
@@ -114,6 +115,7 @@ private:
     QPushButton *m_stopButton = nullptr;
     QPushButton *m_newSessionButton = nullptr;
     QPushButton *m_sendButton = nullptr;
+    QPushButton *m_retryButton = nullptr;
     QToolButton *m_chipBook = nullptr;
     QToolButton *m_chipFile = nullptr;
     QToolButton *m_chipSelectedFiles = nullptr;
@@ -156,6 +158,11 @@ private:
     int m_requestStep = 0;
     qint64 m_requestDurationMs = -1;
     qint64 m_requestFinishedAtMs = 0;
+    QString m_lastSubmittedText;
+    QStringList m_lastSubmittedHandles;
+    QString m_lastSubmittedBookSessionId;
+    bool m_retryAvailable = false;
+    bool m_runActive = false;
 };
 
 } // namespace SigilAgent

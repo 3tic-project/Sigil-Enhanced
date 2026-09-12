@@ -502,9 +502,13 @@ int main(int argc, char *argv[])
 
     composer->setPlainText(QStringLiteral("hello from enter"));
     QString seen;
+    QStringList seen_handles;
+    int send_count = 0;
     QObject::connect(&dock, &SigilAgent::AgentDock::sendRequested,
-                     [&](const QString &text, const QStringList &) {
+                     [&](const QString &text, const QStringList &handles) {
+                         ++send_count;
                          seen = text;
+                         seen_handles = handles;
                          Require(composer->toPlainText().isEmpty(),
                                  "composer must already be empty when sendRequested fires");
                      });
@@ -512,7 +516,44 @@ int main(int argc, char *argv[])
     Require(send && send->isEnabled(), "Send must be enabled while idle");
     send->click();
     application.processEvents();
-    Require(seen == QStringLiteral("hello from enter"), "Send must emit the composer text");
+    Require(send_count == 1 && seen == QStringLiteral("hello from enter")
+                && seen_handles == QStringList { QStringLiteral("book") },
+            "Send must emit the composer text and exact scope snapshot");
     Require(composer->toPlainText().isEmpty(), "composer must stay empty after Send");
+
+    auto *retry = dock.findChild<QPushButton *>(QStringLiteral("agentRetryButton"));
+    Require(retry && !retry->isEnabled(),
+            "Retry must remain unavailable until the submitted provider request fails");
+    dock.setRunState(SigilAgent::AgentRunState::StreamingResponse);
+    dock.appendEvent(provider_started);
+    dock.appendEvent(provider_failed);
+    dock.setRunState(SigilAgent::AgentRunState::Failed);
+    Require(retry->isEnabled()
+                && retry->property("bookSessionId").toString()
+                    == QStringLiteral("12345678-abcd")
+                && retry->property("contextHandles").toStringList()
+                    == QStringList { QStringLiteral("book") },
+            "a provider failure must enable retry for the exact submitted book and scope");
+    retry->click();
+    application.processEvents();
+    Require(send_count == 2 && seen == QStringLiteral("hello from enter")
+                && seen_handles == QStringList { QStringLiteral("book") }
+                && !retry->isEnabled(),
+            "Retry must resend the frozen text and handles once, then disable itself");
+
+    dock.setRunState(SigilAgent::AgentRunState::StreamingResponse);
+    dock.appendEvent(provider_started);
+    dock.appendEvent(provider_failed);
+    dock.setRunState(SigilAgent::AgentRunState::Failed);
+    Require(retry->isEnabled(), "a repeated provider failure must offer another retry");
+    dock.setBookContext(QStringLiteral("Another Book"), QStringLiteral("other.epub"),
+                        3, false, 1, QStringLiteral("different-book-session"));
+    Require(!retry->isEnabled()
+                && retry->toolTip().contains(QStringLiteral("open book changed")),
+            "retry must fail closed after the window binds a different book session");
+    dock.setSessionId(QStringLiteral("new-session-id"));
+    Require(!retry->isEnabled()
+                && retry->property("contextHandles").toStringList().isEmpty(),
+            "New Session must discard all retry payload and scope state");
     return EXIT_SUCCESS;
 }
