@@ -56,6 +56,13 @@ require(
     "Native Agent settings must offer DeepSeek, OpenCode Go, OpenRouter, and a models fetch",
 )
 require(
+    "m_catalogWatcher->setFuture(QtConcurrent::run" in settings_cpp
+    and "modelRefreshState" in settings_cpp
+    and "m_catalogCancelled->store(true" in settings_cpp
+    and "30000, cancelled.get()" in settings_cpp,
+    "model catalog refresh must run off the GUI thread and cancel safely with the settings page",
+)
+require(
     "agentTestConnectionButton" in settings_cpp
     and "QFutureWatcher" in settings_cpp
     and "QtConcurrent::run" in settings_cpp

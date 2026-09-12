@@ -42,6 +42,7 @@ private:
     void readSettings();
     void onProviderChanged();
     void refreshModels();
+    void finishModelRefresh();
     void testConnection();
     void finishConnectionTest();
     void invalidateConnectionTest(bool update_status);
@@ -60,6 +61,7 @@ private:
     QLineEdit *m_baseUrl = nullptr;
     QLineEdit *m_apiKey = nullptr;
     QComboBox *m_model = nullptr;
+    QFutureWatcher<SigilAgent::CatalogResult> *m_catalogWatcher = nullptr;
     QFutureWatcher<SigilAgent::AgentConnectionProbeResult> *m_connectionWatcher = nullptr;
     QPushButton *m_refreshModels = nullptr;
     QPushButton *m_testConnection = nullptr;
@@ -75,6 +77,9 @@ private:
     QHash<QString, QString> m_providerCatalogs;
     QList<SigilAgent::CatalogModel> m_models;
     QString m_catalogJson;
+    SigilAgent::AgentProviderKind m_catalogRequestKind = SigilAgent::AgentProviderKind::Custom;
+    QString m_catalogRequestProvider;
+    std::shared_ptr<std::atomic_bool> m_catalogCancelled;
     std::shared_ptr<std::atomic_bool> m_connectionCancelled;
     QString m_successfulConnectionFingerprint;
     qint64 m_successfulConnectionAtMs = 0;

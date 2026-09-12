@@ -6,7 +6,6 @@
 
 #include "AgentSettingsWidget.h"
 
-#include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
@@ -73,6 +72,7 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_modelInfo->setWordWrap(true);
     m_modelInfo->setStyleSheet(QStringLiteral("color: palette(mid);"));
 
+    m_catalogWatcher = new QFutureWatcher<SigilAgent::CatalogResult>(this);
     m_connectionWatcher =
         new QFutureWatcher<SigilAgent::AgentConnectionProbeResult>(this);
 
@@ -108,6 +108,8 @@ AgentSettingsWidget::AgentSettingsWidget()
     connect(m_provider, &QComboBox::currentIndexChanged, this, [this](int) { onProviderChanged(); });
     connect(m_refreshModels, &QPushButton::clicked, this, [this]() { refreshModels(); });
     connect(m_testConnection, &QPushButton::clicked, this, [this]() { testConnection(); });
+    connect(m_catalogWatcher, &QFutureWatcher<SigilAgent::CatalogResult>::finished,
+            this, &AgentSettingsWidget::finishModelRefresh);
     connect(m_connectionWatcher,
             &QFutureWatcher<SigilAgent::AgentConnectionProbeResult>::finished,
             this, &AgentSettingsWidget::finishConnectionTest);
@@ -125,6 +127,9 @@ AgentSettingsWidget::AgentSettingsWidget()
 
 AgentSettingsWidget::~AgentSettingsWidget()
 {
+    if (m_catalogCancelled) {
+        m_catalogCancelled->store(true, std::memory_order_relaxed);
+    }
     if (m_connectionCancelled) {
         m_connectionCancelled->store(true, std::memory_order_relaxed);
     }
@@ -315,7 +320,8 @@ void AgentSettingsWidget::setConnectionControlsEnabled(bool enabled)
 
 void AgentSettingsWidget::testConnection()
 {
-    if (m_connectionWatcher && m_connectionWatcher->isRunning()) return;
+    if ((m_catalogWatcher && m_catalogWatcher->isRunning())
+        || (m_connectionWatcher && m_connectionWatcher->isRunning())) return;
     rememberCurrentProvider();
     invalidateConnectionTest(false);
     const AgentProviderKind kind = currentKind();
@@ -392,32 +398,58 @@ void AgentSettingsWidget::finishConnectionTest()
 
 void AgentSettingsWidget::refreshModels()
 {
+    if ((m_catalogWatcher && m_catalogWatcher->isRunning())
+        || (m_connectionWatcher && m_connectionWatcher->isRunning())) return;
     rememberCurrentProvider();
     const AgentProviderKind kind = currentKind();
+    const QString provider_id = m_activeProvider;
     const QString url = SigilAgent::modelsUrl(kind, m_baseUrl->text());
+    const QString api_key = m_apiKey->text();
     QString referer;
     QString title;
     if (kind == AgentProviderKind::OpenRouter) {
         referer = SigilAgent::agentHttpReferer();
         title = SigilAgent::agentHttpTitle();
     }
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    m_refreshModels->setEnabled(false);
-    CatalogResult result = SigilAgent::AgentModelCatalog::fetch(url, m_apiKey->text(), referer, title);
-    SigilAgent::AgentModelCatalog::applyProviderDefaults(&result, kind);
-    m_refreshModels->setEnabled(true);
-    QApplication::restoreOverrideCursor();
+    m_catalogRequestKind = kind;
+    m_catalogRequestProvider = provider_id;
+    m_status->setProperty("modelRefreshState", QStringLiteral("loading"));
+    m_status->setProperty("modelRefreshHttpStatus", QVariant());
+    m_status->setText(tr("Loading models…"));
+    setConnectionControlsEnabled(false);
+    m_catalogCancelled = std::make_shared<std::atomic_bool>(false);
+    const std::shared_ptr<std::atomic_bool> cancelled = m_catalogCancelled;
+    m_catalogWatcher->setFuture(QtConcurrent::run(
+        [url, api_key, referer, title, kind, cancelled]() {
+            CatalogResult result = SigilAgent::AgentModelCatalog::fetch(
+                url, api_key, referer, title, 30000, cancelled.get());
+            SigilAgent::AgentModelCatalog::applyProviderDefaults(&result, kind);
+            return result;
+        }));
+}
 
+void AgentSettingsWidget::finishModelRefresh()
+{
+    if (!m_catalogWatcher || !m_catalogWatcher->isFinished()) return;
+    const CatalogResult result = m_catalogWatcher->result();
+    m_catalogCancelled.reset();
+    setConnectionControlsEnabled(true);
+    m_status->setProperty("modelRefreshHttpStatus", result.httpStatus);
     if (!result.error.isEmpty()) {
+        m_status->setProperty("modelRefreshState", QStringLiteral("failed"));
         m_status->setText(result.error);
+        m_status->setAccessibleName(m_status->text());
         return;
     }
     m_models = result.models;
     m_catalogJson = QString::fromUtf8(
-        QJsonDocument(SigilAgent::AgentModelCatalog::toCacheJson(result, kind)).toJson(QJsonDocument::Compact));
-    m_providerCatalogs.insert(m_activeProvider, m_catalogJson);
+        QJsonDocument(SigilAgent::AgentModelCatalog::toCacheJson(
+                          result, m_catalogRequestKind)).toJson(QJsonDocument::Compact));
+    m_providerCatalogs.insert(m_catalogRequestProvider, m_catalogJson);
     fillModelCombo();
+    m_status->setProperty("modelRefreshState", QStringLiteral("succeeded"));
     m_status->setText(tr("Loaded %1 models from the server.").arg(m_models.size()));
+    m_status->setAccessibleName(m_status->text());
 }
 
 void AgentSettingsWidget::readSettings()
