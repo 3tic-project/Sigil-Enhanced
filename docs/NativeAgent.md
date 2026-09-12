@@ -16,6 +16,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - 输入框：**Enter 发送**，Shift+Enter 换行
 - **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
 - **Retry**：仅在可以安全重跑的首个 Provider 请求失败后启用
+- 纯文本提交卡上的 **Restore this task**：在后续目标内容未改变时恢复该次提交
 - 默认折叠的 **Technical details**：完整会话/请求/书籍 ID、revision、模式与冻结范围
 - **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
 - 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；批准带影响说明；预览按变更类型列出暂存内容；提交和回滚显示独立结果；错误
@@ -103,7 +104,8 @@ book session 且没有活动运行时启用；换书或 New Session 后失效。
 | **Auto** | 与 Edit 相同的写入工具，但默认全部允许，不再弹出 Approve。 |
 
 **Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤不会被
-`transaction.rollback` 撤销，结果仍标为 Applied；只能使用提交卡所列的宿主恢复方式。
+`transaction.rollback` 撤销，结果仍标为 Applied；纯文本提交可使用该 Applied 卡上的
+任务恢复按钮，其他提交只能使用卡片所列的宿主恢复方式。
 
 ## 预览、提交与恢复状态
 
@@ -113,8 +115,20 @@ book session 且没有活动运行时启用；换书或 New Session 后失效。
 - **Applied** 表示事务已写入当前内存 Book，不表示 EPUB 文件已保存。卡片和会话事件会
   显示应用项数、Book revision、`save_status=not_saved`，并明确完整 EPUBCheck 未运行。
 - **Staged changes discarded** 只表示提交前暂存事务已丢弃，活书没有被该事务修改。
-  提交后恢复只能在可用处使用 Sigil Undo。`transaction.commit` 自身不会创建整任务
-  恢复点；当前也没有“撤销本次排版”按钮或能避让后续人工编辑的任务级恢复流程。
+- 仅修改既有文本资源、且不含新增、删除、重命名、metadata、Spine 或 TOC 结构变更的
+  commit，会在写入前自动保存受影响资源的原文，写入后封存同一批资源的精确文本与路径。
+  Applied 卡会显示受保护的资源数和 **Restore this task**。
+- 点击恢复时会先检查完整 `book_session_id`，并一次性比较每个受影响资源的当前路径和
+  文本。若任务之后其中任一资源被人工或其他任务修改，恢复以
+  `TASK_RESTORE_CONFLICT` 拒绝，**任何资源都不会先被改回**；未受该任务影响的后续编辑
+  不参与恢复，也不会被覆盖。处理冲突并使目标内容回到该任务提交后的状态后可以重试。
+- 成功恢复只改回该任务涉及的文本资源，使用宿主的 undoable text edit，Book revision
+  递增且 EPUB 重新处于未保存状态；同一恢复点只能成功使用一次。运行中、存在未提交
+  事务或已经切换书籍时不会恢复。
+- 含书籍结构变更的 commit 会明确显示未创建任务恢复点，继续只在可用处依赖 Sigil Undo
+  或提交前另行建立的宿主 Checkpoint。任务恢复点只存在于当前打开书籍的内存会话，不能
+  代替保存、完整 EPUBCheck、进程崩溃恢复或整包结构快照。自动任务恢复点不能通过模型的
+  普通 `checkpoint.restore` 绕过上述冲突检查。
 
 因此，Agent 回答“完成”不能替代用户保存 EPUB，也不能替代完整 EPUBCheck。会话的
 Conversation Markdown 导出保留同样的 Preview / Applied / Rollback 状态边界。
@@ -216,6 +230,7 @@ Agent 循环在 `AgentRunner` 里，不在 UI 类中：
 5. deny / 用户拒绝 / 取消时仍写入一条 tool-role 结果（`PERMISSION_DENIED` 或 `CANCELLED`），避免下一次请求因缺 tool 消息而 400
 6. 用 `request_id` 配对模型请求开始/成功/失败/取消事件，并记录真实流式调用耗时
 7. 在模型与工具边界复核运行开始时冻结的 `book_session_id`
-8. 把事件追加到会话日志（transcript 的唯一来源）
+8. 对符合条件的纯文本 commit 在写入前创建任务快照、写入后封存冲突基线
+9. 把事件追加到会话日志（transcript 的唯一来源）
 
 书籍写入走现有 Book / 事务 / 撤销机制。

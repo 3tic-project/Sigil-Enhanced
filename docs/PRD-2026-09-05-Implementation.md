@@ -833,3 +833,43 @@ Chat Completions“测试连接”操作，也没有全任务阶段耗时、toke
 真实慢速/断网 Provider、Windows/Linux 本地化时间显示、屏幕阅读器和长 ID/大量 handles
 的人工布局仍待验收。用户说明见
 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
+
+## Native Agent 冲突安全的文本任务恢复（2026-09-12）
+
+分支：`feature/agent-task-recovery`。主要提交：`10007ec10`（任务恢复点协议与冲突保护）、
+`80e377426`（纯文本事务自动快照/封存）、`58bbd0a36`（恢复按钮、Controller 与导出事件）
+和 `c448227a0`（四语恢复文案）。
+
+### 恢复协议与边界
+
+- Runner 在执行 `transaction.commit` 前读取事务预览。只有全部变更均为既有文本资源，
+  且不含资源新增/删除/重命名、metadata、Spine 或 TOC 结构变更时，才为本次 commit
+  自动创建 guarded task restore point；失败提交会丢弃未封存恢复点。
+- 恢复点保存受影响资源的提交前文本和路径；commit 成功后再封存同一资源的提交后精确
+  文本和路径。Applied 事件以 `recovery.task_restore_point=available` 公开 checkpoint、
+  冻结的 book session、资源集合和 `post_commit_text_and_path` 冲突门。结构提交返回
+  `unavailable/structural_changes`，不会把不完整的文本快照冒充整包恢复。
+- 专用恢复入口先验证书籍会话、无活动 Agent run、无暂存事务、恢复点已封存且未使用；
+  然后对所有目标做完整预检。路径、存在性或内容任一不匹配即返回
+  `TASK_RESTORE_CONFLICT` 和逐资源原因，设置 `live_book_unchanged=true`，不执行部分写入。
+  无关资源不在快照或校验集合中，因此任务后的无关人工编辑会保留。
+- 自动恢复点不能经普通 `checkpoint.restore` 使用，避免模型绕过专用冲突门。成功恢复用
+  Sigil 的 undoable text edit 写回全部目标、递增 Agent book revision，并把按钮结算为
+  Restored；同一点只能成功恢复一次。切书清除 workspace 内恢复点，旧卡还会被完整
+  book-session 校验拒绝。
+
+### 测试证据与未关闭项
+
+`agent_book_tools` 覆盖双资源成功恢复、普通 checkpoint 绕过拒绝、一次性语义，以及一份
+目标后续修改时整批零写入；`agent_harness` 验证 Runner 自动发布可用恢复点、结构 commit
+明确不可用、Controller 拒绝跨书卡并发布完成/失败事件；`agent_dock` 验证按钮绑定、运行/
+换书失效、冲突可见与成功结算。`agent_workspace_package_integration` 在完整宿主和真实导入
+EPUB 上提交两份 XHTML/Nav 文本，证明冲突时另一文件不被部分恢复，冲突内容回到提交后
+状态后可恢复精确原文。完整 Sigil 构建与 42 个固定 Python 依赖通过。四语 15 条新增文案
+可生成 `.qm`；严格三种非英文覆盖仍为 73 行继承欠账，本切片新增失败为 0。
+
+本切片直接推进 AGENT-04、AGENT-IM2 和 A11，但不将完整任务恢复关闭：资源增删/重命名、
+metadata、Spine、TOC 和二进制的整包恢复仍需接入可精确寻址的宿主 repository checkpoint，
+并为其建立等价的提交后冲突清单。恢复点目前不持久化，进程崩溃、关闭后重开、跨平台
+GUI、磁盘保存后的恢复及大型书籍内存/延迟基准仍待验收。用户说明见
+[Native Agent](NativeAgent.md#预览提交与恢复状态)。

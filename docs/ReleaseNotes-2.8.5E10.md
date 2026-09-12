@@ -109,9 +109,13 @@ Preview 按文本、新增、重命名、删除、元数据、阅读顺序和 TO
 EPUBCheck 未运行。
 
 提交前 rollback 会显示“已丢弃暂存变更，活书未变”，不再被误解成提交后撤销。
-提交卡只建议在可用处使用 Sigil Undo，并明确本次 commit 没有创建整任务恢复点；
-任务级恢复按钮和后续人工编辑冲突处理仍未实现。Conversation Markdown 导出保留
-相同状态说明。详见 [Native Agent](NativeAgent.md#预览提交与恢复状态)。
+仅修改既有文本资源的提交现在会自动建立任务恢复点，Applied 卡提供
+**Restore this task**。恢复前会一次性核对该任务写入后的每个目标文件；任一目标后来被
+人工或其他任务改过，就会显示冲突并保持整本书不变，不会先恢复一半。未被该任务修改的
+后续编辑会原样保留。新增、删除、重命名、metadata、阅读顺序或 TOC 等结构提交会明确
+说明没有任务恢复点，仍需使用 Sigil Undo 或事先建立的宿主 Checkpoint。恢复点仅在当前
+打开书籍的内存会话中有效，不能代替保存、EPUBCheck 或崩溃恢复。Conversation Markdown
+导出保留相同状态说明。详见 [Native Agent](NativeAgent.md#预览提交与恢复状态)。
 
 ### Agent 会明确显示当前书籍和实时选区
 
