@@ -7182,10 +7182,6 @@ Do you want to save your changes?</source>
         <translation>このインストールには組み込み KFX 変換器が含まれていません。</translation>
     </message>
     <message>
-        <source>Cannot create a temporary EPUB file: %1</source>
-        <translation>一時 EPUB ファイルを作成できません：%1</translation>
-    </message>
-    <message>
         <source>Starting KFX conversion...</source>
         <translation>KFX 変換を開始しています...</translation>
     </message>
@@ -27264,7 +27260,65 @@ Continue using the requested filename?</source>
     <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落の正規化：追加の XHTML 整形を適用しました。</translation></message>
 </context>
 <context>
+    <name>MainWindow</name>
+    <message><source>Export conversation</source><translation>会話をエクスポート</translation></message>
+    <message><source>Export debug log</source><translation>デバッグログをエクスポート</translation></message>
+    <message><source>JSON (*.json);;All files (*)</source><translation>JSON (*.json);;すべてのファイル (*)</translation></message>
+    <message><source>Markdown (*.md);;All files (*)</source><translation>Markdown (*.md);;すべてのファイル (*)</translation></message>
+</context>
+<context>
+    <name>PluginSession</name>
+    <message><source>The live plugin launcher or snippet file does not exist.</source><translation>ライブプラグインランチャーまたはスニペットファイルが存在しません。</translation></message>
+</context>
+<context>
+    <name>PluginSessionManager</name>
+    <message><source>Could not write a temporary Python snippet.</source><translation>一時 Python スニペットを書き込めませんでした。</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>Export failed</source><translation>エクスポートに失敗しました</translation></message>
+</context>
+<context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Agent</source><translation>エージェント</translation></message>
+    <message><source>Answer</source><translation>回答</translation></message>
+    <message><source>Applied: %1</source><translation>適用済み：%1</translation></message>
+    <message><source>Approve</source><translation>承認</translation></message>
+    <message><source>Approve %1?</source><translation>%1 を承認しますか？</translation></message>
+    <message><source>Approved</source><translation>承認済み</translation></message>
+    <message><source>Ask</source><translation>質問</translation></message>
+    <message><source>Ask about this book, plan a change, or describe an edit…</source><translation>このブックについて質問、変更を計画、または編集内容を入力…</translation></message>
+    <message><source>Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking.</source><translation>「質問」は読み取り専用です。「計画」はプレビューをステージできます。「編集」は承認後にコミットできます。「自動」は確認せずにコミットします。</translation></message>
+    <message><source>Auto</source><translation>自動</translation></message>
+    <message><source>Context: %1</source><translation>コンテキスト：%1</translation></message>
+    <message><source>Conversation…</source><translation>会話…</translation></message>
+    <message><source>Debug log…</source><translation>デバッグログ…</translation></message>
+    <message><source>Denied</source><translation>拒否済み</translation></message>
+    <message><source>Deny</source><translation>拒否</translation></message>
+    <message><source>Edit</source><translation>編集</translation></message>
+    <message><source>Enter to send · Shift+Enter for a new line · Stop cancels the in-flight request</source><translation>Enter で送信 · Shift+Enter で改行 · Stop で処理中のリクエストをキャンセル</translation></message>
+    <message><source>Error</source><translation>エラー</translation></message>
+    <message><source>Export</source><translation>エクスポート</translation></message>
+    <message><source>File</source><translation>ファイル</translation></message>
+    <message><source>File · %1</source><translation>ファイル · %1</translation></message>
+    <message><source>Idle</source><translation>アイドル</translation></message>
+    <message><source>Model is chosen in Preferences → Native Agent</source><translation>モデルは「環境設定 → Native Agent」で選択します</translation></message>
+    <message><source>New Session</source><translation>新しいセッション</translation></message>
+    <message><source>No model (set in Preferences)</source><translation>モデル未設定（環境設定で設定）</translation></message>
+    <message><source>Plan</source><translation>計画</translation></message>
+    <message><source>Run stopped. Uncommitted staged work was rolled back.</source><translation>実行を停止しました。未コミットのステージ済み作業はロールバックされました。</translation></message>
+    <message><source>Selection</source><translation>選択範囲</translation></message>
+    <message><source>Selection · %1–%2</source><translation>選択範囲 · %1–%2</translation></message>
+    <message><source>Send</source><translation>送信</translation></message>
+    <message><source>Stop</source><translation>停止</translation></message>
+    <message><source>Stopped</source><translation>停止済み</translation></message>
+    <message><source>Thinking</source><translation>思考中</translation></message>
+    <message><source>Tool failed: %1</source><translation>ツール失敗：%1</translation></message>
+    <message><source>Tool running: %1</source><translation>ツール実行中：%1</translation></message>
+    <message><source>Tool: %1</source><translation>ツール：%1</translation></message>
+    <message><source>You</source><translation>あなた</translation></message>
+    <message><source>current file</source><translation>現在のファイル</translation></message>
+    <message><source>selection</source><translation>選択範囲</translation></message>
     <message><source>Whole book</source><translation>ブック全体</translation></message>
     <message><source>Selected files</source><translation>選択したファイル</translation></message>
     <message><source>Attach the complete resource map for %1</source><translation>%1 の完全なリソース一覧を添付</translation></message>

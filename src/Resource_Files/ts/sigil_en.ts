@@ -23318,7 +23318,65 @@ Continue using the requested filename?</translation>
     <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV paragraph normalization: optional XHTML formatting was applied.</translation></message>
 </context>
 <context>
+    <name>MainWindow</name>
+    <message><source>Export conversation</source><translation>Export conversation</translation></message>
+    <message><source>Export debug log</source><translation>Export debug log</translation></message>
+    <message><source>JSON (*.json);;All files (*)</source><translation>JSON (*.json);;All files (*)</translation></message>
+    <message><source>Markdown (*.md);;All files (*)</source><translation>Markdown (*.md);;All files (*)</translation></message>
+</context>
+<context>
+    <name>PluginSession</name>
+    <message><source>The live plugin launcher or snippet file does not exist.</source><translation>The live plugin launcher or snippet file does not exist.</translation></message>
+</context>
+<context>
+    <name>PluginSessionManager</name>
+    <message><source>Could not write a temporary Python snippet.</source><translation>Could not write a temporary Python snippet.</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>Export failed</source><translation>Export failed</translation></message>
+</context>
+<context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Agent</source><translation>Agent</translation></message>
+    <message><source>Answer</source><translation>Answer</translation></message>
+    <message><source>Applied: %1</source><translation>Applied: %1</translation></message>
+    <message><source>Approve</source><translation>Approve</translation></message>
+    <message><source>Approve %1?</source><translation>Approve %1?</translation></message>
+    <message><source>Approved</source><translation>Approved</translation></message>
+    <message><source>Ask</source><translation>Ask</translation></message>
+    <message><source>Ask about this book, plan a change, or describe an edit…</source><translation>Ask about this book, plan a change, or describe an edit…</translation></message>
+    <message><source>Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking.</source><translation>Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking.</translation></message>
+    <message><source>Auto</source><translation>Auto</translation></message>
+    <message><source>Context: %1</source><translation>Context: %1</translation></message>
+    <message><source>Conversation…</source><translation>Conversation…</translation></message>
+    <message><source>Debug log…</source><translation>Debug log…</translation></message>
+    <message><source>Denied</source><translation>Denied</translation></message>
+    <message><source>Deny</source><translation>Deny</translation></message>
+    <message><source>Edit</source><translation>Edit</translation></message>
+    <message><source>Enter to send · Shift+Enter for a new line · Stop cancels the in-flight request</source><translation>Enter to send · Shift+Enter for a new line · Stop cancels the in-flight request</translation></message>
+    <message><source>Error</source><translation>Error</translation></message>
+    <message><source>Export</source><translation>Export</translation></message>
+    <message><source>File</source><translation>File</translation></message>
+    <message><source>File · %1</source><translation>File · %1</translation></message>
+    <message><source>Idle</source><translation>Idle</translation></message>
+    <message><source>Model is chosen in Preferences → Native Agent</source><translation>Model is chosen in Preferences → Native Agent</translation></message>
+    <message><source>New Session</source><translation>New Session</translation></message>
+    <message><source>No model (set in Preferences)</source><translation>No model (set in Preferences)</translation></message>
+    <message><source>Plan</source><translation>Plan</translation></message>
+    <message><source>Run stopped. Uncommitted staged work was rolled back.</source><translation>Run stopped. Uncommitted staged work was rolled back.</translation></message>
+    <message><source>Selection</source><translation>Selection</translation></message>
+    <message><source>Selection · %1–%2</source><translation>Selection · %1–%2</translation></message>
+    <message><source>Send</source><translation>Send</translation></message>
+    <message><source>Stop</source><translation>Stop</translation></message>
+    <message><source>Stopped</source><translation>Stopped</translation></message>
+    <message><source>Thinking</source><translation>Thinking</translation></message>
+    <message><source>Tool failed: %1</source><translation>Tool failed: %1</translation></message>
+    <message><source>Tool running: %1</source><translation>Tool running: %1</translation></message>
+    <message><source>Tool: %1</source><translation>Tool: %1</translation></message>
+    <message><source>You</source><translation>You</translation></message>
+    <message><source>current file</source><translation>current file</translation></message>
+    <message><source>selection</source><translation>selection</translation></message>
     <message><source>Whole book</source><translation>Whole book</translation></message>
     <message><source>Selected files</source><translation>Selected files</translation></message>
     <message><source>Attach the complete resource map for %1</source><translation>Attach the complete resource map for %1</translation></message>

@@ -7177,10 +7177,6 @@ Do you want to save your changes?</source>
         <translation>此安裝中缺少內建 KFX 轉換器。</translation>
     </message>
     <message>
-        <source>Cannot create a temporary EPUB file: %1</source>
-        <translation>無法建立暫存 EPUB 檔案：%1</translation>
-    </message>
-    <message>
         <source>Starting KFX conversion...</source>
         <translation>正在啟動 KFX 轉換...</translation>
     </message>
@@ -27249,7 +27245,65 @@ Continue using the requested filename?</source>
     <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落規範化：已套用選用的 XHTML 格式化。</translation></message>
 </context>
 <context>
+    <name>MainWindow</name>
+    <message><source>Export conversation</source><translation>匯出對話</translation></message>
+    <message><source>Export debug log</source><translation>匯出偵錯記錄</translation></message>
+    <message><source>JSON (*.json);;All files (*)</source><translation>JSON (*.json);;所有檔案 (*)</translation></message>
+    <message><source>Markdown (*.md);;All files (*)</source><translation>Markdown (*.md);;所有檔案 (*)</translation></message>
+</context>
+<context>
+    <name>PluginSession</name>
+    <message><source>The live plugin launcher or snippet file does not exist.</source><translation>即時外掛程式啟動器或程式碼片段檔案不存在。</translation></message>
+</context>
+<context>
+    <name>PluginSessionManager</name>
+    <message><source>Could not write a temporary Python snippet.</source><translation>無法寫入暫存 Python 程式碼片段。</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>Export failed</source><translation>匯出失敗</translation></message>
+</context>
+<context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>Agent</source><translation>Agent</translation></message>
+    <message><source>Answer</source><translation>回答</translation></message>
+    <message><source>Applied: %1</source><translation>已套用：%1</translation></message>
+    <message><source>Approve</source><translation>核准</translation></message>
+    <message><source>Approve %1?</source><translation>是否核准 %1？</translation></message>
+    <message><source>Approved</source><translation>已核准</translation></message>
+    <message><source>Ask</source><translation>詢問</translation></message>
+    <message><source>Ask about this book, plan a change, or describe an edit…</source><translation>詢問此書、規劃變更或描述編輯…</translation></message>
+    <message><source>Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking.</source><translation>「詢問」為唯讀。「規劃」可暫存預覽。「編輯」經核准後可提交。「自動」不詢問即提交。</translation></message>
+    <message><source>Auto</source><translation>自動</translation></message>
+    <message><source>Context: %1</source><translation>上下文：%1</translation></message>
+    <message><source>Conversation…</source><translation>對話…</translation></message>
+    <message><source>Debug log…</source><translation>偵錯記錄…</translation></message>
+    <message><source>Denied</source><translation>已拒絕</translation></message>
+    <message><source>Deny</source><translation>拒絕</translation></message>
+    <message><source>Edit</source><translation>編輯</translation></message>
+    <message><source>Enter to send · Shift+Enter for a new line · Stop cancels the in-flight request</source><translation>Enter 傳送 · Shift+Enter 換行 · Stop 取消進行中的請求</translation></message>
+    <message><source>Error</source><translation>錯誤</translation></message>
+    <message><source>Export</source><translation>匯出</translation></message>
+    <message><source>File</source><translation>檔案</translation></message>
+    <message><source>File · %1</source><translation>檔案 · %1</translation></message>
+    <message><source>Idle</source><translation>閒置</translation></message>
+    <message><source>Model is chosen in Preferences → Native Agent</source><translation>模型在「偏好設定 → Native Agent」中選擇</translation></message>
+    <message><source>New Session</source><translation>新工作階段</translation></message>
+    <message><source>No model (set in Preferences)</source><translation>未設定模型（請在偏好設定中設定）</translation></message>
+    <message><source>Plan</source><translation>規劃</translation></message>
+    <message><source>Run stopped. Uncommitted staged work was rolled back.</source><translation>執行已停止。未提交的暫存工作已回復。</translation></message>
+    <message><source>Selection</source><translation>選取範圍</translation></message>
+    <message><source>Selection · %1–%2</source><translation>選取範圍 · %1–%2</translation></message>
+    <message><source>Send</source><translation>傳送</translation></message>
+    <message><source>Stop</source><translation>停止</translation></message>
+    <message><source>Stopped</source><translation>已停止</translation></message>
+    <message><source>Thinking</source><translation>思考中</translation></message>
+    <message><source>Tool failed: %1</source><translation>工具失敗：%1</translation></message>
+    <message><source>Tool running: %1</source><translation>工具執行中：%1</translation></message>
+    <message><source>Tool: %1</source><translation>工具：%1</translation></message>
+    <message><source>You</source><translation>你</translation></message>
+    <message><source>current file</source><translation>目前檔案</translation></message>
+    <message><source>selection</source><translation>選取範圍</translation></message>
     <message><source>Whole book</source><translation>整本書</translation></message>
     <message><source>Selected files</source><translation>已選檔案</translation></message>
     <message><source>Attach the complete resource map for %1</source><translation>為 %1 附加完整資源對照表</translation></message>
