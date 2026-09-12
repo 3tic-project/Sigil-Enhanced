@@ -190,9 +190,17 @@ int main(int argc, char *argv[])
             { QStringLiteral("status"), QStringLiteral("not_run") }
         } },
         { QStringLiteral("recovery"), QJsonObject {
-            { QStringLiteral("task_restore_point"),
-              QStringLiteral("not_created_by_commit") }
+            { QStringLiteral("task_restore_point"), QStringLiteral("available") },
+            { QStringLiteral("affected_resources"), QJsonArray {
+                QStringLiteral("chapter-1"), QStringLiteral("chapter-2") } }
         } }
+    });
+    session.append(AgentEventType::TaskRestoreFailed, QJsonObject {
+        { QStringLiteral("code"), QStringLiteral("TASK_RESTORE_CONFLICT") }
+    });
+    session.append(AgentEventType::TaskRestoreCompleted, QJsonObject {
+        { QStringLiteral("affected_resources"), QJsonArray {
+            QStringLiteral("chapter-1"), QStringLiteral("chapter-2") } }
     });
     session.append(AgentEventType::TransactionRolledBack, QJsonObject {
         { QStringLiteral("rolled_back"), true },
@@ -216,8 +224,13 @@ int main(int argc, char *argv[])
                 && markdown.contains(QStringLiteral("Book revision: 9")),
             "conversation export must preserve commit save state and counts");
     Require(markdown.contains(QStringLiteral("Full EPUBCheck: not run"))
-                && markdown.contains(QStringLiteral("did not create a task-wide restore point")),
+                && markdown.contains(QStringLiteral("restore point is available for 2 text resource")),
             "conversation export must state validation and recovery boundaries");
+    Require(markdown.contains(QStringLiteral("## Restore blocked"))
+                && markdown.contains(QStringLiteral("No book content was changed"))
+                && markdown.contains(QStringLiteral("## Task restored"))
+                && markdown.contains(QStringLiteral("Restored 2 text resource")),
+            "conversation export must preserve task recovery outcomes");
     Require(markdown.contains(QStringLiteral("## Staged changes discarded"))
                 && markdown.contains(QStringLiteral("live book was not changed")),
             "conversation export must include rollback status");
