@@ -83,7 +83,9 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 失败状态把 401、403、404、408、429、5xx 和常见网络错误整理为简短说明，完整的
 提供商错误仍显示在 Error 卡片。若服务端在错误正文或 HTTP trace 中回显当前 API Key，
 提供商边界会先替换成 `[redacted]`，导出时还会再次脱敏。**Refresh models** 的成功只
-证明模型列表请求成功，不证明 Chat Completions 可用。
+证明模型列表请求成功，不证明 Chat Completions 可用。模型刷新也在线程池中执行，最多等待
+30 秒；刷新与连接测试互斥，运行期间连接字段被冻结，关闭设置页会取消请求。目录接口的
+错误正文若回显当前 API Key，同样会先脱敏再显示。
 
 偏好设置提供独立的 **Test Chat Completions**。它先在本地校验 URL、API Key 和模型，
 再向当前表单中的 endpoint 发送一条流式小请求：不含书籍内容、不含 tools、关闭 thinking，
@@ -215,6 +217,10 @@ HTTP 出错时 Error 卡会带上状态码和服务器返回的 `error.message`�
 | **Custom** | 你填写的 OpenAI 兼容 URL | 从同一 origin 推导 `/models` |
 
 点 **Refresh models** 会向服务器拉取模型 id 以及它公布的参数（context length、`supported_parameters` 里的 tools / reasoning）。不要手抄模型名；列表来自服务器。密钥只存在本机 Sigil 设置里，不会进入 transcript、崩溃日志、导出文件或 EPUB。
+
+刷新在后台执行，设置页显示 **Loading models…**，完成后才以启动请求时冻结的 provider
+写入内存缓存。刷新与连接测试不会并发；关闭设置窗口会取消仍在等待的目录请求。HTTP
+错误可显示状态和服务端说明，但其中回显的当前 API Key 会替换为 `[redacted]`。
 
 若要验证所选模型能否真正接受对话请求，使用同一页的 **Test Chat Completions**，不要把
 模型列表刷新成功当作鉴权/模型可用证明。探测不会发送当前书籍或 Agent 工具定义。

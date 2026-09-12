@@ -991,3 +991,28 @@ XML 解析通过；四份目录均可由 `lrelease` 生成 `.qm` 且 0 unfinishe
 本切片关闭设置页 15 秒嵌套事件循环的已知风险，但请求一旦发出仍可能产生服务商计费；
 关闭窗口只能尽快中止本地请求，不能撤回服务端已经处理的内容。真实高延迟代理、DNS/TLS
 卡顿、线程池饱和、Windows/Linux 关闭窗口竞态和辅助技术人工验收仍待补充。
+
+## Native Agent 非阻塞模型目录刷新（2026-09-13）
+
+分支：`feature/agent-async-model-catalog`。主要提交：`ac89b71a6`（目录取消和密钥脱敏）、
+`ecb425418`（设置页后台刷新）和 `3e87ab7ea`（四语加载状态）。
+
+- `AgentModelCatalog::fetch` 新增可选原子取消标记和 50 ms cancel poll，明确区分外部取消与
+  30 秒超时。服务端错误正文、解析错误和结果 `sourceUrl` 在离开目录边界前替换当前 API
+  Key，避免模型列表接口成为设置页密钥回显旁路。
+- **Refresh models** 通过独立 `QFutureWatcher<CatalogResult>` 在线程池执行。URL、API Key、
+  OpenRouter headers、provider kind/id 均在启动时冻结；Provider 默认能力和缓存归属使用
+  同一快照，不从完成时可能变化的表单重新推断。
+- 模型刷新与 Chat Completions 测试互斥，期间统一冻结连接控件并显示可翻译的
+  **Loading models…**；完成状态公开 `modelRefreshState` / `modelRefreshHttpStatus`。设置页
+  析构会取消两类后台请求，已销毁 QObject 不接收 finished 回调。
+
+`agent_provider_catalog` 用本地模型服务证明后台 GET 成功时主事件循环仍可响应，验证参数
+解析和缓存来源；401 服务证明错误与结果元数据不含密钥原文；无响应服务证明取消不等待
+5 秒测试超时。`agent_dock_contract` 固定异步、互斥、状态与析构取消边界。完整 Sigil 构建
+通过，13 项 Agent 测试连续 3 轮共 39 次通过；简中、繁中、日文严格覆盖测试全部通过，
+四份目录均可生成 `.qm` 且 0 unfinished（非英文目录各覆盖 5,647 条活跃源文）。
+
+本切片关闭设置页模型刷新阻塞与目录错误密钥回显风险，但目录接口仍因服务商而异；成功
+只说明列表可读取，不代表所选模型支持 Chat Completions 或 tools。真实三家服务的大目录、
+分页、代理/证书、线程池饱和、关闭竞态和跨平台人工布局仍待验收。
