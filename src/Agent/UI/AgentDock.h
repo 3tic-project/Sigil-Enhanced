@@ -15,6 +15,7 @@
 #include "Agent/Model/AgentProviderPreset.h"
 
 class QComboBox;
+class QButtonGroup;
 class QLabel;
 class QPlainTextEdit;
 class QPushButton;
@@ -45,6 +46,7 @@ public:
                         bool modified,
                         quint64 revision);
     void setCurrentFile(const QString &book_path, const QString &resource_id);
+    void setSelectedFiles(const QStringList &book_paths, const QStringList &resource_ids);
     void setSelection(const QString &resource_id, int start, int end, const QString &snippet);
     void appendEvent(const AgentEvent &event);
     void resetTranscript();
@@ -88,6 +90,7 @@ private:
     void settleApproval(const QString &toolCallId, bool approved);
     void setThinkingText(const QString &text, bool append);
     void setAnswerText(const QString &text, bool append);
+    void chooseDefaultScope();
     void refreshScopeLabel();
     void refreshProviderStatus();
     QString providerFailureSummary(const QString &message) const;
@@ -101,11 +104,13 @@ private:
     QLabel *m_providerStatus = nullptr;
     QLabel *m_bookStatus = nullptr;
     QLabel *m_composerHint = nullptr;
+    QButtonGroup *m_scopeGroup = nullptr;
     QPushButton *m_stopButton = nullptr;
     QPushButton *m_newSessionButton = nullptr;
     QPushButton *m_sendButton = nullptr;
     QToolButton *m_chipBook = nullptr;
     QToolButton *m_chipFile = nullptr;
+    QToolButton *m_chipSelectedFiles = nullptr;
     QToolButton *m_chipSelection = nullptr;
     QPlainTextEdit *m_composer = nullptr;
     QScrollArea *m_transcript = nullptr;
@@ -123,10 +128,13 @@ private:
     quint64 m_bookRevision = 0;
     QString m_filePath;
     QString m_fileId;
+    QStringList m_selectedFilePaths;
+    QStringList m_selectedFileIds;
     QString m_selectionId;
     QString m_selectionSnippet;
     int m_selectionStart = 0;
     int m_selectionEnd = 0;
+    bool m_scopeChoiceExplicit = false;
     AgentProviderReadiness m_providerReadiness;
     ProviderRequestState m_providerRequestState = ProviderRequestState::Configured;
     QString m_providerFailure;

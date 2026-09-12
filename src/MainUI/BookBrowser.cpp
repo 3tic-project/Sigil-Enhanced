@@ -27,6 +27,7 @@
 #include <QMenu>
 #include <QUrl>
 #include <QMessageBox>
+#include <QItemSelectionModel>
 #include <QProgressDialog>
 #include <QScrollBar>
 #include <QVariant>
@@ -2521,6 +2522,15 @@ void BookBrowser::SetFontObfuscationActionCheckState()
 
 void BookBrowser::ConnectSignalsToSlots()
 {
+    connect(m_TreeView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, [this](const QItemSelection &, const QItemSelection &) {
+        if (m_SelectedResourcesNotificationPending) return;
+        m_SelectedResourcesNotificationPending = true;
+        QTimer::singleShot(0, this, [this]() {
+            m_SelectedResourcesNotificationPending = false;
+            emit SelectedResourcesChanged();
+        });
+    });
     connect(m_OpenInOtherGroup, SIGNAL(triggered()),
             this, SLOT(OpenInOtherEditorGroup()));
     connect(m_TreeView, SIGNAL(activated(const QModelIndex &)),

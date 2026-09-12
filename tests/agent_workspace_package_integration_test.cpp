@@ -11,6 +11,7 @@
 #include <stdexcept>
 
 #include "Agent/Execution/SigilBookWorkspace.h"
+#include "Agent/Core/PromptAssembler.h"
 #include "Agent/UI/AgentDock.h"
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
@@ -107,6 +108,25 @@ int main(int argc, char **argv)
 
         SigilAgent::SigilBookWorkspace workspace;
         workspace.setBook(book);
+        window.SelectResources(QList<Resource *> { chapter, nav });
+        app.processEvents();
+        auto *selectedFilesChip = agentDock->findChild<QToolButton *>(
+            QStringLiteral("agentChipSelectedFiles"));
+        Require(selectedFilesChip && selectedFilesChip->isEnabled()
+                    && selectedFilesChip->property("resourceIds").toStringList()
+                        == QStringList { chapter->GetIdentifier(), nav->GetIdentifier() },
+                "Book Browser multi-selection did not reach the Agent scope");
+        selectedFilesChip->click();
+        const QStringList selectedHandles = agentDock->contextHandles();
+        Require(selectedHandles
+                    == QStringList { chapter->GetIdentifier(), nav->GetIdentifier() },
+                "Agent selected-files scope did not emit the selected resource ids exclusively");
+        const QString selectedContext = SigilAgent::PromptAssembler().contextBlock(
+            &workspace, selectedHandles);
+        Require(selectedContext.contains(QStringLiteral("Original paragraph"))
+                    && selectedContext.contains(QStringLiteral("epub:type=\"toc\""))
+                    && !selectedContext.contains(QStringLiteral("Resources:\n")),
+                "selected-files context did not read current in-memory sources exclusively");
         const QString original = opf->GetSourceText();
         const quint64 metadataRevision = workspace.revision();
         Require(workspace.beginTransaction(QStringLiteral("metadata source preservation")).ok,

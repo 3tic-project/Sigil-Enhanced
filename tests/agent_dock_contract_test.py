@@ -13,6 +13,8 @@ repo = Path(sys.argv[1]).resolve()
 main_window = (repo / "src/MainUI/MainWindow.cpp").read_text(encoding="utf-8")
 main_window_h = (repo / "src/MainUI/MainWindow.h").read_text(encoding="utf-8")
 dock_h = (repo / "src/Agent/UI/AgentDock.h").read_text(encoding="utf-8")
+book_browser_h = (repo / "src/MainUI/BookBrowser.h").read_text(encoding="utf-8")
+book_browser_cpp = (repo / "src/MainUI/BookBrowser.cpp").read_text(encoding="utf-8")
 
 require(
     "class AgentDock : public QDockWidget" in dock_h,
@@ -63,6 +65,13 @@ require(
     and "ModelRequestFailed" in dock_cpp,
     "dock must distinguish provider setup, request success, and request failure",
 )
+require(
+    "agentChipSelectedFiles" in dock_cpp
+    and "QButtonGroup" in dock_cpp
+    and "setExclusive(true)" in dock_cpp
+    and 'tr("Whole book")' in dock_cpp,
+    "Agent scope must explicitly offer exclusive Selection/File/Selected files/Whole book choices",
+)
 configure_provider = main_window.split("void MainWindow::ConfigureAgentProvider()", 1)[1].split(
     "void MainWindow::CreateAgentDock()", 1
 )[0]
@@ -102,6 +111,18 @@ require(
     and "GetSelectionEnd()" in update_context
     and "qMax(cursor, cursor)" not in update_context,
     "Agent selection context must use the live editor range",
+)
+require(
+    "AllSelectedResources()" in update_context
+    and "setSelectedFiles" in update_context
+    and "SelectedResourcesChanged" in main_window,
+    "Book Browser selected resources must refresh the Agent selected-files scope",
+)
+require(
+    "SelectedResourcesChanged" in book_browser_h
+    and "m_SelectedResourcesNotificationPending" in book_browser_cpp
+    and "QTimer::singleShot(0" in book_browser_cpp,
+    "Book Browser multi-selection notifications must be coalesced",
 )
 require(
     "&Book::ModifiedStateChanged" in main_window

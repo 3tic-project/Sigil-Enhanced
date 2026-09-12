@@ -7,6 +7,7 @@
 #include "Agent/UI/AgentDock.h"
 
 #include <QAction>
+#include <QButtonGroup>
 #include <QComboBox>
 #include <QEvent>
 #include <QFrame>
@@ -107,25 +108,35 @@ AgentDock::AgentDock(QWidget *parent) :
     chips->setObjectName(QStringLiteral("agentContextChips"));
     auto *chips_layout = new QHBoxLayout(chips);
     chips_layout->setContentsMargins(0, 0, 0, 0);
+    m_scopeGroup = new QButtonGroup(chips);
+    m_scopeGroup->setExclusive(true);
     m_chipBook = new QToolButton(chips);
     m_chipBook->setObjectName(QStringLiteral("agentChipBook"));
     m_chipBook->setCheckable(true);
-    m_chipBook->setChecked(true);
-    m_chipBook->setText(tr("Book"));
+    m_chipBook->setText(tr("Whole book"));
     m_chipFile = new QToolButton(chips);
     m_chipFile->setObjectName(QStringLiteral("agentChipFile"));
     m_chipFile->setCheckable(true);
-    m_chipFile->setChecked(true);
     m_chipFile->setText(tr("File"));
     m_chipFile->setEnabled(false);
+    m_chipSelectedFiles = new QToolButton(chips);
+    m_chipSelectedFiles->setObjectName(QStringLiteral("agentChipSelectedFiles"));
+    m_chipSelectedFiles->setCheckable(true);
+    m_chipSelectedFiles->setText(tr("Selected files"));
+    m_chipSelectedFiles->setEnabled(false);
     m_chipSelection = new QToolButton(chips);
     m_chipSelection->setObjectName(QStringLiteral("agentChipSelection"));
     m_chipSelection->setCheckable(true);
     m_chipSelection->setChecked(false);
     m_chipSelection->setText(tr("Selection"));
     m_chipSelection->setEnabled(false);
+    m_scopeGroup->addButton(m_chipBook);
+    m_scopeGroup->addButton(m_chipFile);
+    m_scopeGroup->addButton(m_chipSelectedFiles);
+    m_scopeGroup->addButton(m_chipSelection);
     chips_layout->addWidget(m_chipBook);
     chips_layout->addWidget(m_chipFile);
+    chips_layout->addWidget(m_chipSelectedFiles);
     chips_layout->addWidget(m_chipSelection);
     chips_layout->addStretch(1);
 
@@ -171,9 +182,13 @@ AgentDock::AgentDock(QWidget *parent) :
     connect(export_conversation, &QAction::triggered, this, &AgentDock::exportConversationRequested);
     connect(export_debug, &QAction::triggered, this, &AgentDock::exportDebugLogRequested);
     connect(m_modeCombo, &QComboBox::currentIndexChanged, this, &AgentDock::onModeChanged);
-    connect(m_chipBook, &QToolButton::toggled, this, [this](bool) { refreshScopeLabel(); });
-    connect(m_chipFile, &QToolButton::toggled, this, [this](bool) { refreshScopeLabel(); });
-    connect(m_chipSelection, &QToolButton::toggled, this, [this](bool) { refreshScopeLabel(); });
+    for (QToolButton *scope : {m_chipBook, m_chipFile, m_chipSelectedFiles, m_chipSelection}) {
+        connect(scope, &QToolButton::clicked, this, [this]() {
+            m_scopeChoiceExplicit = true;
+            refreshScopeLabel();
+        });
+    }
+    chooseDefaultScope();
     refreshProviderStatus();
 }
 
@@ -258,7 +273,8 @@ void AgentDock::setBookContext(const QString &title,
             .arg(identity, resources, save_state)
             .arg(revision));
     m_bookStatus->setAccessibleName(m_bookStatus->text());
-    m_chipBook->setText(tr("Book · %1").arg(identity));
+    m_chipBook->setText(tr("Whole book"));
+    m_chipBook->setToolTip(tr("Attach the complete resource map for %1").arg(identity));
     refreshScopeLabel();
 }
 
@@ -267,13 +283,41 @@ void AgentDock::setCurrentFile(const QString &book_path, const QString &resource
     m_filePath = book_path;
     m_fileId = resource_id;
     const bool have = !book_path.isEmpty() || !resource_id.isEmpty();
-    const bool was_enabled = m_chipFile->isEnabled();
     m_chipFile->setEnabled(have);
-    if (have && !was_enabled) m_chipFile->setChecked(true);
-    if (!have) m_chipFile->setChecked(false);
     m_chipFile->setText(have ? tr("File · %1").arg(book_path.isEmpty() ? resource_id : book_path)
                              : tr("File"));
-    refreshScopeLabel();
+    chooseDefaultScope();
+}
+
+void AgentDock::setSelectedFiles(const QStringList &book_paths,
+                                 const QStringList &resource_ids)
+{
+    m_selectedFilePaths.clear();
+    m_selectedFileIds.clear();
+    const int count = qMin(book_paths.size(), resource_ids.size());
+    for (int i = 0; i < count; ++i) {
+        const QString id = resource_ids.at(i).trimmed();
+        if (id.isEmpty() || m_selectedFileIds.contains(id)) continue;
+        m_selectedFileIds.append(id);
+        m_selectedFilePaths.append(book_paths.at(i));
+    }
+    m_chipSelectedFiles->setProperty("resourceIds", m_selectedFileIds);
+    m_chipSelectedFiles->setProperty("bookPaths", m_selectedFilePaths);
+    const int selected = m_selectedFileIds.size();
+    m_chipSelectedFiles->setEnabled(selected > 0);
+    if (selected == 1) {
+        const QString label = m_selectedFilePaths.first().isEmpty()
+            ? m_selectedFileIds.first() : m_selectedFilePaths.first();
+        m_chipSelectedFiles->setText(tr("Selected file · %1").arg(label));
+    } else {
+        m_chipSelectedFiles->setText(selected > 0
+            ? tr("Selected files · %1").arg(selected)
+            : tr("Selected files"));
+    }
+    m_chipSelectedFiles->setToolTip(selected > 0
+        ? tr("Attach %1 file(s) selected in Book Browser").arg(selected)
+        : tr("Select one or more files in Book Browser"));
+    chooseDefaultScope();
 }
 
 void AgentDock::setSelection(const QString &resource_id, int start, int end, const QString &snippet)
@@ -286,21 +330,46 @@ void AgentDock::setSelection(const QString &resource_id, int start, int end, con
     m_chipSelection->setProperty("selectionStart", start);
     m_chipSelection->setProperty("selectionEnd", end);
     const bool have = !resource_id.isEmpty() && end > start;
-    const bool was_enabled = m_chipSelection->isEnabled();
     m_chipSelection->setEnabled(have);
-    if (have && !was_enabled) m_chipSelection->setChecked(true);
-    if (!have) m_chipSelection->setChecked(false);
     m_chipSelection->setText(have ? tr("Selection · %1–%2").arg(start).arg(end) : tr("Selection"));
+    chooseDefaultScope();
+}
+
+void AgentDock::chooseDefaultScope()
+{
+    const bool explicit_scope_is_valid = m_scopeChoiceExplicit
+        && ((m_chipSelection->isChecked() && m_chipSelection->isEnabled())
+            || (m_chipFile->isChecked() && m_chipFile->isEnabled())
+            || (m_chipSelectedFiles->isChecked() && m_chipSelectedFiles->isEnabled())
+            || m_chipBook->isChecked());
+    if (explicit_scope_is_valid) {
+        refreshScopeLabel();
+        return;
+    }
+    m_scopeChoiceExplicit = false;
+    if (m_chipSelection->isEnabled()) {
+        m_chipSelection->setChecked(true);
+    } else if (m_chipFile->isEnabled()) {
+        m_chipFile->setChecked(true);
+    } else if (m_chipSelectedFiles->isEnabled()) {
+        m_chipSelectedFiles->setChecked(true);
+    } else {
+        m_chipBook->setChecked(true);
+    }
     refreshScopeLabel();
 }
 
 void AgentDock::refreshScopeLabel()
 {
     QStringList parts;
-    if (m_chipBook->isChecked()) parts.append(tr("book structure"));
+    if (m_chipBook->isChecked()) parts.append(tr("whole book"));
     if (m_chipFile->isEnabled() && m_chipFile->isChecked()) parts.append(tr("current file"));
+    if (m_chipSelectedFiles->isEnabled() && m_chipSelectedFiles->isChecked()) {
+        parts.append(m_selectedFileIds.size() == 1
+            ? tr("one selected file")
+            : tr("%1 selected files").arg(m_selectedFileIds.size()));
+    }
     if (m_chipSelection->isEnabled() && m_chipSelection->isChecked()) parts.append(tr("selection"));
-    if (parts.isEmpty()) parts.append(tr("book structure + sampled fragments"));
     setContextScope(parts.join(QStringLiteral(" + ")));
 }
 
@@ -433,10 +502,11 @@ QStringList AgentDock::contextHandles() const
 {
     QStringList handles;
     if (m_chipBook->isChecked()) handles.append(QStringLiteral("book"));
-    if (m_chipFile->isEnabled() && m_chipFile->isChecked()) {
+    else if (m_chipFile->isEnabled() && m_chipFile->isChecked()) {
         handles.append(m_fileId.isEmpty() ? m_filePath : m_fileId);
-    }
-    if (m_chipSelection->isEnabled() && m_chipSelection->isChecked()) {
+    } else if (m_chipSelectedFiles->isEnabled() && m_chipSelectedFiles->isChecked()) {
+        handles.append(m_selectedFileIds);
+    } else if (m_chipSelection->isEnabled() && m_chipSelection->isChecked()) {
         handles.append(QStringLiteral("%1:%2-%3")
                            .arg(m_selectionId)
                            .arg(m_selectionStart)

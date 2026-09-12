@@ -6322,7 +6322,24 @@ void MainWindow::UpdateAgentContext()
     }
     const quint64 revision = m_AgentWorkspace ? m_AgentWorkspace->revision() : 1;
     m_AgentDock->setBookContext(title, m_CurrentFileName, resource_count, modified, revision);
+    UpdateAgentSelectedFilesContext();
     UpdateAgentEditorContext();
+}
+
+void MainWindow::UpdateAgentSelectedFilesContext()
+{
+    if (!m_AgentDock) return;
+    QStringList paths;
+    QStringList ids;
+    if (m_BookBrowser) {
+        const QList<Resource *> resources = m_BookBrowser->AllSelectedResources();
+        for (Resource *resource : resources) {
+            if (!resource) continue;
+            paths.append(resource->GetRelativePath());
+            ids.append(resource->GetIdentifier());
+        }
+    }
+    m_AgentDock->setSelectedFiles(paths, ids);
 }
 
 void MainWindow::UpdateAgentEditorContext()
@@ -8057,6 +8074,8 @@ void MainWindow::ConnectSignalsToSlots()
             this,                    SLOT(UpdatePreview()));
     connect(m_BookBrowser,          SIGNAL(UpdateBrowserSelection()),
             this,                    SLOT(UpdateBrowserSelectionToTab()));
+    connect(m_BookBrowser, &BookBrowser::SelectedResourcesChanged,
+            this, &MainWindow::UpdateAgentSelectedFilesContext);
     connect(m_BookBrowser, SIGNAL(RenumberTOCContentsRequest()),
             m_TableOfContents,     SLOT(RenumberTOCContents()));
     connect(m_BookBrowser, SIGNAL(RemoveTabRequest()),

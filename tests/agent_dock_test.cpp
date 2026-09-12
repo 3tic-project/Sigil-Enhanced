@@ -135,15 +135,26 @@ int main(int argc, char *argv[])
             "New Session control is missing");
     Require(composer, "composer is missing");
     Require(transcript, "transcript surface is missing");
-    Require(dock.findChild<QToolButton *>(QStringLiteral("agentChipBook")),
-            "book context chip is missing");
-    Require(dock.findChild<QToolButton *>(QStringLiteral("agentChipFile")),
+    auto *whole_book_chip =
+        dock.findChild<QToolButton *>(QStringLiteral("agentChipBook"));
+    auto *file_chip =
+        dock.findChild<QToolButton *>(QStringLiteral("agentChipFile"));
+    auto *selected_files_chip =
+        dock.findChild<QToolButton *>(QStringLiteral("agentChipSelectedFiles"));
+    Require(whole_book_chip,
+            "whole-book context chip is missing");
+    Require(file_chip,
             "file context chip is missing");
+    Require(selected_files_chip,
+            "Book Browser selected-files context chip is missing");
     Require(dock.findChild<QToolButton *>(QStringLiteral("agentChipSelection")),
             "selection context chip is missing");
     auto *selection_chip =
         dock.findChild<QToolButton *>(QStringLiteral("agentChipSelection"));
     dock.setCurrentFile(QStringLiteral("OEBPS/Text/ch1.xhtml"), QStringLiteral("chapter-1"));
+    Require(file_chip->isChecked()
+                && dock.contextHandles() == QStringList { QStringLiteral("chapter-1") },
+            "current file must be the default scope when there is no editor selection");
     dock.setSelection(QStringLiteral("chapter-1"), 12, 34,
                       QStringLiteral("<ruby>字<rt>じ</rt></ruby>"));
     Require(selection_chip && selection_chip->isEnabled() && selection_chip->isChecked()
@@ -156,9 +167,34 @@ int main(int argc, char *argv[])
     Require(dock.contextHandles().contains(QStringLiteral("chapter-1:12-34")),
             "selected context must emit a bounded resource range handle");
     dock.setSelection(QStringLiteral("chapter-1"), 34, 34, QString());
-    Require(!selection_chip->isEnabled()
+    Require(!selection_chip->isEnabled() && file_chip->isChecked()
+                && dock.contextHandles() == QStringList { QStringLiteral("chapter-1") }
                 && !dock.contextHandles().contains(QStringLiteral("chapter-1:34-34")),
-            "a collapsed cursor must not be advertised as a selection");
+            "a collapsed cursor must fall back to current file without a fake selection");
+
+    dock.setSelectedFiles(
+        QStringList { QStringLiteral("OEBPS/Text/ch1.xhtml"),
+                      QStringLiteral("OEBPS/Styles/book.css"),
+                      QStringLiteral("OEBPS/Styles/book.css") },
+        QStringList { QStringLiteral("chapter-1"), QStringLiteral("book-css"),
+                      QStringLiteral("book-css") });
+    Require(selected_files_chip->isEnabled()
+                && selected_files_chip->property("resourceIds").toStringList()
+                    == QStringList { QStringLiteral("chapter-1"), QStringLiteral("book-css") },
+            "selected-files scope must preserve Book Browser order and remove duplicates");
+    selected_files_chip->click();
+    Require(selected_files_chip->isChecked()
+                && !file_chip->isChecked() && !whole_book_chip->isChecked()
+                && dock.contextHandles()
+                    == QStringList { QStringLiteral("chapter-1"), QStringLiteral("book-css") },
+            "selected files must be an explicit exclusive scope");
+    dock.setSelection(QStringLiteral("chapter-1"), 4, 10, QStringLiteral("source"));
+    Require(selected_files_chip->isChecked(),
+            "a manually selected valid scope must survive editor selection changes");
+    whole_book_chip->click();
+    Require(whole_book_chip->isChecked()
+                && dock.contextHandles() == QStringList { QStringLiteral("book") },
+            "whole book must be explicit and must not also attach file scopes");
 
     SigilAgent::AgentEvent thinking;
     thinking.type = SigilAgent::AgentEventType::AssistantDelta;
