@@ -87,6 +87,8 @@ set( AGENT_FILES
     Agent/Core/PromptAssembler.h
     Agent/Model/AgentModelCatalog.cpp
     Agent/Model/AgentModelCatalog.h
+    Agent/Model/AgentConnectionProbe.cpp
+    Agent/Model/AgentConnectionProbe.h
     Agent/Model/AgentProviderPreset.cpp
     Agent/Model/AgentProviderPreset.h
     Agent/Model/HistoryAssembler.cpp

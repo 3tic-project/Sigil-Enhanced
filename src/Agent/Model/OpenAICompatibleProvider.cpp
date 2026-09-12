@@ -139,6 +139,9 @@ QJsonObject OpenAICompatibleProvider::buildChatBody(const ModelRequest &request)
     if (!request.tools.isEmpty()) {
         body.insert(QStringLiteral("tools"), request.tools);
     }
+    if (request.maxOutputTokens > 0) {
+        body.insert(QStringLiteral("max_tokens"), request.maxOutputTokens);
+    }
     return body;
 }
 
@@ -208,8 +211,13 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
 
     QTimer timeout;
     timeout.setSingleShot(true);
-    QObject::connect(&timeout, &QTimer::timeout, reply, [reply]() { reply->abort(); });
-    timeout.start(120000);
+    bool timed_out = false;
+    const int timeout_ms = qBound(100, outgoing.timeoutMs, 120000);
+    QObject::connect(&timeout, &QTimer::timeout, reply, [reply, &timed_out]() {
+        timed_out = true;
+        reply->abort();
+    });
+    timeout.start(timeout_ms);
 
     QTimer cancel_poll;
     cancel_poll.setInterval(50);
@@ -228,6 +236,14 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
         recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
                                   reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
                                   timer.elapsed(), QStringLiteral("cancelled"), m_config.apiKey));
+        reply->deleteLater();
+        return turn;
+    }
+    if (timed_out) {
+        turn.error = QStringLiteral("Request timed out after %1 ms").arg(timeout_ms);
+        recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
+                                  reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
+                                  timer.elapsed(), turn.error, m_config.apiKey));
         reply->deleteLater();
         return turn;
     }

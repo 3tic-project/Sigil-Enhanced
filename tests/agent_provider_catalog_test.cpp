@@ -6,10 +6,12 @@
 #include <QJsonDocument>
 #include <QHostAddress>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QTcpServer>
 #include <QTcpSocket>
 
 #include "Agent/Core/AgentSession.h"
+#include "Agent/Model/AgentConnectionProbe.h"
 #include "Agent/Model/AgentModelCatalog.h"
 #include "Agent/Model/AgentProviderPreset.h"
 #include "Agent/Model/OpenAICompatibleProvider.h"
@@ -157,9 +159,12 @@ int main(int argc, char *argv[])
             "OpenRouter body must send reasoning.effort");
 
     request.reasoningProtocol = ReasoningProtocol::None;
+    request.maxOutputTokens = 8;
     QJsonObject plain_body = OpenAICompatibleProvider::buildChatBody(request);
     Require(!plain_body.contains(QStringLiteral("thinking")) && !plain_body.contains(QStringLiteral("reasoning")),
             "OpenCode Go / custom body must omit provider-specific reasoning fields");
+    Require(plain_body.value(QStringLiteral("max_tokens")).toInt() == 8,
+            "bounded requests must publish max_tokens");
 
     AgentSession session;
     session.append(AgentEventType::UserMessage, QJsonObject {
@@ -289,6 +294,68 @@ int main(int argc, char *argv[])
     Require(fetched.models.first().tools, "fetched supported_parameters.tools must be recorded");
     Require(!fetched.sourceUrl.contains(QStringLiteral("sk-")), "catalog result must not echo the API key");
 
+    QTcpServer probe_server;
+    Require(probe_server.listen(QHostAddress::LocalHost, 0),
+            "local Chat Completions probe server must listen");
+    QByteArray probe_request;
+    const QByteArray probe_payload = QByteArray(
+        "data: {\"choices\":[{\"delta\":{\"content\":\"OK\"},\"finish_reason\":\"stop\"}]}\n\n"
+        "data: [DONE]\n\n");
+    QObject::connect(&probe_server, &QTcpServer::newConnection,
+                     [&probe_server, &probe_request, probe_payload]() {
+        while (probe_server.hasPendingConnections()) {
+            QTcpSocket *socket = probe_server.nextPendingConnection();
+            QObject::connect(socket, &QTcpSocket::readyRead, socket,
+                             [socket, &probe_request, probe_payload]() {
+                probe_request += socket->readAll();
+                const int header_end = probe_request.indexOf("\r\n\r\n");
+                if (header_end < 0) return;
+                const QRegularExpression content_length(
+                    QStringLiteral("Content-Length: \\s*(\\d+)"),
+                    QRegularExpression::CaseInsensitiveOption);
+                const QRegularExpressionMatch match = content_length.match(
+                    QString::fromLatin1(probe_request.left(header_end)));
+                if (!match.hasMatch()) return;
+                const int body_size = match.captured(1).toInt();
+                if (probe_request.size() < header_end + 4 + body_size) return;
+                QByteArray response =
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: ";
+                response += QByteArray::number(probe_payload.size());
+                response += "\r\nConnection: close\r\n\r\n";
+                response += probe_payload;
+                socket->write(response);
+                socket->flush();
+                socket->disconnectFromHost();
+            });
+        }
+    });
+
+    OpenAIProviderConfig probe_config;
+    probe_config.baseUrl = QStringLiteral("http://127.0.0.1:%1/chat/completions")
+                               .arg(probe_server.serverPort());
+    probe_config.apiKey = QStringLiteral("sk-probe-test-secret");
+    probe_config.model = QStringLiteral("probe-model");
+    probe_config.thinking = true;
+    probe_config.reasoningProtocol = ReasoningProtocol::DeepSeek;
+    const AgentConnectionProbeResult probe = probeAgentConnection(probe_config, 2000);
+    Require(probe.ok && probe.httpStatus == 200 && probe.model == probe_config.model
+                && probe.finishReason == QStringLiteral("stop")
+                && probe.durationMs >= 0,
+            "a valid streaming Chat Completions response must pass the connection probe");
+    const int probe_header_end = probe_request.indexOf("\r\n\r\n");
+    const QJsonObject probe_body = QJsonDocument::fromJson(
+        probe_request.mid(probe_header_end + 4)).object();
+    Require(probe_request.startsWith("POST /chat/completions ")
+                && probe_request.contains("Authorization: Bearer sk-probe-test-secret")
+                && probe_body.value(QStringLiteral("model")).toString()
+                    == QStringLiteral("probe-model")
+                && probe_body.value(QStringLiteral("stream")).toBool()
+                && probe_body.value(QStringLiteral("max_tokens")).toInt() == 8
+                && probe_body.value(QStringLiteral("thinking")).toObject()
+                    .value(QStringLiteral("type")).toString() == QStringLiteral("disabled")
+                && !probe_body.contains(QStringLiteral("tools")),
+            "connection probe must be a tiny no-tools request with thinking disabled");
+
     QTcpServer error_server;
     Require(error_server.listen(QHostAddress::LocalHost, 0),
             "local provider error server must listen");
@@ -339,6 +406,33 @@ int main(int argc, char *argv[])
     Require(!trace_json.contains(provider_key.toUtf8())
                 && trace_json.contains("[redacted]"),
             "in-memory HTTP traces must redact an echoed API key before export");
+    const AgentConnectionProbeResult rejected_probe =
+        probeAgentConnection(error_config, 2000);
+    Require(!rejected_probe.ok && rejected_probe.httpStatus == 401
+                && rejected_probe.error.contains(QStringLiteral("[redacted]"))
+                && !rejected_probe.error.contains(provider_key),
+            "connection probe must surface authentication failure without echoing the key");
+
+    QTcpServer timeout_server;
+    Require(timeout_server.listen(QHostAddress::LocalHost, 0),
+            "local timeout probe server must listen");
+    QObject::connect(&timeout_server, &QTcpServer::newConnection, [&timeout_server]() {
+        while (timeout_server.hasPendingConnections()) {
+            QTcpSocket *socket = timeout_server.nextPendingConnection();
+            QObject::connect(socket, &QTcpSocket::readyRead, socket, [socket]() {
+                socket->readAll();
+            });
+        }
+    });
+    OpenAIProviderConfig timeout_config = probe_config;
+    timeout_config.baseUrl = QStringLiteral("http://127.0.0.1:%1/chat/completions")
+                                 .arg(timeout_server.serverPort());
+    const AgentConnectionProbeResult timed_out =
+        probeAgentConnection(timeout_config, 120);
+    Require(!timed_out.ok && timed_out.httpStatus == 0
+                && timed_out.error.contains(QStringLiteral("timed out after 120 ms"))
+                && timed_out.durationMs >= 100 && timed_out.durationMs < 2000,
+            "connection probe timeout must be explicit, bounded, and never reported as success");
 
     return EXIT_SUCCESS;
 }

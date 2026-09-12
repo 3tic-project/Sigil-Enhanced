@@ -1486,6 +1486,7 @@ add_executable(agent_provider_catalog_test
     agent_provider_catalog_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentConnectionProbe.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentModelCatalog.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentProviderPreset.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
