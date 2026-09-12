@@ -13,6 +13,29 @@
 namespace SigilAgent
 {
 
+namespace
+{
+
+qint64 nonNegativeInteger(const QJsonValue &value)
+{
+    if (!value.isDouble()) return -1;
+    const qint64 result = value.toInteger(-1);
+    return result >= 0 ? result : -1;
+}
+
+qint64 usageValue(const QJsonObject &usage,
+                  const QString &primary,
+                  const QString &alias = QString())
+{
+    qint64 result = nonNegativeInteger(usage.value(primary));
+    if (result < 0 && !alias.isEmpty()) {
+        result = nonNegativeInteger(usage.value(alias));
+    }
+    return result;
+}
+
+} // namespace
+
 void StreamingJsonDecoder::reset()
 {
     m_buffer.clear();
@@ -20,6 +43,7 @@ void StreamingJsonDecoder::reset()
     m_content.clear();
     m_finishReason.clear();
     m_error.clear();
+    m_usage = ModelUsage();
     m_toolCalls.clear();
     m_deltas.clear();
     m_done = false;
@@ -59,6 +83,7 @@ ModelTurn StreamingJsonDecoder::finish()
     turn.toolCalls = m_toolCalls;
     turn.finishReason = m_finishReason;
     turn.error = m_error;
+    turn.usage = m_usage;
     if (turn.finishReason.isEmpty()) {
         turn.finishReason = turn.toolCalls.isEmpty()
             ? QStringLiteral("stop") : QStringLiteral("tool_calls");
@@ -126,6 +151,10 @@ void StreamingJsonDecoder::parsePayload(const QJsonObject &payload)
         return;
     }
 
+    if (payload.value(QStringLiteral("usage")).isObject()) {
+        parseUsage(payload.value(QStringLiteral("usage")).toObject());
+    }
+
     const QJsonArray choices = payload.value(QStringLiteral("choices")).toArray();
     if (choices.isEmpty()) return;
     const QJsonObject choice = choices.at(0).toObject();
@@ -168,6 +197,35 @@ void StreamingJsonDecoder::parsePayload(const QJsonObject &payload)
         || !emitted.toolCalls.isEmpty() || !emitted.finishReason.isEmpty()) {
         m_deltas.append(emitted);
     }
+}
+
+void StreamingJsonDecoder::parseUsage(const QJsonObject &usage)
+{
+    const qint64 input = usageValue(
+        usage, QStringLiteral("prompt_tokens"), QStringLiteral("input_tokens"));
+    const qint64 output = usageValue(
+        usage, QStringLiteral("completion_tokens"), QStringLiteral("output_tokens"));
+    const qint64 total = usageValue(usage, QStringLiteral("total_tokens"));
+    if (input >= 0) m_usage.inputTokens = input;
+    if (output >= 0) m_usage.outputTokens = output;
+    if (total >= 0) {
+        m_usage.totalTokens = total;
+    } else if (m_usage.inputTokens >= 0 && m_usage.outputTokens >= 0) {
+        m_usage.totalTokens = m_usage.inputTokens + m_usage.outputTokens;
+    }
+
+    const QJsonObject input_details =
+        usage.value(QStringLiteral("prompt_tokens_details")).toObject();
+    const qint64 cached = usageValue(
+        input_details, QStringLiteral("cached_tokens"),
+        QStringLiteral("cached_input_tokens"));
+    if (cached >= 0) m_usage.cachedInputTokens = cached;
+
+    const QJsonObject output_details =
+        usage.value(QStringLiteral("completion_tokens_details")).toObject();
+    const qint64 reasoning = usageValue(
+        output_details, QStringLiteral("reasoning_tokens"));
+    if (reasoning >= 0) m_usage.reasoningTokens = reasoning;
 }
 
 void StreamingJsonDecoder::applyToolCallDelta(const QJsonArray &tool_calls)

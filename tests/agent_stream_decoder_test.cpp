@@ -63,6 +63,11 @@ int main()
             } }
         } } }
     }, QStringLiteral("tool_calls"));
+    stream += QByteArray(
+        "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":120,"
+        "\"completion_tokens\":35,\"total_tokens\":155,"
+        "\"prompt_tokens_details\":{\"cached_tokens\":80},"
+        "\"completion_tokens_details\":{\"reasoning_tokens\":12}}}\n");
     stream += QByteArray("data: [DONE]\n");
 
     // Split mid-line to prove the decoder buffers.
@@ -91,6 +96,26 @@ int main()
             "tool call argument fragments must concatenate");
     Require(turn.finishReason == QStringLiteral("tool_calls"),
             "finish_reason tool_calls must be preserved");
+    Require(turn.usage.inputTokens == 120
+                && turn.usage.outputTokens == 35
+                && turn.usage.totalTokens == 155
+                && turn.usage.cachedInputTokens == 80
+                && turn.usage.reasoningTokens == 12,
+            "an empty-choices final chunk must retain provider-reported token usage");
+    const QJsonObject usage_json = modelUsageToJson(turn.usage);
+    Require(usage_json.value(QStringLiteral("input_tokens")).toInteger() == 120
+                && usage_json.value(QStringLiteral("reasoning_tokens")).toInteger() == 12,
+            "reported usage must serialize to the provider-neutral event schema");
+
+    StreamingJsonDecoder alias_decoder;
+    alias_decoder.feed(QByteArray(
+        "data: {\"usage\":{\"input_tokens\":7,\"output_tokens\":3},"
+        "\"choices\":[]}\n\ndata: [DONE]\n\n"));
+    const ModelTurn alias_turn = alias_decoder.finish();
+    Require(alias_turn.usage.inputTokens == 7
+                && alias_turn.usage.outputTokens == 3
+                && alias_turn.usage.totalTokens == 10,
+            "input/output token aliases must parse and yield an exact total when omitted");
 
     AgentSession session;
     QJsonArray calls { toolCallToJson(turn.toolCalls.first()) };

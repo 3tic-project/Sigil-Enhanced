@@ -103,12 +103,23 @@ struct AgentEvent {
     QJsonObject payload;
 };
 
+struct ModelUsage {
+    qint64 inputTokens = -1;
+    qint64 outputTokens = -1;
+    qint64 totalTokens = -1;
+    qint64 cachedInputTokens = -1;
+    qint64 reasoningTokens = -1;
+
+    bool isReported() const;
+};
+
 struct ModelTurn {
     QString reasoning;
     QString content;
     QList<ToolCall> toolCalls;
     QString finishReason;
     QString error;
+    ModelUsage usage;
 };
 
 QString eventTypeName(AgentEventType type);
@@ -118,6 +129,7 @@ QString toolRiskName(ToolRisk risk);
 AgentMode modeFromName(const QString &name);
 QJsonObject toolCallToJson(const ToolCall &call);
 ToolCall toolCallFromJson(const QJsonObject &object);
+QJsonObject modelUsageToJson(const ModelUsage &usage);
 
 } // namespace SigilAgent
 

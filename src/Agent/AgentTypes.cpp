@@ -128,4 +128,31 @@ ToolCall toolCallFromJson(const QJsonObject &object)
     return call;
 }
 
+bool ModelUsage::isReported() const
+{
+    return inputTokens >= 0 || outputTokens >= 0 || totalTokens >= 0
+        || cachedInputTokens >= 0 || reasoningTokens >= 0;
+}
+
+QJsonObject modelUsageToJson(const ModelUsage &usage)
+{
+    QJsonObject object;
+    if (usage.inputTokens >= 0) {
+        object.insert(QStringLiteral("input_tokens"), usage.inputTokens);
+    }
+    if (usage.outputTokens >= 0) {
+        object.insert(QStringLiteral("output_tokens"), usage.outputTokens);
+    }
+    if (usage.totalTokens >= 0) {
+        object.insert(QStringLiteral("total_tokens"), usage.totalTokens);
+    }
+    if (usage.cachedInputTokens >= 0) {
+        object.insert(QStringLiteral("cached_input_tokens"), usage.cachedInputTokens);
+    }
+    if (usage.reasoningTokens >= 0) {
+        object.insert(QStringLiteral("reasoning_tokens"), usage.reasoningTokens);
+    }
+    return object;
+}
+
 } // namespace SigilAgent
