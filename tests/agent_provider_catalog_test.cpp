@@ -322,13 +322,27 @@ int main(int argc, char *argv[])
     });
 
     const QString fetch_url = QStringLiteral("http://127.0.0.1:%1/models").arg(server.serverPort());
-    CatalogResult fetched = AgentModelCatalog::fetch(fetch_url, QStringLiteral("sk-test-not-a-secret"),
-                                                     QString(), QString(), 5000);
+    QFutureWatcher<CatalogResult> catalog_watcher;
+    QEventLoop catalog_loop;
+    bool catalog_event_loop_responsive = false;
+    QObject::connect(&catalog_watcher, &QFutureWatcher<CatalogResult>::finished,
+                     &catalog_loop, &QEventLoop::quit);
+    QTimer::singleShot(0, [&catalog_event_loop_responsive]() {
+        catalog_event_loop_responsive = true;
+    });
+    catalog_watcher.setFuture(QtConcurrent::run([fetch_url]() {
+        return AgentModelCatalog::fetch(
+            fetch_url, QStringLiteral("sk-test-not-a-secret"),
+            QString(), QString(), 5000);
+    }));
+    catalog_loop.exec();
+    const CatalogResult fetched = catalog_watcher.result();
     Require(fetched.error.isEmpty(), "GET /models against a local server must succeed");
     Require(fetched.httpStatus == 200, "GET /models must surface HTTP 200");
     Require(fetched.models.size() == 1 && fetched.models.first().id == QStringLiteral("fetched-model"),
             "GET /models must parse the live payload");
-    Require(fetched.models.first().tools, "fetched supported_parameters.tools must be recorded");
+    Require(fetched.models.first().tools && catalog_event_loop_responsive,
+            "background model fetch must preserve parameters while the main event loop stays responsive");
     Require(!fetched.sourceUrl.contains(QStringLiteral("sk-")), "catalog result must not echo the API key");
 
     QTcpServer probe_server;
@@ -462,6 +476,13 @@ int main(int argc, char *argv[])
                 && rejected_probe.error.contains(QStringLiteral("[redacted]"))
                 && !rejected_probe.error.contains(provider_key),
             "connection probe must surface authentication failure without echoing the key");
+    const CatalogResult rejected_catalog = AgentModelCatalog::fetch(
+        error_config.baseUrl, provider_key, QString(), QString(), 2000);
+    Require(!rejected_catalog.error.isEmpty()
+                && rejected_catalog.error.contains(QStringLiteral("[redacted]"))
+                && !rejected_catalog.error.contains(provider_key)
+                && !rejected_catalog.sourceUrl.contains(provider_key),
+            "model catalog errors and result metadata must redact the configured API key");
 
     QTcpServer timeout_server;
     Require(timeout_server.listen(QHostAddress::LocalHost, 0),
@@ -496,6 +517,19 @@ int main(int argc, char *argv[])
                 && cancelled_probe.error == QStringLiteral("cancelled")
                 && cancel_timer.elapsed() < 1000,
             "connection probes must observe external cancellation without waiting for timeout");
+
+    std::atomic_bool cancel_catalog { false };
+    QTimer::singleShot(20, [&cancel_catalog]() {
+        cancel_catalog.store(true, std::memory_order_relaxed);
+    });
+    QElapsedTimer catalog_cancel_timer;
+    catalog_cancel_timer.start();
+    const CatalogResult cancelled_catalog = AgentModelCatalog::fetch(
+        timeout_config.baseUrl, timeout_config.apiKey,
+        QString(), QString(), 5000, &cancel_catalog);
+    Require(cancelled_catalog.error == QStringLiteral("Models request cancelled")
+                && catalog_cancel_timer.elapsed() < 1000,
+            "model catalog fetch must observe external cancellation without waiting for timeout");
 
     return EXIT_SUCCESS;
 }

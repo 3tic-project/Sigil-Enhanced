@@ -8,6 +8,8 @@
 #ifndef SIGIL_AGENT_MODEL_CATALOG_H
 #define SIGIL_AGENT_MODEL_CATALOG_H
 
+#include <atomic>
+
 #include <QByteArray>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -51,7 +53,8 @@ public:
                                const QString &apiKey,
                                const QString &referer = QString(),
                                const QString &title = QString(),
-                               int timeoutMs = 30000);
+                               int timeoutMs = 30000,
+                               const std::atomic_bool *cancelled = nullptr);
 };
 
 } // namespace SigilAgent
