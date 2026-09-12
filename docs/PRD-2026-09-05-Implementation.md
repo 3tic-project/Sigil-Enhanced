@@ -947,3 +947,21 @@ API Key、模型任一变化都会失配，指纹不包含密钥原文；`agent_
 联网、凭据轮换人工检查、系统密钥链存储、代理/证书错误、Windows/Linux 本地化时间、
 屏幕阅读器与偏好设置嵌套事件循环压力测试。用户说明见
 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
+
+## Native Agent 界面翻译覆盖收口（2026-09-13）
+
+分支：`chore/agent-translation-coverage`。主要提交：`7e36e178c`（四语目录收口）。
+
+- 补齐 `SigilAgent::AgentDock` 的 39 条基础界面文案，包括模式、Composer、范围、审批、
+  工具状态、导出与停止/回滚反馈；同时补齐 MainWindow 的 4 条 Agent 导出文件对话框文案、
+  PluginSession/PluginSessionManager 的 2 条实时插件错误和 QObject 的 1 条导出错误。
+- 从简中、繁中、日文目录删除已不在当前源码中的
+  `KfxImportController: Cannot create a temporary EPUB file: %1` 活跃旧条目。英文精简目录也
+  同步加入上述 46 条现行源文，避免新界面只依赖运行时 fallback。
+- 覆盖测试使用 Qt `lupdate` 从当前 `cpp/h/ui` 重新提取源文，并检查 context、unfinished、
+  空译文、占位符、富文本标签、简中误混日文假名及未包裹 `tr()` 的常见控件字面量。
+
+XML 解析通过；四份目录均可由 `lrelease` 生成 `.qm` 且 0 unfinished。简中、繁中和日文
+严格覆盖测试全部通过，每份覆盖当前 5,646 条活跃源文；此前连续记录的每种 47 条继承欠账
+已关闭。本切片只改变翻译目录，不改变 Agent 协议或运行时逻辑。真实三语言 GUI 的截断、
+字体回退、输入法、屏幕阅读器和 Windows/Linux 菜单布局仍需人工验收。
