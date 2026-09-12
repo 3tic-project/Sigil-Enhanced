@@ -164,6 +164,27 @@ int main()
     Require(session.eventsOf(AgentEventType::ModelRequestCompleted).size()
                 == provider.requestCount(),
             "every successful model request must publish a completion event");
+    const QList<AgentEvent> started_requests =
+        session.eventsOf(AgentEventType::ModelRequestStarted);
+    const QList<AgentEvent> completed_requests =
+        session.eventsOf(AgentEventType::ModelRequestCompleted);
+    Require(started_requests.size() == completed_requests.size(),
+            "every completed model request must have a start event");
+    for (int i = 0; i < started_requests.size(); ++i) {
+        const QJsonObject started = started_requests.at(i).payload;
+        const QJsonObject completed = completed_requests.at(i).payload;
+        Require(!started.value(QStringLiteral("request_id")).toString().isEmpty()
+                    && started.value(QStringLiteral("request_id")).toString()
+                        == completed.value(QStringLiteral("request_id")).toString()
+                    && started.value(QStringLiteral("session_id")).toString() == session.id()
+                    && started.value(QStringLiteral("book_session_id")).toString()
+                        == book.bookSessionId()
+                    && started.value(QStringLiteral("book_revision")).toInteger() >= 1
+                    && started.value(QStringLiteral("mode")).toString()
+                        == QStringLiteral("ask")
+                    && completed.value(QStringLiteral("duration_ms")).toInteger() >= 0,
+                "request lifecycle events must retain identity, target, mode, and elapsed time");
+    }
     Require(!hasEvent(session, AgentEventType::ModelRequestFailed),
             "successful model requests must not publish failure events");
 
@@ -188,11 +209,43 @@ int main()
     const QJsonObject failed_request =
         failed_session.eventsOf(AgentEventType::ModelRequestFailed).constLast().payload;
     Require(failed_request.value(QStringLiteral("step")).toInt() == 1
+                && !failed_request.value(QStringLiteral("request_id")).toString().isEmpty()
                 && failed_request.value(QStringLiteral("model")).toString()
                     == QStringLiteral("mock")
+                && failed_request.value(QStringLiteral("duration_ms")).toInteger() >= 0
                 && failed_request.value(QStringLiteral("message")).toString()
                     .contains(QStringLiteral("401")),
             "model failure events must carry the request identity and readable error");
+
+    MemoryBookWorkspace request_cancel_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry request_cancel_registry;
+    registerBookTools(&request_cancel_registry, &request_cancel_book);
+    AgentSession request_cancel_session;
+    AgentCancellation request_cancel_token;
+    MockModelProvider request_cancel_provider;
+    request_cancel_provider.setScript(
+        [&request_cancel_token](const ModelRequest &) {
+            request_cancel_token.request(AgentCancellationReason::UserStop);
+            ModelTurn turn;
+            turn.content = QStringLiteral("must be discarded");
+            return turn;
+        });
+    AgentRunner request_cancel_runner(
+        &request_cancel_session, &request_cancel_provider, &request_cancel_registry,
+        &request_cancel_book, &policy, &approve, &request_cancel_token);
+    request_cancel_runner.setModel(QStringLiteral("mock"));
+    const AgentRunResult request_cancel_result = request_cancel_runner.runTurn(
+        QStringLiteral("cancel during provider request"));
+    const QList<AgentEvent> cancelled_requests =
+        request_cancel_session.eventsOf(AgentEventType::ModelRequestCancelled);
+    Require(request_cancel_result.state == AgentRunState::Cancelled
+                && cancelled_requests.size() == 1
+                && !cancelled_requests.first().payload
+                        .value(QStringLiteral("request_id")).toString().isEmpty()
+                && cancelled_requests.first().payload
+                        .value(QStringLiteral("duration_ms")).toInteger() >= 0
+                && !hasEvent(request_cancel_session, AgentEventType::ModelRequestFailed),
+            "cancelled provider requests must publish a timed cancellation outcome");
 
     HistoryAssembler assembler;
     const QJsonArray replay = assembler.toOpenAIMessages(assembler.assemble(session.events(), true), true);

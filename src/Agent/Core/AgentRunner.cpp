@@ -6,9 +6,11 @@
 
 #include "Agent/Core/AgentRunner.h"
 
+#include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QUuid>
 
 #include "Agent/Tools/BookTools.h"
 
@@ -373,9 +375,17 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
 
         const ModelRequest request = m_prompts.build(
             *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking, m_effort, handles);
+        const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         m_session->append(AgentEventType::ModelRequestStarted, QJsonObject {
+            { QStringLiteral("request_id"), request_id },
+            { QStringLiteral("session_id"), m_session->id() },
+            { QStringLiteral("book_session_id"), m_runBookSessionId },
+            { QStringLiteral("book_revision"), m_workspace
+                  ? static_cast<qint64>(m_workspace->revision()) : 0 },
             { QStringLiteral("step"), steps },
             { QStringLiteral("model"), request.model },
+            { QStringLiteral("mode"), modeName(m_mode) },
+            { QStringLiteral("context_handles"), QJsonArray::fromStringList(handles) },
             { QStringLiteral("thinking"), request.thinking },
             { QStringLiteral("tools"), request.tools.size() }
         });
@@ -383,15 +393,26 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
 
         SessionSink sink(m_session, m_cancellation);
         setState(AgentRunState::StreamingResponse);
+        QElapsedTimer request_timer;
+        request_timer.start();
         ModelTurn turn = m_provider->stream(request, sink);
+        const qint64 duration_ms = request_timer.elapsed();
         if (m_cancellation && m_cancellation->isCancelled()) {
+            m_session->append(AgentEventType::ModelRequestCancelled, QJsonObject {
+                { QStringLiteral("request_id"), request_id },
+                { QStringLiteral("step"), steps },
+                { QStringLiteral("model"), request.model },
+                { QStringLiteral("duration_ms"), duration_ms }
+            });
             return cancelRun();
         }
         if (!turn.error.isEmpty()) {
             setState(AgentRunState::Failed);
             m_session->append(AgentEventType::ModelRequestFailed, QJsonObject {
+                { QStringLiteral("request_id"), request_id },
                 { QStringLiteral("step"), steps },
                 { QStringLiteral("model"), request.model },
+                { QStringLiteral("duration_ms"), duration_ms },
                 { QStringLiteral("message"), turn.error }
             });
             m_session->append(AgentEventType::Error, QJsonObject {
@@ -404,8 +425,10 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         }
 
         m_session->append(AgentEventType::ModelRequestCompleted, QJsonObject {
+            { QStringLiteral("request_id"), request_id },
             { QStringLiteral("step"), steps },
             { QStringLiteral("model"), request.model },
+            { QStringLiteral("duration_ms"), duration_ms },
             { QStringLiteral("finish_reason"), turn.finishReason },
             { QStringLiteral("tool_calls"), turn.toolCalls.size() }
         });

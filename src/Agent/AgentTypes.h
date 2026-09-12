@@ -44,6 +44,7 @@ enum class AgentEventType {
     ModelRequestStarted,
     ModelRequestCompleted,
     ModelRequestFailed,
+    ModelRequestCancelled,
     AssistantDelta,
     AssistantMessage,
     ToolRequested,
