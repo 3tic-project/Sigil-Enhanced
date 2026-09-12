@@ -27334,5 +27334,24 @@ Continue using the requested filename?</source>
     <message><source>The run stopped before this window closed.</source><translation>ウィンドウを閉じる前に実行を停止しました。</translation></message>
     <message><source>Book target changed</source><translation>対象ブックが変更されました</translation></message>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>実行中に開いているブックが変更されました。以前の応答は新しいブックに適用される前にブロックされました。</translation></message>
+    <message><source>Retry</source><translation>再試行</translation></message>
+    <message><source>Technical details</source><translation>技術的な詳細</translation></message>
+    <message><source>Show request identifiers, timing, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、対象リビジョン、スコープハンドルを表示します。</translation></message>
+    <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ミリ秒 · %3</translation></message>
+    <message><source>Session: %1</source><translation>セッション：%1</translation></message>
+    <message><source>Not available</source><translation>利用不可</translation></message>
+    <message><source>Book session: %1</source><translation>ブックセッション：%1</translation></message>
+    <message><source>Request: %1</source><translation>リクエスト：%1</translation></message>
+    <message><source>Step: %1 · Mode: %2 · Status: %3</source><translation>ステップ：%1 · モード：%2 · 状態：%3</translation></message>
+    <message><source>Request target: %1 · revision %2</source><translation>リクエスト対象：%1 · リビジョン %2</translation></message>
+    <message><source>Model: %1</source><translation>モデル：%1</translation></message>
+    <message><source>Scope handles: %1</source><translation>スコープハンドル：%1</translation></message>
+    <message><source>None</source><translation>なし</translation></message>
+    <message><source>Duration: %1 ms · Finished: %2</source><translation>所要時間：%1 ミリ秒 · 完了：%2</translation></message>
+    <message><source>No model request in this session.</source><translation>このセッションにはモデルリクエストがありません。</translation></message>
+    <message><source>Provider: %1 · Endpoint: %2</source><translation>プロバイダー：%1 · エンドポイント：%2</translation></message>
+    <message><source>Resend the last prompt with the same scope handles.</source><translation>同じスコープハンドルで直前のプロンプトを再送信します。</translation></message>
+    <message><source>Retry is unavailable because the open book changed.</source><translation>開いているブックが変更されたため再試行できません。</translation></message>
+    <message><source>Retry is available after a provider request fails.</source><translation>プロバイダーへのリクエストが失敗すると再試行できます。</translation></message>
 </context>
 </TS>

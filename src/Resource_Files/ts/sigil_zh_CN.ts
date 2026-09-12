@@ -27336,5 +27336,24 @@ Continue using the requested filename?</source>
     <message><source>The run stopped before this window closed.</source><translation>运行已在此窗口关闭前停止。</translation></message>
     <message><source>Book target changed</source><translation>目标书籍已更改</translation></message>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>运行期间打开的书籍发生了更改。旧响应在应用到新书籍前已被阻止。</translation></message>
+    <message><source>Retry</source><translation>重试</translation></message>
+    <message><source>Technical details</source><translation>技术详情</translation></message>
+    <message><source>Show request identifiers, timing, target revision, and scope handles.</source><translation>显示请求标识符、耗时、目标修订和范围句柄。</translation></message>
+    <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 毫秒 · %3</translation></message>
+    <message><source>Session: %1</source><translation>会话：%1</translation></message>
+    <message><source>Not available</source><translation>不可用</translation></message>
+    <message><source>Book session: %1</source><translation>书籍会话：%1</translation></message>
+    <message><source>Request: %1</source><translation>请求：%1</translation></message>
+    <message><source>Step: %1 · Mode: %2 · Status: %3</source><translation>步骤：%1 · 模式：%2 · 状态：%3</translation></message>
+    <message><source>Request target: %1 · revision %2</source><translation>请求目标：%1 · 修订 %2</translation></message>
+    <message><source>Model: %1</source><translation>模型：%1</translation></message>
+    <message><source>Scope handles: %1</source><translation>范围句柄：%1</translation></message>
+    <message><source>None</source><translation>无</translation></message>
+    <message><source>Duration: %1 ms · Finished: %2</source><translation>耗时：%1 毫秒 · 完成时间：%2</translation></message>
+    <message><source>No model request in this session.</source><translation>此会话中尚无模型请求。</translation></message>
+    <message><source>Provider: %1 · Endpoint: %2</source><translation>提供商：%1 · 端点：%2</translation></message>
+    <message><source>Resend the last prompt with the same scope handles.</source><translation>使用相同的范围句柄重新发送最近一次提示。</translation></message>
+    <message><source>Retry is unavailable because the open book changed.</source><translation>打开的书籍已更改，无法重试。</translation></message>
+    <message><source>Retry is available after a provider request fails.</source><translation>提供商请求失败后可重试。</translation></message>
 </context>
 </TS>

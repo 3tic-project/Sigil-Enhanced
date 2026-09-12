@@ -23388,5 +23388,24 @@ Continue using the requested filename?</translation>
     <message><source>The run stopped before this window closed.</source><translation>The run stopped before this window closed.</translation></message>
     <message><source>Book target changed</source><translation>Book target changed</translation></message>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>The open book changed during this run. The old response was blocked before it could be applied to the new book.</translation></message>
+    <message><source>Retry</source><translation>Retry</translation></message>
+    <message><source>Technical details</source><translation>Technical details</translation></message>
+    <message><source>Show request identifiers, timing, target revision, and scope handles.</source><translation>Show request identifiers, timing, target revision, and scope handles.</translation></message>
+    <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ms · %3</translation></message>
+    <message><source>Session: %1</source><translation>Session: %1</translation></message>
+    <message><source>Not available</source><translation>Not available</translation></message>
+    <message><source>Book session: %1</source><translation>Book session: %1</translation></message>
+    <message><source>Request: %1</source><translation>Request: %1</translation></message>
+    <message><source>Step: %1 · Mode: %2 · Status: %3</source><translation>Step: %1 · Mode: %2 · Status: %3</translation></message>
+    <message><source>Request target: %1 · revision %2</source><translation>Request target: %1 · revision %2</translation></message>
+    <message><source>Model: %1</source><translation>Model: %1</translation></message>
+    <message><source>Scope handles: %1</source><translation>Scope handles: %1</translation></message>
+    <message><source>None</source><translation>None</translation></message>
+    <message><source>Duration: %1 ms · Finished: %2</source><translation>Duration: %1 ms · Finished: %2</translation></message>
+    <message><source>No model request in this session.</source><translation>No model request in this session.</translation></message>
+    <message><source>Provider: %1 · Endpoint: %2</source><translation>Provider: %1 · Endpoint: %2</translation></message>
+    <message><source>Resend the last prompt with the same scope handles.</source><translation>Resend the last prompt with the same scope handles.</translation></message>
+    <message><source>Retry is unavailable because the open book changed.</source><translation>Retry is unavailable because the open book changed.</translation></message>
+    <message><source>Retry is available after a provider request fails.</source><translation>Retry is available after a provider request fails.</translation></message>
 </context>
 </TS>
