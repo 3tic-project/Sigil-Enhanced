@@ -32,6 +32,9 @@ private:
     void readSettings();
     void onProviderChanged();
     void refreshModels();
+    void testConnection();
+    void invalidateConnectionTest(bool update_status);
+    void setConnectionControlsEnabled(bool enabled);
     void fillModelCombo();
     void updateModelInfo();
     void rememberCurrentProvider();
@@ -45,6 +48,7 @@ private:
     QLineEdit *m_apiKey = nullptr;
     QComboBox *m_model = nullptr;
     QPushButton *m_refreshModels = nullptr;
+    QPushButton *m_testConnection = nullptr;
     QLabel *m_modelInfo = nullptr;
     QLabel *m_status = nullptr;
     QCheckBox *m_thinking = nullptr;

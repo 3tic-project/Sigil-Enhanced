@@ -56,6 +56,19 @@ require(
     "Native Agent settings must offer DeepSeek, OpenCode Go, OpenRouter, and a models fetch",
 )
 require(
+    "agentTestConnectionButton" in settings_cpp
+    and "probeAgentConnection(config, 15000)" in settings_cpp
+    and "providerReadiness" in settings_cpp
+    and "config.thinking = false" in settings_cpp,
+    "Native Agent settings must run a bounded, locally validated Chat Completions probe",
+)
+require(
+    "never sends book content or tools" in settings_cpp
+    and "connectionTestState" in settings_cpp
+    and "connectionTestHttpStatus" in settings_cpp,
+    "connection testing must disclose its scope and publish inspectable terminal state",
+)
+require(
     "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,
     "dock must export the conversation and a debug log",
 )

@@ -15,8 +15,10 @@
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPointer>
 #include <QPushButton>
 
+#include "Agent/Model/AgentConnectionProbe.h"
 #include "Agent/Model/AgentProviderPreset.h"
 #include "Agent/Persistence/AgentSettings.h"
 
@@ -79,7 +81,12 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_status->setObjectName(QStringLiteral("agentSettingsStatus"));
     m_status->setWordWrap(true);
 
-    auto *note = new QLabel(tr("Choose the provider and model here. The Agent dock uses this model and does not ask for a model name. Refresh models loads the live catalog and advertised parameters (context length, tools, reasoning) from the server."), this);
+    m_testConnection = new QPushButton(tr("Test Chat Completions"), this);
+    m_testConnection->setObjectName(QStringLiteral("agentTestConnectionButton"));
+    m_testConnection->setToolTip(
+        tr("Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens."));
+
+    auto *note = new QLabel(tr("Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings."), this);
     note->setWordWrap(true);
 
     layout->addRow(tr("Provider"), m_provider);
@@ -89,12 +96,21 @@ AgentSettingsWidget::AgentSettingsWidget()
     layout->addRow(QString(), m_modelInfo);
     layout->addRow(m_thinking);
     layout->addRow(tr("Reasoning effort"), m_effort);
+    layout->addRow(QString(), m_testConnection);
     layout->addRow(m_status);
     layout->addRow(note);
 
     connect(m_provider, &QComboBox::currentIndexChanged, this, [this](int) { onProviderChanged(); });
     connect(m_refreshModels, &QPushButton::clicked, this, [this]() { refreshModels(); });
-    connect(m_model, &QComboBox::currentTextChanged, this, [this](const QString &) { updateModelInfo(); });
+    connect(m_testConnection, &QPushButton::clicked, this, [this]() { testConnection(); });
+    connect(m_model, &QComboBox::currentTextChanged, this, [this](const QString &) {
+        updateModelInfo();
+        invalidateConnectionTest(true);
+    });
+    connect(m_baseUrl, &QLineEdit::textEdited, this,
+            [this](const QString &) { invalidateConnectionTest(true); });
+    connect(m_apiKey, &QLineEdit::textEdited, this,
+            [this](const QString &) { invalidateConnectionTest(true); });
 
     readSettings();
 }
@@ -226,6 +242,94 @@ void AgentSettingsWidget::onProviderChanged()
     } else {
         m_status->setText(tr("Loaded %1 cached models. Refresh to update from the server.").arg(m_models.size()));
     }
+    invalidateConnectionTest(false);
+}
+
+void AgentSettingsWidget::invalidateConnectionTest(bool update_status)
+{
+    if (m_loading || !m_status) return;
+    const QString prior = m_status->property("connectionTestState").toString();
+    m_status->setProperty("connectionTestState", QStringLiteral("not_tested"));
+    m_status->setProperty("connectionTestDurationMs", QVariant());
+    m_status->setProperty("connectionTestHttpStatus", QVariant());
+    m_status->setProperty("connectionTestEndpointHost", QVariant());
+    m_status->setProperty("connectionTestModel", QVariant());
+    if (update_status && !prior.isEmpty() && prior != QLatin1String("not_tested")) {
+        m_status->setText(tr("Chat Completions has not been tested for the current settings."));
+    }
+}
+
+void AgentSettingsWidget::setConnectionControlsEnabled(bool enabled)
+{
+    const QList<QWidget *> controls {
+        m_provider, m_baseUrl, m_apiKey, m_model, m_refreshModels,
+        m_testConnection, m_thinking, m_effort
+    };
+    for (QWidget *control : controls) {
+        if (control) control->setEnabled(enabled);
+    }
+}
+
+void AgentSettingsWidget::testConnection()
+{
+    rememberCurrentProvider();
+    const AgentProviderKind kind = currentKind();
+    const QString chat_url = SigilAgent::chatCompletionsUrl(kind, m_baseUrl->text());
+    const QString model = selectedModelId();
+    const SigilAgent::AgentProviderReadiness readiness = SigilAgent::providerReadiness(
+        kind, chat_url, !m_apiKey->text().isEmpty(), model);
+    if (!readiness.isConfigured()) {
+        m_status->setProperty("connectionTestState", QStringLiteral("setup_error"));
+        if (readiness.issue == SigilAgent::AgentProviderSetupIssue::Endpoint) {
+            m_status->setText(tr("Cannot test: enter a valid Chat Completions URL."));
+        } else if (readiness.issue == SigilAgent::AgentProviderSetupIssue::ApiKey) {
+            m_status->setText(tr("Cannot test: enter an API key."));
+        } else {
+            m_status->setText(tr("Cannot test: choose or enter a model."));
+        }
+        return;
+    }
+
+    SigilAgent::OpenAIProviderConfig config;
+    config.baseUrl = chat_url;
+    config.apiKey = m_apiKey->text();
+    config.model = model;
+    config.thinking = false;
+    config.reasoningEffort = m_effort->currentText();
+    config.reasoningProtocol = SigilAgent::reasoningProtocolFor(kind, chat_url);
+    if (kind == AgentProviderKind::OpenRouter) {
+        config.httpReferer = SigilAgent::agentHttpReferer();
+        config.httpTitle = SigilAgent::agentHttpTitle();
+    }
+
+    m_status->setProperty("connectionTestState", QStringLiteral("testing"));
+    m_status->setProperty("connectionTestEndpointHost", readiness.endpointHost);
+    m_status->setProperty("connectionTestModel", model);
+    m_status->setText(tr("Testing Chat Completions for %1 at %2…")
+                          .arg(model, readiness.endpointHost));
+    setConnectionControlsEnabled(false);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QPointer<AgentSettingsWidget> guard(this);
+    const SigilAgent::AgentConnectionProbeResult result =
+        SigilAgent::probeAgentConnection(config, 15000);
+    QApplication::restoreOverrideCursor();
+    if (!guard) return;
+    setConnectionControlsEnabled(true);
+    m_status->setProperty("connectionTestDurationMs", result.durationMs);
+    m_status->setProperty("connectionTestHttpStatus", result.httpStatus);
+    if (result.ok) {
+        m_status->setProperty("connectionTestState", QStringLiteral("succeeded"));
+        m_status->setText(tr("Chat Completions succeeded for %1 at %2 in %3 ms.")
+                              .arg(model, readiness.endpointHost)
+                              .arg(result.durationMs));
+    } else {
+        m_status->setProperty("connectionTestState", QStringLiteral("failed"));
+        QString error = result.error.simplified();
+        if (error.size() > 400) error = error.left(400) + QStringLiteral("…");
+        m_status->setText(tr("Chat Completions failed for %1 at %2: %3")
+                              .arg(model, readiness.endpointHost, error));
+    }
+    m_status->setAccessibleName(m_status->text());
 }
 
 void AgentSettingsWidget::refreshModels()
@@ -312,6 +416,7 @@ void AgentSettingsWidget::readSettings()
         else m_model->setEditText(current_model);
     }
     m_status->clear();
+    m_status->setProperty("connectionTestState", QStringLiteral("not_tested"));
     m_loading = false;
 }
 
