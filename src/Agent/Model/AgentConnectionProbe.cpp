@@ -17,16 +17,25 @@ namespace
 class ProbeSink : public ModelStreamSink
 {
 public:
+    explicit ProbeSink(const std::atomic_bool *cancelled) : m_cancelled(cancelled) {}
+
     void onReasoningDelta(const QString &) override {}
     void onContentDelta(const QString &) override {}
     void onToolCallsUpdated(const QList<ToolCall> &) override {}
-    bool isCancelled() const override { return false; }
+    bool isCancelled() const override
+    {
+        return m_cancelled && m_cancelled->load(std::memory_order_relaxed);
+    }
+
+private:
+    const std::atomic_bool *m_cancelled = nullptr;
 };
 
 } // namespace
 
 AgentConnectionProbeResult probeAgentConnection(
-    const OpenAIProviderConfig &config, int timeout_ms)
+    const OpenAIProviderConfig &config, int timeout_ms,
+    const std::atomic_bool *cancelled)
 {
     AgentConnectionProbeResult result;
     result.model = config.model.trimmed();
@@ -46,7 +55,7 @@ AgentConnectionProbeResult probeAgentConnection(
     message.content = QStringLiteral("Reply with exactly OK.");
     request.messages.append(message);
 
-    ProbeSink sink;
+    ProbeSink sink(cancelled);
     QElapsedTimer timer;
     timer.start();
     const ModelTurn turn = provider.stream(request, sink);

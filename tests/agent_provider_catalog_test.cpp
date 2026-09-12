@@ -1,7 +1,9 @@
+#include <atomic>
 #include <cstdlib>
 #include <iostream>
 
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QHostAddress>
@@ -9,6 +11,7 @@
 #include <QRegularExpression>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QTimer>
 
 #include "Agent/Core/AgentSession.h"
 #include "Agent/Model/AgentConnectionProbe.h"
@@ -464,6 +467,19 @@ int main(int argc, char *argv[])
                 && timed_out.error.contains(QStringLiteral("timed out after 120 ms"))
                 && timed_out.durationMs >= 100 && timed_out.durationMs < 2000,
             "connection probe timeout must be explicit, bounded, and never reported as success");
+
+    std::atomic_bool cancel_probe { false };
+    QTimer::singleShot(20, [&cancel_probe]() {
+        cancel_probe.store(true, std::memory_order_relaxed);
+    });
+    QElapsedTimer cancel_timer;
+    cancel_timer.start();
+    const AgentConnectionProbeResult cancelled_probe =
+        probeAgentConnection(timeout_config, 5000, &cancel_probe);
+    Require(!cancelled_probe.ok
+                && cancelled_probe.error == QStringLiteral("cancelled")
+                && cancel_timer.elapsed() < 1000,
+            "connection probes must observe external cancellation without waiting for timeout");
 
     return EXIT_SUCCESS;
 }

@@ -8,6 +8,8 @@
 #ifndef SIGIL_AGENT_CONNECTION_PROBE_H
 #define SIGIL_AGENT_CONNECTION_PROBE_H
 
+#include <atomic>
+
 #include <QString>
 
 #include "Agent/Model/OpenAICompatibleProvider.h"
@@ -25,7 +27,8 @@ struct AgentConnectionProbeResult {
 };
 
 AgentConnectionProbeResult probeAgentConnection(
-    const OpenAIProviderConfig &config, int timeout_ms = 15000);
+    const OpenAIProviderConfig &config, int timeout_ms = 15000,
+    const std::atomic_bool *cancelled = nullptr);
 
 } // namespace SigilAgent
 
