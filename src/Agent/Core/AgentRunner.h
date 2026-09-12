@@ -66,6 +66,9 @@ private:
     ToolResult executeTool(const ToolCall &call);
     void publishToolOutcome(const ToolCall &call, const ToolResult &result);
     void rollbackOpenWork();
+    bool bookTargetMatchesRun() const;
+    AgentRunResult cancelRun();
+    AgentRunResult failBookTargetChanged(const QString &stage);
     QJsonObject parseArguments(const QString &json) const;
 
     AgentSession *m_session;
@@ -82,6 +85,7 @@ private:
     bool m_thinking = true;
     QString m_effort = QStringLiteral("medium");
     int m_maxSteps = 24;
+    QString m_runBookSessionId;
 };
 
 } // namespace SigilAgent

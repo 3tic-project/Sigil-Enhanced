@@ -59,6 +59,7 @@ enum class AgentEventType {
     TransactionRolledBack,
     CheckpointCreated,
     BookRevisionObserved,
+    BookTargetChanged,
     RunStateChanged,
     SessionCancelled,
     Error

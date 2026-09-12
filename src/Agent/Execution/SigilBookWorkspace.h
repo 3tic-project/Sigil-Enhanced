@@ -29,10 +29,12 @@ namespace SigilAgent
 class SigilBookWorkspace : public IBookWorkspace
 {
 public:
+    SigilBookWorkspace();
     void setBook(QSharedPointer<Book> book);
     void setPluginSessionManager(PluginSessionManager *manager);
     QSharedPointer<Book> book() const;
 
+    QString bookSessionId() const override;
     quint64 revision() const override;
     QJsonObject summary() const override;
     QJsonArray resources() const override;
@@ -125,6 +127,7 @@ private:
                                const QString &after_resource_id);
 
     QSharedPointer<Book> m_book;
+    QString m_bookSessionId;
     PluginSessionManager *m_pluginSessions = nullptr;
     quint64 m_revision = 1;
     mutable QHash<QString, TrackedResource> m_tracked;

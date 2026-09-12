@@ -131,6 +131,11 @@ TocEditTree tocTreeFromNcx(const NcxNavigation &navigation,
 
 } // namespace
 
+SigilBookWorkspace::SigilBookWorkspace() :
+    m_bookSessionId(QUuid::createUuid().toString(QUuid::WithoutBraces))
+{
+}
+
 void SigilBookWorkspace::setBook(QSharedPointer<Book> book)
 {
     if (m_transaction) {
@@ -138,6 +143,7 @@ void SigilBookWorkspace::setBook(QSharedPointer<Book> book)
         m_transaction.reset();
     }
     m_book = book;
+    m_bookSessionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_tracked.clear();
     m_checkpoints.clear();
     m_hasStagedMetadata = false;
@@ -335,6 +341,11 @@ quint64 SigilBookWorkspace::revision() const
     return m_revision;
 }
 
+QString SigilBookWorkspace::bookSessionId() const
+{
+    return m_bookSessionId;
+}
+
 QJsonObject SigilBookWorkspace::summary() const
 {
     return invokeJson([this]() {
@@ -356,6 +367,7 @@ QJsonObject SigilBookWorkspace::summary() const
             }
         }
         return QJsonObject {
+            { QStringLiteral("book_session_id"), m_bookSessionId },
             { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
             { QStringLiteral("epub_version"), m_book->GetConstOPF() ? m_book->GetConstOPF()->GetEpubVersion() : QString() },
             { QStringLiteral("title"), title },

@@ -636,6 +636,54 @@ int main()
     Require(plan_result.finalText.contains(QStringLiteral("did not commit")),
             "final Plan text must reflect the tool-role deny, not a canned skip");
 
+    MemoryBookWorkspace rebound_book = MemoryBookWorkspace::samplePhysicsBook();
+    const QString original_book_session = rebound_book.bookSessionId();
+    Require(!original_book_session.isEmpty()
+                && rebound_book.summary().value(QStringLiteral("book_session_id")).toString()
+                    == original_book_session,
+            "workspace summaries must expose a stable, non-empty book session id");
+    ToolRegistry rebound_registry;
+    registerBookTools(&rebound_registry, &rebound_book);
+    AgentSession rebound_session;
+    MockModelProvider rebound_provider;
+    rebound_provider.setScript([&rebound_book](const ModelRequest &) {
+        rebound_book.resetBookSession();
+        ModelTurn turn;
+        ToolCall call;
+        call.id = QStringLiteral("old-book-call");
+        call.name = QStringLiteral("transaction.begin");
+        call.argumentsJson = QStringLiteral("{}");
+        turn.toolCalls.append(call);
+        return turn;
+    });
+    AgentCancellation rebound_token;
+    AutoApprovalGate rebound_gate(true);
+    AgentRunner rebound_runner(&rebound_session, &rebound_provider, &rebound_registry,
+                               &rebound_book, &ask_policy, &rebound_gate, &rebound_token);
+    rebound_runner.setMode(AgentMode::Edit);
+    const AgentRunResult rebound_result = rebound_runner.runTurn(
+        QStringLiteral("edit the book that was open when this run began"));
+    Require(rebound_result.state == AgentRunState::Failed
+                && rebound_result.error.contains(QStringLiteral("open book changed")),
+            "a model response must fail closed when the workspace is rebound");
+    Require(rebound_book.bookSessionId() != original_book_session,
+            "resetBookSession must issue a new opaque target identity");
+    Require(hasEvent(rebound_session, AgentEventType::BookTargetChanged)
+                && !hasEvent(rebound_session, AgentEventType::ToolRequested)
+                && !rebound_book.hasOpenTransaction(),
+            "an old response must be rejected before any tool targets the replacement book");
+    const QJsonObject rebound_context =
+        rebound_session.eventsOf(AgentEventType::ContextAttached).constLast().payload;
+    const QJsonObject rebound_error =
+        rebound_session.eventsOf(AgentEventType::BookTargetChanged).constLast().payload;
+    Require(rebound_context.value(QStringLiteral("book_session_id")).toString()
+                == original_book_session
+                && rebound_error.value(QStringLiteral("expected_book_session_id")).toString()
+                    == original_book_session
+                && rebound_error.value(QStringLiteral("actual_book_session_id")).toString()
+                    == rebound_book.bookSessionId(),
+            "context and target-change diagnostics must identify expected and actual books");
+
     MemoryBookWorkspace cancel_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry cancel_registry;
     registerBookTools(&cancel_registry, &cancel_book);
@@ -689,5 +737,17 @@ int main()
     Require(rollback_status.value(QStringLiteral("live_book_unchanged")).toBool()
                 && !rollback_status.value(QStringLiteral("applied_to_book")).toBool(),
             "rollback event must say the staged work never reached the live book");
+    const QJsonObject cancellation_status =
+        cancel_session.eventsOf(AgentEventType::SessionCancelled).constLast().payload;
+    Require(cancellation_status.value(QStringLiteral("reason")).toString()
+                == QStringLiteral("user_stop")
+                && cancellation_status.value(QStringLiteral("book_session_id")).toString()
+                    == cancel_book.bookSessionId(),
+            "cancellation events must retain their explicit reason and bound book identity");
+    AgentCancellation first_reason_wins;
+    first_reason_wins.request(AgentCancellationReason::BookChanged);
+    first_reason_wins.request(AgentCancellationReason::WindowClosing);
+    Require(first_reason_wins.reason() == AgentCancellationReason::BookChanged,
+            "the first cancellation cause must survive later stop requests");
     return EXIT_SUCCESS;
 }

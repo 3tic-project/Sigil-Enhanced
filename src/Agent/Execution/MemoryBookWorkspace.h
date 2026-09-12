@@ -51,7 +51,9 @@ public:
     void setToc(const QJsonArray &toc);
     void setEpubVersion(const QString &version);
     void bumpRevision();
+    void resetBookSession();
 
+    QString bookSessionId() const override;
     quint64 revision() const override;
     QJsonObject summary() const override;
     QJsonArray resources() const override;
@@ -121,6 +123,7 @@ private:
                                bool add_to_spine,
                                const QString &after_resource_id);
 
+    QString m_bookSessionId;
     quint64 m_revision = 1;
     QString m_epubVersion = QStringLiteral("3.0");
     QJsonObject m_metadata;

@@ -165,13 +165,58 @@ QJsonObject AgentRunner::parseArguments(const QString &json) const
 
 void AgentRunner::rollbackOpenWork()
 {
-    if (m_workspace && m_workspace->hasOpenTransaction()) {
+    if (bookTargetMatchesRun() && m_workspace && m_workspace->hasOpenTransaction()) {
         const BookOpResult rolled = m_workspace->rollbackTransaction();
         if (m_session) {
             m_session->append(AgentEventType::TransactionRolledBack,
                               rollbackStatus(rolled.data));
         }
     }
+}
+
+bool AgentRunner::bookTargetMatchesRun() const
+{
+    return !m_workspace || m_workspace->bookSessionId() == m_runBookSessionId;
+}
+
+AgentRunResult AgentRunner::cancelRun()
+{
+    rollbackOpenWork();
+    setState(AgentRunState::Cancelled);
+    const AgentCancellationReason reason = m_cancellation
+        ? m_cancellation->reason() : AgentCancellationReason::UserStop;
+    if (m_session) {
+        m_session->append(AgentEventType::SessionCancelled, QJsonObject {
+            { QStringLiteral("reason"), cancellationReasonName(reason) },
+            { QStringLiteral("book_session_id"), m_runBookSessionId }
+        });
+    }
+    AgentRunResult result;
+    result.state = AgentRunState::Cancelled;
+    return result;
+}
+
+AgentRunResult AgentRunner::failBookTargetChanged(const QString &stage)
+{
+    const QString actual = m_workspace ? m_workspace->bookSessionId() : QString();
+    const QString message = QStringLiteral(
+        "The open book changed during this Agent run. The old response was not applied to the new book.");
+    setState(AgentRunState::Failed);
+    if (m_session) {
+        const QJsonObject payload {
+            { QStringLiteral("code"), QStringLiteral("BOOK_TARGET_CHANGED") },
+            { QStringLiteral("message"), message },
+            { QStringLiteral("stage"), stage },
+            { QStringLiteral("expected_book_session_id"), m_runBookSessionId },
+            { QStringLiteral("actual_book_session_id"), actual }
+        };
+        m_session->append(AgentEventType::BookTargetChanged, payload);
+        m_session->append(AgentEventType::Error, payload);
+    }
+    AgentRunResult result;
+    result.state = AgentRunState::Failed;
+    result.error = message;
+    return result;
 }
 
 void AgentRunner::publishToolOutcome(const ToolCall &call, const ToolResult &result)
@@ -272,6 +317,13 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
         setState(AgentRunState::ExecutingTools);
     }
 
+    if (!bookTargetMatchesRun()) {
+        const ToolResult changed = ToolResult::failure(
+            QStringLiteral("BOOK_TARGET_CHANGED"),
+            QStringLiteral("The open book changed before this tool could run."));
+        publishToolOutcome(local, changed);
+        return changed;
+    }
     if (m_cancellation && m_cancellation->isCancelled()) {
         const ToolResult cancelled = ToolResult::cancelled();
         publishToolOutcome(local, cancelled);
@@ -297,6 +349,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         return result;
     }
     if (m_cancellation) m_cancellation->reset();
+    m_runBookSessionId = m_workspace ? m_workspace->bookSessionId() : QString();
 
     setState(AgentRunState::PreparingContext);
     m_session->append(AgentEventType::UserMessage, QJsonObject {
@@ -306,6 +359,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
     if (m_workspace) {
         m_session->append(AgentEventType::ContextAttached, QJsonObject {
             { QStringLiteral("scope"), QStringLiteral("book structure + sampled fragments") },
+            { QStringLiteral("book_session_id"), m_runBookSessionId },
             { QStringLiteral("book_revision"), static_cast<qint64>(m_workspace->revision()) }
         });
     }
@@ -314,13 +368,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
     while (steps < m_maxSteps) {
         ++steps;
         if (m_cancellation && m_cancellation->isCancelled()) {
-            rollbackOpenWork();
-            setState(AgentRunState::Cancelled);
-            m_session->append(AgentEventType::SessionCancelled, QJsonObject {
-                { QStringLiteral("reason"), QStringLiteral("stop") }
-            });
-            result.state = AgentRunState::Cancelled;
-            return result;
+            return cancelRun();
         }
 
         const ModelRequest request = m_prompts.build(
@@ -337,13 +385,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         setState(AgentRunState::StreamingResponse);
         ModelTurn turn = m_provider->stream(request, sink);
         if (m_cancellation && m_cancellation->isCancelled()) {
-            rollbackOpenWork();
-            setState(AgentRunState::Cancelled);
-            m_session->append(AgentEventType::SessionCancelled, QJsonObject {
-                { QStringLiteral("reason"), QStringLiteral("stop") }
-            });
-            result.state = AgentRunState::Cancelled;
-            return result;
+            return cancelRun();
         }
         if (!turn.error.isEmpty()) {
             setState(AgentRunState::Failed);
@@ -367,6 +409,9 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             { QStringLiteral("finish_reason"), turn.finishReason },
             { QStringLiteral("tool_calls"), turn.toolCalls.size() }
         });
+        if (!bookTargetMatchesRun()) {
+            return failBookTargetChanged(QStringLiteral("after_model_response"));
+        }
         QJsonArray tool_calls_json;
         for (const ToolCall &call : turn.toolCalls) {
             tool_calls_json.append(toolCallToJson(call));
@@ -387,6 +432,9 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
 
         setState(AgentRunState::ExecutingTools);
         for (const ToolCall &call : turn.toolCalls) {
+            if (!bookTargetMatchesRun()) {
+                return failBookTargetChanged(QStringLiteral("before_tool"));
+            }
             IAgentTool *resolved = m_tools->find(call.name);
             result.toolNames.append(resolved ? resolved->descriptor().name : call.name);
             if (m_cancellation && m_cancellation->isCancelled()) {
@@ -394,15 +442,12 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
                 continue;
             }
             executeTool(call);
+            if (!bookTargetMatchesRun()) {
+                return failBookTargetChanged(QStringLiteral("after_tool"));
+            }
         }
         if (m_cancellation && m_cancellation->isCancelled()) {
-            rollbackOpenWork();
-            setState(AgentRunState::Cancelled);
-            m_session->append(AgentEventType::SessionCancelled, QJsonObject {
-                { QStringLiteral("reason"), QStringLiteral("stop") }
-            });
-            result.state = AgentRunState::Cancelled;
-            return result;
+            return cancelRun();
         }
     }
 

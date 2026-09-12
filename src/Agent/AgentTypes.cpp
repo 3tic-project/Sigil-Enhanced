@@ -36,6 +36,7 @@ QString eventTypeName(AgentEventType type)
         case AgentEventType::TransactionRolledBack: return QStringLiteral("transaction_rolled_back");
         case AgentEventType::CheckpointCreated: return QStringLiteral("checkpoint_created");
         case AgentEventType::BookRevisionObserved: return QStringLiteral("book_revision_observed");
+        case AgentEventType::BookTargetChanged: return QStringLiteral("book_target_changed");
         case AgentEventType::RunStateChanged: return QStringLiteral("run_state_changed");
         case AgentEventType::SessionCancelled: return QStringLiteral("session_cancelled");
         case AgentEventType::Error: return QStringLiteral("error");

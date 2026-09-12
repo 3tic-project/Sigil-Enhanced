@@ -51,6 +51,7 @@ class IBookWorkspace
 public:
     virtual ~IBookWorkspace() = default;
 
+    virtual QString bookSessionId() const = 0;
     virtual quint64 revision() const = 0;
     virtual QJsonObject summary() const = 0;
     virtual QJsonArray resources() const = 0;

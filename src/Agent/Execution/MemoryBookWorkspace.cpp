@@ -156,6 +156,7 @@ QJsonArray entriesFromTocTree(const TocEditTree &tree)
 } // namespace
 
 MemoryBookWorkspace::MemoryBookWorkspace()
+    : m_bookSessionId(QUuid::createUuid().toString(QUuid::WithoutBraces))
 {
     m_metadata = QJsonObject {
         { QStringLiteral("title"), QStringLiteral("Untitled") },
@@ -262,6 +263,20 @@ void MemoryBookWorkspace::bumpRevision()
     ++m_revision;
 }
 
+void MemoryBookWorkspace::resetBookSession()
+{
+    if (m_transaction) {
+        m_transaction->Clear();
+        m_transaction.reset();
+    }
+    m_bookSessionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
+QString MemoryBookWorkspace::bookSessionId() const
+{
+    return m_bookSessionId;
+}
+
 quint64 MemoryBookWorkspace::revision() const
 {
     return m_revision;
@@ -282,6 +297,7 @@ QJsonObject MemoryBookWorkspace::summary() const
         else if (resource.kind == QLatin1String("text")) ++text;
     }
     return QJsonObject {
+        { QStringLiteral("book_session_id"), m_bookSessionId },
         { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
         { QStringLiteral("epub_version"), m_epubVersion },
         { QStringLiteral("title"), m_metadata.value(QStringLiteral("title")).toString() },
