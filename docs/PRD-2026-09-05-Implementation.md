@@ -755,7 +755,7 @@ AGENT-IM1：尚无任务开始后冻结/展示不可变范围快照、书籍关�
 
 分支：`feature/agent-run-book-binding`。主要提交：`fdd10d22d`（书籍会话身份、取消原因及
 Runner fail-closed 检查）、`fc9270142`（Controller/MainWindow 生命周期延迟和状态卡）、
-`e7682f3f8`（四语运行状态文案）。
+`e7682f3f8`（四语运行状态文案）和 `7d3a579fc`（拒绝 Controller 重入变更）。
 
 ### 安全边界
 
@@ -769,7 +769,7 @@ Runner fail-closed 检查）、`fc9270142`（Controller/MainWindow 生命周期�
 - MainWindow 的正常换书路径在 `setBook()` 前以 `book_changed` 请求取消。关闭窗口若运行
   尚在模型网络或批准门的嵌套 Qt 事件循环中，先 ignore close、请求 `window_closing`，待
   `send()` 返回后再排队关闭，保证 `WA_DeleteOnClose` 不会释放调用栈仍在使用的对象。
-- Controller 在活动运行中拒绝 Provider/Runner 替换；Preferences 产生的新配置延后应用。
+- Controller 在活动运行中拒绝 Provider、workspace/Runner 替换和递归 `send()`；Preferences 产生的新配置延后应用。
   New Session 在 UI 中运行期间禁用，Controller 层仍做延迟清理：只先设置 `new_session`
   取消，旧 Runner 退栈后才清除事件、取消标记和工具实例。模式、模型和 thinking 配置由
   Controller 持有，重建 Runner 后不会丢失。
@@ -778,7 +778,7 @@ Runner fail-closed 检查）、`fc9270142`（Controller/MainWindow 生命周期�
 
 `agent_harness` 在 Provider 回调内直接换发 Memory workspace 会话 ID，验证旧工具调用在
 `ToolRequested` 前被拒绝、没有事务或写入；同一回调还请求 New Session 并尝试替换
-Provider，验证替换失败且清理只发生在 Runner 返回后。`agent_dock` 覆盖运行中控件锁定、
+Provider/workspace 并递归 send，验证三者均失败且清理只发生在 Runner 返回后。`agent_dock` 覆盖运行中控件锁定、
 书籍会话状态和专用结果卡；`agent_dock_contract` 固定换书取消顺序、关闭延迟和 Provider
 延迟。`agent_workspace_package_integration` 在真实导入 EPUB 上验证 Dock ID、workspace
 summary 以及重绑换发 ID。完整 Sigil 构建与 42 个固定 Python 依赖通过。四语 7 条变更
