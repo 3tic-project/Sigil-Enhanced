@@ -75,6 +75,26 @@ int main()
                 && bounded_selection_context.size() < 12000,
             "large attached selections must be bounded and report truncation");
 
+    MemoryBookWorkspace selected_files_book;
+    QStringList selected_file_handles;
+    for (int i = 0; i < 65; ++i) {
+        MemoryResource resource;
+        resource.id = QStringLiteral("selected-%1").arg(i);
+        resource.bookPath = QStringLiteral("OEBPS/Text/selected-%1.xhtml").arg(i);
+        resource.kind = QStringLiteral("xhtml");
+        resource.mediaType = QStringLiteral("application/xhtml+xml");
+        resource.text = QStringLiteral("<p>selected file %1</p>").arg(i);
+        selected_files_book.addResource(resource);
+        selected_file_handles.append(resource.id);
+    }
+    const QString selected_files_context = PromptAssembler().contextBlock(
+        &selected_files_book, selected_file_handles);
+    Require(selected_files_context.count(QStringLiteral("- resource selected-")) == 60
+                && selected_files_context.contains(
+                    QStringLiteral("5 additional selected resource(s) omitted"))
+                && !selected_files_context.contains(QStringLiteral("Resources:\n")),
+            "selected-files automatic context must be bounded, explicit, and file-scoped");
+
     MemoryBookWorkspace book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry registry;
     registerBookTools(&registry, &book);

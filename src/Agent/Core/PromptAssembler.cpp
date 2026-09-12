@@ -21,6 +21,7 @@ namespace
 {
 
 constexpr int kMaxAttachedSelectionLength = 4096;
+constexpr int kMaxAttachedResourceCount = 60;
 
 struct AttachedSelection {
     QString resourceId;
@@ -133,6 +134,8 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
     }
     if (!handles.isEmpty()) {
         block += QStringLiteral("\nUser-attached handles:\n");
+        int attached_resources = 0;
+        int omitted_resources = 0;
         for (const QString &handle : handles) {
             if (handle == QLatin1String("book")) {
                 block += QStringLiteral("- book (structure shown above)\n");
@@ -162,12 +165,22 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
                 }
                 continue;
             }
+            if (attached_resources >= kMaxAttachedResourceCount) {
+                ++omitted_resources;
+                continue;
+            }
+            ++attached_resources;
             block += QStringLiteral("- resource %1\n").arg(handle);
             const BookOpResult fragment = workspace->readFragment(handle, 0, 400);
             if (fragment.ok) {
                 block += fragment.data.value(QStringLiteral("text")).toString();
                 block += QLatin1Char('\n');
             }
+        }
+        if (omitted_resources > 0) {
+            block += QStringLiteral(
+                "- %1 additional selected resource(s) omitted from automatic context; read them with resource.read_fragment\n")
+                         .arg(omitted_resources);
         }
     }
     if (session) {
