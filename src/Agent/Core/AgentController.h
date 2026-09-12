@@ -29,7 +29,7 @@ class AgentController
 public:
     AgentController();
 
-    void setWorkspace(IBookWorkspace *workspace);
+    bool setWorkspace(IBookWorkspace *workspace);
     bool setProvider(std::unique_ptr<IModelProvider> provider);
     void setMode(AgentMode mode);
     void setModel(const QString &model);

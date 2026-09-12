@@ -33,10 +33,12 @@ void AgentController::rebuildTools()
     m_runner->setThinking(m_thinkingEnabled, m_reasoningEffort);
 }
 
-void AgentController::setWorkspace(IBookWorkspace *workspace)
+bool AgentController::setWorkspace(IBookWorkspace *workspace)
 {
+    if (isRunning()) return false;
     m_workspace = workspace;
     rebuildTools();
+    return true;
 }
 
 void AgentController::harvestProviderTraces()
@@ -119,6 +121,12 @@ bool AgentController::isRunning() const
 
 AgentRunResult AgentController::send(const QString &text, const QStringList &handles)
 {
+    if (isRunning()) {
+        AgentRunResult result;
+        result.state = AgentRunState::Failed;
+        result.error = QStringLiteral("An Agent run is already in progress");
+        return result;
+    }
     if (!m_runner) rebuildTools();
     AgentRunResult result = m_runner->runTurn(text, handles);
     if (m_resetSessionAfterRun) {

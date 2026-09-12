@@ -753,12 +753,22 @@ int main()
 
     MemoryBookWorkspace controller_book = MemoryBookWorkspace::samplePhysicsBook();
     AgentController controller;
-    controller.setWorkspace(&controller_book);
+    Require(controller.setWorkspace(&controller_book),
+            "an idle controller must accept its workspace");
     controller.setMode(AgentMode::Auto);
     auto in_flight_provider = std::make_unique<MockModelProvider>();
     bool provider_replacement_rejected = false;
+    bool workspace_replacement_rejected = false;
+    bool recursive_send_rejected = false;
+    MemoryBookWorkspace replacement_workspace = MemoryBookWorkspace::samplePhysicsBook();
     in_flight_provider->setScript(
-        [&controller, &provider_replacement_rejected](const ModelRequest &) {
+        [&controller, &provider_replacement_rejected, &workspace_replacement_rejected,
+         &recursive_send_rejected, &replacement_workspace](const ModelRequest &) {
+            const AgentRunResult nested = controller.send(
+                QStringLiteral("this recursive turn must not start"), QStringList());
+            recursive_send_rejected = nested.state == AgentRunState::Failed
+                && nested.error.contains(QStringLiteral("already in progress"));
+            workspace_replacement_rejected = !controller.setWorkspace(&replacement_workspace);
             controller.newSession();
             provider_replacement_rejected = !controller.setProvider(
                 std::make_unique<MockModelProvider>());
@@ -772,8 +782,11 @@ int main()
     const AgentRunResult controller_result = controller.send(
         QStringLiteral("start a run, then reset from its nested event loop"), QStringList());
     Require(controller_result.state == AgentRunState::Cancelled
-                && provider_replacement_rejected,
-            "active provider replacement must be rejected and New Session must cancel the old run");
+                && provider_replacement_rejected
+                && workspace_replacement_rejected
+                && recursive_send_rejected
+                && controller.workspace() == &controller_book,
+            "active provider/workspace replacement and recursive send must be rejected before reset");
     Require(controller.session()->id() != controller_session_before
                 && controller.session()->events().size() == 1
                 && controller.session()->events().first().type == AgentEventType::SessionCreated
