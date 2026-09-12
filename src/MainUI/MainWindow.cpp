@@ -6277,6 +6277,7 @@ void MainWindow::CreateAgentDock()
     m_AgentController = std::make_unique<SigilAgent::AgentController>();
     m_AgentController->setWorkspace(m_AgentWorkspace.get());
     m_AgentDock = new SigilAgent::AgentDock(this);
+    m_AgentDock->setSessionId(m_AgentController->session()->id());
     m_AgentDock->setObjectName(QStringLiteral("agentDock"));
     addDockWidget(Qt::RightDockWidgetArea, m_AgentDock);
     tabifyDockWidget(m_PreviewWindow, m_AgentDock);
@@ -6290,6 +6291,8 @@ void MainWindow::CreateAgentDock()
         if (m_AgentDock) {
             if (event.type == SigilAgent::AgentEventType::SessionCreated) {
                 m_AgentDock->resetTranscript();
+                m_AgentDock->setSessionId(
+                    event.payload.value(QStringLiteral("session_id")).toString());
                 m_AgentDock->setRunState(SigilAgent::AgentRunState::Idle);
             } else {
                 m_AgentDock->appendEvent(event);

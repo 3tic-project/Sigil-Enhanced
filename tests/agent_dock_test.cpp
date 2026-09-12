@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
     qputenv("QT_QPA_PLATFORM", QByteArray("offscreen"));
     QApplication application(argc, argv);
     SigilAgent::AgentDock dock;
+    dock.setSessionId(QStringLiteral("session-full-id"));
     dock.show();
     application.processEvents();
 
@@ -76,6 +77,17 @@ int main(int argc, char *argv[])
             "complete settings must say configured but not tested");
     SigilAgent::AgentEvent provider_started;
     provider_started.type = SigilAgent::AgentEventType::ModelRequestStarted;
+    provider_started.payload = QJsonObject {
+        { QStringLiteral("request_id"), QStringLiteral("request-full-id") },
+        { QStringLiteral("session_id"), QStringLiteral("session-full-id") },
+        { QStringLiteral("book_session_id"), QStringLiteral("request-book-id") },
+        { QStringLiteral("book_revision"), 6 },
+        { QStringLiteral("step"), 1 },
+        { QStringLiteral("model"), QStringLiteral("deepseek-chat") },
+        { QStringLiteral("mode"), QStringLiteral("ask") },
+        { QStringLiteral("context_handles"), QJsonArray {
+              QStringLiteral("chapter-1:12-34"), QStringLiteral("book-css") } }
+    };
     dock.appendEvent(provider_started);
     Require(provider_status->text().contains(QStringLiteral("Contacting provider"))
                 && provider_status->property("requestState").toString()
@@ -83,15 +95,29 @@ int main(int argc, char *argv[])
             "a real model request must move provider status to requesting");
     SigilAgent::AgentEvent provider_completed;
     provider_completed.type = SigilAgent::AgentEventType::ModelRequestCompleted;
+    provider_completed.timestampMs = 1700000000000;
+    provider_completed.payload = QJsonObject {
+        { QStringLiteral("request_id"), QStringLiteral("request-full-id") },
+        { QStringLiteral("step"), 1 },
+        { QStringLiteral("model"), QStringLiteral("deepseek-chat") },
+        { QStringLiteral("duration_ms"), 27 }
+    };
     dock.appendEvent(provider_completed);
     Require(provider_status->text().contains(QStringLiteral("Last request succeeded"))
+                && provider_status->text().contains(QStringLiteral("27 ms"))
                 && provider_status->property("requestState").toString()
-                    == QStringLiteral("succeeded"),
-            "only a completed model request may report success");
+                    == QStringLiteral("succeeded")
+                && provider_status->property("requestId").toString()
+                    == QStringLiteral("request-full-id")
+                && provider_status->property("durationMs").toLongLong() == 27,
+            "only a completed model request may report success with measured timing");
     dock.appendEvent(provider_started);
     SigilAgent::AgentEvent provider_failed;
     provider_failed.type = SigilAgent::AgentEventType::ModelRequestFailed;
+    provider_failed.timestampMs = 1700000001000;
     provider_failed.payload = QJsonObject {
+        { QStringLiteral("request_id"), QStringLiteral("request-full-id") },
+        { QStringLiteral("duration_ms"), 31 },
         { QStringLiteral("message"),
           QStringLiteral("HTTP 401: rejected sk-private-provider-key") }
     };
@@ -102,10 +128,21 @@ int main(int argc, char *argv[])
                     == QStringLiteral("failed"),
             "provider failures must use a readable summary without echoing response details");
     dock.appendEvent(provider_started);
+    SigilAgent::AgentEvent request_cancelled;
+    request_cancelled.type = SigilAgent::AgentEventType::ModelRequestCancelled;
+    request_cancelled.timestampMs = 1700000002000;
+    request_cancelled.payload = QJsonObject {
+        { QStringLiteral("request_id"), QStringLiteral("request-full-id") },
+        { QStringLiteral("step"), 1 },
+        { QStringLiteral("model"), QStringLiteral("deepseek-chat") },
+        { QStringLiteral("duration_ms"), 44 }
+    };
+    dock.appendEvent(request_cancelled);
     SigilAgent::AgentEvent provider_cancelled;
     provider_cancelled.type = SigilAgent::AgentEventType::SessionCancelled;
     dock.appendEvent(provider_cancelled);
     Require(provider_status->text().contains(QStringLiteral("Last request cancelled"))
+                && provider_status->text().contains(QStringLiteral("44 ms"))
                 && provider_status->property("requestState").toString()
                     == QStringLiteral("cancelled"),
             "cancelled requests must not leave provider status stuck on contacting");
@@ -129,6 +166,24 @@ int main(int argc, char *argv[])
     Require(book_status->text().contains(QStringLiteral("Saved"))
                 && !book_status->text().contains(QStringLiteral("Unsaved changes")),
             "book status must update after saving");
+    auto *technical_toggle = dock.findChild<QToolButton *>(
+        QStringLiteral("agentTechnicalDetailsToggle"));
+    auto *technical = dock.findChild<QLabel *>(QStringLiteral("agentTechnicalDetails"));
+    Require(technical_toggle && technical && !technical->isVisible(),
+            "technical request details must exist and start collapsed");
+    technical_toggle->click();
+    Require(technical->isVisible()
+                && technical->text().contains(QStringLiteral("session-full-id"))
+                && technical->text().contains(QStringLiteral("request-full-id"))
+                && technical->text().contains(QStringLiteral("request-book-id"))
+                && technical->text().contains(QStringLiteral("chapter-1:12-34"))
+                && technical->property("requestBookRevision").toLongLong() == 6
+                && technical->property("requestHandles").toStringList()
+                    == QStringList { QStringLiteral("chapter-1:12-34"),
+                                     QStringLiteral("book-css") },
+            "expanded details must expose full immutable request identity and scope");
+    technical_toggle->click();
+    Require(!technical->isVisible(), "technical details must collapse again");
     Require(mode && mode->count() == 4, "mode combo must offer Ask/Plan/Edit/Auto");
     Require(mode->itemData(0).toString() == QStringLiteral("ask")
                 && mode->itemData(1).toString() == QStringLiteral("plan")

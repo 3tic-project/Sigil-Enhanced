@@ -9,6 +9,7 @@
 #include <QAction>
 #include <QButtonGroup>
 #include <QComboBox>
+#include <QDateTime>
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -104,6 +105,20 @@ AgentDock::AgentDock(QWidget *parent) :
     m_bookStatus->setToolTip(
         tr("Agent plans and tool calls are bound to this open book."));
 
+    m_technicalDetailsToggle = new QToolButton(root);
+    m_technicalDetailsToggle->setObjectName(QStringLiteral("agentTechnicalDetailsToggle"));
+    m_technicalDetailsToggle->setText(tr("Technical details"));
+    m_technicalDetailsToggle->setCheckable(true);
+    m_technicalDetailsToggle->setArrowType(Qt::RightArrow);
+    m_technicalDetailsToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_technicalDetailsToggle->setAccessibleDescription(
+        tr("Show request identifiers, timing, target revision, and scope handles."));
+    m_technicalDetails = new QLabel(root);
+    m_technicalDetails->setObjectName(QStringLiteral("agentTechnicalDetails"));
+    m_technicalDetails->setWordWrap(true);
+    m_technicalDetails->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_technicalDetails->hide();
+
     auto *chips = new QWidget(root);
     chips->setObjectName(QStringLiteral("agentContextChips"));
     auto *chips_layout = new QHBoxLayout(chips);
@@ -168,6 +183,8 @@ AgentDock::AgentDock(QWidget *parent) :
     root_layout->addWidget(status);
     root_layout->addWidget(m_providerStatus);
     root_layout->addWidget(m_bookStatus);
+    root_layout->addWidget(m_technicalDetailsToggle);
+    root_layout->addWidget(m_technicalDetails);
     root_layout->addWidget(chips);
     root_layout->addWidget(m_transcript, 1);
     root_layout->addWidget(m_composer);
@@ -179,6 +196,10 @@ AgentDock::AgentDock(QWidget *parent) :
     connect(m_sendButton, &QPushButton::clicked, this, &AgentDock::onSend);
     connect(m_stopButton, &QPushButton::clicked, this, &AgentDock::stopRequested);
     connect(m_newSessionButton, &QPushButton::clicked, this, &AgentDock::newSessionRequested);
+    connect(m_technicalDetailsToggle, &QToolButton::toggled, this, [this](bool expanded) {
+        m_technicalDetailsToggle->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
+        m_technicalDetails->setVisible(expanded);
+    });
     connect(export_conversation, &QAction::triggered, this, &AgentDock::exportConversationRequested);
     connect(export_debug, &QAction::triggered, this, &AgentDock::exportDebugLogRequested);
     connect(m_modeCombo, &QComboBox::currentIndexChanged, this, &AgentDock::onModeChanged);
@@ -190,6 +211,7 @@ AgentDock::AgentDock(QWidget *parent) :
     }
     chooseDefaultScope();
     refreshProviderStatus();
+    refreshTechnicalDetails();
 }
 
 AgentMode AgentDock::mode() const
@@ -209,6 +231,23 @@ void AgentDock::setContextScope(const QString &scope)
     m_contextScope->setText(tr("Context: %1").arg(scope));
 }
 
+void AgentDock::setSessionId(const QString &session_id)
+{
+    if (m_sessionId == session_id) return;
+    m_sessionId = session_id;
+    m_requestId.clear();
+    m_requestModel.clear();
+    m_requestMode.clear();
+    m_requestStatus.clear();
+    m_requestBookSessionId.clear();
+    m_requestHandles.clear();
+    m_requestBookRevision = 0;
+    m_requestStep = 0;
+    m_requestDurationMs = -1;
+    m_requestFinishedAtMs = 0;
+    refreshTechnicalDetails();
+}
+
 void AgentDock::setModelName(const QString &model)
 {
     if (!m_modelLabel) return;
@@ -225,6 +264,7 @@ void AgentDock::setProviderConfiguration(const AgentProviderReadiness &readiness
     m_providerFailure.clear();
     setModelName(readiness.model);
     refreshProviderStatus();
+    refreshTechnicalDetails();
 }
 
 void AgentDock::setRunState(AgentRunState state)
@@ -282,6 +322,7 @@ void AgentDock::setBookContext(const QString &title,
     m_chipBook->setText(tr("Whole book"));
     m_chipBook->setToolTip(tr("Attach the complete resource map for %1").arg(identity));
     refreshScopeLabel();
+    refreshTechnicalDetails();
 }
 
 void AgentDock::setCurrentFile(const QString &book_path, const QString &resource_id)
@@ -470,6 +511,15 @@ void AgentDock::refreshProviderStatus()
             break;
     }
 
+    if (m_providerReadiness.issue == AgentProviderSetupIssue::None
+        && m_providerRequestState != ProviderRequestState::Configured
+        && m_providerRequestState != ProviderRequestState::Requesting
+        && m_requestDurationMs >= 0 && m_requestFinishedAtMs > 0) {
+        const QString finished = QDateTime::fromMSecsSinceEpoch(m_requestFinishedAtMs)
+            .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+        state = tr("%1 · %2 ms · %3").arg(state).arg(m_requestDurationMs).arg(finished);
+    }
+
     const QString details = identity.join(QStringLiteral(" · "));
     m_providerStatus->setText(details.isEmpty()
                                   ? state
@@ -478,10 +528,97 @@ void AgentDock::refreshProviderStatus()
     m_providerStatus->setProperty("model", m_providerReadiness.model);
     m_providerStatus->setProperty("endpointHost", m_providerReadiness.endpointHost);
     m_providerStatus->setProperty("requestState", state_name);
+    m_providerStatus->setProperty("requestId", m_requestId);
+    m_providerStatus->setProperty("durationMs", m_requestDurationMs);
+    m_providerStatus->setProperty("finishedAtMs", m_requestFinishedAtMs);
     m_providerStatus->setAccessibleName(m_providerStatus->text());
     m_providerStatus->setToolTip(m_providerReadiness.isConfigured()
         ? tr("Configured means the required settings are present. Connectivity is verified only by a real request.")
         : tr("Configure the provider in Preferences → Native Agent."));
+}
+
+void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &status)
+{
+    const QJsonObject payload = event.payload;
+    if (payload.contains(QStringLiteral("request_id"))) {
+        m_requestId = payload.value(QStringLiteral("request_id")).toString();
+    }
+    if (payload.contains(QStringLiteral("model"))) {
+        m_requestModel = payload.value(QStringLiteral("model")).toString();
+    }
+    if (payload.contains(QStringLiteral("mode"))) {
+        m_requestMode = payload.value(QStringLiteral("mode")).toString();
+    }
+    if (payload.contains(QStringLiteral("book_session_id"))) {
+        m_requestBookSessionId = payload.value(QStringLiteral("book_session_id")).toString();
+    }
+    if (payload.contains(QStringLiteral("book_revision"))) {
+        m_requestBookRevision = payload.value(QStringLiteral("book_revision")).toInteger();
+    }
+    if (payload.contains(QStringLiteral("context_handles"))) {
+        m_requestHandles.clear();
+        for (const QJsonValue &value : payload.value(QStringLiteral("context_handles")).toArray()) {
+            m_requestHandles.append(value.toString());
+        }
+    }
+    if (payload.contains(QStringLiteral("step"))) {
+        m_requestStep = payload.value(QStringLiteral("step")).toInt();
+    }
+    if (payload.contains(QStringLiteral("duration_ms"))) {
+        m_requestDurationMs = payload.value(QStringLiteral("duration_ms")).toInteger();
+        m_requestFinishedAtMs = event.timestampMs;
+    } else {
+        m_requestDurationMs = -1;
+        m_requestFinishedAtMs = 0;
+    }
+    m_requestStatus = status;
+    refreshTechnicalDetails();
+}
+
+void AgentDock::refreshTechnicalDetails()
+{
+    if (!m_technicalDetails) return;
+    QStringList lines;
+    lines.append(tr("Session: %1").arg(m_sessionId.isEmpty() ? tr("Not available") : m_sessionId));
+    lines.append(tr("Book session: %1").arg(
+        m_bookSessionId.isEmpty() ? tr("Not available") : m_bookSessionId));
+    lines.append(tr("Book revision: %1").arg(m_bookRevision));
+    if (!m_requestId.isEmpty()) {
+        lines.append(tr("Request: %1").arg(m_requestId));
+        lines.append(tr("Step: %1 · Mode: %2 · Status: %3")
+                         .arg(m_requestStep)
+                         .arg(m_requestMode.isEmpty() ? tr("Not available") : m_requestMode,
+                              m_requestStatus));
+        lines.append(tr("Request target: %1 · revision %2")
+                         .arg(m_requestBookSessionId, QString::number(m_requestBookRevision)));
+        lines.append(tr("Model: %1").arg(m_requestModel));
+        lines.append(tr("Scope handles: %1").arg(
+            m_requestHandles.isEmpty() ? tr("None") : m_requestHandles.join(QStringLiteral(", "))));
+        if (m_requestDurationMs >= 0) {
+            const QString finished = QDateTime::fromMSecsSinceEpoch(m_requestFinishedAtMs)
+                .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+            lines.append(tr("Duration: %1 ms · Finished: %2")
+                             .arg(m_requestDurationMs).arg(finished));
+        }
+    } else {
+        lines.append(tr("No model request in this session."));
+    }
+    const QString provider = m_providerReadiness.displayName.isEmpty()
+        ? tr("Not available") : m_providerReadiness.displayName;
+    const QString endpoint = m_providerReadiness.endpointHost.isEmpty()
+        ? tr("Not available") : m_providerReadiness.endpointHost;
+    lines.append(tr("Provider: %1 · Endpoint: %2").arg(provider, endpoint));
+    m_technicalDetails->setText(lines.join(QLatin1Char('\n')));
+    m_technicalDetails->setProperty("sessionId", m_sessionId);
+    m_technicalDetails->setProperty("bookSessionId", m_bookSessionId);
+    m_technicalDetails->setProperty("requestId", m_requestId);
+    m_technicalDetails->setProperty("requestStatus", m_requestStatus);
+    m_technicalDetails->setProperty("requestBookSessionId", m_requestBookSessionId);
+    m_technicalDetails->setProperty("requestBookRevision", m_requestBookRevision);
+    m_technicalDetails->setProperty("requestHandles", m_requestHandles);
+    m_technicalDetails->setProperty("durationMs", m_requestDurationMs);
+    m_technicalDetails->setProperty("finishedAtMs", m_requestFinishedAtMs);
+    m_technicalDetails->setAccessibleName(m_technicalDetails->text());
 }
 
 void AgentDock::resetTranscript()
@@ -762,17 +899,26 @@ void AgentDock::appendEvent(const AgentEvent &event)
             beginModelStep();
             m_providerRequestState = ProviderRequestState::Requesting;
             m_providerFailure.clear();
+            captureRequestEvent(event, QStringLiteral("requesting"));
             refreshProviderStatus();
             break;
         case AgentEventType::ModelRequestCompleted:
             m_providerRequestState = ProviderRequestState::Succeeded;
             m_providerFailure.clear();
+            captureRequestEvent(event, QStringLiteral("succeeded"));
             refreshProviderStatus();
             break;
         case AgentEventType::ModelRequestFailed:
             m_providerRequestState = ProviderRequestState::Failed;
             m_providerFailure = providerFailureSummary(
                 event.payload.value(QStringLiteral("message")).toString());
+            captureRequestEvent(event, QStringLiteral("failed"));
+            refreshProviderStatus();
+            break;
+        case AgentEventType::ModelRequestCancelled:
+            m_providerRequestState = ProviderRequestState::Cancelled;
+            m_providerFailure.clear();
+            captureRequestEvent(event, QStringLiteral("cancelled"));
             refreshProviderStatus();
             break;
         case AgentEventType::AssistantDelta:

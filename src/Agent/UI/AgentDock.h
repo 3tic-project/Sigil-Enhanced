@@ -37,6 +37,7 @@ public:
     AgentMode mode() const;
     void setMode(AgentMode mode);
     void setContextScope(const QString &scope);
+    void setSessionId(const QString &sessionId);
     void setModelName(const QString &model);
     void setProviderConfiguration(const AgentProviderReadiness &readiness);
     void setRunState(AgentRunState state);
@@ -94,6 +95,8 @@ private:
     void chooseDefaultScope();
     void refreshScopeLabel();
     void refreshProviderStatus();
+    void refreshTechnicalDetails();
+    void captureRequestEvent(const AgentEvent &event, const QString &status);
     QString providerFailureSummary(const QString &message) const;
     QString previewBody(const QJsonObject &payload) const;
     QString appliedBody(const QJsonObject &payload) const;
@@ -104,6 +107,8 @@ private:
     QLabel *m_runState = nullptr;
     QLabel *m_providerStatus = nullptr;
     QLabel *m_bookStatus = nullptr;
+    QToolButton *m_technicalDetailsToggle = nullptr;
+    QLabel *m_technicalDetails = nullptr;
     QLabel *m_composerHint = nullptr;
     QButtonGroup *m_scopeGroup = nullptr;
     QPushButton *m_stopButton = nullptr;
@@ -128,6 +133,7 @@ private:
     bool m_bookModified = false;
     quint64 m_bookRevision = 0;
     QString m_bookSessionId;
+    QString m_sessionId;
     QString m_filePath;
     QString m_fileId;
     QStringList m_selectedFilePaths;
@@ -140,6 +146,16 @@ private:
     AgentProviderReadiness m_providerReadiness;
     ProviderRequestState m_providerRequestState = ProviderRequestState::Configured;
     QString m_providerFailure;
+    QString m_requestId;
+    QString m_requestModel;
+    QString m_requestMode;
+    QString m_requestStatus;
+    QString m_requestBookSessionId;
+    QStringList m_requestHandles;
+    qint64 m_requestBookRevision = 0;
+    int m_requestStep = 0;
+    qint64 m_requestDurationMs = -1;
+    qint64 m_requestFinishedAtMs = 0;
 };
 
 } // namespace SigilAgent

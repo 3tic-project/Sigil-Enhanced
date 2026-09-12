@@ -62,8 +62,16 @@ require(
 require(
     "agentProviderStatus" in dock_cpp
     and "ModelRequestCompleted" in dock_cpp
-    and "ModelRequestFailed" in dock_cpp,
-    "dock must distinguish provider setup, request success, and request failure",
+    and "ModelRequestFailed" in dock_cpp
+    and "ModelRequestCancelled" in dock_cpp,
+    "dock must distinguish provider setup, request success, failure, and cancellation",
+)
+require(
+    "agentTechnicalDetailsToggle" in dock_cpp
+    and "agentTechnicalDetails" in dock_cpp
+    and "requestBookSessionId" in dock_cpp
+    and "requestHandles" in dock_cpp,
+    "protocol identifiers and immutable scope must live in expandable technical details",
 )
 require(
     "agentChipSelectedFiles" in dock_cpp
@@ -112,6 +120,10 @@ create_dock = main_window.split("void MainWindow::CreateAgentDock()", 1)[1].spli
 require(
     "GetMetadataValues" not in create_dock,
     "CreateAgentDock runs during ExtendUI before LoadInitialFile; it must not read OPF metadata",
+)
+require(
+    "setSessionId" in create_dock and 'QStringLiteral("session_id")' in create_dock,
+    "Agent technical details must track initial and renewed controller session ids",
 )
 require(
     "UpdateAgentContext();" in main_window.split("void MainWindow::SetNewBook", 1)[1].split(
