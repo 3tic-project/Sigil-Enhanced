@@ -27370,4 +27370,42 @@ Continue using the requested filename?</source>
     <message><source>The task could not be restored.</source><translation>タスクを復元できませんでした。</translation></message>
     <message><source>This task has already been restored.</source><translation>このタスクはすでに復元されています。</translation></message>
 </context>
+<context>
+    <name>AgentSettingsWidget</name>
+    <message><source>%1 context tokens</source><translation>コンテキスト %1 トークン</translation></message>
+    <message><source>%1k context</source><translation>コンテキスト %1k</translation></message>
+    <message><source>API key</source><translation>API キー</translation></message>
+    <message><source>Chat Completions URL</source><translation>Chat Completions URL</translation></message>
+    <message><source>Custom (OpenAI-compatible)</source><translation>カスタム（OpenAI 互換）</translation></message>
+    <message><source>DeepSeek</source><translation>DeepSeek</translation></message>
+    <message><source>Full Chat Completions URL or API base</source><translation>完全な Chat Completions URL または API ベース URL</translation></message>
+    <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>キャッシュ済みモデル %1 件を読み込みました。サーバーから更新するには再読み込みしてください。</translation></message>
+    <message><source>Loaded %1 models from the server.</source><translation>%1 件のモデルをサーバーから読み込みました。</translation></message>
+    <message><source>Model</source><translation>モデル</translation></message>
+    <message><source>Native Agent</source><translation>ネイティブ Agent</translation></message>
+    <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>
+    <message><source>OpenRouter</source><translation>OpenRouter</translation></message>
+    <message><source>Provider</source><translation>プロバイダー</translation></message>
+    <message><source>Reasoning effort</source><translation>推論の強度</translation></message>
+    <message><source>Refresh models</source><translation>モデルを更新</translation></message>
+    <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>モデルを更新してサーバーから ID とパラメーターを読み込むか、ID を入力してください。</translation></message>
+    <message><source>Refresh models to load this provider's catalog.</source><translation>モデルを更新して、このプロバイダーのカタログを読み込んでください。</translation></message>
+    <message><source>Send thinking (reasoning_content)</source><translation>思考内容（reasoning_content）を送信</translation></message>
+    <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>ローカルの Sigil 設定にのみ保存され、EPUB や会話記録には保存されません</translation></message>
+    <message><source>parameters: %1</source><translation>パラメーター：%1</translation></message>
+    <message><source>reasoning</source><translation>推論</translation></message>
+    <message><source>reasoning not advertised</source><translation>推論サポートは公開されていません</translation></message>
+    <message><source>tools</source><translation>ツール</translation></message>
+    <message><source>tools not advertised</source><translation>ツールサポートは公開されていません</translation></message>
+    <message><source>Test Chat Completions</source><translation>Chat Completions をテスト</translation></message>
+    <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>ツールやブック内容を含まない小さなリクエストを送信します。最大 8 出力トークン分の料金が発生する場合があります。</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings.</source><translation>ここでプロバイダーとモデルを選択します。「モデルを更新」はカタログと公開パラメーターを読み込みます。「Chat Completions をテスト」は、このエンドポイント、API キー、モデルを確認するための小さな別リクエストを送信します。ブック内容やツールは送信せず、これらの設定も保存しません。</translation></message>
+    <message><source>Chat Completions has not been tested for the current settings.</source><translation>現在の設定では Chat Completions はまだテストされていません。</translation></message>
+    <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>テストできません。有効な Chat Completions URL を入力してください。</translation></message>
+    <message><source>Cannot test: enter an API key.</source><translation>テストできません。API キーを入力してください。</translation></message>
+    <message><source>Cannot test: choose or enter a model.</source><translation>テストできません。モデルを選択または入力してください。</translation></message>
+    <message><source>Testing Chat Completions for %1 at %2…</source><translation>%2 のモデル %1 で Chat Completions をテストしています…</translation></message>
+    <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>%2 のモデル %1 で Chat Completions に成功しました（%3 ミリ秒）。</translation></message>
+    <message><source>Chat Completions failed for %1 at %2: %3</source><translation>%2 のモデル %1 で Chat Completions に失敗しました：%3</translation></message>
+</context>
 </TS>

@@ -23424,4 +23424,42 @@ Continue using the requested filename?</translation>
     <message><source>The task could not be restored.</source><translation>The task could not be restored.</translation></message>
     <message><source>This task has already been restored.</source><translation>This task has already been restored.</translation></message>
 </context>
+<context>
+    <name>AgentSettingsWidget</name>
+    <message><source>%1 context tokens</source><translation>%1 context tokens</translation></message>
+    <message><source>%1k context</source><translation>%1k context</translation></message>
+    <message><source>API key</source><translation>API key</translation></message>
+    <message><source>Chat Completions URL</source><translation>Chat Completions URL</translation></message>
+    <message><source>Custom (OpenAI-compatible)</source><translation>Custom (OpenAI-compatible)</translation></message>
+    <message><source>DeepSeek</source><translation>DeepSeek</translation></message>
+    <message><source>Full Chat Completions URL or API base</source><translation>Full Chat Completions URL or API base</translation></message>
+    <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>Loaded %1 cached models. Refresh to update from the server.</translation></message>
+    <message><source>Loaded %1 models from the server.</source><translation>Loaded %1 models from the server.</translation></message>
+    <message><source>Model</source><translation>Model</translation></message>
+    <message><source>Native Agent</source><translation>Native Agent</translation></message>
+    <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>
+    <message><source>OpenRouter</source><translation>OpenRouter</translation></message>
+    <message><source>Provider</source><translation>Provider</translation></message>
+    <message><source>Reasoning effort</source><translation>Reasoning effort</translation></message>
+    <message><source>Refresh models</source><translation>Refresh models</translation></message>
+    <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>Refresh models to load ids and parameters from the server, or type an id.</translation></message>
+    <message><source>Refresh models to load this provider's catalog.</source><translation>Refresh models to load this provider's catalog.</translation></message>
+    <message><source>Send thinking (reasoning_content)</source><translation>Send thinking (reasoning_content)</translation></message>
+    <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>Stored only in local Sigil settings, never in the EPUB or transcript</translation></message>
+    <message><source>parameters: %1</source><translation>parameters: %1</translation></message>
+    <message><source>reasoning</source><translation>reasoning</translation></message>
+    <message><source>reasoning not advertised</source><translation>reasoning not advertised</translation></message>
+    <message><source>tools</source><translation>tools</translation></message>
+    <message><source>tools not advertised</source><translation>tools not advertised</translation></message>
+    <message><source>Test Chat Completions</source><translation>Test Chat Completions</translation></message>
+    <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings.</source><translation>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings.</translation></message>
+    <message><source>Chat Completions has not been tested for the current settings.</source><translation>Chat Completions has not been tested for the current settings.</translation></message>
+    <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>Cannot test: enter a valid Chat Completions URL.</translation></message>
+    <message><source>Cannot test: enter an API key.</source><translation>Cannot test: enter an API key.</translation></message>
+    <message><source>Cannot test: choose or enter a model.</source><translation>Cannot test: choose or enter a model.</translation></message>
+    <message><source>Testing Chat Completions for %1 at %2…</source><translation>Testing Chat Completions for %1 at %2…</translation></message>
+    <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>Chat Completions succeeded for %1 at %2 in %3 ms.</translation></message>
+    <message><source>Chat Completions failed for %1 at %2: %3</source><translation>Chat Completions failed for %1 at %2: %3</translation></message>
+</context>
 </TS>

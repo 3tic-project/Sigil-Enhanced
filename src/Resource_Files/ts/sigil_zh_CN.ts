@@ -27372,4 +27372,42 @@ Continue using the requested filename?</source>
     <message><source>The task could not be restored.</source><translation>无法恢复此任务。</translation></message>
     <message><source>This task has already been restored.</source><translation>此任务已恢复过。</translation></message>
 </context>
+<context>
+    <name>AgentSettingsWidget</name>
+    <message><source>%1 context tokens</source><translation>%1 个上下文 token</translation></message>
+    <message><source>%1k context</source><translation>%1k 上下文</translation></message>
+    <message><source>API key</source><translation>API 密钥</translation></message>
+    <message><source>Chat Completions URL</source><translation>Chat Completions URL</translation></message>
+    <message><source>Custom (OpenAI-compatible)</source><translation>自定义（OpenAI 兼容）</translation></message>
+    <message><source>DeepSeek</source><translation>DeepSeek</translation></message>
+    <message><source>Full Chat Completions URL or API base</source><translation>完整的 Chat Completions URL 或 API 基础地址</translation></message>
+    <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>已加载 %1 个缓存模型。刷新以从服务器更新。</translation></message>
+    <message><source>Loaded %1 models from the server.</source><translation>已从服务器加载 %1 个模型。</translation></message>
+    <message><source>Model</source><translation>模型</translation></message>
+    <message><source>Native Agent</source><translation>原生 Agent</translation></message>
+    <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>
+    <message><source>OpenRouter</source><translation>OpenRouter</translation></message>
+    <message><source>Provider</source><translation>提供商</translation></message>
+    <message><source>Reasoning effort</source><translation>推理强度</translation></message>
+    <message><source>Refresh models</source><translation>刷新模型</translation></message>
+    <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>刷新模型以从服务器加载 ID 和参数，或直接输入 ID。</translation></message>
+    <message><source>Refresh models to load this provider's catalog.</source><translation>刷新模型以加载此提供商的目录。</translation></message>
+    <message><source>Send thinking (reasoning_content)</source><translation>发送思考内容（reasoning_content）</translation></message>
+    <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>仅存储在本机 Sigil 设置中，绝不会写入 EPUB 或会话记录</translation></message>
+    <message><source>parameters: %1</source><translation>参数：%1</translation></message>
+    <message><source>reasoning</source><translation>推理</translation></message>
+    <message><source>reasoning not advertised</source><translation>未公布推理支持</translation></message>
+    <message><source>tools</source><translation>工具</translation></message>
+    <message><source>tools not advertised</source><translation>未公布工具支持</translation></message>
+    <message><source>Test Chat Completions</source><translation>测试 Chat Completions</translation></message>
+    <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>发送一个不含工具和书籍内容的小型请求。提供商最多可能收取 8 个输出 token 的费用。</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings.</source><translation>在此选择提供商和模型。刷新模型会加载目录和公布的参数。测试 Chat Completions 会发送一个独立的小型请求，以验证此端点、API 密钥和模型；它绝不会发送书籍内容或工具，也不会保存这些设置。</translation></message>
+    <message><source>Chat Completions has not been tested for the current settings.</source><translation>尚未针对当前设置测试 Chat Completions。</translation></message>
+    <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>无法测试：请输入有效的 Chat Completions URL。</translation></message>
+    <message><source>Cannot test: enter an API key.</source><translation>无法测试：请输入 API 密钥。</translation></message>
+    <message><source>Cannot test: choose or enter a model.</source><translation>无法测试：请选择或输入模型。</translation></message>
+    <message><source>Testing Chat Completions for %1 at %2…</source><translation>正在测试 %2 上模型 %1 的 Chat Completions…</translation></message>
+    <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>%2 上模型 %1 的 Chat Completions 测试成功，耗时 %3 毫秒。</translation></message>
+    <message><source>Chat Completions failed for %1 at %2: %3</source><translation>%2 上模型 %1 的 Chat Completions 测试失败：%3</translation></message>
+</context>
 </TS>
