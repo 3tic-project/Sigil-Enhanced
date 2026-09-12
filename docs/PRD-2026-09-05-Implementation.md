@@ -30,6 +30,8 @@
   复用已验证的 `TocTreeTransform` 与 Nav/NCX 原节点写回器。
 - 原生 Agent 提供商状态：`feature/agent-provider-readiness-status`，从当前书籍与选区状态
   分支继续，区分本地配置完整性和真实请求结果。
+- 原生 Agent 已验证配置状态：`feature/agent-verified-provider-status`，从独立连接测试分支
+  继续，用精确配置指纹持久化历史成功证据，并在 Dock 安全显示。
 - 其余功能分别创建分支；有依赖的分支从已验证的依赖提交继续。
 - 每项拆分为可审阅的算法/集成/验证和文档提交，未验证的项不标为完成。
 - 原工作树三处未提交的文本资源加载改动保留，不纳入本分支。
@@ -909,4 +911,39 @@ GUI、磁盘保存后的恢复及大型书籍内存/延迟基准仍待验收。�
 整体连接体验关闭：测试结果尚不跨偏好设置会话持久化，Dock 仍只显示真实书籍请求状态；
 真实 DeepSeek/OpenCode Go/OpenRouter 联网、代理/证书错误、Windows/Linux、关闭偏好设置时
 的嵌套事件循环和屏幕阅读器人工验收仍待补充。用户说明见
+[Native Agent](NativeAgent.md#提供商配置与最近请求状态)。
+
+## Native Agent 已验证提供商配置状态（2026-09-13）
+
+分支：`feature/agent-verified-provider-status`。主要提交：`87daf9228`（配置指纹和设置存储）、
+`a6ef362ac`（设置页记住成功探测）、`7795e369d`（Dock 历史验证状态）和 `e74d51816`
+（四语文案）。
+
+### 证明绑定与界面语义
+
+- 成功探测只在设置页内暂存；偏好设置关闭并执行既有保存流程时，才与当前表单配置一起
+  写入成功时间和 SHA-256 指纹。指纹覆盖 provider、规范化后的 Chat Completions URL、
+  API Key 与模型，持久化值不包含可读密钥或响应正文。
+- `AgentSettings::verifiedConnectionAtMs()` 每次都从当前已保存配置重新计算指纹；任一字段
+  由设置页或其他入口改变后，即使旧记录仍存在也返回未验证。字段编辑、切换 provider 或
+  失败重测还会清除当前表单内待保存的成功证明。
+- 重开设置页会为完全匹配的配置显示历史成功时间。Dock 在尚无真实 Agent 请求时显示
+  **Chat tested successfully · 时间**，并公开 `verified` / `connectionVerifiedAtMs` 控件
+  属性供辅助技术和测试检查；tooltip 明确这是历史测试，不是实时连接状态。
+- `ModelRequestStarted/Completed/Failed/Cancelled` 仍优先驱动请求状态，连接测试不写
+  AgentSession、不伪造最近书籍请求，也不改变既有重试语义。
+
+### 测试证据与剩余项
+
+`agent_provider_catalog` 验证等价 endpoint 形式得到同一 64 位十六进制指纹，且 provider、
+API Key、模型任一变化都会失配，指纹不包含密钥原文；`agent_dock` 验证未测试/历史验证及
+真实请求覆盖链；`agent_dock_contract` 固定设置保存和 MainWindow 重算边界。完整 Sigil
+构建通过，13 项 Agent 测试连续 3 轮共 39 次通过。四份翻译目录可生成 `.qm`，本切片 5 条
+现行文案均已翻译；严格简中/繁中/日文覆盖仍各有 47 条上一分支已记录的继承欠账，本切片
+新增失败为 0。
+
+本切片关闭上一节的“测试结果不跨偏好设置会话持久化、Dock 无法显示设置页证明”缺口，
+但不声称当前在线：网络、凭据或服务端模型仍可能在历史测试后变化。尚未完成真实三家服务
+联网、凭据轮换人工检查、系统密钥链存储、代理/证书错误、Windows/Linux 本地化时间、
+屏幕阅读器与偏好设置嵌套事件循环压力测试。用户说明见
 [Native Agent](NativeAgent.md#提供商配置与最近请求状态)。

@@ -73,6 +73,8 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 
 - **Setup required**：缺少或无法识别 endpoint、API Key 或模型。此时没有尝试网络连接。
 - **Configured · not tested**：必需设置已填写，**不表示服务器可连接或凭据有效**。
+- **Chat tested successfully · 时间**：这组已保存的 provider、endpoint、API Key 和模型曾经
+  通过独立 Chat Completions 测试；这是历史结果，不是实时在线指示。
 - **Contacting provider…**：已经发出一轮真实模型请求。
 - **Last request succeeded / failed / cancelled**：只由该轮请求的完成、失败或取消事件
   更新；工具调用型响应也会产生明确的模型请求完成事件。终态同时显示该次
@@ -88,11 +90,14 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 并把输出限制为最多 8 token、等待限制为 15 秒。提供商仍可能按这条请求计费。设置页会
 显示冻结的安全主机名、模型、HTTP 结果和耗时；401 等服务端错误继续执行密钥脱敏，超时
 明确显示失败，不会把中止误报成成功。修改 URL、API Key 或模型后，旧结果立即标为
-“当前设置未测试”。测试本身不保存表单；只有正常确认偏好设置才会保存配置。
+“当前设置未测试”。测试运行期间不会提前保存表单；关闭偏好设置时，成功结果才与当前
+配置一起保存。
 
 连接测试不进入书籍 Agent 会话，也不伪造 Dock 的最近请求状态。Dock 的
 **Last request succeeded / failed / cancelled** 仍只代表一次真实的书籍 Agent 请求；
-设置页测试的结果只用于在关闭偏好设置前验证当前输入。
+尚无真实书籍请求时，Dock 可以显示同一组已保存配置上次通过连接测试的时间。证明只保存
+成功时间与配置的 SHA-256 指纹，不复制 API Key；provider、规范化后的 Chat URL、API Key
+或模型任一不匹配都会自动失效。重新测试失败同样会清除待保存的成功证明。
 
 **Technical details** 默认折叠，展开后显示完整 Agent session ID、当前 book session ID、
 最近一次 request ID、该请求绑定的 book session/revision、步骤、模式、模型、终态、耗时和
