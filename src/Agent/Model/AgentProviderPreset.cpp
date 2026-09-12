@@ -6,6 +6,7 @@
 
 #include "Agent/Model/AgentProviderPreset.h"
 
+#include <QCryptographicHash>
 #include <QUrl>
 
 namespace SigilAgent
@@ -183,6 +184,26 @@ AgentProviderReadiness providerReadiness(AgentProviderKind kind,
         readiness.issue = AgentProviderSetupIssue::None;
     }
     return readiness;
+}
+
+QString providerConfigurationFingerprint(AgentProviderKind kind,
+                                         const QString &chat_url,
+                                         const QString &api_key,
+                                         const QString &model)
+{
+    QByteArray serialized;
+    const auto append_field = [&serialized](const QString &value) {
+        const QByteArray bytes = value.toUtf8();
+        serialized.append(QByteArray::number(bytes.size()));
+        serialized.append(':');
+        serialized.append(bytes);
+    };
+    append_field(providerKindName(kind));
+    append_field(chatCompletionsUrl(kind, chat_url));
+    append_field(api_key);
+    append_field(model);
+    return QString::fromLatin1(
+        QCryptographicHash::hash(serialized, QCryptographicHash::Sha256).toHex());
 }
 
 QString agentHttpReferer()

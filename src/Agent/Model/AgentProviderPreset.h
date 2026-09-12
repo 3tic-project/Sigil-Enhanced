@@ -65,6 +65,10 @@ AgentProviderReadiness providerReadiness(AgentProviderKind kind,
                                          const QString &chatUrl,
                                          bool apiKeyPresent,
                                          const QString &model);
+QString providerConfigurationFingerprint(AgentProviderKind kind,
+                                         const QString &chatUrl,
+                                         const QString &apiKey,
+                                         const QString &model);
 
 QString agentHttpReferer();
 QString agentHttpTitle();

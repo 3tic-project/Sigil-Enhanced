@@ -105,6 +105,37 @@ int main(int argc, char *argv[])
     Require(missing_model.issue == AgentProviderSetupIssue::Model,
             "provider readiness must identify a missing model");
 
+    const QString verified_fingerprint = providerConfigurationFingerprint(
+        AgentProviderKind::DeepSeek,
+        QStringLiteral("https://api.deepseek.com"),
+        QStringLiteral("sk-fingerprint-secret"),
+        QStringLiteral("deepseek-chat"));
+    Require(verified_fingerprint.size() == 64
+                && !verified_fingerprint.contains(QStringLiteral("sk-fingerprint-secret")),
+            "provider verification must persist a one-way SHA-256 fingerprint, not the API key");
+    Require(verified_fingerprint == providerConfigurationFingerprint(
+                AgentProviderKind::DeepSeek,
+                QStringLiteral("https://api.deepseek.com/chat/completions/"),
+                QStringLiteral("sk-fingerprint-secret"),
+                QStringLiteral("deepseek-chat")),
+            "equivalent configured endpoint forms must have one verification fingerprint");
+    Require(verified_fingerprint != providerConfigurationFingerprint(
+                AgentProviderKind::DeepSeek,
+                QStringLiteral("https://api.deepseek.com"),
+                QStringLiteral("sk-different-secret"),
+                QStringLiteral("deepseek-chat"))
+                && verified_fingerprint != providerConfigurationFingerprint(
+                    AgentProviderKind::DeepSeek,
+                    QStringLiteral("https://api.deepseek.com"),
+                    QStringLiteral("sk-fingerprint-secret"),
+                    QStringLiteral("deepseek-reasoner"))
+                && verified_fingerprint != providerConfigurationFingerprint(
+                    AgentProviderKind::OpenRouter,
+                    QStringLiteral("https://api.deepseek.com"),
+                    QStringLiteral("sk-fingerprint-secret"),
+                    QStringLiteral("deepseek-chat")),
+            "provider, API key, and model changes must invalidate connection verification");
+
     const CatalogResult deepseek = AgentModelCatalog::parseModelsJson(QByteArray(
         R"({"object":"list","data":[{"id":"deepseek-chat","object":"model"},{"id":"deepseek-reasoner"}]})"));
     Require(deepseek.error.isEmpty() && deepseek.models.size() == 2, "DeepSeek /models list must parse");

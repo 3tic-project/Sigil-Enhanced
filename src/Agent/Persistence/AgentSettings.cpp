@@ -249,6 +249,45 @@ void AgentSettings::setProviderCatalogs(const QJsonObject &catalogs)
     writeJsonObject(QStringLiteral("provider_catalogs"), catalogs);
 }
 
+QString AgentSettings::connectionTestFingerprint() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return store.value(QStringLiteral("connection_test_fingerprint")).toString();
+}
+
+qint64 AgentSettings::connectionTestSucceededAtMs() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return store.value(QStringLiteral("connection_test_succeeded_at_ms"), 0).toLongLong();
+}
+
+void AgentSettings::setConnectionTestVerification(const QString &fingerprint,
+                                                  qint64 succeeded_at_ms)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    if (fingerprint.isEmpty() || succeeded_at_ms <= 0) {
+        store.remove(QStringLiteral("connection_test_fingerprint"));
+        store.remove(QStringLiteral("connection_test_succeeded_at_ms"));
+        return;
+    }
+    store.setValue(QStringLiteral("connection_test_fingerprint"), fingerprint);
+    store.setValue(QStringLiteral("connection_test_succeeded_at_ms"), succeeded_at_ms);
+}
+
+qint64 AgentSettings::verifiedConnectionAtMs() const
+{
+    const qint64 succeeded_at_ms = connectionTestSucceededAtMs();
+    const QString saved_fingerprint = connectionTestFingerprint();
+    if (succeeded_at_ms <= 0 || saved_fingerprint.isEmpty()) return 0;
+    const OpenAIProviderConfig config = providerConfig();
+    const QString current_fingerprint = providerConfigurationFingerprint(
+        providerKind(), config.baseUrl, config.apiKey, config.model);
+    return saved_fingerprint == current_fingerprint ? succeeded_at_ms : 0;
+}
+
 OpenAIProviderConfig AgentSettings::providerConfig() const
 {
     const AgentProviderKind kind = providerKind();

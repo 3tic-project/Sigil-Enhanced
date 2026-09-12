@@ -64,6 +64,12 @@ public:
     QJsonObject providerCatalogs() const;
     void setProviderCatalogs(const QJsonObject &catalogs);
 
+    QString connectionTestFingerprint() const;
+    qint64 connectionTestSucceededAtMs() const;
+    void setConnectionTestVerification(const QString &fingerprint,
+                                       qint64 succeededAtMs);
+    qint64 verifiedConnectionAtMs() const;
+
     OpenAIProviderConfig providerConfig() const;
 
     static bool looksLikeSecret(const QString &text);
