@@ -57,10 +57,13 @@ require(
 )
 require(
     "agentTestConnectionButton" in settings_cpp
-    and "probeAgentConnection(config, 15000)" in settings_cpp
+    and "QFutureWatcher" in settings_cpp
+    and "QtConcurrent::run" in settings_cpp
+    and "probeAgentConnection(config, 15000, cancelled.get())" in settings_cpp
+    and "m_connectionCancelled->store(true" in settings_cpp
     and "providerReadiness" in settings_cpp
     and "config.thinking = false" in settings_cpp,
-    "Native Agent settings must run a bounded, locally validated Chat Completions probe",
+    "Native Agent settings must run a bounded, locally validated Chat Completions probe off the GUI thread",
 )
 require(
     "never sends book content or tools" in settings_cpp

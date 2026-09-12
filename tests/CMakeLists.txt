@@ -1495,7 +1495,7 @@ add_executable(agent_provider_catalog_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Persistence/AgentSessionExport.cpp
 )
 target_include_directories(agent_provider_catalog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(agent_provider_catalog_test PRIVATE Qt6::Core Qt6::Network)
+target_link_libraries(agent_provider_catalog_test PRIVATE Qt6::Concurrent Qt6::Core Qt6::Network)
 target_compile_features(agent_provider_catalog_test PRIVATE cxx_std_17)
 add_test(NAME agent_provider_catalog COMMAND agent_provider_catalog_test)
 set_tests_properties(agent_provider_catalog PROPERTIES TIMEOUT 30)

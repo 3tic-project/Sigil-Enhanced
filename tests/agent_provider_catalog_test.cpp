@@ -4,6 +4,8 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QEventLoop>
+#include <QFutureWatcher>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QHostAddress>
@@ -12,6 +14,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTimer>
+#include <QtConcurrent>
 
 #include "Agent/Core/AgentSession.h"
 #include "Agent/Model/AgentConnectionProbe.h"
@@ -371,11 +374,24 @@ int main(int argc, char *argv[])
     probe_config.model = QStringLiteral("probe-model");
     probe_config.thinking = true;
     probe_config.reasoningProtocol = ReasoningProtocol::DeepSeek;
-    const AgentConnectionProbeResult probe = probeAgentConnection(probe_config, 2000);
+    QFutureWatcher<AgentConnectionProbeResult> probe_watcher;
+    QEventLoop probe_loop;
+    bool main_event_loop_responsive = false;
+    QObject::connect(&probe_watcher,
+                     &QFutureWatcher<AgentConnectionProbeResult>::finished,
+                     &probe_loop, &QEventLoop::quit);
+    QTimer::singleShot(0, [&main_event_loop_responsive]() {
+        main_event_loop_responsive = true;
+    });
+    probe_watcher.setFuture(QtConcurrent::run([probe_config]() {
+        return probeAgentConnection(probe_config, 2000);
+    }));
+    probe_loop.exec();
+    const AgentConnectionProbeResult probe = probe_watcher.result();
     Require(probe.ok && probe.httpStatus == 200 && probe.model == probe_config.model
                 && probe.finishReason == QStringLiteral("stop")
-                && probe.durationMs >= 0,
-            "a valid streaming Chat Completions response must pass the connection probe");
+                && probe.durationMs >= 0 && main_event_loop_responsive,
+            "a background Chat Completions probe must pass while the main event loop stays responsive");
     const int probe_header_end = probe_request.indexOf("\r\n\r\n");
     const QJsonObject probe_body = QJsonDocument::fromJson(
         probe_request.mid(probe_header_end + 4)).object();

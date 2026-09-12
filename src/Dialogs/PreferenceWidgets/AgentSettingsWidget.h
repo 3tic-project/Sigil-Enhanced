@@ -8,6 +8,9 @@
 #ifndef AGENTSETTINGSWIDGET_H
 #define AGENTSETTINGSWIDGET_H
 
+#include <atomic>
+#include <memory>
+
 #include <QHash>
 #include <QList>
 
@@ -16,9 +19,15 @@
 
 class QCheckBox;
 class QComboBox;
+template<typename T> class QFutureWatcher;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+
+namespace SigilAgent
+{
+struct AgentConnectionProbeResult;
+}
 
 class AgentSettingsWidget : public PreferencesWidget
 {
@@ -26,6 +35,7 @@ class AgentSettingsWidget : public PreferencesWidget
 
 public:
     AgentSettingsWidget();
+    ~AgentSettingsWidget() override;
     PreferencesWidget::ResultActions saveSettings() override;
 
 private:
@@ -33,6 +43,7 @@ private:
     void onProviderChanged();
     void refreshModels();
     void testConnection();
+    void finishConnectionTest();
     void invalidateConnectionTest(bool update_status);
     void showRememberedConnectionTest();
     void setConnectionControlsEnabled(bool enabled);
@@ -49,6 +60,7 @@ private:
     QLineEdit *m_baseUrl = nullptr;
     QLineEdit *m_apiKey = nullptr;
     QComboBox *m_model = nullptr;
+    QFutureWatcher<SigilAgent::AgentConnectionProbeResult> *m_connectionWatcher = nullptr;
     QPushButton *m_refreshModels = nullptr;
     QPushButton *m_testConnection = nullptr;
     QLabel *m_modelInfo = nullptr;
@@ -63,6 +75,7 @@ private:
     QHash<QString, QString> m_providerCatalogs;
     QList<SigilAgent::CatalogModel> m_models;
     QString m_catalogJson;
+    std::shared_ptr<std::atomic_bool> m_connectionCancelled;
     QString m_successfulConnectionFingerprint;
     qint64 m_successfulConnectionAtMs = 0;
     bool m_loading = false;

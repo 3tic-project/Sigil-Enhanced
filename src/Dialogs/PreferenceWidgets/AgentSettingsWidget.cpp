@@ -12,12 +12,13 @@
 #include <QCompleter>
 #include <QDateTime>
 #include <QFormLayout>
+#include <QFutureWatcher>
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
-#include <QPointer>
 #include <QPushButton>
+#include <QtConcurrent>
 
 #include "Agent/Model/AgentConnectionProbe.h"
 #include "Agent/Model/AgentProviderPreset.h"
@@ -72,6 +73,9 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_modelInfo->setWordWrap(true);
     m_modelInfo->setStyleSheet(QStringLiteral("color: palette(mid);"));
 
+    m_connectionWatcher =
+        new QFutureWatcher<SigilAgent::AgentConnectionProbeResult>(this);
+
     m_thinking = new QCheckBox(tr("Send thinking (reasoning_content)"), this);
     m_thinking->setObjectName(QStringLiteral("agentThinking"));
     m_effort = new QComboBox(this);
@@ -104,6 +108,9 @@ AgentSettingsWidget::AgentSettingsWidget()
     connect(m_provider, &QComboBox::currentIndexChanged, this, [this](int) { onProviderChanged(); });
     connect(m_refreshModels, &QPushButton::clicked, this, [this]() { refreshModels(); });
     connect(m_testConnection, &QPushButton::clicked, this, [this]() { testConnection(); });
+    connect(m_connectionWatcher,
+            &QFutureWatcher<SigilAgent::AgentConnectionProbeResult>::finished,
+            this, &AgentSettingsWidget::finishConnectionTest);
     connect(m_model, &QComboBox::currentTextChanged, this, [this](const QString &) {
         updateModelInfo();
         invalidateConnectionTest(true);
@@ -114,6 +121,13 @@ AgentSettingsWidget::AgentSettingsWidget()
             [this](const QString &) { invalidateConnectionTest(true); });
 
     readSettings();
+}
+
+AgentSettingsWidget::~AgentSettingsWidget()
+{
+    if (m_connectionCancelled) {
+        m_connectionCancelled->store(true, std::memory_order_relaxed);
+    }
 }
 
 SigilAgent::AgentProviderKind AgentSettingsWidget::currentKind() const
@@ -301,6 +315,7 @@ void AgentSettingsWidget::setConnectionControlsEnabled(bool enabled)
 
 void AgentSettingsWidget::testConnection()
 {
+    if (m_connectionWatcher && m_connectionWatcher->isRunning()) return;
     rememberCurrentProvider();
     invalidateConnectionTest(false);
     const AgentProviderKind kind = currentKind();
@@ -338,13 +353,23 @@ void AgentSettingsWidget::testConnection()
     m_status->setText(tr("Testing Chat Completions for %1 at %2…")
                           .arg(model, readiness.endpointHost));
     setConnectionControlsEnabled(false);
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    QPointer<AgentSettingsWidget> guard(this);
+    m_connectionCancelled = std::make_shared<std::atomic_bool>(false);
+    const std::shared_ptr<std::atomic_bool> cancelled = m_connectionCancelled;
+    m_connectionWatcher->setFuture(QtConcurrent::run([config, cancelled]() {
+        return SigilAgent::probeAgentConnection(config, 15000, cancelled.get());
+    }));
+}
+
+void AgentSettingsWidget::finishConnectionTest()
+{
+    if (!m_connectionWatcher || !m_connectionWatcher->isFinished()) return;
     const SigilAgent::AgentConnectionProbeResult result =
-        SigilAgent::probeAgentConnection(config, 15000);
-    QApplication::restoreOverrideCursor();
-    if (!guard) return;
+        m_connectionWatcher->result();
+    m_connectionCancelled.reset();
     setConnectionControlsEnabled(true);
+    const QString model = m_status->property("connectionTestModel").toString();
+    const QString endpoint_host =
+        m_status->property("connectionTestEndpointHost").toString();
     m_status->setProperty("connectionTestDurationMs", result.durationMs);
     m_status->setProperty("connectionTestHttpStatus", result.httpStatus);
     if (result.ok) {
@@ -353,14 +378,14 @@ void AgentSettingsWidget::testConnection()
         m_status->setProperty("connectionTestState", QStringLiteral("succeeded"));
         m_status->setProperty("connectionTestSucceededAtMs", m_successfulConnectionAtMs);
         m_status->setText(tr("Chat Completions succeeded for %1 at %2 in %3 ms.")
-                              .arg(model, readiness.endpointHost)
+                              .arg(model, endpoint_host)
                               .arg(result.durationMs));
     } else {
         m_status->setProperty("connectionTestState", QStringLiteral("failed"));
         QString error = result.error.simplified();
         if (error.size() > 400) error = error.left(400) + QStringLiteral("…");
         m_status->setText(tr("Chat Completions failed for %1 at %2: %3")
-                              .arg(model, readiness.endpointHost, error));
+                              .arg(model, endpoint_host, error));
     }
     m_status->setAccessibleName(m_status->text());
 }
