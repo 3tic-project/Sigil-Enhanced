@@ -940,6 +940,29 @@ void AgentDock::refreshPlanNavigationState()
     }
 }
 
+bool AgentDock::matchesReviewedPlan(const QString &tool_name,
+                                    const QJsonObject &arguments) const
+{
+    QString expected_kind;
+    if (tool_name == QLatin1String("paragraphs.apply")) {
+        expected_kind = QStringLiteral("paragraph_normalization");
+    } else if (tool_name == QLatin1String("toc.apply_transform")) {
+        expected_kind = QStringLiteral("toc_hierarchy");
+    } else {
+        return true;
+    }
+    const QString plan_id = arguments.value(QStringLiteral("plan_id")).toString();
+    if (plan_id.isEmpty() || !m_reviewedPlans.contains(plan_id)) return false;
+    const QJsonObject plan = m_reviewedPlans.value(plan_id);
+    return plan.value(QStringLiteral("plan_kind")).toString() == expected_kind
+        && plan.value(QStringLiteral("plan_digest")).toString()
+            == arguments.value(QStringLiteral("plan_digest")).toString()
+        && plan.value(QStringLiteral("book_revision")).toInteger(-1)
+            == arguments.value(QStringLiteral("expected_book_revision")).toInteger(-2)
+        && !m_bookSessionId.isEmpty()
+        && plan.value(QStringLiteral("book_session_id")).toString() == m_bookSessionId;
+}
+
 void AgentDock::resetTranscript()
 {
     QLayoutItem *item = nullptr;
@@ -949,6 +972,7 @@ void AgentDock::resetTranscript()
     }
     m_transcriptLayout->addStretch(1);
     m_approvalCards.clear();
+    m_reviewedPlans.clear();
     m_taskRestoreButtons.clear();
     m_currentThinking = nullptr;
     m_currentAnswer = nullptr;
@@ -1466,17 +1490,38 @@ void AgentDock::appendEvent(const AgentEvent &event)
             const QString id = event.payload.value(QStringLiteral("tool_call_id")).toString();
             const QString name = event.payload.value(QStringLiteral("name")).toString();
             const QString impact = event.payload.value(QStringLiteral("impact")).toString();
+            const QJsonObject arguments =
+                event.payload.value(QStringLiteral("arguments")).toObject();
+            const bool requires_plan_review = name == QLatin1String("paragraphs.apply")
+                || name == QLatin1String("toc.apply_transform");
+            const bool reviewed_plan_matches =
+                !requires_plan_review || matchesReviewedPlan(name, arguments);
             auto *frame = new QFrame(m_transcriptContents);
             frame->setObjectName(QStringLiteral("agentApprovalCard-%1").arg(id));
+            frame->setProperty("planReviewRequired", requires_plan_review);
+            frame->setProperty("reviewedPlanMatched", reviewed_plan_matches);
             auto *layout = new QVBoxLayout(frame);
             layout->addWidget(new QLabel(tr("Approve %1?").arg(name), frame));
             auto *impact_label = new QLabel(impact, frame);
             impact_label->setObjectName(QStringLiteral("agentApprovalImpact"));
             impact_label->setWordWrap(true);
             layout->addWidget(impact_label);
+            if (requires_plan_review) {
+                auto *binding = new QLabel(
+                    reviewed_plan_matches
+                        ? tr("Reviewed plan binding: matched.")
+                        : tr("Approval blocked: this apply call does not match a reviewed plan."),
+                    frame);
+                binding->setObjectName(QStringLiteral("agentApprovalPlanBinding"));
+                binding->setWordWrap(true);
+                binding->setAccessibleName(binding->text());
+                layout->addWidget(binding);
+            }
             auto *buttons = new QHBoxLayout();
             auto *approve = new QPushButton(tr("Approve"), frame);
             approve->setObjectName(QStringLiteral("agentApproveButton-%1").arg(id));
+            approve->setEnabled(reviewed_plan_matches);
+            approve->setProperty("reviewedPlanMatched", reviewed_plan_matches);
             auto *deny = new QPushButton(tr("Deny"), frame);
             deny->setObjectName(QStringLiteral("agentDenyButton-%1").arg(id));
             buttons->addWidget(approve);
@@ -1501,6 +1546,11 @@ void AgentDock::appendEvent(const AgentEvent &event)
             settleApproval(event.payload.value(QStringLiteral("tool_call_id")).toString(), false);
             break;
         case AgentEventType::PlanCreated:
+            if (!event.payload.value(QStringLiteral("plan_id")).toString().isEmpty()) {
+                m_reviewedPlans.insert(
+                    event.payload.value(QStringLiteral("plan_id")).toString(),
+                    event.payload);
+            }
             appendCard(makePlanReviewCard(event.payload));
             break;
         case AgentEventType::TransactionPreviewed:

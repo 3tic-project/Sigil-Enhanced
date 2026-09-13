@@ -635,6 +635,62 @@ int main(int argc, char *argv[])
                 && open_paragraph->property("bookPath").toString()
                     == QStringLiteral("Text/chapter-1.xhtml"),
             "paragraph review must offer a book-bound resource navigation action");
+
+    SigilAgent::AgentEvent matching_plan_approval;
+    matching_plan_approval.type = SigilAgent::AgentEventType::ToolApprovalRequested;
+    matching_plan_approval.payload = QJsonObject {
+        { QStringLiteral("tool_call_id"), QStringLiteral("matching-plan-apply") },
+        { QStringLiteral("name"), QStringLiteral("paragraphs.apply") },
+        { QStringLiteral("impact"), QStringLiteral("Stage reviewed paragraph plan") },
+        { QStringLiteral("arguments"), QJsonObject {
+            { QStringLiteral("plan_id"), QStringLiteral("paragraph-plan-id") },
+            { QStringLiteral("plan_digest"), QStringLiteral("paragraph-plan-digest") },
+            { QStringLiteral("expected_book_revision"), 7 }
+        } }
+    };
+    dock.appendEvent(matching_plan_approval);
+    application.processEvents();
+    auto *matching_approval_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentApprovalCard-matching-plan-apply"));
+    auto *matching_approve = dock.findChild<QPushButton *>(
+        QStringLiteral("agentApproveButton-matching-plan-apply"));
+    auto *matching_binding = matching_approval_card
+        ? matching_approval_card->findChild<QLabel *>(
+              QStringLiteral("agentApprovalPlanBinding"))
+        : nullptr;
+    Require(matching_approve && matching_approve->isEnabled()
+                && matching_approval_card->property("planReviewRequired").toBool()
+                && matching_approval_card->property("reviewedPlanMatched").toBool()
+                && matching_binding
+                && matching_binding->text().contains(QStringLiteral("matched")),
+            "native apply approval must enable only for its displayed plan binding");
+
+    SigilAgent::AgentEvent mismatched_plan_approval = matching_plan_approval;
+    mismatched_plan_approval.payload.insert(
+        QStringLiteral("tool_call_id"), QStringLiteral("mismatched-plan-apply"));
+    QJsonObject mismatched_arguments =
+        mismatched_plan_approval.payload.value(QStringLiteral("arguments")).toObject();
+    mismatched_arguments.insert(QStringLiteral("plan_digest"), QStringLiteral("other-digest"));
+    mismatched_plan_approval.payload.insert(QStringLiteral("arguments"), mismatched_arguments);
+    dock.appendEvent(mismatched_plan_approval);
+    application.processEvents();
+    auto *mismatched_approval_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentApprovalCard-mismatched-plan-apply"));
+    auto *mismatched_approve = dock.findChild<QPushButton *>(
+        QStringLiteral("agentApproveButton-mismatched-plan-apply"));
+    auto *mismatched_deny = dock.findChild<QPushButton *>(
+        QStringLiteral("agentDenyButton-mismatched-plan-apply"));
+    auto *mismatched_binding = mismatched_approval_card
+        ? mismatched_approval_card->findChild<QLabel *>(
+              QStringLiteral("agentApprovalPlanBinding"))
+        : nullptr;
+    Require(mismatched_approve && !mismatched_approve->isEnabled()
+                && mismatched_deny && mismatched_deny->isEnabled()
+                && !mismatched_approval_card->property("reviewedPlanMatched").toBool()
+                && mismatched_binding
+                && mismatched_binding->text().contains(QStringLiteral("blocked")),
+            "an unreviewed digest must be visible and blocked while remaining deniable");
+
     open_paragraph->click();
     Require(opened_plan_resources == 1
                 && opened_plan_path == QStringLiteral("Text/chapter-1.xhtml"),

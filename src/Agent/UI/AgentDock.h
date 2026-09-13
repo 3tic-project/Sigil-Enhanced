@@ -104,6 +104,8 @@ private:
     void refreshRetryState();
     void refreshTaskRestoreState();
     void refreshPlanNavigationState();
+    bool matchesReviewedPlan(const QString &toolName,
+                             const QJsonObject &arguments) const;
     void captureRequestEvent(const AgentEvent &event, const QString &status);
     void captureRunEvent(const AgentEvent &event);
     QString providerFailureSummary(const QString &message) const;
@@ -134,6 +136,7 @@ private:
     QWidget *m_transcriptContents = nullptr;
     QVBoxLayout *m_transcriptLayout = nullptr;
     QHash<QString, QWidget *> m_approvalCards;
+    QHash<QString, QJsonObject> m_reviewedPlans;
     QHash<QString, QPushButton *> m_taskRestoreButtons;
     QWidget *m_currentThinking = nullptr;
     QWidget *m_currentAnswer = nullptr;

@@ -123,6 +123,12 @@ require(
     "native plans must produce book-bound review cards and guarded resource navigation",
 )
 require(
+    "matchesReviewedPlan" in dock_cpp
+    and "m_reviewedPlans" in dock_h
+    and 'setProperty("reviewedPlanMatched"' in dock_cpp,
+    "native apply approval must fail closed when its displayed plan binding does not match",
+)
+require(
     "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,
     "dock must export the conversation and a debug log",
 )
