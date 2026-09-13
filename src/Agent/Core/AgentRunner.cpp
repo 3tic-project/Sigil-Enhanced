@@ -61,6 +61,34 @@ QJsonObject rollbackStatus(QJsonObject payload)
     return payload;
 }
 
+QString reviewablePlanKind(const QString &tool_name)
+{
+    if (tool_name == QLatin1String("paragraphs.plan")) {
+        return QStringLiteral("paragraph_normalization");
+    }
+    if (tool_name == QLatin1String("toc.plan_transform")) {
+        return QStringLiteral("toc_hierarchy");
+    }
+    return QString();
+}
+
+QJsonObject planStatus(const ToolCall &call, const ToolResult &result)
+{
+    const QString kind = reviewablePlanKind(call.name);
+    if (kind.isEmpty() || !result.ok || result.applied || !result.previewOnly
+        || result.data.value(QStringLiteral("plan_id")).toString().isEmpty()
+        || result.data.value(QStringLiteral("plan_digest")).toString().isEmpty()) {
+        return QJsonObject();
+    }
+    QJsonObject payload = result.data;
+    payload.insert(QStringLiteral("tool_call_id"), call.id);
+    payload.insert(QStringLiteral("name"), call.name);
+    payload.insert(QStringLiteral("plan_kind"), kind);
+    payload.insert(QStringLiteral("review_status"), QStringLiteral("ready"));
+    payload.insert(QStringLiteral("applied_to_book"), false);
+    return payload;
+}
+
 QStringList taskRestoreResources(const QJsonObject &preview, QString *unavailable_reason)
 {
     const bool structural = preview.value(QStringLiteral("metadata_changed")).toBool()
@@ -343,6 +371,10 @@ void AgentRunner::publishToolOutcome(const ToolCall &call, const ToolResult &res
     payload.insert(QStringLiteral("id"), call.id);
     if (result.ok) {
         m_session->append(AgentEventType::ToolCompleted, payload);
+        const QJsonObject plan_status = planStatus(call, result);
+        if (!plan_status.isEmpty()) {
+            m_session->append(AgentEventType::PlanCreated, plan_status);
+        }
         if (call.name == QLatin1String("transaction.preview")) {
             m_session->append(AgentEventType::TransactionPreviewed,
                               previewStatus(result.data));

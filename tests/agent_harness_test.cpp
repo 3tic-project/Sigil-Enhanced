@@ -170,6 +170,8 @@ int main()
     Require(hasEvent(session, AgentEventType::UserMessage), "session must record the user message");
     Require(hasEvent(session, AgentEventType::AssistantMessage), "session must record assistant text");
     Require(hasEvent(session, AgentEventType::ToolCompleted), "session must record the tool result");
+    Require(!hasEvent(session, AgentEventType::PlanCreated),
+            "ordinary read tools must not be presented as reviewable plans");
     Require(session.eventsOf(AgentEventType::ModelRequestCompleted).size()
                 == provider.requestCount(),
             "every successful model request must publish a completion event");
@@ -540,6 +542,63 @@ int main()
               paragraph_analysis.data.value(QStringLiteral("analysis_id")) }
         });
     Require(paragraph_plan.ok, "paragraph approval fixture plan failed");
+    AgentSession plan_event_session;
+    AutoApprovalGate plan_event_gate(true);
+    MockModelProvider plan_event_provider;
+    const QJsonObject plan_event_arguments {
+        { QStringLiteral("analysis_id"),
+          paragraph_analysis.data.value(QStringLiteral("analysis_id")) }
+    };
+    plan_event_provider.setScript([plan_event_arguments](const ModelRequest &request) {
+        bool plan_created = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role == QLatin1String("tool")
+                && message.content.contains(QStringLiteral("plan_id"))) {
+                plan_created = true;
+            }
+        }
+        ModelTurn turn;
+        if (!plan_created) {
+            ToolCall call;
+            call.id = QStringLiteral("paragraph_plan_review");
+            call.name = QStringLiteral("paragraphs.plan");
+            call.argumentsJson = QString::fromUtf8(
+                QJsonDocument(plan_event_arguments).toJson(QJsonDocument::Compact));
+            turn.toolCalls.append(call);
+        } else {
+            turn.content = QStringLiteral("The paragraph plan is ready for review.");
+        }
+        return turn;
+    });
+    AgentCancellation plan_event_cancel;
+    AgentRunner plan_event_runner(
+        &plan_event_session, &plan_event_provider, &paragraph_registry, &paragraph_book,
+        &ask_policy, &plan_event_gate, &plan_event_cancel);
+    plan_event_runner.setMode(AgentMode::Plan);
+    const AgentRunResult plan_event_result = plan_event_runner.runTurn(
+        QStringLiteral("create a reviewable paragraph plan"));
+    Require(plan_event_result.state == AgentRunState::Completed,
+            "reviewable paragraph plan runner failed");
+    const QList<AgentEvent> plan_events =
+        plan_event_session.eventsOf(AgentEventType::PlanCreated);
+    Require(plan_events.size() == 1,
+            "a successful native planning tool must publish one plan-created event");
+    const QJsonObject plan_event = plan_events.constFirst().payload;
+    Require(plan_event.value(QStringLiteral("tool_call_id")).toString()
+                    == QStringLiteral("paragraph_plan_review")
+                && plan_event.value(QStringLiteral("name")).toString()
+                    == QStringLiteral("paragraphs.plan")
+                && plan_event.value(QStringLiteral("plan_kind")).toString()
+                    == QStringLiteral("paragraph_normalization")
+                && plan_event.value(QStringLiteral("review_status")).toString()
+                    == QStringLiteral("ready")
+                && !plan_event.value(QStringLiteral("applied_to_book")).toBool()
+                && plan_event.value(QStringLiteral("plan_id")).toString()
+                    == paragraph_plan.data.value(QStringLiteral("plan_id")).toString()
+                && plan_event.value(QStringLiteral("plan_digest")).toString()
+                    == paragraph_plan.data.value(QStringLiteral("plan_digest")).toString()
+                && !plan_event.value(QStringLiteral("changes")).toArray().isEmpty(),
+            "plan-created event must preserve the reviewed binding and bounded changes");
     const QJsonObject paragraph_apply_arguments {
         { QStringLiteral("plan_id"), paragraph_plan.data.value(QStringLiteral("plan_id")) },
         { QStringLiteral("plan_digest"), paragraph_plan.data.value(QStringLiteral("plan_digest")) },
