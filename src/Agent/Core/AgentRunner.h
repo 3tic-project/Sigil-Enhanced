@@ -42,6 +42,7 @@ public:
     AgentMode mode() const;
     void setModel(const QString &model);
     void setThinking(bool enabled, const QString &effort);
+    void setTokenUsage(bool enabled);
     void setMaxSteps(int steps);
     AgentRunState state() const;
 
@@ -83,6 +84,7 @@ private:
     AgentRunState m_state = AgentRunState::Idle;
     QString m_model;
     bool m_thinking = true;
+    bool m_tokenUsage = true;
     QString m_effort = QStringLiteral("medium");
     int m_maxSteps = 24;
     QString m_runBookSessionId;

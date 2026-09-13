@@ -261,6 +261,8 @@ void AgentDock::setSessionId(const QString &session_id)
     m_requestStep = 0;
     m_requestDurationMs = -1;
     m_requestFinishedAtMs = 0;
+    m_requestUsageRequested = false;
+    m_requestUsage = ModelUsage();
     m_lastSubmittedText.clear();
     m_lastSubmittedHandles.clear();
     m_lastSubmittedBookSessionId.clear();
@@ -583,6 +585,16 @@ void AgentDock::refreshProviderStatus()
 void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &status)
 {
     const QJsonObject payload = event.payload;
+    if (status == QLatin1String("requesting")) {
+        m_requestUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
+        m_requestUsage = ModelUsage();
+    } else if (payload.contains(QStringLiteral("usage_requested"))) {
+        m_requestUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
+    }
+    if (payload.value(QStringLiteral("usage")).isObject()) {
+        m_requestUsage = modelUsageFromJson(
+            payload.value(QStringLiteral("usage")).toObject());
+    }
     if (payload.contains(QStringLiteral("request_id"))) {
         m_requestId = payload.value(QStringLiteral("request_id")).toString();
     }
@@ -643,6 +655,29 @@ void AgentDock::refreshTechnicalDetails()
             lines.append(tr("Duration: %1 ms · Finished: %2")
                              .arg(m_requestDurationMs).arg(finished));
         }
+        if (m_requestUsage.isReported()) {
+            const QString unavailable = tr("Not reported");
+            const auto count_text = [&unavailable](qint64 count) {
+                return count >= 0 ? QString::number(count) : unavailable;
+            };
+            lines.append(tr("Token usage: input %1 · output %2 · total %3")
+                             .arg(count_text(m_requestUsage.inputTokens),
+                                  count_text(m_requestUsage.outputTokens),
+                                  count_text(m_requestUsage.totalTokens)));
+            if (m_requestUsage.cachedInputTokens >= 0
+                || m_requestUsage.reasoningTokens >= 0) {
+                lines.append(tr("Usage details: cached input %1 · reasoning %2")
+                                 .arg(count_text(m_requestUsage.cachedInputTokens),
+                                      count_text(m_requestUsage.reasoningTokens)));
+            }
+        } else if (m_requestUsageRequested
+                   && m_requestStatus == QLatin1String("requesting")) {
+            lines.append(tr("Token usage: requested; awaiting response"));
+        } else if (m_requestUsageRequested) {
+            lines.append(tr("Token usage: not reported by provider"));
+        } else {
+            lines.append(tr("Token usage: not requested"));
+        }
     } else {
         lines.append(tr("No model request in this session."));
     }
@@ -661,6 +696,13 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setProperty("requestHandles", m_requestHandles);
     m_technicalDetails->setProperty("durationMs", m_requestDurationMs);
     m_technicalDetails->setProperty("finishedAtMs", m_requestFinishedAtMs);
+    m_technicalDetails->setProperty("usageRequested", m_requestUsageRequested);
+    m_technicalDetails->setProperty("usageReported", m_requestUsage.isReported());
+    m_technicalDetails->setProperty("inputTokens", m_requestUsage.inputTokens);
+    m_technicalDetails->setProperty("outputTokens", m_requestUsage.outputTokens);
+    m_technicalDetails->setProperty("totalTokens", m_requestUsage.totalTokens);
+    m_technicalDetails->setProperty("cachedInputTokens", m_requestUsage.cachedInputTokens);
+    m_technicalDetails->setProperty("reasoningTokens", m_requestUsage.reasoningTokens);
     m_technicalDetails->setAccessibleName(m_technicalDetails->text());
 }
 

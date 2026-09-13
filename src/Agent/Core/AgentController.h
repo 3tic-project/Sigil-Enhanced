@@ -34,6 +34,7 @@ public:
     void setMode(AgentMode mode);
     void setModel(const QString &model);
     void setThinking(bool enabled, const QString &effort);
+    void setTokenUsage(bool enabled);
 
     AgentSession *session();
     AgentRunner *runner();
@@ -69,6 +70,7 @@ private:
     AgentMode m_mode = AgentMode::Ask;
     QString m_model;
     bool m_thinkingEnabled = true;
+    bool m_tokenUsageEnabled = true;
     QString m_reasoningEffort = QStringLiteral("medium");
     bool m_resetSessionAfterRun = false;
 };

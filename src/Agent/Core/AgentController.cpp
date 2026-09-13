@@ -31,6 +31,7 @@ void AgentController::rebuildTools()
     m_runner->setMode(m_mode);
     m_runner->setModel(m_model);
     m_runner->setThinking(m_thinkingEnabled, m_reasoningEffort);
+    m_runner->setTokenUsage(m_tokenUsageEnabled);
 }
 
 bool AgentController::setWorkspace(IBookWorkspace *workspace)
@@ -77,6 +78,12 @@ void AgentController::setThinking(bool enabled, const QString &effort)
     m_thinkingEnabled = enabled;
     m_reasoningEffort = effort;
     if (m_runner) m_runner->setThinking(enabled, effort);
+}
+
+void AgentController::setTokenUsage(bool enabled)
+{
+    m_tokenUsageEnabled = enabled;
+    if (m_runner) m_runner->setTokenUsage(enabled);
 }
 
 AgentSession *AgentController::session()

@@ -171,6 +171,11 @@ void AgentRunner::setThinking(bool enabled, const QString &effort)
     m_effort = effort;
 }
 
+void AgentRunner::setTokenUsage(bool enabled)
+{
+    m_tokenUsage = enabled;
+}
+
 void AgentRunner::setMaxSteps(int steps)
 {
     m_maxSteps = qMax(1, steps);
@@ -467,8 +472,9 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             return cancelRun();
         }
 
-        const ModelRequest request = m_prompts.build(
+        ModelRequest request = m_prompts.build(
             *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking, m_effort, handles);
+        request.includeUsage = m_tokenUsage;
         const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         m_session->append(AgentEventType::ModelRequestStarted, QJsonObject {
             { QStringLiteral("request_id"), request_id },
@@ -481,6 +487,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             { QStringLiteral("mode"), modeName(m_mode) },
             { QStringLiteral("context_handles"), QJsonArray::fromStringList(handles) },
             { QStringLiteral("thinking"), request.thinking },
+            { QStringLiteral("usage_requested"), request.includeUsage },
             { QStringLiteral("tools"), request.tools.size() }
         });
         setState(AgentRunState::RequestingModel);
@@ -518,14 +525,18 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             return result;
         }
 
-        m_session->append(AgentEventType::ModelRequestCompleted, QJsonObject {
+        QJsonObject completed_payload {
             { QStringLiteral("request_id"), request_id },
             { QStringLiteral("step"), steps },
             { QStringLiteral("model"), request.model },
             { QStringLiteral("duration_ms"), duration_ms },
             { QStringLiteral("finish_reason"), turn.finishReason },
             { QStringLiteral("tool_calls"), turn.toolCalls.size() }
-        });
+        };
+        if (turn.usage.isReported()) {
+            completed_payload.insert(QStringLiteral("usage"), modelUsageToJson(turn.usage));
+        }
+        m_session->append(AgentEventType::ModelRequestCompleted, completed_payload);
         if (!bookTargetMatchesRun()) {
             return failBookTargetChanged(QStringLiteral("after_model_response"));
         }

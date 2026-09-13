@@ -123,6 +123,11 @@ int main()
             }
         }
         ModelTurn turn;
+        turn.usage.inputTokens = has_summary ? 150 : 100;
+        turn.usage.outputTokens = has_summary ? 20 : 10;
+        turn.usage.totalTokens = turn.usage.inputTokens + turn.usage.outputTokens;
+        turn.usage.cachedInputTokens = has_summary ? 100 : 60;
+        turn.usage.reasoningTokens = has_summary ? 4 : 6;
         if (!has_summary) {
             ToolCall call;
             call.id = QStringLiteral("call_summary");
@@ -182,8 +187,16 @@ int main()
                     && started.value(QStringLiteral("book_revision")).toInteger() >= 1
                     && started.value(QStringLiteral("mode")).toString()
                         == QStringLiteral("ask")
+                    && started.value(QStringLiteral("usage_requested")).toBool()
                     && completed.value(QStringLiteral("duration_ms")).toInteger() >= 0,
                 "request lifecycle events must retain identity, target, mode, and elapsed time");
+        const QJsonObject usage = completed.value(QStringLiteral("usage")).toObject();
+        Require(usage.value(QStringLiteral("input_tokens")).toInteger() > 0
+                    && usage.value(QStringLiteral("output_tokens")).toInteger() > 0
+                    && usage.value(QStringLiteral("total_tokens")).toInteger()
+                        == usage.value(QStringLiteral("input_tokens")).toInteger()
+                            + usage.value(QStringLiteral("output_tokens")).toInteger(),
+                "completed requests must retain exact provider-reported token usage");
     }
     Require(!hasEvent(session, AgentEventType::ModelRequestFailed),
             "successful model requests must not publish failure events");
@@ -200,6 +213,7 @@ int main()
     AgentRunner failed_runner(&failed_session, &failed_provider, &failed_registry, &failed_book,
                               &policy, &approve, &failed_cancellation);
     failed_runner.setModel(QStringLiteral("mock"));
+    failed_runner.setTokenUsage(false);
     const AgentRunResult failed_result = failed_runner.runTurn(QStringLiteral("fail safely"));
     Require(failed_result.state == AgentRunState::Failed,
             "provider errors must fail the Agent turn");
@@ -216,6 +230,10 @@ int main()
                 && failed_request.value(QStringLiteral("message")).toString()
                     .contains(QStringLiteral("401")),
             "model failure events must carry the request identity and readable error");
+    Require(!failed_provider.lastRequest().includeUsage
+                && !failed_session.eventsOf(AgentEventType::ModelRequestStarted).constLast()
+                        .payload.value(QStringLiteral("usage_requested")).toBool(),
+            "disabling token usage must reach both the model request and lifecycle event");
 
     MemoryBookWorkspace request_cancel_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry request_cancel_registry;

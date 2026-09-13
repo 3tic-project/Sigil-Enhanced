@@ -36,6 +36,7 @@ dock_cpp = (repo / "src/Agent/UI/AgentDock.cpp").read_text(encoding="utf-8")
 settings_cpp = (repo / "src/Dialogs/PreferenceWidgets/AgentSettingsWidget.cpp").read_text(
     encoding="utf-8"
 )
+runner_cpp = (repo / "src/Agent/Core/AgentRunner.cpp").read_text(encoding="utf-8")
 require(
     "agentModeCombo" in dock_cpp,
     "dock must expose Ask/Plan/Edit",
@@ -86,6 +87,12 @@ require(
     and "tokenUsageEnabled" in settings_cpp
     and "setTokenUsageEnabled" in settings_cpp,
     "Native Agent settings must expose and persist the optional token-usage request",
+)
+require(
+    "setTokenUsage(settings.tokenUsageEnabled())" in main_window
+    and 'QStringLiteral("usage_requested")' in runner_cpp
+    and "modelUsageToJson(turn.usage)" in runner_cpp,
+    "the saved usage setting and reported counts must reach request lifecycle events",
 )
 require(
     "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,

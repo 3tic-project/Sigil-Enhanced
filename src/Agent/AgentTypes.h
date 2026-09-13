@@ -130,6 +130,7 @@ AgentMode modeFromName(const QString &name);
 QJsonObject toolCallToJson(const ToolCall &call);
 ToolCall toolCallFromJson(const QJsonObject &object);
 QJsonObject modelUsageToJson(const ModelUsage &usage);
+ModelUsage modelUsageFromJson(const QJsonObject &object);
 
 } // namespace SigilAgent
 

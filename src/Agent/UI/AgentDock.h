@@ -162,6 +162,8 @@ private:
     int m_requestStep = 0;
     qint64 m_requestDurationMs = -1;
     qint64 m_requestFinishedAtMs = 0;
+    bool m_requestUsageRequested = false;
+    ModelUsage m_requestUsage;
     QString m_lastSubmittedText;
     QStringList m_lastSubmittedHandles;
     QString m_lastSubmittedBookSessionId;

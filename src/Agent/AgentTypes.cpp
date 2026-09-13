@@ -155,4 +155,21 @@ QJsonObject modelUsageToJson(const ModelUsage &usage)
     return object;
 }
 
+ModelUsage modelUsageFromJson(const QJsonObject &object)
+{
+    const auto read_count = [&object](const QString &name) {
+        const QJsonValue value = object.value(name);
+        if (!value.isDouble()) return qint64(-1);
+        const qint64 count = value.toInteger(-1);
+        return count >= 0 ? count : qint64(-1);
+    };
+    ModelUsage usage;
+    usage.inputTokens = read_count(QStringLiteral("input_tokens"));
+    usage.outputTokens = read_count(QStringLiteral("output_tokens"));
+    usage.totalTokens = read_count(QStringLiteral("total_tokens"));
+    usage.cachedInputTokens = read_count(QStringLiteral("cached_input_tokens"));
+    usage.reasoningTokens = read_count(QStringLiteral("reasoning_tokens"));
+    return usage;
+}
+
 } // namespace SigilAgent

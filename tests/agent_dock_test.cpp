@@ -93,6 +93,7 @@ int main(int argc, char *argv[])
         { QStringLiteral("step"), 1 },
         { QStringLiteral("model"), QStringLiteral("deepseek-chat") },
         { QStringLiteral("mode"), QStringLiteral("ask") },
+        { QStringLiteral("usage_requested"), true },
         { QStringLiteral("context_handles"), QJsonArray {
               QStringLiteral("chapter-1:12-34"), QStringLiteral("book-css") } }
     };
@@ -108,7 +109,13 @@ int main(int argc, char *argv[])
         { QStringLiteral("request_id"), QStringLiteral("request-full-id") },
         { QStringLiteral("step"), 1 },
         { QStringLiteral("model"), QStringLiteral("deepseek-chat") },
-        { QStringLiteral("duration_ms"), 27 }
+        { QStringLiteral("duration_ms"), 27 },
+        { QStringLiteral("usage"), QJsonObject {
+              { QStringLiteral("input_tokens"), 120 },
+              { QStringLiteral("output_tokens"), 35 },
+              { QStringLiteral("total_tokens"), 155 },
+              { QStringLiteral("cached_input_tokens"), 80 },
+              { QStringLiteral("reasoning_tokens"), 12 } } }
     };
     dock.appendEvent(provider_completed);
     Require(provider_status->text().contains(QStringLiteral("Last request succeeded"))
@@ -119,6 +126,36 @@ int main(int argc, char *argv[])
                     == QStringLiteral("request-full-id")
                 && provider_status->property("durationMs").toLongLong() == 27,
             "only a completed model request may report success with measured timing");
+    auto *usage_details =
+        dock.findChild<QLabel *>(QStringLiteral("agentTechnicalDetails"));
+    Require(usage_details
+                && usage_details->text().contains(
+                    QStringLiteral("Token usage: input 120 · output 35 · total 155"))
+                && usage_details->text().contains(
+                    QStringLiteral("cached input 80 · reasoning 12"))
+                && usage_details->property("usageRequested").toBool()
+                && usage_details->property("usageReported").toBool()
+                && usage_details->property("totalTokens").toLongLong() == 155,
+            "technical details must expose exact provider-reported token usage");
+
+    SigilAgent::AgentEvent no_usage_completed = provider_completed;
+    no_usage_completed.payload.remove(QStringLiteral("usage"));
+    dock.appendEvent(provider_started);
+    dock.appendEvent(no_usage_completed);
+    Require(usage_details->text().contains(
+                QStringLiteral("Token usage: not reported by provider"))
+                && usage_details->property("usageRequested").toBool()
+                && !usage_details->property("usageReported").toBool()
+                && usage_details->property("totalTokens").toLongLong() == -1,
+            "missing provider usage must stay unavailable instead of becoming zero");
+
+    SigilAgent::AgentEvent usage_disabled_started = provider_started;
+    usage_disabled_started.payload.insert(QStringLiteral("usage_requested"), false);
+    dock.appendEvent(usage_disabled_started);
+    dock.appendEvent(no_usage_completed);
+    Require(usage_details->text().contains(QStringLiteral("Token usage: not requested"))
+                && !usage_details->property("usageRequested").toBool(),
+            "technical details must distinguish a disabled usage request");
     dock.appendEvent(provider_started);
     SigilAgent::AgentEvent provider_failed;
     provider_failed.type = SigilAgent::AgentEventType::ModelRequestFailed;
