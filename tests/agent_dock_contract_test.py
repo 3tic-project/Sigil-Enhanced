@@ -107,6 +107,13 @@ require(
     "whole-run usage must preserve coverage and expose partial summaries honestly",
 )
 require(
+    "response_timing" in runner_cpp
+    and "modelResponseTimingToJson" in runner_cpp
+    and "Response latency:" in dock_cpp
+    and 'setProperty("firstByteMs"' in dock_cpp,
+    "request events and technical details must expose measured response latency",
+)
+require(
     "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,
     "dock must export the conversation and a debug log",
 )

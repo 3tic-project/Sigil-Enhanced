@@ -263,6 +263,7 @@ void AgentDock::setSessionId(const QString &session_id)
     m_requestFinishedAtMs = 0;
     m_requestUsageRequested = false;
     m_requestUsage = ModelUsage();
+    m_requestTiming = ModelResponseTiming();
     m_runId.clear();
     m_runStatus.clear();
     m_runDurationMs = -1;
@@ -604,12 +605,17 @@ void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &stat
     if (status == QLatin1String("requesting")) {
         m_requestUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
         m_requestUsage = ModelUsage();
+        m_requestTiming = ModelResponseTiming();
     } else if (payload.contains(QStringLiteral("usage_requested"))) {
         m_requestUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
     }
     if (payload.value(QStringLiteral("usage")).isObject()) {
         m_requestUsage = modelUsageFromJson(
             payload.value(QStringLiteral("usage")).toObject());
+    }
+    if (payload.value(QStringLiteral("response_timing")).isObject()) {
+        m_requestTiming = modelResponseTimingFromJson(
+            payload.value(QStringLiteral("response_timing")).toObject());
     }
     if (payload.contains(QStringLiteral("request_id"))) {
         m_requestId = payload.value(QStringLiteral("request_id")).toString();
@@ -783,6 +789,20 @@ void AgentDock::refreshTechnicalDetails()
             lines.append(tr("Duration: %1 ms · Finished: %2")
                              .arg(m_requestDurationMs).arg(finished));
         }
+        if (m_requestStatus == QLatin1String("requesting")) {
+            lines.append(tr("Response latency: awaiting response"));
+        } else if (m_requestTiming.isReported()) {
+            const QString unobserved = tr("Not observed");
+            lines.append(tr("Response latency: first byte %1 ms · first model event %2 ms")
+                             .arg(m_requestTiming.firstByteMs >= 0
+                                      ? QString::number(m_requestTiming.firstByteMs)
+                                      : unobserved,
+                                  m_requestTiming.firstEventMs >= 0
+                                      ? QString::number(m_requestTiming.firstEventMs)
+                                      : unobserved));
+        } else {
+            lines.append(tr("Response latency: not observed"));
+        }
         if (m_requestUsage.isReported()) {
             const QString unavailable = tr("Not reported");
             const auto count_text = [&unavailable](qint64 count) {
@@ -851,6 +871,8 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setProperty("totalTokens", m_requestUsage.totalTokens);
     m_technicalDetails->setProperty("cachedInputTokens", m_requestUsage.cachedInputTokens);
     m_technicalDetails->setProperty("reasoningTokens", m_requestUsage.reasoningTokens);
+    m_technicalDetails->setProperty("firstByteMs", m_requestTiming.firstByteMs);
+    m_technicalDetails->setProperty("firstModelEventMs", m_requestTiming.firstEventMs);
     m_technicalDetails->setAccessibleName(m_technicalDetails->text());
 }
 

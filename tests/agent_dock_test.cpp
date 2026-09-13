@@ -130,6 +130,9 @@ int main(int argc, char *argv[])
         { QStringLiteral("step"), 1 },
         { QStringLiteral("model"), QStringLiteral("deepseek-chat") },
         { QStringLiteral("duration_ms"), 27 },
+        { QStringLiteral("response_timing"), QJsonObject {
+              { QStringLiteral("first_byte_ms"), 9 },
+              { QStringLiteral("first_model_event_ms"), 14 } } },
         { QStringLiteral("usage"), QJsonObject {
               { QStringLiteral("input_tokens"), 120 },
               { QStringLiteral("output_tokens"), 35 },
@@ -155,7 +158,11 @@ int main(int argc, char *argv[])
                     QStringLiteral("cached input 80 · reasoning 12"))
                 && usage_details->property("usageRequested").toBool()
                 && usage_details->property("usageReported").toBool()
-                && usage_details->property("totalTokens").toLongLong() == 155,
+                && usage_details->property("totalTokens").toLongLong() == 155
+                && usage_details->text().contains(
+                    QStringLiteral("Response latency: first byte 9 ms · first model event 14 ms"))
+                && usage_details->property("firstByteMs").toLongLong() == 9
+                && usage_details->property("firstModelEventMs").toLongLong() == 14,
             "technical details must expose exact provider-reported token usage");
     SigilAgent::AgentEvent run_completed;
     run_completed.type = SigilAgent::AgentEventType::RunStateChanged;

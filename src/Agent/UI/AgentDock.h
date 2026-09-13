@@ -165,6 +165,7 @@ private:
     qint64 m_requestFinishedAtMs = 0;
     bool m_requestUsageRequested = false;
     ModelUsage m_requestUsage;
+    ModelResponseTiming m_requestTiming;
     QString m_runId;
     QString m_runStatus;
     qint64 m_runDurationMs = -1;
