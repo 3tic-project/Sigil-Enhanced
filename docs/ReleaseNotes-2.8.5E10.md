@@ -188,6 +188,11 @@ Native Agent 的正式流式请求现在默认向兼容服务请求 usage。展�
 Native Agent”关闭 **Request token usage when supported**。独立的 Chat Completions 连接
 测试仍保持最小请求，不发送这个可选字段，因此历史“测试成功”不代表端点支持 usage。
 
+Technical details 现在还会单独显示 **Whole run**：从准备上下文开始，覆盖本轮所有模型
+请求、审批等待、工具执行，以及失败/取消时的暂存回滚，并列出模型请求数和工具调用数。
+原有 **Duration** 继续只代表最近一次 Provider 网络调用，因此多步骤任务不会再拿单次
+请求耗时冒充整轮耗时。运行尚未结束时只显示“进行中”，不会提前冻结一个伪终值。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。
@@ -200,7 +205,7 @@ Native Agent”关闭 **Request token usage when supported**。独立的 Chat Co
 ## 兼容性
 
 - Automate 命令、快捷键、插件接口没有改。
-- 当前 C++、头文件和 Qt Designer 源码中的 5,655 条活跃界面文案，已全部进入简体中文、
+- 当前 C++、头文件和 Qt Designer 源码中的 5,659 条活跃界面文案，已全部进入简体中文、
   繁体中文和日文目录且没有 unfinished 条目；严格目录覆盖测试通过。详见
   [PRD 实施审计](PRD-2026-09-05-Implementation.md)。
 

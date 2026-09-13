@@ -17,7 +17,8 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - **Stop**（会立刻中止正在等待的 HTTP，不只在收到首包之后）、**New Session**
 - **Retry**：仅在可以安全重跑的首个 Provider 请求失败后启用
 - 纯文本提交卡上的 **Restore this task**：在后续目标内容未改变时恢复该次提交
-- 默认折叠的 **Technical details**：完整会话/请求/书籍 ID、revision、模式与冻结范围
+- 默认折叠的 **Technical details**：完整会话/整轮运行/请求/书籍 ID、两级耗时、token
+  用量、revision、模式与冻结范围
 - **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
 - 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；批准带影响说明；预览按变更类型列出暂存内容；提交和回滚显示独立结果；错误
 
@@ -111,9 +112,12 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 或模型任一不匹配都会自动失效。重新测试失败同样会清除待保存的成功证明。
 
 **Technical details** 默认折叠，展开后显示完整 Agent session ID、当前 book session ID、
-最近一次 request ID、该请求绑定的 book session/revision、步骤、模式、模型、终态、耗时和
-发送时冻结的 scope handles，并显示该请求的服务端 token 用量状态。这里只有安全的
-endpoint 主机，不显示 API Key、URL 路径、查询参数或响应正文。
+最近一次 run ID 和 request ID。**Whole run** 从进入上下文准备开始，覆盖本轮所有模型请求、
+审批等待、工具调用和失败/取消时的暂存回滚；终态显示总耗时、模型请求数、工具调用数和
+完成时间。独立的 **Duration** 仍只表示最近一次 `provider.stream()`，不会冒充整轮时间。
+详情还显示请求绑定的 book session/revision、步骤、模式、模型、终态、发送时冻结的 scope
+handles 和服务端 token 用量状态。这里只有安全的 endpoint 主机，不显示 API Key、URL
+路径、查询参数或响应正文。
 
 **Retry** 不是底层 HTTP 自动重试。它会作为新一轮，重新发送用户上次实际提交的文本和
 同一组 scope handles，并重新组装当前内存内容。仅当首个模型请求失败、当前仍是同一
@@ -261,9 +265,10 @@ Agent 循环在 `AgentRunner` 里，不在 UI 类中：
 3. 按权限 allow / ask / deny 处理工具
 4. ask 时先发批准卡片，批准后才执行
 5. deny / 用户拒绝 / 取消时仍写入一条 tool-role 结果（`PERMISSION_DENIED` 或 `CANCELLED`），避免下一次请求因缺 tool 消息而 400
-6. 用 `request_id` 配对模型请求开始/成功/失败/取消事件，记录真实流式调用耗时和可用的服务端 token 用量
-7. 在模型与工具边界复核运行开始时冻结的 `book_session_id`
-8. 对符合条件的纯文本 commit 在写入前创建任务快照、写入后封存冲突基线
-9. 把事件追加到会话日志（transcript 的唯一来源）
+6. 为整轮生成 `run_id`，在终态记录覆盖安全收尾的总耗时、模型请求数和工具调用数
+7. 用 `request_id` 配对模型请求开始/成功/失败/取消事件，记录真实流式调用耗时和可用的服务端 token 用量
+8. 在模型与工具边界复核运行开始时冻结的 `book_session_id`
+9. 对符合条件的纯文本 commit 在写入前创建任务快照、写入后封存冲突基线
+10. 把事件追加到会话日志（transcript 的唯一来源）
 
 书籍写入走现有 Book / 事务 / 撤销机制。

@@ -1059,3 +1059,35 @@ total 的精确合计；`agent_provider_catalog` 断言正式 body 包含可关�
 多步骤 Agent 的合计、整轮墙钟时间、价格或网络分段延迟混为同一指标。当前也不解析厂商
 自定义成本字段；没有 usage 支持的兼容端点会明确显示未报告。真实三家服务的 usage 形态、
 长上下文/缓存计费、Windows/Linux 布局、屏幕阅读器和整轮聚合仍待验收。
+
+## Native Agent 整轮任务计时（2026-09-13）
+
+分支：`feature/agent-run-timing`。主要提交：`5dae170c3`（Runner 整轮计时事件）、
+`823f21bb4`（Technical details 展示）和 `b6db90f3c`（四语文案）。
+
+### 计时边界与终态
+
+- 每次通过 Runner 前置接线校验的用户轮次生成独立 `run_id`，从
+  `preparing_context` 开始计时。后续 `run_state_changed` 阶段事件携带同一 ID；只有
+  completed/failed/cancelled 终态附带 `duration_ms`、`model_steps` 和 `tool_calls`，不会把
+  进行中的时间冒充最终指标。
+- Provider 失败、目标书籍改变、步数上限和取消路径均在错误/取消事件与暂存事务回滚完成后
+  才发布计时终态。因此 Whole run 覆盖上下文组装、所有模型步骤、审批等待、工具执行和
+  安全收尾；单次 `model_request_*` 的 duration 仍只测 `provider.stream()`，两者字段和界面
+  行均独立。
+- Dock Technical details 在进行中显示 run ID 和 **Whole run: in progress**，终态显示整轮
+  毫秒数、模型请求数、工具调用数和完成时间；`runDurationMs` 等独立控件属性不会覆盖既有
+  request `durationMs`。事件进入既有脱敏调试导出，Conversation Markdown 不复制技术遥测。
+
+### 测试证据与剩余项
+
+`agent_harness` 验证多步骤成功轮次从 preparing 到 completed 共用 ID，模型/工具计数正确，
+并验证 Provider 失败与请求中取消都发布非负整轮耗时；`agent_dock` 验证进行中不虚构时长，
+以及终态 Whole run 与最近请求 Duration 各自保留；`agent_dock_contract` 固定事件消费和
+属性边界。完整 Sigil 构建及 42 个固定 Python 依赖通过；13 项 Agent 测试连续 3 轮共
+39 次通过。四份目录可生成 `.qm` 且 0 unfinished；严格简中、繁中、日文覆盖均通过，每份
+覆盖当前 5,659 条活跃源文。
+
+本切片关闭上一节保留的“无整轮墙钟时间”缺口，但不会把墙钟时间拆成 DNS、TLS、首 token、
+审批或各工具子阶段；多轮会话也没有累计时间。真实慢速审批、长工具、窗口关闭、跨平台
+单调时钟/本地化时间和辅助技术仍待人工验收。
