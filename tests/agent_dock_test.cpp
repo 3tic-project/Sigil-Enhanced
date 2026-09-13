@@ -201,6 +201,15 @@ int main(int argc, char *argv[])
                 && run_details->property("runTotalTokens").toLongLong() == 280,
             "terminal technical details must distinguish whole-run timing and counts");
 
+    SigilAgent::AgentEvent legacy_run_started = run_started;
+    legacy_run_started.payload.insert(QStringLiteral("run_id"),
+                                      QStringLiteral("legacy-run-id"));
+    legacy_run_started.payload.remove(QStringLiteral("usage_requested"));
+    dock.appendEvent(legacy_run_started);
+    Require(run_details->text().contains(QStringLiteral("Run token usage: not requested"))
+                && !run_details->property("runUsageRequested").toBool(),
+            "a new run without usage metadata must not inherit the prior run setting");
+
     SigilAgent::AgentEvent partial_run_started = run_started;
     partial_run_started.payload.insert(QStringLiteral("run_id"),
                                        QStringLiteral("partial-run-id"));

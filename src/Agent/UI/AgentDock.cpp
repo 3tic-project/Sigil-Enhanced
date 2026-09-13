@@ -658,6 +658,7 @@ void AgentDock::captureRunEvent(const AgentEvent &event)
         m_runModelSteps = -1;
         m_runToolCalls = -1;
         m_runUsageComplete = false;
+        m_runUsageRequested = false;
         m_runUsageRequestCount = 0;
         m_runUsageReportedRequests = 0;
         m_runUsage = ModelUsage();
