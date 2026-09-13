@@ -269,6 +269,16 @@ void AgentDock::setSessionId(const QString &session_id)
     m_runFinishedAtMs = 0;
     m_runModelSteps = -1;
     m_runToolCalls = -1;
+    m_runUsageRequested = false;
+    m_runUsageComplete = false;
+    m_runUsageRequestCount = 0;
+    m_runUsageReportedRequests = 0;
+    m_runUsage = ModelUsage();
+    m_runInputUsageRequests = 0;
+    m_runOutputUsageRequests = 0;
+    m_runTotalUsageRequests = 0;
+    m_runCachedUsageRequests = 0;
+    m_runReasoningUsageRequests = 0;
     m_lastSubmittedText.clear();
     m_lastSubmittedHandles.clear();
     m_lastSubmittedBookSessionId.clear();
@@ -647,14 +657,44 @@ void AgentDock::captureRunEvent(const AgentEvent &event)
         m_runFinishedAtMs = 0;
         m_runModelSteps = -1;
         m_runToolCalls = -1;
+        m_runUsageComplete = false;
+        m_runUsageRequestCount = 0;
+        m_runUsageReportedRequests = 0;
+        m_runUsage = ModelUsage();
+        m_runInputUsageRequests = 0;
+        m_runOutputUsageRequests = 0;
+        m_runTotalUsageRequests = 0;
+        m_runCachedUsageRequests = 0;
+        m_runReasoningUsageRequests = 0;
     }
     m_runId = run_id;
     m_runStatus = status;
+    if (payload.contains(QStringLiteral("usage_requested"))) {
+        m_runUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
+    }
     if (payload.contains(QStringLiteral("duration_ms"))) {
         m_runDurationMs = payload.value(QStringLiteral("duration_ms")).toInteger();
         m_runFinishedAtMs = event.timestampMs;
         m_runModelSteps = payload.value(QStringLiteral("model_steps")).toInt();
         m_runToolCalls = payload.value(QStringLiteral("tool_calls")).toInt();
+        const QJsonObject usage =
+            payload.value(QStringLiteral("usage_summary")).toObject();
+        m_runUsageRequestCount = usage.value(QStringLiteral("request_count")).toInt();
+        m_runUsageReportedRequests =
+            usage.value(QStringLiteral("reported_request_count")).toInt();
+        m_runUsageComplete =
+            usage.value(QStringLiteral("all_requests_reported")).toBool();
+        m_runUsage = modelUsageFromJson(usage);
+        m_runInputUsageRequests =
+            usage.value(QStringLiteral("input_request_count")).toInt();
+        m_runOutputUsageRequests =
+            usage.value(QStringLiteral("output_request_count")).toInt();
+        m_runTotalUsageRequests =
+            usage.value(QStringLiteral("total_request_count")).toInt();
+        m_runCachedUsageRequests =
+            usage.value(QStringLiteral("cached_input_request_count")).toInt();
+        m_runReasoningUsageRequests =
+            usage.value(QStringLiteral("reasoning_request_count")).toInt();
     }
     refreshTechnicalDetails();
 }
@@ -680,6 +720,49 @@ void AgentDock::refreshTechnicalDetails()
                              .arg(finished));
         } else {
             lines.append(tr("Whole run: in progress"));
+        }
+        if (!m_runUsageRequested) {
+            lines.append(tr("Run token usage: not requested"));
+        } else if (m_runDurationMs < 0) {
+            lines.append(tr("Run token usage: awaiting completed requests"));
+        } else if (m_runUsageRequestCount <= 0) {
+            lines.append(tr("Run token usage: no model request was sent"));
+        } else if (m_runUsageReportedRequests <= 0) {
+            lines.append(tr("Run token usage: not reported by provider"));
+        } else {
+            const QString unavailable = tr("Not reported");
+            const auto complete_count = [&unavailable, this](qint64 count, int coverage) {
+                return count >= 0 && coverage == m_runUsageReportedRequests
+                    ? QString::number(count) : unavailable;
+            };
+            const QString input = complete_count(
+                m_runUsage.inputTokens, m_runInputUsageRequests);
+            const QString output = complete_count(
+                m_runUsage.outputTokens, m_runOutputUsageRequests);
+            const QString total = complete_count(
+                m_runUsage.totalTokens, m_runTotalUsageRequests);
+            if (m_runUsageComplete) {
+                lines.append(tr("Run token usage: input %1 · output %2 · total %3")
+                                 .arg(input, output, total));
+            } else {
+                lines.append(tr("Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5")
+                                 .arg(m_runUsageReportedRequests)
+                                 .arg(m_runUsageRequestCount)
+                                 .arg(input, output, total));
+            }
+            const bool cached_complete = m_runUsage.cachedInputTokens >= 0
+                && m_runCachedUsageRequests == m_runUsageReportedRequests;
+            const bool reasoning_complete = m_runUsage.reasoningTokens >= 0
+                && m_runReasoningUsageRequests == m_runUsageReportedRequests;
+            if (cached_complete || reasoning_complete) {
+                lines.append(tr("Run usage details: cached input %1 · reasoning %2")
+                                 .arg(cached_complete
+                                          ? QString::number(m_runUsage.cachedInputTokens)
+                                          : unavailable,
+                                      reasoning_complete
+                                          ? QString::number(m_runUsage.reasoningTokens)
+                                          : unavailable));
+            }
         }
     }
     if (!m_requestId.isEmpty()) {
@@ -739,6 +822,20 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setProperty("runFinishedAtMs", m_runFinishedAtMs);
     m_technicalDetails->setProperty("runModelSteps", m_runModelSteps);
     m_technicalDetails->setProperty("runToolCalls", m_runToolCalls);
+    m_technicalDetails->setProperty("runUsageRequested", m_runUsageRequested);
+    m_technicalDetails->setProperty("runUsageComplete", m_runUsageComplete);
+    m_technicalDetails->setProperty("runUsageRequestCount", m_runUsageRequestCount);
+    m_technicalDetails->setProperty("runUsageReportedRequests", m_runUsageReportedRequests);
+    m_technicalDetails->setProperty("runInputTokens", m_runUsage.inputTokens);
+    m_technicalDetails->setProperty("runOutputTokens", m_runUsage.outputTokens);
+    m_technicalDetails->setProperty("runTotalTokens", m_runUsage.totalTokens);
+    m_technicalDetails->setProperty("runCachedInputTokens", m_runUsage.cachedInputTokens);
+    m_technicalDetails->setProperty("runReasoningTokens", m_runUsage.reasoningTokens);
+    m_technicalDetails->setProperty("runInputUsageRequests", m_runInputUsageRequests);
+    m_technicalDetails->setProperty("runOutputUsageRequests", m_runOutputUsageRequests);
+    m_technicalDetails->setProperty("runTotalUsageRequests", m_runTotalUsageRequests);
+    m_technicalDetails->setProperty("runCachedUsageRequests", m_runCachedUsageRequests);
+    m_technicalDetails->setProperty("runReasoningUsageRequests", m_runReasoningUsageRequests);
     m_technicalDetails->setProperty("requestId", m_requestId);
     m_technicalDetails->setProperty("requestStatus", m_requestStatus);
     m_technicalDetails->setProperty("requestBookSessionId", m_requestBookSessionId);

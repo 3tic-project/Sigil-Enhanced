@@ -101,6 +101,12 @@ require(
     "technical details must consume whole-run timing separately from request timing",
 )
 require(
+    "usage_summary" in runner_cpp
+    and "reported_request_count" in runner_cpp
+    and "Run token usage" in dock_cpp,
+    "whole-run usage must preserve coverage and expose partial summaries honestly",
+)
+require(
     "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,
     "dock must export the conversation and a debug log",
 )

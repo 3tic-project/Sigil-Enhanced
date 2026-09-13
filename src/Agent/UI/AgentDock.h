@@ -171,6 +171,16 @@ private:
     qint64 m_runFinishedAtMs = 0;
     int m_runModelSteps = -1;
     int m_runToolCalls = -1;
+    bool m_runUsageRequested = false;
+    bool m_runUsageComplete = false;
+    int m_runUsageRequestCount = 0;
+    int m_runUsageReportedRequests = 0;
+    ModelUsage m_runUsage;
+    int m_runInputUsageRequests = 0;
+    int m_runOutputUsageRequests = 0;
+    int m_runTotalUsageRequests = 0;
+    int m_runCachedUsageRequests = 0;
+    int m_runReasoningUsageRequests = 0;
     QString m_lastSubmittedText;
     QStringList m_lastSubmittedHandles;
     QString m_lastSubmittedBookSessionId;

@@ -89,13 +89,16 @@ int main(int argc, char *argv[])
     run_started.payload = QJsonObject {
         { QStringLiteral("run_id"), QStringLiteral("run-full-id") },
         { QStringLiteral("state"), QStringLiteral("preparing_context") },
-        { QStringLiteral("book_session_id"), QStringLiteral("request-book-id") }
+        { QStringLiteral("book_session_id"), QStringLiteral("request-book-id") },
+        { QStringLiteral("usage_requested"), true }
     };
     dock.appendEvent(run_started);
     auto *run_details =
         dock.findChild<QLabel *>(QStringLiteral("agentTechnicalDetails"));
     Require(run_details
                 && run_details->text().contains(QStringLiteral("Whole run: in progress"))
+                && run_details->text().contains(
+                    QStringLiteral("Run token usage: awaiting completed requests"))
                 && run_details->property("runId").toString()
                     == QStringLiteral("run-full-id")
                 && run_details->property("runDurationMs").toLongLong() == -1,
@@ -162,18 +165,67 @@ int main(int argc, char *argv[])
         { QStringLiteral("state"), QStringLiteral("completed") },
         { QStringLiteral("book_session_id"), QStringLiteral("request-book-id") },
         { QStringLiteral("duration_ms"), 91 },
-        { QStringLiteral("model_steps"), 1 },
-        { QStringLiteral("tool_calls"), 0 }
+        { QStringLiteral("model_steps"), 2 },
+        { QStringLiteral("tool_calls"), 1 },
+        { QStringLiteral("usage_requested"), true },
+        { QStringLiteral("usage_summary"), QJsonObject {
+              { QStringLiteral("request_count"), 2 },
+              { QStringLiteral("reported_request_count"), 2 },
+              { QStringLiteral("missing_request_count"), 0 },
+              { QStringLiteral("all_requests_reported"), true },
+              { QStringLiteral("input_tokens"), 250 },
+              { QStringLiteral("input_request_count"), 2 },
+              { QStringLiteral("output_tokens"), 30 },
+              { QStringLiteral("output_request_count"), 2 },
+              { QStringLiteral("total_tokens"), 280 },
+              { QStringLiteral("total_request_count"), 2 },
+              { QStringLiteral("cached_input_tokens"), 160 },
+              { QStringLiteral("cached_input_request_count"), 2 },
+              { QStringLiteral("reasoning_tokens"), 10 },
+              { QStringLiteral("reasoning_request_count"), 2 } } }
     };
     dock.appendEvent(run_completed);
     Require(run_details->text().contains(
-                QStringLiteral("Whole run: 91 ms · model requests 1 · tool calls 0"))
+                QStringLiteral("Whole run: 91 ms · model requests 2 · tool calls 1"))
+                && run_details->text().contains(
+                    QStringLiteral("Run token usage: input 250 · output 30 · total 280"))
+                && run_details->text().contains(
+                    QStringLiteral("Run usage details: cached input 160 · reasoning 10"))
                 && run_details->property("runStatus").toString()
                     == QStringLiteral("completed")
                 && run_details->property("runDurationMs").toLongLong() == 91
-                && run_details->property("runModelSteps").toInt() == 1
-                && run_details->property("runToolCalls").toInt() == 0,
+                && run_details->property("runModelSteps").toInt() == 2
+                && run_details->property("runToolCalls").toInt() == 1
+                && run_details->property("runUsageComplete").toBool()
+                && run_details->property("runUsageRequestCount").toInt() == 2
+                && run_details->property("runTotalTokens").toLongLong() == 280,
             "terminal technical details must distinguish whole-run timing and counts");
+
+    SigilAgent::AgentEvent partial_run_started = run_started;
+    partial_run_started.payload.insert(QStringLiteral("run_id"),
+                                       QStringLiteral("partial-run-id"));
+    dock.appendEvent(partial_run_started);
+    SigilAgent::AgentEvent partial_run_completed = run_completed;
+    partial_run_completed.payload.insert(QStringLiteral("run_id"),
+                                         QStringLiteral("partial-run-id"));
+    partial_run_completed.payload.insert(QStringLiteral("usage_summary"), QJsonObject {
+        { QStringLiteral("request_count"), 2 },
+        { QStringLiteral("reported_request_count"), 1 },
+        { QStringLiteral("missing_request_count"), 1 },
+        { QStringLiteral("all_requests_reported"), false },
+        { QStringLiteral("input_tokens"), 40 },
+        { QStringLiteral("input_request_count"), 1 },
+        { QStringLiteral("output_tokens"), 6 },
+        { QStringLiteral("output_request_count"), 1 },
+        { QStringLiteral("total_tokens"), 46 },
+        { QStringLiteral("total_request_count"), 1 }
+    });
+    dock.appendEvent(partial_run_completed);
+    Require(run_details->text().contains(
+                QStringLiteral("Run token usage (1 of 2 requests reported): input 40 · output 6 · total 46"))
+                && !run_details->property("runUsageComplete").toBool()
+                && run_details->property("runUsageReportedRequests").toInt() == 1,
+            "partial run usage must disclose request coverage beside exact known sums");
 
     SigilAgent::AgentEvent no_usage_completed = provider_completed;
     no_usage_completed.payload.remove(QStringLiteral("usage"));
