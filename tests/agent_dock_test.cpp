@@ -495,6 +495,13 @@ int main(int argc, char *argv[])
             "a terminal event must synchronously flush every queued stream character once");
 
     dock.resetTranscript();
+    dock.appendEvent(tiny_delta);
+    dock.resetTranscript();
+    ProcessEventsFor(100);
+    Require(!dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard"))
+                && transcript->property("streamRenderBatches").toULongLong() == 0,
+            "transcript reset must cancel a pending stream flush from the old session");
+
     SigilAgent::AgentEvent first_user;
     first_user.type = SigilAgent::AgentEventType::UserMessage;
     first_user.payload = QJsonObject { { QStringLiteral("text"), QStringLiteral("one") } };
