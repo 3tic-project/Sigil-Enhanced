@@ -3,12 +3,14 @@
 
 #include <QApplication>
 #include <QComboBox>
+#include <QDialog>
 #include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
+#include <QPointer>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QTimer>
@@ -662,6 +664,8 @@ int main(int argc, char *argv[])
         : nullptr;
     auto *open_paragraph = dock.findChild<QPushButton *>(
         QStringLiteral("agentPlanOpenResourceButton-plan-call-0"));
+    auto *compare_paragraph = dock.findChild<QPushButton *>(
+        QStringLiteral("agentPlanCompareButton-plan-call-0"));
     Require(paragraph_plan_card && paragraph_plan_body && paragraph_plan_body->isVisible()
                 && paragraph_plan_body->textFormat() == Qt::PlainText
                 && paragraph_plan_card->property("planId").toString()
@@ -684,6 +688,49 @@ int main(int argc, char *argv[])
                 && open_paragraph->property("bookPath").toString()
                     == QStringLiteral("Text/chapter-1.xhtml"),
             "paragraph review must offer a book-bound resource navigation action");
+    Require(compare_paragraph && compare_paragraph->isEnabled()
+                && compare_paragraph->property("bookPath").toString()
+                    == QStringLiteral("Text/chapter-1.xhtml")
+                && compare_paragraph->property("bookSessionId").toString()
+                    == QStringLiteral("12345678-abcd")
+                && compare_paragraph->accessibleName().contains(
+                    QStringLiteral("Text/chapter-1.xhtml")),
+            "paragraph review must offer a book-bound side-by-side comparison");
+    compare_paragraph->click();
+    application.processEvents();
+    QPointer<QDialog> paragraph_comparison = dock.findChild<QDialog *>(
+        QStringLiteral("agentPlanComparisonDialog-plan-call-0"));
+    auto *paragraph_before = paragraph_comparison
+        ? paragraph_comparison->findChild<QPlainTextEdit *>(
+              QStringLiteral("agentPlanComparisonBefore"))
+        : nullptr;
+    auto *paragraph_after = paragraph_comparison
+        ? paragraph_comparison->findChild<QPlainTextEdit *>(
+              QStringLiteral("agentPlanComparisonAfter"))
+        : nullptr;
+    Require(paragraph_comparison && paragraph_comparison->isVisible()
+                && paragraph_comparison->windowTitle().contains(
+                    QStringLiteral("Text/chapter-1.xhtml"))
+                && paragraph_comparison->property("planId").toString()
+                    == QStringLiteral("paragraph-plan-id")
+                && paragraph_comparison->property("planDigest").toString()
+                    == QStringLiteral("paragraph-plan-digest")
+                && paragraph_comparison->property("bookRevision").toLongLong() == 7
+                && paragraph_comparison->property("bookSessionId").toString()
+                    == QStringLiteral("12345678-abcd"),
+            "paragraph comparison must preserve the reviewed plan and book binding");
+    Require(paragraph_before && paragraph_after
+                && paragraph_before->isReadOnly() && paragraph_after->isReadOnly()
+                && paragraph_before->toPlainText()
+                    == QStringLiteral("<div>Original paragraph</div>")
+                && paragraph_after->toPlainText()
+                    == QStringLiteral("<p>Original paragraph</p>")
+                && paragraph_comparison->property("displayTruncated").toBool(),
+            "paragraph comparison must render literal bounded source in distinct panes");
+    compare_paragraph->click();
+    Require(dock.findChildren<QDialog *>(
+                QStringLiteral("agentPlanComparisonDialog-plan-call-0")).size() == 1,
+            "reopening one plan comparison must reuse its existing dialog");
 
     SigilAgent::AgentEvent matching_plan_approval;
     matching_plan_approval.type = SigilAgent::AgentEventType::ToolApprovalRequested;
@@ -746,16 +793,18 @@ int main(int argc, char *argv[])
             "plan navigation must emit the reviewed resource and book session");
     dock.setBookContext(QStringLiteral("Another Book"), QStringLiteral("other.epub"),
                         3, false, 1, QStringLiteral("other-book-session"));
-    Require(!open_paragraph->isEnabled(),
-            "plan navigation must visibly disable as soon as the open book changes");
+    Require(!open_paragraph->isEnabled() && !compare_paragraph->isEnabled(),
+            "plan navigation and comparison must disable as soon as the open book changes");
+    Require(!paragraph_comparison || !paragraph_comparison->isVisible(),
+            "an open comparison must close when the dock binds another book");
     open_paragraph->click();
     Require(opened_plan_resources == 1,
             "a stale plan card must not navigate after the open book changes");
     dock.setBookContext(QStringLiteral("Junior Physics"),
                         QStringLiteral("physics.epub"), 42, false, 7,
                         QStringLiteral("12345678-abcd"));
-    Require(open_paragraph->isEnabled(),
-            "returning to the plan-bound book session must restore navigation");
+    Require(open_paragraph->isEnabled() && compare_paragraph->isEnabled(),
+            "returning to the plan-bound book session must restore review actions");
 
     SigilAgent::AgentEvent toc_plan;
     toc_plan.type = SigilAgent::AgentEventType::PlanCreated;
@@ -795,6 +844,8 @@ int main(int argc, char *argv[])
         : nullptr;
     auto *open_toc = dock.findChild<QPushButton *>(
         QStringLiteral("agentPlanOpenResourceButton-toc-plan-call-0"));
+    auto *compare_toc = dock.findChild<QPushButton *>(
+        QStringLiteral("agentPlanCompareButton-toc-plan-call-toc"));
     Require(toc_plan_body && toc_plan_body->text().contains(
                 QStringLiteral("2 affected node(s)"))
                 && toc_plan_body->text().contains(QStringLiteral("Chapter C"))
@@ -805,8 +856,40 @@ int main(int argc, char *argv[])
     Require(open_toc && open_toc->property("bookPath").toString()
                     == QStringLiteral("Text/c.xhtml"),
             "TOC review navigation must strip the target fragment");
+    Require(compare_toc && compare_toc->isEnabled()
+                && compare_toc->accessibleName().contains(
+                    QStringLiteral("TOC hierarchy")),
+            "TOC review must offer a book-bound hierarchy comparison");
+    compare_toc->click();
+    application.processEvents();
+    QPointer<QDialog> toc_comparison = dock.findChild<QDialog *>(
+        QStringLiteral("agentPlanComparisonDialog-toc-plan-call-toc"));
+    auto *toc_before = toc_comparison
+        ? toc_comparison->findChild<QPlainTextEdit *>(
+              QStringLiteral("agentPlanComparisonBefore"))
+        : nullptr;
+    auto *toc_after = toc_comparison
+        ? toc_comparison->findChild<QPlainTextEdit *>(
+              QStringLiteral("agentPlanComparisonAfter"))
+        : nullptr;
+    Require(toc_comparison && toc_comparison->isVisible()
+                && toc_comparison->property("planId").toString()
+                    == QStringLiteral("toc-plan-id")
+                && toc_comparison->property("comparisonSubject").toString()
+                    == QStringLiteral("TOC hierarchy")
+                && toc_comparison->property("displayTruncated").toBool(),
+            "TOC comparison must preserve the reviewed plan and truncation boundary");
+    Require(toc_before && toc_after
+                && toc_before->toPlainText().contains(
+                    QStringLiteral("Depth: 2 · Parent: 1"))
+                && toc_after->toPlainText().contains(
+                    QStringLiteral("Depth: 1 · Parent: 0")),
+            "TOC comparison must place old and new hierarchy values in separate panes");
 
     dock.resetTranscript();
+    application.processEvents();
+    Require(!toc_comparison || !toc_comparison->isVisible(),
+            "resetting the transcript must close detached plan comparisons");
     SigilAgent::AgentEvent preview;
     preview.type = SigilAgent::AgentEventType::TransactionPreviewed;
     preview.payload = QJsonObject {

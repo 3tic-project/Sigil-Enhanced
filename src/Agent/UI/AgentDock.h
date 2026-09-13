@@ -28,6 +28,8 @@ class QWidget;
 namespace SigilAgent
 {
 
+struct AgentPlanComparisonContent;
+
 class AgentDock : public QDockWidget
 {
     Q_OBJECT
@@ -108,6 +110,11 @@ private:
     void refreshRetryState();
     void refreshTaskRestoreState();
     void refreshPlanNavigationState();
+    void closePlanComparisons();
+    void showPlanComparison(const QJsonObject &payload,
+                            const QString &comparisonId,
+                            const QString &subject,
+                            const AgentPlanComparisonContent &content);
     bool matchesReviewedPlan(const QString &toolName,
                              const QJsonObject &arguments) const;
     void captureRequestEvent(const AgentEvent &event, const QString &status);

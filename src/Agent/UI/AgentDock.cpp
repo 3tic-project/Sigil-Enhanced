@@ -5,6 +5,7 @@
 *************************************************************************/
 
 #include "Agent/UI/AgentDock.h"
+#include "Agent/UI/AgentPlanComparisonDialog.h"
 
 #include <utility>
 
@@ -12,6 +13,7 @@
 #include <QButtonGroup>
 #include <QComboBox>
 #include <QDateTime>
+#include <QDialog>
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -947,8 +949,11 @@ void AgentDock::refreshPlanNavigationState()
     const QList<QPushButton *> buttons =
         m_transcriptContents->findChildren<QPushButton *>();
     for (QPushButton *button : buttons) {
-        if (!button || !button->objectName().startsWith(
-                           QLatin1String("agentPlanOpenResourceButton-"))) {
+        if (!button
+            || (!button->objectName().startsWith(
+                    QLatin1String("agentPlanOpenResourceButton-"))
+                && !button->objectName().startsWith(
+                    QLatin1String("agentPlanCompareButton-")))) {
             continue;
         }
         const QString bound_session =
@@ -956,6 +961,57 @@ void AgentDock::refreshPlanNavigationState()
         button->setEnabled(!bound_session.isEmpty()
                            && bound_session == m_bookSessionId);
     }
+    const QList<QDialog *> dialogs = findChildren<QDialog *>(
+        QString(), Qt::FindDirectChildrenOnly);
+    for (QDialog *dialog : dialogs) {
+        if (!dialog || !dialog->objectName().startsWith(
+                           QLatin1String("agentPlanComparisonDialog-"))) {
+            continue;
+        }
+        if (dialog->property("bookSessionId").toString() != m_bookSessionId) {
+            dialog->close();
+        }
+    }
+}
+
+void AgentDock::closePlanComparisons()
+{
+    const QList<QDialog *> dialogs = findChildren<QDialog *>(
+        QString(), Qt::FindDirectChildrenOnly);
+    for (QDialog *dialog : dialogs) {
+        if (dialog && dialog->objectName().startsWith(
+                          QLatin1String("agentPlanComparisonDialog-"))) {
+            dialog->close();
+        }
+    }
+}
+
+void AgentDock::showPlanComparison(
+    const QJsonObject &payload,
+    const QString &comparison_id,
+    const QString &subject,
+    const AgentPlanComparisonContent &content)
+{
+    const QString book_session_id =
+        payload.value(QStringLiteral("book_session_id")).toString();
+    if (book_session_id.isEmpty() || book_session_id != m_bookSessionId) return;
+    const QString object_name =
+        QStringLiteral("agentPlanComparisonDialog-%1").arg(comparison_id);
+    if (QDialog *existing = findChild<QDialog *>(object_name)) {
+        existing->show();
+        existing->raise();
+        return;
+    }
+    auto *dialog = new AgentPlanComparisonDialog(content, this);
+    dialog->setObjectName(object_name);
+    dialog->setProperty("planId", payload.value(QStringLiteral("plan_id")).toString());
+    dialog->setProperty(
+        "planDigest", payload.value(QStringLiteral("plan_digest")).toString());
+    dialog->setProperty(
+        "bookRevision", payload.value(QStringLiteral("book_revision")).toInteger());
+    dialog->setProperty("bookSessionId", book_session_id);
+    dialog->setProperty("comparisonSubject", subject);
+    dialog->show();
 }
 
 bool AgentDock::matchesReviewedPlan(const QString &tool_name,
@@ -984,6 +1040,7 @@ bool AgentDock::matchesReviewedPlan(const QString &tool_name,
 void AgentDock::resetTranscript()
 {
     discardAssistantDeltas();
+    closePlanComparisons();
     m_streamRenderBatches = 0;
     if (m_transcript) {
         m_transcript->setProperty(
@@ -1322,6 +1379,7 @@ QWidget *AgentDock::makePlanReviewCard(const QJsonObject &payload)
     }
 
     QStringList paths;
+    QList<QJsonObject> path_changes;
     for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
         const QJsonObject change = value.toObject();
         QString path = paragraph
@@ -1334,19 +1392,26 @@ QWidget *AgentDock::makePlanReviewCard(const QJsonObject &payload)
             continue;
         }
         paths.append(path);
+        path_changes.append(change);
         if (paths.size() >= 8) break;
     }
     auto *layout = qobject_cast<QVBoxLayout *>(card->layout());
     for (int index = 0; layout && index < paths.size(); ++index) {
         const QString path = paths.at(index);
-        auto *open = new QPushButton(tr("Open %1").arg(path), card);
+        const QJsonObject change = path_changes.at(index);
+        auto *row = new QWidget(card);
+        row->setObjectName(QStringLiteral("agentPlanResourceRow-%1-%2")
+                               .arg(call_id).arg(index));
+        auto *row_layout = new QHBoxLayout(row);
+        row_layout->setContentsMargins(0, 0, 0, 0);
+        auto *open = new QPushButton(tr("Open %1").arg(path), row);
         open->setObjectName(QStringLiteral("agentPlanOpenResourceButton-%1-%2")
                                 .arg(call_id).arg(index));
         open->setProperty("bookPath", path);
         open->setProperty("bookSessionId", book_session_id);
         open->setAccessibleDescription(tr("Open this resource in Sigil for plan review."));
         open->setEnabled(!book_session_id.isEmpty() && book_session_id == m_bookSessionId);
-        layout->addWidget(open, 0, Qt::AlignLeft);
+        row_layout->addWidget(open);
         connect(open, &QPushButton::clicked, this,
                 [this, open, path, book_session_id]() {
             if (book_session_id.isEmpty() || book_session_id != m_bookSessionId) {
@@ -1354,6 +1419,110 @@ QWidget *AgentDock::makePlanReviewCard(const QJsonObject &payload)
                 return;
             }
             emit openPlanResourceRequested(path, book_session_id);
+        });
+        const QJsonObject diff = change.value(QStringLiteral("source_diff")).toObject();
+        if (paragraph && (diff.contains(QStringLiteral("before"))
+                          || diff.contains(QStringLiteral("after")))) {
+            auto *compare = new QPushButton(tr("Compare…"), row);
+            compare->setObjectName(QStringLiteral("agentPlanCompareButton-%1-%2")
+                                       .arg(call_id).arg(index));
+            compare->setProperty("bookPath", path);
+            compare->setProperty("bookSessionId", book_session_id);
+            compare->setAccessibleName(tr("Compare %1").arg(path));
+            compare->setAccessibleDescription(
+                tr("Compare the reviewed before and after excerpts side by side."));
+            compare->setEnabled(!book_session_id.isEmpty()
+                                && book_session_id == m_bookSessionId);
+            row_layout->addWidget(compare);
+            connect(compare, &QPushButton::clicked, this,
+                    [this, compare, payload, diff, path, call_id, index,
+                     book_session_id]() {
+                if (book_session_id.isEmpty()
+                    || book_session_id != m_bookSessionId) {
+                    compare->setEnabled(false);
+                    return;
+                }
+                AgentPlanComparisonContent content;
+                content.windowTitle = tr("Plan comparison — %1").arg(path);
+                content.summary = tr(
+                    "Read-only excerpt from the reviewed plan. The live book is unchanged.");
+                content.beforeTitle = tr("Before");
+                content.afterTitle = tr("After");
+                content.beforeAccessibleName =
+                    tr("Before excerpt for %1").arg(path);
+                content.afterAccessibleName =
+                    tr("After excerpt for %1").arg(path);
+                content.beforeText = diff.value(QStringLiteral("before")).toString();
+                content.afterText = diff.value(QStringLiteral("after")).toString();
+                content.prefixTruncated =
+                    diff.value(QStringLiteral("prefix_truncated")).toBool();
+                content.suffixTruncated =
+                    diff.value(QStringLiteral("suffix_truncated")).toBool();
+                content.truncationNotice = tr(
+                    "This comparison is a bounded excerpt; source outside the displayed region is omitted.");
+                showPlanComparison(
+                    payload,
+                    QStringLiteral("%1-%2").arg(call_id).arg(index),
+                    path, content);
+            });
+        }
+        row_layout->addStretch(1);
+        layout->addWidget(row);
+    }
+    if (layout && !paragraph
+        && !payload.value(QStringLiteral("changes")).toArray().isEmpty()) {
+        auto *compare = new QPushButton(tr("Compare hierarchy…"), card);
+        compare->setObjectName(
+            QStringLiteral("agentPlanCompareButton-%1-toc").arg(call_id));
+        compare->setProperty("bookSessionId", book_session_id);
+        compare->setAccessibleName(tr("Compare TOC hierarchy"));
+        compare->setAccessibleDescription(
+            tr("Compare the reviewed TOC hierarchy before and after side by side."));
+        compare->setEnabled(!book_session_id.isEmpty()
+                            && book_session_id == m_bookSessionId);
+        layout->addWidget(compare, 0, Qt::AlignLeft);
+        connect(compare, &QPushButton::clicked, this,
+                [this, compare, payload, call_id, book_session_id]() {
+            if (book_session_id.isEmpty() || book_session_id != m_bookSessionId) {
+                compare->setEnabled(false);
+                return;
+            }
+            QStringList before;
+            QStringList after;
+            for (const QJsonValue &value :
+                 payload.value(QStringLiteral("changes")).toArray()) {
+                const QJsonObject change = value.toObject();
+                const QString entry = tr("Entry: %1 · %2")
+                                          .arg(change.value(QStringLiteral("label")).toString(),
+                                               change.value(QStringLiteral("target")).toString());
+                before.append(entry);
+                before.append(tr("Depth: %1 · Parent: %2")
+                                  .arg(change.value(QStringLiteral("from_depth")).toInt())
+                                  .arg(change.value(QStringLiteral("from_parent_id")).toInteger()));
+                before.append(QString());
+                after.append(entry);
+                after.append(tr("Depth: %1 · Parent: %2")
+                                 .arg(change.value(QStringLiteral("to_depth")).toInt())
+                                 .arg(change.value(QStringLiteral("to_parent_id")).toInteger()));
+                after.append(QString());
+            }
+            AgentPlanComparisonContent content;
+            content.windowTitle = tr("Plan comparison — %1").arg(tr("TOC hierarchy"));
+            content.summary = tr(
+                "Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.");
+            content.beforeTitle = tr("Before");
+            content.afterTitle = tr("After");
+            content.beforeAccessibleName = tr("TOC hierarchy before transformation");
+            content.afterAccessibleName = tr("TOC hierarchy after transformation");
+            content.beforeText = before.join(QLatin1Char('\n')).trimmed();
+            content.afterText = after.join(QLatin1Char('\n')).trimmed();
+            content.suffixTruncated =
+                payload.value(QStringLiteral("changes_truncated")).toBool();
+            content.truncationNotice = tr(
+                "This comparison is bounded; additional TOC changes are omitted.");
+            showPlanComparison(
+                payload, QStringLiteral("%1-toc").arg(call_id),
+                tr("TOC hierarchy"), content);
         });
     }
     return card;
