@@ -6,6 +6,8 @@
 
 #include "Agent/UI/AgentDock.h"
 
+#include <utility>
+
 #include <QAction>
 #include <QButtonGroup>
 #include <QComboBox>
@@ -24,12 +26,20 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSet>
+#include <QTimer>
 #include <QToolButton>
 #include <QVariant>
 #include <QVBoxLayout>
 
 namespace SigilAgent
 {
+
+namespace
+{
+
+constexpr int STREAM_FLUSH_INTERVAL_MS = 33;
+
+}
 
 AgentDock::AgentDock(QWidget *parent) :
     QDockWidget(tr("Agent"), parent)
@@ -175,6 +185,13 @@ AgentDock::AgentDock(QWidget *parent) :
     m_transcriptLayout->setSpacing(8);
     m_transcriptLayout->addStretch(1);
     m_transcript->setWidget(m_transcriptContents);
+    m_streamFlushTimer = new QTimer(this);
+    m_streamFlushTimer->setSingleShot(true);
+    m_streamFlushTimer->setInterval(STREAM_FLUSH_INTERVAL_MS);
+    m_transcript->setProperty("streamFlushIntervalMs", STREAM_FLUSH_INTERVAL_MS);
+    m_transcript->setProperty("streamRenderBatches", QVariant::fromValue<qulonglong>(0));
+    connect(m_streamFlushTimer, &QTimer::timeout,
+            this, &AgentDock::flushAssistantDeltas);
 
     m_composer = new QPlainTextEdit(root);
     m_composer->setObjectName(QStringLiteral("agentComposer"));
@@ -251,6 +268,7 @@ void AgentDock::setContextScope(const QString &scope)
 void AgentDock::setSessionId(const QString &session_id)
 {
     if (m_sessionId == session_id) return;
+    discardAssistantDeltas();
     m_sessionId = session_id;
     m_requestId.clear();
     m_requestModel.clear();
@@ -965,6 +983,12 @@ bool AgentDock::matchesReviewedPlan(const QString &tool_name,
 
 void AgentDock::resetTranscript()
 {
+    discardAssistantDeltas();
+    m_streamRenderBatches = 0;
+    if (m_transcript) {
+        m_transcript->setProperty(
+            "streamRenderBatches", QVariant::fromValue<qulonglong>(0));
+    }
     QLayoutItem *item = nullptr;
     while ((item = m_transcriptLayout->takeAt(0)) != nullptr) {
         delete item->widget();
@@ -1126,6 +1150,42 @@ void AgentDock::settleApproval(const QString &toolCallId, bool approved)
     }
 }
 
+void AgentDock::queueAssistantDelta(const QString &kind, const QString &text)
+{
+    if (text.isEmpty()) return;
+    if (kind == QLatin1String("reasoning")) {
+        m_pendingThinkingText.append(text);
+    } else {
+        m_pendingAnswerText.append(text);
+    }
+    if (m_streamFlushTimer && !m_streamFlushTimer->isActive()) {
+        m_streamFlushTimer->start();
+    }
+}
+
+void AgentDock::flushAssistantDeltas()
+{
+    if (m_streamFlushTimer) m_streamFlushTimer->stop();
+    if (m_pendingThinkingText.isEmpty() && m_pendingAnswerText.isEmpty()) return;
+    const QString thinking = std::exchange(m_pendingThinkingText, QString());
+    const QString answer = std::exchange(m_pendingAnswerText, QString());
+    if (!thinking.isEmpty()) setThinkingText(thinking, true);
+    if (!answer.isEmpty()) setAnswerText(answer, true);
+    ++m_streamRenderBatches;
+    if (m_transcript) {
+        m_transcript->setProperty(
+            "streamRenderBatches",
+            QVariant::fromValue<qulonglong>(m_streamRenderBatches));
+    }
+}
+
+void AgentDock::discardAssistantDeltas()
+{
+    if (m_streamFlushTimer) m_streamFlushTimer->stop();
+    m_pendingThinkingText.clear();
+    m_pendingAnswerText.clear();
+}
+
 void AgentDock::setThinkingText(const QString &text, bool append)
 {
     if (!m_currentThinking) {
@@ -1135,7 +1195,8 @@ void AgentDock::setThinkingText(const QString &text, bool append)
     }
     auto *body = m_currentThinking->findChild<QLabel *>(thinkingCardName() + QStringLiteral("Body"));
     if (!body) return;
-    body->setText(append ? body->text() + text : text);
+    const QString updated = append ? body->text() + text : text;
+    if (body->text() != updated) body->setText(updated);
 }
 
 void AgentDock::setAnswerText(const QString &text, bool append)
@@ -1147,7 +1208,8 @@ void AgentDock::setAnswerText(const QString &text, bool append)
     }
     auto *body = m_currentAnswer->findChild<QLabel *>(answerCardName() + QStringLiteral("Body"));
     if (!body) return;
-    body->setText(append ? body->text() + text : text);
+    const QString updated = append ? body->text() + text : text;
+    if (body->text() != updated) body->setText(updated);
 }
 
 QString AgentDock::planReviewBody(const QJsonObject &payload) const
@@ -1394,6 +1456,7 @@ QString AgentDock::appliedBody(const QJsonObject &payload) const
 
 void AgentDock::appendEvent(const AgentEvent &event)
 {
+    if (event.type != AgentEventType::AssistantDelta) flushAssistantDeltas();
     switch (event.type) {
         case AgentEventType::UserMessage:
             beginUserTurn();
@@ -1437,16 +1500,14 @@ void AgentDock::appendEvent(const AgentEvent &event)
             refreshRetryState();
             break;
         case AgentEventType::AssistantDelta:
-            if (event.payload.value(QStringLiteral("kind")).toString() == QLatin1String("reasoning")) {
-                setThinkingText(event.payload.value(QStringLiteral("text")).toString(), true);
-            } else {
-                setAnswerText(event.payload.value(QStringLiteral("text")).toString(), true);
-            }
+            queueAssistantDelta(
+                event.payload.value(QStringLiteral("kind")).toString(),
+                event.payload.value(QStringLiteral("text")).toString());
             break;
         case AgentEventType::AssistantMessage: {
             const QString reasoning = event.payload.value(QStringLiteral("reasoning_content")).toString();
             const QString content = event.payload.value(QStringLiteral("content")).toString();
-            if (!reasoning.isEmpty() && !m_currentThinking) setThinkingText(reasoning, false);
+            if (!reasoning.isEmpty()) setThinkingText(reasoning, false);
             if (!content.isEmpty()) setAnswerText(content, false);
             break;
         }

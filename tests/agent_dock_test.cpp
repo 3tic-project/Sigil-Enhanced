@@ -3,6 +3,7 @@
 
 #include <QApplication>
 #include <QComboBox>
+#include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QLabel>
@@ -10,6 +11,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QTimer>
 #include <QToolButton>
 
 #include "Agent/UI/AgentDock.h"
@@ -23,6 +25,13 @@ void Require(bool condition, const char *message)
         std::cerr << message << '\n';
         std::exit(EXIT_FAILURE);
     }
+}
+
+void ProcessEventsFor(int milliseconds)
+{
+    QEventLoop loop;
+    QTimer::singleShot(milliseconds, &loop, &QEventLoop::quit);
+    loop.exec();
 }
 
 } // namespace
@@ -443,7 +452,7 @@ int main(int argc, char *argv[])
         { QStringLiteral("text"), QStringLiteral("This book has two chapters.") }
     };
     dock.appendEvent(answer);
-    application.processEvents();
+    ProcessEventsFor(100);
 
     QWidget *thinking_card = dock.findChild<QWidget *>(QStringLiteral("agentThinkingCard"));
     QWidget *answer_card = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard"));
@@ -457,6 +466,33 @@ int main(int argc, char *argv[])
             "answer card must show the user-visible content");
     Require(!thinking_body->isVisible(), "thinking card must start collapsed");
     Require(answer_body->isVisible(), "answer card must be visible");
+    Require(transcript->property("streamFlushIntervalMs").toInt() == 33
+                && transcript->property("streamRenderBatches").toULongLong() == 1,
+            "reasoning and answer deltas in one frame must share one render batch");
+
+    dock.resetTranscript();
+    SigilAgent::AgentEvent tiny_delta;
+    tiny_delta.type = SigilAgent::AgentEventType::AssistantDelta;
+    tiny_delta.payload = QJsonObject {
+        { QStringLiteral("kind"), QStringLiteral("content") },
+        { QStringLiteral("text"), QStringLiteral("x") }
+    };
+    constexpr int streamed_chunks = 2000;
+    for (int i = 0; i < streamed_chunks; ++i) dock.appendEvent(tiny_delta);
+    Require(!dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard"))
+                && transcript->property("streamRenderBatches").toULongLong() == 0,
+            "a burst of stream chunks must not trigger per-chunk card rendering");
+    SigilAgent::AgentEvent complete_answer;
+    complete_answer.type = SigilAgent::AgentEventType::AssistantMessage;
+    complete_answer.payload = QJsonObject {
+        { QStringLiteral("content"), QString(streamed_chunks, QLatin1Char('x')) }
+    };
+    dock.appendEvent(complete_answer);
+    auto *coalesced_body = dock.findChild<QLabel *>(QStringLiteral("agentAnswerCardBody"));
+    Require(coalesced_body && coalesced_body->text().size() == streamed_chunks
+                && coalesced_body->text() == QString(streamed_chunks, QLatin1Char('x'))
+                && transcript->property("streamRenderBatches").toULongLong() == 1,
+            "a terminal event must synchronously flush every queued stream character once");
 
     dock.resetTranscript();
     SigilAgent::AgentEvent first_user;
@@ -481,6 +517,12 @@ int main(int argc, char *argv[])
         { QStringLiteral("text"), QStringLiteral("second answer") }
     };
     dock.appendEvent(second_answer);
+    SigilAgent::AgentEvent final_answer;
+    final_answer.type = SigilAgent::AgentEventType::AssistantMessage;
+    final_answer.payload = QJsonObject {
+        { QStringLiteral("content"), QStringLiteral("second answer") }
+    };
+    dock.appendEvent(final_answer);
     application.processEvents();
 
     QWidget *answer1 = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard"));

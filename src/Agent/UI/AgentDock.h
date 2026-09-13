@@ -21,6 +21,7 @@ class QPlainTextEdit;
 class QPushButton;
 class QScrollArea;
 class QToolButton;
+class QTimer;
 class QVBoxLayout;
 class QWidget;
 
@@ -95,6 +96,9 @@ private:
     void beginUserTurn();
     void beginModelStep();
     void settleApproval(const QString &toolCallId, bool approved);
+    void queueAssistantDelta(const QString &kind, const QString &text);
+    void flushAssistantDeltas();
+    void discardAssistantDeltas();
     void setThinkingText(const QString &text, bool append);
     void setAnswerText(const QString &text, bool append);
     void chooseDefaultScope();
@@ -135,6 +139,10 @@ private:
     QScrollArea *m_transcript = nullptr;
     QWidget *m_transcriptContents = nullptr;
     QVBoxLayout *m_transcriptLayout = nullptr;
+    QTimer *m_streamFlushTimer = nullptr;
+    QString m_pendingThinkingText;
+    QString m_pendingAnswerText;
+    quint64 m_streamRenderBatches = 0;
     QHash<QString, QWidget *> m_approvalCards;
     QHash<QString, QJsonObject> m_reviewedPlans;
     QHash<QString, QPushButton *> m_taskRestoreButtons;
