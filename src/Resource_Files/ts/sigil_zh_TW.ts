@@ -27400,6 +27400,10 @@ Continue using the requested filename?</source>
     <message><source>Scope handles: %1</source><translation>範圍代碼：%1</translation></message>
     <message><source>None</source><translation>無</translation></message>
     <message><source>Duration: %1 ms · Finished: %2</source><translation>耗時：%1 毫秒 · 完成時間：%2</translation></message>
+    <message><source>Response latency: awaiting response</source><translation>回應延遲：正在等待回應</translation></message>
+    <message><source>Not observed</source><translation>未觀測</translation></message>
+    <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>回應延遲：首位元組 %1 毫秒 · 第一個模型事件 %2 毫秒</translation></message>
+    <message><source>Response latency: not observed</source><translation>回應延遲：未觀測</translation></message>
     <message><source>Not reported</source><translation>未回報</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token 用量：輸入 %1 · 輸出 %2 · 總計 %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>用量詳情：快取輸入 %1 · 推理 %2</translation></message>

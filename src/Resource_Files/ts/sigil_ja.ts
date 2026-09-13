@@ -27415,6 +27415,10 @@ Continue using the requested filename?</source>
     <message><source>Scope handles: %1</source><translation>スコープハンドル：%1</translation></message>
     <message><source>None</source><translation>なし</translation></message>
     <message><source>Duration: %1 ms · Finished: %2</source><translation>所要時間：%1 ミリ秒 · 完了：%2</translation></message>
+    <message><source>Response latency: awaiting response</source><translation>応答遅延：応答待ち</translation></message>
+    <message><source>Not observed</source><translation>未観測</translation></message>
+    <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>応答遅延：最初のバイト %1 ミリ秒 · 最初のモデルイベント %2 ミリ秒</translation></message>
+    <message><source>Response latency: not observed</source><translation>応答遅延：未観測</translation></message>
     <message><source>Not reported</source><translation>未報告</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>トークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>使用量の詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>

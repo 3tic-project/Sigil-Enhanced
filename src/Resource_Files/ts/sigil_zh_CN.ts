@@ -27417,6 +27417,10 @@ Continue using the requested filename?</source>
     <message><source>Scope handles: %1</source><translation>范围句柄：%1</translation></message>
     <message><source>None</source><translation>无</translation></message>
     <message><source>Duration: %1 ms · Finished: %2</source><translation>耗时：%1 毫秒 · 完成时间：%2</translation></message>
+    <message><source>Response latency: awaiting response</source><translation>响应延迟：正在等待响应</translation></message>
+    <message><source>Not observed</source><translation>未观测</translation></message>
+    <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>响应延迟：首字节 %1 毫秒 · 首个模型事件 %2 毫秒</translation></message>
+    <message><source>Response latency: not observed</source><translation>响应延迟：未观测</translation></message>
     <message><source>Not reported</source><translation>未报告</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token 用量：输入 %1 · 输出 %2 · 总计 %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>用量详情：缓存输入 %1 · 推理 %2</translation></message>

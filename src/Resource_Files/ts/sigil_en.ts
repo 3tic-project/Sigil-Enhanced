@@ -23473,6 +23473,10 @@ Continue using the requested filename?</translation>
     <message><source>Scope handles: %1</source><translation>Scope handles: %1</translation></message>
     <message><source>None</source><translation>None</translation></message>
     <message><source>Duration: %1 ms · Finished: %2</source><translation>Duration: %1 ms · Finished: %2</translation></message>
+    <message><source>Response latency: awaiting response</source><translation>Response latency: awaiting response</translation></message>
+    <message><source>Not observed</source><translation>Not observed</translation></message>
+    <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>Response latency: first byte %1 ms · first model event %2 ms</translation></message>
+    <message><source>Response latency: not observed</source><translation>Response latency: not observed</translation></message>
     <message><source>Not reported</source><translation>Not reported</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token usage: input %1 · output %2 · total %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>Usage details: cached input %1 · reasoning %2</translation></message>
