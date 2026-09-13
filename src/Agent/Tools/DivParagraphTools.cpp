@@ -644,10 +644,12 @@ public:
         m_plan = stored;
 
         QJsonArray changes;
+        QJsonArray operation_groups;
         for (const NormalizationPlan::Entry &entry : current_plan.entries) {
+            const QString path = current.paths.value(entry.resourceId);
             changes.append(QJsonObject {
                 { QStringLiteral("resource_id"), entry.resourceId },
-                { QStringLiteral("book_path"), current.paths.value(entry.resourceId) },
+                { QStringLiteral("book_path"), path },
                 { QStringLiteral("resource_revision"), entry.baseRevision.toLongLong() },
                 { QStringLiteral("before_hash"), entry.beforeHash },
                 { QStringLiteral("after_hash"), entry.afterHash },
@@ -655,6 +657,17 @@ public:
                 { QStringLiteral("conversion_count"), entry.analysis.convertibleLeaves },
                 { QStringLiteral("protected_count"), entry.analysis.protectedRanges.size() },
                 { QStringLiteral("source_diff"), diffExcerpt(entry.source, entry.output) }
+            });
+            operation_groups.append(QJsonObject {
+                { QStringLiteral("group_id"), entry.resourceId },
+                { QStringLiteral("label"), path },
+                { QStringLiteral("resource_ids"),
+                  QJsonArray { entry.resourceId } },
+                { QStringLiteral("conversion_count"),
+                  entry.analysis.convertibleLeaves },
+                { QStringLiteral("protected_count"),
+                  entry.analysis.protectedRanges.size() },
+                { QStringLiteral("independently_applicable"), true }
             });
         }
         return ToolResult::success(QJsonObject {
@@ -668,6 +681,8 @@ public:
             { QStringLiteral("adds_resources"), false },
             { QStringLiteral("summary"), summaryJson(current_plan) },
             { QStringLiteral("changes"), changes },
+            { QStringLiteral("operation_groups"), operation_groups },
+            { QStringLiteral("operation_groups_independent"), true },
             { QStringLiteral("local_validation"), QStringLiteral("passed") },
             { QStringLiteral("full_epubcheck"), epubcheckNotRun() },
             { QStringLiteral("applied_to_book"), false }
@@ -691,6 +706,36 @@ public:
                 QStringLiteral("PLAN_BINDING_MISMATCH"),
                 QStringLiteral("plan_id, plan_digest, and expected_book_revision must match the reviewed plan"));
         }
+        QStringList selected_resource_ids = m_plan->resourceIds;
+        const QJsonValue selected_value = arguments.value(
+            QStringLiteral("selected_resource_ids"));
+        if (!selected_value.isUndefined()) {
+            if (!selected_value.isArray() || selected_value.toArray().isEmpty()) {
+                return ToolResult::failure(
+                    QStringLiteral("PLAN_GROUP_SELECTION_EMPTY"),
+                    QStringLiteral("selected_resource_ids must contain at least one reviewed plan resource"));
+            }
+            QSet<QString> requested;
+            for (const QJsonValue &value : selected_value.toArray()) {
+                if (!value.isString() || value.toString().isEmpty()
+                    || requested.contains(value.toString())) {
+                    return ToolResult::failure(
+                        QStringLiteral("INVALID_ARGUMENT"),
+                        QStringLiteral("selected_resource_ids must contain unique non-empty strings"));
+                }
+                if (!m_plan->resourceIds.contains(value.toString())) {
+                    return ToolResult::failure(
+                        QStringLiteral("PLAN_GROUP_NOT_FOUND"),
+                        QStringLiteral("Resource %1 is not an operation group in the reviewed plan")
+                            .arg(value.toString()));
+                }
+                requested.insert(value.toString());
+            }
+            selected_resource_ids.clear();
+            for (const QString &id : m_plan->resourceIds) {
+                if (requested.contains(id)) selected_resource_ids.append(id);
+            }
+        }
         if (m_workspace->hasOpenTransaction()) {
             return ToolResult::failure(
                 QStringLiteral("TRANSACTION_OPEN"),
@@ -706,14 +751,18 @@ public:
         }
 
         const InputBatch current = buildInputs(
-            m_workspace, QJsonValue(), m_plan->resourceIds);
+            m_workspace, QJsonValue(), selected_resource_ids);
         if (!current.ok) {
             return ToolResult::failure(current.code, current.message);
         }
         QStringList conflicts = pathConflicts(
-            m_plan->paths, current.paths, m_plan->resourceIds);
+            m_plan->paths, current.paths, selected_resource_ids);
+        QSet<QString> selected_set;
+        for (const QString &id : selected_resource_ids) selected_set.insert(id);
+        const NormalizationPlan::Result selected_plan = selectedResult(
+            m_plan->result, selected_set);
         conflicts.append(NormalizationPlan::revisionConflicts(
-            m_plan->result, current.inputs));
+            selected_plan, current.inputs));
         if (!conflicts.isEmpty()) {
             return ToolResult::failure(
                 QStringLiteral("PLAN_STALE"),
@@ -726,8 +775,8 @@ public:
         if (rebuilt.cancelled || isCancelled()) {
             return ToolResult::cancelled();
         }
-        if (!rebuilt.ok || rebuilt.planId != m_plan->result.planId ||
-            rebuilt.applyFiles != m_plan->resourceIds.size()) {
+        if (!rebuilt.ok || rebuilt.planId != selected_plan.planId ||
+            rebuilt.applyFiles != selected_resource_ids.size()) {
             return ToolResult::failure(
                 QStringLiteral("PLAN_STALE"),
                 QStringLiteral("Revalidated paragraph output differs from the reviewed plan"));
@@ -755,6 +804,12 @@ public:
         data.insert(QStringLiteral("plan_id"), m_plan->id);
         data.insert(QStringLiteral("plan_digest"), m_plan->digest);
         data.insert(QStringLiteral("book_revision"), static_cast<qint64>(m_plan->bookRevision));
+        data.insert(QStringLiteral("available_operation_groups"),
+                    m_plan->resourceIds.size());
+        data.insert(QStringLiteral("selected_operation_groups"),
+                    selected_resource_ids.size());
+        data.insert(QStringLiteral("selected_resource_ids"),
+                    QJsonArray::fromStringList(selected_resource_ids));
         data.insert(QStringLiteral("staged_files"), rebuilt.applyFiles);
         data.insert(QStringLiteral("staged_conversions"), rebuilt.conversionCount);
         data.insert(QStringLiteral("requires_transaction_preview"), true);
@@ -882,14 +937,22 @@ void registerDivParagraphTools(ToolRegistry *registry,
     addTool(
         registry,
         QStringLiteral("paragraphs.apply"),
-        QStringLiteral("Revalidate and stage exactly the reviewed native DIV-paragraph plan in an exclusive transaction. Requires matching plan_id, plan_digest, and book revision. The live Book remains unchanged until transaction.preview and transaction.commit."),
+        QStringLiteral("Revalidate and stage the approved XHTML operation groups from exactly the reviewed native DIV-paragraph plan in an exclusive transaction. Optional selected_resource_ids must be a non-empty subset of that plan. Requires matching plan_id, plan_digest, and book revision. The live Book remains unchanged until transaction.preview and transaction.commit."),
         ToolRisk::Bulk, true, true,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
                 { QStringLiteral("plan_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
                 { QStringLiteral("plan_digest"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                { QStringLiteral("expected_book_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+                { QStringLiteral("expected_book_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("selected_resource_ids"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("items"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") }
+                    } },
+                    { QStringLiteral("minItems"), 1 },
+                    { QStringLiteral("uniqueItems"), true }
+                } }
             } },
             { QStringLiteral("required"), QJsonArray {
                 QStringLiteral("plan_id"),

@@ -226,7 +226,10 @@ int main()
         registry.find(QStringLiteral("paragraphs.apply"))->descriptor();
     Require(apply_descriptor.risk == ToolRisk::Bulk
                 && apply_descriptor.mutatesBook
-                && apply_descriptor.supportsPreview,
+                && apply_descriptor.supportsPreview
+                && apply_descriptor.inputSchema.value(QStringLiteral("properties"))
+                    .toObject().value(QStringLiteral("selected_resource_ids"))
+                    .toObject().value(QStringLiteral("uniqueItems")).toBool(),
             "paragraph apply risk and preview metadata are incorrect");
     PermissionPolicy permission_policy;
     Require(permission_policy.evaluate(AgentMode::Ask, apply_descriptor)
@@ -309,6 +312,87 @@ int main()
             "review plan must contain a bounded source diff");
     Require(QJsonDocument(plan.data).toJson(QJsonDocument::Compact).size() < 16384,
             "native plan response must remain bounded");
+
+    MemoryBookWorkspace grouped_book = sampleBook(false, true);
+    ToolRegistry grouped_registry;
+    registerDivParagraphTools(&grouped_registry, &grouped_book);
+    const ToolResult grouped_analysis = run(
+        grouped_registry, QStringLiteral("paragraphs.analyze"));
+    const ToolResult grouped_plan = run(
+        grouped_registry, QStringLiteral("paragraphs.plan"),
+        QJsonObject {
+            { QStringLiteral("analysis_id"),
+              grouped_analysis.data.value(QStringLiteral("analysis_id")) }
+        });
+    const QJsonArray operation_groups = grouped_plan.data.value(
+        QStringLiteral("operation_groups")).toArray();
+    Require(grouped_plan.ok
+                && grouped_plan.data.value(
+                    QStringLiteral("operation_groups_independent")).toBool()
+                && operation_groups.size() == 2
+                && operation_groups.first().toObject()
+                    .value(QStringLiteral("independently_applicable")).toBool()
+                && operation_groups.first().toObject()
+                    .value(QStringLiteral("resource_ids")).toArray().size() == 1,
+            "paragraph plan must declare one independently applicable group per XHTML resource");
+    PlanBinding grouped_binding;
+    grouped_binding.analysisId = grouped_analysis.data.value(
+        QStringLiteral("analysis_id")).toString();
+    grouped_binding.planId = grouped_plan.data.value(
+        QStringLiteral("plan_id")).toString();
+    grouped_binding.digest = grouped_plan.data.value(
+        QStringLiteral("plan_digest")).toString();
+    grouped_binding.revision = static_cast<quint64>(
+        grouped_plan.data.value(QStringLiteral("book_revision")).toInteger());
+    QJsonObject empty_group_arguments = bindingArguments(grouped_binding);
+    empty_group_arguments.insert(
+        QStringLiteral("selected_resource_ids"), QJsonArray());
+    const ToolResult empty_groups = run(
+        grouped_registry, QStringLiteral("paragraphs.apply"),
+        empty_group_arguments);
+    Require(!empty_groups.ok
+                && empty_groups.code == QStringLiteral("PLAN_GROUP_SELECTION_EMPTY")
+                && !grouped_book.hasOpenTransaction(),
+            "an empty operation-group selection must fail before transaction creation");
+    QJsonObject foreign_group_arguments = bindingArguments(grouped_binding);
+    foreign_group_arguments.insert(
+        QStringLiteral("selected_resource_ids"),
+        QJsonArray { QStringLiteral("not-reviewed") });
+    const ToolResult foreign_group = run(
+        grouped_registry, QStringLiteral("paragraphs.apply"),
+        foreign_group_arguments);
+    Require(!foreign_group.ok
+                && foreign_group.code == QStringLiteral("PLAN_GROUP_NOT_FOUND")
+                && !grouped_book.hasOpenTransaction(),
+            "an operation group outside the reviewed plan must fail closed");
+    const QString first_group_original = grouped_book.resourceText(
+        QStringLiteral("safe"));
+    QJsonObject selected_group_arguments = bindingArguments(grouped_binding);
+    selected_group_arguments.insert(
+        QStringLiteral("selected_resource_ids"),
+        QJsonArray { QStringLiteral("safe-2") });
+    const ToolResult selected_group = run(
+        grouped_registry, QStringLiteral("paragraphs.apply"),
+        selected_group_arguments);
+    Require(selected_group.ok && selected_group.previewOnly
+                && selected_group.data.value(
+                    QStringLiteral("available_operation_groups")).toInt() == 2
+                && selected_group.data.value(
+                    QStringLiteral("selected_operation_groups")).toInt() == 1
+                && selected_group.data.value(
+                    QStringLiteral("selected_resource_ids")).toArray()
+                    == QJsonArray { QStringLiteral("safe-2") },
+            "paragraph apply must report the exact approved operation-group subset");
+    Require(grouped_book.hasOpenTransaction()
+                && grouped_book.workingText(QStringLiteral("safe"))
+                    == first_group_original
+                && grouped_book.workingText(QStringLiteral("safe-2"))
+                    .contains(QStringLiteral("<p class='para'"))
+                && grouped_book.previewTransaction().data
+                    .value(QStringLiteral("changes")).toArray().size() == 1,
+            "selected paragraph groups must stage atomically without touching unchecked XHTML");
+    Require(grouped_book.rollbackTransaction().ok,
+            "selected operation-group test transaction must roll back cleanly");
 
     PlanBinding binding;
     binding.analysisId = analysis_id;
