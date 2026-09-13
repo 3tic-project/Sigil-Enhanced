@@ -113,6 +113,13 @@ struct ModelUsage {
     bool isReported() const;
 };
 
+struct ModelResponseTiming {
+    qint64 firstByteMs = -1;
+    qint64 firstEventMs = -1;
+
+    bool isReported() const;
+};
+
 struct ModelTurn {
     QString reasoning;
     QString content;
@@ -120,6 +127,7 @@ struct ModelTurn {
     QString finishReason;
     QString error;
     ModelUsage usage;
+    ModelResponseTiming timing;
 };
 
 QString eventTypeName(AgentEventType type);
@@ -131,6 +139,8 @@ QJsonObject toolCallToJson(const ToolCall &call);
 ToolCall toolCallFromJson(const QJsonObject &object);
 QJsonObject modelUsageToJson(const ModelUsage &usage);
 ModelUsage modelUsageFromJson(const QJsonObject &object);
+QJsonObject modelResponseTimingToJson(const ModelResponseTiming &timing);
+ModelResponseTiming modelResponseTimingFromJson(const QJsonObject &object);
 
 } // namespace SigilAgent
 

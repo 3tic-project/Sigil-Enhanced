@@ -45,7 +45,8 @@ QJsonObject makeHttpTrace(const QString &url,
                           int status,
                           qint64 elapsed_ms,
                           const QString &error,
-                          const QString &secret)
+                          const QString &secret,
+                          const ModelResponseTiming &timing)
 {
     QJsonObject trace {
         { QStringLiteral("method"), QStringLiteral("POST") },
@@ -67,6 +68,12 @@ QJsonObject makeHttpTrace(const QString &url,
         trace.insert(QStringLiteral("response_truncated"), true);
     } else {
         trace.insert(QStringLiteral("response_truncated"), false);
+    }
+    if (timing.firstByteMs >= 0) {
+        trace.insert(QStringLiteral("first_byte_ms"), timing.firstByteMs);
+    }
+    if (timing.firstEventMs >= 0) {
+        trace.insert(QStringLiteral("first_model_event_ms"), timing.firstEventMs);
     }
     return trace;
 }
@@ -187,31 +194,49 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
         http.setRawHeader("X-Title", m_config.httpTitle.toUtf8());
     }
 
+    QElapsedTimer timer;
+    timer.start();
     QNetworkAccessManager manager;
     QNetworkReply *reply = manager.post(http, payload);
     StreamingJsonDecoder decoder;
     QByteArray raw;
-    QElapsedTimer timer;
-    timer.start();
-    QEventLoop loop;
-    QObject::connect(reply, &QNetworkReply::readyRead, reply, [reply, &decoder, &sink, &turn, &raw]() {
-        if (sink.isCancelled()) {
-            reply->abort();
-            return;
-        }
-        const QByteArray chunk = reply->readAll();
-        raw += chunk;
-        decoder.feed(chunk);
+    qint64 first_byte_ms = -1;
+    qint64 first_event_ms = -1;
+    const auto publish_deltas = [&decoder, &sink, &timer, &first_event_ms]() {
         const QList<StreamDelta> deltas = decoder.takeDeltas();
         for (const StreamDelta &delta : deltas) {
+            const bool meaningful = !delta.reasoning.isEmpty()
+                || !delta.content.isEmpty() || !delta.toolCalls.isEmpty()
+                || !delta.finishReason.isEmpty();
+            if (meaningful && first_event_ms < 0) first_event_ms = timer.elapsed();
             if (!delta.reasoning.isEmpty()) sink.onReasoningDelta(delta.reasoning);
             if (!delta.content.isEmpty()) sink.onContentDelta(delta.content);
             if (!delta.toolCalls.isEmpty()) sink.onToolCallsUpdated(delta.toolCalls);
         }
+    };
+    const auto consume_chunk = [&decoder, &turn, &raw, &timer, &first_byte_ms,
+                                &publish_deltas, reply](const QByteArray &chunk) {
+        if (chunk.isEmpty()) return;
+        if (first_byte_ms < 0) first_byte_ms = timer.elapsed();
+        raw += chunk;
+        decoder.feed(chunk);
+        publish_deltas();
         if (!decoder.error().isEmpty()) {
             turn.error = decoder.error();
             reply->abort();
         }
+    };
+    const auto apply_timing = [&turn, &first_byte_ms, &first_event_ms]() {
+        turn.timing.firstByteMs = first_byte_ms;
+        turn.timing.firstEventMs = first_event_ms;
+    };
+    QEventLoop loop;
+    QObject::connect(reply, &QNetworkReply::readyRead, reply, [reply, &sink, &consume_chunk]() {
+        if (sink.isCancelled()) {
+            reply->abort();
+            return;
+        }
+        consume_chunk(reply->readAll());
     });
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
 
@@ -239,26 +264,27 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     if (sink.isCancelled()) {
         turn.error = QStringLiteral("cancelled");
         turn.finishReason = QStringLiteral("cancelled");
+        apply_timing();
         recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
                                   reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
-                                  timer.elapsed(), QStringLiteral("cancelled"), m_config.apiKey));
+                                  timer.elapsed(), QStringLiteral("cancelled"), m_config.apiKey,
+                                  turn.timing));
         reply->deleteLater();
         return turn;
     }
     if (timed_out) {
         turn.error = QStringLiteral("Request timed out after %1 ms").arg(timeout_ms);
+        apply_timing();
         recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
                                   reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
-                                  timer.elapsed(), turn.error, m_config.apiKey));
+                                  timer.elapsed(), turn.error, m_config.apiKey, turn.timing));
         reply->deleteLater();
         return turn;
     }
 
     const QByteArray leftover = reply->readAll();
     if (!leftover.isEmpty()) {
-        raw += leftover;
-        decoder.feed(leftover);
-        if (turn.error.isEmpty() && !decoder.error().isEmpty()) turn.error = decoder.error();
+        consume_chunk(leftover);
     }
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     if (reply->error() != QNetworkReply::NoError
@@ -279,10 +305,13 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     }
     if (turn.error.isEmpty()) {
         turn = decoder.finish();
+        publish_deltas();
     }
+    apply_timing();
     turn.error = redactConfiguredSecret(turn.error, m_config.apiKey);
     recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
-                              status, timer.elapsed(), turn.error, m_config.apiKey));
+                              status, timer.elapsed(), turn.error, m_config.apiKey,
+                              turn.timing));
     reply->deleteLater();
     return turn;
 }

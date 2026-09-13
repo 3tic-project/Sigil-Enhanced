@@ -107,6 +107,15 @@ int main()
                 && usage_json.value(QStringLiteral("reasoning_tokens")).toInteger() == 12,
             "reported usage must serialize to the provider-neutral event schema");
 
+    ModelResponseTiming timing;
+    timing.firstByteMs = 14;
+    timing.firstEventMs = 37;
+    const ModelResponseTiming timing_round_trip =
+        modelResponseTimingFromJson(modelResponseTimingToJson(timing));
+    Require(timing_round_trip.firstByteMs == 14
+                && timing_round_trip.firstEventMs == 37,
+            "response timing must round-trip through the lifecycle event schema");
+
     StreamingJsonDecoder alias_decoder;
     alias_decoder.feed(QByteArray(
         "data: {\"usage\":{\"input_tokens\":7,\"output_tokens\":3},"

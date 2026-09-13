@@ -43,6 +43,18 @@ public:
     bool isCancelled() const override { return false; }
 };
 
+class RecordingSink : public SigilAgent::ModelStreamSink
+{
+public:
+    void onReasoningDelta(const QString &text) override { reasoning += text; }
+    void onContentDelta(const QString &text) override { content += text; }
+    void onToolCallsUpdated(const QList<SigilAgent::ToolCall> &) override {}
+    bool isCancelled() const override { return false; }
+
+    QString reasoning;
+    QString content;
+};
+
 } // namespace
 
 int main(int argc, char *argv[])
@@ -427,6 +439,86 @@ int main(int argc, char *argv[])
                 && !probe_body.contains(QStringLiteral("stream_options"))
                 && !probe_body.contains(QStringLiteral("tools")),
             "connection probe must be a tiny no-tools request without optional extensions");
+
+    QTcpServer timing_server;
+    Require(timing_server.listen(QHostAddress::LocalHost, 0),
+            "local response timing server must listen");
+    QByteArray timing_http_request;
+    QObject::connect(&timing_server, &QTcpServer::newConnection,
+                     [&timing_server, &timing_http_request]() {
+        while (timing_server.hasPendingConnections()) {
+            QTcpSocket *socket = timing_server.nextPendingConnection();
+            QObject::connect(socket, &QTcpSocket::readyRead, socket,
+                             [socket, &timing_http_request]() {
+                timing_http_request += socket->readAll();
+                if (socket->property("responseScheduled").toBool()) return;
+                const int header_end = timing_http_request.indexOf("\r\n\r\n");
+                if (header_end < 0) return;
+                const QRegularExpression content_length(
+                    QStringLiteral("Content-Length: \\s*(\\d+)"),
+                    QRegularExpression::CaseInsensitiveOption);
+                const QRegularExpressionMatch match = content_length.match(
+                    QString::fromLatin1(timing_http_request.left(header_end)));
+                if (!match.hasMatch()) return;
+                const int body_size = match.captured(1).toInt();
+                if (timing_http_request.size() < header_end + 4 + body_size) return;
+                socket->setProperty("responseScheduled", true);
+                QTimer::singleShot(30, socket, [socket]() {
+                    socket->write(
+                        "HTTP/1.1 200 OK\r\n"
+                        "Content-Type: text/event-stream\r\n"
+                        "Connection: close\r\n\r\n"
+                        ": keepalive\n\n");
+                    socket->flush();
+                });
+                QTimer::singleShot(100, socket, [socket]() {
+                    socket->write(
+                        "data: {\"choices\":[{\"delta\":{\"content\":\"OK\"},"
+                        "\"finish_reason\":\"stop\"}]}");
+                    socket->flush();
+                    socket->disconnectFromHost();
+                });
+            });
+        }
+    });
+
+    OpenAIProviderConfig timing_config;
+    timing_config.baseUrl = QStringLiteral("http://127.0.0.1:%1/chat/completions")
+                                .arg(timing_server.serverPort());
+    timing_config.apiKey = QStringLiteral("sk-timing-test-secret");
+    timing_config.model = QStringLiteral("timing-model");
+    timing_config.reasoningProtocol = ReasoningProtocol::None;
+    timing_config.requestUsage = false;
+    OpenAICompatibleProvider timing_provider(timing_config);
+    ModelRequest timing_model_request;
+    timing_model_request.model = timing_config.model;
+    timing_model_request.includeUsage = false;
+    timing_model_request.timeoutMs = 2000;
+    ChatMessage timing_user;
+    timing_user.role = QStringLiteral("user");
+    timing_user.content = QStringLiteral("hello");
+    timing_model_request.messages.append(timing_user);
+    RecordingSink timing_sink;
+    const ModelTurn timed_turn =
+        timing_provider.stream(timing_model_request, timing_sink);
+    Require(timed_turn.error.isEmpty()
+                && timed_turn.content == QStringLiteral("OK")
+                && timing_sink.content == QStringLiteral("OK"),
+            "a final SSE event without a trailing newline must reach both the turn and sink");
+    Require(timed_turn.timing.firstByteMs >= 15
+                && timed_turn.timing.firstByteMs < 1000
+                && timed_turn.timing.firstEventMs >= 70
+                && timed_turn.timing.firstEventMs < 1500
+                && timed_turn.timing.firstEventMs > timed_turn.timing.firstByteMs,
+            "response timing must distinguish an early keepalive byte from the first model event");
+    const QJsonArray timing_traces = timing_provider.debugTraces();
+    const QJsonObject timing_trace = timing_traces.isEmpty()
+        ? QJsonObject() : timing_traces.at(timing_traces.size() - 1).toObject();
+    Require(timing_trace.value(QStringLiteral("first_byte_ms")).toInteger()
+                    == timed_turn.timing.firstByteMs
+                && timing_trace.value(QStringLiteral("first_model_event_ms")).toInteger()
+                    == timed_turn.timing.firstEventMs,
+            "HTTP traces must retain the same safe response latency breakdown");
 
     QTcpServer error_server;
     Require(error_server.listen(QHostAddress::LocalHost, 0),

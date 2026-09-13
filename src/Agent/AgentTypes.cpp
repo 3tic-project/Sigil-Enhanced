@@ -172,4 +172,35 @@ ModelUsage modelUsageFromJson(const QJsonObject &object)
     return usage;
 }
 
+bool ModelResponseTiming::isReported() const
+{
+    return firstByteMs >= 0 || firstEventMs >= 0;
+}
+
+QJsonObject modelResponseTimingToJson(const ModelResponseTiming &timing)
+{
+    QJsonObject object;
+    if (timing.firstByteMs >= 0) {
+        object.insert(QStringLiteral("first_byte_ms"), timing.firstByteMs);
+    }
+    if (timing.firstEventMs >= 0) {
+        object.insert(QStringLiteral("first_model_event_ms"), timing.firstEventMs);
+    }
+    return object;
+}
+
+ModelResponseTiming modelResponseTimingFromJson(const QJsonObject &object)
+{
+    const auto read_milliseconds = [&object](const QString &name) {
+        const QJsonValue value = object.value(name);
+        if (!value.isDouble()) return qint64(-1);
+        const qint64 milliseconds = value.toInteger(-1);
+        return milliseconds >= 0 ? milliseconds : qint64(-1);
+    };
+    ModelResponseTiming timing;
+    timing.firstByteMs = read_milliseconds(QStringLiteral("first_byte_ms"));
+    timing.firstEventMs = read_milliseconds(QStringLiteral("first_model_event_ms"));
+    return timing;
+}
+
 } // namespace SigilAgent
