@@ -23438,6 +23438,13 @@ Continue using the requested filename?</translation>
     <message><source>Run status: %1</source><translation>Run status: %1</translation></message>
     <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</translation></message>
     <message><source>Whole run: in progress</source><translation>Whole run: in progress</translation></message>
+    <message><source>Run token usage: not requested</source><translation>Run token usage: not requested</translation></message>
+    <message><source>Run token usage: awaiting completed requests</source><translation>Run token usage: awaiting completed requests</translation></message>
+    <message><source>Run token usage: no model request was sent</source><translation>Run token usage: no model request was sent</translation></message>
+    <message><source>Run token usage: not reported by provider</source><translation>Run token usage: not reported by provider</translation></message>
+    <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>Run token usage: input %1 · output %2 · total %3</translation></message>
+    <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</translation></message>
+    <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>Run usage details: cached input %1 · reasoning %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>Full EPUBCheck: not run.</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>Full EPUBCheck: %1</translation></message>
     <message><source>Recovery: use Sigil Undo where available.</source><translation>Recovery: use Sigil Undo where available.</translation></message>

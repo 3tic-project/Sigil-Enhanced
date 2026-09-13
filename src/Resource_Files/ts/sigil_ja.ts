@@ -27380,6 +27380,13 @@ Continue using the requested filename?</source>
     <message><source>Run status: %1</source><translation>実行状態：%1</translation></message>
     <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>実行全体：%1 ミリ秒 · モデルリクエスト %2 · ツール呼び出し %3 · 完了：%4</translation></message>
     <message><source>Whole run: in progress</source><translation>実行全体：進行中</translation></message>
+    <message><source>Run token usage: not requested</source><translation>実行全体のトークン使用量：要求なし</translation></message>
+    <message><source>Run token usage: awaiting completed requests</source><translation>実行全体のトークン使用量：リクエストの完了待ち</translation></message>
+    <message><source>Run token usage: no model request was sent</source><translation>実行全体のトークン使用量：モデルリクエストは未送信</translation></message>
+    <message><source>Run token usage: not reported by provider</source><translation>実行全体のトークン使用量：プロバイダーからの報告なし</translation></message>
+    <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>実行全体のトークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
+    <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>実行全体のトークン使用量（%2 件中 %1 件のリクエストが報告済み）：入力 %3 · 出力 %4 · 合計 %5</translation></message>
+    <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>実行全体の使用量詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完全な EPUBCheck：未実行。</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>完全な EPUBCheck：%1</translation></message>
     <message><source>Recovery: use Sigil Undo where available.</source><translation>復元：利用可能な場合は Sigil の「元に戻す」を使用してください。</translation></message>

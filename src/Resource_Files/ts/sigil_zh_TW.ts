@@ -27365,6 +27365,13 @@ Continue using the requested filename?</source>
     <message><source>Run status: %1</source><translation>執行狀態：%1</translation></message>
     <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>整輪執行：%1 毫秒 · 模型請求 %2 · 工具呼叫 %3 · 完成時間：%4</translation></message>
     <message><source>Whole run: in progress</source><translation>整輪執行：進行中</translation></message>
+    <message><source>Run token usage: not requested</source><translation>整輪 Token 用量：未請求</translation></message>
+    <message><source>Run token usage: awaiting completed requests</source><translation>整輪 Token 用量：正在等待請求完成</translation></message>
+    <message><source>Run token usage: no model request was sent</source><translation>整輪 Token 用量：未傳送模型請求</translation></message>
+    <message><source>Run token usage: not reported by provider</source><translation>整輪 Token 用量：提供者未回報</translation></message>
+    <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>整輪 Token 用量：輸入 %1 · 輸出 %2 · 總計 %3</translation></message>
+    <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>整輪 Token 用量（%1/%2 個請求已回報）：輸入 %3 · 輸出 %4 · 總計 %5</translation></message>
+    <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>整輪用量詳情：快取輸入 %1 · 推理 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完整 EPUBCheck：未執行。</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>完整 EPUBCheck：%1</translation></message>
     <message><source>Recovery: use Sigil Undo where available.</source><translation>復原：可用時請使用 Sigil 的復原功能。</translation></message>
