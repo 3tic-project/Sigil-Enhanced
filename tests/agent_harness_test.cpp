@@ -4,6 +4,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QThread>
 
 #include "Agent/Core/AgentCancellation.h"
 #include "Agent/Core/AgentController.h"
@@ -115,6 +116,7 @@ int main()
     AutoApprovalGate approve(true);
     MockModelProvider provider;
     provider.setScript([](const ModelRequest &request) {
+        QThread::msleep(8);
         bool has_summary = false;
         for (const ChatMessage &message : request.messages) {
             if (message.role == QLatin1String("tool")
@@ -128,6 +130,8 @@ int main()
         turn.usage.totalTokens = turn.usage.inputTokens + turn.usage.outputTokens;
         turn.usage.cachedInputTokens = has_summary ? 100 : 60;
         turn.usage.reasoningTokens = has_summary ? 4 : 6;
+        turn.timing.firstByteMs = 2;
+        turn.timing.firstEventMs = 5;
         if (!has_summary) {
             ToolCall call;
             call.id = QStringLiteral("call_summary");
@@ -197,6 +201,13 @@ int main()
                         == usage.value(QStringLiteral("input_tokens")).toInteger()
                             + usage.value(QStringLiteral("output_tokens")).toInteger(),
                 "completed requests must retain exact provider-reported token usage");
+        const QJsonObject timing =
+            completed.value(QStringLiteral("response_timing")).toObject();
+        Require(timing.value(QStringLiteral("first_byte_ms")).toInteger() == 2
+                    && timing.value(QStringLiteral("first_model_event_ms")).toInteger() == 5
+                    && completed.value(QStringLiteral("duration_ms")).toInteger()
+                        >= timing.value(QStringLiteral("first_model_event_ms")).toInteger(),
+                "completed requests must retain measured first-byte and first-event latency");
     }
     const QList<AgentEvent> successful_run_states =
         session.eventsOf(AgentEventType::RunStateChanged);
@@ -239,6 +250,7 @@ int main()
     MockModelProvider failed_provider;
     ModelTurn failed_turn;
     failed_turn.error = QStringLiteral("HTTP 401: invalid credentials");
+    failed_turn.timing.firstByteMs = 0;
     failed_provider.addTurn(failed_turn);
     AgentRunner failed_runner(&failed_session, &failed_provider, &failed_registry, &failed_book,
                               &policy, &approve, &failed_cancellation);
@@ -260,6 +272,11 @@ int main()
                 && failed_request.value(QStringLiteral("message")).toString()
                     .contains(QStringLiteral("401")),
             "model failure events must carry the request identity and readable error");
+    Require(failed_request.value(QStringLiteral("response_timing")).toObject()
+                    .value(QStringLiteral("first_byte_ms")).toInteger() == 0
+                && !failed_request.value(QStringLiteral("response_timing")).toObject()
+                        .contains(QStringLiteral("first_model_event_ms")),
+            "provider failures must retain an observed response byte without inventing a model event");
     Require(!failed_provider.lastRequest().includeUsage
                 && !failed_session.eventsOf(AgentEventType::ModelRequestStarted).constLast()
                         .payload.value(QStringLiteral("usage_requested")).toBool(),
@@ -325,6 +342,8 @@ int main()
             request_cancel_token.request(AgentCancellationReason::UserStop);
             ModelTurn turn;
             turn.content = QStringLiteral("must be discarded");
+            turn.timing.firstByteMs = 0;
+            turn.timing.firstEventMs = 0;
             return turn;
         });
     AgentRunner request_cancel_runner(
@@ -341,6 +360,9 @@ int main()
                         .value(QStringLiteral("request_id")).toString().isEmpty()
                 && cancelled_requests.first().payload
                         .value(QStringLiteral("duration_ms")).toInteger() >= 0
+                && cancelled_requests.first().payload
+                        .value(QStringLiteral("response_timing")).toObject()
+                        .value(QStringLiteral("first_model_event_ms")).toInteger() == 0
                 && !hasEvent(request_cancel_session, AgentEventType::ModelRequestFailed),
             "cancelled provider requests must publish a timed cancellation outcome");
     const QJsonObject cancelled_run = request_cancel_session

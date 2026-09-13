@@ -584,22 +584,34 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         ModelTurn turn = m_provider->stream(request, sink);
         const qint64 duration_ms = request_timer.elapsed();
         if (m_cancellation && m_cancellation->isCancelled()) {
-            m_session->append(AgentEventType::ModelRequestCancelled, QJsonObject {
+            QJsonObject cancelled_payload {
                 { QStringLiteral("request_id"), request_id },
                 { QStringLiteral("step"), steps },
                 { QStringLiteral("model"), request.model },
                 { QStringLiteral("duration_ms"), duration_ms }
-            });
+            };
+            if (turn.timing.isReported()) {
+                cancelled_payload.insert(
+                    QStringLiteral("response_timing"),
+                    modelResponseTimingToJson(turn.timing));
+            }
+            m_session->append(AgentEventType::ModelRequestCancelled, cancelled_payload);
             return cancelRun();
         }
         if (!turn.error.isEmpty()) {
-            m_session->append(AgentEventType::ModelRequestFailed, QJsonObject {
+            QJsonObject failed_payload {
                 { QStringLiteral("request_id"), request_id },
                 { QStringLiteral("step"), steps },
                 { QStringLiteral("model"), request.model },
                 { QStringLiteral("duration_ms"), duration_ms },
                 { QStringLiteral("message"), turn.error }
-            });
+            };
+            if (turn.timing.isReported()) {
+                failed_payload.insert(
+                    QStringLiteral("response_timing"),
+                    modelResponseTimingToJson(turn.timing));
+            }
+            m_session->append(AgentEventType::ModelRequestFailed, failed_payload);
             m_session->append(AgentEventType::Error, QJsonObject {
                 { QStringLiteral("message"), turn.error }
             });
@@ -622,6 +634,11 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         };
         if (turn.usage.isReported()) {
             completed_payload.insert(QStringLiteral("usage"), modelUsageToJson(turn.usage));
+        }
+        if (turn.timing.isReported()) {
+            completed_payload.insert(
+                QStringLiteral("response_timing"),
+                modelResponseTimingToJson(turn.timing));
         }
         m_session->append(AgentEventType::ModelRequestCompleted, completed_payload);
         if (!bookTargetMatchesRun()) {
