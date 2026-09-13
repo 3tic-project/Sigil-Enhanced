@@ -284,6 +284,14 @@ HTTP 出错时 Error 卡会带上状态码和服务器返回的 `error.message`�
 
 协议仍是 OpenAI 兼容 Chat Completions。流式响应里 `reasoning_content`（以及 OpenRouter 的 `reasoning`）、`content`、`tool_calls` 分开解析。当某次请求带了 `tools` 时，同一会话后续请求必须回放助手的 `reasoning_content`（否则部分推理模型会返回 400）；不带 `tools` 的请求可以省略先前的思维链。
 
+### 流式界面刷新
+
+Agent 仍逐段接收并记录模型输出，但停靠栏最多约每 33 ms 合并刷新一次 Thinking 和
+Answer，避免长回复为每个 token 重新排版整个标签。请求完成、失败、取消、工具调用、换轮
+或其他非增量事件到达前会同步冲刷尚未显示的文本；完整 assistant 消息还会校准最终正文，
+因此合并刷新不会截断尾段或改变会话事件顺序。New Session 与 transcript 重置会丢弃属于旧
+会话、尚未显示的缓冲，防止延迟计时器把旧回复写进新会话。
+
 Native Agent 不调用 MCP，也不把 MCP 当作内部 RPC。`paragraphs.*` 与原生
 `toc.inspect_hierarchy` / `toc.plan_transform` / `toc.apply_transform` 当前是 Native
 Agent 专用工具，不在公共 `sigil.*` MCP catalog 中。

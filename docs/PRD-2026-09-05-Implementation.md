@@ -1207,3 +1207,38 @@ Agent 测试连续 3 轮共 39 次通过。四份目录可生成 `.qm` 且 0 unf
 目前只消费两类原生工具已经返回的 bounded changes，未提供整文件统一 diff、专用双栏预览
 或卡片内独立操作组勾选；改变段落资源子集仍须重新生成计划。真实三语言 GUI、长片段布局、
 键盘遍历、屏幕阅读器、10,000 节点 TOC 和 Windows/Linux 主题仍待人工/性能验收。
+
+## Native Agent 流式界面增量合并（2026-09-13）
+
+分支：`feature/agent-stream-ui-coalescing`。主要提交：`1de4fedb3`（Dock 增量合并与压力
+回归）、`d0eca8b0e`（宿主热路径去除重复状态刷新）和 `af2e8c147`（待刷新缓冲取消回归）。
+
+### 刷新预算与顺序保证
+
+- `AssistantDelta` 只向 reasoning/content 缓冲追加字符串。single-shot timer 以 33 ms 为
+  刷新周期，同一周期的两类文本合并为一个 render batch；持续流仍保持约 30 FPS 的渐进
+  反馈，不再让每个细碎 token 各触发一次 QLabel 文本设置、布局和滚动范围更新。
+- 任意非增量事件进入 Dock 前同步冲刷缓冲，覆盖正常完成、失败、取消、工具调用和下一用户
+  轮次。最终 `AssistantMessage` 以 Provider 的完整正文校准卡片，并跳过内容完全相同的
+  `setText`；既保留事件顺序和尾段，也不会因完成事件重复排版同一正文。
+- transcript reset 与 session ID 变化会先停止 timer 并清空旧缓冲；延迟回调不能在新会话中
+  生成旧卡片。`streamFlushIntervalMs` / `streamRenderBatches` 作为无正文的自动化属性公开
+  刷新预算与实际批次数，不进入会话或导出。
+- MainWindow 不再为每个 `AssistantDelta` 重跑 `setRunState` 及其按钮、重试、任务恢复刷新。
+  Runner 在开始流式传输前已有显式 `streaming_response` 状态事件；其他事件仍保留原宿主
+  同步路径，因此本切片不改变停止、批准、失败和完成状态语义。
+
+### 测试证据与剩余项
+
+`agent_dock` 覆盖 timer 到期时 reasoning/content 同批刷新，以及 2,000 个连续 content chunk
+在终止事件前零卡片渲染、终止时一次完整输出，并验证 transcript reset 取消待执行 timer；
+多轮卡片隔离继续通过。
+`agent_dock_contract` 固定 Runner 先发布 streaming 状态、MainWindow 再跳过 delta 状态刷新
+的接线边界。完整 Sigil 构建及 42 个固定 Python 依赖通过；13 项 Agent 测试连续 3 轮共
+39 次通过。四份目录可生成 `.qm` 且 0 unfinished；严格简中、繁中、日文覆盖均通过，非英文
+目录各覆盖当前 5,693 条活跃源文。
+
+本切片减少 GUI 主线程的更新次数，不改变 Provider 网络读取、decoder、session 事件记录或
+导出语义，也不宣称提高模型吞吐。33 ms 是交互刷新预算而非逐 token SLA；超长单卡仍使用
+QLabel 保存完整文本，尚未做虚拟化/分块文档，也没有真实慢速在线服务、低端硬件和
+Windows/Linux/macOS 三平台 GUI profiler 数据。
