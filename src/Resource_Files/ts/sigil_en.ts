@@ -23477,6 +23477,29 @@ Continue using the requested filename?</translation>
     <message><source>Not observed</source><translation>Not observed</translation></message>
     <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>Response latency: first byte %1 ms · first model event %2 ms</translation></message>
     <message><source>Response latency: not observed</source><translation>Response latency: not observed</translation></message>
+    <message><source>The live book is unchanged. Review this plan before approving its apply step.</source><translation>The live book is unchanged. Review this plan before approving its apply step.</translation></message>
+    <message><source>Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)</source><translation>Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)</translation></message>
+    <message><source>Other files: %1 review only · %2 skipped · %3 failed</source><translation>Other files: %1 review only · %2 skipped · %3 failed</translation></message>
+    <message><source>Plan scope: XHTML only; no CSS, OPF, or resource additions.</source><translation>Plan scope: XHTML only; no CSS, OPF, or resource additions.</translation></message>
+    <message><source>Plan may change CSS, OPF, or resource inventory; inspect each change.</source><translation>Plan may change CSS, OPF, or resource inventory; inspect each change.</translation></message>
+    <message><source>File: %1 · %2 conversion(s) · %3 protected item(s)</source><translation>File: %1 · %2 conversion(s) · %3 protected item(s)</translation></message>
+    <message><source>Before excerpt:</source><translation>Before excerpt:</translation></message>
+    <message><source>After excerpt:</source><translation>After excerpt:</translation></message>
+    <message><source>TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)</source><translation>TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)</translation></message>
+    <message><source>Preorder preserved: %1 · XHTML heading levels changed: %2</source><translation>Preorder preserved: %1 · XHTML heading levels changed: %2</translation></message>
+    <message><source>Yes</source><translation>Yes</translation></message>
+    <message><source>No</source><translation>No</translation></message>
+    <message><source>Entry: %1 · %2</source><translation>Entry: %1 · %2</translation></message>
+    <message><source>Depth: %1 → %2 · Parent: %3 → %4</source><translation>Depth: %1 → %2 · Parent: %3 → %4</translation></message>
+    <message><source>Additional TOC changes are omitted from this bounded review.</source><translation>Additional TOC changes are omitted from this bounded review.</translation></message>
+    <message><source>This native plan is ready for review.</source><translation>This native plan is ready for review.</translation></message>
+    <message><source>Local validation: %1</source><translation>Local validation: %1</translation></message>
+    <message><source>Review paragraph plan</source><translation>Review paragraph plan</translation></message>
+    <message><source>Review TOC plan</source><translation>Review TOC plan</translation></message>
+    <message><source>Open %1</source><translation>Open %1</translation></message>
+    <message><source>Open this resource in Sigil for plan review.</source><translation>Open this resource in Sigil for plan review.</translation></message>
+    <message><source>Reviewed plan binding: matched.</source><translation>Reviewed plan binding: matched.</translation></message>
+    <message><source>Approval blocked: this apply call does not match a reviewed plan.</source><translation>Approval blocked: this apply call does not match a reviewed plan.</translation></message>
     <message><source>Not reported</source><translation>Not reported</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token usage: input %1 · output %2 · total %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>Usage details: cached input %1 · reasoning %2</translation></message>

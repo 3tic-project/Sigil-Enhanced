@@ -27419,6 +27419,29 @@ Continue using the requested filename?</source>
     <message><source>Not observed</source><translation>未観測</translation></message>
     <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>応答遅延：最初のバイト %1 ミリ秒 · 最初のモデルイベント %2 ミリ秒</translation></message>
     <message><source>Response latency: not observed</source><translation>応答遅延：未観測</translation></message>
+    <message><source>The live book is unchanged. Review this plan before approving its apply step.</source><translation>現在のブックは変更されていません。適用ステップを承認する前に、このプランを確認してください。</translation></message>
+    <message><source>Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)</source><translation>段落正規化：準備完了 %1 ファイル · 変換 %2 件 · 保護項目 %3 件</translation></message>
+    <message><source>Other files: %1 review only · %2 skipped · %3 failed</source><translation>その他のファイル：確認のみ %1 件 · スキップ %2 件 · 失敗 %3 件</translation></message>
+    <message><source>Plan scope: XHTML only; no CSS, OPF, or resource additions.</source><translation>プランの範囲：XHTML のみ。CSS、OPF、リソースの追加はありません。</translation></message>
+    <message><source>Plan may change CSS, OPF, or resource inventory; inspect each change.</source><translation>このプランは CSS、OPF、またはリソース一覧を変更する可能性があります。各変更を確認してください。</translation></message>
+    <message><source>File: %1 · %2 conversion(s) · %3 protected item(s)</source><translation>ファイル：%1 · 変換 %2 件 · 保護項目 %3 件</translation></message>
+    <message><source>Before excerpt:</source><translation>変更前の抜粋：</translation></message>
+    <message><source>After excerpt:</source><translation>変更後の抜粋：</translation></message>
+    <message><source>TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)</source><translation>目次階層：影響を受けるノード %1 件 · 再帰属する兄弟ノード %2 件</translation></message>
+    <message><source>Preorder preserved: %1 · XHTML heading levels changed: %2</source><translation>事前順序を維持：%1 · XHTML 見出しレベルを変更：%2</translation></message>
+    <message><source>Yes</source><translation>はい</translation></message>
+    <message><source>No</source><translation>いいえ</translation></message>
+    <message><source>Entry: %1 · %2</source><translation>項目：%1 · %2</translation></message>
+    <message><source>Depth: %1 → %2 · Parent: %3 → %4</source><translation>深さ：%1 → %2 · 親：%3 → %4</translation></message>
+    <message><source>Additional TOC changes are omitted from this bounded review.</source><translation>この限定レビューでは、その他の目次変更を省略しています。</translation></message>
+    <message><source>This native plan is ready for review.</source><translation>このネイティブプランを確認できます。</translation></message>
+    <message><source>Local validation: %1</source><translation>ローカル検証：%1</translation></message>
+    <message><source>Review paragraph plan</source><translation>段落プランを確認</translation></message>
+    <message><source>Review TOC plan</source><translation>目次プランを確認</translation></message>
+    <message><source>Open %1</source><translation>%1 を開く</translation></message>
+    <message><source>Open this resource in Sigil for plan review.</source><translation>プラン確認のため、このリソースを Sigil で開きます。</translation></message>
+    <message><source>Reviewed plan binding: matched.</source><translation>確認済みプランの関連付け：一致。</translation></message>
+    <message><source>Approval blocked: this apply call does not match a reviewed plan.</source><translation>承認をブロックしました：この適用呼び出しは確認済みプランと一致しません。</translation></message>
     <message><source>Not reported</source><translation>未報告</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>トークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>使用量の詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>

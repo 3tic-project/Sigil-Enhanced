@@ -27421,6 +27421,29 @@ Continue using the requested filename?</source>
     <message><source>Not observed</source><translation>未观测</translation></message>
     <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>响应延迟：首字节 %1 毫秒 · 首个模型事件 %2 毫秒</translation></message>
     <message><source>Response latency: not observed</source><translation>响应延迟：未观测</translation></message>
+    <message><source>The live book is unchanged. Review this plan before approving its apply step.</source><translation>当前书籍未被更改。批准应用步骤前，请审阅此计划。</translation></message>
+    <message><source>Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)</source><translation>段落规范化：%1 个文件可处理 · %2 处转换 · %3 个受保护项</translation></message>
+    <message><source>Other files: %1 review only · %2 skipped · %3 failed</source><translation>其他文件：%1 个仅供审阅 · %2 个已跳过 · %3 个失败</translation></message>
+    <message><source>Plan scope: XHTML only; no CSS, OPF, or resource additions.</source><translation>计划范围：仅 XHTML；不更改 CSS、OPF，也不新增资源。</translation></message>
+    <message><source>Plan may change CSS, OPF, or resource inventory; inspect each change.</source><translation>计划可能更改 CSS、OPF 或资源清单；请检查每项更改。</translation></message>
+    <message><source>File: %1 · %2 conversion(s) · %3 protected item(s)</source><translation>文件：%1 · %2 处转换 · %3 个受保护项</translation></message>
+    <message><source>Before excerpt:</source><translation>更改前片段：</translation></message>
+    <message><source>After excerpt:</source><translation>更改后片段：</translation></message>
+    <message><source>TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)</source><translation>目录层级：%1 个受影响节点 · %2 个重新归属的同级节点</translation></message>
+    <message><source>Preorder preserved: %1 · XHTML heading levels changed: %2</source><translation>前序顺序已保留：%1 · XHTML 标题级别已更改：%2</translation></message>
+    <message><source>Yes</source><translation>是</translation></message>
+    <message><source>No</source><translation>否</translation></message>
+    <message><source>Entry: %1 · %2</source><translation>条目：%1 · %2</translation></message>
+    <message><source>Depth: %1 → %2 · Parent: %3 → %4</source><translation>深度：%1 → %2 · 父节点：%3 → %4</translation></message>
+    <message><source>Additional TOC changes are omitted from this bounded review.</source><translation>此受限审阅省略了其他目录更改。</translation></message>
+    <message><source>This native plan is ready for review.</source><translation>此原生计划已可供审阅。</translation></message>
+    <message><source>Local validation: %1</source><translation>本地校验：%1</translation></message>
+    <message><source>Review paragraph plan</source><translation>审阅段落计划</translation></message>
+    <message><source>Review TOC plan</source><translation>审阅目录计划</translation></message>
+    <message><source>Open %1</source><translation>打开 %1</translation></message>
+    <message><source>Open this resource in Sigil for plan review.</source><translation>在 Sigil 中打开此资源以审阅计划。</translation></message>
+    <message><source>Reviewed plan binding: matched.</source><translation>已审阅计划绑定：匹配。</translation></message>
+    <message><source>Approval blocked: this apply call does not match a reviewed plan.</source><translation>已阻止批准：此应用调用与已审阅计划不匹配。</translation></message>
     <message><source>Not reported</source><translation>未报告</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token 用量：输入 %1 · 输出 %2 · 总计 %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>用量详情：缓存输入 %1 · 推理 %2</translation></message>
