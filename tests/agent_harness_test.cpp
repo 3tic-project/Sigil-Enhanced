@@ -198,6 +198,22 @@ int main()
                             + usage.value(QStringLiteral("output_tokens")).toInteger(),
                 "completed requests must retain exact provider-reported token usage");
     }
+    const QList<AgentEvent> successful_run_states =
+        session.eventsOf(AgentEventType::RunStateChanged);
+    const QJsonObject run_started = successful_run_states.constFirst().payload;
+    const QJsonObject run_completed = successful_run_states.constLast().payload;
+    Require(run_started.value(QStringLiteral("state")).toString()
+                    == QStringLiteral("preparing_context")
+                && !run_started.value(QStringLiteral("run_id")).toString().isEmpty()
+                && run_started.value(QStringLiteral("run_id")).toString()
+                    == run_completed.value(QStringLiteral("run_id")).toString()
+                && run_completed.value(QStringLiteral("state")).toString()
+                    == QStringLiteral("completed")
+                && run_completed.value(QStringLiteral("duration_ms")).toInteger() >= 0
+                && run_completed.value(QStringLiteral("model_steps")).toInt()
+                    == provider.requestCount()
+                && run_completed.value(QStringLiteral("tool_calls")).toInt() == 1,
+            "one run id must bind preparation through a timed multi-step terminal event");
     Require(!hasEvent(session, AgentEventType::ModelRequestFailed),
             "successful model requests must not publish failure events");
 
@@ -234,6 +250,13 @@ int main()
                 && !failed_session.eventsOf(AgentEventType::ModelRequestStarted).constLast()
                         .payload.value(QStringLiteral("usage_requested")).toBool(),
             "disabling token usage must reach both the model request and lifecycle event");
+    const QJsonObject failed_run =
+        failed_session.eventsOf(AgentEventType::RunStateChanged).constLast().payload;
+    Require(failed_run.value(QStringLiteral("state")).toString()
+                    == QStringLiteral("failed")
+                && failed_run.value(QStringLiteral("duration_ms")).toInteger() >= 0
+                && failed_run.value(QStringLiteral("model_steps")).toInt() == 1,
+            "provider failures must publish one timed whole-run terminal state");
 
     MemoryBookWorkspace request_cancel_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry request_cancel_registry;
@@ -264,6 +287,13 @@ int main()
                         .value(QStringLiteral("duration_ms")).toInteger() >= 0
                 && !hasEvent(request_cancel_session, AgentEventType::ModelRequestFailed),
             "cancelled provider requests must publish a timed cancellation outcome");
+    const QJsonObject cancelled_run = request_cancel_session
+        .eventsOf(AgentEventType::RunStateChanged).constLast().payload;
+    Require(cancelled_run.value(QStringLiteral("state")).toString()
+                    == QStringLiteral("cancelled")
+                && cancelled_run.value(QStringLiteral("duration_ms")).toInteger() >= 0
+                && cancelled_run.value(QStringLiteral("model_steps")).toInt() == 1,
+            "cancelled turns must publish a timed whole-run terminal state after cleanup");
 
     HistoryAssembler assembler;
     const QJsonArray replay = assembler.toOpenAIMessages(assembler.assemble(session.events(), true), true);

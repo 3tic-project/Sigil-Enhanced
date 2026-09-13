@@ -8,6 +8,8 @@
 #ifndef SIGIL_AGENT_RUNNER_H
 #define SIGIL_AGENT_RUNNER_H
 
+#include <QElapsedTimer>
+
 #include "Agent/AgentTypes.h"
 #include "Agent/Core/AgentCancellation.h"
 #include "Agent/Core/AgentSession.h"
@@ -88,6 +90,11 @@ private:
     QString m_effort = QStringLiteral("medium");
     int m_maxSteps = 24;
     QString m_runBookSessionId;
+    QString m_runId;
+    QElapsedTimer m_runTimer;
+    int m_runModelSteps = 0;
+    int m_runToolCalls = 0;
+    bool m_runTimingActive = false;
 };
 
 } // namespace SigilAgent

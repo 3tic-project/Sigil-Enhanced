@@ -190,9 +190,23 @@ void AgentRunner::setState(AgentRunState state)
 {
     m_state = state;
     if (m_session) {
-        m_session->append(AgentEventType::RunStateChanged, QJsonObject {
+        QJsonObject payload {
             { QStringLiteral("state"), runStateName(state) }
-        });
+        };
+        if (m_runTimingActive) {
+            payload.insert(QStringLiteral("run_id"), m_runId);
+            payload.insert(QStringLiteral("book_session_id"), m_runBookSessionId);
+            const bool terminal = state == AgentRunState::Completed
+                || state == AgentRunState::Cancelled
+                || state == AgentRunState::Failed;
+            if (terminal) {
+                payload.insert(QStringLiteral("duration_ms"), m_runTimer.elapsed());
+                payload.insert(QStringLiteral("model_steps"), m_runModelSteps);
+                payload.insert(QStringLiteral("tool_calls"), m_runToolCalls);
+                m_runTimingActive = false;
+            }
+        }
+        m_session->append(AgentEventType::RunStateChanged, payload);
     }
 }
 
@@ -226,7 +240,6 @@ bool AgentRunner::bookTargetMatchesRun() const
 AgentRunResult AgentRunner::cancelRun()
 {
     rollbackOpenWork();
-    setState(AgentRunState::Cancelled);
     const AgentCancellationReason reason = m_cancellation
         ? m_cancellation->reason() : AgentCancellationReason::UserStop;
     if (m_session) {
@@ -237,6 +250,7 @@ AgentRunResult AgentRunner::cancelRun()
     }
     AgentRunResult result;
     result.state = AgentRunState::Cancelled;
+    setState(AgentRunState::Cancelled);
     return result;
 }
 
@@ -245,7 +259,6 @@ AgentRunResult AgentRunner::failBookTargetChanged(const QString &stage)
     const QString actual = m_workspace ? m_workspace->bookSessionId() : QString();
     const QString message = QStringLiteral(
         "The open book changed during this Agent run. The old response was not applied to the new book.");
-    setState(AgentRunState::Failed);
     if (m_session) {
         const QJsonObject payload {
             { QStringLiteral("code"), QStringLiteral("BOOK_TARGET_CHANGED") },
@@ -260,6 +273,7 @@ AgentRunResult AgentRunner::failBookTargetChanged(const QString &stage)
     AgentRunResult result;
     result.state = AgentRunState::Failed;
     result.error = message;
+    setState(AgentRunState::Failed);
     return result;
 }
 
@@ -451,6 +465,11 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
     }
     if (m_cancellation) m_cancellation->reset();
     m_runBookSessionId = m_workspace ? m_workspace->bookSessionId() : QString();
+    m_runId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_runModelSteps = 0;
+    m_runToolCalls = 0;
+    m_runTimer.start();
+    m_runTimingActive = true;
 
     setState(AgentRunState::PreparingContext);
     m_session->append(AgentEventType::UserMessage, QJsonObject {
@@ -475,6 +494,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         ModelRequest request = m_prompts.build(
             *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking, m_effort, handles);
         request.includeUsage = m_tokenUsage;
+        ++m_runModelSteps;
         const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         m_session->append(AgentEventType::ModelRequestStarted, QJsonObject {
             { QStringLiteral("request_id"), request_id },
@@ -508,7 +528,6 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             return cancelRun();
         }
         if (!turn.error.isEmpty()) {
-            setState(AgentRunState::Failed);
             m_session->append(AgentEventType::ModelRequestFailed, QJsonObject {
                 { QStringLiteral("request_id"), request_id },
                 { QStringLiteral("step"), steps },
@@ -522,6 +541,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             result.state = AgentRunState::Failed;
             result.error = turn.error;
             rollbackOpenWork();
+            setState(AgentRunState::Failed);
             return result;
         }
 
@@ -541,6 +561,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             return failBookTargetChanged(QStringLiteral("after_model_response"));
         }
         QJsonArray tool_calls_json;
+        m_runToolCalls += turn.toolCalls.size();
         for (const ToolCall &call : turn.toolCalls) {
             tool_calls_json.append(toolCallToJson(call));
         }
@@ -580,12 +601,12 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
     }
 
     rollbackOpenWork();
-    setState(AgentRunState::Failed);
     result.state = AgentRunState::Failed;
     result.error = QStringLiteral("Exceeded max agent steps");
     m_session->append(AgentEventType::Error, QJsonObject {
         { QStringLiteral("message"), result.error }
     });
+    setState(AgentRunState::Failed);
     return result;
 }
 
