@@ -49,7 +49,8 @@ public:
                              const QString &expectedBookSessionId);
     void stop(AgentCancellationReason reason = AgentCancellationReason::UserStop);
     void newSession();
-    void resolveApproval(const QString &toolCallId, bool approved);
+    void resolveApproval(const QString &toolCallId, bool approved,
+                         const QJsonObject &argumentOverrides = QJsonObject());
     QJsonArray debugTraces() const;
 
 private:

@@ -527,13 +527,19 @@ int main()
         "</div></body></html>");
     paragraph_xhtml.revision = 1;
     paragraph_book.addResource(paragraph_xhtml);
+    MemoryResource paragraph_xhtml_2 = paragraph_xhtml;
+    paragraph_xhtml_2.id = QStringLiteral("paragraph-page-2");
+    paragraph_xhtml_2.bookPath = QStringLiteral("OEBPS/Text/paragraph-2.xhtml");
+    paragraph_book.addResource(paragraph_xhtml_2);
     const QString paragraph_original = paragraph_xhtml.text;
+    const QString paragraph_original_2 = paragraph_xhtml_2.text;
     ToolRegistry paragraph_registry;
     registerBookTools(&paragraph_registry, &paragraph_book);
     registerDivParagraphTools(&paragraph_registry, &paragraph_book);
     const ToolResult paragraph_analysis = paragraph_registry.find(
         QStringLiteral("paragraphs.analyze"))->execute(QJsonObject {
-            { QStringLiteral("resource_ids"), QJsonArray { paragraph_xhtml.id } }
+            { QStringLiteral("resource_ids"), QJsonArray {
+                paragraph_xhtml.id, paragraph_xhtml_2.id } }
         });
     Require(paragraph_analysis.ok, "paragraph approval fixture analysis failed");
     const ToolResult paragraph_plan = paragraph_registry.find(
@@ -653,6 +659,80 @@ int main()
     Require(!paragraph_book.hasOpenTransaction()
                 && paragraph_book.resourceText(paragraph_xhtml.id) == paragraph_original,
             "denied paragraph staging must not open a transaction or change the Book");
+
+    class SelectParagraphGroupGate : public IApprovalGate
+    {
+    public:
+        ApprovalDecision waitForApproval(const QString &, const QString &,
+                                         const QJsonObject &,
+                                         const QString &) override
+        {
+            return ApprovalDecision {
+                true,
+                QJsonObject {
+                    { QStringLiteral("selected_resource_ids"),
+                      QJsonArray { QStringLiteral("paragraph-page-2") } },
+                    { QStringLiteral("plan_digest"), QStringLiteral("must-be-ignored") }
+                }
+            };
+        }
+    } selected_group_gate;
+    AgentSession selected_group_session;
+    MockModelProvider selected_group_provider;
+    selected_group_provider.setScript(
+        [paragraph_apply_arguments](const ModelRequest &request) {
+        bool already_requested = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role != QLatin1String("assistant")) continue;
+            for (const ToolCall &call : message.toolCalls) {
+                if (call.id == QLatin1String("selected_paragraph_apply")) {
+                    already_requested = true;
+                }
+            }
+        }
+        ModelTurn turn;
+        if (!already_requested) {
+            ToolCall call;
+            call.id = QStringLiteral("selected_paragraph_apply");
+            call.name = QStringLiteral("paragraphs_apply");
+            call.argumentsJson = QString::fromUtf8(
+                QJsonDocument(paragraph_apply_arguments).toJson(QJsonDocument::Compact));
+            turn.toolCalls.append(call);
+        } else {
+            turn.content = QStringLiteral("The selected paragraph group was staged.");
+        }
+        return turn;
+    });
+    AgentCancellation selected_group_cancel;
+    AgentRunner selected_group_runner(
+        &selected_group_session, &selected_group_provider, &paragraph_registry,
+        &paragraph_book, &ask_policy, &selected_group_gate, &selected_group_cancel);
+    selected_group_runner.setMode(AgentMode::Edit);
+    const AgentRunResult selected_group_result = selected_group_runner.runTurn(
+        QStringLiteral("apply one reviewed paragraph group"));
+    Require(selected_group_result.state == AgentRunState::Completed
+                && paragraph_book.hasOpenTransaction(),
+            "approved paragraph group should leave one reviewed transaction staged");
+    const QJsonObject approved_group = selected_group_session.eventsOf(
+        AgentEventType::ToolApproved).constFirst().payload;
+    const QJsonObject approved_group_arguments = approved_group.value(
+        QStringLiteral("arguments")).toObject();
+    Require(approved_group.value(
+                QStringLiteral("argument_overrides_applied")).toBool()
+                && approved_group_arguments.value(
+                    QStringLiteral("selected_resource_ids")).toArray()
+                    == QJsonArray { QStringLiteral("paragraph-page-2") }
+                && approved_group_arguments.value(
+                    QStringLiteral("plan_digest")).toString()
+                    == paragraph_plan.data.value(
+                        QStringLiteral("plan_digest")).toString(),
+            "Runner must audit the selected groups while ignoring unauthorized approval overrides");
+    Require(paragraph_book.workingText(paragraph_xhtml.id) == paragraph_original
+                && paragraph_book.workingText(paragraph_xhtml_2.id)
+                    != paragraph_original_2,
+            "approval argument overrides must stage only the explicitly selected plan group");
+    Require(paragraph_book.rollbackTransaction().ok,
+            "selected paragraph approval fixture must roll back its staged transaction");
 
     MemoryBookWorkspace edit_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry edit_registry;
@@ -956,12 +1036,14 @@ int main()
     public:
         CancelOnApproval(AgentCancellation *cancellation, IBookWorkspace *workspace) :
             m_cancellation(cancellation), m_workspace(workspace) {}
-        bool waitForApproval(const QString &, const QString &, const QJsonObject &, const QString &) override
+        ApprovalDecision waitForApproval(const QString &, const QString &,
+                                         const QJsonObject &,
+                                         const QString &) override
         {
             Require(m_workspace->hasOpenTransaction(),
                     "transaction should still be open when approval is pending");
             m_cancellation->request();
-            return false;
+            return ApprovalDecision();
         }
     private:
         AgentCancellation *m_cancellation;

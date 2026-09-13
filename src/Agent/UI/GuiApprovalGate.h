@@ -28,10 +28,10 @@ public:
     {
     }
 
-    bool waitForApproval(const QString &toolCallId,
-                         const QString &name,
-                         const QJsonObject &arguments,
-                         const QString &impact) override
+    ApprovalDecision waitForApproval(const QString &toolCallId,
+                                     const QString &name,
+                                     const QJsonObject &arguments,
+                                     const QString &impact) override
     {
         Q_UNUSED(name);
         Q_UNUSED(arguments);
@@ -41,6 +41,7 @@ public:
             m_pendingId = toolCallId;
             m_decided = false;
             m_approved = false;
+            m_argumentOverrides = QJsonObject();
         }
         if (QCoreApplication::instance()
             && QThread::currentThread() == QCoreApplication::instance()->thread()) {
@@ -58,14 +59,21 @@ public:
         }
         QMutexLocker locker(&m_mutex);
         m_pendingId.clear();
-        return m_approved && !(m_cancellation && m_cancellation->isCancelled());
+        const bool approved = m_approved
+            && !(m_cancellation && m_cancellation->isCancelled());
+        const QJsonObject overrides = approved
+            ? m_argumentOverrides : QJsonObject();
+        m_argumentOverrides = QJsonObject();
+        return ApprovalDecision { approved, overrides };
     }
 
-    void resolve(const QString &toolCallId, bool approved)
+    void resolve(const QString &toolCallId, bool approved,
+                 const QJsonObject &argumentOverrides = QJsonObject())
     {
         QMutexLocker locker(&m_mutex);
         if (!m_pendingId.isEmpty() && toolCallId != m_pendingId) return;
         m_approved = approved;
+        m_argumentOverrides = approved ? argumentOverrides : QJsonObject();
         m_decided = true;
         m_cv.wakeAll();
         if (m_loop) m_loop->quit();
@@ -75,6 +83,7 @@ public:
     {
         QMutexLocker locker(&m_mutex);
         m_approved = false;
+        m_argumentOverrides = QJsonObject();
         m_decided = true;
         m_cv.wakeAll();
         if (m_loop) m_loop->quit();
@@ -87,6 +96,7 @@ private:
     QString m_pendingId;
     bool m_decided = false;
     bool m_approved = false;
+    QJsonObject m_argumentOverrides;
     QEventLoop *m_loop = nullptr;
 };
 

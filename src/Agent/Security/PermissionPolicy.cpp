@@ -69,15 +69,15 @@ AutoApprovalGate::AutoApprovalGate(bool approve) :
 {
 }
 
-bool AutoApprovalGate::waitForApproval(const QString &,
-                                       const QString &name,
-                                       const QJsonObject &,
-                                       const QString &impact)
+ApprovalDecision AutoApprovalGate::waitForApproval(const QString &,
+                                                   const QString &name,
+                                                   const QJsonObject &,
+                                                   const QString &impact)
 {
     ++m_requestCount;
     m_lastName = name;
     m_lastImpact = impact;
-    return m_approve;
+    return ApprovalDecision { m_approve, QJsonObject() };
 }
 
 int AutoApprovalGate::requestCount() const

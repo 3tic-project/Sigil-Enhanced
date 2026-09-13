@@ -412,6 +412,7 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
     }
     const AgentToolDescriptor descriptor = tool->descriptor();
     const QJsonObject arguments = parseArguments(call.argumentsJson);
+    QJsonObject execution_arguments = arguments;
     const PermissionAction permission = m_policy
         ? m_policy->evaluate(m_mode, descriptor) : PermissionAction::Deny;
 
@@ -443,13 +444,15 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
             { QStringLiteral("impact"), impact },
             { QStringLiteral("arguments"), arguments }
         });
-        const bool approved = m_gate && m_gate->waitForApproval(local.id, local.name, arguments, impact);
+        const ApprovalDecision decision = m_gate
+            ? m_gate->waitForApproval(local.id, local.name, arguments, impact)
+            : ApprovalDecision();
         if (m_cancellation && m_cancellation->isCancelled()) {
             const ToolResult cancelled = ToolResult::cancelled();
             publishToolOutcome(local, cancelled);
             return cancelled;
         }
-        if (!approved) {
+        if (!decision.approved) {
             m_session->append(AgentEventType::ToolRejected, QJsonObject {
                 { QStringLiteral("tool_call_id"), local.id },
                 { QStringLiteral("name"), local.name },
@@ -459,9 +462,20 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
             publishToolOutcome(local, denied);
             return denied;
         }
+        if (local.name == QLatin1String("paragraphs.apply")) {
+            const QJsonValue selected = decision.argumentOverrides.value(
+                QStringLiteral("selected_resource_ids"));
+            if (!selected.isUndefined()) {
+                execution_arguments.insert(
+                    QStringLiteral("selected_resource_ids"), selected);
+            }
+        }
         m_session->append(AgentEventType::ToolApproved, QJsonObject {
             { QStringLiteral("tool_call_id"), local.id },
-            { QStringLiteral("name"), local.name }
+            { QStringLiteral("name"), local.name },
+            { QStringLiteral("arguments"), execution_arguments },
+            { QStringLiteral("argument_overrides_applied"),
+              execution_arguments != arguments }
         });
         setState(AgentRunState::ExecutingTools);
     }
@@ -512,7 +526,7 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
         }
     }
 
-    ToolResult result = tool->execute(arguments);
+    ToolResult result = tool->execute(execution_arguments);
     if (local.name == QLatin1String("transaction.commit") && m_workspace) {
         if (result.ok && result.applied && !task_restore_id.isEmpty()) {
             const BookOpResult sealed = m_workspace->sealTaskRestorePoint(task_restore_id);

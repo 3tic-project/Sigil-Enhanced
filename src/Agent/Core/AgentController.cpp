@@ -205,9 +205,10 @@ void AgentController::resetSessionNow()
     rebuildTools();
 }
 
-void AgentController::resolveApproval(const QString &toolCallId, bool approved)
+void AgentController::resolveApproval(const QString &toolCallId, bool approved,
+                                      const QJsonObject &argument_overrides)
 {
-    m_gate.resolve(toolCallId, approved);
+    m_gate.resolve(toolCallId, approved, argument_overrides);
 }
 
 QJsonArray AgentController::debugTraces() const
