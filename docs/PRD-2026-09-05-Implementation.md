@@ -1242,3 +1242,37 @@ Agent 测试连续 3 轮共 39 次通过。四份目录可生成 `.qm` 且 0 unf
 导出语义，也不宣称提高模型吞吐。33 ms 是交互刷新预算而非逐 token SLA；超长单卡仍使用
 QLabel 保存完整文本，尚未做虚拟化/分块文档，也没有真实慢速在线服务、低端硬件和
 Windows/Linux/macOS 三平台 GUI profiler 数据。
+
+## Native Agent 原生计划双栏比较（2026-09-13）
+
+分支：`feature/agent-plan-comparison-dialog`。主要提交：`e8aadaeb9`（通用受限比较组件）、
+`1814b1c5e`（段落/TOC 审阅接线）和 `4d2a30e0e`（四语文案）。
+
+### 比较界面与绑定边界
+
+- `AgentPlanComparisonDialog` 是独立的只读双栏组件。before/after 使用 `QPlainTextEdit`
+  PlainText、固定宽度字体和 NoWrap，水平/垂直滚动互相同步；每栏即使收到异常事件也最多
+  显示 8,192 字符，截断时显示明确提示。窗口不含 Apply，也不读取或写入 Book。
+- 段落计划为前 8 个唯一资源在原 Open 操作旁提供短标签 **Compare…**，完整路径保留在
+  accessible name。内容只取 `paragraphs.plan` 的 `source_diff.before/after` 及前后截断标志，
+  XML 标签保持字面文本，不交给 rich-text renderer。
+- TOC 计划提供单个 **Compare hierarchy…**，把 bounded changes 的 label/target 及
+  from/to parent/depth 分别排列在两栏；`changes_truncated` 继续传到对话框，不能把前 128 项
+  冒充完整目录变化。
+- 比较按钮和窗口都绑定计划的 book session；点击前重验，换书立即禁用按钮并关闭已打开窗口，
+  transcript reset 也关闭窗口。窗口同时公开 plan ID、digest、book revision、book session
+  和 comparison subject，批准卡原有的计划绑定门保持独立且不被比较操作修改。
+
+### 测试证据与剩余项
+
+新增 `agent_plan_comparison_dialog` 覆盖双栏结构、只读/NoWrap/辅助名称、8 KiB 防御上限、
+截断提示、双向同步滚动和关闭释放。`agent_dock` 覆盖段落 XML 前后片段、TOC parent/depth、
+窗口计划属性、重复打开复用、换书失效和 transcript reset 清理。完整 Sigil 构建及 42 个
+固定 Python 依赖通过；新增后的 14 项 Agent 测试连续 3 轮共 42 次通过。严格四语目录覆盖
+通过，四份 `.qm` 均可生成且 0 unfinished；英文为 4,735 条活跃源文，简中/繁中/日文各为
+5,712 条。
+
+本切片直接补上 AGENT-02 的专用双栏审阅入口，但不宣称完整关闭 AGENT-IM2：它显示的是
+原生工具已经生成的 bounded evidence，并非任意 staged transaction 的整文件 unified diff；
+尚未支持卡片内选择结构独立操作组，也未在 Windows/Linux、屏幕阅读器、超长真实计划和
+不同字体/DPI 下完成人工验收。

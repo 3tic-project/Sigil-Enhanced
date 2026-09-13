@@ -212,7 +212,9 @@ Technical details 现在还会单独显示 **Whole run**：从准备上下文开
 资源按钮绑定生成计划时的书籍会话，换书后立即禁用。Edit 模式批准原生 apply 时还会核对
 已展示计划的 ID、digest、书籍 revision 和会话；不匹配的调用不能点击 Approve，工具执行
 边界仍会再次重验。Conversation 导出提供相同的可读计划摘要，完整技术绑定只保留在脱敏
-Debug JSON。当前尚不支持卡片内选择独立操作组或整文件双栏 diff。
+Debug JSON。段落计划还可把受限的修改前后源码并排比较，TOC 计划可并排比较 parent/depth；
+两栏只读、同步滚动，并在换书或新会话时关闭。当前尚不支持卡片内选择独立操作组或整文件
+统一 diff。
 
 ### Agent 长回复降低界面重排
 
@@ -242,7 +244,7 @@ Agent 仍实时显示 Thinking 与 Answer，但会把约 33 ms 内到达的细�
 - Debug 版 Sigil 能完整编过、链过，内置 Python 包也校验过。
 - CTest 覆盖了 KFX 导入、无损保存、代码视图关闭、EPUB 2→3 实体与导航、预览网格、
   代码视图选择、Clips 快捷键角标、目录层级编辑、DIV 段落结构规范化和 Native Agent
-  请求/用量状态及流式界面合并。四语文案均可生成 `.qm` 且 0 unfinished；严格简中、繁中、
-  日文目录覆盖检查通过。
+  请求/用量状态、流式界面合并及计划双栏比较。四语文案均可生成 `.qm` 且 0 unfinished；
+  严格简中、繁中、日文目录覆盖检查通过。
 
 本说明对应发布标签 `v2.8.5E10`。Windows / macOS 安装包、签名和校验和按[发布清单](ReleaseChecklist.md)在打标签后生成。

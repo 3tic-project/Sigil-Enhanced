@@ -164,15 +164,20 @@ book session 且没有活动运行时启用；换书或 New Session 后失效。
   个唯一目标提供 **Open…** 按钮；它打开当前 Book 中的对应资源，现有 Preview 随编辑标签
   更新。按钮绑定生成计划时的完整 book session，换书立即禁用，MainWindow 跳转前还会
   再核对一次；TOC fragment 会去除，URL 编码路径会按 EPUB 路径规则解码。
+- 段落资源旁的 **Compare…** 会把计划携带的 before/after 源码片段放进只读双栏；TOC 的
+  **Compare hierarchy…** 则分栏显示每项变换前后的 parent/depth。两栏使用固定宽度字体、
+  不自动折行并同步滚动。对话框继承计划 ID、digest、revision 与 book session，换书或重置
+  transcript 时立即关闭；片段本身有工具侧上限，界面另有每栏 8 KiB 防御上限并明确提示省略。
 - Edit 模式中，`paragraphs.apply` / `toc.apply_transform` 的批准卡会把参数中的 plan ID、
   digest、expected revision 与本会话已展示的计划及当前 book session 逐项匹配。任一项不符
   时 **Approve** 禁用，**Deny** 保持可用；工具层仍会再次执行原有的计划重验。普通
   `transaction.commit` 批准不受这条专用门影响。Auto 模式没有人工批准，但工具层绑定校验
   仍然有效。
 
-这推进了宿主计划审阅，但还不是可编辑计划表：目前不能在卡片内勾选独立操作组，也没有
-整文件统一 diff 或专用双栏预览。若要改变段落计划的文件子集，应让 Agent 用明确的
-resource IDs 重新调用 `paragraphs.plan`，生成新的 plan/digest 后再审阅。
+这推进了宿主计划审阅，但还不是可编辑计划表：目前不能在卡片内勾选独立操作组；双栏只
+比较计划自带的受限片段/层级清单，不是重新读取活书得到的整文件统一 diff。若要改变段落
+计划的文件子集，应让 Agent 用明确的 resource IDs 重新调用 `paragraphs.plan`，生成新的
+plan/digest 后再审阅。
 
 ## 预览、提交与恢复状态
 
