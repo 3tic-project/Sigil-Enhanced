@@ -64,6 +64,8 @@ signals:
     void exportDebugLogRequested();
     void modeChanged(AgentMode mode);
     void approvalResponded(const QString &toolCallId, bool approved);
+    void openPlanResourceRequested(const QString &bookPath,
+                                   const QString &bookSessionId);
     void taskRestoreRequested(const QString &checkpointId,
                               const QString &bookSessionId);
 
@@ -87,6 +89,7 @@ private:
                       const QString &title,
                       const QString &body,
                       bool collapsed);
+    QWidget *makePlanReviewCard(const QJsonObject &payload);
     QWidget *findCard(const QString &object_name) const;
     void appendCard(QWidget *card);
     void beginUserTurn();
@@ -100,9 +103,11 @@ private:
     void refreshTechnicalDetails();
     void refreshRetryState();
     void refreshTaskRestoreState();
+    void refreshPlanNavigationState();
     void captureRequestEvent(const AgentEvent &event, const QString &status);
     void captureRunEvent(const AgentEvent &event);
     QString providerFailureSummary(const QString &message) const;
+    QString planReviewBody(const QJsonObject &payload) const;
     QString previewBody(const QJsonObject &payload) const;
     QString appliedBody(const QJsonObject &payload) const;
 

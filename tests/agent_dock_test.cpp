@@ -554,6 +554,153 @@ int main(int argc, char *argv[])
     Require(approve->text().contains(QStringLiteral("Approved")),
             "Approve must show it was accepted");
 
+    SigilAgent::AgentEvent paragraph_plan;
+    paragraph_plan.type = SigilAgent::AgentEventType::PlanCreated;
+    paragraph_plan.payload = QJsonObject {
+        { QStringLiteral("tool_call_id"), QStringLiteral("plan-call") },
+        { QStringLiteral("name"), QStringLiteral("paragraphs.plan") },
+        { QStringLiteral("plan_kind"), QStringLiteral("paragraph_normalization") },
+        { QStringLiteral("plan_id"), QStringLiteral("paragraph-plan-id") },
+        { QStringLiteral("plan_digest"), QStringLiteral("paragraph-plan-digest") },
+        { QStringLiteral("book_session_id"), QStringLiteral("12345678-abcd") },
+        { QStringLiteral("book_revision"), 7 },
+        { QStringLiteral("applied_to_book"), false },
+        { QStringLiteral("summary"), QJsonObject {
+            { QStringLiteral("ready_files"), 1 },
+            { QStringLiteral("review_only_files"), 0 },
+            { QStringLiteral("skipped_files"), 1 },
+            { QStringLiteral("error_files"), 0 },
+            { QStringLiteral("conversion_count"), 12 },
+            { QStringLiteral("protected_count"), 2 }
+        } },
+        { QStringLiteral("changes_css"), false },
+        { QStringLiteral("changes_opf"), false },
+        { QStringLiteral("adds_resources"), false },
+        { QStringLiteral("changes"), QJsonArray { QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("chapter-1") },
+            { QStringLiteral("book_path"), QStringLiteral("Text/chapter-1.xhtml") },
+            { QStringLiteral("conversion_count"), 12 },
+            { QStringLiteral("protected_count"), 2 },
+            { QStringLiteral("source_diff"), QJsonObject {
+                { QStringLiteral("before"), QStringLiteral("<div>Original paragraph</div>") },
+                { QStringLiteral("after"), QStringLiteral("<p>Original paragraph</p>") },
+                { QStringLiteral("prefix_truncated"), true },
+                { QStringLiteral("suffix_truncated"), false }
+            } }
+        } } },
+        { QStringLiteral("local_validation"), QStringLiteral("passed") },
+        { QStringLiteral("full_epubcheck"), QJsonObject {
+            { QStringLiteral("status"), QStringLiteral("not_run") }
+        } }
+    };
+    int opened_plan_resources = 0;
+    QString opened_plan_path;
+    QObject::connect(&dock, &SigilAgent::AgentDock::openPlanResourceRequested,
+                     [&opened_plan_resources, &opened_plan_path](
+                         const QString &path, const QString &book_session_id) {
+        if (book_session_id == QLatin1String("12345678-abcd")) {
+            ++opened_plan_resources;
+            opened_plan_path = path;
+        }
+    });
+    dock.appendEvent(paragraph_plan);
+    application.processEvents();
+    auto *paragraph_plan_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentPlanReviewCard-plan-call"));
+    auto *paragraph_plan_body = paragraph_plan_card
+        ? paragraph_plan_card->findChild<QLabel *>(
+              QStringLiteral("agentPlanReviewCard-plan-callBody"))
+        : nullptr;
+    auto *open_paragraph = dock.findChild<QPushButton *>(
+        QStringLiteral("agentPlanOpenResourceButton-plan-call-0"));
+    Require(paragraph_plan_card && paragraph_plan_body && paragraph_plan_body->isVisible()
+                && paragraph_plan_body->textFormat() == Qt::PlainText
+                && paragraph_plan_card->property("planId").toString()
+                    == QStringLiteral("paragraph-plan-id")
+                && paragraph_plan_card->property("planDigest").toString()
+                    == QStringLiteral("paragraph-plan-digest")
+                && paragraph_plan_card->property("bookRevision").toLongLong() == 7,
+            "paragraph plan card must expose a visible, plain-text reviewed binding");
+    Require(paragraph_plan_body->text().contains(QStringLiteral("12 conversion(s)"))
+                && paragraph_plan_body->text().contains(QStringLiteral("2 protected item(s)"))
+                && paragraph_plan_body->text().contains(
+                    QStringLiteral("<div>Original paragraph</div>"))
+                && paragraph_plan_body->text().contains(
+                    QStringLiteral("<p>Original paragraph</p>"))
+                && paragraph_plan_body->text().contains(QStringLiteral("XHTML only"))
+                && paragraph_plan_body->text().contains(
+                    QStringLiteral("Full EPUBCheck: not run")),
+            "paragraph review must show scope, bounded source excerpts, and validation limits");
+    Require(open_paragraph && open_paragraph->isEnabled()
+                && open_paragraph->property("bookPath").toString()
+                    == QStringLiteral("Text/chapter-1.xhtml"),
+            "paragraph review must offer a book-bound resource navigation action");
+    open_paragraph->click();
+    Require(opened_plan_resources == 1
+                && opened_plan_path == QStringLiteral("Text/chapter-1.xhtml"),
+            "plan navigation must emit the reviewed resource and book session");
+    dock.setBookContext(QStringLiteral("Another Book"), QStringLiteral("other.epub"),
+                        3, false, 1, QStringLiteral("other-book-session"));
+    Require(!open_paragraph->isEnabled(),
+            "plan navigation must visibly disable as soon as the open book changes");
+    open_paragraph->click();
+    Require(opened_plan_resources == 1,
+            "a stale plan card must not navigate after the open book changes");
+    dock.setBookContext(QStringLiteral("Junior Physics"),
+                        QStringLiteral("physics.epub"), 42, false, 7,
+                        QStringLiteral("12345678-abcd"));
+    Require(open_paragraph->isEnabled(),
+            "returning to the plan-bound book session must restore navigation");
+
+    SigilAgent::AgentEvent toc_plan;
+    toc_plan.type = SigilAgent::AgentEventType::PlanCreated;
+    toc_plan.payload = QJsonObject {
+        { QStringLiteral("tool_call_id"), QStringLiteral("toc-plan-call") },
+        { QStringLiteral("name"), QStringLiteral("toc.plan_transform") },
+        { QStringLiteral("plan_kind"), QStringLiteral("toc_hierarchy") },
+        { QStringLiteral("plan_id"), QStringLiteral("toc-plan-id") },
+        { QStringLiteral("plan_digest"), QStringLiteral("toc-plan-digest") },
+        { QStringLiteral("book_session_id"), QStringLiteral("12345678-abcd") },
+        { QStringLiteral("book_revision"), 7 },
+        { QStringLiteral("affected_count"), 2 },
+        { QStringLiteral("adopted_count"), 1 },
+        { QStringLiteral("preorder_preserved"), true },
+        { QStringLiteral("changes_xhtml_headings"), false },
+        { QStringLiteral("changes"), QJsonArray { QJsonObject {
+            { QStringLiteral("label"), QStringLiteral("Chapter C") },
+            { QStringLiteral("target"), QStringLiteral("Text/c.xhtml#one") },
+            { QStringLiteral("from_depth"), 2 },
+            { QStringLiteral("to_depth"), 1 },
+            { QStringLiteral("from_parent_id"), 1 },
+            { QStringLiteral("to_parent_id"), 0 }
+        } } },
+        { QStringLiteral("changes_truncated"), true },
+        { QStringLiteral("local_validation"), QStringLiteral("passed") },
+        { QStringLiteral("full_epubcheck"), QJsonObject {
+            { QStringLiteral("status"), QStringLiteral("not_run") }
+        } }
+    };
+    dock.appendEvent(toc_plan);
+    application.processEvents();
+    auto *toc_plan_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentPlanReviewCard-toc-plan-call"));
+    auto *toc_plan_body = toc_plan_card
+        ? toc_plan_card->findChild<QLabel *>(
+              QStringLiteral("agentPlanReviewCard-toc-plan-callBody"))
+        : nullptr;
+    auto *open_toc = dock.findChild<QPushButton *>(
+        QStringLiteral("agentPlanOpenResourceButton-toc-plan-call-0"));
+    Require(toc_plan_body && toc_plan_body->text().contains(
+                QStringLiteral("2 affected node(s)"))
+                && toc_plan_body->text().contains(QStringLiteral("Chapter C"))
+                && toc_plan_body->text().contains(QStringLiteral("Depth: 2 → 1"))
+                && toc_plan_body->text().contains(QStringLiteral("Preorder preserved: Yes"))
+                && toc_plan_body->text().contains(QStringLiteral("omitted")),
+            "TOC review must show bounded reparenting and structural invariants");
+    Require(open_toc && open_toc->property("bookPath").toString()
+                    == QStringLiteral("Text/c.xhtml"),
+            "TOC review navigation must strip the target fragment");
+
     dock.resetTranscript();
     SigilAgent::AgentEvent preview;
     preview.type = SigilAgent::AgentEventType::TransactionPreviewed;

@@ -23,6 +23,7 @@
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QSet>
 #include <QToolButton>
 #include <QVariant>
 #include <QVBoxLayout>
@@ -369,6 +370,7 @@ void AgentDock::setBookContext(const QString &title,
     refreshScopeLabel();
     refreshTechnicalDetails();
     refreshRetryState();
+    refreshPlanNavigationState();
     if (changed_book) refreshTaskRestoreState();
 }
 
@@ -922,6 +924,22 @@ void AgentDock::refreshTaskRestoreState()
     }
 }
 
+void AgentDock::refreshPlanNavigationState()
+{
+    const QList<QPushButton *> buttons =
+        m_transcriptContents->findChildren<QPushButton *>();
+    for (QPushButton *button : buttons) {
+        if (!button || !button->objectName().startsWith(
+                           QLatin1String("agentPlanOpenResourceButton-"))) {
+            continue;
+        }
+        const QString bound_session =
+            button->property("bookSessionId").toString();
+        button->setEnabled(!bound_session.isEmpty()
+                           && bound_session == m_bookSessionId);
+    }
+}
+
 void AgentDock::resetTranscript()
 {
     QLayoutItem *item = nullptr;
@@ -1106,6 +1124,153 @@ void AgentDock::setAnswerText(const QString &text, bool append)
     auto *body = m_currentAnswer->findChild<QLabel *>(answerCardName() + QStringLiteral("Body"));
     if (!body) return;
     body->setText(append ? body->text() + text : text);
+}
+
+QString AgentDock::planReviewBody(const QJsonObject &payload) const
+{
+    QStringList lines;
+    lines.append(tr("The live book is unchanged. Review this plan before approving its apply step."));
+    const QString kind = payload.value(QStringLiteral("plan_kind")).toString();
+    if (kind == QLatin1String("paragraph_normalization")) {
+        const QJsonObject summary = payload.value(QStringLiteral("summary")).toObject();
+        lines.append(tr("Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)")
+                         .arg(summary.value(QStringLiteral("ready_files")).toInt())
+                         .arg(summary.value(QStringLiteral("conversion_count")).toInt())
+                         .arg(summary.value(QStringLiteral("protected_count")).toInt()));
+        lines.append(tr("Other files: %1 review only · %2 skipped · %3 failed")
+                         .arg(summary.value(QStringLiteral("review_only_files")).toInt())
+                         .arg(summary.value(QStringLiteral("skipped_files")).toInt())
+                         .arg(summary.value(QStringLiteral("error_files")).toInt()));
+        if (!payload.value(QStringLiteral("changes_css")).toBool()
+            && !payload.value(QStringLiteral("changes_opf")).toBool()
+            && !payload.value(QStringLiteral("adds_resources")).toBool()) {
+            lines.append(tr("Plan scope: XHTML only; no CSS, OPF, or resource additions."));
+        } else {
+            lines.append(tr("Plan may change CSS, OPF, or resource inventory; inspect each change."));
+        }
+        for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
+            const QJsonObject change = value.toObject();
+            const QString path = change.value(QStringLiteral("book_path")).toString();
+            lines.append(QString());
+            lines.append(tr("File: %1 · %2 conversion(s) · %3 protected item(s)")
+                             .arg(path.isEmpty()
+                                      ? change.value(QStringLiteral("resource_id")).toString()
+                                      : path)
+                             .arg(change.value(QStringLiteral("conversion_count")).toInt())
+                             .arg(change.value(QStringLiteral("protected_count")).toInt()));
+            const QJsonObject diff = change.value(QStringLiteral("source_diff")).toObject();
+            QString before = diff.value(QStringLiteral("before")).toString();
+            QString after = diff.value(QStringLiteral("after")).toString();
+            if (diff.value(QStringLiteral("prefix_truncated")).toBool()) {
+                before.prepend(QStringLiteral("…"));
+                after.prepend(QStringLiteral("…"));
+            }
+            if (diff.value(QStringLiteral("suffix_truncated")).toBool()) {
+                before.append(QStringLiteral("…"));
+                after.append(QStringLiteral("…"));
+            }
+            lines.append(tr("Before excerpt:"));
+            lines.append(before);
+            lines.append(tr("After excerpt:"));
+            lines.append(after);
+        }
+    } else if (kind == QLatin1String("toc_hierarchy")) {
+        lines.append(tr("TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)")
+                         .arg(payload.value(QStringLiteral("affected_count")).toInt())
+                         .arg(payload.value(QStringLiteral("adopted_count")).toInt()));
+        lines.append(tr("Preorder preserved: %1 · XHTML heading levels changed: %2")
+                         .arg(payload.value(QStringLiteral("preorder_preserved")).toBool()
+                                  ? tr("Yes") : tr("No"),
+                              payload.value(QStringLiteral("changes_xhtml_headings")).toBool()
+                                  ? tr("Yes") : tr("No")));
+        for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
+            const QJsonObject change = value.toObject();
+            lines.append(QString());
+            lines.append(tr("Entry: %1 · %2")
+                             .arg(change.value(QStringLiteral("label")).toString(),
+                                  change.value(QStringLiteral("target")).toString()));
+            lines.append(tr("Depth: %1 → %2 · Parent: %3 → %4")
+                             .arg(change.value(QStringLiteral("from_depth")).toInt())
+                             .arg(change.value(QStringLiteral("to_depth")).toInt())
+                             .arg(change.value(QStringLiteral("from_parent_id")).toInteger())
+                             .arg(change.value(QStringLiteral("to_parent_id")).toInteger()));
+        }
+        if (payload.value(QStringLiteral("changes_truncated")).toBool()) {
+            lines.append(tr("Additional TOC changes are omitted from this bounded review."));
+        }
+    } else {
+        lines.append(tr("This native plan is ready for review."));
+    }
+    lines.append(QString());
+    lines.append(tr("Local validation: %1")
+                     .arg(payload.value(QStringLiteral("local_validation")).toString()));
+    const QString epubcheck = payload.value(QStringLiteral("full_epubcheck")).toObject()
+                                  .value(QStringLiteral("status")).toString();
+    lines.append(epubcheck.isEmpty() || epubcheck == QLatin1String("not_run")
+                     ? tr("Full EPUBCheck: not run.")
+                     : tr("Full EPUBCheck: %1").arg(epubcheck));
+    return lines.join(QLatin1Char('\n'));
+}
+
+QWidget *AgentDock::makePlanReviewCard(const QJsonObject &payload)
+{
+    const QString call_id = payload.value(QStringLiteral("tool_call_id")).toString();
+    const QString object_name = call_id.isEmpty()
+        ? QStringLiteral("agentPlanReviewCard")
+        : QStringLiteral("agentPlanReviewCard-%1").arg(call_id);
+    const bool paragraph = payload.value(QStringLiteral("plan_kind")).toString()
+        == QLatin1String("paragraph_normalization");
+    QWidget *card = makeCard(object_name,
+                             paragraph ? tr("Review paragraph plan")
+                                       : tr("Review TOC plan"),
+                             planReviewBody(payload), false);
+    card->setProperty("planId", payload.value(QStringLiteral("plan_id")).toString());
+    card->setProperty("planDigest", payload.value(QStringLiteral("plan_digest")).toString());
+    card->setProperty("bookRevision", payload.value(QStringLiteral("book_revision")).toInteger());
+    const QString book_session_id =
+        payload.value(QStringLiteral("book_session_id")).toString();
+    card->setProperty("bookSessionId", book_session_id);
+    if (auto *body = card->findChild<QLabel *>(object_name + QStringLiteral("Body"))) {
+        body->setTextFormat(Qt::PlainText);
+        body->setAccessibleName(body->text());
+    }
+
+    QStringList paths;
+    for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
+        const QJsonObject change = value.toObject();
+        QString path = paragraph
+            ? change.value(QStringLiteral("book_path")).toString()
+            : change.value(QStringLiteral("target")).toString();
+        const int fragment = path.indexOf(QLatin1Char('#'));
+        if (fragment >= 0) path.truncate(fragment);
+        if (path.isEmpty() || path.startsWith(QLatin1Char('/'))
+            || path.contains(QStringLiteral("://")) || paths.contains(path)) {
+            continue;
+        }
+        paths.append(path);
+        if (paths.size() >= 8) break;
+    }
+    auto *layout = qobject_cast<QVBoxLayout *>(card->layout());
+    for (int index = 0; layout && index < paths.size(); ++index) {
+        const QString path = paths.at(index);
+        auto *open = new QPushButton(tr("Open %1").arg(path), card);
+        open->setObjectName(QStringLiteral("agentPlanOpenResourceButton-%1-%2")
+                                .arg(call_id).arg(index));
+        open->setProperty("bookPath", path);
+        open->setProperty("bookSessionId", book_session_id);
+        open->setAccessibleDescription(tr("Open this resource in Sigil for plan review."));
+        open->setEnabled(!book_session_id.isEmpty() && book_session_id == m_bookSessionId);
+        layout->addWidget(open, 0, Qt::AlignLeft);
+        connect(open, &QPushButton::clicked, this,
+                [this, open, path, book_session_id]() {
+            if (book_session_id.isEmpty() || book_session_id != m_bookSessionId) {
+                open->setEnabled(false);
+                return;
+            }
+            emit openPlanResourceRequested(path, book_session_id);
+        });
+    }
+    return card;
 }
 
 QString AgentDock::previewBody(const QJsonObject &payload) const
@@ -1334,6 +1499,9 @@ void AgentDock::appendEvent(const AgentEvent &event)
             break;
         case AgentEventType::ToolRejected:
             settleApproval(event.payload.value(QStringLiteral("tool_call_id")).toString(), false);
+            break;
+        case AgentEventType::PlanCreated:
+            appendCard(makePlanReviewCard(event.payload));
             break;
         case AgentEventType::TransactionPreviewed:
             appendCard(makeCard(QStringLiteral("agentPreviewCard"),

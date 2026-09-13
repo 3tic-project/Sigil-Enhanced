@@ -371,8 +371,10 @@ void AgentRunner::publishToolOutcome(const ToolCall &call, const ToolResult &res
     payload.insert(QStringLiteral("id"), call.id);
     if (result.ok) {
         m_session->append(AgentEventType::ToolCompleted, payload);
-        const QJsonObject plan_status = planStatus(call, result);
+        QJsonObject plan_status = planStatus(call, result);
         if (!plan_status.isEmpty()) {
+            plan_status.insert(QStringLiteral("book_session_id"), m_runBookSessionId);
+            plan_status.insert(QStringLiteral("run_id"), m_runId);
             m_session->append(AgentEventType::PlanCreated, plan_status);
         }
         if (call.name == QLatin1String("transaction.preview")) {

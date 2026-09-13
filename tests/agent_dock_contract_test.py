@@ -114,6 +114,15 @@ require(
     "request events and technical details must expose measured response latency",
 )
 require(
+    "AgentEventType::PlanCreated" in runner_cpp
+    and "makePlanReviewCard" in dock_cpp
+    and "openPlanResourceRequested" in dock_h
+    and "openPlanResourceRequested" in main_window
+    and "m_AgentWorkspace->bookSessionId() != book_session_id" in main_window
+    and "Utility::URLDecodePath(book_path)" in main_window,
+    "native plans must produce book-bound review cards and guarded resource navigation",
+)
+require(
     "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,
     "dock must export the conversation and a debug log",
 )

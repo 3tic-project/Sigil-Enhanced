@@ -6332,6 +6332,14 @@ void MainWindow::CreateAgentDock()
             [this](const QString &id, bool ok) {
                 if (m_AgentController) m_AgentController->resolveApproval(id, ok);
             });
+    connect(m_AgentDock, &SigilAgent::AgentDock::openPlanResourceRequested, this,
+            [this](const QString &book_path, const QString &book_session_id) {
+                if (!m_AgentWorkspace
+                    || m_AgentWorkspace->bookSessionId() != book_session_id) {
+                    return;
+                }
+                OpenFile(Utility::URLDecodePath(book_path));
+            });
     connect(m_AgentDock, &SigilAgent::AgentDock::taskRestoreRequested, this,
             [this](const QString &checkpoint_id, const QString &book_session_id) {
                 if (m_AgentController) {
