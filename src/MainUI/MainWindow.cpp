@@ -6299,9 +6299,11 @@ void MainWindow::CreateAgentDock()
                 m_AgentDock->setRunState(SigilAgent::AgentRunState::Idle);
             } else {
                 m_AgentDock->appendEvent(event);
-                m_AgentDock->setRunState(m_AgentController && m_AgentController->runner()
-                                             ? m_AgentController->runner()->state()
-                                             : SigilAgent::AgentRunState::Idle);
+                if (event.type != SigilAgent::AgentEventType::AssistantDelta) {
+                    m_AgentDock->setRunState(m_AgentController && m_AgentController->runner()
+                                                 ? m_AgentController->runner()->state()
+                                                 : SigilAgent::AgentRunState::Idle);
+                }
             }
         }
         const bool applied_live = event.type == SigilAgent::AgentEventType::TransactionCommitted

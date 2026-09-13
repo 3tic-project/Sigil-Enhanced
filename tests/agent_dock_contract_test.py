@@ -207,6 +207,11 @@ require(
     "Agent technical details must track initial and renewed controller session ids",
 )
 require(
+    "event.type != SigilAgent::AgentEventType::AssistantDelta" in create_dock
+    and "setState(AgentRunState::StreamingResponse)" in runner_cpp,
+    "stream deltas must not repeat the full run-control refresh after streaming state is published",
+)
+require(
     "UpdateAgentContext();" in main_window.split("void MainWindow::SetNewBook", 1)[1].split(
         "void MainWindow::ResourcesAddedOrDeletedOrMoved", 1
     )[0],
