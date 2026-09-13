@@ -27469,6 +27469,25 @@ Continue using the requested filename?</source>
     <message><source>Task restored</source><translation>タスクを復元しました</translation></message>
     <message><source>The task could not be restored.</source><translation>タスクを復元できませんでした。</translation></message>
     <message><source>This task has already been restored.</source><translation>このタスクはすでに復元されています。</translation></message>
+    <message><source>Compare…</source><translation>比較…</translation></message>
+    <message><source>Compare %1</source><translation>%1 を比較</translation></message>
+    <message><source>Compare the reviewed before and after excerpts side by side.</source><translation>レビュー済みの変更前後の抜粋を並べて比較します。</translation></message>
+    <message><source>Plan comparison — %1</source><translation>プラン比較 — %1</translation></message>
+    <message><source>Read-only excerpt from the reviewed plan. The live book is unchanged.</source><translation>レビュー済みプランの読み取り専用抜粋です。現在のブックは変更されていません。</translation></message>
+    <message><source>Before</source><translation>変更前</translation></message>
+    <message><source>After</source><translation>変更後</translation></message>
+    <message><source>Before excerpt for %1</source><translation>%1 の変更前の抜粋</translation></message>
+    <message><source>After excerpt for %1</source><translation>%1 の変更後の抜粋</translation></message>
+    <message><source>This comparison is a bounded excerpt; source outside the displayed region is omitted.</source><translation>この比較は範囲を限定した抜粋です。表示範囲外のソースは省略されています。</translation></message>
+    <message><source>Compare hierarchy…</source><translation>階層を比較…</translation></message>
+    <message><source>Compare TOC hierarchy</source><translation>目次階層を比較</translation></message>
+    <message><source>Compare the reviewed TOC hierarchy before and after side by side.</source><translation>レビュー済みの目次階層の変更前後を並べて比較します。</translation></message>
+    <message><source>Depth: %1 · Parent: %2</source><translation>深さ：%1 · 親：%2</translation></message>
+    <message><source>TOC hierarchy</source><translation>目次階層</translation></message>
+    <message><source>Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.</source><translation>レビュー済みプランの読み取り専用階層比較です。現在のブックは変更されていません。</translation></message>
+    <message><source>TOC hierarchy before transformation</source><translation>変換前の目次階層</translation></message>
+    <message><source>TOC hierarchy after transformation</source><translation>変換後の目次階層</translation></message>
+    <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>この比較には上限があり、残りの目次変更は省略されています。</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>

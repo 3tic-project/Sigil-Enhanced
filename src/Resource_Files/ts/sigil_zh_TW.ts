@@ -27454,6 +27454,25 @@ Continue using the requested filename?</source>
     <message><source>Task restored</source><translation>任務已還原</translation></message>
     <message><source>The task could not be restored.</source><translation>無法還原此任務。</translation></message>
     <message><source>This task has already been restored.</source><translation>此任務已還原過。</translation></message>
+    <message><source>Compare…</source><translation>比較…</translation></message>
+    <message><source>Compare %1</source><translation>比較 %1</translation></message>
+    <message><source>Compare the reviewed before and after excerpts side by side.</source><translation>並排比較已審閱的變更前後片段。</translation></message>
+    <message><source>Plan comparison — %1</source><translation>計畫比較 — %1</translation></message>
+    <message><source>Read-only excerpt from the reviewed plan. The live book is unchanged.</source><translation>來自已審閱計畫的唯讀片段。目前書籍未變更。</translation></message>
+    <message><source>Before</source><translation>變更前</translation></message>
+    <message><source>After</source><translation>變更後</translation></message>
+    <message><source>Before excerpt for %1</source><translation>%1 的變更前片段</translation></message>
+    <message><source>After excerpt for %1</source><translation>%1 的變更後片段</translation></message>
+    <message><source>This comparison is a bounded excerpt; source outside the displayed region is omitted.</source><translation>此比較僅顯示有限片段；顯示區域外的原始碼已省略。</translation></message>
+    <message><source>Compare hierarchy…</source><translation>比較層級…</translation></message>
+    <message><source>Compare TOC hierarchy</source><translation>比較目錄層級</translation></message>
+    <message><source>Compare the reviewed TOC hierarchy before and after side by side.</source><translation>並排比較已審閱的目錄層級變換前後。</translation></message>
+    <message><source>Depth: %1 · Parent: %2</source><translation>深度：%1 · 父節點：%2</translation></message>
+    <message><source>TOC hierarchy</source><translation>目錄層級</translation></message>
+    <message><source>Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.</source><translation>來自已審閱計畫的唯讀層級比較。目前書籍未變更。</translation></message>
+    <message><source>TOC hierarchy before transformation</source><translation>變換前的目錄層級</translation></message>
+    <message><source>TOC hierarchy after transformation</source><translation>變換後的目錄層級</translation></message>
+    <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>此比較內容有上限；其餘目錄變更已省略。</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>

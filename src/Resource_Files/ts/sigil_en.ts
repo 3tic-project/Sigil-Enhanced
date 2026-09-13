@@ -23527,6 +23527,25 @@ Continue using the requested filename?</translation>
     <message><source>Task restored</source><translation>Task restored</translation></message>
     <message><source>The task could not be restored.</source><translation>The task could not be restored.</translation></message>
     <message><source>This task has already been restored.</source><translation>This task has already been restored.</translation></message>
+    <message><source>Compare…</source><translation>Compare…</translation></message>
+    <message><source>Compare %1</source><translation>Compare %1</translation></message>
+    <message><source>Compare the reviewed before and after excerpts side by side.</source><translation>Compare the reviewed before and after excerpts side by side.</translation></message>
+    <message><source>Plan comparison — %1</source><translation>Plan comparison — %1</translation></message>
+    <message><source>Read-only excerpt from the reviewed plan. The live book is unchanged.</source><translation>Read-only excerpt from the reviewed plan. The live book is unchanged.</translation></message>
+    <message><source>Before</source><translation>Before</translation></message>
+    <message><source>After</source><translation>After</translation></message>
+    <message><source>Before excerpt for %1</source><translation>Before excerpt for %1</translation></message>
+    <message><source>After excerpt for %1</source><translation>After excerpt for %1</translation></message>
+    <message><source>This comparison is a bounded excerpt; source outside the displayed region is omitted.</source><translation>This comparison is a bounded excerpt; source outside the displayed region is omitted.</translation></message>
+    <message><source>Compare hierarchy…</source><translation>Compare hierarchy…</translation></message>
+    <message><source>Compare TOC hierarchy</source><translation>Compare TOC hierarchy</translation></message>
+    <message><source>Compare the reviewed TOC hierarchy before and after side by side.</source><translation>Compare the reviewed TOC hierarchy before and after side by side.</translation></message>
+    <message><source>Depth: %1 · Parent: %2</source><translation>Depth: %1 · Parent: %2</translation></message>
+    <message><source>TOC hierarchy</source><translation>TOC hierarchy</translation></message>
+    <message><source>Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.</source><translation>Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.</translation></message>
+    <message><source>TOC hierarchy before transformation</source><translation>TOC hierarchy before transformation</translation></message>
+    <message><source>TOC hierarchy after transformation</source><translation>TOC hierarchy after transformation</translation></message>
+    <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>This comparison is bounded; additional TOC changes are omitted.</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>
