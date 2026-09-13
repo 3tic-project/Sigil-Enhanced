@@ -1678,11 +1678,27 @@ target_include_directories(agent_live_deepseek PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(agent_live_deepseek PRIVATE Qt6::Core Qt6::Network)
 target_compile_features(agent_live_deepseek PRIVATE cxx_std_17)
 
+add_executable(agent_plan_comparison_dialog_test
+    agent_plan_comparison_dialog_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.h
+)
+target_include_directories(agent_plan_comparison_dialog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_plan_comparison_dialog_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(agent_plan_comparison_dialog_test PRIVATE cxx_std_17)
+add_test(NAME agent_plan_comparison_dialog COMMAND agent_plan_comparison_dialog_test)
+set_tests_properties(agent_plan_comparison_dialog PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(agent_dock_test
     agent_dock_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentDock.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentDock.h
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.h
 )
 target_include_directories(agent_dock_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(agent_dock_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)

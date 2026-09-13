@@ -136,6 +136,8 @@ set( AGENT_FILES
     Agent/Persistence/AgentSettings.h
     Agent/UI/AgentDock.cpp
     Agent/UI/AgentDock.h
+    Agent/UI/AgentPlanComparisonDialog.cpp
+    Agent/UI/AgentPlanComparisonDialog.h
     Agent/UI/GuiApprovalGate.h
 )
 
