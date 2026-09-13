@@ -23434,6 +23434,10 @@ Continue using the requested filename?</translation>
     <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>Applied to the current book. The EPUB file has not been saved.</translation></message>
     <message><source>Applied changes: %1</source><translation>Applied changes: %1</translation></message>
     <message><source>Book revision: %1</source><translation>Book revision: %1</translation></message>
+    <message><source>Run: %1</source><translation>Run: %1</translation></message>
+    <message><source>Run status: %1</source><translation>Run status: %1</translation></message>
+    <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</translation></message>
+    <message><source>Whole run: in progress</source><translation>Whole run: in progress</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>Full EPUBCheck: not run.</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>Full EPUBCheck: %1</translation></message>
     <message><source>Recovery: use Sigil Undo where available.</source><translation>Recovery: use Sigil Undo where available.</translation></message>

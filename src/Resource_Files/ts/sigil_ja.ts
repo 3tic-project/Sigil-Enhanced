@@ -27376,6 +27376,10 @@ Continue using the requested filename?</source>
     <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>現在のブックに適用しました。EPUB ファイルはまだ保存されていません。</translation></message>
     <message><source>Applied changes: %1</source><translation>適用した変更：%1</translation></message>
     <message><source>Book revision: %1</source><translation>ブックのリビジョン：%1</translation></message>
+    <message><source>Run: %1</source><translation>実行 ID：%1</translation></message>
+    <message><source>Run status: %1</source><translation>実行状態：%1</translation></message>
+    <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>実行全体：%1 ミリ秒 · モデルリクエスト %2 · ツール呼び出し %3 · 完了：%4</translation></message>
+    <message><source>Whole run: in progress</source><translation>実行全体：進行中</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完全な EPUBCheck：未実行。</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>完全な EPUBCheck：%1</translation></message>
     <message><source>Recovery: use Sigil Undo where available.</source><translation>復元：利用可能な場合は Sigil の「元に戻す」を使用してください。</translation></message>

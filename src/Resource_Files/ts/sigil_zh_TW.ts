@@ -27361,6 +27361,10 @@ Continue using the requested filename?</source>
     <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>已套用至目前書籍。EPUB 檔案尚未儲存。</translation></message>
     <message><source>Applied changes: %1</source><translation>已套用變更：%1</translation></message>
     <message><source>Book revision: %1</source><translation>書籍修訂：%1</translation></message>
+    <message><source>Run: %1</source><translation>執行 ID：%1</translation></message>
+    <message><source>Run status: %1</source><translation>執行狀態：%1</translation></message>
+    <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>整輪執行：%1 毫秒 · 模型請求 %2 · 工具呼叫 %3 · 完成時間：%4</translation></message>
+    <message><source>Whole run: in progress</source><translation>整輪執行：進行中</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完整 EPUBCheck：未執行。</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>完整 EPUBCheck：%1</translation></message>
     <message><source>Recovery: use Sigil Undo where available.</source><translation>復原：可用時請使用 Sigil 的復原功能。</translation></message>
