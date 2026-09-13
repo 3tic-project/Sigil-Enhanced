@@ -1125,3 +1125,41 @@ Provider 失败时的 1/2 部分汇总，以及请求中取消的 missing 计数
 本切片关闭“整轮 token 不聚合”的缺口，但部分汇总不是消费账单；价格、币种、不同模型/
 缓存层级的费率、服务端重试计费和会话跨轮累计均不推断。真实服务商混合字段、超大计数、
 屏幕阅读器及多步骤长任务布局仍待验收。
+
+## Native Agent 响应延迟分段（2026-09-13）
+
+分支：`feature/agent-request-latency-breakdown`。主要提交：`ed854c94e`（Provider 流式边界
+计时）、`33e81c470`（请求终态事件）、`3cf349f81`（Technical details 展示）和
+`5b7d93ffc`（四语文案）。
+
+### 本地测量语义与事件传播
+
+- 公共 `ModelResponseTiming` 用 `-1` 明确表示未观测，只接受非负毫秒数，并可在 JSON 中
+  往返 `first_byte_ms` / `first_model_event_ms`。它挂在 `ModelTurn` 上，不改变模型正文、
+  reasoning、tool call、usage 或完成原因的既有语义。
+- `OpenAICompatibleProvider` 在实际 `post()` 前启动单调计时。首个非空响应正文记录
+  first byte；首个包含 reasoning/content/tool call/finish reason 的解码增量记录 first model
+  event。SSE 注释、空行和 keepalive 只影响前者，不伪造成模型事件；后者因此也不命名为
+  first token。
+- decoder 完成时会再次发布尾部增量，使没有结尾换行的最后一条 JSON/SSE 事件仍能到达
+  sink。成功、HTTP/协议失败、超时和取消路径都保留已真实观测到的字段，缺失边界不补 0。
+  同一组整数进入脱敏 HTTP trace 和 `model_request_completed/failed/cancelled` 的
+  `response_timing`，没有响应正文、模型文本或密钥。
+- Dock Technical details 在请求中显示等待响应，终态分别展示 first byte 与 first model
+  event；单个字段缺失时显示 **Not observed**。独立控件属性不会覆盖最近请求 Duration、
+  Whole run 或 token 用量；新请求和 New Session 都会清空旧值。
+
+### 测试证据与剩余项
+
+`agent_stream_decoder` 覆盖响应计时 JSON 往返；`agent_provider_catalog` 的本地 HTTP 服务先
+发送 SSE keepalive，再发送没有尾随换行的最终 content 事件，断言 first byte 早于 first
+model event 且最终增量不会丢失，该测试另连续运行 5 次通过。`agent_harness` 覆盖成功、
+失败和取消事件的字段保真；`agent_dock` 覆盖 9/14 ms 展示、复位与公开属性；
+`agent_dock_contract` 固定 Runner/Dock 接线边界。完整 Sigil 构建及 42 个固定 Python 依赖
+通过；13 项 Agent 测试连续 3 轮共 39 次通过。四份目录可生成 `.qm` 且 0 unfinished；严格
+简中、繁中、日文覆盖均通过，每份覆盖当前 5,670 条活跃源文。
+
+本切片补齐请求内部最有用的两个用户可见边界，但 first byte 可能只是代理或服务端心跳，
+first model event 也可能是 reasoning、tool call 或 finish reason，并非保证可见文本 token。
+当前未拆分 DNS、TCP、TLS、上传、排队与逐 token 吞吐，也没有跨平台真实高延迟代理和
+三家在线服务的人工对照；这些指标只用于诊断，不应单独解释为模型质量或服务端计算时间。

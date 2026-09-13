@@ -81,6 +81,13 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
   更新；工具调用型响应也会产生明确的模型请求完成事件。终态同时显示该次
   `provider.stream()` 的耗时和完成时间，不把整个多步骤 Agent 任务时长冒充网络耗时。
 
+每次正式流式请求还在本地单调时钟上记录两段响应延迟：**first byte** 是收到首个非空
+响应正文时的时间，**first model event** 是解码出首个有意义的 reasoning、content、
+tool call 或 finish reason 时的时间。SSE 注释/心跳可以让 first byte 更早，但不会被当作
+模型事件；因此后者是“首个可用模型事件”，并不承诺等同于首个文本 token。两者都从实际
+`provider.stream()` 发请求前起算，不是整轮 Agent 时长，也没有推断 DNS/TLS 等子阶段。
+超时、取消或错误发生前没有观测到对应边界时，界面明确显示 **Not observed**。
+
 偏好设置中的 **Request token usage when supported** 默认开启。正式流式请求会加入
 `stream_options.include_usage=true`；若兼容端点拒绝这个可选字段，可关闭该项。服务端
 返回 usage 时，最近请求的 Technical details 显示输入、输出、总计以及可用的缓存输入/
@@ -120,9 +127,10 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 最近一次 run ID 和 request ID。**Whole run** 从进入上下文准备开始，覆盖本轮所有模型请求、
 审批等待、工具调用和失败/取消时的暂存回滚；终态显示总耗时、模型请求数、工具调用数和
 完成时间。独立的 **Duration** 仍只表示最近一次 `provider.stream()`，不会冒充整轮时间。
-详情还显示请求绑定的 book session/revision、步骤、模式、模型、终态、发送时冻结的 scope
-handles、最近请求 token 用量和带覆盖率的整轮 token 汇总。这里只有安全的 endpoint 主机，
-不显示 API Key、URL 路径、查询参数或响应正文。
+**Response latency** 独立显示最近一次请求的 first byte 与 first model event，未观测字段
+不会用 0 补齐。详情还显示请求绑定的 book session/revision、步骤、模式、模型、终态、
+发送时冻结的 scope handles、最近请求 token 用量和带覆盖率的整轮 token 汇总。这里只有
+安全的 endpoint 主机，不显示 API Key、URL 路径、查询参数或响应正文。
 
 **Retry** 不是底层 HTTP 自动重试。它会作为新一轮，重新发送用户上次实际提交的文本和
 同一组 scope handles，并重新组装当前内存内容。仅当首个模型请求失败、当前仍是同一
@@ -259,7 +267,7 @@ Agent 专用工具，不在公共 `sigil.*` MCP catalog 中。
 停靠栏 **Export** 菜单：
 
 - **Conversation**：当前会话的 Markdown（用户 / Thinking / Answer / 工具），供阅读或贴给别人。
-- **Debug log**：JSON，含会话事件（不含逐 token 的 `assistant_delta`，只保留完整 assistant/tool 事件；请求完成事件保留服务端报告的 token 用量）、提供商（不含密钥）、以及跨轮保留的 HTTP 追踪（请求体最多 64KB，响应保留头尾）。API Key 和 `sk-…` 会被替换成 `[redacted]`。
+- **Debug log**：JSON，含会话事件（不含逐 token 的 `assistant_delta`，只保留完整 assistant/tool 事件；请求终态保留本地响应延迟，完成事件还保留服务端报告的 token 用量）、提供商（不含密钥）、以及跨轮保留的 HTTP 追踪（请求体最多 64KB，响应保留头尾，并记录同一组安全的响应延迟整数）。API Key 和 `sk-…` 会被替换成 `[redacted]`。
 
 ## Harness
 
@@ -271,7 +279,7 @@ Agent 循环在 `AgentRunner` 里，不在 UI 类中：
 4. ask 时先发批准卡片，批准后才执行
 5. deny / 用户拒绝 / 取消时仍写入一条 tool-role 结果（`PERMISSION_DENIED` 或 `CANCELLED`），避免下一次请求因缺 tool 消息而 400
 6. 为整轮生成 `run_id`，在终态记录覆盖安全收尾的总耗时、模型请求数、工具调用数和带请求覆盖率的 token 汇总
-7. 用 `request_id` 配对模型请求开始/成功/失败/取消事件，记录真实流式调用耗时和可用的服务端 token 用量
+7. 用 `request_id` 配对模型请求开始/成功/失败/取消事件，记录真实流式调用耗时、首字节/首个有意义模型事件和可用的服务端 token 用量
 8. 在模型与工具边界复核运行开始时冻结的 `book_session_id`
 9. 对符合条件的纯文本 commit 在写入前创建任务快照、写入后封存冲突基线
 10. 把事件追加到会话日志（transcript 的唯一来源）
