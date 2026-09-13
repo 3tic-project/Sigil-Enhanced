@@ -66,7 +66,8 @@ signals:
     void exportConversationRequested();
     void exportDebugLogRequested();
     void modeChanged(AgentMode mode);
-    void approvalResponded(const QString &toolCallId, bool approved);
+    void approvalResponded(const QString &toolCallId, bool approved,
+                           const QJsonObject &argumentOverrides);
     void openPlanResourceRequested(const QString &bookPath,
                                    const QString &bookSessionId);
     void taskRestoreRequested(const QString &checkpointId,

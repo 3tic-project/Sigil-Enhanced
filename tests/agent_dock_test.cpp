@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
@@ -594,8 +595,12 @@ int main(int argc, char *argv[])
             "approval buttons must start enabled");
     bool approved = false;
     QObject::connect(&dock, &SigilAgent::AgentDock::approvalResponded,
-                     [&approved](const QString &id, bool ok) {
-                         approved = ok && id == QStringLiteral("call-1");
+                     [&approved](const QString &id, bool ok,
+                                 const QJsonObject &overrides) {
+                         if (id != QLatin1String("call-1")) return;
+                         Require(overrides.isEmpty(),
+                                 "ordinary approval must not add argument overrides");
+                         approved = ok;
                      });
     approve->click();
     application.processEvents();
@@ -617,28 +622,61 @@ int main(int argc, char *argv[])
         { QStringLiteral("book_revision"), 7 },
         { QStringLiteral("applied_to_book"), false },
         { QStringLiteral("summary"), QJsonObject {
-            { QStringLiteral("ready_files"), 1 },
+            { QStringLiteral("ready_files"), 2 },
             { QStringLiteral("review_only_files"), 0 },
             { QStringLiteral("skipped_files"), 1 },
             { QStringLiteral("error_files"), 0 },
-            { QStringLiteral("conversion_count"), 12 },
-            { QStringLiteral("protected_count"), 2 }
+            { QStringLiteral("conversion_count"), 20 },
+            { QStringLiteral("protected_count"), 3 }
         } },
         { QStringLiteral("changes_css"), false },
         { QStringLiteral("changes_opf"), false },
         { QStringLiteral("adds_resources"), false },
-        { QStringLiteral("changes"), QJsonArray { QJsonObject {
-            { QStringLiteral("resource_id"), QStringLiteral("chapter-1") },
-            { QStringLiteral("book_path"), QStringLiteral("Text/chapter-1.xhtml") },
-            { QStringLiteral("conversion_count"), 12 },
-            { QStringLiteral("protected_count"), 2 },
-            { QStringLiteral("source_diff"), QJsonObject {
-                { QStringLiteral("before"), QStringLiteral("<div>Original paragraph</div>") },
-                { QStringLiteral("after"), QStringLiteral("<p>Original paragraph</p>") },
-                { QStringLiteral("prefix_truncated"), true },
-                { QStringLiteral("suffix_truncated"), false }
-            } }
-        } } },
+        { QStringLiteral("changes"), QJsonArray {
+            QJsonObject {
+                { QStringLiteral("resource_id"), QStringLiteral("chapter-1") },
+                { QStringLiteral("book_path"), QStringLiteral("Text/chapter-1.xhtml") },
+                { QStringLiteral("conversion_count"), 12 },
+                { QStringLiteral("protected_count"), 2 },
+                { QStringLiteral("source_diff"), QJsonObject {
+                    { QStringLiteral("before"), QStringLiteral("<div>Original paragraph</div>") },
+                    { QStringLiteral("after"), QStringLiteral("<p>Original paragraph</p>") },
+                    { QStringLiteral("prefix_truncated"), true },
+                    { QStringLiteral("suffix_truncated"), false }
+                } }
+            },
+            QJsonObject {
+                { QStringLiteral("resource_id"), QStringLiteral("chapter-2") },
+                { QStringLiteral("book_path"), QStringLiteral("Text/chapter-2.xhtml") },
+                { QStringLiteral("conversion_count"), 8 },
+                { QStringLiteral("protected_count"), 1 },
+                { QStringLiteral("source_diff"), QJsonObject {
+                    { QStringLiteral("before"), QStringLiteral("<div>Second paragraph</div>") },
+                    { QStringLiteral("after"), QStringLiteral("<p>Second paragraph</p>") }
+                } }
+            }
+        } },
+        { QStringLiteral("operation_groups_independent"), true },
+        { QStringLiteral("operation_groups"), QJsonArray {
+            QJsonObject {
+                { QStringLiteral("group_id"), QStringLiteral("chapter-1") },
+                { QStringLiteral("label"), QStringLiteral("Text/chapter-1.xhtml") },
+                { QStringLiteral("resource_ids"), QJsonArray {
+                    QStringLiteral("chapter-1") } },
+                { QStringLiteral("conversion_count"), 12 },
+                { QStringLiteral("protected_count"), 2 },
+                { QStringLiteral("independently_applicable"), true }
+            },
+            QJsonObject {
+                { QStringLiteral("group_id"), QStringLiteral("chapter-2") },
+                { QStringLiteral("label"), QStringLiteral("Text/chapter-2.xhtml") },
+                { QStringLiteral("resource_ids"), QJsonArray {
+                    QStringLiteral("chapter-2") } },
+                { QStringLiteral("conversion_count"), 8 },
+                { QStringLiteral("protected_count"), 1 },
+                { QStringLiteral("independently_applicable"), true }
+            }
+        } },
         { QStringLiteral("local_validation"), QStringLiteral("passed") },
         { QStringLiteral("full_epubcheck"), QJsonObject {
             { QStringLiteral("status"), QStringLiteral("not_run") }
@@ -754,12 +792,65 @@ int main(int argc, char *argv[])
         ? matching_approval_card->findChild<QLabel *>(
               QStringLiteral("agentApprovalPlanBinding"))
         : nullptr;
+    auto *group_list = matching_approval_card
+        ? matching_approval_card->findChild<QListWidget *>(
+              QStringLiteral("agentPlanGroupList-matching-plan-apply"))
+        : nullptr;
+    auto *select_all_groups = matching_approval_card
+        ? matching_approval_card->findChild<QPushButton *>(
+              QStringLiteral("agentPlanGroupsSelectAll-matching-plan-apply"))
+        : nullptr;
+    auto *clear_groups = matching_approval_card
+        ? matching_approval_card->findChild<QPushButton *>(
+              QStringLiteral("agentPlanGroupsClear-matching-plan-apply"))
+        : nullptr;
     Require(matching_approve && matching_approve->isEnabled()
                 && matching_approval_card->property("planReviewRequired").toBool()
                 && matching_approval_card->property("reviewedPlanMatched").toBool()
                 && matching_binding
-                && matching_binding->text().contains(QStringLiteral("matched")),
+                && matching_binding->text().contains(QStringLiteral("2 of 2")),
             "native apply approval must enable only for its displayed plan binding");
+    Require(group_list && group_list->count() == 2
+                && group_list->property("totalGroups").toInt() == 2
+                && group_list->item(0)->checkState() == Qt::Checked
+                && group_list->item(1)->checkState() == Qt::Checked
+                && select_all_groups && clear_groups,
+            "paragraph approval must expose every independent XHTML group as checked");
+    clear_groups->click();
+    Require(!matching_approve->isEnabled()
+                && matching_binding->text().contains(
+                    QStringLiteral("select at least one")),
+            "clearing every paragraph group must visibly block approval");
+    select_all_groups->click();
+    Require(matching_approve->isEnabled()
+                && matching_binding->text().contains(QStringLiteral("2 of 2")),
+            "Select all must restore the complete reviewed group selection");
+    group_list->item(0)->setCheckState(Qt::Unchecked);
+    Require(matching_approve->isEnabled()
+                && matching_binding->text().contains(QStringLiteral("1 of 2"))
+                && matching_approve->property("selectedResourceIds").toStringList()
+                    == QStringList { QStringLiteral("chapter-2") },
+            "an independent plan group must be removable without invalidating the other group");
+    QString approved_group_call;
+    QJsonObject approved_group_overrides;
+    QObject::connect(&dock, &SigilAgent::AgentDock::approvalResponded,
+                     [&approved_group_call, &approved_group_overrides](
+                         const QString &id, bool ok,
+                         const QJsonObject &overrides) {
+        if (id == QLatin1String("matching-plan-apply") && ok) {
+            approved_group_call = id;
+            approved_group_overrides = overrides;
+        }
+    });
+    matching_approve->click();
+    Require(approved_group_call == QStringLiteral("matching-plan-apply")
+                && approved_group_overrides.value(
+                    QStringLiteral("selected_resource_ids")).toArray()
+                    == QJsonArray { QStringLiteral("chapter-2") }
+                && !group_list->isEnabled()
+                && !select_all_groups->isEnabled()
+                && !clear_groups->isEnabled(),
+            "approval must freeze and emit exactly the checked paragraph groups");
 
     SigilAgent::AgentEvent mismatched_plan_approval = matching_plan_approval;
     mismatched_plan_approval.payload.insert(
@@ -885,6 +976,32 @@ int main(int argc, char *argv[])
                 && toc_after->toPlainText().contains(
                     QStringLiteral("Depth: 1 · Parent: 0")),
             "TOC comparison must place old and new hierarchy values in separate panes");
+    SigilAgent::AgentEvent toc_approval;
+    toc_approval.type = SigilAgent::AgentEventType::ToolApprovalRequested;
+    toc_approval.payload = QJsonObject {
+        { QStringLiteral("tool_call_id"), QStringLiteral("toc-plan-apply") },
+        { QStringLiteral("name"), QStringLiteral("toc.apply_transform") },
+        { QStringLiteral("impact"), QStringLiteral("Stage reviewed TOC plan") },
+        { QStringLiteral("arguments"), QJsonObject {
+            { QStringLiteral("plan_id"), QStringLiteral("toc-plan-id") },
+            { QStringLiteral("plan_digest"), QStringLiteral("toc-plan-digest") },
+            { QStringLiteral("expected_book_revision"), 7 }
+        } }
+    };
+    dock.appendEvent(toc_approval);
+    application.processEvents();
+    auto *toc_approval_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentApprovalCard-toc-plan-apply"));
+    auto *toc_approve = dock.findChild<QPushButton *>(
+        QStringLiteral("agentApproveButton-toc-plan-apply"));
+    auto *toc_dependency = toc_approval_card
+        ? toc_approval_card->findChild<QLabel *>(
+              QStringLiteral("agentApprovalPlanDependency"))
+        : nullptr;
+    Require(toc_approve && toc_approve->isEnabled() && toc_dependency
+                && toc_dependency->text().contains(QStringLiteral("dependent group"))
+                && !toc_approval_card->findChild<QListWidget *>(),
+            "dependent TOC hierarchy changes must remain one visible inseparable group");
 
     dock.resetTranscript();
     application.processEvents();

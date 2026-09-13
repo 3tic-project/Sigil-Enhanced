@@ -6331,8 +6331,12 @@ void MainWindow::CreateAgentDock()
                 if (m_AgentController) m_AgentController->setMode(mode);
             });
     connect(m_AgentDock, &SigilAgent::AgentDock::approvalResponded, this,
-            [this](const QString &id, bool ok) {
-                if (m_AgentController) m_AgentController->resolveApproval(id, ok);
+            [this](const QString &id, bool ok,
+                   const QJsonObject &argument_overrides) {
+                if (m_AgentController) {
+                    m_AgentController->resolveApproval(
+                        id, ok, argument_overrides);
+                }
             });
     connect(m_AgentDock, &SigilAgent::AgentDock::openPlanResourceRequested, this,
             [this](const QString &book_path, const QString &book_session_id) {

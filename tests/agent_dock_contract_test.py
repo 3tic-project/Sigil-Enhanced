@@ -212,6 +212,13 @@ require(
     "stream deltas must not repeat the full run-control refresh after streaming state is published",
 )
 require(
+    "argument_overrides" in create_dock
+    and "resolveApproval" in create_dock
+    and 'QStringLiteral("selected_resource_ids")' in runner_cpp
+    and "execution_arguments" in runner_cpp,
+    "reviewed paragraph group choices must reach the Runner's restricted approval override path",
+)
+require(
     "UpdateAgentContext();" in main_window.split("void MainWindow::SetNewBook", 1)[1].split(
         "void MainWindow::ResourcesAddedOrDeletedOrMoved", 1
     )[0],

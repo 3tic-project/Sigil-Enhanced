@@ -21,6 +21,7 @@
 #include <QJsonDocument>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QListWidget>
 #include <QMenu>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -28,6 +29,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSet>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QToolButton>
 #include <QVariant>
@@ -40,6 +42,19 @@ namespace
 {
 
 constexpr int STREAM_FLUSH_INTERVAL_MS = 33;
+
+QStringList checkedPlanGroupResourceIds(const QListWidget *list)
+{
+    QStringList resource_ids;
+    if (!list) return resource_ids;
+    for (int row = 0; row < list->count(); ++row) {
+        const QListWidgetItem *item = list->item(row);
+        if (item && item->checkState() == Qt::Checked) {
+            resource_ids.append(item->data(Qt::UserRole).toString());
+        }
+    }
+    return resource_ids;
+}
 
 }
 
@@ -1205,6 +1220,17 @@ void AgentDock::settleApproval(const QString &toolCallId, bool approved)
         deny->setEnabled(false);
         if (!approved) deny->setText(tr("Denied"));
     }
+    if (auto *groups = card->findChild<QListWidget *>(
+            QStringLiteral("agentPlanGroupList-%1").arg(toolCallId))) {
+        groups->setEnabled(false);
+    }
+    for (const QString &name : {
+             QStringLiteral("agentPlanGroupsSelectAll-%1").arg(toolCallId),
+             QStringLiteral("agentPlanGroupsClear-%1").arg(toolCallId) }) {
+        if (auto *button = card->findChild<QPushButton *>(name)) {
+            button->setEnabled(false);
+        }
+    }
 }
 
 void AgentDock::queueAssistantDelta(const QString &kind, const QString &text)
@@ -1284,6 +1310,14 @@ QString AgentDock::planReviewBody(const QJsonObject &payload) const
                          .arg(summary.value(QStringLiteral("review_only_files")).toInt())
                          .arg(summary.value(QStringLiteral("skipped_files")).toInt())
                          .arg(summary.value(QStringLiteral("error_files")).toInt()));
+        const QJsonArray groups = payload.value(
+            QStringLiteral("operation_groups")).toArray();
+        if (payload.value(
+                QStringLiteral("operation_groups_independent")).toBool()
+            && !groups.isEmpty()) {
+            lines.append(tr("Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.")
+                             .arg(groups.size()));
+        }
         if (!payload.value(QStringLiteral("changes_css")).toBool()
             && !payload.value(QStringLiteral("changes_opf")).toBool()
             && !payload.value(QStringLiteral("adds_resources")).toBool()) {
@@ -1326,6 +1360,7 @@ QString AgentDock::planReviewBody(const QJsonObject &payload) const
                                   ? tr("Yes") : tr("No"),
                               payload.value(QStringLiteral("changes_xhtml_headings")).toBool()
                                   ? tr("Yes") : tr("No")));
+        lines.append(tr("Operation groups: one dependent TOC hierarchy change."));
         for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
             const QJsonObject change = value.toObject();
             lines.append(QString());
@@ -1724,20 +1759,23 @@ void AgentDock::appendEvent(const AgentEvent &event)
                 event.payload.value(QStringLiteral("arguments")).toObject();
             const bool requires_plan_review = name == QLatin1String("paragraphs.apply")
                 || name == QLatin1String("toc.apply_transform");
-            const bool reviewed_plan_matches =
+            bool reviewed_plan_matches =
                 !requires_plan_review || matchesReviewedPlan(name, arguments);
+            const QString plan_id = arguments.value(
+                QStringLiteral("plan_id")).toString();
+            const QJsonObject reviewed_plan = m_reviewedPlans.value(plan_id);
             auto *frame = new QFrame(m_transcriptContents);
             frame->setObjectName(QStringLiteral("agentApprovalCard-%1").arg(id));
             frame->setProperty("planReviewRequired", requires_plan_review);
-            frame->setProperty("reviewedPlanMatched", reviewed_plan_matches);
             auto *layout = new QVBoxLayout(frame);
             layout->addWidget(new QLabel(tr("Approve %1?").arg(name), frame));
             auto *impact_label = new QLabel(impact, frame);
             impact_label->setObjectName(QStringLiteral("agentApprovalImpact"));
             impact_label->setWordWrap(true);
             layout->addWidget(impact_label);
+            QLabel *binding = nullptr;
             if (requires_plan_review) {
-                auto *binding = new QLabel(
+                binding = new QLabel(
                     reviewed_plan_matches
                         ? tr("Reviewed plan binding: matched.")
                         : tr("Approval blocked: this apply call does not match a reviewed plan."),
@@ -1746,6 +1784,114 @@ void AgentDock::appendEvent(const AgentEvent &event)
                 binding->setWordWrap(true);
                 binding->setAccessibleName(binding->text());
                 layout->addWidget(binding);
+            }
+            QListWidget *group_list = nullptr;
+            const bool paragraph_groups = reviewed_plan_matches
+                && name == QLatin1String("paragraphs.apply")
+                && reviewed_plan.value(
+                    QStringLiteral("operation_groups_independent")).toBool();
+            const QJsonArray groups = reviewed_plan.value(
+                QStringLiteral("operation_groups")).toArray();
+            if (paragraph_groups && !groups.isEmpty()) {
+                auto *group_header = new QWidget(frame);
+                auto *group_header_layout = new QHBoxLayout(group_header);
+                group_header_layout->setContentsMargins(0, 0, 0, 0);
+                auto *group_label = new QLabel(
+                    tr("Independent XHTML groups: choose one or more files to stage."),
+                    group_header);
+                group_label->setWordWrap(true);
+                auto *select_all = new QPushButton(tr("Select all"), group_header);
+                select_all->setObjectName(
+                    QStringLiteral("agentPlanGroupsSelectAll-%1").arg(id));
+                auto *clear = new QPushButton(tr("Clear"), group_header);
+                clear->setObjectName(
+                    QStringLiteral("agentPlanGroupsClear-%1").arg(id));
+                group_header_layout->addWidget(group_label, 1);
+                group_header_layout->addWidget(select_all);
+                group_header_layout->addWidget(clear);
+                layout->addWidget(group_header);
+
+                group_list = new QListWidget(frame);
+                group_list->setObjectName(
+                    QStringLiteral("agentPlanGroupList-%1").arg(id));
+                group_list->setSelectionMode(QAbstractItemView::NoSelection);
+                group_list->setAlternatingRowColors(true);
+                group_list->setProperty("planId", plan_id);
+                QSet<QString> seen_resources;
+                for (const QJsonValue &value : groups) {
+                    const QJsonObject group = value.toObject();
+                    const QJsonArray resources = group.value(
+                        QStringLiteral("resource_ids")).toArray();
+                    const QString resource_id = resources.size() == 1
+                        ? resources.first().toString() : QString();
+                    if (!group.value(
+                            QStringLiteral("independently_applicable")).toBool()
+                        || resource_id.isEmpty()
+                        || seen_resources.contains(resource_id)) {
+                        reviewed_plan_matches = false;
+                        continue;
+                    }
+                    seen_resources.insert(resource_id);
+                    const QString label = group.value(
+                        QStringLiteral("label")).toString();
+                    auto *item = new QListWidgetItem(
+                        tr("%1 · %2 conversion(s) · %3 protected item(s)")
+                            .arg(label.isEmpty() ? resource_id : label)
+                            .arg(group.value(
+                                QStringLiteral("conversion_count")).toInt())
+                            .arg(group.value(
+                                QStringLiteral("protected_count")).toInt()),
+                        group_list);
+                    item->setData(Qt::UserRole, resource_id);
+                    item->setData(Qt::UserRole + 1, group.value(
+                        QStringLiteral("group_id")).toString());
+                    item->setFlags((item->flags() | Qt::ItemIsUserCheckable)
+                                   & ~Qt::ItemIsSelectable);
+                    item->setCheckState(Qt::Checked);
+                    item->setToolTip(label);
+                }
+                if (group_list->count() != groups.size()) {
+                    reviewed_plan_matches = false;
+                }
+                group_list->setEnabled(reviewed_plan_matches);
+                if (!reviewed_plan_matches && binding) {
+                    binding->setText(tr("Approval blocked: this apply call does not match a reviewed plan."));
+                    binding->setAccessibleName(binding->text());
+                }
+                group_list->setProperty("totalGroups", group_list->count());
+                const int visible_rows = qMin(6, group_list->count());
+                group_list->setFixedHeight(
+                    qMax(72, visible_rows * group_list->fontMetrics().lineSpacing() + 14));
+                layout->addWidget(group_list);
+                connect(select_all, &QPushButton::clicked, group_list,
+                        [group_list]() {
+                    {
+                        const QSignalBlocker blocker(group_list);
+                        for (int row = 0; row < group_list->count(); ++row) {
+                            group_list->item(row)->setCheckState(Qt::Checked);
+                        }
+                    }
+                    emit group_list->itemChanged(group_list->item(0));
+                });
+                connect(clear, &QPushButton::clicked, group_list,
+                        [group_list]() {
+                    {
+                        const QSignalBlocker blocker(group_list);
+                        for (int row = 0; row < group_list->count(); ++row) {
+                            group_list->item(row)->setCheckState(Qt::Unchecked);
+                        }
+                    }
+                    emit group_list->itemChanged(group_list->item(0));
+                });
+            } else if (reviewed_plan_matches
+                       && name == QLatin1String("toc.apply_transform")) {
+                auto *dependency = new QLabel(
+                    tr("TOC hierarchy changes form one dependent group and cannot be split safely."),
+                    frame);
+                dependency->setObjectName(QStringLiteral("agentApprovalPlanDependency"));
+                dependency->setWordWrap(true);
+                dependency->setAccessibleName(dependency->text());
+                layout->addWidget(dependency);
             }
             auto *buttons = new QHBoxLayout();
             auto *approve = new QPushButton(tr("Approve"), frame);
@@ -1757,13 +1903,49 @@ void AgentDock::appendEvent(const AgentEvent &event)
             buttons->addWidget(approve);
             buttons->addWidget(deny);
             layout->addLayout(buttons);
-            connect(approve, &QPushButton::clicked, this, [this, id]() {
+            frame->setProperty("reviewedPlanMatched", reviewed_plan_matches);
+            if (group_list) {
+                auto update_selection = [this, frame, binding, approve, group_list,
+                                         reviewed_plan_matches]() {
+                    const QStringList selected =
+                        checkedPlanGroupResourceIds(group_list);
+                    group_list->setProperty("selectedResourceIds", selected);
+                    frame->setProperty("selectedResourceIds", selected);
+                    approve->setProperty("selectedResourceIds", selected);
+                    approve->setEnabled(reviewed_plan_matches
+                                        && group_list->isEnabled()
+                                        && !selected.isEmpty());
+                    if (binding && reviewed_plan_matches) {
+                        binding->setText(selected.isEmpty()
+                            ? tr("Approval blocked: select at least one independent operation group.")
+                            : tr("Reviewed plan binding: matched. Selected groups: %1 of %2.")
+                                  .arg(selected.size()).arg(group_list->count()));
+                        binding->setAccessibleName(binding->text());
+                    }
+                };
+                connect(group_list, &QListWidget::itemChanged, this,
+                        [update_selection](QListWidgetItem *) {
+                    update_selection();
+                });
+                update_selection();
+            }
+            connect(approve, &QPushButton::clicked, this,
+                    [this, id, group_list]() {
+                QJsonObject overrides;
+                if (group_list) {
+                    const QStringList selected =
+                        checkedPlanGroupResourceIds(group_list);
+                    if (selected.isEmpty()) return;
+                    overrides.insert(
+                        QStringLiteral("selected_resource_ids"),
+                        QJsonArray::fromStringList(selected));
+                }
                 settleApproval(id, true);
-                emit approvalResponded(id, true);
+                emit approvalResponded(id, true, overrides);
             });
             connect(deny, &QPushButton::clicked, this, [this, id]() {
                 settleApproval(id, false);
-                emit approvalResponded(id, false);
+                emit approvalResponded(id, false, QJsonObject());
             });
             appendCard(frame);
             m_approvalCards.insert(id, frame);
