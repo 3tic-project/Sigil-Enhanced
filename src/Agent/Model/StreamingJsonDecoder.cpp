@@ -214,17 +214,31 @@ void StreamingJsonDecoder::parseUsage(const QJsonObject &usage)
         m_usage.totalTokens = m_usage.inputTokens + m_usage.outputTokens;
     }
 
-    const QJsonObject input_details =
+    QJsonObject input_details =
         usage.value(QStringLiteral("prompt_tokens_details")).toObject();
-    const qint64 cached = usageValue(
+    if (input_details.isEmpty()) {
+        input_details = usage.value(QStringLiteral("input_tokens_details")).toObject();
+    }
+    qint64 cached = usageValue(
         input_details, QStringLiteral("cached_tokens"),
         QStringLiteral("cached_input_tokens"));
+    if (cached < 0) {
+        cached = usageValue(
+            usage, QStringLiteral("prompt_cache_hit_tokens"),
+            QStringLiteral("cached_input_tokens"));
+    }
     if (cached >= 0) m_usage.cachedInputTokens = cached;
 
-    const QJsonObject output_details =
+    QJsonObject output_details =
         usage.value(QStringLiteral("completion_tokens_details")).toObject();
-    const qint64 reasoning = usageValue(
+    if (output_details.isEmpty()) {
+        output_details = usage.value(QStringLiteral("output_tokens_details")).toObject();
+    }
+    qint64 reasoning = usageValue(
         output_details, QStringLiteral("reasoning_tokens"));
+    if (reasoning < 0) {
+        reasoning = usageValue(usage, QStringLiteral("reasoning_tokens"));
+    }
     if (reasoning >= 0) m_usage.reasoningTokens = reasoning;
 }
 

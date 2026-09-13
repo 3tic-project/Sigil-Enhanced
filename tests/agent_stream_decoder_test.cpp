@@ -117,6 +117,18 @@ int main()
                 && alias_turn.usage.totalTokens == 10,
             "input/output token aliases must parse and yield an exact total when omitted");
 
+    StreamingJsonDecoder deepseek_usage_decoder;
+    deepseek_usage_decoder.feed(QByteArray(
+        "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],"
+        "\"usage\":{\"prompt_tokens\":21,\"completion_tokens\":9,"
+        "\"total_tokens\":30,\"prompt_cache_hit_tokens\":13,"
+        "\"completion_tokens_details\":{\"reasoning_tokens\":5}}}\n\n"
+        "data: [DONE]\n\n"));
+    const ModelTurn deepseek_usage_turn = deepseek_usage_decoder.finish();
+    Require(deepseek_usage_turn.usage.cachedInputTokens == 13
+                && deepseek_usage_turn.usage.reasoningTokens == 5,
+            "DeepSeek top-level cache hits and nested reasoning usage must be retained");
+
     AgentSession session;
     QJsonArray calls { toolCallToJson(turn.toolCalls.first()) };
     session.append(AgentEventType::UserMessage, QJsonObject { { QStringLiteral("text"), QStringLiteral("summarize") } });
