@@ -23450,7 +23450,7 @@ Continue using the requested filename?</translation>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>The open book changed during this run. The old response was blocked before it could be applied to the new book.</translation></message>
     <message><source>Retry</source><translation>Retry</translation></message>
     <message><source>Technical details</source><translation>Technical details</translation></message>
-    <message><source>Show request identifiers, timing, target revision, and scope handles.</source><translation>Show request identifiers, timing, target revision, and scope handles.</translation></message>
+    <message><source>Show request identifiers, timing, token usage, target revision, and scope handles.</source><translation>Show request identifiers, timing, token usage, target revision, and scope handles.</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ms · %3</translation></message>
     <message><source>Session: %1</source><translation>Session: %1</translation></message>
     <message><source>Not available</source><translation>Not available</translation></message>
@@ -23462,6 +23462,12 @@ Continue using the requested filename?</translation>
     <message><source>Scope handles: %1</source><translation>Scope handles: %1</translation></message>
     <message><source>None</source><translation>None</translation></message>
     <message><source>Duration: %1 ms · Finished: %2</source><translation>Duration: %1 ms · Finished: %2</translation></message>
+    <message><source>Not reported</source><translation>Not reported</translation></message>
+    <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token usage: input %1 · output %2 · total %3</translation></message>
+    <message><source>Usage details: cached input %1 · reasoning %2</source><translation>Usage details: cached input %1 · reasoning %2</translation></message>
+    <message><source>Token usage: requested; awaiting response</source><translation>Token usage: requested; awaiting response</translation></message>
+    <message><source>Token usage: not reported by provider</source><translation>Token usage: not reported by provider</translation></message>
+    <message><source>Token usage: not requested</source><translation>Token usage: not requested</translation></message>
     <message><source>No model request in this session.</source><translation>No model request in this session.</translation></message>
     <message><source>Provider: %1 · Endpoint: %2</source><translation>Provider: %1 · Endpoint: %2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>Resend the last prompt with the same scope handles.</translation></message>
@@ -23506,6 +23512,8 @@ Continue using the requested filename?</translation>
     <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>Refresh models to load ids and parameters from the server, or type an id.</translation></message>
     <message><source>Refresh models to load this provider's catalog.</source><translation>Refresh models to load this provider's catalog.</translation></message>
     <message><source>Send thinking (reasoning_content)</source><translation>Send thinking (reasoning_content)</translation></message>
+    <message><source>Request token usage when supported</source><translation>Request token usage when supported</translation></message>
+    <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>Stored only in local Sigil settings, never in the EPUB or transcript</translation></message>
     <message><source>parameters: %1</source><translation>parameters: %1</translation></message>
     <message><source>reasoning</source><translation>reasoning</translation></message>
@@ -23514,7 +23522,7 @@ Continue using the requested filename?</translation>
     <message><source>tools not advertised</source><translation>tools not advertised</translation></message>
     <message><source>Test Chat Completions</source><translation>Test Chat Completions</translation></message>
     <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</translation></message>
-    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</translation></message>
     <message><source>Chat Completions has not been tested for the current settings.</source><translation>Chat Completions has not been tested for the current settings.</translation></message>
     <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>Chat Completions was last tested successfully for these settings on %1.</translation></message>
     <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>Cannot test: enter a valid Chat Completions URL.</translation></message>

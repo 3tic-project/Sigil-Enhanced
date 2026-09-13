@@ -27377,7 +27377,7 @@ Continue using the requested filename?</source>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>執行期間開啟的書籍已變更。舊回應在套用至新書籍前已被封鎖。</translation></message>
     <message><source>Retry</source><translation>重試</translation></message>
     <message><source>Technical details</source><translation>技術詳細資料</translation></message>
-    <message><source>Show request identifiers, timing, target revision, and scope handles.</source><translation>顯示請求識別碼、耗時、目標修訂和範圍代碼。</translation></message>
+    <message><source>Show request identifiers, timing, token usage, target revision, and scope handles.</source><translation>顯示請求識別碼、耗時、Token 用量、目標修訂和範圍代碼。</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 毫秒 · %3</translation></message>
     <message><source>Session: %1</source><translation>工作階段：%1</translation></message>
     <message><source>Not available</source><translation>無法使用</translation></message>
@@ -27389,6 +27389,12 @@ Continue using the requested filename?</source>
     <message><source>Scope handles: %1</source><translation>範圍代碼：%1</translation></message>
     <message><source>None</source><translation>無</translation></message>
     <message><source>Duration: %1 ms · Finished: %2</source><translation>耗時：%1 毫秒 · 完成時間：%2</translation></message>
+    <message><source>Not reported</source><translation>未回報</translation></message>
+    <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token 用量：輸入 %1 · 輸出 %2 · 總計 %3</translation></message>
+    <message><source>Usage details: cached input %1 · reasoning %2</source><translation>用量詳情：快取輸入 %1 · 推理 %2</translation></message>
+    <message><source>Token usage: requested; awaiting response</source><translation>Token 用量：已請求，正在等待回應</translation></message>
+    <message><source>Token usage: not reported by provider</source><translation>提供者未回報 Token 用量</translation></message>
+    <message><source>Token usage: not requested</source><translation>未請求 Token 用量</translation></message>
     <message><source>No model request in this session.</source><translation>此工作階段尚無模型請求。</translation></message>
     <message><source>Provider: %1 · Endpoint: %2</source><translation>供應商：%1 · 端點：%2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>使用相同的範圍代碼重新傳送最近一次提示。</translation></message>
@@ -27433,6 +27439,8 @@ Continue using the requested filename?</source>
     <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>重新整理模型以從伺服器載入 ID 和參數，或直接輸入 ID。</translation></message>
     <message><source>Refresh models to load this provider's catalog.</source><translation>重新整理模型以載入此供應商的目錄。</translation></message>
     <message><source>Send thinking (reasoning_content)</source><translation>傳送思考內容（reasoning_content）</translation></message>
+    <message><source>Request token usage when supported</source><translation>支援時請求 Token 用量</translation></message>
+    <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>向串流請求加入 stream_options.include_usage。如果端點拒絕此選項，請將其停用。</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>僅儲存在本機 Sigil 設定中，絕不寫入 EPUB 或工作階段記錄</translation></message>
     <message><source>parameters: %1</source><translation>參數：%1</translation></message>
     <message><source>reasoning</source><translation>推理</translation></message>
@@ -27441,7 +27449,7 @@ Continue using the requested filename?</source>
     <message><source>tools not advertised</source><translation>未公布工具支援</translation></message>
     <message><source>Test Chat Completions</source><translation>測試 Chat Completions</translation></message>
     <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>傳送一個不含工具和書籍內容的小型請求。供應商最多可能收取 8 個輸出 token 的費用。</translation></message>
-    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>在此選擇供應商和模型。重新整理模型會載入目錄和公布的參數。測試 Chat Completions 會傳送一個獨立的小型請求，以驗證此端點、API 金鑰和模型；測試執行時絕不會傳送書籍內容或工具，也不會儲存這些設定。偏好設定關閉時，會為這組完全相同的設定記住成功結果。</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>在此選擇供應商和模型。重新整理模型會載入目錄和公布的參數。測試 Chat Completions 會傳送一個獨立的小型請求，以驗證此端點、API 金鑰和模型；測試執行時絕不會傳送書籍內容或工具，不測試選用的 Token 用量請求，也不會儲存這些設定。偏好設定關閉時，會為這組完全相同的設定記住成功結果。</translation></message>
     <message><source>Chat Completions has not been tested for the current settings.</source><translation>尚未針對目前設定測試 Chat Completions。</translation></message>
     <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>這組設定上次成功通過 Chat Completions 測試的時間為 %1。</translation></message>
     <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>無法測試：請輸入有效的 Chat Completions URL。</translation></message>

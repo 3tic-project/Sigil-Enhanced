@@ -27392,7 +27392,7 @@ Continue using the requested filename?</source>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>実行中に開いているブックが変更されました。以前の応答は新しいブックに適用される前にブロックされました。</translation></message>
     <message><source>Retry</source><translation>再試行</translation></message>
     <message><source>Technical details</source><translation>技術的な詳細</translation></message>
-    <message><source>Show request identifiers, timing, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、対象リビジョン、スコープハンドルを表示します。</translation></message>
+    <message><source>Show request identifiers, timing, token usage, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、トークン使用量、対象リビジョン、スコープハンドルを表示します。</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ミリ秒 · %3</translation></message>
     <message><source>Session: %1</source><translation>セッション：%1</translation></message>
     <message><source>Not available</source><translation>利用不可</translation></message>
@@ -27404,6 +27404,12 @@ Continue using the requested filename?</source>
     <message><source>Scope handles: %1</source><translation>スコープハンドル：%1</translation></message>
     <message><source>None</source><translation>なし</translation></message>
     <message><source>Duration: %1 ms · Finished: %2</source><translation>所要時間：%1 ミリ秒 · 完了：%2</translation></message>
+    <message><source>Not reported</source><translation>未報告</translation></message>
+    <message><source>Token usage: input %1 · output %2 · total %3</source><translation>トークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
+    <message><source>Usage details: cached input %1 · reasoning %2</source><translation>使用量の詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
+    <message><source>Token usage: requested; awaiting response</source><translation>トークン使用量：要求済み、応答待ち</translation></message>
+    <message><source>Token usage: not reported by provider</source><translation>トークン使用量：プロバイダーからの報告なし</translation></message>
+    <message><source>Token usage: not requested</source><translation>トークン使用量：要求なし</translation></message>
     <message><source>No model request in this session.</source><translation>このセッションにはモデルリクエストがありません。</translation></message>
     <message><source>Provider: %1 · Endpoint: %2</source><translation>プロバイダー：%1 · エンドポイント：%2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>同じスコープハンドルで直前のプロンプトを再送信します。</translation></message>
@@ -27448,6 +27454,8 @@ Continue using the requested filename?</source>
     <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>モデルを更新してサーバーから ID とパラメーターを読み込むか、ID を入力してください。</translation></message>
     <message><source>Refresh models to load this provider's catalog.</source><translation>モデルを更新して、このプロバイダーのカタログを読み込んでください。</translation></message>
     <message><source>Send thinking (reasoning_content)</source><translation>思考内容（reasoning_content）を送信</translation></message>
+    <message><source>Request token usage when supported</source><translation>対応時にトークン使用量を要求</translation></message>
+    <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>ストリーミングリクエストに stream_options.include_usage を追加します。エンドポイントがこのオプションを拒否する場合は無効にしてください。</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>ローカルの Sigil 設定にのみ保存され、EPUB や会話記録には保存されません</translation></message>
     <message><source>parameters: %1</source><translation>パラメーター：%1</translation></message>
     <message><source>reasoning</source><translation>推論</translation></message>
@@ -27456,7 +27464,7 @@ Continue using the requested filename?</source>
     <message><source>tools not advertised</source><translation>ツールサポートは公開されていません</translation></message>
     <message><source>Test Chat Completions</source><translation>Chat Completions をテスト</translation></message>
     <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>ツールやブック内容を含まない小さなリクエストを送信します。最大 8 出力トークン分の料金が発生する場合があります。</translation></message>
-    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>ここでプロバイダーとモデルを選択します。「モデルを更新」はカタログと公開パラメーターを読み込みます。「Chat Completions をテスト」は、このエンドポイント、API キー、モデルを確認するための小さな別リクエストを送信します。テスト実行中はブック内容やツールを送信せず、これらの設定も保存しません。環境設定を閉じると、この構成と完全に一致する場合に成功結果が記録されます。</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>ここでプロバイダーとモデルを選択します。「モデルを更新」はカタログと公開パラメーターを読み込みます。「Chat Completions をテスト」は、このエンドポイント、API キー、モデルを確認するための小さな別リクエストを送信します。テスト実行中はブック内容やツールを送信せず、オプションのトークン使用量要求もテストせず、これらの設定も保存しません。環境設定を閉じると、この構成と完全に一致する場合に成功結果が記録されます。</translation></message>
     <message><source>Chat Completions has not been tested for the current settings.</source><translation>現在の設定では Chat Completions はまだテストされていません。</translation></message>
     <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>この設定で Chat Completions テストに最後に成功した日時: %1。</translation></message>
     <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>テストできません。有効な Chat Completions URL を入力してください。</translation></message>
