@@ -878,6 +878,46 @@ int main(int argc, char *argv[])
                 && mismatched_binding->text().contains(QStringLiteral("blocked")),
             "an unreviewed digest must be visible and blocked while remaining deniable");
 
+    SigilAgent::AgentEvent malformed_group_plan = paragraph_plan;
+    malformed_group_plan.payload.insert(
+        QStringLiteral("tool_call_id"), QStringLiteral("malformed-group-plan"));
+    malformed_group_plan.payload.insert(
+        QStringLiteral("plan_id"), QStringLiteral("malformed-group-plan-id"));
+    malformed_group_plan.payload.insert(
+        QStringLiteral("plan_digest"), QStringLiteral("malformed-group-plan-digest"));
+    QJsonObject duplicate_group = paragraph_plan.payload.value(
+        QStringLiteral("operation_groups")).toArray().first().toObject();
+    malformed_group_plan.payload.insert(
+        QStringLiteral("operation_groups"),
+        QJsonArray { duplicate_group, duplicate_group });
+    dock.appendEvent(malformed_group_plan);
+    SigilAgent::AgentEvent malformed_group_approval = matching_plan_approval;
+    malformed_group_approval.payload.insert(
+        QStringLiteral("tool_call_id"), QStringLiteral("malformed-group-apply"));
+    QJsonObject malformed_group_arguments = malformed_group_approval.payload.value(
+        QStringLiteral("arguments")).toObject();
+    malformed_group_arguments.insert(
+        QStringLiteral("plan_id"), QStringLiteral("malformed-group-plan-id"));
+    malformed_group_arguments.insert(
+        QStringLiteral("plan_digest"),
+        QStringLiteral("malformed-group-plan-digest"));
+    malformed_group_approval.payload.insert(
+        QStringLiteral("arguments"), malformed_group_arguments);
+    dock.appendEvent(malformed_group_approval);
+    application.processEvents();
+    auto *malformed_group_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentApprovalCard-malformed-group-apply"));
+    auto *malformed_group_approve = dock.findChild<QPushButton *>(
+        QStringLiteral("agentApproveButton-malformed-group-apply"));
+    auto *malformed_group_deny = dock.findChild<QPushButton *>(
+        QStringLiteral("agentDenyButton-malformed-group-apply"));
+    Require(malformed_group_card && malformed_group_approve
+                && !malformed_group_approve->isEnabled()
+                && malformed_group_deny && malformed_group_deny->isEnabled()
+                && !malformed_group_card->property(
+                    "reviewedPlanMatched").toBool(),
+            "duplicate reviewed operation groups must fail closed while remaining deniable");
+
     open_paragraph->click();
     Require(opened_plan_resources == 1
                 && opened_plan_path == QStringLiteral("Text/chapter-1.xhtml"),

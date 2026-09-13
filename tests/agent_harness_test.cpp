@@ -606,8 +606,12 @@ int main()
                     == paragraph_plan.data.value(QStringLiteral("plan_id")).toString()
                 && plan_event.value(QStringLiteral("plan_digest")).toString()
                     == paragraph_plan.data.value(QStringLiteral("plan_digest")).toString()
+                && plan_event.value(
+                    QStringLiteral("operation_groups_independent")).toBool()
+                && plan_event.value(QStringLiteral("operation_groups"))
+                    .toArray().size() == 2
                 && !plan_event.value(QStringLiteral("changes")).toArray().isEmpty(),
-            "plan-created event must preserve the reviewed binding and bounded changes");
+            "plan-created event must preserve the binding, operation groups, and bounded changes");
     const QJsonObject paragraph_apply_arguments {
         { QStringLiteral("plan_id"), paragraph_plan.data.value(QStringLiteral("plan_id")) },
         { QStringLiteral("plan_digest"), paragraph_plan.data.value(QStringLiteral("plan_digest")) },

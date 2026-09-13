@@ -354,6 +354,17 @@ int main()
                 && empty_groups.code == QStringLiteral("PLAN_GROUP_SELECTION_EMPTY")
                 && !grouped_book.hasOpenTransaction(),
             "an empty operation-group selection must fail before transaction creation");
+    QJsonObject duplicate_group_arguments = bindingArguments(grouped_binding);
+    duplicate_group_arguments.insert(
+        QStringLiteral("selected_resource_ids"),
+        QJsonArray { QStringLiteral("safe"), QStringLiteral("safe") });
+    const ToolResult duplicate_groups = run(
+        grouped_registry, QStringLiteral("paragraphs.apply"),
+        duplicate_group_arguments);
+    Require(!duplicate_groups.ok
+                && duplicate_groups.code == QStringLiteral("INVALID_ARGUMENT")
+                && !grouped_book.hasOpenTransaction(),
+            "duplicate operation-group selections must fail before transaction creation");
     QJsonObject foreign_group_arguments = bindingArguments(grouped_binding);
     foreign_group_arguments.insert(
         QStringLiteral("selected_resource_ids"),

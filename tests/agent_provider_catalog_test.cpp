@@ -247,6 +247,14 @@ int main(int argc, char *argv[])
             { QStringLiteral("conversion_count"), 2 },
             { QStringLiteral("protected_count"), 1 }
         } },
+        { QStringLiteral("operation_groups_independent"), true },
+        { QStringLiteral("operation_groups"), QJsonArray { QJsonObject {
+            { QStringLiteral("group_id"), QStringLiteral("chapter-1") },
+            { QStringLiteral("label"), QStringLiteral("Text/chapter-1.xhtml") },
+            { QStringLiteral("resource_ids"), QJsonArray {
+                QStringLiteral("chapter-1") } },
+            { QStringLiteral("independently_applicable"), true }
+        } } },
         { QStringLiteral("changes"), QJsonArray { QJsonObject {
             { QStringLiteral("resource_id"), QStringLiteral("chapter-1") },
             { QStringLiteral("book_path"), QStringLiteral("Text/chapter-1.xhtml") },
@@ -334,6 +342,8 @@ int main(int argc, char *argv[])
     Require(markdown.contains(QStringLiteral("book.summary")), "conversation export must include tools");
     Require(markdown.contains(QStringLiteral("## Plan review: Paragraph normalization"))
                 && markdown.contains(QStringLiteral("Text/chapter-1.xhtml"))
+                && markdown.contains(
+                    QStringLiteral("Independent XHTML operation groups: 1"))
                 && markdown.contains(QStringLiteral("<div>Before</div>"))
                 && markdown.contains(QStringLiteral("<p>After</p>"))
                 && markdown.contains(QStringLiteral("Full EPUBCheck: not run"))

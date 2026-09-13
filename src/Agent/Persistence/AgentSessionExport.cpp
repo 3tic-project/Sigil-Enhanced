@@ -64,6 +64,15 @@ void appendPlanReview(QStringList *lines, const QJsonObject &payload)
                           .arg(summary.value(QStringLiteral("ready_files")).toInt())
                           .arg(summary.value(QStringLiteral("conversion_count")).toInt())
                           .arg(summary.value(QStringLiteral("protected_count")).toInt()));
+        const QJsonArray groups = payload.value(
+            QStringLiteral("operation_groups")).toArray();
+        if (payload.value(
+                QStringLiteral("operation_groups_independent")).toBool()
+            && !groups.isEmpty()) {
+            lines->append(QStringLiteral(
+                "- Independent XHTML operation groups: %1; choose one or more when approving apply.")
+                              .arg(groups.size()));
+        }
         for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
             const QJsonObject change = value.toObject();
             const QString path = change.value(QStringLiteral("book_path")).toString();
