@@ -202,6 +202,18 @@ Technical details 现在还会单独显示 **Whole run**：从准备上下文开
 成模型输出；没有观测到的边界明确显示“未观测”。该指标与单次请求 **Duration**、整轮
 **Whole run** 和 Token 用量各自独立，不会用 0 或推测值补齐。
 
+### Agent 可审阅原生计划
+
+`paragraphs.plan` 与 `toc.plan_transform` 成功后，Agent 停靠栏现在显示独立计划审阅卡。
+段落计划按文件显示转换/保护计数及受限的前后源码片段；TOC 计划显示条目、目标、父节点和
+深度变化，并明确是否保持先序、是否改动 XHTML 标题。卡片始终说明活书尚未改变、局部校验
+和完整 EPUBCheck 状态，可直接打开当前书中的对应资源。
+
+资源按钮绑定生成计划时的书籍会话，换书后立即禁用。Edit 模式批准原生 apply 时还会核对
+已展示计划的 ID、digest、书籍 revision 和会话；不匹配的调用不能点击 Approve，工具执行
+边界仍会再次重验。Conversation 导出提供相同的可读计划摘要，完整技术绑定只保留在脱敏
+Debug JSON。当前尚不支持卡片内选择独立操作组或整文件双栏 diff。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。
@@ -214,7 +226,7 @@ Technical details 现在还会单独显示 **Whole run**：从准备上下文开
 ## 兼容性
 
 - Automate 命令、快捷键、插件接口没有改。
-- 当前 C++、头文件和 Qt Designer 源码中的 5,670 条活跃界面文案，已全部进入简体中文、
+- 当前 C++、头文件和 Qt Designer 源码中的 5,693 条活跃界面文案，已全部进入简体中文、
   繁体中文和日文目录且没有 unfinished 条目；严格目录覆盖测试通过。详见
   [PRD 实施审计](PRD-2026-09-05-Implementation.md)。
 

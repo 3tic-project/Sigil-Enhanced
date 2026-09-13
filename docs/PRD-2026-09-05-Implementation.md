@@ -1163,3 +1163,47 @@ model event 且最终增量不会丢失，该测试另连续运行 5 次通过�
 first model event 也可能是 reasoning、tool call 或 finish reason，并非保证可见文本 token。
 当前未拆分 DNS、TCP、TLS、上传、排队与逐 token 吞吐，也没有跨平台真实高延迟代理和
 三家在线服务的人工对照；这些指标只用于诊断，不应单独解释为模型质量或服务端计算时间。
+
+## Native Agent 原生计划审阅卡（2026-09-13）
+
+分支：`feature/agent-plan-review-cards`。主要提交：`c53f69e9f`（原生计划事件）、
+`081b5c966`（书籍绑定的结构化审阅卡与资源跳转）、`7a16851b3`（审阅绑定批准门）、
+`d1e054b00`（四语文案）和 `68b20ec73`（可读 Conversation 导出）。
+
+### 计划事件、审阅内容与批准闭环
+
+- Runner 只在 `paragraphs.plan` / `toc.plan_transform` 成功、preview-only、未应用且同时返回
+  非空 plan ID/digest 时发布 `plan_created`。事件自包含原工具的受限 changes、plan kind、
+  review status、run ID 和 book session；普通只读工具、分析、失败结果和事务 preview 不会
+  被误标成计划。
+- 段落审阅卡按资源显示汇总、变更范围、转换/保护计数及原生工具生成的 bounded before/
+  after 片段，正文 QLabel 固定 PlainText。TOC 卡显示受影响/重新归属计数、label/target、
+  父级与深度变化、先序和不改正文标题的不变量，并保留 changes-truncated 提示。两者都
+  明确活书未改变、局部校验与完整 EPUBCheck 状态。
+- 每张卡只为前 8 个唯一 book path 建立跳转按钮，避免大计划创建无界控件。按钮和信号携带
+  完整 book session；Dock 在上下文切换时即时禁用旧按钮，MainWindow 再次 fail-closed 核对，
+  然后移除 TOC fragment、URL 解码并复用既有 `OpenFile`。卡片属性保留 plan/digest/revision，
+  供辅助技术和宿主测试检查。
+- Dock 仅记录本会话实际展示的计划。Edit 模式收到 `paragraphs.apply` 或
+  `toc.apply_transform` 批准请求时，必须同时匹配 kind、plan ID、digest、expected revision
+  和当前 book session 才启用 Approve；不匹配时显示阻断提示且保留 Deny。工具内部原有的
+  精确源码/树重验继续构成第二道边界；普通 transaction commit 与 Auto 模式语义未改变。
+- Conversation Markdown 抑制这两个计划工具冗余的原始 completion JSON，改为输出按资源
+  可读的 Plan review、源码片段/TOC 结构和验证边界，不复制协议绑定。Debug JSON 仍保留
+  ToolCompleted 与完整 `plan_created`，用于诊断和可复现取证。
+
+### 测试证据与剩余项
+
+`agent_harness` 用真实段落分析/计划工具验证事件只发布一次，并保留 plan/digest/run/book
+绑定；普通 `book.summary` 不产生假计划。`agent_dock` 覆盖段落 XML 纯文本差异、TOC
+父级/深度变化、fragment 去除、资源跳转、换书即时禁用与切回恢复，以及匹配/错误 digest
+批准门；`agent_dock_contract` 固定 MainWindow 双重书籍核对和 URL 解码接线。
+`agent_provider_catalog` 按真实 ToolCompleted → PlanCreated 顺序验证两类可读导出隐藏协议
+绑定，而 Debug JSON 完整保留事件。完整 Sigil 构建及 42 个固定 Python 依赖通过；13 项
+Agent 测试连续 3 轮共 39 次通过。四份目录可生成 `.qm` 且 0 unfinished；严格简中、繁中、
+日文覆盖均通过，每份覆盖当前 5,693 条活跃源文。
+
+本切片直接推进 AGENT-02/A04 的可检查计划和审批失效边界，但不宣称完成整个 AGENT-IM2：
+目前只消费两类原生工具已经返回的 bounded changes，未提供整文件统一 diff、专用双栏预览
+或卡片内独立操作组勾选；改变段落资源子集仍须重新生成计划。真实三语言 GUI、长片段布局、
+键盘遍历、屏幕阅读器、10,000 节点 TOC 和 Windows/Linux 主题仍待人工/性能验收。
