@@ -95,6 +95,12 @@ require(
     "the saved usage setting and reported counts must reach request lifecycle events",
 )
 require(
+    "captureRunEvent(event)" in dock_cpp
+    and 'setProperty("runDurationMs"' in dock_cpp
+    and "Whole run:" in dock_cpp,
+    "technical details must consume whole-run timing separately from request timing",
+)
+require(
     "agentExportButton" in dock_cpp and "exportDebugLogRequested" in dock_cpp,
     "dock must export the conversation and a debug log",
 )

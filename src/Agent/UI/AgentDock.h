@@ -101,6 +101,7 @@ private:
     void refreshRetryState();
     void refreshTaskRestoreState();
     void captureRequestEvent(const AgentEvent &event, const QString &status);
+    void captureRunEvent(const AgentEvent &event);
     QString providerFailureSummary(const QString &message) const;
     QString previewBody(const QJsonObject &payload) const;
     QString appliedBody(const QJsonObject &payload) const;
@@ -164,6 +165,12 @@ private:
     qint64 m_requestFinishedAtMs = 0;
     bool m_requestUsageRequested = false;
     ModelUsage m_requestUsage;
+    QString m_runId;
+    QString m_runStatus;
+    qint64 m_runDurationMs = -1;
+    qint64 m_runFinishedAtMs = 0;
+    int m_runModelSteps = -1;
+    int m_runToolCalls = -1;
     QString m_lastSubmittedText;
     QStringList m_lastSubmittedHandles;
     QString m_lastSubmittedBookSessionId;

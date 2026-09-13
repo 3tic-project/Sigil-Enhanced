@@ -263,6 +263,12 @@ void AgentDock::setSessionId(const QString &session_id)
     m_requestFinishedAtMs = 0;
     m_requestUsageRequested = false;
     m_requestUsage = ModelUsage();
+    m_runId.clear();
+    m_runStatus.clear();
+    m_runDurationMs = -1;
+    m_runFinishedAtMs = 0;
+    m_runModelSteps = -1;
+    m_runToolCalls = -1;
     m_lastSubmittedText.clear();
     m_lastSubmittedHandles.clear();
     m_lastSubmittedBookSessionId.clear();
@@ -630,6 +636,29 @@ void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &stat
     refreshTechnicalDetails();
 }
 
+void AgentDock::captureRunEvent(const AgentEvent &event)
+{
+    const QJsonObject payload = event.payload;
+    const QString run_id = payload.value(QStringLiteral("run_id")).toString();
+    const QString status = payload.value(QStringLiteral("state")).toString();
+    if (run_id.isEmpty()) return;
+    if (run_id != m_runId || status == QLatin1String("preparing_context")) {
+        m_runDurationMs = -1;
+        m_runFinishedAtMs = 0;
+        m_runModelSteps = -1;
+        m_runToolCalls = -1;
+    }
+    m_runId = run_id;
+    m_runStatus = status;
+    if (payload.contains(QStringLiteral("duration_ms"))) {
+        m_runDurationMs = payload.value(QStringLiteral("duration_ms")).toInteger();
+        m_runFinishedAtMs = event.timestampMs;
+        m_runModelSteps = payload.value(QStringLiteral("model_steps")).toInt();
+        m_runToolCalls = payload.value(QStringLiteral("tool_calls")).toInt();
+    }
+    refreshTechnicalDetails();
+}
+
 void AgentDock::refreshTechnicalDetails()
 {
     if (!m_technicalDetails) return;
@@ -638,6 +667,21 @@ void AgentDock::refreshTechnicalDetails()
     lines.append(tr("Book session: %1").arg(
         m_bookSessionId.isEmpty() ? tr("Not available") : m_bookSessionId));
     lines.append(tr("Book revision: %1").arg(m_bookRevision));
+    if (!m_runId.isEmpty()) {
+        lines.append(tr("Run: %1").arg(m_runId));
+        lines.append(tr("Run status: %1").arg(m_runStatus));
+        if (m_runDurationMs >= 0) {
+            const QString finished = QDateTime::fromMSecsSinceEpoch(m_runFinishedAtMs)
+                .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+            lines.append(tr("Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4")
+                             .arg(m_runDurationMs)
+                             .arg(m_runModelSteps)
+                             .arg(m_runToolCalls)
+                             .arg(finished));
+        } else {
+            lines.append(tr("Whole run: in progress"));
+        }
+    }
     if (!m_requestId.isEmpty()) {
         lines.append(tr("Request: %1").arg(m_requestId));
         lines.append(tr("Step: %1 · Mode: %2 · Status: %3")
@@ -689,6 +733,12 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setText(lines.join(QLatin1Char('\n')));
     m_technicalDetails->setProperty("sessionId", m_sessionId);
     m_technicalDetails->setProperty("bookSessionId", m_bookSessionId);
+    m_technicalDetails->setProperty("runId", m_runId);
+    m_technicalDetails->setProperty("runStatus", m_runStatus);
+    m_technicalDetails->setProperty("runDurationMs", m_runDurationMs);
+    m_technicalDetails->setProperty("runFinishedAtMs", m_runFinishedAtMs);
+    m_technicalDetails->setProperty("runModelSteps", m_runModelSteps);
+    m_technicalDetails->setProperty("runToolCalls", m_runToolCalls);
     m_technicalDetails->setProperty("requestId", m_requestId);
     m_technicalDetails->setProperty("requestStatus", m_requestStatus);
     m_technicalDetails->setProperty("requestBookSessionId", m_requestBookSessionId);
@@ -1288,6 +1338,9 @@ void AgentDock::appendEvent(const AgentEvent &event)
                                     tr("Run stopped. Uncommitted staged work was rolled back."),
                                     false));
             }
+            break;
+        case AgentEventType::RunStateChanged:
+            captureRunEvent(event);
             break;
         case AgentEventType::BookTargetChanged:
             appendCard(makeCard(QStringLiteral("agentBookTargetChangedCard"),

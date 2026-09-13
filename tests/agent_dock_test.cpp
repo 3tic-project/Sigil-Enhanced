@@ -83,6 +83,23 @@ int main(int argc, char *argv[])
                 && provider_status->property("connectionVerifiedAtMs").toLongLong()
                     == 1700000000000,
             "a matching saved probe must be shown as historical verification");
+    SigilAgent::AgentEvent run_started;
+    run_started.type = SigilAgent::AgentEventType::RunStateChanged;
+    run_started.timestampMs = 1699999999900;
+    run_started.payload = QJsonObject {
+        { QStringLiteral("run_id"), QStringLiteral("run-full-id") },
+        { QStringLiteral("state"), QStringLiteral("preparing_context") },
+        { QStringLiteral("book_session_id"), QStringLiteral("request-book-id") }
+    };
+    dock.appendEvent(run_started);
+    auto *run_details =
+        dock.findChild<QLabel *>(QStringLiteral("agentTechnicalDetails"));
+    Require(run_details
+                && run_details->text().contains(QStringLiteral("Whole run: in progress"))
+                && run_details->property("runId").toString()
+                    == QStringLiteral("run-full-id")
+                && run_details->property("runDurationMs").toLongLong() == -1,
+            "a preparing run must expose its identity without inventing a final duration");
     SigilAgent::AgentEvent provider_started;
     provider_started.type = SigilAgent::AgentEventType::ModelRequestStarted;
     provider_started.payload = QJsonObject {
@@ -137,6 +154,26 @@ int main(int argc, char *argv[])
                 && usage_details->property("usageReported").toBool()
                 && usage_details->property("totalTokens").toLongLong() == 155,
             "technical details must expose exact provider-reported token usage");
+    SigilAgent::AgentEvent run_completed;
+    run_completed.type = SigilAgent::AgentEventType::RunStateChanged;
+    run_completed.timestampMs = 1700000000100;
+    run_completed.payload = QJsonObject {
+        { QStringLiteral("run_id"), QStringLiteral("run-full-id") },
+        { QStringLiteral("state"), QStringLiteral("completed") },
+        { QStringLiteral("book_session_id"), QStringLiteral("request-book-id") },
+        { QStringLiteral("duration_ms"), 91 },
+        { QStringLiteral("model_steps"), 1 },
+        { QStringLiteral("tool_calls"), 0 }
+    };
+    dock.appendEvent(run_completed);
+    Require(run_details->text().contains(
+                QStringLiteral("Whole run: 91 ms · model requests 1 · tool calls 0"))
+                && run_details->property("runStatus").toString()
+                    == QStringLiteral("completed")
+                && run_details->property("runDurationMs").toLongLong() == 91
+                && run_details->property("runModelSteps").toInt() == 1
+                && run_details->property("runToolCalls").toInt() == 0,
+            "terminal technical details must distinguish whole-run timing and counts");
 
     SigilAgent::AgentEvent no_usage_completed = provider_completed;
     no_usage_completed.payload.remove(QStringLiteral("usage"));
