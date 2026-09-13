@@ -39,6 +39,74 @@ void flushAssistant(QStringList *lines, QString *thinking, QString *answer)
     }
 }
 
+void appendIndented(QStringList *lines, const QString &text)
+{
+    if (!lines) return;
+    const QStringList source_lines = text.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (const QString &line : source_lines) {
+        lines->append(QStringLiteral("    ") + line);
+    }
+}
+
+void appendPlanReview(QStringList *lines, const QJsonObject &payload)
+{
+    if (!lines) return;
+    const QString kind = payload.value(QStringLiteral("plan_kind")).toString();
+    lines->append(kind == QLatin1String("paragraph_normalization")
+                      ? QStringLiteral("## Plan review: Paragraph normalization")
+                      : QStringLiteral("## Plan review: TOC hierarchy"));
+    lines->append(QStringLiteral(
+        "The live book is unchanged. Review this plan before approving its apply step."));
+    if (kind == QLatin1String("paragraph_normalization")) {
+        const QJsonObject summary = payload.value(QStringLiteral("summary")).toObject();
+        lines->append(QStringLiteral(
+            "- Files ready: %1; conversions: %2; protected items: %3")
+                          .arg(summary.value(QStringLiteral("ready_files")).toInt())
+                          .arg(summary.value(QStringLiteral("conversion_count")).toInt())
+                          .arg(summary.value(QStringLiteral("protected_count")).toInt()));
+        for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
+            const QJsonObject change = value.toObject();
+            const QString path = change.value(QStringLiteral("book_path")).toString();
+            lines->append(QStringLiteral("### %1").arg(
+                path.isEmpty() ? change.value(QStringLiteral("resource_id")).toString() : path));
+            lines->append(QStringLiteral("- Conversions: %1; protected items: %2")
+                              .arg(change.value(QStringLiteral("conversion_count")).toInt())
+                              .arg(change.value(QStringLiteral("protected_count")).toInt()));
+            const QJsonObject diff = change.value(QStringLiteral("source_diff")).toObject();
+            lines->append(QStringLiteral("Before excerpt:"));
+            appendIndented(lines, diff.value(QStringLiteral("before")).toString());
+            lines->append(QStringLiteral("After excerpt:"));
+            appendIndented(lines, diff.value(QStringLiteral("after")).toString());
+        }
+    } else {
+        lines->append(QStringLiteral("- Affected nodes: %1; adopted siblings: %2")
+                          .arg(payload.value(QStringLiteral("affected_count")).toInt())
+                          .arg(payload.value(QStringLiteral("adopted_count")).toInt()));
+        for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
+            const QJsonObject change = value.toObject();
+            lines->append(QStringLiteral("- %1 (%2): depth %3 → %4; parent %5 → %6")
+                              .arg(change.value(QStringLiteral("label")).toString())
+                              .arg(change.value(QStringLiteral("target")).toString())
+                              .arg(change.value(QStringLiteral("from_depth")).toInt())
+                              .arg(change.value(QStringLiteral("to_depth")).toInt())
+                              .arg(change.value(QStringLiteral("from_parent_id")).toInteger())
+                              .arg(change.value(QStringLiteral("to_parent_id")).toInteger()));
+        }
+        if (payload.value(QStringLiteral("changes_truncated")).toBool()) {
+            lines->append(QStringLiteral(
+                "- Additional TOC changes were omitted from this bounded review."));
+        }
+    }
+    lines->append(QStringLiteral("- Local validation: %1")
+                      .arg(payload.value(QStringLiteral("local_validation")).toString()));
+    const QString epubcheck = payload.value(QStringLiteral("full_epubcheck")).toObject()
+                                  .value(QStringLiteral("status")).toString();
+    lines->append(epubcheck.isEmpty() || epubcheck == QLatin1String("not_run")
+                      ? QStringLiteral("- Full EPUBCheck: not run.")
+                      : QStringLiteral("- Full EPUBCheck: %1").arg(epubcheck));
+    lines->append(QString());
+}
+
 } // namespace
 
 QString redactSecrets(QString text, const QStringList &secrets)
@@ -137,8 +205,13 @@ QString exportConversationMarkdown(const AgentSession &session, const SessionExp
             case AgentEventType::ToolCompleted:
             case AgentEventType::ToolFailed:
             case AgentEventType::ToolRejected: {
-                flushAssistant(&lines, &thinking, &answer);
                 const QString name = event.payload.value(QStringLiteral("name")).toString();
+                const bool summarized_by_plan_event =
+                    event.type == AgentEventType::ToolCompleted
+                    && (name == QLatin1String("paragraphs.plan")
+                        || name == QLatin1String("toc.plan_transform"));
+                if (summarized_by_plan_event) break;
+                flushAssistant(&lines, &thinking, &answer);
                 QString heading = QStringLiteral("## Tool: %1").arg(name);
                 if (event.type == AgentEventType::ToolFailed) {
                     heading = QStringLiteral("## Tool failed: %1").arg(name);
@@ -181,6 +254,10 @@ QString exportConversationMarkdown(const AgentSession &session, const SessionExp
                 lines.append(QStringLiteral("## Stopped"));
                 lines.append(QStringLiteral("Run stopped."));
                 lines.append(QString());
+                break;
+            case AgentEventType::PlanCreated:
+                flushAssistant(&lines, &thinking, &answer);
+                appendPlanReview(&lines, event.payload);
                 break;
             case AgentEventType::TransactionPreviewed:
                 flushAssistant(&lines, &thinking, &answer);

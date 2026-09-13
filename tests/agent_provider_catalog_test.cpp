@@ -238,6 +238,60 @@ int main(int argc, char *argv[])
         { QStringLiteral("name"), QStringLiteral("book.summary") },
         { QStringLiteral("data"), QJsonObject { { QStringLiteral("title"), QStringLiteral("Junior Physics") } } }
     });
+    const QJsonObject exported_plan {
+        { QStringLiteral("plan_kind"), QStringLiteral("paragraph_normalization") },
+        { QStringLiteral("plan_id"), QStringLiteral("plan-secret-binding") },
+        { QStringLiteral("plan_digest"), QStringLiteral("digest-secret-binding") },
+        { QStringLiteral("summary"), QJsonObject {
+            { QStringLiteral("ready_files"), 1 },
+            { QStringLiteral("conversion_count"), 2 },
+            { QStringLiteral("protected_count"), 1 }
+        } },
+        { QStringLiteral("changes"), QJsonArray { QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("chapter-1") },
+            { QStringLiteral("book_path"), QStringLiteral("Text/chapter-1.xhtml") },
+            { QStringLiteral("conversion_count"), 2 },
+            { QStringLiteral("protected_count"), 1 },
+            { QStringLiteral("source_diff"), QJsonObject {
+                { QStringLiteral("before"), QStringLiteral("<div>Before</div>") },
+                { QStringLiteral("after"), QStringLiteral("<p>After</p>") }
+            } }
+        } } },
+        { QStringLiteral("local_validation"), QStringLiteral("passed") },
+        { QStringLiteral("full_epubcheck"), QJsonObject {
+            { QStringLiteral("status"), QStringLiteral("not_run") }
+        } }
+    };
+    session.append(AgentEventType::ToolCompleted, QJsonObject {
+        { QStringLiteral("name"), QStringLiteral("paragraphs.plan") },
+        { QStringLiteral("data"), exported_plan }
+    });
+    session.append(AgentEventType::PlanCreated, exported_plan);
+    const QJsonObject exported_toc_plan {
+        { QStringLiteral("plan_kind"), QStringLiteral("toc_hierarchy") },
+        { QStringLiteral("plan_id"), QStringLiteral("toc-plan-secret-binding") },
+        { QStringLiteral("plan_digest"), QStringLiteral("toc-digest-secret-binding") },
+        { QStringLiteral("affected_count"), 2 },
+        { QStringLiteral("adopted_count"), 1 },
+        { QStringLiteral("changes"), QJsonArray { QJsonObject {
+            { QStringLiteral("label"), QStringLiteral("Chapter B") },
+            { QStringLiteral("target"), QStringLiteral("Text/chapter-b.xhtml#start") },
+            { QStringLiteral("from_depth"), 2 },
+            { QStringLiteral("to_depth"), 1 },
+            { QStringLiteral("from_parent_id"), 1 },
+            { QStringLiteral("to_parent_id"), 0 }
+        } } },
+        { QStringLiteral("changes_truncated"), true },
+        { QStringLiteral("local_validation"), QStringLiteral("passed") },
+        { QStringLiteral("full_epubcheck"), QJsonObject {
+            { QStringLiteral("status"), QStringLiteral("not_run") }
+        } }
+    };
+    session.append(AgentEventType::ToolCompleted, QJsonObject {
+        { QStringLiteral("name"), QStringLiteral("toc.plan_transform") },
+        { QStringLiteral("data"), exported_toc_plan }
+    });
+    session.append(AgentEventType::PlanCreated, exported_toc_plan);
     session.append(AgentEventType::TransactionPreviewed, QJsonObject {
         { QStringLiteral("applied_to_book"), false },
         { QStringLiteral("save_status"), QStringLiteral("not_applied") }
@@ -278,6 +332,21 @@ int main(int argc, char *argv[])
     Require(markdown.contains(QStringLiteral("## You")), "conversation export must include the user turn");
     Require(markdown.contains(QStringLiteral("Two chapters.")), "conversation export must include the answer");
     Require(markdown.contains(QStringLiteral("book.summary")), "conversation export must include tools");
+    Require(markdown.contains(QStringLiteral("## Plan review: Paragraph normalization"))
+                && markdown.contains(QStringLiteral("Text/chapter-1.xhtml"))
+                && markdown.contains(QStringLiteral("<div>Before</div>"))
+                && markdown.contains(QStringLiteral("<p>After</p>"))
+                && markdown.contains(QStringLiteral("Full EPUBCheck: not run"))
+                && !markdown.contains(QStringLiteral("plan-secret-binding"))
+                && !markdown.contains(QStringLiteral("digest-secret-binding")),
+            "conversation export must retain reviewable source changes without protocol bindings");
+    Require(markdown.contains(QStringLiteral("## Plan review: TOC hierarchy"))
+                && markdown.contains(QStringLiteral("Chapter B"))
+                && markdown.contains(QStringLiteral("depth 2 → 1"))
+                && markdown.contains(QStringLiteral("Additional TOC changes"))
+                && !markdown.contains(QStringLiteral("toc-plan-secret-binding"))
+                && !markdown.contains(QStringLiteral("toc-digest-secret-binding")),
+            "conversation export must summarize bounded TOC reparenting without protocol bindings");
     Require(markdown.contains(QStringLiteral("Staged only. The live book was unchanged.")),
             "conversation export must distinguish preview from live-book changes");
     Require(markdown.contains(QStringLiteral("EPUB file has not been saved"))
@@ -309,6 +378,10 @@ int main(int argc, char *argv[])
             "debug log must declare its format");
     Require(QString::fromUtf8(debug).contains(QStringLiteral("user_message")),
             "debug log must include session events");
+    Require(QString::fromUtf8(debug).contains(QStringLiteral("plan_created"))
+                && QString::fromUtf8(debug).contains(QStringLiteral("plan-secret-binding"))
+                && QString::fromUtf8(debug).contains(QStringLiteral("toc-plan-secret-binding")),
+            "debug log must retain the complete native plan event for diagnosis");
     Require(QString::fromUtf8(debug).contains(QStringLiteral("http_traces")),
             "debug log must include HTTP traces");
     const QJsonObject debug_object = QJsonDocument::fromJson(debug).object();
