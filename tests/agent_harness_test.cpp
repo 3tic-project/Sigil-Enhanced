@@ -214,6 +214,20 @@ int main()
                     == provider.requestCount()
                 && run_completed.value(QStringLiteral("tool_calls")).toInt() == 1,
             "one run id must bind preparation through a timed multi-step terminal event");
+    const QJsonObject successful_usage =
+        run_completed.value(QStringLiteral("usage_summary")).toObject();
+    Require(run_completed.value(QStringLiteral("usage_requested")).toBool()
+                && successful_usage.value(QStringLiteral("request_count")).toInt() == 2
+                && successful_usage.value(QStringLiteral("reported_request_count")).toInt() == 2
+                && successful_usage.value(QStringLiteral("missing_request_count")).toInt() == 0
+                && successful_usage.value(QStringLiteral("all_requests_reported")).toBool()
+                && successful_usage.value(QStringLiteral("input_tokens")).toInteger() == 250
+                && successful_usage.value(QStringLiteral("output_tokens")).toInteger() == 30
+                && successful_usage.value(QStringLiteral("total_tokens")).toInteger() == 280
+                && successful_usage.value(QStringLiteral("cached_input_tokens")).toInteger() == 160
+                && successful_usage.value(QStringLiteral("reasoning_tokens")).toInteger() == 10
+                && successful_usage.value(QStringLiteral("total_request_count")).toInt() == 2,
+            "a completed multi-step run must sum exact usage with per-field coverage");
     Require(!hasEvent(session, AgentEventType::ModelRequestFailed),
             "successful model requests must not publish failure events");
 
@@ -257,6 +271,48 @@ int main()
                 && failed_run.value(QStringLiteral("duration_ms")).toInteger() >= 0
                 && failed_run.value(QStringLiteral("model_steps")).toInt() == 1,
             "provider failures must publish one timed whole-run terminal state");
+    Require(!failed_run.value(QStringLiteral("usage_requested")).toBool()
+                && failed_run.value(QStringLiteral("usage_summary")).toObject()
+                       .value(QStringLiteral("reported_request_count")).toInt() == 0,
+            "a run with usage disabled must not claim missing provider reports");
+
+    MemoryBookWorkspace partial_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry partial_registry;
+    registerBookTools(&partial_registry, &partial_book);
+    AgentSession partial_session;
+    AgentCancellation partial_cancellation;
+    MockModelProvider partial_provider;
+    ModelTurn partial_tool_turn;
+    ToolCall partial_call;
+    partial_call.id = QStringLiteral("partial-summary");
+    partial_call.name = QStringLiteral("book.summary");
+    partial_call.argumentsJson = QStringLiteral("{}");
+    partial_tool_turn.toolCalls.append(partial_call);
+    partial_tool_turn.usage.inputTokens = 40;
+    partial_tool_turn.usage.outputTokens = 6;
+    partial_tool_turn.usage.totalTokens = 46;
+    partial_provider.addTurn(partial_tool_turn);
+    ModelTurn partial_failure;
+    partial_failure.error = QStringLiteral("HTTP 503: retry later");
+    partial_provider.addTurn(partial_failure);
+    AgentRunner partial_runner(
+        &partial_session, &partial_provider, &partial_registry, &partial_book,
+        &policy, &approve, &partial_cancellation);
+    partial_runner.setModel(QStringLiteral("mock"));
+    const AgentRunResult partial_result =
+        partial_runner.runTurn(QStringLiteral("summarize, then fail"));
+    const QJsonObject partial_run =
+        partial_session.eventsOf(AgentEventType::RunStateChanged).constLast().payload;
+    const QJsonObject partial_usage =
+        partial_run.value(QStringLiteral("usage_summary")).toObject();
+    Require(partial_result.state == AgentRunState::Failed
+                && partial_usage.value(QStringLiteral("request_count")).toInt() == 2
+                && partial_usage.value(QStringLiteral("reported_request_count")).toInt() == 1
+                && partial_usage.value(QStringLiteral("missing_request_count")).toInt() == 1
+                && !partial_usage.value(QStringLiteral("all_requests_reported")).toBool()
+                && partial_usage.value(QStringLiteral("total_tokens")).toInteger() == 46
+                && partial_usage.value(QStringLiteral("total_request_count")).toInt() == 1,
+            "partial run usage must expose exact sums and request coverage without claiming completeness");
 
     MemoryBookWorkspace request_cancel_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry request_cancel_registry;
@@ -294,6 +350,10 @@ int main()
                 && cancelled_run.value(QStringLiteral("duration_ms")).toInteger() >= 0
                 && cancelled_run.value(QStringLiteral("model_steps")).toInt() == 1,
             "cancelled turns must publish a timed whole-run terminal state after cleanup");
+    Require(cancelled_run.value(QStringLiteral("usage_requested")).toBool()
+                && cancelled_run.value(QStringLiteral("usage_summary")).toObject()
+                       .value(QStringLiteral("missing_request_count")).toInt() == 1,
+            "a cancelled in-flight request must remain missing from the run usage summary");
 
     HistoryAssembler assembler;
     const QJsonArray replay = assembler.toOpenAIMessages(assembler.assemble(session.events(), true), true);

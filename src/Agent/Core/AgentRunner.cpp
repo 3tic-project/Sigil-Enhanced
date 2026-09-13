@@ -196,6 +196,7 @@ void AgentRunner::setState(AgentRunState state)
         if (m_runTimingActive) {
             payload.insert(QStringLiteral("run_id"), m_runId);
             payload.insert(QStringLiteral("book_session_id"), m_runBookSessionId);
+            payload.insert(QStringLiteral("usage_requested"), m_runUsageRequested);
             const bool terminal = state == AgentRunState::Completed
                 || state == AgentRunState::Cancelled
                 || state == AgentRunState::Failed;
@@ -203,11 +204,67 @@ void AgentRunner::setState(AgentRunState state)
                 payload.insert(QStringLiteral("duration_ms"), m_runTimer.elapsed());
                 payload.insert(QStringLiteral("model_steps"), m_runModelSteps);
                 payload.insert(QStringLiteral("tool_calls"), m_runToolCalls);
+                payload.insert(QStringLiteral("usage_summary"), runUsageSummary());
                 m_runTimingActive = false;
             }
         }
         m_session->append(AgentEventType::RunStateChanged, payload);
     }
+}
+
+void AgentRunner::accumulateRunUsage(const ModelUsage &usage)
+{
+    if (!usage.isReported()) return;
+    ++m_runUsageReportedRequests;
+    const auto add_count = [](qint64 value, qint64 *total, int *requests) {
+        if (value < 0) return;
+        if (*requests == 0) *total = 0;
+        *total += value;
+        ++(*requests);
+    };
+    add_count(usage.inputTokens, &m_runUsage.inputTokens, &m_runInputUsageRequests);
+    add_count(usage.outputTokens, &m_runUsage.outputTokens, &m_runOutputUsageRequests);
+    add_count(usage.totalTokens, &m_runUsage.totalTokens, &m_runTotalUsageRequests);
+    add_count(usage.cachedInputTokens, &m_runUsage.cachedInputTokens,
+              &m_runCachedUsageRequests);
+    add_count(usage.reasoningTokens, &m_runUsage.reasoningTokens,
+              &m_runReasoningUsageRequests);
+}
+
+QJsonObject AgentRunner::runUsageSummary() const
+{
+    QJsonObject summary {
+        { QStringLiteral("request_count"), m_runModelSteps },
+        { QStringLiteral("reported_request_count"), m_runUsageReportedRequests },
+        { QStringLiteral("missing_request_count"),
+          qMax(0, m_runModelSteps - m_runUsageReportedRequests) },
+        { QStringLiteral("all_requests_reported"),
+          m_runModelSteps > 0 && m_runUsageReportedRequests == m_runModelSteps }
+    };
+    const auto insert_count = [&summary](const QString &token_key,
+                                         const QString &coverage_key,
+                                         qint64 value,
+                                         int requests) {
+        if (requests <= 0 || value < 0) return;
+        summary.insert(token_key, value);
+        summary.insert(coverage_key, requests);
+    };
+    insert_count(QStringLiteral("input_tokens"),
+                 QStringLiteral("input_request_count"),
+                 m_runUsage.inputTokens, m_runInputUsageRequests);
+    insert_count(QStringLiteral("output_tokens"),
+                 QStringLiteral("output_request_count"),
+                 m_runUsage.outputTokens, m_runOutputUsageRequests);
+    insert_count(QStringLiteral("total_tokens"),
+                 QStringLiteral("total_request_count"),
+                 m_runUsage.totalTokens, m_runTotalUsageRequests);
+    insert_count(QStringLiteral("cached_input_tokens"),
+                 QStringLiteral("cached_input_request_count"),
+                 m_runUsage.cachedInputTokens, m_runCachedUsageRequests);
+    insert_count(QStringLiteral("reasoning_tokens"),
+                 QStringLiteral("reasoning_request_count"),
+                 m_runUsage.reasoningTokens, m_runReasoningUsageRequests);
+    return summary;
 }
 
 QJsonObject AgentRunner::parseArguments(const QString &json) const
@@ -468,6 +525,14 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
     m_runId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_runModelSteps = 0;
     m_runToolCalls = 0;
+    m_runUsage = ModelUsage();
+    m_runUsageReportedRequests = 0;
+    m_runInputUsageRequests = 0;
+    m_runOutputUsageRequests = 0;
+    m_runTotalUsageRequests = 0;
+    m_runCachedUsageRequests = 0;
+    m_runReasoningUsageRequests = 0;
+    m_runUsageRequested = m_tokenUsage;
     m_runTimer.start();
     m_runTimingActive = true;
 
@@ -493,7 +558,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
 
         ModelRequest request = m_prompts.build(
             *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking, m_effort, handles);
-        request.includeUsage = m_tokenUsage;
+        request.includeUsage = m_runUsageRequested;
         ++m_runModelSteps;
         const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         m_session->append(AgentEventType::ModelRequestStarted, QJsonObject {
@@ -544,6 +609,8 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             setState(AgentRunState::Failed);
             return result;
         }
+
+        accumulateRunUsage(turn.usage);
 
         QJsonObject completed_payload {
             { QStringLiteral("request_id"), request_id },

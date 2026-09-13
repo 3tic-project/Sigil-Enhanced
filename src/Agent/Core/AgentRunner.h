@@ -73,6 +73,8 @@ private:
     AgentRunResult cancelRun();
     AgentRunResult failBookTargetChanged(const QString &stage);
     QJsonObject parseArguments(const QString &json) const;
+    void accumulateRunUsage(const ModelUsage &usage);
+    QJsonObject runUsageSummary() const;
 
     AgentSession *m_session;
     IModelProvider *m_provider;
@@ -94,6 +96,14 @@ private:
     QElapsedTimer m_runTimer;
     int m_runModelSteps = 0;
     int m_runToolCalls = 0;
+    ModelUsage m_runUsage;
+    int m_runUsageReportedRequests = 0;
+    int m_runInputUsageRequests = 0;
+    int m_runOutputUsageRequests = 0;
+    int m_runTotalUsageRequests = 0;
+    int m_runCachedUsageRequests = 0;
+    int m_runReasoningUsageRequests = 0;
+    bool m_runUsageRequested = true;
     bool m_runTimingActive = false;
 };
 
