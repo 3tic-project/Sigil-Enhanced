@@ -1016,3 +1016,46 @@ XML 解析通过；四份目录均可由 `lrelease` 生成 `.qm` 且 0 unfinishe
 本切片关闭设置页模型刷新阻塞与目录错误密钥回显风险，但目录接口仍因服务商而异；成功
 只说明列表可读取，不代表所选模型支持 Chat Completions 或 tools。真实三家服务的大目录、
 分页、代理/证书、线程池饱和、关闭竞态和跨平台人工布局仍待验收。
+
+## Native Agent 服务端 Token 用量（2026-09-13）
+
+分支：`feature/agent-token-usage`。主要提交：`86d04f52a`（用量模型和流式解码）、
+`988931e8e`（请求协商与设置开关）、`81e713d9b`（事件、Controller 和 Dock 展示）以及
+`855deab47`（四语文案）、`fe27aa1d0`（DeepSeek 缓存字段兼容）。
+
+### 协议、设置与可观测性
+
+- `StreamingJsonDecoder` 在处理 `choices` 前读取标准 Chat Completions `usage`，因此能保留
+  `choices: []` 的最终用量分片。公共 `ModelUsage` 区分 input/output/total、cached input
+  和 reasoning token；只接受非负整数。服务端省略 total 但同时给出 input/output 时仅做
+  精确加法，不使用字符数或本地 tokenizer 估算。缓存输入同时兼容 OpenAI 风格的
+  `prompt_tokens_details.cached_tokens`、input/output 别名，以及 DeepSeek 的顶层
+  `prompt_cache_hit_tokens`；推理计数兼容 completion/output details。
+- 正式流请求默认发送 `stream_options.include_usage=true`。偏好设置新增
+  **Request token usage when supported** 并持久化到 `request_token_usage`；关闭后同一值经
+  MainWindow → Controller → Runner → ModelRequest 到达实际 HTTP body 和生命周期事件。
+  Provider 配置还执行一次交集校验，避免上层关闭后意外重开。
+- 独立 Chat Completions 探测明确关闭 usage 协商，继续只验证 endpoint、API Key、模型和
+  最小聊天请求，不把可选扩展能力混入已验证配置证明。设置页提示该边界；usage 开关不改变
+  连接指纹。若正式请求的兼容端点拒绝 `stream_options`，用户可单独关闭用量请求。
+- `model_request_started` 记录 `usage_requested`；成功且服务端实际报告时，
+  `model_request_completed.usage` 使用稳定的 provider-neutral 字段。调试导出自然保留这些
+  事件，普通 Conversation Markdown 不复制技术遥测。
+- Dock 的 Technical details 显示最近一次请求的 input/output/total 和可用的 cached input/
+  reasoning。请求中、服务端未报告以及用户未请求有独立状态；缺失值保持 -1/不可用，绝不
+  伪装成 0。控件属性公开 requested/reported 和五项计数，便于辅助技术与宿主测试检查。
+
+### 测试证据与剩余项
+
+`agent_stream_decoder` 覆盖分片截断、空 choices 最终 usage、嵌套缓存/推理计数、别名和省略
+total 的精确合计；`agent_provider_catalog` 断言正式 body 包含可关闭的 usage 协商，而真实
+本地连接探测不包含它；`agent_harness` 验证多步骤请求的 started/completed 遥测和关闭开关
+传播；`agent_dock` 验证完整计数、服务端未报告与未请求三种界面状态；
+`agent_dock_contract` 固定设置到 MainWindow/Runner 的宿主接线。完整 Sigil 构建及 42 个
+固定 Python 依赖通过；13 项 Agent 测试连续 3 轮共 39 次通过。四份目录可生成 `.qm` 且
+0 unfinished；严格简中、繁中、日文覆盖均通过，每份覆盖当前 5,655 条活跃源文。
+
+本切片关闭此前记录的“无 token 用量”缺口，但只显示最近一次模型步骤的服务端整数，不把
+多步骤 Agent 的合计、整轮墙钟时间、价格或网络分段延迟混为同一指标。当前也不解析厂商
+自定义成本字段；没有 usage 支持的兼容端点会明确显示未报告。真实三家服务的 usage 形态、
+长上下文/缓存计费、Windows/Linux 布局、屏幕阅读器和整轮聚合仍待验收。

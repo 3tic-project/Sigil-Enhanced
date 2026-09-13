@@ -80,6 +80,13 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
   更新；工具调用型响应也会产生明确的模型请求完成事件。终态同时显示该次
   `provider.stream()` 的耗时和完成时间，不把整个多步骤 Agent 任务时长冒充网络耗时。
 
+偏好设置中的 **Request token usage when supported** 默认开启。正式流式请求会加入
+`stream_options.include_usage=true`；若兼容端点拒绝这个可选字段，可关闭该项。服务端
+返回 usage 时，最近请求的 Technical details 显示输入、输出、总计以及可用的缓存输入/
+推理 token，并把同一组整数写入 `model_request_completed` 调试事件。这里绝不按字符数
+估算 token；服务端未返回时明确显示 **not reported by provider**，关闭开关时显示
+**not requested**，两者都不会显示成 0。
+
 失败状态把 401、403、404、408、429、5xx 和常见网络错误整理为简短说明，完整的
 提供商错误仍显示在 Error 卡片。若服务端在错误正文或 HTTP trace 中回显当前 API Key，
 提供商边界会先替换成 `[redacted]`，导出时还会再次脱敏。**Refresh models** 的成功只
@@ -89,7 +96,8 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 
 偏好设置提供独立的 **Test Chat Completions**。它先在本地校验 URL、API Key 和模型，
 再向当前表单中的 endpoint 发送一条流式小请求：不含书籍内容、不含 tools、关闭 thinking，
-并把输出限制为最多 8 token、等待限制为 15 秒。提供商仍可能按这条请求计费。设置页会
+不发送可选的 usage 请求，并把输出限制为最多 8 token、等待限制为 15 秒。提供商仍可能
+按这条请求计费。设置页会
 显示冻结的安全主机名、模型、HTTP 结果和耗时；401 等服务端错误继续执行密钥脱敏，超时
 明确显示失败，不会把中止误报成成功。修改 URL、API Key 或模型后，旧结果立即标为
 “当前设置未测试”。测试运行期间不会提前保存表单；关闭偏好设置时，成功结果才与当前
@@ -104,8 +112,8 @@ Runner 返回后才重新关闭窗口。状态卡会区分用户 Stop、换书�
 
 **Technical details** 默认折叠，展开后显示完整 Agent session ID、当前 book session ID、
 最近一次 request ID、该请求绑定的 book session/revision、步骤、模式、模型、终态、耗时和
-发送时冻结的 scope handles。这里只有安全的 endpoint 主机，不显示 API Key、URL 路径、
-查询参数或响应正文。
+发送时冻结的 scope handles，并显示该请求的服务端 token 用量状态。这里只有安全的
+endpoint 主机，不显示 API Key、URL 路径、查询参数或响应正文。
 
 **Retry** 不是底层 HTTP 自动重试。它会作为新一轮，重新发送用户上次实际提交的文本和
 同一组 scope handles，并重新组装当前内存内容。仅当首个模型请求失败、当前仍是同一
@@ -242,7 +250,7 @@ Agent 专用工具，不在公共 `sigil.*` MCP catalog 中。
 停靠栏 **Export** 菜单：
 
 - **Conversation**：当前会话的 Markdown（用户 / Thinking / Answer / 工具），供阅读或贴给别人。
-- **Debug log**：JSON，含会话事件（不含逐 token 的 `assistant_delta`，只保留完整 assistant/tool 事件）、提供商（不含密钥）、以及跨轮保留的 HTTP 追踪（请求体最多 64KB，响应保留头尾）。API Key 和 `sk-…` 会被替换成 `[redacted]`。
+- **Debug log**：JSON，含会话事件（不含逐 token 的 `assistant_delta`，只保留完整 assistant/tool 事件；请求完成事件保留服务端报告的 token 用量）、提供商（不含密钥）、以及跨轮保留的 HTTP 追踪（请求体最多 64KB，响应保留头尾）。API Key 和 `sk-…` 会被替换成 `[redacted]`。
 
 ## Harness
 
@@ -253,7 +261,7 @@ Agent 循环在 `AgentRunner` 里，不在 UI 类中：
 3. 按权限 allow / ask / deny 处理工具
 4. ask 时先发批准卡片，批准后才执行
 5. deny / 用户拒绝 / 取消时仍写入一条 tool-role 结果（`PERMISSION_DENIED` 或 `CANCELLED`），避免下一次请求因缺 tool 消息而 400
-6. 用 `request_id` 配对模型请求开始/成功/失败/取消事件，并记录真实流式调用耗时
+6. 用 `request_id` 配对模型请求开始/成功/失败/取消事件，记录真实流式调用耗时和可用的服务端 token 用量
 7. 在模型与工具边界复核运行开始时冻结的 `book_session_id`
 8. 对符合条件的纯文本 commit 在写入前创建任务快照、写入后封存冲突基线
 9. 把事件追加到会话日志（transcript 的唯一来源）

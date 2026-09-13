@@ -177,6 +177,17 @@ New Session 或本轮已经执行过工具时不会启用，避免旧范围串�
 **Refresh models** 也改为后台请求，最长等待 30 秒，并与连接测试互斥。关闭设置窗口会
 取消尚未完成的刷新；服务端模型目录错误若回显当前 API Key，显示前会脱敏。
 
+### Agent 可显示服务端 Token 用量
+
+Native Agent 的正式流式请求现在默认向兼容服务请求 usage。展开 **Technical details**，
+可以看到最近一次模型步骤的输入、输出、总计，以及服务端提供时的缓存输入和推理 Token。
+这些数字也进入脱敏调试事件；不会用字符数自行估算，服务端未返回时会明确显示“未报告”，
+而不是错误地显示为 0。
+
+若某个 OpenAI-compatible 端点拒绝 `stream_options.include_usage`，可在“偏好设置 →
+Native Agent”关闭 **Request token usage when supported**。独立的 Chat Completions 连接
+测试仍保持最小请求，不发送这个可选字段，因此历史“测试成功”不代表端点支持 usage。
+
 ## 修了什么
 
 - **EPUB 2 转 EPUB 3**：以前「Epub3 Tools」在 EPUB 2 下是灰的，转不了。现在菜单能打开。
@@ -189,7 +200,7 @@ New Session 或本轮已经执行过工具时不会启用，避免旧范围串�
 ## 兼容性
 
 - Automate 命令、快捷键、插件接口没有改。
-- 当前 C++、头文件和 Qt Designer 源码中的 5,647 条活跃界面文案，已全部进入简体中文、
+- 当前 C++、头文件和 Qt Designer 源码中的 5,655 条活跃界面文案，已全部进入简体中文、
   繁体中文和日文目录且没有 unfinished 条目；严格目录覆盖测试通过。详见
   [PRD 实施审计](PRD-2026-09-05-Implementation.md)。
 
@@ -197,7 +208,8 @@ New Session 或本轮已经执行过工具时不会启用，避免旧范围串�
 
 - Debug 版 Sigil 能完整编过、链过，内置 Python 包也校验过。
 - CTest 覆盖了 KFX 导入、无损保存、代码视图关闭、EPUB 2→3 实体与导航、预览网格、
-  代码视图选择、Clips 快捷键角标、目录层级编辑和 DIV 段落结构规范化。新增三语文案可生成 `.qm`；覆盖检查仍报告
-  既有的原生 Agent/KFX 目录欠账，未新增本功能漏译。
+  代码视图选择、Clips 快捷键角标、目录层级编辑、DIV 段落结构规范化和 Native Agent
+  请求/用量状态。四语文案均可生成 `.qm` 且 0 unfinished；严格简中、繁中、日文目录
+  覆盖检查通过。
 
 本说明对应发布标签 `v2.8.5E10`。Windows / macOS 安装包、签名和校验和按[发布清单](ReleaseChecklist.md)在打标签后生成。
