@@ -1091,3 +1091,37 @@ total 的精确合计；`agent_provider_catalog` 断言正式 body 包含可关�
 本切片关闭上一节保留的“无整轮墙钟时间”缺口，但不会把墙钟时间拆成 DNS、TLS、首 token、
 审批或各工具子阶段；多轮会话也没有累计时间。真实慢速审批、长工具、窗口关闭、跨平台
 单调时钟/本地化时间和辅助技术仍待人工验收。
+
+## Native Agent 整轮 Token 用量汇总（2026-09-13）
+
+分支：`feature/agent-run-usage-summary`。主要提交：`a191c55b6`（Runner 覆盖率汇总）、
+`c05d5be36`（Dock 完整/部分状态）、`0d27d3410`（四语文案）和 `880c697a3`
+（跨 run 状态复位）。
+
+### 精确汇总与缺失语义
+
+- Runner 在每轮开始时冻结 usage 开关，并为 input/output/total/cached input/reasoning 分别
+  累加服务端非负整数和报告请求数。终态 `run_state_changed.usage_summary` 同时记录
+  `request_count`、`reported_request_count`、`missing_request_count`、
+  `all_requests_reported` 及每个字段自己的 `*_request_count`。
+- `request_count` 使用实际发出的模型请求数；Provider 失败或取消中的请求没有成功 usage，
+  因此仍进入 missing 数。禁用开关、尚未发出请求、Provider 完全未报告和部分请求报告是
+  四种独立状态，不会把未知值补成 0。
+- 全部请求报告时 Dock 显示完整整轮合计；部分报告时显示 **N of M requests reported**，并
+  只把已报告请求的精确和标为部分数据。某个标准字段若未覆盖所有已报告请求则显示未报告；
+  缓存/推理明细也只有完整覆盖已报告子集时才出现。
+- 整轮汇总与最近一次请求 usage 使用独立成员和 `run*` 控件属性。新 run 的 preparing 事件
+  会清空旧汇总，进行中只显示等待终态，不把上一轮数字带入当前轮。
+
+### 测试证据与剩余项
+
+`agent_harness` 覆盖两步完整汇总（250 input、30 output、280 total）、usage 禁用、第二步
+Provider 失败时的 1/2 部分汇总，以及请求中取消的 missing 计数；`agent_dock` 覆盖进行中、
+完整 2/2 和部分 1/2 的文案及独立属性；`agent_dock_contract` 固定覆盖率事件字段和宿主
+消费边界。完整 Sigil 构建及 42 个固定 Python 依赖通过；13 项 Agent 测试连续 3 轮共
+39 次通过。四份目录可生成 `.qm` 且 0 unfinished；严格简中、繁中、日文覆盖均通过，每份
+覆盖当前 5,666 条活跃源文。
+
+本切片关闭“整轮 token 不聚合”的缺口，但部分汇总不是消费账单；价格、币种、不同模型/
+缓存层级的费率、服务端重试计费和会话跨轮累计均不推断。真实服务商混合字段、超大计数、
+屏幕阅读器及多步骤长任务布局仍待验收。
