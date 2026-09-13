@@ -27488,6 +27488,15 @@ Continue using the requested filename?</source>
     <message><source>TOC hierarchy before transformation</source><translation>変換前の目次階層</translation></message>
     <message><source>TOC hierarchy after transformation</source><translation>変換後の目次階層</translation></message>
     <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>この比較には上限があり、残りの目次変更は省略されています。</translation></message>
+    <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>独立操作グループ：XHTML ファイル %1 件。適用の承認時にグループを選択してください。</translation></message>
+    <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>操作グループ：依存関係のある目次階層変更 1 件。</translation></message>
+    <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>独立した XHTML グループ：ステージするファイルを 1 つ以上選択してください。</translation></message>
+    <message><source>Select all</source><translation>すべて選択</translation></message>
+    <message><source>Clear</source><translation>クリア</translation></message>
+    <message><source>%1 · %2 conversion(s) · %3 protected item(s)</source><translation>%1 · 変換 %2 件 · 保護項目 %3 件</translation></message>
+    <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>目次階層の変更は依存関係のある 1 つのグループであり、安全に分割できません。</translation></message>
+    <message><source>Approval blocked: select at least one independent operation group.</source><translation>承認をブロックしました：独立した操作グループを 1 つ以上選択してください。</translation></message>
+    <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>レビュー済みプランの関連付け：一致。選択したグループ：%1/%2。</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>

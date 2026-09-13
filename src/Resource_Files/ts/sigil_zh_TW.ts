@@ -27473,6 +27473,15 @@ Continue using the requested filename?</source>
     <message><source>TOC hierarchy before transformation</source><translation>變換前的目錄層級</translation></message>
     <message><source>TOC hierarchy after transformation</source><translation>變換後的目錄層級</translation></message>
     <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>此比較內容有上限；其餘目錄變更已省略。</translation></message>
+    <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>獨立操作群組：%1 個 XHTML 檔案。請在套用核准時選擇操作群組。</translation></message>
+    <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>操作群組：一個相互依賴的目錄層級變更。</translation></message>
+    <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>獨立 XHTML 群組：請選擇要暫存的一個或多個檔案。</translation></message>
+    <message><source>Select all</source><translation>全選</translation></message>
+    <message><source>Clear</source><translation>清除</translation></message>
+    <message><source>%1 · %2 conversion(s) · %3 protected item(s)</source><translation>%1 · %2 次轉換 · %3 個受保護項目</translation></message>
+    <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>目錄層級變更組成一個相互依賴的操作群組，無法安全拆分。</translation></message>
+    <message><source>Approval blocked: select at least one independent operation group.</source><translation>核准已阻止：請至少選擇一個獨立操作群組。</translation></message>
+    <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>已審閱計畫繫結：相符。已選擇群組：%1/%2。</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>

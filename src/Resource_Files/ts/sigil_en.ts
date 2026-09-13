@@ -23546,6 +23546,15 @@ Continue using the requested filename?</translation>
     <message><source>TOC hierarchy before transformation</source><translation>TOC hierarchy before transformation</translation></message>
     <message><source>TOC hierarchy after transformation</source><translation>TOC hierarchy after transformation</translation></message>
     <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>This comparison is bounded; additional TOC changes are omitted.</translation></message>
+    <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</translation></message>
+    <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>Operation groups: one dependent TOC hierarchy change.</translation></message>
+    <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>Independent XHTML groups: choose one or more files to stage.</translation></message>
+    <message><source>Select all</source><translation>Select all</translation></message>
+    <message><source>Clear</source><translation>Clear</translation></message>
+    <message><source>%1 · %2 conversion(s) · %3 protected item(s)</source><translation>%1 · %2 conversion(s) · %3 protected item(s)</translation></message>
+    <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>TOC hierarchy changes form one dependent group and cannot be split safely.</translation></message>
+    <message><source>Approval blocked: select at least one independent operation group.</source><translation>Approval blocked: select at least one independent operation group.</translation></message>
+    <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>Reviewed plan binding: matched. Selected groups: %1 of %2.</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>
