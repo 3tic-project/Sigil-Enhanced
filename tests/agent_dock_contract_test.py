@@ -130,6 +130,13 @@ require(
     "technical details must consume whole-run timing separately from request timing",
 )
 require(
+    'QStringLiteral("max_model_steps")' in runner_cpp
+    and "m_runMaxModelSteps" in dock_h
+    and "Model-step budget:" in dock_cpp
+    and 'setProperty("runMaxModelSteps"' in dock_cpp,
+    "technical details must disclose the configured model-step run budget",
+)
+require(
     "usage_summary" in runner_cpp
     and "reported_request_count" in runner_cpp
     and "Run token usage" in dock_cpp,

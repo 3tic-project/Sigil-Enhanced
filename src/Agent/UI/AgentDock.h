@@ -199,6 +199,7 @@ private:
     qint64 m_runDurationMs = -1;
     qint64 m_runFinishedAtMs = 0;
     int m_runModelSteps = -1;
+    int m_runMaxModelSteps = -1;
     int m_runToolCalls = -1;
     bool m_runUsageRequested = false;
     bool m_runUsageComplete = false;

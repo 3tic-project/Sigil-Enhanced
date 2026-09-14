@@ -102,6 +102,7 @@ int main(int argc, char *argv[])
         { QStringLiteral("run_id"), QStringLiteral("run-full-id") },
         { QStringLiteral("state"), QStringLiteral("preparing_context") },
         { QStringLiteral("book_session_id"), QStringLiteral("request-book-id") },
+        { QStringLiteral("max_model_steps"), 24 },
         { QStringLiteral("usage_requested"), true }
     };
     dock.appendEvent(run_started);
@@ -110,9 +111,12 @@ int main(int argc, char *argv[])
     Require(run_details
                 && run_details->text().contains(QStringLiteral("Whole run: in progress"))
                 && run_details->text().contains(
+                    QStringLiteral("Model-step budget: limit 24 per run"))
+                && run_details->text().contains(
                     QStringLiteral("Run token usage: awaiting completed requests"))
                 && run_details->property("runId").toString()
                     == QStringLiteral("run-full-id")
+                && run_details->property("runMaxModelSteps").toInt() == 24
                 && run_details->property("runDurationMs").toLongLong() == -1,
             "a preparing run must expose its identity without inventing a final duration");
     SigilAgent::AgentEvent provider_started;
@@ -222,6 +226,7 @@ int main(int argc, char *argv[])
         { QStringLiteral("book_session_id"), QStringLiteral("request-book-id") },
         { QStringLiteral("duration_ms"), 91 },
         { QStringLiteral("model_steps"), 2 },
+        { QStringLiteral("max_model_steps"), 24 },
         { QStringLiteral("tool_calls"), 1 },
         { QStringLiteral("usage_requested"), true },
         { QStringLiteral("usage_summary"), QJsonObject {
@@ -244,6 +249,8 @@ int main(int argc, char *argv[])
     Require(run_details->text().contains(
                 QStringLiteral("Whole run: 91 ms · model requests 2 · tool calls 1"))
                 && run_details->text().contains(
+                    QStringLiteral("Model-step budget: 2/24 used"))
+                && run_details->text().contains(
                     QStringLiteral("Run token usage: input 250 · output 30 · total 280"))
                 && run_details->text().contains(
                     QStringLiteral("Run usage details: cached input 160 · reasoning 10"))
@@ -251,6 +258,7 @@ int main(int argc, char *argv[])
                     == QStringLiteral("completed")
                 && run_details->property("runDurationMs").toLongLong() == 91
                 && run_details->property("runModelSteps").toInt() == 2
+                && run_details->property("runMaxModelSteps").toInt() == 24
                 && run_details->property("runToolCalls").toInt() == 1
                 && run_details->property("runUsageComplete").toBool()
                 && run_details->property("runUsageRequestCount").toInt() == 2
