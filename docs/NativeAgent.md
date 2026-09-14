@@ -18,7 +18,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - **Retry**：仅在可以安全重跑的首个 Provider 请求失败后启用
 - 纯文本提交卡上的 **Restore this task**：在后续目标内容未改变时恢复该次提交
 - 默认折叠的 **Technical details**：完整会话/整轮运行/请求/书籍 ID、两级耗时、token
-  用量、请求历史与工具目录预算、revision、模式与冻结范围
+  用量、模型步骤上限、请求历史与工具目录预算、revision、模式与冻结范围
 - **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
 - 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；原生计划按资源展示可检查差异；批准带影响与计划绑定；预览按变更类型列出暂存内容；提交和回滚显示独立结果；错误
 
@@ -129,8 +129,25 @@ tool call 或 finish reason 时的时间。SSE 注释/心跳可以让 first byte
 完成时间。独立的 **Duration** 仍只表示最近一次 `provider.stream()`，不会冒充整轮时间。
 **Response latency** 独立显示最近一次请求的 first byte 与 first model event，未观测字段
 不会用 0 补齐。详情还显示请求绑定的 book session/revision、步骤、模式、模型、终态、
-发送时冻结的 scope handles、最近请求 token 用量和带覆盖率的整轮 token 汇总。这里只有
-安全的 endpoint 主机，不显示 API Key、URL 路径、查询参数或响应正文。
+发送时冻结的 scope handles、当前模型步骤用量/上限、最近请求 token 用量和带覆盖率的整轮
+token 汇总。这里只有安全的 endpoint 主机，不显示 API Key、URL 路径、查询参数或响应正文。
+
+### 单次运行模型步骤上限
+
+在 **偏好设置 → Native Agent** 中，**Maximum model steps per run** 限制一轮任务最多发送
+多少次正式模型请求，默认 **24**，可设范围为 **1–64**。一次模型步骤就是一次 Provider
+请求；模型调用工具后，为读取工具结果而继续发送的请求也计入。限制不会截断正在进行的
+HTTP 响应或工具调用，而是在准备发送下一次模型请求前停止本轮，因此设为 N 时最多实际
+发送 N 次请求。
+
+达到上限会以 `MAX_MODEL_STEPS_EXCEEDED` 失败，并自动回滚当时仍开放的暂存事务，避免一个
+持续索取工具的模型无界运行。此前已经 commit、标为 **Applied** 的变更不会被这个回滚悄悄
+撤销，仍须按 Applied 卡片所列的恢复边界处理。这与 **Stop** 的用户主动取消原因不同，但
+两者都只回滚尚未提交的暂存工作。
+
+每个运行状态调试事件都带本轮 `max_model_steps`，终态还带实际 `model_steps`；错误事件同时
+记录两者。展开 **Technical details**，运行中可看到本轮上限，结束后可看到“已用/上限”，
+无需等到触发错误才确认当前安全预算。
 
 ### 请求历史预算
 

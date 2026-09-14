@@ -1475,3 +1475,40 @@ Agent 测试连续 3 轮共 42 次通过。该切片没有新增 UI 文案；四
 宿主仍先枚举完整内存清单再在 Tool 层切页，因此不宣称降低 Book 侧枚举峰值。单项 label/path
 没有额外字符截断，`font.inventory`、`book.check`、transaction preview 等其他聚合结果也未纳入
 本次分页；旧提示或第三方脚本若假定无参数永远返回全量，需要读取 `has_more` 后续页。
+
+## Native Agent 单次运行模型步骤上限（2026-09-15）
+
+分支：`feature/agent-model-step-limit`。主要提交：`b0d0f16e6`（Runner 限制、设置接线、审计与
+回滚回归）、`104c8ce13`（Technical details 展示）和 `367d9163a`（四语文案）。
+
+### 有界模型循环与事务边界
+
+- `AgentRunner` 默认允许每轮 24 个模型步骤，公开边界为 1–64；所有入口均夹紧该范围，旧设置
+  中小于 1 的无效值回退默认。步骤按实际 `provider.stream()` 请求计数，包括工具执行后的
+  继续请求；检查发生在下一次请求之前，所以配置 N 最多发送 N 次，不中途截断响应或工具。
+- 达到上限后 Runner 先复用正常失败/取消路径的 `rollbackOpenWork()`，再发布带稳定代码
+  `MAX_MODEL_STEPS_EXCEEDED` 的 Error 和 Failed 终态。开放的 staged transaction 被回滚；此前
+  已 commit 的 Applied 变更不在开放事务中，不会被误报或自动撤销。
+- 所有活动运行状态事件包含 `max_model_steps`，终态另含实际 `model_steps`；上限错误同时记录
+  两者。这样即使没有触发上限，Debug JSON 也能证明该轮实际采用的配置，而不依赖读取当前
+  偏好设置反推历史运行。
+
+### 设置、可观察性与测试证据
+
+- 偏好设置新增 **Maximum model steps per run** 数值项，范围 1–64、默认 24。值经
+  `AgentSettings → MainWindow → AgentController → AgentRunner` 传递；提示明确达到限制会停止
+  运行并回滚未提交的暂存事务。
+- Dock 的 **Technical details** 在运行中显示每轮上限，终态显示实际步骤数/上限；两者也以
+  `runModelSteps` / `runMaxModelSteps` 动态属性公开给 GUI 自动化。会话切换和新运行会重置旧值，
+  同一运行的后续事件若缺少字段则保留已审计的起始上限。
+- `agent_harness` 让模型持续返回工具调用，验证配置 2 时只发送两次请求、产生稳定错误字段、
+  发布 Failed 终态、回滚已打开的 Plan 事务且不残留 staged 状态；正常完成路径固定默认 24
+  同时出现在开始和终态事件。`agent_dock` / `agent_dock_contract` 覆盖设置持久化接线、运行中/
+  终态文本和公开属性。完整 Sigil 构建及 42 个固定 Python 依赖通过；14 项 Agent 测试连续
+  3 轮共 42 次通过。四份 `.qm` 均为 0 unfinished，英文 4,767 条，简中/繁中/日文各 5,744
+  条；当前 Agent Dock/设置的 279 条活跃文案已逐项核对四语存在、非空和占位符一致。
+
+本切片防止的是模型通过连续请求/工具往返形成无界单轮循环，不是 token、耗时、工具调用数或
+成本上限。一次模型请求仍可能很大或很慢，一次响应也可能提出多个工具调用；已 Applied 的提交
+仍按各自恢复能力处理。真实在线 Provider 的长链路、达到上限前已经 commit 的混合任务、
+Windows/Linux GUI 和辅助技术人工验收仍属于后续发布边界。
