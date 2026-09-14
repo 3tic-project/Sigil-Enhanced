@@ -45,6 +45,7 @@ public:
     void setModel(const QString &model);
     void setThinking(bool enabled, const QString &effort);
     void setTokenUsage(bool enabled);
+    void setHistoryPreviousTurnBudget(int bytes);
     void setMaxSteps(int steps);
     AgentRunState state() const;
 
@@ -89,6 +90,7 @@ private:
     QString m_model;
     bool m_thinking = true;
     bool m_tokenUsage = true;
+    int m_historyPreviousTurnBudgetBytes = 32768;
     QString m_effort = QStringLiteral("medium");
     int m_maxSteps = 24;
     QString m_runBookSessionId;

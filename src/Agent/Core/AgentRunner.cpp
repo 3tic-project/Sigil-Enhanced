@@ -281,6 +281,11 @@ void AgentRunner::setTokenUsage(bool enabled)
     m_tokenUsage = enabled;
 }
 
+void AgentRunner::setHistoryPreviousTurnBudget(int bytes)
+{
+    m_historyPreviousTurnBudgetBytes = qMax(0, bytes);
+}
+
 void AgentRunner::setMaxSteps(int steps)
 {
     m_maxSteps = qMax(1, steps);
@@ -692,7 +697,8 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         }
 
         ModelRequest request = m_prompts.build(
-            *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking, m_effort, handles);
+            *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking,
+            m_effort, handles, m_historyPreviousTurnBudgetBytes);
         request.includeUsage = m_runUsageRequested;
         ++m_runModelSteps;
         const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -708,6 +714,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             { QStringLiteral("context_handles"), QJsonArray::fromStringList(handles) },
             { QStringLiteral("thinking"), request.thinking },
             { QStringLiteral("usage_requested"), request.includeUsage },
+            { QStringLiteral("history_context"), request.historyContext },
             { QStringLiteral("tools"), request.tools.size() }
         });
         setState(AgentRunState::RequestingModel);

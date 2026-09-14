@@ -208,7 +208,8 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
                                     const QString &model,
                                     bool thinking,
                                     const QString &reasoning_effort,
-                                    const QStringList &handles) const
+                                    const QStringList &handles,
+                                    int history_previous_turn_budget_bytes) const
 {
     ModelRequest request;
     request.model = model;
@@ -240,7 +241,11 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
 
     HistoryAssembler assembler;
     const bool include_tools = !request.tools.isEmpty();
-    request.messages += assembler.assemble(session.events(), include_tools);
+    HistoryAssemblyStats history_stats;
+    request.messages += assembler.assemble(
+        session.events(), include_tools, history_previous_turn_budget_bytes,
+        &history_stats);
+    request.historyContext = history_stats.toJson();
     return request;
 }
 

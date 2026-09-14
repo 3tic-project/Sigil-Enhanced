@@ -9,6 +9,7 @@
 #define SIGIL_AGENT_IMODEL_PROVIDER_H
 
 #include <QJsonArray>
+#include <QJsonObject>
 #include <QString>
 
 #include "Agent/AgentTypes.h"
@@ -35,6 +36,7 @@ struct ModelRequest {
     QString model;
     QList<ChatMessage> messages;
     QJsonArray tools;
+    QJsonObject historyContext;
     bool thinking = true;
     QString reasoningEffort = QStringLiteral("medium");
     ReasoningProtocol reasoningProtocol = ReasoningProtocol::DeepSeek;

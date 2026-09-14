@@ -32,7 +32,8 @@ public:
                        const QString &model,
                        bool thinking,
                        const QString &reasoning_effort,
-                       const QStringList &handles) const;
+                       const QStringList &handles,
+                       int historyPreviousTurnBudgetBytes = 32768) const;
 };
 
 } // namespace SigilAgent

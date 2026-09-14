@@ -191,6 +191,8 @@ int main()
     for (int i = 0; i < started_requests.size(); ++i) {
         const QJsonObject started = started_requests.at(i).payload;
         const QJsonObject completed = completed_requests.at(i).payload;
+        const QJsonObject history = started.value(
+            QStringLiteral("history_context")).toObject();
         Require(!started.value(QStringLiteral("request_id")).toString().isEmpty()
                     && started.value(QStringLiteral("request_id")).toString()
                         == completed.value(QStringLiteral("request_id")).toString()
@@ -201,8 +203,16 @@ int main()
                     && started.value(QStringLiteral("mode")).toString()
                         == QStringLiteral("ask")
                     && started.value(QStringLiteral("usage_requested")).toBool()
+                    && history.value(QStringLiteral("limit_enabled")).toBool()
+                    && history.value(QStringLiteral("budget_bytes")).toInt() == 32768
+                    && history.value(
+                        QStringLiteral("included_turn_count")).toInt() == 1
+                    && history.value(
+                        QStringLiteral("omitted_turn_count")).toInt() == 0
+                    && history.value(
+                        QStringLiteral("current_turn_bytes")).toInteger() > 0
                     && completed.value(QStringLiteral("duration_ms")).toInteger() >= 0,
-                "request lifecycle events must retain identity, target, mode, and elapsed time");
+                "request lifecycle events must retain identity, target, history budget, and elapsed time");
         const QJsonObject usage = completed.value(QStringLiteral("usage")).toObject();
         Require(usage.value(QStringLiteral("input_tokens")).toInteger() > 0
                     && usage.value(QStringLiteral("output_tokens")).toInteger() > 0
