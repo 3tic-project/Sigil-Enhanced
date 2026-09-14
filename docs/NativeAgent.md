@@ -189,7 +189,14 @@ book session 且没有活动运行时启用；换书或 New Session 后失效。
   阅读顺序和 TOC 层级变更。预览事件同时记录 `applied_to_book=false`、
   `save_status=not_applied` 和完整 EPUBCheck 未运行。
 - **Applied** 表示事务已写入当前内存 Book，不表示 EPUB 文件已保存。卡片和会话事件会
-  显示应用项数、Book revision、`save_status=not_saved`，并明确完整 EPUBCheck 未运行。
+  显示资源成功/失败数、metadata/spine/TOC 结构操作成功/失败数、应用操作数、Book revision、
+  `save_status=not_saved`，并明确完整 EPUBCheck 未运行。资源按提交前 Preview 中的唯一 ID
+  统计；新增、删除和重命名仍算资源，结构类别不混进资源数。
+- 实际执行的 `transaction.commit` 若失败，工具卡会展开为 **Apply failed**：首行明确未应用
+  到当前 Book，并显示 0 个资源成功和该原子批次中未能应用的资源数。revision/源码冲突时
+  `transaction_state=staged`，卡片说明暂存仍可审阅、重试或回滚；写入中途失败并完成整批
+  回滚时则说明没有残留部分修改。若提交前范围本身无法读取，会明确显示资源结果不可用，
+  不用 0 冒充已核对的数量。
 - **Staged changes discarded** 只表示提交前暂存事务已丢弃，活书没有被该事务修改。
 - 仅修改既有文本资源、且不含新增、删除、重命名、metadata、Spine 或 TOC 结构变更的
   commit，会在写入前自动保存受影响资源的原文，写入后封存同一批资源的精确文本与路径。
@@ -209,8 +216,10 @@ book session 且没有活动运行时启用；换书或 New Session 后失效。
 因此，Agent 回答“完成”不能替代用户保存 EPUB，也不能替代完整 EPUBCheck。会话的
 Conversation Markdown 导出保留同样的 Plan review / Preview / Applied / Rollback 状态边界。
 段落计划导出还会说明可独立选择的 XHTML 组数；计划导出保留可读的资源、源码片段和 TOC
-结构摘要，不重复输出 plan/digest。完整绑定和实际批准的 `selected_resource_ids` 仍可在
-脱敏 Debug JSON 的对应事件中审计。
+结构摘要，不重复输出 plan/digest。事务成功/失败也只输出一份可读资源结果，不重复原始
+completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selected_resource_ids` 仍可
+在脱敏 Debug JSON 的对应事件中审计。模型最终回答被要求复述这些精确结果，不能从旧的
+`applied_changes` 操作数推测资源数。
 
 ## 工具（模型不能直接写 EPUB ZIP）
 

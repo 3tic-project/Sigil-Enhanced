@@ -1316,3 +1316,44 @@ digest 覆盖；`agent_dock` 覆盖默认全选、清空阻断、单组批准、
 transaction，也不允许拆分 TOC 依赖变化。选择发生在 apply 批准而不是修改计划内容；要
 改变转换选项、加入计划外文件或处理失效资源仍须重新分析/生成计划。整文件 unified diff、
 超大真实计划、键盘/屏幕阅读器、Windows/Linux 主题与在线模型端到端人工验收仍待后续。
+
+## Native Agent 原子事务资源结果（2026-09-15）
+
+分支：`feature/agent-transaction-resource-outcomes`。主要提交：`3f5af4f01`（Runner 原子结果
+协议与成功/回滚/冲突回归）、`2fe244409`（成功和失败结果卡）、`984f723c7`（可读 Conversation
+导出）、`1c7b5b807`（四语文案）和 `7eac7c26c`（模型结果报告约束）。
+
+### 冻结范围、原子语义与用户结果
+
+- Runner 在实际 `transaction.commit` 前复用任务恢复所需的真实 `previewTransaction()`，按
+  首次出现顺序冻结并去重 `changes[].resource_id` 与 removed IDs；新增、正文、CSS、重命名和
+  删除统一计入资源。metadata、spine、TOC 作为结构操作类别单列，不把旧的
+  `applied_changes` 操作计数冒充资源数。
+- 每次实际执行的 commit 都在工具数据中写入 `resource_outcomes`：范围是否可用、原子语义、
+  资源 ID/成功/失败数、结构类别及其成功/失败数，以及 committed/staged/rolled_back/not_open
+  事务状态。成功意味着冻结范围全部成功且失败数为 0；任何提交失败均报告 0 成功和整个
+  未应用范围，绝不把中途写入后回滚的资源当作最终成功。
+- revision/源码冲突拒绝写入但保留事务时，失败卡明确仍可审阅、修复后重试或 rollback；宿主
+  在中途故障后完成原子回滚时，卡片明确没有残留部分修改。提交前 Preview 不可得时只报告
+  scope unavailable，不伪造 0/0。服务端/工具错误正文强制按 PlainText 显示。
+- Applied 卡继续保留“写入当前 Book、EPUB 尚未保存”、Book revision、完整 EPUBCheck 和恢复
+  边界，同时新增资源与结构结果。失败 commit 复用同一个 ToolFailed 事件形成展开的
+  **Apply failed** 结果，不制造与工具历史脱节的第二个终态事件。
+- Conversation Markdown 抑制已有专用 Preview/Applied/Rollback 摘要的原始 ToolCompleted
+  JSON；成功和失败提交各输出一份可读结果。完整 `resource_outcomes` 仍保留在脱敏 Debug
+  JSON。系统提示要求模型按这些精确字段报告，禁止从 `applied_changes` 猜资源成功数。
+
+### 测试证据与剩余项
+
+`agent_harness` 以真实 Memory workspace 覆盖单资源成功、两资源加 metadata 的第二资源故障
+注入及整批回滚、错误 expected revision 的零写入和暂存保留，并固定模型报告约束；
+`agent_dock` 覆盖成功资源/结构计数、原子全成功、回滚失败、冲突仍暂存、公开属性及恶意
+样式错误正文的 PlainText；`agent_provider_catalog` 覆盖成功/失败可读导出、秘密脱敏和原始
+commit JSON 去重。完整 Sigil 构建及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 轮
+共 42 次通过。严格四语目录覆盖通过，四份 `.qm` 均可生成且 0 unfinished；英文为 4,756 条
+活跃源文，简中/繁中/日文各为 5,733 条。
+
+本切片直接补齐 AGENT-04 的成功/失败资源计数，并强化 A07/A08 的原子回滚与未保存结果证据。
+它统计的是事务 Preview 中的宿主资源，不宣称每个 metadata 字段或每条 TOC 节点都是独立
+资源；结构类别仅给出成功/失败操作类别数。当前也未提供失败资源的可点击明细表、跨进程
+恢复、真实磁盘保存后结果、Windows/Linux GUI、超大事务性能或在线模型人工端到端验收。
