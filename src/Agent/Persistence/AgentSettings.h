@@ -45,6 +45,9 @@ public:
     int historyPreviousTurnBudgetBytes() const;
     void setHistoryPreviousTurnBudgetBytes(int bytes);
 
+    int maxModelSteps() const;
+    void setMaxModelSteps(int steps);
+
     QString reasoningEffort() const;
     void setReasoningEffort(const QString &effort);
 

@@ -6265,6 +6265,7 @@ void MainWindow::ConfigureAgentProvider()
     m_AgentController->setTokenUsage(settings.tokenUsageEnabled());
     m_AgentController->setHistoryPreviousTurnBudget(
         settings.historyPreviousTurnBudgetBytes());
+    m_AgentController->setMaxModelSteps(settings.maxModelSteps());
     if (m_AgentDock) {
         m_AgentController->setMode(m_AgentDock->mode());
         SigilAgent::AgentProviderReadiness readiness = SigilAgent::providerReadiness(

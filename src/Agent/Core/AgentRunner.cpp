@@ -289,7 +289,7 @@ void AgentRunner::setHistoryPreviousTurnBudget(int bytes)
 
 void AgentRunner::setMaxSteps(int steps)
 {
-    m_maxSteps = qMax(1, steps);
+    m_maxSteps = qBound(1, steps, MAX_MODEL_STEPS);
 }
 
 AgentRunState AgentRunner::state() const
@@ -308,6 +308,7 @@ void AgentRunner::setState(AgentRunState state)
             payload.insert(QStringLiteral("run_id"), m_runId);
             payload.insert(QStringLiteral("book_session_id"), m_runBookSessionId);
             payload.insert(QStringLiteral("usage_requested"), m_runUsageRequested);
+            payload.insert(QStringLiteral("max_model_steps"), m_maxSteps);
             const bool terminal = state == AgentRunState::Completed
                 || state == AgentRunState::Cancelled
                 || state == AgentRunState::Failed;
@@ -830,9 +831,13 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
 
     rollbackOpenWork();
     result.state = AgentRunState::Failed;
-    result.error = QStringLiteral("Exceeded max agent steps");
+    result.error = QStringLiteral("Exceeded maximum of %1 model steps")
+                       .arg(m_maxSteps);
     m_session->append(AgentEventType::Error, QJsonObject {
-        { QStringLiteral("message"), result.error }
+        { QStringLiteral("code"), QStringLiteral("MAX_MODEL_STEPS_EXCEEDED") },
+        { QStringLiteral("message"), result.error },
+        { QStringLiteral("model_steps"), m_runModelSteps },
+        { QStringLiteral("max_model_steps"), m_maxSteps }
     });
     setState(AgentRunState::Failed);
     return result;

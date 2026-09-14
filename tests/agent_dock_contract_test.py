@@ -108,6 +108,14 @@ require(
     "Native Agent settings must disclose and persist the bounded previous-turn history budget",
 )
 require(
+    "agentMaxModelSteps" in settings_cpp
+    and "Maximum model steps per run" in settings_cpp
+    and "rolls back any uncommitted staged transaction" in settings_cpp
+    and "max_model_steps" in agent_settings_cpp
+    and "setMaxModelSteps(settings.maxModelSteps())" in main_window,
+    "Native Agent settings must disclose, persist, and apply the model-step safety limit",
+)
+require(
     "setHistoryPreviousTurnBudget(" in main_window
     and "settings.historyPreviousTurnBudgetBytes()" in main_window
     and "m_runner->setHistoryPreviousTurnBudget" in controller_cpp

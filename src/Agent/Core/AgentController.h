@@ -36,6 +36,7 @@ public:
     void setThinking(bool enabled, const QString &effort);
     void setTokenUsage(bool enabled);
     void setHistoryPreviousTurnBudget(int bytes);
+    void setMaxModelSteps(int steps);
 
     AgentSession *session();
     AgentRunner *runner();
@@ -75,6 +76,7 @@ private:
     bool m_tokenUsageEnabled = true;
     int m_historyPreviousTurnBudgetBytes =
         DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES;
+    int m_maxModelSteps = DEFAULT_MAX_MODEL_STEPS;
     QString m_reasoningEffort = QStringLiteral("medium");
     bool m_resetSessionAfterRun = false;
 };

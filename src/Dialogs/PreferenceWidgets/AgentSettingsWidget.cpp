@@ -21,6 +21,7 @@
 #include <QtConcurrent>
 
 #include "Agent/Model/AgentConnectionProbe.h"
+#include "Agent/Core/AgentRunner.h"
 #include "Agent/Model/HistoryAssembler.h"
 #include "Agent/Model/AgentProviderPreset.h"
 #include "Agent/Persistence/AgentSettings.h"
@@ -91,6 +92,10 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_historyBudget->setSuffix(tr(" KiB"));
     m_historyBudget->setSpecialValueText(tr("Unlimited"));
     m_historyBudget->setToolTip(tr("Limits only previous complete conversation turns sent to the model. The current run is always retained in full."));
+    m_maxModelSteps = new QSpinBox(this);
+    m_maxModelSteps->setObjectName(QStringLiteral("agentMaxModelSteps"));
+    m_maxModelSteps->setRange(1, SigilAgent::MAX_MODEL_STEPS);
+    m_maxModelSteps->setToolTip(tr("Stops a run after this many model requests and rolls back any uncommitted staged transaction."));
     m_effort = new QComboBox(this);
     m_effort->setObjectName(QStringLiteral("agentReasoningEffort"));
     m_effort->addItems({ QStringLiteral("low"), QStringLiteral("medium"), QStringLiteral("high") });
@@ -115,6 +120,7 @@ AgentSettingsWidget::AgentSettingsWidget()
     layout->addRow(m_thinking);
     layout->addRow(m_tokenUsage);
     layout->addRow(tr("Previous-turn history budget"), m_historyBudget);
+    layout->addRow(tr("Maximum model steps per run"), m_maxModelSteps);
     layout->addRow(tr("Reasoning effort"), m_effort);
     layout->addRow(QString(), m_testConnection);
     layout->addRow(m_status);
@@ -502,6 +508,7 @@ void AgentSettingsWidget::readSettings()
     m_thinking->setChecked(settings.thinkingEnabled());
     m_tokenUsage->setChecked(settings.tokenUsageEnabled());
     m_historyBudget->setValue(settings.historyPreviousTurnBudgetBytes() / 1024);
+    m_maxModelSteps->setValue(settings.maxModelSteps());
     const int effort = m_effort->findText(settings.reasoningEffort());
     m_effort->setCurrentIndex(effort >= 0 ? effort : 1);
 
@@ -542,6 +549,7 @@ PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
     settings.setThinkingEnabled(m_thinking->isChecked());
     settings.setTokenUsageEnabled(m_tokenUsage->isChecked());
     settings.setHistoryPreviousTurnBudgetBytes(m_historyBudget->value() * 1024);
+    settings.setMaxModelSteps(m_maxModelSteps->value());
     settings.setReasoningEffort(m_effort->currentText());
     settings.setCatalogJson(m_catalogJson);
     if (m_successfulConnectionAtMs > 0

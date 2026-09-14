@@ -10,6 +10,7 @@
 #include <QJsonParseError>
 
 #include "Agent/AgentTypes.h"
+#include "Agent/Core/AgentRunner.h"
 #include "Agent/Model/HistoryAssembler.h"
 #include "Misc/SettingsStore.h"
 
@@ -156,6 +157,24 @@ void AgentSettings::setHistoryPreviousTurnBudgetBytes(int bytes)
     store.setValue(QStringLiteral("history_previous_turn_budget_bytes"),
                    qBound(0, bytes,
                           MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES));
+}
+
+int AgentSettings::maxModelSteps() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    const int steps = store.value(QStringLiteral("max_model_steps"),
+                                  DEFAULT_MAX_MODEL_STEPS).toInt();
+    if (steps < 1) return DEFAULT_MAX_MODEL_STEPS;
+    return qMin(steps, MAX_MODEL_STEPS);
+}
+
+void AgentSettings::setMaxModelSteps(int steps)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("max_model_steps"),
+                   qBound(1, steps, MAX_MODEL_STEPS));
 }
 
 QString AgentSettings::reasoningEffort() const

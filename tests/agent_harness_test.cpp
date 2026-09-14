@@ -323,6 +323,10 @@ int main()
                     == run_completed.value(QStringLiteral("run_id")).toString()
                 && run_completed.value(QStringLiteral("state")).toString()
                     == QStringLiteral("completed")
+                && run_started.value(QStringLiteral("max_model_steps")).toInt()
+                    == DEFAULT_MAX_MODEL_STEPS
+                && run_completed.value(QStringLiteral("max_model_steps")).toInt()
+                    == DEFAULT_MAX_MODEL_STEPS
                 && run_completed.value(QStringLiteral("duration_ms")).toInteger() >= 0
                 && run_completed.value(QStringLiteral("model_steps")).toInt()
                     == provider.requestCount()
@@ -344,6 +348,57 @@ int main()
             "a completed multi-step run must sum exact usage with per-field coverage");
     Require(!hasEvent(session, AgentEventType::ModelRequestFailed),
             "successful model requests must not publish failure events");
+
+    MemoryBookWorkspace step_limit_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry step_limit_registry;
+    registerBookTools(&step_limit_registry, &step_limit_book);
+    AgentSession step_limit_session;
+    AgentCancellation step_limit_cancel;
+    PermissionPolicy step_limit_policy;
+    AutoApprovalGate step_limit_gate(true);
+    MockModelProvider step_limit_provider;
+    int step_limit_calls = 0;
+    step_limit_provider.setScript([&step_limit_calls](const ModelRequest &) {
+        ++step_limit_calls;
+        ToolCall call;
+        call.id = QStringLiteral("step-limit-%1").arg(step_limit_calls);
+        call.name = step_limit_calls == 1
+            ? QStringLiteral("transaction.begin")
+            : QStringLiteral("book.summary");
+        call.argumentsJson = step_limit_calls == 1
+            ? QStringLiteral("{\"label\":\"step limit rollback\"}")
+            : QStringLiteral("{}");
+        ModelTurn turn;
+        turn.toolCalls.append(call);
+        return turn;
+    });
+    AgentRunner step_limit_runner(
+        &step_limit_session, &step_limit_provider, &step_limit_registry,
+        &step_limit_book, &step_limit_policy, &step_limit_gate,
+        &step_limit_cancel);
+    step_limit_runner.setMode(AgentMode::Plan);
+    step_limit_runner.setMaxSteps(2);
+    const AgentRunResult step_limit_result = step_limit_runner.runTurn(
+        QStringLiteral("keep calling tools forever"));
+    const QJsonObject step_limit_error = step_limit_session
+        .eventsOf(AgentEventType::Error).constLast().payload;
+    const QJsonObject step_limit_terminal = step_limit_session
+        .eventsOf(AgentEventType::RunStateChanged).constLast().payload;
+    Require(step_limit_result.state == AgentRunState::Failed
+                && step_limit_calls == 2
+                && step_limit_result.error.contains(QStringLiteral("2 model steps"))
+                && !step_limit_book.hasOpenTransaction()
+                && hasEvent(step_limit_session,
+                            AgentEventType::TransactionRolledBack)
+                && step_limit_error.value(QStringLiteral("code")).toString()
+                    == QStringLiteral("MAX_MODEL_STEPS_EXCEEDED")
+                && step_limit_error.value(QStringLiteral("model_steps")).toInt() == 2
+                && step_limit_error.value(QStringLiteral("max_model_steps")).toInt() == 2
+                && step_limit_terminal.value(QStringLiteral("state")).toString()
+                    == QStringLiteral("failed")
+                && step_limit_terminal.value(QStringLiteral("model_steps")).toInt() == 2
+                && step_limit_terminal.value(QStringLiteral("max_model_steps")).toInt() == 2,
+            "the configured model-step limit must fail with audit data and roll back staged work");
 
     MemoryBookWorkspace failed_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry failed_registry;

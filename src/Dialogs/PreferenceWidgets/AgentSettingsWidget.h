@@ -71,6 +71,7 @@ private:
     QCheckBox *m_thinking = nullptr;
     QCheckBox *m_tokenUsage = nullptr;
     QSpinBox *m_historyBudget = nullptr;
+    QSpinBox *m_maxModelSteps = nullptr;
     QComboBox *m_effort = nullptr;
 
     QString m_activeProvider;
