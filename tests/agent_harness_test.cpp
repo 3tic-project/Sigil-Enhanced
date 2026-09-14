@@ -295,8 +295,13 @@ int main()
                             QStringLiteral("total_tool_count")).toInt()
                     && tool_context.value(
                         QStringLiteral("hidden_tool_count")).toInt() > 0
+                    && started.value(QStringLiteral("max_tool_calls")).toInt()
+                        == DEFAULT_MAX_TOOL_CALLS
+                    && started.value(QStringLiteral("used_tool_calls")).toInt() == i
+                    && started.value(QStringLiteral("remaining_tool_calls")).toInt()
+                        == DEFAULT_MAX_TOOL_CALLS - i
                     && completed.value(QStringLiteral("duration_ms")).toInteger() >= 0,
-                "request lifecycle events must retain identity, target, history, mode tools, and elapsed time");
+                "request lifecycle events must retain identity, target, history, mode tools, tool-call budget, and elapsed time");
         const QJsonObject usage = completed.value(QStringLiteral("usage")).toObject();
         Require(usage.value(QStringLiteral("input_tokens")).toInteger() > 0
                     && usage.value(QStringLiteral("output_tokens")).toInteger() > 0
@@ -327,6 +332,10 @@ int main()
                     == DEFAULT_MAX_MODEL_STEPS
                 && run_completed.value(QStringLiteral("max_model_steps")).toInt()
                     == DEFAULT_MAX_MODEL_STEPS
+                && run_started.value(QStringLiteral("max_tool_calls")).toInt()
+                    == DEFAULT_MAX_TOOL_CALLS
+                && run_completed.value(QStringLiteral("max_tool_calls")).toInt()
+                    == DEFAULT_MAX_TOOL_CALLS
                 && run_completed.value(QStringLiteral("duration_ms")).toInteger() >= 0
                 && run_completed.value(QStringLiteral("model_steps")).toInt()
                     == provider.requestCount()
@@ -399,6 +408,81 @@ int main()
                 && step_limit_terminal.value(QStringLiteral("model_steps")).toInt() == 2
                 && step_limit_terminal.value(QStringLiteral("max_model_steps")).toInt() == 2,
             "the configured model-step limit must fail with audit data and roll back staged work");
+
+    MemoryBookWorkspace tool_limit_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry tool_limit_registry;
+    registerBookTools(&tool_limit_registry, &tool_limit_book);
+    AgentSession tool_limit_session;
+    AgentCancellation tool_limit_cancel;
+    PermissionPolicy tool_limit_policy;
+    AutoApprovalGate tool_limit_gate(true);
+    MockModelProvider tool_limit_provider;
+    int tool_limit_requests = 0;
+    tool_limit_provider.setScript([&tool_limit_requests](const ModelRequest &) {
+        ++tool_limit_requests;
+        ModelTurn turn;
+        if (tool_limit_requests == 1) {
+            ToolCall begin;
+            begin.id = QStringLiteral("tool-limit-begin");
+            begin.name = QStringLiteral("transaction.begin");
+            begin.argumentsJson = QStringLiteral("{\"label\":\"tool limit rollback\"}");
+            turn.toolCalls.append(begin);
+        } else {
+            for (int i = 0; i < 2; ++i) {
+                ToolCall call;
+                call.id = QStringLiteral("tool-limit-rejected-%1").arg(i);
+                call.name = QStringLiteral("book.summary");
+                call.argumentsJson = QStringLiteral("{}");
+                turn.toolCalls.append(call);
+            }
+        }
+        return turn;
+    });
+    AgentRunner tool_limit_runner(
+        &tool_limit_session, &tool_limit_provider, &tool_limit_registry,
+        &tool_limit_book, &tool_limit_policy, &tool_limit_gate,
+        &tool_limit_cancel);
+    tool_limit_runner.setMode(AgentMode::Plan);
+    tool_limit_runner.setMaxToolCalls(2);
+    const AgentRunResult tool_limit_result = tool_limit_runner.runTurn(
+        QStringLiteral("request an oversized tool batch"));
+    const QJsonObject tool_limit_error = tool_limit_session
+        .eventsOf(AgentEventType::Error).constLast().payload;
+    const QJsonObject tool_limit_terminal = tool_limit_session
+        .eventsOf(AgentEventType::RunStateChanged).constLast().payload;
+    const QJsonObject tool_limit_second_request = tool_limit_session
+        .eventsOf(AgentEventType::ModelRequestStarted).constLast().payload;
+    Require(tool_limit_result.state == AgentRunState::Failed
+                && tool_limit_requests == 2
+                && tool_limit_result.error.contains(
+                    QStringLiteral("maximum of 2 tool calls"))
+                && !tool_limit_book.hasOpenTransaction()
+                && hasEvent(tool_limit_session,
+                            AgentEventType::TransactionRolledBack)
+                && tool_limit_session.eventsOf(
+                    AgentEventType::ToolStarted).size() == 1
+                && tool_limit_session.eventsOf(
+                    AgentEventType::AssistantMessage).size() == 1
+                && tool_limit_error.value(QStringLiteral("code")).toString()
+                    == QStringLiteral("MAX_TOOL_CALLS_EXCEEDED")
+                && tool_limit_error.value(QStringLiteral("tool_calls")).toInt() == 1
+                && tool_limit_error.value(
+                    QStringLiteral("requested_tool_calls")).toInt() == 2
+                && tool_limit_error.value(
+                    QStringLiteral("remaining_tool_calls")).toInt() == 1
+                && tool_limit_error.value(QStringLiteral("max_tool_calls")).toInt() == 2
+                && tool_limit_second_request.value(
+                    QStringLiteral("used_tool_calls")).toInt() == 1
+                && tool_limit_second_request.value(
+                    QStringLiteral("remaining_tool_calls")).toInt() == 1
+                && tool_limit_provider.lastRequest().messages.constFirst().content
+                    .contains(QStringLiteral("at most 1 more tool call"))
+                && tool_limit_terminal.value(QStringLiteral("state")).toString()
+                    == QStringLiteral("failed")
+                && tool_limit_terminal.value(QStringLiteral("tool_calls")).toInt() == 1
+                && tool_limit_terminal.value(
+                    QStringLiteral("max_tool_calls")).toInt() == 2,
+            "an oversized tool-call batch must execute nothing from that batch, audit the limit, and roll back staged work");
 
     MemoryBookWorkspace failed_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry failed_registry;

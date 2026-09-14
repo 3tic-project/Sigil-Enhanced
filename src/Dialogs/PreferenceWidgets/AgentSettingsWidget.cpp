@@ -96,6 +96,10 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_maxModelSteps->setObjectName(QStringLiteral("agentMaxModelSteps"));
     m_maxModelSteps->setRange(1, SigilAgent::MAX_MODEL_STEPS);
     m_maxModelSteps->setToolTip(tr("Stops a run after this many model requests and rolls back any uncommitted staged transaction."));
+    m_maxToolCalls = new QSpinBox(this);
+    m_maxToolCalls->setObjectName(QStringLiteral("agentMaxToolCalls"));
+    m_maxToolCalls->setRange(1, SigilAgent::MAX_TOOL_CALLS);
+    m_maxToolCalls->setToolTip(tr("Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work."));
     m_effort = new QComboBox(this);
     m_effort->setObjectName(QStringLiteral("agentReasoningEffort"));
     m_effort->addItems({ QStringLiteral("low"), QStringLiteral("medium"), QStringLiteral("high") });
@@ -121,6 +125,7 @@ AgentSettingsWidget::AgentSettingsWidget()
     layout->addRow(m_tokenUsage);
     layout->addRow(tr("Previous-turn history budget"), m_historyBudget);
     layout->addRow(tr("Maximum model steps per run"), m_maxModelSteps);
+    layout->addRow(tr("Maximum tool calls per run"), m_maxToolCalls);
     layout->addRow(tr("Reasoning effort"), m_effort);
     layout->addRow(QString(), m_testConnection);
     layout->addRow(m_status);
@@ -509,6 +514,7 @@ void AgentSettingsWidget::readSettings()
     m_tokenUsage->setChecked(settings.tokenUsageEnabled());
     m_historyBudget->setValue(settings.historyPreviousTurnBudgetBytes() / 1024);
     m_maxModelSteps->setValue(settings.maxModelSteps());
+    m_maxToolCalls->setValue(settings.maxToolCalls());
     const int effort = m_effort->findText(settings.reasoningEffort());
     m_effort->setCurrentIndex(effort >= 0 ? effort : 1);
 
@@ -550,6 +556,7 @@ PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
     settings.setTokenUsageEnabled(m_tokenUsage->isChecked());
     settings.setHistoryPreviousTurnBudgetBytes(m_historyBudget->value() * 1024);
     settings.setMaxModelSteps(m_maxModelSteps->value());
+    settings.setMaxToolCalls(m_maxToolCalls->value());
     settings.setReasoningEffort(m_effort->currentText());
     settings.setCatalogJson(m_catalogJson);
     if (m_successfulConnectionAtMs > 0

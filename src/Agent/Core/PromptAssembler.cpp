@@ -51,7 +51,7 @@ bool parseAttachedSelection(const QString &handle, AttachedSelection *selection)
 
 } // namespace
 
-QString PromptAssembler::systemPrompt(AgentMode mode) const
+QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) const
 {
     QString prompt = QStringLiteral(
         "You are Sigil Agent, a native EPUB assistant inside Sigil-Enhanced.\n"
@@ -80,6 +80,11 @@ QString PromptAssembler::systemPrompt(AgentMode mode) const
         "- After transaction.commit, report the exact resource_outcomes success/failure counts and transaction_state. If the scope is unavailable, say so; never infer resource success from applied_changes.\n"
         "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n"
         "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n");
+    if (remaining_tool_calls >= 0) {
+        prompt += QStringLiteral(
+            "- This run may make at most %1 more tool call(s). Do not return a batch larger than this remaining budget.\n")
+                      .arg(remaining_tool_calls);
+    }
     if (mode == AgentMode::Ask) {
         prompt += QStringLiteral("Mode: Ask. Read-only. Do not call mutating tools.\n");
     } else if (mode == AgentMode::Plan) {
@@ -212,7 +217,8 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
                                     const QString &reasoning_effort,
                                     const QStringList &handles,
                                     int history_previous_turn_budget_bytes,
-                                    const PermissionPolicy *permission_policy) const
+                                    const PermissionPolicy *permission_policy,
+                                    int remaining_tool_calls) const
 {
     ModelRequest request;
     request.model = model;
@@ -259,7 +265,7 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
     const QList<AgentSkill> skills = loadAgentSkills();
     ChatMessage system;
     system.role = QStringLiteral("system");
-    system.content = systemPrompt(mode);
+    system.content = systemPrompt(mode, remaining_tool_calls);
     system.content += QLatin1Char('\n');
     system.content += skillCatalogPrompt(skills);
     system.content += matchedSkillBodies(skills, last_user, workspace);

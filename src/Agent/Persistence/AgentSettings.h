@@ -48,6 +48,9 @@ public:
     int maxModelSteps() const;
     void setMaxModelSteps(int steps);
 
+    int maxToolCalls() const;
+    void setMaxToolCalls(int calls);
+
     QString reasoningEffort() const;
     void setReasoningEffort(const QString &effort);
 

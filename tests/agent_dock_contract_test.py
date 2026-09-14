@@ -116,6 +116,14 @@ require(
     "Native Agent settings must disclose, persist, and apply the model-step safety limit",
 )
 require(
+    "agentMaxToolCalls" in settings_cpp
+    and "Maximum tool calls per run" in settings_cpp
+    and "Rejects an entire model tool-call batch" in settings_cpp
+    and "max_tool_calls" in agent_settings_cpp
+    and "setMaxToolCalls(settings.maxToolCalls())" in main_window,
+    "Native Agent settings must disclose, persist, and apply the tool-call safety limit",
+)
+require(
     "setHistoryPreviousTurnBudget(" in main_window
     and "settings.historyPreviousTurnBudgetBytes()" in main_window
     and "m_runner->setHistoryPreviousTurnBudget" in controller_cpp

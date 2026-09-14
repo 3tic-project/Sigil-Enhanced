@@ -292,6 +292,11 @@ void AgentRunner::setMaxSteps(int steps)
     m_maxSteps = qBound(1, steps, MAX_MODEL_STEPS);
 }
 
+void AgentRunner::setMaxToolCalls(int calls)
+{
+    m_maxToolCalls = qBound(1, calls, MAX_TOOL_CALLS);
+}
+
 AgentRunState AgentRunner::state() const
 {
     return m_state;
@@ -309,6 +314,7 @@ void AgentRunner::setState(AgentRunState state)
             payload.insert(QStringLiteral("book_session_id"), m_runBookSessionId);
             payload.insert(QStringLiteral("usage_requested"), m_runUsageRequested);
             payload.insert(QStringLiteral("max_model_steps"), m_maxSteps);
+            payload.insert(QStringLiteral("max_tool_calls"), m_maxToolCalls);
             const bool terminal = state == AgentRunState::Completed
                 || state == AgentRunState::Cancelled
                 || state == AgentRunState::Failed;
@@ -700,7 +706,8 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
 
         ModelRequest request = m_prompts.build(
             *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking,
-            m_effort, handles, m_historyPreviousTurnBudgetBytes, m_policy);
+            m_effort, handles, m_historyPreviousTurnBudgetBytes, m_policy,
+            qMax(0, m_maxToolCalls - m_runToolCalls));
         request.includeUsage = m_runUsageRequested;
         ++m_runModelSteps;
         const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -718,6 +725,10 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             { QStringLiteral("usage_requested"), request.includeUsage },
             { QStringLiteral("history_context"), request.historyContext },
             { QStringLiteral("tool_context"), request.toolContext },
+            { QStringLiteral("max_tool_calls"), m_maxToolCalls },
+            { QStringLiteral("used_tool_calls"), m_runToolCalls },
+            { QStringLiteral("remaining_tool_calls"),
+              qMax(0, m_maxToolCalls - m_runToolCalls) },
             { QStringLiteral("tools"), request.tools.size() }
         });
         setState(AgentRunState::RequestingModel);
@@ -789,8 +800,29 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         if (!bookTargetMatchesRun()) {
             return failBookTargetChanged(QStringLiteral("after_model_response"));
         }
+        const int requested_tool_calls = turn.toolCalls.size();
+        const int remaining_tool_calls = qMax(0, m_maxToolCalls - m_runToolCalls);
+        if (requested_tool_calls > remaining_tool_calls) {
+            rollbackOpenWork();
+            result.state = AgentRunState::Failed;
+            result.error = QStringLiteral(
+                "Exceeded maximum of %1 tool calls per run: model requested %2 with %3 remaining")
+                               .arg(m_maxToolCalls)
+                               .arg(requested_tool_calls)
+                               .arg(remaining_tool_calls);
+            m_session->append(AgentEventType::Error, QJsonObject {
+                { QStringLiteral("code"), QStringLiteral("MAX_TOOL_CALLS_EXCEEDED") },
+                { QStringLiteral("message"), result.error },
+                { QStringLiteral("tool_calls"), m_runToolCalls },
+                { QStringLiteral("requested_tool_calls"), requested_tool_calls },
+                { QStringLiteral("remaining_tool_calls"), remaining_tool_calls },
+                { QStringLiteral("max_tool_calls"), m_maxToolCalls }
+            });
+            setState(AgentRunState::Failed);
+            return result;
+        }
         QJsonArray tool_calls_json;
-        m_runToolCalls += turn.toolCalls.size();
+        m_runToolCalls += requested_tool_calls;
         for (const ToolCall &call : turn.toolCalls) {
             tool_calls_json.append(toolCallToJson(call));
         }

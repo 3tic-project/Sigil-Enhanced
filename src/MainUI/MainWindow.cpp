@@ -6266,6 +6266,7 @@ void MainWindow::ConfigureAgentProvider()
     m_AgentController->setHistoryPreviousTurnBudget(
         settings.historyPreviousTurnBudgetBytes());
     m_AgentController->setMaxModelSteps(settings.maxModelSteps());
+    m_AgentController->setMaxToolCalls(settings.maxToolCalls());
     if (m_AgentDock) {
         m_AgentController->setMode(m_AgentDock->mode());
         SigilAgent::AgentProviderReadiness readiness = SigilAgent::providerReadiness(

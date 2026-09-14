@@ -24,6 +24,8 @@ namespace SigilAgent
 
 constexpr int DEFAULT_MAX_MODEL_STEPS = 24;
 constexpr int MAX_MODEL_STEPS = 64;
+constexpr int DEFAULT_MAX_TOOL_CALLS = 128;
+constexpr int MAX_TOOL_CALLS = 512;
 
 struct AgentRunResult {
     AgentRunState state = AgentRunState::Idle;
@@ -50,6 +52,7 @@ public:
     void setTokenUsage(bool enabled);
     void setHistoryPreviousTurnBudget(int bytes);
     void setMaxSteps(int steps);
+    void setMaxToolCalls(int calls);
     AgentRunState state() const;
 
     AgentRunResult runTurn(const QString &user_text, const QStringList &handles = QStringList());
@@ -97,6 +100,7 @@ private:
         DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES;
     QString m_effort = QStringLiteral("medium");
     int m_maxSteps = DEFAULT_MAX_MODEL_STEPS;
+    int m_maxToolCalls = DEFAULT_MAX_TOOL_CALLS;
     QString m_runBookSessionId;
     QString m_runId;
     QElapsedTimer m_runTimer;

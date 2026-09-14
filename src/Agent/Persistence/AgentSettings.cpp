@@ -177,6 +177,24 @@ void AgentSettings::setMaxModelSteps(int steps)
                    qBound(1, steps, MAX_MODEL_STEPS));
 }
 
+int AgentSettings::maxToolCalls() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    const int calls = store.value(QStringLiteral("max_tool_calls"),
+                                  DEFAULT_MAX_TOOL_CALLS).toInt();
+    if (calls < 1) return DEFAULT_MAX_TOOL_CALLS;
+    return qMin(calls, MAX_TOOL_CALLS);
+}
+
+void AgentSettings::setMaxToolCalls(int calls)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("max_tool_calls"),
+                   qBound(1, calls, MAX_TOOL_CALLS));
+}
+
 QString AgentSettings::reasoningEffort() const
 {
     SettingsStore store;

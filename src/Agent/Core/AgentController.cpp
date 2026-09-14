@@ -34,6 +34,7 @@ void AgentController::rebuildTools()
     m_runner->setTokenUsage(m_tokenUsageEnabled);
     m_runner->setHistoryPreviousTurnBudget(m_historyPreviousTurnBudgetBytes);
     m_runner->setMaxSteps(m_maxModelSteps);
+    m_runner->setMaxToolCalls(m_maxToolCalls);
 }
 
 bool AgentController::setWorkspace(IBookWorkspace *workspace)
@@ -102,6 +103,12 @@ void AgentController::setMaxModelSteps(int steps)
 {
     m_maxModelSteps = qBound(1, steps, MAX_MODEL_STEPS);
     if (m_runner) m_runner->setMaxSteps(m_maxModelSteps);
+}
+
+void AgentController::setMaxToolCalls(int calls)
+{
+    m_maxToolCalls = qBound(1, calls, MAX_TOOL_CALLS);
+    if (m_runner) m_runner->setMaxToolCalls(m_maxToolCalls);
 }
 
 AgentSession *AgentController::session()
