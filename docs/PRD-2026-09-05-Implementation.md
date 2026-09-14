@@ -1357,3 +1357,48 @@ commit JSON 去重。完整 Sigil 构建及 42 个固定 Python 依赖通过；1
 它统计的是事务 Preview 中的宿主资源，不宣称每个 metadata 字段或每条 TOC 节点都是独立
 资源；结构类别仅给出成功/失败操作类别数。当前也未提供失败资源的可点击明细表、跨进程
 恢复、真实磁盘保存后结果、Windows/Linux GUI、超大事务性能或在线模型人工端到端验收。
+
+## Native Agent 完整轮次历史预算（2026-09-15）
+
+分支：`feature/agent-history-budget`。主要提交：`0dd8821a4`（完整轮次裁剪与回归）、
+`b50eea67b`（请求审计统计）、`37a0a464a`（持久化设置与 Runner 接线）、`77090af9a`
+（Technical details 展示）和 `1a733850e`（四语文案）。
+
+### 有界回放与当前轮完整性
+
+- `HistoryAssembler` 先把 User/Assistant/ToolCompleted/ToolFailed 事件按用户轮次分组，并按
+  实际 OpenAI 消息对象的紧凑 JSON UTF-8 大小计费。默认 32 KiB 只用于先前已完成轮次；
+  当前运行轮始终完整保留，即使其 assistant/tool 往返自身超过预算。
+- 选择算法只输出完整轮次的连续最近后缀。若一个更旧轮次无法装入剩余预算，则该轮及更旧
+  轮次全部省略；不会留下孤立 tool result，也不会为了填满预算跳过中间轮后再加入更旧轮。
+  0 明确定义为 Unlimited，保留旧版全量回放语义。
+- 预算不涵盖独立的 system prompt、技能正文或当前书籍/选区上下文，也不会改写 `AgentSession`
+  事件、Conversation 导出和任务记忆。因此它限制模型请求增长，但不是 token/context-window
+  的硬保证，当前轮和书籍上下文仍可能使请求超过较小模型的上下文长度。
+- 每次 `ModelRequestStarted` 都记录 `history_context`：预算是否启用、预算字节、总计/发送/
+  省略轮次、发送/省略消息数、先前轮次总字节/发送字节及当前轮字节。该对象同时留在脱敏
+  Debug JSON，避免仅凭最终 token usage 反推裁剪行为。
+
+### 设置与可观察性
+
+- 偏好设置新增 **Previous-turn history budget**，单位 KiB，范围 0–512、默认 32；0 以
+  **Unlimited** 显示。提示明确只限制先前完整轮次且当前运行完整保留。字节值经
+  `AgentSettings → MainWindow → AgentController → AgentRunner` 传递，旧设置中的负数回退默认，
+  超范围值在读取、保存和 Runner 边界均夹紧。
+- Dock 的 **Technical details** 为最近请求显示发送/总轮次、遗漏轮次、先前历史用量/预算和
+  当前轮大小，并标明当前轮 always retained；无限模式单独显示，不把 0 误解成零历史。
+  精确字节与轮次数也以 QWidget 动态属性公开给 GUI 自动化。
+
+### 测试证据与剩余项
+
+`agent_stream_decoder` 构造旧大轮次、最近小轮次和超过预算的当前工具轮，验证只省略完整旧
+轮、保留连续后缀、当前 user/assistant/tool 全部存在且统计精确；`agent_harness` 固定默认
+32 KiB 预算和请求开始事件；`agent_dock` / `agent_dock_contract` 覆盖设置持久化接线、限制
+提示、技术详情文本与精确属性。完整 Sigil 构建及 42 个固定 Python 依赖通过；14 项 Agent
+测试连续 3 轮共 42 次通过。四份 `.qm` 均为 0 unfinished，英文 4,762 条，简中/繁中/日文
+各 5,739 条；当前 Agent Dock/设置的 274 条活跃文案已逐项核对四语存在、非空和占位符一致。
+
+本切片关闭了长会话每轮请求随完整历史线性增长的默认路径，但没有做语义摘要、向量检索、
+provider tokenizer 预估或自动按模型 context length 调整预算。字节计费不含 JSON 数组分隔符和
+HTTP 包装开销；Unlimited 仍可能产生很大的请求。尚未完成超长真实在线会话的延迟/费用对比、
+低内存设备与 Windows/Linux GUI 人工验收。

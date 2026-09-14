@@ -208,6 +208,18 @@ Technical details 现在还会单独显示 **Whole run**：从准备上下文开
 成模型输出；没有观测到的边界明确显示“未观测”。该指标与单次请求 **Duration**、整轮
 **Whole run** 和 Token 用量各自独立，不会用 0 或推测值补齐。
 
+### Agent 长会话采用完整轮次历史预算
+
+Native Agent 不再在每次请求中无界回放整个会话。默认只为先前完整用户轮次保留 32 KiB
+消息预算，并从最近轮次向前选择连续后缀；较旧内容一旦放不下，就连同更旧轮次一起省略，
+不会从轮次中间拆开 assistant tool call 与 tool result。正在运行的当前轮始终完整发送，
+因此多步骤工具调用不会因为预算而形成孤立消息。
+
+可在“偏好设置 → Native Agent”的 **Previous-turn history budget** 中选择 0–512 KiB，
+0 显示为 **Unlimited** 并恢复完整历史回放。该值只控制发给模型的旧对话，不删除 transcript、
+Conversation 导出或任务记忆，也不是模型 token 上限。每次请求的已发送/遗漏轮次、先前历史
+字节和当前轮大小会写入调试事件，并显示在 **Technical details** 中。
+
 ### Agent 可审阅原生计划
 
 `paragraphs.plan` 与 `toc.plan_transform` 成功后，Agent 停靠栏现在显示独立计划审阅卡。
@@ -246,7 +258,7 @@ Agent 仍实时显示 Thinking 与 Answer，但会把约 33 ms 内到达的细�
 ## 兼容性
 
 - Automate 命令、快捷键、插件接口没有改。
-- 当前 C++、头文件和 Qt Designer 源码中的 5,733 条活跃界面文案，已全部进入简体中文、
+- 当前 C++、头文件和 Qt Designer 源码中的 5,739 条活跃界面文案，已全部进入简体中文、
   繁体中文和日文目录且没有 unfinished 条目；严格目录覆盖测试通过。详见
   [PRD 实施审计](PRD-2026-09-05-Implementation.md)。
 
@@ -255,7 +267,7 @@ Agent 仍实时显示 Thinking 与 Answer，但会把约 33 ms 内到达的细�
 - Debug 版 Sigil 能完整编过、链过，内置 Python 包也校验过。
 - CTest 覆盖了 KFX 导入、无损保存、代码视图关闭、EPUB 2→3 实体与导航、预览网格、
   代码视图选择、Clips 快捷键角标、目录层级编辑、DIV 段落结构规范化和 Native Agent
-  请求/用量状态、流式界面合并、计划双栏比较、段落独立操作组及事务资源结果。四语文案
-  均可生成 `.qm` 且 0 unfinished；严格简中、繁中、日文目录覆盖检查通过。
+  请求/用量状态、完整轮次历史预算、流式界面合并、计划双栏比较、段落独立操作组及事务
+  资源结果。四语文案均可生成 `.qm` 且 0 unfinished；严格简中、繁中、日文目录覆盖检查通过。
 
 本说明对应发布标签 `v2.8.5E10`。Windows / macOS 安装包、签名和校验和按[发布清单](ReleaseChecklist.md)在打标签后生成。

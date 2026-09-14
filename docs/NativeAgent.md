@@ -18,7 +18,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - **Retry**：仅在可以安全重跑的首个 Provider 请求失败后启用
 - 纯文本提交卡上的 **Restore this task**：在后续目标内容未改变时恢复该次提交
 - 默认折叠的 **Technical details**：完整会话/整轮运行/请求/书籍 ID、两级耗时、token
-  用量、revision、模式与冻结范围
+  用量、请求历史预算、revision、模式与冻结范围
 - **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
 - 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；原生计划按资源展示可检查差异；批准带影响与计划绑定；预览按变更类型列出暂存内容；提交和回滚显示独立结果；错误
 
@@ -131,6 +131,23 @@ tool call 或 finish reason 时的时间。SSE 注释/心跳可以让 first byte
 不会用 0 补齐。详情还显示请求绑定的 book session/revision、步骤、模式、模型、终态、
 发送时冻结的 scope handles、最近请求 token 用量和带覆盖率的整轮 token 汇总。这里只有
 安全的 endpoint 主机，不显示 API Key、URL 路径、查询参数或响应正文。
+
+### 请求历史预算
+
+在 **偏好设置 → Native Agent** 中，**Previous-turn history budget** 控制每次正式模型请求
+最多回放多少先前对话，默认 **32 KiB**，范围为 1–512 KiB；设为 **Unlimited**（数值 0）
+可恢复完整回放。这个预算只作用于先前已经完成的用户轮次，不包括系统提示、当前书籍/选区
+上下文，也不限制正在运行的当前轮。当前轮即使本身超过预算也会完整发送，使该轮内已有的
+assistant tool call 与对应 tool result 不会被截断。
+
+裁剪按完整用户轮次选择连续的最近后缀：若再加入一个较旧轮次就超限，则从该轮及更旧轮次
+全部省略，不从轮次中间切开消息。预算以最终 OpenAI 消息对象的紧凑 JSON UTF-8 字节数计算，
+不是模型 token 上限，也不会删除会话日志、Conversation 导出或本地任务记忆。
+
+每个 `model_request_started` 调试事件都包含 `history_context`，记录预算、总计/已发送/已省略
+轮次和消息数、先前轮次总字节/已发送字节及当前轮字节。展开 **Technical details** 可直接看到
+最近请求的已发送轮次、遗漏轮次、预算使用量与始终保留的当前轮大小；多步骤工具任务会随
+最新请求更新当前轮统计。
 
 **Retry** 不是底层 HTTP 自动重试。它会作为新一轮，重新发送用户上次实际提交的文本和
 同一组 scope handles，并重新组装当前内存内容。仅当首个模型请求失败、当前仍是同一
