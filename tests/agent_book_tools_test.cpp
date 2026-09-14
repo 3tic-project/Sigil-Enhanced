@@ -103,6 +103,9 @@ int main()
     const ToolResult resources = run(QStringLiteral("book.resources"), QJsonObject());
     Require(resources.data.value(QStringLiteral("resources")).toArray().size() >= 4,
             "book.resources must list fixture files");
+    Require(resources.data.value(QStringLiteral("total_count")).toInt() >= 4
+                && !resources.data.value(QStringLiteral("has_more")).toBool(),
+            "small resource inventories must publish complete pagination metadata");
 
     const ToolResult spine = run(QStringLiteral("book.spine"), QJsonObject());
     Require(spine.data.value(QStringLiteral("spine")).toArray().size() == 2,
@@ -112,6 +115,111 @@ int main()
     Require(toc.data.value(QStringLiteral("toc")).toArray().first().toObject()
                 .value(QStringLiteral("label")).toString().contains(QStringLiteral("Heat")),
             "book.toc must return real labels");
+
+    MemoryBookWorkspace paginated_book;
+    QStringList paginated_spine;
+    QJsonArray paginated_toc;
+    for (int index = 0; index < 235; ++index) {
+        MemoryResource item;
+        item.id = QStringLiteral("page-%1").arg(index);
+        item.bookPath = index < 55
+            ? QStringLiteral("OEBPS/Styles/style-%1.css").arg(index)
+            : QStringLiteral("OEBPS/Text/page-%1.xhtml").arg(index);
+        item.kind = index < 55 ? QStringLiteral("css") : QStringLiteral("xhtml");
+        item.mediaType = index < 55 ? QStringLiteral("text/css")
+                                    : QStringLiteral("application/xhtml+xml");
+        item.text = index < 55 ? QStringLiteral("p { color: #%1; }").arg(index)
+                               : QStringLiteral("<p>Page %1</p>").arg(index);
+        paginated_book.addResource(item);
+        if (index < 225) paginated_spine.append(item.id);
+        if (index < 215) {
+            paginated_toc.append(QJsonObject {
+                { QStringLiteral("label"), QStringLiteral("Entry %1").arg(index) },
+                { QStringLiteral("href"), item.bookPath },
+                { QStringLiteral("level"), 1 }
+            });
+        }
+    }
+    paginated_book.setSpine(paginated_spine);
+    paginated_book.setToc(paginated_toc);
+    ToolRegistry paginated_registry;
+    registerBookTools(&paginated_registry, &paginated_book);
+    auto run_paginated = [&](const QString &name, const QJsonObject &arguments) {
+        IAgentTool *tool = paginated_registry.find(name);
+        Require(tool != nullptr, "paginated inventory tool missing");
+        return tool->execute(arguments);
+    };
+    const ToolResult resource_page = run_paginated(
+        QStringLiteral("book.resources"), QJsonObject());
+    Require(resource_page.data.value(QStringLiteral("resources")).toArray().size() == 100
+                && resource_page.data.value(QStringLiteral("total_count")).toInt() == 235
+                && resource_page.data.value(QStringLiteral("returned_count")).toInt() == 100
+                && resource_page.data.value(QStringLiteral("has_more")).toBool()
+                && resource_page.data.value(QStringLiteral("next_offset")).toInt() == 100,
+            "resource inventory defaults must return a bounded first page");
+    const QJsonObject resource_page_properties = paginated_registry
+        .find(QStringLiteral("book.resources"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(resource_page_properties.value(QStringLiteral("offset")).toObject()
+                    .value(QStringLiteral("minimum")).toInt() == 0
+                && resource_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 100
+                && resource_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 200,
+            "resource pagination schema must disclose its default and hard bounds");
+    const ToolResult resource_tail = run_paginated(
+        QStringLiteral("book.resources"), QJsonObject {
+            { QStringLiteral("offset"), 200 },
+            { QStringLiteral("limit"), 999 }
+        });
+    Require(resource_tail.data.value(QStringLiteral("resources")).toArray().size() == 35
+                && resource_tail.data.value(QStringLiteral("limit")).toInt() == 200
+                && !resource_tail.data.value(QStringLiteral("has_more")).toBool()
+                && !resource_tail.data.contains(QStringLiteral("next_offset")),
+            "resource inventory tails must clamp limits and terminate pagination");
+    const ToolResult spine_page = run_paginated(
+        QStringLiteral("book.spine"), QJsonObject {
+            { QStringLiteral("offset"), 100 },
+            { QStringLiteral("limit"), 10 }
+        });
+    Require(spine_page.data.value(QStringLiteral("spine")).toArray().size() == 10
+                && spine_page.data.value(QStringLiteral("spine")).toArray().first()
+                       .toObject().value(QStringLiteral("index")).toInt() == 100
+                && spine_page.data.value(QStringLiteral("next_offset")).toInt() == 110,
+            "spine pages must preserve original reading-order indices");
+    const ToolResult toc_tail = run_paginated(
+        QStringLiteral("book.toc"), QJsonObject {
+            { QStringLiteral("offset"), 200 },
+            { QStringLiteral("limit"), 100 }
+        });
+    Require(toc_tail.data.value(QStringLiteral("toc")).toArray().size() == 15
+                && toc_tail.data.value(QStringLiteral("toc")).toArray().first()
+                       .toObject().value(QStringLiteral("label")).toString()
+                    == QStringLiteral("Entry 200")
+                && !toc_tail.data.value(QStringLiteral("has_more")).toBool(),
+            "TOC pagination must return the requested stable tail");
+    const ToolResult css_page = run_paginated(
+        QStringLiteral("style.stylesheets"), QJsonObject());
+    Require(css_page.data.value(QStringLiteral("stylesheets")).toArray().size() == 12
+                && css_page.data.value(QStringLiteral("total_count")).toInt() == 55
+                && css_page.data.value(QStringLiteral("next_offset")).toInt() == 12,
+            "stylesheet reads must use a smaller bounded default page");
+    const QJsonObject css_page_properties = paginated_registry
+        .find(QStringLiteral("style.stylesheets"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(css_page_properties.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 12
+                && css_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 50,
+            "stylesheet pagination schema must disclose its smaller text-page bound");
+    const ToolResult css_tail = run_paginated(
+        QStringLiteral("style.stylesheets"), QJsonObject {
+            { QStringLiteral("offset"), 48 },
+            { QStringLiteral("limit"), 50 }
+        });
+    Require(css_tail.data.value(QStringLiteral("stylesheets")).toArray().size() == 7
+                && !css_tail.data.value(QStringLiteral("has_more")).toBool(),
+            "stylesheet pagination must expose the final bounded page");
 
     const ToolResult metadata = run(QStringLiteral("book.metadata"), QJsonObject());
     Require(metadata.data.value(QStringLiteral("language")).toString() == QStringLiteral("zh-CN"),

@@ -19,12 +19,65 @@ namespace SigilAgent
 namespace
 {
 
+constexpr int DEFAULT_INVENTORY_PAGE_SIZE = 100;
+constexpr int MAX_INVENTORY_PAGE_SIZE = 200;
+constexpr int DEFAULT_STYLESHEET_PAGE_SIZE = 12;
+constexpr int MAX_STYLESHEET_PAGE_SIZE = 50;
+
 QJsonObject emptyObjectSchema()
 {
     return QJsonObject {
         { QStringLiteral("type"), QStringLiteral("object") },
         { QStringLiteral("properties"), QJsonObject() }
     };
+}
+
+QJsonObject paginationSchema(int default_limit, int max_limit)
+{
+    return QJsonObject {
+        { QStringLiteral("type"), QStringLiteral("object") },
+        { QStringLiteral("properties"), QJsonObject {
+            { QStringLiteral("offset"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("integer") },
+                { QStringLiteral("minimum"), 0 },
+                { QStringLiteral("default"), 0 }
+            } },
+            { QStringLiteral("limit"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("integer") },
+                { QStringLiteral("minimum"), 1 },
+                { QStringLiteral("maximum"), max_limit },
+                { QStringLiteral("default"), default_limit }
+            } }
+        } }
+    };
+}
+
+QJsonObject paginatedArray(const QString &key,
+                           const QJsonArray &all,
+                           const QJsonObject &arguments,
+                           int default_limit,
+                           int max_limit)
+{
+    const int offset = qBound(
+        0, arguments.value(QStringLiteral("offset")).toInt(0), all.size());
+    const int requested_limit = arguments.contains(QStringLiteral("limit"))
+        ? arguments.value(QStringLiteral("limit")).toInt(default_limit)
+        : default_limit;
+    const int limit = qBound(1, requested_limit, max_limit);
+    const int end = qMin(all.size(), offset + limit);
+    QJsonArray page;
+    for (int index = offset; index < end; ++index) page.append(all.at(index));
+    const bool has_more = end < all.size();
+    QJsonObject result {
+        { key, page },
+        { QStringLiteral("total_count"), all.size() },
+        { QStringLiteral("offset"), offset },
+        { QStringLiteral("limit"), limit },
+        { QStringLiteral("returned_count"), page.size() },
+        { QStringLiteral("has_more"), has_more }
+    };
+    if (has_more) result.insert(QStringLiteral("next_offset"), end);
+    return result;
 }
 
 class LambdaTool : public IAgentTool
@@ -170,24 +223,33 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("book.resources"),
-        QStringLiteral("List manifest resources with id, path, media type and kind. Font/image bytes are omitted."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(QJsonObject { { QStringLiteral("resources"), workspace->resources() } });
+        QStringLiteral("List a bounded page of manifest resources with id, path, media type and kind. Font/image bytes are omitted. Use next_offset while has_more is true."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_INVENTORY_PAGE_SIZE, MAX_INVENTORY_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedArray(
+                QStringLiteral("resources"), workspace->resources(), arguments,
+                DEFAULT_INVENTORY_PAGE_SIZE, MAX_INVENTORY_PAGE_SIZE));
         });
 
     add(registry, QStringLiteral("book.spine"),
-        QStringLiteral("List spine reading order."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(QJsonObject { { QStringLiteral("spine"), workspace->spine() } });
+        QStringLiteral("List a bounded page of spine reading order. Use next_offset while has_more is true."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_INVENTORY_PAGE_SIZE, MAX_INVENTORY_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedArray(
+                QStringLiteral("spine"), workspace->spine(), arguments,
+                DEFAULT_INVENTORY_PAGE_SIZE, MAX_INVENTORY_PAGE_SIZE));
         });
 
     add(registry, QStringLiteral("book.toc"),
-        QStringLiteral("List table of contents entries."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(QJsonObject { { QStringLiteral("toc"), workspace->toc() } });
+        QStringLiteral("List a bounded page of table of contents entries. Use next_offset while has_more is true."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_INVENTORY_PAGE_SIZE, MAX_INVENTORY_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedArray(
+                QStringLiteral("toc"), workspace->toc(), arguments,
+                DEFAULT_INVENTORY_PAGE_SIZE, MAX_INVENTORY_PAGE_SIZE));
         });
 
     add(registry, QStringLiteral("book.metadata"),
@@ -236,12 +298,13 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("style.stylesheets"),
-        QStringLiteral("List CSS stylesheets with bounded text."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(QJsonObject {
-                { QStringLiteral("stylesheets"), workspace->stylesheets() }
-            });
+        QStringLiteral("List a bounded page of CSS stylesheets with bounded text. Use next_offset while has_more is true."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_STYLESHEET_PAGE_SIZE, MAX_STYLESHEET_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedArray(
+                QStringLiteral("stylesheets"), workspace->stylesheets(), arguments,
+                DEFAULT_STYLESHEET_PAGE_SIZE, MAX_STYLESHEET_PAGE_SIZE));
         });
 
     add(registry, QStringLiteral("font.inventory"),
