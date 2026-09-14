@@ -123,7 +123,9 @@ private:
     QString providerFailureSummary(const QString &message) const;
     QString planReviewBody(const QJsonObject &payload) const;
     QString previewBody(const QJsonObject &payload) const;
+    QString resourceOutcomesBody(const QJsonObject &outcomes) const;
     QString appliedBody(const QJsonObject &payload) const;
+    QString failedCommitBody(const QJsonObject &payload) const;
 
     QComboBox *m_modeCombo = nullptr;
     QLabel *m_modelLabel = nullptr;

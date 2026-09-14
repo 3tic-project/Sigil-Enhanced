@@ -1622,6 +1622,9 @@ QString AgentDock::appliedBody(const QJsonObject &payload) const
 {
     QStringList lines;
     lines.append(tr("Applied to the current book. The EPUB file has not been saved."));
+    const QString outcomes = resourceOutcomesBody(
+        payload.value(QStringLiteral("resource_outcomes")).toObject());
+    if (!outcomes.isEmpty()) lines.append(outcomes);
     if (payload.value(QStringLiteral("applied_changes")).isDouble()) {
         lines.append(tr("Applied changes: %1")
                          .arg(payload.value(QStringLiteral("applied_changes")).toInt()));
@@ -1654,6 +1657,69 @@ QString AgentDock::appliedBody(const QJsonObject &payload) const
         lines.append(tr("A task restore point could not be created for this commit."));
     } else if (restore_status == QLatin1String("not_created_by_commit")) {
         lines.append(tr("This commit did not create a task-wide restore point."));
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
+QString AgentDock::resourceOutcomesBody(const QJsonObject &outcomes) const
+{
+    if (outcomes.isEmpty()) return QString();
+    if (!outcomes.value(QStringLiteral("scope_available")).toBool()) {
+        return tr("Resource result unavailable because the commit scope could not be inspected.");
+    }
+
+    QStringList lines;
+    lines.append(tr("Resources: %1 succeeded · %2 failed.")
+                     .arg(outcomes.value(
+                         QStringLiteral("successful_resource_count")).toInt())
+                     .arg(outcomes.value(
+                         QStringLiteral("failed_resource_count")).toInt()));
+    const int structural_count = outcomes.value(
+        QStringLiteral("structural_operation_count")).toInt();
+    if (structural_count > 0) {
+        lines.append(tr("Structural operations: %1 succeeded · %2 failed.")
+                         .arg(outcomes.value(
+                             QStringLiteral(
+                                 "successful_structural_operation_count")).toInt())
+                         .arg(outcomes.value(
+                             QStringLiteral(
+                                 "failed_structural_operation_count")).toInt()));
+    }
+    if (outcomes.value(QStringLiteral("all_or_nothing")).toBool()) {
+        lines.append(outcomes.value(QStringLiteral("status")).toString()
+                         == QLatin1String("all_applied")
+                     ? tr("Atomic result: all staged targets were applied.")
+                     : tr("Atomic result: no staged target was applied."));
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
+QString AgentDock::failedCommitBody(const QJsonObject &payload) const
+{
+    QStringList lines;
+    lines.append(tr("Not applied to the current book."));
+    const QJsonObject data = payload.value(QStringLiteral("data")).toObject();
+    const QJsonObject outcomes = data.value(
+        QStringLiteral("resource_outcomes")).toObject();
+    const QString outcome_body = resourceOutcomesBody(outcomes);
+    if (!outcome_body.isEmpty()) lines.append(outcome_body);
+
+    const QString transaction_state = outcomes.value(
+        QStringLiteral("transaction_state")).toString();
+    if (transaction_state == QLatin1String("staged")) {
+        lines.append(tr("The staged transaction remains available for review, retry, or rollback."));
+    } else if (transaction_state == QLatin1String("rolled_back")) {
+        lines.append(tr("The staged transaction was rolled back; no partial book changes remain."));
+    } else if (transaction_state == QLatin1String("not_open")) {
+        lines.append(tr("No staged transaction remains."));
+    }
+    lines.append(tr("Full EPUBCheck: not run."));
+    const QString code = payload.value(QStringLiteral("code")).toString();
+    const QString message = payload.value(QStringLiteral("message")).toString();
+    if (!code.isEmpty() && !message.isEmpty()) {
+        lines.append(tr("Failure: %1 — %2").arg(code, message));
+    } else if (!message.isEmpty()) {
+        lines.append(tr("Failure: %1").arg(message));
     }
     return lines.join(QLatin1Char('\n'));
 }
@@ -1721,14 +1787,19 @@ void AgentDock::appendEvent(const AgentEvent &event)
         case AgentEventType::ToolFailed: {
             const QString id = event.payload.value(QStringLiteral("tool_call_id")).toString();
             const QString name = event.payload.value(QStringLiteral("name")).toString();
+            const bool commit_failure = event.type == AgentEventType::ToolFailed
+                && name == QLatin1String("transaction.commit");
             QString title = tr("Tool: %1").arg(name);
-            if (event.type == AgentEventType::ToolFailed) title = tr("Tool failed: %1").arg(name);
+            if (commit_failure) title = tr("Apply failed");
+            else if (event.type == AgentEventType::ToolFailed) title = tr("Tool failed: %1").arg(name);
             else if (event.type == AgentEventType::ToolStarted) title = tr("Tool running: %1").arg(name);
             else if (event.payload.value(QStringLiteral("applied")).toBool()) {
                 title = tr("Applied: %1").arg(name);
             }
             QString body = name;
-            if (event.payload.contains(QStringLiteral("message"))) {
+            if (commit_failure) {
+                body = failedCommitBody(event.payload);
+            } else if (event.payload.contains(QStringLiteral("message"))) {
                 body = event.payload.value(QStringLiteral("message")).toString();
             } else if (event.payload.contains(QStringLiteral("data"))) {
                 body = QString::fromUtf8(
@@ -1739,15 +1810,35 @@ void AgentDock::appendEvent(const AgentEvent &event)
             const QString object_name = id.isEmpty()
                 ? QStringLiteral("agentToolCard")
                 : QStringLiteral("agentToolCard-%1").arg(id);
-            if (QWidget *existing = findCard(object_name)) {
+            QWidget *card = findCard(object_name);
+            if (card) {
+                QWidget *existing = card;
                 if (auto *title_btn = existing->findChild<QToolButton *>(object_name + QStringLiteral("Title"))) {
                     title_btn->setText(title);
+                    if (commit_failure) title_btn->setChecked(true);
                 }
                 if (auto *body_label = existing->findChild<QLabel *>(object_name + QStringLiteral("Body"))) {
                     body_label->setText(body);
                 }
             } else {
-                appendCard(makeCard(object_name, title, body, true));
+                card = makeCard(object_name, title, body, !commit_failure);
+                appendCard(card);
+            }
+            if (commit_failure && card) {
+                if (auto *body_label = card->findChild<QLabel *>(
+                        object_name + QStringLiteral("Body"))) {
+                    body_label->setTextFormat(Qt::PlainText);
+                    body_label->setVisible(true);
+                }
+                const QJsonObject outcomes = event.payload.value(
+                    QStringLiteral("data")).toObject().value(
+                    QStringLiteral("resource_outcomes")).toObject();
+                card->setProperty("successfulResourceCount", outcomes.value(
+                    QStringLiteral("successful_resource_count")).toInt());
+                card->setProperty("failedResourceCount", outcomes.value(
+                    QStringLiteral("failed_resource_count")).toInt());
+                card->setProperty("transactionState", outcomes.value(
+                    QStringLiteral("transaction_state")).toString());
             }
             break;
         }
@@ -1976,6 +2067,14 @@ void AgentDock::appendEvent(const AgentEvent &event)
                                      tr("Applied"),
                                      appliedBody(event.payload),
                                      false);
+            const QJsonObject outcomes = event.payload.value(
+                QStringLiteral("resource_outcomes")).toObject();
+            card->setProperty("successfulResourceCount", outcomes.value(
+                QStringLiteral("successful_resource_count")).toInt());
+            card->setProperty("failedResourceCount", outcomes.value(
+                QStringLiteral("failed_resource_count")).toInt());
+            card->setProperty("transactionState", outcomes.value(
+                QStringLiteral("transaction_state")).toString());
             const QJsonObject recovery =
                 event.payload.value(QStringLiteral("recovery")).toObject();
             const QString checkpoint_id =

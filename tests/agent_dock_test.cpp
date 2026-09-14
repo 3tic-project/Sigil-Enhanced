@@ -1101,6 +1101,18 @@ int main(int argc, char *argv[])
         { QStringLiteral("save_status"), QStringLiteral("not_saved") },
         { QStringLiteral("applied_changes"), 4 },
         { QStringLiteral("book_revision"), 17 },
+        { QStringLiteral("resource_outcomes"), QJsonObject {
+            { QStringLiteral("scope_available"), true },
+            { QStringLiteral("all_or_nothing"), true },
+            { QStringLiteral("status"), QStringLiteral("all_applied") },
+            { QStringLiteral("transaction_state"), QStringLiteral("committed") },
+            { QStringLiteral("resource_count"), 2 },
+            { QStringLiteral("successful_resource_count"), 2 },
+            { QStringLiteral("failed_resource_count"), 0 },
+            { QStringLiteral("structural_operation_count"), 1 },
+            { QStringLiteral("successful_structural_operation_count"), 1 },
+            { QStringLiteral("failed_structural_operation_count"), 0 }
+        } },
         { QStringLiteral("full_epubcheck"), QJsonObject {
             { QStringLiteral("status"), QStringLiteral("not_run") }
         } },
@@ -1123,8 +1135,18 @@ int main(int argc, char *argv[])
     Require(applied_body && applied_body->isVisible(), "applied status card must be visible");
     Require(applied_body->text().contains(QStringLiteral("EPUB file has not been saved"))
                 && applied_body->text().contains(QStringLiteral("Applied changes: 4"))
-                && applied_body->text().contains(QStringLiteral("Book revision: 17")),
-            "applied card must show save state, count, and book revision");
+                && applied_body->text().contains(QStringLiteral("Book revision: 17"))
+                && applied_body->text().contains(
+                    QStringLiteral("Resources: 2 succeeded · 0 failed"))
+                && applied_body->text().contains(
+                    QStringLiteral("Structural operations: 1 succeeded · 0 failed"))
+                && applied_body->text().contains(
+                    QStringLiteral("all staged targets were applied"))
+                && applied_card->property("successfulResourceCount").toInt() == 2
+                && applied_card->property("failedResourceCount").toInt() == 0
+                && applied_card->property("transactionState").toString()
+                    == QStringLiteral("committed"),
+            "applied card must show save state and exact atomic resource outcomes");
     Require(applied_body->text().contains(QStringLiteral("Full EPUBCheck: not run"))
                 && applied_body->text().contains(QStringLiteral("Undo where available"))
                 && applied_body->text().contains(QStringLiteral("2 text resource(s)"))
@@ -1134,6 +1156,90 @@ int main(int argc, char *argv[])
         QStringLiteral("agentTaskRestoreButton-restore-17"));
     Require(restore_button && restore_button->isEnabled(),
             "a guarded text commit must offer task restoration");
+
+    SigilAgent::AgentEvent rolled_back_commit;
+    rolled_back_commit.type = SigilAgent::AgentEventType::ToolFailed;
+    rolled_back_commit.payload = QJsonObject {
+        { QStringLiteral("tool_call_id"), QStringLiteral("commit-rolled-back") },
+        { QStringLiteral("name"), QStringLiteral("transaction.commit") },
+        { QStringLiteral("code"), QStringLiteral("TRANSACTION_ROLLED_BACK") },
+        { QStringLiteral("message"), QStringLiteral("<unsafe> write failed") },
+        { QStringLiteral("data"), QJsonObject {
+            { QStringLiteral("resource_outcomes"), QJsonObject {
+                { QStringLiteral("scope_available"), true },
+                { QStringLiteral("all_or_nothing"), true },
+                { QStringLiteral("status"), QStringLiteral("not_applied") },
+                { QStringLiteral("transaction_state"), QStringLiteral("rolled_back") },
+                { QStringLiteral("resource_count"), 2 },
+                { QStringLiteral("successful_resource_count"), 0 },
+                { QStringLiteral("failed_resource_count"), 2 },
+                { QStringLiteral("structural_operation_count"), 1 },
+                { QStringLiteral("successful_structural_operation_count"), 0 },
+                { QStringLiteral("failed_structural_operation_count"), 1 }
+            } }
+        } }
+    };
+    dock.appendEvent(rolled_back_commit);
+    application.processEvents();
+    auto *rolled_back_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentToolCard-commit-rolled-back"));
+    auto *rolled_back_title = rolled_back_card
+        ? rolled_back_card->findChild<QToolButton *>(
+              QStringLiteral("agentToolCard-commit-rolled-backTitle"))
+        : nullptr;
+    auto *rolled_back_body = rolled_back_card
+        ? rolled_back_card->findChild<QLabel *>(
+              QStringLiteral("agentToolCard-commit-rolled-backBody"))
+        : nullptr;
+    Require(rolled_back_title && rolled_back_title->text().contains(
+                QStringLiteral("Apply failed"))
+                && rolled_back_body && rolled_back_body->isVisible()
+                && rolled_back_body->textFormat() == Qt::PlainText
+                && rolled_back_body->text().contains(
+                    QStringLiteral("Not applied to the current book"))
+                && rolled_back_body->text().contains(
+                    QStringLiteral("Resources: 0 succeeded · 2 failed"))
+                && rolled_back_body->text().contains(
+                    QStringLiteral("Structural operations: 0 succeeded · 1 failed"))
+                && rolled_back_body->text().contains(
+                    QStringLiteral("no partial book changes remain"))
+                && rolled_back_body->text().contains(
+                    QStringLiteral("Full EPUBCheck: not run"))
+                && rolled_back_body->text().contains(
+                    QStringLiteral("<unsafe> write failed"))
+                && rolled_back_card->property("successfulResourceCount").toInt() == 0
+                && rolled_back_card->property("failedResourceCount").toInt() == 2
+                && rolled_back_card->property("transactionState").toString()
+                    == QStringLiteral("rolled_back"),
+            "rolled-back commit failure must visibly report atomic resource outcomes as plain text");
+
+    SigilAgent::AgentEvent retained_commit = rolled_back_commit;
+    retained_commit.payload.insert(
+        QStringLiteral("tool_call_id"), QStringLiteral("commit-retained"));
+    retained_commit.payload.insert(
+        QStringLiteral("code"), QStringLiteral("BOOK_REVISION_CONFLICT"));
+    QJsonObject retained_data = retained_commit.payload.value(
+        QStringLiteral("data")).toObject();
+    QJsonObject retained_outcomes = retained_data.value(
+        QStringLiteral("resource_outcomes")).toObject();
+    retained_outcomes.insert(
+        QStringLiteral("transaction_state"), QStringLiteral("staged"));
+    retained_data.insert(QStringLiteral("resource_outcomes"), retained_outcomes);
+    retained_commit.payload.insert(QStringLiteral("data"), retained_data);
+    dock.appendEvent(retained_commit);
+    application.processEvents();
+    auto *retained_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentToolCard-commit-retained"));
+    auto *retained_body = retained_card
+        ? retained_card->findChild<QLabel *>(
+              QStringLiteral("agentToolCard-commit-retainedBody"))
+        : nullptr;
+    Require(retained_body && retained_body->isVisible()
+                && retained_body->text().contains(
+                    QStringLiteral("remains available for review, retry, or rollback"))
+                && retained_card->property("transactionState").toString()
+                    == QStringLiteral("staged"),
+            "revision conflict result must say that its staged transaction remains available");
     QString requested_restore;
     QString requested_restore_book;
     QObject::connect(&dock, &SigilAgent::AgentDock::taskRestoreRequested,
