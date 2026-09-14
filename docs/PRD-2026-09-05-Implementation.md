@@ -1442,3 +1442,36 @@ Agent Dock/设置的 275 条活跃文案已逐项核对四语存在、非空和�
 实现、批准流程或模式语义。它没有做任务意图级动态工具检索、工具分组分页、在线模型 A/B、
 tokenizer 精确计数或跨 provider 成本基准；Edit/Auto 仍携带完整目录，后续若继续缩减必须保证
 多步骤任务能够发现所需工具，不能只为更小请求而牺牲完成能力。
+
+## Native Agent 大型清单工具分页（2026-09-15）
+
+分支：`feature/agent-paginated-inventory-tools`。主要提交：`4a5e0c5b4`（统一分页协议、边界
+和大清单回归）与 `33de488a8`（模型续页规则）。
+
+### 有界结果与兼容字段
+
+- `book.resources`、`book.spine`、`book.toc` 和 `style.stylesheets` 从无参数全量结果改为可选
+  `offset` / `limit`。清单类默认 100、硬上限 200；单项含最多一段 CSS 正文的 stylesheets
+  默认 12、硬上限 50，避免当前运行轮因一次全量样式读取产生无界 tool-role 消息。
+- 四个工具继续使用原有 `resources` / `spine` / `toc` / `stylesheets` 数组键，并新增统一的
+  `total_count`、规范化 `offset` / `limit`、`returned_count` 和 `has_more`；仅在确有下一页时
+  返回 `next_offset`。小清单无参数调用仍在首页返回全部数据，已有读取字段不需改名。
+- 缺省参数由 schema 的 default 明示，offset 最小为 0，limit 最小为 1；执行边界仍夹紧绕过
+  schema 的负数/过大输入。offset 超过总数规范化到结尾并返回稳定空页，不产生越界访问。
+  Spine 页面保留全局 `index`，TOC/resource/CSS 顺序均沿 workspace 原数组稳定切片。
+- 系统提示和每个工具 description 都要求模型在 `has_more=true` 时使用 `next_offset`，不得把
+  第一页当作全量。`book.summary` 的资源/Spine/TOC 总数仍可用于先判断是否需要继续读取。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 建立 235 个资源、225 项 Spine、215 项 TOC 和 55 份 CSS，覆盖默认首页、
+硬上限夹紧、中间页全局索引、尾页、无 next_offset 的终止状态，以及普通清单与 CSS 两套
+schema 边界；原有小型 Physics Book 的数组键和内容回归继续通过。`agent_harness` 固定系统
+提示的 `has_more/next_offset` 续页要求。完整 Sigil 构建及 42 个固定 Python 依赖通过；14 项
+Agent 测试连续 3 轮共 42 次通过。该切片没有新增 UI 文案；四份 `.qm` 继续为 0 unfinished，
+英文 4,763 条，简中/繁中/日文各 5,740 条。
+
+本切片界定的是送入模型、会话与导出的工具结果，不改变 `IBookWorkspace` 返回数组的内部接口；
+宿主仍先枚举完整内存清单再在 Tool 层切页，因此不宣称降低 Book 侧枚举峰值。单项 label/path
+没有额外字符截断，`font.inventory`、`book.check`、transaction preview 等其他聚合结果也未纳入
+本次分页；旧提示或第三方脚本若假定无参数永远返回全量，需要读取 `has_more` 后续页。
