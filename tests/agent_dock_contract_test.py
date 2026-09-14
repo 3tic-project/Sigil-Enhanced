@@ -145,6 +145,13 @@ require(
     "technical details must disclose the configured model-step run budget",
 )
 require(
+    'QStringLiteral("max_tool_calls")' in runner_cpp
+    and "m_runMaxToolCalls" in dock_h
+    and "Tool-call budget:" in dock_cpp
+    and 'setProperty("runMaxToolCalls"' in dock_cpp,
+    "technical details must disclose the configured tool-call run budget",
+)
+require(
     "usage_summary" in runner_cpp
     and "reported_request_count" in runner_cpp
     and "Run token usage" in dock_cpp,

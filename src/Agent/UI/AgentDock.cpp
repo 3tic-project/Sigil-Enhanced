@@ -316,6 +316,7 @@ void AgentDock::setSessionId(const QString &session_id)
     m_runModelSteps = -1;
     m_runMaxModelSteps = -1;
     m_runToolCalls = -1;
+    m_runMaxToolCalls = -1;
     m_runUsageRequested = false;
     m_runUsageComplete = false;
     m_runUsageRequestCount = 0;
@@ -723,6 +724,7 @@ void AgentDock::captureRunEvent(const AgentEvent &event)
         m_runModelSteps = -1;
         m_runMaxModelSteps = -1;
         m_runToolCalls = -1;
+        m_runMaxToolCalls = -1;
         m_runUsageComplete = false;
         m_runUsageRequested = false;
         m_runUsageRequestCount = 0;
@@ -739,6 +741,10 @@ void AgentDock::captureRunEvent(const AgentEvent &event)
     if (payload.contains(QStringLiteral("max_model_steps"))) {
         m_runMaxModelSteps =
             payload.value(QStringLiteral("max_model_steps")).toInt();
+    }
+    if (payload.contains(QStringLiteral("max_tool_calls"))) {
+        m_runMaxToolCalls =
+            payload.value(QStringLiteral("max_tool_calls")).toInt();
     }
     if (payload.contains(QStringLiteral("usage_requested"))) {
         m_runUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
@@ -800,6 +806,16 @@ void AgentDock::refreshTechnicalDetails()
             } else {
                 lines.append(tr("Model-step budget: limit %1 per run")
                                  .arg(m_runMaxModelSteps));
+            }
+        }
+        if (m_runMaxToolCalls > 0) {
+            if (m_runDurationMs >= 0 && m_runToolCalls >= 0) {
+                lines.append(tr("Tool-call budget: %1/%2 used")
+                                 .arg(m_runToolCalls)
+                                 .arg(m_runMaxToolCalls));
+            } else {
+                lines.append(tr("Tool-call budget: limit %1 per run")
+                                 .arg(m_runMaxToolCalls));
             }
         }
         if (!m_runUsageRequested) {
@@ -963,6 +979,7 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setProperty("runModelSteps", m_runModelSteps);
     m_technicalDetails->setProperty("runMaxModelSteps", m_runMaxModelSteps);
     m_technicalDetails->setProperty("runToolCalls", m_runToolCalls);
+    m_technicalDetails->setProperty("runMaxToolCalls", m_runMaxToolCalls);
     m_technicalDetails->setProperty("runUsageRequested", m_runUsageRequested);
     m_technicalDetails->setProperty("runUsageComplete", m_runUsageComplete);
     m_technicalDetails->setProperty("runUsageRequestCount", m_runUsageRequestCount);

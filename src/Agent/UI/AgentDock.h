@@ -201,6 +201,7 @@ private:
     int m_runModelSteps = -1;
     int m_runMaxModelSteps = -1;
     int m_runToolCalls = -1;
+    int m_runMaxToolCalls = -1;
     bool m_runUsageRequested = false;
     bool m_runUsageComplete = false;
     int m_runUsageRequestCount = 0;
