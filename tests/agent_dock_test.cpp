@@ -126,6 +126,14 @@ int main(int argc, char *argv[])
         { QStringLiteral("model"), QStringLiteral("deepseek-chat") },
         { QStringLiteral("mode"), QStringLiteral("ask") },
         { QStringLiteral("usage_requested"), true },
+        { QStringLiteral("history_context"), QJsonObject {
+              { QStringLiteral("limit_enabled"), true },
+              { QStringLiteral("budget_bytes"), 32768 },
+              { QStringLiteral("total_turn_count"), 4 },
+              { QStringLiteral("included_turn_count"), 3 },
+              { QStringLiteral("omitted_turn_count"), 1 },
+              { QStringLiteral("included_previous_turn_bytes"), 20480 },
+              { QStringLiteral("current_turn_bytes"), 5120 } } },
         { QStringLiteral("context_handles"), QJsonArray {
               QStringLiteral("chapter-1:12-34"), QStringLiteral("book-css") } }
     };
@@ -174,8 +182,17 @@ int main(int argc, char *argv[])
                 && usage_details->text().contains(
                     QStringLiteral("Response latency: first byte 9 ms · first model event 14 ms"))
                 && usage_details->property("firstByteMs").toLongLong() == 9
-                && usage_details->property("firstModelEventMs").toLongLong() == 14,
-            "technical details must expose exact provider-reported token usage");
+                && usage_details->property("firstModelEventMs").toLongLong() == 14
+                && usage_details->text().contains(
+                    QStringLiteral("Request history: 3/4 turns sent · 1 omitted · previous 20/32 KiB · current 5 KiB (always retained)"))
+                && usage_details->property("historyBudgetBytes").toInt() == 32768
+                && usage_details->property("historyIncludedTurns").toInt() == 3
+                && usage_details->property("historyOmittedTurns").toInt() == 1
+                && usage_details->property("historyIncludedPreviousBytes").toInt()
+                    == 20480
+                && usage_details->property("historyCurrentTurnBytes").toInt()
+                    == 5120,
+            "technical details must expose exact token usage and bounded history assembly");
     SigilAgent::AgentEvent run_completed;
     run_completed.type = SigilAgent::AgentEventType::RunStateChanged;
     run_completed.timestampMs = 1700000000100;

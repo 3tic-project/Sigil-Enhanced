@@ -135,6 +135,14 @@ require(
     "request events and technical details must expose measured response latency",
 )
 require(
+    'QStringLiteral("history_context")' in runner_cpp
+    and "m_requestHistoryContext" in dock_h
+    and "Request history:" in dock_cpp
+    and 'setProperty(\n        "historyBudgetBytes"' in dock_cpp
+    and 'setProperty(\n        "historyCurrentTurnBytes"' in dock_cpp,
+    "technical details must disclose each request's bounded history assembly",
+)
+require(
     "AgentEventType::PlanCreated" in runner_cpp
     and "makePlanReviewCard" in dock_cpp
     and "openPlanResourceRequested" in dock_h

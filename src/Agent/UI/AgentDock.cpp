@@ -300,6 +300,7 @@ void AgentDock::setSessionId(const QString &session_id)
     m_requestUsageRequested = false;
     m_requestUsage = ModelUsage();
     m_requestTiming = ModelResponseTiming();
+    m_requestHistoryContext = QJsonObject();
     m_runId.clear();
     m_runStatus.clear();
     m_runDurationMs = -1;
@@ -643,6 +644,8 @@ void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &stat
         m_requestUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
         m_requestUsage = ModelUsage();
         m_requestTiming = ModelResponseTiming();
+        m_requestHistoryContext =
+            payload.value(QStringLiteral("history_context")).toObject();
     } else if (payload.contains(QStringLiteral("usage_requested"))) {
         m_requestUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
     }
@@ -653,6 +656,10 @@ void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &stat
     if (payload.value(QStringLiteral("response_timing")).isObject()) {
         m_requestTiming = modelResponseTimingFromJson(
             payload.value(QStringLiteral("response_timing")).toObject());
+    }
+    if (payload.value(QStringLiteral("history_context")).isObject()) {
+        m_requestHistoryContext =
+            payload.value(QStringLiteral("history_context")).toObject();
     }
     if (payload.contains(QStringLiteral("request_id"))) {
         m_requestId = payload.value(QStringLiteral("request_id")).toString();
@@ -820,6 +827,43 @@ void AgentDock::refreshTechnicalDetails()
         lines.append(tr("Model: %1").arg(m_requestModel));
         lines.append(tr("Scope handles: %1").arg(
             m_requestHandles.isEmpty() ? tr("None") : m_requestHandles.join(QStringLiteral(", "))));
+        if (!m_requestHistoryContext.isEmpty()) {
+            const auto kib_text = [](qint64 bytes) {
+                bytes = qMax<qint64>(0, bytes);
+                if (bytes % 1024 == 0) {
+                    return QString::number(bytes / 1024);
+                }
+                return QString::number(bytes / 1024.0, 'f', 1);
+            };
+            const int included_turns = m_requestHistoryContext
+                .value(QStringLiteral("included_turn_count")).toInt();
+            const int total_turns = m_requestHistoryContext
+                .value(QStringLiteral("total_turn_count")).toInt();
+            const int omitted_turns = m_requestHistoryContext
+                .value(QStringLiteral("omitted_turn_count")).toInt();
+            const qint64 included_previous_bytes = m_requestHistoryContext
+                .value(QStringLiteral("included_previous_turn_bytes")).toInteger();
+            const qint64 current_bytes = m_requestHistoryContext
+                .value(QStringLiteral("current_turn_bytes")).toInteger();
+            if (m_requestHistoryContext
+                    .value(QStringLiteral("limit_enabled")).toBool()) {
+                const qint64 budget_bytes = m_requestHistoryContext
+                    .value(QStringLiteral("budget_bytes")).toInteger();
+                lines.append(tr("Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)")
+                                 .arg(included_turns)
+                                 .arg(total_turns)
+                                 .arg(omitted_turns)
+                                 .arg(kib_text(included_previous_bytes),
+                                      kib_text(budget_bytes),
+                                      kib_text(current_bytes)));
+            } else {
+                lines.append(tr("Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)")
+                                 .arg(included_turns)
+                                 .arg(total_turns)
+                                 .arg(kib_text(included_previous_bytes),
+                                      kib_text(current_bytes)));
+            }
+        }
         if (m_requestDurationMs >= 0) {
             const QString finished = QDateTime::fromMSecsSinceEpoch(m_requestFinishedAtMs)
                 .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
@@ -910,6 +954,25 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setProperty("reasoningTokens", m_requestUsage.reasoningTokens);
     m_technicalDetails->setProperty("firstByteMs", m_requestTiming.firstByteMs);
     m_technicalDetails->setProperty("firstModelEventMs", m_requestTiming.firstEventMs);
+    m_technicalDetails->setProperty(
+        "historyBudgetBytes",
+        m_requestHistoryContext.value(QStringLiteral("budget_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "historyTotalTurns",
+        m_requestHistoryContext.value(QStringLiteral("total_turn_count")).toInt());
+    m_technicalDetails->setProperty(
+        "historyIncludedTurns",
+        m_requestHistoryContext.value(QStringLiteral("included_turn_count")).toInt());
+    m_technicalDetails->setProperty(
+        "historyOmittedTurns",
+        m_requestHistoryContext.value(QStringLiteral("omitted_turn_count")).toInt());
+    m_technicalDetails->setProperty(
+        "historyIncludedPreviousBytes",
+        m_requestHistoryContext.value(
+            QStringLiteral("included_previous_turn_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "historyCurrentTurnBytes",
+        m_requestHistoryContext.value(QStringLiteral("current_turn_bytes")).toInteger());
     m_technicalDetails->setAccessibleName(m_technicalDetails->text());
 }
 

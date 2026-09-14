@@ -192,6 +192,7 @@ private:
     bool m_requestUsageRequested = false;
     ModelUsage m_requestUsage;
     ModelResponseTiming m_requestTiming;
+    QJsonObject m_requestHistoryContext;
     QString m_runId;
     QString m_runStatus;
     qint64 m_runDurationMs = -1;
