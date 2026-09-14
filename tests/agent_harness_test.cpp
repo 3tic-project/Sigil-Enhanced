@@ -822,6 +822,23 @@ int main()
                 && commit_status.value(QStringLiteral("book_revision")).toInteger()
                     == static_cast<qint64>(edit_book.revision()),
             "commit status must preserve workspace counts and revision");
+    const QJsonObject edit_outcomes = commit_status.value(
+        QStringLiteral("resource_outcomes")).toObject();
+    Require(edit_outcomes.value(QStringLiteral("scope_available")).toBool()
+                && edit_outcomes.value(QStringLiteral("all_or_nothing")).toBool()
+                && edit_outcomes.value(QStringLiteral("status")).toString()
+                    == QStringLiteral("all_applied")
+                && edit_outcomes.value(QStringLiteral("transaction_state")).toString()
+                    == QStringLiteral("committed")
+                && edit_outcomes.value(QStringLiteral("resource_ids")).toArray()
+                    == QJsonArray { QStringLiteral("ch1") }
+                && edit_outcomes.value(
+                    QStringLiteral("successful_resource_count")).toInt() == 1
+                && edit_outcomes.value(
+                    QStringLiteral("failed_resource_count")).toInt() == 0
+                && edit_outcomes.value(
+                    QStringLiteral("structural_operation_count")).toInt() == 0,
+            "successful commit must publish exact all-or-nothing resource outcomes");
     const BookOpResult edit_restored = edit_book.restoreTaskRestorePoint(
         commit_recovery.value(QStringLiteral("checkpoint_id")).toString());
     Require(edit_restored.ok && edit_restored.applied
@@ -895,6 +912,202 @@ int main()
                 && auto_recovery.value(QStringLiteral("reason")).toString()
                     == QStringLiteral("structural_changes"),
             "structural commits must not advertise a text-only restore point");
+
+    MemoryBookWorkspace failed_commit_book = MemoryBookWorkspace::samplePhysicsBook();
+    const QString failed_commit_ch1 = failed_commit_book.resourceText(
+        QStringLiteral("ch1"));
+    const QString failed_commit_ch2 = failed_commit_book.resourceText(
+        QStringLiteral("ch2"));
+    failed_commit_book.setInjectedFailureIndex(1);
+    ToolRegistry failed_commit_registry;
+    registerBookTools(&failed_commit_registry, &failed_commit_book);
+    AgentSession failed_commit_session;
+    AutoApprovalGate failed_commit_gate(true);
+    MockModelProvider failed_commit_provider;
+    failed_commit_provider.setScript([&failed_commit_book](const ModelRequest &request) {
+        bool began = false;
+        bool patched_ch1 = false;
+        bool patched_ch2 = false;
+        bool metadata_staged = false;
+        bool commit_failed = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role != QLatin1String("tool")) continue;
+            if (message.toolCallId == QLatin1String("failed-commit-begin")) {
+                began = true;
+            } else if (message.toolCallId == QLatin1String("failed-commit-ch1")) {
+                patched_ch1 = true;
+            } else if (message.toolCallId == QLatin1String("failed-commit-ch2")) {
+                patched_ch2 = true;
+            } else if (message.toolCallId == QLatin1String("failed-commit-metadata")) {
+                metadata_staged = true;
+            } else if (message.toolCallId == QLatin1String("failed-commit-apply")) {
+                commit_failed = message.content.contains(
+                    QStringLiteral("TRANSACTION_ROLLED_BACK"));
+            }
+        }
+        ModelTurn turn;
+        ToolCall call;
+        if (!began) {
+            call.id = QStringLiteral("failed-commit-begin");
+            call.name = QStringLiteral("transaction.begin");
+            call.argumentsJson = QStringLiteral("{}");
+        } else if (!patched_ch1) {
+            call.id = QStringLiteral("failed-commit-ch1");
+            call.name = QStringLiteral("resource.patch_fragment");
+            call.argumentsJson = QStringLiteral(
+                "{\"resource_id\":\"ch1\",\"expected_text\":\"<title>Heat</title>\",\"text\":\"<title>Heat revised</title>\",\"expected_revision\":1}");
+        } else if (!patched_ch2) {
+            call.id = QStringLiteral("failed-commit-ch2");
+            call.name = QStringLiteral("resource.patch_fragment");
+            call.argumentsJson = QStringLiteral(
+                "{\"resource_id\":\"ch2\",\"expected_text\":\"<title>Light</title>\",\"text\":\"<title>Light revised</title>\",\"expected_revision\":1}");
+        } else if (!metadata_staged) {
+            call.id = QStringLiteral("failed-commit-metadata");
+            call.name = QStringLiteral("metadata.update");
+            call.argumentsJson = QStringLiteral(
+                "{\"patch\":{\"title\":\"Should roll back\"}}");
+        } else if (!commit_failed) {
+            call.id = QStringLiteral("failed-commit-apply");
+            call.name = QStringLiteral("transaction.commit");
+            call.argumentsJson = QStringLiteral("{\"expected_revision\":%1}")
+                                     .arg(failed_commit_book.revision());
+        } else {
+            turn.content = QStringLiteral("The atomic commit failed and was rolled back.");
+            return turn;
+        }
+        turn.toolCalls.append(call);
+        return turn;
+    });
+    AgentCancellation failed_commit_cancel;
+    AgentRunner failed_commit_runner(
+        &failed_commit_session, &failed_commit_provider, &failed_commit_registry,
+        &failed_commit_book, &ask_policy, &failed_commit_gate,
+        &failed_commit_cancel);
+    failed_commit_runner.setMode(AgentMode::Auto);
+    const AgentRunResult failed_commit_result = failed_commit_runner.runTurn(
+        QStringLiteral("apply two text edits atomically"));
+    Require(failed_commit_result.state == AgentRunState::Completed
+                && !failed_commit_book.hasOpenTransaction()
+                && failed_commit_book.resourceText(QStringLiteral("ch1"))
+                    == failed_commit_ch1
+                && failed_commit_book.resourceText(QStringLiteral("ch2"))
+                    == failed_commit_ch2
+                && failed_commit_book.metadata().value(
+                    QStringLiteral("title")).toString()
+                    == QStringLiteral("Junior Physics")
+                && !hasEvent(failed_commit_session,
+                             AgentEventType::TransactionCommitted),
+            "failed multi-resource commit must roll back without a committed event");
+    const QList<AgentEvent> failed_tool_events = failed_commit_session.eventsOf(
+        AgentEventType::ToolFailed);
+    Require(failed_tool_events.size() == 1
+                && failed_tool_events.constFirst().payload.value(
+                    QStringLiteral("name")).toString()
+                    == QStringLiteral("transaction.commit"),
+            "failed transaction commit must publish one auditable tool failure");
+    const QJsonObject failed_outcomes = failed_tool_events.constFirst().payload
+        .value(QStringLiteral("data")).toObject()
+        .value(QStringLiteral("resource_outcomes")).toObject();
+    Require(failed_outcomes.value(QStringLiteral("scope_available")).toBool()
+                && failed_outcomes.value(QStringLiteral("all_or_nothing")).toBool()
+                && failed_outcomes.value(QStringLiteral("status")).toString()
+                    == QStringLiteral("not_applied")
+                && failed_outcomes.value(
+                    QStringLiteral("transaction_state")).toString()
+                    == QStringLiteral("rolled_back")
+                && failed_outcomes.value(QStringLiteral("resource_ids")).toArray()
+                    == QJsonArray { QStringLiteral("ch1"), QStringLiteral("ch2") }
+                && failed_outcomes.value(
+                    QStringLiteral("successful_resource_count")).toInt() == 0
+                && failed_outcomes.value(
+                    QStringLiteral("failed_resource_count")).toInt() == 2,
+            "rolled-back commit must report zero successes and every attempted resource as failed");
+    Require(failed_outcomes.value(
+                QStringLiteral("structural_operations")).toArray()
+                    == QJsonArray { QStringLiteral("metadata") }
+                && failed_outcomes.value(
+                    QStringLiteral("successful_structural_operation_count")).toInt() == 0
+                && failed_outcomes.value(
+                    QStringLiteral("failed_structural_operation_count")).toInt() == 1,
+            "rolled-back commit must report structural operations separately from resources");
+
+    MemoryBookWorkspace conflicted_commit_book =
+        MemoryBookWorkspace::samplePhysicsBook();
+    const QString conflicted_original = conflicted_commit_book.resourceText(
+        QStringLiteral("ch1"));
+    ToolRegistry conflicted_commit_registry;
+    registerBookTools(&conflicted_commit_registry, &conflicted_commit_book);
+    AgentSession conflicted_commit_session;
+    AutoApprovalGate conflicted_commit_gate(true);
+    MockModelProvider conflicted_commit_provider;
+    conflicted_commit_provider.setScript(
+        [&conflicted_commit_book](const ModelRequest &request) {
+        bool began = false;
+        bool patched = false;
+        bool commit_conflicted = false;
+        for (const ChatMessage &message : request.messages) {
+            if (message.role != QLatin1String("tool")) continue;
+            if (message.toolCallId == QLatin1String("conflict-begin")) {
+                began = true;
+            } else if (message.toolCallId == QLatin1String("conflict-patch")) {
+                patched = true;
+            } else if (message.toolCallId == QLatin1String("conflict-commit")) {
+                commit_conflicted = message.content.contains(
+                    QStringLiteral("BOOK_REVISION_CONFLICT"));
+            }
+        }
+        ModelTurn turn;
+        ToolCall call;
+        if (!began) {
+            call.id = QStringLiteral("conflict-begin");
+            call.name = QStringLiteral("transaction.begin");
+            call.argumentsJson = QStringLiteral("{}");
+        } else if (!patched) {
+            call.id = QStringLiteral("conflict-patch");
+            call.name = QStringLiteral("resource.patch_fragment");
+            call.argumentsJson = QStringLiteral(
+                "{\"resource_id\":\"ch1\",\"expected_text\":\"<title>Heat</title>\",\"text\":\"<title>Conflict</title>\",\"expected_revision\":1}");
+        } else if (!commit_conflicted) {
+            call.id = QStringLiteral("conflict-commit");
+            call.name = QStringLiteral("transaction.commit");
+            call.argumentsJson = QStringLiteral("{\"expected_revision\":%1}")
+                                     .arg(conflicted_commit_book.revision() + 1);
+        } else {
+            turn.content = QStringLiteral("The revision conflict left the edit staged.");
+            return turn;
+        }
+        turn.toolCalls.append(call);
+        return turn;
+    });
+    AgentCancellation conflicted_commit_cancel;
+    AgentRunner conflicted_commit_runner(
+        &conflicted_commit_session, &conflicted_commit_provider,
+        &conflicted_commit_registry, &conflicted_commit_book, &ask_policy,
+        &conflicted_commit_gate, &conflicted_commit_cancel);
+    conflicted_commit_runner.setMode(AgentMode::Auto);
+    const AgentRunResult conflicted_commit_result =
+        conflicted_commit_runner.runTurn(QStringLiteral("try a stale commit"));
+    const QJsonObject conflict_failure = conflicted_commit_session.eventsOf(
+        AgentEventType::ToolFailed).constFirst().payload;
+    const QJsonObject conflict_outcomes = conflict_failure.value(
+        QStringLiteral("data")).toObject().value(
+        QStringLiteral("resource_outcomes")).toObject();
+    Require(conflicted_commit_result.state == AgentRunState::Completed
+                && conflicted_commit_book.hasOpenTransaction()
+                && conflicted_commit_book.resourceText(QStringLiteral("ch1"))
+                    == conflicted_original
+                && conflict_failure.value(QStringLiteral("code")).toString()
+                    == QStringLiteral("BOOK_REVISION_CONFLICT")
+                && conflict_outcomes.value(
+                    QStringLiteral("transaction_state")).toString()
+                    == QStringLiteral("staged")
+                && conflict_outcomes.value(
+                    QStringLiteral("successful_resource_count")).toInt() == 0
+                && conflict_outcomes.value(
+                    QStringLiteral("failed_resource_count")).toInt() == 1,
+            "revision-conflicted commit must report zero applied resources and retain staging");
+    Require(conflicted_commit_book.rollbackTransaction().ok,
+            "conflicted outcome fixture must discard its retained staged transaction");
 
     MemoryBookWorkspace plan_book = MemoryBookWorkspace::samplePhysicsBook();
     const QString plan_original = plan_book.resourceText(QStringLiteral("ch1"));

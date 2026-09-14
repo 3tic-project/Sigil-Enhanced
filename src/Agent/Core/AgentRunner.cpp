@@ -10,6 +10,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QSet>
 #include <QUuid>
 
 #include "Agent/Tools/BookTools.h"
@@ -59,6 +60,82 @@ QJsonObject rollbackStatus(QJsonObject payload)
     payload.insert(QStringLiteral("save_status"), QStringLiteral("not_applied"));
     payload.insert(QStringLiteral("live_book_unchanged"), true);
     return payload;
+}
+
+QJsonObject transactionOutcomeScope(const QJsonObject &preview)
+{
+    QJsonArray resource_ids;
+    QSet<QString> seen_resources;
+    auto append_resource = [&resource_ids, &seen_resources](const QString &raw_id) {
+        const QString id = raw_id.trimmed();
+        if (id.isEmpty() || seen_resources.contains(id)) return;
+        seen_resources.insert(id);
+        resource_ids.append(id);
+    };
+    for (const QJsonValue &value : preview.value(QStringLiteral("changes")).toArray()) {
+        append_resource(value.toObject().value(QStringLiteral("resource_id")).toString());
+    }
+    for (const QJsonValue &value : preview.value(QStringLiteral("removed")).toArray()) {
+        append_resource(value.toString());
+    }
+
+    QJsonArray structural_operations;
+    if (preview.value(QStringLiteral("metadata_changed")).toBool()) {
+        structural_operations.append(QStringLiteral("metadata"));
+    }
+    if (preview.value(QStringLiteral("spine_changed")).toBool()) {
+        structural_operations.append(QStringLiteral("spine"));
+    }
+    if (preview.value(QStringLiteral("toc_changed")).toBool()) {
+        structural_operations.append(QStringLiteral("toc"));
+    }
+    return QJsonObject {
+        { QStringLiteral("resource_ids"), resource_ids },
+        { QStringLiteral("resource_count"), resource_ids.size() },
+        { QStringLiteral("structural_operations"), structural_operations },
+        { QStringLiteral("structural_operation_count"),
+          structural_operations.size() }
+    };
+}
+
+QJsonObject transactionResourceOutcomes(const QJsonObject &scope,
+                                        bool scope_available,
+                                        const ToolResult &result,
+                                        bool transaction_open)
+{
+    const bool applied = result.ok && result.applied;
+    QJsonObject outcomes {
+        { QStringLiteral("scope_available"), scope_available },
+        { QStringLiteral("all_or_nothing"), true },
+        { QStringLiteral("status"),
+          applied ? QStringLiteral("all_applied") : QStringLiteral("not_applied") },
+        { QStringLiteral("transaction_state"),
+          applied ? QStringLiteral("committed")
+                  : transaction_open ? QStringLiteral("staged")
+                  : result.code == QLatin1String("TRANSACTION_ROLLED_BACK")
+                      ? QStringLiteral("rolled_back")
+                      : QStringLiteral("not_open") }
+    };
+    if (!scope_available) return outcomes;
+
+    const int resource_count = scope.value(QStringLiteral("resource_count")).toInt();
+    const int structural_count = scope.value(
+        QStringLiteral("structural_operation_count")).toInt();
+    outcomes.insert(QStringLiteral("resource_ids"),
+                    scope.value(QStringLiteral("resource_ids")));
+    outcomes.insert(QStringLiteral("resource_count"), resource_count);
+    outcomes.insert(QStringLiteral("successful_resource_count"),
+                    applied ? resource_count : 0);
+    outcomes.insert(QStringLiteral("failed_resource_count"),
+                    applied ? 0 : resource_count);
+    outcomes.insert(QStringLiteral("structural_operations"),
+                    scope.value(QStringLiteral("structural_operations")));
+    outcomes.insert(QStringLiteral("structural_operation_count"), structural_count);
+    outcomes.insert(QStringLiteral("successful_structural_operation_count"),
+                    applied ? structural_count : 0);
+    outcomes.insert(QStringLiteral("failed_structural_operation_count"),
+                    applied ? 0 : structural_count);
+    return outcomes;
 }
 
 QString reviewablePlanKind(const QString &tool_name)
@@ -500,11 +577,15 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
     });
     QString task_restore_id;
     QJsonObject task_recovery;
+    QJsonObject commit_outcome_scope;
+    bool commit_scope_available = false;
     if (local.name == QLatin1String("transaction.commit") && m_workspace) {
         const BookOpResult preview = m_workspace->previewTransaction();
         if (!preview.ok) {
             task_recovery = unavailableTaskRecovery(QStringLiteral("preview_failed"));
         } else {
+            commit_outcome_scope = transactionOutcomeScope(preview.data);
+            commit_scope_available = true;
             QString reason;
             const QStringList resources = taskRestoreResources(preview.data, &reason);
             if (resources.isEmpty()) {
@@ -528,6 +609,12 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
 
     ToolResult result = tool->execute(execution_arguments);
     if (local.name == QLatin1String("transaction.commit") && m_workspace) {
+        result.data.insert(
+            QStringLiteral("resource_outcomes"),
+            transactionResourceOutcomes(commit_outcome_scope,
+                                        commit_scope_available,
+                                        result,
+                                        m_workspace->hasOpenTransaction()));
         if (result.ok && result.applied && !task_restore_id.isEmpty()) {
             const BookOpResult sealed = m_workspace->sealTaskRestorePoint(task_restore_id);
             if (sealed.ok) {
