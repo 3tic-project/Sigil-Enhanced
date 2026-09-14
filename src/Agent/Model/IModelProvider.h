@@ -37,6 +37,7 @@ struct ModelRequest {
     QList<ChatMessage> messages;
     QJsonArray tools;
     QJsonObject historyContext;
+    QJsonObject toolContext;
     bool thinking = true;
     QString reasoningEffort = QStringLiteral("medium");
     ReasoningProtocol reasoningProtocol = ReasoningProtocol::DeepSeek;

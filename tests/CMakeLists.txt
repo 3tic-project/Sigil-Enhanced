@@ -1570,6 +1570,7 @@ add_executable(agent_typeset_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSkills.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/PromptAssembler.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/BookTools.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp

@@ -34,6 +34,17 @@ bool hasEvent(const SigilAgent::AgentSession &session, SigilAgent::AgentEventTyp
     return !session.eventsOf(type).isEmpty();
 }
 
+QStringList toolSchemaNames(const QJsonArray &schemas)
+{
+    QStringList names;
+    for (const QJsonValue &value : schemas) {
+        names.append(value.toObject()
+                         .value(QStringLiteral("function")).toObject()
+                         .value(QStringLiteral("name")).toString());
+    }
+    return names;
+}
+
 } // namespace
 
 int main()
@@ -118,6 +129,67 @@ int main()
             "Edit must ask before python.run");
     Require(policy.evaluate(AgentMode::Auto, python_tool->descriptor()) == PermissionAction::Allow,
             "Auto must allow python.run");
+    AgentSession catalog_session;
+    catalog_session.append(AgentEventType::UserMessage, QJsonObject {
+        { QStringLiteral("text"), QStringLiteral("inspect or edit this book") }
+    });
+    PromptAssembler prompt_assembler;
+    const ModelRequest ask_catalog = prompt_assembler.build(
+        catalog_session, &book, registry, AgentMode::Ask,
+        QStringLiteral("mock"), false, QString(), QStringList(),
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES, &policy);
+    const ModelRequest plan_catalog = prompt_assembler.build(
+        catalog_session, &book, registry, AgentMode::Plan,
+        QStringLiteral("mock"), false, QString(), QStringList(),
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES, &policy);
+    const ModelRequest edit_catalog = prompt_assembler.build(
+        catalog_session, &book, registry, AgentMode::Edit,
+        QStringLiteral("mock"), false, QString(), QStringList(),
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES, &policy);
+    const ModelRequest auto_catalog = prompt_assembler.build(
+        catalog_session, &book, registry, AgentMode::Auto,
+        QStringLiteral("mock"), false, QString(), QStringList(),
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES, &policy);
+    const QStringList ask_tools = toolSchemaNames(ask_catalog.tools);
+    const QStringList plan_tools = toolSchemaNames(plan_catalog.tools);
+    const QStringList edit_tools = toolSchemaNames(edit_catalog.tools);
+    Require(ask_tools.contains(QStringLiteral("book_summary"))
+                && ask_tools.contains(QStringLiteral("transaction_preview"))
+                && !ask_tools.contains(QStringLiteral("resource_patch_fragment"))
+                && !ask_tools.contains(QStringLiteral("transaction_commit"))
+                && !ask_tools.contains(QStringLiteral("python_run")),
+            "Ask schema catalog must hide every book-mutating tool");
+    Require(plan_tools.contains(QStringLiteral("resource_patch_fragment"))
+                && plan_tools.contains(QStringLiteral("transaction_preview"))
+                && !plan_tools.contains(QStringLiteral("transaction_commit"))
+                && !plan_tools.contains(QStringLiteral("checkpoint_create"))
+                && !plan_tools.contains(QStringLiteral("python_run")),
+            "Plan schema catalog must retain staging but hide apply-only tools");
+    Require(edit_tools.contains(QStringLiteral("transaction_commit"))
+                && edit_tools.contains(QStringLiteral("checkpoint_create"))
+                && edit_tools.contains(QStringLiteral("python_run"))
+                && edit_tools.size() == registry.descriptors().size(),
+            "Edit schema catalog must retain the full compatible tool surface");
+    const QJsonObject ask_tool_context = ask_catalog.toolContext;
+    Require(ask_tool_context.value(QStringLiteral("policy_applied")).toBool()
+                && ask_tool_context.value(QStringLiteral("mode")).toString()
+                    == QStringLiteral("ask")
+                && ask_tool_context.value(QStringLiteral("total_tool_count")).toInt()
+                    == registry.descriptors().size()
+                && ask_tool_context.value(QStringLiteral("exposed_tool_count")).toInt()
+                    == ask_catalog.tools.size()
+                && ask_tool_context.value(QStringLiteral("hidden_tool_count")).toInt()
+                    == registry.descriptors().size() - ask_catalog.tools.size()
+                && ask_tool_context.value(QStringLiteral("saved_schema_bytes")).toInt() > 0,
+            "mode-filtered requests must publish exact tool catalog savings");
+    Require(edit_catalog.toolContext.value(
+                QStringLiteral("hidden_tool_count")).toInt() == 0
+                && edit_catalog.toolContext.value(
+                    QStringLiteral("saved_schema_bytes")).toInt() == 0
+                && auto_catalog.tools.size() == edit_catalog.tools.size()
+                && auto_catalog.toolContext.value(
+                    QStringLiteral("hidden_tool_count")).toInt() == 0,
+            "full Edit and Auto catalogs must not invent policy savings");
     AgentSession session;
     AgentCancellation cancellation;
     AutoApprovalGate approve(true);
@@ -193,6 +265,8 @@ int main()
         const QJsonObject completed = completed_requests.at(i).payload;
         const QJsonObject history = started.value(
             QStringLiteral("history_context")).toObject();
+        const QJsonObject tool_context = started.value(
+            QStringLiteral("tool_context")).toObject();
         Require(!started.value(QStringLiteral("request_id")).toString().isEmpty()
                     && started.value(QStringLiteral("request_id")).toString()
                         == completed.value(QStringLiteral("request_id")).toString()
@@ -211,8 +285,16 @@ int main()
                         QStringLiteral("omitted_turn_count")).toInt() == 0
                     && history.value(
                         QStringLiteral("current_turn_bytes")).toInteger() > 0
+                    && tool_context.value(QStringLiteral("mode")).toString()
+                        == QStringLiteral("ask")
+                    && tool_context.value(
+                        QStringLiteral("exposed_tool_count")).toInt()
+                        < tool_context.value(
+                            QStringLiteral("total_tool_count")).toInt()
+                    && tool_context.value(
+                        QStringLiteral("hidden_tool_count")).toInt() > 0
                     && completed.value(QStringLiteral("duration_ms")).toInteger() >= 0,
-                "request lifecycle events must retain identity, target, history budget, and elapsed time");
+                "request lifecycle events must retain identity, target, history, mode tools, and elapsed time");
         const QJsonObject usage = completed.value(QStringLiteral("usage")).toObject();
         Require(usage.value(QStringLiteral("input_tokens")).toInteger() > 0
                     && usage.value(QStringLiteral("output_tokens")).toInteger() > 0
@@ -462,6 +544,9 @@ int main()
             "tool-role deny payload must carry PERMISSION_DENIED");
     Require(ask_provider.lastRequest().messages.size() > 0,
             "Ask-deny follow-up must inspect the real next ModelRequest");
+    Require(!toolSchemaNames(ask_provider.lastRequest().tools).contains(
+                QStringLiteral("resource_patch_fragment")),
+            "a provider returning an unadvertised mutation must still be denied at execution");
 
     MemoryBookWorkspace deny_book = MemoryBookWorkspace::samplePhysicsBook();
     const QString deny_original = deny_book.resourceText(QStringLiteral("ch1"));

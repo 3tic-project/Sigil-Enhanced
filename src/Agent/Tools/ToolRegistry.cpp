@@ -50,11 +50,13 @@ QList<AgentToolDescriptor> ToolRegistry::descriptors() const
     return list;
 }
 
-QJsonArray ToolRegistry::openaiToolSchemas() const
+QJsonArray ToolRegistry::openaiToolSchemas(
+    const std::function<bool(const AgentToolDescriptor &)> &include) const
 {
     QJsonArray array;
     for (const auto &tool : m_tools) {
         const AgentToolDescriptor descriptor = tool->descriptor();
+        if (include && !include(descriptor)) continue;
         array.append(QJsonObject {
             { QStringLiteral("type"), QStringLiteral("function") },
             { QStringLiteral("function"), QJsonObject {

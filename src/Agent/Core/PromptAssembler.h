@@ -20,6 +20,8 @@
 namespace SigilAgent
 {
 
+class PermissionPolicy;
+
 class PromptAssembler
 {
 public:
@@ -35,7 +37,8 @@ public:
                        const QString &reasoning_effort,
                        const QStringList &handles,
                        int historyPreviousTurnBudgetBytes =
-                           DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES) const;
+                           DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES,
+                       const PermissionPolicy *permissionPolicy = nullptr) const;
 };
 
 } // namespace SigilAgent

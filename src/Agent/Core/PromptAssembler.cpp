@@ -13,6 +13,7 @@
 
 #include "Agent/Core/AgentSkills.h"
 #include "Agent/Model/HistoryAssembler.h"
+#include "Agent/Security/PermissionPolicy.h"
 
 namespace SigilAgent
 {
@@ -209,14 +210,43 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
                                     bool thinking,
                                     const QString &reasoning_effort,
                                     const QStringList &handles,
-                                    int history_previous_turn_budget_bytes) const
+                                    int history_previous_turn_budget_bytes,
+                                    const PermissionPolicy *permission_policy) const
 {
     ModelRequest request;
     request.model = model;
     request.thinking = thinking;
     request.reasoningEffort = reasoning_effort;
     request.stream = true;
-    request.tools = tools.openaiToolSchemas();
+    PermissionPolicy default_policy;
+    const PermissionPolicy *effective_policy = permission_policy
+        ? permission_policy : &default_policy;
+    QJsonArray hidden_tools;
+    const QJsonArray all_tool_schemas = tools.openaiToolSchemas();
+    request.tools = tools.openaiToolSchemas(
+        [effective_policy, mode, &hidden_tools](
+            const AgentToolDescriptor &descriptor) {
+            const bool exposed = effective_policy->evaluate(mode, descriptor)
+                != PermissionAction::Deny;
+            if (!exposed) hidden_tools.append(descriptor.name);
+            return exposed;
+        });
+    const int all_schema_bytes = QJsonDocument(all_tool_schemas)
+        .toJson(QJsonDocument::Compact).size();
+    const int exposed_schema_bytes = QJsonDocument(request.tools)
+        .toJson(QJsonDocument::Compact).size();
+    request.toolContext = QJsonObject {
+        { QStringLiteral("mode"), modeName(mode) },
+        { QStringLiteral("policy_applied"), true },
+        { QStringLiteral("total_tool_count"), all_tool_schemas.size() },
+        { QStringLiteral("exposed_tool_count"), request.tools.size() },
+        { QStringLiteral("hidden_tool_count"), hidden_tools.size() },
+        { QStringLiteral("hidden_tools"), hidden_tools },
+        { QStringLiteral("unfiltered_schema_bytes"), all_schema_bytes },
+        { QStringLiteral("exposed_schema_bytes"), exposed_schema_bytes },
+        { QStringLiteral("saved_schema_bytes"),
+          qMax(0, all_schema_bytes - exposed_schema_bytes) }
+    };
 
     QString last_user;
     for (int i = session.events().size() - 1; i >= 0; --i) {

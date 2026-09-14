@@ -51,6 +51,21 @@ int main()
             "wire names must resolve to the same shipped tool as dotted names");
     Require(ToolRegistry::toWireName(QStringLiteral("book.summary")) == QStringLiteral("book_summary"),
             "book.summary must be sent as book_summary");
+    const QJsonArray read_only_schemas = registry.openaiToolSchemas(
+        [](const AgentToolDescriptor &descriptor) {
+            return !descriptor.mutatesBook;
+        });
+    Require(!read_only_schemas.isEmpty()
+                && read_only_schemas.size() < schemas.size(),
+            "schema filters must publish a strict read-only subset");
+    for (const QJsonValue &value : read_only_schemas) {
+        const QString wire = value.toObject()
+                                 .value(QStringLiteral("function")).toObject()
+                                 .value(QStringLiteral("name")).toString();
+        Require(registry.find(wire) != nullptr
+                    && !registry.find(wire)->descriptor().mutatesBook,
+                "filtered schemas must retain only accepted descriptors");
+    }
 
     const QString paragraph_impact = humanReadableImpact(
         QStringLiteral("paragraphs.apply"),

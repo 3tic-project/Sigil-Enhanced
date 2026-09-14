@@ -699,7 +699,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
 
         ModelRequest request = m_prompts.build(
             *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking,
-            m_effort, handles, m_historyPreviousTurnBudgetBytes);
+            m_effort, handles, m_historyPreviousTurnBudgetBytes, m_policy);
         request.includeUsage = m_runUsageRequested;
         ++m_runModelSteps;
         const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -716,6 +716,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             { QStringLiteral("thinking"), request.thinking },
             { QStringLiteral("usage_requested"), request.includeUsage },
             { QStringLiteral("history_context"), request.historyContext },
+            { QStringLiteral("tool_context"), request.toolContext },
             { QStringLiteral("tools"), request.tools.size() }
         });
         setState(AgentRunState::RequestingModel);
