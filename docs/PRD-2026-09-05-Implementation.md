@@ -1276,3 +1276,43 @@ Windows/Linux/macOS 三平台 GUI profiler 数据。
 原生工具已经生成的 bounded evidence，并非任意 staged transaction 的整文件 unified diff；
 尚未支持卡片内选择结构独立操作组，也未在 Windows/Linux、屏幕阅读器、超长真实计划和
 不同字体/DPI 下完成人工验收。
+
+## Native Agent 段落独立操作组（2026-09-13）
+
+分支：`feature/agent-paragraph-plan-groups`。主要提交：`3804e6d01`（段落计划与选中子集
+暂存）、`d364fda40`（批准参数的受限传递）、`57ddfd7e9`（Dock 组选择界面）、
+`b3f58b0ae`（四语文案）和 `418165925`（导出及失败关闭回归）。
+
+### 独立性证明与批准闭环
+
+- `paragraphs.plan` 已有范围不变量为 `changes_css=false`、`changes_opf=false`、
+  `adds_resources=false`，每个输出仅替换一份既有 XHTML。因此计划显式返回每资源一个
+  `operation_groups` 条目及 `operation_groups_independent=true`；没有把可能互相依赖的 TOC
+  reparent/adopt 变化伪装成独立项，TOC 批准卡明确显示它仍是一个不可拆分组。
+- `paragraphs.apply` 新增可选 `selected_resource_ids`。省略保持原有全计划行为；显式选择
+  必须非空、唯一且属于已审阅计划。工具仍先校验原始 plan ID/digest/expected revision，
+  再只对选中资源重建输出与 CSS 依赖，最后在一个独占事务中原子暂存；中途失败整批回滚，
+  未选中的 XHTML 保持逐字节不变。
+- GUI 批准决策现在可以携带参数覆盖，但 Runner 采用白名单：只有规范化后的
+  `paragraphs.apply` 可覆盖 `selected_resource_ids`，plan ID、digest、revision 及其他工具
+  参数都不能由 UI 改写。`tool_approved` 记录实际执行参数与是否应用覆盖，形成可审计闭环。
+- 匹配计划的批准卡使用一个限高 `QListWidget` 承载所有 XHTML 组，默认全选，支持逐项、
+  Select all 和 Clear；零选择禁用 Approve，Deny 始终可用。决定后列表和批量按钮冻结；畸形
+  或重复组记录失败关闭。该结构不会为大型计划按行创建无界 QWidget。
+- Conversation Markdown 的段落计划摘要显示独立 XHTML 组数而不泄露 plan/digest；Debug
+  JSON 保留完整 `plan_created`、批准后的实际 `selected_resource_ids` 与工具结果。
+
+### 测试证据与剩余项
+
+`agent_div_paragraph_tools` 覆盖组声明、空/重复/越界选择在事务前拒绝、二选一精确暂存及
+回滚；`agent_harness` 覆盖 operation groups 进入计划事件、只允许组选择覆盖并忽略恶意
+digest 覆盖；`agent_dock` 覆盖默认全选、清空阻断、单组批准、决定冻结、普通批准无覆盖、
+错误 binding 和重复组失败关闭；`agent_provider_catalog` 验证可读导出保留组数但不输出协议
+绑定。完整 Sigil 构建及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次
+通过。严格四语目录覆盖通过，四份 `.qm` 均可生成且 0 unfinished；英文为 4,744 条活跃
+源文，简中/繁中/日文各为 5,721 条。
+
+本切片补齐 AGENT-02 中已有独立性证明的段落文件选择，但不把选择能力推广到任意 staged
+transaction，也不允许拆分 TOC 依赖变化。选择发生在 apply 批准而不是修改计划内容；要
+改变转换选项、加入计划外文件或处理失效资源仍须重新分析/生成计划。整文件 unified diff、
+超大真实计划、键盘/屏幕阅读器、Windows/Linux 主题与在线模型端到端人工验收仍待后续。

@@ -173,11 +173,15 @@ book session 且没有活动运行时启用；换书或 New Session 后失效。
   时 **Approve** 禁用，**Deny** 保持可用；工具层仍会再次执行原有的计划重验。普通
   `transaction.commit` 批准不受这条专用门影响。Auto 模式没有人工批准，但工具层绑定校验
   仍然有效。
+- 匹配的段落 apply 批准卡会按 XHTML 显示独立操作组，默认全选，也可 **Select all**、
+  **Clear** 或逐项取消；至少保留一项才能批准。批准只把勾选资源作为受限参数覆盖传给
+  `paragraphs.apply`，plan ID/digest/revision 不允许由界面覆盖，未勾选 XHTML 不进入该次
+  暂存事务。TOC 的父子关系变化可能互相依赖，因此仍明确显示为一个不可拆分的操作组。
 
-这推进了宿主计划审阅，但还不是可编辑计划表：目前不能在卡片内勾选独立操作组；双栏只
-比较计划自带的受限片段/层级清单，不是重新读取活书得到的整文件统一 diff。若要改变段落
-计划的文件子集，应让 Agent 用明确的 resource IDs 重新调用 `paragraphs.plan`，生成新的
-plan/digest 后再审阅。
+这推进了宿主计划审阅，但还不是通用可编辑计划表：只有原生段落计划按 XHTML 声明为独立
+的组可在批准时选择；TOC 和其他事务不会被界面武断拆分。双栏只比较计划自带的受限片段/
+层级清单，不是重新读取活书得到的整文件统一 diff。要改变转换选项、加入原计划外的资源，
+或重新审阅已变化的文件，仍须重新调用 `paragraphs.analyze` / `paragraphs.plan` 生成绑定。
 
 ## 预览、提交与恢复状态
 
@@ -204,8 +208,9 @@ plan/digest 后再审阅。
 
 因此，Agent 回答“完成”不能替代用户保存 EPUB，也不能替代完整 EPUBCheck。会话的
 Conversation Markdown 导出保留同样的 Plan review / Preview / Applied / Rollback 状态边界。
-计划导出保留可读的资源、源码片段和 TOC 结构摘要，不重复输出 plan/digest；完整绑定仍在
-脱敏 Debug JSON 的 `plan_created` 事件中。
+段落计划导出还会说明可独立选择的 XHTML 组数；计划导出保留可读的资源、源码片段和 TOC
+结构摘要，不重复输出 plan/digest。完整绑定和实际批准的 `selected_resource_ids` 仍可在
+脱敏 Debug JSON 的对应事件中审计。
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
@@ -227,7 +232,8 @@ Conversation Markdown 导出保留同样的 Plan review / Preview / Applied / Ro
 `transaction.preview` → `transaction.commit`。这条流程复用菜单功能的保守 DIV/CSS
 引擎；不要用正则逐段改写，也不要在 `paragraphs.apply` 前调用
 `transaction.begin`。`apply` 会核对计划 ID、摘要、书籍/XHTML/CSS 修订并自行创建
-独占暂存事务，成功也不代表已写入活书。完整协议、错误和证据见
+独占暂存事务；Edit 模式批准卡可只勾选计划内的一部分独立 XHTML 组，省略选择则保持全量
+计划语义。成功也不代表已写入活书。完整协议、错误和证据见
 [Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
 
 调整既有目录层级时使用 `toc.inspect_hierarchy` → `toc.plan_transform` →

@@ -42,10 +42,18 @@ CSS 依赖、输入与输出哈希。范围和依赖列表各最多返回 128 �
 - `plan_id`、`plan_digest`、`book_revision`；
 - 每份 XHTML 的路径、修订、XHTML/CSS 前后哈希；
 - 最多 4,096 个 UTF-16 code unit 的前后源码摘录；
+- 每份 XHTML 一个 `operation_groups` 记录，并声明
+  `operation_groups_independent=true`；
 - `changes_css=false`、`changes_opf=false`、`adds_resources=false`；
 - `local_validation=passed` 和 `full_epubcheck.status=not_run`。
 
 `local_validation` 只表示原生 XHTML/CSS 与结构不变量检查，不表示完整 EPUBCheck。
+
+每个操作组只含一个已审阅的 XHTML resource ID。Edit 模式的批准卡默认勾选全部组，用户
+可逐项取消；批准时 Runner 只允许把 `selected_resource_ids` 合入实际执行参数，不能借批准
+界面改写 plan ID、digest 或 revision。省略该参数保持兼容，表示应用完整计划；显式列表
+必须非空、无重复且完全属于当前计划。被选中的资源仍在同一个独占事务中原子暂存，任一
+暂存失败会回滚整批。未选择资源保持原样，不会偷偷进入 Preview。
 
 ## 审批绑定与失败边界
 
@@ -59,6 +67,9 @@ CSS 依赖、输入与输出哈希。范围和依赖列表各最多返回 128 �
 - `ANALYSIS_NOT_FOUND` / `PLAN_NOT_FOUND`：当前书籍会话没有对应状态；
 - `ANALYSIS_BINDING_MISMATCH` / `PLAN_BINDING_MISMATCH`：ID、摘要或修订不一致；
 - `PLAN_SELECTION_UNSAFE`：请求包含非自动安全资源；
+- `PLAN_GROUP_SELECTION_EMPTY`：批准时没有选择任何独立 XHTML 组；
+- `PLAN_GROUP_NOT_FOUND`：选择包含当前已审阅计划以外的资源；
+- `INVALID_ARGUMENT`：选择不是字符串数组、含空 ID 或重复 ID；
 - `ANALYSIS_STALE` / `PLAN_STALE` / `BOOK_REVISION_CONFLICT`：XHTML、CSS、路径或书籍已变化；
 - `TRANSACTION_OPEN`：已有事务，须先预览、提交或回滚；
 - `CANCELLED`：取消发生在分析、重建或暂存期间；
@@ -77,6 +88,7 @@ ctest --test-dir build --output-on-failure \
 ```
 
 自动测试覆盖跨会话拒绝、计划摘要、CSS 变化但书籍计数未更新的冲突、Ruby/标题/空行
-保留、幂等、取消、第二个文件暂存失败后的整批回滚，以及 Edit 模式审批拒绝时工具不
-启动。当前未执行完整 EPUBCheck、真实书籍视觉比较或 Windows/Linux Native Agent
-交互，因此这些仍是发布验收边界。
+保留、幂等、取消、空/重复/越界组拒绝、只暂存两个资源中的一个、第二个文件暂存失败后的
+整批回滚，以及 Edit 模式审批拒绝与精确组选择。Dock 回归还覆盖默认全选、清空阻断、批准
+后冻结和畸形重复组失败关闭。当前未执行完整 EPUBCheck、真实书籍视觉比较或 Windows/
+Linux Native Agent 交互，因此这些仍是发布验收边界。
