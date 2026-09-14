@@ -1402,3 +1402,43 @@ commit JSON 去重。完整 Sigil 构建及 42 个固定 Python 依赖通过；1
 provider tokenizer 预估或自动按模型 context length 调整预算。字节计费不含 JSON 数组分隔符和
 HTTP 包装开销；Unlimited 仍可能产生很大的请求。尚未完成超长真实在线会话的延迟/费用对比、
 低内存设备与 Windows/Linux GUI 人工验收。
+
+## Native Agent 按模式过滤工具目录（2026-09-15）
+
+分支：`feature/agent-mode-tool-catalog`。主要提交：`b9bed70e9`（权限同源的 schema 过滤与
+Runner 审计）、`6eeedba7b`（Technical details 展示）和 `096fae2b9`（四语文案）。
+
+### 请求目录与执行策略同源
+
+- `ToolRegistry::openaiToolSchemas` 新增 descriptor predicate，可在保持原有注册顺序、wire name
+  和 schema 结构的同时输出严格子集；无 predicate 的旧调用仍返回完整目录。
+- `PromptAssembler` 使用 Runner 传入的同一个 `PermissionPolicy` 判断 `Deny`：Ask 不再向模型
+  宣告任何 `mutatesBook` 工具；Plan 保留读工具、begin/preview/rollback 及声明支持 preview 的
+  暂存工具，隐藏 commit、checkpoint create/restore、`python.run` 和其他不可预览写入；Edit/
+  Auto 没有 Deny，继续收到完整目录。空指针直调 PromptAssembler 时使用同类型默认策略，测试
+  和非 Runner 调用不会退回无条件全量目录。
+- 过滤只改变发送给模型的 schema，不改变 ToolRegistry 内容。Runner 收到 tool call 后仍按
+  wire/dotted name 查真实 descriptor 并再次执行权限策略；恶意或幻觉模型返回 Ask 写工具时仍
+  产生 `PERMISSION_DENIED` tool-role 结果且不进入 ToolStarted，不会把优化当作授权边界。
+- 每个 `ModelRequest` 和 `model_request_started` 新增 `tool_context`：模式、策略已应用标志、
+  总计/暴露/隐藏数量、按注册顺序的隐藏 dotted names、完整/暴露紧凑 JSON schema 字节和差值。
+  这些统计不发送给模型，只进入会话审计与脱敏 Debug JSON。
+
+### 用户可观察性与测试证据
+
+Dock 的 **Technical details** 显示最近请求暴露/总工具数、按模式隐藏数和过滤后/未过滤 schema
+KiB；精确数量、字节、节省字节与隐藏工具名同时作为 QWidget 动态属性供 GUI 自动化读取。
+Edit/Auto 的隐藏数和节省值明确为 0，不制造性能收益；这里的字节差也不冒充 provider token。
+
+`agent_book_tools` 覆盖 ToolRegistry predicate 只保留接受的 descriptor；`agent_harness` 分别
+固定 Ask、Plan、Edit、Auto 的工具集合与统计，验证 Ask 隐藏 patch/commit/python、Plan 保留
+patch 但隐藏 commit/checkpoint create/python、Edit/Auto 完整，并模拟模型返回未宣告 Ask 写
+工具后仍被执行策略拒绝；`agent_dock` / `agent_dock_contract` 覆盖请求事件、可读摘要、精确
+属性与隐藏名称。完整 Sigil 构建及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 轮共
+42 次通过。四份 `.qm` 均为 0 unfinished，英文 4,763 条，简中/繁中/日文各 5,740 条；当前
+Agent Dock/设置的 275 条活跃文案已逐项核对四语存在、非空和占位符一致。
+
+本切片减少的是每次请求固定携带的工具 schema 和选择错误工具的机会，不改变 Provider、工具
+实现、批准流程或模式语义。它没有做任务意图级动态工具检索、工具分组分页、在线模型 A/B、
+tokenizer 精确计数或跨 provider 成本基准；Edit/Auto 仍携带完整目录，后续若继续缩减必须保证
+多步骤任务能够发现所需工具，不能只为更小请求而牺牲完成能力。

@@ -18,7 +18,7 @@ Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手�
 - **Retry**：仅在可以安全重跑的首个 Provider 请求失败后启用
 - 纯文本提交卡上的 **Restore this task**：在后续目标内容未改变时恢复该次提交
 - 默认折叠的 **Technical details**：完整会话/整轮运行/请求/书籍 ID、两级耗时、token
-  用量、请求历史预算、revision、模式与冻结范围
+  用量、请求历史与工具目录预算、revision、模式与冻结范围
 - **Export**：导出当前对话（Markdown）或完整调试日志（JSON，已脱敏）
 - 事件卡片：每一轮独立的用户 / 折叠 Thinking / 回答；工具卡片会更新运行状态；原生计划按资源展示可检查差异；批准带影响与计划绑定；预览按变更类型列出暂存内容；提交和回滚显示独立结果；错误
 
@@ -162,6 +162,18 @@ book session 且没有活动运行时启用；换书或 New Session 后失效。
 | **Plan** | 可以 `transaction.begin`、暂存 create/copy/rename/patch/CSS/metadata，并 `preview`。不能 `commit` / `restore` / `python.run`。活书保持不变。 |
 | **Edit** | 可通过工具改书。可逆编辑默认要你点 **Approve**。提交结果会说明保存、校验和可用的恢复边界。 |
 | **Auto** | 与 Edit 相同的写入工具，但默认全部允许，不再弹出 Approve。 |
+
+每次模型请求只发送当前模式的权限策略允许调用的工具 schema。Ask 隐藏所有会改 Book 的工具；
+Plan 保留只读、transaction begin/preview/rollback 和可暂存预览的工具，但不发送 commit、
+checkpoint create/restore、`python.run` 及其他不能预览的写工具；Edit 与 Auto 继续发送完整目录。
+过滤直接调用 Runner 随后用于执行工具的同一个 `PermissionPolicy`，避免请求目录和实际权限
+各写一套规则。
+
+这是减少请求体和无效工具选择的优化，不是唯一安全边界。模型若仍返回未宣告、拼错或当前
+模式禁止的工具，Runner 会照常按注册表解析并在执行前拒绝，不能靠伪造 tool call 绕过模式。
+每个 `model_request_started.tool_context` 会记录完整/暴露/隐藏工具数、隐藏名称以及过滤前后
+schema 字节；**Technical details** 显示数量和大小，Debug JSON 保留精确字段。schema 大小是
+紧凑 JSON 数组大小，不是 token 估算，也不包括消息正文和 HTTP 包装。
 
 **Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤不会被
 `transaction.rollback` 撤销，结果仍标为 Applied；纯文本提交可使用该 Applied 卡上的

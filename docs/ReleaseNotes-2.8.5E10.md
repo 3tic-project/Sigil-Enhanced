@@ -220,6 +220,17 @@ Native Agent 不再在每次请求中无界回放整个会话。默认只为先�
 Conversation 导出或任务记忆，也不是模型 token 上限。每次请求的已发送/遗漏轮次、先前历史
 字节和当前轮大小会写入调试事件，并显示在 **Technical details** 中。
 
+### Agent 按模式缩小工具目录
+
+模型请求不再无论模式都携带整套工具 schema。Ask 只宣告不会改 Book 的工具；Plan 保留读取、
+事务预览/回滚和可暂存的修改工具，但隐藏 commit、checkpoint create/restore、`python.run`
+等当前模式必然拒绝的能力；Edit 与 Auto 保持完整目录。这样既缩小请求体，也减少模型选择
+一个注定失败工具后再补发拒绝结果的往返。
+
+目录过滤与执行阶段共用同一个权限策略，但没有替代执行检查。即使模型自行返回未宣告的写
+工具，Runner 仍会拒绝。最近请求暴露/隐藏的工具数和过滤前后 schema 大小会进入调试事件，
+并显示在 **Technical details** 中，便于确认实际节省而不是估算 token。
+
 ### Agent 可审阅原生计划
 
 `paragraphs.plan` 与 `toc.plan_transform` 成功后，Agent 停靠栏现在显示独立计划审阅卡。
@@ -258,7 +269,7 @@ Agent 仍实时显示 Thinking 与 Answer，但会把约 33 ms 内到达的细�
 ## 兼容性
 
 - Automate 命令、快捷键、插件接口没有改。
-- 当前 C++、头文件和 Qt Designer 源码中的 5,739 条活跃界面文案，已全部进入简体中文、
+- 当前 C++、头文件和 Qt Designer 源码中的 5,740 条活跃界面文案，已全部进入简体中文、
   繁体中文和日文目录且没有 unfinished 条目；严格目录覆盖测试通过。详见
   [PRD 实施审计](PRD-2026-09-05-Implementation.md)。
 
@@ -267,7 +278,8 @@ Agent 仍实时显示 Thinking 与 Answer，但会把约 33 ms 内到达的细�
 - Debug 版 Sigil 能完整编过、链过，内置 Python 包也校验过。
 - CTest 覆盖了 KFX 导入、无损保存、代码视图关闭、EPUB 2→3 实体与导航、预览网格、
   代码视图选择、Clips 快捷键角标、目录层级编辑、DIV 段落结构规范化和 Native Agent
-  请求/用量状态、完整轮次历史预算、流式界面合并、计划双栏比较、段落独立操作组及事务
-  资源结果。四语文案均可生成 `.qm` 且 0 unfinished；严格简中、繁中、日文目录覆盖检查通过。
+  请求/用量状态、完整轮次历史预算、按模式工具目录、流式界面合并、计划双栏比较、段落
+  独立操作组及事务资源结果。四语文案均可生成 `.qm` 且 0 unfinished；严格简中、繁中、
+  日文目录覆盖检查通过。
 
 本说明对应发布标签 `v2.8.5E10`。Windows / macOS 安装包、签名和校验和按[发布清单](ReleaseChecklist.md)在打标签后生成。
