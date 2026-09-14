@@ -27388,6 +27388,8 @@ Continue using the requested filename?</source>
     <message><source>Run token usage: not reported by provider</source><translation>整轮 Token 用量：提供商未报告</translation></message>
     <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>整轮 Token 用量：输入 %1 · 输出 %2 · 总计 %3</translation></message>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>整轮 Token 用量（%1/%2 个请求已报告）：输入 %3 · 输出 %4 · 总计 %5</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>请求历史：已发送 %1/%2 轮 · 已省略 %3 轮 · 先前轮次 %4/%5 KiB · 当前轮次 %6 KiB（始终保留）</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>请求历史：已发送 %1/%2 轮 · 先前轮次预算无限制 · 先前轮次 %3 KiB · 当前轮次 %4 KiB（始终保留）</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>整轮用量详情：缓存输入 %1 · 推理 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完整 EPUBCheck：未运行。</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>完整 EPUBCheck：%1</translation></message>
@@ -27405,7 +27407,7 @@ Continue using the requested filename?</source>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>运行期间打开的书籍发生了更改。旧响应在应用到新书籍前已被阻止。</translation></message>
     <message><source>Retry</source><translation>重试</translation></message>
     <message><source>Technical details</source><translation>技术详情</translation></message>
-    <message><source>Show request identifiers, timing, token usage, target revision, and scope handles.</source><translation>显示请求标识符、耗时、Token 用量、目标修订和范围句柄。</translation></message>
+    <message><source>Show request identifiers, timing, token usage, history budget, target revision, and scope handles.</source><translation>显示请求标识符、耗时、Token 用量、历史预算、目标修订和范围句柄。</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 毫秒 · %3</translation></message>
     <message><source>Session: %1</source><translation>会话：%1</translation></message>
     <message><source>Not available</source><translation>不可用</translation></message>
@@ -27536,6 +27538,10 @@ Continue using the requested filename?</source>
     <message><source>Send thinking (reasoning_content)</source><translation>发送思考内容（reasoning_content）</translation></message>
     <message><source>Request token usage when supported</source><translation>在支持时请求 Token 用量</translation></message>
     <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>向流式请求添加 stream_options.include_usage。如果端点拒绝该选项，请将其关闭。</translation></message>
+    <message><source> KiB</source><translation> KiB</translation></message>
+    <message><source>Unlimited</source><translation>无限制</translation></message>
+    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>仅限制发送给模型的先前完整会话轮次。当前运行始终完整保留。</translation></message>
+    <message><source>Previous-turn history budget</source><translation>先前轮次历史预算</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>仅存储在本机 Sigil 设置中，绝不会写入 EPUB 或会话记录</translation></message>
     <message><source>parameters: %1</source><translation>参数：%1</translation></message>
     <message><source>reasoning</source><translation>推理</translation></message>

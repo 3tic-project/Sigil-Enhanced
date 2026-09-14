@@ -149,7 +149,7 @@ AgentDock::AgentDock(QWidget *parent) :
     m_technicalDetailsToggle->setArrowType(Qt::RightArrow);
     m_technicalDetailsToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     m_technicalDetailsToggle->setAccessibleDescription(
-        tr("Show request identifiers, timing, token usage, target revision, and scope handles."));
+        tr("Show request identifiers, timing, token usage, history budget, target revision, and scope handles."));
     m_technicalDetails = new QLabel(root);
     m_technicalDetails->setObjectName(QStringLiteral("agentTechnicalDetails"));
     m_technicalDetails->setWordWrap(true);

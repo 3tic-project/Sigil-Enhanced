@@ -23444,6 +23444,8 @@ Continue using the requested filename?</translation>
     <message><source>Run token usage: not reported by provider</source><translation>Run token usage: not reported by provider</translation></message>
     <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>Run token usage: input %1 · output %2 · total %3</translation></message>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>Run usage details: cached input %1 · reasoning %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>Full EPUBCheck: not run.</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>Full EPUBCheck: %1</translation></message>
@@ -23461,7 +23463,7 @@ Continue using the requested filename?</translation>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>The open book changed during this run. The old response was blocked before it could be applied to the new book.</translation></message>
     <message><source>Retry</source><translation>Retry</translation></message>
     <message><source>Technical details</source><translation>Technical details</translation></message>
-    <message><source>Show request identifiers, timing, token usage, target revision, and scope handles.</source><translation>Show request identifiers, timing, token usage, target revision, and scope handles.</translation></message>
+    <message><source>Show request identifiers, timing, token usage, history budget, target revision, and scope handles.</source><translation>Show request identifiers, timing, token usage, history budget, target revision, and scope handles.</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ms · %3</translation></message>
     <message><source>Session: %1</source><translation>Session: %1</translation></message>
     <message><source>Not available</source><translation>Not available</translation></message>
@@ -23592,6 +23594,10 @@ Continue using the requested filename?</translation>
     <message><source>Send thinking (reasoning_content)</source><translation>Send thinking (reasoning_content)</translation></message>
     <message><source>Request token usage when supported</source><translation>Request token usage when supported</translation></message>
     <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</translation></message>
+    <message><source> KiB</source><translation> KiB</translation></message>
+    <message><source>Unlimited</source><translation>Unlimited</translation></message>
+    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</translation></message>
+    <message><source>Previous-turn history budget</source><translation>Previous-turn history budget</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>Stored only in local Sigil settings, never in the EPUB or transcript</translation></message>
     <message><source>parameters: %1</source><translation>parameters: %1</translation></message>
     <message><source>reasoning</source><translation>reasoning</translation></message>

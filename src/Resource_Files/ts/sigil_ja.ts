@@ -27386,6 +27386,8 @@ Continue using the requested filename?</source>
     <message><source>Run token usage: not reported by provider</source><translation>実行全体のトークン使用量：プロバイダーからの報告なし</translation></message>
     <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>実行全体のトークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>実行全体のトークン使用量（%2 件中 %1 件のリクエストが報告済み）：入力 %3 · 出力 %4 · 合計 %5</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · %3 ターンを省略 · 過去 %4/%5 KiB · 現在 %6 KiB（常に保持）</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · 過去ターンの予算は無制限 · 過去 %3 KiB · 現在 %4 KiB（常に保持）</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>実行全体の使用量詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完全な EPUBCheck：未実行。</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>完全な EPUBCheck：%1</translation></message>
@@ -27403,7 +27405,7 @@ Continue using the requested filename?</source>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>実行中に開いているブックが変更されました。以前の応答は新しいブックに適用される前にブロックされました。</translation></message>
     <message><source>Retry</source><translation>再試行</translation></message>
     <message><source>Technical details</source><translation>技術的な詳細</translation></message>
-    <message><source>Show request identifiers, timing, token usage, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、トークン使用量、対象リビジョン、スコープハンドルを表示します。</translation></message>
+    <message><source>Show request identifiers, timing, token usage, history budget, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、トークン使用量、履歴予算、対象リビジョン、スコープハンドルを表示します。</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ミリ秒 · %3</translation></message>
     <message><source>Session: %1</source><translation>セッション：%1</translation></message>
     <message><source>Not available</source><translation>利用不可</translation></message>
@@ -27534,6 +27536,10 @@ Continue using the requested filename?</source>
     <message><source>Send thinking (reasoning_content)</source><translation>思考内容（reasoning_content）を送信</translation></message>
     <message><source>Request token usage when supported</source><translation>対応時にトークン使用量を要求</translation></message>
     <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>ストリーミングリクエストに stream_options.include_usage を追加します。エンドポイントがこのオプションを拒否する場合は無効にしてください。</translation></message>
+    <message><source> KiB</source><translation> KiB</translation></message>
+    <message><source>Unlimited</source><translation>無制限</translation></message>
+    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>モデルに送信する過去の完全な会話ターンだけを制限します。現在の実行は常に完全なまま保持されます。</translation></message>
+    <message><source>Previous-turn history budget</source><translation>過去ターンの履歴予算</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>ローカルの Sigil 設定にのみ保存され、EPUB や会話記録には保存されません</translation></message>
     <message><source>parameters: %1</source><translation>パラメーター：%1</translation></message>
     <message><source>reasoning</source><translation>推論</translation></message>
