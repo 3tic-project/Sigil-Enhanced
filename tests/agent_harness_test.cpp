@@ -55,8 +55,10 @@ int main()
     Require(edit_system_prompt.contains(QStringLiteral("resource_outcomes"))
                 && edit_system_prompt.contains(QStringLiteral("transaction_state"))
                 && edit_system_prompt.contains(
-                    QStringLiteral("never infer resource success from applied_changes")),
-            "system prompt must ground final commit summaries in exact resource outcomes");
+                    QStringLiteral("never infer resource success from applied_changes"))
+                && edit_system_prompt.contains(
+                    QStringLiteral("When has_more=true, use next_offset")),
+            "system prompt must ground commit summaries and paginated inventory traversal");
 
     MemoryBookWorkspace selection_book;
     MemoryResource selection_resource;
