@@ -27382,6 +27382,8 @@ Continue using the requested filename?</source>
     <message><source>Whole run: in progress</source><translation>実行全体：進行中</translation></message>
     <message><source>Model-step budget: %1/%2 used</source><translation>モデルステップ予算：%1/%2 使用</translation></message>
     <message><source>Model-step budget: limit %1 per run</source><translation>モデルステップ予算：実行ごとの上限 %1</translation></message>
+    <message><source>Tool-call budget: %1/%2 used</source><translation>ツール呼び出し予算：%1/%2 使用</translation></message>
+    <message><source>Tool-call budget: limit %1 per run</source><translation>ツール呼び出し予算：実行ごとの上限 %1</translation></message>
     <message><source>Run token usage: not requested</source><translation>実行全体のトークン使用量：要求なし</translation></message>
     <message><source>Run token usage: awaiting completed requests</source><translation>実行全体のトークン使用量：リクエストの完了待ち</translation></message>
     <message><source>Run token usage: no model request was sent</source><translation>実行全体のトークン使用量：モデルリクエストは未送信</translation></message>
@@ -27545,6 +27547,8 @@ Continue using the requested filename?</source>
     <message><source>Previous-turn history budget</source><translation>過去ターンの履歴予算</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>このモデルリクエスト回数に達すると実行を停止し、未コミットのステージ済みトランザクションをロールバックします。</translation></message>
     <message><source>Maximum model steps per run</source><translation>実行ごとの最大モデルステップ数</translation></message>
+    <message><source>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</source><translation>モデルのツール呼び出しバッチ全体がこの実行上限を超える場合、そのバッチを拒否して未コミットのステージ済み作業をロールバックします。</translation></message>
+    <message><source>Maximum tool calls per run</source><translation>実行ごとの最大ツール呼び出し数</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>ローカルの Sigil 設定にのみ保存され、EPUB や会話記録には保存されません</translation></message>
     <message><source>parameters: %1</source><translation>パラメーター：%1</translation></message>
     <message><source>reasoning</source><translation>推論</translation></message>

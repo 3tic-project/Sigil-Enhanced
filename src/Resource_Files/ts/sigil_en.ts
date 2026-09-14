@@ -23440,6 +23440,8 @@ Continue using the requested filename?</translation>
     <message><source>Whole run: in progress</source><translation>Whole run: in progress</translation></message>
     <message><source>Model-step budget: %1/%2 used</source><translation>Model-step budget: %1/%2 used</translation></message>
     <message><source>Model-step budget: limit %1 per run</source><translation>Model-step budget: limit %1 per run</translation></message>
+    <message><source>Tool-call budget: %1/%2 used</source><translation>Tool-call budget: %1/%2 used</translation></message>
+    <message><source>Tool-call budget: limit %1 per run</source><translation>Tool-call budget: limit %1 per run</translation></message>
     <message><source>Run token usage: not requested</source><translation>Run token usage: not requested</translation></message>
     <message><source>Run token usage: awaiting completed requests</source><translation>Run token usage: awaiting completed requests</translation></message>
     <message><source>Run token usage: no model request was sent</source><translation>Run token usage: no model request was sent</translation></message>
@@ -23603,6 +23605,8 @@ Continue using the requested filename?</translation>
     <message><source>Previous-turn history budget</source><translation>Previous-turn history budget</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</translation></message>
     <message><source>Maximum model steps per run</source><translation>Maximum model steps per run</translation></message>
+    <message><source>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</source><translation>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</translation></message>
+    <message><source>Maximum tool calls per run</source><translation>Maximum tool calls per run</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>Stored only in local Sigil settings, never in the EPUB or transcript</translation></message>
     <message><source>parameters: %1</source><translation>parameters: %1</translation></message>
     <message><source>reasoning</source><translation>reasoning</translation></message>

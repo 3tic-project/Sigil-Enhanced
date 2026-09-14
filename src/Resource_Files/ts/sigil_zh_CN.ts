@@ -27384,6 +27384,8 @@ Continue using the requested filename?</source>
     <message><source>Whole run: in progress</source><translation>整轮运行：进行中</translation></message>
     <message><source>Model-step budget: %1/%2 used</source><translation>模型步骤预算：已使用 %1/%2</translation></message>
     <message><source>Model-step budget: limit %1 per run</source><translation>模型步骤预算：每次运行上限 %1</translation></message>
+    <message><source>Tool-call budget: %1/%2 used</source><translation>工具调用预算：已使用 %1/%2</translation></message>
+    <message><source>Tool-call budget: limit %1 per run</source><translation>工具调用预算：每次运行上限 %1</translation></message>
     <message><source>Run token usage: not requested</source><translation>整轮 Token 用量：未请求</translation></message>
     <message><source>Run token usage: awaiting completed requests</source><translation>整轮 Token 用量：正在等待请求完成</translation></message>
     <message><source>Run token usage: no model request was sent</source><translation>整轮 Token 用量：未发送模型请求</translation></message>
@@ -27547,6 +27549,8 @@ Continue using the requested filename?</source>
     <message><source>Previous-turn history budget</source><translation>先前轮次历史预算</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>达到此模型请求次数后停止运行，并回滚任何尚未提交的暂存事务。</translation></message>
     <message><source>Maximum model steps per run</source><translation>每次运行的最大模型步骤数</translation></message>
+    <message><source>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</source><translation>如果整个模型工具调用批次会超出本轮上限，则拒绝该批次，然后回滚尚未提交的暂存工作。</translation></message>
+    <message><source>Maximum tool calls per run</source><translation>每次运行的最大工具调用数</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>仅存储在本机 Sigil 设置中，绝不会写入 EPUB 或会话记录</translation></message>
     <message><source>parameters: %1</source><translation>参数：%1</translation></message>
     <message><source>reasoning</source><translation>推理</translation></message>

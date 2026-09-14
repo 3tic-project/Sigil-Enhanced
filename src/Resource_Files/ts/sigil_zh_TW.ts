@@ -27367,6 +27367,8 @@ Continue using the requested filename?</source>
     <message><source>Whole run: in progress</source><translation>整輪執行：進行中</translation></message>
     <message><source>Model-step budget: %1/%2 used</source><translation>模型步驟預算：已使用 %1/%2</translation></message>
     <message><source>Model-step budget: limit %1 per run</source><translation>模型步驟預算：每次執行上限 %1</translation></message>
+    <message><source>Tool-call budget: %1/%2 used</source><translation>工具呼叫預算：已使用 %1/%2</translation></message>
+    <message><source>Tool-call budget: limit %1 per run</source><translation>工具呼叫預算：每次執行上限 %1</translation></message>
     <message><source>Run token usage: not requested</source><translation>整輪 Token 用量：未請求</translation></message>
     <message><source>Run token usage: awaiting completed requests</source><translation>整輪 Token 用量：正在等待請求完成</translation></message>
     <message><source>Run token usage: no model request was sent</source><translation>整輪 Token 用量：未傳送模型請求</translation></message>
@@ -27530,6 +27532,8 @@ Continue using the requested filename?</source>
     <message><source>Previous-turn history budget</source><translation>先前輪次歷史預算</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>達到此模型請求次數後停止執行，並回復任何尚未提交的暫存交易。</translation></message>
     <message><source>Maximum model steps per run</source><translation>每次執行的最大模型步驟數</translation></message>
+    <message><source>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</source><translation>如果整個模型工具呼叫批次會超出本輪上限，則拒絕該批次，然後回復尚未提交的暫存工作。</translation></message>
+    <message><source>Maximum tool calls per run</source><translation>每次執行的最大工具呼叫數</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>僅儲存在本機 Sigil 設定中，絕不寫入 EPUB 或工作階段記錄</translation></message>
     <message><source>parameters: %1</source><translation>參數：%1</translation></message>
     <message><source>reasoning</source><translation>推理</translation></message>
