@@ -27380,6 +27380,8 @@ Continue using the requested filename?</source>
     <message><source>Run status: %1</source><translation>実行状態：%1</translation></message>
     <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>実行全体：%1 ミリ秒 · モデルリクエスト %2 · ツール呼び出し %3 · 完了：%4</translation></message>
     <message><source>Whole run: in progress</source><translation>実行全体：進行中</translation></message>
+    <message><source>Model-step budget: %1/%2 used</source><translation>モデルステップ予算：%1/%2 使用</translation></message>
+    <message><source>Model-step budget: limit %1 per run</source><translation>モデルステップ予算：実行ごとの上限 %1</translation></message>
     <message><source>Run token usage: not requested</source><translation>実行全体のトークン使用量：要求なし</translation></message>
     <message><source>Run token usage: awaiting completed requests</source><translation>実行全体のトークン使用量：リクエストの完了待ち</translation></message>
     <message><source>Run token usage: no model request was sent</source><translation>実行全体のトークン使用量：モデルリクエストは未送信</translation></message>
@@ -27406,7 +27408,7 @@ Continue using the requested filename?</source>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>実行中に開いているブックが変更されました。以前の応答は新しいブックに適用される前にブロックされました。</translation></message>
     <message><source>Retry</source><translation>再試行</translation></message>
     <message><source>Technical details</source><translation>技術的な詳細</translation></message>
-    <message><source>Show request identifiers, timing, token usage, history and tool budgets, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、トークン使用量、履歴とツールの予算、対象リビジョン、スコープハンドルを表示します。</translation></message>
+    <message><source>Show request identifiers, timing, token usage, run limits, history and tool budgets, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、トークン使用量、実行上限、履歴とツールの予算、対象リビジョン、スコープハンドルを表示します。</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ミリ秒 · %3</translation></message>
     <message><source>Session: %1</source><translation>セッション：%1</translation></message>
     <message><source>Not available</source><translation>利用不可</translation></message>
@@ -27541,6 +27543,8 @@ Continue using the requested filename?</source>
     <message><source>Unlimited</source><translation>無制限</translation></message>
     <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>モデルに送信する過去の完全な会話ターンだけを制限します。現在の実行は常に完全なまま保持されます。</translation></message>
     <message><source>Previous-turn history budget</source><translation>過去ターンの履歴予算</translation></message>
+    <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>このモデルリクエスト回数に達すると実行を停止し、未コミットのステージ済みトランザクションをロールバックします。</translation></message>
+    <message><source>Maximum model steps per run</source><translation>実行ごとの最大モデルステップ数</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>ローカルの Sigil 設定にのみ保存され、EPUB や会話記録には保存されません</translation></message>
     <message><source>parameters: %1</source><translation>パラメーター：%1</translation></message>
     <message><source>reasoning</source><translation>推論</translation></message>

@@ -27365,6 +27365,8 @@ Continue using the requested filename?</source>
     <message><source>Run status: %1</source><translation>執行狀態：%1</translation></message>
     <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>整輪執行：%1 毫秒 · 模型請求 %2 · 工具呼叫 %3 · 完成時間：%4</translation></message>
     <message><source>Whole run: in progress</source><translation>整輪執行：進行中</translation></message>
+    <message><source>Model-step budget: %1/%2 used</source><translation>模型步驟預算：已使用 %1/%2</translation></message>
+    <message><source>Model-step budget: limit %1 per run</source><translation>模型步驟預算：每次執行上限 %1</translation></message>
     <message><source>Run token usage: not requested</source><translation>整輪 Token 用量：未請求</translation></message>
     <message><source>Run token usage: awaiting completed requests</source><translation>整輪 Token 用量：正在等待請求完成</translation></message>
     <message><source>Run token usage: no model request was sent</source><translation>整輪 Token 用量：未傳送模型請求</translation></message>
@@ -27391,7 +27393,7 @@ Continue using the requested filename?</source>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>執行期間開啟的書籍已變更。舊回應在套用至新書籍前已被封鎖。</translation></message>
     <message><source>Retry</source><translation>重試</translation></message>
     <message><source>Technical details</source><translation>技術詳細資料</translation></message>
-    <message><source>Show request identifiers, timing, token usage, history and tool budgets, target revision, and scope handles.</source><translation>顯示請求識別碼、耗時、Token 用量、歷史與工具預算、目標修訂和範圍代碼。</translation></message>
+    <message><source>Show request identifiers, timing, token usage, run limits, history and tool budgets, target revision, and scope handles.</source><translation>顯示請求識別碼、耗時、Token 用量、執行上限、歷史與工具預算、目標修訂和範圍代碼。</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 毫秒 · %3</translation></message>
     <message><source>Session: %1</source><translation>工作階段：%1</translation></message>
     <message><source>Not available</source><translation>無法使用</translation></message>
@@ -27526,6 +27528,8 @@ Continue using the requested filename?</source>
     <message><source>Unlimited</source><translation>無限制</translation></message>
     <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>僅限制傳送給模型的先前完整對話輪次。目前執行始終完整保留。</translation></message>
     <message><source>Previous-turn history budget</source><translation>先前輪次歷史預算</translation></message>
+    <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>達到此模型請求次數後停止執行，並回復任何尚未提交的暫存交易。</translation></message>
+    <message><source>Maximum model steps per run</source><translation>每次執行的最大模型步驟數</translation></message>
     <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>僅儲存在本機 Sigil 設定中，絕不寫入 EPUB 或工作階段記錄</translation></message>
     <message><source>parameters: %1</source><translation>參數：%1</translation></message>
     <message><source>reasoning</source><translation>推理</translation></message>
