@@ -304,11 +304,31 @@ int main(int argc, char *argv[])
         { QStringLiteral("applied_to_book"), false },
         { QStringLiteral("save_status"), QStringLiteral("not_applied") }
     });
+    const QJsonObject exported_commit_outcomes {
+        { QStringLiteral("scope_available"), true },
+        { QStringLiteral("all_or_nothing"), true },
+        { QStringLiteral("status"), QStringLiteral("all_applied") },
+        { QStringLiteral("transaction_state"), QStringLiteral("committed") },
+        { QStringLiteral("resource_count"), 2 },
+        { QStringLiteral("successful_resource_count"), 2 },
+        { QStringLiteral("failed_resource_count"), 0 },
+        { QStringLiteral("structural_operation_count"), 0 },
+        { QStringLiteral("successful_structural_operation_count"), 0 },
+        { QStringLiteral("failed_structural_operation_count"), 0 }
+    };
+    session.append(AgentEventType::ToolCompleted, QJsonObject {
+        { QStringLiteral("name"), QStringLiteral("transaction.commit") },
+        { QStringLiteral("data"), QJsonObject {
+            { QStringLiteral("raw_commit_protocol_marker"), true },
+            { QStringLiteral("resource_outcomes"), exported_commit_outcomes }
+        } }
+    });
     session.append(AgentEventType::TransactionCommitted, QJsonObject {
         { QStringLiteral("applied_to_book"), true },
         { QStringLiteral("save_status"), QStringLiteral("not_saved") },
         { QStringLiteral("applied_changes"), 2 },
         { QStringLiteral("book_revision"), 9 },
+        { QStringLiteral("resource_outcomes"), exported_commit_outcomes },
         { QStringLiteral("full_epubcheck"), QJsonObject {
             { QStringLiteral("status"), QStringLiteral("not_run") }
         } },
@@ -316,6 +336,26 @@ int main(int argc, char *argv[])
             { QStringLiteral("task_restore_point"), QStringLiteral("available") },
             { QStringLiteral("affected_resources"), QJsonArray {
                 QStringLiteral("chapter-1"), QStringLiteral("chapter-2") } }
+        } }
+    });
+    session.append(AgentEventType::ToolFailed, QJsonObject {
+        { QStringLiteral("name"), QStringLiteral("transaction.commit") },
+        { QStringLiteral("code"), QStringLiteral("BOOK_REVISION_CONFLICT") },
+        { QStringLiteral("message"),
+          QStringLiteral("Conflict echoed sk-secretvalue999") },
+        { QStringLiteral("data"), QJsonObject {
+            { QStringLiteral("resource_outcomes"), QJsonObject {
+                { QStringLiteral("scope_available"), true },
+                { QStringLiteral("all_or_nothing"), true },
+                { QStringLiteral("status"), QStringLiteral("not_applied") },
+                { QStringLiteral("transaction_state"), QStringLiteral("staged") },
+                { QStringLiteral("resource_count"), 3 },
+                { QStringLiteral("successful_resource_count"), 0 },
+                { QStringLiteral("failed_resource_count"), 3 },
+                { QStringLiteral("structural_operation_count"), 1 },
+                { QStringLiteral("successful_structural_operation_count"), 0 },
+                { QStringLiteral("failed_structural_operation_count"), 1 }
+            } }
         } }
     });
     session.append(AgentEventType::TaskRestoreFailed, QJsonObject {
@@ -361,8 +401,26 @@ int main(int argc, char *argv[])
             "conversation export must distinguish preview from live-book changes");
     Require(markdown.contains(QStringLiteral("EPUB file has not been saved"))
                 && markdown.contains(QStringLiteral("Applied changes: 2"))
-                && markdown.contains(QStringLiteral("Book revision: 9")),
-            "conversation export must preserve commit save state and counts");
+                && markdown.contains(QStringLiteral("Book revision: 9"))
+                && markdown.contains(
+                    QStringLiteral("Resources: 2 succeeded; 0 failed"))
+                && markdown.contains(
+                    QStringLiteral("Atomic result: all staged targets were applied"))
+                && markdown.count(QStringLiteral("## Applied")) == 1
+                && !markdown.contains(
+                    QStringLiteral("raw_commit_protocol_marker")),
+            "conversation export must preserve one readable applied result without raw protocol duplication");
+    Require(markdown.contains(QStringLiteral("## Apply failed"))
+                && markdown.contains(
+                    QStringLiteral("Not applied to the current book"))
+                && markdown.contains(
+                    QStringLiteral("Resources: 0 succeeded; 3 failed"))
+                && markdown.contains(
+                    QStringLiteral("Structural operations: 0 succeeded; 1 failed"))
+                && markdown.contains(
+                    QStringLiteral("remains available for review, retry, or rollback"))
+                && markdown.contains(QStringLiteral("BOOK_REVISION_CONFLICT")),
+            "conversation export must preserve readable failed resource outcomes and staging state");
     Require(markdown.contains(QStringLiteral("Full EPUBCheck: not run"))
                 && markdown.contains(QStringLiteral("restore point is available for 2 text resource")),
             "conversation export must state validation and recovery boundaries");
