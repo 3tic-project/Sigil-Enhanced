@@ -40,6 +40,13 @@ int main()
 {
     using namespace SigilAgent;
 
+    const QString edit_system_prompt = PromptAssembler().systemPrompt(AgentMode::Edit);
+    Require(edit_system_prompt.contains(QStringLiteral("resource_outcomes"))
+                && edit_system_prompt.contains(QStringLiteral("transaction_state"))
+                && edit_system_prompt.contains(
+                    QStringLiteral("never infer resource success from applied_changes")),
+            "system prompt must ground final commit summaries in exact resource outcomes");
+
     MemoryBookWorkspace selection_book;
     MemoryResource selection_resource;
     selection_resource.id = QStringLiteral("scope:chapter");
