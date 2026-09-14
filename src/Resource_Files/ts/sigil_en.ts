@@ -23446,6 +23446,7 @@ Continue using the requested filename?</translation>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</translation></message>
     <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</translation></message>
     <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</translation></message>
+    <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>Run usage details: cached input %1 · reasoning %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>Full EPUBCheck: not run.</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>Full EPUBCheck: %1</translation></message>
@@ -23463,7 +23464,7 @@ Continue using the requested filename?</translation>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>The open book changed during this run. The old response was blocked before it could be applied to the new book.</translation></message>
     <message><source>Retry</source><translation>Retry</translation></message>
     <message><source>Technical details</source><translation>Technical details</translation></message>
-    <message><source>Show request identifiers, timing, token usage, history budget, target revision, and scope handles.</source><translation>Show request identifiers, timing, token usage, history budget, target revision, and scope handles.</translation></message>
+    <message><source>Show request identifiers, timing, token usage, history and tool budgets, target revision, and scope handles.</source><translation>Show request identifiers, timing, token usage, history and tool budgets, target revision, and scope handles.</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ms · %3</translation></message>
     <message><source>Session: %1</source><translation>Session: %1</translation></message>
     <message><source>Not available</source><translation>Not available</translation></message>

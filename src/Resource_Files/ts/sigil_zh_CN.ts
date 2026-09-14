@@ -27390,6 +27390,7 @@ Continue using the requested filename?</source>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>整轮 Token 用量（%1/%2 个请求已报告）：输入 %3 · 输出 %4 · 总计 %5</translation></message>
     <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>请求历史：已发送 %1/%2 轮 · 已省略 %3 轮 · 先前轮次 %4/%5 KiB · 当前轮次 %6 KiB（始终保留）</translation></message>
     <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>请求历史：已发送 %1/%2 轮 · 先前轮次预算无限制 · 先前轮次 %3 KiB · 当前轮次 %4 KiB（始终保留）</translation></message>
+    <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>请求工具：已暴露 %1/%2 个 · 模式策略已隐藏 %3 个 · schema %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>整轮用量详情：缓存输入 %1 · 推理 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完整 EPUBCheck：未运行。</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>完整 EPUBCheck：%1</translation></message>
@@ -27407,7 +27408,7 @@ Continue using the requested filename?</source>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>运行期间打开的书籍发生了更改。旧响应在应用到新书籍前已被阻止。</translation></message>
     <message><source>Retry</source><translation>重试</translation></message>
     <message><source>Technical details</source><translation>技术详情</translation></message>
-    <message><source>Show request identifiers, timing, token usage, history budget, target revision, and scope handles.</source><translation>显示请求标识符、耗时、Token 用量、历史预算、目标修订和范围句柄。</translation></message>
+    <message><source>Show request identifiers, timing, token usage, history and tool budgets, target revision, and scope handles.</source><translation>显示请求标识符、耗时、Token 用量、历史与工具预算、目标修订和范围句柄。</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 毫秒 · %3</translation></message>
     <message><source>Session: %1</source><translation>会话：%1</translation></message>
     <message><source>Not available</source><translation>不可用</translation></message>

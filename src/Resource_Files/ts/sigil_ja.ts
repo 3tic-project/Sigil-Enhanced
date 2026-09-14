@@ -27388,6 +27388,7 @@ Continue using the requested filename?</source>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>実行全体のトークン使用量（%2 件中 %1 件のリクエストが報告済み）：入力 %3 · 出力 %4 · 合計 %5</translation></message>
     <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · %3 ターンを省略 · 過去 %4/%5 KiB · 現在 %6 KiB（常に保持）</translation></message>
     <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · 過去ターンの予算は無制限 · 過去 %3 KiB · 現在 %4 KiB（常に保持）</translation></message>
+    <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>リクエストツール：%2 個中 %1 個を公開 · モードポリシーで %3 個を非表示 · スキーマ %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>実行全体の使用量詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完全な EPUBCheck：未実行。</translation></message>
     <message><source>Full EPUBCheck: %1</source><translation>完全な EPUBCheck：%1</translation></message>
@@ -27405,7 +27406,7 @@ Continue using the requested filename?</source>
     <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>実行中に開いているブックが変更されました。以前の応答は新しいブックに適用される前にブロックされました。</translation></message>
     <message><source>Retry</source><translation>再試行</translation></message>
     <message><source>Technical details</source><translation>技術的な詳細</translation></message>
-    <message><source>Show request identifiers, timing, token usage, history budget, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、トークン使用量、履歴予算、対象リビジョン、スコープハンドルを表示します。</translation></message>
+    <message><source>Show request identifiers, timing, token usage, history and tool budgets, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、トークン使用量、履歴とツールの予算、対象リビジョン、スコープハンドルを表示します。</translation></message>
     <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ミリ秒 · %3</translation></message>
     <message><source>Session: %1</source><translation>セッション：%1</translation></message>
     <message><source>Not available</source><translation>利用不可</translation></message>
