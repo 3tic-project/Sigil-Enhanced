@@ -143,6 +143,14 @@ require(
     "technical details must disclose each request's bounded history assembly",
 )
 require(
+    'QStringLiteral("tool_context")' in runner_cpp
+    and "m_requestToolContext" in dock_h
+    and "Request tools:" in dock_cpp
+    and 'setProperty(\n        "toolExposedCount"' in dock_cpp
+    and 'setProperty(\n        "toolSavedSchemaBytes"' in dock_cpp,
+    "technical details must disclose each request's mode-filtered tool catalog",
+)
+require(
     "AgentEventType::PlanCreated" in runner_cpp
     and "makePlanReviewCard" in dock_cpp
     and "openPlanResourceRequested" in dock_h

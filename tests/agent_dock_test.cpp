@@ -134,6 +134,18 @@ int main(int argc, char *argv[])
               { QStringLiteral("omitted_turn_count"), 1 },
               { QStringLiteral("included_previous_turn_bytes"), 20480 },
               { QStringLiteral("current_turn_bytes"), 5120 } } },
+        { QStringLiteral("tool_context"), QJsonObject {
+              { QStringLiteral("mode"), QStringLiteral("ask") },
+              { QStringLiteral("policy_applied"), true },
+              { QStringLiteral("total_tool_count"), 44 },
+              { QStringLiteral("exposed_tool_count"), 17 },
+              { QStringLiteral("hidden_tool_count"), 27 },
+              { QStringLiteral("hidden_tools"), QJsonArray {
+                    QStringLiteral("resource.patch_fragment"),
+                    QStringLiteral("transaction.commit") } },
+              { QStringLiteral("unfiltered_schema_bytes"), 32768 },
+              { QStringLiteral("exposed_schema_bytes"), 12288 },
+              { QStringLiteral("saved_schema_bytes"), 20480 } } },
         { QStringLiteral("context_handles"), QJsonArray {
               QStringLiteral("chapter-1:12-34"), QStringLiteral("book-css") } }
     };
@@ -191,8 +203,16 @@ int main(int argc, char *argv[])
                 && usage_details->property("historyIncludedPreviousBytes").toInt()
                     == 20480
                 && usage_details->property("historyCurrentTurnBytes").toInt()
-                    == 5120,
-            "technical details must expose exact token usage and bounded history assembly");
+                    == 5120
+                && usage_details->text().contains(
+                    QStringLiteral("Request tools: 17/44 exposed · 27 hidden by mode policy · schema 12/32 KiB"))
+                && usage_details->property("toolTotalCount").toInt() == 44
+                && usage_details->property("toolExposedCount").toInt() == 17
+                && usage_details->property("toolHiddenCount").toInt() == 27
+                && usage_details->property("toolSchemaBytes").toInt() == 12288
+                && usage_details->property("toolSavedSchemaBytes").toInt() == 20480
+                && usage_details->property("hiddenToolNames").toList().size() == 2,
+            "technical details must expose token, history, and mode tool request budgets");
     SigilAgent::AgentEvent run_completed;
     run_completed.type = SigilAgent::AgentEventType::RunStateChanged;
     run_completed.timestampMs = 1700000000100;

@@ -43,6 +43,13 @@ namespace
 
 constexpr int STREAM_FLUSH_INTERVAL_MS = 33;
 
+QString kibText(qint64 bytes)
+{
+    bytes = qMax<qint64>(0, bytes);
+    if (bytes % 1024 == 0) return QString::number(bytes / 1024);
+    return QString::number(bytes / 1024.0, 'f', 1);
+}
+
 QStringList checkedPlanGroupResourceIds(const QListWidget *list)
 {
     QStringList resource_ids;
@@ -301,6 +308,7 @@ void AgentDock::setSessionId(const QString &session_id)
     m_requestUsage = ModelUsage();
     m_requestTiming = ModelResponseTiming();
     m_requestHistoryContext = QJsonObject();
+    m_requestToolContext = QJsonObject();
     m_runId.clear();
     m_runStatus.clear();
     m_runDurationMs = -1;
@@ -646,6 +654,8 @@ void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &stat
         m_requestTiming = ModelResponseTiming();
         m_requestHistoryContext =
             payload.value(QStringLiteral("history_context")).toObject();
+        m_requestToolContext =
+            payload.value(QStringLiteral("tool_context")).toObject();
     } else if (payload.contains(QStringLiteral("usage_requested"))) {
         m_requestUsageRequested = payload.value(QStringLiteral("usage_requested")).toBool();
     }
@@ -660,6 +670,10 @@ void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &stat
     if (payload.value(QStringLiteral("history_context")).isObject()) {
         m_requestHistoryContext =
             payload.value(QStringLiteral("history_context")).toObject();
+    }
+    if (payload.value(QStringLiteral("tool_context")).isObject()) {
+        m_requestToolContext =
+            payload.value(QStringLiteral("tool_context")).toObject();
     }
     if (payload.contains(QStringLiteral("request_id"))) {
         m_requestId = payload.value(QStringLiteral("request_id")).toString();
@@ -827,14 +841,22 @@ void AgentDock::refreshTechnicalDetails()
         lines.append(tr("Model: %1").arg(m_requestModel));
         lines.append(tr("Scope handles: %1").arg(
             m_requestHandles.isEmpty() ? tr("None") : m_requestHandles.join(QStringLiteral(", "))));
+        if (!m_requestToolContext.isEmpty()) {
+            lines.append(tr("Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB")
+                             .arg(m_requestToolContext
+                                      .value(QStringLiteral("exposed_tool_count")).toInt())
+                             .arg(m_requestToolContext
+                                      .value(QStringLiteral("total_tool_count")).toInt())
+                             .arg(m_requestToolContext
+                                      .value(QStringLiteral("hidden_tool_count")).toInt())
+                             .arg(kibText(m_requestToolContext
+                                              .value(QStringLiteral("exposed_schema_bytes"))
+                                              .toInteger()),
+                                  kibText(m_requestToolContext
+                                              .value(QStringLiteral("unfiltered_schema_bytes"))
+                                              .toInteger())));
+        }
         if (!m_requestHistoryContext.isEmpty()) {
-            const auto kib_text = [](qint64 bytes) {
-                bytes = qMax<qint64>(0, bytes);
-                if (bytes % 1024 == 0) {
-                    return QString::number(bytes / 1024);
-                }
-                return QString::number(bytes / 1024.0, 'f', 1);
-            };
             const int included_turns = m_requestHistoryContext
                 .value(QStringLiteral("included_turn_count")).toInt();
             const int total_turns = m_requestHistoryContext
@@ -853,15 +875,15 @@ void AgentDock::refreshTechnicalDetails()
                                  .arg(included_turns)
                                  .arg(total_turns)
                                  .arg(omitted_turns)
-                                 .arg(kib_text(included_previous_bytes),
-                                      kib_text(budget_bytes),
-                                      kib_text(current_bytes)));
+                                 .arg(kibText(included_previous_bytes),
+                                      kibText(budget_bytes),
+                                      kibText(current_bytes)));
             } else {
                 lines.append(tr("Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)")
                                  .arg(included_turns)
                                  .arg(total_turns)
-                                 .arg(kib_text(included_previous_bytes),
-                                      kib_text(current_bytes)));
+                                 .arg(kibText(included_previous_bytes),
+                                      kibText(current_bytes)));
             }
         }
         if (m_requestDurationMs >= 0) {
@@ -973,6 +995,28 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setProperty(
         "historyCurrentTurnBytes",
         m_requestHistoryContext.value(QStringLiteral("current_turn_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "toolTotalCount",
+        m_requestToolContext.value(QStringLiteral("total_tool_count")).toInt());
+    m_technicalDetails->setProperty(
+        "toolExposedCount",
+        m_requestToolContext.value(QStringLiteral("exposed_tool_count")).toInt());
+    m_technicalDetails->setProperty(
+        "toolHiddenCount",
+        m_requestToolContext.value(QStringLiteral("hidden_tool_count")).toInt());
+    m_technicalDetails->setProperty(
+        "toolSchemaBytes",
+        m_requestToolContext.value(QStringLiteral("exposed_schema_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "toolUnfilteredSchemaBytes",
+        m_requestToolContext.value(QStringLiteral("unfiltered_schema_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "toolSavedSchemaBytes",
+        m_requestToolContext.value(QStringLiteral("saved_schema_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "hiddenToolNames",
+        m_requestToolContext.value(QStringLiteral("hidden_tools"))
+            .toArray().toVariantList());
     m_technicalDetails->setAccessibleName(m_technicalDetails->text());
 }
 
