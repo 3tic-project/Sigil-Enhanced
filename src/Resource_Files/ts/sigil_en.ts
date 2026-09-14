@@ -23555,6 +23555,18 @@ Continue using the requested filename?</translation>
     <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>TOC hierarchy changes form one dependent group and cannot be split safely.</translation></message>
     <message><source>Approval blocked: select at least one independent operation group.</source><translation>Approval blocked: select at least one independent operation group.</translation></message>
     <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>Reviewed plan binding: matched. Selected groups: %1 of %2.</translation></message>
+    <message><source>Resource result unavailable because the commit scope could not be inspected.</source><translation>Resource result unavailable because the commit scope could not be inspected.</translation></message>
+    <message><source>Resources: %1 succeeded · %2 failed.</source><translation>Resources: %1 succeeded · %2 failed.</translation></message>
+    <message><source>Structural operations: %1 succeeded · %2 failed.</source><translation>Structural operations: %1 succeeded · %2 failed.</translation></message>
+    <message><source>Atomic result: all staged targets were applied.</source><translation>Atomic result: all staged targets were applied.</translation></message>
+    <message><source>Atomic result: no staged target was applied.</source><translation>Atomic result: no staged target was applied.</translation></message>
+    <message><source>Not applied to the current book.</source><translation>Not applied to the current book.</translation></message>
+    <message><source>The staged transaction remains available for review, retry, or rollback.</source><translation>The staged transaction remains available for review, retry, or rollback.</translation></message>
+    <message><source>The staged transaction was rolled back; no partial book changes remain.</source><translation>The staged transaction was rolled back; no partial book changes remain.</translation></message>
+    <message><source>No staged transaction remains.</source><translation>No staged transaction remains.</translation></message>
+    <message><source>Failure: %1 — %2</source><translation>Failure: %1 — %2</translation></message>
+    <message><source>Failure: %1</source><translation>Failure: %1</translation></message>
+    <message><source>Apply failed</source><translation>Apply failed</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>

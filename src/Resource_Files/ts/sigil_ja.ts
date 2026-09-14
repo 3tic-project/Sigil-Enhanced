@@ -27497,6 +27497,18 @@ Continue using the requested filename?</source>
     <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>目次階層の変更は依存関係のある 1 つのグループであり、安全に分割できません。</translation></message>
     <message><source>Approval blocked: select at least one independent operation group.</source><translation>承認をブロックしました：独立した操作グループを 1 つ以上選択してください。</translation></message>
     <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>レビュー済みプランの関連付け：一致。選択したグループ：%1/%2。</translation></message>
+    <message><source>Resource result unavailable because the commit scope could not be inspected.</source><translation>コミット範囲を検査できなかったため、リソース結果を取得できません。</translation></message>
+    <message><source>Resources: %1 succeeded · %2 failed.</source><translation>リソース：成功 %1 件 · 失敗 %2 件。</translation></message>
+    <message><source>Structural operations: %1 succeeded · %2 failed.</source><translation>構造操作：成功 %1 件 · 失敗 %2 件。</translation></message>
+    <message><source>Atomic result: all staged targets were applied.</source><translation>アトミック結果：ステージ済みのすべての対象を適用しました。</translation></message>
+    <message><source>Atomic result: no staged target was applied.</source><translation>アトミック結果：ステージ済みの対象は一つも適用されませんでした。</translation></message>
+    <message><source>Not applied to the current book.</source><translation>現在のブックには適用されていません。</translation></message>
+    <message><source>The staged transaction remains available for review, retry, or rollback.</source><translation>ステージ済みトランザクションは、確認、再試行、またはロールバックに引き続き使用できます。</translation></message>
+    <message><source>The staged transaction was rolled back; no partial book changes remain.</source><translation>ステージ済みトランザクションはロールバックされました。ブックには部分的な変更が残っていません。</translation></message>
+    <message><source>No staged transaction remains.</source><translation>ステージ済みトランザクションは残っていません。</translation></message>
+    <message><source>Failure: %1 — %2</source><translation>失敗：%1 — %2</translation></message>
+    <message><source>Failure: %1</source><translation>失敗：%1</translation></message>
+    <message><source>Apply failed</source><translation>適用に失敗</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>

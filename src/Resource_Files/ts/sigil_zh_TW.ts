@@ -27482,6 +27482,18 @@ Continue using the requested filename?</source>
     <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>目錄層級變更組成一個相互依賴的操作群組，無法安全拆分。</translation></message>
     <message><source>Approval blocked: select at least one independent operation group.</source><translation>核准已阻止：請至少選擇一個獨立操作群組。</translation></message>
     <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>已審閱計畫繫結：相符。已選擇群組：%1/%2。</translation></message>
+    <message><source>Resource result unavailable because the commit scope could not be inspected.</source><translation>因無法檢查提交範圍，資源結果無法取得。</translation></message>
+    <message><source>Resources: %1 succeeded · %2 failed.</source><translation>資源：成功 %1 個 · 失敗 %2 個。</translation></message>
+    <message><source>Structural operations: %1 succeeded · %2 failed.</source><translation>結構操作：成功 %1 項 · 失敗 %2 項。</translation></message>
+    <message><source>Atomic result: all staged targets were applied.</source><translation>不可分割結果：所有暫存目標均已套用。</translation></message>
+    <message><source>Atomic result: no staged target was applied.</source><translation>不可分割結果：未套用任何暫存目標。</translation></message>
+    <message><source>Not applied to the current book.</source><translation>未套用至目前書籍。</translation></message>
+    <message><source>The staged transaction remains available for review, retry, or rollback.</source><translation>暫存交易仍可供檢閱、重試或回復。</translation></message>
+    <message><source>The staged transaction was rolled back; no partial book changes remain.</source><translation>暫存交易已回復；未留下部分書籍變更。</translation></message>
+    <message><source>No staged transaction remains.</source><translation>未保留暫存交易。</translation></message>
+    <message><source>Failure: %1 — %2</source><translation>失敗：%1 — %2</translation></message>
+    <message><source>Failure: %1</source><translation>失敗：%1</translation></message>
+    <message><source>Apply failed</source><translation>套用失敗</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>

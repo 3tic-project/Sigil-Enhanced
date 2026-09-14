@@ -27499,6 +27499,18 @@ Continue using the requested filename?</source>
     <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>目录层级变更组成一个相互依赖的操作组，无法安全拆分。</translation></message>
     <message><source>Approval blocked: select at least one independent operation group.</source><translation>批准已阻止：请至少选择一个独立操作组。</translation></message>
     <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>已审阅计划绑定：匹配。已选择组：%1/%2。</translation></message>
+    <message><source>Resource result unavailable because the commit scope could not be inspected.</source><translation>由于无法检查提交范围，资源结果不可用。</translation></message>
+    <message><source>Resources: %1 succeeded · %2 failed.</source><translation>资源：成功 %1 个 · 失败 %2 个。</translation></message>
+    <message><source>Structural operations: %1 succeeded · %2 failed.</source><translation>结构操作：成功 %1 项 · 失败 %2 项。</translation></message>
+    <message><source>Atomic result: all staged targets were applied.</source><translation>原子结果：所有暂存目标均已应用。</translation></message>
+    <message><source>Atomic result: no staged target was applied.</source><translation>原子结果：没有应用任何暂存目标。</translation></message>
+    <message><source>Not applied to the current book.</source><translation>未应用到当前书籍。</translation></message>
+    <message><source>The staged transaction remains available for review, retry, or rollback.</source><translation>暂存事务仍可用于审阅、重试或回滚。</translation></message>
+    <message><source>The staged transaction was rolled back; no partial book changes remain.</source><translation>暂存事务已回滚；没有残留部分书籍修改。</translation></message>
+    <message><source>No staged transaction remains.</source><translation>没有保留暂存事务。</translation></message>
+    <message><source>Failure: %1 — %2</source><translation>失败：%1 — %2</translation></message>
+    <message><source>Failure: %1</source><translation>失败：%1</translation></message>
+    <message><source>Apply failed</source><translation>应用失败</translation></message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>
