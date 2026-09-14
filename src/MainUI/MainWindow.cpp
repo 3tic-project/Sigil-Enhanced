@@ -6263,6 +6263,8 @@ void MainWindow::ConfigureAgentProvider()
     m_AgentController->setModel(settings.model());
     m_AgentController->setThinking(settings.thinkingEnabled(), settings.reasoningEffort());
     m_AgentController->setTokenUsage(settings.tokenUsageEnabled());
+    m_AgentController->setHistoryPreviousTurnBudget(
+        settings.historyPreviousTurnBudgetBytes());
     if (m_AgentDock) {
         m_AgentController->setMode(m_AgentDock->mode());
         SigilAgent::AgentProviderReadiness readiness = SigilAgent::providerReadiness(

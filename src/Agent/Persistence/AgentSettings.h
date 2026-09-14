@@ -42,6 +42,9 @@ public:
     bool tokenUsageEnabled() const;
     void setTokenUsageEnabled(bool enabled);
 
+    int historyPreviousTurnBudgetBytes() const;
+    void setHistoryPreviousTurnBudgetBytes(int bytes);
+
     QString reasoningEffort() const;
     void setReasoningEffort(const QString &effort);
 

@@ -32,6 +32,7 @@ void AgentController::rebuildTools()
     m_runner->setModel(m_model);
     m_runner->setThinking(m_thinkingEnabled, m_reasoningEffort);
     m_runner->setTokenUsage(m_tokenUsageEnabled);
+    m_runner->setHistoryPreviousTurnBudget(m_historyPreviousTurnBudgetBytes);
 }
 
 bool AgentController::setWorkspace(IBookWorkspace *workspace)
@@ -84,6 +85,16 @@ void AgentController::setTokenUsage(bool enabled)
 {
     m_tokenUsageEnabled = enabled;
     if (m_runner) m_runner->setTokenUsage(enabled);
+}
+
+void AgentController::setHistoryPreviousTurnBudget(int bytes)
+{
+    m_historyPreviousTurnBudgetBytes =
+        qBound(0, bytes, MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES);
+    if (m_runner) {
+        m_runner->setHistoryPreviousTurnBudget(
+            m_historyPreviousTurnBudgetBytes);
+    }
 }
 
 AgentSession *AgentController::session()

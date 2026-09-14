@@ -16,6 +16,9 @@
 namespace SigilAgent
 {
 
+constexpr int DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES = 32 * 1024;
+constexpr int MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES = 512 * 1024;
+
 struct HistoryAssemblyStats {
     int budgetBytes = 0;
     int totalTurnCount = 0;

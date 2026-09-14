@@ -283,7 +283,8 @@ void AgentRunner::setTokenUsage(bool enabled)
 
 void AgentRunner::setHistoryPreviousTurnBudget(int bytes)
 {
-    m_historyPreviousTurnBudgetBytes = qMax(0, bytes);
+    m_historyPreviousTurnBudgetBytes =
+        qBound(0, bytes, MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES);
 }
 
 void AgentRunner::setMaxSteps(int steps)

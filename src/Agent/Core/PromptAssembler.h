@@ -13,6 +13,7 @@
 #include "Agent/AgentTypes.h"
 #include "Agent/Core/AgentSession.h"
 #include "Agent/Execution/IBookWorkspace.h"
+#include "Agent/Model/HistoryAssembler.h"
 #include "Agent/Model/IModelProvider.h"
 #include "Agent/Tools/ToolRegistry.h"
 
@@ -33,7 +34,8 @@ public:
                        bool thinking,
                        const QString &reasoning_effort,
                        const QStringList &handles,
-                       int historyPreviousTurnBudgetBytes = 32768) const;
+                       int historyPreviousTurnBudgetBytes =
+                           DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES) const;
 };
 
 } // namespace SigilAgent

@@ -90,7 +90,8 @@ private:
     QString m_model;
     bool m_thinking = true;
     bool m_tokenUsage = true;
-    int m_historyPreviousTurnBudgetBytes = 32768;
+    int m_historyPreviousTurnBudgetBytes =
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES;
     QString m_effort = QStringLiteral("medium");
     int m_maxSteps = 24;
     QString m_runBookSessionId;

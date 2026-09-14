@@ -23,6 +23,7 @@ template<typename T> class QFutureWatcher;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QSpinBox;
 
 namespace SigilAgent
 {
@@ -69,6 +70,7 @@ private:
     QLabel *m_status = nullptr;
     QCheckBox *m_thinking = nullptr;
     QCheckBox *m_tokenUsage = nullptr;
+    QSpinBox *m_historyBudget = nullptr;
     QComboBox *m_effort = nullptr;
 
     QString m_activeProvider;

@@ -10,6 +10,7 @@
 #include <QJsonParseError>
 
 #include "Agent/AgentTypes.h"
+#include "Agent/Model/HistoryAssembler.h"
 #include "Misc/SettingsStore.h"
 
 namespace SigilAgent
@@ -135,6 +136,26 @@ void AgentSettings::setTokenUsageEnabled(bool enabled)
     SettingsStore store;
     store.beginGroup(QLatin1String(groupName()));
     store.setValue(QStringLiteral("request_token_usage"), enabled);
+}
+
+int AgentSettings::historyPreviousTurnBudgetBytes() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    const int bytes = store.value(
+        QStringLiteral("history_previous_turn_budget_bytes"),
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES).toInt();
+    if (bytes < 0) return DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES;
+    return qMin(bytes, MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES);
+}
+
+void AgentSettings::setHistoryPreviousTurnBudgetBytes(int bytes)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("history_previous_turn_budget_bytes"),
+                   qBound(0, bytes,
+                          MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES));
 }
 
 QString AgentSettings::reasoningEffort() const

@@ -35,6 +35,7 @@ public:
     void setModel(const QString &model);
     void setThinking(bool enabled, const QString &effort);
     void setTokenUsage(bool enabled);
+    void setHistoryPreviousTurnBudget(int bytes);
 
     AgentSession *session();
     AgentRunner *runner();
@@ -72,6 +73,8 @@ private:
     QString m_model;
     bool m_thinkingEnabled = true;
     bool m_tokenUsageEnabled = true;
+    int m_historyPreviousTurnBudgetBytes =
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES;
     QString m_reasoningEffort = QStringLiteral("medium");
     bool m_resetSessionAfterRun = false;
 };

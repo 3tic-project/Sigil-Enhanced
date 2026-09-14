@@ -37,6 +37,12 @@ settings_cpp = (repo / "src/Dialogs/PreferenceWidgets/AgentSettingsWidget.cpp").
     encoding="utf-8"
 )
 runner_cpp = (repo / "src/Agent/Core/AgentRunner.cpp").read_text(encoding="utf-8")
+controller_cpp = (repo / "src/Agent/Core/AgentController.cpp").read_text(
+    encoding="utf-8"
+)
+agent_settings_cpp = (repo / "src/Agent/Persistence/AgentSettings.cpp").read_text(
+    encoding="utf-8"
+)
 require(
     "agentModeCombo" in dock_cpp,
     "dock must expose Ask/Plan/Edit",
@@ -93,6 +99,21 @@ require(
     and 'QStringLiteral("usage_requested")' in runner_cpp
     and "modelUsageToJson(turn.usage)" in runner_cpp,
     "the saved usage setting and reported counts must reach request lifecycle events",
+)
+require(
+    "agentHistoryBudgetKib" in settings_cpp
+    and 'setSpecialValueText(tr("Unlimited"))' in settings_cpp
+    and "previous complete conversation turns" in settings_cpp
+    and "history_previous_turn_budget_bytes" in agent_settings_cpp,
+    "Native Agent settings must disclose and persist the bounded previous-turn history budget",
+)
+require(
+    "setHistoryPreviousTurnBudget(" in main_window
+    and "settings.historyPreviousTurnBudgetBytes()" in main_window
+    and "m_runner->setHistoryPreviousTurnBudget" in controller_cpp
+    and "m_historyPreviousTurnBudgetBytes" in runner_cpp
+    and 'QStringLiteral("history_context")' in runner_cpp,
+    "the saved history budget and its audit statistics must reach every model request",
 )
 require(
     "captureRunEvent(event)" in dock_cpp
