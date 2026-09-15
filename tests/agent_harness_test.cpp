@@ -68,6 +68,10 @@ int main()
                 && edit_system_prompt.contains(QStringLiteral("toc.inspect_hierarchy"))
                 && edit_system_prompt.contains(
                     QStringLiteral("same analysis_id"))
+                && edit_system_prompt.contains(
+                    QStringLiteral("review_next_offset"))
+                && edit_system_prompt.contains(
+                    QStringLiteral("review_complete=true"))
                 && edit_system_prompt.contains(QStringLiteral("preview_digest")),
             "system prompt must ground commit summaries and paginated inventory traversal");
 
@@ -902,6 +906,11 @@ int main()
                     QStringLiteral("operation_groups_independent")).toBool()
                 && plan_event.value(QStringLiteral("operation_groups"))
                     .toArray().size() == 2
+                && plan_event.value(QStringLiteral("total_count")).toInt() == 2
+                && plan_event.value(
+                    QStringLiteral("reviewed_count")).toInt() == 2
+                && plan_event.value(
+                    QStringLiteral("review_complete")).toBool()
                 && !plan_event.value(QStringLiteral("changes")).toArray().isEmpty(),
             "plan-created event must preserve the binding, operation groups, and bounded changes");
     const QJsonObject paragraph_apply_arguments {

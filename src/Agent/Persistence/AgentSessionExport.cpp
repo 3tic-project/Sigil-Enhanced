@@ -64,6 +64,25 @@ void appendPlanReview(QStringList *lines, const QJsonObject &payload)
                           .arg(summary.value(QStringLiteral("ready_files")).toInt())
                           .arg(summary.value(QStringLiteral("conversion_count")).toInt())
                           .arg(summary.value(QStringLiteral("protected_count")).toInt()));
+        const bool paginated = payload.contains(QStringLiteral("total_count"));
+        if (paginated) {
+            lines->append(QStringLiteral(
+                "- Plan page: %1 of %2 XHTML files (offset %3); cumulative review: %4/%2")
+                              .arg(payload.value(
+                                  QStringLiteral("returned_count")).toInt())
+                              .arg(payload.value(
+                                  QStringLiteral("total_count")).toInt())
+                              .arg(payload.value(
+                                  QStringLiteral("offset")).toInt())
+                              .arg(payload.value(
+                                  QStringLiteral("reviewed_count")).toInt()));
+            if (!payload.value(QStringLiteral("review_complete")).toBool()) {
+                lines->append(QStringLiteral(
+                    "- Review incomplete; continue at offset %1 before applying.")
+                                  .arg(payload.value(
+                                      QStringLiteral("review_next_offset")).toInt()));
+            }
+        }
         const QJsonArray groups = payload.value(
             QStringLiteral("operation_groups")).toArray();
         if (payload.value(
@@ -71,7 +90,10 @@ void appendPlanReview(QStringList *lines, const QJsonObject &payload)
             && !groups.isEmpty()) {
             lines->append(QStringLiteral(
                 "- Independent XHTML operation groups: %1; choose one or more when approving apply.")
-                              .arg(groups.size()));
+                              .arg(paginated
+                                      ? payload.value(
+                                          QStringLiteral("total_count")).toInt()
+                                      : groups.size()));
         }
         for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
             const QJsonObject change = value.toObject();

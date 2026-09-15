@@ -366,6 +366,124 @@ int main()
                     .value(QStringLiteral("maximum")).toInt() == 50,
             "paragraph analysis must page stable files while retaining its full plan binding");
 
+    QJsonArray paged_plan_resource_ids;
+    for (int index = 0; index < 23; ++index) {
+        paged_plan_resource_ids.append(QStringLiteral("bulk-%1").arg(
+            index, 3, 10, QLatin1Char('0')));
+    }
+    const QJsonObject first_plan_arguments {
+        { QStringLiteral("analysis_id"), large_analysis_id },
+        { QStringLiteral("resource_ids"), paged_plan_resource_ids }
+    };
+    const ToolResult first_plan_page = run(
+        large_analysis_registry, QStringLiteral("paragraphs.plan"),
+        first_plan_arguments);
+    PlanBinding incomplete_plan_binding;
+    incomplete_plan_binding.planId = first_plan_page.data.value(
+        QStringLiteral("plan_id")).toString();
+    incomplete_plan_binding.digest = first_plan_page.data.value(
+        QStringLiteral("plan_digest")).toString();
+    incomplete_plan_binding.revision = static_cast<quint64>(
+        first_plan_page.data.value(
+            QStringLiteral("book_revision")).toInteger());
+    const ToolResult incomplete_plan_apply = run(
+        large_analysis_registry, QStringLiteral("paragraphs.apply"),
+        bindingArguments(incomplete_plan_binding));
+    const bool incomplete_apply_left_transaction_closed =
+        !large_analysis_book.hasOpenTransaction();
+    QJsonObject final_plan_arguments = first_plan_arguments;
+    final_plan_arguments.insert(QStringLiteral("offset"), 10);
+    final_plan_arguments.insert(QStringLiteral("limit"), 999);
+    const ToolResult final_plan_page = run(
+        large_analysis_registry, QStringLiteral("paragraphs.plan"),
+        final_plan_arguments);
+    const ToolResult complete_plan_apply = run(
+        large_analysis_registry, QStringLiteral("paragraphs.apply"),
+        bindingArguments(incomplete_plan_binding));
+    const QJsonObject plan_properties = large_analysis_registry.find(
+        QStringLiteral("paragraphs.plan"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(first_plan_page.ok
+                && first_plan_page.data.value(
+                    QStringLiteral("changes")).toArray().size() == 10
+                && first_plan_page.data.value(
+                    QStringLiteral("operation_groups")).toArray().size() == 10
+                && first_plan_page.data.value(
+                    QStringLiteral("total_count")).toInt() == 23
+                && first_plan_page.data.value(
+                    QStringLiteral("returned_count")).toInt() == 10
+                && first_plan_page.data.value(
+                    QStringLiteral("reviewed_count")).toInt() == 10
+                && !first_plan_page.data.value(
+                    QStringLiteral("review_complete")).toBool()
+                && first_plan_page.data.value(
+                    QStringLiteral("review_next_offset")).toInt() == 10
+                && first_plan_page.data.value(
+                    QStringLiteral("next_offset")).toInt() == 10
+                && !QJsonDocument(first_plan_page.data).toJson(
+                    QJsonDocument::Compact).contains("bulk-010")
+                && !incomplete_plan_apply.ok
+                && incomplete_plan_apply.code
+                    == QStringLiteral("PLAN_REVIEW_INCOMPLETE")
+                && incomplete_plan_apply.data.value(
+                    QStringLiteral("review_next_offset")).toInt() == 10
+                && incomplete_apply_left_transaction_closed
+                && final_plan_page.ok
+                && final_plan_page.data.value(
+                    QStringLiteral("limit")).toInt() == 20
+                && final_plan_page.data.value(
+                    QStringLiteral("changes")).toArray().size() == 13
+                && final_plan_page.data.value(
+                    QStringLiteral("operation_groups")).toArray().size() == 13
+                && final_plan_page.data.value(
+                    QStringLiteral("changes")).toArray().first().toObject()
+                    .value(QStringLiteral("resource_id")).toString()
+                    == QStringLiteral("bulk-010")
+                && final_plan_page.data.value(
+                    QStringLiteral("reviewed_count")).toInt() == 23
+                && final_plan_page.data.value(
+                    QStringLiteral("review_complete")).toBool()
+                && !final_plan_page.data.value(
+                    QStringLiteral("has_more")).toBool()
+                && !final_plan_page.data.contains(
+                    QStringLiteral("review_next_offset"))
+                && final_plan_page.data.value(QStringLiteral("plan_id"))
+                    == first_plan_page.data.value(QStringLiteral("plan_id"))
+                && final_plan_page.data.value(QStringLiteral("plan_digest"))
+                    == first_plan_page.data.value(QStringLiteral("plan_digest"))
+                && complete_plan_apply.ok && complete_plan_apply.previewOnly
+                && complete_plan_apply.data.value(
+                    QStringLiteral("available_operation_groups")).toInt() == 23
+                && complete_plan_apply.data.value(
+                    QStringLiteral("selected_operation_groups")).toInt() == 23
+                && large_analysis_book.previewTransaction().data.value(
+                    QStringLiteral("changes")).toArray().size() == 23
+                && plan_properties.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 10
+                && plan_properties.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 20,
+            "paragraph plan pages must be bounded and fully reviewed before apply");
+    Require(large_analysis_book.rollbackTransaction().ok,
+            "paged paragraph plan transaction cleanup failed");
+    const ToolResult out_of_order_plan_page = run(
+        large_analysis_registry, QStringLiteral("paragraphs.plan"),
+        final_plan_arguments);
+    const ToolResult out_of_order_plan_apply = run(
+        large_analysis_registry, QStringLiteral("paragraphs.apply"),
+        bindingArguments(incomplete_plan_binding));
+    Require(out_of_order_plan_page.ok
+                && !out_of_order_plan_page.data.value(
+                    QStringLiteral("review_complete")).toBool()
+                && out_of_order_plan_page.data.value(
+                    QStringLiteral("reviewed_count")).toInt() == 0
+                && out_of_order_plan_page.data.value(
+                    QStringLiteral("review_next_offset")).toInt() == 0
+                && !out_of_order_plan_apply.ok
+                && out_of_order_plan_apply.code
+                    == QStringLiteral("PLAN_REVIEW_INCOMPLETE")
+                && !large_analysis_book.hasOpenTransaction(),
+            "out-of-order paragraph plan review must restart from offset zero");
+
     const QString analysis_id = analysis.data.value(QStringLiteral("analysis_id")).toString();
     const ToolResult unsafe_plan = run(
         registry, QStringLiteral("paragraphs.plan"),

@@ -905,6 +905,152 @@ int main(int argc, char *argv[])
                 && !clear_groups->isEnabled(),
             "approval must freeze and emit exactly the checked paragraph groups");
 
+    SigilAgent::AgentEvent paged_plan_first = paragraph_plan;
+    paged_plan_first.payload.insert(
+        QStringLiteral("tool_call_id"), QStringLiteral("paged-plan-0"));
+    paged_plan_first.payload.insert(
+        QStringLiteral("plan_id"), QStringLiteral("paged-plan-id"));
+    paged_plan_first.payload.insert(
+        QStringLiteral("plan_digest"), QStringLiteral("paged-plan-digest"));
+    paged_plan_first.payload.insert(
+        QStringLiteral("analysis_id"), QStringLiteral("paged-analysis-id"));
+    paged_plan_first.payload.insert(QStringLiteral("total_count"), 3);
+    paged_plan_first.payload.insert(QStringLiteral("offset"), 0);
+    paged_plan_first.payload.insert(QStringLiteral("limit"), 2);
+    paged_plan_first.payload.insert(QStringLiteral("returned_count"), 2);
+    paged_plan_first.payload.insert(QStringLiteral("has_more"), true);
+    paged_plan_first.payload.insert(QStringLiteral("next_offset"), 2);
+    paged_plan_first.payload.insert(QStringLiteral("reviewed_count"), 2);
+    paged_plan_first.payload.insert(QStringLiteral("review_complete"), false);
+    paged_plan_first.payload.insert(QStringLiteral("review_next_offset"), 2);
+    dock.appendEvent(paged_plan_first);
+    application.processEvents();
+    auto *paged_plan_first_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentPlanReviewCard-paged-plan-0"));
+    auto *paged_plan_first_body = paged_plan_first_card
+        ? paged_plan_first_card->findChild<QLabel *>(
+              QStringLiteral("agentPlanReviewCard-paged-plan-0Body"))
+        : nullptr;
+    Require(paged_plan_first_card && paged_plan_first_body
+                && !paged_plan_first_card->property(
+                    "planReviewComplete").toBool()
+                && paged_plan_first_body->text().contains(
+                    QStringLiteral("2 of 3 XHTML file(s)"))
+                && paged_plan_first_body->text().contains(
+                    QStringLiteral("offset 2 before applying")),
+            "an incomplete paragraph plan page must disclose required continuation");
+
+    SigilAgent::AgentEvent incomplete_paged_approval = matching_plan_approval;
+    incomplete_paged_approval.payload.insert(
+        QStringLiteral("tool_call_id"),
+        QStringLiteral("incomplete-paged-plan-apply"));
+    QJsonObject incomplete_paged_arguments = incomplete_paged_approval.payload.value(
+        QStringLiteral("arguments")).toObject();
+    incomplete_paged_arguments.insert(
+        QStringLiteral("plan_id"), QStringLiteral("paged-plan-id"));
+    incomplete_paged_arguments.insert(
+        QStringLiteral("plan_digest"), QStringLiteral("paged-plan-digest"));
+    incomplete_paged_approval.payload.insert(
+        QStringLiteral("arguments"), incomplete_paged_arguments);
+    dock.appendEvent(incomplete_paged_approval);
+    application.processEvents();
+    auto *incomplete_paged_approve = dock.findChild<QPushButton *>(
+        QStringLiteral("agentApproveButton-incomplete-paged-plan-apply"));
+    Require(incomplete_paged_approve && !incomplete_paged_approve->isEnabled(),
+            "apply approval must remain blocked until every paragraph plan page is reviewed");
+
+    const QJsonObject third_change {
+        { QStringLiteral("resource_id"), QStringLiteral("chapter-3") },
+        { QStringLiteral("book_path"), QStringLiteral("Text/chapter-3.xhtml") },
+        { QStringLiteral("conversion_count"), 4 },
+        { QStringLiteral("protected_count"), 0 },
+        { QStringLiteral("source_diff"), QJsonObject {
+            { QStringLiteral("before"), QStringLiteral("<div>Third paragraph</div>") },
+            { QStringLiteral("after"), QStringLiteral("<p>Third paragraph</p>") }
+        } }
+    };
+    const QJsonObject third_group {
+        { QStringLiteral("group_id"), QStringLiteral("chapter-3") },
+        { QStringLiteral("label"), QStringLiteral("Text/chapter-3.xhtml") },
+        { QStringLiteral("resource_ids"), QJsonArray {
+            QStringLiteral("chapter-3") } },
+        { QStringLiteral("conversion_count"), 4 },
+        { QStringLiteral("protected_count"), 0 },
+        { QStringLiteral("independently_applicable"), true }
+    };
+    SigilAgent::AgentEvent paged_plan_final = paged_plan_first;
+    paged_plan_final.payload.insert(
+        QStringLiteral("tool_call_id"), QStringLiteral("paged-plan-2"));
+    paged_plan_final.payload.insert(
+        QStringLiteral("changes"), QJsonArray { third_change });
+    paged_plan_final.payload.insert(
+        QStringLiteral("operation_groups"), QJsonArray { third_group });
+    paged_plan_final.payload.insert(QStringLiteral("offset"), 2);
+    paged_plan_final.payload.insert(QStringLiteral("returned_count"), 1);
+    paged_plan_final.payload.insert(QStringLiteral("has_more"), false);
+    paged_plan_final.payload.remove(QStringLiteral("next_offset"));
+    paged_plan_final.payload.insert(QStringLiteral("reviewed_count"), 3);
+    paged_plan_final.payload.insert(QStringLiteral("review_complete"), true);
+    paged_plan_final.payload.remove(QStringLiteral("review_next_offset"));
+    dock.appendEvent(paged_plan_final);
+    application.processEvents();
+    auto *paged_plan_final_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentPlanReviewCard-paged-plan-2"));
+    Require(paged_plan_final_card
+                && paged_plan_final_card->property(
+                    "planReviewComplete").toBool(),
+            "the final contiguous paragraph plan page must complete review");
+
+    SigilAgent::AgentEvent complete_paged_approval = incomplete_paged_approval;
+    complete_paged_approval.payload.insert(
+        QStringLiteral("tool_call_id"),
+        QStringLiteral("complete-paged-plan-apply"));
+    dock.appendEvent(complete_paged_approval);
+    application.processEvents();
+    auto *complete_paged_approval_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentApprovalCard-complete-paged-plan-apply"));
+    auto *complete_paged_approve = dock.findChild<QPushButton *>(
+        QStringLiteral("agentApproveButton-complete-paged-plan-apply"));
+    auto *complete_paged_groups = complete_paged_approval_card
+        ? complete_paged_approval_card->findChild<QListWidget *>(
+              QStringLiteral("agentPlanGroupList-complete-paged-plan-apply"))
+        : nullptr;
+    Require(complete_paged_approval_card && complete_paged_approve
+                && complete_paged_approve->isEnabled()
+                && complete_paged_approval_card->property(
+                    "reviewedPlanMatched").toBool()
+                && complete_paged_groups
+                && complete_paged_groups->count() == 3
+                && complete_paged_groups->item(2)->data(
+                    Qt::UserRole).toString() == QStringLiteral("chapter-3"),
+            "contiguous plan pages must aggregate every group before approval");
+
+    SigilAgent::AgentEvent skipped_plan_page = paged_plan_final;
+    skipped_plan_page.payload.insert(
+        QStringLiteral("tool_call_id"), QStringLiteral("skipped-plan-page"));
+    skipped_plan_page.payload.insert(
+        QStringLiteral("plan_id"), QStringLiteral("skipped-plan-id"));
+    skipped_plan_page.payload.insert(
+        QStringLiteral("plan_digest"), QStringLiteral("skipped-plan-digest"));
+    dock.appendEvent(skipped_plan_page);
+    SigilAgent::AgentEvent skipped_plan_approval = incomplete_paged_approval;
+    skipped_plan_approval.payload.insert(
+        QStringLiteral("tool_call_id"), QStringLiteral("skipped-plan-apply"));
+    QJsonObject skipped_plan_arguments = skipped_plan_approval.payload.value(
+        QStringLiteral("arguments")).toObject();
+    skipped_plan_arguments.insert(
+        QStringLiteral("plan_id"), QStringLiteral("skipped-plan-id"));
+    skipped_plan_arguments.insert(
+        QStringLiteral("plan_digest"), QStringLiteral("skipped-plan-digest"));
+    skipped_plan_approval.payload.insert(
+        QStringLiteral("arguments"), skipped_plan_arguments);
+    dock.appendEvent(skipped_plan_approval);
+    application.processEvents();
+    auto *skipped_plan_approve = dock.findChild<QPushButton *>(
+        QStringLiteral("agentApproveButton-skipped-plan-apply"));
+    Require(skipped_plan_approve && !skipped_plan_approve->isEnabled(),
+            "a final plan page without its prefix must not unlock approval");
+
     SigilAgent::AgentEvent mismatched_plan_approval = matching_plan_approval;
     mismatched_plan_approval.payload.insert(
         QStringLiteral("tool_call_id"), QStringLiteral("mismatched-plan-apply"));

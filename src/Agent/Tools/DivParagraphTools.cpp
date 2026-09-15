@@ -40,6 +40,8 @@ constexpr int kMaxReportedCssDependencies = 128;
 constexpr int kMaxDiffExcerpt = 4096;
 constexpr int kDefaultAnalysisPageSize = 20;
 constexpr int kMaxAnalysisPageSize = 50;
+constexpr int kDefaultPlanPageSize = 10;
+constexpr int kMaxPlanPageSize = 20;
 
 class LambdaTool final : public IAgentTool
 {
@@ -94,6 +96,8 @@ struct StoredPlan {
     NormalizationPlan::Result result;
     QHash<QString, QString> paths;
     QStringList resourceIds;
+    int reviewedThrough = 0;
+    bool reviewComplete = false;
 };
 
 QString framedDigest(const QStringList &values)
@@ -664,11 +668,31 @@ public:
             digest_parts.append(entry.afterHash);
         }
         stored.digest = framedDigest(digest_parts);
-        m_plan = stored;
+
+        const int total_count = current_plan.entries.size();
+        const int offset = qBound(
+            0, arguments.value(QStringLiteral("offset")).toInt(0),
+            total_count);
+        const int requested_limit = arguments.contains(QStringLiteral("limit"))
+            ? arguments.value(QStringLiteral("limit")).toInt(
+                kDefaultPlanPageSize)
+            : kDefaultPlanPageSize;
+        const int limit = qBound(1, requested_limit, kMaxPlanPageSize);
+        const int end = qMin(total_count, offset + limit);
+        const bool same_plan = m_plan && m_plan->id == stored.id
+            && m_plan->digest == stored.digest
+            && m_plan->bookRevision == stored.bookRevision;
+        if (same_plan && offset == m_plan->reviewedThrough) {
+            stored.reviewedThrough = end;
+        } else if (offset == 0) {
+            stored.reviewedThrough = end;
+        }
+        stored.reviewComplete = stored.reviewedThrough >= total_count;
 
         QJsonArray changes;
         QJsonArray operation_groups;
-        for (const NormalizationPlan::Entry &entry : current_plan.entries) {
+        for (int index = offset; index < end; ++index) {
+            const NormalizationPlan::Entry &entry = current_plan.entries.at(index);
             const QString path = current.paths.value(entry.resourceId);
             changes.append(QJsonObject {
                 { QStringLiteral("resource_id"), entry.resourceId },
@@ -693,7 +717,8 @@ public:
                 { QStringLiteral("independently_applicable"), true }
             });
         }
-        return ToolResult::success(QJsonObject {
+        m_plan = stored;
+        QJsonObject data {
             { QStringLiteral("plan_id"), stored.id },
             { QStringLiteral("plan_digest"), stored.digest },
             { QStringLiteral("analysis_id"), stored.analysisId },
@@ -706,10 +731,25 @@ public:
             { QStringLiteral("changes"), changes },
             { QStringLiteral("operation_groups"), operation_groups },
             { QStringLiteral("operation_groups_independent"), true },
+            { QStringLiteral("total_count"), total_count },
+            { QStringLiteral("offset"), offset },
+            { QStringLiteral("limit"), limit },
+            { QStringLiteral("returned_count"), changes.size() },
+            { QStringLiteral("has_more"), end < total_count },
+            { QStringLiteral("reviewed_count"), stored.reviewedThrough },
+            { QStringLiteral("review_complete"), stored.reviewComplete },
             { QStringLiteral("local_validation"), QStringLiteral("passed") },
             { QStringLiteral("full_epubcheck"), epubcheckNotRun() },
             { QStringLiteral("applied_to_book"), false }
-        }, false, true);
+        };
+        if (end < total_count) {
+            data.insert(QStringLiteral("next_offset"), end);
+        }
+        if (!stored.reviewComplete) {
+            data.insert(QStringLiteral("review_next_offset"),
+                        stored.reviewedThrough);
+        }
+        return ToolResult::success(data, false, true);
     }
 
     ToolResult apply(const QJsonObject &arguments)
@@ -728,6 +768,19 @@ public:
             return ToolResult::failure(
                 QStringLiteral("PLAN_BINDING_MISMATCH"),
                 QStringLiteral("plan_id, plan_digest, and expected_book_revision must match the reviewed plan"));
+        }
+        if (!m_plan->reviewComplete) {
+            return ToolResult::failure(
+                QStringLiteral("PLAN_REVIEW_INCOMPLETE"),
+                QStringLiteral("Read every paragraph plan page before applying it"),
+                QJsonObject {
+                    { QStringLiteral("total_count"),
+                      m_plan->result.entries.size() },
+                    { QStringLiteral("reviewed_count"),
+                      m_plan->reviewedThrough },
+                    { QStringLiteral("review_next_offset"),
+                      m_plan->reviewedThrough }
+                });
         }
         QStringList selected_resource_ids = m_plan->resourceIds;
         const QJsonValue selected_value = arguments.value(
@@ -911,6 +964,17 @@ QJsonObject paragraphScopeSchema(bool require_analysis = false)
     if (require_analysis) {
         properties.insert(QStringLiteral("analysis_id"),
                           QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } });
+        properties.insert(QStringLiteral("offset"), QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("integer") },
+            { QStringLiteral("minimum"), 0 },
+            { QStringLiteral("default"), 0 }
+        });
+        properties.insert(QStringLiteral("limit"), QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("integer") },
+            { QStringLiteral("minimum"), 1 },
+            { QStringLiteral("maximum"), kMaxPlanPageSize },
+            { QStringLiteral("default"), kDefaultPlanPageSize }
+        });
         required.append(QStringLiteral("analysis_id"));
     } else {
         properties.insert(QStringLiteral("offset"), QJsonObject {
@@ -964,7 +1028,7 @@ void registerDivParagraphTools(ToolRegistry *registry,
     addTool(
         registry,
         QStringLiteral("paragraphs.plan"),
-        QStringLiteral("Create a revision-bound native DIV-paragraph plan from the current analysis. Only auto-safe resources may be selected. Returns hashes and bounded source diffs; never changes the Book."),
+        QStringLiteral("Create a revision-bound native DIV-paragraph plan from the current analysis. Only auto-safe resources may be selected. Returns a bounded page of hashes, source diffs, and operation groups. Repeat the same analysis and selection using review_next_offset until review_complete is true; plan_id and plan_digest must remain unchanged. Applying an incompletely reviewed plan is rejected. Never changes the Book."),
         ToolRisk::Read, false, true, paragraphScopeSchema(true),
         [service](const QJsonObject &arguments) { return service->plan(arguments); });
 

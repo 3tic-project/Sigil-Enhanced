@@ -116,6 +116,7 @@ private:
                             const QString &comparisonId,
                             const QString &subject,
                             const AgentPlanComparisonContent &content);
+    void recordReviewedPlanPage(const QJsonObject &payload);
     bool matchesReviewedPlan(const QString &toolName,
                              const QJsonObject &arguments) const;
     void captureRequestEvent(const AgentEvent &event, const QString &status);

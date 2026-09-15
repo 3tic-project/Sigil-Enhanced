@@ -248,6 +248,13 @@ int main(int argc, char *argv[])
             { QStringLiteral("protected_count"), 1 }
         } },
         { QStringLiteral("operation_groups_independent"), true },
+        { QStringLiteral("total_count"), 1 },
+        { QStringLiteral("offset"), 0 },
+        { QStringLiteral("limit"), 10 },
+        { QStringLiteral("returned_count"), 1 },
+        { QStringLiteral("has_more"), false },
+        { QStringLiteral("reviewed_count"), 1 },
+        { QStringLiteral("review_complete"), true },
         { QStringLiteral("operation_groups"), QJsonArray { QJsonObject {
             { QStringLiteral("group_id"), QStringLiteral("chapter-1") },
             { QStringLiteral("label"), QStringLiteral("Text/chapter-1.xhtml") },
@@ -384,6 +391,8 @@ int main(int argc, char *argv[])
                 && markdown.contains(QStringLiteral("Text/chapter-1.xhtml"))
                 && markdown.contains(
                     QStringLiteral("Independent XHTML operation groups: 1"))
+                && markdown.contains(
+                    QStringLiteral("Plan page: 1 of 1 XHTML files"))
                 && markdown.contains(QStringLiteral("<div>Before</div>"))
                 && markdown.contains(QStringLiteral("<p>After</p>"))
                 && markdown.contains(QStringLiteral("Full EPUBCheck: not run"))

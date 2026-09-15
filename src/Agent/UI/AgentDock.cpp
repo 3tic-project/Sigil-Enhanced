@@ -1184,13 +1184,120 @@ bool AgentDock::matchesReviewedPlan(const QString &tool_name,
     const QString plan_id = arguments.value(QStringLiteral("plan_id")).toString();
     if (plan_id.isEmpty() || !m_reviewedPlans.contains(plan_id)) return false;
     const QJsonObject plan = m_reviewedPlans.value(plan_id);
-    return plan.value(QStringLiteral("plan_kind")).toString() == expected_kind
+    return plan.value(QStringLiteral("review_complete")).toBool()
+        && plan.value(QStringLiteral("plan_kind")).toString() == expected_kind
         && plan.value(QStringLiteral("plan_digest")).toString()
             == arguments.value(QStringLiteral("plan_digest")).toString()
         && plan.value(QStringLiteral("book_revision")).toInteger(-1)
             == arguments.value(QStringLiteral("expected_book_revision")).toInteger(-2)
         && !m_bookSessionId.isEmpty()
         && plan.value(QStringLiteral("book_session_id")).toString() == m_bookSessionId;
+}
+
+void AgentDock::recordReviewedPlanPage(const QJsonObject &payload)
+{
+    const QString plan_id = payload.value(QStringLiteral("plan_id")).toString();
+    if (plan_id.isEmpty()) return;
+    const bool paginated_paragraph = payload.value(
+        QStringLiteral("plan_kind")).toString()
+            == QLatin1String("paragraph_normalization")
+        && payload.contains(QStringLiteral("total_count"));
+    if (!paginated_paragraph) {
+        QJsonObject reviewed = payload;
+        reviewed.insert(QStringLiteral("review_complete"), true);
+        m_reviewedPlans.insert(plan_id, reviewed);
+        return;
+    }
+
+    const int total_count = payload.value(QStringLiteral("total_count")).toInt(-1);
+    const int offset = payload.value(QStringLiteral("offset")).toInt(-1);
+    const int returned_count = payload.value(
+        QStringLiteral("returned_count")).toInt(-1);
+    const QJsonArray page_changes = payload.value(
+        QStringLiteral("changes")).toArray();
+    const QJsonArray page_groups = payload.value(
+        QStringLiteral("operation_groups")).toArray();
+    bool valid = total_count > 0 && offset >= 0 && returned_count >= 0
+        && offset + returned_count <= total_count
+        && page_changes.size() == returned_count
+        && page_groups.size() == returned_count
+        && payload.value(QStringLiteral("operation_groups_independent")).toBool();
+
+    QJsonObject aggregate;
+    QJsonArray changes;
+    QJsonArray groups;
+    if (valid && offset == 0) {
+        aggregate = payload;
+    } else if (valid) {
+        aggregate = m_reviewedPlans.value(plan_id);
+        const bool same_binding = !aggregate.isEmpty()
+            && aggregate.value(QStringLiteral("aggregation_valid")).toBool()
+            && aggregate.value(QStringLiteral("plan_digest"))
+                == payload.value(QStringLiteral("plan_digest"))
+            && aggregate.value(QStringLiteral("analysis_id"))
+                == payload.value(QStringLiteral("analysis_id"))
+            && aggregate.value(QStringLiteral("book_revision"))
+                == payload.value(QStringLiteral("book_revision"))
+            && aggregate.value(QStringLiteral("book_session_id"))
+                == payload.value(QStringLiteral("book_session_id"))
+            && aggregate.value(QStringLiteral("total_count")).toInt(-1)
+                == total_count
+            && aggregate.value(QStringLiteral("aggregated_count")).toInt(-1)
+                == offset;
+        valid = same_binding;
+        if (valid) {
+            changes = aggregate.value(QStringLiteral("changes")).toArray();
+            groups = aggregate.value(
+                QStringLiteral("operation_groups")).toArray();
+        }
+    }
+    if (!valid) {
+        aggregate = payload;
+        aggregate.insert(QStringLiteral("changes"), QJsonArray());
+        aggregate.insert(QStringLiteral("operation_groups"), QJsonArray());
+        aggregate.insert(QStringLiteral("aggregated_count"), 0);
+        aggregate.insert(QStringLiteral("aggregation_valid"), false);
+        aggregate.insert(QStringLiteral("review_complete"), false);
+        m_reviewedPlans.insert(plan_id, aggregate);
+        return;
+    }
+
+    for (const QJsonValue &value : page_changes) changes.append(value);
+    for (const QJsonValue &value : page_groups) groups.append(value);
+    const int aggregated_count = changes.size();
+    aggregate.insert(QStringLiteral("changes"), changes);
+    aggregate.insert(QStringLiteral("operation_groups"), groups);
+    aggregate.insert(QStringLiteral("aggregated_count"), aggregated_count);
+    aggregate.insert(QStringLiteral("aggregation_valid"), true);
+    aggregate.insert(QStringLiteral("offset"), offset);
+    aggregate.insert(QStringLiteral("limit"),
+                     payload.value(QStringLiteral("limit")));
+    aggregate.insert(QStringLiteral("returned_count"), returned_count);
+    aggregate.insert(QStringLiteral("has_more"),
+                     payload.value(QStringLiteral("has_more")));
+    aggregate.insert(QStringLiteral("reviewed_count"),
+                     payload.value(QStringLiteral("reviewed_count")));
+    aggregate.insert(QStringLiteral("tool_call_id"),
+                     payload.value(QStringLiteral("tool_call_id")));
+    if (payload.contains(QStringLiteral("next_offset"))) {
+        aggregate.insert(QStringLiteral("next_offset"),
+                         payload.value(QStringLiteral("next_offset")));
+    } else {
+        aggregate.remove(QStringLiteral("next_offset"));
+    }
+    if (payload.contains(QStringLiteral("review_next_offset"))) {
+        aggregate.insert(QStringLiteral("review_next_offset"),
+                         payload.value(QStringLiteral("review_next_offset")));
+    } else {
+        aggregate.remove(QStringLiteral("review_next_offset"));
+    }
+    const bool complete = aggregated_count == total_count
+        && !payload.value(QStringLiteral("has_more")).toBool()
+        && payload.value(QStringLiteral("review_complete")).toBool()
+        && payload.value(QStringLiteral("reviewed_count")).toInt(-1)
+            == total_count;
+    aggregate.insert(QStringLiteral("review_complete"), complete);
+    m_reviewedPlans.insert(plan_id, aggregate);
 }
 
 void AgentDock::resetTranscript()
@@ -1451,13 +1558,30 @@ QString AgentDock::planReviewBody(const QJsonObject &payload) const
                          .arg(summary.value(QStringLiteral("review_only_files")).toInt())
                          .arg(summary.value(QStringLiteral("skipped_files")).toInt())
                          .arg(summary.value(QStringLiteral("error_files")).toInt()));
+        const bool paginated = payload.contains(QStringLiteral("total_count"));
+        if (paginated) {
+            lines.append(tr("Plan page: %1 of %2 XHTML file(s) (offset %3).")
+                             .arg(payload.value(
+                                      QStringLiteral("returned_count")).toInt())
+                             .arg(payload.value(
+                                      QStringLiteral("total_count")).toInt())
+                             .arg(payload.value(QStringLiteral("offset")).toInt()));
+            if (!payload.value(QStringLiteral("review_complete")).toBool()) {
+                lines.append(tr("More plan files must be reviewed; continue at offset %1 before applying.")
+                                 .arg(payload.value(
+                                      QStringLiteral("review_next_offset")).toInt()));
+            }
+        }
         const QJsonArray groups = payload.value(
             QStringLiteral("operation_groups")).toArray();
         if (payload.value(
                 QStringLiteral("operation_groups_independent")).toBool()
             && !groups.isEmpty()) {
             lines.append(tr("Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.")
-                             .arg(groups.size()));
+                             .arg(paginated
+                                      ? payload.value(
+                                          QStringLiteral("total_count")).toInt()
+                                      : groups.size()));
         }
         if (!payload.value(QStringLiteral("changes_css")).toBool()
             && !payload.value(QStringLiteral("changes_opf")).toBool()
@@ -1546,6 +1670,10 @@ QWidget *AgentDock::makePlanReviewCard(const QJsonObject &payload)
     card->setProperty("planId", payload.value(QStringLiteral("plan_id")).toString());
     card->setProperty("planDigest", payload.value(QStringLiteral("plan_digest")).toString());
     card->setProperty("bookRevision", payload.value(QStringLiteral("book_revision")).toInteger());
+    card->setProperty(
+        "planReviewComplete",
+        !payload.contains(QStringLiteral("total_count"))
+            || payload.value(QStringLiteral("review_complete")).toBool());
     const QString book_session_id =
         payload.value(QStringLiteral("book_session_id")).toString();
     card->setProperty("bookSessionId", book_session_id);
@@ -2214,11 +2342,7 @@ void AgentDock::appendEvent(const AgentEvent &event)
             settleApproval(event.payload.value(QStringLiteral("tool_call_id")).toString(), false);
             break;
         case AgentEventType::PlanCreated:
-            if (!event.payload.value(QStringLiteral("plan_id")).toString().isEmpty()) {
-                m_reviewedPlans.insert(
-                    event.payload.value(QStringLiteral("plan_id")).toString(),
-                    event.payload);
-            }
+            recordReviewedPlanPage(event.payload);
             appendCard(makePlanReviewCard(event.payload));
             break;
         case AgentEventType::TransactionPreviewed:
