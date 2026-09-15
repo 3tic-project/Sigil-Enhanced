@@ -142,6 +142,19 @@ int main()
     }
     paginated_book.setSpine(paginated_spine);
     paginated_book.setToc(paginated_toc);
+    QJsonObject paginated_metadata {
+        { QStringLiteral("title"), QStringLiteral("Metadata Pagination") },
+        { QStringLiteral("language"), QStringLiteral("en") }
+    };
+    for (int index = 0; index < 125; ++index) {
+        paginated_metadata.insert(
+            QStringLiteral("field-%1").arg(index, 3, 10, QLatin1Char('0')),
+            QStringLiteral("value-%1").arg(index));
+    }
+    paginated_metadata.insert(
+        QStringLiteral("field-023"),
+        QString(10000, QLatin1Char('x')) + QStringLiteral("END"));
+    paginated_book.setMetadata(paginated_metadata);
     ToolRegistry paginated_registry;
     registerBookTools(&paginated_registry, &paginated_book);
     auto run_paginated = [&](const QString &name, const QJsonObject &arguments) {
@@ -198,6 +211,100 @@ int main()
                     == QStringLiteral("Entry 200")
                 && !toc_tail.data.value(QStringLiteral("has_more")).toBool(),
             "TOC pagination must return the requested stable tail");
+    const ToolResult metadata_page = run_paginated(
+        QStringLiteral("book.metadata"), QJsonObject());
+    const QString metadata_digest = metadata_page.data.value(
+        QStringLiteral("metadata_digest")).toString();
+    Require(metadata_page.data.value(QStringLiteral("entries")).toArray().size() == 20
+                && metadata_page.data.value(QStringLiteral("total_count")).toInt() == 127
+                && metadata_page.data.value(QStringLiteral("returned_count")).toInt() == 20
+                && metadata_page.data.value(QStringLiteral("next_offset")).toInt() == 20
+                && metadata_digest.size() == 64
+                && metadata_page.data.value(QStringLiteral("title")).toString()
+                    == QStringLiteral("Metadata Pagination"),
+            "metadata inventory defaults must return a bounded first page and stable digest");
+    const QJsonObject metadata_page_properties = paginated_registry
+        .find(QStringLiteral("book.metadata"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(metadata_page_properties.value(QStringLiteral("offset")).toObject()
+                    .value(QStringLiteral("minimum")).toInt() == 0
+                && metadata_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 20
+                && metadata_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 50,
+            "metadata pagination schema must disclose its default and hard bounds");
+    const ToolResult metadata_tail = run_paginated(
+        QStringLiteral("book.metadata"), QJsonObject {
+            { QStringLiteral("offset"), 20 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const QJsonObject long_metadata_preview = metadata_tail.data
+        .value(QStringLiteral("entries")).toArray().at(3).toObject();
+    Require(metadata_tail.data.value(QStringLiteral("entries")).toArray().size() == 50
+                && metadata_tail.data.value(QStringLiteral("limit")).toInt() == 50
+                && metadata_tail.data.value(QStringLiteral("metadata_digest")).toString()
+                    == metadata_digest
+                && long_metadata_preview.value(QStringLiteral("index")).toInt() == 23
+                && long_metadata_preview.value(QStringLiteral("name")).toString()
+                    == QStringLiteral("field-023")
+                && long_metadata_preview.value(QStringLiteral("content")).toString().size()
+                    == 512
+                && long_metadata_preview.value(QStringLiteral("content_length")).toInt()
+                    == 10003
+                && long_metadata_preview.value(QStringLiteral("content_truncated")).toBool(),
+            "metadata pages must clamp item counts and bound individual content previews");
+    const QJsonObject metadata_fragment_properties = paginated_registry
+        .find(QStringLiteral("metadata.read_fragment"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(metadata_fragment_properties.value(QStringLiteral("offset")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 0
+                && metadata_fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 2048
+                && metadata_fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 8192,
+            "metadata fragment schema must disclose its default and hard bounds");
+    const ToolResult metadata_fragment = run_paginated(
+        QStringLiteral("metadata.read_fragment"), QJsonObject {
+            { QStringLiteral("index"), 23 },
+            { QStringLiteral("metadata_digest"), metadata_digest },
+            { QStringLiteral("offset"), 500 },
+            { QStringLiteral("limit"), 99999 }
+        });
+    Require(metadata_fragment.ok
+                && metadata_fragment.data.value(QStringLiteral("offset")).toInt() == 500
+                && metadata_fragment.data.value(QStringLiteral("limit")).toInt() == 8192
+                && metadata_fragment.data.value(QStringLiteral("length")).toInt() == 8192
+                && metadata_fragment.data.value(QStringLiteral("total")).toInt() == 10003
+                && metadata_fragment.data.value(QStringLiteral("truncated")).toBool()
+                && metadata_fragment.data.value(QStringLiteral("continuation")).toInt()
+                    == 8692,
+            "metadata fragment reads must clamp oversized requests and publish continuation");
+    const ToolResult metadata_fragment_tail = run_paginated(
+        QStringLiteral("metadata.read_fragment"), QJsonObject {
+            { QStringLiteral("index"), 23 },
+            { QStringLiteral("metadata_digest"), metadata_digest },
+            { QStringLiteral("offset"), 8692 }
+        });
+    Require(metadata_fragment_tail.ok
+                && metadata_fragment_tail.data.value(QStringLiteral("text")).toString()
+                       .endsWith(QStringLiteral("END"))
+                && !metadata_fragment_tail.data.value(QStringLiteral("truncated")).toBool()
+                && !metadata_fragment_tail.data.contains(QStringLiteral("continuation")),
+            "metadata fragment tails must preserve exact content and terminate");
+    paginated_metadata.insert(QStringLiteral("field-000"),
+                              QStringLiteral("changed-value"));
+    paginated_book.setMetadata(paginated_metadata);
+    const ToolResult stale_metadata_fragment = run_paginated(
+        QStringLiteral("metadata.read_fragment"), QJsonObject {
+            { QStringLiteral("index"), 23 },
+            { QStringLiteral("metadata_digest"), metadata_digest }
+        });
+    Require(!stale_metadata_fragment.ok
+                && stale_metadata_fragment.code == QStringLiteral("METADATA_CHANGED")
+                && stale_metadata_fragment.data.value(
+                       QStringLiteral("actual_metadata_digest")).toString()
+                    != metadata_digest,
+            "metadata fragment reads must fail closed when the inventory digest changes");
     const ToolResult css_page = run_paginated(
         QStringLiteral("style.stylesheets"), QJsonObject());
     Require(css_page.data.value(QStringLiteral("stylesheets")).toArray().size() == 12

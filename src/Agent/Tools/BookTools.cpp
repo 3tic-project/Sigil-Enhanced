@@ -46,6 +46,12 @@ constexpr int DEFAULT_MANUSCRIPT_SUMMARY_PAGE_SIZE = 40;
 constexpr int MAX_MANUSCRIPT_SUMMARY_PAGE_SIZE = 100;
 constexpr int DEFAULT_TRANSACTION_PREVIEW_PAGE_SIZE = 50;
 constexpr int MAX_TRANSACTION_PREVIEW_PAGE_SIZE = 100;
+constexpr int DEFAULT_METADATA_PAGE_SIZE = 20;
+constexpr int MAX_METADATA_PAGE_SIZE = 50;
+constexpr int MAX_METADATA_PREVIEW_LENGTH = 512;
+constexpr int MAX_METADATA_NAME_PREVIEW_LENGTH = 256;
+constexpr int DEFAULT_METADATA_FRAGMENT_LENGTH = 2048;
+constexpr int MAX_METADATA_FRAGMENT_LENGTH = 8192;
 
 QJsonObject emptyObjectSchema()
 {
@@ -332,6 +338,153 @@ QJsonObject paginatedTransactionPreview(QJsonObject preview,
     return preview;
 }
 
+QString metadataValueText(const QJsonValue &value)
+{
+    if (value.isString()) return value.toString();
+    if (value.isBool()) return value.toBool() ? QStringLiteral("true")
+                                              : QStringLiteral("false");
+    if (value.isDouble()) return QString::number(value.toDouble(), 'g', 17);
+    if (value.isArray()) {
+        return QString::fromUtf8(QJsonDocument(value.toArray()).toJson(
+            QJsonDocument::Compact));
+    }
+    if (value.isObject()) {
+        return QString::fromUtf8(QJsonDocument(value.toObject()).toJson(
+            QJsonDocument::Compact));
+    }
+    return QString();
+}
+
+bool metadataNameMatchesField(const QString &name, const QString &field)
+{
+    return name == field || name.endsWith(QLatin1Char(':') + field);
+}
+
+QJsonArray effectiveMetadataEntries(const QJsonObject &metadata)
+{
+    QJsonArray entries;
+    const QJsonArray stored_entries = metadata.value(
+        QStringLiteral("entries")).toArray();
+    for (const QJsonValue &value : stored_entries) {
+        if (!value.isObject()) continue;
+        const QJsonObject stored = value.toObject();
+        entries.append(QJsonObject {
+            { QStringLiteral("name"), metadataValueText(
+                  stored.value(QStringLiteral("name"))) },
+            { QStringLiteral("content"), metadataValueText(
+                  stored.value(QStringLiteral("content"))) }
+        });
+    }
+
+    for (auto it = metadata.constBegin(); it != metadata.constEnd(); ++it) {
+        if (it.key() == QLatin1String("entries")
+            || it.key() == QLatin1String("book_revision")) {
+            continue;
+        }
+        const QString content = metadataValueText(it.value());
+        bool replaced = false;
+        for (int index = 0; index < entries.size(); ++index) {
+            QJsonObject entry = entries.at(index).toObject();
+            if (!metadataNameMatchesField(
+                    entry.value(QStringLiteral("name")).toString(), it.key())) {
+                continue;
+            }
+            entry.insert(QStringLiteral("content"), content);
+            entries.replace(index, entry);
+            replaced = true;
+            break;
+        }
+        if (!replaced) {
+            entries.append(QJsonObject {
+                { QStringLiteral("name"), it.key() },
+                { QStringLiteral("content"), content }
+            });
+        }
+    }
+    return entries;
+}
+
+QString metadataDigest(const QJsonArray &entries)
+{
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    hash.addData(QByteArrayLiteral("sigil-agent-metadata-v1:"));
+    hash.addData(QJsonDocument(entries).toJson(QJsonDocument::Compact));
+    return QString::fromLatin1(hash.result().toHex());
+}
+
+QJsonObject boundedMetadataEntry(const QJsonObject &entry, int index)
+{
+    const QString name = entry.value(QStringLiteral("name")).toString();
+    const QString content = entry.value(QStringLiteral("content")).toString();
+    return QJsonObject {
+        { QStringLiteral("index"), index },
+        { QStringLiteral("name"), name.left(MAX_METADATA_NAME_PREVIEW_LENGTH) },
+        { QStringLiteral("name_length"), name.size() },
+        { QStringLiteral("name_truncated"),
+          name.size() > MAX_METADATA_NAME_PREVIEW_LENGTH },
+        { QStringLiteral("content"), content.left(MAX_METADATA_PREVIEW_LENGTH) },
+        { QStringLiteral("content_length"), content.size() },
+        { QStringLiteral("content_truncated"),
+          content.size() > MAX_METADATA_PREVIEW_LENGTH },
+        { QStringLiteral("content_hash"), QString::fromLatin1(
+              QCryptographicHash::hash(content.toUtf8(),
+                                       QCryptographicHash::Sha256).toHex()) }
+    };
+}
+
+QJsonObject paginatedMetadata(const QJsonObject &metadata,
+                              const QJsonObject &arguments)
+{
+    const QJsonArray entries = effectiveMetadataEntries(metadata);
+    const int offset = qBound(
+        0, arguments.value(QStringLiteral("offset")).toInt(0), entries.size());
+    const int requested_limit = arguments.contains(QStringLiteral("limit"))
+        ? arguments.value(QStringLiteral("limit")).toInt(
+              DEFAULT_METADATA_PAGE_SIZE)
+        : DEFAULT_METADATA_PAGE_SIZE;
+    const int limit = qBound(1, requested_limit, MAX_METADATA_PAGE_SIZE);
+    const int end = qMin(entries.size(), offset + limit);
+    QJsonArray page;
+    for (int index = offset; index < end; ++index) {
+        page.append(boundedMetadataEntry(entries.at(index).toObject(), index));
+    }
+
+    QJsonObject result {
+        { QStringLiteral("book_revision"),
+          metadata.value(QStringLiteral("book_revision")) },
+        { QStringLiteral("metadata_digest"), metadataDigest(entries) },
+        { QStringLiteral("entries"), page },
+        { QStringLiteral("total_count"), entries.size() },
+        { QStringLiteral("offset"), offset },
+        { QStringLiteral("limit"), limit },
+        { QStringLiteral("returned_count"), page.size() },
+        { QStringLiteral("has_more"), end < entries.size() }
+    };
+    if (end < entries.size()) result.insert(QStringLiteral("next_offset"), end);
+
+    const QStringList summary_fields {
+        QStringLiteral("title"), QStringLiteral("language"),
+        QStringLiteral("creator"), QStringLiteral("contributor"),
+        QStringLiteral("publisher"), QStringLiteral("description"),
+        QStringLiteral("subject"), QStringLiteral("date"),
+        QStringLiteral("identifier"), QStringLiteral("rights"),
+        QStringLiteral("source"), QStringLiteral("coverage"),
+        QStringLiteral("type"), QStringLiteral("format"),
+        QStringLiteral("relation")
+    };
+    QJsonArray truncated_fields;
+    for (const QString &field : summary_fields) {
+        if (!metadata.contains(field)) continue;
+        const QString text = metadataValueText(metadata.value(field));
+        result.insert(field, text.left(MAX_METADATA_PREVIEW_LENGTH));
+        if (text.size() > MAX_METADATA_PREVIEW_LENGTH) {
+            truncated_fields.append(field);
+        }
+    }
+    result.insert(QStringLiteral("summary_truncated_fields"), truncated_fields);
+    return result;
+}
+
 class LambdaTool : public IAgentTool
 {
 public:
@@ -505,10 +658,109 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("book.metadata"),
-        QStringLiteral("Read package metadata such as title, language and creator."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(workspace->metadata());
+        QStringLiteral("Read a bounded page of package metadata previews such as title, language and creator. Use next_offset while has_more is true; use metadata.read_fragment for truncated content."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_METADATA_PAGE_SIZE, MAX_METADATA_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedMetadata(
+                workspace->metadata(), arguments));
+        });
+
+    add(registry, QStringLiteral("metadata.read_fragment"),
+        QStringLiteral("Read an exact bounded fragment of one metadata entry selected from book.metadata. Reuse the same metadata_digest and entry index; continue at continuation while truncated is true."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("index"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("integer") },
+                    { QStringLiteral("minimum"), 0 }
+                } },
+                { QStringLiteral("metadata_digest"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("string") },
+                    { QStringLiteral("minLength"), 64 },
+                    { QStringLiteral("maxLength"), 64 }
+                } },
+                { QStringLiteral("offset"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("integer") },
+                    { QStringLiteral("minimum"), 0 },
+                    { QStringLiteral("default"), 0 }
+                } },
+                { QStringLiteral("limit"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("integer") },
+                    { QStringLiteral("minimum"), 1 },
+                    { QStringLiteral("maximum"), MAX_METADATA_FRAGMENT_LENGTH },
+                    { QStringLiteral("default"), DEFAULT_METADATA_FRAGMENT_LENGTH }
+                } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("index"), QStringLiteral("metadata_digest")
+            } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const QJsonArray entries = effectiveMetadataEntries(
+                workspace->metadata());
+            const QString digest = metadataDigest(entries);
+            const QString expected_digest = arguments.value(
+                QStringLiteral("metadata_digest")).toString();
+            if (expected_digest != digest) {
+                return ToolResult::failure(
+                    QStringLiteral("METADATA_CHANGED"),
+                    QStringLiteral("Package metadata changed; restart book.metadata at offset 0"),
+                    QJsonObject {
+                        { QStringLiteral("expected_metadata_digest"),
+                          expected_digest },
+                        { QStringLiteral("actual_metadata_digest"), digest }
+                    });
+            }
+            const int index = arguments.value(QStringLiteral("index")).toInt(-1);
+            if (index < 0 || index >= entries.size()) {
+                return ToolResult::failure(
+                    QStringLiteral("METADATA_ENTRY_NOT_FOUND"),
+                    QStringLiteral("Metadata entry index is outside the current inventory"),
+                    QJsonObject {
+                        { QStringLiteral("index"), index },
+                        { QStringLiteral("total_count"), entries.size() },
+                        { QStringLiteral("metadata_digest"), digest }
+                    });
+            }
+            const QJsonObject entry = entries.at(index).toObject();
+            const QString name = entry.value(QStringLiteral("name")).toString();
+            const QString content = entry.value(
+                QStringLiteral("content")).toString();
+            const int offset = qBound(
+                0, arguments.value(QStringLiteral("offset")).toInt(0),
+                content.size());
+            const int requested_limit = arguments.contains(QStringLiteral("limit"))
+                ? arguments.value(QStringLiteral("limit")).toInt(
+                      DEFAULT_METADATA_FRAGMENT_LENGTH)
+                : DEFAULT_METADATA_FRAGMENT_LENGTH;
+            const int limit = qBound(
+                1, requested_limit, MAX_METADATA_FRAGMENT_LENGTH);
+            const QString text = content.mid(offset, limit);
+            const int end = offset + text.size();
+            const bool truncated = end < content.size();
+            QJsonObject data {
+                { QStringLiteral("index"), index },
+                { QStringLiteral("name"),
+                  name.left(MAX_METADATA_NAME_PREVIEW_LENGTH) },
+                { QStringLiteral("name_length"), name.size() },
+                { QStringLiteral("name_truncated"),
+                  name.size() > MAX_METADATA_NAME_PREVIEW_LENGTH },
+                { QStringLiteral("metadata_digest"), digest },
+                { QStringLiteral("content_hash"), QString::fromLatin1(
+                      QCryptographicHash::hash(content.toUtf8(),
+                                               QCryptographicHash::Sha256).toHex()) },
+                { QStringLiteral("offset"), offset },
+                { QStringLiteral("end"), end },
+                { QStringLiteral("length"), text.size() },
+                { QStringLiteral("total"), content.size() },
+                { QStringLiteral("limit"), limit },
+                { QStringLiteral("truncated"), truncated },
+                { QStringLiteral("text"), text }
+            };
+            if (truncated) data.insert(QStringLiteral("continuation"), end);
+            return ToolResult::success(data);
         });
 
     QJsonObject search_schema {
