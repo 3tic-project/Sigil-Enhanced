@@ -306,6 +306,12 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 避免旧 index 静默指向另一项。分页与分段发生在工具边界；workspace 目前仍先构造完整 metadata
 对象和 entries，摘要计算也会序列化完整有效清单，因此本改动不降低 Book 侧枚举或临时内存。
 
+`resource.read_fragment` 的 offset 默认/最小为 0，limit 默认 2,048、最小 1、最大 8,192 个
+UTF-16 单元，schema 和执行层使用相同边界；绕过 schema 的负 offset、零值或超大 limit 也会
+夹紧。结果返回实际 `limit`，只要后面仍有文本就返回精确 `continuation`；必须继续读取直到
+`truncated=false`。超过 EOF 的 offset 会规范化为 `total`，形成 offset=end=total 的稳定空尾页。
+XHTML/CSS 的 hash、revision 和行号元数据保持不变，图片与字体二进制仍拒绝进入模型上下文。
+
 `font.inventory`、`book.validate` 和 `book.check` 也支持 `offset` / `limit`，默认 100、最多
 200。它们一次包含多个数组，因此同一个 offset 分别切取每个数组，并用 `total_counts` /
 `returned_counts` 按原数组键报告计数；`has_more` 与 `next_offset` 以最长数组为准。较短数组

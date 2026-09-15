@@ -267,6 +267,16 @@ continuation 续读。元数据变化后旧 digest 会以 `METADATA_CHANGED` 失
 工具层目前仍先取得并摘要完整 metadata，因此该改动限制模型与 transcript 负载，不降低宿主
 内部枚举峰值。
 
+### Agent 资源片段读取契约统一
+
+`resource.read_fragment` 现在在工具 schema 中明确公开 offset 默认/最小值 0，以及 limit
+默认 2,048、最小 1、最大 8,192 个 UTF-16 单元；执行层也会夹紧绕过 schema 的异常值。Memory
+与真实 Sigil 工作区统一返回实际 limit，并在 `truncated=true` 时提供精确 continuation。
+
+超过正文结尾的 offset 会归一到 total，返回稳定空尾页，不再回显不可能的游标。系统提示要求
+模型沿 continuation 读到 `truncated=false`；资源 hash/revision、行号消歧、补丁来源规则和
+字体/图片拒绝策略均未改变。
+
 ### Agent 大型诊断结果改为分页
 
 `font.inventory`、`book.validate` 和 `book.check` 不再把全部字体、问题、未引用图片和 XHTML

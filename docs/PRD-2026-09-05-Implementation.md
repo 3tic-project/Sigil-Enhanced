@@ -1947,3 +1947,37 @@ continuation 尾读以及元数据改变后的摘要拒绝。`agent_workspace_pa
 CPU 或临时内存峰值。超过 256 单元的非常规 metadata name 目前只有截断预览，精确分段工具只
 读取 content；重复 DC 字段也继续沿现有 `metadata.update` 的首项 upsert 语义。真实恶意超长
 字段名、在线模型的分页/分段遵循率、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
+
+## Native Agent 资源片段读取契约统一（2026-09-16）
+
+分支：`feature/agent-fragment-read-contract`。主要提交：`5a7b58058`（schema/运行时边界、双后端
+continuation 与 EOF 归一、模型提示和回归）。
+
+### 公开并强制已有硬边界
+
+- Memory 与 Sigil workspace 原本已把单次 `readFragment()` 限制为最多 8,192 个 UTF-16 单元，
+  但工具 schema 没有 minimum/default/maximum，模型无法在调用前知道契约；Sigil 返回值还缺少
+  Memory 已有的 continuation。现在 `resource.read_fragment` 明确声明 offset 默认/最小 0，limit
+  默认 2,048、最小 1、最大 8,192；工具执行层把绕过 schema 的负 offset、零 limit 和超大 limit
+  分别夹紧为 0、1 和 8,192，再交给 workspace 的既有防线。
+- 两个 workspace 都返回实际 `limit`，并只在 `truncated=true` 时返回下一段起点
+  `continuation=end`。系统提示和工具描述要求沿 continuation 读取到终止，避免模型只看首段或
+  猜测下一 offset。XHTML/CSS 的完整 hash、resource revision、UTF-16 offset/end/length/total、
+  1-based 行号元数据和 patch_fragment 来源规则没有改变。
+- 起点超过正文长度时不再回显调用方的任意大整数，而是归一到 total；结果稳定为
+  offset=end=total、length=0、`truncated=false` 且无 continuation。字体和图片仍在读取正文前以
+  `BINARY_NOT_IN_CONTEXT` 拒绝，契约统一没有扩大模型可见数据类型。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 用 10,003 UTF-16 单元资源验证默认 2,048 段、8,192 硬上限、schema 全部边界、
+负 offset/零 limit 的执行层夹紧、精确尾段和越过 EOF 的稳定空页；既有 XHTML 行号、补丁来源和
+二进制隔离回归继续通过。`agent_workspace_package_integration` 直接在真实 Sigil workspace 验证
+首字符 continuation 以及超大 offset/limit 的 total/8,192 归一。完整 Sigil 构建、链接及 42 个
+固定 Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。该切片没有新增 UI 文案，四语
+`.qm` 目标保持最新，简中/繁中/日文严格目录覆盖测试通过。
+
+本切片统一的是已经存在的分段读取边界，不减少 workspace 为 hash 和行号元数据读取完整 QString
+的成本，也不为一次模型任务设置累计读取字节预算；模型仍可通过多次合法 continuation 读取完整
+文本资源。全轮累计返回量继续由工具调用上限、模型步骤上限和历史预算共同约束。超大单文件
+hash/行号扫描基准、在线模型续读率、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
