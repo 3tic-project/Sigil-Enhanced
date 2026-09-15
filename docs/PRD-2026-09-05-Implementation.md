@@ -1512,3 +1512,41 @@ Agent 测试连续 3 轮共 42 次通过。该切片没有新增 UI 文案；四
 成本上限。一次模型请求仍可能很大或很慢，一次响应也可能提出多个工具调用；已 Applied 的提交
 仍按各自恢复能力处理。真实在线 Provider 的长链路、达到上限前已经 commit 的混合任务、
 Windows/Linux GUI 和辅助技术人工验收仍属于后续发布边界。
+
+## Native Agent 单次运行工具调用上限（2026-09-15）
+
+分支：`feature/agent-tool-call-limit`。主要提交：`20056f428`（整批预检、设置接线、提示与
+Runner 回归）、`28055448f`（Technical details 展示）和 `654a6bc10`（四语文案）。
+
+### 累计预算与整批零执行
+
+- `AgentRunner` 默认每轮接受 128 次工具调用，设置/Runner 边界为 1–512。计数与模型步骤独立，
+  按模型返回且通过批次预检的 calls 累计；权限拒绝或工具自身失败仍会消耗额度，防止模型用
+  大量无效调用绕开预算。每次请求的 system prompt 都带当前剩余额度。
+- 模型响应完成、书籍目标复核通过后，Runner 在发布 AssistantMessage 或进入 ExecutingTools
+  前比较本批数量与余额。超限时不截取前缀，而是整批零执行；因此不会形成“同一模型批次只
+  做了一半”的新部分状态，也不会把没有对应 tool result 的 assistant tool calls 纳入后续历史。
+- 超限路径先 `rollbackOpenWork()`，再发布稳定代码 `MAX_TOOL_CALLS_EXCEEDED` 和 Failed 终态。
+  Error 记录此前获准数、本批申请数、剩余数和上限；运行状态事件始终记录上限，终态保留实际
+  获准数。此前已经 commit 的 Applied 变更不属于开放事务，继续遵循原恢复边界。
+
+### 设置、可观察性与测试证据
+
+- 偏好设置新增 **Maximum tool calls per run**。值经
+  `AgentSettings → MainWindow → AgentController → AgentRunner` 持久化和传递；提示明确超限会
+  整批拒绝并回滚未提交工作。`model_request_started` 另记录请求开始时的 used/remaining/max，
+  使 Debug JSON 可以还原每步预算。
+- Dock 的 **Technical details** 在运行中显示上限，终态显示实际工具调用数/上限，并公开
+  `runToolCalls` / `runMaxToolCalls` 动态属性。该指标与相邻的模型步骤预算分开呈现。
+- `agent_harness` 构造第一步 `transaction.begin`、第二步在只剩 1 个额度时返回 2 个调用，验证
+  第二批没有任何 ToolStarted、没有进入 AssistantMessage 历史、开放事务回滚、稳定错误字段、
+  请求提示余额和终态实际计数；正常两步任务固定默认 128 出现在请求与运行事件。
+  `agent_dock` / `agent_dock_contract` 覆盖设置链、运行中/终态文案和公开属性。完整 Sigil 构建
+  及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。四份 `.qm` 均为
+  0 unfinished，英文 4,771 条，简中/繁中/日文各 5,748 条；当前 Agent Dock/设置的 283 条
+  活跃文案已逐项核对四语存在、非空和占位符一致。
+
+本切片只限制调用数量，不限制单个调用的参数/结果字节、一次工具内部处理的资源数、Provider
+响应体或已经开始的工具耗时；大型聚合结果仍需各工具自己的分页/截断策略。真实在线模型在
+低额度下的任务完成率、单响应极大 tool-call 数组的 Provider 解码内存、达到上限前已经 commit
+的混合任务、Windows/Linux GUI 和辅助技术人工验收仍属于后续边界。
