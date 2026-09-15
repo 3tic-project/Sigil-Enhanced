@@ -295,6 +295,11 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 长度，不能猜测。真实 Sigil summary 直接对底层 Spine 路径和解析后的 TOC 条目计数，不再为了
 两个标量构造完整 `spine()` / `toc()` JSON；资源类型计数也只获取一次资源列表。
 
+自动 Book map 最多列出 60 个资源时，book path / resource ID 标签最多显示 256 个 UTF-16
+单元，kind 最多 64 个；截断标签会写出原始长度。该限制也用于两份自动正文样本、用户附加资源
+和选区的标题，但内部仍用完整 ID 调用 `readFragment()`，不会改变读取范围。模型若需要标签的
+精确值，应调用分页的 `book.resources` 或 `book.spine`，不能把预览省略号当成真实 ID/path。
+
 其中 `book.resources`、`book.spine`、`book.toc` 和 `style.stylesheets` 使用 `offset` / `limit`
 分页，返回原数组键以及 `total_count`、实际 `offset` / `limit`、`returned_count`、`has_more`；
 尚有下一页时还返回 `next_offset`。前三者默认 100 项、每页最多 200 项；样式表包含每份 CSS

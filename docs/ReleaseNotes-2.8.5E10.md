@@ -288,6 +288,13 @@ Sigil summary 的 Spine/TOC 数量现在直接从底层路径列表和解析条�
 JSON 数组；资源总数也复用类型统计时取得的同一列表。该改动减少自动上下文热路径上的临时
 对象，但 TOC 本身仍需解析，未改变书籍内容或导航语义。
 
+### Agent 自动资源标签有界化
+
+自动 Book map、正文样本以及用户附加资源/选区标题中的 book path 和 resource ID 现在最多预览
+256 个 UTF-16 单元，resource kind 最多 64 个；超长标签会标出原始长度并引导模型用分页
+`book.resources` / `book.spine` 取得精确值。截断只影响提示文本，样本和选区仍用完整内部 ID
+读取，因此不会改变选区内容或资源定位。
+
 ### Agent 大型诊断结果改为分页
 
 `font.inventory`、`book.validate` 和 `book.check` 不再把全部字体、问题、未引用图片和 XHTML

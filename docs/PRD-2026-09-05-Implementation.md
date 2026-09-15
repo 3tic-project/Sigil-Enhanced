@@ -2014,3 +2014,36 @@ title/language/version 验证 512/128/64 预览、原始长度、截断标志和
 也不限制后续显式分页工具的累计读取量。Book map 的前 60 个资源路径仍逐项输出，单个异常超长
 path/ID 尚无字符预览边界，是自动上下文中下一项可单独收敛的输入。真实超大 Nav/NCX 计数
 基准、在线模型行为、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
+
+## Native Agent 自动资源标签有界化（2026-09-16）
+
+分支：`feature/agent-bounded-book-map-labels`。主要提交：`2da1900dd`（自动上下文标签边界、精确
+内部读取保留与超长夹具）。
+
+### 限制展示文本而不破坏资源定位
+
+- Book map 已把资源条目数限制为前 60 项，但原先直接拼接每项完整 book path/kind；两份自动
+  Spine 样本、用户附加资源和 attached selection 标题也直接拼接完整 resource ID。ZIP path 或
+  内部 ID 极端超长时，这些字符串会绕过工具分页并在每次请求中重复。现在 path/ID 标签最多
+  预览 256 个 UTF-16 单元，kind 最多 64 个，截断后统一追加原始长度。
+- 边界只应用于 `PromptAssembler` 生成的可见标签。Spine sample、attached resource 和 selection
+  仍把完整 ID 传给 `readFragment()`，selection 的精确 UTF-16 start/end 也保持不变；因此超长
+  ID 的资源仍能读取正确正文，只是不再把完整标签复制进系统上下文。
+- system prompt 明确说明自动标签是预览；看到截断标记时通过分页的 `book.resources` 或
+  `book.spine` 取得精确 ID/path，不能把省略号或说明文字当成资源标识。显式工具页仍保留完整
+  单项值，本切片没有改变 rename/delete/patch 等写入参数语义。
+
+### 测试证据与剩余项
+
+`agent_harness` 构造 716 单元 resource ID、720+ 单元 book path 和 109 单元 kind，验证自动资源
+行、Spine sample 标题和 attached selection 标题都不泄漏尾部，包含原始长度提示且总上下文
+保持有界；同时精确正文仍由完整 ID 成功读取。完整 Sigil 构建、链接及 42 个固定 Python 依赖
+通过；14 项 Agent 测试连续 3 轮共 42 次通过。该切片没有新增 UI 文案，四语 `.qm` 目标保持
+最新，简中/繁中/日文严格目录覆盖测试通过。
+
+PromptAssembler 当前仍会先调用 `workspace->resources()` / `spine()` 构造完整内部数组，再只输出
+前 60 项和两份样本，因此这里降低的是模型请求与 transcript 大小，不是 Book 侧枚举/临时内存。
+显式 `book.resources` / `book.spine` 页中的单项 ID/path 也仍为完整值；后续若对工具页再做单项
+预览，必须同时提供稳定索引的精确读取路径，不能破坏模型调用写工具所需的真实 ID。多 attached
+selection 的累计正文上限、在线模型补读率、Windows/Linux 构建与辅助技术人工验收仍待后续
+验证。
