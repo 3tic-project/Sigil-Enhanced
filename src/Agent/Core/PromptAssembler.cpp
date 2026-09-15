@@ -23,6 +23,9 @@ namespace
 
 constexpr int kMaxAttachedSelectionLength = 4096;
 constexpr int kMaxAttachedResourceCount = 60;
+constexpr int kMaxAutomaticSessionTasks = 8;
+constexpr int kMaxAutomaticSessionMemoryEntries = 8;
+constexpr int kMaxAutomaticSessionValueLength = 512;
 
 struct AttachedSelection {
     QString resourceId;
@@ -64,7 +67,7 @@ QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) 
         "- Inspect before editing. Prefer bounded fragments over full files.\n"
         "- An attached selection is identified by resource:start-end in UTF-16 code units. Its exact bounded excerpt is included in context; use resource.read_fragment if it was truncated.\n"
         "- The book map and attached samples are already in context. For greetings or high-level questions, answer from that. Call extra read tools only for a fact you do not already have.\n"
-        "- book.resources, book.spine, book.toc, style.stylesheets, font.inventory, book.validate, and book.check are paginated. When has_more=true, use next_offset to continue; never treat the first page as the complete inventory or diagnostic result.\n"
+        "- book.resources, book.spine, book.toc, style.stylesheets, font.inventory, book.validate, book.check, session.tasks, and keyless session.recall are paginated. When has_more=true, use next_offset to continue; never treat the first page as the complete inventory, diagnostic, or session-state result.\n"
         "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
         "- A patch must not cut through a markup tag.\n"
         "- Mutations must go through transaction.begin → staged edits → transaction.preview → transaction.commit, except the native paragraph and TOC workflows below.\n"
@@ -194,15 +197,79 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
     if (session) {
         const QJsonArray tasks = session->tasks();
         if (!tasks.isEmpty()) {
-            block += QStringLiteral("\nSession tasks:\n");
-            block += QString::fromUtf8(QJsonDocument(tasks).toJson(QJsonDocument::Compact));
+            const int start = qMax(0, tasks.size() - kMaxAutomaticSessionTasks);
+            QJsonArray recent_tasks;
+            for (int index = start; index < tasks.size(); ++index) {
+                QJsonObject task = tasks.at(index).toObject();
+                const QString note = task.value(QStringLiteral("note")).toString();
+                if (note.size() > kMaxAutomaticSessionValueLength) {
+                    task.insert(QStringLiteral("note"),
+                                note.left(kMaxAutomaticSessionValueLength));
+                    task.insert(QStringLiteral("note_length"), note.size());
+                    task.insert(QStringLiteral("note_truncated"), true);
+                }
+                recent_tasks.append(task);
+            }
+            block += QStringLiteral("\nSession tasks (most recent %1 of %2):\n")
+                         .arg(recent_tasks.size()).arg(tasks.size());
+            block += QString::fromUtf8(
+                QJsonDocument(recent_tasks).toJson(QJsonDocument::Compact));
             block += QLatin1Char('\n');
+            if (start > 0) {
+                block += QStringLiteral(
+                    "%1 earlier task(s) omitted from automatic context; read session.tasks pages for the complete checklist.\n")
+                             .arg(start);
+            }
         }
         const QJsonObject memory = session->memory();
         if (!memory.isEmpty()) {
-            block += QStringLiteral("\nSession memory:\n");
-            block += QString::fromUtf8(QJsonDocument(memory).toJson(QJsonDocument::Compact));
+            const QStringList keys = session->memoryKeys();
+            const int start = qMax(
+                0, keys.size() - kMaxAutomaticSessionMemoryEntries);
+            QJsonObject recent_memory;
+            QJsonObject truncated_memory_lengths;
+            for (int index = start; index < keys.size(); ++index) {
+                const QString &key = keys.at(index);
+                const QJsonValue value = memory.value(key);
+                if (value.isString()
+                    && value.toString().size()
+                        > kMaxAutomaticSessionValueLength) {
+                    recent_memory.insert(
+                        key, value.toString().left(
+                            kMaxAutomaticSessionValueLength));
+                    truncated_memory_lengths.insert(key, value.toString().size());
+                } else if (!value.isString()) {
+                    const QByteArray serialized = QJsonDocument(
+                        QJsonArray { value }).toJson(QJsonDocument::Compact);
+                    if (serialized.size() > kMaxAutomaticSessionValueLength) {
+                        recent_memory.insert(
+                            key, QStringLiteral(
+                                "[structured value omitted; use session.recall key]"));
+                        truncated_memory_lengths.insert(key, serialized.size());
+                    } else {
+                        recent_memory.insert(key, value);
+                    }
+                } else {
+                    recent_memory.insert(key, value);
+                }
+            }
+            block += QStringLiteral("\nSession memory (most recent %1 of %2):\n")
+                         .arg(recent_memory.size()).arg(keys.size());
+            block += QString::fromUtf8(
+                QJsonDocument(recent_memory).toJson(QJsonDocument::Compact));
             block += QLatin1Char('\n');
+            if (!truncated_memory_lengths.isEmpty()) {
+                block += QStringLiteral(
+                    "Truncated memory value sizes (read exact values with session.recall key): ");
+                block += QString::fromUtf8(QJsonDocument(truncated_memory_lengths)
+                                               .toJson(QJsonDocument::Compact));
+                block += QLatin1Char('\n');
+            }
+            if (start > 0) {
+                block += QStringLiteral(
+                    "%1 earlier memory note(s) omitted from automatic context; read session.recall pages for the complete memory.\n")
+                             .arg(start);
+            }
         }
     }
     return block;

@@ -60,7 +60,9 @@ int main()
                     QStringLiteral("When has_more=true, use next_offset"))
                 && edit_system_prompt.contains(QStringLiteral("font.inventory"))
                 && edit_system_prompt.contains(QStringLiteral("book.validate"))
-                && edit_system_prompt.contains(QStringLiteral("book.check")),
+                && edit_system_prompt.contains(QStringLiteral("book.check"))
+                && edit_system_prompt.contains(QStringLiteral("session.tasks"))
+                && edit_system_prompt.contains(QStringLiteral("keyless session.recall")),
             "system prompt must ground commit summaries and paginated inventory traversal");
 
     MemoryBookWorkspace selection_book;
@@ -119,6 +121,44 @@ int main()
                     QStringLiteral("5 additional selected resource(s) omitted"))
                 && !selected_files_context.contains(QStringLiteral("Resources:\n")),
             "selected-files automatic context must be bounded, explicit, and file-scoped");
+
+    AgentSession bounded_context_session;
+    for (int index = 0; index < 25; ++index) {
+        const QString note = index == 24
+            ? QString(700, QLatin1Char('n')) + QStringLiteral("TASK-NOTE-TAIL")
+            : QStringLiteral("task-note-[%1]").arg(index);
+        Require(!bounded_context_session.addTask(
+                    QStringLiteral("session-task-[%1]").arg(index),
+                    note).isEmpty(),
+                "session context task fixture must fit storage bounds");
+    }
+    for (int index = 0; index < 20; ++index) {
+        const QString value = index == 19
+            ? QString(700, QLatin1Char('m')) + QStringLiteral("MEMORY-VALUE-TAIL")
+            : QStringLiteral("memory-value-[%1]").arg(index);
+        Require(bounded_context_session.remember(
+                    QStringLiteral("memory-key-[%1]").arg(index),
+                    value),
+                "session context memory fixture must fit storage bounds");
+    }
+    const QString bounded_session_context = PromptAssembler().contextBlock(
+        &selected_files_book, QStringList(), &bounded_context_session);
+    Require(bounded_session_context.count(QStringLiteral("session-task-[")) == 8
+                && !bounded_session_context.contains(QStringLiteral("session-task-[0]"))
+                && bounded_session_context.contains(QStringLiteral("session-task-[24]"))
+                && bounded_session_context.contains(
+                    QStringLiteral("17 earlier task(s) omitted"))
+                && bounded_session_context.contains(QStringLiteral("\"note_truncated\":true"))
+                && !bounded_session_context.contains(QStringLiteral("TASK-NOTE-TAIL"))
+                && bounded_session_context.count(QStringLiteral("memory-value-[")) == 7
+                && !bounded_session_context.contains(QStringLiteral("memory-value-[0]"))
+                && bounded_session_context.contains(
+                    QStringLiteral("12 earlier memory note(s) omitted"))
+                && bounded_session_context.contains(
+                    QStringLiteral("Truncated memory value sizes"))
+                && bounded_session_context.contains(QStringLiteral("memory-key-[19]"))
+                && !bounded_session_context.contains(QStringLiteral("MEMORY-VALUE-TAIL")),
+            "automatic session context must retain only recent bounded task and memory windows");
 
     MemoryBookWorkspace book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry registry;
