@@ -295,6 +295,12 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 的受限正文片段，默认 12 项、每页最多 50 项。`limit` 超界会夹紧，`offset` 超过结尾会返回
 稳定空页。模型在 `has_more=true` 时必须沿 `next_offset` 继续，不能把首页当作完整清单。
 
+`font.inventory`、`book.validate` 和 `book.check` 也支持 `offset` / `limit`，默认 100、最多
+200。它们一次包含多个数组，因此同一个 offset 分别切取每个数组，并用 `total_counts` /
+`returned_counts` 按原数组键报告计数；`has_more` 与 `next_offset` 以最长数组为准。较短数组
+可能在后续页为空，这是正常的终止状态，不表示其他数组也已读完。原来的 `embedded_fonts`、
+`css_families`、`declared_families`、`issues`、`unused_images` 和 `wellformed` 键保持不变。
+
 写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate` / `toc.apply_transform`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
 
 立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。
@@ -303,7 +309,7 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 
 长文本必须已经在书里（拖进 Book Browser 的 TXT/HTML）。`content.wrap_plain` 用你提供的 heading/illustration **正则**套标签；`content.split` 按标题拆章；`content.replace_body` 用 `source_resource_id` 搬运整段 body。不要把小说正文贴进 `patch_fragment` / `replace_text`（后两者对模型有大小上限）。
 
-批量套标签用 `content.wrap`，全书查找替换用 `content.replace_regex`（`$1` 捕获组）。图片必须先拖进 Images，再用 `image.insert` 按锚点插入 `<img>`。`book.check` 会报损坏的图片链接和未引用图片。
+批量套标签用 `content.wrap`，全书查找替换用 `content.replace_regex`（`$1` 捕获组）。图片必须先拖进 Images，再用 `image.insert` 按锚点插入 `<img>`。`book.check` 会分页报告损坏的图片链接、未引用图片和 XHTML 良构性。
 
 `spine.set` 重排阅读顺序；`spine.sort` 按路径字母数字排序；`resource.rename` 可改文件名或换目录（提交时改 href）；`style.link` 重写 XHTML 的 stylesheet `<link>`；`resource.delete` 不能删 OPF/NCX/Nav 或最后一份 XHTML；`toc.generate` 按标题正则生成 TOC；`metadata.update` 支持任意 DC 字段，`_remove` 删除字段。
 

@@ -1550,3 +1550,36 @@ Runner 回归）、`28055448f`（Technical details 展示）和 `654a6bc10`（�
 响应体或已经开始的工具耗时；大型聚合结果仍需各工具自己的分页/截断策略。真实在线模型在
 低额度下的任务完成率、单响应极大 tool-call 数组的 Provider 解码内存、达到上限前已经 commit
 的混合任务、Windows/Linux GUI 和辅助技术人工验收仍属于后续边界。
+
+## Native Agent 大型诊断工具分页（2026-09-15）
+
+分支：`feature/agent-paginated-diagnostics`。主要提交：`4a20d9826`（共享窗口分页、模型续页
+规则和大诊断夹具）。
+
+### 多数组共享窗口
+
+- `font.inventory`、`book.validate`、`book.check` 从无参数全量结果改为可选 `offset` / `limit`，
+  默认 100、硬上限 200。已有字体/问题/未引用图片/XHTML 良构性数组键与 scalar 总结字段保持
+  不变，小书无参数调用仍在第一页返回完整内容。
+- 三个工具可能在一个结果里带长度不同的多个数组。统一 helper 对每个声明数组应用同一 offset
+  和 limit，以 `total_counts` / `returned_counts` 按数组键报告精确计数；`has_more` 和
+  `next_offset` 由最长数组决定。后续页中已经耗尽的短数组为空，尚未耗尽的数组继续返回，
+  不把某一数组结束误报为整个诊断结束。
+- schema 明示 offset 最小 0、limit 最小 1/最大 200/默认 100；工具边界继续夹紧绕过 schema
+  的负数与过大值。系统提示将这三个入口加入分页清单，要求 `has_more=true` 时沿
+  `next_offset` 继续，不把第一页当作完整诊断。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 构造 235 份缺 body XHTML、225 张未引用图片、225 份嵌入字体和 215 份
+CSS 字体声明，验证首页每数组最多 100、limit 夹紧到 200、共享 offset 尾页分别返回
+35/25/35 与 25/15/15、最长数组结束后移除 `next_offset`、全量/本页计数以及字体二进制不进入
+结果；原 Physics Book 的小字体、零问题和两份 XHTML 检查仍在首页完整返回。`agent_harness`
+固定三项工具进入模型续页规则。完整 Sigil 构建及 42 个固定 Python 依赖通过；14 项 Agent
+测试连续 3 轮共 42 次通过。本切片没有新增 UI 文案；四份 `.qm` 继续为 0 unfinished，英文
+4,771 条，简中/繁中/日文各 5,748 条。
+
+分页限制的是发给模型、会话与导出的结果，不改变 `IBookWorkspace::fontInventory()` /
+`validate()` 或 `inspectBook()` 的内部全量计算；宿主仍先扫描整书、构造全数组再切页，所以不
+宣称减少 CPU、Book 侧枚举或临时内存峰值。`transaction.preview`、原生计划和其他聚合结果也
+未纳入本切片；真实超大 EPUB、在线模型的续页完整率与 Windows/Linux 构建仍待后续验证。
