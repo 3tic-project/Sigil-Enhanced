@@ -129,6 +129,21 @@ TocEditTree tocTreeFromNcx(const NcxNavigation &navigation,
     return tree;
 }
 
+const QStringList &editableMetadataFields()
+{
+    static const QStringList fields {
+        QStringLiteral("title"), QStringLiteral("language"),
+        QStringLiteral("creator"), QStringLiteral("contributor"),
+        QStringLiteral("publisher"), QStringLiteral("description"),
+        QStringLiteral("subject"), QStringLiteral("date"),
+        QStringLiteral("identifier"), QStringLiteral("rights"),
+        QStringLiteral("source"), QStringLiteral("coverage"),
+        QStringLiteral("type"), QStringLiteral("format"),
+        QStringLiteral("relation")
+    };
+    return fields;
+}
+
 } // namespace
 
 SigilBookWorkspace::SigilBookWorkspace() :
@@ -501,19 +516,55 @@ QJsonObject SigilBookWorkspace::metadata() const
     return invokeJson([this]() {
         QJsonObject object;
         QJsonArray entries;
+        QStringList represented_fields;
+        QStringList updated_fields;
         for (const MetaEntry &entry : m_book->GetMetadata()) {
+            bool removed = false;
+            for (const QString &key : m_stagedMetadataRemove) {
+                if (entry.m_name.endsWith(key)) {
+                    removed = true;
+                    break;
+                }
+            }
+            if (removed) continue;
+
+            QString content = entry.m_content;
+            for (const QString &field : editableMetadataFields()) {
+                if (!entry.m_name.endsWith(field)) continue;
+                if (!represented_fields.contains(field)) {
+                    represented_fields.append(field);
+                }
+                if (m_hasStagedMetadata && m_stagedMetadata.contains(field)
+                    && !updated_fields.contains(field)) {
+                    content = m_stagedMetadata.value(field).toString();
+                    updated_fields.append(field);
+                }
+                break;
+            }
             entries.append(QJsonObject {
                 { QStringLiteral("name"), entry.m_name },
-                { QStringLiteral("content"), entry.m_content }
+                { QStringLiteral("content"), content }
             });
             if (entry.m_name.endsWith(QLatin1String("title")) && !object.contains(QStringLiteral("title"))) {
-                object.insert(QStringLiteral("title"), entry.m_content);
+                object.insert(QStringLiteral("title"), content);
             }
             if (entry.m_name.endsWith(QLatin1String("language")) && !object.contains(QStringLiteral("language"))) {
-                object.insert(QStringLiteral("language"), entry.m_content);
+                object.insert(QStringLiteral("language"), content);
             }
         }
         if (m_hasStagedMetadata) {
+            for (const QString &field : editableMetadataFields()) {
+                if (!m_stagedMetadata.contains(field)
+                    || represented_fields.contains(field)
+                    || m_stagedMetadataRemove.contains(field)) {
+                    continue;
+                }
+                entries.append(QJsonObject {
+                    { QStringLiteral("name"),
+                      QStringLiteral("dc:%1").arg(field) },
+                    { QStringLiteral("content"), m_stagedMetadata.value(field).toString() }
+                });
+            }
             for (auto it = m_stagedMetadata.begin(); it != m_stagedMetadata.end(); ++it) {
                 object.insert(it.key(), it.value());
             }
@@ -981,14 +1032,7 @@ BookOpResult SigilBookWorkspace::commitTransaction(quint64 expected_revision)
             if (m_stagedMetadata.contains(QStringLiteral("language"))) {
                 upsert(QStringLiteral("language"), m_stagedMetadata.value(QStringLiteral("language")).toString());
             }
-            const QStringList fields = {
-                QStringLiteral("title"), QStringLiteral("language"), QStringLiteral("creator"),
-                QStringLiteral("contributor"), QStringLiteral("publisher"), QStringLiteral("description"),
-                QStringLiteral("subject"), QStringLiteral("date"), QStringLiteral("identifier"),
-                QStringLiteral("rights"), QStringLiteral("source"), QStringLiteral("coverage"),
-                QStringLiteral("type"), QStringLiteral("format"), QStringLiteral("relation")
-            };
-            for (const QString &field : fields) {
+            for (const QString &field : editableMetadataFields()) {
                 if (m_stagedMetadata.contains(field) && field != QLatin1String("_remove")) {
                     upsert(field, m_stagedMetadata.value(field).toString());
                 }

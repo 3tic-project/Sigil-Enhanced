@@ -137,6 +137,44 @@ int main(int argc, char **argv)
                     && !selectedContext.contains(QStringLiteral("Resources:\n")),
                 "selected-files context did not read current in-memory sources exclusively");
         const QString original = opf->GetSourceText();
+        Require(workspace.beginTransaction(QStringLiteral("metadata staged view")).ok,
+                "Could not begin staged metadata view transaction");
+        Require(workspace.updateMetadata(QJsonObject {
+            { QStringLiteral("title"), QStringLiteral("Staged metadata title") },
+            { QStringLiteral("creator"), QStringLiteral("Staged creator") },
+            { QStringLiteral("_remove"), QJsonArray {
+                QStringLiteral("language")
+            } }
+        }).ok, "Could not stage metadata view update");
+        const QJsonObject stagedMetadata = workspace.metadata();
+        bool stagedTitleEntry = false;
+        bool stagedCreatorEntry = false;
+        bool stagedLanguageEntry = false;
+        for (const QJsonValue &value : stagedMetadata.value(
+                 QStringLiteral("entries")).toArray()) {
+            const QJsonObject entry = value.toObject();
+            const QString name = entry.value(QStringLiteral("name")).toString();
+            if (name.endsWith(QLatin1String("title"))) {
+                stagedTitleEntry = stagedTitleEntry
+                    || entry.value(QStringLiteral("content")).toString()
+                        == QStringLiteral("Staged metadata title");
+            } else if (name.endsWith(QLatin1String("creator"))) {
+                stagedCreatorEntry = stagedCreatorEntry
+                    || entry.value(QStringLiteral("content")).toString()
+                        == QStringLiteral("Staged creator");
+            } else if (name.endsWith(QLatin1String("language"))) {
+                stagedLanguageEntry = true;
+            }
+        }
+        Require(stagedMetadata.value(QStringLiteral("title")).toString()
+                    == QStringLiteral("Staged metadata title")
+                    && stagedMetadata.value(QStringLiteral("creator")).toString()
+                        == QStringLiteral("Staged creator")
+                    && !stagedMetadata.contains(QStringLiteral("language"))
+                    && stagedTitleEntry && stagedCreatorEntry && !stagedLanguageEntry,
+                "Sigil metadata reads did not expose the effective staged values and removals");
+        Require(workspace.rollbackTransaction().ok,
+                "Could not roll back staged metadata view transaction");
         const quint64 metadataRevision = workspace.revision();
         Require(workspace.beginTransaction(QStringLiteral("metadata source preservation")).ok,
                 "Could not begin metadata transaction");
