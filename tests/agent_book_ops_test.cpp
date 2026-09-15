@@ -315,6 +315,166 @@ int main()
                 .value(QStringLiteral("status")).toString() == QStringLiteral("done"),
             "task done");
 
+    AgentSession bounded_session;
+    ToolRegistry bounded_session_registry;
+    registerBookTools(&bounded_session_registry, &book, &bounded_session);
+    auto run_bounded_session = [&](const QString &name,
+                                   const QJsonObject &arguments) {
+        return bounded_session_registry.find(name)->execute(arguments);
+    };
+    for (int index = 0; index < MAX_SESSION_MEMORY_ENTRIES; ++index) {
+        const ToolResult stored = run_bounded_session(
+            QStringLiteral("session.remember"), QJsonObject {
+                { QStringLiteral("key"), QStringLiteral("memory-%1").arg(index) },
+                { QStringLiteral("value"), QStringLiteral("value-%1").arg(index) }
+            });
+        Require(stored.ok
+                    && stored.data.value(QStringLiteral("memory_count")).toInt()
+                        == index + 1
+                    && !stored.data.contains(QStringLiteral("memory")),
+                "remember must return only the changed bounded note");
+    }
+    const ToolResult updated_full_memory = run_bounded_session(
+        QStringLiteral("session.remember"), QJsonObject {
+            { QStringLiteral("key"), QStringLiteral("memory-0") },
+            { QStringLiteral("value"), QStringLiteral("updated") }
+        });
+    const ToolResult overflow_memory = run_bounded_session(
+        QStringLiteral("session.remember"), QJsonObject {
+            { QStringLiteral("key"), QStringLiteral("memory-overflow") },
+            { QStringLiteral("value"), QStringLiteral("overflow") }
+        });
+    const ToolResult oversized_memory = run_bounded_session(
+        QStringLiteral("session.remember"), QJsonObject {
+            { QStringLiteral("key"), QStringLiteral("oversized") },
+            { QStringLiteral("value"), QString(
+                MAX_SESSION_MEMORY_VALUE_LENGTH + 1, QLatin1Char('x')) }
+        });
+    Require(updated_full_memory.ok
+                && updated_full_memory.data.value(
+                    QStringLiteral("memory_count")).toInt()
+                    == MAX_SESSION_MEMORY_ENTRIES
+                && !overflow_memory.ok
+                && overflow_memory.code
+                    == QStringLiteral("SESSION_MEMORY_LIMIT_REACHED")
+                && !oversized_memory.ok
+                && oversized_memory.code
+                    == QStringLiteral("SESSION_MEMORY_ARGUMENT_INVALID"),
+            "session memory must allow updates but reject count and value overflow");
+    const ToolResult memory_page = run_bounded_session(
+        QStringLiteral("session.recall"), QJsonObject());
+    const ToolResult memory_tail = run_bounded_session(
+        QStringLiteral("session.recall"), QJsonObject {
+            { QStringLiteral("offset"), 32 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const ToolResult exact_memory = run_bounded_session(
+        QStringLiteral("session.recall"), QJsonObject {
+            { QStringLiteral("key"), QStringLiteral("memory-0") }
+        });
+    Require(memory_page.data.value(QStringLiteral("memory")).toObject().size() == 16
+                && memory_page.data.value(QStringLiteral("total_count")).toInt() == 64
+                && memory_page.data.value(QStringLiteral("has_more")).toBool()
+                && memory_page.data.value(QStringLiteral("next_offset")).toInt() == 16
+                && !memory_page.data.value(QStringLiteral("memory")).toObject()
+                    .contains(QStringLiteral("memory-0"))
+                && memory_tail.data.value(QStringLiteral("memory")).toObject().size() == 32
+                && memory_tail.data.value(QStringLiteral("memory")).toObject()
+                    .contains(QStringLiteral("memory-0"))
+                && memory_tail.data.value(QStringLiteral("limit")).toInt() == 32
+                && !memory_tail.data.value(QStringLiteral("has_more")).toBool()
+                && exact_memory.data.value(QStringLiteral("found")).toBool()
+                && exact_memory.data.value(QStringLiteral("value")).toString()
+                    == QStringLiteral("updated"),
+            "session memory listing must paginate while exact recall remains available");
+
+    QString last_task_id;
+    for (int index = 0; index < MAX_SESSION_TASKS; ++index) {
+        const ToolResult added = run_bounded_session(
+            QStringLiteral("session.task_add"), QJsonObject {
+                { QStringLiteral("title"), QStringLiteral("task-%1").arg(index) },
+                { QStringLiteral("note"), QStringLiteral("note-%1").arg(index) }
+            });
+        last_task_id = added.data.value(QStringLiteral("id")).toString();
+        Require(added.ok && !last_task_id.isEmpty()
+                    && added.data.value(QStringLiteral("task_count")).toInt()
+                        == index + 1
+                    && added.data.value(QStringLiteral("task")).toObject()
+                        .value(QStringLiteral("id")).toString() == last_task_id
+                    && !added.data.contains(QStringLiteral("tasks")),
+                "task add must return only the changed bounded task");
+    }
+    const ToolResult overflow_task = run_bounded_session(
+        QStringLiteral("session.task_add"), QJsonObject {
+            { QStringLiteral("title"), QStringLiteral("task-overflow") }
+        });
+    const ToolResult invalid_task_status = run_bounded_session(
+        QStringLiteral("session.task_update"), QJsonObject {
+            { QStringLiteral("id"), last_task_id },
+            { QStringLiteral("status"), QStringLiteral("mystery") }
+        });
+    const ToolResult updated_task = run_bounded_session(
+        QStringLiteral("session.task_update"), QJsonObject {
+            { QStringLiteral("id"), last_task_id },
+            { QStringLiteral("status"), QStringLiteral("done") }
+        });
+    Require(!overflow_task.ok
+                && overflow_task.code == QStringLiteral("SESSION_TASK_LIMIT_REACHED")
+                && !invalid_task_status.ok
+                && invalid_task_status.code
+                    == QStringLiteral("SESSION_TASK_ARGUMENT_INVALID")
+                && updated_task.ok
+                && updated_task.data.value(QStringLiteral("task")).toObject()
+                    .value(QStringLiteral("status")).toString()
+                    == QStringLiteral("done")
+                && !updated_task.data.contains(QStringLiteral("tasks")),
+            "session tasks must reject overflow and invalid status without full-list echoes");
+    const ToolResult task_page = run_bounded_session(
+        QStringLiteral("session.tasks"), QJsonObject());
+    const ToolResult task_tail = run_bounded_session(
+        QStringLiteral("session.tasks"), QJsonObject {
+            { QStringLiteral("offset"), 100 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const QJsonObject recall_schema = bounded_session_registry.find(
+        QStringLiteral("session.recall"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    const QJsonObject tasks_schema = bounded_session_registry.find(
+        QStringLiteral("session.tasks"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(task_page.data.value(QStringLiteral("tasks")).toArray().size() == 20
+                && task_page.data.value(QStringLiteral("total_count")).toInt() == 128
+                && task_page.data.value(QStringLiteral("next_offset")).toInt() == 20
+                && task_tail.data.value(QStringLiteral("tasks")).toArray().size() == 28
+                && task_tail.data.value(QStringLiteral("limit")).toInt() == 50
+                && !task_tail.data.value(QStringLiteral("has_more")).toBool()
+                && recall_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 16
+                && recall_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 32
+                && tasks_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 20
+                && tasks_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 50,
+            "session task pages and schemas must expose stable bounded traversal");
+    bounded_session.clear();
+    const QString after_clear_task = bounded_session.addTask(
+        QStringLiteral("after-clear"));
+    Require(bounded_session.remember(QStringLiteral("after-clear"),
+                                     QStringLiteral("value"))
+                && !after_clear_task.isEmpty()
+                && bounded_session.memoryKeys().size() == 1
+                && bounded_session.tasks().size() == 1
+                && !bounded_session.remember(
+                    QString(MAX_SESSION_MEMORY_KEY_LENGTH + 1, QLatin1Char('k')),
+                    QStringLiteral("value"))
+                && bounded_session.addTask(
+                    QString(MAX_SESSION_TASK_TITLE_LENGTH + 1,
+                            QLatin1Char('t'))).isEmpty()
+                && !bounded_session.updateTask(
+                    after_clear_task, QStringLiteral("invalid"), QString()),
+            "new session must reset bounded memory/task storage and insertion order");
+
     Require(registry.find(QStringLiteral("resource_rename")) != nullptr, "rename registered");
     Require(registry.find(QStringLiteral("spine_sort")) != nullptr, "spine.sort registered");
     Require(registry.find(QStringLiteral("style_link")) != nullptr, "style.link registered");

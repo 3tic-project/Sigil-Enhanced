@@ -23,6 +23,13 @@
 namespace SigilAgent
 {
 
+constexpr int MAX_SESSION_MEMORY_ENTRIES = 64;
+constexpr int MAX_SESSION_MEMORY_KEY_LENGTH = 64;
+constexpr int MAX_SESSION_MEMORY_VALUE_LENGTH = 2048;
+constexpr int MAX_SESSION_TASKS = 128;
+constexpr int MAX_SESSION_TASK_TITLE_LENGTH = 256;
+constexpr int MAX_SESSION_TASK_NOTE_LENGTH = 2048;
+
 class AgentSession
 {
 public:
@@ -38,9 +45,10 @@ public:
     void clear();
     bool containsSecret(const QString &secret) const;
 
-    void remember(const QString &key, const QJsonValue &value);
+    bool remember(const QString &key, const QJsonValue &value);
     QJsonValue recall(const QString &key) const;
     QJsonObject memory() const;
+    QStringList memoryKeys() const;
     QString addTask(const QString &title, const QString &note = QString());
     bool updateTask(const QString &id, const QString &status, const QString &note);
     QJsonArray tasks() const;
@@ -58,6 +66,7 @@ private:
     QList<AgentEvent> m_events;
     Listener m_listener;
     QJsonObject m_memory;
+    QStringList m_memoryKeys;
     QList<SessionTask> m_tasks;
 };
 

@@ -29,6 +29,10 @@ constexpr int DEFAULT_LITERAL_SEARCH_MATCHES = 20;
 constexpr int MAX_LITERAL_SEARCH_MATCHES = 50;
 constexpr int MAX_LITERAL_SEARCH_QUERY_LENGTH = 512;
 constexpr int MAX_LITERAL_SEARCH_SNIPPET_LENGTH = 240;
+constexpr int DEFAULT_SESSION_TASK_PAGE_SIZE = 20;
+constexpr int MAX_SESSION_TASK_PAGE_SIZE = 50;
+constexpr int DEFAULT_SESSION_MEMORY_PAGE_SIZE = 16;
+constexpr int MAX_SESSION_MEMORY_PAGE_SIZE = 32;
 
 QJsonObject emptyObjectSchema()
 {
@@ -153,6 +157,47 @@ QJsonObject boundedLiteralSearchResult(const QJsonArray &source,
         { QStringLiteral("match_limit_reached"), matches.size() >= max_matches },
         { QStringLiteral("query_length"), query.size() }
     };
+}
+
+QJsonObject paginatedSessionMemory(const AgentSession *session,
+                                   const QJsonObject &arguments)
+{
+    const QJsonObject all = session->memory();
+    const QStringList keys = session->memoryKeys();
+    const int offset = qBound(
+        0, arguments.value(QStringLiteral("offset")).toInt(0), keys.size());
+    const int requested_limit = arguments.contains(QStringLiteral("limit"))
+        ? arguments.value(QStringLiteral("limit")).toInt(
+            DEFAULT_SESSION_MEMORY_PAGE_SIZE)
+        : DEFAULT_SESSION_MEMORY_PAGE_SIZE;
+    const int limit = qBound(
+        1, requested_limit, MAX_SESSION_MEMORY_PAGE_SIZE);
+    const int end = qMin(keys.size(), offset + limit);
+    QJsonObject page;
+    for (int index = offset; index < end; ++index) {
+        const QString &key = keys.at(index);
+        page.insert(key, all.value(key));
+    }
+    const bool has_more = end < keys.size();
+    QJsonObject result {
+        { QStringLiteral("memory"), page },
+        { QStringLiteral("total_count"), keys.size() },
+        { QStringLiteral("offset"), offset },
+        { QStringLiteral("limit"), limit },
+        { QStringLiteral("returned_count"), page.size() },
+        { QStringLiteral("has_more"), has_more }
+    };
+    if (has_more) result.insert(QStringLiteral("next_offset"), end);
+    return result;
+}
+
+QJsonObject taskById(const QJsonArray &tasks, const QString &id)
+{
+    for (const QJsonValue &value : tasks) {
+        const QJsonObject task = value.toObject();
+        if (task.value(QStringLiteral("id")).toString() == id) return task;
+    }
+    return QJsonObject();
 }
 
 class LambdaTool : public IAgentTool
@@ -1109,62 +1154,167 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
 
     if (session) {
         add(registry, QStringLiteral("session.remember"),
-            QStringLiteral("Store a small note for this Agent session (user preferences, chosen heading regex, unfinished mapping). Value should be short JSON or a string. Cleared on New Session."),
+            QStringLiteral("Store one bounded note for this Agent session (user preferences, chosen heading regex, unfinished mapping). At most 64 notes; key at most 64 characters and value at most 2048. Returns only the changed note. Cleared on New Session."),
             ToolRisk::Read, false, false,
             QJsonObject {
                 { QStringLiteral("type"), QStringLiteral("object") },
                 { QStringLiteral("properties"), QJsonObject {
-                    { QStringLiteral("key"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                    { QStringLiteral("value"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                    { QStringLiteral("key"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") },
+                        { QStringLiteral("minLength"), 1 },
+                        { QStringLiteral("maxLength"), MAX_SESSION_MEMORY_KEY_LENGTH }
+                    } },
+                    { QStringLiteral("value"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") },
+                        { QStringLiteral("maxLength"), MAX_SESSION_MEMORY_VALUE_LENGTH }
+                    } }
                 } },
                 { QStringLiteral("required"), QJsonArray { QStringLiteral("key"), QStringLiteral("value") } }
             },
             [session](const QJsonObject &arguments) {
-                const QString key = arguments.value(QStringLiteral("key")).toString();
-                session->remember(key, arguments.value(QStringLiteral("value")));
+                const QString key = arguments.value(QStringLiteral("key")).toString().trimmed();
+                const QString value = arguments.value(QStringLiteral("value")).toString();
+                if (key.isEmpty() || key.size() > MAX_SESSION_MEMORY_KEY_LENGTH
+                    || value.size() > MAX_SESSION_MEMORY_VALUE_LENGTH) {
+                    return ToolResult::failure(
+                        QStringLiteral("SESSION_MEMORY_ARGUMENT_INVALID"),
+                        QStringLiteral("Memory key must be 1-64 characters and value at most 2048 characters."),
+                        QJsonObject {
+                            { QStringLiteral("key_length"), key.size() },
+                            { QStringLiteral("value_length"), value.size() },
+                            { QStringLiteral("max_key_length"),
+                              MAX_SESSION_MEMORY_KEY_LENGTH },
+                            { QStringLiteral("max_value_length"),
+                              MAX_SESSION_MEMORY_VALUE_LENGTH }
+                        });
+                }
+                const bool existing = !session->recall(key).isUndefined();
+                if (!existing
+                    && session->memory().size() >= MAX_SESSION_MEMORY_ENTRIES) {
+                    return ToolResult::failure(
+                        QStringLiteral("SESSION_MEMORY_LIMIT_REACHED"),
+                        QStringLiteral("This session already contains 64 memory notes. Update an existing key or start a new session."),
+                        QJsonObject {
+                            { QStringLiteral("memory_count"), session->memory().size() },
+                            { QStringLiteral("max_memory_count"),
+                              MAX_SESSION_MEMORY_ENTRIES }
+                        });
+                }
+                if (!session->remember(key, value)) {
+                    return ToolResult::failure(
+                        QStringLiteral("SESSION_MEMORY_ARGUMENT_INVALID"),
+                        QStringLiteral("The session memory note was rejected by its storage bounds."));
+                }
                 return ToolResult::success(QJsonObject {
                     { QStringLiteral("key"), key },
-                    { QStringLiteral("memory"), session->memory() }
+                    { QStringLiteral("value"), session->recall(key) },
+                    { QStringLiteral("memory_count"), session->memory().size() }
                 });
             });
 
         add(registry, QStringLiteral("session.recall"),
-            QStringLiteral("Read session memory. Omit key to return all notes."),
+            QStringLiteral("Read one session memory key, or omit key to list a bounded insertion-order page. Use next_offset while has_more is true."),
             ToolRisk::Read, false, false,
             QJsonObject {
                 { QStringLiteral("type"), QStringLiteral("object") },
                 { QStringLiteral("properties"), QJsonObject {
-                    { QStringLiteral("key"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                    { QStringLiteral("key"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") },
+                        { QStringLiteral("maxLength"), MAX_SESSION_MEMORY_KEY_LENGTH }
+                    } },
+                    { QStringLiteral("offset"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("integer") },
+                        { QStringLiteral("minimum"), 0 },
+                        { QStringLiteral("default"), 0 }
+                    } },
+                    { QStringLiteral("limit"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("integer") },
+                        { QStringLiteral("minimum"), 1 },
+                        { QStringLiteral("maximum"), MAX_SESSION_MEMORY_PAGE_SIZE },
+                        { QStringLiteral("default"), DEFAULT_SESSION_MEMORY_PAGE_SIZE }
+                    } }
                 } }
             },
             [session](const QJsonObject &arguments) {
-                const QString key = arguments.value(QStringLiteral("key")).toString();
+                const QString key = arguments.value(QStringLiteral("key")).toString().trimmed();
                 if (key.isEmpty()) {
-                    return ToolResult::success(QJsonObject { { QStringLiteral("memory"), session->memory() } });
+                    return ToolResult::success(paginatedSessionMemory(session, arguments));
                 }
+                if (key.size() > MAX_SESSION_MEMORY_KEY_LENGTH) {
+                    return ToolResult::failure(
+                        QStringLiteral("SESSION_MEMORY_ARGUMENT_INVALID"),
+                        QStringLiteral("Memory key must be at most 64 characters."),
+                        QJsonObject {
+                            { QStringLiteral("key_length"), key.size() },
+                            { QStringLiteral("max_key_length"),
+                              MAX_SESSION_MEMORY_KEY_LENGTH }
+                        });
+                }
+                const QJsonValue value = session->recall(key);
                 return ToolResult::success(QJsonObject {
                     { QStringLiteral("key"), key },
-                    { QStringLiteral("value"), session->recall(key) }
+                    { QStringLiteral("found"), !value.isUndefined() },
+                    { QStringLiteral("value"), value }
                 });
             });
 
         add(registry, QStringLiteral("session.task_add"),
-            QStringLiteral("Add an item to this session's task list (plan/progress). Returns id."),
+            QStringLiteral("Add a bounded item to this session's task list (plan/progress). At most 128 tasks; title at most 256 characters and note at most 2048. Returns only the added task."),
             ToolRisk::Read, false, false,
             QJsonObject {
                 { QStringLiteral("type"), QStringLiteral("object") },
                 { QStringLiteral("properties"), QJsonObject {
-                    { QStringLiteral("title"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                    { QStringLiteral("note"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                    { QStringLiteral("title"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") },
+                        { QStringLiteral("minLength"), 1 },
+                        { QStringLiteral("maxLength"), MAX_SESSION_TASK_TITLE_LENGTH }
+                    } },
+                    { QStringLiteral("note"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") },
+                        { QStringLiteral("maxLength"), MAX_SESSION_TASK_NOTE_LENGTH }
+                    } }
                 } },
                 { QStringLiteral("required"), QJsonArray { QStringLiteral("title") } }
             },
             [session](const QJsonObject &arguments) {
-                const QString id = session->addTask(arguments.value(QStringLiteral("title")).toString(),
-                                                    arguments.value(QStringLiteral("note")).toString());
+                const QString title = arguments.value(QStringLiteral("title")).toString();
+                const QString note = arguments.value(QStringLiteral("note")).toString();
+                if (title.trimmed().isEmpty()
+                    || title.size() > MAX_SESSION_TASK_TITLE_LENGTH
+                    || note.size() > MAX_SESSION_TASK_NOTE_LENGTH) {
+                    return ToolResult::failure(
+                        QStringLiteral("SESSION_TASK_ARGUMENT_INVALID"),
+                        QStringLiteral("Task title must be 1-256 characters and note at most 2048 characters."),
+                        QJsonObject {
+                            { QStringLiteral("title_length"), title.size() },
+                            { QStringLiteral("note_length"), note.size() },
+                            { QStringLiteral("max_title_length"),
+                              MAX_SESSION_TASK_TITLE_LENGTH },
+                            { QStringLiteral("max_note_length"),
+                              MAX_SESSION_TASK_NOTE_LENGTH }
+                        });
+                }
+                const QJsonArray before = session->tasks();
+                if (before.size() >= MAX_SESSION_TASKS) {
+                    return ToolResult::failure(
+                        QStringLiteral("SESSION_TASK_LIMIT_REACHED"),
+                        QStringLiteral("This session already contains 128 tasks. Start a new session to create more."),
+                        QJsonObject {
+                            { QStringLiteral("task_count"), before.size() },
+                            { QStringLiteral("max_task_count"), MAX_SESSION_TASKS }
+                        });
+                }
+                const QString id = session->addTask(title, note);
+                if (id.isEmpty()) {
+                    return ToolResult::failure(
+                        QStringLiteral("SESSION_TASK_LIMIT_REACHED"),
+                        QStringLiteral("The session task was rejected by its storage bounds."));
+                }
+                const QJsonArray tasks = session->tasks();
                 return ToolResult::success(QJsonObject {
                     { QStringLiteral("id"), id },
-                    { QStringLiteral("tasks"), session->tasks() }
+                    { QStringLiteral("task"), taskById(tasks, id) },
+                    { QStringLiteral("task_count"), tasks.size() }
                 });
             });
 
@@ -1174,27 +1324,65 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
             QJsonObject {
                 { QStringLiteral("type"), QStringLiteral("object") },
                 { QStringLiteral("properties"), QJsonObject {
-                    { QStringLiteral("id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                    { QStringLiteral("status"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                    { QStringLiteral("note"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                    { QStringLiteral("id"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") },
+                        { QStringLiteral("maxLength"), 64 }
+                    } },
+                    { QStringLiteral("status"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") },
+                        { QStringLiteral("enum"), QJsonArray {
+                            QStringLiteral("pending"), QStringLiteral("in_progress"),
+                            QStringLiteral("done"), QStringLiteral("cancelled")
+                        } }
+                    } },
+                    { QStringLiteral("note"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("string") },
+                        { QStringLiteral("maxLength"), MAX_SESSION_TASK_NOTE_LENGTH }
+                    } }
                 } },
                 { QStringLiteral("required"), QJsonArray { QStringLiteral("id") } }
             },
             [session](const QJsonObject &arguments) {
-                if (!session->updateTask(arguments.value(QStringLiteral("id")).toString(),
-                                         arguments.value(QStringLiteral("status")).toString(),
-                                         arguments.value(QStringLiteral("note")).toString())) {
+                const QString id = arguments.value(QStringLiteral("id")).toString();
+                const QString status = arguments.value(QStringLiteral("status")).toString();
+                const QString note = arguments.value(QStringLiteral("note")).toString();
+                const QStringList statuses {
+                    QStringLiteral("pending"), QStringLiteral("in_progress"),
+                    QStringLiteral("done"), QStringLiteral("cancelled")
+                };
+                if ((!status.isEmpty() && !statuses.contains(status))
+                    || note.size() > MAX_SESSION_TASK_NOTE_LENGTH) {
+                    return ToolResult::failure(
+                        QStringLiteral("SESSION_TASK_ARGUMENT_INVALID"),
+                        QStringLiteral("Task status must be pending, in_progress, done, or cancelled; note is capped at 2048 characters."),
+                        QJsonObject {
+                            { QStringLiteral("status"), status },
+                            { QStringLiteral("note_length"), note.size() },
+                            { QStringLiteral("max_note_length"),
+                              MAX_SESSION_TASK_NOTE_LENGTH }
+                        });
+                }
+                if (!session->updateTask(id, status, note)) {
                     return ToolResult::failure(QStringLiteral("TASK_NOT_FOUND"),
                                                QStringLiteral("Unknown task id"));
                 }
-                return ToolResult::success(QJsonObject { { QStringLiteral("tasks"), session->tasks() } });
+                const QJsonArray tasks = session->tasks();
+                return ToolResult::success(QJsonObject {
+                    { QStringLiteral("task"), taskById(tasks, id) },
+                    { QStringLiteral("task_count"), tasks.size() }
+                });
             });
 
         add(registry, QStringLiteral("session.tasks"),
-            QStringLiteral("List this session's task checklist."),
-            ToolRisk::Read, false, false, emptyObjectSchema(),
-            [session](const QJsonObject &) {
-                return ToolResult::success(QJsonObject { { QStringLiteral("tasks"), session->tasks() } });
+            QStringLiteral("List a bounded insertion-order page of this session's task checklist. Use next_offset while has_more is true."),
+            ToolRisk::Read, false, false,
+            paginationSchema(DEFAULT_SESSION_TASK_PAGE_SIZE,
+                             MAX_SESSION_TASK_PAGE_SIZE),
+            [session](const QJsonObject &arguments) {
+                return ToolResult::success(paginatedArray(
+                    QStringLiteral("tasks"), session->tasks(), arguments,
+                    DEFAULT_SESSION_TASK_PAGE_SIZE,
+                    MAX_SESSION_TASK_PAGE_SIZE));
             });
     }
 }
