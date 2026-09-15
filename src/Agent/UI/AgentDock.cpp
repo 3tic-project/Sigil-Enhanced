@@ -1224,7 +1224,6 @@ void AgentDock::recordReviewedPlanPage(const QJsonObject &payload)
         && payload.value(QStringLiteral("operation_groups_independent")).toBool();
 
     QJsonObject aggregate;
-    QJsonArray changes;
     QJsonArray groups;
     if (valid && offset == 0) {
         aggregate = payload;
@@ -1246,7 +1245,6 @@ void AgentDock::recordReviewedPlanPage(const QJsonObject &payload)
                 == offset;
         valid = same_binding;
         if (valid) {
-            changes = aggregate.value(QStringLiteral("changes")).toArray();
             groups = aggregate.value(
                 QStringLiteral("operation_groups")).toArray();
         }
@@ -1262,10 +1260,9 @@ void AgentDock::recordReviewedPlanPage(const QJsonObject &payload)
         return;
     }
 
-    for (const QJsonValue &value : page_changes) changes.append(value);
     for (const QJsonValue &value : page_groups) groups.append(value);
-    const int aggregated_count = changes.size();
-    aggregate.insert(QStringLiteral("changes"), changes);
+    const int aggregated_count = groups.size();
+    aggregate.insert(QStringLiteral("changes"), QJsonArray());
     aggregate.insert(QStringLiteral("operation_groups"), groups);
     aggregate.insert(QStringLiteral("aggregated_count"), aggregated_count);
     aggregate.insert(QStringLiteral("aggregation_valid"), true);
