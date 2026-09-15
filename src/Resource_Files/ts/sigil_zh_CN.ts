@@ -27499,6 +27499,8 @@ Continue using the requested filename?</source>
     <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>此比较内容有上限；其余目录变更已省略。</translation></message>
     <message><source>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</source><translation>• 预览页：显示 %2 项变更中的 %1 项、%4 项移除中的 %3 项（偏移 %5）。</translation></message>
     <message><source>• More staged items remain; preview again with offset %1 before committing.</source><translation>• 仍有暂存项目未显示；提交前请使用偏移 %1 再次预览。</translation></message>
+    <message><source>Plan page: %1 of %2 XHTML file(s) (offset %3).</source><translation>计划页：%2 个 XHTML 文件中的 %1 个（偏移 %3）。</translation></message>
+    <message><source>More plan files must be reviewed; continue at offset %1 before applying.</source><translation>仍有计划文件必须审阅；应用前请从偏移 %1 继续。</translation></message>
     <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>独立操作组：%1 个 XHTML 文件。请在应用批准时选择操作组。</translation></message>
     <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>操作组：一个相互依赖的目录层级变更。</translation></message>
     <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>独立 XHTML 组：请选择要暂存的一个或多个文件。</translation></message>

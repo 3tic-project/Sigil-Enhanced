@@ -23555,6 +23555,8 @@ Continue using the requested filename?</translation>
     <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>This comparison is bounded; additional TOC changes are omitted.</translation></message>
     <message><source>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</source><translation>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</translation></message>
     <message><source>• More staged items remain; preview again with offset %1 before committing.</source><translation>• More staged items remain; preview again with offset %1 before committing.</translation></message>
+    <message><source>Plan page: %1 of %2 XHTML file(s) (offset %3).</source><translation>Plan page: %1 of %2 XHTML file(s) (offset %3).</translation></message>
+    <message><source>More plan files must be reviewed; continue at offset %1 before applying.</source><translation>More plan files must be reviewed; continue at offset %1 before applying.</translation></message>
     <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</translation></message>
     <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>Operation groups: one dependent TOC hierarchy change.</translation></message>
     <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>Independent XHTML groups: choose one or more files to stage.</translation></message>
