@@ -97,8 +97,47 @@ int main()
     const ToolResult summary = run(QStringLiteral("book.summary"), QJsonObject());
     Require(summary.ok && summary.data.value(QStringLiteral("title")).toString() == QStringLiteral("Junior Physics"),
             "book.summary must return the fixture title");
-    Require(summary.data.value(QStringLiteral("spine_count")).toInt() == 2,
-            "book.summary must report real spine count");
+    Require(summary.data.value(QStringLiteral("title_length")).toInt() == 14
+                && !summary.data.value(QStringLiteral("title_truncated")).toBool()
+                && summary.data.value(QStringLiteral("language_length")).toInt() == 5
+                && !summary.data.value(QStringLiteral("language_truncated")).toBool()
+                && summary.data.value(QStringLiteral("spine_count")).toInt() == 2,
+            "book.summary must report complete short fields and the real spine count");
+
+    MemoryBookWorkspace bounded_summary_book;
+    bounded_summary_book.setMetadata(QJsonObject {
+        { QStringLiteral("title"),
+          QString(700, QLatin1Char('t')) + QStringLiteral("TITLE-TAIL") },
+        { QStringLiteral("language"),
+          QString(200, QLatin1Char('l')) + QStringLiteral("LANGUAGE-TAIL") }
+    });
+    bounded_summary_book.setEpubVersion(
+        QString(100, QLatin1Char('v')) + QStringLiteral("VERSION-TAIL"));
+    ToolRegistry bounded_summary_registry;
+    registerBookTools(&bounded_summary_registry, &bounded_summary_book);
+    const ToolResult bounded_summary = bounded_summary_registry.find(
+        QStringLiteral("book.summary"))->execute(QJsonObject());
+    Require(bounded_summary.ok
+                && bounded_summary.data.value(QStringLiteral("title")).toString().size()
+                    == 512
+                && bounded_summary.data.value(QStringLiteral("title_length")).toInt()
+                    == 710
+                && bounded_summary.data.value(QStringLiteral("title_truncated")).toBool()
+                && bounded_summary.data.value(QStringLiteral("language")).toString().size()
+                    == 128
+                && bounded_summary.data.value(QStringLiteral("language_length")).toInt()
+                    == 213
+                && bounded_summary.data.value(QStringLiteral("language_truncated")).toBool()
+                && bounded_summary.data.value(QStringLiteral("epub_version")).toString().size()
+                    == 64
+                && bounded_summary.data.value(
+                       QStringLiteral("epub_version_length")).toInt() == 112
+                && bounded_summary.data.value(
+                       QStringLiteral("epub_version_truncated")).toBool()
+                && !QJsonDocument(bounded_summary.data).toJson().contains("TITLE-TAIL")
+                && !QJsonDocument(bounded_summary.data).toJson().contains("LANGUAGE-TAIL")
+                && !QJsonDocument(bounded_summary.data).toJson().contains("VERSION-TAIL"),
+            "book.summary must bound every model-visible package identity string");
 
     const ToolResult resources = run(QStringLiteral("book.resources"), QJsonObject());
     Require(resources.data.value(QStringLiteral("resources")).toArray().size() >= 4,

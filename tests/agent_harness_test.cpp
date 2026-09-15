@@ -75,6 +75,38 @@ int main()
                 && edit_system_prompt.contains(QStringLiteral("preview_digest")),
             "system prompt must ground commit summaries and paginated inventory traversal");
 
+    MemoryBookWorkspace bounded_summary_book;
+    bounded_summary_book.setMetadata(QJsonObject {
+        { QStringLiteral("title"),
+          QString(700, QLatin1Char('t')) + QStringLiteral("TITLE-CONTEXT-TAIL") },
+        { QStringLiteral("language"),
+          QString(200, QLatin1Char('l')) + QStringLiteral("LANGUAGE-CONTEXT-TAIL") }
+    });
+    bounded_summary_book.setEpubVersion(
+        QString(100, QLatin1Char('v')) + QStringLiteral("VERSION-CONTEXT-TAIL"));
+    const QString bounded_summary_context = PromptAssembler().contextBlock(
+        &bounded_summary_book, QStringList());
+    Require(bounded_summary_context.contains(
+                QStringLiteral("\"title_length\":718"))
+                && bounded_summary_context.contains(
+                    QStringLiteral("\"title_truncated\":true"))
+                && bounded_summary_context.contains(
+                    QStringLiteral("\"language_length\":221"))
+                && bounded_summary_context.contains(
+                    QStringLiteral("\"language_truncated\":true"))
+                && bounded_summary_context.contains(
+                    QStringLiteral("\"epub_version_length\":120"))
+                && bounded_summary_context.contains(
+                    QStringLiteral("\"epub_version_truncated\":true"))
+                && !bounded_summary_context.contains(
+                    QStringLiteral("TITLE-CONTEXT-TAIL"))
+                && !bounded_summary_context.contains(
+                    QStringLiteral("LANGUAGE-CONTEXT-TAIL"))
+                && !bounded_summary_context.contains(
+                    QStringLiteral("VERSION-CONTEXT-TAIL"))
+                && bounded_summary_context.size() < 1500,
+            "automatic book identity context must bound long summary strings");
+
     MemoryBookWorkspace selection_book;
     MemoryResource selection_resource;
     selection_resource.id = QStringLiteral("scope:chapter");

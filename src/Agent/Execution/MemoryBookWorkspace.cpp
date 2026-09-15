@@ -26,6 +26,9 @@ namespace
 {
 
 const int kMaxFragment = 8192;
+const int kMaxSummaryTitle = 512;
+const int kMaxSummaryLanguage = 128;
+const int kMaxSummaryEpubVersion = 64;
 const QStringList kGenericFonts = {
     QStringLiteral("serif"), QStringLiteral("sans-serif"), QStringLiteral("monospace"),
     QStringLiteral("cursive"), QStringLiteral("fantasy"), QStringLiteral("system-ui")
@@ -297,12 +300,24 @@ QJsonObject MemoryBookWorkspace::summary() const
         else if (resource.kind == QLatin1String("image")) ++images;
         else if (resource.kind == QLatin1String("text")) ++text;
     }
+    const QString title = m_metadata.value(QStringLiteral("title")).toString();
+    const QString language = m_metadata.value(
+        QStringLiteral("language")).toString();
     return QJsonObject {
         { QStringLiteral("book_session_id"), m_bookSessionId },
         { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
-        { QStringLiteral("epub_version"), m_epubVersion },
-        { QStringLiteral("title"), m_metadata.value(QStringLiteral("title")).toString() },
-        { QStringLiteral("language"), m_metadata.value(QStringLiteral("language")).toString() },
+        { QStringLiteral("epub_version"),
+          m_epubVersion.left(kMaxSummaryEpubVersion) },
+        { QStringLiteral("epub_version_length"), m_epubVersion.size() },
+        { QStringLiteral("epub_version_truncated"),
+          m_epubVersion.size() > kMaxSummaryEpubVersion },
+        { QStringLiteral("title"), title.left(kMaxSummaryTitle) },
+        { QStringLiteral("title_length"), title.size() },
+        { QStringLiteral("title_truncated"), title.size() > kMaxSummaryTitle },
+        { QStringLiteral("language"), language.left(kMaxSummaryLanguage) },
+        { QStringLiteral("language_length"), language.size() },
+        { QStringLiteral("language_truncated"),
+          language.size() > kMaxSummaryLanguage },
         { QStringLiteral("spine_count"), m_spineIds.size() },
         { QStringLiteral("toc_count"), m_toc.size() },
         { QStringLiteral("resources"), QJsonObject {

@@ -623,7 +623,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
     if (!registry || !workspace) return;
 
     add(registry, QStringLiteral("book.summary"),
-        QStringLiteral("Summarize the open EPUB: revision, version, title, spine/TOC counts, resource totals. Never returns file binaries."),
+        QStringLiteral("Summarize the open EPUB: revision, bounded version/title/language previews, spine/TOC counts, and resource totals. Use book.metadata when title or language is truncated. Never returns file binaries."),
         ToolRisk::Read, false, false, emptyObjectSchema(),
         [workspace](const QJsonObject &) {
             return ToolResult::success(workspace->summary());

@@ -44,6 +44,9 @@ namespace
 {
 
 const int kMaxFragment = 8192;
+const int kMaxSummaryTitle = 512;
+const int kMaxSummaryLanguage = 128;
+const int kMaxSummaryEpubVersion = 64;
 
 QString sha256Text(const QString &text)
 {
@@ -365,7 +368,9 @@ QJsonObject SigilBookWorkspace::summary() const
 {
     return invokeJson([this]() {
         int xhtml = 0, css = 0, fonts = 0, images = 0, text = 0;
-        for (Resource *resource : m_book->GetFolderKeeper()->GetResourceList()) {
+        const QList<Resource *> resources = m_book->GetFolderKeeper()
+            ->GetResourceList();
+        for (Resource *resource : resources) {
             const QString kind = kindOf(resource);
             if (kind == QLatin1String("xhtml")) ++xhtml;
             else if (kind == QLatin1String("css")) ++css;
@@ -375,27 +380,52 @@ QJsonObject SigilBookWorkspace::summary() const
         }
         QString title;
         QString language;
-        if (m_book->GetConstOPF()) {
+        OPFResource *opf = m_book->GetOPF();
+        if (opf) {
             for (const MetaEntry &entry : m_book->GetMetadata()) {
                 if (entry.m_name.endsWith(QLatin1String("title")) && title.isEmpty()) title = entry.m_content;
                 if (entry.m_name.endsWith(QLatin1String("language")) && language.isEmpty()) language = entry.m_content;
             }
         }
+        const QString epub_version = opf ? opf->GetEpubVersion() : QString();
+        const int spine_count = opf ? opf->GetSpineOrderBookPaths().size() : 0;
+        int toc_count = 0;
+        if (opf) {
+            if (HTMLResource *nav = opf->GetNavResource()) {
+                toc_count = NavProcessor(nav).GetTOC().size();
+            }
+            if (toc_count == 0) {
+                if (NCXResource *ncx = m_book->GetNCX()) {
+                    toc_count = NcxNavigation::parse(ncx->GetText()).toc.size();
+                }
+            }
+        }
         return QJsonObject {
             { QStringLiteral("book_session_id"), m_bookSessionId },
             { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
-            { QStringLiteral("epub_version"), m_book->GetConstOPF() ? m_book->GetConstOPF()->GetEpubVersion() : QString() },
-            { QStringLiteral("title"), title },
-            { QStringLiteral("language"), language },
-            { QStringLiteral("spine_count"), spine().size() },
-            { QStringLiteral("toc_count"), toc().size() },
+            { QStringLiteral("epub_version"),
+              epub_version.left(kMaxSummaryEpubVersion) },
+            { QStringLiteral("epub_version_length"), epub_version.size() },
+            { QStringLiteral("epub_version_truncated"),
+              epub_version.size() > kMaxSummaryEpubVersion },
+            { QStringLiteral("title"), title.left(kMaxSummaryTitle) },
+            { QStringLiteral("title_length"), title.size() },
+            { QStringLiteral("title_truncated"),
+              title.size() > kMaxSummaryTitle },
+            { QStringLiteral("language"),
+              language.left(kMaxSummaryLanguage) },
+            { QStringLiteral("language_length"), language.size() },
+            { QStringLiteral("language_truncated"),
+              language.size() > kMaxSummaryLanguage },
+            { QStringLiteral("spine_count"), spine_count },
+            { QStringLiteral("toc_count"), toc_count },
             { QStringLiteral("resources"), QJsonObject {
                 { QStringLiteral("xhtml"), xhtml },
                 { QStringLiteral("css"), css },
                 { QStringLiteral("fonts"), fonts },
                 { QStringLiteral("images"), images },
                 { QStringLiteral("text"), text },
-                { QStringLiteral("total"), m_book->GetFolderKeeper()->GetResourceList().size() }
+                { QStringLiteral("total"), resources.size() }
             } }
         };
     });

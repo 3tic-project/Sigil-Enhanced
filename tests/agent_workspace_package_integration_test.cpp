@@ -110,10 +110,24 @@ int main(int argc, char **argv)
         SigilAgent::SigilBookWorkspace workspace;
         workspace.setBook(book);
         const QString firstBookSession = workspace.bookSessionId();
+        const QJsonObject firstSummary = workspace.summary();
         Require(!firstBookSession.isEmpty()
-                    && workspace.summary().value(QStringLiteral("book_session_id")).toString()
-                        == firstBookSession,
-                "Sigil workspace summary does not expose its bound book session");
+                    && firstSummary.value(
+                           QStringLiteral("book_session_id")).toString()
+                        == firstBookSession
+                    && firstSummary.value(QStringLiteral("spine_count")).toInt()
+                        == workspace.spine().size()
+                    && firstSummary.value(QStringLiteral("toc_count")).toInt()
+                        == workspace.toc().size()
+                    && firstSummary.value(QStringLiteral("title_length")).toInt()
+                        == firstSummary.value(QStringLiteral("title")).toString().size()
+                    && !firstSummary.value(
+                           QStringLiteral("title_truncated")).toBool()
+                    && firstSummary.value(QStringLiteral("language_length")).toInt()
+                        == firstSummary.value(QStringLiteral("language")).toString().size()
+                    && !firstSummary.value(
+                           QStringLiteral("language_truncated")).toBool(),
+                "Sigil workspace summary did not expose bounded identity and direct counts");
         workspace.setBook(book);
         Require(workspace.bookSessionId() != firstBookSession,
                 "rebinding a Sigil workspace must invalidate plans for its previous book session");
