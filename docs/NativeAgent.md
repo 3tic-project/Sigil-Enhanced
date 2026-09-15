@@ -322,6 +322,17 @@ length 和 `snippet_truncated`。需要精确原文时也必须改用 `resource.
 
 会话级（不改书，New Session 会清空）：`session.remember`、`session.task_add`、`session.task_update`。
 
+会话记忆最多 64 条，key 最长 64、value 最长 2,048 个 UTF-16 单元；任务最多 128 项，title
+最长 256、note 最长 2,048，status 只接受 `pending` / `in_progress` / `done` / `cancelled`。
+容量满后仍可更新已有记忆和任务，继续新增则需 New Session。`session.remember` 与
+`session.task_add/update` 只返回刚变更的项和总数，不再随每次写入回显完整状态。
+
+无 key 的 `session.recall` 默认按最近写入顺序分页 16 条、最多 32 条；指定 key 仍可精确读取。
+`session.tasks` 按创建顺序默认分页 20 项、最多 50 项。两者都提供 `total_count`、offset、limit、
+`returned_count`、`has_more` 和可用时的 `next_offset`。每次模型请求的自动上下文只携带最后
+创建的 8 个任务和最后写入的 8 条记忆；task note 与字符串 memory value 在自动上下文中最多
+预览 512 个 UTF-16 单元，并明确报告省略或截断。完整项须按 key 或分页工具读取。
+
 长文本必须已经在书里（拖进 Book Browser 的 TXT/HTML）。`content.wrap_plain` 用你提供的 heading/illustration **正则**套标签；`content.split` 按标题拆章；`content.replace_body` 用 `source_resource_id` 搬运整段 body。不要把小说正文贴进 `patch_fragment` / `replace_text`（后两者对模型有大小上限）。
 
 批量套标签用 `content.wrap`，全书查找替换用 `content.replace_regex`（`$1` 捕获组）。图片必须先拖进 Images，再用 `image.insert` 按锚点插入 `<img>`。`book.check` 会分页报告损坏的图片链接、未引用图片和 XHTML 良构性。

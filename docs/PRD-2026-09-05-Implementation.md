@@ -1644,3 +1644,40 @@ snippet 长度保留、模型可见 snippet 只有 240 字符且 JSON 不含尾�
 不区分大小写语义。字面搜索目前没有 resource filter 或结果 offset，达到 50 项后不能直接续页；
 模型需改用更独特的短查询缩小结果。超大 EPUB 的扫描耗时、在线模型按位置补读的完成率、
 Windows/Linux 构建仍待后续验证。
+
+## Native Agent 会话状态上下文有界化（2026-09-15）
+
+分支：`feature/agent-bounded-session-state`。主要提交：`b524ebd77`（存储上限、分页工具与写入
+回显收敛）和 `7509c6b90`（自动上下文窗口与长值预览）。
+
+### 存储与工具结果边界
+
+- `AgentSession` 在锁内强制最多 64 条 memory、128 个 task；memory key/value 上限为
+  64/2,048 个 UTF-16 单元，task title/note 上限为 256/2,048。已有 memory key 在容量满后仍可
+  更新并移动到最近写入位置；任务状态只接受既有四值。`clear()` 同时清空值、任务和记忆顺序。
+- `session.remember`、`session.task_add`、`session.task_update` 的 schema 明示字段长度，运行时
+  继续复核绕过 schema 的参数。容量、字段和状态错误使用稳定的
+  `SESSION_MEMORY_LIMIT_REACHED` / `SESSION_MEMORY_ARGUMENT_INVALID` /
+  `SESSION_TASK_LIMIT_REACHED` / `SESSION_TASK_ARGUMENT_INVALID`，且错误数据不重复超长正文。
+- 三个写入工具成功后只返回受影响的 `value` / `task` 与当前总数，不再把最大可达 64/128 项的
+  完整状态写进每个 tool-role 消息。指定 key 的 `session.recall` 保持精确读取，并新增 `found`；
+  无 key 时按写入/更新顺序默认 16、最多 32 条分页。`session.tasks` 按创建顺序默认 20、最多
+  50 项分页；二者使用现有统一 offset/limit/returned_count/has_more/next_offset 协议。
+
+### 自动上下文预算与测试证据
+
+- `PromptAssembler` 不再把完整 memory/tasks 注入每次请求。自动上下文只带最后创建的 8 个任务
+  与最后写入的 8 条记忆，并报告更早项数量；task note 和字符串 memory value 最多预览 512 个
+  UTF-16 单元，结构化旧值超过同等序列化阈值时只放占位符。截断元数据要求模型用精确 key 或
+  分页工具补读。系统提示把 `session.tasks` 和无 key 的 `session.recall` 加入续页规则。
+- `agent_book_ops` 写满 64 条记忆和 128 个任务，覆盖已有 key 更新后移、容量/字段/状态拒绝、
+  默认页/硬上限/尾页、精确 recall、写入结果不含全表、schema 边界和 New Session 重置。
+  `agent_harness` 构造 25 个任务和 20 条记忆，验证自动上下文只含最后 8+8 项，报告 17/12 个
+  省略项，且 700 字符 note/value 的尾部标记不进入请求。完整 Sigil 构建、链接及 42 个固定
+  Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。本切片没有新增 UI 文案；四份
+  `.qm` 继续为 0 unfinished，英文 4,771 条，简中/繁中/日文各 5,748 条。
+
+本切片限制的是 Native Agent 内存会话及其模型可见副本，不持久化这些数据，也没有新增逐项
+删除工具；达到容量后需复用现有 key/task 或开始 New Session。自动窗口优先最后创建/写入项，
+较早但仍 pending 的任务不会自动置顶，模型必须根据省略提示分页读取。在线模型的补页遵循率、
+真实长会话体验和 Windows/Linux 构建仍待后续验证。
