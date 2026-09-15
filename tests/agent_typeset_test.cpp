@@ -215,11 +215,109 @@ int main()
     Require(parsed_tool.ok, "manuscript.parse must succeed");
     Require(parsed_tool.data.value(QStringLiteral("chapter_count")).toInt() == 3,
             "parse tool chapter_count");
+    Require(parsed_tool.data.value(QStringLiteral("total_counts")).toObject()
+                    .value(QStringLiteral("chapters")).toInt() == 3
+                && !parsed_tool.data.value(QStringLiteral("has_more")).toBool(),
+            "small parsed manuscripts must remain complete with pagination metadata");
     Require(parsed_tool.data.value(QStringLiteral("template")).toObject()
                 .value(QStringLiteral("detected")).toBool(),
             "template must be detected");
     Require(!QJsonDocument(parsed_tool.data).toJson().contains("春天到了"),
             "parse tool must omit chapter bodies");
+
+    MemoryBookWorkspace large_manuscript_book;
+    MemoryResource large_manuscript;
+    large_manuscript.id = QStringLiteral("large-manuscript");
+    large_manuscript.bookPath = QStringLiteral("OEBPS/Misc/large.txt");
+    large_manuscript.mediaType = QStringLiteral("text/plain");
+    large_manuscript.kind = QStringLiteral("text");
+    QStringList manuscript_lines;
+    for (int index = 0; index < 135; ++index) {
+        manuscript_lines.append(
+            QStringLiteral("第%1話　章节 %1").arg(index + 1));
+        manuscript_lines.append(QStringLiteral("正文 %1").arg(index + 1));
+        manuscript_lines.append(
+            QStringLiteral("［插图：image-%1］").arg(index + 1));
+    }
+    large_manuscript.text = manuscript_lines.join(QLatin1Char('\n'));
+    large_manuscript_book.addResource(large_manuscript);
+    for (int index = 0; index < 135; ++index) {
+        large_manuscript_book.addResource(image(
+            QStringLiteral("large-image-%1").arg(index),
+            QStringLiteral("OEBPS/Images/image-%1.jpg").arg(index + 1)));
+    }
+    for (int index = 0; index < 105; ++index) {
+        large_manuscript_book.addResource(xhtml(
+            QStringLiteral("large-illus-page-%1").arg(index),
+            QStringLiteral("OEBPS/Text/illus%1.xhtml").arg(index + 1),
+            QStringLiteral("<html><body/></html>")));
+        large_manuscript_book.addResource(xhtml(
+            QStringLiteral("large-section-page-%1").arg(index),
+            QStringLiteral("OEBPS/Text/Section%1.xhtml").arg(index + 1),
+            QStringLiteral("<html><body/></html>")));
+    }
+    ToolRegistry large_manuscript_registry;
+    registerBookTools(&large_manuscript_registry, &large_manuscript_book);
+    auto parse_large_manuscript = [&](const QJsonObject &arguments) {
+        return large_manuscript_registry.find(
+            QStringLiteral("manuscript.parse"))->execute(arguments);
+    };
+    const ToolResult manuscript_page = parse_large_manuscript(QJsonObject {
+        { QStringLiteral("manuscript_id"), large_manuscript.id }
+    });
+    const ToolResult manuscript_page_again = parse_large_manuscript(QJsonObject {
+        { QStringLiteral("manuscript_id"), large_manuscript.id }
+    });
+    const ToolResult manuscript_tail = parse_large_manuscript(QJsonObject {
+        { QStringLiteral("manuscript_id"), large_manuscript.id },
+        { QStringLiteral("offset"), 100 },
+        { QStringLiteral("limit"), 999 }
+    });
+    const QJsonObject manuscript_totals = manuscript_page.data.value(
+        QStringLiteral("total_counts")).toObject();
+    const QJsonObject manuscript_returned = manuscript_tail.data.value(
+        QStringLiteral("returned_counts")).toObject();
+    const QJsonObject manuscript_schema = large_manuscript_registry.find(
+        QStringLiteral("manuscript.parse"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(manuscript_page.ok
+                && manuscript_page.data.value(QStringLiteral("chapter_count")).toInt()
+                    == 135
+                && manuscript_page.data.value(QStringLiteral("chapters")).toArray().size()
+                    == 40
+                && manuscript_page.data.value(QStringLiteral("toc")).toArray().size()
+                    == 40
+                && manuscript_page.data.value(QStringLiteral("illustrations")).toArray().size()
+                    == 40
+                && manuscript_page.data.value(QStringLiteral("images_in_book")).toArray().size()
+                    == 40
+                && manuscript_page.data.value(QStringLiteral("images_in_book")).toArray()
+                    == manuscript_page_again.data.value(
+                        QStringLiteral("images_in_book")).toArray()
+                && manuscript_page.data.value(QStringLiteral("resolved_images")).toArray().size()
+                    == 40
+                && manuscript_page.data.value(QStringLiteral("template")).toObject()
+                    .value(QStringLiteral("illustrations")).toArray().size() == 40
+                && manuscript_page.data.value(QStringLiteral("template")).toObject()
+                    .value(QStringLiteral("chapters")).toArray().size() == 40
+                && manuscript_totals.value(QStringLiteral("chapters")).toInt() == 135
+                && manuscript_totals.value(QStringLiteral("template.chapters")).toInt()
+                    == 105
+                && manuscript_page.data.value(QStringLiteral("has_more")).toBool()
+                && manuscript_page.data.value(QStringLiteral("next_offset")).toInt() == 40
+                && manuscript_tail.data.value(QStringLiteral("limit")).toInt() == 100
+                && manuscript_tail.data.value(QStringLiteral("chapters")).toArray().size()
+                    == 35
+                && manuscript_returned.value(QStringLiteral("illustrations")).toInt()
+                    == 35
+                && manuscript_returned.value(QStringLiteral("template.illustrations")).toInt()
+                    == 5
+                && !manuscript_tail.data.value(QStringLiteral("has_more")).toBool()
+                && manuscript_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 40
+                && manuscript_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 100,
+            "manuscript.parse must page every top-level and template collection together");
 
     Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "begin");
     const ToolResult typeset = run(QStringLiteral("content.typeset_from_manuscript"), QJsonObject());

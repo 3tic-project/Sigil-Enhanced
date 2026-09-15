@@ -61,6 +61,7 @@ int main()
                 && edit_system_prompt.contains(QStringLiteral("font.inventory"))
                 && edit_system_prompt.contains(QStringLiteral("book.validate"))
                 && edit_system_prompt.contains(QStringLiteral("book.check"))
+                && edit_system_prompt.contains(QStringLiteral("manuscript.parse"))
                 && edit_system_prompt.contains(QStringLiteral("checkpoint.list"))
                 && edit_system_prompt.contains(QStringLiteral("session.tasks"))
                 && edit_system_prompt.contains(QStringLiteral("keyless session.recall")),

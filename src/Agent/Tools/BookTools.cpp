@@ -38,6 +38,8 @@ constexpr int MAX_CHECKPOINT_PAGE_SIZE = 50;
 constexpr int MAX_CHECKPOINT_LABEL_LENGTH = 256;
 constexpr int MAX_CHECKPOINT_AFFECTED_RESOURCES = 32;
 constexpr int MAX_CHECKPOINT_RESOURCE_ID_LENGTH = 256;
+constexpr int DEFAULT_MANUSCRIPT_SUMMARY_PAGE_SIZE = 40;
+constexpr int MAX_MANUSCRIPT_SUMMARY_PAGE_SIZE = 100;
 
 QJsonObject emptyObjectSchema()
 {
@@ -250,6 +252,34 @@ QJsonObject paginatedCheckpointList(const QJsonArray &all,
     }
     result.insert(QStringLiteral("checkpoints"), checkpoints);
     return result;
+}
+
+QJsonObject paginatedManuscriptSummary(QJsonObject summary,
+                                       const QJsonObject &arguments)
+{
+    const QString template_illustrations_key = QStringLiteral(
+        "template.illustrations");
+    const QString template_chapters_key = QStringLiteral("template.chapters");
+    const bool has_template = summary.contains(QStringLiteral("template"));
+    QJsonObject template_data = summary.value(QStringLiteral("template")).toObject();
+    summary.insert(template_illustrations_key,
+                   template_data.value(QStringLiteral("illustrations")));
+    summary.insert(template_chapters_key,
+                   template_data.value(QStringLiteral("chapters")));
+    summary = paginatedArrays(
+        summary,
+        { QStringLiteral("toc"), QStringLiteral("chapters"),
+          QStringLiteral("front_illustrations"), QStringLiteral("illustrations"),
+          QStringLiteral("images_in_book"), QStringLiteral("resolved_images"),
+          template_illustrations_key, template_chapters_key },
+        arguments, DEFAULT_MANUSCRIPT_SUMMARY_PAGE_SIZE,
+        MAX_MANUSCRIPT_SUMMARY_PAGE_SIZE);
+    template_data.insert(QStringLiteral("illustrations"),
+                         summary.take(template_illustrations_key));
+    template_data.insert(QStringLiteral("chapters"),
+                         summary.take(template_chapters_key));
+    if (has_template) summary.insert(QStringLiteral("template"), template_data);
+    return summary;
 }
 
 class LambdaTool : public IAgentTool
@@ -689,14 +719,27 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("manuscript.parse"),
-        QStringLiteral("Parse a text/HTML resource already in the book into a compact structure (title, credits, chapter list, illustration names). Never returns chapter bodies. Optional heading_pattern and illustration_pattern are regexes (capture group 1 = name). Omit them to use built-in East-Asian volume heuristics. Omit manuscript_id to auto-detect the largest dropped text."),
+        QStringLiteral("Parse a text/HTML resource already in the book into a bounded shared-offset page of title/credits plus chapter, TOC, illustration, image, and template arrays. Never returns chapter bodies. Use next_offset while has_more is true. Optional heading_pattern and illustration_pattern are regexes (capture group 1 = name). Omit them to use built-in East-Asian volume heuristics. Omit manuscript_id to auto-detect the largest dropped text."),
         ToolRisk::Read, false, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
                 { QStringLiteral("manuscript_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
                 { QStringLiteral("heading_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                { QStringLiteral("illustration_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                { QStringLiteral("illustration_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("offset"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("integer") },
+                    { QStringLiteral("minimum"), 0 },
+                    { QStringLiteral("default"), 0 }
+                } },
+                { QStringLiteral("limit"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("integer") },
+                    { QStringLiteral("minimum"), 1 },
+                    { QStringLiteral("maximum"),
+                      MAX_MANUSCRIPT_SUMMARY_PAGE_SIZE },
+                    { QStringLiteral("default"),
+                      DEFAULT_MANUSCRIPT_SUMMARY_PAGE_SIZE }
+                } }
             } }
         },
         [workspace](const QJsonObject &arguments) {
@@ -713,7 +756,8 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                         summary.value(QStringLiteral("message")).toString(),
                         summary);
                 }
-                return ToolResult::success(summary);
+                return ToolResult::success(
+                    paginatedManuscriptSummary(summary, arguments));
             }
             const QString id = findManuscriptResourceId(
                 workspace, arguments.value(QStringLiteral("manuscript_id")).toString());
@@ -725,7 +769,8 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
             QJsonObject summary = manuscriptSummaryJson(parsed);
             summary.insert(QStringLiteral("ok"), true);
             summary.insert(QStringLiteral("resource_id"), id);
-            return ToolResult::success(summary);
+            return ToolResult::success(
+                paginatedManuscriptSummary(summary, arguments));
         });
 
     add(registry, QStringLiteral("content.fill_section"),
