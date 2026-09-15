@@ -201,9 +201,9 @@ public:
                 QStringLiteral("INVALID_ARGUMENT"),
                 QStringLiteral("offset or limit is too large"));
         }
-        const int offset = static_cast<int>(offset_integer);
+        const int requested_offset = static_cast<int>(offset_integer);
         const int limit = static_cast<int>(limit_integer);
-        if (offset < 0 || limit < 1 || limit > kMaxPageSize) {
+        if (requested_offset < 0 || limit < 1 || limit > kMaxPageSize) {
             return ToolResult::failure(
                 QStringLiteral("INVALID_ARGUMENT"),
                 QStringLiteral("offset must be non-negative and limit must be between 1 and %1")
@@ -252,6 +252,7 @@ public:
 
         const QList<TocNodeId> preorder = TocTreeTransform::PreorderIds(stored.tree);
         const QHash<TocNodeId, int> node_depths = depths(stored.tree);
+        const int offset = qMin(requested_offset, preorder.size());
         QJsonArray nodes;
         const int end = qMin(preorder.size(), offset + limit);
         for (int index = offset; index < end; ++index) {
@@ -261,8 +262,11 @@ public:
             { QStringLiteral("snapshot_id"), stored.id },
             { QStringLiteral("book_revision"), static_cast<qint64>(stored.bookRevision) },
             { QStringLiteral("node_count"), preorder.size() },
+            { QStringLiteral("total_count"), preorder.size() },
             { QStringLiteral("offset"), offset },
             { QStringLiteral("limit"), limit },
+            { QStringLiteral("returned_count"), nodes.size() },
+            { QStringLiteral("has_more"), end < preorder.size() },
             { QStringLiteral("nodes"), nodes },
             { QStringLiteral("preorder_stable"), true },
             { QStringLiteral("full_epubcheck"), epubcheckNotRun() },
@@ -571,13 +575,13 @@ void registerTocTools(ToolRegistry *registry,
 
     addTool(
         registry, QStringLiteral("toc.inspect_hierarchy"),
-        QStringLiteral("Inspect the current native Nav/NCX hierarchy with stable node IDs and bounded pagination. Read-only and session-bound; never changes headings or the Book."),
+        QStringLiteral("Inspect a bounded page of the current native Nav/NCX hierarchy with stable node IDs. Use next_offset while has_more is true. Read-only and session-bound; never changes headings or the Book."),
         ToolRisk::Read, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
                 { QStringLiteral("offset"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 0 } } },
-                { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 1 }, { QStringLiteral("maximum"), kMaxPageSize } } }
+                { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 1 }, { QStringLiteral("maximum"), kMaxPageSize }, { QStringLiteral("default"), kDefaultPageSize } } }
             } }
         },
         [service](const QJsonObject &arguments) { return service->inspect(arguments); });

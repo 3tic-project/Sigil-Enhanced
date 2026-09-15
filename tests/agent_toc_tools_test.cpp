@@ -142,6 +142,14 @@ int main()
         QJsonObject { { QStringLiteral("limit"), QStringLiteral("100") } });
     Require(!invalid_page.ok && invalid_page.code == QStringLiteral("INVALID_ARGUMENT"),
             "TOC pagination must reject string limits");
+    const QJsonObject inspect_properties = registry.find(
+        QStringLiteral("toc.inspect_hierarchy"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(inspect_properties.value(QStringLiteral("limit")).toObject()
+                .value(QStringLiteral("default")).toInt() == 100
+                && inspect_properties.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 500,
+            "TOC inspection schema must publish its default and maximum page sizes");
 
     MissingPrimaryTocWorkspace missing_source_book;
     missing_source_book.setToc(hierarchyBook().toc());
@@ -163,6 +171,9 @@ int main()
             "TOC inspection must be read-only");
     Require(first_page.data.value(QStringLiteral("snapshot_id")).toString().size() == 64
                 && first_page.data.value(QStringLiteral("node_count")).toInt() == 6
+                && first_page.data.value(QStringLiteral("total_count")).toInt() == 6
+                && first_page.data.value(QStringLiteral("returned_count")).toInt() == 3
+                && first_page.data.value(QStringLiteral("has_more")).toBool()
                 && first_page.data.value(QStringLiteral("nodes")).toArray().size() == 3
                 && first_page.data.value(QStringLiteral("next_offset")).toInt() == 3,
             "TOC inspection must publish a stable paginated snapshot");
@@ -173,6 +184,59 @@ int main()
                 && nodes.at(2).toObject().value(QStringLiteral("label")).toString()
                     == QStringLiteral("Chapter C"),
             "TOC inspection lost hierarchy, identity, or labels");
+
+    MemoryBookWorkspace large_hierarchy_book;
+    QJsonArray large_toc;
+    for (int index = 0; index < 620; ++index) {
+        large_toc.append(entry(
+            QStringLiteral("Entry %1").arg(index, 3, 10, QLatin1Char('0')),
+            QStringLiteral("Text/entry-%1.xhtml").arg(
+                index, 3, 10, QLatin1Char('0')),
+            1));
+    }
+    large_hierarchy_book.setToc(large_toc);
+    ToolRegistry large_hierarchy_registry;
+    registerTocTools(&large_hierarchy_registry, &large_hierarchy_book);
+    const ToolResult default_hierarchy_page = run(
+        large_hierarchy_registry, QStringLiteral("toc.inspect_hierarchy"));
+    const ToolResult maximum_hierarchy_page = run(
+        large_hierarchy_registry, QStringLiteral("toc.inspect_hierarchy"),
+        QJsonObject { { QStringLiteral("limit"), 500 } });
+    const ToolResult hierarchy_tail = run(
+        large_hierarchy_registry, QStringLiteral("toc.inspect_hierarchy"),
+        QJsonObject {
+            { QStringLiteral("offset"), 500 },
+            { QStringLiteral("limit"), 500 }
+        });
+    const ToolResult hierarchy_empty_page = run(
+        large_hierarchy_registry, QStringLiteral("toc.inspect_hierarchy"),
+        QJsonObject { { QStringLiteral("offset"), 999 } });
+    Require(default_hierarchy_page.ok
+                && default_hierarchy_page.data.value(
+                    QStringLiteral("nodes")).toArray().size() == 100
+                && default_hierarchy_page.data.value(
+                    QStringLiteral("returned_count")).toInt() == 100
+                && default_hierarchy_page.data.value(
+                    QStringLiteral("next_offset")).toInt() == 100
+                && maximum_hierarchy_page.data.value(
+                    QStringLiteral("nodes")).toArray().size() == 500
+                && maximum_hierarchy_page.data.value(
+                    QStringLiteral("next_offset")).toInt() == 500
+                && hierarchy_tail.data.value(
+                    QStringLiteral("nodes")).toArray().size() == 120
+                && hierarchy_tail.data.value(
+                    QStringLiteral("returned_count")).toInt() == 120
+                && !hierarchy_tail.data.value(
+                    QStringLiteral("has_more")).toBool()
+                && !hierarchy_tail.data.contains(QStringLiteral("next_offset"))
+                && hierarchy_empty_page.data.value(
+                    QStringLiteral("offset")).toInt() == 620
+                && hierarchy_empty_page.data.value(
+                    QStringLiteral("returned_count")).toInt() == 0
+                && default_hierarchy_page.data.value(
+                    QStringLiteral("snapshot_id"))
+                    == hierarchy_tail.data.value(QStringLiteral("snapshot_id")),
+            "large TOC hierarchy pages must expose stable normalized traversal metadata");
 
     const QString snapshot_id = first_page.data.value(
         QStringLiteral("snapshot_id")).toString();

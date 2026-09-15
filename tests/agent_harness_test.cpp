@@ -65,6 +65,7 @@ int main()
                 && edit_system_prompt.contains(QStringLiteral("checkpoint.list"))
                 && edit_system_prompt.contains(QStringLiteral("session.tasks"))
                 && edit_system_prompt.contains(QStringLiteral("keyless session.recall"))
+                && edit_system_prompt.contains(QStringLiteral("toc.inspect_hierarchy"))
                 && edit_system_prompt.contains(QStringLiteral("preview_digest")),
             "system prompt must ground commit summaries and paginated inventory traversal");
 
