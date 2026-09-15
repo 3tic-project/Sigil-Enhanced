@@ -287,13 +287,24 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
-只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
+只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
 
 其中 `book.resources`、`book.spine`、`book.toc` 和 `style.stylesheets` 使用 `offset` / `limit`
 分页，返回原数组键以及 `total_count`、实际 `offset` / `limit`、`returned_count`、`has_more`；
 尚有下一页时还返回 `next_offset`。前三者默认 100 项、每页最多 200 项；样式表包含每份 CSS
 的受限正文片段，默认 12 项、每页最多 50 项。`limit` 超界会夹紧，`offset` 超过结尾会返回
 稳定空页。模型在 `has_more=true` 时必须沿 `next_offset` 继续，不能把首页当作完整清单。
+
+`book.metadata` 默认分页 20 项、最多 50 项；每项保留稳定的全局 `index`，name/content 预览
+分别最多 256/512 个 UTF-16 单元，并报告原始长度、截断标志和内容 SHA-256。常用 DC 摘要字段
+继续以顶层键兼容返回，但同样最多预览 512 个单元；被截断的字段列在
+`summary_truncated_fields`。所有页面都带完整有效 metadata 清单的 `metadata_digest`。
+
+需要完整长值时，用对应 `index` 和同一个 `metadata_digest` 调用 `metadata.read_fragment`；每段
+默认 2,048、最多 8,192 个 UTF-16 单元，并沿 `continuation` 读取到 `truncated=false`。若元数据
+在两次调用间变化，旧摘要会得到 `METADATA_CHANGED`，必须从 `book.metadata` offset 0 重读，
+避免旧 index 静默指向另一项。分页与分段发生在工具边界；workspace 目前仍先构造完整 metadata
+对象和 entries，摘要计算也会序列化完整有效清单，因此本改动不降低 Book 侧枚举或临时内存。
 
 `font.inventory`、`book.validate` 和 `book.check` 也支持 `offset` / `limit`，默认 100、最多
 200。它们一次包含多个数组，因此同一个 offset 分别切取每个数组，并用 `total_counts` /

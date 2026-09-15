@@ -255,6 +255,18 @@ Conversation 导出或任务记忆，也不是模型 token 上限。每次请求
 需要完整清单时可沿 `next_offset` 稳定遍历。宿主目前仍先枚举内存中的原始清单再切页，因此
 本改动不宣称减少 Book 侧枚举成本。
 
+### Agent 元数据读取改为分页与分段
+
+`book.metadata` 不再一次返回包内全部 metadata entry 和任意长度的值，而是默认/最多分页
+20/50 项；name/content 预览最多 256/512 个 UTF-16 单元，并保留全局 index、原始长度、截断
+状态和内容摘要。常用 title/language/creator 等顶层字段保持兼容，但长值也会明确截断。
+
+每一页都返回完整有效清单的 `metadata_digest`。需要精确长值时，模型用同一 digest 和 index
+调用新的只读 `metadata.read_fragment`，默认/最多读取 2,048/8,192 个 UTF-16 单元并沿
+continuation 续读。元数据变化后旧 digest 会以 `METADATA_CHANGED` 失败关闭，避免 index 漂移。
+工具层目前仍先取得并摘要完整 metadata，因此该改动限制模型与 transcript 负载，不降低宿主
+内部枚举峰值。
+
 ### Agent 大型诊断结果改为分页
 
 `font.inventory`、`book.validate` 和 `book.check` 不再把全部字体、问题、未引用图片和 XHTML
@@ -397,8 +409,8 @@ Agent 仍实时显示 Thinking 与 Answer，但会把约 33 ms 内到达的细�
 - CTest 覆盖了 KFX 导入、无损保存、代码视图关闭、EPUB 2→3 实体与导航、预览网格、
   代码视图选择、Clips 快捷键角标、目录层级编辑、DIV 段落结构规范化和 Native Agent
   请求/用量状态、模型步骤与工具调用上限、完整轮次历史预算、按模式工具目录、资源清单分页、
-  诊断/排版稿/段落分析与计划/事务预览分页、流式界面合并、计划双栏比较、段落独立操作组及事务
-  资源结果。
+  元数据分页与精确分段读取、诊断/排版稿/段落分析与计划/事务预览分页、流式界面合并、计划
+  双栏比较、段落独立操作组及事务资源结果。
   四语文案均可生成 `.qm` 且
   0 unfinished；严格简中、繁中、日文目录覆盖检查通过。
 

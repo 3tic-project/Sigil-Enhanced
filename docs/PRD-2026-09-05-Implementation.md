@@ -1906,3 +1906,44 @@ Dock 聚合、导出与回归）、`5e43e41e4`（四语文案）和 `8682cd211`�
 页卡也保留自己的可见差异；极端上千文件计划的 UI 行数与会话总量仍是后续虚拟化目标。单项
 resource ID/path 尚无字符上限。真实大书、在线模型续页/门禁恢复率、Windows/Linux 构建和
 辅助技术人工验收仍待后续验证。
+
+## Native Agent 元数据分页与精确分段读取（2026-09-16）
+
+分支：`feature/agent-paginated-metadata`。主要提交：`2ed3dfedf`（分页、单值预览边界、精确
+分段读取与模型续页协议）和 `cfd56ca18`（Sigil 暂存元数据读取一致性与集成回归）。
+
+### 有界清单、稳定绑定与完整长值
+
+- `book.metadata` 从无参数返回全部 package metadata 改为 offset/limit 分页，默认 20、硬上限
+  50。每项新增稳定的全局 index；name/content 预览分别限制为 256/512 个 UTF-16 单元，并返回
+  原始长度、截断状态和完整内容 SHA-256。常用 15 个 DC 字段继续以顶层键兼容返回，但长值也
+  只预览 512 个单元，并集中列入 `summary_truncated_fields`。Memory workspace 的扁平字段会
+  规范化为 entries，因此测试后端与真实 Sigil 后端使用同一分页协议。
+- 工具为完整规范化 entries 计算稳定的 SHA-256 `metadata_digest`，所有页面都返回同一摘要。
+  新的只读 `metadata.read_fragment` 必须带该摘要和全局 index，按 offset 精确读取 entry content，
+  默认 2,048、最大 8,192 个 UTF-16 单元，并只在仍有后文时给出 `continuation`。摘要不匹配以
+  `METADATA_CHANGED` 失败关闭，越界 index 以 `METADATA_ENTRY_NOT_FOUND` 拒绝，避免元数据
+  增删后旧 index 静默指向另一项。
+- system prompt 把 `book.metadata` 加入统一分页清单，要求沿 `next_offset` 读完；发现
+  `content_truncated` 后以相同 digest/index 沿 continuation 分段补读，摘要变化则从 offset 0
+  重启。短 title/language/creator 等字段与小型 metadata 仍可在首页直接读取。
+- `SigilBookWorkspace::metadata()` 现在先形成事务内的有效暂存视图：替换只覆盖与提交逻辑相同
+  的首个匹配项，新 DC 字段补成 entry，`_remove` 项不再残留在 entries 或 title/language 摘要中。
+  因而工具摘要能反映即将预览/提交的 metadata，而不会继续绑定活书旧清单；回滚和实际 OPF
+  写入语义未改变。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 构造 127 项规范化 metadata 和一条 10,003 UTF-16 单元长值，验证默认首页
+20 项、`limit=999` 夹紧为 50、稳定全局 index/digest、512 单元预览、8,192 单元精确片段、
+continuation 尾读以及元数据改变后的摘要拒绝。`agent_workspace_package_integration` 在真实 Sigil
+工作区事务内验证 title 替换、creator 新增、language 删除都立即出现在读取视图，随后回滚不改
+活包。完整 Sigil 构建、链接及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次
+通过。该切片没有新增 UI 文案；四语 `.qm` 目标保持最新，简中/繁中/日文严格目录覆盖测试通过，
+既有英文 4,775 条、简中/繁中/日文各 5,752 条且 0 unfinished。
+
+分页限制的是模型轮次和 transcript 的结果体积。当前 `IBookWorkspace::metadata()` 仍先构造
+完整 entries，工具层还会规范化并序列化全量清单计算摘要，所以不宣称降低 Book 侧枚举、摘要
+CPU 或临时内存峰值。超过 256 单元的非常规 metadata name 目前只有截断预览，精确分段工具只
+读取 content；重复 DC 字段也继续沿现有 `metadata.update` 的首项 upsert 语义。真实恶意超长
+字段名、在线模型的分页/分段遵循率、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
