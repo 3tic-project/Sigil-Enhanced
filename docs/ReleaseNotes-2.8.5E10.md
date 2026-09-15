@@ -76,6 +76,10 @@ Nav/NCX 源码；apply 只创建独占暂存事务，预览后才可提交。层
 内联标记、标题、目标和非 TOC 区域，不通过改写 XHTML 标题来制造层级。详见
 [Native Agent 原生目录层级工具](AgentNativeTocTools.md)。
 
+层级检查默认/最多分页 100/500 项，并补齐 `total_count`、`returned_count`、`has_more` 和
+`next_offset`；系统提示会要求模型先读完整棵层级再规划。越过末尾的 offset 返回归一空页，
+既有 `node_count` 与稳定 snapshot/node ID 保持兼容。
+
 ### 安全整理 DIV 伪段落
 
 “增强”菜单中的旧 BookLive 段落入口已扩展为通用 DIV 段落结构工具。它可以分析

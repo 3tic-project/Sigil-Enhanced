@@ -1790,3 +1790,37 @@ chapter body 并构造全量 summary 的行为，因此不宣称降低解析 CPU
 CPU 或临时内存峰值。workspace 已有的 change excerpt 继续保持 80 字符边界，但 resource ID、
 removed 字符串等单项字段没有在本切片中另加字符截断。真实大书、在线模型对“无中途编辑”
 规则的遵循率、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
+
+## Native Agent TOC 层级分页契约统一（2026-09-15）
+
+分支：`feature/agent-toc-pagination-contract`。主要提交：`715a8a2dc`（标准分页元数据、续页提示与
+大型目录回归）。
+
+### 从隐式 next offset 到完整契约
+
+- `toc.inspect_hierarchy` 原本已限制默认 100、最大 500 个节点并在有后页时返回
+  `next_offset`，但没有 `has_more` / `returned_count`，schema 也没有公开默认值，系统分页清单
+  因而无法用与其他清单相同的规则约束模型。本切片保留兼容的 `node_count`，新增同值
+  `total_count`、实际 `returned_count` 和显式 `has_more`；仅在有后页时继续返回
+  `next_offset`。limit 的 1–500 拒绝语义保持不变，schema 新增 default=100。
+- 超过目录结尾的合法 offset 从回显调用方的大值改为归一到 `total_count`，返回
+  `returned_count=0`、`has_more=false` 且无 `next_offset` 的稳定空页。目录按原始先序分页；
+  source identity、书籍 revision 和完整树未变化时，不同页重建出的 `snapshot_id` 相同。
+- 系统提示把 `toc.inspect_hierarchy` 纳入统一分页清单，要求 `has_more=true` 时沿
+  `next_offset` 读完，不能把首页当作完整层级。每次 inspect 仍会刷新当前 snapshot 并清除旧
+  plan，因此正确顺序是先读完全部检查页，再调用一次 `toc.plan_transform`；原生
+  promote/demote、128 项计划差异上限、apply 复核和 Nav/NCX 保真写回都未改变。
+
+### 测试证据与剩余项
+
+`agent_toc_tools` 构造 620 个顶层节点，验证无参数首页 100 项、显式 500 项上限、offset 500
+尾页 120 项、offset 999 归一为空页、完整/本页计数、`has_more` / `next_offset` 终止状态、跨页
+snapshot ID 一致和 schema 默认/最大值；原六节点层级、字符串参数拒绝及既有计划/应用回归继续
+通过。`agent_harness` 固定该工具进入模型续页规则。完整 Sigil 构建、链接及 42 个固定 Python
+依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。本切片没有新增 UI 文案；四份 `.qm` 继续
+为 0 unfinished，英文 4,773 条，简中/繁中/日文各 5,750 条。
+
+本切片统一的是模型可见的分页元数据，不改变 `tocHierarchy()` 先解析完整 Nav/NCX、构造整棵
+`TocEditTree`、计算所有节点深度与 snapshot digest 后再切页的实现，因此不降低解析 CPU 或
+宿主临时内存。节点 label/target 也没有新增单项字符上限。真实超大目录、在线模型的完整续页率、
+Windows/Linux 构建与辅助技术人工验收仍待后续验证。

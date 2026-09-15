@@ -378,6 +378,11 @@ Runner 的任务恢复范围检查也继续使用完整预览，所以不会因�
 属性、内联标记、标题、目标、先序及非 TOC 区域。详见
 [Native Agent 原生目录层级工具](AgentNativeTocTools.md)。
 
+`toc.inspect_hierarchy` 默认分页 100 项、最多 500 项，返回兼容的 `node_count` 以及标准
+`total_count`、`returned_count`、`has_more` / `next_offset`。超出目录结尾的 offset 会归一为
+总数并返回稳定空页；目录未变化时各页的 `snapshot_id` 相同。必须沿 `next_offset` 读完层级
+后再规划，因为新的 inspect 会刷新当前 snapshot 并使此前的 TOC plan 失效。
+
 `python.run` 只落一个临时 `.py` snippet（和其它 harness 的 `run_code` 一样），用 `live_launcher --snippet` 连上现有 `PluginSession` socket，把 `plugin` 绑进这段代码。不要写 `plugin.xml`。Snippet 顶层就能用 `plugin.book`；也可以定义 `def run(plugin)` 或设 `result`。若 Agent 还有未提交事务，会先要求 `commit` / `rollback`。Memory 测试工作区返回 `LIVE_PYTHON_UNAVAILABLE`。脚本上限 64KiB，输出截到 8KiB。优先用 typed 工具；Python 只补工具盖不到的逻辑。
 
 格式不是固定的：标题/插图标记都通过工具参数里的 regex 传入。`ln-template-typeset` 只是一套可选默认启发式；通用流程见 skill `book-structure`。目前仍不能把字体/图片二进制塞进模型，也不能改 EPUB3 landmarks/page-list。

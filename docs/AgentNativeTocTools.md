@@ -21,9 +21,12 @@ Native Agent 可以复用“编辑目录”的 C++ 树变换和原节点写回�
 
 ## 检查与计划
 
-`toc.inspect_hierarchy` 默认返回 100 项，`limit` 范围为 1–500，可用
-`next_offset` 继续读取。同一次 controller/Book 会话中的节点 ID 按原始先序稳定；
-重新打开会话后必须重新检查，不能沿用旧 ID。
+`toc.inspect_hierarchy` 默认返回 100 项，`limit` 范围为 1–500；响应保留 `node_count`，并用
+`total_count`、`returned_count` 和 `has_more` 报告标准分页状态。`has_more=true` 时必须沿
+`next_offset` 读完再规划；超过末尾的 offset 会归一为总数并返回稳定空页。同一次
+controller/Book 会话且目录未变化时，各页的 `snapshot_id` 和按原始先序分配的节点 ID 稳定。
+每次 inspect 都会刷新当前 snapshot 并清除旧 plan；重新打开会话后也必须重新检查，不能沿用
+旧 ID 或旧计划。
 
 `toc.plan_transform` 要求传回当前 `snapshot_id`：
 
@@ -73,8 +76,9 @@ ctest --test-dir build --output-on-failure \
   -R '^(agent_toc_tools|agent_workspace_package_integration|toc_tree_transform|edit_toc_hierarchy_integration)$'
 ```
 
-测试覆盖分页与稳定 ID、提升/降级、兄弟接管、跨会话和旧计划拒绝、取消、暂存失败
-回滚、预览/提交以及提交前宿主冲突。macOS 原生集成使用真实 EPUB3 Nav，验证属性、
+测试覆盖 620 节点目录的默认 100/上限 500/尾页/归一空页、标准计数与稳定 ID，以及
+提升/降级、兄弟接管、跨会话和旧计划拒绝、取消、暂存失败回滚、预览/提交以及提交前
+宿主冲突。macOS 原生集成使用真实 EPUB3 Nav，验证属性、
 内联 `<span>`、landmarks、精确 Undo/Redo 和源码冲突。已有 EditTOC 集成覆盖相同
 NCX 重挂器的 EPUB2 保真路径。最终 9 项相关测试各连续运行 3 次通过。
 
