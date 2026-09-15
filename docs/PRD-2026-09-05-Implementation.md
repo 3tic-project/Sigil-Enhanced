@@ -1613,3 +1613,34 @@ Sigil 构建及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 �
 `content.replace_regex` / `content.wrap` 等写工具语义。宿主目前仍构造完整命中及其全部捕获组，
 因此复杂表达式的执行时间、回溯风险和 Book 侧临时内存峰值没有改善；50 项的结构元数据仍有
 固定开销。真实超长 EPUB、在线模型按位置补读的完成率、Windows/Linux 构建仍待后续验证。
+
+## Native Agent 字面搜索结果有界化（2026-09-15）
+
+分支：`feature/agent-bounded-literal-search`。主要提交：`4362985f9`（工具层统一边界、可恢复
+位置元数据和长查询回归）。
+
+### 查询、命中与 snippet 边界
+
+- `book.search` 的 schema 现在明示 query 长度 1–512，`max_matches` 最小 1、默认 20、最大 50；
+  工具层把绕过 schema 的命中数夹紧，超过 512 个 UTF-16 单元的查询以稳定代码
+  `SEARCH_QUERY_TOO_LONG` 拒绝，并只回报实际/允许长度，不在错误结果中重复原查询。
+- 工具结果对每项后端 snippet 再施加 240 个 UTF-16 单元硬上限，即使 workspace 实现返回更多
+  文本也不会继续进入模型。原有 `resource_id`、`book_path` 和匹配 `offset` 保持不变；新增
+  `match_length`、`snippet_offset`、原始 `snippet_length` 与 `snippet_truncated`，模型可据此
+  调用 `resource.read_fragment` 分段恢复来源。
+- 顶层新增 `query_length`、`match_count`、规范化的 `max_matches` 与
+  `match_limit_reached`。后者是保守的触顶标志：刚好有 50 项也会为 true，不宣称第 51 项存在。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 保留短查询兼容回归，并新增 409 字符命中：验证完整匹配位置/长度与原始
+snippet 长度保留、模型可见 snippet 只有 240 字符且 JSON 不含尾部秘密标记；另覆盖
+`max_matches=999` 仍只返回 50 项、513 字符查询的稳定拒绝字段，以及 schema 的 1/512 与
+1/20/50 边界。完整 Sigil 构建、链接及 42 个固定 Python 依赖通过；14 项 Agent 测试连续
+3 轮共 42 次通过。本切片没有新增 UI 文案；四份 `.qm` 继续为 0 unfinished，英文 4,771 条，
+简中/繁中/日文各 5,748 条。
+
+本切片限制的是工具结果与单次查询规模，不改变两个 workspace 后端的全资源线性扫描和
+不区分大小写语义。字面搜索目前没有 resource filter 或结果 offset，达到 50 项后不能直接续页；
+模型需改用更独特的短查询缩小结果。超大 EPUB 的扫描耗时、在线模型按位置补读的完成率、
+Windows/Linux 构建仍待后续验证。

@@ -309,6 +309,13 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 搜索预览本身当作补丁来源。`match_limit_reached=true` 表示结果达到本次上限，并不证明后面必然
 还有其他命中。
 
+不区分大小写的字面量 `book.search` 默认最多返回 20 个命中，硬上限同样为 50；查询最长
+512 个 UTF-16 单元，超出时返回 `SEARCH_QUERY_TOO_LONG`，应改搜更短的独特片段。每项
+`snippet` 最多 240 个 UTF-16 单元，同时保留匹配 offset / length、snippet offset / 原始
+length 和 `snippet_truncated`。需要精确原文时也必须改用 `resource.read_fragment`。结果达到
+50 项后目前不能按 offset 读取后续命中；可用更独特的查询或限定上下文，不要把上限内结果
+误报为全书无遗漏。
+
 写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate` / `toc.apply_transform`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
 
 立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。
