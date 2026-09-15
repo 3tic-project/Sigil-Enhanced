@@ -1681,3 +1681,36 @@ Windows/Linux 构建仍待后续验证。
 删除工具；达到容量后需复用现有 key/task 或开始 New Session。自动窗口优先最后创建/写入项，
 较早但仍 pending 的任务不会自动置顶，模型必须根据省略提示分页读取。在线模型的补页遵循率、
 真实长会话体验和 Windows/Linux 构建仍待后续验证。
+
+## Native Agent Checkpoint 目录分页（2026-09-15）
+
+分支：`feature/agent-paginated-checkpoints`。主要提交：`2dc676310`（目录分页、单项预览边界、
+创建 label 校验与大目录回归）。
+
+### 有界目录与恢复语义
+
+- `checkpoint.list` 改用统一 offset/limit 协议，默认 20、硬上限 50，并返回 `total_count`、
+  `returned_count`、`has_more` 和可用时的 `next_offset`。系统提示将它加入续页规则，模型不能
+  把第一页当作全部恢复点。
+- 每项 label 最多返回 256 个 UTF-16 单元，并公开原始 `label_length` / `label_truncated`。
+  `checkpoint.create` 的 label schema 同样声明 maxLength 256，执行层对绕过 schema 的调用以
+  `CHECKPOINT_LABEL_TOO_LONG` 拒绝，只回报实际/允许长度，不重复超长字符串。
+- guarded task restore point 的 `affected_resources` 最多返回前 32 项，每个资源 ID 最多 256 个
+  UTF-16 单元；`affected_resource_count`、`returned_affected_resource_count`、
+  `affected_resource_ids_truncated` 与 `affected_resources_truncated` 区分数量和单 ID 截断。
+  restore 仍使用未截断的 `checkpoint_id`，目录裁剪不改变、删除或自动恢复任何快照。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 创建 55 个普通 checkpoint 和 1 个含 41 个资源的 guarded restore point，
+覆盖默认首页、`limit=999` 夹紧后的尾页、精确总数/next_offset/终止状态、32 项资源边界、超过
+256 字符的资源 ID 尾部秘密标记不进入 JSON，以及 257 字符 label 的稳定拒绝和 schema 边界。
+`agent_harness` 固定 checkpoint 进入模型续页规则。完整 Sigil 构建、链接及 42 个固定 Python
+依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。本切片没有新增 UI 文案；四份 `.qm` 继续
+为 0 unfinished，英文 4,771 条，简中/繁中/日文各 5,748 条。
+
+本切片只约束模型、会话事件和导出的目录 JSON。`IBookWorkspace::listCheckpoints()` 仍先构造
+完整数组；generic checkpoint 仍复制当前书的全部文本，guarded restore point 仍保存全部受影响
+文本，数量也尚无淘汰策略。为快照数量设硬上限会影响现有恢复卡承诺，需先设计用户可见的
+过期/删除状态，不能在本切片中静默回收。受影响资源预览也没有独立分页，因为恢复操作只依赖
+checkpoint ID。真实大书的快照内存、在线模型续页、Windows/Linux 构建仍待后续验证。

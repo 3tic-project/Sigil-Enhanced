@@ -284,6 +284,16 @@ note 2,048）；任务状态也固定为四个已支持值。容量满后仍可�
 状态重复写入 transcript。每次请求的自动上下文只带最近 8 个任务和 8 条记忆，长 note/value
 预览再限制为 512 个 UTF-16 单元；省略与截断都会提示模型通过工具补读。
 
+### Agent Checkpoint 目录改为分页
+
+`checkpoint.list` 不再一次返回当前书的全部 Agent checkpoint，默认/最多分页 20/50 项，并
+提供总数和 `has_more` / `next_offset`。任务恢复点的受影响资源预览最多 32 个 ID，每个 ID 与
+checkpoint label 最多 256 个 UTF-16 单元，完整计数与截断状态仍可审计。创建 checkpoint 时
+超长 label 会以稳定代码 `CHECKPOINT_LABEL_TOO_LONG` 拒绝。
+
+分页不会删除或淘汰恢复点，也不改变 restore 的 checkpoint ID；当前 checkpoint 快照数量和
+整书文本副本仍保存在内存中，本次改动只约束模型与 transcript 看到的目录结果。
+
 ### Agent 单次运行增加模型步骤上限
 
 Native Agent 现在默认每轮最多发送 24 次正式模型请求，可在“偏好设置 → Native Agent”的

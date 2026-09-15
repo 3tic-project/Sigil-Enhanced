@@ -318,6 +318,12 @@ length 和 `snippet_truncated`。需要精确原文时也必须改用 `resource.
 
 写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate` / `toc.apply_transform`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
 
+`checkpoint.list` 默认分页 20 项、最多 50 项，并使用统一的 `has_more` / `next_offset` 协议。
+每项 label 最多预览 256 个 UTF-16 单元；任务恢复点最多列出前 32 个受影响资源 ID，每个 ID
+最多 256 个 UTF-16 单元，同时返回完整/已返回计数和截断标志。`checkpoint.create` 也在 schema
+和执行层把 label 限制为 256，超限时以 `CHECKPOINT_LABEL_TOO_LONG` 拒绝。目录中的资源列表
+没有独立续页，但 restore 只需要完整 `checkpoint_id`。
+
 立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。
 
 会话级（不改书，New Session 会清空）：`session.remember`、`session.task_add`、`session.task_update`。
