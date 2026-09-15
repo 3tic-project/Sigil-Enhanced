@@ -33,6 +33,11 @@ constexpr int DEFAULT_SESSION_TASK_PAGE_SIZE = 20;
 constexpr int MAX_SESSION_TASK_PAGE_SIZE = 50;
 constexpr int DEFAULT_SESSION_MEMORY_PAGE_SIZE = 16;
 constexpr int MAX_SESSION_MEMORY_PAGE_SIZE = 32;
+constexpr int DEFAULT_CHECKPOINT_PAGE_SIZE = 20;
+constexpr int MAX_CHECKPOINT_PAGE_SIZE = 50;
+constexpr int MAX_CHECKPOINT_LABEL_LENGTH = 256;
+constexpr int MAX_CHECKPOINT_AFFECTED_RESOURCES = 32;
+constexpr int MAX_CHECKPOINT_RESOURCE_ID_LENGTH = 256;
 
 QJsonObject emptyObjectSchema()
 {
@@ -198,6 +203,53 @@ QJsonObject taskById(const QJsonArray &tasks, const QString &id)
         if (task.value(QStringLiteral("id")).toString() == id) return task;
     }
     return QJsonObject();
+}
+
+QJsonObject paginatedCheckpointList(const QJsonArray &all,
+                                    const QJsonObject &arguments)
+{
+    QJsonObject result = paginatedArray(
+        QStringLiteral("checkpoints"), all, arguments,
+        DEFAULT_CHECKPOINT_PAGE_SIZE, MAX_CHECKPOINT_PAGE_SIZE);
+    QJsonArray checkpoints;
+    for (const QJsonValue &value : result.value(
+             QStringLiteral("checkpoints")).toArray()) {
+        QJsonObject checkpoint = value.toObject();
+        const QString label = checkpoint.value(QStringLiteral("label")).toString();
+        checkpoint.insert(QStringLiteral("label"),
+                          label.left(MAX_CHECKPOINT_LABEL_LENGTH));
+        checkpoint.insert(QStringLiteral("label_length"), label.size());
+        checkpoint.insert(QStringLiteral("label_truncated"),
+                          label.size() > MAX_CHECKPOINT_LABEL_LENGTH);
+        if (checkpoint.contains(QStringLiteral("affected_resources"))) {
+            const QJsonArray all_resources = checkpoint.value(
+                QStringLiteral("affected_resources")).toArray();
+            QJsonArray resources;
+            bool id_truncated = false;
+            const int count = qMin(
+                all_resources.size(), MAX_CHECKPOINT_AFFECTED_RESOURCES);
+            for (int index = 0; index < count; ++index) {
+                const QString id = all_resources.at(index).toString();
+                resources.append(id.left(MAX_CHECKPOINT_RESOURCE_ID_LENGTH));
+                id_truncated = id_truncated
+                    || id.size() > MAX_CHECKPOINT_RESOURCE_ID_LENGTH;
+            }
+            checkpoint.insert(QStringLiteral("affected_resources"), resources);
+            checkpoint.insert(QStringLiteral("affected_resource_count"),
+                              all_resources.size());
+            checkpoint.insert(QStringLiteral("returned_affected_resource_count"),
+                              resources.size());
+            checkpoint.insert(QStringLiteral("affected_resource_ids_truncated"),
+                              id_truncated);
+            checkpoint.insert(QStringLiteral("affected_resources_truncated"),
+                              id_truncated
+                                  || all_resources.size()
+                                      > MAX_CHECKPOINT_AFFECTED_RESOURCES);
+        }
+        checkpoints.append(checkpoint);
+    }
+    result.insert(QStringLiteral("checkpoints"), checkpoints);
+    return result;
 }
 
 class LambdaTool : public IAgentTool
@@ -745,26 +797,39 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("checkpoint.create"),
-        QStringLiteral("Create a restore point of the live book."),
+        QStringLiteral("Create a restore point of the live book. Label is capped at 256 characters."),
         ToolRisk::ReversibleEdit, true, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
-                { QStringLiteral("label"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                { QStringLiteral("label"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("string") },
+                    { QStringLiteral("maxLength"), MAX_CHECKPOINT_LABEL_LENGTH }
+                } }
             } }
         },
         [workspace](const QJsonObject &arguments) {
-            return fromBook(workspace->createCheckpoint(
-                arguments.value(QStringLiteral("label")).toString()));
+            const QString label = arguments.value(QStringLiteral("label")).toString();
+            if (label.size() > MAX_CHECKPOINT_LABEL_LENGTH) {
+                return ToolResult::failure(
+                    QStringLiteral("CHECKPOINT_LABEL_TOO_LONG"),
+                    QStringLiteral("Checkpoint label is capped at 256 characters."),
+                    QJsonObject {
+                        { QStringLiteral("label_length"), label.size() },
+                        { QStringLiteral("max_label_length"),
+                          MAX_CHECKPOINT_LABEL_LENGTH }
+                    });
+            }
+            return fromBook(workspace->createCheckpoint(label));
         });
 
     add(registry, QStringLiteral("checkpoint.list"),
-        QStringLiteral("List Agent checkpoints for the open book."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(QJsonObject {
-                { QStringLiteral("checkpoints"), workspace->listCheckpoints() }
-            });
+        QStringLiteral("List a bounded page of Agent checkpoints. Guarded task restore points include at most 32 bounded affected-resource ID previews. Use next_offset while has_more is true."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_CHECKPOINT_PAGE_SIZE, MAX_CHECKPOINT_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedCheckpointList(
+                workspace->listCheckpoints(), arguments));
         });
 
     add(registry, QStringLiteral("checkpoint.restore"),

@@ -499,6 +499,102 @@ int main()
             "commit must write the patched text");
     Require(book.revision() != original_revision, "commit must bump book revision");
 
+    MemoryBookWorkspace checkpoint_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry checkpoint_registry;
+    registerBookTools(&checkpoint_registry, &checkpoint_book);
+    auto run_checkpoint = [&](const QString &name,
+                              const QJsonObject &arguments) {
+        return checkpoint_registry.find(name)->execute(arguments);
+    };
+    for (int index = 0; index < 55; ++index) {
+        Require(run_checkpoint(
+                    QStringLiteral("checkpoint.create"), QJsonObject {
+                        { QStringLiteral("label"),
+                          QStringLiteral("checkpoint-%1").arg(index) }
+                    }).ok,
+                "checkpoint pagination fixture creation failed");
+    }
+    QStringList affected_resource_ids;
+    MemoryResource long_checkpoint_resource;
+    long_checkpoint_resource.id = QString(300, QLatin1Char('i'))
+        + QStringLiteral("CHECKPOINT-ID-TAIL-SECRET");
+    long_checkpoint_resource.bookPath = QStringLiteral(
+        "OEBPS/Text/long-checkpoint-id.xhtml");
+    long_checkpoint_resource.kind = QStringLiteral("xhtml");
+    long_checkpoint_resource.mediaType = QStringLiteral(
+        "application/xhtml+xml");
+    long_checkpoint_resource.text = QStringLiteral("<p>long id</p>");
+    checkpoint_book.addResource(long_checkpoint_resource);
+    affected_resource_ids.append(long_checkpoint_resource.id);
+    for (int index = 0; index < 40; ++index) {
+        MemoryResource affected;
+        affected.id = QStringLiteral("affected-%1").arg(index);
+        affected.bookPath = QStringLiteral("OEBPS/Text/affected-%1.xhtml").arg(index);
+        affected.kind = QStringLiteral("xhtml");
+        affected.mediaType = QStringLiteral("application/xhtml+xml");
+        affected.text = QStringLiteral("<p>affected %1</p>").arg(index);
+        checkpoint_book.addResource(affected);
+        affected_resource_ids.append(affected.id);
+    }
+    Require(checkpoint_book.createTaskRestorePoint(
+                QStringLiteral("large guarded restore"),
+                affected_resource_ids).ok,
+            "guarded checkpoint fixture creation failed");
+    const ToolResult checkpoint_page = run_checkpoint(
+        QStringLiteral("checkpoint.list"), QJsonObject());
+    const ToolResult checkpoint_tail = run_checkpoint(
+        QStringLiteral("checkpoint.list"), QJsonObject {
+            { QStringLiteral("offset"), 50 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const QJsonObject guarded_checkpoint = checkpoint_tail.data.value(
+        QStringLiteral("checkpoints")).toArray().last().toObject();
+    const ToolResult rejected_checkpoint_label = run_checkpoint(
+        QStringLiteral("checkpoint.create"), QJsonObject {
+            { QStringLiteral("label"), QString(257, QLatin1Char('l')) }
+        });
+    const QJsonObject checkpoint_schema = checkpoint_registry.find(
+        QStringLiteral("checkpoint.list"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    const QJsonObject checkpoint_create_schema = checkpoint_registry.find(
+        QStringLiteral("checkpoint.create"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(checkpoint_page.data.value(QStringLiteral("checkpoints")).toArray().size()
+                    == 20
+                && checkpoint_page.data.value(QStringLiteral("total_count")).toInt()
+                    == 56
+                && checkpoint_page.data.value(QStringLiteral("next_offset")).toInt()
+                    == 20
+                && checkpoint_tail.data.value(QStringLiteral("checkpoints")).toArray().size()
+                    == 6
+                && checkpoint_tail.data.value(QStringLiteral("limit")).toInt() == 50
+                && !checkpoint_tail.data.value(QStringLiteral("has_more")).toBool()
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resource_count")).toInt() == 41
+                && guarded_checkpoint.value(
+                    QStringLiteral("returned_affected_resource_count")).toInt() == 32
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resources")).toArray().size() == 32
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resources")).toArray().first().toString().size()
+                    == 256
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resource_ids_truncated")).toBool()
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resources_truncated")).toBool()
+                && !QJsonDocument(checkpoint_tail.data).toJson().contains(
+                    "CHECKPOINT-ID-TAIL-SECRET")
+                && !rejected_checkpoint_label.ok
+                && rejected_checkpoint_label.code
+                    == QStringLiteral("CHECKPOINT_LABEL_TOO_LONG")
+                && checkpoint_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 20
+                && checkpoint_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 50
+                && checkpoint_create_schema.value(QStringLiteral("label")).toObject()
+                    .value(QStringLiteral("maxLength")).toInt() == 256,
+            "checkpoint catalog must bound pages, labels, and affected-resource previews");
+
     MemoryBookWorkspace recovery_book = MemoryBookWorkspace::samplePhysicsBook();
     const QString recovery_ch1_before = recovery_book.resourceText(QStringLiteral("ch1"));
     const QString recovery_ch2_before = recovery_book.resourceText(QStringLiteral("ch2"));

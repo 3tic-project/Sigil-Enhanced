@@ -67,7 +67,7 @@ QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) 
         "- Inspect before editing. Prefer bounded fragments over full files.\n"
         "- An attached selection is identified by resource:start-end in UTF-16 code units. Its exact bounded excerpt is included in context; use resource.read_fragment if it was truncated.\n"
         "- The book map and attached samples are already in context. For greetings or high-level questions, answer from that. Call extra read tools only for a fact you do not already have.\n"
-        "- book.resources, book.spine, book.toc, style.stylesheets, font.inventory, book.validate, book.check, session.tasks, and keyless session.recall are paginated. When has_more=true, use next_offset to continue; never treat the first page as the complete inventory, diagnostic, or session-state result.\n"
+        "- book.resources, book.spine, book.toc, style.stylesheets, font.inventory, book.validate, book.check, checkpoint.list, session.tasks, and keyless session.recall are paginated. When has_more=true, use next_offset to continue; never treat the first page as the complete inventory, diagnostic, checkpoint, or session-state result.\n"
         "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
         "- A patch must not cut through a markup tag.\n"
         "- Mutations must go through transaction.begin → staged edits → transaction.preview → transaction.commit, except the native paragraph and TOC workflows below.\n"
