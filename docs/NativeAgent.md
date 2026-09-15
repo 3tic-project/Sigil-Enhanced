@@ -301,6 +301,14 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 可能在后续页为空，这是正常的终止状态，不表示其他数组也已读完。原来的 `embedded_fonts`、
 `css_families`、`declared_families`、`issues`、`unused_images` 和 `wellformed` 键保持不变。
 
+`book.search_regex` 默认最多返回 40 个命中，`max_matches` 可调但硬上限为 50。每个命中的
+`match` 预览最多 240 个 UTF-16 单元，只返回前 8 个捕获组且每组最多 160 个 UTF-16 单元；
+完整的资源 ID、offset、匹配 length、line、捕获组总数和已返回捕获组的原始长度仍会保留。
+`match_truncated`、`captures_truncated` 和汇总的 `preview_truncated` 明确表示预览是否有删节；
+需要核对或修改原文时必须按位置调用 `resource.read_fragment`（超长片段继续分段读取），不能把
+搜索预览本身当作补丁来源。`match_limit_reached=true` 表示结果达到本次上限，并不证明后面必然
+还有其他命中。
+
 写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate` / `toc.apply_transform`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
 
 立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。

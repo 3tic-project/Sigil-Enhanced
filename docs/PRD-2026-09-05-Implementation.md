@@ -1583,3 +1583,33 @@ CSS 字体声明，验证首页每数组最多 100、limit 夹紧到 200、共�
 `validate()` 或 `inspectBook()` 的内部全量计算；宿主仍先扫描整书、构造全数组再切页，所以不
 宣称减少 CPU、Book 侧枚举或临时内存峰值。`transaction.preview`、原生计划和其他聚合结果也
 未纳入本切片；真实超大 EPUB、在线模型的续页完整率与 Windows/Linux 构建仍待后续验证。
+
+## Native Agent 正则搜索结果有界化（2026-09-15）
+
+分支：`feature/agent-bounded-regex-results`。主要提交：`a850c89c3`（匹配数硬上限、文本预览
+边界、截断元数据和回归夹具）。
+
+### 有界命中与可恢复位置
+
+- `book.search_regex` 的 `max_matches` schema 明示最小 1、默认 40、最大 50；执行层也把绕过
+  schema 的值夹紧到同一范围。结果新增规范化后的 `max_matches` 与
+  `match_limit_reached`，后者表示返回数达到本次上限，不把它误写成后面一定还有命中。
+- 每项 `match` 最多返回 240 个 UTF-16 单元；捕获组最多返回前 8 个，每组预览最多 160 个
+  UTF-16 单元。完整 `resource_id` / `book_path` / `offset` / 匹配 `length` / `line` 和
+  `capture_count` 保留，`capture_lengths` 与已返回捕获组一一对应。
+- `match_truncated`、`captures_truncated` 和汇总的 `preview_truncated` 显式区分完整短结果与
+  有删节预览。工具描述要求模型在需要精确来源时按位置调用 `resource.read_fragment`；超长
+  区间继续分段读取，不能直接把预览文本当作替换或补丁来源。
+
+### 测试证据与剩余项
+
+`agent_book_ops` 覆盖短匹配/捕获组保持原样、约 5,000 字符的整资源命中只泄露 240/160 字符
+预览且 JSON 不含尾部秘密标记、12 个捕获组只返回前 8 个、完整长度/计数和截断标志，以及
+`max_matches=999` 仍只返回 50 项并公开规范化上限；schema 的 1/40/50 边界同时固定。完整
+Sigil 构建及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。本切片没有
+新增 UI 文案；四份 `.qm` 继续为 0 unfinished，英文 4,771 条，简中/繁中/日文各 5,748 条。
+
+本切片限制的是进入模型、会话和导出的正则结果 JSON，不改变 `regexHits()` 的内部算法或
+`content.replace_regex` / `content.wrap` 等写工具语义。宿主目前仍构造完整命中及其全部捕获组，
+因此复杂表达式的执行时间、回溯风险和 Book 侧临时内存峰值没有改善；50 项的结构元数据仍有
+固定开销。真实超长 EPUB、在线模型按位置补读的完成率、Windows/Linux 构建仍待后续验证。
