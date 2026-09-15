@@ -38,6 +38,8 @@ using NormalizationPlan = BuiltinPlugins::DivParagraphNormalizationPlan;
 constexpr int kMaxReportedRanges = 128;
 constexpr int kMaxReportedCssDependencies = 128;
 constexpr int kMaxDiffExcerpt = 4096;
+constexpr int kDefaultAnalysisPageSize = 20;
+constexpr int kMaxAnalysisPageSize = 50;
 
 class LambdaTool final : public IAgentTool
 {
@@ -493,20 +495,41 @@ public:
         m_analysis = stored;
         m_plan.reset();
 
+        const int offset = qBound(
+            0, arguments.value(QStringLiteral("offset")).toInt(0),
+            result.entries.size());
+        const int requested_limit = arguments.contains(QStringLiteral("limit"))
+            ? arguments.value(QStringLiteral("limit")).toInt(
+                kDefaultAnalysisPageSize)
+            : kDefaultAnalysisPageSize;
+        const int limit = qBound(
+            1, requested_limit, kMaxAnalysisPageSize);
+        const int end = qMin(result.entries.size(), offset + limit);
         QJsonArray files;
-        for (const NormalizationPlan::Entry &entry : result.entries) {
-            files.append(analysisEntryJson(entry, batch.paths.value(entry.resourceId)));
+        for (int index = offset; index < end; ++index) {
+            const NormalizationPlan::Entry &entry = result.entries.at(index);
+            files.append(analysisEntryJson(
+                entry, batch.paths.value(entry.resourceId)));
         }
-        return ToolResult::success(QJsonObject {
+        QJsonObject data {
             { QStringLiteral("analysis_id"), stored.id },
             { QStringLiteral("book_revision"), static_cast<qint64>(stored.bookRevision) },
             { QStringLiteral("rule_version"), result.ruleVersion },
             { QStringLiteral("preset_id"), result.presetId },
             { QStringLiteral("summary"), summaryJson(result) },
             { QStringLiteral("files"), files },
+            { QStringLiteral("total_count"), result.entries.size() },
+            { QStringLiteral("offset"), offset },
+            { QStringLiteral("limit"), limit },
+            { QStringLiteral("returned_count"), files.size() },
+            { QStringLiteral("has_more"), end < result.entries.size() },
             { QStringLiteral("full_epubcheck"), epubcheckNotRun() },
             { QStringLiteral("applied_to_book"), false }
-        }, false, true);
+        };
+        if (end < result.entries.size()) {
+            data.insert(QStringLiteral("next_offset"), end);
+        }
+        return ToolResult::success(data, false, true);
     }
 
     ToolResult plan(const QJsonObject &arguments)
@@ -890,6 +913,17 @@ QJsonObject paragraphScopeSchema(bool require_analysis = false)
                           QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } });
         required.append(QStringLiteral("analysis_id"));
     } else {
+        properties.insert(QStringLiteral("offset"), QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("integer") },
+            { QStringLiteral("minimum"), 0 },
+            { QStringLiteral("default"), 0 }
+        });
+        properties.insert(QStringLiteral("limit"), QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("integer") },
+            { QStringLiteral("minimum"), 1 },
+            { QStringLiteral("maximum"), kMaxAnalysisPageSize },
+            { QStringLiteral("default"), kDefaultAnalysisPageSize }
+        });
         properties.insert(QStringLiteral("convert_blank_lines"),
                           QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } });
         properties.insert(QStringLiteral("convert_scene_breaks"),
@@ -923,7 +957,7 @@ void registerDivParagraphTools(ToolRegistry *registry,
     addTool(
         registry,
         QStringLiteral("paragraphs.analyze"),
-        QStringLiteral("Analyze selected XHTML resource IDs (or all XHTML when omitted) with Sigil's native conservative DIV-paragraph and CSS-risk engine. Returns bounded source ranges and diagnostics; never changes the Book."),
+        QStringLiteral("Analyze selected XHTML resource IDs (or all XHTML when omitted) with Sigil's native conservative DIV-paragraph and CSS-risk engine. Returns a bounded page of files with full-summary counts. Repeat the same scope/options and use next_offset while has_more is true; analysis_id must remain unchanged. Never changes the Book."),
         ToolRisk::Read, false, true, paragraphScopeSchema(),
         [service](const QJsonObject &arguments) { return service->analyze(arguments); });
 

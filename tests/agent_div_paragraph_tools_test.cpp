@@ -279,6 +279,93 @@ int main()
     Require(found_safe && found_risk,
             "structured analysis omitted candidates, protected ranges, or CSS risk");
 
+    MemoryBookWorkspace large_analysis_book;
+    large_analysis_book.addResource(cssResource(
+        QStringLiteral("bulk-css"), QStringLiteral("OEBPS/Styles/safe.css"),
+        QStringLiteral("div, p { margin: 0; padding: 0; }")));
+    for (int index = 124; index >= 0; --index) {
+        large_analysis_book.addResource(textResource(
+            QStringLiteral("bulk-%1").arg(
+                index, 3, 10, QLatin1Char('0')),
+            QStringLiteral("OEBPS/Text/bulk-%1.xhtml").arg(
+                index, 3, 10, QLatin1Char('0')),
+            chapterSource(QStringLiteral("safe.css"))));
+    }
+    ToolRegistry large_analysis_registry;
+    registerDivParagraphTools(
+        &large_analysis_registry, &large_analysis_book);
+    const ToolResult default_analysis_page = run(
+        large_analysis_registry, QStringLiteral("paragraphs.analyze"));
+    const ToolResult maximum_analysis_page = run(
+        large_analysis_registry, QStringLiteral("paragraphs.analyze"),
+        QJsonObject { { QStringLiteral("limit"), 999 } });
+    const ToolResult analysis_tail = run(
+        large_analysis_registry, QStringLiteral("paragraphs.analyze"),
+        QJsonObject {
+            { QStringLiteral("offset"), 100 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const ToolResult analysis_empty_page = run(
+        large_analysis_registry, QStringLiteral("paragraphs.analyze"),
+        QJsonObject { { QStringLiteral("offset"), 999 } });
+    const QString large_analysis_id = analysis_empty_page.data.value(
+        QStringLiteral("analysis_id")).toString();
+    const ToolResult paged_analysis_plan = run(
+        large_analysis_registry, QStringLiteral("paragraphs.plan"),
+        QJsonObject {
+            { QStringLiteral("analysis_id"), large_analysis_id },
+            { QStringLiteral("resource_ids"), QJsonArray {
+                QStringLiteral("bulk-000")
+            } }
+        });
+    const QJsonObject analyze_properties = large_analysis_registry.find(
+        QStringLiteral("paragraphs.analyze"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(default_analysis_page.ok
+                && default_analysis_page.data.value(
+                    QStringLiteral("files")).toArray().size() == 20
+                && default_analysis_page.data.value(
+                    QStringLiteral("total_count")).toInt() == 125
+                && default_analysis_page.data.value(
+                    QStringLiteral("returned_count")).toInt() == 20
+                && default_analysis_page.data.value(
+                    QStringLiteral("next_offset")).toInt() == 20
+                && default_analysis_page.data.value(
+                    QStringLiteral("files")).toArray().first().toObject()
+                    .value(QStringLiteral("resource_id")).toString()
+                    == QStringLiteral("bulk-000")
+                && maximum_analysis_page.data.value(
+                    QStringLiteral("limit")).toInt() == 50
+                && maximum_analysis_page.data.value(
+                    QStringLiteral("files")).toArray().size() == 50
+                && maximum_analysis_page.data.value(
+                    QStringLiteral("next_offset")).toInt() == 50
+                && analysis_tail.data.value(
+                    QStringLiteral("files")).toArray().size() == 25
+                && analysis_tail.data.value(
+                    QStringLiteral("returned_count")).toInt() == 25
+                && !analysis_tail.data.value(
+                    QStringLiteral("has_more")).toBool()
+                && !analysis_tail.data.contains(QStringLiteral("next_offset"))
+                && analysis_empty_page.data.value(
+                    QStringLiteral("offset")).toInt() == 125
+                && analysis_empty_page.data.value(
+                    QStringLiteral("returned_count")).toInt() == 0
+                && default_analysis_page.data.value(
+                    QStringLiteral("analysis_id"))
+                    == analysis_tail.data.value(QStringLiteral("analysis_id"))
+                && default_analysis_page.data.value(
+                    QStringLiteral("summary")).toObject()
+                    .value(QStringLiteral("ready_files")).toInt() == 125
+                && paged_analysis_plan.ok
+                && paged_analysis_plan.data.value(
+                    QStringLiteral("changes")).toArray().size() == 1
+                && analyze_properties.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 20
+                && analyze_properties.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 50,
+            "paragraph analysis must page stable files while retaining its full plan binding");
+
     const QString analysis_id = analysis.data.value(QStringLiteral("analysis_id")).toString();
     const ToolResult unsafe_plan = run(
         registry, QStringLiteral("paragraphs.plan"),
