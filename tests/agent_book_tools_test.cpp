@@ -499,6 +499,108 @@ int main()
             "commit must write the patched text");
     Require(book.revision() != original_revision, "commit must bump book revision");
 
+    MemoryBookWorkspace paged_preview_book;
+    QStringList preview_resource_ids;
+    for (int index = 0; index < 135; ++index) {
+        MemoryResource resource;
+        resource.id = QStringLiteral("preview-%1").arg(index, 3, 10, QLatin1Char('0'));
+        resource.bookPath = QStringLiteral("OEBPS/Text/preview-%1.xhtml")
+                                .arg(index, 3, 10, QLatin1Char('0'));
+        resource.kind = QStringLiteral("xhtml");
+        resource.mediaType = QStringLiteral("application/xhtml+xml");
+        resource.text = QStringLiteral("<p>before %1</p>").arg(index);
+        preview_resource_ids.append(resource.id);
+        paged_preview_book.addResource(resource);
+    }
+    Require(paged_preview_book.beginTransaction(
+                QStringLiteral("large preview")).ok,
+            "large preview transaction begin failed");
+    for (int index = 0; index < preview_resource_ids.size(); ++index) {
+        const QString &id = preview_resource_ids.at(index);
+        Require(paged_preview_book.replaceText(
+                    id, QStringLiteral("<p>after %1</p>").arg(index),
+                    paged_preview_book.resourceRevision(id)).ok,
+                "large preview text staging failed");
+    }
+    for (int index = 0; index < 125; ++index) {
+        Require(paged_preview_book.deleteResource(
+                    preview_resource_ids.at(index)).ok,
+                "large preview removal staging failed");
+    }
+    ToolRegistry paged_preview_registry;
+    registerBookTools(&paged_preview_registry, &paged_preview_book);
+    auto run_preview = [&](const QJsonObject &arguments) {
+        return paged_preview_registry.find(
+            QStringLiteral("transaction.preview"))->execute(arguments);
+    };
+    const ToolResult preview_page = run_preview(QJsonObject());
+    const ToolResult preview_page_again = run_preview(QJsonObject());
+    const ToolResult preview_tail = run_preview(QJsonObject {
+        { QStringLiteral("offset"), 100 },
+        { QStringLiteral("limit"), 999 }
+    });
+    const QJsonObject preview_totals = preview_page.data.value(
+        QStringLiteral("total_counts")).toObject();
+    const QJsonObject preview_tail_returned = preview_tail.data.value(
+        QStringLiteral("returned_counts")).toObject();
+    const QJsonObject preview_schema = paged_preview_registry.find(
+        QStringLiteral("transaction.preview"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    const QJsonObject full_internal_preview = paged_preview_book
+        .previewTransaction().data;
+    Require(preview_page.ok && preview_page.previewOnly
+                && preview_page.data.value(QStringLiteral("changes")).toArray().size()
+                    == 50
+                && preview_page.data.value(QStringLiteral("removed")).toArray().size()
+                    == 50
+                && preview_totals.value(QStringLiteral("changes")).toInt() == 135
+                && preview_totals.value(QStringLiteral("removed")).toInt() == 125
+                && preview_page.data.value(QStringLiteral("next_offset")).toInt() == 50
+                && preview_page.data.value(QStringLiteral("changes")).toArray().first()
+                    .toObject().value(QStringLiteral("resource_id")).toString()
+                    == QStringLiteral("preview-000")
+                && preview_page.data.value(QStringLiteral("preview_digest")).toString()
+                    == preview_page_again.data.value(
+                        QStringLiteral("preview_digest")).toString()
+                && preview_page.data.value(QStringLiteral("changes")).toArray()
+                    == preview_page_again.data.value(
+                        QStringLiteral("changes")).toArray()
+                && preview_tail.data.value(QStringLiteral("limit")).toInt() == 100
+                && preview_tail.data.value(QStringLiteral("changes")).toArray().size()
+                    == 35
+                && preview_tail.data.value(QStringLiteral("removed")).toArray().size()
+                    == 25
+                && preview_tail_returned.value(QStringLiteral("changes")).toInt() == 35
+                && preview_tail_returned.value(QStringLiteral("removed")).toInt() == 25
+                && !preview_tail.data.value(QStringLiteral("has_more")).toBool()
+                && preview_page.data.value(QStringLiteral("preview_digest")).toString()
+                    == preview_tail.data.value(
+                        QStringLiteral("preview_digest")).toString()
+                && preview_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 50
+                && preview_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 100
+                && full_internal_preview.value(QStringLiteral("changes")).toArray().size()
+                    == 135
+                && full_internal_preview.value(QStringLiteral("removed")).toArray().size()
+                    == 125
+                && paged_preview_book.resourceText(QStringLiteral("preview-000"))
+                    == QStringLiteral("<p>before 0</p>"),
+            "transaction preview must page a stable digest without changing full staged state");
+    Require(paged_preview_book.replaceText(
+                QStringLiteral("preview-134"),
+                QStringLiteral("<p>after changed snapshot</p>"),
+                paged_preview_book.resourceRevision(
+                    QStringLiteral("preview-134"))).ok,
+            "preview digest mutation fixture failed");
+    const ToolResult changed_preview = run_preview(QJsonObject());
+    Require(changed_preview.data.value(QStringLiteral("preview_digest")).toString()
+                != preview_page.data.value(
+                    QStringLiteral("preview_digest")).toString(),
+            "preview digest must change when staged content changes between pages");
+    Require(paged_preview_book.rollbackTransaction().ok,
+            "large preview transaction cleanup failed");
+
     MemoryBookWorkspace checkpoint_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry checkpoint_registry;
     registerBookTools(&checkpoint_registry, &checkpoint_book);

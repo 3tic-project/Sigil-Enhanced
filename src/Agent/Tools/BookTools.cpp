@@ -6,7 +6,11 @@
 
 #include "Agent/Tools/BookTools.h"
 
+#include <algorithm>
+
+#include <QCryptographicHash>
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <functional>
 
 #include "Agent/Execution/BookEdits.h"
@@ -40,6 +44,8 @@ constexpr int MAX_CHECKPOINT_AFFECTED_RESOURCES = 32;
 constexpr int MAX_CHECKPOINT_RESOURCE_ID_LENGTH = 256;
 constexpr int DEFAULT_MANUSCRIPT_SUMMARY_PAGE_SIZE = 40;
 constexpr int MAX_MANUSCRIPT_SUMMARY_PAGE_SIZE = 100;
+constexpr int DEFAULT_TRANSACTION_PREVIEW_PAGE_SIZE = 50;
+constexpr int MAX_TRANSACTION_PREVIEW_PAGE_SIZE = 100;
 
 QJsonObject emptyObjectSchema()
 {
@@ -280,6 +286,50 @@ QJsonObject paginatedManuscriptSummary(QJsonObject summary,
                          summary.take(template_chapters_key));
     if (has_template) summary.insert(QStringLiteral("template"), template_data);
     return summary;
+}
+
+QJsonObject paginatedTransactionPreview(QJsonObject preview,
+                                        const QJsonObject &arguments)
+{
+    QList<QJsonObject> ordered_changes;
+    for (const QJsonValue &value : preview.value(
+             QStringLiteral("changes")).toArray()) {
+        ordered_changes.append(value.toObject());
+    }
+    std::sort(ordered_changes.begin(), ordered_changes.end(),
+              [](const QJsonObject &left, const QJsonObject &right) {
+        const QString left_id = left.value(
+            QStringLiteral("resource_id")).toString();
+        const QString right_id = right.value(
+            QStringLiteral("resource_id")).toString();
+        if (left_id != right_id) return left_id < right_id;
+        return QJsonDocument(left).toJson(QJsonDocument::Compact)
+            < QJsonDocument(right).toJson(QJsonDocument::Compact);
+    });
+    QJsonArray changes;
+    for (const QJsonObject &change : ordered_changes) changes.append(change);
+    preview.insert(QStringLiteral("changes"), changes);
+
+    QStringList ordered_removals;
+    for (const QJsonValue &value : preview.value(
+             QStringLiteral("removed")).toArray()) {
+        ordered_removals.append(value.toString());
+    }
+    std::sort(ordered_removals.begin(), ordered_removals.end());
+    preview.insert(QStringLiteral("removed"),
+                   QJsonArray::fromStringList(ordered_removals));
+
+    const QByteArray digest = QCryptographicHash::hash(
+        QJsonDocument(preview).toJson(QJsonDocument::Compact),
+        QCryptographicHash::Sha256).toHex();
+    preview = paginatedArrays(
+        preview,
+        { QStringLiteral("changes"), QStringLiteral("removed") },
+        arguments, DEFAULT_TRANSACTION_PREVIEW_PAGE_SIZE,
+        MAX_TRANSACTION_PREVIEW_PAGE_SIZE);
+    preview.insert(QStringLiteral("preview_digest"),
+                   QString::fromLatin1(digest));
+    return preview;
 }
 
 class LambdaTool : public IAgentTool
@@ -571,10 +621,17 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("transaction.preview"),
-        QStringLiteral("Preview staged changes without mutating the live book."),
-        ToolRisk::Read, false, true, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return fromBook(workspace->previewTransaction());
+        QStringLiteral("Preview a bounded shared-offset page of staged changes and removals without mutating the live book. Read every page using next_offset before commit, without staging more edits between pages; preview_digest must remain unchanged."),
+        ToolRisk::Read, false, true,
+        paginationSchema(DEFAULT_TRANSACTION_PREVIEW_PAGE_SIZE,
+                         MAX_TRANSACTION_PREVIEW_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            BookOpResult preview = workspace->previewTransaction();
+            if (preview.ok) {
+                preview.data = paginatedTransactionPreview(
+                    preview.data, arguments);
+            }
+            return fromBook(preview);
         });
 
     add(registry, QStringLiteral("transaction.commit"),

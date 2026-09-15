@@ -64,7 +64,8 @@ int main()
                 && edit_system_prompt.contains(QStringLiteral("manuscript.parse"))
                 && edit_system_prompt.contains(QStringLiteral("checkpoint.list"))
                 && edit_system_prompt.contains(QStringLiteral("session.tasks"))
-                && edit_system_prompt.contains(QStringLiteral("keyless session.recall")),
+                && edit_system_prompt.contains(QStringLiteral("keyless session.recall"))
+                && edit_system_prompt.contains(QStringLiteral("preview_digest")),
             "system prompt must ground commit summaries and paginated inventory traversal");
 
     MemoryBookWorkspace selection_book;
@@ -1470,7 +1471,12 @@ int main()
         plan_session.eventsOf(AgentEventType::TransactionPreviewed).constLast().payload;
     Require(!preview_status.value(QStringLiteral("applied_to_book")).toBool()
                 && preview_status.value(QStringLiteral("save_status")).toString()
-                    == QStringLiteral("not_applied"),
+                    == QStringLiteral("not_applied")
+                && !preview_status.value(
+                    QStringLiteral("preview_digest")).toString().isEmpty()
+                && preview_status.value(QStringLiteral("total_counts")).toObject()
+                    .value(QStringLiteral("changes")).toInt() == 1
+                && !preview_status.value(QStringLiteral("has_more")).toBool(),
             "preview event must say the live book is unchanged");
     Require(preview_status.value(QStringLiteral("full_epubcheck")).toObject()
                 .value(QStringLiteral("status")).toString() == QStringLiteral("not_run"),

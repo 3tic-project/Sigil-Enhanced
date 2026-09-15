@@ -1126,6 +1126,17 @@ int main(int argc, char *argv[])
         { QStringLiteral("spine_changed"), true },
         { QStringLiteral("toc_changed"), true },
         { QStringLiteral("removed"), QJsonArray { QStringLiteral("old-style") } },
+        { QStringLiteral("total_counts"), QJsonObject {
+            { QStringLiteral("changes"), 8 },
+            { QStringLiteral("removed"), 4 }
+        } },
+        { QStringLiteral("returned_counts"), QJsonObject {
+            { QStringLiteral("changes"), 3 },
+            { QStringLiteral("removed"), 1 }
+        } },
+        { QStringLiteral("offset"), 0 },
+        { QStringLiteral("has_more"), true },
+        { QStringLiteral("next_offset"), 3 },
         { QStringLiteral("applied_to_book"), false }
     };
     dock.appendEvent(preview);
@@ -1146,6 +1157,11 @@ int main(int argc, char *argv[])
                 && preview_body->text().contains(QStringLiteral("Reading order changes"))
                 && preview_body->text().contains(QStringLiteral("TOC hierarchy changes")),
             "preview card must expose metadata, spine, and TOC changes");
+    Require(preview_body->text().contains(
+                QStringLiteral("3 of 8 changes and 1 of 4 removals"))
+                && preview_body->text().contains(
+                    QStringLiteral("offset 3 before committing")),
+            "preview card must disclose partial pages and the next required offset");
 
     SigilAgent::AgentEvent committed;
     committed.type = SigilAgent::AgentEventType::TransactionCommitted;

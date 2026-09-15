@@ -1753,7 +1753,31 @@ QString AgentDock::previewBody(const QJsonObject &payload) const
         lines.append(tr("• Removed: %1").arg(value.toString()));
         described_change = true;
     }
-    if (!described_change) {
+    const QJsonObject total_counts = payload.value(
+        QStringLiteral("total_counts")).toObject();
+    const QJsonObject returned_counts = payload.value(
+        QStringLiteral("returned_counts")).toObject();
+    if (!total_counts.isEmpty()) {
+        lines.append(tr("• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).")
+                         .arg(returned_counts.value(
+                                  QStringLiteral("changes")).toInt())
+                         .arg(total_counts.value(
+                                  QStringLiteral("changes")).toInt())
+                         .arg(returned_counts.value(
+                                  QStringLiteral("removed")).toInt())
+                         .arg(total_counts.value(
+                                  QStringLiteral("removed")).toInt())
+                         .arg(payload.value(QStringLiteral("offset")).toInt()));
+    }
+    if (payload.value(QStringLiteral("has_more")).toBool()) {
+        lines.append(tr("• More staged items remain; preview again with offset %1 before committing.")
+                         .arg(payload.value(
+                                  QStringLiteral("next_offset")).toInt()));
+    }
+    const bool paged_items_exist = total_counts.value(
+        QStringLiteral("changes")).toInt() > 0
+        || total_counts.value(QStringLiteral("removed")).toInt() > 0;
+    if (!described_change && !paged_items_exist) {
         lines.append(tr("No staged differences were reported."));
     }
     return lines.join(QLatin1Char('\n'));
