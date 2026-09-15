@@ -628,9 +628,10 @@ BookOpResult SigilBookWorkspace::readFragment(const QString &resource_id, int of
             return BookOpResult::error(QStringLiteral("NOT_TEXT"), QStringLiteral("Resource is not text"));
         }
         const QString all = text ? currentText(text) : staged_added;
-        const int start = qMax(0, offset);
+        const int start = qBound(0, offset, static_cast<int>(all.size()));
         int count = limit <= 0 ? 2048 : qMin(limit, kMaxFragment);
         const QString fragment = all.mid(start, count);
+        const bool truncated = start + fragment.size() < all.size();
         QJsonObject data {
             { QStringLiteral("resource_id"), resource ? resource->GetIdentifier() : resource_id },
             { QStringLiteral("book_path"), resource ? resource->GetRelativePath() : staged_path },
@@ -638,7 +639,10 @@ BookOpResult SigilBookWorkspace::readFragment(const QString &resource_id, int of
             { QStringLiteral("end"), start + fragment.size() },
             { QStringLiteral("length"), fragment.size() },
             { QStringLiteral("total"), all.size() },
-            { QStringLiteral("truncated"), start + fragment.size() < all.size() },
+            { QStringLiteral("limit"), count },
+            { QStringLiteral("truncated"), truncated },
+            { QStringLiteral("continuation"),
+              truncated ? start + fragment.size() : QJsonValue() },
             { QStringLiteral("hash"), sha256Text(all) },
             { QStringLiteral("revision"), static_cast<qint64>(resource ? trackedRevision(resource) : staged_rev) },
             { QStringLiteral("text"), fragment }

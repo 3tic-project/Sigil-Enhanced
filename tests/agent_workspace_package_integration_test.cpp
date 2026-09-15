@@ -117,6 +117,25 @@ int main(int argc, char **argv)
         workspace.setBook(book);
         Require(workspace.bookSessionId() != firstBookSession,
                 "rebinding a Sigil workspace must invalidate plans for its previous book session");
+        const SigilAgent::BookOpResult firstFragment = workspace.readFragment(
+            chapter->GetIdentifier(), 0, 1);
+        Require(firstFragment.ok
+                    && firstFragment.data.value(QStringLiteral("limit")).toInt() == 1
+                    && firstFragment.data.value(QStringLiteral("length")).toInt() == 1
+                    && firstFragment.data.value(QStringLiteral("truncated")).toBool()
+                    && firstFragment.data.value(QStringLiteral("continuation")).toInt() == 1,
+                "Sigil fragment reads did not expose their exact continuation");
+        const SigilAgent::BookOpResult pastEndFragment = workspace.readFragment(
+            chapter->GetIdentifier(), 999999, 999999);
+        Require(pastEndFragment.ok
+                    && pastEndFragment.data.value(QStringLiteral("offset")).toInt()
+                        == pastEndFragment.data.value(QStringLiteral("total")).toInt()
+                    && pastEndFragment.data.value(QStringLiteral("end")).toInt()
+                        == pastEndFragment.data.value(QStringLiteral("total")).toInt()
+                    && pastEndFragment.data.value(QStringLiteral("limit")).toInt() == 8192
+                    && pastEndFragment.data.value(QStringLiteral("length")).toInt() == 0
+                    && !pastEndFragment.data.value(QStringLiteral("truncated")).toBool(),
+                "Sigil fragment offsets past EOF did not normalize to an empty tail");
         window.SelectResources(QList<Resource *> { chapter, nav });
         app.processEvents();
         auto *selectedFilesChip = agentDock->findChild<QToolButton *>(

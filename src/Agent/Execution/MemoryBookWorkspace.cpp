@@ -415,7 +415,7 @@ BookOpResult MemoryBookWorkspace::readFragment(const QString &resource_id, int o
                                    QStringLiteral("Font and image binaries are never returned to the model"));
     }
     const QString text = resource ? currentText(*resource) : staged_added;
-    const int start = qMax(0, offset);
+    const int start = qBound(0, offset, static_cast<int>(text.size()));
     int count = limit <= 0 ? 2048 : limit;
     count = qMin(count, kMaxFragment);
     const QString fragment = text.mid(start, count);
@@ -427,6 +427,7 @@ BookOpResult MemoryBookWorkspace::readFragment(const QString &resource_id, int o
         { QStringLiteral("end"), start + fragment.size() },
         { QStringLiteral("length"), fragment.size() },
         { QStringLiteral("total"), text.size() },
+        { QStringLiteral("limit"), count },
         { QStringLiteral("truncated"), truncated },
         { QStringLiteral("continuation"), truncated ? start + fragment.size() : QJsonValue() },
         { QStringLiteral("hash"), sha256Text(text) },

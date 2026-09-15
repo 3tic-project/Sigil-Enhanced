@@ -52,6 +52,8 @@ constexpr int MAX_METADATA_PREVIEW_LENGTH = 512;
 constexpr int MAX_METADATA_NAME_PREVIEW_LENGTH = 256;
 constexpr int DEFAULT_METADATA_FRAGMENT_LENGTH = 2048;
 constexpr int MAX_METADATA_FRAGMENT_LENGTH = 8192;
+constexpr int DEFAULT_RESOURCE_FRAGMENT_LENGTH = 2048;
+constexpr int MAX_RESOURCE_FRAGMENT_LENGTH = 8192;
 
 QJsonObject emptyObjectSchema()
 {
@@ -808,20 +810,39 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
     QJsonObject fragment_schema {
         { QStringLiteral("type"), QStringLiteral("object") },
         { QStringLiteral("properties"), QJsonObject {
-            { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-            { QStringLiteral("offset"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
-            { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+            { QStringLiteral("resource_id"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("string") },
+                { QStringLiteral("minLength"), 1 }
+            } },
+            { QStringLiteral("offset"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("integer") },
+                { QStringLiteral("minimum"), 0 },
+                { QStringLiteral("default"), 0 }
+            } },
+            { QStringLiteral("limit"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("integer") },
+                { QStringLiteral("minimum"), 1 },
+                { QStringLiteral("maximum"), MAX_RESOURCE_FRAGMENT_LENGTH },
+                { QStringLiteral("default"), DEFAULT_RESOURCE_FRAGMENT_LENGTH }
+            } }
         } },
         { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
     };
     add(registry, QStringLiteral("resource.read_fragment"),
-        QStringLiteral("Read a bounded text fragment of an XHTML or CSS resource. Copy the `text` field into patch_fragment.expected_text (no line-number prefixes). `lines` gives 1-based line identity for start_line when the substring is not unique. Fonts and images are refused."),
+        QStringLiteral("Read a bounded text fragment of an XHTML or CSS resource. Follow `continuation` while `truncated` is true. Copy the `text` field into patch_fragment.expected_text (no line-number prefixes). `lines` gives 1-based line identity for start_line when the substring is not unique. Fonts and images are refused."),
         ToolRisk::Read, false, false, fragment_schema,
         [workspace](const QJsonObject &arguments) {
+            const int offset = qMax(
+                0, arguments.value(QStringLiteral("offset")).toInt(0));
+            const int requested_limit = arguments.contains(QStringLiteral("limit"))
+                ? arguments.value(QStringLiteral("limit")).toInt(
+                      DEFAULT_RESOURCE_FRAGMENT_LENGTH)
+                : DEFAULT_RESOURCE_FRAGMENT_LENGTH;
+            const int limit = qBound(
+                1, requested_limit, MAX_RESOURCE_FRAGMENT_LENGTH);
             return fromBook(workspace->readFragment(
                 arguments.value(QStringLiteral("resource_id")).toString(),
-                arguments.value(QStringLiteral("offset")).toInt(0),
-                arguments.value(QStringLiteral("limit")).toInt(2048)));
+                offset, limit));
         });
 
     add(registry, QStringLiteral("style.stylesheets"),

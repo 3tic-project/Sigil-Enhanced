@@ -552,6 +552,93 @@ int main()
     Require(!fragment.data.value(QStringLiteral("text")).toString().contains(QStringLiteral("OTTO-FAKE-FONT")),
             "fragment must not include font bytes");
 
+    MemoryBookWorkspace fragment_book;
+    MemoryResource long_resource;
+    long_resource.id = QStringLiteral("long-text");
+    long_resource.bookPath = QStringLiteral("OEBPS/Text/long.xhtml");
+    long_resource.kind = QStringLiteral("xhtml");
+    long_resource.mediaType = QStringLiteral("application/xhtml+xml");
+    long_resource.text = QString(10000, QLatin1Char('x')) + QStringLiteral("END");
+    fragment_book.addResource(long_resource);
+    ToolRegistry fragment_registry;
+    registerBookTools(&fragment_registry, &fragment_book);
+    auto run_fragment = [&](const QJsonObject &arguments) {
+        IAgentTool *tool = fragment_registry.find(
+            QStringLiteral("resource.read_fragment"));
+        Require(tool != nullptr, "resource fragment tool missing");
+        return tool->execute(arguments);
+    };
+    const QJsonObject fragment_properties = fragment_registry.find(
+        QStringLiteral("resource.read_fragment"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(fragment_properties.value(QStringLiteral("resource_id")).toObject()
+                    .value(QStringLiteral("minLength")).toInt() == 1
+                && fragment_properties.value(QStringLiteral("offset")).toObject()
+                       .value(QStringLiteral("minimum")).toInt() == 0
+                && fragment_properties.value(QStringLiteral("offset")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 0
+                && fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("minimum")).toInt() == 1
+                && fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 2048
+                && fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 8192,
+            "resource fragment schema must disclose its default and hard bounds");
+    const ToolResult default_fragment = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") }
+    });
+    Require(default_fragment.ok
+                && default_fragment.data.value(QStringLiteral("offset")).toInt() == 0
+                && default_fragment.data.value(QStringLiteral("limit")).toInt() == 2048
+                && default_fragment.data.value(QStringLiteral("length")).toInt() == 2048
+                && default_fragment.data.value(QStringLiteral("total")).toInt() == 10003
+                && default_fragment.data.value(QStringLiteral("truncated")).toBool()
+                && default_fragment.data.value(QStringLiteral("continuation")).toInt() == 2048,
+            "resource fragment defaults must return a bounded first segment and continuation");
+    const ToolResult maximum_fragment = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") },
+        { QStringLiteral("limit"), 99999 }
+    });
+    Require(maximum_fragment.ok
+                && maximum_fragment.data.value(QStringLiteral("limit")).toInt() == 8192
+                && maximum_fragment.data.value(QStringLiteral("length")).toInt() == 8192
+                && maximum_fragment.data.value(QStringLiteral("continuation")).toInt() == 8192,
+            "resource fragment reads must clamp oversized limits at runtime");
+    const ToolResult minimum_fragment = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") },
+        { QStringLiteral("offset"), -50 },
+        { QStringLiteral("limit"), 0 }
+    });
+    Require(minimum_fragment.ok
+                && minimum_fragment.data.value(QStringLiteral("offset")).toInt() == 0
+                && minimum_fragment.data.value(QStringLiteral("limit")).toInt() == 1
+                && minimum_fragment.data.value(QStringLiteral("length")).toInt() == 1
+                && minimum_fragment.data.value(QStringLiteral("continuation")).toInt() == 1,
+            "resource fragment reads must clamp schema-bypassing negative and zero bounds");
+    const ToolResult fragment_tail = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") },
+        { QStringLiteral("offset"), 8192 },
+        { QStringLiteral("limit"), 99999 }
+    });
+    Require(fragment_tail.ok
+                && fragment_tail.data.value(QStringLiteral("offset")).toInt() == 8192
+                && fragment_tail.data.value(QStringLiteral("length")).toInt() == 1811
+                && fragment_tail.data.value(QStringLiteral("text")).toString()
+                       .endsWith(QStringLiteral("END"))
+                && !fragment_tail.data.value(QStringLiteral("truncated")).toBool()
+                && !fragment_tail.data.value(QStringLiteral("continuation")).isDouble(),
+            "resource fragment tails must preserve exact text and terminate continuation");
+    const ToolResult fragment_past_end = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") },
+        { QStringLiteral("offset"), 99999 }
+    });
+    Require(fragment_past_end.ok
+                && fragment_past_end.data.value(QStringLiteral("offset")).toInt() == 10003
+                && fragment_past_end.data.value(QStringLiteral("end")).toInt() == 10003
+                && fragment_past_end.data.value(QStringLiteral("length")).toInt() == 0
+                && !fragment_past_end.data.value(QStringLiteral("truncated")).toBool(),
+            "resource fragment offsets past EOF must normalize to a stable empty tail");
+
     const ToolResult fonts = run(QStringLiteral("font.inventory"), QJsonObject());
     Require(fonts.data.value(QStringLiteral("embedded_fonts")).toArray().size() == 1,
             "font.inventory must list the embedded font");
