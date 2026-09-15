@@ -23553,6 +23553,8 @@ Continue using the requested filename?</translation>
     <message><source>TOC hierarchy before transformation</source><translation>TOC hierarchy before transformation</translation></message>
     <message><source>TOC hierarchy after transformation</source><translation>TOC hierarchy after transformation</translation></message>
     <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>This comparison is bounded; additional TOC changes are omitted.</translation></message>
+    <message><source>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</source><translation>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</translation></message>
+    <message><source>• More staged items remain; preview again with offset %1 before committing.</source><translation>• More staged items remain; preview again with offset %1 before committing.</translation></message>
     <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</translation></message>
     <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>Operation groups: one dependent TOC hierarchy change.</translation></message>
     <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>Independent XHTML groups: choose one or more files to stage.</translation></message>
