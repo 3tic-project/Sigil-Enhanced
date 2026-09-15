@@ -324,6 +324,12 @@ length 和 `snippet_truncated`。需要精确原文时也必须改用 `resource.
 和执行层把 label 限制为 256，超限时以 `CHECKPOINT_LABEL_TOO_LONG` 拒绝。目录中的资源列表
 没有独立续页，但 restore 只需要完整 `checkpoint_id`。
 
+`manuscript.parse` 对 `toc`、`chapters`、`front_illustrations`、`illustrations`、`images_in_book`、
+`resolved_images` 以及 `template.illustrations` / `template.chapters` 使用同一个 offset 分页，默认
+40 项、最多 100 项。`total_counts` / `returned_counts` 以这些路径为键，`has_more` 由最长数组
+决定；短数组在后续页为空不代表整份解析完成。图片目录按 book path 稳定排序，确保多次续页
+不会因哈希遍历换序。章节总数等标量仍为全量；章节正文始终不进入结果。
+
 立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。
 
 会话级（不改书，New Session 会清空）：`session.remember`、`session.task_add`、`session.task_update`。

@@ -1714,3 +1714,38 @@ Windows/Linux 构建仍待后续验证。
 文本，数量也尚无淘汰策略。为快照数量设硬上限会影响现有恢复卡承诺，需先设计用户可见的
 过期/删除状态，不能在本切片中静默回收。受影响资源预览也没有独立分页，因为恢复操作只依赖
 checkpoint ID。真实大书的快照内存、在线模型续页、Windows/Linux 构建仍待后续验证。
+
+## Native Agent 排版稿解析摘要分页（2026-09-15）
+
+分支：`feature/agent-paginated-manuscript-summary`。主要提交：`23e997955`（共享窗口、稳定图片
+顺序、模型续页规则与大型稿件夹具）。
+
+### 模型摘要与内部排版分层
+
+- 只在 `manuscript.parse` 的 Tool 边界分页，不修改 `ParsedManuscript`、
+  `manuscriptSummaryJson()` 或 `parseManuscriptInBook()` 的完整内部结果。因此
+  `content.fill_section` / `content.typeset_from_manuscript` 继续从书内原稿取得全部章节和正文，
+  模型摘要的页窗口不会改变实际排版产物。
+- `toc`、`chapters`、`front_illustrations`、`illustrations`、`images_in_book`、
+  `resolved_images`、`template.illustrations` 与 `template.chapters` 共用 offset/limit，默认 40、
+  硬上限 100。原数组键和 template 嵌套结构保持不变；`total_counts` / `returned_counts` 用上述
+  字段路径（含 `template.*`）报告全量/本页计数，`has_more` / `next_offset` 由最长数组决定。
+- schema 与执行层都夹紧 offset/limit；内建东亚卷本启发式和自定义 heading/illustration regex
+  两条入口使用同一分页出口。`chapter_count`、source chars/lines、标题、credits、synopsis 等
+  标量保持全量，章节 body 一如既往不会进入摘要。
+- `images_in_book` 原来从 `QHash` 迭代生成，无法作为跨调用页游标的显式顺序契约；现在先按
+  book path 排序再生成 JSON。章节、TOC、插图标记和模板页继续使用各自已有的源序或数字序。
+
+### 测试证据与剩余项
+
+`agent_typeset` 构造 135 章、135 个稿件插图、135 张书内图片，以及各 105 个模板插图页和
+章节页，验证默认首页每数组 40 项、`limit=999` 夹紧为 100、offset 100 尾页分别为 35/5、
+八组精确 total/returned counts、最长数组终止、图片页重复调用顺序一致及小型三章结果兼容。
+`agent_harness` 固定 `manuscript.parse` 进入模型续页规则。完整 Sigil 构建、链接及 42 个固定
+Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。本切片没有新增 UI 文案；四份
+`.qm` 继续为 0 unfinished，英文 4,771 条，简中/繁中/日文各 5,748 条。
+
+本切片限制的是发送给模型、会话和导出的数组数量，不改变解析器先读取整份原稿、保存完整
+chapter body 并构造全量 summary 的行为，因此不宣称降低解析 CPU 或宿主临时内存。单项标题、
+资源路径和插图名尚未新增字符截断；真实超大原稿、在线模型完整续页率、Windows/Linux 构建
+仍待后续验证。

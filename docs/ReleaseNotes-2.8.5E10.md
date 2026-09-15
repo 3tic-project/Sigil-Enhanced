@@ -294,6 +294,16 @@ checkpoint label 最多 256 个 UTF-16 单元，完整计数与截断状态仍�
 分页不会删除或淘汰恢复点，也不改变 restore 的 checkpoint ID；当前 checkpoint 快照数量和
 整书文本副本仍保存在内存中，本次改动只约束模型与 transcript 看到的目录结果。
 
+### Agent 排版稿解析摘要改为分页
+
+`manuscript.parse` 不再一次返回长篇稿件的全部章节、目录、插图、书内图片和模板页。八组顶层
+或 template 数组共用 offset，默认/最多返回 40/100 项，并按最长数组提供
+`has_more` / `next_offset`；全量与本页计数按字段路径分别报告。`images_in_book` 另按 book path
+排序，使相同书籍的续页顺序稳定。
+
+章节正文仍不会进入模型；排版执行继续从书内原稿做完整解析，不会因摘要分页漏掉后续章节。
+宿主目前仍会先解析整份稿件并构造全量摘要，本次改动不减少解析 CPU 或内部临时内存。
+
 ### Agent 单次运行增加模型步骤上限
 
 Native Agent 现在默认每轮最多发送 24 次正式模型请求，可在“偏好设置 → Native Agent”的
