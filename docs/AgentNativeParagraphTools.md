@@ -53,6 +53,16 @@ CSS 依赖、输入与输出哈希。范围和依赖列表各最多返回 128 �
 - `changes_css=false`、`changes_opf=false`、`adds_resources=false`；
 - `local_validation=passed` 和 `full_epubcheck.status=not_run`。
 
+`changes` 与一一对应的 `operation_groups` 共用分页窗口，默认 10 项、最多 20 项。每页保留完整
+plan ID、digest、summary 和总数；必须重复相同 analysis ID 与资源选择，沿
+`review_next_offset` 连续读取，直到 `review_complete=true`。服务端只累计从 offset 0 开始且
+没有缺口的页；跳页会把累计进度归零，`paragraphs.apply` 会以
+`PLAN_REVIEW_INCOMPLETE` 拒绝未读完的计划，在 Auto 模式也不会绕过。
+
+Dock 按相同 plan/digest、analysis、书籍会话与 revision 聚合每页操作组。Edit 批准在完整连续
+页到齐前保持禁用，之后才列出全部独立 XHTML 组；差异仍按页显示并可逐项打开/并排比较，
+Conversation 导出也记录各页与累计审阅进度。
+
 `local_validation` 只表示原生 XHTML/CSS 与结构不变量检查，不表示完整 EPUBCheck。
 
 每个操作组只含一个已审阅的 XHTML resource ID。Edit 模式的批准卡默认勾选全部组，用户
@@ -72,6 +82,7 @@ CSS 依赖、输入与输出哈希。范围和依赖列表各最多返回 128 �
 
 - `ANALYSIS_NOT_FOUND` / `PLAN_NOT_FOUND`：当前书籍会话没有对应状态；
 - `ANALYSIS_BINDING_MISMATCH` / `PLAN_BINDING_MISMATCH`：ID、摘要或修订不一致；
+- `PLAN_REVIEW_INCOMPLETE`：计划页未从 offset 0 连续读完；按 `review_next_offset` 继续或重启；
 - `PLAN_SELECTION_UNSAFE`：请求包含非自动安全资源；
 - `PLAN_GROUP_SELECTION_EMPTY`：批准时没有选择任何独立 XHTML 组；
 - `PLAN_GROUP_NOT_FOUND`：选择包含当前已审阅计划以外的资源；
@@ -94,8 +105,9 @@ ctest --test-dir build --output-on-failure \
 ```
 
 自动测试覆盖 125 文件分析的默认 20/最大 50/尾页/归一空页、完整 summary 和跨页稳定绑定，
+以及 23 文件计划的默认 10/最大 20、连续页门禁、跳页归零和全组暂存，
 以及跨会话拒绝、计划摘要、CSS 变化但书籍计数未更新的冲突、Ruby/标题/空行保留、幂等、
 取消、空/重复/越界组拒绝、只暂存两个资源中的一个、第二个文件暂存失败后的
 整批回滚，以及 Edit 模式审批拒绝与精确组选择。Dock 回归还覆盖默认全选、清空阻断、批准
-后冻结和畸形重复组失败关闭。当前未执行完整 EPUBCheck、真实书籍视觉比较或 Windows/
-Linux Native Agent 交互，因此这些仍是发布验收边界。
+后冻结、分页组聚合、缺页阻断和畸形重复组失败关闭。当前未执行完整 EPUBCheck、真实书籍
+视觉比较或 Windows/Linux Native Agent 交互，因此这些仍是发布验收边界。

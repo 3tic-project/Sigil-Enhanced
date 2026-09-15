@@ -376,6 +376,12 @@ Runner 的任务恢复范围检查也继续使用完整预览，所以不会因�
 全部页读完后才能用最新 analysis ID 调用 `paragraphs.plan`。工具内部仍分析并保留完整选择范围，
 分页不会令后续计划漏文件。
 
+`paragraphs.plan` 的 `changes` / `operation_groups` 默认共用 10 项页窗口、最多 20 项；完整
+summary、plan ID 和 digest 不随窗口缩减。必须用相同 analysis ID 与资源选择，从 offset 0 沿
+`review_next_offset` 连续读到 `review_complete=true`。缺页或跳页会重置服务端累计审阅，未完成
+时 `paragraphs.apply` 以 `PLAN_REVIEW_INCOMPLETE` 拒绝。Dock 也按相同计划/书籍绑定聚合全部
+操作组，页未齐时不会启用 Edit 批准；差异卡和 Conversation 导出仍逐页呈现。
+
 调整既有目录层级时使用 `toc.inspect_hierarchy` → `toc.plan_transform` →
 `toc.apply_transform` → `transaction.preview` → `transaction.commit`。不要预先调用
 `transaction.begin`，也不要为目录升降级改写 XHTML 标题。计划绑定当前会话、书籍

@@ -1857,7 +1857,52 @@ Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。本切�
 
 分页不改变底层先读取所选 XHTML/CSS、完成全量规范化分析并保留完整 Result 的行为，所以没有
 降低分析引擎 CPU 或主体内存；它只减少单页详情 JSON 和模型/transcript 负载。单项 message、
-warning、resource ID/path 没有新增字符上限。`paragraphs.plan` 的 `changes` / `operation_groups`
-仍为完整选择，因为当前批准卡需要展示全部独立组；要分页它必须先设计跨页 UI 聚合与完整选择
-协议，不能只裁剪模型结果。真实大书、在线模型续页率、Windows/Linux 构建与辅助技术人工验收
-仍待后续验证。
+warning、resource ID/path 没有新增字符上限。`paragraphs.plan` 当时仍返回完整选择，其后已在
+“段落计划分页与完整审阅门禁”切片中加入跨页 UI 聚合和代码层完整性协议。真实大书、在线模型
+续页率、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
+
+## Native Agent 段落计划分页与完整审阅门禁（2026-09-16）
+
+分支：`feature/agent-paginated-paragraph-plan`。主要提交：`706d543ff`（分页、服务端 apply 门禁、
+Dock 聚合、导出与回归）、`5e43e41e4`（四语文案）和 `8682cd211`（聚合状态不重复保留源码差异）。
+
+### 计划页、累计覆盖与强制门禁
+
+- `paragraphs.plan` 的 `changes` 与一一对应的 `operation_groups` 共用 offset/limit，默认 10、
+  硬上限 20；顶层继续返回完整 plan/analysis 绑定、book revision、summary、局部校验和未运行
+  EPUBCheck 状态，并新增 `total_count`、`returned_count`、`has_more` / `next_offset`、累计
+  `reviewed_count`、`review_complete` 与未完成时的 `review_next_offset`。执行层夹紧绕过 schema
+  的 offset/limit，页窗口外的 entry 不再构造最多 4,096+4,096 UTF-16 单元的前后差异 JSON。
+- `StoredPlan` 保留完整确定性 Result 供最终重验和暂存，但只在相同 plan ID/digest/revision 且
+  本页 offset 精确等于此前累计位置时推进 `reviewedThrough`；offset 0 开始或重启，跳页、缺页
+  或不同绑定不能伪造完整覆盖。`paragraphs.apply` 在核对 plan 绑定后再检查
+  `reviewComplete`，未完成时以稳定代码 `PLAN_REVIEW_INCOMPLETE` 返回总数、已读数和应读 offset，
+  事务尚未创建。该门禁位于工具服务层，因此 Edit、Auto 或直接执行测试都一致生效，不依赖模型
+  是否服从 system prompt。
+- system prompt 与内置 `paragraph-normalization` skill 都要求续页重复相同 analysis ID 和
+  resource selection，核对相同 plan ID/digest，并沿 `review_next_offset` 直到完成。完整页后
+  原有 `paragraphs.apply` 精确资源子集、XHTML/CSS/hash 重验和独占事务语义不变。
+
+### UI 聚合、导出与测试证据
+
+- 每个 PlanCreated 事件只携带当前页。Dock 用 plan/digest、analysis ID、book revision、
+  `book_session_id`、总数和精确连续 offset 复核页面，再累积轻量 operation group；不在聚合表中
+  再复制每页 source diff。页卡显示本页/总数、offset 和下一必读 offset，仍可打开本页资源或
+  并排比较；缺页、绑定变化、数组计数不一致或尾页先到都会让聚合状态失败关闭。只有全部组连续
+  到齐且服务端也报告 complete 时，Edit 批准才启用并默认勾选所有组。Conversation Markdown
+  逐页导出差异、页码与累计审阅进度，不泄露 plan/digest。
+- `agent_div_paragraph_tools` 从完整 125 文件分析中选择 23 项，验证首页 10、`limit=999` 夹紧 20、
+  尾页 13、窗口外 resource ID 不进入首页 JSON、跨页绑定稳定；首页后 apply 返回
+  `PLAN_REVIEW_INCOMPLETE` 且不开事务，尾页连续到达后才一次暂存全部 23 项，尾页单独重放则
+  累计归零并再次拒绝。`agent_dock` 验证 2+1 页聚合出完整三组、首屏批准禁用、尾页后解锁及
+  缺少前缀仍禁用；`agent_harness` 固定 plan event 完整状态，`agent_provider_catalog` 固定分页
+  Conversation 导出。完整 Sigil 构建、链接及 42 个固定 Python 依赖通过；14 项 Agent 测试连续
+  3 轮共 42 次通过。四份 `.qm` 均为 0 unfinished，英文 4,775 条，简中/繁中/日文各 5,752 条；
+  Agent Dock/设置的 287 条活跃文案已逐项核对四语存在、非空和占位符一致。
+
+计划工具仍会在每次续页时重新读取所选 XHTML/CSS、重建完整确定性计划并把完整 Result 留在
+内存中，因此分页减少的是未返回 diff JSON、模型上下文和 transcript 单事件体积，不降低原生
+分析 CPU，且多页会重复这部分工作。Dock 最终仍需保留全部轻量操作组并创建对应选择行，每张
+页卡也保留自己的可见差异；极端上千文件计划的 UI 行数与会话总量仍是后续虚拟化目标。单项
+resource ID/path 尚无字符上限。真实大书、在线模型续页/门禁恢复率、Windows/Linux 构建和
+辅助技术人工验收仍待后续验证。

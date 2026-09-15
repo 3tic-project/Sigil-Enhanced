@@ -25,11 +25,15 @@ with regex.
 1. Call `paragraphs.analyze`. Pass `resource_ids` for an explicit scope; omit it
    only when the user requested the whole book. The four optional categories
    (blank lines, scene breaks, image wrappers, nested blocks) default to false.
+   Read every page with the same scope/options and `analysis_id`.
 2. Summarize `apply`, `review`, `skip`, and `error` files. Treat CSS dependencies
    and protected ranges as constraints. Do not promote a review-only file.
 3. Call `paragraphs.plan` with the exact `analysis_id` and, when needed, an
    independently selectable subset of auto-safe resource IDs. Present the
    bounded source diffs and the fact that CSS, OPF, and resources are unchanged.
+   Repeat the exact analysis/selection at `review_next_offset` until
+   `review_complete=true`; require the same `plan_id` and `plan_digest` on every
+   page.
 4. Call `paragraphs.apply` with the exact `plan_id`, `plan_digest`, and
    `expected_book_revision` returned by the plan. Do not call
    `transaction.begin` first: this tool revalidates the plan and opens an
