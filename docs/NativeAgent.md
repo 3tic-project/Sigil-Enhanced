@@ -300,6 +300,10 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 和选区的标题，但内部仍用完整 ID 调用 `readFragment()`，不会改变读取范围。模型若需要标签的
 精确值，应调用分页的 `book.resources` 或 `book.spine`，不能把预览省略号当成真实 ID/path。
 
+用户附加上下文每轮最多自动展开 8 个精确选区（每个仍最多 4,096 个 UTF-16 单元）和 60 个
+资源片段（每个 400 个单元）；超出的两类分别计数并提示省略。重复的 `book` handle 只显示一次。
+省略不修改用户选择或书籍，后续轮次可缩小范围，或用 `resource.read_fragment` 按需补读。
+
 其中 `book.resources`、`book.spine`、`book.toc` 和 `style.stylesheets` 使用 `offset` / `limit`
 分页，返回原数组键以及 `total_count`、实际 `offset` / `limit`、`returned_count`、`has_more`；
 尚有下一页时还返回 `next_offset`。前三者默认 100 项、每页最多 200 项；样式表包含每份 CSS

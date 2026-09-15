@@ -2047,3 +2047,35 @@ PromptAssembler 当前仍会先调用 `workspace->resources()` / `spine()` 构�
 预览，必须同时提供稳定索引的精确读取路径，不能破坏模型调用写工具所需的真实 ID。多 attached
 selection 的累计正文上限、在线模型补读率、Windows/Linux 构建与辅助技术人工验收仍待后续
 验证。
+
+## Native Agent 附加选区累计有界化（2026-09-16）
+
+分支：`feature/agent-bounded-attached-selections`。主要提交：`f6e2db786`（选区数量上限、book
+handle 去重、省略提示与多选区回归）。
+
+### 补齐单项边界之外的累计边界
+
+- attached selection 原本每项最多读取 4,096 个 UTF-16 单元，但处理分支位于
+  `attached_resources >= 60` 判断之前并直接 continue；因此任意数量的合法
+  `resource:start-end` handle 都会完整追加，单项限制不能约束总上下文。现在选区使用独立计数，
+  每轮最多展开 8 项，即选区正文累计最多 32 Ki UTF-16；普通附加资源继续最多 60 项、每项
+  读取 400 单元，两类不会互相挤占既有额度。
+- 超过上限的 selections/resources 分别统计并在上下文尾部给出明确省略数，system prompt 要求
+  后续缩小选择范围或用 `resource.read_fragment` 补读，不能把当前轮当作所有附件均已检查。
+  重复 `book` handle 也只输出一次，避免无正文的重复标签形成另一条无界路径。
+- 上限只约束发给模型的自动上下文；原始 handles、用户选区和 Book 均不修改。前 8 个选区仍按
+  完整内部 ID 与精确 UTF-16 start/end 读取，每项既有 4,096 截断提示和资源标签 256 预览继续
+  生效。
+
+### 测试证据与剩余项
+
+`agent_harness` 同时传入 12 个 5,000 单元选区和两个重复 book handle，验证只出现 8 个选区、
+明确报告 4 个省略项、book 标签只出现一次，且合成上下文保持在固定阈值以内；既有单选区精确
+Ruby/UTF-16 范围、4,096 单元截断和 65 个附加资源的 60/5 边界回归继续通过。定向 harness
+测试通过。完整 Sigil 构建、链接及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 轮共
+42 次通过。该切片没有新增 UI 文案，四语 `.qm` 目标保持最新，简中/繁中/日文严格目录覆盖
+测试通过。
+
+当前限制按 handle 数而不是去重后的 selection range 计数；重复选区会占用额度但不会突破上限。
+PromptAssembler 仍遍历全部传入 handles 以计算准确省略数，极端长列表的 CPU 与输入内存不是
+本切片目标。在线多选区工作流、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
