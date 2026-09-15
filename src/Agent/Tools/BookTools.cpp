@@ -683,14 +683,19 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("book.search_regex"),
-        QStringLiteral("Regex search over text resources. Returns offsets, lines, and capture groups. Never returns whole files. Optional resource_id limits the search."),
+        QStringLiteral("Regex search over text resources. Returns at most 50 matches with bounded match/capture previews, full offsets and lengths, and explicit truncation flags. Use resource.read_fragment for truncated source. Optional resource_id limits the search."),
         ToolRisk::Read, false, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
                 { QStringLiteral("pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
                 { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                { QStringLiteral("max_matches"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+                { QStringLiteral("max_matches"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("integer") },
+                    { QStringLiteral("minimum"), 1 },
+                    { QStringLiteral("maximum"), MAX_REGEX_SEARCH_MATCHES },
+                    { QStringLiteral("default"), DEFAULT_REGEX_SEARCH_MATCHES }
+                } }
             } },
             { QStringLiteral("required"), QJsonArray { QStringLiteral("pattern") } }
         },
@@ -699,7 +704,8 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                 workspace,
                 arguments.value(QStringLiteral("pattern")).toString(),
                 arguments.value(QStringLiteral("resource_id")).toString(),
-                arguments.value(QStringLiteral("max_matches")).toInt(40));
+                arguments.value(QStringLiteral("max_matches")).toInt(
+                    DEFAULT_REGEX_SEARCH_MATCHES));
             if (data.value(QStringLiteral("ok")).toBool() == false
                 && data.contains(QStringLiteral("code"))) {
                 return ToolResult::failure(data.value(QStringLiteral("code")).toString(),

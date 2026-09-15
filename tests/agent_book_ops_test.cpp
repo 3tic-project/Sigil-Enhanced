@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
 
 #include "Agent/Core/AgentSession.h"
@@ -104,6 +105,99 @@ int main()
     });
     Require(searched.ok && searched.data.value(QStringLiteral("match_count")).toInt() >= 1,
             "regex search");
+    const QJsonObject short_hit = searched.data.value(
+        QStringLiteral("matches")).toArray().first().toObject();
+    Require(short_hit.value(QStringLiteral("captures")).toArray().first().toString()
+                    == QStringLiteral("boils")
+                && !short_hit.value(QStringLiteral("preview_truncated")).toBool(),
+            "short regex matches and captures must remain intact");
+
+    MemoryBookWorkspace bounded_search_book;
+    MemoryResource long_page;
+    long_page.id = QStringLiteral("long-regex");
+    long_page.bookPath = QStringLiteral("OEBPS/Text/long.xhtml");
+    long_page.kind = QStringLiteral("xhtml");
+    long_page.mediaType = QStringLiteral("application/xhtml+xml");
+    long_page.text = QStringLiteral("<html>") + QString(5000, QLatin1Char('x'))
+        + QStringLiteral("REGEX-TAIL-SECRET</html>");
+    bounded_search_book.addResource(long_page);
+    MemoryResource groups_page;
+    groups_page.id = QStringLiteral("many-groups");
+    groups_page.bookPath = QStringLiteral("OEBPS/Text/groups.xhtml");
+    groups_page.kind = QStringLiteral("xhtml");
+    groups_page.mediaType = QStringLiteral("application/xhtml+xml");
+    groups_page.text = QStringLiteral("abcdefghijkl");
+    bounded_search_book.addResource(groups_page);
+    MemoryResource hits_page;
+    hits_page.id = QStringLiteral("many-hits");
+    hits_page.bookPath = QStringLiteral("OEBPS/Text/hits.xhtml");
+    hits_page.kind = QStringLiteral("xhtml");
+    hits_page.mediaType = QStringLiteral("application/xhtml+xml");
+    hits_page.text = QString(200, QLatin1Char('z'));
+    bounded_search_book.addResource(hits_page);
+    ToolRegistry bounded_search_registry;
+    registerBookTools(&bounded_search_registry, &bounded_search_book);
+    auto run_bounded_search = [&](const QJsonObject &arguments) {
+        return bounded_search_registry.find(
+            QStringLiteral("book.search_regex"))->execute(arguments);
+    };
+    const ToolResult long_search = run_bounded_search(QJsonObject {
+        { QStringLiteral("pattern"), QStringLiteral("(<html>([\\s\\S]+)</html>)") },
+        { QStringLiteral("resource_id"), long_page.id }
+    });
+    const QJsonObject long_hit = long_search.data.value(
+        QStringLiteral("matches")).toArray().first().toObject();
+    const QJsonArray long_captures = long_hit.value(
+        QStringLiteral("captures")).toArray();
+    const QJsonArray long_capture_lengths = long_hit.value(
+        QStringLiteral("capture_lengths")).toArray();
+    Require(long_search.ok
+                && long_hit.value(QStringLiteral("length")).toInt()
+                    == long_page.text.size()
+                && long_hit.value(QStringLiteral("match")).toString().size() == 240
+                && long_hit.value(QStringLiteral("match_truncated")).toBool()
+                && long_hit.value(QStringLiteral("capture_count")).toInt() == 2
+                && long_hit.value(QStringLiteral("returned_capture_count")).toInt() == 2
+                && long_captures.size() == 2
+                && long_captures.at(0).toString().size() == 160
+                && long_captures.at(1).toString().size() == 160
+                && long_capture_lengths.at(0).toInt() == long_page.text.size()
+                && long_hit.value(QStringLiteral("captures_truncated")).toBool()
+                && long_hit.value(QStringLiteral("preview_truncated")).toBool()
+                && !QJsonDocument(long_search.data).toJson().contains(
+                    "REGEX-TAIL-SECRET"),
+            "regex search must retain source locations while bounding long match and capture previews");
+    const ToolResult grouped_search = run_bounded_search(QJsonObject {
+        { QStringLiteral("pattern"), QStringLiteral(
+              "(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)") },
+        { QStringLiteral("resource_id"), groups_page.id }
+    });
+    const QJsonObject grouped_hit = grouped_search.data.value(
+        QStringLiteral("matches")).toArray().first().toObject();
+    Require(grouped_hit.value(QStringLiteral("capture_count")).toInt() == 12
+                && grouped_hit.value(
+                    QStringLiteral("returned_capture_count")).toInt() == 8
+                && grouped_hit.value(QStringLiteral("captures")).toArray().size() == 8
+                && grouped_hit.value(QStringLiteral("capture_lengths")).toArray().size() == 8
+                && grouped_hit.value(QStringLiteral("captures_truncated")).toBool(),
+            "regex search must bound the number of returned capture previews");
+    const ToolResult limited_search = run_bounded_search(QJsonObject {
+        { QStringLiteral("pattern"), QStringLiteral("z") },
+        { QStringLiteral("resource_id"), hits_page.id },
+        { QStringLiteral("max_matches"), 999 }
+    });
+    const QJsonObject search_schema = bounded_search_registry.find(
+        QStringLiteral("book.search_regex"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject()
+        .value(QStringLiteral("max_matches")).toObject();
+    Require(limited_search.data.value(QStringLiteral("match_count")).toInt() == 50
+                && limited_search.data.value(QStringLiteral("max_matches")).toInt() == 50
+                && limited_search.data.value(
+                    QStringLiteral("match_limit_reached")).toBool()
+                && search_schema.value(QStringLiteral("minimum")).toInt() == 1
+                && search_schema.value(QStringLiteral("default")).toInt() == 40
+                && search_schema.value(QStringLiteral("maximum")).toInt() == 50,
+            "regex search must clamp and disclose its match-count bound");
     Require(run(QStringLiteral("content.replace_regex"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("ch1") },
         { QStringLiteral("pattern"), QStringLiteral("<em>([^<]+)</em>") },
