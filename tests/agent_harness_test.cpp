@@ -177,6 +177,22 @@ int main()
                 && !bounded_selection_context.contains(QStringLiteral("Resources:\n"))
                 && bounded_selection_context.size() < 12000,
             "large attached selections must be bounded and report truncation");
+    QStringList many_selection_handles {
+        QStringLiteral("book"), QStringLiteral("book")
+    };
+    for (int index = 0; index < 12; ++index) {
+        many_selection_handles.append(QStringLiteral("scope:chapter:0-5000"));
+    }
+    const QString bounded_many_selections_context = PromptAssembler().contextBlock(
+        &selection_book, many_selection_handles);
+    Require(bounded_many_selections_context.count(
+                QStringLiteral("- selection scope:chapter")) == 8
+                && bounded_many_selections_context.contains(
+                    QStringLiteral("4 additional selection(s) omitted"))
+                && bounded_many_selections_context.count(
+                    QStringLiteral("- book (structure shown above)")) == 1
+                && bounded_many_selections_context.size() < 50000,
+            "automatic context must cap selection excerpts and deduplicate book handles");
 
     MemoryBookWorkspace selected_files_book;
     QStringList selected_file_handles;

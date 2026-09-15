@@ -22,6 +22,7 @@ namespace
 {
 
 constexpr int kMaxAttachedSelectionLength = 4096;
+constexpr int kMaxAttachedSelectionCount = 8;
 constexpr int kMaxAttachedResourceCount = 60;
 constexpr int kMaxAutomaticSessionTasks = 8;
 constexpr int kMaxAutomaticSessionMemoryEntries = 8;
@@ -79,6 +80,7 @@ QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) 
         "- The book map and attached samples are already in context. For greetings or high-level questions, answer from that. Call extra read tools only for a fact you do not already have.\n"
         "- Book-map title, language, and EPUB version fields are bounded previews. If title or language is truncated, use book.metadata and metadata.read_fragment for exact content. If the EPUB version is truncated, report its preview and length instead of guessing.\n"
         "- Resource paths, IDs, and kinds shown automatically in the Book map are bounded labels. When a label says truncated, use the paginated book.resources or book.spine tool for its exact value.\n"
+        "- Automatic context includes at most 8 attached selection excerpts and 60 attached resource excerpts. If more are omitted, inspect them in a later turn or with bounded read tools.\n"
         "- book.resources, book.spine, book.toc, book.metadata, style.stylesheets, font.inventory, book.validate, book.check, manuscript.parse, paragraphs.analyze, paragraphs.plan, transaction.preview, toc.inspect_hierarchy, checkpoint.list, session.tasks, and keyless session.recall are paginated. When has_more=true, use next_offset to continue; never treat the first page as the complete inventory, metadata, diagnostic, parsed manuscript, paragraph analysis or plan, staged transaction, TOC hierarchy, checkpoint, or session-state result.\n"
         "- Metadata entry content is a bounded preview. For content_truncated=true, call metadata.read_fragment with the same metadata_digest and entry index, then follow continuation while truncated=true. If METADATA_CHANGED is returned, restart book.metadata at offset 0.\n"
         "- resource.read_fragment defaults to 2,048 UTF-16 code units and returns at most 8,192. Follow continuation while truncated=true; an offset past the end is normalized to total.\n"
@@ -170,13 +172,24 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
         block += QStringLiteral("\nUser-attached handles:\n");
         int attached_resources = 0;
         int omitted_resources = 0;
+        int attached_selections = 0;
+        int omitted_selections = 0;
+        bool attached_book_listed = false;
         for (const QString &handle : handles) {
             if (handle == QLatin1String("book")) {
-                block += QStringLiteral("- book (structure shown above)\n");
+                if (!attached_book_listed) {
+                    block += QStringLiteral("- book (structure shown above)\n");
+                    attached_book_listed = true;
+                }
                 continue;
             }
             AttachedSelection selection;
             if (parseAttachedSelection(handle, &selection)) {
+                if (attached_selections >= kMaxAttachedSelectionCount) {
+                    ++omitted_selections;
+                    continue;
+                }
+                ++attached_selections;
                 const int requested = selection.end - selection.start;
                 const int length = qMin(requested, kMaxAttachedSelectionLength);
                 block += QStringLiteral("- selection %1 [%2,%3) UTF-16\n")
@@ -218,6 +231,11 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
             block += QStringLiteral(
                 "- %1 additional selected resource(s) omitted from automatic context; read them with resource.read_fragment\n")
                          .arg(omitted_resources);
+        }
+        if (omitted_selections > 0) {
+            block += QStringLiteral(
+                "- %1 additional selection(s) omitted from automatic context; inspect them in a later turn or with resource.read_fragment\n")
+                         .arg(omitted_selections);
         }
     }
     if (session) {
