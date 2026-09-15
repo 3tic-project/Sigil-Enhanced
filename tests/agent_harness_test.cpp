@@ -107,6 +107,40 @@ int main()
                 && bounded_summary_context.size() < 1500,
             "automatic book identity context must bound long summary strings");
 
+    MemoryBookWorkspace long_label_book;
+    MemoryResource long_label_resource;
+    long_label_resource.id = QString(700, QLatin1Char('i'))
+        + QStringLiteral("RESOURCE-ID-TAIL");
+    long_label_resource.bookPath = QStringLiteral("OEBPS/Text/")
+        + QString(700, QLatin1Char('p')) + QStringLiteral("PATH-TAIL.xhtml");
+    long_label_resource.kind = QString(100, QLatin1Char('k'))
+        + QStringLiteral("KIND-TAIL");
+    long_label_resource.mediaType = QStringLiteral("application/xhtml+xml");
+    long_label_resource.text = QStringLiteral("<p>bounded label body</p>");
+    long_label_book.addResource(long_label_resource);
+    long_label_book.setSpine(QStringList { long_label_resource.id });
+    const QString bounded_label_context = PromptAssembler().contextBlock(
+        &long_label_book, QStringList());
+    Require(bounded_label_context.contains(QStringLiteral("truncated from"))
+                && bounded_label_context.contains(
+                    QStringLiteral("<p>bounded label body</p>"))
+                && !bounded_label_context.contains(QStringLiteral("RESOURCE-ID-TAIL"))
+                && !bounded_label_context.contains(QStringLiteral("PATH-TAIL.xhtml"))
+                && !bounded_label_context.contains(QStringLiteral("KIND-TAIL"))
+                && bounded_label_context.size() < 1800,
+            "automatic book map must bound resource path, kind, and sample-id labels");
+    const QString bounded_label_selection = PromptAssembler().contextBlock(
+        &long_label_book,
+        QStringList { QStringLiteral("%1:0-%2")
+                          .arg(long_label_resource.id)
+                          .arg(long_label_resource.text.size()) });
+    Require(bounded_label_selection.contains(QStringLiteral("truncated from"))
+                && bounded_label_selection.contains(long_label_resource.text)
+                && !bounded_label_selection.contains(
+                    QStringLiteral("RESOURCE-ID-TAIL"))
+                && bounded_label_selection.size() < 1800,
+            "attached selection headers must bound IDs without changing exact reads");
+
     MemoryBookWorkspace selection_book;
     MemoryResource selection_resource;
     selection_resource.id = QStringLiteral("scope:chapter");

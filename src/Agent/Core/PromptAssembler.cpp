@@ -26,12 +26,22 @@ constexpr int kMaxAttachedResourceCount = 60;
 constexpr int kMaxAutomaticSessionTasks = 8;
 constexpr int kMaxAutomaticSessionMemoryEntries = 8;
 constexpr int kMaxAutomaticSessionValueLength = 512;
+constexpr int kMaxAutomaticResourceLabelLength = 256;
+constexpr int kMaxAutomaticResourceKindLength = 64;
 
 struct AttachedSelection {
     QString resourceId;
     int start = 0;
     int end = 0;
 };
+
+QString boundedContextLabel(const QString &text, int maximum)
+{
+    if (text.size() <= maximum) return text;
+    return QStringLiteral("%1… [truncated from %2 UTF-16]")
+        .arg(text.left(maximum))
+        .arg(text.size());
+}
 
 bool parseAttachedSelection(const QString &handle, AttachedSelection *selection)
 {
@@ -68,6 +78,7 @@ QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) 
         "- An attached selection is identified by resource:start-end in UTF-16 code units. Its exact bounded excerpt is included in context; use resource.read_fragment if it was truncated.\n"
         "- The book map and attached samples are already in context. For greetings or high-level questions, answer from that. Call extra read tools only for a fact you do not already have.\n"
         "- Book-map title, language, and EPUB version fields are bounded previews. If title or language is truncated, use book.metadata and metadata.read_fragment for exact content. If the EPUB version is truncated, report its preview and length instead of guessing.\n"
+        "- Resource paths, IDs, and kinds shown automatically in the Book map are bounded labels. When a label says truncated, use the paginated book.resources or book.spine tool for its exact value.\n"
         "- book.resources, book.spine, book.toc, book.metadata, style.stylesheets, font.inventory, book.validate, book.check, manuscript.parse, paragraphs.analyze, paragraphs.plan, transaction.preview, toc.inspect_hierarchy, checkpoint.list, session.tasks, and keyless session.recall are paginated. When has_more=true, use next_offset to continue; never treat the first page as the complete inventory, metadata, diagnostic, parsed manuscript, paragraph analysis or plan, staged transaction, TOC hierarchy, checkpoint, or session-state result.\n"
         "- Metadata entry content is a bounded preview. For content_truncated=true, call metadata.read_fragment with the same metadata_digest and entry index, then follow continuation while truncated=true. If METADATA_CHANGED is returned, restart book.metadata at offset 0.\n"
         "- resource.read_fragment defaults to 2,048 UTF-16 code units and returns at most 8,192. Follow continuation while truncated=true; an offset past the end is normalized to total.\n"
@@ -126,8 +137,12 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
             }
             const QJsonObject object = value.toObject();
             block += QStringLiteral("- %1 (%2, %3 chars)\n")
-                         .arg(object.value(QStringLiteral("book_path")).toString(),
-                              object.value(QStringLiteral("kind")).toString())
+                         .arg(boundedContextLabel(
+                                  object.value(QStringLiteral("book_path")).toString(),
+                                  kMaxAutomaticResourceLabelLength),
+                              boundedContextLabel(
+                                  object.value(QStringLiteral("kind")).toString(),
+                                  kMaxAutomaticResourceKindLength))
                          .arg(object.value(QStringLiteral("text_length")).toInt());
             ++listed;
         }
@@ -145,7 +160,9 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
             const QString sample = fragment.data.value(QStringLiteral("text")).toString();
             if (sample.contains(QLatin1String("<svg"))
                 && sample.contains(QLatin1String("image"))) continue;
-            block += QStringLiteral("\nSample %1:\n%2\n").arg(id, sample);
+            block += QStringLiteral("\nSample %1:\n%2\n")
+                         .arg(boundedContextLabel(
+                                  id, kMaxAutomaticResourceLabelLength), sample);
             ++sampled;
         }
     }
@@ -163,7 +180,9 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
                 const int requested = selection.end - selection.start;
                 const int length = qMin(requested, kMaxAttachedSelectionLength);
                 block += QStringLiteral("- selection %1 [%2,%3) UTF-16\n")
-                             .arg(selection.resourceId)
+                             .arg(boundedContextLabel(
+                                 selection.resourceId,
+                                 kMaxAutomaticResourceLabelLength))
                              .arg(selection.start)
                              .arg(selection.end);
                 const BookOpResult fragment = workspace->readFragment(
@@ -187,7 +206,8 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
                 continue;
             }
             ++attached_resources;
-            block += QStringLiteral("- resource %1\n").arg(handle);
+            block += QStringLiteral("- resource %1\n").arg(
+                boundedContextLabel(handle, kMaxAutomaticResourceLabelLength));
             const BookOpResult fragment = workspace->readFragment(handle, 0, 400);
             if (fragment.ok) {
                 block += fragment.data.value(QStringLiteral("text")).toString();
