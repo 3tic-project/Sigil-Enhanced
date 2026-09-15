@@ -289,6 +289,12 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 
 只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
 
+`book.summary` 及每轮自动 Book map 中的 title/language/EPUB version 分别最多预览
+512/128/64 个 UTF-16 单元，并返回各自的 `*_length` / `*_truncated`。title 或 language 截断时
+可用 `book.metadata` / `metadata.read_fragment` 精确补读；异常超长的 EPUB version 只报告预览和
+长度，不能猜测。真实 Sigil summary 直接对底层 Spine 路径和解析后的 TOC 条目计数，不再为了
+两个标量构造完整 `spine()` / `toc()` JSON；资源类型计数也只获取一次资源列表。
+
 其中 `book.resources`、`book.spine`、`book.toc` 和 `style.stylesheets` 使用 `offset` / `limit`
 分页，返回原数组键以及 `total_count`、实际 `offset` / `limit`、`returned_count`、`has_more`；
 尚有下一页时还返回 `next_offset`。前三者默认 100 项、每页最多 200 项；样式表包含每份 CSS

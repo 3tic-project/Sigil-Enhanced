@@ -1981,3 +1981,36 @@ continuation 与 EOF 归一、模型提示和回归）。
 的成本，也不为一次模型任务设置累计读取字节预算；模型仍可通过多次合法 continuation 读取完整
 文本资源。全轮累计返回量继续由工具调用上限、模型步骤上限和历史预算共同约束。超大单文件
 hash/行号扫描基准、在线模型续读率、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
+
+## Native Agent 自动 Book Summary 有界化（2026-09-16）
+
+分支：`feature/agent-bounded-book-summary`。主要提交：`f779f4d5b`（摘要字符串边界、自动上下文
+提示、Sigil 直接计数与三层回归）。
+
+### 固定每轮书籍身份开销
+
+- `PromptAssembler::contextBlock()` 会在每次模型请求前无条件序列化 `workspace->summary()`；原来
+  title、language 和 EPUB version 都完整进入 Book map，因此单条恶意或损坏元数据可以绕过
+  `book.metadata` 的新分页/预览边界。Memory 与 Sigil workspace 现在分别把三者限制为
+  512/128/64 个 UTF-16 单元，并新增对应 `*_length` / `*_truncated`；正常短字段的原键和值不变。
+- system prompt 和 `book.summary` 描述说明这些字段只是预览。title/language 截断时必须使用
+  `book.metadata` 的稳定分页和 `metadata.read_fragment` 精确补读；EPUB version 不是 metadata
+  entry，异常超长时只能报告预览和原始长度，不能猜测被截掉的内容。
+- Sigil summary 原来为 `spine_count` / `toc_count` 调用完整 `spine()` / `toc()`，会建立模型工具
+  所需的逐项 QJsonObject/QJsonArray，但最终只使用 size。现在 Spine 直接读取 OPF 路径列表计数；
+  TOC 保持原优先级（非空 Nav，否则 NCX）解析后直接取条目数，不再生成逐项 JSON。资源类型与
+  total 也复用一次 `GetResourceList()` 结果，避免同一摘要重复取得列表。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 验证普通 Physics Book 的 title/language 保持完整，并以 710/213/112 单元的
+title/language/version 验证 512/128/64 预览、原始长度、截断标志和尾部不泄漏；`agent_harness`
+验证同样的长值不会穿过每轮自动 Book map。`agent_workspace_package_integration` 在真实 Sigil
+工作区核对新的直接 Spine/TOC 计数仍与完整工具数组 size 相等，普通 title/language 不误报
+截断。完整 Sigil 构建、链接及 42 个固定 Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次
+通过。该切片没有新增 UI 文案，四语 `.qm` 目标保持最新，简中/繁中/日文严格目录覆盖测试通过。
+
+摘要仍需枚举全部资源类型并解析 Nav/NCX 才能给出精确计数，只是避免额外逐项 JSON 分配；它
+也不限制后续显式分页工具的累计读取量。Book map 的前 60 个资源路径仍逐项输出，单个异常超长
+path/ID 尚无字符预览边界，是自动上下文中下一项可单独收敛的输入。真实超大 Nav/NCX 计数
+基准、在线模型行为、Windows/Linux 构建与辅助技术人工验收仍待后续验证。

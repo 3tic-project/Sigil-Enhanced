@@ -277,6 +277,17 @@ continuation 续读。元数据变化后旧 digest 会以 `METADATA_CHANGED` 失
 模型沿 continuation 读到 `truncated=false`；资源 hash/revision、行号消歧、补丁来源规则和
 字体/图片拒绝策略均未改变。
 
+### Agent 自动书籍摘要有界化
+
+每轮都会进入 Book map 的 `book.summary` 不再原样携带任意长度的 title、language 和 EPUB
+version；三者分别最多预览 512/128/64 个 UTF-16 单元，并报告原始长度与截断状态。短字段保持
+原值兼容；长 title/language 可通过分页 metadata 工具精确补读，异常长 version 不再继续扩张
+每次请求。
+
+Sigil summary 的 Spine/TOC 数量现在直接从底层路径列表和解析条目计数，不再先构造完整工具
+JSON 数组；资源总数也复用类型统计时取得的同一列表。该改动减少自动上下文热路径上的临时
+对象，但 TOC 本身仍需解析，未改变书籍内容或导航语义。
+
 ### Agent 大型诊断结果改为分页
 
 `font.inventory`、`book.validate` 和 `book.check` 不再把全部字体、问题、未引用图片和 XHTML
