@@ -1824,3 +1824,40 @@ snapshot ID 一致和 schema 默认/最大值；原六节点层级、字符串�
 `TocEditTree`、计算所有节点深度与 snapshot digest 后再切页的实现，因此不降低解析 CPU 或
 宿主临时内存。节点 label/target 也没有新增单项字符上限。真实超大目录、在线模型的完整续页率、
 Windows/Linux 构建与辅助技术人工验收仍待后续验证。
+
+## Native Agent 段落分析详情分页（2026-09-15）
+
+分支：`feature/agent-paginated-paragraph-analysis`。主要提交：`647494cda`（文件页窗口、完整分析
+绑定、续页提示与大型 XHTML 夹具）。
+
+### 工具出口分页而不缩窄计划
+
+- `paragraphs.analyze` 的单文件 candidate/protected range 与 CSS dependency 原本已有各 128 项
+  上限，但顶层 `files` 会随全书 XHTML 数量增长。本切片为 analyze schema 增加 offset/limit，
+  默认 20、硬上限 50；执行层夹紧绕过 schema 的负 offset、零值和过大 limit，并返回标准
+  `total_count`、实际 offset/limit、`returned_count`、`has_more` 和可用时的 `next_offset`。
+- 全书模式继续按清理后的 book path、再按 resource ID 排序；显式 `resource_ids` 继续保持调用方
+  首次出现顺序并去重。页窗口只决定哪些 entry 调用 `analysisEntryJson()`，因此避免为当前模型
+  轮次构造未返回文件的范围/依赖 JSON；`summary` 始终统计完整选择范围。
+- `StoredAnalysis` 仍保存完整 `NormalizationPlan::Result`、路径和选项，`analysis_id` 也继续由完整
+  分析与完整资源范围生成，与 offset/limit 无关。同一会话、书籍和完全相同 scope/options 的
+  各页具有同一 ID；系统提示要求逐页核对，变化时从 offset 0 重读，并只从最新且已完整读取的
+  analysis 创建 plan。随后显式选择任意分析内 auto-safe 资源或省略选择规划全部 safe 资源的
+  语义不变。
+
+### 测试证据与剩余项
+
+`agent_div_paragraph_tools` 逆序加入 125 份安全 XHTML，验证全书分析按路径稳定从 `bulk-000`
+开始、默认首页 20 项、`limit=999` 夹紧为 50、offset 100 尾页 25、offset 999 归一为空页、
+完整/本页计数、终止状态、完整 `ready_files=125` summary 和跨页 analysis ID 一致。最后一次空页
+后仍用该 ID 为未出现在尾页的 `bulk-000` 成功生成单资源 plan，证明内存绑定没有被页窗口缩窄。
+`agent_harness` 固定同 scope/options 与 ID 的续页规则。完整 Sigil 构建、链接及 42 个固定
+Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。本切片没有新增 UI 文案；四份 `.qm`
+继续为 0 unfinished，英文 4,773 条，简中/繁中/日文各 5,750 条。
+
+分页不改变底层先读取所选 XHTML/CSS、完成全量规范化分析并保留完整 Result 的行为，所以没有
+降低分析引擎 CPU 或主体内存；它只减少单页详情 JSON 和模型/transcript 负载。单项 message、
+warning、resource ID/path 没有新增字符上限。`paragraphs.plan` 的 `changes` / `operation_groups`
+仍为完整选择，因为当前批准卡需要展示全部独立组；要分页它必须先设计跨页 UI 聚合与完整选择
+协议，不能只裁剪模型结果。真实大书、在线模型续页率、Windows/Linux 构建与辅助技术人工验收
+仍待后续验证。

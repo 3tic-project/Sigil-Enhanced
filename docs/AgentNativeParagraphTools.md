@@ -32,6 +32,12 @@ Native Agent 可以直接复用“DIV 段落结构规范化”的 C++ 分类、C
 - `convert_image_wrappers`
 - `convert_nested_blocks`
 
+分析结果的 `files` 默认分页 20 项、最多 50 项，并返回 `total_count`、`returned_count`、
+`has_more` 和可用时的 `next_offset`；`summary` 始终是完整所选范围的统计。续页必须重复完全
+相同的 `resource_ids` 与四个转换选项，并核对每页相同的 `analysis_id`；不一致时从 offset 0
+重新分析。读完所有页后再用最新且匹配的 analysis ID 创建计划，因为每次 analyze 都会刷新
+内存中的完整分析并清除旧计划。
+
 每个文件会报告 `apply`、`review`、`skip` 或 `error`，以及候选/受保护源码范围、
 CSS 依赖、输入与输出哈希。范围和依赖列表各最多返回 128 项，避免把整章或大型样式
 分析结果塞进模型上下文；总数仍在摘要字段中保留。
@@ -87,8 +93,9 @@ ctest --test-dir build --output-on-failure \
   -R '^(agent_div_paragraph_tools|agent_harness|agent_typeset|booklive_paragraph_normalizer|div_paragraph_normalization_contract)$'
 ```
 
-自动测试覆盖跨会话拒绝、计划摘要、CSS 变化但书籍计数未更新的冲突、Ruby/标题/空行
-保留、幂等、取消、空/重复/越界组拒绝、只暂存两个资源中的一个、第二个文件暂存失败后的
+自动测试覆盖 125 文件分析的默认 20/最大 50/尾页/归一空页、完整 summary 和跨页稳定绑定，
+以及跨会话拒绝、计划摘要、CSS 变化但书籍计数未更新的冲突、Ruby/标题/空行保留、幂等、
+取消、空/重复/越界组拒绝、只暂存两个资源中的一个、第二个文件暂存失败后的
 整批回滚，以及 Edit 模式审批拒绝与精确组选择。Dock 回归还覆盖默认全选、清空阻断、批准
 后冻结和畸形重复组失败关闭。当前未执行完整 EPUBCheck、真实书籍视觉比较或 Windows/
 Linux Native Agent 交互，因此这些仍是发布验收边界。

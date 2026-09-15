@@ -371,6 +371,11 @@ Runner 的任务恢复范围检查也继续使用完整预览，所以不会因�
 计划语义。成功也不代表已写入活书。完整协议、错误和证据见
 [Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
 
+其中 `paragraphs.analyze.files` 默认分页 20 项、最多 50 项，完整 `summary` 不随页窗口缩减。
+续页时必须重复相同资源范围与转换选项，并确认 `analysis_id` 一致；变化时从 offset 0 重读。
+全部页读完后才能用最新 analysis ID 调用 `paragraphs.plan`。工具内部仍分析并保留完整选择范围，
+分页不会令后续计划漏文件。
+
 调整既有目录层级时使用 `toc.inspect_hierarchy` → `toc.plan_transform` →
 `toc.apply_transform` → `transaction.preview` → `transaction.commit`。不要预先调用
 `transaction.begin`，也不要为目录升降级改写 XHTML 标题。计划绑定当前会话、书籍
