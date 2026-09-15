@@ -330,6 +330,18 @@ length 和 `snippet_truncated`。需要精确原文时也必须改用 `resource.
 决定；短数组在后续页为空不代表整份解析完成。图片目录按 book path 稳定排序，确保多次续页
 不会因哈希遍历换序。章节总数等标量仍为全量；章节正文始终不进入结果。
 
+`transaction.preview` 对 `changes` 与 `removed` 使用同一个 offset 分页，默认 50、最多 100 项，
+并返回逐数组的 `total_counts` / `returned_counts`、`has_more` 和 `next_offset`。工具输出先按
+resource ID 稳定排列变更、按字典序排列移除项，再为完整有序快照计算 SHA-256
+`preview_digest`。提交前必须读完每一页，续页期间不能再暂存修改；所有页的 `transaction_id`
+和 `preview_digest` 都必须相同，否则从 offset 0 重新预览。Dock 每次显示本页/总数及下一 offset。
+该 digest 是模型与界面的快照一致性证据，并不是代码层的 commit 令牌；commit 仍依赖现有事务
+冲突检查。
+
+分页只作用于工具结果、会话和导出。内部 `previewTransaction()` 仍生成完整数组，commit 以及
+Runner 的任务恢复范围检查也继续使用完整预览，所以不会因分页漏掉 staged 项；相应地，完整
+数组的构造、排序和 digest 序列化成本仍然存在。
+
 立即作用于活书（不走 Agent 暂存事务；Plan 模式禁用）：`python.run`。
 
 会话级（不改书，New Session 会清空）：`session.remember`、`session.task_add`、`session.task_update`。

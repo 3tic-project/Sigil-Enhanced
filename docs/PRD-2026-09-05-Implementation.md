@@ -1749,3 +1749,44 @@ Python 依赖通过；14 项 Agent 测试连续 3 轮共 42 次通过。本切�
 chapter body 并构造全量 summary 的行为，因此不宣称降低解析 CPU 或宿主临时内存。单项标题、
 资源路径和插图名尚未新增字符截断；真实超大原稿、在线模型完整续页率、Windows/Linux 构建
 仍待后续验证。
+
+## Native Agent 事务预览分页与快照摘要（2026-09-15）
+
+分支：`feature/agent-paginated-transaction-preview`。主要提交：`788ff8a38`（共享窗口分页、
+稳定顺序、快照 digest、提示/UI 与大型事务回归）和 `84ed5b3e3`（四语文案）。
+
+### 有界工具结果与跨页一致性
+
+- `transaction.preview` 从无参数全量结果改为可选 offset/limit；`changes` 和 `removed` 共用同一
+  offset，默认 50、硬上限 100。它保留原数组与事务/校验标量，并新增 `total_counts`、
+  `returned_counts`、规范化 offset/limit、`has_more` 和可用时的 `next_offset`。schema 与执行
+  层都夹紧绕过 schema 的负 offset、零值和过大 limit。
+- workspace 的 staged change 来自 `QHash`，不能直接作为跨调用顺序契约。工具出口先按
+  `resource_id` 排序 change（同 ID 时以紧凑 JSON 稳定打破平局），再按字典序排序 removed，
+  然后才切页。该顺序是模型遍历顺序，不表示用户或 Agent 的修改时间线。
+- 工具为完整的有序 preview JSON 计算 SHA-256 `preview_digest`，因此同一 staged 快照的首页、
+  尾页和重复调用具有相同 digest；任何纳入预览的 staged 内容变化都会改变它。系统提示要求
+  commit 前读完所有页，续页间不再 staged edit，并核对相同 `transaction_id` / digest；不一致
+  时从 offset 0 重读。digest 不由 `transaction.commit` 接收或强制校验，只是模型可审计的一致性
+  证据；已有精确资源、OPF、Nav/NCX 与书籍 revision 冲突检查继续承担代码层安全边界。
+- Dock 的 Preview 卡显示本页/总 changes、removals 和 offset，仍有后页时给出下一 offset；即使
+  当前页两数组为空，只要总数非零，也不会误写“No staged differences”。每次工具调用仍产生
+  一张预览卡，不会把多页在 UI 中自动合并。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 构造 135 项 staged change 与 125 项 removal，验证默认页各返回 50 项、
+`limit=999` 夹紧为 100、offset 100 尾页返回 35/25、精确全量/本页计数、稳定排序和终止状态；
+首页重复调用与尾页 digest 相同，追加 staged text 后 digest 改变。测试还直接读取内部 preview，
+确认仍有完整 135/125 项且活书正文未改变。`agent_harness` 固定分页规则和 preview 事件 digest；
+`agent_dock` 固定本页/总数与下一 offset 文案。完整 Sigil 构建、链接及 42 个固定 Python 依赖
+通过；14 项 Agent 测试连续 3 轮共 42 次通过。四份 `.qm` 均为 0 unfinished，英文 4,773 条，
+简中/繁中/日文各 5,750 条；Agent Dock/设置的 285 条活跃文案已逐项核对四语存在、非空和
+占位符一致。
+
+本切片只限制发送给模型、会话与导出的 preview 页面，不修改
+`IBookWorkspace::previewTransaction()`、commit 或 Runner 任务恢复范围使用的全量结果；宿主仍
+先构造全部数组，工具层还会复制、排序并序列化整份快照来计算 digest，因此不宣称降低 Book 侧
+CPU 或临时内存峰值。workspace 已有的 change excerpt 继续保持 80 字符边界，但 resource ID、
+removed 字符串等单项字段没有在本切片中另加字符截断。真实大书、在线模型对“无中途编辑”
+规则的遵循率、Windows/Linux 构建与辅助技术人工验收仍待后续验证。
