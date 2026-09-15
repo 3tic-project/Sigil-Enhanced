@@ -23,6 +23,8 @@ constexpr int DEFAULT_INVENTORY_PAGE_SIZE = 100;
 constexpr int MAX_INVENTORY_PAGE_SIZE = 200;
 constexpr int DEFAULT_STYLESHEET_PAGE_SIZE = 12;
 constexpr int MAX_STYLESHEET_PAGE_SIZE = 50;
+constexpr int DEFAULT_DIAGNOSTIC_PAGE_SIZE = 100;
+constexpr int MAX_DIAGNOSTIC_PAGE_SIZE = 200;
 
 QJsonObject emptyObjectSchema()
 {
@@ -77,6 +79,47 @@ QJsonObject paginatedArray(const QString &key,
         { QStringLiteral("has_more"), has_more }
     };
     if (has_more) result.insert(QStringLiteral("next_offset"), end);
+    return result;
+}
+
+QJsonObject paginatedArrays(QJsonObject result,
+                            const QStringList &keys,
+                            const QJsonObject &arguments,
+                            int default_limit,
+                            int max_limit)
+{
+    int total_count = 0;
+    for (const QString &key : keys) {
+        total_count = qMax(total_count, result.value(key).toArray().size());
+    }
+    const int offset = qBound(
+        0, arguments.value(QStringLiteral("offset")).toInt(0), total_count);
+    const int requested_limit = arguments.contains(QStringLiteral("limit"))
+        ? arguments.value(QStringLiteral("limit")).toInt(default_limit)
+        : default_limit;
+    const int limit = qBound(1, requested_limit, max_limit);
+    QJsonObject total_counts;
+    QJsonObject returned_counts;
+    for (const QString &key : keys) {
+        const QJsonArray all = result.value(key).toArray();
+        const int count = qMin(limit, qMax(0, all.size() - offset));
+        QJsonArray page;
+        for (int index = offset; index < offset + count; ++index) {
+            page.append(all.at(index));
+        }
+        result.insert(key, page);
+        total_counts.insert(key, all.size());
+        returned_counts.insert(key, page.size());
+    }
+    const bool has_more = offset + qMin(limit, total_count - offset) < total_count;
+    result.insert(QStringLiteral("total_counts"), total_counts);
+    result.insert(QStringLiteral("returned_counts"), returned_counts);
+    result.insert(QStringLiteral("offset"), offset);
+    result.insert(QStringLiteral("limit"), limit);
+    result.insert(QStringLiteral("has_more"), has_more);
+    if (has_more) {
+        result.insert(QStringLiteral("next_offset"), offset + limit);
+    }
     return result;
 }
 
@@ -308,17 +351,27 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("font.inventory"),
-        QStringLiteral("List embedded fonts and CSS font-family names. Never returns font file bytes."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(workspace->fontInventory());
+        QStringLiteral("List a bounded shared-offset page of embedded fonts, CSS font-family references, and declared family names. Never returns font file bytes. Use next_offset while has_more is true."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_DIAGNOSTIC_PAGE_SIZE, MAX_DIAGNOSTIC_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedArrays(
+                workspace->fontInventory(),
+                { QStringLiteral("embedded_fonts"),
+                  QStringLiteral("css_families"),
+                  QStringLiteral("declared_families") },
+                arguments, DEFAULT_DIAGNOSTIC_PAGE_SIZE,
+                MAX_DIAGNOSTIC_PAGE_SIZE));
         });
 
     add(registry, QStringLiteral("book.validate"),
-        QStringLiteral("Run structural checks on the open book (spine, body, basic CSS)."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(workspace->validate());
+        QStringLiteral("Run structural checks on the open book (spine, body, basic CSS) and return a bounded page of issues. Use next_offset while has_more is true."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_DIAGNOSTIC_PAGE_SIZE, MAX_DIAGNOSTIC_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedArrays(
+                workspace->validate(), { QStringLiteral("issues") }, arguments,
+                DEFAULT_DIAGNOSTIC_PAGE_SIZE, MAX_DIAGNOSTIC_PAGE_SIZE));
         });
 
     add(registry, QStringLiteral("transaction.begin"),
@@ -656,10 +709,16 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("book.check"),
-        QStringLiteral("Structural QA: validation issues, broken image hrefs, unused images. Prefer this over claiming the book is fine from memory."),
-        ToolRisk::Read, false, false, emptyObjectSchema(),
-        [workspace](const QJsonObject &) {
-            return ToolResult::success(inspectBook(workspace));
+        QStringLiteral("Structural QA with bounded shared-offset pages of validation issues, unused images, and XHTML wellformedness. Prefer this over claiming the book is fine from memory. Use next_offset while has_more is true."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_DIAGNOSTIC_PAGE_SIZE, MAX_DIAGNOSTIC_PAGE_SIZE),
+        [workspace](const QJsonObject &arguments) {
+            return ToolResult::success(paginatedArrays(
+                inspectBook(workspace),
+                { QStringLiteral("issues"), QStringLiteral("unused_images"),
+                  QStringLiteral("wellformed") },
+                arguments, DEFAULT_DIAGNOSTIC_PAGE_SIZE,
+                MAX_DIAGNOSTIC_PAGE_SIZE));
         });
 
     add(registry, QStringLiteral("content.replace_body"),

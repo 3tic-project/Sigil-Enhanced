@@ -221,6 +221,121 @@ int main()
                 && !css_tail.data.value(QStringLiteral("has_more")).toBool(),
             "stylesheet pagination must expose the final bounded page");
 
+    MemoryBookWorkspace diagnostic_book;
+    QStringList diagnostic_spine;
+    for (int index = 0; index < 235; ++index) {
+        MemoryResource page;
+        page.id = QStringLiteral("diagnostic-page-%1").arg(index);
+        page.bookPath = QStringLiteral("OEBPS/Text/diagnostic-%1.xhtml").arg(index);
+        page.kind = QStringLiteral("xhtml");
+        page.mediaType = QStringLiteral("application/xhtml+xml");
+        page.text = QStringLiteral("<html><p>Missing body %1</p></html>").arg(index);
+        diagnostic_book.addResource(page);
+        diagnostic_spine.append(page.id);
+        if (index < 225) {
+            MemoryResource image;
+            image.id = QStringLiteral("diagnostic-image-%1").arg(index);
+            image.bookPath = QStringLiteral("OEBPS/Images/unused-%1.png").arg(index);
+            image.kind = QStringLiteral("image");
+            image.mediaType = QStringLiteral("image/png");
+            image.binary = QByteArray("PNG");
+            diagnostic_book.addResource(image);
+
+            MemoryResource font;
+            font.id = QStringLiteral("diagnostic-font-%1").arg(index);
+            font.bookPath = QStringLiteral("OEBPS/Fonts/font-%1.otf").arg(index);
+            font.kind = QStringLiteral("font");
+            font.mediaType = QStringLiteral("font/otf");
+            font.binary = QByteArray("OTTO-DIAGNOSTIC");
+            diagnostic_book.addResource(font);
+        }
+        if (index < 215) {
+            MemoryResource sheet;
+            sheet.id = QStringLiteral("diagnostic-css-%1").arg(index);
+            sheet.bookPath = QStringLiteral("OEBPS/Styles/font-%1.css").arg(index);
+            sheet.kind = QStringLiteral("css");
+            sheet.mediaType = QStringLiteral("text/css");
+            sheet.text = QStringLiteral(
+                "@font-face { font-family: Family%1; src: url(../Fonts/font-%1.otf); }")
+                             .arg(index);
+            diagnostic_book.addResource(sheet);
+        }
+    }
+    diagnostic_book.setSpine(diagnostic_spine);
+    ToolRegistry diagnostic_registry;
+    registerBookTools(&diagnostic_registry, &diagnostic_book);
+    auto run_diagnostic = [&](const QString &name, const QJsonObject &arguments) {
+        IAgentTool *tool = diagnostic_registry.find(name);
+        Require(tool != nullptr, "paginated diagnostic tool missing");
+        return tool->execute(arguments);
+    };
+    const ToolResult font_page = run_diagnostic(
+        QStringLiteral("font.inventory"), QJsonObject());
+    const QJsonObject font_totals = font_page.data
+        .value(QStringLiteral("total_counts")).toObject();
+    const QJsonObject font_returned = font_page.data
+        .value(QStringLiteral("returned_counts")).toObject();
+    Require(font_page.data.value(QStringLiteral("embedded_fonts")).toArray().size() == 100
+                && font_page.data.value(QStringLiteral("css_families")).toArray().size() == 100
+                && font_page.data.value(QStringLiteral("declared_families")).toArray().size() == 100
+                && font_totals.value(QStringLiteral("embedded_fonts")).toInt() == 225
+                && font_totals.value(QStringLiteral("css_families")).toInt() == 215
+                && font_totals.value(QStringLiteral("declared_families")).toInt() == 215
+                && font_returned.value(QStringLiteral("embedded_fonts")).toInt() == 100
+                && font_page.data.value(QStringLiteral("has_more")).toBool()
+                && font_page.data.value(QStringLiteral("next_offset")).toInt() == 100
+                && !QJsonDocument(font_page.data).toJson().contains("OTTO-DIAGNOSTIC"),
+            "font inventory must bound every array, retain totals, and omit font bytes");
+    const QJsonObject font_schema = diagnostic_registry
+        .find(QStringLiteral("font.inventory"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(font_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 100
+                && font_schema.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 200,
+            "diagnostic schemas must disclose default and maximum page sizes");
+    const ToolResult font_tail = run_diagnostic(
+        QStringLiteral("font.inventory"), QJsonObject {
+            { QStringLiteral("offset"), 200 },
+            { QStringLiteral("limit"), 999 }
+        });
+    Require(font_tail.data.value(QStringLiteral("embedded_fonts")).toArray().size() == 25
+                && font_tail.data.value(QStringLiteral("css_families")).toArray().size() == 15
+                && font_tail.data.value(QStringLiteral("declared_families")).toArray().size() == 15
+                && font_tail.data.value(QStringLiteral("limit")).toInt() == 200
+                && !font_tail.data.value(QStringLiteral("has_more")).toBool()
+                && !font_tail.data.contains(QStringLiteral("next_offset")),
+            "font inventory must terminate after the longest shared-offset array");
+
+    const ToolResult validation_page = run_diagnostic(
+        QStringLiteral("book.validate"), QJsonObject());
+    Require(validation_page.data.value(QStringLiteral("issues")).toArray().size() == 100
+                && validation_page.data.value(QStringLiteral("issue_count")).toInt() == 235
+                && validation_page.data.value(QStringLiteral("total_counts")).toObject()
+                       .value(QStringLiteral("issues")).toInt() == 235
+                && validation_page.data.value(QStringLiteral("next_offset")).toInt() == 100,
+            "book validation must return a bounded issue page with the full issue count");
+    const ToolResult check_tail = run_diagnostic(
+        QStringLiteral("book.check"), QJsonObject {
+            { QStringLiteral("offset"), 200 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const QJsonObject check_totals = check_tail.data
+        .value(QStringLiteral("total_counts")).toObject();
+    const QJsonObject check_returned = check_tail.data
+        .value(QStringLiteral("returned_counts")).toObject();
+    Require(check_tail.data.value(QStringLiteral("issues")).toArray().size() == 35
+                && check_tail.data.value(QStringLiteral("unused_images")).toArray().size() == 25
+                && check_tail.data.value(QStringLiteral("wellformed")).toArray().size() == 35
+                && check_totals.value(QStringLiteral("issues")).toInt() == 235
+                && check_totals.value(QStringLiteral("unused_images")).toInt() == 225
+                && check_totals.value(QStringLiteral("wellformed")).toInt() == 235
+                && check_returned.value(QStringLiteral("issues")).toInt() == 35
+                && check_returned.value(QStringLiteral("unused_images")).toInt() == 25
+                && check_returned.value(QStringLiteral("wellformed")).toInt() == 35
+                && !check_tail.data.value(QStringLiteral("has_more")).toBool(),
+            "book QA must page issue, unused-image, and wellformedness arrays together");
+
     const ToolResult metadata = run(QStringLiteral("book.metadata"), QJsonObject());
     Require(metadata.data.value(QStringLiteral("language")).toString() == QStringLiteral("zh-CN"),
             "book.metadata must return language");
@@ -253,6 +368,10 @@ int main()
     const ToolResult fonts = run(QStringLiteral("font.inventory"), QJsonObject());
     Require(fonts.data.value(QStringLiteral("embedded_fonts")).toArray().size() == 1,
             "font.inventory must list the embedded font");
+    Require(fonts.data.value(QStringLiteral("total_counts")).toObject()
+                    .value(QStringLiteral("embedded_fonts")).toInt() == 1
+                && !fonts.data.value(QStringLiteral("has_more")).toBool(),
+            "small font inventories must remain complete on their first page");
     Require(!QJsonDocument(fonts.data).toJson().contains("OTTO-FAKE-FONT"),
             "font.inventory must never return font bytes");
 
@@ -264,6 +383,15 @@ int main()
     const ToolResult validate = run(QStringLiteral("book.validate"), QJsonObject());
     Require(validate.data.value(QStringLiteral("ok")).toBool(),
             "valid fixture must pass book.validate");
+    Require(!validate.data.value(QStringLiteral("has_more")).toBool()
+                && validate.data.value(QStringLiteral("total_counts")).toObject()
+                       .value(QStringLiteral("issues")).toInt() == 0,
+            "small validation reports must expose complete pagination metadata");
+    const ToolResult checked = run(QStringLiteral("book.check"), QJsonObject());
+    Require(!checked.data.value(QStringLiteral("has_more")).toBool()
+                && checked.data.value(QStringLiteral("total_counts")).toObject()
+                       .value(QStringLiteral("wellformed")).toInt() == 2,
+            "small QA reports must remain complete on their first page");
 
     const QString original = book.resourceText(QStringLiteral("ch1"));
     const quint64 original_revision = book.revision();

@@ -57,7 +57,10 @@ int main()
                 && edit_system_prompt.contains(
                     QStringLiteral("never infer resource success from applied_changes"))
                 && edit_system_prompt.contains(
-                    QStringLiteral("When has_more=true, use next_offset")),
+                    QStringLiteral("When has_more=true, use next_offset"))
+                && edit_system_prompt.contains(QStringLiteral("font.inventory"))
+                && edit_system_prompt.contains(QStringLiteral("book.validate"))
+                && edit_system_prompt.contains(QStringLiteral("book.check")),
             "system prompt must ground commit summaries and paginated inventory traversal");
 
     MemoryBookWorkspace selection_book;
