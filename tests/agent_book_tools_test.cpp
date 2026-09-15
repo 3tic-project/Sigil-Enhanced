@@ -343,8 +343,88 @@ int main()
     const ToolResult search = run(QStringLiteral("book.search"), QJsonObject {
         { QStringLiteral("query"), QStringLiteral("boils") }
     });
-    Require(search.data.value(QStringLiteral("matches")).toArray().size() == 1,
+    Require(search.data.value(QStringLiteral("matches")).toArray().size() == 1
+                && search.data.value(QStringLiteral("match_count")).toInt() == 1
+                && search.data.value(QStringLiteral("max_matches")).toInt() == 20
+                && !search.data.value(QStringLiteral("match_limit_reached")).toBool(),
             "book.search must find the fixture sentence");
+
+    MemoryBookWorkspace bounded_literal_book;
+    MemoryResource long_literal_page;
+    long_literal_page.id = QStringLiteral("long-literal");
+    long_literal_page.bookPath = QStringLiteral("OEBPS/Text/long-literal.xhtml");
+    long_literal_page.kind = QStringLiteral("xhtml");
+    long_literal_page.mediaType = QStringLiteral("application/xhtml+xml");
+    const QString long_query = QString(390, QLatin1Char('q'))
+        + QStringLiteral("LITERAL-TAIL-SECRET");
+    long_literal_page.text = QString(24, QLatin1Char('a')) + long_query
+        + QString(24, QLatin1Char('b'));
+    bounded_literal_book.addResource(long_literal_page);
+    MemoryResource many_literal_hits;
+    many_literal_hits.id = QStringLiteral("many-literal-hits");
+    many_literal_hits.bookPath = QStringLiteral("OEBPS/Text/many-literal-hits.xhtml");
+    many_literal_hits.kind = QStringLiteral("xhtml");
+    many_literal_hits.mediaType = QStringLiteral("application/xhtml+xml");
+    many_literal_hits.text = QString(200, QLatin1Char('z'));
+    bounded_literal_book.addResource(many_literal_hits);
+    ToolRegistry bounded_literal_registry;
+    registerBookTools(&bounded_literal_registry, &bounded_literal_book);
+    auto run_bounded_literal = [&](const QJsonObject &arguments) {
+        return bounded_literal_registry.find(
+            QStringLiteral("book.search"))->execute(arguments);
+    };
+    const ToolResult long_literal_search = run_bounded_literal(QJsonObject {
+        { QStringLiteral("query"), long_query },
+        { QStringLiteral("max_matches"), 999 }
+    });
+    const QJsonObject long_literal_hit = long_literal_search.data.value(
+        QStringLiteral("matches")).toArray().first().toObject();
+    Require(long_literal_search.ok
+                && long_literal_search.data.value(QStringLiteral("query_length")).toInt()
+                    == long_query.size()
+                && long_literal_search.data.value(QStringLiteral("max_matches")).toInt() == 50
+                && long_literal_hit.value(QStringLiteral("offset")).toInt() == 24
+                && long_literal_hit.value(QStringLiteral("snippet_offset")).toInt() == 0
+                && long_literal_hit.value(QStringLiteral("match_length")).toInt()
+                    == long_query.size()
+                && long_literal_hit.value(QStringLiteral("snippet_length")).toInt()
+                    == long_literal_page.text.size()
+                && long_literal_hit.value(QStringLiteral("snippet")).toString().size() == 240
+                && long_literal_hit.value(QStringLiteral("snippet_truncated")).toBool()
+                && !QJsonDocument(long_literal_search.data).toJson().contains(
+                    "LITERAL-TAIL-SECRET"),
+            "literal search must retain source positions while bounding long snippets");
+    const ToolResult capped_literal_search = run_bounded_literal(QJsonObject {
+        { QStringLiteral("query"), QStringLiteral("z") },
+        { QStringLiteral("max_matches"), 999 }
+    });
+    Require(capped_literal_search.data.value(QStringLiteral("match_count")).toInt() == 50
+                && capped_literal_search.data.value(
+                    QStringLiteral("match_limit_reached")).toBool(),
+            "literal search must clamp and disclose its match-count bound");
+    const ToolResult rejected_literal_search = run_bounded_literal(QJsonObject {
+        { QStringLiteral("query"), QString(513, QLatin1Char('x')) }
+    });
+    const QJsonObject literal_search_schema = bounded_literal_registry.find(
+        QStringLiteral("book.search"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(!rejected_literal_search.ok
+                && rejected_literal_search.code == QStringLiteral("SEARCH_QUERY_TOO_LONG")
+                && rejected_literal_search.data.value(
+                    QStringLiteral("query_length")).toInt() == 513
+                && rejected_literal_search.data.value(
+                    QStringLiteral("max_query_length")).toInt() == 512
+                && literal_search_schema.value(QStringLiteral("query")).toObject()
+                    .value(QStringLiteral("minLength")).toInt() == 1
+                && literal_search_schema.value(QStringLiteral("query")).toObject()
+                    .value(QStringLiteral("maxLength")).toInt() == 512
+                && literal_search_schema.value(QStringLiteral("max_matches")).toObject()
+                    .value(QStringLiteral("minimum")).toInt() == 1
+                && literal_search_schema.value(QStringLiteral("max_matches")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 20
+                && literal_search_schema.value(QStringLiteral("max_matches")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 50,
+            "literal search must reject oversized queries and publish schema bounds");
 
     const ToolResult fragment = run(QStringLiteral("resource.read_fragment"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("ch1") },

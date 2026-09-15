@@ -25,6 +25,10 @@ constexpr int DEFAULT_STYLESHEET_PAGE_SIZE = 12;
 constexpr int MAX_STYLESHEET_PAGE_SIZE = 50;
 constexpr int DEFAULT_DIAGNOSTIC_PAGE_SIZE = 100;
 constexpr int MAX_DIAGNOSTIC_PAGE_SIZE = 200;
+constexpr int DEFAULT_LITERAL_SEARCH_MATCHES = 20;
+constexpr int MAX_LITERAL_SEARCH_MATCHES = 50;
+constexpr int MAX_LITERAL_SEARCH_QUERY_LENGTH = 512;
+constexpr int MAX_LITERAL_SEARCH_SNIPPET_LENGTH = 240;
 
 QJsonObject emptyObjectSchema()
 {
@@ -121,6 +125,34 @@ QJsonObject paginatedArrays(QJsonObject result,
         result.insert(QStringLiteral("next_offset"), offset + limit);
     }
     return result;
+}
+
+QJsonObject boundedLiteralSearchResult(const QJsonArray &source,
+                                       const QString &query,
+    int max_matches)
+{
+    QJsonArray matches;
+    for (const QJsonValue &value : source) {
+        if (matches.size() >= max_matches) break;
+        QJsonObject match = value.toObject();
+        const QString snippet = match.value(QStringLiteral("snippet")).toString();
+        const bool truncated = snippet.size() > MAX_LITERAL_SEARCH_SNIPPET_LENGTH;
+        match.insert(QStringLiteral("snippet"),
+                     snippet.left(MAX_LITERAL_SEARCH_SNIPPET_LENGTH));
+        match.insert(QStringLiteral("snippet_offset"), qMax(
+            0, match.value(QStringLiteral("offset")).toInt() - 24));
+        match.insert(QStringLiteral("snippet_length"), snippet.size());
+        match.insert(QStringLiteral("match_length"), query.size());
+        match.insert(QStringLiteral("snippet_truncated"), truncated);
+        matches.append(match);
+    }
+    return QJsonObject {
+        { QStringLiteral("matches"), matches },
+        { QStringLiteral("match_count"), matches.size() },
+        { QStringLiteral("max_matches"), max_matches },
+        { QStringLiteral("match_limit_reached"), matches.size() >= max_matches },
+        { QStringLiteral("query_length"), query.size() }
+    };
 }
 
 class LambdaTool : public IAgentTool
@@ -305,20 +337,43 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
     QJsonObject search_schema {
         { QStringLiteral("type"), QStringLiteral("object") },
         { QStringLiteral("properties"), QJsonObject {
-            { QStringLiteral("query"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-            { QStringLiteral("max_matches"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+            { QStringLiteral("query"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("string") },
+                { QStringLiteral("minLength"), 1 },
+                { QStringLiteral("maxLength"), MAX_LITERAL_SEARCH_QUERY_LENGTH }
+            } },
+            { QStringLiteral("max_matches"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("integer") },
+                { QStringLiteral("minimum"), 1 },
+                { QStringLiteral("maximum"), MAX_LITERAL_SEARCH_MATCHES },
+                { QStringLiteral("default"), DEFAULT_LITERAL_SEARCH_MATCHES }
+            } }
         } },
         { QStringLiteral("required"), QJsonArray { QStringLiteral("query") } }
     };
     add(registry, QStringLiteral("book.search"),
-        QStringLiteral("Search text resources. Returns snippets, never whole files."),
+        QStringLiteral("Case-insensitive literal search over text resources. Query length is capped at 512 characters. Returns at most 50 matches with bounded snippets, full offsets and match lengths, and explicit truncation flags. Use resource.read_fragment for truncated source."),
         ToolRisk::Read, false, false, search_schema,
         [workspace](const QJsonObject &arguments) {
             const QString query = arguments.value(QStringLiteral("query")).toString();
-            const int max_matches = arguments.value(QStringLiteral("max_matches")).toInt(20);
-            return ToolResult::success(QJsonObject {
-                { QStringLiteral("matches"), workspace->search(query, max_matches) }
-            });
+            if (query.size() > MAX_LITERAL_SEARCH_QUERY_LENGTH) {
+                return ToolResult::failure(
+                    QStringLiteral("SEARCH_QUERY_TOO_LONG"),
+                    QStringLiteral("book.search query is capped at 512 characters. Search for a shorter distinctive literal."),
+                    QJsonObject {
+                        { QStringLiteral("query_length"), query.size() },
+                        { QStringLiteral("max_query_length"),
+                          MAX_LITERAL_SEARCH_QUERY_LENGTH }
+                    });
+            }
+            const int requested_matches = arguments.contains(QStringLiteral("max_matches"))
+                ? arguments.value(QStringLiteral("max_matches")).toInt(
+                    DEFAULT_LITERAL_SEARCH_MATCHES)
+                : DEFAULT_LITERAL_SEARCH_MATCHES;
+            const int max_matches = qBound(
+                1, requested_matches, MAX_LITERAL_SEARCH_MATCHES);
+            return ToolResult::success(boundedLiteralSearchResult(
+                workspace->search(query, max_matches), query, max_matches));
         });
 
     QJsonObject fragment_schema {
