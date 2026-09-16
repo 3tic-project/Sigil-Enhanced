@@ -543,7 +543,8 @@ QString SettingsStore::codeViewDoubleClickSelection()
     clearSettingsGroup();
     const QString mode = value(KEY_CODE_VIEW_DOUBLE_CLICK_SELECTION,
                                QStringLiteral("element-content")).toString();
-    return mode == QLatin1String("word") ? mode : QStringLiteral("element-content");
+    return mode == QLatin1String("word") || mode == QLatin1String("sentence")
+        ? mode : QStringLiteral("element-content");
 }
 
 SettingsStore::CodeViewAppearance SettingsStore::codeViewDarkAppearance()
@@ -963,7 +964,8 @@ void SettingsStore::setCodeViewDoubleClickSelection(const QString &mode)
 {
     clearSettingsGroup();
     setValue(KEY_CODE_VIEW_DOUBLE_CLICK_SELECTION,
-             mode == QLatin1String("word") ? mode : QStringLiteral("element-content"));
+             mode == QLatin1String("word") || mode == QLatin1String("sentence")
+                 ? mode : QStringLiteral("element-content"));
 }
 
 void SettingsStore::setCodeViewDarkAppearance(const SettingsStore::CodeViewAppearance &code_view_appearance)

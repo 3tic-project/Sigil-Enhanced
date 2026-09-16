@@ -8,6 +8,7 @@ ModifiedVerPrefsWidget::ModifiedVerPrefsWidget()
     ui.setupUi(this);
     ui.cbDoubleClickSelection->setItemData(0, QStringLiteral("element-content"));
     ui.cbDoubleClickSelection->setItemData(1, QStringLiteral("word"));
+    ui.cbDoubleClickSelection->setItemData(2, QStringLiteral("sentence"));
     readSettings();
     connectSignalsToSlots();
 }

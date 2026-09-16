@@ -1416,12 +1416,17 @@ void CodeViewEditor::mouseDoubleClickEvent(QMouseEvent *event)
 
     if (!isShift && !isAlt) {
         SettingsStore settings;
+        const QString selection_mode = settings.codeViewDoubleClickSelection();
         if (m_reformatHTMLEnabled && !isNavigationModifier
-            && settings.codeViewDoubleClickSelection() == QLatin1String("element-content")) {
+            && selection_mode != QLatin1String("word")) {
             const QString source = toPlainText();
             MaybeRegenerateTagList(source);
-            const CodeViewSelectionPolicy::Result selection =
-                CodeViewSelectionPolicy::FindTextUnit(source, m_TagList, hit_position);
+            const CodeViewSelectionPolicy::Result selection = selection_mode
+                    == QLatin1String("sentence")
+                ? CodeViewSelectionPolicy::FindSentence(
+                      source, m_TagList, hit_position)
+                : CodeViewSelectionPolicy::FindTextUnit(
+                      source, m_TagList, hit_position);
             if (selection.hasSelection()) {
                 cursor.setPosition(selection.start);
                 cursor.setPosition(selection.end, QTextCursor::KeepAnchor);

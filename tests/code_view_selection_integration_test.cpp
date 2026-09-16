@@ -112,6 +112,9 @@ static void TestSettingsContract()
     settings.setCodeViewDoubleClickSelection(QStringLiteral("word"));
     Require(settings.codeViewDoubleClickSelection() == QLatin1String("word"),
             "The compatible word mode was not persisted");
+    settings.setCodeViewDoubleClickSelection(QStringLiteral("sentence"));
+    Require(settings.codeViewDoubleClickSelection() == QLatin1String("sentence"),
+            "The sentence mode was not persisted");
 }
 
 static void TestPreferencesWidget()
@@ -121,7 +124,7 @@ static void TestPreferencesWidget()
     ModifiedVerPrefsWidget widget;
     QComboBox *mode = widget.findChild<QComboBox *>(QStringLiteral("cbDoubleClickSelection"));
     QTabWidget *tabs = widget.findChild<QTabWidget *>(QStringLiteral("tabWidget"));
-    Require(mode && mode->count() == 2, "The preferences selection mode control is missing");
+    Require(mode && mode->count() == 3, "The preferences selection mode control is missing");
     Require(mode->currentData() == QLatin1String("element-content"),
             "The preferences control did not read the stored selection mode");
     Require(widget.windowTitle() == QLatin1String("Editor") && tabs
@@ -132,10 +135,53 @@ static void TestPreferencesWidget()
     widget.saveSettings();
     Require(SettingsStore().codeViewDoubleClickSelection() == QLatin1String("word"),
             "The preferences control did not save word mode");
+    mode->setCurrentIndex(2);
+    widget.saveSettings();
+    Require(SettingsStore().codeViewDoubleClickSelection() == QLatin1String("sentence"),
+            "The preferences control did not save sentence mode");
     mode->setCurrentIndex(0);
     widget.saveSettings();
     Require(SettingsStore().codeViewDoubleClickSelection() == QLatin1String("element-content"),
             "The preferences control did not restore element-content mode");
+}
+
+static void TestSentenceMode()
+{
+    const QString source = QString::fromUtf8(
+        "<html><body><p>第一句。第二句含<ruby>風<rt>かぜ</rt></ruby>！第三句？</p>"
+        "<p id='english'>Value 3.14 stays. Visit example.com now.</p>"
+        "</body></html>");
+    SettingsStore settings;
+    settings.setCodeViewDoubleClickSelection(QStringLiteral("sentence"));
+
+    TestTextDocument document;
+    TestCodeViewEditor editor(document);
+    Load(editor, source);
+    editor.DoubleClickAt(source.indexOf(QString::fromUtf8("かぜ")));
+    Require(SelectedText(editor) == QString::fromUtf8(
+                "第二句含<ruby>風<rt>かぜ</rt></ruby>！"),
+            "The real editor did not map a Ruby annotation to its CJK sentence");
+    Require(!editor.document()->isModified() && !editor.document()->isUndoAvailable(),
+            "Sentence selection modified the document or its undo stack");
+
+    editor.DoubleClickAt(source.indexOf(QStringLiteral("3.14")));
+    Require(SelectedText(editor) == QStringLiteral("Value 3.14 stays."),
+            "The real editor split a sentence at decimal punctuation");
+    editor.DoubleClickAt(source.indexOf(QStringLiteral("example.com")));
+    Require(SelectedText(editor) == QStringLiteral("Visit example.com now."),
+            "The real editor split a sentence inside a URL");
+    editor.DoubleClickAt(source.indexOf(QStringLiteral("english")));
+    Require(SelectedText(editor) == QStringLiteral("english"),
+            "Sentence mode expanded an attribute click");
+    editor.DoubleClickAt(source.indexOf(QStringLiteral("Value")),
+                         Qt::ControlModifier);
+    Require(SelectedText(editor) == QStringLiteral("Value"),
+            "A navigation-modified sentence click did not preserve word selection");
+
+    Load(editor, source, false);
+    editor.DoubleClickAt(source.indexOf(QStringLiteral("Value")));
+    Require(SelectedText(editor) == QStringLiteral("Value"),
+            "A non-XHTML editor used sentence selection");
 }
 
 static void TestElementContentAndFallbacks()
@@ -233,6 +279,7 @@ int main(int argc, char **argv)
         TestSettingsContract();
         TestPreferencesWidget();
         TestElementContentAndFallbacks();
+        TestSentenceMode();
         TestTagModifiersAndEditorConsistency();
     } catch (const std::exception &error) {
         qCritical("%s", error.what());

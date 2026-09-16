@@ -78,12 +78,17 @@
               <string>Character or word (original behavior)</string>
              </property>
             </item>
+            <item>
+             <property name="text">
+              <string>Current sentence</string>
+             </property>
+            </item>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="labelDoubleClickSelectionHelp">
             <property name="text">
-             <string>Selects the content inside a paragraph; nested markup such as Ruby is included.</string>
+             <string>Choose paragraph/tag content, the current sentence, or original word behavior. Nested markup such as Ruby stays intact.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
