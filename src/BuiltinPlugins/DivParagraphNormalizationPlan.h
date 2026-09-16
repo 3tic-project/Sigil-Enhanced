@@ -77,6 +77,9 @@ public:
     static Result build(const QVector<Input>& inputs,
                         const BookLiveParagraphNormalizer::Options& options,
                         const ProgressFunction& progress = ProgressFunction());
+    static Result buildCmoa(const QVector<Input>& inputs,
+                            const BookLiveParagraphNormalizer::Options& options,
+                            const ProgressFunction& progress = ProgressFunction());
     static QStringList revisionConflicts(const Result& plan,
                                          const QVector<Input>& currentInputs);
     static void refreshIdentity(Result& plan);

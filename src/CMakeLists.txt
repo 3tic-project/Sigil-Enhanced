@@ -144,6 +144,8 @@ set( AGENT_FILES
 set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     BuiltinPlugins/BookLiveParagraphNormalizer.h
+    BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    BuiltinPlugins/CmoaParagraphNormalizer.h
     BuiltinPlugins/DivParagraphCssAnalyzer.cpp
     BuiltinPlugins/DivParagraphCssAnalyzer.h
     BuiltinPlugins/DivParagraphNormalizationPlan.cpp

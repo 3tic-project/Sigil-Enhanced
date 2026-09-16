@@ -13,6 +13,8 @@
 
 #include "BuiltinPlugins/DivParagraphNormalizationPlan.h"
 
+#include "BuiltinPlugins/CmoaParagraphNormalizer.h"
+
 #include <QCryptographicHash>
 #include <QHash>
 
@@ -22,12 +24,93 @@ namespace BuiltinPlugins
 namespace
 {
 
+using Normalizer = std::function<BookLiveParagraphNormalizer::NormalizeResult(
+    const DivParagraphNormalizationPlan::Input&)>;
+
 void addFramed(QCryptographicHash& hash, const QString& value)
 {
     const QByteArray bytes = value.toUtf8();
     hash.addData(QByteArray::number(bytes.size()));
     hash.addData(QByteArrayLiteral(":"));
     hash.addData(bytes);
+}
+
+DivParagraphNormalizationPlan::Result buildPlan(
+    const QVector<DivParagraphNormalizationPlan::Input>& inputs,
+    const QString& preset_id,
+    const DivParagraphNormalizationPlan::ProgressFunction& progress,
+    const Normalizer& normalize)
+{
+    using Plan = DivParagraphNormalizationPlan;
+    Plan::Result plan;
+    plan.presetId = preset_id;
+
+    for (int input_index = 0; input_index < inputs.count(); ++input_index) {
+        if (progress && !progress(input_index, inputs.count())) {
+            plan.cancelled = true;
+            plan.errors << QStringLiteral("normalization plan generation was cancelled");
+            plan.ok = false;
+            Plan::refreshIdentity(plan);
+            return plan;
+        }
+        const Plan::Input& input = inputs.at(input_index);
+        Plan::Entry entry;
+        entry.resourceId = input.resourceId;
+        entry.baseRevision = input.baseRevision;
+        entry.source = input.text;
+        entry.beforeHash = Plan::hashText(input.text);
+        entry.cssHash = Plan::hashStylesheets(input.stylesheets);
+        const BookLiveParagraphNormalizer::NormalizeResult normalized = normalize(input);
+        entry.analysis = normalized.before;
+        if (plan.ruleVersion.isEmpty()) {
+            plan.ruleVersion = entry.analysis.ruleVersion;
+        }
+
+        if (!entry.analysis.ok) {
+            entry.status = Plan::Status::Error;
+            entry.messages << entry.analysis.message;
+            plan.errorFiles++;
+        } else if (entry.analysis.safeToNormalize) {
+            entry.messages = normalized.messages;
+            if (!normalized.ok) {
+                entry.status = Plan::Status::Error;
+                plan.errorFiles++;
+                plan.errors << QStringLiteral("%1: %2")
+                    .arg(input.resourceId, normalized.messages.join(QStringLiteral("; ")));
+            } else if (!normalized.changed) {
+                entry.status = Plan::Status::Skip;
+                plan.skippedFiles++;
+            } else {
+                entry.status = Plan::Status::Apply;
+                entry.output = normalized.text;
+                entry.afterHash = normalized.afterHash;
+                plan.applyFiles++;
+                plan.conversionCount += entry.analysis.convertibleLeaves;
+                plan.protectedCount += entry.analysis.protectedRanges.count();
+            }
+        } else if (entry.analysis.candidate) {
+            entry.status = Plan::Status::Review;
+            entry.messages << entry.analysis.message;
+            plan.reviewFiles++;
+        } else {
+            entry.status = Plan::Status::Skip;
+            entry.messages << entry.analysis.message;
+            plan.skippedFiles++;
+        }
+
+        plan.entries << entry;
+    }
+
+    if (progress && !progress(inputs.count(), inputs.count())) {
+        plan.cancelled = true;
+        plan.errors << QStringLiteral("normalization plan generation was cancelled");
+        plan.ok = false;
+        Plan::refreshIdentity(plan);
+        return plan;
+    }
+    plan.ok = plan.errors.isEmpty();
+    Plan::refreshIdentity(plan);
+    return plan;
 }
 
 }
@@ -63,77 +146,25 @@ DivParagraphNormalizationPlan::build(
     const BookLiveParagraphNormalizer::Options& options,
     const ProgressFunction& progress)
 {
-    Result plan;
-    plan.presetId = options.presetId();
-
-    for (int input_index = 0; input_index < inputs.count(); ++input_index) {
-        if (progress && !progress(input_index, inputs.count())) {
-            plan.cancelled = true;
-            plan.errors << QStringLiteral("normalization plan generation was cancelled");
-            plan.ok = false;
-            refreshIdentity(plan);
-            return plan;
-        }
-        const Input& input = inputs.at(input_index);
-        Entry entry;
-        entry.resourceId = input.resourceId;
-        entry.baseRevision = input.baseRevision;
-        entry.source = input.text;
-        entry.beforeHash = hashText(input.text);
-        entry.cssHash = hashStylesheets(input.stylesheets);
-        const BookLiveParagraphNormalizer::NormalizeResult normalized =
-            BookLiveParagraphNormalizer::normalizeXhtmlText(
+    return buildPlan(
+        inputs, options.presetId(), progress,
+        [&options](const Input& input) {
+            return BookLiveParagraphNormalizer::normalizeXhtmlText(
                 input.text, options, input.stylesheets);
-        entry.analysis = normalized.before;
-        if (plan.ruleVersion.isEmpty()) {
-            plan.ruleVersion = entry.analysis.ruleVersion;
-        }
+        });
+}
 
-        if (!entry.analysis.ok) {
-            entry.status = Status::Error;
-            entry.messages << entry.analysis.message;
-            plan.errorFiles++;
-        } else if (entry.analysis.safeToNormalize) {
-            entry.messages = normalized.messages;
-            if (!normalized.ok) {
-                entry.status = Status::Error;
-                plan.errorFiles++;
-                plan.errors << QStringLiteral("%1: %2")
-                    .arg(input.resourceId, normalized.messages.join(QStringLiteral("; ")));
-            } else if (!normalized.changed) {
-                entry.status = Status::Skip;
-                plan.skippedFiles++;
-            } else {
-                entry.status = Status::Apply;
-                entry.output = normalized.text;
-                entry.afterHash = normalized.afterHash;
-                plan.applyFiles++;
-                plan.conversionCount += entry.analysis.convertibleLeaves;
-                plan.protectedCount += entry.analysis.protectedRanges.count();
-            }
-        } else if (entry.analysis.candidate) {
-            entry.status = Status::Review;
-            entry.messages << entry.analysis.message;
-            plan.reviewFiles++;
-        } else {
-            entry.status = Status::Skip;
-            entry.messages << entry.analysis.message;
-            plan.skippedFiles++;
-        }
-
-        plan.entries << entry;
-    }
-
-    if (progress && !progress(inputs.count(), inputs.count())) {
-        plan.cancelled = true;
-        plan.errors << QStringLiteral("normalization plan generation was cancelled");
-        plan.ok = false;
-        refreshIdentity(plan);
-        return plan;
-    }
-    plan.ok = plan.errors.isEmpty();
-    refreshIdentity(plan);
-    return plan;
+DivParagraphNormalizationPlan::Result DivParagraphNormalizationPlan::buildCmoa(
+    const QVector<Input>& inputs,
+    const BookLiveParagraphNormalizer::Options& options,
+    const ProgressFunction& progress)
+{
+    return buildPlan(
+        inputs, CmoaParagraphNormalizer::presetId(options), progress,
+        [&options](const Input& input) {
+            return CmoaParagraphNormalizer::normalizeXhtmlText(
+                input.text, options, input.stylesheets);
+        });
 }
 
 void DivParagraphNormalizationPlan::refreshIdentity(Result& plan)

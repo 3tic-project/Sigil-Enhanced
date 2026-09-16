@@ -763,6 +763,8 @@ add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.h
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
@@ -783,6 +785,24 @@ target_link_libraries(booklive_paragraph_normalizer_test PRIVATE
 add_test(NAME booklive_paragraph_normalizer COMMAND booklive_paragraph_normalizer_test)
 set_tests_properties(booklive_paragraph_normalizer PROPERTIES TIMEOUT 30)
 
+add_executable(cmoa_paragraph_normalizer_test
+    cmoa_paragraph_normalizer_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.h
+)
+target_include_directories(cmoa_paragraph_normalizer_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+target_link_libraries(cmoa_paragraph_normalizer_test PRIVATE Qt6::Core Qt6::Xml)
+add_test(NAME cmoa_paragraph_normalizer COMMAND cmoa_paragraph_normalizer_test)
+set_tests_properties(cmoa_paragraph_normalizer PROPERTIES TIMEOUT 30)
+
 add_test(NAME div_paragraph_normalization_contract
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/div_paragraph_normalization_contract_test.py
@@ -794,6 +814,8 @@ add_executable(div_paragraph_performance_test
     div_paragraph_performance_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.h
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
@@ -1189,6 +1211,15 @@ add_test(NAME opf_source_bytes
 set_tests_properties(opf_source_bytes PROPERTIES TIMEOUT 30)
 
 if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_test(NAME cmoa_epub_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_cmoa_epub_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(cmoa_epub_integration PROPERTIES
+        TIMEOUT 120
+        RUN_SERIAL TRUE
+        SKIP_RETURN_CODE 77
+    )
     add_test(NAME opf_resource_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_opf_resource_integration.py
                 ${CMAKE_BINARY_DIR}
@@ -1531,6 +1562,7 @@ add_executable(agent_harness_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/TocTools.cpp
     ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphStylesheetResolver.cpp
@@ -1625,6 +1657,7 @@ add_executable(agent_div_paragraph_tools_test
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphStylesheetResolver.cpp
