@@ -2169,3 +2169,16 @@ OPF、选择、TOC、Clips、BookLive/Cmoa、事务和三语覆盖共 29 项定�
 这仍不关闭跨平台 UI、完整 MainWindow 无操作保存、元数据对话框取消、两阅读器视觉、
 完整 EPUBCheck、断电级原子性或 Agent 三项用户故事。逐项状态见
 [2026-09-05 PRD 验收复核](PRD-2026-09-05-Acceptance.md)。
+
+## MainWindow 无操作保存与元数据取消矩阵（2026-09-16）
+
+`main_window_noop_epub2_integration`、`main_window_noop_epub3_integration` 和
+`main_window_noop_cmoa_integration` 链接真实应用对象并分别打开有效 EPUB 2、有效
+EPUB 3、缺 nav 的私有 Cmoa 样本。三项都调用 MainWindow 的真实 `Save` 槽，并自动
+驱动真实非原生 `QFileDialog` 完成 `Save As` 和 `Save A Copy`；输入、另存和副本整包
+字节完全相同，Save As 正确更新当前路径，Save A Copy 不改变当前路径，Book 始终未变脏。
+
+同一测试随后打开真实 Metadata Editor 并通过其 reject 槽取消，确认 OPF 源码、Book
+modified 状态和当前磁盘 EPUB 均未改变。私有样本固定 SHA-256，测试前后再次校验原件。
+三项连续执行全部通过（14.73 秒），由此关闭 O02、O12 与 G2 的本机自动化缺口；
+Windows/Linux 的同路径仍归入 G7 跨平台矩阵，不能由 macOS 结果替代。

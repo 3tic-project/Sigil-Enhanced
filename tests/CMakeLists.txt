@@ -1255,6 +1255,25 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(code_view_selection_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME main_window_noop_epub3_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_noop_integration.py
+                ${CMAKE_BINARY_DIR} --fixture epub3
+    )
+    set_tests_properties(main_window_noop_epub3_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME main_window_noop_epub2_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_noop_integration.py
+                ${CMAKE_BINARY_DIR} --fixture epub2
+    )
+    set_tests_properties(main_window_noop_epub2_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME main_window_noop_cmoa_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_noop_integration.py
+                ${CMAKE_BINARY_DIR} --fixture cmoa
+    )
+    set_tests_properties(main_window_noop_cmoa_integration PROPERTIES
+        TIMEOUT 120
+        RUN_SERIAL TRUE
+        SKIP_RETURN_CODE 77
+    )
     add_test(NAME clip_shortcut_badge_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_clip_shortcut_badge_integration.py
                 ${CMAKE_BINARY_DIR}
