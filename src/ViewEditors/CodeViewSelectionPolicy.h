@@ -8,11 +8,14 @@ class CodeViewSelectionPolicy
 public:
     enum class Reason {
         ElementContent,
+        Sentence,
+        SentenceFallbackElement,
         OutsideDocument,
         InMarkup,
         UnsafeContainer,
         EmptyContent,
-        NoTextUnit
+        NoTextUnit,
+        NoSentence
     };
 
     struct Result {
@@ -26,4 +29,5 @@ public:
     };
 
     static Result FindTextUnit(const QString &source, TagLister &tags, int position);
+    static Result FindSentence(const QString &source, TagLister &tags, int position);
 };
