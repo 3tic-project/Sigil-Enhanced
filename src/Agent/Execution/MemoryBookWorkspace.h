@@ -36,6 +36,13 @@ struct MemoryCheckpoint {
     QJsonObject metadata;
     QStringList spineIds;
     QJsonArray toc;
+    bool guardedTaskRestore = false;
+    bool sealed = false;
+    bool restored = false;
+    QString bookSessionId;
+    QStringList affectedResourceIds;
+    QHash<QString, QString> expectedBookPaths;
+    QHash<QString, QString> expectedPostTexts;
 };
 
 class MemoryBookWorkspace : public IBookWorkspace
@@ -51,12 +58,16 @@ public:
     void setToc(const QJsonArray &toc);
     void setEpubVersion(const QString &version);
     void bumpRevision();
+    void resetBookSession();
 
+    QString bookSessionId() const override;
     quint64 revision() const override;
     QJsonObject summary() const override;
     QJsonArray resources() const override;
     QJsonArray spine() const override;
     QJsonArray toc() const override;
+    TocEditTree tocHierarchy() const override;
+    QString tocHierarchyIdentity() const override;
     QJsonObject metadata() const override;
     QJsonArray search(const QString &query, int max_matches) const override;
     BookOpResult readFragment(const QString &resource_id, int offset, int limit) const override;
@@ -95,9 +106,16 @@ public:
     BookOpResult renameResource(const QString &resource_id, const QString &book_path) override;
     BookOpResult updateSpine(const QStringList &resource_ids) override;
     BookOpResult updateToc(const QJsonArray &entries) override;
+    BookOpResult updateTocHierarchy(const TocEditTree &before,
+                                    const TocEditTree &after) override;
     BookOpResult createCheckpoint(const QString &label) override;
     QJsonArray listCheckpoints() const override;
     BookOpResult restoreCheckpoint(const QString &checkpoint_id) override;
+    BookOpResult createTaskRestorePoint(const QString &label,
+                                        const QStringList &resource_ids) override;
+    BookOpResult sealTaskRestorePoint(const QString &checkpoint_id) override;
+    BookOpResult restoreTaskRestorePoint(const QString &checkpoint_id) override;
+    BookOpResult discardTaskRestorePoint(const QString &checkpoint_id) override;
     QString resourceText(const QString &resource_id) const override;
     QString workingText(const QString &resource_id) const override;
     quint64 resourceRevision(const QString &resource_id) const override;
@@ -117,6 +135,7 @@ private:
                                bool add_to_spine,
                                const QString &after_resource_id);
 
+    QString m_bookSessionId;
     quint64 m_revision = 1;
     QString m_epubVersion = QStringLiteral("3.0");
     QJsonObject m_metadata;
@@ -132,6 +151,8 @@ private:
     bool m_hasStagedSpine = false;
     QJsonArray m_stagedToc;
     bool m_hasStagedToc = false;
+    bool m_hasStagedTocHierarchy = false;
+    QString m_transactionTocIdentity;
     QList<MemoryCheckpoint> m_checkpoints;
     int m_failAfter = -1;
     QHash<QString, QString> m_stagedAfterIds;

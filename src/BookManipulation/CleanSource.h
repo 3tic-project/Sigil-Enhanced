@@ -42,6 +42,9 @@ public:
 
     static QString ProcessXML(const QString &source, const QString mtype="");
 
+    // Persistent OPF source is separate from the normalized parser input.
+    static QString ProcessOPFSource(const QString &source);
+
     static XhtmlDoc::WellFormedError WellFormedXMLCheck(const QString &source, const QString mtype="");
 
     static bool IsWellFormedXML(const QString &source, const QString mtype="");
@@ -84,4 +87,3 @@ private:
 
 
 #endif // CLEANSOURCE_H
-

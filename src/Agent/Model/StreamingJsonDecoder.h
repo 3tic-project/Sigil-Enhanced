@@ -42,6 +42,7 @@ public:
 private:
     void parseLine(QByteArray line);
     void parsePayload(const QJsonObject &payload);
+    void parseUsage(const QJsonObject &usage);
     void applyToolCallDelta(const QJsonArray &tool_calls);
 
     QByteArray m_buffer;
@@ -49,6 +50,7 @@ private:
     QString m_content;
     QString m_finishReason;
     QString m_error;
+    ModelUsage m_usage;
     QList<ToolCall> m_toolCalls;
     QList<StreamDelta> m_deltas;
     bool m_done = false;

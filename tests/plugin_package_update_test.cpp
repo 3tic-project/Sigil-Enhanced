@@ -1,7 +1,10 @@
+#include "EmbedPython/EmbeddedPython.h"
+
 #include <cstdlib>
 #include <iostream>
 
 #include <QDomDocument>
+#include <QApplication>
 
 #include "PluginAPI/PluginPackageUpdate.h"
 
@@ -41,8 +44,15 @@ QDomElement FirstByLocalName(const QDomNode &node, const QString &name)
 
 }
 
-int main()
+int main(int argc, char **argv)
 {
+    QApplication app(argc, argv);
+    Require(argc == 3, "Expected source root and EPUB fixture");
+    const QString root = QString::fromLocal8Bit(argv[1]);
+    auto &python = EmbeddedPython::instance();
+    python.addToPythonSysPath(qEnvironmentVariable("SIGIL_TEST_PYTHON_ROOT"));
+    python.addToPythonSysPath(root + "/src/Resource_Files/plugin_launchers/python");
+    python.addToPythonSysPath(root + "/src/Resource_Files/python3lib");
     QString updated;
     QString error;
     const QJsonArray metadata {

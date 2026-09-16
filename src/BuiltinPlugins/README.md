@@ -242,30 +242,42 @@ Phase 2:
 - 批量转换通过资源写回，不提供跨文件文本 undo；执行前会自动创建 Sigil Checkpoint。
 - 当前文件转换走 `FlowTab::ReplaceDocumentText()`，尽量保留 Code View undo。
 
-## BookLive / EBPAJ Div Paragraph Normalizer
+## Generic DIV Paragraph Normalizer
 
-目标是修复 BookLive、Kadokawa、EBPAJ 回流 EPUB 中“多层布局 `div` 下使用叶子 `div` 模拟段落”的结构，同时保持原纵排、行高、对齐、标题间距和空行表现。
+目标是把 BookLive、Cmoa、EBPAJ/Kadokawa 等转换链中确实承担正文段落作用的
+`div` 改成 `p`，同时让合法布局容器、标题包装、Ruby、空行和纵排样式保持不变。
+判定不绑定书店名、随机 class 或固定 wrapper 深度。
 
 入口:
 
-- `Enhancement > Analyze BookLive Div Paragraphs (Whole Book)...`
-- `Enhancement > Normalize BookLive Div Paragraphs (Current File)...`
-- `Enhancement > Normalize BookLive Div Paragraphs (Whole Book)...`
-- Automate: `AnalyzeBookLiveParagraphs`、`NormalizeBookLiveParagraphs`
+- `Enhancement > Analyze DIV Paragraph Structure...`
+- `Enhancement > Normalize DIV Paragraph Structure (Current File)...`
+- `Enhancement > Normalize DIV Paragraph Structure...`
+- Automate 兼容命令：`AnalyzeBookLiveParagraphs`、`NormalizeBookLiveParagraphs`
 
-转换策略:
+模块与策略:
 
-- 通过叶子比例、子节点数和深度发现 content-parent，不绑定每本书都会变化的 `css_class_N`。
-- 只在 content-parent 内原位把已证明安全的伪段落 `div` 改成 `p.se-bl-paragraph`；承载 writing-mode、justify、line-height 等样式的布局 wrapper 保持原样。
-- 新 `p` 完整复制源 `div` 的 class、inline style、id/name 和其它属性；外部样式表仍按原 class 生效。
-- 单层嵌套的标题、署名或装饰文字不做语义猜测：外层变成 `p`，内层变成 `span.se-bl-inner-block`，两层属性均保留。
-- `div > br` 空行、场景分隔和插图叶均原位转换并保留，不删除空行、不写死 `5em` 等跨书不稳定的视觉值。
-- 注入的默认规则位于原链接样式表之前，只补偿 `p`/`span` 与原 `div` 的浏览器默认盒模型差异；原 class 规则和 inline style 保持更高或更后的级联优先级。
-- 目录、`body.p-image` 图页和复杂嵌套块默认跳过；短页、后记和署名页只允许从 Current 入口人工确认。
-- 每次转换验证 XML、可见文本、原属性/class/style 多重集、`id`/`name`、`href`/`src`、ruby/rt/rp 与图片计数；任一不一致即不写回。
-- 整书入口只处理 auto-safe 页面并先创建 Checkpoint；当前文件入口使用编辑器文本替换保留 undo。
+- `BookLiveParagraphNormalizer` 使用 DOM 分类，但用源码范围只替换候选的起止标签名；
+  默认只转换满足 `p` 内容模型的正文叶子。
+- 标题包装作为受保护岛，不阻止相邻正文转换。空行、场景分隔、图片包装和单层
+  嵌套视觉块各有独立设置，通用预设默认关闭。
+- `DivParagraphStylesheetResolver` 从 XHTML 解析内联、链接、递归 `@import` 和
+  `xml-stylesheet` 依赖；`DivParagraphCssAnalyzer` 把标签选择器、of-type 选择器、
+  不成对的 `div`/`p` 规则和无法证明的默认 margin 差异列为人工检查。
+- 转换验证有序字符、Ruby 子树、标题子树、`id`/`name`、`href`/`src`、旧展示属性
+  及 XML 良构性；正文新增候选不会被旧幂等标记隐藏。
+- `DivParagraphNormalizationPlan` 绑定资源、XHTML/CSS 哈希、规则/预设、范围及输出；
+  预览后源文件或样式变化会拒绝旧计划。用户选取的子集会重新生成独立计划。
+- 交互式批量写回复用 `SearchBatchCoordinator`，先完整验证，再创建 Checkpoint，
+  每资源保留撤销，并在提交失败时回滚。分析与取消不修改 Book。
+- 默认不格式化源码；开启后才调用 XHTML formatter。旧 Automate 规范化命令明确
+  使用 `booklive-compat-v1`，保留旧类别、补偿样式和格式化行为。
 
-仓库 CTest 位于 `tests/booklive_paragraph_normalizer_test.cpp`；本地全书回归程序位于 `todo/finish/booklive_normalizer_test/`，覆盖 `todo/booklive_test/` 中两本真实 EPUB。
+CTest 位于 `tests/booklive_paragraph_normalizer_test.cpp`、
+`tests/div_paragraph_normalization_contract_test.py`、
+`tests/div_paragraph_performance_test.cpp` 和 `tests/div_paragraph_dialog_test.cpp`。
+完整的用户流程、安全边界与验证记录见
+[`docs/DivParagraphNormalization.md`](../../docs/DivParagraphNormalization.md)。
 
 相比旧实现的改进:
 

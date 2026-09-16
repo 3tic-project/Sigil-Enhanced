@@ -4,6 +4,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSet>
 
 #include "Agent/AgentTypes.h"
 #include "Agent/Core/AgentSession.h"
@@ -63,6 +64,11 @@ int main()
             } }
         } } }
     }, QStringLiteral("tool_calls"));
+    stream += QByteArray(
+        "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":120,"
+        "\"completion_tokens\":35,\"total_tokens\":155,"
+        "\"prompt_tokens_details\":{\"cached_tokens\":80},"
+        "\"completion_tokens_details\":{\"reasoning_tokens\":12}}}\n");
     stream += QByteArray("data: [DONE]\n");
 
     // Split mid-line to prove the decoder buffers.
@@ -91,6 +97,47 @@ int main()
             "tool call argument fragments must concatenate");
     Require(turn.finishReason == QStringLiteral("tool_calls"),
             "finish_reason tool_calls must be preserved");
+    Require(turn.usage.inputTokens == 120
+                && turn.usage.outputTokens == 35
+                && turn.usage.totalTokens == 155
+                && turn.usage.cachedInputTokens == 80
+                && turn.usage.reasoningTokens == 12,
+            "an empty-choices final chunk must retain provider-reported token usage");
+    const QJsonObject usage_json = modelUsageToJson(turn.usage);
+    Require(usage_json.value(QStringLiteral("input_tokens")).toInteger() == 120
+                && usage_json.value(QStringLiteral("reasoning_tokens")).toInteger() == 12,
+            "reported usage must serialize to the provider-neutral event schema");
+
+    ModelResponseTiming timing;
+    timing.firstByteMs = 14;
+    timing.firstEventMs = 37;
+    const ModelResponseTiming timing_round_trip =
+        modelResponseTimingFromJson(modelResponseTimingToJson(timing));
+    Require(timing_round_trip.firstByteMs == 14
+                && timing_round_trip.firstEventMs == 37,
+            "response timing must round-trip through the lifecycle event schema");
+
+    StreamingJsonDecoder alias_decoder;
+    alias_decoder.feed(QByteArray(
+        "data: {\"usage\":{\"input_tokens\":7,\"output_tokens\":3},"
+        "\"choices\":[]}\n\ndata: [DONE]\n\n"));
+    const ModelTurn alias_turn = alias_decoder.finish();
+    Require(alias_turn.usage.inputTokens == 7
+                && alias_turn.usage.outputTokens == 3
+                && alias_turn.usage.totalTokens == 10,
+            "input/output token aliases must parse and yield an exact total when omitted");
+
+    StreamingJsonDecoder deepseek_usage_decoder;
+    deepseek_usage_decoder.feed(QByteArray(
+        "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],"
+        "\"usage\":{\"prompt_tokens\":21,\"completion_tokens\":9,"
+        "\"total_tokens\":30,\"prompt_cache_hit_tokens\":13,"
+        "\"completion_tokens_details\":{\"reasoning_tokens\":5}}}\n\n"
+        "data: [DONE]\n\n"));
+    const ModelTurn deepseek_usage_turn = deepseek_usage_decoder.finish();
+    Require(deepseek_usage_turn.usage.cachedInputTokens == 13
+                && deepseek_usage_turn.usage.reasoningTokens == 5,
+            "DeepSeek top-level cache hits and nested reasoning usage must be retained");
 
     AgentSession session;
     QJsonArray calls { toolCallToJson(turn.toolCalls.first()) };
@@ -133,6 +180,87 @@ int main()
     }
     Require(assistant_omits_reasoning,
             "tools absent → prior CoT may be omitted and must not be required");
+
+    AgentSession bounded_session;
+    auto append_tool_turn = [](AgentSession *target,
+                               const QString &user_text,
+                               const QString &call_id,
+                               const QString &answer) {
+        ToolCall history_call;
+        history_call.id = call_id;
+        history_call.name = QStringLiteral("book.summary");
+        history_call.argumentsJson = QStringLiteral("{}");
+        target->append(AgentEventType::UserMessage, QJsonObject {
+            { QStringLiteral("text"), user_text }
+        });
+        target->append(AgentEventType::AssistantMessage, QJsonObject {
+            { QStringLiteral("content"), answer },
+            { QStringLiteral("tool_calls"), QJsonArray {
+                toolCallToJson(history_call) } }
+        });
+        target->append(AgentEventType::ToolCompleted, QJsonObject {
+            { QStringLiteral("tool_call_id"), call_id },
+            { QStringLiteral("name"), QStringLiteral("book.summary") },
+            { QStringLiteral("data"), QJsonObject {
+                { QStringLiteral("marker"), call_id } } }
+        });
+    };
+    append_tool_turn(&bounded_session,
+                     QStringLiteral("old-") + QString(4096, QLatin1Char('o')),
+                     QStringLiteral("old-call"), QStringLiteral("old-answer"));
+    bounded_session.append(AgentEventType::UserMessage, QJsonObject {
+        { QStringLiteral("text"), QStringLiteral("recent-turn") }
+    });
+    bounded_session.append(AgentEventType::AssistantMessage, QJsonObject {
+        { QStringLiteral("content"), QStringLiteral("recent-answer") }
+    });
+    append_tool_turn(&bounded_session,
+                     QStringLiteral("current-") + QString(2048, QLatin1Char('c')),
+                     QStringLiteral("current-call"),
+                     QStringLiteral("current-answer"));
+
+    HistoryAssemblyStats bounded_stats;
+    const QList<ChatMessage> bounded_messages = assembler.assemble(
+        bounded_session.events(), true, 512, &bounded_stats);
+    QString bounded_text;
+    QSet<QString> assistant_call_ids;
+    int tool_message_count = 0;
+    for (const ChatMessage &message : bounded_messages) {
+        bounded_text += message.content;
+        for (const ToolCall &call : message.toolCalls) {
+            assistant_call_ids.insert(call.id);
+        }
+        if (message.role == QLatin1String("tool")) {
+            ++tool_message_count;
+            Require(assistant_call_ids.contains(message.toolCallId),
+                    "bounded history must never retain an orphan tool result");
+        }
+    }
+    Require(!bounded_text.contains(QStringLiteral("old-answer"))
+                && !bounded_text.contains(QStringLiteral("old-call"))
+                && bounded_text.contains(QStringLiteral("recent-turn"))
+                && bounded_text.contains(QStringLiteral("recent-answer"))
+                && bounded_text.contains(QStringLiteral("current-answer"))
+                && bounded_text.contains(QString(2048, QLatin1Char('c')))
+                && tool_message_count == 1
+                && assistant_call_ids == QSet<QString> {
+                    QStringLiteral("current-call") },
+            "history budget must keep a contiguous suffix of complete turns and the full current turn");
+    const QJsonObject bounded_stats_json = bounded_stats.toJson();
+    Require(bounded_stats.budgetBytes == 512
+                && bounded_stats.totalTurnCount == 3
+                && bounded_stats.includedTurnCount == 2
+                && bounded_stats.omittedTurnCount == 1
+                && bounded_stats.includedMessageCount == 5
+                && bounded_stats.omittedMessageCount == 3
+                && bounded_stats.includedPreviousTurnBytes > 0
+                && bounded_stats.includedPreviousTurnBytes <= 512
+                && bounded_stats.currentTurnBytes > 512
+                && bounded_stats_json.value(
+                    QStringLiteral("limit_enabled")).toBool()
+                && bounded_stats_json.value(
+                    QStringLiteral("omitted_turn_count")).toInt() == 1,
+            "history budget statistics must disclose exact inclusion and current-turn overflow");
 
     ModelRequest request;
     request.model = QStringLiteral("deepseek-v4-flash");

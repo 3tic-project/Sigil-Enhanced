@@ -30,6 +30,8 @@ set( MAIN_FILES
 set( BOOK_MANIPULATION_FILES
     BookManipulation/Book.cpp
     BookManipulation/Book.h
+    BookManipulation/NavigationRepair.cpp
+    BookManipulation/NavigationRepair.h
     BookManipulation/BookReports.cpp
     BookManipulation/BookReports.h
     BookManipulation/Index.cpp
@@ -42,6 +44,8 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/HtmlNamedEntity.h
     BookManipulation/NcxNavigation.cpp
     BookManipulation/NcxNavigation.h
+    BookManipulation/TocTreeTransform.cpp
+    BookManipulation/TocTreeTransform.h
     BookManipulation/FolderKeeper.cpp
     BookManipulation/FolderKeeperExt.cpp
     BookManipulation/FolderKeeper.h
@@ -83,6 +87,8 @@ set( AGENT_FILES
     Agent/Core/PromptAssembler.h
     Agent/Model/AgentModelCatalog.cpp
     Agent/Model/AgentModelCatalog.h
+    Agent/Model/AgentConnectionProbe.cpp
+    Agent/Model/AgentConnectionProbe.h
     Agent/Model/AgentProviderPreset.cpp
     Agent/Model/AgentProviderPreset.h
     Agent/Model/HistoryAssembler.cpp
@@ -98,6 +104,10 @@ set( AGENT_FILES
     Agent/Security/PermissionPolicy.h
     Agent/Tools/BookTools.cpp
     Agent/Tools/BookTools.h
+    Agent/Tools/DivParagraphTools.cpp
+    Agent/Tools/DivParagraphTools.h
+    Agent/Tools/TocTools.cpp
+    Agent/Tools/TocTools.h
     Agent/Tools/IAgentTool.h
     Agent/Tools/ToolRegistry.cpp
     Agent/Tools/ToolRegistry.h
@@ -126,12 +136,22 @@ set( AGENT_FILES
     Agent/Persistence/AgentSettings.h
     Agent/UI/AgentDock.cpp
     Agent/UI/AgentDock.h
+    Agent/UI/AgentPlanComparisonDialog.cpp
+    Agent/UI/AgentPlanComparisonDialog.h
     Agent/UI/GuiApprovalGate.h
 )
 
 set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     BuiltinPlugins/BookLiveParagraphNormalizer.h
+    BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    BuiltinPlugins/CmoaParagraphNormalizer.h
+    BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    BuiltinPlugins/DivParagraphCssAnalyzer.h
+    BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    BuiltinPlugins/DivParagraphNormalizationPlan.h
+    BuiltinPlugins/DivParagraphStylesheetResolver.cpp
+    BuiltinPlugins/DivParagraphStylesheetResolver.h
     BuiltinPlugins/BrParagraphNormalizer.cpp
     BuiltinPlugins/BrParagraphNormalizer.h
     BuiltinPlugins/EpubStructureNormalizer.cpp
@@ -246,6 +266,8 @@ set( DIALOG_FILES
     Dialogs/EditRO.h
     Dialogs/EditTOC.cpp
     Dialogs/EditTOC.h
+    Dialogs/NavigationRepairDialog.cpp
+    Dialogs/NavigationRepairDialog.h
     Dialogs/EmptyLayout.cpp
     Dialogs/EmptyLayout.h
     Dialogs/ImageResizeDialog.cpp
@@ -330,6 +352,10 @@ set( DIALOG_FILES
     Dialogs/ChineseConversionDialog.h
     Dialogs/ChineseConversionPreviewDialog.cpp
     Dialogs/ChineseConversionPreviewDialog.h
+    Dialogs/DivParagraphNormalizationDialog.cpp
+    Dialogs/DivParagraphNormalizationDialog.h
+    Dialogs/DivParagraphNormalizationPreviewDialog.cpp
+    Dialogs/DivParagraphNormalizationPreviewDialog.h
     Dialogs/PreferenceWidgets/AppearanceWidget.cpp
     Dialogs/PreferenceWidgets/AppearanceWidget.h
     Dialogs/PreferenceWidgets/GeneralSettingsWidget.cpp
@@ -429,6 +455,10 @@ set( WIDGET_FILES
     Widgets/ImageView.h
     Widgets/AdjustImage.cpp
     Widgets/AdjustImage.h
+    Widgets/ActionShortcutBadge.cpp
+    Widgets/ActionShortcutBadge.h
+    Widgets/ShortcutBadgeModel.cpp
+    Widgets/ShortcutBadgeModel.h
     Widgets/AVView.cpp
     Widgets/AVView.h
     Widgets/PdfView.cpp
@@ -719,6 +749,8 @@ set( VIEW_EDITOR_FILES
     ViewEditors/CodeViewEditor.cpp
     ViewEditors/CodeViewEditorExt.cpp
     ViewEditors/CodeViewEditor.h
+    ViewEditors/CodeViewSelectionPolicy.cpp
+    ViewEditors/CodeViewSelectionPolicy.h
     ViewEditors/WebEngPage.cpp
     ViewEditors/WebEngPage.h
     ViewEditors/SimplePage.cpp

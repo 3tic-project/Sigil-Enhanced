@@ -243,15 +243,19 @@ bool Resource::Delete()
         successful = Utility::SDeleteFile(m_FullFilePath);
     }
 
-    if (successful) {
-        emit Deleted(this);
-        // try to prevent any resource modified signals from going out
-        // while we wait for delete to actually happen
-        disconnect(this, 0, 0, 0);
-        deleteLater();
-    }
+    if (successful) FinalizeDeletionAfterFileRemoval();
 
     return successful;
+}
+
+void Resource::FinalizeDeletionAfterFileRemoval()
+{
+    Q_ASSERT(!QFileInfo::exists(m_FullFilePath));
+    emit Deleted(this);
+    // try to prevent any resource modified signals from going out
+    // while we wait for delete to actually happen
+    disconnect(this, 0, 0, 0);
+    deleteLater();
 }
 
 

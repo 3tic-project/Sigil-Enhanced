@@ -543,10 +543,15 @@ QJsonObject parseManuscriptInBook(IBookWorkspace *workspace, const QString &manu
     QJsonArray images;
     const QHash<QString, QString> index = imageIndex(workspace);
     QSet<QString> seen;
+    QStringList image_paths;
     for (auto it = index.constBegin(); it != index.constEnd(); ++it) {
         const QString path_value = it.value();
         if (seen.contains(path_value)) continue;
         seen.insert(path_value);
+        image_paths.append(path_value);
+    }
+    std::sort(image_paths.begin(), image_paths.end());
+    for (const QString &path_value : image_paths) {
         images.append(QJsonObject {
             { QStringLiteral("name"), fileBaseName(path_value) },
             { QStringLiteral("book_path"), path_value }

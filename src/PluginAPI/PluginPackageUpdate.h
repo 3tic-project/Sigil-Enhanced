@@ -31,6 +31,9 @@ struct PackageManifestRelocation {
     QString targetHref;
 };
 
+// Read-only model for the flat structured API. Never persist this projection.
+bool ReadPackageModel(const QString &source, QString *model, QString *error);
+// Return source-preserving plans; failures leave the output argument untouched.
 bool ApplyMetadataUpdate(const QString &source, const QJsonArray &entries,
                          QString *updated, QString *error);
 bool ApplyManifestAdditions(const QString &source,

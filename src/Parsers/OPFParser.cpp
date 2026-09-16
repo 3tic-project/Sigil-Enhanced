@@ -377,6 +377,15 @@ int BaseParser::stopWhenContains(const QStringView tgt, const QString& stopchars
 
 void OPFParser::parse(const QString& source)
 {
+    // A parser can be reused; its baseline must describe only this source.
+    m_package = PackageEntry();
+    m_metans = MetaNSEntry();
+    m_metadata.clear();
+    m_manifest.clear();
+    m_spineattr = SpineAttrEntry();
+    m_spine.clear();
+    m_guide.clear();
+    m_bindings.clear();
     BaseParser fxp(source);
     QString tcontent;
     BaseParser::MarkupInfo matching_begin_tag;
@@ -506,6 +515,7 @@ void OPFParser::parse(const QString& source)
             continue;
         }
     }
+    m_original_model_xml = convert_to_xml();
 }
 
 

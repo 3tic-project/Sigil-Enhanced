@@ -926,6 +926,21 @@ if a sans-serif font-family specified in your CSS</source>
         <source>PreFind Selection</source>
         <translation>预查找选区</translation>
     </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="631"/>
+        <source>Clip Toolbar:</source>
+        <translation>Clip 工具栏：</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="637"/>
+        <source>Show the current shortcut on each of the first ten Clip buttons.</source>
+        <translation>在前十个 Clip 按钮上显示当前快捷键。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="640"/>
+        <source>Show Clips shortcut badges</source>
+        <translation>显示 Clips 快捷键角标</translation>
+    </message>
 </context>
 <context>
     <name>AriaClips</name>
@@ -1811,6 +1826,10 @@ if a sans-serif font-family specified in your CSS</source>
 </context>
 <context>
     <name>BookBrowser</name>
+    <message>
+        <source>Generate a navigation document from the Table of Contents panel before editing landmarks.</source>
+        <translation>编辑地标前，请先在目录面板中生成导航文档。</translation>
+    </message>
     <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="86"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="117"/>
@@ -3203,6 +3222,14 @@ Do you want to save your changes?</source>
         <translation>此位置没有开放标记。</translation>
     </message>
     <message>
+        <source>Select Element Content</source>
+        <translation>选择元素内容</translation>
+    </message>
+    <message>
+        <source>Select Whole Element</source>
+        <translation>选择整个元素</translation>
+    </message>
+    <message>
         <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1600"/>
         <source>Add To Default Dictionary</source>
         <translation>添加到默认字典</translation>
@@ -4051,10 +4078,14 @@ other end to continue searching.</source>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="122"/>
-        <source>Decrease the heading level of the selected entry.
+        <source>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</source>
-        <translation>所选目录条目降一级。
-您也可以使用左箭头键。</translation>
+        <translation>提升所选条目，并将其后续同级条目移到其下；保持目录阅读顺序。
+也可使用左方向键。</translation>
+    </message>
+    <message>
+        <source>Promote one level</source>
+        <translation>提升一级</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="141"/>
@@ -4064,10 +4095,38 @@ You can also use the left arrow key.</source>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="169"/>
-        <source>Increase the heading level of the selected entry.
+        <source>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</source>
-        <translation>所选目录条目升一级。
-您也可以使用右箭头键。</translation>
+        <translation>将所选条目移入前一个同级条目，保留已有子目录。
+也可使用右方向键。</translation>
+    </message>
+    <message>
+        <source>Demote one level</source>
+        <translation>降级一级</translation>
+    </message>
+    <message>
+        <source>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</source>
+        <translation>启用后，提升的条目会接管后续同级条目，以保持目录阅读顺序不变。</translation>
+    </message>
+    <message>
+        <source>Promotion adopts following siblings</source>
+        <translation>提升时接管后续同级条目</translation>
+    </message>
+    <message>
+        <source>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</source>
+        <translation>启用后，同时将最终目录层级应用到 EPUB 3 兼容 NCX。</translation>
+    </message>
+    <message>
+        <source>Also sync compatibility NCX</source>
+        <translation>同时同步兼容 NCX</translation>
+    </message>
+    <message>
+        <source>TOC edit status</source>
+        <translation>目录编辑状态</translation>
+    </message>
+    <message>
+        <source>This EPUB also contains an NCX. It will stay unchanged unless synchronization is enabled.</source>
+        <translation>此 EPUB 还包含 NCX。除非启用同步，否则 NCX 将保持不变。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="99"/>
@@ -4078,6 +4137,70 @@ You can also use the right arrow key.</source>
         <location filename="../../Dialogs/EditTOC.cpp" line="100"/>
         <source>Target</source>
         <translation>目标</translation>
+    </message>
+    <message>
+        <source>Edit TOC entry</source>
+        <translation>编辑目录条目</translation>
+    </message>
+    <message>
+        <source>Edit TOC target</source>
+        <translation>编辑目录目标</translation>
+    </message>
+    <message>
+        <source>Cannot promote: a selected entry is already at the top level.</source>
+        <translation>无法提升：所选条目中有条目已位于顶层。</translation>
+    </message>
+    <message>
+        <source>Cannot demote: a selected range has no previous sibling.</source>
+        <translation>无法降级：所选区段没有前一个同级条目。</translation>
+    </message>
+    <message>
+        <source>The selected hierarchy changes overlap; no entries were moved.</source>
+        <translation>所选层级变更互相重叠；未移动任何条目。</translation>
+    </message>
+    <message>
+        <source>The TOC hierarchy is inconsistent; no entries were moved.</source>
+        <translation>目录层级不一致；未移动任何条目。</translation>
+    </message>
+    <message>
+        <source>Promote TOC entries</source>
+        <translation>提升目录条目</translation>
+    </message>
+    <message>
+        <source>Promoted %1 item(s); reassigned %2 following item(s).</source>
+        <translation>已提升 %1 项；重新归属 %2 个后续条目。</translation>
+    </message>
+    <message>
+        <source>Demote TOC entries</source>
+        <translation>降级目录条目</translation>
+    </message>
+    <message>
+        <source>Demoted %1 item(s).</source>
+        <translation>已降级 %1 项。</translation>
+    </message>
+    <message>
+        <source>Move TOC entries up</source>
+        <translation>上移目录条目</translation>
+    </message>
+    <message>
+        <source>Move TOC entries down</source>
+        <translation>下移目录条目</translation>
+    </message>
+    <message>
+        <source>Add TOC entry</source>
+        <translation>添加目录条目</translation>
+    </message>
+    <message>
+        <source>Delete TOC entry</source>
+        <translation>删除目录条目</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>撤销</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>重做</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="384"/>
@@ -5531,6 +5654,14 @@ then find the Next match in Code View.&lt;/p&gt;</source>
 <context>
     <name>GeneralSettingsWidget</name>
     <message>
+        <source>Preserve OPF formatting and comments</source>
+        <translation>保留 OPF 原始格式与注释</translation>
+    </message>
+    <message>
+        <source>Keep OPF source when opening books and apply package changes locally. Turn off to use legacy automatic OPF formatting. HTML mending is configured separately.</source>
+        <translation>打开书籍时保留 OPF 原文，并局部应用必要修改。关闭后使用旧版自动整理 OPF 的行为。HTML 修复单独设置。</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="14"/>
         <source>General Settings</source>
         <translation>一般设定</translation>
@@ -6677,6 +6808,18 @@ You can then check or uncheck individual headings in the list above.</source>
 <context>
     <name>ImportEPUB</name>
     <message>
+        <source>Missing EPUB 3 navigation document. No files were generated. The Table of Contents panel can display the NCX and offers an explicit navigation repair.</source>
+        <translation>缺少 EPUB 3 导航文档。未生成任何文件。目录面板可显示 NCX，并提供明确的导航修复操作。</translation>
+    </message>
+    <message>
+        <source>The OPF has no usable spine. No automatic repair was applied.</source>
+        <translation>OPF 中没有可用的 spine。未执行自动修复。</translation>
+    </message>
+    <message>
+        <source>Expected a package element in the OPF namespace.</source>
+        <translation>应为 OPF 命名空间中的 package 元素。</translation>
+    </message>
+    <message>
         <location filename="../../Importers/ImportEPUB.cpp" line="138"/>
         <source>Files exist in epub that are not listed in the manifest, they will be ignored.</source>
         <translation>epub 中存在但未被列举在清单中的文件，这些文件将被忽略。</translation>
@@ -7039,10 +7182,6 @@ Do you want to save your changes?</source>
     <message>
         <source>The built-in KFX converter is missing from this installation.</source>
         <translation>此安装中缺少内置 KFX 转换器。</translation>
-    </message>
-    <message>
-        <source>Cannot create a temporary EPUB file: %1</source>
-        <translation>无法创建临时 EPUB 文件：%1</translation>
     </message>
     <message>
         <source>Starting KFX conversion...</source>
@@ -10731,6 +10870,14 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <source>Generate a navigation document from the Table of Contents panel first.</source>
+        <translation>请先在目录面板中生成导航文档。</translation>
+    </message>
+    <message>
+        <source>Navigation document generated.</source>
+        <translation>导航文档已生成。</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="58"/>
         <source>&amp;File</source>
@@ -20352,13 +20499,13 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
     <name>PModifiedVerPrefsWidget</name>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="14"/>
-        <source>ModifiedVersion Prefs</source>
-        <translation>增强版设置</translation>
+        <source>Editor</source>
+        <translation>编辑器</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="24"/>
-        <source>General</source>
-        <translation>常规</translation>
+        <source>Code View</source>
+        <translation>代码视图</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="30"/>
@@ -20374,6 +20521,26 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="43"/>
         <source>Emmet</source>
         <translation>Emmet</translation>
+    </message>
+    <message>
+        <source>Double-click selection:</source>
+        <translation>双击选择：</translation>
+    </message>
+    <message>
+        <source>Current paragraph/tag content</source>
+        <translation>当前段落/标签内容</translation>
+    </message>
+    <message>
+        <source>Character or word (original behavior)</source>
+        <translation>字或词（原有行为）</translation>
+    </message>
+    <message>
+        <source>Current sentence</source>
+        <translation>当前句子</translation>
+    </message>
+    <message>
+        <source>Choose paragraph/tag content, the current sentence, or original word behavior. Nested markup such as Ruby stays intact.</source>
+        <translation>选择段落/标签内容、当前句子或原有字词行为；Ruby 等嵌套标记会保持完整。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="66"/>
@@ -25120,6 +25287,18 @@ Use if you edit any HTML files while Spellcheck is open.</source>
 <context>
     <name>TableOfContents</name>
     <message>
+        <source>Missing EPUB 3 navigation document. If available, NCX contents are shown for viewing only.</source>
+        <translation>缺少 EPUB 3 导航文档。如有 NCX，其内容仅供查看。</translation>
+    </message>
+    <message>
+        <source>View Issues</source>
+        <translation>查看问题</translation>
+    </message>
+    <message>
+        <source>Generate Navigation Document…</source>
+        <translation>生成导航文档…</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/TableOfContents.cpp" line="46"/>
         <source>Table Of Contents</source>
         <translation>目录</translation>
@@ -26865,5 +27044,542 @@ Continue using the requested filename?</source>
     <message><source>PBE %1</source><translation>块后内距 %1</translation></message>
     <message><source>WM %1</source><translation>书写模式 %1</translation></message>
     <message><source>Layout metrics unavailable</source><translation>暂无排版度量</translation></message>
+</context>
+<context>
+    <name>NavigationRepair</name>
+    <message>
+        <source>The NCX is not well-formed. Review it before generating navigation.</source>
+        <translation>NCX 格式不良构。请先检查 NCX，再生成导航。</translation>
+    </message>
+    <message>
+        <source>Navigation repair is only available for EPUB 3 books without a navigation document.</source>
+        <translation>导航修复仅适用于缺少导航文档的 EPUB 3 书籍。</translation>
+    </message>
+    <message>
+        <source>Repair requires well-formed OPF and at most one XHTML navigation declaration. Review the OPF first.</source>
+        <translation>修复要求 OPF 格式良构，且最多有一个 XHTML 导航声明。请先检查 OPF。</translation>
+    </message>
+    <message>
+        <source>The declared navigation path is not a local XHTML path. Review the OPF first.</source>
+        <translation>声明的导航路径不是本地 XHTML 路径。请先检查 OPF。</translation>
+    </message>
+    <message>
+        <source>The navigation destination cannot be registered as an XHTML resource.</source>
+        <translation>导航目标位置无法注册为 XHTML 资源。</translation>
+    </message>
+    <message>
+        <source>The navigation destination must be an unused file in an existing book folder.</source>
+        <translation>导航目标必须是书籍现有文件夹中尚未使用的文件路径。</translation>
+    </message>
+    <message>
+        <source>There are no NCX entries or readable spine resources to use for navigation.</source>
+        <translation>没有可用于导航的 NCX 条目或可读 spine 资源。</translation>
+    </message>
+    <message>
+        <source>Contents</source>
+        <translation>目录</translation>
+    </message>
+    <message>
+        <source>An NCX entry has an empty label or an invalid local target. Review the NCX first.</source>
+        <translation>某个 NCX 条目的标题为空或本地链接目标无效。请先检查 NCX。</translation>
+    </message>
+    <message>
+        <source>The book or repair plan changed after preview. Review a new plan before applying it.</source>
+        <translation>预览后书籍或修复计划已变化。请重新预览计划后再应用。</translation>
+    </message>
+</context>
+<context>
+    <name>NavigationRepairDialog</name>
+    <message>
+        <source>Generate Navigation Document</source>
+        <translation>生成导航文档</translation>
+    </message>
+    <message>
+        <source>Create %1. No CSS file or spine entry will be added.</source>
+        <translation>创建 %1。不会添加 CSS 文件或 spine 条目。</translation>
+    </message>
+    <message>
+        <source>Navigation will use NCX entries.</source>
+        <translation>导航将使用 NCX 条目。</translation>
+    </message>
+    <message>
+        <source>Navigation will use the current spine order.</source>
+        <translation>导航将使用当前 spine 阅读顺序。</translation>
+    </message>
+    <message>
+        <source>The existing manifest declaration will be used; OPF will not change.</source>
+        <translation>将使用现有 manifest 声明；OPF 不会改变。</translation>
+    </message>
+    <message>
+        <source>One navigation item will be added to the OPF manifest.</source>
+        <translation>将向 OPF manifest 添加一个导航条目。</translation>
+    </message>
+    <message>
+        <source>New navigation source</source>
+        <translation>新导航源码</translation>
+    </message>
+    <message>
+        <source>OPF before</source>
+        <translation>修改前的 OPF</translation>
+    </message>
+    <message>
+        <source>OPF after</source>
+        <translation>修改后的 OPF</translation>
+    </message>
+</context>
+<context>
+    <name>ActionShortcutBadge</name>
+    <message>
+        <location filename="../../Widgets/ActionShortcutBadge.cpp" line="150"/>
+        <source>Key</source>
+        <translation>按键</translation>
+    </message>
+</context>
+<context>
+    <name>ShortcutBadgeModel</name>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="58"/>
+        <source>%1 · No shortcut assigned</source>
+        <translation>%1 · 未分配快捷键</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="60"/>
+        <source>%1, Clip %2, no shortcut assigned</source>
+        <translation>%1，Clip %2，未分配快捷键</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="64"/>
+        <source>%1 · %2</source>
+        <translation>%1 · %2</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="66"/>
+        <source>%1, Clip %2, %3</source>
+        <translation>%1，Clip %2，%3</translation>
+    </message>
+</context>
+<context>
+    <name>DivParagraphNormalizationDialog</name>
+    <message><source>Normalize Cmoa DIV Paragraphs</source><translation>规范化 Cmoa DIV 段落</translation></message>
+    <message><source>Analyze Cmoa/EBPAJ XHTML first, then preview a revision-bound plan. Only DIV leaves covered by the verified Cmoa CSS profile are converted automatically.</source><translation>先分析 Cmoa/EBPAJ XHTML，再预览绑定修订版本的计划。仅自动转换经过验证的 Cmoa CSS 配置所涵盖的 DIV 叶元素。</translation></message>
+    <message><source>Scope</source><translation>范围</translation></message>
+    <message><source>Current XHTML file</source><translation>当前 XHTML 文件</translation></message>
+    <message><source>Selected XHTML files (%1)</source><translation>选中的 XHTML 文件（%1）</translation></message>
+    <message><source>All XHTML files in the book</source><translation>书中所有 XHTML 文件</translation></message>
+    <message><source>Conversion categories</source><translation>转换类别</translation></message>
+    <message><source>Body-text paragraph DIVs</source><translation>正文段落 DIV</translation></message>
+    <message><source>The conservative content-model check is always enabled.</source><translation>始终启用保守的内容模型检查。</translation></message>
+    <message><source>Blank-line DIVs containing only BR</source><translation>仅含 BR 的空行 DIV</translation></message>
+    <message><source>Scene-separator DIVs</source><translation>场景分隔 DIV</translation></message>
+    <message><source>Image-only DIV wrappers</source><translation>仅含图片的 DIV 包装</translation></message>
+    <message><source>Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)</source><translation>单层嵌套视觉块（DIV 变为 P；内层 DIV 变为 SPAN）</translation></message>
+    <message><source>Format XHTML source after conversion</source><translation>转换后格式化 XHTML 源码</translation></message>
+    <message><source>Off by default. When off, only selected start/end tag names are patched.</source><translation>默认关闭。关闭时只修补选中的起止标签名。</translation></message>
+    <message><source>Tag-dependent CSS, scripts, fixed-layout indicators, lists, tables, SVG, MathML, and unknown mixed blocks remain review-only. No force-all mode is provided.</source><translation>依赖标签的 CSS、脚本、固定版式标记、列表、表格、SVG、MathML 和未知混合块仅供检查。本功能不提供强制全部转换模式。</translation></message>
+    <message><source>Analyze and Preview</source><translation>分析并预览</translation></message>
+</context>
+<context>
+    <name>DivParagraphNormalizationPreviewDialog</name>
+    <message><source>Ready to apply</source><translation>可应用</translation></message>
+    <message><source>Review required</source><translation>需检查</translation></message>
+    <message><source>Skipped</source><translation>已跳过</translation></message>
+    <message><source>Parse/validation error</source><translation>解析/验证错误</translation></message>
+    <message><source>Body flow</source><translation>正文流</translation></message>
+    <message><source>Already normalized</source><translation>已规范化</translation></message>
+    <message><source>TOC-like</source><translation>类似目录</translation></message>
+    <message><source>Notice/imprint</source><translation>声明/版权页</translation></message>
+    <message><source>Short flow</source><translation>短内容流</translation></message>
+    <message><source>CSS risk</source><translation>CSS 风险</translation></message>
+    <message><source>Complex/fixed layout</source><translation>复杂/固定版式</translation></message>
+    <message><source>Image/title page</source><translation>图片/扉页</translation></message>
+    <message><source>No candidate</source><translation>无候选</translation></message>
+    <message><source>No body</source><translation>无正文</translation></message>
+    <message><source>Parse error</source><translation>解析错误</translation></message>
+    <message><source>None detected</source><translation>未检测到</translation></message>
+    <message><source>%1 selector(s)</source><translation>%1 个选择器</translation></message>
+    <message><source>Cmoa Paragraph Normalization Preview</source><translation>Cmoa 段落规范化预览</translation></message>
+    <message><source>Cmoa paragraph resource analysis</source><translation>Cmoa 段落资源分析</translation></message>
+    <message><source>Apply</source><translation>应用</translation></message>
+    <message><source>File</source><translation>文件</translation></message>
+    <message><source>Classification</source><translation>分类</translation></message>
+    <message><source>Body candidates</source><translation>正文候选</translation></message>
+    <message><source>Blank/separator</source><translation>空行/分隔</translation></message>
+    <message><source>Protected</source><translation>受保护</translation></message>
+    <message><source>Status</source><translation>状态</translation></message>
+    <message><source>Before</source><translation>转换前</translation></message>
+    <message><source>Source before Cmoa paragraph normalization</source><translation>Cmoa 段落规范化前的源码</translation></message>
+    <message><source>After</source><translation>转换后</translation></message>
+    <message><source>Source after Cmoa paragraph normalization</source><translation>Cmoa 段落规范化后的源码</translation></message>
+    <message><source>Source Diff</source><translation>源码差异</translation></message>
+    <message><source>Before Preview</source><translation>转换前预览</translation></message>
+    <message><source>After Preview</source><translation>转换后预览</translation></message>
+    <message><source>Apply Selected Files</source><translation>应用选中文件</translation></message>
+    <message><source>Plan %1 · %2 of %3 ready files selected · %4 paragraph(s) planned · %5 protected block(s) · %6 review-only file(s) · %7 error(s)</source><translation>计划 %1 · 已选择 %3 个可应用文件中的 %2 个 · 计划转换 %4 个段落 · %5 个受保护块 · %6 个仅供检查文件 · %7 个错误</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Analyze Cmoa DIV Paragraphs...</source><translation>分析 Cmoa DIV 段落...</translation></message>
+    <message><source>Analyze current, selected, or all Cmoa/EBPAJ XHTML files without changing the book</source><translation>分析当前、选中或全部 Cmoa/EBPAJ XHTML 文件，不修改图书</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs (Current File)...</source><translation>规范化 Cmoa DIV 段落（当前文件）...</translation></message>
+    <message><source>Preview and convert proven Cmoa paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>预览并使用源码范围补丁转换当前 XHTML 文件中已确认的 Cmoa 段落 DIV 叶元素</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs...</source><translation>规范化 Cmoa DIV 段落...</translation></message>
+    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe Cmoa paragraphs</source><translation>选择范围，预览绑定修订版本的计划，并原子转换可自动安全处理的 Cmoa 段落</translation></message>
+    <message><source>Cmoa Paragraph Normalization</source><translation>Cmoa 段落规范化</translation></message>
+    <message><source>The selected scope contains no XHTML files.</source><translation>所选范围不包含 XHTML 文件。</translation></message>
+    <message><source>Analyzing Cmoa paragraph structure...</source><translation>正在分析 Cmoa 段落结构...</translation></message>
+    <message><source>Cmoa paragraph analysis cancelled. No files were changed.</source><translation>已取消 Cmoa 段落分析。未修改任何文件。</translation></message>
+    <message><source>Cmoa paragraph analysis completed. No files were changed.</source><translation>Cmoa 段落分析已完成。未修改任何文件。</translation></message>
+    <message><source>No auto-safe Cmoa paragraph changes were found.</source><translation>未发现可自动安全处理的 Cmoa 段落变更。</translation></message>
+    <message><source>Cmoa paragraph normalization cancelled. No files were changed.</source><translation>已取消 Cmoa 段落规范化。未修改任何文件。</translation></message>
+    <message><source>Validating selected Cmoa paragraph changes...</source><translation>正在验证选中的 Cmoa 段落变更...</translation></message>
+    <message><source>Cmoa paragraph validation cancelled. No files were changed.</source><translation>已取消 Cmoa 段落验证。未修改任何文件。</translation></message>
+    <message><source>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</source><translation>所选内容已变化或不再可自动安全处理。请重新分析。未修改任何文件。</translation></message>
+    <message><source>Content changed after analysis. Re-run analysis. No files were changed.
+%1</source><translation>内容在分析后发生变化。请重新分析。未修改任何文件。
+%1</translation></message>
+    <message><source>Cmoa paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>已原子应用 Cmoa 段落规范化：转换 %2 个文件中的 %1 个段落。已创建恢复检查点及逐资源撤销步骤。</translation></message>
+    <message><source>Cmoa paragraph normalization applied: %1 changes in %2 files.</source><translation>已应用 Cmoa 段落规范化：%2 个文件中共 %1 项变更。</translation></message>
+</context>
+<context>
+    <name>PModifiedVerPrefsWidget</name>
+    <message><source>Paragraph Structure</source><translation>段落结构</translation></message>
+    <message><source>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</source><translation>DIV 段落规范化始终转换已确认的正文叶元素。除非在下方启用，否则可选结构类别保持不变。</translation></message>
+    <message><source>Convert blank-line DIVs containing only BR</source><translation>转换仅含 BR 的空行 DIV</translation></message>
+    <message><source>Convert scene-separator DIVs</source><translation>转换场景分隔 DIV</translation></message>
+    <message><source>Convert image-only DIV wrappers</source><translation>转换仅含图片的 DIV 包装</translation></message>
+    <message><source>Convert single nested visual blocks (legacy compatibility)</source><translation>转换单层嵌套视觉块（旧版兼容）</translation></message>
+    <message><source>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</source><translation>此类别需要旧版 BookLive 兼容转换，并可能重写周围源码的排版。</translation></message>
+    <message><source>Format XHTML source after structural conversion</source><translation>结构转换后格式化 XHTML 源码</translation></message>
+    <message><source>Off by default because formatting can change whitespace outside the selected tags.</source><translation>默认关闭，因为格式化可能改变所选标签之外的空白。</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>unresolved stylesheet</source><translation>未解析的样式表</translation></message>
+    <message><source>CSS review: %1 · %2 · %3</source><translation>CSS 检查：%1 · %2 · %3</translation></message>
+    <message><source>DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, %5 error(s), %6 conversion(s), %7 protected block(s).</source><translation>DIV 段落计划 %1：%2 个可应用文件，%3 个仅供检查，%4 个已跳过，%5 个错误，%6 项转换，%7 个受保护块。</translation></message>
+    <message><source>Formatting target is no longer available: %1</source><translation>格式化目标已不可用：%1</translation></message>
+    <message><source>XHTML formatting failed for %1: %2</source><translation>%1 的 XHTML 格式化失败：%2</translation></message>
+    <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落规范化：已应用可选的 XHTML 格式化。</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Export conversation</source><translation>导出对话</translation></message>
+    <message><source>Export debug log</source><translation>导出调试日志</translation></message>
+    <message><source>JSON (*.json);;All files (*)</source><translation>JSON (*.json);;所有文件 (*)</translation></message>
+    <message><source>Markdown (*.md);;All files (*)</source><translation>Markdown (*.md);;所有文件 (*)</translation></message>
+</context>
+<context>
+    <name>PluginSession</name>
+    <message><source>The live plugin launcher or snippet file does not exist.</source><translation>实时插件启动器或代码片段文件不存在。</translation></message>
+</context>
+<context>
+    <name>PluginSessionManager</name>
+    <message><source>Could not write a temporary Python snippet.</source><translation>无法写入临时 Python 代码片段。</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>Export failed</source><translation>导出失败</translation></message>
+</context>
+<context>
+    <name>SigilAgent::AgentDock</name>
+    <message><source>Agent</source><translation>Agent</translation></message>
+    <message><source>Answer</source><translation>回答</translation></message>
+    <message><source>Applied: %1</source><translation>已应用：%1</translation></message>
+    <message><source>Approve</source><translation>批准</translation></message>
+    <message><source>Approve %1?</source><translation>是否批准 %1？</translation></message>
+    <message><source>Approved</source><translation>已批准</translation></message>
+    <message><source>Ask</source><translation>询问</translation></message>
+    <message><source>Ask about this book, plan a change, or describe an edit…</source><translation>询问本书、规划变更或描述编辑…</translation></message>
+    <message><source>Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking.</source><translation>“询问”只读。“规划”可以暂存预览。“编辑”经批准后可提交。“自动”无需询问即提交。</translation></message>
+    <message><source>Auto</source><translation>自动</translation></message>
+    <message><source>Context: %1</source><translation>上下文：%1</translation></message>
+    <message><source>Conversation…</source><translation>对话…</translation></message>
+    <message><source>Debug log…</source><translation>调试日志…</translation></message>
+    <message><source>Denied</source><translation>已拒绝</translation></message>
+    <message><source>Deny</source><translation>拒绝</translation></message>
+    <message><source>Edit</source><translation>编辑</translation></message>
+    <message><source>Enter to send · Shift+Enter for a new line · Stop cancels the in-flight request</source><translation>Enter 发送 · Shift+Enter 换行 · Stop 取消进行中的请求</translation></message>
+    <message><source>Error</source><translation>错误</translation></message>
+    <message><source>Export</source><translation>导出</translation></message>
+    <message><source>File</source><translation>文件</translation></message>
+    <message><source>File · %1</source><translation>文件 · %1</translation></message>
+    <message><source>Idle</source><translation>空闲</translation></message>
+    <message><source>Model is chosen in Preferences → Native Agent</source><translation>模型在“偏好设置 → Native Agent”中选择</translation></message>
+    <message><source>New Session</source><translation>新建会话</translation></message>
+    <message><source>No model (set in Preferences)</source><translation>未设置模型（请在偏好设置中设置）</translation></message>
+    <message><source>Plan</source><translation>规划</translation></message>
+    <message><source>Run stopped. Uncommitted staged work was rolled back.</source><translation>运行已停止。未提交的暂存工作已回滚。</translation></message>
+    <message><source>Selection</source><translation>选区</translation></message>
+    <message><source>Selection · %1–%2</source><translation>选区 · %1–%2</translation></message>
+    <message><source>Send</source><translation>发送</translation></message>
+    <message><source>Stop</source><translation>停止</translation></message>
+    <message><source>Stopped</source><translation>已停止</translation></message>
+    <message><source>Thinking</source><translation>思考</translation></message>
+    <message><source>Tool failed: %1</source><translation>工具失败：%1</translation></message>
+    <message><source>Tool running: %1</source><translation>工具正在运行：%1</translation></message>
+    <message><source>Tool: %1</source><translation>工具：%1</translation></message>
+    <message><source>You</source><translation>你</translation></message>
+    <message><source>current file</source><translation>当前文件</translation></message>
+    <message><source>selection</source><translation>选区</translation></message>
+    <message><source>Whole book</source><translation>全书</translation></message>
+    <message><source>Selected files</source><translation>选中文件</translation></message>
+    <message><source>Attach the complete resource map for %1</source><translation>为 %1 附加完整资源表</translation></message>
+    <message><source>Selected file · %1</source><translation>选中文件 · %1</translation></message>
+    <message><source>Selected files · %1</source><translation>选中文件 · %1 个</translation></message>
+    <message><source>Attach %1 file(s) selected in Book Browser</source><translation>附加 Book Browser 中选中的 %1 个文件</translation></message>
+    <message><source>Select one or more files in Book Browser</source><translation>请在 Book Browser 中选择一个或多个文件</translation></message>
+    <message><source>whole book</source><translation>全书</translation></message>
+    <message><source>one selected file</source><translation>一个选中文件</translation></message>
+    <message><source>%1 selected files</source><translation>%1 个选中文件</translation></message>
+    <message><source>Endpoint is not configured</source><translation>未配置端点</translation></message>
+    <message><source>API key is not configured</source><translation>未配置 API 密钥</translation></message>
+    <message><source>Model is not configured</source><translation>未配置模型</translation></message>
+    <message><source>Authentication failed (HTTP 401)</source><translation>身份验证失败（HTTP 401）</translation></message>
+    <message><source>Access denied (HTTP 403)</source><translation>访问被拒绝（HTTP 403）</translation></message>
+    <message><source>Endpoint or model not found (HTTP 404)</source><translation>未找到端点或模型（HTTP 404）</translation></message>
+    <message><source>Provider request timed out (HTTP 408)</source><translation>提供商请求超时（HTTP 408）</translation></message>
+    <message><source>Provider rate limit reached (HTTP 429)</source><translation>已达到提供商速率限制（HTTP 429）</translation></message>
+    <message><source>Provider unavailable (HTTP %1)</source><translation>提供商不可用（HTTP %1）</translation></message>
+    <message><source>Provider returned HTTP %1</source><translation>提供商返回 HTTP %1</translation></message>
+    <message><source>Network connection failed</source><translation>网络连接失败</translation></message>
+    <message><source>Request failed; see the Error card</source><translation>请求失败；请查看“错误”卡片</translation></message>
+    <message><source>Setup required: endpoint</source><translation>需要设置：端点</translation></message>
+    <message><source>Setup required: API key</source><translation>需要设置：API 密钥</translation></message>
+    <message><source>Setup required: model</source><translation>需要设置：模型</translation></message>
+    <message><source>Configured · not tested</source><translation>已配置 · 未测试</translation></message>
+    <message><source>Chat tested successfully · %1</source><translation>Chat 测试已成功 · %1</translation></message>
+    <message><source>Contacting provider…</source><translation>正在连接提供商…</translation></message>
+    <message><source>Last request succeeded</source><translation>最近一次请求成功</translation></message>
+    <message><source>Last request failed: %1</source><translation>最近一次请求失败：%1</translation></message>
+    <message><source>Last request cancelled</source><translation>最近一次请求已取消</translation></message>
+    <message><source>Provider: %1 · %2</source><translation>提供商：%1 · %2</translation></message>
+    <message><source>This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator.</source><translation>这组完全相同的已保存提供商配置已通过 Chat Completions 测试。这是历史测试结果，不是实时连接指示。</translation></message>
+    <message><source>Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them.</source><translation>“已配置”表示必需设置均已填写。请在偏好设置中使用“测试 Chat Completions”进行验证。</translation></message>
+    <message><source>Configure the provider in Preferences → Native Agent.</source><translation>请在“偏好设置 → 原生 Agent”中配置提供商。</translation></message>
+    <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent 计划和工具调用均绑定到当前打开的书籍。</translation></message>
+    <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
+    <message><source>Untitled book</source><translation>未命名书籍</translation></message>
+    <message><source>%1 resource</source><translation>%1 个资源</translation></message>
+    <message><source>%1 resources</source><translation>%1 个资源</translation></message>
+    <message><source>Unsaved changes</source><translation>有未保存的更改</translation></message>
+    <message><source>Saved</source><translation>已保存</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</source><translation>当前书籍：%1 · %2 · %3 · 书籍会话 %4 · Agent 修订 %5</translation></message>
+    <message><source>Preview</source><translation>预览</translation></message>
+    <message><source>Applied</source><translation>已应用</translation></message>
+    <message><source>The live book is unchanged; these changes are staged only.</source><translation>当前书籍未发生更改；以下变更仅处于暂存状态。</translation></message>
+    <message><source>• Added: %1</source><translation>• 已新增：%1</translation></message>
+    <message><source>• Renamed: %1 → %2</source><translation>• 已重命名：%1 → %2</translation></message>
+    <message><source>• Text: %1 (%2 → %3)</source><translation>• 文本：%1（%2 → %3）</translation></message>
+    <message><source>• Metadata changes</source><translation>• 元数据变更</translation></message>
+    <message><source>• Reading order changes</source><translation>• 阅读顺序变更</translation></message>
+    <message><source>• TOC hierarchy changes</source><translation>• 目录层级变更</translation></message>
+    <message><source>• Removed: %1</source><translation>• 已删除：%1</translation></message>
+    <message><source>No staged differences were reported.</source><translation>未报告任何暂存差异。</translation></message>
+    <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>已应用到当前书籍。EPUB 文件尚未保存。</translation></message>
+    <message><source>Applied changes: %1</source><translation>已应用变更：%1</translation></message>
+    <message><source>Book revision: %1</source><translation>书籍修订：%1</translation></message>
+    <message><source>Run: %1</source><translation>运行 ID：%1</translation></message>
+    <message><source>Run status: %1</source><translation>运行状态：%1</translation></message>
+    <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>整轮运行：%1 毫秒 · 模型请求 %2 · 工具调用 %3 · 完成时间：%4</translation></message>
+    <message><source>Whole run: in progress</source><translation>整轮运行：进行中</translation></message>
+    <message><source>Model-step budget: %1/%2 used</source><translation>模型步骤预算：已使用 %1/%2</translation></message>
+    <message><source>Model-step budget: limit %1 per run</source><translation>模型步骤预算：每次运行上限 %1</translation></message>
+    <message><source>Tool-call budget: %1/%2 used</source><translation>工具调用预算：已使用 %1/%2</translation></message>
+    <message><source>Tool-call budget: limit %1 per run</source><translation>工具调用预算：每次运行上限 %1</translation></message>
+    <message><source>Run token usage: not requested</source><translation>整轮 Token 用量：未请求</translation></message>
+    <message><source>Run token usage: awaiting completed requests</source><translation>整轮 Token 用量：正在等待请求完成</translation></message>
+    <message><source>Run token usage: no model request was sent</source><translation>整轮 Token 用量：未发送模型请求</translation></message>
+    <message><source>Run token usage: not reported by provider</source><translation>整轮 Token 用量：提供商未报告</translation></message>
+    <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>整轮 Token 用量：输入 %1 · 输出 %2 · 总计 %3</translation></message>
+    <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>整轮 Token 用量（%1/%2 个请求已报告）：输入 %3 · 输出 %4 · 总计 %5</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>请求历史：已发送 %1/%2 轮 · 已省略 %3 轮 · 先前轮次 %4/%5 KiB · 当前轮次 %6 KiB（始终保留）</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>请求历史：已发送 %1/%2 轮 · 先前轮次预算无限制 · 先前轮次 %3 KiB · 当前轮次 %4 KiB（始终保留）</translation></message>
+    <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>请求工具：已暴露 %1/%2 个 · 模式策略已隐藏 %3 个 · schema %4/%5 KiB</translation></message>
+    <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>整轮用量详情：缓存输入 %1 · 推理 %2</translation></message>
+    <message><source>Full EPUBCheck: not run.</source><translation>完整 EPUBCheck：未运行。</translation></message>
+    <message><source>Full EPUBCheck: %1</source><translation>完整 EPUBCheck：%1</translation></message>
+    <message><source>Recovery: use Sigil Undo where available.</source><translation>恢复：在可用处使用 Sigil 撤销。</translation></message>
+    <message><source>This commit did not create a task-wide restore point.</source><translation>本次提交未创建整任务恢复点。</translation></message>
+    <message><source>Staged changes discarded</source><translation>已丢弃暂存变更</translation></message>
+    <message><source>No staged changes</source><translation>无暂存变更</translation></message>
+    <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>已丢弃暂存事务。本事务未更改当前书籍。</translation></message>
+    <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>没有可丢弃的暂存事务。当前书籍未发生更改。</translation></message>
+    <message><source>Book changed</source><translation>书籍已切换</translation></message>
+    <message><source>The run stopped because this window switched to another book. No old response was applied to the new book.</source><translation>此窗口切换到另一书籍，因此运行已停止。旧响应未应用到新书籍。</translation></message>
+    <message><source>Closing</source><translation>正在关闭</translation></message>
+    <message><source>The run stopped before this window closed.</source><translation>运行已在此窗口关闭前停止。</translation></message>
+    <message><source>Book target changed</source><translation>目标书籍已更改</translation></message>
+    <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>运行期间打开的书籍发生了更改。旧响应在应用到新书籍前已被阻止。</translation></message>
+    <message><source>Retry</source><translation>重试</translation></message>
+    <message><source>Technical details</source><translation>技术详情</translation></message>
+    <message><source>Show request identifiers, timing, token usage, run limits, history and tool budgets, target revision, and scope handles.</source><translation>显示请求标识符、耗时、Token 用量、运行上限、历史与工具预算、目标修订和范围句柄。</translation></message>
+    <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 毫秒 · %3</translation></message>
+    <message><source>Session: %1</source><translation>会话：%1</translation></message>
+    <message><source>Not available</source><translation>不可用</translation></message>
+    <message><source>Book session: %1</source><translation>书籍会话：%1</translation></message>
+    <message><source>Request: %1</source><translation>请求：%1</translation></message>
+    <message><source>Step: %1 · Mode: %2 · Status: %3</source><translation>步骤：%1 · 模式：%2 · 状态：%3</translation></message>
+    <message><source>Request target: %1 · revision %2</source><translation>请求目标：%1 · 修订 %2</translation></message>
+    <message><source>Model: %1</source><translation>模型：%1</translation></message>
+    <message><source>Scope handles: %1</source><translation>范围句柄：%1</translation></message>
+    <message><source>None</source><translation>无</translation></message>
+    <message><source>Duration: %1 ms · Finished: %2</source><translation>耗时：%1 毫秒 · 完成时间：%2</translation></message>
+    <message><source>Response latency: awaiting response</source><translation>响应延迟：正在等待响应</translation></message>
+    <message><source>Not observed</source><translation>未观测</translation></message>
+    <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>响应延迟：首字节 %1 毫秒 · 首个模型事件 %2 毫秒</translation></message>
+    <message><source>Response latency: not observed</source><translation>响应延迟：未观测</translation></message>
+    <message><source>The live book is unchanged. Review this plan before approving its apply step.</source><translation>当前书籍未被更改。批准应用步骤前，请审阅此计划。</translation></message>
+    <message><source>Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)</source><translation>段落规范化：%1 个文件可处理 · %2 处转换 · %3 个受保护项</translation></message>
+    <message><source>Other files: %1 review only · %2 skipped · %3 failed</source><translation>其他文件：%1 个仅供审阅 · %2 个已跳过 · %3 个失败</translation></message>
+    <message><source>Plan scope: XHTML only; no CSS, OPF, or resource additions.</source><translation>计划范围：仅 XHTML；不更改 CSS、OPF，也不新增资源。</translation></message>
+    <message><source>Plan may change CSS, OPF, or resource inventory; inspect each change.</source><translation>计划可能更改 CSS、OPF 或资源清单；请检查每项更改。</translation></message>
+    <message><source>File: %1 · %2 conversion(s) · %3 protected item(s)</source><translation>文件：%1 · %2 处转换 · %3 个受保护项</translation></message>
+    <message><source>Before excerpt:</source><translation>更改前片段：</translation></message>
+    <message><source>After excerpt:</source><translation>更改后片段：</translation></message>
+    <message><source>TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)</source><translation>目录层级：%1 个受影响节点 · %2 个重新归属的同级节点</translation></message>
+    <message><source>Preorder preserved: %1 · XHTML heading levels changed: %2</source><translation>前序顺序已保留：%1 · XHTML 标题级别已更改：%2</translation></message>
+    <message><source>Yes</source><translation>是</translation></message>
+    <message><source>No</source><translation>否</translation></message>
+    <message><source>Entry: %1 · %2</source><translation>条目：%1 · %2</translation></message>
+    <message><source>Depth: %1 → %2 · Parent: %3 → %4</source><translation>深度：%1 → %2 · 父节点：%3 → %4</translation></message>
+    <message><source>Additional TOC changes are omitted from this bounded review.</source><translation>此受限审阅省略了其他目录更改。</translation></message>
+    <message><source>This native plan is ready for review.</source><translation>此原生计划已可供审阅。</translation></message>
+    <message><source>Local validation: %1</source><translation>本地校验：%1</translation></message>
+    <message><source>Review paragraph plan</source><translation>审阅段落计划</translation></message>
+    <message><source>Review TOC plan</source><translation>审阅目录计划</translation></message>
+    <message><source>Open %1</source><translation>打开 %1</translation></message>
+    <message><source>Open this resource in Sigil for plan review.</source><translation>在 Sigil 中打开此资源以审阅计划。</translation></message>
+    <message><source>Reviewed plan binding: matched.</source><translation>已审阅计划绑定：匹配。</translation></message>
+    <message><source>Approval blocked: this apply call does not match a reviewed plan.</source><translation>已阻止批准：此应用调用与已审阅计划不匹配。</translation></message>
+    <message><source>Not reported</source><translation>未报告</translation></message>
+    <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token 用量：输入 %1 · 输出 %2 · 总计 %3</translation></message>
+    <message><source>Usage details: cached input %1 · reasoning %2</source><translation>用量详情：缓存输入 %1 · 推理 %2</translation></message>
+    <message><source>Token usage: requested; awaiting response</source><translation>Token 用量：已请求，正在等待响应</translation></message>
+    <message><source>Token usage: not reported by provider</source><translation>提供商未报告 Token 用量</translation></message>
+    <message><source>Token usage: not requested</source><translation>未请求 Token 用量</translation></message>
+    <message><source>No model request in this session.</source><translation>此会话中尚无模型请求。</translation></message>
+    <message><source>Provider: %1 · Endpoint: %2</source><translation>提供商：%1 · 端点：%2</translation></message>
+    <message><source>Resend the last prompt with the same scope handles.</source><translation>使用相同的范围句柄重新发送最近一次提示。</translation></message>
+    <message><source>Retry is unavailable because the open book changed.</source><translation>打开的书籍已更改，无法重试。</translation></message>
+    <message><source>Retry is unavailable because this turn already executed tools.</source><translation>本轮已执行工具，无法安全重试。</translation></message>
+    <message><source>Retry is available after a provider request fails.</source><translation>提供商请求失败后可重试。</translation></message>
+    <message><source>A task restore point could not be created for this commit.</source><translation>本次提交无法创建任务恢复点。</translation></message>
+    <message><source>A task restore point was not created because this commit changed book structure.</source><translation>本次提交更改了书籍结构，因此未创建任务恢复点。</translation></message>
+    <message><source>Restore blocked</source><translation>恢复已阻止</translation></message>
+    <message><source>Restore is unavailable because the open book changed.</source><translation>打开的书籍已更改，无法恢复。</translation></message>
+    <message><source>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</source><translation>恢复本次提交更改的文本资源。若这些资源后来被编辑，恢复将被阻止。</translation></message>
+    <message><source>Restore this task</source><translation>恢复此任务</translation></message>
+    <message><source>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</source><translation>恢复已阻止，因为本任务完成后有 %1 个受影响资源发生更改。未更改任何书籍内容。</translation></message>
+    <message><source>Restore was blocked because this restore point belongs to another book.</source><translation>恢复点属于另一本书籍，因此已阻止恢复。</translation></message>
+    <message><source>Restored</source><translation>已恢复</translation></message>
+    <message><source>Restored %1 text resource(s). Later unrelated edits were preserved.</source><translation>已恢复 %1 个文本资源。之后对无关资源的编辑予以保留。</translation></message>
+    <message><source>Stop the active Agent run before restoring this task.</source><translation>请先停止正在运行的 Agent，再恢复此任务。</translation></message>
+    <message><source>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</source><translation>任务恢复点：%1 个文本资源，受提交后冲突检查保护。</translation></message>
+    <message><source>Task restored</source><translation>任务已恢复</translation></message>
+    <message><source>The task could not be restored.</source><translation>无法恢复此任务。</translation></message>
+    <message><source>This task has already been restored.</source><translation>此任务已恢复过。</translation></message>
+    <message><source>Compare…</source><translation>比较…</translation></message>
+    <message><source>Compare %1</source><translation>比较 %1</translation></message>
+    <message><source>Compare the reviewed before and after excerpts side by side.</source><translation>并排比较已审阅的修改前后片段。</translation></message>
+    <message><source>Plan comparison — %1</source><translation>计划比较 — %1</translation></message>
+    <message><source>Read-only excerpt from the reviewed plan. The live book is unchanged.</source><translation>来自已审阅计划的只读片段。当前书籍未更改。</translation></message>
+    <message><source>Before</source><translation>修改前</translation></message>
+    <message><source>After</source><translation>修改后</translation></message>
+    <message><source>Before excerpt for %1</source><translation>%1 的修改前片段</translation></message>
+    <message><source>After excerpt for %1</source><translation>%1 的修改后片段</translation></message>
+    <message><source>This comparison is a bounded excerpt; source outside the displayed region is omitted.</source><translation>此比较仅显示有限片段；显示区域外的源码已省略。</translation></message>
+    <message><source>Compare hierarchy…</source><translation>比较层级…</translation></message>
+    <message><source>Compare TOC hierarchy</source><translation>比较目录层级</translation></message>
+    <message><source>Compare the reviewed TOC hierarchy before and after side by side.</source><translation>并排比较已审阅的目录层级变换前后。</translation></message>
+    <message><source>Depth: %1 · Parent: %2</source><translation>深度：%1 · 父节点：%2</translation></message>
+    <message><source>TOC hierarchy</source><translation>目录层级</translation></message>
+    <message><source>Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.</source><translation>来自已审阅计划的只读层级比较。当前书籍未更改。</translation></message>
+    <message><source>TOC hierarchy before transformation</source><translation>变换前的目录层级</translation></message>
+    <message><source>TOC hierarchy after transformation</source><translation>变换后的目录层级</translation></message>
+    <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>此比较内容有上限；其余目录变更已省略。</translation></message>
+    <message><source>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</source><translation>• 预览页：显示 %2 项变更中的 %1 项、%4 项移除中的 %3 项（偏移 %5）。</translation></message>
+    <message><source>• More staged items remain; preview again with offset %1 before committing.</source><translation>• 仍有暂存项目未显示；提交前请使用偏移 %1 再次预览。</translation></message>
+    <message><source>Plan page: %1 of %2 XHTML file(s) (offset %3).</source><translation>计划页：%2 个 XHTML 文件中的 %1 个（偏移 %3）。</translation></message>
+    <message><source>More plan files must be reviewed; continue at offset %1 before applying.</source><translation>仍有计划文件必须审阅；应用前请从偏移 %1 继续。</translation></message>
+    <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>独立操作组：%1 个 XHTML 文件。请在应用批准时选择操作组。</translation></message>
+    <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>操作组：一个相互依赖的目录层级变更。</translation></message>
+    <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>独立 XHTML 组：请选择要暂存的一个或多个文件。</translation></message>
+    <message><source>Select all</source><translation>全选</translation></message>
+    <message><source>Clear</source><translation>清除</translation></message>
+    <message><source>%1 · %2 conversion(s) · %3 protected item(s)</source><translation>%1 · %2 次转换 · %3 个受保护项</translation></message>
+    <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>目录层级变更组成一个相互依赖的操作组，无法安全拆分。</translation></message>
+    <message><source>Approval blocked: select at least one independent operation group.</source><translation>批准已阻止：请至少选择一个独立操作组。</translation></message>
+    <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>已审阅计划绑定：匹配。已选择组：%1/%2。</translation></message>
+    <message><source>Resource result unavailable because the commit scope could not be inspected.</source><translation>由于无法检查提交范围，资源结果不可用。</translation></message>
+    <message><source>Resources: %1 succeeded · %2 failed.</source><translation>资源：成功 %1 个 · 失败 %2 个。</translation></message>
+    <message><source>Structural operations: %1 succeeded · %2 failed.</source><translation>结构操作：成功 %1 项 · 失败 %2 项。</translation></message>
+    <message><source>Atomic result: all staged targets were applied.</source><translation>原子结果：所有暂存目标均已应用。</translation></message>
+    <message><source>Atomic result: no staged target was applied.</source><translation>原子结果：没有应用任何暂存目标。</translation></message>
+    <message><source>Not applied to the current book.</source><translation>未应用到当前书籍。</translation></message>
+    <message><source>The staged transaction remains available for review, retry, or rollback.</source><translation>暂存事务仍可用于审阅、重试或回滚。</translation></message>
+    <message><source>The staged transaction was rolled back; no partial book changes remain.</source><translation>暂存事务已回滚；没有残留部分书籍修改。</translation></message>
+    <message><source>No staged transaction remains.</source><translation>没有保留暂存事务。</translation></message>
+    <message><source>Failure: %1 — %2</source><translation>失败：%1 — %2</translation></message>
+    <message><source>Failure: %1</source><translation>失败：%1</translation></message>
+    <message><source>Apply failed</source><translation>应用失败</translation></message>
+</context>
+<context>
+    <name>AgentSettingsWidget</name>
+    <message><source>%1 context tokens</source><translation>%1 个上下文 token</translation></message>
+    <message><source>%1k context</source><translation>%1k 上下文</translation></message>
+    <message><source>API key</source><translation>API 密钥</translation></message>
+    <message><source>Chat Completions URL</source><translation>Chat Completions URL</translation></message>
+    <message><source>Custom (OpenAI-compatible)</source><translation>自定义（OpenAI 兼容）</translation></message>
+    <message><source>DeepSeek</source><translation>DeepSeek</translation></message>
+    <message><source>Full Chat Completions URL or API base</source><translation>完整的 Chat Completions URL 或 API 基础地址</translation></message>
+    <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>已加载 %1 个缓存模型。刷新以从服务器更新。</translation></message>
+    <message><source>Loaded %1 models from the server.</source><translation>已从服务器加载 %1 个模型。</translation></message>
+    <message><source>Loading models…</source><translation>正在加载模型…</translation></message>
+    <message><source>Model</source><translation>模型</translation></message>
+    <message><source>Native Agent</source><translation>原生 Agent</translation></message>
+    <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>
+    <message><source>OpenRouter</source><translation>OpenRouter</translation></message>
+    <message><source>Provider</source><translation>提供商</translation></message>
+    <message><source>Reasoning effort</source><translation>推理强度</translation></message>
+    <message><source>Refresh models</source><translation>刷新模型</translation></message>
+    <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>刷新模型以从服务器加载 ID 和参数，或直接输入 ID。</translation></message>
+    <message><source>Refresh models to load this provider's catalog.</source><translation>刷新模型以加载此提供商的目录。</translation></message>
+    <message><source>Send thinking (reasoning_content)</source><translation>发送思考内容（reasoning_content）</translation></message>
+    <message><source>Request token usage when supported</source><translation>在支持时请求 Token 用量</translation></message>
+    <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>向流式请求添加 stream_options.include_usage。如果端点拒绝该选项，请将其关闭。</translation></message>
+    <message><source> KiB</source><translation> KiB</translation></message>
+    <message><source>Unlimited</source><translation>无限制</translation></message>
+    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>仅限制发送给模型的先前完整会话轮次。当前运行始终完整保留。</translation></message>
+    <message><source>Previous-turn history budget</source><translation>先前轮次历史预算</translation></message>
+    <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>达到此模型请求次数后停止运行，并回滚任何尚未提交的暂存事务。</translation></message>
+    <message><source>Maximum model steps per run</source><translation>每次运行的最大模型步骤数</translation></message>
+    <message><source>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</source><translation>如果整个模型工具调用批次会超出本轮上限，则拒绝该批次，然后回滚尚未提交的暂存工作。</translation></message>
+    <message><source>Maximum tool calls per run</source><translation>每次运行的最大工具调用数</translation></message>
+    <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>仅存储在本机 Sigil 设置中，绝不会写入 EPUB 或会话记录</translation></message>
+    <message><source>parameters: %1</source><translation>参数：%1</translation></message>
+    <message><source>reasoning</source><translation>推理</translation></message>
+    <message><source>reasoning not advertised</source><translation>未公布推理支持</translation></message>
+    <message><source>tools</source><translation>工具</translation></message>
+    <message><source>tools not advertised</source><translation>未公布工具支持</translation></message>
+    <message><source>Test Chat Completions</source><translation>测试 Chat Completions</translation></message>
+    <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>发送一个不含工具和书籍内容的小型请求。提供商最多可能收取 8 个输出 token 的费用。</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>在此选择提供商和模型。刷新模型会加载目录和公布的参数。测试 Chat Completions 会发送一个独立的小型请求，以验证此端点、API 密钥和模型；测试运行时绝不会发送书籍内容或工具，不测试可选的 Token 用量请求，也不会保存这些设置。偏好设置关闭时，会为这组完全相同的配置记住成功结果。</translation></message>
+    <message><source>Chat Completions has not been tested for the current settings.</source><translation>尚未针对当前设置测试 Chat Completions。</translation></message>
+    <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>这组设置上次成功通过 Chat Completions 测试的时间为 %1。</translation></message>
+    <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>无法测试：请输入有效的 Chat Completions URL。</translation></message>
+    <message><source>Cannot test: enter an API key.</source><translation>无法测试：请输入 API 密钥。</translation></message>
+    <message><source>Cannot test: choose or enter a model.</source><translation>无法测试：请选择或输入模型。</translation></message>
+    <message><source>Testing Chat Completions for %1 at %2…</source><translation>正在测试 %2 上模型 %1 的 Chat Completions…</translation></message>
+    <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>%2 上模型 %1 的 Chat Completions 测试成功，耗时 %3 毫秒。</translation></message>
+    <message><source>Chat Completions failed for %1 at %2: %3</source><translation>%2 上模型 %1 的 Chat Completions 测试失败：%3</translation></message>
+</context>
+<context>
+    <name>CmoaParagraphNormalizer</name>
+    <message><source>Cmoa paragraph analysis: no vrtl/hltr and main-container profile was found; skipped.</source><translation>Cmoa 段落分析：未发现 vrtl/hltr 和 main 容器配置，已跳过。</translation></message>
+    <message><source>Cmoa paragraph analysis: manual review required (%1); candidate DIVs: %2.</source><translation>Cmoa 段落分析：需要人工复核（%1）；候选 DIV：%2。</translation></message>
+    <message><source>Cmoa paragraph analysis: CSS is outside the verified EBPAJ reset profile; %1 candidates are review-only.</source><translation>Cmoa 段落分析：CSS 不在已验证的 EBPAJ 重置配置内；%1 个候选项仅供复核。</translation></message>
+    <message><source>Cmoa paragraph analysis: %1 body DIVs are safe to convert; headings, Ruby, blank lines, and source formatting are preserved.</source><translation>Cmoa 段落分析：%1 个正文 DIV 可安全转换；标题、Ruby、空行和源码格式均会保留。</translation></message>
+    <message><source>Cmoa paragraph normalization: this file has no convertible items.</source><translation>Cmoa 段落规范化：此文件没有可转换项。</translation></message>
+    <message><source>Cmoa paragraph normalization: conversion used source-range patches.</source><translation>Cmoa 段落规范化：转换使用了源码范围补丁。</translation></message>
 </context>
 </TS>

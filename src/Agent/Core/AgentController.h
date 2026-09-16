@@ -29,11 +29,15 @@ class AgentController
 public:
     AgentController();
 
-    void setWorkspace(IBookWorkspace *workspace);
-    void setProvider(std::unique_ptr<IModelProvider> provider);
+    bool setWorkspace(IBookWorkspace *workspace);
+    bool setProvider(std::unique_ptr<IModelProvider> provider);
     void setMode(AgentMode mode);
     void setModel(const QString &model);
     void setThinking(bool enabled, const QString &effort);
+    void setTokenUsage(bool enabled);
+    void setHistoryPreviousTurnBudget(int bytes);
+    void setMaxModelSteps(int steps);
+    void setMaxToolCalls(int calls);
 
     AgentSession *session();
     AgentRunner *runner();
@@ -41,15 +45,20 @@ public:
     GuiApprovalGate *approvalGate();
     IBookWorkspace *workspace();
     ToolRegistry *tools();
+    bool isRunning() const;
 
     AgentRunResult send(const QString &text, const QStringList &handles);
-    void stop();
+    BookOpResult restoreTask(const QString &checkpointId,
+                             const QString &expectedBookSessionId);
+    void stop(AgentCancellationReason reason = AgentCancellationReason::UserStop);
     void newSession();
-    void resolveApproval(const QString &toolCallId, bool approved);
+    void resolveApproval(const QString &toolCallId, bool approved,
+                         const QJsonObject &argumentOverrides = QJsonObject());
     QJsonArray debugTraces() const;
 
 private:
     void rebuildTools();
+    void resetSessionNow();
 
     AgentSession m_session;
     void harvestProviderTraces();
@@ -62,6 +71,16 @@ private:
     std::unique_ptr<IModelProvider> m_provider;
     std::unique_ptr<AgentRunner> m_runner;
     QJsonArray m_httpTraces;
+    AgentMode m_mode = AgentMode::Ask;
+    QString m_model;
+    bool m_thinkingEnabled = true;
+    bool m_tokenUsageEnabled = true;
+    int m_historyPreviousTurnBudgetBytes =
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES;
+    int m_maxModelSteps = DEFAULT_MAX_MODEL_STEPS;
+    int m_maxToolCalls = DEFAULT_MAX_TOOL_CALLS;
+    QString m_reasoningEffort = QStringLiteral("medium");
+    bool m_resetSessionAfterRun = false;
 };
 
 } // namespace SigilAgent

@@ -55,12 +55,15 @@ public:
 
     void setupRedirects();
 
+    // Callers that propagate errors (especially save workers) can suppress the
+    // legacy modal dialog and handle the returned status/traceback themselves.
     QVariant runInPython(const QString &module_name,
                          const QString &function_name,
                          const QVariantList &args,
                          int *pRV,
                          QString &error_traceback,
-                         bool ret_python_object = false);
+                         bool ret_python_object = false,
+                         bool show_error_dialog = true);
 
     QVariant callPyObjMethod(PyObjectPtr &pyobj, 
                              const QString &methname, 

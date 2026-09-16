@@ -181,6 +181,7 @@ private:
      * of the publication.
      */
     QString m_OPFFilePath;
+    QByteArray m_OPFSourceBytes;
 
     /**
      * The full path to the NCX file

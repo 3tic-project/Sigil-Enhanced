@@ -12,8 +12,10 @@ allowed-tools: >
   content.wrap_plain content.wrap content.replace_regex content.replace_body
   content.insert content.split content.merge image.insert
   resource.copy resource.create resource.delete resource.rename resource.replace_text
-  spine.set spine.sort style.link toc.generate metadata.update python.run
-  transaction.begin transaction.preview transaction.commit
+  spine.set spine.sort style.link toc.generate
+  toc.inspect_hierarchy toc.plan_transform toc.apply_transform
+  metadata.update python.run
+  transaction.begin transaction.preview transaction.commit transaction.rollback
   session.task_add session.task_update session.remember
 ---
 
@@ -54,6 +56,20 @@ Images must already be in the book (Book Browser drop). `image.insert` writes an
 - `toc.generate` — headings in spine order
 - `metadata.update` — any DC field; `_remove` deletes
 - `python.run` — Live Python v2 snippet with `plugin` bound (`plugin.book`). Not a plugin package and not a ZIP snapshot. Commit/rollback the Agent transaction first. Prefer typed tools.
+
+## Native TOC hierarchy
+
+For promoting or demoting existing TOC entries, use
+`toc.inspect_hierarchy` → `toc.plan_transform` → `toc.apply_transform` →
+`transaction.preview` → `transaction.commit`. Pass the exact snapshot, plan,
+digest, and book revision returned by the preceding calls. Do not call
+`transaction.begin` first: apply revalidates the plan and opens an exclusive
+staged transaction.
+
+This workflow reparents existing EPUB 3 Nav or EPUB 2 NCX nodes. It must keep
+preorder, labels, targets, attributes, and inline label markup intact. It does
+not edit XHTML `h1`–`h6` headings. On a stale-source or revision error, inspect
+and plan again; never retry an old digest.
 
 ## Session
 

@@ -294,8 +294,10 @@ Editor 三个写工具立即修改 live Book，不属于 staged transaction。
 
 ```json
 {
-  "committed": true,
+  "committed": [{"resource_id": "...", "revision": 9}],
   "transaction_id": "...",
+  "checkpoint_created": true,
+  "checkpoint_book_id": "...",
   "confirmation_required": false
 }
 ```
@@ -412,6 +414,9 @@ OPF、nav、最后一个 XHTML 等保护规则由宿主执行。
 - spine idref 存在；
 - 与 staged add/remove/move 的最终资源集合一致。
 
+该工具有意以调用方的完整 `text` 替换整个 OPF；若目标只是结构化 metadata/spine 更新并希望
+保留原排版，应使用下述两个工具。
+
 ### `sigil.transaction.update_metadata`
 
 参数：
@@ -436,6 +441,14 @@ OPF、nav、最后一个 XHTML 等保护规则由宿主执行。
 manifest，再替换 spine。因此生成新书时应先 stage/finish 全部 XHTML、CSS、图片，再调用一次
 `update_metadata` 和最终 `update_spine`，随后 preview、validate、commit；不再需要为了让
 manifest ID 可见而中途 commit。若 `update_spine` 后又新增资源，必须重新调用它。
+
+`update_metadata` / `update_spine` 把安全模型差异局部应用到原始 OPF，保留无关注释、PI、
+CDATA、namespace 前缀、属性引号、换行和不透明嵌套扩展；严格无操作保持源码完全相同。
+歧义 ID/href、未声明名称或畸形 XML 会失败，不回退到 DOM 全文序列化。两种调用传入的数组
+都是“模型可见子项”的完整替换，省略已有项表示删除。计划除 revision 外还绑定 OPF resource
+ID 与精确源码；preview 的 `opf_changes` 给出前后长度和 SHA-256，宿主在创建恢复 Checkpoint
+后、真正写入前再次校验。Checkpoint 的 OPF 使用提交前源码字节，不先更新时间戳或向 live OPF
+插入 UUID；成功 commit 返回 `checkpoint_created` / `checkpoint_book_id`。
 
 ## 10. MCP Resources
 

@@ -15,6 +15,8 @@
 namespace SigilAgent
 {
 
+constexpr int MAX_PATCH_FRAGMENT_LENGTH = 8192;
+
 struct PatchRangeResolution {
     bool ok = false;
     QString code;

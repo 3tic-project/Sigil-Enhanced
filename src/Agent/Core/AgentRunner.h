@@ -8,6 +8,8 @@
 #ifndef SIGIL_AGENT_RUNNER_H
 #define SIGIL_AGENT_RUNNER_H
 
+#include <QElapsedTimer>
+
 #include "Agent/AgentTypes.h"
 #include "Agent/Core/AgentCancellation.h"
 #include "Agent/Core/AgentSession.h"
@@ -19,6 +21,11 @@
 
 namespace SigilAgent
 {
+
+constexpr int DEFAULT_MAX_MODEL_STEPS = 24;
+constexpr int MAX_MODEL_STEPS = 64;
+constexpr int DEFAULT_MAX_TOOL_CALLS = 128;
+constexpr int MAX_TOOL_CALLS = 512;
 
 struct AgentRunResult {
     AgentRunState state = AgentRunState::Idle;
@@ -42,7 +49,10 @@ public:
     AgentMode mode() const;
     void setModel(const QString &model);
     void setThinking(bool enabled, const QString &effort);
+    void setTokenUsage(bool enabled);
+    void setHistoryPreviousTurnBudget(int bytes);
     void setMaxSteps(int steps);
+    void setMaxToolCalls(int calls);
     AgentRunState state() const;
 
     AgentRunResult runTurn(const QString &user_text, const QStringList &handles = QStringList());
@@ -66,7 +76,12 @@ private:
     ToolResult executeTool(const ToolCall &call);
     void publishToolOutcome(const ToolCall &call, const ToolResult &result);
     void rollbackOpenWork();
+    bool bookTargetMatchesRun() const;
+    AgentRunResult cancelRun();
+    AgentRunResult failBookTargetChanged(const QString &stage);
     QJsonObject parseArguments(const QString &json) const;
+    void accumulateRunUsage(const ModelUsage &usage);
+    QJsonObject runUsageSummary() const;
 
     AgentSession *m_session;
     IModelProvider *m_provider;
@@ -80,8 +95,26 @@ private:
     AgentRunState m_state = AgentRunState::Idle;
     QString m_model;
     bool m_thinking = true;
+    bool m_tokenUsage = true;
+    int m_historyPreviousTurnBudgetBytes =
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES;
     QString m_effort = QStringLiteral("medium");
-    int m_maxSteps = 24;
+    int m_maxSteps = DEFAULT_MAX_MODEL_STEPS;
+    int m_maxToolCalls = DEFAULT_MAX_TOOL_CALLS;
+    QString m_runBookSessionId;
+    QString m_runId;
+    QElapsedTimer m_runTimer;
+    int m_runModelSteps = 0;
+    int m_runToolCalls = 0;
+    ModelUsage m_runUsage;
+    int m_runUsageReportedRequests = 0;
+    int m_runInputUsageRequests = 0;
+    int m_runOutputUsageRequests = 0;
+    int m_runTotalUsageRequests = 0;
+    int m_runCachedUsageRequests = 0;
+    int m_runReasoningUsageRequests = 0;
+    bool m_runUsageRequested = true;
+    bool m_runTimingActive = false;
 };
 
 } // namespace SigilAgent

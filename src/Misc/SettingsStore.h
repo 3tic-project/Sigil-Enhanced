@@ -172,6 +172,8 @@ public:
 
     int cleanOn();
 
+    bool preserveOPFSource();
+
     QStringList pluginMap();
 
     QStringList automateMap();
@@ -226,6 +228,8 @@ public:
      */
     bool highlightOpenCloseTags();
 
+    QString codeViewDoubleClickSelection();
+
     /**
      * All appearance settings related to Special Characters.
      */
@@ -262,6 +266,8 @@ public:
      * The icon size to use for the main menu.
      */
     double mainMenuIconSize();
+
+    bool showClipShortcutBadges();
     
     /**
      * How many clipboard history items to save.
@@ -410,6 +416,8 @@ public slots:
 
     void setCleanOn(int on);
 
+    void setPreserveOPFSource(bool enabled);
+
     void setPluginMap(const QStringList & map);
 
     void setAutomateMap(const QStringList & map);
@@ -437,6 +445,8 @@ public slots:
      */
     void setHighlightOpenCloseTags(bool enabled);
 
+    void setCodeViewDoubleClickSelection(const QString &mode);
+
     void setCodeViewDarkAppearance(const CodeViewAppearance &code_view_appearance);
     /**
     * Set the default font settings to use for Special Characters popup window
@@ -447,6 +457,8 @@ public slots:
      * Set the icon size to use for the main menu.
      */
     void setMainMenuIconSize(double icon_size);
+
+    void setShowClipShortcutBadges(bool visible);
 
     /**
      * Set the number of clipboard history items to retain

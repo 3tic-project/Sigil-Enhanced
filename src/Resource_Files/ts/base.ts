@@ -906,6 +906,21 @@ if a sans-serif font-family specified in your CSS</source>
         <source>PreFind Selection</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="631"/>
+        <source>Clip Toolbar:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="637"/>
+        <source>Show the current shortcut on each of the first ten Clip buttons.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="640"/>
+        <source>Show Clips shortcut badges</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>AriaClips</name>
@@ -3184,6 +3199,14 @@ Do you want to save your changes?</source>
     <message>
         <location filename="../../ViewEditors/CodeViewEditor.cpp" line="642"/>
         <source>No open tags found at this position.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select Element Content</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select Whole Element</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -19974,12 +19997,12 @@ A checkpoint will be created before batch changes.</source>
     <name>PModifiedVerPrefsWidget</name>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="14"/>
-        <source>ModifiedVersion Prefs</source>
+        <source>Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="24"/>
-        <source>General</source>
+        <source>Code View</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -19995,6 +20018,26 @@ A checkpoint will be created before batch changes.</source>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="43"/>
         <source>Emmet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Double-click selection:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current paragraph/tag content</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Character or word (original behavior)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current sentence</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose paragraph/tag content, the current sentence, or original word behavior. Nested markup such as Ruby stays intact.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -27331,6 +27374,37 @@ Continue using the requested filename?</source>
     <message>
         <location filename="../../Misc/XMLEntities.cpp" line="339"/>
         <source>black diamond suit</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ActionShortcutBadge</name>
+    <message>
+        <location filename="../../Widgets/ActionShortcutBadge.cpp" line="150"/>
+        <source>Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ShortcutBadgeModel</name>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="58"/>
+        <source>%1 · No shortcut assigned</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="60"/>
+        <source>%1, Clip %2, no shortcut assigned</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="64"/>
+        <source>%1 · %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="66"/>
+        <source>%1, Clip %2, %3</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

@@ -6,17 +6,23 @@
 
 #include "AgentSettingsWidget.h"
 
-#include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
+#include <QDateTime>
 #include <QFormLayout>
+#include <QFutureWatcher>
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QSpinBox>
+#include <QtConcurrent>
 
+#include "Agent/Model/AgentConnectionProbe.h"
+#include "Agent/Core/AgentRunner.h"
+#include "Agent/Model/HistoryAssembler.h"
 #include "Agent/Model/AgentProviderPreset.h"
 #include "Agent/Persistence/AgentSettings.h"
 
@@ -69,8 +75,31 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_modelInfo->setWordWrap(true);
     m_modelInfo->setStyleSheet(QStringLiteral("color: palette(mid);"));
 
+    m_catalogWatcher = new QFutureWatcher<SigilAgent::CatalogResult>(this);
+    m_connectionWatcher =
+        new QFutureWatcher<SigilAgent::AgentConnectionProbeResult>(this);
+
     m_thinking = new QCheckBox(tr("Send thinking (reasoning_content)"), this);
     m_thinking->setObjectName(QStringLiteral("agentThinking"));
+    m_tokenUsage = new QCheckBox(tr("Request token usage when supported"), this);
+    m_tokenUsage->setObjectName(QStringLiteral("agentTokenUsage"));
+    m_tokenUsage->setToolTip(
+        tr("Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option."));
+    m_historyBudget = new QSpinBox(this);
+    m_historyBudget->setObjectName(QStringLiteral("agentHistoryBudgetKib"));
+    m_historyBudget->setRange(
+        0, SigilAgent::MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES / 1024);
+    m_historyBudget->setSuffix(tr(" KiB"));
+    m_historyBudget->setSpecialValueText(tr("Unlimited"));
+    m_historyBudget->setToolTip(tr("Limits only previous complete conversation turns sent to the model. The current run is always retained in full."));
+    m_maxModelSteps = new QSpinBox(this);
+    m_maxModelSteps->setObjectName(QStringLiteral("agentMaxModelSteps"));
+    m_maxModelSteps->setRange(1, SigilAgent::MAX_MODEL_STEPS);
+    m_maxModelSteps->setToolTip(tr("Stops a run after this many model requests and rolls back any uncommitted staged transaction."));
+    m_maxToolCalls = new QSpinBox(this);
+    m_maxToolCalls->setObjectName(QStringLiteral("agentMaxToolCalls"));
+    m_maxToolCalls->setRange(1, SigilAgent::MAX_TOOL_CALLS);
+    m_maxToolCalls->setToolTip(tr("Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work."));
     m_effort = new QComboBox(this);
     m_effort->setObjectName(QStringLiteral("agentReasoningEffort"));
     m_effort->addItems({ QStringLiteral("low"), QStringLiteral("medium"), QStringLiteral("high") });
@@ -79,7 +108,12 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_status->setObjectName(QStringLiteral("agentSettingsStatus"));
     m_status->setWordWrap(true);
 
-    auto *note = new QLabel(tr("Choose the provider and model here. The Agent dock uses this model and does not ask for a model name. Refresh models loads the live catalog and advertised parameters (context length, tools, reasoning) from the server."), this);
+    m_testConnection = new QPushButton(tr("Test Chat Completions"), this);
+    m_testConnection->setObjectName(QStringLiteral("agentTestConnectionButton"));
+    m_testConnection->setToolTip(
+        tr("Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens."));
+
+    auto *note = new QLabel(tr("Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes."), this);
     note->setWordWrap(true);
 
     layout->addRow(tr("Provider"), m_provider);
@@ -88,20 +122,56 @@ AgentSettingsWidget::AgentSettingsWidget()
     layout->addRow(tr("Model"), model_row);
     layout->addRow(QString(), m_modelInfo);
     layout->addRow(m_thinking);
+    layout->addRow(m_tokenUsage);
+    layout->addRow(tr("Previous-turn history budget"), m_historyBudget);
+    layout->addRow(tr("Maximum model steps per run"), m_maxModelSteps);
+    layout->addRow(tr("Maximum tool calls per run"), m_maxToolCalls);
     layout->addRow(tr("Reasoning effort"), m_effort);
+    layout->addRow(QString(), m_testConnection);
     layout->addRow(m_status);
     layout->addRow(note);
 
     connect(m_provider, &QComboBox::currentIndexChanged, this, [this](int) { onProviderChanged(); });
     connect(m_refreshModels, &QPushButton::clicked, this, [this]() { refreshModels(); });
-    connect(m_model, &QComboBox::currentTextChanged, this, [this](const QString &) { updateModelInfo(); });
+    connect(m_testConnection, &QPushButton::clicked, this, [this]() { testConnection(); });
+    connect(m_catalogWatcher, &QFutureWatcher<SigilAgent::CatalogResult>::finished,
+            this, &AgentSettingsWidget::finishModelRefresh);
+    connect(m_connectionWatcher,
+            &QFutureWatcher<SigilAgent::AgentConnectionProbeResult>::finished,
+            this, &AgentSettingsWidget::finishConnectionTest);
+    connect(m_model, &QComboBox::currentTextChanged, this, [this](const QString &) {
+        updateModelInfo();
+        invalidateConnectionTest(true);
+    });
+    connect(m_baseUrl, &QLineEdit::textEdited, this,
+            [this](const QString &) { invalidateConnectionTest(true); });
+    connect(m_apiKey, &QLineEdit::textEdited, this,
+            [this](const QString &) { invalidateConnectionTest(true); });
 
     readSettings();
+}
+
+AgentSettingsWidget::~AgentSettingsWidget()
+{
+    if (m_catalogCancelled) {
+        m_catalogCancelled->store(true, std::memory_order_relaxed);
+    }
+    if (m_connectionCancelled) {
+        m_connectionCancelled->store(true, std::memory_order_relaxed);
+    }
 }
 
 SigilAgent::AgentProviderKind AgentSettingsWidget::currentKind() const
 {
     return SigilAgent::providerKindFromName(m_provider->currentData().toString());
+}
+
+QString AgentSettingsWidget::currentConnectionFingerprint() const
+{
+    const AgentProviderKind kind = currentKind();
+    return SigilAgent::providerConfigurationFingerprint(
+        kind, SigilAgent::chatCompletionsUrl(kind, m_baseUrl->text()),
+        m_apiKey->text(), selectedModelId());
 }
 
 void AgentSettingsWidget::rememberCurrentProvider()
@@ -226,42 +296,194 @@ void AgentSettingsWidget::onProviderChanged()
     } else {
         m_status->setText(tr("Loaded %1 cached models. Refresh to update from the server.").arg(m_models.size()));
     }
+    invalidateConnectionTest(false);
+}
+
+void AgentSettingsWidget::invalidateConnectionTest(bool update_status)
+{
+    if (m_loading || !m_status) return;
+    const QString prior = m_status->property("connectionTestState").toString();
+    m_successfulConnectionFingerprint.clear();
+    m_successfulConnectionAtMs = 0;
+    m_status->setProperty("connectionTestState", QStringLiteral("not_tested"));
+    m_status->setProperty("connectionTestDurationMs", QVariant());
+    m_status->setProperty("connectionTestHttpStatus", QVariant());
+    m_status->setProperty("connectionTestEndpointHost", QVariant());
+    m_status->setProperty("connectionTestModel", QVariant());
+    m_status->setProperty("connectionTestSucceededAtMs", QVariant());
+    if (update_status && !prior.isEmpty() && prior != QLatin1String("not_tested")) {
+        m_status->setText(tr("Chat Completions has not been tested for the current settings."));
+    }
+}
+
+void AgentSettingsWidget::showRememberedConnectionTest()
+{
+    if (m_successfulConnectionAtMs <= 0
+        || m_successfulConnectionFingerprint.isEmpty()
+        || m_successfulConnectionFingerprint != currentConnectionFingerprint()) {
+        invalidateConnectionTest(false);
+        return;
+    }
+    const QString tested_at = QDateTime::fromMSecsSinceEpoch(m_successfulConnectionAtMs)
+        .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+    m_status->setProperty("connectionTestState", QStringLiteral("succeeded"));
+    m_status->setProperty("connectionTestSucceededAtMs", m_successfulConnectionAtMs);
+    m_status->setText(tr("Chat Completions was last tested successfully for these settings on %1.")
+                          .arg(tested_at));
+    m_status->setAccessibleName(m_status->text());
+}
+
+void AgentSettingsWidget::setConnectionControlsEnabled(bool enabled)
+{
+    const QList<QWidget *> controls {
+        m_provider, m_baseUrl, m_apiKey, m_model, m_refreshModels,
+        m_testConnection, m_thinking, m_tokenUsage, m_effort
+    };
+    for (QWidget *control : controls) {
+        if (control) control->setEnabled(enabled);
+    }
+}
+
+void AgentSettingsWidget::testConnection()
+{
+    if ((m_catalogWatcher && m_catalogWatcher->isRunning())
+        || (m_connectionWatcher && m_connectionWatcher->isRunning())) return;
+    rememberCurrentProvider();
+    invalidateConnectionTest(false);
+    const AgentProviderKind kind = currentKind();
+    const QString chat_url = SigilAgent::chatCompletionsUrl(kind, m_baseUrl->text());
+    const QString model = selectedModelId();
+    const SigilAgent::AgentProviderReadiness readiness = SigilAgent::providerReadiness(
+        kind, chat_url, !m_apiKey->text().isEmpty(), model);
+    if (!readiness.isConfigured()) {
+        m_status->setProperty("connectionTestState", QStringLiteral("setup_error"));
+        if (readiness.issue == SigilAgent::AgentProviderSetupIssue::Endpoint) {
+            m_status->setText(tr("Cannot test: enter a valid Chat Completions URL."));
+        } else if (readiness.issue == SigilAgent::AgentProviderSetupIssue::ApiKey) {
+            m_status->setText(tr("Cannot test: enter an API key."));
+        } else {
+            m_status->setText(tr("Cannot test: choose or enter a model."));
+        }
+        return;
+    }
+
+    SigilAgent::OpenAIProviderConfig config;
+    config.baseUrl = chat_url;
+    config.apiKey = m_apiKey->text();
+    config.model = model;
+    config.thinking = false;
+    config.reasoningEffort = m_effort->currentText();
+    config.reasoningProtocol = SigilAgent::reasoningProtocolFor(kind, chat_url);
+    if (kind == AgentProviderKind::OpenRouter) {
+        config.httpReferer = SigilAgent::agentHttpReferer();
+        config.httpTitle = SigilAgent::agentHttpTitle();
+    }
+
+    m_status->setProperty("connectionTestState", QStringLiteral("testing"));
+    m_status->setProperty("connectionTestEndpointHost", readiness.endpointHost);
+    m_status->setProperty("connectionTestModel", model);
+    m_status->setText(tr("Testing Chat Completions for %1 at %2…")
+                          .arg(model, readiness.endpointHost));
+    setConnectionControlsEnabled(false);
+    m_connectionCancelled = std::make_shared<std::atomic_bool>(false);
+    const std::shared_ptr<std::atomic_bool> cancelled = m_connectionCancelled;
+    m_connectionWatcher->setFuture(QtConcurrent::run([config, cancelled]() {
+        return SigilAgent::probeAgentConnection(config, 15000, cancelled.get());
+    }));
+}
+
+void AgentSettingsWidget::finishConnectionTest()
+{
+    if (!m_connectionWatcher || !m_connectionWatcher->isFinished()) return;
+    const SigilAgent::AgentConnectionProbeResult result =
+        m_connectionWatcher->result();
+    m_connectionCancelled.reset();
+    setConnectionControlsEnabled(true);
+    const QString model = m_status->property("connectionTestModel").toString();
+    const QString endpoint_host =
+        m_status->property("connectionTestEndpointHost").toString();
+    m_status->setProperty("connectionTestDurationMs", result.durationMs);
+    m_status->setProperty("connectionTestHttpStatus", result.httpStatus);
+    if (result.ok) {
+        m_successfulConnectionFingerprint = currentConnectionFingerprint();
+        m_successfulConnectionAtMs = QDateTime::currentMSecsSinceEpoch();
+        m_status->setProperty("connectionTestState", QStringLiteral("succeeded"));
+        m_status->setProperty("connectionTestSucceededAtMs", m_successfulConnectionAtMs);
+        m_status->setText(tr("Chat Completions succeeded for %1 at %2 in %3 ms.")
+                              .arg(model, endpoint_host)
+                              .arg(result.durationMs));
+    } else {
+        m_status->setProperty("connectionTestState", QStringLiteral("failed"));
+        QString error = result.error.simplified();
+        if (error.size() > 400) error = error.left(400) + QStringLiteral("…");
+        m_status->setText(tr("Chat Completions failed for %1 at %2: %3")
+                              .arg(model, endpoint_host, error));
+    }
+    m_status->setAccessibleName(m_status->text());
 }
 
 void AgentSettingsWidget::refreshModels()
 {
+    if ((m_catalogWatcher && m_catalogWatcher->isRunning())
+        || (m_connectionWatcher && m_connectionWatcher->isRunning())) return;
     rememberCurrentProvider();
     const AgentProviderKind kind = currentKind();
+    const QString provider_id = m_activeProvider;
     const QString url = SigilAgent::modelsUrl(kind, m_baseUrl->text());
+    const QString api_key = m_apiKey->text();
     QString referer;
     QString title;
     if (kind == AgentProviderKind::OpenRouter) {
         referer = SigilAgent::agentHttpReferer();
         title = SigilAgent::agentHttpTitle();
     }
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    m_refreshModels->setEnabled(false);
-    CatalogResult result = SigilAgent::AgentModelCatalog::fetch(url, m_apiKey->text(), referer, title);
-    SigilAgent::AgentModelCatalog::applyProviderDefaults(&result, kind);
-    m_refreshModels->setEnabled(true);
-    QApplication::restoreOverrideCursor();
+    m_catalogRequestKind = kind;
+    m_catalogRequestProvider = provider_id;
+    m_status->setProperty("modelRefreshState", QStringLiteral("loading"));
+    m_status->setProperty("modelRefreshHttpStatus", QVariant());
+    m_status->setText(tr("Loading models…"));
+    setConnectionControlsEnabled(false);
+    m_catalogCancelled = std::make_shared<std::atomic_bool>(false);
+    const std::shared_ptr<std::atomic_bool> cancelled = m_catalogCancelled;
+    m_catalogWatcher->setFuture(QtConcurrent::run(
+        [url, api_key, referer, title, kind, cancelled]() {
+            CatalogResult result = SigilAgent::AgentModelCatalog::fetch(
+                url, api_key, referer, title, 30000, cancelled.get());
+            SigilAgent::AgentModelCatalog::applyProviderDefaults(&result, kind);
+            return result;
+        }));
+}
 
+void AgentSettingsWidget::finishModelRefresh()
+{
+    if (!m_catalogWatcher || !m_catalogWatcher->isFinished()) return;
+    const CatalogResult result = m_catalogWatcher->result();
+    m_catalogCancelled.reset();
+    setConnectionControlsEnabled(true);
+    m_status->setProperty("modelRefreshHttpStatus", result.httpStatus);
     if (!result.error.isEmpty()) {
+        m_status->setProperty("modelRefreshState", QStringLiteral("failed"));
         m_status->setText(result.error);
+        m_status->setAccessibleName(m_status->text());
         return;
     }
     m_models = result.models;
     m_catalogJson = QString::fromUtf8(
-        QJsonDocument(SigilAgent::AgentModelCatalog::toCacheJson(result, kind)).toJson(QJsonDocument::Compact));
-    m_providerCatalogs.insert(m_activeProvider, m_catalogJson);
+        QJsonDocument(SigilAgent::AgentModelCatalog::toCacheJson(
+                          result, m_catalogRequestKind)).toJson(QJsonDocument::Compact));
+    m_providerCatalogs.insert(m_catalogRequestProvider, m_catalogJson);
     fillModelCombo();
+    m_status->setProperty("modelRefreshState", QStringLiteral("succeeded"));
     m_status->setText(tr("Loaded %1 models from the server.").arg(m_models.size()));
+    m_status->setAccessibleName(m_status->text());
 }
 
 void AgentSettingsWidget::readSettings()
 {
     m_loading = true;
     SigilAgent::AgentSettings settings;
+    m_successfulConnectionFingerprint = settings.connectionTestFingerprint();
+    m_successfulConnectionAtMs = settings.connectionTestSucceededAtMs();
     const QJsonObject secrets = settings.providerSecrets();
     const QJsonObject models = settings.providerModels();
     const QJsonObject urls = settings.providerUrls();
@@ -289,6 +511,10 @@ void AgentSettingsWidget::readSettings()
     m_provider->setCurrentIndex(index);
     applyStoredProvider(m_provider->currentData().toString());
     m_thinking->setChecked(settings.thinkingEnabled());
+    m_tokenUsage->setChecked(settings.tokenUsageEnabled());
+    m_historyBudget->setValue(settings.historyPreviousTurnBudgetBytes() / 1024);
+    m_maxModelSteps->setValue(settings.maxModelSteps());
+    m_maxToolCalls->setValue(settings.maxToolCalls());
     const int effort = m_effort->findText(settings.reasoningEffort());
     m_effort->setCurrentIndex(effort >= 0 ? effort : 1);
 
@@ -312,7 +538,9 @@ void AgentSettingsWidget::readSettings()
         else m_model->setEditText(current_model);
     }
     m_status->clear();
+    m_status->setProperty("connectionTestState", QStringLiteral("not_tested"));
     m_loading = false;
+    showRememberedConnectionTest();
 }
 
 PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
@@ -325,8 +553,19 @@ PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
     settings.setApiKey(m_apiKey->text());
     settings.setModel(selectedModelId());
     settings.setThinkingEnabled(m_thinking->isChecked());
+    settings.setTokenUsageEnabled(m_tokenUsage->isChecked());
+    settings.setHistoryPreviousTurnBudgetBytes(m_historyBudget->value() * 1024);
+    settings.setMaxModelSteps(m_maxModelSteps->value());
+    settings.setMaxToolCalls(m_maxToolCalls->value());
     settings.setReasoningEffort(m_effort->currentText());
     settings.setCatalogJson(m_catalogJson);
+    if (m_successfulConnectionAtMs > 0
+        && m_successfulConnectionFingerprint == currentConnectionFingerprint()) {
+        settings.setConnectionTestVerification(m_successfulConnectionFingerprint,
+                                               m_successfulConnectionAtMs);
+    } else {
+        settings.setConnectionTestVerification(QString(), 0);
+    }
 
     const CatalogModel selected = selectedCatalogModel();
     if (!selected.id.isEmpty() && !m_models.isEmpty()) {

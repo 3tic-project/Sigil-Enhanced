@@ -21,6 +21,8 @@
 **
 *************************************************************************/
 
+#include "EmbedPython/EmbeddedPython.h"
+
 #include <memory>
 
 #include <QtCore/QBuffer>
@@ -32,9 +34,7 @@
 #include <QRegularExpressionMatch>
 #include <QDateTime>
 #include <QDebug>
-#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
-#include <QTimeZone>
-#endif
+#include <QSaveFile>
 
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/XhtmlDoc.h"
@@ -187,6 +187,7 @@ void OPFResource::SetText(const QString &text)
     QWriteLocker locker(&GetLock());
     QString source = ValidatePackageVersion(text);
     TextResource::SetText(source);
+    m_PreservedSourceText = source;
 }
 
 
@@ -198,14 +199,78 @@ void OPFResource::SetTextAsUndoableEdit(const QString &text)
     emit TextChanging();
     const QString source = ValidatePackageVersion(text);
     TextResource::SetTextAsUndoableEdit(source);
+    m_PreservedSourceText = source;
 }
 
+
+namespace {
+
+QVariant RunOPFSourceBytes(const QString &function, const QVariantList &arguments)
+{
+    int rv = 0;
+    QString error;
+    QVariant result = EmbeddedPython::instance().runInPython(
+        "opf_source_bytes", function, arguments, &rv, error, false, false);
+    if (rv != 0) throw ErrorParsingXml(error.toStdString());
+    return result;
+}
+
+QString EditorProjection(QString source)
+{
+    return source.replace("\r\n", "\n").replace('\r', '\n')
+        .replace(QChar(0x2028), QChar('\n')).replace(QChar(0x2029), QChar('\n'));
+}
+
+}
+
+QString OPFResource::DecodeSourceBytes(const QByteArray &bytes)
+{
+    return RunOPFSourceBytes("decode_source", { bytes }).toString();
+}
+
+QString OPFResource::ModelSource() const
+{
+    SettingsStore settings;
+    if (!settings.preserveOPFSource())
+        return CleanSource::ProcessXML(GetText(), "application/oebps-package+xml");
+    int rv = 0;
+    QString error;
+    const QVariant result = EmbeddedPython::instance().runInPython(
+        "opf_source", "model_xml", { GetText() }, &rv, error, false, false);
+    if (rv != 0) throw ErrorParsingXml(error.toStdString());
+    return result.toString();
+}
+
+void OPFResource::SetSourceBytes(const QByteArray &bytes)
+{
+    const QString source = DecodeSourceBytes(bytes);
+    QWriteLocker locker(&GetLock());
+    SetText(source);
+    m_OriginalSourceBytes = bytes;
+    m_OriginalSourceText = source;
+    m_PreservedSourceText = source;
+}
+
+QString OPFResource::PreservedSourceText() const
+{
+    const QString edited = GetText();
+    if (edited == EditorProjection(m_PreservedSourceText)) return m_PreservedSourceText;
+    if (edited == EditorProjection(m_OriginalSourceText)) return m_OriginalSourceText;
+    if (m_PreservedSourceText.isEmpty()) return edited;
+    return RunOPFSourceBytes("restore_source_text", { m_PreservedSourceText, edited }).toString();
+}
 
 bool OPFResource::LoadFromDisk()
 {
     try {
-        const QString &text = Utility::ReadUnicodeTextFile(GetFullPath());
-        SetText(text);
+        SettingsStore settings;
+        if (settings.preserveOPFSource()) {
+            QFile file(GetFullPath());
+            if (!file.open(QIODevice::ReadOnly)) throw CannotOpenFile(file.errorString().toStdString());
+            SetSourceBytes(file.readAll());
+        } else {
+            SetText(Utility::ReadUnicodeTextFile(GetFullPath()));
+        }
         emit LoadedFromDisk();
         return true;
     } catch (CannotOpenFile&) {
@@ -221,7 +286,7 @@ QList<Resource*> OPFResource::GetSpineOrderResources( const QList<Resource *> &r
     QString version = GetEpubVersion();
     bool nav_in_spine = isNavInSpine();
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     const QHash<QString, Resource*> id_mapping = GetManifestIDResourceMapping(resources, p);
@@ -233,8 +298,8 @@ QList<Resource*> OPFResource::GetSpineOrderResources( const QList<Resource *> &r
         }
     }
     // in epub 3 without nav in the spine, add it to be watched as last
-    if (version.startsWith("3") && (!nav_in_spine)) {
-        spine_order << GetNavResource();;
+    if (version.startsWith("3") && !nav_in_spine && GetNavResource()) {
+        spine_order << GetNavResource();
     }
     return spine_order;
 }
@@ -251,7 +316,7 @@ QHash <Resource *, int>  OPFResource::GetReadingOrderAll( const QList <Resource 
         nav_rsc = GetNavResource();
     }
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     if (nav_rsc) {
@@ -264,7 +329,7 @@ QHash <Resource *, int>  OPFResource::GetReadingOrderAll( const QList <Resource 
     }
     // Need to special case, epub version 3 without nav in the spine
     // add it in always as last
-    if (version.startsWith("3") && (!nav_in_spine)) {
+    if (version.startsWith("3") && !nav_in_spine && nav_rsc) {
         id_order[nav_id] = p.m_spine.count() - 1;
     }
     QHash<Resource *, QString> id_mapping = GetResourceManifestIDMapping(resources, p);
@@ -276,7 +341,7 @@ QHash <Resource *, int>  OPFResource::GetReadingOrderAll( const QList <Resource 
 
 bool OPFResource::isNavInSpine() const
 {
-    if (GetEpubVersion().startsWith('3')) {
+    if (GetEpubVersion().startsWith('3') && GetNavResource()) {
         return GetReadingOrder(GetNavResource()) != -1;
     }
     return false;
@@ -285,8 +350,9 @@ bool OPFResource::isNavInSpine() const
 // this is used by isNavInSpine() so do not treat is as a special case
 int OPFResource::GetReadingOrder(const HTMLResource *html_resource) const
 {
+    if (!html_resource) return -1;
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     const Resource *resource = static_cast<const Resource *>(html_resource);
@@ -307,7 +373,7 @@ void OPFResource::MoveReadingOrder(const HTMLResource* from_resource, const HTML
     const Resource *after_res = static_cast<const Resource *>(after_resource);
     if (from_res == NULL || after_res == NULL) return;
 
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString from_id = GetResourceManifestID(from_res, p);
@@ -338,7 +404,7 @@ void OPFResource::MoveReadingOrder(const HTMLResource* from_resource, const HTML
 QString OPFResource::GetMainIdentifierValue() const
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     int i = GetMainIdentifier(p);
@@ -350,11 +416,41 @@ QString OPFResource::GetMainIdentifierValue() const
 
 void OPFResource::SaveToDisk(bool book_wide_save)
 {
-    QString source = ValidatePackageVersion(CleanSource::ProcessXML(GetText(),"application/oebps-package+xml"));
-    // Work around for covers appearing on the Nook. Issue 942.
+    SettingsStore settings;
+    if (settings.preserveOPFSource()) {
+        {
+            QWriteLocker locker(&GetLock());
+            const QString source = ValidatePackageVersion(PreservedSourceText());
+            const QByteArray bytes = source == m_OriginalSourceText && !m_OriginalSourceBytes.isEmpty()
+                ? m_OriginalSourceBytes
+                : RunOPFSourceBytes("encode_source", { m_OriginalSourceBytes, source }).toByteArray();
+            QSaveFile file(GetFullPath());
+            if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit()) {
+                throw CannotOpenFile(file.errorString().toStdString());
+            }
+            if (EditorProjection(source) != GetText()) TextResource::SetText(source);
+            m_PreservedSourceText = source;
+        }
+        FinishSaveToDisk(book_wide_save);
+        return;
+    }
+
+    QString source = ValidatePackageVersion(CleanSource::ProcessOPFSource(GetText()));
+    // Legacy Nook compatibility formatting. Issue 942.
     source = source.replace(QRegularExpression("<meta content=\"([^\"]+)\" name=\"cover\""), "<meta name=\"cover\" content=\"\\1\"");
-    TextResource::SetText(source);
+    if (source != GetText()) TextResource::SetText(source);
     TextResource::SaveToDisk(book_wide_save);
+    m_OriginalSourceBytes = source.toUtf8();
+    m_OriginalSourceText = m_PreservedSourceText = source;
+}
+
+QByteArray OPFResource::GetSourceBytes() const
+{
+    QReadLocker locker(&GetLock());
+    const QString source = PreservedSourceText();
+    return source == m_OriginalSourceText && !m_OriginalSourceBytes.isEmpty()
+        ? m_OriginalSourceBytes
+        : RunOPFSourceBytes("encode_source", { m_OriginalSourceBytes, source }).toByteArray();
 }
 
 
@@ -388,7 +484,7 @@ QString OPFResource::GetUUIDIdentifierValue(bool ensure_present)
         EnsureUUIDIdentifierPresent();
     }
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     for (int i=0; i < p.m_metadata.count(); ++i) {
@@ -409,7 +505,7 @@ QString OPFResource::GetUUIDIdentifierValue(bool ensure_present)
 void OPFResource::EnsureUUIDIdentifierPresent()
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     for (int i=0; i < p.m_metadata.count(); ++i) {
@@ -435,7 +531,7 @@ void OPFResource::EnsureUUIDIdentifierPresent()
 QString OPFResource::AddNCXItem(const QString &ncx_path, QString id)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString ncx_bkpath = ncx_path.right(ncx_path.length() - GetFullPathToBookFolder().length() - 1);
@@ -456,7 +552,7 @@ QString OPFResource::AddNCXItem(const QString &ncx_path, QString id)
 void OPFResource::UpdateNCXOnSpine(const QString &new_ncx_id)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString ncx_id = p.m_spineattr.m_atts.value(QString("toc"),"");
@@ -469,7 +565,7 @@ void OPFResource::UpdateNCXOnSpine(const QString &new_ncx_id)
 void OPFResource::RemoveNCXOnSpine()
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     p.m_spineattr.m_atts.remove("toc");
@@ -480,7 +576,7 @@ void OPFResource::RemoveNCXOnSpine()
 void OPFResource::UpdateNCXLocationInManifest(const NCXResource *ncx)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString ncx_id = p.m_spineattr.m_atts.value(QString("toc"), "");
@@ -501,7 +597,7 @@ void OPFResource::UpdateNCXLocationInManifest(const NCXResource *ncx)
 void OPFResource::AddSigilVersionMeta()
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     for (int i=0; i < p.m_metadata.count(); ++i) {
@@ -528,7 +624,7 @@ void OPFResource::AddSigilVersionMeta()
 bool OPFResource::IsCoverImage(const ImageResource *image_resource) const
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString resource_id = GetResourceManifestID(image_resource, p);
@@ -550,7 +646,7 @@ bool OPFResource::IsCoverImageCheck(QString resource_id, const OPFParser & p) co
 bool OPFResource::CoverImageExists() const
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     return GetCoverMeta(p) > -1;
@@ -560,7 +656,7 @@ bool OPFResource::CoverImageExists() const
 QString OPFResource::GetCoverImagePath() const
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString bkpath;
@@ -589,7 +685,7 @@ void OPFResource::AutoFixWellFormedErrors()
 {
     QWriteLocker locker(&GetLock());
     const QStringList TEXT_EXTS = QStringList() << "htm" << "html" << "xhtml";
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     // auto fill in spine from manifest if completely empty
@@ -619,7 +715,7 @@ void OPFResource::AutoFixWellFormedErrors()
 QStringList OPFResource::GetSpineOrderBookPaths() const
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QStringList book_paths_in_reading_order;
@@ -640,7 +736,7 @@ QStringList OPFResource::GetMediaOverlayActiveClassSelectors() const
 {
     QReadLocker locker(&GetLock());
     QStringList activeclassselectors;
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     for (int i=0; i < p.m_metadata.count(); ++i) {
@@ -683,7 +779,7 @@ QString OPFResource::GetPrimaryBookLanguage() const
 QList<MetaEntry> OPFResource::GetDCMetadata() const
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QList<MetaEntry> metadata;
@@ -700,7 +796,7 @@ QList<MetaEntry> OPFResource::GetDCMetadata() const
 QString OPFResource::GetMetadataXML() const
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     return p.get_metadata_xml();
@@ -722,9 +818,54 @@ QStringList OPFResource::GetDCMetadataValues(QString text) const
 void OPFResource::SetDCMetadata(const QList<MetaEntry> &metadata)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
+    SettingsStore settings;
+    if (settings.preserveOPFSource()) {
+        QList<MetaEntry> updated;
+        QSet<int> consumed;
+        const int main_identifier = GetMainIdentifier(p);
+        for (int pos = 0; pos < p.m_metadata.size(); ++pos) {
+            const MetaEntry &original = p.m_metadata.at(pos);
+            if (!original.m_name.startsWith("dc:")) {
+                updated.append(original);
+                continue;
+            }
+            int match = -1;
+            for (int i = 0; i < metadata.size(); ++i) {
+                const MetaEntry &candidate = metadata.at(i);
+                if (consumed.contains(i) || candidate.m_name != original.m_name
+                    || candidate.m_atts.value("id") != original.m_atts.value("id")) continue;
+                if (match == -1) match = i;
+                if (candidate.m_content == original.m_content
+                    || candidate.m_content == Utility::DecodeXML(original.m_content)) {
+                    match = i;
+                    break;
+                }
+            }
+            if (match >= 0) {
+                MetaEntry entry(metadata.at(match));
+                // GetDCMetadata historically returns escaped model text. Keep an
+                // unchanged value intact instead of escaping its entities again.
+                if (entry.m_content != original.m_content) entry.m_content = entry.m_content.toHtmlEscaped();
+                updated.append(entry);
+                consumed.insert(match);
+            } else if (pos == main_identifier) {
+                // Existing callers may omit the publication identifier.
+                updated.append(original);
+            }
+        }
+        for (int i = 0; i < metadata.size(); ++i) {
+            if (consumed.contains(i)) continue;
+            MetaEntry entry(metadata.at(i));
+            entry.m_content = entry.m_content.toHtmlEscaped();
+            updated.append(entry);
+        }
+        p.m_metadata = updated;
+        UpdateText(p);
+        return;
+    }
     // this will not work with refines so it needs to be fixed
     RemoveDCElements(p);
     foreach(MetaEntry book_meta, metadata) {
@@ -739,7 +880,7 @@ void OPFResource::SetDCMetadata(const QList<MetaEntry> &metadata)
 void OPFResource::AddResource(const Resource *resource)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     ManifestEntry me;
@@ -837,7 +978,7 @@ void OPFResource::AddCoverMetaForImage(const Resource *resource, OPFParser &p)
 
 void OPFResource::BulkAddResources(const QList<Resource*>resources) {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(), "application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     foreach(Resource * resource, resources) {
@@ -864,7 +1005,7 @@ void OPFResource::BulkAddResources(const QList<Resource*>resources) {
 void OPFResource::BulkRemoveResources(const QList<Resource *>resources)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     if (p.m_manifest.isEmpty()) return;
@@ -914,7 +1055,7 @@ void OPFResource::BulkRemoveResources(const QList<Resource *>resources)
 void OPFResource::RemoveResource(const Resource *resource)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     if (p.m_manifest.isEmpty()) return;
@@ -961,7 +1102,7 @@ void OPFResource::RemoveResource(const Resource *resource)
 void OPFResource::ClearSemanticCodesInGuide()
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     foreach(GuideEntry ge, p.m_guide) {
@@ -976,7 +1117,7 @@ void OPFResource::AddGuideSemanticCode(HTMLResource *html_resource, QString new_
     //first get primary book language
     QString lang = GetPrimaryBookLanguage();
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString current_code = GetGuideSemanticCodeForResource(html_resource, p, tgt_id);
@@ -1056,7 +1197,7 @@ QStringList OPFResource::GetAllGuideInfoByBookPath() const
 {
     QStringList guide_info;
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);    
     if (p.m_guide.isEmpty()) return guide_info;
@@ -1100,7 +1241,7 @@ void OPFResource::RemoveAllGuideReferencesForResource(const Resource *resource, 
 void OPFResource::UpdateGuideFragments(QHash<QString,QString> &idupdates)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     for(int c=0; c < p.m_guide.size(); c++) {
@@ -1135,7 +1276,7 @@ void OPFResource::UpdateGuideAfterMerge(QList<Resource*> &merged_resources, QHas
         merged_bookpaths << res->GetRelativePath();
     }
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     for(int c=0; c < p.m_guide.size(); c++) {
@@ -1189,7 +1330,7 @@ void OPFResource::SetGuideSemanticCodeForResource(QString code, const Resource *
 QString OPFResource::GetGuideSemanticCodeForResource(const Resource *resource, QString tgt_id) const
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     return GetGuideSemanticCodeForResource(resource, p, tgt_id);
@@ -1206,7 +1347,7 @@ QString OPFResource::GetGuideSemanticNameForResource(Resource *resource, QString
 QHash <QString, QStringList>  OPFResource::GetSemanticCodeForPaths()
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
 
@@ -1232,7 +1373,7 @@ QHash <QString, QStringList>  OPFResource::GetSemanticCodeForPaths()
 QHash <QString, QStringList>  OPFResource::GetGuideSemanticNameForPaths()
 {
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
 
@@ -1270,7 +1411,7 @@ QHash <QString, QStringList>  OPFResource::GetGuideSemanticNameForPaths()
 void OPFResource::SetResourceAsCoverImage(ImageResource *image_resource)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString resource_id = GetResourceManifestID(image_resource, p);
@@ -1308,7 +1449,7 @@ void OPFResource::UpdateSpineOrder(const QList<::HTMLResource *> html_files)
 {
     // bool contains_nav = html_files.contains(GetNavResource());
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QList<SpineEntry> new_spine;
@@ -1340,7 +1481,7 @@ void OPFResource::UpdateSpineOrder(const QList<::HTMLResource *> html_files)
 void OPFResource::ResourceRenamed(const Resource *resource, QString old_full_path)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     // first convert old_full_path to old_bkpath
@@ -1399,7 +1540,7 @@ void OPFResource::ResourceMoved(const Resource *resource, QString old_full_path)
 {
     QWriteLocker locker(&GetLock());
     // QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
-    QString source = GetText();
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     // first convert old_full_path to old_bkpath
@@ -1427,7 +1568,7 @@ void OPFResource::BulkResourcesMoved(const QHash<QString, Resource *> movedDict)
 {
     QWriteLocker locker(&GetLock());
     QString opf_start_dir = Utility::startingDir(GetRelativePath());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
 
@@ -1454,7 +1595,7 @@ void OPFResource::BulkResourcesRenamed(const QHash<QString, Resource *> renamedD
 {
     QWriteLocker locker(&GetLock());
     QString opf_start_dir = Utility::startingDir(GetRelativePath());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
 
@@ -1614,36 +1755,37 @@ void OPFResource::WriteIdentifier(const QString &metaname, const QString &metava
 
 QString OPFResource::AddModificationDateMeta()
 {
-    QString datetime;
-    QDateTime local(QDateTime::currentDateTime());
-#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
-    local.setTimeZone(QTimeZone::UTC);
-#else
-    local.setTimeSpec(Qt::UTC);
-#endif
-    datetime = local.toString(Qt::ISODate);
+    const QString datetime = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
 
     QString epubversion = GetEpubVersion();
     if (epubversion.startsWith('3')) {
 
-        // epub 3 set dcterms:modified date time in ISO 8601 format
-        // if an entry exists, update it
+        // Refined dates describe another metadata record, not the publication.
+        // Keep the first publication date in place and remove only duplicates.
+        int publication_date = -1;
         for (int i=0; i < p.m_metadata.count(); ++i) {
             MetaEntry me = p.m_metadata.at(i);
             if (me.m_name == QString("meta")) {
                 QString property = me.m_atts.value(QString("property"), QString(""));
-                if (property == QString("dcterms:modified")) {
+                if (property == QString("dcterms:modified") && me.m_atts.value("refines").isEmpty()) {
+                    if (publication_date >= 0) {
+                        p.m_metadata.removeAt(i--);
+                        continue;
+                    }
+                    publication_date = i;
                     me.m_content = datetime;
                     p.m_metadata.replace(i, me);
-                    UpdateText(p);
-                    return datetime;
                 }
             }
+        }
+        if (publication_date >= 0) {
+            UpdateText(p);
+            return datetime;
         }
         // otherwize create a new entry
         MetaEntry me;
@@ -1695,13 +1837,7 @@ QString OPFResource::GetOPFDefaultText(const QString &version)
         return TEMPLATE_TEXT.arg(Utility::CreateUUID()).arg(defaultLanguage).arg(tr("[Title here]"));
     }
     // epub 3 set dcterms:modified date time in ISO 8601 format
-    QDateTime local(QDateTime::currentDateTime());
-#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
-    local.setTimeZone(QTimeZone::UTC);
-#else
-    local.setTimeSpec(Qt::UTC);
-#endif
-    QString datetime = local.toString(Qt::ISODate);
+    const QString datetime = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
     return TEMPLATE3_TEXT.arg(Utility::CreateUUID()).arg(defaultLanguage).arg(tr("[Main title here]")).arg(datetime);
 }
 
@@ -1748,7 +1884,7 @@ QString OPFResource::GetResourceMimetype(const Resource *resource) const
 void OPFResource::UpdateManifestMediaTypes(const QList<Resource*> resources)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     foreach(Resource* resource, resources) {
@@ -1781,7 +1917,25 @@ void OPFResource::UpdateManifestMediaTypes(const QList<Resource*> resources)
 
 void OPFResource::UpdateText(const OPFParser &p)
 {
-    TextResource::SetText(p.convert_to_xml());
+    QString updated = p.convert_to_xml();
+    SettingsStore settings;
+    if (settings.preserveOPFSource()) {
+        const QString before = p.original_model_xml();
+        if (before == updated) return;
+        const QString original = PreservedSourceText();
+        int rv = 0;
+        QString error;
+        const QList<QVariant> args { original, before, updated };
+        const QVariant result = EmbeddedPython::instance().runInPython(
+            "opf_source", "apply_model_update", args, &rv, error, false, false);
+        if (rv != 0) {
+            const QString message = QStringLiteral("Cannot preserve OPF source: ") + error;
+            throw ErrorParsingXml(message.toStdString());
+        }
+        updated = result.toString();
+        m_PreservedSourceText = updated;
+    }
+    if (EditorProjection(updated) != GetText()) TextResource::SetText(updated);
 }
 
 
@@ -1809,7 +1963,7 @@ QString OPFResource::ValidatePackageVersion(const QString& source)
 void OPFResource::UpdateManifestProperties(const QList<Resource*> resources)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     if (p.m_package.m_version != "3.0") {
@@ -1823,7 +1977,7 @@ void OPFResource::UpdateManifestProperties(const QList<Resource*> resources)
             ManifestEntry me = p.m_manifest.at(pos);
             QStringList properties = html_resource->GetManifestProperties();
             // The nav must not lose the nav property
-            if (html_resource == m_NavResource) {
+            if (html_resource == GetNavResource()) {
                 if (!properties.contains("nav")) {
                     properties << "nav";
                 }
@@ -1864,7 +2018,7 @@ QString OPFResource::GetManifestPropertiesForResource(const Resource * resource)
     QString properties;
     if (!resource) return properties;
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     if (!p.m_package.m_version.startsWith("3")) {
@@ -1888,7 +2042,7 @@ QHash <QString, QString>  OPFResource::GetManifestPropertiesForPaths()
         return manifest_properties_all;
     }
     QReadLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     foreach(ManifestEntry me, p.m_manifest) {
@@ -1905,26 +2059,32 @@ QHash <QString, QString>  OPFResource::GetManifestPropertiesForPaths()
 
 HTMLResource * OPFResource::GetNavResource()const
 {
-    return m_NavResource;
+    return m_NavResource.loadAcquire();
+}
+
+QString OPFResource::GetSourceText() const
+{
+    QReadLocker locker(&GetLock());
+    return PreservedSourceText();
 }
 
 
-void OPFResource::SetNavResource(HTMLResource * nav_resource)
+void OPFResource::SetNavResource(HTMLResource * nav_resource, bool update_manifest)
 {
-    m_NavResource = nav_resource;
+    const bool changed = m_NavResource.loadAcquire() != nav_resource;
     // Make sure the proper nav property is set in the opf manifest
     // but do not overwrite any other existing properties
-    if (m_NavResource) { 
+    if (nav_resource && update_manifest) {
         QWriteLocker locker(&GetLock());
-        QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+        QString source = ModelSource();
         OPFParser p;
         p.parse(source);
-        QString href = Utility::URLEncodePath(GetRelativePathToResource(m_NavResource));
+        QString href = Utility::URLEncodePath(GetRelativePathToResource(nav_resource));
         int pos = p.m_hrefpos.value(href, -1);
         if ((pos >= 0) && (pos < p.m_manifest.count())) {
             ManifestEntry me = p.m_manifest.at(pos);
             QString props = me.m_atts.value("properties", "");
-            if (!props.contains("nav")) {
+            if (!props.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts).contains("nav")) {
                 props = props + " nav";
             }
             props = props.simplified();
@@ -1934,13 +2094,15 @@ void OPFResource::SetNavResource(HTMLResource * nav_resource)
         }
         UpdateText(p);
     }
+    m_NavResource.storeRelease(nav_resource);
+    if (changed) emit NavigationResourceChanged();
 }
 
 
 void OPFResource::SetItemRefLinear(Resource * resource, bool linear)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString resource_href_path = Utility::URLEncodePath(GetRelativePathToResource(resource));
@@ -1971,7 +2133,7 @@ void OPFResource::SetItemRefLinear(Resource * resource, bool linear)
 void OPFResource::RebaseManifestIDs()
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     PythonRoutines pr;
     source = pr.RebaseManifestIDsInPython(source);
     TextResource::SetText(source);
@@ -1980,7 +2142,7 @@ void OPFResource::RebaseManifestIDs()
 void OPFResource::AppendResourceToSpine(const Resource* resource, bool nonlinear)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString item_id = GetResourceManifestID(resource, p);
@@ -2006,7 +2168,7 @@ void OPFResource::AppendResourceToSpine(const Resource* resource, bool nonlinear
 void OPFResource::RemoveResourceFromSpine(const Resource* resource)
 {
     QWriteLocker locker(&GetLock());
-    QString source = CleanSource::ProcessXML(GetText(),"application/oebps-package+xml");
+    QString source = ModelSource();
     OPFParser p;
     p.parse(source);
     QString item_id = GetResourceManifestID(resource, p);

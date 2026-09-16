@@ -360,6 +360,16 @@ once through `ApplyResourceBatch`, applies `UniversalUpdates` to non-OPF
 references, then removes staged resources. Relocation cannot be combined with
 staged text writes because the latter could overwrite link corrections.
 
+If a live commit fails after applying one or more mutations, the host attempts
+to compensate every applied text, binary, archive, package, path, and resource
+change in reverse and releases the global writer lease. Managed resource
+removals are backed up as a complete batch before the first file is deleted;
+the in-memory resource objects are detached only after every deletion succeeds.
+Restoration errors are reported explicitly and are never described as a full
+rollback. This is process-local compensation, not a durable write-ahead log:
+termination or power loss inside the commit window can still require recovery
+from the pre-commit Checkpoint.
+
 Newly staged text resources are addressable by the `staging_id` returned from
 `add_resource()` or a chunked text writer. The same transaction can range-read,
 replace, or patch that ID before commit; its staged revision starts at zero and
@@ -372,6 +382,29 @@ add/remove/move set, that manifest IDs and hrefs are unique, that every spine
 does not generate a second manifest rewrite; it applies the package once after
 the physical structure changes. Larger reads use `open_binary()` streams;
 larger writes use Begin/Chunk/End and are length/SHA-256 checked before staging.
+
+`update_metadata()` and `update_spine()` are source-preserving structured
+operations. They build a safe package model, apply the requested model change,
+and patch that difference onto the original OPF source. An exact no-op returns
+the original source. Unrelated comments, processing instructions, CDATA,
+namespace prefixes, attribute quoting, line endings, and opaque nested extension
+elements remain in place; ambiguous IDs/hrefs, undeclared names, malformed XML,
+or unsafe extension collisions fail instead of falling back to DOM
+serialization. The supplied metadata/items arrays are still replacements for
+the modeled children, so omitting a modeled entry is an intentional removal.
+`replace_package()` is different by design: its complete `text` is authoritative
+and therefore replaces the full OPF source supplied by the caller.
+
+A staged package plan is bound to its OPF resource ID, numeric revision, and
+exact raw source. Stage, preview/validate, checkpoint creation, and commit all
+recheck that identity, so a host edit is rejected even if a numeric revision
+observer has not run yet. Package preview entries include before/after UTF-16
+lengths and SHA-256 digests. A changed package requires a recovery Checkpoint;
+its OPF member is materialized from the pre-commit source bytes without updating
+the publication timestamp or inserting a UUID into the live OPF. Commit returns
+`checkpoint_created` and `checkpoint_book_id`. If the original encoding cannot
+represent the current source, Checkpoint creation fails and the live package is
+left unchanged.
 
 `read_text_range()` uses UTF-16 offsets and returns `text`, `start`, `end`,
 `total_utf16_units`, `revision`, `staged`, and nullable `next_start`. The first
@@ -481,12 +514,15 @@ chunked transaction binary, and a bounded 1000-block console.
 
 ## Verification
 
-The CTest suite contains 20 registered targets covering archive/input
-validation, frame limits, metadata/runtime selection, OpenRPC/dispatcher parity,
-the SDK, examples, bilingual documentation coverage, real launcher/transport
-handshakes, UTF-16 patches, transactions, rollback, and the global writer lease.
-The current macOS Debug result is 20/20. GUI save/load and
-fault-injected cross-resource recovery remain manual acceptance items; see
+The CTest suite covers archive/input validation, frame limits,
+metadata/runtime selection, OpenRPC/dispatcher parity, the SDK, examples,
+bilingual documentation coverage, real launcher/transport handshakes, UTF-16
+patches, transactions, rollback, and the global writer lease. The macOS Debug
+suite also includes a real MainWindow/launcher/SDK integration target that
+injects failures after package, multi-text, structure, binary, archive,
+relocation/reference, and resource-deletion mutations and verifies compensation
+plus writer reacquisition. Process-kill recovery, active-editor UI restoration,
+and the Windows/Linux matrix remain manual acceptance items; see
 `LivePythonPluginSecurityAudit.md`.
 Run it with:
 

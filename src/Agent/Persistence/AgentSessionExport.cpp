@@ -39,6 +39,137 @@ void flushAssistant(QStringList *lines, QString *thinking, QString *answer)
     }
 }
 
+void appendIndented(QStringList *lines, const QString &text)
+{
+    if (!lines) return;
+    const QStringList source_lines = text.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (const QString &line : source_lines) {
+        lines->append(QStringLiteral("    ") + line);
+    }
+}
+
+void appendPlanReview(QStringList *lines, const QJsonObject &payload)
+{
+    if (!lines) return;
+    const QString kind = payload.value(QStringLiteral("plan_kind")).toString();
+    lines->append(kind == QLatin1String("paragraph_normalization")
+                      ? QStringLiteral("## Plan review: Paragraph normalization")
+                      : QStringLiteral("## Plan review: TOC hierarchy"));
+    lines->append(QStringLiteral(
+        "The live book is unchanged. Review this plan before approving its apply step."));
+    if (kind == QLatin1String("paragraph_normalization")) {
+        const QJsonObject summary = payload.value(QStringLiteral("summary")).toObject();
+        lines->append(QStringLiteral(
+            "- Files ready: %1; conversions: %2; protected items: %3")
+                          .arg(summary.value(QStringLiteral("ready_files")).toInt())
+                          .arg(summary.value(QStringLiteral("conversion_count")).toInt())
+                          .arg(summary.value(QStringLiteral("protected_count")).toInt()));
+        const bool paginated = payload.contains(QStringLiteral("total_count"));
+        if (paginated) {
+            lines->append(QStringLiteral(
+                "- Plan page: %1 of %2 XHTML files (offset %3); cumulative review: %4/%2")
+                              .arg(payload.value(
+                                  QStringLiteral("returned_count")).toInt())
+                              .arg(payload.value(
+                                  QStringLiteral("total_count")).toInt())
+                              .arg(payload.value(
+                                  QStringLiteral("offset")).toInt())
+                              .arg(payload.value(
+                                  QStringLiteral("reviewed_count")).toInt()));
+            if (!payload.value(QStringLiteral("review_complete")).toBool()) {
+                lines->append(QStringLiteral(
+                    "- Review incomplete; continue at offset %1 before applying.")
+                                  .arg(payload.value(
+                                      QStringLiteral("review_next_offset")).toInt()));
+            }
+        }
+        const QJsonArray groups = payload.value(
+            QStringLiteral("operation_groups")).toArray();
+        if (payload.value(
+                QStringLiteral("operation_groups_independent")).toBool()
+            && !groups.isEmpty()) {
+            lines->append(QStringLiteral(
+                "- Independent XHTML operation groups: %1; choose one or more when approving apply.")
+                              .arg(paginated
+                                      ? payload.value(
+                                          QStringLiteral("total_count")).toInt()
+                                      : groups.size()));
+        }
+        for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
+            const QJsonObject change = value.toObject();
+            const QString path = change.value(QStringLiteral("book_path")).toString();
+            lines->append(QStringLiteral("### %1").arg(
+                path.isEmpty() ? change.value(QStringLiteral("resource_id")).toString() : path));
+            lines->append(QStringLiteral("- Conversions: %1; protected items: %2")
+                              .arg(change.value(QStringLiteral("conversion_count")).toInt())
+                              .arg(change.value(QStringLiteral("protected_count")).toInt()));
+            const QJsonObject diff = change.value(QStringLiteral("source_diff")).toObject();
+            lines->append(QStringLiteral("Before excerpt:"));
+            appendIndented(lines, diff.value(QStringLiteral("before")).toString());
+            lines->append(QStringLiteral("After excerpt:"));
+            appendIndented(lines, diff.value(QStringLiteral("after")).toString());
+        }
+    } else {
+        lines->append(QStringLiteral("- Affected nodes: %1; adopted siblings: %2")
+                          .arg(payload.value(QStringLiteral("affected_count")).toInt())
+                          .arg(payload.value(QStringLiteral("adopted_count")).toInt()));
+        for (const QJsonValue &value : payload.value(QStringLiteral("changes")).toArray()) {
+            const QJsonObject change = value.toObject();
+            lines->append(QStringLiteral("- %1 (%2): depth %3 → %4; parent %5 → %6")
+                              .arg(change.value(QStringLiteral("label")).toString())
+                              .arg(change.value(QStringLiteral("target")).toString())
+                              .arg(change.value(QStringLiteral("from_depth")).toInt())
+                              .arg(change.value(QStringLiteral("to_depth")).toInt())
+                              .arg(change.value(QStringLiteral("from_parent_id")).toInteger())
+                              .arg(change.value(QStringLiteral("to_parent_id")).toInteger()));
+        }
+        if (payload.value(QStringLiteral("changes_truncated")).toBool()) {
+            lines->append(QStringLiteral(
+                "- Additional TOC changes were omitted from this bounded review."));
+        }
+    }
+    lines->append(QStringLiteral("- Local validation: %1")
+                      .arg(payload.value(QStringLiteral("local_validation")).toString()));
+    const QString epubcheck = payload.value(QStringLiteral("full_epubcheck")).toObject()
+                                  .value(QStringLiteral("status")).toString();
+    lines->append(epubcheck.isEmpty() || epubcheck == QLatin1String("not_run")
+                      ? QStringLiteral("- Full EPUBCheck: not run.")
+                      : QStringLiteral("- Full EPUBCheck: %1").arg(epubcheck));
+    lines->append(QString());
+}
+
+void appendResourceOutcomes(QStringList *lines, const QJsonObject &outcomes)
+{
+    if (!lines || outcomes.isEmpty()) return;
+    if (!outcomes.value(QStringLiteral("scope_available")).toBool()) {
+        lines->append(QStringLiteral(
+            "Resource result unavailable because the commit scope could not be inspected."));
+        return;
+    }
+    lines->append(QStringLiteral("Resources: %1 succeeded; %2 failed.")
+                      .arg(outcomes.value(
+                          QStringLiteral("successful_resource_count")).toInt())
+                      .arg(outcomes.value(
+                          QStringLiteral("failed_resource_count")).toInt()));
+    if (outcomes.value(
+            QStringLiteral("structural_operation_count")).toInt() > 0) {
+        lines->append(QStringLiteral(
+            "Structural operations: %1 succeeded; %2 failed.")
+                          .arg(outcomes.value(QStringLiteral(
+                              "successful_structural_operation_count")).toInt())
+                          .arg(outcomes.value(QStringLiteral(
+                              "failed_structural_operation_count")).toInt()));
+    }
+    if (outcomes.value(QStringLiteral("all_or_nothing")).toBool()) {
+        lines->append(outcomes.value(QStringLiteral("status")).toString()
+                              == QLatin1String("all_applied")
+                          ? QStringLiteral(
+                              "Atomic result: all staged targets were applied.")
+                          : QStringLiteral(
+                              "Atomic result: no staged target was applied."));
+    }
+}
+
 } // namespace
 
 QString redactSecrets(QString text, const QStringList &secrets)
@@ -137,8 +268,51 @@ QString exportConversationMarkdown(const AgentSession &session, const SessionExp
             case AgentEventType::ToolCompleted:
             case AgentEventType::ToolFailed:
             case AgentEventType::ToolRejected: {
-                flushAssistant(&lines, &thinking, &answer);
                 const QString name = event.payload.value(QStringLiteral("name")).toString();
+                const bool summarized_by_plan_event =
+                    event.type == AgentEventType::ToolCompleted
+                    && (name == QLatin1String("paragraphs.plan")
+                        || name == QLatin1String("toc.plan_transform"));
+                const bool summarized_by_transaction_event =
+                    event.type == AgentEventType::ToolCompleted
+                    && (name == QLatin1String("transaction.preview")
+                        || name == QLatin1String("transaction.commit")
+                        || name == QLatin1String("transaction.rollback"));
+                if (summarized_by_plan_event || summarized_by_transaction_event) break;
+                flushAssistant(&lines, &thinking, &answer);
+                if (event.type == AgentEventType::ToolFailed
+                    && name == QLatin1String("transaction.commit")) {
+                    lines.append(QStringLiteral("## Apply failed"));
+                    lines.append(QStringLiteral("Not applied to the current book."));
+                    const QJsonObject outcomes = event.payload.value(
+                        QStringLiteral("data")).toObject().value(
+                        QStringLiteral("resource_outcomes")).toObject();
+                    appendResourceOutcomes(&lines, outcomes);
+                    const QString transaction_state = outcomes.value(
+                        QStringLiteral("transaction_state")).toString();
+                    if (transaction_state == QLatin1String("staged")) {
+                        lines.append(QStringLiteral(
+                            "The staged transaction remains available for review, retry, or rollback."));
+                    } else if (transaction_state == QLatin1String("rolled_back")) {
+                        lines.append(QStringLiteral(
+                            "The staged transaction was rolled back; no partial book changes remain."));
+                    } else if (transaction_state == QLatin1String("not_open")) {
+                        lines.append(QStringLiteral("No staged transaction remains."));
+                    }
+                    lines.append(QStringLiteral("Full EPUBCheck: not run."));
+                    const QString code = event.payload.value(
+                        QStringLiteral("code")).toString();
+                    const QString message = redactSecrets(event.payload.value(
+                        QStringLiteral("message")).toString(), context.secrets);
+                    if (!code.isEmpty() && !message.isEmpty()) {
+                        lines.append(QStringLiteral("Failure: %1 — %2")
+                                         .arg(code, message));
+                    } else if (!message.isEmpty()) {
+                        lines.append(QStringLiteral("Failure: %1").arg(message));
+                    }
+                    lines.append(QString());
+                    break;
+                }
                 QString heading = QStringLiteral("## Tool: %1").arg(name);
                 if (event.type == AgentEventType::ToolFailed) {
                     heading = QStringLiteral("## Tool failed: %1").arg(name);
@@ -182,16 +356,86 @@ QString exportConversationMarkdown(const AgentSession &session, const SessionExp
                 lines.append(QStringLiteral("Run stopped."));
                 lines.append(QString());
                 break;
+            case AgentEventType::PlanCreated:
+                flushAssistant(&lines, &thinking, &answer);
+                appendPlanReview(&lines, event.payload);
+                break;
             case AgentEventType::TransactionPreviewed:
                 flushAssistant(&lines, &thinking, &answer);
                 lines.append(QStringLiteral("## Preview"));
-                lines.append(QStringLiteral("Staged changes were not committed."));
+                lines.append(QStringLiteral("Staged only. The live book was unchanged."));
                 lines.append(QString());
                 break;
-            case AgentEventType::TransactionCommitted:
+            case AgentEventType::TransactionCommitted: {
                 flushAssistant(&lines, &thinking, &answer);
                 lines.append(QStringLiteral("## Applied"));
-                lines.append(QStringLiteral("Committed to the book."));
+                lines.append(QStringLiteral("Applied to the current book. The EPUB file has not been saved."));
+                appendResourceOutcomes(
+                    &lines, event.payload.value(
+                        QStringLiteral("resource_outcomes")).toObject());
+                if (event.payload.value(QStringLiteral("applied_changes")).isDouble()) {
+                    lines.append(QStringLiteral("Applied changes: %1")
+                                     .arg(event.payload.value(QStringLiteral("applied_changes")).toInt()));
+                }
+                if (event.payload.value(QStringLiteral("book_revision")).isDouble()) {
+                    lines.append(QStringLiteral("Book revision: %1")
+                                     .arg(event.payload.value(QStringLiteral("book_revision")).toInteger()));
+                }
+                const QString epubcheck_status =
+                    event.payload.value(QStringLiteral("full_epubcheck")).toObject()
+                        .value(QStringLiteral("status")).toString();
+                lines.append(epubcheck_status.isEmpty() || epubcheck_status == QLatin1String("not_run")
+                                 ? QStringLiteral("Full EPUBCheck: not run.")
+                                 : QStringLiteral("Full EPUBCheck: %1").arg(epubcheck_status));
+                lines.append(QStringLiteral("Recovery: use Sigil Undo where available."));
+                const QJsonObject recovery =
+                    event.payload.value(QStringLiteral("recovery")).toObject();
+                const QString restore_status = recovery
+                    .value(QStringLiteral("task_restore_point")).toString();
+                if (restore_status == QLatin1String("available")) {
+                    lines.append(QStringLiteral(
+                        "A conflict-checked task restore point is available for %1 text resource(s).")
+                                     .arg(recovery.value(QStringLiteral("affected_resources"))
+                                              .toArray().size()));
+                } else if (restore_status == QLatin1String("unavailable")
+                           && recovery.value(QStringLiteral("reason")).toString()
+                               == QLatin1String("structural_changes")) {
+                    lines.append(QStringLiteral(
+                        "A task restore point was not created because this commit changed book structure."));
+                } else if (restore_status == QLatin1String("unavailable")) {
+                    lines.append(QStringLiteral(
+                        "A task restore point could not be created for this commit."));
+                } else if (restore_status == QLatin1String("not_created_by_commit")) {
+                    lines.append(QStringLiteral("This commit did not create a task-wide restore point."));
+                }
+                lines.append(QString());
+                break;
+            }
+            case AgentEventType::TaskRestoreCompleted:
+                flushAssistant(&lines, &thinking, &answer);
+                lines.append(QStringLiteral("## Task restored"));
+                lines.append(QStringLiteral("Restored %1 text resource(s). Later unrelated edits were preserved.")
+                                 .arg(event.payload.value(QStringLiteral("affected_resources"))
+                                          .toArray().size()));
+                lines.append(QString());
+                break;
+            case AgentEventType::TaskRestoreFailed:
+                flushAssistant(&lines, &thinking, &answer);
+                lines.append(QStringLiteral("## Restore blocked"));
+                lines.append(event.payload.value(QStringLiteral("code")).toString()
+                                     == QLatin1String("TASK_RESTORE_CONFLICT")
+                                 ? QStringLiteral("Affected resources changed after the task. No book content was changed.")
+                                 : event.payload.value(QStringLiteral("message")).toString());
+                lines.append(QString());
+                break;
+            case AgentEventType::TransactionRolledBack:
+                flushAssistant(&lines, &thinking, &answer);
+                lines.append(event.payload.value(QStringLiteral("rolled_back")).toBool()
+                                 ? QStringLiteral("## Staged changes discarded")
+                                 : QStringLiteral("## No staged changes"));
+                lines.append(event.payload.value(QStringLiteral("rolled_back")).toBool()
+                                 ? QStringLiteral("The staged transaction was discarded. The live book was not changed by this transaction.")
+                                 : QStringLiteral("There was no staged transaction to discard. The live book was not changed."));
                 lines.append(QString());
                 break;
             default:

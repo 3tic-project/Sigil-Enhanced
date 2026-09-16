@@ -32,9 +32,11 @@
 #include <QAction>
 #include <QMenu>
 #include <QPointer>
+#include <QHash>
 
 #include "MainUI/TOCModel.h"
 #include "BookManipulation/Headings.h"
+#include "BookManipulation/TocTreeTransform.h"
 #include "ResourceObjects/NCXResource.h"
 
 #include "ui_EditTOC.h"
@@ -42,6 +44,7 @@
 class Book;
 class QStandardItem;
 class Resource;
+class QUndoStack;
 
 class EditTOC : public QDialog
 {
@@ -59,6 +62,8 @@ public:
     EditTOC(QSharedPointer<Book> book, QList<Resource *> resources, QWidget *parent = 0);
 
     ~EditTOC();
+
+    bool DidSaveChanges() const;
 
         
 protected:
@@ -81,6 +86,8 @@ private slots:
     void SelectTarget();
     void MakeDefaultFirstSelection();
     void OpenContextMenu(const QPoint &point);
+    void UpdateMoveButtons();
+    void RecordItemEdit(QStandardItem *item);
     
 private:
 
@@ -94,6 +101,24 @@ private:
 
     TOCModel::TOCEntry ConvertTableToEntries();
     TOCModel::TOCEntry ConvertItemToEntry(QStandardItem *item);
+    TocEditTree ConvertTableToEditTree() const;
+    void AddItemToEditTree(QStandardItem *item, TocNodeId parentId,
+                           TocEditTree &tree) const;
+    QList<TocNodeId> SelectedNodeIds() const;
+    void ApplyEditTree(const TocEditTree &tree,
+                       const QList<TocNodeId> &selectedIds);
+    void AddEditNodeToParentItem(const TocEditTree &tree, TocNodeId id,
+                                 QStandardItem *parent);
+    void ApplyHierarchyTransform(const TocTransformResult &result,
+                                 const QString &undoText);
+    void PushSnapshot(const TocEditTree &before, const TocEditTree &after,
+                      const QList<TocNodeId> &beforeSelection,
+                      const QList<TocNodeId> &afterSelection,
+                      const QString &undoText, bool alreadyApplied);
+    void RecordAppliedEdit(const TocEditTree &before,
+                           const QList<TocNodeId> &beforeSelection,
+                           const QString &undoText);
+    void ShowTransformError(const TocTransformResult &result);
 
     void BuildModel(const TOCModel::TOCEntry &root_entry);
     void AddEntryToParentItem(const TOCModel::TOCEntry &entry, QStandardItem *parent, int level);
@@ -131,10 +156,20 @@ private:
     QAction *m_ExpandAll;
     QAction *m_MoveDown;
     QAction *m_MoveUp;
+    QAction *m_Undo;
+    QAction *m_Redo;
 
     TOCModel *m_TOCModel;
 
     Resource * m_BaseResource;
+
+    QUndoStack *m_UndoStack;
+    TocEditTree m_InitialTree;
+    TocEditTree m_CurrentTree;
+    TocNodeId m_NextNodeId;
+    QHash<TocNodeId, QStandardItem *> m_ItemsById;
+    bool m_ApplyingTree;
+    bool m_SavedChanges;
 
     Ui::EditTOC ui;
 };

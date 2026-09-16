@@ -9,6 +9,7 @@
 #define SIGIL_AGENT_IMODEL_PROVIDER_H
 
 #include <QJsonArray>
+#include <QJsonObject>
 #include <QString>
 
 #include "Agent/AgentTypes.h"
@@ -35,10 +36,15 @@ struct ModelRequest {
     QString model;
     QList<ChatMessage> messages;
     QJsonArray tools;
+    QJsonObject historyContext;
+    QJsonObject toolContext;
     bool thinking = true;
     QString reasoningEffort = QStringLiteral("medium");
     ReasoningProtocol reasoningProtocol = ReasoningProtocol::DeepSeek;
     bool stream = true;
+    bool includeUsage = true;
+    int maxOutputTokens = 0;
+    int timeoutMs = 120000;
 };
 
 class ModelStreamSink

@@ -606,6 +606,21 @@ void FolderKeeper::RemoveWithoutUpdatingOPF(Resource* resource)
     resource->Delete();
 }
 
+void FolderKeeper::ForgetDeletedResourceWithoutUpdatingOPF(Resource* resource)
+{
+    if (!resource || QFileInfo::exists(resource->GetFullPath())) return;
+    m_Resources.remove(resource->GetIdentifier());
+    m_Path2Resource.remove(resource->GetRelativePath());
+
+    if (m_FSWatcher->files().contains(resource->GetFullPath())) {
+        m_FSWatcher->removePath(resource->GetFullPath());
+    }
+    m_SuspendedWatchedFiles.removeAll(resource->GetFullPath());
+
+    disconnect(resource, SIGNAL(Deleted(const Resource*)), this, SLOT(RemoveResource(const Resource*)));
+    resource->FinalizeDeletionAfterFileRemoval();
+}
+
 void FolderKeeper::BulkRenameResources(const QList<Resource *> resources,
                                        const QStringList &newnames,
                                        bool update_opf)

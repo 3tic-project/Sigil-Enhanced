@@ -25,12 +25,31 @@
 #include <QList>
 #include <QStringView>
 #include <QDebug>
+#include <QtGlobal>
 
-#include "Misc/Utility.h"
 #include "Parsers/TagLister.h"
 #include "sigil_constants.h"
 
 const QString WHITESPACE_CHARS=" \t\n\r";  // valid in pure xml
+
+namespace {
+
+QStringView SliceView(const QString &source, int start, int end)
+{
+    const QStringView view(source);
+    const qsizetype bounded_start = qBound(qsizetype(0), qsizetype(start), view.size());
+    const qsizetype bounded_end = qBound(bounded_start, qsizetype(end), view.size());
+    return view.sliced(bounded_start, bounded_end - bounded_start);
+}
+
+QString Slice(const QStringView source, int start, int end)
+{
+    const qsizetype bounded_start = qBound(qsizetype(0), qsizetype(start), source.size());
+    const qsizetype bounded_end = qBound(bounded_start, qsizetype(end), source.size());
+    return source.sliced(bounded_start, bounded_end - bounded_start).toString();
+}
+
+}
 
 // public interface
 
@@ -306,7 +325,7 @@ void TagLister::parseAttribute(const QStringView tagstring, const QString &attri
         p = skipAnyBlanks(tagstring, p);
         int s = p;
         p = stopWhenContains(tagstring, "=", p);
-        QString aname = Utility::Substring(s, p, tagstring).trimmed();
+        QString aname = Slice(tagstring, s, p).trimmed();
         if (aname == attribute_name) {
             ainfo.pos = s;
             ainfo.aname = aname;
@@ -319,7 +338,7 @@ void TagLister::parseAttribute(const QStringView tagstring, const QString &attri
             p++;
             int b = p;
             p = stopWhenContains(tagstring, qc, p);
-            avalue = Utility::Substring(b, p, tagstring);
+            avalue = Slice(tagstring, b, p);
             if (aname == attribute_name) {
                 ainfo.avalue = avalue;
                 ainfo.len = p - s + 1;
@@ -330,7 +349,7 @@ void TagLister::parseAttribute(const QStringView tagstring, const QString &attri
         } else {
             int b = p;
             p = stopWhenContains(tagstring, ">/ ", p);
-            avalue = Utility::Substring(b, p, tagstring);
+            avalue = Slice(tagstring, b, p);
             if (aname == attribute_name) {
                 ainfo.avalue = avalue;
                 ainfo.len = p - s;
@@ -459,20 +478,20 @@ QStringView TagLister::parseML()
     if (m_source.at(p) != '<') {
         // we have text leading up to a tag start
         m_next = findTarget("<", p+1);
-        return Utility::SubstringView(m_pos, m_next, m_source);
+        return SliceView(m_source, m_pos, m_next);
     }
     // we have a tag or special case
     // handle special cases first
-    QString tstart = Utility::Substring(p, p+9, m_source);
+    QString tstart = SliceView(m_source, p, p + 9).toString();
     if (tstart.startsWith("<!--")) {
         // include ending > as part of the string
         m_next = findTarget("-->", p+4, true);
-        return Utility::SubstringView(m_pos, m_next, m_source);
+        return SliceView(m_source, m_pos, m_next);
     }
     if (tstart.startsWith("<![CDATA[")) {
         // include ending > as part of the string
         m_next = findTarget("]]>", p+9, true);
-        return Utility::SubstringView(m_pos, m_next, m_source);
+        return SliceView(m_source, m_pos, m_next);
     }
     // include ending > as part of the string
     m_next = findTarget(">", p+1, true);
@@ -481,7 +500,7 @@ QStringView TagLister::parseML()
     if ((ntb != -1) && (ntb < m_next)) {
         m_next = ntb;
     }
-    return Utility::SubstringView(m_pos, m_next, m_source);
+    return SliceView(m_source, m_pos, m_next);
 }
 
 
@@ -525,7 +544,7 @@ void TagLister::parseTag(const QStringView tagstring, TagLister::TagInfo& mi)
     };
     int b = p;
     p = stopWhenContains(tagstring, ">/ \f\t\r\n", p);
-    mi.tname = Utility::Substring(b, p, tagstring);
+    mi.tname = Slice(tagstring, b, p);
 
     // fill in tag type
     if (mi.ttype.isEmpty()) {

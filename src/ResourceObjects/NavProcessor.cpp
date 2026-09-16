@@ -40,39 +40,91 @@ static const QString NAV_TOC_PATTERN = "\\s*<!--\\s*SIGIL_REPLACE_TOC_HERE\\s*--
 
 static const QString _RS = QString(QChar(30)); // Ascii Record Separator
 
+namespace {
+
+GumboNode *DirectChild(GumboNode *parent, GumboTag tag)
+{
+    if (!parent || parent->type != GUMBO_NODE_ELEMENT) return nullptr;
+    const GumboVector *children = &parent->v.element.children;
+    for (unsigned int index = 0; index < children->length; ++index) {
+        GumboNode *child = static_cast<GumboNode *>(children->data[index]);
+        if (child->type == GUMBO_NODE_ELEMENT
+                && child->v.element.tag == tag) return child;
+    }
+    return nullptr;
+}
+
+void CollectListItems(GumboNode *list, const QList<TocNodeId> &preorder,
+                      int &position, QHash<TocNodeId, GumboNode *> &items,
+                      QHash<TocNodeId, GumboNode *> &childLists)
+{
+    if (!list || list->type != GUMBO_NODE_ELEMENT) return;
+    const GumboVector *children = &list->v.element.children;
+    for (unsigned int index = 0; index < children->length; ++index) {
+        GumboNode *child = static_cast<GumboNode *>(children->data[index]);
+        if (child->type != GUMBO_NODE_ELEMENT
+                || child->v.element.tag != GUMBO_TAG_LI
+                || position >= preorder.size()) continue;
+        const TocNodeId id = preorder.at(position++);
+        items.insert(id, child);
+        GumboNode *nested = DirectChild(child, GUMBO_TAG_OL);
+        if (nested) {
+            childLists.insert(id, nested);
+            CollectListItems(nested, preorder, position, items, childLists);
+        }
+    }
+}
+
+void ClearChildren(GumboNode *parent)
+{
+    if (!parent || parent->type != GUMBO_NODE_ELEMENT) return;
+    GumboVector *children = &parent->v.element.children;
+    while (children->length > 0) {
+        GumboNode *child = static_cast<GumboNode *>(children->data[0]);
+        gumbo_remove_from_parent(child);
+        gumbo_destroy_node(child);
+    }
+}
+
+void AppendHierarchy(const TocEditTree &tree, TocNodeId id, GumboNode *parentList,
+                     const QHash<TocNodeId, GumboNode *> &items,
+                     QHash<TocNodeId, GumboNode *> &childLists)
+{
+    GumboNode *item = items.value(id, nullptr);
+    if (!item) return;
+    gumbo_append_node(parentList, item);
+    const QList<TocNodeId> children = tree.nodes.value(id).children;
+    GumboNode *nested = childLists.value(id, nullptr);
+    if (children.isEmpty()) {
+        if (nested && nested->parent) {
+            gumbo_remove_from_parent(nested);
+            gumbo_destroy_node(nested);
+            childLists.remove(id);
+        }
+        return;
+    }
+    if (!nested) {
+        nested = gumbo_create_element_node(GUMBO_TAG_OL, GUMBO_NAMESPACE_HTML);
+        gumbo_append_node(item, nested);
+        childLists.insert(id, nested);
+    }
+    for (TocNodeId child : children) {
+        AppendHierarchy(tree, child, nested, items, childLists);
+    }
+}
+
+}
+
 NavProcessor::NavProcessor(HTMLResource * nav_resource)
   : m_NavResource(nav_resource)
 {
+    SettingsStore ss;
+    m_language = ss.defaultMetadataLang();
+    if (!m_NavResource) return;
     QReadLocker locker(&m_NavResource->GetLock());
     QString source = m_NavResource->GetText();
-    SettingsStore ss;
-    QString lang = ss.defaultMetadataLang();
-    if (source.isEmpty()) {
-          QString newsource =
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-            "<!DOCTYPE html>\n"
-            "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" "
-            "lang=\"%1\" xml:lang=\"%2\">\n"
-            "<head>\n"
-            "  <meta charset=\"utf-8\" />\n"
-            "  <style type=\"text/css\">\n"
-            "    nav#landmarks, nav#page-list { display:none; }\n"
-            "    ol { list-style-type: none; }\n"
-            "  </style>\n"
-            "</head>\n"
-            "<body epub:type=\"frontmatter\">\n"
-            "  <nav epub:type=\"toc\" id=\"toc\" role=\"doc-toc\">\n"
-            "  </nav>\n"
-            "  <nav epub:type=\"landmarks\" id=\"landmarks\" hidden=\"\">\n"
-            "  </nav>\n"
-            "</body>\n"
-            "</html>";
-          source = newsource.arg(lang).arg(lang);
-          QWriteLocker locker(&m_NavResource->GetLock());
-          m_NavResource->SetText(source);
-          m_language = lang;
-          return;
-    }
+    if (source.isEmpty()) return; // Looking up navigation must never repair it.
+    QString lang = m_language;
     // determine the language used by the nav
     GumboInterface gi = GumboInterface(source, "3.0");
     gi.parse();
@@ -446,11 +498,129 @@ void NavProcessor::SetLandmarks(const QList<NavLandmarkEntry> & landlist)
     m_NavResource->SetText(nav_data);
 }
 
+bool NavProcessor::ReplaceTOCList(const QString &generatedSource, bool undoable)
+{
+    if (!m_NavResource) return false;
 
+    QString source = m_NavResource->GetText();
+    const QRegularExpression tocStart(
+        "(<\\s*nav\\s[^>]*epub:type[^>]*[\"']toc[\"'][^>]*>)",
+        QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpression olStart(
+        "(<\\s*ol\\b[^>]*>)", QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpression olEnd(
+        "</\\s*ol\\s*>", QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpressionMatch tocMatch = tocStart.match(source);
+    if (tocMatch.hasMatch()) {
+        const int navEnd = source.indexOf("</nav>", tocMatch.capturedEnd(),
+                                          Qt::CaseInsensitive);
+        const QRegularExpressionMatch oldOlStart = olStart.match(
+            source, tocMatch.capturedEnd());
+        if (navEnd >= 0 && oldOlStart.hasMatch()
+                && oldOlStart.capturedStart() < navEnd) {
+            QRegularExpressionMatch oldOlEnd;
+            auto endings = olEnd.globalMatch(
+                source.mid(oldOlStart.capturedStart(),
+                           navEnd - oldOlStart.capturedStart()));
+            while (endings.hasNext()) oldOlEnd = endings.next();
+
+            const QRegularExpressionMatch newTocMatch = tocStart.match(generatedSource);
+            const int newNavEnd = newTocMatch.hasMatch()
+                ? generatedSource.indexOf(
+                    QStringLiteral("</nav>"), newTocMatch.capturedEnd(),
+                    Qt::CaseInsensitive)
+                : -1;
+            const QRegularExpressionMatch newOlStart = newTocMatch.hasMatch()
+                ? olStart.match(generatedSource, newTocMatch.capturedEnd())
+                : QRegularExpressionMatch();
+            QRegularExpressionMatch newOlEnd;
+            if (newNavEnd >= 0 && newOlStart.hasMatch()
+                    && newOlStart.capturedStart() < newNavEnd) {
+                auto generatedEndings = olEnd.globalMatch(
+                    generatedSource.mid(
+                        newOlStart.capturedStart(),
+                        newNavEnd - newOlStart.capturedStart()));
+                while (generatedEndings.hasNext()) newOlEnd = generatedEndings.next();
+            }
+            if (oldOlEnd.hasMatch() && newOlStart.hasMatch() && newOlEnd.hasMatch()) {
+                const int oldEnd = oldOlStart.capturedStart()
+                    + oldOlEnd.capturedEnd();
+                QString newList = generatedSource.mid(
+                    newOlStart.capturedStart(),
+                    newOlEnd.capturedEnd());
+                newList.replace(0, newOlStart.capturedLength(),
+                                oldOlStart.captured());
+                source.replace(oldOlStart.capturedStart(),
+                               oldEnd - oldOlStart.capturedStart(), newList);
+                if (source != m_NavResource->GetText()) {
+                    if (undoable) m_NavResource->SetTextAsUndoableEdit(source);
+                    else m_NavResource->SetText(source);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool NavProcessor::ReparentNavTOC(const TocEditTree &before,
+                                  const TocEditTree &after,
+                                  bool undoable)
+{
+    if (!m_NavResource || !TocTreeTransform::Validate(before)
+            || !TocTreeTransform::Validate(after)
+            || before.rootId != after.rootId
+            || before.nodes.size() != after.nodes.size()) return false;
+    for (auto it = before.nodes.cbegin(); it != before.nodes.cend(); ++it) {
+        if (!after.nodes.contains(it.key())
+                || it.value().label != after.nodes.value(it.key()).label
+                || it.value().target != after.nodes.value(it.key()).target) {
+            return false;
+        }
+    }
+
+    GumboInterface gi(m_NavResource->GetText(), "3.0");
+    gi.parse();
+    GumboNode *rootList = nullptr;
+    const QList<GumboNode *> navNodes = gi.get_all_nodes_with_tag(GUMBO_TAG_NAV);
+    for (GumboNode *nav : navNodes) {
+        GumboAttribute *type = gumbo_get_attribute(
+            &nav->v.element.attributes, "epub:type");
+        if (!type || QString::fromUtf8(type->value) != QLatin1String("toc")) continue;
+        rootList = DirectChild(nav, GUMBO_TAG_OL);
+        if (!rootList) {
+            const QList<GumboNode *> lists = gi.get_nodes_with_tags(
+                nav, {GUMBO_TAG_OL});
+            if (!lists.isEmpty()) rootList = lists.first();
+        }
+        break;
+    }
+    if (!rootList) return false;
+
+    const QList<TocNodeId> preorder = TocTreeTransform::PreorderIds(before);
+    QHash<TocNodeId, GumboNode *> items;
+    QHash<TocNodeId, GumboNode *> childLists;
+    int position = 0;
+    CollectListItems(rootList, preorder, position, items, childLists);
+    if (position != preorder.size() || items.size() != preorder.size()) return false;
+
+    for (TocNodeId id : preorder) {
+        GumboNode *item = items.value(id, nullptr);
+        if (!item || !item->parent) return false;
+        gumbo_remove_from_parent(item);
+    }
+    ClearChildren(rootList);
+    for (GumboNode *list : childLists) ClearChildren(list);
+    for (TocNodeId id : after.nodes.value(after.rootId).children) {
+        AppendHierarchy(after, id, rootList, items, childLists);
+    }
+    return ReplaceTOCList(gi.getxhtml(), undoable);
+}
 
 void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)
 {
     if (!m_NavResource) return;
+    if (ReplaceTOCList(BuildTOC(toclist))) return;
 
     bool found_toc = false;
     // QWriteLocker locker(&m_NavResource->GetLock());
@@ -494,6 +664,7 @@ void NavProcessor::SetTOC(const QList<NavTOCEntry> & toclist)
 
 void NavProcessor::AddLandmarkCode(const Resource *resource, QString new_code, bool toggle, QString tgt_id)
 {
+    if (!m_NavResource || !resource) return;
     if (new_code.isEmpty()) return;
     QList<NavLandmarkEntry> landlist = GetLandmarks();
     QWriteLocker locker(&m_NavResource->GetLock());
@@ -534,6 +705,7 @@ void NavProcessor::AddLandmarkCode(const Resource *resource, QString new_code, b
 
 void NavProcessor::RemoveLandmarkForResource(const Resource * resource, QString tgt_id)
 {
+    if (!m_NavResource || !resource) return;
     QList<NavLandmarkEntry> landlist = GetLandmarks();
     QWriteLocker locker(&m_NavResource->GetLock());
     int pos = GetResourceLandmarkPos(resource, landlist, tgt_id);
@@ -545,6 +717,7 @@ void NavProcessor::RemoveLandmarkForResource(const Resource * resource, QString 
 
 void NavProcessor::RemoveAllLandmarksForResource(const Resource * resource)
 {
+    if (!m_NavResource || !resource) return;
     QList<NavLandmarkEntry> landlist = GetLandmarks();
     QWriteLocker locker(&m_NavResource->GetLock());
     QString resource_book_path = Utility::URLEncodePath(resource->GetRelativePath());
@@ -582,6 +755,7 @@ int NavProcessor::GetResourceLandmarkPos(const Resource *resource, const QList<N
 
 QString NavProcessor::GetLandmarkCodeForResource(const Resource *resource, QString tgt_id)
 {
+    if (!m_NavResource || !resource) return QString();
     const QList<NavLandmarkEntry> landlist = GetLandmarks();
     QReadLocker locker(&m_NavResource->GetLock());
     int pos = GetResourceLandmarkPos(resource, landlist, tgt_id);
@@ -608,6 +782,7 @@ QString NavProcessor::GetLandmarkNameForResource(const Resource *resource, QStri
 // bookpath|fragment|code|title
 QStringList NavProcessor::GetAllLandmarkInfoByBookPath()
 {
+    if (!m_NavResource) return {};
     const QList<NavLandmarkEntry> landlist = GetLandmarks();
     QReadLocker locker(&m_NavResource->GetLock());
     QStringList landmark_info;
@@ -627,6 +802,7 @@ QStringList NavProcessor::GetAllLandmarkInfoByBookPath()
 // create a hash of bookpaths to a list of all landmarks names contained therein
 QHash <QString, QStringList> NavProcessor::GetLandmarkNameForPaths()
 {
+    if (!m_NavResource) return {};
     const QList<NavLandmarkEntry> landlist = GetLandmarks();
     QReadLocker locker(&m_NavResource->GetLock());
     QHash <QString, QStringList> semantic_types;
@@ -647,6 +823,7 @@ QHash <QString, QStringList> NavProcessor::GetLandmarkNameForPaths()
 // create a hash of bookpaths to a list of all landmarks names contained therein
 QHash <QString, QStringList> NavProcessor::GetLandmarkCodeForPaths()
 {
+  if (!m_NavResource) return {};
   const QList<NavLandmarkEntry> landlist = GetLandmarks();
   QReadLocker locker(&m_NavResource->GetLock());
   QHash <QString, QStringList> semantic_codes;
@@ -670,6 +847,7 @@ QHash <QString, QStringList> NavProcessor::GetLandmarkCodeForPaths()
 // That tree of headings to our flat NavTOCEntry list
 bool NavProcessor::GenerateTOCFromBookContents(const Book* book)
 {
+    if (!m_NavResource) return false;
     QString prev_xml = BuildTOC(GetTOC());
     QWriteLocker locker(&m_NavResource->GetLock());
     bool is_changed = false;
@@ -790,6 +968,7 @@ void NavProcessor::AddChildEntry(NavTOCEntry &parent, NavTOCEntry new_child)
 // So convert to flat Nav TOC Entry list and rebuild the Nav TOC Section
 void NavProcessor::GenerateNavTOCFromTOCEntries(const TOCModel::TOCEntry& root)
 {
+    if (!m_NavResource) return;
     QList<NavTOCEntry> toclist;
     foreach(TOCModel::TOCEntry entry, root.children) {
         toclist.append(AddEditTOCEntry(entry, 1));

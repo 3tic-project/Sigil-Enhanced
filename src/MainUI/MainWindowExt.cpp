@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QCheckBox>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -8,6 +9,8 @@
 #include <QLocale>
 #include <QMessageBox>
 #include <QObject>
+#include <QProgressDialog>
+#include <QReadLocker>
 #include <QSet>
 #include <QTemporaryFile>
 #include <QWriteLocker>
@@ -19,6 +22,8 @@
 #include "BuiltinPlugins/EpubStructureNormalizer.h"
 #include "BuiltinPlugins/FormatterEnhancer.h"
 #include "BuiltinPlugins/BookLiveParagraphNormalizer.h"
+#include "BuiltinPlugins/DivParagraphNormalizationPlan.h"
+#include "BuiltinPlugins/DivParagraphStylesheetResolver.h"
 #include "BuiltinPlugins/BrParagraphNormalizer.h"
 #include "BuiltinPlugins/KfxParagraphNormalizer.h"
 #include "BuiltinPlugins/KfxImportController.h"
@@ -44,6 +49,8 @@
 #include "ChineseConversion/OpenCCConverter.h"
 #include "Dialogs/ChineseConversionDialog.h"
 #include "Dialogs/ChineseConversionPreviewDialog.h"
+#include "Dialogs/DivParagraphNormalizationDialog.h"
+#include "Dialogs/DivParagraphNormalizationPreviewDialog.h"
 #include "Tabs/SVGTab.h"
 #include "Tabs/TextTab.h"
 #include "BookManipulation/FontSubset/FontSubsetController.h"
@@ -151,23 +158,194 @@ void ApplyBookLivePostFormat(HTMLResource* resource,
 
     SettingsStoreExtend settings;
     const BuiltinPlugins::FormatterEnhancer::FormatResult format_result =
-        BuiltinPlugins::FormatterEnhancer::formatXhtmlText(text, resource->GetEpubVersion(), settings.getXhtmlFormat());
+        BuiltinPlugins::FormatterEnhancer::formatXhtmlText(
+            text, resource->GetEpubVersion(), settings.getXhtmlFormat());
 
     if (!format_result.ok) {
-        results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1,
-                                    QObject::tr("BookLive paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1")
-                                        .arg(format_result.messages.join(QStringLiteral("; "))));
+        results << ValidationResult(
+            ValidationResult::ResType_Warn, bookpath, -1, -1,
+            QObject::tr("BookLive paragraph normalization: automatic XHTML formatting failed; "
+                        "writing the normalized XHTML without formatter changes. %1")
+                .arg(format_result.messages.join(QStringLiteral("; "))));
         return;
     }
 
     if (format_result.changed) {
         text = format_result.text;
-        results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1,
-                                    QObject::tr("BookLive paragraph normalization: automatic XHTML formatting was applied."));
+        results << ValidationResult(
+            ValidationResult::ResType_Info, bookpath, -1, -1,
+            QObject::tr("BookLive paragraph normalization: automatic XHTML formatting was applied."));
     } else {
-        results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1,
-                                    QObject::tr("BookLive paragraph normalization: automatic XHTML formatting found no further changes."));
+        results << ValidationResult(
+            ValidationResult::ResType_Info, bookpath, -1, -1,
+            QObject::tr("BookLive paragraph normalization: automatic XHTML formatting found no further changes."));
     }
+}
+
+
+using DivPlan = BuiltinPlugins::DivParagraphNormalizationPlan;
+using DivOptions = BuiltinPlugins::BookLiveParagraphNormalizer::Options;
+using CssSource = BuiltinPlugins::DivParagraphCssAnalyzer::Source;
+
+
+QHash<QString, QString> CaptureCssTexts(Book* book)
+{
+    QHash<QString, QString> css_by_path;
+    if (!book || !book->GetFolderKeeper()) {
+        return css_by_path;
+    }
+    const QList<CSSResource*> resources =
+        book->GetFolderKeeper()->GetResourceTypeList<CSSResource>(true);
+    for (CSSResource* resource : resources) {
+        if (!resource) {
+            continue;
+        }
+        resource->InitialLoad();
+        QReadLocker locker(&resource->GetLock());
+        css_by_path.insert(QDir::cleanPath(resource->GetRelativePath()), resource->GetText());
+    }
+    return css_by_path;
+}
+
+QVector<DivPlan::Input> CaptureDivInputs(const QList<HTMLResource*>& resources,
+                                         const QHash<QString, QString>& css_by_path)
+{
+    QVector<DivPlan::Input> inputs;
+    inputs.reserve(resources.count());
+    for (HTMLResource* resource : resources) {
+        if (!resource) {
+            continue;
+        }
+        resource->InitialLoad();
+        QReadLocker locker(&resource->GetLock());
+        const QString text = resource->GetText();
+        const QString path = QDir::cleanPath(resource->GetRelativePath());
+        inputs << DivPlan::Input {
+            path,
+            text,
+            DivPlan::hashText(text),
+            BuiltinPlugins::DivParagraphStylesheetResolver::resolve(
+                text, path, css_by_path)
+        };
+    }
+    return inputs;
+}
+
+DivOptions LoadDivOptions()
+{
+    SettingsStoreExtend settings;
+    DivOptions options = DivOptions::conservative();
+    options.convertSpacerBr = settings.getDivParagraphConvertBlankLines();
+    options.convertSceneBreaks = settings.getDivParagraphConvertSceneBreaks();
+    options.convertImageWrappers = settings.getDivParagraphConvertImageWrappers();
+    options.convertSingleBlockWrappers =
+        settings.getDivParagraphConvertSingleBlockWrappers();
+    return options;
+}
+
+void SaveDivOptions(const DivOptions& options, bool format_source)
+{
+    SettingsStoreExtend settings;
+    settings.setDivParagraphConvertBlankLines(options.convertSpacerBr);
+    settings.setDivParagraphConvertSceneBreaks(options.convertSceneBreaks);
+    settings.setDivParagraphConvertImageWrappers(options.convertImageWrappers);
+    settings.setDivParagraphConvertSingleBlockWrappers(
+        options.convertSingleBlockWrappers);
+    settings.setDivParagraphFormatSource(format_source);
+}
+
+DivPlan::Result BuildCmoaPlanWithProgress(
+    QWidget* parent,
+    const QVector<DivPlan::Input>& inputs,
+    const DivOptions& options,
+    const QString& label)
+{
+    QProgressDialog progress(label, QObject::tr("Cancel"), 0, inputs.count(), parent);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setMinimumDuration(250);
+    progress.setValue(0);
+    return DivPlan::buildCmoa(inputs, options, [&progress](int completed, int total) {
+        progress.setMaximum(total);
+        progress.setValue(completed);
+        QCoreApplication::processEvents();
+        return !progress.wasCanceled();
+    });
+}
+
+bool FormatDivPlan(DivPlan::Result& plan,
+                   const QHash<QString, HTMLResource*>& resources,
+                   QList<ValidationResult>& results)
+{
+    SettingsStoreExtend settings;
+    for (DivPlan::Entry& entry : plan.entries) {
+        if (entry.status != DivPlan::Status::Apply) {
+            continue;
+        }
+        HTMLResource* resource = resources.value(entry.resourceId, nullptr);
+        if (!resource) {
+            plan.ok = false;
+            plan.errors << QObject::tr("Formatting target is no longer available: %1")
+                               .arg(entry.resourceId);
+            return false;
+        }
+        const BuiltinPlugins::FormatterEnhancer::FormatResult formatted =
+            BuiltinPlugins::FormatterEnhancer::formatXhtmlText(
+                entry.output, resource->GetEpubVersion(), settings.getXhtmlFormat());
+        if (!formatted.ok) {
+            plan.ok = false;
+            plan.errors << QObject::tr("XHTML formatting failed for %1: %2")
+                               .arg(entry.resourceId,
+                                    formatted.messages.join(QStringLiteral("; ")));
+            return false;
+        }
+        if (formatted.changed) {
+            entry.output = formatted.text;
+            entry.afterHash = DivPlan::hashText(entry.output);
+            results << ValidationResult(
+                ValidationResult::ResType_Info, entry.resourceId, -1, -1,
+                QObject::tr("DIV paragraph normalization: optional XHTML formatting was applied."));
+        }
+    }
+    DivPlan::refreshIdentity(plan);
+    return true;
+}
+
+void AppendDivPlanResults(const DivPlan::Result& plan,
+                          QList<ValidationResult>& results)
+{
+    for (const DivPlan::Entry& entry : plan.entries) {
+        ValidationResult::ResType type = ValidationResult::ResType_Info;
+        if (entry.status == DivPlan::Status::Apply || entry.status == DivPlan::Status::Review) {
+            type = ValidationResult::ResType_Warn;
+        } else if (entry.status == DivPlan::Status::Error) {
+            type = ValidationResult::ResType_Error;
+        }
+        results << ValidationResult(type, entry.resourceId, -1, -1,
+                                    entry.analysis.message);
+        for (const BuiltinPlugins::DivParagraphCssAnalyzer::Dependency& dependency :
+             entry.analysis.cssDependencies) {
+            results << ValidationResult(
+                ValidationResult::ResType_Warn, entry.resourceId, -1, -1,
+                QObject::tr("CSS review: %1 · %2 · %3")
+                    .arg(dependency.sourceId,
+                         dependency.selector.isEmpty() ? QObject::tr("unresolved stylesheet")
+                                                       : dependency.selector,
+                         dependency.reason));
+        }
+    }
+    results << ValidationResult(
+        plan.errorFiles > 0 ? ValidationResult::ResType_Warn
+                            : ValidationResult::ResType_Info,
+        QString(), -1, -1,
+        QObject::tr("DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, "
+                    "%5 error(s), %6 conversion(s), %7 protected block(s).")
+            .arg(plan.planId.left(12))
+            .arg(plan.applyFiles)
+            .arg(plan.reviewFiles)
+            .arg(plan.skippedFiles)
+            .arg(plan.errorFiles)
+            .arg(plan.conversionCount)
+            .arg(plan.protectedCount));
 }
 
 }
@@ -1697,9 +1875,9 @@ bool MainWindow::AnalyzeBookLiveParagraphs()
         return false;
     }
 
-    const QList<HTMLResource*> html_resources =
+    const QList<HTMLResource*> resources =
         m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
-    foreach(HTMLResource* resource, html_resources) {
+    foreach(HTMLResource* resource, resources) {
         if (!resource) {
             continue;
         }
@@ -1708,32 +1886,37 @@ bool MainWindow::AnalyzeBookLiveParagraphs()
         const QString bookpath = resource->GetRelativePath();
         const BuiltinPlugins::BookLiveParagraphNormalizer::Analysis analysis =
             BuiltinPlugins::BookLiveParagraphNormalizer::analyzeXhtmlText(resource->GetText());
-
         if (analysis.safeToNormalize) {
             auto_candidates++;
             total_leaves += analysis.convertibleLeaves;
-            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1, analysis.message);
+            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1,
+                                        analysis.message);
         } else if (analysis.candidate) {
             manual_candidates++;
-            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1, analysis.message);
+            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1,
+                                        analysis.message);
         } else {
             skipped++;
-            results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1, analysis.message);
+            results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1,
+                                        analysis.message);
         }
     }
     QApplication::restoreOverrideCursor();
 
-    results << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
-                                tr("BookLive paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe candidate files, %3 manual-review candidate files, skipped %4 files, and estimated %5 auto-safe div-to-p conversions.")
-                                    .arg(checked)
-                                    .arg(auto_candidates)
-                                    .arg(manual_candidates)
-                                    .arg(skipped)
-                                    .arg(total_leaves));
+    results << ValidationResult(
+        ValidationResult::ResType_Info, QString(), -1, -1,
+        tr("BookLive paragraph analysis completed. Checked %1 XHTML files, found %2 auto-safe "
+           "candidate files, %3 manual-review candidate files, skipped %4 files, and estimated "
+           "%5 auto-safe div-to-p conversions.")
+            .arg(checked)
+            .arg(auto_candidates)
+            .arg(manual_candidates)
+            .arg(skipped)
+            .arg(total_leaves));
     m_ValidationResultsView->LoadResults(results);
-    ShowMessageOnStatusBar((auto_candidates + manual_candidates) > 0 ?
-                           tr("BookLive paragraph candidates found. See Validation Results.") :
-                           tr("No BookLive paragraph candidates found."));
+    ShowMessageOnStatusBar((auto_candidates + manual_candidates) > 0
+        ? tr("BookLive paragraph candidates found. See Validation Results.")
+        : tr("No BookLive paragraph candidates found."));
     return true;
 }
 
@@ -1742,29 +1925,31 @@ bool MainWindow::NormalizeCurrentBookLiveParagraphs()
     SaveTabData();
 
     ContentTab* tab = GetCurrentContentTab();
-    HTMLResource* resource = tab ? qobject_cast<HTMLResource*>(tab->GetLoadedResource()) : nullptr;
+    HTMLResource* resource = tab
+        ? qobject_cast<HTMLResource*>(tab->GetLoadedResource()) : nullptr;
     QList<ValidationResult> results;
     if (!resource) {
         results << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
                                     tr("BookLive paragraph normalization: current tab is not an XHTML resource."));
         m_ValidationResultsView->LoadResults(results);
-        Utility::warning(this, tr("Sigil-Enhanced"), tr("The current tab is not an XHTML file."));
+        Utility::warning(this, tr("Sigil-Enhanced"),
+                         tr("The current tab is not an XHTML file."));
         return false;
     }
 
     resource->InitialLoad();
     const QString bookpath = resource->GetRelativePath();
     const BuiltinPlugins::BookLiveParagraphNormalizer::NormalizeResult normalize_result =
-        BuiltinPlugins::BookLiveParagraphNormalizer::normalizeXhtmlText(resource->GetText(), true);
-
-    results << ValidationResult((normalize_result.before.candidate || normalize_result.before.safeToNormalize) ?
-                                    ValidationResult::ResType_Warn :
-                                    ValidationResult::ResType_Info,
-                                bookpath, -1, -1, normalize_result.before.message);
+        BuiltinPlugins::BookLiveParagraphNormalizer::normalizeXhtmlText(
+            resource->GetText(), true);
+    results << ValidationResult(
+        (normalize_result.before.candidate || normalize_result.before.safeToNormalize)
+            ? ValidationResult::ResType_Warn : ValidationResult::ResType_Info,
+        bookpath, -1, -1, normalize_result.before.message);
     foreach(const QString& message, normalize_result.messages) {
-        results << ValidationResult(normalize_result.ok ?
-                                        ValidationResult::ResType_Info :
-                                        ValidationResult::ResType_Error,
+        results << ValidationResult(normalize_result.ok
+                                        ? ValidationResult::ResType_Info
+                                        : ValidationResult::ResType_Error,
                                     bookpath, -1, -1, message);
     }
 
@@ -1776,8 +1961,9 @@ bool MainWindow::NormalizeCurrentBookLiveParagraphs()
     }
     if (!normalize_result.before.candidate) {
         m_ValidationResultsView->LoadResults(results);
-        Utility::warning(this, tr("Sigil-Enhanced"),
-                         tr("The current XHTML file is not a BookLive div-paragraph candidate. See Validation Results."));
+        Utility::warning(
+            this, tr("Sigil-Enhanced"),
+            tr("The current XHTML file is not a BookLive div-paragraph candidate. See Validation Results."));
         return false;
     }
     if (!normalize_result.ok) {
@@ -1792,19 +1978,19 @@ bool MainWindow::NormalizeCurrentBookLiveParagraphs()
         return true;
     }
 
-    const QString review_note = normalize_result.before.safeToNormalize ?
-        tr("This file is an auto-safe BookLive div-paragraph candidate.") :
-        tr("This file requires manual review and is skipped by full-book normalization. Continue only if you inspected it.");
+    const QString review_note = normalize_result.before.safeToNormalize
+        ? tr("This file is an auto-safe BookLive div-paragraph candidate.")
+        : tr("This file requires manual review and is skipped by full-book normalization. "
+             "Continue only if you inspected it.");
     const QMessageBox::StandardButton button_pressed = Utility::warning(
-        this,
-        tr("Sigil-Enhanced"),
+        this, tr("Sigil-Enhanced"),
         tr("Normalize BookLive div paragraphs in the current XHTML file?\n\n"
            "%1\n\n"
            "This converts only proven pseudo-paragraph div leaves into p elements in place. "
-           "Layout wrappers, blank lines, source classes, inline styles, images, ruby, anchors, and links are preserved. "
-           "A single nested visual block is represented by a block span without guessing whether it is a title, credit, or scene break. "
-           "The result will be formatted once before writing.\n\n"
-           "Estimated div-to-p conversions: %2")
+           "Layout wrappers, blank lines, source classes, inline styles, images, ruby, anchors, "
+           "and links are preserved. A single nested visual block is represented by a block "
+           "span without guessing whether it is a title, credit, or scene break. The result "
+           "will be formatted once before writing.\n\nEstimated div-to-p conversions: %2")
             .arg(review_note)
             .arg(normalize_result.before.convertibleLeaves),
         QMessageBox::Ok | QMessageBox::Cancel);
@@ -1828,7 +2014,6 @@ bool MainWindow::NormalizeCurrentBookLiveParagraphs()
     if (m_Book) {
         m_Book->SetModified();
     }
-
     results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1,
                                 tr("BookLive paragraph normalization: current XHTML file was updated."));
     m_ValidationResultsView->LoadResults(results);
@@ -1853,7 +2038,6 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
         QString bookpath;
         BuiltinPlugins::BookLiveParagraphNormalizer::Analysis analysis;
     };
-
     QList<PlanEntry> plan;
     int checked = 0;
     int manual_candidates = 0;
@@ -1863,9 +2047,9 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
     int total_wrapped = 0;
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    const QList<HTMLResource*> html_resources =
+    const QList<HTMLResource*> resources =
         m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
-    foreach(HTMLResource* resource, html_resources) {
+    foreach(HTMLResource* resource, resources) {
         if (!resource) {
             continue;
         }
@@ -1875,30 +2059,37 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
         const BuiltinPlugins::BookLiveParagraphNormalizer::Analysis analysis =
             BuiltinPlugins::BookLiveParagraphNormalizer::analyzeXhtmlText(resource->GetText());
         if (analysis.safeToNormalize) {
-            plan << PlanEntry{resource, bookpath, analysis};
+            plan << PlanEntry { resource, bookpath, analysis };
             total_leaves += analysis.convertibleLeaves;
             total_spacers += analysis.spacerBrLeaves;
             total_wrapped += analysis.wrappedBlockLeaves;
-            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1, analysis.message);
+            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1,
+                                        analysis.message);
         } else if (analysis.candidate) {
             manual_candidates++;
-            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1, analysis.message);
+            results << ValidationResult(ValidationResult::ResType_Warn, bookpath, -1, -1,
+                                        analysis.message);
         } else {
             skipped++;
-            results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1, analysis.message);
+            results << ValidationResult(ValidationResult::ResType_Info, bookpath, -1, -1,
+                                        analysis.message);
         }
     }
     QApplication::restoreOverrideCursor();
 
-    results << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
-                                tr("BookLive paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files are auto-safe, %3 files require manual review, %4 files were skipped, and %5 div leaves will become p elements. All %6 blank-line leaves and %7 single nested visual blocks will be preserved.")
-                                    .arg(checked)
-                                    .arg(plan.count())
-                                    .arg(manual_candidates)
-                                    .arg(skipped)
-                                    .arg(total_leaves)
-                                    .arg(total_spacers)
-                                    .arg(total_wrapped));
+    results << ValidationResult(
+        ValidationResult::ResType_Info, QString(), -1, -1,
+        tr("BookLive paragraph normalization dry-run completed. Checked %1 XHTML files, %2 files "
+           "are auto-safe, %3 files require manual review, %4 files were skipped, and %5 div leaves "
+           "will become p elements. All %6 blank-line leaves and %7 single nested visual blocks will "
+           "be preserved.")
+            .arg(checked)
+            .arg(plan.count())
+            .arg(manual_candidates)
+            .arg(skipped)
+            .arg(total_leaves)
+            .arg(total_spacers)
+            .arg(total_wrapped));
     if (plan.isEmpty()) {
         m_ValidationResultsView->LoadResults(results);
         Utility::warning(this, tr("Sigil-Enhanced"),
@@ -1907,15 +2098,13 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
     }
 
     const QMessageBox::StandardButton button_pressed = Utility::warning(
-        this,
-        tr("Sigil-Enhanced"),
+        this, tr("Sigil-Enhanced"),
         tr("Normalize BookLive div paragraphs in %1 auto-safe XHTML files?\n\n"
-           "%2 files require manual review and will be skipped. %3 non-candidate files will be skipped.\n\n"
-           "Only proven pseudo-paragraph div leaves are changed to p elements. Layout wrappers, blank lines, "
-           "all source classes and inline styles, images, ruby, anchors, and links remain in place. "
-           "Every changed file is formatted once and checked before writing.\n\n"
-           "Estimated div-to-p conversions: %4\n"
-           "Blank-line leaves preserved: %5\n"
+           "%2 files require manual review and will be skipped. %3 non-candidate files will be "
+           "skipped.\n\nOnly proven pseudo-paragraph div leaves are changed to p elements. Layout "
+           "wrappers, blank lines, all source classes and inline styles, images, ruby, anchors, and "
+           "links remain in place. Every changed file is formatted once and checked before writing."
+           "\n\nEstimated div-to-p conversions: %4\nBlank-line leaves preserved: %5\n"
            "Single nested visual blocks preserved: %6")
             .arg(plan.count())
             .arg(manual_candidates)
@@ -1931,22 +2120,24 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
 
     ShowMessageOnStatusBar(tr("Creating checkpoint before BookLive paragraph normalization..."));
     if (!RepoCommit()) {
-        results << ValidationResult(ValidationResult::ResType_Error, QString(), -1, -1,
-                                    tr("BookLive paragraph normalization cancelled: checkpoint failed. No XHTML files were changed."));
+        results << ValidationResult(
+            ValidationResult::ResType_Error, QString(), -1, -1,
+            tr("BookLive paragraph normalization cancelled: checkpoint failed. No XHTML files were changed."));
         m_ValidationResultsView->LoadResults(results);
         Utility::warning(this, tr("Sigil-Enhanced"),
                          tr("Checkpoint creation failed. BookLive paragraph normalization was cancelled."));
         return false;
     }
-    results << ValidationResult(ValidationResult::ResType_Info, QString(), -1, -1,
-                                tr("BookLive paragraph normalization: checkpoint saved before batch changes. Use Checkpoints to restore; batch resource writes are not available in Code View undo."));
+    results << ValidationResult(
+        ValidationResult::ResType_Info, QString(), -1, -1,
+        tr("BookLive paragraph normalization: checkpoint saved before batch changes. Use Checkpoints "
+           "to restore; batch resource writes are not available in Code View undo."));
 
     int changed = 0;
     int unchanged = 0;
     int failed = 0;
     ContentTab* current_tab = GetCurrentContentTab();
     Resource* current_resource = current_tab ? current_tab->GetLoadedResource() : nullptr;
-
     QApplication::setOverrideCursor(Qt::WaitCursor);
     foreach(const PlanEntry& entry, plan) {
         HTMLResource* resource = entry.resource;
@@ -1957,9 +2148,9 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
         const BuiltinPlugins::BookLiveParagraphNormalizer::NormalizeResult normalize_result =
             BuiltinPlugins::BookLiveParagraphNormalizer::normalizeXhtmlText(resource->GetText());
         foreach(const QString& message, normalize_result.messages) {
-            results << ValidationResult(normalize_result.ok ?
-                                            ValidationResult::ResType_Info :
-                                            ValidationResult::ResType_Error,
+            results << ValidationResult(normalize_result.ok
+                                            ? ValidationResult::ResType_Info
+                                            : ValidationResult::ResType_Error,
                                         entry.bookpath, -1, -1, message);
         }
         if (!normalize_result.ok) {
@@ -1972,7 +2163,6 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
                                         tr("BookLive paragraph normalization: no changes needed."));
             continue;
         }
-
         QString text_to_write = normalize_result.text;
         ApplyBookLivePostFormat(resource, text_to_write, results, entry.bookpath);
         {
@@ -1987,22 +2177,295 @@ bool MainWindow::NormalizeAllBookLiveParagraphs()
                                     tr("BookLive paragraph normalization: XHTML file was updated."));
     }
     QApplication::restoreOverrideCursor();
-
     if (changed > 0 && m_Book) {
         m_Book->SetModified();
     }
-    results << ValidationResult(failed > 0 ? ValidationResult::ResType_Warn : ValidationResult::ResType_Info,
-                                QString(), -1, -1,
-                                tr("BookLive paragraph normalization completed. Updated %1 files, left %2 unchanged, failed %3 files, skipped %4 manual-review candidates.")
-                                    .arg(changed)
-                                    .arg(unchanged)
-                                    .arg(failed)
-                                    .arg(manual_candidates));
+    results << ValidationResult(
+        failed > 0 ? ValidationResult::ResType_Warn : ValidationResult::ResType_Info,
+        QString(), -1, -1,
+        tr("BookLive paragraph normalization completed. Updated %1 files, left %2 unchanged, "
+           "failed %3 files, skipped %4 manual-review candidates.")
+            .arg(changed)
+            .arg(unchanged)
+            .arg(failed)
+            .arg(manual_candidates));
     m_ValidationResultsView->LoadResults(results);
-    ShowMessageOnStatusBar(changed > 0 ?
-                           tr("BookLive paragraph normalization completed.") :
-                           tr("No BookLive paragraph files were changed."));
+    ShowMessageOnStatusBar(changed > 0
+        ? tr("BookLive paragraph normalization completed.")
+        : tr("No BookLive paragraph files were changed."));
     return failed == 0;
+}
+
+bool MainWindow::AnalyzeCmoaParagraphs()
+{
+    return RunCmoaParagraphNormalization(false, true);
+}
+
+bool MainWindow::NormalizeCurrentCmoaParagraphs()
+{
+    return RunCmoaParagraphNormalization(true, false);
+}
+
+bool MainWindow::NormalizeAllCmoaParagraphs()
+{
+    return RunCmoaParagraphNormalization(false, false);
+}
+
+bool MainWindow::RunCmoaParagraphNormalization(bool prefer_current, bool analysis_only)
+{
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        Utility::warning(this, tr("Cmoa Paragraph Normalization"),
+                         tr("No EPUB is currently loaded."));
+        return false;
+    }
+
+    SaveTabData();
+    ContentTab* current_tab = GetCurrentContentTab();
+    HTMLResource* current_resource = current_tab
+        ? qobject_cast<HTMLResource*>(current_tab->GetLoadedResource()) : nullptr;
+    QList<HTMLResource*> selected_resources;
+    if (m_BookBrowser) {
+        for (Resource* selected : m_BookBrowser->AllSelectedResources()) {
+            if (HTMLResource* html = qobject_cast<HTMLResource*>(selected)) {
+                if (!selected_resources.contains(html)) {
+                    selected_resources << html;
+                }
+            }
+        }
+    }
+
+    DivParagraphNormalizationDialog::Scope initial_scope =
+        DivParagraphNormalizationDialog::Scope::WholeBook;
+    if (prefer_current && current_resource) {
+        initial_scope = DivParagraphNormalizationDialog::Scope::CurrentFile;
+    } else if (!selected_resources.isEmpty()) {
+        initial_scope = DivParagraphNormalizationDialog::Scope::SelectedFiles;
+    }
+    SettingsStoreExtend settings;
+    DivParagraphNormalizationDialog options_dialog(
+        initial_scope, current_resource != nullptr, selected_resources.count(),
+        LoadDivOptions(), settings.getDivParagraphFormatSource(), this);
+    if (options_dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+    const DivOptions options = options_dialog.NormalizerOptions();
+    const bool format_source = options_dialog.FormatSource();
+    SaveDivOptions(options, format_source);
+
+    QList<HTMLResource*> targets;
+    switch (options_dialog.SelectedScope()) {
+    case DivParagraphNormalizationDialog::Scope::CurrentFile:
+        if (current_resource) {
+            targets << current_resource;
+        }
+        break;
+    case DivParagraphNormalizationDialog::Scope::SelectedFiles:
+        targets = selected_resources;
+        break;
+    case DivParagraphNormalizationDialog::Scope::WholeBook:
+        targets = m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
+        break;
+    }
+    if (targets.isEmpty()) {
+        Utility::warning(this, tr("Cmoa Paragraph Normalization"),
+                         tr("The selected scope contains no XHTML files."));
+        return false;
+    }
+
+    QHash<QString, HTMLResource*> resources_by_path;
+    for (HTMLResource* target : targets) {
+        if (target) {
+            resources_by_path.insert(QDir::cleanPath(target->GetRelativePath()), target);
+        }
+    }
+    const QVector<DivPlan::Input> inputs = CaptureDivInputs(
+        targets, CaptureCssTexts(m_Book.data()));
+    DivPlan::Result preview_plan = BuildCmoaPlanWithProgress(
+        this, inputs, options, tr("Analyzing Cmoa paragraph structure..."));
+    if (preview_plan.cancelled) {
+        ShowMessageOnStatusBar(tr("Cmoa paragraph analysis cancelled. No files were changed."));
+        return false;
+    }
+    QList<ValidationResult> results;
+    if (format_source && !FormatDivPlan(preview_plan, resources_by_path, results)) {
+        Utility::warning(this, tr("Cmoa Paragraph Normalization"),
+                         preview_plan.errors.join(QLatin1Char('\n')));
+        return false;
+    }
+    AppendDivPlanResults(preview_plan, results);
+    m_ValidationResultsView->LoadResults(results);
+
+    const bool preview_only = analysis_only || preview_plan.applyFiles == 0 || !preview_plan.ok;
+    DivParagraphNormalizationPreviewDialog preview(preview_plan, preview_only, this);
+    const int preview_result = preview.exec();
+    if (preview_only) {
+        ShowMessageOnStatusBar(preview_plan.applyFiles > 0
+            ? tr("Cmoa paragraph analysis completed. No files were changed.")
+            : tr("No auto-safe Cmoa paragraph changes were found."));
+        return preview_plan.ok;
+    }
+    if (preview_result != QDialog::Accepted) {
+        ShowMessageOnStatusBar(tr("Cmoa paragraph normalization cancelled. No files were changed."));
+        return false;
+    }
+
+    const QSet<QString> selected_ids = preview.SelectedResourceIds();
+    QList<HTMLResource*> selected_targets;
+    for (HTMLResource* target : targets) {
+        if (target && selected_ids.contains(QDir::cleanPath(target->GetRelativePath()))) {
+            selected_targets << target;
+        }
+    }
+    if (selected_targets.isEmpty()) {
+        return false;
+    }
+
+    // A checked subset is regenerated as an independent plan.
+    SaveTabData();
+    const QVector<DivPlan::Input> selected_inputs = CaptureDivInputs(
+        selected_targets, CaptureCssTexts(m_Book.data()));
+    DivPlan::Result commit_plan = BuildCmoaPlanWithProgress(
+        this, selected_inputs, options, tr("Validating selected Cmoa paragraph changes..."));
+    if (commit_plan.cancelled) {
+        ShowMessageOnStatusBar(tr("Cmoa paragraph validation cancelled. No files were changed."));
+        return false;
+    }
+    if (!commit_plan.ok || commit_plan.applyFiles != selected_targets.count()) {
+        Utility::warning(
+            this, tr("Cmoa Paragraph Normalization"),
+            tr("The selected content changed or is no longer auto-safe. Re-run analysis. "
+               "No files were changed."));
+        return false;
+    }
+    if (format_source && !FormatDivPlan(commit_plan, resources_by_path, results)) {
+        Utility::warning(this, tr("Cmoa Paragraph Normalization"),
+                         commit_plan.errors.join(QLatin1Char('\n')));
+        return false;
+    }
+
+    QHash<QString, TextResource*> text_resources;
+    QStringList ordered_paths;
+    for (HTMLResource* target : selected_targets) {
+        const QString path = QDir::cleanPath(target->GetRelativePath());
+        text_resources.insert(path, target);
+        ordered_paths << path;
+    }
+    SearchBatchCoordinator::Snapshot snapshot;
+    QString snapshot_error;
+    if (!SearchBatchCoordinator::CaptureSnapshot(
+            this, ordered_paths, text_resources, snapshot, &snapshot_error)) {
+        Utility::warning(this, tr("Cmoa Paragraph Normalization"), snapshot_error);
+        return false;
+    }
+    const QVector<DivPlan::Input> current_inputs = CaptureDivInputs(
+        selected_targets, CaptureCssTexts(m_Book.data()));
+    const QStringList conflicts = DivPlan::revisionConflicts(commit_plan, current_inputs);
+    if (!conflicts.isEmpty()) {
+        Utility::warning(
+            this, tr("Cmoa Paragraph Normalization"),
+            tr("Content changed after analysis. Re-run analysis. No files were changed.\n%1")
+                .arg(conflicts.join(QLatin1Char('\n'))));
+        return false;
+    }
+
+    SearchBatch::Result staged;
+    staged.success = true;
+    staged.replacementCount = commit_plan.conversionCount;
+    for (const DivPlan::Entry& entry : commit_plan.entries) {
+        if (entry.status != DivPlan::Status::Apply) {
+            continue;
+        }
+        if (snapshot.originalTexts.value(entry.resourceId) != entry.source) {
+            Utility::warning(
+                this, tr("Cmoa Paragraph Normalization"),
+                tr("%1 changed after analysis. No files were changed.").arg(entry.resourceId));
+            return false;
+        }
+        staged.changedTexts.insert(entry.resourceId, entry.output);
+    }
+    const SearchBatch::Result committed = SearchBatchCoordinator::CommitStagedResult(
+        this, text_resources, snapshot, staged, true);
+    if (!committed.success) {
+        Utility::warning(this, tr("Cmoa Paragraph Normalization"), committed.error);
+        return false;
+    }
+
+    AppendDivPlanResults(commit_plan, results);
+    results << ValidationResult(
+        ValidationResult::ResType_Info, QString(), -1, -1,
+        tr("Cmoa paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). "
+           "A recovery checkpoint and per-resource undo steps were created.")
+            .arg(commit_plan.conversionCount)
+            .arg(commit_plan.applyFiles));
+    m_ValidationResultsView->LoadResults(results);
+    ShowMessageOnStatusBar(
+        tr("Cmoa paragraph normalization applied: %1 changes in %2 files.")
+            .arg(commit_plan.conversionCount)
+            .arg(commit_plan.applyFiles));
+    return true;
+}
+
+bool MainWindow::RunBookLiveCompatibilityAutomation()
+{
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        return false;
+    }
+    SaveTabData();
+    const QList<HTMLResource*> targets =
+        m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
+    QHash<QString, HTMLResource*> html_resources;
+    QHash<QString, TextResource*> text_resources;
+    QStringList ordered_paths;
+    for (HTMLResource* target : targets) {
+        if (!target) {
+            continue;
+        }
+        const QString path = QDir::cleanPath(target->GetRelativePath());
+        html_resources.insert(path, target);
+        text_resources.insert(path, target);
+        ordered_paths << path;
+    }
+
+    const QVector<DivPlan::Input> inputs = CaptureDivInputs(
+        targets, QHash<QString, QString>());
+    DivPlan::Result plan = DivPlan::build(
+        inputs, DivOptions::bookLiveCompatibility());
+    QList<ValidationResult> results;
+    AppendDivPlanResults(plan, results);
+    if (!plan.ok || plan.applyFiles == 0) {
+        m_ValidationResultsView->LoadResults(results);
+        return plan.ok;
+    }
+    if (!FormatDivPlan(plan, html_resources, results)) {
+        m_ValidationResultsView->LoadResults(results);
+        return false;
+    }
+
+    SearchBatchCoordinator::Snapshot snapshot;
+    QString error;
+    if (!SearchBatchCoordinator::CaptureSnapshot(
+            this, ordered_paths, text_resources, snapshot, &error)) {
+        results << ValidationResult(ValidationResult::ResType_Error,
+                                    QString(), -1, -1, error);
+        m_ValidationResultsView->LoadResults(results);
+        return false;
+    }
+    SearchBatch::Result staged;
+    staged.success = true;
+    staged.replacementCount = plan.conversionCount;
+    for (const DivPlan::Entry& entry : plan.entries) {
+        if (entry.status == DivPlan::Status::Apply) {
+            staged.changedTexts.insert(entry.resourceId, entry.output);
+        }
+    }
+    const SearchBatch::Result committed = SearchBatchCoordinator::CommitStagedResult(
+        this, text_resources, snapshot, staged, true);
+    if (!committed.success) {
+        results << ValidationResult(ValidationResult::ResType_Error,
+                                    QString(), -1, -1, committed.error);
+    }
+    m_ValidationResultsView->LoadResults(results);
+    return committed.success;
 }
 
 bool MainWindow::AnalyzeVerticalLayout()

@@ -156,3 +156,53 @@ QString SettingsStoreExtend::getOtherGroupTarget()
     }
     return QStringLiteral("inactive");
 }
+
+void SettingsStoreExtend::setDivParagraphConvertBlankLines(bool enabled)
+{
+    setValue(QStringLiteral("paragraph_normalization/convert_blank_lines"), enabled);
+}
+
+bool SettingsStoreExtend::getDivParagraphConvertBlankLines() const
+{
+    return value(QStringLiteral("paragraph_normalization/convert_blank_lines"), false).toBool();
+}
+
+void SettingsStoreExtend::setDivParagraphConvertSceneBreaks(bool enabled)
+{
+    setValue(QStringLiteral("paragraph_normalization/convert_scene_breaks"), enabled);
+}
+
+bool SettingsStoreExtend::getDivParagraphConvertSceneBreaks() const
+{
+    return value(QStringLiteral("paragraph_normalization/convert_scene_breaks"), false).toBool();
+}
+
+void SettingsStoreExtend::setDivParagraphConvertImageWrappers(bool enabled)
+{
+    setValue(QStringLiteral("paragraph_normalization/convert_image_wrappers"), enabled);
+}
+
+bool SettingsStoreExtend::getDivParagraphConvertImageWrappers() const
+{
+    return value(QStringLiteral("paragraph_normalization/convert_image_wrappers"), false).toBool();
+}
+
+void SettingsStoreExtend::setDivParagraphConvertSingleBlockWrappers(bool enabled)
+{
+    setValue(QStringLiteral("paragraph_normalization/convert_single_block_wrappers"), enabled);
+}
+
+bool SettingsStoreExtend::getDivParagraphConvertSingleBlockWrappers() const
+{
+    return value(QStringLiteral("paragraph_normalization/convert_single_block_wrappers"), false).toBool();
+}
+
+void SettingsStoreExtend::setDivParagraphFormatSource(bool enabled)
+{
+    setValue(QStringLiteral("paragraph_normalization/format_source"), enabled);
+}
+
+bool SettingsStoreExtend::getDivParagraphFormatSource() const
+{
+    return value(QStringLiteral("paragraph_normalization/format_source"), false).toBool();
+}

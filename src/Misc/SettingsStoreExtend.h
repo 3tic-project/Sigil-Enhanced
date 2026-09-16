@@ -31,6 +31,16 @@ public:
     bool getFindReplaceEnhancedMode();
     void setOtherGroupTarget(const QString &target);
     QString getOtherGroupTarget();
+    void setDivParagraphConvertBlankLines(bool enabled);
+    bool getDivParagraphConvertBlankLines() const;
+    void setDivParagraphConvertSceneBreaks(bool enabled);
+    bool getDivParagraphConvertSceneBreaks() const;
+    void setDivParagraphConvertImageWrappers(bool enabled);
+    bool getDivParagraphConvertImageWrappers() const;
+    void setDivParagraphConvertSingleBlockWrappers(bool enabled);
+    bool getDivParagraphConvertSingleBlockWrappers() const;
+    void setDivParagraphFormatSource(bool enabled);
+    bool getDivParagraphFormatSource() const;
 };
 
 #endif // SETTINGSSTOREEXTEND_H

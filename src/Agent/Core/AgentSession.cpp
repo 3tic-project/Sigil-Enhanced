@@ -70,6 +70,7 @@ void AgentSession::clear()
     QMutexLocker locker(&m_mutex);
     m_events.clear();
     m_memory = QJsonObject();
+    m_memoryKeys.clear();
     m_tasks.clear();
     m_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     locker.unlock();
@@ -91,11 +92,25 @@ bool AgentSession::containsSecret(const QString &secret) const
     return false;
 }
 
-void AgentSession::remember(const QString &key, const QJsonValue &value)
+bool AgentSession::remember(const QString &key, const QJsonValue &value)
 {
-    if (key.trimmed().isEmpty()) return;
+    const QString normalized_key = key.trimmed();
+    const int value_length = value.isString()
+        ? value.toString().size()
+        : QString::fromUtf8(QJsonDocument(QJsonArray { value })
+                                .toJson(QJsonDocument::Compact)).size();
+    if (normalized_key.isEmpty()
+        || normalized_key.size() > MAX_SESSION_MEMORY_KEY_LENGTH
+        || value_length > MAX_SESSION_MEMORY_VALUE_LENGTH) {
+        return false;
+    }
     QMutexLocker locker(&m_mutex);
-    m_memory.insert(key.trimmed(), value);
+    const bool existing = m_memory.contains(normalized_key);
+    if (!existing && m_memory.size() >= MAX_SESSION_MEMORY_ENTRIES) return false;
+    m_memory.insert(normalized_key, value);
+    if (existing) m_memoryKeys.removeAll(normalized_key);
+    m_memoryKeys.append(normalized_key);
+    return true;
 }
 
 QJsonValue AgentSession::recall(const QString &key) const
@@ -110,20 +125,40 @@ QJsonObject AgentSession::memory() const
     return m_memory;
 }
 
+QStringList AgentSession::memoryKeys() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_memoryKeys;
+}
+
 QString AgentSession::addTask(const QString &title, const QString &note)
 {
+    if (title.trimmed().isEmpty()
+        || title.size() > MAX_SESSION_TASK_TITLE_LENGTH
+        || note.size() > MAX_SESSION_TASK_NOTE_LENGTH) {
+        return QString();
+    }
     SessionTask task;
     task.id = QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
     task.title = title;
     task.status = QStringLiteral("pending");
     task.note = note;
     QMutexLocker locker(&m_mutex);
+    if (m_tasks.size() >= MAX_SESSION_TASKS) return QString();
     m_tasks.append(task);
     return task.id;
 }
 
 bool AgentSession::updateTask(const QString &id, const QString &status, const QString &note)
 {
+    if (note.size() > MAX_SESSION_TASK_NOTE_LENGTH
+        || (!status.isEmpty()
+            && status != QLatin1String("pending")
+            && status != QLatin1String("in_progress")
+            && status != QLatin1String("done")
+            && status != QLatin1String("cancelled"))) {
+        return false;
+    }
     QMutexLocker locker(&m_mutex);
     for (SessionTask &task : m_tasks) {
         if (task.id != id) continue;

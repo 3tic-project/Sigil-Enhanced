@@ -186,6 +186,12 @@ struct OPFParser
 
     QString get_metadata_xml() const;
     QString convert_to_xml() const;
+
+    // The model before the caller's mutations, for source-preserving updates.
+    QString original_model_xml() const { return m_original_model_xml; }
+
+private:
+    QString m_original_model_xml;
 };
 
 #endif

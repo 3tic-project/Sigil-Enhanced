@@ -97,6 +97,12 @@ QString httpErrorMessage(int status, const QByteArray &body, const QString &netw
     return snippet.isEmpty() ? networkError : snippet;
 }
 
+QString redactConfiguredSecret(QString text, const QString &secret)
+{
+    if (!secret.isEmpty()) text.replace(secret, QStringLiteral("[redacted]"));
+    return text;
+}
+
 } // namespace
 
 CatalogModel AgentModelCatalog::modelFromJson(const QJsonObject &object)
@@ -243,10 +249,11 @@ CatalogResult AgentModelCatalog::fetch(const QString &url,
                                        const QString &apiKey,
                                        const QString &referer,
                                        const QString &title,
-                                       int timeoutMs)
+                                       int timeoutMs,
+                                       const std::atomic_bool *cancelled)
 {
     CatalogResult result;
-    result.sourceUrl = url;
+    result.sourceUrl = redactConfiguredSecret(url, apiKey);
     if (url.trimmed().isEmpty()) {
         result.error = QStringLiteral("Models URL is not configured");
         return result;
@@ -270,28 +277,52 @@ CatalogResult AgentModelCatalog::fetch(const QString &url,
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     QTimer timeout;
     timeout.setSingleShot(true);
-    QObject::connect(&timeout, &QTimer::timeout, reply, [reply]() { reply->abort(); });
+    bool timed_out = false;
+    QObject::connect(&timeout, &QTimer::timeout, reply, [reply, &timed_out]() {
+        timed_out = true;
+        reply->abort();
+    });
     timeout.start(qMax(1000, timeoutMs));
+    QTimer cancel_poll;
+    cancel_poll.setInterval(50);
+    QObject::connect(&cancel_poll, &QTimer::timeout, reply, [reply, cancelled]() {
+        if (cancelled && cancelled->load(std::memory_order_relaxed)) reply->abort();
+    });
+    cancel_poll.start();
+    if (cancelled && cancelled->load(std::memory_order_relaxed)) reply->abort();
     loop.exec();
+    cancel_poll.stop();
     timeout.stop();
 
     const QByteArray body = reply->readAll();
     result.httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (cancelled && cancelled->load(std::memory_order_relaxed)) {
+        result.error = QStringLiteral("Models request cancelled");
+        reply->deleteLater();
+        return result;
+    }
+    if (timed_out) {
+        result.error = QStringLiteral("Models request timed out");
+        reply->deleteLater();
+        return result;
+    }
     if (reply->error() != QNetworkReply::NoError
         && reply->error() != QNetworkReply::OperationCanceledError) {
-        result.error = httpErrorMessage(result.httpStatus, body, reply->errorString());
+        result.error = redactConfiguredSecret(
+            httpErrorMessage(result.httpStatus, body, reply->errorString()), apiKey);
         reply->deleteLater();
         return result;
     }
     if (reply->error() == QNetworkReply::OperationCanceledError) {
-        result.error = QStringLiteral("Models request timed out");
+        result.error = QStringLiteral("Models request cancelled");
         reply->deleteLater();
         return result;
     }
     reply->deleteLater();
     CatalogResult parsed = parseModelsJson(body);
+    parsed.error = redactConfiguredSecret(parsed.error, apiKey);
     parsed.httpStatus = result.httpStatus;
-    parsed.sourceUrl = url;
+    parsed.sourceUrl = result.sourceUrl;
     return parsed;
 }
 

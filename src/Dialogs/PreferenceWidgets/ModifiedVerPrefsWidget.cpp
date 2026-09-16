@@ -1,21 +1,29 @@
 ﻿
 #include "ModifiedVerPrefsWidget.h"
+#include "Misc/SettingsStore.h"
 #include "Misc/SettingsStoreExtend.h"
 
 ModifiedVerPrefsWidget::ModifiedVerPrefsWidget()
 {
-	ui.setupUi(this);
+    ui.setupUi(this);
+    ui.cbDoubleClickSelection->setItemData(0, QStringLiteral("element-content"));
+    ui.cbDoubleClickSelection->setItemData(1, QStringLiteral("word"));
+    ui.cbDoubleClickSelection->setItemData(2, QStringLiteral("sentence"));
     readSettings();
     connectSignalsToSlots();
 }
 
 PreferencesWidget::ResultActions ModifiedVerPrefsWidget::saveSettings()
 {
-	PreferencesWidget::ResultActions results = PreferencesWidget::ResultAction_None;
+    PreferencesWidget::ResultActions results = PreferencesWidget::ResultAction_None;
 
     SettingsStoreExtend sse;
+    SettingsStore settings;
 
-	// XHTML Fomat Configure
+    settings.setCodeViewDoubleClickSelection(
+        ui.cbDoubleClickSelection->currentData().toString());
+
+    // XHTML Fomat Configure
     sse.setXhtmlFormat(ui.editXHTMLFormat->toPlainText());
 
     // modified: CodeCompleterParser
@@ -49,12 +57,24 @@ PreferencesWidget::ResultActions ModifiedVerPrefsWidget::saveSettings()
     }
     sse.setOtherGroupTarget(other_group_target);
 
-	return results;
+    sse.setDivParagraphConvertBlankLines(ui.cbDivParagraphBlankLines->isChecked());
+    sse.setDivParagraphConvertSceneBreaks(ui.cbDivParagraphSceneBreaks->isChecked());
+    sse.setDivParagraphConvertImageWrappers(ui.cbDivParagraphImageWrappers->isChecked());
+    sse.setDivParagraphConvertSingleBlockWrappers(
+        ui.cbDivParagraphSingleBlockWrappers->isChecked());
+    sse.setDivParagraphFormatSource(ui.cbDivParagraphFormatSource->isChecked());
+
+    return results;
 }
 
 void ModifiedVerPrefsWidget::readSettings()
 {
     SettingsStoreExtend sse;
+    SettingsStore settings;
+
+    const int double_click_index = ui.cbDoubleClickSelection->findData(
+        settings.codeViewDoubleClickSelection());
+    ui.cbDoubleClickSelection->setCurrentIndex(double_click_index >= 0 ? double_click_index : 0);
 
     // XHTML Fomat Configure
     if (sse.getXhtmlFormat().isNull()) {
@@ -88,6 +108,13 @@ void ModifiedVerPrefsWidget::readSettings()
     } else {
         ui.rbOtherGroupInactive->setChecked(true);
     }
+
+    ui.cbDivParagraphBlankLines->setChecked(sse.getDivParagraphConvertBlankLines());
+    ui.cbDivParagraphSceneBreaks->setChecked(sse.getDivParagraphConvertSceneBreaks());
+    ui.cbDivParagraphImageWrappers->setChecked(sse.getDivParagraphConvertImageWrappers());
+    ui.cbDivParagraphSingleBlockWrappers->setChecked(
+        sse.getDivParagraphConvertSingleBlockWrappers());
+    ui.cbDivParagraphFormatSource->setChecked(sse.getDivParagraphFormatSource());
 
 }
 

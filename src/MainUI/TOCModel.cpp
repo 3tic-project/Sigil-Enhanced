@@ -44,7 +44,14 @@ TOCModel::TOCModel(QObject *parent)
 }
 
 
-void TOCModel::SetBook(QSharedPointer<Book> book)
+TOCModel::~TOCModel()
+{
+    // A background parse captures this model. Keep its book and parser state
+    // alive until that parse has finished, even when the dock is closing.
+    m_TocRootWatcher->waitForFinished();
+}
+
+void TOCModel::SetBook(QSharedPointer<Book> book, bool refresh)
 {
     {
         // We need to make sure we don't step on the toes of GetNCXText
@@ -52,7 +59,7 @@ void TOCModel::SetBook(QSharedPointer<Book> book)
         m_Book = book;
         m_EpubVersion = m_Book->GetConstOPF()->GetEpubVersion();
     }
-    Refresh();
+    if (refresh) Refresh();
 }
 
 
@@ -77,6 +84,7 @@ void TOCModel::Refresh()
     Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
 
     if (m_RefreshInProgress) {
+        m_RefreshPending = true;
         return;
     }
 
@@ -87,15 +95,21 @@ void TOCModel::Refresh()
 
 void TOCModel::RefreshEnd()
 {
-    BuildModel(m_TocRootWatcher->result());
     m_RefreshInProgress = false;
+    if (m_RefreshPending) {
+        m_RefreshPending = false;
+        Refresh();
+        return; // Do not display results from the superseded book/nav state.
+    }
+    BuildModel(m_TocRootWatcher->result());
     emit RefreshDone();
 }
 
 
 TOCModel::TOCEntry TOCModel::GetRootTOCEntry()
 {
-    if (m_EpubVersion.startsWith('3')) {
+    QMutexLocker book_lock(&m_UsingBookMutex);
+    if (m_EpubVersion.startsWith('3') && m_Book->GetConstOPF()->GetNavResource()) {
         NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
         return navproc.GetRootTOCEntry();
     }
@@ -105,11 +119,11 @@ TOCModel::TOCEntry TOCModel::GetRootTOCEntry()
 
 QString TOCModel::GetNCXText()
 {
-    QMutexLocker book_lock(&m_UsingBookMutex);
+    // Called only by GetRootTOCEntry while it holds m_UsingBookMutex.
     NCXResource *ncx = m_Book->GetNCX();
     if (!ncx) return QString();
     QReadLocker locker(&(ncx->GetLock()));
-    return CleanSource::ProcessXML(ncx->GetText(), "application/x-dtbncx+xml");
+    return ncx->GetText(); // The viewing model must not repair or reserialize NCX.
 }
 
 
@@ -160,14 +174,10 @@ TOCModel::TOCEntry TOCModel::ParseNavPoint(QXmlStreamReader &ncx)
 
         if (ncx.isStartElement()) {
             if (ncx.name().compare(QLatin1String("text")) == 0) {
-                while (!ncx.isCharacters()) {
-                    ncx.readNext();
-                }
-
-                // The string returned from text() is unescaped
-                // (that is, XML entities have already been converted to text).
-                // Compress whitespace that pretty-print may add.
-                current.text = ncx.text().toString().simplified();
+                // Consume this element only, including adjacent CDATA/entity
+                // tokens. Waiting for a Characters token can steal a later
+                // label after <text/> or loop forever on truncated input.
+                current.text = ncx.readElementText(QXmlStreamReader::IncludeChildElements).simplified();
             } else if (ncx.name().compare(QLatin1String("content")) == 0) {
                 QString href = ncx.attributes().value("", "src").toString();
                 current.target = ConvertHREFToBookPath(href);

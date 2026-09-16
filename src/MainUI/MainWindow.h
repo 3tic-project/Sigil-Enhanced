@@ -67,7 +67,9 @@ class QLabel;
 class QSignalMapper;
 class QSlider;
 class QTimer;
+class QToolButton;
 class QActionGroup;
+class ActionShortcutBadge;
 class FindReplace;
 class TabManager;
 class BookBrowser;
@@ -296,6 +298,8 @@ public slots:
     bool RemoveNCXGuideFromEpub3();
 
     bool RemoveNavFromSpine();
+    bool RepairMissingNavigation();
+    bool EnsureNavigationDocument();
     bool AddNavToSpine(bool nonlinear);
 
     void CreateIndex();
@@ -307,7 +311,8 @@ public slots:
     void launchExternalXEditor();
 
     bool RepoCommit();
-    bool CreateRecoveryCheckpoint();
+    bool CreateRecoveryCheckpoint(bool preserve_package_source = false);
+    QString RecoveryCheckpointBookId() const { return m_RecoveryCheckpointBookId; }
     void RepoCheckout(QString bookid="", QString destpath="", QString filename="", bool loadnow=true);
     void RepoDiff(QString bookid="");
     void RepoManage();
@@ -751,11 +756,14 @@ private slots:
     void unloadPluginsMenu();
 
 private:
-    bool CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data);
+    bool CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data,
+                              bool preserve_package_source = false);
 
     void updateToolTipsOnPluginIcons();
     void updateToolTipsOnAutomateIcons();
-    void UpdateClipButton(QAction *ui_action);
+    void UpdateClipButton(QAction *ui_action, bool show_shortcut_badges);
+    QToolButton *ClipToolButton(QAction *ui_action) const;
+    ActionShortcutBadge *EnsureClipShortcutBadge(QAction *ui_action);
     void InsertFiles(const QStringList &selected_images);
     void InsertFilesFromDisk();
 
@@ -883,6 +891,8 @@ private:
     void AgentExportConversationRequested();
     void AgentExportDebugLogRequested();
     void UpdateAgentContext();
+    void UpdateAgentEditorContext();
+    void UpdateAgentSelectedFilesContext();
 
     /**
      * Updates the recent files actions when the
@@ -981,6 +991,7 @@ private:
      * save and byte-identical Save As/Save a Copy without running exporters.
      */
     EpubFileSnapshot m_SourceEpubSnapshot;
+    QString m_RecoveryCheckpointBookId;
 
     /**
      * The book currently being worked on.
@@ -1047,6 +1058,8 @@ private:
     SigilAgent::AgentDock *m_AgentDock;
     std::unique_ptr<SigilAgent::SigilBookWorkspace> m_AgentWorkspace;
     std::unique_ptr<SigilAgent::AgentController> m_AgentController;
+    bool m_CloseAfterAgentRun = false;
+    bool m_AgentProviderReconfigurePending = false;
     QAction *m_DeveloperToolsAction;
     QAction *m_SplitEditorDownAction;
     QAction *m_JoinEditorGroupsAction;
@@ -1215,12 +1228,17 @@ public slots:
     bool AnalyzeBookLiveParagraphs(); // modified: Builtin native plugin
     bool NormalizeCurrentBookLiveParagraphs(); // modified: Builtin native plugin
     bool NormalizeAllBookLiveParagraphs(); // modified: Builtin native plugin
+    bool AnalyzeCmoaParagraphs(); // modified: Builtin native plugin
+    bool NormalizeCurrentCmoaParagraphs(); // modified: Builtin native plugin
+    bool NormalizeAllCmoaParagraphs(); // modified: Builtin native plugin
     bool AnalyzeVerticalLayout(); // modified: Builtin native plugin
     bool ConvertVerticalToHorizontal(); // modified: Builtin native plugin
     bool ConvertHorizontalToVertical(); // modified: Builtin native plugin
     bool ConvertVerticalLayoutDirection(bool to_horizontal); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
+    bool RunCmoaParagraphNormalization(bool prefer_current, bool analysis_only);
+    bool RunBookLiveCompatibilityAutomation();
     bool ConvertKfxFile(const QString& sourcePath,
                         bool openInNewWindow,
                         bool normalizeStructure);

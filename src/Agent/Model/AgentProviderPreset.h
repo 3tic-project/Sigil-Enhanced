@@ -32,6 +32,24 @@ struct AgentProviderPreset {
     ReasoningProtocol reasoningProtocol = ReasoningProtocol::None;
 };
 
+enum class AgentProviderSetupIssue {
+    None,
+    Endpoint,
+    ApiKey,
+    Model
+};
+
+struct AgentProviderReadiness {
+    AgentProviderKind kind = AgentProviderKind::Custom;
+    QString displayName;
+    QString model;
+    QString endpointHost;
+    qint64 verifiedAtMs = 0;
+    AgentProviderSetupIssue issue = AgentProviderSetupIssue::Endpoint;
+
+    bool isConfigured() const { return issue == AgentProviderSetupIssue::None; }
+};
+
 QString providerKindName(AgentProviderKind kind);
 AgentProviderKind providerKindFromName(const QString &name);
 AgentProviderKind inferProviderKind(const QString &url);
@@ -44,6 +62,14 @@ QString stripChatCompletionsPath(QString url);
 QString chatCompletionsUrl(AgentProviderKind kind, const QString &overrideUrl);
 QString modelsUrl(AgentProviderKind kind, const QString &overrideUrl);
 ReasoningProtocol reasoningProtocolFor(AgentProviderKind kind, const QString &url);
+AgentProviderReadiness providerReadiness(AgentProviderKind kind,
+                                         const QString &chatUrl,
+                                         bool apiKeyPresent,
+                                         const QString &model);
+QString providerConfigurationFingerprint(AgentProviderKind kind,
+                                         const QString &chatUrl,
+                                         const QString &apiKey,
+                                         const QString &model);
 
 QString agentHttpReferer();
 QString agentHttpTitle();

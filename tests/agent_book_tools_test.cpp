@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -51,16 +52,100 @@ int main()
             "wire names must resolve to the same shipped tool as dotted names");
     Require(ToolRegistry::toWireName(QStringLiteral("book.summary")) == QStringLiteral("book_summary"),
             "book.summary must be sent as book_summary");
+    const QJsonArray read_only_schemas = registry.openaiToolSchemas(
+        [](const AgentToolDescriptor &descriptor) {
+            return !descriptor.mutatesBook;
+        });
+    Require(!read_only_schemas.isEmpty()
+                && read_only_schemas.size() < schemas.size(),
+            "schema filters must publish a strict read-only subset");
+    for (const QJsonValue &value : read_only_schemas) {
+        const QString wire = value.toObject()
+                                 .value(QStringLiteral("function")).toObject()
+                                 .value(QStringLiteral("name")).toString();
+        Require(registry.find(wire) != nullptr
+                    && !registry.find(wire)->descriptor().mutatesBook,
+                "filtered schemas must retain only accepted descriptors");
+    }
+
+    const QString paragraph_impact = humanReadableImpact(
+        QStringLiteral("paragraphs.apply"),
+        QJsonObject {
+            { QStringLiteral("plan_id"), QStringLiteral("plan-123") },
+            { QStringLiteral("plan_digest"), QStringLiteral("digest-456") },
+            { QStringLiteral("expected_book_revision"), 17 }
+        });
+    Require(paragraph_impact.contains(QStringLiteral("plan-123"))
+                && paragraph_impact.contains(QStringLiteral("digest-456"))
+                && paragraph_impact.contains(QStringLiteral("17"))
+                && paragraph_impact.contains(QStringLiteral("unchanged")),
+            "paragraph approval impact must identify the reviewed plan and staging boundary");
+
+    const QString toc_impact = humanReadableImpact(
+        QStringLiteral("toc.apply_transform"),
+        QJsonObject {
+            { QStringLiteral("plan_id"), QStringLiteral("toc-plan-123") },
+            { QStringLiteral("plan_digest"), QStringLiteral("toc-digest-456") },
+            { QStringLiteral("expected_book_revision"), 19 }
+        });
+    Require(toc_impact.contains(QStringLiteral("toc-plan-123"))
+                && toc_impact.contains(QStringLiteral("toc-digest-456"))
+                && toc_impact.contains(QStringLiteral("19"))
+                && toc_impact.contains(QStringLiteral("XHTML headings"))
+                && toc_impact.contains(QStringLiteral("unchanged")),
+            "TOC approval impact must identify the plan and navigation-only staging boundary");
 
     const ToolResult summary = run(QStringLiteral("book.summary"), QJsonObject());
     Require(summary.ok && summary.data.value(QStringLiteral("title")).toString() == QStringLiteral("Junior Physics"),
             "book.summary must return the fixture title");
-    Require(summary.data.value(QStringLiteral("spine_count")).toInt() == 2,
-            "book.summary must report real spine count");
+    Require(summary.data.value(QStringLiteral("title_length")).toInt() == 14
+                && !summary.data.value(QStringLiteral("title_truncated")).toBool()
+                && summary.data.value(QStringLiteral("language_length")).toInt() == 5
+                && !summary.data.value(QStringLiteral("language_truncated")).toBool()
+                && summary.data.value(QStringLiteral("spine_count")).toInt() == 2,
+            "book.summary must report complete short fields and the real spine count");
+
+    MemoryBookWorkspace bounded_summary_book;
+    bounded_summary_book.setMetadata(QJsonObject {
+        { QStringLiteral("title"),
+          QString(700, QLatin1Char('t')) + QStringLiteral("TITLE-TAIL") },
+        { QStringLiteral("language"),
+          QString(200, QLatin1Char('l')) + QStringLiteral("LANGUAGE-TAIL") }
+    });
+    bounded_summary_book.setEpubVersion(
+        QString(100, QLatin1Char('v')) + QStringLiteral("VERSION-TAIL"));
+    ToolRegistry bounded_summary_registry;
+    registerBookTools(&bounded_summary_registry, &bounded_summary_book);
+    const ToolResult bounded_summary = bounded_summary_registry.find(
+        QStringLiteral("book.summary"))->execute(QJsonObject());
+    Require(bounded_summary.ok
+                && bounded_summary.data.value(QStringLiteral("title")).toString().size()
+                    == 512
+                && bounded_summary.data.value(QStringLiteral("title_length")).toInt()
+                    == 710
+                && bounded_summary.data.value(QStringLiteral("title_truncated")).toBool()
+                && bounded_summary.data.value(QStringLiteral("language")).toString().size()
+                    == 128
+                && bounded_summary.data.value(QStringLiteral("language_length")).toInt()
+                    == 213
+                && bounded_summary.data.value(QStringLiteral("language_truncated")).toBool()
+                && bounded_summary.data.value(QStringLiteral("epub_version")).toString().size()
+                    == 64
+                && bounded_summary.data.value(
+                       QStringLiteral("epub_version_length")).toInt() == 112
+                && bounded_summary.data.value(
+                       QStringLiteral("epub_version_truncated")).toBool()
+                && !QJsonDocument(bounded_summary.data).toJson().contains("TITLE-TAIL")
+                && !QJsonDocument(bounded_summary.data).toJson().contains("LANGUAGE-TAIL")
+                && !QJsonDocument(bounded_summary.data).toJson().contains("VERSION-TAIL"),
+            "book.summary must bound every model-visible package identity string");
 
     const ToolResult resources = run(QStringLiteral("book.resources"), QJsonObject());
     Require(resources.data.value(QStringLiteral("resources")).toArray().size() >= 4,
             "book.resources must list fixture files");
+    Require(resources.data.value(QStringLiteral("total_count")).toInt() >= 4
+                && !resources.data.value(QStringLiteral("has_more")).toBool(),
+            "small resource inventories must publish complete pagination metadata");
 
     const ToolResult spine = run(QStringLiteral("book.spine"), QJsonObject());
     Require(spine.data.value(QStringLiteral("spine")).toArray().size() == 2,
@@ -71,6 +156,333 @@ int main()
                 .value(QStringLiteral("label")).toString().contains(QStringLiteral("Heat")),
             "book.toc must return real labels");
 
+    MemoryBookWorkspace paginated_book;
+    QStringList paginated_spine;
+    QJsonArray paginated_toc;
+    for (int index = 0; index < 235; ++index) {
+        MemoryResource item;
+        item.id = QStringLiteral("page-%1").arg(index);
+        item.bookPath = index < 55
+            ? QStringLiteral("OEBPS/Styles/style-%1.css").arg(index)
+            : QStringLiteral("OEBPS/Text/page-%1.xhtml").arg(index);
+        item.kind = index < 55 ? QStringLiteral("css") : QStringLiteral("xhtml");
+        item.mediaType = index < 55 ? QStringLiteral("text/css")
+                                    : QStringLiteral("application/xhtml+xml");
+        item.text = index < 55 ? QStringLiteral("p { color: #%1; }").arg(index)
+                               : QStringLiteral("<p>Page %1</p>").arg(index);
+        paginated_book.addResource(item);
+        if (index < 225) paginated_spine.append(item.id);
+        if (index < 215) {
+            paginated_toc.append(QJsonObject {
+                { QStringLiteral("label"), QStringLiteral("Entry %1").arg(index) },
+                { QStringLiteral("href"), item.bookPath },
+                { QStringLiteral("level"), 1 }
+            });
+        }
+    }
+    paginated_book.setSpine(paginated_spine);
+    paginated_book.setToc(paginated_toc);
+    QJsonObject paginated_metadata {
+        { QStringLiteral("title"), QStringLiteral("Metadata Pagination") },
+        { QStringLiteral("language"), QStringLiteral("en") }
+    };
+    for (int index = 0; index < 125; ++index) {
+        paginated_metadata.insert(
+            QStringLiteral("field-%1").arg(index, 3, 10, QLatin1Char('0')),
+            QStringLiteral("value-%1").arg(index));
+    }
+    paginated_metadata.insert(
+        QStringLiteral("field-023"),
+        QString(10000, QLatin1Char('x')) + QStringLiteral("END"));
+    paginated_book.setMetadata(paginated_metadata);
+    ToolRegistry paginated_registry;
+    registerBookTools(&paginated_registry, &paginated_book);
+    auto run_paginated = [&](const QString &name, const QJsonObject &arguments) {
+        IAgentTool *tool = paginated_registry.find(name);
+        Require(tool != nullptr, "paginated inventory tool missing");
+        return tool->execute(arguments);
+    };
+    const ToolResult resource_page = run_paginated(
+        QStringLiteral("book.resources"), QJsonObject());
+    Require(resource_page.data.value(QStringLiteral("resources")).toArray().size() == 100
+                && resource_page.data.value(QStringLiteral("total_count")).toInt() == 235
+                && resource_page.data.value(QStringLiteral("returned_count")).toInt() == 100
+                && resource_page.data.value(QStringLiteral("has_more")).toBool()
+                && resource_page.data.value(QStringLiteral("next_offset")).toInt() == 100,
+            "resource inventory defaults must return a bounded first page");
+    const QJsonObject resource_page_properties = paginated_registry
+        .find(QStringLiteral("book.resources"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(resource_page_properties.value(QStringLiteral("offset")).toObject()
+                    .value(QStringLiteral("minimum")).toInt() == 0
+                && resource_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 100
+                && resource_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 200,
+            "resource pagination schema must disclose its default and hard bounds");
+    const ToolResult resource_tail = run_paginated(
+        QStringLiteral("book.resources"), QJsonObject {
+            { QStringLiteral("offset"), 200 },
+            { QStringLiteral("limit"), 999 }
+        });
+    Require(resource_tail.data.value(QStringLiteral("resources")).toArray().size() == 35
+                && resource_tail.data.value(QStringLiteral("limit")).toInt() == 200
+                && !resource_tail.data.value(QStringLiteral("has_more")).toBool()
+                && !resource_tail.data.contains(QStringLiteral("next_offset")),
+            "resource inventory tails must clamp limits and terminate pagination");
+    const ToolResult spine_page = run_paginated(
+        QStringLiteral("book.spine"), QJsonObject {
+            { QStringLiteral("offset"), 100 },
+            { QStringLiteral("limit"), 10 }
+        });
+    Require(spine_page.data.value(QStringLiteral("spine")).toArray().size() == 10
+                && spine_page.data.value(QStringLiteral("spine")).toArray().first()
+                       .toObject().value(QStringLiteral("index")).toInt() == 100
+                && spine_page.data.value(QStringLiteral("next_offset")).toInt() == 110,
+            "spine pages must preserve original reading-order indices");
+    const ToolResult toc_tail = run_paginated(
+        QStringLiteral("book.toc"), QJsonObject {
+            { QStringLiteral("offset"), 200 },
+            { QStringLiteral("limit"), 100 }
+        });
+    Require(toc_tail.data.value(QStringLiteral("toc")).toArray().size() == 15
+                && toc_tail.data.value(QStringLiteral("toc")).toArray().first()
+                       .toObject().value(QStringLiteral("label")).toString()
+                    == QStringLiteral("Entry 200")
+                && !toc_tail.data.value(QStringLiteral("has_more")).toBool(),
+            "TOC pagination must return the requested stable tail");
+    const ToolResult metadata_page = run_paginated(
+        QStringLiteral("book.metadata"), QJsonObject());
+    const QString metadata_digest = metadata_page.data.value(
+        QStringLiteral("metadata_digest")).toString();
+    Require(metadata_page.data.value(QStringLiteral("entries")).toArray().size() == 20
+                && metadata_page.data.value(QStringLiteral("total_count")).toInt() == 127
+                && metadata_page.data.value(QStringLiteral("returned_count")).toInt() == 20
+                && metadata_page.data.value(QStringLiteral("next_offset")).toInt() == 20
+                && metadata_digest.size() == 64
+                && metadata_page.data.value(QStringLiteral("title")).toString()
+                    == QStringLiteral("Metadata Pagination"),
+            "metadata inventory defaults must return a bounded first page and stable digest");
+    const QJsonObject metadata_page_properties = paginated_registry
+        .find(QStringLiteral("book.metadata"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(metadata_page_properties.value(QStringLiteral("offset")).toObject()
+                    .value(QStringLiteral("minimum")).toInt() == 0
+                && metadata_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 20
+                && metadata_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 50,
+            "metadata pagination schema must disclose its default and hard bounds");
+    const ToolResult metadata_tail = run_paginated(
+        QStringLiteral("book.metadata"), QJsonObject {
+            { QStringLiteral("offset"), 20 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const QJsonObject long_metadata_preview = metadata_tail.data
+        .value(QStringLiteral("entries")).toArray().at(3).toObject();
+    Require(metadata_tail.data.value(QStringLiteral("entries")).toArray().size() == 50
+                && metadata_tail.data.value(QStringLiteral("limit")).toInt() == 50
+                && metadata_tail.data.value(QStringLiteral("metadata_digest")).toString()
+                    == metadata_digest
+                && long_metadata_preview.value(QStringLiteral("index")).toInt() == 23
+                && long_metadata_preview.value(QStringLiteral("name")).toString()
+                    == QStringLiteral("field-023")
+                && long_metadata_preview.value(QStringLiteral("content")).toString().size()
+                    == 512
+                && long_metadata_preview.value(QStringLiteral("content_length")).toInt()
+                    == 10003
+                && long_metadata_preview.value(QStringLiteral("content_truncated")).toBool(),
+            "metadata pages must clamp item counts and bound individual content previews");
+    const QJsonObject metadata_fragment_properties = paginated_registry
+        .find(QStringLiteral("metadata.read_fragment"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(metadata_fragment_properties.value(QStringLiteral("offset")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 0
+                && metadata_fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 2048
+                && metadata_fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 8192,
+            "metadata fragment schema must disclose its default and hard bounds");
+    const ToolResult metadata_fragment = run_paginated(
+        QStringLiteral("metadata.read_fragment"), QJsonObject {
+            { QStringLiteral("index"), 23 },
+            { QStringLiteral("metadata_digest"), metadata_digest },
+            { QStringLiteral("offset"), 500 },
+            { QStringLiteral("limit"), 99999 }
+        });
+    Require(metadata_fragment.ok
+                && metadata_fragment.data.value(QStringLiteral("offset")).toInt() == 500
+                && metadata_fragment.data.value(QStringLiteral("limit")).toInt() == 8192
+                && metadata_fragment.data.value(QStringLiteral("length")).toInt() == 8192
+                && metadata_fragment.data.value(QStringLiteral("total")).toInt() == 10003
+                && metadata_fragment.data.value(QStringLiteral("truncated")).toBool()
+                && metadata_fragment.data.value(QStringLiteral("continuation")).toInt()
+                    == 8692,
+            "metadata fragment reads must clamp oversized requests and publish continuation");
+    const ToolResult metadata_fragment_tail = run_paginated(
+        QStringLiteral("metadata.read_fragment"), QJsonObject {
+            { QStringLiteral("index"), 23 },
+            { QStringLiteral("metadata_digest"), metadata_digest },
+            { QStringLiteral("offset"), 8692 }
+        });
+    Require(metadata_fragment_tail.ok
+                && metadata_fragment_tail.data.value(QStringLiteral("text")).toString()
+                       .endsWith(QStringLiteral("END"))
+                && !metadata_fragment_tail.data.value(QStringLiteral("truncated")).toBool()
+                && !metadata_fragment_tail.data.contains(QStringLiteral("continuation")),
+            "metadata fragment tails must preserve exact content and terminate");
+    paginated_metadata.insert(QStringLiteral("field-000"),
+                              QStringLiteral("changed-value"));
+    paginated_book.setMetadata(paginated_metadata);
+    const ToolResult stale_metadata_fragment = run_paginated(
+        QStringLiteral("metadata.read_fragment"), QJsonObject {
+            { QStringLiteral("index"), 23 },
+            { QStringLiteral("metadata_digest"), metadata_digest }
+        });
+    Require(!stale_metadata_fragment.ok
+                && stale_metadata_fragment.code == QStringLiteral("METADATA_CHANGED")
+                && stale_metadata_fragment.data.value(
+                       QStringLiteral("actual_metadata_digest")).toString()
+                    != metadata_digest,
+            "metadata fragment reads must fail closed when the inventory digest changes");
+    const ToolResult css_page = run_paginated(
+        QStringLiteral("style.stylesheets"), QJsonObject());
+    Require(css_page.data.value(QStringLiteral("stylesheets")).toArray().size() == 12
+                && css_page.data.value(QStringLiteral("total_count")).toInt() == 55
+                && css_page.data.value(QStringLiteral("next_offset")).toInt() == 12,
+            "stylesheet reads must use a smaller bounded default page");
+    const QJsonObject css_page_properties = paginated_registry
+        .find(QStringLiteral("style.stylesheets"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(css_page_properties.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 12
+                && css_page_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 50,
+            "stylesheet pagination schema must disclose its smaller text-page bound");
+    const ToolResult css_tail = run_paginated(
+        QStringLiteral("style.stylesheets"), QJsonObject {
+            { QStringLiteral("offset"), 48 },
+            { QStringLiteral("limit"), 50 }
+        });
+    Require(css_tail.data.value(QStringLiteral("stylesheets")).toArray().size() == 7
+                && !css_tail.data.value(QStringLiteral("has_more")).toBool(),
+            "stylesheet pagination must expose the final bounded page");
+
+    MemoryBookWorkspace diagnostic_book;
+    QStringList diagnostic_spine;
+    for (int index = 0; index < 235; ++index) {
+        MemoryResource page;
+        page.id = QStringLiteral("diagnostic-page-%1").arg(index);
+        page.bookPath = QStringLiteral("OEBPS/Text/diagnostic-%1.xhtml").arg(index);
+        page.kind = QStringLiteral("xhtml");
+        page.mediaType = QStringLiteral("application/xhtml+xml");
+        page.text = QStringLiteral("<html><p>Missing body %1</p></html>").arg(index);
+        diagnostic_book.addResource(page);
+        diagnostic_spine.append(page.id);
+        if (index < 225) {
+            MemoryResource image;
+            image.id = QStringLiteral("diagnostic-image-%1").arg(index);
+            image.bookPath = QStringLiteral("OEBPS/Images/unused-%1.png").arg(index);
+            image.kind = QStringLiteral("image");
+            image.mediaType = QStringLiteral("image/png");
+            image.binary = QByteArray("PNG");
+            diagnostic_book.addResource(image);
+
+            MemoryResource font;
+            font.id = QStringLiteral("diagnostic-font-%1").arg(index);
+            font.bookPath = QStringLiteral("OEBPS/Fonts/font-%1.otf").arg(index);
+            font.kind = QStringLiteral("font");
+            font.mediaType = QStringLiteral("font/otf");
+            font.binary = QByteArray("OTTO-DIAGNOSTIC");
+            diagnostic_book.addResource(font);
+        }
+        if (index < 215) {
+            MemoryResource sheet;
+            sheet.id = QStringLiteral("diagnostic-css-%1").arg(index);
+            sheet.bookPath = QStringLiteral("OEBPS/Styles/font-%1.css").arg(index);
+            sheet.kind = QStringLiteral("css");
+            sheet.mediaType = QStringLiteral("text/css");
+            sheet.text = QStringLiteral(
+                "@font-face { font-family: Family%1; src: url(../Fonts/font-%1.otf); }")
+                             .arg(index);
+            diagnostic_book.addResource(sheet);
+        }
+    }
+    diagnostic_book.setSpine(diagnostic_spine);
+    ToolRegistry diagnostic_registry;
+    registerBookTools(&diagnostic_registry, &diagnostic_book);
+    auto run_diagnostic = [&](const QString &name, const QJsonObject &arguments) {
+        IAgentTool *tool = diagnostic_registry.find(name);
+        Require(tool != nullptr, "paginated diagnostic tool missing");
+        return tool->execute(arguments);
+    };
+    const ToolResult font_page = run_diagnostic(
+        QStringLiteral("font.inventory"), QJsonObject());
+    const QJsonObject font_totals = font_page.data
+        .value(QStringLiteral("total_counts")).toObject();
+    const QJsonObject font_returned = font_page.data
+        .value(QStringLiteral("returned_counts")).toObject();
+    Require(font_page.data.value(QStringLiteral("embedded_fonts")).toArray().size() == 100
+                && font_page.data.value(QStringLiteral("css_families")).toArray().size() == 100
+                && font_page.data.value(QStringLiteral("declared_families")).toArray().size() == 100
+                && font_totals.value(QStringLiteral("embedded_fonts")).toInt() == 225
+                && font_totals.value(QStringLiteral("css_families")).toInt() == 215
+                && font_totals.value(QStringLiteral("declared_families")).toInt() == 215
+                && font_returned.value(QStringLiteral("embedded_fonts")).toInt() == 100
+                && font_page.data.value(QStringLiteral("has_more")).toBool()
+                && font_page.data.value(QStringLiteral("next_offset")).toInt() == 100
+                && !QJsonDocument(font_page.data).toJson().contains("OTTO-DIAGNOSTIC"),
+            "font inventory must bound every array, retain totals, and omit font bytes");
+    const QJsonObject font_schema = diagnostic_registry
+        .find(QStringLiteral("font.inventory"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(font_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 100
+                && font_schema.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 200,
+            "diagnostic schemas must disclose default and maximum page sizes");
+    const ToolResult font_tail = run_diagnostic(
+        QStringLiteral("font.inventory"), QJsonObject {
+            { QStringLiteral("offset"), 200 },
+            { QStringLiteral("limit"), 999 }
+        });
+    Require(font_tail.data.value(QStringLiteral("embedded_fonts")).toArray().size() == 25
+                && font_tail.data.value(QStringLiteral("css_families")).toArray().size() == 15
+                && font_tail.data.value(QStringLiteral("declared_families")).toArray().size() == 15
+                && font_tail.data.value(QStringLiteral("limit")).toInt() == 200
+                && !font_tail.data.value(QStringLiteral("has_more")).toBool()
+                && !font_tail.data.contains(QStringLiteral("next_offset")),
+            "font inventory must terminate after the longest shared-offset array");
+
+    const ToolResult validation_page = run_diagnostic(
+        QStringLiteral("book.validate"), QJsonObject());
+    Require(validation_page.data.value(QStringLiteral("issues")).toArray().size() == 100
+                && validation_page.data.value(QStringLiteral("issue_count")).toInt() == 235
+                && validation_page.data.value(QStringLiteral("total_counts")).toObject()
+                       .value(QStringLiteral("issues")).toInt() == 235
+                && validation_page.data.value(QStringLiteral("next_offset")).toInt() == 100,
+            "book validation must return a bounded issue page with the full issue count");
+    const ToolResult check_tail = run_diagnostic(
+        QStringLiteral("book.check"), QJsonObject {
+            { QStringLiteral("offset"), 200 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const QJsonObject check_totals = check_tail.data
+        .value(QStringLiteral("total_counts")).toObject();
+    const QJsonObject check_returned = check_tail.data
+        .value(QStringLiteral("returned_counts")).toObject();
+    Require(check_tail.data.value(QStringLiteral("issues")).toArray().size() == 35
+                && check_tail.data.value(QStringLiteral("unused_images")).toArray().size() == 25
+                && check_tail.data.value(QStringLiteral("wellformed")).toArray().size() == 35
+                && check_totals.value(QStringLiteral("issues")).toInt() == 235
+                && check_totals.value(QStringLiteral("unused_images")).toInt() == 225
+                && check_totals.value(QStringLiteral("wellformed")).toInt() == 235
+                && check_returned.value(QStringLiteral("issues")).toInt() == 35
+                && check_returned.value(QStringLiteral("unused_images")).toInt() == 25
+                && check_returned.value(QStringLiteral("wellformed")).toInt() == 35
+                && !check_tail.data.value(QStringLiteral("has_more")).toBool(),
+            "book QA must page issue, unused-image, and wellformedness arrays together");
+
     const ToolResult metadata = run(QStringLiteral("book.metadata"), QJsonObject());
     Require(metadata.data.value(QStringLiteral("language")).toString() == QStringLiteral("zh-CN"),
             "book.metadata must return language");
@@ -78,8 +490,88 @@ int main()
     const ToolResult search = run(QStringLiteral("book.search"), QJsonObject {
         { QStringLiteral("query"), QStringLiteral("boils") }
     });
-    Require(search.data.value(QStringLiteral("matches")).toArray().size() == 1,
+    Require(search.data.value(QStringLiteral("matches")).toArray().size() == 1
+                && search.data.value(QStringLiteral("match_count")).toInt() == 1
+                && search.data.value(QStringLiteral("max_matches")).toInt() == 20
+                && !search.data.value(QStringLiteral("match_limit_reached")).toBool(),
             "book.search must find the fixture sentence");
+
+    MemoryBookWorkspace bounded_literal_book;
+    MemoryResource long_literal_page;
+    long_literal_page.id = QStringLiteral("long-literal");
+    long_literal_page.bookPath = QStringLiteral("OEBPS/Text/long-literal.xhtml");
+    long_literal_page.kind = QStringLiteral("xhtml");
+    long_literal_page.mediaType = QStringLiteral("application/xhtml+xml");
+    const QString long_query = QString(390, QLatin1Char('q'))
+        + QStringLiteral("LITERAL-TAIL-SECRET");
+    long_literal_page.text = QString(24, QLatin1Char('a')) + long_query
+        + QString(24, QLatin1Char('b'));
+    bounded_literal_book.addResource(long_literal_page);
+    MemoryResource many_literal_hits;
+    many_literal_hits.id = QStringLiteral("many-literal-hits");
+    many_literal_hits.bookPath = QStringLiteral("OEBPS/Text/many-literal-hits.xhtml");
+    many_literal_hits.kind = QStringLiteral("xhtml");
+    many_literal_hits.mediaType = QStringLiteral("application/xhtml+xml");
+    many_literal_hits.text = QString(200, QLatin1Char('z'));
+    bounded_literal_book.addResource(many_literal_hits);
+    ToolRegistry bounded_literal_registry;
+    registerBookTools(&bounded_literal_registry, &bounded_literal_book);
+    auto run_bounded_literal = [&](const QJsonObject &arguments) {
+        return bounded_literal_registry.find(
+            QStringLiteral("book.search"))->execute(arguments);
+    };
+    const ToolResult long_literal_search = run_bounded_literal(QJsonObject {
+        { QStringLiteral("query"), long_query },
+        { QStringLiteral("max_matches"), 999 }
+    });
+    const QJsonObject long_literal_hit = long_literal_search.data.value(
+        QStringLiteral("matches")).toArray().first().toObject();
+    Require(long_literal_search.ok
+                && long_literal_search.data.value(QStringLiteral("query_length")).toInt()
+                    == long_query.size()
+                && long_literal_search.data.value(QStringLiteral("max_matches")).toInt() == 50
+                && long_literal_hit.value(QStringLiteral("offset")).toInt() == 24
+                && long_literal_hit.value(QStringLiteral("snippet_offset")).toInt() == 0
+                && long_literal_hit.value(QStringLiteral("match_length")).toInt()
+                    == long_query.size()
+                && long_literal_hit.value(QStringLiteral("snippet_length")).toInt()
+                    == long_literal_page.text.size()
+                && long_literal_hit.value(QStringLiteral("snippet")).toString().size() == 240
+                && long_literal_hit.value(QStringLiteral("snippet_truncated")).toBool()
+                && !QJsonDocument(long_literal_search.data).toJson().contains(
+                    "LITERAL-TAIL-SECRET"),
+            "literal search must retain source positions while bounding long snippets");
+    const ToolResult capped_literal_search = run_bounded_literal(QJsonObject {
+        { QStringLiteral("query"), QStringLiteral("z") },
+        { QStringLiteral("max_matches"), 999 }
+    });
+    Require(capped_literal_search.data.value(QStringLiteral("match_count")).toInt() == 50
+                && capped_literal_search.data.value(
+                    QStringLiteral("match_limit_reached")).toBool(),
+            "literal search must clamp and disclose its match-count bound");
+    const ToolResult rejected_literal_search = run_bounded_literal(QJsonObject {
+        { QStringLiteral("query"), QString(513, QLatin1Char('x')) }
+    });
+    const QJsonObject literal_search_schema = bounded_literal_registry.find(
+        QStringLiteral("book.search"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(!rejected_literal_search.ok
+                && rejected_literal_search.code == QStringLiteral("SEARCH_QUERY_TOO_LONG")
+                && rejected_literal_search.data.value(
+                    QStringLiteral("query_length")).toInt() == 513
+                && rejected_literal_search.data.value(
+                    QStringLiteral("max_query_length")).toInt() == 512
+                && literal_search_schema.value(QStringLiteral("query")).toObject()
+                    .value(QStringLiteral("minLength")).toInt() == 1
+                && literal_search_schema.value(QStringLiteral("query")).toObject()
+                    .value(QStringLiteral("maxLength")).toInt() == 512
+                && literal_search_schema.value(QStringLiteral("max_matches")).toObject()
+                    .value(QStringLiteral("minimum")).toInt() == 1
+                && literal_search_schema.value(QStringLiteral("max_matches")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 20
+                && literal_search_schema.value(QStringLiteral("max_matches")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 50,
+            "literal search must reject oversized queries and publish schema bounds");
 
     const ToolResult fragment = run(QStringLiteral("resource.read_fragment"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("ch1") },
@@ -100,9 +592,100 @@ int main()
     Require(!fragment.data.value(QStringLiteral("text")).toString().contains(QStringLiteral("OTTO-FAKE-FONT")),
             "fragment must not include font bytes");
 
+    MemoryBookWorkspace fragment_book;
+    MemoryResource long_resource;
+    long_resource.id = QStringLiteral("long-text");
+    long_resource.bookPath = QStringLiteral("OEBPS/Text/long.xhtml");
+    long_resource.kind = QStringLiteral("xhtml");
+    long_resource.mediaType = QStringLiteral("application/xhtml+xml");
+    long_resource.text = QString(10000, QLatin1Char('x')) + QStringLiteral("END");
+    fragment_book.addResource(long_resource);
+    ToolRegistry fragment_registry;
+    registerBookTools(&fragment_registry, &fragment_book);
+    auto run_fragment = [&](const QJsonObject &arguments) {
+        IAgentTool *tool = fragment_registry.find(
+            QStringLiteral("resource.read_fragment"));
+        Require(tool != nullptr, "resource fragment tool missing");
+        return tool->execute(arguments);
+    };
+    const QJsonObject fragment_properties = fragment_registry.find(
+        QStringLiteral("resource.read_fragment"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(fragment_properties.value(QStringLiteral("resource_id")).toObject()
+                    .value(QStringLiteral("minLength")).toInt() == 1
+                && fragment_properties.value(QStringLiteral("offset")).toObject()
+                       .value(QStringLiteral("minimum")).toInt() == 0
+                && fragment_properties.value(QStringLiteral("offset")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 0
+                && fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("minimum")).toInt() == 1
+                && fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("default")).toInt() == 2048
+                && fragment_properties.value(QStringLiteral("limit")).toObject()
+                       .value(QStringLiteral("maximum")).toInt() == 8192,
+            "resource fragment schema must disclose its default and hard bounds");
+    const ToolResult default_fragment = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") }
+    });
+    Require(default_fragment.ok
+                && default_fragment.data.value(QStringLiteral("offset")).toInt() == 0
+                && default_fragment.data.value(QStringLiteral("limit")).toInt() == 2048
+                && default_fragment.data.value(QStringLiteral("length")).toInt() == 2048
+                && default_fragment.data.value(QStringLiteral("total")).toInt() == 10003
+                && default_fragment.data.value(QStringLiteral("truncated")).toBool()
+                && default_fragment.data.value(QStringLiteral("continuation")).toInt() == 2048,
+            "resource fragment defaults must return a bounded first segment and continuation");
+    const ToolResult maximum_fragment = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") },
+        { QStringLiteral("limit"), 99999 }
+    });
+    Require(maximum_fragment.ok
+                && maximum_fragment.data.value(QStringLiteral("limit")).toInt() == 8192
+                && maximum_fragment.data.value(QStringLiteral("length")).toInt() == 8192
+                && maximum_fragment.data.value(QStringLiteral("continuation")).toInt() == 8192,
+            "resource fragment reads must clamp oversized limits at runtime");
+    const ToolResult minimum_fragment = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") },
+        { QStringLiteral("offset"), -50 },
+        { QStringLiteral("limit"), 0 }
+    });
+    Require(minimum_fragment.ok
+                && minimum_fragment.data.value(QStringLiteral("offset")).toInt() == 0
+                && minimum_fragment.data.value(QStringLiteral("limit")).toInt() == 1
+                && minimum_fragment.data.value(QStringLiteral("length")).toInt() == 1
+                && minimum_fragment.data.value(QStringLiteral("continuation")).toInt() == 1,
+            "resource fragment reads must clamp schema-bypassing negative and zero bounds");
+    const ToolResult fragment_tail = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") },
+        { QStringLiteral("offset"), 8192 },
+        { QStringLiteral("limit"), 99999 }
+    });
+    Require(fragment_tail.ok
+                && fragment_tail.data.value(QStringLiteral("offset")).toInt() == 8192
+                && fragment_tail.data.value(QStringLiteral("length")).toInt() == 1811
+                && fragment_tail.data.value(QStringLiteral("text")).toString()
+                       .endsWith(QStringLiteral("END"))
+                && !fragment_tail.data.value(QStringLiteral("truncated")).toBool()
+                && !fragment_tail.data.value(QStringLiteral("continuation")).isDouble(),
+            "resource fragment tails must preserve exact text and terminate continuation");
+    const ToolResult fragment_past_end = run_fragment(QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("long-text") },
+        { QStringLiteral("offset"), 99999 }
+    });
+    Require(fragment_past_end.ok
+                && fragment_past_end.data.value(QStringLiteral("offset")).toInt() == 10003
+                && fragment_past_end.data.value(QStringLiteral("end")).toInt() == 10003
+                && fragment_past_end.data.value(QStringLiteral("length")).toInt() == 0
+                && !fragment_past_end.data.value(QStringLiteral("truncated")).toBool(),
+            "resource fragment offsets past EOF must normalize to a stable empty tail");
+
     const ToolResult fonts = run(QStringLiteral("font.inventory"), QJsonObject());
     Require(fonts.data.value(QStringLiteral("embedded_fonts")).toArray().size() == 1,
             "font.inventory must list the embedded font");
+    Require(fonts.data.value(QStringLiteral("total_counts")).toObject()
+                    .value(QStringLiteral("embedded_fonts")).toInt() == 1
+                && !fonts.data.value(QStringLiteral("has_more")).toBool(),
+            "small font inventories must remain complete on their first page");
     Require(!QJsonDocument(fonts.data).toJson().contains("OTTO-FAKE-FONT"),
             "font.inventory must never return font bytes");
 
@@ -114,10 +697,58 @@ int main()
     const ToolResult validate = run(QStringLiteral("book.validate"), QJsonObject());
     Require(validate.data.value(QStringLiteral("ok")).toBool(),
             "valid fixture must pass book.validate");
+    Require(!validate.data.value(QStringLiteral("has_more")).toBool()
+                && validate.data.value(QStringLiteral("total_counts")).toObject()
+                       .value(QStringLiteral("issues")).toInt() == 0,
+            "small validation reports must expose complete pagination metadata");
+    const ToolResult checked = run(QStringLiteral("book.check"), QJsonObject());
+    Require(!checked.data.value(QStringLiteral("has_more")).toBool()
+                && checked.data.value(QStringLiteral("total_counts")).toObject()
+                       .value(QStringLiteral("wellformed")).toInt() == 2,
+            "small QA reports must remain complete on their first page");
 
     const QString original = book.resourceText(QStringLiteral("ch1"));
     const quint64 original_revision = book.revision();
     Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "transaction.begin failed");
+    const QJsonObject patch_properties = registry.find(
+        QStringLiteral("resource.patch_fragment"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(patch_properties.value(QStringLiteral("expected_text")).toObject()
+                    .value(QStringLiteral("maxLength")).toInt() == 8192
+                && patch_properties.value(QStringLiteral("text")).toObject()
+                       .value(QStringLiteral("maxLength")).toInt() == 8192,
+            "patch fragment schema must disclose expected and replacement bounds");
+    const QString oversized_patch_text(8193, QLatin1Char('x'));
+    const ToolResult oversized_expected = run(
+        QStringLiteral("resource.patch_fragment"), QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("ch1") },
+            { QStringLiteral("expected_text"), oversized_patch_text },
+            { QStringLiteral("text"), QStringLiteral("small") },
+            { QStringLiteral("expected_revision"),
+              static_cast<qint64>(book.resourceRevision(QStringLiteral("ch1"))) }
+        });
+    Require(!oversized_expected.ok
+                && oversized_expected.code
+                    == QStringLiteral("PATCH_EXPECTED_TEXT_TOO_LARGE")
+                && oversized_expected.data.value(
+                       QStringLiteral("expected_text_length")).toInt() == 8193,
+            "oversized expected_text must be rejected before patch resolution");
+    const ToolResult oversized_replacement = run(
+        QStringLiteral("resource.patch_fragment"), QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("ch1") },
+            { QStringLiteral("expected_text"), QStringLiteral("<title>Heat</title>") },
+            { QStringLiteral("text"), oversized_patch_text },
+            { QStringLiteral("expected_revision"),
+              static_cast<qint64>(book.resourceRevision(QStringLiteral("ch1"))) }
+        });
+    Require(!oversized_replacement.ok
+                && oversized_replacement.code
+                    == QStringLiteral("PATCH_REPLACEMENT_TOO_LARGE")
+                && oversized_replacement.data.value(
+                       QStringLiteral("replacement_length")).toInt() == 8193,
+            "oversized patch replacement must be rejected before staging");
+    Require(book.resourceText(QStringLiteral("ch1")) == original,
+            "rejected oversized patches must leave the live book unchanged");
     const ToolResult patched = run(QStringLiteral("resource.patch_fragment"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("ch1") },
         { QStringLiteral("expected_text"), QStringLiteral("<title>Heat</title>") },
@@ -140,6 +771,281 @@ int main()
     Require(book.resourceText(QStringLiteral("ch1")).contains(QStringLiteral("<title>HELLO</title>")),
             "commit must write the patched text");
     Require(book.revision() != original_revision, "commit must bump book revision");
+
+    MemoryBookWorkspace paged_preview_book;
+    QStringList preview_resource_ids;
+    for (int index = 0; index < 135; ++index) {
+        MemoryResource resource;
+        resource.id = QStringLiteral("preview-%1").arg(index, 3, 10, QLatin1Char('0'));
+        resource.bookPath = QStringLiteral("OEBPS/Text/preview-%1.xhtml")
+                                .arg(index, 3, 10, QLatin1Char('0'));
+        resource.kind = QStringLiteral("xhtml");
+        resource.mediaType = QStringLiteral("application/xhtml+xml");
+        resource.text = QStringLiteral("<p>before %1</p>").arg(index);
+        preview_resource_ids.append(resource.id);
+        paged_preview_book.addResource(resource);
+    }
+    Require(paged_preview_book.beginTransaction(
+                QStringLiteral("large preview")).ok,
+            "large preview transaction begin failed");
+    for (int index = 0; index < preview_resource_ids.size(); ++index) {
+        const QString &id = preview_resource_ids.at(index);
+        Require(paged_preview_book.replaceText(
+                    id, QStringLiteral("<p>after %1</p>").arg(index),
+                    paged_preview_book.resourceRevision(id)).ok,
+                "large preview text staging failed");
+    }
+    for (int index = 0; index < 125; ++index) {
+        Require(paged_preview_book.deleteResource(
+                    preview_resource_ids.at(index)).ok,
+                "large preview removal staging failed");
+    }
+    ToolRegistry paged_preview_registry;
+    registerBookTools(&paged_preview_registry, &paged_preview_book);
+    auto run_preview = [&](const QJsonObject &arguments) {
+        return paged_preview_registry.find(
+            QStringLiteral("transaction.preview"))->execute(arguments);
+    };
+    const ToolResult preview_page = run_preview(QJsonObject());
+    const ToolResult preview_page_again = run_preview(QJsonObject());
+    const ToolResult preview_tail = run_preview(QJsonObject {
+        { QStringLiteral("offset"), 100 },
+        { QStringLiteral("limit"), 999 }
+    });
+    const QJsonObject preview_totals = preview_page.data.value(
+        QStringLiteral("total_counts")).toObject();
+    const QJsonObject preview_tail_returned = preview_tail.data.value(
+        QStringLiteral("returned_counts")).toObject();
+    const QJsonObject preview_schema = paged_preview_registry.find(
+        QStringLiteral("transaction.preview"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    const QJsonObject full_internal_preview = paged_preview_book
+        .previewTransaction().data;
+    Require(preview_page.ok && preview_page.previewOnly
+                && preview_page.data.value(QStringLiteral("changes")).toArray().size()
+                    == 50
+                && preview_page.data.value(QStringLiteral("removed")).toArray().size()
+                    == 50
+                && preview_totals.value(QStringLiteral("changes")).toInt() == 135
+                && preview_totals.value(QStringLiteral("removed")).toInt() == 125
+                && preview_page.data.value(QStringLiteral("next_offset")).toInt() == 50
+                && preview_page.data.value(QStringLiteral("changes")).toArray().first()
+                    .toObject().value(QStringLiteral("resource_id")).toString()
+                    == QStringLiteral("preview-000")
+                && preview_page.data.value(QStringLiteral("preview_digest")).toString()
+                    == preview_page_again.data.value(
+                        QStringLiteral("preview_digest")).toString()
+                && preview_page.data.value(QStringLiteral("changes")).toArray()
+                    == preview_page_again.data.value(
+                        QStringLiteral("changes")).toArray()
+                && preview_tail.data.value(QStringLiteral("limit")).toInt() == 100
+                && preview_tail.data.value(QStringLiteral("changes")).toArray().size()
+                    == 35
+                && preview_tail.data.value(QStringLiteral("removed")).toArray().size()
+                    == 25
+                && preview_tail_returned.value(QStringLiteral("changes")).toInt() == 35
+                && preview_tail_returned.value(QStringLiteral("removed")).toInt() == 25
+                && !preview_tail.data.value(QStringLiteral("has_more")).toBool()
+                && preview_page.data.value(QStringLiteral("preview_digest")).toString()
+                    == preview_tail.data.value(
+                        QStringLiteral("preview_digest")).toString()
+                && preview_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 50
+                && preview_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 100
+                && full_internal_preview.value(QStringLiteral("changes")).toArray().size()
+                    == 135
+                && full_internal_preview.value(QStringLiteral("removed")).toArray().size()
+                    == 125
+                && paged_preview_book.resourceText(QStringLiteral("preview-000"))
+                    == QStringLiteral("<p>before 0</p>"),
+            "transaction preview must page a stable digest without changing full staged state");
+    Require(paged_preview_book.replaceText(
+                QStringLiteral("preview-134"),
+                QStringLiteral("<p>after changed snapshot</p>"),
+                paged_preview_book.resourceRevision(
+                    QStringLiteral("preview-134"))).ok,
+            "preview digest mutation fixture failed");
+    const ToolResult changed_preview = run_preview(QJsonObject());
+    Require(changed_preview.data.value(QStringLiteral("preview_digest")).toString()
+                != preview_page.data.value(
+                    QStringLiteral("preview_digest")).toString(),
+            "preview digest must change when staged content changes between pages");
+    Require(paged_preview_book.rollbackTransaction().ok,
+            "large preview transaction cleanup failed");
+
+    MemoryBookWorkspace checkpoint_book = MemoryBookWorkspace::samplePhysicsBook();
+    ToolRegistry checkpoint_registry;
+    registerBookTools(&checkpoint_registry, &checkpoint_book);
+    auto run_checkpoint = [&](const QString &name,
+                              const QJsonObject &arguments) {
+        return checkpoint_registry.find(name)->execute(arguments);
+    };
+    for (int index = 0; index < 55; ++index) {
+        Require(run_checkpoint(
+                    QStringLiteral("checkpoint.create"), QJsonObject {
+                        { QStringLiteral("label"),
+                          QStringLiteral("checkpoint-%1").arg(index) }
+                    }).ok,
+                "checkpoint pagination fixture creation failed");
+    }
+    QStringList affected_resource_ids;
+    MemoryResource long_checkpoint_resource;
+    long_checkpoint_resource.id = QString(300, QLatin1Char('i'))
+        + QStringLiteral("CHECKPOINT-ID-TAIL-SECRET");
+    long_checkpoint_resource.bookPath = QStringLiteral(
+        "OEBPS/Text/long-checkpoint-id.xhtml");
+    long_checkpoint_resource.kind = QStringLiteral("xhtml");
+    long_checkpoint_resource.mediaType = QStringLiteral(
+        "application/xhtml+xml");
+    long_checkpoint_resource.text = QStringLiteral("<p>long id</p>");
+    checkpoint_book.addResource(long_checkpoint_resource);
+    affected_resource_ids.append(long_checkpoint_resource.id);
+    for (int index = 0; index < 40; ++index) {
+        MemoryResource affected;
+        affected.id = QStringLiteral("affected-%1").arg(index);
+        affected.bookPath = QStringLiteral("OEBPS/Text/affected-%1.xhtml").arg(index);
+        affected.kind = QStringLiteral("xhtml");
+        affected.mediaType = QStringLiteral("application/xhtml+xml");
+        affected.text = QStringLiteral("<p>affected %1</p>").arg(index);
+        checkpoint_book.addResource(affected);
+        affected_resource_ids.append(affected.id);
+    }
+    Require(checkpoint_book.createTaskRestorePoint(
+                QStringLiteral("large guarded restore"),
+                affected_resource_ids).ok,
+            "guarded checkpoint fixture creation failed");
+    const ToolResult checkpoint_page = run_checkpoint(
+        QStringLiteral("checkpoint.list"), QJsonObject());
+    const ToolResult checkpoint_tail = run_checkpoint(
+        QStringLiteral("checkpoint.list"), QJsonObject {
+            { QStringLiteral("offset"), 50 },
+            { QStringLiteral("limit"), 999 }
+        });
+    const QJsonObject guarded_checkpoint = checkpoint_tail.data.value(
+        QStringLiteral("checkpoints")).toArray().last().toObject();
+    const ToolResult rejected_checkpoint_label = run_checkpoint(
+        QStringLiteral("checkpoint.create"), QJsonObject {
+            { QStringLiteral("label"), QString(257, QLatin1Char('l')) }
+        });
+    const QJsonObject checkpoint_schema = checkpoint_registry.find(
+        QStringLiteral("checkpoint.list"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    const QJsonObject checkpoint_create_schema = checkpoint_registry.find(
+        QStringLiteral("checkpoint.create"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(checkpoint_page.data.value(QStringLiteral("checkpoints")).toArray().size()
+                    == 20
+                && checkpoint_page.data.value(QStringLiteral("total_count")).toInt()
+                    == 56
+                && checkpoint_page.data.value(QStringLiteral("next_offset")).toInt()
+                    == 20
+                && checkpoint_tail.data.value(QStringLiteral("checkpoints")).toArray().size()
+                    == 6
+                && checkpoint_tail.data.value(QStringLiteral("limit")).toInt() == 50
+                && !checkpoint_tail.data.value(QStringLiteral("has_more")).toBool()
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resource_count")).toInt() == 41
+                && guarded_checkpoint.value(
+                    QStringLiteral("returned_affected_resource_count")).toInt() == 32
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resources")).toArray().size() == 32
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resources")).toArray().first().toString().size()
+                    == 256
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resource_ids_truncated")).toBool()
+                && guarded_checkpoint.value(
+                    QStringLiteral("affected_resources_truncated")).toBool()
+                && !QJsonDocument(checkpoint_tail.data).toJson().contains(
+                    "CHECKPOINT-ID-TAIL-SECRET")
+                && !rejected_checkpoint_label.ok
+                && rejected_checkpoint_label.code
+                    == QStringLiteral("CHECKPOINT_LABEL_TOO_LONG")
+                && checkpoint_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("default")).toInt() == 20
+                && checkpoint_schema.value(QStringLiteral("limit")).toObject()
+                    .value(QStringLiteral("maximum")).toInt() == 50
+                && checkpoint_create_schema.value(QStringLiteral("label")).toObject()
+                    .value(QStringLiteral("maxLength")).toInt() == 256,
+            "checkpoint catalog must bound pages, labels, and affected-resource previews");
+
+    MemoryBookWorkspace recovery_book = MemoryBookWorkspace::samplePhysicsBook();
+    const QString recovery_ch1_before = recovery_book.resourceText(QStringLiteral("ch1"));
+    const QString recovery_ch2_before = recovery_book.resourceText(QStringLiteral("ch2"));
+    Require(recovery_book.beginTransaction(QStringLiteral("two chapter edit")).ok,
+            "recovery transaction begin failed");
+    Require(recovery_book.patchFragment(
+                QStringLiteral("ch1"), -1, -1, QStringLiteral("<title>RECOVER ONE</title>"),
+                recovery_book.resourceRevision(QStringLiteral("ch1")),
+                QStringLiteral("<title>Heat</title>")).ok,
+            "first recovery patch failed");
+    Require(recovery_book.patchFragment(
+                QStringLiteral("ch2"), -1, -1, QStringLiteral("<title>RECOVER TWO</title>"),
+                recovery_book.resourceRevision(QStringLiteral("ch2")),
+                QStringLiteral("<title>Light</title>")).ok,
+            "second recovery patch failed");
+    const BookOpResult recovery_created = recovery_book.createTaskRestorePoint(
+        QStringLiteral("two chapter edit"),
+        QStringList { QStringLiteral("ch1"), QStringLiteral("ch2") });
+    Require(recovery_created.ok, "guarded recovery point creation failed");
+    const QString recovery_id = recovery_created.data
+        .value(QStringLiteral("checkpoint_id")).toString();
+    Require(recovery_book.commitTransaction(recovery_book.revision()).applied,
+            "recovery transaction commit failed");
+    Require(recovery_book.sealTaskRestorePoint(recovery_id).ok,
+            "guarded recovery point sealing failed");
+    Require(!recovery_book.restoreCheckpoint(recovery_id).ok,
+            "generic checkpoint restore must not bypass task conflict guards");
+    const BookOpResult recovered = recovery_book.restoreTaskRestorePoint(recovery_id);
+    Require(recovered.ok && recovered.applied,
+            "unchanged post-task resources must be restorable");
+    Require(recovery_book.resourceText(QStringLiteral("ch1")) == recovery_ch1_before
+                && recovery_book.resourceText(QStringLiteral("ch2")) == recovery_ch2_before,
+            "task restore must restore every affected text resource");
+    Require(recovery_book.restoreTaskRestorePoint(recovery_id).code
+                == QStringLiteral("TASK_ALREADY_RESTORED"),
+            "task restore points must be one-shot");
+
+    MemoryBookWorkspace conflict_book = MemoryBookWorkspace::samplePhysicsBook();
+    Require(conflict_book.beginTransaction(QStringLiteral("conflicting task")).ok,
+            "conflict transaction begin failed");
+    Require(conflict_book.patchFragment(
+                QStringLiteral("ch1"), -1, -1, QStringLiteral("<title>TASK ONE</title>"),
+                conflict_book.resourceRevision(QStringLiteral("ch1")),
+                QStringLiteral("<title>Heat</title>")).ok,
+            "conflict first task patch failed");
+    Require(conflict_book.patchFragment(
+                QStringLiteral("ch2"), -1, -1, QStringLiteral("<title>TASK TWO</title>"),
+                conflict_book.resourceRevision(QStringLiteral("ch2")),
+                QStringLiteral("<title>Light</title>")).ok,
+            "conflict second task patch failed");
+    const QString conflict_id = conflict_book.createTaskRestorePoint(
+        QStringLiteral("conflicting task"),
+        QStringList { QStringLiteral("ch1"), QStringLiteral("ch2") })
+        .data.value(QStringLiteral("checkpoint_id")).toString();
+    Require(conflict_book.commitTransaction(conflict_book.revision()).applied,
+            "conflicting task commit failed");
+    Require(conflict_book.sealTaskRestorePoint(conflict_id).ok,
+            "conflicting task seal failed");
+    const QString committed_ch1 = conflict_book.resourceText(QStringLiteral("ch1"));
+    Require(conflict_book.beginTransaction(QStringLiteral("later manual edit")).ok,
+            "later edit begin failed");
+    Require(conflict_book.patchFragment(
+                QStringLiteral("ch2"), -1, -1, QStringLiteral("<title>MANUAL</title>"),
+                conflict_book.resourceRevision(QStringLiteral("ch2")),
+                QStringLiteral("<title>TASK TWO</title>")).ok,
+            "later manual edit failed");
+    Require(conflict_book.commitTransaction(conflict_book.revision()).applied,
+            "later manual edit commit failed");
+    const QString manual_ch2 = conflict_book.resourceText(QStringLiteral("ch2"));
+    const BookOpResult conflicted = conflict_book.restoreTaskRestorePoint(conflict_id);
+    Require(!conflicted.ok && conflicted.code == QStringLiteral("TASK_RESTORE_CONFLICT")
+                && conflicted.data.value(QStringLiteral("live_book_unchanged")).toBool(),
+            "later edits to an affected resource must block the whole restore");
+    Require(conflict_book.resourceText(QStringLiteral("ch1")) == committed_ch1
+                && conflict_book.resourceText(QStringLiteral("ch2")) == manual_ch2,
+            "a conflicted restore must not partially mutate any resource");
 
     const quint64 after_first = book.revision();
     book.bumpRevision();
@@ -319,6 +1225,61 @@ int main()
         skeleton, -1, -1, QStringLiteral("<title></title>"));
     Require(by_text_only.ok, "resolvePatchRange must work with no character offsets");
 
+    const QString repeated_source(2 * 1024 * 1024, QLatin1Char('x'));
+    QElapsedTimer repeated_timer;
+    repeated_timer.start();
+    const PatchRangeResolution repeated = resolvePatchRange(
+        repeated_source, -1, -1, QStringLiteral("x"));
+    const qint64 repeated_milliseconds = repeated_timer.elapsed();
+    const QJsonArray repeated_occurrences = repeated.data.value(
+        QStringLiteral("occurrences")).toArray();
+    Require(!repeated.ok
+                && repeated.code == QStringLiteral("PATCH_TEXT_AMBIGUOUS")
+                && repeated_occurrences.size() == 20
+                && repeated.data.value(
+                       QStringLiteral("occurrences_truncated")).toBool()
+                && repeated.data.value(
+                       QStringLiteral("occurrence_count_lower_bound")).toInt()
+                    == 21,
+            "repeated patch text must return only a bounded occurrence preview");
+    Require(repeated_milliseconds <= 100,
+            "bounded repeated-text patch resolution exceeded 100 ms");
+
+    QElapsedTimer mismatch_timer;
+    mismatch_timer.start();
+    const PatchRangeResolution large_mismatch = resolvePatchRange(
+        repeated_source, 0, repeated_source.size(),
+        QStringLiteral("not-present"));
+    const qint64 mismatch_milliseconds = mismatch_timer.elapsed();
+    Require(!large_mismatch.ok
+                && large_mismatch.code == QStringLiteral("PATCH_TEXT_NOT_FOUND")
+                && large_mismatch.data.value(
+                       QStringLiteral("actual_text")).toString().size() == 512
+                && large_mismatch.data.value(
+                       QStringLiteral("actual_text_length")).toInt()
+                    == repeated_source.size()
+                && large_mismatch.data.value(
+                       QStringLiteral("actual_text_truncated")).toBool()
+                && large_mismatch.data.value(
+                       QStringLiteral("context")).toString().size() == 512
+                && large_mismatch.data.value(
+                       QStringLiteral("context_truncated")).toBool()
+                && QJsonDocument(large_mismatch.data).toJson(
+                       QJsonDocument::Compact).size() < 4096,
+            "large mismatch diagnostics must bound actual text and context previews");
+    Require(mismatch_milliseconds <= 100,
+            "bounded large-range mismatch diagnostics exceeded 100 ms");
+
+    const PatchRangeResolution direct_oversized = resolvePatchRange(
+        skeleton, -1, -1, oversized_patch_text);
+    Require(!direct_oversized.ok
+                && direct_oversized.code
+                    == QStringLiteral("PATCH_EXPECTED_TEXT_TOO_LARGE")
+                && direct_oversized.data.value(
+                       QStringLiteral("max_expected_text_length")).toInt()
+                    == 8192,
+            "direct patch resolution must enforce the expected-text hard bound");
+
     MemoryBookWorkspace lines_book;
     MemoryResource twice;
     twice.id = QStringLiteral("s2");
@@ -343,6 +1304,15 @@ int main()
     });
     Require(!ambiguous.ok && ambiguous.code == QStringLiteral("PATCH_TEXT_AMBIGUOUS"),
             "repeated expected_text without start_line must be ambiguous");
+    const PatchRangeResolution line_over_range = resolvePatchRange(
+        twice.text,
+        twice.text.indexOf(QStringLiteral("<p>alpha</p>")),
+        twice.text.indexOf(QStringLiteral("<p>alpha</p>")) + 12,
+        QStringLiteral("<p>alpha</p>"), 3);
+    Require(line_over_range.ok && line_over_range.rangeCorrected
+                && line_over_range.start
+                    == twice.text.lastIndexOf(QStringLiteral("<p>alpha</p>")),
+            "start_line must retain precedence over an exact competing range");
     const ToolResult lined = run_lines(QStringLiteral("resource.patch_fragment"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("s2") },
         { QStringLiteral("expected_text"), QStringLiteral("<p>alpha</p>") },

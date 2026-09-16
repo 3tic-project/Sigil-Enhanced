@@ -95,6 +95,8 @@ public:
 
 protected:
     virtual bool LoadFromDisk();
+    // Shared bookkeeping for subclasses with their own byte-preserving writer.
+    void FinishSaveToDisk(bool book_wide_save);
 
 private slots:
 

@@ -24,6 +24,7 @@
 #pragma once
 #ifndef OPFRESOURCE_H
 #define OPFRESOURCE_H
+#include <QAtomicPointer>
 
 #include <memory>
 #include <QStringList>
@@ -79,6 +80,9 @@ public:
     virtual void SetTextAsUndoableEdit(const QString &text);
 
     virtual bool LoadFromDisk();
+
+    static QString DecodeSourceBytes(const QByteArray &bytes);
+    void SetSourceBytes(const QByteArray &bytes);
 
     QString GetGuideSemanticCodeForResource(const Resource *resource, QString tgt_id="") const;
     QString GetGuideSemanticNameForResource(Resource *resource, QString tgt_id="");
@@ -168,8 +172,12 @@ public:
      */
     QStringList GetDCMetadataValues(QString text) const;
 
-    void SetNavResource(HTMLResource* nav);
+    void SetNavResource(HTMLResource* nav, bool update_manifest = true);
     HTMLResource* GetNavResource() const;
+    // Raw source with preserved line endings; do not use for editor offsets.
+    QString GetSourceText() const;
+    // Read-only bytes for isolated recovery snapshots, without saving or normalizing.
+    QByteArray GetSourceBytes() const;
 
     void UpdateGuideAfterMerge(QList<Resource*> &merged_resources, QHash<QString,QString> &section_id_map);
     void UpdateGuideFragments(QHash<QString,QString> &idupdates);
@@ -179,6 +187,7 @@ public:
  signals:
     void TextChanging();
     void LoadedFromDisk();
+    void NavigationResourceChanged();
 
 public slots:
 
@@ -311,13 +320,18 @@ private:
     void UpdateText(const OPFParser &p);
 
     QString ValidatePackageVersion(const QString &source);
+    QString PreservedSourceText() const;
+    QString ModelSource() const;
 
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES
     ///////////////////////////////
 
-    HTMLResource * m_NavResource;
+    QAtomicPointer<HTMLResource> m_NavResource;
     bool m_WarnedAboutVersion;
+    QByteArray m_OriginalSourceBytes;
+    QString m_OriginalSourceText;
+    QString m_PreservedSourceText;
 };
 
 #endif // OPFRESOURCE_H

@@ -21,24 +21,29 @@ public:
     QString denyReason(AgentMode mode, const AgentToolDescriptor &tool) const;
 };
 
+struct ApprovalDecision {
+    bool approved = false;
+    QJsonObject argumentOverrides;
+};
+
 class IApprovalGate
 {
 public:
     virtual ~IApprovalGate() = default;
-    virtual bool waitForApproval(const QString &toolCallId,
-                                 const QString &name,
-                                 const QJsonObject &arguments,
-                                 const QString &impact) = 0;
+    virtual ApprovalDecision waitForApproval(const QString &toolCallId,
+                                             const QString &name,
+                                             const QJsonObject &arguments,
+                                             const QString &impact) = 0;
 };
 
 class AutoApprovalGate : public IApprovalGate
 {
 public:
     explicit AutoApprovalGate(bool approve = true);
-    bool waitForApproval(const QString &toolCallId,
-                         const QString &name,
-                         const QJsonObject &arguments,
-                         const QString &impact) override;
+    ApprovalDecision waitForApproval(const QString &toolCallId,
+                                     const QString &name,
+                                     const QJsonObject &arguments,
+                                     const QString &impact) override;
     int requestCount() const;
     QString lastName() const;
     QString lastImpact() const;

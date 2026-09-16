@@ -926,6 +926,21 @@ if a sans-serif font-family specified in your CSS</source>
         <source>PreFind Selection</source>
         <translation>事前検索の選択範囲</translation>
     </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="631"/>
+        <source>Clip Toolbar:</source>
+        <translation>Clip ツールバー:</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="637"/>
+        <source>Show the current shortcut on each of the first ten Clip buttons.</source>
+        <translation>最初の 10 個の Clip ボタンに現在のショートカットを表示します。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/PAppearanceWidget.ui" line="640"/>
+        <source>Show Clips shortcut badges</source>
+        <translation>Clips のショートカットバッジを表示</translation>
+    </message>
 </context>
 <context>
     <name>AriaClips</name>
@@ -1811,6 +1826,10 @@ if a sans-serif font-family specified in your CSS</source>
 </context>
 <context>
     <name>BookBrowser</name>
+    <message>
+        <source>Generate a navigation document from the Table of Contents panel before editing landmarks.</source>
+        <translation>ランドマークを編集する前に、目次パネルでナビゲーション文書を生成してください。</translation>
+    </message>
     <message>
         <location filename="../../MainUI/BookBrowser.cpp" line="86"/>
         <location filename="../../MainUI/BookBrowser.cpp" line="117"/>
@@ -3203,6 +3222,14 @@ Do you want to save your changes?</source>
         <translation>この位置に開始タグが見つかりません。</translation>
     </message>
     <message>
+        <source>Select Element Content</source>
+        <translation>要素の内容を選択</translation>
+    </message>
+    <message>
+        <source>Select Whole Element</source>
+        <translation>要素全体を選択</translation>
+    </message>
+    <message>
         <location filename="../../ViewEditors/CodeViewEditor.cpp" line="1600"/>
         <source>Add To Default Dictionary</source>
         <translation>デフォルトの辞書に追加</translation>
@@ -4050,10 +4077,14 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="122"/>
-        <source>Decrease the heading level of the selected entry.
+        <source>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</source>
-        <translation>選択したエントリーの見出しレベルを下げます。
-左矢印キーを使用することもできます。</translation>
+        <translation>選択した項目を昇格し、後続の同階層項目をその下へ移動して目次の読み順を保ちます。
+左矢印キーも使用できます。</translation>
+    </message>
+    <message>
+        <source>Promote one level</source>
+        <translation>1 階層上げる</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="141"/>
@@ -4063,10 +4094,38 @@ You can also use the left arrow key.</source>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="169"/>
-        <source>Increase the heading level of the selected entry.
+        <source>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</source>
-        <translation>選択したエントリーの見出しレベルを上げます。
-右矢印キーを使用することもできます。</translation>
+        <translation>選択した項目を直前の同階層項目の下へ移動し、既存の子項目を保持します。
+右矢印キーも使用できます。</translation>
+    </message>
+    <message>
+        <source>Demote one level</source>
+        <translation>1 階層下げる</translation>
+    </message>
+    <message>
+        <source>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</source>
+        <translation>有効にすると、昇格した項目が後続の同階層項目を引き継ぎ、目次の読み順を維持します。</translation>
+    </message>
+    <message>
+        <source>Promotion adopts following siblings</source>
+        <translation>昇格時に後続の同階層項目を引き継ぐ</translation>
+    </message>
+    <message>
+        <source>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</source>
+        <translation>有効にすると、最終的な目次階層を EPUB 3 互換 NCX にも適用します。</translation>
+    </message>
+    <message>
+        <source>Also sync compatibility NCX</source>
+        <translation>互換 NCX も同期</translation>
+    </message>
+    <message>
+        <source>TOC edit status</source>
+        <translation>目次編集の状態</translation>
+    </message>
+    <message>
+        <source>This EPUB also contains an NCX. It will stay unchanged unless synchronization is enabled.</source>
+        <translation>この EPUB には NCX も含まれています。同期を有効にしない限り変更されません。</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="99"/>
@@ -4077,6 +4136,70 @@ You can also use the right arrow key.</source>
         <location filename="../../Dialogs/EditTOC.cpp" line="100"/>
         <source>Target</source>
         <translation>ターゲット</translation>
+    </message>
+    <message>
+        <source>Edit TOC entry</source>
+        <translation>目次項目を編集</translation>
+    </message>
+    <message>
+        <source>Edit TOC target</source>
+        <translation>目次ターゲットを編集</translation>
+    </message>
+    <message>
+        <source>Cannot promote: a selected entry is already at the top level.</source>
+        <translation>昇格できません。選択した項目の中に最上位の項目があります。</translation>
+    </message>
+    <message>
+        <source>Cannot demote: a selected range has no previous sibling.</source>
+        <translation>降格できません。選択範囲に直前の同階層項目がありません。</translation>
+    </message>
+    <message>
+        <source>The selected hierarchy changes overlap; no entries were moved.</source>
+        <translation>選択した階層変更が重複しています。項目は移動されませんでした。</translation>
+    </message>
+    <message>
+        <source>The TOC hierarchy is inconsistent; no entries were moved.</source>
+        <translation>目次階層に不整合があります。項目は移動されませんでした。</translation>
+    </message>
+    <message>
+        <source>Promote TOC entries</source>
+        <translation>目次項目を昇格</translation>
+    </message>
+    <message>
+        <source>Promoted %1 item(s); reassigned %2 following item(s).</source>
+        <translation>%1 項目を昇格し、後続の %2 項目を再配置しました。</translation>
+    </message>
+    <message>
+        <source>Demote TOC entries</source>
+        <translation>目次項目を降格</translation>
+    </message>
+    <message>
+        <source>Demoted %1 item(s).</source>
+        <translation>%1 項目を降格しました。</translation>
+    </message>
+    <message>
+        <source>Move TOC entries up</source>
+        <translation>目次項目を上へ移動</translation>
+    </message>
+    <message>
+        <source>Move TOC entries down</source>
+        <translation>目次項目を下へ移動</translation>
+    </message>
+    <message>
+        <source>Add TOC entry</source>
+        <translation>目次項目を追加</translation>
+    </message>
+    <message>
+        <source>Delete TOC entry</source>
+        <translation>目次項目を削除</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>元に戻す</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>やり直す</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="384"/>
@@ -5530,6 +5653,14 @@ then find the Next match in Code View.&lt;/p&gt;</source>
 <context>
     <name>GeneralSettingsWidget</name>
     <message>
+        <source>Preserve OPF formatting and comments</source>
+        <translation>OPF の書式とコメントを保持する</translation>
+    </message>
+    <message>
+        <source>Keep OPF source when opening books and apply package changes locally. Turn off to use legacy automatic OPF formatting. HTML mending is configured separately.</source>
+        <translation>書籍を開く際に OPF のソースを保持し、必要な箇所だけを変更します。無効にすると従来の OPF 自動整形を使用します。HTML の修復は別途設定します。</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/PGeneralSettingsWidget.ui" line="14"/>
         <source>General Settings</source>
         <translation>全般の設定</translation>
@@ -6675,6 +6806,18 @@ You can then check or uncheck individual headings in the list above.</source>
 <context>
     <name>ImportEPUB</name>
     <message>
+        <source>Missing EPUB 3 navigation document. No files were generated. The Table of Contents panel can display the NCX and offers an explicit navigation repair.</source>
+        <translation>EPUB 3 ナビゲーション文書がありません。ファイルは生成されていません。目次パネルで NCX を表示し、明示的にナビゲーションを修復できます。</translation>
+    </message>
+    <message>
+        <source>The OPF has no usable spine. No automatic repair was applied.</source>
+        <translation>OPF に使用可能な spine がありません。自動修復は行われていません。</translation>
+    </message>
+    <message>
+        <source>Expected a package element in the OPF namespace.</source>
+        <translation>OPF 名前空間の package 要素が必要です。</translation>
+    </message>
+    <message>
         <location filename="../../Importers/ImportEPUB.cpp" line="138"/>
         <source>Files exist in epub that are not listed in the manifest, they will be ignored.</source>
         <translation>マニフェストにリストされていないファイルがepubに存在する場合、それらは無視されます。</translation>
@@ -7037,10 +7180,6 @@ Do you want to save your changes?</source>
     <message>
         <source>The built-in KFX converter is missing from this installation.</source>
         <translation>このインストールには組み込み KFX 変換器が含まれていません。</translation>
-    </message>
-    <message>
-        <source>Cannot create a temporary EPUB file: %1</source>
-        <translation>一時 EPUB ファイルを作成できません：%1</translation>
     </message>
     <message>
         <source>Starting KFX conversion...</source>
@@ -10728,6 +10867,14 @@ Stylesheets that are listed first take precedence over later stylesheets.</sourc
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <source>Generate a navigation document from the Table of Contents panel first.</source>
+        <translation>先に目次パネルでナビゲーション文書を生成してください。</translation>
+    </message>
+    <message>
+        <source>Navigation document generated.</source>
+        <translation>ナビゲーション文書を生成しました。</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/main.ui" line="58"/>
         <source>&amp;File</source>
@@ -20349,13 +20496,13 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
     <name>PModifiedVerPrefsWidget</name>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="14"/>
-        <source>ModifiedVersion Prefs</source>
-        <translation>拡張版の設定</translation>
+        <source>Editor</source>
+        <translation>エディター</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="24"/>
-        <source>General</source>
-        <translation>全般</translation>
+        <source>Code View</source>
+        <translation>コードビュー</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="30"/>
@@ -20371,6 +20518,26 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="43"/>
         <source>Emmet</source>
         <translation>Emmet</translation>
+    </message>
+    <message>
+        <source>Double-click selection:</source>
+        <translation>ダブルクリック選択:</translation>
+    </message>
+    <message>
+        <source>Current paragraph/tag content</source>
+        <translation>現在の段落／タグの内容</translation>
+    </message>
+    <message>
+        <source>Character or word (original behavior)</source>
+        <translation>文字または単語（従来の動作）</translation>
+    </message>
+    <message>
+        <source>Current sentence</source>
+        <translation>現在の文</translation>
+    </message>
+    <message>
+        <source>Choose paragraph/tag content, the current sentence, or original word behavior. Nested markup such as Ruby stays intact.</source>
+        <translation>段落／タグの内容、現在の文、または従来の単語選択を選べます。Ruby などの入れ子マークアップは完全なまま保持されます。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="66"/>
@@ -25118,6 +25285,18 @@ Use if you edit any HTML files while Spellcheck is open.</source>
 <context>
     <name>TableOfContents</name>
     <message>
+        <source>Missing EPUB 3 navigation document. If available, NCX contents are shown for viewing only.</source>
+        <translation>EPUB 3 ナビゲーション文書がありません。NCX がある場合、その内容を閲覧用に表示します。</translation>
+    </message>
+    <message>
+        <source>View Issues</source>
+        <translation>問題を確認</translation>
+    </message>
+    <message>
+        <source>Generate Navigation Document…</source>
+        <translation>ナビゲーション文書を生成…</translation>
+    </message>
+    <message>
         <location filename="../../MainUI/TableOfContents.cpp" line="46"/>
         <source>Table Of Contents</source>
         <translation>目次</translation>
@@ -26863,5 +27042,542 @@ Continue using the requested filename?</source>
     <message><source>PBE %1</source><translation>ブロック後パディング %1</translation></message>
     <message><source>WM %1</source><translation>書字方向 %1</translation></message>
     <message><source>Layout metrics unavailable</source><translation>レイアウト計測値を取得できません</translation></message>
+</context>
+<context>
+    <name>NavigationRepair</name>
+    <message>
+        <source>The NCX is not well-formed. Review it before generating navigation.</source>
+        <translation>NCX が整形式ではありません。ナビゲーションを生成する前に確認してください。</translation>
+    </message>
+    <message>
+        <source>Navigation repair is only available for EPUB 3 books without a navigation document.</source>
+        <translation>ナビゲーションの修復は、ナビゲーション文書のない EPUB 3 書籍でのみ使用できます。</translation>
+    </message>
+    <message>
+        <source>Repair requires well-formed OPF and at most one XHTML navigation declaration. Review the OPF first.</source>
+        <translation>修復には整形式の OPF と、最大 1 つの XHTML ナビゲーション宣言が必要です。先に OPF を確認してください。</translation>
+    </message>
+    <message>
+        <source>The declared navigation path is not a local XHTML path. Review the OPF first.</source>
+        <translation>宣言されたナビゲーションパスはローカルの XHTML パスではありません。先に OPF を確認してください。</translation>
+    </message>
+    <message>
+        <source>The navigation destination cannot be registered as an XHTML resource.</source>
+        <translation>ナビゲーションの保存先を XHTML リソースとして登録できません。</translation>
+    </message>
+    <message>
+        <source>The navigation destination must be an unused file in an existing book folder.</source>
+        <translation>ナビゲーションの保存先には、書籍内の既存フォルダーにある未使用のファイルパスを指定する必要があります。</translation>
+    </message>
+    <message>
+        <source>There are no NCX entries or readable spine resources to use for navigation.</source>
+        <translation>ナビゲーションに使用できる NCX 項目や読み取り可能な spine リソースがありません。</translation>
+    </message>
+    <message>
+        <source>Contents</source>
+        <translation>目次</translation>
+    </message>
+    <message>
+        <source>An NCX entry has an empty label or an invalid local target. Review the NCX first.</source>
+        <translation>NCX の項目のラベルが空か、ローカルのリンク先が無効です。先に NCX を確認してください。</translation>
+    </message>
+    <message>
+        <source>The book or repair plan changed after preview. Review a new plan before applying it.</source>
+        <translation>プレビュー後に書籍または修復計画が変更されました。新しい計画を確認してから適用してください。</translation>
+    </message>
+</context>
+<context>
+    <name>NavigationRepairDialog</name>
+    <message>
+        <source>Generate Navigation Document</source>
+        <translation>ナビゲーション文書を生成</translation>
+    </message>
+    <message>
+        <source>Create %1. No CSS file or spine entry will be added.</source>
+        <translation>%1 を作成します。CSS ファイルや spine 項目は追加されません。</translation>
+    </message>
+    <message>
+        <source>Navigation will use NCX entries.</source>
+        <translation>NCX 項目を使用してナビゲーションを作成します。</translation>
+    </message>
+    <message>
+        <source>Navigation will use the current spine order.</source>
+        <translation>現在の spine の順序を使用してナビゲーションを作成します。</translation>
+    </message>
+    <message>
+        <source>The existing manifest declaration will be used; OPF will not change.</source>
+        <translation>既存の manifest 宣言を使用します。OPF は変更されません。</translation>
+    </message>
+    <message>
+        <source>One navigation item will be added to the OPF manifest.</source>
+        <translation>OPF manifest にナビゲーション項目を 1 つ追加します。</translation>
+    </message>
+    <message>
+        <source>New navigation source</source>
+        <translation>新しいナビゲーションのソース</translation>
+    </message>
+    <message>
+        <source>OPF before</source>
+        <translation>変更前の OPF</translation>
+    </message>
+    <message>
+        <source>OPF after</source>
+        <translation>変更後の OPF</translation>
+    </message>
+</context>
+<context>
+    <name>ActionShortcutBadge</name>
+    <message>
+        <location filename="../../Widgets/ActionShortcutBadge.cpp" line="150"/>
+        <source>Key</source>
+        <translation>キー</translation>
+    </message>
+</context>
+<context>
+    <name>ShortcutBadgeModel</name>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="58"/>
+        <source>%1 · No shortcut assigned</source>
+        <translation>%1 · ショートカット未割り当て</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="60"/>
+        <source>%1, Clip %2, no shortcut assigned</source>
+        <translation>%1、Clip %2、ショートカット未割り当て</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="64"/>
+        <source>%1 · %2</source>
+        <translation>%1 · %2</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/ShortcutBadgeModel.cpp" line="66"/>
+        <source>%1, Clip %2, %3</source>
+        <translation>%1、Clip %2、%3</translation>
+    </message>
+</context>
+<context>
+    <name>DivParagraphNormalizationDialog</name>
+    <message><source>Normalize Cmoa DIV Paragraphs</source><translation>Cmoa DIV 段落を正規化</translation></message>
+    <message><source>Analyze Cmoa/EBPAJ XHTML first, then preview a revision-bound plan. Only DIV leaves covered by the verified Cmoa CSS profile are converted automatically.</source><translation>最初に Cmoa/EBPAJ XHTML を解析し、リビジョンに結び付けられた計画をプレビューします。検証済みの Cmoa CSS プロファイルに該当する DIV の末端要素だけが自動変換されます。</translation></message>
+    <message><source>Scope</source><translation>範囲</translation></message>
+    <message><source>Current XHTML file</source><translation>現在の XHTML ファイル</translation></message>
+    <message><source>Selected XHTML files (%1)</source><translation>選択した XHTML ファイル（%1）</translation></message>
+    <message><source>All XHTML files in the book</source><translation>書籍内のすべての XHTML ファイル</translation></message>
+    <message><source>Conversion categories</source><translation>変換カテゴリ</translation></message>
+    <message><source>Body-text paragraph DIVs</source><translation>本文段落の DIV</translation></message>
+    <message><source>The conservative content-model check is always enabled.</source><translation>保守的なコンテンツモデル検査は常に有効です。</translation></message>
+    <message><source>Blank-line DIVs containing only BR</source><translation>BR だけを含む空行 DIV</translation></message>
+    <message><source>Scene-separator DIVs</source><translation>場面区切りの DIV</translation></message>
+    <message><source>Image-only DIV wrappers</source><translation>画像だけを含む DIV ラッパー</translation></message>
+    <message><source>Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)</source><translation>単一の入れ子視覚ブロック（DIV を P に、内側の DIV を SPAN に変更）</translation></message>
+    <message><source>Format XHTML source after conversion</source><translation>変換後に XHTML ソースを整形</translation></message>
+    <message><source>Off by default. When off, only selected start/end tag names are patched.</source><translation>既定ではオフです。オフの場合、選択した開始・終了タグ名だけを修正します。</translation></message>
+    <message><source>Tag-dependent CSS, scripts, fixed-layout indicators, lists, tables, SVG, MathML, and unknown mixed blocks remain review-only. No force-all mode is provided.</source><translation>タグ依存の CSS、スクリプト、固定レイアウト指標、リスト、表、SVG、MathML、不明な混在ブロックは確認のみとなります。すべてを強制変換するモードはありません。</translation></message>
+    <message><source>Analyze and Preview</source><translation>解析してプレビュー</translation></message>
+</context>
+<context>
+    <name>DivParagraphNormalizationPreviewDialog</name>
+    <message><source>Ready to apply</source><translation>適用可能</translation></message>
+    <message><source>Review required</source><translation>確認が必要</translation></message>
+    <message><source>Skipped</source><translation>スキップ</translation></message>
+    <message><source>Parse/validation error</source><translation>解析/検証エラー</translation></message>
+    <message><source>Body flow</source><translation>本文フロー</translation></message>
+    <message><source>Already normalized</source><translation>正規化済み</translation></message>
+    <message><source>TOC-like</source><translation>目次に類似</translation></message>
+    <message><source>Notice/imprint</source><translation>注意書き/奥付</translation></message>
+    <message><source>Short flow</source><translation>短いフロー</translation></message>
+    <message><source>CSS risk</source><translation>CSS リスク</translation></message>
+    <message><source>Complex/fixed layout</source><translation>複雑/固定レイアウト</translation></message>
+    <message><source>Image/title page</source><translation>画像/タイトルページ</translation></message>
+    <message><source>No candidate</source><translation>候補なし</translation></message>
+    <message><source>No body</source><translation>本文なし</translation></message>
+    <message><source>Parse error</source><translation>解析エラー</translation></message>
+    <message><source>None detected</source><translation>検出なし</translation></message>
+    <message><source>%1 selector(s)</source><translation>%1 個のセレクター</translation></message>
+    <message><source>Cmoa Paragraph Normalization Preview</source><translation>Cmoa 段落正規化のプレビュー</translation></message>
+    <message><source>Cmoa paragraph resource analysis</source><translation>Cmoa 段落リソースの解析</translation></message>
+    <message><source>Apply</source><translation>適用</translation></message>
+    <message><source>File</source><translation>ファイル</translation></message>
+    <message><source>Classification</source><translation>分類</translation></message>
+    <message><source>Body candidates</source><translation>本文候補</translation></message>
+    <message><source>Blank/separator</source><translation>空行/区切り</translation></message>
+    <message><source>Protected</source><translation>保護対象</translation></message>
+    <message><source>Status</source><translation>状態</translation></message>
+    <message><source>Before</source><translation>変換前</translation></message>
+    <message><source>Source before Cmoa paragraph normalization</source><translation>Cmoa 段落正規化前のソース</translation></message>
+    <message><source>After</source><translation>変換後</translation></message>
+    <message><source>Source after Cmoa paragraph normalization</source><translation>Cmoa 段落正規化後のソース</translation></message>
+    <message><source>Source Diff</source><translation>ソース差分</translation></message>
+    <message><source>Before Preview</source><translation>変換前のプレビュー</translation></message>
+    <message><source>After Preview</source><translation>変換後のプレビュー</translation></message>
+    <message><source>Apply Selected Files</source><translation>選択したファイルを適用</translation></message>
+    <message><source>Plan %1 · %2 of %3 ready files selected · %4 paragraph(s) planned · %5 protected block(s) · %6 review-only file(s) · %7 error(s)</source><translation>計画 %1 · 適用可能な %3 ファイル中 %2 ファイルを選択 · 予定段落数 %4 · 保護ブロック数 %5 · 確認のみのファイル数 %6 · エラー数 %7</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Analyze Cmoa DIV Paragraphs...</source><translation>Cmoa DIV 段落を解析...</translation></message>
+    <message><source>Analyze current, selected, or all Cmoa/EBPAJ XHTML files without changing the book</source><translation>書籍を変更せず、現在、選択、または全 Cmoa/EBPAJ XHTML ファイルを解析します</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs (Current File)...</source><translation>Cmoa DIV 段落を正規化（現在のファイル）...</translation></message>
+    <message><source>Preview and convert proven Cmoa paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>現在の XHTML ファイルで確認済みの Cmoa 段落 DIV 末端要素をプレビューし、ソース範囲パッチで変換します</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs...</source><translation>Cmoa DIV 段落を正規化...</translation></message>
+    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe Cmoa paragraphs</source><translation>範囲を選び、リビジョンに結び付けられた計画をプレビューして、自動的に安全な Cmoa 段落を一括変換します</translation></message>
+    <message><source>Cmoa Paragraph Normalization</source><translation>Cmoa 段落の正規化</translation></message>
+    <message><source>The selected scope contains no XHTML files.</source><translation>選択した範囲に XHTML ファイルがありません。</translation></message>
+    <message><source>Analyzing Cmoa paragraph structure...</source><translation>Cmoa 段落構造を解析しています...</translation></message>
+    <message><source>Cmoa paragraph analysis cancelled. No files were changed.</source><translation>Cmoa 段落解析をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>Cmoa paragraph analysis completed. No files were changed.</source><translation>Cmoa 段落解析が完了しました。ファイルは変更されていません。</translation></message>
+    <message><source>No auto-safe Cmoa paragraph changes were found.</source><translation>自動的に安全な Cmoa 段落の変更は見つかりませんでした。</translation></message>
+    <message><source>Cmoa paragraph normalization cancelled. No files were changed.</source><translation>Cmoa 段落の正規化をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>Validating selected Cmoa paragraph changes...</source><translation>選択した Cmoa 段落の変更を検証しています...</translation></message>
+    <message><source>Cmoa paragraph validation cancelled. No files were changed.</source><translation>Cmoa 段落の検証をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</source><translation>選択した内容が変更されたか、自動的に安全ではなくなりました。解析をやり直してください。ファイルは変更されていません。</translation></message>
+    <message><source>Content changed after analysis. Re-run analysis. No files were changed.
+%1</source><translation>解析後に内容が変更されました。解析をやり直してください。ファイルは変更されていません。
+%1</translation></message>
+    <message><source>Cmoa paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>Cmoa 段落の正規化を一括適用しました：%2 ファイル内の %1 段落を変換しました。復元チェックポイントとリソースごとの取り消し手順を作成しました。</translation></message>
+    <message><source>Cmoa paragraph normalization applied: %1 changes in %2 files.</source><translation>Cmoa 段落の正規化を適用しました：%2 ファイル内で %1 件変更しました。</translation></message>
+</context>
+<context>
+    <name>PModifiedVerPrefsWidget</name>
+    <message><source>Paragraph Structure</source><translation>段落構造</translation></message>
+    <message><source>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</source><translation>DIV 段落の正規化は確認済みの本文末端要素を常に変換します。追加の構造カテゴリは、下で有効にしない限り変更されません。</translation></message>
+    <message><source>Convert blank-line DIVs containing only BR</source><translation>BR だけを含む空行 DIV を変換</translation></message>
+    <message><source>Convert scene-separator DIVs</source><translation>場面区切りの DIV を変換</translation></message>
+    <message><source>Convert image-only DIV wrappers</source><translation>画像だけを含む DIV ラッパーを変換</translation></message>
+    <message><source>Convert single nested visual blocks (legacy compatibility)</source><translation>単一の入れ子視覚ブロックを変換（従来互換）</translation></message>
+    <message><source>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</source><translation>このカテゴリには従来の BookLive 互換変換が必要で、周辺ソースの書式が書き換えられることがあります。</translation></message>
+    <message><source>Format XHTML source after structural conversion</source><translation>構造変換後に XHTML ソースを整形</translation></message>
+    <message><source>Off by default because formatting can change whitespace outside the selected tags.</source><translation>整形によって選択タグ外の空白が変わる可能性があるため、既定ではオフです。</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>unresolved stylesheet</source><translation>未解決のスタイルシート</translation></message>
+    <message><source>CSS review: %1 · %2 · %3</source><translation>CSS の確認：%1 · %2 · %3</translation></message>
+    <message><source>DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, %5 error(s), %6 conversion(s), %7 protected block(s).</source><translation>DIV 段落計画 %1：適用可能 %2 ファイル、確認のみ %3、スキップ %4、エラー %5、変換 %6 件、保護ブロック %7 件。</translation></message>
+    <message><source>Formatting target is no longer available: %1</source><translation>整形対象は利用できなくなりました：%1</translation></message>
+    <message><source>XHTML formatting failed for %1: %2</source><translation>%1 の XHTML 整形に失敗しました：%2</translation></message>
+    <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落の正規化：追加の XHTML 整形を適用しました。</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Export conversation</source><translation>会話をエクスポート</translation></message>
+    <message><source>Export debug log</source><translation>デバッグログをエクスポート</translation></message>
+    <message><source>JSON (*.json);;All files (*)</source><translation>JSON (*.json);;すべてのファイル (*)</translation></message>
+    <message><source>Markdown (*.md);;All files (*)</source><translation>Markdown (*.md);;すべてのファイル (*)</translation></message>
+</context>
+<context>
+    <name>PluginSession</name>
+    <message><source>The live plugin launcher or snippet file does not exist.</source><translation>ライブプラグインランチャーまたはスニペットファイルが存在しません。</translation></message>
+</context>
+<context>
+    <name>PluginSessionManager</name>
+    <message><source>Could not write a temporary Python snippet.</source><translation>一時 Python スニペットを書き込めませんでした。</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>Export failed</source><translation>エクスポートに失敗しました</translation></message>
+</context>
+<context>
+    <name>SigilAgent::AgentDock</name>
+    <message><source>Agent</source><translation>エージェント</translation></message>
+    <message><source>Answer</source><translation>回答</translation></message>
+    <message><source>Applied: %1</source><translation>適用済み：%1</translation></message>
+    <message><source>Approve</source><translation>承認</translation></message>
+    <message><source>Approve %1?</source><translation>%1 を承認しますか？</translation></message>
+    <message><source>Approved</source><translation>承認済み</translation></message>
+    <message><source>Ask</source><translation>質問</translation></message>
+    <message><source>Ask about this book, plan a change, or describe an edit…</source><translation>このブックについて質問、変更を計画、または編集内容を入力…</translation></message>
+    <message><source>Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking.</source><translation>「質問」は読み取り専用です。「計画」はプレビューをステージできます。「編集」は承認後にコミットできます。「自動」は確認せずにコミットします。</translation></message>
+    <message><source>Auto</source><translation>自動</translation></message>
+    <message><source>Context: %1</source><translation>コンテキスト：%1</translation></message>
+    <message><source>Conversation…</source><translation>会話…</translation></message>
+    <message><source>Debug log…</source><translation>デバッグログ…</translation></message>
+    <message><source>Denied</source><translation>拒否済み</translation></message>
+    <message><source>Deny</source><translation>拒否</translation></message>
+    <message><source>Edit</source><translation>編集</translation></message>
+    <message><source>Enter to send · Shift+Enter for a new line · Stop cancels the in-flight request</source><translation>Enter で送信 · Shift+Enter で改行 · Stop で処理中のリクエストをキャンセル</translation></message>
+    <message><source>Error</source><translation>エラー</translation></message>
+    <message><source>Export</source><translation>エクスポート</translation></message>
+    <message><source>File</source><translation>ファイル</translation></message>
+    <message><source>File · %1</source><translation>ファイル · %1</translation></message>
+    <message><source>Idle</source><translation>アイドル</translation></message>
+    <message><source>Model is chosen in Preferences → Native Agent</source><translation>モデルは「環境設定 → Native Agent」で選択します</translation></message>
+    <message><source>New Session</source><translation>新しいセッション</translation></message>
+    <message><source>No model (set in Preferences)</source><translation>モデル未設定（環境設定で設定）</translation></message>
+    <message><source>Plan</source><translation>計画</translation></message>
+    <message><source>Run stopped. Uncommitted staged work was rolled back.</source><translation>実行を停止しました。未コミットのステージ済み作業はロールバックされました。</translation></message>
+    <message><source>Selection</source><translation>選択範囲</translation></message>
+    <message><source>Selection · %1–%2</source><translation>選択範囲 · %1–%2</translation></message>
+    <message><source>Send</source><translation>送信</translation></message>
+    <message><source>Stop</source><translation>停止</translation></message>
+    <message><source>Stopped</source><translation>停止済み</translation></message>
+    <message><source>Thinking</source><translation>思考中</translation></message>
+    <message><source>Tool failed: %1</source><translation>ツール失敗：%1</translation></message>
+    <message><source>Tool running: %1</source><translation>ツール実行中：%1</translation></message>
+    <message><source>Tool: %1</source><translation>ツール：%1</translation></message>
+    <message><source>You</source><translation>あなた</translation></message>
+    <message><source>current file</source><translation>現在のファイル</translation></message>
+    <message><source>selection</source><translation>選択範囲</translation></message>
+    <message><source>Whole book</source><translation>ブック全体</translation></message>
+    <message><source>Selected files</source><translation>選択したファイル</translation></message>
+    <message><source>Attach the complete resource map for %1</source><translation>%1 の完全なリソース一覧を添付</translation></message>
+    <message><source>Selected file · %1</source><translation>選択ファイル · %1</translation></message>
+    <message><source>Selected files · %1</source><translation>選択ファイル · %1 件</translation></message>
+    <message><source>Attach %1 file(s) selected in Book Browser</source><translation>Book Browser で選択した %1 件のファイルを添付</translation></message>
+    <message><source>Select one or more files in Book Browser</source><translation>Book Browser で 1 つ以上のファイルを選択してください</translation></message>
+    <message><source>whole book</source><translation>ブック全体</translation></message>
+    <message><source>one selected file</source><translation>選択した 1 ファイル</translation></message>
+    <message><source>%1 selected files</source><translation>選択した %1 ファイル</translation></message>
+    <message><source>Endpoint is not configured</source><translation>エンドポイントが設定されていません</translation></message>
+    <message><source>API key is not configured</source><translation>API キーが設定されていません</translation></message>
+    <message><source>Model is not configured</source><translation>モデルが設定されていません</translation></message>
+    <message><source>Authentication failed (HTTP 401)</source><translation>認証に失敗しました（HTTP 401）</translation></message>
+    <message><source>Access denied (HTTP 403)</source><translation>アクセスが拒否されました（HTTP 403）</translation></message>
+    <message><source>Endpoint or model not found (HTTP 404)</source><translation>エンドポイントまたはモデルが見つかりません（HTTP 404）</translation></message>
+    <message><source>Provider request timed out (HTTP 408)</source><translation>プロバイダーへのリクエストがタイムアウトしました（HTTP 408）</translation></message>
+    <message><source>Provider rate limit reached (HTTP 429)</source><translation>プロバイダーのレート制限に達しました（HTTP 429）</translation></message>
+    <message><source>Provider unavailable (HTTP %1)</source><translation>プロバイダーを利用できません（HTTP %1）</translation></message>
+    <message><source>Provider returned HTTP %1</source><translation>プロバイダーが HTTP %1 を返しました</translation></message>
+    <message><source>Network connection failed</source><translation>ネットワーク接続に失敗しました</translation></message>
+    <message><source>Request failed; see the Error card</source><translation>リクエストに失敗しました。エラーカードを確認してください</translation></message>
+    <message><source>Setup required: endpoint</source><translation>設定が必要：エンドポイント</translation></message>
+    <message><source>Setup required: API key</source><translation>設定が必要：API キー</translation></message>
+    <message><source>Setup required: model</source><translation>設定が必要：モデル</translation></message>
+    <message><source>Configured · not tested</source><translation>設定済み · 未テスト</translation></message>
+    <message><source>Chat tested successfully · %1</source><translation>Chat テスト成功 · %1</translation></message>
+    <message><source>Contacting provider…</source><translation>プロバイダーに接続中…</translation></message>
+    <message><source>Last request succeeded</source><translation>前回のリクエストは成功しました</translation></message>
+    <message><source>Last request failed: %1</source><translation>前回のリクエストに失敗しました：%1</translation></message>
+    <message><source>Last request cancelled</source><translation>前回のリクエストはキャンセルされました</translation></message>
+    <message><source>Provider: %1 · %2</source><translation>プロバイダー：%1 · %2</translation></message>
+    <message><source>This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator.</source><translation>この保存済みプロバイダー設定と完全に一致する構成は、Chat Completions テストに合格しています。これは過去のテスト結果であり、現在の接続状態を示すものではありません。</translation></message>
+    <message><source>Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them.</source><translation>「設定済み」は必須設定が入力済みであることを示します。確認するには、環境設定の「Chat Completions をテスト」を使用してください。</translation></message>
+    <message><source>Configure the provider in Preferences → Native Agent.</source><translation>「環境設定 → Native Agent」でプロバイダーを設定してください。</translation></message>
+    <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent の計画とツール呼び出しは、現在開いているブックに紐付けられます。</translation></message>
+    <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
+    <message><source>Untitled book</source><translation>無題のブック</translation></message>
+    <message><source>%1 resource</source><translation>%1 個のリソース</translation></message>
+    <message><source>%1 resources</source><translation>%1 個のリソース</translation></message>
+    <message><source>Unsaved changes</source><translation>未保存の変更あり</translation></message>
+    <message><source>Saved</source><translation>保存済み</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</source><translation>現在のブック：%1 · %2 · %3 · ブックセッション %4 · Agent リビジョン %5</translation></message>
+    <message><source>Preview</source><translation>プレビュー</translation></message>
+    <message><source>Applied</source><translation>適用済み</translation></message>
+    <message><source>The live book is unchanged; these changes are staged only.</source><translation>現在のブックは変更されていません。これらの変更はステージングのみです。</translation></message>
+    <message><source>• Added: %1</source><translation>• 追加：%1</translation></message>
+    <message><source>• Renamed: %1 → %2</source><translation>• 名前変更：%1 → %2</translation></message>
+    <message><source>• Text: %1 (%2 → %3)</source><translation>• テキスト：%1（%2 → %3）</translation></message>
+    <message><source>• Metadata changes</source><translation>• メタデータの変更</translation></message>
+    <message><source>• Reading order changes</source><translation>• 読み順の変更</translation></message>
+    <message><source>• TOC hierarchy changes</source><translation>• 目次階層の変更</translation></message>
+    <message><source>• Removed: %1</source><translation>• 削除：%1</translation></message>
+    <message><source>No staged differences were reported.</source><translation>ステージされた差分は報告されていません。</translation></message>
+    <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>現在のブックに適用しました。EPUB ファイルはまだ保存されていません。</translation></message>
+    <message><source>Applied changes: %1</source><translation>適用した変更：%1</translation></message>
+    <message><source>Book revision: %1</source><translation>ブックのリビジョン：%1</translation></message>
+    <message><source>Run: %1</source><translation>実行 ID：%1</translation></message>
+    <message><source>Run status: %1</source><translation>実行状態：%1</translation></message>
+    <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>実行全体：%1 ミリ秒 · モデルリクエスト %2 · ツール呼び出し %3 · 完了：%4</translation></message>
+    <message><source>Whole run: in progress</source><translation>実行全体：進行中</translation></message>
+    <message><source>Model-step budget: %1/%2 used</source><translation>モデルステップ予算：%1/%2 使用</translation></message>
+    <message><source>Model-step budget: limit %1 per run</source><translation>モデルステップ予算：実行ごとの上限 %1</translation></message>
+    <message><source>Tool-call budget: %1/%2 used</source><translation>ツール呼び出し予算：%1/%2 使用</translation></message>
+    <message><source>Tool-call budget: limit %1 per run</source><translation>ツール呼び出し予算：実行ごとの上限 %1</translation></message>
+    <message><source>Run token usage: not requested</source><translation>実行全体のトークン使用量：要求なし</translation></message>
+    <message><source>Run token usage: awaiting completed requests</source><translation>実行全体のトークン使用量：リクエストの完了待ち</translation></message>
+    <message><source>Run token usage: no model request was sent</source><translation>実行全体のトークン使用量：モデルリクエストは未送信</translation></message>
+    <message><source>Run token usage: not reported by provider</source><translation>実行全体のトークン使用量：プロバイダーからの報告なし</translation></message>
+    <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>実行全体のトークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
+    <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>実行全体のトークン使用量（%2 件中 %1 件のリクエストが報告済み）：入力 %3 · 出力 %4 · 合計 %5</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · %3 ターンを省略 · 過去 %4/%5 KiB · 現在 %6 KiB（常に保持）</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · 過去ターンの予算は無制限 · 過去 %3 KiB · 現在 %4 KiB（常に保持）</translation></message>
+    <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>リクエストツール：%2 個中 %1 個を公開 · モードポリシーで %3 個を非表示 · スキーマ %4/%5 KiB</translation></message>
+    <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>実行全体の使用量詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
+    <message><source>Full EPUBCheck: not run.</source><translation>完全な EPUBCheck：未実行。</translation></message>
+    <message><source>Full EPUBCheck: %1</source><translation>完全な EPUBCheck：%1</translation></message>
+    <message><source>Recovery: use Sigil Undo where available.</source><translation>復元：利用可能な場合は Sigil の「元に戻す」を使用してください。</translation></message>
+    <message><source>This commit did not create a task-wide restore point.</source><translation>このコミットではタスク全体の復元ポイントは作成されていません。</translation></message>
+    <message><source>Staged changes discarded</source><translation>ステージされた変更を破棄しました</translation></message>
+    <message><source>No staged changes</source><translation>ステージされた変更はありません</translation></message>
+    <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>ステージされたトランザクションを破棄しました。このトランザクションによってブック本体は変更されていません。</translation></message>
+    <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>破棄するステージ済みトランザクションはありません。ブック本体は変更されていません。</translation></message>
+    <message><source>Book changed</source><translation>ブックが切り替わりました</translation></message>
+    <message><source>The run stopped because this window switched to another book. No old response was applied to the new book.</source><translation>このウィンドウが別のブックに切り替わったため、実行を停止しました。以前の応答は新しいブックに適用されていません。</translation></message>
+    <message><source>Closing</source><translation>終了中</translation></message>
+    <message><source>The run stopped before this window closed.</source><translation>ウィンドウを閉じる前に実行を停止しました。</translation></message>
+    <message><source>Book target changed</source><translation>対象ブックが変更されました</translation></message>
+    <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>実行中に開いているブックが変更されました。以前の応答は新しいブックに適用される前にブロックされました。</translation></message>
+    <message><source>Retry</source><translation>再試行</translation></message>
+    <message><source>Technical details</source><translation>技術的な詳細</translation></message>
+    <message><source>Show request identifiers, timing, token usage, run limits, history and tool budgets, target revision, and scope handles.</source><translation>リクエスト識別子、所要時間、トークン使用量、実行上限、履歴とツールの予算、対象リビジョン、スコープハンドルを表示します。</translation></message>
+    <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ミリ秒 · %3</translation></message>
+    <message><source>Session: %1</source><translation>セッション：%1</translation></message>
+    <message><source>Not available</source><translation>利用不可</translation></message>
+    <message><source>Book session: %1</source><translation>ブックセッション：%1</translation></message>
+    <message><source>Request: %1</source><translation>リクエスト：%1</translation></message>
+    <message><source>Step: %1 · Mode: %2 · Status: %3</source><translation>ステップ：%1 · モード：%2 · 状態：%3</translation></message>
+    <message><source>Request target: %1 · revision %2</source><translation>リクエスト対象：%1 · リビジョン %2</translation></message>
+    <message><source>Model: %1</source><translation>モデル：%1</translation></message>
+    <message><source>Scope handles: %1</source><translation>スコープハンドル：%1</translation></message>
+    <message><source>None</source><translation>なし</translation></message>
+    <message><source>Duration: %1 ms · Finished: %2</source><translation>所要時間：%1 ミリ秒 · 完了：%2</translation></message>
+    <message><source>Response latency: awaiting response</source><translation>応答遅延：応答待ち</translation></message>
+    <message><source>Not observed</source><translation>未観測</translation></message>
+    <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>応答遅延：最初のバイト %1 ミリ秒 · 最初のモデルイベント %2 ミリ秒</translation></message>
+    <message><source>Response latency: not observed</source><translation>応答遅延：未観測</translation></message>
+    <message><source>The live book is unchanged. Review this plan before approving its apply step.</source><translation>現在のブックは変更されていません。適用ステップを承認する前に、このプランを確認してください。</translation></message>
+    <message><source>Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)</source><translation>段落正規化：準備完了 %1 ファイル · 変換 %2 件 · 保護項目 %3 件</translation></message>
+    <message><source>Other files: %1 review only · %2 skipped · %3 failed</source><translation>その他のファイル：確認のみ %1 件 · スキップ %2 件 · 失敗 %3 件</translation></message>
+    <message><source>Plan scope: XHTML only; no CSS, OPF, or resource additions.</source><translation>プランの範囲：XHTML のみ。CSS、OPF、リソースの追加はありません。</translation></message>
+    <message><source>Plan may change CSS, OPF, or resource inventory; inspect each change.</source><translation>このプランは CSS、OPF、またはリソース一覧を変更する可能性があります。各変更を確認してください。</translation></message>
+    <message><source>File: %1 · %2 conversion(s) · %3 protected item(s)</source><translation>ファイル：%1 · 変換 %2 件 · 保護項目 %3 件</translation></message>
+    <message><source>Before excerpt:</source><translation>変更前の抜粋：</translation></message>
+    <message><source>After excerpt:</source><translation>変更後の抜粋：</translation></message>
+    <message><source>TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)</source><translation>目次階層：影響を受けるノード %1 件 · 再帰属する兄弟ノード %2 件</translation></message>
+    <message><source>Preorder preserved: %1 · XHTML heading levels changed: %2</source><translation>事前順序を維持：%1 · XHTML 見出しレベルを変更：%2</translation></message>
+    <message><source>Yes</source><translation>はい</translation></message>
+    <message><source>No</source><translation>いいえ</translation></message>
+    <message><source>Entry: %1 · %2</source><translation>項目：%1 · %2</translation></message>
+    <message><source>Depth: %1 → %2 · Parent: %3 → %4</source><translation>深さ：%1 → %2 · 親：%3 → %4</translation></message>
+    <message><source>Additional TOC changes are omitted from this bounded review.</source><translation>この限定レビューでは、その他の目次変更を省略しています。</translation></message>
+    <message><source>This native plan is ready for review.</source><translation>このネイティブプランを確認できます。</translation></message>
+    <message><source>Local validation: %1</source><translation>ローカル検証：%1</translation></message>
+    <message><source>Review paragraph plan</source><translation>段落プランを確認</translation></message>
+    <message><source>Review TOC plan</source><translation>目次プランを確認</translation></message>
+    <message><source>Open %1</source><translation>%1 を開く</translation></message>
+    <message><source>Open this resource in Sigil for plan review.</source><translation>プラン確認のため、このリソースを Sigil で開きます。</translation></message>
+    <message><source>Reviewed plan binding: matched.</source><translation>確認済みプランの関連付け：一致。</translation></message>
+    <message><source>Approval blocked: this apply call does not match a reviewed plan.</source><translation>承認をブロックしました：この適用呼び出しは確認済みプランと一致しません。</translation></message>
+    <message><source>Not reported</source><translation>未報告</translation></message>
+    <message><source>Token usage: input %1 · output %2 · total %3</source><translation>トークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
+    <message><source>Usage details: cached input %1 · reasoning %2</source><translation>使用量の詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
+    <message><source>Token usage: requested; awaiting response</source><translation>トークン使用量：要求済み、応答待ち</translation></message>
+    <message><source>Token usage: not reported by provider</source><translation>トークン使用量：プロバイダーからの報告なし</translation></message>
+    <message><source>Token usage: not requested</source><translation>トークン使用量：要求なし</translation></message>
+    <message><source>No model request in this session.</source><translation>このセッションにはモデルリクエストがありません。</translation></message>
+    <message><source>Provider: %1 · Endpoint: %2</source><translation>プロバイダー：%1 · エンドポイント：%2</translation></message>
+    <message><source>Resend the last prompt with the same scope handles.</source><translation>同じスコープハンドルで直前のプロンプトを再送信します。</translation></message>
+    <message><source>Retry is unavailable because the open book changed.</source><translation>開いているブックが変更されたため再試行できません。</translation></message>
+    <message><source>Retry is unavailable because this turn already executed tools.</source><translation>このターンではすでにツールを実行したため、安全に再試行できません。</translation></message>
+    <message><source>Retry is available after a provider request fails.</source><translation>プロバイダーへのリクエストが失敗すると再試行できます。</translation></message>
+    <message><source>A task restore point could not be created for this commit.</source><translation>このコミットのタスク復元ポイントを作成できませんでした。</translation></message>
+    <message><source>A task restore point was not created because this commit changed book structure.</source><translation>このコミットではブック構造が変更されたため、タスク復元ポイントは作成されませんでした。</translation></message>
+    <message><source>Restore blocked</source><translation>復元をブロックしました</translation></message>
+    <message><source>Restore is unavailable because the open book changed.</source><translation>開いているブックが変更されたため復元できません。</translation></message>
+    <message><source>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</source><translation>このコミットで変更されたテキストリソースを復元します。後で対象リソースが編集されている場合、復元はブロックされます。</translation></message>
+    <message><source>Restore this task</source><translation>このタスクを復元</translation></message>
+    <message><source>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</source><translation>このタスクの完了後に対象リソース %1 件が変更されたため、復元をブロックしました。ブックの内容は変更されていません。</translation></message>
+    <message><source>Restore was blocked because this restore point belongs to another book.</source><translation>この復元ポイントは別のブックに属するため、復元をブロックしました。</translation></message>
+    <message><source>Restored</source><translation>復元済み</translation></message>
+    <message><source>Restored %1 text resource(s). Later unrelated edits were preserved.</source><translation>テキストリソース %1 件を復元しました。後で行われた無関係な編集は保持されています。</translation></message>
+    <message><source>Stop the active Agent run before restoring this task.</source><translation>このタスクを復元する前に、実行中の Agent を停止してください。</translation></message>
+    <message><source>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</source><translation>タスク復元ポイント：テキストリソース %1 件（コミット後の競合チェックで保護）</translation></message>
+    <message><source>Task restored</source><translation>タスクを復元しました</translation></message>
+    <message><source>The task could not be restored.</source><translation>タスクを復元できませんでした。</translation></message>
+    <message><source>This task has already been restored.</source><translation>このタスクはすでに復元されています。</translation></message>
+    <message><source>Compare…</source><translation>比較…</translation></message>
+    <message><source>Compare %1</source><translation>%1 を比較</translation></message>
+    <message><source>Compare the reviewed before and after excerpts side by side.</source><translation>レビュー済みの変更前後の抜粋を並べて比較します。</translation></message>
+    <message><source>Plan comparison — %1</source><translation>プラン比較 — %1</translation></message>
+    <message><source>Read-only excerpt from the reviewed plan. The live book is unchanged.</source><translation>レビュー済みプランの読み取り専用抜粋です。現在のブックは変更されていません。</translation></message>
+    <message><source>Before</source><translation>変更前</translation></message>
+    <message><source>After</source><translation>変更後</translation></message>
+    <message><source>Before excerpt for %1</source><translation>%1 の変更前の抜粋</translation></message>
+    <message><source>After excerpt for %1</source><translation>%1 の変更後の抜粋</translation></message>
+    <message><source>This comparison is a bounded excerpt; source outside the displayed region is omitted.</source><translation>この比較は範囲を限定した抜粋です。表示範囲外のソースは省略されています。</translation></message>
+    <message><source>Compare hierarchy…</source><translation>階層を比較…</translation></message>
+    <message><source>Compare TOC hierarchy</source><translation>目次階層を比較</translation></message>
+    <message><source>Compare the reviewed TOC hierarchy before and after side by side.</source><translation>レビュー済みの目次階層の変更前後を並べて比較します。</translation></message>
+    <message><source>Depth: %1 · Parent: %2</source><translation>深さ：%1 · 親：%2</translation></message>
+    <message><source>TOC hierarchy</source><translation>目次階層</translation></message>
+    <message><source>Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.</source><translation>レビュー済みプランの読み取り専用階層比較です。現在のブックは変更されていません。</translation></message>
+    <message><source>TOC hierarchy before transformation</source><translation>変換前の目次階層</translation></message>
+    <message><source>TOC hierarchy after transformation</source><translation>変換後の目次階層</translation></message>
+    <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>この比較には上限があり、残りの目次変更は省略されています。</translation></message>
+    <message><source>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</source><translation>• プレビューページ：変更 %2 件中 %1 件、削除 %4 件中 %3 件（オフセット %5）。</translation></message>
+    <message><source>• More staged items remain; preview again with offset %1 before committing.</source><translation>• 未表示のステージ済み項目があります。コミット前にオフセット %1 でもう一度プレビューしてください。</translation></message>
+    <message><source>Plan page: %1 of %2 XHTML file(s) (offset %3).</source><translation>プランページ：XHTML ファイル %2 件中 %1 件（オフセット %3）。</translation></message>
+    <message><source>More plan files must be reviewed; continue at offset %1 before applying.</source><translation>未レビューのプランファイルがあります。適用前にオフセット %1 から続行してください。</translation></message>
+    <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>独立操作グループ：XHTML ファイル %1 件。適用の承認時にグループを選択してください。</translation></message>
+    <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>操作グループ：依存関係のある目次階層変更 1 件。</translation></message>
+    <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>独立した XHTML グループ：ステージするファイルを 1 つ以上選択してください。</translation></message>
+    <message><source>Select all</source><translation>すべて選択</translation></message>
+    <message><source>Clear</source><translation>クリア</translation></message>
+    <message><source>%1 · %2 conversion(s) · %3 protected item(s)</source><translation>%1 · 変換 %2 件 · 保護項目 %3 件</translation></message>
+    <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>目次階層の変更は依存関係のある 1 つのグループであり、安全に分割できません。</translation></message>
+    <message><source>Approval blocked: select at least one independent operation group.</source><translation>承認をブロックしました：独立した操作グループを 1 つ以上選択してください。</translation></message>
+    <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>レビュー済みプランの関連付け：一致。選択したグループ：%1/%2。</translation></message>
+    <message><source>Resource result unavailable because the commit scope could not be inspected.</source><translation>コミット範囲を検査できなかったため、リソース結果を取得できません。</translation></message>
+    <message><source>Resources: %1 succeeded · %2 failed.</source><translation>リソース：成功 %1 件 · 失敗 %2 件。</translation></message>
+    <message><source>Structural operations: %1 succeeded · %2 failed.</source><translation>構造操作：成功 %1 件 · 失敗 %2 件。</translation></message>
+    <message><source>Atomic result: all staged targets were applied.</source><translation>アトミック結果：ステージ済みのすべての対象を適用しました。</translation></message>
+    <message><source>Atomic result: no staged target was applied.</source><translation>アトミック結果：ステージ済みの対象は一つも適用されませんでした。</translation></message>
+    <message><source>Not applied to the current book.</source><translation>現在のブックには適用されていません。</translation></message>
+    <message><source>The staged transaction remains available for review, retry, or rollback.</source><translation>ステージ済みトランザクションは、確認、再試行、またはロールバックに引き続き使用できます。</translation></message>
+    <message><source>The staged transaction was rolled back; no partial book changes remain.</source><translation>ステージ済みトランザクションはロールバックされました。ブックには部分的な変更が残っていません。</translation></message>
+    <message><source>No staged transaction remains.</source><translation>ステージ済みトランザクションは残っていません。</translation></message>
+    <message><source>Failure: %1 — %2</source><translation>失敗：%1 — %2</translation></message>
+    <message><source>Failure: %1</source><translation>失敗：%1</translation></message>
+    <message><source>Apply failed</source><translation>適用に失敗</translation></message>
+</context>
+<context>
+    <name>AgentSettingsWidget</name>
+    <message><source>%1 context tokens</source><translation>コンテキスト %1 トークン</translation></message>
+    <message><source>%1k context</source><translation>コンテキスト %1k</translation></message>
+    <message><source>API key</source><translation>API キー</translation></message>
+    <message><source>Chat Completions URL</source><translation>Chat Completions URL</translation></message>
+    <message><source>Custom (OpenAI-compatible)</source><translation>カスタム（OpenAI 互換）</translation></message>
+    <message><source>DeepSeek</source><translation>DeepSeek</translation></message>
+    <message><source>Full Chat Completions URL or API base</source><translation>完全な Chat Completions URL または API ベース URL</translation></message>
+    <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>キャッシュ済みモデル %1 件を読み込みました。サーバーから更新するには再読み込みしてください。</translation></message>
+    <message><source>Loaded %1 models from the server.</source><translation>%1 件のモデルをサーバーから読み込みました。</translation></message>
+    <message><source>Loading models…</source><translation>モデルを読み込み中…</translation></message>
+    <message><source>Model</source><translation>モデル</translation></message>
+    <message><source>Native Agent</source><translation>ネイティブ Agent</translation></message>
+    <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>
+    <message><source>OpenRouter</source><translation>OpenRouter</translation></message>
+    <message><source>Provider</source><translation>プロバイダー</translation></message>
+    <message><source>Reasoning effort</source><translation>推論の強度</translation></message>
+    <message><source>Refresh models</source><translation>モデルを更新</translation></message>
+    <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>モデルを更新してサーバーから ID とパラメーターを読み込むか、ID を入力してください。</translation></message>
+    <message><source>Refresh models to load this provider's catalog.</source><translation>モデルを更新して、このプロバイダーのカタログを読み込んでください。</translation></message>
+    <message><source>Send thinking (reasoning_content)</source><translation>思考内容（reasoning_content）を送信</translation></message>
+    <message><source>Request token usage when supported</source><translation>対応時にトークン使用量を要求</translation></message>
+    <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>ストリーミングリクエストに stream_options.include_usage を追加します。エンドポイントがこのオプションを拒否する場合は無効にしてください。</translation></message>
+    <message><source> KiB</source><translation> KiB</translation></message>
+    <message><source>Unlimited</source><translation>無制限</translation></message>
+    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>モデルに送信する過去の完全な会話ターンだけを制限します。現在の実行は常に完全なまま保持されます。</translation></message>
+    <message><source>Previous-turn history budget</source><translation>過去ターンの履歴予算</translation></message>
+    <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>このモデルリクエスト回数に達すると実行を停止し、未コミットのステージ済みトランザクションをロールバックします。</translation></message>
+    <message><source>Maximum model steps per run</source><translation>実行ごとの最大モデルステップ数</translation></message>
+    <message><source>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</source><translation>モデルのツール呼び出しバッチ全体がこの実行上限を超える場合、そのバッチを拒否して未コミットのステージ済み作業をロールバックします。</translation></message>
+    <message><source>Maximum tool calls per run</source><translation>実行ごとの最大ツール呼び出し数</translation></message>
+    <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>ローカルの Sigil 設定にのみ保存され、EPUB や会話記録には保存されません</translation></message>
+    <message><source>parameters: %1</source><translation>パラメーター：%1</translation></message>
+    <message><source>reasoning</source><translation>推論</translation></message>
+    <message><source>reasoning not advertised</source><translation>推論サポートは公開されていません</translation></message>
+    <message><source>tools</source><translation>ツール</translation></message>
+    <message><source>tools not advertised</source><translation>ツールサポートは公開されていません</translation></message>
+    <message><source>Test Chat Completions</source><translation>Chat Completions をテスト</translation></message>
+    <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>ツールやブック内容を含まない小さなリクエストを送信します。最大 8 出力トークン分の料金が発生する場合があります。</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>ここでプロバイダーとモデルを選択します。「モデルを更新」はカタログと公開パラメーターを読み込みます。「Chat Completions をテスト」は、このエンドポイント、API キー、モデルを確認するための小さな別リクエストを送信します。テスト実行中はブック内容やツールを送信せず、オプションのトークン使用量要求もテストせず、これらの設定も保存しません。環境設定を閉じると、この構成と完全に一致する場合に成功結果が記録されます。</translation></message>
+    <message><source>Chat Completions has not been tested for the current settings.</source><translation>現在の設定では Chat Completions はまだテストされていません。</translation></message>
+    <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>この設定で Chat Completions テストに最後に成功した日時: %1。</translation></message>
+    <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>テストできません。有効な Chat Completions URL を入力してください。</translation></message>
+    <message><source>Cannot test: enter an API key.</source><translation>テストできません。API キーを入力してください。</translation></message>
+    <message><source>Cannot test: choose or enter a model.</source><translation>テストできません。モデルを選択または入力してください。</translation></message>
+    <message><source>Testing Chat Completions for %1 at %2…</source><translation>%2 のモデル %1 で Chat Completions をテストしています…</translation></message>
+    <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>%2 のモデル %1 で Chat Completions に成功しました（%3 ミリ秒）。</translation></message>
+    <message><source>Chat Completions failed for %1 at %2: %3</source><translation>%2 のモデル %1 で Chat Completions に失敗しました：%3</translation></message>
+</context>
+<context>
+    <name>CmoaParagraphNormalizer</name>
+    <message><source>Cmoa paragraph analysis: no vrtl/hltr and main-container profile was found; skipped.</source><translation>Cmoa 段落解析：vrtl/hltr と main コンテナーのプロファイルが見つからないため、スキップしました。</translation></message>
+    <message><source>Cmoa paragraph analysis: manual review required (%1); candidate DIVs: %2.</source><translation>Cmoa 段落解析：手動確認が必要です（%1）。候補 DIV：%2。</translation></message>
+    <message><source>Cmoa paragraph analysis: CSS is outside the verified EBPAJ reset profile; %1 candidates are review-only.</source><translation>Cmoa 段落解析：CSS が検証済み EBPAJ リセットプロファイル外です。%1 件の候補は確認のみとなります。</translation></message>
+    <message><source>Cmoa paragraph analysis: %1 body DIVs are safe to convert; headings, Ruby, blank lines, and source formatting are preserved.</source><translation>Cmoa 段落解析：本文 DIV %1 件を安全に変換できます。見出し、ルビ、空行、ソース書式は保持されます。</translation></message>
+    <message><source>Cmoa paragraph normalization: this file has no convertible items.</source><translation>Cmoa 段落の正規化：このファイルには変換可能な項目がありません。</translation></message>
+    <message><source>Cmoa paragraph normalization: conversion used source-range patches.</source><translation>Cmoa 段落の正規化：変換にはソース範囲パッチを使用しました。</translation></message>
 </context>
 </TS>

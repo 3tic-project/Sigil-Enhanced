@@ -121,12 +121,14 @@ QJsonObject AttributesToJson(const TagAtts &attributes)
     return result;
 }
 
-QJsonObject PackageSections(Book *book)
+QJsonObject PackageSections(Book *book, QString *error)
 {
     OPFResource *opf = book->GetOPF();
     opf->InitialLoad();
+    QString model;
+    if (!PluginApi::ReadPackageModel(opf->GetSourceText(), &model, error)) return {};
     OPFParser parser;
-    parser.parse(opf->GetText());
+    parser.parse(model);
     FolderKeeper *folder_keeper = book->GetFolderKeeper();
 
     QJsonArray metadata;
@@ -164,6 +166,7 @@ QJsonObject PackageSections(Book *book)
         Resource *resource = folder_keeper->GetResourceByBookPathNoThrow(book_path);
         spine.append(QJsonObject {
             { QStringLiteral("idref"), entry.m_idref },
+            { QStringLiteral("id"), entry.m_atts.value(QStringLiteral("id")) },
             { QStringLiteral("book_path"), book_path },
             { QStringLiteral("linear"), entry.m_atts.value(QStringLiteral("linear")) },
             { QStringLiteral("properties"), entry.m_atts.value(QStringLiteral("properties")) },
@@ -1011,7 +1014,12 @@ void PluginSession::Dispatch(const QJsonObject &request)
                || method == QStringLiteral("book.getSpine")
                || method == QStringLiteral("book.getGuide")
                || method == QStringLiteral("book.getBindings")) {
-        const QJsonObject sections = PackageSections(m_MainWindow->GetCurrentBook().data());
+        QString package_error;
+        const QJsonObject sections = PackageSections(m_MainWindow->GetCurrentBook().data(), &package_error);
+        if (!package_error.isEmpty()) {
+            RespondError(id, PluginApi::ValidationFailed, package_error);
+            return;
+        }
         if (method == QStringLiteral("book.getMetadata")) {
             Respond(id, QJsonObject {
                 { QStringLiteral("items"), sections.value(QStringLiteral("metadata")) },
@@ -1082,7 +1090,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         Respond(id, QJsonObject {
             { QStringLiteral("package"), QJsonObject {
                 { QStringLiteral("resource"), ResourceInfo(opf) },
-                { QStringLiteral("text"), opf->GetText() },
+                { QStringLiteral("text"), opf->GetSourceText() },
                 { QStringLiteral("book_path"), opf->GetRelativePath() }
             } },
             { QStringLiteral("resources"), resources },
@@ -2523,12 +2531,14 @@ void PluginSession::Dispatch(const QJsonObject &request)
         opf->InitialLoad();
         const quint64 required_revision = transaction->HasPackageChange()
             ? transaction->PackageChange().baseRevision : Revision(opf);
-        if (expected_revision != required_revision) {
+        if (expected_revision != required_revision || Revision(opf) != required_revision
+            || (transaction->HasPackageChange()
+                && transaction->PackageChange().originalText != opf->GetSourceText())) {
             RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"));
             return;
         }
         const QString source = transaction->HasPackageChange()
-            ? transaction->PackageChange().stagedText : opf->GetText();
+            ? transaction->PackageChange().stagedText : opf->GetSourceText();
         QString package_source = source;
         QString replacement;
         QString package_error;
@@ -2592,7 +2602,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, PluginApi::ValidationFailed, package_error);
             return;
         }
-        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetText(), Revision(opf),
+        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetSourceText(), Revision(opf),
                                          expected_revision, replacement, &package_error)) {
             RespondError(id, PluginApi::RevisionConflict, package_error);
             return;
@@ -2621,7 +2631,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
         opf->InitialLoad();
         const quint64 required_revision = transaction->HasPackageChange()
             ? transaction->PackageChange().baseRevision : Revision(opf);
-        if (expected_revision != required_revision) {
+        if (expected_revision != required_revision || Revision(opf) != required_revision
+            || (transaction->HasPackageChange()
+                && transaction->PackageChange().originalText != opf->GetSourceText())) {
             RespondError(id, PluginApi::RevisionConflict, QStringLiteral("Revision conflict"),
                          QJsonObject {
                              { QStringLiteral("expected"), static_cast<qint64>(expected_revision) },
@@ -2637,7 +2649,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             RespondError(id, PluginApi::ValidationFailed, package_error);
             return;
         }
-        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetText(), Revision(opf),
+        if (!transaction->ReplacePackage(opf->GetIdentifier(), opf->GetSourceText(), Revision(opf),
                                          expected_revision, replacement, &package_error)) {
             RespondError(id, PluginApi::RevisionConflict, package_error);
             return;
@@ -2843,6 +2855,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
             QString package_error;
             const quint64 actual = resource ? Revision(resource) : 0;
             if (!resource || actual != package.baseRevision
+                || package.originalText != m_MainWindow->GetCurrentBook()->GetOPF()->GetSourceText()
                 || !ValidatePackageTransaction(
                     transaction, m_MainWindow->GetCurrentBook()->GetFolderKeeper(),
                     m_MainWindow->GetCurrentBook()->GetOPF(), &package_error)) {
@@ -2859,7 +2872,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 opf_changes.append(QJsonObject {
                     { QStringLiteral("operation"), QStringLiteral("replace-package") },
                     { QStringLiteral("before_length"), package.originalText.size() },
-                    { QStringLiteral("after_length"), package.stagedText.size() }
+                    { QStringLiteral("after_length"), package.stagedText.size() },
+                    { QStringLiteral("before_sha256"), DataFingerprint(package.originalText.toUtf8()) },
+                    { QStringLiteral("after_sha256"), DataFingerprint(package.stagedText.toUtf8()) }
                 });
             }
         }
@@ -2925,7 +2940,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (has_package_change) {
             Resource *resource = ResolveResource(package_change.resourceId);
             const quint64 actual = resource ? Revision(resource) : 0;
-            if (!resource || actual != package_change.baseRevision) {
+            if (!resource || actual != package_change.baseRevision
+                || package_change.originalText != opf->GetSourceText()) {
                 conflicts.append(QJsonObject {
                     { QStringLiteral("resource_id"), package_change.resourceId },
                     { QStringLiteral("expected"), static_cast<qint64>(package_change.baseRevision) },
@@ -3038,7 +3054,8 @@ void PluginSession::Dispatch(const QJsonObject &request)
             || !relocations.isEmpty();
         bool safety_checkpoint_required = dirty_changes.size() + dirty_binary_changes.size() > 1
             || !dirty_binary_changes.isEmpty() || !dirty_archive_changes.isEmpty()
-            || has_structure_changes || has_package_change;
+            || has_structure_changes
+            || (has_package_change && package_change.originalText != package_change.stagedText);
         for (const PluginApi::StagedTextChange &change : dirty_changes) {
             Resource *resource = ResolveResource(change.resourceId);
             safety_checkpoint_required = safety_checkpoint_required || (resource &&
@@ -3054,9 +3071,15 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const bool checkpoint_required = transaction->CheckpointPolicy() == QStringLiteral("required")
             || (transaction->CheckpointPolicy() == QStringLiteral("auto")
                 && safety_checkpoint_required);
-        if (checkpoint_required && !m_MainWindow->RepoCommit()) {
+        if (checkpoint_required && !m_MainWindow->CreateRecoveryCheckpoint(true)) {
             RespondError(id, PluginApi::ValidationFailed,
                          QStringLiteral("Could not create the required checkpoint"));
+            return;
+        }
+        if (has_package_change && (Revision(opf) != package_change.baseRevision
+            || opf->GetSourceText() != package_change.originalText)) {
+            RespondError(id, PluginApi::RevisionConflict,
+                         QStringLiteral("Package changed while creating its checkpoint"));
             return;
         }
         const bool book_was_modified = m_MainWindow->GetCurrentBook()->IsModified();
@@ -3074,7 +3097,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     continue;
                 }
                 text->InitialLoad();
-                text_snapshots.insert(resource->GetIdentifier(), text->GetText());
+                text_snapshots.insert(resource->GetIdentifier(), resource == opf ? opf->GetSourceText() : text->GetText());
             }
         }
 
@@ -3112,25 +3135,60 @@ void PluginSession::Dispatch(const QJsonObject &request)
             }
             for (auto it = text_snapshots.cbegin(); it != text_snapshots.cend(); ++it) {
                 TextResource *resource = ResolveTextResource(it.key());
-                if (resource && resource->GetText() != it.value()) resource->SetText(it.value());
+                if (!resource) continue;
+                try {
+                    const bool changed = resource == opf
+                        ? opf->GetSourceText() != it.value() : resource->GetText() != it.value();
+                    if (changed) resource->SetText(it.value());
+                } catch (const std::exception &exception) {
+                    recovery_errors.append(QStringLiteral("text %1: %2")
+                                               .arg(it.key(), QString::fromLocal8Bit(exception.what())));
+                } catch (...) {
+                    recovery_errors.append(QStringLiteral("text %1: unknown recovery error")
+                                               .arg(it.key()));
+                }
             }
 
-            QList<Resource *> moved_resources;
-            QStringList original_paths;
             for (const PluginApi::StagedResourceRelocation &relocation : relocations) {
                 Resource *resource = ResolveResource(relocation.resourceId);
                 if (resource && resource->GetRelativePath() != relocation.originalBookPath) {
-                    moved_resources.append(resource);
-                    original_paths.append(relocation.originalBookPath);
+                    try {
+                        folder_keeper->BulkMoveResources(
+                            QList<Resource *> { resource },
+                            QStringList { relocation.originalBookPath }, false);
+                        if (resource->GetRelativePath() != relocation.originalBookPath) {
+                            recovery_errors.append(QStringLiteral("resource %1: could not restore path")
+                                                       .arg(relocation.resourceId));
+                        } else {
+                            resource->SetCurrentBookRelPath(QString());
+                        }
+                    } catch (const std::exception &exception) {
+                        recovery_errors.append(QStringLiteral("resource %1: %2")
+                                                   .arg(relocation.resourceId,
+                                                        QString::fromLocal8Bit(exception.what())));
+                    } catch (...) {
+                        recovery_errors.append(QStringLiteral("resource %1: unknown path recovery error")
+                                                   .arg(relocation.resourceId));
+                    }
                 }
-            }
-            if (!moved_resources.isEmpty()) {
-                folder_keeper->BulkMoveResources(moved_resources, original_paths, false);
-                for (Resource *resource : moved_resources) resource->SetCurrentBookRelPath(QString());
             }
             for (Resource *resource : std::as_const(added_resources)) {
                 if (ResolveResource(resource->GetIdentifier())) {
-                    folder_keeper->RemoveWithoutUpdatingOPF(resource);
+                    const QString id = resource->GetIdentifier();
+                    const QString path = resource->GetFullPath();
+                    try {
+                        folder_keeper->RemoveWithoutUpdatingOPF(resource);
+                        if (ResolveResource(id) || QFileInfo::exists(path)) {
+                            recovery_errors.append(QStringLiteral("resource %1: could not remove addition")
+                                                       .arg(id));
+                        }
+                    } catch (const std::exception &exception) {
+                        recovery_errors.append(QStringLiteral("resource %1: %2")
+                                                   .arg(id, QString::fromLocal8Bit(exception.what())));
+                    } catch (...) {
+                        recovery_errors.append(QStringLiteral("resource %1: unknown removal error")
+                                                   .arg(id));
+                    }
                 }
             }
             for (const QString &book_path : std::as_const(added_unmanaged_paths)) {
@@ -3141,9 +3199,34 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 }
             }
             folder_keeper->ResumeWatchingResources();
-            m_MainWindow->GetCurrentBook()->SetModified(book_was_modified);
-            m_MainWindow->GetBookBrowser()->Refresh();
+            try {
+                m_MainWindow->GetCurrentBook()->SetModified(book_was_modified);
+                m_MainWindow->GetBookBrowser()->Refresh();
+            } catch (const std::exception &exception) {
+                recovery_errors.append(QStringLiteral("book state: %1")
+                                           .arg(QString::fromLocal8Bit(exception.what())));
+            } catch (...) {
+                recovery_errors.append(QStringLiteral("book state: unknown recovery error"));
+            }
             return recovery_errors;
+        };
+        auto inject_commit_failure = [this]() {
+            auto *manager = qobject_cast<PluginSessionManager *>(parent());
+            return manager && manager->ConsumeCommitMutationForTesting();
+        };
+        auto abort_commit = [&](const QString &message,
+                                const QStringList &prior_recovery_errors = QStringList()) {
+            QStringList recovery_errors = prior_recovery_errors;
+            recovery_errors.append(rollback_applied_changes());
+            ClearBinaryWriteUploads();
+            ClearTextWriteUploads();
+            m_Transaction.reset();
+            ReleaseWriter();
+            RespondError(id, PluginApi::ValidationFailed,
+                         message + (recovery_errors.isEmpty()
+                             ? QStringLiteral("; all applied changes were rolled back")
+                             : QStringLiteral("; rollback errors: ")
+                                 + recovery_errors.join(QStringLiteral("; "))));
         };
         if (has_structure_changes) {
             folder_keeper->SuspendWatchingResources();
@@ -3167,6 +3250,10 @@ void PluginSession::Dispatch(const QJsonObject &request)
                         break;
                     }
                     added_unmanaged_paths.append(addition.bookPath);
+                    if (inject_commit_failure()) {
+                        structure_error = QStringLiteral("Injected failure after adding an unmanifested file");
+                        break;
+                    }
                     continue;
                 }
                 QTemporaryFile staged_file;
@@ -3180,10 +3267,17 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 try {
                     Resource *resource = folder_keeper->AddContentFileToFolder(
                         staged_file.fileName(), false, addition.mediaType, addition.bookPath);
+                    if (!resource) {
+                        structure_error = QStringLiteral("Could not add resource %1")
+                            .arg(addition.bookPath);
+                        break;
+                    }
+                    // Register the live object for compensation before lazy
+                    // loading or revision tracking can throw.
+                    added_resources.append(resource);
                     if (auto *text_resource = qobject_cast<TextResource *>(resource)) {
                         text_resource->InitialLoad();
                     }
-                    added_resources.append(resource);
                     TrackResource(resource);
                     ManifestResourceAddition manifest_addition;
                     manifest_addition.resource = resource;
@@ -3193,6 +3287,10 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     manifest_addition.overlay = addition.overlay;
                     manifest_addition.addToSpine = addition.addToSpine;
                     manifest_additions.append(manifest_addition);
+                    if (inject_commit_failure()) {
+                        structure_error = QStringLiteral("Injected failure after adding a managed resource");
+                        break;
+                    }
                 } catch (...) {
                     structure_error = QStringLiteral("Could not add resource %1").arg(addition.bookPath);
                     break;
@@ -3214,13 +3312,26 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     m_ResourceRevisions[resource->GetIdentifier()] += 1;
                     m_BookRevision += 1;
                 }
+                if (structure_error.isEmpty() && inject_commit_failure()) {
+                    structure_error = QStringLiteral("Injected failure after relocating resources");
+                }
             }
             const bool needs_opf_batch = !manifest_additions.isEmpty()
                 || !removal_resources.isEmpty() || !relocation_map.isEmpty();
-            if (structure_error.isEmpty() && !has_package_change && needs_opf_batch
-                && !m_MainWindow->GetCurrentBook()->GetOPF()->ApplyResourceBatch(
-                    manifest_additions, removal_resources, relocation_map, &structure_error)) {
-                if (structure_error.isEmpty()) {
+            if (structure_error.isEmpty() && !has_package_change && needs_opf_batch) {
+                try {
+                    if (!m_MainWindow->GetCurrentBook()->GetOPF()->ApplyResourceBatch(
+                            manifest_additions, removal_resources, relocation_map, &structure_error)) {
+                        if (structure_error.isEmpty()) {
+                            structure_error = QStringLiteral("Could not update the package document");
+                        }
+                    } else if (inject_commit_failure()) {
+                        structure_error = QStringLiteral("Injected failure after updating the package document");
+                    }
+                } catch (const std::exception &exception) {
+                    structure_error = QStringLiteral("Could not update the package document: %1")
+                        .arg(QString::fromLocal8Bit(exception.what()));
+                } catch (...) {
                     structure_error = QStringLiteral("Could not update the package document");
                 }
             }
@@ -3235,20 +3346,13 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 const QStringList update_errors = UniversalUpdates::PerformUniversalUpdates(
                     true, update_resources, path_updates);
                 if (!update_errors.isEmpty()) structure_error = update_errors.join(QLatin1Char('\n'));
+                else if (inject_commit_failure()) {
+                    structure_error = QStringLiteral("Injected failure after updating resource references");
+                }
             }
             folder_keeper->ResumeWatchingResources();
             if (!structure_error.isEmpty()) {
-                const QStringList recovery_errors = rollback_applied_changes();
-                ClearBinaryWriteUploads();
-                ClearTextWriteUploads();
-                m_Transaction.reset();
-                ReleaseWriter();
-                QString message = structure_error;
-                message += recovery_errors.isEmpty()
-                    ? QStringLiteral("; all applied changes were rolled back")
-                    : QStringLiteral("; rollback errors: ")
-                        + recovery_errors.join(QStringLiteral("; "));
-                RespondError(id, PluginApi::ValidationFailed, message);
+                abort_commit(structure_error);
                 return;
             }
             for (Resource *resource : added_resources) {
@@ -3269,20 +3373,46 @@ void PluginSession::Dispatch(const QJsonObject &request)
                 });
             }
         }
-        if (has_package_change && package_change.originalText != package_change.stagedText) {
-            opf->SetText(package_change.stagedText);
-            committed.append(QJsonObject {
-                { QStringLiteral("resource_id"), package_change.resourceId },
-                { QStringLiteral("revision"), static_cast<qint64>(Revision(opf)) }
-            });
+        QString content_error;
+        try {
+            if (has_package_change && package_change.originalText != package_change.stagedText) {
+                opf->SetText(package_change.stagedText);
+                committed.append(QJsonObject {
+                    { QStringLiteral("resource_id"), package_change.resourceId },
+                    { QStringLiteral("revision"), static_cast<qint64>(Revision(opf)) }
+                });
+                if (inject_commit_failure()) {
+                    content_error = QStringLiteral("Injected failure after updating the package source");
+                }
+            }
+            if (content_error.isEmpty()) {
+                for (const PluginApi::StagedTextChange &change : dirty_changes) {
+                    TextResource *resource = ResolveTextResource(change.resourceId);
+                    if (!resource) {
+                        content_error = QStringLiteral("Text resource disappeared during commit: %1")
+                            .arg(change.resourceId);
+                        break;
+                    }
+                    resource->SetText(change.stagedText);
+                    committed.append(QJsonObject {
+                        { QStringLiteral("resource_id"), change.resourceId },
+                        { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
+                    });
+                    if (inject_commit_failure()) {
+                        content_error = QStringLiteral("Injected failure after updating a text resource");
+                        break;
+                    }
+                }
+            }
+        } catch (const std::exception &exception) {
+            content_error = QStringLiteral("Text commit failed: %1")
+                .arg(QString::fromLocal8Bit(exception.what()));
+        } catch (...) {
+            content_error = QStringLiteral("Text commit failed with an unknown error");
         }
-        for (const PluginApi::StagedTextChange &change : dirty_changes) {
-            TextResource *resource = ResolveTextResource(change.resourceId);
-            resource->SetText(change.stagedText);
-            committed.append(QJsonObject {
-                { QStringLiteral("resource_id"), change.resourceId },
-                { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
-            });
+        if (!content_error.isEmpty()) {
+            abort_commit(content_error);
+            return;
         }
         if (!dirty_binary_changes.isEmpty()) {
             folder_keeper->SuspendWatchingResources();
@@ -3301,20 +3431,14 @@ void PluginSession::Dispatch(const QJsonObject &request)
                     { QStringLiteral("resource_id"), change.resourceId },
                     { QStringLiteral("revision"), static_cast<qint64>(Revision(resource)) }
                 });
+                if (inject_commit_failure()) {
+                    write_error = QStringLiteral("Injected failure after updating a binary resource");
+                    break;
+                }
             }
             folder_keeper->ResumeWatchingResources();
             if (!write_error.isEmpty()) {
-                const QStringList recovery_errors = rollback_applied_changes();
-                ClearBinaryWriteUploads();
-                ClearTextWriteUploads();
-                m_Transaction.reset();
-                ReleaseWriter();
-                RespondError(id, PluginApi::ValidationFailed,
-                             QStringLiteral("Binary commit failed: %1; %2")
-                                 .arg(write_error, recovery_errors.isEmpty()
-                                     ? QStringLiteral("all applied changes were rolled back")
-                                     : QStringLiteral("rollback errors: ")
-                                         + recovery_errors.join(QStringLiteral("; "))));
+                abort_commit(QStringLiteral("Binary commit failed: %1").arg(write_error));
                 return;
             }
         }
@@ -3344,32 +3468,93 @@ void PluginSession::Dispatch(const QJsonObject &request)
                         ? QJsonValue() : QJsonValue(DataFingerprint(change.stagedData)) }
                 });
                 m_BookRevision += 1;
+                if (inject_commit_failure()) {
+                    archive_error = QStringLiteral("Injected failure after updating an archive file");
+                    break;
+                }
             }
             folder_keeper->ResumeWatchingResources();
             if (!archive_error.isEmpty()) {
-                const QStringList recovery_errors = rollback_applied_changes();
-                ClearBinaryWriteUploads();
-                ClearTextWriteUploads();
-                m_Transaction.reset();
-                ReleaseWriter();
-                RespondError(id, PluginApi::ValidationFailed,
-                             QStringLiteral("Archive commit failed: %1; %2")
-                                 .arg(archive_error, recovery_errors.isEmpty()
-                                     ? QStringLiteral("all applied changes were rolled back")
-                                     : QStringLiteral("rollback errors: ")
-                                         + recovery_errors.join(QStringLiteral("; "))));
+                abort_commit(QStringLiteral("Archive commit failed: %1").arg(archive_error));
                 return;
             }
         }
         if (!removal_resources.isEmpty()) {
-            folder_keeper->SuspendWatchingResources();
+            // Tabs may publish their current document back to the Resource as
+            // they close, so close them while the backing file still exists.
             for (Resource *resource : removal_resources) {
                 m_TabManager->CloseTabForResource(resource, true);
+            }
+            struct RemovalBackup {
+                Resource *resource = nullptr;
+                QString originalPath;
+                QString backupPath;
+                QFileDevice::Permissions permissions;
+            };
+            QTemporaryDir removal_backups;
+            QList<RemovalBackup> backups;
+            QString removal_error;
+            if (!removal_backups.isValid()) {
+                removal_error = QStringLiteral("Could not create resource-removal backups");
+            }
+            for (Resource *resource : removal_resources) {
+                if (!removal_error.isEmpty()) break;
+                const QString original_path = resource ? resource->GetFullPath() : QString();
+                const QString backup_path = removal_backups.filePath(
+                    QString::number(backups.size()) + QStringLiteral(".resource"));
+                if (!resource || !QFileInfo::exists(original_path)
+                    || !QFile::copy(original_path, backup_path)) {
+                    removal_error = QStringLiteral("Could not back up resource before removal: %1")
+                        .arg(resource ? resource->GetIdentifier() : QStringLiteral("unknown"));
+                    break;
+                }
+                backups.append(RemovalBackup {
+                    resource, original_path, backup_path, QFileInfo(original_path).permissions()
+                });
+            }
+
+            folder_keeper->SuspendWatchingResources();
+            QList<RemovalBackup> deleted;
+            for (const RemovalBackup &backup : std::as_const(backups)) {
+                if (!removal_error.isEmpty()) break;
+                if (!Utility::SDeleteFile(backup.originalPath)) {
+                    removal_error = QStringLiteral("Could not delete resource %1")
+                        .arg(backup.resource->GetIdentifier());
+                    break;
+                }
+                deleted.append(backup);
+                if (inject_commit_failure()) {
+                    removal_error = QStringLiteral("Injected failure after deleting a resource file");
+                    break;
+                }
+            }
+            if (!removal_error.isEmpty()) {
+                QStringList restore_errors;
+                for (auto it = deleted.crbegin(); it != deleted.crend(); ++it) {
+                    if (QFileInfo::exists(it->originalPath)
+                        || !QFile::copy(it->backupPath, it->originalPath)) {
+                        restore_errors.append(QStringLiteral("resource %1: could not restore deleted file")
+                                                  .arg(it->resource->GetIdentifier()));
+                    } else {
+                        if (!QFile::setPermissions(it->originalPath, it->permissions)) {
+                            restore_errors.append(
+                                QStringLiteral("resource %1: could not restore file permissions")
+                                    .arg(it->resource->GetIdentifier()));
+                        }
+                    }
+                }
+                folder_keeper->ResumeWatchingResources();
+                abort_commit(QStringLiteral("Resource removal failed: %1").arg(removal_error),
+                             restore_errors);
+                return;
+            }
+            for (const RemovalBackup &backup : std::as_const(backups)) {
+                Resource *resource = backup.resource;
                 const QJsonObject removed_info {
                     { QStringLiteral("resource_id"), resource->GetIdentifier() },
                     { QStringLiteral("book_path"), resource->GetRelativePath() }
                 };
-                folder_keeper->RemoveWithoutUpdatingOPF(resource);
+                folder_keeper->ForgetDeletedResourceWithoutUpdatingOPF(resource);
                 if (m_Subscriptions.contains(QStringLiteral("book.resourceRemoved"))) {
                     Notify(QStringLiteral("book.resourceRemoved"), removed_info);
                 }
@@ -3405,7 +3590,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
             { QStringLiteral("removed"), removals.size() + archive_removed },
             { QStringLiteral("relocated"), relocations.size() },
             { QStringLiteral("archive_files"), dirty_archive_changes.size() },
-            { QStringLiteral("checkpoint_created"), checkpoint_required }
+            { QStringLiteral("checkpoint_created"), checkpoint_required },
+            { QStringLiteral("checkpoint_book_id"), checkpoint_required
+                ? m_MainWindow->RecoveryCheckpointBookId() : QString() }
         });
     } else if (method == QStringLiteral("transaction.rollback")) {
         PluginApi::TextTransaction *transaction = RequireTransaction(params, id);

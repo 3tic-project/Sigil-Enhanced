@@ -10,6 +10,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
 #include "Agent/Typeset/TypesetEngine.h"
@@ -191,12 +192,23 @@ QString matchedSkillBodies(const QList<AgentSkill> &skills,
         || lowered.contains(QStringLiteral("regex"))
         || lowered.contains(QStringLiteral("正则"))
         || lowered.contains(QStringLiteral("正則"));
+    static const QRegularExpression div_word(
+        QStringLiteral("\\bdiv\\b"), QRegularExpression::CaseInsensitiveOption);
+    const bool paragraphs = lowered.contains(QStringLiteral("伪段落"))
+        || lowered.contains(QStringLiteral("偽段落"))
+        || lowered.contains(QStringLiteral("段落结构"))
+        || lowered.contains(QStringLiteral("段落結構"))
+        || lowered.contains(QStringLiteral("paragraph normal"))
+        || lowered.contains(QStringLiteral("paragraph structure"))
+        || div_word.match(lowered).hasMatch();
     QString block;
     for (const AgentSkill &skill : skills) {
         const bool named = lowered.contains(skill.name.toLower());
         const bool typeset_skill = skill.name == QLatin1String("ln-template-typeset");
         const bool structure_skill = skill.name == QLatin1String("book-structure");
-        if (named || (typeset_skill && keyword) || (structure_skill && structure)) {
+        const bool paragraph_skill = skill.name == QLatin1String("paragraph-normalization");
+        if (named || (typeset_skill && keyword) || (structure_skill && structure)
+            || (paragraph_skill && paragraphs)) {
             block += QStringLiteral("\n# Skill: %1\n%2\n").arg(skill.name, skill.body);
         }
     }

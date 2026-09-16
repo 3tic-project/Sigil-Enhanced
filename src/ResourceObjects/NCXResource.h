@@ -25,6 +25,7 @@
 #define NCXRESOURCE_H
 
 #include "MainUI/TOCModel.h"
+#include "BookManipulation/TocTreeTransform.h"
 #include "ResourceObjects/XMLResource.h"
 
 class Book;
@@ -60,6 +61,8 @@ public:
     bool GenerateNCXFromBookContents(const Book *book);
     void GenerateNCXFromTOCContents(const Book *book, TOCModel *toc_model);
     void GenerateNCXFromTOCEntries(const Book *book, TOCModel::TOCEntry toc_root_entry);
+    bool ReparentNCX(const TocEditTree &before, const TocEditTree &after,
+                     bool undoable = false);
     void FillWithDefaultText(const QString &version, const QString &default_text_folder);
     void FillWithDefaultTextToBookPath(const QString &version, const QString &start_bookpath);
 };

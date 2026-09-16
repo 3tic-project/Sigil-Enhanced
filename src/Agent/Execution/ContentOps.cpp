@@ -13,6 +13,15 @@
 namespace SigilAgent
 {
 
+namespace
+{
+
+constexpr int kRegexMatchPreviewLimit = 240;
+constexpr int kRegexCapturePreviewLimit = 160;
+constexpr int kRegexCaptureCountLimit = 8;
+
+} // namespace
+
 QString xmlEscape(const QString &text)
 {
     QString out = text;
@@ -105,15 +114,33 @@ QJsonArray regexHitsJson(const QList<RegexHit> &hits, const QString &resource_id
     QJsonArray array;
     for (const RegexHit &hit : hits) {
         QJsonArray captures;
-        for (const QString &capture : hit.captures) captures.append(capture);
+        QJsonArray capture_lengths;
+        bool captures_truncated = hit.captures.size() > kRegexCaptureCountLimit;
+        const int returned_capture_count = qMin(
+            hit.captures.size(), kRegexCaptureCountLimit);
+        for (int index = 0; index < returned_capture_count; ++index) {
+            const QString capture = hit.captures.at(index);
+            captures.append(capture.left(kRegexCapturePreviewLimit));
+            capture_lengths.append(capture.size());
+            captures_truncated = captures_truncated
+                || capture.size() > kRegexCapturePreviewLimit;
+        }
+        const bool match_truncated = hit.match.size() > kRegexMatchPreviewLimit;
         QJsonObject object {
             { QStringLiteral("resource_id"), resource_id },
             { QStringLiteral("book_path"), book_path },
             { QStringLiteral("offset"), hit.offset },
             { QStringLiteral("length"), hit.length },
             { QStringLiteral("line"), hit.line },
-            { QStringLiteral("match"), hit.match.left(240) },
-            { QStringLiteral("captures"), captures }
+            { QStringLiteral("match"), hit.match.left(kRegexMatchPreviewLimit) },
+            { QStringLiteral("match_truncated"), match_truncated },
+            { QStringLiteral("capture_count"), hit.captures.size() },
+            { QStringLiteral("returned_capture_count"), returned_capture_count },
+            { QStringLiteral("capture_lengths"), capture_lengths },
+            { QStringLiteral("captures"), captures },
+            { QStringLiteral("captures_truncated"), captures_truncated },
+            { QStringLiteral("preview_truncated"),
+              match_truncated || captures_truncated }
         };
         array.append(object);
     }

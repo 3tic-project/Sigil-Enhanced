@@ -191,6 +191,26 @@ archive API 修改。
 `replace_package()` 会验证 XML、EPUB 版本、manifest id/href 唯一性、spine idref，
 以及 package manifest 是否与同一事务的 add/remove/move 最终状态完全一致。
 
+`update_metadata()` 与 `update_spine()` 是保留源码的结构化操作：宿主先生成安全模型，
+在模型上应用目标变化，再把差异局部写回原始 OPF。严格无操作会返回原文；无关的注释、PI、
+CDATA、namespace 前缀、属性引号、换行及不透明的嵌套扩展保持原位。重复/歧义 ID 或 href、
+未声明名称、畸形 XML 和不安全的扩展冲突会失败，不回退到 DOM 全文序列化。传入的 metadata
+和 itemref 数组仍表示对“模型可见子项”的完整替换，省略已有模型项即表示删除。
+`replace_package()` 则有意把调用方提供的完整 `text` 视为权威源码，不提供格式保留承诺。
+
+已暂存 package 计划同时绑定 OPF resource ID、数值 revision 与精确原始源码；stage、
+preview/validate、创建 Checkpoint 和 commit 都会重检，因此即使 revision 观察器尚未运行，
+宿主编辑也会触发 `RevisionConflict`。preview 的 `opf_changes` 含前后 UTF-16 长度和 SHA-256。
+package 有实际变化时必须创建恢复 Checkpoint；其中 OPF 使用提交前源码字节，不更新时间戳，
+也不会为缺 UUID 的书先改写 live OPF。commit 返回 `checkpoint_created` 和
+`checkpoint_book_id`。原编码不能表示当前源码时，Checkpoint 创建失败且 live package 不变。
+
+若 live commit 在一个或多个写入已经生效后失败，宿主会逆序补偿已应用的文本、二进制、
+archive、package、路径和资源变化，并释放全局 writer。托管资源删除会在删除第一个文件前
+备份整批文件，只有全部删除成功后才从内存模型移除对象；恢复中的任何错误都会明确返回，
+不会被描述成完整回滚。这是进程内补偿，不是持久化预写日志：在 commit 窗口中强制结束
+进程或断电时，仍可能需要从提交前 Checkpoint 恢复。
+
 `read_text_range()` 返回 `text`、`start`、`end`、`total_utf16_units`、`revision`、`staged`
 和可空 `next_start`；首段 `start=0` 额外返回整文 `total_utf8_bytes` 与 `sha256`，后续段省略
 这两个需要整文编码/哈希的字段。单次最多 1 Mi 个 UTF-16 code units，且不会切开代理项对。
@@ -359,5 +379,7 @@ cmake --build cmake-build-debug -j4
 ctest --test-dir cmake-build-debug --output-on-failure
 ```
 
-当前环境完整结果及尚未自动化的 GUI、崩溃恢复和平台矩阵范围见
-`LivePythonPluginSecurityAudit.md`，不能用 SDK 方法覆盖替代这些端到端验收。
+macOS Debug 还注册了真实 MainWindow/launcher/SDK 故障注入集成目标，覆盖 package、
+多文本、结构、二进制、archive、移动/引用更新和资源删除后的补偿以及 writer 重新获取。
+尚未自动化的强制杀进程恢复、活动编辑器 UI 状态和平台矩阵范围见
+`LivePythonPluginSecurityAudit.md`；不能用 SDK 方法覆盖替代这些端到端验收。

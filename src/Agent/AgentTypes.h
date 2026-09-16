@@ -42,6 +42,9 @@ enum class AgentEventType {
     UserMessage,
     ContextAttached,
     ModelRequestStarted,
+    ModelRequestCompleted,
+    ModelRequestFailed,
+    ModelRequestCancelled,
     AssistantDelta,
     AssistantMessage,
     ToolRequested,
@@ -56,7 +59,10 @@ enum class AgentEventType {
     TransactionCommitted,
     TransactionRolledBack,
     CheckpointCreated,
+    TaskRestoreCompleted,
+    TaskRestoreFailed,
     BookRevisionObserved,
+    BookTargetChanged,
     RunStateChanged,
     SessionCancelled,
     Error
@@ -97,12 +103,31 @@ struct AgentEvent {
     QJsonObject payload;
 };
 
+struct ModelUsage {
+    qint64 inputTokens = -1;
+    qint64 outputTokens = -1;
+    qint64 totalTokens = -1;
+    qint64 cachedInputTokens = -1;
+    qint64 reasoningTokens = -1;
+
+    bool isReported() const;
+};
+
+struct ModelResponseTiming {
+    qint64 firstByteMs = -1;
+    qint64 firstEventMs = -1;
+
+    bool isReported() const;
+};
+
 struct ModelTurn {
     QString reasoning;
     QString content;
     QList<ToolCall> toolCalls;
     QString finishReason;
     QString error;
+    ModelUsage usage;
+    ModelResponseTiming timing;
 };
 
 QString eventTypeName(AgentEventType type);
@@ -112,6 +137,10 @@ QString toolRiskName(ToolRisk risk);
 AgentMode modeFromName(const QString &name);
 QJsonObject toolCallToJson(const ToolCall &call);
 ToolCall toolCallFromJson(const QJsonObject &object);
+QJsonObject modelUsageToJson(const ModelUsage &usage);
+ModelUsage modelUsageFromJson(const QJsonObject &object);
+QJsonObject modelResponseTimingToJson(const ModelResponseTiming &timing);
+ModelResponseTiming modelResponseTimingFromJson(const QJsonObject &object);
 
 } // namespace SigilAgent
 

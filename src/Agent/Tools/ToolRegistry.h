@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <vector>
+#include <functional>
 
 #include <QHash>
 #include <QJsonArray>
@@ -26,7 +27,8 @@ public:
     void add(std::unique_ptr<IAgentTool> tool);
     IAgentTool *find(const QString &name) const;
     QList<AgentToolDescriptor> descriptors() const;
-    QJsonArray openaiToolSchemas() const;
+    QJsonArray openaiToolSchemas(
+        const std::function<bool(const AgentToolDescriptor &)> &include = {}) const;
     static QString toWireName(const QString &name);
     static bool isValidWireName(const QString &name);
 

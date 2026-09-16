@@ -247,7 +247,9 @@ bool TextTransaction::ReplacePackage(const QString &resource_id,
 {
     const quint64 required_revision = m_HasPackageChange
         ? m_PackageChange.baseRevision : current_revision;
-    if (expected_revision != required_revision) {
+    if (expected_revision != required_revision || current_revision != required_revision
+        || (m_HasPackageChange && (m_PackageChange.resourceId != resource_id
+                                  || m_PackageChange.originalText != current_text))) {
         if (error) *error = QStringLiteral("Revision conflict");
         return false;
     }

@@ -185,6 +185,15 @@ PreferencesWidget::ResultActions AppearanceWidget::saveSettings()
     specialCharacterAppearance.font_size   = ui.specialCharacterFontSizeSpin->value();
     settings.setSpecialCharacterAppearance(specialCharacterAppearance);
     settings.setMainMenuIconSize(double(ui.iconSizeSlider->value())/10);
+    const bool clip_badges_changed = settings.showClipShortcutBadges()
+        != ui.chkClipShortcutBadges->isChecked();
+    settings.setShowClipShortcutBadges(ui.chkClipShortcutBadges->isChecked());
+    if (clip_badges_changed) {
+        MainWindow *main_window = qobject_cast<MainWindow *>(Utility::GetMainWindow());
+        if (main_window) {
+            QMetaObject::invokeMethod(main_window, "UpdateClipsUI", Qt::DirectConnection);
+        }
+    }
     // PV settings can be globally changed and will take effect immediately
     QWebEngineSettings *web_settings = QWebEngineProfile::defaultProfile()->settings();
     web_settings->setFontSize(QWebEngineSettings::DefaultFontSize,   PVAppearance.font_size);
@@ -319,6 +328,7 @@ SettingsStore::CodeViewAppearance AppearanceWidget::readSettings()
     ui.specialCharacterFontSizeSpin->setValue(specialCharacterAppearance.font_size);
     codeViewAppearance.font_family = ui.cbCodeViewFont->currentText();
     ui.iconSizeSlider->setValue(int(settings.mainMenuIconSize()*10));
+    ui.chkClipShortcutBadges->setChecked(settings.showClipShortcutBadges());
     return codeViewAppearance;
 }
 

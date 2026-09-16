@@ -242,6 +242,16 @@ transaction into the staged OPF before validating idrefs. New-book generation
 therefore uses one transaction and one checkpoint rather than exposing a partial
 Book between resource and package commits.
 
+Structured metadata and spine updates preserve the original OPF source by
+patching the safe model delta, including when invoked through MCP. They retain
+unrelated comments, prefixes, quoting, line endings, and opaque extensions;
+invalid or ambiguous input fails without a full-document serialization fallback.
+The explicit `replace_package` tool remains an authoritative whole-source
+replacement. Package plans are also bound to the exact OPF source in addition
+to its resource revision, and preview exposes before/after lengths and SHA-256
+digests. Commit creates a recovery checkpoint for a changed package and returns
+its `checkpoint_book_id`.
+
 ## Resources And Prompts
 
 Stable read-only resources:
@@ -316,6 +326,14 @@ services rather than copied into the adapter:
 
 Each service will use analyze/preview/commit/discard plan semantics, bind plans to
 Book and revision, and share its core implementation with the GUI workflow.
+
+The in-process Native Agent now implements this pattern for DIV paragraph
+normalization and TOC hierarchy transforms. `paragraphs.analyze/plan/apply` and
+`toc.inspect_hierarchy/plan_transform/apply_transform` share the GUI C++ engines
+and use session/source/revision-bound staged transactions. These names are
+**not** part of the 38-tool `sigil.*` MCP catalog. Exposing the same PlanRegistry
+boundary through Live v2/MCP, including session identity and compatibility
+behavior for direct MCP commit, remains roadmap work.
 
 ## Verification
 

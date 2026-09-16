@@ -70,6 +70,7 @@
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/Index.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "BookManipulation/NavigationRepair.h"
 #include "BuiltinPlugins/KfxImportProtocol.h"
 #include "Dialogs/About.h"
 #include "Dialogs/AddClips.h"
@@ -78,6 +79,7 @@
 #include "Dialogs/ClipboardHistorySelector.h"
 #include "Dialogs/DeleteStyles.h"
 #include "Dialogs/EditTOC.h"
+#include "Dialogs/NavigationRepairDialog.h"
 #include "Dialogs/EmptyLayout.h"
 #include "Dialogs/HeadingSelector.h"
 #include "Dialogs/LinkStylesheets.h"
@@ -156,6 +158,8 @@
 #include "Tabs/TabManager.h"
 #include "MainUI/MainApplication.h"
 #include "Widgets/FileDropZone.h"
+#include "Widgets/ActionShortcutBadge.h"
+#include "Widgets/ShortcutBadgeModel.h"
 #include "Misc/SettingsStoreExtend.h" //modified: SettingsStoreExtend
 #ifdef Q_OS_MAC  // allow MacOS to build its own recent files menu in dock
 extern void addFileToRecentDocs(const QString &filePath);
@@ -363,6 +367,9 @@ MainWindow::MainWindow(const QString &openfilepath,
     // Needs to come before signals connect and after ExtendUI
     // (avoiding side-effects)
     ReadSettings();
+    // Clip shortcuts are registered while reading settings, so create and
+    // refresh their badges only after the effective bindings are available.
+    UpdateClipsUI();
     {
         SettingsStore settings;
         ui.actionOpenRegexWorkbench->setVisible(
@@ -513,7 +520,7 @@ bool MainWindow::Automate(const QStringList &commands)
             else if (cmd == "ConvertHorizontalToVertical") success = ConvertHorizontalToVertical();
             else if (cmd == "ConvertVerticalToHorizontal") success = ConvertVerticalToHorizontal();
             else if (cmd == "EnhanceSourceFormatting")    success = EnhanceSourceFormatting();
-            else if (cmd == "NormalizeBookLiveParagraphs") success = NormalizeAllBookLiveParagraphs();
+            else if (cmd == "NormalizeBookLiveParagraphs") success = RunBookLiveCompatibilityAutomation();
             else if (cmd == "NormalizeBrParagraphs")       success = NormalizeAllBrParagraphs();
             else if (cmd == "NormalizeEpubStructure")     success = NormalizeEpubStructure();
             else if (cmd == "NormalizeKfxParagraphs")      success = NormalizeAllKfxParagraphs();
@@ -1242,12 +1249,13 @@ bool MainWindow::RepoCommit()
     return CreateRepoCheckpoint(true, true);
 }
 
-bool MainWindow::CreateRecoveryCheckpoint()
+bool MainWindow::CreateRecoveryCheckpoint(bool preserve_package_source)
 {
-    return CreateRepoCheckpoint(false, false);
+    return CreateRepoCheckpoint(false, false, preserve_package_source);
 }
 
-bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data)
+bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_data,
+                                      bool preserve_package_source)
 {
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -1263,6 +1271,12 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
     QString checkpointOpfText;
     QString liveOpfBeforeIdentity;
     QString bookid = opf->GetUUIDIdentifierValue(update_book_metadata);
+    if (bookid.isEmpty() && preserve_package_source) {
+        // Repository identity is outside the publication. Taking a staged
+        // transaction's backup must not insert an unreviewed UUID into OPF.
+        bookid = m_RecoveryCheckpointBookId.isEmpty()
+            ? QUuid::createUuid().toString(QUuid::WithoutBraces) : m_RecoveryCheckpointBookId;
+    }
     if (bookid.isEmpty() && !update_book_metadata) {
         // Some otherwise usable EPUBs have a dangling unique-identifier or
         // only vendor identifiers such as "none". Prepare the UUID entirely
@@ -1339,7 +1353,12 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
                 }
 
                 TextResource* textResource = qobject_cast<TextResource*>(resource);
-                if (resource == opf && !checkpointOpfText.isEmpty()) {
+                if (resource == opf && preserve_package_source) {
+                    const QByteArray bytes = opf->GetSourceBytes();
+                    QFile snapshot(destination);
+                    if (!snapshot.open(QIODevice::WriteOnly) || snapshot.write(bytes) != bytes.size()
+                        || !snapshot.flush()) throw CannotOpenFile(destination.toStdString());
+                } else if (resource == opf && !checkpointOpfText.isEmpty()) {
                     Utility::WriteUnicodeTextFile(checkpointOpfText, destination);
                 } else if (textResource && textResource->IsLoaded()) {
                     QReadLocker locker(&textResource->GetLock());
@@ -1357,7 +1376,8 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
                 !QFile::copy(containerSource, containerDestination)) {
                 throw CannotOpenFile(containerSource.toStdString());
             }
-        } catch (const CannotOpenFile&) {
+        } catch (const std::exception &exception) {
+            qWarning() << "Could not materialize recovery checkpoint:" << exception.what();
             ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
             QApplication::restoreOverrideCursor();
             return false;
@@ -1391,6 +1411,8 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
     }
 
     QApplication::restoreOverrideCursor();
+    if (update_book_metadata) m_RecoveryCheckpointBookId.clear();
+    else if (preserve_package_source) m_RecoveryCheckpointBookId = bookid;
     ShowMessageOnStatusBar(tr("Checkpoint saved."));
     return true;
 }
@@ -1410,7 +1432,8 @@ void MainWindow::RepoCheckout(QString bookid, QString destdir, QString filename,
 
     if (bookid.isEmpty()) {
         // use current epub's bookid and create one if needed
-        bookid = m_Book->GetOPF()->GetUUIDIdentifierValue();
+        bookid = m_RecoveryCheckpointBookId.isEmpty()
+            ? m_Book->GetOPF()->GetUUIDIdentifierValue() : m_RecoveryCheckpointBookId;
     }
 
     if (filename.isEmpty()) {
@@ -2294,6 +2317,12 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    if (m_AgentController && m_AgentController->isRunning()) {
+        m_CloseAfterAgentRun = true;
+        m_AgentController->stop(SigilAgent::AgentCancellationReason::WindowClosing);
+        event->ignore();
+        return;
+    }
     m_IsClosing = true;
 
 
@@ -2988,6 +3017,7 @@ void MainWindow::AddDroppedFiles(const QStringList& filepaths)
 
 bool MainWindow::AddCover()
 {
+    if (!EnsureNavigationDocument()) return false;
     QString version = m_Book->GetOPF()->GetEpubVersion();
 
     // Get the image to use.
@@ -3219,6 +3249,7 @@ bool MainWindow::RemoveNavFromSpine()
     }
     SaveTabData();
     Resource * navrsc = m_Book->GetConstOPF()->GetNavResource();
+    if (!navrsc) return false;
     m_Book->GetOPF()->RemoveResourceFromSpine(navrsc);
     ShowMessageOnStatusBar(tr("Nav removed from OPF Spine."));
     m_BookBrowser->BookContentModified();
@@ -3239,6 +3270,7 @@ bool MainWindow::AddNavToSpine(bool nonlinear)
     }
     SaveTabData();
     Resource * navrsc = m_Book->GetConstOPF()->GetNavResource();
+    if (!navrsc) return false;
     m_Book->GetOPF()->AppendResourceToSpine(navrsc, nonlinear);
     if (nonlinear) {
         ShowMessageOnStatusBar(tr("Nav added to OPF Spine with linear=\"no\""));
@@ -3383,6 +3415,7 @@ bool MainWindow::GenerateNCXGuideFromNav()
 
 void MainWindow::CreateIndex()
 {
+    if (!EnsureNavigationDocument()) return;
     SaveTabData();
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -4672,9 +4705,36 @@ void MainWindow::RemoveResources(QList<Resource *> resources)
     ShowMessageOnStatusBar(tr("File(s) deleted."));
 }
 
+bool MainWindow::EnsureNavigationDocument()
+{
+    if (!m_Book->GetOPF()->GetEpubVersion().startsWith('3') || m_Book->GetOPF()->GetNavResource()) return true;
+    return RepairMissingNavigation();
+}
+
+bool MainWindow::RepairMissingNavigation()
+{
+    SaveTabData();
+    NavigationRepair::Plan plan;
+    QString error;
+    if (!NavigationRepair::Prepare(m_Book, plan, error)) {
+        Utility::DisplayStdErrorDialog(error);
+        return false;
+    }
+    NavigationRepairDialog preview(plan, this);
+    if (preview.exec() != QDialog::Accepted) return false;
+    if (!NavigationRepair::Apply(m_Book, plan, error)) {
+        Utility::DisplayStdErrorDialog(error);
+        return false;
+    }
+    ResourcesAddedOrDeletedOrMoved();
+    ShowMessageOnStatusBar(tr("Navigation document generated."));
+    return true;
+}
+
 void MainWindow::EditTOCDialog()
 {
     SaveTabData();
+    if (!EnsureNavigationDocument()) return;
 
     QList<Resource *> resources = GetAllHTMLResources() + m_BookBrowser->AllMediaResources();
     EditTOC toc(m_Book, resources, this);
@@ -4684,14 +4744,25 @@ void MainWindow::EditTOCDialog()
         return;
     }
 
-    m_Book.data()->SetModified();
-    ShowMessageOnStatusBar(tr("Table Of Contents edited."));
+    if (toc.DidSaveChanges()) {
+        m_Book.data()->SetModified();
+        ShowMessageOnStatusBar(tr("Table Of Contents edited."));
+    } else {
+        ShowMessageOnStatusBar(tr("No changes to save."));
+    }
 }
 
 // For epub2 this set the NCX, for epub3 this sets the Nav TOC section
 bool MainWindow::GenerateTOC(bool skip_selector)
 {
     SaveTabData();
+    if (m_Book->GetOPF()->GetEpubVersion().startsWith('3') && !m_Book->GetOPF()->GetNavResource()) {
+        if (skip_selector) {
+            ShowMessageOnStatusBar(tr("Generate a navigation document from the Table of Contents panel first."));
+            return false;
+        }
+        if (!EnsureNavigationDocument()) return false;
+    }
     QList<Resource *> resources = GetAllHTMLResources();
 
     if (resources.isEmpty()) {
@@ -4740,6 +4811,7 @@ bool MainWindow::GenerateTOC(bool skip_selector)
 
 bool MainWindow::CreateHTMLTOC()
 {
+    if (!EnsureNavigationDocument()) return false;
     SaveTabData();
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -6176,14 +6248,31 @@ bool MainWindow::ProceedToOverwrite(const QString& msg, const QString &filename)
 void MainWindow::ConfigureAgentProvider()
 {
     if (!m_AgentController) return;
+    if (m_AgentController->isRunning()) {
+        m_AgentProviderReconfigurePending = true;
+        return;
+    }
     SigilAgent::AgentSettings settings;
-    auto provider = std::make_unique<SigilAgent::OpenAICompatibleProvider>(settings.providerConfig());
-    m_AgentController->setProvider(std::move(provider));
+    const SigilAgent::OpenAIProviderConfig config = settings.providerConfig();
+    auto provider = std::make_unique<SigilAgent::OpenAICompatibleProvider>(config);
+    if (!m_AgentController->setProvider(std::move(provider))) {
+        m_AgentProviderReconfigurePending = true;
+        return;
+    }
+    m_AgentProviderReconfigurePending = false;
     m_AgentController->setModel(settings.model());
     m_AgentController->setThinking(settings.thinkingEnabled(), settings.reasoningEffort());
+    m_AgentController->setTokenUsage(settings.tokenUsageEnabled());
+    m_AgentController->setHistoryPreviousTurnBudget(
+        settings.historyPreviousTurnBudgetBytes());
+    m_AgentController->setMaxModelSteps(settings.maxModelSteps());
+    m_AgentController->setMaxToolCalls(settings.maxToolCalls());
     if (m_AgentDock) {
         m_AgentController->setMode(m_AgentDock->mode());
-        m_AgentDock->setModelName(settings.model());
+        SigilAgent::AgentProviderReadiness readiness = SigilAgent::providerReadiness(
+            settings.providerKind(), config.baseUrl, !config.apiKey.isEmpty(), config.model);
+        readiness.verifiedAtMs = settings.verifiedConnectionAtMs();
+        m_AgentDock->setProviderConfiguration(readiness);
     }
 }
 
@@ -6195,24 +6284,34 @@ void MainWindow::CreateAgentDock()
     m_AgentController = std::make_unique<SigilAgent::AgentController>();
     m_AgentController->setWorkspace(m_AgentWorkspace.get());
     m_AgentDock = new SigilAgent::AgentDock(this);
+    m_AgentDock->setSessionId(m_AgentController->session()->id());
     m_AgentDock->setObjectName(QStringLiteral("agentDock"));
     addDockWidget(Qt::RightDockWidgetArea, m_AgentDock);
     tabifyDockWidget(m_PreviewWindow, m_AgentDock);
 
     SigilAgent::AgentSettings settings;
-    m_AgentDock->setModelName(settings.model());
     m_AgentDock->setMode(settings.defaultMode());
     m_AgentController->setMode(settings.defaultMode());
     ConfigureAgentProvider();
 
     m_AgentController->session()->setListener([this](const SigilAgent::AgentEvent &event) {
         if (m_AgentDock) {
-            m_AgentDock->appendEvent(event);
-            m_AgentDock->setRunState(m_AgentController && m_AgentController->runner()
-                                         ? m_AgentController->runner()->state()
-                                         : SigilAgent::AgentRunState::Idle);
+            if (event.type == SigilAgent::AgentEventType::SessionCreated) {
+                m_AgentDock->resetTranscript();
+                m_AgentDock->setSessionId(
+                    event.payload.value(QStringLiteral("session_id")).toString());
+                m_AgentDock->setRunState(SigilAgent::AgentRunState::Idle);
+            } else {
+                m_AgentDock->appendEvent(event);
+                if (event.type != SigilAgent::AgentEventType::AssistantDelta) {
+                    m_AgentDock->setRunState(m_AgentController && m_AgentController->runner()
+                                                 ? m_AgentController->runner()->state()
+                                                 : SigilAgent::AgentRunState::Idle);
+                }
+            }
         }
         const bool applied_live = event.type == SigilAgent::AgentEventType::TransactionCommitted
+            || event.type == SigilAgent::AgentEventType::TaskRestoreCompleted
             || (event.type == SigilAgent::AgentEventType::ToolCompleted
                 && event.payload.value(QStringLiteral("applied")).toBool());
         if (applied_live && m_BookBrowser) {
@@ -6236,8 +6335,26 @@ void MainWindow::CreateAgentDock()
                 if (m_AgentController) m_AgentController->setMode(mode);
             });
     connect(m_AgentDock, &SigilAgent::AgentDock::approvalResponded, this,
-            [this](const QString &id, bool ok) {
-                if (m_AgentController) m_AgentController->resolveApproval(id, ok);
+            [this](const QString &id, bool ok,
+                   const QJsonObject &argument_overrides) {
+                if (m_AgentController) {
+                    m_AgentController->resolveApproval(
+                        id, ok, argument_overrides);
+                }
+            });
+    connect(m_AgentDock, &SigilAgent::AgentDock::openPlanResourceRequested, this,
+            [this](const QString &book_path, const QString &book_session_id) {
+                if (!m_AgentWorkspace
+                    || m_AgentWorkspace->bookSessionId() != book_session_id) {
+                    return;
+                }
+                OpenFile(Utility::URLDecodePath(book_path));
+            });
+    connect(m_AgentDock, &SigilAgent::AgentDock::taskRestoreRequested, this,
+            [this](const QString &checkpoint_id, const QString &book_session_id) {
+                if (m_AgentController) {
+                    m_AgentController->restoreTask(checkpoint_id, book_session_id);
+                }
             });
 }
 
@@ -6245,18 +6362,49 @@ void MainWindow::UpdateAgentContext()
 {
     if (!m_AgentDock) return;
     QString title;
+    int resource_count = 0;
+    bool modified = false;
     if (m_Book && m_Book->GetFolderKeeper() && m_Book->GetConstOPF()) {
         const QStringList titles = m_Book->GetMetadataValues(QStringLiteral("dc:title"));
         if (!titles.isEmpty()) title = titles.first();
+        resource_count = m_Book->GetFolderKeeper()->GetResourceList().size();
+        modified = m_Book->IsModified();
     }
     const quint64 revision = m_AgentWorkspace ? m_AgentWorkspace->revision() : 1;
-    m_AgentDock->setBookContext(title, revision);
+    const QString book_session_id = m_AgentWorkspace
+        ? m_AgentWorkspace->bookSessionId() : QString();
+    m_AgentDock->setBookContext(title, m_CurrentFileName, resource_count, modified,
+                                revision, book_session_id);
+    UpdateAgentSelectedFilesContext();
+    UpdateAgentEditorContext();
+}
+
+void MainWindow::UpdateAgentSelectedFilesContext()
+{
+    if (!m_AgentDock) return;
+    QStringList paths;
+    QStringList ids;
+    if (m_BookBrowser) {
+        const QList<Resource *> resources = m_BookBrowser->AllSelectedResources();
+        for (Resource *resource : resources) {
+            if (!resource) continue;
+            paths.append(resource->GetRelativePath());
+            ids.append(resource->GetIdentifier());
+        }
+    }
+    m_AgentDock->setSelectedFiles(paths, ids);
+}
+
+void MainWindow::UpdateAgentEditorContext()
+{
+    if (!m_AgentDock) return;
     ContentTab *tab = GetCurrentContentTab();
     Resource *resource = tab ? tab->GetLoadedResource() : nullptr;
     if (resource) {
         m_AgentDock->setCurrentFile(resource->GetRelativePath(), resource->GetIdentifier());
-        const int cursor = tab->GetCursorPosition();
-        m_AgentDock->setSelection(resource->GetIdentifier(), qMax(0, cursor), qMax(cursor, cursor),
+        const int selection_start = qMax(0, tab->GetSelectionStart());
+        const int selection_end = qMax(selection_start, tab->GetSelectionEnd());
+        m_AgentDock->setSelection(resource->GetIdentifier(), selection_start, selection_end,
                                   QString());
     } else {
         m_AgentDock->setCurrentFile(QString(), QString());
@@ -6273,6 +6421,14 @@ void MainWindow::AgentSendRequested(const QString &text, const QStringList &hand
     if (m_AgentController->runner()) {
         m_AgentDock->setRunState(m_AgentController->runner()->state());
     }
+    if (m_CloseAfterAgentRun) {
+        m_CloseAfterAgentRun = false;
+        QTimer::singleShot(0, this, [this]() { close(); });
+        return;
+    }
+    if (m_AgentProviderReconfigurePending) {
+        ConfigureAgentProvider();
+    }
 }
 
 void MainWindow::AgentStopRequested()
@@ -6283,10 +6439,6 @@ void MainWindow::AgentStopRequested()
 void MainWindow::AgentNewSessionRequested()
 {
     if (m_AgentController) m_AgentController->newSession();
-    if (m_AgentDock) {
-        m_AgentDock->resetTranscript();
-        m_AgentDock->setRunState(SigilAgent::AgentRunState::Idle);
-    }
 }
 
 namespace
@@ -6374,6 +6526,10 @@ void MainWindow::AgentExportDebugLogRequested()
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
+    if (m_AgentController && m_AgentController->isRunning()) {
+        m_AgentController->stop(SigilAgent::AgentCancellationReason::BookChanged);
+    }
+    m_RecoveryCheckpointBookId.clear();
     if (m_RegexWorkbenchDialog) {
         ui.actionOpenRegexWorkbench->setEnabled(false);
         m_RegexWorkbenchDialog->CloseForBookChange();
@@ -6405,6 +6561,8 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
     SettingsStore settings;
     settings.setRenameTemplate("");
     connect(m_Book.data(),     SIGNAL(ModifiedStateChanged(bool)), this, SLOT(setWindowModified(bool)));
+    connect(m_Book.data(), &Book::ModifiedStateChanged, this,
+            [this](bool) { UpdateAgentContext(); });
     connect(m_Book.data(),     SIGNAL(ResourceUpdatedFromDiskRequest(Resource *)), this, SLOT(ResourceUpdatedFromDisk(Resource *)));
     connect(m_BookBrowser,     SIGNAL(ShowStatusMessageRequest(const QString &, int)), this, SLOT(ShowMessageOnStatusBar(const QString &, int)));
     connect(m_BookBrowser,     SIGNAL(ResourcesDeleted()), this, SLOT(ResourcesAddedOrDeletedOrMoved()));
@@ -6432,6 +6590,7 @@ void MainWindow::ResourcesAddedOrDeletedOrMoved()
         setWindowTitle(tr("%1[*] - epub%2 - %3").arg(m_CurrentFileName).arg(epubversion).arg(APP_DISPLAY_NAME));
     }
     UpdateEpub3ToolsEnabled(epubversion);
+    UpdateAgentContext();
 
 }
 
@@ -7009,6 +7168,7 @@ void MainWindow::UpdateUiWithCurrentFile(const QString &fullfilepath, bool just_
     }
 
     UpdateEpub3ToolsEnabled(epubversion);
+    UpdateAgentContext();
 
     if (m_CurrentFilePath.isEmpty()) {
         return;
@@ -7615,6 +7775,9 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeBookLiveParagraphs, "MainWindow.AnalyzeBookLiveParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentBookLiveParagraphs, "MainWindow.NormalizeCurrentBookLiveParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeBookLiveParagraphs, "MainWindow.NormalizeBookLiveParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeCmoaParagraphs, "MainWindow.AnalyzeCmoaParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentCmoaParagraphs, "MainWindow.NormalizeCurrentCmoaParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCmoaParagraphs, "MainWindow.NormalizeCmoaParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeVerticalLayout, "MainWindow.AnalyzeVerticalLayout"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertVerticalToHorizontal, "MainWindow.ConvertVerticalToHorizontal"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertHorizontalToVertical, "MainWindow.ConvertHorizontalToVertical"); // modified: Builtin native plugin
@@ -7634,10 +7797,44 @@ void MainWindow::ExtendUI()
     ui.tbHeadings->setFocusPolicy(Qt::NoFocus);
     ui.tbCase->setFocusPolicy(Qt::NoFocus);
 
-    UpdateClipsUI();
 }
 
-void MainWindow::UpdateClipButton(QAction *ui_action)
+QToolButton *MainWindow::ClipToolButton(QAction *ui_action) const
+{
+    QToolButton *button = qobject_cast<QToolButton *>(
+        ui.toolBarClips->widgetForAction(ui_action));
+    if (!button) {
+        button = qobject_cast<QToolButton *>(
+            ui.toolBarClips2->widgetForAction(ui_action));
+    }
+    return button;
+}
+
+ActionShortcutBadge *MainWindow::EnsureClipShortcutBadge(QAction *ui_action)
+{
+    const int clip_number = ui_action->data().toInt();
+    if (clip_number < 1 || clip_number > 10) return nullptr;
+    QToolButton *button = ClipToolButton(ui_action);
+    if (!button) return nullptr;
+
+    ActionShortcutBadge *badge = button->findChild<ActionShortcutBadge *>(
+        QStringLiteral("actionShortcutBadge"), Qt::FindDirectChildrenOnly);
+    const QString shortcut_id = QStringLiteral("MainWindow.Clip%1").arg(clip_number);
+    const QKeySequence default_shortcut = KeyboardShortcutManager::instance()
+        .keyboardShortcut(shortcut_id).defaultKeySequence();
+    if (!badge) {
+        badge = new ActionShortcutBadge(button, ui_action, default_shortcut);
+        badge->setShortcutChangedCallback([this, ui_action]() {
+            SettingsStore settings;
+            UpdateClipButton(ui_action, settings.showClipShortcutBadges());
+        });
+    } else {
+        badge->setDefaultShortcut(default_shortcut);
+    }
+    return badge;
+}
+
+void MainWindow::UpdateClipButton(QAction *ui_action, bool show_shortcut_badges)
 {
     // clipEntry is a simple struct created by GetEntry with new,
     // no reference counting or smart pointers so they must be cleaned up appropriately
@@ -7646,23 +7843,32 @@ void MainWindow::UpdateClipButton(QAction *ui_action)
 
     if (clip_entry) {
         ui_action->setText(clip_entry->name);
-        QString clip_text = clip_entry->text;
-        clip_text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
-        ui_action->setToolTip(clip_text);
+        const ClipShortcutText text = ShortcutBadgeModel::FormatClipText(
+            clip_entry->name, clip_number, clip_entry->text, ui_action->shortcut());
+        ui_action->setToolTip(text.tooltip);
         ui_action->setVisible(true);
+        QToolButton *button = ClipToolButton(ui_action);
+        if (button) button->setAccessibleName(text.accessibleName);
         // prevent memory leak
         delete clip_entry;
     } else {
         ui_action->setText("");
         ui_action->setToolTip("");
         ui_action->setVisible(false);
+        QToolButton *button = ClipToolButton(ui_action);
+        if (button) button->setAccessibleName(QString());
+    }
+    if (ActionShortcutBadge *badge = EnsureClipShortcutBadge(ui_action)) {
+        badge->setBadgesVisible(show_shortcut_badges);
     }
 }
 
 void MainWindow::UpdateClipsUI()
 {
+    SettingsStore settings;
+    const bool show_shortcut_badges = settings.showClipShortcutBadges();
     foreach(QAction * clipaction, m_clactions) {
-        UpdateClipButton(clipaction);
+        UpdateClipButton(clipaction, show_shortcut_badges);
     }
 }
 
@@ -7931,6 +8137,8 @@ void MainWindow::ConnectSignalsToSlots()
             this,                    SLOT(UpdatePreview()));
     connect(m_BookBrowser,          SIGNAL(UpdateBrowserSelection()),
             this,                    SLOT(UpdateBrowserSelectionToTab()));
+    connect(m_BookBrowser, &BookBrowser::SelectedResourcesChanged,
+            this, &MainWindow::UpdateAgentSelectedFilesContext);
     connect(m_BookBrowser, SIGNAL(RenumberTOCContentsRequest()),
             m_TableOfContents,     SLOT(RenumberTOCContents()));
     connect(m_BookBrowser, SIGNAL(RemoveTabRequest()),
@@ -7945,6 +8153,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(m_BookBrowser, SIGNAL(RemoveResourcesRequest()), this, SLOT(RemoveResources()));
     connect(m_BookBrowser, SIGNAL(OpenFileRequest(QString, int, int)), this, SLOT(OpenFile(QString, int, int)));
     connect(m_BookBrowser, SIGNAL(ViewImageRequest(const QUrl&)), this, SLOT(ViewImageDialog(const QUrl&)));
+    connect(m_TableOfContents, &TableOfContents::NavigationRepairRequested, this, &MainWindow::RepairMissingNavigation);
     connect(m_TableOfContents, SIGNAL(OpenResourceRequest(Resource *, int, int, const QString &, const QUrl &)),
             this,     SLOT(OpenResource(Resource *, int, int, const QString &, const QUrl &)));
     connect(m_ValidationResultsView, SIGNAL(OpenResourceRequest(Resource *, int, int, const QString &)),
@@ -8023,6 +8232,9 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionAnalyzeBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeBookLiveParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeCurrentBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentBookLiveParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllBookLiveParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionAnalyzeCmoaParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeCmoaParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionNormalizeCurrentCmoaParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentCmoaParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionNormalizeCmoaParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllCmoaParagraphs())); // modified: Builtin native plugin
     connect(ui.actionAnalyzeVerticalLayout, SIGNAL(triggered()), this, SLOT(AnalyzeVerticalLayout())); // modified: Builtin native plugin
     connect(ui.actionConvertVerticalToHorizontal, SIGNAL(triggered()), this, SLOT(ConvertVerticalToHorizontal())); // modified: Builtin native plugin
     connect(ui.actionConvertHorizontalToVertical, SIGNAL(triggered()), this, SLOT(ConvertHorizontalToVertical())); // modified: Builtin native plugin
@@ -8046,6 +8258,14 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
     }
 
     rType = tab->GetLoadedResource()->Type();
+
+    if (FlowTab *flow_tab = qobject_cast<FlowTab *>(tab)) {
+        connect(flow_tab, &FlowTab::SelectionChanged,
+                this, &MainWindow::UpdateAgentEditorContext);
+    } else if (TextTab *text_tab = qobject_cast<TextTab *>(tab)) {
+        connect(text_tab, &TextTab::SelectionChanged,
+                this, &MainWindow::UpdateAgentEditorContext);
+    }
 
     connect(tab, SIGNAL(UndoRedoStateChanged()), this, SLOT(UpdateUIOnTabChanges()));
 

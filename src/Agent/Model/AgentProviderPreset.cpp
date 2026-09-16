@@ -6,6 +6,9 @@
 
 #include "Agent/Model/AgentProviderPreset.h"
 
+#include <QCryptographicHash>
+#include <QUrl>
+
 namespace SigilAgent
 {
 
@@ -145,6 +148,62 @@ ReasoningProtocol reasoningProtocolFor(AgentProviderKind kind, const QString &ur
         }
     }
     return ReasoningProtocol::None;
+}
+
+AgentProviderReadiness providerReadiness(AgentProviderKind kind,
+                                         const QString &chat_url,
+                                         bool api_key_present,
+                                         const QString &model)
+{
+    AgentProviderReadiness readiness;
+    readiness.kind = kind;
+    readiness.displayName = presetFor(kind).displayName;
+    readiness.model = model.trimmed();
+
+    const QUrl url(chat_url.trimmed());
+    const QString scheme = url.scheme().toLower();
+    const bool valid_endpoint = url.isValid()
+        && (scheme == QLatin1String("http") || scheme == QLatin1String("https"))
+        && !url.host().isEmpty();
+    if (valid_endpoint) {
+        readiness.endpointHost = url.host();
+        if (readiness.endpointHost.contains(QLatin1Char(':'))) {
+            readiness.endpointHost = QStringLiteral("[%1]").arg(readiness.endpointHost);
+        }
+        const int port = url.port(-1);
+        if (port > 0) readiness.endpointHost += QStringLiteral(":%1").arg(port);
+    }
+
+    if (!valid_endpoint) {
+        readiness.issue = AgentProviderSetupIssue::Endpoint;
+    } else if (!api_key_present) {
+        readiness.issue = AgentProviderSetupIssue::ApiKey;
+    } else if (readiness.model.isEmpty()) {
+        readiness.issue = AgentProviderSetupIssue::Model;
+    } else {
+        readiness.issue = AgentProviderSetupIssue::None;
+    }
+    return readiness;
+}
+
+QString providerConfigurationFingerprint(AgentProviderKind kind,
+                                         const QString &chat_url,
+                                         const QString &api_key,
+                                         const QString &model)
+{
+    QByteArray serialized;
+    const auto append_field = [&serialized](const QString &value) {
+        const QByteArray bytes = value.toUtf8();
+        serialized.append(QByteArray::number(bytes.size()));
+        serialized.append(':');
+        serialized.append(bytes);
+    };
+    append_field(providerKindName(kind));
+    append_field(chatCompletionsUrl(kind, chat_url));
+    append_field(api_key);
+    append_field(model);
+    return QString::fromLatin1(
+        QCryptographicHash::hash(serialized, QCryptographicHash::Sha256).toHex());
 }
 
 QString agentHttpReferer()

@@ -63,6 +63,7 @@ static QString KEY_PLUGIN_USER_MAP = SETTINGS_GROUP + "/" + "plugin_user_map";
 static QString KEY_AUTOMATE_USER_MAP = SETTINGS_GROUP + "/" + "automate_user_map";
 static QString KEY_AUTOMATE_SHOW_MENU = SETTINGS_GROUP + "/" + "automate_show_menu";
 static QString KEY_CLEAN_ON = SETTINGS_GROUP + "/" + "clean_on";
+static QString KEY_PRESERVE_OPF_SOURCE = SETTINGS_GROUP + "/" + "preserve_opf_source";
 static QString KEY_REMOTE_ON = SETTINGS_GROUP + "/" + "remote_on";
 static QString KEY_JAVASCRIPT_ON = SETTINGS_GROUP + "/" + "javascript_on";
 static QString KEY_SHOWFULLPATH_ON = SETTINGS_GROUP + "/" + "showfullpath_on";
@@ -116,6 +117,7 @@ static QString KEY_CODE_VIEW_XHTML_HTML_COLOR = SETTINGS_GROUP + "/" + "code_vie
 static QString KEY_CODE_VIEW_XHTML_HTML_COMMENT_COLOR = SETTINGS_GROUP + "/" + "code_view_xhtml_html_comment_color";
 
 static QString KEY_CODE_VIEW_HIGHLIGHT_OPEN_CLOSE_TAGS = SETTINGS_GROUP + "/" + "code_view_highlight_open_close_tags";
+static QString KEY_CODE_VIEW_DOUBLE_CLICK_SELECTION = SETTINGS_GROUP + "/" + "code_view_double_click_selection";
 static QString KEY_SKIP_PRINT_PREVIEW = SETTINGS_GROUP + "/" + "skipprintpreview";
 
 // Dark Appearance
@@ -149,6 +151,7 @@ static QString KEY_CV_DARK_PRESELECTION_COLOR = SETTINGS_GROUP + "/" + "cv_dark_
 static QString KEY_SPECIAL_CHARACTER_FONT_FAMILY = SETTINGS_GROUP + "/" + "special_character_font_family";
 static QString KEY_SPECIAL_CHARACTER_FONT_SIZE = SETTINGS_GROUP + "/" + "special_character_font_size";
 static QString KEY_MAIN_MENU_ICON_SIZE = SETTINGS_GROUP + "/" + "main_menu_icon_size";
+static QString KEY_SHOW_CLIP_SHORTCUT_BADGES = SETTINGS_GROUP + "/" + "show_clip_shortcut_badges";
 static QString KEY_CLIPBOARD_HISTORY_LIMIT = SETTINGS_GROUP + "/" + "clipboard_history_limit";
 
 SettingsStore::SettingsStore()
@@ -362,6 +365,12 @@ int SettingsStore::cleanOn()
     return value(KEY_CLEAN_ON, (CLEANON_OPEN | CLEANON_SAVE)).toInt();
 }
 
+bool SettingsStore::preserveOPFSource()
+{
+    clearSettingsGroup();
+    return value(KEY_PRESERVE_OPF_SOURCE, true).toBool();
+}
+
 QStringList SettingsStore::pluginMap()
 {
     clearSettingsGroup();
@@ -529,6 +538,15 @@ bool SettingsStore::highlightOpenCloseTags()
     return static_cast<bool>(value(KEY_CODE_VIEW_HIGHLIGHT_OPEN_CLOSE_TAGS, true).toBool());
 }
 
+QString SettingsStore::codeViewDoubleClickSelection()
+{
+    clearSettingsGroup();
+    const QString mode = value(KEY_CODE_VIEW_DOUBLE_CLICK_SELECTION,
+                               QStringLiteral("element-content")).toString();
+    return mode == QLatin1String("word") || mode == QLatin1String("sentence")
+        ? mode : QStringLiteral("element-content");
+}
+
 SettingsStore::CodeViewAppearance SettingsStore::codeViewDarkAppearance()
 {
     clearSettingsGroup();
@@ -571,6 +589,12 @@ double SettingsStore::mainMenuIconSize()
 {
     clearSettingsGroup();
     return value(KEY_MAIN_MENU_ICON_SIZE, 1.8).toDouble();
+}
+
+bool SettingsStore::showClipShortcutBadges()
+{
+    clearSettingsGroup();
+    return value(KEY_SHOW_CLIP_SHORTCUT_BADGES, true).toBool();
 }
 
 int SettingsStore::clipboardHistoryLimit()
@@ -788,6 +812,12 @@ void SettingsStore::setCleanOn(int on)
     setValue(KEY_CLEAN_ON, on);
 }
 
+void SettingsStore::setPreserveOPFSource(bool enabled)
+{
+    clearSettingsGroup();
+    setValue(KEY_PRESERVE_OPF_SOURCE, enabled);
+}
+
 void SettingsStore::setPluginMap(const QStringList &map)
 {
     clearSettingsGroup();
@@ -930,6 +960,14 @@ void SettingsStore::setHighlightOpenCloseTags(bool enabled)
     setValue(KEY_CODE_VIEW_HIGHLIGHT_OPEN_CLOSE_TAGS, enabled);
 }
 
+void SettingsStore::setCodeViewDoubleClickSelection(const QString &mode)
+{
+    clearSettingsGroup();
+    setValue(KEY_CODE_VIEW_DOUBLE_CLICK_SELECTION,
+             mode == QLatin1String("word") || mode == QLatin1String("sentence")
+                 ? mode : QStringLiteral("element-content"));
+}
+
 void SettingsStore::setCodeViewDarkAppearance(const SettingsStore::CodeViewAppearance &code_view_appearance)
 {
     clearSettingsGroup();
@@ -968,6 +1006,12 @@ void SettingsStore::setMainMenuIconSize(double icon_size)
 {
     clearSettingsGroup();
     setValue(KEY_MAIN_MENU_ICON_SIZE, icon_size);
+}
+
+void SettingsStore::setShowClipShortcutBadges(bool visible)
+{
+    clearSettingsGroup();
+    setValue(KEY_SHOW_CLIP_SHORTCUT_BADGES, visible);
 }
 
 void SettingsStore::setClipboardHistoryLimit(int limit)
@@ -1042,6 +1086,7 @@ void SettingsStore::clearAppearanceSettings()
     remove(KEY_SPECIAL_CHARACTER_FONT_FAMILY);
     remove(KEY_SPECIAL_CHARACTER_FONT_SIZE);
     remove(KEY_MAIN_MENU_ICON_SIZE);
+    remove(KEY_SHOW_CLIP_SHORTCUT_BADGES);
     remove(KEY_SHOWFULLPATH_ON);
     remove(KEY_BOOK_BROWSER_IMAGE_PREVIEW_SIZE);
     remove(KEY_UI_FONT);

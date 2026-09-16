@@ -3638,10 +3638,14 @@ other end to continue searching.</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="122"/>
-        <source>Decrease the heading level of the selected entry.
+        <source>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</source>
-        <translation>Decrease the heading level of the selected entry.
+        <translation>Promote selected entries and place their following siblings beneath them; keeps TOC reading order.
 You can also use the left arrow key.</translation>
+    </message>
+    <message>
+        <source>Promote one level</source>
+        <translation>Promote one level</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="141"/>
@@ -3651,10 +3655,38 @@ You can also use the left arrow key.</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="169"/>
-        <source>Increase the heading level of the selected entry.
+        <source>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</source>
-        <translation>Increase the heading level of the selected entry.
+        <translation>Move selected entries beneath the previous sibling and preserve existing subentries.
 You can also use the right arrow key.</translation>
+    </message>
+    <message>
+        <source>Demote one level</source>
+        <translation>Demote one level</translation>
+    </message>
+    <message>
+        <source>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</source>
+        <translation>When enabled, promoted entries adopt following siblings so TOC reading order stays unchanged.</translation>
+    </message>
+    <message>
+        <source>Promotion adopts following siblings</source>
+        <translation>Promotion adopts following siblings</translation>
+    </message>
+    <message>
+        <source>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</source>
+        <translation>When enabled, apply the final TOC hierarchy to the EPUB 3 compatibility NCX as well.</translation>
+    </message>
+    <message>
+        <source>Also sync compatibility NCX</source>
+        <translation>Also sync compatibility NCX</translation>
+    </message>
+    <message>
+        <source>TOC edit status</source>
+        <translation>TOC edit status</translation>
+    </message>
+    <message>
+        <source>This EPUB also contains an NCX. It will stay unchanged unless synchronization is enabled.</source>
+        <translation>This EPUB also contains an NCX. It will stay unchanged unless synchronization is enabled.</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="104"/>
@@ -3665,6 +3697,70 @@ You can also use the right arrow key.</translation>
         <location filename="../../Dialogs/EditTOC.cpp" line="105"/>
         <source>Target</source>
         <translation>Target</translation>
+    </message>
+    <message>
+        <source>Edit TOC entry</source>
+        <translation>Edit TOC entry</translation>
+    </message>
+    <message>
+        <source>Edit TOC target</source>
+        <translation>Edit TOC target</translation>
+    </message>
+    <message>
+        <source>Cannot promote: a selected entry is already at the top level.</source>
+        <translation>Cannot promote: a selected entry is already at the top level.</translation>
+    </message>
+    <message>
+        <source>Cannot demote: a selected range has no previous sibling.</source>
+        <translation>Cannot demote: a selected range has no previous sibling.</translation>
+    </message>
+    <message>
+        <source>The selected hierarchy changes overlap; no entries were moved.</source>
+        <translation>The selected hierarchy changes overlap; no entries were moved.</translation>
+    </message>
+    <message>
+        <source>The TOC hierarchy is inconsistent; no entries were moved.</source>
+        <translation>The TOC hierarchy is inconsistent; no entries were moved.</translation>
+    </message>
+    <message>
+        <source>Promote TOC entries</source>
+        <translation>Promote TOC entries</translation>
+    </message>
+    <message>
+        <source>Promoted %1 item(s); reassigned %2 following item(s).</source>
+        <translation>Promoted %1 item(s); reassigned %2 following item(s).</translation>
+    </message>
+    <message>
+        <source>Demote TOC entries</source>
+        <translation>Demote TOC entries</translation>
+    </message>
+    <message>
+        <source>Demoted %1 item(s).</source>
+        <translation>Demoted %1 item(s).</translation>
+    </message>
+    <message>
+        <source>Move TOC entries up</source>
+        <translation>Move TOC entries up</translation>
+    </message>
+    <message>
+        <source>Move TOC entries down</source>
+        <translation>Move TOC entries down</translation>
+    </message>
+    <message>
+        <source>Add TOC entry</source>
+        <translation>Add TOC entry</translation>
+    </message>
+    <message>
+        <source>Delete TOC entry</source>
+        <translation>Delete TOC entry</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>Undo</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>Redo</translation>
     </message>
     <message>
         <location filename="../../Dialogs/EditTOC.cpp" line="613"/>
@@ -23117,5 +23213,420 @@ Continue using the requested filename?</translation>
         <source>black diamond suit</source>
         <translation>black diamond suit</translation>
     </message>
+</context>
+<context>
+    <name>DivParagraphNormalizationDialog</name>
+    <message><source>Normalize DIV Paragraph Structure</source><translation>Normalize DIV Paragraph Structure</translation></message>
+    <message><source>Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves that satisfy the paragraph content model are converted automatically.</source><translation>Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves that satisfy the paragraph content model are converted automatically.</translation></message>
+    <message><source>Scope</source><translation>Scope</translation></message>
+    <message><source>Current XHTML file</source><translation>Current XHTML file</translation></message>
+    <message><source>Selected XHTML files (%1)</source><translation>Selected XHTML files (%1)</translation></message>
+    <message><source>All XHTML files in the book</source><translation>All XHTML files in the book</translation></message>
+    <message><source>Conversion categories</source><translation>Conversion categories</translation></message>
+    <message><source>Body-text paragraph DIVs</source><translation>Body-text paragraph DIVs</translation></message>
+    <message><source>The conservative content-model check is always enabled.</source><translation>The conservative content-model check is always enabled.</translation></message>
+    <message><source>Blank-line DIVs containing only BR</source><translation>Blank-line DIVs containing only BR</translation></message>
+    <message><source>Scene-separator DIVs</source><translation>Scene-separator DIVs</translation></message>
+    <message><source>Image-only DIV wrappers</source><translation>Image-only DIV wrappers</translation></message>
+    <message><source>Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)</source><translation>Single nested visual blocks (DIV becomes P; inner DIV becomes SPAN)</translation></message>
+    <message><source>Format XHTML source after conversion</source><translation>Format XHTML source after conversion</translation></message>
+    <message><source>Off by default. When off, only selected start/end tag names are patched.</source><translation>Off by default. When off, only selected start/end tag names are patched.</translation></message>
+    <message><source>Tag-dependent CSS, scripts, fixed-layout indicators, lists, tables, SVG, MathML, and unknown mixed blocks remain review-only. No force-all mode is provided.</source><translation>Tag-dependent CSS, scripts, fixed-layout indicators, lists, tables, SVG, MathML, and unknown mixed blocks remain review-only. No force-all mode is provided.</translation></message>
+    <message><source>Analyze and Preview</source><translation>Analyze and Preview</translation></message>
+</context>
+<context>
+    <name>DivParagraphNormalizationPreviewDialog</name>
+    <message><source>Ready to apply</source><translation>Ready to apply</translation></message>
+    <message><source>Review required</source><translation>Review required</translation></message>
+    <message><source>Skipped</source><translation>Skipped</translation></message>
+    <message><source>Parse/validation error</source><translation>Parse/validation error</translation></message>
+    <message><source>Body flow</source><translation>Body flow</translation></message>
+    <message><source>Already normalized</source><translation>Already normalized</translation></message>
+    <message><source>TOC-like</source><translation>TOC-like</translation></message>
+    <message><source>Notice/imprint</source><translation>Notice/imprint</translation></message>
+    <message><source>Short flow</source><translation>Short flow</translation></message>
+    <message><source>CSS risk</source><translation>CSS risk</translation></message>
+    <message><source>Complex/fixed layout</source><translation>Complex/fixed layout</translation></message>
+    <message><source>Image/title page</source><translation>Image/title page</translation></message>
+    <message><source>No candidate</source><translation>No candidate</translation></message>
+    <message><source>No body</source><translation>No body</translation></message>
+    <message><source>Parse error</source><translation>Parse error</translation></message>
+    <message><source>None detected</source><translation>None detected</translation></message>
+    <message><source>%1 selector(s)</source><translation>%1 selector(s)</translation></message>
+    <message><source>DIV Paragraph Normalization Preview</source><translation>DIV Paragraph Normalization Preview</translation></message>
+    <message><source>DIV paragraph resource analysis</source><translation>DIV paragraph resource analysis</translation></message>
+    <message><source>Apply</source><translation>Apply</translation></message>
+    <message><source>File</source><translation>File</translation></message>
+    <message><source>Classification</source><translation>Classification</translation></message>
+    <message><source>Body candidates</source><translation>Body candidates</translation></message>
+    <message><source>Blank/separator</source><translation>Blank/separator</translation></message>
+    <message><source>Protected</source><translation>Protected</translation></message>
+    <message><source>Status</source><translation>Status</translation></message>
+    <message><source>Before</source><translation>Before</translation></message>
+    <message><source>Source before DIV paragraph normalization</source><translation>Source before DIV paragraph normalization</translation></message>
+    <message><source>After</source><translation>After</translation></message>
+    <message><source>Source after DIV paragraph normalization</source><translation>Source after DIV paragraph normalization</translation></message>
+    <message><source>Source Diff</source><translation>Source Diff</translation></message>
+    <message><source>Before Preview</source><translation>Before Preview</translation></message>
+    <message><source>After Preview</source><translation>After Preview</translation></message>
+    <message><source>Apply Selected Files</source><translation>Apply Selected Files</translation></message>
+    <message><source>Plan %1 · %2 of %3 ready files selected · %4 paragraph(s) planned · %5 protected block(s) · %6 review-only file(s) · %7 error(s)</source><translation>Plan %1 · %2 of %3 ready files selected · %4 paragraph(s) planned · %5 protected block(s) · %6 review-only file(s) · %7 error(s)</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Analyze DIV Paragraph Structure...</source><translation>Analyze DIV Paragraph Structure...</translation></message>
+    <message><source>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</source><translation>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</translation></message>
+    <message><source>Normalize DIV Paragraph Structure (Current File)...</source><translation>Normalize DIV Paragraph Structure (Current File)...</translation></message>
+    <message><source>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</translation></message>
+    <message><source>Normalize DIV Paragraph Structure...</source><translation>Normalize DIV Paragraph Structure...</translation></message>
+    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</source><translation>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</translation></message>
+    <message><source>DIV Paragraph Normalization</source><translation>DIV Paragraph Normalization</translation></message>
+    <message><source>The selected scope contains no XHTML files.</source><translation>The selected scope contains no XHTML files.</translation></message>
+    <message><source>Analyzing DIV paragraph structure...</source><translation>Analyzing DIV paragraph structure...</translation></message>
+    <message><source>DIV paragraph analysis cancelled. No files were changed.</source><translation>DIV paragraph analysis cancelled. No files were changed.</translation></message>
+    <message><source>DIV paragraph analysis completed. No files were changed.</source><translation>DIV paragraph analysis completed. No files were changed.</translation></message>
+    <message><source>No auto-safe DIV paragraph changes were found.</source><translation>No auto-safe DIV paragraph changes were found.</translation></message>
+    <message><source>DIV paragraph normalization cancelled. No files were changed.</source><translation>DIV paragraph normalization cancelled. No files were changed.</translation></message>
+    <message><source>Validating selected DIV paragraph changes...</source><translation>Validating selected DIV paragraph changes...</translation></message>
+    <message><source>DIV paragraph validation cancelled. No files were changed.</source><translation>DIV paragraph validation cancelled. No files were changed.</translation></message>
+    <message><source>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</source><translation>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</translation></message>
+    <message><source>Content changed after analysis. Re-run analysis. No files were changed.
+%1</source><translation>Content changed after analysis. Re-run analysis. No files were changed.
+%1</translation></message>
+    <message><source>DIV paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>DIV paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</translation></message>
+    <message><source>DIV paragraph normalization applied: %1 changes in %2 files.</source><translation>DIV paragraph normalization applied: %1 changes in %2 files.</translation></message>
+</context>
+<context>
+    <name>PModifiedVerPrefsWidget</name>
+    <message><source>Paragraph Structure</source><translation>Paragraph Structure</translation></message>
+    <message><source>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</source><translation>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</translation></message>
+    <message><source>Convert blank-line DIVs containing only BR</source><translation>Convert blank-line DIVs containing only BR</translation></message>
+    <message><source>Convert scene-separator DIVs</source><translation>Convert scene-separator DIVs</translation></message>
+    <message><source>Convert image-only DIV wrappers</source><translation>Convert image-only DIV wrappers</translation></message>
+    <message><source>Convert single nested visual blocks (legacy compatibility)</source><translation>Convert single nested visual blocks (legacy compatibility)</translation></message>
+    <message><source>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</source><translation>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</translation></message>
+    <message><source>Format XHTML source after structural conversion</source><translation>Format XHTML source after structural conversion</translation></message>
+    <message><source>Off by default because formatting can change whitespace outside the selected tags.</source><translation>Off by default because formatting can change whitespace outside the selected tags.</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>unresolved stylesheet</source><translation>unresolved stylesheet</translation></message>
+    <message><source>CSS review: %1 · %2 · %3</source><translation>CSS review: %1 · %2 · %3</translation></message>
+    <message><source>DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, %5 error(s), %6 conversion(s), %7 protected block(s).</source><translation>DIV paragraph plan %1: %2 ready file(s), %3 review-only, %4 skipped, %5 error(s), %6 conversion(s), %7 protected block(s).</translation></message>
+    <message><source>Formatting target is no longer available: %1</source><translation>Formatting target is no longer available: %1</translation></message>
+    <message><source>XHTML formatting failed for %1: %2</source><translation>XHTML formatting failed for %1: %2</translation></message>
+    <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV paragraph normalization: optional XHTML formatting was applied.</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>Export conversation</source><translation>Export conversation</translation></message>
+    <message><source>Export debug log</source><translation>Export debug log</translation></message>
+    <message><source>JSON (*.json);;All files (*)</source><translation>JSON (*.json);;All files (*)</translation></message>
+    <message><source>Markdown (*.md);;All files (*)</source><translation>Markdown (*.md);;All files (*)</translation></message>
+</context>
+<context>
+    <name>PluginSession</name>
+    <message><source>The live plugin launcher or snippet file does not exist.</source><translation>The live plugin launcher or snippet file does not exist.</translation></message>
+</context>
+<context>
+    <name>PluginSessionManager</name>
+    <message><source>Could not write a temporary Python snippet.</source><translation>Could not write a temporary Python snippet.</translation></message>
+</context>
+<context>
+    <name>QObject</name>
+    <message><source>Export failed</source><translation>Export failed</translation></message>
+</context>
+<context>
+    <name>SigilAgent::AgentDock</name>
+    <message><source>Agent</source><translation>Agent</translation></message>
+    <message><source>Answer</source><translation>Answer</translation></message>
+    <message><source>Applied: %1</source><translation>Applied: %1</translation></message>
+    <message><source>Approve</source><translation>Approve</translation></message>
+    <message><source>Approve %1?</source><translation>Approve %1?</translation></message>
+    <message><source>Approved</source><translation>Approved</translation></message>
+    <message><source>Ask</source><translation>Ask</translation></message>
+    <message><source>Ask about this book, plan a change, or describe an edit…</source><translation>Ask about this book, plan a change, or describe an edit…</translation></message>
+    <message><source>Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking.</source><translation>Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking.</translation></message>
+    <message><source>Auto</source><translation>Auto</translation></message>
+    <message><source>Context: %1</source><translation>Context: %1</translation></message>
+    <message><source>Conversation…</source><translation>Conversation…</translation></message>
+    <message><source>Debug log…</source><translation>Debug log…</translation></message>
+    <message><source>Denied</source><translation>Denied</translation></message>
+    <message><source>Deny</source><translation>Deny</translation></message>
+    <message><source>Edit</source><translation>Edit</translation></message>
+    <message><source>Enter to send · Shift+Enter for a new line · Stop cancels the in-flight request</source><translation>Enter to send · Shift+Enter for a new line · Stop cancels the in-flight request</translation></message>
+    <message><source>Error</source><translation>Error</translation></message>
+    <message><source>Export</source><translation>Export</translation></message>
+    <message><source>File</source><translation>File</translation></message>
+    <message><source>File · %1</source><translation>File · %1</translation></message>
+    <message><source>Idle</source><translation>Idle</translation></message>
+    <message><source>Model is chosen in Preferences → Native Agent</source><translation>Model is chosen in Preferences → Native Agent</translation></message>
+    <message><source>New Session</source><translation>New Session</translation></message>
+    <message><source>No model (set in Preferences)</source><translation>No model (set in Preferences)</translation></message>
+    <message><source>Plan</source><translation>Plan</translation></message>
+    <message><source>Run stopped. Uncommitted staged work was rolled back.</source><translation>Run stopped. Uncommitted staged work was rolled back.</translation></message>
+    <message><source>Selection</source><translation>Selection</translation></message>
+    <message><source>Selection · %1–%2</source><translation>Selection · %1–%2</translation></message>
+    <message><source>Send</source><translation>Send</translation></message>
+    <message><source>Stop</source><translation>Stop</translation></message>
+    <message><source>Stopped</source><translation>Stopped</translation></message>
+    <message><source>Thinking</source><translation>Thinking</translation></message>
+    <message><source>Tool failed: %1</source><translation>Tool failed: %1</translation></message>
+    <message><source>Tool running: %1</source><translation>Tool running: %1</translation></message>
+    <message><source>Tool: %1</source><translation>Tool: %1</translation></message>
+    <message><source>You</source><translation>You</translation></message>
+    <message><source>current file</source><translation>current file</translation></message>
+    <message><source>selection</source><translation>selection</translation></message>
+    <message><source>Whole book</source><translation>Whole book</translation></message>
+    <message><source>Selected files</source><translation>Selected files</translation></message>
+    <message><source>Attach the complete resource map for %1</source><translation>Attach the complete resource map for %1</translation></message>
+    <message><source>Selected file · %1</source><translation>Selected file · %1</translation></message>
+    <message><source>Selected files · %1</source><translation>Selected files · %1</translation></message>
+    <message><source>Attach %1 file(s) selected in Book Browser</source><translation>Attach %1 file(s) selected in Book Browser</translation></message>
+    <message><source>Select one or more files in Book Browser</source><translation>Select one or more files in Book Browser</translation></message>
+    <message><source>whole book</source><translation>whole book</translation></message>
+    <message><source>one selected file</source><translation>one selected file</translation></message>
+    <message><source>%1 selected files</source><translation>%1 selected files</translation></message>
+    <message><source>Endpoint is not configured</source><translation>Endpoint is not configured</translation></message>
+    <message><source>API key is not configured</source><translation>API key is not configured</translation></message>
+    <message><source>Model is not configured</source><translation>Model is not configured</translation></message>
+    <message><source>Authentication failed (HTTP 401)</source><translation>Authentication failed (HTTP 401)</translation></message>
+    <message><source>Access denied (HTTP 403)</source><translation>Access denied (HTTP 403)</translation></message>
+    <message><source>Endpoint or model not found (HTTP 404)</source><translation>Endpoint or model not found (HTTP 404)</translation></message>
+    <message><source>Provider request timed out (HTTP 408)</source><translation>Provider request timed out (HTTP 408)</translation></message>
+    <message><source>Provider rate limit reached (HTTP 429)</source><translation>Provider rate limit reached (HTTP 429)</translation></message>
+    <message><source>Provider unavailable (HTTP %1)</source><translation>Provider unavailable (HTTP %1)</translation></message>
+    <message><source>Provider returned HTTP %1</source><translation>Provider returned HTTP %1</translation></message>
+    <message><source>Network connection failed</source><translation>Network connection failed</translation></message>
+    <message><source>Request failed; see the Error card</source><translation>Request failed; see the Error card</translation></message>
+    <message><source>Setup required: endpoint</source><translation>Setup required: endpoint</translation></message>
+    <message><source>Setup required: API key</source><translation>Setup required: API key</translation></message>
+    <message><source>Setup required: model</source><translation>Setup required: model</translation></message>
+    <message><source>Configured · not tested</source><translation>Configured · not tested</translation></message>
+    <message><source>Chat tested successfully · %1</source><translation>Chat tested successfully · %1</translation></message>
+    <message><source>Contacting provider…</source><translation>Contacting provider…</translation></message>
+    <message><source>Last request succeeded</source><translation>Last request succeeded</translation></message>
+    <message><source>Last request failed: %1</source><translation>Last request failed: %1</translation></message>
+    <message><source>Last request cancelled</source><translation>Last request cancelled</translation></message>
+    <message><source>Provider: %1 · %2</source><translation>Provider: %1 · %2</translation></message>
+    <message><source>This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator.</source><translation>This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator.</translation></message>
+    <message><source>Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them.</source><translation>Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them.</translation></message>
+    <message><source>Configure the provider in Preferences → Native Agent.</source><translation>Configure the provider in Preferences → Native Agent.</translation></message>
+    <message><source>Agent plans and tool calls are bound to this open book.</source><translation>Agent plans and tool calls are bound to this open book.</translation></message>
+    <message><source>%1 — %2</source><translation>%1 — %2</translation></message>
+    <message><source>Untitled book</source><translation>Untitled book</translation></message>
+    <message><source>%1 resource</source><translation>%1 resource</translation></message>
+    <message><source>%1 resources</source><translation>%1 resources</translation></message>
+    <message><source>Unsaved changes</source><translation>Unsaved changes</translation></message>
+    <message><source>Saved</source><translation>Saved</translation></message>
+    <message><source>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</source><translation>Current book: %1 · %2 · %3 · Book session %4 · Agent rev %5</translation></message>
+    <message><source>Preview</source><translation>Preview</translation></message>
+    <message><source>Applied</source><translation>Applied</translation></message>
+    <message><source>The live book is unchanged; these changes are staged only.</source><translation>The live book is unchanged; these changes are staged only.</translation></message>
+    <message><source>• Added: %1</source><translation>• Added: %1</translation></message>
+    <message><source>• Renamed: %1 → %2</source><translation>• Renamed: %1 → %2</translation></message>
+    <message><source>• Text: %1 (%2 → %3)</source><translation>• Text: %1 (%2 → %3)</translation></message>
+    <message><source>• Metadata changes</source><translation>• Metadata changes</translation></message>
+    <message><source>• Reading order changes</source><translation>• Reading order changes</translation></message>
+    <message><source>• TOC hierarchy changes</source><translation>• TOC hierarchy changes</translation></message>
+    <message><source>• Removed: %1</source><translation>• Removed: %1</translation></message>
+    <message><source>No staged differences were reported.</source><translation>No staged differences were reported.</translation></message>
+    <message><source>Applied to the current book. The EPUB file has not been saved.</source><translation>Applied to the current book. The EPUB file has not been saved.</translation></message>
+    <message><source>Applied changes: %1</source><translation>Applied changes: %1</translation></message>
+    <message><source>Book revision: %1</source><translation>Book revision: %1</translation></message>
+    <message><source>Run: %1</source><translation>Run: %1</translation></message>
+    <message><source>Run status: %1</source><translation>Run status: %1</translation></message>
+    <message><source>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</source><translation>Whole run: %1 ms · model requests %2 · tool calls %3 · Finished: %4</translation></message>
+    <message><source>Whole run: in progress</source><translation>Whole run: in progress</translation></message>
+    <message><source>Model-step budget: %1/%2 used</source><translation>Model-step budget: %1/%2 used</translation></message>
+    <message><source>Model-step budget: limit %1 per run</source><translation>Model-step budget: limit %1 per run</translation></message>
+    <message><source>Tool-call budget: %1/%2 used</source><translation>Tool-call budget: %1/%2 used</translation></message>
+    <message><source>Tool-call budget: limit %1 per run</source><translation>Tool-call budget: limit %1 per run</translation></message>
+    <message><source>Run token usage: not requested</source><translation>Run token usage: not requested</translation></message>
+    <message><source>Run token usage: awaiting completed requests</source><translation>Run token usage: awaiting completed requests</translation></message>
+    <message><source>Run token usage: no model request was sent</source><translation>Run token usage: no model request was sent</translation></message>
+    <message><source>Run token usage: not reported by provider</source><translation>Run token usage: not reported by provider</translation></message>
+    <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>Run token usage: input %1 · output %2 · total %3</translation></message>
+    <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</translation></message>
+    <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</translation></message>
+    <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>Run usage details: cached input %1 · reasoning %2</translation></message>
+    <message><source>Full EPUBCheck: not run.</source><translation>Full EPUBCheck: not run.</translation></message>
+    <message><source>Full EPUBCheck: %1</source><translation>Full EPUBCheck: %1</translation></message>
+    <message><source>Recovery: use Sigil Undo where available.</source><translation>Recovery: use Sigil Undo where available.</translation></message>
+    <message><source>This commit did not create a task-wide restore point.</source><translation>This commit did not create a task-wide restore point.</translation></message>
+    <message><source>Staged changes discarded</source><translation>Staged changes discarded</translation></message>
+    <message><source>No staged changes</source><translation>No staged changes</translation></message>
+    <message><source>The staged transaction was discarded. The live book was not changed by this transaction.</source><translation>The staged transaction was discarded. The live book was not changed by this transaction.</translation></message>
+    <message><source>There was no staged transaction to discard. The live book was not changed.</source><translation>There was no staged transaction to discard. The live book was not changed.</translation></message>
+    <message><source>Book changed</source><translation>Book changed</translation></message>
+    <message><source>The run stopped because this window switched to another book. No old response was applied to the new book.</source><translation>The run stopped because this window switched to another book. No old response was applied to the new book.</translation></message>
+    <message><source>Closing</source><translation>Closing</translation></message>
+    <message><source>The run stopped before this window closed.</source><translation>The run stopped before this window closed.</translation></message>
+    <message><source>Book target changed</source><translation>Book target changed</translation></message>
+    <message><source>The open book changed during this run. The old response was blocked before it could be applied to the new book.</source><translation>The open book changed during this run. The old response was blocked before it could be applied to the new book.</translation></message>
+    <message><source>Retry</source><translation>Retry</translation></message>
+    <message><source>Technical details</source><translation>Technical details</translation></message>
+    <message><source>Show request identifiers, timing, token usage, run limits, history and tool budgets, target revision, and scope handles.</source><translation>Show request identifiers, timing, token usage, run limits, history and tool budgets, target revision, and scope handles.</translation></message>
+    <message><source>%1 · %2 ms · %3</source><translation>%1 · %2 ms · %3</translation></message>
+    <message><source>Session: %1</source><translation>Session: %1</translation></message>
+    <message><source>Not available</source><translation>Not available</translation></message>
+    <message><source>Book session: %1</source><translation>Book session: %1</translation></message>
+    <message><source>Request: %1</source><translation>Request: %1</translation></message>
+    <message><source>Step: %1 · Mode: %2 · Status: %3</source><translation>Step: %1 · Mode: %2 · Status: %3</translation></message>
+    <message><source>Request target: %1 · revision %2</source><translation>Request target: %1 · revision %2</translation></message>
+    <message><source>Model: %1</source><translation>Model: %1</translation></message>
+    <message><source>Scope handles: %1</source><translation>Scope handles: %1</translation></message>
+    <message><source>None</source><translation>None</translation></message>
+    <message><source>Duration: %1 ms · Finished: %2</source><translation>Duration: %1 ms · Finished: %2</translation></message>
+    <message><source>Response latency: awaiting response</source><translation>Response latency: awaiting response</translation></message>
+    <message><source>Not observed</source><translation>Not observed</translation></message>
+    <message><source>Response latency: first byte %1 ms · first model event %2 ms</source><translation>Response latency: first byte %1 ms · first model event %2 ms</translation></message>
+    <message><source>Response latency: not observed</source><translation>Response latency: not observed</translation></message>
+    <message><source>The live book is unchanged. Review this plan before approving its apply step.</source><translation>The live book is unchanged. Review this plan before approving its apply step.</translation></message>
+    <message><source>Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)</source><translation>Paragraph normalization: %1 file(s) ready · %2 conversion(s) · %3 protected item(s)</translation></message>
+    <message><source>Other files: %1 review only · %2 skipped · %3 failed</source><translation>Other files: %1 review only · %2 skipped · %3 failed</translation></message>
+    <message><source>Plan scope: XHTML only; no CSS, OPF, or resource additions.</source><translation>Plan scope: XHTML only; no CSS, OPF, or resource additions.</translation></message>
+    <message><source>Plan may change CSS, OPF, or resource inventory; inspect each change.</source><translation>Plan may change CSS, OPF, or resource inventory; inspect each change.</translation></message>
+    <message><source>File: %1 · %2 conversion(s) · %3 protected item(s)</source><translation>File: %1 · %2 conversion(s) · %3 protected item(s)</translation></message>
+    <message><source>Before excerpt:</source><translation>Before excerpt:</translation></message>
+    <message><source>After excerpt:</source><translation>After excerpt:</translation></message>
+    <message><source>TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)</source><translation>TOC hierarchy: %1 affected node(s) · %2 adopted sibling(s)</translation></message>
+    <message><source>Preorder preserved: %1 · XHTML heading levels changed: %2</source><translation>Preorder preserved: %1 · XHTML heading levels changed: %2</translation></message>
+    <message><source>Yes</source><translation>Yes</translation></message>
+    <message><source>No</source><translation>No</translation></message>
+    <message><source>Entry: %1 · %2</source><translation>Entry: %1 · %2</translation></message>
+    <message><source>Depth: %1 → %2 · Parent: %3 → %4</source><translation>Depth: %1 → %2 · Parent: %3 → %4</translation></message>
+    <message><source>Additional TOC changes are omitted from this bounded review.</source><translation>Additional TOC changes are omitted from this bounded review.</translation></message>
+    <message><source>This native plan is ready for review.</source><translation>This native plan is ready for review.</translation></message>
+    <message><source>Local validation: %1</source><translation>Local validation: %1</translation></message>
+    <message><source>Review paragraph plan</source><translation>Review paragraph plan</translation></message>
+    <message><source>Review TOC plan</source><translation>Review TOC plan</translation></message>
+    <message><source>Open %1</source><translation>Open %1</translation></message>
+    <message><source>Open this resource in Sigil for plan review.</source><translation>Open this resource in Sigil for plan review.</translation></message>
+    <message><source>Reviewed plan binding: matched.</source><translation>Reviewed plan binding: matched.</translation></message>
+    <message><source>Approval blocked: this apply call does not match a reviewed plan.</source><translation>Approval blocked: this apply call does not match a reviewed plan.</translation></message>
+    <message><source>Not reported</source><translation>Not reported</translation></message>
+    <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token usage: input %1 · output %2 · total %3</translation></message>
+    <message><source>Usage details: cached input %1 · reasoning %2</source><translation>Usage details: cached input %1 · reasoning %2</translation></message>
+    <message><source>Token usage: requested; awaiting response</source><translation>Token usage: requested; awaiting response</translation></message>
+    <message><source>Token usage: not reported by provider</source><translation>Token usage: not reported by provider</translation></message>
+    <message><source>Token usage: not requested</source><translation>Token usage: not requested</translation></message>
+    <message><source>No model request in this session.</source><translation>No model request in this session.</translation></message>
+    <message><source>Provider: %1 · Endpoint: %2</source><translation>Provider: %1 · Endpoint: %2</translation></message>
+    <message><source>Resend the last prompt with the same scope handles.</source><translation>Resend the last prompt with the same scope handles.</translation></message>
+    <message><source>Retry is unavailable because the open book changed.</source><translation>Retry is unavailable because the open book changed.</translation></message>
+    <message><source>Retry is unavailable because this turn already executed tools.</source><translation>Retry is unavailable because this turn already executed tools.</translation></message>
+    <message><source>Retry is available after a provider request fails.</source><translation>Retry is available after a provider request fails.</translation></message>
+    <message><source>A task restore point could not be created for this commit.</source><translation>A task restore point could not be created for this commit.</translation></message>
+    <message><source>A task restore point was not created because this commit changed book structure.</source><translation>A task restore point was not created because this commit changed book structure.</translation></message>
+    <message><source>Restore blocked</source><translation>Restore blocked</translation></message>
+    <message><source>Restore is unavailable because the open book changed.</source><translation>Restore is unavailable because the open book changed.</translation></message>
+    <message><source>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</source><translation>Restore the text resources changed by this commit. Later edits to those resources will block restoration.</translation></message>
+    <message><source>Restore this task</source><translation>Restore this task</translation></message>
+    <message><source>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</source><translation>Restore was blocked because %1 affected resource(s) changed after this task. No book content was changed.</translation></message>
+    <message><source>Restore was blocked because this restore point belongs to another book.</source><translation>Restore was blocked because this restore point belongs to another book.</translation></message>
+    <message><source>Restored</source><translation>Restored</translation></message>
+    <message><source>Restored %1 text resource(s). Later unrelated edits were preserved.</source><translation>Restored %1 text resource(s). Later unrelated edits were preserved.</translation></message>
+    <message><source>Stop the active Agent run before restoring this task.</source><translation>Stop the active Agent run before restoring this task.</translation></message>
+    <message><source>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</source><translation>Task restore point: %1 text resource(s), protected by a post-commit conflict check.</translation></message>
+    <message><source>Task restored</source><translation>Task restored</translation></message>
+    <message><source>The task could not be restored.</source><translation>The task could not be restored.</translation></message>
+    <message><source>This task has already been restored.</source><translation>This task has already been restored.</translation></message>
+    <message><source>Compare…</source><translation>Compare…</translation></message>
+    <message><source>Compare %1</source><translation>Compare %1</translation></message>
+    <message><source>Compare the reviewed before and after excerpts side by side.</source><translation>Compare the reviewed before and after excerpts side by side.</translation></message>
+    <message><source>Plan comparison — %1</source><translation>Plan comparison — %1</translation></message>
+    <message><source>Read-only excerpt from the reviewed plan. The live book is unchanged.</source><translation>Read-only excerpt from the reviewed plan. The live book is unchanged.</translation></message>
+    <message><source>Before</source><translation>Before</translation></message>
+    <message><source>After</source><translation>After</translation></message>
+    <message><source>Before excerpt for %1</source><translation>Before excerpt for %1</translation></message>
+    <message><source>After excerpt for %1</source><translation>After excerpt for %1</translation></message>
+    <message><source>This comparison is a bounded excerpt; source outside the displayed region is omitted.</source><translation>This comparison is a bounded excerpt; source outside the displayed region is omitted.</translation></message>
+    <message><source>Compare hierarchy…</source><translation>Compare hierarchy…</translation></message>
+    <message><source>Compare TOC hierarchy</source><translation>Compare TOC hierarchy</translation></message>
+    <message><source>Compare the reviewed TOC hierarchy before and after side by side.</source><translation>Compare the reviewed TOC hierarchy before and after side by side.</translation></message>
+    <message><source>Depth: %1 · Parent: %2</source><translation>Depth: %1 · Parent: %2</translation></message>
+    <message><source>TOC hierarchy</source><translation>TOC hierarchy</translation></message>
+    <message><source>Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.</source><translation>Read-only hierarchy comparison from the reviewed plan. The live book is unchanged.</translation></message>
+    <message><source>TOC hierarchy before transformation</source><translation>TOC hierarchy before transformation</translation></message>
+    <message><source>TOC hierarchy after transformation</source><translation>TOC hierarchy after transformation</translation></message>
+    <message><source>This comparison is bounded; additional TOC changes are omitted.</source><translation>This comparison is bounded; additional TOC changes are omitted.</translation></message>
+    <message><source>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</source><translation>• Preview page: %1 of %2 changes and %3 of %4 removals (offset %5).</translation></message>
+    <message><source>• More staged items remain; preview again with offset %1 before committing.</source><translation>• More staged items remain; preview again with offset %1 before committing.</translation></message>
+    <message><source>Plan page: %1 of %2 XHTML file(s) (offset %3).</source><translation>Plan page: %1 of %2 XHTML file(s) (offset %3).</translation></message>
+    <message><source>More plan files must be reviewed; continue at offset %1 before applying.</source><translation>More plan files must be reviewed; continue at offset %1 before applying.</translation></message>
+    <message><source>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</source><translation>Independent operation groups: %1 XHTML file(s). Choose groups when the apply approval appears.</translation></message>
+    <message><source>Operation groups: one dependent TOC hierarchy change.</source><translation>Operation groups: one dependent TOC hierarchy change.</translation></message>
+    <message><source>Independent XHTML groups: choose one or more files to stage.</source><translation>Independent XHTML groups: choose one or more files to stage.</translation></message>
+    <message><source>Select all</source><translation>Select all</translation></message>
+    <message><source>Clear</source><translation>Clear</translation></message>
+    <message><source>%1 · %2 conversion(s) · %3 protected item(s)</source><translation>%1 · %2 conversion(s) · %3 protected item(s)</translation></message>
+    <message><source>TOC hierarchy changes form one dependent group and cannot be split safely.</source><translation>TOC hierarchy changes form one dependent group and cannot be split safely.</translation></message>
+    <message><source>Approval blocked: select at least one independent operation group.</source><translation>Approval blocked: select at least one independent operation group.</translation></message>
+    <message><source>Reviewed plan binding: matched. Selected groups: %1 of %2.</source><translation>Reviewed plan binding: matched. Selected groups: %1 of %2.</translation></message>
+    <message><source>Resource result unavailable because the commit scope could not be inspected.</source><translation>Resource result unavailable because the commit scope could not be inspected.</translation></message>
+    <message><source>Resources: %1 succeeded · %2 failed.</source><translation>Resources: %1 succeeded · %2 failed.</translation></message>
+    <message><source>Structural operations: %1 succeeded · %2 failed.</source><translation>Structural operations: %1 succeeded · %2 failed.</translation></message>
+    <message><source>Atomic result: all staged targets were applied.</source><translation>Atomic result: all staged targets were applied.</translation></message>
+    <message><source>Atomic result: no staged target was applied.</source><translation>Atomic result: no staged target was applied.</translation></message>
+    <message><source>Not applied to the current book.</source><translation>Not applied to the current book.</translation></message>
+    <message><source>The staged transaction remains available for review, retry, or rollback.</source><translation>The staged transaction remains available for review, retry, or rollback.</translation></message>
+    <message><source>The staged transaction was rolled back; no partial book changes remain.</source><translation>The staged transaction was rolled back; no partial book changes remain.</translation></message>
+    <message><source>No staged transaction remains.</source><translation>No staged transaction remains.</translation></message>
+    <message><source>Failure: %1 — %2</source><translation>Failure: %1 — %2</translation></message>
+    <message><source>Failure: %1</source><translation>Failure: %1</translation></message>
+    <message><source>Apply failed</source><translation>Apply failed</translation></message>
+</context>
+<context>
+    <name>AgentSettingsWidget</name>
+    <message><source>%1 context tokens</source><translation>%1 context tokens</translation></message>
+    <message><source>%1k context</source><translation>%1k context</translation></message>
+    <message><source>API key</source><translation>API key</translation></message>
+    <message><source>Chat Completions URL</source><translation>Chat Completions URL</translation></message>
+    <message><source>Custom (OpenAI-compatible)</source><translation>Custom (OpenAI-compatible)</translation></message>
+    <message><source>DeepSeek</source><translation>DeepSeek</translation></message>
+    <message><source>Full Chat Completions URL or API base</source><translation>Full Chat Completions URL or API base</translation></message>
+    <message><source>Loaded %1 cached models. Refresh to update from the server.</source><translation>Loaded %1 cached models. Refresh to update from the server.</translation></message>
+    <message><source>Loaded %1 models from the server.</source><translation>Loaded %1 models from the server.</translation></message>
+    <message><source>Loading models…</source><translation>Loading models…</translation></message>
+    <message><source>Model</source><translation>Model</translation></message>
+    <message><source>Native Agent</source><translation>Native Agent</translation></message>
+    <message><source>OpenCode Go</source><translation>OpenCode Go</translation></message>
+    <message><source>OpenRouter</source><translation>OpenRouter</translation></message>
+    <message><source>Provider</source><translation>Provider</translation></message>
+    <message><source>Reasoning effort</source><translation>Reasoning effort</translation></message>
+    <message><source>Refresh models</source><translation>Refresh models</translation></message>
+    <message><source>Refresh models to load ids and parameters from the server, or type an id.</source><translation>Refresh models to load ids and parameters from the server, or type an id.</translation></message>
+    <message><source>Refresh models to load this provider's catalog.</source><translation>Refresh models to load this provider's catalog.</translation></message>
+    <message><source>Send thinking (reasoning_content)</source><translation>Send thinking (reasoning_content)</translation></message>
+    <message><source>Request token usage when supported</source><translation>Request token usage when supported</translation></message>
+    <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</translation></message>
+    <message><source> KiB</source><translation> KiB</translation></message>
+    <message><source>Unlimited</source><translation>Unlimited</translation></message>
+    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</translation></message>
+    <message><source>Previous-turn history budget</source><translation>Previous-turn history budget</translation></message>
+    <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</translation></message>
+    <message><source>Maximum model steps per run</source><translation>Maximum model steps per run</translation></message>
+    <message><source>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</source><translation>Rejects an entire model tool-call batch if it would exceed this run limit, then rolls back uncommitted staged work.</translation></message>
+    <message><source>Maximum tool calls per run</source><translation>Maximum tool calls per run</translation></message>
+    <message><source>Stored only in local Sigil settings, never in the EPUB or transcript</source><translation>Stored only in local Sigil settings, never in the EPUB or transcript</translation></message>
+    <message><source>parameters: %1</source><translation>parameters: %1</translation></message>
+    <message><source>reasoning</source><translation>reasoning</translation></message>
+    <message><source>reasoning not advertised</source><translation>reasoning not advertised</translation></message>
+    <message><source>tools</source><translation>tools</translation></message>
+    <message><source>tools not advertised</source><translation>tools not advertised</translation></message>
+    <message><source>Test Chat Completions</source><translation>Test Chat Completions</translation></message>
+    <message><source>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</source><translation>Send a tiny no-tools request with no book content. The provider may charge for up to 8 output tokens.</translation></message>
+    <message><source>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</source><translation>Choose the provider and model here. Refresh models loads the catalog and advertised parameters. Test Chat Completions sends a separate tiny request to verify this endpoint, API key, and model; it never sends book content or tools, does not test the optional token-usage request, and does not save these settings while the test runs. A successful result is remembered for this exact configuration when Preferences closes.</translation></message>
+    <message><source>Chat Completions has not been tested for the current settings.</source><translation>Chat Completions has not been tested for the current settings.</translation></message>
+    <message><source>Chat Completions was last tested successfully for these settings on %1.</source><translation>Chat Completions was last tested successfully for these settings on %1.</translation></message>
+    <message><source>Cannot test: enter a valid Chat Completions URL.</source><translation>Cannot test: enter a valid Chat Completions URL.</translation></message>
+    <message><source>Cannot test: enter an API key.</source><translation>Cannot test: enter an API key.</translation></message>
+    <message><source>Cannot test: choose or enter a model.</source><translation>Cannot test: choose or enter a model.</translation></message>
+    <message><source>Testing Chat Completions for %1 at %2…</source><translation>Testing Chat Completions for %1 at %2…</translation></message>
+    <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>Chat Completions succeeded for %1 at %2 in %3 ms.</translation></message>
+    <message><source>Chat Completions failed for %1 at %2: %3</source><translation>Chat Completions failed for %1 at %2: %3</translation></message>
 </context>
 </TS>

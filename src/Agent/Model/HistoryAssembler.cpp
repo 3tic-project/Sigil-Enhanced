@@ -26,17 +26,80 @@ QList<ToolCall> toolCallsFromPayload(const QJsonObject &payload)
     return calls;
 }
 
+QJsonObject openAIMessage(const ChatMessage &message, bool include_tools)
+{
+    QJsonObject object;
+    object.insert(QStringLiteral("role"), message.role);
+    if (message.role == QLatin1String("tool")) {
+        object.insert(QStringLiteral("tool_call_id"), message.toolCallId);
+        object.insert(QStringLiteral("content"), message.content);
+        return object;
+    }
+
+    object.insert(QStringLiteral("content"), message.content);
+    if (include_tools && message.hasReasoning) {
+        object.insert(QStringLiteral("reasoning_content"), message.reasoningContent);
+    }
+    if (!message.toolCalls.isEmpty()) {
+        QJsonArray calls;
+        for (const ToolCall &call : message.toolCalls) {
+            calls.append(toolCallToJson(call));
+        }
+        object.insert(QStringLiteral("tool_calls"), calls);
+    }
+    return object;
+}
+
+qint64 serializedMessageBytes(const ChatMessage &message, bool include_tools)
+{
+    return QJsonDocument(openAIMessage(message, include_tools))
+        .toJson(QJsonDocument::Compact).size();
+}
+
+struct HistoryTurn {
+    QList<ChatMessage> messages;
+    qint64 serializedBytes = 0;
+};
+
 } // namespace
 
-QList<ChatMessage> HistoryAssembler::assemble(const QList<AgentEvent> &events, bool includeTools) const
+QJsonObject HistoryAssemblyStats::toJson() const
 {
-    QList<ChatMessage> messages;
+    return QJsonObject {
+        { QStringLiteral("limit_enabled"), budgetBytes > 0 },
+        { QStringLiteral("budget_bytes"), budgetBytes },
+        { QStringLiteral("total_turn_count"), totalTurnCount },
+        { QStringLiteral("included_turn_count"), includedTurnCount },
+        { QStringLiteral("omitted_turn_count"), omittedTurnCount },
+        { QStringLiteral("included_message_count"), includedMessageCount },
+        { QStringLiteral("omitted_message_count"), omittedMessageCount },
+        { QStringLiteral("total_previous_turn_bytes"), totalPreviousTurnBytes },
+        { QStringLiteral("included_previous_turn_bytes"),
+          includedPreviousTurnBytes },
+        { QStringLiteral("current_turn_bytes"), currentTurnBytes }
+    };
+}
+
+QList<ChatMessage> HistoryAssembler::assemble(
+    const QList<AgentEvent> &events,
+    bool includeTools,
+    int maxPreviousTurnBytes,
+    HistoryAssemblyStats *stats) const
+{
+    QList<HistoryTurn> turns;
+    auto append_message = [&turns, includeTools](const ChatMessage &message) {
+        if (turns.isEmpty()) turns.append(HistoryTurn());
+        HistoryTurn &turn = turns.last();
+        turn.messages.append(message);
+        turn.serializedBytes += serializedMessageBytes(message, includeTools);
+    };
     for (const AgentEvent &event : events) {
         if (event.type == AgentEventType::UserMessage) {
+            turns.append(HistoryTurn());
             ChatMessage message;
             message.role = QStringLiteral("user");
             message.content = event.payload.value(QStringLiteral("text")).toString();
-            messages.append(message);
+            append_message(message);
             continue;
         }
         if (event.type == AgentEventType::AssistantMessage) {
@@ -49,7 +112,7 @@ QList<ChatMessage> HistoryAssembler::assemble(const QList<AgentEvent> &events, b
                 message.hasReasoning = true;
             }
             message.toolCalls = toolCallsFromPayload(event.payload);
-            messages.append(message);
+            append_message(message);
             continue;
         }
         if (event.type == AgentEventType::ToolCompleted
@@ -67,11 +130,48 @@ QList<ChatMessage> HistoryAssembler::assemble(const QList<AgentEvent> &events, b
             }
             message.content = QString::fromUtf8(QJsonDocument(payload).toJson(QJsonDocument::Compact));
             if (message.content.isEmpty()) message.content = QStringLiteral("{}");
-            messages.append(message);
+            append_message(message);
             continue;
         }
     }
-    Q_UNUSED(includeTools);
+
+    HistoryAssemblyStats assembled;
+    assembled.budgetBytes = qMax(0, maxPreviousTurnBytes);
+    assembled.totalTurnCount = turns.size();
+    int total_message_count = 0;
+    for (int i = 0; i < turns.size(); ++i) {
+        total_message_count += turns.at(i).messages.size();
+        if (i + 1 < turns.size()) {
+            assembled.totalPreviousTurnBytes += turns.at(i).serializedBytes;
+        }
+    }
+
+    int first_included_turn = 0;
+    if (!turns.isEmpty()) {
+        assembled.currentTurnBytes = turns.constLast().serializedBytes;
+    }
+    if (assembled.budgetBytes > 0 && turns.size() > 1) {
+        qint64 remaining = assembled.budgetBytes;
+        first_included_turn = turns.size() - 1;
+        for (int i = turns.size() - 2; i >= 0; --i) {
+            if (turns.at(i).serializedBytes > remaining) break;
+            remaining -= turns.at(i).serializedBytes;
+            first_included_turn = i;
+        }
+    }
+
+    QList<ChatMessage> messages;
+    for (int i = first_included_turn; i < turns.size(); ++i) {
+        messages += turns.at(i).messages;
+        assembled.includedMessageCount += turns.at(i).messages.size();
+        if (i + 1 < turns.size()) {
+            assembled.includedPreviousTurnBytes += turns.at(i).serializedBytes;
+        }
+    }
+    assembled.includedTurnCount = turns.size() - first_included_turn;
+    assembled.omittedTurnCount = first_included_turn;
+    assembled.omittedMessageCount = total_message_count - assembled.includedMessageCount;
+    if (stats) *stats = assembled;
     return messages;
 }
 
@@ -79,25 +179,7 @@ QJsonArray HistoryAssembler::toOpenAIMessages(const QList<ChatMessage> &messages
 {
     QJsonArray output;
     for (const ChatMessage &message : messages) {
-        QJsonObject object;
-        object.insert(QStringLiteral("role"), message.role);
-        if (message.role == QLatin1String("tool")) {
-            object.insert(QStringLiteral("tool_call_id"), message.toolCallId);
-            object.insert(QStringLiteral("content"), message.content);
-        } else {
-            object.insert(QStringLiteral("content"), message.content);
-            if (includeTools && message.hasReasoning) {
-                object.insert(QStringLiteral("reasoning_content"), message.reasoningContent);
-            }
-            if (!message.toolCalls.isEmpty()) {
-                QJsonArray calls;
-                for (const ToolCall &call : message.toolCalls) {
-                    calls.append(toolCallToJson(call));
-                }
-                object.insert(QStringLiteral("tool_calls"), calls);
-            }
-        }
-        output.append(object);
+        output.append(openAIMessage(message, includeTools));
     }
     return output;
 }

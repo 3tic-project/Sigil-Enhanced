@@ -1,0 +1,113 @@
+# Native Agent 原生段落计划工具
+
+Native Agent 可以直接复用“DIV 段落结构规范化”的 C++ 分类、CSS 风险和源码补丁
+引擎。模型只编排范围与审批绑定，不读取全书正文后自行生成替换，也不使用正则模仿
+原生规则。
+
+这三个工具目前只注册在内置 Native Agent。它们不是 `sigil.*` 公共 MCP catalog 的
+一部分；外部 MCP 客户端仍使用既有 Live v2 事务工具。
+
+## 工作流
+
+| 阶段 | 工具 | 对 Book 的影响 |
+|---|---|---|
+| 分析 | `paragraphs.analyze` | 只读；返回候选、受保护范围、CSS 依赖和诊断 |
+| 计划 | `paragraphs.plan` | 只读；只接受分析中状态为 `apply` 的资源，返回有界源码差异和审批摘要 |
+| 暂存 | `paragraphs.apply` | 重新校验后创建独占暂存事务；活书仍不变 |
+| 检查 | `transaction.preview` | 查看实际暂存资源；不应用 |
+| 应用 | `transaction.commit` | 再次核对书籍修订后写入当前 Book；EPUB 文件仍未保存 |
+
+不要在 `paragraphs.apply` 前调用 `transaction.begin`。`apply` 必须独占地创建自己的
+事务，以保证已审阅计划与暂存内容是一批不可拼接的变更。Plan 模式允许进行到预览，
+但不能 commit；Edit 模式中的暂存和最终 commit 都服从现有批准策略；Auto 模式不弹出
+批准。
+
+## 分析和选择
+
+`paragraphs.analyze` 的 `resource_ids` 可指定 XHTML 范围；省略表示全部 XHTML。
+默认使用 `conservative-v1`，只启用安全正文类别。下列布尔参数默认为 `false`：
+
+- `convert_blank_lines`
+- `convert_scene_breaks`
+- `convert_image_wrappers`
+- `convert_nested_blocks`
+
+分析结果的 `files` 默认分页 20 项、最多 50 项，并返回 `total_count`、`returned_count`、
+`has_more` 和可用时的 `next_offset`；`summary` 始终是完整所选范围的统计。续页必须重复完全
+相同的 `resource_ids` 与四个转换选项，并核对每页相同的 `analysis_id`；不一致时从 offset 0
+重新分析。读完所有页后再用最新且匹配的 analysis ID 创建计划，因为每次 analyze 都会刷新
+内存中的完整分析并清除旧计划。
+
+每个文件会报告 `apply`、`review`、`skip` 或 `error`，以及候选/受保护源码范围、
+CSS 依赖、输入与输出哈希。范围和依赖列表各最多返回 128 项，避免把整章或大型样式
+分析结果塞进模型上下文；总数仍在摘要字段中保留。
+
+`paragraphs.plan` 必须带当前 `analysis_id`。省略 `resource_ids` 时只选全部 `apply`
+资源；显式列表也不能加入 `review`、`skip` 或 `error` 文件。计划返回：
+
+- `plan_id`、`plan_digest`、`book_revision`；
+- 每份 XHTML 的路径、修订、XHTML/CSS 前后哈希；
+- 最多 4,096 个 UTF-16 code unit 的前后源码摘录；
+- 每份 XHTML 一个 `operation_groups` 记录，并声明
+  `operation_groups_independent=true`；
+- `changes_css=false`、`changes_opf=false`、`adds_resources=false`；
+- `local_validation=passed` 和 `full_epubcheck.status=not_run`。
+
+`changes` 与一一对应的 `operation_groups` 共用分页窗口，默认 10 项、最多 20 项。每页保留完整
+plan ID、digest、summary 和总数；必须重复相同 analysis ID 与资源选择，沿
+`review_next_offset` 连续读取，直到 `review_complete=true`。服务端只累计从 offset 0 开始且
+没有缺口的页；跳页会把累计进度归零，`paragraphs.apply` 会以
+`PLAN_REVIEW_INCOMPLETE` 拒绝未读完的计划，在 Auto 模式也不会绕过。
+
+Dock 按相同 plan/digest、analysis、书籍会话与 revision 聚合每页操作组。Edit 批准在完整连续
+页到齐前保持禁用，之后才列出全部独立 XHTML 组；差异仍按页显示并可逐项打开/并排比较，
+Conversation 导出也记录各页与累计审阅进度。
+
+`local_validation` 只表示原生 XHTML/CSS 与结构不变量检查，不表示完整 EPUBCheck。
+
+每个操作组只含一个已审阅的 XHTML resource ID。Edit 模式的批准卡默认勾选全部组，用户
+可逐项取消；批准时 Runner 只允许把 `selected_resource_ids` 合入实际执行参数，不能借批准
+界面改写 plan ID、digest 或 revision。省略该参数保持兼容，表示应用完整计划；显式列表
+必须非空、无重复且完全属于当前计划。被选中的资源仍在同一个独占事务中原子暂存，任一
+暂存失败会回滚整批。未选择资源保持原样，不会偷偷进入 Preview。
+
+## 审批绑定与失败边界
+
+`paragraphs.apply` 要求原样传回 `plan_id + plan_digest + expected_book_revision`。
+暂存前还会重新读取资源路径、XHTML 修订/内容、关联 CSS 内容，并重建确定性计划。
+任何一项变化都会拒绝旧计划，不能用后台重试绕过重新分析。
+
+计划只保存在当前 Agent controller 的内存中；New Session、换书或 controller 重建后
+不能复用。一次新分析会废弃旧计划。常见错误包括：
+
+- `ANALYSIS_NOT_FOUND` / `PLAN_NOT_FOUND`：当前书籍会话没有对应状态；
+- `ANALYSIS_BINDING_MISMATCH` / `PLAN_BINDING_MISMATCH`：ID、摘要或修订不一致；
+- `PLAN_REVIEW_INCOMPLETE`：计划页未从 offset 0 连续读完；按 `review_next_offset` 继续或重启；
+- `PLAN_SELECTION_UNSAFE`：请求包含非自动安全资源；
+- `PLAN_GROUP_SELECTION_EMPTY`：批准时没有选择任何独立 XHTML 组；
+- `PLAN_GROUP_NOT_FOUND`：选择包含当前已审阅计划以外的资源；
+- `INVALID_ARGUMENT`：选择不是字符串数组、含空 ID 或重复 ID；
+- `ANALYSIS_STALE` / `PLAN_STALE` / `BOOK_REVISION_CONFLICT`：XHTML、CSS、路径或书籍已变化；
+- `TRANSACTION_OPEN`：已有事务，须先预览、提交或回滚；
+- `CANCELLED`：取消发生在分析、重建或暂存期间；
+- `STAGING_ROLLED_BACK`：多文件暂存中途失败，已丢弃整个独占事务。
+
+`paragraphs.apply` 成功只返回 `applied_to_book=false` 和
+`requires_transaction_commit=true`。最终 commit 后应向用户报告“已应用到当前书籍，
+尚未保存”；不能把暂存、局部校验或 Agent 回答完成误报为已保存 EPUB。
+
+## 验证
+
+```sh
+cmake --build build --target Sigil agent_div_paragraph_tools_test agent_harness_test agent_typeset_test -j2
+ctest --test-dir build --output-on-failure \
+  -R '^(agent_div_paragraph_tools|agent_harness|agent_typeset|booklive_paragraph_normalizer|div_paragraph_normalization_contract)$'
+```
+
+自动测试覆盖 125 文件分析的默认 20/最大 50/尾页/归一空页、完整 summary 和跨页稳定绑定，
+以及 23 文件计划的默认 10/最大 20、连续页门禁、跳页归零和全组暂存，
+以及跨会话拒绝、计划摘要、CSS 变化但书籍计数未更新的冲突、Ruby/标题/空行保留、幂等、
+取消、空/重复/越界组拒绝、只暂存两个资源中的一个、第二个文件暂存失败后的
+整批回滚，以及 Edit 模式审批拒绝与精确组选择。Dock 回归还覆盖默认全选、清空阻断、批准
+后冻结、分页组聚合、缺页阻断和畸形重复组失败关闭。当前未执行完整 EPUBCheck、真实书籍
+视觉比较或 Windows/Linux Native Agent 交互，因此这些仍是发布验收边界。

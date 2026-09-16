@@ -136,6 +136,58 @@ target_compile_features(ncx_navigation_test PRIVATE cxx_std_17)
 add_test(NAME ncx_navigation COMMAND ncx_navigation_test)
 set_tests_properties(ncx_navigation PROPERTIES TIMEOUT 30)
 
+add_executable(code_view_selection_policy_test
+    code_view_selection_policy_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Parsers/TagLister.cpp
+    ${CMAKE_SOURCE_DIR}/src/Parsers/TagLister.h
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/CodeViewSelectionPolicy.cpp
+    ${CMAKE_SOURCE_DIR}/src/ViewEditors/CodeViewSelectionPolicy.h
+)
+target_include_directories(code_view_selection_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(code_view_selection_policy_test PRIVATE Qt6::Core)
+target_compile_features(code_view_selection_policy_test PRIVATE cxx_std_17)
+add_test(NAME code_view_selection_policy COMMAND code_view_selection_policy_test)
+set_tests_properties(code_view_selection_policy PROPERTIES TIMEOUT 30)
+
+add_executable(shortcut_badge_model_test
+    shortcut_badge_model_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.h
+)
+target_include_directories(shortcut_badge_model_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(shortcut_badge_model_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(shortcut_badge_model_test PRIVATE cxx_std_17)
+add_test(NAME shortcut_badge_model COMMAND shortcut_badge_model_test)
+set_tests_properties(shortcut_badge_model PROPERTIES TIMEOUT 30)
+
+add_executable(action_shortcut_badge_test
+    action_shortcut_badge_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ActionShortcutBadge.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ActionShortcutBadge.h
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.cpp
+    ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.h
+)
+target_include_directories(action_shortcut_badge_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(action_shortcut_badge_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(action_shortcut_badge_test PRIVATE cxx_std_17)
+set_target_properties(action_shortcut_badge_test PROPERTIES AUTOMOC ON)
+add_test(NAME action_shortcut_badge COMMAND action_shortcut_badge_test)
+set_tests_properties(action_shortcut_badge PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
+add_executable(toc_tree_transform_test
+    toc_tree_transform_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.h
+)
+target_include_directories(toc_tree_transform_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(toc_tree_transform_test PRIVATE Qt6::Core)
+target_compile_features(toc_tree_transform_test PRIVATE cxx_std_17)
+add_test(NAME toc_tree_transform COMMAND toc_tree_transform_test)
+set_tests_properties(toc_tree_transform PROPERTIES TIMEOUT 30)
+
 add_executable(epub_file_snapshot_test
     epub_file_snapshot_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Misc/EpubFileSnapshot.cpp
@@ -711,6 +763,14 @@ add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphStylesheetResolver.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphStylesheetResolver.h
 )
 
 target_include_directories(booklive_paragraph_normalizer_test PRIVATE
@@ -724,6 +784,71 @@ target_link_libraries(booklive_paragraph_normalizer_test PRIVATE
 
 add_test(NAME booklive_paragraph_normalizer COMMAND booklive_paragraph_normalizer_test)
 set_tests_properties(booklive_paragraph_normalizer PROPERTIES TIMEOUT 30)
+
+add_executable(cmoa_paragraph_normalizer_test
+    cmoa_paragraph_normalizer_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.h
+)
+target_include_directories(cmoa_paragraph_normalizer_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+target_link_libraries(cmoa_paragraph_normalizer_test PRIVATE Qt6::Core Qt6::Xml)
+add_test(NAME cmoa_paragraph_normalizer COMMAND cmoa_paragraph_normalizer_test)
+set_tests_properties(cmoa_paragraph_normalizer PROPERTIES TIMEOUT 30)
+
+add_test(NAME div_paragraph_normalization_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/div_paragraph_normalization_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(div_paragraph_normalization_contract PROPERTIES TIMEOUT 30)
+
+add_executable(div_paragraph_performance_test
+    div_paragraph_performance_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.h
+)
+target_include_directories(div_paragraph_performance_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+target_link_libraries(div_paragraph_performance_test PRIVATE Qt6::Core Qt6::Xml)
+add_test(NAME div_paragraph_performance COMMAND div_paragraph_performance_test)
+set_tests_properties(div_paragraph_performance PROPERTIES TIMEOUT 60)
+
+add_executable(div_paragraph_dialog_test
+    div_paragraph_dialog_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.h
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.h
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/DivParagraphNormalizationDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/DivParagraphNormalizationDialog.h
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/DivParagraphNormalizationPreviewDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Dialogs/DivParagraphNormalizationPreviewDialog.h
+)
+target_include_directories(div_paragraph_dialog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(div_paragraph_dialog_test PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Xml
+)
+set_target_properties(div_paragraph_dialog_test PROPERTIES AUTOMOC ON)
+add_test(NAME div_paragraph_dialog COMMAND div_paragraph_dialog_test)
+set_tests_properties(div_paragraph_dialog PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
 
 set(V2H_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/VerticalLayoutAnalyzer.cpp
@@ -1076,6 +1201,72 @@ add_test(NAME plugin_metadata COMMAND plugin_metadata_test)
 set_tests_properties(plugin_metadata PROPERTIES TIMEOUT 30)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME opf_source
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_test.py
+)
+set_tests_properties(opf_source PROPERTIES TIMEOUT 30)
+add_test(NAME opf_source_bytes
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_bytes_test.py
+)
+set_tests_properties(opf_source_bytes PROPERTIES TIMEOUT 30)
+
+if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_test(NAME cmoa_epub_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_cmoa_epub_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(cmoa_epub_integration PROPERTIES
+        TIMEOUT 120
+        RUN_SERIAL TRUE
+        SKIP_RETURN_CODE 77
+    )
+    add_test(NAME opf_resource_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_opf_resource_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(opf_resource_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME navigation_repair_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_navigation_repair_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(navigation_repair_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME plugin_package_update_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plugin_package_update_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(plugin_package_update_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME plugin_session_package_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plugin_session_package_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(plugin_session_package_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME plugin_session_fault_recovery_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plugin_session_fault_recovery_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(plugin_session_fault_recovery_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME agent_workspace_package_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_agent_workspace_package_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(agent_workspace_package_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME code_view_selection_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_code_view_selection_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(code_view_selection_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME clip_shortcut_badge_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_clip_shortcut_badge_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(clip_shortcut_badge_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME edit_toc_hierarchy_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_edit_toc_hierarchy_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(edit_toc_hierarchy_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+endif()
+
 add_test(NAME vendored_source_manifest
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/vendored_source_manifest_test.py
 )
@@ -1289,22 +1480,9 @@ target_link_libraries(plugin_writer_lock_test PRIVATE
 add_test(NAME plugin_writer_lock COMMAND plugin_writer_lock_test)
 set_tests_properties(plugin_writer_lock PROPERTIES TIMEOUT 30)
 
-add_executable(plugin_package_update_test
-    plugin_package_update_test.cpp
-    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginPackageUpdate.cpp
-    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginPackageUpdate.h
+add_test(NAME plugin_package_update
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_package_update_test.py
 )
-
-target_include_directories(plugin_package_update_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-target_link_libraries(plugin_package_update_test PRIVATE
-    Qt6::Core
-    Qt6::Xml
-)
-
-add_test(NAME plugin_package_update COMMAND plugin_package_update_test)
 set_tests_properties(plugin_package_update PROPERTIES TIMEOUT 30)
 
 add_executable(agent_stream_decoder_test
@@ -1339,6 +1517,7 @@ add_executable(agent_provider_catalog_test
     agent_provider_catalog_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentConnectionProbe.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentModelCatalog.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentProviderPreset.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
@@ -1347,7 +1526,7 @@ add_executable(agent_provider_catalog_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Persistence/AgentSessionExport.cpp
 )
 target_include_directories(agent_provider_catalog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(agent_provider_catalog_test PRIVATE Qt6::Core Qt6::Network)
+target_link_libraries(agent_provider_catalog_test PRIVATE Qt6::Concurrent Qt6::Core Qt6::Network)
 target_compile_features(agent_provider_catalog_test PRIVATE cxx_std_17)
 add_test(NAME agent_provider_catalog COMMAND agent_provider_catalog_test)
 set_tests_properties(agent_provider_catalog PROPERTIES TIMEOUT 30)
@@ -1378,9 +1557,18 @@ set(AGENT_CORE_SOURCES
 add_executable(agent_harness_test
     agent_harness_test.cpp
     ${AGENT_CORE_SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentController.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/DivParagraphTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/TocTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphStylesheetResolver.cpp
 )
 target_include_directories(agent_harness_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(agent_harness_test PRIVATE Qt6::Core Qt6::Gui)
+target_link_libraries(agent_harness_test PRIVATE Qt6::Core Qt6::Gui Qt6::Xml)
 target_compile_features(agent_harness_test PRIVATE cxx_std_17)
 add_test(NAME agent_harness COMMAND agent_harness_test)
 set_tests_properties(agent_harness PROPERTIES TIMEOUT 30)
@@ -1414,6 +1602,7 @@ add_executable(agent_typeset_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSkills.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/PromptAssembler.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/BookTools.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
@@ -1454,6 +1643,52 @@ target_compile_features(agent_book_ops_test PRIVATE cxx_std_17)
 add_test(NAME agent_book_ops COMMAND agent_book_ops_test)
 set_tests_properties(agent_book_ops PROPERTIES TIMEOUT 30)
 
+add_executable(agent_div_paragraph_tools_test
+    agent_div_paragraph_tools_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/DivParagraphTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/BookEdits.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/CmoaParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphNormalizationPlan.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphStylesheetResolver.cpp
+)
+target_include_directories(agent_div_paragraph_tools_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_div_paragraph_tools_test PRIVATE Qt6::Core Qt6::Gui Qt6::Xml)
+target_compile_features(agent_div_paragraph_tools_test PRIVATE cxx_std_17)
+add_test(NAME agent_div_paragraph_tools COMMAND agent_div_paragraph_tools_test)
+set_tests_properties(agent_div_paragraph_tools PROPERTIES TIMEOUT 30)
+
+add_executable(agent_toc_tools_test
+    agent_toc_tools_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/TocTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/BookEdits.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.cpp
+)
+target_include_directories(agent_toc_tools_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_toc_tools_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(agent_toc_tools_test PRIVATE cxx_std_17)
+add_test(NAME agent_toc_tools COMMAND agent_toc_tools_test)
+set_tests_properties(agent_toc_tools PROPERTIES TIMEOUT 30)
+
 add_executable(agent_launch_test
     agent_launch_test.cpp
     ${AGENT_CORE_SOURCES}
@@ -1477,11 +1712,27 @@ target_include_directories(agent_live_deepseek PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(agent_live_deepseek PRIVATE Qt6::Core Qt6::Network)
 target_compile_features(agent_live_deepseek PRIVATE cxx_std_17)
 
+add_executable(agent_plan_comparison_dialog_test
+    agent_plan_comparison_dialog_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.h
+)
+target_include_directories(agent_plan_comparison_dialog_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_plan_comparison_dialog_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_features(agent_plan_comparison_dialog_test PRIVATE cxx_std_17)
+add_test(NAME agent_plan_comparison_dialog COMMAND agent_plan_comparison_dialog_test)
+set_tests_properties(agent_plan_comparison_dialog PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(agent_dock_test
     agent_dock_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentDock.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentDock.h
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.h
 )
 target_include_directories(agent_dock_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(agent_dock_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)

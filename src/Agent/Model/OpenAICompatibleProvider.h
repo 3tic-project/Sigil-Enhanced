@@ -24,6 +24,7 @@ struct OpenAIProviderConfig {
     QString apiKey;
     QString model;
     bool thinking = true;
+    bool requestUsage = true;
     QString reasoningEffort = QStringLiteral("medium");
     ReasoningProtocol reasoningProtocol = ReasoningProtocol::DeepSeek;
     QString httpReferer;

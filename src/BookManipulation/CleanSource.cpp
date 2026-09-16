@@ -166,6 +166,17 @@ QString CleanSource::ProcessXML(const QString &source, const QString mtype)
     return XMLPrettyPrintBS4(source, mtype);
 }
 
+QString CleanSource::ProcessOPFSource(const QString &source)
+{
+    SettingsStore settings;
+    if (settings.preserveOPFSource()) {
+        // Import validates this source. Invalid XML must not be silently repaired
+        // and persisted as a side effect of merely opening a publication.
+        return source;
+    }
+    return ProcessXML(source, "application/oebps-package+xml");
+}
+
 QString CleanSource::RemoveMetaCharset(const QString &source)
 {
     int head_end = source.indexOf(QRegularExpression(HEAD_END));

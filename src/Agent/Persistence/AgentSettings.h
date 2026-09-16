@@ -39,6 +39,18 @@ public:
     bool thinkingEnabled() const;
     void setThinkingEnabled(bool enabled);
 
+    bool tokenUsageEnabled() const;
+    void setTokenUsageEnabled(bool enabled);
+
+    int historyPreviousTurnBudgetBytes() const;
+    void setHistoryPreviousTurnBudgetBytes(int bytes);
+
+    int maxModelSteps() const;
+    void setMaxModelSteps(int steps);
+
+    int maxToolCalls() const;
+    void setMaxToolCalls(int calls);
+
     QString reasoningEffort() const;
     void setReasoningEffort(const QString &effort);
 
@@ -63,6 +75,12 @@ public:
     void setProviderUrls(const QJsonObject &urls);
     QJsonObject providerCatalogs() const;
     void setProviderCatalogs(const QJsonObject &catalogs);
+
+    QString connectionTestFingerprint() const;
+    qint64 connectionTestSucceededAtMs() const;
+    void setConnectionTestVerification(const QString &fingerprint,
+                                       qint64 succeededAtMs);
+    qint64 verifiedConnectionAtMs() const;
 
     OpenAIProviderConfig providerConfig() const;
 

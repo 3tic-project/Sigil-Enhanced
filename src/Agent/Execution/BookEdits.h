@@ -17,6 +17,9 @@
 namespace SigilAgent
 {
 
+constexpr int DEFAULT_REGEX_SEARCH_MATCHES = 40;
+constexpr int MAX_REGEX_SEARCH_MATCHES = 50;
+
 BookOpResult stageWorkingReplace(IBookWorkspace *workspace, const QString &resource_id, const QString &text);
 BookOpResult replaceBody(IBookWorkspace *workspace, const QString &resource_id,
                          const QString &inner, const QString &source_id);

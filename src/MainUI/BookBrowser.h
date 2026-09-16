@@ -270,6 +270,10 @@ signals:
 
     void ResourcesMoved();
 
+    // Coalesced after the Book Browser selection model settles, including
+    // programmatic multi-selection.
+    void SelectedResourcesChanged();
+
 
     /**
      * Wired to the current MainWindow::UpdateBrowserSelectionToTab signal.
@@ -598,6 +602,8 @@ private:
 
     Resource *m_RenamedResource;
     Resource *m_MovedResource;
+
+    bool m_SelectedResourcesNotificationPending = false;
 
 /* ------------------------------ modified: BookBrowserExt --------------------------------*/
 signals:

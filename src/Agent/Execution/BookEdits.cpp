@@ -182,6 +182,7 @@ QJsonObject regexSearchInBook(IBookWorkspace *workspace, const QString &pattern,
             { QStringLiteral("message"), error }
         };
     }
+    const int limit = qBound(1, max_hits, MAX_REGEX_SEARCH_MATCHES);
     QJsonArray matches;
     auto search = [&](const QJsonObject &resource) {
         const QString id = resource.value(QStringLiteral("resource_id")).toString();
@@ -189,7 +190,7 @@ QJsonObject regexSearchInBook(IBookWorkspace *workspace, const QString &pattern,
         const QString kind = resource.value(QStringLiteral("kind")).toString();
         if (kind == QLatin1String("image") || kind == QLatin1String("font")) return;
         const QList<RegexHit> hits = regexHits(workspace->workingText(id), re,
-                                               max_hits - matches.size());
+                                               limit - matches.size());
         const QJsonArray part = regexHitsJson(hits, id, path);
         for (const QJsonValue &value : part) matches.append(value);
     };
@@ -197,14 +198,16 @@ QJsonObject regexSearchInBook(IBookWorkspace *workspace, const QString &pattern,
         search(resourceById(workspace, resource_id));
     } else {
         for (const QJsonValue &value : workspace->resources()) {
-            if (matches.size() >= max_hits) break;
+            if (matches.size() >= limit) break;
             search(value.toObject());
         }
     }
     return QJsonObject {
         { QStringLiteral("ok"), true },
         { QStringLiteral("matches"), matches },
-        { QStringLiteral("match_count"), matches.size() }
+        { QStringLiteral("match_count"), matches.size() },
+        { QStringLiteral("max_matches"), limit },
+        { QStringLiteral("match_limit_reached"), matches.size() >= limit }
     };
 }
 

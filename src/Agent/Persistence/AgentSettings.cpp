@@ -10,6 +10,8 @@
 #include <QJsonParseError>
 
 #include "Agent/AgentTypes.h"
+#include "Agent/Core/AgentRunner.h"
+#include "Agent/Model/HistoryAssembler.h"
 #include "Misc/SettingsStore.h"
 
 namespace SigilAgent
@@ -121,6 +123,76 @@ void AgentSettings::setThinkingEnabled(bool enabled)
     SettingsStore store;
     store.beginGroup(QLatin1String(groupName()));
     store.setValue(QStringLiteral("thinking"), enabled);
+}
+
+bool AgentSettings::tokenUsageEnabled() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return store.value(QStringLiteral("request_token_usage"), true).toBool();
+}
+
+void AgentSettings::setTokenUsageEnabled(bool enabled)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("request_token_usage"), enabled);
+}
+
+int AgentSettings::historyPreviousTurnBudgetBytes() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    const int bytes = store.value(
+        QStringLiteral("history_previous_turn_budget_bytes"),
+        DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES).toInt();
+    if (bytes < 0) return DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES;
+    return qMin(bytes, MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES);
+}
+
+void AgentSettings::setHistoryPreviousTurnBudgetBytes(int bytes)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("history_previous_turn_budget_bytes"),
+                   qBound(0, bytes,
+                          MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES));
+}
+
+int AgentSettings::maxModelSteps() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    const int steps = store.value(QStringLiteral("max_model_steps"),
+                                  DEFAULT_MAX_MODEL_STEPS).toInt();
+    if (steps < 1) return DEFAULT_MAX_MODEL_STEPS;
+    return qMin(steps, MAX_MODEL_STEPS);
+}
+
+void AgentSettings::setMaxModelSteps(int steps)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("max_model_steps"),
+                   qBound(1, steps, MAX_MODEL_STEPS));
+}
+
+int AgentSettings::maxToolCalls() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    const int calls = store.value(QStringLiteral("max_tool_calls"),
+                                  DEFAULT_MAX_TOOL_CALLS).toInt();
+    if (calls < 1) return DEFAULT_MAX_TOOL_CALLS;
+    return qMin(calls, MAX_TOOL_CALLS);
+}
+
+void AgentSettings::setMaxToolCalls(int calls)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("max_tool_calls"),
+                   qBound(1, calls, MAX_TOOL_CALLS));
 }
 
 QString AgentSettings::reasoningEffort() const
@@ -249,6 +321,45 @@ void AgentSettings::setProviderCatalogs(const QJsonObject &catalogs)
     writeJsonObject(QStringLiteral("provider_catalogs"), catalogs);
 }
 
+QString AgentSettings::connectionTestFingerprint() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return store.value(QStringLiteral("connection_test_fingerprint")).toString();
+}
+
+qint64 AgentSettings::connectionTestSucceededAtMs() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return store.value(QStringLiteral("connection_test_succeeded_at_ms"), 0).toLongLong();
+}
+
+void AgentSettings::setConnectionTestVerification(const QString &fingerprint,
+                                                  qint64 succeeded_at_ms)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    if (fingerprint.isEmpty() || succeeded_at_ms <= 0) {
+        store.remove(QStringLiteral("connection_test_fingerprint"));
+        store.remove(QStringLiteral("connection_test_succeeded_at_ms"));
+        return;
+    }
+    store.setValue(QStringLiteral("connection_test_fingerprint"), fingerprint);
+    store.setValue(QStringLiteral("connection_test_succeeded_at_ms"), succeeded_at_ms);
+}
+
+qint64 AgentSettings::verifiedConnectionAtMs() const
+{
+    const qint64 succeeded_at_ms = connectionTestSucceededAtMs();
+    const QString saved_fingerprint = connectionTestFingerprint();
+    if (succeeded_at_ms <= 0 || saved_fingerprint.isEmpty()) return 0;
+    const OpenAIProviderConfig config = providerConfig();
+    const QString current_fingerprint = providerConfigurationFingerprint(
+        providerKind(), config.baseUrl, config.apiKey, config.model);
+    return saved_fingerprint == current_fingerprint ? succeeded_at_ms : 0;
+}
+
 OpenAIProviderConfig AgentSettings::providerConfig() const
 {
     const AgentProviderKind kind = providerKind();
@@ -257,6 +368,7 @@ OpenAIProviderConfig AgentSettings::providerConfig() const
     config.apiKey = apiKey();
     config.model = model();
     config.thinking = thinkingEnabled();
+    config.requestUsage = tokenUsageEnabled();
     config.reasoningEffort = reasoningEffort();
     config.reasoningProtocol = reasoningProtocolFor(kind, config.baseUrl);
     if (kind == AgentProviderKind::OpenRouter && !modelSupportsReasoning()) {

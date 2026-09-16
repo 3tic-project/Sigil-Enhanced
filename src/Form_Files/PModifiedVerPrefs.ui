@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>ModifiedVersion Prefs</string>
+   <string>Editor</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -21,7 +21,7 @@
      </property>
      <widget class="QWidget" name="GeneralTab">
       <attribute name="title">
-       <string>General</string>
+       <string>Code View</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
@@ -56,6 +56,44 @@
              </size>
             </property>
            </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="Group_doubleClickSelection">
+         <property name="title">
+          <string>Double-click selection:</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_doubleClickSelection">
+          <item>
+           <widget class="QComboBox" name="cbDoubleClickSelection">
+            <item>
+             <property name="text">
+              <string>Current paragraph/tag content</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Character or word (original behavior)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Current sentence</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelDoubleClickSelectionHelp">
+            <property name="text">
+             <string>Choose paragraph/tag content, the current sentence, or original word behavior. Nested markup such as Ruby stays intact.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -202,6 +240,77 @@
           </spacer>
          </item>
         </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="ParagraphStructureTab">
+      <attribute name="title">
+       <string>Paragraph Structure</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutParagraphStructure">
+       <item>
+        <widget class="QLabel" name="labelDivParagraphDefaults">
+         <property name="text">
+          <string>DIV paragraph normalization always converts proven body-text leaves. Optional structural categories remain unchanged unless enabled below.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbDivParagraphBlankLines">
+         <property name="text">
+          <string>Convert blank-line DIVs containing only BR</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbDivParagraphSceneBreaks">
+         <property name="text">
+          <string>Convert scene-separator DIVs</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbDivParagraphImageWrappers">
+         <property name="text">
+          <string>Convert image-only DIV wrappers</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbDivParagraphSingleBlockWrappers">
+         <property name="text">
+          <string>Convert single nested visual blocks (legacy compatibility)</string>
+         </property>
+         <property name="toolTip">
+          <string>This category requires the legacy BookLive compatibility transform and can rewrite surrounding source formatting.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbDivParagraphFormatSource">
+         <property name="text">
+          <string>Format XHTML source after structural conversion</string>
+         </property>
+         <property name="toolTip">
+          <string>Off by default because formatting can change whitespace outside the selected tags.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacerParagraphStructure">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>
