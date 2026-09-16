@@ -14,6 +14,7 @@
 #include <functional>
 
 #include "Agent/Execution/BookEdits.h"
+#include "Agent/Execution/PatchRange.h"
 #include "Agent/Typeset/ManuscriptParser.h"
 #include "Agent/Typeset/TypesetEngine.h"
 
@@ -931,14 +932,20 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("resource.patch_fragment"),
-        QStringLiteral("Stage a replacement of an exact current substring. expected_text is required and must be copied from read_fragment.text (never invent UTF-16 offsets). If that substring appears more than once, pass start_line from read_fragment.lines. Optional start/end are ignored unless they exactly equal expected_text. Must not cut through a markup tag. Live book unchanged until transaction.commit."),
+        QStringLiteral("Stage a bounded replacement of an exact current substring. expected_text is required and must be copied from read_fragment.text (never invent UTF-16 offsets); expected_text and replacement text are each capped at 8192 UTF-16 units. If that substring appears more than once, pass start_line from read_fragment.lines. Optional start/end are ignored unless they exactly equal expected_text. Must not cut through a markup tag. Live book unchanged until transaction.commit."),
         ToolRisk::ReversibleEdit, true, true,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
                 { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                { QStringLiteral("expected_text"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                { QStringLiteral("text"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("expected_text"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("string") },
+                    { QStringLiteral("maxLength"), MAX_PATCH_FRAGMENT_LENGTH }
+                } },
+                { QStringLiteral("text"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("string") },
+                    { QStringLiteral("maxLength"), MAX_PATCH_FRAGMENT_LENGTH }
+                } },
                 { QStringLiteral("expected_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
                 { QStringLiteral("start_line"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
                 { QStringLiteral("start"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
@@ -950,13 +957,39 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
             } }
         },
         [workspace](const QJsonObject &arguments) {
+            const QString expected_text = arguments.value(
+                QStringLiteral("expected_text")).toString();
+            if (expected_text.size() > MAX_PATCH_FRAGMENT_LENGTH) {
+                return ToolResult::failure(
+                    QStringLiteral("PATCH_EXPECTED_TEXT_TOO_LARGE"),
+                    QStringLiteral("expected_text is capped at 8192 UTF-16 units. Read and patch a smaller fragment."),
+                    QJsonObject {
+                        { QStringLiteral("expected_text_length"),
+                          expected_text.size() },
+                        { QStringLiteral("max_expected_text_length"),
+                          MAX_PATCH_FRAGMENT_LENGTH }
+                    });
+            }
+            const QString replacement = arguments.value(
+                QStringLiteral("text")).toString();
+            if (replacement.size() > MAX_PATCH_FRAGMENT_LENGTH) {
+                return ToolResult::failure(
+                    QStringLiteral("PATCH_REPLACEMENT_TOO_LARGE"),
+                    QStringLiteral("replacement text is capped at 8192 UTF-16 units. Use smaller patches."),
+                    QJsonObject {
+                        { QStringLiteral("replacement_length"),
+                          replacement.size() },
+                        { QStringLiteral("max_replacement_length"),
+                          MAX_PATCH_FRAGMENT_LENGTH }
+                    });
+            }
             return fromBook(workspace->patchFragment(
                 arguments.value(QStringLiteral("resource_id")).toString(),
                 arguments.value(QStringLiteral("start")).toInt(-1),
                 arguments.value(QStringLiteral("end")).toInt(-1),
-                arguments.value(QStringLiteral("text")).toString(),
+                replacement,
                 static_cast<quint64>(arguments.value(QStringLiteral("expected_revision")).toInteger()),
-                arguments.value(QStringLiteral("expected_text")).toString(),
+                expected_text,
                 arguments.value(QStringLiteral("start_line")).toInt(-1)));
         });
 

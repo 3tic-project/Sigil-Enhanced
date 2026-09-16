@@ -7,7 +7,6 @@
 #include "Agent/Execution/PatchRange.h"
 
 #include <QJsonArray>
-#include <QList>
 
 namespace SigilAgent
 {
@@ -15,58 +14,139 @@ namespace SigilAgent
 namespace
 {
 
+constexpr int MAX_OCCURRENCE_PREVIEW = 20;
+constexpr int MAX_MISMATCH_TEXT_PREVIEW = 512;
+
 QString sliceAt(const QString &source, int start, int end)
 {
     if (start < 0 || end < start || end > source.size()) return QString();
     return source.mid(start, end - start);
 }
 
-QJsonArray occurrenceList(const QString &source, const QString &expected)
+struct HitProbe {
+    int first = -1;
+    int count = 0;
+};
+
+HitProbe probeHits(const QString &source, const QString &expected,
+                   int start = 0, int end = -1)
+{
+    HitProbe probe;
+    if (expected.isEmpty()) return probe;
+    const int bounded_start = qBound(0, start, source.size());
+    const int bounded_end = end < 0
+        ? source.size() : qBound(bounded_start, end, source.size());
+    int from = bounded_start;
+    while (probe.count < 2) {
+        const int at = source.indexOf(expected, from);
+        if (at < 0 || at >= bounded_end) break;
+        if (probe.first < 0) probe.first = at;
+        ++probe.count;
+        from = at + expected.size();
+    }
+    return probe;
+}
+
+bool sourceRangeForLine(const QString &source, int wanted_line,
+                        int *start, int *end)
+{
+    if (wanted_line < 1 || !start || !end) return false;
+    int line = 1;
+    int line_start = 0;
+    while (line < wanted_line) {
+        const int newline = source.indexOf(QLatin1Char('\n'), line_start);
+        if (newline < 0) return false;
+        line_start = newline + 1;
+        ++line;
+    }
+    const int newline = source.indexOf(QLatin1Char('\n'), line_start);
+    *start = line_start;
+    *end = newline < 0 ? source.size() : newline + 1;
+    return true;
+}
+
+QJsonArray occurrenceList(const QString &source, const QString &expected,
+                          bool *truncated)
 {
     QJsonArray occurrences;
+    if (truncated) *truncated = false;
     if (expected.isEmpty()) return occurrences;
     int from = 0;
-    while (occurrences.size() < 20) {
+    int line = 1;
+    int next_newline = source.indexOf(QLatin1Char('\n'));
+    while (occurrences.size() <= MAX_OCCURRENCE_PREVIEW) {
         const int at = source.indexOf(expected, from);
         if (at < 0) break;
+        if (occurrences.size() == MAX_OCCURRENCE_PREVIEW) {
+            if (truncated) *truncated = true;
+            break;
+        }
+        while (next_newline >= 0 && next_newline < at) {
+            ++line;
+            next_newline = source.indexOf(QLatin1Char('\n'), next_newline + 1);
+        }
         occurrences.append(QJsonObject {
             { QStringLiteral("start"), at },
             { QStringLiteral("end"), at + expected.size() },
-            { QStringLiteral("line"), lineNumberAt(source, at) }
+            { QStringLiteral("line"), line }
         });
-        from = at + qMax(1, expected.size());
+        from = at + expected.size();
     }
     return occurrences;
 }
 
-QJsonObject mismatchData(const QString &source, int start, int end, const QString &expected)
+void addTextPreview(QJsonObject *object, const QString &key,
+                    const QString &text)
 {
-    const QString actual = sliceAt(source, start, end);
-    const int context = 40;
-    const int from = qMax(0, start - context);
-    return QJsonObject {
-        { QStringLiteral("start"), start },
-        { QStringLiteral("end"), end },
-        { QStringLiteral("total"), source.size() },
-        { QStringLiteral("expected_text"), expected },
-        { QStringLiteral("actual_text"), actual },
-        { QStringLiteral("context"), source.mid(from, qMin(source.size() - from, (end - start) + context * 2)) },
-        { QStringLiteral("occurrences"), occurrenceList(source, expected) }
-    };
+    if (!object) return;
+    object->insert(key, text.left(MAX_MISMATCH_TEXT_PREVIEW));
+    object->insert(key + QStringLiteral("_length"), text.size());
+    object->insert(key + QStringLiteral("_truncated"),
+                   text.size() > MAX_MISMATCH_TEXT_PREVIEW);
 }
 
-QList<int> allHits(const QString &source, const QString &expected)
+QJsonObject mismatchData(const QString &source, int start, int end, const QString &expected)
 {
-    QList<int> hits;
-    if (expected.isEmpty()) return hits;
-    int from = 0;
-    while (true) {
-        const int at = source.indexOf(expected, from);
-        if (at < 0) break;
-        hits.append(at);
-        from = at + expected.size();
+    const bool valid_range = start >= 0 && end >= start && end <= source.size();
+    const int actual_length = valid_range ? end - start : 0;
+    const QString actual = valid_range
+        ? source.mid(start, qMin(actual_length, MAX_MISMATCH_TEXT_PREVIEW))
+        : QString();
+    const int context = 40;
+    const int bounded_start = qBound(0, start, source.size());
+    const int bounded_end = valid_range ? end : bounded_start;
+    const int from = qMax(0, bounded_start - context);
+    const int context_length = qMin(
+        source.size() - from, bounded_end - bounded_start + context * 2);
+    QJsonObject data {
+        { QStringLiteral("start"), start },
+        { QStringLiteral("end"), end },
+        { QStringLiteral("total"), source.size() }
+    };
+    addTextPreview(&data, QStringLiteral("expected_text"), expected);
+    data.insert(QStringLiteral("actual_text"), actual);
+    data.insert(QStringLiteral("actual_text_length"), actual_length);
+    data.insert(QStringLiteral("actual_text_truncated"),
+                actual_length > MAX_MISMATCH_TEXT_PREVIEW);
+    data.insert(QStringLiteral("context"), source.mid(
+        from, qMin(context_length, MAX_MISMATCH_TEXT_PREVIEW)));
+    data.insert(QStringLiteral("context_start"), from);
+    data.insert(QStringLiteral("context_length"), context_length);
+    data.insert(QStringLiteral("context_truncated"),
+                context_length > MAX_MISMATCH_TEXT_PREVIEW);
+    bool occurrences_truncated = false;
+    const QJsonArray occurrences = occurrenceList(
+        source, expected, &occurrences_truncated);
+    data.insert(QStringLiteral("occurrences"), occurrences);
+    data.insert(QStringLiteral("occurrences_returned"), occurrences.size());
+    data.insert(QStringLiteral("occurrences_truncated"), occurrences_truncated);
+    if (occurrences_truncated) {
+        data.insert(QStringLiteral("occurrence_count_lower_bound"),
+                    MAX_OCCURRENCE_PREVIEW + 1);
+    } else {
+        data.insert(QStringLiteral("occurrence_count"), occurrences.size());
     }
-    return hits;
+    return data;
 }
 
 } // namespace
@@ -145,52 +225,70 @@ PatchRangeResolution resolvePatchRange(const QString &source,
         result.data = mismatchData(source, start, end, expected_text);
         return result;
     }
+    if (expected_text.size() > MAX_PATCH_FRAGMENT_LENGTH) {
+        result.code = QStringLiteral("PATCH_EXPECTED_TEXT_TOO_LARGE");
+        result.message = QStringLiteral(
+            "expected_text is capped at 8192 UTF-16 units. Read and patch a smaller fragment.");
+        result.data = QJsonObject {
+            { QStringLiteral("expected_text_length"), expected_text.size() },
+            { QStringLiteral("max_expected_text_length"),
+              MAX_PATCH_FRAGMENT_LENGTH }
+        };
+        return result;
+    }
 
-    const QList<int> hits = allHits(source, expected_text);
     int chosen = -1;
     const bool range_matches = start >= 0 && end >= start && end <= source.size()
         && sliceAt(source, start, end) == expected_text;
 
-    if (hits.size() == 1) {
-        chosen = hits.first();
-        result.rangeCorrected = !(range_matches && start == chosen);
-    } else if (hits.isEmpty()) {
-        result.code = QStringLiteral("PATCH_TEXT_NOT_FOUND");
-        result.message = QStringLiteral(
-            "expected_text was not found. Re-read the fragment and copy text exactly; do not guess offsets.");
-        result.data = mismatchData(source, start, end, expected_text);
-        return result;
-    } else if (start_line >= 1) {
-        QList<int> on_line;
-        for (int at : hits) {
-            if (lineNumberAt(source, at) == start_line) on_line.append(at);
-        }
-        if (on_line.size() == 1) {
-            chosen = on_line.first();
-            result.rangeCorrected = !range_matches || start != chosen;
-        } else if (on_line.isEmpty()) {
-            result.code = QStringLiteral("PATCH_TEXT_NOT_FOUND");
-            result.message = QStringLiteral(
-                "expected_text was not found on start_line. Use the line number from read_fragment.lines.");
-            result.data = mismatchData(source, start, end, expected_text);
-            result.data.insert(QStringLiteral("start_line"), start_line);
-            return result;
-        } else {
-            result.code = QStringLiteral("PATCH_TEXT_AMBIGUOUS");
-            result.message = QStringLiteral(
-                "expected_text occurs more than once on that line. Copy a longer unique substring.");
-            result.data = mismatchData(source, start, end, expected_text);
-            result.data.insert(QStringLiteral("start_line"), start_line);
-            return result;
-        }
-    } else if (range_matches) {
+    if (range_matches && start_line < 1) {
         chosen = start;
     } else {
-        result.code = QStringLiteral("PATCH_TEXT_AMBIGUOUS");
-        result.message = QStringLiteral(
-            "expected_text occurs more than once. Pass start_line from read_fragment.lines to pick one occurrence.");
-        result.data = mismatchData(source, start, end, expected_text);
-        return result;
+        const HitProbe hits = probeHits(source, expected_text);
+        if (hits.count == 1) {
+            chosen = hits.first;
+            result.rangeCorrected = !(range_matches && start == chosen);
+        } else if (hits.count == 0) {
+            result.code = QStringLiteral("PATCH_TEXT_NOT_FOUND");
+            result.message = QStringLiteral(
+                "expected_text was not found. Re-read the fragment and copy text exactly; do not guess offsets.");
+            result.data = mismatchData(source, start, end, expected_text);
+            return result;
+        } else {
+            if (start_line >= 1) {
+                int line_start = 0;
+                int line_end = 0;
+                const HitProbe on_line = sourceRangeForLine(
+                        source, start_line, &line_start, &line_end)
+                    ? probeHits(source, expected_text, line_start, line_end)
+                    : HitProbe();
+                if (on_line.count == 1) {
+                    chosen = on_line.first;
+                    result.rangeCorrected = !range_matches
+                        || start != chosen;
+                } else if (on_line.count == 0) {
+                    result.code = QStringLiteral("PATCH_TEXT_NOT_FOUND");
+                    result.message = QStringLiteral(
+                        "expected_text was not found on start_line. Use the line number from read_fragment.lines.");
+                    result.data = mismatchData(source, start, end, expected_text);
+                    result.data.insert(QStringLiteral("start_line"), start_line);
+                    return result;
+                } else {
+                    result.code = QStringLiteral("PATCH_TEXT_AMBIGUOUS");
+                    result.message = QStringLiteral(
+                        "expected_text occurs more than once on that line. Copy a longer unique substring.");
+                    result.data = mismatchData(source, start, end, expected_text);
+                    result.data.insert(QStringLiteral("start_line"), start_line);
+                    return result;
+                }
+            } else {
+                result.code = QStringLiteral("PATCH_TEXT_AMBIGUOUS");
+                result.message = QStringLiteral(
+                    "expected_text occurs more than once. Pass start_line from read_fragment.lines to pick one occurrence.");
+                result.data = mismatchData(source, start, end, expected_text);
+                return result;
+            }
+        }
     }
 
     result.start = chosen;

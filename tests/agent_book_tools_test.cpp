@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -709,6 +710,45 @@ int main()
     const QString original = book.resourceText(QStringLiteral("ch1"));
     const quint64 original_revision = book.revision();
     Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "transaction.begin failed");
+    const QJsonObject patch_properties = registry.find(
+        QStringLiteral("resource.patch_fragment"))->descriptor().inputSchema
+        .value(QStringLiteral("properties")).toObject();
+    Require(patch_properties.value(QStringLiteral("expected_text")).toObject()
+                    .value(QStringLiteral("maxLength")).toInt() == 8192
+                && patch_properties.value(QStringLiteral("text")).toObject()
+                       .value(QStringLiteral("maxLength")).toInt() == 8192,
+            "patch fragment schema must disclose expected and replacement bounds");
+    const QString oversized_patch_text(8193, QLatin1Char('x'));
+    const ToolResult oversized_expected = run(
+        QStringLiteral("resource.patch_fragment"), QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("ch1") },
+            { QStringLiteral("expected_text"), oversized_patch_text },
+            { QStringLiteral("text"), QStringLiteral("small") },
+            { QStringLiteral("expected_revision"),
+              static_cast<qint64>(book.resourceRevision(QStringLiteral("ch1"))) }
+        });
+    Require(!oversized_expected.ok
+                && oversized_expected.code
+                    == QStringLiteral("PATCH_EXPECTED_TEXT_TOO_LARGE")
+                && oversized_expected.data.value(
+                       QStringLiteral("expected_text_length")).toInt() == 8193,
+            "oversized expected_text must be rejected before patch resolution");
+    const ToolResult oversized_replacement = run(
+        QStringLiteral("resource.patch_fragment"), QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("ch1") },
+            { QStringLiteral("expected_text"), QStringLiteral("<title>Heat</title>") },
+            { QStringLiteral("text"), oversized_patch_text },
+            { QStringLiteral("expected_revision"),
+              static_cast<qint64>(book.resourceRevision(QStringLiteral("ch1"))) }
+        });
+    Require(!oversized_replacement.ok
+                && oversized_replacement.code
+                    == QStringLiteral("PATCH_REPLACEMENT_TOO_LARGE")
+                && oversized_replacement.data.value(
+                       QStringLiteral("replacement_length")).toInt() == 8193,
+            "oversized patch replacement must be rejected before staging");
+    Require(book.resourceText(QStringLiteral("ch1")) == original,
+            "rejected oversized patches must leave the live book unchanged");
     const ToolResult patched = run(QStringLiteral("resource.patch_fragment"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("ch1") },
         { QStringLiteral("expected_text"), QStringLiteral("<title>Heat</title>") },
@@ -1185,6 +1225,61 @@ int main()
         skeleton, -1, -1, QStringLiteral("<title></title>"));
     Require(by_text_only.ok, "resolvePatchRange must work with no character offsets");
 
+    const QString repeated_source(2 * 1024 * 1024, QLatin1Char('x'));
+    QElapsedTimer repeated_timer;
+    repeated_timer.start();
+    const PatchRangeResolution repeated = resolvePatchRange(
+        repeated_source, -1, -1, QStringLiteral("x"));
+    const qint64 repeated_milliseconds = repeated_timer.elapsed();
+    const QJsonArray repeated_occurrences = repeated.data.value(
+        QStringLiteral("occurrences")).toArray();
+    Require(!repeated.ok
+                && repeated.code == QStringLiteral("PATCH_TEXT_AMBIGUOUS")
+                && repeated_occurrences.size() == 20
+                && repeated.data.value(
+                       QStringLiteral("occurrences_truncated")).toBool()
+                && repeated.data.value(
+                       QStringLiteral("occurrence_count_lower_bound")).toInt()
+                    == 21,
+            "repeated patch text must return only a bounded occurrence preview");
+    Require(repeated_milliseconds <= 100,
+            "bounded repeated-text patch resolution exceeded 100 ms");
+
+    QElapsedTimer mismatch_timer;
+    mismatch_timer.start();
+    const PatchRangeResolution large_mismatch = resolvePatchRange(
+        repeated_source, 0, repeated_source.size(),
+        QStringLiteral("not-present"));
+    const qint64 mismatch_milliseconds = mismatch_timer.elapsed();
+    Require(!large_mismatch.ok
+                && large_mismatch.code == QStringLiteral("PATCH_TEXT_NOT_FOUND")
+                && large_mismatch.data.value(
+                       QStringLiteral("actual_text")).toString().size() == 512
+                && large_mismatch.data.value(
+                       QStringLiteral("actual_text_length")).toInt()
+                    == repeated_source.size()
+                && large_mismatch.data.value(
+                       QStringLiteral("actual_text_truncated")).toBool()
+                && large_mismatch.data.value(
+                       QStringLiteral("context")).toString().size() == 512
+                && large_mismatch.data.value(
+                       QStringLiteral("context_truncated")).toBool()
+                && QJsonDocument(large_mismatch.data).toJson(
+                       QJsonDocument::Compact).size() < 4096,
+            "large mismatch diagnostics must bound actual text and context previews");
+    Require(mismatch_milliseconds <= 100,
+            "bounded large-range mismatch diagnostics exceeded 100 ms");
+
+    const PatchRangeResolution direct_oversized = resolvePatchRange(
+        skeleton, -1, -1, oversized_patch_text);
+    Require(!direct_oversized.ok
+                && direct_oversized.code
+                    == QStringLiteral("PATCH_EXPECTED_TEXT_TOO_LARGE")
+                && direct_oversized.data.value(
+                       QStringLiteral("max_expected_text_length")).toInt()
+                    == 8192,
+            "direct patch resolution must enforce the expected-text hard bound");
+
     MemoryBookWorkspace lines_book;
     MemoryResource twice;
     twice.id = QStringLiteral("s2");
@@ -1209,6 +1304,15 @@ int main()
     });
     Require(!ambiguous.ok && ambiguous.code == QStringLiteral("PATCH_TEXT_AMBIGUOUS"),
             "repeated expected_text without start_line must be ambiguous");
+    const PatchRangeResolution line_over_range = resolvePatchRange(
+        twice.text,
+        twice.text.indexOf(QStringLiteral("<p>alpha</p>")),
+        twice.text.indexOf(QStringLiteral("<p>alpha</p>")) + 12,
+        QStringLiteral("<p>alpha</p>"), 3);
+    Require(line_over_range.ok && line_over_range.rangeCorrected
+                && line_over_range.start
+                    == twice.text.lastIndexOf(QStringLiteral("<p>alpha</p>")),
+            "start_line must retain precedence over an exact competing range");
     const ToolResult lined = run_lines(QStringLiteral("resource.patch_fragment"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("s2") },
         { QStringLiteral("expected_text"), QStringLiteral("<p>alpha</p>") },

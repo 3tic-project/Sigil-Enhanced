@@ -87,7 +87,7 @@ QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) 
         "- For paragraphs.analyze continuation pages, repeat the same resource scope and conversion options and require the same analysis_id. If it changes, restart at offset 0; plan only from the latest fully read analysis.\n"
         "- For paragraphs.plan continuation pages, repeat the same analysis_id and resource selection, require the same plan_id and plan_digest, and follow review_next_offset until review_complete=true. paragraphs.apply rejects an incompletely reviewed plan.\n"
         "- Read every transaction.preview page before commit without staging more edits between pages. Require the same transaction_id and preview_digest on every page; if either changes, restart preview at offset 0.\n"
-        "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
+        "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). expected_text and replacement text are each capped at 8,192 UTF-16 units; use smaller patches when needed. Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
         "- A patch must not cut through a markup tag.\n"
         "- Mutations must go through transaction.begin → staged edits → transaction.preview → transaction.commit, except the native paragraph and TOC workflows below.\n"
         "- Native DIV paragraph normalization is paragraphs.analyze → paragraphs.plan → paragraphs.apply → transaction.preview → transaction.commit. Do not call transaction.begin before paragraphs.apply: apply revalidates the reviewed plan and opens its own exclusive staged transaction; it does not change the live Book.\n"
@@ -101,7 +101,7 @@ QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) 
         "- Keep a plan with session.task_add / session.task_update and session.remember for constraints (heading regex, class names) across turns.\n"
         "- After transaction.commit, report the exact resource_outcomes success/failure counts and transaction_state. If the scope is unavailable, say so; never infer resource success from applied_changes.\n"
         "- If commit returns BOOK_REVISION_CONFLICT, re-read and replan. Do not retry the same expected revision.\n"
-        "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. Do not retry guessed offsets.\n");
+        "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. If it returns PATCH_EXPECTED_TEXT_TOO_LARGE or PATCH_REPLACEMENT_TOO_LARGE, split the edit into smaller patches. Do not retry guessed offsets.\n");
     if (remaining_tool_calls >= 0) {
         prompt += QStringLiteral(
             "- This run may make at most %1 more tool call(s). Do not return a batch larger than this remaining budget.\n")
