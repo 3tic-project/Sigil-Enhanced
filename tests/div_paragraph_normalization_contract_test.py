@@ -66,13 +66,13 @@ for preview_feature in (
 
 run = function_body(
     main_ext,
-    "bool MainWindow::RunDivParagraphNormalization(",
+    "bool MainWindow::RunCmoaParagraphNormalization(",
     "bool MainWindow::RunBookLiveCompatibilityAutomation()",
 )
-first_plan = run.index("BuildDivPlanWithProgress(")
+first_plan = run.index("BuildCmoaPlanWithProgress(")
 preview = run.index("preview.exec()", first_plan)
 selection = run.index("preview.SelectedResourceIds()", preview)
-second_plan = run.index("BuildDivPlanWithProgress(", selection)
+second_plan = run.index("BuildCmoaPlanWithProgress(", selection)
 snapshot = run.index("SearchBatchCoordinator::CaptureSnapshot(", second_plan)
 css_conflict = run.index("DivPlan::revisionConflicts(", snapshot)
 commit = run.index("SearchBatchCoordinator::CommitStagedResult(", css_conflict)
@@ -121,14 +121,32 @@ require(
 )
 
 for action_name in (
+    'action name="actionAnalyzeCmoaParagraphs"',
+    'action name="actionNormalizeCurrentCmoaParagraphs"',
+    'action name="actionNormalizeCmoaParagraphs"',
+):
+    require(action_name in main_ui, f"Cmoa action is missing: {action_name}")
+
+for action_name in (
     'action name="actionAnalyzeBookLiveParagraphs"',
     'action name="actionNormalizeCurrentBookLiveParagraphs"',
     'action name="actionNormalizeBookLiveParagraphs"',
 ):
     require(action_name in main_ui, f"legacy action ID was removed: {action_name}")
 require(
-    "Normalize DIV Paragraph Structure..." in main_ui,
-    "the user-facing action must describe the generic DIV workflow",
+    "Analyze BookLive Div Paragraphs (Whole Book)..." in main_ui
+    and "Normalize Cmoa DIV Paragraphs..." in main_ui,
+    "BookLive compatibility and Cmoa source-preserving workflows must remain separate",
+)
+booklive_current = function_body(
+    main_ext,
+    "bool MainWindow::NormalizeCurrentBookLiveParagraphs()",
+    "bool MainWindow::NormalizeAllBookLiveParagraphs()",
+)
+require(
+    "BookLiveParagraphNormalizer::normalizeXhtmlText(" in booklive_current
+    and "RunCmoaParagraphNormalization" not in booklive_current,
+    "the original BookLive current-file action must not route through Cmoa",
 )
 
 for key in (

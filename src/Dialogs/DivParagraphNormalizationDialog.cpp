@@ -23,13 +23,14 @@ DivParagraphNormalizationDialog::DivParagraphNormalizationDialog(
     QWidget* parent)
     : QDialog(parent)
 {
-    setWindowTitle(tr("Normalize DIV Paragraph Structure"));
+    setWindowTitle(tr("Normalize Cmoa DIV Paragraphs"));
     setMinimumWidth(560);
 
     auto* root = new QVBoxLayout(this);
     auto* explanation = new QLabel(
-        tr("Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves "
-           "that satisfy the paragraph content model are converted automatically."), this);
+        tr("Analyze Cmoa/EBPAJ XHTML first, then preview a revision-bound plan. Only "
+           "DIV leaves covered by the verified Cmoa CSS profile are converted automatically."),
+        this);
     explanation->setWordWrap(true);
     root->addWidget(explanation);
 

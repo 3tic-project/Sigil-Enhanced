@@ -69,6 +69,24 @@ expected = (
         "NormalizeAllBookLiveParagraphs",
         "whole book",
     ),
+    (
+        "actionAnalyzeCmoaParagraphs",
+        "Analyze Cmoa DIV Paragraphs...",
+        "AnalyzeCmoaParagraphs",
+        "current, selected, or all",
+    ),
+    (
+        "actionNormalizeCurrentCmoaParagraphs",
+        "Normalize Cmoa DIV Paragraphs (Current File)...",
+        "NormalizeCurrentCmoaParagraphs",
+        "current XHTML file",
+    ),
+    (
+        "actionNormalizeCmoaParagraphs",
+        "Normalize Cmoa DIV Paragraphs...",
+        "NormalizeAllCmoaParagraphs",
+        "Choose a scope",
+    ),
 )
 
 enhancement_menu = main_ui.find(".//widget[@name='menuEnhancement']")

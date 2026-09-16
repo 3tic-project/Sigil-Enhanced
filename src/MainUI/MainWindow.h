@@ -1228,13 +1228,16 @@ public slots:
     bool AnalyzeBookLiveParagraphs(); // modified: Builtin native plugin
     bool NormalizeCurrentBookLiveParagraphs(); // modified: Builtin native plugin
     bool NormalizeAllBookLiveParagraphs(); // modified: Builtin native plugin
+    bool AnalyzeCmoaParagraphs(); // modified: Builtin native plugin
+    bool NormalizeCurrentCmoaParagraphs(); // modified: Builtin native plugin
+    bool NormalizeAllCmoaParagraphs(); // modified: Builtin native plugin
     bool AnalyzeVerticalLayout(); // modified: Builtin native plugin
     bool ConvertVerticalToHorizontal(); // modified: Builtin native plugin
     bool ConvertHorizontalToVertical(); // modified: Builtin native plugin
     bool ConvertVerticalLayoutDirection(bool to_horizontal); // modified: Builtin native plugin
     void InsertFileFromBookBrowser(); //modified: insertFileToEditor
 private:
-    bool RunDivParagraphNormalization(bool prefer_current, bool analysis_only);
+    bool RunCmoaParagraphNormalization(bool prefer_current, bool analysis_only);
     bool RunBookLiveCompatibilityAutomation();
     bool ConvertKfxFile(const QString& sourcePath,
                         bool openInNewWindow,

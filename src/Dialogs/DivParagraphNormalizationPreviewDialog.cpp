@@ -99,7 +99,7 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
       m_Plan(plan),
       m_AnalysisOnly(analysisOnly)
 {
-    setWindowTitle(tr("DIV Paragraph Normalization Preview"));
+    setWindowTitle(tr("Cmoa Paragraph Normalization Preview"));
     resize(1180, 760);
 
     auto* root = new QVBoxLayout(this);
@@ -109,7 +109,7 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
 
     m_Table = new QTableWidget(m_Plan.entries.count(), 8, this);
     m_Table->setObjectName(QStringLiteral("divParagraphResourceTable"));
-    m_Table->setAccessibleName(tr("DIV paragraph resource analysis"));
+    m_Table->setAccessibleName(tr("Cmoa paragraph resource analysis"));
     m_Table->setHorizontalHeaderLabels({
         tr("Apply"), tr("File"), tr("Classification"), tr("Body candidates"),
         tr("Blank/separator"), tr("Protected"), tr("CSS risk"), tr("Status")
@@ -164,14 +164,14 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
     auto* beforeGroup = new QGroupBox(tr("Before"), sourceSplitter);
     auto* beforeLayout = new QVBoxLayout(beforeGroup);
     m_BeforeSource = new QPlainTextEdit(beforeGroup);
-    m_BeforeSource->setAccessibleName(tr("Source before DIV paragraph normalization"));
+    m_BeforeSource->setAccessibleName(tr("Source before Cmoa paragraph normalization"));
     m_BeforeSource->setReadOnly(true);
     m_BeforeSource->setLineWrapMode(QPlainTextEdit::NoWrap);
     beforeLayout->addWidget(m_BeforeSource);
     auto* afterGroup = new QGroupBox(tr("After"), sourceSplitter);
     auto* afterLayout = new QVBoxLayout(afterGroup);
     m_AfterSource = new QPlainTextEdit(afterGroup);
-    m_AfterSource->setAccessibleName(tr("Source after DIV paragraph normalization"));
+    m_AfterSource->setAccessibleName(tr("Source after Cmoa paragraph normalization"));
     m_AfterSource->setReadOnly(true);
     m_AfterSource->setLineWrapMode(QPlainTextEdit::NoWrap);
     afterLayout->addWidget(m_AfterSource);

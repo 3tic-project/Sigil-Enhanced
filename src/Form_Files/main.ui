@@ -445,6 +445,9 @@
     <addaction name="actionAnalyzeBookLiveParagraphs"/>
     <addaction name="actionNormalizeCurrentBookLiveParagraphs"/>
     <addaction name="actionNormalizeBookLiveParagraphs"/>
+    <addaction name="actionAnalyzeCmoaParagraphs"/>
+    <addaction name="actionNormalizeCurrentCmoaParagraphs"/>
+    <addaction name="actionNormalizeCmoaParagraphs"/>
     <addaction name="separator"/>
     <addaction name="actionAnalyzeVerticalLayout"/>
     <addaction name="actionConvertVerticalToHorizontal"/>
@@ -2053,26 +2056,50 @@
   </action>
   <action name="actionAnalyzeBookLiveParagraphs">
     <property name="text">
-      <string>Analyze DIV Paragraph Structure...</string>
+      <string>Analyze BookLive Div Paragraphs (Whole Book)...</string>
     </property>
     <property name="toolTip">
-      <string>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</string>
+      <string>Report BookLive/EBPAJ XHTML files across the whole book that use nested div elements as pseudo-paragraphs</string>
     </property>
   </action>
   <action name="actionNormalizeCurrentBookLiveParagraphs">
     <property name="text">
-      <string>Normalize DIV Paragraph Structure (Current File)...</string>
+      <string>Normalize BookLive Div Paragraphs (Current File)...</string>
     </property>
     <property name="toolTip">
-      <string>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</string>
+      <string>Convert proven pseudo-paragraph div leaves in the current XHTML file into style-preserving p elements</string>
     </property>
   </action>
   <action name="actionNormalizeBookLiveParagraphs">
     <property name="text">
-      <string>Normalize DIV Paragraph Structure...</string>
+      <string>Normalize BookLive Div Paragraphs (Whole Book)...</string>
     </property>
     <property name="toolTip">
-      <string>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</string>
+      <string>Convert auto-safe BookLive/EBPAJ div pseudo-paragraph leaves across the whole book into style-preserving p elements</string>
+    </property>
+  </action>
+  <action name="actionAnalyzeCmoaParagraphs">
+    <property name="text">
+      <string>Analyze Cmoa DIV Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Analyze current, selected, or all Cmoa/EBPAJ XHTML files without changing the book</string>
+    </property>
+  </action>
+  <action name="actionNormalizeCurrentCmoaParagraphs">
+    <property name="text">
+      <string>Normalize Cmoa DIV Paragraphs (Current File)...</string>
+    </property>
+    <property name="toolTip">
+      <string>Preview and convert proven Cmoa paragraph DIV leaves in the current XHTML file using source-range patches</string>
+    </property>
+  </action>
+  <action name="actionNormalizeCmoaParagraphs">
+    <property name="text">
+      <string>Normalize Cmoa DIV Paragraphs...</string>
+    </property>
+    <property name="toolTip">
+      <string>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe Cmoa paragraphs</string>
     </property>
   </action>
   <action name="actionAnalyzeVerticalLayout">

@@ -14565,7 +14565,6 @@ Spacing p elements to preserve: %6</source>
         <source>No KFX paragraph files were changed.</source>
         <translation>KFX 段落を含むファイルは変更されませんでした。</translation>
     </message>
-    <!-- Superseded by the generic DIV paragraph workflow.
     <message>
         <source>Analyze BookLive Div Paragraphs (Whole Book)...</source>
         <translation>BookLive Div 段落を解析（書籍全体）...</translation>
@@ -14718,7 +14717,6 @@ div から p への推定変換数: %4
         <source>No BookLive paragraph files were changed.</source>
         <translation>BookLive 段落を含むファイルは変更されませんでした。</translation>
     </message>
-    -->
     <message>
         <location filename="../../MainUI/MainWindow.cpp" line="850"/>
         <source>Are you sure you want to restructure this epub?
@@ -21608,7 +21606,6 @@ Line: %1 Column %2 - %3</source>
         <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>KFX 段落の正規化: XHTML の自動整形による追加の変更はありませんでした。</translation>
     </message>
-    <!-- Superseded by the generic DIV paragraph workflow.
     <message>
         <source>BookLive paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
         <translation>BookLive 段落の正規化: XHTML の自動整形に失敗しました。整形による変更を加えず、正規化済み XHTML を書き込みます。%1</translation>
@@ -21621,7 +21618,6 @@ Line: %1 Column %2 - %3</source>
         <source>BookLive paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>BookLive 段落の正規化: XHTML の自動整形による追加の変更はありませんでした。</translation>
     </message>
-    -->
     <message>
         <location filename="../../Misc/UpdateChecker.cpp" line="100"/>
         <source>&lt;p&gt;A newer version of Sigil-Enhanced is available, version &lt;b&gt;%1&lt;/b&gt;.&lt;br/&gt;&lt;p&gt;Would you like to go to the download page?&lt;/p&gt;</source>
@@ -27162,8 +27158,8 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>DivParagraphNormalizationDialog</name>
-    <message><source>Normalize DIV Paragraph Structure</source><translation>DIV 段落構造を正規化</translation></message>
-    <message><source>Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves that satisfy the paragraph content model are converted automatically.</source><translation>最初に XHTML を解析し、リビジョンに結び付けられた計画をプレビューします。段落のコンテンツモデルを満たす DIV の末端要素だけが自動変換されます。</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs</source><translation>Cmoa DIV 段落を正規化</translation></message>
+    <message><source>Analyze Cmoa/EBPAJ XHTML first, then preview a revision-bound plan. Only DIV leaves covered by the verified Cmoa CSS profile are converted automatically.</source><translation>最初に Cmoa/EBPAJ XHTML を解析し、リビジョンに結び付けられた計画をプレビューします。検証済みの Cmoa CSS プロファイルに該当する DIV の末端要素だけが自動変換されます。</translation></message>
     <message><source>Scope</source><translation>範囲</translation></message>
     <message><source>Current XHTML file</source><translation>現在の XHTML ファイル</translation></message>
     <message><source>Selected XHTML files (%1)</source><translation>選択した XHTML ファイル（%1）</translation></message>
@@ -27199,8 +27195,8 @@ Continue using the requested filename?</source>
     <message><source>Parse error</source><translation>解析エラー</translation></message>
     <message><source>None detected</source><translation>検出なし</translation></message>
     <message><source>%1 selector(s)</source><translation>%1 個のセレクター</translation></message>
-    <message><source>DIV Paragraph Normalization Preview</source><translation>DIV 段落正規化のプレビュー</translation></message>
-    <message><source>DIV paragraph resource analysis</source><translation>DIV 段落リソースの解析</translation></message>
+    <message><source>Cmoa Paragraph Normalization Preview</source><translation>Cmoa 段落正規化のプレビュー</translation></message>
+    <message><source>Cmoa paragraph resource analysis</source><translation>Cmoa 段落リソースの解析</translation></message>
     <message><source>Apply</source><translation>適用</translation></message>
     <message><source>File</source><translation>ファイル</translation></message>
     <message><source>Classification</source><translation>分類</translation></message>
@@ -27209,9 +27205,9 @@ Continue using the requested filename?</source>
     <message><source>Protected</source><translation>保護対象</translation></message>
     <message><source>Status</source><translation>状態</translation></message>
     <message><source>Before</source><translation>変換前</translation></message>
-    <message><source>Source before DIV paragraph normalization</source><translation>DIV 段落正規化前のソース</translation></message>
+    <message><source>Source before Cmoa paragraph normalization</source><translation>Cmoa 段落正規化前のソース</translation></message>
     <message><source>After</source><translation>変換後</translation></message>
-    <message><source>Source after DIV paragraph normalization</source><translation>DIV 段落正規化後のソース</translation></message>
+    <message><source>Source after Cmoa paragraph normalization</source><translation>Cmoa 段落正規化後のソース</translation></message>
     <message><source>Source Diff</source><translation>ソース差分</translation></message>
     <message><source>Before Preview</source><translation>変換前のプレビュー</translation></message>
     <message><source>After Preview</source><translation>変換後のプレビュー</translation></message>
@@ -27220,27 +27216,27 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>MainWindow</name>
-    <message><source>Analyze DIV Paragraph Structure...</source><translation>DIV 段落構造を解析...</translation></message>
-    <message><source>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</source><translation>現在、選択、または全 XHTML ファイルについて、安全な本文段落 DIV の末端要素と CSS リスクを解析します</translation></message>
-    <message><source>Normalize DIV Paragraph Structure (Current File)...</source><translation>DIV 段落構造を正規化（現在のファイル）...</translation></message>
-    <message><source>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>現在の XHTML ファイルで確認済みの段落 DIV 末端要素をプレビューし、ソース範囲パッチで変換します</translation></message>
-    <message><source>Normalize DIV Paragraph Structure...</source><translation>DIV 段落構造を正規化...</translation></message>
-    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</source><translation>範囲を選び、リビジョンに結び付けられた計画をプレビューして、自動的に安全な DIV 段落を一括変換します</translation></message>
-    <message><source>DIV Paragraph Normalization</source><translation>DIV 段落の正規化</translation></message>
+    <message><source>Analyze Cmoa DIV Paragraphs...</source><translation>Cmoa DIV 段落を解析...</translation></message>
+    <message><source>Analyze current, selected, or all Cmoa/EBPAJ XHTML files without changing the book</source><translation>書籍を変更せず、現在、選択、または全 Cmoa/EBPAJ XHTML ファイルを解析します</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs (Current File)...</source><translation>Cmoa DIV 段落を正規化（現在のファイル）...</translation></message>
+    <message><source>Preview and convert proven Cmoa paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>現在の XHTML ファイルで確認済みの Cmoa 段落 DIV 末端要素をプレビューし、ソース範囲パッチで変換します</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs...</source><translation>Cmoa DIV 段落を正規化...</translation></message>
+    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe Cmoa paragraphs</source><translation>範囲を選び、リビジョンに結び付けられた計画をプレビューして、自動的に安全な Cmoa 段落を一括変換します</translation></message>
+    <message><source>Cmoa Paragraph Normalization</source><translation>Cmoa 段落の正規化</translation></message>
     <message><source>The selected scope contains no XHTML files.</source><translation>選択した範囲に XHTML ファイルがありません。</translation></message>
-    <message><source>Analyzing DIV paragraph structure...</source><translation>DIV 段落構造を解析しています...</translation></message>
-    <message><source>DIV paragraph analysis cancelled. No files were changed.</source><translation>DIV 段落解析をキャンセルしました。ファイルは変更されていません。</translation></message>
-    <message><source>DIV paragraph analysis completed. No files were changed.</source><translation>DIV 段落解析が完了しました。ファイルは変更されていません。</translation></message>
-    <message><source>No auto-safe DIV paragraph changes were found.</source><translation>自動的に安全な DIV 段落の変更は見つかりませんでした。</translation></message>
-    <message><source>DIV paragraph normalization cancelled. No files were changed.</source><translation>DIV 段落の正規化をキャンセルしました。ファイルは変更されていません。</translation></message>
-    <message><source>Validating selected DIV paragraph changes...</source><translation>選択した DIV 段落の変更を検証しています...</translation></message>
-    <message><source>DIV paragraph validation cancelled. No files were changed.</source><translation>DIV 段落の検証をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>Analyzing Cmoa paragraph structure...</source><translation>Cmoa 段落構造を解析しています...</translation></message>
+    <message><source>Cmoa paragraph analysis cancelled. No files were changed.</source><translation>Cmoa 段落解析をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>Cmoa paragraph analysis completed. No files were changed.</source><translation>Cmoa 段落解析が完了しました。ファイルは変更されていません。</translation></message>
+    <message><source>No auto-safe Cmoa paragraph changes were found.</source><translation>自動的に安全な Cmoa 段落の変更は見つかりませんでした。</translation></message>
+    <message><source>Cmoa paragraph normalization cancelled. No files were changed.</source><translation>Cmoa 段落の正規化をキャンセルしました。ファイルは変更されていません。</translation></message>
+    <message><source>Validating selected Cmoa paragraph changes...</source><translation>選択した Cmoa 段落の変更を検証しています...</translation></message>
+    <message><source>Cmoa paragraph validation cancelled. No files were changed.</source><translation>Cmoa 段落の検証をキャンセルしました。ファイルは変更されていません。</translation></message>
     <message><source>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</source><translation>選択した内容が変更されたか、自動的に安全ではなくなりました。解析をやり直してください。ファイルは変更されていません。</translation></message>
     <message><source>Content changed after analysis. Re-run analysis. No files were changed.
 %1</source><translation>解析後に内容が変更されました。解析をやり直してください。ファイルは変更されていません。
 %1</translation></message>
-    <message><source>DIV paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>DIV 段落の正規化を一括適用しました：%2 ファイル内の %1 段落を変換しました。復元チェックポイントとリソースごとの取り消し手順を作成しました。</translation></message>
-    <message><source>DIV paragraph normalization applied: %1 changes in %2 files.</source><translation>DIV 段落の正規化を適用しました：%2 ファイル内で %1 件変更しました。</translation></message>
+    <message><source>Cmoa paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>Cmoa 段落の正規化を一括適用しました：%2 ファイル内の %1 段落を変換しました。復元チェックポイントとリソースごとの取り消し手順を作成しました。</translation></message>
+    <message><source>Cmoa paragraph normalization applied: %1 changes in %2 files.</source><translation>Cmoa 段落の正規化を適用しました：%2 ファイル内で %1 件変更しました。</translation></message>
 </context>
 <context>
     <name>PModifiedVerPrefsWidget</name>
@@ -27574,5 +27570,14 @@ Continue using the requested filename?</source>
     <message><source>Testing Chat Completions for %1 at %2…</source><translation>%2 のモデル %1 で Chat Completions をテストしています…</translation></message>
     <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>%2 のモデル %1 で Chat Completions に成功しました（%3 ミリ秒）。</translation></message>
     <message><source>Chat Completions failed for %1 at %2: %3</source><translation>%2 のモデル %1 で Chat Completions に失敗しました：%3</translation></message>
+</context>
+<context>
+    <name>CmoaParagraphNormalizer</name>
+    <message><source>Cmoa paragraph analysis: no vrtl/hltr and main-container profile was found; skipped.</source><translation>Cmoa 段落解析：vrtl/hltr と main コンテナーのプロファイルが見つからないため、スキップしました。</translation></message>
+    <message><source>Cmoa paragraph analysis: manual review required (%1); candidate DIVs: %2.</source><translation>Cmoa 段落解析：手動確認が必要です（%1）。候補 DIV：%2。</translation></message>
+    <message><source>Cmoa paragraph analysis: CSS is outside the verified EBPAJ reset profile; %1 candidates are review-only.</source><translation>Cmoa 段落解析：CSS が検証済み EBPAJ リセットプロファイル外です。%1 件の候補は確認のみとなります。</translation></message>
+    <message><source>Cmoa paragraph analysis: %1 body DIVs are safe to convert; headings, Ruby, blank lines, and source formatting are preserved.</source><translation>Cmoa 段落解析：本文 DIV %1 件を安全に変換できます。見出し、ルビ、空行、ソース書式は保持されます。</translation></message>
+    <message><source>Cmoa paragraph normalization: this file has no convertible items.</source><translation>Cmoa 段落の正規化：このファイルには変換可能な項目がありません。</translation></message>
+    <message><source>Cmoa paragraph normalization: conversion used source-range patches.</source><translation>Cmoa 段落の正規化：変換にはソース範囲パッチを使用しました。</translation></message>
 </context>
 </TS>

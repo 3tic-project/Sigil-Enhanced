@@ -15494,7 +15494,6 @@ Spacing p elements to preserve: %6</source>
         <source>No KFX paragraph files were changed.</source>
         <translation>没有 KFX 段落文件被修改。</translation>
     </message>
-    <!-- Superseded by the generic DIV paragraph workflow.
     <message>
         <source>Analyze BookLive Div Paragraphs (Whole Book)...</source>
         <translation>分析 BookLive Div 段落（全书）...</translation>
@@ -15647,7 +15646,6 @@ Single nested visual blocks preserved: %6</source>
         <source>No BookLive paragraph files were changed.</source>
         <translation>没有 BookLive 段落文件被修改。</translation>
     </message>
-    -->
     <message><source>Advanced Regex Workbench</source><translation>高级正则工作台</translation></message>
     <message><source>Advanced Regex Workbench...</source><translation>高级正则工作台...</translation></message>
     <message><source>Regex recipe %1 processed %2 match(es), applied %3 replacement(s) to %4 resource(s).</source><translation>正则方案 %1 已处理 %2 个匹配，执行 %3 次替换并修改 %4 个资源。</translation></message>
@@ -21610,7 +21608,6 @@ Line: %1 Column %2 - %3</source>
         <source>KFX paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>KFX 段落规范化：自动 XHTML 格式化未发现进一步修改。</translation>
     </message>
-    <!-- Superseded by the generic DIV paragraph workflow.
     <message>
         <source>BookLive paragraph normalization: automatic XHTML formatting failed; writing the normalized XHTML without formatter changes. %1</source>
         <translation>BookLive 段落规范化：自动 XHTML 格式化失败；将写入未经格式化器进一步修改的规范化 XHTML。%1</translation>
@@ -21623,7 +21620,6 @@ Line: %1 Column %2 - %3</source>
         <source>BookLive paragraph normalization: automatic XHTML formatting found no further changes.</source>
         <translation>BookLive 段落规范化：自动 XHTML 格式化未发现进一步修改。</translation>
     </message>
-    -->
     <message>
         <location filename="../../Misc/UpdateChecker.cpp" line="100"/>
         <source>&lt;p&gt;A newer version of Sigil-Enhanced is available, version &lt;b&gt;%1&lt;/b&gt;.&lt;br/&gt;&lt;p&gt;Would you like to go to the download page?&lt;/p&gt;</source>
@@ -27164,8 +27160,8 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>DivParagraphNormalizationDialog</name>
-    <message><source>Normalize DIV Paragraph Structure</source><translation>规范化 DIV 段落结构</translation></message>
-    <message><source>Analyze XHTML first, then preview a revision-bound plan. Only DIV leaves that satisfy the paragraph content model are converted automatically.</source><translation>先分析 XHTML，再预览绑定修订版本的计划。仅自动转换符合段落内容模型的 DIV 叶元素。</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs</source><translation>规范化 Cmoa DIV 段落</translation></message>
+    <message><source>Analyze Cmoa/EBPAJ XHTML first, then preview a revision-bound plan. Only DIV leaves covered by the verified Cmoa CSS profile are converted automatically.</source><translation>先分析 Cmoa/EBPAJ XHTML，再预览绑定修订版本的计划。仅自动转换经过验证的 Cmoa CSS 配置所涵盖的 DIV 叶元素。</translation></message>
     <message><source>Scope</source><translation>范围</translation></message>
     <message><source>Current XHTML file</source><translation>当前 XHTML 文件</translation></message>
     <message><source>Selected XHTML files (%1)</source><translation>选中的 XHTML 文件（%1）</translation></message>
@@ -27201,8 +27197,8 @@ Continue using the requested filename?</source>
     <message><source>Parse error</source><translation>解析错误</translation></message>
     <message><source>None detected</source><translation>未检测到</translation></message>
     <message><source>%1 selector(s)</source><translation>%1 个选择器</translation></message>
-    <message><source>DIV Paragraph Normalization Preview</source><translation>DIV 段落规范化预览</translation></message>
-    <message><source>DIV paragraph resource analysis</source><translation>DIV 段落资源分析</translation></message>
+    <message><source>Cmoa Paragraph Normalization Preview</source><translation>Cmoa 段落规范化预览</translation></message>
+    <message><source>Cmoa paragraph resource analysis</source><translation>Cmoa 段落资源分析</translation></message>
     <message><source>Apply</source><translation>应用</translation></message>
     <message><source>File</source><translation>文件</translation></message>
     <message><source>Classification</source><translation>分类</translation></message>
@@ -27211,9 +27207,9 @@ Continue using the requested filename?</source>
     <message><source>Protected</source><translation>受保护</translation></message>
     <message><source>Status</source><translation>状态</translation></message>
     <message><source>Before</source><translation>转换前</translation></message>
-    <message><source>Source before DIV paragraph normalization</source><translation>DIV 段落规范化前的源码</translation></message>
+    <message><source>Source before Cmoa paragraph normalization</source><translation>Cmoa 段落规范化前的源码</translation></message>
     <message><source>After</source><translation>转换后</translation></message>
-    <message><source>Source after DIV paragraph normalization</source><translation>DIV 段落规范化后的源码</translation></message>
+    <message><source>Source after Cmoa paragraph normalization</source><translation>Cmoa 段落规范化后的源码</translation></message>
     <message><source>Source Diff</source><translation>源码差异</translation></message>
     <message><source>Before Preview</source><translation>转换前预览</translation></message>
     <message><source>After Preview</source><translation>转换后预览</translation></message>
@@ -27222,27 +27218,27 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>MainWindow</name>
-    <message><source>Analyze DIV Paragraph Structure...</source><translation>分析 DIV 段落结构...</translation></message>
-    <message><source>Analyze current, selected, or all XHTML files for safe body-paragraph DIV leaves and CSS risks</source><translation>分析当前、选中或全部 XHTML 文件中的安全正文段落 DIV 叶元素和 CSS 风险</translation></message>
-    <message><source>Normalize DIV Paragraph Structure (Current File)...</source><translation>规范化 DIV 段落结构（当前文件）...</translation></message>
-    <message><source>Preview and convert proven paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>预览并使用源码范围补丁转换当前 XHTML 文件中已确认的段落 DIV 叶元素</translation></message>
-    <message><source>Normalize DIV Paragraph Structure...</source><translation>规范化 DIV 段落结构...</translation></message>
-    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe DIV paragraphs</source><translation>选择范围，预览绑定修订版本的计划，并原子转换可自动安全处理的 DIV 段落</translation></message>
-    <message><source>DIV Paragraph Normalization</source><translation>DIV 段落规范化</translation></message>
+    <message><source>Analyze Cmoa DIV Paragraphs...</source><translation>分析 Cmoa DIV 段落...</translation></message>
+    <message><source>Analyze current, selected, or all Cmoa/EBPAJ XHTML files without changing the book</source><translation>分析当前、选中或全部 Cmoa/EBPAJ XHTML 文件，不修改图书</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs (Current File)...</source><translation>规范化 Cmoa DIV 段落（当前文件）...</translation></message>
+    <message><source>Preview and convert proven Cmoa paragraph DIV leaves in the current XHTML file using source-range patches</source><translation>预览并使用源码范围补丁转换当前 XHTML 文件中已确认的 Cmoa 段落 DIV 叶元素</translation></message>
+    <message><source>Normalize Cmoa DIV Paragraphs...</source><translation>规范化 Cmoa DIV 段落...</translation></message>
+    <message><source>Choose a scope, preview a revision-bound plan, and atomically convert auto-safe Cmoa paragraphs</source><translation>选择范围，预览绑定修订版本的计划，并原子转换可自动安全处理的 Cmoa 段落</translation></message>
+    <message><source>Cmoa Paragraph Normalization</source><translation>Cmoa 段落规范化</translation></message>
     <message><source>The selected scope contains no XHTML files.</source><translation>所选范围不包含 XHTML 文件。</translation></message>
-    <message><source>Analyzing DIV paragraph structure...</source><translation>正在分析 DIV 段落结构...</translation></message>
-    <message><source>DIV paragraph analysis cancelled. No files were changed.</source><translation>已取消 DIV 段落分析。未修改任何文件。</translation></message>
-    <message><source>DIV paragraph analysis completed. No files were changed.</source><translation>DIV 段落分析已完成。未修改任何文件。</translation></message>
-    <message><source>No auto-safe DIV paragraph changes were found.</source><translation>未发现可自动安全处理的 DIV 段落变更。</translation></message>
-    <message><source>DIV paragraph normalization cancelled. No files were changed.</source><translation>已取消 DIV 段落规范化。未修改任何文件。</translation></message>
-    <message><source>Validating selected DIV paragraph changes...</source><translation>正在验证选中的 DIV 段落变更...</translation></message>
-    <message><source>DIV paragraph validation cancelled. No files were changed.</source><translation>已取消 DIV 段落验证。未修改任何文件。</translation></message>
+    <message><source>Analyzing Cmoa paragraph structure...</source><translation>正在分析 Cmoa 段落结构...</translation></message>
+    <message><source>Cmoa paragraph analysis cancelled. No files were changed.</source><translation>已取消 Cmoa 段落分析。未修改任何文件。</translation></message>
+    <message><source>Cmoa paragraph analysis completed. No files were changed.</source><translation>Cmoa 段落分析已完成。未修改任何文件。</translation></message>
+    <message><source>No auto-safe Cmoa paragraph changes were found.</source><translation>未发现可自动安全处理的 Cmoa 段落变更。</translation></message>
+    <message><source>Cmoa paragraph normalization cancelled. No files were changed.</source><translation>已取消 Cmoa 段落规范化。未修改任何文件。</translation></message>
+    <message><source>Validating selected Cmoa paragraph changes...</source><translation>正在验证选中的 Cmoa 段落变更...</translation></message>
+    <message><source>Cmoa paragraph validation cancelled. No files were changed.</source><translation>已取消 Cmoa 段落验证。未修改任何文件。</translation></message>
     <message><source>The selected content changed or is no longer auto-safe. Re-run analysis. No files were changed.</source><translation>所选内容已变化或不再可自动安全处理。请重新分析。未修改任何文件。</translation></message>
     <message><source>Content changed after analysis. Re-run analysis. No files were changed.
 %1</source><translation>内容在分析后发生变化。请重新分析。未修改任何文件。
 %1</translation></message>
-    <message><source>DIV paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>已原子应用 DIV 段落规范化：转换 %2 个文件中的 %1 个段落。已创建恢复检查点及逐资源撤销步骤。</translation></message>
-    <message><source>DIV paragraph normalization applied: %1 changes in %2 files.</source><translation>已应用 DIV 段落规范化：%2 个文件中共 %1 项变更。</translation></message>
+    <message><source>Cmoa paragraph normalization applied atomically: %1 paragraph(s) in %2 file(s). A recovery checkpoint and per-resource undo steps were created.</source><translation>已原子应用 Cmoa 段落规范化：转换 %2 个文件中的 %1 个段落。已创建恢复检查点及逐资源撤销步骤。</translation></message>
+    <message><source>Cmoa paragraph normalization applied: %1 changes in %2 files.</source><translation>已应用 Cmoa 段落规范化：%2 个文件中共 %1 项变更。</translation></message>
 </context>
 <context>
     <name>PModifiedVerPrefsWidget</name>
@@ -27576,5 +27572,14 @@ Continue using the requested filename?</source>
     <message><source>Testing Chat Completions for %1 at %2…</source><translation>正在测试 %2 上模型 %1 的 Chat Completions…</translation></message>
     <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>%2 上模型 %1 的 Chat Completions 测试成功，耗时 %3 毫秒。</translation></message>
     <message><source>Chat Completions failed for %1 at %2: %3</source><translation>%2 上模型 %1 的 Chat Completions 测试失败：%3</translation></message>
+</context>
+<context>
+    <name>CmoaParagraphNormalizer</name>
+    <message><source>Cmoa paragraph analysis: no vrtl/hltr and main-container profile was found; skipped.</source><translation>Cmoa 段落分析：未发现 vrtl/hltr 和 main 容器配置，已跳过。</translation></message>
+    <message><source>Cmoa paragraph analysis: manual review required (%1); candidate DIVs: %2.</source><translation>Cmoa 段落分析：需要人工复核（%1）；候选 DIV：%2。</translation></message>
+    <message><source>Cmoa paragraph analysis: CSS is outside the verified EBPAJ reset profile; %1 candidates are review-only.</source><translation>Cmoa 段落分析：CSS 不在已验证的 EBPAJ 重置配置内；%1 个候选项仅供复核。</translation></message>
+    <message><source>Cmoa paragraph analysis: %1 body DIVs are safe to convert; headings, Ruby, blank lines, and source formatting are preserved.</source><translation>Cmoa 段落分析：%1 个正文 DIV 可安全转换；标题、Ruby、空行和源码格式均会保留。</translation></message>
+    <message><source>Cmoa paragraph normalization: this file has no convertible items.</source><translation>Cmoa 段落规范化：此文件没有可转换项。</translation></message>
+    <message><source>Cmoa paragraph normalization: conversion used source-range patches.</source><translation>Cmoa 段落规范化：转换使用了源码范围补丁。</translation></message>
 </context>
 </TS>

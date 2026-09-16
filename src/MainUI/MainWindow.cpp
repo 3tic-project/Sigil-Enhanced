@@ -7775,6 +7775,9 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeBookLiveParagraphs, "MainWindow.AnalyzeBookLiveParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentBookLiveParagraphs, "MainWindow.NormalizeCurrentBookLiveParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeBookLiveParagraphs, "MainWindow.NormalizeBookLiveParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeCmoaParagraphs, "MainWindow.AnalyzeCmoaParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCurrentCmoaParagraphs, "MainWindow.NormalizeCurrentCmoaParagraphs"); // modified: Builtin native plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeCmoaParagraphs, "MainWindow.NormalizeCmoaParagraphs"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionAnalyzeVerticalLayout, "MainWindow.AnalyzeVerticalLayout"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertVerticalToHorizontal, "MainWindow.ConvertVerticalToHorizontal"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertHorizontalToVertical, "MainWindow.ConvertHorizontalToVertical"); // modified: Builtin native plugin
@@ -8229,6 +8232,9 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionAnalyzeBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeBookLiveParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeCurrentBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentBookLiveParagraphs())); // modified: Builtin native plugin
     connect(ui.actionNormalizeBookLiveParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllBookLiveParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionAnalyzeCmoaParagraphs, SIGNAL(triggered()), this, SLOT(AnalyzeCmoaParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionNormalizeCurrentCmoaParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeCurrentCmoaParagraphs())); // modified: Builtin native plugin
+    connect(ui.actionNormalizeCmoaParagraphs, SIGNAL(triggered()), this, SLOT(NormalizeAllCmoaParagraphs())); // modified: Builtin native plugin
     connect(ui.actionAnalyzeVerticalLayout, SIGNAL(triggered()), this, SLOT(AnalyzeVerticalLayout())); // modified: Builtin native plugin
     connect(ui.actionConvertVerticalToHorizontal, SIGNAL(triggered()), this, SLOT(ConvertVerticalToHorizontal())); // modified: Builtin native plugin
     connect(ui.actionConvertHorizontalToVertical, SIGNAL(triggered()), this, SLOT(ConvertHorizontalToVertical())); // modified: Builtin native plugin
