@@ -2153,3 +2153,19 @@ Ruby/中日韩句子、小数、网址、属性/修饰键/非 XHTML 回退，以
 本切片消除的是全命中列表、重复行号扫描和错误 JSON 放大，不减少工作区持有完整资源文本的
 内存。`rangeSplitsMarkup()` 是既有保守源码边界检查，不替代 XML 解析或完整 EPUBCheck。
 Windows/Linux Release 性能、超大真实章节和在线模型拆分补丁行为仍待后续验收。
+
+## 非 Agent 功能与 Cmoa 验收复核（2026-09-16）
+
+分支：`feature/cmoa-paragraph-normalizer`。本轮停止继续扩展 Native Agent，恢复原有
+BookLive 入口和 `booklive-compat-v1` 行为，并为私有 Cmoa 样本增加独立入口、
+`cmoa-conservative-v1` 预设及失败关闭的 EBPAJ CSS 配置检查。
+
+真实样本绑定 SHA-256，23 个 XHTML 的标签指纹与 PRD evidence 一致；12 个正文文件
+生成 958 个 DIV-to-P 源码范围补丁，5 个文件仅供复核，标题、Ruby、rt、BR、live Book
+状态和原 EPUB 均不改变，第二次计划为零改动。BookLive 正规化器源码未修改；菜单合同
+同时固定旧 BookLive 三项与新 Cmoa 三项。
+
+OPF、选择、TOC、Clips、BookLive/Cmoa、事务和三语覆盖共 29 项定向 CTest 全部通过。
+这仍不关闭跨平台 UI、完整 MainWindow 无操作保存、元数据对话框取消、两阅读器视觉、
+完整 EPUBCheck、断电级原子性或 Agent 三项用户故事。逐项状态见
+[2026-09-05 PRD 验收复核](PRD-2026-09-05-Acceptance.md)。

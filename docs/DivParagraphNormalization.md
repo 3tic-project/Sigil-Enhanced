@@ -1,19 +1,26 @@
-# DIV 段落结构规范化
+# BookLive 与 Cmoa DIV 段落规范化
 
-Sigil-Enhanced 可以把确实承担正文段落作用的 XHTML `div` 原位改成 `p`。
-它面向 BookLive、Cmoa、EBPAJ/Kadokawa 等转换链中常见的伪段落结构，但判断
-不依赖书店名、随机 class 或固定的包装层数。合法的布局 `div` 不是错误，默认
-不会被批量替换。
+Sigil-Enhanced 提供两个相互独立的工作流。既有 BookLive 插件保留原动作、
+`booklive-compat-v1` 预设和格式化行为；Cmoa 使用单独入口和
+`cmoa-conservative-v1` 预设，只把已证明安全的正文伪段落 `div` 原位改成 `p`。
+两者不会因共用底层分类器而共用默认值。合法的布局 `div` 不是错误，不会被
+无条件批量替换。
 
 ## 使用入口
 
-“增强”菜单提供三个入口：
+“增强”菜单保留三个 BookLive 入口：
 
-- “分析 DIV 段落结构…”：选择当前文件、Book Browser 中选中的 XHTML，或全书；
+- “分析 BookLive Div 段落（全书）…”；
+- “规范化 BookLive Div 段落（当前文件）…”；
+- “规范化 BookLive Div 段落（全书）…”。
+
+同时新增三个独立的 Cmoa 入口：
+
+- “分析 Cmoa DIV 段落…”：选择当前文件、Book Browser 中选中的 XHTML，或全书；
   只生成分析和预览，不写入资源。
-- “规范化 DIV 段落结构（当前文件）…”：默认选中当前 XHTML，仍可在对话框中
+- “规范化 Cmoa DIV 段落（当前文件）…”：默认选中当前 XHTML，仍可在对话框中
   改为选中文件或全书。
-- “规范化 DIV 段落结构…”：默认使用 Book Browser 选区；没有选区时默认全书。
+- “规范化 Cmoa DIV 段落…”：默认使用 Book Browser 选区；没有选区时默认全书。
 
 先选择范围和类别，再点“分析并预览”。结果表把“分类”和“状态”分开显示，
 并列出正文候选、空行/分隔、受保护块及 CSS 风险。选择一行可在“源码差异”、
@@ -22,15 +29,16 @@ Sigil-Enhanced 可以把确实承担正文段落作用的 XHTML `div` 原位改�
 
 ## 默认规则与设置
 
-通用交互模式只默认转换“正文段落 DIV”：候选必须处于连续正文流，且后代全部
-属于允许出现在 `p` 中的 phrasing content。以下类别默认保持不变，可在运行
+Cmoa 交互模式只默认转换“正文段落 DIV”：页面必须匹配 Cmoa/EBPAJ 的
+`vrtl`/`hltr`、`.main` 和已验证的段落 reset 配置；候选必须处于连续正文流，
+且后代全部属于允许出现在 `p` 中的 phrasing content。以下类别默认保持不变，可在运行
 对话框或“偏好设置 → 修改版 → 段落结构”中显式开启：
 
 - 只含 `br` 的空行 DIV；
 - 场景分隔 DIV；
 - 只含图片的 DIV 包装；
 - 单层嵌套视觉块。该兼容类别会把外层 `div` 改成 `p`、内层直接 `div` 改成
-  `span`，应只用于已知旧 BookLive 工作流。
+  `span`；Cmoa 默认不启用。
 
 “转换后格式化 XHTML 源码”也默认关闭。关闭时，正常转换只修改已选元素的
 起止标签名，元素内部源码、属性顺序、引号、实体和无关缩进保持原样。开启格式化
@@ -46,6 +54,10 @@ Sigil-Enhanced 可以把确实承担正文段落作用的 XHTML `div` 原位改�
 分析器读取页面内 `<style>`、关联样式表和递归 `@import`，同时支持
 `xml-stylesheet` 处理指令、查询参数/片段、循环依赖及注释中的伪 import。
 外部、缺失、越界或无法解析的样式表会使文件进入人工检查。
+
+Cmoa 自动应用还要求样式具有 EBPAJ 常见的 `body, div, p` 缩进重置、
+`body > p, div > p` 继承规则，以及 `div`/`p` 成对 margin 证据。只在非扉页
+忽略明确限定到 `.p-titlepage` 的规则；其他未知标签依赖继续失败关闭。
 
 以下情况不能自动证明安全，例如：
 
@@ -84,29 +96,31 @@ Checkpoint，每个变更资源形成一个 Code View 撤销步骤；任一写�
 
 ## Native Agent
 
-内置 Agent 通过 `paragraphs.analyze`、`paragraphs.plan` 和 `paragraphs.apply` 复用
-同一分类、样式依赖和计划实现。分析/计划只返回有界摘要与源码差异；apply 重新验证
-计划绑定后只创建暂存事务，仍需 `transaction.preview` 和 `transaction.commit`。
-不要预先调用 `transaction.begin`。这组工具目前不属于公共 MCP catalog，详见
+内置 Agent 的通用段落工具仍通过 `paragraphs.analyze`、`paragraphs.plan` 和
+`paragraphs.apply` 使用原有保守计划。本次 Cmoa 适配没有新增 Agent 工具、提示或
+工作流。分析/计划只返回有界摘要与源码差异；apply 重新验证计划绑定后只创建暂存
+事务，仍需 `transaction.preview` 和 `transaction.commit`。不要预先调用
+`transaction.begin`。这组工具目前不属于公共 MCP catalog，详见
 [Native Agent 原生段落计划工具](AgentNativeParagraphTools.md)。
 
 ## Automate 兼容性
 
-既有动作对象、快捷键 ID 和 Automate 命令保持不变：
+既有 BookLive 动作对象、快捷键 ID、实现默认值和 Automate 命令保持不变：
 
 - `AnalyzeBookLiveParagraphs`；
 - `NormalizeBookLiveParagraphs`。
 
 无界面的 `NormalizeBookLiveParagraphs` 明确使用 `booklive-compat-v1` 预设，保留旧版
 空行、场景分隔、图片包装、单层嵌套块、样式补偿和格式化行为，但仍采用完整批次计划、
-验证、Checkpoint、回滚及每资源撤销。新交互入口使用 `conservative-v1`，两者不要
-视为同一默认策略。
+验证、Checkpoint、回滚及每资源撤销。Cmoa 没有新增无界面 Automate 命令；其交互入口
+使用 `cmoa-conservative-v1`，两者不要视为同一默认策略。
 
 ## 开发与验证
 
 核心模块分工如下：
 
 - `BookLiveParagraphNormalizer`：DOM 分类、源码范围补丁和语义不变量；
+- `CmoaParagraphNormalizer`：Cmoa/EBPAJ 页面与 CSS 配置适配，默认失败关闭；
 - `DivParagraphCssAnalyzer`：标签选择器与 margin 等价风险；
 - `DivParagraphStylesheetResolver`：页面到内联/链接/import 样式依赖；
 - `DivParagraphNormalizationPlan`：批量身份、哈希、状态、取消和冲突检测；
@@ -118,7 +132,7 @@ Checkpoint，每个变更资源形成一个 Code View 撤销步骤；任一写�
 ```sh
 cmake --build build --target Sigil -j2
 ctest --test-dir build --output-on-failure \
-  -R '^(booklive_paragraph_normalizer|div_paragraph_normalization_contract|div_paragraph_performance|div_paragraph_dialog|search_undo_contract)$'
+  -R '^(booklive_paragraph_normalizer|cmoa_paragraph_normalizer|cmoa_epub_integration|paragraph_normalizer_menu_contract|div_paragraph_normalization_contract|div_paragraph_performance|div_paragraph_dialog|search_undo_contract)$'
 ```
 
 性能测试生成 200 个 XHTML、合计约 20.20 MiB 和 66,000 个转换候选。在 macOS
@@ -128,6 +142,10 @@ ctest --test-dir build --output-on-failure \
 
 当前自动测试覆盖源码精确保留、Ruby/标题/引用顺序、CSS 风险、递归样式解析、
 幂等、新增候选、取消、XHTML/CSS 修订冲突、批量身份、20 MiB 性能和真实 Qt
-对话框状态。尚未完成随公开仓库分发的原 Cmoa/BookLive 附件回归、Windows/Linux
-原生 GUI、人工屏幕阅读器、完整 EPUBCheck、独立阅读器及固定字体/视口的视觉对比；
-因此不能把静态 CSS 门描述为跨阅读器视觉验收。
+对话框状态。本地私有 `cmoa_test.epub` 回归验证了 12 个安全正文文件、958 个
+DIV-to-P 源码范围补丁、5 个仅供复核文件；原样本 SHA-256 在测试前后不变，第二次
+计划无改动。真实样本不随仓库分发，缺少环境变量时该测试跳过。
+
+尚未完成 Windows/Linux 原生 GUI、人工屏幕阅读器、完整 EPUBCheck、独立阅读器及
+固定字体/视口的视觉对比；因此不能把静态 CSS 门描述为跨阅读器视觉验收，也不能据此
+关闭 D06 或全局 G7。
