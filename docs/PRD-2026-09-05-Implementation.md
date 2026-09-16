@@ -2118,3 +2118,38 @@ Ruby/中日韩句子、小数、网址、属性/修饰键/非 XHTML 回退，以
 不会猜测其显示字符。±65,536 窗口内的单句可完整选择，跨出窗口且无可证句界的文本有意回退
 为单词。Windows/Linux Release 性能、输入法/辅助技术、真实电子书人工操作和 Preview DOM
 选择仍待后续验收。
+
+## Native Agent 补丁定位与错误诊断有界化（2026-09-16）
+
+分支：`feature/agent-bounded-patch-resolution`。主要提交：`b7405c6fe`（有界命中探测、输入与
+错误预览契约、模型提示和回归）。
+
+### 消除重复短文本的全命中临时列表
+
+- `resolvePatchRange()` 原来先为整份资源建立所有非重叠命中的 `QList<int>`，再判断唯一、
+  歧义或按行选择；单字符出现在 1 MiB 正文每个位置时，会产生百万级临时整数并继续逐项计算
+  行号。现在普通判断找到第二个命中即可确认歧义；需要 `start_line` 时先取得该行源码范围，
+  只在这一行探测最多两个候选。唯一子串、无行号的精确范围以及“重复子串时行号优先于冲突
+  范围”的既有语义均保留。
+- `expected_text` 与 replacement 现在在 schema 和执行层都限制为最多 8,192 个 UTF-16 单元，
+  与 `resource.read_fragment` 单段上限一致。前者过长返回 `PATCH_EXPECTED_TEXT_TOO_LARGE`，
+  后者返回 `PATCH_REPLACEMENT_TOO_LARGE`；直接调用范围解析器也会防御超长 expected text。
+  system prompt 指示模型拆成较小补丁，不再把长篇正文塞入单次 patch。
+- mismatch 数据中的 expected/actual/context 各最多返回 512 单元，同时保留原始长度和截断标志；
+  occurrence 候选最多 20 项。第 21 项存在时返回 `occurrences_truncated=true` 和
+  `occurrence_count_lower_bound=21`，不再用被截断数组暗示精确总数。候选行号在一次单调扫描中
+  计算，不再对每个预览项从资源开头重复计数。
+
+### 测试证据与剩余项
+
+`agent_book_tools` 验证 schema 与运行时 8,192 边界、超限拒绝不暂存修改、唯一/重复/按行与
+冲突范围优先级，以及标签切分保护。2 MiB 单字符重复正文只返回 20 个候选和下界标志，2 MiB
+错误范围只返回 512 单元 actual/context，紧凑错误 JSON 小于 4 KiB；两条路径各自必须在
+100 ms 内完成。完整 Sigil 构建、链接和 42 项固定 Python 依赖通过；`agent_book_tools`、
+`agent_harness` 与真实 `agent_workspace_package_integration` 通过。本切片没有新增 UI 文案，
+既有翻译目录无需变化。
+
+有界探测仍需在“完全未命中”时线性扫描当前 QString，标签切分保护也会扫描资源中的尖括号；
+本切片消除的是全命中列表、重复行号扫描和错误 JSON 放大，不减少工作区持有完整资源文本的
+内存。`rangeSplitsMarkup()` 是既有保守源码边界检查，不替代 XML 解析或完整 EPUBCheck。
+Windows/Linux Release 性能、超大真实章节和在线模型拆分补丁行为仍待后续验收。

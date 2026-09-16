@@ -436,7 +436,17 @@ summary、plan ID 和 digest 不随窗口缩减。必须用相同 analysis ID �
 
 模型**禁止**让你去书籍视图里全选粘贴。
 
-`resource.patch_fragment` 用 **当前原文子串** 定位，不要让模型数字符偏移。必填 `expected_text`（从 `read_fragment` 的 `text` 原样复制，可以是一整行）。子串出现多次时用 `start_line`（来自 `read_fragment.lines` 的 1-based 行号）消歧。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带 staged excerpt。
+`resource.patch_fragment` 用 **当前原文子串** 定位，不要让模型数字符偏移。必填
+`expected_text`（从 `read_fragment` 的 `text` 原样复制，可以是一整行），它和替换文本分别
+最多 8,192 个 UTF-16 单元；更长修改应拆成多个小补丁。子串出现多次时用 `start_line`
+（来自 `read_fragment.lines` 的 1-based 行号）消歧；如果调用同时给了另一个可匹配范围，
+`start_line` 仍决定目标。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带
+staged excerpt。
+
+重复或不匹配错误只返回前 20 个候选位置、最多 512 单元的 expected/actual/context 预览，
+并用原始长度和截断标志说明省略；不会把整章错误范围复制进 transcript。候选超过 20 项时
+只有 `occurrence_count_lower_bound`，不应把它当成精确总数。重新读取更长的独特子串，或用
+准确 `start_line` 消歧。
 
 发给模型的 function 名会把点换成下划线（`book.summary` → `book_summary`），因为 DeepSeek/OpenAI 只接受 `^[a-zA-Z0-9_-]+$`。内部仍用带点的名字。
 

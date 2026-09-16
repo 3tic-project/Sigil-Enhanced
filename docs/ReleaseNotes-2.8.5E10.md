@@ -279,6 +279,16 @@ continuation 续读。元数据变化后旧 digest 会以 `METADATA_CHANGED` 失
 模型沿 continuation 读到 `truncated=false`；资源 hash/revision、行号消歧、补丁来源规则和
 字体/图片拒绝策略均未改变。
 
+### Agent 补丁定位和错误结果有界化
+
+`resource.patch_fragment` 不再为判断一个短子串是否唯一而保存整章的全部命中。普通定位只需
+找到前两个候选；按行消歧时只扫描指定行。`expected_text` 与替换文本都明确限制为最多 8,192
+个 UTF-16 单元，与资源片段读取上限一致；绕过工具 schema 的超长调用也会稳定拒绝。
+
+不匹配错误中的 expected、actual 和 context 各最多预览 512 单元，候选位置最多返回 20 项并
+标明是否截断，避免错误回包把大段正文再次写入对话历史。2 MiB 重复文本和超大错误范围的
+回归均满足 100 ms 预算；唯一文本、精确范围、`start_line` 优先级和标签切分拒绝语义保持不变。
+
 ### Agent 自动书籍摘要有界化
 
 每轮都会进入 Book map 的 `book.summary` 不再原样携带任意长度的 title、language 和 EPUB
