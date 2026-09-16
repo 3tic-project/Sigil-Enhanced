@@ -20033,7 +20033,11 @@ A checkpoint will be created before batch changes.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Selects the content inside a paragraph; nested markup such as Ruby is included.</source>
+        <source>Current sentence</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose paragraph/tag content, the current sentence, or original word behavior. Nested markup such as Ruby stays intact.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

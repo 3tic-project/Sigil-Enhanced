@@ -20534,8 +20534,12 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <translation>文字または単語（従来の動作）</translation>
     </message>
     <message>
-        <source>Selects the content inside a paragraph; nested markup such as Ruby is included.</source>
-        <translation>段落内部の内容を選択します。Ruby などの入れ子のマークアップも選択範囲に含まれます。</translation>
+        <source>Current sentence</source>
+        <translation>現在の文</translation>
+    </message>
+    <message>
+        <source>Choose paragraph/tag content, the current sentence, or original word behavior. Nested markup such as Ruby stays intact.</source>
+        <translation>段落／タグの内容、現在の文、または従来の単語選択を選べます。Ruby などの入れ子マークアップは完全なまま保持されます。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="66"/>

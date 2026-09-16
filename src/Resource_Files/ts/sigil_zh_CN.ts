@@ -20537,8 +20537,12 @@ EPUB %2 / 语言 [%3] / 翻页方向 %4
         <translation>字或词（原有行为）</translation>
     </message>
     <message>
-        <source>Selects the content inside a paragraph; nested markup such as Ruby is included.</source>
-        <translation>选择段落内部内容；Ruby 等嵌套标记也包含在选区中。</translation>
+        <source>Current sentence</source>
+        <translation>当前句子</translation>
+    </message>
+    <message>
+        <source>Choose paragraph/tag content, the current sentence, or original word behavior. Nested markup such as Ruby stays intact.</source>
+        <translation>选择段落/标签内容、当前句子或原有字词行为；Ruby 等嵌套标记会保持完整。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/PModifiedVerPrefs.ui" line="66"/>
