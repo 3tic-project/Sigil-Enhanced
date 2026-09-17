@@ -8378,7 +8378,7 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
         rType != Resource::FontResourceType) {
         connect(ui.actionPrintPreview,             SIGNAL(triggered()),  tab,   SLOT(PrintPreview()));
         connect(ui.actionPrint,                    SIGNAL(triggered()),  tab,   SLOT(Print()));
-        connect(tab,   SIGNAL(ContentChanged()),                    m_Book.data(), SLOT(SetModified()));
+        connect(tab,   SIGNAL(ContentChanged()),                    m_Book.data(), SLOT(RefreshModifiedFromTextDocuments()));
         connect(tab,   SIGNAL(UpdateCursorPosition(int, int, int)), this, SLOT(UpdateCursorPositionLabel(int, int, int)));
         connect(tab,   SIGNAL(ZoomFactorChanged(float)),   this,          SLOT(UpdateZoomLabel(float)));
         connect(tab,   SIGNAL(ZoomFactorChanged(float)),   this,          SLOT(UpdateZoomSlider(float)));

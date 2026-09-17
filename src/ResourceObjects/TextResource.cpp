@@ -37,7 +37,8 @@ TextResource::TextResource(const QString &mainfolder, const QString &fullfilepat
     Resource(mainfolder, fullfilepath, parent),
     m_CacheInUse(false),
     m_TextDocument(new TextDocument(this)),
-    m_IsLoaded(false)
+    m_IsLoaded(false),
+    m_BookSaveBaselineSet(false)
 {
     m_TextDocument->setDocumentLayout(new QPlainTextDocumentLayout(m_TextDocument));
     connect(m_TextDocument, SIGNAL(contentsChanged()), this, SIGNAL(Modified()));
@@ -87,6 +88,10 @@ void TextResource::SetTextAsUndoableEdit(const QString &text)
     Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
     Q_ASSERT(m_TextDocument);
 
+    if (!m_BookSaveBaselineSet) {
+        m_BookSaveBaseline = m_TextDocument->toText();
+        m_BookSaveBaselineSet = true;
+    }
     m_TextDocument->replaceTextAsSingleUndoStep(text);
     m_IsLoaded = true;
     m_CacheInUse = false;
@@ -162,7 +167,13 @@ void TextResource::InitialLoad()
     QWriteLocker locker(&GetLock());
     Q_ASSERT(m_TextDocument);
 
-    if (m_TextDocument->isEmpty() && QFile::exists(GetFullPath())) {
+    bool pending_cached_text = false;
+    {
+        QMutexLocker cache_locker(&m_CacheAccessMutex);
+        pending_cached_text = m_CacheInUse;
+    }
+    if (!pending_cached_text && m_TextDocument->isEmpty()
+        && QFile::exists(GetFullPath())) {
         // Loading an existing file is not an edit. In particular, do not notify
         // an attached editor while its document and preview state are being
         // initialized.
@@ -213,6 +224,10 @@ void TextResource::DelayedUpdateToTextDocument()
 
 void TextResource::SetTextInternal(const QString &text)
 {
+    if (!m_BookSaveBaselineSet) {
+        m_BookSaveBaseline = text;
+        m_BookSaveBaselineSet = true;
+    }
     m_TextDocument->setPlainText(text);
     m_TextDocument->setModified(false);
     // Our resource has now been loaded with some text
@@ -225,4 +240,23 @@ void TextResource::SetTextInternal(const QString &text)
 bool TextResource::IsLoaded()
 {
     return m_IsLoaded;
+}
+
+bool TextResource::HasChangesSinceBookSave() const
+{
+    if (!m_BookSaveBaselineSet) {
+        return m_TextDocument->isModified();
+    }
+    return GetText() != m_BookSaveBaseline;
+}
+
+void TextResource::ResetBookSaveBaseline()
+{
+    if (!m_IsLoaded && !m_CacheInUse) {
+        m_BookSaveBaseline.clear();
+        m_BookSaveBaselineSet = false;
+        return;
+    }
+    m_BookSaveBaseline = GetText();
+    m_BookSaveBaselineSet = true;
 }

@@ -348,6 +348,9 @@ public slots:
      */
     void SetModified(bool modified = true);
 
+    /** Recompute undoable text dirtiness without clearing structural changes. */
+    void RefreshModifiedFromTextDocuments();
+
     void ResourceUpdatedFromDisk(Resource *resource);
 
 signals:
@@ -362,6 +365,8 @@ signals:
     void ResourceUpdatedFromDiskRequest(Resource *resource);
 
 private:
+
+    void UpdateModifiedState(bool modified);
 
     // Describe a new section.
     //
@@ -451,6 +456,9 @@ private:
      * Stores the modified state of the book.
      */
     bool m_IsModified;
+
+    /** Changes which cannot be cleared by returning QTextDocuments to clean. */
+    bool m_HasNonTextChanges;
 
 };
 

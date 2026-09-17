@@ -2182,3 +2182,26 @@ EPUB 3、缺 nav 的私有 Cmoa 样本。三项都调用 MainWindow 的真实 `S
 modified 状态和当前磁盘 EPUB 均未改变。私有样本固定 SHA-256，测试前后再次校验原件。
 三项连续执行全部通过（14.73 秒），由此关闭 O02、O12 与 G2 的本机自动化缺口；
 Windows/Linux 的同路径仍归入 G7 跨平台矩阵，不能由 macOS 结果替代。
+
+## MainWindow OPF 改名、失败与 Undo 完成矩阵（2026-09-17）
+
+`main_window_opf_completion_epub2_integration` 和
+`main_window_opf_completion_epub3_integration` 分别以有效 EPUB 2/3 合成书运行四个
+独立 MainWindow 场景，避免测试宿主重复构造 QWebEngine 生命周期造成干扰：
+
+- 通过真实 Book Browser 改名章节，导出后核对 ZIP 成员、manifest href 及 Nav/NCX
+  实际目标，旧路径不存在且无关 `mimetype` 字节不变；同时修复了未打开 Nav 已有待写
+  缓存却在导出初始化时被旧磁盘内容覆盖的问题。
+- 源 EPUB 被外部改写后调用真实 Save，确认冲突提示路径拒绝覆盖且外部字节不变；将
+  Save A Copy 目标预建为目录以触发真实写失败，确认目录和源 EPUB 均保持完整。
+- 在真实 FlowTab 中编辑、Undo 并保存，整包保持输入字节；再覆盖“标签内容已写入临时
+  工作目录”的边界：Undo 到仍与源 EPUB 不同的文本时 Book 保持 modified，继续 Undo
+  到源文本才恢复原包复制资格。TextResource 为书籍保存基线保留精确文本比较，结构修改
+  另行保持 sticky，因此正文 Undo 不会错误清除改名等非文本变化。
+
+完整 Sigil 构建及 42 项固定 Python 依赖检查通过。上述 EPUB 2/3 完成矩阵 2/2 通过
+（17.91 秒）；受影响的 OPF、导航、Undo、三项无操作保存及私有 Cmoa 链共 10/10 通过
+（41.37 秒）。原 29 项非 Agent 定向套件在最终改动后再次 29/29 通过（65.22 秒）。
+
+由此关闭 O05、O09、O10、O11 的本机核心自动化缺口；强杀/断电级持久化原子性仍不成立，
+Windows/Linux、完整 EPUBCheck 和独立阅读器仍不能由 macOS 原生集成代替。

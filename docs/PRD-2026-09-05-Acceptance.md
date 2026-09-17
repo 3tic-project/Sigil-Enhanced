@@ -1,13 +1,13 @@
 # 2026-09-05 PRD 验收复核
 
-复核日期：2026-09-16。当前代码分支为 `feature/cmoa-paragraph-normalizer`；本轮不再
+复核日期：2026-09-17。当前代码分支为 `integration/prd-2026-09-05`；本轮不再
 扩展 Native Agent，只检查 OPF、文本选择、TOC、Clips、BookLive/Cmoa 和共用事务能力。
 真实 Cmoa EPUB 仅从本地私有路径读取，不加入仓库，也不写回原文件。
 
 ## 自动化结果
 
 macOS 15.7.7、Qt 6.7.3、AppleClang 17、Ninja Debug 下，29 项非 Agent 定向 CTest
-全部通过，耗时 61.90 秒：
+在最终 OPF 修复后再次全部通过，耗时 65.22 秒：
 
 - OPF 原文/字节、普通导出、缺 nav 修复、插件 package 更新、Live package 事务和
   故障补偿；
@@ -23,6 +23,11 @@ macOS 15.7.7、Qt 6.7.3、AppleClang 17、Ninja Debug 下，29 项非 Agent 定�
 同一矩阵打开 Metadata Editor 后走真实 reject 槽，确认 OPF 源码、Book 状态和磁盘 EPUB
 均未改变，关闭 O02/O12 的本机自动化缺口。
 
+另有 2 项 EPUB 2/EPUB 3 MainWindow OPF 完成矩阵通过（17.91 秒）：资源改名后的
+ZIP 路径、manifest 和 Nav/NCX 目标一致；外部改写源 EPUB 时真实 Save 拒绝覆盖；
+目标为目录时真实 Save A Copy 失败且源/目标均完整；正文编辑精确 Undo（包括内容已写入
+临时工作目录的边界）恢复无修改和原包复制资格，同时不会清除既有结构修改。
+
 真实样本测试显式绑定 SHA-256
 `cc95eccdc564e3a55b076966d99116dc7690ca8b88058cb6af8951b7b95179a9`。结果为 23 个
 XHTML、原始 `div=1211`、`p=2`、`h1=12`、`ruby=250`、`rt=250`、`br=86`；其中
@@ -33,7 +38,7 @@ live Book 或原 EPUB，第二次计划为零改动。
 
 | PRD | 当前结论 | 已有证据 | 仍未关闭 |
 |---|---|---|---|
-| OPF O01–O12 | 部分验收 | O01–O04、O06–O08、O12 的核心路径有原生导入/导出和源码字节证据；O02 已在 EPUB 2、EPUB 3、缺 nav 私有样本上通过三个真实 MainWindow 保存动作；外部变化、修订冲突及进程内故障补偿已覆盖 | O05/O09–O11 尚缺所有 GUI/磁盘失败组合；强杀/断电不在保证内 |
+| OPF O01–O12 | 本机核心通过 | O01–O12 均有源码字节或原生入口证据；O02/O12 覆盖 EPUB 2、EPUB 3、缺 nav 私有样本；O05/O09–O11 另覆盖 MainWindow 改名、外部冲突、磁盘失败和跨工作目录写入的精确 Undo | 强杀/断电、Windows/Linux、完整 EPUBCheck 与独立阅读器不在本机证据内 |
 | 选择 S01–S12 | 本机自动化基本通过 | Unicode、Ruby、实体、同行/跨行、属性/危险结构回退、修饰键、设置持久化、真实鼠标坐标、1 MiB/20,000 标签预算均有测试 | 右键/三击/拖拽、分屏和 IME/辅助技术仍需发布环境人工回归；Windows/Linux 未执行 |
 | TOC T01–T12 | 本机自动化基本通过 | 单/多选、接管规则、边界、稳定 ID、Undo/Redo、Nav/NCX 写回、取消、双导航选择及 10,000 项性能已覆盖 | Windows/Linux、真实大型书、EPUBCheck/独立阅读器、强杀提交恢复未执行 |
 | Clips C01–C10 | C01–C07 通过，C08 部分，C09/C10 未关闭 | 实际 QAction 绑定、自定义/清空、固定槽位、不重编号、HTML/Ruby tooltip、溢出菜单、插入链和 100%–200% 离屏缩放均有测试 | 三平台原生快捷键显示、深浅/高对比度人工视觉和屏幕阅读器/键盘焦点需人工验收 |
@@ -46,17 +51,17 @@ live Book 或原 EPUB，第二次计划为零改动。
 |---|---|---|
 | G1 打开不改变 | 本机核心通过 | 有效 EPUB 与缺 nav 合成/真实 Cmoa 路径均不因诊断变脏；仍缺三平台真实样本矩阵 |
 | G2 无操作保存 | 本机自动化通过 | EPUB 2、EPUB 3、缺 nav 私有样本的 MainWindow Save/Save As/Save A Copy 均整包字节相同；Metadata Editor 取消也不破坏原样保存资格 |
-| G3 精准修改 | 本机核心通过 | 正文、metadata/package 局部变化及无关成员保留有原生证据；资源改名的全 GUI 矩阵仍需补充 |
+| G3 精准修改 | 本机核心通过 | 正文、metadata/package 局部变化及无关成员保留有原生证据；真实 Book Browser 改名在 EPUB 2/3 输出中同步 ZIP、manifest 与 Nav/NCX |
 | G4 导航稳定 | 本机核心通过 | 树不变量、稳定 ID/target、Nav/NCX 原节点写回及性能通过；跨平台/阅读器未验 |
 | G5 DIV 保真 | 部分 | 真实 Cmoa 结构、Ruby、标题、BR、幂等和源码范围通过；跨阅读器视觉 D06 未验 |
-| G6 事务 | 部分 | 取消、过期计划、故障注入和进程内补偿通过；强杀/断电级持久化原子性不成立 |
+| G6 事务 | 部分 | 取消、过期计划、多提交阶段故障注入、真实磁盘失败和进程内补偿通过；强杀/断电级持久化原子性不成立 |
 | G7 UI | 未关闭 | 当前只有 macOS offscreen/原生集成；缺 Windows、Linux、主题/DPI/辅助技术人工矩阵 |
 | G8 Agent | 本轮未验收 | 遵循 PRD：仍需三项端到端用户故事，不继续堆叠 Agent 功能代替验收 |
 
 ## 发布判断
 
-代码层面不存在本轮发现的阻断性回归，29 项原定向检查及 3 项 MainWindow 无操作矩阵
-全部通过；BookLive 与 Cmoa 已按独立产品入口和独立预设收敛。整份 PRD 仍不能标记
-“全部完成”，发布前优先补 D06、G7 和 O05/O09–O11 的剩余组合，再完成 G8 的真实
-演示。完整 EPUBCheck、独立阅读器、
+代码层面不存在本轮发现的阻断性回归，29 项原定向检查、3 项 MainWindow 无操作矩阵及
+2 项 OPF 完成矩阵全部通过；BookLive 与 Cmoa 已按独立产品入口和独立预设收敛，OPF
+O01–O12 的本机核心路径已有可重复证据。整份 PRD 仍不能标记“全部完成”，发布前优先补
+D06、G7，再完成 G8 的真实演示。完整 EPUBCheck、独立阅读器、
 Windows/Linux 和断电级恢复均未运行时，文案必须明确写成“未验证”。

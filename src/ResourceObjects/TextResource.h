@@ -89,6 +89,8 @@ public:
     virtual void InitialLoad();
 
     bool IsLoaded();
+    bool HasChangesSinceBookSave() const;
+    void ResetBookSaveBaseline();
 
     // inherited
     virtual ResourceType Type() const;
@@ -141,6 +143,9 @@ private:
     TextDocument *m_TextDocument;
 
     bool m_IsLoaded;
+
+    QString m_BookSaveBaseline;
+    bool m_BookSaveBaselineSet;
 };
 
 #endif // TEXTRESOURCE_H

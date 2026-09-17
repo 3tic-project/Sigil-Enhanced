@@ -44,6 +44,7 @@
 #include "ResourceObjects/NCXResource.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/MiscTextResource.h"
+#include "ResourceObjects/TextResource.h"
 #include "sigil_constants.h"
 #include "SourceUpdates/AnchorUpdates.h"
 #include "SourceUpdates/PerformHTMLUpdates.h"
@@ -229,7 +230,8 @@ const QString HTML5_COVER_SOURCE =
 Book::Book()
     :
     m_Mainfolder(new FolderKeeper(this)),
-    m_IsModified(false)
+    m_IsModified(false),
+    m_HasNonTextChanges(false)
 {
 }
 
@@ -1485,6 +1487,33 @@ void Book::ResourceUpdatedFromDisk(Resource *resource)
 }
 
 void Book::SetModified(bool modified)
+{
+    if (!modified) {
+        Q_FOREACH(Resource *resource, m_Mainfolder->GetResourceList()) {
+            TextResource *text_resource = qobject_cast<TextResource *>(resource);
+            if (text_resource) {
+                text_resource->ResetBookSaveBaseline();
+            }
+        }
+    }
+    m_HasNonTextChanges = modified;
+    UpdateModifiedState(modified);
+}
+
+void Book::RefreshModifiedFromTextDocuments()
+{
+    bool text_modified = false;
+    Q_FOREACH(Resource *resource, m_Mainfolder->GetResourceList()) {
+        TextResource *text_resource = qobject_cast<TextResource *>(resource);
+        if (text_resource && text_resource->HasChangesSinceBookSave()) {
+            text_modified = true;
+            break;
+        }
+    }
+    UpdateModifiedState(m_HasNonTextChanges || text_modified);
+}
+
+void Book::UpdateModifiedState(bool modified)
 {
     bool old_modified_state = m_IsModified;
     m_IsModified = modified;
