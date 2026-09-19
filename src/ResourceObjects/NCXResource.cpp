@@ -170,7 +170,9 @@ NCXResource::NCXResource(const QString &mainfolder,
                          QObject *parent)
     : XMLResource(mainfolder, fullfilepath, parent)
 {
-    FillWithDefaultText(version, "OEBPS/Text");
+    if (!QFileInfo::exists(fullfilepath)) {
+        FillWithDefaultText(version, "OEBPS/Text");
+    }
 }
 
 // a rename of the ncx should only need updating in the opf

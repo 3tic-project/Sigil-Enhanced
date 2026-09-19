@@ -1220,6 +1220,15 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
         RUN_SERIAL TRUE
         SKIP_RETURN_CODE 77
     )
+    add_test(NAME cmoa_preview_visual_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_cmoa_preview_visual_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(cmoa_preview_visual_integration PROPERTIES
+        TIMEOUT 120
+        RUN_SERIAL TRUE
+        SKIP_RETURN_CODE 77
+    )
     add_test(NAME opf_resource_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_opf_resource_integration.py
                 ${CMAKE_BINARY_DIR}

@@ -69,7 +69,7 @@ def verify_epub_exports(path, source, members):
 
 def run(build, test_entry='opf_resource_integration_test.cpp', build_fixture=epub_fixture,
         verify=verify_epub_exports, direct_app_executable=False,
-        run_arguments=None):
+        run_arguments=None, run_timeout=30):
     if sys.platform != 'darwin':
         raise RuntimeError('This integration runner currently supports macOS only')
     root = pathlib.Path(__file__).resolve().parents[1]
@@ -136,7 +136,7 @@ def run(build, test_entry='opf_resource_integration_test.cpp', build_fixture=epu
                     [executable, root, fixture, *extra],
                     env=environment,
                     check=True,
-                    timeout=30,
+                    timeout=run_timeout,
                 )
             verify(fixture, source, members)
 

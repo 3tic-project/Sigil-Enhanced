@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QFileInfo>
 #include <QHash>
 #include <QRegularExpression>
 #include <QTimer>
@@ -15,6 +16,7 @@
 #include "BuiltinPlugins/CmoaParagraphNormalizer.h"
 #include "BuiltinPlugins/DivParagraphNormalizationPlan.h"
 #include "BuiltinPlugins/DivParagraphStylesheetResolver.h"
+#include "Exporters/ExportEPUB.h"
 #include "Importers/ImportEPUB.h"
 #include "Misc/SettingsStore.h"
 #include "ResourceObjects/CSSResource.h"
@@ -154,6 +156,23 @@ int main(int argc, char** argv)
         require(second.ok && second.applyFiles == 0 && second.conversionCount == 0,
                 "Cmoa attachment did not become idempotent after the planned conversion");
         require(!book->IsModified(), "Read-only Cmoa planning modified the live book");
+
+        const QString normalized_output =
+            qEnvironmentVariable("SIGIL_CMOA_NORMALIZED_OUTPUT");
+        if (!normalized_output.isEmpty()) {
+            require(!QFileInfo::exists(normalized_output),
+                    "Refusing to overwrite an existing normalized Cmoa artifact");
+            for (HTMLResource* html : html_resources) {
+                const QString path = QDir::cleanPath(html->GetRelativePath());
+                if (outputs.contains(path)) {
+                    html->SetTextAsUndoableEdit(outputs.value(path));
+                }
+            }
+            book->SetModified(true);
+            ExportEPUB(normalized_output, book).WriteBook();
+            require(QFileInfo::exists(normalized_output),
+                    "Normalized Cmoa EPUB was not exported");
+        }
 
         std::cout << "Cmoa EPUB acceptance passed: "
                   << plan.applyFiles << " files, "

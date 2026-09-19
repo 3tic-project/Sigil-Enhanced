@@ -2205,3 +2205,25 @@ Windows/Linux 的同路径仍归入 G7 跨平台矩阵，不能由 macOS 结果�
 
 由此关闭 O05、O09、O10、O11 的本机核心自动化缺口；强杀/断电级持久化原子性仍不成立，
 Windows/Linux、完整 EPUBCheck 和独立阅读器仍不能由 macOS 原生集成代替。
+
+## Cmoa 导出与视觉验收补充（2026-09-19）
+
+保持原 BookLive 正规化器和 `booklive-compat-v1` 预设不变；独立 Cmoa 入口仍使用
+`cmoa-conservative-v1`。真实样本的正常化导出增加逐 ZIP 成员字节比较：只允许 12 个
+计划内 XHTML 和 OPF `dcterms:modified` 变化。该检查发现未编辑 CSS、NCX 和
+`container.xml` 在修改后保存时也被重写。修复后，加载但未编辑的导入文本在工作文件
+仍与原 ZIP CRC 相同时保留磁盘字节；已有且良构的 NCX 不再被默认模板/格式化覆盖；
+`container.xml` 指向当前 OPF 时保留原文。35 项相关非 Agent 定向 CTest 在最终构建后
+全部通过（100.04 秒）。
+
+D06 的本机代表性视觉证据：Sigil Preview 在固定 `Hiragino Mincho ProN`、
+1200×869 内容视口下比较三章 215 个转换目标的计算样式和元素几何，全部相同；
+Firefox 155.0.1 的 Gecko 引擎对同三章在 1200×900、4000×900 两个视口生成的
+6 对 PNG 完全相同。完整 EPUBCheck 5.4.0 对原书和规范化输出分别给出 31、30 个
+错误位置；没有新增错误位置，消失的是原包 mimetype 顺序错误，但缺 nav 等原有错误
+仍在。此结果不能冒充 EPUB 完全合规或独立 EPUB 阅读器的整书人工验收。
+
+分支复核：PRD 所涉 OPF、选择、TOC、Clips、BookLive/Cmoa 和事务功能已在
+`integration/prd-2026-09-05`；仅 `feature/duokan-epub-plugin` 尚未并入，改动约
+8,500 行且不在本 PRD 范围内，本轮不混入收尾。原 `native-agent` 工作树的三处未提交
+用户修改保持不动。

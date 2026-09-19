@@ -114,12 +114,14 @@ void TextResource::SaveToDisk(bool book_wide_save)
             return;
         }
 
-        // We can't perform the document modified check
-        // here because that causes problems with epub export
-        // when the user has not changed the text file.
-        // (some text files have placeholder text on disk)
-
-        // But we always want to save the most up to date version
+        // Keep imported bytes (including line endings) when the loaded text
+        // still matches the last book-save baseline. New resources have no
+        // saved ZIP CRC, so their on-disk placeholder must still be written.
+        if (m_BookSaveBaselineSet && !HasChangesSinceBookSave()
+            && !GetSavedCRC32().isEmpty() && QFile::exists(GetFullPath())
+            && Utility::FileCRC32(GetFullPath()) == GetSavedCRC32()) {
+            return;
+        }
 
         if (m_CacheInUse) {
             Utility::WriteUnicodeTextFile(m_Cache, GetFullPath());

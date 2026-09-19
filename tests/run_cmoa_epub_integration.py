@@ -7,8 +7,10 @@ CTest reports the private acceptance test as skipped rather than passed.
 import hashlib
 import os
 import pathlib
+import re
 import shutil
 import sys
+import zipfile
 
 from run_opf_resource_integration import run
 
@@ -31,9 +33,12 @@ def main():
             f"{EXPECTED_SAMPLE_SHA256}, got {source_hash}"
         )
 
+    output_value = os.environ.get("SIGIL_CMOA_NORMALIZED_OUTPUT", "")
+
     def fixture(scratch):
         target = scratch / "cmoa-test.epub"
         shutil.copy2(source, target)
+        os.environ["SIGIL_CMOA_NORMALIZED_OUTPUT"] = output_value or str(scratch / "normalized.epub")
         return target, source_hash, None
 
     def verify(path, expected_hash, _members):
@@ -42,6 +47,27 @@ def main():
             raise AssertionError("native Cmoa acceptance changed its private input copy")
         if hashlib.sha256(source.read_bytes()).hexdigest() != source_hash:
             raise AssertionError("native Cmoa acceptance changed the original private EPUB")
+        normalized = pathlib.Path(os.environ["SIGIL_CMOA_NORMALIZED_OUTPUT"])
+        expected_changes = {"item/standard.opf"} | {
+            f"item/xhtml/p-{number:03}.xhtml" for number in range(2, 14)
+        }
+        with zipfile.ZipFile(path) as original_zip, zipfile.ZipFile(normalized) as output_zip:
+            original_names = set(original_zip.namelist())
+            output_names = set(output_zip.namelist())
+            if original_names != output_names:
+                raise AssertionError("Cmoa export changed the EPUB member list")
+            changed = {name for name in original_names
+                       if original_zip.read(name) != output_zip.read(name)}
+            if changed != expected_changes:
+                raise AssertionError(f"Cmoa export changed unexpected members: {changed ^ expected_changes}")
+            modified_date = rb'(<meta property="dcterms:modified">)[^<]*(</meta>)'
+            original_opf = re.sub(modified_date, rb'\1DATE\2',
+                                  original_zip.read("item/standard.opf"))
+            output_opf = re.sub(modified_date, rb'\1DATE\2',
+                                output_zip.read("item/standard.opf"))
+            if original_opf != output_opf:
+                raise AssertionError("Cmoa export changed unrelated OPF bytes")
+        print("Cmoa export changed only 12 planned XHTML members and the OPF modified date")
 
     run(
         pathlib.Path(sys.argv[1]).resolve(),

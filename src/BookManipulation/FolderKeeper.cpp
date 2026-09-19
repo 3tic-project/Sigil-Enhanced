@@ -29,6 +29,7 @@
 #include <QApplication>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
+#include <QXmlStreamReader>
 #include <QIcon>
 #include <QFileIconProvider>
 #include <QDebug>
@@ -474,7 +475,21 @@ void FolderKeeper::UpdateContainerXML(const QString& FullPathToMainFolder, const
 {
     QDir folder(FullPathToMainFolder);
     folder.mkpath("META-INF");
-    Utility::WriteUnicodeTextFile(CONTAINER_XML.arg(opfbookpath), FullPathToMainFolder + "/META-INF/container.xml");
+    const QString path = FullPathToMainFolder + "/META-INF/container.xml";
+    QFile existing(path);
+    if (existing.open(QIODevice::ReadOnly)) {
+        QXmlStreamReader xml(&existing);
+        bool matching_rootfile = false;
+        while (!xml.atEnd()) {
+            xml.readNext();
+            if (xml.isStartElement() && xml.name() == QLatin1String("rootfile")
+                && xml.attributes().value(QLatin1String("full-path")) == opfbookpath) {
+                matching_rootfile = true;
+            }
+        }
+        if (matching_rootfile && !xml.hasError()) return;
+    }
+    Utility::WriteUnicodeTextFile(CONTAINER_XML.arg(opfbookpath), path);
 }
 
 
@@ -499,8 +514,12 @@ NCXResource*FolderKeeper::AddNCXToFolder(const QString &version,
     m_NCX->SetEpubVersion(version);
     m_NCX->SetMediaType("application/x-dtbncx+xml");
     m_NCX->SetShortPathName(NCXBookPath.split('/').last());
-    m_NCX->FillWithDefaultText(version, textdir);
-    m_NCX->SetMainID(m_OPF->GetMainIdentifierValue());
+    if (QFile::exists(m_NCX->GetFullPath())) {
+        m_NCX->InitialLoad();
+    } else {
+        m_NCX->FillWithDefaultText(version, textdir);
+        m_NCX->SetMainID(m_OPF->GetMainIdentifierValue());
+    }
     m_Resources[ m_NCX->GetIdentifier() ] = m_NCX;
     m_Path2Resource[ m_NCX->GetRelativePath() ] = m_NCX;
     // cache file icons by media type

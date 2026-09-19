@@ -76,6 +76,13 @@ static const QString CONTAINER_XML       = "<?xml version=\"1.0\" encoding=\"UTF
 
 static  const QString SEP = QString(QChar(31));
 
+static QString PrepareNCXText(const QString& source)
+{
+    return CleanSource::IsWellFormedXML(source, "application/x-dtbncx+xml")
+        ? source
+        : CleanSource::ProcessXML(source, "application/x-dtbncx+xml");
+}
+
 // Constructor;
 // The parameter is the file to be imported
 ImportEPUB::ImportEPUB(const QString &fullfilepath)
@@ -765,12 +772,12 @@ void ImportEPUB::LocateOrCreateNCX(const QString &ncx_id_on_spine)
         m_NCXFilePath = QFileInfo(m_OPFFilePath).absolutePath() % "/" % ncx_href;
         m_NCXFilePath = Utility::resolveRelativeSegmentsInFilePath(m_NCXFilePath, "/");
         if (QFile::exists(m_NCXFilePath)) {
-            QString ncx_text = Utility::ReadUnicodeTextFile(m_NCXFilePath);
-            ncx_text = CleanSource::ProcessXML(ncx_text, "application/x-dtbncx+xml");
+            const QString original_ncx = Utility::ReadUnicodeTextFile(m_NCXFilePath);
+            const QString ncx_text = PrepareNCXText(original_ncx);
             QString bookpath = m_NCXFilePath.right(m_NCXFilePath.length() - m_ExtractedFolderPath.length() - 1);
             NCXResource* resource = m_Book->GetFolderKeeper()->AddNCXToFolder(m_PackageVersion, bookpath);
             resource->SetText(ncx_text);
-            resource->SaveToDisk(false);
+            if (ncx_text != original_ncx) resource->SaveToDisk(false);
             if (m_FileInfoFromZip.contains(bookpath)) {
                 std::tuple<size_t, QString, QString> ainfo = m_FileInfoFromZip[bookpath];
                 resource->SetSavedSize(std::get<0>(ainfo));
@@ -809,12 +816,12 @@ void ImportEPUB::LocateOrCreateNCX(const QString &ncx_id_on_spine)
         m_NCXFilePath = QFileInfo(m_OPFFilePath).absolutePath() % "/" % ncx_href;
         m_NCXFilePath = Utility::resolveRelativeSegmentsInFilePath(m_NCXFilePath, "/");
         if (QFile::exists(m_NCXFilePath)) {
-            QString ncx_text = CleanSource::ProcessXML(Utility::ReadUnicodeTextFile(m_NCXFilePath),
-                                                       "application/x-dtbncx+xml");
+            const QString original_ncx = Utility::ReadUnicodeTextFile(m_NCXFilePath);
+            const QString ncx_text = PrepareNCXText(original_ncx);
             QString bookpath = m_NCXFilePath.right(m_NCXFilePath.length() - m_ExtractedFolderPath.length() - 1);
             NCXResource* resource = m_Book->GetFolderKeeper()->AddNCXToFolder(m_PackageVersion, bookpath);
             resource->SetText(ncx_text);
-            resource->SaveToDisk(false);
+            if (ncx_text != original_ncx) resource->SaveToDisk(false);
             if (m_FileInfoFromZip.contains(bookpath)) {
                 std::tuple<size_t, QString, QString> ainfo = m_FileInfoFromZip[bookpath];
                 resource->SetSavedSize(std::get<0>(ainfo));
@@ -893,7 +900,7 @@ void ImportEPUB::LoadInfrastructureFiles()
     NCXResource * ncxresource = m_Book->GetNCX();
     if (ncxresource) {
         ncxresource->SetEpubVersion(m_PackageVersion);
-        ncxresource->SetText(CleanSource::ProcessXML(Utility::ReadUnicodeTextFile(m_NCXFilePath),"application/x-dtbncx+xml"));
+        ncxresource->SetText(PrepareNCXText(Utility::ReadUnicodeTextFile(m_NCXFilePath)));
         QString NCXBookRelPath = m_NCXFilePath;
         NCXBookRelPath = NCXBookRelPath.remove(0,m_ExtractedFolderPath.length()+1);
         ncxresource->SetCurrentBookRelPath(NCXBookRelPath);
