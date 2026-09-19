@@ -108,11 +108,12 @@ void ActionShortcutBadge::paintEvent(QPaintEvent *event)
     const bool enabled = m_button && m_button->isEnabled();
     const QPalette::ColorGroup group = enabled
         ? QPalette::Active : QPalette::Disabled;
-    QColor background = palette().color(group, QPalette::Highlight);
-    QColor foreground = palette().color(group, QPalette::HighlightedText);
+    const QPalette colors = m_button ? m_button->palette() : palette();
+    QColor background = colors.color(group, QPalette::Highlight);
+    QColor foreground = colors.color(group, QPalette::HighlightedText);
     if (enabled && m_button->isDown()) {
-        background = palette().color(group, QPalette::Dark);
-        foreground = palette().color(group, QPalette::ButtonText);
+        background = colors.color(group, QPalette::Dark);
+        foreground = colors.color(group, QPalette::ButtonText);
     }
 
     QPainter painter(this);

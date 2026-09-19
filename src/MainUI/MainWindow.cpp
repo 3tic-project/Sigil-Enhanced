@@ -7816,6 +7816,9 @@ ActionShortcutBadge *MainWindow::EnsureClipShortcutBadge(QAction *ui_action)
     if (clip_number < 1 || clip_number > 10) return nullptr;
     QToolButton *button = ClipToolButton(ui_action);
     if (!button) return nullptr;
+    // QToolBar creates action buttons with NoFocus. Keep the visible Clip
+    // action itself in the tab order; the badge remains a non-focusable layer.
+    button->setFocusPolicy(Qt::StrongFocus);
 
     ActionShortcutBadge *badge = button->findChild<ActionShortcutBadge *>(
         QStringLiteral("actionShortcutBadge"), Qt::FindDirectChildrenOnly);

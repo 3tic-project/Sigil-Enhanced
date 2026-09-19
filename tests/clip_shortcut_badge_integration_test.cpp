@@ -1,7 +1,10 @@
 #include "EmbedPython/EmbeddedPython.h" // Python must precede Qt's slots macro.
 
 #include <QAction>
+#include <QAccessible>
 #include <QCheckBox>
+#include <QImage>
+#include <QKeyEvent>
 #include <QMenu>
 #include <QPixmap>
 #include <QToolBar>
@@ -103,6 +106,33 @@ int main(int argc, char **argv)
         toolbar->setVisible(true);
         MainApplication::processEvents();
 
+        const QString paletteMode = qEnvironmentVariable("SIGIL_CLIP_TEST_PALETTE");
+        const bool customPalette = paletteMode == QLatin1String("dark")
+            || paletteMode == QLatin1String("high-contrast");
+        if (customPalette) {
+            QPalette palette = toolbar->palette();
+            const bool highContrast = paletteMode == QLatin1String("high-contrast");
+            const QColor background = highContrast ? QColor(Qt::black)
+                                                   : QColor("#303030");
+            palette.setColor(QPalette::Window, background);
+            palette.setColor(QPalette::Button, background);
+            palette.setColor(QPalette::ButtonText, Qt::white);
+            palette.setColor(QPalette::Highlight,
+                             highContrast ? QColor("#ffff00") : QColor("#496bb2"));
+            palette.setColor(QPalette::HighlightedText,
+                             highContrast ? Qt::black : Qt::white);
+            toolbar->setPalette(palette);
+            toolbar->setStyleSheet(QStringLiteral("QToolBar { background-color: %1; }")
+                                       .arg(background.name()));
+            for (QAction *action : toolbar->actions()) {
+                if (QToolButton *button = qobject_cast<QToolButton *>(
+                        toolbar->widgetForAction(action))) {
+                    button->setPalette(palette);
+                }
+            }
+            MainApplication::processEvents();
+        }
+
         for (int slot = 1; slot <= 10; ++slot) {
             QAction *action = ClipAction(window, slot);
             QToolButton *button = ClipButton(toolbar, action);
@@ -118,9 +148,32 @@ int main(int argc, char **argv)
                         && badge->displayedText() == expected,
                     "The first ten Clip actions did not show 1-9 and 0 badges");
         }
+        if (customPalette) {
+            QToolButton *button = ClipButton(toolbar, ClipAction(window, 1));
+            const QRect badgeRect = ClipBadge(button)->badgeRect();
+            const QImage image = button->grab().toImage();
+            const qreal scale = image.devicePixelRatio();
+            const QColor highlight = button->palette().color(
+                QPalette::Active, QPalette::Highlight);
+            bool paintedHighlight = false;
+            for (int y = badgeRect.top() + 2; y < badgeRect.bottom() - 1; ++y) {
+                for (int x = badgeRect.left() + 2; x < badgeRect.right() - 1; ++x) {
+                    if (image.pixelColor(qRound(x * scale), qRound(y * scale)) == highlight) {
+                        paintedHighlight = true;
+                    }
+                }
+            }
+            Require(paintedHighlight,
+                    "The Clip badge did not repaint with its button's theme palette");
+        }
 
         QAction *first = ClipAction(window, 1);
         QToolButton *firstButton = ClipButton(toolbar, first);
+#ifdef Q_OS_MACOS
+        Require(first->shortcut().toString(QKeySequence::NativeText)
+                    == QString::fromUtf8("⌥⌘1"),
+                "The macOS Clip 1 shortcut is not shown in native Option-Command notation");
+#endif
         Require(first->toolTip().contains(QStringLiteral("Ruby &amp; quote"))
                     && first->toolTip().contains(QStringLiteral("&lt;ruby&gt;"))
                     && !first->toolTip().contains(QStringLiteral("<ruby>"))
@@ -131,6 +184,31 @@ int main(int argc, char **argv)
                     && firstButton->accessibleName().contains(
                         first->shortcut().toString(QKeySequence::NativeText)),
                 "The Clip button accessible name omits its slot or shortcut");
+        QAccessibleInterface *accessible =
+            QAccessible::queryAccessibleInterface(firstButton);
+        Require(accessible && accessible->isValid()
+                    && accessible->role() == QAccessible::Button
+                    && accessible->text(QAccessible::Name) == firstButton->accessibleName(),
+                "The real Clip button accessibility interface lacks its full name");
+        Require(accessible->state().focusable
+                    && (firstButton->focusPolicy() & Qt::TabFocus),
+                "The Clip button is not reachable by keyboard focus");
+        firstButton->setFocus(Qt::TabFocusReason);
+        MainApplication::processEvents();
+        Require(firstButton->hasFocus() && accessible->state().focused,
+                "The Clip button did not expose its focused state");
+        QAccessibleInterface *badgeAccessible = QAccessible::queryAccessibleInterface(
+            ClipBadge(firstButton));
+        Require(!badgeAccessible || (!badgeAccessible->state().focusable
+                    && badgeAccessible->text(QAccessible::Name).isEmpty()),
+                "The visual badge exposed an extra focus stop or digit-only name");
+        QKeyEvent tabPress(QEvent::KeyPress, Qt::Key_Tab, Qt::NoModifier);
+        QKeyEvent tabRelease(QEvent::KeyRelease, Qt::Key_Tab, Qt::NoModifier);
+        QApplication::sendEvent(firstButton, &tabPress);
+        QApplication::sendEvent(firstButton, &tabRelease);
+        MainApplication::processEvents();
+        Require(ClipButton(toolbar, ClipAction(window, 2))->hasFocus(),
+                "Tab did not move from Clip 1 to the next Clip button");
 
         const QString screenshot = qEnvironmentVariable("SIGIL_CLIP_BADGE_SCREENSHOT");
         if (!screenshot.isEmpty()) {
@@ -156,6 +234,11 @@ int main(int argc, char **argv)
                     && thirdButton->accessibleName().contains(
                         custom.toString(QKeySequence::NativeText)),
                 "A customized Clip shortcut did not refresh all presentations");
+        QAccessibleInterface *thirdAccessible =
+            QAccessible::queryAccessibleInterface(thirdButton);
+        Require(thirdAccessible && thirdAccessible->text(QAccessible::Name)
+                    == thirdButton->accessibleName(),
+                "The customized shortcut did not reach the accessibility interface");
         QMenu overflowMenu;
         overflowMenu.addAction(third);
         Require(overflowMenu.actions().constFirst() == third
@@ -170,6 +253,9 @@ int main(int argc, char **argv)
                     && thirdButton->accessibleName().contains(
                         QStringLiteral("no shortcut assigned")),
                 "Clearing a Clip shortcut left a misleading badge or description");
+        Require(thirdAccessible->text(QAccessible::Name)
+                    == thirdButton->accessibleName(),
+                "Clearing the shortcut left a stale accessible name");
         KeyboardShortcutManager::instance().resetKeySequence(
             QStringLiteral("MainWindow.Clip3"));
         MainApplication::processEvents();
