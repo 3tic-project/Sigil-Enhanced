@@ -62,6 +62,7 @@
 #include "Misc/GuideItems.h"
 #include "Misc/Landmarks.h"
 #include "ResourceObjects/HTMLResource.h"
+#include "ResourceObjects/TextResource.h"
 #include "ResourceObjects/NCXResource.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/NavProcessor.h"
@@ -1055,9 +1056,8 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images, QSt
                 }
             }
             // TODO: adding a CSS file should add the referenced fonts too
-            if (resource->Type() == Resource::CSSResourceType) {
-                CSSResource *css_resource = qobject_cast<CSSResource *> (resource);
-                css_resource->InitialLoad();
+            if (TextResource *text_resource = qobject_cast<TextResource *>(resource)) {
+                text_resource->InitialLoad();
             }
         }
 

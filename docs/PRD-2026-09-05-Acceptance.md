@@ -116,6 +116,15 @@ G8 需演示 Ruby 段落样式、整书伪段落和 TOC 提升三个完整用户
 `native-agent` 的当前提交是本集成分支的祖先，但原工作树有三处未提交改动，
 其分支指针未快进；分支名减少不等于已完成发布回并。
 
+范围复核：`feature/duokan-epub-plugin` 保持独立，未并入本 PRD。旧
+`feature/pure-theme-foundation` 指针停在已属于 `master` 和 `native-agent` 的历史提交；
+清理这个冗余分支名没有合入新的皮肤改版。集成分支相对 `native-agent` 的外观偏好
+文件差异仅是本 PRD 的 Clips 快捷键角标开关，不是独立皮肤功能。
+原工作树三处未提交修改保持原样；其中 TXT/JS 文本资源的加载修正经审查后单独移植
+到集成分支，并在读取时跳过已加载资源，以免覆盖有意清空的实时编辑。原生回归覆盖
+未打开 TXT 的 Agent 读取、空编辑，以及 Book Browser 的“添加现有文件”和文件拖入
+入口；`opf_resource_integration` 与 `agent_workspace_package_integration` 均通过。
+
 代码层面不存在本轮发现的阻断性回归，36 项非 Agent 定向检查全部通过；BookLive 与
 Cmoa 已按独立产品入口和独立预设收敛，OPF O01–O12 的本机核心路径已有可重复证据。
 整份 PRD 仍不能标记“全部完成”：G6 的断电持久化及其余入口强杀矩阵、G7 的 Windows/Linux/主题/DPI/

@@ -16,6 +16,7 @@
 #include "sigil_exception.h"
 #include "Importers/ImportHTML.h"
 #include "Importers/ImportTXT.h" // modified: BookBrowserTreeView
+#include "ResourceObjects/TextResource.h"
 //------------------------ modified: AddFiles ------------------------------
 QStringList BookBrowser::AddFiles(QStringList &filepaths)
 {
@@ -174,9 +175,8 @@ QStringList BookBrowser::AddFiles(QStringList &filepaths)
                 }
             }
             // TODO: adding a CSS file should add the referenced fonts too
-            if (resource->Type() == Resource::CSSResourceType) {
-                CSSResource* css_resource = qobject_cast<CSSResource*> (resource);
-                css_resource->InitialLoad();
+            if (TextResource *text_resource = qobject_cast<TextResource *>(resource)) {
+                text_resource->InitialLoad();
             }
         }
 

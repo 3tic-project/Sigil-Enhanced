@@ -1,8 +1,11 @@
 #include "EmbedPython/EmbeddedPython.h" // Python must precede Qt's slots macro.
 
 #include <QFileInfo>
+#include <QFile>
 #include <QRegularExpression>
+#include <QSignalMapper>
 #include <QLabel>
+#include <QTemporaryDir>
 #include <QToolButton>
 #include <QWebEngineSettings>
 #include <QWebEngineUrlScheme>
@@ -16,12 +19,14 @@
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/TocTreeTransform.h"
+#include "MainUI/BookBrowser.h"
 #include "MainUI/MainApplication.h"
 #include "MainUI/MainWindow.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/WebProfileMgr.h"
 #include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/OPFResource.h"
+#include "ResourceObjects/TextResource.h"
 #include "Tabs/ContentTab.h"
 
 static void Require(bool condition, const char *message)
@@ -452,7 +457,68 @@ int main(int argc, char **argv)
         Require(workspace.rollbackTransaction().ok,
                 "Could not roll back stale native TOC hierarchy transaction");
 
-        std::cout << "Native agent package, guarded task recovery, TOC source preservation, undo, and stale-commit checks passed\n";
+        QTemporaryDir lazySourceDir;
+        Require(lazySourceDir.isValid(), "Could not create lazy text fixture directory");
+        QFile lazySource(lazySourceDir.filePath(QStringLiteral("unopened-notes.txt")));
+        const QByteArray lazyBody("Unopened TXT content");
+        Require(lazySource.open(QIODevice::WriteOnly)
+                    && lazySource.write(lazyBody) == lazyBody.size(),
+                "Could not write lazy text fixture");
+        lazySource.close();
+        Resource *lazyResource = book->GetFolderKeeper()->AddContentFileToFolder(
+            lazySource.fileName(), false);
+        auto *lazyText = qobject_cast<TextResource *>(lazyResource);
+        Require(lazyText && !lazyText->IsLoaded() && lazyText->GetText().isEmpty(),
+                "Misc TXT fixture was not initially unloaded");
+        const QString lazyId = lazyResource->GetIdentifier();
+        bool listedLazyText = false;
+        for (const QJsonValue &value : workspace.resources()) {
+            const QJsonObject entry = value.toObject();
+            if (entry.value(QStringLiteral("resource_id")).toString() != lazyId) continue;
+            listedLazyText = entry.value(QStringLiteral("text_length")).toInt()
+                == lazyBody.size();
+            break;
+        }
+        Require(listedLazyText && lazyText->IsLoaded()
+                    && workspace.resourceText(lazyId) == QString::fromUtf8(lazyBody),
+                "Agent resource listing and read lost an unopened TXT body");
+        lazyText->SetText(QString());
+        Require(lazyText->IsLoaded() && workspace.resourceText(lazyId).isEmpty(),
+                "Agent read resurrected disk text over an intentionally empty live edit");
+
+        BookBrowser *browser = window.GetBookBrowser();
+        Require(browser, "Book browser is missing for text import checks");
+        QFile existingSource(lazySourceDir.filePath(QStringLiteral("existing-notes.txt")));
+        const QByteArray existingBody("Existing TXT content");
+        Require(existingSource.open(QIODevice::WriteOnly)
+                    && existingSource.write(existingBody) == existingBody.size(),
+                "Could not write existing TXT fixture");
+        existingSource.close();
+        const QStringList existingPaths = browser->AddExisting(
+            false, false, QStringList{existingSource.fileName()});
+        Require(existingPaths.size() == 1, "Add Existing did not import TXT fixture");
+        auto *existingText = qobject_cast<TextResource *>(
+            book->GetFolderKeeper()->GetResourceByBookPathNoThrow(existingPaths.first()));
+        Require(existingText && existingText->IsLoaded()
+                    && existingText->GetText() == QString::fromUtf8(existingBody),
+                "Add Existing left TXT text unloaded");
+
+        QFile droppedSource(lazySourceDir.filePath(QStringLiteral("dropped-script.js")));
+        const QByteArray droppedBody("const dropped = true;\n");
+        Require(droppedSource.open(QIODevice::WriteOnly)
+                    && droppedSource.write(droppedBody) == droppedBody.size(),
+                "Could not write dropped JS fixture");
+        droppedSource.close();
+        QStringList droppedFiles{droppedSource.fileName()};
+        const QStringList droppedPaths = browser->AddFiles(droppedFiles);
+        Require(droppedPaths.size() == 1, "Add Files did not import JS fixture");
+        auto *droppedText = qobject_cast<TextResource *>(
+            book->GetFolderKeeper()->GetResourceByBookPathNoThrow(droppedPaths.first()));
+        Require(droppedText && droppedText->IsLoaded()
+                    && droppedText->GetText() == QString::fromUtf8(droppedBody),
+                "Add Files left JS text unloaded");
+
+        std::cout << "Native agent package, guarded task recovery, TOC source preservation, lazy text imports, undo, and stale-commit checks passed\n";
         return 0;
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';

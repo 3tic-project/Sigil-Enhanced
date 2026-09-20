@@ -250,7 +250,11 @@ TextResource *SigilBookWorkspace::textResource(const QString &id_or_path) const
 
 QString SigilBookWorkspace::liveText(TextResource *resource) const
 {
-    return resource ? resource->GetText() : QString();
+    if (!resource) return QString();
+    // Misc text resources can remain unloaded until opened in a tab. Do not
+    // reload a resource that was already loaded and intentionally edited empty.
+    if (!resource->IsLoaded()) resource->InitialLoad();
+    return resource->GetText();
 }
 
 QString SigilBookWorkspace::currentText(TextResource *resource) const
@@ -294,7 +298,7 @@ quint64 SigilBookWorkspace::trackedRevision(Resource *resource) const
     if (!resource) return 0;
     const QString id = resource->GetIdentifier();
     TextResource *text = qobject_cast<TextResource *>(resource);
-    const QString live = text ? text->GetText() : QString();
+    const QString live = text ? liveText(text) : QString();
     TrackedResource &tracked = m_tracked[id];
     if (tracked.initialized && text && tracked.lastText != live) {
         tracked.revision += 1;
@@ -332,7 +336,7 @@ QJsonObject SigilBookWorkspace::resourceJson(Resource *resource) const
         { QStringLiteral("media_type"), resource->GetMediaType() },
         { QStringLiteral("kind"), kindOf(resource) },
         { QStringLiteral("revision"), static_cast<qint64>(trackedRevision(resource)) },
-        { QStringLiteral("text_length"), text ? text->GetText().size() : 0 }
+        { QStringLiteral("text_length"), text ? liveText(text).size() : 0 }
     };
 }
 
@@ -1965,7 +1969,7 @@ QString SigilBookWorkspace::resourceText(const QString &resource_id) const
 {
     return invokeString([this, resource_id]() {
         TextResource *resource = textResource(resource_id);
-        return resource ? resource->GetText() : QString();
+        return liveText(resource);
     });
 }
 
