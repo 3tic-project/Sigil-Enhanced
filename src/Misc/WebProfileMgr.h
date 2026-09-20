@@ -33,7 +33,9 @@
 
 class URLInterceptor;
 class URLSchemeHandler;
+class QObject;
 class QWebEngineProfile;
+class QWebEngineView;
 
 class WebProfileMgr
 {
@@ -47,9 +49,12 @@ public:
     WebProfileMgr(const WebProfileMgr&) = delete;
     WebProfileMgr& operator=(const WebProfileMgr&) = delete;
 
-    QWebEngineProfile* GetPreviewProfile();
+    // Parent the profile to the Preview view so destroying the view also
+    // tears down its Chromium renderer. A new unparented profile leaks both.
+    QWebEngineProfile* GetPreviewProfile(QObject *parent);
     QWebEngineProfile* GetOneTimeProfile();
     QWebEngineProfile* GetInspectorProfile();
+    static void ReleaseEngineView(QWebEngineView *view);
     // void FlushDiskCaches();
     // void CleanUpForExit();
     

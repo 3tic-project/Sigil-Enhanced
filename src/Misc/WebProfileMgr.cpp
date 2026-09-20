@@ -23,8 +23,10 @@
 #include <QString>
 #include <QStringList>
 #include <QApplication>
+#include <QWebEnginePage>
 #include <QWebEngineProfile>
 #include <QWebEngineSettings>
+#include <QWebEngineView>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
 #include <QWebEngineProfileBuilder>
 #endif
@@ -37,7 +39,19 @@
 #include "Misc/WebProfileMgr.h"
 
 
-QWebEngineProfile*  WebProfileMgr::GetPreviewProfile()
+void WebProfileMgr::ReleaseEngineView(QWebEngineView *view)
+{
+    if (!view) {
+        return;
+    }
+    view->stop();
+    QWebEnginePage *page = view->page();
+    if (page) {
+        page->setLifecycleState(QWebEnginePage::LifecycleState::Discarded);
+    }
+}
+
+QWebEngineProfile*  WebProfileMgr::GetPreviewProfile(QObject *parent)
 {
     // Create Dynamic Preview Profile - Off The Record
     // ---------------
@@ -45,10 +59,10 @@ QWebEngineProfile*  WebProfileMgr::GetPreviewProfile()
     SettingsStore ss;
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
-    preview_profile = new QWebEngineProfile();
+    preview_profile = new QWebEngineProfile(parent);
     preview_profile->setPersistentStoragePath(m_local_storage_path);
 #else
-    preview_profile = QWebEngineProfileBuilder::createOffTheRecordProfile(nullptr);
+    preview_profile = QWebEngineProfileBuilder::createOffTheRecordProfile(parent);
     preview_profile->setHttpCacheMaximumSize(0);
     preview_profile->setHttpCacheType(QWebEngineProfile::MemoryHttpCache);
 #endif

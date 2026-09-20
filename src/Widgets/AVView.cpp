@@ -85,6 +85,7 @@ AVView::AVView(QWidget *parent)
 
 AVView::~AVView()
 {
+    WebProfileMgr::ReleaseEngineView(m_WebView);
 }
 
 

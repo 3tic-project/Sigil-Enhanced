@@ -138,6 +138,7 @@ SelectFiles::SelectFiles(QString title, QList<Resource *> media_resources, QStri
 
 SelectFiles::~SelectFiles()
 {
+    WebProfileMgr::ReleaseEngineView(m_WebView);
     WriteSettings();
 }
 

@@ -56,6 +56,7 @@
 #include "Misc/webviewprinter.h"
 #include "ViewEditors/ViewPreview.h"
 #include "ViewEditors/Overlay.h"
+#include <QWebEnginePage>
 #include "sigil_constants.h"
 
 static const QStringList HEADERTAGS = QStringList() << "h1" << "h2" << "h3" << "h4" << "h5" << "h6";
@@ -195,6 +196,9 @@ void PreviewWindow::hideEvent(QHideEvent * event)
     if ((m_Preview) && m_Preview->isVisible()) {
         m_Preview->hide();
     }
+    if (m_Preview && m_Preview->page()) {
+        m_Preview->page()->setLifecycleState(QWebEnginePage::LifecycleState::Frozen);
+    }
 }
 
 
@@ -203,6 +207,9 @@ void PreviewWindow::showEvent(QShowEvent * event)
     // perform the show for all children of this widget
     if ((m_Preview) && !m_Preview->isVisible()) {
         m_Preview->show();
+    }
+    if (m_Preview && m_Preview->page()) {
+        m_Preview->page()->setLifecycleState(QWebEnginePage::LifecycleState::Active);
     }
 
     QDockWidget::showEvent(event);

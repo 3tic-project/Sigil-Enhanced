@@ -88,6 +88,7 @@ FontView::FontView(QWidget *parent)
 
 FontView::~FontView()
 {
+    WebProfileMgr::ReleaseEngineView(m_WebView);
 }
 
 void FontView::ShowFont(QString path)

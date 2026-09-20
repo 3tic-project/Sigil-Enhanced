@@ -79,6 +79,7 @@ ImageView::ImageView(QWidget *parent)
 
 ImageView::~ImageView()
 {
+    WebProfileMgr::ReleaseEngineView(m_WebView);
 }
 
 #if 0

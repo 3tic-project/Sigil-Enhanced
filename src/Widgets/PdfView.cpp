@@ -53,6 +53,7 @@ PdfView::PdfView(QWidget *parent)
 
 PdfView::~PdfView()
 {
+    WebProfileMgr::ReleaseEngineView(m_WebView);
 }
 
 

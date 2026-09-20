@@ -110,7 +110,7 @@ ViewPreview::ViewPreview(QWidget *parent, bool setbackground)
       m_LoadOkay(false),
       m_overlay(new LoadingOverlay(this))
 {
-    QWebEngineProfile* profile = WebProfileMgr::instance().GetPreviewProfile();
+    QWebEngineProfile* profile = WebProfileMgr::instance().GetPreviewProfile(this);
     m_ViewWebPage = new WebEngPage(profile, this, setbackground);
     setPage(m_ViewWebPage);
     
@@ -131,10 +131,11 @@ ViewPreview::ViewPreview(QWidget *parent, bool setbackground)
 
 ViewPreview::~ViewPreview()
 {
-    if (m_ViewWebPage != NULL) {
-        delete m_ViewWebPage;
-        m_ViewWebPage = 0;
-    }
+    // Drop GPU/renderer resources before QWebEngineView unbinds the page.
+    // The page and its preview profile are children of this view and are
+    // destroyed with it.
+    WebProfileMgr::ReleaseEngineView(this);
+    m_ViewWebPage = nullptr;
 }
 
 

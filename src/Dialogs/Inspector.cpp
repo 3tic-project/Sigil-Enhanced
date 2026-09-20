@@ -72,6 +72,7 @@ Inspector::~Inspector()
         if (m_inspectView->page()) {
             m_inspectView->page()->setInspectedPage(nullptr);
         }
+        WebProfileMgr::ReleaseEngineView(m_inspectView);
         m_view = nullptr;
         delete m_inspectView;
         m_inspectView = nullptr;
