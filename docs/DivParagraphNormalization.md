@@ -146,6 +146,8 @@ ctest --test-dir build --output-on-failure \
 DIV-to-P 源码范围补丁、5 个仅供复核文件；原样本 SHA-256 在测试前后不变，第二次
 计划无改动。真实样本不随仓库分发，缺少环境变量时该测试跳过。
 
-尚未完成 Windows/Linux 原生 GUI、人工屏幕阅读器、完整 EPUBCheck、独立阅读器及
-固定字体/视口的视觉对比；因此不能把静态 CSS 门描述为跨阅读器视觉验收，也不能据此
-关闭 D06 或全局 G7。
+后续验收已完成 EPUBCheck 原书/导出逐项比较（无新增错误）、Sigil Preview 与 Firefox
+固定视口对照，以及 calibre 独立 EPUB 阅读器三个代表章节起始页检查。calibre 截图
+并非逐像素一致，`p-002` 有数像素的布局差异；整书人工检查、Windows/Linux 原生 GUI
+和人工屏幕阅读器仍未完成。因此不能把静态 CSS 门或这些代表样本描述为跨阅读器
+完整视觉验收，也不能据此关闭 D06 或全局 G7。详见 `PRD-2026-09-05-Acceptance.md`。
