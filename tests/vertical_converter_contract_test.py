@@ -146,7 +146,10 @@ require(
     "OPFResource must override undoable whole-document writes",
 )
 opf_undo_start = opf_resource.index("void OPFResource::SetTextAsUndoableEdit")
-opf_undo_end = opf_resource.index("bool OPFResource::LoadFromDisk", opf_undo_start)
+# The next function signature is too far away: the anonymous namespace helpers
+# between the two functions hold their own locks, so end the slice at the
+# closing brace of the undoable-write body itself.
+opf_undo_end = opf_resource.index("\n}\n", opf_undo_start) + len("\n}\n")
 opf_undo_body = opf_resource[opf_undo_start:opf_undo_end]
 require(
     "emit TextChanging();" in opf_undo_body
