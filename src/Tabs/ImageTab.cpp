@@ -120,7 +120,7 @@ ImageTab::~ImageTab()
 }
 
 // map context menu actions into AdjustImage routines
-void ImageTab::SaveChanges() { m_AdjImg->doSave();        }
+void ImageTab::SaveChanges() { m_AdjImg->doSave(); }
 void ImageTab::ZoomIn()      { m_AdjImg->doZoomIn();      }
 void ImageTab::ZoomOut()     { m_AdjImg->doZoomOut();     }
 void ImageTab::ZoomToFit()   { m_AdjImg->doZoomToFit();   }
@@ -521,6 +521,10 @@ void ImageTab::keyPressEvent(QKeyEvent *event)
     ContentTab::keyPressEvent(event);
 }
 
+void ImageTab::EmitImageContentChanged()
+{
+    emit ImageContentChanged();
+}
 
 void ImageTab::ConnectSignalsToSlots()
 {
@@ -530,6 +534,7 @@ void ImageTab::ConnectSignalsToSlots()
     connect(m_AdjImg, SIGNAL(customContextMenuRequested(const QPoint &)),this, SLOT(OpenContextMenu(const QPoint &)));
     connect(m_AdjImg, SIGNAL(InternalZoomFactorChanged(double)),  this, SLOT(HandleInternalImageZoomChange(double)));
     connect(m_AdjImg, SIGNAL(UndoRedoStateChanged()), this, SLOT(EmitUndoRedoStateChanged()));
+    connect(m_AdjImg, SIGNAL(SetImageContentModified()), this, SLOT(EmitImageContentChanged()));
 
     connect(m_OpenWith,       SIGNAL(triggered()),   this, SLOT(openWith()));
     connect(m_OpenWithEditor0, SIGNAL(triggered()),  m_openWithMapper, SLOT(map()));

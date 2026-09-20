@@ -236,8 +236,16 @@
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="98"/>
-        <source>Crop image.</source>
-        <translation>画像を切り抜きます。</translation>
+        <source>Crop image Mode: Use Enter to Crop to selection and Escape to abort crop</source>
+        <translation>切り抜きモード: Enter で選択範囲を切り抜き、Escape で切り抜きを中止します</translation>
+    </message>
+    <message>
+        <source>Crop Mode: Enter to Crop, Escape to Abort</source>
+        <translation>切り抜きモード: Enter で切り抜き、Escape で中止します</translation>
+    </message>
+    <message>
+        <source>Exiting Crop Mode</source>
+        <translation>切り抜きモードを終了します</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="107"/>
@@ -1823,6 +1831,8 @@ if a sans-serif font-family specified in your CSS</source>
         <source>Start</source>
         <translation>開始</translation>
     </message>
+    <message><source>PrettyPrint cancelled: %1, XML not well formed.</source><translation>整形をキャンセルしました: %1、XML は整形式ではありません。</translation></message>
+    <message><source>Sigil</source><translation>Sigil</translation></message>
 </context>
 <context>
     <name>BookBrowser</name>
@@ -27258,6 +27268,10 @@ Continue using the requested filename?</source>
     <message><source>Formatting target is no longer available: %1</source><translation>整形対象は利用できなくなりました：%1</translation></message>
     <message><source>XHTML formatting failed for %1: %2</source><translation>%1 の XHTML 整形に失敗しました：%2</translation></message>
     <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落の正規化：追加の XHTML 整形を適用しました。</translation></message>
+    <message><source>Malformed OPF</source><translation>OPF が不正な形式です</translation></message>
+    <message><source>No automatic repair was applied.</source><translation>自動修復は行われませんでした。</translation></message>
+    <message><source>Will attempt auto repair.</source><translation>自動修復を試みます。</translation></message>
+    <message><source>near</source><translation>付近</translation></message>
 </context>
 <context>
     <name>MainWindow</name>

@@ -40,9 +40,13 @@
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QWheelEvent>
+#include <QTemporaryFile>
 #include "Misc/SettingsStore.h"
+#include "Misc/Utility.h"
 #include "Misc/WebpSupport.h"
+#include "EmbedPython/PythonRoutines.h"
 #include "Dialogs/ImageResizeDialog.h"
+#include "Widgets/BetterRubberBand.h"
 #include "Widgets/AdjustImage.h"
 #include "ui_AdjustImage.h"
 
@@ -62,7 +66,8 @@ static double clampImageZoom(double factor)
 AdjustImage::AdjustImage(const QString filepath, const QString& mediatype,  QWidget *parent) :
     QWidget(parent),
     ui(new Ui::AdjustImage),
-    m_mediatype(mediatype)
+    m_mediatype(mediatype),
+    m_lastPos(QPoint(0,0))
 {
     ui->setupUi(this);
     m_mainToolBar = ui->mainToolBar;
@@ -79,9 +84,9 @@ AdjustImage::AdjustImage(const QString filepath, const QString& mediatype,  QWid
     m_imageLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
     m_imageLabel->setScaledContents(true);
     m_imageLabel->installEventFilter(this);
-    // rubber band must be a child of the m_imageLabel
+    // our rubber band must be a child of the m_imageLabel
     // otherwise there is a coordinate nightmare
-    m_rb = new QRubberBand(QRubberBand::Rectangle, m_imageLabel);
+    m_rb = new BetterRubberBand(QRubberBand::Rectangle, m_imageLabel);
     m_rb->hide();
 
     m_scrollArea = new QScrollArea;
@@ -229,10 +234,22 @@ void AdjustImage::changeCroppingState(bool changeTo)
     m_croppingState = changeTo;
     ui->actionCrop->setDisabled(changeTo);
 
-    if (changeTo)
-        setCursor(Qt::CrossCursor);
-    else
-        setCursor(Qt::ArrowCursor);
+    if (changeTo) {
+        updateActions(false);
+        
+        m_rb->setGeometry(0, 0, ((m_image.width() * m_scaleFactor)/2), ((m_image.height() * m_scaleFactor)/2));
+        m_rb->show();
+        // a focus policy that accepts keyboard focus is required for setFocus() to work
+        setFocusPolicy(Qt::StrongFocus);
+        setFocus();
+        QString msg = tr("Crop Mode: Enter to Crop, Escape to Abort");
+        m_statusBar->showMessage(msg);
+    } else {
+        m_rb->hide();
+        updateActions(true);
+        QString msg = tr("Exiting Crop Mode");
+        m_statusBar->showMessage(msg);
+    }
 }
 
 void AdjustImage::refreshLabel()
@@ -319,6 +336,7 @@ void AdjustImage::scaleImageUsing(double factor)
     adjustScrollBar(m_scrollArea->verticalScrollBar(), scroll_factor);
 
     updateZoomActions();
+    UpdateZoomedCoordinates();
 }
 
 void AdjustImage::updateZoomActions()
@@ -341,6 +359,42 @@ void AdjustImage::updateActions(bool updateTo)
         ui->actionZoomOut->setEnabled(false);
     }
     ui->actionZoomToFit->setEnabled(updateTo);
+}
+
+
+void AdjustImage::keyPressEvent(QKeyEvent *event)
+{
+    if (!m_croppingState) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+    if (event->key() == Qt::Key_Escape) {
+        m_rb->hide();
+        refreshLabel();
+        changeCroppingState(false);
+        updateActions(true);
+    } else if ((event->key() == Qt::Key_Return) || (event->key() == Qt::Key_Enter)) {
+        saveToHistoryWithClear(m_image);
+        m_croppingStart = m_rb->getTopLeftPos() / m_scaleFactor;
+        m_croppingEnd = m_rb->getBottomRightPos() / m_scaleFactor;
+        m_rb->hide();
+        QRect rect = BuildRect(m_croppingStart, m_croppingEnd);
+        m_image = m_image.copy(rect);
+        refreshLabel();
+        changeCroppingState(false);
+    } else {
+        QWidget::keyPressEvent(event);
+    }
+}
+
+void AdjustImage::UpdateZoomedCoordinates()
+{
+    QString sf = QString::number(m_scaleFactor, 'f', 4);
+    QString msg = tr("(x,y) coordinates:") + " (%1,%2)  " + tr("Zoom") + " (%3)";
+    int x_pos = std::round(m_lastPos.x() / m_scaleFactor);
+    int y_pos = std::round(m_lastPos.y()/ m_scaleFactor);
+    msg = msg.arg(x_pos).arg(y_pos).arg(sf);
+    m_statusBar->showMessage(msg);
 }
 
 
@@ -375,73 +429,25 @@ bool AdjustImage::eventFilter(QObject* watched, QEvent* event)
 
     switch (event->type())
     {
-        case QEvent::MouseButtonPress:
-        {
-            if (!m_croppingState) break;
-            const QMouseEvent* const me = static_cast<const QMouseEvent*>(event);
-            m_croppingStart = me->pos() / m_scaleFactor;
-            // QRubberBand scales with m_imageLabel scaling
-            m_rbstart = me->pos();
-            m_rb->setGeometry(QRect(m_rbstart, QSize()));
-            m_rb->show();
-            break;
-        }
-
-        case QEvent::MouseButtonRelease:
-        {
-            if (!m_croppingState) break;
-            saveToHistoryWithClear(m_image);
-            const QMouseEvent* const me = static_cast<const QMouseEvent*>(event);
-            m_croppingEnd = me->pos() / m_scaleFactor;
-            m_rbend = me->pos();
-            m_rb->setGeometry(BuildRect(m_rbstart, m_rbend));
-            m_rb->hide();
-            QRect rect = BuildRect(m_croppingStart, m_croppingEnd);
-            m_image = m_image.copy(rect);
-            refreshLabel();
-            changeCroppingState(false);
-            break;
-        }
-
         case QEvent::MouseMove:
         {
             const QMouseEvent* const me = static_cast<const QMouseEvent*>(event);
             const QPoint position = me->pos();
-            QString sf = QString::number(m_scaleFactor, 'f', 4);
-            QString msg = tr("(x,y) coordinates:") + " (%1,%2)  " + tr("Zoom") + " (%3)";
-            int x_pos = std::round(position.x() / m_scaleFactor);
-            int y_pos = std::round(position.y()/ m_scaleFactor);
-            msg = msg.arg(x_pos).arg(y_pos).arg(sf);
-            m_statusBar->showMessage(msg);
-            if (m_croppingState) {
-                m_rbend = position;
-                m_rb->setGeometry(BuildRect(m_rbstart, m_rbend));
-            }
+            m_lastPos = position;
+            UpdateZoomedCoordinates();
             break;
         }
 
         default:
             break;
     }
-    return false;
+    return QObject::eventFilter(watched, event);
 }
-
 
 void AdjustImage::doCrop()
 {
     changeCroppingState(true);
 }
-
-#if 0
-void AdjustImage::toggleFullscreen()
-{
-    if(isFullScreen()) {
-        this->showNormal();
-    } else {
-        this->showFullScreen();
-    }
-}
-#endif
 
 void AdjustImage::doResizeImage()
 {
@@ -473,6 +479,30 @@ void AdjustImage::doSave()
     QString format;
     if (m_mediatype.startsWith("image/")) {
         format = m_mediatype.mid(6,-1).toUpper();
+    }
+    if (format == "GIF") {
+        // Qt can read but not write even static GIF files
+        // So save to a temp png file and ask PIL to convert it to GIF
+        QString targetDir = Utility::DefinePrefsDir() + "/workspace";
+        QTemporaryFile tempFile(targetDir + "/XXXXXX.png");
+        bool success = false;
+        if (tempFile.open()) {
+            success = m_image.save(&tempFile, "PNG", -1);
+            tempFile.close();
+            if (success) {
+                PythonRoutines pr;
+                success = pr.ConvertPngToGifInPython(tempFile.fileName(), m_fileName);
+            }
+        }
+        if (success) {
+            m_ffsize = QFile(m_fileName).size() / 1024.0;
+            m_fsize = QLocale().toString(m_ffsize, 'f', 2);
+            emit SetImageContentModified();
+            m_statusBar->showMessage(tr("Image successfully saved."));
+        } else {
+            m_statusBar->showMessage(tr("Image save failed."));
+        }
+        return;
     }
     // if an unknown format just default to let QImage decide based on filename
     if (format.isEmpty()) {
@@ -510,11 +540,11 @@ void AdjustImage::doSave()
             m_statusBar->showMessage(tr("Image successfully saved."));
             m_ffsize = QFile(m_fileName).size() / 1024.0;
             m_fsize =  QLocale().toString(m_ffsize, 'f', 2);
+            emit SetImageContentModified();
         } else {
             m_statusBar->showMessage(tr("Image save failed: ") + writer.errorString() );
         }
     }
-    
 }
 
 
@@ -554,11 +584,13 @@ void AdjustImage::doRedo()
 void AdjustImage::doZoomIn()
 {
     scaleImageBy(IMAGE_ZOOM_STEP_IN);
+    UpdateZoomedCoordinates();
 }
 
 void AdjustImage::doZoomOut()
 {
     scaleImageBy(IMAGE_ZOOM_STEP_OUT);
+    UpdateZoomedCoordinates();
 }
 
 void AdjustImage::doZoomToFit()
@@ -580,6 +612,7 @@ void AdjustImage::doZoomToFit()
     }
     double scaleBy = scaleTo / m_scaleFactor;
     scaleImageBy(scaleBy);
+    UpdateZoomedCoordinates();
 }
 
 
@@ -595,6 +628,5 @@ void AdjustImage::ConnectSignalsToSlots()
     connect(ui->actionZoomToFit,   SIGNAL(triggered()), this, SLOT(doZoomToFit()));
     connect(ui->actionRedo,        SIGNAL(triggered()), this, SLOT(doRedo()));
     connect(ui->actionUndo,        SIGNAL(triggered()), this, SLOT(doUndo()));
-    // connect(ui->actionFullscreen,  SIGNAL(triggered()), this, SLOT(toggleFullscreen()));
     connect(ui->actionShowToolbar, SIGNAL(triggered(bool)), this, SLOT(toggleShowToolbar(bool)));
 }

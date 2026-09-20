@@ -295,10 +295,12 @@ QHash<QString, QString> ImportEPUB::ParseEncryptionXml()
                 encryption_algo = encryption.attributes().value("", "Algorithm").toString();
             } else if (encryption.name().compare(QLatin1String("CipherReference")) == 0) {
                 // Note: fragments are not part of the CipherReference specs so this is okay
+                // Note: uri path must be absolute from epub root, not relative to META-INF
+                // according to spec.
                 uri = Utility::URLDecodePath(encryption.attributes().value("", "URI").toString());
-                // hack to handle non-spec encryption file url relative to META-INF instead
-                // of being absolute from epub root as the spec calls for
-                if (uri.startsWith("../")) uri = uri.mid(3,-1);
+                uri = "/" + uri.replace("\\","");
+                while(uri.contains("/../")) uri.replace("/../","/");
+                while(uri.startsWith("/")) uri = uri.remove(0,1);
                 encrypted_files[ uri ] = encryption_algo;
             }
         }
@@ -470,8 +472,13 @@ void ImportEPUB::LocateOPF()
                 container.attributes().value("", "media-type") == OEBPS_MIMETYPE) {
                 // As per OCF spec, the first rootfile element
                 // with the OEBPS mimetype is considered the "main" one.
+                // this is a full book path not a relative path from META-INF
                 if (m_OPFFilePath.isEmpty()) {
-                    m_OPFFilePath = m_ExtractedFolderPath + "/" + container.attributes().value("", "full-path").toString();
+                    QString apath = container.attributes().value("", "full-path").toString();
+                    apath = "/" + apath.replace("\\","");
+                    while(apath.contains("/../")) apath = apath.replace("/../", "/");
+                    while(apath.startsWith("/")) apath = apath.remove(0,1);
+                    m_OPFFilePath = m_ExtractedFolderPath + "/" + apath;
                 }
                 num_opf++;
 
@@ -504,9 +511,25 @@ void ImportEPUB::ReadOPF()
     if (!source_file.open(QIODevice::ReadOnly)) throw CannotOpenFile(source_file.errorString().toStdString());
     m_OPFSourceBytes = source_file.readAll();
     SettingsStore settings;
-    const QString opf_text = settings.preserveOPFSource()
+    const bool preserve_opf_source = settings.preserveOPFSource();
+    QString opf_text = preserve_opf_source
         ? OPFResource::DecodeSourceBytes(m_OPFSourceBytes)
-        : CleanSource::ProcessOPFSource(PrepareOPFForReading(Utility::ReadUnicodeTextFile(m_OPFFilePath)));
+        : PrepareOPFForReading(Utility::ReadUnicodeTextFile(m_OPFFilePath));
+
+    // Detect a malformed OPF before any cleaning so the user is warned about the
+    // malformed source that GetBook() reports as a modified book.
+    XhtmlDoc::WellFormedError opferror = CleanSource::WellFormedXMLCheck(opf_text, OEBPS_MIMETYPE);
+    if (opferror.line != -1) {
+        QString error_message = opferror.message + " " + QObject::tr("near" ) + " " +
+            QString::number(opferror.line) + ":" + QString::number(opferror.column) + "<br/><br/>" +
+            (preserve_opf_source ? QObject::tr("No automatic repair was applied.")
+                                 : QObject::tr("Will attempt auto repair."));
+        AddLoadWarning(QObject::tr("Malformed OPF") + " - " + error_message);
+    }
+
+    if (!preserve_opf_source) {
+        opf_text = CleanSource::ProcessOPFSource(opf_text);
+    }
 
     QXmlStreamReader opf_reader(opf_text);
     QString ncx_id_on_spine;

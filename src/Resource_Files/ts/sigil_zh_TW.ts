@@ -236,8 +236,16 @@
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="98"/>
-        <source>Crop image.</source>
-        <translation>裁剪影像。</translation>
+        <source>Crop image Mode: Use Enter to Crop to selection and Escape to abort crop</source>
+        <translation>裁剪模式：使用 Enter 裁剪選取範圍，使用 Escape 取消裁剪</translation>
+    </message>
+    <message>
+        <source>Crop Mode: Enter to Crop, Escape to Abort</source>
+        <translation>裁剪模式：按 Enter 裁剪，按 Escape 取消</translation>
+    </message>
+    <message>
+        <source>Exiting Crop Mode</source>
+        <translation>正在結束裁剪模式</translation>
     </message>
     <message>
         <location filename="../../Form_Files/AdjustImage.ui" line="107"/>
@@ -1823,6 +1831,8 @@ if a sans-serif font-family specified in your CSS</source>
         <source>Start</source>
         <translation>開始</translation>
     </message>
+    <message><source>PrettyPrint cancelled: %1, XML not well formed.</source><translation>美化已取消：%1，XML 格式不正確。</translation></message>
+    <message><source>Sigil</source><translation>Sigil</translation></message>
 </context>
 <context>
     <name>BookBrowser</name>
@@ -27243,6 +27253,10 @@ Continue using the requested filename?</source>
     <message><source>Formatting target is no longer available: %1</source><translation>格式化目標已無法使用：%1</translation></message>
     <message><source>XHTML formatting failed for %1: %2</source><translation>%1 的 XHTML 格式化失敗：%2</translation></message>
     <message><source>DIV paragraph normalization: optional XHTML formatting was applied.</source><translation>DIV 段落規範化：已套用選用的 XHTML 格式化。</translation></message>
+    <message><source>Malformed OPF</source><translation>OPF 格式錯誤</translation></message>
+    <message><source>No automatic repair was applied.</source><translation>未套用自動修復。</translation></message>
+    <message><source>Will attempt auto repair.</source><translation>將嘗試自動修復。</translation></message>
+    <message><source>near</source><translation>位於</translation></message>
 </context>
 <context>
     <name>MainWindow</name>

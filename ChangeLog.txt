@@ -7,6 +7,10 @@ Sigil-Enhanced-2.8.5.E10
      - Made ordinary Save a no-op for an unmodified EPUB; Save As and Save a Copy copy the original file; Sigil version metadata and EPUB 3 modification dates are written only when the book actually changed.
      - Made Regex Workbench checkpoints optional instead of creating one on every apply.
      - Clarified Enhancement menu labels.
+     - Kept libnss3.so and libnssutil3.so in the AppImage, fixing crashes with remote resources and secure links.
+     - Stopped PrettyPrint from crashing when a book contains an empty HTML resource.
+     - Made saving an edited GIF mark the book as modified like other image saves.
+     - Let crop mode take keyboard focus so Enter crops and Escape aborts without an extra click.
 
    New Features
      - Added built-in DRM-free KFX to EPUB conversion from the Enhancement menu or by dropping .kfx/.kfx-zip, with Save As or Open in New Window and optional EPUB structure normalization.

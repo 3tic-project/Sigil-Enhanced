@@ -730,6 +730,20 @@ bool Book::IsDataOnDiskWellFormed(HTMLResource *html_resource)
 }
 
 
+bool Book::IsDataGumboWellFormed(HTMLResource *html_resource)
+{
+    const QString source = html_resource->GetText();
+    // Empty content has no tag or attribute syntax errors, and there is no
+    // parse tree to inspect, so it is well formed by definition.
+    if (source.isEmpty()) {
+        return true;
+    }
+    XhtmlDoc::WellFormedError error = XhtmlDoc::GumboWellFormedErrorForSource(source,
+                                                                             html_resource->GetEpubVersion());
+    return error.line == -1;
+}
+
+
 bool Book::RenameClassInHTML(const QString css_bookpath, const QString oldname, const QString newname)
 {
     const QList<HTMLResource *> html_resources = m_Mainfolder->GetResourceTypeList<HTMLResource>(false);
@@ -1716,6 +1730,13 @@ bool Book::XhtmlUsesStyleProperty(HTMLResource* html_resource, QString property)
 
 bool Book::SafePrettyPrintResources(QList<HTMLResource*> resources)
 {
+    foreach (HTMLResource * hresource, resources) {
+        if (!IsDataGumboWellFormed(hresource)) {
+            Utility::warning(Utility::GetMainWindow(), tr("Sigil"),
+                                 tr("PrettyPrint cancelled: %1, XML not well formed.").arg(hresource->ShortPathName()));
+            return false;
+        }
+    }
     QProgressDialog progress(QObject::tr("PrettyPrinting..."), 0, 0, resources.count(), Utility::GetMainWindow());
     progress.setMinimumDuration(PROGRESS_BAR_MINIMUM_DURATION);
     int progress_value = 0;
@@ -1754,6 +1775,11 @@ QString Book::SafePrettyPrint(const QString& bookpath, const QString& original_t
     if (resource) {
         HTMLResource* html_resource = qobject_cast<HTMLResource*>(resource);
         if (html_resource) {
+            if (!IsDataGumboWellFormed(html_resource)) {
+                Utility::warning(Utility::GetMainWindow(), tr("Sigil"),
+                                 tr("PrettyPrint cancelled: %1, XML not well formed.").arg(html_resource->ShortPathName()));
+                return original_text;
+            }
             QString version = html_resource->GetEpubVersion();
             bool keep_whitespace = XhtmlUsesStyleProperty(html_resource, "white-space");
             newsource = CleanSource::PrettyPrint(newsource, keep_whitespace, version);

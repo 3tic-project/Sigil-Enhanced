@@ -45,10 +45,11 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPoint>
-#include <QRubberBand>
 #include <QDebug>
 #include <QVBoxLayout>
 #include <QToolBar>
+
+class BetterRubberBand;
 
 class QAction;
 
@@ -86,15 +87,19 @@ public slots:
 signals:
     void InternalZoomFactorChanged(double factor);
     void UndoRedoStateChanged();
+    void SetImageContentModified();
 
 private slots:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void toggleShowToolbar(bool checked);
 
-  
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
+
 private:
     void ReadSettings();
     void WriteSettings();
+    void UpdateZoomedCoordinates();
     void ConnectSignalsToSlots();
     void adjustScrollBar(QScrollBar *scrollBar, double factor);
     void updateUndoRedoActions();
@@ -125,14 +130,13 @@ private:
     bool m_croppingState;
     QPoint m_croppingStart;
     QPoint m_croppingEnd;
-    QPoint m_rbstart;
-    QPoint m_rbend;
-    QRubberBand*  m_rb;
+    BetterRubberBand*  m_rb;
 
     QString m_fileName;  // this is the full absolute path
     QString m_mediatype;
     double m_ffsize = 0.0;
     QString m_fsize;
+    QPoint m_lastPos;
 
     QVector<QImage> m_history;
     QVector<QImage> m_reverseHistory;
