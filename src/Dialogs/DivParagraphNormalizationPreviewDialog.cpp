@@ -12,6 +12,7 @@
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QSplitter>
 #include <QTabWidget>
 #include <QTableWidget>
@@ -87,6 +88,31 @@ QString CssRiskDetails(const Plan::Entry& entry)
             .arg(dependency.sourceId, dependency.selector, dependency.reason);
     }
     return details.join(QLatin1Char('\n'));
+}
+
+// QTextBrowser::setHtml uses Qt rich text, which can freeze on Cmoa XHTML
+// (nested DIV pseudo-paragraphs plus Ruby). Keep a short visible excerpt.
+QString SafePreviewText(const QString& xhtml)
+{
+    QString text = xhtml;
+    static const QRegularExpression ruby_text(
+        QStringLiteral("<rt\\b[^>]*>.*?</rt>"),
+        QRegularExpression::CaseInsensitiveOption |
+            QRegularExpression::DotMatchesEverythingOption);
+    static const QRegularExpression tags(QStringLiteral("<[^>]+>"));
+    static const QRegularExpression space(QStringLiteral("\\s+"));
+    text.replace(ruby_text, QString());
+    text.replace(tags, QStringLiteral(" "));
+    text.replace(space, QStringLiteral(" "));
+    text = text.trimmed();
+    if (text.size() > 4000) {
+        text.truncate(4000);
+        text += QChar(0x2026);
+    }
+    return DivParagraphNormalizationPreviewDialog::tr(
+        "Rendered HTML preview is disabled for EPUB XHTML because Qt rich text "
+        "can freeze on nested DIV/Ruby.\n\n%1")
+        .arg(text);
 }
 
 }
@@ -181,9 +207,11 @@ DivParagraphNormalizationPreviewDialog::DivParagraphNormalizationPreviewDialog(
     details->addTab(sourcePage, tr("Source Diff"));
 
     m_BeforePreview = new QTextBrowser(details);
+    m_BeforePreview->setObjectName(QStringLiteral("divParagraphBeforePreview"));
     m_BeforePreview->setOpenExternalLinks(false);
     details->addTab(m_BeforePreview, tr("Before Preview"));
     m_AfterPreview = new QTextBrowser(details);
+    m_AfterPreview->setObjectName(QStringLiteral("divParagraphAfterPreview"));
     m_AfterPreview->setOpenExternalLinks(false);
     details->addTab(m_AfterPreview, tr("After Preview"));
     root->addWidget(details, 3);
@@ -255,6 +283,6 @@ void DivParagraphNormalizationPreviewDialog::ShowEntry(
     const QString after = entry.output.isEmpty() ? entry.source : entry.output;
     m_BeforeSource->setPlainText(entry.source);
     m_AfterSource->setPlainText(after);
-    m_BeforePreview->setHtml(entry.source);
-    m_AfterPreview->setHtml(after);
+    m_BeforePreview->setPlainText(SafePreviewText(entry.source));
+    m_AfterPreview->setPlainText(SafePreviewText(after));
 }

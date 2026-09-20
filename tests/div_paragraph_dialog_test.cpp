@@ -1,9 +1,11 @@
 #include <QApplication>
 #include <QCheckBox>
+#include <QElapsedTimer>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QTabWidget>
 #include <QTableWidget>
+#include <QTextBrowser>
 #include <QTextStream>
 
 #include "Dialogs/DivParagraphNormalizationDialog.h"
@@ -110,6 +112,29 @@ int main(int argc, char* argv[])
     QApplication::processEvents();
     if (apply->isEnabled() || !preview.SelectedResourceIds().isEmpty()) {
         return fail(QStringLiteral("Apply remained enabled with no selected files"));
+    }
+
+    DivParagraphNormalizationPlan::Result heavy_plan = plan;
+    QString nested;
+    nested += QStringLiteral("<html><body>");
+    for (int i = 0; i < 180; ++i) {
+        nested += QStringLiteral(
+            "<div class='css_class_18'>テキスト<ruby>漢<rt>かん</rt></ruby>段落</div>");
+    }
+    nested += QStringLiteral("</body></html>");
+    heavy_plan.entries[0].source = nested;
+    heavy_plan.entries[0].output = nested;
+    QElapsedTimer timer;
+    timer.start();
+    DivParagraphNormalizationPreviewDialog heavy(heavy_plan);
+    QApplication::processEvents();
+    if (timer.elapsed() > 2000) {
+        return fail(QStringLiteral("Cmoa preview dialog froze on nested DIV/Ruby XHTML"));
+    }
+    auto* before_preview = heavy.findChild<QTextBrowser*>(
+        QStringLiteral("divParagraphBeforePreview"));
+    if (!before_preview || before_preview->toHtml().contains(QStringLiteral("<ruby"))) {
+        return fail(QStringLiteral("preview still fed raw EPUB XHTML to Qt rich text"));
     }
 
     DivParagraphNormalizationPreviewDialog analysis_only(plan, true);
