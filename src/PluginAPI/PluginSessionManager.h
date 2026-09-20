@@ -11,6 +11,7 @@
 #include <QHash>
 #include <QObject>
 #include <QUuid>
+#include <functional>
 
 #include "PluginAPI/PluginWriterLock.h"
 
@@ -42,6 +43,8 @@ public:
     // Native integration tests use this one-shot hook to prove that a live
     // commit restores already-applied mutations. Negative values disable it.
     void SetCommitFailureAfterMutationForTesting(int successful_mutations);
+    // Native crash tests stop the host at a deterministic physical mutation.
+    void SetCommitMutationCallbackForTesting(std::function<void()> callback);
 
 private:
     friend class PluginSession;
@@ -58,6 +61,7 @@ private:
     QHash<QUuid, PluginSession *> m_Sessions;
     PluginApi::WriterLock m_WriterLock;
     int m_CommitMutationsBeforeFailure = -1;
+    std::function<void()> m_CommitMutationCallbackForTesting;
 };
 
 #endif // PLUGINSESSIONMANAGER_H

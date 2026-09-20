@@ -188,8 +188,15 @@ void PluginSessionManager::SetCommitFailureAfterMutationForTesting(int successfu
     m_CommitMutationsBeforeFailure = successful_mutations;
 }
 
+void PluginSessionManager::SetCommitMutationCallbackForTesting(
+    std::function<void()> callback)
+{
+    m_CommitMutationCallbackForTesting = std::move(callback);
+}
+
 bool PluginSessionManager::ConsumeCommitMutationForTesting()
 {
+    if (m_CommitMutationCallbackForTesting) m_CommitMutationCallbackForTesting();
     if (m_CommitMutationsBeforeFailure < 0) return false;
     if (m_CommitMutationsBeforeFailure == 0) {
         m_CommitMutationsBeforeFailure = -1;
