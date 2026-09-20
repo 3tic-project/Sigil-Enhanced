@@ -497,6 +497,8 @@ protected:
 
     QString cursor_selected_text(const QTextCursor& c) const;
 
+    bool SelectionIsCurrentFindMatch(const QString &search_regex) const;
+
     /**
      * The global event processing function.
      *

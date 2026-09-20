@@ -1736,9 +1736,7 @@ bool CodeViewEditor::FindPrevPlus(const QString& presearch_regex,
 //modified: FindReplacePlus
 bool CodeViewEditor::ReplaceSelectedPlus(const QString& search_regex, const QString& replacement, Searchable::Direction direction, bool replace_current)
 {
-    // It is only safe to do a replace if we have not changed the selection or find text
-    // since we last did a Find.
-    if ((search_regex != m_lastFindRegex) || (m_lastMatch.offset.first == -1)) {
+    if (!SelectionIsCurrentFindMatch(search_regex)) {
         return false;
     }
 

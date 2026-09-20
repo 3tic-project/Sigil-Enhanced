@@ -1149,15 +1149,25 @@ int CodeViewEditor::Count(const QString &search_regex, Searchable::Direction dir
 }
 
 
+bool CodeViewEditor::SelectionIsCurrentFindMatch(const QString &search_regex) const
+{
+    if ((search_regex != m_lastFindRegex) || (m_lastMatch.offset.first == -1)) {
+        return false;
+    }
+    const QTextCursor cursor = textCursor();
+    return cursor.selectionStart() == m_lastMatch.offset.first
+        && cursor.selectionEnd() == m_lastMatch.offset.second;
+}
+
 bool CodeViewEditor::ReplaceSelected(const QString &search_regex, const QString &replacement, Searchable::Direction direction, bool replace_current)
 {
     SPCRE *spcre = PCRECache::instance().getObject(search_regex);
     int selection_start = textCursor().selectionStart();
     int selection_end = textCursor().selectionEnd();
 
-    // It is only safe to do a replace if we have not changed the selection or find text
-    // since we last did a Find.
-    if ((search_regex != m_lastFindRegex) || (m_lastMatch.offset.first == -1)) {
+    // Replace only the text selected by the last Find. A stale match cache with
+    // no selection would otherwise insert the replacement at the caret.
+    if (!SelectionIsCurrentFindMatch(search_regex)) {
         return false;
     }
 
@@ -1313,16 +1323,23 @@ int CodeViewEditor::ReplaceAll(const QString &search_regex,
 
 void CodeViewEditor::ResetLastFindMatch()
 {
+    // Keep the cached match during a Plus replace; selectionChanged is also
+    // disconnected there. Original Find/Replace never sets m_ReplacingInSearch.
+    if (m_ReplacingInSearch) {
+        return;
+    }
+    m_lastMatch.offset.first = -1;
     // ---- modified: FindReplacePlus ----
-    //m_lastMatch.offset.first = -1;
-    if (m_InSearchingState && !m_ReplacingInSearch) {
+    if (m_InSearchingState) {
         m_lastMatch = SPCRE::MatchInfo();
         m_preSearchInfo = PreSearchInfo();
         m_InSearchingState = false;
         m_CountSplitOffset = false;
         m_SplitOffset = 0;
         MainWindow* mainwin = qobject_cast<MainWindow*>(Utility::GetMainWindow());
-        emit mainwin->UpdateSearchStateRequest();
+        if (mainwin) {
+            emit mainwin->UpdateSearchStateRequest();
+        }
     }
     //------------------------------------
 }
