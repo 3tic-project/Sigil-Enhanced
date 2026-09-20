@@ -668,6 +668,10 @@ QList<GumboWellFormedError> GumboInterface::error_check()
         m_output = gumbo_parse_with_options(&myoptions, m_utf8src.data(), m_utf8src.length());
     }
     // qDebug() << QString::fromStdString(m_utf8src);
+    // An empty source is never parsed, so there is no output tree to inspect.
+    if (m_output == NULL) {
+        return errlist;
+    }
     const GumboVector* errors  = &m_output->errors;
     for (unsigned int i=0; i< errors->length; ++i) {
         GumboError* er = static_cast<GumboError*>(errors->data[i]);
@@ -709,6 +713,10 @@ QList<GumboWellFormedError> GumboInterface::fragment_error_check()
         m_utf8src = m_source.toStdString();
         m_output = gumbo_parse_fragment(&myoptions, m_utf8src.data(), m_utf8src.length(),
                                         GUMBO_TAG_BODY, GUMBO_NAMESPACE_HTML);
+    }
+    // An empty source is never parsed, so there is no output tree to inspect.
+    if (m_output == NULL) {
+        return errlist;
     }
     const GumboVector* errors  = &m_output->errors;
     for (unsigned int i=0; i< errors->length; ++i) {

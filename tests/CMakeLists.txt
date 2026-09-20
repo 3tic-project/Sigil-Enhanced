@@ -1239,6 +1239,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(navigation_repair_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME gumbo_empty_source_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_gumbo_empty_source_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(gumbo_empty_source_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
     add_test(NAME plugin_package_update_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plugin_package_update_integration.py
                 ${CMAKE_BINARY_DIR}
