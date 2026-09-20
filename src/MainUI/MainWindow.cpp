@@ -1399,14 +1399,19 @@ bool MainWindow::CreateRepoCheckpoint(bool update_book_metadata, bool save_tab_d
     }
 
     if (!checkpointOpfText.isEmpty()) {
-        QWriteLocker locker(&opf->GetLock());
-        if (opf->GetText() != liveOpfBeforeIdentity) {
-            qWarning() << "Live OPF changed while creating a recovery checkpoint";
-            ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
-            QApplication::restoreOverrideCursor();
-            return false;
+        {
+            QWriteLocker locker(&opf->GetLock());
+            if (opf->GetText() != liveOpfBeforeIdentity) {
+                qWarning() << "Live OPF changed while creating a recovery checkpoint";
+                ShowMessageOnStatusBar(tr("Checkpoint generation failed."));
+                QApplication::restoreOverrideCursor();
+                return false;
+            }
+            opf->SetTextAsUndoableEdit(checkpointOpfText);
         }
-        opf->SetTextAsUndoableEdit(checkpointOpfText);
+        // ModifiedStateChanged updates the Agent dock, which reads OPF metadata.
+        // Qt recursive QReadWriteLock cannot convert a write lock into a read lock
+        // on the same thread, so this must happen after the write locker is gone.
         m_Book->SetModified();
     }
 
@@ -6562,7 +6567,10 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
     settings.setRenameTemplate("");
     connect(m_Book.data(),     SIGNAL(ModifiedStateChanged(bool)), this, SLOT(setWindowModified(bool)));
     connect(m_Book.data(), &Book::ModifiedStateChanged, this,
-            [this](bool) { UpdateAgentContext(); });
+            [this](bool) {
+                QMetaObject::invokeMethod(this, [this]() { UpdateAgentContext(); },
+                                          Qt::QueuedConnection);
+            });
     connect(m_Book.data(),     SIGNAL(ResourceUpdatedFromDiskRequest(Resource *)), this, SLOT(ResourceUpdatedFromDisk(Resource *)));
     connect(m_BookBrowser,     SIGNAL(ShowStatusMessageRequest(const QString &, int)), this, SLOT(ShowMessageOnStatusBar(const QString &, int)));
     connect(m_BookBrowser,     SIGNAL(ResourcesDeleted()), this, SLOT(ResourcesAddedOrDeletedOrMoved()));
