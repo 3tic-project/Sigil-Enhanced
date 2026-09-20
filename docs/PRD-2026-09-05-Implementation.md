@@ -18,6 +18,10 @@
 
 ## 分支与提交策略
 
+以下分支名是实施过程的历史切片，不是当前仍需保留的分支清单。2026-09-20 已确认
+相应提交均包含在 `integration/prd-2026-09-05`，并清理了 55 个已合并的本地分支
+引用；现存分支与未完成发布门槛见 `PRD-2026-09-05-Acceptance.md`。
+
 - OPF：`feature/opf-source-preservation`，独立工作树
   `/Users/parsle/Code/sigil-enhanced-opf-preservation`。
 - 导航诊断/显式修复：`feature/opf-navigation-repair`，从上述分支的
