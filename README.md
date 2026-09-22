@@ -13,9 +13,10 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 - Telegram：https://t.me/+bUUc3T1rwVZmNWE9
 - QQ 群：`796723288`（入群问题答案：`3tic`）
 
-> 最近发布版本：**2.8.5E10**。该版本相对 `v2.8.5E9` 的变化见
-> [2.8.5E10 更新说明](docs/ReleaseNotes-2.8.5E10.md)；当前 `master` 在此基础上继续开发，
-> 完整历史见 [ChangeLog.txt](ChangeLog.txt)。
+> 最近发布版本：**2.8.5E11**。该版本相对 `v2.8.5E10` 的变化见
+> [2.8.5E11 更新说明](docs/ReleaseNotes-2.8.5E11.md)。上一版说明仍在
+> [2.8.5E10 更新说明](docs/ReleaseNotes-2.8.5E10.md)。完整历史见
+> [ChangeLog.txt](ChangeLog.txt)。
 
 ## 增强功能
 
@@ -33,13 +34,19 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 - **拆分编辑器**：可拆成上下两组同时打开不同资源，标签可在组间拖动；详见 [拆分编辑器](docs/SplitEditorGroups.md)。
 - **开发者工具**：停靠在预览区下方、随 Preview 一起浮动，也可拆成独立窗口；详见 [Preview 开发者工具](docs/PreviewDeveloperTools.md)。
 - **中键关闭标签**：鼠标中键直接关闭所指向的标签页，不会激活后台标签或误关空白区域。
+- **[代码视图选择](docs/CodeViewTextSelection.md)**：XHTML 里双击默认选中当前段落或标签内部，Ruby 和实体留在选区里。也可以改成按句子选择，或退回原来的按词选择。
+- **[Clips 快捷键角标](docs/ClipShortcutBadges.md)**：Clips 工具栏前十个按钮显示当前真正绑定的快捷键。改绑定后角标马上更新，可在偏好设置里关闭。
+- **字体预览**：打开字体时按书籍的 `dc:language` 显示简体中文、繁体中文、日文或英文范文，并统计画得出来的字。空轮廓算缺字，用系统字体标出。可以改预览语言。还不能换成书中正文或自定义文本。
 - **撤销与恢复**：搜索、正则等批量替换先在内存中完成全部规则并校验，再对每个变化资源统一写回一次；未变化的资源不再重写，单步撤销和整书 Checkpoint 恢复能力均保留。
 
 ### 内置工具（`Enhancement` 菜单，多数可接入 Automate 批处理）
 
 - **EPUB 结构规范化**：修复 OPF Manifest 的重复/无效 ID 与 href、未登记资源和链接大小写问题，并把资源整理为 Sigil 标准目录结构（由 sigil-modified 的规范化插件重构而来，感谢 Sigil 吧 @遥遥心航）。
 - **格式化 XHTML 和 CSS**：批量把全部 XHTML/CSS 格式化为统一风格；格式不合法的文件先跳过，并在结果面板报告原因。
-- **段落规范化 ×3**：Kobo BR（顶层 `<br/>` 换行）、Kindle KFX（spacer `<p>` 分隔裸文本）、BookLive/EBPAJ（div 伪段落拍平成保留原样式的 `<p>`）；均区分当前文件与全书操作，高风险页只报告不转换。
+- **段落规范化**：Kobo BR（顶层 `<br/>` 换行）和 Kindle KFX（spacer `<p>` 分隔裸文本）区分当前文件与全书；高风险页只报告不转换。
+- **[DIV 段落结构](docs/DivParagraphNormalization.md)**：分析当前文件、选中文件或全书，只把通过内容和 CSS 风险检查的叶子 `div` 改成 `p`。写入前有预览，并创建整书 Checkpoint。原来的 BookLive 入口并入这里。
+- **Cmoa DIV 段落**：与 BookLive 分开。只转换符合已核对 Cmoa/EBPAJ 样式的正文叶子 `div`。预览大页时不再把整页嵌套 Ruby 塞进对话框。
+- **[目录层级](docs/TocHierarchyEditing.md)**：提升目录条目时接住后面的同级条目，阅读顺序不变。取消不改书；没有变化时不把书标脏。
 - **[纵横排版转换](docs/VerticalLayoutConversion.md)**：逐页分析书写方向与关联 CSS，支持竖排转横排、横排转竖排；经验证页面只切换 class，其它模板用可逆兼容覆盖；固定版式和高风险页默认跳过，写回前完整预检并创建整书 Checkpoint。
 - **[高级正则工作台](docs/AdvancedRegexWorkbench.md)**：二级正则筛选、递归替换、命名捕获变量、仅捕获规则、可保存方案；试运行不改动书籍，应用时一次可撤销提交。
 - **[中文简繁与地区转换](docs/ChineseConversion.md)**：内置 OpenCC，提供 12 个转换方向；支持当前选区、当前文件、选中文件和全书，带结构安全白名单、逐项预览、单步撤销与批量 Checkpoint。
@@ -49,10 +56,12 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 - 未修改 EPUB 的普通保存不再重新打包；另存为和保存副本直接复制源文件，保持字节一致。
 - 默认不新增或更新 `Sigil version` 元数据；EPUB 3 的 `dcterms:modified` 只在实际修改后导出时更新。
+- 旋转、裁剪或其他图片编辑保存后，EPUB 会变成未保存。解压出的图片若正被占用，新图会在保存 EPUB 时打包进去。
+- **保留 OPF 原文**：偏好设置里默认开启「保留 OPF 原始格式与注释」。改元数据或清单时按差异改原文件。缺少 EPUB 3 导航时，先看修复预览再写入。
 
 ### Native Agent
 
-- **[Native Agent](docs/NativeAgent.md)**：主窗口停靠栏里的 EPUB 助手（Ask / Plan / Edit）。明确显示当前文件/书名、资源数、未保存状态、实时选区范围，以及提供商配置/最近请求状态；任务范围可在选区、当前文件、Book Browser 选中文件和全书之间明确切换。在偏好设置里选择 DeepSeek / OpenCode Go / OpenRouter，并从服务器拉取模型。支持 thinking/`reasoning_content`、工具批准、可撤销事务、会话导出，以及复用原生引擎的[段落分析与计划](docs/AgentNativeParagraphTools.md)和[目录层级计划](docs/AgentNativeTocTools.md)。不调用 MCP，也没有 shell。
+- **[Native Agent](docs/NativeAgent.md)**：主窗口停靠栏里的 EPUB 助手，模式为 Ask / Plan / Edit / Auto。没有保存过模式时默认 Auto；已经明确保存为 Ask 的仍是 Ask。停靠栏显示当前书名、资源数、未保存状态、实时选区，以及提供商是否已配置、最近一次请求结果。任务范围在选区、当前文件、Book Browser 选中文件和全书之间切换。偏好设置里可选 DeepSeek / OpenCode Go / OpenRouter，并从服务器拉取模型。支持 thinking/`reasoning_content`、工具批准、可撤销事务、会话导出，以及和菜单同一套的[段落分析与计划](docs/AgentNativeParagraphTools.md)、[目录层级计划](docs/AgentNativeTocTools.md)。不调用 MCP，也没有 shell。
 
 ### 插件与自动化
 
@@ -63,7 +72,7 @@ Sigil-Enhanced 是基于 Sigil 和 sigil-modified 继续维护的增强版 EPUB 
 
 ### 本地化
 
-- 简体中文、繁体中文和日文界面翻译完整覆盖；其余语言目录与 Transifex 保持同步，已新增瑞典语。
+- 简体中文、繁体中文和日文覆盖既有界面。本版字体预览和图片被占用时的保存提示目前只补了简体中文。其余语言目录与 Transifex 保持同步，已新增瑞典语。
 
 
 # =========

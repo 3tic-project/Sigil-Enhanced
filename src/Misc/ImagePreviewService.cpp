@@ -60,11 +60,22 @@ ImagePreviewData decodeBitmap(const QString& filePath, int maximumSide)
         return preview;
     }
 
-    QImageReader reader(filePath);
-    reader.setAutoTransform(true);
-    preview.pixelSize = reader.size();
-    const QSize targetSize = previewSize(preview.pixelSize, maximumSide);
-    if (targetSize.isEmpty()) {
+    {
+        // Close the reader before any fallback open. A live QImageReader
+        // keeps the file mapped on Windows and blocks the image editor save.
+        QImageReader reader(filePath);
+        reader.setAutoTransform(true);
+        preview.pixelSize = reader.size();
+        const QSize targetSize = previewSize(preview.pixelSize, maximumSide);
+        if (!targetSize.isEmpty()) {
+            reader.setScaledSize(targetSize);
+            const QImage decoded = reader.read();
+            if (!decoded.isNull()) {
+                preview.image = decoded.copy();
+            }
+        }
+    }
+    if (preview.image.isNull()) {
         QImage fallback = LoadRasterImage(filePath);
         if (fallback.isNull()) {
             return preview;
@@ -75,21 +86,9 @@ ImagePreviewData decodeBitmap(const QString& filePath, int maximumSide)
                                         Qt::SmoothTransformation);
         return preview;
     }
-    reader.setScaledSize(targetSize);
-    preview.image = reader.read();
-    if (preview.image.isNull()) {
-        QImage fallback = LoadRasterImage(filePath);
-        if (!fallback.isNull()) {
-            preview.pixelSize = fallback.size();
-            const QSize scaled = previewSize(preview.pixelSize, maximumSide);
-            preview.image = fallback.scaled(scaled, Qt::KeepAspectRatio,
-                                            Qt::SmoothTransformation);
-            return preview;
-        }
-    }
-    if (!preview.image.isNull() &&
-        (preview.image.width() > maximumSide ||
-         preview.image.height() > maximumSide)) {
+    if (preview.image.width() > maximumSide ||
+        preview.image.height() > maximumSide) {
+        const QSize targetSize = previewSize(preview.image.size(), maximumSide);
         preview.image = preview.image.scaled(targetSize, Qt::KeepAspectRatio,
                                              Qt::SmoothTransformation);
     }

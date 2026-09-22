@@ -116,6 +116,7 @@ void ExportEPUB::WriteBook()
 void ExportEPUB::CreatePublication(const QString &fullfolderpath)
 {
     Utility::CopyFiles(m_Book->GetFolderKeeper()->GetFullPathToMainFolder(), fullfolderpath);
+    m_Book->WritePendingImagePayloads(fullfolderpath);
 
     if (m_Book->HasObfuscatedFonts()) {
         CreateEncryptionXML(fullfolderpath + METAINF_FOLDER_SUFFIX);

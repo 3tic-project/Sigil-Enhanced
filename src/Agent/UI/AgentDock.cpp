@@ -87,6 +87,7 @@ AgentDock::AgentDock(QWidget *parent) :
     m_modeCombo->addItem(tr("Plan"), QStringLiteral("plan"));
     m_modeCombo->addItem(tr("Edit"), QStringLiteral("edit"));
     m_modeCombo->addItem(tr("Auto"), QStringLiteral("auto"));
+    m_modeCombo->setCurrentIndex(m_modeCombo->findData(QStringLiteral("auto")));
     m_modeCombo->setToolTip(tr("Ask is read-only. Plan can stage a preview. Edit can commit after approval. Auto commits without asking."));
 
     auto *export_button = new QToolButton(header);

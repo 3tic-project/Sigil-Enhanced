@@ -1093,6 +1093,37 @@ target_link_libraries(webp_sanitize_test PRIVATE Qt6::Core Qt6::Gui)
 add_test(NAME webp_sanitize COMMAND webp_sanitize_test)
 set_tests_properties(webp_sanitize PROPERTIES TIMEOUT 10)
 
+add_executable(atomic_file_write_test
+    atomic_file_write_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/AtomicFileWrite.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/AtomicFileWrite.h
+)
+target_include_directories(atomic_file_write_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(atomic_file_write_test PRIVATE Qt6::Core)
+target_compile_features(atomic_file_write_test PRIVATE cxx_std_17)
+add_test(NAME atomic_file_write COMMAND atomic_file_write_test)
+set_tests_properties(atomic_file_write PROPERTIES TIMEOUT 10)
+
+add_executable(font_preview_test
+    font_preview_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/FontPreview/FontPreviewLanguage.cpp
+    ${CMAKE_SOURCE_DIR}/src/FontPreview/FontPreviewLanguage.h
+    ${CMAKE_SOURCE_DIR}/src/FontPreview/FontPreviewSamples.cpp
+    ${CMAKE_SOURCE_DIR}/src/FontPreview/FontPreviewSamples.h
+    ${CMAKE_SOURCE_DIR}/src/FontPreview/FontGlyphCoverage.cpp
+    ${CMAKE_SOURCE_DIR}/src/FontPreview/FontGlyphCoverage.h
+    ${CMAKE_SOURCE_DIR}/src/FontPreview/FontPreviewHtml.cpp
+    ${CMAKE_SOURCE_DIR}/src/FontPreview/FontPreviewHtml.h
+)
+target_include_directories(font_preview_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(font_preview_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(font_preview_test PRIVATE cxx_std_17)
+add_test(NAME font_preview COMMAND font_preview_test)
+set_tests_properties(font_preview PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(opf_model_clear_benchmark
     opf_model_clear_benchmark.cpp
 )

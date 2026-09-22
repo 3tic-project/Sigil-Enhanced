@@ -395,6 +395,8 @@
         <source>Image save failed: </source>
         <translation>画像保存に失敗しました: </translation>
     </message>
+    <message><source>GIF conversion failed.</source><translation>GIF 変換に失敗しました。</translation></message>
+    <message><source>Image saved for the EPUB. The extracted file could not be replaced and will be packaged on save: </source><translation>画像は EPUB に反映されました。展開されたファイルを置き換えられないため、保存時にパッケージされます: </translation></message>
 </context>
 <context>
     <name>AlertBox</name>
@@ -5639,26 +5641,19 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <source>No reliable font data</source>
         <translation>信頼できるフォントデータがありません</translation>
     </message>
-    <message>
-        <location filename="../../Widgets/FontView.cpp" line="136"/>
-        <source>abcdefghijklmnopqrstuvwxyz</source>
-        <translation>abcdefghijklmnopqrstuvwxyz</translation>
-    </message>
-    <message>
-        <location filename="../../Widgets/FontView.cpp" line="137"/>
-        <source>ABCDEFGHIJKLMNOPQRSTUVWXYZ</source>
-        <translation>ABCDEFGHIJKLMNOPQRSTUVWXYZ</translation>
-    </message>
-    <message>
-        <location filename="../../Widgets/FontView.cpp" line="138"/>
-        <source>0123456789.:,;(*!?&apos;\/&quot;)$%^&amp;-+@=_-~&gt;&lt;</source>
-        <translation>0123456789.:,;(*!?&apos;\/&quot;)$%^&amp;-+@=_-~&gt;&lt;</translation>
-    </message>
-    <message>
-        <location filename="../../Widgets/FontView.cpp" line="139"/>
-        <source>The quick brown fox jumps over the lazy dog</source>
-        <translation>The quick brown fox jumps over the lazy dog（素早い茶色の狐はのろまな犬を飛び越える）</translation>
-    </message>
+    <message><source>Preview language</source><translation>プレビュー言語</translation></message>
+    <message><source>Auto: %1</source><translation>自動: %1</translation></message>
+    <message><source>Simplified Chinese</source><translation>簡体字中国語</translation></message>
+    <message><source>Traditional Chinese</source><translation>繁体字中国語</translation></message>
+    <message><source>Chinese (Simplified/Traditional)</source><translation>中国語（簡体字/繁体字）</translation></message>
+    <message><source>Japanese</source><translation>日本語</translation></message>
+    <message><source>English</source><translation>英語</translation></message>
+    <message><source>Generic</source><translation>汎用</translation></message>
+    <message><source>Coverage: 0 / 0</source><translation>カバレッジ: 0 / 0</translation></message>
+    <message><source>Coverage: %1 / %2 (%3%)</source><translation>カバレッジ: %1 / %2（%3%）</translation></message>
+    <message><source>No missing glyphs</source><translation>欠けているグリフはありません</translation></message>
+    <message><source>Missing: %1</source><translation>欠落: %1</translation></message>
+    <message><source>Not present in this font</source><translation>このフォントに含まれていません</translation></message>
 </context>
 <context>
     <name>GeneralSettingsWidget</name>
@@ -6694,6 +6689,7 @@ You can then check or uncheck individual headings in the list above.</source>
         <source>Color</source>
         <translation>カラー</translation>
     </message>
+    <message><source>No image payload is waiting to be written.</source><translation>書き込み待ちの画像データはありません。</translation></message>
 </context>
 <context>
     <name>ImageTab</name>
@@ -27188,6 +27184,11 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>DivParagraphNormalizationPreviewDialog</name>
+    <message><source>Rendered HTML preview is disabled for EPUB XHTML because Qt rich text can freeze on nested DIV/Ruby.
+
+%1</source><translation>EPUB XHTML のレンダリングプレビューは無効です。Qt のリッチテキストはネストした DIV/Ruby でフリーズすることがあります。
+
+%1</translation></message>
     <message><source>Ready to apply</source><translation>適用可能</translation></message>
     <message><source>Review required</source><translation>確認が必要</translation></message>
     <message><source>Skipped</source><translation>スキップ</translation></message>

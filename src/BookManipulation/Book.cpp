@@ -41,11 +41,13 @@
 #include "Misc/HTMLSpellCheckML.h"
 #include "Misc/Landmarks.h"
 #include "ResourceObjects/HTMLResource.h"
+#include "ResourceObjects/ImageResource.h"
 #include "ResourceObjects/NCXResource.h"
 #include "ResourceObjects/OPFResource.h"
 #include "ResourceObjects/MiscTextResource.h"
 #include "ResourceObjects/TextResource.h"
 #include "sigil_constants.h"
+#include "sigil_exception.h"
 #include "SourceUpdates/AnchorUpdates.h"
 #include "SourceUpdates/PerformHTMLUpdates.h"
 #include "SourceUpdates/UniversalUpdates.h"
@@ -1471,10 +1473,35 @@ void Book::SaveAllResourcesToDisk()
     m_Mainfolder->ResumeWatchingResources();
 }
 
+void Book::WritePendingImagePayloads(const QString &publicationFolder)
+{
+    const QList<ImageResource *> images = m_Mainfolder->GetResourceTypeList<ImageResource>(false);
+    for (ImageResource *image : images) {
+        if (!image || !image->hasPendingPayload()) {
+            continue;
+        }
+        const QString destination = publicationFolder + "/" + image->GetRelativePath();
+        QString error;
+        if (!image->writePendingPayloadTo(destination, &error)) {
+            const QString message = image->GetRelativePath() + QStringLiteral(": ") + error;
+            throw CannotWriteFile(message.toStdString());
+        }
+    }
+}
+
 
 bool Book::IsModified() const
 {
-    return m_IsModified;
+    if (m_IsModified) {
+        return true;
+    }
+    const QList<ImageResource *> images = m_Mainfolder->GetResourceTypeList<ImageResource>(false);
+    for (ImageResource *image : images) {
+        if (image && image->isContentModified()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -1507,6 +1534,13 @@ void Book::SetModified(bool modified)
             TextResource *text_resource = qobject_cast<TextResource *>(resource);
             if (text_resource) {
                 text_resource->ResetBookSaveBaseline();
+            }
+            ImageResource *image_resource = qobject_cast<ImageResource *>(resource);
+            if (image_resource) {
+                // Leave a pending payload in place. The extracted file may
+                // still be the pre-edit bytes when Windows would not allow
+                // the replace; the next full export reads this payload.
+                image_resource->setContentModified(false);
             }
         }
     }

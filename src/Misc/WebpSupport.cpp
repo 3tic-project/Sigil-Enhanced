@@ -101,9 +101,12 @@ QByteArray SanitizeWebpPayload(const QByteArray &data)
 
 QImage LoadRasterImage(const QString &path, QString *error_out)
 {
+    // QImage(path) / QImageReader can keep the file mapped until every
+    // shared copy is destroyed. On Windows that mapping blocks the later
+    // save (sharing violation) and the EPUB then looks unchanged.
     QImage image(path);
     if (!image.isNull()) {
-        return image;
+        return image.copy();
     }
 
     QFile file(path);
@@ -147,5 +150,5 @@ QImage LoadRasterImage(const QString &path, QString *error_out)
                          "Cannot load %1 (%2). Supported formats: %3.")
                          .arg(path, detail, supportedFormats());
     }
-    return image;
+    return image.isNull() ? QImage() : image.copy();
 }

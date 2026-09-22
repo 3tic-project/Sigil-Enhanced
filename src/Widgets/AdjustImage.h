@@ -48,6 +48,7 @@
 #include <QDebug>
 #include <QVBoxLayout>
 #include <QToolBar>
+#include <QByteArray>
 
 class BetterRubberBand;
 
@@ -71,6 +72,8 @@ public:
     bool isCropEnabled();
     bool isUndoEnabled();
     bool isRedoEnabled();
+    bool lastSaveWroteLiveFile() const { return m_LastSaveWroteLiveFile; }
+    QByteArray unwrittenImagePayload() const { return m_UnwrittenPayload; }
                           
 public slots:
     void doSave();
@@ -142,6 +145,8 @@ private:
     QVector<QImage> m_reverseHistory;
 
     double m_scaleFactor;
+    bool m_LastSaveWroteLiveFile = false;
+    QByteArray m_UnwrittenPayload;
     int m_jpeg_quality;
     int m_webp_quality;
     int m_jxl_quality;

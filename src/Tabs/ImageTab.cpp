@@ -523,7 +523,32 @@ void ImageTab::keyPressEvent(QKeyEvent *event)
 
 void ImageTab::EmitImageContentChanged()
 {
+    ImageResource *image = qobject_cast<ImageResource *>(m_Resource);
+    if (!image || !m_AdjImg) {
+        return;
+    }
+    if (m_AdjImg->lastSaveWroteLiveFile()) {
+        image->clearPendingPayload();
+        // Stamp size and mtime so a watcher does not treat our own
+        // replace as an external edit and reload over the editor.
+        image->SaveToDisk(true);
+    } else {
+        const QByteArray payload = m_AdjImg->unwrittenImagePayload();
+        if (payload.isEmpty()) {
+            return;
+        }
+        image->setPendingPayload(payload);
+    }
+    image->setContentModified(true);
     emit ImageContentChanged();
+    for (QWidget *widget = this; widget; widget = widget->parentWidget()) {
+        if (MainWindow *window = qobject_cast<MainWindow *>(widget)) {
+            if (QSharedPointer<Book> book = window->GetCurrentBook()) {
+                book->SetModified(true);
+            }
+            break;
+        }
+    }
 }
 
 void ImageTab::ConnectSignalsToSlots()

@@ -25,9 +25,11 @@
 #include <QtWidgets/QLayout>
 #include <QGuiApplication>
 #include <QApplication>
+#include "BookManipulation/Book.h"
 #include "MainUI/MainWindow.h"
-#include "Widgets/FontView.h"
 #include "Misc/Utility.h"
+#include "ResourceObjects/OPFResource.h"
+#include "Widgets/FontView.h"
 
 #include "Tabs/FontTab.h"
 
@@ -40,9 +42,31 @@ FontTab::FontTab(Resource *resource, QWidget *parent)
     ConnectSignalsToSlots();
 }
 
+QStringList FontTab::BookLanguages() const
+{
+    auto languagesFrom = [](QWidget *start) {
+        for (QWidget *widget = start; widget; widget = widget->parentWidget()) {
+            if (MainWindow *window = qobject_cast<MainWindow *>(widget)) {
+                if (QSharedPointer<Book> book = window->GetCurrentBook()) {
+                    if (const OPFResource *opf = book->GetConstOPF()) {
+                        return opf->GetDCMetadataValues(QStringLiteral("dc:language"));
+                    }
+                }
+                break;
+            }
+        }
+        return QStringList();
+    };
+    QStringList languages = languagesFrom(const_cast<FontTab *>(this));
+    if (languages.isEmpty()) {
+        languages = languagesFrom(Utility::GetMainWindow());
+    }
+    return languages;
+}
+
 void FontTab::ShowFont()
 {
-    m_fv->ShowFont(m_Resource->GetFullPath());
+    m_fv->ShowFont(m_Resource->GetFullPath(), BookLanguages());
 }
 
 void FontTab::RefreshContent()

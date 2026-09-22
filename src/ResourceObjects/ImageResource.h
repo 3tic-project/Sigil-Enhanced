@@ -24,6 +24,8 @@
 #ifndef IMAGERESOURCE_H
 #define IMAGERESOURCE_H
 
+#include <QByteArray>
+
 #include "ResourceObjects/Resource.h"
 
 class ImageResource : public Resource
@@ -44,9 +46,27 @@ public:
 
     QString GetDescription() const;
     // inherited
-    virtual ResourceType Type() const;
+    ResourceType Type() const override;
 
-    virtual bool LoadFromDisk();
+    bool LoadFromDisk() override;
+
+    bool isContentModified() const;
+    void setContentModified(bool modified);
+
+    // Bytes for an edit that could not replace the extracted file because
+    // another handle still has it open. Kept after the book is marked clean
+    // so the next full EPUB export can still package the edit. Cleared only
+    // once those bytes are on the extracted file itself.
+    bool hasPendingPayload() const;
+    void setPendingPayload(const QByteArray &bytes);
+    void clearPendingPayload();
+    bool writePendingPayloadTo(const QString &destination, QString *error = nullptr) const;
+
+    void SaveToDisk(bool book_wide_save = false) override;
+
+private:
+    bool m_ContentModified = false;
+    QByteArray m_PendingPayload;
 };
 
 #endif // IMAGERESOURCE_H

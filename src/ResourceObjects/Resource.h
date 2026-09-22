@@ -325,6 +325,13 @@ private:
     qint64 m_LastSaved;
 
     /**
+     * Size in bytes at m_LastSaved. A same-timestamp notification whose
+     * size differs is still a real change (Windows timestamp granularity,
+     * or a replace that keeps the previous mtime).
+     */
+    qint64 m_LastSavedSize;
+
+    /**
      * Timestamp of when the resource was last written to by an external application.
      */
     qint64 m_LastWrittenTo;

@@ -20,7 +20,9 @@
 **
 *************************************************************************/
 
+#include <QFileInfo>
 #include <QImage>
+#include "Misc/AtomicFileWrite.h"
 #include "Misc/Utility.h"
 #include "ResourceObjects/ImageResource.h"
 
@@ -43,10 +45,61 @@ bool ImageResource::LoadFromDisk()
     return true;
 }
 
+bool ImageResource::isContentModified() const
+{
+    return m_ContentModified;
+}
+
+void ImageResource::setContentModified(bool modified)
+{
+    m_ContentModified = modified;
+}
+
+bool ImageResource::hasPendingPayload() const
+{
+    return !m_PendingPayload.isEmpty();
+}
+
+void ImageResource::setPendingPayload(const QByteArray &bytes)
+{
+    m_PendingPayload = bytes;
+}
+
+void ImageResource::clearPendingPayload()
+{
+    m_PendingPayload.clear();
+}
+
+bool ImageResource::writePendingPayloadTo(const QString &destination, QString *error) const
+{
+    if (m_PendingPayload.isEmpty()) {
+        if (error) {
+            *error = tr("No image payload is waiting to be written.");
+        }
+        return false;
+    }
+    return AtomicFile::WriteBytesReplacing(destination, m_PendingPayload, error);
+}
+
+void ImageResource::SaveToDisk(bool book_wide_save)
+{
+    if (!m_PendingPayload.isEmpty()) {
+        QString error;
+        if (AtomicFile::WriteBytesReplacing(GetFullPath(), m_PendingPayload, &error)) {
+            const QFileInfo saved(GetFullPath());
+            if (saved.size() == static_cast<qint64>(m_PendingPayload.size())) {
+                m_PendingPayload.clear();
+            }
+        }
+    }
+    Resource::SaveToDisk(book_wide_save);
+}
+
 QString ImageResource::GetDescription() const
 {
     const QString path = GetFullPath();
-    const QImage img(path);
+    // Drop the file mapping before this function does anything else.
+    const QImage img = QImage(path).copy();
     QString colors_shades = img.isGrayscale() ? tr("shades") : tr("colors");
     QString grayscale_color = img.isGrayscale() ? tr("Grayscale") : tr("Color");
     QString colorsInfo = "";

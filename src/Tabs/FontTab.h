@@ -53,6 +53,7 @@ public slots:
     void Print() { };
 
 private:
+    QStringList BookLanguages() const;
     void ConnectSignalsToSlots();
     FontView *m_fv;
 };

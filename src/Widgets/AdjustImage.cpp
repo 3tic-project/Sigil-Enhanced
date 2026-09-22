@@ -36,11 +36,13 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QLocale>
+#include <QBuffer>
 #include <QImageWriter>
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QWheelEvent>
 #include <QTemporaryFile>
+#include "Misc/AtomicFileWrite.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "Misc/WebpSupport.h"
@@ -364,6 +366,11 @@ void AdjustImage::updateActions(bool updateTo)
 
 void AdjustImage::keyPressEvent(QKeyEvent *event)
 {
+    if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_S) {
+        doSave();
+        event->accept();
+        return;
+    }
     if (!m_croppingState) {
         QWidget::keyPressEvent(event);
         return;
@@ -474,77 +481,122 @@ void AdjustImage::doRotateRight()
     rotateImage(90);
 }
 
+static bool EncodeEditedImage(const QImage &image, const QString &format,
+                              const QString &fileName, int quality,
+                              QByteArray *bytes, QString *error)
+{
+    auto fail = [error](const QString &text) {
+        if (error) {
+            *error = text;
+        }
+        return false;
+    };
+    if (format == QLatin1String("GIF")) {
+        // Qt can read but not write even static GIF files.
+        // Encode to a temp GIF, then the caller replaces the book file.
+        // Writing the GIF straight onto the extracted path fails on Windows
+        // when that path is still open, and a failed write used to leave
+        // the book unmarked.
+        const QString targetDir = Utility::DefinePrefsDir() + "/workspace";
+        QTemporaryFile png(targetDir + "/XXXXXX.png");
+        png.setAutoRemove(true);
+        if (!png.open() || !image.save(&png, "PNG", -1)) {
+            return fail(AdjustImage::tr("Image save failed."));
+        }
+        const QString pngPath = png.fileName();
+        png.close();
+        QTemporaryFile gif(targetDir + "/XXXXXX.gif");
+        gif.setAutoRemove(true);
+        if (!gif.open()) {
+            return fail(AdjustImage::tr("Image save failed."));
+        }
+        const QString gifPath = gif.fileName();
+        gif.close();
+        PythonRoutines pr;
+        if (!pr.ConvertPngToGifInPython(pngPath, gifPath)) {
+            return fail(AdjustImage::tr("GIF conversion failed."));
+        }
+        QFile gifFile(gifPath);
+        if (!gifFile.open(QIODevice::ReadOnly)) {
+            return fail(gifFile.errorString());
+        }
+        *bytes = gifFile.readAll();
+        if (bytes->isEmpty()) {
+            return fail(AdjustImage::tr("GIF conversion failed."));
+        }
+        return true;
+    }
+
+    QByteArray writerFormat = format.toLatin1();
+    if (writerFormat.isEmpty()) {
+        writerFormat = QFileInfo(fileName).suffix().toLatin1();
+    }
+    QBuffer buffer(bytes);
+    if (!buffer.open(QIODevice::WriteOnly)) {
+        return fail(AdjustImage::tr("Image save failed."));
+    }
+    QImageWriter writer(&buffer, writerFormat);
+    if (quality != -1) {
+        writer.setQuality(quality);
+    }
+    writer.setOptimizedWrite(true);
+    if (!writer.write(image)) {
+        return fail(AdjustImage::tr("Image save failed: ") + writer.errorString());
+    }
+    if (bytes->isEmpty()) {
+        return fail(AdjustImage::tr("Image save failed."));
+    }
+    return true;
+}
+
 void AdjustImage::doSave()
 {
     QString format;
-    if (m_mediatype.startsWith("image/")) {
-        format = m_mediatype.mid(6,-1).toUpper();
+    if (m_mediatype.startsWith(QLatin1String("image/"))) {
+        format = m_mediatype.mid(6).toUpper();
     }
-    if (format == "GIF") {
-        // Qt can read but not write even static GIF files
-        // So save to a temp png file and ask PIL to convert it to GIF
-        QString targetDir = Utility::DefinePrefsDir() + "/workspace";
-        QTemporaryFile tempFile(targetDir + "/XXXXXX.png");
-        bool success = false;
-        if (tempFile.open()) {
-            success = m_image.save(&tempFile, "PNG", -1);
-            tempFile.close();
-            if (success) {
-                PythonRoutines pr;
-                success = pr.ConvertPngToGifInPython(tempFile.fileName(), m_fileName);
-            }
+
+    int quality = -1;
+    if (format != QLatin1String("GIF") && SAVE_QUALITY_MEDIATYPES.contains(m_mediatype)) {
+        if (m_mediatype == QLatin1String("image/jpeg")) quality = m_jpeg_quality;
+        if (m_mediatype == QLatin1String("image/webp")) quality = m_webp_quality;
+        if (m_mediatype == QLatin1String("image/jxl"))  quality = m_jxl_quality;
+        if (m_mediatype == QLatin1String("image/avif")) quality = m_avif_quality;
+        bool ok = false;
+        quality = QInputDialog::getInt(nullptr, tr("Image Quality"),
+                                       tr("Enter quality level (0-100):"), quality, 0, 100, 1, &ok);
+        if (!ok) {
+            m_statusBar->showMessage(tr("Image save failed. "));
+            return;
         }
-        if (success) {
-            m_ffsize = QFile(m_fileName).size() / 1024.0;
-            m_fsize = QLocale().toString(m_ffsize, 'f', 2);
-            emit SetImageContentModified();
-            m_statusBar->showMessage(tr("Image successfully saved."));
-        } else {
-            m_statusBar->showMessage(tr("Image save failed."));
-        }
+        if (m_mediatype == QLatin1String("image/jpeg")) m_jpeg_quality = quality;
+        if (m_mediatype == QLatin1String("image/webp")) m_webp_quality = quality;
+        if (m_mediatype == QLatin1String("image/jxl"))  m_jxl_quality = quality;
+        if (m_mediatype == QLatin1String("image/avif")) m_avif_quality = quality;
+    }
+
+    QByteArray bytes;
+    QString error;
+    if (!EncodeEditedImage(m_image, format, m_fileName, quality, &bytes, &error)) {
+        m_statusBar->showMessage(error.isEmpty() ? tr("Image save failed.") : error);
         return;
     }
-    // if an unknown format just default to let QImage decide based on filename
-    if (format.isEmpty()) {
-        bool success = m_image.save(m_fileName);
-        if (success) {
-            m_statusBar->showMessage(tr("Image successfully saved."));
-        } else {
-            m_statusBar->showMessage(tr("Image save failed."));
-        }
+
+    const bool written = AtomicFile::WriteBytesReplacing(m_fileName, bytes, &error);
+    m_LastSaveWroteLiveFile = written;
+    m_UnwrittenPayload = written ? QByteArray() : bytes;
+    const qint64 storedSize = written ? QFile(m_fileName).size() : static_cast<qint64>(bytes.size());
+    m_ffsize = storedSize / 1024.0;
+    m_fsize = QLocale().toString(m_ffsize, 'f', 2);
+    UpdateImageDescription();
+    if (written) {
+        m_statusBar->showMessage(tr("Image successfully saved."));
     } else {
-        int quality = -1;
-        // handle lossy image types
-        if (SAVE_QUALITY_MEDIATYPES.contains(m_mediatype)) {
-            if (m_mediatype == "image/jpeg") quality = m_jpeg_quality;
-            if (m_mediatype == "image/webp") quality = m_webp_quality;
-            if (m_mediatype == "image/jxl")  quality = m_jxl_quality;
-            if (m_mediatype == "image/avif") quality = m_avif_quality;
-            bool ok;
-            quality = QInputDialog::getInt(nullptr, tr("Image Quality"),
-                                           tr("Enter quality level (0-100):"), quality, 0, 100, 1, &ok);
-            if (!ok) {
-                m_statusBar->showMessage(tr("Image save failed. "));
-                return;
-            }
-            if (m_mediatype == "image/jpeg") m_jpeg_quality = quality;
-            if (m_mediatype == "image/webp") m_webp_quality = quality;
-            if (m_mediatype == "image/jxl")  m_jxl_quality = quality;
-            if (m_mediatype == "image/avif") m_avif_quality = quality;
-        }
-        QImageWriter writer(m_fileName, format.toUtf8().data());
-        if (quality != -1) writer.setQuality(quality);
-        writer.setOptimizedWrite(true);
-        bool success = writer.write(m_image);
-        if (success) {
-            m_statusBar->showMessage(tr("Image successfully saved."));
-            m_ffsize = QFile(m_fileName).size() / 1024.0;
-            m_fsize =  QLocale().toString(m_ffsize, 'f', 2);
-            emit SetImageContentModified();
-        } else {
-            m_statusBar->showMessage(tr("Image save failed: ") + writer.errorString() );
-        }
+        m_statusBar->showMessage(
+            tr("Image saved for the EPUB. The extracted file could not be replaced and will be packaged on save: ") + error);
     }
+    emit SetImageContentModified();
+    m_UnwrittenPayload.clear();
 }
 
 

@@ -400,6 +400,8 @@ int main(int argc, char *argv[])
     technical_toggle->click();
     Require(!technical->isVisible(), "technical details must collapse again");
     Require(mode && mode->count() == 4, "mode combo must offer Ask/Plan/Edit/Auto");
+    Require(mode->currentData().toString() == QStringLiteral("auto"),
+            "Agent mode must default to Auto");
     Require(mode->itemData(0).toString() == QStringLiteral("ask")
                 && mode->itemData(1).toString() == QStringLiteral("plan")
                 && mode->itemData(2).toString() == QStringLiteral("edit")

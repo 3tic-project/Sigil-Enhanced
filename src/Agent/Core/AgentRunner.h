@@ -91,7 +91,7 @@ private:
     IApprovalGate *m_gate;
     AgentCancellation *m_cancellation;
     PromptAssembler m_prompts;
-    AgentMode m_mode = AgentMode::Ask;
+    AgentMode m_mode = AgentMode::Auto;
     AgentRunState m_state = AgentRunState::Idle;
     QString m_model;
     bool m_thinking = true;

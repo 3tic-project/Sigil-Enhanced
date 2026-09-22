@@ -214,7 +214,9 @@ AgentMode AgentSettings::defaultMode() const
 {
     SettingsStore store;
     store.beginGroup(QLatin1String(groupName()));
-    return modeFromName(store.value(QStringLiteral("mode")).toString());
+    const QString stored = store.value(QStringLiteral("mode")).toString();
+    if (stored.isEmpty()) return AgentMode::Auto;
+    return modeFromName(stored);
 }
 
 void AgentSettings::setDefaultMode(AgentMode mode)

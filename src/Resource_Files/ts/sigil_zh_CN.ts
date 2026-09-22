@@ -395,6 +395,16 @@
         <source>Image save failed: </source>
         <translation>图像保存失败：</translation>
     </message>
+    <message>
+        <location filename="../../Widgets/AdjustImage.cpp"/>
+        <source>GIF conversion failed.</source>
+        <translation>GIF 转换失败。</translation>
+    </message>
+    <message>
+        <location filename="../../Widgets/AdjustImage.cpp"/>
+        <source>Image saved for the EPUB. The extracted file could not be replaced and will be packaged on save: </source>
+        <translation>图像已计入 EPUB。暂时无法覆盖解压出的文件，保存 EPUB 时会打包进去：</translation>
+    </message>
 </context>
 <context>
     <name>AlertBox</name>
@@ -5640,26 +5650,19 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <source>No reliable font data</source>
         <translation>没有可靠的字体数据</translation>
     </message>
-    <message>
-        <location filename="../../Widgets/FontView.cpp" line="136"/>
-        <source>abcdefghijklmnopqrstuvwxyz</source>
-        <translation>abcdefghijklmnopqrstuvwxyz</translation>
-    </message>
-    <message>
-        <location filename="../../Widgets/FontView.cpp" line="137"/>
-        <source>ABCDEFGHIJKLMNOPQRSTUVWXYZ</source>
-        <translation>ABCDEFGHIJKLMNOPQRSTUVWXYZ</translation>
-    </message>
-    <message>
-        <location filename="../../Widgets/FontView.cpp" line="138"/>
-        <source>0123456789.:,;(*!?&apos;\/&quot;)$%^&amp;-+@=_-~&gt;&lt;</source>
-        <translation>0123456789.:,;(*!?&apos;\/&quot;)$%^&amp;-+@=_-~&gt;&lt;</translation>
-    </message>
-    <message>
-        <location filename="../../Widgets/FontView.cpp" line="139"/>
-        <source>The quick brown fox jumps over the lazy dog</source>
-        <translation>The quick brown fox jumps over the lazy dog</translation>
-    </message>
+    <message><source>Preview language</source><translation>预览语言</translation></message>
+    <message><source>Auto: %1</source><translation>自动：%1</translation></message>
+    <message><source>Simplified Chinese</source><translation>简体中文</translation></message>
+    <message><source>Traditional Chinese</source><translation>繁體中文</translation></message>
+    <message><source>Chinese (Simplified/Traditional)</source><translation>中文（简繁）</translation></message>
+    <message><source>Japanese</source><translation>日本語</translation></message>
+    <message><source>English</source><translation>English</translation></message>
+    <message><source>Generic</source><translation>通用</translation></message>
+    <message><source>Coverage: 0 / 0</source><translation>覆盖率：0 / 0</translation></message>
+    <message><source>Coverage: %1 / %2 (%3%)</source><translation>覆盖率：%1 / %2（%3%）</translation></message>
+    <message><source>No missing glyphs</source><translation>没有缺字</translation></message>
+    <message><source>Missing: %1</source><translation>缺失：%1</translation></message>
+    <message><source>Not present in this font</source><translation>此字体不含该字符</translation></message>
 </context>
 <context>
     <name>GeneralSettingsWidget</name>
@@ -6696,6 +6699,7 @@ You can then check or uncheck individual headings in the list above.</source>
         <source>Color</source>
         <translation>颜色</translation>
     </message>
+    <message><source>No image payload is waiting to be written.</source><translation>没有等待写入的图像数据。</translation></message>
 </context>
 <context>
     <name>ImageTab</name>
@@ -27190,6 +27194,11 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>DivParagraphNormalizationPreviewDialog</name>
+    <message><source>Rendered HTML preview is disabled for EPUB XHTML because Qt rich text can freeze on nested DIV/Ruby.
+
+%1</source><translation>EPUB XHTML 的渲染预览已关闭，因为 Qt 富文本遇到嵌套 DIV/Ruby 时可能卡死。
+
+%1</translation></message>
     <message><source>Ready to apply</source><translation>可应用</translation></message>
     <message><source>Review required</source><translation>需检查</translation></message>
     <message><source>Skipped</source><translation>已跳过</translation></message>

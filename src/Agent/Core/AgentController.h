@@ -71,7 +71,7 @@ private:
     std::unique_ptr<IModelProvider> m_provider;
     std::unique_ptr<AgentRunner> m_runner;
     QJsonArray m_httpTraces;
-    AgentMode m_mode = AgentMode::Ask;
+    AgentMode m_mode = AgentMode::Auto;
     QString m_model;
     bool m_thinkingEnabled = true;
     bool m_tokenUsageEnabled = true;

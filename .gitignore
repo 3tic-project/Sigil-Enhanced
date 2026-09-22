@@ -94,3 +94,6 @@ todo/
 
 # Product requirement drafts stay out of shipped docs.
 docs/**/*PRD*
+
+# CTest output written when the suite runs from the source root.
+Testing/

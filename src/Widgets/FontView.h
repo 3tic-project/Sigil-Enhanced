@@ -4,27 +4,19 @@
 **
 **  This file is part of Sigil.
 **
-**  Sigil is free software: you can redistribute it and/or modify
-**  it under the terms of the GNU General Public License as published by
-**  the Free Software Foundation, either version 3 of the License, or
-**  (at your option) any later version.
-**
-**  Sigil is distributed in the hope that it will be useful,
-**  but WITHOUT ANY WARRANTY; without even the implied warranty of
-**  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-**  GNU General Public License for more details.
-**
-**  You should have received a copy of the GNU General Public License
-**  along with Sigil.  If not, see <http://www.gnu.org/licenses/>.
-**
 *************************************************************************/
 
 #pragma once
 #ifndef FONTVIEW_H
 #define FONTVIEW_H
 
+#include <QComboBox>
+#include <QLabel>
 #include <QString>
+#include <QStringList>
 #include <QWidget>
+
+#include "FontPreview/FontPreviewLanguage.h"
 
 class QVBoxLayout;
 class QWebEngineView;
@@ -34,17 +26,29 @@ class FontView : public QWidget
     Q_OBJECT
 
  public:
-    FontView(QWidget *parent=0);
+    FontView(QWidget *parent = nullptr);
     ~FontView();
 
  public slots:
-    void ShowFont(QString path);
+    void ShowFont(const QString &path, const QStringList &bookLanguages = QStringList());
     void ReloadViewer();
 
+ private slots:
+    void LanguageChanged(int index);
+
  private:
+    void Rebuild();
+    QString ProfileName(FontPreviewProfile profile) const;
+    void UpdateAutoLabel(FontPreviewProfile resolved);
+
     QString m_path;
+    QStringList m_bookLanguages;
+    FontPreviewChoice m_choice = FontPreviewChoice::Auto;
+    QLabel *m_languageLabel;
+    QComboBox *m_language;
+    QLabel *m_coverage;
     QWebEngineView *m_WebView;
-    QVBoxLayout* m_layout;
+    QVBoxLayout *m_layout;
 };
 
-#endif // FONTVIEW_H
+#endif

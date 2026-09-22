@@ -39,6 +39,7 @@ Resource::Resource(const QString &mainfolder, const QString &fullfilepath, QObje
     m_MainFolder(mainfolder),
     m_FullFilePath(fullfilepath),
     m_LastSaved(0),
+    m_LastSavedSize(-1),
     m_LastWrittenTo(0),
     m_LastWrittenSize(0),
     m_CurrentBookRelPath(""),
@@ -271,11 +272,17 @@ bool Resource::LoadFromDisk()
 
 void Resource::SaveToDisk(bool book_wide_save)
 {
-    const QDateTime lastModifiedDate = QFileInfo(m_FullFilePath).lastModified();
+    Q_UNUSED(book_wide_save);
+    QFileInfo info(m_FullFilePath);
+    info.refresh();
+    const QDateTime lastModifiedDate = info.lastModified();
 
     if (lastModifiedDate.isValid()) {
         m_LastSaved = lastModifiedDate.toMSecsSinceEpoch();
+    } else {
+        m_LastSaved = 0;
     }
+    m_LastSavedSize = info.exists() ? info.size() : -1;
 }
 
 void Resource::FileChangedOnDisk()
@@ -294,12 +301,13 @@ void Resource::ResourceFileModified()
     qint64 latestWrittenTo = lastModifiedDate.isValid() ? lastModifiedDate.toMSecsSinceEpoch() : 0;
     qint64 latestWrittenSize = newFileInfo.size();
 
-    if (latestWrittenTo == m_LastSaved) {
-        // The FileChangedOnDisk has triggered even though the data in the file has not changed.
-        // This can happen if the FileWatcher is monitoring a file that Sigil has just performed
-        // a disk operation with, such as Saving before a Merge. In this circumstance the data
-        // loaded in memory by Sigil may be more up to date than that on disk (such as after the
-        // merge but before user has chosen to Save) so we want to ignore the file change notification.
+    if (m_LastSaved != 0 &&
+        latestWrittenTo == m_LastSaved &&
+        latestWrittenSize == m_LastSavedSize) {
+        // Sigil just wrote this file. The watcher also fires for our own
+        // replace. Ignore that only when both the timestamp and the size
+        // match what we saved. A same-second external write that changes
+        // the size must still reload.
         return;
     }
 

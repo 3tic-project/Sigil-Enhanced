@@ -450,6 +450,17 @@ list(APPEND DIALOG_FILES
     Dialogs/RegexWorkbenchDialog.h
 )
 
+set( FONT_PREVIEW_FILES
+    FontPreview/FontPreviewLanguage.cpp
+    FontPreview/FontPreviewLanguage.h
+    FontPreview/FontPreviewSamples.cpp
+    FontPreview/FontPreviewSamples.h
+    FontPreview/FontGlyphCoverage.cpp
+    FontPreview/FontGlyphCoverage.h
+    FontPreview/FontPreviewHtml.cpp
+    FontPreview/FontPreviewHtml.h
+)
+
 set( WIDGET_FILES
     Widgets/ImageView.cpp
     Widgets/ImageView.h
@@ -606,6 +617,8 @@ set( MISC_FILES
     Misc/Utility.cpp
     Misc/UtilityExt.cpp
     Misc/Utility.h
+    Misc/AtomicFileWrite.cpp
+    Misc/AtomicFileWrite.h
     Misc/SearchUtils.cpp
     Misc/SearchUtils.h
     Misc/SleepFunctions.h

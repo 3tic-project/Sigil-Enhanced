@@ -276,6 +276,11 @@ public:
      */
     void SaveAllResourcesToDisk();
 
+    // Write image edits that could not replace a locked extracted file
+    // into the publication folder. That folder is a new copy, so the
+    // write is not blocked by whatever still has the original open.
+    void WritePendingImagePayloads(const QString &publicationFolder);
+
 
     /**
      * Returns the modified state of the book. A book
