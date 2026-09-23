@@ -17,6 +17,9 @@ Sigil-Enhanced-2.8.5.E11
      - Updated the status-bar zoom text after every zoom change.
      - Made links in the About dialog clickable.
      - Smoothed scaled thumbnail images in the Insert Files dialog.
+     - Stopped EPUB files from failing to open on Windows, where the extracted OPF could not be replaced while the importer still held it open.
+     - Aborted an image save with a clear message for PBM and PGM, which Qt cannot write.
+     - Stopped setting a cover image from overwriting an unrelated manifest entry in an EPUB 3 book that already carried a cover-image property.
      - Asked for a restart after changing the JavaScript or remote-content preferences, as already done when disabling GPU acceleration.
 
    New Features
@@ -29,6 +32,9 @@ Sigil-Enhanced-2.8.5.E11
      - Native Agent can plan paragraph normalization and TOC hierarchy with the menu engines, then apply only after preview.
      - Preserved OPF formatting and comments by default, patching the original file instead of rewriting it. A missing EPUB 3 nav can be repaired after an explicit preview.
      - Font preview follows dc:language and shows original samples for Simplified Chinese, Traditional Chinese, Japanese, and English, with a coverage count. Empty glyph outlines count as missing.
+     - Build your own Insert Special Character dialog from special_characters.xml in the Sigil preferences folder. Design and code credit goes to BeckyEbook.
+     - Sigil version metadata now uses the EPUB version specific form, and EPUB 3 books mark cover art with the manifest cover-image property instead of the old EPUB 2 cover meta.
+     - EPUB 3 SVG cover images carry href alongside xlink:href, and Epub3 Tools adds or removes the EPUB 2 cover meta for older readers.
 
    Build/Testing
      - Added CTest coverage for code-view selection, clip badges, TOC hierarchy, DIV and Cmoa paragraph tools, OPF source preservation, Native Agent, original-mode Replace/Find, empty-HTML PrettyPrint, font-preview language and coverage, and image bytes written to the publication copy when the live file is busy.

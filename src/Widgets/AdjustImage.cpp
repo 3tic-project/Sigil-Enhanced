@@ -555,6 +555,10 @@ void AdjustImage::doSave()
     if (m_mediatype.startsWith(QLatin1String("image/"))) {
         format = m_mediatype.mid(6).toUpper();
     }
+    if (format == QLatin1String("PBM") || format == QLatin1String("PGM")) {
+        m_statusBar->showMessage(tr("PBM and PGM Image formats can not be saved. Save aborted."));
+        return;
+    }
 
     int quality = -1;
     if (format != QLatin1String("GIF") && SAVE_QUALITY_MEDIATYPES.contains(m_mediatype)) {
@@ -566,7 +570,7 @@ void AdjustImage::doSave()
         quality = QInputDialog::getInt(nullptr, tr("Image Quality"),
                                        tr("Enter quality level (0-100):"), quality, 0, 100, 1, &ok);
         if (!ok) {
-            m_statusBar->showMessage(tr("Image save failed. "));
+            m_statusBar->showMessage(tr("Image save aborted, as quality unavailable."));
             return;
         }
         if (m_mediatype == QLatin1String("image/jpeg")) m_jpeg_quality = quality;

@@ -386,10 +386,10 @@
         <translation>输入画质等级（0-100）</translation>
     </message>
     <message>
-        <location filename="../../Widgets/AdjustImage.cpp" line="486"/>
-        <source>Image save failed. </source>
-        <translation>图像保存失败</translation>
+        <source>Image save aborted, as quality unavailable.</source>
+        <translation>未获取画质设置，已中止图像保存。</translation>
     </message>
+    <message><source>PBM and PGM Image formats can not be saved. Save aborted.</source><translation>PBM 与 PGM 图像格式无法保存，已中止。</translation></message>
     <message>
         <location filename="../../Widgets/AdjustImage.cpp" line="501"/>
         <source>Image save failed: </source>
@@ -23322,6 +23322,12 @@ Do you want to save your changes?</source>
 </context>
 <context>
     <name>SelectCharacter</name>
+    <message>
+        <source>Unable to read special_characters xml. 
+Line: %1 Column %2 - %3)</source>
+        <translation>无法读取 special_characters xml。
+行：%1 列 %2 - %3)</translation>
+    </message>
     <message>
         <location filename="../../Form_Files/SelectCharacter.ui" line="14"/>
         <source>Insert Special Character</source>
