@@ -1,6 +1,7 @@
 #include "EmbedPython/EmbeddedPython.h"
 
 #include <QApplication>
+#include <QDir>
 #include <QFile>
 #include <QDateTime>
 #include <QTemporaryDir>
@@ -15,6 +16,7 @@
 
 #include "Misc/SettingsStore.h"
 #include "BookManipulation/CleanSource.h"
+#include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/OPFResource.h"
 #include "Widgets/TextDocument.h"
 #include "Importers/ImportEPUB.h"
@@ -74,6 +76,28 @@ int main(int argc, char **argv)
         Require(settings.preserveOPFSource(), "An absent preference must enable preservation");
         QTemporaryDir scratch;
         Require(scratch.isValid(), "Cannot create temporary resource directory");
+        const QString existing_path = scratch.path() + "/extracted.opf";
+        const QByteArray extracted_bytes = "<?xml version='1.0'?><package>Extracted OPF</package>";
+        {
+            QFile existing(existing_path);
+            Require(existing.open(QIODevice::WriteOnly), "Cannot create extracted OPF fixture");
+            Require(existing.write(extracted_bytes) == extracted_bytes.size(), "Cannot write extracted OPF fixture");
+        }
+        QFile existing_reader(existing_path);
+        Require(existing_reader.open(QIODevice::ReadOnly), "Cannot hold extracted OPF open");
+        OPFResource extracted(scratch.path(), existing_path, "3.0");
+        Require(ReadBytes(existing_path) == extracted_bytes, "OPF constructor overwrote an extracted package");
+        existing_reader.close();
+        Require(QDir(scratch.path()).mkpath("META-INF"), "Cannot create container directory");
+        const QString container_path = scratch.path() + "/META-INF/container.xml";
+        {
+            QFile container(container_path);
+            Require(container.open(QIODevice::WriteOnly), "Cannot create container fixture");
+            Require(container.write("<container/>") == 12, "Cannot write container fixture");
+        }
+        FolderKeeper::UpdateContainerXML(scratch.path(), "extracted.opf");
+        Require(ReadBytes(container_path).contains("full-path=\"extracted.opf\""),
+                "Container repair did not update the rootfile");
         const QString path = scratch.path() + "/content.opf";
         OPFResource resource(scratch.path(), path, "3.0");
         resource.SetEpubVersion("3.0");

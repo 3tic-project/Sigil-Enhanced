@@ -488,6 +488,7 @@ void FolderKeeper::UpdateContainerXML(const QString& FullPathToMainFolder, const
             }
         }
         if (matching_rootfile && !xml.hasError()) return;
+        existing.close();
     }
     Utility::WriteUnicodeTextFile(CONTAINER_XML.arg(opfbookpath), path);
 }

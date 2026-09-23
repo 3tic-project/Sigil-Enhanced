@@ -510,6 +510,10 @@ void ImportEPUB::ReadOPF()
     QFile source_file(m_OPFFilePath);
     if (!source_file.open(QIODevice::ReadOnly)) throw CannotOpenFile(source_file.errorString().toStdString());
     m_OPFSourceBytes = source_file.readAll();
+    if (source_file.error() != QFileDevice::NoError) {
+        throw CannotOpenFile(source_file.errorString().toStdString());
+    }
+    source_file.close();
     SettingsStore settings;
     const bool preserve_opf_source = settings.preserveOPFSource();
     QString opf_text = preserve_opf_source
@@ -614,9 +618,14 @@ void ImportEPUB::ReadOPF()
     QString OPFBookRelPath = m_OPFFilePath;
     OPFBookRelPath = OPFBookRelPath.remove(0,m_ExtractedFolderPath.length()+1);
     m_Book->GetOPF()->SetCurrentBookRelPath(OPFBookRelPath);
-    if (settings.preserveOPFSource()) oresource->SetSourceBytes(m_OPFSourceBytes);
-    else oresource->SetText(opf_text);
-    oresource->SaveToDisk(false);
+    if (preserve_opf_source) {
+        oresource->SetSourceBytes(m_OPFSourceBytes);
+        // The extracted file already has these exact bytes. Replacing it here
+        // is unnecessary and can fail on Windows if another reader has it open.
+    } else {
+        oresource->SetText(opf_text);
+        oresource->SaveToDisk(false);
+    }
     if (m_FileInfoFromZip.contains(bookpath)) {
         std::tuple<size_t, QString, QString> ainfo = m_FileInfoFromZip[bookpath];
         oresource->SetSavedSize(std::get<0>(ainfo));

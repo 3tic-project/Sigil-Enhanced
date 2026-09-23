@@ -34,11 +34,11 @@
 #include <QRegularExpressionMatch>
 #include <QDateTime>
 #include <QDebug>
-#include <QSaveFile>
 
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/XhtmlDoc.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "Misc/AtomicFileWrite.h"
 #include "Misc/Utility.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/GuideItems.h"
@@ -135,10 +135,14 @@ OPFResource::OPFResource(const QString &mainfolder,
     m_WarnedAboutVersion(false)
 {
     FillWithDefaultText(version);
-    // Make sure the file exists on disk.
-    // Among many reasons, this also solves the problem
-    // with the Book Browser not displaying an icon for this resource.
-    SaveToDisk();
+    // An importer may already have extracted the real OPF at this path.
+    // Do not replace it with the default template before the importer loads it.
+    if (QFile::exists(fullfilepath)) {
+        Resource::SaveToDisk(false);
+    } else {
+        // New books still need an on-disk file for the Book Browser icon.
+        SaveToDisk();
+    }
 }
 
 
@@ -267,7 +271,10 @@ bool OPFResource::LoadFromDisk()
         if (settings.preserveOPFSource()) {
             QFile file(GetFullPath());
             if (!file.open(QIODevice::ReadOnly)) throw CannotOpenFile(file.errorString().toStdString());
-            SetSourceBytes(file.readAll());
+            const QByteArray bytes = file.readAll();
+            if (file.error() != QFileDevice::NoError) throw CannotOpenFile(file.errorString().toStdString());
+            file.close();
+            SetSourceBytes(bytes);
         } else {
             SetText(Utility::ReadUnicodeTextFile(GetFullPath()));
         }
@@ -424,9 +431,9 @@ void OPFResource::SaveToDisk(bool book_wide_save)
             const QByteArray bytes = source == m_OriginalSourceText && !m_OriginalSourceBytes.isEmpty()
                 ? m_OriginalSourceBytes
                 : RunOPFSourceBytes("encode_source", { m_OriginalSourceBytes, source }).toByteArray();
-            QSaveFile file(GetFullPath());
-            if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit()) {
-                throw CannotOpenFile(file.errorString().toStdString());
+            QString write_error;
+            if (!AtomicFile::WriteBytesReplacing(GetFullPath(), bytes, &write_error)) {
+                throw CannotOpenFile(write_error.toStdString());
             }
             if (EditorProjection(source) != GetText()) TextResource::SetText(source);
             m_PreservedSourceText = source;

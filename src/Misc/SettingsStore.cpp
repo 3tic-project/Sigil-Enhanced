@@ -27,6 +27,7 @@
 #include <QPalette>
 #include <QFile>
 #include <QDir>
+#include <QTemporaryFile>
 
 #include "Misc/SettingsStore.h"
 #include "Misc/PluginDB.h"
@@ -479,7 +480,10 @@ QString SettingsStore::tempFolderHome()
     QString temp_path = value(KEY_TEMP_FOLDER, "<SIGIL_DEFAULT_TEMP_HOME>").toString();
     if (temp_path != "<SIGIL_DEFAULT_TEMP_HOME>") {
         QDir tdir = QDir(temp_path);
-        if ( !tdir.exists() || !tdir.isReadable()) {
+        // QFileInfo::isWritable() reports any Windows folder carrying the read-only
+        // attribute as unwritable, so create a real file to decide.
+        QTemporaryFile probe(tdir.filePath("sigil-write-probe-XXXXXX"));
+        if (!tdir.exists() || !tdir.isReadable() || !probe.open()) {
             temp_path = "<SIGIL_DEFAULT_TEMP_HOME>";
         }
     }
