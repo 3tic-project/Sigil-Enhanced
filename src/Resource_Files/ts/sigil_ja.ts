@@ -4068,8 +4068,8 @@ HTMLファイルを検索する場合にのみ有効です。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="78"/>
-        <source>Delete the selected TOC entry</source>
-        <translation>選択した目次エントリーを削除</translation>
+        <source>Delete the selected TOC entries and their children.</source>
+        <translation>選択した目次項目とその子項目を削除します。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="81"/>
@@ -4204,6 +4204,10 @@ You can also use the right arrow key.</source>
     <message>
         <source>Delete TOC entry</source>
         <translation>目次項目を削除</translation>
+    </message>
+    <message>
+        <source>Delete TOC entries</source>
+        <translation>複数の目次項目を削除</translation>
     </message>
     <message>
         <source>Undo</source>

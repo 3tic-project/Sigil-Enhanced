@@ -822,50 +822,62 @@ QModelIndex EditTOC::CheckSelection(int row)
 
 void EditTOC::DeleteEntry()
 {
-    QModelIndex index = CheckSelection(0);
-    if (!index.isValid()) {
-        return;
-    }
-
-    QStandardItem *item = m_TableOfContents->itemFromIndex(index);
-    const TocEditTree before = m_CurrentTree;
     const QList<TocNodeId> beforeSelection = SelectedNodeIds();
-
-    QStandardItem *parent_item = item->parent();
-    if (!parent_item) {
-        parent_item = m_TableOfContents->invisibleRootItem();
-    }
-
-    std::function<void(QStandardItem *)> removeIds = [&](QStandardItem *node) {
-        if (!node) return;
-        m_ItemsById.remove(node->data(NODE_ID_ROLE).toULongLong());
-        for (int row = 0; row < node->rowCount(); ++row) {
-            removeIds(node->child(row, 0));
+    if (beforeSelection.isEmpty()) return;
+    const TocEditTree before = m_CurrentTree;
+    const QSet<TocNodeId> selected(beforeSelection.cbegin(), beforeSelection.cend());
+    QList<TocNodeId> selectedRoots;
+    for (TocNodeId id : TocTreeTransform::PreorderIds(before)) {
+        if (!selected.contains(id)) continue;
+        TocNodeId ancestor = before.nodes.value(id).parentId;
+        bool coveredBySelection = false;
+        while (ancestor != before.rootId) {
+            if (selected.contains(ancestor)) {
+                coveredBySelection = true;
+                break;
+            }
+            ancestor = before.nodes.value(ancestor).parentId;
         }
-    };
-    removeIds(item);
-    const QList<QStandardItem *> deletedRow = parent_item->takeRow(item->row());
-    qDeleteAll(deletedRow);
-
-    // make sure at leat one empty row exits for editing purposes
-    if (m_TableOfContents->rowCount() == 0) {
-        QStandardItem *entry_item = new QStandardItem();
-        QStandardItem *target_item = new QStandardItem();
-        entry_item->setText(tr("[placeholder]"));
-        const TocNodeId id = m_NextNodeId++;
-        entry_item->setData(QVariant::fromValue<qulonglong>(id), NODE_ID_ROLE);
-        m_ItemsById.insert(id, entry_item);
-        QList<QStandardItem *> row_items;
-        row_items << entry_item << target_item ;
-        parent_item->insertRow(0,row_items);
-
-        // Select the new row
-        ui.TOCTree->selectionModel()->clear();
-        ui.TOCTree->setCurrentIndex(entry_item->index());
-        ui.TOCTree->selectionModel()->select(entry_item->index(),
-                                             QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+        if (!coveredBySelection) selectedRoots.append(id);
     }
-    RecordAppliedEdit(before, beforeSelection, tr("Delete TOC entry"));
+    if (selectedRoots.isEmpty()) return;
+
+    const TocNodeId anchorId = selectedRoots.first();
+    const TocNodeId anchorParent = before.nodes.value(anchorId).parentId;
+    const int anchorRow = before.nodes.value(anchorParent).children.indexOf(anchorId);
+    TocEditTree after = before;
+    for (TocNodeId id : selectedRoots) {
+        const TocNodeId parentId = after.nodes.value(id).parentId;
+        after.nodes[parentId].children.removeAll(id);
+        QList<TocNodeId> pending = {id};
+        while (!pending.isEmpty()) {
+            const TocNodeId removed = pending.takeLast();
+            pending.append(after.nodes.value(removed).children);
+            after.nodes.remove(removed);
+        }
+    }
+
+    QList<TocNodeId> afterSelection;
+    const QList<TocNodeId> remainingSiblings = after.nodes.value(anchorParent).children;
+    if (!remainingSiblings.isEmpty()) {
+        afterSelection.append(remainingSiblings.at(qMin(anchorRow, remainingSiblings.size() - 1)));
+    } else if (anchorParent != after.rootId) {
+        afterSelection.append(anchorParent);
+    }
+    if (after.nodes.value(after.rootId).children.isEmpty()) {
+        TocEditNode placeholder;
+        placeholder.id = m_NextNodeId++;
+        placeholder.parentId = after.rootId;
+        placeholder.label = tr("[placeholder]");
+        after.nodes.insert(placeholder.id, placeholder);
+        after.nodes[after.rootId].children.append(placeholder.id);
+    }
+    if (afterSelection.isEmpty()) {
+        afterSelection.append(after.nodes.value(after.rootId).children.first());
+    }
+    PushSnapshot(before, after, beforeSelection, afterSelection,
+                 selectedRoots.size() == 1 ? tr("Delete TOC entry") : tr("Delete TOC entries"),
+                 false);
 }
 
 void EditTOC::SelectTarget()

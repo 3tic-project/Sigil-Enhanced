@@ -202,6 +202,9 @@ int main(int argc, char **argv)
             auto *statusLabel = dialog->findChild<QLabel *>(QStringLiteral("OperationStatus"));
             Require(view && model && promote && demote && adopt && sync && statusLabel,
                     "EditTOC hierarchy controls are incomplete");
+            Require(view->selectionMode() == QAbstractItemView::ExtendedSelection
+                        && view->selectionBehavior() == QAbstractItemView::SelectRows,
+                    "The TOC tree must support selecting multiple complete rows");
             Require(ModelSignature(model) == QLatin1String("A[B,C[C1],D,E,F],X"),
                     "EditTOC did not load the source hierarchy");
             Require(adopt->isChecked() && sync->isVisible() && !sync->isChecked()
@@ -213,6 +216,42 @@ int main(int argc, char **argv)
                     "Hierarchy actions are not described accessibly");
             Require(!promote->isEnabled() && !demote->isEnabled(),
                     "A top-level boundary selection enabled an invalid hierarchy action");
+
+            auto *deleteButton = dialog->findChild<QPushButton *>(QStringLiteral("DeleteEntry"));
+            QAction *undo = FindUndo(*dialog);
+            QAction *redo = FindRedo(*dialog);
+            Require(deleteButton && undo && redo,
+                    "TOC deletion and dialog-local undo actions are unavailable");
+            Select(view, {FindItem(model->invisibleRootItem(), QStringLiteral("C")),
+                          FindItem(model->invisibleRootItem(), QStringLiteral("C1")),
+                          FindItem(model->invisibleRootItem(), QStringLiteral("E"))});
+            Require(view->selectionModel()->selectedRows(0).size() == 3,
+                    "The TOC tree did not retain a mixed ancestor and child selection");
+            deleteButton->click();
+            Require(ModelSignature(model) == QLatin1String("A[B,D,F],X")
+                        && SelectedLabels(view) == QSet<QString>({QStringLiteral("D")})
+                        && undo->text().contains(QStringLiteral("Delete TOC entries")),
+                    "Multi-delete did not remove selected branches in one undo step");
+            undo->trigger();
+            Require(ModelSignature(model) == QLatin1String("A[B,C[C1],D,E,F],X")
+                        && SelectedLabels(view) == QSet<QString>({QStringLiteral("C"),
+                                                                  QStringLiteral("C1"),
+                                                                  QStringLiteral("E")}),
+                    "Undo did not restore all deleted branches and their selection");
+            redo->trigger();
+            Require(ModelSignature(model) == QLatin1String("A[B,D,F],X"),
+                    "Redo did not restore the complete multi-delete");
+            undo->trigger();
+
+            Select(view, {FindItem(model->invisibleRootItem(), QStringLiteral("A")),
+                          FindItem(model->invisibleRootItem(), QStringLiteral("X"))});
+            deleteButton->click();
+            Require(ModelSignature(model) == QLatin1String("[placeholder]")
+                        && SelectedLabels(view) == QSet<QString>({QStringLiteral("[placeholder]")}),
+                    "Deleting every top-level entry did not leave an editable placeholder");
+            undo->trigger();
+            Require(ModelSignature(model) == QLatin1String("A[B,C[C1],D,E,F],X"),
+                    "Undo did not restore the complete tree after deleting all roots");
 
             QStandardItem *oldC = FindItem(model->invisibleRootItem(), QStringLiteral("C"));
             view->setExpanded(oldC->index(), true);
@@ -226,8 +265,6 @@ int main(int argc, char **argv)
                         && statusLabel->text().contains(QStringLiteral("reassigned 2")),
                     "Promote did not report moved and reassigned counts");
 
-            QAction *undo = FindUndo(*dialog);
-            QAction *redo = FindRedo(*dialog);
             Require(undo && redo && undo->isEnabled(),
                     "Dialog-local undo/redo actions are unavailable");
             undo->trigger();
@@ -322,6 +359,33 @@ int main(int argc, char **argv)
         Require(nav->GetText() == navBefore && ncx->GetText() == ncxBefore
                     && !book->IsModified(),
                 "Accepting an unchanged EditTOC rewrote navigation");
+
+        ImportEPUB deletionImporter(fixture);
+        const auto deletionBook = deletionImporter.GetBook();
+        HTMLResource *deletionNav = deletionBook->GetOPF()->GetNavResource();
+        const QString deletionNcxBefore = deletionBook->GetNCX()->GetText();
+        {
+            std::unique_ptr<EditTOC> dialog(MakeDialog(deletionBook));
+            auto *view = dialog->findChild<QTreeView *>(QStringLiteral("TOCTree"));
+            auto *model = qobject_cast<QStandardItemModel *>(view->model());
+            Select(view, {FindItem(model->invisibleRootItem(), QStringLiteral("C")),
+                          FindItem(model->invisibleRootItem(), QStringLiteral("C1")),
+                          FindItem(model->invisibleRootItem(), QStringLiteral("E"))});
+            dialog->findChild<QPushButton *>(QStringLiteral("DeleteEntry"))->click();
+            dialog->accept();
+            Require(dialog->DidSaveChanges(),
+                    "Accepting a multi-delete did not write the Nav resource");
+        }
+        NavProcessor deletionProcessor(deletionNav);
+        const TOCModel::TOCEntry deletionRoot = deletionProcessor.GetRootTOCEntry();
+        Require(deletionRoot.children.size() == 2
+                    && deletionRoot.children[0].children.size() == 3
+                    && deletionRoot.children[0].children[0].text == QLatin1String("B")
+                    && deletionRoot.children[0].children[1].text == QLatin1String("D")
+                    && deletionRoot.children[0].children[2].text == QLatin1String("F")
+                    && deletionRoot.children[1].text == QLatin1String("X")
+                    && deletionBook->GetNCX()->GetText() == deletionNcxBefore,
+                "Saving a multi-delete changed surviving Nav entries or the compatibility NCX");
 
         ImportEPUB changedImporter(fixture);
         const auto changedBook = changedImporter.GetBook();

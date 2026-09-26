@@ -4065,8 +4065,8 @@ other end to continue searching.</source>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="78"/>
-        <source>Delete the selected TOC entry</source>
-        <translation>刪除選取的項目</translation>
+        <source>Delete the selected TOC entries and their children.</source>
+        <translation>刪除選取的目錄項目及其子項目。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="81"/>
@@ -4201,6 +4201,10 @@ You can also use the right arrow key.</source>
     <message>
         <source>Delete TOC entry</source>
         <translation>刪除目錄項目</translation>
+    </message>
+    <message>
+        <source>Delete TOC entries</source>
+        <translation>刪除多個目錄項目</translation>
     </message>
     <message>
         <source>Undo</source>

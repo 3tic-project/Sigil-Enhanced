@@ -75,7 +75,7 @@
        <item>
         <widget class="QPushButton" name="DeleteEntry">
          <property name="toolTip">
-          <string>Delete the selected TOC entry</string>
+          <string>Delete the selected TOC entries and their children.</string>
          </property>
          <property name="text">
           <string>Delete</string>

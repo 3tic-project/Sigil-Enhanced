@@ -3617,8 +3617,8 @@ other end to continue searching.</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="78"/>
-        <source>Delete the selected TOC entry</source>
-        <translation>Delete the selected TOC entry</translation>
+        <source>Delete the selected TOC entries and their children.</source>
+        <translation>Delete the selected TOC entries and their children.</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="81"/>
@@ -3753,6 +3753,10 @@ You can also use the right arrow key.</translation>
     <message>
         <source>Delete TOC entry</source>
         <translation>Delete TOC entry</translation>
+    </message>
+    <message>
+        <source>Delete TOC entries</source>
+        <translation>Delete TOC entries</translation>
     </message>
     <message>
         <source>Undo</source>

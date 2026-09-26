@@ -4077,8 +4077,8 @@ other end to continue searching.</source>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="78"/>
-        <source>Delete the selected TOC entry</source>
-        <translation>删除已选中的目录条目。</translation>
+        <source>Delete the selected TOC entries and their children.</source>
+        <translation>删除选中的目录条目及其子项。</translation>
     </message>
     <message>
         <location filename="../../Form_Files/EditTOC.ui" line="81"/>
@@ -4213,6 +4213,10 @@ You can also use the right arrow key.</source>
     <message>
         <source>Delete TOC entry</source>
         <translation>删除目录条目</translation>
+    </message>
+    <message>
+        <source>Delete TOC entries</source>
+        <translation>删除多个目录条目</translation>
     </message>
     <message>
         <source>Undo</source>
