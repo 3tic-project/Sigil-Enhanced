@@ -11,6 +11,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
+#include <QStringList>
 
 #include "Agent/Model/IModelProvider.h"
 
@@ -18,6 +19,9 @@ class QNetworkAccessManager;
 
 namespace SigilAgent
 {
+
+constexpr int DEFAULT_FIRST_TOKEN_TIMEOUT_MS = 180000;
+constexpr int MAX_FIRST_TOKEN_TIMEOUT_MS = 1800000;
 
 struct OpenAIProviderConfig {
     QString baseUrl;
@@ -29,6 +33,12 @@ struct OpenAIProviderConfig {
     ReasoningProtocol reasoningProtocol = ReasoningProtocol::DeepSeek;
     QString httpReferer;
     QString httpTitle;
+    bool openCodeGo = false;
+    QString userAgent;
+    QStringList supportedReasoningEfforts;
+    QString defaultReasoningEffort;
+    bool reasoningEffortSelectable = true;
+    int firstTokenTimeoutMs = DEFAULT_FIRST_TOKEN_TIMEOUT_MS;
 };
 
 class OpenAICompatibleProvider : public IModelProvider
@@ -47,6 +57,7 @@ private:
     void recordTrace(const QJsonObject &trace);
 
     OpenAIProviderConfig m_config;
+    QString m_fallbackSessionId;
     QJsonArray m_traces;
 };
 

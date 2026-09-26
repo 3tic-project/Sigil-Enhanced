@@ -203,6 +203,70 @@ QJsonObject unavailableTaskRecovery(const QString &reason)
     };
 }
 
+QJsonObject partialRunOutcome(const QList<AgentEvent> &events)
+{
+    int commit_count = 0;
+    qint64 last_book_revision = -1;
+    QSet<QString> seen_resources;
+    QJsonArray resource_ids;
+    QString checkpoint_id;
+    for (int i = events.size() - 1; i >= 0; --i) {
+        const AgentEvent &event = events.at(i);
+        if (event.type == AgentEventType::UserMessage) break;
+        if (event.type != AgentEventType::TransactionCommitted) continue;
+        ++commit_count;
+        if (last_book_revision < 0) {
+            last_book_revision = event.payload.value(QStringLiteral("book_revision"))
+                                     .toInteger(-1);
+        }
+        const QJsonArray resources = event.payload
+            .value(QStringLiteral("resource_outcomes")).toObject()
+            .value(QStringLiteral("resource_ids")).toArray();
+        for (const QJsonValue &value : resources) {
+            const QString id = value.toString();
+            if (id.isEmpty() || seen_resources.contains(id)) continue;
+            seen_resources.insert(id);
+            resource_ids.append(id);
+        }
+        if (checkpoint_id.isEmpty()) {
+            checkpoint_id = event.payload.value(QStringLiteral("recovery"))
+                                .toObject().value(QStringLiteral("checkpoint_id")).toString();
+        }
+    }
+    if (commit_count == 0) return QJsonObject();
+    return QJsonObject {
+        { QStringLiteral("status"), QStringLiteral("partial_applied") },
+        { QStringLiteral("commit_count"), commit_count },
+        { QStringLiteral("resource_ids"), resource_ids },
+        { QStringLiteral("book_revision"), last_book_revision },
+        { QStringLiteral("save_status"), QStringLiteral("not_saved_by_agent") },
+        { QStringLiteral("verification_status"), QStringLiteral("not_confirmed") },
+        { QStringLiteral("latest_restore_point"), checkpoint_id }
+    };
+}
+
+QJsonObject requestSizeStats(const ModelRequest &request, qsizetype max_context_tokens)
+{
+    HistoryAssembler assembler;
+    const qint64 message_bytes = QJsonDocument(assembler.toOpenAIMessages(
+        request.messages, !request.tools.isEmpty())).toJson(QJsonDocument::Compact).size();
+    const qint64 tool_schema_bytes = QJsonDocument(request.tools)
+        .toJson(QJsonDocument::Compact).size();
+    const qint64 payload_bytes = message_bytes + tool_schema_bytes + 1024;
+    const qint64 estimated_tokens = (payload_bytes + 2) / 3;
+    const qint64 output_reserve = qMax<qint64>(
+        request.maxOutputTokens > 0 ? request.maxOutputTokens : 4096,
+        max_context_tokens / 8);
+    return QJsonObject {
+        { QStringLiteral("message_bytes"), message_bytes },
+        { QStringLiteral("tool_schema_bytes"), tool_schema_bytes },
+        { QStringLiteral("request_payload_bytes_estimate"), payload_bytes },
+        { QStringLiteral("context_tokens_estimate"), estimated_tokens },
+        { QStringLiteral("context_token_limit"), static_cast<qint64>(max_context_tokens) },
+        { QStringLiteral("output_token_reserve"), output_reserve }
+    };
+}
+
 } // namespace
 
 AgentRunner::SessionSink::SessionSink(AgentSession *session, AgentCancellation *cancellation) :
@@ -323,6 +387,13 @@ void AgentRunner::setState(AgentRunState state)
                 payload.insert(QStringLiteral("model_steps"), m_runModelSteps);
                 payload.insert(QStringLiteral("tool_calls"), m_runToolCalls);
                 payload.insert(QStringLiteral("usage_summary"), runUsageSummary());
+                if (state == AgentRunState::Cancelled || state == AgentRunState::Failed) {
+                    QJsonObject partial = partialRunOutcome(m_session->events());
+                    if (!partial.isEmpty()) {
+                        partial.insert(QStringLiteral("book_session_id"), m_runBookSessionId);
+                        payload.insert(QStringLiteral("partial_outcome"), partial);
+                    }
+                }
                 m_runTimingActive = false;
             }
         }
@@ -708,9 +779,40 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking,
             m_effort, handles, m_historyPreviousTurnBudgetBytes, m_policy,
             qMax(0, m_maxToolCalls - m_runToolCalls));
+        request.sessionId = m_session->id();
         request.includeUsage = m_runUsageRequested;
-        ++m_runModelSteps;
         const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const QJsonObject size_stats = requestSizeStats(
+            request, m_provider->capabilities().maxContextTokens);
+        for (auto it = size_stats.begin(); it != size_stats.end(); ++it) {
+            request.historyContext.insert(it.key(), it.value());
+        }
+        const qint64 context_limit = size_stats.value(
+            QStringLiteral("context_token_limit")).toInteger();
+        if (context_limit > 0
+            && size_stats.value(QStringLiteral("context_tokens_estimate")).toInteger()
+                   > context_limit - size_stats.value(
+                         QStringLiteral("output_token_reserve")).toInteger()) {
+            result.state = AgentRunState::Failed;
+            result.error = QStringLiteral(
+                "CONTEXT_BUDGET_EXCEEDED: The request is too large after history compaction. "
+                "Shorten the current instruction or reduce attached context, then continue.");
+            QJsonObject error_payload = size_stats;
+            error_payload.insert(QStringLiteral("request_id"), request_id);
+            error_payload.insert(QStringLiteral("step"), steps);
+            error_payload.insert(QStringLiteral("model"), request.model);
+            error_payload.insert(QStringLiteral("duration_ms"), 0);
+            error_payload.insert(QStringLiteral("history_context"), request.historyContext);
+            error_payload.insert(QStringLiteral("code"),
+                                 QStringLiteral("CONTEXT_BUDGET_EXCEEDED"));
+            error_payload.insert(QStringLiteral("message"), result.error);
+            m_session->append(AgentEventType::ModelRequestFailed, error_payload);
+            m_session->append(AgentEventType::Error, error_payload);
+            rollbackOpenWork();
+            setState(AgentRunState::Failed);
+            return result;
+        }
+        ++m_runModelSteps;
         m_session->append(AgentEventType::ModelRequestStarted, QJsonObject {
             { QStringLiteral("request_id"), request_id },
             { QStringLiteral("session_id"), m_session->id() },
@@ -829,6 +931,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         m_session->append(AgentEventType::AssistantMessage, QJsonObject {
             { QStringLiteral("content"), turn.content },
             { QStringLiteral("reasoning_content"), turn.reasoning },
+            { QStringLiteral("reasoning_details"), turn.reasoningDetails },
             { QStringLiteral("tool_calls"), tool_calls_json },
             { QStringLiteral("is_final"), turn.toolCalls.isEmpty() }
         });

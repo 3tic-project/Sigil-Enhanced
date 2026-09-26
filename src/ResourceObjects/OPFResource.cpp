@@ -38,6 +38,7 @@
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/XhtmlDoc.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "BookManipulation/ManifestIdRebase.h"
 #include "Misc/AtomicFileWrite.h"
 #include "Misc/Utility.h"
 #include "Misc/SettingsStore.h"
@@ -48,8 +49,10 @@
 #include "ResourceObjects/ImageResource.h"
 #include "ResourceObjects/NCXResource.h"
 #include "ResourceObjects/OPFResource.h"
+#include "ResourceObjects/OPFSourceText.h"
+#include "ResourceObjects/OPFSourceBytes.h"
+#include "ResourceObjects/OPFSourcePatch.h"
 #include "ResourceObjects/NavProcessor.h"
-#include "EmbedPython/PythonRoutines.h"
 #include "sigil_constants.h"
 #include "sigil_exception.h"
 
@@ -219,6 +222,13 @@ QVariant RunOPFSourceBytes(const QString &function, const QVariantList &argument
     return result;
 }
 
+QByteArray EncodeSourceBytes(const QByteArray &original, const QString &source)
+{
+    if (OPFSourceBytes::CanEncodeNatively(original, source))
+        return OPFSourceBytes::Encode(original, source);
+    return RunOPFSourceBytes("encode_source", { original, source }).toByteArray();
+}
+
 QString EditorProjection(QString source)
 {
     return source.replace("\r\n", "\n").replace('\r', '\n')
@@ -229,7 +239,9 @@ QString EditorProjection(QString source)
 
 QString OPFResource::DecodeSourceBytes(const QByteArray &bytes)
 {
-    return RunOPFSourceBytes("decode_source", { bytes }).toString();
+    return OPFSourceBytes::CanDecodeNatively(bytes)
+        ? OPFSourceBytes::Decode(bytes)
+        : RunOPFSourceBytes("decode_source", { bytes }).toString();
 }
 
 QString OPFResource::ModelSource() const
@@ -237,12 +249,7 @@ QString OPFResource::ModelSource() const
     SettingsStore settings;
     if (!settings.preserveOPFSource())
         return CleanSource::ProcessXML(GetText(), "application/oebps-package+xml");
-    int rv = 0;
-    QString error;
-    const QVariant result = EmbeddedPython::instance().runInPython(
-        "opf_source", "model_xml", { GetText() }, &rv, error, false, false);
-    if (rv != 0) throw ErrorParsingXml(error.toStdString());
-    return result.toString();
+    return OPFSourcePatch::ModelXml(GetText());
 }
 
 void OPFResource::SetSourceBytes(const QByteArray &bytes)
@@ -261,7 +268,7 @@ QString OPFResource::PreservedSourceText() const
     if (edited == EditorProjection(m_PreservedSourceText)) return m_PreservedSourceText;
     if (edited == EditorProjection(m_OriginalSourceText)) return m_OriginalSourceText;
     if (m_PreservedSourceText.isEmpty()) return edited;
-    return RunOPFSourceBytes("restore_source_text", { m_PreservedSourceText, edited }).toString();
+    return OPFSourceText::Restore(m_PreservedSourceText, edited);
 }
 
 bool OPFResource::LoadFromDisk()
@@ -430,7 +437,7 @@ void OPFResource::SaveToDisk(bool book_wide_save)
             const QString source = ValidatePackageVersion(PreservedSourceText());
             const QByteArray bytes = source == m_OriginalSourceText && !m_OriginalSourceBytes.isEmpty()
                 ? m_OriginalSourceBytes
-                : RunOPFSourceBytes("encode_source", { m_OriginalSourceBytes, source }).toByteArray();
+                : EncodeSourceBytes(m_OriginalSourceBytes, source);
             QString write_error;
             if (!AtomicFile::WriteBytesReplacing(GetFullPath(), bytes, &write_error)) {
                 throw CannotOpenFile(write_error.toStdString());
@@ -457,7 +464,7 @@ QByteArray OPFResource::GetSourceBytes() const
     const QString source = PreservedSourceText();
     return source == m_OriginalSourceText && !m_OriginalSourceBytes.isEmpty()
         ? m_OriginalSourceBytes
-        : RunOPFSourceBytes("encode_source", { m_OriginalSourceBytes, source }).toByteArray();
+        : EncodeSourceBytes(m_OriginalSourceBytes, source);
 }
 
 
@@ -2004,16 +2011,11 @@ void OPFResource::UpdateText(const OPFParser &p)
         const QString before = p.original_model_xml();
         if (before == updated) return;
         const QString original = PreservedSourceText();
-        int rv = 0;
-        QString error;
-        const QList<QVariant> args { original, before, updated };
-        const QVariant result = EmbeddedPython::instance().runInPython(
-            "opf_source", "apply_model_update", args, &rv, error, false, false);
-        if (rv != 0) {
-            const QString message = QStringLiteral("Cannot preserve OPF source: ") + error;
-            throw ErrorParsingXml(message.toStdString());
+        try {
+            updated = OPFSourcePatch::ApplyModelUpdate(original, before, updated);
+        } catch (const std::exception &error) {
+            throw ErrorParsingXml(std::string("Cannot preserve OPF source: ") + error.what());
         }
-        updated = result.toString();
         m_PreservedSourceText = updated;
     }
     if (EditorProjection(updated) != GetText()) TextResource::SetText(updated);
@@ -2214,10 +2216,15 @@ void OPFResource::SetItemRefLinear(Resource * resource, bool linear)
 void OPFResource::RebaseManifestIDs()
 {
     QWriteLocker locker(&GetLock());
-    QString source = ModelSource();
-    PythonRoutines pr;
-    source = pr.RebaseManifestIDsInPython(source);
-    TextResource::SetText(source);
+    SettingsStore settings;
+    if (settings.preserveOPFSource()) {
+        const QString updated = ManifestIdRebase::Preserving(PreservedSourceText());
+        m_PreservedSourceText = updated;
+        const QString projected = EditorProjection(updated);
+        if (projected != GetText()) TextResource::SetText(projected);
+        return;
+    }
+    TextResource::SetText(ManifestIdRebase::Legacy(ModelSource()));
 }
 
 void OPFResource::AppendResourceToSpine(const Resource* resource, bool nonlinear)

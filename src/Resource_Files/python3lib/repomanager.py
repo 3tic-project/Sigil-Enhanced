@@ -588,23 +588,6 @@ def performCommit(localRepo, bookid, bookinfo, bookroot, bookfiles):
     return ''
 
 
-def eraseRepo(localRepo, bookid):
-    repo_home = pathof(localRepo)
-    repo_home = repo_home.replace("/", os.sep)
-    repo_path = os.path.join(repo_home, "epub_" + bookid)
-    success = 1
-    cdir = os.getcwd()
-    if os.path.exists(repo_path):
-        try:
-            shutil.rmtree(repo_path)
-        except Exception as e:
-            print("repo erasure failed")
-            print(str(e))
-            success = 0
-            pass
-    return success
-
-
 def generate_diff_from_checkpoints(localRepo, bookid, leftchkpoint, rightchkpoint):
     repo_home = pathof(localRepo)
     repo_home = repo_home.replace("/", os.sep)
@@ -662,30 +645,6 @@ def generate_parsed_ndiff(path1, path2):
         results.append(dinfo)
     return results
 
-
-def generate_unified_diff(path1, path2):
-    path1 = pathof(path1)
-    path2 = pathof(path2)
-    try:
-        leftContents = open(path1,'rb').read().decode('utf-8')
-    except:
-        leftContents = ''
-    try:
-        rightContents = open(path2, 'rb').read().decode('utf-8')
-    except:
-        rightContents = ''
-
-    diffs = difflib.unified_diff(leftContents.splitlines(keepends=True), 
-                                 rightContents.splitlines(keepends=True),
-                                 fromfile=path1, tofile=path2, n=3)
-    results = "diff a/%s b/%s\n" % (path1, path2)
-    with StringIO() as sf:
-        for a in diffs:
-            sf.write(a)
-        sf.seek(0)
-        results += sf.getvalue()
-    return results
-    
 
 def copy_tag_to_destdir(localRepo, bookid, tagname, destdir):
     # convert posix paths to os specific paths

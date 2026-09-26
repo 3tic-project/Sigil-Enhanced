@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/codepoint_names">
+        <file alias="unicode14.bin" compress="0">codepoint_names_unicode14.bin</file>
+    </qresource>
+</RCC>

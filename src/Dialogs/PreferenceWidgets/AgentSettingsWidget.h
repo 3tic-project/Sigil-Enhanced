@@ -70,6 +70,7 @@ private:
     QLabel *m_status = nullptr;
     QCheckBox *m_thinking = nullptr;
     QCheckBox *m_tokenUsage = nullptr;
+    QSpinBox *m_firstTokenTimeout = nullptr;
     QSpinBox *m_historyBudget = nullptr;
     QSpinBox *m_maxModelSteps = nullptr;
     QSpinBox *m_maxToolCalls = nullptr;

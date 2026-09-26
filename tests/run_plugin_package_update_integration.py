@@ -1,4 +1,4 @@
-"""Run package source planners through the real embedded Python bridge."""
+"""Run the application's plugin package update planners without a Python bridge."""
 import argparse
 import pathlib
 

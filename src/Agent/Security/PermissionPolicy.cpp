@@ -11,6 +11,15 @@ namespace SigilAgent
 
 PermissionAction PermissionPolicy::evaluate(AgentMode mode, const AgentToolDescriptor &tool) const
 {
+    if ((tool.name == QLatin1String("proof.decide")
+         || tool.name == QLatin1String("proof.configure"))
+        && mode != AgentMode::Edit) {
+        return PermissionAction::Deny;
+    }
+    if (mode == AgentMode::Auto
+        && tool.name == QLatin1String("proof.apply")) {
+        return PermissionAction::Deny;
+    }
     if (!tool.mutatesBook && tool.risk == ToolRisk::Read) {
         return PermissionAction::Allow;
     }
@@ -46,6 +55,15 @@ PermissionAction PermissionPolicy::evaluate(AgentMode mode, const AgentToolDescr
 
 QString PermissionPolicy::denyReason(AgentMode mode, const AgentToolDescriptor &tool) const
 {
+    if ((tool.name == QLatin1String("proof.decide")
+         || tool.name == QLatin1String("proof.configure"))
+        && mode != AgentMode::Edit) {
+        return QStringLiteral("Proofreading conventions and decisions require reviewed Edit mode; %1 is unavailable").arg(tool.name);
+    }
+    if (mode == AgentMode::Auto
+        && tool.name == QLatin1String("proof.apply")) {
+        return QStringLiteral("Proofreading changes require review; Auto cannot run %1").arg(tool.name);
+    }
     if (mode == AgentMode::Ask && tool.mutatesBook) {
         return QStringLiteral("Ask mode is read-only and cannot run %1").arg(tool.name);
     }

@@ -549,6 +549,61 @@ int main()
                 && capped_literal_search.data.value(
                     QStringLiteral("match_limit_reached")).toBool(),
             "literal search must clamp and disclose its match-count bound");
+
+    MemoryBookWorkspace paged_book;
+    MemoryResource first_page_resource;
+    first_page_resource.id = QStringLiteral("page-a");
+    first_page_resource.bookPath = QStringLiteral("OEBPS/Text/a.xhtml");
+    first_page_resource.kind = QStringLiteral("xhtml");
+    first_page_resource.mediaType = QStringLiteral("application/xhtml+xml");
+    first_page_resource.text = QString(37, QLatin1Char('z'));
+    paged_book.addResource(first_page_resource);
+    MemoryResource second_page_resource = first_page_resource;
+    second_page_resource.id = QStringLiteral("page-b");
+    second_page_resource.bookPath = QStringLiteral("OEBPS/Text/b.xhtml");
+    second_page_resource.text = QString(41, QLatin1Char('z'));
+    paged_book.addResource(second_page_resource);
+    ToolRegistry paged_registry;
+    registerBookTools(&paged_registry, &paged_book);
+    const auto paged_search = [&](const QJsonObject &arguments) {
+        return paged_registry.find(QStringLiteral("book.search"))->execute(arguments);
+    };
+    const QJsonObject page_query {
+        { QStringLiteral("query"), QStringLiteral("z") },
+        { QStringLiteral("limit"), 30 }
+    };
+    const ToolResult page_one = paged_search(page_query);
+    const QString second_cursor = page_one.data.value(QStringLiteral("next_cursor")).toString();
+    QJsonObject page_two_query = page_query;
+    page_two_query.insert(QStringLiteral("cursor"), second_cursor);
+    const ToolResult page_two = paged_search(page_two_query);
+    QJsonObject page_three_query = page_query;
+    page_three_query.insert(QStringLiteral("cursor"),
+                            page_two.data.value(QStringLiteral("next_cursor")));
+    const ToolResult page_three = paged_search(page_three_query);
+    const QJsonArray second_matches = page_two.data.value(QStringLiteral("matches")).toArray();
+    Require(page_one.ok && page_two.ok && page_three.ok
+                && page_one.data.value(QStringLiteral("total_count")).toInt() == 78
+                && page_one.data.value(QStringLiteral("returned_count")).toInt() == 30
+                && page_one.data.value(QStringLiteral("has_more")).toBool()
+                && second_matches.size() == 30
+                && second_matches.at(6).toObject().value(QStringLiteral("offset")).toInt() == 36
+                && second_matches.at(7).toObject().value(QStringLiteral("resource_id")).toString()
+                    == second_page_resource.id
+                && page_three.data.value(QStringLiteral("returned_count")).toInt() == 18
+                && !page_three.data.value(QStringLiteral("has_more")).toBool(),
+            "literal search pages must enumerate every occurrence across resources");
+    QJsonObject count_query = page_query;
+    count_query.insert(QStringLiteral("count_only"), true);
+    const ToolResult counted_search = paged_search(count_query);
+    Require(counted_search.ok
+                && counted_search.data.value(QStringLiteral("total_count")).toInt() == 78
+                && counted_search.data.value(QStringLiteral("matches")).toArray().isEmpty(),
+            "count-only literal search must return an exact total without snippets");
+    first_page_resource.text.append(QLatin1Char('z'));
+    paged_book.addResource(first_page_resource);
+    Require(paged_search(page_two_query).code == QStringLiteral("SEARCH_SNAPSHOT_STALE"),
+            "search cursor must reject changed source text even without a revision bump");
     const ToolResult rejected_literal_search = run_bounded_literal(QJsonObject {
         { QStringLiteral("query"), QString(513, QLatin1Char('x')) }
     });
@@ -1270,6 +1325,21 @@ int main()
     Require(mismatch_milliseconds <= 100,
             "bounded large-range mismatch diagnostics exceeded 100 ms");
 
+    const QString near_source = QString(1000, QLatin1Char('x'))
+        + QStringLiteral("\r\n<p>Shared anchor</p>\r\n<p>Actual translation</p>\r\n");
+    const PatchRangeResolution near_mismatch = resolvePatchRange(
+        near_source, -1, -1,
+        QStringLiteral("<p>Shared anchor</p>\n<p>Outdated translation</p>"));
+    const QJsonArray near_candidates = near_mismatch.data.value(
+        QStringLiteral("nearby_candidates")).toArray();
+    Require(near_mismatch.code == QStringLiteral("PATCH_TEXT_NOT_FOUND")
+                && near_candidates.size() == 1
+                && near_candidates.first().toObject().value(
+                    QStringLiteral("line")).toInt() == 2
+                && near_mismatch.data.value(QStringLiteral("source_has_crlf")).toBool()
+                && near_mismatch.data.value(QStringLiteral("context_start")).toInt() > 900,
+            "missing cross-line text must suggest a nearby source line and newline format");
+
     const PatchRangeResolution direct_oversized = resolvePatchRange(
         skeleton, -1, -1, oversized_patch_text);
     Require(!direct_oversized.ok
@@ -1328,6 +1398,109 @@ int main()
     Require(lined_text.contains(QStringLiteral("<p>alpha</p>")) && lined_text.contains(QStringLiteral("<p>beta</p>")),
             "start_line must change only the chosen occurrence");
 
+    MemoryBookWorkspace newline_book;
+    MemoryResource newline_resource;
+    newline_resource.id = QStringLiteral("newline");
+    newline_resource.bookPath = QStringLiteral("OEBPS/Text/newline.xhtml");
+    newline_resource.mediaType = QStringLiteral("application/xhtml+xml");
+    newline_resource.kind = QStringLiteral("xhtml");
+    newline_resource.text = QStringLiteral("<p>one</p>\n<p>two</p>");
+    newline_book.addResource(newline_resource);
+    ToolRegistry newline_registry;
+    registerBookTools(&newline_registry, &newline_book);
+    auto run_newline = [&](const QString &name, const QJsonObject &arguments) {
+        return newline_registry.find(name)->execute(arguments);
+    };
+    Require(run_newline(QStringLiteral("transaction.begin"), QJsonObject()).ok,
+            "newline transaction begin failed");
+    const qint64 newline_revision = static_cast<qint64>(newline_book.resourceRevision(
+        QStringLiteral("newline")));
+    const ToolResult first_newline = run_newline(QStringLiteral("resource.patch_fragment"),
+        QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("newline") },
+            { QStringLiteral("expected_text"), QStringLiteral("<p>one</p>") },
+            { QStringLiteral("text"), QStringLiteral("<p>one</p>\n<p class=\"zh\">一</p>") },
+            { QStringLiteral("expected_resource_revision"), newline_revision }
+        });
+    Require(first_newline.ok, "first multiline patch must stage");
+    const ToolResult staged_newline = run_newline(QStringLiteral("resource.read_fragment"),
+        QJsonObject { { QStringLiteral("resource_id"), QStringLiteral("newline") } });
+    const QString staged_newline_text = staged_newline.data.value(QStringLiteral("text")).toString();
+    Require(staged_newline.ok
+                && staged_newline.data.value(QStringLiteral("resource_revision")).toInteger()
+                    == newline_revision
+                && staged_newline.data.value(QStringLiteral("book_revision")).toInteger()
+                    == static_cast<qint64>(newline_book.revision())
+                && staged_newline_text.contains(QStringLiteral("</p>\n<p>two</p>"))
+                && !staged_newline_text.contains(QChar(0x2029)),
+            "staged reads must expose both revisions and preserve source newlines");
+    const ToolResult second_newline = run_newline(QStringLiteral("resource.patch_fragment"),
+        QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("newline") },
+            { QStringLiteral("expected_text"), QStringLiteral("<p class=\"zh\">一</p>\n<p>two</p>") },
+            { QStringLiteral("text"), QStringLiteral("<p class=\"zh\">一</p>\n<p>two</p>\n<p class=\"zh\">二</p>") },
+            { QStringLiteral("expected_resource_revision"), newline_revision }
+        });
+    Require(second_newline.ok, "a cross-line anchor copied from the staged view must match");
+    Require(run_newline(QStringLiteral("transaction.commit"), QJsonObject {
+        { QStringLiteral("expected_book_revision"), static_cast<qint64>(newline_book.revision()) }
+    }).applied, "newline transaction must commit");
+    Require(newline_book.resourceText(QStringLiteral("newline")).count(QLatin1Char('\n')) == 3,
+            "committed staged text must retain LF line breaks");
+    Require(run_newline(QStringLiteral("transaction.begin"), QJsonObject()).ok,
+            "second newline transaction begin failed");
+    const ToolResult stale_newline = run_newline(QStringLiteral("resource.patch_fragment"),
+        QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("newline") },
+            { QStringLiteral("expected_text"), QStringLiteral("<p>two</p>") },
+            { QStringLiteral("text"), QStringLiteral("<p>three</p>") },
+            { QStringLiteral("expected_resource_revision"), newline_revision }
+        });
+    Require(!stale_newline.ok
+                && stale_newline.code == QLatin1String("RESOURCE_REVISION_CONFLICT")
+                && stale_newline.data.value(QStringLiteral("expected_resource_revision")).toInteger()
+                    == newline_revision
+                && stale_newline.data.value(QStringLiteral("actual_resource_revision")).toInteger()
+                    == static_cast<qint64>(newline_book.resourceRevision(QStringLiteral("newline"))),
+            "stale resource revisions must report the actual resource revision");
+    Require(run_newline(QStringLiteral("transaction.rollback"), QJsonObject()).ok,
+            "second newline transaction rollback failed");
+
+    MemoryBookWorkspace mixed_book;
+    MemoryResource mixed_resource = newline_resource;
+    mixed_resource.id = QStringLiteral("mixed-newline");
+    mixed_resource.text = QStringLiteral("<p>one</p>\r\n<p>two😀</p>")
+        + QChar(0x2029) + QStringLiteral("<p>three</p>");
+    mixed_book.addResource(mixed_resource);
+    ToolRegistry mixed_registry;
+    registerBookTools(&mixed_registry, &mixed_book);
+    auto run_mixed = [&](const QString &name, const QJsonObject &arguments) {
+        return mixed_registry.find(name)->execute(arguments);
+    };
+    Require(run_mixed(QStringLiteral("transaction.begin"), QJsonObject()).ok,
+            "mixed-newline transaction begin failed");
+    const ToolResult mixed_patch = run_mixed(QStringLiteral("resource.patch_fragment"),
+        QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("mixed-newline") },
+            { QStringLiteral("expected_text"), QStringLiteral("<p>two😀</p>") },
+            { QStringLiteral("text"), QStringLiteral("<p>二😀</p>") },
+            { QStringLiteral("expected_resource_revision"),
+              static_cast<qint64>(mixed_book.resourceRevision(QStringLiteral("mixed-newline"))) }
+        });
+    const ToolResult mixed_read = run_mixed(QStringLiteral("resource.read_fragment"),
+        QJsonObject { { QStringLiteral("resource_id"), QStringLiteral("mixed-newline") } });
+    const QString expected_mixed = QStringLiteral("<p>one</p>\r\n<p>二😀</p>")
+        + QChar(0x2029) + QStringLiteral("<p>three</p>");
+    Require(mixed_patch.ok && mixed_read.ok
+                && mixed_read.data.value(QStringLiteral("text")).toString()
+                    == expected_mixed
+                && run_mixed(QStringLiteral("transaction.commit"), QJsonObject {
+                    { QStringLiteral("expected_book_revision"),
+                      static_cast<qint64>(mixed_book.revision()) }
+                }).applied
+                && mixed_book.resourceText(QStringLiteral("mixed-newline")) == expected_mixed,
+            "UTF-16 edits after CRLF must preserve CRLF, U+2029, and non-BMP text");
+
     MemoryBookWorkspace copy_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry copy_registry;
     registerBookTools(&copy_registry, &copy_book);
@@ -1345,6 +1518,23 @@ int main()
     const QString staging_id = copied.data.value(QStringLiteral("resource_id")).toString();
     Require(copy_book.resourceText(QStringLiteral("ch1")).contains(QStringLiteral("Heat")),
             "copy must not change the live source before commit");
+    const ToolResult staged_copy_read = run_copy(QStringLiteral("resource.read_fragment"),
+        QJsonObject { { QStringLiteral("resource_id"), staging_id } });
+    const qint64 staged_copy_revision = staged_copy_read.data.value(
+        QStringLiteral("resource_revision")).toInteger(-1);
+    const ToolResult stale_copy_patch = run_copy(QStringLiteral("resource.patch_fragment"),
+        QJsonObject {
+            { QStringLiteral("resource_id"), staging_id },
+            { QStringLiteral("expected_text"), QStringLiteral("<title>Heat</title>") },
+            { QStringLiteral("text"), QStringLiteral("<title>Copy</title>") },
+            { QStringLiteral("expected_resource_revision"), staged_copy_revision + 1 }
+        });
+    Require(staged_copy_read.ok && staged_copy_revision > 0
+                && stale_copy_patch.code == QStringLiteral("RESOURCE_REVISION_CONFLICT")
+                && stale_copy_patch.data.value(
+                    QStringLiteral("actual_resource_revision")).toInteger()
+                    == staged_copy_revision,
+            "staged new resources must report their staged revision on patch conflicts");
     Require(run_copy(QStringLiteral("transaction.commit"), QJsonObject {
         { QStringLiteral("expected_revision"), static_cast<qint64>(copy_book.revision()) }
     }).applied, "copy commit must apply");

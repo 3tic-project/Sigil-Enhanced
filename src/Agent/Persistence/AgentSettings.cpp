@@ -12,6 +12,7 @@
 #include "Agent/AgentTypes.h"
 #include "Agent/Core/AgentRunner.h"
 #include "Agent/Model/HistoryAssembler.h"
+#include "Agent/Model/AgentModelCatalog.h"
 #include "Misc/SettingsStore.h"
 
 namespace SigilAgent
@@ -137,6 +138,24 @@ void AgentSettings::setTokenUsageEnabled(bool enabled)
     SettingsStore store;
     store.beginGroup(QLatin1String(groupName()));
     store.setValue(QStringLiteral("request_token_usage"), enabled);
+}
+
+int AgentSettings::firstTokenTimeoutSeconds() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    const int seconds = store.value(QStringLiteral("first_token_timeout_seconds"),
+                                    DEFAULT_FIRST_TOKEN_TIMEOUT_MS / 1000).toInt();
+    if (seconds < 1) return DEFAULT_FIRST_TOKEN_TIMEOUT_MS / 1000;
+    return qMin(seconds, MAX_FIRST_TOKEN_TIMEOUT_MS / 1000);
+}
+
+void AgentSettings::setFirstTokenTimeoutSeconds(int seconds)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("first_token_timeout_seconds"),
+                   qBound(1, seconds, MAX_FIRST_TOKEN_TIMEOUT_MS / 1000));
 }
 
 int AgentSettings::historyPreviousTurnBudgetBytes() const
@@ -371,6 +390,7 @@ OpenAIProviderConfig AgentSettings::providerConfig() const
     config.model = model();
     config.thinking = thinkingEnabled();
     config.requestUsage = tokenUsageEnabled();
+    config.firstTokenTimeoutMs = firstTokenTimeoutSeconds() * 1000;
     config.reasoningEffort = reasoningEffort();
     config.reasoningProtocol = reasoningProtocolFor(kind, config.baseUrl);
     if (kind == AgentProviderKind::OpenRouter && !modelSupportsReasoning()) {
@@ -380,6 +400,20 @@ OpenAIProviderConfig AgentSettings::providerConfig() const
     if (kind == AgentProviderKind::OpenRouter) {
         config.httpReferer = agentHttpReferer();
         config.httpTitle = agentHttpTitle();
+        const QJsonDocument catalog = QJsonDocument::fromJson(catalogJson().toUtf8());
+        if (catalog.isObject()) {
+            const CatalogResult cached = AgentModelCatalog::fromCacheJson(catalog.object());
+            for (const CatalogModel &entry : cached.models) {
+                if (entry.id != config.model) continue;
+                config.supportedReasoningEfforts = entry.supportedReasoningEfforts;
+                config.defaultReasoningEffort = entry.defaultReasoningEffort;
+                config.reasoningEffortSelectable = entry.reasoningEffortSelectable;
+                break;
+            }
+        }
+    } else if (kind == AgentProviderKind::OpenCodeGo) {
+        config.openCodeGo = true;
+        config.userAgent = agentUserAgent();
     }
     return config;
 }

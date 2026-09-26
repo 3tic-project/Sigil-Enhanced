@@ -72,11 +72,19 @@ public:
         QTimer::singleShot(0, this, [this]() { drive(); });
     }
 
+    void acceptMetadataEditor()
+    {
+        m_Mode = Mode::AcceptMetadata;
+        m_Attempts = 0;
+        QTimer::singleShot(0, this, [this]() { drive(); });
+    }
+
 private:
     enum class Mode {
         None,
         SavePath,
-        CancelMetadata
+        CancelMetadata,
+        AcceptMetadata
     };
 
     void drive()
@@ -112,6 +120,14 @@ private:
                     require(QMetaObject::invokeMethod(
                                 dialog, "reject", Qt::QueuedConnection),
                             "Could not cancel Metadata Editor through its real reject slot");
+                    return;
+                }
+            } else if (m_Mode == Mode::AcceptMetadata) {
+                if (auto* dialog = qobject_cast<MetaEditor*>(widget)) {
+                    m_Mode = Mode::None;
+                    require(QMetaObject::invokeMethod(
+                                dialog, "saveData", Qt::QueuedConnection),
+                            "Could not accept Metadata Editor through its real saveData slot");
                     return;
                 }
             }
@@ -203,9 +219,25 @@ int main(int argc, char** argv)
         require(readBytes(save_as) == original,
                 "Cancelling Metadata Editor changed the current EPUB on disk");
 
+        // Accepting unchanged metadata must write what the legacy metaproc
+        // round trip produced for the same OPF text.
+        python.addToPythonSysPath(root + "/tests/fixtures");
+        int rv = 0;
+        QString traceback;
+        const QString expected_opf = python.runInPython(
+            "metaproc_roundtrip_legacy", "roundtrip",
+            {opf_before, book->GetConstOPF()->GetEpubVersion()}, &rv, traceback).toString();
+        require(rv == 0, "Legacy metadata round trip raised");
+        driver.acceptMetadataEditor();
+        require(QMetaObject::invokeMethod(
+                    &window, "MetaEditorDialog", Qt::DirectConnection),
+                "Could not invoke MainWindow Metadata Editor action for accept");
+        require(book->GetOPF()->GetText() == expected_opf,
+                "Accepting Metadata Editor differs from the legacy metaproc round trip");
+
         std::cout << "MainWindow no-op acceptance passed: SHA-256 "
                   << sha256(original).toStdString()
-                  << ", Save/Save As/Save A Copy byte-identical, metadata cancel clean\n";
+                  << ", Save/Save As/Save A Copy byte-identical, metadata cancel clean, accept matches legacy\n";
         return EXIT_SUCCESS;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

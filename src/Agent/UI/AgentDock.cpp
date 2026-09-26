@@ -5,17 +5,21 @@
 *************************************************************************/
 
 #include "Agent/UI/AgentDock.h"
+#include "Agent/UI/AgentMarkdown.h"
 #include "Agent/UI/AgentPlanComparisonDialog.h"
 
 #include <utility>
 
 #include <QAction>
 #include <QButtonGroup>
+#include <QClipboard>
 #include <QComboBox>
+#include <QCursor>
 #include <QDateTime>
 #include <QDialog>
 #include <QEvent>
 #include <QFrame>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -32,6 +36,7 @@
 #include <QSignalBlocker>
 #include <QTimer>
 #include <QToolButton>
+#include <QToolTip>
 #include <QVariant>
 #include <QVBoxLayout>
 
@@ -218,6 +223,37 @@ AgentDock::AgentDock(QWidget *parent) :
     connect(m_streamFlushTimer, &QTimer::timeout,
             this, &AgentDock::flushAssistantDeltas);
 
+    m_locationNotice = new QFrame(root);
+    m_locationNotice->setObjectName(QStringLiteral("agentLocationNotice"));
+    auto *notice_layout = new QHBoxLayout(m_locationNotice);
+    notice_layout->setContentsMargins(0, 0, 0, 0);
+    m_locationNoticeText = new QLabel(m_locationNotice);
+    m_locationNoticeText->setObjectName(QStringLiteral("agentLocationNoticeText"));
+    m_locationNoticeText->setTextFormat(Qt::PlainText);
+    m_locationNoticeText->setWordWrap(true);
+    m_locationNoticeText->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_locationOpenFileButton = new QPushButton(tr("Open file"), m_locationNotice);
+    m_locationOpenFileButton->setObjectName(QStringLiteral("agentLocationOpenFileButton"));
+    auto *notice_close = new QToolButton(m_locationNotice);
+    notice_close->setObjectName(QStringLiteral("agentLocationNoticeClose"));
+    notice_close->setText(tr("Dismiss"));
+    notice_layout->addWidget(m_locationNoticeText, 1);
+    notice_layout->addWidget(m_locationOpenFileButton);
+    notice_layout->addWidget(notice_close);
+    m_locationNotice->hide();
+    connect(notice_close, &QToolButton::clicked, m_locationNotice, &QWidget::hide);
+    connect(m_locationOpenFileButton, &QPushButton::clicked, this, [this]() {
+        const AgentLocation &location = m_noticeLocation.location;
+        m_locationNotice->hide();
+        if (location.id.isEmpty()) return;
+        const AgentLocationCheck current = m_locations.check(location.id, m_locationSource);
+        if (current.status != AgentLocationStatus::Exact
+            && current.status != AgentLocationStatus::ContentChanged) {
+            return;
+        }
+        emit openLocationRequested(location.bookSessionId, location.resourceId, -1);
+    });
+
     m_composer = new QPlainTextEdit(root);
     m_composer->setObjectName(QStringLiteral("agentComposer"));
     m_composer->setPlaceholderText(tr("Ask about this book, plan a change, or describe an edit…"));
@@ -239,6 +275,7 @@ AgentDock::AgentDock(QWidget *parent) :
     root_layout->addWidget(m_technicalDetails);
     root_layout->addWidget(chips);
     root_layout->addWidget(m_transcript, 1);
+    root_layout->addWidget(m_locationNotice);
     root_layout->addWidget(m_composer);
     root_layout->addWidget(m_composerHint);
     root_layout->addWidget(m_sendButton, 0, Qt::AlignRight);
@@ -380,6 +417,7 @@ void AgentDock::setBookContext(const QString &title,
 {
     const bool changed_book = !m_bookSessionId.isEmpty()
         && m_bookSessionId != book_session_id;
+    if (m_bookSessionId != book_session_id) m_locations.revokeOtherBooks(book_session_id);
     m_bookTitle = title;
     m_bookFileName = file_name;
     m_bookResourceCount = qMax(0, resource_count);
@@ -898,25 +936,37 @@ void AgentDock::refreshTechnicalDetails()
                 .value(QStringLiteral("omitted_turn_count")).toInt();
             const qint64 included_previous_bytes = m_requestHistoryContext
                 .value(QStringLiteral("included_previous_turn_bytes")).toInteger();
-            const qint64 current_bytes = m_requestHistoryContext
-                .value(QStringLiteral("current_turn_bytes")).toInteger();
             if (m_requestHistoryContext
                     .value(QStringLiteral("limit_enabled")).toBool()) {
                 const qint64 budget_bytes = m_requestHistoryContext
                     .value(QStringLiteral("budget_bytes")).toInteger();
-                lines.append(tr("Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)")
+                lines.append(tr("Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB")
                                  .arg(included_turns)
                                  .arg(total_turns)
                                  .arg(omitted_turns)
                                  .arg(kibText(included_previous_bytes),
-                                      kibText(budget_bytes),
-                                      kibText(current_bytes)));
+                                      kibText(budget_bytes)));
             } else {
-                lines.append(tr("Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)")
+                lines.append(tr("Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB")
                                  .arg(included_turns)
                                  .arg(total_turns)
-                                 .arg(kibText(included_previous_bytes),
-                                      kibText(current_bytes)));
+                                 .arg(kibText(included_previous_bytes)));
+            }
+            if (m_requestHistoryContext.contains(
+                    QStringLiteral("current_turn_budget_bytes"))) {
+                const qint64 current_bytes = m_requestHistoryContext
+                    .value(QStringLiteral("current_turn_bytes")).toInteger();
+                const qint64 included_current_bytes = m_requestHistoryContext
+                    .value(QStringLiteral("included_current_turn_bytes")).toInteger();
+                const qint64 current_budget_bytes = m_requestHistoryContext
+                    .value(QStringLiteral("current_turn_budget_bytes")).toInteger();
+                const int omitted_current_messages = m_requestHistoryContext
+                    .value(QStringLiteral("omitted_current_turn_messages")).toInt();
+                lines.append(tr("Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4")
+                                 .arg(kibText(included_current_bytes),
+                                      kibText(current_bytes),
+                                      kibText(current_budget_bytes))
+                                 .arg(omitted_current_messages));
             }
         }
         if (m_requestDurationMs >= 0) {
@@ -1030,6 +1080,18 @@ void AgentDock::refreshTechnicalDetails()
     m_technicalDetails->setProperty(
         "historyCurrentTurnBytes",
         m_requestHistoryContext.value(QStringLiteral("current_turn_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "historyIncludedCurrentTurnBytes",
+        m_requestHistoryContext.value(
+            QStringLiteral("included_current_turn_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "historyCurrentTurnBudgetBytes",
+        m_requestHistoryContext.value(
+            QStringLiteral("current_turn_budget_bytes")).toInteger());
+    m_technicalDetails->setProperty(
+        "historyOmittedCurrentTurnMessages",
+        m_requestHistoryContext.value(
+            QStringLiteral("omitted_current_turn_messages")).toInt());
     m_technicalDetails->setProperty(
         "toolTotalCount",
         m_requestToolContext.value(QStringLiteral("total_tool_count")).toInt());
@@ -1316,6 +1378,9 @@ void AgentDock::resetTranscript()
     m_approvalCards.clear();
     m_reviewedPlans.clear();
     m_taskRestoreButtons.clear();
+    m_locations.clear();
+    m_noticeLocation = AgentLocationCheck();
+    m_locationNotice->hide();
     m_currentThinking = nullptr;
     m_currentAnswer = nullptr;
     m_turn = 0;
@@ -1404,21 +1469,166 @@ QWidget *AgentDock::makeCard(const QString &object_name,
     frame->setObjectName(object_name);
     frame->setFrameShape(QFrame::StyledPanel);
     auto *layout = new QVBoxLayout(frame);
-    auto *toggle = new QToolButton(frame);
+    auto *header = new QWidget(frame);
+    header->setObjectName(object_name + QStringLiteral("Header"));
+    auto *header_layout = new QHBoxLayout(header);
+    header_layout->setContentsMargins(0, 0, 0, 0);
+    auto *toggle = new QToolButton(header);
     toggle->setObjectName(object_name + QStringLiteral("Title"));
     toggle->setText(title);
     toggle->setToolButtonStyle(Qt::ToolButtonTextOnly);
     toggle->setCheckable(true);
     toggle->setChecked(!collapsed);
-    auto *body_label = new QLabel(body, frame);
+    header_layout->addWidget(toggle);
+    header_layout->addStretch(1);
+    auto *body_label = new QLabel(frame);
     body_label->setObjectName(object_name + QStringLiteral("Body"));
+    // Model, tool and book text must never be sniffed as rich text.
+    body_label->setTextFormat(Qt::PlainText);
+    body_label->setText(body);
     body_label->setWordWrap(true);
     body_label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    body_label->setAccessibleName(title);
     body_label->setVisible(!collapsed);
-    layout->addWidget(toggle);
+    frame->setProperty("rawMarkdown", body);
+    layout->addWidget(header);
     layout->addWidget(body_label);
     connect(toggle, &QToolButton::toggled, body_label, &QLabel::setVisible);
     return frame;
+}
+
+void AgentDock::setCardMarkdown(QWidget *card, const QString &object_name,
+                                const QString &markdown, bool linkify)
+{
+    if (!card) return;
+    auto *body = card->findChild<QLabel *>(object_name + QStringLiteral("Body"));
+    if (!body) return;
+    card->setProperty("rawMarkdown", markdown);
+
+    auto *header = card->findChild<QWidget *>(object_name + QStringLiteral("Header"));
+    if (header && !card->findChild<QToolButton *>(object_name + QStringLiteral("Copy"))) {
+        auto *copy = new QToolButton(header);
+        copy->setObjectName(object_name + QStringLiteral("Copy"));
+        copy->setText(tr("Copy"));
+        copy->setToolTip(tr("Copy the original Markdown text"));
+        copy->setAccessibleName(tr("Copy original text"));
+        header->layout()->addWidget(copy);
+        connect(copy, &QToolButton::clicked, card, [card]() {
+            if (QClipboard *clipboard = QGuiApplication::clipboard()) {
+                clipboard->setText(card->property("rawMarkdown").toString());
+            }
+        });
+    }
+
+    QString display = markdown;
+    if (linkify && m_locationSource && markdown.size() <= AGENT_MARKDOWN_RENDER_BUDGET) {
+        const AgentLinkifyResult links = m_locations.linkify(markdown, *m_locationSource);
+        display = links.markdown;
+        card->setProperty("locationFileLinks", links.fileLinks);
+        card->setProperty("locationLineLinks", links.lineLinks);
+        card->setProperty("locationUnboundLineRefs", links.unboundLineRefs);
+        card->setProperty("locationOutOfRangeLineRefs", links.outOfRangeLineRefs);
+    }
+    const AgentMarkdownRender render = renderAgentMarkdown(display, body->font());
+    card->setProperty("markdownRenderMs", render.elapsedMs);
+    card->setProperty("markdownBlockedLinks", render.blockedLinks);
+    card->setProperty("markdownBlockedImages", render.blockedImages);
+    auto *note = card->findChild<QLabel *>(object_name + QStringLiteral("PlainNote"));
+    if (!render.rendered) {
+        body->setTextFormat(Qt::PlainText);
+        body->setText(markdown);
+        body->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+        body->setFocusPolicy(Qt::StrongFocus);
+        card->setProperty("markdownState", QStringLiteral("plain_over_budget"));
+        if (!note) {
+            note = new QLabel(card);
+            note->setObjectName(object_name + QStringLiteral("PlainNote"));
+            note->setTextFormat(Qt::PlainText);
+            note->setWordWrap(true);
+            note->setStyleSheet(QStringLiteral("color: palette(mid);"));
+            card->layout()->addWidget(note);
+        }
+        note->setText(tr("This message is longer than %1 characters, so it is shown as plain text.")
+                          .arg(AGENT_MARKDOWN_RENDER_BUDGET));
+        note->show();
+        return;
+    }
+    if (note) note->hide();
+    body->setTextFormat(Qt::RichText);
+    body->setText(render.html);
+    body->setOpenExternalLinks(false);
+    body->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard
+                                  | Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
+    body->setFocusPolicy(Qt::StrongFocus);
+    card->setProperty("markdownState", QStringLiteral("rendered"));
+    if (!body->property("locationLinksConnected").toBool()) {
+        body->setProperty("locationLinksConnected", true);
+        connect(body, &QLabel::linkActivated, this, &AgentDock::activateLocation);
+        connect(body, &QLabel::linkHovered, body, [this, body](const QString &href) {
+            QString tip;
+            if (const AgentLocation *location = m_locations.find(
+                    agentLocationIdFromHref(href))) {
+                tip = location->kind == AgentLocationKind::SourceLine
+                    ? tr("Open %1 at source line %2 in Code View")
+                          .arg(location->bookPath).arg(location->line)
+                    : tr("Open %1 in Code View").arg(location->bookPath);
+            } else if (!href.isEmpty()) {
+                tip = tr("This link is no longer available.");
+            }
+            body->setToolTip(tip);
+            if (tip.isEmpty()) QToolTip::hideText();
+            else QToolTip::showText(QCursor::pos(), tip, body);
+        });
+    }
+}
+
+void AgentDock::setLocationSource(const AgentLocationSource *source)
+{
+    m_locationSource = source;
+}
+
+void AgentDock::activateLocation(const QString &href)
+{
+    const QString id = agentLocationIdFromHref(href);
+    const AgentLocationCheck check = m_locations.check(id, m_locationSource);
+    setProperty("lastLocationStatus", agentLocationStatusName(check.status));
+    switch (check.status) {
+        case AgentLocationStatus::Exact:
+            m_locationNotice->hide();
+            emit openLocationRequested(check.location.bookSessionId, check.location.resourceId,
+                                       check.location.kind == AgentLocationKind::SourceLine
+                                           ? check.location.line : -1);
+            return;
+        case AgentLocationStatus::ContentChanged:
+            showLocationNotice(tr("%1 changed after this answer, so source line %2 may no longer be the cited text.")
+                                   .arg(check.currentBookPath).arg(check.location.line),
+                               check, true);
+            return;
+        case AgentLocationStatus::ResourceMissing:
+            showLocationNotice(tr("%1 is no longer in this book.").arg(check.location.bookPath),
+                               check, false);
+            return;
+        case AgentLocationStatus::OtherBook:
+            showLocationNotice(tr("This link belongs to a book that is no longer open."),
+                               check, false);
+            return;
+        case AgentLocationStatus::Unavailable:
+            showLocationNotice(tr("No book is available for this link."), check, false);
+            return;
+        case AgentLocationStatus::Unknown:
+            break;
+    }
+    showLocationNotice(tr("This link is no longer available."), check, false);
+}
+
+void AgentDock::showLocationNotice(const QString &text, const AgentLocationCheck &check,
+                                   bool offer_file)
+{
+    m_noticeLocation = check;
+    m_locationNoticeText->setText(text);
+    m_locationOpenFileButton->setVisible(offer_file);
+    m_locationNotice->setProperty("locationStatus", agentLocationStatusName(check.status));
+    m_locationNotice->show();
 }
 
 QWidget *AgentDock::findCard(const QString &object_name) const
@@ -1530,14 +1740,25 @@ void AgentDock::setThinkingText(const QString &text, bool append)
 
 void AgentDock::setAnswerText(const QString &text, bool append)
 {
+    const QString name = answerCardName();
     if (!m_currentAnswer) {
-        m_currentAnswer = makeCard(answerCardName(), tr("Answer"), text, false);
+        m_currentAnswer = makeCard(name, tr("Answer"), append ? text : QString(), false);
         appendCard(m_currentAnswer);
+        if (append) {
+            m_currentAnswer->setProperty("markdownState", QStringLiteral("streaming"));
+            return;
+        }
+    }
+    if (!append) {
+        setCardMarkdown(m_currentAnswer, name, text, true);
         return;
     }
-    auto *body = m_currentAnswer->findChild<QLabel *>(answerCardName() + QStringLiteral("Body"));
+    auto *body = m_currentAnswer->findChild<QLabel *>(name + QStringLiteral("Body"));
     if (!body) return;
-    const QString updated = append ? body->text() + text : text;
+    const QString updated = m_currentAnswer->property("rawMarkdown").toString() + text;
+    m_currentAnswer->setProperty("rawMarkdown", updated);
+    m_currentAnswer->setProperty("markdownState", QStringLiteral("streaming"));
+    body->setTextFormat(Qt::PlainText);
     if (body->text() != updated) body->setText(updated);
 }
 
@@ -2019,13 +2240,14 @@ void AgentDock::appendEvent(const AgentEvent &event)
 {
     if (event.type != AgentEventType::AssistantDelta) flushAssistantDeltas();
     switch (event.type) {
-        case AgentEventType::UserMessage:
+        case AgentEventType::UserMessage: {
             beginUserTurn();
-            appendCard(makeCard(QStringLiteral("agentUserCard"),
-                                tr("You"),
-                                event.payload.value(QStringLiteral("text")).toString(),
-                                false));
+            const QString text = event.payload.value(QStringLiteral("text")).toString();
+            QWidget *card = makeCard(QStringLiteral("agentUserCard"), tr("You"), text, false);
+            setCardMarkdown(card, QStringLiteral("agentUserCard"), text, false);
+            appendCard(card);
             break;
+        }
         case AgentEventType::ModelRequestStarted:
             beginModelStep();
             m_providerRequestState = ProviderRequestState::Requesting;
@@ -2475,9 +2697,39 @@ void AgentDock::appendEvent(const AgentEvent &event)
                                     false));
             }
             break;
-        case AgentEventType::RunStateChanged:
+        case AgentEventType::RunStateChanged: {
             captureRunEvent(event);
+            const QJsonObject partial = event.payload.value(
+                QStringLiteral("partial_outcome")).toObject();
+            if (partial.value(QStringLiteral("status")).toString()
+                    == QLatin1String("partial_applied")) {
+                QStringList lines;
+                lines.append(tr("The run stopped after %1 transaction(s) were applied during this run.")
+                                 .arg(partial.value(QStringLiteral("commit_count")).toInt()));
+                QStringList resource_ids;
+                for (const QJsonValue &value : partial.value(
+                         QStringLiteral("resource_ids")).toArray()) {
+                    resource_ids.append(value.toString());
+                }
+                if (!resource_ids.isEmpty()) {
+                    lines.append(tr("Affected resources: %1")
+                                     .arg(resource_ids.join(QStringLiteral(", "))));
+                }
+                if (partial.value(QStringLiteral("book_revision")).toInteger(-1) >= 0) {
+                    lines.append(tr("Last committed book revision: %1")
+                                     .arg(partial.value(QStringLiteral("book_revision")).toInteger()));
+                }
+                lines.append(tr("The Agent did not save the EPUB. Completion and validation are unconfirmed."));
+                if (!partial.value(QStringLiteral("latest_restore_point")).toString().isEmpty()) {
+                    lines.append(tr("A task restore point is available on the applied card."));
+                }
+                lines.append(tr("To continue, re-read the affected book and remaining work before making more edits."));
+                appendCard(makeCard(QStringLiteral("agentPartialOutcomeCard"),
+                                    tr("Partially applied"),
+                                    lines.join(QLatin1Char('\n')), false));
+            }
             break;
+        }
         case AgentEventType::BookTargetChanged:
             appendCard(makeCard(QStringLiteral("agentBookTargetChangedCard"),
                                 tr("Book target changed"),

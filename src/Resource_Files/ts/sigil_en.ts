@@ -23448,8 +23448,9 @@ Continue using the requested filename?</translation>
     <message><source>Run token usage: not reported by provider</source><translation>Run token usage: not reported by provider</translation></message>
     <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>Run token usage: input %1 · output %2 · total %3</translation></message>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</translation></message>
-    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</translation></message>
-    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB</source><translation>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB</source><translation>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB</translation></message>
+    <message><source>Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4</source><translation>Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4</translation></message>
     <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>Run usage details: cached input %1 · reasoning %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>Full EPUBCheck: not run.</translation></message>
@@ -23603,9 +23604,12 @@ Continue using the requested filename?</translation>
     <message><source>Send thinking (reasoning_content)</source><translation>Send thinking (reasoning_content)</translation></message>
     <message><source>Request token usage when supported</source><translation>Request token usage when supported</translation></message>
     <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</translation></message>
+    <message><source>First model output timeout</source><translation>First model output timeout</translation></message>
+    <message><source>Time to wait for the first reasoning, text, or tool output. HTTP headers and keepalives do not count.</source><translation>Time to wait for the first reasoning, text, or tool output. HTTP headers and keepalives do not count.</translation></message>
+    <message><source> s</source><translation> s</translation></message>
     <message><source> KiB</source><translation> KiB</translation></message>
     <message><source>Unlimited</source><translation>Unlimited</translation></message>
-    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</translation></message>
+    <message><source>Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB.</source><translation>Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB.</translation></message>
     <message><source>Previous-turn history budget</source><translation>Previous-turn history budget</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</translation></message>
     <message><source>Maximum model steps per run</source><translation>Maximum model steps per run</translation></message>

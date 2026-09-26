@@ -148,6 +148,9 @@ void DryRunReplace::CreateTable()
         functionname = rname;
     }
     PyObjectPtr fsp = nullptr;
+    if (!functionname.isEmpty() && SPCRE::isBuiltinFunction(functionname)) {
+        functionname.clear();
+    }
     if (!functionname.isEmpty()) {
         PythonRoutines pr;
         fsp = pr.SetupInitialFunctionSearchEnvInPython(functionname);

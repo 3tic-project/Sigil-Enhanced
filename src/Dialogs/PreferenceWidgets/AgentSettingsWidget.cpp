@@ -85,13 +85,18 @@ AgentSettingsWidget::AgentSettingsWidget()
     m_tokenUsage->setObjectName(QStringLiteral("agentTokenUsage"));
     m_tokenUsage->setToolTip(
         tr("Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option."));
+    m_firstTokenTimeout = new QSpinBox(this);
+    m_firstTokenTimeout->setObjectName(QStringLiteral("agentFirstTokenTimeoutSeconds"));
+    m_firstTokenTimeout->setRange(1, SigilAgent::MAX_FIRST_TOKEN_TIMEOUT_MS / 1000);
+    m_firstTokenTimeout->setSuffix(tr(" s"));
+    m_firstTokenTimeout->setToolTip(tr("Time to wait for the first reasoning, text, or tool output. HTTP headers and keepalives do not count."));
     m_historyBudget = new QSpinBox(this);
     m_historyBudget->setObjectName(QStringLiteral("agentHistoryBudgetKib"));
     m_historyBudget->setRange(
         0, SigilAgent::MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES / 1024);
     m_historyBudget->setSuffix(tr(" KiB"));
     m_historyBudget->setSpecialValueText(tr("Unlimited"));
-    m_historyBudget->setToolTip(tr("Limits only previous complete conversation turns sent to the model. The current run is always retained in full."));
+    m_historyBudget->setToolTip(tr("Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB."));
     m_maxModelSteps = new QSpinBox(this);
     m_maxModelSteps->setObjectName(QStringLiteral("agentMaxModelSteps"));
     m_maxModelSteps->setRange(1, SigilAgent::MAX_MODEL_STEPS);
@@ -123,6 +128,7 @@ AgentSettingsWidget::AgentSettingsWidget()
     layout->addRow(QString(), m_modelInfo);
     layout->addRow(m_thinking);
     layout->addRow(m_tokenUsage);
+    layout->addRow(tr("First model output timeout"), m_firstTokenTimeout);
     layout->addRow(tr("Previous-turn history budget"), m_historyBudget);
     layout->addRow(tr("Maximum model steps per run"), m_maxModelSteps);
     layout->addRow(tr("Maximum tool calls per run"), m_maxToolCalls);
@@ -236,7 +242,14 @@ void AgentSettingsWidget::fillModelCombo()
             tip.append(tr("%1k context").arg((model.contextLength + 999) / 1000));
         }
         if (model.tools) tip.append(tr("tools"));
-        if (model.reasoning) tip.append(tr("reasoning"));
+        if (model.reasoning) {
+            tip.append(model.reasoningMandatory ? tr("reasoning required") : tr("reasoning"));
+        }
+        if (currentKind() == AgentProviderKind::OpenCodeGo
+            && model.apiEndpoint != QLatin1String("/chat/completions")) {
+            tip.append(tr("Requires %1; this client supports Chat Completions only")
+                           .arg(model.apiEndpoint));
+        }
         if (!tip.isEmpty()) m_model->setItemData(m_model->count() - 1, tip.join(QStringLiteral(" · ")), Qt::ToolTipRole);
     }
     int index = m_model->findData(current);
@@ -262,9 +275,23 @@ void AgentSettingsWidget::updateModelInfo()
         parts.append(tr("%1 context tokens").arg(model.contextLength));
     }
     parts.append(model.tools ? tr("tools") : tr("tools not advertised"));
-    parts.append(model.reasoning ? tr("reasoning") : tr("reasoning not advertised"));
+    parts.append(model.reasoningMandatory ? tr("reasoning required")
+                                          : model.reasoning ? tr("reasoning")
+                                                            : tr("reasoning not advertised"));
     if (!model.supportedParameters.isEmpty()) {
         parts.append(tr("parameters: %1").arg(model.supportedParameters.join(QStringLiteral(", "))));
+    }
+    if (!model.supportedReasoningEfforts.isEmpty()) {
+        parts.append(tr("reasoning efforts: %1")
+                         .arg(model.supportedReasoningEfforts.join(QStringLiteral(", "))));
+    }
+    if (!model.defaultReasoningEffort.isEmpty()) {
+        parts.append(tr("default effort: %1").arg(model.defaultReasoningEffort));
+    }
+    if (currentKind() == AgentProviderKind::OpenCodeGo
+        && model.apiEndpoint != QLatin1String("/chat/completions")) {
+        parts.append(tr("Requires %1; this client supports Chat Completions only")
+                         .arg(model.apiEndpoint));
     }
     m_modelInfo->setText(parts.join(QStringLiteral(" · ")));
 }
@@ -337,7 +364,7 @@ void AgentSettingsWidget::setConnectionControlsEnabled(bool enabled)
 {
     const QList<QWidget *> controls {
         m_provider, m_baseUrl, m_apiKey, m_model, m_refreshModels,
-        m_testConnection, m_thinking, m_tokenUsage, m_effort
+        m_testConnection, m_thinking, m_tokenUsage, m_firstTokenTimeout, m_effort
     };
     for (QWidget *control : controls) {
         if (control) control->setEnabled(enabled);
@@ -377,6 +404,9 @@ void AgentSettingsWidget::testConnection()
     if (kind == AgentProviderKind::OpenRouter) {
         config.httpReferer = SigilAgent::agentHttpReferer();
         config.httpTitle = SigilAgent::agentHttpTitle();
+    } else if (kind == AgentProviderKind::OpenCodeGo) {
+        config.openCodeGo = true;
+        config.userAgent = SigilAgent::agentUserAgent();
     }
 
     m_status->setProperty("connectionTestState", QStringLiteral("testing"));
@@ -433,9 +463,13 @@ void AgentSettingsWidget::refreshModels()
     const QString api_key = m_apiKey->text();
     QString referer;
     QString title;
+    QString user_agent;
     if (kind == AgentProviderKind::OpenRouter) {
         referer = SigilAgent::agentHttpReferer();
         title = SigilAgent::agentHttpTitle();
+    }
+    if (kind == AgentProviderKind::OpenCodeGo) {
+        user_agent = SigilAgent::agentUserAgent();
     }
     m_catalogRequestKind = kind;
     m_catalogRequestProvider = provider_id;
@@ -446,9 +480,9 @@ void AgentSettingsWidget::refreshModels()
     m_catalogCancelled = std::make_shared<std::atomic_bool>(false);
     const std::shared_ptr<std::atomic_bool> cancelled = m_catalogCancelled;
     m_catalogWatcher->setFuture(QtConcurrent::run(
-        [url, api_key, referer, title, kind, cancelled]() {
+        [url, api_key, referer, title, user_agent, kind, cancelled]() {
             CatalogResult result = SigilAgent::AgentModelCatalog::fetch(
-                url, api_key, referer, title, 30000, cancelled.get());
+                url, api_key, referer, title, 30000, cancelled.get(), user_agent);
             SigilAgent::AgentModelCatalog::applyProviderDefaults(&result, kind);
             return result;
         }));
@@ -512,6 +546,7 @@ void AgentSettingsWidget::readSettings()
     applyStoredProvider(m_provider->currentData().toString());
     m_thinking->setChecked(settings.thinkingEnabled());
     m_tokenUsage->setChecked(settings.tokenUsageEnabled());
+    m_firstTokenTimeout->setValue(settings.firstTokenTimeoutSeconds());
     m_historyBudget->setValue(settings.historyPreviousTurnBudgetBytes() / 1024);
     m_maxModelSteps->setValue(settings.maxModelSteps());
     m_maxToolCalls->setValue(settings.maxToolCalls());
@@ -554,6 +589,7 @@ PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
     settings.setModel(selectedModelId());
     settings.setThinkingEnabled(m_thinking->isChecked());
     settings.setTokenUsageEnabled(m_tokenUsage->isChecked());
+    settings.setFirstTokenTimeoutSeconds(m_firstTokenTimeout->value());
     settings.setHistoryPreviousTurnBudgetBytes(m_historyBudget->value() * 1024);
     settings.setMaxModelSteps(m_maxModelSteps->value());
     settings.setMaxToolCalls(m_maxToolCalls->value());

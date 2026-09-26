@@ -65,6 +65,16 @@
 namespace
 {
 
+void appendBoundedOutput(QString *target, const QString &chunk, int limit)
+{
+    int count = qMin(static_cast<int>(chunk.size()), qMax(0, limit - static_cast<int>(target->size())));
+    if (count > 0 && count < chunk.size()
+        && chunk.at(count - 1).isHighSurrogate() && chunk.at(count).isLowSurrogate()) {
+        --count;
+    }
+    target->append(chunk.left(count));
+}
+
 // Base64 plus the JSON envelope must still fit the 8 MiB framed-message limit.
 constexpr qsizetype MAX_INLINE_BINARY_SIZE = 5 * 1024 * 1024;
 constexpr qsizetype DEFAULT_BINARY_CHUNK_SIZE = 1024 * 1024;
@@ -773,16 +783,10 @@ bool PluginSession::Start(QString *error)
         m_Console->show();
     }
 
-    connect(m_Process, &QProcess::readyReadStandardOutput, this, [this]() {
-        const QString text = QString::fromUtf8(m_Process->readAllStandardOutput());
-        m_CapturedOutput += text;
-        if (m_Console) m_Console->AppendOutput(text);
-    });
-    connect(m_Process, &QProcess::readyReadStandardError, this, [this]() {
-        const QString text = QString::fromUtf8(m_Process->readAllStandardError());
-        m_CapturedOutput += text;
-        if (m_Console) m_Console->AppendOutput(text);
-    });
+    connect(m_Process, &QProcess::readyReadStandardOutput,
+            this, &PluginSession::CaptureProcessOutput);
+    connect(m_Process, &QProcess::readyReadStandardError,
+            this, &PluginSession::CaptureProcessOutput);
     connect(m_Process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError) {
         Finish(QStringLiteral("failed"), m_Process->errorString());
     });
@@ -829,6 +833,11 @@ void PluginSession::setSnippetPath(const QString &path)
     m_SnippetPath = path;
 }
 
+void PluginSession::setSnippetReadOnly(bool read_only)
+{
+    m_SnippetReadOnly = read_only;
+}
+
 QString PluginSession::CapturedOutput() const
 {
     if (m_Console) {
@@ -838,9 +847,63 @@ QString PluginSession::CapturedOutput() const
     return m_CapturedOutput;
 }
 
+QString PluginSession::CapturedStdout() const { return m_CapturedStdout; }
+QString PluginSession::CapturedStderr() const { return m_CapturedStderr; }
+qint64 PluginSession::CapturedStdoutLength() const { return m_CapturedStdoutLength; }
+qint64 PluginSession::CapturedStderrLength() const { return m_CapturedStderrLength; }
+QString PluginSession::FinishMessage() const { return m_FinishMessage; }
+int PluginSession::ExitCode() const { return m_ExitCode; }
+quint64 PluginSession::BookRevision() const { return m_BookRevision; }
+bool PluginSession::SnippetMutated() const { return m_SnippetMutated; }
+
+void PluginSession::CaptureProcessOutput()
+{
+    const QByteArray rawOut = m_Process->readAllStandardOutput();
+    const QByteArray rawErr = m_Process->readAllStandardError();
+    const bool snippet = !m_SnippetPath.isEmpty();
+    const QString out = rawOut.isEmpty() ? QString()
+        : snippet ? QString(m_StdoutDecoder(rawOut)) : QString::fromUtf8(rawOut);
+    const QString err = rawErr.isEmpty() ? QString()
+        : snippet ? QString(m_StderrDecoder(rawErr)) : QString::fromUtf8(rawErr);
+    constexpr int kMaxCapturedSnippetUnits = 32768;
+    if (!out.isEmpty()) {
+        m_CapturedStdoutLength += out.size();
+        if (snippet) {
+            appendBoundedOutput(&m_CapturedStdout, out, kMaxCapturedSnippetUnits);
+            appendBoundedOutput(&m_CapturedOutput, out, kMaxCapturedSnippetUnits);
+        } else {
+            m_CapturedStdout += out;
+            m_CapturedOutput += out;
+        }
+        if (m_Console) m_Console->AppendOutput(out);
+    }
+    if (!err.isEmpty()) {
+        m_CapturedStderrLength += err.size();
+        if (snippet) {
+            appendBoundedOutput(&m_CapturedStderr, err, kMaxCapturedSnippetUnits);
+            appendBoundedOutput(&m_CapturedOutput, err, kMaxCapturedSnippetUnits);
+        } else {
+            m_CapturedStderr += err;
+            m_CapturedOutput += err;
+        }
+        if (m_Console) m_Console->AppendOutput(err);
+    }
+}
+
+void PluginSession::ScheduleEnded()
+{
+    if (m_EndSignalScheduled) return;
+    m_EndSignalScheduled = true;
+    QTimer::singleShot(0, this, &PluginSession::Ended);
+}
+
 void PluginSession::Cancel()
 {
     if (m_Ending) {
+        if (!m_SnippetPath.isEmpty() && m_Process->state() != QProcess::NotRunning) {
+            m_Status = QStringLiteral("cancelled");
+            m_Process->kill();
+        }
         return;
     }
     m_Ending = true;
@@ -909,7 +972,17 @@ void PluginSession::ReadMessages()
 
 void PluginSession::ProcessFinished(int exit_code, QProcess::ExitStatus exit_status)
 {
+    m_ExitCode = exit_code;
+    CaptureProcessOutput();
     if (m_Ending) {
+        if (!m_SnippetPath.isEmpty()) {
+            if ((exit_status == QProcess::CrashExit || exit_code != 0)
+                && m_Status == QStringLiteral("success")) {
+                m_Status = QStringLiteral("failed");
+                m_FinishMessage = tr("Plugin process exited with code %1.").arg(exit_code);
+            }
+            ScheduleEnded();
+        }
         return;
     }
     if (exit_status == QProcess::CrashExit || exit_code != 0) {
@@ -965,6 +1038,17 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (m_Console) {
             m_Console->SetStatus(tr("Connected"));
         }
+        return;
+    }
+
+    if (m_SnippetReadOnly && (method.startsWith(QLatin1String("transaction."))
+                              || method.startsWith(QLatin1String("input."))
+                              || method.startsWith(QLatin1String("output."))
+                              || method == QLatin1String("editor.applyEdits")
+                              || method == QLatin1String("editor.replaceSelection")
+                              || method == QLatin1String("editor.insertText"))) {
+        RespondError(id, PluginApi::PermissionDenied,
+                     QStringLiteral("Read-only Python snippets cannot modify the book"));
         return;
     }
 
@@ -3570,6 +3654,7 @@ void PluginSession::Dispatch(const QJsonObject &request)
         if (!dirty_changes.isEmpty() || !dirty_binary_changes.isEmpty() || has_structure_changes
             || !dirty_archive_changes.isEmpty()
             || (has_package_change && package_change.originalText != package_change.stagedText)) {
+            if (!m_SnippetPath.isEmpty()) m_SnippetMutated = true;
             m_MainWindow->GetCurrentBook()->SetModified();
         }
         const QString transaction_id = transaction->Id();
@@ -3699,6 +3784,9 @@ void PluginSession::Dispatch(const QJsonObject &request)
         {
             QWriteLocker locker(&text_resource->GetLock());
             PluginApi::ApplyTextEdits(&text_resource->GetTextDocumentForWriting(), edits);
+        }
+        if (!m_SnippetPath.isEmpty() && text_resource->GetText() != current_text) {
+            m_SnippetMutated = true;
         }
         m_MainWindow->GetCurrentBook()->SetModified();
         Respond(id, QJsonObject {
@@ -4152,6 +4240,7 @@ void PluginSession::Finish(const QString &status, const QString &message)
 {
     ReleaseWriter();
     m_Status = status;
+    m_FinishMessage = message;
     m_InputEpubAccepted = status == QStringLiteral("success") && m_InputEpubFile;
     m_Ending = true;
     if (!message.isEmpty() && m_Console) {
@@ -4162,9 +4251,9 @@ void PluginSession::Finish(const QString &status, const QString &message)
         m_Console->SetFinished();
     }
     CleanServer();
-    if (!m_EndSignalScheduled) {
-        m_EndSignalScheduled = true;
-        QTimer::singleShot(0, this, &PluginSession::Ended);
+    if (m_SnippetPath.isEmpty() || m_Process->state() == QProcess::NotRunning) {
+        CaptureProcessOutput();
+        ScheduleEnded();
     }
 }
 

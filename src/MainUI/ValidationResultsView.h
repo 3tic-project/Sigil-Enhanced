@@ -57,16 +57,11 @@ public:
      */
     ValidationResultsView(QWidget *parent = 0);
 
-    /**
-     * Validates the epub file given and displays the results.
-     */
+    /** Validates the current book and displays the results. */
     void ValidateCurrentBook();
 
-    QList<ValidationResult> validateXhtml(); // modified: validateXhtml
-    QList<ValidationResult> correctOPF(); // modified: correctOPF
-    void ValidateCurrentBook_M(); // modified: well formed check
-
-    QStringList ValidateFile(QString &apath);
+    QList<ValidationResult> validateXhtml();
+    QList<ValidationResult> correctOPF();
 
     void LoadResults(const QList<ValidationResult> &results);
 
@@ -173,8 +168,6 @@ private:
      */
     QSharedPointer<Book> m_Book;
     BookBrowser* m_BookBrowser; // modified: correctOPF
-
-    static const QString SEP;
 
     bool m_NoProblems;
 

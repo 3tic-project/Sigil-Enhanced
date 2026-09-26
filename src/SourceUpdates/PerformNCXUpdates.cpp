@@ -24,6 +24,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include "Misc/Utility.h"
+#include "BookManipulation/XmlProcessor.h"
 #include "SourceUpdates/PerformNCXUpdates.h"
 
 PerformNCXUpdates::PerformNCXUpdates(const QString &source,
@@ -42,6 +43,9 @@ PerformNCXUpdates::PerformNCXUpdates(const QString &source,
 QString PerformNCXUpdates::operator()()
 {
     QString newsource = m_source;
+    if (XmlProcessor::PerformNCXSourceUpdates(m_source, m_newbookpath, m_CurrentPath, m_XMLUpdates, &newsource)) {
+        return newsource;
+    }
 
     // serialize the hash for passing to python
     QStringList dictkeys = m_XMLUpdates.keys();

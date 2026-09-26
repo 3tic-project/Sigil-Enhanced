@@ -7,12 +7,26 @@
 #include "PluginAPI/PluginTextTransaction.h"
 
 #include <algorithm>
-#include <QTextDocument>
 
 #include "PluginAPI/PluginTextEdit.h"
 
 namespace PluginApi
 {
+
+namespace
+{
+
+QString applyEditsToSource(QString source, const QList<TextEdit> &edits)
+{
+    // ParseTextEdits orders edits from the end. QString offsets use the same
+    // UTF-16 coordinate space as the source returned by read_fragment.
+    for (const TextEdit &edit : edits) {
+        source.replace(edit.start, edit.end - edit.start, edit.text);
+    }
+    return source;
+}
+
+} // namespace
 
 TextTransaction::TextTransaction(const QString &id,
                                  const QString &label,
@@ -137,11 +151,8 @@ bool TextTransaction::ApplyEdits(const QString &resource_id,
 
     QList<TextEdit> edits;
     if (!ParseTextEdits(edit_values, source, &edits, error)) return false;
-    QTextDocument document;
-    document.setPlainText(source);
-    ApplyTextEdits(&document, edits);
     return ReplaceText(resource_id, current_text, current_revision, expected_revision,
-                       document.toRawText(), error);
+                       applyEditsToSource(source, edits), error);
 }
 
 bool TextTransaction::ReadAddedText(const QString &staging_id,
@@ -191,10 +202,8 @@ bool TextTransaction::ApplyAddedTextEdits(const QString &staging_id,
     }
     QList<TextEdit> edits;
     if (!ParseTextEdits(edit_values, source, &edits, error)) return false;
-    QTextDocument document;
-    document.setPlainText(source);
-    ApplyTextEdits(&document, edits);
-    return ReplaceAddedText(staging_id, expected_revision, document.toRawText(), error);
+    return ReplaceAddedText(staging_id, expected_revision,
+                            applyEditsToSource(source, edits), error);
 }
 
 QByteArray TextTransaction::ReadBinary(const QString &resource_id,

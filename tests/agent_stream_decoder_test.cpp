@@ -127,6 +127,73 @@ int main()
                 && alias_turn.usage.totalTokens == 10,
             "input/output token aliases must parse and yield an exact total when omitted");
 
+    StreamingJsonDecoder details_decoder;
+    details_decoder.feed(sseLine(QJsonObject {
+        { QStringLiteral("reasoning_details"), QJsonArray { QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("reasoning.text") },
+            { QStringLiteral("index"), 0 },
+            { QStringLiteral("format"), QStringLiteral("anthropic-claude-v1") },
+            { QStringLiteral("text"), QStringLiteral("First ") }
+        } } }
+    }));
+    details_decoder.feed(sseLine(QJsonObject {
+        { QStringLiteral("reasoning_details"), QJsonArray { QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("reasoning.text") },
+            { QStringLiteral("index"), 0 },
+            { QStringLiteral("text"), QStringLiteral("step") },
+            { QStringLiteral("signature"), QStringLiteral("signed") }
+        }, QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("reasoning.encrypted") },
+            { QStringLiteral("index"), 1 },
+            { QStringLiteral("data"), QStringLiteral("opaque-block") }
+        } } }
+    }));
+    const ModelTurn details_turn = details_decoder.finish();
+    Require(details_turn.reasoning == QStringLiteral("First step")
+                && details_turn.reasoningDetails.size() == 2
+                && details_turn.reasoningDetails.at(0).toObject()
+                    .value(QStringLiteral("text")).toString() == QStringLiteral("First step")
+                && details_turn.reasoningDetails.at(0).toObject()
+                    .value(QStringLiteral("signature")).toString() == QStringLiteral("signed")
+                && details_turn.reasoningDetails.at(1).toObject()
+                    .value(QStringLiteral("data")).toString() == QStringLiteral("opaque-block"),
+            "OpenRouter reasoning_details chunks must retain ordered text, signature and opaque data");
+    AgentSession details_session;
+    details_session.append(AgentEventType::AssistantMessage, QJsonObject {
+        { QStringLiteral("content"), QStringLiteral("Done") },
+        { QStringLiteral("reasoning_content"), details_turn.reasoning },
+        { QStringLiteral("reasoning_details"), details_turn.reasoningDetails }
+    });
+    HistoryAssembler details_assembler;
+    const QList<ChatMessage> details_messages = details_assembler.assemble(
+        details_session.events(), true);
+    const QJsonArray details_replay = details_assembler.toOpenAIMessages(details_messages, true);
+    Require(details_replay.size() == 1
+                && details_replay.at(0).toObject()
+                    .value(QStringLiteral("reasoning_details")).toArray()
+                    == details_turn.reasoningDetails
+                && !details_replay.at(0).toObject().contains(QStringLiteral("reasoning_content")),
+            "OpenRouter history must replay the complete structured reasoning blocks");
+    ModelRequest details_request;
+    details_request.model = QStringLiteral("anthropic/claude-sonnet-4");
+    details_request.messages = details_messages;
+    details_request.reasoningProtocol = ReasoningProtocol::OpenRouter;
+    Require(OpenAICompatibleProvider::buildChatBody(details_request)
+                .value(QStringLiteral("messages")).toArray().at(0).toObject()
+                .value(QStringLiteral("reasoning_details")).toArray()
+                == details_turn.reasoningDetails,
+            "OpenRouter must replay reasoning details on later turns even without tools");
+    details_request.reasoningProtocol = ReasoningProtocol::DeepSeek;
+    details_request.tools = QJsonArray { QJsonObject {
+        { QStringLiteral("type"), QStringLiteral("function") }
+    } };
+    const QJsonObject non_router_message = OpenAICompatibleProvider::buildChatBody(details_request)
+        .value(QStringLiteral("messages")).toArray().at(0).toObject();
+    Require(!non_router_message.contains(QStringLiteral("reasoning_details"))
+                && non_router_message.value(QStringLiteral("reasoning_content")).toString()
+                    == details_turn.reasoning,
+            "Other providers must receive only the compatible plaintext reasoning field");
+
     StreamingJsonDecoder deepseek_usage_decoder;
     deepseek_usage_decoder.feed(QByteArray(
         "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],"

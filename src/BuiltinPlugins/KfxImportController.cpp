@@ -26,16 +26,8 @@
 #include <QUuid>
 
 #include "BuiltinPlugins/KfxImportProtocol.h"
-#ifdef slots
-#undef slots
-#define SIGIL_KFX_RESTORE_QT_SLOTS
-#endif
-#include "EmbedPython/EmbeddedPython.h"
-#ifdef SIGIL_KFX_RESTORE_QT_SLOTS
-#define slots Q_SLOTS
-#undef SIGIL_KFX_RESTORE_QT_SLOTS
-#endif
 #include "Misc/PluginDB.h"
+#include "sigil_constants.h"
 
 namespace BuiltinPlugins
 {
@@ -47,6 +39,21 @@ bool isUsableInterpreter(const QString& path)
 {
     const QFileInfo info(path);
     return info.isFile() && info.isReadable() && info.isExecutable();
+}
+
+QString kfxPythonRoot()
+{
+    // Match the old EmbeddedPython::embeddedRoot() search locations without
+    // making the subprocess controller depend on the embedded interpreter.
+#ifdef Q_OS_MAC
+    const QString root = QCoreApplication::applicationDirPath() + QStringLiteral("/../python3lib");
+#elif defined(Q_OS_WIN32)
+    const QString root = QCoreApplication::applicationDirPath() + QStringLiteral("/python3lib");
+#else
+    const QString root = (sigil_extra_root.isEmpty() ? sigil_share_root : sigil_extra_root)
+        + QStringLiteral("/python3lib");
+#endif
+    return QDir(root).absolutePath();
 }
 
 QString phaseText(const QString& phase)
@@ -138,7 +145,7 @@ KfxImportController::Result KfxImportController::convert(const QString& sourcePa
         return result;
     }
 
-    const QString python_root = EmbeddedPython::instance().embeddedRoot();
+    const QString python_root = kfxPythonRoot();
     const QString worker_module = QDir(python_root).filePath(
         QStringLiteral("sigil_kfx_import/worker.py"));
     const QString worker_bootstrap = QDir(python_root).filePath(

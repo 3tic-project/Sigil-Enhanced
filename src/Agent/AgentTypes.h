@@ -91,6 +91,7 @@ struct ChatMessage {
     QString role;
     QString content;
     QString reasoningContent;
+    QJsonArray reasoningDetails;
     QString toolCallId;
     QList<ToolCall> toolCalls;
     bool hasReasoning = false;
@@ -122,6 +123,7 @@ struct ModelResponseTiming {
 
 struct ModelTurn {
     QString reasoning;
+    QJsonArray reasoningDetails;
     QString content;
     QList<ToolCall> toolCalls;
     QString finishReason;

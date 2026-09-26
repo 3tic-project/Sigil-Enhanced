@@ -679,6 +679,8 @@ BookOpResult SigilBookWorkspace::readFragment(const QString &resource_id, int of
               truncated ? start + fragment.size() : QJsonValue() },
             { QStringLiteral("hash"), sha256Text(all) },
             { QStringLiteral("revision"), static_cast<qint64>(resource ? trackedRevision(resource) : staged_rev) },
+            { QStringLiteral("resource_revision"), static_cast<qint64>(resource ? trackedRevision(resource) : staged_rev) },
+            { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
             { QStringLiteral("text"), fragment }
         };
         addFragmentLineMetadata(&data, all, start, fragment.size());
@@ -1572,9 +1574,10 @@ BookOpResult SigilBookWorkspace::renameResource(const QString &resource_id, cons
     });
 }
 
-BookOpResult SigilBookWorkspace::runLivePython(const QString &script, int timeout_ms)
+BookOpResult SigilBookWorkspace::runLivePython(const QString &script, int timeout_ms,
+                                               const QString &mode)
 {
-    return invokeOp([this, script, timeout_ms]() {
+    return invokeOp([this, script, timeout_ms, mode]() {
         if (!m_pluginSessions) {
             return BookOpResult::error(QStringLiteral("LIVE_PYTHON_UNAVAILABLE"),
                                        QStringLiteral("Live Python v2 is only available in the Sigil GUI."));
@@ -1591,27 +1594,48 @@ BookOpResult SigilBookWorkspace::runLivePython(const QString &script, int timeou
             return BookOpResult::error(QStringLiteral("SCRIPT_TOO_LARGE"),
                                        QStringLiteral("Live Python scripts are capped at 65536 characters"));
         }
-        QString status;
+        if (mode != QLatin1String("read") && mode != QLatin1String("edit")) {
+            return BookOpResult::error(QStringLiteral("INVALID_ARGUMENT"),
+                                       QStringLiteral("python.run mode must be read or edit"));
+        }
+        SnippetRunOutcome outcome;
         QString error;
-        QString output;
-        const bool ok = m_pluginSessions->RunSnippetAndWait(
-            script, &status, &error, qMax(1000, timeout_ms), &output);
+        const bool ok = m_pluginSessions->RunSnippetDetailed(
+            script, &outcome, &error, qMax(1000, timeout_ms),
+            mode == QLatin1String("read"));
+        if (outcome.bookChanged) {
+            m_tracked.clear();
+            ++m_revision;
+        }
+        const int output_budget = 8000;
+        const int stdout_budget = outcome.stderrLength > 0 ? 6000 : output_budget;
+        const QString stdout_preview = outcome.stdoutText.left(stdout_budget);
+        const QString stderr_preview = outcome.stderrText.left(
+            qMax(0, output_budget - stdout_preview.size()));
+        const QJsonObject details {
+            { QStringLiteral("status"), outcome.status },
+            { QStringLiteral("message"), outcome.message.left(1024) },
+            { QStringLiteral("exit_code"), outcome.exitCode },
+            { QStringLiteral("exit_status"), outcome.exitCode },
+            { QStringLiteral("stdout"), stdout_preview },
+            { QStringLiteral("stderr"), stderr_preview },
+            { QStringLiteral("stdout_length"), outcome.stdoutLength },
+            { QStringLiteral("stderr_length"), outcome.stderrLength },
+            { QStringLiteral("stdout_truncated"),
+              stdout_preview.size() < outcome.stdoutLength },
+            { QStringLiteral("stderr_truncated"),
+              stderr_preview.size() < outcome.stderrLength },
+            { QStringLiteral("output"), outcome.output.left(output_budget) },
+            { QStringLiteral("book_changed"), outcome.bookChanged },
+            { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) }
+        };
         if (!ok) {
             return BookOpResult::error(QStringLiteral("LIVE_PYTHON_FAILED"),
-                                       error.isEmpty() ? status : error,
-                                       QJsonObject {
-                                           { QStringLiteral("status"), status },
-                                           { QStringLiteral("output"), output.left(8000) }
-                                       });
+                                       error.isEmpty() ? outcome.status : error, details);
         }
-        m_tracked.clear();
-        ++m_revision;
-        return BookOpResult::success(QJsonObject {
-            { QStringLiteral("status"), status.isEmpty() ? QStringLiteral("success") : status },
-            { QStringLiteral("output"), output.left(8000) },
-            { QStringLiteral("applied"), true },
-            { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) }
-        }, true);
+        QJsonObject success_details = details;
+        success_details.insert(QStringLiteral("applied"), outcome.bookChanged);
+        return BookOpResult::success(success_details, outcome.bookChanged);
     });
 }
 

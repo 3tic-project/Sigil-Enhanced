@@ -10,7 +10,7 @@
 
 //------------------------modified: well formed check----------------
 
-void ValidationResultsView::ValidateCurrentBook_M()
+void ValidationResultsView::ValidateCurrentBook()
 {
     ClearResults();
     QApplication::setOverrideCursor(Qt::WaitCursor);

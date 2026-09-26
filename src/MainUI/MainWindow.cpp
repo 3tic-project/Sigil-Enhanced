@@ -71,6 +71,7 @@
 #include "BookManipulation/Index.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/NavigationRepair.h"
+#include "BookManipulation/NcxGenerator.h"
 #include "BuiltinPlugins/KfxImportProtocol.h"
 #include "Dialogs/About.h"
 #include "Dialogs/AddClips.h"
@@ -3371,10 +3372,9 @@ bool MainWindow::GenerateNCXGuideFromNav()
     }
     QString mainid = m_Book->GetConstOPF()->GetMainIdentifierValue();
 
-    // Now build the ncx in python in a separate thread since may be an long job
-    PythonRoutines pr;
-    QFuture<QString> future = QtConcurrent::run(&PythonRoutines::GenerateNcxInPython, &pr, navdata,
-                                             navbkpath, ncxdir, doctitle, mainid);
+    // Build the NCX on a worker thread because a large navigation document can take time.
+    QFuture<QString> future = QtConcurrent::run(&NcxGenerator::Generate, navdata,
+                                                 navbkpath, ncxdir, doctitle, mainid);
     future.waitForFinished();
     QString ncxdata = future.result();
 
@@ -5216,7 +5216,7 @@ bool MainWindow::NormalizedOPF()
 
 bool MainWindow::WellFormedCheckEpub()
 {
-    m_ValidationResultsView->ValidateCurrentBook_M();
+    m_ValidationResultsView->ValidateCurrentBook();
     return true;
 }
 
@@ -6260,6 +6260,71 @@ bool MainWindow::ProceedToOverwrite(const QString& msg, const QString &filename)
     return false;
 }
 
+namespace
+{
+
+// Resolves Agent conversation links against the live book, including unsaved editor text.
+class AgentBookLocationSource final : public SigilAgent::AgentLocationSource
+{
+public:
+    AgentBookLocationSource(MainWindow *window, const SigilAgent::SigilBookWorkspace *workspace)
+        : m_Window(window), m_Workspace(workspace)
+    {
+    }
+
+    QString bookSessionId() const override
+    {
+        return m_Workspace ? m_Workspace->bookSessionId() : QString();
+    }
+
+    QList<SigilAgent::AgentLocationResource> textResources() const override
+    {
+        QList<SigilAgent::AgentLocationResource> resources;
+        const QSharedPointer<Book> book = m_Window->GetCurrentBook();
+        if (!book || !book->GetFolderKeeper()) return resources;
+        for (Resource *resource : book->GetFolderKeeper()->GetResourceList()) {
+            if (IsNavigableText(resource)) {
+                resources.append({ resource->GetIdentifier(), resource->GetRelativePath() });
+            }
+        }
+        return resources;
+    }
+
+    bool resourceText(const QString &resource_id, QString *book_path, QString *text) const override
+    {
+        const QSharedPointer<Book> book = m_Window->GetCurrentBook();
+        if (!book || !book->GetFolderKeeper()) return false;
+        Resource *resource = book->GetFolderKeeper()->GetResourceByIdentifier(resource_id);
+        if (!IsNavigableText(resource)) return false;
+        auto *text_resource = qobject_cast<TextResource *>(resource);
+        if (!text_resource->IsLoaded()) text_resource->InitialLoad();
+        if (book_path) *book_path = resource->GetRelativePath();
+        if (text) *text = text_resource->GetText();
+        return true;
+    }
+
+private:
+    static bool IsNavigableText(Resource *resource)
+    {
+        if (!qobject_cast<TextResource *>(resource)) return false;
+        switch (resource->Type()) {
+            case Resource::HTMLResourceType:
+            case Resource::CSSResourceType:
+            case Resource::MiscTextResourceType:
+            case Resource::OPFResourceType:
+            case Resource::NCXResourceType:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    MainWindow *m_Window;
+    const SigilAgent::SigilBookWorkspace *m_Workspace;
+};
+
+} // namespace
+
 void MainWindow::ConfigureAgentProvider()
 {
     if (!m_AgentController) return;
@@ -6301,6 +6366,8 @@ void MainWindow::CreateAgentDock()
     m_AgentDock = new SigilAgent::AgentDock(this);
     m_AgentDock->setSessionId(m_AgentController->session()->id());
     m_AgentDock->setObjectName(QStringLiteral("agentDock"));
+    m_AgentLocationSource = std::make_unique<AgentBookLocationSource>(this, m_AgentWorkspace.get());
+    m_AgentDock->setLocationSource(m_AgentLocationSource.get());
     addDockWidget(Qt::RightDockWidgetArea, m_AgentDock);
     tabifyDockWidget(m_PreviewWindow, m_AgentDock);
 
@@ -6364,6 +6431,16 @@ void MainWindow::CreateAgentDock()
                     return;
                 }
                 OpenFile(Utility::URLDecodePath(book_path));
+            });
+    connect(m_AgentDock, &SigilAgent::AgentDock::openLocationRequested, this,
+            [this](const QString &book_session_id, const QString &resource_id, int line) {
+                if (!m_AgentWorkspace || !m_Book
+                    || m_AgentWorkspace->bookSessionId() != book_session_id) {
+                    return;
+                }
+                Resource *resource = m_Book->GetFolderKeeper()->GetResourceByIdentifier(resource_id);
+                if (!resource) return;
+                OpenFile(resource->GetRelativePath(), line > 0 ? line : -1);
             });
     connect(m_AgentDock, &SigilAgent::AgentDock::taskRestoreRequested, this,
             [this](const QString &checkpoint_id, const QString &book_session_id) {

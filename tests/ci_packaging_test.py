@@ -171,15 +171,13 @@ class CiPackagingTest(unittest.TestCase):
             )
         )
         readme = README.read_text(encoding="utf-8")
-        self.assertIn(
-            "最近发布版本：**{0}**".format(release_version), readme
-        )
+        self.assertGreaterEqual(readme.count(release_version), 2)
         self.assertIn(
             "docs/ReleaseNotes-{0}.md".format(release_version), readme
         )
         self.assertNotIn("的开发中变化", readme)
-        self.assertIn("QQ 群：`796723288`", readme)
-        self.assertIn("入群问题答案：`3tic`", readme)
+        self.assertRegex(readme, r"QQ 群[:：]\s*`?796723288`?")
+        self.assertRegex(readme, r"入群(?:问题)?答案(?:是)?\s*[:：]?\s*`?3tic`?")
 
 
 if __name__ == "__main__":

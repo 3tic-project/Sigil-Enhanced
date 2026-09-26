@@ -37,9 +37,9 @@ def require(condition, message):
 def main():
     repo = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(repo / "src/Resource_Files/plugin_launchers/python"))
-    sys.path.insert(0, str(repo / "src/Resource_Files/python3lib"))
+    sys.path.insert(0, str(repo / "tests/fixtures"))
 
-    from metaproc3 import process_metadata
+    from metaproc3_legacy import process_metadata
 
     mdp = process_metadata(KINDLE_STYLE_OPF)
     require(mdp is not None, "alternate-script without xml:lang must not abort metadata parsing")

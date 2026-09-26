@@ -21,6 +21,8 @@ if ( WIN32 )
 
 endif()
 find_package( Qt6 ${QT6_NEEDED} COMPONENTS ${PKGS_TO_FIND} REQUIRED )
+find_package(EXPAT REQUIRED)
+find_package(LibXml2 REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
 
@@ -211,7 +213,7 @@ set( LIBS_TO_LINK ${HUNSPELL_LIBRARIES} ${PCRE2_LIBRARIES} ${GUMBO_LIBRARIES} ${
 # Additions to LIBS_TO_LINK for Python3
 set( _BUNDLED_PYVER "${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}" )
 message(STATUS "Using newer Python3::Python target to link to Python")
-list( APPEND LIBS_TO_LINK Python3::Python )
+list( APPEND LIBS_TO_LINK Python3::Python EXPAT::EXPAT LibXml2::LibXml2 )
 
 set( SIGIL_CORE_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-core.txt )
 set( SIGIL_WINDOWS_PYTHON_REQUIREMENTS ${CMAKE_SOURCE_DIR}/src/Resource_Files/python_pkg/requirements-windows.txt )

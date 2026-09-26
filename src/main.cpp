@@ -57,7 +57,6 @@
 #include "Misc/UpdateChecker.h"
 #include "Misc/Utility.h"
 #include "Misc/WebProfileMgr.h"
-#include "Misc/CodepointNames.h"
 #include "Misc/PrettyPrintProps.h"
 #include "Widgets/CaretStyle.h"
 #include "sigil_constants.h"
@@ -770,10 +769,6 @@ int main(int argc, char *argv[])
         // just once, installing both URLInterceptor and URLSchemeHandler as needed
         // to bypass 2mb url limit (singleton)
         WebProfileMgr::instance();
-
-	// Initialize the CodepointNames cache
-        // just once
-        CodepointNames::instance();
 
 	// Initialize the PrettyPrint settings properties
         PrettyPrintProps::instance();

@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/opf_legacy_codecs">
+        <file alias="codecs.bin" compress="0">opf_legacy_codecs.bin</file>
+    </qresource>
+</RCC>

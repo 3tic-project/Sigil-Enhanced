@@ -84,6 +84,7 @@ class ClipsWindow;
 namespace SigilAgent {
 class AgentDock;
 class AgentController;
+class AgentLocationSource;
 class SigilBookWorkspace;
 }
 class SelectCharacter;
@@ -1058,6 +1059,7 @@ private:
     SigilAgent::AgentDock *m_AgentDock;
     std::unique_ptr<SigilAgent::SigilBookWorkspace> m_AgentWorkspace;
     std::unique_ptr<SigilAgent::AgentController> m_AgentController;
+    std::unique_ptr<SigilAgent::AgentLocationSource> m_AgentLocationSource;
     bool m_CloseAfterAgentRun = false;
     bool m_AgentProviderReconfigurePending = false;
     QAction *m_DeveloperToolsAction;

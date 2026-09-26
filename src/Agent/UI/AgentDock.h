@@ -13,6 +13,7 @@
 
 #include "Agent/AgentTypes.h"
 #include "Agent/Model/AgentProviderPreset.h"
+#include "Agent/UI/AgentLocations.h"
 
 class QComboBox;
 class QButtonGroup;
@@ -53,6 +54,7 @@ public:
     void setCurrentFile(const QString &book_path, const QString &resource_id);
     void setSelectedFiles(const QStringList &book_paths, const QStringList &resource_ids);
     void setSelection(const QString &resource_id, int start, int end, const QString &snippet);
+    void setLocationSource(const AgentLocationSource *source);
     void appendEvent(const AgentEvent &event);
     void resetTranscript();
 
@@ -72,6 +74,10 @@ signals:
                                    const QString &bookSessionId);
     void taskRestoreRequested(const QString &checkpointId,
                               const QString &bookSessionId);
+    // line < 1 opens the file without moving to a source line.
+    void openLocationRequested(const QString &bookSessionId,
+                               const QString &resourceId,
+                               int line);
 
 private slots:
     void onSend();
@@ -104,6 +110,11 @@ private:
     void discardAssistantDeltas();
     void setThinkingText(const QString &text, bool append);
     void setAnswerText(const QString &text, bool append);
+    void setCardMarkdown(QWidget *card, const QString &object_name,
+                         const QString &markdown, bool linkify);
+    void activateLocation(const QString &href);
+    void showLocationNotice(const QString &text, const AgentLocationCheck &check,
+                            bool offer_file);
     void chooseDefaultScope();
     void refreshScopeLabel();
     void refreshProviderStatus();
@@ -147,6 +158,12 @@ private:
     QToolButton *m_chipSelectedFiles = nullptr;
     QToolButton *m_chipSelection = nullptr;
     QPlainTextEdit *m_composer = nullptr;
+    QWidget *m_locationNotice = nullptr;
+    QLabel *m_locationNoticeText = nullptr;
+    QPushButton *m_locationOpenFileButton = nullptr;
+    AgentLocationCheck m_noticeLocation;
+    const AgentLocationSource *m_locationSource = nullptr;
+    AgentLocationTable m_locations;
     QScrollArea *m_transcript = nullptr;
     QWidget *m_transcriptContents = nullptr;
     QVBoxLayout *m_transcriptLayout = nullptr;

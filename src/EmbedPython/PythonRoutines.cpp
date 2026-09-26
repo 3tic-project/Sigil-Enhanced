@@ -31,101 +31,6 @@
 #include "EmbedPython/PythonRoutines.h"
 
 
-QString PythonRoutines::GenerateNcxInPython(const QString &navdata, const QString &navbkpath, 
-                                            const QString &ncxdir, const QString &doctitle, 
-                                            const QString &mainid)
-{
-    QString results;
-    int rv = -1;
-    QString error_traceback;
-    QList<QVariant> args;
-    args.append(QVariant(navdata));
-    args.append(QVariant(navbkpath));
-    args.append(QVariant(ncxdir));
-    args.append(QVariant(doctitle));
-    args.append(QVariant(mainid));
-
-    QVariant res = EmbeddedPython::instance().runInPython( QString("ncxgenerator"),
-                                         QString("generateNCX"),
-                                         args,
-                                         &rv,
-                                         error_traceback);
-    if (rv == 0) {
-        results = res.toString();
-    }
-    return results;
-}
-
-
-MetadataPieces PythonRoutines::GetMetadataInPython(const QString& opfdata, const QString& version) 
-{
-    int rv = 0;
-    QString traceback;
-    MetadataPieces mdp;
-
-    QString module = "metaproc2";
-    if (version.startsWith('3')) module = "metaproc3";
-    QList<QVariant> args;
-    args.append(QVariant(opfdata));
-    QVariant res = EmbeddedPython::instance().runInPython(module, QString("process_metadata"), args, &rv, traceback, true);
-    PyObjectPtr mpo = PyObjectPtr(res);
-    if (rv || mpo.isNull() || mpo.object() == Py_None) {
-        if (rv) {
-            fprintf(stderr, "process_meta error %d traceback %s\n",rv, traceback.toStdString().c_str());
-        }
-        return mdp;
-    }
-    args.clear();
-    res = EmbeddedPython::instance().callPyObjMethod(mpo, QString("get_recognized_metadata"), args, &rv, traceback);
-    if (rv) {
-        fprintf(stderr, "get_recognized_metadata error %d traceback %s\n",rv, traceback.toStdString().c_str());
-    }
-    mdp.data = res.toString();
-    args.clear();
-    res = EmbeddedPython::instance().callPyObjMethod(mpo, QString("get_other_meta_xml"), args, &rv, traceback);
-    if (rv) {
-        fprintf(stderr, "get_other_meta_xml error %d traceback %s\n",rv, traceback.toStdString().c_str());
-    }
-    mdp.otherxml = res.toString();
-    args.clear();
-    res = EmbeddedPython::instance().callPyObjMethod(mpo, QString("get_id_list"), args, &rv, traceback);
-    if (rv) {
-        fprintf(stderr, "get_id_list error %d traceback %s\n",rv, traceback.toStdString().c_str());
-    }
-    mdp.idlist = res.toStringList();
-    args.clear();
-    res = EmbeddedPython::instance().callPyObjMethod(mpo, QString("get_metadata_tag"), args, &rv, traceback);
-    if (rv) {
-        fprintf(stderr, "get_metadata_tag error %d traceback %s\n",rv, traceback.toStdString().c_str());
-    }
-    mdp.metatag = res.toString();
-    return mdp;
-}
-
-
-QString PythonRoutines::SetNewMetadataInPython(const MetadataPieces& mdp, const QString& opfdata, const QString& version) 
-{
-    int rv = 0;
-    QString traceback;
-    QString newopfdata= opfdata;
-    QString module = "metaproc2";
-    if (version.startsWith('3')) module = "metaproc3";
-    QList<QVariant> args;
-    args.append(QVariant(mdp.data));
-    args.append(QVariant(mdp.otherxml));
-    args.append(QVariant(mdp.idlist));
-    args.append(QVariant(mdp.metatag));
-    args.append(QVariant(opfdata));
-    QVariant res = EmbeddedPython::instance().runInPython(module, QString("set_new_metadata"), args, &rv, traceback, true);
-    if (rv) {
-        fprintf(stderr, "set_new_metadata error %d traceback %s\n",rv, traceback.toStdString().c_str());
-        return newopfdata;
-    }
-    newopfdata = res.toString();
-    return newopfdata;
-}
-
-
 QString PythonRoutines::PerformRepoCommitInPython(const QString &localRepo, 
                                                   const QString &bookid, 
                                                   const QStringList &bookinfo,
@@ -153,26 +58,6 @@ QString PythonRoutines::PerformRepoCommitInPython(const QString &localRepo,
     return results;
 }
 
-
-bool PythonRoutines::PerformRepoEraseInPython(const QString& localRepo, const QString& bookid)
-{
-    bool results = false;
-    int rv = -1;
-    QString error_traceback;
-    QList<QVariant> args;
-    args.append(QVariant(localRepo));
-    args.append(QVariant(bookid));
-
-    QVariant res = EmbeddedPython::instance().runInPython( QString("repomanager"),
-                                         QString("eraseRepo"),
-                                         args,
-                                         &rv,
-                                         error_traceback);
-    if (rv == 0) {
-        results = (res.toInt() > 0);
-    }
-    return results;
-}
 
 QStringList PythonRoutines::GetRepoTagsInPython(const QString& localRepo, const QString& bookid)
 {
@@ -245,31 +130,6 @@ QString PythonRoutines::GenerateEpubFromTagInPython(const QString& localRepo,
 }
 
 
-QString PythonRoutines::GenerateDiffFromCheckPoints(const QString& localRepo,
-                                    const QString& bookid,
-                                    const QString& leftchkpoint,
-                                    const QString& rightchkpoint)
-{
-    QString results;
-    int rv = -1;
-    QString error_traceback;
-    QList<QVariant> args;
-    args.append(QVariant(localRepo));
-    args.append(QVariant(bookid));
-    args.append(QVariant(leftchkpoint));
-    args.append(QVariant(rightchkpoint));
-
-    QVariant res = EmbeddedPython::instance().runInPython( QString("repomanager"),
-                                         QString("generate_diff_from_checkpoints"),
-                                         args,
-                                         &rv,
-                                         error_traceback);
-    if (rv == 0) {
-        results = res.toString();
-    }
-    return results;
-}
-
 QString PythonRoutines::GenerateRepoLogSummaryInPython(const QString& localRepo,
                                                        const QString& bookid)
 {
@@ -319,28 +179,6 @@ QList<DiffRecord::DiffRec> PythonRoutines::GenerateParsedNDiffInPython(const QSt
             dr.rightchanges = fields.at(4);
             results << dr;
         }
-    }
-    return results;
-}
-
-
-
-QString PythonRoutines::GenerateUnifiedDiffInPython(const QString& path1, const QString& path2)
-{
-    QString results;
-    int rv = -1;
-    QString error_traceback;
-    QList<QVariant> args;
-    args.append(QVariant(path1));
-    args.append(QVariant(path2));
-
-    QVariant res = EmbeddedPython::instance().runInPython( QString("repomanager"),
-                                         QString("generate_unified_diff"),
-                                         args,
-                                         &rv,
-                                         error_traceback);
-    if (rv == 0) {
-        results = res.toString();
     }
     return results;
 }
@@ -399,23 +237,6 @@ QString PythonRoutines::CopyTagToDestDirInPython(const QString& localRepo,
     return results;
 }
 
-
-QString PythonRoutines::RebaseManifestIDsInPython(const QString& opfdata) 
-{
-    int rv = 0;
-    QString traceback;
-    QString newopfdata= opfdata;
-    QString module = "fix_opf_ids";
-    QList<QVariant> args;
-    args.append(QVariant(opfdata));
-    QVariant res = EmbeddedPython::instance().runInPython(module, QString("rebase_manifest_ids"), args, &rv, traceback, true);
-    if (rv) {
-        fprintf(stderr, "rebase_manifest_ids error %d traceback %s\n",rv, traceback.toStdString().c_str());
-        return newopfdata;
-    }
-    newopfdata = res.toString();
-    return newopfdata;
-}
 
 
 PyObjectPtr PythonRoutines::SetupInitialFunctionSearchEnvInPython(const QString& function_name)
@@ -508,58 +329,4 @@ QString PythonRoutines::GetSingleReplacementByFunction(PyObjectPtr FSO,
         fprintf(stderr, "get_single_replacement_by_function error %d traceback %s\n",rv, traceback.toStdString().c_str());
     }
     return res.toString();
-}
-
-
-bool PythonRoutines::CreateUserJsonFileInPython()
-{
-    int rv = 0;
-    QString traceback;
-    QString jsonpath = Utility::DefinePrefsDir() + "/" + SIGIL_FUNCTION_REPLACE_JSON_FILE;
-    QString module = "functionsearch";
-    QList<QVariant> args;
-    args.append(QVariant(jsonpath));
-    QVariant res = EmbeddedPython::instance().runInPython(module, QString("createJsonFile"), args, &rv, traceback, true);
-    if (rv) {
-        fprintf(stderr, "createJsonFile error %d traceback %s\n",rv, traceback.toStdString().c_str());
-    }
-    int v = res.toInt();
-    args.clear();
-    if (v) return true;
-    return false;
-}
-
-QString PythonRoutines::GetNameOfCurrentCodepointInPython(int cp)
-{
-    int rv = 0;
-    QString traceback;
-    QString charname = "";
-    QString module = "getcodepointname";
-    QList<QVariant> args;
-    args.append(QVariant(cp));
-    QVariant res = EmbeddedPython::instance().runInPython(module, QString("getname"), args, &rv, traceback, true);
-    if (rv) {
-        fprintf(stderr, "getcodepointname error %d traceback %s\n",rv, traceback.toStdString().c_str());
-        return charname;
-    }
-    charname = res.toString();
-    return charname;
-}
-
-bool PythonRoutines::ConvertPngToGifInPython(const QString& pngpath, const QString& gifpath)
-{
-    int rv = 0;
-    QString traceback;
-    QString module = "imagesupport";
-    QList<QVariant> args;
-    args.append(QVariant(pngpath));
-    args.append(QVariant(gifpath));
-    QVariant res = EmbeddedPython::instance().runInPython(module, QString("convert_png_to_static_gif"), args, &rv, traceback, true);
-    if (rv) {
-        fprintf(stderr, "convert_png_to_static_gif error %d traceback %s\n",rv, traceback.toStdString().c_str());
-    }
-    int v = res.toInt();
-    args.clear();
-    if (v) return true;
-    return false;
 }

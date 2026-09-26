@@ -20,18 +20,15 @@
 **
 *************************************************************************/
 
-#include "EmbedPython/EmbeddedPython.h"
-
 #include <QtCore/QDateTime>
-#include <QtCore/QDir>
 #include <QtGui/QDesktopServices>
 #include <QtWidgets/QMessageBox>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 #include <QUrl>
-#include <QDebug>
 
 #include "Misc/SettingsStore.h"
+#include "Misc/UpdateVersionFeed.h"
 #include "Misc/Utility.h"
 #include "Misc/UpdateChecker.h"
 #include "sigil_constants.h"
@@ -67,22 +64,8 @@ void UpdateChecker::CheckForUpdate()
     if (last_check_time.secsTo(QDateTime::currentDateTime()) > SECONDS_BETWEEN_CHECKS) {
         settings.setValue(LAST_CHECK_TIME_KEY, QDateTime::currentDateTime());
 
-        int rv = 0;
-        QString error_traceback;
-        QList<QVariant> args;
-        args.append(QVariant(UPDATE_XML_LOCATION));
-
-        QVariant res = EmbeddedPython::instance().runInPython( QString("updatechecker"),
-                                         QString("check_for_updates"),
-                                         args,
-                                         &rv,
-                                         error_traceback);    
-        if (rv != 0) {
-             qDebug() << QString("error in updatechecker check_for_updates: ") + QString::number(rv) + error_traceback;
-            return;
-        }
-
-        QString current_online_version = res.toString();
+        const QString current_online_version =
+            UpdateVersionFeed::FetchVersion(QUrl(UPDATE_XML_LOCATION));
 
         if (current_online_version.isEmpty()) {
             return;

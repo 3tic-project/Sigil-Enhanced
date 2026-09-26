@@ -25,6 +25,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include "Misc/Utility.h"
+#include "BookManipulation/XmlProcessor.h"
 #include "SourceUpdates/PerformOPFUpdates.h"
 
 
@@ -44,6 +45,9 @@ PerformOPFUpdates::PerformOPFUpdates(const QString &source,
 QString PerformOPFUpdates::operator()()
 {
     QString newsource = m_source;
+    if (XmlProcessor::PerformOPFSourceUpdates(m_source, m_newbookpath, m_CurrentPath, m_XMLUpdates, &newsource)) {
+        return newsource;
+    }
 
     // serialize the hash for passing to python
     QStringList dictkeys = m_XMLUpdates.keys();

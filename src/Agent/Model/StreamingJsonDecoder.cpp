@@ -40,6 +40,7 @@ void StreamingJsonDecoder::reset()
 {
     m_buffer.clear();
     m_reasoning.clear();
+    m_reasoningDetails = QJsonArray();
     m_content.clear();
     m_finishReason.clear();
     m_error.clear();
@@ -79,6 +80,7 @@ ModelTurn StreamingJsonDecoder::finish()
     }
     ModelTurn turn;
     turn.reasoning = m_reasoning;
+    turn.reasoningDetails = m_reasoningDetails;
     turn.content = m_content;
     turn.toolCalls = m_toolCalls;
     turn.finishReason = m_finishReason;
@@ -173,6 +175,22 @@ void StreamingJsonDecoder::parsePayload(const QJsonObject &payload)
             reasoning = reasoning_value.toObject().value(QStringLiteral("content")).toString();
         }
     }
+    const QJsonArray details = delta.value(QStringLiteral("reasoning_details")).toArray();
+    if (!details.isEmpty()) {
+        appendReasoningDetails(details);
+        if (reasoning.isEmpty()) {
+            for (const QJsonValue &value : details) {
+                const QJsonObject detail = value.toObject();
+                if (detail.value(QStringLiteral("type")).toString()
+                    == QLatin1String("reasoning.text")) {
+                    reasoning += detail.value(QStringLiteral("text")).toString();
+                } else if (detail.value(QStringLiteral("type")).toString()
+                           == QLatin1String("reasoning.summary")) {
+                    reasoning += detail.value(QStringLiteral("summary")).toString();
+                }
+            }
+        }
+    }
     const QString content = delta.value(QStringLiteral("content")).toString();
     if (!reasoning.isEmpty()) {
         m_reasoning += reasoning;
@@ -196,6 +214,42 @@ void StreamingJsonDecoder::parsePayload(const QJsonObject &payload)
     if (!emitted.reasoning.isEmpty() || !emitted.content.isEmpty()
         || !emitted.toolCalls.isEmpty() || !emitted.finishReason.isEmpty()) {
         m_deltas.append(emitted);
+    }
+}
+
+void StreamingJsonDecoder::appendReasoningDetails(const QJsonArray &details)
+{
+    for (const QJsonValue &value : details) {
+        if (!value.isObject()) continue;
+        const QJsonObject incoming = value.toObject();
+        const int index = incoming.value(QStringLiteral("index")).toInt(-1);
+        int existing_index = -1;
+        if (index >= 0) {
+            for (int i = 0; i < m_reasoningDetails.size(); ++i) {
+                if (m_reasoningDetails.at(i).toObject()
+                        .value(QStringLiteral("index")).toInt(-1) == index) {
+                    existing_index = i;
+                    break;
+                }
+            }
+        }
+        if (existing_index < 0) {
+            m_reasoningDetails.append(incoming);
+            continue;
+        }
+        QJsonObject merged = m_reasoningDetails.at(existing_index).toObject();
+        for (auto it = incoming.begin(); it != incoming.end(); ++it) {
+            if ((it.key() == QLatin1String("text")
+                 || it.key() == QLatin1String("summary")
+                 || it.key() == QLatin1String("data")) && it.value().isString()) {
+                QString combined = merged.value(it.key()).toString();
+                combined += it.value().toString();
+                merged.insert(it.key(), combined);
+            } else if (!it.value().isNull()) {
+                merged.insert(it.key(), it.value());
+            }
+        }
+        m_reasoningDetails.replace(existing_index, merged);
     }
 }
 

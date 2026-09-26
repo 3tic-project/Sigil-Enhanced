@@ -34,6 +34,7 @@ struct ModelCapabilities {
 
 struct ModelRequest {
     QString model;
+    QString sessionId;
     QList<ChatMessage> messages;
     QJsonArray tools;
     QJsonObject historyContext;

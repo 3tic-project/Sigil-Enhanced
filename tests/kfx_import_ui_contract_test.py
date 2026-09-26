@@ -17,6 +17,11 @@ main_window_ext = (repo / "src/MainUI/MainWindowExt.cpp").read_text(encoding="ut
 book_browser_ext = (repo / "src/MainUI/BookBrowserExt.cpp").read_text(encoding="utf-8")
 controller = (repo / "src/BuiltinPlugins/KfxImportController.cpp").read_text(encoding="utf-8")
 cmake = (repo / "src/qt6sigil.cmake").read_text(encoding="utf-8")
+require(
+    'EmbedPython/EmbeddedPython.h' not in controller
+    and 'EmbeddedPython::instance()' not in controller,
+    "the isolated KFX controller must locate its worker without the embedded interpreter",
+)
 
 action_name = "actionConvertKfx"
 enhancement_menu = main_ui.find(".//widget[@name='menuEnhancement']")

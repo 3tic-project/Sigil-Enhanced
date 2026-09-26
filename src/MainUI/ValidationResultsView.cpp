@@ -20,14 +20,11 @@
 **
 *************************************************************************/
 
-#include "EmbedPython/EmbeddedPython.h"
-
 #include <QFileInfo>
 #include <QApplication>
 #include <QHeaderView>
 #include <QTableWidget>
 #include <QRegularExpression>
-#include <QVariant>
 #include <QFileDialog>
 #include <QPaintEvent>
 #include <QStylePainter>
@@ -43,8 +40,6 @@ static const QBrush INFO_BRUSH    = QBrush(QColor(224, 255, 255));
 static const QBrush WARNING_BRUSH = QBrush(QColor(255, 255, 230));
 static const QBrush ERROR_BRUSH   = QBrush(QColor(255, 230, 230));
 #endif
-
-const QString ValidationResultsView::SEP = QString(QChar(31));
 
 static const QString SETTINGS_GROUP = "validation_results";
 
@@ -187,73 +182,6 @@ void ValidationResultsView::paintEvent(QPaintEvent *event)
 #endif
 
     painter.drawControl(QStyle::CE_DockWidgetTitle, options);
-}
-
-
-QStringList ValidationResultsView::ValidateFile(QString &apath)
-{
-    int rv = 0;
-    QString error_traceback;
-    QStringList results;
-
-    QList<QVariant> args;
-    args.append(QVariant(apath));
-
-    QVariant res = EmbeddedPython::instance().runInPython( QString("sanitycheck"),
-                                         QString("perform_sanity_check"),
-                                         args,
-                                         &rv,
-                                         error_traceback);    
-    if (rv != 0) {
-        Utility::DisplayStdWarningDialog(QString("error in sanitycheck perform_sanity_check: ") + QString::number(rv), 
-                                         error_traceback);
-        // an error happened - make no changes
-        return results;
-    }
-    return res.toStringList();
-}
-
-
-void ValidationResultsView::ValidateCurrentBook()
-{
-    ClearResults();
-    QList<ValidationResult> results;
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    m_Book->SaveAllResourcesToDisk();
-
-    QList<Resource *> resources = m_Book->GetFolderKeeper()->GetResourceList();
-    foreach (Resource * resource, resources) {
-        if (resource->Type() == Resource::HTMLResourceType) {
-            QString apath = resource->GetFullPath();
-            QString bookpath = resource->GetRelativePath();
-            QStringList reslst = ValidateFile(apath);
-            if (!reslst.isEmpty()) {
-                foreach (QString res, reslst) {
-                    QStringList details = res.split(SEP);
-                    ValidationResult::ResType vtype;
-                    QString etype = details[0];
-                    if (etype == "info") {
-                        vtype = ValidationResult::ResType_Info;
-                    } else if (etype == "warning") {
-                        vtype = ValidationResult::ResType_Warn;
-                    } else if (etype == "error") {
-                        vtype = ValidationResult::ResType_Error;
-                    } else {
-                        continue;
-                    }
-                    QString filename = details[1];
-                    int lineno = details[2].toInt();
-                    int charoffset = details[3].toInt();
-                    QString msg = details[4];
-                    results.append(ValidationResult(vtype,bookpath,lineno,charoffset,msg));
-                }
-            }
-        }
-    }
-    QApplication::restoreOverrideCursor();
-    DisplayResults(results);
-    show();
-    raise();
 }
 
 
@@ -441,4 +369,3 @@ void ValidationResultsView::SetItemPalette(QTableWidgetItem * item, QBrush &row_
         item->setBackground(row_brush);
     }   
 }
-

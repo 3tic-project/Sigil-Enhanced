@@ -18,6 +18,7 @@
 #include "MainUI/MainWindow.h"
 #include "Misc/SettingsStore.h"
 #include "ResourceObjects/HTMLResource.h"
+#include "ResourceObjects/NCXResource.h"
 #include "ResourceObjects/OPFResource.h"
 #include "Tabs/FlowTab.h"
 #include "Widgets/AlertBox.h"
@@ -133,6 +134,27 @@ void checkRename(const QString& source)
     require(window.ExportCurrentBookCopy(output),
             "Renamed EPUB could not be exported through MainWindow");
     std::cerr << "scenario rename: done\n" << std::flush;
+}
+
+void checkGenerateNcx(const QString& source)
+{
+    MainWindow window(source);
+    require(window.GetCurrentBook()->GetNCX() == nullptr,
+            "NCX scenario fixture unexpectedly has an NCX");
+    require(window.GenerateNCXGuideFromNav(),
+            "Generate NCX and Guide failed through MainWindow");
+    NCXResource* ncx = window.GetCurrentBook()->GetNCX();
+    require(ncx, "Generate NCX and Guide did not create an NCX resource");
+    const QString text = ncx->GetText();
+    require(text.contains(QStringLiteral("<meta name=\"dtb:depth\" content=\"1\" />")),
+            "Generated NCX has the wrong navigation depth");
+    require(text.contains(QStringLiteral("<text>Chapter</text>"))
+                && text.contains(QStringLiteral("<content src=\"a.xhtml\" />")),
+            "Generated NCX lost the navigation title or target");
+    require(window.GetCurrentBook()->IsModified(),
+            "Generate NCX and Guide did not mark the book modified");
+    require(window.ExportCurrentBookCopy(source + QStringLiteral(".generated.epub")),
+            "Generated NCX could not be exported through MainWindow");
 }
 
 void checkUndoRestoresNoOp(const QString& source, const QByteArray& original)
@@ -292,6 +314,8 @@ int main(int argc, char** argv)
 
         if (scenario == QLatin1String("rename")) {
             checkRename(copyFixture(input, QStringLiteral(".rename.epub")));
+        } else if (scenario == QLatin1String("ncx")) {
+            checkGenerateNcx(copyFixture(input, QStringLiteral(".ncx.epub")));
         } else if (scenario == QLatin1String("undo")) {
             checkUndoRestoresNoOp(
                 copyFixture(input, QStringLiteral(".undo.epub")), original);

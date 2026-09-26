@@ -42,6 +42,9 @@ public:
     bool tokenUsageEnabled() const;
     void setTokenUsageEnabled(bool enabled);
 
+    int firstTokenTimeoutSeconds() const;
+    void setFirstTokenTimeoutSeconds(int seconds);
+
     int historyPreviousTurnBudgetBytes() const;
     void setHistoryPreviousTurnBudgetBytes(int bytes);
 

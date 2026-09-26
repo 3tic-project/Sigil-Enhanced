@@ -41,12 +41,11 @@
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QWheelEvent>
-#include <QTemporaryFile>
 #include "Misc/AtomicFileWrite.h"
 #include "Misc/SettingsStore.h"
+#include "Misc/StaticGif.h"
 #include "Misc/Utility.h"
 #include "Misc/WebpSupport.h"
-#include "EmbedPython/PythonRoutines.h"
 #include "Dialogs/ImageResizeDialog.h"
 #include "Widgets/BetterRubberBand.h"
 #include "Widgets/AdjustImage.h"
@@ -493,34 +492,7 @@ static bool EncodeEditedImage(const QImage &image, const QString &format,
     };
     if (format == QLatin1String("GIF")) {
         // Qt can read but not write even static GIF files.
-        // Encode to a temp GIF, then the caller replaces the book file.
-        // Writing the GIF straight onto the extracted path fails on Windows
-        // when that path is still open, and a failed write used to leave
-        // the book unmarked.
-        const QString targetDir = Utility::DefinePrefsDir() + "/workspace";
-        QTemporaryFile png(targetDir + "/XXXXXX.png");
-        png.setAutoRemove(true);
-        if (!png.open() || !image.save(&png, "PNG", -1)) {
-            return fail(AdjustImage::tr("Image save failed."));
-        }
-        const QString pngPath = png.fileName();
-        png.close();
-        QTemporaryFile gif(targetDir + "/XXXXXX.gif");
-        gif.setAutoRemove(true);
-        if (!gif.open()) {
-            return fail(AdjustImage::tr("Image save failed."));
-        }
-        const QString gifPath = gif.fileName();
-        gif.close();
-        PythonRoutines pr;
-        if (!pr.ConvertPngToGifInPython(pngPath, gifPath)) {
-            return fail(AdjustImage::tr("GIF conversion failed."));
-        }
-        QFile gifFile(gifPath);
-        if (!gifFile.open(QIODevice::ReadOnly)) {
-            return fail(gifFile.errorString());
-        }
-        *bytes = gifFile.readAll();
+        *bytes = StaticGif::Encode(image);
         if (bytes->isEmpty()) {
             return fail(AdjustImage::tr("GIF conversion failed."));
         }

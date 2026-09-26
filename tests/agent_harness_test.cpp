@@ -4,6 +4,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSet>
 #include <QThread>
 
 #include "Agent/Core/AgentCancellation.h"
@@ -74,6 +75,15 @@ int main()
                     QStringLiteral("review_complete=true"))
                 && edit_system_prompt.contains(QStringLiteral("preview_digest")),
             "system prompt must ground commit summaries and paginated inventory traversal");
+    Require(edit_system_prompt.contains(QStringLiteral("eligible source paragraphs"))
+                && edit_system_prompt.contains(QStringLiteral("report partial work"))
+                && edit_system_prompt.contains(QStringLiteral("run book.check")),
+            "bilingual tasks must require coverage and validation before a completion claim");
+    Require(edit_system_prompt.contains(QStringLiteral("1-based source line written as L<number>"))
+                && edit_system_prompt.contains(QStringLiteral("a table spanning files must name the path in every row"))
+                && edit_system_prompt.contains(QStringLiteral("Never invent paths, lines, or offsets"))
+                && edit_system_prompt.contains(QStringLiteral("Do not write sigil-agent:// links")),
+            "system prompt must require verified path and source-line citations the dock can link");
 
     MemoryBookWorkspace bounded_summary_book;
     bounded_summary_book.setMetadata(QJsonObject {
@@ -257,7 +267,31 @@ int main()
     registerBookTools(&registry, &book);
     IAgentTool *python_tool = registry.find(QStringLiteral("python.run"));
     Require(python_tool != nullptr, "python.run must be registered");
+    IAgentTool *python_inspect = registry.find(QStringLiteral("python.inspect"));
+    Require(python_inspect != nullptr, "python.inspect must be registered");
+    IAgentTool *proof_audit = registry.find(QStringLiteral("proof.audit"));
+    IAgentTool *proof_configure = registry.find(QStringLiteral("proof.configure"));
+    IAgentTool *proof_decide = registry.find(QStringLiteral("proof.decide"));
+    IAgentTool *proof_apply = registry.find(QStringLiteral("proof.apply"));
+    Require(proof_audit && proof_configure && proof_decide && proof_apply,
+            "proofreading tools must be registered");
     PermissionPolicy policy;
+    Require(policy.evaluate(AgentMode::Ask, proof_audit->descriptor()) == PermissionAction::Allow
+                && policy.evaluate(AgentMode::Ask, proof_configure->descriptor()) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Ask, proof_decide->descriptor()) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Plan, proof_configure->descriptor()) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Plan, proof_decide->descriptor()) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Auto, proof_apply->descriptor()) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Auto, proof_configure->descriptor()) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Auto, proof_decide->descriptor()) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Edit, proof_configure->descriptor()) == PermissionAction::Ask
+                && policy.evaluate(AgentMode::Edit, proof_decide->descriptor()) == PermissionAction::Ask
+                && policy.evaluate(AgentMode::Edit, proof_apply->descriptor()) == PermissionAction::Ask,
+            "proof scans are read-only and proof application requires reviewed Edit approval");
+    Require(policy.evaluate(AgentMode::Ask, python_inspect->descriptor()) == PermissionAction::Allow
+                && policy.evaluate(AgentMode::Plan, python_inspect->descriptor())
+                    == PermissionAction::Allow,
+            "Read-only Python inspection must be available in Ask and Plan");
     Require(policy.evaluate(AgentMode::Ask, python_tool->descriptor()) == PermissionAction::Deny,
             "Ask must deny python.run");
     Require(policy.evaluate(AgentMode::Plan, python_tool->descriptor()) == PermissionAction::Deny,
@@ -294,13 +328,17 @@ int main()
                 && ask_tools.contains(QStringLiteral("transaction_preview"))
                 && !ask_tools.contains(QStringLiteral("resource_patch_fragment"))
                 && !ask_tools.contains(QStringLiteral("transaction_commit"))
-                && !ask_tools.contains(QStringLiteral("python_run")),
+                && !ask_tools.contains(QStringLiteral("python_run"))
+                && !ask_tools.contains(QStringLiteral("proof_configure"))
+                && !ask_tools.contains(QStringLiteral("proof_decide")),
             "Ask schema catalog must hide every book-mutating tool");
     Require(plan_tools.contains(QStringLiteral("resource_patch_fragment"))
                 && plan_tools.contains(QStringLiteral("transaction_preview"))
                 && !plan_tools.contains(QStringLiteral("transaction_commit"))
                 && !plan_tools.contains(QStringLiteral("checkpoint_create"))
-                && !plan_tools.contains(QStringLiteral("python_run")),
+                && !plan_tools.contains(QStringLiteral("python_run"))
+                && !plan_tools.contains(QStringLiteral("proof_configure"))
+                && !plan_tools.contains(QStringLiteral("proof_decide")),
             "Plan schema catalog must retain staging but hide apply-only tools");
     Require(edit_tools.contains(QStringLiteral("transaction_commit"))
                 && edit_tools.contains(QStringLiteral("checkpoint_create"))
@@ -323,10 +361,12 @@ int main()
                 QStringLiteral("hidden_tool_count")).toInt() == 0
                 && edit_catalog.toolContext.value(
                     QStringLiteral("saved_schema_bytes")).toInt() == 0
-                && auto_catalog.tools.size() == edit_catalog.tools.size()
+                && auto_catalog.tools.size() + 3 == edit_catalog.tools.size()
                 && auto_catalog.toolContext.value(
-                    QStringLiteral("hidden_tool_count")).toInt() == 0,
-            "full Edit and Auto catalogs must not invent policy savings");
+                    QStringLiteral("hidden_tool_count")).toInt() == 3
+                && auto_catalog.toolContext.value(
+                    QStringLiteral("saved_schema_bytes")).toInt() > 0,
+            "Auto catalog must hide proofreading configuration, decisions and application");
     AgentSession session;
     AgentCancellation cancellation;
     AutoApprovalGate approve(true);
@@ -670,6 +710,30 @@ int main()
                        .value(QStringLiteral("reported_request_count")).toInt() == 0,
             "a run with usage disabled must not claim missing provider reports");
 
+    {
+        MemoryBookWorkspace oversized_book = MemoryBookWorkspace::samplePhysicsBook();
+        ToolRegistry oversized_registry;
+        registerBookTools(&oversized_registry, &oversized_book);
+        AgentSession oversized_session;
+        MockModelProvider oversized_provider;
+        AutoApprovalGate oversized_gate(true);
+        AgentCancellation oversized_cancel;
+        AgentRunner oversized_runner(&oversized_session, &oversized_provider,
+                                     &oversized_registry, &oversized_book,
+                                     &policy, &oversized_gate, &oversized_cancel);
+        const AgentRunResult oversized_result = oversized_runner.runTurn(
+            QString(500000, QLatin1Char('x')));
+        const QJsonObject oversized_failure = oversized_session.eventsOf(
+            AgentEventType::ModelRequestFailed).constLast().payload;
+        Require(oversized_result.state == AgentRunState::Failed
+                    && oversized_provider.requestCount() == 0
+                    && oversized_failure.value(QStringLiteral("code")).toString()
+                        == QStringLiteral("CONTEXT_BUDGET_EXCEEDED")
+                    && oversized_failure.value(
+                        QStringLiteral("request_payload_bytes_estimate")).toInteger() > 0,
+                "an oversized request must fail locally with metrics before calling the provider");
+    }
+
     MemoryBookWorkspace partial_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry partial_registry;
     registerBookTools(&partial_registry, &partial_book);
@@ -763,6 +827,60 @@ int main()
         }
     }
     Require(replayed_reasoning, "session history with tools must replay reasoning_content");
+
+    AgentSession long_turn_session;
+    long_turn_session.append(AgentEventType::UserMessage,
+                             QJsonObject { { QStringLiteral("text"), QStringLiteral("Translate this book") } });
+    for (int i = 0; i < 300; ++i) {
+        ToolCall call;
+        call.id = QStringLiteral("long_call_%1").arg(i);
+        call.name = QStringLiteral("resource.read_fragment");
+        call.argumentsJson = QStringLiteral("{\"resource_id\":\"ch1\"}");
+        long_turn_session.append(AgentEventType::AssistantMessage, QJsonObject {
+            { QStringLiteral("content"), QString() },
+            { QStringLiteral("tool_calls"), QJsonArray { toolCallToJson(call) } }
+        });
+        long_turn_session.append(AgentEventType::ToolCompleted, QJsonObject {
+            { QStringLiteral("tool_call_id"), call.id },
+            { QStringLiteral("name"), call.name },
+            { QStringLiteral("result"), QString(2500, QLatin1Char('x')) }
+        });
+    }
+    long_turn_session.append(AgentEventType::TransactionCommitted, QJsonObject {
+        { QStringLiteral("book_revision"), 7 },
+        { QStringLiteral("resource_outcomes"), QJsonObject {
+            { QStringLiteral("resource_ids"), QJsonArray { QStringLiteral("ch1") } }
+        } },
+        { QStringLiteral("recovery"), QJsonObject {
+            { QStringLiteral("checkpoint_id"), QStringLiteral("restore-7") }
+        } }
+    });
+    HistoryAssemblyStats compact_stats;
+    const QList<ChatMessage> compact_messages = assembler.assemble(
+        long_turn_session.events(), true, 0, &compact_stats,
+        DEFAULT_CURRENT_TURN_HISTORY_BUDGET_BYTES);
+    Require(compact_stats.currentTurnBytes > DEFAULT_CURRENT_TURN_HISTORY_BUDGET_BYTES
+                && compact_stats.includedCurrentTurnBytes
+                       <= DEFAULT_CURRENT_TURN_HISTORY_BUDGET_BYTES
+                && compact_stats.omittedCurrentTurnMessages > 0
+                && compact_messages.first().content == QStringLiteral("Translate this book")
+                && compact_messages.at(1).content.contains(
+                    QStringLiteral("Host summary of omitted current-turn history"))
+                && compact_messages.at(1).content.contains(QStringLiteral("ch1"))
+                && compact_messages.at(1).content.contains(QStringLiteral("restore-7")),
+            "large current turns must be bounded and preserve the user request with a summary");
+    QSet<QString> visible_call_ids;
+    for (const ChatMessage &message : compact_messages) {
+        if (message.role == QLatin1String("assistant")) {
+            for (const ToolCall &call : message.toolCalls) visible_call_ids.insert(call.id);
+        } else if (message.role == QLatin1String("tool")) {
+            Require(visible_call_ids.contains(message.toolCallId),
+                    "compacted tool results must keep their assistant tool calls");
+        }
+    }
+    Require(visible_call_ids.contains(QStringLiteral("long_call_299"))
+                && !visible_call_ids.contains(QStringLiteral("long_call_0")),
+            "current-turn compaction must retain recent complete tool exchanges");
 
     MemoryBookWorkspace ask_book = MemoryBookWorkspace::samplePhysicsBook();
     const QString original = ask_book.resourceText(QStringLiteral("ch1"));
@@ -1228,6 +1346,60 @@ int main()
                 && edit_book.resourceText(QStringLiteral("ch1")).contains(
                     QStringLiteral("<title>Heat</title>")),
             "the published task restore point must restore the committed text");
+
+    {
+        MemoryBookWorkspace partial_book = MemoryBookWorkspace::samplePhysicsBook();
+        ToolRegistry partial_registry;
+        registerBookTools(&partial_registry, &partial_book);
+        AgentSession partial_session;
+        AutoApprovalGate partial_gate(true);
+        MockModelProvider partial_provider;
+        int partial_step = 0;
+        partial_provider.setScript([&](const ModelRequest &) {
+            ModelTurn turn;
+            if (partial_step == 3) {
+                turn.error = QStringLiteral("HTTP 400: provider rejected request");
+                return turn;
+            }
+            ToolCall call;
+            call.id = QStringLiteral("partial_%1").arg(partial_step);
+            if (partial_step == 0) {
+                call.name = QStringLiteral("transaction.begin");
+                call.argumentsJson = QStringLiteral("{}");
+            } else if (partial_step == 1) {
+                call.name = QStringLiteral("resource.patch_fragment");
+                call.argumentsJson = QStringLiteral(
+                    "{\"resource_id\":\"ch1\",\"expected_text\":\"<title>Heat</title>\",\"text\":\"<title>Partial</title>\",\"expected_resource_revision\":1}");
+            } else {
+                call.name = QStringLiteral("transaction.commit");
+                call.argumentsJson = QStringLiteral("{\"expected_book_revision\":1}");
+            }
+            ++partial_step;
+            turn.toolCalls.append(call);
+            return turn;
+        });
+        AgentCancellation partial_cancel;
+        AgentRunner partial_runner(&partial_session, &partial_provider,
+                                   &partial_registry, &partial_book, &ask_policy,
+                                   &partial_gate, &partial_cancel);
+        partial_runner.setMode(AgentMode::Edit);
+        const AgentRunResult partial_result = partial_runner.runTurn(
+            QStringLiteral("Make a long edit"));
+        const QJsonObject partial_outcome = partial_session.eventsOf(
+            AgentEventType::RunStateChanged).constLast().payload
+            .value(QStringLiteral("partial_outcome")).toObject();
+        Require(partial_result.state == AgentRunState::Failed
+                    && partial_book.resourceText(QStringLiteral("ch1")).contains(
+                        QStringLiteral("<title>Partial</title>"))
+                    && partial_outcome.value(QStringLiteral("status")).toString()
+                        == QStringLiteral("partial_applied")
+                    && partial_outcome.value(QStringLiteral("commit_count")).toInt() == 1
+                    && partial_outcome.value(QStringLiteral("resource_ids")).toArray()
+                        == QJsonArray { QStringLiteral("ch1") }
+                    && partial_outcome.value(QStringLiteral("book_revision")).toInteger()
+                        == static_cast<qint64>(partial_book.revision()),
+                "provider failure after a commit must preserve a machine-readable partial outcome");
+    }
 
     MemoryBookWorkspace auto_book = MemoryBookWorkspace::samplePhysicsBook();
     ToolRegistry auto_registry;

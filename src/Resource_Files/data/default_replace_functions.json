@@ -1,0 +1,12 @@
+{
+  "uppercase": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_uppercase(match, number, file_name, metadata, data)\n",
+  "lowercase": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_lowercase(match, number, file_name, metadata, data)\n",
+  "capitalize": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_capitalize(match, number, file_name, metadata, data)\n",
+  "titlecase": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_titlecase(match, number, file_name, metadata, data)\n",
+  "swapcase": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_swapcase(match, number, file_name, metadata, data)\n",
+  "uppercase_ignore_tags": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_uppercase_ignore_tags(match, number, file_name, metadata, data)\n",
+  "lowercase_ignore_tags": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_lowercase_ignore_tags(match, number, file_name, metadata, data)\n",
+  "capitalize_ignore_tags": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_capitalize_ignore_tags(match, number, file_name, metadata, data)\n",
+  "titlecase_ignore_tags": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_titlecase_ignore_tags(match, number, file_name, metadata, data)\n",
+  "swapcase_ignore_tags": "def replace(match, number, file_name, metadata, data):\n\tif match:\n\t\treturn replace_swapcase_ignore_tags(match, number, file_name, metadata, data)\n"
+}

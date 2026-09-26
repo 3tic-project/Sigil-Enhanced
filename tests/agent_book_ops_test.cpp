@@ -4,6 +4,10 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QElapsedTimer>
+#include <QSet>
+#include <QStandardPaths>
+#include <QUuid>
 
 #include "Agent/Core/AgentSession.h"
 #include "Agent/Execution/ContentOps.h"
@@ -29,6 +33,7 @@ void Require(bool condition, const char *message)
 int main()
 {
     using namespace SigilAgent;
+    QStandardPaths::setTestModeEnabled(true);
 
     Require(xmlEscape(QStringLiteral("a<b")) == QStringLiteral("a&lt;b"), "xmlEscape");
     Require(relativeBookHref(QStringLiteral("OEBPS/Text/ch.xhtml"),
@@ -198,6 +203,487 @@ int main()
                 && search_schema.value(QStringLiteral("default")).toInt() == 40
                 && search_schema.value(QStringLiteral("maximum")).toInt() == 50,
             "regex search must clamp and disclose its match-count bound");
+    const ToolResult invalid_regex = run_bounded_search(QJsonObject {
+        { QStringLiteral("pattern"), QStringLiteral("(") }
+    });
+    Require(!invalid_regex.ok && invalid_regex.code == QStringLiteral("REGEX_INVALID")
+                && invalid_regex.data.contains(QStringLiteral("error_offset")),
+            "invalid regex must return a syntax error instead of matching empty strings");
+    const ToolResult empty_regex = run_bounded_search(QJsonObject {
+        { QStringLiteral("pattern"), QStringLiteral("(?=z)") },
+        { QStringLiteral("resource_id"), hits_page.id }
+    });
+    Require(!empty_regex.ok && empty_regex.code == QStringLiteral("ZERO_LENGTH_MATCH"),
+            "zero-length regex matches must be explicitly rejected");
+    const ToolResult regex_count = run_bounded_search(QJsonObject {
+        { QStringLiteral("pattern"), QStringLiteral("z") },
+        { QStringLiteral("resource_id"), hits_page.id },
+        { QStringLiteral("count_only"), true }
+    });
+    Require(regex_count.ok && regex_count.data.value(QStringLiteral("total_count")).toInt() == 200
+                && regex_count.data.value(QStringLiteral("matches")).toArray().isEmpty(),
+            "regex count-only search must count beyond the page cap");
+    const ToolResult regex_first_page = run_bounded_search(QJsonObject {
+        { QStringLiteral("pattern"), QStringLiteral("z") },
+        { QStringLiteral("resource_id"), hits_page.id },
+        { QStringLiteral("limit"), 50 }
+    });
+    const ToolResult regex_second_page = run_bounded_search(QJsonObject {
+        { QStringLiteral("pattern"), QStringLiteral("z") },
+        { QStringLiteral("resource_id"), hits_page.id },
+        { QStringLiteral("limit"), 50 },
+        { QStringLiteral("cursor"), regex_first_page.data.value(QStringLiteral("next_cursor")) }
+    });
+    Require(regex_second_page.ok
+                && regex_second_page.data.value(QStringLiteral("offset")).toInt() == 50
+                && regex_second_page.data.value(QStringLiteral("returned_count")).toInt() == 50
+                && regex_second_page.data.value(QStringLiteral("matches")).toArray().first()
+                    .toObject().value(QStringLiteral("offset")).toInt() == 50,
+            "regex search must continue after the first fifty matches");
+
+    MemoryBookWorkspace audit_book;
+    audit_book.setMetadata(QJsonObject {
+        { QStringLiteral("title"), QStringLiteral("Proof Audit Fixture") },
+        { QStringLiteral("identifier"), QStringLiteral("urn:test:sigil-proof-audit-fixture-20260925") }
+    });
+    MemoryResource audit_one;
+    audit_one.id = QStringLiteral("audit-one");
+    audit_one.bookPath = QStringLiteral("Text/one.xhtml");
+    audit_one.kind = QStringLiteral("xhtml");
+    audit_one.mediaType = QStringLiteral("application/xhtml+xml");
+    audit_one.text = QStringLiteral(
+        "<html><head><style>，，</style><script>if (a && b) {}</script></head>"
+        "<body><p>甲&amp;乙&copy;&#xFFFD;。<em>。</em>丙😀！！～～　……"
+        "<ruby>字<rt>，，</rt></ruby><span hidden=\"hidden\">，，</span>"
+        "<span style=\"display:none\">，，</span><!--，，--></p>"
+        "<p>尾&#x200B;，，</p></body></html>");
+    audit_book.addResource(audit_one);
+    MemoryResource audit_two = audit_one;
+    audit_two.id = QStringLiteral("audit-two");
+    audit_two.bookPath = QStringLiteral("Text/two.xhtml");
+    audit_two.text = QStringLiteral("<html><body><p>乙，，甲</p></body></html>");
+    audit_book.addResource(audit_two);
+    audit_book.setSpine({ audit_one.id, audit_two.id });
+    ToolRegistry audit_registry;
+    registerBookTools(&audit_registry, &audit_book);
+    auto audit = [&](const QJsonObject &args) {
+        return audit_registry.find(QStringLiteral("proof.audit"))->execute(args);
+    };
+    const QJsonObject audit_args {
+        { QStringLiteral("scope"), QJsonObject {{ QStringLiteral("kind"), QStringLiteral("whole_book") }} },
+        { QStringLiteral("limit"), 1 }
+    };
+    ToolResult audit_page = audit(audit_args);
+    Require(audit_page.ok && audit_page.data.value(QStringLiteral("total_count")).toInt() == 5
+                && audit_page.data.value(QStringLiteral("has_more")).toBool()
+                && audit_page.data.value(QStringLiteral("scanned_resources")).toInt() == 2
+                && audit_page.data.value(QStringLiteral("style_counts_are_errors")).toBool() == false
+                && audit_page.data.value(QStringLiteral("style_counts")).toObject()
+                    .value(QStringLiteral("double_exclamation")).toInt() == 1
+                && audit_page.data.value(QStringLiteral("style_counts")).toObject()
+                    .value(QStringLiteral("double_tilde")).toInt() == 1
+                && audit_page.data.value(QStringLiteral("style_counts")).toObject()
+                    .value(QStringLiteral("fullwidth_space")).toInt() == 1
+                && audit_page.data.value(QStringLiteral("style_counts")).toObject()
+                    .value(QStringLiteral("double_ellipsis")).toInt() == 1,
+            "audit must scan visible body and count all candidates");
+    QSet<QString> audit_ids;
+    QJsonArray audit_issues;
+    do {
+        const QJsonArray page_issues = audit_page.data.value(QStringLiteral("issues")).toArray();
+        Require(page_issues.size() == 1, "audit should respect page limit");
+        const QJsonObject candidate = page_issues.first().toObject();
+        const QString id = candidate.value(QStringLiteral("issue_id")).toString();
+        Require(!audit_ids.contains(id), "audit pages must not duplicate candidates");
+        audit_ids.insert(id);
+        audit_issues.append(candidate);
+        if (!audit_page.data.value(QStringLiteral("has_more")).toBool()) break;
+        QJsonObject next = audit_args;
+        next.insert(QStringLiteral("cursor"), audit_page.data.value(QStringLiteral("next_cursor")));
+        audit_page = audit(next);
+        Require(audit_page.ok, "audit continuation");
+    } while (true);
+    Require(audit_issues.size() == 5, "audit pages must enumerate the exact total");
+    const QJsonObject replacement_issue = audit_issues.at(0).toObject();
+    const QJsonObject cross_tag_issue = audit_issues.at(1).toObject();
+    Require(replacement_issue.value(QStringLiteral("rule")).toString()
+                == QStringLiteral("REPLACEMENT_CHARACTER")
+                && !replacement_issue.value(QStringLiteral("auto_fixable")).toBool()
+                && replacement_issue.value(QStringLiteral("before")).toString().contains(QChar(0x00a9))
+                && audit_one.text.mid(replacement_issue.value(QStringLiteral("start")).toInt(),
+                                      replacement_issue.value(QStringLiteral("length")).toInt())
+                    == QStringLiteral("&#xFFFD;"),
+            "entity candidate must map to its exact XHTML source span");
+    Require(cross_tag_issue.value(QStringLiteral("rule")).toString()
+                == QStringLiteral("REPEATED_PUNCTUATION")
+                && !cross_tag_issue.value(QStringLiteral("auto_fixable")).toBool()
+                && audit_one.text.mid(cross_tag_issue.value(QStringLiteral("start")).toInt(),
+                                      cross_tag_issue.value(QStringLiteral("length")).toInt())
+                    == QStringLiteral("。<em>。"),
+            "cross-tag candidate must preserve source coordinates and require manual review");
+    const QJsonObject zero_width_issue = audit_issues.at(2).toObject();
+    Require(zero_width_issue.value(QStringLiteral("rule")).toString()
+                == QStringLiteral("INVISIBLE_OR_CONTROL")
+                && audit_one.text.mid(zero_width_issue.value(QStringLiteral("start")).toInt(),
+                                      zero_width_issue.value(QStringLiteral("length")).toInt())
+                    == QStringLiteral("&#x200B;"),
+            "zero-width entity must map to its exact XHTML source span");
+    const ToolResult selection_audit = audit(QJsonObject {
+        { QStringLiteral("scope"), QJsonObject {
+            { QStringLiteral("kind"), QStringLiteral("selection") },
+            { QStringLiteral("resource_id"), audit_one.id },
+            { QStringLiteral("start"), audit_one.text.indexOf(QStringLiteral("<p>尾")) },
+            { QStringLiteral("end"), audit_one.text.indexOf(QStringLiteral("</p></body>")) }
+        } }
+    });
+    Require(selection_audit.ok
+                && selection_audit.data.value(QStringLiteral("total_count")).toInt() == 2,
+            "selection audit must include only candidates inside the source selection");
+    const ToolResult stale_first = audit(audit_args);
+    audit_one.text.replace(QStringLiteral("尾"), QStringLiteral("末"));
+    audit_book.addResource(audit_one); // no revision bump: source fingerprint must still invalidate cursor
+    QJsonObject stale_args = audit_args;
+    stale_args.insert(QStringLiteral("cursor"), stale_first.data.value(QStringLiteral("next_cursor")));
+    const ToolResult stale_audit = audit(stale_args);
+    Require(!stale_audit.ok && stale_audit.code == QStringLiteral("AUDIT_SNAPSHOT_STALE"),
+            "audit cursor must reject changed XHTML even without a revision bump");
+
+    const ToolResult review_scan = audit(QJsonObject {{ QStringLiteral("limit"), 50 }});
+    Require(review_scan.ok && review_scan.data.value(QStringLiteral("total_count")).toInt() == 5,
+            "rescan after source change");
+    const QJsonArray current_issues = review_scan.data.value(QStringLiteral("issues")).toArray();
+    const QString invisible_id = current_issues.at(2).toObject().value(QStringLiteral("issue_id")).toString();
+    const QString punctuation_id = current_issues.at(4).toObject().value(QStringLiteral("issue_id")).toString();
+    const QString ignored_id = current_issues.at(0).toObject().value(QStringLiteral("issue_id")).toString();
+    const QString cross_tag_id = current_issues.at(1).toObject().value(QStringLiteral("issue_id")).toString();
+    const ToolResult invalid_xml_replacement = audit_registry.find(QStringLiteral("proof.decide"))->execute(QJsonObject {
+        { QStringLiteral("issue_id"), invisible_id },
+        { QStringLiteral("decision"), QStringLiteral("accept") },
+        { QStringLiteral("replacement"), QString(QChar(0x0001)) }
+    });
+    Require(!invalid_xml_replacement.ok
+                && invalid_xml_replacement.code == QStringLiteral("AUDIT_REPLACEMENT_INVALID"),
+            "proof decisions must reject replacement text that cannot be serialized as XHTML");
+    Require(audit_registry.find(QStringLiteral("proof.decide"))->execute(QJsonObject {
+        { QStringLiteral("issue_id"), cross_tag_id },
+        { QStringLiteral("decision"), QStringLiteral("accept") },
+        { QStringLiteral("replacement"), QStringLiteral("。") },
+        { QStringLiteral("reviewer"), QStringLiteral("user") }
+    }).ok, "cross-tag candidate may be recorded as a reviewed decision");
+    const ToolResult rejected_markup_plan = audit_registry.find(QStringLiteral("proof.plan"))->execute(QJsonObject {
+        { QStringLiteral("accepted_issue_ids"), QJsonArray { cross_tag_id } }
+    });
+    Require(!rejected_markup_plan.ok && rejected_markup_plan.code == QStringLiteral("AUDIT_MARKUP_SPAN"),
+            "proof plan must not flatten inline XHTML markup");
+    const ToolResult ignored_replacement = audit_registry.find(QStringLiteral("proof.decide"))->execute(QJsonObject {
+        { QStringLiteral("issue_id"), ignored_id },
+        { QStringLiteral("decision"), QStringLiteral("ignore") },
+        { QStringLiteral("reviewer"), QStringLiteral("user") }
+    });
+    const ToolResult accepted_invisible = audit_registry.find(QStringLiteral("proof.decide"))->execute(QJsonObject {
+        { QStringLiteral("issue_id"), invisible_id },
+        { QStringLiteral("decision"), QStringLiteral("accept") },
+        { QStringLiteral("replacement"), QStringLiteral("") },
+        { QStringLiteral("reviewer"), QStringLiteral("user") }
+    });
+    const ToolResult accepted_punctuation = audit_registry.find(QStringLiteral("proof.decide"))->execute(QJsonObject {
+        { QStringLiteral("issue_id"), punctuation_id },
+        { QStringLiteral("decision"), QStringLiteral("accept") },
+        { QStringLiteral("reviewer"), QStringLiteral("user") }
+    });
+    Require(ignored_replacement.ok && accepted_invisible.ok && accepted_punctuation.ok
+                && !accepted_invisible.applied && !accepted_punctuation.applied,
+            "review decisions must persist locally without editing the book");
+    MemoryBookWorkspace reopened_audit_book;
+    reopened_audit_book.setMetadata(audit_book.metadata());
+    reopened_audit_book.addResource(audit_one);
+    reopened_audit_book.addResource(audit_two);
+    reopened_audit_book.setSpine({ audit_one.id, audit_two.id });
+    ToolRegistry reopened_audit_registry;
+    registerBookTools(&reopened_audit_registry, &reopened_audit_book);
+    const ToolResult reopened_scan = reopened_audit_registry.find(QStringLiteral("proof.audit"))->execute(QJsonObject {
+        { QStringLiteral("limit"), 50 }
+    });
+    const QJsonArray reopened_issues = reopened_scan.data.value(QStringLiteral("issues")).toArray();
+    Require(reopened_scan.ok
+                && reopened_issues.at(2).toObject().value(QStringLiteral("decision")).toString() == QStringLiteral("accept")
+                && reopened_issues.at(0).toObject().value(QStringLiteral("decision")).toString() == QStringLiteral("ignore")
+                && reopened_issues.at(4).toObject().value(QStringLiteral("decision")).toString() == QStringLiteral("accept"),
+            "same-source review decisions must recover after reopening the book");
+    const ToolResult first_plan_page = audit_registry.find(QStringLiteral("proof.plan"))->execute(QJsonObject {
+        { QStringLiteral("accepted_issue_ids"), QJsonArray { invisible_id, punctuation_id } },
+        { QStringLiteral("limit"), 1 }
+    });
+    Require(first_plan_page.ok && !first_plan_page.data.value(QStringLiteral("review_complete")).toBool()
+                && first_plan_page.data.value(QStringLiteral("total_count")).toInt() == 2,
+            "proof plan must paginate accepted changes");
+    const QJsonObject apply_args {
+        { QStringLiteral("plan_id"), first_plan_page.data.value(QStringLiteral("plan_id")) },
+        { QStringLiteral("plan_digest"), first_plan_page.data.value(QStringLiteral("plan_digest")) },
+        { QStringLiteral("expected_book_revision"), static_cast<qint64>(audit_book.revision()) }
+    };
+    const ToolResult early_apply = audit_registry.find(QStringLiteral("proof.apply"))->execute(apply_args);
+    Require(!early_apply.ok && early_apply.code == QStringLiteral("AUDIT_PLAN_NOT_REVIEWED")
+                && !audit_book.hasOpenTransaction(),
+            "proof apply must reject an unread plan page without opening a transaction");
+    const ToolResult last_plan_page = audit_registry.find(QStringLiteral("proof.plan"))->execute(QJsonObject {
+        { QStringLiteral("cursor"), first_plan_page.data.value(QStringLiteral("next_cursor")) },
+        { QStringLiteral("limit"), 1 }
+    });
+    Require(last_plan_page.ok && last_plan_page.data.value(QStringLiteral("review_complete")).toBool(),
+            "proof plan final page must complete review");
+    const ToolResult staged_proof = audit_registry.find(QStringLiteral("proof.apply"))->execute(apply_args);
+    Require(staged_proof.ok && staged_proof.previewOnly && !staged_proof.applied
+                && audit_book.hasOpenTransaction()
+                && audit_book.resourceText(audit_one.id).contains(QStringLiteral("&#x200B;"))
+                && audit_book.resourceText(audit_two.id).contains(QStringLiteral("，，")),
+            "proof apply must stage only, leaving live XHTML untouched");
+    const ToolResult proof_preview = audit_registry.find(QStringLiteral("transaction.preview"))->execute(QJsonObject());
+    Require(proof_preview.ok && proof_preview.data.value(QStringLiteral("changes")).toArray().size() == 2,
+            "proof changes must be visible in the existing transaction preview");
+    const ToolResult proof_commit = audit_registry.find(QStringLiteral("transaction.commit"))->execute(QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(audit_book.revision()) }
+    });
+    Require(proof_commit.ok && proof_commit.applied
+                && !audit_book.resourceText(audit_one.id).contains(QStringLiteral("&#x200B;"))
+                && audit_book.resourceText(audit_one.id).contains(QStringLiteral("&#xFFFD;"))
+                && audit_book.resourceText(audit_two.id).contains(QStringLiteral("乙，甲"))
+                && audit_book.resourceText(audit_one.id).contains(QStringLiteral("<rt>，，</rt>")),
+            "commit must change only accepted issues, preserving unreviewed and Ruby text");
+    const ToolResult old_decision = audit_registry.find(QStringLiteral("proof.decide"))->execute(QJsonObject {
+        { QStringLiteral("issue_id"), invisible_id },
+        { QStringLiteral("decision"), QStringLiteral("ignore") }
+    });
+    Require(!old_decision.ok && old_decision.code == QStringLiteral("AUDIT_SNAPSHOT_STALE"),
+            "old review snapshot must reject decisions after commit");
+    const ToolResult rescanned_after_commit = audit(QJsonObject {{ QStringLiteral("limit"), 50 }});
+    Require(rescanned_after_commit.ok
+                && !rescanned_after_commit.data.value(QStringLiteral("issues")).toArray().first()
+                    .toObject().contains(QStringLiteral("decision")),
+            "a changed resource must require review again even for a surviving candidate");
+
+    MemoryBookWorkspace conflict_book;
+    MemoryResource conflict_page = audit_two;
+    conflict_page.id = QStringLiteral("conflict-proof");
+    conflict_page.text = QStringLiteral("<html><body><p>甲，，乙</p></body></html>");
+    conflict_book.addResource(conflict_page);
+    ToolRegistry conflict_registry;
+    registerBookTools(&conflict_registry, &conflict_book);
+    const ToolResult conflict_scan = conflict_registry.find(QStringLiteral("proof.audit"))->execute(QJsonObject());
+    const QString conflict_issue = conflict_scan.data.value(QStringLiteral("issues")).toArray().first()
+        .toObject().value(QStringLiteral("issue_id")).toString();
+    Require(conflict_registry.find(QStringLiteral("proof.decide"))->execute(QJsonObject {
+        { QStringLiteral("issue_id"), conflict_issue },
+        { QStringLiteral("decision"), QStringLiteral("accept") },
+        { QStringLiteral("reviewer"), QStringLiteral("user") }
+    }).ok, "conflict fixture decision");
+    const ToolResult conflict_plan = conflict_registry.find(QStringLiteral("proof.plan"))->execute(QJsonObject {
+        { QStringLiteral("accepted_issue_ids"), QJsonArray { conflict_issue } }
+    });
+    Require(conflict_plan.ok && conflict_plan.data.value(QStringLiteral("review_complete")).toBool(),
+            "conflict fixture plan");
+    conflict_page.text.replace(QStringLiteral("甲"), QStringLiteral("新"));
+    conflict_book.addResource(conflict_page);
+    const ToolResult conflict_apply = conflict_registry.find(QStringLiteral("proof.apply"))->execute(QJsonObject {
+        { QStringLiteral("plan_id"), conflict_plan.data.value(QStringLiteral("plan_id")) },
+        { QStringLiteral("plan_digest"), conflict_plan.data.value(QStringLiteral("plan_digest")) },
+        { QStringLiteral("expected_book_revision"), static_cast<qint64>(conflict_book.revision()) }
+    });
+    Require(!conflict_apply.ok && conflict_apply.code == QStringLiteral("AUDIT_PLAN_STALE")
+                && conflict_apply.data.value(QStringLiteral("conflicting_issue_ids")).toArray()
+                    .contains(conflict_issue)
+                && !conflict_book.hasOpenTransaction(),
+            "proof apply must reject concurrent source edits without a partial transaction");
+
+    MemoryBookWorkspace cdata_book;
+    MemoryResource cdata_page = conflict_page;
+    cdata_page.id = QStringLiteral("cdata-proof");
+    cdata_page.text = QStringLiteral("<html><body><p><![CDATA[甲，，乙]]></p></body></html>");
+    cdata_book.addResource(cdata_page);
+    ToolRegistry cdata_registry;
+    registerBookTools(&cdata_registry, &cdata_book);
+    const ToolResult cdata_scan = cdata_registry.find(QStringLiteral("proof.audit"))->execute(QJsonObject());
+    const QJsonObject cdata_issue = cdata_scan.data.value(QStringLiteral("issues")).toArray().first().toObject();
+    Require(cdata_scan.ok && cdata_scan.data.value(QStringLiteral("total_count")).toInt() == 1
+                && cdata_issue.value(QStringLiteral("source_kind")).toString() == QStringLiteral("cdata")
+                && !cdata_issue.value(QStringLiteral("auto_fixable")).toBool(),
+            "CDATA text may be reported but must never be treated as a direct XHTML replacement");
+    MemoryBookWorkspace unknown_entity_book;
+    MemoryResource unknown_entity_page = conflict_page;
+    unknown_entity_page.id = QStringLiteral("unknown-entity-proof");
+    unknown_entity_page.text = QStringLiteral("<html><body><p>甲&bogusproofentity;乙</p></body></html>");
+    unknown_entity_book.addResource(unknown_entity_page);
+    ToolRegistry unknown_entity_registry;
+    registerBookTools(&unknown_entity_registry, &unknown_entity_book);
+    const ToolResult unknown_entity_audit = unknown_entity_registry.find(QStringLiteral("proof.audit"))->execute(QJsonObject());
+    Require(!unknown_entity_audit.ok && unknown_entity_audit.code == QStringLiteral("AUDIT_XHTML_INVALID"),
+            "unknown XHTML entities must fail explicitly instead of shifting source offsets");
+
+    MemoryBookWorkspace scale_book;
+    for (int chapter = 0; chapter < 22; ++chapter) {
+        MemoryResource page = conflict_page;
+        page.id = QStringLiteral("scale-%1").arg(chapter);
+        page.bookPath = QStringLiteral("Text/scale-%1.xhtml").arg(chapter);
+        QString body;
+        for (int segment = 0; segment < 20; ++segment) {
+            body += QString(248, QChar(0x7532)) + QStringLiteral("，，");
+        }
+        page.text = QStringLiteral("<html><body><p>") + body + QStringLiteral("</p></body></html>");
+        scale_book.addResource(page);
+    }
+    ToolRegistry scale_registry;
+    registerBookTools(&scale_registry, &scale_book);
+    QElapsedTimer audit_timer;
+    audit_timer.start();
+    const ToolResult scale_scan = scale_registry.find(QStringLiteral("proof.audit"))->execute(QJsonObject());
+    const qint64 audit_ms = audit_timer.elapsed();
+    Require(scale_scan.ok && scale_scan.data.value(QStringLiteral("scanned_resources")).toInt() == 22
+                && scale_scan.data.value(QStringLiteral("total_count")).toInt() == 440
+                && scale_scan.data.value(QStringLiteral("has_more")).toBool()
+                && audit_ms < 15000,
+            "audit must handle a 22-chapter, 110k-character synthetic book within the test budget");
+    std::cout << "Synthetic proof audit 22 chapters / 110k chars: " << audit_ms << " ms\n";
+
+    MemoryBookWorkspace convention_book;
+    convention_book.setMetadata(QJsonObject {
+        { QStringLiteral("title"), QStringLiteral("Proof Convention Fixture") },
+        { QStringLiteral("identifier"),
+          QStringLiteral("urn:test:sigil-proof-conventions-")
+              + QUuid::createUuid().toString(QUuid::WithoutBraces) }
+    });
+    MemoryResource convention_one = conflict_page;
+    convention_one.id = QStringLiteral("convention-one");
+    convention_one.bookPath = QStringLiteral("Text/convention-one.xhtml");
+    convention_one.text = QStringLiteral("<html><body><p>甲，，乙 裏姬 裏地</p></body></html>");
+    convention_book.addResource(convention_one);
+    MemoryResource convention_two = convention_one;
+    convention_two.id = QStringLiteral("convention-two");
+    convention_two.bookPath = QStringLiteral("Text/convention-two.xhtml");
+    convention_two.text = QStringLiteral("<html><body><p>甲，，乙 裏地</p></body></html>");
+    convention_book.addResource(convention_two);
+    ToolRegistry convention_registry;
+    registerBookTools(&convention_registry, &convention_book);
+    auto convention = [&](const QString &name, const QJsonObject &args) {
+        return convention_registry.find(name)->execute(args);
+    };
+    const ToolResult configured_book = convention(QStringLiteral("proof.configure"), QJsonObject {
+        { QStringLiteral("scope"), QJsonObject {{ QStringLiteral("kind"), QStringLiteral("book") }} },
+        { QStringLiteral("allow_repeats"), QJsonArray { QStringLiteral("，，") } },
+        { QStringLiteral("allowed_terms"), QJsonArray { QStringLiteral("裏姬") } },
+        { QStringLiteral("variant_pairs"), QJsonArray { QJsonObject {
+            { QStringLiteral("observed"), QStringLiteral("裏") },
+            { QStringLiteral("preferred"), QStringLiteral("里") }
+        } } }
+    });
+    Require(configured_book.ok && !configured_book.applied && convention_book.revision() == 1,
+            "book conventions must be stored locally without mutating the EPUB");
+    const ToolResult convention_scan = convention(QStringLiteral("proof.audit"), QJsonObject {
+        { QStringLiteral("limit"), 1 }
+    });
+    Require(convention_scan.ok && convention_scan.data.value(QStringLiteral("total_count")).toInt() == 2
+                && convention_scan.data.value(QStringLiteral("style_counts")).toObject()
+                    .value(QStringLiteral("chinese_comma")).toInt() == 4
+                && convention_scan.data.value(QStringLiteral("issues")).toArray().first()
+                    .toObject().value(QStringLiteral("rule")).toString() == QStringLiteral("TERM_VARIANT"),
+            "configured punctuation is allowed and proper-name exceptions suppress variant candidates");
+    const ToolResult second_convention_page = convention(QStringLiteral("proof.audit"), QJsonObject {
+        { QStringLiteral("limit"), 1 },
+        { QStringLiteral("cursor"), convention_scan.data.value(QStringLiteral("next_cursor")) }
+    });
+    const QString second_variant_id = second_convention_page.data.value(QStringLiteral("issues"))
+        .toArray().first().toObject().value(QStringLiteral("issue_id")).toString();
+    Require(second_convention_page.ok
+                && convention(QStringLiteral("proof.decide"), QJsonObject {
+                    { QStringLiteral("issue_id"), second_variant_id },
+                    { QStringLiteral("decision"), QStringLiteral("ignore") },
+                    { QStringLiteral("reviewer"), QStringLiteral("user") }
+                }).ok,
+            "configured variant can receive a local review decision");
+    ToolRegistry second_convention_registry;
+    registerBookTools(&second_convention_registry, &convention_book);
+    const ToolResult configured_file = second_convention_registry.find(
+        QStringLiteral("proof.configure"))->execute(QJsonObject {
+        { QStringLiteral("scope"), QJsonObject {
+            { QStringLiteral("kind"), QStringLiteral("file") },
+            { QStringLiteral("resource_id"), convention_one.id }
+        } },
+        { QStringLiteral("allowed_terms"), QJsonArray { QStringLiteral("裏地") } }
+    });
+    Require(configured_file.ok, "chapter convention should save");
+    const ToolResult stale_convention_decision = convention(QStringLiteral("proof.decide"), QJsonObject {
+        { QStringLiteral("issue_id"), second_variant_id },
+        { QStringLiteral("decision"), QStringLiteral("accept") }
+    });
+    Require(!stale_convention_decision.ok
+                && stale_convention_decision.code == QStringLiteral("AUDIT_SNAPSHOT_STALE"),
+            "a configuration change from another tool registry must invalidate old decisions");
+    const ToolResult old_convention_cursor = convention(QStringLiteral("proof.audit"), QJsonObject {
+        { QStringLiteral("limit"), 1 },
+        { QStringLiteral("cursor"), convention_scan.data.value(QStringLiteral("next_cursor")) }
+    });
+    Require(!old_convention_cursor.ok && old_convention_cursor.code == QStringLiteral("AUDIT_SNAPSHOT_STALE"),
+            "changing a convention must invalidate previous audit cursors");
+    const ToolResult chapter_scan = convention(QStringLiteral("proof.audit"), QJsonObject());
+    Require(chapter_scan.ok && chapter_scan.data.value(QStringLiteral("total_count")).toInt() == 1
+                && chapter_scan.data.value(QStringLiteral("issues")).toArray().first()
+                    .toObject().value(QStringLiteral("resource_id")).toString() == convention_two.id
+                && !chapter_scan.data.value(QStringLiteral("issues")).toArray().first()
+                    .toObject().contains(QStringLiteral("decision")),
+            "chapter convention change must suppress only that chapter and require renewed decisions");
+    MemoryBookWorkspace reopened_convention_book;
+    reopened_convention_book.setMetadata(convention_book.metadata());
+    reopened_convention_book.addResource(convention_one);
+    reopened_convention_book.addResource(convention_two);
+    ToolRegistry reopened_convention_registry;
+    registerBookTools(&reopened_convention_registry, &reopened_convention_book);
+    const ToolResult reopened_settings = reopened_convention_registry.find(QStringLiteral("proof.settings"))->execute(QJsonObject());
+    const ToolResult reopened_conventions = reopened_convention_registry.find(QStringLiteral("proof.audit"))->execute(QJsonObject());
+    Require(reopened_settings.ok && reopened_settings.data.value(QStringLiteral("files")).toObject()
+                .contains(convention_one.bookPath)
+                && reopened_conventions.ok
+                && reopened_conventions.data.value(QStringLiteral("total_count")).toInt() == 1,
+            "book and chapter conventions must survive reopening with the same identifier");
+    const QString reviewed_variant = reopened_conventions.data.value(QStringLiteral("issues"))
+        .toArray().first().toObject().value(QStringLiteral("issue_id")).toString();
+    Require(reopened_convention_registry.find(QStringLiteral("proof.decide"))->execute(QJsonObject {
+        { QStringLiteral("issue_id"), reviewed_variant },
+        { QStringLiteral("decision"), QStringLiteral("accept") },
+        { QStringLiteral("reviewer"), QStringLiteral("user") }
+    }).ok, "reviewed configured variant should be accepted");
+    const ToolResult variant_plan = reopened_convention_registry.find(QStringLiteral("proof.plan"))->execute(QJsonObject {
+        { QStringLiteral("accepted_issue_ids"), QJsonArray { reviewed_variant } }
+    });
+    Require(variant_plan.ok && variant_plan.data.value(QStringLiteral("review_complete")).toBool()
+                && variant_plan.data.value(QStringLiteral("items")).toArray().first()
+                    .toObject().value(QStringLiteral("after")).toString() == QStringLiteral("里"),
+            "configured variant plan must contain the reviewed replacement");
+    const ToolResult staged_variant = reopened_convention_registry.find(QStringLiteral("proof.apply"))->execute(QJsonObject {
+        { QStringLiteral("plan_id"), variant_plan.data.value(QStringLiteral("plan_id")) },
+        { QStringLiteral("plan_digest"), variant_plan.data.value(QStringLiteral("plan_digest")) },
+        { QStringLiteral("expected_book_revision"), static_cast<qint64>(reopened_convention_book.revision()) }
+    });
+    Require(staged_variant.ok && staged_variant.previewOnly
+                && reopened_convention_book.resourceText(convention_two.id).contains(QStringLiteral("裏地")),
+            "configured variant apply must stage without changing the live book");
+    Require(reopened_convention_registry.find(QStringLiteral("transaction.preview"))->execute(QJsonObject()).ok,
+            "configured variant transaction preview");
+    Require(reopened_convention_registry.find(QStringLiteral("transaction.commit"))->execute(QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(reopened_convention_book.revision()) }
+    }).applied
+                && reopened_convention_book.resourceText(convention_two.id).contains(QStringLiteral("里地"))
+                && reopened_convention_book.resourceText(convention_one.id).contains(QStringLiteral("裏姬")),
+            "configured variant commit must preserve the allowed proper name");
+    const ToolResult invalid_convention = convention(QStringLiteral("proof.configure"), QJsonObject {
+        { QStringLiteral("scope"), QJsonObject {{ QStringLiteral("kind"), QStringLiteral("book") }} },
+        { QStringLiteral("variant_pairs"), QJsonArray { QJsonObject {
+            { QStringLiteral("observed"), QStringLiteral("裏") },
+            { QStringLiteral("preferred"), QStringLiteral("裏") }
+        } } }
+    });
+    Require(!invalid_convention.ok && invalid_convention.code == QStringLiteral("AUDIT_CONFIG_INVALID")
+                && convention(QStringLiteral("proof.audit"), QJsonObject()).data
+                    .value(QStringLiteral("total_count")).toInt() == 1,
+            "invalid conventions must leave the previous rule set intact");
     Require(run(QStringLiteral("content.replace_regex"), QJsonObject {
         { QStringLiteral("resource_id"), QStringLiteral("ch1") },
         { QStringLiteral("pattern"), QStringLiteral("<em>([^<]+)</em>") },

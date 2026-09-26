@@ -7,6 +7,7 @@
 #include "Agent/Model/AgentConnectionProbe.h"
 
 #include <QElapsedTimer>
+#include <QUuid>
 
 namespace SigilAgent
 {
@@ -43,9 +44,11 @@ AgentConnectionProbeResult probeAgentConnection(
     OpenAIProviderConfig probe_config = config;
     probe_config.thinking = false;
     probe_config.requestUsage = false;
+    probe_config.firstTokenTimeoutMs = qBound(100, timeout_ms, 30000);
     OpenAICompatibleProvider provider(probe_config);
     ModelRequest request;
     request.model = result.model;
+    request.sessionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     request.thinking = false;
     request.includeUsage = false;
     request.reasoningEffort.clear();

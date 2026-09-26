@@ -32,6 +32,7 @@
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QFile>
 #include <QCompleter>
 #include <QRegularExpression>
 #include <QVariant>
@@ -40,7 +41,6 @@
 
 #include <limits>
 
-#include "EmbedPython/PythonRoutines.h"
 #include "Dialogs/DryRunReplace.h"
 #include "Dialogs/ReplacementChooser.h"
 #include "Dialogs/PythonFunctionEditor.h"
@@ -49,10 +49,12 @@
 #include "MainUI/FindReplace.h"
 #include "MainUI/SearchBatchCoordinator.h"
 #include "Misc/SettingsStore.h"
+#include "Misc/DefaultReplaceFunctions.h"
 #include "Misc/Utility.h"
 #include "Misc/SearchUtils.h"
 #include "Misc/FindReplaceQLineEdit.h"
 #include "PCRE2/PCREErrors.h"
+#include "PCRE2/SPCRE.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
 #include "sigil_constants.h"
@@ -1236,7 +1238,8 @@ int FindReplace::ReplaceInAllFiles()
         functionname.chop(1);
     }
 
-    if (functionname.isEmpty()) {
+    if (functionname.isEmpty() || SPCRE::isBuiltinFunction(functionname)) {
+        // Default functions run in C++ through the same PCRE2 matches as preview.
         count = SearchOperations::ReplaceInAllFIles(
                     GetSearchRegex(),
                     GetReplace(),
@@ -2405,8 +2408,7 @@ void FindReplace::ManagePythonFunction()
 {
     QString fullfilepath = Utility::DefinePrefsDir() + "/" + SIGIL_FUNCTION_REPLACE_JSON_FILE;
     if (!QFile::exists(fullfilepath)) {
-        PythonRoutines pr;
-        pr.CreateUserJsonFileInPython();
+        DefaultReplaceFunctions::CreateIfMissing(fullfilepath);
     }
     QString functionName = ui.cbReplace->currentText().trimmed();
     if (functionName.startsWith("\\F<") && functionName.endsWith(">")) {

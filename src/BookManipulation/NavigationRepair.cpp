@@ -1,4 +1,3 @@
-#include "EmbedPython/EmbeddedPython.h" // Python headers must precede Qt's slots macro.
 #include "BookManipulation/NavigationRepair.h"
 
 #include <QCryptographicHash>
@@ -13,6 +12,7 @@
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/OPFResource.h"
+#include "ResourceObjects/OPFSourcePatch.h"
 #include "MainUI/TOCModel.h"
 #include "Misc/Utility.h"
 #include "ResourceObjects/HTMLResource.h"
@@ -156,12 +156,15 @@ bool NavigationRepair::Prepare(const QSharedPointer<Book> &book, Plan &plan, QSt
     if (!declarations) {
         QString identifier = "nav";
         for (int suffix = 1; ids.contains(identifier); ++suffix) identifier = QString("nav%1").arg(suffix);
-        int rv = 0;
-        const QVariant result = EmbeddedPython::instance().runInPython("opf_source", "add_navigation_manifest",
-            { plan.opfBefore, Utility::URLEncodePath(Utility::buildRelativePath(opf->GetRelativePath(), plan.navBookPath)), identifier },
-            &rv, error, false, false);
-        if (rv != 0) return false;
-        plan.opfAfter = result.toString();
+        try {
+            plan.opfAfter = OPFSourcePatch::AddNavigationManifest(
+                plan.opfBefore,
+                Utility::URLEncodePath(Utility::buildRelativePath(opf->GetRelativePath(), plan.navBookPath)),
+                identifier);
+        } catch (const std::exception &failure) {
+            error = QString::fromUtf8(failure.what());
+            return false;
+        }
     }
 
     TOCModel model;

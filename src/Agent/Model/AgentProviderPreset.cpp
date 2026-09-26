@@ -216,4 +216,30 @@ QString agentHttpTitle()
     return QStringLiteral("Sigil-Enhanced Native Agent");
 }
 
+QString agentUserAgent()
+{
+    return QStringLiteral("Sigil-Enhanced-Native-Agent/1.0");
+}
+
+QString openCodeGoEndpointForModel(const QString &model)
+{
+    // OpenCode Go's /models currently returns ids without their API protocol.
+    // Keep this mapping in sync with https://opencode.ai/docs/zh-cn/go/#api-端点.
+    QString id = model.trimmed().toLower();
+    if (id.startsWith(QLatin1String("opencode-go/"))) {
+        id.remove(0, QStringLiteral("opencode-go/").size());
+    }
+    if (id.startsWith(QLatin1String("grok-"))
+        || id == QLatin1String("gpt-5.6-luna")
+        || id == QLatin1String("gpt-6-luna")
+        || id.startsWith(QLatin1String("muse-spark-"))) {
+        return QStringLiteral("/responses");
+    }
+    if (id.startsWith(QLatin1String("minimax-m"))
+        || id.startsWith(QLatin1String("qwen3."))) {
+        return QStringLiteral("/messages");
+    }
+    return QStringLiteral("/chat/completions");
+}
+
 } // namespace SigilAgent

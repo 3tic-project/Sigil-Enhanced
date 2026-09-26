@@ -85,7 +85,7 @@ QRegularExpression compileRegex(const QString &pattern, QString *error)
                                        | QRegularExpression::MultilineOption);
     if (!re.isValid()) {
         if (error) *error = re.errorString();
-        return QRegularExpression();
+        return re;
     }
     return re;
 }

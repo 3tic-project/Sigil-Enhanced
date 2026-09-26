@@ -4,9 +4,9 @@ import pathlib
 import sys
 import unittest
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'src/Resource_Files/python3lib'))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'tests/fixtures'))
 from lxml import etree
-from opf_package_update import apply_update
+from opf_package_update_legacy import apply_update
 
 
 SOURCE = """<?xml version='1.0' encoding='UTF-8'?>

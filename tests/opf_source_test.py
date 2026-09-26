@@ -7,7 +7,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] /
                        "src/Resource_Files/python3lib"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] /
                        "src/Resource_Files/plugin_launchers/python"))
-from opf_source import Document, apply_model_update, model_xml, add_navigation_manifest
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests/fixtures"))
+from opf_source_legacy import Document, apply_model_update, model_xml, add_navigation_manifest
 
 
 SOURCE = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -90,6 +91,63 @@ class SourceUpdateTest(unittest.TestCase):
         result = self.apply(self.before.replace('</manifest>', item + '</manifest>'))
         self.assertIn("\r\n  " + item, result)
         self.assertEqual(result.replace('\r\n  ' + item, ''), SOURCE)
+
+    def test_new_xhtml_does_not_inherit_metadata_only_namespaces(self):
+        source = ('<package xmlns="http://www.idpf.org/2007/opf">'
+                  '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" '
+                  'xmlns:opf="http://www.idpf.org/2007/opf">'
+                  '<dc:title>Test</dc:title></metadata><manifest/><spine/></package>')
+        before = model_xml(source)
+        after = before.replace('</manifest>',
+                               '<item id="new" href="new.xhtml" media-type="application/xhtml+xml"/>'
+                               '</manifest>').replace('</spine>', '<itemref idref="new"/></spine>')
+        result = self.apply(after, source, before)
+        self.assertIn('<item id="new" href="new.xhtml" media-type="application/xhtml+xml"/>', result)
+        self.assertIn('<itemref idref="new"/>', result)
+        self.assertEqual(result.count('xmlns:dc='), 1)
+        self.assertEqual(result.count('xmlns:opf='), 1)
+        self.assertEqual(Document(result).root.children[1].children[0].name,
+                         'http://www.idpf.org/2007/opf|item')
+
+    def test_model_keeps_section_and_leaf_namespace_declarations(self):
+        from lxml import etree
+        source = ('<package xmlns="http://www.idpf.org/2007/opf" version="2.0">'
+                  '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" '
+                  'xmlns:calibre="http://calibre.kovidgoyal.net/2009/metadata">'
+                  '<dc:title>T</dc:title><calibre:series>S</calibre:series>'
+                  '<leaf:note xmlns:leaf="urn:leaf" leaf:kind="k">n</leaf:note></metadata>'
+                  '<manifest xmlns:m="urn:m"><item id="a" href="a.xhtml" media-type="text/css" m:x="1"/>'
+                  '</manifest><spine/></package>')
+        before = model_xml(source)
+        root = etree.fromstring(before.encode())
+        metadata = root.find('{http://www.idpf.org/2007/opf}metadata')
+        self.assertEqual(metadata.find('{http://calibre.kovidgoyal.net/2009/metadata}series').text, 'S')
+        self.assertEqual(metadata.find('{urn:leaf}note').get('{urn:leaf}kind'), 'k')
+        self.assertEqual(root.find('.//{http://www.idpf.org/2007/opf}item').get('{urn:m}x'), '1')
+        self.assertEqual(self.apply(before, source, before), source)
+
+    def test_new_item_keeps_namespaces_used_by_names_or_curie_values(self):
+        source = ('<package xmlns="http://www.idpf.org/2007/opf">'
+                  '<metadata/><manifest/><spine/></package>')
+        before = model_xml(source)
+        after = before.replace('</manifest>',
+                               '<item id="new" href="new.xhtml" media-type="application/xhtml+xml" '
+                               'xmlns:custom="urn:custom" custom:flag="yes" '
+                               'properties="opf:sample"/></manifest>')
+        result = self.apply(after, source, before)
+        item = Document(result).root.children[1].children[0]
+        self.assertEqual(item.attrs['urn:custom|flag'], 'yes')
+        self.assertIn('xmlns:custom="urn:custom"', result)
+        self.assertIn('xmlns:opf="http://www.idpf.org/2007/opf"', result)
+        self.assertNotIn('xmlns:dc=', result)
+        qualified = before.replace('</manifest>',
+                                   '<item id="new" href="new.xhtml" media-type="application/xhtml+xml" '
+                                   'opf:flag="yes"/></manifest>')
+        result = self.apply(qualified, source, before)
+        item = Document(result).root.children[1].children[0]
+        self.assertEqual(item.attrs['http://www.idpf.org/2007/opf|flag'], 'yes')
+        self.assertIn('xmlns:opf="http://www.idpf.org/2007/opf"', result)
+        self.assertNotIn('xmlns:dc=', result)
 
     def test_new_attribute_and_namespace(self):
         after = self.before.replace("idref='a'", "idref='a' linear='no'")

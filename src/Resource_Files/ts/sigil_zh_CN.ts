@@ -27311,6 +27311,27 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>A task restore point is available on the applied card.</source><translation>已应用卡片中有可用的任务恢复点。</translation></message>
+    <message><source>Affected resources: %1</source><translation>受影响的资源：%1</translation></message>
+    <message><source>Last committed book revision: %1</source><translation>最近一次提交的书籍修订：%1</translation></message>
+    <message><source>Partially applied</source><translation>部分应用</translation></message>
+    <message><source>The Agent did not save the EPUB. Completion and validation are unconfirmed.</source><translation>Agent 尚未保存 EPUB。完成状态和验证结果尚未确认。</translation></message>
+    <message><source>The run stopped after %1 transaction(s) were applied during this run.</source><translation>本轮已应用 %1 个事务，随后运行停止。</translation></message>
+    <message><source>To continue, re-read the affected book and remaining work before making more edits.</source><translation>继续前，请重新读取受影响的书籍并核对剩余工作，再进行编辑。</translation></message>
+    <message><source>%1 changed after this answer, so source line %2 may no longer be the cited text.</source><translation>%1 在此答复之后已更改，源码第 %2 行可能已不是当时引用的文字。</translation></message>
+    <message><source>%1 is no longer in this book.</source><translation>%1 已不在此书中。</translation></message>
+    <message><source>Copy</source><translation>复制</translation></message>
+    <message><source>Copy original text</source><translation>复制原文</translation></message>
+    <message><source>Copy the original Markdown text</source><translation>复制原始 Markdown 文本</translation></message>
+    <message><source>Dismiss</source><translation>关闭</translation></message>
+    <message><source>No book is available for this link.</source><translation>没有可供此链接使用的书籍。</translation></message>
+    <message><source>Open %1 at source line %2 in Code View</source><translation>在代码视图中打开 %1 的源码第 %2 行</translation></message>
+    <message><source>Open %1 in Code View</source><translation>在代码视图中打开 %1</translation></message>
+    <message><source>Open file</source><translation>打开文件</translation></message>
+    <message><source>This link belongs to a book that is no longer open.</source><translation>此链接属于一本已不再打开的书。</translation></message>
+    <message><source>This link is no longer available.</source><translation>此链接已不可用。</translation></message>
+    <message><source>This message is longer than %1 characters, so it is shown as plain text.</source><translation>此消息超过 %1 个字符，因此以纯文本显示。</translation></message>
+    <message><source>[image not loaded]</source><translation>[未加载图片]</translation></message>
     <message><source>Agent</source><translation>Agent</translation></message>
     <message><source>Answer</source><translation>回答</translation></message>
     <message><source>Applied: %1</source><translation>已应用：%1</translation></message>
@@ -27421,8 +27442,9 @@ Continue using the requested filename?</source>
     <message><source>Run token usage: not reported by provider</source><translation>整轮 Token 用量：提供商未报告</translation></message>
     <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>整轮 Token 用量：输入 %1 · 输出 %2 · 总计 %3</translation></message>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>整轮 Token 用量（%1/%2 个请求已报告）：输入 %3 · 输出 %4 · 总计 %5</translation></message>
-    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>请求历史：已发送 %1/%2 轮 · 已省略 %3 轮 · 先前轮次 %4/%5 KiB · 当前轮次 %6 KiB（始终保留）</translation></message>
-    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>请求历史：已发送 %1/%2 轮 · 先前轮次预算无限制 · 先前轮次 %3 KiB · 当前轮次 %4 KiB（始终保留）</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB</source><translation>请求历史：已发送 %1/%2 轮 · 已省略 %3 轮 · 先前轮次 %4/%5 KiB</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB</source><translation>请求历史：已发送 %1/%2 轮 · 先前轮次预算无限制 · 先前轮次 %3 KiB</translation></message>
+    <message><source>Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4</source><translation>当前运行历史：已发送 %1/%2 KiB · 预算 %3 KiB · 已省略消息：%4 条</translation></message>
     <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>请求工具：已暴露 %1/%2 个 · 模式策略已隐藏 %3 个 · schema %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>整轮用量详情：缓存输入 %1 · 推理 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完整 EPUBCheck：未运行。</translation></message>
@@ -27554,6 +27576,10 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>AgentSettingsWidget</name>
+    <message><source>Requires %1; this client supports Chat Completions only</source><translation>需要 %1；此客户端仅支持 Chat Completions</translation></message>
+    <message><source>default effort: %1</source><translation>默认推理强度：%1</translation></message>
+    <message><source>reasoning efforts: %1</source><translation>可用推理强度：%1</translation></message>
+    <message><source>reasoning required</source><translation>必须启用推理</translation></message>
     <message><source>%1 context tokens</source><translation>%1 个上下文 token</translation></message>
     <message><source>%1k context</source><translation>%1k 上下文</translation></message>
     <message><source>API key</source><translation>API 密钥</translation></message>
@@ -27576,9 +27602,12 @@ Continue using the requested filename?</source>
     <message><source>Send thinking (reasoning_content)</source><translation>发送思考内容（reasoning_content）</translation></message>
     <message><source>Request token usage when supported</source><translation>在支持时请求 Token 用量</translation></message>
     <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>向流式请求添加 stream_options.include_usage。如果端点拒绝该选项，请将其关闭。</translation></message>
+    <message><source>First model output timeout</source><translation>等待模型首字超时</translation></message>
+    <message><source>Time to wait for the first reasoning, text, or tool output. HTTP headers and keepalives do not count.</source><translation>等待首个推理、文本或工具输出的时间。HTTP 响应头和心跳消息不计入。</translation></message>
+    <message><source> s</source><translation> 秒</translation></message>
     <message><source> KiB</source><translation> KiB</translation></message>
     <message><source>Unlimited</source><translation>无限制</translation></message>
-    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>仅限制发送给模型的先前完整会话轮次。当前运行始终完整保留。</translation></message>
+    <message><source>Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB.</source><translation>限制发送给模型的先前完整会话轮次。当前运行历史超过 128 KiB 时会单独压缩。</translation></message>
     <message><source>Previous-turn history budget</source><translation>先前轮次历史预算</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>达到此模型请求次数后停止运行，并回滚任何尚未提交的暂存事务。</translation></message>
     <message><source>Maximum model steps per run</source><translation>每次运行的最大模型步骤数</translation></message>

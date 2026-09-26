@@ -1,11 +1,10 @@
 ﻿
-#include "EmbedPython/EmbeddedPython.h"
 #include <QDir>
 #include <QRegExp>
 #include <QFile>
-#include <QTextCodec>
 
 #include "Misc/Utility.h"
+#include "Misc/TxtEncoding.h"
 #include "Misc/PreSearchMatcher.h"
 #include "sigil_exception.h"
 #include "PCRE2/PCRECache.h"
@@ -195,24 +194,13 @@ QString Utility::ReadUnicodeTextFile_M(const QString& fullfilepath)
         throw(CannotOpenFile(msg));
     }
 
-    int rv = 0;
-    QString error_traceback;
-    QList<QVariant> args;
-    args.append(QVariant(fullfilepath));
-    EmbeddedPython& epython = EmbeddedPython::instance();
-
-    QVariant res = epython.runInPython(QString("importtxt"),
-                                       QString("read_unicode"),
-                                       args,
-                                       &rv,
-                                       error_traceback);
-    if (rv != 0) {
-        Utility::DisplayStdWarningDialog(QString("error in importtxt read_unicode: ") + QString::number(rv),
-            error_traceback);
-        // an error happened - make no changes
+    const QByteArray bytes = file.readAll();
+    if (file.error() != QFile::NoError) {
+        Utility::DisplayStdWarningDialog(QStringLiteral("error in importtxt read_unicode: 1"),
+                                         file.errorString());
         return QString();
     }
-    return ConvertLineEndingsAndNormalize(res.toString());
+    return ConvertLineEndingsAndNormalize(TxtEncoding::Decode(bytes));
 }
 //----------------------------------------------------------------------------------
 

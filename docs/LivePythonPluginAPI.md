@@ -392,6 +392,9 @@ elements remain in place; ambiguous IDs/hrefs, undeclared names, malformed XML,
 or unsafe extension collisions fail instead of falling back to DOM
 serialization. The supplied metadata/items arrays are still replacements for
 the modeled children, so omitting a modeled entry is an intentional removal.
+New manifest and spine entries receive only namespace bindings used by their
+names, attributes, or CURIE values; metadata-only `dc` and `opf` declarations
+are not copied onto unrelated entries.
 `replace_package()` is different by design: its complete `text` is authoritative
 and therefore replaces the full OPF source supplied by the caller.
 

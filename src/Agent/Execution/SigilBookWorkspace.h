@@ -79,7 +79,8 @@ public:
     BookOpResult deleteResource(const QString &resource_id) override;
     BookOpResult renameResource(const QString &resource_id, const QString &book_path) override;
     BookOpResult updateSpine(const QStringList &resource_ids) override;
-    BookOpResult runLivePython(const QString &script, int timeout_ms) override;
+    BookOpResult runLivePython(const QString &script, int timeout_ms,
+                               const QString &mode = QStringLiteral("edit")) override;
     BookOpResult updateToc(const QJsonArray &entries) override;
     BookOpResult updateTocHierarchy(const TocEditTree &before,
                                     const TocEditTree &after) override;

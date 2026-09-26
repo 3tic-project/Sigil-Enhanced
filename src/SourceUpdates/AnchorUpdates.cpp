@@ -33,6 +33,7 @@
 #include "Misc/Utility.h"
 #include "Parsers/GumboInterface.h"
 #include "BookManipulation/CleanSource.h"
+#include "BookManipulation/XmlProcessor.h"
 #include "ResourceObjects/HTMLResource.h"
 #include "ResourceObjects/NCXResource.h"
 #include "sigil_constants.h"
@@ -300,6 +301,12 @@ void AnchorUpdates::UpdateTOCEntries(NCXResource *ncx_resource, const QString &o
     QString source = ncx_resource->GetText();
     QString ncx_bookpath = ncx_resource->GetRelativePath();
 
+    QString updated;
+    if (XmlProcessor::AnchorNCXUpdates(source, ncx_bookpath, originating_bookpath, ID_locations, &updated)) {
+        ncx_resource->SetText(updated);
+        return;
+    }
+
     int rv = 0;
     QString error_traceback;
 
@@ -334,6 +341,12 @@ void AnchorUpdates::UpdateTOCEntriesAfterMerge(NCXResource *ncx_resource, const 
     QWriteLocker locker(&ncx_resource->GetLock());
     QString source = ncx_resource->GetText();
     QString ncx_bookpath = ncx_resource->GetRelativePath();
+
+    QString updated;
+    if (XmlProcessor::AnchorNCXUpdatesAfterMerge(source, ncx_bookpath, sink_bookpath, merged_bookpaths, &updated)) {
+        ncx_resource->SetText(updated);
+        return;
+    }
 
     int rv = 0;
     QString error_traceback;

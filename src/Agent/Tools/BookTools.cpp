@@ -11,10 +11,14 @@
 #include <QCryptographicHash>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QRegularExpression>
+#include <QSet>
 #include <functional>
 
 #include "Agent/Execution/BookEdits.h"
+#include "Agent/Execution/ContentOps.h"
 #include "Agent/Execution/PatchRange.h"
+#include "Agent/Execution/ProofAudit.h"
 #include "Agent/Typeset/ManuscriptParser.h"
 #include "Agent/Typeset/TypesetEngine.h"
 
@@ -153,32 +157,213 @@ QJsonObject paginatedArrays(QJsonObject result,
     return result;
 }
 
-QJsonObject boundedLiteralSearchResult(const QJsonArray &source,
-                                       const QString &query,
-    int max_matches)
+ToolResult paginatedSearch(IBookWorkspace *workspace, const QJsonObject &arguments,
+                           bool regex_search)
 {
-    QJsonArray matches;
-    for (const QJsonValue &value : source) {
-        if (matches.size() >= max_matches) break;
-        QJsonObject match = value.toObject();
-        const QString snippet = match.value(QStringLiteral("snippet")).toString();
-        const bool truncated = snippet.size() > MAX_LITERAL_SEARCH_SNIPPET_LENGTH;
-        match.insert(QStringLiteral("snippet"),
-                     snippet.left(MAX_LITERAL_SEARCH_SNIPPET_LENGTH));
-        match.insert(QStringLiteral("snippet_offset"), qMax(
-            0, match.value(QStringLiteral("offset")).toInt() - 24));
-        match.insert(QStringLiteral("snippet_length"), snippet.size());
-        match.insert(QStringLiteral("match_length"), query.size());
-        match.insert(QStringLiteral("snippet_truncated"), truncated);
-        matches.append(match);
+    const QString query = arguments.value(regex_search ? QStringLiteral("pattern")
+                                                       : QStringLiteral("query")).toString();
+    if (query.isEmpty()) {
+        return ToolResult::failure(QStringLiteral("SEARCH_QUERY_REQUIRED"),
+                                   QStringLiteral("A nonempty query or pattern is required"));
     }
-    return QJsonObject {
+    if (!regex_search && query.size() > MAX_LITERAL_SEARCH_QUERY_LENGTH) {
+        return ToolResult::failure(
+            QStringLiteral("SEARCH_QUERY_TOO_LONG"),
+            QStringLiteral("book.search query is capped at 512 characters. Search for a shorter distinctive literal."),
+            QJsonObject {
+                { QStringLiteral("query_length"), query.size() },
+                { QStringLiteral("max_query_length"), MAX_LITERAL_SEARCH_QUERY_LENGTH }
+            });
+    }
+    const QRegularExpression pattern = regex_search ? compileRegex(query, nullptr)
+                                                    : QRegularExpression();
+    if (regex_search && !pattern.isValid()) {
+        return ToolResult::failure(QStringLiteral("REGEX_INVALID"), pattern.errorString(),
+                                   QJsonObject {{ QStringLiteral("error_offset"),
+                                                  pattern.patternErrorOffset() }});
+    }
+
+    const int default_limit = regex_search ? DEFAULT_REGEX_SEARCH_MATCHES
+                                           : DEFAULT_LITERAL_SEARCH_MATCHES;
+    const int limit = qBound(1, arguments.value(QStringLiteral("limit"))
+                                   .toInt(arguments.value(QStringLiteral("max_matches"))
+                                              .toInt(default_limit)), 50);
+    const bool count_only = arguments.value(QStringLiteral("count_only")).toBool();
+    if ((arguments.contains(QStringLiteral("resource_id"))
+         && !arguments.value(QStringLiteral("resource_id")).isString())
+        || (arguments.contains(QStringLiteral("resource_ids"))
+            && !arguments.value(QStringLiteral("resource_ids")).isArray())) {
+        return ToolResult::failure(QStringLiteral("INVALID_ARGUMENT"),
+                                   QStringLiteral("Search resource scope has an invalid type"));
+    }
+    const QString single_id = arguments.value(QStringLiteral("resource_id")).toString();
+    const QJsonArray requested_resources = arguments.value(QStringLiteral("resource_ids")).toArray();
+    if (!single_id.isEmpty() && !requested_resources.isEmpty()) {
+        return ToolResult::failure(QStringLiteral("INVALID_ARGUMENT"),
+                                   QStringLiteral("Use resource_id or resource_ids, not both"));
+    }
+
+    QList<QJsonObject> resources;
+    QHash<QString, QString> ids_by_name;
+    for (const QJsonValue &value : workspace->resources()) {
+        const QJsonObject resource = value.toObject();
+        const QString id = resource.value(QStringLiteral("resource_id")).toString();
+        const QString path = resource.value(QStringLiteral("book_path")).toString();
+        const QString kind = resource.value(QStringLiteral("kind")).toString();
+        if (kind == QLatin1String("image") || kind == QLatin1String("font")) continue;
+        ids_by_name.insert(id, id);
+        ids_by_name.insert(path, id);
+        resources.append(resource);
+    }
+    QSet<QString> selected;
+    const auto select = [&ids_by_name, &selected](const QString &name) {
+        if (name.isEmpty() || !ids_by_name.contains(name)) return false;
+        selected.insert(ids_by_name.value(name));
+        return true;
+    };
+    if (!single_id.isEmpty() && !select(single_id)) {
+        return ToolResult::failure(QStringLiteral("RESOURCE_NOT_FOUND"),
+                                   QStringLiteral("Unknown text resource: %1").arg(single_id));
+    }
+    for (const QJsonValue &value : requested_resources) {
+        if (!value.isString() || !select(value.toString())) {
+            return ToolResult::failure(QStringLiteral("RESOURCE_NOT_FOUND"),
+                                       QStringLiteral("Unknown text resource in resource_ids"));
+        }
+    }
+    std::sort(resources.begin(), resources.end(), [](const QJsonObject &a, const QJsonObject &b) {
+        const QString ap = a.value(QStringLiteral("book_path")).toString();
+        const QString bp = b.value(QStringLiteral("book_path")).toString();
+        return ap == bp
+            ? a.value(QStringLiteral("resource_id")).toString()
+                  < b.value(QStringLiteral("resource_id")).toString()
+            : ap < bp;
+    });
+
+    QJsonArray selected_ids;
+    for (const QJsonObject &resource : resources) {
+        const QString id = resource.value(QStringLiteral("resource_id")).toString();
+        if (selected.isEmpty() && single_id.isEmpty() && requested_resources.isEmpty()) {
+            selected_ids.append(id);
+        } else if (selected.contains(id)) {
+            selected_ids.append(id);
+        }
+    }
+    const QJsonObject identity {
+        { QStringLiteral("regex"), regex_search },
+        { QStringLiteral("query"), query },
+        { QStringLiteral("resource_ids"), selected_ids }
+    };
+    const QByteArray query_digest = QCryptographicHash::hash(
+        QJsonDocument(identity).toJson(QJsonDocument::Compact), QCryptographicHash::Sha256).toHex();
+    QCryptographicHash snapshot_hash(QCryptographicHash::Sha256);
+    snapshot_hash.addData(query_digest);
+    snapshot_hash.addData(workspace->bookSessionId().toUtf8());
+    snapshot_hash.addData(QByteArray::number(workspace->revision()));
+    for (const QJsonValue &value : selected_ids) {
+        const QString id = value.toString();
+        snapshot_hash.addData(id.toUtf8());
+        snapshot_hash.addData(workspace->workingText(id).toUtf8());
+    }
+    const QByteArray snapshot = snapshot_hash.result().toHex();
+    int offset = 0;
+    const QString cursor = arguments.value(QStringLiteral("cursor")).toString();
+    if (!cursor.isEmpty()) {
+        const QByteArray decoded = QByteArray::fromBase64(
+            cursor.toLatin1(), QByteArray::Base64UrlEncoding);
+        const QList<QByteArray> parts = decoded.split(':');
+        bool index_ok = false;
+        const int index = parts.size() == 2 ? parts.first().toInt(&index_ok) : -1;
+        if (!index_ok || index < 0 || parts.size() != 2 || parts.last().size() != snapshot.size()) {
+            return ToolResult::failure(QStringLiteral("SEARCH_CURSOR_INVALID"),
+                                       QStringLiteral("Invalid search cursor"));
+        }
+        if (parts.last() != snapshot) {
+            return ToolResult::failure(QStringLiteral("SEARCH_SNAPSHOT_STALE"),
+                                       QStringLiteral("Book or search scope changed; restart at the first page"));
+        }
+        offset = index;
+    }
+
+    QJsonArray matches;
+    int total_count = 0;
+    for (const QJsonObject &resource : resources) {
+        const QString id = resource.value(QStringLiteral("resource_id")).toString();
+        if (!selected_ids.contains(id)) continue;
+        const QString path = resource.value(QStringLiteral("book_path")).toString();
+        const QString source = workspace->workingText(id);
+        if (regex_search) {
+            auto it = pattern.globalMatch(source);
+            while (it.hasNext()) {
+                const QRegularExpressionMatch match = it.next();
+                if (match.capturedLength() == 0) {
+                    return ToolResult::failure(QStringLiteral("ZERO_LENGTH_MATCH"),
+                                               QStringLiteral("Zero-length regex matches are not supported by book.search_regex"),
+                                               QJsonObject {{ QStringLiteral("zero_length_policy"),
+                                                              QStringLiteral("reject") }});
+                }
+                if (!count_only && total_count >= offset && matches.size() < limit) {
+                    RegexHit hit;
+                    hit.offset = match.capturedStart();
+                    hit.length = match.capturedLength();
+                    hit.match = match.captured();
+                    hit.line = source.left(hit.offset).count(QLatin1Char('\n')) + 1;
+                    for (int capture = 1; capture <= match.lastCapturedIndex(); ++capture) {
+                        hit.captures.append(match.captured(capture));
+                    }
+                    matches.append(regexHitsJson({hit}, id, path).first());
+                }
+                ++total_count;
+            }
+        } else {
+            int from = 0;
+            while (true) {
+                const int found = source.indexOf(query, from, Qt::CaseInsensitive);
+                if (found < 0) break;
+                if (!count_only && total_count >= offset && matches.size() < limit) {
+                    const int start = qMax(0, found - 24);
+                    const QString snippet = source.mid(
+                        start, qMin(source.size() - start, query.size() + 48));
+                    matches.append(QJsonObject {
+                        { QStringLiteral("resource_id"), id },
+                        { QStringLiteral("book_path"), path },
+                        { QStringLiteral("offset"), found },
+                        { QStringLiteral("snippet"), snippet.left(MAX_LITERAL_SEARCH_SNIPPET_LENGTH) },
+                        { QStringLiteral("snippet_offset"), start },
+                        { QStringLiteral("snippet_length"), snippet.size() },
+                        { QStringLiteral("match_length"), query.size() },
+                        { QStringLiteral("snippet_truncated"),
+                          snippet.size() > MAX_LITERAL_SEARCH_SNIPPET_LENGTH }
+                    });
+                }
+                ++total_count;
+                from = found + qMax(1, query.size());
+            }
+        }
+    }
+    offset = qMin(offset, total_count);
+    const bool has_more = !count_only && offset + matches.size() < total_count;
+    QJsonObject data {
         { QStringLiteral("matches"), matches },
         { QStringLiteral("match_count"), matches.size() },
-        { QStringLiteral("max_matches"), max_matches },
-        { QStringLiteral("match_limit_reached"), matches.size() >= max_matches },
-        { QStringLiteral("query_length"), query.size() }
+        { QStringLiteral("max_matches"), limit },
+        { QStringLiteral("match_limit_reached"), total_count >= limit },
+        { QStringLiteral("query_length"), query.size() },
+        { QStringLiteral("total_count"), total_count },
+        { QStringLiteral("returned_count"), matches.size() },
+        { QStringLiteral("has_more"), has_more },
+        { QStringLiteral("offset"), offset },
+        { QStringLiteral("limit"), limit },
+        { QStringLiteral("book_revision"), static_cast<qint64>(workspace->revision()) },
+        { QStringLiteral("query_digest"), QString::fromLatin1(query_digest) },
+        { QStringLiteral("zero_length_policy"), QStringLiteral("reject") }
     };
+    if (has_more) {
+        data.insert(QStringLiteral("next_cursor"), QString::fromLatin1(
+            (QByteArray::number(offset + matches.size()) + ':' + snapshot)
+                .toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals)));
+    }
+    return ToolResult::success(data);
 }
 
 QJsonObject paginatedSessionMemory(const AgentSession *session,
@@ -553,7 +738,8 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
     }
     if (name == QLatin1String("transaction.commit")) {
         return QStringLiteral("Commit staged EPUB edits to the open book (revision %1). Already-committed steps stay in Undo.")
-            .arg(arguments.value(QStringLiteral("expected_revision")).toInteger());
+            .arg(arguments.value(QStringLiteral("expected_book_revision"))
+                     .toInteger(arguments.value(QStringLiteral("expected_revision")).toInteger()));
     }
     if (name == QLatin1String("checkpoint.restore")) {
         return QStringLiteral("Restore checkpoint %1, replacing live book content.")
@@ -609,6 +795,25 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
                  arguments.value(QStringLiteral("plan_digest")).toString(),
                  QString::number(arguments.value(QStringLiteral("expected_book_revision")).toInteger()));
     }
+    if (name == QLatin1String("proof.apply")) {
+        return QStringLiteral("Stage reviewed proofreading plan %1 with digest %2 for book revision %3. "
+                              "The live book stays unchanged until transaction.commit.")
+            .arg(arguments.value(QStringLiteral("plan_id")).toString(),
+                 arguments.value(QStringLiteral("plan_digest")).toString(),
+                 QString::number(arguments.value(QStringLiteral("expected_book_revision")).toInteger()));
+    }
+    if (name == QLatin1String("proof.configure")) {
+        const QJsonObject scope = arguments.value(QStringLiteral("scope")).toObject();
+        return QStringLiteral("Save local proofreading conventions for %1%2 and invalidate prior audit snapshots. The EPUB is unchanged.")
+            .arg(scope.value(QStringLiteral("kind")).toString(),
+                 scope.value(QStringLiteral("resource_id")).toString().isEmpty()
+                     ? QString() : QStringLiteral(" %1").arg(scope.value(QStringLiteral("resource_id")).toString()));
+    }
+    if (name == QLatin1String("proof.decide")) {
+        return QStringLiteral("Record local proofreading decision %1 for issue %2. The EPUB is unchanged.")
+            .arg(arguments.value(QStringLiteral("decision")).toString(),
+                 arguments.value(QStringLiteral("issue_id")).toString());
+    }
     if (name == QLatin1String("toc.apply_transform")) {
         return QStringLiteral("Stage reviewed native TOC hierarchy plan %1 with digest %2 for book revision %3. "
                               "This reparents Nav/NCX entries only; labels, targets, preorder, XHTML headings, and the live book remain unchanged until transaction.commit.")
@@ -622,6 +827,128 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
 void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentSession *session)
 {
     if (!registry || !workspace) return;
+
+    const auto proof_audit = std::make_shared<ProofAudit>();
+
+    add(registry, QStringLiteral("proof.audit"),
+        QStringLiteral("Scan visible XHTML body text for review candidates. The default ruleset reports replacement/invisible characters and repeated Chinese comma/full stop. Supports whole_book, file, selection, resources, and zero-based spine ranges. Follow next_cursor until has_more is false. Offsets are UTF-16 XHTML source positions; candidates spanning markup or entities require source inspection. Results are suggestions, not confirmed errors."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("scope"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("object") },
+                    { QStringLiteral("properties"), QJsonObject {
+                        { QStringLiteral("kind"), QJsonObject {
+                            { QStringLiteral("type"), QStringLiteral("string") },
+                            { QStringLiteral("enum"), QJsonArray { QStringLiteral("whole_book"), QStringLiteral("file"), QStringLiteral("selection"), QStringLiteral("resources"), QStringLiteral("spine") } }
+                        } },
+                        { QStringLiteral("resource_id"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+                        { QStringLiteral("resource_ids"), QJsonObject { { QStringLiteral("type"), QStringLiteral("array") }, { QStringLiteral("items"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} } } },
+                        { QStringLiteral("start"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("integer") }} },
+                        { QStringLiteral("end"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("integer") }} },
+                        { QStringLiteral("start_index"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("integer") }} },
+                        { QStringLiteral("end_index"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("integer") }} }
+                    } }
+                } },
+                { QStringLiteral("ruleset"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") }, { QStringLiteral("enum"), QJsonArray { QStringLiteral("default") } } } },
+                { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 1 }, { QStringLiteral("maximum"), 50 }, { QStringLiteral("default"), 20 } } },
+                { QStringLiteral("cursor"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }
+            } }
+        },
+        [workspace, proof_audit](const QJsonObject &arguments) {
+            return proof_audit->audit(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("proof.settings"),
+        QStringLiteral("Read the local, book-bound proofreading configuration: allowed repeated punctuation, allowed terms, and explicitly configured term variants. No EPUB content or body text is stored here."),
+        ToolRisk::Read, false, false, emptyObjectSchema(),
+        [workspace, proof_audit](const QJsonObject &) {
+            return proof_audit->settings(workspace);
+        });
+
+    add(registry, QStringLiteral("proof.configure"),
+        QStringLiteral("Save user-reviewed proofreading conventions for this book or one XHTML file. allow_repeats may contain ，， or 。。; allowed_terms suppress configured variant candidates inside exact visible terms; variant_pairs contain observed/preferred text and create low-confidence review candidates. Supplied arrays replace that field; [] clears it. Settings stay local and invalidate prior audit cursors, decisions and plans."),
+        ToolRisk::ReversibleEdit, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("scope"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("object") },
+                    { QStringLiteral("properties"), QJsonObject {
+                        { QStringLiteral("kind"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") }, { QStringLiteral("enum"), QJsonArray { QStringLiteral("book"), QStringLiteral("file") } } } },
+                        { QStringLiteral("resource_id"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }
+                    } },
+                    { QStringLiteral("required"), QJsonArray { QStringLiteral("kind") } }
+                } },
+                { QStringLiteral("allow_repeats"), QJsonObject { { QStringLiteral("type"), QStringLiteral("array") }, { QStringLiteral("items"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }, { QStringLiteral("maxItems"), 2 } } },
+                { QStringLiteral("allowed_terms"), QJsonObject { { QStringLiteral("type"), QStringLiteral("array") }, { QStringLiteral("items"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }, { QStringLiteral("maxItems"), 100 } } },
+                { QStringLiteral("variant_pairs"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("maxItems"), 32 },
+                    { QStringLiteral("items"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("object") },
+                        { QStringLiteral("properties"), QJsonObject {
+                            { QStringLiteral("observed"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+                            { QStringLiteral("preferred"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }
+                        } },
+                        { QStringLiteral("required"), QJsonArray { QStringLiteral("observed"), QStringLiteral("preferred") } }
+                    } }
+                } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("scope") } }
+        },
+        [workspace, proof_audit](const QJsonObject &arguments) {
+            return proof_audit->configure(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("proof.decide"),
+        QStringLiteral("Record a review decision for one issue from the current proof.audit snapshot. accept needs a reviewed replacement when no suggestion exists; pass an explicit empty replacement to delete. ignore and pending are also supported. Records are local to the book and never modify the EPUB."),
+        ToolRisk::ReversibleEdit, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("issue_id"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+                { QStringLiteral("decision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") }, { QStringLiteral("enum"), QJsonArray { QStringLiteral("accept"), QStringLiteral("ignore"), QStringLiteral("pending") } } } },
+                { QStringLiteral("replacement"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }, { QStringLiteral("maxLength"), 256 }} },
+                { QStringLiteral("reviewer"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("issue_id"), QStringLiteral("decision") } }
+        },
+        [workspace, proof_audit](const QJsonObject &arguments) {
+            return proof_audit->decide(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("proof.plan"),
+        QStringLiteral("Create a bounded, paginated plan from 1 to 100 explicitly accepted issue IDs in the current proof.audit snapshot. Review every items page with next_cursor before proof.apply. Markup-spanning or overlapping candidates are rejected. The book is unchanged."),
+        ToolRisk::Read, false, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("accepted_issue_ids"), QJsonObject { { QStringLiteral("type"), QStringLiteral("array") }, { QStringLiteral("items"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} } } },
+                { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 1 }, { QStringLiteral("maximum"), 20 }, { QStringLiteral("default"), 20 } } },
+                { QStringLiteral("cursor"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }
+            } }
+        },
+        [workspace, proof_audit](const QJsonObject &arguments) {
+            return proof_audit->plan(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("proof.apply"),
+        QStringLiteral("Stage exactly the fully reviewed proof.plan in a new exclusive transaction. Requires plan_id, plan_digest and expected_book_revision. Rechecks all source hashes; never commits itself. Then read all transaction.preview pages and call transaction.commit. Accepted style suggestions require user review."),
+        ToolRisk::Bulk, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("plan_id"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+                { QStringLiteral("plan_digest"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+                { QStringLiteral("expected_book_revision"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("integer") }} }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("plan_id"), QStringLiteral("plan_digest"), QStringLiteral("expected_book_revision") } }
+        },
+        [workspace, proof_audit](const QJsonObject &arguments) {
+            return proof_audit->apply(workspace, arguments);
+        });
 
     add(registry, QStringLiteral("book.summary"),
         QStringLiteral("Summarize the open EPUB: revision, bounded version/title/language previews, spine/TOC counts, and resource totals. Use book.metadata when title or language is truncated. Never returns file binaries."),
@@ -779,33 +1106,27 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                 { QStringLiteral("minimum"), 1 },
                 { QStringLiteral("maximum"), MAX_LITERAL_SEARCH_MATCHES },
                 { QStringLiteral("default"), DEFAULT_LITERAL_SEARCH_MATCHES }
+            } },
+            { QStringLiteral("limit"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("integer") },
+                { QStringLiteral("minimum"), 1 },
+                { QStringLiteral("maximum"), MAX_LITERAL_SEARCH_MATCHES }
+            } },
+            { QStringLiteral("cursor"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+            { QStringLiteral("count_only"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("boolean") }} },
+            { QStringLiteral("resource_id"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+            { QStringLiteral("resource_ids"), QJsonObject {
+                { QStringLiteral("type"), QStringLiteral("array") },
+                { QStringLiteral("items"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }
             } }
         } },
         { QStringLiteral("required"), QJsonArray { QStringLiteral("query") } }
     };
     add(registry, QStringLiteral("book.search"),
-        QStringLiteral("Case-insensitive literal search over text resources. Query length is capped at 512 characters. Returns at most 50 matches with bounded snippets, full offsets and match lengths, and explicit truncation flags. Use resource.read_fragment for truncated source."),
+        QStringLiteral("Case-insensitive literal search over text resources. Query length is capped at 512 characters. Follow next_cursor while has_more to inspect all matches; count_only returns an exact total without snippets. Each page returns at most 50 bounded matches with UTF-16 source offsets. Use resource.read_fragment for exact source."),
         ToolRisk::Read, false, false, search_schema,
         [workspace](const QJsonObject &arguments) {
-            const QString query = arguments.value(QStringLiteral("query")).toString();
-            if (query.size() > MAX_LITERAL_SEARCH_QUERY_LENGTH) {
-                return ToolResult::failure(
-                    QStringLiteral("SEARCH_QUERY_TOO_LONG"),
-                    QStringLiteral("book.search query is capped at 512 characters. Search for a shorter distinctive literal."),
-                    QJsonObject {
-                        { QStringLiteral("query_length"), query.size() },
-                        { QStringLiteral("max_query_length"),
-                          MAX_LITERAL_SEARCH_QUERY_LENGTH }
-                    });
-            }
-            const int requested_matches = arguments.contains(QStringLiteral("max_matches"))
-                ? arguments.value(QStringLiteral("max_matches")).toInt(
-                    DEFAULT_LITERAL_SEARCH_MATCHES)
-                : DEFAULT_LITERAL_SEARCH_MATCHES;
-            const int max_matches = qBound(
-                1, requested_matches, MAX_LITERAL_SEARCH_MATCHES);
-            return ToolResult::success(boundedLiteralSearchResult(
-                workspace->search(query, max_matches), query, max_matches));
+            return paginatedSearch(workspace, arguments, false);
         });
 
     QJsonObject fragment_schema {
@@ -830,7 +1151,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
     };
     add(registry, QStringLiteral("resource.read_fragment"),
-        QStringLiteral("Read a bounded text fragment of an XHTML or CSS resource. Follow `continuation` while `truncated` is true. Copy the `text` field into patch_fragment.expected_text (no line-number prefixes). `lines` gives 1-based line identity for start_line when the substring is not unique. Fonts and images are refused."),
+        QStringLiteral("Read a bounded text fragment of an XHTML or CSS resource, including staged edits during an Agent transaction. Follow continuation while truncated is true. Copy text into patch_fragment.expected_text and resource_revision into patch_fragment.expected_resource_revision; book_revision is for transaction.commit. lines gives 1-based start_line for repeated substrings. Fonts and images are refused."),
         ToolRisk::Read, false, false, fragment_schema,
         [workspace](const QJsonObject &arguments) {
             const int offset = qMax(
@@ -909,18 +1230,33 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("transaction.commit"),
-        QStringLiteral("Commit staged changes. Fails with BOOK_REVISION_CONFLICT if the book changed since the transaction began."),
+        QStringLiteral("Commit staged changes. Pass expected_book_revision from book.summary or transaction.preview.live_book_revision (legacy expected_revision is accepted). Fails with BOOK_REVISION_CONFLICT if the live book changed since the transaction began."),
         ToolRisk::Bulk, true, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("expected_book_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
                 { QStringLiteral("expected_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
-            } },
-            { QStringLiteral("required"), QJsonArray { QStringLiteral("expected_revision") } }
+            } }
         },
         [workspace](const QJsonObject &arguments) {
-            const quint64 expected = static_cast<quint64>(
-                arguments.value(QStringLiteral("expected_revision")).toInteger());
+            const bool has_book = arguments.contains(QStringLiteral("expected_book_revision"));
+            const bool has_legacy = arguments.contains(QStringLiteral("expected_revision"));
+            if (!has_book && !has_legacy) {
+                return ToolResult::failure(QStringLiteral("EXPECTED_BOOK_REVISION_REQUIRED"),
+                    QStringLiteral("Pass expected_book_revision from the current book or transaction preview."));
+            }
+            const qint64 book_value = arguments.value(QStringLiteral("expected_book_revision")).toInteger(-1);
+            const qint64 legacy_value = arguments.value(QStringLiteral("expected_revision")).toInteger(-1);
+            if (has_book && has_legacy && book_value != legacy_value) {
+                return ToolResult::failure(QStringLiteral("REVISION_ARGUMENT_CONFLICT"),
+                    QStringLiteral("expected_book_revision and expected_revision disagree."));
+            }
+            if ((has_book ? book_value : legacy_value) < 0) {
+                return ToolResult::failure(QStringLiteral("EXPECTED_BOOK_REVISION_REQUIRED"),
+                    QStringLiteral("expected_book_revision must be a non-negative integer."));
+            }
+            const quint64 expected = static_cast<quint64>(has_book ? book_value : legacy_value);
             return fromBook(workspace->commitTransaction(expected));
         });
 
@@ -932,7 +1268,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("resource.patch_fragment"),
-        QStringLiteral("Stage a bounded replacement of an exact current substring. expected_text is required and must be copied from read_fragment.text (never invent UTF-16 offsets); expected_text and replacement text are each capped at 8192 UTF-16 units. If that substring appears more than once, pass start_line from read_fragment.lines. Optional start/end are ignored unless they exactly equal expected_text. Must not cut through a markup tag. Live book unchanged until transaction.commit."),
+        QStringLiteral("Stage a bounded replacement of an exact current substring. Pass expected_resource_revision from resource.read_fragment.resource_revision (legacy expected_revision is accepted); this is NOT the book revision used by transaction.commit. expected_text must be copied from read_fragment.text; each text is capped at 8192 UTF-16 units. If repeated, pass start_line from read_fragment.lines. Optional start/end are ignored unless they exactly match. Must not cut through markup. Reads during a transaction see staged text; Live book changes only at commit."),
         ToolRisk::ReversibleEdit, true, true,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
@@ -947,13 +1283,14 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                     { QStringLiteral("maxLength"), MAX_PATCH_FRAGMENT_LENGTH }
                 } },
                 { QStringLiteral("expected_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("expected_resource_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
                 { QStringLiteral("start_line"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
                 { QStringLiteral("start"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
                 { QStringLiteral("end"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
             } },
             { QStringLiteral("required"), QJsonArray {
                 QStringLiteral("resource_id"), QStringLiteral("expected_text"),
-                QStringLiteral("text"), QStringLiteral("expected_revision")
+                QStringLiteral("text")
             } }
         },
         [workspace](const QJsonObject &arguments) {
@@ -983,14 +1320,48 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                           MAX_PATCH_FRAGMENT_LENGTH }
                     });
             }
-            return fromBook(workspace->patchFragment(
-                arguments.value(QStringLiteral("resource_id")).toString(),
+            const bool has_resource = arguments.contains(QStringLiteral("expected_resource_revision"));
+            const bool has_legacy = arguments.contains(QStringLiteral("expected_revision"));
+            if (!has_resource && !has_legacy) {
+                return ToolResult::failure(QStringLiteral("EXPECTED_RESOURCE_REVISION_REQUIRED"),
+                    QStringLiteral("Read the resource and pass resource_revision as expected_resource_revision."));
+            }
+            const qint64 resource_value = arguments.value(QStringLiteral("expected_resource_revision")).toInteger(-1);
+            const qint64 legacy_value = arguments.value(QStringLiteral("expected_revision")).toInteger(-1);
+            if (has_resource && has_legacy && resource_value != legacy_value) {
+                return ToolResult::failure(QStringLiteral("REVISION_ARGUMENT_CONFLICT"),
+                    QStringLiteral("expected_resource_revision and expected_revision disagree."));
+            }
+            if ((has_resource ? resource_value : legacy_value) < 0) {
+                return ToolResult::failure(QStringLiteral("EXPECTED_RESOURCE_REVISION_REQUIRED"),
+                    QStringLiteral("expected_resource_revision must be a non-negative integer."));
+            }
+            const QString resource_id = arguments.value(QStringLiteral("resource_id")).toString();
+            const quint64 expected = static_cast<quint64>(has_resource ? resource_value : legacy_value);
+            const BookOpResult result = workspace->patchFragment(
+                resource_id,
                 arguments.value(QStringLiteral("start")).toInt(-1),
                 arguments.value(QStringLiteral("end")).toInt(-1),
                 replacement,
-                static_cast<quint64>(arguments.value(QStringLiteral("expected_revision")).toInteger()),
+                expected,
                 expected_text,
-                arguments.value(QStringLiteral("start_line")).toInt(-1)));
+                arguments.value(QStringLiteral("start_line")).toInt(-1));
+            if (!result.ok && result.code == QLatin1String("BOOK_REVISION_CONFLICT")) {
+                const BookOpResult current = workspace->readFragment(resource_id, 0, 1);
+                const qint64 actual = current.ok
+                    ? current.data.value(QStringLiteral("resource_revision")).toInteger(-1)
+                    : static_cast<qint64>(workspace->resourceRevision(resource_id));
+                return ToolResult::failure(QStringLiteral("RESOURCE_REVISION_CONFLICT"),
+                    QStringLiteral("Resource revision changed. Re-read this resource before retrying; do not use the book revision."),
+                    QJsonObject {
+                        { QStringLiteral("resource_id"), resource_id },
+                        { QStringLiteral("expected_resource_revision"), static_cast<qint64>(expected) },
+                        { QStringLiteral("actual_resource_revision"), actual },
+                        { QStringLiteral("book_revision"), static_cast<qint64>(workspace->revision()) },
+                        { QStringLiteral("legacy_code"), QStringLiteral("BOOK_REVISION_CONFLICT") }
+                    });
+            }
+            return fromBook(result);
         });
 
     add(registry, QStringLiteral("css.update_rules"),
@@ -1256,7 +1627,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("book.search_regex"),
-        QStringLiteral("Regex search over text resources. Returns at most 50 matches with bounded match/capture previews, full offsets and lengths, and explicit truncation flags. Use resource.read_fragment for truncated source. Optional resource_id limits the search."),
+        QStringLiteral("Regex search over text resources. Follow next_cursor while has_more to inspect all matches; count_only returns an exact total. Each page returns at most 50 bounded matches with UTF-16 source offsets. Invalid or zero-length patterns fail explicitly. Use resource.read_fragment for exact source."),
         ToolRisk::Read, false, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
@@ -1268,23 +1639,23 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                     { QStringLiteral("minimum"), 1 },
                     { QStringLiteral("maximum"), MAX_REGEX_SEARCH_MATCHES },
                     { QStringLiteral("default"), DEFAULT_REGEX_SEARCH_MATCHES }
+                } },
+                { QStringLiteral("limit"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("integer") },
+                    { QStringLiteral("minimum"), 1 },
+                    { QStringLiteral("maximum"), MAX_REGEX_SEARCH_MATCHES }
+                } },
+                { QStringLiteral("cursor"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+                { QStringLiteral("count_only"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("boolean") }} },
+                { QStringLiteral("resource_ids"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("items"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} }
                 } }
             } },
             { QStringLiteral("required"), QJsonArray { QStringLiteral("pattern") } }
         },
         [workspace](const QJsonObject &arguments) {
-            const QJsonObject data = regexSearchInBook(
-                workspace,
-                arguments.value(QStringLiteral("pattern")).toString(),
-                arguments.value(QStringLiteral("resource_id")).toString(),
-                arguments.value(QStringLiteral("max_matches")).toInt(
-                    DEFAULT_REGEX_SEARCH_MATCHES));
-            if (data.value(QStringLiteral("ok")).toBool() == false
-                && data.contains(QStringLiteral("code"))) {
-                return ToolResult::failure(data.value(QStringLiteral("code")).toString(),
-                                           data.value(QStringLiteral("message")).toString(), data);
-            }
-            return ToolResult::success(data);
+            return paginatedSearch(workspace, arguments, true);
         });
 
     add(registry, QStringLiteral("book.check"),
@@ -1592,14 +1963,38 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
             return fromBook(linkStylesheets(workspace, html_ids, css_ids));
         });
 
+    add(registry, QStringLiteral("python.inspect"),
+        QStringLiteral("Run a read-only Live Python v2 snippet for custom Book statistics. Book and editor writes are rejected; the Agent revision stays unchanged. Use plugin.book.text_resources() and plugin.book.read_many([Resource]) to inspect XHTML. Print a compact report; stdout is returned on success. `result` and def run(plugin) return EXIT STATUS 0/None, not report data. Available in the Sigil GUI only."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("script"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("string") }} },
+                { QStringLiteral("timeout_ms"), QJsonObject {{ QStringLiteral("type"), QStringLiteral("integer") }} }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("script") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            const int timeout_ms = qBound(1000,
+                arguments.value(QStringLiteral("timeout_ms")).toInt(30000), 300000);
+            return fromBook(workspace->runLivePython(
+                arguments.value(QStringLiteral("script")).toString(), timeout_ms,
+                QStringLiteral("read")));
+        });
+
     add(registry, QStringLiteral("python.run"),
-        QStringLiteral("Run a Live Python v2 snippet against the in-memory Book. `plugin` is bound (plugin.book / plugin.editor); optional def run(plugin) or a `result` value. This is a code snippet, not a plugin package and not a ZIP snapshot. Applies immediately; commit or rollback any Agent transaction first. stdout/stderr are returned (truncated). Unavailable outside the Sigil GUI (LIVE_PYTHON_UNAVAILABLE). Capped at 64KiB."),
+        QStringLiteral("Run a Live Python v2 snippet against the in-memory Book. Use mode=read for statistics; it rejects Book writes and preserves revision. mode=edit is the compatibility default. `plugin` is bound; plugin.book.text_resources() and plugin.book.read_many([Resource]) read XHTML. Print reports to stdout. Optional def run(plugin) or `result` is an EXIT STATUS (0/None means success), not report data. Commit or rollback any Agent transaction first. Output is bounded. Unavailable outside Sigil GUI; script capped at 64KiB."),
         ToolRisk::Bulk, true, false,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
                 { QStringLiteral("script"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
-                { QStringLiteral("timeout_ms"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } }
+                { QStringLiteral("timeout_ms"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("mode"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("string") },
+                    { QStringLiteral("enum"), QJsonArray { QStringLiteral("read"), QStringLiteral("edit") } },
+                    { QStringLiteral("default"), QStringLiteral("edit") }
+                } }
             } },
             { QStringLiteral("required"), QJsonArray { QStringLiteral("script") } }
         },
@@ -1608,7 +2003,8 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
             if (timeout_ms < 1000) timeout_ms = 1000;
             if (timeout_ms > 300000) timeout_ms = 300000;
             return fromBook(workspace->runLivePython(
-                arguments.value(QStringLiteral("script")).toString(), timeout_ms));
+                arguments.value(QStringLiteral("script")).toString(), timeout_ms,
+                arguments.value(QStringLiteral("mode")).toString(QStringLiteral("edit"))));
         });
 
     add(registry, QStringLiteral("toc.generate"),

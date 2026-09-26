@@ -1,4 +1,153 @@
-find_package(Qt6 6.4 COMPONENTS Concurrent Core Gui Network Svg WebEngineCore Widgets Xml REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Concurrent Core Core5Compat Gui Network Svg WebEngineCore Widgets Xml REQUIRED)
+find_package(EXPAT REQUIRED)
+find_package(LibXml2 REQUIRED)
+
+add_test(NAME xmlprocessor_legacy_golden
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/xmlprocessor_legacy_golden_test.py
+)
+set_tests_properties(xmlprocessor_legacy_golden PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
+
+add_test(NAME sanitycheck_legacy_golden
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/sanitycheck_legacy_golden_test.py
+)
+set_tests_properties(sanitycheck_legacy_golden PROPERTIES TIMEOUT 30)
+
+add_test(NAME ncxgenerator_legacy_golden
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ncxgenerator_legacy_golden_test.py
+)
+set_tests_properties(ncxgenerator_legacy_golden PROPERTIES TIMEOUT 30)
+
+add_test(NAME checkpoint_legacy_golden
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/checkpoint_legacy_golden_test.py
+)
+set_tests_properties(checkpoint_legacy_golden PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
+
+add_test(NAME functionsearch_legacy_golden
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/functionsearch_legacy_golden_test.py
+)
+set_tests_properties(functionsearch_legacy_golden PROPERTIES TIMEOUT 30)
+
+add_test(NAME opf_id_rebase_legacy_golden
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_id_rebase_legacy_golden_test.py
+)
+set_tests_properties(opf_id_rebase_legacy_golden PROPERTIES TIMEOUT 30)
+
+add_executable(default_replace_functions_test
+    default_replace_functions_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/DefaultReplaceFunctions.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/DefaultReplaceFunctions.h
+    ${CMAKE_SOURCE_DIR}/src/Resource_Files/data/DefaultReplaceFunctionsData.qrc
+)
+target_include_directories(default_replace_functions_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(default_replace_functions_test PRIVATE Qt6::Core)
+target_compile_features(default_replace_functions_test PRIVATE cxx_std_17)
+set_target_properties(default_replace_functions_test PROPERTIES AUTORCC ON)
+add_test(NAME default_replace_functions COMMAND default_replace_functions_test)
+set_tests_properties(default_replace_functions PROPERTIES TIMEOUT 30)
+
+add_executable(gif_readback_probe gif_readback_probe.cpp)
+target_link_libraries(gif_readback_probe PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(gif_readback_probe PRIVATE cxx_std_17)
+add_test(NAME gif_legacy_readback
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/gif_legacy_readback_test.py
+            $<TARGET_FILE:gif_readback_probe>
+)
+set_tests_properties(gif_legacy_readback PROPERTIES TIMEOUT 30)
+add_executable(static_gif_probe
+    static_gif_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/StaticGif.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/StaticGif.h
+)
+target_include_directories(static_gif_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(static_gif_probe PRIVATE Qt6::Core Qt6::Gui)
+add_test(NAME static_gif_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/static_gif_parity_test.py
+            $<TARGET_FILE:static_gif_probe> $<TARGET_FILE:gif_readback_probe>
+)
+set_tests_properties(static_gif_parity PROPERTIES TIMEOUT 120)
+add_executable(replace_functions_probe
+    replace_functions_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/ReplaceFunctions.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/ReplaceFunctions.h
+)
+target_include_directories(replace_functions_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(replace_functions_probe PRIVATE Qt6::Core)
+add_test(NAME replace_functions_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/replace_functions_parity_test.py
+            $<TARGET_FILE:replace_functions_probe>
+)
+set_tests_properties(replace_functions_parity PROPERTIES TIMEOUT 300)
+add_executable(metadata_processor_probe
+    metadata_processor_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/MetadataProcessor.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/MetadataProcessor.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/ReplaceFunctions.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/ReplaceFunctions.h
+)
+target_include_directories(metadata_processor_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(metadata_processor_probe PRIVATE Qt6::Core)
+add_test(NAME metadata_processor_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/metadata_processor_parity_test.py
+            $<TARGET_FILE:metadata_processor_probe>
+)
+set_tests_properties(metadata_processor_parity PROPERTIES TIMEOUT 300)
+
+add_test(NAME codepoint_name_golden
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/codepoint_name_golden_test.py
+)
+set_tests_properties(codepoint_name_golden PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
+
+add_executable(codepoint_names_test
+    codepoint_names_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/CodepointNames.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/CodepointNames.h
+    ${CMAKE_SOURCE_DIR}/src/Resource_Files/data/CodepointNamesData.qrc
+)
+target_include_directories(codepoint_names_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(codepoint_names_test PRIVATE Qt6::Core)
+target_compile_features(codepoint_names_test PRIVATE cxx_std_17)
+set_target_properties(codepoint_names_test PROPERTIES AUTORCC ON)
+add_test(NAME codepoint_names COMMAND codepoint_names_test)
+set_tests_properties(codepoint_names PROPERTIES TIMEOUT 30)
+
+add_test(NAME codepoint_names_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/codepoint_names_parity_test.py
+            $<TARGET_FILE:codepoint_names_test> --exhaustive
+)
+set_tests_properties(codepoint_names_parity PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
+
+add_test(NAME importtxt_golden
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/importtxt_golden_test.py
+)
+set_tests_properties(importtxt_golden PROPERTIES TIMEOUT 30)
+
+add_executable(txt_encoding_test
+    txt_encoding_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/TxtEncoding.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/TxtEncoding.h
+)
+target_include_directories(txt_encoding_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(txt_encoding_test PRIVATE Qt6::Core)
+target_compile_features(txt_encoding_test PRIVATE cxx_std_17)
+add_test(NAME txt_encoding COMMAND txt_encoding_test)
+set_tests_properties(txt_encoding PROPERTIES TIMEOUT 30)
+
+add_test(NAME txt_encoding_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/txt_encoding_parity_test.py
+            $<TARGET_FILE:txt_encoding_test>
+)
+set_tests_properties(txt_encoding_parity PROPERTIES TIMEOUT 30)
+
+add_executable(update_version_feed_test
+    update_version_feed_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/UpdateVersionFeed.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/UpdateVersionFeed.h
+)
+target_include_directories(update_version_feed_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(update_version_feed_test PRIVATE Qt6::Core Qt6::Network)
+target_compile_features(update_version_feed_test PRIVATE cxx_std_17)
+add_test(NAME update_version_feed COMMAND update_version_feed_test)
+set_tests_properties(update_version_feed PROPERTIES TIMEOUT 30)
 
 add_executable(baseline_grid_model_test
     baseline_grid_model_test.cpp
@@ -1232,6 +1381,105 @@ add_test(NAME plugin_metadata COMMAND plugin_metadata_test)
 set_tests_properties(plugin_metadata PROPERTIES TIMEOUT 30)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_executable(ncx_generator_probe
+    ncx_generator_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/NcxGenerator.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/NcxGenerator.h
+)
+target_include_directories(ncx_generator_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(ncx_generator_probe PRIVATE Qt6::Core)
+add_test(NAME ncx_generator_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ncx_generator_parity_test.py
+            $<TARGET_FILE:ncx_generator_probe>
+)
+set_tests_properties(ncx_generator_parity PROPERTIES TIMEOUT 30)
+add_executable(opf_source_text_probe
+    opf_source_text_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/ResourceObjects/OPFSourceText.cpp
+    ${CMAKE_SOURCE_DIR}/src/ResourceObjects/OPFSourceText.h
+)
+target_include_directories(opf_source_text_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(opf_source_text_probe PRIVATE Qt6::Core)
+add_test(NAME opf_source_text_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_text_parity_test.py
+            $<TARGET_FILE:opf_source_text_probe>
+)
+set_tests_properties(opf_source_text_parity PROPERTIES TIMEOUT 30)
+add_executable(opf_source_bytes_probe
+    opf_source_bytes_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/ResourceObjects/OPFSourceBytes.cpp
+    ${CMAKE_SOURCE_DIR}/src/ResourceObjects/OPFSourceBytes.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/TxtEncoding.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/TxtEncoding.h
+    ${CMAKE_SOURCE_DIR}/src/Resource_Files/data/OPFLegacyCodecsData.qrc
+)
+target_include_directories(opf_source_bytes_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(opf_source_bytes_probe PRIVATE Qt6::Core Qt6::Core5Compat)
+set_target_properties(opf_source_bytes_probe PROPERTIES AUTORCC ON)
+add_test(NAME opf_source_bytes_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_bytes_parity_test.py
+            $<TARGET_FILE:opf_source_bytes_probe>
+)
+set_tests_properties(opf_source_bytes_parity PROPERTIES TIMEOUT 900)
+add_executable(opf_source_patch_probe
+    opf_source_patch_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/ResourceObjects/OPFSourcePatch.cpp
+    ${CMAKE_SOURCE_DIR}/src/ResourceObjects/OPFSourcePatch.h
+)
+target_include_directories(opf_source_patch_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(opf_source_patch_probe PRIVATE Qt6::Core EXPAT::EXPAT)
+add_test(NAME opf_source_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_parity_test.py
+            $<TARGET_FILE:opf_source_patch_probe>
+)
+set_tests_properties(opf_source_parity PROPERTIES TIMEOUT 60)
+add_test(NAME opf_package_update_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_package_update_parity_test.py
+            $<TARGET_FILE:opf_source_patch_probe>
+)
+set_tests_properties(opf_package_update_parity PROPERTIES TIMEOUT 120)
+add_executable(manifest_id_rebase_probe
+    manifest_id_rebase_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/ManifestIdRebase.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/ManifestIdRebase.h
+    ${CMAKE_SOURCE_DIR}/src/ResourceObjects/OPFSourcePatch.cpp
+    ${CMAKE_SOURCE_DIR}/src/ResourceObjects/OPFSourcePatch.h
+)
+target_include_directories(manifest_id_rebase_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(manifest_id_rebase_probe PRIVATE Qt6::Core EXPAT::EXPAT)
+add_test(NAME manifest_id_rebase_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/manifest_id_rebase_parity_test.py
+            $<TARGET_FILE:manifest_id_rebase_probe>
+)
+set_tests_properties(manifest_id_rebase_parity PROPERTIES TIMEOUT 30)
+add_executable(xml_well_formed_probe
+    xml_well_formed_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlWellFormed.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlWellFormed.h
+)
+target_include_directories(xml_well_formed_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(xml_well_formed_probe PRIVATE Qt6::Core LibXml2::LibXml2)
+add_test(NAME xml_well_formed_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/xml_well_formed_parity_test.py
+            $<TARGET_FILE:xml_well_formed_probe>
+)
+set_tests_properties(xml_well_formed_parity PROPERTIES TIMEOUT 30)
+add_executable(xml_processor_probe
+    xml_processor_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlProcessor.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlProcessor.h
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlWellFormed.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlWellFormed.h
+    ${CMAKE_SOURCE_DIR}/src/Misc/ReplaceFunctions.cpp
+    ${CMAKE_SOURCE_DIR}/src/Misc/ReplaceFunctions.h
+)
+target_include_directories(xml_processor_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(xml_processor_probe PRIVATE Qt6::Core EXPAT::EXPAT LibXml2::LibXml2)
+add_test(NAME xml_processor_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/xml_processor_parity_test.py
+            $<TARGET_FILE:xml_processor_probe>
+)
+set_tests_properties(xml_processor_parity PROPERTIES TIMEOUT 300)
 add_test(NAME opf_source
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/opf_source_test.py
 )
@@ -1275,6 +1523,16 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(gumbo_empty_source_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME replace_function_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_replace_function_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(replace_function_integration PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
+    add_test(NAME xml_processor_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_xml_processor_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(xml_processor_integration PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
     add_test(NAME plugin_package_update_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plugin_package_update_integration.py
                 ${CMAKE_BINARY_DIR}
@@ -1300,6 +1558,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(agent_workspace_package_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME agent_conversation_navigation_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_agent_conversation_navigation_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(agent_conversation_navigation_integration PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
     add_test(NAME code_view_selection_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_code_view_selection_integration.py
                 ${CMAKE_BINARY_DIR}
@@ -1574,6 +1837,7 @@ add_executable(agent_stream_decoder_test
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentProviderPreset.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/OpenAICompatibleProvider.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/StreamingJsonDecoder.cpp
 )
@@ -1588,6 +1852,7 @@ add_executable(agent_provider_cancel_test
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentProviderPreset.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/OpenAICompatibleProvider.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Model/StreamingJsonDecoder.cpp
 )
@@ -1632,6 +1897,7 @@ set(AGENT_CORE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/BookEdits.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ProofAudit.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/TypesetEngine.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
@@ -1668,6 +1934,7 @@ add_executable(agent_book_tools_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/BookEdits.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ProofAudit.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/TypesetEngine.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
@@ -1694,6 +1961,7 @@ add_executable(agent_typeset_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/BookEdits.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ProofAudit.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/TypesetEngine.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
@@ -1716,6 +1984,7 @@ add_executable(agent_book_ops_test
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Execution/BookEdits.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ProofAudit.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/ManuscriptParser.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Typeset/TypesetEngine.cpp
     ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
@@ -1810,11 +2079,31 @@ set_tests_properties(agent_plan_comparison_dialog PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
+add_executable(agent_locations_test
+    agent_locations_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentLocations.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentLocations.h
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentMarkdown.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentMarkdown.h
+)
+target_include_directories(agent_locations_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_locations_test PRIVATE Qt6::Core Qt6::Gui)
+target_compile_features(agent_locations_test PRIVATE cxx_std_17)
+add_test(NAME agent_locations COMMAND agent_locations_test)
+set_tests_properties(agent_locations PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(agent_dock_test
     agent_dock_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentDock.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentDock.h
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentLocations.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentLocations.h
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentMarkdown.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentMarkdown.h
     ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/UI/AgentPlanComparisonDialog.h
 )

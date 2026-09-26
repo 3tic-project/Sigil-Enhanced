@@ -125,6 +125,7 @@ CatalogModel AgentModelCatalog::modelFromJson(const QJsonObject &object)
     if (model.supportedParameters.isEmpty()) {
         model.supportedParameters = parametersFromValue(object.value(QStringLiteral("supportedParameters")));
     }
+    model.apiEndpoint = object.value(QStringLiteral("api_endpoint")).toString();
     if (object.contains(QStringLiteral("tools"))) {
         model.tools = object.value(QStringLiteral("tools")).toBool();
     } else {
@@ -136,7 +137,33 @@ CatalogModel AgentModelCatalog::modelFromJson(const QJsonObject &object)
             model.reasoning = reasoning.toBool();
         } else if (reasoning.isObject()) {
             model.reasoning = true;
+            const QJsonObject details = reasoning.toObject();
+            model.reasoningMandatory = details.value(QStringLiteral("mandatory")).toBool();
+            model.supportedReasoningEfforts =
+                parametersFromValue(details.value(QStringLiteral("supported_efforts")));
+            model.reasoningEffortSelectable =
+                details.contains(QStringLiteral("supported_efforts"))
+                && (details.value(QStringLiteral("supported_efforts")).isNull()
+                    || !model.supportedReasoningEfforts.isEmpty());
+            model.defaultReasoningEffort =
+                details.value(QStringLiteral("default_effort")).toString();
         }
+    }
+    // Preserve these fields when reading a cached catalog entry.
+    if (object.contains(QStringLiteral("reasoning_mandatory"))) {
+        model.reasoningMandatory = object.value(QStringLiteral("reasoning_mandatory")).toBool();
+    }
+    if (object.contains(QStringLiteral("reasoning_effort_selectable"))) {
+        model.reasoningEffortSelectable =
+            object.value(QStringLiteral("reasoning_effort_selectable")).toBool();
+    }
+    if (object.contains(QStringLiteral("supported_reasoning_efforts"))) {
+        model.supportedReasoningEfforts = parametersFromValue(
+            object.value(QStringLiteral("supported_reasoning_efforts")));
+    }
+    if (object.contains(QStringLiteral("default_reasoning_effort"))) {
+        model.defaultReasoningEffort =
+            object.value(QStringLiteral("default_reasoning_effort")).toString();
     }
     if (!model.reasoning) {
         model.reasoning = listContains(model.supportedParameters, QStringLiteral("reasoning"))
@@ -153,11 +180,20 @@ QJsonObject AgentModelCatalog::modelToJson(const CatalogModel &model)
     for (const QString &parameter : model.supportedParameters) {
         parameters.append(parameter);
     }
+    QJsonArray efforts;
+    for (const QString &effort : model.supportedReasoningEfforts) {
+        efforts.append(effort);
+    }
     return QJsonObject {
         { QStringLiteral("id"), model.id },
         { QStringLiteral("name"), model.name },
         { QStringLiteral("context_length"), model.contextLength },
         { QStringLiteral("supported_parameters"), parameters },
+        { QStringLiteral("supported_reasoning_efforts"), efforts },
+        { QStringLiteral("default_reasoning_effort"), model.defaultReasoningEffort },
+        { QStringLiteral("reasoning_mandatory"), model.reasoningMandatory },
+        { QStringLiteral("reasoning_effort_selectable"), model.reasoningEffortSelectable },
+        { QStringLiteral("api_endpoint"), model.apiEndpoint },
         { QStringLiteral("tools"), model.tools },
         { QStringLiteral("reasoning"), model.reasoning }
     };
@@ -173,6 +209,7 @@ void AgentModelCatalog::applyProviderDefaults(CatalogResult *result, AgentProvid
             if (model.contextLength <= 0) model.contextLength = 128000;
         } else if (kind == AgentProviderKind::OpenCodeGo) {
             if (model.supportedParameters.isEmpty()) model.tools = true;
+            model.apiEndpoint = openCodeGoEndpointForModel(model.id);
         }
     }
 }
@@ -250,7 +287,8 @@ CatalogResult AgentModelCatalog::fetch(const QString &url,
                                        const QString &referer,
                                        const QString &title,
                                        int timeoutMs,
-                                       const std::atomic_bool *cancelled)
+                                       const std::atomic_bool *cancelled,
+                                       const QString &userAgent)
 {
     CatalogResult result;
     result.sourceUrl = redactConfiguredSecret(url, apiKey);
@@ -261,6 +299,9 @@ CatalogResult AgentModelCatalog::fetch(const QString &url,
 
     QNetworkRequest http{QUrl(url)};
     http.setRawHeader("Accept", "application/json");
+    if (!userAgent.isEmpty()) {
+        http.setHeader(QNetworkRequest::UserAgentHeader, userAgent);
+    }
     if (!apiKey.isEmpty()) {
         http.setRawHeader("Authorization", QByteArray("Bearer ") + apiKey.toUtf8());
     }
@@ -268,7 +309,7 @@ CatalogResult AgentModelCatalog::fetch(const QString &url,
         http.setRawHeader("HTTP-Referer", referer.toUtf8());
     }
     if (!title.isEmpty()) {
-        http.setRawHeader("X-Title", title.toUtf8());
+        http.setRawHeader("X-OpenRouter-Title", title.toUtf8());
     }
 
     QNetworkAccessManager manager;

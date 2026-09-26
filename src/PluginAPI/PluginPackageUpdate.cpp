@@ -4,27 +4,24 @@
 **
 *************************************************************************/
 
-#include "EmbedPython/EmbeddedPython.h" // Python before Qt's slots macro.
 #include "PluginAPI/PluginPackageUpdate.h"
+#include "ResourceObjects/OPFSourcePatch.h"
 
-#include <QJsonDocument>
+#include <exception>
 
 namespace {
 
 bool UpdateSource(const QString &source, const QString &operation,
                   const QJsonObject &payload, QString *updated, QString *error)
 {
-    int result_code = 0;
-    QString message;
-    const QVariant result = EmbeddedPython::instance().runInPython(
-        "opf_package_update", "apply_update",
-        { source, operation, QString::fromUtf8(QJsonDocument(payload).toJson(QJsonDocument::Compact)) },
-        &result_code, message, false, false);
-    if (error) *error = message;
-    if (result_code != 0) return false;
-    // Do not touch the caller's output on failure (it may alias source).
-    *updated = result.toString();
-    return true;
+    try {
+        // Do not touch the caller's output on failure (it may alias source).
+        *updated = OPFSourcePatch::ApplyPackageUpdate(source, operation, payload);
+        return true;
+    } catch (const std::exception &failure) {
+        if (error) *error = QString::fromUtf8(failure.what());
+        return false;
+    }
 }
 
 }
@@ -33,14 +30,13 @@ namespace PluginApi {
 
 bool ReadPackageModel(const QString &source, QString *model, QString *error)
 {
-    int result_code = 0;
-    QString message;
-    const QVariant result = EmbeddedPython::instance().runInPython(
-        "opf_source", "model_xml", { source }, &result_code, message, false, false);
-    if (error) *error = message;
-    if (result_code != 0) return false;
-    *model = result.toString();
-    return true;
+    try {
+        *model = OPFSourcePatch::ModelXml(source);
+        return true;
+    } catch (const std::exception &failure) {
+        if (error) *error = QString::fromUtf8(failure.what());
+        return false;
+    }
 }
 
 bool ApplyMetadataUpdate(const QString &source, const QJsonArray &entries,

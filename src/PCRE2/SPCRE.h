@@ -157,6 +157,9 @@ public:
                              const QList<std::pair<int, int>> &capture_groups_offsets,
                              PyObjectPtr fsp, QString &out);
 
+    // True when \F<name> runs a default replace function in C++ rather than user Python code.
+    static bool isBuiltinFunction(const QString &function_name);
+
 private:
     MatchInfo generateMatchInfo(PCRE2_SIZE* ovector, int ovector_count);
 

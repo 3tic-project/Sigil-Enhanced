@@ -31,11 +31,7 @@
  * exists, then a dialog is displayed informing the user
  * about it.
  *
- * Objects of this class should ALWAYS be created on the heap
- * and never explicitly deleted. The reason is that these objects
- * receive replies asynchronously from the web and need to persist.
- * Upon receiving and processing the network reply, the object
- * schedules its own deletion.
+ * The check is synchronous and bounded by the network timeout.
  */
 class UpdateChecker : QObject
 {

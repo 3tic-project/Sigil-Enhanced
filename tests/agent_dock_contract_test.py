@@ -324,5 +324,21 @@ require(
     and "&TextTab::SelectionChanged" in main_window,
     "book save state and editor selection changes must refresh Agent context",
 )
+markdown_cpp = (repo / "src/Agent/UI/AgentMarkdown.cpp").read_text(encoding="utf-8")
+require(
+    "MarkdownNoHTML" in markdown_cpp
+    and "setHtml" not in markdown_cpp
+    and "setHtml" not in dock_cpp
+    and "QDesktopServices" not in dock_cpp
+    and "setOpenExternalLinks(true)" not in dock_cpp,
+    "Agent Markdown must parse without raw HTML and never open links outside Sigil",
+)
+require(
+    "setLocationSource(m_AgentLocationSource.get())" in main_window
+    and "AgentDock::openLocationRequested" in main_window
+    and "m_AgentWorkspace->bookSessionId() != book_session_id" in main_window
+    and "GetResourceByIdentifier(resource_id)" in main_window,
+    "Agent location links must re-check the book session and resolve resources by identity",
+)
 
 print("agent dock contract ok")

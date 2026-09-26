@@ -16,8 +16,10 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QTimer>
+#include <QUuid>
 
 #include "Agent/Model/HistoryAssembler.h"
+#include "Agent/Model/AgentProviderPreset.h"
 #include "Agent/Model/StreamingJsonDecoder.h"
 
 namespace SigilAgent
@@ -81,7 +83,8 @@ QJsonObject makeHttpTrace(const QString &url,
 } // namespace
 
 OpenAICompatibleProvider::OpenAICompatibleProvider(OpenAIProviderConfig config) :
-    m_config(std::move(config))
+    m_config(std::move(config)),
+    m_fallbackSessionId(QUuid::createUuid().toString(QUuid::WithoutBraces))
 {
 }
 
@@ -117,6 +120,13 @@ void OpenAICompatibleProvider::recordTrace(const QJsonObject &trace)
 QJsonObject OpenAICompatibleProvider::buildChatBody(const ModelRequest &request)
 {
     HistoryAssembler assembler;
+    QList<ChatMessage> messages = request.messages;
+    if (request.reasoningProtocol != ReasoningProtocol::OpenRouter) {
+        for (ChatMessage &message : messages) {
+            message.reasoningDetails = QJsonArray();
+            message.hasReasoning = !message.reasoningContent.isEmpty();
+        }
+    }
     QJsonObject body;
     body.insert(QStringLiteral("model"), request.model);
     body.insert(QStringLiteral("stream"), request.stream);
@@ -126,7 +136,8 @@ QJsonObject OpenAICompatibleProvider::buildChatBody(const ModelRequest &request)
         });
     }
     body.insert(QStringLiteral("messages"),
-                assembler.toOpenAIMessages(request.messages, !request.tools.isEmpty()));
+                assembler.toOpenAIMessages(messages,
+                    !request.tools.isEmpty() || request.reasoningProtocol == ReasoningProtocol::OpenRouter));
     if (request.reasoningProtocol == ReasoningProtocol::DeepSeek) {
         if (request.thinking) {
             body.insert(QStringLiteral("thinking"), QJsonObject {
@@ -144,6 +155,8 @@ QJsonObject OpenAICompatibleProvider::buildChatBody(const ModelRequest &request)
         QJsonObject reasoning;
         if (!request.reasoningEffort.isEmpty()) {
             reasoning.insert(QStringLiteral("effort"), request.reasoningEffort);
+        } else {
+            reasoning.insert(QStringLiteral("enabled"), true);
         }
         reasoning.insert(QStringLiteral("exclude"), false);
         body.insert(QStringLiteral("reasoning"), reasoning);
@@ -175,9 +188,34 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
         turn.error = QStringLiteral("Model is not configured. Choose one in Preferences → Native Agent.");
         return turn;
     }
+    if (m_config.openCodeGo) {
+        if (outgoing.model.startsWith(QLatin1String("opencode-go/"), Qt::CaseInsensitive)) {
+            outgoing.model.remove(0, QStringLiteral("opencode-go/").size());
+        }
+        const QString endpoint = openCodeGoEndpointForModel(outgoing.model);
+        if (endpoint != QLatin1String("/chat/completions")) {
+            turn.error = QStringLiteral("OpenCode Go model %1 requires %2; this client supports Chat Completions only")
+                             .arg(outgoing.model, endpoint);
+            return turn;
+        }
+    }
     outgoing.thinking = m_config.thinking && request.thinking;
     outgoing.includeUsage = m_config.requestUsage && request.includeUsage;
     if (outgoing.reasoningEffort.isEmpty()) outgoing.reasoningEffort = m_config.reasoningEffort;
+    if (m_config.reasoningProtocol == ReasoningProtocol::OpenRouter
+        && !m_config.reasoningEffortSelectable) {
+        outgoing.reasoningEffort.clear();
+    }
+    if (m_config.reasoningProtocol == ReasoningProtocol::OpenRouter
+        && !m_config.supportedReasoningEfforts.isEmpty()
+        && !m_config.supportedReasoningEfforts.contains(outgoing.reasoningEffort,
+                                                        Qt::CaseInsensitive)) {
+        outgoing.reasoningEffort =
+            m_config.defaultReasoningEffort.compare(QLatin1String("none"), Qt::CaseInsensitive) != 0
+            && m_config.supportedReasoningEfforts.contains(
+                m_config.defaultReasoningEffort, Qt::CaseInsensitive)
+            ? m_config.defaultReasoningEffort : QString();
+    }
     outgoing.reasoningProtocol = m_config.reasoningProtocol;
 
     const QJsonObject body = buildChatBody(outgoing);
@@ -187,11 +225,17 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     http.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
     http.setRawHeader("Authorization", QByteArray("Bearer ") + m_config.apiKey.toUtf8());
     http.setRawHeader("Accept", "text/event-stream");
+    if (m_config.openCodeGo) {
+        http.setHeader(QNetworkRequest::UserAgentHeader, m_config.userAgent);
+        const QString session_id = outgoing.sessionId.isEmpty()
+            ? m_fallbackSessionId : outgoing.sessionId;
+        http.setRawHeader("x-opencode-session", session_id.toUtf8());
+    }
     if (!m_config.httpReferer.isEmpty()) {
         http.setRawHeader("HTTP-Referer", m_config.httpReferer.toUtf8());
     }
     if (!m_config.httpTitle.isEmpty()) {
-        http.setRawHeader("X-Title", m_config.httpTitle.toUtf8());
+        http.setRawHeader("X-OpenRouter-Title", m_config.httpTitle.toUtf8());
     }
 
     QElapsedTimer timer;
@@ -202,13 +246,26 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     QByteArray raw;
     qint64 first_byte_ms = -1;
     qint64 first_event_ms = -1;
-    const auto publish_deltas = [&decoder, &sink, &timer, &first_event_ms]() {
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    const int first_token_timeout_ms = qBound(100, m_config.firstTokenTimeoutMs,
+                                               MAX_FIRST_TOKEN_TIMEOUT_MS);
+    const int idle_timeout_ms = qBound(100, outgoing.timeoutMs, 120000);
+    bool saw_model_output = false;
+    bool timed_out = false;
+    bool timed_out_before_output = false;
+    const auto publish_deltas = [&decoder, &sink, &timer, &first_event_ms,
+                                 &timeout, &saw_model_output, idle_timeout_ms]() {
         const QList<StreamDelta> deltas = decoder.takeDeltas();
         for (const StreamDelta &delta : deltas) {
-            const bool meaningful = !delta.reasoning.isEmpty()
-                || !delta.content.isEmpty() || !delta.toolCalls.isEmpty()
-                || !delta.finishReason.isEmpty();
+            const bool has_output = !delta.reasoning.isEmpty()
+                || !delta.content.isEmpty() || !delta.toolCalls.isEmpty();
+            const bool meaningful = has_output || !delta.finishReason.isEmpty();
             if (meaningful && first_event_ms < 0) first_event_ms = timer.elapsed();
+            if (has_output) {
+                saw_model_output = true;
+                timeout.start(idle_timeout_ms);
+            }
             if (!delta.reasoning.isEmpty()) sink.onReasoningDelta(delta.reasoning);
             if (!delta.content.isEmpty()) sink.onContentDelta(delta.content);
             if (!delta.toolCalls.isEmpty()) sink.onToolCallsUpdated(delta.toolCalls);
@@ -240,15 +297,13 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     });
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
 
-    QTimer timeout;
-    timeout.setSingleShot(true);
-    bool timed_out = false;
-    const int timeout_ms = qBound(100, outgoing.timeoutMs, 120000);
-    QObject::connect(&timeout, &QTimer::timeout, reply, [reply, &timed_out]() {
+    QObject::connect(&timeout, &QTimer::timeout, reply,
+                     [reply, &timed_out, &timed_out_before_output, &saw_model_output]() {
         timed_out = true;
+        timed_out_before_output = !saw_model_output;
         reply->abort();
     });
-    timeout.start(timeout_ms);
+    timeout.start(first_token_timeout_ms);
 
     QTimer cancel_poll;
     cancel_poll.setInterval(50);
@@ -273,7 +328,9 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
         return turn;
     }
     if (timed_out) {
-        turn.error = QStringLiteral("Request timed out after %1 ms").arg(timeout_ms);
+        turn.error = timed_out_before_output
+            ? QStringLiteral("First model output timed out after %1 ms").arg(first_token_timeout_ms)
+            : QStringLiteral("Model stream stalled for %1 ms").arg(idle_timeout_ms);
         apply_timing();
         recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
                                   reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),

@@ -99,10 +99,12 @@ public:
     virtual BookOpResult updateToc(const QJsonArray &entries) = 0;
     virtual BookOpResult updateTocHierarchy(const TocEditTree &before,
                                             const TocEditTree &after) = 0;
-    virtual BookOpResult runLivePython(const QString &script, int timeout_ms)
+    virtual BookOpResult runLivePython(const QString &script, int timeout_ms,
+                                       const QString &mode = QStringLiteral("edit"))
     {
         Q_UNUSED(script);
         Q_UNUSED(timeout_ms);
+        Q_UNUSED(mode);
         return BookOpResult::error(QStringLiteral("LIVE_PYTHON_UNAVAILABLE"),
                                    QStringLiteral("Live Python v2 requires the Sigil GUI and the in-memory Book, not a snapshot."));
     }

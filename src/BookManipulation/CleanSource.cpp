@@ -31,6 +31,8 @@
 #include <QRegularExpressionMatch>
 
 #include "BookManipulation/CleanSource.h"
+#include "BookManipulation/XmlProcessor.h"
+#include "BookManipulation/XmlWellFormed.h"
 #include "BookManipulation/XhtmlDoc.h"
 #include "Parsers/GumboInterface.h"
 #include "Misc/SettingsStore.h"
@@ -76,6 +78,11 @@ QString CleanSource::PrettyPrint(const QString &source, bool keep_whitespace, co
 // Repair XML if needed and PrettyPrint using BeautifulSoup4
 QString CleanSource::XMLPrettyPrintBS4(const QString &source, const QString mtype)
 {
+    QString repaired;
+    if (XmlProcessor::RepairXML(source, mtype, &repaired)) {
+        return repaired;
+    }
+    // Malformed input needs the recovering lxml parser.
     int rv = 0;
     QString error_traceback;
     QList<QVariant> args;
@@ -108,51 +115,19 @@ QString CleanSource::ToValidXHTML(const QString &source, const QString &version)
 
 XhtmlDoc::WellFormedError CleanSource::WellFormedXMLCheck(const QString &source, const QString mtype)
 {
-    XhtmlDoc::WellFormedError error; 
-    int rv = 0;
-    QString error_traceback;
-    QList<QVariant> args;
-    args.append(QVariant(source));
-    args.append(QVariant(mtype));
-
-    QVariant res = EmbeddedPython::instance().runInPython( QString("xmlprocessor"),
-                                         QString("WellFormedXMLErrorCheck"),
-                                         args,
-                                         &rv,
-                                         error_traceback);    
-    if (rv != 0) {
-        Utility::DisplayStdWarningDialog(QString("error in xmlprocessor WellFormedXMLCheck: ") + QString::number(rv), 
-                                         error_traceback);
-        // an error happened during check, return well-formed as true
-        return error;
-    }
-    QStringList errors = res.toStringList();
-    error.line = errors.at(0).toInt();
-    error.column = errors.at(1).toInt();
-    error.message = errors.at(2);
+    Q_UNUSED(mtype);
+    const XmlWellFormed::Result result = XmlWellFormed::Check(source);
+    XhtmlDoc::WellFormedError error;
+    error.line = result.line;
+    error.column = result.column;
+    error.message = result.message;
     return error;
 }
 
 bool CleanSource::IsWellFormedXML(const QString &source, const QString mtype)
 {
-    int rv = 0;
-    QString error_traceback;
-    QList<QVariant> args;
-    args.append(QVariant(source));
-    args.append(QVariant(mtype));
-
-    QVariant res = EmbeddedPython::instance().runInPython( QString("xmlprocessor"),
-                                         QString("IsWellFormedXML"),
-                                         args,
-                                         &rv,
-                                         error_traceback);    
-    if (rv != 0) {
-        Utility::DisplayStdWarningDialog(QString("error in xmlprocessor IsWellFormedXML: ") + QString::number(rv), 
-                                         error_traceback);
-        // an error happened during check return well-formed as true
-        return true;
-    }
-    return res.toBool();
+    Q_UNUSED(mtype);
+    return XmlWellFormed::Check(source).line == -1;
 }
 
 QString CleanSource::ProcessXML(const QString &source, const QString mtype)

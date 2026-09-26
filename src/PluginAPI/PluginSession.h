@@ -15,6 +15,7 @@
 #include <QPointer>
 #include <QProcess>
 #include <QSet>
+#include <QStringConverter>
 #include <QUuid>
 
 #include <memory>
@@ -61,7 +62,16 @@ public:
     void Cancel();
     void setQuiet(bool quiet);
     void setSnippetPath(const QString &path);
+    void setSnippetReadOnly(bool read_only);
     QString CapturedOutput() const;
+    QString CapturedStdout() const;
+    QString CapturedStderr() const;
+    qint64 CapturedStdoutLength() const;
+    qint64 CapturedStderrLength() const;
+    QString FinishMessage() const;
+    int ExitCode() const;
+    quint64 BookRevision() const;
+    bool SnippetMutated() const;
 
 signals:
     void Ended();
@@ -140,6 +150,8 @@ private:
     QJsonObject EditorEventState() const;
     QString ResolveInterpreter() const;
     void Finish(const QString &status, const QString &message = QString());
+    void CaptureProcessOutput();
+    void ScheduleEnded();
     void CleanServer();
 
     Plugin m_Plugin;
@@ -185,6 +197,16 @@ private:
     QPointer<PluginSessionConsole> m_Console;
     bool m_Quiet = false;
     QString m_CapturedOutput;
+    QString m_CapturedStdout;
+    QString m_CapturedStderr;
+    qint64 m_CapturedStdoutLength = 0;
+    qint64 m_CapturedStderrLength = 0;
+    QStringDecoder m_StdoutDecoder { QStringDecoder::Utf8 };
+    QStringDecoder m_StderrDecoder { QStringDecoder::Utf8 };
+    QString m_FinishMessage;
+    int m_ExitCode = -1;
+    bool m_SnippetReadOnly = false;
+    bool m_SnippetMutated = false;
     QString m_SnippetPath;
 };
 

@@ -2,6 +2,7 @@
 
 #include <QFileInfo>
 #include <QFile>
+#include <QElapsedTimer>
 #include <QRegularExpression>
 #include <QSignalMapper>
 #include <QLabel>
@@ -14,6 +15,8 @@
 #include <stdexcept>
 
 #include "Agent/Execution/SigilBookWorkspace.h"
+#include "Agent/Tools/BookTools.h"
+#include "Agent/Tools/ToolRegistry.h"
 #include "Agent/Core/PromptAssembler.h"
 #include "Agent/UI/AgentDock.h"
 #include "BookManipulation/Book.h"
@@ -65,6 +68,80 @@ int main(int argc, char **argv)
         SettingsStore settings;
         settings.setPreserveOPFSource(true);
         WebProfileMgr::instance();
+
+        const QString proofSample = qEnvironmentVariable("SIGIL_PROOF_SAMPLE_EPUB");
+        if (!proofSample.isEmpty()) {
+            QTemporaryDir sampleCopy;
+            Require(sampleCopy.isValid(), "Could not create a private sample copy");
+            const QString copiedPath = sampleCopy.filePath(QStringLiteral("proof-sample.epub"));
+            Require(QFile::copy(proofSample, copiedPath), "Could not copy the private sample");
+            MainWindow sampleWindow(copiedPath);
+            const QSharedPointer<Book> sampleBook = sampleWindow.GetCurrentBook();
+            SigilAgent::SigilBookWorkspace sampleWorkspace;
+            sampleWorkspace.setBook(sampleBook);
+            SigilAgent::ToolRegistry sampleTools;
+            SigilAgent::registerBookTools(&sampleTools, &sampleWorkspace);
+            const quint64 initialRevision = sampleWorkspace.revision();
+            const SigilAgent::ToolResult search = sampleTools.find(
+                QStringLiteral("book.search"))->execute(QJsonObject {
+                    { QStringLiteral("query"), QStringLiteral("伊月") },
+                    { QStringLiteral("limit"), 50 }
+                });
+            Require(search.ok, "Private sample search failed");
+            int searchPages = 1;
+            int searchReturned = search.data.value(QStringLiteral("returned_count")).toInt();
+            QJsonObject searchPage = search.data;
+            while (searchPage.value(QStringLiteral("has_more")).toBool()) {
+                const SigilAgent::ToolResult next = sampleTools.find(
+                    QStringLiteral("book.search"))->execute(QJsonObject {
+                        { QStringLiteral("query"), QStringLiteral("伊月") },
+                        { QStringLiteral("limit"), 50 },
+                        { QStringLiteral("cursor"), searchPage.value(QStringLiteral("next_cursor")) }
+                    });
+                Require(next.ok, "Private sample search continuation failed");
+                searchPage = next.data;
+                searchReturned += searchPage.value(QStringLiteral("returned_count")).toInt();
+                ++searchPages;
+            }
+            Require(searchReturned > 50
+                        && searchReturned == search.data.value(QStringLiteral("total_count")).toInt(),
+                    "Private sample search did not reproduce and complete the old 50-hit limit");
+
+            QElapsedTimer auditTimer;
+            auditTimer.start();
+            const SigilAgent::ToolResult firstAudit = sampleTools.find(
+                QStringLiteral("proof.audit"))->execute(QJsonObject {
+                    { QStringLiteral("limit"), 50 }
+                });
+            Require(firstAudit.ok, "Private sample proof audit failed");
+            const qint64 firstAuditMs = auditTimer.elapsed();
+            int auditPages = 1;
+            int auditReturned = firstAudit.data.value(QStringLiteral("returned_count")).toInt();
+            QJsonObject auditPage = firstAudit.data;
+            while (auditPage.value(QStringLiteral("has_more")).toBool()) {
+                const SigilAgent::ToolResult next = sampleTools.find(
+                    QStringLiteral("proof.audit"))->execute(QJsonObject {
+                        { QStringLiteral("limit"), 50 },
+                        { QStringLiteral("cursor"), auditPage.value(QStringLiteral("next_cursor")) }
+                    });
+                Require(next.ok, "Private sample proof continuation failed");
+                auditPage = next.data;
+                auditReturned += auditPage.value(QStringLiteral("returned_count")).toInt();
+                ++auditPages;
+            }
+            Require(auditReturned == firstAudit.data.value(QStringLiteral("total_count")).toInt()
+                        && sampleWorkspace.revision() == initialRevision
+                        && !sampleBook->IsModified(),
+                    "Private sample read-only audit changed the book or lost a page");
+            std::cout << "Private sample: search=" << searchReturned
+                      << " in " << searchPages << " page(s), proof=" << auditReturned
+                      << " in " << auditPages << " page(s), XHTML="
+                      << firstAudit.data.value(QStringLiteral("scanned_resources")).toInt()
+                      << ", visible UTF-16 units="
+                      << firstAudit.data.value(QStringLiteral("visible_characters")).toInt()
+                      << ", first audit=" << firstAuditMs << " ms\n";
+            return 0;
+        }
 
         MainWindow window(QString::fromLocal8Bit(argv[2]));
         const QSharedPointer<Book> book = window.GetCurrentBook();
@@ -155,6 +232,27 @@ int main(int argc, char **argv)
                     && pastEndFragment.data.value(QStringLiteral("length")).toInt() == 0
                     && !pastEndFragment.data.value(QStringLiteral("truncated")).toBool(),
                 "Sigil fragment offsets past EOF did not normalize to an empty tail");
+        SigilAgent::ToolRegistry liveTools;
+        SigilAgent::registerBookTools(&liveTools, &workspace);
+        const quint64 readRevision = workspace.revision();
+        const SigilAgent::ToolResult liveSearch = liveTools.find(QStringLiteral("book.search"))->execute(QJsonObject {
+            { QStringLiteral("query"), QStringLiteral("Original paragraph") },
+            { QStringLiteral("count_only"), true }
+        });
+        const SigilAgent::ToolResult liveInvalidRegex = liveTools.find(QStringLiteral("book.search_regex"))->execute(QJsonObject {
+            { QStringLiteral("pattern"), QStringLiteral("(") }
+        });
+        const SigilAgent::ToolResult liveProof = liveTools.find(QStringLiteral("proof.audit"))->execute(QJsonObject {
+            { QStringLiteral("scope"), QJsonObject {
+                { QStringLiteral("kind"), QStringLiteral("file") },
+                { QStringLiteral("resource_id"), chapter->GetIdentifier() }
+            } }
+        });
+        Require(liveSearch.ok && liveSearch.data.value(QStringLiteral("total_count")).toInt() >= 1
+                    && liveInvalidRegex.code == QStringLiteral("REGEX_INVALID")
+                    && liveProof.ok && liveProof.data.value(QStringLiteral("scanned_resources")).toInt() == 1
+                    && workspace.revision() == readRevision && !book->IsModified(),
+                "Live Book search and audit must be read-only and report invalid regex explicitly");
         window.SelectResources(QList<Resource *> { chapter, nav });
         app.processEvents();
         auto *selectedFilesChip = agentDock->findChild<QToolButton *>(

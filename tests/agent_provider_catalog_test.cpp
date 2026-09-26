@@ -91,6 +91,17 @@ int main(int argc, char *argv[])
             "OpenRouter must use the reasoning object");
     Require(reasoningProtocolFor(AgentProviderKind::OpenCodeGo, QString()) == ReasoningProtocol::None,
             "OpenCode Go must not send DeepSeek thinking fields");
+    Require(openCodeGoEndpointForModel(QStringLiteral("glm-5.3"))
+                == QStringLiteral("/chat/completions")
+                && openCodeGoEndpointForModel(QStringLiteral("grok-4.7"))
+                    == QStringLiteral("/responses")
+                && openCodeGoEndpointForModel(QStringLiteral("qwen3.8-max"))
+                    == QStringLiteral("/messages")
+                && openCodeGoEndpointForModel(QStringLiteral("minimax-m3"))
+                    == QStringLiteral("/messages")
+                && openCodeGoEndpointForModel(QStringLiteral("opencode-go/grok-4.7"))
+                    == QStringLiteral("/responses"),
+            "OpenCode Go documented model families must retain their API protocols");
 
     const AgentProviderReadiness ready = providerReadiness(
         AgentProviderKind::Custom,
@@ -164,7 +175,8 @@ int main(int argc, char *argv[])
         "id": "deepseek/deepseek-chat",
         "name": "DeepSeek Chat",
         "context_length": 64000,
-        "supported_parameters": ["tools", "reasoning", "temperature"]
+        "supported_parameters": ["tools", "reasoning", "temperature"],
+        "reasoning": {"mandatory": true, "supported_efforts": ["high", "low"], "default_effort": "high"}
       }]
     })"));
     Require(openrouter.error.isEmpty() && openrouter.models.size() == 1, "OpenRouter /models list must parse");
@@ -173,17 +185,43 @@ int main(int argc, char *argv[])
     Require(openrouter.models.first().contextLength == 64000, "OpenRouter context_length must be kept");
     Require(openrouter.models.first().supportedParameters.contains(QStringLiteral("tools")),
             "raw supported_parameters must be retained");
+    Require(openrouter.models.first().reasoningMandatory
+                && openrouter.models.first().reasoningEffortSelectable
+                && openrouter.models.first().supportedReasoningEfforts
+                    == QStringList({QStringLiteral("high"), QStringLiteral("low")})
+                && openrouter.models.first().defaultReasoningEffort == QStringLiteral("high"),
+            "OpenRouter reasoning capabilities and default effort must be parsed");
+    const CatalogModel no_effort_model = AgentModelCatalog::modelFromJson(QJsonObject {
+        { QStringLiteral("id"), QStringLiteral("no-effort-model") },
+        { QStringLiteral("reasoning"), QJsonObject {
+            { QStringLiteral("mandatory"), true }
+        } }
+    });
+    Require(no_effort_model.reasoning && !no_effort_model.reasoningEffortSelectable,
+            "OpenRouter models without supported_efforts must not receive an effort selector");
 
     const CatalogResult opencode = AgentModelCatalog::parseModelsJson(QByteArray(
         R"({"models":[{"id":"glm-5.1","name":"GLM-5.1","context_length":202800}]})"));
     Require(opencode.error.isEmpty() && opencode.models.first().id == QStringLiteral("glm-5.1"),
             "OpenCode-style models array must parse");
+    CatalogResult go_catalog = AgentModelCatalog::parseModelsJson(QByteArray(
+        R"({"data":[{"id":"grok-4.7"},{"id":"glm-5.1"},{"id":"qwen3.8-max"}]})"));
+    AgentModelCatalog::applyProviderDefaults(&go_catalog, AgentProviderKind::OpenCodeGo);
+    Require(go_catalog.models.at(0).apiEndpoint == QStringLiteral("/responses")
+                && go_catalog.models.at(1).apiEndpoint == QStringLiteral("/chat/completions")
+                && go_catalog.models.at(2).apiEndpoint == QStringLiteral("/messages"),
+            "OpenCode Go catalog must label protocol-specific models");
 
     AgentModelCatalog::applyProviderDefaults(&openrouter, AgentProviderKind::OpenRouter);
     CatalogResult cached = AgentModelCatalog::fromCacheJson(
         AgentModelCatalog::toCacheJson(openrouter, AgentProviderKind::OpenRouter));
     Require(cached.models.size() == 1 && cached.models.first().id == QStringLiteral("deepseek/deepseek-chat"),
             "catalog cache must round-trip model ids");
+    Require(cached.models.first().reasoningMandatory
+                && cached.models.first().reasoningEffortSelectable
+                && cached.models.first().supportedReasoningEfforts.size() == 2
+                && cached.models.first().defaultReasoningEffort == QStringLiteral("high"),
+            "catalog cache must round-trip OpenRouter reasoning metadata");
 
     ModelRequest request;
     request.model = QStringLiteral("deepseek-chat");
@@ -209,6 +247,13 @@ int main(int argc, char *argv[])
     Require(openrouter_body.value(QStringLiteral("reasoning")).toObject().value(QStringLiteral("effort")).toString()
                 == QStringLiteral("medium"),
             "OpenRouter body must send reasoning.effort");
+    request.reasoningEffort.clear();
+    const QJsonObject default_reasoning_body = OpenAICompatibleProvider::buildChatBody(request);
+    Require(default_reasoning_body.value(QStringLiteral("reasoning")).toObject()
+                .value(QStringLiteral("enabled")).toBool()
+                && !default_reasoning_body.value(QStringLiteral("reasoning")).toObject()
+                    .contains(QStringLiteral("effort")),
+            "OpenRouter must enable reasoning without forcing an unavailable effort level");
 
     request.reasoningProtocol = ReasoningProtocol::None;
     request.maxOutputTokens = 8;
@@ -590,6 +635,121 @@ int main(int argc, char *argv[])
                 && !probe_body.contains(QStringLiteral("tools")),
             "connection probe must be a tiny no-tools request without optional extensions");
 
+    probe_request.clear();
+    OpenAIProviderConfig go_config = probe_config;
+    go_config.model = QStringLiteral("opencode-go/glm-5.1");
+    go_config.reasoningProtocol = ReasoningProtocol::None;
+    go_config.openCodeGo = true;
+    go_config.userAgent = agentUserAgent();
+    QFutureWatcher<AgentConnectionProbeResult> go_watcher;
+    QEventLoop go_loop;
+    QObject::connect(&go_watcher, &QFutureWatcher<AgentConnectionProbeResult>::finished,
+                     &go_loop, &QEventLoop::quit);
+    go_watcher.setFuture(QtConcurrent::run([go_config]() {
+        return probeAgentConnection(go_config, 2000);
+    }));
+    go_loop.exec();
+    const int go_header_end = probe_request.indexOf("\r\n\r\n");
+    const QJsonObject go_body = QJsonDocument::fromJson(
+        probe_request.mid(go_header_end + 4)).object();
+    Require(go_watcher.result().ok
+                && probe_request.contains("User-Agent: Sigil-Enhanced-Native-Agent/1.0")
+                && QRegularExpression(QStringLiteral("(?im)^x-opencode-session: [0-9a-f-]{36}\\r?$"))
+                    .match(QString::fromLatin1(probe_request)).hasMatch()
+                && go_body.value(QStringLiteral("model")).toString() == QStringLiteral("glm-5.1"),
+            "OpenCode Go probe must send its client identity, session and bare API model id");
+    probe_request.clear();
+    QFutureWatcher<ModelTurn> go_session_watcher;
+    QEventLoop go_session_loop;
+    QObject::connect(&go_session_watcher, &QFutureWatcher<ModelTurn>::finished,
+                     &go_session_loop, &QEventLoop::quit);
+    go_session_watcher.setFuture(QtConcurrent::run([go_config]() {
+        OpenAICompatibleProvider provider(go_config);
+        ModelRequest request;
+        request.model = QStringLiteral("glm-5.1");
+        request.sessionId = QStringLiteral("conversation-123");
+        ChatMessage message;
+        message.role = QStringLiteral("user");
+        message.content = QStringLiteral("OK");
+        request.messages.append(message);
+        NullSink sink;
+        return provider.stream(request, sink);
+    }));
+    go_session_loop.exec();
+    Require(go_session_watcher.result().error.isEmpty()
+                && probe_request.contains("x-opencode-session: conversation-123"),
+            "OpenCode Go must forward the conversation's stable session id");
+    OpenAICompatibleProvider unsupported_go(go_config);
+    ModelRequest unsupported_request;
+    unsupported_request.model = QStringLiteral("qwen3.8-max");
+    NullSink unsupported_sink;
+    Require(unsupported_go.stream(unsupported_request, unsupported_sink).error
+                .contains(QStringLiteral("/messages")),
+            "OpenCode Go must report a non-Chat-Completions model before posting");
+
+    probe_request.clear();
+    OpenAIProviderConfig effort_config = probe_config;
+    effort_config.reasoningProtocol = ReasoningProtocol::OpenRouter;
+    effort_config.supportedReasoningEfforts = {QStringLiteral("high"), QStringLiteral("low")};
+    effort_config.defaultReasoningEffort = QStringLiteral("high");
+    effort_config.httpReferer = agentHttpReferer();
+    effort_config.httpTitle = agentHttpTitle();
+    QFutureWatcher<ModelTurn> effort_watcher;
+    QEventLoop effort_loop;
+    QObject::connect(&effort_watcher, &QFutureWatcher<ModelTurn>::finished,
+                     &effort_loop, &QEventLoop::quit);
+    effort_watcher.setFuture(QtConcurrent::run([effort_config]() {
+        OpenAICompatibleProvider provider(effort_config);
+        ModelRequest request;
+        request.model = effort_config.model;
+        request.reasoningEffort = QStringLiteral("medium");
+        ChatMessage message;
+        message.role = QStringLiteral("user");
+        message.content = QStringLiteral("OK");
+        request.messages.append(message);
+        NullSink sink;
+        return provider.stream(request, sink);
+    }));
+    effort_loop.exec();
+    const int effort_header_end = probe_request.indexOf("\r\n\r\n");
+    const QJsonObject effort_body = QJsonDocument::fromJson(
+        probe_request.mid(effort_header_end + 4)).object();
+    Require(effort_watcher.result().error.isEmpty()
+                && effort_body.value(QStringLiteral("reasoning")).toObject()
+                    .value(QStringLiteral("effort")).toString() == QStringLiteral("high")
+                && probe_request.contains("X-OpenRouter-Title: Sigil-Enhanced Native Agent")
+                && probe_request.contains("HTTP-Referer: "),
+            "OpenRouter must use the advertised effort and current attribution headers");
+
+    probe_request.clear();
+    effort_config.supportedReasoningEfforts = {QStringLiteral("low"), QStringLiteral("none")};
+    effort_config.defaultReasoningEffort = QStringLiteral("none");
+    QFutureWatcher<ModelTurn> none_default_watcher;
+    QEventLoop none_default_loop;
+    QObject::connect(&none_default_watcher, &QFutureWatcher<ModelTurn>::finished,
+                     &none_default_loop, &QEventLoop::quit);
+    none_default_watcher.setFuture(QtConcurrent::run([effort_config]() {
+        OpenAICompatibleProvider provider(effort_config);
+        ModelRequest request;
+        request.model = effort_config.model;
+        request.reasoningEffort = QStringLiteral("medium");
+        ChatMessage message;
+        message.role = QStringLiteral("user");
+        message.content = QStringLiteral("OK");
+        request.messages.append(message);
+        NullSink sink;
+        return provider.stream(request, sink);
+    }));
+    none_default_loop.exec();
+    const int none_header_end = probe_request.indexOf("\r\n\r\n");
+    const QJsonObject none_reasoning = QJsonDocument::fromJson(
+        probe_request.mid(none_header_end + 4)).object()
+        .value(QStringLiteral("reasoning")).toObject();
+    Require(none_default_watcher.result().error.isEmpty()
+                && none_reasoning.value(QStringLiteral("enabled")).toBool()
+                && !none_reasoning.contains(QStringLiteral("effort")),
+            "Explicit thinking must not fall back to a model's none default effort");
+
     QTcpServer timing_server;
     Require(timing_server.listen(QHostAddress::LocalHost, 0),
             "local response timing server must listen");
@@ -621,7 +781,7 @@ int main(int argc, char *argv[])
                         ": keepalive\n\n");
                     socket->flush();
                 });
-                QTimer::singleShot(100, socket, [socket]() {
+                QTimer::singleShot(260, socket, [socket]() {
                     socket->write(
                         "data: {\"choices\":[{\"delta\":{\"content\":\"OK\"},"
                         "\"finish_reason\":\"stop\"}]}");
@@ -639,11 +799,12 @@ int main(int argc, char *argv[])
     timing_config.model = QStringLiteral("timing-model");
     timing_config.reasoningProtocol = ReasoningProtocol::None;
     timing_config.requestUsage = false;
+    timing_config.firstTokenTimeoutMs = 500;
     OpenAICompatibleProvider timing_provider(timing_config);
     ModelRequest timing_model_request;
     timing_model_request.model = timing_config.model;
     timing_model_request.includeUsage = false;
-    timing_model_request.timeoutMs = 2000;
+    timing_model_request.timeoutMs = 100;
     ChatMessage timing_user;
     timing_user.role = QStringLiteral("user");
     timing_user.content = QStringLiteral("hello");
@@ -657,10 +818,10 @@ int main(int argc, char *argv[])
             "a final SSE event without a trailing newline must reach both the turn and sink");
     Require(timed_turn.timing.firstByteMs >= 15
                 && timed_turn.timing.firstByteMs < 1000
-                && timed_turn.timing.firstEventMs >= 70
+                && timed_turn.timing.firstEventMs >= 220
                 && timed_turn.timing.firstEventMs < 1500
                 && timed_turn.timing.firstEventMs > timed_turn.timing.firstByteMs,
-            "response timing must distinguish an early keepalive byte from the first model event");
+            "the first-output limit must outlast the stream idle limit and ignore keepalive bytes");
     const QJsonArray timing_traces = timing_provider.debugTraces();
     const QJsonObject timing_trace = timing_traces.isEmpty()
         ? QJsonObject() : timing_traces.at(timing_traces.size() - 1).toObject();
@@ -669,6 +830,69 @@ int main(int argc, char *argv[])
                 && timing_trace.value(QStringLiteral("first_model_event_ms")).toInteger()
                     == timed_turn.timing.firstEventMs,
             "HTTP traces must retain the same safe response latency breakdown");
+
+    Require(OpenAIProviderConfig().firstTokenTimeoutMs == 180000,
+            "first model output timeout must default to three minutes");
+    QTcpServer keepalive_server;
+    Require(keepalive_server.listen(QHostAddress::LocalHost, 0),
+            "local keepalive server must listen");
+    QObject::connect(&keepalive_server, &QTcpServer::newConnection,
+                     [&keepalive_server]() {
+        while (keepalive_server.hasPendingConnections()) {
+            QTcpSocket *socket = keepalive_server.nextPendingConnection();
+            QObject::connect(socket, &QTcpSocket::readyRead, socket, [socket]() {
+                socket->readAll();
+                if (socket->property("responseSent").toBool()) return;
+                socket->setProperty("responseSent", true);
+                socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n\r\n: keepalive\n\n");
+                socket->flush();
+            });
+        }
+    });
+    OpenAIProviderConfig first_token_config = timing_config;
+    first_token_config.baseUrl = QStringLiteral("http://127.0.0.1:%1/chat/completions")
+                                      .arg(keepalive_server.serverPort());
+    first_token_config.firstTokenTimeoutMs = 160;
+    ModelRequest delayed_request = timing_model_request;
+    delayed_request.timeoutMs = 1000;
+    OpenAICompatibleProvider first_token_provider(first_token_config);
+    QElapsedTimer first_token_timer;
+    first_token_timer.start();
+    NullSink first_token_sink;
+    const ModelTurn first_token_turn = first_token_provider.stream(delayed_request, first_token_sink);
+    Require(first_token_turn.error.contains(QStringLiteral("First model output timed out after 160 ms"))
+                && first_token_turn.timing.firstByteMs >= 0
+                && first_token_turn.timing.firstEventMs < 0
+                && first_token_timer.elapsed() < 1000,
+            "headers and SSE keepalives must not satisfy the first model output timeout");
+
+    QTcpServer stalled_server;
+    Require(stalled_server.listen(QHostAddress::LocalHost, 0),
+            "local stalled stream server must listen");
+    QObject::connect(&stalled_server, &QTcpServer::newConnection,
+                     [&stalled_server]() {
+        while (stalled_server.hasPendingConnections()) {
+            QTcpSocket *socket = stalled_server.nextPendingConnection();
+            QObject::connect(socket, &QTcpSocket::readyRead, socket, [socket]() {
+                socket->readAll();
+                if (socket->property("responseSent").toBool()) return;
+                socket->setProperty("responseSent", true);
+                socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n\r\n"
+                              "data: {\"choices\":[{\"delta\":{\"content\":\"A\"}}]}\n\n");
+                socket->flush();
+            });
+        }
+    });
+    OpenAIProviderConfig stalled_config = timing_config;
+    stalled_config.baseUrl = QStringLiteral("http://127.0.0.1:%1/chat/completions")
+                                 .arg(stalled_server.serverPort());
+    OpenAICompatibleProvider stalled_provider(stalled_config);
+    delayed_request.timeoutMs = 130;
+    RecordingSink stalled_sink;
+    const ModelTurn stalled_turn = stalled_provider.stream(delayed_request, stalled_sink);
+    Require(stalled_sink.content == QStringLiteral("A")
+                && stalled_turn.error.contains(QStringLiteral("Model stream stalled for 130 ms")),
+            "after first output, a stalled stream must use the separate idle timeout");
 
     QTcpServer error_server;
     Require(error_server.listen(QHostAddress::LocalHost, 0),

@@ -44,9 +44,11 @@ private:
     void parsePayload(const QJsonObject &payload);
     void parseUsage(const QJsonObject &usage);
     void applyToolCallDelta(const QJsonArray &tool_calls);
+    void appendReasoningDetails(const QJsonArray &details);
 
     QByteArray m_buffer;
     QString m_reasoning;
+    QJsonArray m_reasoningDetails;
     QString m_content;
     QString m_finishReason;
     QString m_error;

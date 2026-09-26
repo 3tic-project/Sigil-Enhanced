@@ -447,6 +447,8 @@ BookOpResult MemoryBookWorkspace::readFragment(const QString &resource_id, int o
         { QStringLiteral("continuation"), truncated ? start + fragment.size() : QJsonValue() },
         { QStringLiteral("hash"), sha256Text(text) },
         { QStringLiteral("revision"), static_cast<qint64>(resource ? resource->revision : staged_rev) },
+        { QStringLiteral("resource_revision"), static_cast<qint64>(resource ? resource->revision : staged_rev) },
+        { QStringLiteral("book_revision"), static_cast<qint64>(m_revision) },
         { QStringLiteral("text"), fragment }
     };
     addFragmentLineMetadata(&data, text, start, fragment.size());

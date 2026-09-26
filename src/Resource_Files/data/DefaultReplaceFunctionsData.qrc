@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/replace_functions">
+        <file alias="defaults.json" compress="0">default_replace_functions.json</file>
+    </qresource>
+</RCC>

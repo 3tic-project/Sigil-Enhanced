@@ -73,6 +73,8 @@ QString providerConfigurationFingerprint(AgentProviderKind kind,
 
 QString agentHttpReferer();
 QString agentHttpTitle();
+QString agentUserAgent();
+QString openCodeGoEndpointForModel(const QString &model);
 
 } // namespace SigilAgent
 

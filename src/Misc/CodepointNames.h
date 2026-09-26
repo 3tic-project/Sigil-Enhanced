@@ -54,8 +54,6 @@ private:
     CodepointNames();
     ~CodepointNames() = default;
 
-    void SetNameCache();
-
     QHash<int, QString> m_NameCache;
     
 };

@@ -40,6 +40,19 @@ def verify_rename(path, _source, members):
         assert "src='a.xhtml'" not in navigation
         assert archive.read("mimetype") == members["mimetype"], "unrelated mimetype changed"
 
+    generated = pathlib.Path(str(path) + ".ncx.epub.generated.epub")
+    if generated.exists():
+        with zipfile.ZipFile(generated) as archive:
+            names = set(archive.namelist())
+            assert "OEBPS/toc.ncx" in names, "generated NCX is missing from EPUB"
+            ncx = archive.read("OEBPS/toc.ncx").decode("utf-8")
+            assert '<content src="a.xhtml" />' in ncx
+            opf = ET.fromstring(archive.read("OEBPS/content.opf"))
+            items = [node for node in opf.iter() if local_name(node.tag) == "item"]
+            assert any(node.attrib.get("href") == "toc.ncx" for node in items), (
+                "generated NCX is absent from the OPF manifest"
+            )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -57,5 +70,5 @@ if __name__ == "__main__":
             ("undo",),
             ("conflict",),
             ("write-failure",),
-        ],
+        ] + ([("ncx",)] if args.fixture == "epub3" else []),
     )

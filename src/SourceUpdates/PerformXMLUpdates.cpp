@@ -26,6 +26,7 @@
 #include <QStringList>
 
 #include "Misc/Utility.h"
+#include "BookManipulation/XmlProcessor.h"
 #include "SourceUpdates/PerformXMLUpdates.h"
 #include "sigil_constants.h"
 
@@ -86,6 +87,14 @@ QString PerformXMLUpdates::operator()()
         Utility::DisplayStdWarningDialog(QString("Unsupported XML media-type: ") + m_MediaType); 
         // make no changes
         return newsource;
+    }
+
+    QString updated;
+    const bool native = routine == QLatin1String("performSMILUpdates")
+        ? XmlProcessor::PerformSMILUpdates(newsource, m_newbookpath, m_CurrentPath, m_XMLUpdates, &updated)
+        : XmlProcessor::PerformPageMapUpdates(newsource, m_newbookpath, m_CurrentPath, m_XMLUpdates, &updated);
+    if (native) {
+        return updated;
     }
 
     QVariant res = EmbeddedPython::instance().runInPython( QString("xmlprocessor"),

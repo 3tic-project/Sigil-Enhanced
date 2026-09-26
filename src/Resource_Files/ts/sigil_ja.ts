@@ -27301,6 +27301,27 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>SigilAgent::AgentDock</name>
+    <message><source>A task restore point is available on the applied card.</source><translation>適用済みカードからタスクの復元ポイントを利用できます。</translation></message>
+    <message><source>Affected resources: %1</source><translation>影響を受けたリソース：%1</translation></message>
+    <message><source>Last committed book revision: %1</source><translation>最後にコミットされたブックのリビジョン：%1</translation></message>
+    <message><source>Partially applied</source><translation>一部適用済み</translation></message>
+    <message><source>The Agent did not save the EPUB. Completion and validation are unconfirmed.</source><translation>Agent は EPUB を保存していません。完了状態と検証結果は未確認です。</translation></message>
+    <message><source>The run stopped after %1 transaction(s) were applied during this run.</source><translation>この実行では %1 件のトランザクションを適用した後に停止しました。</translation></message>
+    <message><source>To continue, re-read the affected book and remaining work before making more edits.</source><translation>続行する前に、対象のブックと残りの作業を再確認してから編集してください。</translation></message>
+    <message><source>%1 changed after this answer, so source line %2 may no longer be the cited text.</source><translation>%1 はこの回答の後に変更されたため、ソース %2 行目は引用したテキストではない可能性があります。</translation></message>
+    <message><source>%1 is no longer in this book.</source><translation>%1 はこの書籍にもうありません。</translation></message>
+    <message><source>Copy</source><translation>コピー</translation></message>
+    <message><source>Copy original text</source><translation>原文をコピー</translation></message>
+    <message><source>Copy the original Markdown text</source><translation>元の Markdown テキストをコピー</translation></message>
+    <message><source>Dismiss</source><translation>閉じる</translation></message>
+    <message><source>No book is available for this link.</source><translation>このリンクに使える書籍がありません。</translation></message>
+    <message><source>Open %1 at source line %2 in Code View</source><translation>コードビューで %1 のソース %2 行目を開く</translation></message>
+    <message><source>Open %1 in Code View</source><translation>コードビューで %1 を開く</translation></message>
+    <message><source>Open file</source><translation>ファイルを開く</translation></message>
+    <message><source>This link belongs to a book that is no longer open.</source><translation>このリンクは、すでに閉じられた書籍のものです。</translation></message>
+    <message><source>This link is no longer available.</source><translation>このリンクはもう使用できません。</translation></message>
+    <message><source>This message is longer than %1 characters, so it is shown as plain text.</source><translation>このメッセージは %1 文字を超えているため、プレーンテキストで表示します。</translation></message>
+    <message><source>[image not loaded]</source><translation>[画像は読み込まれていません]</translation></message>
     <message><source>Agent</source><translation>エージェント</translation></message>
     <message><source>Answer</source><translation>回答</translation></message>
     <message><source>Applied: %1</source><translation>適用済み：%1</translation></message>
@@ -27411,8 +27432,9 @@ Continue using the requested filename?</source>
     <message><source>Run token usage: not reported by provider</source><translation>実行全体のトークン使用量：プロバイダーからの報告なし</translation></message>
     <message><source>Run token usage: input %1 · output %2 · total %3</source><translation>実行全体のトークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
     <message><source>Run token usage (%1 of %2 requests reported): input %3 · output %4 · total %5</source><translation>実行全体のトークン使用量（%2 件中 %1 件のリクエストが報告済み）：入力 %3 · 出力 %4 · 合計 %5</translation></message>
-    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB · current %6 KiB (always retained)</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · %3 ターンを省略 · 過去 %4/%5 KiB · 現在 %6 KiB（常に保持）</translation></message>
-    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB · current %4 KiB (always retained)</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · 過去ターンの予算は無制限 · 過去 %3 KiB · 現在 %4 KiB（常に保持）</translation></message>
+    <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · %3 ターンを省略 · 過去 %4/%5 KiB</translation></message>
+    <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · 過去ターンの予算は無制限 · 過去 %3 KiB</translation></message>
+    <message><source>Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4</source><translation>現在の実行履歴：%1/%2 KiB を送信 · 予算 %3 KiB · 省略したメッセージ：%4 件</translation></message>
     <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>リクエストツール：%2 個中 %1 個を公開 · モードポリシーで %3 個を非表示 · スキーマ %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>実行全体の使用量詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完全な EPUBCheck：未実行。</translation></message>
@@ -27544,6 +27566,10 @@ Continue using the requested filename?</source>
 </context>
 <context>
     <name>AgentSettingsWidget</name>
+    <message><source>Requires %1; this client supports Chat Completions only</source><translation>%1 が必要です。このクライアントは Chat Completions のみに対応しています</translation></message>
+    <message><source>default effort: %1</source><translation>既定の推論強度：%1</translation></message>
+    <message><source>reasoning efforts: %1</source><translation>対応する推論強度：%1</translation></message>
+    <message><source>reasoning required</source><translation>推論が必要</translation></message>
     <message><source>%1 context tokens</source><translation>コンテキスト %1 トークン</translation></message>
     <message><source>%1k context</source><translation>コンテキスト %1k</translation></message>
     <message><source>API key</source><translation>API キー</translation></message>
@@ -27566,9 +27592,12 @@ Continue using the requested filename?</source>
     <message><source>Send thinking (reasoning_content)</source><translation>思考内容（reasoning_content）を送信</translation></message>
     <message><source>Request token usage when supported</source><translation>対応時にトークン使用量を要求</translation></message>
     <message><source>Adds stream_options.include_usage to streamed requests. Disable this if the endpoint rejects that option.</source><translation>ストリーミングリクエストに stream_options.include_usage を追加します。エンドポイントがこのオプションを拒否する場合は無効にしてください。</translation></message>
+    <message><source>First model output timeout</source><translation>モデルの初回出力タイムアウト</translation></message>
+    <message><source>Time to wait for the first reasoning, text, or tool output. HTTP headers and keepalives do not count.</source><translation>最初の推論、テキスト、またはツール出力を待つ時間です。HTTP ヘッダーとキープアライブは対象外です。</translation></message>
+    <message><source> s</source><translation> 秒</translation></message>
     <message><source> KiB</source><translation> KiB</translation></message>
     <message><source>Unlimited</source><translation>無制限</translation></message>
-    <message><source>Limits only previous complete conversation turns sent to the model. The current run is always retained in full.</source><translation>モデルに送信する過去の完全な会話ターンだけを制限します。現在の実行は常に完全なまま保持されます。</translation></message>
+    <message><source>Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB.</source><translation>モデルに送信する過去の完全な会話ターンを制限します。現在の実行履歴が 128 KiB を超える場合は別途圧縮されます。</translation></message>
     <message><source>Previous-turn history budget</source><translation>過去ターンの履歴予算</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>このモデルリクエスト回数に達すると実行を停止し、未コミットのステージ済みトランザクションをロールバックします。</translation></message>
     <message><source>Maximum model steps per run</source><translation>実行ごとの最大モデルステップ数</translation></message>

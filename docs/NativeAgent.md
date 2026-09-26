@@ -2,7 +2,7 @@
 
 Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手。它理解这本书的结构、资源、样式、字体、Spine、目录和元数据，可以用自然语言查询、规划，并在你批准后做可撤销的修改。
 
-它不是编程 Agent，也不会操作整台电脑。它不调用 MCP。需要 typed 工具表达不了的批量逻辑时，可以用 `python.run`：把一段 Python **snippet** 交给 Live Python v2，绑定 `plugin`（`plugin.book` / `plugin.editor`）在当前内存中的 Book 上执行。这不是一份插件包，也不是旧插件那种 ZIP 快照。
+它不是编程 Agent，也不会操作整台电脑。它不调用 MCP。需要 typed 工具表达不了的统计逻辑时，可以用只读 `python.inspect`；需要编辑时用 `python.run`。两者把 Python **snippet** 交给 Live Python v2，绑定 `plugin`（`plugin.book` / `plugin.editor`）访问当前内存 Book。这不是一份插件包，也不是旧插件那种 ZIP 快照。
 
 ## 打开方式
 
@@ -193,7 +193,7 @@ book session 且没有活动运行时启用；换书或 New Session 后失效。
 
 | 模式 | 能做什么 |
 |---|---|
-| **Ask** | 只读。可摘要、搜索、读片段、列字体、校验。不能改书。 |
+| **Ask** | 只读。可摘要、搜索、读片段、列字体、校验，或用 `python.inspect` 做只读统计。不能改书。 |
 | **Plan** | 可以 `transaction.begin`、暂存 create/copy/rename/patch/CSS/metadata，并 `preview`。不能 `commit` / `restore` / `python.run`。活书保持不变。 |
 | **Edit** | 可通过工具改书。可逆编辑默认要你点 **Approve**。提交结果会说明保存、校验和可用的恢复边界。 |
 | **Auto** | 与 Edit 相同的写入工具，但默认全部允许，不再弹出 Approve。 |
@@ -287,7 +287,7 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
-只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
+只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`proof.audit` / `proof.settings` / `proof.plan`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`python.inspect`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
 
 `book.summary` 及每轮自动 Book map 中的 title/language/EPUB version 分别最多预览
 512/128/64 个 UTF-16 单元，并返回各自的 `*_length` / `*_truncated`。title 或 language 截断时
@@ -333,7 +333,12 @@ XHTML/CSS 的 hash、revision 和行号元数据保持不变，图片与字体�
 可能在后续页为空，这是正常的终止状态，不表示其他数组也已读完。原来的 `embedded_fonts`、
 `css_families`、`declared_families`、`issues`、`unused_images` 和 `wellformed` 键保持不变。
 
-`book.search_regex` 默认最多返回 40 个命中，`max_matches` 可调但硬上限为 50。每个命中的
+`book.search_regex` 默认每页最多返回 40 个命中，`limit` 或兼容字段 `max_matches` 可调但每页
+硬上限为 50。`book.search` 默认每页 20 个。两者都返回精确 `total_count`、`has_more`、
+`next_cursor`、`query_digest` 和当前书籍 revision；沿同一查询、资源范围和 limit 的
+`next_cursor` 继续读取。`count_only=true` 只返回总数。游标绑定书籍内容，修改后返回
+`SEARCH_SNAPSHOT_STALE`。无效正则报 `REGEX_INVALID`，零长度匹配报
+`ZERO_LENGTH_MATCH`。位置均是 XHTML 源码的 UTF-16 单元。每个正则命中的
 `match` 预览最多 240 个 UTF-16 单元，只返回前 8 个捕获组且每组最多 160 个 UTF-16 单元；
 完整的资源 ID、offset、匹配 length、line、捕获组总数和已返回捕获组的原始长度仍会保留。
 `match_truncated`、`captures_truncated` 和汇总的 `preview_truncated` 明确表示预览是否有删节；
@@ -341,14 +346,35 @@ XHTML/CSS 的 hash、revision 和行号元数据保持不变，图片与字体�
 搜索预览本身当作补丁来源。`match_limit_reached=true` 表示结果达到本次上限，并不证明后面必然
 还有其他命中。
 
-不区分大小写的字面量 `book.search` 默认最多返回 20 个命中，硬上限同样为 50；查询最长
+不区分大小写的字面量 `book.search` 每页硬上限同样为 50；查询最长
 512 个 UTF-16 单元，超出时返回 `SEARCH_QUERY_TOO_LONG`，应改搜更短的独特片段。每项
 `snippet` 最多 240 个 UTF-16 单元，同时保留匹配 offset / length、snippet offset / 原始
-length 和 `snippet_truncated`。需要精确原文时也必须改用 `resource.read_fragment`。结果达到
-50 项后目前不能按 offset 读取后续命中；可用更独特的查询或限定上下文，不要把上限内结果
-误报为全书无遗漏。
+length 和 `snippet_truncated`。需要精确原文时也必须改用 `resource.read_fragment`。
+每页返回的项数不等于全书总数；沿 `next_cursor` 读完或使用 `count_only` 核对。
 
-写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate` / `toc.apply_transform`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
+`proof.audit` 对 XHTML 可见正文做只读候选扫描，默认规则只报告替换字符、零宽或控制字符，
+以及重复的中文逗号和句号；后者属于低确定性风格候选。可按全书、单文件、选区、指定资源
+或 Spine 的零基半开范围扫描。扫描跳过 Ruby 注音、导航、脚本、样式和隐藏内容；实体与内联
+标签保留到 XHTML 源码的 UTF-16 范围映射。响应给出规则版本、快照、精确总数和每条候选的
+源码哈希、前后文及建议。每页最多 50 条，必须沿 `next_cursor` 读完；书籍或源码变化会使旧
+游标失效。`style_counts` 汇总所选范围的全角空格、重复感叹号/波浪号、省略号和破折号等
+用法，可按单文件范围查看章节分布；这些统计不是错误数。候选数并非错字数，跨标签或
+CDATA 候选只能人工处理。
+
+审阅流程是 `proof.audit` → `proof.decide` → `proof.plan` → `proof.apply` →
+`transaction.preview` → `transaction.commit` → `book.check`。结构检查通过也不代表语义校对完成。
+`proof.decide` 对当前快照中的候选记录接受、忽略
+或待定；接受时可改写建议，缺少建议时须给出替换文字，显式空串表示删除。记录保存在本机，
+不进入 EPUB；同一书的标识和完整资源哈希匹配时，重开后可恢复，正文变化须重新审阅。
+`proof.plan` 一次接收最多 100 条已接受候选，返回有界差异并要求读完所有计划页。
+`proof.apply` 校验计划 ID、摘要、书籍 revision 和原文，拒绝重叠修改，只创建独占暂存事务；
+随后仍须完整预览再提交。`proof.settings` 可查看本机配置；`proof.configure` 可按整本书或单份
+XHTML 设置允许的 `，，` / `。。`、专名或固定短语例外，以及用户指定的异体词对。异体词
+只生成低确定性候选，仍须逐条审阅。配置变化会使旧游标和计划失效。配置与审阅决定仅能
+在 Edit 模式经审批写入本机；Auto 模式也禁止 `proof.apply`。建议按章规划。当前规则包只有 `default`，
+跨标签候选不能自动应用；更广的语言规则仍待后续扩展。
+
+写入（先暂存，再预览，再提交）：`transaction.begin` / `preview` / `commit` / `rollback`、`proof.configure` / `decide` / `apply`、`resource.create` / `copy` / `delete` / `rename` / `replace_text` / `patch_fragment`、`content.replace_body` / `insert` / `wrap` / `replace_regex` / `wrap_plain` / `split` / `merge`、`image.insert`、`spine.set` / `spine.sort`、`style.link`、`toc.generate` / `toc.apply_transform`、`css.update_rules`、`metadata.update`、`content.fill_section`、`content.typeset_from_manuscript`、`paragraphs.apply`、`checkpoint.create` / `list` / `restore`。
 
 `checkpoint.list` 默认分页 20 项、最多 50 项，并使用统一的 `has_more` / `next_offset` 协议。
 每项 label 最多预览 256 个 UTF-16 单元；任务恢复点最多列出前 32 个受影响资源 ID，每个 ID
@@ -426,7 +452,18 @@ summary、plan ID 和 digest 不随窗口缩减。必须用相同 analysis ID �
 总数并返回稳定空页；目录未变化时各页的 `snapshot_id` 相同。必须沿 `next_offset` 读完层级
 后再规划，因为新的 inspect 会刷新当前 snapshot 并使此前的 TOC plan 失效。
 
-`python.run` 只落一个临时 `.py` snippet（和其它 harness 的 `run_code` 一样），用 `live_launcher --snippet` 连上现有 `PluginSession` socket，把 `plugin` 绑进这段代码。不要写 `plugin.xml`。Snippet 顶层就能用 `plugin.book`；也可以定义 `def run(plugin)` 或设 `result`。若 Agent 还有未提交事务，会先要求 `commit` / `rollback`。Memory 测试工作区返回 `LIVE_PYTHON_UNAVAILABLE`。脚本上限 64KiB，输出截到 8KiB。优先用 typed 工具；Python 只补工具盖不到的逻辑。
+`python.inspect` 使用 Live Python v2 做只读统计，可在 Ask 模式调用；它在 RPC 层拒绝
+Book 写入，成功时不增加 Agent revision。`python.run` 保留兼容默认 `mode=edit`，需要只读
+时也可显式传 `mode=read`。两者都把临时 `.py` snippet 交给
+`live_launcher --snippet`，绑定 `plugin`（`plugin.book` / `plugin.editor`），而非旧 ZIP
+插件。读取 XHTML 可用 `plugin.book.text_resources()`，再用 `read_many([Resource])`；
+`read_text()` 返回记录而非纯字符串。用 `print()` 输出报告，成功时也会返回有界
+stdout/stderr。Snippet 顶层可用 `plugin`，也可定义 `def run(plugin)` 或设 `result`；
+后两者的值是**退出状态**，`0` / `None` 表示成功，不能把报告字符串放入 `result`。
+脚本失败会返回具体说明和输出；脚本上限 64KiB，输出预览合计 8KiB，进程采集每个输出流最多保留
+32,768 个 UTF-16 单元但仍记录完整长度。stderr 有独立预览预算，不会被大量 stdout 完全挤掉。编辑模式会立即
+作用于活书，须先提交或回滚未完成的 Agent 事务。Memory 测试工作区返回
+`LIVE_PYTHON_UNAVAILABLE`。优先使用 typed 工具。
 
 格式不是固定的：标题/插图标记都通过工具参数里的 regex 传入。`ln-template-typeset` 只是一套可选默认启发式；通用流程见 skill `book-structure`。目前仍不能把字体/图片二进制塞进模型，也不能改 EPUB3 landmarks/page-list。
 
@@ -441,7 +478,12 @@ summary、plan ID 和 digest 不随窗口缩减。必须用相同 analysis ID �
 最多 8,192 个 UTF-16 单元；更长修改应拆成多个小补丁。子串出现多次时用 `start_line`
 （来自 `read_fragment.lines` 的 1-based 行号）消歧；如果调用同时给了另一个可匹配范围，
 `start_line` 仍决定目标。区间不能切到半个标签（例如把 `</title>` 切成 `</titl`）。预览会带
-staged excerpt。
+staged excerpt。`read_fragment` 的 `resource_revision` 用于 `patch_fragment.expected_resource_revision`；
+`book_revision` 用于 `transaction.commit.expected_book_revision`。旧参数 `expected_revision` 暂时兼容。
+资源修订与书籍修订不能互相推算；资源冲突返回 `RESOURCE_REVISION_CONFLICT` 和当前资源修订。
+事务内 `read_fragment` 会读取暂存文本，提交后须重新读取受影响资源的修订。
+当前轮对话历史超过 128 KiB 时会保留用户请求和近期完整工具交换，并将旧结果整理为有界摘要；若请求估算仍超过模型上下文预算，会在发送前报 `CONTEXT_BUDGET_EXCEEDED`。
+一次运行中已有提交而随后失败或停止时，对话会显示“部分应用”摘要。提交已作用于当前书，但 Agent 未保存 EPUB；继续前须重读受影响资源并完成验证。
 
 重复或不匹配错误只返回前 20 个候选位置、最多 512 单元的 expected/actual/context 预览，
 并用原始长度和截断标志说明省略；不会把整章错误范围复制进 transcript。候选超过 20 项时
@@ -451,7 +493,7 @@ staged excerpt。
 发给模型的 function 名会把点换成下划线（`book.summary` → `book_summary`），因为 DeepSeek/OpenAI 只接受 `^[a-zA-Z0-9_-]+$`。内部仍用带点的名字。
 
 没有 shell，没有技能脚本，不会把字体二进制或整本书 XHTML 送给模型。若提交时的
-`expected_revision` 与当前书籍 revision 不一致，会返回 `BOOK_REVISION_CONFLICT`，不会改书。
+`expected_book_revision` 与当前书籍 revision 不一致，会返回 `BOOK_REVISION_CONFLICT`，不会改书。
 提交前还会比较事务开始时的精确 OPF 源码、每份已暂存正文的原文、重命名/删除资源基线，
 以及需要改写的 Nav/NCX 原文；因此用户在 preview 后从 GUI 修改目标内容，即使内部书籍计数尚未
 更新，也会拒绝旧计划并保留用户改动。`metadata.update`、`spine.set/sort` 和资源结构操作最终
@@ -473,6 +515,8 @@ HTTP 出错时 Error 卡会带上状态码和服务器返回的 `error.message`�
 
 点 **Refresh models** 会向服务器拉取模型 id 以及它公布的参数（context length、`supported_parameters` 里的 tools / reasoning）。不要手抄模型名；列表来自服务器。密钥只存在本机 Sigil 设置里，不会进入 transcript、崩溃日志、导出文件或 EPUB。
 
+OpenCode Go 的 `/models` 只返回模型 ID，没有公布每个模型的 API 协议。其文档把部分模型分配给 `/responses` 或 `/messages`；当前 Native Agent 只实现 Chat Completions。设置页会标明这些模型需要的端点，选择后发起请求会立即给出说明，不会把它们误发到 `/chat/completions`。OpenCode Go 请求使用 `Sigil-Enhanced-Native-Agent/1.0` 作为 User-Agent，并在同一 Agent 会话的每次模型请求中发送相同的 `x-opencode-session`；连接测试使用独立的会话 ID。
+
 刷新在后台执行，设置页显示 **Loading models…**，完成后才以启动请求时冻结的 provider
 写入内存缓存。刷新与连接测试不会并发；关闭设置窗口会取消仍在等待的目录请求。HTTP
 错误可显示状态和服务端说明，但其中回显的当前 API Key 会替换为 `[redacted]`。
@@ -480,13 +524,18 @@ HTTP 出错时 Error 卡会带上状态码和服务器返回的 `error.message`�
 若要验证所选模型能否真正接受对话请求，使用同一页的 **Test Chat Completions**，不要把
 模型列表刷新成功当作鉴权/模型可用证明。探测不会发送当前书籍或 Agent 工具定义。
 
+**First model output timeout** 默认 180 秒，可在 Native Agent 设置中调整。计时从发起
+模型请求开始，到收到第一段推理、正文或工具调用为止；HTTP 响应头和 SSE keepalive 不算输出。
+首段输出之后，连续 120 秒没有新的模型输出会中止流。连接测试使用独立的 15 秒上限，
+不会等待设置中的首字超时。
+
 请求体按提供商区分：
 
 - DeepSeek：`thinking: {type: enabled|disabled}` 和 `reasoning_effort`
-- OpenRouter：`reasoning: {effort, exclude: false}`（且只在该模型宣称支持 reasoning 时发送）；并带 `HTTP-Referer` / `X-Title`
+- OpenRouter：`reasoning: {effort, exclude: false}`（且只在该模型宣称支持 reasoning 时发送）；若所选 effort 不在模型的 `reasoning.supported_efforts` 中，改用模型公布的 `default_effort`，或发送 `enabled: true` 而省略 effort；并带 `HTTP-Referer` / `X-OpenRouter-Title`
 - OpenCode Go / 其他：不发送 DeepSeek 的 `thinking` 字段，避免 400
 
-协议仍是 OpenAI 兼容 Chat Completions。流式响应里 `reasoning_content`（以及 OpenRouter 的 `reasoning`）、`content`、`tool_calls` 分开解析。当某次请求带了 `tools` 时，同一会话后续请求必须回放助手的 `reasoning_content`（否则部分推理模型会返回 400）；不带 `tools` 的请求可以省略先前的思维链。
+协议仍是 OpenAI 兼容 Chat Completions。流式响应里 `reasoning_content`（以及 OpenRouter 的 `reasoning` 和结构化 `reasoning_details`）、`content`、`tool_calls` 分开解析。OpenRouter 的 `reasoning_details` 会保留文本、签名及加密块，并在后续请求原样回放；其他提供商在请求带 `tools` 时回放助手的 `reasoning_content`（否则部分推理模型会返回 400）。
 
 ### 流式界面刷新
 
@@ -496,6 +545,42 @@ Answer，避免长回复为每个 token 重新排版整个标签。请求完成�
 因此合并刷新不会截断尾段或改变会话事件顺序。New Session 与 transcript 重置会丢弃属于旧
 会话、尚未显示的缓冲，防止延迟计时器把旧回复写进新会话。
 
+### Markdown 答复与书内定位
+
+“You” 与 Answer 卡片按 GitHub 风格 Markdown 排版（标题、粗斜体、列表、引用、围栏代码、
+行内代码、分隔线、表格）；Thinking、工具、审批和结果卡片一律按纯文本显示。流式阶段 Answer
+保持可选中的原文，收到完整 assistant 消息后只解析排版一次。
+
+安全边界：
+
+- 解析启用 `MarkdownNoHTML`：模型写的 `<b>`、`<img>`、`<script>` 按字面显示；渲染后再移除全部
+  图片（显示“[image not loaded]”）和所有非 `sigil-agent://location/<32 位十六进制>` 的链接，
+  `http(s):`、`file:`、`javascript:`、`mailto:`、裸 URL 只保留可读文字，永不打开。
+- 超过 65,536 个 UTF-16 单元的消息不解析，按纯文本显示并提示原因。
+- 卡片保留原始 Markdown；**Copy** 复制原文而非渲染结果。会话事件、导出和模型历史不受
+  渲染或加链接影响。
+
+定位链接由停靠栏按当前书生成，模型不拼写内部 URI：
+
+- 只识别当前书中真实存在、边界完整的 `book_path`（文本资源：XHTML、CSS、Misc 文本、OPF、
+  NCX），写在行内代码或正文里均可；后缀、半截路径、URL、已有链接和围栏代码内不识别。
+- `L数字` 表示 **XHTML 源码行号**（1 基，与 Code View 行一致），不是段落序号。整条答复只明确
+  提到一个文件时，其中的 `L数字` 绑定到该文件；多文件答复只在“同一表格行恰好一个路径”时
+  绑定；超出该资源行数、多文件歧义或无文件的 `L数字` 保持普通文字。
+- 位置表记录 `book_session_id`、`resource_id`、生成时路径、类型与行号，以及资源全文 SHA-256；
+  链接只含宿主签发的不透明 ID。悬停显示将打开的文件与行号。
+- 单击时重新核验：书籍会话一致、资源仍在（按 ID，因此改名后跟随新路径）、行号内容指纹未变，
+  然后打开 Code View 并跳到该行。目标资源内容变化（包括在前方插行）时不跳旧行，提示“原位置
+  可能已变”，可选 **Open file** 只打开文件；撤销回原文后恢复精确跳转；其他资源的修改不影响。
+  资源被删除、换书或 ID 未知时只显示说明，不打开任何东西。换书会丢弃旧书的位置表，New Session
+  清空全部。
+- 生成与点击链接都是只读的：不改 EPUB、modified、Book revision 或 Agent revision，也不调用工具。
+
+系统提示词要求校对表格为每条可执行建议给出已核实的 `book_path` 与 `L数字` 源码行号
+（单文件表格可在范围行写一次路径，跨文件表格逐行写路径），确认不了时如实说明，并禁止模型
+自写 `sigil-agent://` 链接。精确 UTF-16 范围选中、正文段落定位、工具签发的 `location_ref`
+与 `resource.resolve_location` 尚未实现（见 `todo/NativeAgentConversationMarkdownNavigationRequirements.md` P1）。
+
 Native Agent 不调用 MCP，也不把 MCP 当作内部 RPC。`paragraphs.*` 与原生
 `toc.inspect_hierarchy` / `toc.plan_transform` / `toc.apply_transform` 当前是 Native
 Agent 专用工具，不在公共 `sigil.*` MCP catalog 中。
@@ -504,7 +589,7 @@ Agent 专用工具，不在公共 `sigil.*` MCP catalog 中。
 
 停靠栏 **Export** 菜单：
 
-- **Conversation**：当前会话的 Markdown（用户 / Thinking / Answer / 工具），供阅读或贴给别人。
+- **Conversation**：当前会话的 Markdown（用户 / Thinking / Answer / 工具），供阅读或贴给别人。导出的是原始答复文字，保留可读的文件名与 `L数字`，不含停靠栏内部定位链接。
 - **Debug log**：JSON，含会话事件（不含逐 token 的 `assistant_delta`，只保留完整 assistant/tool 事件；请求终态保留本地响应延迟，完成事件还保留服务端报告的 token 用量）、提供商（不含密钥）、以及跨轮保留的 HTTP 追踪（请求体最多 64KB，响应保留头尾，并记录同一组安全的响应延迟整数）。API Key 和 `sk-…` 会被替换成 `[redacted]`。
 
 ## Harness

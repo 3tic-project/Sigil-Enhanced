@@ -36,7 +36,8 @@ bool PluginSessionManager::StartPlugin(const Plugin &plugin, QString *error)
 }
 
 PluginSession *PluginSessionManager::StartSession(const Plugin &plugin, QString *error, bool quiet,
-                                                  const QString &snippet_path)
+                                                  const QString &snippet_path,
+                                                  bool snippet_read_only)
 {
     if (plugin.get_lifetime() == QStringLiteral("book-session")) {
         for (PluginSession *running : std::as_const(m_Sessions)) {
@@ -52,6 +53,7 @@ PluginSession *PluginSessionManager::StartSession(const Plugin &plugin, QString 
     auto *session = new PluginSession(plugin, m_MainWindow, m_TabManager, this);
     session->setQuiet(quiet);
     if (!snippet_path.isEmpty()) session->setSnippetPath(snippet_path);
+    session->setSnippetReadOnly(snippet_read_only);
     const QUuid id = session->SessionId();
     connect(session, &PluginSession::Ended, this, [this, id]() {
         PluginSession *finished = m_Sessions.take(id);
@@ -101,6 +103,16 @@ bool PluginSessionManager::RunPluginAndWait(const Plugin &plugin, QString *statu
 bool PluginSessionManager::RunSnippetAndWait(const QString &script, QString *status, QString *error,
                                              int timeout_ms, QString *output)
 {
+    SnippetRunOutcome outcome;
+    const bool ok = RunSnippetDetailed(script, &outcome, error, timeout_ms, false);
+    if (status) *status = outcome.status;
+    if (output) *output = outcome.output;
+    return ok;
+}
+
+bool PluginSessionManager::RunSnippetDetailed(const QString &script, SnippetRunOutcome *outcome,
+                                              QString *error, int timeout_ms, bool read_only)
+{
     QTemporaryFile file(QDir::temp().filePath(QStringLiteral("sigil-agent-XXXXXX.py")));
     file.setAutoRemove(true);
     const QByteArray bytes = script.toUtf8();
@@ -115,26 +127,40 @@ bool PluginSessionManager::RunSnippetAndWait(const QString &script, QString *sta
     host.set_engine(QStringLiteral("python3"));
     host.set_api(2, QStringLiteral("live"));
     host.set_lifetime(QStringLiteral("command"));
-    PluginSession *session = StartSession(host, error, true, file.fileName());
+    PluginSession *session = StartSession(host, error, true, file.fileName(), read_only);
     if (!session) return false;
-    return WaitForSession(session, status, nullptr, nullptr, error, timeout_ms, output);
+    return WaitForSession(session, nullptr, nullptr, nullptr, error, timeout_ms,
+                          nullptr, outcome);
 }
 
 bool PluginSessionManager::WaitForSession(PluginSession *session, QString *status, QString *plugin_type,
                                           int *validation_error_count, QString *error, int timeout_ms,
-                                          QString *output)
+                                          QString *output, SnippetRunOutcome *outcome)
 {
     QEventLoop loop;
     bool timed_out = false;
     QString completed_status;
+    QString completed_message;
     connect(session, &PluginSession::Ended, &loop, [&]() {
         completed_status = session->Status();
+        completed_message = session->FinishMessage();
         if (status) *status = completed_status;
         if (plugin_type) *plugin_type = session->PluginType();
         if (validation_error_count) {
             *validation_error_count = session->ValidationErrorCount();
         }
         if (output) *output = session->CapturedOutput();
+        if (outcome) {
+            outcome->status = completed_status;
+            outcome->message = session->FinishMessage();
+            outcome->stdoutText = session->CapturedStdout();
+            outcome->stderrText = session->CapturedStderr();
+            outcome->stdoutLength = session->CapturedStdoutLength();
+            outcome->stderrLength = session->CapturedStderrLength();
+            outcome->output = session->CapturedOutput();
+            outcome->exitCode = session->ExitCode();
+            outcome->bookChanged = session->SnippetMutated();
+        }
         loop.quit();
     });
     QTimer timeout;
@@ -148,6 +174,10 @@ bool PluginSessionManager::WaitForSession(PluginSession *session, QString *statu
     if (timed_out) {
         if (error) *error = tr("Live plugin timed out.");
         return false;
+    }
+    if (completed_status != QStringLiteral("success") && error
+        && !completed_message.isEmpty()) {
+        *error = completed_message;
     }
     return completed_status == QStringLiteral("success");
 }

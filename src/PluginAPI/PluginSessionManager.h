@@ -10,6 +10,7 @@
 
 #include <QHash>
 #include <QObject>
+#include <QString>
 #include <QUuid>
 #include <functional>
 
@@ -19,6 +20,18 @@ class MainWindow;
 class Plugin;
 class PluginSession;
 class TabManager;
+
+struct SnippetRunOutcome {
+    QString status;
+    QString message;
+    QString stdoutText;
+    QString stderrText;
+    qint64 stdoutLength = 0;
+    qint64 stderrLength = 0;
+    QString output;
+    int exitCode = -1;
+    bool bookChanged = false;
+};
 
 class PluginSessionManager : public QObject
 {
@@ -35,6 +48,9 @@ public:
                           QString *output = nullptr, bool quiet = false);
     bool RunSnippetAndWait(const QString &script, QString *status, QString *error = nullptr,
                            int timeout_ms = 30 * 1000, QString *output = nullptr);
+    bool RunSnippetDetailed(const QString &script, SnippetRunOutcome *outcome,
+                            QString *error = nullptr, int timeout_ms = 30 * 1000,
+                            bool read_only = false);
     bool AcquireWriter(const QUuid &session_id);
     void ReleaseWriter(const QUuid &session_id);
     void StopAll();
@@ -51,10 +67,11 @@ private:
     bool ConsumeCommitMutationForTesting();
 
     PluginSession *StartSession(const Plugin &plugin, QString *error, bool quiet = false,
-                                const QString &snippet_path = QString());
+                                const QString &snippet_path = QString(),
+                                bool snippet_read_only = false);
     bool WaitForSession(PluginSession *session, QString *status, QString *plugin_type,
                         int *validation_error_count, QString *error, int timeout_ms,
-                        QString *output);
+                        QString *output, SnippetRunOutcome *outcome = nullptr);
 
     MainWindow *m_MainWindow;
     TabManager *m_TabManager;

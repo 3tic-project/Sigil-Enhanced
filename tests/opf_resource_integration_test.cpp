@@ -18,6 +18,7 @@
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/OPFResource.h"
+#include "ResourceObjects/OPFSourceBytes.h"
 #include "Widgets/TextDocument.h"
 #include "Importers/ImportEPUB.h"
 #include "Exporters/ExportEPUB.h"
@@ -101,6 +102,19 @@ int main(int argc, char **argv)
         const QString path = scratch.path() + "/content.opf";
         OPFResource resource(scratch.path(), path, "3.0");
         resource.SetEpubVersion("3.0");
+        HTMLResource added_chapter(scratch.path(), scratch.path() + "/new.xhtml", nullptr);
+        resource.AddResource(&added_chapter);
+        const QString added_opf = resource.GetText();
+        const QRegularExpression item_pattern("<item\\b[^>]*id=\"([^\"]+)\"[^>]*href=\"new.xhtml\"[^>]*/>");
+        const auto item = item_pattern.match(added_opf);
+        const QRegularExpression itemref_pattern("<itemref\\b[^>]*idref=\"" +
+                                                 QRegularExpression::escape(item.captured(1)) + "\"[^>]*/>");
+        const auto itemref = itemref_pattern.match(added_opf);
+        Require(item.hasMatch() && itemref.hasMatch(), "Adding XHTML did not update manifest and spine");
+        Require(!item.captured().contains("xmlns:dc=") && !item.captured().contains("xmlns:opf=") &&
+                !itemref.captured().contains("xmlns:dc=") && !itemref.captured().contains("xmlns:opf="),
+                "Adding XHTML copied metadata-only namespaces to manifest or spine");
+        Require(added_opf.contains("<metadata xmlns:dc="), "Adding XHTML changed metadata namespaces");
         const QString source = QString::fromUtf8(R"XML(<?xml version='1.0' encoding='UTF-8'?>
 <package xmlns='http://www.idpf.org/2007/opf' xmlns:dc='http://purl.org/dc/elements/1.1/' xmlns:x='urn:publisher' version='3.0' unique-identifier='bookid'>
   <!-- metadata -->
@@ -216,6 +230,42 @@ int main(int argc, char **argv)
         document.undo();
         resource.SaveToDisk(false);
         Require(ReadBytes(path) == latin_bytes, "Undo after rejected save did not restore original bytes");
+
+        // GBK now uses the frozen CPython table. This still checks that a real
+        // resource preserves the original bytes and an ASCII insertion.
+        const QByteArray gbk_bytes = "<?xml version='1.0' encoding='GBK'?>"
+            "<package xmlns='http://www.idpf.org/2007/opf' xmlns:dc='http://purl.org/dc/elements/1.1/' version='3.0'>"
+            "<metadata><dc:title>\xd6\xd0\xce\xc4</dc:title></metadata><manifest/><spine/></package>";
+        resource.SetSourceBytes(gbk_bytes);
+        Require(resource.GetText().contains(QString::fromUtf8("中文")), "GBK fallback did not decode the title");
+        resource.SaveToDisk(false);
+        Require(ReadBytes(path) == gbk_bytes, "GBK fallback did not preserve unchanged bytes");
+        resource.SetText(QString(resource.GetText()).replace(QString::fromUtf8("中文"), QString::fromUtf8("中文 One")));
+        resource.SaveToDisk(false);
+        Require(ReadBytes(path) == QByteArray(gbk_bytes).replace("</dc:title>", " One</dc:title>"),
+                "GBK fallback did not preserve edited encoding");
+
+        // Declarations resolved through CPython's aliases use the frozen tables.
+        const QList<QPair<QByteArray, QByteArray>> legacy_titles {
+            {"GB18030", "\x95\x32\x82\x36\x81\x30\x81\x30"},  // U+20000 and U+0080 as four-byte sequences
+            {"big5", "\xa4\xa4\xa4\xe5"},
+            {"eucJP", "\x8f\xb0\xa1\xc6\xfc"},  // JIS X 0212 three-byte sequence
+            {"uhc", "\xb0\xa1\x81\x41"},  // cp949 extension
+            {"KOI8-R", "\xf2\xd5\xd3\xd3"},
+        };
+        for (const auto &[name, title] : legacy_titles) {
+            const QByteArray bytes = "<?xml version='1.0' encoding='" + name + "'?>"
+                "<package xmlns='http://www.idpf.org/2007/opf' xmlns:dc='http://purl.org/dc/elements/1.1/' version='3.0'>"
+                "<metadata><dc:title>" + title + "</dc:title></metadata><manifest/><spine/></package>";
+            Require(OPFSourceBytes::CanDecodeNatively(bytes), ("Frozen codec was not used for " + name).constData());
+            resource.SetSourceBytes(bytes);
+            resource.SaveToDisk(false);
+            Require(ReadBytes(path) == bytes, ("Unchanged OPF was not preserved: " + name).constData());
+            resource.SetText(QString(resource.GetText()).replace("</dc:title>", " One</dc:title>"));
+            resource.SaveToDisk(false);
+            Require(ReadBytes(path) == QByteArray(bytes).replace("</dc:title>", " One</dc:title>"),
+                    ("Edited OPF did not keep its encoding: " + name).constData());
+        }
 
         QString prefixed = source;
         prefixed.replace(QRegularExpression("<(/?)(package|metadata|meta|manifest|item|spine|itemref)(?=[\\s/>])"), "<\\1p:\\2");

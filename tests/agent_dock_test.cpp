@@ -2,9 +2,11 @@
 #include <iostream>
 
 #include <QApplication>
+#include <QClipboard>
 #include <QComboBox>
 #include <QDialog>
 #include <QEventLoop>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QLabel>
@@ -13,11 +15,14 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScrollArea>
+#include <QTextDocument>
 #include <QTimer>
 #include <QToolButton>
 
 #include "Agent/UI/AgentDock.h"
+#include "Agent/UI/AgentMarkdown.h"
 
 namespace
 {
@@ -35,6 +40,316 @@ void ProcessEventsFor(int milliseconds)
     QEventLoop loop;
     QTimer::singleShot(milliseconds, &loop, &QEventLoop::quit);
     loop.exec();
+}
+
+QString VisibleText(const QLabel *label)
+{
+    if (!label) return QString();
+    if (label->textFormat() != Qt::RichText) return label->text();
+    QTextDocument document;
+    document.setHtml(label->text());
+    return document.toPlainText();
+}
+
+class FakeLocationSource final : public SigilAgent::AgentLocationSource
+{
+public:
+    QString session = QStringLiteral("nav-book-session");
+    QList<SigilAgent::AgentLocationResource> resources;
+    QHash<QString, QString> texts;
+
+    QString bookSessionId() const override { return session; }
+    QList<SigilAgent::AgentLocationResource> textResources() const override { return resources; }
+    bool resourceText(const QString &resource_id, QString *book_path, QString *text) const override
+    {
+        for (const SigilAgent::AgentLocationResource &resource : resources) {
+            if (resource.resourceId != resource_id || !texts.contains(resource_id)) continue;
+            if (book_path) *book_path = resource.bookPath;
+            if (text) *text = texts.value(resource_id);
+            return true;
+        }
+        return false;
+    }
+};
+
+QString NumberedLines(int count)
+{
+    QStringList lines;
+    for (int i = 1; i <= count; ++i) lines.append(QStringLiteral("<p>source line %1</p>").arg(i));
+    return lines.join(QLatin1Char('\n'));
+}
+
+QString HrefForLabel(const QLabel *label, const QString &text)
+{
+    const QRegularExpression pattern(
+        QStringLiteral("href=\"(sigil-agent://location/[0-9a-f]{32})\"[^>]*>(?:<span[^>]*>)?%1<")
+            .arg(QRegularExpression::escape(text)));
+    return pattern.match(label ? label->text() : QString()).captured(1);
+}
+
+struct OpenRequest {
+    QString bookSessionId;
+    QString resourceId;
+    int line = 0;
+};
+
+void TestMarkdownNavigation(QApplication &application)
+{
+    FakeLocationSource source;
+    source.resources = {
+        { QStringLiteral("res-ch1"), QStringLiteral("OEBPS/Text/Section001.xhtml") },
+        { QStringLiteral("res-ch2"), QStringLiteral("OEBPS/Text/Section002.xhtml") }
+    };
+    source.texts.insert(QStringLiteral("res-ch1"), NumberedLines(2300));
+    source.texts.insert(QStringLiteral("res-ch2"), NumberedLines(40));
+
+    SigilAgent::AgentDock dock;
+    dock.setSessionId(QStringLiteral("nav-session"));
+    dock.setBookContext(QStringLiteral("Book"), QStringLiteral("book.epub"), 2, false, 1,
+                        source.session);
+    dock.setLocationSource(&source);
+    dock.resize(360, 700);
+    dock.show();
+    application.processEvents();
+
+    QList<OpenRequest> requests;
+    QObject::connect(&dock, &SigilAgent::AgentDock::openLocationRequested, &dock,
+                     [&requests](const QString &book_session_id, const QString &resource_id,
+                                 int line) {
+                         requests.append({ book_session_id, resource_id, line });
+                     });
+
+    SigilAgent::AgentEvent user;
+    user.type = SigilAgent::AgentEventType::UserMessage;
+    user.payload = QJsonObject { { QStringLiteral("text"),
+                                   QStringLiteral("Please **proofread** `chapter 1` <b>now</b>") } };
+    dock.appendEvent(user);
+    QWidget *user_card = dock.findChild<QWidget *>(QStringLiteral("agentUserCard"));
+    auto *user_body = user_card
+        ? user_card->findChild<QLabel *>(QStringLiteral("agentUserCardBody")) : nullptr;
+    Require(user_body && user_card->property("markdownState").toString() == QStringLiteral("rendered")
+                && VisibleText(user_body).contains(QStringLiteral("Please proofread chapter 1 <b>now</b>"))
+                && user_card->property("rawMarkdown").toString()
+                    == QStringLiteral("Please **proofread** `chapter 1` <b>now</b>"),
+            "user text must render as Markdown with raw HTML shown literally");
+
+    SigilAgent::AgentEvent step;
+    step.type = SigilAgent::AgentEventType::ModelRequestStarted;
+    dock.appendEvent(step);
+    const QString answer = QString::fromUtf8(
+        "已通读第一章全文。**目前尚未写入任何修改。**\n\n"
+        "**范围**：`OEBPS/Text/Section001.xhtml`（第一章）\n"
+        "**自动审计**：`proof.audit` 默认规则 **0 项**；章节以 `<p><br /></p>` 分隔。\n\n"
+        "## 一、建议修改（6 项）\n\n"
+        "| # | 行 | 原文 | 建议 | 依据 |\n|---|---|---|---|---|\n"
+        "| 1 | L25 | 也**帮忙我**发传单 | **帮我**发传单 | 同章 L75、L27 |\n"
+        "| 2 | L477 | 「**暗椿**」 | 「**暗桩**」 | 错字 |\n"
+        "| 3 | L925 | **指是**什么 | 是什么 | 衍字 |\n"
+        "| 4 | L1409 | **并下无意识** | **并下意识** | 错字 |\n"
+        "| 5 | L1897 | **小事一椿** | 小事一**桩** | 错字 |\n"
+        "| 6 | L2219 | **向我地**道歉 | **向我**道歉 | 衍字 |\n\n"
+        "## 二、需你决定\n\n"
+        "7. **L1899**「帮忙成香的演讲」\n8. **L789**「显着」\n"
+        "9. **L1513 / L1833 / L1895 / L2031**「想像」\n10. **L1161**「能在」\n\n"
+        "## 三、其他观察\n\n- L2043 用「•」表示并列。\n\n---\n\n"
+        "**下一步**：`transaction.begin → patch → preview → commit`。\n");
+    const QStringList deltas = { answer.left(40), answer.mid(40, 200), answer.mid(240) };
+    for (const QString &delta : deltas) {
+        SigilAgent::AgentEvent event;
+        event.type = SigilAgent::AgentEventType::AssistantDelta;
+        event.payload = QJsonObject { { QStringLiteral("kind"), QStringLiteral("content") },
+                                      { QStringLiteral("text"), delta } };
+        dock.appendEvent(event);
+    }
+    ProcessEventsFor(80);
+    QWidget *answer_card = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard"));
+    auto *answer_body = answer_card
+        ? answer_card->findChild<QLabel *>(QStringLiteral("agentAnswerCardBody")) : nullptr;
+    Require(answer_body && answer_body->textFormat() == Qt::PlainText
+                && answer_body->text() == answer
+                && answer_card->property("markdownState").toString() == QStringLiteral("streaming"),
+            "streamed deltas must stay plain selectable source until the final message");
+
+    SigilAgent::AgentEvent final_answer;
+    final_answer.type = SigilAgent::AgentEventType::AssistantMessage;
+    final_answer.payload = QJsonObject { { QStringLiteral("content"), answer } };
+    dock.appendEvent(final_answer);
+    application.processEvents();
+    const QString html = answer_body->text();
+    const QString visible = VisibleText(answer_body);
+    Require(answer_body->textFormat() == Qt::RichText
+                && answer_card->property("markdownState").toString() == QStringLiteral("rendered")
+                && answer_card->property("rawMarkdown").toString() == answer
+                && html.contains(QStringLiteral("<table"))
+                && visible.contains(QString::fromUtf8("一、建议修改"))
+                && visible.contains(QString::fromUtf8("帮忙我"))
+                && visible.contains(QStringLiteral("<p><br /></p>"))
+                && !visible.contains(QStringLiteral("**")),
+            "the final answer must render headings, tables, emphasis and code once");
+    const QString screenshot = qEnvironmentVariable("SIGIL_AGENT_DOCK_SCREENSHOT");
+    if (!screenshot.isEmpty()) dock.grab().save(screenshot);
+    Require(answer_card->property("locationFileLinks").toInt() == 1
+                && answer_card->property("locationLineLinks").toInt() == 16
+                && answer_card->property("locationUnboundLineRefs").toInt() == 0
+                && answer_card->property("locationOutOfRangeLineRefs").toInt() == 0,
+            "the sample-shaped answer must link its one file and all 16 source-line references");
+    Require(answer_body->textInteractionFlags().testFlag(Qt::LinksAccessibleByKeyboard)
+                && answer_body->textInteractionFlags().testFlag(Qt::TextSelectableByMouse)
+                && !answer_body->openExternalLinks()
+                && answer_body->accessibleName() == QStringLiteral("Answer"),
+            "rendered answers must stay selectable, keyboard reachable and never open external links");
+
+    auto *copy = answer_card->findChild<QToolButton *>(QStringLiteral("agentAnswerCardCopy"));
+    Require(copy, "rendered cards must offer Copy for the original Markdown");
+    copy->click();
+    Require(QGuiApplication::clipboard()->text() == answer,
+            "Copy must place the original Markdown, not rendered HTML, on the clipboard");
+
+    const QString l477 = HrefForLabel(answer_body, QStringLiteral("L477"));
+    const QString file_link = HrefForLabel(answer_body, QStringLiteral("OEBPS/Text/Section001.xhtml"));
+    Require(!l477.isEmpty() && !file_link.isEmpty(), "rendered HTML must carry the location links");
+    emit answer_body->linkHovered(l477);
+    Require(answer_body->toolTip().contains(QStringLiteral("OEBPS/Text/Section001.xhtml"))
+                && answer_body->toolTip().contains(QStringLiteral("477")),
+            "hovering a line link must say which file and source line will open");
+    emit answer_body->linkActivated(l477);
+    Require(requests.size() == 1 && requests.last().bookSessionId == source.session
+                && requests.last().resourceId == QStringLiteral("res-ch1")
+                && requests.last().line == 477
+                && dock.property("lastLocationStatus").toString() == QStringLiteral("exact"),
+            "an unchanged source-line link must request that resource and line");
+    emit answer_body->linkActivated(file_link);
+    Require(requests.size() == 2 && requests.last().resourceId == QStringLiteral("res-ch1")
+                && requests.last().line == -1,
+            "a file link must open the file without inventing a line");
+
+    auto *notice = dock.findChild<QWidget *>(QStringLiteral("agentLocationNotice"));
+    auto *notice_text = dock.findChild<QLabel *>(QStringLiteral("agentLocationNoticeText"));
+    auto *open_file = dock.findChild<QPushButton *>(QStringLiteral("agentLocationOpenFileButton"));
+    Require(notice && notice_text && open_file && !notice->isVisible(),
+            "successful navigation must not show a location notice");
+
+    const QString original = source.texts.value(QStringLiteral("res-ch1"));
+    source.texts[QStringLiteral("res-ch2")] = NumberedLines(41);
+    emit answer_body->linkActivated(l477);
+    Require(requests.size() == 3 && requests.last().line == 477,
+            "editing another resource must not invalidate this link");
+    source.texts[QStringLiteral("res-ch1")] = QStringLiteral("<p>new</p>\n") + original;
+    emit answer_body->linkActivated(l477);
+    Require(requests.size() == 3 && notice->isVisible() && open_file->isVisible()
+                && notice->property("locationStatus").toString() == QStringLiteral("content_changed")
+                && notice_text->text().contains(QStringLiteral("477")),
+            "a changed target must not jump to the stale line and must explain why");
+    open_file->click();
+    Require(requests.size() == 4 && requests.last().resourceId == QStringLiteral("res-ch1")
+                && requests.last().line == -1 && !notice->isVisible(),
+            "the user may still open only the changed file");
+    source.texts[QStringLiteral("res-ch1")] = original;
+    emit answer_body->linkActivated(l477);
+    Require(requests.size() == 5 && requests.last().line == 477,
+            "undoing the change must restore exact navigation");
+
+    source.resources[0].bookPath = QStringLiteral("OEBPS/Text/Renamed.xhtml");
+    emit answer_body->linkActivated(l477);
+    Require(requests.size() == 6 && requests.last().resourceId == QStringLiteral("res-ch1"),
+            "a renamed resource must still resolve by identity");
+    source.texts.remove(QStringLiteral("res-ch1"));
+    emit answer_body->linkActivated(l477);
+    Require(requests.size() == 6 && notice->isVisible() && !open_file->isVisible()
+                && notice->property("locationStatus").toString() == QStringLiteral("resource_missing"),
+            "a deleted resource must not open anything");
+    source.texts.insert(QStringLiteral("res-ch1"), original);
+    source.resources[0].bookPath = QStringLiteral("OEBPS/Text/Section001.xhtml");
+
+    emit answer_body->linkActivated(QStringLiteral("sigil-agent://location/0123456789abcdef0123456789abcdef"));
+    emit answer_body->linkActivated(QStringLiteral("file:///etc/passwd"));
+    Require(requests.size() == 6 && dock.property("lastLocationStatus").toString() == QStringLiteral("unknown"),
+            "IDs the host did not issue and foreign schemes must never navigate");
+
+    SigilAgent::AgentEvent next_step;
+    next_step.type = SigilAgent::AgentEventType::ModelRequestStarted;
+    dock.appendEvent(next_step);
+    SigilAgent::AgentEvent multi;
+    multi.type = SigilAgent::AgentEventType::AssistantMessage;
+    multi.payload = QJsonObject { { QStringLiteral("content"), QStringLiteral(
+        "`OEBPS/Text/Section001.xhtml` and `OEBPS/Text/Section002.xhtml`: L3 is ambiguous.\n\n"
+        "| file | line |\n|---|---|\n| OEBPS/Text/Section002.xhtml | L40 |\n\n"
+        "```\nOEBPS/Text/Section001.xhtml L5\n```\n") } };
+    dock.appendEvent(multi);
+    QWidget *multi_card = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard1-2"));
+    auto *multi_body = multi_card
+        ? multi_card->findChild<QLabel *>(QStringLiteral("agentAnswerCard1-2Body")) : nullptr;
+    Require(multi_card && multi_card->property("locationFileLinks").toInt() == 3
+                && multi_card->property("locationLineLinks").toInt() == 1
+                && multi_card->property("locationUnboundLineRefs").toInt() == 1,
+            "multi-file answers must bind L numbers only through their own table row");
+    emit multi_body->linkActivated(HrefForLabel(multi_body, QStringLiteral("L40")));
+    Require(requests.size() == 7 && requests.last().resourceId == QStringLiteral("res-ch2")
+                && requests.last().line == 40,
+            "a row-bound L number must open the path named in that row");
+
+    SigilAgent::AgentEvent third_step;
+    third_step.type = SigilAgent::AgentEventType::ModelRequestStarted;
+    dock.appendEvent(third_step);
+    SigilAgent::AgentEvent unsafe;
+    unsafe.type = SigilAgent::AgentEventType::AssistantMessage;
+    unsafe.payload = QJsonObject { { QStringLiteral("content"), QStringLiteral(
+        "<img src=\"file:///etc/hosts\"> ![x](https://example.com/x.png) "
+        "[web](https://example.com) [js](javascript:alert(1))") } };
+    dock.appendEvent(unsafe);
+    QWidget *unsafe_card = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard1-3"));
+    auto *unsafe_body = unsafe_card
+        ? unsafe_card->findChild<QLabel *>(QStringLiteral("agentAnswerCard1-3Body")) : nullptr;
+    Require(unsafe_body && !unsafe_body->text().contains(QStringLiteral("<img"))
+                && !unsafe_body->text().contains(QStringLiteral("href=\"http"))
+                && !unsafe_body->text().contains(QStringLiteral("javascript:"))
+                && unsafe_card->property("markdownBlockedImages").toInt() == 1
+                && unsafe_card->property("markdownBlockedLinks").toInt() == 2
+                && VisibleText(unsafe_body).contains(QStringLiteral("<img src=")),
+            "model HTML, images and external links must not become live rich text");
+
+    SigilAgent::AgentEvent tool;
+    tool.type = SigilAgent::AgentEventType::ToolCompleted;
+    tool.payload = QJsonObject { { QStringLiteral("tool_call_id"), QStringLiteral("html-tool") },
+                                 { QStringLiteral("name"), QStringLiteral("resource.read_fragment") },
+                                 { QStringLiteral("message"), QStringLiteral("<b>not bold</b>") } };
+    dock.appendEvent(tool);
+    auto *tool_body = dock.findChild<QLabel *>(QStringLiteral("agentToolCard-html-toolBody"));
+    Require(tool_body && tool_body->textFormat() == Qt::PlainText
+                && tool_body->text() == QStringLiteral("<b>not bold</b>"),
+            "tool cards must stay plain text");
+
+    SigilAgent::AgentEvent fourth_step;
+    fourth_step.type = SigilAgent::AgentEventType::ModelRequestStarted;
+    dock.appendEvent(fourth_step);
+    SigilAgent::AgentEvent huge;
+    huge.type = SigilAgent::AgentEventType::AssistantMessage;
+    const QString huge_text = QStringLiteral("**x** ").repeated(SigilAgent::AGENT_MARKDOWN_RENDER_BUDGET / 6 + 10)
+        + QStringLiteral(" OEBPS/Text/Section001.xhtml L1");
+    huge.payload = QJsonObject { { QStringLiteral("content"), huge_text } };
+    dock.appendEvent(huge);
+    QWidget *huge_card = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard1-4"));
+    auto *huge_body = huge_card
+        ? huge_card->findChild<QLabel *>(QStringLiteral("agentAnswerCard1-4Body")) : nullptr;
+    auto *huge_note = huge_card
+        ? huge_card->findChild<QLabel *>(QStringLiteral("agentAnswerCard1-4PlainNote")) : nullptr;
+    Require(huge_body && huge_note && huge_body->textFormat() == Qt::PlainText
+                && huge_body->text() == huge_text && !huge_note->isHidden()
+                && huge_card->property("markdownState").toString() == QStringLiteral("plain_over_budget")
+                && huge_card->property("locationLineLinks").toInt() == 0
+                && (huge_body->textInteractionFlags() & Qt::TextSelectableByKeyboard),
+            "an answer above the render budget must stay copyable plain text with a notice");
+
+    source.session = QStringLiteral("another-book-session");
+    dock.setBookContext(QStringLiteral("Other"), QStringLiteral("other.epub"), 2, false, 1,
+                        source.session);
+    emit answer_body->linkActivated(l477);
+    Require(requests.size() == 7 && notice->isVisible() && !open_file->isVisible()
+                && notice->property("locationStatus").toString() == QStringLiteral("other_book"),
+            "after the book changes, old links must not open the new book");
+
+    dock.resetTranscript();
+    Require(!notice->isVisible(), "a new transcript must clear the location notice");
 }
 
 } // namespace
@@ -141,7 +456,10 @@ int main(int argc, char *argv[])
               { QStringLiteral("included_turn_count"), 3 },
               { QStringLiteral("omitted_turn_count"), 1 },
               { QStringLiteral("included_previous_turn_bytes"), 20480 },
-              { QStringLiteral("current_turn_bytes"), 5120 } } },
+              { QStringLiteral("current_turn_bytes"), 5120 },
+              { QStringLiteral("included_current_turn_bytes"), 4096 },
+              { QStringLiteral("current_turn_budget_bytes"), 131072 },
+              { QStringLiteral("omitted_current_turn_messages"), 2 } } },
         { QStringLiteral("tool_context"), QJsonObject {
               { QStringLiteral("mode"), QStringLiteral("ask") },
               { QStringLiteral("policy_applied"), true },
@@ -204,7 +522,9 @@ int main(int argc, char *argv[])
                 && usage_details->property("firstByteMs").toLongLong() == 9
                 && usage_details->property("firstModelEventMs").toLongLong() == 14
                 && usage_details->text().contains(
-                    QStringLiteral("Request history: 3/4 turns sent · 1 omitted · previous 20/32 KiB · current 5 KiB (always retained)"))
+                    QStringLiteral("Request history: 3/4 turns sent · 1 omitted · previous 20/32 KiB"))
+                && usage_details->text().contains(
+                    QStringLiteral("Current run history: 4/5 KiB sent · budget 128 KiB · messages omitted: 2"))
                 && usage_details->property("historyBudgetBytes").toInt() == 32768
                 && usage_details->property("historyIncludedTurns").toInt() == 3
                 && usage_details->property("historyOmittedTurns").toInt() == 1
@@ -212,6 +532,12 @@ int main(int argc, char *argv[])
                     == 20480
                 && usage_details->property("historyCurrentTurnBytes").toInt()
                     == 5120
+                && usage_details->property("historyIncludedCurrentTurnBytes").toInt()
+                    == 4096
+                && usage_details->property("historyCurrentTurnBudgetBytes").toInt()
+                    == 131072
+                && usage_details->property("historyOmittedCurrentTurnMessages").toInt()
+                    == 2
                 && usage_details->text().contains(
                     QStringLiteral("Request tools: 17/44 exposed · 27 hidden by mode policy · schema 12/32 KiB"))
                 && usage_details->property("toolTotalCount").toInt() == 44
@@ -547,8 +873,12 @@ int main(int argc, char *argv[])
     };
     dock.appendEvent(complete_answer);
     auto *coalesced_body = dock.findChild<QLabel *>(QStringLiteral("agentAnswerCardBody"));
-    Require(coalesced_body && coalesced_body->text().size() == streamed_chunks
-                && coalesced_body->text() == QString(streamed_chunks, QLatin1Char('x'))
+    QWidget *coalesced_card = dock.findChild<QWidget *>(QStringLiteral("agentAnswerCard"));
+    Require(coalesced_body && coalesced_card
+                && coalesced_card->property("rawMarkdown").toString()
+                    == QString(streamed_chunks, QLatin1Char('x'))
+                && VisibleText(coalesced_body) == QString(streamed_chunks, QLatin1Char('x'))
+                && coalesced_card->property("markdownState").toString() == QStringLiteral("rendered")
                 && transcript->property("streamRenderBatches").toULongLong() == 1,
             "a terminal event must synchronously flush every queued stream character once");
 
@@ -630,9 +960,9 @@ int main(int argc, char *argv[])
     auto *step2_body = step2_card
         ? step2_card->findChild<QLabel *>(QStringLiteral("agentAnswerCard1-2Body"))
         : nullptr;
-    Require(step1_body && step1_body->text().contains(QStringLiteral("I'll patch the title.")),
+    Require(step1_body && VisibleText(step1_body).contains(QStringLiteral("I'll patch the title.")),
             "later model steps must not overwrite the earlier answer card");
-    Require(step2_body && step2_body->text().contains(QStringLiteral("提交修复")),
+    Require(step2_body && VisibleText(step2_body).contains(QStringLiteral("提交修复")),
             "each model step must keep its own answer card");
 
     SigilAgent::AgentEvent approval;
@@ -1374,6 +1704,34 @@ int main(int argc, char *argv[])
     Require(restore_button && restore_button->isEnabled(),
             "a guarded text commit must offer task restoration");
 
+    SigilAgent::AgentEvent partial_terminal;
+    partial_terminal.type = SigilAgent::AgentEventType::RunStateChanged;
+    partial_terminal.payload = QJsonObject {
+        { QStringLiteral("run_id"), QStringLiteral("partial-after-commit") },
+        { QStringLiteral("state"), QStringLiteral("failed") },
+        { QStringLiteral("partial_outcome"), QJsonObject {
+            { QStringLiteral("status"), QStringLiteral("partial_applied") },
+            { QStringLiteral("commit_count"), 1 },
+            { QStringLiteral("resource_ids"), QJsonArray { QStringLiteral("chapter-1") } },
+            { QStringLiteral("book_revision"), 17 },
+            { QStringLiteral("latest_restore_point"), QStringLiteral("restore-17") }
+        } }
+    };
+    dock.appendEvent(partial_terminal);
+    application.processEvents();
+    auto *partial_card = dock.findChild<QWidget *>(
+        QStringLiteral("agentPartialOutcomeCard"));
+    auto *partial_body = partial_card
+        ? partial_card->findChild<QLabel *>(QStringLiteral("agentPartialOutcomeCardBody"))
+        : nullptr;
+    Require(partial_body && partial_body->text().contains(
+                QStringLiteral("after 1 transaction"))
+                && partial_body->text().contains(QStringLiteral("chapter-1"))
+                && partial_body->text().contains(QStringLiteral("revision: 17"))
+                && partial_body->text().contains(QStringLiteral("Completion and validation are unconfirmed"))
+                && partial_body->text().contains(QStringLiteral("did not save the EPUB")),
+            "failed runs with commits must show a persistent partial-outcome card");
+
     SigilAgent::AgentEvent rolled_back_commit;
     rolled_back_commit.type = SigilAgent::AgentEventType::ToolFailed;
     rolled_back_commit.payload = QJsonObject {
@@ -1589,5 +1947,6 @@ int main(int argc, char *argv[])
     Require(!retry->isEnabled()
                 && retry->property("contextHandles").toStringList().isEmpty(),
             "New Session must discard all retry payload and scope state");
+    TestMarkdownNavigation(application);
     return EXIT_SUCCESS;
 }

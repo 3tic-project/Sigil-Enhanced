@@ -37,6 +37,12 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/Index.cpp
     BookManipulation/Index.h
     BookManipulation/CleanSource.cpp
+    BookManipulation/ManifestIdRebase.cpp
+    BookManipulation/ManifestIdRebase.h
+    BookManipulation/XmlWellFormed.cpp
+    BookManipulation/XmlWellFormed.h
+    BookManipulation/XmlProcessor.cpp
+    BookManipulation/XmlProcessor.h
     BookManipulation/CleanSourceExt.cpp
     BookManipulation/CleanSource.h
     BookManipulation/EpubVersionConv.cpp
@@ -44,6 +50,8 @@ set( BOOK_MANIPULATION_FILES
     BookManipulation/HtmlNamedEntity.h
     BookManipulation/NcxNavigation.cpp
     BookManipulation/NcxNavigation.h
+    BookManipulation/NcxGenerator.cpp
+    BookManipulation/NcxGenerator.h
     BookManipulation/TocTreeTransform.cpp
     BookManipulation/TocTreeTransform.h
     BookManipulation/FolderKeeper.cpp
@@ -121,6 +129,7 @@ set( AGENT_FILES
     Agent/Execution/ContentOps.cpp
     Agent/Execution/ContentOps.h
     Agent/Execution/BookEdits.cpp
+    Agent/Execution/ProofAudit.cpp
     Agent/Execution/BookEdits.h
     Agent/Typeset/ManuscriptParser.cpp
     Agent/Typeset/ManuscriptParser.h
@@ -136,6 +145,10 @@ set( AGENT_FILES
     Agent/Persistence/AgentSettings.h
     Agent/UI/AgentDock.cpp
     Agent/UI/AgentDock.h
+    Agent/UI/AgentLocations.cpp
+    Agent/UI/AgentLocations.h
+    Agent/UI/AgentMarkdown.cpp
+    Agent/UI/AgentMarkdown.h
     Agent/UI/AgentPlanComparisonDialog.cpp
     Agent/UI/AgentPlanComparisonDialog.h
     Agent/UI/GuiApprovalGate.h
@@ -235,6 +248,13 @@ set( RESOURCE_OBJECT_FILES
     ResourceObjects/OPFResource.cpp
     ResourceObjects/OPFResourceExt.cpp
     ResourceObjects/OPFResource.h
+    ResourceObjects/OPFSourceText.cpp
+    ResourceObjects/OPFSourceText.h
+    ResourceObjects/OPFSourceBytes.cpp
+    ResourceObjects/OPFSourceBytes.h
+    ResourceObjects/OPFLegacyCodecTables.h
+    ResourceObjects/OPFSourcePatch.cpp
+    ResourceObjects/OPFSourcePatch.h
     ResourceObjects/NavProcessor.cpp
     ResourceObjects/NavProcessor.h
     ResourceObjects/NCXResource.cpp
@@ -604,6 +624,10 @@ set( MISC_FILES
     Misc/AsciiFy.h
     Misc/UpdateChecker.cpp
     Misc/UpdateChecker.h
+    Misc/UpdateVersionFeed.cpp
+    Misc/UpdateVersionFeed.h
+    Misc/DefaultReplaceFunctions.cpp
+    Misc/DefaultReplaceFunctions.h
     Misc/URLInterceptor.cpp
     Misc/URLInterceptor.h
     Misc/URLSchemeHandler.cpp
@@ -619,6 +643,9 @@ set( MISC_FILES
     Misc/Utility.cpp
     Misc/UtilityExt.cpp
     Misc/Utility.h
+    Misc/TxtEncoding.cpp
+    Misc/TxtEncoding.h
+    Misc/TxtEncodingTables.h
     Misc/AtomicFileWrite.cpp
     Misc/AtomicFileWrite.h
     Misc/SearchUtils.cpp
@@ -716,6 +743,13 @@ set( MISC_FILES
     Misc/webviewprinter.h
     Misc/CodepointNames.cpp
     Misc/CodepointNames.h
+    Misc/StaticGif.cpp
+    Misc/StaticGif.h
+    Misc/MetadataProcessor.cpp
+    Misc/MetadataProcessor.h
+    Misc/ReplaceFunctions.cpp
+    Misc/ReplaceFunctions.h
+    Misc/ReplaceFunctionsData.h
     Misc/SettingsStoreExtend.cpp
     Misc/SettingsStoreExtend.h
     )
@@ -974,6 +1008,9 @@ set( QRC_FILES
     Resource_Files/icon/icon.qrc
     Resource_Files/dark/dark.qrc
     Agent/Skills/agent_skills.qrc
+    Resource_Files/data/CodepointNamesData.qrc
+    Resource_Files/data/OPFLegacyCodecsData.qrc
+    Resource_Files/data/DefaultReplaceFunctionsData.qrc
     )
 
 set( MAIN_BINARY_QRC_FILES

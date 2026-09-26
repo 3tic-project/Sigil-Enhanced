@@ -28,6 +28,11 @@ struct CatalogModel {
     QString name;
     qint64 contextLength = 0;
     QStringList supportedParameters;
+    QStringList supportedReasoningEfforts;
+    QString defaultReasoningEffort;
+    QString apiEndpoint;
+    bool reasoningMandatory = false;
+    bool reasoningEffortSelectable = true;
     bool tools = false;
     bool reasoning = false;
 };
@@ -54,7 +59,8 @@ public:
                                const QString &referer = QString(),
                                const QString &title = QString(),
                                int timeoutMs = 30000,
-                               const std::atomic_bool *cancelled = nullptr);
+                               const std::atomic_bool *cancelled = nullptr,
+                               const QString &userAgent = QString());
 };
 
 } // namespace SigilAgent

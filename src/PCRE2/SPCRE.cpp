@@ -28,6 +28,7 @@
 #include "PCRE2/CaptureNameTable.h"
 #include "PCRE2/PCREReplaceTextBuilder.h"
 #include "Misc/Utility.h"
+#include "Misc/ReplaceFunctions.h"
 #include "Misc/SearchUtils.h"
 #include "sigil_constants.h"
 
@@ -286,11 +287,22 @@ bool SPCRE::replaceText(const QString &text, const QList<std::pair<int, int>> &c
                                             replacement_pattern, out, resolver);
     }
     if (!isValid()) return false;
+    ReplaceFunctions::Builtin builtin;
+    if (ReplaceFunctions::Resolve(functionname, Utility::DefinePrefsDir() + "/" + SIGIL_FUNCTION_REPLACE_JSON_FILE, &builtin)) {
+        out = ReplaceFunctions::Apply(builtin, text, capture_groups_offsets);
+        return true;
+    }
     QList<std::pair<int, int> > fixed_groups = SearchUtils::ConvertCaptureGroupstoUTF32(text, capture_groups_offsets);
     PythonRoutines pr;
     PyObjectPtr fsp = pr.SetupInitialFunctionSearchEnvInPython(functionname);
     out = pr.GetSingleReplacementByFunction(fsp, "", text, fixed_groups);
     return true;
+}
+
+bool SPCRE::isBuiltinFunction(const QString &function_name)
+{
+    ReplaceFunctions::Builtin builtin;
+    return ReplaceFunctions::Resolve(function_name, Utility::DefinePrefsDir() + "/" + SIGIL_FUNCTION_REPLACE_JSON_FILE, &builtin);
 }
 
 bool SPCRE::functionReplaceText(const QString &bookpath, const QString &text,

@@ -19,7 +19,6 @@
 **
 *************************************************************************/
 
-#include "EmbedPython/PythonRoutines.h"
 
 #include <QString>
 #include <QChar>
@@ -43,6 +42,7 @@
 #include "MainUI/MainWindow.h"
 #include "Misc/Language.h"
 #include "Misc/MarcRelators.h"
+#include "Misc/MetadataProcessor.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
 #include "Dialogs/MetaEditorItemDelegate.h"
@@ -307,8 +307,9 @@ void MetaEditor::loadE2Choices()
 
 
 QString MetaEditor::GetOPFMetadata() {
-    PythonRoutines pr;
-    MetadataPieces mdp = pr.GetMetadataInPython(m_opfdata, m_version);
+    MetadataProcessor::Pieces mdp;
+    // On failure the pieces stay empty, as they did when process_metadata returned None.
+    MetadataProcessor::Extract(m_opfdata, m_version, &mdp);
     QString adata = mdp.data;
     m_otherxml = mdp.otherxml;
     m_metatag = mdp.metatag;
@@ -367,7 +368,7 @@ QString MetaEditor::GetOPFMetadata() {
 QString MetaEditor::SetNewOPFMetadata(QString& data) 
 {
     QString newopfdata = m_opfdata;
-    MetadataPieces mdp;
+    MetadataProcessor::Pieces mdp;
     // Translate from Human Readable Form
     QStringList dlist = data.split(_RS, Qt::SkipEmptyParts);
     QStringList nlist;
@@ -422,9 +423,8 @@ QString MetaEditor::SetNewOPFMetadata(QString& data)
     mdp.otherxml = m_otherxml;
     mdp.metatag = m_metatag;
     mdp.idlist = m_idlist;
-    PythonRoutines pr;
-    QString results = pr.SetNewMetadataInPython(mdp, m_opfdata, m_version);
-    if (!results.isEmpty()) {
+    QString results;
+    if (MetadataProcessor::Apply(mdp, m_opfdata, m_version, &results) && !results.isEmpty()) {
         newopfdata = results;
     }
     return newopfdata;

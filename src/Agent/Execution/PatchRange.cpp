@@ -107,13 +107,38 @@ void addTextPreview(QJsonObject *object, const QString &key,
 
 QJsonObject mismatchData(const QString &source, int start, int end, const QString &expected)
 {
+    QString anchor;
+    for (const QString &line : expected.split(QLatin1Char('\n'))) {
+        if (line.trimmed().size() >= 8) {
+            anchor = line.trimmed().left(48);
+            break;
+        }
+    }
+    QJsonArray candidates;
+    if (!anchor.isEmpty()) {
+        int from_anchor = 0;
+        while (candidates.size() < 3) {
+            const int at = source.indexOf(anchor, from_anchor);
+            if (at < 0) break;
+            candidates.append(QJsonObject {
+                { QStringLiteral("offset"), at },
+                { QStringLiteral("line"), lineNumberAt(source, at) },
+                { QStringLiteral("preview"), source.mid(qMax(0, at - 32), 160) },
+                { QStringLiteral("read_offset"), qMax(0, at - 128) },
+                { QStringLiteral("read_limit"), 512 }
+            });
+            from_anchor = at + anchor.size();
+        }
+    }
     const bool valid_range = start >= 0 && end >= start && end <= source.size();
     const int actual_length = valid_range ? end - start : 0;
     const QString actual = valid_range
         ? source.mid(start, qMin(actual_length, MAX_MISMATCH_TEXT_PREVIEW))
         : QString();
     const int context = 40;
-    const int bounded_start = qBound(0, start, source.size());
+    const int bounded_start = start >= 0 ? qBound(0, start, source.size())
+        : candidates.isEmpty() ? 0
+        : candidates.first().toObject().value(QStringLiteral("offset")).toInt();
     const int bounded_end = valid_range ? end : bounded_start;
     const int from = qMax(0, bounded_start - context);
     const int context_length = qMin(
@@ -134,6 +159,10 @@ QJsonObject mismatchData(const QString &source, int start, int end, const QStrin
     data.insert(QStringLiteral("context_length"), context_length);
     data.insert(QStringLiteral("context_truncated"),
                 context_length > MAX_MISMATCH_TEXT_PREVIEW);
+    data.insert(QStringLiteral("nearby_candidates"), candidates);
+    data.insert(QStringLiteral("source_has_lf"), source.contains(QLatin1Char('\n')));
+    data.insert(QStringLiteral("source_has_crlf"), source.contains(QStringLiteral("\r\n")));
+    data.insert(QStringLiteral("source_has_u2029"), source.contains(QChar(0x2029)));
     bool occurrences_truncated = false;
     const QJsonArray occurrences = occurrenceList(
         source, expected, &occurrences_truncated);
