@@ -874,7 +874,7 @@ BookOpResult MemoryBookWorkspace::patchFragment(const QString &resource_id,
                                     expected_resource_revision, edits, &error);
     if (!applied_edits) {
         const QString code = error.contains(QLatin1String("Revision"))
-            ? QStringLiteral("BOOK_REVISION_CONFLICT") : QStringLiteral("PATCH_FAILED");
+            ? QStringLiteral("RESOURCE_REVISION_CONFLICT") : QStringLiteral("PATCH_FAILED");
         return BookOpResult::error(code, error);
     }
     QJsonObject data = resolved.data;
@@ -911,7 +911,7 @@ BookOpResult MemoryBookWorkspace::replaceText(const QString &resource_id,
                                      expected_resource_revision, text, &error);
     if (!replaced) {
         const QString code = error.contains(QLatin1String("Revision"))
-            ? QStringLiteral("BOOK_REVISION_CONFLICT") : QStringLiteral("REPLACE_FAILED");
+            ? QStringLiteral("RESOURCE_REVISION_CONFLICT") : QStringLiteral("REPLACE_FAILED");
         return BookOpResult::error(code, error);
     }
     return BookOpResult::success(QJsonObject {
@@ -1499,6 +1499,11 @@ QString MemoryBookWorkspace::workingText(const QString &resource_id) const
 
 quint64 MemoryBookWorkspace::resourceRevision(const QString &resource_id) const
 {
+    quint64 staged_revision = 0;
+    if (m_transaction
+        && m_transaction->ReadAddedText(resource_id, nullptr, &staged_revision)) {
+        return staged_revision;
+    }
     const MemoryResource *resource = findResource(resource_id);
     return resource ? resource->revision : 0;
 }

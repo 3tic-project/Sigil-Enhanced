@@ -20,6 +20,7 @@ namespace SigilAgent
 
 struct TypesetOptions {
     QString manuscriptId;
+    ParseOptions parseOptions;
     bool retireSource = true;
     bool updateMetadata = true;
 };
@@ -52,7 +53,8 @@ BookOpResult fillTemplateSection(IBookWorkspace *workspace,
                                  const QString &role,
                                  const QString &manuscript_id,
                                  int chapter_index,
-                                 const QString &image_name);
+                                 const QString &image_name,
+                                 const ParseOptions &parse_options = ParseOptions());
 BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptions &options);
 
 } // namespace SigilAgent

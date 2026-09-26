@@ -324,6 +324,8 @@ int main()
     Require(typeset.ok && typeset.previewOnly, "typeset must stage");
     Require(typeset.data.value(QStringLiteral("chapters_filled")).toInt() == 3, "three chapters filled");
     Require(typeset.data.value(QStringLiteral("sections_copied")).toInt() == 1, "one extra section copied");
+    Require(typeset.data.value(QStringLiteral("toc_entries_staged")).toInt() == 3,
+            "chapter navigation staged");
     Require(book.resourceText(QStringLiteral("s1")).contains(QStringLiteral("请先转为书籍视图界面")),
             "live Section001 must stay placeholder until commit");
 
@@ -366,12 +368,83 @@ int main()
             "synopsis page filled");
     Require(book.resourceText(QStringLiteral("contents")).contains(QStringLiteral("Section001.xhtml")),
             "TOC must link Section001");
+    Require(book.toc().size() == 3
+                && book.toc().first().toObject().value(QStringLiteral("label")).toString()
+                    == QStringLiteral("第一話　春")
+                && book.toc().last().toObject().value(QStringLiteral("label")).toString()
+                    == QStringLiteral("後記"),
+            "navigation TOC must use the manuscript chapter headings");
     Require(book.resourceText(QStringLiteral("title")).contains(QStringLiteral("测试书名")),
             "title page must use 中文標題");
     Require(book.metadata().value(QStringLiteral("creator")).toString() == QStringLiteral("测试作者"),
             "metadata creator");
     Require(book.metadata().value(QStringLiteral("title")).toString() == QStringLiteral("测试书名"),
             "metadata title from 中文標題");
+
+    MemoryBookWorkspace custom_book = lnTemplateBook(false);
+    MemoryResource custom_manuscript;
+    custom_manuscript.id = QStringLiteral("custom-ms");
+    custom_manuscript.bookPath = QStringLiteral("OEBPS/Misc/custom.txt");
+    custom_manuscript.kind = QStringLiteral("text");
+    custom_manuscript.mediaType = QStringLiteral("text/plain");
+    custom_manuscript.text = QStringLiteral(
+        "中文標題：自定义书名\n目錄\n序　章\n第一話　春\n終　章\n\n"
+        "序　章\n序文。\n（插圖001）\n第一話　春\n春天。\n終　章\n完结。\n");
+    custom_book.addResource(custom_manuscript);
+    custom_book.addResource(image(QStringLiteral("img-001"),
+                                  QStringLiteral("OEBPS/Images/001.jpg")));
+    custom_book.setToc(QJsonArray {
+        QJsonObject {
+            { QStringLiteral("label"), QStringLiteral("书名") },
+            { QStringLiteral("href"), QStringLiteral("Text/title.xhtml") }
+        },
+        QJsonObject {
+            { QStringLiteral("label"), QStringLiteral("第一话") },
+            { QStringLiteral("href"), QStringLiteral("Text/Section001.xhtml") }
+        }
+    });
+    ToolRegistry custom_registry;
+    registerBookTools(&custom_registry, &custom_book);
+    auto run_custom = [&](const QString &name, const QJsonObject &arguments) {
+        return custom_registry.find(name)->execute(arguments);
+    };
+    const QString custom_headings = QStringLiteral("^(序　章|第一話　春|終　章)$");
+    const QString custom_illustrations = QStringLiteral("^（插圖([0-9]{3})）$");
+    const QJsonObject custom_patterns {
+        { QStringLiteral("heading_pattern"), custom_headings },
+        { QStringLiteral("illustration_pattern"), custom_illustrations }
+    };
+    const ToolResult invalid_pattern = run_custom(QStringLiteral("manuscript.parse"),
+        QJsonObject { { QStringLiteral("heading_pattern"), QStringLiteral("[") } });
+    Require(!invalid_pattern.ok && invalid_pattern.code == QStringLiteral("REGEX_INVALID"),
+            "invalid custom manuscript regex must be reported");
+    const ToolResult custom_parsed = run_custom(QStringLiteral("manuscript.parse"),
+                                                custom_patterns);
+    Require(custom_parsed.ok
+                && custom_parsed.data.value(QStringLiteral("chapter_count")).toInt() == 3,
+            "custom manuscript parse finds prologue and finale");
+    Require(run_custom(QStringLiteral("transaction.begin"), QJsonObject()).ok,
+            "custom typeset begin");
+    const ToolResult custom_typeset = run_custom(
+        QStringLiteral("content.typeset_from_manuscript"), custom_patterns);
+    Require(custom_typeset.ok
+                && custom_typeset.data.value(QStringLiteral("chapters_filled")).toInt() == 3,
+            "custom parse patterns carry into typesetting");
+    Require(run_custom(QStringLiteral("transaction.commit"), QJsonObject {
+        { QStringLiteral("expected_revision"), static_cast<qint64>(custom_book.revision()) }
+    }).applied, "custom typeset commit");
+    Require(custom_book.resourceText(QStringLiteral("s1")).contains(
+                QStringLiteral("<h1>序　章</h1>")),
+            "custom prologue heading appears in chapter");
+    Require(custom_book.resourceText(QStringLiteral("s1")).contains(
+                QStringLiteral("../Images/001.jpg")),
+            "custom illustration marker resolves in chapter");
+    Require(custom_book.toc().size() == 4
+                && custom_book.toc().first().toObject().value(
+                    QStringLiteral("label")).toString() == QStringLiteral("自定义书名")
+                && custom_book.toc().last().toObject().value(
+                    QStringLiteral("label")).toString() == QStringLiteral("終　章"),
+            "custom chapter navigation matches parsed headings");
 
     Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "replace begin");
     const ToolResult replaced = run(QStringLiteral("resource.replace_text"), QJsonObject {

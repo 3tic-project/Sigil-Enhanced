@@ -23,6 +23,28 @@ namespace SigilAgent
 namespace
 {
 
+BookOpResult validateParseOptions(const ParseOptions &options)
+{
+    const QList<QPair<QString, QString>> patterns {
+        { QStringLiteral("heading_pattern"), options.headingRegex },
+        { QStringLiteral("illustration_pattern"), options.illustrationRegex }
+    };
+    for (const auto &entry : patterns) {
+        if (entry.second.isEmpty()) continue;
+        const QRegularExpression expression(entry.second,
+            QRegularExpression::UseUnicodePropertiesOption);
+        if (!expression.isValid()) {
+            return BookOpResult::error(QStringLiteral("REGEX_INVALID"),
+                QStringLiteral("%1: %2").arg(entry.first, expression.errorString()),
+                QJsonObject {
+                    { QStringLiteral("field"), entry.first },
+                    { QStringLiteral("error_offset"), expression.patternErrorOffset() }
+                });
+        }
+    }
+    return BookOpResult::success(QJsonObject());
+}
+
 QString xmlEscape(const QString &text)
 {
     QString out = text;
@@ -189,15 +211,30 @@ bool lineIsOnlyIllustration(const QString &raw)
     return t.isEmpty();
 }
 
-QString chapterBodyHtml(const ManuscriptChapter &chapter, const QHash<QString, QString> &images)
+QString chapterBodyHtml(const ManuscriptChapter &chapter,
+                        const QHash<QString, QString> &images,
+                        const ParseOptions &parse_options)
 {
     QString html = QStringLiteral("  <div>\n    <h1>%1</h1>\n").arg(xmlEscape(chapter.heading));
     const QStringList lines = chapter.body.split(QLatin1Char('\n'));
+    const QRegularExpression illustration_re(
+        parse_options.illustrationRegex,
+        QRegularExpression::UseUnicodePropertiesOption);
     bool pending_blank = false;
     for (const QString &raw : lines) {
-        if (lineIsOnlyIllustration(raw)) {
+        QString illus;
+        if (!parse_options.illustrationRegex.isEmpty() && illustration_re.isValid()) {
+            const QRegularExpressionMatch match = illustration_re.match(raw);
+            if (match.hasMatch() && match.capturedStart() == 0
+                && match.capturedLength() == raw.size()) {
+                illus = match.lastCapturedIndex() >= 1
+                    ? match.captured(1) : match.captured();
+            }
+        } else if (lineIsOnlyIllustration(raw)) {
+            illus = illustrationNameInLine(raw);
+        }
+        if (!illus.isEmpty()) {
             pending_blank = false;
-            const QString illus = illustrationNameInLine(raw);
             const QString path = resolveImage(images, illus);
             const QString href = path.isEmpty()
                 ? QStringLiteral("../Images/%1.jpg").arg(illus)
@@ -587,11 +624,14 @@ BookOpResult fillTemplateSection(IBookWorkspace *workspace,
                                  const QString &role,
                                  const QString &manuscript_id,
                                  int chapter_index,
-                                 const QString &image_name)
+                                 const QString &image_name,
+                                 const ParseOptions &parse_options)
 {
     if (!workspace) {
         return BookOpResult::error(QStringLiteral("NO_BOOK"), QStringLiteral("No book is open"));
     }
+    const BookOpResult valid_options = validateParseOptions(parse_options);
+    if (!valid_options.ok) return valid_options;
     const QJsonObject parsed_json = parseManuscriptInBook(workspace, manuscript_id);
     if (!parsed_json.value(QStringLiteral("ok")).toBool()) {
         return BookOpResult::error(parsed_json.value(QStringLiteral("code")).toString(),
@@ -601,7 +641,7 @@ BookOpResult fillTemplateSection(IBookWorkspace *workspace,
     const QString source_id = parsed_json.value(QStringLiteral("resource_id")).toString();
     const ParsedManuscript parsed = parseManuscriptText(
         workspace->resourceText(source_id),
-        parsed_json.value(QStringLiteral("title")).toString());
+        parsed_json.value(QStringLiteral("title")).toString(), parse_options);
     const QHash<QString, QString> images = imageIndex(workspace);
     const QString skeleton = currentTextOf(workspace, resource_id);
     QString filled;
@@ -614,7 +654,8 @@ BookOpResult fillTemplateSection(IBookWorkspace *workspace,
                                        QStringLiteral("chapter_index is out of range"));
         }
         filled = setTitleAndBody(skeleton, parsed.chapters.at(chapter_index).heading,
-                                 chapterBodyHtml(parsed.chapters.at(chapter_index), images));
+                                 chapterBodyHtml(parsed.chapters.at(chapter_index), images,
+                                                 parse_options));
     } else if (used_role == QLatin1String("credits")) {
         filled = setTitleAndBody(skeleton, QStringLiteral("制作信息"), creditsBodyHtml(parsed, skeleton));
     } else if (used_role == QLatin1String("synopsis")) {
@@ -651,6 +692,8 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
     if (!workspace) {
         return BookOpResult::error(QStringLiteral("NO_BOOK"), QStringLiteral("No book is open"));
     }
+    const BookOpResult valid_options = validateParseOptions(options.parseOptions);
+    if (!valid_options.ok) return valid_options;
     TemplateMap tmpl = detectTemplateMap(workspace);
     if (tmpl.chapters.isEmpty()) {
         return BookOpResult::error(
@@ -665,7 +708,9 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
     }
     const QJsonObject resource = resourceObject(workspace, manuscript_id);
     const ParsedManuscript parsed = parseManuscriptText(
-        workspace->resourceText(manuscript_id), hintTitleFromPath(resource.value(QStringLiteral("book_path")).toString()));
+        workspace->resourceText(manuscript_id),
+        hintTitleFromPath(resource.value(QStringLiteral("book_path")).toString()),
+        options.parseOptions);
     if (parsed.chapters.isEmpty()) {
         return BookOpResult::error(
             QStringLiteral("NO_CHAPTERS"),
@@ -828,7 +873,8 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
         const ManuscriptChapter &chapter = parsed.chapters.at(i);
         const TemplatePage &page = chapter_pages.at(i);
         const QString filled_text = setTitleAndBody(
-            chapter_skeleton, chapter.heading, chapterBodyHtml(chapter, images));
+            chapter_skeleton, chapter.heading,
+            chapterBodyHtml(chapter, images, options.parseOptions));
         const BookOpResult replaced = stageReplace(workspace, page.resourceId, filled_text);
         if (!replaced.ok) return replaced;
         for (const QString &name : chapter.illustrationNames) {
@@ -844,6 +890,27 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
             { QStringLiteral("chars"), chapter.charCount }
         });
     }
+
+    QJsonArray toc_entries;
+    for (const QJsonValue &value : workspace->toc()) {
+        QJsonObject entry = value.toObject();
+        const QString href = entry.value(QStringLiteral("href")).toString();
+        if (templatePageRole(href) != QLatin1String("chapter")) {
+            if (templatePageRole(href) == QLatin1String("title")) {
+                entry.insert(QStringLiteral("label"), parsed.title);
+            }
+            toc_entries.append(entry);
+        }
+    }
+    for (int i = 0; i < parsed.chapters.size(); ++i) {
+        toc_entries.append(QJsonObject {
+            { QStringLiteral("label"), parsed.chapters.at(i).heading },
+            { QStringLiteral("href"), chapter_pages.at(i).bookPath },
+            { QStringLiteral("level"), 1 }
+        });
+    }
+    const BookOpResult toc_update = workspace->updateToc(toc_entries);
+    if (!toc_update.ok) return toc_update;
 
     bool retired = false;
     const QString source_role = templatePageRole(resource.value(QStringLiteral("book_path")).toString());
@@ -875,6 +942,7 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
         { QStringLiteral("manuscript_id"), manuscript_id },
         { QStringLiteral("title"), parsed.title },
         { QStringLiteral("chapters_filled"), parsed.chapters.size() },
+        { QStringLiteral("toc_entries_staged"), toc_entries.size() },
         { QStringLiteral("sections_copied"), copied.size() },
         { QStringLiteral("copied"), copied },
         { QStringLiteral("filled"), filled },

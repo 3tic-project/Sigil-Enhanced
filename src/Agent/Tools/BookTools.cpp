@@ -215,6 +215,26 @@ ToolResult paginatedSearch(IBookWorkspace *workspace, const QJsonObject &argumen
         ids_by_name.insert(path, id);
         resources.append(resource);
     }
+    const BookOpResult staged_preview = workspace->previewTransaction();
+    if (staged_preview.ok) {
+        for (const QJsonValue &value : staged_preview.data.value(
+                 QStringLiteral("changes")).toArray()) {
+            const QJsonObject addition = value.toObject();
+            if (!addition.value(QStringLiteral("added")).toBool()) continue;
+            const QString id = addition.value(QStringLiteral("resource_id")).toString();
+            if (id.isEmpty() || ids_by_name.contains(id)) continue;
+            const BookOpResult fragment = workspace->readFragment(id, 0, 1);
+            if (!fragment.ok) continue;
+            const QString path = fragment.data.value(QStringLiteral("book_path")).toString();
+            ids_by_name.insert(id, id);
+            ids_by_name.insert(path, id);
+            resources.append(QJsonObject {
+                { QStringLiteral("resource_id"), id },
+                { QStringLiteral("book_path"), path },
+                { QStringLiteral("kind"), QStringLiteral("text") }
+            });
+        }
+    }
     QSet<QString> selected;
     const auto select = [&ids_by_name, &selected](const QString &name) {
         if (name.isEmpty() || !ids_by_name.contains(name)) return false;
@@ -1346,20 +1366,25 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                 expected,
                 expected_text,
                 arguments.value(QStringLiteral("start_line")).toInt(-1));
-            if (!result.ok && result.code == QLatin1String("BOOK_REVISION_CONFLICT")) {
+            if (!result.ok
+                && (result.code == QLatin1String("RESOURCE_REVISION_CONFLICT")
+                    || result.code == QLatin1String("BOOK_REVISION_CONFLICT"))) {
                 const BookOpResult current = workspace->readFragment(resource_id, 0, 1);
                 const qint64 actual = current.ok
                     ? current.data.value(QStringLiteral("resource_revision")).toInteger(-1)
                     : static_cast<qint64>(workspace->resourceRevision(resource_id));
+                QJsonObject details {
+                    { QStringLiteral("resource_id"), resource_id },
+                    { QStringLiteral("expected_resource_revision"), static_cast<qint64>(expected) },
+                    { QStringLiteral("actual_resource_revision"), actual },
+                    { QStringLiteral("book_revision"), static_cast<qint64>(workspace->revision()) }
+                };
+                if (result.code == QLatin1String("BOOK_REVISION_CONFLICT")) {
+                    details.insert(QStringLiteral("legacy_code"), result.code);
+                }
                 return ToolResult::failure(QStringLiteral("RESOURCE_REVISION_CONFLICT"),
                     QStringLiteral("Resource revision changed. Re-read this resource before retrying; do not use the book revision."),
-                    QJsonObject {
-                        { QStringLiteral("resource_id"), resource_id },
-                        { QStringLiteral("expected_resource_revision"), static_cast<qint64>(expected) },
-                        { QStringLiteral("actual_resource_revision"), actual },
-                        { QStringLiteral("book_revision"), static_cast<qint64>(workspace->revision()) },
-                        { QStringLiteral("legacy_code"), QStringLiteral("BOOK_REVISION_CONFLICT") }
-                    });
+                    details);
             }
             return fromBook(result);
         });
@@ -1480,6 +1505,21 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
             ParseOptions options;
             options.headingRegex = arguments.value(QStringLiteral("heading_pattern")).toString();
             options.illustrationRegex = arguments.value(QStringLiteral("illustration_pattern")).toString();
+            for (const auto &entry : {
+                     qMakePair(QStringLiteral("heading_pattern"), options.headingRegex),
+                     qMakePair(QStringLiteral("illustration_pattern"), options.illustrationRegex) }) {
+                if (entry.second.isEmpty()) continue;
+                const QRegularExpression expression(
+                    entry.second, QRegularExpression::UseUnicodePropertiesOption);
+                if (!expression.isValid()) {
+                    return ToolResult::failure(QStringLiteral("REGEX_INVALID"),
+                        QStringLiteral("%1: %2").arg(entry.first, expression.errorString()),
+                        QJsonObject {
+                            { QStringLiteral("field"), entry.first },
+                            { QStringLiteral("error_offset"), expression.patternErrorOffset() }
+                        });
+                }
+            }
             if (options.headingRegex.isEmpty() && options.illustrationRegex.isEmpty()) {
                 const QJsonObject summary = parseManuscriptInBook(
                     workspace, arguments.value(QStringLiteral("manuscript_id")).toString());
@@ -1508,7 +1548,7 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         });
 
     add(registry, QStringLiteral("content.fill_section"),
-        QStringLiteral("Fill one template page from the parsed manuscript (chapter, credits, synopsis, toc, title, illustration, cover, start). Pass chapter_index for Section pages or image_name for illus/cover/start. Does not send chapter text through the model. Live book unchanged until transaction.commit."),
+        QStringLiteral("Fill one template page from the parsed manuscript (chapter, credits, synopsis, toc, title, illustration, cover, start). Pass chapter_index for Section pages or image_name for illus/cover/start. Pass the same heading_pattern and illustration_pattern used with manuscript.parse when its custom parsing is needed. Does not send chapter text through the model. Live book unchanged until transaction.commit."),
         ToolRisk::ReversibleEdit, true, true,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
@@ -1517,27 +1557,35 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                 { QStringLiteral("role"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
                 { QStringLiteral("manuscript_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
                 { QStringLiteral("chapter_index"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
-                { QStringLiteral("image_name"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                { QStringLiteral("image_name"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("heading_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("illustration_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
             } },
             { QStringLiteral("required"), QJsonArray { QStringLiteral("resource_id") } }
         },
         [workspace](const QJsonObject &arguments) {
+            ParseOptions parse_options;
+            parse_options.headingRegex = arguments.value(QStringLiteral("heading_pattern")).toString();
+            parse_options.illustrationRegex = arguments.value(QStringLiteral("illustration_pattern")).toString();
             return fromBook(fillTemplateSection(
                 workspace,
                 arguments.value(QStringLiteral("resource_id")).toString(),
                 arguments.value(QStringLiteral("role")).toString(),
                 arguments.value(QStringLiteral("manuscript_id")).toString(),
                 arguments.value(QStringLiteral("chapter_index")).toInt(-1),
-                arguments.value(QStringLiteral("image_name")).toString()));
+                arguments.value(QStringLiteral("image_name")).toString(),
+                parse_options));
         });
 
     add(registry, QStringLiteral("content.typeset_from_manuscript"),
-        QStringLiteral("Fill the open 轻小说模板 from a dropped manuscript: parse TXT, copy extra Section pages, wrap every chapter, rewrite illus/cover/start image hrefs, and fill title/credits/synopsis/contents/metadata. Never dumps chapter bodies into the model. Call transaction.begin first (or the tool will). Preview with transaction.preview, then transaction.commit. retire_source defaults true for imported HTML that is not a template page."),
+        QStringLiteral("Fill the open 轻小说模板 from a dropped manuscript: parse TXT, copy extra Section pages, wrap every chapter, rewrite illus/cover/start image hrefs, and fill title/credits/synopsis/contents/metadata. Pass the same heading_pattern and illustration_pattern used with manuscript.parse when its custom parsing is needed. Never dumps chapter bodies into the model. Call transaction.begin first (or the tool will). Preview with transaction.preview, then transaction.commit. retire_source defaults true for imported HTML that is not a template page."),
         ToolRisk::Bulk, true, true,
         QJsonObject {
             { QStringLiteral("type"), QStringLiteral("object") },
             { QStringLiteral("properties"), QJsonObject {
                 { QStringLiteral("manuscript_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("heading_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("illustration_pattern"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
                 { QStringLiteral("retire_source"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } },
                 { QStringLiteral("update_metadata"), QJsonObject { { QStringLiteral("type"), QStringLiteral("boolean") } } }
             } }
@@ -1545,6 +1593,8 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         [workspace](const QJsonObject &arguments) {
             TypesetOptions options;
             options.manuscriptId = arguments.value(QStringLiteral("manuscript_id")).toString();
+            options.parseOptions.headingRegex = arguments.value(QStringLiteral("heading_pattern")).toString();
+            options.parseOptions.illustrationRegex = arguments.value(QStringLiteral("illustration_pattern")).toString();
             if (arguments.contains(QStringLiteral("retire_source"))) {
                 options.retireSource = arguments.value(QStringLiteral("retire_source")).toBool();
             }

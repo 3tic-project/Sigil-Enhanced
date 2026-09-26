@@ -8,7 +8,8 @@ metadata:
   sigil.risk: "bulk-edit"
   sigil.requires-book: "true"
 allowed-tools: >
-  book.summary book.resources book.spine book.metadata book.validate
+  book.summary book.resources book.spine book.toc book.metadata book.validate book.check
+  font.inventory style.stylesheets resource.read_fragment resource.patch_fragment
   manuscript.parse content.typeset_from_manuscript content.fill_section
   resource.copy resource.replace_text resource.create
   transaction.begin transaction.preview transaction.commit transaction.rollback
@@ -33,19 +34,22 @@ The open book has pages named like `cover`, `start`, `title`, `message`, `summar
 - Do not put novel text in `resource.replace_text` (it will refuse large payloads).
 - Do not tell the user to paste into Book View / 书籍视图.
 - Do not invent image filenames. `manuscript.parse` reports what is in the book.
-- Do not rewrite `OEBPS/Styles/style.css` for this workflow.
+- Preserve the template CSS unless the user requests a font or style change. For a font change, use `font.inventory` and verify each referenced font file exists.
 - Do not ask for font or image bytes.
 
 ## Procedure
 
 1. `book.summary` / `book.resources` if the book map is not already in context.
-2. `manuscript.parse` (omit `manuscript_id` unless several candidates exist). Read the compact summary only.
+2. `manuscript.parse` (omit `manuscript_id` unless several candidates exist). Check its chapter list against the manuscript's actual headings and illustration markers. If prologue, interlude, finale, or afterword is missing, supply `heading_pattern` and `illustration_pattern` and parse again.
 3. If `template.detected` is false, stop and tell the user to open `轻小说模板.epub` first, then drop the book folder.
 4. If `chapter_count` is 0, stop and report that the TXT has no `第N話` / `后记` headings.
 5. `transaction.begin` with a short label.
-6. `content.typeset_from_manuscript` — one call. It copies extra `Section` pages, wraps every chapter, rewrites `illus`/`cover`/`start` image hrefs to dropped filenames, and fills title / 制作信息 / 简介 / 目录 / metadata.
-7. `transaction.preview`, then `transaction.commit` with the current `book_revision`.
-8. `book.validate`. Report filled chapters, copied sections, image map, missing images, and whether the raw import page was stubbed.
+6. `content.typeset_from_manuscript` — one call. Pass exactly the same custom patterns used by the successful `manuscript.parse`, if any. It copies extra `Section` pages, wraps every chapter, rewrites `illus`/`cover`/`start` image hrefs, and fills title / 制作信息 / 简介 / visible contents / navigation TOC / metadata.
+7. Compare `chapters_filled` with the verified `chapter_count`; if they differ, roll back and correct the patterns. Review `missing_images` and `warnings` before commit.
+8. `transaction.preview`, then `transaction.commit` with the current `book_revision`.
+9. `book.validate` and `book.toc`. Report filled chapters, copied sections, image map, missing images, and whether the raw import page was stubbed.
+
+If the user asks to use the embedded font by default, inspect the existing `@font-face`, `body`, and title rules. Point them to actual bundled fonts, then check CSS URLs and chapter pages before reporting success.
 
 ## Image mapping (engine, not the model)
 

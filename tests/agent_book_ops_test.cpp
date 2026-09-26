@@ -1075,5 +1075,52 @@ int main()
     Require(book.resourceText(QStringLiteral("ch1")).contains(QStringLiteral("<h1>HEAD</h1>")),
             "plain wrapped into existing xhtml");
 
+    Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok,
+            "staged plain begin");
+    const ToolResult staged_page = run(QStringLiteral("resource.create"), QJsonObject {
+        { QStringLiteral("book_path"), QStringLiteral("OEBPS/Text/wrapped.xhtml") },
+        { QStringLiteral("kind"), QStringLiteral("xhtml") },
+        { QStringLiteral("add_to_spine"), false }
+    });
+    Require(staged_page.ok, "create staged wrap target");
+    const QString staged_id = staged_page.data.value(QStringLiteral("resource_id")).toString();
+    Require(book.resourceRevision(staged_id) == 1, "new staged resource revision");
+    Require(run(QStringLiteral("content.wrap_plain"), QJsonObject {
+        { QStringLiteral("source_resource_id"), QStringLiteral("plain") },
+        { QStringLiteral("target_id"), staged_id },
+        { QStringLiteral("rules"), QJsonObject {
+            { QStringLiteral("heading_pattern"), QStringLiteral("^HEAD") }
+        } }
+    }).ok, "first staged wrap");
+    Require(book.resourceRevision(staged_id) == 2, "first staged wrap advances revision");
+    const ToolResult stale_staged_write = run(QStringLiteral("resource.replace_text"),
+        QJsonObject {
+            { QStringLiteral("resource_id"), staged_id },
+            { QStringLiteral("expected_revision"), 1 },
+            { QStringLiteral("text"), QStringLiteral("<html/>") }
+        });
+    Require(!stale_staged_write.ok
+                && stale_staged_write.code == QStringLiteral("RESOURCE_REVISION_CONFLICT"),
+            "stale staged write reports a resource revision conflict");
+    const ToolResult staged_search = run(QStringLiteral("book.search_regex"), QJsonObject {
+        { QStringLiteral("resource_id"), staged_id },
+        { QStringLiteral("pattern"), QStringLiteral("<h1>HEAD</h1>") }
+    });
+    Require(staged_search.ok
+                && staged_search.data.value(QStringLiteral("total_count")).toInt() == 1,
+            "search includes staged new text");
+    Require(run(QStringLiteral("content.wrap_plain"), QJsonObject {
+        { QStringLiteral("source_resource_id"), QStringLiteral("plain") },
+        { QStringLiteral("target_id"), staged_id },
+        { QStringLiteral("rules"), QJsonObject {
+            { QStringLiteral("heading_pattern"), QStringLiteral("^body") }
+        } }
+    }).ok, "repeat wrap of staged new text");
+    Require(book.resourceRevision(staged_id) == 3
+                && book.workingText(staged_id).contains(QStringLiteral("<h1>body line</h1>")),
+            "repeat staged wrap uses current revision");
+    Require(run(QStringLiteral("transaction.rollback"), QJsonObject()).ok,
+            "staged plain rollback");
+
     return EXIT_SUCCESS;
 }
