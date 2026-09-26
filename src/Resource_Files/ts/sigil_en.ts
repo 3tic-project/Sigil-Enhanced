@@ -23451,6 +23451,11 @@ Continue using the requested filename?</translation>
     <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB</source><translation>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB</translation></message>
     <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB</source><translation>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB</translation></message>
     <message><source>Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4</source><translation>Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4</translation></message>
+    <message><source>pinned</source><translation>pinned</translation></message>
+    <message><source>reused</source><translation>reused</translation></message>
+    <message><source> · fresh bytes differed and were pinned back</source><translation> · fresh bytes differed and were pinned back</translation></message>
+    <message><source> · checkpoint installed</source><translation> · checkpoint installed</translation></message>
+    <message><source>Prompt prefix: %1%2%3</source><translation>Prompt prefix: %1%2%3</translation></message>
     <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>Run usage details: cached input %1 · reasoning %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>Full EPUBCheck: not run.</translation></message>
@@ -23511,11 +23516,11 @@ Continue using the requested filename?</translation>
     <message><source>Not reported</source><translation>Not reported</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token usage: input %1 · output %2 · total %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>Usage details: cached input %1 · reasoning %2</translation></message>
+    <message><source>Cache miss tokens: %1</source><translation>Cache miss tokens: %1</translation></message>
     <message><source>Token usage: requested; awaiting response</source><translation>Token usage: requested; awaiting response</translation></message>
     <message><source>Token usage: not reported by provider</source><translation>Token usage: not reported by provider</translation></message>
     <message><source>Token usage: not requested</source><translation>Token usage: not requested</translation></message>
     <message><source>No model request in this session.</source><translation>No model request in this session.</translation></message>
-    <message><source>Provider: %1 · Endpoint: %2</source><translation>Provider: %1 · Endpoint: %2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>Resend the last prompt with the same scope handles.</translation></message>
     <message><source>Retry is unavailable because the open book changed.</source><translation>Retry is unavailable because the open book changed.</translation></message>
     <message><source>Retry is unavailable because this turn already executed tools.</source><translation>Retry is unavailable because this turn already executed tools.</translation></message>
@@ -23609,7 +23614,7 @@ Continue using the requested filename?</translation>
     <message><source> s</source><translation> s</translation></message>
     <message><source> KiB</source><translation> KiB</translation></message>
     <message><source>Unlimited</source><translation>Unlimited</translation></message>
-    <message><source>Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB.</source><translation>Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB.</translation></message>
+    <message><source>Stored for compatibility and no longer applied. The previous complete conversation turns stay in the prompt so the provider cache prefix can remain stable. A frozen checkpoint replaces older tool rounds when the request approaches the context window.</source><translation>Stored for compatibility and no longer applied. The previous complete conversation turns stay in the prompt so the provider cache prefix can remain stable. A frozen checkpoint replaces older tool rounds when the request approaches the context window.</translation></message>
     <message><source>Previous-turn history budget</source><translation>Previous-turn history budget</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</translation></message>
     <message><source>Maximum model steps per run</source><translation>Maximum model steps per run</translation></message>

@@ -27445,6 +27445,11 @@ Continue using the requested filename?</source>
     <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB</source><translation>请求历史：已发送 %1/%2 轮 · 已省略 %3 轮 · 先前轮次 %4/%5 KiB</translation></message>
     <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB</source><translation>请求历史：已发送 %1/%2 轮 · 先前轮次预算无限制 · 先前轮次 %3 KiB</translation></message>
     <message><source>Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4</source><translation>当前运行历史：已发送 %1/%2 KiB · 预算 %3 KiB · 已省略消息：%4 条</translation></message>
+    <message><source>pinned</source><translation>已固定</translation></message>
+    <message><source>reused</source><translation>已复用</translation></message>
+    <message><source> · fresh bytes differed and were pinned back</source><translation> · 新生成内容存在差异，已恢复固定前缀</translation></message>
+    <message><source> · checkpoint installed</source><translation> · 已启用检查点</translation></message>
+    <message><source>Prompt prefix: %1%2%3</source><translation>提示前缀：%1%2%3</translation></message>
     <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>请求工具：已暴露 %1/%2 个 · 模式策略已隐藏 %3 个 · schema %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>整轮用量详情：缓存输入 %1 · 推理 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完整 EPUBCheck：未运行。</translation></message>
@@ -27505,11 +27510,11 @@ Continue using the requested filename?</source>
     <message><source>Not reported</source><translation>未报告</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>Token 用量：输入 %1 · 输出 %2 · 总计 %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>用量详情：缓存输入 %1 · 推理 %2</translation></message>
+    <message><source>Cache miss tokens: %1</source><translation>缓存未命中 Token：%1</translation></message>
     <message><source>Token usage: requested; awaiting response</source><translation>Token 用量：已请求，正在等待响应</translation></message>
     <message><source>Token usage: not reported by provider</source><translation>提供商未报告 Token 用量</translation></message>
     <message><source>Token usage: not requested</source><translation>未请求 Token 用量</translation></message>
     <message><source>No model request in this session.</source><translation>此会话中尚无模型请求。</translation></message>
-    <message><source>Provider: %1 · Endpoint: %2</source><translation>提供商：%1 · 端点：%2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>使用相同的范围句柄重新发送最近一次提示。</translation></message>
     <message><source>Retry is unavailable because the open book changed.</source><translation>打开的书籍已更改，无法重试。</translation></message>
     <message><source>Retry is unavailable because this turn already executed tools.</source><translation>本轮已执行工具，无法安全重试。</translation></message>
@@ -27607,7 +27612,7 @@ Continue using the requested filename?</source>
     <message><source> s</source><translation> 秒</translation></message>
     <message><source> KiB</source><translation> KiB</translation></message>
     <message><source>Unlimited</source><translation>无限制</translation></message>
-    <message><source>Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB.</source><translation>限制发送给模型的先前完整会话轮次。当前运行历史超过 128 KiB 时会单独压缩。</translation></message>
+    <message><source>Stored for compatibility and no longer applied. The previous complete conversation turns stay in the prompt so the provider cache prefix can remain stable. A frozen checkpoint replaces older tool rounds when the request approaches the context window.</source><translation>此设置仅为兼容旧配置而保留，现已不再生效。此前完整的对话轮次会保留在提示中，以维持提供商缓存前缀的稳定性。当请求接近上下文窗口上限时，会用固定的检查点替换较早的工具调用轮次。</translation></message>
     <message><source>Previous-turn history budget</source><translation>先前轮次历史预算</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>达到此模型请求次数后停止运行，并回滚任何尚未提交的暂存事务。</translation></message>
     <message><source>Maximum model steps per run</source><translation>每次运行的最大模型步骤数</translation></message>

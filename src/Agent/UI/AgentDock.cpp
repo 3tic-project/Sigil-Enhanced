@@ -134,19 +134,14 @@ AgentDock::AgentDock(QWidget *parent) :
     status_layout->addWidget(m_modelLabel);
     status_layout->addWidget(m_contextScope, 1);
 
-    auto *provider_row = new QWidget(root);
-    provider_row->setObjectName(QStringLiteral("agentProviderRow"));
-    auto *provider_layout = new QHBoxLayout(provider_row);
-    provider_layout->setContentsMargins(0, 0, 0, 0);
-    m_providerStatus = new QLabel(provider_row);
-    m_providerStatus->setObjectName(QStringLiteral("agentProviderStatus"));
-    m_providerStatus->setWordWrap(true);
-    m_providerStatus->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_retryButton = new QPushButton(tr("Retry"), provider_row);
+    m_retryButton = new QPushButton(tr("Retry"), status);
     m_retryButton->setObjectName(QStringLiteral("agentRetryButton"));
     m_retryButton->setEnabled(false);
-    provider_layout->addWidget(m_providerStatus, 1);
-    provider_layout->addWidget(m_retryButton);
+    status_layout->addWidget(m_retryButton);
+
+    m_providerStatus = new QLabel(root);
+    m_providerStatus->setObjectName(QStringLiteral("agentProviderStatus"));
+    m_providerStatus->hide();
 
     m_bookStatus = new QLabel(root);
     m_bookStatus->setObjectName(QStringLiteral("agentBookStatus"));
@@ -269,7 +264,6 @@ AgentDock::AgentDock(QWidget *parent) :
 
     root_layout->addWidget(header);
     root_layout->addWidget(status);
-    root_layout->addWidget(provider_row);
     root_layout->addWidget(m_bookStatus);
     root_layout->addWidget(m_technicalDetailsToggle);
     root_layout->addWidget(m_technicalDetails);
@@ -306,7 +300,6 @@ AgentDock::AgentDock(QWidget *parent) :
     }
     chooseDefaultScope();
     refreshProviderStatus();
-    refreshTechnicalDetails();
     refreshRetryState();
 }
 
@@ -389,7 +382,6 @@ void AgentDock::setProviderConfiguration(const AgentProviderReadiness &readiness
     m_providerFailure.clear();
     setModelName(readiness.model);
     refreshProviderStatus();
-    refreshTechnicalDetails();
 }
 
 void AgentDock::setRunState(AgentRunState state)
@@ -675,15 +667,15 @@ void AgentDock::refreshProviderStatus()
     m_providerStatus->setProperty("finishedAtMs", m_requestFinishedAtMs);
     m_providerStatus->setProperty("connectionVerifiedAtMs",
                                   m_providerReadiness.verifiedAtMs);
-    m_providerStatus->setAccessibleName(m_providerStatus->text());
     if (!m_providerReadiness.isConfigured()) {
-        m_providerStatus->setToolTip(
+        m_technicalDetailsToggle->setToolTip(
             tr("Configure the provider in Preferences → Native Agent."));
     } else if (m_providerReadiness.verifiedAtMs > 0) {
-        m_providerStatus->setToolTip(tr("This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator."));
+        m_technicalDetailsToggle->setToolTip(tr("This exact saved provider configuration passed a Chat Completions test. This is a historical test, not a live connection indicator."));
     } else {
-        m_providerStatus->setToolTip(tr("Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them."));
+        m_technicalDetailsToggle->setToolTip(tr("Configured means the required settings are present. Use Test Chat Completions in Preferences to verify them."));
     }
+    refreshTechnicalDetails();
 }
 
 void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &status)
@@ -748,7 +740,6 @@ void AgentDock::captureRequestEvent(const AgentEvent &event, const QString &stat
         m_requestFinishedAtMs = 0;
     }
     m_requestStatus = status;
-    refreshTechnicalDetails();
 }
 
 void AgentDock::captureRunEvent(const AgentEvent &event)
@@ -1032,11 +1023,7 @@ void AgentDock::refreshTechnicalDetails()
     } else {
         lines.append(tr("No model request in this session."));
     }
-    const QString provider = m_providerReadiness.displayName.isEmpty()
-        ? tr("Not available") : m_providerReadiness.displayName;
-    const QString endpoint = m_providerReadiness.endpointHost.isEmpty()
-        ? tr("Not available") : m_providerReadiness.endpointHost;
-    lines.append(tr("Provider: %1 · Endpoint: %2").arg(provider, endpoint));
+    lines.append(m_providerStatus->text());
     m_technicalDetails->setText(lines.join(QLatin1Char('\n')));
     m_technicalDetails->setProperty("sessionId", m_sessionId);
     m_technicalDetails->setProperty("bookSessionId", m_bookSessionId);

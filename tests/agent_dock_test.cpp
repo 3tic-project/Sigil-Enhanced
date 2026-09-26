@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QComboBox>
+#include <QDateTime>
 #include <QDialog>
 #include <QEventLoop>
 #include <QHash>
@@ -380,6 +381,16 @@ int main(int argc, char *argv[])
             "dock model label must show the settings model");
     auto *provider_status = dock.findChild<QLabel *>(QStringLiteral("agentProviderStatus"));
     Require(provider_status, "dock must expose provider setup and request status");
+    auto *retry_button = dock.findChild<QPushButton *>(QStringLiteral("agentRetryButton"));
+    Require(!provider_status->isVisible()
+                && !dock.findChild<QWidget *>(QStringLiteral("agentProviderRow"))
+                && retry_button && retry_button->isVisible(),
+            "provider status must only appear in technical details while Retry stays visible");
+    const auto provider_status_in_details = [&dock, provider_status]() {
+        auto *details = dock.findChild<QLabel *>(QStringLiteral("agentTechnicalDetails"));
+        return details && !provider_status->text().isEmpty()
+            && details->text().endsWith(provider_status->text());
+    };
     SigilAgent::AgentProviderReadiness setup_required;
     setup_required.kind = SigilAgent::AgentProviderKind::DeepSeek;
     setup_required.displayName = QStringLiteral("DeepSeek");
@@ -391,6 +402,8 @@ int main(int argc, char *argv[])
                 && provider_status->property("requestState").toString()
                     == QStringLiteral("setup_required"),
             "missing provider settings must be explicit without claiming connectivity");
+    Require(provider_status_in_details(),
+            "technical details must show the provider setup status");
 
     SigilAgent::AgentProviderReadiness configured = setup_required;
     configured.issue = SigilAgent::AgentProviderSetupIssue::None;
@@ -402,6 +415,8 @@ int main(int argc, char *argv[])
                 && provider_status->property("requestState").toString()
                     == QStringLiteral("configured"),
             "complete settings must say configured but not tested");
+    Require(provider_status_in_details(),
+            "technical details must include the configured provider, model, and endpoint");
     configured.verifiedAtMs = 1700000000000;
     dock.setProviderConfiguration(configured);
     Require(provider_status->text().contains(QStringLiteral("Chat tested successfully"))
@@ -410,6 +425,8 @@ int main(int argc, char *argv[])
                 && provider_status->property("connectionVerifiedAtMs").toLongLong()
                     == 1700000000000,
             "a matching saved probe must be shown as historical verification");
+    Require(provider_status_in_details(),
+            "technical details must show the provider verification status");
     SigilAgent::AgentEvent run_started;
     run_started.type = SigilAgent::AgentEventType::RunStateChanged;
     run_started.timestampMs = 1699999999900;
@@ -480,6 +497,8 @@ int main(int argc, char *argv[])
                 && provider_status->property("requestState").toString()
                     == QStringLiteral("requesting"),
             "a real model request must move provider status to requesting");
+    Require(provider_status_in_details(),
+            "technical details must update when a provider request starts");
     SigilAgent::AgentEvent provider_completed;
     provider_completed.type = SigilAgent::AgentEventType::ModelRequestCompleted;
     provider_completed.timestampMs = 1700000000000;
@@ -507,8 +526,15 @@ int main(int argc, char *argv[])
                     == QStringLiteral("request-full-id")
                 && provider_status->property("durationMs").toLongLong() == 27,
             "only a completed model request may report success with measured timing");
+    Require(provider_status_in_details(),
+            "technical details must include the provider request result, duration, and time");
     auto *usage_details =
         dock.findChild<QLabel *>(QStringLiteral("agentTechnicalDetails"));
+    const QString completion_time = QDateTime::fromMSecsSinceEpoch(
+        provider_completed.timestampMs).toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+    Require(usage_details && usage_details->text().contains(QStringLiteral("27 ms"))
+                && usage_details->text().contains(completion_time),
+            "technical details must include the completed provider request timing");
     Require(usage_details
                 && usage_details->text().contains(
                     QStringLiteral("Token usage: input 120 · output 35 · total 155"))
@@ -668,6 +694,9 @@ int main(int argc, char *argv[])
                 && provider_status->property("requestState").toString()
                     == QStringLiteral("failed"),
             "provider failures must use a readable summary without echoing response details");
+    Require(provider_status_in_details()
+                && !usage_details->text().contains(QStringLiteral("sk-private-provider-key")),
+            "technical details must show the sanitized provider failure");
     dock.appendEvent(provider_started);
     SigilAgent::AgentEvent request_cancelled;
     request_cancelled.type = SigilAgent::AgentEventType::ModelRequestCancelled;
@@ -687,6 +716,14 @@ int main(int argc, char *argv[])
                 && provider_status->property("requestState").toString()
                     == QStringLiteral("cancelled"),
             "cancelled requests must not leave provider status stuck on contacting");
+    Require(provider_status_in_details(),
+            "technical details must show a cancelled provider request");
+    dock.appendEvent(provider_started);
+    dock.appendEvent(provider_cancelled);
+    Require(provider_status->property("requestState").toString()
+                == QStringLiteral("cancelled")
+                && provider_status_in_details(),
+            "session cancellation must update technical details even without a request cancellation event");
     dock.resetTranscript();
     dock.setBookContext(QStringLiteral("Junior Physics"),
                         QStringLiteral("physics.epub"), 42, true, 7,

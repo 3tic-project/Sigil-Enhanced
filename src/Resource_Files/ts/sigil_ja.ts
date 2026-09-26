@@ -27435,6 +27435,11 @@ Continue using the requested filename?</source>
     <message><source>Request history: %1/%2 turns sent · %3 omitted · previous %4/%5 KiB</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · %3 ターンを省略 · 過去 %4/%5 KiB</translation></message>
     <message><source>Request history: %1/%2 turns sent · unlimited previous-turn budget · previous %3 KiB</source><translation>リクエスト履歴：%2 ターン中 %1 ターンを送信 · 過去ターンの予算は無制限 · 過去 %3 KiB</translation></message>
     <message><source>Current run history: %1/%2 KiB sent · budget %3 KiB · messages omitted: %4</source><translation>現在の実行履歴：%1/%2 KiB を送信 · 予算 %3 KiB · 省略したメッセージ：%4 件</translation></message>
+    <message><source>pinned</source><translation>固定済み</translation></message>
+    <message><source>reused</source><translation>再利用</translation></message>
+    <message><source> · fresh bytes differed and were pinned back</source><translation> · 新たに生成した内容が異なったため固定済みの内容に戻しました</translation></message>
+    <message><source> · checkpoint installed</source><translation> · チェックポイントを適用</translation></message>
+    <message><source>Prompt prefix: %1%2%3</source><translation>プロンプトのプレフィックス：%1%2%3</translation></message>
     <message><source>Request tools: %1/%2 exposed · %3 hidden by mode policy · schema %4/%5 KiB</source><translation>リクエストツール：%2 個中 %1 個を公開 · モードポリシーで %3 個を非表示 · スキーマ %4/%5 KiB</translation></message>
     <message><source>Run usage details: cached input %1 · reasoning %2</source><translation>実行全体の使用量詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
     <message><source>Full EPUBCheck: not run.</source><translation>完全な EPUBCheck：未実行。</translation></message>
@@ -27495,11 +27500,11 @@ Continue using the requested filename?</source>
     <message><source>Not reported</source><translation>未報告</translation></message>
     <message><source>Token usage: input %1 · output %2 · total %3</source><translation>トークン使用量：入力 %1 · 出力 %2 · 合計 %3</translation></message>
     <message><source>Usage details: cached input %1 · reasoning %2</source><translation>使用量の詳細：キャッシュ済み入力 %1 · 推論 %2</translation></message>
+    <message><source>Cache miss tokens: %1</source><translation>キャッシュミスのトークン：%1</translation></message>
     <message><source>Token usage: requested; awaiting response</source><translation>トークン使用量：要求済み、応答待ち</translation></message>
     <message><source>Token usage: not reported by provider</source><translation>トークン使用量：プロバイダーからの報告なし</translation></message>
     <message><source>Token usage: not requested</source><translation>トークン使用量：要求なし</translation></message>
     <message><source>No model request in this session.</source><translation>このセッションにはモデルリクエストがありません。</translation></message>
-    <message><source>Provider: %1 · Endpoint: %2</source><translation>プロバイダー：%1 · エンドポイント：%2</translation></message>
     <message><source>Resend the last prompt with the same scope handles.</source><translation>同じスコープハンドルで直前のプロンプトを再送信します。</translation></message>
     <message><source>Retry is unavailable because the open book changed.</source><translation>開いているブックが変更されたため再試行できません。</translation></message>
     <message><source>Retry is unavailable because this turn already executed tools.</source><translation>このターンではすでにツールを実行したため、安全に再試行できません。</translation></message>
@@ -27597,7 +27602,7 @@ Continue using the requested filename?</source>
     <message><source> s</source><translation> 秒</translation></message>
     <message><source> KiB</source><translation> KiB</translation></message>
     <message><source>Unlimited</source><translation>無制限</translation></message>
-    <message><source>Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB.</source><translation>モデルに送信する過去の完全な会話ターンを制限します。現在の実行履歴が 128 KiB を超える場合は別途圧縮されます。</translation></message>
+    <message><source>Stored for compatibility and no longer applied. The previous complete conversation turns stay in the prompt so the provider cache prefix can remain stable. A frozen checkpoint replaces older tool rounds when the request approaches the context window.</source><translation>互換性のために保存されていますが、現在は適用されません。過去の完全な会話ターンはプロンプトに残し、プロバイダーのキャッシュ用プレフィックスを安定させます。リクエストがコンテキストウィンドウの上限に近づくと、古いツール呼び出しのターンを固定済みのチェックポイントで置き換えます。</translation></message>
     <message><source>Previous-turn history budget</source><translation>過去ターンの履歴予算</translation></message>
     <message><source>Stops a run after this many model requests and rolls back any uncommitted staged transaction.</source><translation>このモデルリクエスト回数に達すると実行を停止し、未コミットのステージ済みトランザクションをロールバックします。</translation></message>
     <message><source>Maximum model steps per run</source><translation>実行ごとの最大モデルステップ数</translation></message>
