@@ -63,9 +63,90 @@ bool parseAttachedSelection(const QString &handle, AttachedSelection *selection)
     return true;
 }
 
+QString sessionStateBlock(const AgentSession *session)
+{
+    if (!session) return QString();
+    QString block;
+    const QJsonArray tasks = session->tasks();
+    if (!tasks.isEmpty()) {
+        const int start = qMax(0, tasks.size() - kMaxAutomaticSessionTasks);
+        QJsonArray recent_tasks;
+        for (int index = start; index < tasks.size(); ++index) {
+            QJsonObject task = tasks.at(index).toObject();
+            const QString note = task.value(QStringLiteral("note")).toString();
+            if (note.size() > kMaxAutomaticSessionValueLength) {
+                task.insert(QStringLiteral("note"),
+                            note.left(kMaxAutomaticSessionValueLength));
+                task.insert(QStringLiteral("note_length"), note.size());
+                task.insert(QStringLiteral("note_truncated"), true);
+            }
+            recent_tasks.append(task);
+        }
+        block += QStringLiteral("\nSession tasks (most recent %1 of %2):\n")
+                     .arg(recent_tasks.size()).arg(tasks.size());
+        block += QString::fromUtf8(
+            QJsonDocument(recent_tasks).toJson(QJsonDocument::Compact));
+        block += QLatin1Char('\n');
+        if (start > 0) {
+            block += QStringLiteral(
+                "%1 earlier task(s) omitted from automatic context; read session.tasks pages for the complete checklist.\n")
+                         .arg(start);
+        }
+    }
+    const QJsonObject memory = session->memory();
+    if (!memory.isEmpty()) {
+        const QStringList keys = session->memoryKeys();
+        const int start = qMax(
+            0, keys.size() - kMaxAutomaticSessionMemoryEntries);
+        QJsonObject recent_memory;
+        QJsonObject truncated_memory_lengths;
+        for (int index = start; index < keys.size(); ++index) {
+            const QString &key = keys.at(index);
+            const QJsonValue value = memory.value(key);
+            if (value.isString()
+                && value.toString().size() > kMaxAutomaticSessionValueLength) {
+                recent_memory.insert(
+                    key, value.toString().left(kMaxAutomaticSessionValueLength));
+                truncated_memory_lengths.insert(key, value.toString().size());
+            } else if (!value.isString()) {
+                const QByteArray serialized = QJsonDocument(
+                    QJsonArray { value }).toJson(QJsonDocument::Compact);
+                if (serialized.size() > kMaxAutomaticSessionValueLength) {
+                    recent_memory.insert(
+                        key, QStringLiteral(
+                            "[structured value omitted; use session.recall key]"));
+                    truncated_memory_lengths.insert(key, serialized.size());
+                } else {
+                    recent_memory.insert(key, value);
+                }
+            } else {
+                recent_memory.insert(key, value);
+            }
+        }
+        block += QStringLiteral("\nSession memory (most recent %1 of %2):\n")
+                     .arg(recent_memory.size()).arg(keys.size());
+        block += QString::fromUtf8(
+            QJsonDocument(recent_memory).toJson(QJsonDocument::Compact));
+        block += QLatin1Char('\n');
+        if (!truncated_memory_lengths.isEmpty()) {
+            block += QStringLiteral(
+                "Truncated memory value sizes (read exact values with session.recall key): ");
+            block += QString::fromUtf8(QJsonDocument(truncated_memory_lengths)
+                                           .toJson(QJsonDocument::Compact));
+            block += QLatin1Char('\n');
+        }
+        if (start > 0) {
+            block += QStringLiteral(
+                "%1 earlier memory note(s) omitted from automatic context; read session.recall pages for the complete memory.\n")
+                         .arg(start);
+        }
+    }
+    return block;
+}
+
 } // namespace
 
-QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) const
+QString PromptAssembler::systemPrompt(AgentMode mode, int run_tool_call_ceiling) const
 {
     QString prompt = QStringLiteral(
         "You are Sigil Agent, a native EPUB assistant inside Sigil-Enhanced.\n"
@@ -109,10 +190,10 @@ QString PromptAssembler::systemPrompt(AgentMode mode, int remaining_tool_calls) 
         "- After transaction.commit, report the exact resource_outcomes success/failure counts and transaction_state. If the scope is unavailable, say so; never infer resource success from applied_changes.\n"
         "- If patch returns RESOURCE_REVISION_CONFLICT, re-read that resource and use its actual resource revision; do not retry a batch with the same stale value. If commit returns BOOK_REVISION_CONFLICT, re-read and replan.\n"
         "- If a patch returns PATCH_SPLITS_MARKUP, PATCH_TEXT_NOT_FOUND, or PATCH_TEXT_AMBIGUOUS, re-read and copy expected_text again. If it returns PATCH_EXPECTED_TEXT_TOO_LARGE or PATCH_REPLACEMENT_TOO_LARGE, split the edit into smaller patches. Do not retry guessed offsets.\n");
-    if (remaining_tool_calls >= 0) {
+    if (run_tool_call_ceiling >= 0) {
         prompt += QStringLiteral(
-            "- This run may make at most %1 more tool call(s). Do not return a batch larger than this remaining budget.\n")
-                      .arg(remaining_tool_calls);
+            "- This run may make at most %1 tool calls in total.\n")
+                      .arg(run_tool_call_ceiling);
     }
     if (mode == AgentMode::Ask) {
         prompt += QStringLiteral("Mode: Ask. Read-only. Do not call mutating tools.\n");
@@ -245,84 +326,7 @@ QString PromptAssembler::contextBlock(IBookWorkspace *workspace, const QStringLi
                          .arg(omitted_selections);
         }
     }
-    if (session) {
-        const QJsonArray tasks = session->tasks();
-        if (!tasks.isEmpty()) {
-            const int start = qMax(0, tasks.size() - kMaxAutomaticSessionTasks);
-            QJsonArray recent_tasks;
-            for (int index = start; index < tasks.size(); ++index) {
-                QJsonObject task = tasks.at(index).toObject();
-                const QString note = task.value(QStringLiteral("note")).toString();
-                if (note.size() > kMaxAutomaticSessionValueLength) {
-                    task.insert(QStringLiteral("note"),
-                                note.left(kMaxAutomaticSessionValueLength));
-                    task.insert(QStringLiteral("note_length"), note.size());
-                    task.insert(QStringLiteral("note_truncated"), true);
-                }
-                recent_tasks.append(task);
-            }
-            block += QStringLiteral("\nSession tasks (most recent %1 of %2):\n")
-                         .arg(recent_tasks.size()).arg(tasks.size());
-            block += QString::fromUtf8(
-                QJsonDocument(recent_tasks).toJson(QJsonDocument::Compact));
-            block += QLatin1Char('\n');
-            if (start > 0) {
-                block += QStringLiteral(
-                    "%1 earlier task(s) omitted from automatic context; read session.tasks pages for the complete checklist.\n")
-                             .arg(start);
-            }
-        }
-        const QJsonObject memory = session->memory();
-        if (!memory.isEmpty()) {
-            const QStringList keys = session->memoryKeys();
-            const int start = qMax(
-                0, keys.size() - kMaxAutomaticSessionMemoryEntries);
-            QJsonObject recent_memory;
-            QJsonObject truncated_memory_lengths;
-            for (int index = start; index < keys.size(); ++index) {
-                const QString &key = keys.at(index);
-                const QJsonValue value = memory.value(key);
-                if (value.isString()
-                    && value.toString().size()
-                        > kMaxAutomaticSessionValueLength) {
-                    recent_memory.insert(
-                        key, value.toString().left(
-                            kMaxAutomaticSessionValueLength));
-                    truncated_memory_lengths.insert(key, value.toString().size());
-                } else if (!value.isString()) {
-                    const QByteArray serialized = QJsonDocument(
-                        QJsonArray { value }).toJson(QJsonDocument::Compact);
-                    if (serialized.size() > kMaxAutomaticSessionValueLength) {
-                        recent_memory.insert(
-                            key, QStringLiteral(
-                                "[structured value omitted; use session.recall key]"));
-                        truncated_memory_lengths.insert(key, serialized.size());
-                    } else {
-                        recent_memory.insert(key, value);
-                    }
-                } else {
-                    recent_memory.insert(key, value);
-                }
-            }
-            block += QStringLiteral("\nSession memory (most recent %1 of %2):\n")
-                         .arg(recent_memory.size()).arg(keys.size());
-            block += QString::fromUtf8(
-                QJsonDocument(recent_memory).toJson(QJsonDocument::Compact));
-            block += QLatin1Char('\n');
-            if (!truncated_memory_lengths.isEmpty()) {
-                block += QStringLiteral(
-                    "Truncated memory value sizes (read exact values with session.recall key): ");
-                block += QString::fromUtf8(QJsonDocument(truncated_memory_lengths)
-                                               .toJson(QJsonDocument::Compact));
-                block += QLatin1Char('\n');
-            }
-            if (start > 0) {
-                block += QStringLiteral(
-                    "%1 earlier memory note(s) omitted from automatic context; read session.recall pages for the complete memory.\n")
-                             .arg(start);
-            }
-        }
-    }
+    block += sessionStateBlock(session);
     return block;
 }
 
@@ -336,7 +340,9 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
                                     const QStringList &handles,
                                     int history_previous_turn_budget_bytes,
                                     const PermissionPolicy *permission_policy,
-                                    int remaining_tool_calls) const
+                                    int remaining_tool_calls,
+                                    int run_tool_call_ceiling,
+                                    const HistoryCheckpoint *checkpoint) const
 {
     ModelRequest request;
     request.model = model;
@@ -383,7 +389,7 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
     const QList<AgentSkill> skills = loadAgentSkills();
     ChatMessage system;
     system.role = QStringLiteral("system");
-    system.content = systemPrompt(mode, remaining_tool_calls);
+    system.content = systemPrompt(mode, run_tool_call_ceiling);
     system.content += QLatin1Char('\n');
     system.content += skillCatalogPrompt(skills);
     system.content += matchedSkillBodies(skills, last_user, workspace);
@@ -399,8 +405,25 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
     HistoryAssemblyStats history_stats;
     request.messages += assembler.assemble(
         session.events(), include_tools, history_previous_turn_budget_bytes,
-        &history_stats, DEFAULT_CURRENT_TURN_HISTORY_BUDGET_BYTES);
+        &history_stats, 0, checkpoint);
     request.historyContext = history_stats.toJson();
+
+    QString tail = QStringLiteral(
+        "[Run tail. This block is the only per-step state. The system prompt, "
+        "tool list, and book map above stay fixed for this run.]\n");
+    if (remaining_tool_calls >= 0) {
+        tail += QStringLiteral("Remaining tool calls: %1\n").arg(remaining_tool_calls);
+    }
+    if (workspace) {
+        tail += QStringLiteral("Book revision: %1\nBook session: %2\n")
+                    .arg(workspace->revision())
+                    .arg(workspace->bookSessionId());
+    }
+    tail += sessionStateBlock(&session);
+    ChatMessage trailer;
+    trailer.role = QStringLiteral("user");
+    trailer.content = tail;
+    request.messages.append(trailer);
     return request;
 }
 

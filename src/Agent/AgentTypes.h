@@ -109,6 +109,7 @@ struct ModelUsage {
     qint64 outputTokens = -1;
     qint64 totalTokens = -1;
     qint64 cachedInputTokens = -1;
+    qint64 cacheMissTokens = -1;
     qint64 reasoningTokens = -1;
 
     bool isReported() const;

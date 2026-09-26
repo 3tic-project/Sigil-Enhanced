@@ -112,9 +112,17 @@ private:
     int m_runOutputUsageRequests = 0;
     int m_runTotalUsageRequests = 0;
     int m_runCachedUsageRequests = 0;
+    int m_runCacheMissRequests = 0;
     int m_runReasoningUsageRequests = 0;
     bool m_runUsageRequested = true;
     bool m_runTimingActive = false;
+    bool m_prefixPinned = false;
+    QString m_pinnedSystem;
+    QString m_pinnedContext;
+    QJsonArray m_pinnedTools;
+    QJsonObject m_pinnedToolContext;
+    HistoryCheckpoint m_checkpoint;
+    qint64 m_lastInputTokens = -1;
 };
 
 } // namespace SigilAgent

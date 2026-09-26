@@ -6,6 +6,7 @@
 
 #include "Agent/Core/AgentRunner.h"
 
+#include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -416,8 +417,11 @@ void AgentRunner::accumulateRunUsage(const ModelUsage &usage)
     add_count(usage.totalTokens, &m_runUsage.totalTokens, &m_runTotalUsageRequests);
     add_count(usage.cachedInputTokens, &m_runUsage.cachedInputTokens,
               &m_runCachedUsageRequests);
+    add_count(usage.cacheMissTokens, &m_runUsage.cacheMissTokens,
+              &m_runCacheMissRequests);
     add_count(usage.reasoningTokens, &m_runUsage.reasoningTokens,
               &m_runReasoningUsageRequests);
+    if (usage.inputTokens >= 0) m_lastInputTokens = usage.inputTokens;
 }
 
 QJsonObject AgentRunner::runUsageSummary() const
@@ -450,6 +454,9 @@ QJsonObject AgentRunner::runUsageSummary() const
     insert_count(QStringLiteral("cached_input_tokens"),
                  QStringLiteral("cached_input_request_count"),
                  m_runUsage.cachedInputTokens, m_runCachedUsageRequests);
+    insert_count(QStringLiteral("cache_miss_tokens"),
+                 QStringLiteral("cache_miss_request_count"),
+                 m_runUsage.cacheMissTokens, m_runCacheMissRequests);
     insert_count(QStringLiteral("reasoning_tokens"),
                  QStringLiteral("reasoning_request_count"),
                  m_runUsage.reasoningTokens, m_runReasoningUsageRequests);
@@ -750,8 +757,16 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
     m_runOutputUsageRequests = 0;
     m_runTotalUsageRequests = 0;
     m_runCachedUsageRequests = 0;
+    m_runCacheMissRequests = 0;
     m_runReasoningUsageRequests = 0;
     m_runUsageRequested = m_tokenUsage;
+    m_prefixPinned = false;
+    m_pinnedSystem.clear();
+    m_pinnedContext.clear();
+    m_pinnedTools = QJsonArray();
+    m_pinnedToolContext = QJsonObject();
+    m_checkpoint = HistoryCheckpoint();
+    m_lastInputTokens = -1;
     m_runTimer.start();
     m_runTimingActive = true;
 
@@ -775,29 +790,98 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
             return cancelRun();
         }
 
-        ModelRequest request = m_prompts.build(
-            *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking,
-            m_effort, handles, m_historyPreviousTurnBudgetBytes, m_policy,
-            qMax(0, m_maxToolCalls - m_runToolCalls));
-        request.sessionId = m_session->id();
-        request.includeUsage = m_runUsageRequested;
+        const auto build_request = [this, &handles]() {
+            ModelRequest request = m_prompts.build(
+                *m_session, m_workspace, *m_tools, m_mode, m_model, m_thinking,
+                m_effort, handles, 0, m_policy,
+                qMax(0, m_maxToolCalls - m_runToolCalls),
+                m_maxToolCalls,
+                m_checkpoint.installed ? &m_checkpoint : nullptr);
+            request.sessionId = m_session->id();
+            request.includeUsage = m_runUsageRequested;
+            const QString fresh_system = request.messages.isEmpty()
+                ? QString() : request.messages.at(0).content;
+            const QString fresh_context = request.messages.size() > 1
+                ? request.messages.at(1).content : QString();
+            const QByteArray fresh_tools = QJsonDocument(request.tools)
+                .toJson(QJsonDocument::Compact);
+            bool prefix_drift = false;
+            const bool prefix_reused = m_prefixPinned;
+            if (!m_prefixPinned) {
+                m_pinnedSystem = fresh_system;
+                m_pinnedContext = fresh_context;
+                m_pinnedTools = request.tools;
+                m_pinnedToolContext = request.toolContext;
+                m_prefixPinned = true;
+            } else {
+                const QByteArray pinned_tools = QJsonDocument(m_pinnedTools)
+                    .toJson(QJsonDocument::Compact);
+                prefix_drift = fresh_system != m_pinnedSystem
+                    || fresh_context != m_pinnedContext
+                    || fresh_tools != pinned_tools;
+                if (!request.messages.isEmpty()) {
+                    request.messages[0].content = m_pinnedSystem;
+                }
+                if (request.messages.size() > 1) {
+                    request.messages[1].content = m_pinnedContext;
+                }
+                request.tools = m_pinnedTools;
+                request.toolContext = m_pinnedToolContext;
+            }
+            const QByteArray sent_tools = QJsonDocument(request.tools)
+                .toJson(QJsonDocument::Compact);
+            const QByteArray prefix = m_pinnedSystem.toUtf8() + '\n' + sent_tools;
+            const QString prefix_sha = QString::fromLatin1(
+                QCryptographicHash::hash(prefix, QCryptographicHash::Sha256).toHex());
+            request.historyContext.insert(QStringLiteral("prefix_reused"), prefix_reused);
+            request.historyContext.insert(QStringLiteral("prefix_drift"), prefix_drift);
+            request.historyContext.insert(QStringLiteral("prefix_sha256"), prefix_sha);
+            return request;
+        };
+        ModelRequest request = build_request();
         const QString request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QJsonObject size_stats = requestSizeStats(
-            request, m_provider->capabilities().maxContextTokens);
-        for (auto it = size_stats.begin(); it != size_stats.end(); ++it) {
-            request.historyContext.insert(it.key(), it.value());
-        }
-        const qint64 context_limit = size_stats.value(
+        auto size_stats = [this, &request]() {
+            const QJsonObject stats = requestSizeStats(
+                request, m_provider->capabilities().maxContextTokens);
+            for (auto it = stats.begin(); it != stats.end(); ++it) {
+                request.historyContext.insert(it.key(), it.value());
+            }
+            return stats;
+        };
+        QJsonObject stats = size_stats();
+        const qint64 context_limit = stats.value(
             QStringLiteral("context_token_limit")).toInteger();
+        const qint64 output_reserve = stats.value(
+            QStringLiteral("output_token_reserve")).toInteger();
+        const qint64 estimate = stats.value(
+            QStringLiteral("context_tokens_estimate")).toInteger();
+        const qint64 trigger = context_limit > 0 ? (context_limit * 3) / 4 : 0;
+        const bool hard_pressure = context_limit > 0
+            && estimate > context_limit - output_reserve;
+        const bool trigger_pressure = trigger > 0 && (
+            estimate >= trigger
+            || (m_lastInputTokens >= 0 && m_lastInputTokens >= trigger));
+        if ((hard_pressure || (trigger_pressure && !m_checkpoint.installed))
+            && m_session) {
+            HistoryAssembler assembler;
+            const HistoryCheckpoint planned = assembler.planCheckpoint(
+                m_session->events(), !request.tools.isEmpty(),
+                DEFAULT_CHECKPOINT_TAIL_BYTES);
+            if (planned.installed) {
+                m_checkpoint = planned;
+                request = build_request();
+                stats = size_stats();
+            }
+        }
         if (context_limit > 0
-            && size_stats.value(QStringLiteral("context_tokens_estimate")).toInteger()
-                   > context_limit - size_stats.value(
+            && stats.value(QStringLiteral("context_tokens_estimate")).toInteger()
+                   > context_limit - stats.value(
                          QStringLiteral("output_token_reserve")).toInteger()) {
             result.state = AgentRunState::Failed;
             result.error = QStringLiteral(
-                "CONTEXT_BUDGET_EXCEEDED: The request is too large after history compaction. "
+                "CONTEXT_BUDGET_EXCEEDED: The request is too large for the model window. "
                 "Shorten the current instruction or reduce attached context, then continue.");
-            QJsonObject error_payload = size_stats;
+            QJsonObject error_payload = stats;
             error_payload.insert(QStringLiteral("request_id"), request_id);
             error_payload.insert(QStringLiteral("step"), steps);
             error_payload.insert(QStringLiteral("model"), request.model);

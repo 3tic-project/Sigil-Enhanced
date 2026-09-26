@@ -199,12 +199,19 @@ int main()
         "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],"
         "\"usage\":{\"prompt_tokens\":21,\"completion_tokens\":9,"
         "\"total_tokens\":30,\"prompt_cache_hit_tokens\":13,"
+        "\"prompt_cache_miss_tokens\":8,"
         "\"completion_tokens_details\":{\"reasoning_tokens\":5}}}\n\n"
         "data: [DONE]\n\n"));
     const ModelTurn deepseek_usage_turn = deepseek_usage_decoder.finish();
     Require(deepseek_usage_turn.usage.cachedInputTokens == 13
+                && deepseek_usage_turn.usage.cacheMissTokens == 8
                 && deepseek_usage_turn.usage.reasoningTokens == 5,
-            "DeepSeek top-level cache hits and nested reasoning usage must be retained");
+            "DeepSeek top-level cache hits, misses, and nested reasoning usage must be retained");
+    const ModelUsage miss_round_trip = modelUsageFromJson(
+        modelUsageToJson(deepseek_usage_turn.usage));
+    Require(miss_round_trip.cacheMissTokens == 8
+                && miss_round_trip.cachedInputTokens == 13,
+            "cache miss tokens must round-trip through the usage event schema");
 
     AgentSession session;
     QJsonArray calls { toolCallToJson(turn.toolCalls.first()) };

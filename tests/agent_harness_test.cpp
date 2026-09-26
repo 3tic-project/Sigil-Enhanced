@@ -454,8 +454,10 @@ int main()
                     && started.value(QStringLiteral("mode")).toString()
                         == QStringLiteral("ask")
                     && started.value(QStringLiteral("usage_requested")).toBool()
-                    && history.value(QStringLiteral("limit_enabled")).toBool()
-                    && history.value(QStringLiteral("budget_bytes")).toInt() == 32768
+                    && !history.value(QStringLiteral("limit_enabled")).toBool()
+                    && history.value(QStringLiteral("budget_bytes")).toInt() == 0
+                    && history.value(QStringLiteral("prefix_reused")).toBool() == (i > 0)
+                    && history.value(QStringLiteral("prefix_sha256")).toString().size() == 64
                     && history.value(
                         QStringLiteral("included_turn_count")).toInt() == 1
                     && history.value(
@@ -651,7 +653,11 @@ int main()
                 && tool_limit_second_request.value(
                     QStringLiteral("remaining_tool_calls")).toInt() == 1
                 && tool_limit_provider.lastRequest().messages.constFirst().content
-                    .contains(QStringLiteral("at most 1 more tool call"))
+                    .contains(QStringLiteral("at most 2 tool calls in total"))
+                && !tool_limit_provider.lastRequest().messages.constFirst().content
+                    .contains(QStringLiteral("Remaining tool calls"))
+                && tool_limit_provider.lastRequest().messages.constLast().content
+                    .contains(QStringLiteral("Remaining tool calls: 1"))
                 && tool_limit_terminal.value(QStringLiteral("state")).toString()
                     == QStringLiteral("failed")
                 && tool_limit_terminal.value(QStringLiteral("tool_calls")).toInt() == 1
@@ -845,30 +851,37 @@ int main()
             { QStringLiteral("name"), call.name },
             { QStringLiteral("result"), QString(2500, QLatin1Char('x')) }
         });
+        if (i == 4) {
+            long_turn_session.append(AgentEventType::TransactionCommitted, QJsonObject {
+                { QStringLiteral("book_revision"), 7 },
+                { QStringLiteral("resource_outcomes"), QJsonObject {
+                    { QStringLiteral("resource_ids"), QJsonArray { QStringLiteral("ch1") } }
+                } },
+                { QStringLiteral("recovery"), QJsonObject {
+                    { QStringLiteral("checkpoint_id"), QStringLiteral("restore-7") }
+                } }
+            });
+        }
     }
-    long_turn_session.append(AgentEventType::TransactionCommitted, QJsonObject {
-        { QStringLiteral("book_revision"), 7 },
-        { QStringLiteral("resource_outcomes"), QJsonObject {
-            { QStringLiteral("resource_ids"), QJsonArray { QStringLiteral("ch1") } }
-        } },
-        { QStringLiteral("recovery"), QJsonObject {
-            { QStringLiteral("checkpoint_id"), QStringLiteral("restore-7") }
-        } }
-    });
+    const HistoryCheckpoint checkpoint = assembler.planCheckpoint(
+        long_turn_session.events(), true, DEFAULT_CHECKPOINT_TAIL_BYTES);
     HistoryAssemblyStats compact_stats;
     const QList<ChatMessage> compact_messages = assembler.assemble(
-        long_turn_session.events(), true, 0, &compact_stats,
-        DEFAULT_CURRENT_TURN_HISTORY_BUDGET_BYTES);
-    Require(compact_stats.currentTurnBytes > DEFAULT_CURRENT_TURN_HISTORY_BUDGET_BYTES
-                && compact_stats.includedCurrentTurnBytes
-                       <= DEFAULT_CURRENT_TURN_HISTORY_BUDGET_BYTES
+        long_turn_session.events(), true, 0, &compact_stats, 0, &checkpoint);
+    const QJsonArray compact_wire = assembler.toOpenAIMessages(compact_messages, true);
+    const QJsonArray compact_again = assembler.toOpenAIMessages(
+        assembler.assemble(long_turn_session.events(), true, 0, nullptr, 0, &checkpoint),
+        true);
+    Require(checkpoint.installed
+                && compact_stats.checkpointInstalled
                 && compact_stats.omittedCurrentTurnMessages > 0
+                && compact_wire == compact_again
                 && compact_messages.first().content == QStringLiteral("Translate this book")
                 && compact_messages.at(1).content.contains(
-                    QStringLiteral("Host summary of omitted current-turn history"))
+                    QStringLiteral("<compaction-summary>"))
                 && compact_messages.at(1).content.contains(QStringLiteral("ch1"))
                 && compact_messages.at(1).content.contains(QStringLiteral("restore-7")),
-            "large current turns must be bounded and preserve the user request with a summary");
+            "a frozen checkpoint must keep the user request and a stable summary");
     QSet<QString> visible_call_ids;
     for (const ChatMessage &message : compact_messages) {
         if (message.role == QLatin1String("assistant")) {

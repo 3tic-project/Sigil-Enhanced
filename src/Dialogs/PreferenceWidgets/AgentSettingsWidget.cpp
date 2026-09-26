@@ -96,7 +96,8 @@ AgentSettingsWidget::AgentSettingsWidget()
         0, SigilAgent::MAX_PREVIOUS_TURN_HISTORY_BUDGET_BYTES / 1024);
     m_historyBudget->setSuffix(tr(" KiB"));
     m_historyBudget->setSpecialValueText(tr("Unlimited"));
-    m_historyBudget->setToolTip(tr("Limits previous complete conversation turns sent to the model. Current-run history is compacted separately when it exceeds 128 KiB."));
+    m_historyBudget->setEnabled(false);
+    m_historyBudget->setToolTip(tr("Stored for compatibility and no longer applied. The previous complete conversation turns stay in the prompt so the provider cache prefix can remain stable. A frozen checkpoint replaces older tool rounds when the request approaches the context window."));
     m_maxModelSteps = new QSpinBox(this);
     m_maxModelSteps->setObjectName(QStringLiteral("agentMaxModelSteps"));
     m_maxModelSteps->setRange(1, SigilAgent::MAX_MODEL_STEPS);

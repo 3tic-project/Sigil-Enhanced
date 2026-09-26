@@ -952,6 +952,19 @@ void AgentDock::refreshTechnicalDetails()
                                  .arg(total_turns)
                                  .arg(kibText(included_previous_bytes)));
             }
+            if (m_requestHistoryContext.contains(QStringLiteral("prefix_sha256"))) {
+                const QString prefix_state = m_requestHistoryContext
+                    .value(QStringLiteral("prefix_reused")).toBool()
+                    ? tr("reused") : tr("pinned");
+                const QString drift = m_requestHistoryContext
+                    .value(QStringLiteral("prefix_drift")).toBool()
+                    ? tr(" · fresh bytes differed and were pinned back") : QString();
+                const QString checkpoint = m_requestHistoryContext
+                    .value(QStringLiteral("checkpoint_installed")).toBool()
+                    ? tr(" · checkpoint installed") : QString();
+                lines.append(tr("Prompt prefix: %1%2%3")
+                                 .arg(prefix_state, drift, checkpoint));
+            }
             if (m_requestHistoryContext.contains(
                     QStringLiteral("current_turn_budget_bytes"))) {
                 const qint64 current_bytes = m_requestHistoryContext
@@ -1003,6 +1016,10 @@ void AgentDock::refreshTechnicalDetails()
                 lines.append(tr("Usage details: cached input %1 · reasoning %2")
                                  .arg(count_text(m_requestUsage.cachedInputTokens),
                                       count_text(m_requestUsage.reasoningTokens)));
+            }
+            if (m_requestUsage.cacheMissTokens >= 0) {
+                lines.append(tr("Cache miss tokens: %1")
+                                 .arg(count_text(m_requestUsage.cacheMissTokens)));
             }
         } else if (m_requestUsageRequested
                    && m_requestStatus == QLatin1String("requesting")) {

@@ -282,6 +282,10 @@ void StreamingJsonDecoder::parseUsage(const QJsonObject &usage)
             QStringLiteral("cached_input_tokens"));
     }
     if (cached >= 0) m_usage.cachedInputTokens = cached;
+    const qint64 cache_miss = usageValue(
+        usage, QStringLiteral("prompt_cache_miss_tokens"),
+        QStringLiteral("cache_miss_tokens"));
+    if (cache_miss >= 0) m_usage.cacheMissTokens = cache_miss;
 
     QJsonObject output_details =
         usage.value(QStringLiteral("completion_tokens_details")).toObject();

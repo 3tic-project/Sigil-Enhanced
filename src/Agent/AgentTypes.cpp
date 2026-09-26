@@ -131,7 +131,7 @@ ToolCall toolCallFromJson(const QJsonObject &object)
 bool ModelUsage::isReported() const
 {
     return inputTokens >= 0 || outputTokens >= 0 || totalTokens >= 0
-        || cachedInputTokens >= 0 || reasoningTokens >= 0;
+        || cachedInputTokens >= 0 || cacheMissTokens >= 0 || reasoningTokens >= 0;
 }
 
 QJsonObject modelUsageToJson(const ModelUsage &usage)
@@ -148,6 +148,9 @@ QJsonObject modelUsageToJson(const ModelUsage &usage)
     }
     if (usage.cachedInputTokens >= 0) {
         object.insert(QStringLiteral("cached_input_tokens"), usage.cachedInputTokens);
+    }
+    if (usage.cacheMissTokens >= 0) {
+        object.insert(QStringLiteral("cache_miss_tokens"), usage.cacheMissTokens);
     }
     if (usage.reasoningTokens >= 0) {
         object.insert(QStringLiteral("reasoning_tokens"), usage.reasoningTokens);
@@ -168,6 +171,7 @@ ModelUsage modelUsageFromJson(const QJsonObject &object)
     usage.outputTokens = read_count(QStringLiteral("output_tokens"));
     usage.totalTokens = read_count(QStringLiteral("total_tokens"));
     usage.cachedInputTokens = read_count(QStringLiteral("cached_input_tokens"));
+    usage.cacheMissTokens = read_count(QStringLiteral("cache_miss_tokens"));
     usage.reasoningTokens = read_count(QStringLiteral("reasoning_tokens"));
     return usage;
 }

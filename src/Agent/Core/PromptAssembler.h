@@ -25,7 +25,7 @@ class PermissionPolicy;
 class PromptAssembler
 {
 public:
-    QString systemPrompt(AgentMode mode, int remainingToolCalls = -1) const;
+    QString systemPrompt(AgentMode mode, int runToolCallCeiling = -1) const;
     QString contextBlock(IBookWorkspace *workspace, const QStringList &handles,
                          const AgentSession *session = nullptr) const;
     ModelRequest build(const AgentSession &session,
@@ -39,7 +39,9 @@ public:
                        int historyPreviousTurnBudgetBytes =
                            DEFAULT_PREVIOUS_TURN_HISTORY_BUDGET_BYTES,
                        const PermissionPolicy *permissionPolicy = nullptr,
-                       int remainingToolCalls = -1) const;
+                       int remainingToolCalls = -1,
+                       int runToolCallCeiling = -1,
+                       const HistoryCheckpoint *checkpoint = nullptr) const;
 };
 
 } // namespace SigilAgent
