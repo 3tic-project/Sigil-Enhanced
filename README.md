@@ -18,7 +18,7 @@ Sigil-Enhanced 基于 Sigil 最新版本以及早先的 sigil-modified@ichigo250
 
 ## 版本
 
-当前源码版本是 2.8.5E12，改动见 [E12 更新说明](docs/ReleaseNotes-2.8.5E12.md)。目前已发布的版本是 2.8.5E11，说明见[这里](docs/ReleaseNotes-2.8.5E11.md)；更早的记录见 [ChangeLog.txt](ChangeLog.txt)。
+当前版本是 2.8.5E12，改动见 [E12 更新说明](docs/ReleaseNotes-2.8.5E12.md)。上一版 2.8.5E11 的说明在[这里](docs/ReleaseNotes-2.8.5E11.md)；更早的记录见 [ChangeLog.txt](ChangeLog.txt)。
 
 ## 增强的功能
 
