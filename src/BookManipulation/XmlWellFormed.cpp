@@ -14,7 +14,7 @@ struct FirstError {
     QString message;
 };
 
-void collectError(void *user, xmlError *error)
+void collectError(void *user, const xmlError *error)
 {
     if (!user || !error || error->level < XML_ERR_ERROR) return;
     auto *first = static_cast<FirstError *>(user);
@@ -23,6 +23,13 @@ void collectError(void *user, xmlError *error)
     first->line = error->line;
     first->column = error->int2;
     first->message = QString::fromUtf8(error->message ? error->message : "exception").trimmed();
+}
+
+// libxml2's callback gained a const error pointer in newer releases. Keep the
+// old signature for builds against earlier libxml2 without changing the handler.
+void collectError(void *user, xmlError *error)
+{
+    collectError(user, static_cast<const xmlError *>(error));
 }
 
 QString withoutDeclaration(QString source)
