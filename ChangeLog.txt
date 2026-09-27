@@ -1,3 +1,18 @@
+Sigil-Enhanced-2.8.5.E12
+   Bug Fixes
+     - Waited for the extracted EPUB workspace to be removed when closing the book, including when the last window closes.
+     - Made Edit TOC delete every selected entry in one action instead of only one entry.
+
+   New Features
+     - Rendered Native Agent conversations as safe Markdown. Links to current-book files and XHTML source lines open Code View after checking that the target is still current.
+     - Added reviewed proofreading candidates with paged audit, decisions, plans, and staged application; added read-only python.inspect for custom statistics.
+     - Added a configurable first-model-output timeout (180 seconds by default), OpenRouter reasoning-detail replay, and explicit OpenCode Go endpoint compatibility checks.
+     - Kept the Agent prompt prefix stable for provider cache reuse, and added custom manuscript heading and illustration patterns with resource-revision checks.
+     - Moved several built-in XML, metadata, text, image, and update-feed operations from embedded Python to C++ with parity tests.
+
+   Build/Testing
+     - Added integration coverage for closing a book and removing its extracted workspace; expanded TOC and Native Agent coverage.
+
 Sigil-Enhanced-2.8.5.E11
    Bug Fixes
      - Stopped original-mode Replace/Find from inserting the replacement at the caret after matches were exhausted.
@@ -30,7 +45,6 @@ Sigil-Enhanced-2.8.5.E11
      - Added a separate Cmoa/EBPAJ DIV paragraph workflow that converts only leaves covered by the verified Cmoa profile.
      - Added Native Agent in the main window with Ask, Plan, Edit, and Auto. An unset mode opens in Auto; a stored Ask choice stays Ask.
      - Native Agent can plan paragraph normalization and TOC hierarchy with the menu engines, then apply only after preview.
-     - Native Agent answers render as Markdown without raw HTML, images, or external links. Book paths and L-number source lines in an answer open the file and line in Code View, and a changed, deleted, or other-book target is reported instead of opened.
      - Preserved OPF formatting and comments by default, patching the original file instead of rewriting it. A missing EPUB 3 nav can be repaired after an explicit preview.
      - Font preview follows dc:language and shows original samples for Simplified Chinese, Traditional Chinese, Japanese, and English, with a coverage count. Empty glyph outlines count as missing.
      - Build your own Insert Special Character dialog from special_characters.xml in the Sigil preferences folder. Design and code credit goes to BeckyEbook.
