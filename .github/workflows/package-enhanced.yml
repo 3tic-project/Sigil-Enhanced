@@ -232,9 +232,17 @@ jobs:
           for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%i"
           if "%VSINSTALL%"=="" exit /b 1
           call "%VSINSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          rem Expat and LibXml2 are native C++ dependencies, not supplied by the Qt or Python archives.
+          "%VCPKG_INSTALLATION_ROOT%\vcpkg.exe" install expat "libxml2[core]" ^
+            --triplet sigil-x64-windows-static-md ^
+            --overlay-triplets="%GITHUB_WORKSPACE%\ci_scripts\vcpkg-triplets"
+          if errorlevel 1 exit /b 1
           cmake -S "%GITHUB_WORKSPACE%" -B "%BUILD_DIR%" ^
             -G "Ninja" ^
             -DCMAKE_BUILD_TYPE="%BUILD_TYPE%" ^
+            -DCMAKE_TOOLCHAIN_FILE="%VCPKG_INSTALLATION_ROOT%\scripts\buildsystems\vcpkg.cmake" ^
+            -DVCPKG_OVERLAY_TRIPLETS="%GITHUB_WORKSPACE%\ci_scripts\vcpkg-triplets" ^
+            -DVCPKG_TARGET_TRIPLET=sigil-x64-windows-static-md ^
             -DPKG_SYSTEM_PYTHON=1 ^
             -DUSE_VIRT_PY=1 ^
             -DPACKAGE_PYSIDE6=1 ^
@@ -347,9 +355,17 @@ jobs:
           for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%i"
           if "%VSINSTALL%"=="" exit /b 1
           call "%VSINSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x86
+          rem Use static XML libraries with the dynamic MSVC runtime used by Qt.
+          "%VCPKG_INSTALLATION_ROOT%\vcpkg.exe" install expat "libxml2[core]" ^
+            --triplet sigil-x86-windows-static-md ^
+            --overlay-triplets="%GITHUB_WORKSPACE%\ci_scripts\vcpkg-triplets"
+          if errorlevel 1 exit /b 1
           cmake -S "%GITHUB_WORKSPACE%" -B "%BUILD_DIR%" ^
             -G "Ninja" ^
             -DCMAKE_BUILD_TYPE="%BUILD_TYPE%" ^
+            -DCMAKE_TOOLCHAIN_FILE="%VCPKG_INSTALLATION_ROOT%\scripts\buildsystems\vcpkg.cmake" ^
+            -DVCPKG_OVERLAY_TRIPLETS="%GITHUB_WORKSPACE%\ci_scripts\vcpkg-triplets" ^
+            -DVCPKG_TARGET_TRIPLET=sigil-x86-windows-static-md ^
             -DPKG_SYSTEM_PYTHON=1 ^
             -DUSE_VIRT_PY=1 ^
             -DPACKAGE_PYSIDE6=1 ^
