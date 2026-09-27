@@ -21,9 +21,8 @@
 *************************************************************************/
 
 #include <QDir>
-#include <QtConcurrent>
-#include <QFuture>
 #include <QDebug>
+#include <QThread>
 
 #include "Misc/TempFolder.h"
 #include "Misc/SettingsStore.h"
@@ -57,11 +56,16 @@ TempFolder::TempFolder(const QString base_path)
 
 TempFolder::~TempFolder()
 {
-    // To be super safe here ...
-    // only manually delete things if the temp directory is actually valid
-    if (m_tempDir.isValid()) {
-        QFuture<bool> afuture = QtConcurrent::run(DeleteFolderAndFiles, m_tempDir.path());
+    // The last window may exit the process immediately after releasing its Book.
+    // Finish removal here so the worker directory cannot be left half-deleted.
+    if (!m_tempDir.isValid()) return;
+    const QString path = m_tempDir.path();
+    for (int attempt = 0; attempt < 5; ++attempt) {
+        if (m_tempDir.remove() || !QDir(path).exists()) return;
+        if (attempt < 4) QThread::msleep(100);
     }
+    qWarning() << "Could not remove temporary directory after five attempts:"
+               << path << m_tempDir.errorString();
 }
 
 
@@ -103,13 +107,3 @@ QString TempFolder::GetNewTempFolderTemplateFromBasePath(const QString base_path
 {
     return base_path + "/Sigil-XXXXXX";
 }
-
-
-bool TempFolder::DeleteFolderAndFiles(const QString &fullfolderpath)
-{
-    QDir folder(fullfolderpath);
-    return folder.removeRecursively();
-}
-
-
-

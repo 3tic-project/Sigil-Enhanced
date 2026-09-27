@@ -45,9 +45,7 @@ public:
     TempFolder(const QString base_path);
 
     /**
-     * Destructor. Deletes the temp folder on disk
-     * and all the files in it. The deletion is performed
-     * asynchronously in a background thread.
+     * Destructor. Deletes the temp folder and its contents before returning.
      */
     ~TempFolder();
 
@@ -81,16 +79,6 @@ private:
      */
     static QString GetNewTempFolderTemplate();
     static QString GetNewTempFolderTemplateFromBasePath(const QString base_path);
-
-    /**
-     * Deletes the folder specified and all the files
-     * (and folders, recursively) in it.
-     *
-     * @param fullfolderpath The full path to the folder to delete.
-     * @return \c true if the operation is successful.
-     */
-    static bool DeleteFolderAndFiles(const QString &fullfolderpath);
-
 
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES

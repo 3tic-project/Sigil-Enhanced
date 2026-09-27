@@ -1583,6 +1583,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR} --fixture epub2
     )
     set_tests_properties(main_window_noop_epub2_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME main_window_temp_cleanup_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_temp_cleanup_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(main_window_temp_cleanup_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
     add_test(NAME main_window_noop_cmoa_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_noop_integration.py
                 ${CMAKE_BINARY_DIR} --fixture cmoa
