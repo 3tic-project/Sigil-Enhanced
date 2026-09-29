@@ -257,6 +257,34 @@ int main()
     Require(lineLooksLikeChapterHeading(QStringLiteral("第１話　光屬性的朝日同學")), "fullwidth 第１話 must be a heading");
     Require(lineLooksLikeChapterHeading(QStringLiteral("後記")), "後記 must be a heading");
     Require(!lineLooksLikeChapterHeading(QStringLiteral("春天到了。")), "body line must not be a heading");
+    for (const QString &special : {
+             QStringLiteral("序　章"), QStringLiteral("幕　間　托露特的視角"), QStringLiteral("終　章"),
+             QStringLiteral("後　記"), QStringLiteral("間章"), QStringLiteral("楔子"), QStringLiteral("プロローグ") }) {
+        Require(lineLooksLikeChapterHeading(special), "spaced special headings must be recognized");
+    }
+    Require(!lineLooksLikeChapterHeading(QStringLiteral("後頭傳來類似哀嚎的聲音。")),
+            "a body sentence starting with 後 must not be a heading");
+    Require(!lineLooksLikeChapterHeading(QStringLiteral("序章的內容很短。但這是正文裡的一句話，不是標題。她笑了笑。我也笑了。")),
+            "a long body sentence starting with 序章 must not be a heading");
+    const ParsedManuscript spaced = parseManuscriptText(QStringLiteral(
+        "目錄\n序　章\n第一章　邂逅\n幕　間　托露特的視角\n終　章\n後　記\n\n"
+        "序　章\n開場。\n第一章　邂逅\n後頭傳來聲音。\n"
+        "幕　間　托露特的視角\n她想。\n終　章\n結束。\n後　記\n謝謝。\n"));
+    Require(spaced.chapters.size() == 5, "spaced special headings must yield every chapter once");
+    Require(spaced.chapters.at(0).numberLabel == QStringLiteral("序　章")
+                && spaced.chapters.at(2).numberLabel == QStringLiteral("幕　間")
+                && spaced.chapters.at(2).title == QStringLiteral("托露特的視角"),
+            "spaced special headings must split label and title at the heading word");
+    Require(spaced.toc.size() == 5 && spaced.chapters.at(1).body.contains(QStringLiteral("後頭")),
+            "front-matter TOC must be separated from body chapters");
+    const ParsedManuscript listed = parseManuscriptText(QStringLiteral(
+        "目錄\n序章\n1.玲琳，互相交換\n2.玲琳，面臨處刑\n特別篇　她與化妝\n序章\n開場。\n＊＊＊\n"
+        "1.玲琳，互相交換\n正文一。\n＊＊＊\n2.玲琳，面臨處刑\n正文二。\n特別篇　她與化妝\n正文三。\n"));
+    Require(listed.chapters.size() == 4
+                && listed.chapters.at(1).heading == QStringLiteral("1.玲琳，互相交換")
+                && listed.chapters.at(3).heading == QStringLiteral("特別篇　她與化妝")
+                && listed.chapters.at(0).body.contains(QStringLiteral("＊＊＊")),
+            "TOC-listed headings with custom numbering must split chapters without adopting scene breaks");
     Require(chapterNumberFromHeading(QStringLiteral("第１０話　x")) == 10, "fullwidth 10");
     Require(chineseTalkLabel(1) == QStringLiteral("第一话"), "chineseTalkLabel 1");
     Require(chineseTalkLabel(11) == QStringLiteral("第十一话"), "chineseTalkLabel 11");
@@ -643,6 +671,18 @@ int main()
                 "Ask and Plan must not inject complete mutation recipes requiring denied tools");
         Require(limited_request.tools.size() < request.tools.size(),
                 "skill declarations must not expand the policy-filtered tool schemas");
+    }
+
+    const QString saintess = QStringLiteral(
+        "/Users/parsle/Downloads/聖女老師的前衛魔法課！ 1/聖女老師的前衛魔法課！ 1.txt");
+    if (QFile::exists(saintess)) {
+        QFile file(saintess);
+        Require(file.open(QIODevice::ReadOnly), "open saintess sample");
+        const ParsedManuscript live = parseManuscriptText(QString::fromUtf8(file.readAll()));
+        Require(live.chapters.size() == 9, "real sample must parse prologue, interlude, finale and afterword");
+        Require(live.chapters.first().heading == QStringLiteral("序　章")
+                    && live.chapters.last().heading == QStringLiteral("後　記"),
+                "real sample chapter bounds");
     }
 
     const QString asahi = QStringLiteral(
