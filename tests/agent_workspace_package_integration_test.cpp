@@ -206,6 +206,22 @@ int main(int argc, char **argv)
                       << ", broken images=" << brokenImages.size()
                       << ", warnings=" << QJsonDocument(typeset.value(QStringLiteral("warnings")).toArray()).toJson(QJsonDocument::Compact).constData() << '\n';
             Require(brokenImages.isEmpty(), "Typeset sample produced broken image references");
+            const QJsonObject preflight = call(QStringLiteral("preflight.run"), QJsonObject {
+                { QStringLiteral("limit"), 200 }
+            });
+            std::cout << "Preflight sample: total=" << preflight.value(QStringLiteral("total_count")).toInt()
+                      << " severity=" << QJsonDocument(preflight.value(QStringLiteral("severity_counts")).toObject())
+                             .toJson(QJsonDocument::Compact).constData()
+                      << " rules=" << QJsonDocument(preflight.value(QStringLiteral("rule_counts")).toObject())
+                             .toJson(QJsonDocument::Compact).constData() << '\n';
+            for (const QJsonValue &value : preflight.value(QStringLiteral("issues")).toArray()) {
+                const QJsonObject issue = value.toObject();
+                if (issue.value(QStringLiteral("severity")).toString() == QLatin1String("info")) continue;
+                std::cout << "  " << issue.value(QStringLiteral("rule_id")).toString().toStdString() << ' '
+                          << issue.value(QStringLiteral("book_path")).toString().toStdString() << ":L"
+                          << issue.value(QStringLiteral("line")).toInt() << ' '
+                          << issue.value(QStringLiteral("evidence")).toString().toStdString() << '\n';
+            }
             return 0;
         }
 

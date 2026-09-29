@@ -333,7 +333,32 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
-只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`proof.audit` / `proof.settings` / `proof.plan`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`python.inspect`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
+只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`proof.audit` / `proof.settings` / `proof.plan`、`book.check`、`preflight.profiles` / `preflight.run` / `preflight.issues`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`python.inspect`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
+
+### 出版预检（`preflight.*`）
+
+`preflight.run` 对当前书做只读发行前检查，读取的是活书加当前暂存事务的工作文本，因此
+未保存和已暂存的修改都会参与检查；它不导出、不保存，也不打开事务。结果包含 `run_id`、
+绑定会话/revision/全部工作文本的 `snapshot_digest`、`includes_staged_changes`、按严重度和
+规则的计数，以及第一页问题。用 `preflight.issues` 以同一 `run_id` 沿 `next_offset` 翻页，
+可按 `severity` 或 `rule_id` 过滤（默认 50 条，最多 200 条）。书或暂存内容变化后旧 run 返回
+`PREFLIGHT_STALE`，新的 run 会使旧 `run_id` 作废。
+
+`preflight.profiles` 列出版本化 profile：默认 `release-basic`（下列全部规则）、`epub-core`
+（结构与链接）和 `a11y-basic`（语言、alt、标题）。本地规则为：Spine 为空或失效、XHTML 非
+良构（该文件其余检查不执行）、EPUB 3 中未声明的命名实体、内部链接/资源目标缺失、仅大小写
+不同的路径、片段 ID 缺失（含同文件锚点与 TOC 片段）、CSS `url()`/`@import` 缺失、TOC 目标
+缺失、manifest href 缺失、EPUB 3 缺 nav、`dc:title`/`dc:identifier`/`dc:language` 缺失、Spine
+文档缺 `lang`/`xml:lang` 或与 `dc:language` 主语言不同、`<img>` 缺 alt 或 alt 只是文件名、
+标题层级跳级，以及没有任何 XHTML/CSS/导航/封面元数据引用的图片、字体和 CSS。显式
+`alt=""` 视为装饰图，不报缺失；外部 URL 和 `data:` 不按书内路径解析。
+
+每条问题带稳定 `issue_id`、`fingerprint`、`rule_id`、`severity`（error/warning/info）、
+`book_path`、1-based `line`（包级问题无行号）、有界 `evidence`、`fix_kind`（`mechanical` 或
+`manual`）和 `manual_required`，按严重度和位置排序。`validation_status.local` 为
+`errors_found`、`passed_with_findings` 或 `passed`；`epubcheck` 与 `ace` 在没有适配器时固定为
+`not_run` 并给出原因，`human_review` 为 `pending`，`saved_epub_checked=false`。本地规则不是
+EPUBCheck、Ace 或可访问性认证；Agent 不能据此宣称书已合规或无障碍。预检只报告，不自动修复。
 
 `book.summary` 及每轮自动 Book map 中的 title/language/EPUB version 分别最多预览
 512/128/64 个 UTF-16 单元，并返回各自的 `*_length` / `*_truncated`。title 或 language 截断时
@@ -516,6 +541,13 @@ stdout/stderr。Snippet 顶层可用 `plugin`，也可定义 `def run(plugin)` �
 ## 按模板灌文稿（可选捷径）
 
 若当前书碰巧是「封面/彩页/Section」那类轻小说模板，仍可用 `manuscript.parse` + `content.typeset_from_manuscript`。更稳妥的通用做法是：`content.wrap_plain`（自带 heading_pattern）→ `content.split` → `image.insert` / `spine.set` / `toc.generate`。
+
+默认章节识别覆盖 `第N話/章/卷`，以及带或不带全角空格的 `序章`、`幕間`、`間章`、`楔子`、
+`終章`、`最終章`、`尾聲`、`後記`、`番外`、`題外話`、`プロローグ`、`エピローグ`、`あとがき`
+（标题词后须为行尾、空白或冒号，且行不长于 40 字，避免把“後頭傳來…”当标题）。原稿有
+`目錄` 时，目录里列出且在正文中独立成行重复出现的行（如 `1.玲琳，互相交換`、`特別篇　…`）
+也按章节处理，目录本身不会被当成章节。插图标记接受 `［插图：name］`、`【插圖：name】`、
+`[插圖 007]`、`（插圖001）` 等方/圆/尖括号写法，冒号可省略。解析器与模板引擎共用同一规则。
 
 模型**禁止**让你去书籍视图里全选粘贴。
 
