@@ -10,6 +10,7 @@ metadata:
   sigil.requires-book: "true"
 allowed-tools: >
   book.summary book.resources book.spine book.search_regex book.check book.validate
+  structure.inspect
   content.wrap_plain content.wrap content.replace_regex content.replace_body
   content.insert content.split content.merge image.insert
   resource.copy resource.create resource.delete resource.rename resource.replace_text
@@ -25,6 +26,10 @@ allowed-tools: >
 ## Goal
 
 Change the open book through typed tools. Patterns (heading regex, class names, illustration markers) come from the user or from inspecting this book — never from a hardcoded novel format.
+
+## Inspect first
+
+Call `structure.inspect` before planning splits, merges, reordering or TOC changes. It returns each spine page's role candidate with evidence, first heading and line, TOC entry, and `differences` (pages missing from the TOC, labels that differ from headings, TOC order against the spine). Use it instead of reading every page. After committing, run it again (or `preflight.run`) to confirm the differences you meant to fix are gone.
 
 ## Long text
 

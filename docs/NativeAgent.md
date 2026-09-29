@@ -339,7 +339,7 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
-只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`proof.audit` / `proof.settings` / `proof.plan`、`book.check`、`preflight.profiles` / `preflight.run` / `preflight.issues`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`python.inspect`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
+只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`proof.audit` / `proof.settings` / `proof.plan`、`book.check`、`preflight.profiles` / `preflight.run` / `preflight.issues`、`structure.inspect`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`python.inspect`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
 
 ### 出版预检（`preflight.*`）
 
@@ -365,6 +365,23 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 `errors_found`、`passed_with_findings` 或 `passed`；`epubcheck` 与 `ace` 在没有适配器时固定为
 `not_run` 并给出原因，`human_review` 为 `pending`，`saved_epub_checked=false`。本地规则不是
 EPUBCheck、Ace 或可访问性认证；Agent 不能据此宣称书已合规或无障碍。预检只报告，不自动修复。
+
+### 结构诊断（`structure.inspect`）
+
+只读工具，按 Spine 顺序为每页给出角色候选：cover、titlepage、toc、illustration、credits、
+synopsis、prologue、chapter、epilogue、afterword、body 或 unknown。每页附 `confidence`（high/medium/low）
+和逐条 `evidence`：优先使用 `epub:type`（high），其次是首个 h1–h6 或 `<title>` 文字、只含图片的版式
+（medium），最后是 TOC 标签和文件名（low）。CSS class 不被当成语义，Ruby 注音不进入标题文字，
+全角空格原样保留。每页还返回首个标题文字/层级/行号、对应 TOC 条目、可见字数和图片数。
+
+`differences` 列出：正文页不在 TOC 中（`heading_without_toc`）、正文页没有标题
+（`page_without_heading`）、TOC 标签与页内标题不同（忽略空白差异，`toc_label_mismatch`）、TOC
+顺序与 Spine 相反、TOC 指向 Spine 外的文档，以及 TOC 目标缺失。`pages` 与 `differences`
+共用 offset 分页（默认 100，最多 200）。角色是供编辑确认的候选，不是事实；工具不改书。
+结构类问题应先调用它，而不是逐页 `resource.read_fragment`。
+
+`resource.delete` 不改 Nav/NCX（与 Sigil 自身的删除一致）。若要删除的文件仍被 TOC 引用，工具结果会
+列出 `toc_references` 并附 `toc_warning`，模型应在同一事务中修正或重建 TOC 后再提交。
 
 `book.summary` 及每轮自动 Book map 中的 title/language/EPUB version 分别最多预览
 512/128/64 个 UTF-16 单元，并返回各自的 `*_length` / `*_truncated`。title 或 language 截断时
