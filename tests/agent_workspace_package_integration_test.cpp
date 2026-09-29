@@ -327,7 +327,8 @@ int main(int argc, char **argv)
         for (const SigilAgent::AgentSkill &skill : liveSkills) {
             if (skill.name != QLatin1String("ln-template-typeset")
                 && skill.name != QLatin1String("book-structure")
-                && skill.name != QLatin1String("paragraph-normalization")) continue;
+                && skill.name != QLatin1String("paragraph-normalization")
+                && skill.name != QLatin1String("release-preflight")) continue;
             ++bundledSkillCount;
             SigilAgent::AgentSession skillSession;
             skillSession.append(SigilAgent::AgentEventType::UserMessage, QJsonObject {
@@ -339,7 +340,8 @@ int main(int argc, char **argv)
                 const SigilAgent::ModelRequest skillRequest = SigilAgent::PromptAssembler().build(
                     skillSession, &workspace, liveTools, mode, QStringLiteral("test"),
                     false, QString(), QStringList());
-                const bool editable = mode == SigilAgent::AgentMode::Edit
+                const bool editable = skill.name == QLatin1String("release-preflight")
+                    || mode == SigilAgent::AgentMode::Edit
                     || mode == SigilAgent::AgentMode::Auto;
                 Require(skillRequest.messages.first().content.contains(
                             QStringLiteral("# Skill: %1\n").arg(skill.name)) == editable,
@@ -359,7 +361,7 @@ int main(int argc, char **argv)
                 Require(foundDecision, "Live host request lost skill routing diagnostics");
             }
         }
-        Require(bundledSkillCount == 3 && selectedSkillRequests == 6
+        Require(bundledSkillCount == 4 && selectedSkillRequests == 10
                     && workspace.revision() == skillRevision && book->IsModified() == skillModified,
                 "Live skill routing must preserve all bundled recipes without changing the book");
         std::cout << "Live skills: " << bundledSkillCount

@@ -15,7 +15,7 @@ allowed-tools: >
   manuscript.parse content.typeset_from_manuscript content.fill_section
   resource.copy resource.replace_text resource.create
   transaction.begin transaction.preview transaction.commit transaction.rollback
-  checkpoint.create metadata.update
+  checkpoint.create metadata.update preflight.run preflight.issues
 ---
 
 # Light-novel template typeset
@@ -42,14 +42,16 @@ The open book has pages named like `cover`, `start`, `title`, `message`, `summar
 ## Procedure
 
 1. `book.summary` / `book.resources` if the book map is not already in context.
-2. `manuscript.parse` (omit `manuscript_id` unless several candidates exist). Check its chapter list against the manuscript's actual headings and illustration markers. If prologue, interlude, finale, or afterword is missing, supply `heading_pattern` and `illustration_pattern` and parse again.
+2. `manuscript.parse` (omit `manuscript_id` unless several candidates exist). Check its chapter list against the manuscript's actual headings and illustration markers. The built-in rules already cover spaced 序　章/幕　間/終　章/後　記, TOC-listed headings such as `1.标题`, and markers like （插圖001）. Only if a heading or marker is still missing, supply `heading_pattern` and `illustration_pattern` and parse again.
 3. If `template.detected` is false, stop and tell the user to open `轻小说模板.epub` first, then drop the book folder.
 4. If `chapter_count` is 0, stop and report that the TXT has no `第N話` / `后记` headings.
 5. `transaction.begin` with a short label.
 6. `content.typeset_from_manuscript` — one call. Pass exactly the same custom patterns used by the successful `manuscript.parse`, if any. It copies extra `Section` pages, wraps every chapter, rewrites `illus`/`cover`/`start` image hrefs, and fills title / 制作信息 / 简介 / visible contents / navigation TOC / metadata.
 7. Compare `chapters_filled` with the verified `chapter_count`; if they differ, roll back and correct the patterns. Review `missing_images` and `warnings` before commit.
 8. `transaction.preview`, then `transaction.commit` with the current `book_revision`.
-9. `book.validate` and `book.toc`. Report filled chapters, copied sections, image map, missing images, and whether the raw import page was stubbed.
+9. `book.toc`, then `preflight.run` (follow `preflight.issues` pages). Report filled chapters, copied sections, image map, missing and unplaced images, template placeholders left unfilled (warnings), local preflight errors with `book_path` L<line>, and whether the raw import page was stubbed. EPUBCheck is not run; say so.
+10. Placed images get `alt=""` (decorative) except the cover. Tell the user how many images need an alt decision (`alt_review_required`) and ask which illustrations carry information. Never write file names or guesses as alt text.
+11. If an `illus` page stayed a placeholder because the manuscript has fewer front illustrations, offer to delete it and remove it from the spine; do not delete without confirmation.
 
 If the user asks to use the embedded font by default, inspect the existing `@font-face`, `body`, and title rules. Point them to actual bundled fonts, then check CSS URLs and chapter pages before reporting success.
 

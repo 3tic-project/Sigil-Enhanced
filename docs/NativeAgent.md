@@ -256,6 +256,12 @@ Debug JSON 的 `model_request_started.tool_context.skills` 包含 `loaded_count`
 `explicit_name` 或准确触发词，不可用时有缺失能力或元数据错误。
 本轮审计与测试记录见 [Agent 能力审计](AgentCapabilityAudit_2026-09-30.md)。
 
+内置四项 Skill：`book-structure`（通用拆合章、正则、Spine、TOC）、`ln-template-typeset`
+（轻小说模板灌稿，完成后跑预检并提示 alt 复核与空闲占位页）、`paragraph-normalization`
+（原生 DIV→P 计划流程）和只读的 `release-preflight`（发行前检查，Ask 模式也可用；只报告，
+不修改书，并如实写出 EPUBCheck/Ace `not_run`）。Skill 只声明真正需要的工具，
+会话清单等辅助工具不作为依赖，避免辅助能力缺失时整份流程不可用。
+
 **Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤不会被
 `transaction.rollback` 撤销，结果仍标为 Applied；纯文本提交可使用该 Applied 卡上的
 任务恢复按钮，其他提交只能使用卡片所列的宿主恢复方式。

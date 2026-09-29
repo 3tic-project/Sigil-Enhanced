@@ -689,6 +689,17 @@ int main()
         Require(limited_request.tools.size() < request.tools.size(),
                 "skill declarations must not expand the policy-filtered tool schemas");
     }
+    AgentSession release_session;
+    release_session.append(AgentEventType::UserMessage, QJsonObject {
+        { QStringLiteral("text"), QStringLiteral("发布前检查一下这本书能不能交付") }
+    });
+    const ModelRequest release_request = assembler.build(
+        release_session, &book, prompt_tools, AgentMode::Ask, QStringLiteral("test"), false, QString(), QStringList());
+    const QString release_system = release_request.messages.first().content;
+    Require(release_system.contains(QStringLiteral("# Skill: release-preflight"))
+                && release_system.contains(QStringLiteral("Never say the book is valid"))
+                && !release_system.contains(QStringLiteral("# Skill: ln-template-typeset")),
+            "a read-only release check must route to release-preflight even in Ask mode");
 
     const QString saintess = QStringLiteral(
         "/Users/parsle/Downloads/聖女老師的前衛魔法課！ 1/聖女老師的前衛魔法課！ 1.txt");
