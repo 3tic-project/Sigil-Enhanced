@@ -249,6 +249,36 @@ int main(int argc, char **argv)
                           << difference.value(QStringLiteral("toc_label")).toString().toStdString() << " | "
                           << difference.value(QStringLiteral("heading")).toString().toStdString() << '\n';
             }
+            QJsonObject decorative;
+            for (const QJsonValue &value : preflight.value(QStringLiteral("issues")).toArray()) {
+                const QJsonObject issue = value.toObject();
+                if (issue.value(QStringLiteral("rule_id")).toString() != QLatin1String("IMG_ALT_FILENAME")) continue;
+                const QString evidence = issue.value(QStringLiteral("evidence")).toString();
+                const QString src = evidence.section(QStringLiteral("src=\""), 1).section(QLatin1Char('"'), 0, 0);
+                const QString page = issue.value(QStringLiteral("book_path")).toString();
+                QStringList parts = page.section(QLatin1Char('/'), 0, -2).split(QLatin1Char('/'));
+                for (const QString &part : src.split(QLatin1Char('/'))) {
+                    if (part == QLatin1String("..")) parts.removeLast();
+                    else parts.append(part);
+                }
+                decorative.insert(parts.join(QLatin1Char('/')), QString());
+            }
+            if (!decorative.isEmpty()) {
+                const QJsonObject rerun = call(QStringLiteral("preflight.run"), QJsonObject { { QStringLiteral("limit"), 1 } });
+                const QJsonObject applied = call(QStringLiteral("preflight.apply_fixes"), QJsonObject {
+                    { QStringLiteral("run_id"), rerun.value(QStringLiteral("run_id")) },
+                    { QStringLiteral("image_alts"), decorative } });
+                call(QStringLiteral("transaction.preview"), QJsonObject());
+                call(QStringLiteral("transaction.commit"), QJsonObject {
+                    { QStringLiteral("expected_book_revision"), static_cast<qint64>(sampleWorkspace.revision()) } });
+                const QJsonObject after = call(QStringLiteral("preflight.run"), QJsonObject { { QStringLiteral("limit"), 200 } });
+                std::cout << "Alt decisions: images=" << decorative.size()
+                          << " changes=" << applied.value(QStringLiteral("change_count")).toInt()
+                          << " preflight after=" << QJsonDocument(after.value(QStringLiteral("rule_counts")).toObject())
+                                 .toJson(QJsonDocument::Compact).constData() << '\n';
+                Require(!after.value(QStringLiteral("rule_counts")).toObject().contains(QStringLiteral("IMG_ALT_FILENAME")),
+                        "Committed alt decisions must clear the file-name alt finding on the real book");
+            }
             return 0;
         }
 

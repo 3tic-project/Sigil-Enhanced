@@ -1965,6 +1965,7 @@ set_tests_properties(agent_book_tools PROPERTIES TIMEOUT 30)
 
 add_executable(agent_preflight_test
     agent_preflight_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Core/AgentSession.cpp
     ${CMAKE_SOURCE_DIR}/src/Agent/Tools/BookTools.cpp

@@ -364,7 +364,19 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 `manual`）和 `manual_required`，按严重度和位置排序。`validation_status.local` 为
 `errors_found`、`passed_with_findings` 或 `passed`；`epubcheck` 与 `ace` 在没有适配器时固定为
 `not_run` 并给出原因，`human_review` 为 `pending`，`saved_epub_checked=false`。本地规则不是
-EPUBCheck、Ace 或可访问性认证；Agent 不能据此宣称书已合规或无障碍。预检只报告，不自动修复。
+EPUBCheck、Ace 或可访问性认证；Agent 不能据此宣称书已合规或无障碍。预检本身只报告。
+
+`preflight.apply_fixes` 是审阅式写入工具（Edit 需批准，Plan 可暂存预览，Ask 与 Auto 均不可用，因为其中的 alt 文字是编辑决定）。它只接受
+最近一次 run 中 `fix_kind=mechanical` 且带 `fix` 的问题：仅大小写不同的链接路径改为实际大小写（必须在
+该行恰好命中一次），以及用 `dc:language` 补 `<html>` 的 `xml:lang`/`lang`。另可传
+`image_alts`（图片 book_path → 编辑决定的 alt，`""` 表示装饰图，最长 1000 字），按解析后的
+`src` 写入所有引用该图的 `<img>`。需要人工判断的问题返回 `PREFLIGHT_FIX_NOT_MECHANICAL`，未知或
+未被引用的图片分别返回 `IMAGE_NOT_FOUND` / `IMAGE_NOT_REFERENCED`，且不会暂存任何改动。工具
+在暴露前核对 run 未过期，按资源暂存（必要时自动开启事务），返回每处 before/after，并使该 run
+失效；之后仍须读完预览、提交并重新 `preflight.run`。工具不生成 alt 文字。
+
+模板排版、`content.wrap_plain` 和未给 alt 的 `image.insert` 放置的图片一律写 `alt=""`（封面写
+“封面”），不再把文件名当替代文字；排版结果的 `alt_review_required` 给出待编辑决定的图片数。
 
 ### 结构诊断（`structure.inspect`）
 

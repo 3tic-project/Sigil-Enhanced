@@ -17,6 +17,7 @@
 #include <QUuid>
 #include <QXmlStreamReader>
 
+#include "Agent/Execution/BookEdits.h"
 #include "Agent/Execution/IBookWorkspace.h"
 
 namespace SigilAgent
@@ -50,6 +51,7 @@ struct Issue {
     QString message;
     QString fixKind;
     bool manual = false;
+    QJsonObject fix;
 };
 
 struct Reference {
@@ -335,6 +337,7 @@ QJsonObject issueJson(const Issue &issue, int index)
     if (!issue.bookPath.isEmpty()) object.insert(QStringLiteral("book_path"), issue.bookPath);
     if (issue.line > 0) object.insert(QStringLiteral("line"), issue.line);
     if (!issue.evidence.isEmpty()) object.insert(QStringLiteral("evidence"), issue.evidence);
+    if (!issue.fix.isEmpty()) object.insert(QStringLiteral("fix"), issue.fix);
     return object;
 }
 
@@ -751,10 +754,15 @@ QJsonArray preflightIssues(IBookWorkspace *workspace, const QString &profile_id)
             || text.contains(QStringLiteral("epub:type='toc'"));
         if (spine_paths.contains(file.path) && !is_nav && scan.wellFormed) {
             if (!scan.hasRootLang || scan.rootLang.isEmpty()) {
-                add({ QStringLiteral("XHTML_LANG_MISSING"), QStringLiteral("warning"), file.id, file.path, 0,
+                Issue missing_lang { QStringLiteral("XHTML_LANG_MISSING"), QStringLiteral("warning"), file.id, file.path, 0,
                       QStringLiteral("<html>"),
                       QStringLiteral("The html element declares no lang/xml:lang; set it to the content language."),
-                      QStringLiteral("mechanical"), false });
+                      book_language.isEmpty() ? QStringLiteral("manual") : QStringLiteral("mechanical"),
+                      book_language.isEmpty() };
+                if (!book_language.isEmpty()) {
+                    missing_lang.fix = QJsonObject { { QStringLiteral("lang"), metadata.value(QStringLiteral("language")) } };
+                }
+                add(missing_lang);
             } else if (!book_language.isEmpty() && primaryLanguage(scan.rootLang) != book_language) {
                 add({ QStringLiteral("XHTML_LANG_MISMATCH"), QStringLiteral("info"), file.id, file.path, 0,
                       bounded(QStringLiteral("lang=\"%1\" dc:language=\"%2\"").arg(scan.rootLang, metadata.value(QStringLiteral("language")))),
@@ -864,9 +872,38 @@ QJsonArray preflightIssues(IBookWorkspace *workspace, const QString &profile_id)
                 rule = QStringLiteral("CSS_URL_MISSING");
                 message = QStringLiteral("CSS references a file that is not in the book.");
             }
-            add({ rule, QStringLiteral("error"), reference.sourceId, reference.sourcePath, reference.line,
+            Issue link_issue { rule, QStringLiteral("error"), reference.sourceId, reference.sourcePath, reference.line,
                   bounded(QStringLiteral("%1=\"%2\"").arg(reference.attribute, reference.raw)),
-                  message, case_only ? QStringLiteral("mechanical") : QStringLiteral("manual"), !case_only });
+                  message, case_only ? QStringLiteral("mechanical") : QStringLiteral("manual"), !case_only };
+            if (case_only) {
+                const QString actual = files.at(by_lower_path.value(target.toLower())).path;
+                QString replacement = reference.raw;
+                const QString fragment_suffix = reference.raw.contains(QLatin1Char('#'))
+                    ? reference.raw.mid(reference.raw.indexOf(QLatin1Char('#'))) : QString();
+                QString without_fragment = reference.raw.left(reference.raw.size() - fragment_suffix.size());
+                const QStringList from_parts = directoryOf(reference.sourcePath).split(QLatin1Char('/'), Qt::SkipEmptyParts);
+                const QStringList to_parts = actual.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+                int common = 0;
+                while (common < from_parts.size() && common < to_parts.size() - 1
+                       && from_parts.at(common) == to_parts.at(common)) {
+                    ++common;
+                }
+                QStringList relative;
+                for (int i = common; i < from_parts.size(); ++i) relative << QStringLiteral("..");
+                for (int i = common; i < to_parts.size(); ++i) relative << to_parts.at(i);
+                if (!without_fragment.contains(QLatin1Char('%'))) {
+                    replacement = relative.join(QLatin1Char('/')) + fragment_suffix;
+                    link_issue.fix = QJsonObject {
+                        { QStringLiteral("attribute"), reference.attribute },
+                        { QStringLiteral("from"), reference.raw },
+                        { QStringLiteral("to"), replacement }
+                    };
+                } else {
+                    link_issue.fixKind = QStringLiteral("manual");
+                    link_issue.manual = true;
+                }
+            }
+            add(link_issue);
             if (case_only) referenced.insert(files.at(by_lower_path.value(target.toLower())).path);
             continue;
         }
@@ -1052,6 +1089,246 @@ ToolResult PreflightAudit::issues(IBookWorkspace *workspace, const QJsonObject &
     };
     if (has_more) data.insert(QStringLiteral("next_offset"), offset + page.size());
     return ToolResult::success(data);
+}
+
+ToolResult PreflightAudit::applyFixes(IBookWorkspace *workspace, const QJsonObject &arguments)
+{
+    const QString run_id = arguments.value(QStringLiteral("run_id")).toString();
+    if (run_id.isEmpty() || run_id != m_runId) {
+        return ToolResult::failure(QStringLiteral("PREFLIGHT_RUN_UNKNOWN"),
+                                   QStringLiteral("Unknown or superseded run_id; call preflight.run"));
+    }
+    if (workspace->bookSessionId() != m_sessionId
+        || preflightSnapshotDigest(workspace) != m_snapshotDigest) {
+        return ToolResult::failure(QStringLiteral("PREFLIGHT_STALE"),
+                                   QStringLiteral("The book or staged edits changed after this run; call preflight.run again"));
+    }
+    const QJsonArray requested = arguments.value(QStringLiteral("issue_ids")).toArray();
+    const QJsonObject image_alts = arguments.value(QStringLiteral("image_alts")).toObject();
+    if (requested.isEmpty() && image_alts.isEmpty()) {
+        return ToolResult::failure(QStringLiteral("INVALID_ARGUMENT"),
+                                   QStringLiteral("Pass issue_ids of mechanical issues and/or image_alts"));
+    }
+    if (requested.size() > 200 || image_alts.size() > 500) {
+        return ToolResult::failure(QStringLiteral("INVALID_ARGUMENT"),
+                                   QStringLiteral("At most 200 issue_ids and 500 image_alts per call"));
+    }
+    QHash<QString, QJsonObject> by_id;
+    for (const QJsonValue &value : m_issues) {
+        const QJsonObject issue = value.toObject();
+        by_id.insert(issue.value(QStringLiteral("issue_id")).toString(), issue);
+    }
+    QList<QJsonObject> selected;
+    for (const QJsonValue &value : requested) {
+        const QString id = value.toString();
+        if (!by_id.contains(id)) {
+            return ToolResult::failure(QStringLiteral("PREFLIGHT_ISSUE_UNKNOWN"),
+                                       QStringLiteral("Issue %1 is not in run %2").arg(id, run_id));
+        }
+        const QJsonObject issue = by_id.value(id);
+        if (issue.value(QStringLiteral("fix_kind")).toString() != QLatin1String("mechanical")
+            || issue.value(QStringLiteral("fix")).toObject().isEmpty()) {
+            return ToolResult::failure(QStringLiteral("PREFLIGHT_FIX_NOT_MECHANICAL"),
+                                       QStringLiteral("Issue %1 (%2) needs an editor decision and cannot be fixed automatically")
+                                           .arg(id, issue.value(QStringLiteral("rule_id")).toString()),
+                                       QJsonObject { { QStringLiteral("issue_id"), id } });
+        }
+        selected.append(issue);
+    }
+    for (auto it = image_alts.constBegin(); it != image_alts.constEnd(); ++it) {
+        if (!it.value().isString()) {
+            return ToolResult::failure(QStringLiteral("INVALID_ARGUMENT"),
+                                       QStringLiteral("image_alts values must be strings; use \"\" for decorative images"));
+        }
+        if (it.value().toString().size() > 1000) {
+            return ToolResult::failure(QStringLiteral("INVALID_ARGUMENT"),
+                                       QStringLiteral("alt text for %1 is longer than 1000 characters; use a caption or extended description").arg(it.key()));
+        }
+    }
+
+    QHash<QString, QString> path_of;
+    QHash<QString, QString> kind_of;
+    for (const QJsonValue &value : workspace->resources()) {
+        const QJsonObject object = value.toObject();
+        path_of.insert(object.value(QStringLiteral("resource_id")).toString(),
+                       object.value(QStringLiteral("book_path")).toString());
+        kind_of.insert(object.value(QStringLiteral("resource_id")).toString(),
+                       object.value(QStringLiteral("kind")).toString());
+    }
+    for (auto it = image_alts.constBegin(); it != image_alts.constEnd(); ++it) {
+        if (!path_of.values().contains(it.key())) {
+            return ToolResult::failure(QStringLiteral("IMAGE_NOT_FOUND"),
+                                       QStringLiteral("image_alts key %1 is not a book_path in this book").arg(it.key()));
+        }
+    }
+
+    QHash<QString, QString> texts;
+    QStringList order;
+    auto text_of = [&](const QString &id) -> QString & {
+        if (!texts.contains(id)) {
+            texts.insert(id, workspace->workingText(id));
+            order.append(id);
+        }
+        return texts[id];
+    };
+    QJsonArray changes;
+    auto excerpt = [](const QString &text) {
+        return text.size() > 200 ? text.left(200) + QStringLiteral("…") : text;
+    };
+
+    for (const QJsonObject &issue : selected) {
+        const QString id = issue.value(QStringLiteral("resource_id")).toString();
+        const QString rule = issue.value(QStringLiteral("rule_id")).toString();
+        const QJsonObject fix = issue.value(QStringLiteral("fix")).toObject();
+        QString &text = text_of(id);
+        if (rule == QLatin1String("LINK_PATH_CASE_MISMATCH")) {
+            const QString attribute = fix.value(QStringLiteral("attribute")).toString();
+            const QString from = fix.value(QStringLiteral("from")).toString();
+            const QString to = fix.value(QStringLiteral("to")).toString();
+            const int line = issue.value(QStringLiteral("line")).toInt();
+            QStringList lines = text.split(QLatin1Char('\n'));
+            if (line < 1 || line > lines.size()) {
+                return ToolResult::failure(QStringLiteral("PREFLIGHT_FIX_AMBIGUOUS"),
+                                           QStringLiteral("Line %1 is outside %2").arg(line).arg(path_of.value(id)));
+            }
+            QString &source = lines[line - 1];
+            QStringList needles;
+            if (attribute == QLatin1String("url")) {
+                needles << QStringLiteral("url(\"%1\")").arg(from) << QStringLiteral("url('%1')").arg(from)
+                        << QStringLiteral("url(%1)").arg(from);
+            } else {
+                needles << QStringLiteral("%1=\"%2\"").arg(attribute, from) << QStringLiteral("%1='%2'").arg(attribute, from);
+            }
+            int hits = 0;
+            QString needle_hit;
+            for (const QString &needle : needles) {
+                const int count = source.count(needle);
+                if (count > 0) needle_hit = needle;
+                hits += count;
+            }
+            if (hits != 1) {
+                return ToolResult::failure(QStringLiteral("PREFLIGHT_FIX_AMBIGUOUS"),
+                                           QStringLiteral("Expected exactly one %1 on %2 L%3, found %4")
+                                               .arg(from, path_of.value(id)).arg(line).arg(hits),
+                                           QJsonObject { { QStringLiteral("issue_id"), issue.value(QStringLiteral("issue_id")) } });
+            }
+            const QString before = source;
+            QString replacement = needle_hit;
+            replacement.replace(from, to);
+            source.replace(needle_hit, replacement);
+            text = lines.join(QLatin1Char('\n'));
+            changes.append(QJsonObject {
+                { QStringLiteral("issue_id"), issue.value(QStringLiteral("issue_id")) },
+                { QStringLiteral("rule_id"), rule },
+                { QStringLiteral("book_path"), path_of.value(id) },
+                { QStringLiteral("line"), line },
+                { QStringLiteral("before"), excerpt(before.trimmed()) },
+                { QStringLiteral("after"), excerpt(source.trimmed()) } });
+        } else if (rule == QLatin1String("XHTML_LANG_MISSING")) {
+            const QString lang = fix.value(QStringLiteral("lang")).toString().toHtmlEscaped();
+            static const QRegularExpression html_open(QStringLiteral("<html\\b[^>]*>"), QRegularExpression::CaseInsensitiveOption);
+            const QRegularExpressionMatch match = html_open.match(text);
+            if (!match.hasMatch()) {
+                return ToolResult::failure(QStringLiteral("PREFLIGHT_FIX_AMBIGUOUS"),
+                                           QStringLiteral("No <html> start tag in %1").arg(path_of.value(id)));
+            }
+            QString tag = match.captured();
+            const QString before = tag;
+            const bool self_close = tag.endsWith(QStringLiteral("/>"));
+            tag.chop(self_close ? 2 : 1);
+            static const QRegularExpression has_xml_lang(QStringLiteral("\\bxml:lang\\s*="));
+            static const QRegularExpression has_lang(QStringLiteral("(^|\\s)lang\\s*="));
+            if (!has_xml_lang.match(tag).hasMatch()) tag += QStringLiteral(" xml:lang=\"%1\"").arg(lang);
+            if (!has_lang.match(tag).hasMatch()) tag += QStringLiteral(" lang=\"%1\"").arg(lang);
+            tag += self_close ? QStringLiteral("/>") : QStringLiteral(">");
+            text.replace(match.capturedStart(), match.capturedLength(), tag);
+            changes.append(QJsonObject {
+                { QStringLiteral("issue_id"), issue.value(QStringLiteral("issue_id")) },
+                { QStringLiteral("rule_id"), rule },
+                { QStringLiteral("book_path"), path_of.value(id) },
+                { QStringLiteral("line"), lineAt(text, match.capturedStart()) },
+                { QStringLiteral("before"), excerpt(before) },
+                { QStringLiteral("after"), excerpt(tag) } });
+        }
+    }
+
+    int alt_images = 0;
+    if (!image_alts.isEmpty()) {
+        static const QRegularExpression img_tag(QStringLiteral("<img\\b[^>]*>"), QRegularExpression::CaseInsensitiveOption);
+        static const QRegularExpression src_attr(QStringLiteral("\\bsrc\\s*=\\s*(['\"])(.*?)\\1"));
+        static const QRegularExpression alt_attr(QStringLiteral("\\balt\\s*=\\s*(['\"])(.*?)\\1"));
+        QSet<QString> matched_images;
+        for (auto rid = path_of.constBegin(); rid != path_of.constEnd(); ++rid) {
+            if (kind_of.value(rid.key()) != QLatin1String("xhtml")) continue;
+            const QString original = workspace->workingText(rid.key());
+            if (!original.contains(QLatin1String("<img"), Qt::CaseInsensitive)) continue;
+            QString &text = text_of(rid.key());
+            QString rebuilt;
+            int cursor = 0;
+            bool touched = false;
+            auto it = img_tag.globalMatch(text);
+            while (it.hasNext()) {
+                const QRegularExpressionMatch match = it.next();
+                const QString tag = match.captured();
+                const QString src = src_attr.match(tag).captured(2);
+                const QString target = resolveHref(rid.value(), src).first;
+                if (!image_alts.contains(target)) continue;
+                const QString alt = image_alts.value(target).toString().toHtmlEscaped();
+                QString updated = tag;
+                const QRegularExpressionMatch existing = alt_attr.match(tag);
+                if (existing.hasMatch()) {
+                    updated.replace(existing.capturedStart(), existing.capturedLength(),
+                                    QStringLiteral("alt=\"%1\"").arg(alt));
+                } else {
+                    updated.insert(4, QStringLiteral(" alt=\"%1\"").arg(alt));
+                }
+                matched_images.insert(target);
+                if (updated == tag) continue;
+                rebuilt += text.mid(cursor, match.capturedStart() - cursor) + updated;
+                cursor = match.capturedEnd();
+                touched = true;
+                ++alt_images;
+                changes.append(QJsonObject {
+                    { QStringLiteral("rule_id"), QStringLiteral("IMG_ALT_DECISION") },
+                    { QStringLiteral("book_path"), rid.value() },
+                    { QStringLiteral("line"), lineAt(text, match.capturedStart()) },
+                    { QStringLiteral("image"), target },
+                    { QStringLiteral("before"), excerpt(tag) },
+                    { QStringLiteral("after"), excerpt(updated) } });
+            }
+            if (touched) {
+                rebuilt += text.mid(cursor);
+                text = rebuilt;
+            }
+        }
+        for (auto it = image_alts.constBegin(); it != image_alts.constEnd(); ++it) {
+            if (!matched_images.contains(it.key())) {
+                return ToolResult::failure(QStringLiteral("IMAGE_NOT_REFERENCED"),
+                                           QStringLiteral("No <img> in XHTML references %1").arg(it.key()));
+            }
+        }
+    }
+
+    int staged_resources = 0;
+    for (const QString &id : order) {
+        const QString current = workspace->workingText(id);
+        if (texts.value(id) == current) continue;
+        const BookOpResult staged = stageWorkingReplace(workspace, id, texts.value(id));
+        if (!staged.ok) {
+            return ToolResult::failure(staged.code, staged.message, staged.data);
+        }
+        ++staged_resources;
+    }
+    m_runId.clear();
+    return ToolResult::success(QJsonObject {
+        { QStringLiteral("staged"), staged_resources > 0 },
+        { QStringLiteral("live_unchanged"), true },
+        { QStringLiteral("change_count"), changes.size() },
+        { QStringLiteral("alt_images_updated"), alt_images },
+        { QStringLiteral("staged_resource_count"), staged_resources },
+        { QStringLiteral("changes"), changes },
+        { QStringLiteral("next"), QStringLiteral("Read every transaction.preview page, then transaction.commit; afterwards run preflight.run again.") }
+    }, false, true);
 }
 
 } // namespace SigilAgent

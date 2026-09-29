@@ -20,8 +20,10 @@ metadata:
 ## Goal
 
 Give the editor a located, prioritized list of release blockers and review items for
-the book as it is now (including unsaved and staged edits). Do not change the book in
-this skill; fixes are separate, reviewed edits.
+the book as it is now (including unsaved and staged edits). This skill only reports.
+When the user then asks to fix findings, use `preflight.apply_fixes` (Edit/Plan mode):
+it stages only `fix_kind=mechanical` issues from the latest run plus alt text the
+editor explicitly decided, then follow the normal preview and commit flow.
 
 ## Procedure
 
@@ -54,3 +56,6 @@ this skill; fixes are separate, reviewed edits.
   informative image shows.
 - After any fix, run `preflight.run` again. `PREFLIGHT_STALE` means the old run no
   longer describes the book.
+- Alt text in `image_alts` must come from the editor: "" for decorative images, a
+  short description otherwise. Ask per image when unsure; never derive it from the
+  file name.

@@ -27,6 +27,8 @@ public:
     static QJsonArray profiles();
     ToolResult run(IBookWorkspace *workspace, const QJsonObject &arguments);
     ToolResult issues(IBookWorkspace *workspace, const QJsonObject &arguments);
+    // Stages mechanical fixes of the current run and editor-supplied alt decisions; never commits.
+    ToolResult applyFixes(IBookWorkspace *workspace, const QJsonObject &arguments);
 
 private:
     QString m_runId;

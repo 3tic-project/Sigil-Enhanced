@@ -835,6 +835,13 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
             .arg(arguments.value(QStringLiteral("decision")).toString(),
                  arguments.value(QStringLiteral("issue_id")).toString());
     }
+    if (name == QLatin1String("preflight.apply_fixes")) {
+        const int issues = arguments.value(QStringLiteral("issue_ids")).toArray().size();
+        const int alts = arguments.value(QStringLiteral("image_alts")).toObject().size();
+        return QStringLiteral("Stage %1 mechanical preflight fix(es) and %2 editor-decided image alt text(s) from run %3. "
+                              "The live book stays unchanged until transaction.commit.")
+            .arg(issues).arg(alts).arg(arguments.value(QStringLiteral("run_id")).toString());
+    }
     if (name == QLatin1String("toc.apply_transform")) {
         return QStringLiteral("Stage reviewed native TOC hierarchy plan %1 with digest %2 for book revision %3. "
                               "This reparents Nav/NCX entries only; labels, targets, preorder, XHTML headings, and the live book remain unchanged until transaction.commit.")
@@ -896,6 +903,22 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         },
         [workspace, preflight](const QJsonObject &arguments) {
             return preflight->issues(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("preflight.apply_fixes"),
+        QStringLiteral("Stage reviewed preflight fixes from the latest run into the Agent transaction (opens one if needed); never commits. issue_ids may only name fix_kind=mechanical issues that carry a fix (path letter-case corrections, missing lang from dc:language). image_alts maps an image book_path to the alt text the editor decided; \"\" marks it decorative. Never invent alt text from file names or context. Returns before/after for every change. Then read all transaction.preview pages, transaction.commit, and run preflight.run again. PREFLIGHT_STALE means re-run preflight first."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("run_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("issue_ids"), QJsonObject { { QStringLiteral("type"), QStringLiteral("array") }, { QStringLiteral("items"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }, { QStringLiteral("maxItems"), 200 } } },
+                { QStringLiteral("image_alts"), QJsonObject { { QStringLiteral("type"), QStringLiteral("object") }, { QStringLiteral("additionalProperties"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("run_id") } }
+        },
+        [workspace, preflight](const QJsonObject &arguments) {
+            return preflight->applyFixes(workspace, arguments);
         });
 
     add(registry, QStringLiteral("structure.inspect"),

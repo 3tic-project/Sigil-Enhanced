@@ -7,6 +7,7 @@
 
 #include "Agent/Execution/MemoryBookWorkspace.h"
 #include "Agent/Execution/PreflightAudit.h"
+#include "Agent/Security/PermissionPolicy.h"
 #include "Agent/Tools/BookTools.h"
 #include "Agent/Tools/ToolRegistry.h"
 
@@ -277,6 +278,75 @@ int main()
             "a new run must evaluate staged text");
     Require(!call(QStringLiteral("preflight.issues"), QJsonObject { { QStringLiteral("run_id"), run_id } }).ok,
             "a superseded run_id must be rejected");
+    Require(registry.find(QStringLiteral("transaction.rollback"))->execute(QJsonObject()).ok, "rollback staged fix");
+
+    MemoryBookWorkspace fixable = defectiveBook();
+    ToolRegistry fix_tools;
+    registerBookTools(&fix_tools, &fixable);
+    auto fix_call = [&](const QString &name, const QJsonObject &arguments) {
+        return fix_tools.find(name)->execute(arguments);
+    };
+    const AgentToolDescriptor apply_descriptor = fix_tools.find(QStringLiteral("preflight.apply_fixes"))->descriptor();
+    Require(apply_descriptor.mutatesBook && apply_descriptor.supportsPreview,
+            "apply_fixes must be a staged, previewable write tool");
+    const PermissionPolicy policy;
+    Require(policy.evaluate(AgentMode::Auto, apply_descriptor) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Ask, apply_descriptor) == PermissionAction::Deny
+                && policy.evaluate(AgentMode::Edit, apply_descriptor) == PermissionAction::Ask
+                && policy.evaluate(AgentMode::Plan, apply_descriptor) == PermissionAction::Allow,
+            "preflight fixes need review: denied in Auto/Ask, approved in Edit, staged only in Plan");
+    const ToolResult fix_run = fix_call(QStringLiteral("preflight.run"), QJsonObject { { QStringLiteral("limit"), 200 } });
+    const QString fix_run_id = fix_run.data.value(QStringLiteral("run_id")).toString();
+    const QJsonArray fix_issues = fix_run.data.value(QStringLiteral("issues")).toArray();
+    QString case_issue;
+    QString lang_issue;
+    QString manual_issue;
+    for (const QJsonValue &value : fix_issues) {
+        const QJsonObject item = value.toObject();
+        const QString rule = item.value(QStringLiteral("rule_id")).toString();
+        if (rule == QLatin1String("LINK_PATH_CASE_MISMATCH")) case_issue = item.value(QStringLiteral("issue_id")).toString();
+        if (rule == QLatin1String("XHTML_LANG_MISSING")) lang_issue = item.value(QStringLiteral("issue_id")).toString();
+        if (rule == QLatin1String("LINK_TARGET_MISSING")) manual_issue = item.value(QStringLiteral("issue_id")).toString();
+    }
+    Require(!case_issue.isEmpty() && !lang_issue.isEmpty() && !manual_issue.isEmpty(), "fixable fixture issues");
+    const ToolResult refused = fix_call(QStringLiteral("preflight.apply_fixes"), QJsonObject {
+        { QStringLiteral("run_id"), fix_run_id }, { QStringLiteral("issue_ids"), QJsonArray { manual_issue } } });
+    Require(!refused.ok && refused.code == QStringLiteral("PREFLIGHT_FIX_NOT_MECHANICAL") && !fixable.hasOpenTransaction(),
+            "issues that need an editor decision must be refused without staging");
+    Require(fix_call(QStringLiteral("preflight.apply_fixes"), QJsonObject {
+                { QStringLiteral("run_id"), fix_run_id },
+                { QStringLiteral("image_alts"), QJsonObject { { QStringLiteral("OEBPS/Images/nope.jpg"), QString() } } } })
+                .code == QStringLiteral("IMAGE_NOT_FOUND"),
+            "alt decisions for unknown images must be refused");
+    const ToolResult applied = fix_call(QStringLiteral("preflight.apply_fixes"), QJsonObject {
+        { QStringLiteral("run_id"), fix_run_id },
+        { QStringLiteral("issue_ids"), QJsonArray { case_issue, lang_issue } },
+        { QStringLiteral("image_alts"), QJsonObject {
+            { QStringLiteral("OEBPS/Images/p001.jpg"), QStringLiteral("女主角在教室窗边") },
+            { QStringLiteral("OEBPS/Images/p002.jpg"), QString() } } } });
+    Require(applied.ok && applied.previewOnly && fixable.hasOpenTransaction()
+                && applied.data.value(QStringLiteral("change_count")).toInt() == 4
+                && applied.data.value(QStringLiteral("alt_images_updated")).toInt() == 2,
+            "mechanical fixes and alt decisions must be staged with a change list");
+    const QString staged_ch1 = fixable.workingText(QStringLiteral("ch1"));
+    Require(staged_ch1.contains(QStringLiteral("src=\"../Images/Deco.png\""))
+                && staged_ch1.contains(QStringLiteral("alt=\"女主角在教室窗边\" src=\"../Images/p001.jpg\""))
+                && staged_ch1.contains(QStringLiteral("<img alt=\"\" src=\"../Images/p002.jpg\"/>"))
+                && fixable.workingText(QStringLiteral("ch2")).contains(QStringLiteral("xml:lang=\"zh-CN\" lang=\"zh-CN\""))
+                && fixable.resourceText(QStringLiteral("ch1")).contains(QStringLiteral("../images/Deco.png")),
+            "fixes must be exact, staged, and leave the live book unchanged");
+    Require(fix_call(QStringLiteral("preflight.issues"), QJsonObject { { QStringLiteral("run_id"), fix_run_id } }).code
+                == QStringLiteral("PREFLIGHT_RUN_UNKNOWN"),
+            "applying fixes consumes the run so stale findings cannot be reused");
+    Require(fix_call(QStringLiteral("transaction.commit"), QJsonObject {
+                { QStringLiteral("expected_book_revision"), static_cast<qint64>(fixable.revision()) } }).applied,
+            "commit fixes");
+    const QSet<QString> after_rules = rulesIn(preflightIssues(&fixable, QStringLiteral("release-basic")));
+    Require(!after_rules.contains(QStringLiteral("LINK_PATH_CASE_MISMATCH"))
+                && !after_rules.contains(QStringLiteral("IMG_ALT_MISSING"))
+                && !after_rules.contains(QStringLiteral("IMG_ALT_FILENAME"))
+                && after_rules.contains(QStringLiteral("LINK_TARGET_MISSING")),
+            "a fresh preflight must confirm the fixed rules are gone and manual ones remain");
 
     MemoryBookWorkspace clean = MemoryBookWorkspace::samplePhysicsBook();
     const QJsonArray clean_issues = preflightIssues(&clean, QStringLiteral("epub-core"));

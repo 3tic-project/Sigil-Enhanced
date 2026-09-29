@@ -17,7 +17,8 @@ PermissionAction PermissionPolicy::evaluate(AgentMode mode, const AgentToolDescr
         return PermissionAction::Deny;
     }
     if (mode == AgentMode::Auto
-        && tool.name == QLatin1String("proof.apply")) {
+        && (tool.name == QLatin1String("proof.apply")
+            || tool.name == QLatin1String("preflight.apply_fixes"))) {
         return PermissionAction::Deny;
     }
     if (!tool.mutatesBook && tool.risk == ToolRisk::Read) {
@@ -63,6 +64,10 @@ QString PermissionPolicy::denyReason(AgentMode mode, const AgentToolDescriptor &
     if (mode == AgentMode::Auto
         && tool.name == QLatin1String("proof.apply")) {
         return QStringLiteral("Proofreading changes require review; Auto cannot run %1").arg(tool.name);
+    }
+    if (mode == AgentMode::Auto
+        && tool.name == QLatin1String("preflight.apply_fixes")) {
+        return QStringLiteral("Preflight fixes and alt text decisions require review; Auto cannot run %1").arg(tool.name);
     }
     if (mode == AgentMode::Ask && tool.mutatesBook) {
         return QStringLiteral("Ask mode is read-only and cannot run %1").arg(tool.name);
