@@ -164,6 +164,95 @@ int main()
 {
     using namespace SigilAgent;
 
+    const AgentSkill folded_skill = parseSkillMarkdown(QStringLiteral(
+        "---\nname: folded\ndescription: >\n"
+        "  Inspect the current book.\n  Keep changes staged.\n"
+        "metadata:\n  sigil.category: typesetting\n"
+        "allowed-tools: >\n  book.summary manuscript.parse\n"
+        "  transaction.preview transaction.commit\n---\n# Body\n"));
+    Require(folded_skill.description == QStringLiteral(
+                "Inspect the current book. Keep changes staged."),
+            "folded description must not absorb metadata or tool declarations");
+    Require(folded_skill.allowedTools == QStringLiteral(
+                "book.summary manuscript.parse transaction.preview transaction.commit"),
+            "folded allowed-tools must retain every continuation line");
+    Require(folded_skill.body == QStringLiteral("# Body"),
+            "skill body must exclude frontmatter");
+        Require(folded_skill.metadataError.isEmpty() && folded_skill.toolNames.size() == 4,
+            "folded frontmatter must produce structured tools without errors");
+        const AgentSkill structured_skill = parseSkillMarkdown(QStringLiteral(
+        "---\r\nname: 'custom-skill'\r\nversion: \"1\"\r\n"
+        "description: \"Inspect: current book\"\r\n"
+        "triggers: [\"release, preflight\", release preflight]\r\n"
+        "requires_capabilities:\r\n  - book.check\r\n  - book.validate\r\n"
+        "allowed-tools: [book.summary, 'book.check', book.summary]\r\n"
+        "requires_book: true\r\nauto_trigger: false\r\n---\r\nBody"));
+        Require(structured_skill.metadataError.isEmpty()
+            && structured_skill.name == QStringLiteral("custom-skill")
+            && structured_skill.version == QStringLiteral("1")
+            && structured_skill.requiresBook && !structured_skill.autoTrigger,
+            "quoted scalars, CRLF, versions and flags must parse");
+        Require(structured_skill.toolNames.size() == 2
+            && structured_skill.requiredCapabilities == QStringList {
+                QStringLiteral("book.check"), QStringLiteral("book.validate") }
+            && structured_skill.triggers == QStringList {
+                QStringLiteral("release, preflight"), QStringLiteral("release preflight") },
+            "flow and block lists must preserve phrases and deduplicate tools");
+        Require(!parseSkillMarkdown(QStringLiteral("---\nname: broken\nBody")).metadataError.isEmpty(),
+            "unterminated frontmatter must not silently load as a valid skill");
+        Require(!parseSkillMarkdown(QStringLiteral(
+            "---\nname: first\nname: second\n---\nBody")).metadataError.isEmpty(),
+            "duplicate metadata must be rejected");
+        Require(!parseSkillMarkdown(QStringLiteral(
+            "---\nallowed-tools: [book.check\n---\nBody")).metadataError.isEmpty(),
+            "malformed tool lists must not silently disable capability checks");
+        MemoryBookWorkspace routing_book;
+        const QStringList inspect_tools {
+            QStringLiteral("book.summary"), QStringLiteral("book.check"), QStringLiteral("book.validate") };
+        const AgentSkillSelection disabled_selection = selectAgentSkills(
+            { structured_skill }, QStringLiteral("release preflight"), &routing_book, inspect_tools);
+        Require(disabled_selection.bodies.isEmpty()
+                    && disabled_selection.availableSkills.size() == 1,
+                "auto_trigger=false must preserve catalog discovery without automatic injection");
+        const AgentSkillSelection named_selection = selectAgentSkills(
+            { structured_skill }, QStringLiteral("use custom-skill"), &routing_book, inspect_tools);
+        Require(named_selection.bodies.contains(QStringLiteral("# Skill: custom-skill"))
+                    && named_selection.decisions.first().toObject().value(QStringLiteral("reason"))
+                        == QStringLiteral("explicit_name"),
+                "explicit skill names must override disabled automatic triggering");
+        Require(selectAgentSkills({ structured_skill }, QStringLiteral("custom-skill"),
+                    nullptr, inspect_tools).availableSkills.isEmpty(),
+                "book-dependent skills must not be advertised without a book");
+        AgentSkill automatic_skill = structured_skill;
+        automatic_skill.name = QStringLiteral("automatic-skill");
+        automatic_skill.autoTrigger = true;
+        const AgentSkillSelection trigger_selection = selectAgentSkills(
+            { automatic_skill }, QStringLiteral("release preflight"), &routing_book, inspect_tools);
+        Require(!trigger_selection.bodies.isEmpty()
+                    && trigger_selection.decisions.first().toObject().value(QStringLiteral("trigger"))
+                        == QStringLiteral("release preflight"),
+                "declared triggers must record the exact routing evidence");
+        const AgentSkillSelection explicit_override = selectAgentSkills(
+            { structured_skill, automatic_skill }, QStringLiteral("custom-skill release preflight"),
+            &routing_book, inspect_tools);
+        Require(!explicit_override.bodies.contains(QStringLiteral("# Skill: automatic-skill")),
+                "explicit selection must suppress unrelated automatic skill injection");
+        Require(selectAgentSkills({ structured_skill }, QStringLiteral("custom-skill-extra"),
+                    &routing_book, inspect_tools).bodies.isEmpty(),
+                "skill names must not match prefixes of different names");
+        automatic_skill.version = QStringLiteral("2");
+        Require(selectAgentSkills({ automatic_skill }, QStringLiteral("automatic-skill"),
+                    &routing_book, inspect_tools).availableSkills.isEmpty(),
+                "unsupported skill versions must not be injected");
+        const AgentSkill forged_skill = parseSkillMarkdown(QStringLiteral(
+            "---\nname: forged\nallowed-tools: [python.run]\n---\nCall python.run"));
+        const AgentSkillSelection forged_selection = selectAgentSkills(
+            { forged_skill }, QStringLiteral("forged"), &routing_book, inspect_tools);
+        Require(forged_selection.bodies.isEmpty() && forged_selection.availableSkills.isEmpty()
+                    && forged_selection.decisions.first().toObject()
+                        .value(QStringLiteral("missing_capabilities")).toArray().contains(QStringLiteral("python.run")),
+                "forged allowed-tools must not add a denied or unregistered tool");
+
     Require(lineLooksLikeChapterHeading(QStringLiteral("第一話　春")), "第一話 must be a heading");
     Require(lineLooksLikeChapterHeading(QStringLiteral("第１話　光屬性的朝日同學")), "fullwidth 第１話 must be a heading");
     Require(lineLooksLikeChapterHeading(QStringLiteral("後記")), "後記 must be a heading");
@@ -485,6 +574,9 @@ int main()
             "system prompt must name the typeset tool");
     Require(system.contains(QStringLiteral("ln-template-typeset")),
             "matched skill must be injected");
+    Require(request.toolContext.value(QStringLiteral("skills")).toObject()
+                .value(QStringLiteral("available_count")).toInt() > 0,
+            "request diagnostics must record available skills");
     Require(system.contains(QStringLiteral("Never paste chapter bodies")),
             "playbook must forbid pasting chapter bodies");
     const QString context = request.messages.at(1).content;
@@ -509,12 +601,8 @@ int main()
         paragraph_session, &book, prompt_tools, AgentMode::Edit,
         QStringLiteral("test"), false, QString(), QStringList());
     const QString paragraph_system = paragraph_request.messages.first().content;
-    Require(paragraph_system.contains(QStringLiteral("# Skill: paragraph-normalization")),
-            "DIV request must inject the native paragraph workflow");
-    Require(paragraph_system.contains(QStringLiteral("Do not call transaction.begin"))
-                && paragraph_system.contains(QStringLiteral("paragraphs.apply"))
-                && paragraph_system.contains(QStringLiteral("full EPUBCheck as not run")),
-            "paragraph workflow must explain exclusive staging and validation reporting");
+        Require(!paragraph_system.contains(QStringLiteral("# Skill: paragraph-normalization")),
+            "a registry without paragraph tools must not inject their workflow");
 
     AgentSession toc_session;
     toc_session.append(AgentEventType::UserMessage, QJsonObject {
@@ -524,12 +612,38 @@ int main()
         toc_session, &book, prompt_tools, AgentMode::Edit,
         QStringLiteral("test"), false, QString(), QStringList());
     const QString toc_system = toc_request.messages.first().content;
-    Require(toc_system.contains(QStringLiteral("# Skill: book-structure")),
-            "TOC request must inject the native structure workflow");
-    Require(toc_system.contains(QStringLiteral("toc.inspect_hierarchy → toc.plan_transform → toc.apply_transform"))
-                && toc_system.contains(QStringLiteral("Do not call transaction.begin"))
-                && toc_system.contains(QStringLiteral("never edit XHTML h1-h6")),
-            "TOC workflow must explain exclusive staging and the XHTML boundary");
+    Require(!toc_system.contains(QStringLiteral("# Skill: book-structure")),
+            "a registry without TOC and Python tools must not inject a complete structure workflow");
+    QStringList all_skill_tools;
+    for (const AgentSkill &skill : skills) {
+        Require(skill.metadataError.isEmpty() && skill.version == QStringLiteral("1")
+                    && !skill.toolNames.isEmpty() && skill.requiresBook,
+                "every bundled skill must have valid, structured version-1 metadata");
+        all_skill_tools.append(skill.toolNames);
+    }
+    const AgentSkillSelection paragraph_selection = selectAgentSkills(
+        skills, QStringLiteral("整理全书伪段落 DIV 结构"), &book, all_skill_tools);
+    Require(paragraph_selection.bodies.contains(QStringLiteral("# Skill: paragraph-normalization"))
+                && paragraph_selection.bodies.contains(QStringLiteral("`transaction.begin` first"))
+                && paragraph_selection.bodies.contains(QStringLiteral("full EPUBCheck as not run")),
+            "a capable host must retain the original paragraph workflow and its safeguards");
+    const AgentSkillSelection toc_selection = selectAgentSkills(
+        skills, QStringLiteral("把目录中的子章节提升一级，别改正文标题"), &book, all_skill_tools);
+    Require(toc_selection.bodies.contains(QStringLiteral("# Skill: book-structure"))
+                && toc_selection.bodies.contains(QStringLiteral("`toc.inspect_hierarchy`"))
+                && toc_selection.bodies.contains(QStringLiteral("`toc.plan_transform`"))
+                && toc_selection.bodies.contains(QStringLiteral("`toc.apply_transform`")),
+            "a capable host must retain the native TOC workflow");
+    Require(selectAgentSkills(skills, QStringLiteral("dividend"), &book, all_skill_tools).bodies.isEmpty(),
+            "DIV trigger must not match an unrelated English word");
+    for (const AgentMode mode : { AgentMode::Ask, AgentMode::Plan }) {
+        const ModelRequest limited_request = assembler.build(
+            session, &book, prompt_tools, mode, QStringLiteral("test"), false, QString(), QStringList());
+        Require(!limited_request.messages.first().content.contains(QStringLiteral("# Skill:")),
+                "Ask and Plan must not inject complete mutation recipes requiring denied tools");
+        Require(limited_request.tools.size() < request.tools.size(),
+                "skill declarations must not expand the policy-filtered tool schemas");
+    }
 
     const QString asahi = QStringLiteral(
         "/Users/parsle/Code/sigil-modified/todo/Sigil-Enhanced-Native-Agent-PRD/test/"

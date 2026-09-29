@@ -16,7 +16,11 @@
 
 #include "Agent/Execution/SigilBookWorkspace.h"
 #include "Agent/Tools/BookTools.h"
+#include "Agent/Tools/DivParagraphTools.h"
+#include "Agent/Tools/TocTools.h"
 #include "Agent/Tools/ToolRegistry.h"
+#include "Agent/Core/AgentSession.h"
+#include "Agent/Core/AgentSkills.h"
 #include "Agent/Core/PromptAssembler.h"
 #include "Agent/UI/AgentDock.h"
 #include "BookManipulation/Book.h"
@@ -233,7 +237,56 @@ int main(int argc, char **argv)
                     && !pastEndFragment.data.value(QStringLiteral("truncated")).toBool(),
                 "Sigil fragment offsets past EOF did not normalize to an empty tail");
         SigilAgent::ToolRegistry liveTools;
-        SigilAgent::registerBookTools(&liveTools, &workspace);
+        SigilAgent::AgentSession liveSession;
+        SigilAgent::registerBookTools(&liveTools, &workspace, &liveSession);
+        SigilAgent::registerDivParagraphTools(&liveTools, &workspace);
+        SigilAgent::registerTocTools(&liveTools, &workspace);
+        const quint64 skillRevision = workspace.revision();
+        const bool skillModified = book->IsModified();
+        const QList<SigilAgent::AgentSkill> liveSkills = SigilAgent::loadAgentSkills();
+        int selectedSkillRequests = 0;
+        int bundledSkillCount = 0;
+        for (const SigilAgent::AgentSkill &skill : liveSkills) {
+            if (skill.name != QLatin1String("ln-template-typeset")
+                && skill.name != QLatin1String("book-structure")
+                && skill.name != QLatin1String("paragraph-normalization")) continue;
+            ++bundledSkillCount;
+            SigilAgent::AgentSession skillSession;
+            skillSession.append(SigilAgent::AgentEventType::UserMessage, QJsonObject {
+                { QStringLiteral("text"), skill.name }
+            });
+            for (const SigilAgent::AgentMode mode : {
+                     SigilAgent::AgentMode::Ask, SigilAgent::AgentMode::Plan,
+                     SigilAgent::AgentMode::Edit, SigilAgent::AgentMode::Auto }) {
+                const SigilAgent::ModelRequest skillRequest = SigilAgent::PromptAssembler().build(
+                    skillSession, &workspace, liveTools, mode, QStringLiteral("test"),
+                    false, QString(), QStringList());
+                const bool editable = mode == SigilAgent::AgentMode::Edit
+                    || mode == SigilAgent::AgentMode::Auto;
+                Require(skillRequest.messages.first().content.contains(
+                            QStringLiteral("# Skill: %1\n").arg(skill.name)) == editable,
+                        "Live host skill injection disagrees with the policy-filtered tool catalog");
+                const QJsonArray decisions = skillRequest.toolContext.value(QStringLiteral("skills"))
+                    .toObject().value(QStringLiteral("decisions")).toArray();
+                bool foundDecision = false;
+                for (const QJsonValue &value : decisions) {
+                    const QJsonObject decision = value.toObject();
+                    if (decision.value(QStringLiteral("name")).toString() != skill.name) continue;
+                    foundDecision = true;
+                    Require(decision.value(QStringLiteral("state")).toString()
+                                == (editable ? QStringLiteral("selected") : QStringLiteral("unavailable")),
+                            "Live host must record the actual skill availability decision");
+                    if (editable) ++selectedSkillRequests;
+                }
+                Require(foundDecision, "Live host request lost skill routing diagnostics");
+            }
+        }
+        Require(bundledSkillCount == 3 && selectedSkillRequests == 6
+                    && workspace.revision() == skillRevision && book->IsModified() == skillModified,
+                "Live skill routing must preserve all bundled recipes without changing the book");
+        std::cout << "Live skills: " << bundledSkillCount
+                  << ", modes=4, selected requests=" << selectedSkillRequests
+                  << ", book unchanged\n";
         const quint64 readRevision = workspace.revision();
         const SigilAgent::ToolResult liveSearch = liveTools.find(QStringLiteral("book.search"))->execute(QJsonObject {
             { QStringLiteral("query"), QStringLiteral("Original paragraph") },

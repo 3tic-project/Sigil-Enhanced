@@ -2,6 +2,7 @@
 name: book-structure
 description: Restructure the open EPUB with general tools — split/merge chapters, wrap tags, regex replace, rename/move files, spine order, stylesheet linking, TOC generation, resource delete, image insert, Live Python. Use when the user asks to 拆分, 合并, 重命名, reorder, link CSS, generate 目录, wrap paragraphs, regex replace, delete files, or run a Python script on the book. Do not assume a fixed novel template.
 compatibility: Native Sigil-Enhanced Agent.
+triggers: [拆分, 合并, 合併, 重命名, spine, 目录, 目錄, split, merge, regex, 正则, 正則, reorder, link CSS, wrap paragraphs, delete files, Python script]
 metadata:
   sigil.skill-version: "1"
   sigil.category: "structure"

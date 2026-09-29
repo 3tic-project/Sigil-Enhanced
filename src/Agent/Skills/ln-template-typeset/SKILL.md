@@ -2,6 +2,8 @@
 name: ln-template-typeset
 description: Fill the open 轻小说模板 EPUB from a dropped light-novel manuscript (TXT plus images). Use when the user opens the template, drags a book folder into Book Browser, or asks to 排版, 套模板, typeset, import a 文稿, or place 插图/章节 automatically.
 compatibility: Native Sigil-Enhanced Agent. Requires manuscript.parse and content.typeset_from_manuscript.
+triggers: [排版, 模板, typeset, typesetting, 轻小说, 輕小說, 文稿, manuscript, ln-template]
+requires_capabilities: [manuscript.parse, content.typeset_from_manuscript]
 metadata:
   sigil.skill-version: "1"
   sigil.category: "typesetting"

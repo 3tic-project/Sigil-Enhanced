@@ -353,13 +353,15 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
     const PermissionPolicy *effective_policy = permission_policy
         ? permission_policy : &default_policy;
     QJsonArray hidden_tools;
+    QStringList available_tools;
     const QJsonArray all_tool_schemas = tools.openaiToolSchemas();
     request.tools = tools.openaiToolSchemas(
-        [effective_policy, mode, &hidden_tools](
+        [effective_policy, mode, &hidden_tools, &available_tools](
             const AgentToolDescriptor &descriptor) {
             const bool exposed = effective_policy->evaluate(mode, descriptor)
                 != PermissionAction::Deny;
             if (!exposed) hidden_tools.append(descriptor.name);
+            else available_tools.append(descriptor.name);
             return exposed;
         });
     const int all_schema_bytes = QJsonDocument(all_tool_schemas)
@@ -387,12 +389,18 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
         }
     }
     const QList<AgentSkill> skills = loadAgentSkills();
+    const AgentSkillSelection selected = selectAgentSkills(skills, last_user, workspace, available_tools);
+    request.toolContext.insert(QStringLiteral("skills"), QJsonObject {
+        { QStringLiteral("loaded_count"), skills.size() },
+        { QStringLiteral("available_count"), selected.availableSkills.size() },
+        { QStringLiteral("decisions"), selected.decisions }
+    });
     ChatMessage system;
     system.role = QStringLiteral("system");
     system.content = systemPrompt(mode, run_tool_call_ceiling);
     system.content += QLatin1Char('\n');
-    system.content += skillCatalogPrompt(skills);
-    system.content += matchedSkillBodies(skills, last_user, workspace);
+    system.content += skillCatalogPrompt(selected.availableSkills);
+    system.content += selected.bodies;
     request.messages.append(system);
 
     ChatMessage context;
