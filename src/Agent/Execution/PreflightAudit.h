@@ -39,6 +39,8 @@ private:
 
 QString preflightSnapshotDigest(IBookWorkspace *workspace);
 QJsonArray preflightIssues(IBookWorkspace *workspace, const QString &profile_id);
+// Spine-ordered role candidates with evidence, first heading, matching TOC entry, and heading/TOC differences.
+QJsonObject inspectStructure(IBookWorkspace *workspace);
 
 } // namespace SigilAgent
 

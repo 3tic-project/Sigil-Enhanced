@@ -69,6 +69,13 @@ struct XhtmlScan {
     QSet<QString> ids;
     QList<Reference> links;
     QList<QPair<int, int>> headings;
+    QString firstHeading;
+    int firstHeadingLevel = 0;
+    int firstHeadingLine = 0;
+    QStringList epubTypes;
+    int visibleChars = 0;
+    int imageCount = 0;
+    QString title;
     QList<Issue> local;
 };
 
@@ -90,9 +97,17 @@ int severityRank(const QString &severity)
     return 2;
 }
 
+// QString::simplified() also turns U+3000 into ASCII space, which rewrites CJK headings.
+QString collapseAsciiWhitespace(QString text)
+{
+    static const QRegularExpression runs(QStringLiteral("[ \\t\\r\\n\\f\\v]+"));
+    text.replace(runs, QStringLiteral(" "));
+    return text.trimmed();
+}
+
 QString bounded(QString text)
 {
-    text = text.simplified();
+    text = collapseAsciiWhitespace(text);
     return text.size() > kMaxEvidence ? text.left(kMaxEvidence) + QStringLiteral("…") : text;
 }
 
@@ -174,13 +189,60 @@ XhtmlScan scanXhtml(const BookFile &file, const QString &text, bool epub3)
     reader.setEntityResolver(&entities);
     bool root = true;
     bool has_doctype = false;
+    int in_body = 0;
+    int heading_depth = 0;
+    int title_depth = 0;
+    int skip_depth = 0;
+    QString heading_text;
     while (!reader.atEnd()) {
         reader.readNext();
         if (reader.tokenType() == QXmlStreamReader::DTD) has_doctype = true;
+        if (reader.isCharacters()) {
+            const QString chunk = reader.text().toString();
+            if (title_depth > 0) scan.title += chunk;
+            if (in_body > 0 && skip_depth == 0) {
+                for (const QChar ch : chunk) {
+                    if (!ch.isSpace()) ++scan.visibleChars;
+                }
+                if (heading_depth > 0) heading_text += chunk;
+            }
+            continue;
+        }
+        if (reader.isEndElement()) {
+            const QString end = reader.name().toString().toLower();
+            if (end == QLatin1String("body")) in_body = 0;
+            if (end == QLatin1String("title") && title_depth > 0) --title_depth;
+            if ((end == QLatin1String("rt") || end == QLatin1String("rp") || end == QLatin1String("script")
+                 || end == QLatin1String("style")) && skip_depth > 0) {
+                --skip_depth;
+            }
+            if (heading_depth > 0 && end.size() == 2 && end.at(0) == QLatin1Char('h') && end.at(1).isDigit()) {
+                --heading_depth;
+                if (heading_depth == 0 && scan.firstHeading.isEmpty()) scan.firstHeading = collapseAsciiWhitespace(heading_text);
+            }
+            continue;
+        }
         if (!reader.isStartElement()) continue;
         const QString name = reader.name().toString().toLower();
         const QXmlStreamAttributes attributes = reader.attributes();
         const int line = static_cast<int>(reader.lineNumber());
+        if (name == QLatin1String("body")) in_body = 1;
+        if (name == QLatin1String("title") && in_body == 0) ++title_depth;
+        if (name == QLatin1String("rt") || name == QLatin1String("rp") || name == QLatin1String("script")
+            || name == QLatin1String("style")) {
+            ++skip_depth;
+        }
+        if (in_body > 0 && (name == QLatin1String("body") || name == QLatin1String("section")
+                            || name == QLatin1String("nav") || name == QLatin1String("div"))) {
+            for (const QXmlStreamAttribute &attribute : attributes) {
+                if (attribute.name() == QLatin1String("type")) {
+                    for (const QString &type : attribute.value().toString().split(QLatin1Char(' '), Qt::SkipEmptyParts)) {
+                        if (!scan.epubTypes.contains(type)) scan.epubTypes.append(type);
+                    }
+                }
+            }
+        }
+        if (in_body > 0 && (name == QLatin1String("img") || name == QLatin1String("image"))) ++scan.imageCount;
         if (root) {
             root = false;
             const QString lang = attributeValue(attributes, QStringLiteral("lang"));
@@ -227,6 +289,14 @@ XhtmlScan scanXhtml(const BookFile &file, const QString &text, bool epub3)
         if (name.size() == 2 && name.at(0) == QLatin1Char('h') && name.at(1) >= QLatin1Char('1')
             && name.at(1) <= QLatin1Char('6')) {
             scan.headings.append({ name.at(1).digitValue(), line });
+            if (in_body > 0) {
+                if (heading_depth == 0 && scan.firstHeading.isEmpty()) {
+                    heading_text.clear();
+                    scan.firstHeadingLevel = name.at(1).digitValue();
+                    scan.firstHeadingLine = line;
+                }
+                ++heading_depth;
+            }
         }
     }
     if (reader.hasError()) {
@@ -295,6 +365,255 @@ QString primaryLanguage(const QString &tag)
 }
 
 } // namespace
+
+QJsonObject inspectStructure(IBookWorkspace *workspace)
+{
+    QHash<QString, QJsonObject> by_path;
+    QHash<QString, QString> kind_by_path;
+    QString nav_base;
+    QString opf_path;
+    for (const QJsonValue &value : workspace->resources()) {
+        const QJsonObject object = value.toObject();
+        const QString path = object.value(QStringLiteral("book_path")).toString();
+        by_path.insert(path, object);
+        const QString kind = object.value(QStringLiteral("kind")).toString();
+        if (kind == QLatin1String("opf")) opf_path = path;
+        if (kind == QLatin1String("ncx") && nav_base.isEmpty()) nav_base = path;
+    }
+    const bool epub3 = workspace->summary().value(QStringLiteral("epub_version")).toString().startsWith(QLatin1Char('3'));
+
+    struct TocHit {
+        int index = 0;
+        QString label;
+        QString href;
+        int level = 1;
+    };
+    QHash<QString, QList<TocHit>> toc_by_path;
+    QJsonArray toc_unresolved;
+    const QJsonArray toc = workspace->toc();
+    for (int i = 0; i < toc.size(); ++i) {
+        const QJsonObject entry = toc.at(i).toObject();
+        const QString href = entry.value(QStringLiteral("href")).toString();
+        QStringList candidates;
+        if (!nav_base.isEmpty()) candidates << resolveHref(nav_base, href).first;
+        if (!opf_path.isEmpty()) candidates << resolveHref(opf_path, href).first;
+        candidates << resolveHref(QString(), href).first;
+        QString found;
+        for (const QString &candidate : candidates) {
+            if (by_path.contains(candidate)) {
+                found = candidate;
+                break;
+            }
+        }
+        const TocHit hit { i, entry.value(QStringLiteral("label")).toString(), href,
+                           qMax(1, entry.value(QStringLiteral("level")).toInt(1)) };
+        if (found.isEmpty()) {
+            toc_unresolved.append(QJsonObject {
+                { QStringLiteral("toc_index"), i }, { QStringLiteral("label"), hit.label },
+                { QStringLiteral("href"), href } });
+        } else {
+            toc_by_path[found].append(hit);
+        }
+    }
+
+    static const QRegularExpression afterword(QStringLiteral("^(後[\\s\\x{3000}]*記|后[\\s\\x{3000}]*记|あとがき|afterword)"),
+                                              QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression prologue(QStringLiteral("^(序[\\s\\x{3000}]*章|序[\\s\\x{3000}]*幕|楔子|プロローグ|prologue)"),
+                                             QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression epilogue(QStringLiteral("^(終[\\s\\x{3000}]*章|终[\\s\\x{3000}]*章|尾[\\s\\x{3000}]*聲|尾[\\s\\x{3000}]*声|エピローグ|epilogue)"),
+                                             QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression chapter_title(
+        QStringLiteral("^(第[\\s\\x{3000}]*[0-9０-９一二三四五六七八九十百千零〇]+[\\s\\x{3000}]*[話话章回幕卷部篇節节]|幕[\\s\\x{3000}]*間|幕[\\s\\x{3000}]*间|間[\\s\\x{3000}]*章|间[\\s\\x{3000}]*章|番外|chapter[\\s\\x{3000}]*\\d)"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression contents_title(QStringLiteral("^(目[\\s\\x{3000}]*[录錄次]|contents)$"),
+                                                   QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression chapter_file(QStringLiteral("(section|chapter|chap|ch|part|text)[-_]?\\d+"),
+                                                 QRegularExpression::CaseInsensitiveOption);
+
+    QJsonArray pages;
+    QJsonArray differences;
+    QHash<QString, int> role_counts;
+    int previous_toc_index = -1;
+    const QJsonArray spine = workspace->spine();
+    for (int position = 0; position < spine.size(); ++position) {
+        const QJsonObject item = spine.at(position).toObject();
+        const QString path = item.value(QStringLiteral("book_path")).toString();
+        const QString id = item.value(QStringLiteral("resource_id")).toString();
+        const BookFile file { id, path, QStringLiteral("xhtml"), QString() };
+        const XhtmlScan scan = scanXhtml(file, workspace->workingText(id), epub3);
+        const QString base = path.section(QLatin1Char('/'), -1).section(QLatin1Char('.'), 0, 0).toLower();
+        const QString heading = scan.firstHeading;
+        const QString label_text = heading.isEmpty() ? collapseAsciiWhitespace(scan.title) : heading;
+
+        QString role = QStringLiteral("unknown");
+        QString confidence = QStringLiteral("low");
+        QJsonArray evidence;
+        auto decide = [&](const QString &candidate, const QString &level, const QString &why) {
+            if (role == QLatin1String("unknown")) {
+                role = candidate;
+                confidence = level;
+            }
+            evidence.append(why);
+        };
+        static const QStringList semantic = {
+            QStringLiteral("cover"), QStringLiteral("titlepage"), QStringLiteral("toc"),
+            QStringLiteral("preface"), QStringLiteral("foreword"), QStringLiteral("prologue"),
+            QStringLiteral("chapter"), QStringLiteral("epilogue"), QStringLiteral("afterword"),
+            QStringLiteral("appendix"), QStringLiteral("colophon"), QStringLiteral("copyright-page"),
+            QStringLiteral("acknowledgments"), QStringLiteral("dedication")
+        };
+        for (const QString &type : scan.epubTypes) {
+            if (semantic.contains(type)) {
+                decide(type == QLatin1String("copyright-page") || type == QLatin1String("colophon")
+                           ? QStringLiteral("credits") : type,
+                       QStringLiteral("high"), QStringLiteral("epub:type=\"%1\"").arg(type));
+                break;
+            }
+        }
+        auto classify_text = [&](const QString &text, const QString &level, const QString &source) {
+            if (text.isEmpty()) return;
+            const QString why = QStringLiteral("%1 \"%2\"").arg(source, bounded(text));
+            if (contents_title.match(text).hasMatch()) decide(QStringLiteral("toc"), level, why);
+            else if (afterword.match(text).hasMatch()) decide(QStringLiteral("afterword"), level, why);
+            else if (prologue.match(text).hasMatch()) decide(QStringLiteral("prologue"), level, why);
+            else if (epilogue.match(text).hasMatch()) decide(QStringLiteral("epilogue"), level, why);
+            else if (chapter_title.match(text).hasMatch()) decide(QStringLiteral("chapter"), level, why);
+        };
+        const QList<TocHit> toc_hits = toc_by_path.value(path);
+        classify_text(label_text, QStringLiteral("medium"), heading.isEmpty() ? QStringLiteral("title") : QStringLiteral("heading"));
+        if (scan.imageCount > 0 && scan.visibleChars < 20) {
+            decide(position == 0 || base.contains(QStringLiteral("cover")) ? QStringLiteral("cover")
+                                                                              : QStringLiteral("illustration"),
+                   QStringLiteral("medium"),
+                   QStringLiteral("%1 image(s), %2 visible characters").arg(scan.imageCount).arg(scan.visibleChars));
+        }
+        if (!toc_hits.isEmpty()) classify_text(toc_hits.first().label, QStringLiteral("low"), QStringLiteral("TOC label"));
+        if (base.contains(QStringLiteral("cover"))) {
+            decide(QStringLiteral("cover"), QStringLiteral("low"), QStringLiteral("file name %1").arg(base));
+        } else if (base == QLatin1String("toc") || base.contains(QStringLiteral("contents"))) {
+            decide(QStringLiteral("toc"), QStringLiteral("low"), QStringLiteral("file name %1").arg(base));
+        } else if (base.startsWith(QStringLiteral("title"))) {
+            decide(QStringLiteral("titlepage"), QStringLiteral("low"), QStringLiteral("file name %1").arg(base));
+        } else if (base.startsWith(QStringLiteral("illus")) || base.startsWith(QStringLiteral("color"))
+                   || base.startsWith(QStringLiteral("insert"))) {
+            decide(QStringLiteral("illustration"), QStringLiteral("low"), QStringLiteral("file name %1").arg(base));
+        } else if (base == QLatin1String("message") || base.contains(QStringLiteral("credit"))
+                   || base.contains(QStringLiteral("copyright")) || base.contains(QStringLiteral("colophon"))) {
+            decide(QStringLiteral("credits"), QStringLiteral("low"), QStringLiteral("file name %1").arg(base));
+        } else if (base == QLatin1String("summary") || base.contains(QStringLiteral("synopsis"))) {
+            decide(QStringLiteral("synopsis"), QStringLiteral("low"), QStringLiteral("file name %1").arg(base));
+        } else if (chapter_file.match(base).hasMatch() && scan.visibleChars > 200) {
+            decide(QStringLiteral("chapter"), QStringLiteral("low"), QStringLiteral("file name %1 with body text").arg(base));
+        }
+        if (role == QLatin1String("unknown") && scan.visibleChars > 500) {
+            decide(QStringLiteral("body"), QStringLiteral("low"),
+                   QStringLiteral("%1 visible characters").arg(scan.visibleChars));
+        }
+        role_counts[role] += 1;
+
+        const QList<TocHit> &hits = toc_hits;
+        QJsonObject page {
+            { QStringLiteral("spine_index"), position },
+            { QStringLiteral("resource_id"), id },
+            { QStringLiteral("book_path"), path },
+            { QStringLiteral("role"), role },
+            { QStringLiteral("confidence"), confidence },
+            { QStringLiteral("evidence"), evidence },
+            { QStringLiteral("visible_characters"), scan.visibleChars },
+            { QStringLiteral("image_count"), scan.imageCount },
+            { QStringLiteral("well_formed"), scan.wellFormed }
+        };
+        if (!heading.isEmpty()) {
+            page.insert(QStringLiteral("heading"), QJsonObject {
+                { QStringLiteral("text"), bounded(heading) },
+                { QStringLiteral("level"), scan.firstHeadingLevel },
+                { QStringLiteral("line"), scan.firstHeadingLine } });
+        }
+        if (!collapseAsciiWhitespace(scan.title).isEmpty()) page.insert(QStringLiteral("title"), bounded(scan.title));
+        if (!hits.isEmpty()) {
+            page.insert(QStringLiteral("toc"), QJsonObject {
+                { QStringLiteral("toc_index"), hits.first().index },
+                { QStringLiteral("label"), hits.first().label },
+                { QStringLiteral("level"), hits.first().level },
+                { QStringLiteral("entry_count"), hits.size() } });
+        }
+        pages.append(page);
+
+        auto difference = [&](const QString &kind, const QString &message, const QJsonObject &extra = QJsonObject()) {
+            QJsonObject object {
+                { QStringLiteral("kind"), kind },
+                { QStringLiteral("book_path"), path },
+                { QStringLiteral("spine_index"), position },
+                { QStringLiteral("message"), message }
+            };
+            for (auto it = extra.constBegin(); it != extra.constEnd(); ++it) object.insert(it.key(), it.value());
+            differences.append(object);
+        };
+        const bool content_role = role == QLatin1String("chapter") || role == QLatin1String("prologue")
+            || role == QLatin1String("epilogue") || role == QLatin1String("afterword") || role == QLatin1String("body");
+        if (content_role && hits.isEmpty()) {
+            difference(QStringLiteral("heading_without_toc"),
+                       QStringLiteral("Body page is not in the table of contents."),
+                       QJsonObject { { QStringLiteral("heading"), bounded(label_text) } });
+        }
+        if (content_role && heading.isEmpty() && scan.wellFormed) {
+            difference(QStringLiteral("page_without_heading"),
+                       QStringLiteral("Body page has no h1-h6 heading; navigation and screen readers rely on it."));
+        }
+        if (!hits.isEmpty() && !heading.isEmpty()) {
+            QString toc_label = hits.first().label;
+            QString normalized_heading = heading;
+            toc_label.remove(QRegularExpression(QStringLiteral("[\\s\\x{3000}]")));
+            normalized_heading.remove(QRegularExpression(QStringLiteral("[\\s\\x{3000}]")));
+            if (!toc_label.isEmpty() && toc_label != normalized_heading
+                && !normalized_heading.contains(toc_label) && !toc_label.contains(normalized_heading)) {
+                difference(QStringLiteral("toc_label_mismatch"),
+                           QStringLiteral("TOC label differs from the page heading; confirm which one is intended."),
+                           QJsonObject {
+                               { QStringLiteral("toc_label"), hits.first().label },
+                               { QStringLiteral("heading"), bounded(heading) },
+                               { QStringLiteral("line"), scan.firstHeadingLine } });
+            }
+        }
+        if (!hits.isEmpty()) {
+            if (hits.first().index < previous_toc_index) {
+                difference(QStringLiteral("toc_order_differs_from_spine"),
+                           QStringLiteral("This TOC entry appears earlier in the TOC than a page that precedes it in the spine."),
+                           QJsonObject { { QStringLiteral("toc_index"), hits.first().index } });
+            }
+            previous_toc_index = qMax(previous_toc_index, hits.first().index);
+        }
+    }
+    for (auto it = toc_by_path.constBegin(); it != toc_by_path.constEnd(); ++it) {
+        bool in_spine = false;
+        for (const QJsonValue &value : spine) {
+            if (value.toObject().value(QStringLiteral("book_path")).toString() == it.key()) in_spine = true;
+        }
+        if (!in_spine && by_path.value(it.key()).value(QStringLiteral("kind")).toString() == QLatin1String("xhtml")) {
+            differences.append(QJsonObject {
+                { QStringLiteral("kind"), QStringLiteral("toc_target_not_in_spine") },
+                { QStringLiteral("book_path"), it.key() },
+                { QStringLiteral("label"), it.value().first().label },
+                { QStringLiteral("message"), QStringLiteral("The TOC links to a document that is not in the reading order.") } });
+        }
+    }
+    for (const QJsonValue &value : toc_unresolved) {
+        QJsonObject object = value.toObject();
+        object.insert(QStringLiteral("kind"), QStringLiteral("toc_target_missing"));
+        object.insert(QStringLiteral("message"), QStringLiteral("The TOC entry points to a file that is not in the book."));
+        differences.append(object);
+    }
+    QJsonObject counts;
+    for (auto it = role_counts.constBegin(); it != role_counts.constEnd(); ++it) counts.insert(it.key(), it.value());
+    return QJsonObject {
+        { QStringLiteral("spine_count"), spine.size() },
+        { QStringLiteral("toc_count"), toc.size() },
+        { QStringLiteral("role_counts"), counts },
+        { QStringLiteral("pages"), pages },
+        { QStringLiteral("differences"), differences },
+        { QStringLiteral("role_source"), QStringLiteral("epub:type first, then heading text, image-only layout and file name; confidence says which signal decided. CSS classes are not used as semantics.") }
+    };
+}
 
 QJsonArray PreflightAudit::profiles()
 {

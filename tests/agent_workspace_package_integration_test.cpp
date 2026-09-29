@@ -238,6 +238,17 @@ int main(int argc, char **argv)
                           << issue.value(QStringLiteral("line")).toInt() << ' '
                           << issue.value(QStringLiteral("evidence")).toString().toStdString() << '\n';
             }
+            const QJsonObject structure = call(QStringLiteral("structure.inspect"), QJsonObject {
+                { QStringLiteral("limit"), 200 } });
+            std::cout << "Structure sample: roles=" << QJsonDocument(structure.value(QStringLiteral("role_counts")).toObject())
+                             .toJson(QJsonDocument::Compact).constData() << '\n';
+            for (const QJsonValue &value : structure.value(QStringLiteral("differences")).toArray()) {
+                const QJsonObject difference = value.toObject();
+                std::cout << "  " << difference.value(QStringLiteral("kind")).toString().toStdString() << ' '
+                          << difference.value(QStringLiteral("book_path")).toString().toStdString() << ' '
+                          << difference.value(QStringLiteral("toc_label")).toString().toStdString() << " | "
+                          << difference.value(QStringLiteral("heading")).toString().toStdString() << '\n';
+            }
             return 0;
         }
 

@@ -287,5 +287,70 @@ int main()
                 "the clean sample must only lack its fixture identifier");
     }
     std::cout << "preflight issues=" << all.size() << " rules=" << rules.size() << '\n';
+
+    MemoryBookWorkspace novel;
+    novel.setEpubVersion(QStringLiteral("2.0"));
+    novel.setMetadata(QJsonObject { { QStringLiteral("title"), QStringLiteral("书") }, { QStringLiteral("language"), QStringLiteral("zh") } });
+    novel.addResource(text(QStringLiteral("cover"), QStringLiteral("OEBPS/Text/cover.xhtml"), QStringLiteral("xhtml"),
+        QStringLiteral("application/xhtml+xml"), page(QStringLiteral("zh"), QStringLiteral("<div><img alt=\"封面\" src=\"../Images/cover.jpg\"/></div>"))));
+    novel.addResource(text(QStringLiteral("contents"), QStringLiteral("OEBPS/Text/contents.xhtml"), QStringLiteral("xhtml"),
+        QStringLiteral("application/xhtml+xml"), page(QStringLiteral("zh"), QStringLiteral("<h2>目录</h2><p><a href=\"Section001.xhtml\">序章</a></p>"))));
+    novel.addResource(text(QStringLiteral("s1"), QStringLiteral("OEBPS/Text/Section001.xhtml"), QStringLiteral("xhtml"),
+        QStringLiteral("application/xhtml+xml"),
+        page(QStringLiteral("zh"), QStringLiteral("<h1><ruby>序<rt>じょ</rt></ruby>　章</h1>\n<p>%1</p>").arg(QString(300, QChar(0x6587))))));
+    novel.addResource(text(QStringLiteral("s2"), QStringLiteral("OEBPS/Text/Section002.xhtml"), QStringLiteral("xhtml"),
+        QStringLiteral("application/xhtml+xml"),
+        page(QStringLiteral("zh"), QStringLiteral("<h1>第一章　邂逅</h1>\n<p>%1</p>").arg(QString(300, QChar(0x6587))))));
+    novel.addResource(text(QStringLiteral("s3"), QStringLiteral("OEBPS/Text/Section003.xhtml"), QStringLiteral("xhtml"),
+        QStringLiteral("application/xhtml+xml"),
+        page(QStringLiteral("zh"), QStringLiteral("<h1>第二章　邊境</h1>\n<p>%1</p>").arg(QString(300, QChar(0x6587))))));
+    novel.addResource(text(QStringLiteral("s4"), QStringLiteral("OEBPS/Text/Section004.xhtml"), QStringLiteral("xhtml"),
+        QStringLiteral("application/xhtml+xml"),
+        page(QStringLiteral("zh"), QStringLiteral("<p>%1</p>").arg(QString(600, QChar(0x6587))))));
+    novel.setSpine({ QStringLiteral("cover"), QStringLiteral("contents"), QStringLiteral("s1"), QStringLiteral("s2"),
+                     QStringLiteral("s3"), QStringLiteral("s4") });
+    novel.setToc(QJsonArray {
+        QJsonObject { { QStringLiteral("label"), QStringLiteral("封面") }, { QStringLiteral("href"), QStringLiteral("OEBPS/Text/cover.xhtml") } },
+        QJsonObject { { QStringLiteral("label"), QStringLiteral("第一话 相遇") }, { QStringLiteral("href"), QStringLiteral("OEBPS/Text/Section002.xhtml") } },
+        QJsonObject { { QStringLiteral("label"), QStringLiteral("序章") }, { QStringLiteral("href"), QStringLiteral("OEBPS/Text/Section001.xhtml") } },
+        QJsonObject { { QStringLiteral("label"), QStringLiteral("后记") }, { QStringLiteral("href"), QStringLiteral("OEBPS/Text/Section004.xhtml") } }
+    });
+    ToolRegistry novel_tools;
+    registerBookTools(&novel_tools, &novel);
+    const ToolResult structure = novel_tools.find(QStringLiteral("structure.inspect"))->execute(QJsonObject());
+    Require(structure.ok && !novel_tools.find(QStringLiteral("structure.inspect"))->descriptor().mutatesBook,
+            "structure.inspect must be a read-only tool");
+    const QJsonArray pages = structure.data.value(QStringLiteral("pages")).toArray();
+    Require(pages.size() == 6, "every spine page must be mapped");
+    auto page_at = [&](int index) { return pages.at(index).toObject(); };
+    Require(page_at(0).value(QStringLiteral("role")).toString() == QStringLiteral("cover")
+                && page_at(1).value(QStringLiteral("role")).toString() == QStringLiteral("toc")
+                && page_at(2).value(QStringLiteral("role")).toString() == QStringLiteral("prologue")
+                && page_at(3).value(QStringLiteral("role")).toString() == QStringLiteral("chapter")
+                && page_at(5).value(QStringLiteral("role")).toString() == QStringLiteral("afterword"),
+            "roles must follow image layout and heading text");
+    Require(page_at(2).value(QStringLiteral("heading")).toObject().value(QStringLiteral("text")).toString()
+                == QStringLiteral("序　章"),
+            "ruby annotations must not leak into heading text");
+    Require(!page_at(0).value(QStringLiteral("evidence")).toArray().isEmpty()
+                && !page_at(0).value(QStringLiteral("confidence")).toString().isEmpty(),
+            "every role must carry evidence and confidence");
+    QSet<QString> kinds;
+    for (const QJsonValue &value : structure.data.value(QStringLiteral("differences")).toArray()) {
+        const QJsonObject difference = value.toObject();
+        kinds.insert(difference.value(QStringLiteral("kind")).toString()
+                     + QLatin1Char('@') + difference.value(QStringLiteral("book_path")).toString().section(QLatin1Char('/'), -1));
+    }
+    for (const QString &expected : {
+             QStringLiteral("toc_label_mismatch@Section002.xhtml"),
+             QStringLiteral("heading_without_toc@Section003.xhtml"),
+             QStringLiteral("page_without_heading@Section004.xhtml"),
+             QStringLiteral("toc_order_differs_from_spine@Section002.xhtml") }) {
+        if (!kinds.contains(expected)) std::cerr << "missing difference " << expected.toStdString() << '\n';
+        Require(kinds.contains(expected), "heading/TOC differences must be reported per page");
+    }
+    Require(!kinds.contains(QStringLiteral("toc_label_mismatch@Section001.xhtml")),
+            "spacing-only differences between TOC label and heading are not mismatches");
+    Require(novel.revision() == 0 || !novel.hasOpenTransaction(), "structure inspection must not open a transaction");
     return EXIT_SUCCESS;
 }
