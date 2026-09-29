@@ -189,9 +189,9 @@ QString rewriteFirstImage(const QString &xhtml, const QString &href, const QStri
     if (xlink.match(out).hasMatch()) {
         out.replace(xlink, QStringLiteral("\\1") + href + QStringLiteral("\\2"));
     }
-    QRegularExpression alt_re(QStringLiteral("(<img\\b[^>]*alt=\")[^\"]+(\")"),
+    QRegularExpression alt_re(QStringLiteral("(<img\\b[^>]*alt=\")[^\"]*(\")"),
                               QRegularExpression::CaseInsensitiveOption);
-    if (alt_re.match(out).hasMatch() && !alt.isEmpty()) {
+    if (alt_re.match(out).hasMatch()) {
         out.replace(alt_re, QStringLiteral("\\1") + xmlEscape(alt) + QStringLiteral("\\2"));
     }
     return out;
@@ -238,8 +238,9 @@ QString chapterBodyHtml(const ManuscriptChapter &chapter,
             const QString href = path.isEmpty()
                 ? QStringLiteral("../Images/%1.jpg").arg(illus)
                 : imageHrefFromBookPath(path);
-            html += QStringLiteral("    <div class=\"illus duokan-image-single\"><img alt=\"%1\" src=\"%2\"/></div>\n")
-                        .arg(xmlEscape(illus), xmlEscape(href));
+            // A marker name is a file name, not a description; leave alt empty for editor review.
+            html += QStringLiteral("    <div class=\"illus duokan-image-single\"><img alt=\"\" src=\"%1\"/></div>\n")
+                        .arg(xmlEscape(href));
             continue;
         }
         const QString line = stripLeadingIndent(raw);
@@ -671,7 +672,8 @@ BookOpResult fillTemplateSection(IBookWorkspace *workspace,
             return BookOpResult::error(QStringLiteral("IMAGE_NOT_FOUND"),
                                        QStringLiteral("No image named %1").arg(image_name));
         }
-        filled = rewriteFirstImage(skeleton, imageHrefFromBookPath(resolved), image_name);
+        filled = rewriteFirstImage(skeleton, imageHrefFromBookPath(resolved),
+                                   used_role == QLatin1String("cover") ? QStringLiteral("封面") : QString());
     } else {
         return BookOpResult::error(QStringLiteral("UNKNOWN_ROLE"),
                                    QStringLiteral("Unknown fill role %1").arg(used_role));
@@ -759,7 +761,7 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
         const QString skeleton = currentTextOf(workspace, page.resourceId);
         const QString href = imageHrefFromBookPath(path);
         const QString next = rewriteFirstImage(skeleton.isEmpty() ? workspace->resourceText(page.resourceId) : skeleton,
-                                               href, fallback_alt.isEmpty() ? name : fallback_alt);
+                                               href, fallback_alt);
         const BookOpResult replaced = stageReplace(workspace, page.resourceId, next);
         if (!replaced.ok) {
             warnings.append(replaced.message);
@@ -806,8 +808,8 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
         }
     }
 
-    map_image_page(tmpl.cover, cover_name, QStringLiteral("cover"));
-    map_image_page(tmpl.start, start_name, QStringLiteral("start"));
+    map_image_page(tmpl.cover, cover_name, QStringLiteral("封面"));
+    map_image_page(tmpl.start, start_name, QString());
     for (int i = 0; i < tmpl.illustrations.size(); ++i) {
         const QString name = i < color_names.size() ? color_names.at(i) : QString();
         if (name.isEmpty()) {
@@ -815,7 +817,7 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
                                 .arg(tmpl.illustrations.at(i).bookPath));
             continue;
         }
-        map_image_page(tmpl.illustrations.at(i), name, name);
+        map_image_page(tmpl.illustrations.at(i), name, QString());
     }
 
     if (!tmpl.title.resourceId.isEmpty()) {
@@ -948,6 +950,11 @@ BookOpResult typesetFromManuscript(IBookWorkspace *workspace, const TypesetOptio
         { QStringLiteral("image_map"), image_map },
         { QStringLiteral("missing_images"), missing },
         { QStringLiteral("unplaced_images"), unused },
+        { QStringLiteral("alt_review_required"), QJsonObject {
+            { QStringLiteral("image_count"), used_images.size() },
+            { QStringLiteral("alt_policy"), QStringLiteral("empty_until_reviewed") },
+            { QStringLiteral("message"), QStringLiteral("Placed images use alt=\"\" (decorative) except the cover. Ask the editor which images carry information and need a description.") }
+        } },
         { QStringLiteral("retired_source"), retired },
         { QStringLiteral("warnings"), warnings }
     }, false, true);

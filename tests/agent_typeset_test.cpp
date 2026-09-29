@@ -464,6 +464,12 @@ int main()
     Require(ch1.contains(QStringLiteral("<h1>第一話　春</h1>")), "chapter 1 heading");
     Require(ch1.contains(QStringLiteral("<p>春天到了。</p>")), "chapter 1 body without leading indent");
     Require(ch1.contains(QStringLiteral("src=\"../Images/p001.jpg\"")), "in-chapter illustration");
+    Require(ch1.contains(QStringLiteral("<img alt=\"\" src=\"../Images/p001.jpg\""))
+                && !ch1.contains(QStringLiteral("alt=\"p001\"")),
+            "generated body illustrations must not use the file name as alt text");
+    Require(typeset.data.value(QStringLiteral("alt_review_required")).toObject()
+                .value(QStringLiteral("image_count")).toInt() > 0,
+            "typeset must report images whose alt text needs editor review");
     Require(ch1.contains(QStringLiteral("class=\"illus")), "illustration wrapper class");
     Require(!ch1.contains(QStringLiteral("请先转为书籍视图界面")), "placeholder must be gone");
 
@@ -485,6 +491,9 @@ int main()
 
     Require(book.resourceText(QStringLiteral("illus1")).contains(QStringLiteral("color1.jpg")),
             "illus1 must rewrite co1.jpg to color1.jpg");
+    Require(book.resourceText(QStringLiteral("illus1")).contains(QStringLiteral("alt=\"\""))
+                && !book.resourceText(QStringLiteral("illus1")).contains(QStringLiteral("alt=\"co1\"")),
+            "color pages must drop template file-name alt text");
     Require(book.resourceText(QStringLiteral("illus2")).contains(QStringLiteral("color2.jpg")),
             "illus2 must rewrite to color2.jpg");
     Require(book.resourceText(QStringLiteral("message")).contains(QStringLiteral("测试作者")),

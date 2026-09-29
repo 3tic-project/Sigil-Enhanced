@@ -309,8 +309,7 @@ BookOpResult insertImageTag(IBookWorkspace *workspace, const QString &page_id,
     }
     const QString href = relativeBookHref(page.value(QStringLiteral("book_path")).toString(),
                                           image.value(QStringLiteral("book_path")).toString());
-    const QString name = alt.isEmpty()
-        ? QFileInfo(image.value(QStringLiteral("book_path")).toString()).completeBaseName() : alt;
+    const QString name = alt;
     const QString class_attr = klass.isEmpty()
         ? QString() : QStringLiteral(" class=\"%1\"").arg(xmlEscape(klass));
     const QString wrapper = klass.isEmpty()
