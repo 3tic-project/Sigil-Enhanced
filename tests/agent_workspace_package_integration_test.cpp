@@ -206,6 +206,22 @@ int main(int argc, char **argv)
                       << ", broken images=" << brokenImages.size()
                       << ", warnings=" << QJsonDocument(typeset.value(QStringLiteral("warnings")).toArray()).toJson(QJsonDocument::Compact).constData() << '\n';
             Require(brokenImages.isEmpty(), "Typeset sample produced broken image references");
+            QString tocPageId;
+            for (const QJsonValue &value : sampleWorkspace.resources()) {
+                const QJsonObject resource = value.toObject();
+                if (resource.value(QStringLiteral("book_path")).toString().endsWith(QStringLiteral("Text/summary.xhtml"))) {
+                    tocPageId = resource.value(QStringLiteral("resource_id")).toString();
+                }
+            }
+            if (!tocPageId.isEmpty()) {
+                const QJsonObject deleted = call(QStringLiteral("resource.delete"), QJsonObject {
+                    { QStringLiteral("resource_id"), tocPageId } });
+                std::cout << "Delete TOC page: toc_references="
+                          << deleted.value(QStringLiteral("toc_references")).toArray().size() << '\n';
+                Require(!deleted.value(QStringLiteral("toc_references")).toArray().isEmpty(),
+                        "Deleting a page listed in the real NCX must report its TOC entry");
+                call(QStringLiteral("transaction.rollback"), QJsonObject());
+            }
             const QJsonObject preflight = call(QStringLiteral("preflight.run"), QJsonObject {
                 { QStringLiteral("limit"), 200 }
             });

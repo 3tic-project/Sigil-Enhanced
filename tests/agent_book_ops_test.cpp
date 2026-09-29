@@ -778,6 +778,36 @@ int main()
     const ToolResult check = run(QStringLiteral("book.check"), QJsonObject());
     Require(check.ok, "book.check");
 
+    Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "toc reference begin");
+    const ToolResult toc_before_delete = run(QStringLiteral("book.toc"), QJsonObject());
+    QString toc_target_id;
+    for (const QJsonValue &value : book.toc()) {
+        const QString href = value.toObject().value(QStringLiteral("href")).toString();
+        for (const QJsonValue &resource : book.resources()) {
+            const QJsonObject object = resource.toObject();
+            if (object.value(QStringLiteral("kind")).toString() == QLatin1String("xhtml")
+                && href.section(QLatin1Char('#'), 0, 0) == object.value(QStringLiteral("book_path")).toString()
+                && object.value(QStringLiteral("resource_id")).toString() != QStringLiteral("ch1")) {
+                toc_target_id = object.value(QStringLiteral("resource_id")).toString();
+            }
+        }
+    }
+    Require(toc_before_delete.ok && !toc_target_id.isEmpty(), "fixture TOC must point at a deletable page");
+    const ToolResult deleted_page = run(QStringLiteral("resource.delete"), QJsonObject {
+        { QStringLiteral("resource_id"), toc_target_id }
+    });
+    Require(deleted_page.ok
+                && !deleted_page.data.value(QStringLiteral("toc_references")).toArray().isEmpty()
+                && deleted_page.data.value(QStringLiteral("toc_warning")).toString().contains(QStringLiteral("table of contents")),
+            "deleting a page the TOC points to must report the dangling entries before commit");
+    const ToolResult deleted_css = run(QStringLiteral("resource.delete"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("css") }
+    });
+    Require(deleted_css.ok && deleted_css.data.value(QStringLiteral("toc_references")).toArray().isEmpty()
+                && !deleted_css.data.contains(QStringLiteral("toc_warning")),
+            "resources outside the TOC must not produce a navigation warning");
+    Require(run(QStringLiteral("transaction.rollback"), QJsonObject()).ok, "toc reference rollback");
+
     const ToolResult remembered = run(QStringLiteral("session.remember"), QJsonObject {
         { QStringLiteral("key"), QStringLiteral("heading") },
         { QStringLiteral("value"), QStringLiteral("^Chapter") }

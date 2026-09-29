@@ -1091,12 +1091,14 @@ BookOpResult MemoryBookWorkspace::deleteResource(const QString &resource_id)
     if (m_hasStagedSpine) m_stagedSpine.removeAll(resource->id);
     QString error;
     m_transaction->RemoveResource(resource->id, resource->revision, &error);
-    return BookOpResult::success(QJsonObject {
+    QJsonObject data {
         { QStringLiteral("resource_id"), resource->id },
         { QStringLiteral("book_path"), resource->bookPath },
         { QStringLiteral("staged"), true },
         { QStringLiteral("removed"), true }
-    }, false, true);
+    };
+    annotateTocReferences(&data, m_hasStagedToc ? m_stagedToc : m_toc, resource->bookPath);
+    return BookOpResult::success(data, false, true);
 }
 
 BookOpResult MemoryBookWorkspace::renameResource(const QString &resource_id, const QString &book_path)

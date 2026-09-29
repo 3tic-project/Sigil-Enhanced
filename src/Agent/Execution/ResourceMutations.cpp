@@ -132,4 +132,25 @@ QString resolveRenameTarget(const QString &current_path, const QString &requeste
     return target;
 }
 
+void annotateTocReferences(QJsonObject *result, const QJsonArray &toc_entries, const QString &book_path)
+{
+    QJsonArray references;
+    for (const QJsonValue &value : toc_entries) {
+        const QJsonObject entry = value.toObject();
+        const QString href = entry.value(QStringLiteral("href")).toString().section(QLatin1Char('#'), 0, 0);
+        if (href.isEmpty()) continue;
+        if (book_path == href || book_path.endsWith(QLatin1Char('/') + href)) {
+            references.append(QJsonObject {
+                { QStringLiteral("label"), entry.value(QStringLiteral("label")).toString() },
+                { QStringLiteral("href"), entry.value(QStringLiteral("href")).toString() }
+            });
+        }
+    }
+    result->insert(QStringLiteral("toc_references"), references);
+    if (!references.isEmpty()) {
+        result->insert(QStringLiteral("toc_warning"),
+                       QStringLiteral("The table of contents still points to this file. Deleting it does not edit Nav/NCX; fix or regenerate the TOC in this transaction before commit."));
+    }
+}
+
 } // namespace SigilAgent

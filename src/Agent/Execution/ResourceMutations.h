@@ -8,6 +8,8 @@
 #ifndef SIGIL_AGENT_RESOURCE_MUTATIONS_H
 #define SIGIL_AGENT_RESOURCE_MUTATIONS_H
 
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QString>
 #include <QStringList>
 
@@ -22,6 +24,8 @@ bool kindIsCreatable(const QString &kind);
 QString suggestCopyBookPath(const QString &source_path, const QStringList &existing_paths);
 bool bookPathTaken(const QString &book_path, const QStringList &existing_paths);
 QString resolveRenameTarget(const QString &current_path, const QString &requested);
+// Adds toc_references (and toc_warning when non-empty) for TOC entries that still target book_path.
+void annotateTocReferences(QJsonObject *result, const QJsonArray &toc_entries, const QString &book_path);
 
 } // namespace SigilAgent
 
