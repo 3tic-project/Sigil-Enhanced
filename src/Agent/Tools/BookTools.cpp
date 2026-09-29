@@ -835,6 +835,11 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
             .arg(arguments.value(QStringLiteral("decision")).toString(),
                  arguments.value(QStringLiteral("issue_id")).toString());
     }
+    if (name == QLatin1String("content.insert_after_blocks")) {
+        return QStringLiteral("Insert %1 new block(s) after existing elements in %2. Staged until commit; source blocks are unchanged.")
+            .arg(arguments.value(QStringLiteral("items")).toArray().size())
+            .arg(arguments.value(QStringLiteral("resource_id")).toString());
+    }
     if (name == QLatin1String("preflight.apply_fixes")) {
         const int issues = arguments.value(QStringLiteral("issue_ids")).toArray().size();
         const int alts = arguments.value(QStringLiteral("image_alts")).toObject().size();
@@ -1853,6 +1858,40 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                                        arguments.value(QStringLiteral("anchor")).toString(),
                                        html,
                                        arguments.value(QStringLiteral("before")).toBool(false)));
+        });
+
+    add(registry, QStringLiteral("content.insert_after_blocks"),
+        QStringLiteral("Insert new elements after many existing blocks of ONE XHTML file in a single staged edit, e.g. a translation <p class=\"zh-trans\"> after each source paragraph, a caption after each image block, or a note after each heading. Each item has anchor_text (a complete element copied exactly from read_fragment, ending with its closing tag such as </p>), optional start_line to disambiguate, and html to insert. Up to 200 items, html 4 KiB each and 128 KiB total; call once per file or chunk. Anchors must be unique and non-overlapping; if any item fails, nothing is staged and item_index names it. Pass expected_resource_revision from read_fragment. Source blocks are not modified. Prefer this over many resource.patch_fragment calls."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("expected_resource_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("items"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("minItems"), 1 },
+                    { QStringLiteral("maxItems"), 200 },
+                    { QStringLiteral("items"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("object") },
+                        { QStringLiteral("properties"), QJsonObject {
+                            { QStringLiteral("anchor_text"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                            { QStringLiteral("start_line"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                            { QStringLiteral("html"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                        } },
+                        { QStringLiteral("required"), QJsonArray { QStringLiteral("anchor_text"), QStringLiteral("html") } }
+                    } }
+                } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("resource_id"), QStringLiteral("expected_resource_revision"), QStringLiteral("items") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(insertAfterBlocks(
+                workspace,
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                static_cast<quint64>(arguments.value(QStringLiteral("expected_resource_revision")).toInteger()),
+                arguments.value(QStringLiteral("items")).toArray()));
         });
 
     add(registry, QStringLiteral("content.wrap"),

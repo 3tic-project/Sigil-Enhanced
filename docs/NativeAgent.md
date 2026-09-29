@@ -525,6 +525,14 @@ Runner 的任务恢复范围检查也继续使用完整预览，所以不会因�
 
 批量套标签用 `content.wrap`，全书查找替换用 `content.replace_regex`（`$1` 捕获组）。图片必须先拖进 Images，再用 `image.insert` 按锚点插入 `<img>`。`book.check` 会分页报告损坏的图片链接、未引用图片和 XHTML 良构性。
 
+`content.insert_after_blocks` 在同一份 XHTML 的多个现有块之后各插入一段新元素（如原文段落下的
+`<p class="zh-trans">` 译文、图片块下的图注），一次暂存。每项的 `anchor_text` 必须是从
+`read_fragment` 原样复制、以闭合标签结尾的完整元素（否则 `ANCHOR_NOT_BLOCK`，避免译文嵌入段内），
+重复锚点用 `start_line` 消歧；锚点不得重叠。每批最多 200 项，单项 html 最多 4 KiB、合计 128 KiB；
+须传 `expected_resource_revision`。任一项失败则整批不暂存，错误带 `item_index`。插入内容沿用原块的
+缩进，原文块不被修改；仍须预览后提交。在真实双语会话中，253 次逐段 `patch_fragment` 可降为每个文件
+一次调用。
+
 `spine.set` 重排阅读顺序；`spine.sort` 按路径字母数字排序；`resource.rename` 可改文件名或换目录（提交时改 href）；`style.link` 重写 XHTML 的 stylesheet `<link>`；`resource.delete` 不能删 OPF/NCX/Nav 或最后一份 XHTML；`toc.generate` 按标题正则生成 TOC；`metadata.update` 支持任意 DC 字段，`_remove` 删除字段。
 
 整理伪段落时使用 `paragraphs.analyze` → `paragraphs.plan` → `paragraphs.apply` →

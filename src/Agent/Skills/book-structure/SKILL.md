@@ -12,7 +12,7 @@ allowed-tools: >
   book.summary book.resources book.spine book.search_regex book.check book.validate
   structure.inspect
   content.wrap_plain content.wrap content.replace_regex content.replace_body
-  content.insert content.split content.merge image.insert
+  content.insert content.insert_after_blocks content.split content.merge image.insert
   resource.copy resource.create resource.delete resource.rename resource.replace_text
   spine.set spine.sort style.link toc.generate
   toc.inspect_hierarchy toc.plan_transform toc.apply_transform
@@ -45,6 +45,7 @@ Text the user dropped is already a resource. Do not copy it into tool arguments.
 
 - `content.wrap` — wrap matches with tags/classes
 - `content.replace_regex` — global or per-file regex (`$1` captures)
+- `content.insert_after_blocks` — add one new element after each of many existing blocks in a file (translations under source paragraphs, captions under images) in one staged edit; anchors are whole elements copied from `resource.read_fragment`
 - `book.search_regex` — inspect first
 
 ## Images

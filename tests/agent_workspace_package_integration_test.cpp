@@ -279,6 +279,45 @@ int main(int argc, char **argv)
                 Require(!after.value(QStringLiteral("rule_counts")).toObject().contains(QStringLiteral("IMG_ALT_FILENAME")),
                         "Committed alt decisions must clear the file-name alt finding on the real book");
             }
+            QString chapterId;
+            for (const QJsonValue &value : sampleWorkspace.resources()) {
+                const QJsonObject resource = value.toObject();
+                if (resource.value(QStringLiteral("book_path")).toString().endsWith(QStringLiteral("Section002.xhtml"))) {
+                    chapterId = resource.value(QStringLiteral("resource_id")).toString();
+                }
+            }
+            const QJsonObject fragment = call(QStringLiteral("resource.read_fragment"), QJsonObject {
+                { QStringLiteral("resource_id"), chapterId }, { QStringLiteral("limit"), 4000 } });
+            QJsonArray items;
+            for (const QJsonValue &value : fragment.value(QStringLiteral("lines")).toArray()) {
+                const QJsonObject line = value.toObject();
+                const QString text = line.value(QStringLiteral("text")).toString().trimmed();
+                if (!text.startsWith(QStringLiteral("<p>")) || !text.endsWith(QStringLiteral("</p>"))
+                    || text == QLatin1String("<p><br/></p>")) {
+                    continue;
+                }
+                items.append(QJsonObject {
+                    { QStringLiteral("anchor_text"), text },
+                    { QStringLiteral("start_line"), line.value(QStringLiteral("line")).toInt() },
+                    { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">译文 %1</p>").arg(items.size() + 1) } });
+                if (items.size() == 20) break;
+            }
+            const QJsonObject inserted = call(QStringLiteral("content.insert_after_blocks"), QJsonObject {
+                { QStringLiteral("resource_id"), chapterId },
+                { QStringLiteral("expected_resource_revision"), fragment.value(QStringLiteral("resource_revision")) },
+                { QStringLiteral("items"), items } });
+            call(QStringLiteral("transaction.commit"), QJsonObject {
+                { QStringLiteral("expected_book_revision"), static_cast<qint64>(sampleWorkspace.revision()) } });
+            const QJsonObject final_check = call(QStringLiteral("preflight.run"), QJsonObject { { QStringLiteral("limit"), 200 } });
+            const int translations = sampleWorkspace.resourceText(chapterId).count(QStringLiteral("class=\"zh-trans\""));
+            std::cout << "Block inserts: items=" << items.size()
+                      << " inserted=" << inserted.value(QStringLiteral("inserted_count")).toInt()
+                      << " committed translations=" << translations
+                      << " preflight=" << QJsonDocument(final_check.value(QStringLiteral("rule_counts")).toObject())
+                             .toJson(QJsonDocument::Compact).constData() << '\n';
+            Require(items.size() >= 10 && translations == items.size()
+                        && !final_check.value(QStringLiteral("rule_counts")).toObject().contains(QStringLiteral("XHTML_NOT_WELLFORMED")),
+                    "Batch block insertion must commit every translation and keep the real chapter well-formed");
             return 0;
         }
 
