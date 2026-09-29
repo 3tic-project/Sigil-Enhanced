@@ -18,6 +18,7 @@
 #include "Agent/Execution/BookEdits.h"
 #include "Agent/Execution/ContentOps.h"
 #include "Agent/Execution/PatchRange.h"
+#include "Agent/Execution/PreflightAudit.h"
 #include "Agent/Execution/ProofAudit.h"
 #include "Agent/Typeset/ManuscriptParser.h"
 #include "Agent/Typeset/TypesetEngine.h"
@@ -849,6 +850,53 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
     if (!registry || !workspace) return;
 
     const auto proof_audit = std::make_shared<ProofAudit>();
+    const auto preflight = std::make_shared<PreflightAudit>();
+
+    add(registry, QStringLiteral("preflight.profiles"),
+        QStringLiteral("List versioned release-preflight profiles and the local rules each one runs. EPUBCheck and Ace are listed as external validators; they are reported as not_run unless an adapter actually ran them."),
+        ToolRisk::Read, false, false, emptyObjectSchema(),
+        [](const QJsonObject &) {
+            return ToolResult::success(QJsonObject {
+                { QStringLiteral("default_profile_id"), QStringLiteral("release-basic") },
+                { QStringLiteral("profiles"), PreflightAudit::profiles() }
+            });
+        });
+
+    add(registry, QStringLiteral("preflight.run"),
+        QStringLiteral("Read-only release preflight of the current book including unsaved and staged edits: package/spine, XHTML well-formedness, internal links and fragments, path case, CSS url(), TOC targets, required metadata, language tags, image alt, heading order and unreferenced resources. Returns run_id, snapshot_digest, severity/rule counts, validation_status (EPUBCheck/Ace not_run) and the first issue page. Each issue has rule_id, severity, book_path, 1-based line, evidence, fix_kind and manual_required. Local rules are not a full EPUBCheck; never report the book as validated or accessible from this alone."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("profile_id"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("string") },
+                    { QStringLiteral("enum"), QJsonArray { QStringLiteral("release-basic"), QStringLiteral("epub-core"), QStringLiteral("a11y-basic") } },
+                    { QStringLiteral("default"), QStringLiteral("release-basic") }
+                } },
+                { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 1 }, { QStringLiteral("maximum"), 200 }, { QStringLiteral("default"), 50 } } }
+            } }
+        },
+        [workspace, preflight](const QJsonObject &arguments) {
+            return preflight->run(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("preflight.issues"),
+        QStringLiteral("Page through the issues of the latest preflight.run. Pass run_id; optionally filter by severity or rule_id. Follow next_offset while has_more is true. PREFLIGHT_STALE means the book or staged edits changed: run preflight.run again instead of reusing old findings."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("run_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("severity"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") }, { QStringLiteral("enum"), QJsonArray { QStringLiteral("error"), QStringLiteral("warning"), QStringLiteral("info") } } } },
+                { QStringLiteral("rule_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("offset"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 0 }, { QStringLiteral("default"), 0 } } },
+                { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 1 }, { QStringLiteral("maximum"), 200 }, { QStringLiteral("default"), 50 } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("run_id") } }
+        },
+        [workspace, preflight](const QJsonObject &arguments) {
+            return preflight->issues(workspace, arguments);
+        });
 
     add(registry, QStringLiteral("proof.audit"),
         QStringLiteral("Scan visible XHTML body text for review candidates. The default ruleset reports replacement/invisible characters and repeated Chinese comma/full stop. Supports whole_book, file, selection, resources, and zero-based spine ranges. Follow next_cursor until has_more is false. Offsets are UTF-16 XHTML source positions; candidates spanning markup or entities require source inspection. Results are suggestions, not confirmed errors."),
