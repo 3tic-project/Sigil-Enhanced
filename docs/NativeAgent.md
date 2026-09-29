@@ -210,6 +210,52 @@ checkpoint create/restore、`python.run` 及其他不能预览的写工具；Edi
 schema 字节；**Technical details** 显示数量和大小，Debug JSON 保留精确字段。schema 大小是
 紧凑 JSON 数组大小，不是 token 估算，也不包括消息正文和 HTTP 包装。
 
+### Skill 元数据与路由
+
+内置 Skill 是声明式工作说明，不执行脚本，不授予工具权限。加载时支持以下元数据
+（示例不是新增的内置 Skill）：
+
+```yaml
+---
+name: basic-diagnostics
+version: 1
+description: >
+  Inspect local EPUB diagnostics without modifying the current book.
+triggers: [基础检查, basic diagnostics]
+requires_capabilities: [book.check, book.validate]
+allowed-tools: [book.check, book.validate, font.inventory]
+requires_book: true
+auto_trigger: true
+---
+```
+
+- `version` 当前只支持 `1`，省略时为 `1`；旧 `metadata.sigil.skill-version` 仍兼容。
+- `requires_capabilities` 声明必需能力；`allowed-tools` 保留配方的工具清单，不能添加权限。
+- `requires_book` 默认 false，兼容旧 `metadata.sigil.requires-book`。
+- `triggers` 声明自动触发词；英文词按边界匹配。旧三项 Skill 无此字段时仍有兼容路由。
+- `auto_trigger` 默认 true；false 仅关闭自动注入，仍可按准确 Skill 名称显式选择。
+
+解析支持普通/带引号标量、折叠或字面文本块、行内及逐行字符串列表，以及旧 `metadata`
+标量映射；接受 CRLF/BOM。双引号值使用 JSON 字符串转义。这不是完整 YAML 解析器，
+不支持锚点、别名或任意嵌套对象。重复字段、畸形工具列表等会产生 `invalid_metadata`
+诊断，不注入该配方；未知策略字段不参与授权。研究提案中的 `default_mode`、`may_write`、
+`scope`、`output_schema` 尚未实现为执行约束。
+
+目录与正文只使用实际注册且当前 `PermissionPolicy` 允许的声明能力。
+缺少任一 `requires_capabilities` 或 `allowed-tools` 项、版本不支持、缺少所需 Book 时，
+整个配方不可用；不会让模型尝试不存在的工具。当前采用完整配方的保守过滤，因此
+Ask/Plan 也会隐藏需要 commit 的编辑 Skill；模式本身已有的读取、计划与暂存工具仍可用。
+这里过滤的是 Skill 目录与正文，不是全局系统提示中的全部静态工具说明。
+
+用户文本显式提到准确 Skill 名称时，只选择这些名称，不再附加其他关键词命中的配方。
+同名 Skill 按现有搜索顺序首次加载优先，后来的文件不能替换已经加载的内置 Skill。
+Skill 正文不是安全边界，实际执行仍经过注册表、权限、审批和宿主校验。
+
+Debug JSON 的 `model_request_started.tool_context.skills` 包含 `loaded_count`、
+`available_count` 和 `decisions`。每项记录名称、版本、来源、状态与原因；命中时有
+`explicit_name` 或准确触发词，不可用时有缺失能力或元数据错误。
+本轮审计与测试记录见 [Agent 能力审计](AgentCapabilityAudit_2026-09-30.md)。
+
 **Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤不会被
 `transaction.rollback` 撤销，结果仍标为 Applied；纯文本提交可使用该 Applied 卡上的
 任务恢复按钮，其他提交只能使用卡片所列的宿主恢复方式。
