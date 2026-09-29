@@ -13,6 +13,8 @@
 namespace SigilAgent
 {
 
+QString illustrationMarkerPattern();
+
 namespace
 {
 
@@ -223,9 +225,9 @@ bool isSynopsisHeader(const QString &line)
 
 QRegularExpression illustrationRe()
 {
-    static const QRegularExpression re(
-        QStringLiteral("［插[图圖]：([^］]+)］|\\[插[图圖]：([^\\]]+)\\]|【插[图圖]：([^】]+)】"),
-        QRegularExpression::UseUnicodePropertiesOption);
+    // Bracket pairs ［］ [] 【】 （） () 〈〉 <> around 插图/插圖, then an optional colon and the name.
+    static const QRegularExpression re(illustrationMarkerPattern(),
+                                       QRegularExpression::UseUnicodePropertiesOption);
     return re;
 }
 
@@ -238,6 +240,13 @@ QStringList splitLines(const QString &text)
 }
 
 } // namespace
+
+QString illustrationMarkerPattern()
+{
+    return QStringLiteral(
+        "[［\\[【（(〈<]\\s*插[图圖絵画][：:\\s]*"
+        "([^］\\]】）)〉>\\s][^］\\]】）)〉>]*?)\\s*[］\\]】）)〉>]");
+}
 
 QString manuscriptPlainText(const QString &text)
 {
@@ -255,11 +264,7 @@ QString illustrationNameInLine(const QString &line)
 {
     const QRegularExpressionMatch match = illustrationRe().match(line);
     if (!match.hasMatch()) return QString();
-    for (int i = 1; i <= 3; ++i) {
-        const QString captured = match.captured(i).trimmed();
-        if (!captured.isEmpty()) return captured;
-    }
-    return QString();
+    return match.captured(1).trimmed();
 }
 
 bool lineLooksLikeChapterHeading(const QString &line)

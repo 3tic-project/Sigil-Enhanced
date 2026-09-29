@@ -2,6 +2,7 @@
 
 #include <QFileInfo>
 #include <QFile>
+#include <QJsonDocument>
 #include <QElapsedTimer>
 #include <QRegularExpression>
 #include <QSignalMapper>
@@ -144,6 +145,67 @@ int main(int argc, char **argv)
                       << ", visible UTF-16 units="
                       << firstAudit.data.value(QStringLiteral("visible_characters")).toInt()
                       << ", first audit=" << firstAuditMs << " ms\n";
+            return 0;
+        }
+
+        const QString typesetSample = qEnvironmentVariable("SIGIL_TYPESET_SAMPLE_EPUB");
+        if (!typesetSample.isEmpty()) {
+            QTemporaryDir sampleCopy;
+            Require(sampleCopy.isValid(), "Could not create a private typeset copy");
+            const QString copiedPath = sampleCopy.filePath(QStringLiteral("typeset-sample.epub"));
+            Require(QFile::copy(typesetSample, copiedPath), "Could not copy the typeset sample");
+            MainWindow sampleWindow(copiedPath);
+            const QSharedPointer<Book> sampleBook = sampleWindow.GetCurrentBook();
+            SigilAgent::SigilBookWorkspace sampleWorkspace;
+            sampleWorkspace.setBook(sampleBook);
+            SigilAgent::AgentSession sampleSession;
+            SigilAgent::ToolRegistry sampleTools;
+            SigilAgent::registerBookTools(&sampleTools, &sampleWorkspace, &sampleSession);
+            auto call = [&](const QString &name, const QJsonObject &arguments) {
+                const SigilAgent::ToolResult result = sampleTools.find(name)->execute(arguments);
+                if (!result.ok) {
+                    std::cerr << name.toStdString() << " failed: " << result.code.toStdString()
+                              << " " << result.message.toStdString() << '\n';
+                }
+                Require(result.ok, "Typeset sample tool failed");
+                return result.data;
+            };
+            const QJsonObject parsed = call(QStringLiteral("manuscript.parse"), QJsonObject());
+            const int chapters = parsed.value(QStringLiteral("chapter_count")).toInt();
+            const QJsonObject typeset = call(QStringLiteral("content.typeset_from_manuscript"), QJsonObject());
+            Require(typeset.value(QStringLiteral("chapters_filled")).toInt() == chapters,
+                    "Typeset sample did not fill every parsed chapter");
+            call(QStringLiteral("transaction.preview"), QJsonObject());
+            call(QStringLiteral("transaction.commit"), QJsonObject {
+                { QStringLiteral("expected_book_revision"), static_cast<qint64>(sampleWorkspace.revision()) }
+            });
+            int bodyImages = 0;
+            for (const QJsonValue &value : sampleWorkspace.resources()) {
+                const QJsonObject resource = value.toObject();
+                if (!resource.value(QStringLiteral("book_path")).toString().contains(QStringLiteral("Section"))) continue;
+                bodyImages += sampleWorkspace.resourceText(resource.value(QStringLiteral("resource_id")).toString())
+                    .count(QStringLiteral("<img "));
+            }
+            const QJsonObject check = call(QStringLiteral("book.check"), QJsonObject {
+                { QStringLiteral("limit"), 200 }
+            });
+            QJsonArray brokenImages;
+            for (const QJsonValue &value : check.value(QStringLiteral("issues")).toArray()) {
+                if (value.toObject().value(QStringLiteral("code")).toString() == QLatin1String("BROKEN_IMAGE")) {
+                    brokenImages.append(value);
+                }
+            }
+            const QByteArray unplaced = QJsonDocument(
+                typeset.value(QStringLiteral("unplaced_images")).toArray()).toJson(QJsonDocument::Compact);
+            const QByteArray missing = QJsonDocument(
+                typeset.value(QStringLiteral("missing_images")).toArray()).toJson(QJsonDocument::Compact);
+            std::cout << "Typeset sample: chapters=" << chapters
+                      << ", body images=" << bodyImages
+                      << ", unplaced=" << unplaced.constData()
+                      << ", missing=" << missing.constData()
+                      << ", broken images=" << brokenImages.size()
+                      << ", warnings=" << QJsonDocument(typeset.value(QStringLiteral("warnings")).toArray()).toJson(QJsonDocument::Compact).constData() << '\n';
+            Require(brokenImages.isEmpty(), "Typeset sample produced broken image references");
             return 0;
         }
 

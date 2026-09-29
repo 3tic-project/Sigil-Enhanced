@@ -204,9 +204,8 @@ bool lineIsOnlyIllustration(const QString &raw)
     QString t = raw.trimmed();
     t.remove(QChar(0x3000));
     t.remove(QLatin1Char(' '));
-    QRegularExpression marker(
-        QStringLiteral("［插[图圖]：[^］]+］|\\[插[图圖]：[^\\]]+\\]|【插[图圖]：[^】]+】"),
-        QRegularExpression::UseUnicodePropertiesOption);
+    QRegularExpression marker(illustrationMarkerPattern(),
+                              QRegularExpression::UseUnicodePropertiesOption);
     t.replace(marker, QString());
     return t.isEmpty();
 }

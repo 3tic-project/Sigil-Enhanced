@@ -290,6 +290,14 @@ int main()
     Require(chineseTalkLabel(11) == QStringLiteral("第十一话"), "chineseTalkLabel 11");
     Require(illustrationNameInLine(QStringLiteral("［插图：color1］")) == QStringLiteral("color1"),
             "illustration marker");
+    Require(illustrationNameInLine(QStringLiteral("（插圖001）")) == QStringLiteral("001")
+                && illustrationNameInLine(QStringLiteral("（插图：p012）")) == QStringLiteral("p012")
+                && illustrationNameInLine(QStringLiteral("[插圖 007]")) == QStringLiteral("007")
+                && illustrationNameInLine(QStringLiteral("【插图：kuchie-001】")) == QStringLiteral("kuchie-001"),
+            "fullwidth parenthesis and colon-less illustration markers must be recognized");
+    Require(illustrationNameInLine(QStringLiteral("這張插圖很漂亮。")).isEmpty()
+                && illustrationNameInLine(QStringLiteral("（插圖）")).isEmpty(),
+            "prose mentioning illustrations must not become markers");
 
     const ParsedManuscript parsed = parseManuscriptText(kFixtureTxt, QStringLiteral("hint"));
     Require(parsed.chapters.size() == 3, "fixture must parse three chapters");
@@ -683,6 +691,10 @@ int main()
         Require(live.chapters.first().heading == QStringLiteral("序　章")
                     && live.chapters.last().heading == QStringLiteral("後　記"),
                 "real sample chapter bounds");
+        int body_illustrations = 0;
+        for (const ManuscriptChapter &chapter : live.chapters) body_illustrations += chapter.illustrationNames.size();
+        Require(live.frontIllustrationNames.size() == 5 && body_illustrations == 12,
+                "real sample （插圖NNN） markers must map front and body illustrations");
     }
 
     const QString asahi = QStringLiteral(
