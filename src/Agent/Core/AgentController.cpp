@@ -22,7 +22,7 @@ void AgentController::rebuildTools()
 {
     m_tools = ToolRegistry();
     if (m_workspace) {
-        registerBookTools(&m_tools, m_workspace, &m_session);
+        registerBookTools(&m_tools, m_workspace, &m_session, &m_cancellation);
         registerDivParagraphTools(&m_tools, m_workspace, &m_cancellation);
         registerTocTools(&m_tools, m_workspace, &m_cancellation);
     }

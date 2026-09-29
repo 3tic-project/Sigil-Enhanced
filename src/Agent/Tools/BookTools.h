@@ -15,7 +15,10 @@
 namespace SigilAgent
 {
 
-void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentSession *session = nullptr);
+class AgentCancellation;
+
+void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentSession *session = nullptr,
+                       AgentCancellation *cancellation = nullptr);
 QString humanReadableImpact(const QString &name, const QJsonObject &arguments);
 
 } // namespace SigilAgent

@@ -17,6 +17,7 @@
 #include <QUuid>
 #include <QXmlStreamReader>
 
+#include "Agent/Core/AgentCancellation.h"
 #include "Agent/Execution/BookEdits.h"
 #include "Agent/Execution/IBookWorkspace.h"
 
@@ -369,8 +370,9 @@ QString primaryLanguage(const QString &tag)
 
 } // namespace
 
-QJsonObject inspectStructure(IBookWorkspace *workspace)
+QJsonObject inspectStructure(IBookWorkspace *workspace, const AgentCancellation *cancellation, bool *cancelled)
 {
+    if (cancelled) *cancelled = false;
     QHash<QString, QJsonObject> by_path;
     QHash<QString, QString> kind_by_path;
     QString nav_base;
@@ -439,6 +441,10 @@ QJsonObject inspectStructure(IBookWorkspace *workspace)
     int previous_toc_index = -1;
     const QJsonArray spine = workspace->spine();
     for (int position = 0; position < spine.size(); ++position) {
+        if (cancellation && cancellation->isCancelled()) {
+            if (cancelled) *cancelled = true;
+            return QJsonObject();
+        }
         const QJsonObject item = spine.at(position).toObject();
         const QString path = item.value(QStringLiteral("book_path")).toString();
         const QString id = item.value(QStringLiteral("resource_id")).toString();
@@ -587,12 +593,11 @@ QJsonObject inspectStructure(IBookWorkspace *workspace)
             previous_toc_index = qMax(previous_toc_index, hits.first().index);
         }
     }
+    QSet<QString> spine_paths;
+    for (const QJsonValue &value : spine) spine_paths.insert(value.toObject().value(QStringLiteral("book_path")).toString());
     for (auto it = toc_by_path.constBegin(); it != toc_by_path.constEnd(); ++it) {
-        bool in_spine = false;
-        for (const QJsonValue &value : spine) {
-            if (value.toObject().value(QStringLiteral("book_path")).toString() == it.key()) in_spine = true;
-        }
-        if (!in_spine && by_path.value(it.key()).value(QStringLiteral("kind")).toString() == QLatin1String("xhtml")) {
+        if (!spine_paths.contains(it.key())
+            && by_path.value(it.key()).value(QStringLiteral("kind")).toString() == QLatin1String("xhtml")) {
             differences.append(QJsonObject {
                 { QStringLiteral("kind"), QStringLiteral("toc_target_not_in_spine") },
                 { QStringLiteral("book_path"), it.key() },
@@ -659,8 +664,10 @@ QString preflightSnapshotDigest(IBookWorkspace *workspace)
     return QString::fromLatin1(hash.result().toHex());
 }
 
-QJsonArray preflightIssues(IBookWorkspace *workspace, const QString &profile_id)
+QJsonArray preflightIssues(IBookWorkspace *workspace, const QString &profile_id,
+                           const AgentCancellation *cancellation, bool *cancelled)
 {
+    if (cancelled) *cancelled = false;
     const QStringList rule_list = profileRules(profile_id);
     const QSet<QString> enabled(rule_list.cbegin(), rule_list.cend());
     QList<Issue> issues;
@@ -738,6 +745,10 @@ QJsonArray preflightIssues(IBookWorkspace *workspace, const QString &profile_id)
     QHash<QString, bool> wellformed_by_path;
     for (const BookFile &file : files) {
         if (file.kind != QLatin1String("xhtml")) continue;
+        if (cancellation && cancellation->isCancelled()) {
+            if (cancelled) *cancelled = true;
+            return QJsonArray();
+        }
         const QString text = workspace->workingText(file.id);
         const XhtmlScan scan = scanXhtml(file, text, epub3);
         ids_by_path.insert(file.path, scan.ids);
@@ -987,7 +998,9 @@ ToolResult PreflightAudit::run(IBookWorkspace *workspace, const QJsonObject &arg
                                    QStringLiteral("Unknown profile_id; call preflight.profiles"));
     }
     const QString digest_before = preflightSnapshotDigest(workspace);
-    const QJsonArray found = preflightIssues(workspace, profile);
+    bool cancelled = false;
+    const QJsonArray found = preflightIssues(workspace, profile, m_cancellation, &cancelled);
+    if (cancelled) return ToolResult::cancelled();
     if (preflightSnapshotDigest(workspace) != digest_before) {
         return ToolResult::failure(QStringLiteral("PREFLIGHT_SOURCE_CHANGED"),
                                    QStringLiteral("The book changed while preflight was running; run it again"));
@@ -1329,6 +1342,21 @@ ToolResult PreflightAudit::applyFixes(IBookWorkspace *workspace, const QJsonObje
         { QStringLiteral("changes"), changes },
         { QStringLiteral("next"), QStringLiteral("Read every transaction.preview page, then transaction.commit; afterwards run preflight.run again.") }
     }, false, true);
+}
+
+ToolResult PreflightAudit::structure(IBookWorkspace *workspace, QString *snapshot_digest, QJsonObject *result)
+{
+    const QString digest = preflightSnapshotDigest(workspace);
+    if (digest != m_structureDigest || m_structure.isEmpty()) {
+        bool cancelled = false;
+        const QJsonObject fresh = inspectStructure(workspace, m_cancellation, &cancelled);
+        if (cancelled) return ToolResult::cancelled();
+        m_structure = fresh;
+        m_structureDigest = digest;
+    }
+    *snapshot_digest = m_structureDigest;
+    *result = m_structure;
+    return ToolResult::success(QJsonObject());
 }
 
 } // namespace SigilAgent

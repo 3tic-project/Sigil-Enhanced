@@ -3,8 +3,10 @@
 
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QElapsedTimer>
 #include <QSet>
 
+#include "Agent/Core/AgentCancellation.h"
 #include "Agent/Execution/MemoryBookWorkspace.h"
 #include "Agent/Execution/PreflightAudit.h"
 #include "Agent/Security/PermissionPolicy.h"
@@ -422,5 +424,68 @@ int main()
     Require(!kinds.contains(QStringLiteral("toc_label_mismatch@Section001.xhtml")),
             "spacing-only differences between TOC label and heading are not mismatches");
     Require(novel.revision() == 0 || !novel.hasOpenTransaction(), "structure inspection must not open a transaction");
+
+    MemoryBookWorkspace large;
+    large.setEpubVersion(QStringLiteral("3.0"));
+    large.setMetadata(QJsonObject { { QStringLiteral("title"), QStringLiteral("大书") },
+                                    { QStringLiteral("language"), QStringLiteral("zh") },
+                                    { QStringLiteral("identifier"), QStringLiteral("urn:x") } });
+    QStringList large_spine;
+    QJsonArray large_toc;
+    for (int i = 0; i < 3000; ++i) {
+        const QString id = QStringLiteral("c%1").arg(i);
+        const QString file = QStringLiteral("c%1.xhtml").arg(i);
+        large.addResource(text(id, QStringLiteral("OEBPS/Text/") + file, QStringLiteral("xhtml"),
+            QStringLiteral("application/xhtml+xml"),
+            page(QStringLiteral("zh"), QStringLiteral("<h1 id=\"h\">第%1章</h1>\n<p>%2</p>\n<p><a href=\"c%3.xhtml#h\">下一章</a></p>")
+                     .arg(i + 1).arg(QString(1200, QChar(0x6587))).arg((i + 1) % 3000))));
+        large_spine.append(id);
+        large_toc.append(QJsonObject { { QStringLiteral("label"), QStringLiteral("第%1章").arg(i + 1) },
+                                       { QStringLiteral("href"), QStringLiteral("OEBPS/Text/") + file } });
+    }
+    large.addResource(text(QStringLiteral("css"), QStringLiteral("OEBPS/Styles/style.css"), QStringLiteral("css"),
+                           QStringLiteral("text/css"), QStringLiteral("body{}")));
+    large.setSpine(large_spine);
+    large.setToc(large_toc);
+    ToolRegistry large_tools;
+    registerBookTools(&large_tools, &large);
+    QElapsedTimer timer;
+    timer.start();
+    const ToolResult large_run = large_tools.find(QStringLiteral("preflight.run"))->execute(QJsonObject());
+    const qint64 run_ms = timer.restart();
+    const ToolResult large_page = large_tools.find(QStringLiteral("preflight.issues"))->execute(QJsonObject {
+        { QStringLiteral("run_id"), large_run.data.value(QStringLiteral("run_id")) } });
+    const qint64 page_ms = timer.restart();
+    const ToolResult large_structure = large_tools.find(QStringLiteral("structure.inspect"))->execute(QJsonObject());
+    const qint64 structure_ms = timer.elapsed();
+    std::cout << "large book 3000 XHTML: preflight.run " << run_ms << " ms, issues page " << page_ms
+              << " ms, structure.inspect " << structure_ms << " ms, issues=" << large_run.data.value(QStringLiteral("total_count")).toInt()
+              << ", structure page=" << large_structure.data.value(QStringLiteral("returned_counts")).toObject()
+                     .value(QStringLiteral("pages")).toInt() << '\n';
+    Require(large_run.ok && large_page.ok && large_structure.ok
+                && large_structure.data.value(QStringLiteral("has_more")).toBool()
+                && large_structure.data.value(QStringLiteral("total_counts")).toObject().value(QStringLiteral("pages")).toInt() == 3000,
+            "large books must be inspected completely and returned in bounded pages");
+    timer.restart();
+    const ToolResult large_next = large_tools.find(QStringLiteral("structure.inspect"))->execute(QJsonObject {
+        { QStringLiteral("offset"), large_structure.data.value(QStringLiteral("next_offset")) } });
+    const qint64 next_ms = timer.elapsed();
+    std::cout << "structure.inspect continuation page " << next_ms << " ms\n";
+    Require(large_next.ok && large_next.data.value(QStringLiteral("snapshot_digest"))
+                == large_structure.data.value(QStringLiteral("snapshot_digest"))
+                && large_next.data.value(QStringLiteral("pages")).toArray().first().toObject()
+                    .value(QStringLiteral("spine_index")).toInt() == 100
+                && next_ms < structure_ms,
+            "structure continuation pages must reuse the unchanged snapshot");
+
+    AgentCancellation cancellation;
+    ToolRegistry cancel_tools;
+    registerBookTools(&cancel_tools, &large, nullptr, &cancellation);
+    cancellation.request();
+    const ToolResult cancelled_run = cancel_tools.find(QStringLiteral("preflight.run"))->execute(QJsonObject());
+    const ToolResult cancelled_structure = cancel_tools.find(QStringLiteral("structure.inspect"))->execute(QJsonObject());
+    Require(!cancelled_run.ok && cancelled_run.code == QStringLiteral("CANCELLED")
+                && !cancelled_structure.ok && cancelled_structure.code == QStringLiteral("CANCELLED"),
+            "Stop must interrupt whole-book preflight and structure scans");
     return EXIT_SUCCESS;
 }

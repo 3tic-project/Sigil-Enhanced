@@ -857,12 +857,13 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
     return QStringLiteral("Run %1 on the current book.").arg(name);
 }
 
-void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentSession *session)
+void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentSession *session,
+                       AgentCancellation *cancellation)
 {
     if (!registry || !workspace) return;
 
     const auto proof_audit = std::make_shared<ProofAudit>();
-    const auto preflight = std::make_shared<PreflightAudit>();
+    const auto preflight = std::make_shared<PreflightAudit>(cancellation);
 
     add(registry, QStringLiteral("preflight.profiles"),
         QStringLiteral("List versioned release-preflight profiles and the local rules each one runs. EPUBCheck and Ace are listed as external validators; they are reported as not_run unless an adapter actually ran them."),
@@ -930,10 +931,14 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
         QStringLiteral("Read-only structure map in spine order. Each page gets a role candidate (cover, titlepage, toc, illustration, credits, synopsis, prologue, chapter, epilogue, afterword, body or unknown) with confidence and the evidence that decided it (epub:type, heading text, image-only layout, file name), its first h1-h6 heading with line, and its TOC entry. differences lists body pages missing from the TOC or without a heading, TOC labels that differ from the page heading, TOC order that disagrees with the spine, TOC targets outside the spine, and missing TOC targets. Ruby annotations are ignored. Uses unsaved and staged text. pages and differences share offset pagination; follow next_offset while has_more is true. Roles are candidates for the editor, not facts."),
         ToolRisk::Read, false, false,
         paginationSchema(DEFAULT_DIAGNOSTIC_PAGE_SIZE, MAX_DIAGNOSTIC_PAGE_SIZE),
-        [workspace](const QJsonObject &arguments) {
+        [workspace, preflight](const QJsonObject &arguments) {
+            QString digest;
+            QJsonObject structure;
+            const ToolResult built = preflight->structure(workspace, &digest, &structure);
+            if (!built.ok) return built;
+            structure.insert(QStringLiteral("snapshot_digest"), digest);
             return ToolResult::success(paginatedArrays(
-                inspectStructure(workspace),
-                { QStringLiteral("pages"), QStringLiteral("differences") },
+                structure, { QStringLiteral("pages"), QStringLiteral("differences") },
                 arguments, DEFAULT_DIAGNOSTIC_PAGE_SIZE, MAX_DIAGNOSTIC_PAGE_SIZE));
         });
 
