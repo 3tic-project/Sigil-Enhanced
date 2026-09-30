@@ -105,6 +105,11 @@ PluginRunner::PluginRunner(TabManager *tabMgr, QWidget *parent)
 
 PluginRunner::~PluginRunner()
 {
+    // m_folder is destroyed before m_process; the plugin must not keep files open in it.
+    if (m_process.state() != QProcess::NotRunning) {
+        m_process.kill();
+        m_process.waitForFinished(2000);
+    }
 }
 
 QStringList PluginRunner::SupportedEngines()
