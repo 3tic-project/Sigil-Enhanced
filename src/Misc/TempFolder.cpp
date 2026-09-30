@@ -22,8 +22,8 @@
 
 #include <QDir>
 #include <QDebug>
-#include <QThread>
 
+#include "Misc/TempCleanup.h"
 #include "Misc/TempFolder.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/Utility.h"
@@ -56,16 +56,9 @@ TempFolder::TempFolder(const QString base_path)
 
 TempFolder::~TempFolder()
 {
-    // The last window may exit the process immediately after releasing its Book.
-    // Finish removal here so the worker directory cannot be left half-deleted.
-    if (!m_tempDir.isValid()) return;
-    const QString path = m_tempDir.path();
-    for (int attempt = 0; attempt < 5; ++attempt) {
-        if (m_tempDir.remove() || !QDir(path).exists()) return;
-        if (attempt < 4) QThread::msleep(100);
+    if (m_tempDir.isValid()) {
+        TempCleanup::instance().Remove(m_tempDir.path());
     }
-    qWarning() << "Could not remove temporary directory after five attempts:"
-               << path << m_tempDir.errorString();
 }
 
 

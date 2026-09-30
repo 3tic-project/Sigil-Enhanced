@@ -45,7 +45,8 @@ public:
     TempFolder(const QString base_path);
 
     /**
-     * Destructor. Deletes the temp folder and its contents before returning.
+     * Destructor. Deletes the temp folder, or hands it to TempCleanup
+     * when something still holds it open.
      */
     ~TempFolder();
 

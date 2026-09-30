@@ -124,6 +124,9 @@ public:
      * Get path to temp folder home
      */
     QString tempFolderHome();
+
+    // Temporary directories that were still in use when Sigil last exited.
+    QStringList pendingTempCleanup();
     
     /**
      * Whether automatic Spellcheck is enabled or not
@@ -368,6 +371,7 @@ public slots:
      * Set path to temp folder home
      */
     void setTempFolderHome(const QString &path);
+    void setPendingTempCleanup(const QStringList &paths);
 
     /**
      * Set whether automatic Spellcheck is enabled

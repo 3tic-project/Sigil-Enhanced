@@ -724,6 +724,8 @@ set( MISC_FILES
     Misc/FontObfuscation.h
     Misc/TempFolder.cpp
     Misc/TempFolder.h
+    Misc/TempCleanup.cpp
+    Misc/TempCleanup.h
     Misc/OpenExternally.cpp
     Misc/OpenExternally.h
     Misc/TOCHTMLWriter.cpp

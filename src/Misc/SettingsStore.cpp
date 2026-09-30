@@ -90,6 +90,7 @@ static QString KEY_CSS_EPUB2_VALIDATION_SPEC = SETTINGS_GROUP + "/" + "css_epub2
 static QString KEY_CSS_EPUB3_VALIDATION_SPEC = SETTINGS_GROUP + "/" + "css_epub3_validation_spec";
 
 static QString KEY_TEMP_FOLDER = SETTINGS_GROUP + "/" + "temp_folder_path";
+static QString KEY_PENDING_TEMP_CLEANUP = SETTINGS_GROUP + "/" + "pending_temp_cleanup";
 
 static QString KEY_APPEARANCE_PREFS_TAB_INDEX = SETTINGS_GROUP + "/" + "appearance_prefs_tab_index";
 static QString KEY_PREVIEW_FONT_FAMILY_STANDARD = SETTINGS_GROUP + "/" + "preview_font_family_standard";
@@ -488,6 +489,12 @@ QString SettingsStore::tempFolderHome()
         }
     }
     return temp_path;
+}
+
+QStringList SettingsStore::pendingTempCleanup()
+{
+    clearSettingsGroup();
+    return value(KEY_PENDING_TEMP_CLEANUP, QStringList()).toStringList();
 }
 
 int SettingsStore::appearancePrefsTabIndex() {
@@ -914,6 +921,16 @@ void SettingsStore::setTempFolderHome(const QString &path)
         setValue(KEY_TEMP_FOLDER, path);
     } else {
         setValue(KEY_TEMP_FOLDER, "<SIGIL_DEFAULT_TEMP_HOME>" );
+    }
+}
+
+void SettingsStore::setPendingTempCleanup(const QStringList &paths)
+{
+    clearSettingsGroup();
+    if (paths.isEmpty()) {
+        remove(KEY_PENDING_TEMP_CLEANUP);
+    } else {
+        setValue(KEY_PENDING_TEMP_CLEANUP, paths);
     }
 }
 

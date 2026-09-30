@@ -2,6 +2,7 @@ Sigil-Enhanced-2.8.5.E12
    Bug Fixes
      - Waited for the extracted EPUB workspace to be removed when closing the book, including when the last window closes.
      - Made Edit TOC delete every selected entry in one action instead of only one entry.
+     - Kept retrying removal of temporary folders that are still in use (open files, the working directory, read-only folders left by plugins) and, on exit, wait in a dialog until they are gone; folders left after "Exit Without Waiting" are removed on the next start.
 
    New Features
      - Rendered Native Agent conversations as safe Markdown. Links to current-book files and XHTML source lines open Code View after checking that the target is still current.
@@ -12,6 +13,7 @@ Sigil-Enhanced-2.8.5.E12
 
    Build/Testing
      - Added integration coverage for closing a book and removing its extracted workspace; expanded TOC and Native Agent coverage.
+     - Made the workspace-removal test catch the old behavior: large-book exit timing (fails on E11), plugin read-only folders and held files with the exit dialog (fail on E12), plus next-start cleanup and Python holds.
 
 Sigil-Enhanced-2.8.5.E11
    Bug Fixes

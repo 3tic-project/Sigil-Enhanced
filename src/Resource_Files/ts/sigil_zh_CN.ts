@@ -25344,6 +25344,14 @@ Use if you edit any HTML files while Spellcheck is open.</source>
     </message>
 </context>
 <context>
+    <name>TempCleanup</name>
+    <message><source>Cleaning Up Temporary Files</source><translation>正在清理临时文件</translation></message>
+    <message><source>Sigil is waiting for its temporary working files to be released so they can be deleted. It will exit when cleanup finishes.</source><translation>Sigil 正在等待临时工作文件被释放，以便将其删除。清理完成后将自动退出。</translation></message>
+    <message><source>If you exit now, Sigil will try again the next time it starts.</source><translation>如果现在退出，Sigil 会在下次启动时再次尝试清理。</translation></message>
+    <message><source>Exit Without Waiting</source><translation>不等待，直接退出</translation></message>
+    <message><source>Folders still in use: %1</source><translation>仍被占用的文件夹：%1</translation></message>
+</context>
+<context>
     <name>TextTab</name>
     <message>
         <location filename="../../Tabs/TextTab.cpp" line="405"/>
