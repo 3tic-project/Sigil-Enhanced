@@ -4,6 +4,7 @@ Sigil-Enhanced-2.8.5.E12
      - Made Edit TOC delete every selected entry in one action instead of only one entry.
      - Kept retrying removal of temporary folders that are still in use (open files, the working directory, read-only folders left by plugins) and, on exit, wait in a dialog until they are gone; folders left after "Exit Without Waiting" are removed on the next start.
      - Released embedded-Python file handles and working directory inside a temporary folder before retrying its removal, and kept Live plugin materialized files until the plugin process lets go of them.
+     - Stopped Code View from starting a text drag when pressing inside the selection (the drag crashed on Windows and Code View already rejects plain-text drops); the press now starts a new selection. SIGIL_ALLOW_CODEVIEW_DROP restores the old behavior.
 
    New Features
      - Rendered Native Agent conversations as safe Markdown. Links to current-book files and XHTML source lines open Code View after checking that the target is still current.

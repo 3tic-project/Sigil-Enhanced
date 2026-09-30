@@ -1528,6 +1528,19 @@ void CodeViewEditor::mousePressEvent(QMouseEvent *event)
         }
     }
 
+    // Qt's text drag from Code View crashes on Windows, and plain-text drops are rejected anyway.
+    if (event->button() == Qt::LeftButton && !(event->modifiers() & Qt::ShiftModifier)
+        && !qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP")) {
+        const QTextCursor selection = textCursor();
+        const int position = cursorForPosition(event->pos()).position();
+        if (selection.hasSelection() && position >= selection.selectionStart()
+            && position <= selection.selectionEnd()) {
+            QTextCursor collapsed = selection;
+            collapsed.setPosition(position);
+            setTextCursor(collapsed);
+        }
+    }
+
     // Propagate to base class
     QPlainTextEdit::mousePressEvent(event);
     // Allow open link with Ctrl-mouseclick - after propagation sets cursor position

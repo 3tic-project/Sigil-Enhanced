@@ -67,6 +67,11 @@ modified 状态。
 位置与 Qt 编辑器一致使用 UTF-16 code units，因此 emoji、扩展汉字和组合字符不会
 让元素边界偏移。Preview DOM 选择不属于当前交付范围。
 
+在已选中的文本内按下鼠标左键会取消原选择并从按下位置开始新选择，不再启动 Qt 的
+文本拖拽：该拖拽在 Windows 上会导致 Code View 崩溃，而 Code View 本来也不接受纯文本
+拖放（上游 Sigil 2.0.0 起如此）。从 Book Browser 拖入资源引用不受影响。设置环境变量
+`SIGIL_ALLOW_CODEVIEW_DROP` 可恢复旧的拖拽与纯文本拖放行为，但不受支持。
+
 ## 工程结构与性能
 
 `CodeViewSelectionPolicy` 是不依赖 QWidget 的范围计算层。它复用编辑器已有的
