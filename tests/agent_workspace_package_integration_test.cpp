@@ -2,6 +2,7 @@
 
 #include <QFileInfo>
 #include <QFile>
+#include <QJsonDocument>
 #include <QElapsedTimer>
 #include <QRegularExpression>
 #include <QSignalMapper>
@@ -16,7 +17,11 @@
 
 #include "Agent/Execution/SigilBookWorkspace.h"
 #include "Agent/Tools/BookTools.h"
+#include "Agent/Tools/DivParagraphTools.h"
+#include "Agent/Tools/TocTools.h"
 #include "Agent/Tools/ToolRegistry.h"
+#include "Agent/Core/AgentSession.h"
+#include "Agent/Core/AgentSkills.h"
 #include "Agent/Core/PromptAssembler.h"
 #include "Agent/UI/AgentDock.h"
 #include "BookManipulation/Book.h"
@@ -143,6 +148,179 @@ int main(int argc, char **argv)
             return 0;
         }
 
+        const QString typesetSample = qEnvironmentVariable("SIGIL_TYPESET_SAMPLE_EPUB");
+        if (!typesetSample.isEmpty()) {
+            QTemporaryDir sampleCopy;
+            Require(sampleCopy.isValid(), "Could not create a private typeset copy");
+            const QString copiedPath = sampleCopy.filePath(QStringLiteral("typeset-sample.epub"));
+            Require(QFile::copy(typesetSample, copiedPath), "Could not copy the typeset sample");
+            MainWindow sampleWindow(copiedPath);
+            const QSharedPointer<Book> sampleBook = sampleWindow.GetCurrentBook();
+            SigilAgent::SigilBookWorkspace sampleWorkspace;
+            sampleWorkspace.setBook(sampleBook);
+            SigilAgent::AgentSession sampleSession;
+            SigilAgent::ToolRegistry sampleTools;
+            SigilAgent::registerBookTools(&sampleTools, &sampleWorkspace, &sampleSession);
+            auto call = [&](const QString &name, const QJsonObject &arguments) {
+                const SigilAgent::ToolResult result = sampleTools.find(name)->execute(arguments);
+                if (!result.ok) {
+                    std::cerr << name.toStdString() << " failed: " << result.code.toStdString()
+                              << " " << result.message.toStdString() << '\n';
+                }
+                Require(result.ok, "Typeset sample tool failed");
+                return result.data;
+            };
+            const QJsonObject parsed = call(QStringLiteral("manuscript.parse"), QJsonObject());
+            const int chapters = parsed.value(QStringLiteral("chapter_count")).toInt();
+            const QJsonObject typeset = call(QStringLiteral("content.typeset_from_manuscript"), QJsonObject());
+            Require(typeset.value(QStringLiteral("chapters_filled")).toInt() == chapters,
+                    "Typeset sample did not fill every parsed chapter");
+            call(QStringLiteral("transaction.preview"), QJsonObject());
+            call(QStringLiteral("transaction.commit"), QJsonObject {
+                { QStringLiteral("expected_book_revision"), static_cast<qint64>(sampleWorkspace.revision()) }
+            });
+            int bodyImages = 0;
+            for (const QJsonValue &value : sampleWorkspace.resources()) {
+                const QJsonObject resource = value.toObject();
+                if (!resource.value(QStringLiteral("book_path")).toString().contains(QStringLiteral("Section"))) continue;
+                bodyImages += sampleWorkspace.resourceText(resource.value(QStringLiteral("resource_id")).toString())
+                    .count(QStringLiteral("<img "));
+            }
+            const QJsonObject check = call(QStringLiteral("book.check"), QJsonObject {
+                { QStringLiteral("limit"), 200 }
+            });
+            QJsonArray brokenImages;
+            for (const QJsonValue &value : check.value(QStringLiteral("issues")).toArray()) {
+                if (value.toObject().value(QStringLiteral("code")).toString() == QLatin1String("BROKEN_IMAGE")) {
+                    brokenImages.append(value);
+                }
+            }
+            const QByteArray unplaced = QJsonDocument(
+                typeset.value(QStringLiteral("unplaced_images")).toArray()).toJson(QJsonDocument::Compact);
+            const QByteArray missing = QJsonDocument(
+                typeset.value(QStringLiteral("missing_images")).toArray()).toJson(QJsonDocument::Compact);
+            std::cout << "Typeset sample: chapters=" << chapters
+                      << ", body images=" << bodyImages
+                      << ", unplaced=" << unplaced.constData()
+                      << ", missing=" << missing.constData()
+                      << ", broken images=" << brokenImages.size()
+                      << ", warnings=" << QJsonDocument(typeset.value(QStringLiteral("warnings")).toArray()).toJson(QJsonDocument::Compact).constData() << '\n';
+            Require(brokenImages.isEmpty(), "Typeset sample produced broken image references");
+            QString tocPageId;
+            for (const QJsonValue &value : sampleWorkspace.resources()) {
+                const QJsonObject resource = value.toObject();
+                if (resource.value(QStringLiteral("book_path")).toString().endsWith(QStringLiteral("Text/summary.xhtml"))) {
+                    tocPageId = resource.value(QStringLiteral("resource_id")).toString();
+                }
+            }
+            if (!tocPageId.isEmpty()) {
+                const QJsonObject deleted = call(QStringLiteral("resource.delete"), QJsonObject {
+                    { QStringLiteral("resource_id"), tocPageId } });
+                std::cout << "Delete TOC page: toc_references="
+                          << deleted.value(QStringLiteral("toc_references")).toArray().size() << '\n';
+                Require(!deleted.value(QStringLiteral("toc_references")).toArray().isEmpty(),
+                        "Deleting a page listed in the real NCX must report its TOC entry");
+                call(QStringLiteral("transaction.rollback"), QJsonObject());
+            }
+            const QJsonObject preflight = call(QStringLiteral("preflight.run"), QJsonObject {
+                { QStringLiteral("limit"), 200 }
+            });
+            std::cout << "Preflight sample: total=" << preflight.value(QStringLiteral("total_count")).toInt()
+                      << " severity=" << QJsonDocument(preflight.value(QStringLiteral("severity_counts")).toObject())
+                             .toJson(QJsonDocument::Compact).constData()
+                      << " rules=" << QJsonDocument(preflight.value(QStringLiteral("rule_counts")).toObject())
+                             .toJson(QJsonDocument::Compact).constData() << '\n';
+            for (const QJsonValue &value : preflight.value(QStringLiteral("issues")).toArray()) {
+                const QJsonObject issue = value.toObject();
+                if (issue.value(QStringLiteral("severity")).toString() == QLatin1String("info")) continue;
+                std::cout << "  " << issue.value(QStringLiteral("rule_id")).toString().toStdString() << ' '
+                          << issue.value(QStringLiteral("book_path")).toString().toStdString() << ":L"
+                          << issue.value(QStringLiteral("line")).toInt() << ' '
+                          << issue.value(QStringLiteral("evidence")).toString().toStdString() << '\n';
+            }
+            const QJsonObject structure = call(QStringLiteral("structure.inspect"), QJsonObject {
+                { QStringLiteral("limit"), 200 } });
+            std::cout << "Structure sample: roles=" << QJsonDocument(structure.value(QStringLiteral("role_counts")).toObject())
+                             .toJson(QJsonDocument::Compact).constData() << '\n';
+            for (const QJsonValue &value : structure.value(QStringLiteral("differences")).toArray()) {
+                const QJsonObject difference = value.toObject();
+                std::cout << "  " << difference.value(QStringLiteral("kind")).toString().toStdString() << ' '
+                          << difference.value(QStringLiteral("book_path")).toString().toStdString() << ' '
+                          << difference.value(QStringLiteral("toc_label")).toString().toStdString() << " | "
+                          << difference.value(QStringLiteral("heading")).toString().toStdString() << '\n';
+            }
+            QJsonObject decorative;
+            for (const QJsonValue &value : preflight.value(QStringLiteral("issues")).toArray()) {
+                const QJsonObject issue = value.toObject();
+                if (issue.value(QStringLiteral("rule_id")).toString() != QLatin1String("IMG_ALT_FILENAME")) continue;
+                const QString evidence = issue.value(QStringLiteral("evidence")).toString();
+                const QString src = evidence.section(QStringLiteral("src=\""), 1).section(QLatin1Char('"'), 0, 0);
+                const QString page = issue.value(QStringLiteral("book_path")).toString();
+                QStringList parts = page.section(QLatin1Char('/'), 0, -2).split(QLatin1Char('/'));
+                for (const QString &part : src.split(QLatin1Char('/'))) {
+                    if (part == QLatin1String("..")) parts.removeLast();
+                    else parts.append(part);
+                }
+                decorative.insert(parts.join(QLatin1Char('/')), QString());
+            }
+            if (!decorative.isEmpty()) {
+                const QJsonObject rerun = call(QStringLiteral("preflight.run"), QJsonObject { { QStringLiteral("limit"), 1 } });
+                const QJsonObject applied = call(QStringLiteral("preflight.apply_fixes"), QJsonObject {
+                    { QStringLiteral("run_id"), rerun.value(QStringLiteral("run_id")) },
+                    { QStringLiteral("image_alts"), decorative } });
+                call(QStringLiteral("transaction.preview"), QJsonObject());
+                call(QStringLiteral("transaction.commit"), QJsonObject {
+                    { QStringLiteral("expected_book_revision"), static_cast<qint64>(sampleWorkspace.revision()) } });
+                const QJsonObject after = call(QStringLiteral("preflight.run"), QJsonObject { { QStringLiteral("limit"), 200 } });
+                std::cout << "Alt decisions: images=" << decorative.size()
+                          << " changes=" << applied.value(QStringLiteral("change_count")).toInt()
+                          << " preflight after=" << QJsonDocument(after.value(QStringLiteral("rule_counts")).toObject())
+                                 .toJson(QJsonDocument::Compact).constData() << '\n';
+                Require(!after.value(QStringLiteral("rule_counts")).toObject().contains(QStringLiteral("IMG_ALT_FILENAME")),
+                        "Committed alt decisions must clear the file-name alt finding on the real book");
+            }
+            QString chapterId;
+            for (const QJsonValue &value : sampleWorkspace.resources()) {
+                const QJsonObject resource = value.toObject();
+                if (resource.value(QStringLiteral("book_path")).toString().endsWith(QStringLiteral("Section002.xhtml"))) {
+                    chapterId = resource.value(QStringLiteral("resource_id")).toString();
+                }
+            }
+            const QJsonObject fragment = call(QStringLiteral("resource.read_fragment"), QJsonObject {
+                { QStringLiteral("resource_id"), chapterId }, { QStringLiteral("limit"), 4000 } });
+            QJsonArray items;
+            for (const QJsonValue &value : fragment.value(QStringLiteral("lines")).toArray()) {
+                const QJsonObject line = value.toObject();
+                const QString text = line.value(QStringLiteral("text")).toString().trimmed();
+                if (!text.startsWith(QStringLiteral("<p>")) || !text.endsWith(QStringLiteral("</p>"))
+                    || text == QLatin1String("<p><br/></p>")) {
+                    continue;
+                }
+                items.append(QJsonObject {
+                    { QStringLiteral("anchor_text"), text },
+                    { QStringLiteral("start_line"), line.value(QStringLiteral("line")).toInt() },
+                    { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">译文 %1</p>").arg(items.size() + 1) } });
+                if (items.size() == 20) break;
+            }
+            const QJsonObject inserted = call(QStringLiteral("content.insert_after_blocks"), QJsonObject {
+                { QStringLiteral("resource_id"), chapterId },
+                { QStringLiteral("expected_resource_revision"), fragment.value(QStringLiteral("resource_revision")) },
+                { QStringLiteral("items"), items } });
+            call(QStringLiteral("transaction.commit"), QJsonObject {
+                { QStringLiteral("expected_book_revision"), static_cast<qint64>(sampleWorkspace.revision()) } });
+            const QJsonObject final_check = call(QStringLiteral("preflight.run"), QJsonObject { { QStringLiteral("limit"), 200 } });
+            const int translations = sampleWorkspace.resourceText(chapterId).count(QStringLiteral("class=\"zh-trans\""));
+            std::cout << "Block inserts: items=" << items.size()
+                      << " inserted=" << inserted.value(QStringLiteral("inserted_count")).toInt()
+                      << " committed translations=" << translations
+                      << " preflight=" << QJsonDocument(final_check.value(QStringLiteral("rule_counts")).toObject())
+                             .toJson(QJsonDocument::Compact).constData() << '\n';
+            Require(items.size() >= 10 && translations == items.size()
+                        && !final_check.value(QStringLiteral("rule_counts")).toObject().contains(QStringLiteral("XHTML_NOT_WELLFORMED")),
+                    "Batch block insertion must commit every translation and keep the real chapter well-formed");
+            return 0;
+        }
+
         MainWindow window(QString::fromLocal8Bit(argv[2]));
         const QSharedPointer<Book> book = window.GetCurrentBook();
         OPFResource *opf = book->GetOPF();
@@ -233,7 +411,58 @@ int main(int argc, char **argv)
                     && !pastEndFragment.data.value(QStringLiteral("truncated")).toBool(),
                 "Sigil fragment offsets past EOF did not normalize to an empty tail");
         SigilAgent::ToolRegistry liveTools;
-        SigilAgent::registerBookTools(&liveTools, &workspace);
+        SigilAgent::AgentSession liveSession;
+        SigilAgent::registerBookTools(&liveTools, &workspace, &liveSession);
+        SigilAgent::registerDivParagraphTools(&liveTools, &workspace);
+        SigilAgent::registerTocTools(&liveTools, &workspace);
+        const quint64 skillRevision = workspace.revision();
+        const bool skillModified = book->IsModified();
+        const QList<SigilAgent::AgentSkill> liveSkills = SigilAgent::loadAgentSkills();
+        int selectedSkillRequests = 0;
+        int bundledSkillCount = 0;
+        for (const SigilAgent::AgentSkill &skill : liveSkills) {
+            if (skill.name != QLatin1String("ln-template-typeset")
+                && skill.name != QLatin1String("book-structure")
+                && skill.name != QLatin1String("paragraph-normalization")
+                && skill.name != QLatin1String("release-preflight")) continue;
+            ++bundledSkillCount;
+            SigilAgent::AgentSession skillSession;
+            skillSession.append(SigilAgent::AgentEventType::UserMessage, QJsonObject {
+                { QStringLiteral("text"), skill.name }
+            });
+            for (const SigilAgent::AgentMode mode : {
+                     SigilAgent::AgentMode::Ask, SigilAgent::AgentMode::Plan,
+                     SigilAgent::AgentMode::Edit, SigilAgent::AgentMode::Auto }) {
+                const SigilAgent::ModelRequest skillRequest = SigilAgent::PromptAssembler().build(
+                    skillSession, &workspace, liveTools, mode, QStringLiteral("test"),
+                    false, QString(), QStringList());
+                const bool editable = skill.name == QLatin1String("release-preflight")
+                    || mode == SigilAgent::AgentMode::Edit
+                    || mode == SigilAgent::AgentMode::Auto;
+                Require(skillRequest.messages.first().content.contains(
+                            QStringLiteral("# Skill: %1\n").arg(skill.name)) == editable,
+                        "Live host skill injection disagrees with the policy-filtered tool catalog");
+                const QJsonArray decisions = skillRequest.toolContext.value(QStringLiteral("skills"))
+                    .toObject().value(QStringLiteral("decisions")).toArray();
+                bool foundDecision = false;
+                for (const QJsonValue &value : decisions) {
+                    const QJsonObject decision = value.toObject();
+                    if (decision.value(QStringLiteral("name")).toString() != skill.name) continue;
+                    foundDecision = true;
+                    Require(decision.value(QStringLiteral("state")).toString()
+                                == (editable ? QStringLiteral("selected") : QStringLiteral("unavailable")),
+                            "Live host must record the actual skill availability decision");
+                    if (editable) ++selectedSkillRequests;
+                }
+                Require(foundDecision, "Live host request lost skill routing diagnostics");
+            }
+        }
+        Require(bundledSkillCount == 4 && selectedSkillRequests == 10
+                    && workspace.revision() == skillRevision && book->IsModified() == skillModified,
+                "Live skill routing must preserve all bundled recipes without changing the book");
+        std::cout << "Live skills: " << bundledSkillCount
+                  << ", modes=4, selected requests=" << selectedSkillRequests
+                  << ", book unchanged\n";
         const quint64 readRevision = workspace.revision();
         const SigilAgent::ToolResult liveSearch = liveTools.find(QStringLiteral("book.search"))->execute(QJsonObject {
             { QStringLiteral("query"), QStringLiteral("Original paragraph") },

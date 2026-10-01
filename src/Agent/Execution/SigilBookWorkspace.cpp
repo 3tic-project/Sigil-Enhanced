@@ -1516,12 +1516,14 @@ BookOpResult SigilBookWorkspace::deleteResource(const QString &resource_id)
         }
         if (!m_stagedRemovals.contains(id)) m_stagedRemovals.append(id);
         if (m_hasStagedSpine) m_stagedSpine.removeAll(id);
-        return BookOpResult::success(QJsonObject {
+        QJsonObject data {
             { QStringLiteral("resource_id"), id },
             { QStringLiteral("book_path"), resource->GetRelativePath() },
             { QStringLiteral("staged"), true },
             { QStringLiteral("removed"), true }
-        }, false, true);
+        };
+        annotateTocReferences(&data, m_hasStagedToc ? m_stagedToc : toc(), resource->GetRelativePath());
+        return BookOpResult::success(data, false, true);
     });
 }
 

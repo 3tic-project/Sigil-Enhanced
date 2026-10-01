@@ -75,6 +75,7 @@ QString splitHeadingNumber(const QString &heading);
 int chapterNumberFromHeading(const QString &heading);
 QString chineseTalkLabel(int number);
 QString illustrationNameInLine(const QString &line);
+QString illustrationMarkerPattern();
 
 } // namespace SigilAgent
 

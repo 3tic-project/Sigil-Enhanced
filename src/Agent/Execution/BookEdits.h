@@ -8,6 +8,7 @@
 #ifndef SIGIL_AGENT_BOOK_EDITS_H
 #define SIGIL_AGENT_BOOK_EDITS_H
 
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
 #include <QStringList>
@@ -21,6 +22,9 @@ constexpr int DEFAULT_REGEX_SEARCH_MATCHES = 40;
 constexpr int MAX_REGEX_SEARCH_MATCHES = 50;
 
 BookOpResult stageWorkingReplace(IBookWorkspace *workspace, const QString &resource_id, const QString &text);
+// items: [{anchor_text, start_line?, html}]; each anchor must be a unique complete block ending in a closing tag.
+BookOpResult insertAfterBlocks(IBookWorkspace *workspace, const QString &resource_id,
+                               quint64 expected_resource_revision, const QJsonArray &items);
 BookOpResult replaceBody(IBookWorkspace *workspace, const QString &resource_id,
                          const QString &inner, const QString &source_id);
 BookOpResult insertHtml(IBookWorkspace *workspace, const QString &resource_id,

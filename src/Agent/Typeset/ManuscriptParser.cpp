@@ -13,6 +13,8 @@
 namespace SigilAgent
 {
 
+QString illustrationMarkerPattern();
+
 namespace
 {
 
@@ -110,16 +112,58 @@ QRegularExpression headingStartRe()
     return re;
 }
 
+// Special headings are often typeset with ideographic spaces ("序　章"); the word must
+// stand alone or be followed by whitespace so body sentences such as "後頭…" never match.
+int specialHeadingPrefixLength(const QString &line)
+{
+    static const QStringList words = {
+        QStringLiteral("最終章"), QStringLiteral("最终章"),
+        QStringLiteral("序章"), QStringLiteral("序幕"), QStringLiteral("楔子"),
+        QStringLiteral("幕間"), QStringLiteral("幕间"),
+        QStringLiteral("間章"), QStringLiteral("间章"),
+        QStringLiteral("終章"), QStringLiteral("终章"),
+        QStringLiteral("尾聲"), QStringLiteral("尾声"),
+        QStringLiteral("後記"), QStringLiteral("后记"),
+        QStringLiteral("序言"), QStringLiteral("前言"),
+        QStringLiteral("プロローグ"), QStringLiteral("エピローグ"),
+        QStringLiteral("あとがき")
+    };
+    const QString t = foldSpaces(line);
+    if (t.size() > 40) return -1;
+    for (const QString &word : words) {
+        int pos = 0;
+        bool matched = true;
+        for (int k = 0; k < word.size(); ++k) {
+            if (k > 0) {
+                while (pos < t.size() && (t.at(pos).isSpace() || t.at(pos) == QChar(0x3000))) ++pos;
+            }
+            if (pos >= t.size() || t.at(pos) != word.at(k)) {
+                matched = false;
+                break;
+            }
+            ++pos;
+        }
+        if (!matched) continue;
+        if (pos == t.size() || t.at(pos).isSpace() || t.at(pos) == QChar(0x3000)
+            || t.at(pos) == QChar(0xFF1A) || t.at(pos) == QLatin1Char(':')) {
+            return pos;
+        }
+    }
+    return -1;
+}
+
 bool isSpecialHeading(const QString &line)
 {
     const QString t = foldSpaces(line);
-    static const QStringList exact = {
+    if (specialHeadingPrefixLength(t) > 0) return true;
+    // Legacy compact forms such as "後記――" remain headings when written without spaces.
+    static const QStringList compact = {
         QStringLiteral("最終章"), QStringLiteral("最终章"),
         QStringLiteral("後記"), QStringLiteral("后记"),
         QStringLiteral("尾聲"), QStringLiteral("尾声"),
         QStringLiteral("終章"), QStringLiteral("终章")
     };
-    for (const QString &item : exact) {
+    for (const QString &item : compact) {
         if (t == item || t.startsWith(item)) return true;
     }
     if (t.startsWith(QStringLiteral("題外話")) || t.startsWith(QStringLiteral("题外话"))
@@ -181,9 +225,9 @@ bool isSynopsisHeader(const QString &line)
 
 QRegularExpression illustrationRe()
 {
-    static const QRegularExpression re(
-        QStringLiteral("［插[图圖]：([^］]+)］|\\[插[图圖]：([^\\]]+)\\]|【插[图圖]：([^】]+)】"),
-        QRegularExpression::UseUnicodePropertiesOption);
+    // Bracket pairs ［］ [] 【】 （） () 〈〉 <> around 插图/插圖, then an optional colon and the name.
+    static const QRegularExpression re(illustrationMarkerPattern(),
+                                       QRegularExpression::UseUnicodePropertiesOption);
     return re;
 }
 
@@ -196,6 +240,13 @@ QStringList splitLines(const QString &text)
 }
 
 } // namespace
+
+QString illustrationMarkerPattern()
+{
+    return QStringLiteral(
+        "[［\\[【（(〈<]\\s*插[图圖絵画][：:\\s]*"
+        "([^］\\]】）)〉>\\s][^］\\]】）)〉>]*?)\\s*[］\\]】）)〉>]");
+}
 
 QString manuscriptPlainText(const QString &text)
 {
@@ -213,11 +264,7 @@ QString illustrationNameInLine(const QString &line)
 {
     const QRegularExpressionMatch match = illustrationRe().match(line);
     if (!match.hasMatch()) return QString();
-    for (int i = 1; i <= 3; ++i) {
-        const QString captured = match.captured(i).trimmed();
-        if (!captured.isEmpty()) return captured;
-    }
-    return QString();
+    return match.captured(1).trimmed();
 }
 
 bool lineLooksLikeChapterHeading(const QString &line)
@@ -249,14 +296,16 @@ QString normalizeHeadingKey(const QString &line)
 {
     QString t = nfkcDigits(foldSpaces(line));
     t.replace(QChar(0x8A71), QChar(0x8BDD)); // 話 → 话
-    t.replace(QChar(0x3000), QLatin1Char(' '));
-    while (t.contains(QStringLiteral("  "))) t.replace(QStringLiteral("  "), QStringLiteral(" "));
+    t.remove(QChar(0x3000));
+    t.remove(QRegularExpression(QStringLiteral("\\s+")));
     return t;
 }
 
 QString splitHeadingNumber(const QString &heading)
 {
     const QString t = foldSpaces(heading);
+    const int special = specialHeadingPrefixLength(t);
+    if (special > 0) return t.left(special);
     if (isSpecialHeading(t) && !t.startsWith(QStringLiteral("第"))) {
         const int space = t.indexOf(QRegularExpression(QStringLiteral("[\\s　]")));
         return space > 0 ? t.left(space) : t;
@@ -341,10 +390,33 @@ ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_ti
         QString key;
     };
     QList<HeadingHit> headings;
+    const bool custom_heading = heading_re.isValid() && !options.headingRegex.isEmpty();
+    // A listed TOC line repeated later on its own line is a heading even when its numbering
+    // ("1.甲", "特別篇") is unknown to the built-in rules.
+    QSet<QString> toc_keys;
+    if (!custom_heading) {
+        for (int i = 0; i < lines.size(); ++i) {
+            if (!isTocHeader(lines.at(i))) continue;
+            for (int j = i + 1; j < lines.size() && j <= i + 200; ++j) {
+                const QString entry = foldSpaces(lines.at(j));
+                if (entry.isEmpty()) {
+                    if (!toc_keys.isEmpty()) break;
+                    continue;
+                }
+                if (entry.size() > 40 || !illustrationNameInLine(entry).isEmpty()) break;
+                const QString key = normalizeHeadingKey(entry);
+                if (toc_keys.contains(key)) break;
+                toc_keys.insert(key);
+            }
+            break;
+        }
+    }
     for (int i = 0; i < lines.size(); ++i) {
-        const bool is_heading = heading_re.isValid() && !options.headingRegex.isEmpty()
+        const bool is_heading = custom_heading
             ? heading_re.match(foldSpaces(lines.at(i))).hasMatch()
-            : lineLooksLikeChapterHeading(lines.at(i));
+            : (lineLooksLikeChapterHeading(lines.at(i))
+               || (!toc_keys.isEmpty() && !foldSpaces(lines.at(i)).isEmpty()
+                   && toc_keys.contains(normalizeHeadingKey(foldSpaces(lines.at(i))))));
         if (is_heading) {
             HeadingHit hit;
             hit.line = i;
@@ -496,7 +568,9 @@ ParsedManuscript parseManuscriptText(const QString &text, const QString &hint_ti
                 synopsis_lines.append(foldSpaces(line));
             }
         }
-        if (in_toc && lineLooksLikeChapterHeading(line)) {
+        if (in_toc && (lineLooksLikeChapterHeading(line)
+                       || (!foldSpaces(line).isEmpty()
+                           && toc_keys.contains(normalizeHeadingKey(foldSpaces(line)))))) {
             parsed.toc.append(foldSpaces(line));
         }
     }

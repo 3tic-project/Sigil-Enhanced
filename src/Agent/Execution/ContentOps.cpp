@@ -295,7 +295,7 @@ QString wrapPlainText(const QString &plain, const QJsonObject &rules)
                 QString block = illustration_html;
                 if (block.isEmpty()) {
                     const QString name = match.lastCapturedIndex() >= 1 ? match.captured(1) : match.captured();
-                    block = QStringLiteral("<div class=\"illus\"><img alt=\"%1\" src=\"../Images/%1.jpg\"/></div>")
+                    block = QStringLiteral("<div class=\"illus\"><img alt=\"\" src=\"../Images/%1.jpg\"/></div>")
                                 .arg(xmlEscape(name));
                 } else {
                     block = substCaptures(block, match);

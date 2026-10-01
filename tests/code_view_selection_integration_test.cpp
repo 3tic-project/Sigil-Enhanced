@@ -263,6 +263,44 @@ static void TestTagModifiersAndEditorConsistency()
             "The context menu did not select the whole element");
 }
 
+static void SendMouse(TestCodeViewEditor &editor, QEvent::Type type, int position,
+                      Qt::MouseButton button, Qt::MouseButtons buttons)
+{
+    QTextCursor cursor(editor.document());
+    cursor.setPosition(position);
+    const QPoint local_position = editor.cursorRect(cursor).center();
+    QMouseEvent event(type, QPointF(local_position),
+                      QPointF(editor.viewport()->mapToGlobal(local_position)),
+                      button, buttons, Qt::NoModifier);
+    QApplication::sendEvent(editor.viewport(), &event);
+}
+
+static void TestPressInSelectionDoesNotStartTextDrag()
+{
+    const QString source = QStringLiteral("<html><body><p>alpha beta gamma delta</p></body></html>");
+    TestTextDocument document;
+    TestCodeViewEditor editor(document);
+    Load(editor, source);
+    QTextCursor selection(editor.document());
+    selection.setPosition(source.indexOf(QStringLiteral("beta")));
+    selection.setPosition(source.indexOf(QStringLiteral(" delta")), QTextCursor::KeepAnchor);
+    editor.setTextCursor(selection);
+
+    const int press = source.indexOf(QStringLiteral("gamma")) + 2;
+    SendMouse(editor, QEvent::MouseButtonPress, press, Qt::LeftButton, Qt::LeftButton);
+    // Qt would keep the selection here and arm a drag that the next move starts.
+    Require(!editor.textCursor().hasSelection() && editor.textCursor().position() == press,
+            "A press inside the selection kept it and armed Qt's text drag");
+
+    const int moved_to = source.indexOf(QStringLiteral("alpha"));
+    SendMouse(editor, QEvent::MouseMove, moved_to, Qt::NoButton, Qt::LeftButton);
+    SendMouse(editor, QEvent::MouseButtonRelease, moved_to, Qt::LeftButton, Qt::NoButton);
+    Require(editor.textCursor().anchor() == press && editor.textCursor().position() == moved_to,
+            "Dragging from inside the old selection did not select text from the press point");
+    Require(editor.document()->toPlainText() == source && !editor.document()->isModified(),
+            "Pressing and dragging inside a selection changed the document");
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication::setAttribute(Qt::AA_DisableShaderDiskCache);
@@ -281,6 +319,7 @@ int main(int argc, char **argv)
         TestElementContentAndFallbacks();
         TestSentenceMode();
         TestTagModifiersAndEditorConsistency();
+        TestPressInSelectionDoesNotStartTextDrag();
     } catch (const std::exception &error) {
         qCritical("%s", error.what());
         return 1;

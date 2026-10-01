@@ -2,6 +2,8 @@
 name: paragraph-normalization
 description: Analyze and normalize pseudo-paragraph DIV elements with Sigil's native conservative XHTML/CSS engine. Use for 伪段落, 偽段落, DIV 转 P, DIV 轉 P, paragraph normalization, or paragraph structure cleanup.
 compatibility: Native Sigil-Enhanced Agent.
+triggers: [伪段落, 偽段落, 段落结构, 段落結構, paragraph normalization, paragraph structure, DIV]
+requires_capabilities: [paragraphs.analyze, paragraphs.plan, paragraphs.apply]
 metadata:
   sigil.skill-version: "1"
   sigil.category: "structure"

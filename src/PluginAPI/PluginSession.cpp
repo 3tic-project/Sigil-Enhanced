@@ -43,6 +43,7 @@
 #include "MainUI/BookBrowser.h"
 #include "Misc/PluginDB.h"
 #include "Misc/SettingsStore.h"
+#include "Misc/TempCleanup.h"
 #include "Misc/Utility.h"
 #include "Misc/ValidationResult.h"
 #include "Parsers/OPFParser.h"
@@ -4273,11 +4274,21 @@ void PluginSession::CleanServer()
         delete upload.file;
     }
     m_InputUploads.clear();
+    // The plugin process may still hold materialized files open, so the files
+    // stay on disk and the whole root is removed once they are released.
+    for (QTemporaryFile *materialized : std::as_const(m_MaterializedFiles)) {
+        materialized->setAutoRemove(false);
+    }
     qDeleteAll(m_MaterializedFiles);
     m_MaterializedFiles.clear();
     m_MaterializedBytes = 0;
-    delete m_MaterializationRoot;
-    m_MaterializationRoot = nullptr;
+    if (m_MaterializationRoot) {
+        const QString materialization_root = m_MaterializationRoot->path();
+        m_MaterializationRoot->setAutoRemove(false);
+        delete m_MaterializationRoot;
+        m_MaterializationRoot = nullptr;
+        TempCleanup::instance().Remove(materialization_root);
+    }
     if (m_Socket) {
         m_Socket->disconnect(this);
         m_Socket->disconnectFromServer();

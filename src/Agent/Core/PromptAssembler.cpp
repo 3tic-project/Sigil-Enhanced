@@ -172,16 +172,19 @@ QString PromptAssembler::systemPrompt(AgentMode mode, int run_tool_call_ceiling)
         "- For paragraphs.plan continuation pages, repeat the same analysis_id and resource selection, require the same plan_id and plan_digest, and follow review_next_offset until review_complete=true. paragraphs.apply rejects an incompletely reviewed plan.\n"
         "- Read every transaction.preview page before commit without staging more edits between pages. Require the same transaction_id and preview_digest on every page; if either changes, restart preview at offset 0.\n"
         "- resource.read_fragment returns resource_revision and book_revision. For resource.patch_fragment, pass expected_resource_revision copied from that resource's read result; for transaction.commit, pass expected_book_revision from the live book or preview. These revisions are different and must not be guessed from each other. Reads during an Agent transaction include staged edits.\n"
-        "- For bilingual source-plus-translation tasks, enumerate the requested resources and eligible source paragraphs before declaring completion. After commit, verify each source paragraph has its adjacent translation, source text and links remain intact, the translation CSS selector matches its elements, and run book.check. If scope coverage or checks are incomplete, report partial work and unverified items. Never claim the EPUB file was saved by an Agent commit.\n"
+        "- For bilingual source-plus-translation tasks, insert translations with content.insert_after_blocks (one call per file or 200-block chunk, anchors copied from read_fragment) instead of one resource.patch_fragment per paragraph. Enumerate the requested resources and eligible source paragraphs before declaring completion. After commit, verify each source paragraph has its adjacent translation, source text and links remain intact, the translation CSS selector matches its elements, and run book.check. If scope coverage or checks are incomplete, report partial work and unverified items. Never claim the EPUB file was saved by an Agent commit.\n"
         "- resource.patch_fragment locates text by expected_text copied from read_fragment.text (a complete tag, text node, or whole line). expected_text and replacement text are each capped at 8,192 UTF-16 units; use smaller patches when needed. Do not invent character offsets. If the substring appears more than once, pass start_line from read_fragment.lines. Do not put line numbers inside expected_text.\n"
         "- A patch must not cut through a markup tag.\n"
         "- Mutations must go through transaction.begin → staged edits → transaction.preview → transaction.commit, except the native paragraph and TOC workflows below.\n"
         "- Native DIV paragraph normalization is paragraphs.analyze → paragraphs.plan → paragraphs.apply → transaction.preview → transaction.commit. Do not call transaction.begin before paragraphs.apply: apply revalidates the reviewed plan and opens its own exclusive staged transaction; it does not change the live Book.\n"
         "- Native TOC reparenting is toc.inspect_hierarchy → toc.plan_transform → toc.apply_transform → transaction.preview → transaction.commit. Do not call transaction.begin before toc.apply_transform: apply revalidates the reviewed plan and opens its own exclusive staged transaction. Promote/demote only changes Nav/NCX hierarchy; never edit XHTML h1-h6 headings to satisfy a TOC hierarchy request.\n"
         "- To add a new HTML/CSS file use resource.copy or resource.create. To remove a file use resource.delete. To rename or move a file use resource.rename (filename or full EPUB path). To reorder reading order use spine.set or spine.sort. To attach CSS use style.link.\n"
+        "- resource.delete does not edit the TOC. If it returns toc_references/toc_warning, fix navigation in the same transaction (toc.generate or an explicit TOC update) before commit, then confirm with book.toc or preflight.run.\n"
         "- Long text already in the book (dropped TXT/HTML) must stay there: content.wrap_plain, content.replace_body (source_resource_id), content.split/merge. Never paste chapter bodies through patch_fragment or replace_text. Never tell the user to paste into Book View.\n"
         "- Batch markup: content.wrap and content.replace_regex (patterns supplied by the user or inferred, never assume a fixed novel format).\n"
         "- Insert an already-imported image with image.insert. Check broken/unused images with book.check.\n"
+        "- For questions about chapter structure, headings, or whether the TOC matches the pages, call structure.inspect first (read-only; spine-ordered roles with evidence, first heading with line, TOC entry, and differences) instead of reading each page with resource.read_fragment. Roles are candidates; cite their evidence and confidence.\n"
+        "- For release or quality checks use preflight.run (read-only; includes unsaved and staged edits), then page with preflight.issues using the same run_id until has_more=false. Report counts by severity and cite book_path:L<line>. Local rules are not EPUBCheck or Ace: when validation_status says not_run, say so and never call the book valid, conformant, or accessible. After fixing issues, run preflight.run again; PREFLIGHT_STALE means the old findings no longer apply. To fix findings, preflight.apply_fixes stages only fix_kind=mechanical issues of the latest run and editor-decided image_alts (\"\" = decorative); do not call transaction.begin first, then read every transaction.preview page and commit.\n"
         "- toc.generate builds a TOC from heading regex. metadata.update/_remove edits Dublin Core fields.\n"
         "- For custom read-only analysis use python.inspect (or python.run mode=read). Example: rs = [r for r in plugin.book.text_resources() if r.media_type == 'application/xhtml+xml']; rows = plugin.book.read_many(rs); print(len(rows)). read_text returns a record, not a bare string. stdout is returned on success. def run(plugin) and result are EXIT STATUS values: use 0/None for success, never assign report text to result. python.run mode=edit applies Live Book changes immediately; commit or rollback an Agent transaction first. Do not repeat an identical failing Python probe more than twice.\n"
         "- For proofreading, establish the book's punctuation and name conventions first. Treat regex hits and proof.audit issues as candidates, read bounded context, review each style-sensitive suggestion with the user, then preview and commit only approved edits. Never bulk-replace stylistic punctuation or variants from counts alone.\n"
@@ -353,13 +356,15 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
     const PermissionPolicy *effective_policy = permission_policy
         ? permission_policy : &default_policy;
     QJsonArray hidden_tools;
+    QStringList available_tools;
     const QJsonArray all_tool_schemas = tools.openaiToolSchemas();
     request.tools = tools.openaiToolSchemas(
-        [effective_policy, mode, &hidden_tools](
+        [effective_policy, mode, &hidden_tools, &available_tools](
             const AgentToolDescriptor &descriptor) {
             const bool exposed = effective_policy->evaluate(mode, descriptor)
                 != PermissionAction::Deny;
             if (!exposed) hidden_tools.append(descriptor.name);
+            else available_tools.append(descriptor.name);
             return exposed;
         });
     const int all_schema_bytes = QJsonDocument(all_tool_schemas)
@@ -387,12 +392,18 @@ ModelRequest PromptAssembler::build(const AgentSession &session,
         }
     }
     const QList<AgentSkill> skills = loadAgentSkills();
+    const AgentSkillSelection selected = selectAgentSkills(skills, last_user, workspace, available_tools);
+    request.toolContext.insert(QStringLiteral("skills"), QJsonObject {
+        { QStringLiteral("loaded_count"), skills.size() },
+        { QStringLiteral("available_count"), selected.availableSkills.size() },
+        { QStringLiteral("decisions"), selected.decisions }
+    });
     ChatMessage system;
     system.role = QStringLiteral("system");
     system.content = systemPrompt(mode, run_tool_call_ceiling);
     system.content += QLatin1Char('\n');
-    system.content += skillCatalogPrompt(skills);
-    system.content += matchedSkillBodies(skills, last_user, workspace);
+    system.content += skillCatalogPrompt(selected.availableSkills);
+    system.content += selected.bodies;
     request.messages.append(system);
 
     ChatMessage context;

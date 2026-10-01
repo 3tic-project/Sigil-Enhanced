@@ -361,12 +361,14 @@ int main()
                 QStringLiteral("hidden_tool_count")).toInt() == 0
                 && edit_catalog.toolContext.value(
                     QStringLiteral("saved_schema_bytes")).toInt() == 0
-                && auto_catalog.tools.size() + 3 == edit_catalog.tools.size()
+                && auto_catalog.tools.size() + 4 == edit_catalog.tools.size()
                 && auto_catalog.toolContext.value(
-                    QStringLiteral("hidden_tool_count")).toInt() == 3
+                    QStringLiteral("hidden_tool_count")).toInt() == 4
+                && auto_catalog.toolContext.value(
+                    QStringLiteral("hidden_tools")).toArray().contains(QStringLiteral("preflight.apply_fixes"))
                 && auto_catalog.toolContext.value(
                     QStringLiteral("saved_schema_bytes")).toInt() > 0,
-            "Auto catalog must hide proofreading configuration, decisions and application");
+            "Auto catalog must hide proofreading configuration, decisions, application and preflight fixes");
     AgentSession session;
     AgentCancellation cancellation;
     AutoApprovalGate approve(true);

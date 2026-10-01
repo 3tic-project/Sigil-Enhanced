@@ -778,6 +778,96 @@ int main()
     const ToolResult check = run(QStringLiteral("book.check"), QJsonObject());
     Require(check.ok, "book.check");
 
+    Require(run(QStringLiteral("transaction.begin"), QJsonObject()).ok, "toc reference begin");
+    const ToolResult toc_before_delete = run(QStringLiteral("book.toc"), QJsonObject());
+    QString toc_target_id;
+    for (const QJsonValue &value : book.toc()) {
+        const QString href = value.toObject().value(QStringLiteral("href")).toString();
+        for (const QJsonValue &resource : book.resources()) {
+            const QJsonObject object = resource.toObject();
+            if (object.value(QStringLiteral("kind")).toString() == QLatin1String("xhtml")
+                && href.section(QLatin1Char('#'), 0, 0) == object.value(QStringLiteral("book_path")).toString()
+                && object.value(QStringLiteral("resource_id")).toString() != QStringLiteral("ch1")) {
+                toc_target_id = object.value(QStringLiteral("resource_id")).toString();
+            }
+        }
+    }
+    Require(toc_before_delete.ok && !toc_target_id.isEmpty(), "fixture TOC must point at a deletable page");
+    const ToolResult deleted_page = run(QStringLiteral("resource.delete"), QJsonObject {
+        { QStringLiteral("resource_id"), toc_target_id }
+    });
+    Require(deleted_page.ok
+                && !deleted_page.data.value(QStringLiteral("toc_references")).toArray().isEmpty()
+                && deleted_page.data.value(QStringLiteral("toc_warning")).toString().contains(QStringLiteral("table of contents")),
+            "deleting a page the TOC points to must report the dangling entries before commit");
+    const ToolResult deleted_css = run(QStringLiteral("resource.delete"), QJsonObject {
+        { QStringLiteral("resource_id"), QStringLiteral("css") }
+    });
+    Require(deleted_css.ok && deleted_css.data.value(QStringLiteral("toc_references")).toArray().isEmpty()
+                && !deleted_css.data.contains(QStringLiteral("toc_warning")),
+            "resources outside the TOC must not produce a navigation warning");
+    Require(run(QStringLiteral("transaction.rollback"), QJsonObject()).ok, "toc reference rollback");
+
+    MemoryResource bilingual;
+    bilingual.id = QStringLiteral("jp");
+    bilingual.bookPath = QStringLiteral("OEBPS/Text/jp.xhtml");
+    bilingual.mediaType = QStringLiteral("application/xhtml+xml");
+    bilingual.kind = QStringLiteral("xhtml");
+    bilingual.text = QStringLiteral(
+        "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>jp</title></head>\n<body>\n"
+        "      <p>本電子書籍は縦書きでレイアウトされています。</p>\n"
+        "      <p>「はい」</p>\n"
+        "      <p>「はい」</p>\n"
+        "</body></html>");
+    book.addResource(bilingual);
+    const quint64 jp_revision = book.resourceRevision(QStringLiteral("jp"));
+    auto insert_items = [&](const QJsonArray &items, qint64 revision) {
+        return run(QStringLiteral("content.insert_after_blocks"), QJsonObject {
+            { QStringLiteral("resource_id"), QStringLiteral("jp") },
+            { QStringLiteral("expected_resource_revision"), revision },
+            { QStringLiteral("items"), items } });
+    };
+    const ToolResult not_block = insert_items(QJsonArray { QJsonObject {
+        { QStringLiteral("anchor_text"), QStringLiteral("縦書きでレイアウト") },
+        { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">竖排</p>") } } },
+        static_cast<qint64>(jp_revision));
+    Require(!not_block.ok && not_block.code == QStringLiteral("ANCHOR_NOT_BLOCK") && !book.hasOpenTransaction(),
+            "anchors inside a paragraph must be refused so translations are never nested");
+    const ToolResult ambiguous = insert_items(QJsonArray {
+        QJsonObject { { QStringLiteral("anchor_text"), QStringLiteral("<p>本電子書籍は縦書きでレイアウトされています。</p>") },
+                      { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">本电子书采用竖排版式。</p>") } },
+        QJsonObject { { QStringLiteral("anchor_text"), QStringLiteral("<p>「はい」</p>") },
+                      { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">“是”</p>") } } },
+        static_cast<qint64>(jp_revision));
+    Require(!ambiguous.ok && ambiguous.code == QStringLiteral("PATCH_TEXT_AMBIGUOUS")
+                && ambiguous.data.value(QStringLiteral("item_index")).toInt() == 1
+                && book.workingText(QStringLiteral("jp")) == bilingual.text,
+            "one ambiguous anchor must reject the whole batch and name the failing item");
+    const ToolResult stale_revision = insert_items(QJsonArray { QJsonObject {
+        { QStringLiteral("anchor_text"), QStringLiteral("<p>本電子書籍は縦書きでレイアウトされています。</p>") },
+        { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">x</p>") } } },
+        static_cast<qint64>(jp_revision + 5));
+    Require(!stale_revision.ok, "a stale resource revision must be refused");
+    run(QStringLiteral("transaction.rollback"), QJsonObject());
+    const ToolResult inserted = insert_items(QJsonArray {
+        QJsonObject { { QStringLiteral("anchor_text"), QStringLiteral("<p>本電子書籍は縦書きでレイアウトされています。</p>") },
+                      { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">本电子书采用竖排版式。</p>") } },
+        QJsonObject { { QStringLiteral("anchor_text"), QStringLiteral("<p>「はい」</p>") }, { QStringLiteral("start_line"), 4 },
+                      { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">“是”</p>") } },
+        QJsonObject { { QStringLiteral("anchor_text"), QStringLiteral("<p>「はい」</p>") }, { QStringLiteral("start_line"), 5 },
+                      { QStringLiteral("html"), QStringLiteral("<p class=\"zh-trans\">“好”</p>") } } },
+        static_cast<qint64>(jp_revision));
+    Require(inserted.ok && inserted.previewOnly && inserted.data.value(QStringLiteral("inserted_count")).toInt() == 3,
+            "a batch of block insertions must stage once");
+    Require(book.resourceText(QStringLiteral("jp")) == bilingual.text, "live text stays unchanged before commit");
+    Require(run(QStringLiteral("transaction.commit"), QJsonObject {
+                { QStringLiteral("expected_book_revision"), static_cast<qint64>(book.revision()) } }).applied,
+            "commit block insertions");
+    const QString jp = book.resourceText(QStringLiteral("jp"));
+    Require(jp.contains(QStringLiteral("      <p>本電子書籍は縦書きでレイアウトされています。</p>\n      <p class=\"zh-trans\">本电子书采用竖排版式。</p>\n"))
+                && jp.contains(QStringLiteral("<p>「はい」</p>\n      <p class=\"zh-trans\">“是”</p>\n      <p>「はい」</p>\n      <p class=\"zh-trans\">“好”</p>")),
+            "each translation must follow its own source block with the source indentation");
+
     const ToolResult remembered = run(QStringLiteral("session.remember"), QJsonObject {
         { QStringLiteral("key"), QStringLiteral("heading") },
         { QStringLiteral("value"), QStringLiteral("^Chapter") }

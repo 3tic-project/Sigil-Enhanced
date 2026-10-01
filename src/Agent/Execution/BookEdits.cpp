@@ -6,12 +6,16 @@
 
 #include "Agent/Execution/BookEdits.h"
 
+#include <algorithm>
+
 #include <QCollator>
 #include <QFileInfo>
 #include <QJsonArray>
+#include <QRegularExpression>
 #include <QSet>
 
 #include "Agent/Execution/ContentOps.h"
+#include "Agent/Execution/PatchRange.h"
 #include "Agent/Typeset/ManuscriptParser.h"
 
 namespace SigilAgent
@@ -51,6 +55,85 @@ BookOpResult stageWorkingReplace(IBookWorkspace *workspace, const QString &resou
     quint64 revision = workspace->resourceRevision(resource_id);
     if (revision == 0) revision = 1;
     return workspace->replaceText(resource_id, text, revision);
+}
+
+BookOpResult insertAfterBlocks(IBookWorkspace *workspace, const QString &resource_id,
+                               quint64 expected_resource_revision, const QJsonArray &items)
+{
+    constexpr int kMaxItems = 200;
+    constexpr int kMaxItemHtml = 4096;
+    constexpr int kMaxTotalHtml = 131072;
+    if (items.isEmpty() || items.size() > kMaxItems) {
+        return BookOpResult::error(QStringLiteral("INVALID_ARGUMENT"),
+                                   QStringLiteral("items must contain 1 to %1 insertions").arg(kMaxItems));
+    }
+    const QString source = workspace->workingText(resource_id);
+    if (source.isEmpty()) {
+        return BookOpResult::error(QStringLiteral("RESOURCE_NOT_FOUND"), QStringLiteral("Unknown resource"));
+    }
+    static const QRegularExpression block_end(QStringLiteral("(</[A-Za-z][A-Za-z0-9:-]*\\s*>|/>)\\s*$"));
+    struct Insertion {
+        int index = 0;
+        int start = 0;
+        int end = 0;
+        QString html;
+    };
+    QList<Insertion> insertions;
+    int total_html = 0;
+    for (int i = 0; i < items.size(); ++i) {
+        const QJsonObject item = items.at(i).toObject();
+        const QString anchor = item.value(QStringLiteral("anchor_text")).toString();
+        const QString html = item.value(QStringLiteral("html")).toString();
+        auto fail = [&](const QString &code, const QString &message, QJsonObject data = QJsonObject()) {
+            data.insert(QStringLiteral("item_index"), i);
+            data.insert(QStringLiteral("staged"), false);
+            return BookOpResult::error(code, QStringLiteral("items[%1]: %2").arg(i).arg(message), data);
+        };
+        if (html.trimmed().isEmpty() || html.size() > kMaxItemHtml) {
+            return fail(QStringLiteral("INSERT_HTML_INVALID"),
+                        QStringLiteral("html must be non-empty and at most %1 UTF-16 units").arg(kMaxItemHtml));
+        }
+        total_html += html.size();
+        if (total_html > kMaxTotalHtml) {
+            return fail(QStringLiteral("INSERT_TOO_LARGE"),
+                        QStringLiteral("all html together is capped at %1 UTF-16 units; split into several calls").arg(kMaxTotalHtml));
+        }
+        if (!block_end.match(anchor).hasMatch()) {
+            return fail(QStringLiteral("ANCHOR_NOT_BLOCK"),
+                        QStringLiteral("anchor_text must be a complete element that ends with its closing tag, e.g. the whole <p>…</p> copied from read_fragment"));
+        }
+        const PatchRangeResolution range = resolvePatchRange(
+            source, -1, -1, anchor, item.value(QStringLiteral("start_line")).toInt(-1));
+        if (!range.ok) return fail(range.code, range.message, range.data);
+        insertions.append({ i, range.start, range.end, html });
+    }
+    std::sort(insertions.begin(), insertions.end(), [](const Insertion &a, const Insertion &b) {
+        return a.end < b.end;
+    });
+    for (int i = 1; i < insertions.size(); ++i) {
+        if (insertions.at(i).start < insertions.at(i - 1).end) {
+            return BookOpResult::error(QStringLiteral("ANCHOR_OVERLAP"),
+                                       QStringLiteral("items[%1] and items[%2] target overlapping or identical anchors")
+                                           .arg(insertions.at(i - 1).index).arg(insertions.at(i).index),
+                                       QJsonObject { { QStringLiteral("staged"), false } });
+        }
+    }
+    QString next = source;
+    for (int i = insertions.size() - 1; i >= 0; --i) {
+        const Insertion &insertion = insertions.at(i);
+        const int line_start = source.lastIndexOf(QLatin1Char('\n'), insertion.start - 1) + 1;
+        QString indent;
+        for (int c = line_start; c < insertion.start && (source.at(c) == QLatin1Char(' ') || source.at(c) == QLatin1Char('\t')); ++c) {
+            indent += source.at(c);
+        }
+        next.insert(insertion.end, QLatin1Char('\n') + indent + insertion.html.trimmed());
+    }
+    BookOpResult result = workspace->replaceText(resource_id, next, expected_resource_revision);
+    if (result.ok) {
+        result.data.insert(QStringLiteral("inserted_count"), insertions.size());
+        result.data.insert(QStringLiteral("inserted_chars"), total_html);
+    }
+    return result;
 }
 
 BookOpResult replaceBody(IBookWorkspace *workspace, const QString &resource_id,
@@ -309,8 +392,7 @@ BookOpResult insertImageTag(IBookWorkspace *workspace, const QString &page_id,
     }
     const QString href = relativeBookHref(page.value(QStringLiteral("book_path")).toString(),
                                           image.value(QStringLiteral("book_path")).toString());
-    const QString name = alt.isEmpty()
-        ? QFileInfo(image.value(QStringLiteral("book_path")).toString()).completeBaseName() : alt;
+    const QString name = alt;
     const QString class_attr = klass.isEmpty()
         ? QString() : QStringLiteral(" class=\"%1\"").arg(xmlEscape(klass));
     const QString wrapper = klass.isEmpty()

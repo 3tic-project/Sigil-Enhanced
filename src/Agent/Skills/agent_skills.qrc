@@ -3,5 +3,6 @@
         <file alias="ln-template-typeset/SKILL.md">ln-template-typeset/SKILL.md</file>
         <file alias="book-structure/SKILL.md">book-structure/SKILL.md</file>
         <file alias="paragraph-normalization/SKILL.md">paragraph-normalization/SKILL.md</file>
+        <file alias="release-preflight/SKILL.md">release-preflight/SKILL.md</file>
     </qresource>
 </RCC>

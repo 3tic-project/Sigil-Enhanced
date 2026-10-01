@@ -210,6 +210,58 @@ checkpoint create/restore、`python.run` 及其他不能预览的写工具；Edi
 schema 字节；**Technical details** 显示数量和大小，Debug JSON 保留精确字段。schema 大小是
 紧凑 JSON 数组大小，不是 token 估算，也不包括消息正文和 HTTP 包装。
 
+### Skill 元数据与路由
+
+内置 Skill 是声明式工作说明，不执行脚本，不授予工具权限。加载时支持以下元数据
+（示例不是新增的内置 Skill）：
+
+```yaml
+---
+name: basic-diagnostics
+version: 1
+description: >
+  Inspect local EPUB diagnostics without modifying the current book.
+triggers: [基础检查, basic diagnostics]
+requires_capabilities: [book.check, book.validate]
+allowed-tools: [book.check, book.validate, font.inventory]
+requires_book: true
+auto_trigger: true
+---
+```
+
+- `version` 当前只支持 `1`，省略时为 `1`；旧 `metadata.sigil.skill-version` 仍兼容。
+- `requires_capabilities` 声明必需能力；`allowed-tools` 保留配方的工具清单，不能添加权限。
+- `requires_book` 默认 false，兼容旧 `metadata.sigil.requires-book`。
+- `triggers` 声明自动触发词；英文词按边界匹配。旧三项 Skill 无此字段时仍有兼容路由。
+- `auto_trigger` 默认 true；false 仅关闭自动注入，仍可按准确 Skill 名称显式选择。
+
+解析支持普通/带引号标量、折叠或字面文本块、行内及逐行字符串列表，以及旧 `metadata`
+标量映射；接受 CRLF/BOM。双引号值使用 JSON 字符串转义。这不是完整 YAML 解析器，
+不支持锚点、别名或任意嵌套对象。重复字段、畸形工具列表等会产生 `invalid_metadata`
+诊断，不注入该配方；未知策略字段不参与授权。研究提案中的 `default_mode`、`may_write`、
+`scope`、`output_schema` 尚未实现为执行约束。
+
+目录与正文只使用实际注册且当前 `PermissionPolicy` 允许的声明能力。
+缺少任一 `requires_capabilities` 或 `allowed-tools` 项、版本不支持、缺少所需 Book 时，
+整个配方不可用；不会让模型尝试不存在的工具。当前采用完整配方的保守过滤，因此
+Ask/Plan 也会隐藏需要 commit 的编辑 Skill；模式本身已有的读取、计划与暂存工具仍可用。
+这里过滤的是 Skill 目录与正文，不是全局系统提示中的全部静态工具说明。
+
+用户文本显式提到准确 Skill 名称时，只选择这些名称，不再附加其他关键词命中的配方。
+同名 Skill 按现有搜索顺序首次加载优先，后来的文件不能替换已经加载的内置 Skill。
+Skill 正文不是安全边界，实际执行仍经过注册表、权限、审批和宿主校验。
+
+Debug JSON 的 `model_request_started.tool_context.skills` 包含 `loaded_count`、
+`available_count` 和 `decisions`。每项记录名称、版本、来源、状态与原因；命中时有
+`explicit_name` 或准确触发词，不可用时有缺失能力或元数据错误。
+本轮审计与测试记录见 [Agent 能力审计](AgentCapabilityAudit_2026-09-30.md)。
+
+内置四项 Skill：`book-structure`（通用拆合章、正则、Spine、TOC）、`ln-template-typeset`
+（轻小说模板灌稿，完成后跑预检并提示 alt 复核与空闲占位页）、`paragraph-normalization`
+（原生 DIV→P 计划流程）和只读的 `release-preflight`（发行前检查，Ask 模式也可用；只报告，
+不修改书，并如实写出 EPUBCheck/Ace `not_run`）。Skill 只声明真正需要的工具，
+会话清单等辅助工具不作为依赖，避免辅助能力缺失时整份流程不可用。
+
 **Stop** 会取消当前轮次，并回滚尚未提交的暂存事务。已经 commit 的步骤不会被
 `transaction.rollback` 撤销，结果仍标为 Applied；纯文本提交可使用该 Applied 卡上的
 任务恢复按钮，其他提交只能使用卡片所列的宿主恢复方式。
@@ -287,7 +339,61 @@ completion JSON；完整绑定、`resource_outcomes` 和实际批准的 `selecte
 
 ## 工具（模型不能直接写 EPUB ZIP）
 
-只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`proof.audit` / `proof.settings` / `proof.plan`、`book.check`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`python.inspect`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
+只读：`book.summary`、`book.resources`、`book.spine`、`book.toc`、`book.metadata`、`metadata.read_fragment`、`book.search`、`book.search_regex`、`proof.audit` / `proof.settings` / `proof.plan`、`book.check`、`preflight.profiles` / `preflight.run` / `preflight.issues`、`structure.inspect`、`resource.read_fragment`、`style.stylesheets`、`font.inventory`、`book.validate`、`python.inspect`、`manuscript.parse`、`paragraphs.analyze` / `paragraphs.plan`、`toc.inspect_hierarchy` / `toc.plan_transform`、`session.recall` / `session.tasks`。
+
+### 出版预检（`preflight.*`）
+
+`preflight.run` 对当前书做只读发行前检查，读取的是活书加当前暂存事务的工作文本，因此
+未保存和已暂存的修改都会参与检查；它不导出、不保存，也不打开事务。结果包含 `run_id`、
+绑定会话/revision/全部工作文本的 `snapshot_digest`、`includes_staged_changes`、按严重度和
+规则的计数，以及第一页问题。用 `preflight.issues` 以同一 `run_id` 沿 `next_offset` 翻页，
+可按 `severity` 或 `rule_id` 过滤（默认 50 条，最多 200 条）。书或暂存内容变化后旧 run 返回
+`PREFLIGHT_STALE`，新的 run 会使旧 `run_id` 作废。
+
+`preflight.profiles` 列出版本化 profile：默认 `release-basic`（下列全部规则）、`epub-core`
+（结构与链接）和 `a11y-basic`（语言、alt、标题）。本地规则为：Spine 为空或失效、XHTML 非
+良构（该文件其余检查不执行）、EPUB 3 中未声明的命名实体、内部链接/资源目标缺失、仅大小写
+不同的路径、片段 ID 缺失（含同文件锚点与 TOC 片段）、CSS `url()`/`@import` 缺失、TOC 目标
+缺失、manifest href 缺失、EPUB 3 缺 nav、`dc:title`/`dc:identifier`/`dc:language` 缺失、Spine
+文档缺 `lang`/`xml:lang` 或与 `dc:language` 主语言不同、`<img>` 缺 alt 或 alt 只是文件名、
+标题层级跳级，以及没有任何 XHTML/CSS/导航/封面元数据引用的图片、字体和 CSS。显式
+`alt=""` 视为装饰图，不报缺失；外部 URL 和 `data:` 不按书内路径解析。
+
+每条问题带稳定 `issue_id`、`fingerprint`、`rule_id`、`severity`（error/warning/info）、
+`book_path`、1-based `line`（包级问题无行号）、有界 `evidence`、`fix_kind`（`mechanical` 或
+`manual`）和 `manual_required`，按严重度和位置排序。`validation_status.local` 为
+`errors_found`、`passed_with_findings` 或 `passed`；`epubcheck` 与 `ace` 在没有适配器时固定为
+`not_run` 并给出原因，`human_review` 为 `pending`，`saved_epub_checked=false`。本地规则不是
+EPUBCheck、Ace 或可访问性认证；Agent 不能据此宣称书已合规或无障碍。预检本身只报告。
+
+`preflight.apply_fixes` 是审阅式写入工具（Edit 需批准，Plan 可暂存预览，Ask 与 Auto 均不可用，因为其中的 alt 文字是编辑决定）。它只接受
+最近一次 run 中 `fix_kind=mechanical` 且带 `fix` 的问题：仅大小写不同的链接路径改为实际大小写（必须在
+该行恰好命中一次），以及用 `dc:language` 补 `<html>` 的 `xml:lang`/`lang`。另可传
+`image_alts`（图片 book_path → 编辑决定的 alt，`""` 表示装饰图，最长 1000 字），按解析后的
+`src` 写入所有引用该图的 `<img>`。需要人工判断的问题返回 `PREFLIGHT_FIX_NOT_MECHANICAL`，未知或
+未被引用的图片分别返回 `IMAGE_NOT_FOUND` / `IMAGE_NOT_REFERENCED`，且不会暂存任何改动。工具
+在暴露前核对 run 未过期，按资源暂存（必要时自动开启事务），返回每处 before/after，并使该 run
+失效；之后仍须读完预览、提交并重新 `preflight.run`。工具不生成 alt 文字。
+
+模板排版、`content.wrap_plain` 和未给 alt 的 `image.insert` 放置的图片一律写 `alt=""`（封面写
+“封面”），不再把文件名当替代文字；排版结果的 `alt_review_required` 给出待编辑决定的图片数。
+
+### 结构诊断（`structure.inspect`）
+
+只读工具，按 Spine 顺序为每页给出角色候选：cover、titlepage、toc、illustration、credits、
+synopsis、prologue、chapter、epilogue、afterword、body 或 unknown。每页附 `confidence`（high/medium/low）
+和逐条 `evidence`：优先使用 `epub:type`（high），其次是首个 h1–h6 或 `<title>` 文字、只含图片的版式
+（medium），最后是 TOC 标签和文件名（low）。CSS class 不被当成语义，Ruby 注音不进入标题文字，
+全角空格原样保留。每页还返回首个标题文字/层级/行号、对应 TOC 条目、可见字数和图片数。
+
+`differences` 列出：正文页不在 TOC 中（`heading_without_toc`）、正文页没有标题
+（`page_without_heading`）、TOC 标签与页内标题不同（忽略空白差异，`toc_label_mismatch`）、TOC
+顺序与 Spine 相反、TOC 指向 Spine 外的文档，以及 TOC 目标缺失。`pages` 与 `differences`
+共用 offset 分页（默认 100，最多 200）。角色是供编辑确认的候选，不是事实；工具不改书。
+结构类问题应先调用它，而不是逐页 `resource.read_fragment`。
+
+`resource.delete` 不改 Nav/NCX（与 Sigil 自身的删除一致）。若要删除的文件仍被 TOC 引用，工具结果会
+列出 `toc_references` 并附 `toc_warning`，模型应在同一事务中修正或重建 TOC 后再提交。
 
 `book.summary` 及每轮自动 Book map 中的 title/language/EPUB version 分别最多预览
 512/128/64 个 UTF-16 单元，并返回各自的 `*_length` / `*_truncated`。title 或 language 截断时
@@ -419,6 +525,14 @@ Runner 的任务恢复范围检查也继续使用完整预览，所以不会因�
 
 批量套标签用 `content.wrap`，全书查找替换用 `content.replace_regex`（`$1` 捕获组）。图片必须先拖进 Images，再用 `image.insert` 按锚点插入 `<img>`。`book.check` 会分页报告损坏的图片链接、未引用图片和 XHTML 良构性。
 
+`content.insert_after_blocks` 在同一份 XHTML 的多个现有块之后各插入一段新元素（如原文段落下的
+`<p class="zh-trans">` 译文、图片块下的图注），一次暂存。每项的 `anchor_text` 必须是从
+`read_fragment` 原样复制、以闭合标签结尾的完整元素（否则 `ANCHOR_NOT_BLOCK`，避免译文嵌入段内），
+重复锚点用 `start_line` 消歧；锚点不得重叠。每批最多 200 项，单项 html 最多 4 KiB、合计 128 KiB；
+须传 `expected_resource_revision`。任一项失败则整批不暂存，错误带 `item_index`。插入内容沿用原块的
+缩进，原文块不被修改；仍须预览后提交。在真实双语会话中，253 次逐段 `patch_fragment` 可降为每个文件
+一次调用。
+
 `spine.set` 重排阅读顺序；`spine.sort` 按路径字母数字排序；`resource.rename` 可改文件名或换目录（提交时改 href）；`style.link` 重写 XHTML 的 stylesheet `<link>`；`resource.delete` 不能删 OPF/NCX/Nav 或最后一份 XHTML；`toc.generate` 按标题正则生成 TOC；`metadata.update` 支持任意 DC 字段，`_remove` 删除字段。
 
 整理伪段落时使用 `paragraphs.analyze` → `paragraphs.plan` → `paragraphs.apply` →
@@ -470,6 +584,13 @@ stdout/stderr。Snippet 顶层可用 `plugin`，也可定义 `def run(plugin)` �
 ## 按模板灌文稿（可选捷径）
 
 若当前书碰巧是「封面/彩页/Section」那类轻小说模板，仍可用 `manuscript.parse` + `content.typeset_from_manuscript`。更稳妥的通用做法是：`content.wrap_plain`（自带 heading_pattern）→ `content.split` → `image.insert` / `spine.set` / `toc.generate`。
+
+默认章节识别覆盖 `第N話/章/卷`，以及带或不带全角空格的 `序章`、`幕間`、`間章`、`楔子`、
+`終章`、`最終章`、`尾聲`、`後記`、`番外`、`題外話`、`プロローグ`、`エピローグ`、`あとがき`
+（标题词后须为行尾、空白或冒号，且行不长于 40 字，避免把“後頭傳來…”当标题）。原稿有
+`目錄` 时，目录里列出且在正文中独立成行重复出现的行（如 `1.玲琳，互相交換`、`特別篇　…`）
+也按章节处理，目录本身不会被当成章节。插图标记接受 `［插图：name］`、`【插圖：name】`、
+`[插圖 007]`、`（插圖001）` 等方/圆/尖括号写法，冒号可省略。解析器与模板引擎共用同一规则。
 
 模型**禁止**让你去书籍视图里全选粘贴。
 

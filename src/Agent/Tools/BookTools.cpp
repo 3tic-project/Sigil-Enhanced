@@ -18,6 +18,7 @@
 #include "Agent/Execution/BookEdits.h"
 #include "Agent/Execution/ContentOps.h"
 #include "Agent/Execution/PatchRange.h"
+#include "Agent/Execution/PreflightAudit.h"
 #include "Agent/Execution/ProofAudit.h"
 #include "Agent/Typeset/ManuscriptParser.h"
 #include "Agent/Typeset/TypesetEngine.h"
@@ -834,6 +835,18 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
             .arg(arguments.value(QStringLiteral("decision")).toString(),
                  arguments.value(QStringLiteral("issue_id")).toString());
     }
+    if (name == QLatin1String("content.insert_after_blocks")) {
+        return QStringLiteral("Insert %1 new block(s) after existing elements in %2. Staged until commit; source blocks are unchanged.")
+            .arg(arguments.value(QStringLiteral("items")).toArray().size())
+            .arg(arguments.value(QStringLiteral("resource_id")).toString());
+    }
+    if (name == QLatin1String("preflight.apply_fixes")) {
+        const int issues = arguments.value(QStringLiteral("issue_ids")).toArray().size();
+        const int alts = arguments.value(QStringLiteral("image_alts")).toObject().size();
+        return QStringLiteral("Stage %1 mechanical preflight fix(es) and %2 editor-decided image alt text(s) from run %3. "
+                              "The live book stays unchanged until transaction.commit.")
+            .arg(issues).arg(alts).arg(arguments.value(QStringLiteral("run_id")).toString());
+    }
     if (name == QLatin1String("toc.apply_transform")) {
         return QStringLiteral("Stage reviewed native TOC hierarchy plan %1 with digest %2 for book revision %3. "
                               "This reparents Nav/NCX entries only; labels, targets, preorder, XHTML headings, and the live book remain unchanged until transaction.commit.")
@@ -844,11 +857,90 @@ QString humanReadableImpact(const QString &name, const QJsonObject &arguments)
     return QStringLiteral("Run %1 on the current book.").arg(name);
 }
 
-void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentSession *session)
+void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentSession *session,
+                       AgentCancellation *cancellation)
 {
     if (!registry || !workspace) return;
 
     const auto proof_audit = std::make_shared<ProofAudit>();
+    const auto preflight = std::make_shared<PreflightAudit>(cancellation);
+
+    add(registry, QStringLiteral("preflight.profiles"),
+        QStringLiteral("List versioned release-preflight profiles and the local rules each one runs. EPUBCheck and Ace are listed as external validators; they are reported as not_run unless an adapter actually ran them."),
+        ToolRisk::Read, false, false, emptyObjectSchema(),
+        [](const QJsonObject &) {
+            return ToolResult::success(QJsonObject {
+                { QStringLiteral("default_profile_id"), QStringLiteral("release-basic") },
+                { QStringLiteral("profiles"), PreflightAudit::profiles() }
+            });
+        });
+
+    add(registry, QStringLiteral("preflight.run"),
+        QStringLiteral("Read-only release preflight of the current book including unsaved and staged edits: package/spine, XHTML well-formedness, internal links and fragments, path case, CSS url(), TOC targets, required metadata, language tags, image alt, heading order and unreferenced resources. Returns run_id, snapshot_digest, severity/rule counts, validation_status (EPUBCheck/Ace not_run) and the first issue page. Each issue has rule_id, severity, book_path, 1-based line, evidence, fix_kind and manual_required. Local rules are not a full EPUBCheck; never report the book as validated or accessible from this alone."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("profile_id"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("string") },
+                    { QStringLiteral("enum"), QJsonArray { QStringLiteral("release-basic"), QStringLiteral("epub-core"), QStringLiteral("a11y-basic") } },
+                    { QStringLiteral("default"), QStringLiteral("release-basic") }
+                } },
+                { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 1 }, { QStringLiteral("maximum"), 200 }, { QStringLiteral("default"), 50 } } }
+            } }
+        },
+        [workspace, preflight](const QJsonObject &arguments) {
+            return preflight->run(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("preflight.issues"),
+        QStringLiteral("Page through the issues of the latest preflight.run. Pass run_id; optionally filter by severity or rule_id. Follow next_offset while has_more is true. PREFLIGHT_STALE means the book or staged edits changed: run preflight.run again instead of reusing old findings."),
+        ToolRisk::Read, false, false,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("run_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("severity"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") }, { QStringLiteral("enum"), QJsonArray { QStringLiteral("error"), QStringLiteral("warning"), QStringLiteral("info") } } } },
+                { QStringLiteral("rule_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("offset"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 0 }, { QStringLiteral("default"), 0 } } },
+                { QStringLiteral("limit"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") }, { QStringLiteral("minimum"), 1 }, { QStringLiteral("maximum"), 200 }, { QStringLiteral("default"), 50 } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("run_id") } }
+        },
+        [workspace, preflight](const QJsonObject &arguments) {
+            return preflight->issues(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("preflight.apply_fixes"),
+        QStringLiteral("Stage reviewed preflight fixes from the latest run into the Agent transaction (opens one if needed); never commits. issue_ids may only name fix_kind=mechanical issues that carry a fix (path letter-case corrections, missing lang from dc:language). image_alts maps an image book_path to the alt text the editor decided; \"\" marks it decorative. Never invent alt text from file names or context. Returns before/after for every change. Then read all transaction.preview pages, transaction.commit, and run preflight.run again. PREFLIGHT_STALE means re-run preflight first."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("run_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("issue_ids"), QJsonObject { { QStringLiteral("type"), QStringLiteral("array") }, { QStringLiteral("items"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }, { QStringLiteral("maxItems"), 200 } } },
+                { QStringLiteral("image_alts"), QJsonObject { { QStringLiteral("type"), QStringLiteral("object") }, { QStringLiteral("additionalProperties"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } } } }
+            } },
+            { QStringLiteral("required"), QJsonArray { QStringLiteral("run_id") } }
+        },
+        [workspace, preflight](const QJsonObject &arguments) {
+            return preflight->applyFixes(workspace, arguments);
+        });
+
+    add(registry, QStringLiteral("structure.inspect"),
+        QStringLiteral("Read-only structure map in spine order. Each page gets a role candidate (cover, titlepage, toc, illustration, credits, synopsis, prologue, chapter, epilogue, afterword, body or unknown) with confidence and the evidence that decided it (epub:type, heading text, image-only layout, file name), its first h1-h6 heading with line, and its TOC entry. differences lists body pages missing from the TOC or without a heading, TOC labels that differ from the page heading, TOC order that disagrees with the spine, TOC targets outside the spine, and missing TOC targets. Ruby annotations are ignored. Uses unsaved and staged text. pages and differences share offset pagination; follow next_offset while has_more is true. Roles are candidates for the editor, not facts."),
+        ToolRisk::Read, false, false,
+        paginationSchema(DEFAULT_DIAGNOSTIC_PAGE_SIZE, MAX_DIAGNOSTIC_PAGE_SIZE),
+        [workspace, preflight](const QJsonObject &arguments) {
+            QString digest;
+            QJsonObject structure;
+            const ToolResult built = preflight->structure(workspace, &digest, &structure);
+            if (!built.ok) return built;
+            structure.insert(QStringLiteral("snapshot_digest"), digest);
+            return ToolResult::success(paginatedArrays(
+                structure, { QStringLiteral("pages"), QStringLiteral("differences") },
+                arguments, DEFAULT_DIAGNOSTIC_PAGE_SIZE, MAX_DIAGNOSTIC_PAGE_SIZE));
+        });
 
     add(registry, QStringLiteral("proof.audit"),
         QStringLiteral("Scan visible XHTML body text for review candidates. The default ruleset reports replacement/invisible characters and repeated Chinese comma/full stop. Supports whole_book, file, selection, resources, and zero-based spine ranges. Follow next_cursor until has_more is false. Offsets are UTF-16 XHTML source positions; candidates spanning markup or entities require source inspection. Results are suggestions, not confirmed errors."),
@@ -1771,6 +1863,40 @@ void registerBookTools(ToolRegistry *registry, IBookWorkspace *workspace, AgentS
                                        arguments.value(QStringLiteral("anchor")).toString(),
                                        html,
                                        arguments.value(QStringLiteral("before")).toBool(false)));
+        });
+
+    add(registry, QStringLiteral("content.insert_after_blocks"),
+        QStringLiteral("Insert new elements after many existing blocks of ONE XHTML file in a single staged edit, e.g. a translation <p class=\"zh-trans\"> after each source paragraph, a caption after each image block, or a note after each heading. Each item has anchor_text (a complete element copied exactly from read_fragment, ending with its closing tag such as </p>), optional start_line to disambiguate, and html to insert. Up to 200 items, html 4 KiB each and 128 KiB total; call once per file or chunk. Anchors must be unique and non-overlapping; if any item fails, nothing is staged and item_index names it. Pass expected_resource_revision from read_fragment. Source blocks are not modified. Prefer this over many resource.patch_fragment calls."),
+        ToolRisk::ReversibleEdit, true, true,
+        QJsonObject {
+            { QStringLiteral("type"), QStringLiteral("object") },
+            { QStringLiteral("properties"), QJsonObject {
+                { QStringLiteral("resource_id"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                { QStringLiteral("expected_resource_revision"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                { QStringLiteral("items"), QJsonObject {
+                    { QStringLiteral("type"), QStringLiteral("array") },
+                    { QStringLiteral("minItems"), 1 },
+                    { QStringLiteral("maxItems"), 200 },
+                    { QStringLiteral("items"), QJsonObject {
+                        { QStringLiteral("type"), QStringLiteral("object") },
+                        { QStringLiteral("properties"), QJsonObject {
+                            { QStringLiteral("anchor_text"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } },
+                            { QStringLiteral("start_line"), QJsonObject { { QStringLiteral("type"), QStringLiteral("integer") } } },
+                            { QStringLiteral("html"), QJsonObject { { QStringLiteral("type"), QStringLiteral("string") } } }
+                        } },
+                        { QStringLiteral("required"), QJsonArray { QStringLiteral("anchor_text"), QStringLiteral("html") } }
+                    } }
+                } }
+            } },
+            { QStringLiteral("required"), QJsonArray {
+                QStringLiteral("resource_id"), QStringLiteral("expected_resource_revision"), QStringLiteral("items") } }
+        },
+        [workspace](const QJsonObject &arguments) {
+            return fromBook(insertAfterBlocks(
+                workspace,
+                arguments.value(QStringLiteral("resource_id")).toString(),
+                static_cast<quint64>(arguments.value(QStringLiteral("expected_resource_revision")).toInteger()),
+                arguments.value(QStringLiteral("items")).toArray()));
         });
 
     add(registry, QStringLiteral("content.wrap"),

@@ -130,6 +130,8 @@ set( AGENT_FILES
     Agent/Execution/ContentOps.h
     Agent/Execution/BookEdits.cpp
     Agent/Execution/ProofAudit.cpp
+    Agent/Execution/PreflightAudit.cpp
+    Agent/Execution/PreflightAudit.h
     Agent/Execution/BookEdits.h
     Agent/Typeset/ManuscriptParser.cpp
     Agent/Typeset/ManuscriptParser.h
@@ -722,6 +724,8 @@ set( MISC_FILES
     Misc/FontObfuscation.h
     Misc/TempFolder.cpp
     Misc/TempFolder.h
+    Misc/TempCleanup.cpp
+    Misc/TempCleanup.h
     Misc/OpenExternally.cpp
     Misc/OpenExternally.h
     Misc/TOCHTMLWriter.cpp

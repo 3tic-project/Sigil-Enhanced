@@ -53,6 +53,7 @@
 #include "Misc/AppEventFilter.h"
 #include "Misc/SigilDarkStyle.h"
 #include "Misc/SettingsStore.h"
+#include "Misc/TempCleanup.h"
 #include "Misc/TempFolder.h"
 #include "Misc/UpdateChecker.h"
 #include "Misc/Utility.h"
@@ -571,6 +572,16 @@ int main(int argc, char *argv[])
         EmbeddedPython::instance().setupRedirects();
     }
 
+    TempCleanup::instance().SetHandleReleaser([](const QString &path) {
+        int rv = 0;
+        QString traceback;
+        EmbeddedPython::instance().runInPython(QStringLiteral("tempcleanup"),
+                                               QStringLiteral("release_path"),
+                                               QVariantList() << path, &rv, traceback,
+                                               false, false);
+    });
+    TempCleanup::instance().RemoveLeftoversFromPreviousRun();
+
     try {
 
         // Specify the plugin folders
@@ -997,6 +1008,7 @@ int main(int argc, char *argv[])
             widget->show();
             widget->activateWindow();
             app.exec();
+            TempCleanup::instance().FinishBeforeExit();
             // WebProfileMgr::instance().FlushDiskCaches();
             // QCoreApplication::processEvents();
             // WebProfileMgr::instance().CleanUpForExit();
