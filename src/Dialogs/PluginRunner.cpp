@@ -32,6 +32,7 @@
 #include <QProcessEnvironment>
 #include <QApplication>
 #include <QPalette>
+#include <QCryptographicHash>
 
 #include "MainUI/MainWindow.h"
 #include "MainUI/BookBrowser.h"
@@ -44,6 +45,7 @@
 #include "BookManipulation/CleanSource.h"
 #include "BookManipulation/XhtmlDoc.h"
 #include "Dialogs/PluginRunner.h"
+#include "ResourceObjects/TextResource.h"
 #include "sigil_constants.h"
 
 // These are defined in Importers/ImportEPUB.cpp and can be made available by including sigil_constants.h
@@ -53,6 +55,21 @@
 const QString PluginRunner::SEP = QString(QChar(31));
 const QString PluginRunner::_RS = QString(QChar(30));
 const QStringList PluginRunner::CHANGESTAGS = QStringList() << "deleted" << "added" << "modified";
+
+namespace
+{
+
+QByteArray binaryFileHash(const QString &path)
+{
+    QFile file(path);
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    if (!file.open(QIODevice::ReadOnly) || !hash.addData(&file)) {
+        return QByteArray();
+    }
+    return hash.result();
+}
+
+}
 
 
 PluginRunner::PluginRunner(TabManager *tabMgr, QWidget *parent)
@@ -290,6 +307,7 @@ void PluginRunner::startPlugin()
     m_book->GetFolderKeeper()->SuspendWatchingResources();
     m_book->SaveAllResourcesToDisk();
     m_book->GetFolderKeeper()->ResumeWatchingResources();
+    snapshotBinaryResources();
     ui.startButton->setEnabled(false);
     ui.okButton->setEnabled(false);
     ui.cancelButton->setEnabled(true);
@@ -441,6 +459,11 @@ void PluginRunner::processOutput()
 
 void PluginRunner::pluginFinished(int exitcode, QProcess::ExitStatus exitstatus)
 {
+    // Some legacy plugins (e.g. SigilCompressImg) overwrite binary files in
+    // ebook_root without using bk.writefile(). These edits are already live,
+    // even if the plugin fails, is cancelled, or returns no changes in its XML.
+    refreshDirectBinaryChanges();
+
     if (exitstatus == QProcess::CrashExit) {
         ui.textEdit->append(tr("Launcher process crashed"));
         m_result = "crashed";
@@ -558,6 +581,48 @@ void PluginRunner::pluginFinished(int exitcode, QProcess::ExitStatus exitstatus)
     if ((m_pluginType == "validation") || (m_pluginAutoClose == "true")) {
         accept();
         return;
+    }
+}
+
+
+void PluginRunner::snapshotBinaryResources()
+{
+    m_binaryResourceHashes.clear();
+    if (m_pluginType != "edit") return;
+
+    const auto resources = m_book->GetFolderKeeper()->GetResourceList();
+    for (Resource *resource : resources) {
+        // Text resources have in-memory documents and must use the normal
+        // launcher change list. Binary resources are backed directly by disk.
+        if (qobject_cast<TextResource *>(resource)) continue;
+        const QByteArray digest = binaryFileHash(resource->GetFullPath());
+        if (!digest.isEmpty()) {
+            m_binaryResourceHashes.insert(resource->GetRelativePath(), digest);
+        }
+    }
+}
+
+
+void PluginRunner::refreshDirectBinaryChanges()
+{
+    if (m_binaryResourceHashes.isEmpty()) return;
+
+    bool changed = false;
+    const auto resources = m_book->GetFolderKeeper()->GetResourceList();
+    for (Resource *resource : resources) {
+        const auto before = m_binaryResourceHashes.constFind(resource->GetRelativePath());
+        if (before == m_binaryResourceHashes.constEnd()) continue;
+        const QByteArray after = binaryFileHash(resource->GetFullPath());
+        if (!after.isEmpty() && after != before.value()) {
+            m_book->ResourceUpdatedFromDisk(resource);
+            emit resource->ResourceUpdatedOnDisk();
+            changed = true;
+        }
+    }
+    m_binaryResourceHashes.clear();
+    if (changed) {
+        m_bookBrowser->Refresh();
+        m_mainWindow->ResourcesAddedOrDeletedOrMoved();
     }
 }
 

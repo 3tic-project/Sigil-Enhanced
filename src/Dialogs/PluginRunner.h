@@ -27,6 +27,7 @@
 #include <QDialog>
 #include <QProgressBar>
 #include <QProcess>
+#include <QHash>
 // #include <QDebug>
 
 #include "Misc/TempFolder.h"
@@ -98,6 +99,8 @@ private:
     bool addFiles(const QStringList &);
     bool modifyFiles(const QStringList &);
     void writeSigilCFG();
+    void snapshotBinaryResources();
+    void refreshDirectBinaryChanges();
 
 
     void connectSignalsToSlots();
@@ -124,6 +127,7 @@ private:
     QByteArray m_pluginOutput;
     QString m_algorithm;
     QString m_fontMangling;
+    QHash<QString, QByteArray> m_binaryResourceHashes;
 
     QStringList m_filesToDelete;
     QStringList m_filesToAdd;
