@@ -134,6 +134,81 @@ int fail(const QString& message)
 
 int runTests()
 {
+    // BookLive can close a flow group in the middle of a paragraph, leaving
+    // ruby/span nodes and the sentence ending beside the last paragraph div.
+    // The following paragraphs then continue in the enclosing flow group.
+    const QString split_flow = xhtml(
+        QStringLiteral("<div class='main'><div class='outer-flow'>"
+                       "<div class='first-group'><a id='chapter-start'/>") +
+        paragraphs(12) +
+        QStringLiteral("<div class='broken' style='line-height:1.75'>「途中</div>"
+                       "<!-- preserve the continuation -->"
+                       "<ruby>漢<rt>かん</rt></ruby><span class='tcy'>!?</span>」"
+                       "</div>") + paragraphs(12) +
+        QStringLiteral("</div></div>"));
+    const auto split_analysis = BookLiveParagraphNormalizer::analyzeXhtmlText(split_flow);
+    if (!split_analysis.safeToNormalize || split_analysis.paragraphLeaves != 25 ||
+        split_analysis.convertibleLeaves != 25 || split_analysis.candidateRanges.count() != 25) {
+        return fail(QStringLiteral("split BookLive flow was not fully recognized: %1")
+                        .arg(split_analysis.message));
+    }
+    const auto split_result = BookLiveParagraphNormalizer::normalizeXhtmlText(split_flow);
+    QDomDocument split_output;
+    if (!split_result.ok || !split_result.changed || !split_output.setContent(split_result.text)) {
+        return fail(QStringLiteral("split BookLive flow normalization failed: %1")
+                        .arg(split_result.messages.join(QStringLiteral("; "))));
+    }
+    const QDomElement repaired = findClass(split_output, QStringLiteral("broken"));
+    if (localName(repaired) != QStringLiteral("p") ||
+        repaired.text() != QStringLiteral("「途中漢かん!?」") ||
+        countElements(repaired, QStringLiteral("ruby")) != 1 ||
+        countElements(repaired, QStringLiteral("span")) != 1 ||
+        countElements(split_output, QStringLiteral("p")) != 25 ||
+        localName(findClass(split_output, QStringLiteral("first-group"))) != QStringLiteral("div") ||
+        localName(findClass(split_output, QStringLiteral("outer-flow"))) != QStringLiteral("div") ||
+        !split_result.text.contains(QStringLiteral("preserve the continuation"))) {
+        return fail(QStringLiteral("split paragraph continuation or flow wrappers were lost"));
+    }
+    const auto split_again = BookLiveParagraphNormalizer::normalizeXhtmlText(split_result.text);
+    if (!split_again.ok || split_again.changed || split_again.text != split_result.text) {
+        return fail(QStringLiteral("split BookLive flow normalization is not idempotent"));
+    }
+    if (BookLiveParagraphNormalizer::analyzeXhtmlText(
+            split_flow, BookLiveParagraphNormalizer::Options::conservative()).safeToNormalize) {
+        return fail(QStringLiteral("source-preserving preset must not move continuation nodes"));
+    }
+    QString blank_prefix = split_flow;
+    blank_prefix.replace(QStringLiteral("「途中</div>"), QStringLiteral("　</div>"));
+    const auto blank_result = BookLiveParagraphNormalizer::normalizeXhtmlText(blank_prefix);
+    QDomDocument blank_output;
+    if (!blank_result.ok || !blank_result.changed || !blank_output.setContent(blank_result.text) ||
+        findClass(blank_output, QStringLiteral("broken")).text() != QStringLiteral("漢かん!?」") ||
+        !blank_result.text.contains(QStringLiteral(">　<!-- preserve the continuation -->"))) {
+        return fail(QStringLiteral("an indented paragraph split before its first ruby was skipped"));
+    }
+    QString text_continuation = blank_prefix;
+    text_continuation.replace(QStringLiteral("　</div>"), QStringLiteral("&#x3000;</div>"));
+    text_continuation.replace(QStringLiteral("<!-- preserve the continuation -->"), QString());
+    text_continuation.replace(
+        QStringLiteral("<ruby>漢<rt>かん</rt></ruby><span class='tcy'>!?</span>」"),
+        QStringLiteral("本文<span class='tcy'> &#160; </span>」"));
+    const auto text_result = BookLiveParagraphNormalizer::normalizeXhtmlText(text_continuation);
+    QDomDocument text_output;
+    if (!text_result.ok || !text_result.changed || !text_output.setContent(text_result.text) ||
+        findClass(text_output, QStringLiteral("broken")).text() != QStringLiteral("　本文」") ||
+        text_result.text.count(QChar(0x3000)) != 25 ||
+        text_result.text.count(QChar(0x00a0)) != 1) {
+        return fail(QStringLiteral("text-only continuation or encoded layout spacing was lost: %1")
+                        .arg(text_result.messages.join(QStringLiteral("; "))));
+    }
+    QString unsafe_continuation = split_flow;
+    unsafe_continuation.replace(QStringLiteral("<span class='tcy'>!?</span>"),
+                                QStringLiteral("<span><table><tr><td>layout</td></tr></table></span>"));
+    if (BookLiveParagraphNormalizer::analyzeXhtmlText(unsafe_continuation).candidate ||
+        BookLiveParagraphNormalizer::normalizeXhtmlText(unsafe_continuation).ok) {
+        return fail(QStringLiteral("a complex block was mistaken for a paragraph continuation"));
+    }
+
     const QString body =
         QStringLiteral("<div class=\"main\"><div class=\"outer\"><div class=\"justify\">"
                        "<div class=\"content\"><a name=\"start\"></a>"

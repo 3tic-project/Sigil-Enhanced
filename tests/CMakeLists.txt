@@ -934,6 +934,19 @@ target_link_libraries(booklive_paragraph_normalizer_test PRIVATE
 add_test(NAME booklive_paragraph_normalizer COMMAND booklive_paragraph_normalizer_test)
 set_tests_properties(booklive_paragraph_normalizer PROPERTIES TIMEOUT 30)
 
+add_executable(booklive_normalizer_probe
+    booklive_normalizer_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/DivParagraphCssAnalyzer.cpp
+)
+target_include_directories(booklive_normalizer_probe PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(booklive_normalizer_probe PRIVATE Qt6::Core Qt6::Xml)
+add_test(NAME booklive_epub_regression
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/booklive_epub_regression_test.py
+            $<TARGET_FILE:booklive_normalizer_probe>
+)
+set_tests_properties(booklive_epub_regression PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
+
 add_executable(cmoa_paragraph_normalizer_test
     cmoa_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
