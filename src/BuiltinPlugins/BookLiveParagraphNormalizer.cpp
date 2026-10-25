@@ -19,6 +19,7 @@
 #include <QRegularExpression>
 #include <QSet>
 #include <QVector>
+#include <QXmlStreamReader>
 #include <QtGlobal>
 
 #include <algorithm>
@@ -35,7 +36,7 @@ const QString NORMALIZED_CLASS = QStringLiteral("se-bl-normalized");
 const QString PARAGRAPH_CLASS = QStringLiteral("se-bl-paragraph");
 const QString INNER_BLOCK_CLASS = QStringLiteral("se-bl-inner-block");
 const QString STYLE_MARKER = QStringLiteral("booklive-paragraph-normalizer");
-const QString RULE_VERSION = QStringLiteral("div-paragraph-normalizer-v2");
+const QString RULE_VERSION = QStringLiteral("div-paragraph-normalizer-v3");
 const QString NORMALIZER_CSS =
     QStringLiteral(".se-bl-paragraph { display: block; width: auto; height: auto; margin: 0; padding: 0; border: 0; min-height: 0; text-indent: 0; }\n"
                    ".se-bl-inner-block { display: block; width: auto; height: auto; margin: 0; padding: 0; text-indent: 0; }\n");
@@ -63,6 +64,7 @@ enum class LeafKind {
 struct Leaf {
     QDomElement element;
     LeafKind kind = LeafKind::Other;
+    QVector<QDomNode> continuation;
 };
 
 struct ParentMatch {
@@ -147,7 +149,63 @@ void appendClass(QDomElement& element, const QString& class_name)
     element.setAttribute(QStringLiteral("class"), classes.join(QLatin1Char(' ')));
 }
 
-bool parseDocument(const QString& source, QDomDocument& document, QString& error)
+bool containsLayoutSpace(const QString& text)
+{
+    return std::any_of(text.cbegin(), text.cend(), [](QChar ch) {
+        return ch.isSpace() && ch.unicode() > 0x7f;
+    });
+}
+
+void collectElements(const QDomNode& node, QVector<QDomElement>& elements)
+{
+    if (node.isElement()) elements << node.toElement();
+    for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        collectElements(child, elements);
+    }
+}
+
+void restoreLayoutSpaces(const QString& source, QDomDocument& document)
+{
+    // QDom's default parser drops spacing-only text, including Japanese full-
+    // width indents and NBSPs. Recover those layout spaces before reserializing.
+    // QXmlStreamReader also handles character references, and works on Qt 6.4.
+    QVector<QDomElement> elements;
+    collectElements(document, elements);
+    struct Position { QDomNode parent; QDomNode next; };
+    QVector<Position> positions;
+    int element_index = 0;
+    QXmlStreamReader reader(source);
+    while (!reader.atEnd()) {
+        reader.readNext();
+        if (reader.isStartElement()) {
+            if (element_index >= elements.count()) return;
+            const QDomElement element = elements.at(element_index++);
+            if (!positions.isEmpty()) positions.last().next = element.nextSibling();
+            positions << Position {element, element.firstChild()};
+        } else if (reader.isEndElement()) {
+            if (!positions.isEmpty()) positions.removeLast();
+        } else if (!positions.isEmpty()) {
+            Position& position = positions.last();
+            if (reader.isCharacters()) {
+                const QString text = reader.text().toString();
+                if ((position.next.isText() || position.next.isCDATASection()) &&
+                    position.next.nodeValue() == text) {
+                    position.next = position.next.nextSibling();
+                } else if (isWhitespaceOnly(text) && containsLayoutSpace(text)) {
+                    const QDomText spacing = document.createTextNode(text);
+                    if (position.next.isNull()) position.parent.appendChild(spacing);
+                    else position.parent.insertBefore(spacing, position.next);
+                }
+            } else if ((reader.isComment() && position.next.isComment()) ||
+                       (reader.isProcessingInstruction() && position.next.isProcessingInstruction())) {
+                position.next = position.next.nextSibling();
+            }
+        }
+    }
+}
+
+bool parseDocument(const QString& source, QDomDocument& document, QString& error,
+                   bool preserve_layout_spaces = false)
 {
     QString parse_error;
     int line = -1;
@@ -156,6 +214,7 @@ bool parseDocument(const QString& source, QDomDocument& document, QString& error
         error = QStringLiteral("%1:%2 %3").arg(line).arg(column).arg(parse_error);
         return false;
     }
+    if (preserve_layout_spaces) restoreLayoutSpaces(source, document);
     return true;
 }
 
@@ -234,7 +293,8 @@ QString visibleText(const QDomNode& node)
 QString semanticText(const QDomNode& node)
 {
     if (node.isText() || node.isCDATASection()) {
-        return isWhitespaceOnly(node.nodeValue()) ? QString() : node.nodeValue();
+        const QString text = node.nodeValue();
+        return isWhitespaceOnly(text) && !containsLayoutSpace(text) ? QString() : text;
     }
     if (node.isElement()) {
         const QString name = localName(node);
@@ -345,7 +405,7 @@ bool isHeadingName(const QString& name)
            name.at(1) >= QLatin1Char('1') && name.at(1) <= QLatin1Char('6');
 }
 
-bool hasOnlyAllowedPhrasingContent(const QDomNode& node)
+bool isAllowedPhrasingName(const QString& name)
 {
     static const QSet<QString> allowed_names = {
         QStringLiteral("a"), QStringLiteral("abbr"), QStringLiteral("b"),
@@ -362,6 +422,11 @@ bool hasOnlyAllowedPhrasingContent(const QDomNode& node)
         QStringLiteral("wbr")
     };
 
+    return allowed_names.contains(name);
+}
+
+bool hasOnlyAllowedPhrasingContent(const QDomNode& node)
+{
     for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
         if (child.isText() || child.isCDATASection() || child.isComment()) {
             continue;
@@ -369,7 +434,7 @@ bool hasOnlyAllowedPhrasingContent(const QDomNode& node)
         if (!child.isElement()) {
             return false;
         }
-        if (!allowed_names.contains(localName(child)) ||
+        if (!isAllowedPhrasingName(localName(child)) ||
             !hasOnlyAllowedPhrasingContent(child)) {
             return false;
         }
@@ -522,18 +587,93 @@ QList<Leaf> classifyChildren(const QDomElement& parent)
     return leaves;
 }
 
+bool collectCompatibilityFlow(const QDomElement& parent, QList<Leaf>& leaves)
+{
+    for (QDomNode child = parent.firstChild(); !child.isNull(); child = child.nextSibling()) {
+        if (child.isText() || child.isCDATASection()) {
+            if (!isWhitespaceOnly(child.nodeValue())) return false;
+            continue;
+        }
+        if (child.isComment()) continue;
+        if (!child.isElement()) return false;
+
+        const QDomElement element = child.toElement();
+        Leaf leaf { element, classifyLeaf(element), {} };
+        if (leaf.kind == LeafKind::NestedComplex) {
+            QList<Leaf> nested;
+            // Only descend through div wrappers made entirely of known flow
+            // leaves. Tables, sections and unknown blocks remain protected.
+            if (collectCompatibilityFlow(element, nested) &&
+                nested.count() >= MIN_SHORT_PARENT_CHILDREN &&
+                std::all_of(nested.cbegin(), nested.cend(), [](const Leaf& item) {
+                    return isLeafish(item.kind);
+                })) {
+                leaves.append(nested);
+                continue;
+            }
+        }
+        const bool blank_prefix = leaf.kind == LeafKind::Other &&
+            localName(element) == QStringLiteral("div") &&
+            isWhitespaceOnly(visibleText(element)) && hasOnlyAllowedPhrasingContent(element);
+        if (leaf.kind == LeafKind::Paragraph || blank_prefix) {
+            QVector<QDomNode> following;
+            bool meaningful = false;
+            QDomNode last;
+            for (QDomNode next = child.nextSibling(); !next.isNull(); next = next.nextSibling()) {
+                if (next.isText() || next.isCDATASection()) {
+                    meaningful |= !isWhitespaceOnly(next.nodeValue());
+                } else if (next.isElement() && isAllowedPhrasingName(localName(next)) &&
+                           hasOnlyAllowedPhrasingContent(next)) {
+                    meaningful |= !isWhitespaceOnly(visibleText(next)) || countImageElements(next) > 0;
+                } else if (!next.isComment()) {
+                    break;
+                }
+                following << next;
+                last = next;
+            }
+            if (meaningful) {
+                // A publisher's prematurely closed div can leave the end of
+                // its sentence (often ruby/tcy) beside it. Keep the full inline
+                // run in this paragraph, in its original document order.
+                leaf.continuation = following;
+                leaf.kind = LeafKind::Paragraph;
+                child = last;
+            }
+        }
+        leaves << leaf;
+    }
+    return true;
+}
+
+QList<Leaf> classifyChildren(const QDomElement& parent,
+                            const BookLiveParagraphNormalizer::Options& options,
+                            bool* text_compatible = nullptr)
+{
+    if (options.addLegacyStyleCompensation) {
+        QList<Leaf> leaves;
+        const bool compatible = collectCompatibilityFlow(parent, leaves);
+        if (text_compatible) *text_compatible = compatible;
+        if (compatible) return leaves;
+    } else if (text_compatible) {
+        *text_compatible = !hasMeaningfulDirectText(parent);
+    }
+    return classifyChildren(parent);
+}
+
 void considerParent(const QDomElement& element, int depth, int min_children,
                     const BookLiveParagraphNormalizer::Options& options,
                     ParentMatch& best)
 {
     const QVector<QDomElement> children = directElementChildren(element);
-    const int child_count = children.count();
+    bool text_compatible = false;
+    const QList<Leaf> leaves = classifyChildren(element, options, &text_compatible);
+    const int child_count = leaves.count();
     if (child_count >= min_children && child_count <= MAX_CONTENT_PARENT_CHILDREN &&
-        !hasMeaningfulDirectText(element)) {
+        text_compatible) {
         int leafish = 0;
         int convertible = 0;
-        for (const QDomElement& child : children) {
-            const LeafKind kind = classifyLeaf(child);
+        for (const Leaf& leaf : leaves) {
+            const LeafKind kind = leaf.kind;
             if (isLeafish(kind)) {
                 leafish++;
             }
@@ -609,7 +749,8 @@ BookLiveParagraphNormalizer::CandidateKind candidateKind(LeafKind kind)
 
 void collectClassifiedIndexes(
     const QDomNode& node,
-    const QDomElement& content_parent,
+    const QList<Leaf>& leaves,
+    int& leaf_index,
     const BookLiveParagraphNormalizer::Options& options,
     int& index,
     QHash<int, LeafKind>& candidate_indexes,
@@ -617,8 +758,8 @@ void collectClassifiedIndexes(
 {
     if (node.isElement()) {
         const int current_index = index++;
-        if (!content_parent.isNull() && node.parentNode() == content_parent) {
-            const LeafKind kind = classifyLeaf(node.toElement());
+        if (leaf_index < leaves.count() && node == leaves.at(leaf_index).element) {
+            const LeafKind kind = leaves.at(leaf_index++).kind;
             if (isConvertible(kind, options)) {
                 candidate_indexes.insert(current_index, kind);
             } else if (kind != LeafKind::AnchorOnly && kind != LeafKind::ExistingP) {
@@ -627,7 +768,7 @@ void collectClassifiedIndexes(
         }
     }
     for (QDomNode child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
-        collectClassifiedIndexes(child, content_parent, options, index,
+        collectClassifiedIndexes(child, leaves, leaf_index, options, index,
                                  candidate_indexes, protected_indexes);
     }
 }
@@ -756,7 +897,9 @@ void populateSourceRanges(BookLiveParagraphNormalizer::Analysis& analysis,
     QHash<int, LeafKind> candidate_indexes;
     QSet<int> protected_indexes;
     int index = 0;
-    collectClassifiedIndexes(document, content_parent, options, index,
+    int leaf_index = 0;
+    const QList<Leaf> leaves = classifyChildren(content_parent, options);
+    collectClassifiedIndexes(document, leaves, leaf_index, options, index,
                              candidate_indexes, protected_indexes);
     const QHash<int, ElementTagRange> ranges = scanElementRanges(source);
 
@@ -804,7 +947,9 @@ bool sourcePreservingTransform(const QString& source,
     QHash<int, LeafKind> candidate_indexes;
     QSet<int> protected_indexes;
     int index = 0;
-    collectClassifiedIndexes(document, content_parent, options, index,
+    int leaf_index = 0;
+    const QList<Leaf> leaves = classifyChildren(content_parent, options);
+    collectClassifiedIndexes(document, leaves, leaf_index, options, index,
                              candidate_indexes, protected_indexes);
     const QHash<int, ElementTagRange> ranges = scanElementRanges(source);
     QVector<TextPatch> patches;
@@ -1033,6 +1178,9 @@ QDomElement createParagraph(QDomDocument& document, const Leaf& leaf)
         } else {
             paragraph.appendChild(child.cloneNode(true));
         }
+    }
+    for (const QDomNode& node : leaf.continuation) {
+        paragraph.appendChild(node.cloneNode(true));
     }
     return paragraph;
 }
@@ -1275,7 +1423,7 @@ void classifyAnalysis(BookLiveParagraphNormalizer::Analysis& analysis,
                       const QDomElement& body, const ParentMatch& parent,
                       const BookLiveParagraphNormalizer::Options& options)
 {
-    const QList<Leaf> leaves = classifyChildren(parent.element);
+    const QList<Leaf> leaves = classifyChildren(parent.element, options);
     populateLeafCounts(analysis, leaves);
     for (const Leaf& leaf : leaves) {
         if (isConvertible(leaf.kind, options)) {
@@ -1445,7 +1593,7 @@ BookLiveParagraphNormalizer::analyzeXhtmlText(
     analysis.beforeHash = sha256(source);
     QDomDocument document;
     QString error;
-    if (!parseDocument(source, document, error)) {
+    if (!parseDocument(source, document, error, options.addLegacyStyleCompensation)) {
         analysis.pageKind = PageKind::ParseError;
         analysis.reason = error;
         analysis.message = QStringLiteral("BookLive 段落分析：XML 解析失败，已跳过。%1").arg(error);
@@ -1568,7 +1716,7 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(
 
     QDomDocument document;
     QString error;
-    if (!parseDocument(source, document, error)) {
+    if (!parseDocument(source, document, error, options.addLegacyStyleCompensation)) {
         result.messages << QStringLiteral("BookLive 段落规范化：XML 解析失败，已跳过。%1").arg(error);
         return result;
     }
@@ -1579,7 +1727,7 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(
         result.messages << QStringLiteral("BookLive 段落规范化：正文容器在写回前复核时消失，已回退。");
         return result;
     }
-    const QList<Leaf> leaves = classifyChildren(parent.element);
+    const QList<Leaf> leaves = classifyChildren(parent.element, options);
     for (const Leaf& leaf : leaves) {
         if (leaf.kind == LeafKind::NestedComplex) {
             result.messages << QStringLiteral("BookLive 段落规范化：发现复杂嵌套块，已回退。");
@@ -1609,7 +1757,11 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(
                 continue;
             }
             const QDomElement paragraph = createParagraph(document, leaf);
-            parent.element.replaceChild(paragraph, leaf.element);
+            QDomNode owner = leaf.element.parentNode();
+            owner.replaceChild(paragraph, leaf.element);
+            for (const QDomNode& node : leaf.continuation) {
+                owner.removeChild(node);
+            }
             converted++;
         }
         addVisualPreservationStyle(document, body);
@@ -1628,7 +1780,7 @@ BookLiveParagraphNormalizer::normalizeXhtmlText(
 
     QDomDocument after_document;
     QString after_error;
-    if (!parseDocument(result.text, after_document, after_error)) {
+    if (!parseDocument(result.text, after_document, after_error, options.addLegacyStyleCompensation)) {
         result.messages << QStringLiteral("BookLive 段落规范化：转换后 XML 解析失败，已回退。%1")
                                .arg(after_error);
         return result;
