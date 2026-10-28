@@ -31,6 +31,19 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
+        <widget class="QCheckBox" name="RememberWindowLayout">
+         <property name="text">
+          <string>Remember last window position, state and size</string>
+         </property>
+         <property name="toolTip">
+          <string>Restore the last window position, state, size, and panel layout. When disabled or no saved window is available, start full screen.</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">

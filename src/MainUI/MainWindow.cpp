@@ -171,6 +171,7 @@ extern void addFileToRecentDocs(const QString &filePath);
 
 static const int TEXT_ELIDE_WIDTH   = 300;
 static const QString SETTINGS_GROUP = "mainwindow";
+static constexpr int WINDOW_STATE_VERSION = 1;
 const float ZOOM_STEP               = 0.1f;
 const float ZOOM_MIN                = 0.09f;
 const float ZOOM_MAX                = 5.0f;
@@ -2243,6 +2244,17 @@ void MainWindow::showEvent(QShowEvent *event)
 {
     m_IsInitialLoad = false;
     QMainWindow::showEvent(event);
+    if (!m_WindowLayoutRestoreScheduled) {
+        m_WindowLayoutRestoreScheduled = true;
+        // Restore docks after the first show/resize has established the real
+        // geometry. Activation events are not guaranteed during startup.
+        QTimer::singleShot(0, this, [this]() {
+            if (!m_LastState.isEmpty()) {
+                restoreState(m_LastState);
+                m_LastState.clear();
+            }
+        });
+    }
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
@@ -6053,34 +6065,41 @@ void MainWindow::ReadSettings()
     DWINGEO qDebug() << "In ReadSettings";
     SettingsStore settings;
     ui.actionAutoSpellCheck->setChecked(settings.spellCheck());
+    const bool remember_window_layout = settings.rememberWindowLayout();
     emit SettingsChanged();
     settings.beginGroup(SETTINGS_GROUP);
-    // The size of the window and its full screen status
-    // Due to the 4.8 bug, we restore its "normal" window size and then maximize
-    // it afterwards (if last state was maximized) to ensure on correct screen.
-    bool MaximizedState = settings.value("maximized", false).toBool();
-    bool FullScreenState = settings.value("fullscreen", false).toBool();
-
     // The positions of all the toolbars and dock widgets.
     // The dockwidgets  will only "restore" properly if the widget already
     // has the proper geometry to match what was saved and has been
     // properly resized (see QTBUG-46620 and QTBUG-16252)
-    // So read in now but delay restore until the first time the widget is made active
-    m_LastState = settings.value("toolbars",QByteArray()).toByteArray();
+    // Read now and restore after the first show, even if the window is inactive.
+    m_LastState = remember_window_layout
+        ? settings.value("toolbars", QByteArray()).toByteArray() : QByteArray();
 
 #if 0
     // Work around saved state restore bug with Find and Replace
     m_FRVisible = settings.value("frvisible", false).toBool();
 #endif
 
-    QByteArray lastWindowSize = settings.value("geometry", QByteArray()).toByteArray();
-    if (!lastWindowSize.isEmpty()) restoreGeometry(lastWindowSize);
-
-    if (MaximizedState) {
-        // showMaximized();
-    } else if (FullScreenState) {
-        // showFullScreen();
+    Qt::WindowStates startup_state = Qt::WindowFullScreen;
+    if (remember_window_layout) {
+        const QByteArray geometry = settings.value("geometry", QByteArray()).toByteArray();
+        const bool restored_geometry = !geometry.isEmpty() && restoreGeometry(geometry);
+        // Older builds did not reliably restore the saved window state. Start
+        // full screen on migration, retaining their geometry and dock layout.
+        if (restored_geometry && settings.value("windowStateVersion", 0).toInt() == WINDOW_STATE_VERSION) {
+            if (settings.value("fullscreen", false).toBool()) {
+                startup_state = Qt::WindowFullScreen;
+            } else if (settings.value("maximized", false).toBool()) {
+                startup_state = Qt::WindowMaximized;
+            } else {
+                startup_state = Qt::WindowNoState;
+            }
+        }
     }
+    // Set the state while hidden; show() will enter it after construction.
+    // Reopening must never restore a minimized/invisible window.
+    setWindowState(startup_state);
 
     DWINGEO qDebug() << "------";
     DWINGEO qDebug() << "In ReadSettings before restoreState";
@@ -6179,14 +6198,18 @@ void MainWindow::WriteSettings()
     DWINGEO qDebug() << "In WriteSettings";
 
     SettingsStore settings;
+    const bool remember_window_layout = settings.rememberWindowLayout();
     settings.beginGroup(SETTINGS_GROUP);
     // The size of the window and it's full screen status
     // This is a workaround for this bug:
     // Maximizing Sigil and then closing will forget the previous window size
     // and open it maximized on the wrong screen.
     // https://bugreports.qt-project.org/browse/QTBUG-21371
-    settings.setValue("maximized", isMaximized());
-    settings.setValue("fullscreen",isFullScreen());
+    if (remember_window_layout) {
+        settings.setValue("windowStateVersion", WINDOW_STATE_VERSION);
+        settings.setValue("maximized", isMaximized());
+        settings.setValue("fullscreen", isFullScreen());
+    }
 
 #if 0
     // work around Find Replace saved state restore bug on macOS
@@ -6199,10 +6222,11 @@ void MainWindow::WriteSettings()
 
     DBG DebugCurrentWidgetSizes();
 
-    settings.setValue("geometry", saveGeometry());
-
-    // The positions of all the toolbars and dock widgets
-    settings.setValue("toolbars", saveState());
+    if (remember_window_layout) {
+        settings.setValue("geometry", saveGeometry());
+        // The positions, sizes and visibility of all toolbars and dock widgets.
+        settings.setValue("toolbars", saveState());
+    }
 
     // The last folders used for saving and opening files
     settings.setValue("lastfolderopen",  m_LastFolderOpen);
@@ -8007,8 +8031,6 @@ void MainWindow::changeEvent(QEvent *e)
             DWINGEO qDebug() << "Main Window is transitioning from inactive to active: ";
 
             if (m_FirstTime) {
-                if (!m_LastState.isEmpty()) restoreState(m_LastState);
-
 #if 0
                 if (m_FRVisible) {
                      QTimer::singleShot(30, this, SLOT(Find()));

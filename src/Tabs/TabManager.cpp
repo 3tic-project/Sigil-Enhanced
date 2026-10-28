@@ -1283,6 +1283,7 @@ void TabManager::FocusLowerEditorGroup()
 void TabManager::SaveLayoutSettings()
 {
     SettingsStore settings;
+    if (!settings.rememberWindowLayout()) return;
     settings.beginGroup(QStringLiteral("editorGroups"));
     settings.setValue(QStringLiteral("enabled"), IsSplit());
     if (IsSplit()) {
@@ -1297,6 +1298,7 @@ void TabManager::SaveLayoutSettings()
 void TabManager::RestoreLayoutSettings()
 {
     SettingsStore settings;
+    if (!settings.rememberWindowLayout()) return;
     settings.beginGroup(QStringLiteral("editorGroups"));
     const bool enabled = settings.value(QStringLiteral("enabled"), false).toBool();
     const QByteArray state = settings.value(QStringLiteral("splitterState")).toByteArray();

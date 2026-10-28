@@ -135,6 +135,7 @@ PreferencesWidget::ResultActions GeneralSettingsWidget::saveSettings()
     settings.setPrintDPI(ui.cboPrintDPI->currentText().toInt());
     settings.setExternalXEditorPath(new_xeditor_path);
     settings.setFileDropZoneEnabled(ui.useFileDrop->isChecked());
+    settings.setRememberWindowLayout(ui.RememberWindowLayout->isChecked());
     if (m_refreshClipboardHistoryLimit) {
         results = results | PreferencesWidget::ResultAction_RefreshClipHistoryLimit;
     }
@@ -183,6 +184,7 @@ void GeneralSettingsWidget::readSettings()
     ui.lineEdit7->setText(xeditor_path);
     bool showdropzone = settings.fileDropZoneEnabled();
     ui.useFileDrop->setChecked(showdropzone);
+    ui.RememberWindowLayout->setChecked(settings.rememberWindowLayout());
 }
 
 void GeneralSettingsWidget::clearXEditorPath()

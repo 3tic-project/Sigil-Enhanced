@@ -5662,6 +5662,14 @@ then find the Next match in Code View.&lt;/p&gt;</source>
 <context>
     <name>GeneralSettingsWidget</name>
     <message>
+        <source>Remember last window position, state and size</source>
+        <translation>前回のウィンドウ位置・状態・サイズを記憶する</translation>
+    </message>
+    <message>
+        <source>Restore the last window position, state, size, and panel layout. When disabled or no saved window is available, start full screen.</source>
+        <translation>前回のウィンドウ位置・状態・サイズとパネル配置を復元します。無効の場合、または復元できる記録がない場合は、全画面で起動します。</translation>
+    </message>
+    <message>
         <source>Preserve OPF formatting and comments</source>
         <translation>OPF の書式とコメントを保持する</translation>
     </message>

@@ -976,6 +976,7 @@ private:
     bool m_IsInitialLoad;
 
     QByteArray m_LastState;
+    bool m_WindowLayoutRestoreScheduled = false;
 
     /**
      * The path to the current file loaded.

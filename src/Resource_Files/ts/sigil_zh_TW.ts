@@ -5657,6 +5657,14 @@ then find the Next match in Code View.&lt;/p&gt;</source>
 <context>
     <name>GeneralSettingsWidget</name>
     <message>
+        <source>Remember last window position, state and size</source>
+        <translation>記住上次視窗的位置、狀態和大小</translation>
+    </message>
+    <message>
+        <source>Restore the last window position, state, size, and panel layout. When disabled or no saved window is available, start full screen.</source>
+        <translation>還原上次視窗的位置、狀態、大小及各區域配置。取消勾選或沒有可還原的視窗記錄時，預設以全螢幕啟動。</translation>
+    </message>
+    <message>
         <source>Preserve OPF formatting and comments</source>
         <translation>保留 OPF 原始格式與註解</translation>
     </message>

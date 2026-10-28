@@ -985,12 +985,13 @@ void PreviewWindow::SetDevToolsVisible(bool visible)
 
 void PreviewWindow::SaveLayoutSettings()
 {
+    SettingsStore settings;
+    if (!settings.rememberWindowLayout()) return;
     if (m_devToolsDetached && m_DevToolsWindow) {
         m_devToolsWindowGeometry = m_DevToolsWindow->saveGeometry();
     } else if (m_Splitter && m_Inspector && m_Inspector->isVisible()) {
         m_devToolsSplitterState = m_Splitter->saveState();
     }
-    SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     settings.setValue("devToolsVisible", IsDevToolsVisible());
     settings.setValue("devToolsSplitterState", m_devToolsSplitterState);
@@ -1080,6 +1081,7 @@ void PreviewWindow::LoadSettings()
 {
     SettingsStore settings;
     m_use_focus_highlight = settings.uiHighlightFocusWidgetEnabled();
+    if (!settings.rememberWindowLayout()) return;
     settings.beginGroup(SETTINGS_GROUP);
     m_restore_devtools_visible = settings.value("devToolsVisible", false).toBool();
     m_devToolsSplitterState = settings.value("devToolsSplitterState").toByteArray();

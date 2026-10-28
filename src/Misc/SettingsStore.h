@@ -76,6 +76,7 @@ public:
     QString externalXEditorPath();
 
     bool fileDropZoneEnabled();
+    bool rememberWindowLayout();
 
     /**
      * The zoom factor used by the component.
@@ -322,6 +323,7 @@ public slots:
     void setExternalXEditorPath(const QString &path);
 
     void setFileDropZoneEnabled(bool enable);
+    void setRememberWindowLayout(bool remember);
 
     /**
      * Set the zoom factor used by the component.

@@ -1596,6 +1596,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR} --fixture epub2
     )
     set_tests_properties(main_window_noop_epub2_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME main_window_layout_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_layout_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(main_window_layout_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
     foreach(epub_version IN ITEMS epub2 epub3)
         add_test(NAME legacy_plugin_binary_${epub_version}_integration
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_legacy_plugin_binary_integration.py
