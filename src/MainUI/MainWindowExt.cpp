@@ -2816,7 +2816,7 @@ void MainWindow::ConnectSignalsToSearchEditor()
     connect(searchEditor, SIGNAL(ReplaceSelectedSearchRequest()), findReplace, SLOT(ReplaceSearch()));
     connect(searchEditor, SIGNAL(CountAllSelectedSearchRequest()), findReplace, SLOT(CountAllSearch()));
     connect(searchEditor, SIGNAL(ReplaceAllSelectedSearchRequest()), findReplace, SLOT(ReplaceAllSearch()));
-    connect(searchEditor, SIGNAL(RestartSearch()), findReplace, SLOT(DoRestart()));
+    connect(searchEditor, SIGNAL(RestartSearch()), findReplace, SLOT(RestartClicked()));
 
 }
 
@@ -2846,6 +2846,7 @@ void MainWindow::ConnectSignalsToFindReplace()
     disconnect(ui.actionFind, SIGNAL(triggered()), this, SLOT(Find()));
     disconnect(ui.actionFindNext, SIGNAL(triggered()), hiddenFindReplace, SLOT(DoFindNext()));
     disconnect(ui.actionFindPrevious, SIGNAL(triggered()), hiddenFindReplace, SLOT(DoFindPrevious()));
+    disconnect(ui.actionRestartSearch, SIGNAL(triggered()), hiddenFindReplace, SLOT(RestartClicked()));
     disconnect(ui.actionReplaceNext, SIGNAL(triggered()), hiddenFindReplace, SLOT(DoReplaceNext()));
     disconnect(ui.actionReplacePrevious, SIGNAL(triggered()), hiddenFindReplace, SLOT(DoReplacePrevious()));
     disconnect(ui.actionReplaceCurrent, SIGNAL(triggered()), hiddenFindReplace, SLOT(ReplaceCurrent()));
@@ -2864,6 +2865,7 @@ void MainWindow::ConnectSignalsToFindReplace()
     connect(ui.actionFind, SIGNAL(triggered()), this, SLOT(Find()));
     connect(ui.actionFindNext, SIGNAL(triggered()), findReplace, SLOT(DoFindNext()));
     connect(ui.actionFindPrevious, SIGNAL(triggered()), findReplace, SLOT(DoFindPrevious()));
+    connect(ui.actionRestartSearch, SIGNAL(triggered()), findReplace, SLOT(RestartClicked()), Qt::UniqueConnection);
     connect(ui.actionReplaceNext, SIGNAL(triggered()), findReplace, SLOT(DoReplaceNext()));
     connect(ui.actionReplacePrevious, SIGNAL(triggered()), findReplace, SLOT(DoReplacePrevious()));
     connect(ui.actionReplaceCurrent, SIGNAL(triggered()), findReplace, SLOT(ReplaceCurrent()));

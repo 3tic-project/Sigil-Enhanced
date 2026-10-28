@@ -103,6 +103,7 @@ public:
     void HighlightMarkedText();
 
     bool MoveToMarkedText(Searchable::Direction direction, bool wrap);
+    void RestartSearch(Searchable::Direction direction, bool marked_text = false);
 
     bool MoveToSplitText(Searchable::Direction direction, int start, int end);
 
@@ -551,20 +552,12 @@ private slots:
     void EmitFilteredCursorMoved();
 
     /**
-     * Filters the textChanged signal.
-     * It does this based on the availability of undo.
+     * Filters initialization notifications; edits, undo and redo all notify
+     * the owning tab after its document has finished loading.
      */
     void TextChangedFilter();
 
     void PasteClipEntryFromName(const QString &name);
-
-    /**
-     * Used solely to update the m_isUndoAvailable variable
-     * on undo availability change.
-     *
-     * @param available The current availability of the undo action.
-     */
-    void UpdateUndoAvailable(bool available);
 
     /**
      * Creates a margin where the line number are can sit.
@@ -771,11 +764,6 @@ private:
     ///////////////////////////////
     // PRIVATE MEMBER VARIABLES
     ///////////////////////////////
-
-    /**
-     * \c true when an undo action can be performed.
-     */
-    bool m_isUndoAvailable;
 
     /**
      * Keeps track of the last block count.

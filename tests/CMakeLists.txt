@@ -1586,6 +1586,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(code_view_replace_find_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME editor_undo_search_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_editor_undo_search_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(editor_undo_search_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
     add_test(NAME main_window_noop_epub3_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_noop_integration.py
                 ${CMAKE_BINARY_DIR} --fixture epub3

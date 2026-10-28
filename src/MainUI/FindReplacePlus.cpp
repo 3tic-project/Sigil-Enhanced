@@ -23,6 +23,7 @@
 #include "PCRE2/PCREErrors.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
+#include "ViewEditors/CodeViewEditor.h"
 
 static const QString SETTINGS_GROUP = "find_replace_plus";
 static const QString REGEX_OPTION_IGNORE_CASE = "(?i)";
@@ -264,6 +265,21 @@ void FindReplacePlus::DoRestart()
 void FindReplacePlus::RestartClicked()
 {
     m_PreviousSearch.clear();
+    m_StartingResource = nullptr;
+    m_StartingPos = -1;
+    m_InRemainder = false;
+    SetCodeViewIfNeeded();
+    if (!isWhereCF() && !m_LookWhereCurrentFile && !IsMarkedText()) {
+        const auto resources = GetFilesToSearch(true);
+        if (!resources.isEmpty()) {
+            Resource* first = GetSearchDirection() == Direction_Up ? resources.last() : resources.first();
+            if (first != GetCurrentResource()) OpenResourceTabForSearch(first);
+        }
+    }
+    if (auto* editor = dynamic_cast<CodeViewEditor*>(GetAvailableSearchable())) {
+        editor->RestartSearch(GetSearchDirection() == Direction_Up
+            ? Searchable::Direction_Up : Searchable::Direction_Down, IsMarkedText());
+    }
     ShowMessage(tr("Search will restart"));
 }
 
@@ -1108,6 +1124,10 @@ void FindReplacePlus::OpenResourceTabForSearch(Resource* resource)
     QList<Resource*>selected_resources = m_MainWindow->GetBookBrowserSelectedResources();
 
     m_MainWindow->OpenResourceAndWaitUntilLoaded(resource);
+    if (auto* editor = dynamic_cast<CodeViewEditor*>(GetAvailableSearchable())) {
+        editor->RestartSearch(GetSearchDirection() == Direction_Up
+            ? Searchable::Direction_Up : Searchable::Direction_Down);
+    }
     // give the new tab initial focus
     ContentTab* current_tab = m_MainWindow->GetCurrentContentTab();
     if (current_tab) current_tab->setFocus();

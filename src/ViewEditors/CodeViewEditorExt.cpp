@@ -1506,7 +1506,7 @@ bool CodeViewEditor::FindNextPreSearch(const QString& presearch_regex,
         // considering that the position of Split Pos might be changed due to replacement text,
         // we need to calculate the lastest position of Split Pos.
         m_CountSplitOffset = true;
-        text_end = split_at + m_SplitOffset;
+        text_end = qBound(text_start, split_at + m_SplitOffset, text_end);
     }
 
     SPCRE* spcre_pre = PCRECache::instance().getObject(presearch_regex);
@@ -1575,7 +1575,7 @@ bool CodeViewEditor::FindNextPlus(const QString& presearch_regex,
         // inRemainder is true means the search run on the starting resource from start_of_text to split_at (When Direction Down),
         if (inRemainder && split_at != -1) {
             m_CountSplitOffset = true;
-            text_end = split_at + m_SplitOffset;
+            text_end = qBound(text_start, split_at + m_SplitOffset, text_end);
         }
     }
 
@@ -1635,7 +1635,7 @@ bool CodeViewEditor::FindPrevPreSearch(const QString& presearch_regex,
     // inRemainder is true means the search run on the starting resource from end_of_text to split_at (When Direction Up).
     if (inRemainder && split_at != -1) {
         m_CountSplitOffset = false;
-        text_start = split_at + m_SplitOffset;
+        text_start = qBound(text_start, split_at + m_SplitOffset, text_end);
     }
 
     SPCRE* spcre_pre = PCRECache::instance().getObject(presearch_regex);
@@ -1705,7 +1705,7 @@ bool CodeViewEditor::FindPrevPlus(const QString& presearch_regex,
         // inRemainder is true means the search run on the starting resource from end_of_text to split_at (When Direction Up).
         if (inRemainder && split_at != -1) {
             m_CountSplitOffset = false;
-            text_start = split_at + m_SplitOffset;
+            text_start = qBound(text_start, split_at + m_SplitOffset, text_end);
         }
     }
 

@@ -57,6 +57,7 @@
 #include "PCRE2/SPCRE.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
+#include "ViewEditors/CodeViewEditor.h"
 #include "sigil_constants.h"
 
 #define DBG if(0)
@@ -349,14 +350,35 @@ void FindReplace::HideFindReplace()
 
 void FindReplace::DoRestart()
 {
-    m_PreviousSearch.clear();
-    ShowMessage(tr("Search will restart"));
+    RestartClicked();
 }
 
 void FindReplace::RestartClicked()
 {
     m_PreviousSearch.clear();
-    m_RestartPerformed = true;
+    m_StartingResource = nullptr;
+    m_StartingPos = -1;
+    m_InRemainder = false;
+    SetCodeViewIfNeeded();
+    const auto direction = GetSearchableDirection();
+    if (!isWhereCF() && !m_LookWhereCurrentFile && !IsMarkedText()) {
+        const auto resources = GetFilesToSearch(true);
+        if (!resources.isEmpty()) {
+            Resource* first = direction == Searchable::Direction_Up ? resources.last() : resources.first();
+            if (first != GetCurrentResource()) {
+                const auto selected = m_MainWindow->GetBookBrowserSelectedResources();
+                const bool focus_find = HasFocusFind();
+                const bool focus_replace = HasFocusReplace();
+                m_MainWindow->OpenResourceAndWaitUntilLoaded(first);
+                if (isWhereSelected()) m_MainWindow->SelectResources(selected);
+                if (focus_find) SetFocusFind();
+                if (focus_replace) SetFocusReplace();
+            }
+        }
+    }
+    if (auto* editor = dynamic_cast<CodeViewEditor*>(GetAvailableSearchable())) {
+        editor->RestartSearch(direction, IsMarkedText());
+    }
     ShowMessage(tr("Search will restart"));
 }
 
@@ -1809,11 +1831,6 @@ void FindReplace::LoadSearch(SearchEditorModel::searchEntry *search_entry)
 
 void FindReplace::SetStartingResource(bool update_position)
 {
-    bool manual_restart = m_RestartPerformed;
-    Q_UNUSED(manual_restart);
-    
-    m_RestartPerformed = false;
-
     if (isWhereCF() || m_LookWhereCurrentFile || IsMarkedText()) return;
 
     Resource * current_resource = GetCurrentResource();
@@ -1840,9 +1857,7 @@ void FindReplace::SetStartingResource(bool update_position)
 
     // All new searches running from the Saved Search Dialog should start
     // new searches at the top (or bottom) of the current file if it is in the set.
-    // Also, when the user hits Restart, the next search should start at the top (bottom)
-    
-    // if (m_IsSearchGroupRunning || manual_restart ) {
+    // Explicit restarts already moved to the scope boundary in RestartClicked().
     if (m_IsSearchGroupRunning) {
         if ( m_StartingResource == current_resource ) {
             int pos = 0;

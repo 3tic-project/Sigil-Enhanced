@@ -172,7 +172,7 @@ class OpenRpcContractTest(unittest.TestCase):
         self.assertIsNotNone(save)
         self.assertLess(
             save["body"].index("InitialLoad();"),
-            save["body"].index("SetText(GetText());"),
+            save["body"].index("XMLResource::SaveToDisk(book_wide_save);"),
         )
 
 
