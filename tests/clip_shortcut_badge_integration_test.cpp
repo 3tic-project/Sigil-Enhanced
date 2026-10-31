@@ -99,8 +99,10 @@ int main(int argc, char **argv)
         model.UpdateNumber();
 
         MainWindow window(QString::fromLocal8Bit(argv[2]));
+        // This test needs a wide toolbar; a fresh profile now starts full screen
+        // on the offscreen platform's smaller virtual display.
+        window.showNormal();
         window.resize(1800, 800);
-        window.show();
         QToolBar *toolbar = window.findChild<QToolBar *>(QStringLiteral("toolBarClips"));
         Require(toolbar, "The primary Clips toolbar is missing");
         toolbar->setVisible(true);
