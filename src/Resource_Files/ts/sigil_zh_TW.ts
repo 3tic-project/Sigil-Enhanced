@@ -15926,6 +15926,30 @@ EPUB %2 / 語言 [%3] / 閱讀方向 %4
         <source>Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding.</source>
         <translation>預覽中的計算值。MBS/MBE 表示區塊起始／結束外距；PBS/PBE 表示區塊起始／結束內距。</translation>
     </message>
+    <message>
+        <source>Choose a TXT filename different from the source book.</source>
+        <translation>請選擇與來源書籍不同的 TXT 檔名。</translation>
+    </message>
+    <message>
+        <source>Export TXT File</source>
+        <translation>匯出 TXT 檔案</translation>
+    </message>
+    <message>
+        <source>Export TXT File...</source>
+        <translation>匯出 TXT 檔案...</translation>
+    </message>
+    <message>
+        <source>Export the current book as UTF-8 plain text in reading order, including unsaved edits</source>
+        <translation>依閱讀順序將目前書籍匯出為 UTF-8 純文字，包含尚未儲存的編輯</translation>
+    </message>
+    <message>
+        <source>No book is open.</source>
+        <translation>尚未開啟書籍。</translation>
+    </message>
+    <message>
+        <source>TXT exported to %1.</source>
+        <translation>TXT 已匯出至 %1。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -27639,5 +27663,20 @@ Continue using the requested filename?</source>
     <message><source>Cmoa paragraph analysis: %1 body DIVs are safe to convert; headings, Ruby, blank lines, and source formatting are preserved.</source><translation>Cmoa 段落分析：%1 個正文 DIV 可安全轉換；標題、Ruby、空行與原始碼格式均會保留。</translation></message>
     <message><source>Cmoa paragraph normalization: this file has no convertible items.</source><translation>Cmoa 段落規範化：此檔案沒有可轉換項目。</translation></message>
     <message><source>Cmoa paragraph normalization: conversion used source-range patches.</source><translation>Cmoa 段落規範化：轉換使用了原始碼範圍修補。</translation></message>
+</context>
+<context>
+    <name>PlainTextExporter</name>
+    <message>
+        <source>Cannot extract all text from %1: the document exceeds the parser limits.</source>
+        <translation>無法完整擷取 %1 中的文字：文件超出剖析器限制。</translation>
+    </message>
+    <message>
+        <source>Cannot write TXT file %1: %2</source>
+        <translation>無法寫入 TXT 檔案 %1：%2</translation>
+    </message>
+    <message>
+        <source>This book contains no exportable text.</source>
+        <translation>本書沒有可匯出的文字。</translation>
+    </message>
 </context>
 </TS>

@@ -15931,6 +15931,30 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <source>Computed Preview values. MBS/MBE are block margins; PBS/PBE are block padding.</source>
         <translation>プレビューの計算値です。MBS/MBE はブロック方向の前後マージン、PBS/PBE は前後パディングを示します。</translation>
     </message>
+    <message>
+        <source>Choose a TXT filename different from the source book.</source>
+        <translation>元の書籍とは異なる TXT ファイル名を選択してください。</translation>
+    </message>
+    <message>
+        <source>Export TXT File</source>
+        <translation>TXT ファイルをエクスポート</translation>
+    </message>
+    <message>
+        <source>Export TXT File...</source>
+        <translation>TXT ファイルをエクスポート...</translation>
+    </message>
+    <message>
+        <source>Export the current book as UTF-8 plain text in reading order, including unsaved edits</source>
+        <translation>未保存の編集を含め、現在の書籍を読む順序で UTF-8 のプレーンテキストにエクスポートします</translation>
+    </message>
+    <message>
+        <source>No book is open.</source>
+        <translation>書籍が開かれていません。</translation>
+    </message>
+    <message>
+        <source>TXT exported to %1.</source>
+        <translation>TXT を %1 にエクスポートしました。</translation>
+    </message>
 </context>
 <context>
     <name>ManageAutomation</name>
@@ -27654,5 +27678,20 @@ Continue using the requested filename?</source>
     <message><source>Cmoa paragraph analysis: %1 body DIVs are safe to convert; headings, Ruby, blank lines, and source formatting are preserved.</source><translation>Cmoa 段落解析：本文 DIV %1 件を安全に変換できます。見出し、ルビ、空行、ソース書式は保持されます。</translation></message>
     <message><source>Cmoa paragraph normalization: this file has no convertible items.</source><translation>Cmoa 段落の正規化：このファイルには変換可能な項目がありません。</translation></message>
     <message><source>Cmoa paragraph normalization: conversion used source-range patches.</source><translation>Cmoa 段落の正規化：変換にはソース範囲パッチを使用しました。</translation></message>
+</context>
+<context>
+    <name>PlainTextExporter</name>
+    <message>
+        <source>Cannot extract all text from %1: the document exceeds the parser limits.</source>
+        <translation>%1 のすべてのテキストを抽出できません。文書がパーサーの制限を超えています。</translation>
+    </message>
+    <message>
+        <source>Cannot write TXT file %1: %2</source>
+        <translation>TXT ファイル %1 に書き込めません：%2</translation>
+    </message>
+    <message>
+        <source>This book contains no exportable text.</source>
+        <translation>この書籍にはエクスポートできるテキストがありません。</translation>
+    </message>
 </context>
 </TS>

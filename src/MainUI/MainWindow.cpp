@@ -7882,6 +7882,7 @@ void MainWindow::ExtendUI()
     KeyboardShortcutManager::instance().registerAction(this, ui.actionNormalizeEpubStructure, "MainWindow.NormalizeEpubStructure"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionEnhanceSourceFormatting, "MainWindow.EnhanceSourceFormatting"); // modified: Builtin native plugin
     KeyboardShortcutManager::instance().registerAction(this, ui.actionConvertKfx, "MainWindow.ConvertKfx"); // modified: Builtin KFX import plugin
+    KeyboardShortcutManager::instance().registerAction(this, ui.actionExportPlainText, "MainWindow.ExportPlainText");
     KeyboardShortcutManager::instance().registerAction(this, ui.actionChineseConversion, "MainWindow.ConvertChineseText"); // modified: Chinese conversion
     KeyboardShortcutManager::instance().registerAction(this, ui.actionSubsetEmbeddedFonts, "MainWindow.SubsetEmbeddedFonts"); // modified: font subsetting
     KeyboardShortcutManager::instance().registerAction(this, ui.actionOpenRegexWorkbench, "MainWindow.OpenRegexWorkbench"); // modified: Advanced Regex Workbench
@@ -8340,6 +8341,7 @@ void MainWindow::ConnectSignalsToSlots()
     connect(ui.actionNormalizeEpubStructure, SIGNAL(triggered()), this, SLOT(NormalizeEpubStructure())); // modified: Builtin native plugin
     connect(ui.actionEnhanceSourceFormatting, SIGNAL(triggered()), this, SLOT(EnhanceSourceFormatting())); // modified: Builtin native plugin
     connect(ui.actionConvertKfx, SIGNAL(triggered()), this, SLOT(ConvertKfx())); // modified: Builtin KFX import plugin
+    connect(ui.actionExportPlainText, SIGNAL(triggered()), this, SLOT(ExportPlainText()));
     connect(ui.actionChineseConversion, SIGNAL(triggered()), this, SLOT(ConvertChineseText())); // modified: Chinese conversion
     connect(ui.actionSubsetEmbeddedFonts, SIGNAL(triggered()), this, SLOT(SubsetEmbeddedFonts())); // modified: font subsetting
     connect(ui.actionOpenRegexWorkbench, SIGNAL(triggered()), this, SLOT(OpenRegexWorkbench())); // modified: Advanced Regex Workbench

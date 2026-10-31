@@ -28,6 +28,7 @@
 #include "BuiltinPlugins/KfxParagraphNormalizer.h"
 #include "BuiltinPlugins/KfxImportController.h"
 #include "BuiltinPlugins/KfxImportProtocol.h"
+#include "BuiltinPlugins/PlainTextExporter.h"
 #include "BuiltinPlugins/VerticalToHorizontalConverter.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "ResourceObjects/HTMLResource.h"
@@ -40,6 +41,7 @@
 #include "Tabs/CSSTab.h"
 #include "BookManipulation/EpubVersionConv.h" // modified: Epub3ToEpub2 Epub2ToEpub3
 #include "Misc/ResourceInsertion.h"
+#include "Misc/SettingsStore.h"
 #include "Misc/SettingsStoreExtend.h"
 #include "Misc/Utility.h"
 #include "ChineseConversion/ChineseConversionData.h"
@@ -59,6 +61,8 @@
 #include "MainUI/RegexWorkbenchBatchCommitter.h"
 #include "ResourceObjects/CSSResource.h"
 #include "ResourceObjects/FontResource.h"
+
+#include <algorithm>
 
 namespace
 {
@@ -348,6 +352,80 @@ void AppendDivPlanResults(const DivPlan::Result& plan,
             .arg(plan.protectedCount));
 }
 
+}
+
+bool MainWindow::ExportCurrentBookText(const QString& fullfilepath, QString* error)
+{
+    if (!m_Book || !m_Book->GetFolderKeeper()) {
+        if (error) *error = tr("No book is open.");
+        return false;
+    }
+    const QFileInfo destination(fullfilepath);
+    const QFileInfo source(m_CurrentFilePath);
+    if (!m_CurrentFilePath.isEmpty() &&
+        (destination.absoluteFilePath() == source.absoluteFilePath() ||
+         (!destination.canonicalFilePath().isEmpty() &&
+          destination.canonicalFilePath() == source.canonicalFilePath()))) {
+        if (error) *error = tr("Choose a TXT filename different from the source book.");
+        return false;
+    }
+
+    FolderKeeper* keeper = m_Book->GetFolderKeeper();
+    QList<Resource*> ordered;
+    QSet<Resource*> seen;
+    // Follow the live OPF, rather than filenames or the original EPUB on disk.
+    for (const QString& path : keeper->GetOPF()->GetSpineOrderBookPaths()) {
+        Resource* resource = keeper->GetResourceByBookPathNoThrow(path);
+        if (resource && !seen.contains(resource) &&
+            (resource->Type() == Resource::HTMLResourceType || resource->Type() == Resource::SVGResourceType)) {
+            ordered.append(resource);
+            seen.insert(resource);
+        }
+    }
+    // Keep supplementary XHTML (including notes and navigation) as well.
+    auto supplementary = keeper->GetResourceTypeList<HTMLResource>();
+    std::sort(supplementary.begin(), supplementary.end(), [](HTMLResource* a, HTMLResource* b) {
+        return a->GetRelativePath() < b->GetRelativePath();
+    });
+    for (HTMLResource* resource : supplementary) {
+        if (!seen.contains(resource)) ordered.append(resource);
+    }
+
+    QList<BuiltinPlugins::PlainTextExporter::Document> documents;
+    for (Resource* resource : ordered) {
+        auto* text = qobject_cast<TextResource*>(resource);
+        text->InitialLoad();
+        QReadLocker locker(&resource->GetLock());
+        documents.append({resource->GetRelativePath(), text->GetText()});
+    }
+    return BuiltinPlugins::PlainTextExporter::exportToFile(documents, fullfilepath, error);
+}
+
+bool MainWindow::ExportPlainText()
+{
+    if (!m_Book) return false;
+    SettingsStore settings;
+    QString folder = settings.value(QStringLiteral("plain_text_export/last_folder")).toString();
+    if (folder.isEmpty()) {
+        folder = m_CurrentFilePath.isEmpty() ? QDir::homePath() : QFileInfo(m_CurrentFilePath).absolutePath();
+    }
+    QString basename = QFileInfo(m_CurrentFileName).completeBaseName();
+    if (basename.isEmpty()) basename = QStringLiteral("book");
+    QFileDialog dialog(this, tr("Export TXT File"), QDir(folder).filePath(basename + QStringLiteral(".txt")),
+                       tr("Text files (*.txt)"));
+    dialog.setOptions(Utility::DlgOptions(QStringLiteral("LinuxUseNonNative")));
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDefaultSuffix(QStringLiteral("txt"));
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty()) return false;
+    const QString destination = dialog.selectedFiles().first();
+    QString error;
+    if (!ExportCurrentBookText(destination, &error)) {
+        Utility::warning(this, tr("Export TXT File"), error);
+        return false;
+    }
+    settings.setValue(QStringLiteral("plain_text_export/last_folder"), QFileInfo(destination).absolutePath());
+    ShowMessageOnStatusBar(tr("TXT exported to %1.").arg(destination));
+    return true;
 }
 
 bool MainWindow::ConvertKfx()

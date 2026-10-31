@@ -237,6 +237,7 @@ public:
                            const QStringList& conversionWarnings = QStringList());
     bool SaveCurrentBook();
     bool ExportCurrentBookCopy(const QString &fullfilepath);
+    bool ExportCurrentBookText(const QString& fullfilepath, QString* error = nullptr);
 
     void SetValidationResults(const QList<ValidationResult> &results);
 
@@ -1218,6 +1219,7 @@ public slots:
     bool NormalizeEpubStructure(); // modified: Builtin native plugin
     bool EnhanceSourceFormatting(); // modified: Builtin native plugin
     bool ConvertKfx(); // modified: Builtin KFX import plugin
+    bool ExportPlainText();
     bool ConvertChineseText(); // modified: Chinese conversion
     bool SubsetEmbeddedFonts(); // modified: HarfBuzz font subsetting
     bool OpenRegexWorkbench(); // modified: Advanced Regex Workbench

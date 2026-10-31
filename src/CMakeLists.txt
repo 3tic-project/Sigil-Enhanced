@@ -157,6 +157,8 @@ set( AGENT_FILES
 )
 
 set( BUILTIN_PLUGIN_FILES
+    BuiltinPlugins/PlainTextExporter.cpp
+    BuiltinPlugins/PlainTextExporter.h
     BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     BuiltinPlugins/BookLiveParagraphNormalizer.h
     BuiltinPlugins/CmoaParagraphNormalizer.cpp
