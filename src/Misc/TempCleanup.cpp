@@ -64,9 +64,13 @@ void ClearReadOnlyAttribute(const QString &path)
 {
     QString native = QDir::toNativeSeparators(QFileInfo(path).absoluteFilePath());
     if (native.size() >= MAX_PATH - 12 && !native.startsWith(QStringLiteral("\\\\?\\"))) {
-        native = native.startsWith(QStringLiteral("\\\\"))
-            ? QStringLiteral("\\\\?\\UNC\\") + native.mid(2)
-            : QStringLiteral("\\\\?\\") + native;
+        // QStringBuilder keeps references/value categories in its type, so
+        // these concatenations cannot be operands of the same conditional.
+        if (native.startsWith(QStringLiteral("\\\\"))) {
+            native = QStringLiteral("\\\\?\\UNC\\") + native.mid(2);
+        } else {
+            native = QStringLiteral("\\\\?\\") + native;
+        }
     }
     const LPCWSTR wide = reinterpret_cast<LPCWSTR>(native.utf16());
     const DWORD attributes = GetFileAttributesW(wide);
