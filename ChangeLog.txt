@@ -1,10 +1,31 @@
+Sigil-Enhanced-2.8.5.E13
+   New Features
+     - Added Enhancement > Export TXT File for UTF-8 plain text in live reading order, including unsaved edits, paragraph breaks, Unicode indentation, ruby base text, image alternatives, and SVG text.
+     - Added a preference to remember window position, state, size, and panel layout, with fullscreen startup when no layout is saved or remembering is disabled.
+     - Added Native Agent publication preflight and structure inspection, reviewed mechanical fixes and image-alt decisions, batched insertion after content blocks, and a read-only release-preflight skill.
+     - Routed skills by declared capabilities, available tools, explicit names, and triggers, with metadata validation and routing diagnostics.
+     - Recognized spaced and TOC-listed manuscript headings and additional illustration markers; stopped using image filenames as alternative text.
+
+   Bug Fixes
+     - Marked redone edits as unsaved and preserved HTML undo/redo history across saves.
+     - Restarted Find/Replace from the scope boundary in both directions, clearing original, enhanced, and pre-search caches and keeping marked searches inside their range.
+     - Detected binary resources overwritten directly by legacy plugins so image compression results can be saved.
+     - Recognized BookLive nested wrappers, split paragraphs, and stray inline continuations while preserving meaningful Unicode spacing.
+     - Kept retrying removal of busy or plugin read-only temporary folders, waited on exit, and resumed skipped cleanup at the next start.
+     - Released embedded-Python handles and working directories before cleanup and retained Live plugin temporary files until their process releases them.
+     - Stopped Code View from starting a text drag inside the selection, avoiding a Windows crash; the press starts a new selection. SIGIL_ALLOW_CODEVIEW_DROP restores the old behavior.
+     - Reported TOC references left by resource deletion and bounded/cached whole-book Agent preflight and structure scans.
+
+   Build/Testing
+     - Added native EPUB 2/3 TXT export, legacy-plugin binary-change, undo/search restart, and window-layout integration coverage, plus BookLive and Agent regressions.
+     - Tested TXT export on long chapters and disposable copies of three real EPUBs; kept Simplified Chinese, Traditional Chinese, and Japanese translations current.
+     - Expanded temporary-workspace tests for busy/read-only folders, next-start cleanup, and Python file holds.
+     - Made the Clip toolbar integration test explicitly open a wide normal window instead of depending on the startup window state.
+
 Sigil-Enhanced-2.8.5.E12
    Bug Fixes
      - Waited for the extracted EPUB workspace to be removed when closing the book, including when the last window closes.
      - Made Edit TOC delete every selected entry in one action instead of only one entry.
-     - Kept retrying removal of temporary folders that are still in use (open files, the working directory, read-only folders left by plugins) and, on exit, wait in a dialog until they are gone; folders left after "Exit Without Waiting" are removed on the next start.
-     - Released embedded-Python file handles and working directory inside a temporary folder before retrying its removal, and kept Live plugin materialized files until the plugin process lets go of them.
-     - Stopped Code View from starting a text drag when pressing inside the selection (the drag crashed on Windows and Code View already rejects plain-text drops); the press now starts a new selection. SIGIL_ALLOW_CODEVIEW_DROP restores the old behavior.
 
    New Features
      - Rendered Native Agent conversations as safe Markdown. Links to current-book files and XHTML source lines open Code View after checking that the target is still current.
@@ -15,7 +36,6 @@ Sigil-Enhanced-2.8.5.E12
 
    Build/Testing
      - Added integration coverage for closing a book and removing its extracted workspace; expanded TOC and Native Agent coverage.
-     - Made the workspace-removal test catch the old behavior: large-book exit timing (fails on E11), plugin read-only folders and held files with the exit dialog (fail on E12), plus next-start cleanup and Python holds.
 
 Sigil-Enhanced-2.8.5.E11
    Bug Fixes

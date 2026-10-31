@@ -18,8 +18,10 @@ Details
 * Bump `version.xml` to the matching dotted enhanced version.
 * Verify the CMake, `version.xml`, ChangeLog, release-notes, and tag versions agree.
 * Record the release date in the release notes (and in `ChangeLog.txt` if its format includes dates).
-* Commit version changes but do not push them.
-* Tag version using the established `vX.Y.ZEN` form.
+* Commit version changes after validation.
+* Push the validated mainline first, then create and push the annotated release tag using the established `vX.Y.ZEN` form.
+  * For 2.8.5E13: `git push enhanced master`, then `git tag -a v2.8.5E13 -m "Sigil-Enhanced 2.8.5E13"` and `git push enhanced refs/tags/v2.8.5E13`.
+  * The tag must point at the same commit as the published mainline. Tag pushes trigger `.github/workflows/package-enhanced.yml` for Windows/macOS packaging, asset checksums, and the GitHub Release.
 * Build source package $ git archive --prefix Sigil-x.y.z/ -o ../Sigil-x.y.z-Code.zip HEAD
 * Build packages.
   * OS X
