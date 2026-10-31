@@ -48,6 +48,7 @@ static QString KEY_UI_PREVIEW_TIMEOUT = SETTINGS_GROUP + "/" + "ui_preview_timeo
 static QString KEY_UI_HIGHLIGHT_FOCUS_WIDGET = SETTINGS_GROUP + "/" + "ui_highlight_focus_widget";
 static QString KEY_UI_DOUBLEWIDTH_TEXTCURSOR = SETTINGS_GROUP + "/" + "ui_doublewidth_textcursor";
 static QString KEY_UI_CUSTOM_SIGIL_DARK_THEME = SETTINGS_GROUP + "/" + "ui_custom_sigil_dark_theme";
+static const QString KEY_REMEMBER_WINDOW_LAYOUT = SETTINGS_GROUP + "/remember_window_layout";
 static QString KEY_ZOOM_IMAGE = SETTINGS_GROUP + "/" + "zoom_image";
 static QString KEY_ZOOM_TEXT = SETTINGS_GROUP + "/" + "zoom_text";
 static QString KEY_ZOOM_WEB = SETTINGS_GROUP + "/" + "zoom_web";
@@ -237,6 +238,12 @@ bool SettingsStore::fileDropZoneEnabled()
 {
    clearSettingsGroup();
    return value(KEY_ENABLE_FILE_DROP_ZONE, true).toBool();
+}
+
+bool SettingsStore::rememberWindowLayout()
+{
+    clearSettingsGroup();
+    return value(KEY_REMEMBER_WINDOW_LAYOUT, true).toBool();
 }
 
 float SettingsStore::zoomImage()
@@ -693,6 +700,12 @@ void SettingsStore::setFileDropZoneEnabled(bool enable)
 {
     clearSettingsGroup();
     setValue(KEY_ENABLE_FILE_DROP_ZONE, enable);
+}
+
+void SettingsStore::setRememberWindowLayout(bool remember)
+{
+    clearSettingsGroup();
+    setValue(KEY_REMEMBER_WINDOW_LAYOUT, remember);
 }
 
 void SettingsStore::setZoomImage(float zoom)

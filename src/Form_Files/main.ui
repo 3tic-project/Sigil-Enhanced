@@ -431,6 +431,7 @@
     <addaction name="actionNormalizeEpubStructure"/>
     <addaction name="actionEnhanceSourceFormatting"/>
     <addaction name="actionConvertKfx"/>
+    <addaction name="actionExportPlainText"/>
     <addaction name="separator"/>
     <addaction name="actionChineseConversion"/>
     <addaction name="actionSubsetEmbeddedFonts"/>
@@ -1980,6 +1981,14 @@
     </property>
     <property name="toolTip">
       <string>Convert a DRM-free KFX or KFX-ZIP book, then save it or open it in a new window</string>
+    </property>
+  </action>
+  <action name="actionExportPlainText">
+    <property name="text">
+      <string>Export TXT File...</string>
+    </property>
+    <property name="toolTip">
+      <string>Export the current book as UTF-8 plain text in reading order, including unsaved edits</string>
     </property>
   </action>
   <action name="actionChineseConversion">

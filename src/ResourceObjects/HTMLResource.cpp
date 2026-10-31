@@ -113,7 +113,9 @@ void HTMLResource::SetTOCCache(const QString & text)
 void HTMLResource::SaveToDisk(bool book_wide_save)
 {
     InitialLoad();
-    SetText(GetText());
+    // Saving must not reload the document (or queue a stale self-copy from
+    // the export worker), which would erase undo/redo history after a save.
+    TrackNewResources();
     XMLResource::SaveToDisk(book_wide_save);
 }
 

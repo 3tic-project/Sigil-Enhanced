@@ -11,6 +11,13 @@
 - 复用当前 C++ 资源模型、OPF 解析器、FolderKeeper、UniversalUpdates，而不是照搬外部脚本。
 - 将“分析/计划/执行/报告”拆开，避免大范围自动修改时缺少可见结果。
 
+## Plain Text Export
+
+“增强 → 导出 TXT 文件…” 使用 `PlainTextExporter` 将当前 Book 的文档快照按阅读顺序
+导出为 UTF-8 纯文本，包含未保存编辑。正文提取保留段落、换行、Unicode 缩进和
+ruby 基底文字；导出不修改书籍及撤销状态。详细规则与测试见
+[`docs/PlainTextExport.md`](../../docs/PlainTextExport.md)。
+
 ## KFX Import & Convert
 
 KFX 导入采用“原生 Qt 编排层 + 独立 Python worker”的内置插件边界：

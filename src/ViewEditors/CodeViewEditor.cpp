@@ -121,7 +121,6 @@ private:
 CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, QWidget *parent)
     :
     QPlainTextEdit(parent),
-    m_isUndoAvailable(false),
     m_LastBlockCount(0),
     m_LineNumberAreaBlockNumber(-1),
     m_LineNumberArea(new LineNumberArea(this)),
@@ -1344,6 +1343,23 @@ void CodeViewEditor::ResetLastFindMatch()
     //------------------------------------
 }
 
+void CodeViewEditor::RestartSearch(Searchable::Direction direction, bool marked_text)
+{
+    // Reset the cached Plus/pre-search range as well as the visible selection.
+    // Suppress the automatic search invalidation while moving this cursor.
+    m_InSearchingState = false;
+    m_lastMatch = SPCRE::MatchInfo();
+    m_preSearchInfo = PreSearchInfo();
+    m_lastFindRegex.clear();
+    m_CountSplitOffset = false;
+    m_SplitOffset = 0;
+    int position = direction == Searchable::Direction_Up ? textLength() : 0;
+    if (marked_text && IsMarkedText()) {
+        position = direction == Searchable::Direction_Up ? m_MarkedTextEnd : m_MarkedTextStart;
+    }
+    ScrollToPosition(position);
+}
+
 QString CodeViewEditor::GetSelectedText()
 {
     return cursor_selected_text(textCursor());
@@ -2528,7 +2544,9 @@ void CodeViewEditor::TextChangedFilter()
     }
     //------------------------------------------
 
-    if (m_isUndoAvailable) {
+    // On redo, textChanged can precede undoAvailable(true). A cached undo
+    // flag therefore misses the edit that must make the book dirty again.
+    if (m_isLoadFinished) {
         emit FilteredTextChanged();
     }
 }
@@ -2560,12 +2578,6 @@ void CodeViewEditor::RehighlightDocument()
         }
         document()->blockSignals(false);
     }
-}
-
-
-void CodeViewEditor::UpdateUndoAvailable(bool available)
-{
-    m_isUndoAvailable = available;
 }
 
 
@@ -4265,7 +4277,6 @@ void CodeViewEditor::ConnectSignalsToSlots()
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(EmitFilteredCursorMoved()));
     connect(this, SIGNAL(textChanged()), this, SIGNAL(PageUpdated()));
     connect(this, SIGNAL(textChanged()), this, SLOT(TextChangedFilter()));
-    connect(this, SIGNAL(undoAvailable(bool)), this, SLOT(UpdateUndoAvailable(bool)));
     connect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
     connect(m_ScrollOneLineUp,   SIGNAL(activated()), this, SLOT(ScrollOneLineUp()));
     connect(m_ScrollOneLineDown, SIGNAL(activated()), this, SLOT(ScrollOneLineDown()));

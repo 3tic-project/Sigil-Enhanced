@@ -381,8 +381,6 @@ private:
 
     bool m_InRemainder;
 
-    bool m_RestartPerformed;
-
     bool m_SearchRunning;
 
     bool m_DryRunRunning;

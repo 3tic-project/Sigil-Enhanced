@@ -908,6 +908,16 @@ add_test(NAME cross_group_tab_drag_contract
 )
 set_tests_properties(cross_group_tab_drag_contract PROPERTIES TIMEOUT 30)
 
+add_executable(plain_text_exporter_test
+    plain_text_exporter_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/PlainTextExporter.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/PlainTextExporter.h
+)
+target_include_directories(plain_text_exporter_test PRIVATE ${CMAKE_SOURCE_DIR}/src ${GUMBO_INCLUDE_DIRS})
+target_link_libraries(plain_text_exporter_test PRIVATE Qt6::Core ${GUMBO_LIBRARIES})
+add_test(NAME plain_text_exporter COMMAND plain_text_exporter_test)
+set_tests_properties(plain_text_exporter PROPERTIES TIMEOUT 30)
+
 add_executable(booklive_paragraph_normalizer_test
     booklive_paragraph_normalizer_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/BookLiveParagraphNormalizer.cpp
@@ -1586,6 +1596,18 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(code_view_replace_find_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME editor_undo_search_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_editor_undo_search_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(editor_undo_search_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
+    foreach(version IN ITEMS epub2 epub3)
+        add_test(NAME plain_text_export_${version}_integration
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plain_text_export_integration.py
+                    ${CMAKE_BINARY_DIR} --fixture ${version}
+        )
+        set_tests_properties(plain_text_export_${version}_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    endforeach()
     add_test(NAME main_window_noop_epub3_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_noop_integration.py
                 ${CMAKE_BINARY_DIR} --fixture epub3
@@ -1596,6 +1618,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR} --fixture epub2
     )
     set_tests_properties(main_window_noop_epub2_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    add_test(NAME main_window_layout_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_main_window_layout_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(main_window_layout_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
     foreach(epub_version IN ITEMS epub2 epub3)
         add_test(NAME legacy_plugin_binary_${epub_version}_integration
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_legacy_plugin_binary_integration.py
