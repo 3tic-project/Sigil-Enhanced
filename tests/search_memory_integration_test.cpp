@@ -111,6 +111,10 @@ int main(int argc, char** argv)
             settings.setValue("find_strings", QStringList{"Original", "paragraph"});
             settings.setValue("replace_strings", QStringList{"old", "older"});
             settings.setValue("prefind_strings", QStringList{"pre-one", "pre-two"});
+            settings.setValue("find_text", "legacy find input");
+            settings.setValue("replace_text", "legacy replacement input");
+            settings.setValue("prefind_text", "legacy pre-search input");
+            settings.sync();
         }
 
         MainWindow window(input);
@@ -121,20 +125,28 @@ int main(int argc, char** argv)
         auto* replace = field(search, "cbReplace");
         auto* prefind = plus ? field(search, "cbPreFind") : nullptr;
         if (phase == "legacy") {
-            require(find->currentText() == "Original" && replace->currentText() == "old",
-                    "Legacy search history was not restored");
+            require(find->currentText().isEmpty() && replace->currentText().isEmpty() &&
+                    (!prefind || prefind->currentText().isEmpty()),
+                    "A new instance automatically applied previous search inputs");
+            require(find->count() == 2 && replace->count() == 2,
+                    "Opening with blank inputs discarded dropdown history");
         } else if (phase == "draft") {
             find->setEditText(draftFind);
             replace->setEditText(draftReplace);
             if (prefind) prefind->setEditText(draftPreFind);
             invoke(search, "HideFindReplace");
-            require(settings.value("find_text").toString() == draftFind &&
-                    settings.value("replace_text").toString() == draftReplace,
-                    "Unexecuted find/replace drafts were not persisted when closing the search panel");
-        } else if (phase == "read-draft") {
             require(find->currentText() == draftFind && replace->currentText() == draftReplace,
-                    "Restarting lost the exact search drafts or regex/Unicode characters");
-            require(!prefind || prefind->currentText() == draftPreFind, "Restarting lost the pre-search draft");
+                    "Hiding search lost the current operation's inputs");
+            window.OpenResourceAndWaitUntilLoaded(window.GetCurrentBook()->GetFolderKeeper()
+                ->GetResourceByBookPathNoThrow("OEBPS/a.xhtml"));
+            if (plus) static_cast<FindReplacePlus*>(search)->FindAnyText("Original");
+            else static_cast<FindReplace*>(search)->FindAnyText("Original");
+            require(replace->currentText() == draftReplace && (!prefind || prefind->currentText() == draftPreFind),
+                    "Reloading search options discarded current replacement/pre-search inputs");
+        } else if (phase == "read-draft") {
+            require(find->currentText().isEmpty() && replace->currentText().isEmpty() &&
+                    (!prefind || prefind->currentText().isEmpty()),
+                    "Restarting automatically applied unexecuted drafts");
             require(find->count() == 2, "Typing a draft polluted executed search history");
             replace->setEditText("");
             invoke(search, "HideFindReplace");
@@ -143,7 +155,8 @@ int main(int argc, char** argv)
             find->setCurrentIndex(1);
             invoke(search, "HideFindReplace");
         } else if (phase == "history") {
-            require(find->currentText() == "paragraph", "A selected history entry was replaced by the first entry on restart");
+            require(find->currentText().isEmpty() && find->itemText(1) == "paragraph",
+                    "A new instance prefilled a selected history item or lost its dropdown entry");
             window.OpenResourceAndWaitUntilLoaded(window.GetCurrentBook()->GetFolderKeeper()
                 ->GetResourceByBookPathNoThrow("OEBPS/a.xhtml"));
             field(search, "cbSearchMode")->setCurrentIndex(0);
@@ -164,27 +177,41 @@ int main(int argc, char** argv)
             require(settings.value("find_strings").toStringList().count("Original") == 1,
                     "Reusing a query duplicated its history entry");
         } else if (phase == "mode-switch") {
+            find->setEditText(draftFind);
+            replace->setEditText(draftReplace);
+            if (prefind) prefind->setEditText(draftPreFind);
             const QString beforeFind = find->currentText();
             const QString beforeReplace = replace->currentText();
-            switchMode(window, !plus);
-            switchMode(window, plus);
-            require(find->currentText() == beforeFind && replace->currentText() == beforeReplace,
+            for (int i = 0; i < 3; ++i) {
+                switchMode(window, !plus);
+                switchMode(window, plus);
+            }
+            require(find->currentText() == beforeFind && replace->currentText() == beforeReplace &&
+                    (!prefind || prefind->currentText() == draftPreFind),
                     "Switching search modes lost the current find/replace text");
         } else if (phase == "exit-draft") {
             find->setEditText("close app draft");
             replace->setEditText("close app replacement");
         } else if (phase == "read-exit") {
-            require(find->currentText() == "close app draft" && replace->currentText() == "close app replacement",
-                    "Closing the application without hiding search lost its current text");
+            require(find->currentText().isEmpty() && replace->currentText().isEmpty(),
+                    "A new instance restored the previous instance's draft");
         } else if (phase == "stale-window") {
             auto stale = std::make_unique<MainWindow>(input);
+            window.OpenResourceAndWaitUntilLoaded(window.GetCurrentBook()->GetFolderKeeper()
+                ->GetResourceByBookPathNoThrow("OEBPS/a.xhtml"));
+            field(search, "cbSearchMode")->setCurrentIndex(0);
+            field(search, "cbLookWhere")->setCurrentIndex(0);
+            find->setEditText("paragraph");
+            invoke(search, "RestartClicked");
+            require(invokeBool(search, "DoFindNext"), "Cannot update history while another window is open");
             find->setEditText("newer draft");
             replace->setEditText("newer replacement");
             invoke(search, "HideFindReplace");
             stale.reset();
-            require(settings.value("find_text").toString() == "newer draft" &&
-                    settings.value("replace_text").toString() == "newer replacement",
-                    "Closing an unchanged older window overwrote newer search memory");
+            require(find->currentText() == "newer draft" && replace->currentText() == "newer replacement",
+                    "Closing another window changed the current operation's inputs");
+            require(settings.value("find_strings").toStringList().first() == "paragraph",
+                    "Closing an unchanged older window overwrote the newer search history");
         } else if (phase == "clear") {
             QTimer dialogs;
             QObject::connect(&dialogs, &QTimer::timeout, &window, []() {
@@ -213,6 +240,9 @@ int main(int argc, char** argv)
             require(!prefind || (prefind->count() == 0 && prefind->currentText().isEmpty()),
                     "Restarting resurrected cleared pre-search history");
         }
+        settings.sync();
+        require(!settings.contains("find_text") && !settings.contains("replace_text") &&
+                !settings.contains("prefind_text"), "Current input was persisted for automatic restore");
         require(!window.GetCurrentBook()->IsModified(), "Search memory testing unexpectedly changed the book");
         std::cout << "Search memory passed: " << argv[3] << '/' << argv[4] << '\n';
         return 0;

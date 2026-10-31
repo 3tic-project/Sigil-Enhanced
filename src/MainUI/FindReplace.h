@@ -318,7 +318,7 @@ private:
     bool IsValidFindText();
 
     // Reads all the stored dialog settings
-    void ReadSettings();
+    void ReadSettings(bool initialRead = false);
 
     // Writes all the stored dialog settings
     void WriteSettings();
@@ -382,7 +382,7 @@ private:
 
     bool m_InRemainder;
 
-    QVariantMap m_LastSavedTextSettings;
+    QVariantMap m_LastSavedHistorySettings;
 
     bool m_SearchRunning;
 

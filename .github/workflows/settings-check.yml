@@ -1,0 +1,73 @@
+name: Check Windows settings and startup
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - '.github/workflows/settings-check.yml'
+      - 'src/Misc/SettingsStore*'
+      - 'src/Misc/WindowStartupPolicy.h'
+      - 'src/MainUI/FindReplace*'
+      - 'src/MainUI/MainWindow.cpp'
+      - 'tests/settings_concurrency_test.cpp'
+      - 'tests/window_startup_policy_test.cpp'
+      - 'tests/settings_probe/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-settings:
+    runs-on: windows-2025
+    env:
+      QT_VERSION: '6.10.2'
+      QT_ROOT: ${{ github.workspace }}\.ci-cache\qt-settings
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14.2'
+      - uses: actions/cache@v6
+        with:
+          path: ${{ env.QT_ROOT }}
+          key: sigil-settings-windows-qt${{ env.QT_VERSION }}-msvc2022
+      - name: Install Qt Core and Widgets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $config = Get-ChildItem $env:QT_ROOT -Filter Qt6Config.cmake -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $config) {
+            python -m pip install aqtinstall
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 --outputdir $env:QT_ROOT
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $config = Get-ChildItem $env:QT_ROOT -Filter Qt6Config.cmake -Recurse | Select-Object -First 1
+          }
+          if (-not $config) { throw 'Qt6Config.cmake was not found.' }
+          $qtDir = (Resolve-Path (Join-Path $config.Directory.FullName '..\..\..')).Path
+          "QT_DIR=$qtDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "$qtDir\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Compile the settings and window probes
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%i"
+          if "%VSINSTALL%"=="" exit /b 1
+          call "%VSINSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cmake -S tests/settings_probe -B .ci-build/settings -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="%QT_DIR%"
+          if errorlevel 1 exit /b 1
+          cmake --build .ci-build/settings --parallel 2
+          if errorlevel 1 exit /b 1
+      - name: Test concurrent INI access and native title bars
+        shell: pwsh
+        run: |
+          $env:QT_PLUGIN_PATH = "$env:QT_DIR\plugins"
+          $env:QT_QPA_PLATFORM = 'windows'
+          ctest --test-dir .ci-build/settings --output-on-failure -R '^settings_concurrency$'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($scale in @('1', '1.5', '2')) {
+            $env:QT_SCALE_FACTOR = $scale
+            Write-Host "Checking the native Windows title region with QT_SCALE_FACTOR=$scale"
+            ctest --test-dir .ci-build/settings --output-on-failure -R '^window_startup_policy$'
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }

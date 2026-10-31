@@ -428,7 +428,10 @@ MainWindow::~MainWindow()
     if (m_SpellcheckEditor) delete m_SpellcheckEditor;
     if (m_IndexEditor) delete m_IndexEditor;
     if (m_ClipEditor) delete m_ClipEditor;
-    if (m_SearchEditor) delete m_SearchEditor;
+    delete m_SearchEditor;
+    m_SearchEditor = nullptr;
+    delete m_SearchEditorPlus;
+    m_SearchEditorPlus = nullptr;
     if (m_casingChangeGroup) delete m_casingChangeGroup;
     if (m_headingActionGroup) delete m_headingActionGroup;
     if (m_lbZoomLabel) delete m_lbZoomLabel;

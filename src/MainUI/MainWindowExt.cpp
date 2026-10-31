@@ -2836,6 +2836,7 @@ void MainWindow::changeFindReplaceMode()
         if (isShowed)
             m_FindReplacePlus->show();
         delete m_SearchEditor;
+        m_SearchEditor = nullptr;
         m_SearchEditorPlus = new SearchEditorPlus(this);
         ConnectSignalsToSearchEditor();
         ConnectSignalsToFindReplace();
@@ -2846,6 +2847,7 @@ void MainWindow::changeFindReplaceMode()
         if (isShowed)
             m_FindReplace->show();
         delete m_SearchEditorPlus;
+        m_SearchEditorPlus = nullptr;
         m_SearchEditor = new SearchEditor(this);
         ConnectSignalsToSearchEditor();
         ConnectSignalsToFindReplace();

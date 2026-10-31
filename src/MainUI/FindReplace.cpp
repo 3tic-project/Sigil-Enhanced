@@ -124,7 +124,7 @@ FindReplace::FindReplace(MainWindow *main_window)
     ConnectSignalsToSlots();
     // ShowHideAdvancedOptions();
     ShowHideMarkedText(false);
-    ReadSettings();
+    ReadSettings(true);
     m_PreviousSearch.clear();
 }
 
@@ -1697,10 +1697,16 @@ bool FindReplace::IsValidFindText()
 }
 
 
-void FindReplace::ReadSettings()
+void FindReplace::ReadSettings(bool initialRead)
 {
+    const QString findText = initialRead ? QString() : ui.cbFind->currentText();
+    const QString replaceText = initialRead ? QString() : ui.cbReplace->currentText();
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
+    // Migrate away from automatically restoring the previous input.
+    settings.remove("find_text");
+    settings.remove("replace_text");
+    settings.remove("prefind_text");
 
     // Set F&R Buttons to text-only if requested
     bool frButtonsTextOnly = settings.value("frbuttonstextonly", false).toBool();
@@ -1717,11 +1723,13 @@ void FindReplace::ReadSettings()
     replace_strings.removeDuplicates();
     ui.cbReplace->clear();
     ui.cbReplace->addItems(replace_strings);
-    ui.cbFind->setEditText(settings.value("find_text", ui.cbFind->currentText()).toString());
-    ui.cbReplace->setEditText(settings.value("replace_text", ui.cbReplace->currentText()).toString());
-    m_LastSavedTextSettings = {
-        {"find_strings", GetPreviousFindStrings()}, {"replace_strings", GetPreviousReplaceStrings()},
-        {"find_text", ui.cbFind->currentText()}, {"replace_text", ui.cbReplace->currentText()}
+    // New panels start empty; reloading options during a search retains its inputs.
+    ui.cbFind->setCurrentIndex(-1);
+    ui.cbFind->setEditText(findText);
+    ui.cbReplace->setCurrentIndex(-1);
+    ui.cbReplace->setEditText(replaceText);
+    m_LastSavedHistorySettings = {
+        {"find_strings", GetPreviousFindStrings()}, {"replace_strings", GetPreviousReplaceStrings()}
     };
     SetSearchMode(settings.value("search_mode", 0).toInt());
     SetLookWhere(settings.value("look_where", 0).toInt());
@@ -1768,18 +1776,20 @@ void FindReplace::WriteSettings()
 {
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
+    // Migrate away from automatically restoring the previous input.
+    settings.remove("find_text");
+    settings.remove("replace_text");
+    settings.remove("prefind_text");
     // An unchanged older window must not overwrite another window's newer
-    // input/history when it closes. Drafts are separate from executed history.
+    // history when it closes. Current inputs are never written to disk.
     const auto remember = [&](const QString& key, const QVariant& value) {
-        if (m_LastSavedTextSettings.value(key) != value) {
+        if (m_LastSavedHistorySettings.value(key) != value) {
             settings.setValue(key, value);
-            m_LastSavedTextSettings.insert(key, value);
+            m_LastSavedHistorySettings.insert(key, value);
         }
     };
     remember("find_strings", GetPreviousFindStrings());
     remember("replace_strings", GetPreviousReplaceStrings());
-    remember("find_text", ui.cbFind->currentText());
-    remember("replace_text", ui.cbReplace->currentText());
     settings.setValue("search_mode", GetSearchMode());
     settings.setValue("look_where", GetLookWhere());
     settings.setValue("search_direction", GetSearchDirection());
@@ -2166,8 +2176,10 @@ void FindReplace::ClearHistory()
 
     if (button_pressed == QMessageBox::Yes) {
         ui.cbFind->clear();
+        ui.cbFind->clearEditText();
         ui.cbReplace->clear();
-        m_LastSavedTextSettings.clear();
+        ui.cbReplace->clearEditText();
+        m_LastSavedHistorySettings.clear();
         WriteSettings();
     } 
 }

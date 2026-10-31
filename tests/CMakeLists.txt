@@ -908,6 +908,11 @@ add_test(NAME cross_group_tab_drag_contract
 )
 set_tests_properties(cross_group_tab_drag_contract PROPERTIES TIMEOUT 30)
 
+add_executable(settings_concurrency_test settings_concurrency_test.cpp)
+target_link_libraries(settings_concurrency_test PRIVATE Qt6::Core)
+add_test(NAME settings_concurrency COMMAND settings_concurrency_test)
+set_tests_properties(settings_concurrency PROPERTIES TIMEOUT 60)
+
 add_executable(window_startup_policy_test window_startup_policy_test.cpp)
 target_include_directories(window_startup_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(window_startup_policy_test PRIVATE Qt6::Widgets)

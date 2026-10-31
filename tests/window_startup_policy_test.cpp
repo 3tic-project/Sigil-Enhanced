@@ -32,20 +32,30 @@ int main(int argc, char** argv)
                                                             test.maximized, test.migrated);
             if (state != test.expected) throw std::runtime_error("Unexpected startup or migrated window state");
         }
-        QMainWindow window;
-        window.setWindowState(WindowStartupPolicy::Resolve(true, false, false, false, false));
-        window.show();
-        QApplication::processEvents();
-        if (!window.isMaximized() || window.isFullScreen() ||
-            !(window.windowFlags() & Qt::WindowTitleHint)) {
-            throw std::runtime_error("Windows default did not use a maximized, decorated window");
-        }
-        // Check a point in the title region, not the invisible resize border
-        // which Windows intentionally allows outside the maximized work area.
-        const QRect frame = window.frameGeometry();
-        const QPoint title(frame.center().x(), (frame.top() + window.geometry().top()) / 2);
-        if (!window.screen()->availableGeometry().contains(title)) {
-            throw std::runtime_error("Default startup placed the title region outside the available screen");
+        for (bool legacyFullscreen : {false, true}) {
+            QMainWindow window;
+            if (legacyFullscreen) {
+                QMainWindow old;
+                old.setGeometry(20, 30, 500, 400);
+                old.setWindowState(Qt::WindowFullScreen);
+                if (!window.restoreGeometry(old.saveGeometry())) {
+                    throw std::runtime_error("Could not restore a legacy fullscreen geometry");
+                }
+            }
+            window.setWindowState(WindowStartupPolicy::Resolve(true, legacyFullscreen, legacyFullscreen, false, false));
+            window.show();
+            QApplication::processEvents();
+            if (!window.isMaximized() || window.isFullScreen() ||
+                !(window.windowFlags() & Qt::WindowTitleHint)) {
+                throw std::runtime_error("Windows default/migration did not retain a maximized, decorated window");
+            }
+            // Windows intentionally allows an invisible resize border outside
+            // the maximized work area; check the title region instead.
+            const QRect frame = window.frameGeometry();
+            const QPoint title(frame.center().x(), (frame.top() + window.geometry().top()) / 2);
+            if (!window.screen()->availableGeometry().contains(title)) {
+                throw std::runtime_error("Default startup/migration placed the title region outside the available screen");
+            }
         }
         std::cout << "Window startup defaults, migration and title-region checks passed\n";
         return 0;
