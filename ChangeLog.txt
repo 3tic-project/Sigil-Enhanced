@@ -7,6 +7,7 @@ Sigil-Enhanced-2.8.5.E13
      - Recognized spaced and TOC-listed manuscript headings and additional illustration markers; stopped using image filenames as alternative text.
 
    Bug Fixes
+     - Fixed Windows compilation of long-path cleanup with Qt's fast QStringBuilder concatenation by separating local-drive and UNC path assignments.
      - Marked redone edits as unsaved and preserved HTML undo/redo history across saves.
      - Restarted Find/Replace from the scope boundary in both directions, clearing original, enhanced, and pre-search caches and keeping marked searches inside their range.
      - Detected binary resources overwritten directly by legacy plugins so image compression results can be saved.
