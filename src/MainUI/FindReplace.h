@@ -27,6 +27,7 @@
 #define FINDREPLACE_H
 
 #include <QTimer>
+#include <QVariant>
 
 #include "ui_FindReplace.h"
 #include "BookManipulation/FolderKeeper.h"
@@ -380,6 +381,8 @@ private:
     int m_StartingPos;
 
     bool m_InRemainder;
+
+    QVariantMap m_LastSavedTextSettings;
 
     bool m_SearchRunning;
 

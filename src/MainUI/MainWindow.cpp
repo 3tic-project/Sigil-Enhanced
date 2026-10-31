@@ -137,6 +137,7 @@
 #include "Misc/SleepFunctions.h"
 #include "Misc/SpellCheck.h"
 #include "Misc/TempFolder.h"
+#include "Misc/WindowStartupPolicy.h"
 #include "Misc/TOCHTMLWriter.h"
 #include "Misc/Utility.h"
 #include "MiscEditors/IndexHTMLWriter.h"
@@ -6081,22 +6082,22 @@ void MainWindow::ReadSettings()
     m_FRVisible = settings.value("frvisible", false).toBool();
 #endif
 
-    Qt::WindowStates startup_state = Qt::WindowFullScreen;
+#ifdef Q_OS_WIN
+    constexpr bool windows_startup = true;
+#else
+    constexpr bool windows_startup = false;
+#endif
+    bool restore_saved_state = false;
     if (remember_window_layout) {
         const QByteArray geometry = settings.value("geometry", QByteArray()).toByteArray();
         const bool restored_geometry = !geometry.isEmpty() && restoreGeometry(geometry);
-        // Older builds did not reliably restore the saved window state. Start
-        // full screen on migration, retaining their geometry and dock layout.
-        if (restored_geometry && settings.value("windowStateVersion", 0).toInt() == WINDOW_STATE_VERSION) {
-            if (settings.value("fullscreen", false).toBool()) {
-                startup_state = Qt::WindowFullScreen;
-            } else if (settings.value("maximized", false).toBool()) {
-                startup_state = Qt::WindowMaximized;
-            } else {
-                startup_state = Qt::WindowNoState;
-            }
-        }
+        restore_saved_state = restored_geometry &&
+            settings.value("windowStateVersion", 0).toInt() == WINDOW_STATE_VERSION;
     }
+    const Qt::WindowStates startup_state = WindowStartupPolicy::Resolve(
+        windows_startup, restore_saved_state, settings.value("fullscreen", false).toBool(),
+        settings.value("maximized", false).toBool(),
+        settings.value("windowsStartupVersion", 0).toInt() >= 1);
     // Set the state while hidden; show() will enter it after construction.
     // Reopening must never restore a minimized/invisible window.
     setWindowState(startup_state);
@@ -6209,6 +6210,9 @@ void MainWindow::WriteSettings()
         settings.setValue("windowStateVersion", WINDOW_STATE_VERSION);
         settings.setValue("maximized", isMaximized());
         settings.setValue("fullscreen", isFullScreen());
+#ifdef Q_OS_WIN
+        settings.setValue("windowsStartupVersion", 1);
+#endif
     }
 
 #if 0

@@ -54,6 +54,7 @@ QVariantMap layoutSettings()
         if (key == "mainwindow/geometry" || key == "mainwindow/maximized" ||
             key == "mainwindow/fullscreen" || key == "mainwindow/toolbars" ||
             key == "mainwindow/windowStateVersion" ||
+            key == "mainwindow/windowsStartupVersion" ||
             key.startsWith("editorGroups/") || key.startsWith("previewwindow/devTools")) {
             result.insert(key, settings.value(key));
         }
@@ -127,6 +128,14 @@ int main(int argc, char** argv)
         if (scenario == "disabled") settings.setRememberWindowLayout(false);
         if (scenario == "reenabled") settings.setRememberWindowLayout(true);
         if (scenario == "corrupt") settings.setValue("mainwindow/geometry", QByteArray("invalid"));
+        if (scenario == "offscreen") {
+            QMainWindow previous;
+            previous.setGeometry(5000, -300, 2200, 1800);
+            settings.setValue("mainwindow/geometry", previous.saveGeometry());
+            settings.setValue("mainwindow/windowStateVersion", 1);
+            settings.setValue("mainwindow/fullscreen", false);
+            settings.setValue("mainwindow/maximized", false);
+        }
         const QVariantMap before = layoutSettings();
 
         auto window = std::make_unique<MainWindow>(input);
@@ -174,7 +183,12 @@ int main(int argc, char** argv)
             settings.sync();
             require(settings.status() == QSettings::NoError, "Window settings could not be written");
         } else if (scenario == "fresh" || scenario == "legacy" || scenario == "disabled" || scenario == "corrupt") {
+#ifdef Q_OS_WIN
+            require(window->isMaximized() && !window->isFullScreen(),
+                    "A Windows default startup did not retain the title bar in maximized mode");
+#else
             require(window->isFullScreen(), "A default startup did not enter full screen");
+#endif
             require(!window->isMinimized(), "A default startup opened minimized");
             if (scenario == "legacy") {
                 require(window->dockWidgetArea(browser) == Qt::BottomDockWidgetArea &&
@@ -191,6 +205,12 @@ int main(int argc, char** argv)
                 settings.sync();
                 require(layoutSettings() == before, "Disabled remembering overwrote the saved layout");
             }
+        } else if (scenario == "offscreen") {
+            require(!window->isFullScreen() && !window->isMaximized(), "Offscreen geometry changed normal state");
+            const QRect frame = window->frameGeometry();
+            const QPoint title(frame.center().x(), (frame.top() + window->geometry().top()) / 2);
+            require(window->screen()->availableGeometry().contains(title),
+                    "Restoring offscreen/oversized geometry left the title region inaccessible");
         } else {
             const bool fullscreen = scenario == "read-fullscreen";
             const bool maximized = scenario == "read-maximized";

@@ -36,7 +36,7 @@
           <string>Remember last window position, state and size</string>
          </property>
          <property name="toolTip">
-          <string>Restore the last window position, state, size, and panel layout. When disabled or no saved window is available, start full screen.</string>
+          <string>Restore the last window position, state, size, and panel layout. When disabled or no saved window is available, start maximized on Windows and full screen on other systems.</string>
          </property>
          <property name="checked">
           <bool>true</bool>

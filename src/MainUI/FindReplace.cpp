@@ -312,6 +312,7 @@ bool FindReplace::isWhereAll()
 
 void FindReplace::close()
 {
+    WriteSettings();
     WriteSettingsVisible(false);
     QWidget::close();
 }
@@ -344,6 +345,7 @@ bool FindReplace::IsMarkedText()
 
 void FindReplace::HideFindReplace()
 {
+    WriteSettings();
     WriteSettingsVisible(false);
     hide();
 }
@@ -1548,6 +1550,7 @@ void FindReplace::UpdatePreviousFindStrings(const QString &text)
     ui.cbFind->insertItem(0, new_find_string);
     // Must not change the current string!
     ui.cbFind->setCurrentIndex(0);
+    WriteSettings();
 }
 
 
@@ -1569,6 +1572,7 @@ void FindReplace::UpdatePreviousReplaceStrings(const QString &text)
     ui.cbReplace->insertItem(0, new_replace_string);
     // Must not change the current string!
     ui.cbReplace->setCurrentIndex(0);
+    WriteSettings();
 }
 
 
@@ -1713,6 +1717,12 @@ void FindReplace::ReadSettings()
     replace_strings.removeDuplicates();
     ui.cbReplace->clear();
     ui.cbReplace->addItems(replace_strings);
+    ui.cbFind->setEditText(settings.value("find_text", ui.cbFind->currentText()).toString());
+    ui.cbReplace->setEditText(settings.value("replace_text", ui.cbReplace->currentText()).toString());
+    m_LastSavedTextSettings = {
+        {"find_strings", GetPreviousFindStrings()}, {"replace_strings", GetPreviousReplaceStrings()},
+        {"find_text", ui.cbFind->currentText()}, {"replace_text", ui.cbReplace->currentText()}
+    };
     SetSearchMode(settings.value("search_mode", 0).toInt());
     SetLookWhere(settings.value("look_where", 0).toInt());
     SetSearchDirection(settings.value("search_direction", 0).toInt());
@@ -1758,8 +1768,18 @@ void FindReplace::WriteSettings()
 {
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
-    settings.setValue("find_strings", GetPreviousFindStrings());
-    settings.setValue("replace_strings", GetPreviousReplaceStrings());
+    // An unchanged older window must not overwrite another window's newer
+    // input/history when it closes. Drafts are separate from executed history.
+    const auto remember = [&](const QString& key, const QVariant& value) {
+        if (m_LastSavedTextSettings.value(key) != value) {
+            settings.setValue(key, value);
+            m_LastSavedTextSettings.insert(key, value);
+        }
+    };
+    remember("find_strings", GetPreviousFindStrings());
+    remember("replace_strings", GetPreviousReplaceStrings());
+    remember("find_text", ui.cbFind->currentText());
+    remember("replace_text", ui.cbReplace->currentText());
     settings.setValue("search_mode", GetSearchMode());
     settings.setValue("look_where", GetLookWhere());
     settings.setValue("search_direction", GetSearchDirection());
@@ -2147,6 +2167,8 @@ void FindReplace::ClearHistory()
     if (button_pressed == QMessageBox::Yes) {
         ui.cbFind->clear();
         ui.cbReplace->clear();
+        m_LastSavedTextSettings.clear();
+        WriteSettings();
     } 
 }
 
@@ -2441,6 +2463,10 @@ void FindReplace::ManagePythonFunction()
 
 void FindReplace::ConnectSignalsToSlots()
 {
+    connect(ui.cbFind->lineEdit(), &QLineEdit::editingFinished, this, &FindReplace::WriteSettings);
+    connect(ui.cbReplace->lineEdit(), &QLineEdit::editingFinished, this, &FindReplace::WriteSettings);
+    connect(ui.cbFind, &QComboBox::activated, this, &FindReplace::WriteSettings);
+    connect(ui.cbReplace, &QComboBox::activated, this, &FindReplace::WriteSettings);
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(expireMessage()));
     connect(ui.findNext, SIGNAL(clicked()), this, SLOT(FindClicked()));
     connect(ui.cbFind->lineEdit(), SIGNAL(returnPressed()), this, SLOT(Find()));
