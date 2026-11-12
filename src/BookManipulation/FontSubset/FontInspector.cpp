@@ -169,31 +169,6 @@ Inspection FontInspector::Inspect(const QByteArray& fontBytes, unsigned faceInde
     inspection.valid = true;
     inspection.fsType = ReadFsType(face.get());
     inspection.license = ClassifyLicense(inspection.fsType);
-    switch (inspection.license) {
-    case LicenseStatus::Installable:
-    case LicenseStatus::Editable:
-        break;
-    case LicenseStatus::PreviewAndPrint:
-        inspection.blockingReason = QObject::tr(
-            "Preview-and-print embedding does not allow editing the font.");
-        break;
-    case LicenseStatus::Restricted:
-        inspection.blockingReason = QObject::tr(
-            "The font has a restricted embedding license.");
-        break;
-    case LicenseStatus::NoSubsetting:
-        inspection.blockingReason = QObject::tr(
-            "The font license explicitly forbids subsetting.");
-        break;
-    case LicenseStatus::BitmapOnly:
-        inspection.blockingReason = QObject::tr(
-            "The font license permits bitmap embedding only.");
-        break;
-    case LicenseStatus::InvalidOrMissing:
-        inspection.blockingReason = QObject::tr(
-            "The font has missing or invalid embedding permissions.");
-        break;
-    }
 
     const bool hasOutline = HasAny(inspection.tableTags,
                                    {Tag('g', 'l', 'y', 'f'),

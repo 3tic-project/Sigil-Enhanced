@@ -21869,6 +21869,16 @@ Line: %1 Column %2 - %3</source>
         <translation>Unicode コードポイントが要求されていません。</translation>
     </message>
     <message>
+        <location filename="../../BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp" line="31"/>
+        <source>No text is assigned to this font.</source>
+        <translation>このフォントに割り当てられたテキストはありません。</translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/FontSubset/FontFaceAssigner.cpp" line="1549"/>
+        <source>%1: skipped %2 CSS selector(s) that use pseudo-classes or pseudo-elements.</source>
+        <translation>%1: 擬似クラスまたは擬似要素を使う CSS セレクターを %2 件スキップしました。</translation>
+    </message>
+    <message>
         <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="68"/>
         <source>The source font does not cover any requested codepoints.</source>
         <translation>元のフォントは要求されたコードポイントを一つも含んでいません。</translation>

@@ -21864,6 +21864,16 @@ Line: %1 Column %2 - %3</source>
         <translation>未要求任何 Unicode 碼位。</translation>
     </message>
     <message>
+        <location filename="../../BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp" line="31"/>
+        <source>No text is assigned to this font.</source>
+        <translation>沒有文字分配到這個字型。</translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/FontSubset/FontFaceAssigner.cpp" line="1549"/>
+        <source>%1: skipped %2 CSS selector(s) that use pseudo-classes or pseudo-elements.</source>
+        <translation>%1：已跳過 %2 個使用偽類或偽元素的 CSS 選擇器。</translation>
+    </message>
+    <message>
         <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="68"/>
         <source>The source font does not cover any requested codepoints.</source>
         <translation>來源字型不包含任何要求的碼位。</translation>

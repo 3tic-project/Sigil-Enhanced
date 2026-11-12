@@ -72,6 +72,8 @@ list(APPEND BOOK_MANIPULATION_FILES
     BookManipulation/FontSubset/FontInspector.h
     BookManipulation/FontSubset/GlobalFontUsageCollector.cpp
     BookManipulation/FontSubset/GlobalFontUsageCollector.h
+    BookManipulation/FontSubset/FontFaceAssigner.cpp
+    BookManipulation/FontSubset/FontFaceAssigner.h
     BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
     BookManipulation/FontSubset/HarfBuzzSubsetEngine.h
     BookManipulation/FontSubset/FontSubsetTransaction.cpp

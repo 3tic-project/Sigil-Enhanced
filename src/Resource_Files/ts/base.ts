@@ -21084,6 +21084,16 @@ Entities can be separated by lines, commas, or spaces.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp" line="31"/>
+        <source>No text is assigned to this font.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/FontSubset/FontFaceAssigner.cpp" line="1549"/>
+        <source>%1: skipped %2 CSS selector(s) that use pseudo-classes or pseudo-elements.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="68"/>
         <source>The source font does not cover any requested codepoints.</source>
         <translation type="unfinished"></translation>
