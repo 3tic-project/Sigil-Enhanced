@@ -990,6 +990,9 @@ private:
     // modified: FindReplacePlus
     bool m_InSearchingState;
     bool m_ReplacingInSearch;
+    // Programmatic cursor moves and line highlighting also emit
+    // selectionChanged. They must not invalidate the match Replace uses.
+    int m_SuppressFindMatchReset;
     bool m_CountSplitOffset;
     int m_SplitOffset;
 };

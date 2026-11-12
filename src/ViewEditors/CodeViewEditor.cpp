@@ -149,6 +149,7 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     // modified: FindReplacePlus
     m_InSearchingState(false),
     m_ReplacingInSearch(false),
+    m_SuppressFindMatchReset(0),
     m_CountSplitOffset(false),
     m_SplitOffset(0),
     // ------------------------------------
@@ -1322,9 +1323,13 @@ int CodeViewEditor::ReplaceAll(const QString &search_regex,
 
 void CodeViewEditor::ResetLastFindMatch()
 {
-    // Keep the cached match during a Plus replace; selectionChanged is also
-    // disconnected there. Original Find/Replace never sets m_ReplacingInSearch.
-    if (m_ReplacingInSearch) {
+    // Line highlight, focus, and selecting the match itself also emit
+    // selectionChanged. Replace still needs that match. A real caret move
+    // leaves the selection and falls through.
+    if (m_ReplacingInSearch || m_SuppressFindMatchReset > 0) {
+        return;
+    }
+    if (SelectionIsCurrentFindMatch(m_lastFindRegex)) {
         return;
     }
     m_lastMatch.offset.first = -1;
@@ -2747,12 +2752,10 @@ void CodeViewEditor::HighlightCurrentLine(bool highlight_tags)
     //--------------------------------------------------
 
     setExtraSelections(extraSelections);
-    // still want to force a UI update in mainWindow but do not want to reset
-    // any last match info as that would invalidate search settings
-    // so disconnect this locally,  emit,  and then reconnect
-    disconnect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
+    // MainWindow listens for selection changes. This emit is not a caret move.
+    ++m_SuppressFindMatchReset;
     emit selectionChanged();
-    connect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
+    --m_SuppressFindMatchReset;
 }
 
 
@@ -4192,6 +4195,9 @@ void CodeViewEditor::SelectAndScrollIntoView(int start_position, int end_positio
     bool scroll_to_center = false;
     QTextCursor cursor = textCursor();
 
+    // Selecting the match emits selectionChanged before the caller records the
+    // new offsets and capture groups. Keep the previous match until then.
+    ++m_SuppressFindMatchReset;
     if (wrapped) {
         // Set an initial cursor position at the top or bottom of the screen as appropriate
         if (direction == Searchable::Direction_Up) {
@@ -4245,12 +4251,7 @@ void CodeViewEditor::SelectAndScrollIntoView(int start_position, int end_positio
         cursor.setPosition(end_position, QTextCursor::KeepAnchor);
     }
 
-    //-- modified: FindReplacePlus --
-    //setTextCursor(cursor);
-    disconnect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
     setTextCursor(cursor);
-    connect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
-    //-------------------------------
 
     if (scroll_to_center) {
         centerCursor();
@@ -4258,6 +4259,7 @@ void CodeViewEditor::SelectAndScrollIntoView(int start_position, int end_positio
 
     // Tell FlowTab to Tell Preview to Sync to this Location
     emit PageClicked();
+    --m_SuppressFindMatchReset;
 }
 
 void CodeViewEditor::ToggleLineWrapMode()
