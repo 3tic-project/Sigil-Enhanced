@@ -1581,8 +1581,6 @@ bool CodeViewEditor::FindNextPlus(const QString& presearch_regex,
 
     SPCRE* spcre = PCRECache::instance().getObject(search_regex);
     SPCRE::MatchInfo match_info = spcre->getFirstMatchInfo(Utility::Substring(offset, text_end, txt));
-    m_lastFindRegex = search_regex;
-    m_lastMatch = match_info;
 
     if (match_info.offset.first != -1) {
         int match_start = match_info.offset.first + offset;
@@ -1590,12 +1588,17 @@ bool CodeViewEditor::FindNextPlus(const QString& presearch_regex,
         // We will scroll the position on screen in order to ensure the entire block is visible
         // and if not, then center the match.
         SelectAndScrollIntoView(match_start, match_end, Searchable::Direction_Down, false);
-        // We store our offset after the selection changing event which would otherwise reset it
+        // Record the whole match after selectionChanged. Recording it first
+        // lets that signal drop the capture groups and keep only the offsets.
+        m_lastFindRegex = search_regex;
+        m_lastMatch = match_info;
         m_lastMatch.offset.first = match_start;
         m_lastMatch.offset.second = match_end;
         return true;
     }
-    else if (!presearch_regex.isEmpty()) {
+    m_lastFindRegex = search_regex;
+    m_lastMatch = match_info;
+    if (!presearch_regex.isEmpty()) {
         m_preSearchInfo.presearch_has_executed = false;
         return FindNextPlus(presearch_regex, search_regex, marked_text, split_at, inRemainder);
     }
@@ -1711,8 +1714,6 @@ bool CodeViewEditor::FindPrevPlus(const QString& presearch_regex,
 
     SPCRE* spcre = PCRECache::instance().getObject(search_regex);
     SPCRE::MatchInfo match_info = spcre->getLastMatchInfo(Utility::Substring(text_start, offset, txt));
-    m_lastFindRegex = search_regex;
-    m_lastMatch = match_info;
 
     if (match_info.offset.first != -1) {
         int match_start = match_info.offset.first + text_start,
@@ -1720,12 +1721,15 @@ bool CodeViewEditor::FindPrevPlus(const QString& presearch_regex,
         // We will scroll the position on screen in order to ensure the entire block is visible
         // and if not, then center the match.
         SelectAndScrollIntoView(match_start, match_end ,Searchable::Direction_Up, false);
-        // We store our offset after the selection changing event which would otherwise reset it
+        m_lastFindRegex = search_regex;
+        m_lastMatch = match_info;
         m_lastMatch.offset.first = match_start;
         m_lastMatch.offset.second = match_end;
         return true;
     }
-    else if (!presearch_regex.isEmpty()){
+    m_lastFindRegex = search_regex;
+    m_lastMatch = match_info;
+    if (!presearch_regex.isEmpty()) {
         m_preSearchInfo.presearch_has_executed = false;
         return FindPrevPlus(presearch_regex, search_regex, marked_text, split_at, inRemainder);
     }
@@ -1745,7 +1749,6 @@ bool CodeViewEditor::ReplaceSelectedPlus(const QString& search_regex, const QStr
     int selection_end = textCursor().selectionEnd();
 
     m_ReplacingInSearch = true;
-    disconnect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
 
     // Convert to plain text or \s won't get newlines
     const QString& document_text = toPlainText();
@@ -1817,7 +1820,6 @@ bool CodeViewEditor::ReplaceSelectedPlus(const QString& search_regex, const QStr
     }
 
     m_ReplacingInSearch = false;
-    connect(this, SIGNAL(selectionChanged()), this, SLOT(ResetLastFindMatch()));
 
     HighlightCurrentLine();
     return replacement_made;
