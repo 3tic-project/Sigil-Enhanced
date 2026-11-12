@@ -112,13 +112,15 @@ void TestInspection()
 void TestLicensePolicy()
 {
     FontInspector inspector;
-    Require(inspector.Inspect(WithFsType(Fixture(), 0x0008)).canSubset,
-            "editable embedding was blocked");
+    Require(inspector.Inspect(WithFsType(Fixture(), 0x0008)).license ==
+                LicenseStatus::Editable,
+            "editable embedding was not classified");
     Require(inspector.Inspect(WithFsType(Fixture(), 0x0002)).license ==
                 LicenseStatus::Restricted,
             "restricted embedding was not detected");
-    Require(!inspector.Inspect(WithFsType(Fixture(), 0x0004)).canSubset,
-            "preview-and-print embedding was accepted");
+    Require(inspector.Inspect(WithFsType(Fixture(), 0x0004)).license ==
+                LicenseStatus::PreviewAndPrint,
+            "preview-and-print embedding was not classified");
     Require(inspector.Inspect(WithFsType(Fixture(), 0x0100)).license ==
                 LicenseStatus::NoSubsetting,
             "no-subsetting bit was not detected");
@@ -127,7 +129,12 @@ void TestLicensePolicy()
             "bitmap-only bit was not detected");
     Require(inspector.Inspect(WithFsType(Fixture(), 0x0006)).license ==
                 LicenseStatus::InvalidOrMissing,
-            "conflicting embedding levels were accepted");
+            "conflicting embedding levels were misclassified");
+    for (quint16 fsType : {quint16(0x0000), quint16(0x0002), quint16(0x0004),
+                           quint16(0x0008), quint16(0x0100), quint16(0x0200)}) {
+        Require(inspector.Inspect(WithFsType(Fixture(), fsType)).canSubset,
+                "embedding bits blocked subsetting");
+    }
 }
 
 void TestSubsetAndValidation()
@@ -156,11 +163,11 @@ void TestSubsetAndValidation()
     const Result missing = engine.Subset(Fixture(), {0x4e2d}, options);
     Require(!missing.success && missing.unavailableCodepoints.contains(0x4e2d),
             "empty source coverage intersection was not rejected");
-    const Result blocked = engine.Subset(WithFsType(Fixture(), 0x0100),
-                                         requested, options);
-    Require(!blocked.success &&
-                blocked.inspection.license == LicenseStatus::NoSubsetting,
-            "license-blocked font was subsetted");
+    const Result licensed = engine.Subset(WithFsType(Fixture(), 0x0100),
+                                          requested, options);
+    Require(licensed.success &&
+                licensed.inspection.license == LicenseStatus::NoSubsetting,
+            "embedding bits blocked subsetting");
 }
 
 }

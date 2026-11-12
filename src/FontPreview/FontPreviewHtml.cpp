@@ -47,6 +47,33 @@ QString SpecimenBlock(const QString &text, int pixelSize, const QList<uint> &mis
 
 }
 
+QString FormatFontFileSize(qint64 bytes)
+{
+    if (bytes < 0) {
+        bytes = 0;
+    }
+    if (bytes < 1024) {
+        return QStringLiteral("%1 B").arg(bytes);
+    }
+    static const char *units[] = {"KB", "MB", "GB", "TB"};
+    double value = double(bytes) / 1024.0;
+    int unit = 0;
+    while (value >= 1024.0 && unit < 3) {
+        value /= 1024.0;
+        ++unit;
+    }
+    QString number = QString::number(value, 'f', 2);
+    if (number.contains(QLatin1Char('.'))) {
+        while (number.endsWith(QLatin1Char('0'))) {
+            number.chop(1);
+        }
+        if (number.endsWith(QLatin1Char('.'))) {
+            number.chop(1);
+        }
+    }
+    return QStringLiteral("%1 %2").arg(number, QLatin1String(units[unit]));
+}
+
 QString MarkMissingGlyphs(const QString &text, const QList<uint> &missing, const QString &tooltip)
 {
     const QSet<uint> missingSet(missing.begin(), missing.end());
@@ -121,21 +148,29 @@ QString BuildFontPreviewHtml(const FontPreviewDocument &document)
         ".fall-size { width: 2em; flex: none; }"
         ".fall-row .specimen { margin: 0.15em 0; }");
 
+    const QString sizeText = document.fileSizeText.isEmpty()
+        ? FormatFontFileSize(document.fileBytes)
+        : document.fileSizeText;
+    QString facts = QStringLiteral("%1 · %2").arg(Escape(document.fileName), Escape(sizeText));
+    if (!document.glyphSummary.isEmpty()) {
+        facts += QStringLiteral(" · ");
+        facts += Escape(document.glyphSummary);
+    }
+
     return QStringLiteral(
                "<html><head><meta charset=\"utf-8\"><style>"
                "@font-face { font-family: \"SigilPreviewFace\"; src: url(\"%1\"); font-weight: %2; font-style: %3; }"
                "%4"
                "</style></head><body>"
                "<p class=\"meta\">%5</p>"
-               "<p class=\"meta\">%6 · %7 bytes</p>"
-               "%8"
+               "<p class=\"meta\">%6</p>"
+               "%7"
                "</body></html>")
         .arg(document.fontUrl,
              document.fontWeight.isEmpty() ? QStringLiteral("400") : document.fontWeight,
              document.fontStyle.isEmpty() ? QStringLiteral("normal") : document.fontStyle,
              style,
              Escape(document.description),
-             Escape(document.fileName),
-             QString::number(document.fileBytes),
+             facts,
              body);
 }

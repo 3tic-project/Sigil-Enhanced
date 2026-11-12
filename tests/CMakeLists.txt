@@ -1175,6 +1175,8 @@ set_target_properties(vertical_layout_probe PROPERTIES C_STANDARD 11)
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontInspector.h
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/GlobalFontUsageCollector.cpp
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/GlobalFontUsageCollector.h
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontFaceAssigner.cpp
+        ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/FontFaceAssigner.h
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzRAII.h
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp
         ${CMAKE_SOURCE_DIR}/src/BookManipulation/FontSubset/HarfBuzzSubsetEngine.h

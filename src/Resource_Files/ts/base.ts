@@ -5481,6 +5481,10 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>%1 glyphs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../Widgets/FontView.cpp" line="136"/>
         <source>abcdefghijklmnopqrstuvwxyz</source>
         <translation type="unfinished"></translation>
@@ -21081,6 +21085,16 @@ Entities can be separated by lines, commas, or spaces.</source>
     <message>
         <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="50"/>
         <source>No Unicode codepoints were requested.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp" line="31"/>
+        <source>No text is assigned to this font.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/FontSubset/FontFaceAssigner.cpp" line="1549"/>
+        <source>%1: skipped %2 CSS selector(s) that use pseudo-classes or pseudo-elements.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

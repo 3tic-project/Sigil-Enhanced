@@ -27,4 +27,8 @@ bool GlyphHasInk(const QRawFont &font, uint codepoint);
 // Prefer the Unicode name table over a broken Mac Roman family name.
 QString PreferredFontFamilyName(const QRawFont &font);
 
+// Glyph count from the font's maxp table. -1 when the file has no readable count.
+int CountFontGlyphs(const QByteArray &fontBytes);
+int CountFontGlyphs(const QString &path);
+
 #endif

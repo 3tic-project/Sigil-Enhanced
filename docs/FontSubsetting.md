@@ -19,7 +19,8 @@
 - 保持资源 ID、路径、扩展名、media-type 和字体混淆算法不变；
 - 完整提供简体中文、繁体中文和日文界面翻译。
 
-当前不会删除未使用字体，不会更改 CSS `@font-face`，不转换字体格式，也不绕过字体许可。
+当前不会删除未使用字体，也不会更改 CSS `@font-face` 或字体格式。`OS/2.fsType`
+只在结果里显示，不再阻止子集化。没有被 CSS 分到任何字符的字体保持原样，不会自动删除。
 WOFF/WOFF2、TTC/OTC、SVG 字形、EBDT/EBLC、Graphite 和 AAT 布局不属于当前可强制处理
 范围。
 
@@ -41,25 +42,25 @@ WOFF/WOFF2、TTC/OTC、SVG 字形、EBDT/EBLC、Graphite 和 AAT 布局不属于
 
 ## 字符收集规则
 
-当前采用全书安全字符集，而不是根据 CSS 级联把字符精确分配给某个 font face。这会保留较多
-字形，但不容易因错误推断字体归属而删除必要字符。
+每个内嵌字体只保留 CSS 实际分给它的字符，而不是全书字符的并集。分配方式对齐
+SigilFontSubset 插件：
 
-收集器规则如下：
+- 从已链接的 CSS、`@import` 和 `<head>` 里的 `<style>` 读取 `@font-face`；
+  `src` 里第一个能对上现有字体文件的 `url()` 生效，缺文件的 `local()` 或不存在的路径忽略；
+- 选择器支持元素、类、ID、属性、通配符，以及后代、子代、相邻和一般兄弟组合；
+- 同一元素按优先级取一条 `font-family`：`!important`、内联 `style`、ID、类/属性、元素、源码顺序；
+- 子元素继承父元素的字族。元素自己写了 `font-family`，但点名的字体都没有对应文件时，
+  这段文字不回落到父元素的内嵌字体；
+- 字族列表里只保留真正内嵌的字体，并按顺序兜底：前一个字体没有的字符交给下一个；
+- 普通空格、换行和制表符不进入子集。某个字体的字符里出现 U+2E3A 之后的码位，
+  且该字体包含「的」（U+7684）时，额外保留「的」，以兼容多看；
+- `@font-face` 里的 `unicode-set` 会替换匹配结果，`unicode-add` / `unicode-del` 在其后增减；
+- 有序列表会补上实际使用的序号字符（十进制、字母、罗马数字、中文数字等）；
+- 伪类和伪元素选择器不参与分配，并在警告里计数；
+- 每个字体最多保留 64 条、每条不超过 256 个字符的 shaping 样本，样本只含分给该字体的字符。
 
-- 使用 `QXmlStreamReader` 解析 XML 类型资源，不通过正则解析标记；
-- 通过 Sigil 的 XHTML 实体表解析命名实体，并继续扫描实体后的文本；
-- 收集文本节点，以及 `alt`、`title`、`aria-label`、`label` 属性；
-- 跳过 `script` 内容；
-- 将 `style` 内容作为 CSS 扫描；
-- 收集 CSS `content:` 中的单/双引号字符串，并解析 CSS Unicode 转义；
-- 无法静态解析 `attr()`、counter 等动态 `content` 时记录警告；
-- 正确处理 Unicode 辅助平面字符；
-- 始终加入 U+0020、U+00A0 和 U+3000 三种常用空格；
-- 最多保留 64 个、每个不超过 256 字符的 shaping 验证样本。
-
-全书字符集会与每个源字体的 cmap 取交集。源字体本身没有的字符计入
-`unavailableCodepoints`，不会错误地判定为子集化输出缺字；请求保留但输出缺失的字符计入
-`missingCodepoints`，并使该字体处理失败。
+分给某字体、但该字体 cmap 没有的字符计入 `unavailableCodepoints`。请求保留但输出缺失的字符计入
+`missingCodepoints`，并使该字体处理失败。没有任何字符的字体不会生成子集。
 
 ## 支持与跳过矩阵
 
@@ -78,20 +79,8 @@ WOFF/WOFF2、TTC/OTC、SVG 字形、EBDT/EBLC、Graphite 和 AAT 布局不属于
 
 ### 字体许可
 
-工具读取 OpenType `OS/2.fsType`，不提供绕过开关：
-
-| fsType 分类 | 当前行为 |
-| --- | --- |
-| Installable | 允许 |
-| Editable | 允许 |
-| Preview and Print | 跳过 |
-| Restricted | 跳过 |
-| No Subsetting | 跳过 |
-| Bitmap Embedding Only | 跳过 |
-| 缺失、保留位异常或组合无效 | 跳过 |
-
-该判断是保守的工程保护，不构成法律意见。字体授权合同可能比 `fsType` 更严格，使用者仍需确认
-实际许可证。
+工具仍读取 OpenType `OS/2.fsType` 并在结果里显示分类，但任何 `fsType` 都不阻止子集化。
+显示值不构成法律意见，使用者仍需自行确认字体许可证。
 
 ## 验证与提交
 
@@ -101,7 +90,7 @@ WOFF/WOFF2、TTC/OTC、SVG 字形、EBDT/EBLC、Graphite 和 AAT 布局不属于
 2. plan 可以执行并序列化出非空字体；
 3. 输出可按源字体的容器格式重新解析；
 4. 输出覆盖全部请求码点；
-5. 对适用的全书样本进行 shaping，映射后的 GID、cluster、advance 和 offset 等价；
+5. 对分给该字体的样本进行 shaping，映射后的 GID、cluster、advance 和 offset 等价；
 6. 输出体积小于输入体积。
 
 提交阶段使用 `FontSubsetTransaction`：
@@ -127,7 +116,7 @@ WOFF/WOFF2、TTC/OTC、SVG 字形、EBDT/EBLC、Graphite 和 AAT 布局不属于
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
 | `schemaVersion` | integer | 报告结构版本 |
-| `codepointCount` | integer | 全书安全字符集大小 |
+| `codepointCount` | integer | 实际分给内嵌字体的字符数 |
 | `shapingSampleCount` | integer | shaping 样本数 |
 | `dropHinting` | boolean | 本次分析是否删除 hinting |
 | `warnings` | string[] | 扫描和快照警告 |
@@ -177,8 +166,9 @@ worker 不得访问 `Book`、`Resource` 或其他 QObject。
 
 | 类 | 职责 |
 | --- | --- |
-| `GlobalFontUsageCollector` | 从结构化文本和 CSS 收集字符及 shaping 样本 |
-| `FontInspector` | 检查容器、face、表、轮廓、风险和 `fsType` |
+| `GlobalFontUsageCollector` | 从结构化文本和 CSS 收集全书字符及 shaping 样本 |
+| `FontFaceAssigner` | 按 CSS `font-family` 把字符分给每个内嵌字体 |
+| `FontInspector` | 检查容器、face、表、轮廓、风险，并报告 `fsType` |
 | `HarfBuzzSubsetEngine` | 创建 plan、执行 subset、序列化并验证输出 |
 | `FontSubsetTransaction` | stage、冲突检查、原子写入和逆序回滚 |
 | `FontSubsetController` | UI 线程快照、纯分析调度和 Book 提交 |
@@ -266,22 +256,21 @@ ctest --test-dir build --output-on-failure \
 当前实现不接收任意字体输出路径；原位替换路径只来自当前 Book 的 FontResource。唯一可由用户
 选择的路径是只读分析报告的保存位置。核心不启动子进程、不执行字体内容、不调用插件或 Python。
 
-已落实的防护包括：许可拒绝、高风险表拒绝、QObject/worker 边界、完整字节冲突检查、符号链接
+已落实的防护包括：高风险表拒绝、QObject/worker 边界、完整字节冲突检查、符号链接
 拒绝、输出重解析、码点覆盖、shaping 抽样、尺寸门槛、原子单文件写入、批量回滚和 Checkpoint。
 
 剩余风险：
 
 - 内置 HarfBuzz 仍属于解析不可信字体的攻击面，应及时跟随上游安全更新并重跑回归测试；
-- 全书快照和输入/输出字体同时驻留内存，大型 CJK 字体较多时内存峰值较高；
+- 按字体保留 cmap 和子集结果，大型 CJK 字体较多时内存峰值较高；
 - shaping 是代表性样本验证，不是所有 OpenType feature、语言和阅读器的穷举证明；
 - 跨文件事务不能抵御进程被强制终止或系统掉电，必须保留 Checkpoint 恢复路径；
-- 许可判断不能替代人工阅读字体许可证。
+- `fsType` 只作显示，不能替代人工阅读字体许可证。
 
 ## 后续范围
 
 以下仍未实现，不能按现有能力调用：
 
-- CSS-aware 的逐 `@font-face` 字符归属；
 - 未使用字体检测、删除以及 CSS/OPF 清理；
 - WOFF/WOFF2 输出、TTC/OTC face 拆分和格式转换；
 - 可变字体轴固定或静态实例化；
@@ -290,4 +279,4 @@ ctest --test-dir build --output-on-failure \
 - Automation、Agent 或插件公开接口；
 - 持久化跨进程事务日志。
 
-扩展这些能力时必须保持当前安全默认，不得把许可绕过或关闭布局闭包作为普通用户选项。
+扩展这些能力时必须保持当前安全默认，不得把关闭布局闭包作为普通用户选项。

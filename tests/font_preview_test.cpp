@@ -124,18 +124,38 @@ int main(int argc, char **argv)
         Require(coverage.missing.contains(0xE000), "a private-use character absent from the font is missing");
     }
 
+    Require(FormatFontFileSize(0) == QStringLiteral("0 B"), "zero bytes stay in bytes");
+    Require(FormatFontFileSize(512) == QStringLiteral("512 B"), "small files stay in bytes");
+    Require(FormatFontFileSize(1024) == QStringLiteral("1 KB"), "1024 bytes is 1 KB");
+    Require(FormatFontFileSize(77428) == QStringLiteral("75.61 KB"), "mid-size fonts use KB");
+    Require(FormatFontFileSize(13099364) == QStringLiteral("12.49 MB"), "large fonts use MB");
+    QByteArray tinyFont(28 + 6, '\0');
+    tinyFont[1] = 1;
+    tinyFont[5] = 1;
+    tinyFont[12] = 'm';
+    tinyFont[13] = 'a';
+    tinyFont[14] = 'x';
+    tinyFont[15] = 'p';
+    tinyFont[23] = 28;
+    tinyFont[33] = 37;
+    Require(CountFontGlyphs(tinyFont) == 37, "maxp glyph count must be read");
+
     FontPreviewDocument document;
     document.fontUrl = QStringLiteral("font.ttf");
     document.fontWeight = QStringLiteral("400");
     document.fontStyle = QStringLiteral("normal");
     document.description = QStringLiteral("Test");
     document.fileName = QStringLiteral("Test.ttf");
+    document.fileBytes = 2048;
+    document.glyphSummary = QStringLiteral("120 glyphs");
     document.sample = FontPreviewSampleFor(FontPreviewProfile::Generic);
     document.omitFullyMissingLines = true;
     document.coverage = AnalyzeGlyphCoverage(raw, FontPreviewSpecimenText(document.sample));
     const QString html = BuildFontPreviewHtml(document);
     Require(html.contains(QStringLiteral("SigilPreviewFace")) && html.contains(QStringLiteral("Aa Bb Cc")),
             "generic preview must keep the Latin line");
+    Require(html.contains(QStringLiteral("Test.ttf · 2 KB · 120 glyphs")),
+            "preview must show a scaled file size and the glyph count");
     if (!raw.supportsCharacter(QStringLiteral("汉").at(0).unicode())) {
         Require(!html.contains(QStringLiteral("汉")),
                 "a Latin font must not present fallback Chinese as if the font contained it");

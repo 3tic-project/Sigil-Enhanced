@@ -5658,6 +5658,7 @@ then find the Next match in Code View.&lt;/p&gt;</source>
     <message><source>No missing glyphs</source><translation>欠けているグリフはありません</translation></message>
     <message><source>Missing: %1</source><translation>欠落: %1</translation></message>
     <message><source>Not present in this font</source><translation>このフォントに含まれていません</translation></message>
+    <message><source>%1 glyphs</source><translation>%1 グリフ</translation></message>
 </context>
 <context>
     <name>GeneralSettingsWidget</name>
@@ -21867,6 +21868,16 @@ Line: %1 Column %2 - %3</source>
         <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="50"/>
         <source>No Unicode codepoints were requested.</source>
         <translation>Unicode コードポイントが要求されていません。</translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/FontSubset/FontSubsetBatchAnalysis.cpp" line="31"/>
+        <source>No text is assigned to this font.</source>
+        <translation>このフォントに割り当てられたテキストはありません。</translation>
+    </message>
+    <message>
+        <location filename="../../BookManipulation/FontSubset/FontFaceAssigner.cpp" line="1549"/>
+        <source>%1: skipped %2 CSS selector(s) that use pseudo-classes or pseudo-elements.</source>
+        <translation>%1: 擬似クラスまたは擬似要素を使う CSS セレクターを %2 件スキップしました。</translation>
     </message>
     <message>
         <location filename="../../BookManipulation/FontSubset/HarfBuzzSubsetEngine.cpp" line="68"/>
