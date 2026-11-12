@@ -5691,6 +5691,22 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <translation>還原上次視窗的位置、狀態、大小及面板配置。關閉此項或沒有已儲存視窗時，Windows 預設最大化，其他系統預設全螢幕。</translation>
     </message>
     <message>
+        <source>File selection dialog:</source>
+        <translation>檔案選擇對話框：</translation>
+    </message>
+    <message>
+        <source>System native uses the operating system's file dialog. Qt (previous) uses the older non-native dialog, and adding existing files keeps its preview there. On macOS, application bundles are selected reliably by the system dialog.</source>
+        <translation>系統原生使用作業系統的檔案對話框。Qt（舊版）使用以前的非原生對話框，加入現有檔案時仍會顯示預覽。在 macOS 上，系統對話框才能可靠選取 .app 程式套件。</translation>
+    </message>
+    <message>
+        <source>System native</source>
+        <translation>系統原生</translation>
+    </message>
+    <message>
+        <source>Qt (previous)</source>
+        <translation>Qt（舊版）</translation>
+    </message>
+    <message>
         <source>Preserve OPF formatting and comments</source>
         <translation>保留 OPF 原始格式與註解</translation>
     </message>

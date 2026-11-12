@@ -5705,6 +5705,22 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <translation>恢复上次窗口的位置、状态、大小及面板布局。关闭此项或没有已保存窗口时，Windows 默认最大化，其他系统默认全屏。</translation>
     </message>
     <message>
+        <source>File selection dialog:</source>
+        <translation>文件选择对话框：</translation>
+    </message>
+    <message>
+        <source>System native uses the operating system's file dialog. Qt (previous) uses the older non-native dialog, and adding existing files keeps its preview there. On macOS, application bundles are selected reliably by the system dialog.</source>
+        <translation>系统原生使用操作系统的文件对话框。Qt（旧版）使用以前的非原生对话框，添加现有文件时仍会显示预览。在 macOS 上，系统对话框才能可靠选中 .app 程序包。</translation>
+    </message>
+    <message>
+        <source>System native</source>
+        <translation>系统原生</translation>
+    </message>
+    <message>
+        <source>Qt (previous)</source>
+        <translation>Qt（旧版）</translation>
+    </message>
+    <message>
         <source>Preserve OPF formatting and comments</source>
         <translation>保留 OPF 原始格式与注释</translation>
     </message>

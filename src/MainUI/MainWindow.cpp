@@ -2587,7 +2587,7 @@ bool MainWindow::SaveAs()
         save_path       = m_LastFolderOpen + "/" + QFileInfo(proposed_name).completeBaseName() + ".epub";
         default_filter  = c_SaveFilters.value("epub");
     }
-    QFileDialog::Options options = Utility::DlgOptions("LinuxUseNonNative");
+    QFileDialog::Options options = Utility::DlgOptions();
 
     QString filename = QFileDialog::getSaveFileName(this,
                        tr("Save File"),
@@ -2643,7 +2643,7 @@ bool MainWindow::SaveACopy()
     filters.removeDuplicates();
     QString filter_string = "*.epub";
     QString default_filter  = "*.epub";
-    QFileDialog::Options options = Utility::DlgOptions("LinuxUseNonNative");
+    QFileDialog::Options options = Utility::DlgOptions();
 
     QString filename = QFileDialog::getSaveFileName(this,
                        tr("Save a Copy"),
@@ -6625,7 +6625,7 @@ void MainWindow::AgentExportConversationRequested()
         AgentExportSuggestedPath(m_LastFolderOpen, context.sessionId, QStringLiteral("md")),
         filter,
         nullptr,
-        Utility::DlgOptions(QStringLiteral("LinuxUseNonNative")));
+        Utility::DlgOptions());
     if (path.isEmpty()) return;
     const QString markdown = SigilAgent::exportConversationMarkdown(*m_AgentController->session(), context);
     WriteAgentExportFile(this, path, markdown.toUtf8());
@@ -6642,7 +6642,7 @@ void MainWindow::AgentExportDebugLogRequested()
         AgentExportSuggestedPath(m_LastFolderOpen, context.sessionId, QStringLiteral("json")),
         filter,
         nullptr,
-        Utility::DlgOptions(QStringLiteral("LinuxUseNonNative")));
+        Utility::DlgOptions());
     if (path.isEmpty()) return;
     WriteAgentExportFile(this, path, SigilAgent::exportDebugJson(*m_AgentController->session(), context));
 }

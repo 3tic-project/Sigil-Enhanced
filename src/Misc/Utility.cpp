@@ -71,6 +71,7 @@
 
 #include "sigil_constants.h"
 #include "sigil_exception.h"
+#include "Misc/FileDialogPolicy.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/SafeArchiveExtractor.h"
 #include "Misc/SleepFunctions.h"
@@ -1536,30 +1537,20 @@ QString Utility::CleanFileName(const QString &name)
     return result;
 }
 
-// to be used in place of QFileDialog::Options() to initialize them
-QFileDialog::Options Utility::DlgOptions(const QString special_case)
+// Every file dialog passes this so the preference applies in one place.
+QFileDialog::Options Utility::DlgOptions()
 {
-    QFileDialog::Options options = QFileDialog::Options();
-    if (qEnvironmentVariableIsSet("SIGIL_NO_CUSTOM_DIRECTORY_ICONS")) {
-        options = options | QFileDialog::DontUseCustomDirectoryIcons;
+    const bool force_native = qEnvironmentVariableIsSet("SIGIL_FORCE_NATIVE_FILE_DIALOG");
+    FileDialogPolicy::Style style = FileDialogPolicy::Style::Native;
+    if (!force_native) {
+        SettingsStore settings;
+        style = FileDialogPolicy::Parse(settings.fileDialogStyle());
     }
-    if (qEnvironmentVariableIsSet("SIGIL_FORCE_NATIVE_FILE_DIALOG")) {
-        return options;
-    }
-#if defined(Q_OS_MAC)
-    if (special_case.contains("MacUseNative")) {
-        return options;
-    }
-    options = options | QFileDialog::DontUseNativeDialog;
-#elif defined(Q_OS_WIN32)
-    if (special_case.contains("Win32UseNonNative")) {
-        options = options | QFileDialog::DontUseNativeDialog;
-    }
-#else
-    // Linux and other Unix Platforms
-    if (special_case.contains("LinuxUseNonNative")) {
-        options = options | QFileDialog::DontUseNativeDialog;
-    }
-#endif
-    return options;
+    const bool attribute_forces_qt = !force_native && QCoreApplication::instance()
+        && QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
+    return FileDialogPolicy::Options(
+        style,
+        force_native,
+        qEnvironmentVariableIsSet("SIGIL_NO_CUSTOM_DIRECTORY_ICONS"),
+        attribute_forces_qt);
 }

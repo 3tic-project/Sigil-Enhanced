@@ -77,6 +77,7 @@ public:
 
     bool fileDropZoneEnabled();
     bool rememberWindowLayout();
+    QString fileDialogStyle();
 
     /**
      * The zoom factor used by the component.
@@ -324,6 +325,7 @@ public slots:
 
     void setFileDropZoneEnabled(bool enable);
     void setRememberWindowLayout(bool remember);
+    void setFileDialogStyle(const QString &style);
 
     /**
      * Set the zoom factor used by the component.

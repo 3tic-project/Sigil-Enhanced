@@ -919,6 +919,19 @@ target_link_libraries(window_startup_policy_test PRIVATE Qt6::Widgets)
 add_test(NAME window_startup_policy COMMAND window_startup_policy_test)
 set_tests_properties(window_startup_policy PROPERTIES TIMEOUT 15 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(file_dialog_policy_test file_dialog_policy_test.cpp)
+target_include_directories(file_dialog_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(file_dialog_policy_test PRIVATE Qt6::Widgets)
+add_test(NAME file_dialog_policy COMMAND file_dialog_policy_test)
+set_tests_properties(file_dialog_policy PROPERTIES TIMEOUT 15)
+
+add_test(NAME file_dialog_coverage_contract
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/file_dialog_coverage_contract_test.py
+            ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(file_dialog_coverage_contract PROPERTIES TIMEOUT 30)
+
 add_executable(plain_text_exporter_test
     plain_text_exporter_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/PlainTextExporter.cpp

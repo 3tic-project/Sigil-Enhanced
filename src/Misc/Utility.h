@@ -288,7 +288,9 @@ public:
 
     static QString CleanFileName(const QString &name);
 
-    static QFileDialog::Options DlgOptions(const QString special_case = QString());
+    // Shared options for every file dialog. Preferences choose the system
+    // dialog or the previous Qt dialog; SIGIL_FORCE_NATIVE_FILE_DIALOG overrides that.
+    static QFileDialog::Options DlgOptions();
 
     // -------------------------- modified: my additions ----------------------------------
 

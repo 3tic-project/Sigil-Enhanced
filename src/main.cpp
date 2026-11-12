@@ -198,7 +198,7 @@ static void file_open()
     QString default_filter = load_filters.value("epub");
     QString filename = QFileDialog::getOpenFileName(0,
                        "Open File", "~", filter_string, &default_filter,
-                       QFileDialog::DontUseNativeDialog);
+                       Utility::DlgOptions());
     if (!filename.isEmpty()) {
         MainWindow *w = GetMainWindow(QStringList() << "" << filename);
         w->show();

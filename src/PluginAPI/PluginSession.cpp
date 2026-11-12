@@ -3891,9 +3891,10 @@ void PluginSession::Dispatch(const QJsonObject &request)
         const QString initial_path = suggested_name.isEmpty()
             ? directory : QDir(directory).filePath(suggested_name);
         QScopedValueRollback<bool> modal_scope(m_InRequest, false);
+        const QFileDialog::Options options = Utility::DlgOptions();
         const QString path = method == QStringLiteral("ui.chooseOpenFile")
-            ? QFileDialog::getOpenFileName(m_MainWindow, title, initial_path, filter)
-            : QFileDialog::getSaveFileName(m_MainWindow, title, initial_path, filter);
+            ? QFileDialog::getOpenFileName(m_MainWindow, title, initial_path, filter, nullptr, options)
+            : QFileDialog::getSaveFileName(m_MainWindow, title, initial_path, filter, nullptr, options);
         Respond(id, QJsonObject {
             { QStringLiteral("path"), path.isEmpty() ? QJsonValue() : QJsonValue(path) }
         });

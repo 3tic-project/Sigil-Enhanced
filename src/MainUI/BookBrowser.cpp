@@ -853,23 +853,13 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images, QSt
     QStringList filepaths;
     
     if (already_selected.isEmpty() ) {
-        QFileDialog::Options options = Utility::DlgOptions("Win32UseNonNative");
-#if 0
-        // filepaths are full absolute file paths to the files to be added
-        filepaths = QFileDialog::getOpenFileNames(this,
-                                                  tr("Add Existing Files"),
-                                                  m_LastFolderOpen,
-                                                  filter_string,
-                                                  NULL,
-                                                  options);
-#else
+        QFileDialog::Options options = Utility::DlgOptions();
         filepaths = PreviewFileDialog::getOpenFileNames(this,
                                                         tr("Add Existing Files"),
                                                         m_LastFolderOpen,
                                                         filter_string,
                                                         nullptr,
                                                         options);
-#endif
     } else {
         filepaths = already_selected; 
     }

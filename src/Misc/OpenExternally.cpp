@@ -352,13 +352,12 @@ const QString OpenExternally::selectEditorForResourceType(const Resource::Resour
                                        + " (*)"
 #endif
                                        ;
-    QFileDialog::Options options = Utility::DlgOptions("MacUseNative") | QFileDialog::ReadOnly;
+    QFileDialog::Options options = Utility::DlgOptions() | QFileDialog::ReadOnly;
 #ifndef Q_OS_MAC
     options = options | QFileDialog::HideNameFilterDetails;
 #endif
 
-    // Qt Bug, must use native QFileDialog here otherwise treats .app as normal directory
-
+    // The system dialog selects a macOS .app bundle. The Qt dialog treats it as a folder.
     const QString selectedFile = QFileDialog::getOpenFileName(parent,
                                  QObject::tr("Open With"),
                                  last_editor,

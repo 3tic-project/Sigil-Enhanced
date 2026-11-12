@@ -136,6 +136,8 @@ PreferencesWidget::ResultActions GeneralSettingsWidget::saveSettings()
     settings.setExternalXEditorPath(new_xeditor_path);
     settings.setFileDropZoneEnabled(ui.useFileDrop->isChecked());
     settings.setRememberWindowLayout(ui.RememberWindowLayout->isChecked());
+    settings.setFileDialogStyle(ui.FileDialogStyle->currentIndex() == 1
+        ? QStringLiteral("qt") : QStringLiteral("native"));
     if (m_refreshClipboardHistoryLimit) {
         results = results | PreferencesWidget::ResultAction_RefreshClipHistoryLimit;
     }
@@ -185,6 +187,7 @@ void GeneralSettingsWidget::readSettings()
     bool showdropzone = settings.fileDropZoneEnabled();
     ui.useFileDrop->setChecked(showdropzone);
     ui.RememberWindowLayout->setChecked(settings.rememberWindowLayout());
+    ui.FileDialogStyle->setCurrentIndex(settings.fileDialogStyle() == QLatin1String("qt") ? 1 : 0);
 }
 
 void GeneralSettingsWidget::clearXEditorPath()
@@ -210,12 +213,12 @@ void GeneralSettingsWidget::setXEditorPath()
 #endif
       ;
 
-    QFileDialog::Options options = Utility::DlgOptions("MacUseNative") | QFileDialog::ReadOnly;
+    QFileDialog::Options options = Utility::DlgOptions() | QFileDialog::ReadOnly;
 #ifndef Q_OS_MAC
     options = options | QFileDialog::HideNameFilterDetails;
 #endif
 
-    // Qt Bug - you must use a native FileDialog on macOS otherwise it treats .app as a normal directory
+    // The system dialog selects a macOS .app bundle. The Qt dialog treats it as a folder.
     QString xeditorPath = QFileDialog::getOpenFileName(this,
                                                        QObject::tr("Select External Xhtml Editor"),
                                                        LAST_LOCATION,

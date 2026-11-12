@@ -54,6 +54,7 @@
 #include "MainUI/MainWindow.h"
 #include "MainUI/RegexWorkbenchBatchCommitter.h"
 #include "Misc/SettingsStore.h"
+#include "Misc/Utility.h"
 #include "MiscEditors/SearchEditorModelPlus.h"
 #include "ResourceObjects/CSSResource.h"
 #include "ResourceObjects/HTMLResource.h"
@@ -743,7 +744,8 @@ void RegexWorkbenchDialog::OpenRecipe()
                               : m_LastRecipePath;
     const QString path = QFileDialog::getOpenFileName(
         this, tr("Open Regex Workbench Recipe"), start,
-        tr("Regex Workbench recipes (*.json);;All files (*)"));
+        tr("Regex Workbench recipes (*.json);;All files (*)"),
+        nullptr, Utility::DlgOptions());
     if (path.isEmpty()) {
         return;
     }
@@ -774,7 +776,8 @@ void RegexWorkbenchDialog::SaveRecipe()
     }
     path = QFileDialog::getSaveFileName(
         this, tr("Save Regex Workbench Recipe"), path,
-        tr("Regex Workbench recipes (*.json);;All files (*)"));
+        tr("Regex Workbench recipes (*.json);;All files (*)"),
+        nullptr, Utility::DlgOptions());
     if (path.isEmpty()) {
         return;
     }

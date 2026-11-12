@@ -23,6 +23,8 @@
 #include <QVBoxLayout>
 #include <QtConcurrent>
 
+#include "Misc/Utility.h"
+
 namespace
 {
 
@@ -325,7 +327,7 @@ void FontSubsetDialog::SaveReport()
 {
     const QString path = QFileDialog::getSaveFileName(
         this, tr("Save Font Subset Report"), QStringLiteral("font-subset-report.json"),
-        tr("JSON files (*.json);;All files (*)"));
+        tr("JSON files (*.json);;All files (*)"), nullptr, Utility::DlgOptions());
     if (path.isEmpty()) {
         return;
     }

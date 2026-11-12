@@ -413,7 +413,7 @@ bool MainWindow::ExportPlainText()
     if (basename.isEmpty()) basename = QStringLiteral("book");
     QFileDialog dialog(this, tr("Export TXT File"), QDir(folder).filePath(basename + QStringLiteral(".txt")),
                        tr("Text files (*.txt)"));
-    dialog.setOptions(Utility::DlgOptions(QStringLiteral("LinuxUseNonNative")));
+    dialog.setOptions(Utility::DlgOptions());
     dialog.setAcceptMode(QFileDialog::AcceptSave);
     dialog.setDefaultSuffix(QStringLiteral("txt"));
     if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty()) return false;
@@ -434,7 +434,9 @@ bool MainWindow::ConvertKfx()
         this,
         tr("Select KFX File"),
         m_LastFolderOpen,
-        tr("KFX files (*.kfx *.kfx-zip);;All files (*.*)"));
+        tr("KFX files (*.kfx *.kfx-zip);;All files (*.*)"),
+        nullptr,
+        Utility::DlgOptions());
     if (source.isEmpty()) {
         return false;
     }
@@ -489,7 +491,9 @@ bool MainWindow::ConvertKfxFile(const QString& sourcePath,
             this,
             tr("Save Converted EPUB As"),
             QDir(QFileInfo(sourcePath).absolutePath()).filePath(suggested_name),
-            tr("EPUB file (*.epub)"));
+            tr("EPUB file (*.epub)"),
+            nullptr,
+            Utility::DlgOptions());
         if (destination.isEmpty()) {
             return false;
         }

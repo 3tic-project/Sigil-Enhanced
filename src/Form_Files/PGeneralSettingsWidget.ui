@@ -44,6 +44,50 @@
         </widget>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="fileDialogStyleLayout">
+         <item>
+          <widget class="QLabel" name="FileDialogStyleLabel">
+           <property name="text">
+            <string>File selection dialog:</string>
+           </property>
+           <property name="toolTip">
+            <string>System native uses the operating system's file dialog. Qt (previous) uses the older non-native dialog, and adding existing files keeps its preview there. On macOS, application bundles are selected reliably by the system dialog.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="FileDialogStyle">
+           <property name="toolTip">
+            <string>System native uses the operating system's file dialog. Qt (previous) uses the older non-native dialog, and adding existing files keeps its preview there. On macOS, application bundles are selected reliably by the system dialog.</string>
+           </property>
+           <item>
+            <property name="text">
+             <string>System native</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Qt (previous)</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <spacer name="fileDialogStyleSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">

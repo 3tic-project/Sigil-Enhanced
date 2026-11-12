@@ -49,6 +49,7 @@ static QString KEY_UI_HIGHLIGHT_FOCUS_WIDGET = SETTINGS_GROUP + "/" + "ui_highli
 static QString KEY_UI_DOUBLEWIDTH_TEXTCURSOR = SETTINGS_GROUP + "/" + "ui_doublewidth_textcursor";
 static QString KEY_UI_CUSTOM_SIGIL_DARK_THEME = SETTINGS_GROUP + "/" + "ui_custom_sigil_dark_theme";
 static const QString KEY_REMEMBER_WINDOW_LAYOUT = SETTINGS_GROUP + "/remember_window_layout";
+static const QString KEY_FILE_DIALOG_STYLE = SETTINGS_GROUP + "/file_dialog_style";
 static QString KEY_ZOOM_IMAGE = SETTINGS_GROUP + "/" + "zoom_image";
 static QString KEY_ZOOM_TEXT = SETTINGS_GROUP + "/" + "zoom_text";
 static QString KEY_ZOOM_WEB = SETTINGS_GROUP + "/" + "zoom_web";
@@ -244,6 +245,13 @@ bool SettingsStore::rememberWindowLayout()
 {
     clearSettingsGroup();
     return value(KEY_REMEMBER_WINDOW_LAYOUT, true).toBool();
+}
+
+QString SettingsStore::fileDialogStyle()
+{
+    clearSettingsGroup();
+    const QString style = value(KEY_FILE_DIALOG_STYLE, QStringLiteral("native")).toString();
+    return style == QLatin1String("qt") ? QStringLiteral("qt") : QStringLiteral("native");
 }
 
 float SettingsStore::zoomImage()
@@ -706,6 +714,12 @@ void SettingsStore::setRememberWindowLayout(bool remember)
 {
     clearSettingsGroup();
     setValue(KEY_REMEMBER_WINDOW_LAYOUT, remember);
+}
+
+void SettingsStore::setFileDialogStyle(const QString &style)
+{
+    clearSettingsGroup();
+    setValue(KEY_FILE_DIALOG_STYLE, style == QLatin1String("qt") ? QStringLiteral("qt") : QStringLiteral("native"));
 }
 
 void SettingsStore::setZoomImage(float zoom)
