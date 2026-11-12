@@ -398,7 +398,7 @@ jobs:
             py_url: https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Python.framework.tar.xz
             cache_suffix: macos-x64
           - arch: arm64
-            runner: macos-latest
+            runner: macos-15
             osx_arch: arm64
             qt_url: https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Qt6102_arm64.tar.xz
             py_url: https://github.com/kevinhendricks/BuildSigilOnMac/releases/download/for_sigil_1.0.0/Python.framework_arm64.tar.xz
