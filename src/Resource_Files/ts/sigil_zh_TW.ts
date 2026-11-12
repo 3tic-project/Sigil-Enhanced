@@ -5632,6 +5632,31 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <source>No size reduction</source>
         <translation>未縮減大小</translation>
     </message>
+    <message>
+        <location filename="../../Dialogs/FontSubsetDialog.cpp" line="314"/>
+        <source>Characters missing from the target font</source>
+        <translation>目標字體缺少這些字元</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/FontSubsetDialog.cpp" line="474"/>
+        <source> … and %1 more</source>
+        <translation> …還有 %1 個</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/FontSubsetDialog.cpp" line="476"/>
+        <source>%1 (%2): %3</source>
+        <translation>%1（%2）：%3</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/FontSubsetDialog.cpp" line="484"/>
+        <source>These characters are assigned for subsetting, but the target font does not contain them. They will be skipped:</source>
+        <translation>這些字元會被分配到對應字體做子集化，但目標字體裡沒有它們，子集化時會跳過：</translation>
+    </message>
+    <message>
+        <location filename="../../Dialogs/FontSubsetDialog.cpp" line="488"/>
+        <source>%1 more font(s) also have missing characters.</source>
+        <translation>另有 %1 個字體也缺少字元。</translation>
+    </message>
 </context>
 <context>
     <name>FontView</name>
