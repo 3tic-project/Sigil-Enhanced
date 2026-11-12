@@ -285,6 +285,28 @@ static void TestSingleAndBatchReplaceUndo()
     Require(editor.toPlainText() == original, "The edit before the replacements was lost");
 }
 
+static void TestTextOnlyPatternSkipsMarkup()
+{
+    TestTextDocument document;
+    document.setPlainText("<p class=\"red\">red</p>\n");
+    TestCodeViewEditor editor(document);
+    const QString find = QStringLiteral("<[^<>]*>(*SKIP)(*F)|red");
+    Require(editor.FindNextPlus(QString(), find, false), "Text-only pattern missed the text node");
+    const QTextCursor cursor = editor.textCursor();
+    Require(cursor.selectedText() == QLatin1String("red"), "Text-only pattern selected the wrong text");
+    Require(cursor.selectionStart() > document.toPlainText().indexOf('>'),
+            "Text-only pattern matched inside the tag");
+    Require(editor.ReplaceSelectedPlus(find, QStringLiteral("blue"), Searchable::Direction_Down, true),
+            "Text-only replace did not edit the text node");
+    Require(editor.toPlainText() == QLatin1String("<p class=\"red\">blue</p>\n"),
+            "Text-only replace changed markup");
+
+    document.setPlainText("<p class=\"red\">blue</p>\n");
+    editor.CustomSetDocument(document);
+    editor.RestartSearch(Searchable::Direction_Down);
+    Require(!editor.FindNextPlus(QString(), find, false), "Text-only pattern matched an attribute");
+}
+
 static void TestPlusReplaceFindDoesNotInsertWhenExhausted()
 {
     const QString source = QStringLiteral("<html><body><p>a cat ate a rat</p></body></html>");
@@ -331,6 +353,7 @@ int main(int argc, char **argv)
         TestRestartSearchFindsEarlierStyleMatch();
         TestFindAndReplaceMoveToTheMatch();
         TestSingleAndBatchReplaceUndo();
+        TestTextOnlyPatternSkipsMarkup();
         TestPlusReplaceFindDoesNotInsertWhenExhausted();
     } catch (const std::exception &error) {
         qCritical("%s", error.what());

@@ -490,6 +490,9 @@ QString SearchEditorModelPlus::BuildControlsToolTip(const QString & controls)
         if (controls.contains("DN")) {
             tooltip_controls.append("DN - " + tr("Direction: Down") + "\n");
         }
+        if (controls.contains("TO")) {
+            tooltip_controls.append("TO - " + tr("Option: Text Only") + "\n");
+        }
     }
     return tooltip_controls;
 }

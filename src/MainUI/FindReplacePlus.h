@@ -93,6 +93,7 @@ public slots:
 
     void SetOptionWrap(bool new_state);
     void SetOptionPreview(bool new_state);
+    void SetRegexOptionTextOnly(bool new_state);
 
     bool FindAnyText(QString text, bool escape = true);
     void FindAnyTextInTags(QString text);
@@ -238,6 +239,13 @@ private:
 
     bool ResourceContainsCurrentRegex(Resource* resource);
 
+    bool TextOnlyAppliesTo(Resource *resource);
+    QString BuildSearchRegex(bool text_only);
+    QString SearchRegexFor(Resource *resource);
+    void SplitByTextOnly(const QList<Resource *> &files,
+                         QList<Resource *> &text_only_files,
+                         QList<Resource *> &plain_files);
+
     void SearchEndingProcess();
     /**
      * Returns a list of all the strings
@@ -335,6 +343,8 @@ private:
     bool m_OptionWrap;
 
     bool m_OptionPreview;
+
+    bool m_RegexOptionTextOnly;
 
     bool m_LookWhereCurrentFile;
 

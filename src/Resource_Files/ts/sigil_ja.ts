@@ -5161,6 +5161,18 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <translation>折り返し</translation>
     </message>
     <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="416"/>
+        <source>Search only in text (outside tags).
+Valid only when searching HTML files.</source>
+        <translation>タグの外のテキストだけを検索します。
+HTML ファイルを検索するときだけ有効です。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="420"/>
+        <source>Text</source>
+        <translation>テキスト</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/FindReplacePlus.ui" line="408"/>
         <source>Preview matching results as click Replace All button or Count All button.</source>
         <translation>「すべて置換」または「すべてカウント」をクリックしたときに一致結果をプレビューします。</translation>
@@ -23202,6 +23214,11 @@ Do you want to save your changes?</source>
         <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="488"/>
         <source>Direction: Down</source>
         <translation>方向: 下へ</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="494"/>
+        <source>Option: Text Only</source>
+        <translation>オプション: テキストのみ</translation>
     </message>
     <message>
         <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="788"/>

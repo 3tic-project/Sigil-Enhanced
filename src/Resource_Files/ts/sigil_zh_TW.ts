@@ -5156,6 +5156,18 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <translation>繞回</translation>
     </message>
     <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="416"/>
+        <source>Search only in text (outside tags).
+Valid only when searching HTML files.</source>
+        <translation>僅在文字中搜尋（標籤外）。
+僅在搜尋 HTML 檔案時有效。</translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="420"/>
+        <source>Text</source>
+        <translation>文字</translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/FindReplacePlus.ui" line="408"/>
         <source>Preview matching results as click Replace All button or Count All button.</source>
         <translation>單擊“全部替換”或“全部計數”按鈕時預覽匹配結果。</translation>
@@ -23207,6 +23219,11 @@ Do you want to save your changes?</source>
         <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="488"/>
         <source>Direction: Down</source>
         <translation>方向：下</translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="494"/>
+        <source>Option: Text Only</source>
+        <translation>選項：僅文字</translation>
     </message>
     <message>
         <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="788"/>

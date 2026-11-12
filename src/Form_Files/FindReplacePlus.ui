@@ -388,7 +388,7 @@ then find the Next match in Code View.&lt;/p&gt;</string>
          </widget>
         </item>
         <item row="4" column="1" colspan="3">
-         <layout class="QHBoxLayout" name="advancedLayout" stretch="0,0,0,0">
+         <layout class="QHBoxLayout" name="advancedLayout" stretch="0,0,0,0,0">
           <property name="leftMargin">
            <number>6</number>
           </property>
@@ -399,6 +399,20 @@ then find the Next match in Code View.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Wrap</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="chkOptionTextOnly">
+            <property name="focusPolicy">
+             <enum>Qt::TabFocus</enum>
+            </property>
+            <property name="toolTip">
+             <string>Search only in text (outside tags).
+Valid only when searching HTML files.</string>
+            </property>
+            <property name="text">
+             <string>Text</string>
             </property>
            </widget>
           </item>

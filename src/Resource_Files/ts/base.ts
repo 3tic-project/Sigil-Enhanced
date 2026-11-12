@@ -4999,6 +4999,17 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="416"/>
+        <source>Search only in text (outside tags).
+Valid only when searching HTML files.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../Form_Files/FindReplacePlus.ui" line="420"/>
+        <source>Text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../Form_Files/FindReplacePlus.ui" line="408"/>
         <source>Preview matching results as click Replace All button or Count All button.</source>
         <translation type="unfinished"></translation>
@@ -23832,6 +23843,11 @@ Do you want to save your changes?</source>
     <message>
         <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="491"/>
         <source>Direction: Down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../MiscEditors/SearchEditorModelPlus.cpp" line="494"/>
+        <source>Option: Text Only</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

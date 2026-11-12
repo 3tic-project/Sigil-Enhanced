@@ -9,6 +9,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QCompleter>
+#include <QPair>
 #include <QRegularExpression>
 #include <QDebug>
 
@@ -29,6 +30,14 @@ static const QString SETTINGS_GROUP = "find_replace_plus";
 static const QString REGEX_OPTION_IGNORE_CASE = "(?i)";
 static const QString REGEX_OPTION_DOT_ALL = "(?s)";
 static const QString REGEX_OPTION_MINIMAL_MATCH = "(?U)";
+static const QString REGEX_OPTION_TEXT_ONLY = "<[^<>]*>(*SKIP)(*F)|";
+
+static bool MediaTypeIsXML(const QString &media_type)
+{
+    return media_type.endsWith(QLatin1String("+xml"))
+        || media_type == QLatin1String("application/xml")
+        || media_type == QLatin1String("text/xml");
+}
 
 static const int SHOW_FIND_RESULTS_MESSAGE_DELAY_MS = 20000;
 
@@ -43,6 +52,7 @@ FindReplacePlus::FindReplacePlus(MainWindow *main_window)
       m_MainWindow(main_window),
       m_OptionWrap(true),
       m_OptionPreview(false),
+      m_RegexOptionTextOnly(false),
       m_LookWhereCurrentFile(false),
       m_IsSearchGroupRunning(false),
       m_StartingResource(nullptr),
@@ -96,7 +106,7 @@ FindReplacePlus::~FindReplacePlus()
 
 bool FindReplacePlus::ResourceContainsCurrentRegex(Resource* resource)
 {
-    return SearchOperations::TestInFilePlus(GetPreSearchRegex(), GetSearchRegex(), resource);
+    return SearchOperations::TestInFilePlus(GetPreSearchRegex(), SearchRegexFor(resource), resource);
 }
 
 
@@ -182,6 +192,7 @@ QString FindReplacePlus::GetControls()
 {
     QStringList  controls;
     controls << MDS.at(GetSearchMode());
+    if (m_RegexOptionTextOnly) controls << "TO";
     controls << DRS.at(GetSearchDirection());
     controls << TGTS.at(GetLookWhere());
     return controls.join(' ');
@@ -852,6 +863,20 @@ QString FindReplacePlus::GetPreSearchRegex()
 // options and fields and then returns it.
 QString FindReplacePlus::GetSearchRegex()
 {
+    return SearchRegexFor(GetCurrentResource());
+}
+
+bool FindReplacePlus::TextOnlyAppliesTo(Resource *resource)
+{
+    if (!m_RegexOptionTextOnly) return false;
+    if (isWhereCSS()) return false;
+    if (isWhereHTML() || isWhereOPF() || isWhereNCX()) return true;
+    if (!resource) return false;
+    return MediaTypeIsXML(resource->GetMediaType());
+}
+
+QString FindReplacePlus::BuildSearchRegex(bool text_only)
+{
     QString text = ui.cbFind->lineEdit()->text();
     // Convert &#x2029; to match line separator used by plainText.
     text.replace(QRegularExpression("\\R"), "\n");
@@ -862,8 +887,27 @@ QString FindReplacePlus::GetSearchRegex()
     if (GetSearchMode() == FindReplacePlus::SearchMode_Normal) {
         search = QRegularExpression::escape(search);
     }
-    // qDebug() << "GetSearchRegex returns: " << search;
+    if (text_only) {
+        search = REGEX_OPTION_TEXT_ONLY + search;
+    }
     return search;
+}
+
+QString FindReplacePlus::SearchRegexFor(Resource *resource)
+{
+    return BuildSearchRegex(TextOnlyAppliesTo(resource));
+}
+
+void FindReplacePlus::SplitByTextOnly(const QList<Resource *> &files,
+                                      QList<Resource *> &text_only_files,
+                                      QList<Resource *> &plain_files)
+{
+    text_only_files.clear();
+    plain_files.clear();
+    for (Resource *resource : files) {
+        if (TextOnlyAppliesTo(resource)) text_only_files.append(resource);
+        else plain_files.append(resource);
+    }
 }
 
 
@@ -938,7 +982,17 @@ int FindReplacePlus::CountInFiles()
     QList<Resource *>search_files = GetFilesToSearch(true);
     if (search_files.isEmpty()) return 0;
 
-    return SearchOperations::CountInFilesPlus(GetPreSearchRegex(), GetSearchRegex(), search_files);
+    QList<Resource *> text_only_files;
+    QList<Resource *> plain_files;
+    SplitByTextOnly(search_files, text_only_files, plain_files);
+    int count = 0;
+    if (!text_only_files.isEmpty()) {
+        count += SearchOperations::CountInFilesPlus(GetPreSearchRegex(), BuildSearchRegex(true), text_only_files);
+    }
+    if (!plain_files.isEmpty()) {
+        count += SearchOperations::CountInFilesPlus(GetPreSearchRegex(), BuildSearchRegex(false), plain_files);
+    }
+    return count;
 }
 
 int FindReplacePlus::ReplaceInAllFiles()
@@ -947,7 +1001,17 @@ int FindReplacePlus::ReplaceInAllFiles()
     QList<Resource *>search_files = GetFilesToSearch(true);
     if (search_files.isEmpty()) return 0;
 
-    int pending_count = SearchOperations::CountInFilesPlus(GetPreSearchRegex(), GetSearchRegex(), search_files);
+    QList<Resource *> text_only_files;
+    QList<Resource *> plain_files;
+    SplitByTextOnly(search_files, text_only_files, plain_files);
+    const QString replacement = ui.cbReplace->lineEdit()->text();
+    int pending_count = 0;
+    if (!text_only_files.isEmpty()) {
+        pending_count += SearchOperations::CountInFilesPlus(GetPreSearchRegex(), BuildSearchRegex(true), text_only_files);
+    }
+    if (!plain_files.isEmpty()) {
+        pending_count += SearchOperations::CountInFilesPlus(GetPreSearchRegex(), BuildSearchRegex(false), plain_files);
+    }
     if (pending_count == 0) return 0;
 
     ShowMessage(tr("Creating checkpoint before Replace All..."));
@@ -956,11 +1020,15 @@ int FindReplacePlus::ReplaceInAllFiles()
         return -1;
     }
 
-    int count = SearchOperations::ReplaceInAllFIlesPlus(
-                    GetPreSearchRegex(),
-                    GetSearchRegex(),
-                    ui.cbReplace->lineEdit()->text(),
-                    search_files);
+    int count = 0;
+    if (!text_only_files.isEmpty()) {
+        count += SearchOperations::ReplaceInAllFIlesPlus(
+                    GetPreSearchRegex(), BuildSearchRegex(true), replacement, text_only_files);
+    }
+    if (!plain_files.isEmpty()) {
+        count += SearchOperations::ReplaceInAllFIlesPlus(
+                    GetPreSearchRegex(), BuildSearchRegex(false), replacement, plain_files);
+    }
     return count;
 }
 
@@ -1145,7 +1213,9 @@ void FindReplacePlus::OpenResourceTabForSearch(Resource* resource)
 
 Resource *FindReplacePlus::GetCurrentResource()
 {
-    return m_MainWindow->GetCurrentContentTab()->GetLoadedResource();
+    ContentTab *tab = m_MainWindow->GetCurrentContentTab();
+    if (!tab) return nullptr;
+    return tab->GetLoadedResource();
 }
 
 
@@ -1295,6 +1365,7 @@ void FindReplacePlus::UpdateSearchControls(const QString &text)
 
     // Search Flags
     //SetOptionWrap(text.contains("WR"));
+    SetRegexOptionTextOnly(text.contains("TO"));
 }
 
 void FindReplacePlus::SearchEndingProcess()
@@ -1406,6 +1477,7 @@ void FindReplacePlus::ReadSettings(bool initialRead)
     SetSearchDirection(settings.value("search_direction", 0).toInt());
     bool optionWrap = settings.value("optionwrap", true).toBool();
     SetOptionWrap(optionWrap);
+    SetRegexOptionTextOnly(settings.value("regexoptiontextonly", false).toBool());
     //bool optionPreview = settings.value("optionpreview", false).toBool();
     //SetOptionPreview(optionPreview);
     settings.endGroup();
@@ -1460,6 +1532,7 @@ void FindReplacePlus::WriteSettings()
     settings.setValue("search_mode", GetSearchMode());
     settings.setValue("look_where", GetLookWhere());
     settings.setValue("search_direction", GetSearchDirection());
+    settings.setValue("regexoptiontextonly", ui.chkOptionTextOnly->isChecked());
     //settings.setValue("optionwrap", ui.chkOptionWrap->isChecked());
     //settings.setValue("optionpreview", ui.chkOptionPreview->isChecked());
     settings.endGroup();
@@ -1706,28 +1779,40 @@ void FindReplacePlus::ReplaceAllSearch()
         const bool validRule = IsValidFindText();
         requiresLegacyBatch = requiresLegacyBatch || (validRule && IsMarkedText());
 
-        SearchBatch::Rule rule;
-        rule.id = QStringLiteral("%1#%2").arg(search_entry->fullname).arg(ruleIndex++);
-        rule.name = search_entry->name;
-        rule.preSearchRegex = GetPreSearchRegex();
-        rule.searchRegex = GetSearchRegex();
-        rule.replacement = GetReplace();
-        rule.engine = rule.preSearchRegex.isEmpty()
-            ? SearchBatch::Engine::Regex : SearchBatch::Engine::PreSearch;
-
         const QList<Resource*> targets = validRule ? GetAllResourcesToSearch() : QList<Resource*>();
-        for (Resource* target : targets) {
-            TextResource* textResource = qobject_cast<TextResource*>(target);
-            if (!textResource) {
-                continue;
-            }
-            const QString path = textResource->GetRelativePath();
-            resources.insert(path, textResource);
-            if (!rule.resourcePaths.contains(path)) {
-                rule.resourcePaths.append(path);
-            }
+        QList<Resource*> text_only_targets;
+        QList<Resource*> plain_targets;
+        SplitByTextOnly(targets, text_only_targets, plain_targets);
+        if (text_only_targets.isEmpty() && plain_targets.isEmpty()) {
+            plain_targets = targets;
         }
-        rules.append(rule);
+        const QList<QPair<QList<Resource*>, bool>> groups = {
+            {text_only_targets, true},
+            {plain_targets, false}
+        };
+        for (const auto &group : groups) {
+            if (group.first.isEmpty()) continue;
+            SearchBatch::Rule rule;
+            rule.id = QStringLiteral("%1#%2").arg(search_entry->fullname).arg(ruleIndex++);
+            rule.name = search_entry->name;
+            rule.preSearchRegex = GetPreSearchRegex();
+            rule.searchRegex = BuildSearchRegex(group.second);
+            rule.replacement = GetReplace();
+            rule.engine = rule.preSearchRegex.isEmpty()
+                ? SearchBatch::Engine::Regex : SearchBatch::Engine::PreSearch;
+            for (Resource* target : group.first) {
+                TextResource* textResource = qobject_cast<TextResource*>(target);
+                if (!textResource) {
+                    continue;
+                }
+                const QString path = textResource->GetRelativePath();
+                resources.insert(path, textResource);
+                if (!rule.resourcePaths.contains(path)) {
+                    rule.resourcePaths.append(path);
+                }
+            }
+            rules.append(rule);
+        }
     }
 
     qint64 count = 0;
@@ -1908,6 +1993,12 @@ void FindReplacePlus::SetOptionPreview(bool new_state)
 {
     m_OptionPreview = new_state;
     ui.chkOptionPreview->setChecked(new_state);
+}
+
+void FindReplacePlus::SetRegexOptionTextOnly(bool new_state)
+{
+    m_RegexOptionTextOnly = new_state;
+    ui.chkOptionTextOnly->setChecked(new_state);
 }
 
 void FindReplacePlus::SetFRButtonsTextOnly() {
@@ -2096,6 +2187,9 @@ void FindReplacePlus::ConnectSignalsToSlots()
     connect(ui.close, SIGNAL(clicked()), this, SLOT(HideFindReplace()));
     connect(ui.chkOptionWrap, SIGNAL(clicked(bool)), this, SLOT(SetOptionWrap(bool)));
     connect(ui.chkOptionWrap, SIGNAL(clicked(bool)), this, SLOT(DoRestart()));
+    connect(ui.chkOptionTextOnly, SIGNAL(clicked(bool)), this, SLOT(SetRegexOptionTextOnly(bool)));
+    connect(ui.chkOptionTextOnly, SIGNAL(clicked(bool)), this, SLOT(DoRestart()));
+    connect(ui.chkOptionTextOnly, SIGNAL(clicked(bool)), this, SLOT(ValidateRegex()));
     connect(ui.chkOptionPreview, SIGNAL(clicked(bool)), this, SLOT(SetOptionPreview(bool)));
     connect(ui.cbFind, SIGNAL(editTextChanged(const QString&)), this, SLOT(ValidateRegex()));
     connect(ui.cbFind, SIGNAL(currentTextChanged(const QString&)), this, SLOT(ValidateRegex()));
