@@ -123,6 +123,29 @@ QJsonArray StringArray(const QStringList& strings)
     return array;
 }
 
+QString CodepointSample(const QSet<quint32>& codepoints, int limit, int* remaining)
+{
+    QList<quint32> sorted(codepoints.cbegin(), codepoints.cend());
+    std::sort(sorted.begin(), sorted.end());
+    const int shown = std::min(limit, int(sorted.size()));
+    QString text;
+    text.reserve(shown * 2);
+    for (int index = 0; index < shown; ++index) {
+        const quint32 codepoint = sorted.at(index);
+        const bool printable = codepoint >= 0x20 && codepoint != 0x7F &&
+                               QChar::isPrint(codepoint);
+        if (printable) {
+            const char32_t scalar = codepoint;
+            text += QString::fromUcs4(&scalar, 1);
+        } else {
+            text += QStringLiteral("U+%1")
+                        .arg(codepoint, 4, 16, QLatin1Char('0')).toUpper();
+        }
+    }
+    *remaining = int(sorted.size()) - shown;
+    return text;
+}
+
 }
 
 FontSubsetDialog::FontSubsetDialog(
@@ -279,12 +302,17 @@ void FontSubsetDialog::AnalysisFinished()
             .arg(eligible)
             .arg(m_Analysis.fonts.size())
             .arg(m_Analysis.usage.codepoints.size()));
-    if (!m_Analysis.warnings.isEmpty()) {
-        m_Status->setToolTip(m_Analysis.warnings.join(QLatin1Char('\n')));
-    } else {
-        m_Status->setToolTip(QString());
+    QStringList tips = m_Analysis.warnings;
+    const QString notice = MissingCharacterNotice();
+    if (!notice.isEmpty()) {
+        tips.append(notice);
     }
+    m_Status->setToolTip(tips.join(QStringLiteral("\n\n")));
     UpdateApplyState();
+    if (!notice.isEmpty()) {
+        QMessageBox::warning(
+            this, tr("Characters missing from the target font"), notice);
+    }
 }
 
 void FontSubsetDialog::UpdateApplyState()
@@ -425,6 +453,42 @@ void FontSubsetDialog::PopulateResults()
         m_Table->setItem(row, 6, statusItem);
     }
     m_Table->blockSignals(false);
+}
+
+QString FontSubsetDialog::MissingCharacterNotice() const
+{
+    QStringList lines;
+    int hiddenFonts = 0;
+    for (const FontSubset::FontAnalysis& analysis : m_Analysis.fonts) {
+        const QSet<quint32>& missing = analysis.result.unavailableCodepoints;
+        if (missing.isEmpty()) {
+            continue;
+        }
+        if (lines.size() >= 12) {
+            ++hiddenFonts;
+            continue;
+        }
+        int remaining = 0;
+        QString sample = CodepointSample(missing, 80, &remaining);
+        if (remaining > 0) {
+            sample += tr(" … and %1 more").arg(QLocale().toString(remaining));
+        }
+        lines.append(tr("%1 (%2): %3")
+                         .arg(analysis.font.relativePath,
+                              QLocale().toString(missing.size()),
+                              sample));
+    }
+    if (lines.isEmpty()) {
+        return QString();
+    }
+    QString text = tr("These characters are assigned for subsetting, but the target font does not contain them. They will be skipped:")
+                   + QLatin1Char('\n') + lines.join(QLatin1Char('\n'));
+    if (hiddenFonts > 0) {
+        text += QLatin1Char('\n') +
+                tr("%1 more font(s) also have missing characters.")
+                    .arg(QLocale().toString(hiddenFonts));
+    }
+    return text;
 }
 
 void FontSubsetDialog::SetBusy(bool busy)

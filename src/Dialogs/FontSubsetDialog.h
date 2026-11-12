@@ -44,6 +44,7 @@ private:
     QByteArray CreateReportJson() const;
     void PopulateResults();
     void SetBusy(bool busy);
+    QString MissingCharacterNotice() const;
 
     FontSubset::BookSnapshot m_Snapshot;
     FontSubset::BatchResult m_Analysis;
