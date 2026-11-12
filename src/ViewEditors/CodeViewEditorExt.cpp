@@ -12,6 +12,7 @@
 #include <QtGlobal>
 
 #include "ViewEditors/CodeViewEditor.h"
+#include "ViewEditors/CodeViewTextDrag.h"
 #include "sigil_constants.h"
 #include "MainUI/MainWindow.h"
 #include "MainUI/BookBrowser.h"
@@ -57,11 +58,6 @@ static Resource* ResourceForIdentifier(MainWindow *mainwin, const QString &ident
         return nullptr;
     }
     return mainwin->GetCurrentBook()->GetFolderKeeper()->GetResourceByIdentifier(identifier);
-}
-
-static bool AllowPlainCodeViewDrop()
-{
-    return qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP");
 }
 
 static QString SafeClipboardImageFilename(const QMimeData* source)
@@ -1071,6 +1067,12 @@ bool CodeViewEditor::insertBookBrowserResources(const QMimeData* source, const Q
     return true;
 }
 
+bool CodeViewEditor::IsOwnTextDrag(const QDropEvent *event) const
+{
+    return event && event->source() == this && event->mimeData()
+        && event->mimeData()->hasFormat(CodeViewTextDrag::MimeType());
+}
+
 void CodeViewEditor::dragEnterEvent(QDragEnterEvent* event)
 {
     if (canInsertBookBrowserResources(event->mimeData(), event->position().toPoint())) {
@@ -1079,8 +1081,10 @@ void CodeViewEditor::dragEnterEvent(QDragEnterEvent* event)
         return;
     }
 
-    if (AllowPlainCodeViewDrop()) {
-        QPlainTextEdit::dragEnterEvent(event);
+    if (IsOwnTextDrag(event)) {
+        // Accept without moving the caret. The document changes after exec returns.
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
         return;
     }
 
@@ -1095,8 +1099,9 @@ void CodeViewEditor::dragMoveEvent(QDragMoveEvent* event)
         return;
     }
 
-    if (AllowPlainCodeViewDrop()) {
-        QPlainTextEdit::dragMoveEvent(event);
+    if (IsOwnTextDrag(event)) {
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
         return;
     }
 
@@ -1115,8 +1120,11 @@ void CodeViewEditor::dropEvent(QDropEvent* event)
         return;
     }
 
-    if (AllowPlainCodeViewDrop()) {
-        QPlainTextEdit::dropEvent(event);
+    if (IsOwnTextDrag(event)) {
+        m_TextDragDropPosition = cursorForPosition(event->position().toPoint()).position();
+        m_TextDragDroppedInside = true;
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
         return;
     }
 

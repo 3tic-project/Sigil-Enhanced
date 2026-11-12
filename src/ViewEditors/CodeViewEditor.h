@@ -521,6 +521,8 @@ protected:
      */
     void mousePressEvent(QMouseEvent *event);
 
+    void mouseMoveEvent(QMouseEvent *event);
+
     void mouseReleaseEvent(QMouseEvent *event);
 
     void mouseDoubleClickEvent(QMouseEvent *event);
@@ -934,6 +936,12 @@ protected:
     void dragMoveEvent(QDragMoveEvent* event);
     void dropEvent(QDropEvent* event);
 
+    // Qt's own text drag enters the native OLE loop and then updates the caret
+    // and highlighter before that loop returns. On Windows that re-entry crashes
+    // in Qt6Gui. These hooks move the text only after QDrag::exec has returned.
+    virtual Qt::DropAction ExecuteTextContentDrag(QMimeData *mime);
+    bool RelocateSelectedText(int start, int end, int drop);
+
 private:
     //modified: keyPressEvent
     HighlighterType m_hightype;
@@ -995,6 +1003,20 @@ private:
     int m_SuppressFindMatchReset;
     bool m_CountSplitOffset;
     int m_SplitOffset;
+
+    bool m_TextDragArmed = false;
+    bool m_TextDragConsumed = false;
+    bool m_TextDragDroppedInside = false;
+    QPoint m_TextDragOrigin;
+    int m_TextDragPressPosition = -1;
+    int m_TextDragSelectionStart = -1;
+    int m_TextDragSelectionEnd = -1;
+    int m_TextDragDropPosition = -1;
+
+    bool PressCanDragSelectedText(const QMouseEvent *event, int position) const;
+    void StartArmedTextDrag();
+    void RemoveDraggedText(int start, int end);
+    bool IsOwnTextDrag(const QDropEvent *event) const;
 };
 
 #endif // CODEVIEWEDITOR_H

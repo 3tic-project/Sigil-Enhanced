@@ -298,6 +298,13 @@ target_compile_features(code_view_selection_policy_test PRIVATE cxx_std_17)
 add_test(NAME code_view_selection_policy COMMAND code_view_selection_policy_test)
 set_tests_properties(code_view_selection_policy PROPERTIES TIMEOUT 30)
 
+add_executable(code_view_text_drag_test code_view_text_drag_test.cpp)
+target_include_directories(code_view_text_drag_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(code_view_text_drag_test PRIVATE Qt6::Core)
+target_compile_features(code_view_text_drag_test PRIVATE cxx_std_17)
+add_test(NAME code_view_text_drag COMMAND code_view_text_drag_test)
+set_tests_properties(code_view_text_drag PROPERTIES TIMEOUT 15)
+
 add_executable(shortcut_badge_model_test
     shortcut_badge_model_test.cpp
     ${CMAKE_SOURCE_DIR}/src/Widgets/ShortcutBadgeModel.cpp

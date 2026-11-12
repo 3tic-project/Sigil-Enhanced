@@ -1,6 +1,7 @@
 #include "EmbedPython/EmbeddedPython.h" // Python must precede Qt's slots macro.
 
 #include <QComboBox>
+#include <QMimeData>
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QMouseEvent>
@@ -49,6 +50,13 @@ public:
         mouseDoubleClickEvent(&event);
     }
 
+    int text_drags = 0;
+
+    bool MoveSelectionTo(int start, int end, int drop)
+    {
+        return RelocateSelectedText(start, end, drop);
+    }
+
     void TriggerContextActionAt(int position, const QString &action_text)
     {
         QTextCursor cursor(document());
@@ -73,6 +81,14 @@ public:
                                 local_position, global_position);
         contextMenuEvent(&event);
         Require(action_found, "The expected XHTML selection context action is missing");
+    }
+
+protected:
+    Qt::DropAction ExecuteTextContentDrag(QMimeData *mime) override
+    {
+        ++text_drags;
+        delete mime;
+        return Qt::IgnoreAction;
     }
 };
 
@@ -264,41 +280,96 @@ static void TestTagModifiersAndEditorConsistency()
 }
 
 static void SendMouse(TestCodeViewEditor &editor, QEvent::Type type, int position,
-                      Qt::MouseButton button, Qt::MouseButtons buttons)
+                      Qt::MouseButton button, Qt::MouseButtons buttons,
+                      Qt::KeyboardModifiers modifiers = Qt::NoModifier)
 {
     QTextCursor cursor(editor.document());
     cursor.setPosition(position);
     const QPoint local_position = editor.cursorRect(cursor).center();
     QMouseEvent event(type, QPointF(local_position),
                       QPointF(editor.viewport()->mapToGlobal(local_position)),
-                      button, buttons, Qt::NoModifier);
+                      button, buttons, modifiers);
     QApplication::sendEvent(editor.viewport(), &event);
 }
 
-static void TestPressInSelectionDoesNotStartTextDrag()
+static void TestSelectedTextDrag()
 {
-    const QString source = QStringLiteral("<html><body><p>alpha beta gamma delta</p></body></html>");
+    QApplication::setStartDragDistance(1);
+    const QString source = QStringLiteral("alpha beta gamma delta");
+    const int selection_start = source.indexOf(QStringLiteral("beta"));
+    const int selection_end = source.indexOf(QStringLiteral("delta"));
     TestTextDocument document;
     TestCodeViewEditor editor(document);
     Load(editor, source);
     QTextCursor selection(editor.document());
-    selection.setPosition(source.indexOf(QStringLiteral("beta")));
-    selection.setPosition(source.indexOf(QStringLiteral(" delta")), QTextCursor::KeepAnchor);
+    selection.setPosition(selection_start);
+    selection.setPosition(selection_end, QTextCursor::KeepAnchor);
     editor.setTextCursor(selection);
 
     const int press = source.indexOf(QStringLiteral("gamma")) + 2;
     SendMouse(editor, QEvent::MouseButtonPress, press, Qt::LeftButton, Qt::LeftButton);
-    // Qt would keep the selection here and arm a drag that the next move starts.
+    Require(editor.textCursor().selectionStart() == selection_start
+                && editor.textCursor().selectionEnd() == selection_end,
+            "A press inside the selection collapsed it before a drag could start");
+    SendMouse(editor, QEvent::MouseButtonRelease, press, Qt::LeftButton, Qt::NoButton);
     Require(!editor.textCursor().hasSelection() && editor.textCursor().position() == press,
-            "A press inside the selection kept it and armed Qt's text drag");
+            "Releasing inside the selection without movement did not place the caret");
+    Require(editor.toPlainText() == source && !editor.document()->isModified() && editor.text_drags == 0,
+            "A click inside the selection changed the document or started a drag");
 
-    const int moved_to = source.indexOf(QStringLiteral("alpha"));
-    SendMouse(editor, QEvent::MouseMove, moved_to, Qt::NoButton, Qt::LeftButton);
-    SendMouse(editor, QEvent::MouseButtonRelease, moved_to, Qt::LeftButton, Qt::NoButton);
-    Require(editor.textCursor().anchor() == press && editor.textCursor().position() == moved_to,
-            "Dragging from inside the old selection did not select text from the press point");
-    Require(editor.document()->toPlainText() == source && !editor.document()->isModified(),
-            "Pressing and dragging inside a selection changed the document");
+    selection.setPosition(selection_start);
+    selection.setPosition(selection_end, QTextCursor::KeepAnchor);
+    editor.setTextCursor(selection);
+    SendMouse(editor, QEvent::MouseButtonPress, press, Qt::LeftButton, Qt::LeftButton,
+              Qt::ShiftModifier);
+    SendMouse(editor, QEvent::MouseMove, source.indexOf(QStringLiteral("alpha")),
+              Qt::NoButton, Qt::LeftButton, Qt::ShiftModifier);
+    SendMouse(editor, QEvent::MouseButtonRelease, source.indexOf(QStringLiteral("alpha")),
+              Qt::LeftButton, Qt::NoButton, Qt::ShiftModifier);
+    Require(editor.text_drags == 0 && editor.toPlainText() == source,
+            "Shift-dragging inside the selection started a content move");
+
+    selection.setPosition(selection_start);
+    selection.setPosition(selection_end, QTextCursor::KeepAnchor);
+    editor.setTextCursor(selection);
+    SendMouse(editor, QEvent::MouseButtonPress, press, Qt::LeftButton, Qt::LeftButton,
+              Qt::ControlModifier);
+    SendMouse(editor, QEvent::MouseMove, source.indexOf(QStringLiteral("alpha")),
+              Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+    SendMouse(editor, QEvent::MouseButtonRelease, source.indexOf(QStringLiteral("alpha")),
+              Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+    Require(editor.text_drags == 0 && editor.toPlainText() == source,
+            "Ctrl-dragging inside the selection started either content move or Qt's text drag");
+
+    selection.setPosition(selection_start);
+    selection.setPosition(selection_end, QTextCursor::KeepAnchor);
+    editor.setTextCursor(selection);
+    editor.document()->setModified(false);
+    const int drag_target = source.indexOf(QStringLiteral("alpha"));
+    SendMouse(editor, QEvent::MouseButtonPress, press, Qt::LeftButton, Qt::LeftButton);
+    SendMouse(editor, QEvent::MouseMove, drag_target, Qt::NoButton, Qt::LeftButton);
+    Require(editor.text_drags == 1 && editor.toPlainText() == source && !editor.document()->isModified(),
+            "Starting a content drag edited the document inside the drag loop");
+    SendMouse(editor, QEvent::MouseButtonRelease, drag_target, Qt::LeftButton, Qt::NoButton);
+
+    const QString moved = QStringLiteral("beta gamma alpha delta");
+    Require(editor.MoveSelectionTo(selection_start, selection_end, drag_target)
+                && editor.toPlainText() == moved,
+            "The selected text did not move before the drop caret");
+    Require(editor.textCursor().selectionStart() == drag_target
+                && editor.textCursor().selectedText() == QStringLiteral("beta gamma "),
+            "The moved text was not selected at its new location");
+    Require(editor.document()->isModified(), "Moving selected text did not mark the document modified");
+    editor.undo();
+    Require(editor.toPlainText() == source, "Undo did not restore the text from before the drag");
+    editor.redo();
+    Require(editor.toPlainText() == moved, "Redo did not restore the dragged text");
+
+    const int inside = editor.textCursor().selectionStart() + 2;
+    Require(!editor.MoveSelectionTo(editor.textCursor().selectionStart(),
+                                    editor.textCursor().selectionEnd(), inside)
+                && editor.toPlainText() == moved,
+            "Dropping inside the dragged selection changed the document");
 }
 
 int main(int argc, char **argv)
@@ -319,7 +390,7 @@ int main(int argc, char **argv)
         TestElementContentAndFallbacks();
         TestSentenceMode();
         TestTagModifiersAndEditorConsistency();
-        TestPressInSelectionDoesNotStartTextDrag();
+        TestSelectedTextDrag();
     } catch (const std::exception &error) {
         qCritical("%s", error.what());
         return 1;

@@ -45,6 +45,8 @@
 #include <QPointer>
 #include <QPrinter>
 #include <QApplication>
+#include <QDrag>
+#include <QMimeData>
 #include <QInputDialog>
 #include <QTimer>
 #include <QDebug>
@@ -67,6 +69,7 @@
 #include "Parsers/HTMLStyleInfo.h"
 #include "PCRE2/PCRECache.h"
 #include "ViewEditors/CodeViewEditor.h"
+#include "ViewEditors/CodeViewTextDrag.h"
 #include "ViewEditors/CodeViewSelectionPolicy.h"
 #include "ViewEditors/LineNumberArea.h"
 #include "sigil_constants.h"
@@ -155,13 +158,9 @@ CodeViewEditor::CodeViewEditor(HighlighterType high_type, bool check_spelling, Q
     // ------------------------------------
     m_regen_taglist(true)
 {
-    if (high_type == CodeViewEditor::Highlight_XHTML ||
-        high_type == CodeViewEditor::Highlight_CSS ||
-        qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP")) {
-        setAcceptDrops(true);
-    } else {
-        setAcceptDrops(false);
-    }
+    // Drops stay enabled so Book Browser references and this editor's own text
+    // drag can land here. Unrelated payloads are ignored in the drag handlers.
+    setAcceptDrops(true);
     if (high_type == CodeViewEditor::Highlight_XHTML) {
         // m_Highlighter = new XHTMLHighlighter(check_spelling, this);
         m_Highlighter = new XHTMLHighlighter2(check_spelling, this);
@@ -1537,8 +1536,25 @@ void CodeViewEditor::mouseDoubleClickEvent(QMouseEvent *event)
 }
 
 
+bool CodeViewEditor::PressCanDragSelectedText(const QMouseEvent *event, int position) const
+{
+    if (!event || isReadOnly() || event->button() != Qt::LeftButton) {
+        return false;
+    }
+    if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier)) {
+        return false;
+    }
+    const QTextCursor selection = textCursor();
+    return selection.hasSelection()
+        && position >= selection.selectionStart()
+        && position <= selection.selectionEnd();
+}
+
 void CodeViewEditor::mousePressEvent(QMouseEvent *event)
 {
+    m_TextDragArmed = false;
+    m_TextDragConsumed = false;
+
     // When a right-click occurs, move the caret location if this is performed.
     // outside the currently selected text.
     if (event->button() == Qt::RightButton) {
@@ -1549,13 +1565,25 @@ void CodeViewEditor::mousePressEvent(QMouseEvent *event)
         }
     }
 
-    // Qt's text drag from Code View crashes on Windows, and plain-text drops are rejected anyway.
-    if (event->button() == Qt::LeftButton && !(event->modifiers() & Qt::ShiftModifier)
-        && !qEnvironmentVariableIsSet("SIGIL_ALLOW_CODEVIEW_DROP")) {
+    const int position = cursorForPosition(event->pos()).position();
+    if (PressCanDragSelectedText(event, position)) {
+        // Do not forward this press. QPlainTextEdit would arm its own text drag,
+        // and that drag crashes on Windows inside the native OLE loop.
         const QTextCursor selection = textCursor();
-        const int position = cursorForPosition(event->pos()).position();
+        m_TextDragArmed = true;
+        m_TextDragOrigin = event->pos();
+        m_TextDragPressPosition = position;
+        m_TextDragSelectionStart = selection.selectionStart();
+        m_TextDragSelectionEnd = selection.selectionEnd();
+        event->accept();
+        return;
+    }
+    if (event->button() == Qt::LeftButton && !(event->modifiers() & Qt::ShiftModifier)) {
+        const QTextCursor selection = textCursor();
         if (selection.hasSelection() && position >= selection.selectionStart()
             && position <= selection.selectionEnd()) {
+            // Read-only, Ctrl, and Alt presses do not start our drag. Collapse
+            // the selection first so the base editor cannot arm the crashing one.
             QTextCursor collapsed = selection;
             collapsed.setPosition(position);
             setTextCursor(collapsed);
@@ -1572,8 +1600,117 @@ void CodeViewEditor::mousePressEvent(QMouseEvent *event)
     }
 }
 
+void CodeViewEditor::mouseMoveEvent(QMouseEvent *event)
+{
+    if (m_TextDragArmed && (event->buttons() & Qt::LeftButton)) {
+        if ((event->pos() - m_TextDragOrigin).manhattanLength() >= QApplication::startDragDistance()) {
+            StartArmedTextDrag();
+        }
+        event->accept();
+        return;
+    }
+    QPlainTextEdit::mouseMoveEvent(event);
+}
+
+void CodeViewEditor::StartArmedTextDrag()
+{
+    const int start = m_TextDragSelectionStart;
+    const int end = m_TextDragSelectionEnd;
+    m_TextDragArmed = false;
+    m_TextDragConsumed = true;
+    m_TextDragDroppedInside = false;
+    m_TextDragDropPosition = -1;
+
+    const QString current = toPlainText();
+    if (start < 0 || end > current.size() || start >= end) {
+        return;
+    }
+    QMimeData *mime = new QMimeData();
+    mime->setText(current.mid(start, end - start));
+    mime->setData(CodeViewTextDrag::MimeType(), QByteArray());
+    const Qt::DropAction action = ExecuteTextContentDrag(mime);
+    if (m_TextDragDroppedInside) {
+        RelocateSelectedText(start, end, m_TextDragDropPosition);
+    } else if (action == Qt::MoveAction) {
+        RemoveDraggedText(start, end);
+    }
+    m_TextDragDroppedInside = false;
+    m_TextDragDropPosition = -1;
+}
+
+Qt::DropAction CodeViewEditor::ExecuteTextContentDrag(QMimeData *mime)
+{
+    QDrag drag(this);
+    drag.setMimeData(mime);
+    return drag.exec(Qt::CopyAction | Qt::MoveAction, Qt::MoveAction);
+}
+
+bool CodeViewEditor::RelocateSelectedText(int start, int end, int drop)
+{
+    if (isReadOnly()) {
+        return false;
+    }
+    const QString current = toPlainText();
+    const CodeViewTextDrag::Result result = CodeViewTextDrag::Apply(current, start, end, drop);
+    if (!result.changed) {
+        return false;
+    }
+
+    QTextCursor cursor = textCursor();
+    cursor.beginEditBlock();
+    const QString moved = current.mid(start, end - start);
+    if (drop > end) {
+        cursor.setPosition(start);
+        cursor.setPosition(end, QTextCursor::KeepAnchor);
+        cursor.removeSelectedText();
+        cursor.setPosition(result.selectionStart);
+        cursor.insertText(moved);
+    } else {
+        cursor.setPosition(drop);
+        cursor.insertText(moved);
+        cursor.setPosition(start + moved.size());
+        cursor.setPosition(end + moved.size(), QTextCursor::KeepAnchor);
+        cursor.removeSelectedText();
+    }
+    cursor.setPosition(result.selectionStart);
+    cursor.setPosition(result.selectionEnd, QTextCursor::KeepAnchor);
+    cursor.endEditBlock();
+    setTextCursor(cursor);
+    return toPlainText() == result.text;
+}
+
+void CodeViewEditor::RemoveDraggedText(int start, int end)
+{
+    const QString current = toPlainText();
+    if (isReadOnly() || start < 0 || end > current.size() || start >= end) {
+        return;
+    }
+    QTextCursor cursor = textCursor();
+    cursor.beginEditBlock();
+    cursor.setPosition(start);
+    cursor.setPosition(end, QTextCursor::KeepAnchor);
+    cursor.removeSelectedText();
+    cursor.endEditBlock();
+    setTextCursor(cursor);
+}
+
 void CodeViewEditor::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (m_TextDragArmed) {
+        m_TextDragArmed = false;
+        QTextCursor cursor = textCursor();
+        cursor.setPosition(m_TextDragPressPosition);
+        setTextCursor(cursor);
+        emit PageClicked();
+        event->accept();
+        return;
+    }
+    if (m_TextDragConsumed) {
+        m_TextDragConsumed = false;
+        emit PageClicked();
+        event->accept();
+        return;
+    }
     emit PageClicked();
     QPlainTextEdit::mouseReleaseEvent(event);
 }
