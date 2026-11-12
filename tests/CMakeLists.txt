@@ -908,6 +908,17 @@ add_test(NAME cross_group_tab_drag_contract
 )
 set_tests_properties(cross_group_tab_drag_contract PROPERTIES TIMEOUT 30)
 
+add_executable(settings_concurrency_test settings_concurrency_test.cpp)
+target_link_libraries(settings_concurrency_test PRIVATE Qt6::Core)
+add_test(NAME settings_concurrency COMMAND settings_concurrency_test)
+set_tests_properties(settings_concurrency PROPERTIES TIMEOUT 60)
+
+add_executable(window_startup_policy_test window_startup_policy_test.cpp)
+target_include_directories(window_startup_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(window_startup_policy_test PRIVATE Qt6::Widgets)
+add_test(NAME window_startup_policy COMMAND window_startup_policy_test)
+set_tests_properties(window_startup_policy PROPERTIES TIMEOUT 15 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(plain_text_exporter_test
     plain_text_exporter_test.cpp
     ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/PlainTextExporter.cpp
@@ -1603,6 +1614,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(editor_undo_search_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
+    add_test(NAME search_memory_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_search_memory_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(search_memory_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
     foreach(version IN ITEMS epub2 epub3)
         add_test(NAME plain_text_export_${version}_integration
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_plain_text_export_integration.py

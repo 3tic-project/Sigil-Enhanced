@@ -3,6 +3,7 @@
 #define FINDREPLACEPLUS_H
 
 #include <QTimer>
+#include <QVariant>
 
 #include "ui_FindReplacePlus.h"
 #include "BookManipulation/FolderKeeper.h"
@@ -290,7 +291,7 @@ private:
     bool IsValidFindText();
 
     // Reads all the stored dialog settings
-    void ReadSettings();
+    void ReadSettings(bool initialRead = false);
 
     // Writes all the stored dialog settings
     void WriteSettings();
@@ -350,6 +351,8 @@ private:
     int m_StartingPos;
 
     bool m_InRemainder;
+
+    QVariantMap m_LastSavedHistorySettings;
 
     bool m_SearchRunning;
 

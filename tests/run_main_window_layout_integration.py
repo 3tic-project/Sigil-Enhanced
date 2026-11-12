@@ -27,6 +27,6 @@ if __name__ == "__main__":
         run_arguments=[(scenario,) for scenario in (
             "fresh", "write-normal", "read-normal", "legacy", "write-maximized", "read-maximized",
             "write-fullscreen", "read-fullscreen", "write-minimized", "read-normal",
-            "disabled", "reenabled", "corrupt",
+            "disabled", "reenabled", "corrupt", "offscreen",
         )],
     )

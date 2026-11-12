@@ -5662,8 +5662,8 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <translation>記住上次視窗的位置、狀態和大小</translation>
     </message>
     <message>
-        <source>Restore the last window position, state, size, and panel layout. When disabled or no saved window is available, start full screen.</source>
-        <translation>還原上次視窗的位置、狀態、大小及各區域配置。取消勾選或沒有可還原的視窗記錄時，預設以全螢幕啟動。</translation>
+        <source>Restore the last window position, state, size, and panel layout. When disabled or no saved window is available, start maximized on Windows and full screen on other systems.</source>
+        <translation>還原上次視窗的位置、狀態、大小及面板配置。關閉此項或沒有已儲存視窗時，Windows 預設最大化，其他系統預設全螢幕。</translation>
     </message>
     <message>
         <source>Preserve OPF formatting and comments</source>
