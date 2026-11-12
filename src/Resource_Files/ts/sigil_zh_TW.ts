@@ -397,6 +397,28 @@
     </message>
     <message><source>GIF conversion failed.</source><translation>GIF 轉換失敗。</translation></message>
     <message><source>Image saved for the EPUB. The extracted file could not be replaced and will be packaged on save: </source><translation>影像已計入 EPUB。暫時無法覆蓋解壓出的檔案，儲存 EPUB 時會一併封裝：</translation></message>
+    <message>
+        <source>Image format is not supported for write and can not be saved. Save aborted.</source>
+        <translation>該影像格式不支援寫入，無法儲存。已中止儲存。</translation>
+    </message>
+    <message>
+        <source>Image reload from disk failed.</source>
+        <translation>從磁碟重新載入影像失敗。</translation>
+    </message>
+    <message>
+        <source>Image reloaded from disk.</source>
+        <translation>已從磁碟重新載入影像。</translation>
+    </message>
+    <message>
+        <source>Reload Image From Disk</source>
+        <translation>從磁碟重新載入影像</translation>
+    </message>
+    <message>
+        <source>This image has unsaved modifications.
+Do you want to discard all changes and reload from disk?</source>
+        <translation>該影像有尚未儲存的修改。
+要放棄所有修改並從磁碟重新載入嗎？</translation>
+    </message>
 </context>
 <context>
     <name>AlertBox</name>
@@ -6846,6 +6868,10 @@ You can then check or uncheck individual headings in the list above.</source>
         <source>Color</source>
         <translation>顏色</translation>
     </message>
+    <message>
+        <source>Reload Image From Disk</source>
+        <translation>從磁碟重新載入影像</translation>
+    </message>
 </context>
 <context>
     <name>ImageView</name>
@@ -10684,6 +10710,14 @@ Do you want to save your changes?</source>
         <location filename="../../Misc/Language.cpp" line="676"/>
         <source>Zuni</source>
         <translation>Zuni</translation>
+    </message>
+    <message>
+        <source>Gilaki</source>
+        <translation>吉拉基語</translation>
+    </message>
+    <message>
+        <source>Mazandarani</source>
+        <translation>馬贊德蘭語</translation>
     </message>
 </context>
 <context>
@@ -18238,11 +18272,6 @@ EPUB %2 / 語言 [%3] / 閱讀方向 %4
         <translation>錄音工程師</translation>
     </message>
     <message>
-        <location filename="../../Misc/MarcRelators.cpp" line="317"/>
-        <source>Use for a person or organization who supervises the technical aspects of a sound or video recording session.</source>
-        <translation>用於監督聲音或錄像會話的技術方面的個人或組織.</translation>
-    </message>
-    <message>
         <location filename="../../Misc/MarcRelators.cpp" line="318"/>
         <source>A person contributing to a resource by supervising the technical aspects of a sound or video recording session.</source>
         <translation>通過監督聲音或視頻記錄會話的技術方面來貢獻資源的人員.</translation>
@@ -21733,31 +21762,6 @@ Line: %1 Column %2 - %3</source>
         <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="165"/>
         <source>The font has no readable glyphs or tables.</source>
         <translation>字型中沒有可讀取的字形或表格。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="177"/>
-        <source>Preview-and-print embedding does not allow editing the font.</source>
-        <translation>僅供預覽與列印的嵌入授權不允許編輯字型。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="181"/>
-        <source>The font has a restricted embedding license.</source>
-        <translation>字型的嵌入授權受限。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="185"/>
-        <source>The font license explicitly forbids subsetting.</source>
-        <translation>字型授權明確禁止子集化。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="189"/>
-        <source>The font license permits bitmap embedding only.</source>
-        <translation>字型授權僅允許點陣圖嵌入。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="193"/>
-        <source>The font has missing or invalid embedding permissions.</source>
-        <translation>字型的嵌入權限遺失或無效。</translation>
     </message>
     <message>
         <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="204"/>

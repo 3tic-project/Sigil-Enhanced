@@ -397,6 +397,28 @@
     </message>
     <message><source>GIF conversion failed.</source><translation>GIF 変換に失敗しました。</translation></message>
     <message><source>Image saved for the EPUB. The extracted file could not be replaced and will be packaged on save: </source><translation>画像は EPUB に反映されました。展開されたファイルを置き換えられないため、保存時にパッケージされます: </translation></message>
+    <message>
+        <source>Image format is not supported for write and can not be saved. Save aborted.</source>
+        <translation>この画像形式は書き込みに対応していないため保存できません。保存を中止しました。</translation>
+    </message>
+    <message>
+        <source>Image reload from disk failed.</source>
+        <translation>ディスクからの画像の再読み込みに失敗しました。</translation>
+    </message>
+    <message>
+        <source>Image reloaded from disk.</source>
+        <translation>ディスクから画像を再読み込みしました。</translation>
+    </message>
+    <message>
+        <source>Reload Image From Disk</source>
+        <translation>ディスクから画像を再読み込み</translation>
+    </message>
+    <message>
+        <source>This image has unsaved modifications.
+Do you want to discard all changes and reload from disk?</source>
+        <translation>この画像には保存されていない変更があります。
+すべての変更を破棄してディスクから再読み込みしますか？</translation>
+    </message>
 </context>
 <context>
     <name>AlertBox</name>
@@ -6018,6 +6040,22 @@ when creating new or empty Epubs in Sigil.</source>
         <source>Incorrect Folder for Temporary Files selected</source>
         <translation>選択した一時ファイル用のフォルダーが正しくありません</translation>
     </message>
+    <message>
+        <source>File selection dialog:</source>
+        <translation>ファイル選択ダイアログ:</translation>
+    </message>
+    <message>
+        <source>Qt (previous)</source>
+        <translation>Qt (従来)</translation>
+    </message>
+    <message>
+        <source>System native</source>
+        <translation>システム標準</translation>
+    </message>
+    <message>
+        <source>System native uses the operating system's file dialog. Qt (previous) uses the older non-native dialog, and adding existing files keeps its preview there. On macOS, application bundles are selected reliably by the system dialog.</source>
+        <translation>システム標準では OS のファイルダイアログを使います。Qt (従来) では以前の非ネイティブのダイアログを使い、既存ファイルの追加ではそちらでプレビューを表示します。macOS ではアプリケーションバンドルをシステムのダイアログで確実に選択できます。</translation>
+    </message>
 </context>
 <context>
     <name>GuideItems</name>
@@ -6834,6 +6872,10 @@ You can then check or uncheck individual headings in the list above.</source>
         <location filename="../../Tabs/ImageTab.cpp" line="579"/>
         <source>Color</source>
         <translation>カラー</translation>
+    </message>
+    <message>
+        <source>Reload Image From Disk</source>
+        <translation>ディスクから画像を再読み込み</translation>
     </message>
 </context>
 <context>
@@ -10673,6 +10715,14 @@ Do you want to save your changes?</source>
         <location filename="../../Misc/Language.cpp" line="676"/>
         <source>Zuni</source>
         <translation>ズニ語</translation>
+    </message>
+    <message>
+        <source>Gilaki</source>
+        <translation>ギラキ語</translation>
+    </message>
+    <message>
+        <source>Mazandarani</source>
+        <translation>マーザンダラーン語</translation>
     </message>
 </context>
 <context>
@@ -18226,11 +18276,6 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <translation>録音技術者</translation>
     </message>
     <message>
-        <location filename="../../Misc/MarcRelators.cpp" line="317"/>
-        <source>Use for a person or organization who supervises the technical aspects of a sound or video recording session.</source>
-        <translation>音声や映像録音セッションの技術的側面を監督する個人または組織に使用します。</translation>
-    </message>
-    <message>
         <location filename="../../Misc/MarcRelators.cpp" line="318"/>
         <source>A person contributing to a resource by supervising the technical aspects of a sound or video recording session.</source>
         <translation>音声や映像の録音セッションの技術的側面を監督することで、リソースに貢献する人。</translation>
@@ -21722,31 +21767,6 @@ Line: %1 Column %2 - %3</source>
         <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="165"/>
         <source>The font has no readable glyphs or tables.</source>
         <translation>フォントに読み取り可能なグリフまたはテーブルがありません。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="177"/>
-        <source>Preview-and-print embedding does not allow editing the font.</source>
-        <translation>プレビューおよび印刷専用の埋め込み許可ではフォントを編集できません。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="181"/>
-        <source>The font has a restricted embedding license.</source>
-        <translation>フォントの埋め込みライセンスが制限されています。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="185"/>
-        <source>The font license explicitly forbids subsetting.</source>
-        <translation>フォントライセンスでサブセット化が明示的に禁止されています。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="189"/>
-        <source>The font license permits bitmap embedding only.</source>
-        <translation>フォントライセンスではビットマップの埋め込みのみ許可されています。</translation>
-    </message>
-    <message>
-        <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="193"/>
-        <source>The font has missing or invalid embedding permissions.</source>
-        <translation>フォントの埋め込み権限が存在しないか無効です。</translation>
     </message>
     <message>
         <location filename="../../BookManipulation/FontSubset/FontInspector.cpp" line="204"/>

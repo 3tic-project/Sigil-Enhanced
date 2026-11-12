@@ -95,6 +95,7 @@ class FileDropZone;
 class QDragEnterEvent;
 class QDragMoveEvent;
 class QDropEvent;
+class Resource;
 
 /**
  * @mainpage
@@ -337,6 +338,7 @@ public slots:
     void FocusOnPreview();
     void FocusOnTOC();
     void FocusOnClips();
+    void HandleImageContentChanged(Resource* resource);
 
 signals:
     void SettingsChanged();

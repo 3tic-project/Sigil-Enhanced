@@ -35,7 +35,7 @@ from hrefutils import ext_mime_map, mime_group_map
 
 import unicodedata
 
-_launcher_version = 20260915
+_launcher_version = 20261109
 
 _RS = chr(30) # record separator
 _US = chr(31) # unit separator
@@ -76,12 +76,13 @@ TEXT_MIMETYPES = [
     'text/css',
     'application/x-dtbncx+xml',
     'application/oebps-package+xml',
-    'application/oebs-page-map+xml',
+    'application/oebps-page-map+xml',
+    'application/vnd.adobe-page-map+xml',
     'application/smil+xml',
     'application/adobe-page-template+xml',
     'application/vnd.adobe-page-template+xml',
     'text/javascript',
-    'application/javascript'
+    'application/javascript',
     'application/pls+xml'
 ]
 
@@ -434,7 +435,7 @@ class Wrapper(object):
     def getpagemapid(self):
         for id in self.id_to_mime:
             mime = self.id_to_mime[id]
-            if mime == "application/oebs-page-map+xml":
+            if mime in ("application/oebps-page-map+xml", "application/vnd.adobe-page-map+xml"):
                 return id
         return None
 

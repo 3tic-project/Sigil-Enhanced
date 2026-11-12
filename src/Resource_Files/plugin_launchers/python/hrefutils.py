@@ -52,7 +52,13 @@ ext_mime_map = {
     '.woff'  : 'font/woff',
     '.woff2' : 'font/woff2',
     '.xhtml' : 'application/xhtml+xml',
-    '.xml'   : 'application/oebps-page-map+xml',
+    # A generic .xml extension is not necessarily a page map: unmanifested
+    # archive entries such as META-INF/container.xml used to map to the
+    # page-map media type, which made readotherfile() decode them once the
+    # page-map media type became a text type. Keep plain XML out of the text
+    # media types so plugins keep receiving bytes for archive metadata;
+    # manifest page maps get their real media type from the OPF.
+    '.xml'   : 'application/xml',
     '.xpgt'  : 'application/vnd.adobe-page-template+xml',
     # '.js'    : = "text/javascript',
     # '.otf'   : 'application/x-font-opentype',

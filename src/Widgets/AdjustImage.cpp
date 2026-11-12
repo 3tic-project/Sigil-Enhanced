@@ -38,9 +38,11 @@
 #include <QLocale>
 #include <QBuffer>
 #include <QImageWriter>
+#include <QImageReader>
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QWheelEvent>
+#include <QMessageBox>
 #include "Misc/AtomicFileWrite.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/StaticGif.h"
@@ -77,6 +79,16 @@ AdjustImage::AdjustImage(const QString filepath, const QString& mediatype,  QWid
     updateActions(false);
     ui->actionUndo->setEnabled(false);
     ui->actionRedo->setEnabled(false);
+
+    // figure out which formats are read and which are write
+    foreach (QByteArray sf, QImageReader::supportedImageFormats()) {
+        m_ReadSupported.insert(QString::fromLatin1(sf).toUpper());
+    }
+    foreach (QByteArray sf, QImageWriter::supportedImageFormats()) {
+        m_WriteSupported.insert(QString::fromLatin1(sf).toUpper());
+    }
+    // and map in our Pillow support for GIF writing
+    m_WriteSupported.insert("GIF");
 
     m_imageLabel = new QLabel;
     m_imageLabel->resize(0, 0);
@@ -532,6 +544,11 @@ void AdjustImage::doSave()
         return;
     }
 
+    if (!m_WriteSupported.contains(format)) {
+        m_statusBar->showMessage(tr("Image format is not supported for write and can not be saved. Save aborted."));
+        return;
+    }
+
     int quality = -1;
     if (format != QLatin1String("GIF") && SAVE_QUALITY_MEDIATYPES.contains(m_mediatype)) {
         if (m_mediatype == QLatin1String("image/jpeg")) quality = m_jpeg_quality;
@@ -643,7 +660,28 @@ void AdjustImage::doZoomToFit()
     UpdateZoomedCoordinates();
 }
 
-
+void AdjustImage::doReloadImageFromDisk()
+{
+    if (!m_history.isEmpty()) {
+        QMessageBox::StandardButton reply = Utility::warning(this, tr("Reload Image From Disk"),
+            tr("This image has unsaved modifications.\nDo you want to discard all changes and reload from disk?"),
+            QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (reply != QMessageBox::Ok) return;
+    }
+    QImage image_from_disk(m_fileName);
+    if (image_from_disk.isNull()) {
+        m_statusBar->showMessage(tr("Image reload from disk failed."));
+        return;
+    }
+    m_image = image_from_disk;
+    ui->actionUndo->setEnabled(false);
+    ui->actionRedo->setEnabled(false);
+    m_history.clear();
+    m_reverseHistory.clear();
+    refreshLabel();
+    m_statusBar->showMessage(tr("Image reloaded from disk."));
+}
+    
 void AdjustImage::ConnectSignalsToSlots()
 {
     connect(ui->actionCrop,        SIGNAL(triggered()), this, SLOT(doCrop()));

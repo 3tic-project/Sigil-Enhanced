@@ -1,3 +1,59 @@
+Sigil-Enhanced-2.8.6.E14
+   New Features
+     - Synced Sigil 2.8.6: JXL images render in Preview, View Image and Insert Image through a
+       sigil-scheme JPEG polyfill when Qt can read JXL, SVG image tags accept href as well as
+       xlink:href, and the Windows package copies the custom JXL image plugin.
+     - Image editing only offers formats that Qt can actually write, warns before saving PBM or PGM
+       images, and the image tab context menu can reload an image that changed outside Sigil.
+     - Replacing an existing image through Add Existing or the drop zone refreshes the Preview
+       without a manual reload.
+     - Added the Gilaki and Mazandarani language codes, and special_characters.xml can hide
+       character groups with hidden="true".
+     - Added a text-only option to enhanced Find and Replace that skips tags the way the original
+       search does.
+     - Added a preference that makes every file chooser use the system dialog or the Qt dialog,
+       defaulting to the system dialog.
+     - Font subsetting reports the scaled file size and the maxp glyph count, and warns when
+       characters are missing from the subset target font.
+
+   Bug Fixes
+     - Fixed the wrong OPF manifest entry being replaced when changing an EPUB 3 cover image, and
+       only rewrote manifest entries whose cover-image property actually changed.
+     - Fixed PluginRunner and the Python wrapper returning application/javascript,
+       application/pls+xml and page-map resources as bytes instead of text, and corrected the
+       oebps-page-map media type typo.
+     - Escaped literal double quotes in quickparser attribute values so markup rebuilt from
+       single-quoted attributes stays well formed.
+     - Kept readotherfile() returning bytes for generic META-INF XML such as container.xml; the
+       corrected page-map media type made the .xml extension map decode archive metadata as text.
+     - Gave the CSS structure parser a dedicated comment buffer so a comment inside a selector no
+       longer breaks the token positions used by CSS inspection.
+     - Initialized the font obfuscation algorithm so adding and referencing a font before its
+       obfuscation type is set no longer crashes.
+     - Restored the Aria Clips endnote backlink and dropped the deprecated epub:type endnote value,
+       updated the Aria Clips icon in the Fluent theme, and removed the duplicate Recording Engineer
+       relator entry.
+     - Kept the Book Browser on EnsureVisible scrolling so double-clicking an item no longer starts
+       an accidental drag.
+     - Kept the current enhanced Find/Replace match through line highlight and focus changes so a
+       stylesheet match can be replaced; capture groups are recorded after the selection settles.
+     - Restored Code View text dragging on Windows without Qt's native drag path; the selection is
+       moved after the drag returns instead of inside the drag loop.
+     - Subset embedded fonts per CSS font-family, so a font used by several families no longer keeps
+       the whole-book character set, and fsType no longer blocks a subset.
+     - Kept Find/Replace drafts and history without prefilling new search instances, and kept the
+       Windows startup title bar while the window layout is restored.
+
+   Build/Testing
+     - Preserved the fork's pending image payloads, OPF source preservation and cover manifest
+       repair while taking the upstream image, plugin and language changes.
+     - Built the bundled Lexbor CSS parser as a static library and refreshed Qt image plugin
+       packaging for macOS, Windows and AppImage.
+     - Added tests for file dialog policy and coverage, settings concurrency and startup policy,
+       search memory, Code View text dragging, Code View replace with capture groups, and font
+       subset batch/core behavior.
+     - Kept Simplified Chinese, Traditional Chinese and Japanese catalogs complete for the merged
+       sources.
 Sigil-Enhanced-2.8.5.E13
    New Features
      - Added Enhancement > Export TXT File for UTF-8 plain text in live reading order, including unsaved edits, paragraph breaks, Unicode indentation, ruby base text, image alternatives, and SVG text.

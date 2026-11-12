@@ -3071,26 +3071,26 @@ bool MainWindow::AddCover()
     // -------------------------- modified: Optimize the efficency of setting Cover Page -------------------------------
     /*
     // Find existing cover HTML file if there is one.
+    // First collect information on semantic codes already set to find existing html cover
+    QHash<QString, QStringList> semantic_code_info;
+    if (version.startsWith('3')) {
+        NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
+        semantic_code_info = navproc.GetLandmarkCodeForPaths();
+    } else {
+        semantic_code_info = m_Book->GetOPF()->GetSemanticCodeForPaths();
+    }
+
     HTMLResource *html_cover_resource = NULL;
-    QList<HTMLResource *> html_resources;
     QList<Resource *> resources = GetAllHTMLResources();
+
     foreach(Resource * resource, resources) {
         HTMLResource *html_resource = qobject_cast<HTMLResource *>(resource);
-
         if (html_resource) {
-            html_resources.append(html_resource);
-
             // Check if this is an existing cover file.
-            QString semantic_code;
-            if (version.startsWith('3')) {
-                NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
-                semantic_code = navproc.GetLandmarkCodeForResource(html_resource);
-            } else {
-                semantic_code = m_Book->GetOPF()->GetGuideSemanticCodeForResource(html_resource);
-            }
-            if (semantic_code == "cover") {
+            QStringList semcodes = semantic_code_info.value(html_resource->GetRelativePath(), QStringList() << "");
+            if (semcodes.contains("cover")) {
                 html_cover_resource = html_resource;
-            } else if (resource->Filename().toLower() == HTML_COVER_FILENAME && html_cover_resource == NULL) {
+            } else if (html_resource->Filename().toLower() == HTML_COVER_FILENAME && html_cover_resource == NULL) {
                 html_cover_resource = html_resource;
             }
         }
@@ -8443,7 +8443,7 @@ void MainWindow::MakeTabConnections(ContentTab *tab)
     }
 
     if (rType == Resource::ImageResourceType) {
-        connect(tab,   SIGNAL(ImageContentChanged()), m_Book.data(), SLOT(SetModified()));
+        connect(tab,   SIGNAL(ImageContentChanged(Resource*)), this, SLOT(HandleImageContentChanged(Resource *)));
     }
 
     if (rType == Resource::SVGResourceType) {
@@ -8644,4 +8644,26 @@ void MainWindow::FocusOn(QWidget* dw)
         dw->activateWindow();
         dw->setFocus(Qt::ShortcutFocusReason);
     }
+}
+
+void MainWindow::HandleImageContentChanged(Resource* resource)
+{
+    ImageResource* image_resource =  qobject_cast<ImageResource *>(resource);
+    if (!image_resource) {
+        return;
+    }
+    if (image_resource->hasPendingPayload()) {
+        // The edited bytes are held in memory because the live file could not
+        // be replaced. Reloading from disk here would drop that payload, so
+        // only mark the book modified and let the editor keep showing its image.
+        if (m_Book) {
+            m_Book->SetModified(true);
+        }
+        UpdatePreview();
+        return;
+    }
+    // do the sequence as if file was being watched
+    image_resource->FileChangedOnDisk();
+    m_Book->ResourceUpdatedFromDisk(image_resource);
+    UpdatePreview();
 }

@@ -49,6 +49,7 @@
 #include <QVBoxLayout>
 #include <QToolBar>
 #include <QByteArray>
+#include <QSet>
 
 class BetterRubberBand;
 
@@ -86,6 +87,7 @@ public slots:
     void doRotateRight();
     void doCrop();
     void doResizeImage();
+    void doReloadImageFromDisk();
 
 signals:
     void InternalZoomFactorChanged(double factor);
@@ -152,6 +154,8 @@ private:
     int m_jxl_quality;
     int m_avif_quality;
 
+    QSet<QString> m_ReadSupported;
+    QSet<QString> m_WriteSupported;
 };
 
 #endif // ADJUSTIMAGE_H

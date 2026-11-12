@@ -459,6 +459,8 @@ elseif (MSVC)
     set( PYTHON_DEST_DIR ${MAIN_PACKAGE_DIR}/python3 )
     # Qt6 gets shiny new(ish) teal icons
     set( ICON_SRC_PATH  ${PROJECT_SOURCE_DIR}/Resource_Files/icon/app_icons_alt )
+    # Custom jxl imageformat plugin location (if present)
+    set( JXL_PLUGIN_SRC_PATH ${QT_PLUGINS_DIR}/imageformats/qjpegxl6.dll )
 
     # ISS conf file for the Inno Setup compiler
     # We first create a CMake configured version of the ISS file,
@@ -579,6 +581,11 @@ elseif (MSVC)
     # the file is absent.
     add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD
         COMMAND cmake -E rm -f "${MAIN_PACKAGE_DIR}/icuuc.dll" )
+
+    # windeploy doesn't always want to pick up our custom jxl imageformat plugin so copy it manually if it exists.
+    if ( EXISTS ${JXL_PLUGIN_SRC_PATH} )
+        add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy ${JXL_PLUGIN_SRC_PATH} ${MAIN_PACKAGE_DIR}/imageformats/ )
+    endif()
 
     # Copy the translation qm files
     add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/translations/ )

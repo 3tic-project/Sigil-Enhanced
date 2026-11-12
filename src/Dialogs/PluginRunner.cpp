@@ -798,7 +798,7 @@ bool PluginRunner::checkIsWellFormed()
                 xmlFilesToCheck.append(href);
             } else if (mime == "application/x-dtbncx+xml") {
                 xmlFilesToCheck.append(href);
-            } else if (mime == "application/oebs-page-map+xml") {
+            } else if (mime == "application/oebps-page-map+xml" || mime == "application/vnd.adobe-page-map+xml") {
                 xmlFilesToCheck.append(href);
             } else if (mime == "application/xhtml+xml") {
                 xhtmlFilesToCheck.append(href);
@@ -817,7 +817,7 @@ bool PluginRunner::checkIsWellFormed()
                 xmlFilesToCheck.append(href);
             } else if (mime == "application/x-dtbncx+xml") {
                 xmlFilesToCheck.append(href);
-            } else if (mime == "application/oebs-page-map+xml") {
+            } else if (mime == "application/oebps-page-map+xml" || mime == "application/vnd.adobe-page-map+xml") {
                 xmlFilesToCheck.append(href);
             } else if (mime == "application/xhtml+xml") {
                 xhtmlFilesToCheck.append(href);

@@ -130,6 +130,7 @@ void ImageTab::RotateLeft()  { m_AdjImg->doRotateLeft();  }
 void ImageTab::RotateRight() { m_AdjImg->doRotateRight(); }
 void ImageTab::CropImage()   { m_AdjImg->doCrop();        }
 void ImageTab::ResizeImage() { m_AdjImg->doResizeImage(); }
+void ImageTab::ReloadImageFromDisk() { m_AdjImg->doReloadImageFromDisk(); }
 
 bool ImageTab::UndoEnabled()
 {
@@ -360,6 +361,8 @@ bool ImageTab::SuccessfullySetupContextMenu(const QPoint &point)
         m_ContextMenu->addSeparator();
         m_ContextMenu->addAction(m_CropImage);
         m_ContextMenu->addAction(m_ResizeImage);
+        m_ContextMenu->addSeparator();
+        m_ContextMenu->addAction(m_ReloadImageFromDisk);
     }
 
     return true;
@@ -393,6 +396,7 @@ void ImageTab::CreateContextMenuActions()
     m_RotateRight     = new QAction(tr("Rotate Right"), this);
     m_CropImage       = new QAction(tr("Crop Image"),   this);
     m_ResizeImage     = new QAction(tr("Resize Image"), this);
+    m_ReloadImageFromDisk = new QAction(tr("Reload Image From Disk"), this);
 }
 
 
@@ -540,15 +544,7 @@ void ImageTab::EmitImageContentChanged()
         image->setPendingPayload(payload);
     }
     image->setContentModified(true);
-    emit ImageContentChanged();
-    for (QWidget *widget = this; widget; widget = widget->parentWidget()) {
-        if (MainWindow *window = qobject_cast<MainWindow *>(widget)) {
-            if (QSharedPointer<Book> book = window->GetCurrentBook()) {
-                book->SetModified(true);
-            }
-            break;
-        }
-    }
+    emit ImageContentChanged(m_Resource);
 }
 
 void ImageTab::ConnectSignalsToSlots()
@@ -590,6 +586,7 @@ void ImageTab::ConnectSignalsToSlots()
     connect(m_RotateRight,    SIGNAL(triggered()),    this, SLOT(RotateRight()));
     connect(m_CropImage,      SIGNAL(triggered()),    this, SLOT(CropImage()));
     connect(m_ResizeImage,    SIGNAL(triggered()),    this, SLOT(ResizeImage()));
+    connect(m_ReloadImageFromDisk,    SIGNAL(triggered()),    this, SLOT(ReloadImageFromDisk()));
 }
 
 void ImageTab::Zoom()
