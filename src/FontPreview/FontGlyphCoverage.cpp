@@ -7,6 +7,7 @@
 #include "FontPreview/FontGlyphCoverage.h"
 
 #include <QtEndian>
+#include <QFile>
 #include <QSet>
 
 namespace {
@@ -118,4 +119,59 @@ GlyphCoverageResult AnalyzeGlyphCoverage(const QRawFont &font, const QString &te
         }
     }
     return result;
+}
+
+namespace {
+
+int Big16(const QByteArray &data, int offset)
+{
+    if (offset < 0 || offset + 2 > data.size()) {
+        return -1;
+    }
+    return qFromBigEndian<quint16>(data.constData() + offset);
+}
+
+quint32 Big32(const QByteArray &data, int offset)
+{
+    if (offset < 0 || offset + 4 > data.size()) {
+        return 0;
+    }
+    return qFromBigEndian<quint32>(data.constData() + offset);
+}
+
+}
+
+int CountFontGlyphs(const QByteArray &fontBytes)
+{
+    int start = 0;
+    if (fontBytes.startsWith("ttcf")) {
+        if (Big32(fontBytes, 8) < 1) {
+            return -1;
+        }
+        start = int(Big32(fontBytes, 12));
+    } else if (fontBytes.startsWith("wOFF") || fontBytes.startsWith("wOF2")) {
+        return -1;
+    }
+    const int tableCount = Big16(fontBytes, start + 4);
+    if (tableCount <= 0) {
+        return -1;
+    }
+    for (int i = 0; i < tableCount; ++i) {
+        const int record = start + 12 + i * 16;
+        if (Big32(fontBytes, record) != 0x6d617870u) {
+            continue;
+        }
+        const int table = int(Big32(fontBytes, record + 8));
+        return Big16(fontBytes, table + 4);
+    }
+    return -1;
+}
+
+int CountFontGlyphs(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return -1;
+    }
+    return CountFontGlyphs(file.readAll());
 }

@@ -9,6 +9,7 @@
 #include <QFileInfo>
 #include <QFont>
 #include <QHBoxLayout>
+#include <QLocale>
 #include <QRawFont>
 #include <QSignalBlocker>
 #include <QSizePolicy>
@@ -16,7 +17,6 @@
 #include <QVBoxLayout>
 #include <QWebEngineView>
 
-#include "FontPreview/FontGlyphCoverage.h"
 #include "FontPreview/FontPreviewHtml.h"
 #include "FontPreview/FontPreviewSamples.h"
 #include "Misc/Utility.h"
@@ -163,23 +163,29 @@ void FontView::Rebuild()
 
     const FontPreviewSample &sample = FontPreviewSampleFor(resolved);
     const GlyphCoverageResult coverage = AnalyzeGlyphCoverage(rawFont, FontPreviewSpecimenText(sample));
+    QString summary = FormatFontFileSize(info.size());
+    const int glyphCount = CountFontGlyphs(m_path);
+    if (glyphCount >= 0) {
+        summary += QStringLiteral(" · ");
+        summary += tr("%1 glyphs").arg(QLocale().toString(glyphCount));
+    }
+    summary += QStringLiteral("    ");
     if (coverage.total == 0) {
-        m_coverage->setText(tr("Coverage: 0 / 0"));
+        summary += tr("Coverage: 0 / 0");
     } else {
         const double percent = 100.0 * coverage.supported / coverage.total;
-        QString text = tr("Coverage: %1 / %2 (%3%)")
-                           .arg(coverage.supported)
-                           .arg(coverage.total)
-                           .arg(QString::number(percent, 'f', 1));
+        summary += tr("Coverage: %1 / %2 (%3%)")
+                       .arg(coverage.supported)
+                       .arg(coverage.total)
+                       .arg(QString::number(percent, 'f', 1));
+        summary += QStringLiteral("  ");
         if (coverage.missing.isEmpty()) {
-            text += QStringLiteral("  ");
-            text += tr("No missing glyphs");
+            summary += tr("No missing glyphs");
         } else {
-            text += QStringLiteral("  ");
-            text += tr("Missing: %1").arg(coverage.missing.size());
+            summary += tr("Missing: %1").arg(coverage.missing.size());
         }
-        m_coverage->setText(text);
     }
+    m_coverage->setText(summary);
 
     QString description = PreferredFontFamilyName(rawFont);
     const QString weightName = WeightName(rawFont.weight());
@@ -208,6 +214,10 @@ void FontView::Rebuild()
     document.description = description;
     document.fileName = info.fileName();
     document.fileBytes = info.size();
+    document.fileSizeText = FormatFontFileSize(info.size());
+    if (glyphCount >= 0) {
+        document.glyphSummary = tr("%1 glyphs").arg(QLocale().toString(glyphCount));
+    }
     document.sample = sample;
     document.coverage = coverage;
     document.missingTooltip = tr("Not present in this font");

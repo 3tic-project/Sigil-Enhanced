@@ -20,12 +20,16 @@ struct FontPreviewDocument {
     QString fontStyle;
     QString description;
     QString fileName;
+    QString fileSizeText;
+    QString glyphSummary;
     qint64 fileBytes = 0;
     FontPreviewSample sample;
     GlyphCoverageResult coverage;
     QString missingTooltip;
     bool omitFullyMissingLines = false;
 };
+
+QString FormatFontFileSize(qint64 bytes);
 
 QString MarkMissingGlyphs(const QString &text, const QList<uint> &missing, const QString &tooltip);
 

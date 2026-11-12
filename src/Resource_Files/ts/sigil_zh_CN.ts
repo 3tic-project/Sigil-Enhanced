@@ -5667,6 +5667,7 @@ then find the Next match in Code View.&lt;/p&gt;</source>
     <message><source>No missing glyphs</source><translation>没有缺字</translation></message>
     <message><source>Missing: %1</source><translation>缺失：%1</translation></message>
     <message><source>Not present in this font</source><translation>此字体不含该字符</translation></message>
+    <message><source>%1 glyphs</source><translation>%1 个字形</translation></message>
 </context>
 <context>
     <name>GeneralSettingsWidget</name>

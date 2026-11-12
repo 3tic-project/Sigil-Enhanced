@@ -5481,6 +5481,10 @@ then find the Next match in Code View.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>%1 glyphs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../Widgets/FontView.cpp" line="136"/>
         <source>abcdefghijklmnopqrstuvwxyz</source>
         <translation type="unfinished"></translation>
