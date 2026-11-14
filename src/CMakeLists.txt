@@ -169,8 +169,6 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/Translation/TranslationBatch.h
     BuiltinPlugins/Translation/TranslationController.cpp
     BuiltinPlugins/Translation/TranslationController.h
-    BuiltinPlugins/Translation/TranslationPanel.cpp
-    BuiltinPlugins/Translation/TranslationPanel.h
     BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     BuiltinPlugins/BookLiveParagraphNormalizer.h
     BuiltinPlugins/CmoaParagraphNormalizer.cpp

@@ -393,11 +393,17 @@ void AgentDock::setRunState(AgentRunState state)
         && state != AgentRunState::Failed;
     m_runActive = running;
     m_sendButton->setEnabled(!running);
-    m_stopButton->setEnabled(running || state == AgentRunState::AwaitingApproval);
+    m_stopButton->setEnabled(running || m_backgroundTaskActive);
     m_newSessionButton->setEnabled(!running);
     m_modeCombo->setEnabled(!running);
     refreshRetryState();
     refreshTaskRestoreState();
+}
+
+void AgentDock::setBackgroundTaskActive(bool active)
+{
+    m_backgroundTaskActive = active;
+    m_stopButton->setEnabled(m_runActive || active);
 }
 
 void AgentDock::setBookContext(const QString &title,

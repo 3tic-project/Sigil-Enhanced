@@ -90,7 +90,6 @@ class SigilBookWorkspace;
 }
 namespace BuiltinPlugins::Translation {
 class TranslationController;
-class TranslationPanel;
 }
 class SelectCharacter;
 class ViewImage;
@@ -893,7 +892,8 @@ private:
      */
     void CreateRecentFilesActions();
     void CreateAgentDock();
-    void CreateTranslationPanel();
+    void CreateAgentTranslation();
+    void ResetAgentTranslationSession(const QString &sessionId);
     void ContinueTranslationAgent();
     void ConfigureAgentProvider();
     void AgentSendRequested(const QString &text, const QStringList &handles);
@@ -1072,7 +1072,6 @@ private:
     std::unique_ptr<SigilAgent::AgentController> m_AgentController;
     std::unique_ptr<SigilAgent::AgentLocationSource> m_AgentLocationSource;
     std::unique_ptr<BuiltinPlugins::Translation::TranslationController> m_TranslationController;
-    BuiltinPlugins::Translation::TranslationPanel *m_TranslationPanel = nullptr;
     QString m_TranslationAgentSession;
     QString m_TranslationAgentContext;
     QJsonObject m_TranslationAgentNotice;

@@ -5,6 +5,7 @@
 #include <QJsonDocument>
 #include <QThread>
 #include <QFile>
+#include <QFutureWatcher>
 #include "Agent/Execution/MemoryBookWorkspace.h"
 #include "Agent/Tools/TranslationTools.h"
 #include "Agent/Tools/ToolRegistry.h"
@@ -245,6 +246,70 @@ int main(int argc, char **argv)
     require(rejected.prepare().ok && rejected.run({{"stages", QJsonArray {"translate"}}}).ok, "authentication failure run starts");
     require(waitFor([&]() { return !rejected.running(); }), "authentication failure stops workflow");
     require(rejectedCalls.load() == 1 && rejected.status().value("failed").toInt() == 1, "permanent errors do not fan out into retries");
+
+    auto sessionBook = makeBook(1);
+    TranslationController isolated;
+    isolated.setWorkspace(&sessionBook); isolated.setConfigurationProvider(configuration);
+    isolated.bindAgentSession("agent-A");
+    require(isolated.prepare({{"language", "fr"}, {"style", "A-only style"}}).ok, "prepare session A");
+    require(isolated.context({{"kind", "memory"}, {"action", "update"}, {"value", "private A memory"}}).ok, "session A memory");
+    require(isolated.context({{"kind", "glossary"}, {"action", "update"}, {"value", QJsonArray {
+        QJsonObject {{"source", "名前"}, {"target", "A-only name"}}}}}).ok, "session A glossary");
+    require(isolated.prepare().ok && isolated.context({{"kind", "plan"}}).data.value("plan").toObject().value("language") == "fr",
+        "prepare retains language and style only within the same Agent conversation");
+    const QString oldContext = isolated.contextId();
+    isolated.bindAgentSession("agent-A"); require(isolated.contextId() == oldContext, "same-session binding preserves prepared context");
+    ToolRegistry sessionATools; registerTranslationTools(&sessionATools, &isolated);
+    std::atomic_bool sessionEntered {false}, sessionRelease {false};
+    isolated.setCompletion([&](const auto &, const ModelRequest &request, const auto &) {
+        sessionEntered.store(true);
+        while (!sessionRelease.load()) QThread::msleep(1); // Deliberately ignore cancellation.
+        return reply(request);
+    });
+    int sessionFinishes = 0;
+    QObject::connect(&isolated, &TranslationController::finished, [&]() { ++sessionFinishes; });
+    require(isolated.run({{"stages", QJsonArray {"translate"}}}).ok && waitFor([&]() { return sessionEntered.load(); }), "old session request in flight");
+    auto *oldWatcher = isolated.findChild<QFutureWatcherBase *>(); require(oldWatcher, "old request watcher");
+    bool oldDelivered = false;
+    QObject::connect(oldWatcher, &QFutureWatcherBase::finished, &isolated, [&]() { oldDelivered = true; });
+    isolated.bindAgentSession("agent-B");
+    require(isolated.agentSessionId() == "agent-B" && isolated.contextId().isEmpty()
+        && isolated.status().value("state") == "idle" && isolated.status().value("terms").toInt() == 0
+        && isolated.status().value("requests").toInt() == 0 && isolated.status().value("paragraphs").toInt() == 0,
+        "new Agent conversation clears progress, glossary and prepared scope");
+    require(!sessionATools.find("translation.status")->execute({}).ok && !sessionATools.find("translation.prepare")->execute({}).ok,
+        "old conversation tool references cannot inspect or alter the new conversation");
+    ToolRegistry sessionBTools; registerTranslationTools(&sessionBTools, &isolated);
+    require(sessionBTools.find("translation.status")->execute({}).ok, "new session receives fresh tools");
+    require(!sessionBTools.find("translation.status")->execute({{"session_id", oldContext}}).ok
+        && !sessionBTools.find("translation.prepare")->execute({{"session_id", oldContext}}).ok,
+        "old scope IDs cannot read or prepare state in the new conversation");
+    require(isolated.prepare().ok && isolated.context({{"kind", "glossary"}}).data.value("total").toInt() == 0
+        && isolated.context({{"kind", "memory"}}).data.value("memory").toString().isEmpty()
+        && isolated.context({{"kind", "plan"}}).data.value("plan").toObject().value("language") == "zh-Hans",
+        "new session does not inherit language, memory or terminology");
+    require(isolated.context({{"kind", "memory"}, {"action", "update"}, {"value", "B memory"}}).ok, "write B memory");
+    isolated.setCompletion([](const auto &, const ModelRequest &request, const auto &) { return reply(request); });
+    require(isolated.run({{"stages", QJsonArray {"translate"}}}).ok && waitFor([&]() { return !isolated.running(); }), "new conversation completes independently");
+    const QString bookAfterB = sessionBook.resourceText("chapter");
+    sessionRelease.store(true);
+    require(waitFor([&]() { return oldDelivered; }), "old provider finally replies");
+    require(sessionBook.resourceText("chapter") == bookAfterB && sessionFinishes == 1 && isolated.agentSessionId() == "agent-B"
+        && isolated.context({{"kind", "memory"}}).data.value("memory") == "B memory", "late A result cannot write, notify or overwrite B memory");
+    isolated.bindAgentSession("agent-A");
+    require(isolated.contextId().isEmpty() && isolated.status().value("terms").toInt() == 0
+        && sessionBook.resourceText("chapter") == bookAfterB, "discarded conversations stay empty; Book edits survive");
+    auto replacementBook = makeBook(1); isolated.setWorkspace(&replacementBook);
+    require(isolated.agentSessionId() == "agent-A" && isolated.contextId().isEmpty(), "changing books clears context within the same conversation");
+
+    auto commitBook = makeBook(1);
+    TranslationController duringCommit; duringCommit.setWorkspace(&commitBook); duringCommit.setConfigurationProvider(configuration);
+    duringCommit.bindAgentSession("commit-A"); duringCommit.setCompletion([](const auto &, const auto &request, const auto &) { return reply(request); });
+    QObject::connect(&duringCommit, &TranslationController::bookModified, [&]() { duringCommit.bindAgentSession("commit-B"); });
+    require(duringCommit.prepare().ok && duringCommit.run({{"stages", QJsonArray {"translate"}}}).ok, "session change during commit signal");
+    require(waitFor([&]() { return duringCommit.agentSessionId() == "commit-B"; })
+        && duringCommit.status().value("state") == "idle" && duringCommit.status().value("paragraphs").toInt() == 0,
+        "reentrant conversation change during book update cannot reuse old paragraph indexes");
 
     auto partialBook = makeBook(120);
     TranslationController partial;

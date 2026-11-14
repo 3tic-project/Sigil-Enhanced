@@ -118,7 +118,6 @@
 #include "Agent/Persistence/AgentSessionExport.h"
 #include "Agent/UI/AgentDock.h"
 #include "BuiltinPlugins/Translation/TranslationController.h"
-#include "BuiltinPlugins/Translation/TranslationPanel.h"
 #include "MainUI/TableOfContents.h"
 #include "MainUI/ValidationResultsView.h"
 #include "Misc/HTMLSpellCheck.h"
@@ -6414,6 +6413,7 @@ void MainWindow::CreateAgentDock()
     m_AgentController->session()->setListener([this](const SigilAgent::AgentEvent &event) {
         if (m_AgentDock) {
             if (event.type == SigilAgent::AgentEventType::SessionCreated) {
+                ResetAgentTranslationSession(event.payload.value(QStringLiteral("session_id")).toString());
                 m_AgentDock->resetTranscript();
                 m_AgentDock->setSessionId(
                     event.payload.value(QStringLiteral("session_id")).toString());
@@ -6574,6 +6574,7 @@ void MainWindow::AgentSendRequested(const QString &text, const QStringList &hand
 
 void MainWindow::AgentStopRequested()
 {
+    if (m_TranslationController && m_TranslationController->running()) m_TranslationController->control({{"action", "stop"}});
     m_TranslationAgentNotice = {};
     m_TranslationAgentSession.clear();
     if (m_AgentController) m_AgentController->stop();
@@ -6581,8 +6582,9 @@ void MainWindow::AgentStopRequested()
 
 void MainWindow::AgentNewSessionRequested()
 {
-    m_TranslationAgentNotice = {};
-    m_TranslationAgentSession.clear();
+    // Cancel immediately even if the Agent defers its session reset until the
+    // active model turn unwinds. SessionCreated binds the new owner afterward.
+    ResetAgentTranslationSession(QString());
     if (m_AgentController) m_AgentController->newSession();
 }
 
@@ -7580,7 +7582,7 @@ void MainWindow::ExtendUI()
     tabifyDockWidget(m_TableOfContents, m_PreviewWindow);
 
     CreateAgentDock();
-    CreateTranslationPanel();
+    CreateAgentTranslation();
 
     m_Clips = new ClipsWindow(this);
     m_Clips->setObjectName(CLIPS_WINDOW_NAME);

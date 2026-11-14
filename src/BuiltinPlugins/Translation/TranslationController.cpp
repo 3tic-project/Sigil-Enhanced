@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QRegularExpression>
 #include <QSet>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QUuid>
 #include <QtConcurrent/QtConcurrentRun>
@@ -52,12 +53,19 @@ TranslationController::~TranslationController()
 
 void TranslationController::setWorkspace(SigilAgent::IBookWorkspace *workspace)
 {
-    reset(); m_workspace = workspace;
+    m_workspace = workspace; reset();
 }
 void TranslationController::setConfigurationProvider(Configuration provider) { m_configuration = std::move(provider); }
 void TranslationController::setCompletion(Completion completion) { m_completion = std::move(completion); }
 void TranslationController::setFormatHandler(Format handler) { m_format = std::move(handler); }
 void TranslationController::setMiscFolder(const QString &folder) { m_miscFolder = folder; }
+void TranslationController::bindAgentSession(const QString &sessionId)
+{
+    if (m_agentSession == sessionId) return;
+    m_agentSession = sessionId;
+    reset();
+}
+QString TranslationController::agentSessionId() const { return m_agentSession; }
 bool TranslationController::running() const { return m_state == QLatin1String("running") || m_state == QLatin1String("paused"); }
 QString TranslationController::contextId() const { return m_id; }
 bool TranslationController::current() const { return m_workspace && m_workspace->bookSessionId() == m_bookSession; }
@@ -80,6 +88,8 @@ void TranslationController::reset()
     m_requests = m_cacheHits = m_retries = m_unknownUsage = 0;
     m_inputTokens = m_outputTokens = m_cachedTokens = 0;
     m_requestBytes = 0; m_cooldownUntil = 0; m_runtimeConcurrency = 8;
+    m_language = QStringLiteral("zh-Hans"); m_style = QStringLiteral("忠实通顺，保持人物口吻和日式引号");
+    m_stages.clear(); m_wholeBook = true; m_retranslate = false; m_targetCharacters = 3000;
     m_checkpoint = false; m_instruction.clear(); m_focusTerms.clear(); m_onlyParagraphs.clear(); m_advancePending = false; ++m_contextRevision;
     emit changed();
 }
@@ -125,13 +135,14 @@ TranslationController::Result TranslationController::prepare(const QJsonObject &
     const auto retainedTerms = m_terms;
     const QString retainedMemory = m_memory;
     const QJsonObject retainedPlan = m_plan;
+    const QString retainedLanguage = m_language, retainedStyle = m_style;
     const bool sameBook = current();
-    reset();
+    { const QSignalBlocker blocker(this); reset(); }
     if (sameBook) { m_terms = retainedTerms; m_memory = retainedMemory; m_plan = retainedPlan; }
     m_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_bookSession = m_workspace->bookSessionId();
-    m_language = args.value(QStringLiteral("language")).toString(sameBook ? m_language : QStringLiteral("zh-Hans"));
-    m_style = args.value(QStringLiteral("style")).toString(sameBook ? m_style : QStringLiteral("忠实通顺，保持人物口吻和日式引号")).left(2000);
+    m_language = args.value(QStringLiteral("language")).toString(sameBook ? retainedLanguage : QStringLiteral("zh-Hans"));
+    m_style = args.value(QStringLiteral("style")).toString(sameBook ? retainedStyle : QStringLiteral("忠实通顺，保持人物口吻和日式引号")).left(2000);
     m_resources = strings(args.value(QStringLiteral("resource_ids")).toArray());
     m_wholeBook = m_resources.isEmpty();
     const auto resources = m_workspace->resources();
@@ -242,17 +253,21 @@ void TranslationController::beginPhase()
 {
     if (m_state != QLatin1String("running")) return;
     if (!current()) { control({{"action", "stop"}}); return; }
+    const auto phaseToken = m_token;
     ++m_stage;
     if (m_stage >= m_stages.size()) {
         bool partial = !m_errors.isEmpty();
         for (const auto &unit : m_units) partial = partial || !unit.error.isEmpty();
-        m_state = partial ? "partial" : "completed"; emit changed(); emit finished(); return;
+        m_state = partial ? "partial" : "completed"; emit changed();
+        if (phaseToken == m_token) emit finished();
+        return;
     }
     m_phase = m_stages.at(m_stage);
     m_assemblies.clear();
     if (m_phase == QLatin1String("scan")) { m_scanMemory.clear(); m_sectionMemory.clear(); }
     if (m_phase == QLatin1String("format")) {
         auto result = format({{"preset", m_plan.value("preset")}});
+        if (phaseToken != m_token || !current()) return;
         if (!result.ok) recordError(result.message);
         const auto token = m_token;
         QTimer::singleShot(0, this, [this, token]() { if (token == m_token) beginPhase(); }); return;
@@ -304,6 +319,7 @@ void TranslationController::dispatch()
     if (m_state != QLatin1String("running")) return;
     if (!current()) { control({{"action", "stop"}}); return; }
     if (m_stage < 0) { beginPhase(); return; }
+    const auto dispatchToken = m_token;
     const auto configuration = m_configuration();
     const qint64 wait = m_cooldownUntil - QDateTime::currentMSecsSinceEpoch();
     if (wait > 0) {
@@ -312,6 +328,7 @@ void TranslationController::dispatch()
         return;
     }
     while (!m_queue.isEmpty() && m_active < qMin(m_runtimeConcurrency, qBound(1, configuration.concurrency, 8))) {
+        if (dispatchToken != m_token) return;
         Work work = m_queue.takeFirst();
         work.token = m_token; work.contextRevision = m_contextRevision;
         for (auto &item : work.items) if (item.fragment < 0) item.translation = m_units.at(item.paragraph).paragraph.translation;
@@ -426,7 +443,9 @@ void TranslationController::receive(Work work, SigilAgent::ModelTurn turn)
         if (permanent.match(turn.error).hasMatch()) {
             work.retries = 2; retry(work, turn.error);
             m_queue.clear(); m_state = "stopped"; m_cancel->store(true); ++m_token; m_active = 0;
-            emit changed(); emit finished(); return;
+            const auto stoppedToken = m_token; emit changed();
+            if (stoppedToken == m_token) emit finished();
+            return;
         }
         retry(work, turn.error); return;
     }
@@ -465,6 +484,7 @@ void TranslationController::accept(Work work, ParsedBatch parsed)
         }
     } else {
         const auto result = apply(work, parsed);
+        if (work.token != m_token || !current() || m_cancel->load()) return;
         if (!result.ok) { retry(work, result.message); return; }
         if (work.phase == QLatin1String("review")) {
             for (int i = 0; i < work.items.size(); ++i) {
@@ -548,11 +568,13 @@ void TranslationController::adjustBatches(int target)
 
 TranslationController::Result TranslationController::commitTexts(const QHash<QString, QString> &texts, const QString &label)
 {
+    const auto token = m_token;
     if (!current()) return Result::error("BOOK_CHANGED", tr("Current book changed"));
     if (m_workspace->hasOpenTransaction()) return Result::error("TRANSACTION_OPEN", tr("Another book transaction is active"));
     if (!m_checkpoint) {
         auto checkpoint = m_workspace->createCheckpoint(tr("Before bilingual translation"));
         if (!checkpoint.ok) return checkpoint;
+        if (token != m_token || !current()) return Result::error("CONTEXT_CHANGED", tr("Translation session changed"));
         m_checkpoint = true;
     }
     auto result = m_workspace->beginTransaction(label);
@@ -636,6 +658,7 @@ TranslationController::Result TranslationController::apply(const Work &work, con
     if (!texts.isEmpty()) {
         const auto result = commitTexts(texts, tr("Batch bilingual translation"));
         if (!result.ok) return result;
+        if (work.token != m_token || !current()) return Result::error("CONTEXT_CHANGED", tr("Translation session changed"));
         for (auto it = completeTexts.begin(); it != completeTexts.end(); ++it) {
             const int global = it.key();
             if (!successful.contains(global)) continue;
@@ -759,6 +782,7 @@ TranslationController::Result TranslationController::revise(const QJsonObject &a
 
 TranslationController::Result TranslationController::format(const QJsonObject &args)
 {
+    const auto token = m_token;
     if (!validContext(args)) return Result::error("NO_CONTEXT", tr("Prepare this book first"));
     if (m_active > 0) return Result::error("TRANSLATION_RUNNING", tr("Wait for in-flight batches before formatting"));
     if (!m_format) return Result::error("FORMAT_UNAVAILABLE", tr("Book format conversion is available in the Sigil window"));
@@ -768,9 +792,11 @@ TranslationController::Result TranslationController::format(const QJsonObject &a
     if (!m_checkpoint) {
         const auto result = m_workspace->createCheckpoint(tr("Before translation formatting"));
         if (!result.ok) return result;
+        if (token != m_token || !current()) return Result::error("CONTEXT_CHANGED", tr("Translation session changed"));
         m_checkpoint = true;
     }
     const auto result = m_format(options);
+    if (token != m_token || !current()) return Result::error("CONTEXT_CHANGED", tr("Translation session changed"));
     if (result.ok) {
         QHash<QString, TextResult> parsed;
         for (const auto &id : m_resources) parsed.insert(id, extract(m_workspace->resourceText(id)));

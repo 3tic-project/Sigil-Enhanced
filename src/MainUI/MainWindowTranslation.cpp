@@ -1,8 +1,6 @@
 #include "MainUI/MainWindow.h"
 
-#include <QAction>
 #include <QJsonDocument>
-#include <QMenu>
 #include <QRegularExpression>
 #include <QTimer>
 #include "Agent/Core/AgentController.h"
@@ -15,22 +13,20 @@
 #include "BookManipulation/FolderKeeper.h"
 #include "BookManipulation/XmlWellFormed.h"
 #include "BuiltinPlugins/Translation/TranslationController.h"
-#include "BuiltinPlugins/Translation/TranslationPanel.h"
 #include "BuiltinPlugins/VerticalToHorizontalConverter.h"
 #include "MainUI/BookBrowser.h"
-#include "MainUI/PreviewWindow.h"
 #include "MainUI/ValidationResultsView.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
 #include "ResourceObjects/OPFResource.h"
-#include "Tabs/ContentTab.h"
 
-void MainWindow::CreateTranslationPanel()
+void MainWindow::CreateAgentTranslation()
 {
     using namespace BuiltinPlugins::Translation;
     m_TranslationController = std::make_unique<TranslationController>(this);
     auto *controller = m_TranslationController.get();
     controller->setWorkspace(m_AgentWorkspace.get());
+    controller->bindAgentSession(m_AgentController->session()->id());
     controller->setMiscFolder(m_Book->GetFolderKeeper()->GetDefaultFolderForGroup("Misc"));
     controller->setConfigurationProvider([]() {
         SigilAgent::AgentSettings settings;
@@ -111,37 +107,8 @@ void MainWindow::CreateTranslationPanel()
         if (!results.isEmpty()) m_ValidationResultsView->show();
         return Result::success({{"preset", chinese ? "chinese" : "preserve"}, {"fixed_layout_preserved", fixed.size()}}, modified);
     });
-    m_TranslationPanel = new TranslationPanel(controller, m_AgentWorkspace.get(), this);
-    connect(controller, &TranslationController::changed, this, [this, wasRunning = false]() mutable {
-        const bool now = m_TranslationController->running();
-        if (now && !wasRunning) { m_TranslationPanel->show(); m_TranslationPanel->raise(); }
-        wasRunning = now;
-    });
-    m_TranslationPanel->setScopeProvider([this](const QString &scope) {
-        QJsonObject args;
-        if (scope == "book") return args;
-        QJsonArray ids;
-        if (scope == "files") {
-            for (auto *resource : m_BookBrowser->ValidSelectedHTMLResources()) ids.append(resource->GetIdentifier());
-        } else {
-            ContentTab *tab = GetCurrentContentTab();
-            Resource *resource = tab ? tab->GetLoadedResource() : nullptr;
-            if (resource) ids.append(resource->GetIdentifier());
-            if (scope == "selection" && tab) {
-                const int a = tab->GetSelectionStart(), b = tab->GetSelectionEnd();
-                if (a < 0 || b <= a) return QJsonObject {{"error", tr("请先在源码编辑器选择文本。")}};
-                args["selection_start"] = a; args["selection_end"] = b;
-            }
-        }
-        if (ids.isEmpty()) return QJsonObject {{"error", tr("请选择 XHTML 文件或正文选区。")}};
-        args["resource_ids"] = ids;
-        return args;
-    });
-    connect(m_TranslationPanel, &TranslationPanel::settingsRequested, this, [this]() {
-        PreferencesDialog(); m_TranslationPanel->refreshModels();
-    });
-    connect(m_TranslationPanel, &TranslationPanel::locationRequested, this, [this](const QString &id, int line) {
-        if (auto *resource = m_Book->GetFolderKeeper()->GetResourceByIdentifier(id)) OpenFile(resource->GetRelativePath(), line);
+    connect(controller, &TranslationController::changed, this, [this, controller]() {
+        if (m_AgentDock) m_AgentDock->setBackgroundTaskActive(controller->running());
     });
     connect(controller, &TranslationController::bookModified, this, [this]() {
         m_Book->SetModified(true); m_BookBrowser->Refresh(); UpdateAgentContext();
@@ -169,13 +136,14 @@ void MainWindow::CreateTranslationPanel()
             m_TranslationAgentSession = session; m_TranslationAgentContext = controller->contextId();
         });
     });
-    addDockWidget(Qt::RightDockWidgetArea, m_TranslationPanel);
-    tabifyDockWidget(m_PreviewWindow, m_TranslationPanel);
-    auto *action = ui.menuEnhancement->addAction(tr("翻译…"));
-    action->setObjectName(QStringLiteral("actionTranslateBook"));
-    connect(action, &QAction::triggered, this, [this]() { m_TranslationPanel->refreshModels(); m_TranslationPanel->show(); m_TranslationPanel->raise(); });
-    ui.menuView->addAction(m_TranslationPanel->toggleViewAction());
-    m_TranslationPanel->hide();
+
+}
+
+void MainWindow::ResetAgentTranslationSession(const QString &sessionId)
+{
+    m_TranslationAgentNotice = {}; m_TranslationAgentSession.clear(); m_TranslationAgentContext.clear();
+    m_TranslationAgentContinuations = 0;
+    if (m_TranslationController) m_TranslationController->bindAgentSession(sessionId);
 }
 
 void MainWindow::ContinueTranslationAgent()
@@ -183,6 +151,7 @@ void MainWindow::ContinueTranslationAgent()
     if (m_TranslationAgentNotice.isEmpty() || !m_TranslationController || !m_AgentController) return;
     if (m_TranslationController->running()) { m_TranslationAgentNotice = {}; return; }
     if (m_CloseAfterAgentRun || m_TranslationController->contextId() != m_TranslationAgentContext
+        || m_TranslationController->agentSessionId() != m_TranslationAgentSession
         || m_AgentController->session()->id() != m_TranslationAgentSession) { m_TranslationAgentNotice = {}; return; }
     if (m_AgentController->isRunning()) { QTimer::singleShot(100, this, &MainWindow::ContinueTranslationAgent); return; }
     const auto notice = m_TranslationAgentNotice; m_TranslationAgentNotice = {};
@@ -191,7 +160,7 @@ void MainWindow::ContinueTranslationAgent()
         .arg(QString::fromUtf8(QJsonDocument(notice).toJson(QJsonDocument::Compact)));
     if (++m_TranslationAgentContinuations > 3) {
         m_AgentController->session()->append(SigilAgent::AgentEventType::AssistantMessage,
-            {{"content", tr("翻译后续处理已达到重试次数，请查看翻译面板中的剩余问题。")}, {"is_final", true}});
+            {{"content", tr("翻译后续处理已达到重试次数，剩余问题请通过 Agent 查询翻译状态。")}, {"is_final", true}});
         return;
     }
     m_AgentController->continueAfterBackground(message, m_TranslationAgentSession, m_AgentWorkspace->bookSessionId());

@@ -13,12 +13,12 @@ allowed-tools: >
 
 # Translate the open book
 
-Use the window's native translation controller. It extracts whole reading
+Use this Agent conversation's native translation controller. It extracts whole reading
 paragraphs (ruby base + inline text), groups requests and writes bilingual pairs
 directly into the live Book. Never copy chapter bodies into tool arguments,
 generate XHTML, or issue a patch per paragraph.
 
-1. Check translation.status for an existing window context. Prepare once for the
+1. Check translation.status for this conversation's existing context. Prepare once for the
    requested scope; omit resource_ids only for a whole-book request. A selection
    uses one resource and its UTF-16 range, expanded to complete paragraphs.
 2. Keep a short temporary plan. Load any explicitly selected Misc glossary with
@@ -34,7 +34,7 @@ generate XHTML, or issue a patch per paragraph.
    For the complete whole-book request, omit stages so all five phases run;
    preset:preserve retains the scan/aggregate/translate/review phases. Do not
    hand-build a stages list that accidentally leaves out aggregate.
-4. The tool returns immediately and the native panel continues the work. Normal
+4. The tool returns immediately and the Agent's native controller continues the work. Normal
    batches require no additional model turns or user confirmations. Do not
    poll in a loop or claim completion merely because the workflow started.
    The host resumes this same conversation with a background completion notice.
@@ -61,3 +61,8 @@ generate XHTML, or issue a patch per paragraph.
 Default whole-book Chinese reading format uses native horizontal/LTR and image
 adaptation. Preserve is available. Closing/changing the Book discards temporary
 state and stops requests; there is no cross-restart task database or local NER.
+Starting a new Agent conversation cancels old requests and discards its temporary
+plan, memory, glossary and caches. These never transfer to another conversation.
+Book edits and explicitly saved Misc glossaries remain ordinary book content;
+load a saved glossary explicitly when the new conversation needs it. Translation
+model/thinking/batch preferences live in application Preferences under Native Agent.

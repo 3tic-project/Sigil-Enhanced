@@ -113,7 +113,7 @@ if __name__ == '__main__':
                 verify, direct_app_executable=True, run_arguments=[(url,)], run_timeout=60)
             assert any(model == 'test-planner' for model, _ in Mock.requests)
             assert any(model == 'test-translator' for model, _ in Mock.requests)
-            assert len(Mock.requests) < 30, 'Two window workflows grew requests per sentence'
+            assert len(Mock.requests) < 30, 'Agent translation workflow grew requests per sentence'
             assert Mock.agent_finished, 'Agent did not continue after native background completion'
         finally:
             server.shutdown()

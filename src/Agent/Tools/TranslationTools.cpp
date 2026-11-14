@@ -14,6 +14,7 @@ class TranslationTool final : public IAgentTool {
 public:
     AgentToolDescriptor info;
     QPointer<Controller> controller;
+    QString agentSession;
     std::function<void()> started;
     AgentToolDescriptor descriptor() const override { return info; }
     ToolResult execute(const QJsonObject &arguments) override
@@ -57,6 +58,13 @@ public:
         }
         Controller::Result result;
         auto call = [&]() {
+            if (!controller || controller->agentSessionId() != agentSession) {
+                result = Controller::Result::error("AGENT_SESSION_CHANGED", "This translation tool belongs to an ended Agent conversation"); return;
+            }
+            const QString contextId = arguments.value("session_id").toString();
+            if (!contextId.isEmpty() && contextId != controller->contextId()) {
+                result = Controller::Result::error("CONTEXT_CHANGED", "Prepare/read the translation scope in this Agent conversation first"); return;
+            }
             if (info.name == "translation.prepare") result = controller->prepare(arguments);
             else if (info.name == "translation.run") result = controller->run(arguments);
             else if (info.name == "translation.status") result = Controller::Result::success(controller->status());
@@ -65,6 +73,9 @@ public:
             else if (info.name == "translation.revise") result = controller->revise(arguments);
             else if (info.name == "translation.format") result = controller->format(arguments);
             else result = controller->saveGlossary(arguments);
+            if (!controller || controller->agentSessionId() != agentSession) {
+                result = Controller::Result::error("AGENT_SESSION_CHANGED", "Agent conversation changed during translation"); return;
+            }
             if (result.ok && started && controller->running() && (info.name == "translation.run"
                 || info.name == "translation.revise" || (info.name == "translation.control" && arguments.value("action") == "retry_failed"))) started();
         };
@@ -90,22 +101,23 @@ void registerTranslationTools(ToolRegistry *registry, Controller *controller, st
     auto add = [&](const QString &name, const QString &description, bool writes, QJsonObject properties) {
         auto tool = std::make_unique<TranslationTool>();
         tool->controller = controller;
+        tool->agentSession = controller->agentSessionId();
         tool->started = started;
-        properties["session_id"] = string();
+        properties["session_id"] = QJsonObject {{"type", "string"}, {"description", "Optional prepared-scope ID from translation.prepare in this Agent conversation."}};
         tool->info = {name, description, QJsonObject {{"type", "object"}, {"properties", properties}, {"additionalProperties", false}},
             writes ? ToolRisk::Bulk : ToolRisk::Read, writes, false};
         registry->add(std::move(tool));
     };
-    add("translation.prepare", "Prepare complete reading paragraphs from the live book, including unsaved text. Default whole spine; pass resource_ids for files and selection_start/end (UTF-16) for one file selection. No remote requests. Returns window-only session_id and counts. Preserve/reuse an existing context instead of repeatedly preparing.", false,
+    add("translation.prepare", "Prepare complete reading paragraphs from the live book, including unsaved text. Default whole spine; pass resource_ids for files and selection_start/end (UTF-16) for one file selection. No remote requests. Returns prepared-scope session_id and counts isolated to this Agent conversation. Reuse its existing context instead of repeatedly preparing.", false,
         {{"resource_ids", array()}, {"language", string()}, {"style", string()},
          {"selection_start", QJsonObject {{"type", "integer"}}}, {"selection_end", QJsonObject {{"type", "integer"}}}});
-    add("translation.run", "Start window-local native batch workflow: scan, aggregate, translate, review, format. OMIT stages for the complete workflow; preset:preserve changes formatting only. Full-book scan followed by translation needs the aggregate stage. Set stages only for an explicitly requested subset (sample: translate only). Returns immediately; host batches and applies all paragraphs as bilingual pairs. No per-sentence patches or HTML. Does not save EPUB.", true,
+    add("translation.run", "Start this Agent conversation's native batch workflow: scan, aggregate, translate, review, format. OMIT stages for the complete workflow; preset:preserve changes formatting only. Full-book scan followed by translation needs the aggregate stage. Set stages only for an explicitly requested subset (sample: translate only). Returns immediately; host batches and applies all paragraphs as bilingual pairs. No per-sentence patches or HTML. Does not save EPUB.", true,
         {{"stages", QJsonObject {{"type", "array"}, {"items", enumeration({"scan", "aggregate", "translate", "review", "format"})}}},
          {"preset", enumeration({"chinese", "preserve"})}, {"retranslate", QJsonObject {{"type", "boolean"}}}});
-    add("translation.status", "Read bounded native translation progress, requests/usage, local cache hits and failed locations. No model calls. Do not busy-poll; the panel displays live progress.", false, {});
-    add("translation.control", "Pause, resume, stop or retry missing translations in this window. retry_failed starts a new ASYNCHRONOUS workflow and returns immediately. End the current reply after starting it; the host sends another background completion notice. Do not poll status in a loop. Stop rejects late model writes and keeps current Book edits. No restart persistence.", true,
+    add("translation.status", "Read this Agent conversation's native translation progress, requests/usage, cache hits and failed locations. No model calls. Use when progress is requested; background completion notices resume the Agent, so do not busy-poll.", false, {});
+    add("translation.control", "Pause, resume, stop or retry missing translations in this Agent conversation. retry_failed starts a new ASYNCHRONOUS workflow and returns immediately. End the current reply after starting it; the host sends another background completion notice. Do not poll status in a loop. Stop rejects late model writes and keeps current Book edits. No restart persistence.", true,
         {{"action", enumeration({"pause", "resume", "stop", "retry_failed"})}});
-    add("translation.context", "Read/update temporary plan, memory or glossary. For action:update use the typed field matching kind: glossary -> terms array, plan -> plan object, memory -> memory string. Prefer typed fields; legacy value also accepts complete JSON-encoded glossary/plan or plain memory. Read glossary pages with offset/limit. No remote calls or disk persistence.", false,
+    add("translation.context", "Read/update temporary plan, memory or glossary isolated to this Agent conversation. For action:update use the typed field matching kind: glossary -> terms array, plan -> plan object, memory -> memory string. Prefer typed fields; legacy value also accepts complete JSON-encoded glossary/plan or plain memory. Read glossary pages with offset/limit. No remote calls or disk persistence.", false,
         {{"kind", enumeration({"plan", "memory", "glossary"})}, {"action", enumeration({"read", "update"})},
          {"terms", terms()}, {"plan", QJsonObject {{"type", "object"}}}, {"memory", string()},
          {"value", QJsonObject {{"type", "string"}, {"description", "Legacy compatibility field; prefer terms/plan/memory."}}},

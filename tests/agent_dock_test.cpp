@@ -779,6 +779,17 @@ int main(int argc, char *argv[])
     dock.setRunState(SigilAgent::AgentRunState::Completed);
     Require(mode->isEnabled() && fresh->isEnabled() && !stop->isEnabled(),
             "terminal run state must restore mode and New Session controls");
+    dock.setBackgroundTaskActive(true);
+    dock.setRunState(SigilAgent::AgentRunState::Completed);
+    Require(stop->isEnabled() && fresh->isEnabled() && mode->isEnabled(),
+            "background task must remain stoppable without locking conversation controls");
+    dock.setBackgroundTaskActive(false);
+    Require(!stop->isEnabled(), "completed background task must release the Stop button");
+    dock.setRunState(SigilAgent::AgentRunState::RequestingModel);
+    dock.setBackgroundTaskActive(true);
+    dock.setBackgroundTaskActive(false);
+    Require(stop->isEnabled(), "background completion must not disable Stop during an Agent turn");
+    dock.setRunState(SigilAgent::AgentRunState::Completed);
     dock.resetTranscript();
     SigilAgent::AgentEvent target_changed;
     target_changed.type = SigilAgent::AgentEventType::BookTargetChanged;

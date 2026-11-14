@@ -45,6 +45,7 @@ public:
     void setModelName(const QString &model);
     void setProviderConfiguration(const AgentProviderReadiness &readiness);
     void setRunState(AgentRunState state);
+    void setBackgroundTaskActive(bool active);
     void setBookContext(const QString &title,
                         const QString &fileName,
                         int resourceCount,
@@ -236,6 +237,7 @@ private:
     QString m_lastSubmittedBookSessionId;
     bool m_retryAvailable = false;
     bool m_runActive = false;
+    bool m_backgroundTaskActive = false;
 };
 
 } // namespace SigilAgent

@@ -1,10 +1,13 @@
 #include "EmbedPython/EmbeddedPython.h"
 #include <QAction>
+#include <QDockWidget>
+#include <atomic>
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QJsonDocument>
 #include <QEventLoop>
+#include <QFutureWatcher>
 #include <QPushButton>
 #include <QComboBox>
 #include <QSpinBox>
@@ -24,7 +27,6 @@
 #include "BookManipulation/FolderKeeper.h"
 #include "Exporters/ExportEPUB.h"
 #include "BuiltinPlugins/Translation/TranslationController.h"
-#include "BuiltinPlugins/Translation/TranslationPanel.h"
 #include "MainUI/MainApplication.h"
 #include "MainUI/MainWindow.h"
 #include "Misc/SettingsStore.h"
@@ -99,9 +101,9 @@ int main(int argc, char **argv)
         }
         MainWindow window(source);
         auto *controller = window.findChild<BuiltinPlugins::Translation::TranslationController *>();
-        auto *panel = window.findChild<BuiltinPlugins::Translation::TranslationPanel *>();
-        auto *action = window.findChild<QAction *>("actionTranslateBook");
-        require(controller && panel && action, "Native translation menu/panel/controller missing");
+        auto *dock = window.findChild<SigilAgent::AgentDock *>();
+        require(controller && dock && !controller->agentSessionId().isEmpty(), "Agent translation controller missing its conversation owner");
+        require(!window.findChild<QDockWidget *>("translationDock") && !window.findChild<QAction *>("actionTranslateBook"), "Standalone translation UI must not exist");
         auto *resource = qobject_cast<TextResource *>(window.GetCurrentBook()->GetFolderKeeper()->GetResourceByBookPathNoThrow("OEBPS/a.xhtml"));
         require(resource, "Chapter fixture missing"); window.OpenResourceAndWaitUntilLoaded(resource);
         auto *code = dynamic_cast<CodeViewEditor *>(window.GetCurrentContentTab()->GetSearchableContent());
@@ -109,9 +111,17 @@ int main(int argc, char **argv)
         const int at = resource->GetText().indexOf("Original paragraph"); require(at >= 0, "Edit marker missing");
         auto cursor = code->textCursor(); cursor.setPosition(at); cursor.setPosition(at + 18, QTextCursor::KeepAnchor);
         code->setTextCursor(cursor); code->insertPlainText(QStringLiteral("未保存正文😀"));
-        action->trigger(); auto *start = panel->findChild<QPushButton *>("translationStart"); require(start, "Start control missing");
-        start->click();
-        require(waitFor([&]() { return !controller->running(); }), "Native model workflow did not finish");
+        int backgroundNotices = 0;
+        QObject::connect(dock, &SigilAgent::AgentDock::eventObserved, &window, [&](const SigilAgent::AgentEvent &event) {
+            if (event.type == SigilAgent::AgentEventType::UserMessage && event.payload.value("source") == "background") ++backgroundNotices;
+        });
+        TextResource *glossary = nullptr;
+        dock->sendRequested(QStringLiteral("请全文翻译成中文双语，使用中文阅读格式，最后保存词表到 Misc。"), {});
+        require(waitFor([&]() {
+            for (auto *text : window.GetCurrentBook()->GetFolderKeeper()->GetResourceTypeList<TextResource>(true))
+                if (text->GetRelativePath().endsWith("translation-glossary.json")) glossary = text;
+            return !controller->running() && glossary && backgroundNotices > 0;
+        }), "Agent did not finish its native translation and glossary follow-up");
         const auto status = controller->status();
         require(status.value("paragraphs").toInt() > 100, "Fixture scope not fully read");
         require(status.value("translated").toInt() == status.value("paragraphs").toInt()
@@ -122,9 +132,7 @@ int main(int argc, char **argv)
         require(resource->GetText().contains("sigil-translation-images"), "Chinese image preset not applied");
         require(window.GetCurrentBook()->GetOPF()->GetSourceText().contains("page-progression-direction=\"ltr\""), "LTR preset missing");
         require(window.GetCurrentBook()->IsModified() && read(source) == original, "Translation did not remain an unsaved live-book edit");
-        const auto saved = controller->saveGlossary(); require(saved.ok, saved.message);
-        const QString path = saved.data.value("book_path").toString();
-        auto *glossary = qobject_cast<TextResource *>(window.GetCurrentBook()->GetFolderKeeper()->GetResourceByBookPathNoThrow(path));
+        const QString path = glossary ? glossary->GetRelativePath() : QString();
         require(glossary && glossary->GetText().contains("sigil-translation-glossary-v1"), "Native Misc glossary resource missing");
         const int requests = status.value("requests").toInt();
         require(controller->run({{"stages", QJsonArray {"translate"}}}).ok, "Repeat native run failed");
@@ -132,23 +140,60 @@ int main(int argc, char **argv)
         require(controller->status().value("requests").toInt() == requests, "Repeat run unnecessarily called the model");
         const QString output = source + QStringLiteral(".translated.epub");
         ExportEPUB(output, window.GetCurrentBook()).WriteBook();
-        {
-            MainWindow agentWindow(source);
-            auto *agentDock = agentWindow.findChild<SigilAgent::AgentDock *>();
-            auto *native = agentWindow.findChild<BuiltinPlugins::Translation::TranslationController *>();
-            require(agentDock && native, "Agent window missing native controller");
-            agentDock->setMode(SigilAgent::AgentMode::Auto);
-            agentDock->sendRequested(QStringLiteral("请全文翻译为中文双语，最后保存词表到 Misc 并报告完成。"), {});
-            auto hasGlossary = [&]() {
-                for (auto *text : agentWindow.GetCurrentBook()->GetFolderKeeper()->GetResourceTypeList<TextResource>(true))
-                    if (text->GetRelativePath().endsWith("translation-glossary.json")) return true;
-                return false;
-            };
-            require(waitFor([&]() { return !native->running() && hasGlossary(); }), "Agent failed to continue and save glossary after background completion");
-            require(native->status().value("translated") == native->status().value("paragraphs"), "Agent workflow left missing translations");
-            agentWindow.GetCurrentBook()->SetModified(false);
-            require(agentWindow.close(), "Agent test window did not close normally");
-        }
+        // The conversation owns every temporary translation object, while
+        // already-applied Book edits and a saved glossary remain in the Book.
+        const QString ownerA = controller->agentSessionId();
+        controller->context({{"kind", "memory"}, {"action", "update"}, {"value", "A-only memory"}});
+        auto *fresh = dock->findChild<QPushButton *>("agentNewSessionButton");
+        require(fresh && fresh->isEnabled(), "Agent New Session button unavailable after translation");
+        fresh->click();
+        const int noticesAfterNewSession = backgroundNotices;
+        require(controller->agentSessionId() != ownerA && !controller->agentSessionId().isEmpty()
+            && controller->contextId().isEmpty() && controller->status().value("paragraphs").toInt() == 0
+            && controller->status().value("terms").toInt() == 0, "New Agent conversation inherited translation state");
+        require(controller->prepare().ok && controller->context({{"kind", "glossary"}}).data.value("total").toInt() == 0
+            && controller->context({{"kind", "memory"}}).data.value("memory").toString().isEmpty(), "Saved Book glossary was silently imported into a new conversation");
+        require(glossary->GetText().contains("sigil-translation-glossary-v1"), "Conversation reset removed saved Book content");
+        model.setTranslationConcurrency(1);
+        std::atomic_bool entered {false}, release {false};
+        controller->setCompletion([&](const auto &, const SigilAgent::ModelRequest &request, const auto &) {
+            entered.store(true); while (!release.load()) QThread::msleep(1);
+            const auto rows = QJsonDocument::fromJson(request.messages.last().content.toUtf8()).object().value("items").toArray();
+            QJsonArray items;
+            for (const auto &row : rows) items.append(QJsonObject {{"n", row.toObject().value("n")}, {"text", "Late old conversation output"}});
+            SigilAgent::ModelTurn turn; turn.content = QString::fromUtf8(QJsonDocument(QJsonObject {{"items", items}}).toJson()); return turn;
+        });
+        const QString unchanged = resource->GetText();
+        require(controller->run({{"stages", QJsonArray {"translate"}}, {"retranslate", true}}).ok, "Start old conversation request");
+        require(waitFor([&]() { return entered.load(); }), "Old conversation request did not start");
+        QFutureWatcherBase *watcher = nullptr;
+        for (auto *candidate : controller->findChildren<QFutureWatcherBase *>()) if (!candidate->isFinished()) watcher = candidate;
+        require(watcher, "Old conversation watcher missing");
+        bool delivered = false;
+        QObject::connect(watcher, &QFutureWatcherBase::finished, &window, [&]() { delivered = true; });
+        const QString ownerB = controller->agentSessionId();
+        require(fresh->isEnabled(), "Background translation locked New Session");
+        fresh->click();
+        require(controller->agentSessionId() != ownerB && controller->contextId().isEmpty()
+            && !controller->running(), "New Session did not synchronously discard old translation");
+        release.store(true); require(waitFor([&]() { return delivered; }), "Old conversation reply did not settle");
+        require(resource->GetText() == unchanged && controller->contextId().isEmpty() && backgroundNotices == noticesAfterNewSession,
+            "Late translation from old conversation wrote or notified the new conversation");
+        require(controller->prepare().ok, "Prepare current conversation for Stop test");
+        entered.store(false); release.store(false); delivered = false;
+        require(controller->run({{"stages", QJsonArray {"translate"}}, {"retranslate", true}}).ok
+            && waitFor([&]() { return entered.load(); }), "Agent Stop test request did not start");
+        watcher = nullptr;
+        for (auto *candidate : controller->findChildren<QFutureWatcherBase *>()) if (!candidate->isFinished()) watcher = candidate;
+        require(watcher, "Stop test watcher missing");
+        QObject::connect(watcher, &QFutureWatcherBase::finished, &window, [&]() { delivered = true; });
+        auto *stop = dock->findChild<QPushButton *>("agentStopButton");
+        require(stop && stop->isEnabled(), "Agent Stop button disabled during background translation");
+        stop->click();
+        require(!controller->running() && controller->status().value("state") == "stopped", "Agent Stop did not stop its translation task");
+        require(!stop->isEnabled(), "Stopped translation left the Agent Stop button enabled");
+        release.store(true); require(waitFor([&]() { return delivered; }), "Stopped request did not settle");
+        require(resource->GetText() == unchanged, "Agent-stopped translation wrote a late result");
         {
             MainWindow reopened(output);
             auto *newController = reopened.findChild<BuiltinPlugins::Translation::TranslationController *>();

@@ -43,6 +43,8 @@ public:
     void setCompletion(Completion completion); // Injectable model transport for offline tests.
     void setFormatHandler(Format handler);
     void setMiscFolder(const QString &folder);
+    void bindAgentSession(const QString &sessionId);
+    QString agentSessionId() const;
     void reset();
 
     Result prepare(const QJsonObject &arguments = {});
@@ -108,6 +110,7 @@ private:
     QList<BatchText> texts(const QString &phase) const;
 
     SigilAgent::IBookWorkspace *m_workspace = nullptr;
+    QString m_agentSession;
     QString m_bookSession;
     QString m_id;
     QString m_state = QStringLiteral("idle");

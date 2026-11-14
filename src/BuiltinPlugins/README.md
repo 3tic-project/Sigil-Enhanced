@@ -13,11 +13,11 @@
 
 ## 当前书籍翻译
 
-“增强 → 翻译…” 使用窗口内的 `TranslationController`，也通过
-`book-translation` skill 和 8 个原生批量工具供 Agent 调用。直接读取当前
+翻译作为 Agent 内置功能，通过 `book-translation` skill 和 8 个原生批量工具
+调用 `TranslationController`，没有独立翻译面板或菜单入口。直接读取当前
 Book（包含未保存编辑），扫描全文、聚合术语与记忆、批量翻译和校正，默认
 双语对照；中文阅读预设复用横排转换、LTR 和图片适配。供应商和凭据复用
-Agent，可独立选择翻译模型和思考程度。临时状态不跨窗口或重启持久化，
+Agent，在应用设置中独立选择翻译模型和思考程度。临时状态按 Agent 会话隔离，新会话清空，
 术语表可显式存入书内 Misc。使用与测试见
 [`docs/BuiltinTranslation.md`](../../docs/BuiltinTranslation.md)。
 
