@@ -161,6 +161,10 @@ set( AGENT_FILES
 set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/PlainTextExporter.cpp
     BuiltinPlugins/PlainTextExporter.h
+    BuiltinPlugins/Translation/TranslationText.cpp
+    BuiltinPlugins/Translation/TranslationText.h
+    BuiltinPlugins/Translation/TranslationBatch.cpp
+    BuiltinPlugins/Translation/TranslationBatch.h
     BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     BuiltinPlugins/BookLiveParagraphNormalizer.h
     BuiltinPlugins/CmoaParagraphNormalizer.cpp

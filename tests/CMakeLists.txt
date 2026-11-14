@@ -2,6 +2,25 @@ find_package(Qt6 6.4 COMPONENTS Concurrent Core Core5Compat Gui Network Svg WebE
 find_package(EXPAT REQUIRED)
 find_package(LibXml2 REQUIRED)
 
+add_executable(translation_text_test
+    translation_text_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/Translation/TranslationText.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlWellFormed.cpp
+)
+target_include_directories(translation_text_test PRIVATE ${CMAKE_SOURCE_DIR}/src ${GUMBO_INCLUDE_DIRS})
+target_link_libraries(translation_text_test PRIVATE Qt6::Core LibXml2::LibXml2 ${GUMBO_LIBRARIES})
+target_compile_features(translation_text_test PRIVATE cxx_std_17)
+add_test(NAME translation_text COMMAND translation_text_test)
+set_tests_properties(translation_text PROPERTIES TIMEOUT 30)
+
+add_executable(translation_batch_test translation_batch_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/Translation/TranslationBatch.cpp)
+target_include_directories(translation_batch_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(translation_batch_test PRIVATE Qt6::Core)
+target_compile_features(translation_batch_test PRIVATE cxx_std_17)
+add_test(NAME translation_batch COMMAND translation_batch_test)
+set_tests_properties(translation_batch PROPERTIES TIMEOUT 30)
+
 add_test(NAME xmlprocessor_legacy_golden
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/xmlprocessor_legacy_golden_test.py
 )
