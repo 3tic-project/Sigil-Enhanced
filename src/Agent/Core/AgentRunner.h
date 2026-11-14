@@ -55,7 +55,7 @@ public:
     void setMaxToolCalls(int calls);
     AgentRunState state() const;
 
-    AgentRunResult runTurn(const QString &user_text, const QStringList &handles = QStringList());
+    AgentRunResult runTurn(const QString &user_text, const QStringList &handles = QStringList(), bool background = false);
 
 private:
     class SessionSink : public ModelStreamSink

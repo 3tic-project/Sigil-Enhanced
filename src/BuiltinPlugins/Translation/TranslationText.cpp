@@ -4,6 +4,7 @@
 #include <memory>
 #include <QCryptographicHash>
 #include <QRegularExpression>
+#include <QDomDocument>
 #include <QSet>
 
 #include "BookManipulation/XmlWellFormed.h"
@@ -298,8 +299,42 @@ QString normalizedTranslation(const QString &source, QString text)
     return text;
 }
 
+static TextResult ncxText(const QString &source, QDomDocument *document, QList<QDomElement> *labels)
+{
+    TextResult result; result.ncx = true;
+    QString error; int line = 0, column = 0;
+    if (!document->setContent(source, true, &error, &line, &column)) { result.error = error; return result; }
+    const auto visit = [&](auto &&self, const QDomNode &node) -> void {
+        const auto element = node.toElement();
+        if (element.localName() == "text" && element.parentNode().toElement().localName() == "navLabel") {
+            Paragraph paragraph; bool translated = false;
+            for (auto child = node.firstChild(); !child.isNull(); child = child.nextSibling()) {
+                if (child.isComment() && child.nodeValue() == "sigil-translation") { translated = true; continue; }
+                if (child.isText() || child.isCDATASection()) {
+                    if (translated) paragraph.translation += child.nodeValue(); else paragraph.text += child.nodeValue();
+                }
+            }
+            paragraph.text = paragraph.text.trimmed();
+            if (paragraph.text.isEmpty()) return;
+            if (paragraph.translation.startsWith(" / ")) paragraph.translation.remove(0, 3);
+            paragraph.translation = paragraph.translation.trimmed(); paragraph.toc = true;
+            const QByteArray identity = paragraph.text.toUtf8() + QByteArray::number(result.paragraphs.size());
+            paragraph.sourceKey = QCryptographicHash::hash(identity, QCryptographicHash::Sha256);
+            result.paragraphs.append(paragraph); labels->append(element);
+        }
+        for (auto child = node.firstChild(); !child.isNull(); child = child.nextSibling()) self(self, child);
+    };
+    visit(visit, document->documentElement()); return result;
+}
+
 TextResult extract(const QString &xhtml)
 {
+    static const QRegularExpression ncxRoot(QStringLiteral("<(?:[A-Za-z_][\\w.-]*:)?ncx(?:\\s|>)"));
+    if (ncxRoot.match(xhtml.left(8192)).hasMatch()) {
+        QDomDocument document; QList<QDomElement> labels;
+        const auto parsed = ncxText(xhtml, &document, &labels);
+        if (document.documentElement().localName() == "ncx") return parsed;
+    }
     TextResult result;
     const auto valid = XmlWellFormed::Check(xhtml);
     if (valid.line >= 0) { result.error = valid.message; return result; }
@@ -316,12 +351,41 @@ TextResult extract(const QString &xhtml)
     return result;
 }
 
-WriteResult writePairs(const QString &xhtml, const QList<Replacement> &items, const QString &language, const TextResult *prepared)
+WriteResult writePairs(const QString &xhtml, const QList<Replacement> &items, const QString &language, const TextResult *prepared, double spacing)
 {
     WriteResult result;
     result.text = xhtml;
     const TextResult current = prepared ? *prepared : extract(xhtml);
     if (!current.error.isEmpty()) { result.error = current.error; return result; }
+    if (current.ncx) {
+        QDomDocument document; QList<QDomElement> labels;
+        const auto parsed = ncxText(xhtml, &document, &labels);
+        if (!parsed.error.isEmpty()) { result.error = parsed.error; return result; }
+        QSet<int> seen;
+        for (const auto &item : items) {
+            if (item.index < 0 || item.index >= parsed.paragraphs.size() || seen.contains(item.index)
+                || parsed.paragraphs.at(item.index).sourceKey != item.expectedSource
+                || parsed.paragraphs.at(item.index).translation != item.expectedTranslation
+                || item.text.trimmed().isEmpty() || item.text.contains(QChar(0))) { result.conflicts.append(item.index); continue; }
+            seen.insert(item.index); auto label = labels.at(item.index);
+            bool generated = false;
+            for (auto child = label.firstChild(); !child.isNull();) {
+                const auto next = child.nextSibling();
+                if (child.isComment() && child.nodeValue() == "sigil-translation") generated = true;
+                if (generated) label.removeChild(child);
+                child = next;
+            }
+            label.appendChild(document.createComment("sigil-translation"));
+            label.appendChild(document.createTextNode(QStringLiteral(" / ") + normalizedTranslation(parsed.paragraphs.at(item.index).text, item.text)));
+            result.applied.append(item.index);
+        }
+        if (!result.applied.isEmpty()) {
+            result.text = document.toString(0);
+            const auto valid = XmlWellFormed::Check(result.text);
+            if (valid.line >= 0) { result.error = valid.message; result.applied.clear(); }
+        }
+        return result;
+    }
     struct Edit { int start; int end; QByteArray bytes; };
     QList<Edit> edits;
     QSet<int> seen;
@@ -358,9 +422,9 @@ WriteResult writePairs(const QString &xhtml, const QList<Replacement> &items, co
         if (!match.hasMatch()) { result.error = QStringLiteral("XHTML head is missing"); result.applied.clear(); return result; }
         next.insert(match.capturedStart(), QStringLiteral(
             "<style type=\"text/css\" id=\"sigil-translation-style\">\n"
-            ".se-translation { line-height: 1.65; margin-bottom: 1rem; }\n"
+            ".se-translation { line-height: 1.65; margin-bottom: %1rem; }\n"
             "span.se-translation { display: block; }\n"
-            "span.se-toc-translation { display: inline; margin: 0; }\n</style>\n"));
+            "span.se-toc-translation { display: inline; margin: 0; }\n</style>\n").arg(QString::number(qBound(0.0, spacing, 4.0), 'f', 2)));
     }
     const auto valid = XmlWellFormed::Check(next);
     if (valid.line >= 0) { result.error = valid.message; result.applied.clear(); return result; }

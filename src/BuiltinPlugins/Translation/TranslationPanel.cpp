@@ -12,6 +12,7 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSpinBox>
+#include <QDoubleSpinBox>
 #include <QTabWidget>
 #include <QTextDocument>
 #include <QTextBrowser>
@@ -46,6 +47,15 @@ TranslationPanel::TranslationPanel(TranslationController *controller, SigilAgent
     form->addRow(tr("范围"), m_scope); form->addRow(tr("翻译模型"), m_model);
     form->addRow(tr("翻译思考"), m_thinking); form->addRow(tr("并发"), m_concurrency); form->addRow(tr("格式"), m_preset);
     layout->addLayout(form);
+    auto *advancedToggle = new QPushButton(tr("更多翻译设置"), content); advancedToggle->setCheckable(true);
+    auto *advanced = new QWidget(content); auto *advancedForm = new QFormLayout(advanced);
+    m_batch = new QSpinBox(advanced); m_batch->setObjectName("translationBatchCharacters"); m_batch->setRange(0, 4500); m_batch->setSingleStep(500);
+    m_batch->setSpecialValueText(tr("自动调整"));
+    m_spacing = new QDoubleSpinBox(advanced); m_spacing->setObjectName("translationSpacing"); m_spacing->setRange(0, 4); m_spacing->setSingleStep(.25); m_spacing->setSuffix(" rem");
+    m_reviewAgent = new QCheckBox(tr("使用 Agent 模型校正"), advanced); m_reviewAgent->setObjectName("translationReviewWithAgent");
+    advancedForm->addRow(tr("翻译目标字数"), m_batch); advancedForm->addRow(tr("新译文段间距"), m_spacing); advancedForm->addRow(m_reviewAgent);
+    layout->addWidget(advancedToggle); layout->addWidget(advanced); advanced->hide();
+    connect(advancedToggle, &QPushButton::toggled, advanced, &QWidget::setVisible);
     auto *settings = new QPushButton(tr("Agent 连接设置…"), content);
     layout->addWidget(settings);
     m_scan = new QCheckBox(tr("先扫描全文、聚合人物术语与记忆"), content); m_scan->setChecked(true);
@@ -99,6 +109,9 @@ TranslationPanel::TranslationPanel(TranslationController *controller, SigilAgent
     connect(m_model, &QComboBox::currentTextChanged, this, [this]() { if (!m_loading) { updateThinking(); saveOptions(); } });
     connect(m_thinking, &QComboBox::currentIndexChanged, this, [this]() { if (!m_loading) saveOptions(); });
     connect(m_concurrency, &QSpinBox::valueChanged, this, [this]() { if (!m_loading) saveOptions(); });
+    connect(m_batch, &QSpinBox::valueChanged, this, [this]() { if (!m_loading) saveOptions(); });
+    connect(m_spacing, &QDoubleSpinBox::valueChanged, this, [this]() { if (!m_loading) saveOptions(); });
+    connect(m_reviewAgent, &QCheckBox::toggled, this, [this]() { if (!m_loading) saveOptions(); });
     connect(controller, &TranslationController::changed, this, [this]() {
         if (m_refreshPending) return;
         m_refreshPending = true;
@@ -119,6 +132,8 @@ void TranslationPanel::refreshModels()
     const int index = m_model->findData(settings.translationModel());
     if (index >= 0) m_model->setCurrentIndex(index); else m_model->setEditText(settings.translationModel());
     m_concurrency->setValue(settings.translationConcurrency());
+    m_batch->setValue(settings.translationBatchCharacters()); m_spacing->setValue(settings.translationSpacing());
+    m_reviewAgent->setChecked(settings.translationReviewWithAgent());
     updateThinking();
     m_loading = false;
 }
@@ -143,6 +158,8 @@ void TranslationPanel::saveOptions()
     SigilAgent::AgentSettings settings;
     settings.setTranslationModel(m_model->currentIndex() == 0 && m_model->currentText() == m_model->itemText(0) ? QString() : m_model->currentText());
     settings.setTranslationThinking(m_thinking->currentData().toString()); settings.setTranslationConcurrency(m_concurrency->value());
+    settings.setTranslationBatchCharacters(m_batch->value()); settings.setTranslationSpacing(m_spacing->value());
+    settings.setTranslationReviewWithAgent(m_reviewAgent->isChecked());
 }
 
 void TranslationPanel::start()
@@ -196,15 +213,21 @@ void TranslationPanel::refresh()
 {
     const auto state = m_controller->status();
     const QString name = state.value("state").toString();
+    const QHash<QString, QString> labels {{"idle", tr("待开始")}, {"ready", tr("已准备")}, {"running", tr("进行中")},
+        {"paused", tr("已暂停")}, {"stopped", tr("已停止")}, {"completed", tr("已完成")}, {"partial", tr("部分完成")},
+        {"scan", tr("扫描")}, {"aggregate", tr("整理术语")}, {"translate", tr("翻译")}, {"review", tr("校正")}, {"format", tr("格式整理")}};
     m_start->setEnabled(!m_controller->running()); m_scope->setEnabled(!m_controller->running());
     m_pause->setEnabled(m_controller->running()); m_stop->setEnabled(m_controller->running());
     m_pause->setText(name == "paused" ? tr("继续") : tr("暂停"));
     m_progress->setText(tr("%1 · %2\n扫描 %3/%4 · 已译 %5 · 校正 %6 · 失败 %7\n请求 %8 · 在途 %9 · 输入/输出 token %10/%11 · 本地复用 %12\n用量未完整返回 %13 次 · 供应商缓存输入 %14 token")
-        .arg(name, state.value("phase").toString()).arg(state.value("scanned").toInt()).arg(state.value("paragraphs").toInt())
+        .arg(labels.value(name, name), labels.value(state.value("phase").toString())).arg(state.value("scanned").toInt()).arg(state.value("paragraphs").toInt())
         .arg(state.value("translated").toInt()).arg(state.value("reviewed").toInt()).arg(state.value("failed").toInt())
         .arg(state.value("requests").toInt()).arg(state.value("in_flight").toInt())
         .arg(state.value("input_tokens").toInteger()).arg(state.value("output_tokens").toInteger()).arg(state.value("local_cache_hits").toInt())
         .arg(state.value("unknown_usage_requests").toInt()).arg(state.value("cached_input_tokens").toInteger()));
+    m_progress->setToolTip(tr("请求延迟 P50/P95：%1/%2 ms；资源缓存命中 %3，术语缓存命中 %4。当前翻译目标 %5 字符。")
+        .arg(state.value("request_latency_p50_ms").toInteger()).arg(state.value("request_latency_p95_ms").toInteger())
+        .arg(state.value("resource_cache_hits").toInt()).arg(state.value("term_cache_hits").toInt()).arg(state.value("translation_target_characters").toInt()));
     const QString id = m_controller->contextId();
     if (id.isEmpty() && !m_contextId.isEmpty()) { m_terms->clear(); m_memory->clear(); m_plan->clear(); }
     m_contextId = id;

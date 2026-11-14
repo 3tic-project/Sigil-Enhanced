@@ -24,6 +24,7 @@ class QLabel;
 class QLineEdit;
 class QPushButton;
 class QSpinBox;
+class QDoubleSpinBox;
 
 namespace SigilAgent
 {
@@ -51,6 +52,8 @@ private:
     void setConnectionControlsEnabled(bool enabled);
     void fillModelCombo();
     void updateModelInfo();
+    void updateTranslationOptions();
+    QString translationModelId() const;
     void rememberCurrentProvider();
     void applyStoredProvider(const QString &kind);
     QString selectedModelId() const;
@@ -75,6 +78,13 @@ private:
     QSpinBox *m_maxModelSteps = nullptr;
     QSpinBox *m_maxToolCalls = nullptr;
     QComboBox *m_effort = nullptr;
+    QComboBox *m_translationModel = nullptr;
+    QComboBox *m_translationThinking = nullptr;
+    QSpinBox *m_translationConcurrency = nullptr;
+    QSpinBox *m_translationBatch = nullptr;
+    QDoubleSpinBox *m_translationSpacing = nullptr;
+    QCheckBox *m_translationReviewAgent = nullptr;
+    QHash<QString, QString> m_translationModels;
 
     QString m_activeProvider;
     QHash<QString, QString> m_providerKeys;

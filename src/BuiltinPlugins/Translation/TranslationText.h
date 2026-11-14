@@ -28,6 +28,7 @@ struct Paragraph {
 struct TextResult {
     QList<Paragraph> paragraphs;
     QString error;
+    bool ncx = false;
 };
 
 struct Replacement {
@@ -46,7 +47,7 @@ struct WriteResult {
 
 TextResult extract(const QString &xhtml);
 WriteResult writePairs(const QString &xhtml, const QList<Replacement> &items,
-                       const QString &language = QStringLiteral("zh-Hans"), const TextResult *prepared = nullptr);
+                       const QString &language = QStringLiteral("zh-Hans"), const TextResult *prepared = nullptr, double spacing = 1.0);
 QString escapeText(const QString &text);
 QString normalizedTranslation(const QString &source, QString translation);
 

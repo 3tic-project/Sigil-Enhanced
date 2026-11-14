@@ -418,18 +418,18 @@ OpenAIProviderConfig AgentSettings::providerConfig() const
     return config;
 }
 
-QString AgentSettings::translationModel() const
+QString AgentSettings::translationModel(const QString &providerId) const
 {
     SettingsStore store;
     store.beginGroup(QLatin1String(groupName()));
-    return store.value(QStringLiteral("translation_model_") + provider()).toString();
+    return store.value(QStringLiteral("translation_model_") + (providerId.isEmpty() ? provider() : providerId)).toString();
 }
 
-void AgentSettings::setTranslationModel(const QString &model)
+void AgentSettings::setTranslationModel(const QString &model, const QString &providerId)
 {
     SettingsStore store;
     store.beginGroup(QLatin1String(groupName()));
-    store.setValue(QStringLiteral("translation_model_") + provider(), model.trimmed());
+    store.setValue(QStringLiteral("translation_model_") + (providerId.isEmpty() ? provider() : providerId), model.trimmed());
 }
 
 QString AgentSettings::translationThinking() const
@@ -492,6 +492,35 @@ OpenAIProviderConfig AgentSettings::translationProviderConfig() const
         config.thinking = true; config.reasoningEffort = thinking;
     } else if (selected.reasoningMandatory) config.thinking = true;
     return config;
+}
+
+int AgentSettings::translationBatchCharacters() const
+{
+    SettingsStore store; store.beginGroup(QLatin1String(groupName()));
+    const int value = store.value("translation_batch_characters", 0).toInt();
+    return value == 0 ? 0 : qBound(500, value, 4500);
+}
+void AgentSettings::setTranslationBatchCharacters(int value)
+{
+    SettingsStore store; store.beginGroup(QLatin1String(groupName()));
+    store.setValue("translation_batch_characters", value == 0 ? 0 : qBound(500, value, 4500));
+}
+bool AgentSettings::translationReviewWithAgent() const
+{
+    SettingsStore store; store.beginGroup(QLatin1String(groupName()));
+    return store.value("translation_review_with_agent", false).toBool();
+}
+void AgentSettings::setTranslationReviewWithAgent(bool value)
+{
+    SettingsStore store; store.beginGroup(QLatin1String(groupName())); store.setValue("translation_review_with_agent", value);
+}
+double AgentSettings::translationSpacing() const
+{
+    SettingsStore store; store.beginGroup(QLatin1String(groupName())); return qBound(0.0, store.value("translation_spacing", 1.0).toDouble(), 4.0);
+}
+void AgentSettings::setTranslationSpacing(double value)
+{
+    SettingsStore store; store.beginGroup(QLatin1String(groupName())); store.setValue("translation_spacing", qBound(0.0, value, 4.0));
 }
 
 bool AgentSettings::looksLikeSecret(const QString &text)

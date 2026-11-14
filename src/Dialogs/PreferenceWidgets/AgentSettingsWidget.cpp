@@ -11,6 +11,8 @@
 #include <QCompleter>
 #include <QDateTime>
 #include <QFormLayout>
+#include <QGroupBox>
+#include <QDoubleSpinBox>
 #include <QFutureWatcher>
 #include <QHBoxLayout>
 #include <QJsonDocument>
@@ -137,6 +139,22 @@ AgentSettingsWidget::AgentSettingsWidget()
     layout->addRow(QString(), m_testConnection);
     layout->addRow(m_status);
     layout->addRow(note);
+    auto *translation = new QGroupBox(tr("翻译（复用上方连接）"), this);
+    auto *translationForm = new QFormLayout(translation);
+    m_translationModel = new QComboBox(translation); m_translationModel->setObjectName("agentTranslationModel"); m_translationModel->setEditable(true);
+    m_translationThinking = new QComboBox(translation); m_translationThinking->setObjectName("agentTranslationThinking");
+    m_translationConcurrency = new QSpinBox(translation); m_translationConcurrency->setObjectName("agentTranslationConcurrency"); m_translationConcurrency->setRange(1, 8);
+    m_translationBatch = new QSpinBox(translation); m_translationBatch->setObjectName("agentTranslationBatchCharacters"); m_translationBatch->setRange(0, 4500); m_translationBatch->setSingleStep(500); m_translationBatch->setSpecialValueText(tr("自动调整"));
+    m_translationSpacing = new QDoubleSpinBox(translation); m_translationSpacing->setObjectName("agentTranslationSpacing"); m_translationSpacing->setRange(0, 4); m_translationSpacing->setSingleStep(.25); m_translationSpacing->setSuffix(" rem");
+    m_translationReviewAgent = new QCheckBox(tr("使用 Agent 模型校正"), translation); m_translationReviewAgent->setObjectName("agentTranslationReviewWithAgent");
+    translationForm->addRow(tr("翻译模型"), m_translationModel); translationForm->addRow(tr("翻译思考"), m_translationThinking);
+    translationForm->addRow(tr("并发"), m_translationConcurrency); translationForm->addRow(tr("批次目标字数"), m_translationBatch);
+    translationForm->addRow(tr("新译文段间距"), m_translationSpacing); translationForm->addRow(m_translationReviewAgent);
+    layout->addRow(translation);
+    connect(m_translationModel, &QComboBox::currentTextChanged, this, [this]() {
+        if (m_loading) return;
+        m_translationModels[m_activeProvider] = translationModelId(); updateTranslationOptions();
+    });
 
     connect(m_provider, &QComboBox::currentIndexChanged, this, [this](int) { onProviderChanged(); });
     connect(m_refreshModels, &QPushButton::clicked, this, [this]() { refreshModels(); });
@@ -183,6 +201,7 @@ QString AgentSettingsWidget::currentConnectionFingerprint() const
 
 void AgentSettingsWidget::rememberCurrentProvider()
 {
+    m_translationModels.insert(m_activeProvider, translationModelId());
     if (m_activeProvider.isEmpty()) return;
     m_providerKeys.insert(m_activeProvider, m_apiKey->text());
     m_providerModels.insert(m_activeProvider, selectedModelId());
@@ -202,6 +221,31 @@ void AgentSettingsWidget::applyStoredProvider(const QString &kind)
     m_baseUrl->setPlaceholderText(kind == QLatin1String("custom")
         ? tr("Full Chat Completions URL or API base")
         : preset.apiBase + QStringLiteral("/chat/completions"));
+    const QSignalBlocker blocker(m_translationModel);
+    m_translationModel->clear(); m_translationModel->addItem(tr("沿用 Agent 模型"), QString());
+    const QString selected = m_translationModels.value(kind);
+    if (!selected.isEmpty()) m_translationModel->setEditText(selected);
+}
+
+QString AgentSettingsWidget::translationModelId() const
+{
+    return m_translationModel->currentIndex() == 0 && m_translationModel->currentText() == m_translationModel->itemText(0)
+        ? QString() : m_translationModel->currentText().trimmed();
+}
+
+void AgentSettingsWidget::updateTranslationOptions()
+{
+    const QSignalBlocker modelBlock(m_translationModel), thinkingBlock(m_translationThinking);
+    const QString selected = translationModelId(), previous = m_translationThinking->currentData().toString();
+    m_translationModel->clear(); m_translationModel->addItem(tr("沿用 Agent 模型"), QString());
+    for (const auto &model : m_models) m_translationModel->addItem(model.id, model.id);
+    const int modelIndex = m_translationModel->findData(selected);
+    if (modelIndex >= 0) m_translationModel->setCurrentIndex(modelIndex); else m_translationModel->setEditText(selected);
+    m_translationThinking->clear(); m_translationThinking->addItem(tr("自动：优先关闭思考"), "auto"); m_translationThinking->addItem(tr("沿用 Agent 思考"), "inherit");
+    const QString id = selected.isEmpty() ? selectedModelId() : selected;
+    for (const auto &model : m_models) if (model.id == id)
+        for (const auto &level : model.supportedReasoningEfforts) if (level != "none") m_translationThinking->addItem(level, level);
+    m_translationThinking->setCurrentIndex(qMax(0, m_translationThinking->findData(previous)));
 }
 
 QString AgentSettingsWidget::selectedModelId() const
@@ -265,6 +309,7 @@ void AgentSettingsWidget::fillModelCombo()
 
 void AgentSettingsWidget::updateModelInfo()
 {
+    updateTranslationOptions();
     const CatalogModel model = selectedCatalogModel();
     if (model.id.isEmpty()) {
         m_modelInfo->setText(tr("Refresh models to load ids and parameters from the server, or type an id."));
@@ -518,6 +563,9 @@ void AgentSettingsWidget::readSettings()
     m_loading = true;
     SigilAgent::AgentSettings settings;
     m_successfulConnectionFingerprint = settings.connectionTestFingerprint();
+    for (const auto &preset : SigilAgent::allProviderPresets()) m_translationModels[preset.id] = settings.translationModel(preset.id);
+    m_translationConcurrency->setValue(settings.translationConcurrency()); m_translationBatch->setValue(settings.translationBatchCharacters());
+    m_translationSpacing->setValue(settings.translationSpacing()); m_translationReviewAgent->setChecked(settings.translationReviewWithAgent());
     m_successfulConnectionAtMs = settings.connectionTestSucceededAtMs();
     const QJsonObject secrets = settings.providerSecrets();
     const QJsonObject models = settings.providerModels();
@@ -574,6 +622,8 @@ void AgentSettingsWidget::readSettings()
         else m_model->setEditText(current_model);
     }
     m_status->clear();
+    updateTranslationOptions();
+    m_translationThinking->setCurrentIndex(qMax(0, m_translationThinking->findData(settings.translationThinking())));
     m_status->setProperty("connectionTestState", QStringLiteral("not_tested"));
     m_loading = false;
     showRememberedConnectionTest();
@@ -596,6 +646,10 @@ PreferencesWidget::ResultActions AgentSettingsWidget::saveSettings()
     settings.setMaxToolCalls(m_maxToolCalls->value());
     settings.setReasoningEffort(m_effort->currentText());
     settings.setCatalogJson(m_catalogJson);
+    for (auto it = m_translationModels.begin(); it != m_translationModels.end(); ++it) settings.setTranslationModel(it.value(), it.key());
+    settings.setTranslationThinking(m_translationThinking->currentData().toString()); settings.setTranslationConcurrency(m_translationConcurrency->value());
+    settings.setTranslationBatchCharacters(m_translationBatch->value()); settings.setTranslationSpacing(m_translationSpacing->value());
+    settings.setTranslationReviewWithAgent(m_translationReviewAgent->isChecked());
     if (m_successfulConnectionAtMs > 0
         && m_successfulConnectionFingerprint == currentConnectionFingerprint()) {
         settings.setConnectionTestVerification(m_successfulConnectionFingerprint,

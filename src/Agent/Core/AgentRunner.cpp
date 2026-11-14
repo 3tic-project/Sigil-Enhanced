@@ -738,7 +738,7 @@ ToolResult AgentRunner::executeTool(const ToolCall &call)
     return result;
 }
 
-AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList &handles)
+AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList &handles, bool background)
 {
     AgentRunResult result;
     if (!m_session || !m_provider || !m_tools) {
@@ -773,6 +773,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
     setState(AgentRunState::PreparingContext);
     m_session->append(AgentEventType::UserMessage, QJsonObject {
         { QStringLiteral("text"), user_text },
+        { QStringLiteral("source"), background ? QStringLiteral("background") : QStringLiteral("user") },
         { QStringLiteral("handles"), QJsonArray::fromStringList(handles) }
     });
     if (m_workspace) {

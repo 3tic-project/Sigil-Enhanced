@@ -8,7 +8,7 @@ add_executable(translation_text_test
     ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlWellFormed.cpp
 )
 target_include_directories(translation_text_test PRIVATE ${CMAKE_SOURCE_DIR}/src ${GUMBO_INCLUDE_DIRS})
-target_link_libraries(translation_text_test PRIVATE Qt6::Core LibXml2::LibXml2 ${GUMBO_LIBRARIES})
+target_link_libraries(translation_text_test PRIVATE Qt6::Core Qt6::Xml LibXml2::LibXml2 ${GUMBO_LIBRARIES})
 target_compile_features(translation_text_test PRIVATE cxx_std_17)
 add_test(NAME translation_text COMMAND translation_text_test)
 set_tests_properties(translation_text PROPERTIES TIMEOUT 30)
@@ -49,6 +49,8 @@ target_include_directories(translation_controller_test PRIVATE ${CMAKE_SOURCE_DI
 target_link_libraries(translation_controller_test PRIVATE Qt6::Concurrent Qt6::Core Qt6::Network Qt6::Gui Qt6::Xml LibXml2::LibXml2 ${GUMBO_LIBRARIES})
 target_compile_features(translation_controller_test PRIVATE cxx_std_17)
 add_test(NAME translation_controller COMMAND translation_controller_test)
+add_test(NAME translation_benchmark COMMAND translation_controller_test --benchmark)
+set_tests_properties(translation_benchmark PROPERTIES TIMEOUT 30)
 set_tests_properties(translation_controller PROPERTIES TIMEOUT 30)
 foreach(translation_target translation_text_test translation_batch_test translation_controller_test)
     target_compile_definitions(${translation_target} PRIVATE QT_USE_QSTRINGBUILDER)

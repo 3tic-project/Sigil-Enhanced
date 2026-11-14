@@ -6574,11 +6574,15 @@ void MainWindow::AgentSendRequested(const QString &text, const QStringList &hand
 
 void MainWindow::AgentStopRequested()
 {
+    m_TranslationAgentNotice = {};
+    m_TranslationAgentSession.clear();
     if (m_AgentController) m_AgentController->stop();
 }
 
 void MainWindow::AgentNewSessionRequested()
 {
+    m_TranslationAgentNotice = {};
+    m_TranslationAgentSession.clear();
     if (m_AgentController) m_AgentController->newSession();
 }
 
@@ -6667,6 +6671,7 @@ void MainWindow::AgentExportDebugLogRequested()
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
+    m_TranslationAgentNotice = {}; m_TranslationAgentSession.clear();
     if (m_TranslationController) m_TranslationController->reset();
     if (m_AgentController && m_AgentController->isRunning()) {
         m_AgentController->stop(SigilAgent::AgentCancellationReason::BookChanged);

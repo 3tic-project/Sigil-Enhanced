@@ -6,6 +6,10 @@
 #include <QJsonDocument>
 #include <QEventLoop>
 #include <QPushButton>
+#include <QComboBox>
+#include <QSpinBox>
+#include <QDoubleSpinBox>
+#include <QCheckBox>
 #include <QResource>
 #include <QTextCursor>
 #include <QThread>
@@ -14,6 +18,8 @@
 #include <stdexcept>
 #include "Agent/Persistence/AgentSettings.h"
 #include "Agent/Model/AgentModelCatalog.h"
+#include "Agent/UI/AgentDock.h"
+#include "Dialogs/PreferenceWidgets/AgentSettingsWidget.h"
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "Exporters/ExportEPUB.h"
@@ -79,7 +85,18 @@ int main(int argc, char **argv)
         model.setProvider("custom"); model.setBaseUrl(QString::fromLocal8Bit(argv[3])); model.setApiKey("synthetic-loopback-key");
         model.setModel("test-planner"); model.setThinkingEnabled(false); model.setTranslationModel("test-translator");
         model.setTranslationThinking("auto"); model.setTranslationConcurrency(4);
+        model.setDefaultMode(SigilAgent::AgentMode::Auto); model.setModelSupportsTools(true);
         model.setCatalogJson("{}");
+        {
+            AgentSettingsWidget preferences;
+            auto *batch = preferences.findChild<QSpinBox *>("agentTranslationBatchCharacters");
+            auto *spacing = preferences.findChild<QDoubleSpinBox *>("agentTranslationSpacing");
+            auto *review = preferences.findChild<QCheckBox *>("agentTranslationReviewWithAgent");
+            require(batch && spacing && review && preferences.findChild<QComboBox *>("agentTranslationModel"), "Translation preferences missing");
+            batch->setValue(3500); spacing->setValue(1.5); review->setChecked(true); preferences.saveSettings();
+            require(model.translationBatchCharacters() == 3500 && model.translationSpacing() == 1.5 && model.translationReviewWithAgent(), "Translation preferences did not save shared settings");
+            model.setTranslationBatchCharacters(0); model.setTranslationSpacing(1); model.setTranslationReviewWithAgent(false);
+        }
         MainWindow window(source);
         auto *controller = window.findChild<BuiltinPlugins::Translation::TranslationController *>();
         auto *panel = window.findChild<BuiltinPlugins::Translation::TranslationPanel *>();
@@ -116,6 +133,23 @@ int main(int argc, char **argv)
         const QString output = source + QStringLiteral(".translated.epub");
         ExportEPUB(output, window.GetCurrentBook()).WriteBook();
         {
+            MainWindow agentWindow(source);
+            auto *agentDock = agentWindow.findChild<SigilAgent::AgentDock *>();
+            auto *native = agentWindow.findChild<BuiltinPlugins::Translation::TranslationController *>();
+            require(agentDock && native, "Agent window missing native controller");
+            agentDock->setMode(SigilAgent::AgentMode::Auto);
+            agentDock->sendRequested(QStringLiteral("请全文翻译为中文双语，最后保存词表到 Misc 并报告完成。"), {});
+            auto hasGlossary = [&]() {
+                for (auto *text : agentWindow.GetCurrentBook()->GetFolderKeeper()->GetResourceTypeList<TextResource>(true))
+                    if (text->GetRelativePath().endsWith("translation-glossary.json")) return true;
+                return false;
+            };
+            require(waitFor([&]() { return !native->running() && hasGlossary(); }), "Agent failed to continue and save glossary after background completion");
+            require(native->status().value("translated") == native->status().value("paragraphs"), "Agent workflow left missing translations");
+            agentWindow.GetCurrentBook()->SetModified(false);
+            require(agentWindow.close(), "Agent test window did not close normally");
+        }
+        {
             MainWindow reopened(output);
             auto *newController = reopened.findChild<BuiltinPlugins::Translation::TranslationController *>();
             require(newController && newController->contextId().isEmpty(), "New window unexpectedly restored a translation task");
@@ -124,6 +158,7 @@ int main(int argc, char **argv)
             savedGlossary->InitialLoad();
             require(savedGlossary->GetText().contains("sigil-translation-glossary-v1"), "Saved glossary content missing after reopening EPUB");
             reopened.GetCurrentBook()->SetModified(false);
+            require(reopened.close(), "Reopened test window did not close normally");
         }
         std::cout << "Native translation window/HTTP integration passed: " << requests << " requests, "
                   << status.value("paragraphs").toInt() << " reading paragraphs\n";

@@ -21,6 +21,9 @@ struct RequestConfiguration {
     qint64 agentContext = 32768;
     qint64 translatorContext = 32768;
     int concurrency = 4;
+    int translationCharacters = 0; // 0: automatic growth/shrink within 4500.
+    bool reviewWithAgent = false;
+    double spacing = 1.0;
 };
 
 class TranslationController : public QObject
@@ -77,7 +80,21 @@ private:
         quint64 token = 0;
         quint64 contextRevision = 0;
         QByteArray cacheKey;
+        qint64 startedAt = 0;
+        int maxOutputTokens = 0;
+        qint64 outputTokens = -1;
     };
+    struct Assembly {
+        QList<BatchText> items;
+        QStringList results;
+        QVector<bool> complete;
+        QString expectedTranslation;
+        bool applied = false;
+        QString error;
+    };
+    struct ParsedResource { QByteArray digest; TextResult document; };
+    TextResult parsedResource(const QString &id);
+    void invalidateContext();
     void beginPhase();
     void dispatch();
     void receive(Work work, SigilAgent::ModelTurn turn);
@@ -107,10 +124,13 @@ private:
     QList<Unit> m_units;
     QList<Work> m_queue;
     QHash<QString, int> m_resourceCounts;
+    QHash<int, Assembly> m_assemblies;
+    QCache<QString, ParsedResource> m_parsedResources {16384}; // KiB, window local.
     QStringList m_errors;
     QStringList m_prepareErrors;
     QThreadPool m_pool;
     QCache<QByteArray, ParsedBatch> m_cache {64};
+    QCache<QByteArray, QJsonArray> m_termMatches {256};
     Configuration m_configuration;
     Completion m_completion;
     Format m_format;
@@ -137,6 +157,13 @@ private:
     int m_runtimeConcurrency = 8;
     qint64 m_cooldownUntil = 0;
     qint64 m_requestBytes = 0;
+    int m_parseHits = 0;
+    int m_termHits = 0;
+    int m_targetCharacters = 3000;
+    int m_successStreak = 0;
+    QList<qint64> m_latencies;
+    void adjustBatches(int target);
+    QHash<QString, QStringList> m_sectionMemory;
 };
 
 } // namespace BuiltinPlugins::Translation

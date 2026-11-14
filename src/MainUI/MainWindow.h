@@ -30,6 +30,7 @@
 #include <memory>
 #include <QSharedPointer>
 #include <QMainWindow>
+#include <QJsonObject>
 #include <QPointer>
 
 #include "ui_main.h"
@@ -893,6 +894,7 @@ private:
     void CreateRecentFilesActions();
     void CreateAgentDock();
     void CreateTranslationPanel();
+    void ContinueTranslationAgent();
     void ConfigureAgentProvider();
     void AgentSendRequested(const QString &text, const QStringList &handles);
     void AgentStopRequested();
@@ -1071,6 +1073,10 @@ private:
     std::unique_ptr<SigilAgent::AgentLocationSource> m_AgentLocationSource;
     std::unique_ptr<BuiltinPlugins::Translation::TranslationController> m_TranslationController;
     BuiltinPlugins::Translation::TranslationPanel *m_TranslationPanel = nullptr;
+    QString m_TranslationAgentSession;
+    QString m_TranslationAgentContext;
+    QJsonObject m_TranslationAgentNotice;
+    int m_TranslationAgentContinuations = 0;
     bool m_CloseAfterAgentRun = false;
     bool m_AgentProviderReconfigurePending = false;
     QAction *m_DeveloperToolsAction;

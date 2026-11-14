@@ -335,6 +335,7 @@ QJsonObject SigilBookWorkspace::resourceJson(Resource *resource) const
         { QStringLiteral("book_path"), path },
         { QStringLiteral("media_type"), resource->GetMediaType() },
         { QStringLiteral("kind"), kindOf(resource) },
+        { QStringLiteral("is_nav"), m_book && resource == m_book->GetOPF()->GetNavResource() },
         { QStringLiteral("revision"), static_cast<qint64>(trackedRevision(resource)) },
         { QStringLiteral("text_length"), text ? liveText(text).size() : 0 }
     };

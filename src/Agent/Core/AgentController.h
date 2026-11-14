@@ -50,6 +50,7 @@ public:
     bool isRunning() const;
 
     AgentRunResult send(const QString &text, const QStringList &handles);
+    AgentRunResult continueAfterBackground(const QString &text, const QString &sessionId, const QString &bookSessionId);
     BookOpResult restoreTask(const QString &checkpointId,
                              const QString &expectedBookSessionId);
     void stop(AgentCancellationReason reason = AgentCancellationReason::UserStop);

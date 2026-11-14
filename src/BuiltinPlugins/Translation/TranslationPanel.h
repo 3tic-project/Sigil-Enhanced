@@ -10,6 +10,7 @@ class QLabel;
 class QPlainTextEdit;
 class QPushButton;
 class QSpinBox;
+class QDoubleSpinBox;
 class QTextBrowser;
 
 namespace SigilAgent { class IBookWorkspace; }
@@ -45,6 +46,9 @@ private:
     QComboBox *m_preset;
     QComboBox *m_misc;
     QSpinBox *m_concurrency;
+    QSpinBox *m_batch;
+    QDoubleSpinBox *m_spacing;
+    QCheckBox *m_reviewAgent;
     QCheckBox *m_scan;
     QCheckBox *m_review;
     QPushButton *m_start;

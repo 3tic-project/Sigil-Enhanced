@@ -19,6 +19,65 @@ int size(const QList<BatchText> &items, bool pair)
 }
 bool kana(QChar c) { return c.unicode() >= 0x30a0 && c.unicode() <= 0x30ff; }
 bool latin(QChar c) { return c.unicode() < 128 && c.isLetterOrNumber(); }
+
+QList<int> boundaries(const QString &text)
+{
+    QList<int> result;
+    for (int i = 0; i < text.size(); ++i) {
+        const QChar c = text.at(i);
+        if (QStringLiteral("。！？!?\n").contains(c) || (c == QLatin1Char('.') && (i + 1 == text.size() || text.at(i + 1).isSpace()))) {
+            int end = i + 1;
+            while (end < text.size() && (text.at(end).isSpace() || QStringLiteral("」』）”’\"").contains(text.at(end)))) ++end;
+            result.append(end); i = end - 1;
+        }
+    }
+    if (result.isEmpty() || result.last() != text.size()) result.append(text.size());
+    return result;
+}
+
+QStringList divide(const QString &text, int count)
+{
+    if (count == 1) return {text};
+    auto points = boundaries(text);
+    if (points.size() < count) {
+        // A long unpunctuated sentence may still have safe word boundaries.
+        for (int i = 1; i < text.size(); ++i) if (text.at(i - 1).isSpace()) points.append(i);
+        std::sort(points.begin(), points.end());
+        points.erase(std::unique(points.begin(), points.end()), points.end());
+    }
+    if (points.size() < count) return {};
+    QStringList result; int start = 0, first = 0;
+    for (int part = 0; part < count - 1; ++part) {
+        const int target = start + (text.size() - start) / (count - part);
+        int best = first;
+        for (int i = first; i <= points.size() - (count - part); ++i)
+            if (qAbs(points.at(i) - target) < qAbs(points.at(best) - target)) best = i;
+        result.append(text.mid(start, points.at(best) - start)); start = points.at(best); first = best + 1;
+    }
+    result.append(text.mid(start)); return result;
+}
+}
+
+QList<BatchText> splitParagraph(const BatchText &item, int maximumCharacters, bool pair)
+{
+    const int length = characters(item, pair);
+    if (length <= maximumCharacters) return {item};
+    const int initial = (length + maximumCharacters - 1) / maximumCharacters;
+    for (int count = initial; count <= qMin(initial * 3, 512); ++count) {
+        const auto sources = divide(item.source, count);
+        const auto translations = pair ? divide(item.translation, count) : QStringList {};
+        if (sources.size() != count || (pair && translations.size() != count)) continue;
+        QList<BatchText> result;
+        for (int i = 0; i < count; ++i) {
+            auto part = item; part.source = sources.at(i); if (pair) part.translation = translations.at(i);
+            part.fragment = i; part.fragments = count;
+            if (characters(part, pair) > maximumCharacters || part.source.trimmed().isEmpty()
+                || (pair && part.translation.trimmed().isEmpty())) { result.clear(); break; }
+            result.append(part);
+        }
+        if (!result.isEmpty()) return result;
+    }
+    return {};
 }
 
 QList<QList<BatchText>> makeBatches(const QList<BatchText> &items, const BatchLimits &limits, bool pair)
@@ -107,17 +166,87 @@ QJsonArray mergeTerms(const QJsonArray &existing, const QJsonArray &incoming)
     return result;
 }
 
+QList<QList<QJsonObject>> relatedTermGroups(const QJsonArray &terms, int maximum)
+{
+    // Only explicit aliases connect entries. A shared surname or substring does
+    // not establish identity. Keep connected candidates together across batches.
+    QVector<int> parent(terms.size());
+    for (int i = 0; i < parent.size(); ++i) parent[i] = i;
+    const auto root = [&](int i) { while (parent[i] != i) i = parent[i]; return i; };
+    QHash<QString, int> surfaces;
+    for (int i = 0; i < terms.size(); ++i) {
+        const auto term = terms.at(i).toObject();
+        QJsonArray names = term.value("aliases").toArray(); names.prepend(term.value("source"));
+        for (const auto &name : names) {
+            const auto surface = name.toString(); if (surface.isEmpty()) continue;
+            if (surfaces.contains(surface)) parent[root(i)] = root(surfaces.value(surface));
+            else surfaces.insert(surface, i);
+        }
+    }
+    QHash<int, QList<QJsonObject>> connected; QList<int> order;
+    for (int i = 0; i < terms.size(); ++i) {
+        const int key = root(i); if (!connected.contains(key)) order.append(key);
+        connected[key].append(terms.at(i).toObject());
+    }
+    QList<QList<QJsonObject>> result; QList<QJsonObject> group;
+    for (int key : order) {
+        const auto cluster = connected.value(key);
+        if (maximum <= 0) { result.append(cluster); continue; }
+        if (!group.isEmpty() && group.size() + cluster.size() > maximum) { result.append(group); group.clear(); }
+        for (const auto &term : cluster) {
+            if (group.size() >= maximum) { result.append(group); group.clear(); }
+            group.append(term);
+        }
+    }
+    if (!group.isEmpty()) result.append(group);
+    return result;
+}
+
+QJsonArray unifyAliases(const QJsonArray &terms)
+{
+    QHash<QString, QJsonObject> resolved;
+    for (const auto &cluster : relatedTermGroups(terms, 0)) {
+        QSet<QString> locked; QString target; int longest = -1;
+        QJsonArray names;
+        for (const auto &term : cluster) {
+            const QString source = term.value("source").toString(), value = term.value("target").toString();
+            if (!names.contains(source)) names.append(source);
+            for (const auto &alias : term.value("aliases").toArray()) if (!names.contains(alias)) names.append(alias);
+            if (term.value("locked").toBool() && !value.isEmpty()) locked.insert(value);
+            if (!value.isEmpty() && source.size() > longest) { target = value; longest = source.size(); }
+        }
+        if (locked.size() == 1) target = *locked.begin();
+        for (auto term : cluster) {
+            if (locked.size() <= 1) {
+                // Full names and nicknames may intentionally have different
+                // surface translations. Fill unresolved variants; a single
+                // explicit locked mapping takes precedence over model guesses.
+                if (!target.isEmpty() && (locked.size() == 1 || term.value("target").toString().isEmpty())) term["target"] = target;
+                QJsonArray aliases;
+                for (const auto &name : names) if (name != term.value("source")) aliases.append(name);
+                term["aliases"] = aliases;
+            }
+            resolved.insert(term.value("source").toString(), term);
+        }
+    }
+    QJsonArray result;
+    for (const auto &term : terms) result.append(resolved.value(term.toObject().value("source").toString()));
+    return result;
+}
+
 QJsonArray matchingTerms(const QJsonArray &terms, const QString &text)
 {
-    struct Entry { QString surface; QJsonObject term; };
+    struct Entry { QString surface; QJsonObject term; bool direct = false; };
     QList<Entry> entries;
     for (const auto &row : terms) {
         auto term = row.toObject();
         if (term.value(QStringLiteral("target")).toString().isEmpty()) continue;
-        entries.append({term.value(QStringLiteral("source")).toString(), term});
+        entries.append({term.value(QStringLiteral("source")).toString(), term, true});
         for (const auto &alias : term.value(QStringLiteral("aliases")).toArray()) entries.append({alias.toString(), term});
     }
-    std::stable_sort(entries.begin(), entries.end(), [](const Entry &a, const Entry &b) { return a.surface.size() > b.surface.size(); });
+    std::stable_sort(entries.begin(), entries.end(), [](const Entry &a, const Entry &b) {
+        return a.surface.size() == b.surface.size() ? a.direct && !b.direct : a.surface.size() > b.surface.size();
+    });
     QSet<int> occupied;
     QSet<QString> included;
     QJsonArray result;
@@ -157,23 +286,24 @@ QString systemPrompt(const QString &phase, const QString &language, const QStrin
     if (phase == QLatin1String("review")) return base + QStringLiteral(
         "校正全部原译对：忠实、漏译/重复、人物指代、术语和口吻。仅返回需要修改的完整段落，使用输入整数 n：{\"changes\":[{\"n\":1,\"text\":\"完整修订译文\"}]}。无需修改时返回 {\"changes\":[]}。不得改编号、拆分/合并段落或只返回修改片段。");
     return base + QStringLiteral(
-        "完整翻译每一 items 原段，保留口吻、标点和人物称呼，参考命中术语、读音、记忆与邻文。每段仅一份完整译文，禁止逐 XML 节点翻译或合并短对话。返回 {\"items\":[{\"n\":1,\"text\":\"完整译文\"}]}，整数 n 与输入严格对应，不遗漏、不重复；不翻译邻文。");
+        "完整翻译每一 items 原段，保留口吻、标点和人物称呼，参考命中术语、读音、记忆与邻文。part/parts 表示长段的连续分片，只译本片，宿主按序合回。每段仅一份完整译文，禁止逐 XML 节点翻译或合并短对话。返回 {\"items\":[{\"n\":1,\"text\":\"完整译文\"}]}，整数 n 与输入严格对应，不遗漏、不重复；不翻译邻文。");
 }
 
 QJsonObject batchPayload(const QString &phase, const QList<BatchText> &items, const QJsonArray &terms,
-                         const QString &memory, const QStringList &neighbors)
+                         const QString &memory, const QStringList &neighbors, bool termsAlreadyMatched)
 {
     QJsonArray rows;
     QString sources;
     for (int i = 0; i < items.size(); ++i) {
         const auto &item = items.at(i);
         QJsonObject row {{"n", i + 1}, {"source", item.source}};
+        if (item.fragment >= 0) { row["part"] = item.fragment + 1; row["parts"] = item.fragments; }
         if (!item.readings.isEmpty()) row[QStringLiteral("readings")] = item.readings;
         if (!item.section.isEmpty()) row[QStringLiteral("section")] = item.section;
         if (phase == QLatin1String("review")) row[QStringLiteral("translation")] = item.translation;
         rows.append(row); sources += item.source + QLatin1Char('\n');
     }
-    return {{"items", rows}, {"terms", phase == QLatin1String("aggregate") ? terms : matchingTerms(terms, sources)},
+    return {{"items", rows}, {"terms", phase == QLatin1String("aggregate") || termsAlreadyMatched ? terms : matchingTerms(terms, sources)},
             {"memory", memory.left(phase == QLatin1String("aggregate") ? 12000 : 2600)}, {"neighbors", QJsonArray::fromStringList(neighbors)}};
 }
 

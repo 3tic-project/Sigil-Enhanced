@@ -30,6 +30,10 @@ generate XHTML, or issue a patch per paragraph.
 4. The tool returns immediately and the native panel continues the work. Normal
    batches require no additional model turns or user confirmations. Do not
    poll in a loop or claim completion merely because the workflow started.
+   The host resumes this same conversation with a background completion notice.
+   Wait for that notice before final reporting or saving the completed glossary;
+   then finish the original user's remaining requests. Retry failed work at most
+   twice; never restart the already completed whole book.
 5. Use translation.revise for requested name/term corrections, and control for
    pause/resume/stop/retry. Do not patch sentences individually. Use context to
    inspect only the needed glossary/memory pages.

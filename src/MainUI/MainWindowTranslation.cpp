@@ -4,10 +4,12 @@
 #include <QJsonDocument>
 #include <QMenu>
 #include <QRegularExpression>
+#include <QTimer>
 #include "Agent/Core/AgentController.h"
 #include "Agent/Execution/SigilBookWorkspace.h"
 #include "Agent/Model/AgentModelCatalog.h"
 #include "Agent/Persistence/AgentSettings.h"
+#include "Agent/UI/AgentDock.h"
 #include "Agent/Tools/TranslationTools.h"
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
@@ -35,6 +37,8 @@ void MainWindow::CreateTranslationPanel()
         RequestConfiguration config;
         config.agent = settings.providerConfig(); config.translator = settings.translationProviderConfig();
         config.concurrency = settings.translationConcurrency();
+        config.translationCharacters = settings.translationBatchCharacters(); config.reviewWithAgent = settings.translationReviewWithAgent();
+        config.spacing = settings.translationSpacing();
         const auto catalog = SigilAgent::AgentModelCatalog::fromCacheJson(QJsonDocument::fromJson(settings.catalogJson().toUtf8()).object());
         config.agentContext = settings.modelContextLength() > 0 ? settings.modelContextLength() : 32768;
         if (config.translator.model == config.agent.model) config.translatorContext = config.agentContext;
@@ -147,8 +151,24 @@ void MainWindow::CreateTranslationPanel()
             m_ValidationResultsView->LoadResults(m_ValidationResultsView->validateXhtml());
         }
         UpdateAgentContext();
+        if (m_TranslationAgentContext == m_TranslationController->contextId() && !m_TranslationAgentSession.isEmpty()) {
+            m_TranslationAgentNotice = m_TranslationController->status();
+            QJsonArray problems, messages;
+            for (const auto &value : m_TranslationAgentNotice.value("problems").toArray()) { if (problems.size() == 5) break; problems.append(value); }
+            for (const auto &value : m_TranslationAgentNotice.value("messages").toArray()) { if (messages.size() == 3) break; messages.append(value); }
+            m_TranslationAgentNotice["problems"] = problems; m_TranslationAgentNotice["messages"] = messages;
+            QTimer::singleShot(0, this, &MainWindow::ContinueTranslationAgent);
+        }
     });
-    m_AgentController->setExtraTools([controller](SigilAgent::ToolRegistry *registry) { SigilAgent::registerTranslationTools(registry, controller); });
+    m_AgentController->setExtraTools([this, controller](SigilAgent::ToolRegistry *registry) {
+        SigilAgent::registerTranslationTools(registry, controller, [this, controller]() {
+            const QString session = m_AgentController->session()->id();
+            const auto turns = m_AgentController->session()->eventsOf(SigilAgent::AgentEventType::UserMessage);
+            const bool background = !turns.isEmpty() && turns.last().payload.value("source") == "background";
+            if (!background || m_TranslationAgentSession != session) m_TranslationAgentContinuations = 0;
+            m_TranslationAgentSession = session; m_TranslationAgentContext = controller->contextId();
+        });
+    });
     addDockWidget(Qt::RightDockWidgetArea, m_TranslationPanel);
     tabifyDockWidget(m_PreviewWindow, m_TranslationPanel);
     auto *action = ui.menuEnhancement->addAction(tr("翻译…"));
@@ -156,4 +176,24 @@ void MainWindow::CreateTranslationPanel()
     connect(action, &QAction::triggered, this, [this]() { m_TranslationPanel->refreshModels(); m_TranslationPanel->show(); m_TranslationPanel->raise(); });
     ui.menuView->addAction(m_TranslationPanel->toggleViewAction());
     m_TranslationPanel->hide();
+}
+
+void MainWindow::ContinueTranslationAgent()
+{
+    if (m_TranslationAgentNotice.isEmpty() || !m_TranslationController || !m_AgentController) return;
+    if (m_TranslationController->running()) { m_TranslationAgentNotice = {}; return; }
+    if (m_CloseAfterAgentRun || m_TranslationController->contextId() != m_TranslationAgentContext
+        || m_AgentController->session()->id() != m_TranslationAgentSession) { m_TranslationAgentNotice = {}; return; }
+    if (m_AgentController->isRunning()) { QTimer::singleShot(100, this, &MainWindow::ContinueTranslationAgent); return; }
+    const auto notice = m_TranslationAgentNotice; m_TranslationAgentNotice = {};
+    if (m_AgentController->cancellation()->isCancelled()) return;
+    const QString message = tr("后台翻译已结束。以下为宿主实际结果：%1\n请接续原用户目标：按需处理失败项（最多两次），仅在用户要求时保存词表，并报告实际完成/失败数量及书籍尚未保存。不要重新启动已完成的全书翻译。")
+        .arg(QString::fromUtf8(QJsonDocument(notice).toJson(QJsonDocument::Compact)));
+    if (++m_TranslationAgentContinuations > 3) {
+        m_AgentController->session()->append(SigilAgent::AgentEventType::AssistantMessage,
+            {{"content", tr("翻译后续处理已达到重试次数，请查看翻译面板中的剩余问题。")}, {"is_final", true}});
+        return;
+    }
+    m_AgentController->continueAfterBackground(message, m_TranslationAgentSession, m_AgentWorkspace->bookSessionId());
+    if (m_AgentDock && m_AgentController->runner()) m_AgentDock->setRunState(m_AgentController->runner()->state());
 }

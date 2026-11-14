@@ -176,6 +176,18 @@ AgentRunResult AgentController::send(const QString &text, const QStringList &han
     return result;
 }
 
+AgentRunResult AgentController::continueAfterBackground(const QString &text, const QString &sessionId, const QString &bookSessionId)
+{
+    if (isRunning() || m_session.id() != sessionId || !m_workspace || m_workspace->bookSessionId() != bookSessionId
+        || (m_mode != AgentMode::Auto && m_mode != AgentMode::Edit) || m_cancellation.isCancelled()) {
+        AgentRunResult result; result.state = AgentRunState::Cancelled; return result;
+    }
+    if (!m_runner) rebuildTools();
+    auto result = m_runner->runTurn(text, {}, true);
+    if (m_resetSessionAfterRun) resetSessionNow();
+    return result;
+}
+
 BookOpResult AgentController::restoreTask(const QString &checkpoint_id,
                                           const QString &expected_book_session_id)
 {

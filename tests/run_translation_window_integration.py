@@ -13,6 +13,13 @@ from run_opf_resource_integration import epub_fixture, run
 
 def fixture(scratch):
     path, source, members = epub_fixture(scratch)
+    # Navigation identity comes from OPF, independent of its filename.
+    source = source.replace("href='nav.xhtml'", "href='contents.xhtml'")
+    source = source.replace('</manifest>', "<item id='ncx' href='toc.ncx' media-type='application/x-dtbncx+xml'/></manifest>")
+    source = source.replace('<spine>', "<spine toc='ncx'>")
+    members['OEBPS/content.opf'] = b'\xff\xfe' + source.encode('utf-16-le')
+    members['OEBPS/contents.xhtml'] = members.pop('OEBPS/nav.xhtml')
+    members['OEBPS/toc.ncx'] = b'''<?xml version="1.0"?><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:test:opf-source"/></head><docTitle><text>Original synthetic book</text></docTitle><navMap><navPoint id="ch" playOrder="1"><navLabel><text>Chapter</text></navLabel><content src="a.xhtml"/></navPoint></navMap></ncx>'''
     body = '<p>Original paragraph</p>'
     body += ''.join(f'<p id="p{i}">第{i}段の<ruby>名前<rt>なまえ</rt></ruby>です。文章を読み、翻訳します。</p>' for i in range(220))
     members['OEBPS/a.xhtml'] = ('<html xmlns="http://www.w3.org/1999/xhtml"><head><title>T</title></head><body>'
@@ -26,12 +33,29 @@ def fixture(scratch):
 class Mock(http.server.BaseHTTPRequestHandler):
     requests = []
     lock = threading.Lock()
+    agent_finished = False
 
     def log_message(self, *args):
         pass
 
     def do_POST(self):
         request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+        if request.get('tools'):
+            messages = request['messages']
+            calls = [call for message in messages for call in message.get('tool_calls', [])]
+            last = calls[-1]['function']['name'] if calls else ''
+            notification = any('后台翻译已结束' in str(message.get('content', '')) for message in messages if message['role'] == 'user')
+            name = 'translation.save_glossary' if notification and last != 'translation.save_glossary' else (
+                'translation.prepare' if not last else 'translation.run' if last == 'translation.prepare' else '')
+            message = {'role': 'assistant', 'content': '后台已开始，等待完成。'}
+            if name:
+                message['tool_calls'] = [{'id': 'call_' + name.replace('.', '_'), 'type': 'function',
+                                          'function': {'name': name, 'arguments': '{}'}}]
+            elif last == 'translation.save_glossary':
+                message['content'] = '翻译及术语表保存完成。'
+                type(self).agent_finished = True
+            self.respond({'choices': [{'message': message, 'finish_reason': 'tool_calls' if name else 'stop'}]})
+            return
         assert not request.get('tools'), 'Translation received irrelevant Agent tool schemas'
         assert len(request['messages']) == 2, 'Translation received main conversation history'
         prompt = request['messages'][0]['content']
@@ -45,9 +69,12 @@ class Mock(http.server.BaseHTTPRequestHandler):
             result = {'items': [{'n': row['n'], 'text': '译：' + row['source']} for row in payload['items']]}
         with self.lock:
             self.requests.append((request['model'], len(payload['items'])))
-        body = json.dumps({'choices': [{'message': {'role': 'assistant', 'content': json.dumps(result, ensure_ascii=False)},
+        self.respond({'choices': [{'message': {'role': 'assistant', 'content': json.dumps(result, ensure_ascii=False)},
                                        'finish_reason': 'stop'}],
-                           'usage': {'prompt_tokens': 100, 'completion_tokens': 20, 'prompt_cache_hit_tokens': 40}}, ensure_ascii=False).encode()
+                           'usage': {'prompt_tokens': 100, 'completion_tokens': 20, 'prompt_cache_hit_tokens': 40}})
+
+    def respond(self, response):
+        body = json.dumps(response, ensure_ascii=False).encode()
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))
@@ -66,6 +93,10 @@ def verify(path, source, members):
         chapter = ET.fromstring(archive.read('OEBPS/a.xhtml'))
         translations = [n for n in chapter.iter() if 'se-translation' in n.get('class', '').split()]
         assert len(translations) == 221, 'Saved EPUB lost or duplicated translation nodes'
+        nav = ET.fromstring(archive.read('OEBPS/contents.xhtml'))
+        assert any('se-toc-translation' in n.get('class', '') for n in nav.iter()), 'OPF navigation with arbitrary filename was skipped'
+        ncx = archive.read('OEBPS/toc.ncx')
+        assert b'<!--sigil-translation-->' in ncx and b'a.xhtml' in ncx, 'NCX translation or navigation target lost'
 
 
 if __name__ == '__main__':
@@ -82,6 +113,7 @@ if __name__ == '__main__':
                 verify, direct_app_executable=True, run_arguments=[(url,)], run_timeout=60)
             assert any(model == 'test-planner' for model, _ in Mock.requests)
             assert any(model == 'test-translator' for model, _ in Mock.requests)
-            assert len(Mock.requests) < 15, 'Request count grew per sentence'
+            assert len(Mock.requests) < 30, 'Two window workflows grew requests per sentence'
+            assert Mock.agent_finished, 'Agent did not continue after native background completion'
         finally:
             server.shutdown()

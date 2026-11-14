@@ -13,6 +13,7 @@ class TranslationTool final : public IAgentTool {
 public:
     AgentToolDescriptor info;
     QPointer<Controller> controller;
+    std::function<void()> started;
     AgentToolDescriptor descriptor() const override { return info; }
     ToolResult execute(const QJsonObject &arguments) override
     {
@@ -43,6 +44,8 @@ public:
             else if (info.name == "translation.revise") result = controller->revise(arguments);
             else if (info.name == "translation.format") result = controller->format(arguments);
             else result = controller->saveGlossary(arguments);
+            if (result.ok && started && controller->running() && (info.name == "translation.run"
+                || info.name == "translation.revise" || (info.name == "translation.control" && arguments.value("action") == "retry_failed"))) started();
         };
         if (QThread::currentThread() == controller->thread()) call();
         else QMetaObject::invokeMethod(controller, call, Qt::BlockingQueuedConnection);
@@ -55,11 +58,12 @@ QJsonObject array() { return {{"type", "array"}, {"items", string()}}; }
 QJsonObject enumeration(const QJsonArray &values) { return {{"type", "string"}, {"enum", values}}; }
 }
 
-void registerTranslationTools(ToolRegistry *registry, Controller *controller)
+void registerTranslationTools(ToolRegistry *registry, Controller *controller, std::function<void()> started)
 {
     auto add = [&](const QString &name, const QString &description, bool writes, QJsonObject properties) {
         auto tool = std::make_unique<TranslationTool>();
         tool->controller = controller;
+        tool->started = started;
         properties["session_id"] = string();
         tool->info = {name, description, QJsonObject {{"type", "object"}, {"properties", properties}, {"additionalProperties", false}},
             writes ? ToolRisk::Bulk : ToolRisk::Read, writes, false};

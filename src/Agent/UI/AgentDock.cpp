@@ -2247,7 +2247,8 @@ void AgentDock::appendEvent(const AgentEvent &event)
         case AgentEventType::UserMessage: {
             beginUserTurn();
             const QString text = event.payload.value(QStringLiteral("text")).toString();
-            QWidget *card = makeCard(QStringLiteral("agentUserCard"), tr("You"), text, false);
+            const bool background = event.payload.value(QStringLiteral("source")).toString() == QLatin1String("background");
+            QWidget *card = makeCard(QStringLiteral("agentUserCard"), background ? tr("Background task") : tr("You"), text, false);
             setCardMarkdown(card, QStringLiteral("agentUserCard"), text, false);
             appendCard(card);
             break;

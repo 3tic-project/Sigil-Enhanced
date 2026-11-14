@@ -46,5 +46,33 @@ int main(int argc, char **argv)
     require(payload.value(QStringLiteral("items")).toArray().first().toObject().value(QStringLiteral("n")).toInt() == 1, "batch local short index");
     require(systemPrompt(QStringLiteral("translate"), "zh-Hans", "忠实") == systemPrompt(QStringLiteral("translate"), "zh-Hans", "忠实"), "deterministic prompt prefix");
     require(!QJsonDocument(payload).toJson().contains("paragraph"), "internal paragraph ID not sent");
+    BatchText huge {1, QStringLiteral("彼は笑った😀。「元気ですか？」\n").repeated(1200), {}, {}, "chapter"};
+    const auto fragments = splitParagraph(huge, 3000);
+    require(fragments.size() > 3, "long paragraph splits at reading boundaries");
+    QString joined;
+    for (const auto &part : fragments) {
+        require(part.source.toUcs4().size() <= 3000 && part.fragments == fragments.size(), "fragment limits and identity");
+        joined += part.source;
+    }
+    require(joined == huge.source, "sentence split neither drops nor duplicates Unicode text");
+    huge.translation = QStringLiteral("他笑了😀。“你好吗？”\n").repeated(1200);
+    const auto pairs = splitParagraph(huge, 4500, true);
+    QString sourceJoined, translationJoined;
+    for (const auto &part : pairs) { sourceJoined += part.source; translationJoined += part.translation; }
+    require(!pairs.isEmpty() && sourceJoined == huge.source && translationJoined == huge.translation, "long review pairs preserve both complete texts");
+    require(splitParagraph({0, QString(9000, QChar(0x3042))}, 3000).isEmpty(), "unsplittable text fails explicitly without truncation");
+    QJsonArray aliases = normalizeTerms(QJsonArray {
+        QJsonObject {{"source", "フルネーム"}, {"target", "正确译名"}, {"aliases", QJsonArray {"愛称"}}, {"locked", true}},
+        QJsonObject {{"source", "別人"}, {"target", "别人"}},
+        QJsonObject {{"source", "愛称"}, {"target", "旧名"}}});
+    const auto unified = unifyAliases(aliases);
+    require(unified.at(2).toObject().value("target") == "正确译名" && unified.at(1).toObject().value("target") == "别人", "explicit aliases unify across groups, unrelated names stay independent");
+    const auto related = relatedTermGroups(aliases, 2);
+    require(related.first().size() == 2 && related.first().at(1).value("source") == "愛称", "related candidates share model batch");
+    const auto variants = unifyAliases(normalizeTerms(QJsonArray {
+        QJsonObject {{"source", "山田太郎"}, {"target", "山田太郎"}, {"aliases", QJsonArray {"太郎"}}},
+        QJsonObject {{"source", "太郎"}, {"target", "太郎"}}}));
+    const auto nickname = matchingTerms(variants, "太郎");
+    require(nickname.size() == 1 && nickname.first().toObject().value("target") == "太郎", "explicit nickname translation wins over full-name alias");
     qInfo() << "Translation batching/protocol tests passed";
 }

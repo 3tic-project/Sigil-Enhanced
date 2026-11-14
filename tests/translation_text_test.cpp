@@ -83,5 +83,16 @@ int main(int argc, char **argv)
     parsed = extract(indented);
     written = writePairs(indented, {{0, parsed.paragraphs[0].sourceKey, {}, QStringLiteral("译文")}});
     require(written.error.isEmpty() && written.text.contains(QStringLiteral(">　译文</p>")), "fullwidth paragraph indentation preserved");
+    written = writePairs(indented, {{0, parsed.paragraphs[0].sourceKey, {}, QStringLiteral("译文")}}, "zh-Hans", nullptr, 1.75);
+    require(written.text.contains("margin-bottom: 1.75rem"), "configured spacing reaches generated stylesheet");
+    const QString ncx = QStringLiteral("<?xml version=\"1.0\"?><ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\"><head/><docTitle><text>Title</text></docTitle><navMap><navPoint id=\"n1\" playOrder=\"1\"><navLabel><text>序章😀 &amp; 続き</text></navLabel><content src=\"c.xhtml#start\"/></navPoint></navMap></ncx>");
+    parsed = extract(ncx);
+    require(parsed.ncx && parsed.paragraphs.size() == 1 && parsed.paragraphs.first().text == "序章😀 & 続き", "NCX reads visible navigation labels");
+    written = writePairs(ncx, {{0, parsed.paragraphs.first().sourceKey, {}, "序章与后续"}});
+    require(written.error.isEmpty() && written.text.contains("c.xhtml#start") && written.text.contains("playOrder=\"1\""), "NCX translation preserves hierarchy and targets");
+    after = extract(written.text);
+    require(after.paragraphs.first().sourceKey == parsed.paragraphs.first().sourceKey && after.paragraphs.first().translation == "序章与后续", "NCX bilingual source remains identifiable");
+    revised = writePairs(written.text, {{0, after.paragraphs.first().sourceKey, "序章与后续", "修订标题"}});
+    require(revised.error.isEmpty() && revised.text.count("<!--sigil-translation-->") == 1 && extract(revised.text).paragraphs.first().translation == "修订标题", "NCX review replaces the existing translation");
     qInfo() << "Translation text tests passed";
 }
