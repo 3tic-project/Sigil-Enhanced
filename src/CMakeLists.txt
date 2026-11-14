@@ -114,6 +114,8 @@ set( AGENT_FILES
     Agent/Security/PermissionPolicy.h
     Agent/Tools/BookTools.cpp
     Agent/Tools/BookTools.h
+    Agent/Tools/TranslationTools.cpp
+    Agent/Tools/TranslationTools.h
     Agent/Tools/DivParagraphTools.cpp
     Agent/Tools/DivParagraphTools.h
     Agent/Tools/TocTools.cpp
@@ -165,6 +167,10 @@ set( BUILTIN_PLUGIN_FILES
     BuiltinPlugins/Translation/TranslationText.h
     BuiltinPlugins/Translation/TranslationBatch.cpp
     BuiltinPlugins/Translation/TranslationBatch.h
+    BuiltinPlugins/Translation/TranslationController.cpp
+    BuiltinPlugins/Translation/TranslationController.h
+    BuiltinPlugins/Translation/TranslationPanel.cpp
+    BuiltinPlugins/Translation/TranslationPanel.h
     BuiltinPlugins/BookLiveParagraphNormalizer.cpp
     BuiltinPlugins/BookLiveParagraphNormalizer.h
     BuiltinPlugins/CmoaParagraphNormalizer.cpp
@@ -847,6 +853,7 @@ set( MAINUI_FILES
     MainUI/MainApplication.cpp
     MainUI/MainApplication.h
     MainUI/MainWindow.cpp
+    MainUI/MainWindowTranslation.cpp
     MainUI/MainWindowExt.cpp
     MainUI/MainWindow.h
     MainUI/SearchBatchCoordinator.cpp

@@ -418,6 +418,82 @@ OpenAIProviderConfig AgentSettings::providerConfig() const
     return config;
 }
 
+QString AgentSettings::translationModel() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return store.value(QStringLiteral("translation_model_") + provider()).toString();
+}
+
+void AgentSettings::setTranslationModel(const QString &model)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("translation_model_") + provider(), model.trimmed());
+}
+
+QString AgentSettings::translationThinking() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return store.value(QStringLiteral("translation_thinking"), QStringLiteral("auto")).toString();
+}
+
+void AgentSettings::setTranslationThinking(const QString &thinking)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("translation_thinking"), thinking);
+}
+
+int AgentSettings::translationConcurrency() const
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    return qBound(1, store.value(QStringLiteral("translation_concurrency"), 4).toInt(), 8);
+}
+
+void AgentSettings::setTranslationConcurrency(int concurrency)
+{
+    SettingsStore store;
+    store.beginGroup(QLatin1String(groupName()));
+    store.setValue(QStringLiteral("translation_concurrency"), qBound(1, concurrency, 8));
+}
+
+OpenAIProviderConfig AgentSettings::translationProviderConfig() const
+{
+    auto config = providerConfig();
+    if (!translationModel().isEmpty()) config.model = translationModel();
+    CatalogModel selected;
+    const auto cached = QJsonDocument::fromJson(catalogJson().toUtf8());
+    for (const auto &entry : AgentModelCatalog::fromCacheJson(cached.object()).models) {
+        if (entry.id == config.model) { selected = entry; break; }
+    }
+    // A different translator must not inherit the main model's disabled
+    // protocol (e.g. OpenRouter chat model -> reasoning translator).
+    if (config.model != model() || selected.reasoning)
+        config.reasoningProtocol = reasoningProtocolFor(providerKind(), config.baseUrl);
+    config.supportedReasoningEfforts = selected.supportedReasoningEfforts;
+    config.defaultReasoningEffort = selected.defaultReasoningEffort;
+    config.reasoningEffortSelectable = selected.reasoningEffortSelectable;
+    const QString thinking = translationThinking();
+    if (!selected.id.isEmpty() && !selected.reasoning) {
+        config.thinking = false; config.reasoningProtocol = ReasoningProtocol::None;
+    } else if (thinking == QLatin1String("auto") || thinking == QLatin1String("off")) {
+        config.thinking = selected.reasoningMandatory;
+        config.reasoningEffort.clear();
+        if (selected.reasoningMandatory) {
+            for (const QString &level : {QStringLiteral("minimal"), QStringLiteral("low"), QStringLiteral("medium"), QStringLiteral("high")}) {
+                if (selected.supportedReasoningEfforts.contains(level)) { config.reasoningEffort = level; break; }
+            }
+            if (config.reasoningEffort.isEmpty()) config.reasoningEffort = selected.defaultReasoningEffort;
+        }
+    } else if (thinking != QLatin1String("inherit") && selected.supportedReasoningEfforts.contains(thinking)) {
+        config.thinking = true; config.reasoningEffort = thinking;
+    } else if (selected.reasoningMandatory) config.thinking = true;
+    return config;
+}
+
 bool AgentSettings::looksLikeSecret(const QString &text)
 {
     return text.startsWith(QLatin1String("sk-")) && text.size() > 12;

@@ -71,7 +71,17 @@ int main(int argc, char **argv)
             && after.paragraphs[0].translation == QStringLiteral("序章"), "TOC source and translation separated");
     require(after.paragraphs[0].sourceKey == parsed.paragraphs[0].sourceKey, "TOC source projection stable");
     require(!extract(book(QStringLiteral("<p>broken</div>"))).error.isEmpty(), "invalid source rejected");
+    parsed = extract(book(QStringLiteral("裸文本<span>一</span><p> </p>裸文本二<br/>裸文本三")));
+    require(parsed.error.isEmpty() && parsed.paragraphs.size() == 3, "mixed spacer/body flow does not silently drop text");
+    edits.clear();
+    for (int i = 0; i < 3; ++i) edits.append({i, parsed.paragraphs[i].sourceKey, {}, QStringLiteral("中文%1").arg(i)});
+    written = writePairs(book(QStringLiteral("裸文本<span>一</span><p> </p>裸文本二<br/>裸文本三")), edits);
+    require(written.error.isEmpty() && extract(written.text).paragraphs.size() == 3, "mixed-flow inline pairs stable");
     require(normalizedTranslation(QStringLiteral("「日」『本』"), QStringLiteral("“中”‘文’")) == QStringLiteral("「中」『文』"), "safe quote normalization");
     require(normalizedTranslation(QStringLiteral("カナ"), QStringLiteral("カナ译文")) == QStringLiteral("カナ译文"), "kana never deleted");
+    const QString indented = book(QStringLiteral("<p>　原文</p>"));
+    parsed = extract(indented);
+    written = writePairs(indented, {{0, parsed.paragraphs[0].sourceKey, {}, QStringLiteral("译文")}});
+    require(written.error.isEmpty() && written.text.contains(QStringLiteral(">　译文</p>")), "fullwidth paragraph indentation preserved");
     qInfo() << "Translation text tests passed";
 }

@@ -13,6 +13,7 @@ struct Paragraph {
     QString translation;
     QString classes;
     QString style;
+    QString leadingWhitespace;
     QByteArray sourceKey;
     int start = 0;
     int end = 0;
@@ -45,7 +46,7 @@ struct WriteResult {
 
 TextResult extract(const QString &xhtml);
 WriteResult writePairs(const QString &xhtml, const QList<Replacement> &items,
-                       const QString &language = QStringLiteral("zh-Hans"));
+                       const QString &language = QStringLiteral("zh-Hans"), const TextResult *prepared = nullptr);
 QString escapeText(const QString &text);
 QString normalizedTranslation(const QString &source, QString translation);
 

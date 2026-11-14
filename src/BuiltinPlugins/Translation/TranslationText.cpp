@@ -78,7 +78,10 @@ struct Span { int start; int end; QString text; };
 
 class Reader {
 public:
-    explicit Reader(const QByteArray &source) : bytes(source) {}
+    explicit Reader(const QByteArray &source) : bytes(source)
+    {
+        for (int i = 0; i < bytes.size(); ++i) if (bytes.at(i) == '\n') lineBreaks.append(i);
+    }
     int offset(const char *p) const
     {
         return p && p >= bytes.constData() && p <= bytes.constData() + bytes.size()
@@ -148,17 +151,24 @@ public:
         for (unsigned i = 0; i < children.length; ++i) text += readings(static_cast<GumboNode *>(children.data[i]), a, b);
         return text;
     }
-    void append(const GumboNode *node, int a, int b, int insertion, bool inlined, bool toc)
+    void append(const GumboNode *node, int a, int b, int insertion, bool inlined, bool toc,
+                const QList<const GumboNode *> &run = {})
     {
         if (a < 0 || b <= a || insertion < 0) return;
         Paragraph item;
-        item.text = plain(node, a, b).trimmed();
+        if (run.isEmpty()) { item.text = plain(node, a, b); item.readings = readings(node, a, b); }
+        else for (const auto *part : run) { item.text += plain(part, a, b); item.readings += readings(part, a, b); }
+        for (const QChar ch : item.text) {
+            if (!ch.isSpace()) break;
+            if (ch == QChar(0x3000) || ch == QChar(0x00a0)) item.leadingWhitespace += ch;
+        }
+        item.text = item.text.trimmed();
         if (item.text.isEmpty()) return;
-        item.readings = readings(node, a, b).trimmed();
+        item.readings = item.readings.trimmed();
         item.start = a; item.end = b; item.insertAt = insertion;
         item.inlineTranslation = inlined; item.toc = toc;
         item.classes = attribute(node, "class"); item.style = attribute(node, "style");
-        item.line = bytes.left(a).count('\n') + 1;
+        item.line = int(std::lower_bound(lineBreaks.begin(), lineBreaks.end(), a) - lineBreaks.begin()) + 1;
         QByteArray original = bytes.mid(a, b - a);
         for (auto it = translations.crbegin(); it != translations.crend(); ++it) {
             if (it->start >= a && it->end <= b) {
@@ -214,10 +224,36 @@ public:
             return;
         }
         const auto &children = node->v.element.children;
-        for (unsigned i = 0; i < children.length; ++i) visit(static_cast<GumboNode *>(children.data[i]), toc);
+        if (block(node)) {
+            // Mixed body/div flows (including spacer p) still contain source
+            // runs. Work only on each run's nodes, avoiding whole-tree scans.
+            QList<const GumboNode *> run;
+            int begin = start(node) + int(node->v.element.original_tag.length);
+            auto flush = [&](int until) {
+                if (run.isEmpty()) return;
+                QList<Span> boundaries;
+                for (const auto *part : run) breaks(part, boundaries);
+                for (const auto &boundary : boundaries) {
+                    append(node, begin, boundary.start, boundary.start, true, false, run);
+                    begin = boundary.end;
+                }
+                append(node, begin, until, until, true, false, run);
+                run.clear();
+            };
+            for (unsigned i = 0; i < children.length; ++i) {
+                const auto *child = static_cast<GumboNode *>(children.data[i]);
+                if (!ignored(child) && (block(child) || hasBlock(child))) {
+                    flush(start(child)); visit(child, toc); begin = end(child);
+                } else run.append(child);
+            }
+            flush(close(node));
+        } else {
+            for (unsigned i = 0; i < children.length; ++i) visit(static_cast<GumboNode *>(children.data[i]), toc);
+        }
     }
     const QByteArray &bytes;
     QList<Span> translations;
+    QList<int> lineBreaks;
     QList<Paragraph> paragraphs;
 };
 
@@ -229,8 +265,9 @@ QString translationNode(const Paragraph &item, const QString &value, const QStri
     QString attributes = QStringLiteral(" class=\"%1\" lang=\"%2\" xml:lang=\"%2\"")
         .arg(escapeText(classes.trimmed()), escapeText(language));
     if (!item.style.isEmpty()) attributes += QStringLiteral(" style=\"%1\"").arg(escapeText(item.style));
+    const QString translated = item.toc || value.startsWith(item.leadingWhitespace) ? value : item.leadingWhitespace + value;
     return QLatin1Char('<') + name + attributes + QLatin1Char('>')
-        + (item.toc ? QStringLiteral(" / ") : QString()) + escapeText(value)
+        + (item.toc ? QStringLiteral(" / ") : QString()) + escapeText(translated)
         + QStringLiteral("</") + name + QLatin1Char('>');
 }
 
@@ -279,11 +316,11 @@ TextResult extract(const QString &xhtml)
     return result;
 }
 
-WriteResult writePairs(const QString &xhtml, const QList<Replacement> &items, const QString &language)
+WriteResult writePairs(const QString &xhtml, const QList<Replacement> &items, const QString &language, const TextResult *prepared)
 {
     WriteResult result;
     result.text = xhtml;
-    const TextResult current = extract(xhtml);
+    const TextResult current = prepared ? *prepared : extract(xhtml);
     if (!current.error.isEmpty()) { result.error = current.error; return result; }
     struct Edit { int start; int end; QByteArray bytes; };
     QList<Edit> edits;

@@ -1406,7 +1406,7 @@ BookOpResult SigilBookWorkspace::stageAddition(const QString &book_path,
         PluginApi::StagedResourceAddition addition;
         addition.stagingId = QStringLiteral("new:") + QUuid::createUuid().toString(QUuid::WithoutBraces);
         addition.bookPath = path;
-        addition.mediaType = mediaTypeForKind(resolved_kind);
+        addition.mediaType = mediaTypeForKind(resolved_kind, path);
         addition.manifestId = QFileInfo(path).completeBaseName();
         addition.data = text.toUtf8();
         addition.stagedRevision = 1;

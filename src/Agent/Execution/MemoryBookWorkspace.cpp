@@ -997,7 +997,7 @@ BookOpResult MemoryBookWorkspace::stageAddition(const QString &book_path,
     PluginApi::StagedResourceAddition addition;
     addition.stagingId = QStringLiteral("new:") + QUuid::createUuid().toString(QUuid::WithoutBraces);
     addition.bookPath = book_path.trimmed();
-    addition.mediaType = mediaTypeForKind(resolved_kind);
+    addition.mediaType = mediaTypeForKind(resolved_kind, addition.bookPath);
     addition.manifestId = QFileInfo(addition.bookPath).completeBaseName();
     addition.data = text.toUtf8();
     addition.stagedRevision = 1;

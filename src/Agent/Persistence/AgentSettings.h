@@ -86,6 +86,13 @@ public:
     qint64 verifiedConnectionAtMs() const;
 
     OpenAIProviderConfig providerConfig() const;
+    QString translationModel() const;
+    void setTranslationModel(const QString &model);
+    QString translationThinking() const;
+    void setTranslationThinking(const QString &thinking);
+    int translationConcurrency() const;
+    void setTranslationConcurrency(int concurrency);
+    OpenAIProviderConfig translationProviderConfig() const;
 
     static bool looksLikeSecret(const QString &text);
 };

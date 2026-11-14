@@ -25,6 +25,7 @@ void AgentController::rebuildTools()
         registerBookTools(&m_tools, m_workspace, &m_session, &m_cancellation);
         registerDivParagraphTools(&m_tools, m_workspace, &m_cancellation);
         registerTocTools(&m_tools, m_workspace, &m_cancellation);
+        if (m_extraTools) m_extraTools(&m_tools);
     }
     m_runner = std::make_unique<AgentRunner>(
         &m_session, m_provider.get(), &m_tools, m_workspace, &m_policy, &m_gate, &m_cancellation);
@@ -41,6 +42,14 @@ bool AgentController::setWorkspace(IBookWorkspace *workspace)
 {
     if (isRunning()) return false;
     m_workspace = workspace;
+    rebuildTools();
+    return true;
+}
+
+bool AgentController::setExtraTools(std::function<void(ToolRegistry *)> registration)
+{
+    if (isRunning()) return false;
+    m_extraTools = std::move(registration);
     rebuildTools();
     return true;
 }

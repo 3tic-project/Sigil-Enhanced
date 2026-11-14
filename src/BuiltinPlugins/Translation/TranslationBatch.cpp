@@ -174,7 +174,7 @@ QJsonObject batchPayload(const QString &phase, const QList<BatchText> &items, co
         rows.append(row); sources += item.source + QLatin1Char('\n');
     }
     return {{"items", rows}, {"terms", phase == QLatin1String("aggregate") ? terms : matchingTerms(terms, sources)},
-            {"memory", memory.left(2600)}, {"neighbors", QJsonArray::fromStringList(neighbors)}};
+            {"memory", memory.left(phase == QLatin1String("aggregate") ? 12000 : 2600)}, {"neighbors", QJsonArray::fromStringList(neighbors)}};
 }
 
 ParsedBatch parseBatch(const QString &phase, const QString &response, int count)

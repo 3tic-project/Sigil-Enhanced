@@ -87,6 +87,10 @@ class AgentController;
 class AgentLocationSource;
 class SigilBookWorkspace;
 }
+namespace BuiltinPlugins::Translation {
+class TranslationController;
+class TranslationPanel;
+}
 class SelectCharacter;
 class ViewImage;
 class FlowTab;
@@ -888,6 +892,7 @@ private:
      */
     void CreateRecentFilesActions();
     void CreateAgentDock();
+    void CreateTranslationPanel();
     void ConfigureAgentProvider();
     void AgentSendRequested(const QString &text, const QStringList &handles);
     void AgentStopRequested();
@@ -1064,6 +1069,8 @@ private:
     std::unique_ptr<SigilAgent::SigilBookWorkspace> m_AgentWorkspace;
     std::unique_ptr<SigilAgent::AgentController> m_AgentController;
     std::unique_ptr<SigilAgent::AgentLocationSource> m_AgentLocationSource;
+    std::unique_ptr<BuiltinPlugins::Translation::TranslationController> m_TranslationController;
+    BuiltinPlugins::Translation::TranslationPanel *m_TranslationPanel = nullptr;
     bool m_CloseAfterAgentRun = false;
     bool m_AgentProviderReconfigurePending = false;
     QAction *m_DeveloperToolsAction;

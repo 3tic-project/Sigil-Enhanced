@@ -117,6 +117,8 @@
 #include "Agent/Persistence/AgentSettings.h"
 #include "Agent/Persistence/AgentSessionExport.h"
 #include "Agent/UI/AgentDock.h"
+#include "BuiltinPlugins/Translation/TranslationController.h"
+#include "BuiltinPlugins/Translation/TranslationPanel.h"
 #include "MainUI/TableOfContents.h"
 #include "MainUI/ValidationResultsView.h"
 #include "Misc/HTMLSpellCheck.h"
@@ -402,6 +404,7 @@ MainWindow::MainWindow(const QString &openfilepath,
 
 MainWindow::~MainWindow()
 {
+    m_TranslationController.reset();
     ClearTransientSource();
     if (m_RegexWorkbenchDialog) {
         delete m_RegexWorkbenchDialog.data();
@@ -2339,6 +2342,7 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    if (m_TranslationController) m_TranslationController->control({{"action", "stop"}});
     if (m_AgentController && m_AgentController->isRunning()) {
         m_CloseAfterAgentRun = true;
         m_AgentController->stop(SigilAgent::AgentCancellationReason::WindowClosing);
@@ -6538,6 +6542,20 @@ void MainWindow::UpdateAgentEditorContext()
 void MainWindow::AgentSendRequested(const QString &text, const QStringList &handles)
 {
     if (!m_AgentController || !m_AgentDock) return;
+    if (m_TranslationController) {
+        const QString command = text.trimmed();
+        QString action;
+        if (command == QStringLiteral("停止翻译")) action = "stop";
+        else if (command == QStringLiteral("暂停翻译")) action = "pause";
+        else if (command == QStringLiteral("继续翻译")) action = "resume";
+        if (!action.isEmpty()) {
+            const auto result = m_TranslationController->control({{"action", action}});
+            m_AgentController->session()->append(SigilAgent::AgentEventType::UserMessage, {{"text", text}});
+            m_AgentController->session()->append(SigilAgent::AgentEventType::AssistantMessage,
+                {{"content", result.ok ? QStringLiteral("翻译控制已执行：%1。").arg(command) : result.message}, {"is_final", true}});
+            return;
+        }
+    }
     ConfigureAgentProvider();
     m_AgentDock->setRunState(SigilAgent::AgentRunState::RequestingModel);
     m_AgentController->send(text, handles);
@@ -6649,6 +6667,7 @@ void MainWindow::AgentExportDebugLogRequested()
 
 void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
 {
+    if (m_TranslationController) m_TranslationController->reset();
     if (m_AgentController && m_AgentController->isRunning()) {
         m_AgentController->stop(SigilAgent::AgentCancellationReason::BookChanged);
     }
@@ -6674,6 +6693,7 @@ void MainWindow::SetNewBook(QSharedPointer<Book> new_book)
         m_AgentWorkspace->setBook(m_Book);
     }
     m_BookBrowser->SetBook(m_Book);
+    if (m_TranslationController) m_TranslationController->setMiscFolder(m_Book->GetFolderKeeper()->GetDefaultFolderForGroup("Misc"));
     m_TableOfContents->SetBook(m_Book);
     m_ValidationResultsView->SetBook(m_Book);
     m_IndexEditor->SetBook(m_Book);
@@ -7555,6 +7575,7 @@ void MainWindow::ExtendUI()
     tabifyDockWidget(m_TableOfContents, m_PreviewWindow);
 
     CreateAgentDock();
+    CreateTranslationPanel();
 
     m_Clips = new ClipsWindow(this);
     m_Clips->setObjectName(CLIPS_WINDOW_NAME);

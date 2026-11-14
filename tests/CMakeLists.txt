@@ -21,6 +21,44 @@ target_compile_features(translation_batch_test PRIVATE cxx_std_17)
 add_test(NAME translation_batch COMMAND translation_batch_test)
 set_tests_properties(translation_batch PROPERTIES TIMEOUT 30)
 
+set(TRANSLATION_TEST_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/Translation/TranslationController.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/Translation/TranslationText.cpp
+    ${CMAKE_SOURCE_DIR}/src/BuiltinPlugins/Translation/TranslationBatch.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/XmlWellFormed.cpp
+    ${CMAKE_SOURCE_DIR}/src/BookManipulation/TocTreeTransform.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/AgentTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/MemoryBookWorkspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ContentOps.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/PatchRange.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Execution/ResourceMutations.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextEdit.cpp
+    ${CMAKE_SOURCE_DIR}/src/PluginAPI/PluginTextTransaction.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/HistoryAssembler.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/AgentProviderPreset.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/OpenAICompatibleProvider.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Model/StreamingJsonDecoder.cpp
+)
+add_executable(translation_controller_test translation_controller_test.cpp ${TRANSLATION_TEST_SOURCES})
+target_sources(translation_controller_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/TranslationTools.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Tools/ToolRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/Agent/Security/PermissionPolicy.cpp)
+set_target_properties(translation_controller_test PROPERTIES AUTOMOC ON)
+target_include_directories(translation_controller_test PRIVATE ${CMAKE_SOURCE_DIR}/src ${GUMBO_INCLUDE_DIRS})
+target_link_libraries(translation_controller_test PRIVATE Qt6::Concurrent Qt6::Core Qt6::Network Qt6::Gui Qt6::Xml LibXml2::LibXml2 ${GUMBO_LIBRARIES})
+target_compile_features(translation_controller_test PRIVATE cxx_std_17)
+add_test(NAME translation_controller COMMAND translation_controller_test)
+set_tests_properties(translation_controller PROPERTIES TIMEOUT 30)
+foreach(translation_target translation_text_test translation_batch_test translation_controller_test)
+    target_compile_definitions(${translation_target} PRIVATE QT_USE_QSTRINGBUILDER)
+endforeach()
+if(APPLE)
+    add_test(NAME translation_window_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_translation_window_integration.py ${CMAKE_BINARY_DIR})
+    set_tests_properties(translation_window_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
+endif()
+
 add_test(NAME xmlprocessor_legacy_golden
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/xmlprocessor_legacy_golden_test.py
 )

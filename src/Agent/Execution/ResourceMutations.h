@@ -18,7 +18,7 @@ namespace SigilAgent
 
 QString defaultXhtmlTemplate();
 QString defaultSvgTemplate();
-QString mediaTypeForKind(const QString &kind);
+QString mediaTypeForKind(const QString &kind, const QString &book_path = QString());
 QString kindFromPathOrType(const QString &book_path, const QString &kind);
 bool kindIsCreatable(const QString &kind);
 QString suggestCopyBookPath(const QString &source_path, const QStringList &existing_paths);
