@@ -62,6 +62,7 @@ public:
     QStringList contextHandles() const;
 
 signals:
+    void eventObserved(const SigilAgent::AgentEvent &event);
     void sendRequested(const QString &text, const QStringList &handles);
     void stopRequested();
     void newSessionRequested();

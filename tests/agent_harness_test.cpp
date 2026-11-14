@@ -1888,6 +1888,33 @@ int main()
             "the first cancellation cause must survive later stop requests");
 
     MemoryBookWorkspace controller_book = MemoryBookWorkspace::samplePhysicsBook();
+    for (const QString &failure : {QStringLiteral("HTTP error: Connection closed"), QStringLiteral("HTTP 503: unavailable"),
+                                  QStringLiteral("HTTP 401: invalid key"), QStringLiteral("partial output")}) {
+        AgentController transport;
+        Require(transport.setWorkspace(&controller_book), "transport retry workspace");
+        auto provider = std::make_unique<MockModelProvider>(); int requests = 0;
+        provider->setScript([&](const ModelRequest &) {
+            ++requests; ModelTurn turn;
+            if (requests == 1) { turn.error = failure == "partial output" ? QStringLiteral("HTTP error: Connection closed") : failure;
+                if (failure == "partial output") turn.content = "already streamed";
+            } else turn.content = "recovered";
+            return turn;
+        });
+        transport.setProvider(std::move(provider));
+        const auto outcome = transport.send("test empty transport retry", {});
+        const bool recoverable = failure.contains("Connection closed");
+        Require(requests == (recoverable ? 2 : 1) && outcome.state == (recoverable ? AgentRunState::Completed : AgentRunState::Failed),
+            "only empty transient failures get one automatic retry");
+        Require(transport.session()->eventsOf(AgentEventType::UserMessage).size() == 1, "transport retry must not replay a user turn");
+    }
+    {
+        AgentController transport; transport.setWorkspace(&controller_book);
+        auto provider = std::make_unique<MockModelProvider>(); int requests = 0;
+        provider->setScript([&](const ModelRequest &) { ++requests; ModelTurn turn; turn.error = "HTTP error: Connection closed"; return turn; });
+        transport.setProvider(std::move(provider));
+        Require(transport.send("persistent connection failure", {}).state == AgentRunState::Failed && requests == 2,
+            "empty transport retry is bounded to one extra attempt");
+    }
     AgentController controller;
     Require(controller.setWorkspace(&controller_book),
             "an idle controller must accept its workspace");

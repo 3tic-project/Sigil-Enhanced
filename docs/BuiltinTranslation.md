@@ -33,7 +33,7 @@
 | `translation.run` | 异步启动扫描、聚合、翻译、校正和格式修正 |
 | `translation.status` | 读取实际进度、问题位置和用量 |
 | `translation.control` | 暂停、继续、停止、补缺 |
-| `translation.context` | 分页读取或更新临时计划、记忆和词表 |
+| `translation.context` | 分页读取或更新临时资料；更新使用 terms 数组、plan 对象或 memory 字符串，兼容旧 value 参数 |
 | `translation.revise` | 根据术语调整或用户要求批量校正译文 |
 | `translation.format` | 应用中文阅读或保留格式预设 |
 | `translation.save_glossary` | 将词表保存到实际 Misc 目录 |
@@ -66,3 +66,6 @@ macOS 原生窗口测试使用合成 EPUB 和回环 HTTP 服务，通过真实�
 `translation_controller_test --benchmark` 执行目标字数 1500/3000/4500 × 并发 1/2/4/8 的本地模拟矩阵。显式加 `--live` 才会通过环境变量指定的供应商发送合成日文，默认只比较并发 1/4；`--workflow` 改为六段的扫描、聚合、翻译和校正验证。必填环境变量为 `SIGIL_TRANSLATION_BENCH_URL`、`SIGIL_TRANSLATION_BENCH_API_KEY`、`SIGIL_TRANSLATION_BENCH_MODEL`；可选 `SIGIL_TRANSLATION_BENCH_PROVIDER`、`SIGIL_TRANSLATION_BENCH_AGENT_MODEL`、`SIGIL_TRANSLATION_BENCH_CONTEXT` 和 `SIGIL_TRANSLATION_BENCH_REPORT`。凭据通过环境传入，不放进命令参数、EPUB 或报告。
 
 本轮实际结果与边界见 [翻译验证记录](BuiltinTranslation-Validation.md)。
+
+真实 Agent 自主规划、后续纠词和故障接续的验收入口见
+[真实 Agent 翻译验收](TranslationLiveAgentAcceptance.md)。

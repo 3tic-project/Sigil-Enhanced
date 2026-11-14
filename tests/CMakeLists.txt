@@ -59,6 +59,9 @@ if(APPLE)
     add_test(NAME translation_window_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_translation_window_integration.py ${CMAKE_BINARY_DIR})
     set_tests_properties(translation_window_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
+    add_test(NAME translation_agent_acceptance_smoke
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_translation_live_agent_acceptance.py ${CMAKE_BINARY_DIR} --smoke)
+    set_tests_properties(translation_agent_acceptance_smoke PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
 endif()
 
 add_test(NAME xmlprocessor_legacy_golden

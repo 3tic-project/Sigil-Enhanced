@@ -174,6 +174,15 @@ int main(int argc, char **argv)
     }
     require(!registry.find("translation.prepare")->execute({{"arbitrary_shell", "bad"}}).ok, "unexpected tool fields rejected");
     require(registry.find("translation.status")->execute({}).ok, "status tool returns window state");
+    auto *contextTool = registry.find("translation.context");
+    require(contextTool->execute({{"kind", "glossary"}, {"action", "update"}, {"terms", QJsonArray {
+        QJsonObject {{"source", "ミナ"}, {"target", "米娜"}, {"locked", true}}}}}).ok, "typed glossary tool parameter");
+    require(contextTool->execute({{"kind", "glossary"}, {"action", "update"},
+        {"value", QStringLiteral("[{\"source\":\"リク\",\"target\":\"陆\"}]")}}).ok, "provider JSON-string glossary accepted without extra model turns");
+    require(contextTool->execute({{"kind", "plan"}, {"action", "update"}, {"plan", QJsonObject {{"goal", "translate"}}}}).ok, "typed temporary plan");
+    require(contextTool->execute({{"kind", "memory"}, {"action", "update"}, {"memory", "short memory"}}).ok, "typed temporary memory");
+    require(!contextTool->execute({{"kind", "glossary"}, {"action", "update"}, {"value", "[broken"}}).ok, "malformed string glossary rejected strictly");
+    require(!contextTool->execute({{"kind", "glossary"}, {"action", "update"}, {"plan", QJsonObject {}}}).ok, "mismatched context field rejected");
     require(controller.context({{"kind", "glossary"}, {"action", "update"}, {"value", QJsonArray {
         QJsonObject {{"source", "本名"}, {"target", "旧译"}, {"aliases", QJsonArray {"名前"}}}}}}).ok, "manual alias imported");
     controller.setConfigurationProvider([]() { auto config = configuration(); config.reviewWithAgent = true; return config; });

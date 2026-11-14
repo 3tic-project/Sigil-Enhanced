@@ -2242,6 +2242,7 @@ QString AgentDock::failedCommitBody(const QJsonObject &payload) const
 
 void AgentDock::appendEvent(const AgentEvent &event)
 {
+    emit eventObserved(event);
     if (event.type != AgentEventType::AssistantDelta) flushAssistantDeltas();
     switch (event.type) {
         case AgentEventType::UserMessage: {

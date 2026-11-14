@@ -785,6 +785,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
     }
 
     int steps = 0;
+    int emptyTransportRetries = 0;
     while (steps < m_maxSteps) {
         ++steps;
         if (m_cancellation && m_cancellation->isCancelled()) {
@@ -955,6 +956,14 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
                     modelResponseTimingToJson(turn.timing));
             }
             m_session->append(AgentEventType::ModelRequestFailed, failed_payload);
+            const QString error = turn.error.toLower();
+            const bool temporaryTransport = error.contains(QStringLiteral("connection closed"))
+                || error.contains(QStringLiteral("connection reset"));
+            if (temporaryTransport && turn.content.isEmpty() && turn.reasoning.isEmpty() && turn.toolCalls.isEmpty()
+                && emptyTransportRetries == 0 && steps < m_maxSteps) {
+                ++emptyTransportRetries;
+                continue; // No model output or tool effects to duplicate.
+            }
             m_session->append(AgentEventType::Error, QJsonObject {
                 { QStringLiteral("message"), turn.error }
             });
@@ -966,6 +975,7 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
         }
 
         accumulateRunUsage(turn.usage);
+        emptyTransportRetries = 0;
 
         QJsonObject completed_payload {
             { QStringLiteral("request_id"), request_id },

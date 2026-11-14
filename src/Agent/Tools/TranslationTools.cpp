@@ -1,6 +1,7 @@
 #include "Agent/Tools/TranslationTools.h"
 
 #include <QMetaObject>
+#include <QJsonDocument>
 #include <QPointer>
 #include <QThread>
 #include "Agent/Tools/ToolRegistry.h"
@@ -23,8 +24,10 @@ public:
             const auto property = properties.value(it.key()).toObject();
             const QString type = property.value("type").toString();
             const auto value = it.value();
-            if (!properties.contains(it.key()) || (type == "string" && !value.isString())
+            const bool legacyContext = info.name == "translation.context" && it.key() == "value" && (value.isObject() || value.isArray());
+            if (!properties.contains(it.key()) || (type == "string" && !value.isString() && !legacyContext)
                 || (type == "array" && !value.isArray()) || (type == "boolean" && !value.isBool())
+                || (type == "object" && !value.isObject())
                 || (type == "integer" && (!value.isDouble() || value.toDouble() != value.toInt()))) {
                 return ToolResult::failure("INVALID_ARGUMENT", "Invalid translation parameter: " + it.key());
             }
@@ -34,13 +37,31 @@ public:
                 for (const auto &entry : value.toArray()) if (!entry.isString()) return ToolResult::failure("INVALID_ARGUMENT", "Expected string array");
             }
         }
+        QJsonObject effective = arguments;
+        if (info.name == "translation.context") {
+            const QString kind = arguments.value("kind").toString("glossary");
+            const QString field = kind == "glossary" ? "terms" : kind;
+            int supplied = arguments.contains("value");
+            for (const QString &key : {QStringLiteral("terms"), QStringLiteral("plan"), QStringLiteral("memory")}) {
+                if (!arguments.contains(key)) continue;
+                if (key != field || ++supplied > 1) return ToolResult::failure("INVALID_ARGUMENT", "Use one typed field matching kind: glossary/terms, plan/plan, memory/memory");
+                effective["value"] = arguments.value(key);
+            }
+            if (kind != "memory" && effective.value("value").isString()) {
+                QJsonParseError error;
+                const auto document = QJsonDocument::fromJson(effective.value("value").toString().toUtf8(), &error);
+                if (error.error != QJsonParseError::NoError || (kind == "plan" ? !document.isObject() : (!document.isArray() && !document.isObject())))
+                    return ToolResult::failure("INVALID_CONTEXT", "Expected complete JSON for glossary/plan; prefer the typed terms/plan parameter");
+                effective["value"] = document.isArray() ? QJsonValue(document.array()) : QJsonValue(document.object());
+            }
+        }
         Controller::Result result;
         auto call = [&]() {
             if (info.name == "translation.prepare") result = controller->prepare(arguments);
             else if (info.name == "translation.run") result = controller->run(arguments);
             else if (info.name == "translation.status") result = Controller::Result::success(controller->status());
             else if (info.name == "translation.control") result = controller->control(arguments);
-            else if (info.name == "translation.context") result = controller->context(arguments);
+            else if (info.name == "translation.context") result = controller->context(effective);
             else if (info.name == "translation.revise") result = controller->revise(arguments);
             else if (info.name == "translation.format") result = controller->format(arguments);
             else result = controller->saveGlossary(arguments);
@@ -56,6 +77,12 @@ public:
 QJsonObject string() { return {{"type", "string"}}; }
 QJsonObject array() { return {{"type", "array"}, {"items", string()}}; }
 QJsonObject enumeration(const QJsonArray &values) { return {{"type", "string"}, {"enum", values}}; }
+QJsonObject terms()
+{
+    return {{"type", "array"}, {"items", QJsonObject {{"type", "object"}, {"properties", QJsonObject {
+        {"source", string()}, {"target", string()}, {"aliases", array()}, {"note", string()}, {"locked", QJsonObject {{"type", "boolean"}}}}},
+        {"required", QJsonArray {"source", "target"}}}}};
+}
 }
 
 void registerTranslationTools(ToolRegistry *registry, Controller *controller, std::function<void()> started)
@@ -72,16 +99,19 @@ void registerTranslationTools(ToolRegistry *registry, Controller *controller, st
     add("translation.prepare", "Prepare complete reading paragraphs from the live book, including unsaved text. Default whole spine; pass resource_ids for files and selection_start/end (UTF-16) for one file selection. No remote requests. Returns window-only session_id and counts. Preserve/reuse an existing context instead of repeatedly preparing.", false,
         {{"resource_ids", array()}, {"language", string()}, {"style", string()},
          {"selection_start", QJsonObject {{"type", "integer"}}}, {"selection_end", QJsonObject {{"type", "integer"}}}});
-    add("translation.run", "Start window-local native batch workflow: scan full scope, aggregate glossary/memory, translate directly into current Book as bilingual pairs, review, format. Returns immediately; host batches and applies all paragraphs. No per-sentence patches or HTML. stages may select a subset (sample: translate only). Chinese format is default only for whole book. Does not save EPUB.", true,
-        {{"stages", array()}, {"preset", enumeration({"chinese", "preserve"})}, {"retranslate", QJsonObject {{"type", "boolean"}}}});
+    add("translation.run", "Start window-local native batch workflow: scan, aggregate, translate, review, format. OMIT stages for the complete workflow; preset:preserve changes formatting only. Full-book scan followed by translation needs the aggregate stage. Set stages only for an explicitly requested subset (sample: translate only). Returns immediately; host batches and applies all paragraphs as bilingual pairs. No per-sentence patches or HTML. Does not save EPUB.", true,
+        {{"stages", QJsonObject {{"type", "array"}, {"items", enumeration({"scan", "aggregate", "translate", "review", "format"})}}},
+         {"preset", enumeration({"chinese", "preserve"})}, {"retranslate", QJsonObject {{"type", "boolean"}}}});
     add("translation.status", "Read bounded native translation progress, requests/usage, local cache hits and failed locations. No model calls. Do not busy-poll; the panel displays live progress.", false, {});
-    add("translation.control", "Pause, resume, stop or retry missing translations in this window. Stop rejects late model writes and keeps current Book edits. No restart persistence.", true,
+    add("translation.control", "Pause, resume, stop or retry missing translations in this window. retry_failed starts a new ASYNCHRONOUS workflow and returns immediately. End the current reply after starting it; the host sends another background completion notice. Do not poll status in a loop. Stop rejects late model writes and keeps current Book edits. No restart persistence.", true,
         {{"action", enumeration({"pause", "resume", "stop", "retry_failed"})}});
-    add("translation.context", "Read/update temporary plan, memory or glossary. value is a plan object, memory string, or glossary array (source/target/aliases/note/locked; Orion src/dst accepted). Read glossary pages with offset/limit. No remote calls or disk persistence.", false,
+    add("translation.context", "Read/update temporary plan, memory or glossary. For action:update use the typed field matching kind: glossary -> terms array, plan -> plan object, memory -> memory string. Prefer typed fields; legacy value also accepts complete JSON-encoded glossary/plan or plain memory. Read glossary pages with offset/limit. No remote calls or disk persistence.", false,
         {{"kind", enumeration({"plan", "memory", "glossary"})}, {"action", enumeration({"read", "update"})},
-         {"value", QJsonObject {}}, {"offset", QJsonObject {{"type", "integer"}}}, {"limit", QJsonObject {{"type", "integer"}}}});
-    add("translation.revise", "Batch-correct existing bilingual translations using instruction and/or corrected terms. Terms limit review to source paragraphs that contain them. Updates existing translation nodes; never perform one patch per sentence. Stop the current run first.", true,
-        {{"instruction", string()}, {"terms", QJsonObject {{"type", "array"}}}});
+         {"terms", terms()}, {"plan", QJsonObject {{"type", "object"}}}, {"memory", string()},
+         {"value", QJsonObject {{"type", "string"}, {"description", "Legacy compatibility field; prefer terms/plan/memory."}}},
+         {"offset", QJsonObject {{"type", "integer"}}}, {"limit", QJsonObject {{"type", "integer"}}}});
+    add("translation.revise", "Start ASYNCHRONOUS batch correction using instruction and/or corrected terms. Terms limit review to source paragraphs that contain them. End the current reply after starting; the host sends another completion notice. Do not poll status in a loop. Updates existing translation nodes, not sentence patches. Stop the current run first.", true,
+        {{"instruction", string()}, {"terms", terms()}});
     add("translation.format", "Apply the native Chinese reading preset to the prepared scope (horizontal/LTR for whole-book scope, responsive images). Preserve preset retains original layout. Reuses Sigil converters; no model calls or approval workflow.", true,
         {{"preset", enumeration({"chinese", "preserve"})}});
     add("translation.save_glossary", "Save completed temporary terms as JSON in the current book's actual Misc folder, using native resource creation. Unique filename by default; resource_id explicitly updates an existing Misc JSON. No keys or request logs; EPUB remains unsaved until normal Save.", true,
