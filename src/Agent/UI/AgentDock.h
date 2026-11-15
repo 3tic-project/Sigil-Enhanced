@@ -19,6 +19,7 @@ class QComboBox;
 class QButtonGroup;
 class QLabel;
 class QPlainTextEdit;
+class QProgressBar;
 class QPushButton;
 class QScrollArea;
 class QToolButton;
@@ -45,6 +46,8 @@ public:
     void setModelName(const QString &model);
     void setProviderConfiguration(const AgentProviderReadiness &readiness);
     void setRunState(AgentRunState state);
+    void setBackgroundTaskActive(bool active);
+    void setBackgroundTaskStatus(const QJsonObject &status);
     void setBookContext(const QString &title,
                         const QString &fileName,
                         int resourceCount,
@@ -62,8 +65,10 @@ public:
     QStringList contextHandles() const;
 
 signals:
+    void eventObserved(const SigilAgent::AgentEvent &event);
     void sendRequested(const QString &text, const QStringList &handles);
     void stopRequested();
+    void backgroundTaskControlRequested(const QString &action);
     void newSessionRequested();
     void exportConversationRequested();
     void exportDebugLogRequested();
@@ -102,6 +107,7 @@ private:
     QWidget *makePlanReviewCard(const QJsonObject &payload);
     QWidget *findCard(const QString &object_name) const;
     void appendCard(QWidget *card);
+    void followTranscriptLayout();
     void beginUserTurn();
     void beginModelStep();
     void settleApproval(const QString &toolCallId, bool approved);
@@ -149,6 +155,13 @@ private:
     QLabel *m_technicalDetails = nullptr;
     QLabel *m_composerHint = nullptr;
     QButtonGroup *m_scopeGroup = nullptr;
+    QWidget *m_backgroundTask = nullptr;
+    QLabel *m_backgroundTitle = nullptr;
+    QLabel *m_backgroundCounts = nullptr;
+    QLabel *m_backgroundDetail = nullptr;
+    QProgressBar *m_backgroundProgress = nullptr;
+    QPushButton *m_backgroundPause = nullptr;
+    QPushButton *m_backgroundRetry = nullptr;
     QPushButton *m_stopButton = nullptr;
     QPushButton *m_newSessionButton = nullptr;
     QPushButton *m_sendButton = nullptr;
@@ -168,6 +181,9 @@ private:
     QWidget *m_transcriptContents = nullptr;
     QVBoxLayout *m_transcriptLayout = nullptr;
     QTimer *m_streamFlushTimer = nullptr;
+    QTimer *m_scrollFollowTimer = nullptr;
+    bool m_followTranscript = true;
+    bool m_scrollingTranscript = false;
     QString m_pendingThinkingText;
     QString m_pendingAnswerText;
     quint64 m_streamRenderBatches = 0;
@@ -235,6 +251,7 @@ private:
     QString m_lastSubmittedBookSessionId;
     bool m_retryAvailable = false;
     bool m_runActive = false;
+    bool m_backgroundTaskActive = false;
 };
 
 } // namespace SigilAgent

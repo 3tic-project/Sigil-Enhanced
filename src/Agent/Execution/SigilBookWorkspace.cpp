@@ -335,6 +335,7 @@ QJsonObject SigilBookWorkspace::resourceJson(Resource *resource) const
         { QStringLiteral("book_path"), path },
         { QStringLiteral("media_type"), resource->GetMediaType() },
         { QStringLiteral("kind"), kindOf(resource) },
+        { QStringLiteral("is_nav"), m_book && resource == m_book->GetOPF()->GetNavResource() },
         { QStringLiteral("revision"), static_cast<qint64>(trackedRevision(resource)) },
         { QStringLiteral("text_length"), text ? liveText(text).size() : 0 }
     };
@@ -1406,7 +1407,7 @@ BookOpResult SigilBookWorkspace::stageAddition(const QString &book_path,
         PluginApi::StagedResourceAddition addition;
         addition.stagingId = QStringLiteral("new:") + QUuid::createUuid().toString(QUuid::WithoutBraces);
         addition.bookPath = path;
-        addition.mediaType = mediaTypeForKind(resolved_kind);
+        addition.mediaType = mediaTypeForKind(resolved_kind, path);
         addition.manifestId = QFileInfo(path).completeBaseName();
         addition.data = text.toUtf8();
         addition.stagedRevision = 1;

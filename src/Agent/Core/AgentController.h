@@ -9,6 +9,7 @@
 #define SIGIL_AGENT_CONTROLLER_H
 
 #include <memory>
+#include <functional>
 
 #include <QJsonArray>
 
@@ -31,6 +32,7 @@ public:
 
     bool setWorkspace(IBookWorkspace *workspace);
     bool setProvider(std::unique_ptr<IModelProvider> provider);
+    bool setExtraTools(std::function<void(ToolRegistry *)> registration);
     void setMode(AgentMode mode);
     void setModel(const QString &model);
     void setThinking(bool enabled, const QString &effort);
@@ -48,6 +50,7 @@ public:
     bool isRunning() const;
 
     AgentRunResult send(const QString &text, const QStringList &handles);
+    AgentRunResult continueAfterBackground(const QString &text, const QString &sessionId, const QString &bookSessionId);
     BookOpResult restoreTask(const QString &checkpointId,
                              const QString &expectedBookSessionId);
     void stop(AgentCancellationReason reason = AgentCancellationReason::UserStop);
@@ -67,6 +70,7 @@ private:
     PermissionPolicy m_policy;
     GuiApprovalGate m_gate;
     ToolRegistry m_tools;
+    std::function<void(ToolRegistry *)> m_extraTools;
     IBookWorkspace *m_workspace = nullptr;
     std::unique_ptr<IModelProvider> m_provider;
     std::unique_ptr<AgentRunner> m_runner;

@@ -328,6 +328,8 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
         return turn;
     }
     if (timed_out) {
+        turn.retryableError = true;
+        turn.partialOutput = saw_model_output;
         turn.error = timed_out_before_output
             ? QStringLiteral("First model output timed out after %1 ms").arg(first_token_timeout_ms)
             : QStringLiteral("Model stream stalled for %1 ms").arg(idle_timeout_ms);
@@ -366,6 +368,19 @@ ModelTurn OpenAICompatibleProvider::stream(const ModelRequest &request, ModelStr
     }
     apply_timing();
     turn.error = redactConfiguredSecret(turn.error, m_config.apiKey);
+    if (!turn.error.isEmpty()) {
+        turn.httpStatus = status;
+        const auto code = reply->error();
+        turn.partialOutput = saw_model_output;
+        turn.retryableError = status == 408 || status == 429 || status >= 500
+            || ((status == 0 || (status >= 200 && status < 300)) && (code == QNetworkReply::ConnectionRefusedError
+                || code == QNetworkReply::RemoteHostClosedError || code == QNetworkReply::HostNotFoundError
+                || code == QNetworkReply::TimeoutError || code == QNetworkReply::TemporaryNetworkFailureError
+                || code == QNetworkReply::NetworkSessionFailedError));
+        bool secondsOk = false;
+        const qint64 seconds = reply->rawHeader("Retry-After").toLongLong(&secondsOk);
+        if (secondsOk) turn.retryAfterMs = int(qBound<qint64>(qint64(0), seconds, qint64(60)) * 1000);
+    }
     recordTrace(makeHttpTrace(m_config.baseUrl, outgoing.model, payload, raw,
                               status, timer.elapsed(), turn.error, m_config.apiKey,
                               turn.timing));

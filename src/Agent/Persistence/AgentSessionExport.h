@@ -32,6 +32,7 @@ struct SessionExportContext {
     QString runState;
     QStringList secrets;
     QJsonArray httpTraces;
+    QJsonArray backgroundTasks;
 };
 
 QString redactSecrets(QString text, const QStringList &secrets);

@@ -108,11 +108,10 @@ void ContentTab::EmitUndoRedoStateChanged()
 
 void ContentTab::ContentChangedExternally()
 {
-    // This seems to be the easiest way to get the tab's display to
-    // update and reflect the changed contents. But it still causes a
-    // scroll to top in Code View (though the cursor remains unchanged).
-    // The focus mechanism for Code View needs to be looked at.
-    activateWindow();
+    // Connected resource documents already update the editors. Activating the
+    // window here steals focus and dismisses popups in other books/processes
+    // when an Agent or another background writer changes a resource.
+    update();
 }
 
 void ContentTab::ChangeCasing(const Utility::Casing casing)

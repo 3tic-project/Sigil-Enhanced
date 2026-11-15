@@ -11,6 +11,16 @@
 - 复用当前 C++ 资源模型、OPF 解析器、FolderKeeper、UniversalUpdates，而不是照搬外部脚本。
 - 将“分析/计划/执行/报告”拆开，避免大范围自动修改时缺少可见结果。
 
+## 当前书籍翻译
+
+翻译作为 Agent 内置功能，通过 `book-translation` skill 和 8 个原生批量工具
+调用 `TranslationController`，没有独立翻译面板或菜单入口。直接读取当前
+Book（包含未保存编辑），扫描全文、聚合术语与记忆、批量翻译和校正，默认
+双语对照；中文阅读预设复用横排转换、LTR 和图片适配。供应商和凭据复用
+Agent，在应用设置中独立选择翻译模型和思考程度。临时状态按 Agent 会话隔离，新会话清空，
+术语表可显式存入书内 Misc。使用与测试见
+[`docs/BuiltinTranslation.md`](../../docs/BuiltinTranslation.md)。
+
 ## Plain Text Export
 
 “增强 → 导出 TXT 文件…” 使用 `PlainTextExporter` 将当前 Book 的文档快照按阅读顺序

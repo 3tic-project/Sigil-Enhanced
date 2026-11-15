@@ -55,7 +55,7 @@ public:
     void setMaxToolCalls(int calls);
     AgentRunState state() const;
 
-    AgentRunResult runTurn(const QString &user_text, const QStringList &handles = QStringList());
+    AgentRunResult runTurn(const QString &user_text, const QStringList &handles = QStringList(), bool background = false);
 
 private:
     class SessionSink : public ModelStreamSink
@@ -66,6 +66,7 @@ private:
         void onContentDelta(const QString &text) override;
         void onToolCallsUpdated(const QList<ToolCall> &calls) override;
         bool isCancelled() const override;
+        bool sawOutput = false;
 
     private:
         AgentSession *m_session;

@@ -25,6 +25,7 @@ void AgentController::rebuildTools()
         registerBookTools(&m_tools, m_workspace, &m_session, &m_cancellation);
         registerDivParagraphTools(&m_tools, m_workspace, &m_cancellation);
         registerTocTools(&m_tools, m_workspace, &m_cancellation);
+        if (m_extraTools) m_extraTools(&m_tools);
     }
     m_runner = std::make_unique<AgentRunner>(
         &m_session, m_provider.get(), &m_tools, m_workspace, &m_policy, &m_gate, &m_cancellation);
@@ -41,6 +42,14 @@ bool AgentController::setWorkspace(IBookWorkspace *workspace)
 {
     if (isRunning()) return false;
     m_workspace = workspace;
+    rebuildTools();
+    return true;
+}
+
+bool AgentController::setExtraTools(std::function<void(ToolRegistry *)> registration)
+{
+    if (isRunning()) return false;
+    m_extraTools = std::move(registration);
     rebuildTools();
     return true;
 }
@@ -164,6 +173,18 @@ AgentRunResult AgentController::send(const QString &text, const QStringList &han
     if (m_resetSessionAfterRun) {
         resetSessionNow();
     }
+    return result;
+}
+
+AgentRunResult AgentController::continueAfterBackground(const QString &text, const QString &sessionId, const QString &bookSessionId)
+{
+    if (isRunning() || m_session.id() != sessionId || !m_workspace || m_workspace->bookSessionId() != bookSessionId
+        || (m_mode != AgentMode::Auto && m_mode != AgentMode::Edit) || m_cancellation.isCancelled()) {
+        AgentRunResult result; result.state = AgentRunState::Cancelled; return result;
+    }
+    if (!m_runner) rebuildTools();
+    auto result = m_runner->runTurn(text, {}, true);
+    if (m_resetSessionAfterRun) resetSessionNow();
     return result;
 }
 

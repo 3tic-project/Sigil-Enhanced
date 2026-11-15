@@ -123,7 +123,7 @@ def run(build, test_entry='opf_resource_integration_test.cpp', build_fixture=epu
                 executable = pathlib.Path(bin_directory) / 'opf_resource_test'
             link_args[link_args.index('-o') + 1] = str(executable)
             subprocess.run(link_args, cwd=build, check=True)
-            environment = dict(os.environ, QT_QPA_PLATFORM='offscreen', SIGIL_PREFS_DIR=str(scratch))
+            environment = dict(os.environ, QT_QPA_PLATFORM=os.environ.get('SIGIL_NATIVE_TEST_PLATFORM', 'offscreen'), SIGIL_PREFS_DIR=str(scratch))
             # Use source modules plus built runtime dependencies for the nested
             # executable; the embedded interpreter uses the same linked Python.
             environment['SIGIL_TEST_PYTHON_ROOT'] = str(build / 'bin/Sigil.app/Contents/python3lib')

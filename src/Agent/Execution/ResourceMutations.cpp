@@ -33,14 +33,15 @@ QString defaultSvgTemplate()
         "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"100\" height=\"100\"></svg>\n");
 }
 
-QString mediaTypeForKind(const QString &kind)
+QString mediaTypeForKind(const QString &kind, const QString &book_path)
 {
     if (kind == QLatin1String("css")) return QStringLiteral("text/css");
     if (kind == QLatin1String("svg")) return QStringLiteral("image/svg+xml");
     if (kind == QLatin1String("js") || kind == QLatin1String("javascript")) {
         return QStringLiteral("application/javascript");
     }
-    if (kind == QLatin1String("text")) return QStringLiteral("text/plain");
+    if (kind == QLatin1String("text")) return QFileInfo(book_path).suffix().compare(QLatin1String("json"), Qt::CaseInsensitive) == 0
+        ? QStringLiteral("application/json") : QStringLiteral("text/plain");
     return QStringLiteral("application/xhtml+xml");
 }
 

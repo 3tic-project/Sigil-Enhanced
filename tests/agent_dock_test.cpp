@@ -16,8 +16,10 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QProgressBar>
 #include <QRegularExpression>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QTextDocument>
 #include <QTimer>
 #include <QToolButton>
@@ -353,12 +355,52 @@ void TestMarkdownNavigation(QApplication &application)
     Require(!notice->isVisible(), "a new transcript must clear the location notice");
 }
 
+void TestTranscriptFollowing()
+{
+    SigilAgent::AgentDock dock;
+    dock.resize(540, 560); dock.show(); ProcessEventsFor(40);
+    auto *transcript = dock.findChild<QScrollArea *>("agentTranscript");
+    auto *bar = transcript->verticalScrollBar();
+    SigilAgent::AgentEvent user; user.type = SigilAgent::AgentEventType::UserMessage;
+    for (int i = 0; i < 10; ++i) {
+        user.payload = {{"text", QStringLiteral("Message %1\n").arg(i).repeated(5)}};
+        dock.appendEvent(user); ProcessEventsFor(15);
+    }
+    Require(bar->maximum() > 100 && bar->value() == bar->maximum(),
+        "new cards must follow the updated layout rather than the previous message");
+    SigilAgent::AgentEvent delta; delta.type = SigilAgent::AgentEventType::AssistantDelta;
+    delta.payload = {{"kind", "content"}, {"text", QStringLiteral("Growing streamed answer line.\n").repeated(30)}};
+    dock.appendEvent(delta); ProcessEventsFor(80);
+    Require(bar->value() == bar->maximum(), "a growing streamed answer must remain at the bottom");
+    bar->setValue(bar->maximum() / 3);
+    const int readingPosition = bar->value();
+    dock.appendEvent(delta); ProcessEventsFor(80);
+    Require(bar->value() == readingPosition, "streaming must preserve the user's reading position after scrolling up");
+    user.payload = {{"text", "a background card while reading earlier messages"}, {"source", "background"}};
+    dock.appendEvent(user); ProcessEventsFor(40);
+    Require(bar->value() == readingPosition, "new cards must not force a scrolled-up reader to the bottom");
+    bar->setValue(bar->maximum());
+    dock.appendEvent(delta); ProcessEventsFor(80);
+    Require(bar->value() == bar->maximum(), "following must resume when the user returns to the bottom");
+    SigilAgent::AgentEvent final; final.type = SigilAgent::AgentEventType::AssistantMessage;
+    final.payload = {{"content", QStringLiteral("## Final answer\n\n").repeated(35)}};
+    dock.appendEvent(final); ProcessEventsFor(60);
+    Require(bar->value() == bar->maximum(), "final Markdown layout must stay in view");
+    bar->setValue(0);
+    user.payload = {{"text", "my next question"}, {"source", "user"}};
+    dock.appendEvent(user); ProcessEventsFor(40);
+    Require(bar->value() == bar->maximum(), "sending a new question must bring its reply into view");
+    dock.resetTranscript(); ProcessEventsFor(40);
+    Require(bar->value() == 0, "new conversation must reset the scroll anchor");
+}
+
 } // namespace
 
 int main(int argc, char *argv[])
 {
     qputenv("QT_QPA_PLATFORM", QByteArray("offscreen"));
     QApplication application(argc, argv);
+    TestTranscriptFollowing();
     SigilAgent::AgentDock dock;
     dock.setSessionId(QStringLiteral("session-full-id"));
     dock.show();
@@ -779,6 +821,45 @@ int main(int argc, char *argv[])
     dock.setRunState(SigilAgent::AgentRunState::Completed);
     Require(mode->isEnabled() && fresh->isEnabled() && !stop->isEnabled(),
             "terminal run state must restore mode and New Session controls");
+    dock.setBackgroundTaskActive(true);
+    dock.setRunState(SigilAgent::AgentRunState::Completed);
+    Require(stop->isEnabled() && fresh->isEnabled() && mode->isEnabled(),
+            "background task must remain stoppable without locking conversation controls");
+    dock.setBackgroundTaskActive(false);
+    Require(!stop->isEnabled(), "completed background task must release the Stop button");
+    dock.setRunState(SigilAgent::AgentRunState::RequestingModel);
+    dock.setBackgroundTaskActive(true);
+    dock.setBackgroundTaskActive(false);
+    Require(stop->isEnabled(), "background completion must not disable Stop during an Agent turn");
+    dock.setRunState(SigilAgent::AgentRunState::Completed);
+    QJsonObject task {{"session_id", "scope-1"}, {"state", "running"}, {"phase", "translate"},
+        {"paragraphs", 20}, {"scanned", 20}, {"written", 7}, {"reviewed", 0}, {"failed", 0},
+        {"phase_completed", 7}, {"phase_total", 20}, {"in_flight", 2}, {"queued_batches", 3}};
+    dock.setBackgroundTaskStatus(task);
+    auto *taskCard = dock.findChild<QWidget *>("agentBackgroundTask");
+    auto *progress = dock.findChild<QProgressBar *>("agentBackgroundProgress");
+    auto *pauseTask = dock.findChild<QPushButton *>("agentBackgroundPause");
+    auto *retryTask = dock.findChild<QPushButton *>("agentBackgroundRetry");
+    auto *counts = dock.findChild<QLabel *>("agentBackgroundTaskCounts");
+    Require(taskCard && !taskCard->isHidden() && progress && progress->maximum() == 20 && progress->value() == 7
+        && counts->text().contains("Written 7/20") && stop->isEnabled(), "native background task must expose actual progress without an Agent model call");
+    task["effective_concurrency"] = 1; task["configured_concurrency"] = 4;
+    dock.setBackgroundTaskStatus(task);
+    auto *taskDetail = dock.findChild<QLabel *>("agentBackgroundTaskDetail");
+    Require(taskDetail && taskDetail->text().contains("Concurrency 1/4") && taskDetail->text().contains("rate limit"),
+        "task card must distinguish a temporary limit from configured concurrency");
+    task["configured_concurrency"] = 1; dock.setBackgroundTaskStatus(task);
+    Require(!taskDetail->text().contains("rate limit"), "configured single concurrency must not be reported as throttling");
+    QString taskAction;
+    QObject::connect(&dock, &SigilAgent::AgentDock::backgroundTaskControlRequested, [&](const QString &action) { taskAction = action; });
+    pauseTask->click(); Require(taskAction == "pause", "task Pause control must route directly");
+    task["state"] = "paused"; dock.setBackgroundTaskStatus(task);
+    pauseTask->click(); Require(taskAction == "resume", "task Resume control must route directly");
+    task["state"] = "partial"; task["failed"] = 1; dock.setBackgroundTaskStatus(task);
+    Require(!retryTask->isHidden() && !stop->isEnabled(), "unfinished task must stay visible after the Agent run completes");
+    retryTask->click(); Require(taskAction == "retry_failed", "task retry must route directly");
+    dock.setBackgroundTaskStatus({});
+    Require(taskCard->isHidden() && !stop->isEnabled(), "clearing the conversation must remove its task data");
     dock.resetTranscript();
     SigilAgent::AgentEvent target_changed;
     target_changed.type = SigilAgent::AgentEventType::BookTargetChanged;
