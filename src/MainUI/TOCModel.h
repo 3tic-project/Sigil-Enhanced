@@ -25,7 +25,6 @@
 #define TOCMODEL_H
 
 #include <QtCore/QFutureWatcher>
-#include <QtCore/QMutex>
 #include <QtCore/QSharedPointer>
 #include <QtGui/QStandardItemModel>
 
@@ -117,7 +116,8 @@ public:
 
     /**
      * Reads the NCX file or Nav file, parses it and returns the root TOC
-     * entry (that entry is the tree start). 
+     * entry (that entry is the tree start). Called on the model's GUI thread;
+     * use Refresh() for background parsing.
      * @return The root TOCEntry.
      */
     TOCEntry GetRootTOCEntry();
@@ -136,12 +136,7 @@ private slots:
 
 private:
 
-    /**
-     * Reads the NCX file and returns the text in it.
-     *
-     * @return The NCX text.
-     */
-    QString GetNCXText();
+    TOCEntry ReadRootTOCEntry(const QSharedPointer<Book>& book);
 
     /**
      * Parses the NCX source and returns the root TOC entry.
@@ -149,7 +144,7 @@ private:
      * @param ncx_source The NCX source code.
      * @return The root TOCEntry.
      */
-    TOCEntry ParseNCX(const QString &ncx_source);
+    TOCEntry ParseNCX(const QString &ncx_source, const QString &ncx_bookpath);
 
     /**
      * Parses an NCX navPoint element. Calls itself recursively
@@ -158,9 +153,9 @@ private:
      * @param ncx The QXmlStreamReader reading an NCX file positioned
      *            on a navPoint element.
      */
-    TOCEntry ParseNavPoint(QXmlStreamReader &ncx);
+    TOCEntry ParseNavPoint(QXmlStreamReader &ncx, const QString &ncx_bookpath);
 
-    QString ConvertHREFToBookPath(const QString& ahref);
+    QString ConvertHREFToBookPath(const QString& ahref, const QString &ncx_bookpath);
 
     /**
      * Builds the actual display model from the tree of TOCEntries.
@@ -192,17 +187,15 @@ private:
     bool m_RefreshPending = false;
 
     /**
-     * Guards the use of the m_Book variable.
-     */
-    QMutex m_UsingBookMutex;
-
-    /**
      * Watches the completion of the GetRootNCXEntry func
      * and signals the RefreshEnd func when the root NCX entry is ready.
      */
     QFutureWatcher<TOCEntry> *m_TocRootWatcher;
 
-    QString m_EpubVersion;
+    // Owned and released on GUI; a worker must not destroy the last Book
+    // reference (and its QTextDocuments) after the window switches books.
+    QSharedPointer<Book> m_RefreshBook;
+
 };
 
 

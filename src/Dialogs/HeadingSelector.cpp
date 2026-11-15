@@ -42,6 +42,28 @@ static const int FIRST_COLUMN_PADDING = 30;
 const QString SIGIL_TOC_ID_PREFIX = "sigil_toc_id_";
 const QString OLD_SIGIL_TOC_ID_PREFIX = "heading_id_";
 
+namespace {
+void UpdateHeadingPaths(QList<Headings::Heading>& headings, HTMLResource* resource,
+                        const QList<Headings::Heading>& current, int& position)
+{
+    for (auto& heading : headings) {
+        if (heading.resource_file == resource && position < current.size()) {
+            heading.path_to_node = current.at(position++).path_to_node;
+        }
+        UpdateHeadingPaths(heading.children, resource, current, position);
+    }
+}
+
+void UpdateHeadingPaths(QList<Headings::Heading>& headings, HTMLResource* resource)
+{
+    // Serialization can insert whitespace nodes. Refresh paths in place so
+    // later edits still address the same headings, including hidden entries.
+    const auto current = Headings::GetHeadingListForOneFile(resource, true);
+    int position = 0;
+    UpdateHeadingPaths(headings, resource, current, position);
+}
+}
+
 // Constructor;
 // the first parameter is the book whose TOC
 // is being edited, the second is the dialog's parent
@@ -58,7 +80,8 @@ HeadingSelector::HeadingSelector(QSharedPointer<Book> book, QWidget *parent)
     CreateContextMenuActions();
     ConnectSignalsToSlots();
     ui.tvTOCDisplay->setModel(&m_TableOfContents);
-    LockHTMLResources();
+    // Do not keep resource write locks across the dialog's event loop:
+    // queued TOC/Agent readers must remain able to inspect the book.
 
     // Remove the Nav resource from list of  HTMLResources if it exists (EPUB3)
     QList<HTMLResource*> htmlresources = m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true);
@@ -79,7 +102,6 @@ HeadingSelector::HeadingSelector(QSharedPointer<Book> book, QWidget *parent)
 HeadingSelector::~HeadingSelector()
 {
     WriteSettings();
-    UnlockHTMLResources();
 }
 
 bool HeadingSelector::IsBookChanged()
@@ -267,6 +289,7 @@ void HeadingSelector::UpdateHeadingElements()
             if (!changed_resources.contains(heading->resource_file)) {
                 QString source = heading->resource_file->GetTOCCache();
                 QString version = heading->resource_file->GetEpubVersion();
+                QWriteLocker locker(&heading->resource_file->GetLock());
                 heading->resource_file->SetText(CleanSource::CharToEntity(source, version));
                 changed_resources.append(heading->resource_file);
             }
@@ -424,6 +447,7 @@ void HeadingSelector::UpdateOneHeadingTitle(QStandardItem *item, const QString &
         QString title_attribute = heading->title;
 
         if (title != heading->title) {
+            QWriteLocker locker(&heading->resource_file->GetLock());
             heading->title = title;
             heading->is_changed = true;
 
@@ -442,6 +466,7 @@ void HeadingSelector::UpdateOneHeadingTitle(QStandardItem *item, const QString &
             }
             source = gi.getxhtml();
             heading->resource_file->SetText(CleanSource::CharToEntity(source, version));
+            UpdateHeadingPaths(m_Headings, heading->resource_file);
         }
     }
 }
@@ -492,17 +517,21 @@ void HeadingSelector::ChangeHeadingLevel(int change_amount)
     // Rename in document
     QList<GumboTag> HEADING_LOOKUP = QList<GumboTag>() << GUMBO_TAG_H1 << GUMBO_TAG_H2 << GUMBO_TAG_H3 << GUMBO_TAG_H4 << GUMBO_TAG_H5 << GUMBO_TAG_H6;
     GumboTag new_tag = HEADING_LOOKUP.at(heading->level - 1);
-    QString source = heading->resource_file->GetText();
-    QString version = heading->resource_file->GetEpubVersion();
-    GumboInterface gi = GumboInterface(source, version);
-    gi.parse();
-    GumboNode* node = gi.get_node_from_path(heading->path_to_node);
-    if (node->type == GUMBO_NODE_ELEMENT) {
-        GumboTag old_tag = node->v.element.tag;
-        if (HEADING_LOOKUP.contains(old_tag)) {
-            node->v.element.tag = new_tag;
-            source = gi.getxhtml();
-            heading->resource_file->SetText(CleanSource::CharToEntity(source, version));
+    {
+        QWriteLocker locker(&heading->resource_file->GetLock());
+        QString source = heading->resource_file->GetText();
+        QString version = heading->resource_file->GetEpubVersion();
+        GumboInterface gi = GumboInterface(source, version);
+        gi.parse();
+        GumboNode* node = gi.get_node_from_path(heading->path_to_node);
+        if (node->type == GUMBO_NODE_ELEMENT) {
+            GumboTag old_tag = node->v.element.tag;
+            if (HEADING_LOOKUP.contains(old_tag)) {
+                node->v.element.tag = new_tag;
+                source = gi.getxhtml();
+                heading->resource_file->SetText(CleanSource::CharToEntity(source, version));
+                UpdateHeadingPaths(m_Headings, heading->resource_file);
+            }
         }
     }
     // Clear all children information then rebuild hierarchy
@@ -952,22 +981,6 @@ void HeadingSelector::WriteSettings()
     // The size of the window and it's full screen status
     settings.setValue("geometry", saveGeometry());
     settings.endGroup();
-}
-
-
-void HeadingSelector::LockHTMLResources()
-{
-    foreach(HTMLResource *resource, m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true)) {
-        resource->GetLock().lockForWrite();
-    }
-}
-
-
-void HeadingSelector::UnlockHTMLResources()
-{
-    foreach(HTMLResource * resource, m_Book->GetFolderKeeper()->GetResourceTypeList<HTMLResource>(true)) {
-        resource->GetLock().unlock();
-    }
 }
 
 

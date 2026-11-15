@@ -12,6 +12,12 @@ target_link_libraries(settings_concurrency_test PRIVATE Qt6::Core)
 add_test(NAME settings_concurrency COMMAND settings_concurrency_test)
 set_tests_properties(settings_concurrency PROPERTIES TIMEOUT 60)
 
+add_executable(agent_locking_test ../agent_locking_test.cpp ../../src/Agent/Core/AgentSession.cpp)
+target_include_directories(agent_locking_test PRIVATE ../../src)
+target_link_libraries(agent_locking_test PRIVATE Qt6::Core)
+add_test(NAME agent_locking COMMAND agent_locking_test)
+set_tests_properties(agent_locking PROPERTIES TIMEOUT 30)
+
 add_executable(window_startup_policy_test ../window_startup_policy_test.cpp)
 target_include_directories(window_startup_policy_test PRIVATE ../../src)
 target_link_libraries(window_startup_policy_test PRIVATE Qt6::Widgets)

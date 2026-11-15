@@ -982,6 +982,12 @@ target_link_libraries(settings_concurrency_test PRIVATE Qt6::Core)
 add_test(NAME settings_concurrency COMMAND settings_concurrency_test)
 set_tests_properties(settings_concurrency PROPERTIES TIMEOUT 60)
 
+add_executable(agent_locking_test agent_locking_test.cpp ../src/Agent/Core/AgentSession.cpp)
+target_include_directories(agent_locking_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(agent_locking_test PRIVATE Qt6::Core)
+add_test(NAME agent_locking COMMAND agent_locking_test)
+set_tests_properties(agent_locking PROPERTIES TIMEOUT 30)
+
 add_executable(window_startup_policy_test window_startup_policy_test.cpp)
 target_include_directories(window_startup_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(window_startup_policy_test PRIVATE Qt6::Widgets)
@@ -1738,6 +1744,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(book_browser_copy_rename_integration PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
+    add_test(NAME lock_reentrancy_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_lock_reentrancy_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(lock_reentrancy_integration PROPERTIES TIMEOUT 200 RUN_SERIAL TRUE)
     foreach(epub_version IN ITEMS epub2 epub3)
         add_test(NAME legacy_plugin_binary_${epub_version}_integration
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_legacy_plugin_binary_integration.py

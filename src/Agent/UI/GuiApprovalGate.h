@@ -12,6 +12,7 @@
 #include <QEventLoop>
 #include <QMutex>
 #include <QThread>
+#include <QTimer>
 #include <QWaitCondition>
 
 #include "Agent/Core/AgentCancellation.h"
@@ -46,11 +47,23 @@ public:
         if (QCoreApplication::instance()
             && QThread::currentThread() == QCoreApplication::instance()->thread()) {
             QEventLoop loop;
-            m_loop = &loop;
-            while (!m_decided && !(m_cancellation && m_cancellation->isCancelled())) {
-                loop.processEvents(QEventLoop::AllEvents, 100);
+            QTimer pollCancellation;
+            QObject::connect(&pollCancellation, &QTimer::timeout, &loop, [&]() {
+                if (m_cancellation && m_cancellation->isCancelled()) loop.quit();
+            });
+            pollCancellation.start(100);
+            bool pending;
+            {
+                QMutexLocker locker(&m_mutex);
+                m_loop = &loop;
+                pending = !m_decided && !(m_cancellation && m_cancellation->isCancelled());
             }
-            m_loop = nullptr;
+            // A queued quit also covers resolution between the check and exec.
+            if (pending) loop.exec();
+            {
+                QMutexLocker locker(&m_mutex);
+                m_loop = nullptr;
+            }
         } else {
             QMutexLocker locker(&m_mutex);
             while (!m_decided && !(m_cancellation && m_cancellation->isCancelled())) {
@@ -76,7 +89,7 @@ public:
         m_argumentOverrides = approved ? argumentOverrides : QJsonObject();
         m_decided = true;
         m_cv.wakeAll();
-        if (m_loop) m_loop->quit();
+        if (m_loop) QMetaObject::invokeMethod(m_loop, "quit", Qt::QueuedConnection);
     }
 
     void cancel()
@@ -86,7 +99,7 @@ public:
         m_argumentOverrides = QJsonObject();
         m_decided = true;
         m_cv.wakeAll();
-        if (m_loop) m_loop->quit();
+        if (m_loop) QMetaObject::invokeMethod(m_loop, "quit", Qt::QueuedConnection);
     }
 
 private:

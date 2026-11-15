@@ -102,7 +102,9 @@ private:
 
     QHash<QString, QString> m_dictionaries;
     QHash<QString, QString> m_langcode2dict;
-    mutable QMutex mutex;
+    // Public operations call one another (load -> add words, spell -> load).
+    // Keep Hunspell handles and their stateful codecs protected throughout.
+    mutable QRecursiveMutex mutex;
     QHash<QString, struct HDictionary> m_opendicts;
     QSet<QString> m_ignoredWords;
     struct HDictionary m_primary;

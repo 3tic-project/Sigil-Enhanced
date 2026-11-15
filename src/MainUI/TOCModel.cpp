@@ -53,12 +53,8 @@ TOCModel::~TOCModel()
 
 void TOCModel::SetBook(QSharedPointer<Book> book, bool refresh)
 {
-    {
-        // We need to make sure we don't step on the toes of GetNCXText
-        QMutexLocker book_lock(&m_UsingBookMutex);
-        m_Book = book;
-        m_EpubVersion = m_Book->GetConstOPF()->GetEpubVersion();
-    }
+    Q_ASSERT(QThread::currentThread() == thread());
+    m_Book.swap(book);
     if (refresh) Refresh();
 }
 
@@ -89,12 +85,17 @@ void TOCModel::Refresh()
     }
 
     m_RefreshInProgress = true;
-    m_TocRootWatcher->setFuture(QtConcurrent::run(&TOCModel::GetRootTOCEntry, this));
+    m_RefreshBook = m_Book;
+    m_TocRootWatcher->setFuture(QtConcurrent::run([this]() {
+        return ReadRootTOCEntry(m_RefreshBook);
+    }));
 }
 
 
 void TOCModel::RefreshEnd()
 {
+    QSharedPointer<Book> finishedBook;
+    finishedBook.swap(m_RefreshBook);
     m_RefreshInProgress = false;
     if (m_RefreshPending) {
         m_RefreshPending = false;
@@ -108,26 +109,34 @@ void TOCModel::RefreshEnd()
 
 TOCModel::TOCEntry TOCModel::GetRootTOCEntry()
 {
-    QMutexLocker book_lock(&m_UsingBookMutex);
-    if (m_EpubVersion.startsWith('3') && m_Book->GetConstOPF()->GetNavResource()) {
-        NavProcessor navproc(m_Book->GetConstOPF()->GetNavResource());
+    Q_ASSERT(QThread::currentThread() == thread());
+    return ReadRootTOCEntry(m_Book);
+}
+
+TOCModel::TOCEntry TOCModel::ReadRootTOCEntry(const QSharedPointer<Book>& book)
+{
+    // Keep the source book alive, without making the GUI wait on resource
+    // locks or parsing when it switches books.
+    if (!book) return TOCEntry();
+    auto* nav = book->GetConstOPF()->GetNavResource();
+    if (book->GetConstOPF()->GetEpubVersion().startsWith('3') && nav) {
+        NavProcessor navproc(nav);
         return navproc.GetRootTOCEntry();
     }
-    return ParseNCX(GetNCXText());
+    auto* ncx = book->GetNCX();
+    if (!ncx) return ParseNCX(QString(), QString());
+    QString source;
+    QString bookpath;
+    {
+        QReadLocker locker(&ncx->GetLock());
+        source = ncx->GetText(); // The viewing model must not repair or reserialize NCX.
+        bookpath = ncx->GetRelativePath();
+    }
+    return ParseNCX(source, bookpath);
 }
 
 
-QString TOCModel::GetNCXText()
-{
-    // Called only by GetRootTOCEntry while it holds m_UsingBookMutex.
-    NCXResource *ncx = m_Book->GetNCX();
-    if (!ncx) return QString();
-    QReadLocker locker(&(ncx->GetLock()));
-    return ncx->GetText(); // The viewing model must not repair or reserialize NCX.
-}
-
-
-TOCModel::TOCEntry TOCModel::ParseNCX(const QString &ncx_source)
+TOCModel::TOCEntry TOCModel::ParseNCX(const QString &ncx_source, const QString &ncx_bookpath)
 {
     QXmlStreamReader ncx(ncx_source);
     bool in_navmap = false;
@@ -147,7 +156,7 @@ TOCModel::TOCEntry TOCModel::ParseNCX(const QString &ncx_source)
             }
 
             if (ncx.name().compare(QLatin1String("navPoint")) == 0) {
-                root.children.append(ParseNavPoint(ncx));
+                root.children.append(ParseNavPoint(ncx, ncx_bookpath));
             }
         } else if (ncx.isEndElement() &&
                    ncx.name().compare(QLatin1String("navMap")) == 0) {
@@ -165,7 +174,7 @@ TOCModel::TOCEntry TOCModel::ParseNCX(const QString &ncx_source)
 }
 
 
-TOCModel::TOCEntry TOCModel::ParseNavPoint(QXmlStreamReader &ncx)
+TOCModel::TOCEntry TOCModel::ParseNavPoint(QXmlStreamReader &ncx, const QString &ncx_bookpath)
 {
     TOCModel::TOCEntry current;
 
@@ -180,9 +189,9 @@ TOCModel::TOCEntry TOCModel::ParseNavPoint(QXmlStreamReader &ncx)
                 current.text = ncx.readElementText(QXmlStreamReader::IncludeChildElements).simplified();
             } else if (ncx.name().compare(QLatin1String("content")) == 0) {
                 QString href = ncx.attributes().value("", "src").toString();
-                current.target = ConvertHREFToBookPath(href);
+                current.target = ConvertHREFToBookPath(href, ncx_bookpath);
             } else if (ncx.name().compare(QLatin1String("navPoint")) == 0) {
-                current.children.append(ParseNavPoint(ncx));
+                current.children.append(ParseNavPoint(ncx, ncx_bookpath));
             }
         } else if (ncx.isEndElement() &&
                    ncx.name().compare(QLatin1String("navPoint")) == 0) {
@@ -221,12 +230,11 @@ void TOCModel::AddEntryToParentItem(const TOCEntry &entry, QStandardItem *parent
 
 // This routine is designed to work on url encoded hrefs
 // and return things url encoded
-QString TOCModel::ConvertHREFToBookPath(const QString &ahref)
+QString TOCModel::ConvertHREFToBookPath(const QString &ahref, const QString &ncx_bookpath)
 {
     QString bookpath;
     if (ahref.indexOf(":") != -1) return ahref;
     // split off any fragment
-    NCXResource* ncxres = m_Book->GetNCX();
     QStringList pieces = ahref.split('#', Qt::KeepEmptyParts);
     QString basepath = pieces.at(0);
     QString fragment = "";
@@ -234,11 +242,11 @@ QString TOCModel::ConvertHREFToBookPath(const QString &ahref)
     // handle special cases first                                                                                   
     if (basepath == "./" || basepath.isEmpty()) {
         // this link ends in the ncx itself                                                                         
-        bookpath = Utility::URLEncodePath(ncxres->GetRelativePath());
+        bookpath = Utility::URLEncodePath(ncx_bookpath);
         if (!fragment.isEmpty()) bookpath = bookpath + "#" + fragment;
         return bookpath;
     }
-    bookpath = Utility::buildBookPath(Utility::URLDecodePath(basepath), ncxres->GetFolder());
+    bookpath = Utility::buildBookPath(Utility::URLDecodePath(basepath), QFileInfo(ncx_bookpath).path());
     bookpath = Utility::URLEncodePath(bookpath);
     if (!fragment.isEmpty()) bookpath = bookpath + "#" + fragment;
     return bookpath;

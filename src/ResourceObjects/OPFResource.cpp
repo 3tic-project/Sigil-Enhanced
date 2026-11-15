@@ -2033,9 +2033,13 @@ QString OPFResource::ValidatePackageVersion(const QString& source)
         if (version != orig_version) {
             newsource.replace(mo.capturedStart(1), mo.capturedLength(1), orig_version);
             if (!m_WarnedAboutVersion && !version.startsWith('1')) {
-                Utility::DisplayStdWarningDialog("Changing package version inside Sigil is not supported", 
-                                                 "Use an appropriate output plugin to make the initial conversion");
                 m_WarnedAboutVersion = true;
+                // Validation runs under the OPF write lock. A modal alert here
+                // lets GUI callbacks try to reacquire it as a read lock.
+                QMetaObject::invokeMethod(this, []() {
+                    Utility::DisplayStdWarningDialog("Changing package version inside Sigil is not supported",
+                                                     "Use an appropriate output plugin to make the initial conversion");
+                }, Qt::QueuedConnection);
             }
         }
     }

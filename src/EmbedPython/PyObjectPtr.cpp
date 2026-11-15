@@ -43,7 +43,11 @@
 PyObjectPtr::PyObjectPtr(PyObject* o)
 {
     _object = o;
-    if (o) Py_INCREF(_object);
+    if (o) {
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        Py_INCREF(_object);
+        PyGILState_Release(gstate);
+    }
 }
 
 PyObjectPtr::~PyObjectPtr()
@@ -58,12 +62,11 @@ PyObjectPtr::~PyObjectPtr()
 void PyObjectPtr::setNewRef(PyObject* o)
 {
     if (o != _object) {
-        if (_object) {
-            PyGILState_STATE gstate = PyGILState_Ensure();
-            Py_DECREF(_object);
-            PyGILState_Release(gstate);
-        }
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        PyObject* previous = _object;
         _object = o;
+        Py_XDECREF(previous);
+        PyGILState_Release(gstate);
     }
 }
 
@@ -82,12 +85,11 @@ bool PyObjectPtr::fromVariant(const QVariant& variant)
 void PyObjectPtr::setObject(PyObject* o)
 {
     if (o != _object) {
-        if (_object) {
-            PyGILState_STATE gstate = PyGILState_Ensure();
-            Py_DECREF(_object);
-            PyGILState_Release(gstate);
-        }
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        Py_XINCREF(o);
+        PyObject* previous = _object;
         _object = o;
-        if (_object) Py_INCREF(_object);
+        Py_XDECREF(previous);
+        PyGILState_Release(gstate);
     }
 }

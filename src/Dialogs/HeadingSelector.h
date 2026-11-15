@@ -177,10 +177,6 @@ private:
     // window position, geometry etc.
     void WriteSettings();
 
-    void LockHTMLResources();
-
-    void UnlockHTMLResources();
-
     void ConnectSignalsToSlots();
 
     void CountHeadings(QStandardItem *item);

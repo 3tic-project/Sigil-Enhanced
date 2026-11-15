@@ -14,6 +14,18 @@
 namespace SigilAgent
 {
 
+namespace {
+AgentEvent MakeEvent(AgentEventType type, const QJsonObject& payload)
+{
+    AgentEvent event;
+    event.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    event.type = type;
+    event.timestampMs = QDateTime::currentMSecsSinceEpoch();
+    event.payload = payload;
+    return event;
+}
+}
+
 AgentSession::AgentSession() :
     m_id(QUuid::createUuid().toString(QUuid::WithoutBraces))
 {
@@ -24,21 +36,21 @@ AgentSession::AgentSession() :
 
 QString AgentSession::id() const
 {
+    QMutexLocker locker(&m_mutex);
     return m_id;
 }
 
 void AgentSession::setListener(Listener listener)
 {
-    m_listener = std::move(listener);
+    QMutexLocker locker(&m_mutex);
+    // Destroy the previous capture after releasing the lock: its destructor
+    // may itself query the session.
+    m_listener.swap(listener);
 }
 
 AgentEvent AgentSession::append(AgentEventType type, const QJsonObject &payload)
 {
-    AgentEvent event;
-    event.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    event.type = type;
-    event.timestampMs = QDateTime::currentMSecsSinceEpoch();
-    event.payload = payload;
+    const AgentEvent event = MakeEvent(type, payload);
     Listener listener;
     {
         QMutexLocker locker(&m_mutex);
@@ -67,16 +79,22 @@ QList<AgentEvent> AgentSession::eventsOf(AgentEventType type) const
 
 void AgentSession::clear()
 {
-    QMutexLocker locker(&m_mutex);
-    m_events.clear();
-    m_memory = QJsonObject();
-    m_memoryKeys.clear();
-    m_tasks.clear();
-    m_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    locker.unlock();
-    append(AgentEventType::SessionCreated, QJsonObject {
-        { QStringLiteral("session_id"), m_id }
-    });
+    AgentEvent event;
+    Listener listener;
+    {
+        QMutexLocker locker(&m_mutex);
+        m_events.clear();
+        m_memory = QJsonObject();
+        m_memoryKeys.clear();
+        m_tasks.clear();
+        m_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        event = MakeEvent(AgentEventType::SessionCreated, QJsonObject {
+            { QStringLiteral("session_id"), m_id }
+        });
+        m_events.append(event);
+        listener = m_listener;
+    }
+    if (listener) listener(event);
 }
 
 bool AgentSession::containsSecret(const QString &secret) const

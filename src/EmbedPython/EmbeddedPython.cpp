@@ -32,11 +32,25 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QDebug>
+#include <QThread>
 
 #include "Misc/Utility.h"
 #include "sigil_constants.h"
 
 #define DBG if(0)
+
+namespace {
+void ReportPythonError(const QString& traceback)
+{
+    // Even a GUI caller may still hold a resource lock. Show the alert on the
+    // next GUI turn, after both the interpreter and its caller have unwound.
+    if (auto* app = QCoreApplication::instance()) {
+        QMetaObject::invokeMethod(app, [traceback]() {
+            Utility::DisplayStdErrorDialog(EmbeddedPython::tr("Embedded Python Error"), traceback);
+        }, Qt::QueuedConnection);
+    }
+}
+}
 
 // IMPORTANT NOTE:  This interface does NOT support passing/converting the type bool
 // All bool values should be converted to integeres with values of 0 for false and 1 for true
@@ -396,6 +410,7 @@ QVariant EmbeddedPython::runInPython(const QString &mname,
     PyObject *pyargs     = NULL;
     PyObject *pyres      = NULL;
     int       idx        = 0;
+    bool      report_error = false;
 
     moduleName = PyUnicode_FromString(mname.toUtf8().constData());
     if (moduleName == NULL) {
@@ -441,7 +456,8 @@ QVariant EmbeddedPython::runInPython(const QString &mname,
 cleanup:
     if (PyErr_Occurred() != NULL) {
         QString default_error = "Module Error: " + mname + " " + fname;
-        tb = getPythonErrorTraceback(default_error, show_error_dialog);
+        tb = getPythonErrorTraceback(default_error);
+        report_error = show_error_dialog;
     }
     Py_XDECREF(pyres);
     Py_XDECREF(pyargs);
@@ -451,6 +467,7 @@ cleanup:
 
     PyGILState_Release(gstate);
     EmbeddedPython::m_mutex.unlock();
+    if (report_error) ReportPythonError(tb);
     return res;
 }
 
@@ -473,6 +490,7 @@ QVariant EmbeddedPython::callPyObjMethod(PyObjectPtr &pyobj,
     PyObject* pyargs     = NULL;
     PyObject* pyres      = NULL;
     int       idx        = 0;
+    bool      report_error = false;
      
     func = PyObject_GetAttrString(obj,methname.toUtf8().constData());
     if (func == NULL) {
@@ -507,6 +525,7 @@ QVariant EmbeddedPython::callPyObjMethod(PyObjectPtr &pyobj,
     if (PyErr_Occurred() != NULL) {
         QString default_error = "Python Object Method Invocation Error: " + methname;
         tb = getPythonErrorTraceback(default_error);
+        report_error = true;
      }
     Py_XDECREF(pyres);
     Py_XDECREF(pyargs);
@@ -514,6 +533,7 @@ QVariant EmbeddedPython::callPyObjMethod(PyObjectPtr &pyobj,
 
     PyGILState_Release(gstate);
     EmbeddedPython::m_mutex.unlock();
+    if (report_error) ReportPythonError(tb);
     return res;
 }
 
@@ -695,7 +715,7 @@ PyObject* EmbeddedPython::QVariantToPyObject(const QVariant &v)
 
 
 // get traceback from inside interpreter upon error
-QString EmbeddedPython::getPythonErrorTraceback(const QString& default_message, bool useMsgBox)
+QString EmbeddedPython::getPythonErrorTraceback(const QString& default_message)
 {
     PyObject     *etype      = NULL;
     PyObject     *evalue     = NULL;
@@ -728,10 +748,5 @@ QString EmbeddedPython::getPythonErrorTraceback(const QString& default_message, 
 
     PyErr_Clear();
 
-    QString tb = tblist.join(QString("\n"));
-    if (useMsgBox) {
-        QString message = QString(tr("Embedded Python Error"));
-        Utility::DisplayStdErrorDialog(message, tb);
-    }
-    return tb;
+    return tblist.join(QString("\n"));
 }

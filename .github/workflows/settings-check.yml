@@ -9,6 +9,9 @@ on:
       - 'src/Misc/WindowStartupPolicy.h'
       - 'src/MainUI/FindReplace*'
       - 'src/MainUI/MainWindow.cpp'
+      - 'src/Agent/Core/AgentSession.*'
+      - 'src/Agent/UI/GuiApprovalGate.h'
+      - 'tests/agent_locking_test.cpp'
       - 'tests/settings_concurrency_test.cpp'
       - 'tests/window_startup_policy_test.cpp'
       - 'tests/settings_probe/**'
@@ -63,7 +66,7 @@ jobs:
         run: |
           $env:QT_PLUGIN_PATH = "$env:QT_DIR\plugins"
           $env:QT_QPA_PLATFORM = 'windows'
-          ctest --test-dir .ci-build/settings --output-on-failure -R '^settings_concurrency$'
+          ctest --test-dir .ci-build/settings --output-on-failure -R '^(settings_concurrency|agent_locking)$'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($scale in @('1', '1.5', '2')) {
             $env:QT_SCALE_FACTOR = $scale

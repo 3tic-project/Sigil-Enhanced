@@ -92,6 +92,7 @@ SpellCheck::SpellCheck()
 
 void SpellCheck::UpdateLangCodeToDictMapping()
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In UpdateLangCodeToDictMapping";
     m_langcode2dict.clear();
 
@@ -126,6 +127,8 @@ void SpellCheck::UnloadDictionary(const QString &dname)
 {
     DBG qDebug() << "In UnloadDictionary";
     QMutexLocker locker(&mutex);
+    if (m_primary.name == dname) m_primary = HDictionary();
+    if (m_secondary.name == dname) m_secondary = HDictionary();
     if (m_opendicts.contains(dname)) {
         HDictionary hdic = m_opendicts[dname];
         if (hdic.handle) {
@@ -139,6 +142,7 @@ void SpellCheck::UnloadDictionary(const QString &dname)
 
 void SpellCheck::UnloadAllDictionaries()
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In UnloadAllDictionaries";
     foreach(QString name, m_opendicts.keys()) {
         UnloadDictionary(name);
@@ -163,6 +167,7 @@ QStringList SpellCheck::userDictionaries()
 
 QStringList SpellCheck::dictionaries()
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In dictionaries";
     loadDictionaryNames();
     QStringList dicts;
@@ -180,6 +185,7 @@ QString SpellCheck::currentPrimaryDictionary() const
 
 bool SpellCheck::spell(const QString &word)
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In spell";
     QString dname = m_langcode2dict.value(HTMLSpellCheckML::langOf(word), "");
 
@@ -207,6 +213,7 @@ bool SpellCheck::spell(const QString &word)
 // spell check word without langcode info in Primary and Secondary Dictionaries
 bool SpellCheck::spellPS(const QString &word)
 {
+    QMutexLocker locker(&mutex);
     if (!m_primary.handle) return true;
     if(m_ignoredWords.contains(word)) return true;
     QByteArray pba = m_primary.encoder->encode(Utility::getSpellingSafeText(word));
@@ -220,6 +227,7 @@ bool SpellCheck::spellPS(const QString &word)
 
 QStringList SpellCheck::suggest(const QString &word)
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In suggest";
     QStringList suggestions;
     QString dname = m_langcode2dict.value(HTMLSpellCheckML::langOf(word), "");
@@ -245,6 +253,7 @@ QStringList SpellCheck::suggest(const QString &word)
 // suggesttions for word without langcode using Primary and Secondary Dictionaries
 QStringList SpellCheck::suggestPS(const QString &word)
 {
+    QMutexLocker locker(&mutex);
     QStringList suggestions;
     if (!m_primary.handle) return suggestions;
     bool possible_end_of_sentence = word.endsWith('.') && (word.count(".") == 1);
@@ -273,6 +282,7 @@ QStringList SpellCheck::suggestPS(const QString &word)
 
 void SpellCheck::clearIgnoredWords()
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In clearIgnoredWords";
     m_ignoredWords.clear();
 }
@@ -280,12 +290,14 @@ void SpellCheck::clearIgnoredWords()
 
 void SpellCheck::ignoreWord(const QString &word)
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In ignoreWord";
     m_ignoredWords.insert(word);
 }
 
 
 bool SpellCheck::isIgnored(const QString &word) {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In isIgnored";
     return m_ignoredWords.contains(word);
 }
@@ -293,6 +305,7 @@ bool SpellCheck::isIgnored(const QString &word) {
 
 void SpellCheck::addWordToDictionary(const QString &word, const QString &dname)
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In addWordToDictionary";
     if (dname.isEmpty()) return;
     if (m_opendicts.contains(dname)) {
@@ -307,6 +320,7 @@ void SpellCheck::loadDictionary(const QString &dname)
 {
     DBG qDebug() << "In loadDictionary: " << dname;
     QMutexLocker locker(&mutex);
+    if (m_opendicts.contains(dname)) return;
     // If we don't have a dictionary we cannot continue.
     if (dname.isEmpty() || !m_dictionaries.contains(dname)) {
         qDebug() << "attempted to load a non-existent dictionary: " << dname;
@@ -385,6 +399,7 @@ void SpellCheck::loadDictionary(const QString &dname)
 
 void SpellCheck::setDictionary(const QString &dname, bool forceReplace)
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In setDictionary " << dname;
     // See if we are already using a hunspell object for this language.
     if (!forceReplace && m_opendicts.contains(dname)) {
@@ -398,6 +413,7 @@ void SpellCheck::setDictionary(const QString &dname, bool forceReplace)
 
 QString SpellCheck::getWordChars(const QString &lang)
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In getWordChars";
     QString dname;
     if (lang.isEmpty()) { 
@@ -517,6 +533,7 @@ void SpellCheck::dicDeltaWords(const QString &delta_path, QStringList & word_lis
 
 void SpellCheck::loadDictionaryNames()
 {
+    QMutexLocker locker(&mutex);
     DBG qDebug() << "In loadDictionaryNames";
     QStringList dictExts;
     dictExts << ".aff"
