@@ -173,7 +173,10 @@ private:
     QStringList m_focusTerms;
     QSet<int> m_onlyParagraphs;
     bool m_advancePending = false;
-    int m_runtimeConcurrency = 8;
+    int m_runtimeConcurrency = 4;
+    int m_configuredConcurrency = 4;
+    int m_concurrencySuccessStreak = 0;
+    int m_peakInFlight = 0;
     qint64 m_cooldownUntil = 0;
     qint64 m_requestBytes = 0;
     int m_parseHits = 0;

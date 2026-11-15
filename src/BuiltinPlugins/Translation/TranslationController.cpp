@@ -89,9 +89,10 @@ void TranslationController::reset()
     m_cache.clear(); m_active = 0; m_stage = -1; m_state = QStringLiteral("idle"); m_phase.clear();
     m_requests = m_cacheHits = m_retries = m_unknownUsage = 0;
     m_inputTokens = m_outputTokens = m_cachedTokens = 0;
-    m_requestBytes = 0; m_cooldownUntil = 0; m_runtimeConcurrency = 8;
+    m_requestBytes = 0; m_cooldownUntil = 0; m_runtimeConcurrency = 4;
     m_language = QStringLiteral("zh-Hans"); m_style = QStringLiteral("忠实通顺，保持人物口吻和日式引号");
     m_failedStages.clear(); m_retryFailedOnly = false;
+    m_configuredConcurrency = 4; m_concurrencySuccessStreak = 0; m_peakInFlight = 0;
     m_stages.clear(); m_wholeBook = true; m_retranslate = false; m_targetCharacters = 3000;
     m_checkpoint = false; m_instruction.clear(); m_focusTerms.clear(); m_onlyParagraphs.clear(); m_advancePending = false; ++m_contextRevision;
     emit changed();
@@ -257,6 +258,8 @@ TranslationController::Result TranslationController::run(const QJsonObject &args
     m_stages = stages;
     m_retranslate = args.value(QStringLiteral("retranslate")).toBool();
     const bool retryOnly = args.value("retry_failed_only").toBool();
+    m_configuredConcurrency = qBound(1, configuration.concurrency, 8);
+    m_concurrencySuccessStreak = 0;
     m_runtimeConcurrency = retryOnly ? qMin(m_runtimeConcurrency, qBound(1, configuration.concurrency, 8)) : qBound(1, configuration.concurrency, 8);
     m_cooldownUntil = 0;
     m_targetCharacters = configuration.translationCharacters > 0 ? configuration.translationCharacters : retryOnly ? m_targetCharacters : 3000;
@@ -365,6 +368,8 @@ void TranslationController::dispatch()
     if (m_stage < 0) { beginPhase(); return; }
     const auto dispatchToken = m_token;
     const auto configuration = m_configuration();
+    m_configuredConcurrency = qBound(1, configuration.concurrency, 8);
+    m_runtimeConcurrency = qMin(m_runtimeConcurrency, m_configuredConcurrency);
     const qint64 wait = m_cooldownUntil - QDateTime::currentMSecsSinceEpoch();
     if (wait > 0) {
         const auto token = m_token;
@@ -436,9 +441,10 @@ void TranslationController::dispatch()
             retry(work, tr("Batch exceeds model context/output space; reducing batch size"), {}, true); continue;
         }
         if (const auto *cached = m_cache.object(work.cacheKey)) {
-            ++m_cacheHits; accept(work, *cached); continue;
+            ++m_cacheHits; work.startedAt = 0; accept(work, *cached); continue;
         }
         ++m_requests;
+        m_peakInFlight = qMax(m_peakInFlight, m_active);
         work.startedAt = QDateTime::currentMSecsSinceEpoch(); work.maxOutputTokens = request.maxOutputTokens;
         work.model = request.model; work.thinking = request.thinking; work.effort = request.reasoningEffort;
         m_requestBytes += wire.size();
@@ -573,6 +579,9 @@ void TranslationController::accept(Work work, ParsedBatch parsed)
     if (parsed.missing.isEmpty()) {
         m_cache.insert(work.cacheKey, new ParsedBatch(parsed));
         --m_active;
+        if (work.startedAt > 0 && m_runtimeConcurrency < m_configuredConcurrency && ++m_concurrencySuccessStreak >= 3) {
+            ++m_runtimeConcurrency; m_concurrencySuccessStreak = 0;
+        }
         if (work.phase == "translate" && work.retries == 0 && work.outputTokens >= 0
             && work.outputTokens < work.maxOutputTokens * .65 && ++m_successStreak >= 3
             && m_configuration().translationCharacters == 0) {
@@ -588,7 +597,7 @@ void TranslationController::accept(Work work, ParsedBatch parsed)
 void TranslationController::retry(Work work, const QString &message, const QList<int> &missing, bool reduce, bool network, int retryAfterMs)
 {
     --m_active;
-    m_successStreak = 0;
+    m_successStreak = 0; m_concurrencySuccessStreak = 0;
     if (reduce && work.phase == "translate" && m_configuration().translationCharacters == 0) adjustBatches(qMax(500, m_targetCharacters / 2));
     QList<BatchText> pending;
     if (missing.isEmpty()) pending = work.items;
@@ -999,6 +1008,7 @@ QJsonObject TranslationController::status(const QJsonObject &args) const
         {"requests", m_requests}, {"local_cache_hits", m_cacheHits}, {"retries", m_retries},
         {"network_retries", m_networkRetries}, {"last_retry", m_lastRetry},
         {"request_bytes", m_requestBytes}, {"effective_concurrency", m_runtimeConcurrency},
+        {"configured_concurrency", m_configuredConcurrency}, {"peak_in_flight", m_peakInFlight},
         {"resource_cache_hits", m_parseHits},
         {"term_cache_hits", m_termHits}, {"translation_target_characters", m_targetCharacters},
         {"request_latency_p50_ms", percentile(50)}, {"request_latency_p95_ms", percentile(95)},

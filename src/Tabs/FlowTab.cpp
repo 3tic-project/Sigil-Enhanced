@@ -334,7 +334,8 @@ void FlowTab::ReloadTabIfPending()
         return;
     }
 
-    setFocus();
+    // Resource-owned documents repaint without changing the user's focus.
+    if (m_wCodeView) m_wCodeView->viewport()->update();
 }
 
 void FlowTab::LeaveEditor(QWidget *editor)

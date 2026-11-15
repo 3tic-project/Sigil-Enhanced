@@ -19,6 +19,7 @@
 #include <QProgressBar>
 #include <QRegularExpression>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QTextDocument>
 #include <QTimer>
 #include <QToolButton>
@@ -354,12 +355,52 @@ void TestMarkdownNavigation(QApplication &application)
     Require(!notice->isVisible(), "a new transcript must clear the location notice");
 }
 
+void TestTranscriptFollowing()
+{
+    SigilAgent::AgentDock dock;
+    dock.resize(540, 560); dock.show(); ProcessEventsFor(40);
+    auto *transcript = dock.findChild<QScrollArea *>("agentTranscript");
+    auto *bar = transcript->verticalScrollBar();
+    SigilAgent::AgentEvent user; user.type = SigilAgent::AgentEventType::UserMessage;
+    for (int i = 0; i < 10; ++i) {
+        user.payload = {{"text", QStringLiteral("Message %1\n").arg(i).repeated(5)}};
+        dock.appendEvent(user); ProcessEventsFor(15);
+    }
+    Require(bar->maximum() > 100 && bar->value() == bar->maximum(),
+        "new cards must follow the updated layout rather than the previous message");
+    SigilAgent::AgentEvent delta; delta.type = SigilAgent::AgentEventType::AssistantDelta;
+    delta.payload = {{"kind", "content"}, {"text", QStringLiteral("Growing streamed answer line.\n").repeated(30)}};
+    dock.appendEvent(delta); ProcessEventsFor(80);
+    Require(bar->value() == bar->maximum(), "a growing streamed answer must remain at the bottom");
+    bar->setValue(bar->maximum() / 3);
+    const int readingPosition = bar->value();
+    dock.appendEvent(delta); ProcessEventsFor(80);
+    Require(bar->value() == readingPosition, "streaming must preserve the user's reading position after scrolling up");
+    user.payload = {{"text", "a background card while reading earlier messages"}, {"source", "background"}};
+    dock.appendEvent(user); ProcessEventsFor(40);
+    Require(bar->value() == readingPosition, "new cards must not force a scrolled-up reader to the bottom");
+    bar->setValue(bar->maximum());
+    dock.appendEvent(delta); ProcessEventsFor(80);
+    Require(bar->value() == bar->maximum(), "following must resume when the user returns to the bottom");
+    SigilAgent::AgentEvent final; final.type = SigilAgent::AgentEventType::AssistantMessage;
+    final.payload = {{"content", QStringLiteral("## Final answer\n\n").repeated(35)}};
+    dock.appendEvent(final); ProcessEventsFor(60);
+    Require(bar->value() == bar->maximum(), "final Markdown layout must stay in view");
+    bar->setValue(0);
+    user.payload = {{"text", "my next question"}, {"source", "user"}};
+    dock.appendEvent(user); ProcessEventsFor(40);
+    Require(bar->value() == bar->maximum(), "sending a new question must bring its reply into view");
+    dock.resetTranscript(); ProcessEventsFor(40);
+    Require(bar->value() == 0, "new conversation must reset the scroll anchor");
+}
+
 } // namespace
 
 int main(int argc, char *argv[])
 {
     qputenv("QT_QPA_PLATFORM", QByteArray("offscreen"));
     QApplication application(argc, argv);
+    TestTranscriptFollowing();
     SigilAgent::AgentDock dock;
     dock.setSessionId(QStringLiteral("session-full-id"));
     dock.show();
@@ -802,6 +843,13 @@ int main(int argc, char *argv[])
     auto *counts = dock.findChild<QLabel *>("agentBackgroundTaskCounts");
     Require(taskCard && !taskCard->isHidden() && progress && progress->maximum() == 20 && progress->value() == 7
         && counts->text().contains("Written 7/20") && stop->isEnabled(), "native background task must expose actual progress without an Agent model call");
+    task["effective_concurrency"] = 1; task["configured_concurrency"] = 4;
+    dock.setBackgroundTaskStatus(task);
+    auto *taskDetail = dock.findChild<QLabel *>("agentBackgroundTaskDetail");
+    Require(taskDetail && taskDetail->text().contains("Concurrency 1/4") && taskDetail->text().contains("rate limit"),
+        "task card must distinguish a temporary limit from configured concurrency");
+    task["configured_concurrency"] = 1; dock.setBackgroundTaskStatus(task);
+    Require(!taskDetail->text().contains("rate limit"), "configured single concurrency must not be reported as throttling");
     QString taskAction;
     QObject::connect(&dock, &SigilAgent::AgentDock::backgroundTaskControlRequested, [&](const QString &action) { taskAction = action; });
     pauseTask->click(); Require(taskAction == "pause", "task Pause control must route directly");

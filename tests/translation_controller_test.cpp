@@ -262,6 +262,39 @@ int main(int argc, char **argv)
     require(network.diagnostics().value("recent_requests").toArray().size() == 6, "bounded worker diagnostics retain retry and output metadata");
     require(modelRetryDelay(1, 3000) >= 3000 && modelRetryDelay(5) <= 4000, "Retry-After and exponential backoff bounds");
 
+    auto parallelBook = makeBook(600);
+    TranslationController parallel; parallel.setWorkspace(&parallelBook); parallel.setConfigurationProvider(configuration);
+    std::atomic_int activeWorkers {0}, peakWorkers {0}; std::atomic_bool releaseWorkers {false};
+    parallel.setCompletion([&](const auto &, const auto &request, const auto &cancelled) {
+        const int active = ++activeWorkers; int peak = peakWorkers.load();
+        while (peak < active && !peakWorkers.compare_exchange_weak(peak, active)) {}
+        while (!releaseWorkers && !cancelled->load()) QThread::msleep(1);
+        auto turn = reply(request); --activeWorkers; return turn;
+    });
+    require(parallel.prepare().ok && parallel.run({{"stages", QJsonArray {"translate"}}}).ok
+        && waitFor([&]() { return peakWorkers >= 4; }), "four independent batches must execute simultaneously");
+    require(parallel.status().value("in_flight").toInt() == 4 && parallel.status().value("queued_batches").toInt() > 0
+        && !parallelBook.hasOpenTransaction(), "parallel network waits must not hold a live-book transaction");
+    releaseWorkers = true;
+    require(waitFor([&]() { return !parallel.running(); }) && parallel.status().value("written").toInt() == 600,
+        "concurrent responses must preserve every paragraph");
+
+    auto limitedBook = makeBook(1000);
+    TranslationController limited; limited.setWorkspace(&limitedBook);
+    limited.setConfigurationProvider([]() { auto config = configuration(); config.translationCharacters = 1500; return config; });
+    std::atomic_int limitedCalls {0}; bool sawSingleLimit = false;
+    QObject::connect(&limited, &TranslationController::changed, [&]() {
+        if (limited.status().value("effective_concurrency").toInt() == 1) sawSingleLimit = true;
+    });
+    limited.setCompletion([&](const auto &, const auto &request, const auto &) {
+        if (++limitedCalls <= 2) { ModelTurn turn; turn.error = "HTTP 429: synthetic temporary limit"; turn.httpStatus = 429; return turn; }
+        QThread::msleep(5); return reply(request);
+    });
+    require(limited.prepare().ok && limited.run({{"stages", QJsonArray {"translate"}}}).ok
+        && waitFor([&]() { return !limited.running(); }, 15000), "limited workflow finishes");
+    require(sawSingleLimit && limited.status().value("effective_concurrency").toInt() == 4
+        && limited.status().value("written").toInt() == 1000, "temporary throttling must recover instead of serializing the rest of the book");
+
     auto scopeBook = makeBook(6);
     TranslationController scope; scope.setWorkspace(&scopeBook); scope.setConfigurationProvider(configuration);
     ToolRegistry scopedTools; registerTranslationTools(&scopedTools, &scope);

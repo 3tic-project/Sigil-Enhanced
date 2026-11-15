@@ -33,6 +33,7 @@
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QScopedValueRollback>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -211,6 +212,27 @@ AgentDock::AgentDock(QWidget *parent) :
     m_transcriptLayout->setSpacing(8);
     m_transcriptLayout->addStretch(1);
     m_transcript->setWidget(m_transcriptContents);
+    m_transcriptContents->installEventFilter(this);
+    m_scrollFollowTimer = new QTimer(this);
+    m_scrollFollowTimer->setSingleShot(true);
+    auto *transcriptBar = m_transcript->verticalScrollBar();
+    connect(m_scrollFollowTimer, &QTimer::timeout, this, [this, transcriptBar]() {
+        if (!m_followTranscript) return;
+        QScopedValueRollback<bool> scrolling(m_scrollingTranscript, true);
+        m_transcriptLayout->activate();
+        transcriptBar->setValue(transcriptBar->maximum());
+    });
+    connect(transcriptBar, &QScrollBar::rangeChanged, this, [this]() { followTranscriptLayout(); });
+    connect(transcriptBar, &QScrollBar::valueChanged, this, [this, transcriptBar](int value) {
+        if (!m_scrollingTranscript && !m_scrollFollowTimer->isActive())
+            m_followTranscript = transcriptBar->maximum() - value <= 16;
+    });
+    const auto userScroll = [this, transcriptBar]() {
+        m_followTranscript = transcriptBar->maximum() - transcriptBar->sliderPosition() <= 16;
+        if (!m_followTranscript) m_scrollFollowTimer->stop();
+    };
+    connect(transcriptBar, &QScrollBar::actionTriggered, this, userScroll);
+    connect(transcriptBar, &QScrollBar::sliderMoved, this, userScroll);
     m_streamFlushTimer = new QTimer(this);
     m_streamFlushTimer->setSingleShot(true);
     m_streamFlushTimer->setInterval(STREAM_FLUSH_INTERVAL_MS);
@@ -473,9 +495,14 @@ void AgentDock::setBackgroundTaskStatus(const QJsonObject &status)
         m_backgroundProgress->setRange(0, qMax(1, phaseTotal));
         m_backgroundProgress->setValue(state == "completed" ? qMax(1, phaseTotal) : status.value("phase_completed").toInt());
     }
-    QString detail = tr("Active %1 · Queued %2 · Requests %3 · Retries %4")
-        .arg(status.value("in_flight").toInt()).arg(status.value("queued_batches").toInt())
+    QString detail = tr("Active %1 · Concurrency %2/%3 · Queued %4 · Requests %5 · Retries %6")
+        .arg(status.value("in_flight").toInt()).arg(status.value("effective_concurrency").toInt(4))
+        .arg(status.value("configured_concurrency").toInt(4)).arg(status.value("queued_batches").toInt())
         .arg(status.value("requests").toInt()).arg(status.value("retries").toInt());
+    if (active && status.value("effective_concurrency").toInt(4) < status.value("configured_concurrency").toInt(4))
+        detail += tr(" · recovering after rate limit");
+    else if (state == "running" && status.value("in_flight").toInt() == 1 && status.value("queued_batches").toInt() == 0)
+        detail += phase == "aggregate" ? tr(" · one terminology merge remains") : tr(" · one batch remains");
     if (status.value("retry_wait_ms").toInteger() > 0) detail += tr(" · waiting to reconnect");
     if (state == "partial") {
         const auto messages = status.value("messages").toArray();
@@ -1458,6 +1485,7 @@ void AgentDock::recordReviewedPlanPage(const QJsonObject &payload)
 
 void AgentDock::resetTranscript()
 {
+    m_scrollFollowTimer->stop(); m_followTranscript = true;
     setBackgroundTaskStatus({});
     discardAssistantDeltas();
     closePlanComparisons();
@@ -1528,6 +1556,7 @@ void AgentDock::onModeChanged()
 
 bool AgentDock::eventFilter(QObject *watched, QEvent *event)
 {
+    if (watched == m_transcriptContents && event->type() == QEvent::LayoutRequest) followTranscriptLayout();
     if (watched == m_composer && event->type() == QEvent::KeyPress) {
         auto *key = static_cast<QKeyEvent *>(event);
         if ((key->key() == Qt::Key_Return || key->key() == Qt::Key_Enter)
@@ -1736,8 +1765,12 @@ QWidget *AgentDock::findCard(const QString &object_name) const
 void AgentDock::appendCard(QWidget *card)
 {
     m_transcriptLayout->insertWidget(m_transcriptLayout->count() - 1, card);
-    QScrollBar *bar = m_transcript->verticalScrollBar();
-    bar->setValue(bar->maximum());
+    followTranscriptLayout();
+}
+
+void AgentDock::followTranscriptLayout()
+{
+    if (m_followTranscript && !m_scrollFollowTimer->isActive()) m_scrollFollowTimer->start(0);
 }
 
 void AgentDock::beginUserTurn()
@@ -2342,6 +2375,7 @@ void AgentDock::appendEvent(const AgentEvent &event)
             beginUserTurn();
             const QString text = event.payload.value(QStringLiteral("text")).toString();
             const bool background = event.payload.value(QStringLiteral("source")).toString() == QLatin1String("background");
+            if (!background) m_followTranscript = true;
             QWidget *card = makeCard(QStringLiteral("agentUserCard"), background ? tr("Background task") : tr("You"), text, false);
             setCardMarkdown(card, QStringLiteral("agentUserCard"), text, false);
             appendCard(card);

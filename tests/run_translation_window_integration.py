@@ -3,6 +3,7 @@ import argparse
 import http.server
 import json
 import threading
+import time
 import zipfile
 import posixpath
 from urllib.parse import unquote
@@ -34,6 +35,8 @@ class Mock(http.server.BaseHTTPRequestHandler):
     requests = []
     lock = threading.Lock()
     agent_finished = False
+    active_workers = 0
+    peak_workers = 0
 
     def log_message(self, *args):
         pass
@@ -69,9 +72,14 @@ class Mock(http.server.BaseHTTPRequestHandler):
             result = {'items': [{'n': row['n'], 'text': '译：' + row['source']} for row in payload['items']]}
         with self.lock:
             self.requests.append((request['model'], len(payload['items'])))
+            type(self).active_workers += 1
+            type(self).peak_workers = max(type(self).peak_workers, type(self).active_workers)
+        time.sleep(0.05)  # Keep HTTP requests overlapping long enough to observe.
         self.respond({'choices': [{'message': {'role': 'assistant', 'content': json.dumps(result, ensure_ascii=False)},
                                        'finish_reason': 'stop'}],
                            'usage': {'prompt_tokens': 100, 'completion_tokens': 20, 'prompt_cache_hit_tokens': 40}})
+        with self.lock:
+            type(self).active_workers -= 1
 
     def respond(self, response):
         body = json.dumps(response, ensure_ascii=False).encode()
@@ -114,6 +122,8 @@ if __name__ == '__main__':
             assert any(model == 'test-planner' for model, _ in Mock.requests)
             assert any(model == 'test-translator' for model, _ in Mock.requests)
             assert len(Mock.requests) < 30, 'Agent translation workflow grew requests per sentence'
+            assert Mock.peak_workers >= 2, 'Native HTTP batches were serialized'
+            print(f'Native HTTP peak concurrency: {Mock.peak_workers}')
             assert Mock.agent_finished, 'Agent did not continue after native background completion'
         finally:
             server.shutdown()

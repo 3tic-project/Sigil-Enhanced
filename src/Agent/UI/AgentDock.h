@@ -107,6 +107,7 @@ private:
     QWidget *makePlanReviewCard(const QJsonObject &payload);
     QWidget *findCard(const QString &object_name) const;
     void appendCard(QWidget *card);
+    void followTranscriptLayout();
     void beginUserTurn();
     void beginModelStep();
     void settleApproval(const QString &toolCallId, bool approved);
@@ -180,6 +181,9 @@ private:
     QWidget *m_transcriptContents = nullptr;
     QVBoxLayout *m_transcriptLayout = nullptr;
     QTimer *m_streamFlushTimer = nullptr;
+    QTimer *m_scrollFollowTimer = nullptr;
+    bool m_followTranscript = true;
+    bool m_scrollingTranscript = false;
     QString m_pendingThinkingText;
     QString m_pendingAnswerText;
     quint64 m_streamRenderBatches = 0;

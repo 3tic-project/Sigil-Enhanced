@@ -1681,6 +1681,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(agent_conversation_navigation_integration PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
+    add_test(NAME agent_window_isolation_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_agent_window_isolation_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(agent_window_isolation_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
     add_test(NAME code_view_selection_integration
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_code_view_selection_integration.py
                 ${CMAKE_BINARY_DIR}
