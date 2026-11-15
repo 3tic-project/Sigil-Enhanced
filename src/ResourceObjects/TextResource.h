@@ -24,7 +24,7 @@
 #ifndef TEXTRESOURCE_H
 #define TEXTRESOURCE_H
 
-#include <QtCore/QMutex>
+#include <QtCore/QRecursiveMutex>
 #include "Widgets/TextDocument.h"
 #include "ResourceObjects/Resource.h"
 
@@ -133,9 +133,11 @@ private:
     QString m_Cache;
 
     /**
-     * The access mutex for the cache.
+     * The access mutex for the cache. Applying cached text emits synchronous
+     * document notifications whose GUI handlers can call GetText() again.
+     * Keep other threads excluded while allowing that same-thread readback.
      */
-    mutable QMutex m_CacheAccessMutex;
+    mutable QRecursiveMutex m_CacheAccessMutex;
 
     /**
      * The syntax colored cache of the TextResource text content.
