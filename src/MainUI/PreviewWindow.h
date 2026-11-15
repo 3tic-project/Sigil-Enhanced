@@ -137,10 +137,9 @@ protected:
 
     
     /**
-     * Reimplemented from QDockWidget to enable setTitleText()
-     * @param event The underlying QPaintEvent.
+     * Supply the separate Preview title while retaining Qt's native painting.
      */
-    virtual void paintEvent(QPaintEvent* event);
+    virtual void initStyleOption(QStyleOptionDockWidget* options) const;
 
 private:
     void SetupView();
@@ -154,7 +153,7 @@ private:
     void UpdateDetachAction();
     bool fixup_fullscreen_svg_images(const QString &text);
     
-    const QString titleText();
+    const QString titleText() const;
 
     QWidget *m_MainWidget;
     QToolButton * m_binspect;

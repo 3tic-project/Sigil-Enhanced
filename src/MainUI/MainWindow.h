@@ -1268,7 +1268,7 @@ private:
                              int *validation_error_count = nullptr,
                              QString *error = nullptr);
     //modified: FindReplacePlus
-    FindReplaceMode m_findReplaceMode;
+    FindReplaceMode m_findReplaceMode = OriginalMode;
     FindReplacePlus* m_FindReplacePlus;
     QPointer<RegexWorkbenchDialog> m_RegexWorkbenchDialog;
     QString m_TransientSourcePath;

@@ -33,7 +33,7 @@
 #include <QVariant>
 #include <QTimer>
 #include <QPaintEvent>
-#include <QStylePainter>
+#include <QStyleOptionDockWidget>
 #include <QDebug>
 
 #include "BookManipulation/Book.h"
@@ -125,33 +125,13 @@ BookBrowser::~BookBrowser()
     KeyboardShortcutManager::instance().removeActionsOf(this);
 }
 
-void BookBrowser::paintEvent(QPaintEvent *event)
+void BookBrowser::initStyleOption(QStyleOptionDockWidget* options) const
 {
-    // Allow title text to be set independently of tab text
-    // (when QDockWidget is tabified).
-    QStylePainter painter(this);
-
-    if (isFloating()) {
-        QStyleOptionFrame options;
-        options.initFrom(this);
-
+    // Keep Qt's native title/frame painting and its decoration/visibility checks.
+    QDockWidget::initStyleOption(options);
 #ifdef Q_OS_MAC
-        // This is needed for Qt6 but works on Qt5 as well
-        options.palette = QApplication::palette();
+    options->palette = QApplication::palette();
 #endif
-
-        painter.drawPrimitive(QStyle::PE_FrameDockWidget, options);
-    }
-    QStyleOptionDockWidget options;
-    initStyleOption(&options);
-    options.title = windowTitle();
-
-#ifdef Q_OS_MAC
-    // This is needed for Qt6 but works on Qt5 as well
-    options.palette = QApplication::palette();
-#endif
-
-    painter.drawControl(QStyle::CE_DockWidgetTitle, options);
 }
 
 void BookBrowser::showEvent(QShowEvent *event)
@@ -975,8 +955,8 @@ QStringList BookBrowser::AddExisting(bool only_multimedia, bool only_images, QSt
                         continue;
                     }
                     replacements_made = true;
-                    image_resource->FileChangedOnDisk();
-                    m_Book->ResourceUpdatedFromDisk(image_resource);
+                    old_resource->FileChangedOnDisk();
+                    m_Book->ResourceUpdatedFromDisk(old_resource);
                     continue;
                 } catch (ResourceDoesNotExist&) {
                     Utility::DisplayStdErrorDialog(tr("Unable to delete or replace file \"%1\".").arg(filename)

@@ -66,7 +66,7 @@ protected:
 
     void contextMenuEvent(QContextMenuEvent *event);
     virtual void showEvent(QShowEvent *event);
-    virtual void paintEvent(QPaintEvent* event);
+    virtual void initStyleOption(QStyleOptionDockWidget* options) const;
 
 signals:
     void PasteClips(QList<ClipEditorModel::clipEntry *> clips);

@@ -120,6 +120,7 @@
 #include "BuiltinPlugins/Translation/TranslationController.h"
 #include "MainUI/TableOfContents.h"
 #include "MainUI/ValidationResultsView.h"
+#include "MainUI/SearchPanelDock.h"
 #include "Misc/HTMLSpellCheck.h"
 #include "Misc/HTMLSpellCheckML.h"
 #include "Misc/KeyboardShortcutManager.h"
@@ -2259,6 +2260,9 @@ void MainWindow::showEvent(QShowEvent *event)
                 restoreState(m_LastState);
                 m_LastState.clear();
             }
+            // Search visibility belongs to its selected mode, not the generic
+            // dock state (which older versions saved without this container).
+            static_cast<SearchPanelDock*>(findChild<QDockWidget*>("findreplacedock"))->syncVisibility();
         });
     }
 }
@@ -6190,6 +6194,8 @@ void MainWindow::ReadSettings()
     else {
         m_findReplaceMode = FindReplaceMode::OriginalMode;
     }
+    m_FindReplace->ShowHide();
+    m_FindReplacePlus->ShowHide();
     //---------------------------------------
     if (m_TabManager) {
         m_TabManager->RestoreLayoutSettings();
@@ -7544,8 +7550,8 @@ void MainWindow::ExtendUI()
         }
     }
 
-    m_FindReplace->ShowHide();
-    m_FindReplacePlus->ShowHide(); //modified: FindReplacePlus
+    m_FindReplace->hide();
+    m_FindReplacePlus->hide();
     // We want a nice frame around the tab manager
     QFrame *frame = new QFrame(this);
     QLayout *layout = new QVBoxLayout(frame);
@@ -7553,12 +7559,14 @@ void MainWindow::ExtendUI()
     m_TabManager->setObjectName(TAB_MANAGER_NAME);
     m_FindReplace->setObjectName(FIND_REPLACE_NAME);
     layout->addWidget(m_TabManager);
-    layout->addWidget(m_FindReplace);
-    layout->addWidget(m_FindReplacePlus); //modified: FindReplacePlus
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(1);
     frame->setObjectName(FRAME_NAME);
     setCentralWidget(frame);
+    auto* search_dock = new SearchPanelDock(m_FindReplace, m_FindReplacePlus, this);
+    addDockWidget(Qt::BottomDockWidgetArea, search_dock);
+    setCorner(Qt::BottomLeftCorner, Qt::BottomDockWidgetArea);
+    setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
     m_BookBrowser = new BookBrowser(this);
     m_BookBrowser->setObjectName(BOOK_BROWSER_NAME);
     addDockWidget(Qt::LeftDockWidgetArea, m_BookBrowser);

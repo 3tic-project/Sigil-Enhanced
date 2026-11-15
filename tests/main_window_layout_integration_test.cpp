@@ -5,6 +5,10 @@
 #include <QEventLoop>
 #include <QFileInfo>
 #include <QResource>
+#include <QLabel>
+#include <QProxyStyle>
+#include <QStyleFactory>
+#include <QStyleOptionDockWidget>
 #include <QScreen>
 #include <QSplitter>
 #include <QTimer>
@@ -19,7 +23,10 @@
 #include "Dialogs/PreferenceWidgets/GeneralSettingsWidget.h"
 #include "MainUI/MainApplication.h"
 #include "MainUI/MainWindow.h"
+#include "MainUI/FindReplace.h"
+#include "MainUI/FindReplacePlus.h"
 #include "Misc/SettingsStore.h"
+#include "Misc/SettingsStoreExtend.h"
 #include "Tabs/TabManager.h"
 
 namespace
@@ -43,6 +50,28 @@ class IgnoreActivation final : public QObject
     bool eventFilter(QObject*, QEvent* event) override
     {
         return event->type() == QEvent::ActivationChange;
+    }
+};
+
+class DockPaintStyle final : public QProxyStyle
+{
+public:
+    DockPaintStyle() : QProxyStyle(QStyleFactory::create("Windows")) {}
+    mutable int customTitlePaints = 0;
+    mutable QHash<const QWidget*, QString> titles;
+
+    void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter,
+                     const QWidget* widget = nullptr) const override
+    {
+        if (element == CE_DockWidgetTitle) {
+            if (auto* dock = qobject_cast<const QDockWidget*>(widget)) {
+                if (dock->titleBarWidget()) ++customTitlePaints;
+                if (auto* title = qstyleoption_cast<const QStyleOptionDockWidget*>(option)) {
+                    titles.insert(dock, title->title);
+                }
+            }
+        }
+        QProxyStyle::drawControl(element, option, painter, widget);
     }
 };
 
@@ -109,6 +138,11 @@ int main(int argc, char** argv)
         const QString root = QString::fromLocal8Bit(argv[1]);
         const QString input = QString::fromLocal8Bit(argv[2]);
         const QString scenario = QString::fromLocal8Bit(argv[3]);
+        DockPaintStyle* paint_style = nullptr;
+        if (scenario.startsWith("search-") || scenario == "dock-paint") {
+            paint_style = new DockPaintStyle;
+            app.setStyle(paint_style);
+        }
         auto& python = EmbeddedPython::instance();
         python.addToPythonSysPath(qEnvironmentVariable("SIGIL_TEST_PYTHON_ROOT"));
         python.addToPythonSysPath(root + "/src/Resource_Files/plugin_launchers/python");
@@ -116,6 +150,20 @@ int main(int argc, char** argv)
         SettingsStore settings;
         settings.setPreserveOPFSource(true);
         settings.setCleanOn(0);
+        const bool search_case = scenario.startsWith("search-");
+        if (search_case) {
+            SettingsStoreExtend extended;
+            extended.setFindReplaceEnhancedMode(scenario.endsWith("plus"));
+            if (scenario.startsWith("search-write-")) {
+                settings.remove("mainwindow/toolbars");
+                settings.setValue("find_replace/visible", false);
+                extended.setValue("find_replace_plus/visible", false);
+            } else {
+                // Old installations can have both modes marked visible.
+                settings.setValue("find_replace/visible", true);
+                extended.setValue("find_replace_plus/visible", true);
+            }
+        }
         if (scenario == "fresh") checkPreferences();
         if (scenario == "legacy") {
             QMainWindow legacy;
@@ -155,7 +203,87 @@ int main(int argc, char** argv)
         require(browser && toc && preview && toolbar && tabs && splitter,
                 "Cannot find the real dock widgets, toolbar or editor splitter");
 
-        if (scenario.startsWith("write-")) {
+        if (scenario == "dock-paint") {
+            window->showNormal();
+            window->resize(1500, 900);
+            auto* validation = window->findChild<QDockWidget*>("validationresultsname");
+            auto* clips = window->findChild<QDockWidget*>("clipswindow");
+            require(validation && clips && paint_style, "Cannot find real dock paint subjects");
+            require(QMetaObject::invokeMethod(preview, "setTitleText", Qt::DirectConnection,
+                                             Q_ARG(QString, QString("Independent Preview title"))),
+                    "Cannot set the independent Preview title");
+            for (auto* dock : {browser, toc, preview, validation, clips}) {
+                window->removeDockWidget(dock);
+                window->addDockWidget(dock == validation ? Qt::BottomDockWidgetArea : Qt::LeftDockWidgetArea, dock);
+                dock->show();
+                settle();
+                if (dock == preview) {
+                    require(QMetaObject::invokeMethod(preview, "setTitleText", Qt::DirectConnection,
+                                                     Q_ARG(QString, QString("Independent Preview title"))),
+                            "Cannot set Preview's independent title after layout");
+                }
+                dock->grab();
+                require(paint_style->titles.contains(dock), "Default dock title was not painted");
+                if (dock == preview) {
+                    require(paint_style->titles.value(dock) == "Independent Preview title",
+                            "Native dock painting lost Preview's independent title");
+                }
+                dock->setTitleBarWidget(new QLabel("Custom title", dock));
+                settle();
+                dock->grab();
+            }
+            require(paint_style->customTitlePaints == 0,
+                    "A dock painted its old title over a custom or suppressed title bar");
+        } else if (search_case) {
+            auto* original = window->findChild<FindReplace*>();
+            auto* enhanced = window->findChild<FindReplacePlus*>();
+            require(original && enhanced, "Cannot find both real search panels");
+            QWidget* active = scenario.endsWith("plus") ? static_cast<QWidget*>(enhanced) : original;
+            QWidget* inactive = active == original ? static_cast<QWidget*>(enhanced) : original;
+            if (scenario.startsWith("search-write-")) {
+                window->showNormal();
+                window->setGeometry(window->screen()->availableGeometry().adjusted(30, 40, -30, -40));
+                window->addDockWidget(Qt::LeftDockWidgetArea, browser);
+                window->addDockWidget(Qt::RightDockWidgetArea, preview);
+                toc->hide();
+                browser->show();
+                preview->show();
+                original->HideFindReplace();
+                enhanced->HideFindReplace();
+                settle();
+                window->resizeDocks({browser, preview}, {260, 1100}, Qt::Horizontal);
+                settle();
+                const int browser_width = browser->width(), preview_width = preview->width();
+                require(QMetaObject::invokeMethod(window.get(), "Find", Qt::DirectConnection), "Cannot open search");
+                settle();
+                require(active->isVisible() && inactive->isHidden(), "Find did not open only the active search panel");
+                require(qAbs(browser->width() - browser_width) <= 1 && qAbs(preview->width() - preview_width) <= 1,
+                        "Opening search resized the Book Browser or Preview");
+                for (int toggle = 0; toggle < 3; ++toggle) {
+                    if (active == original) original->HideFindReplace(); else enhanced->HideFindReplace();
+                    settle();
+                    require(!active->isVisible(), "Closing search left its panel visible");
+                    require(qAbs(browser->width() - browser_width) <= 1 && qAbs(preview->width() - preview_width) <= 1,
+                            "Closing search changed the side panel widths");
+                    require(QMetaObject::invokeMethod(window.get(), "Find", Qt::DirectConnection), "Cannot reopen search");
+                    settle();
+                }
+                settings.setValue("windowLayoutTest/browserWidth", browser->width());
+                settings.setValue("windowLayoutTest/previewWidth", preview->width());
+                std::cout << "Saved search layout: browser=" << browser->width() << " preview=" << preview->width()
+                          << " central=" << window->centralWidget()->width() << " search minimum="
+                          << active->minimumSizeHint().width() << '\n';
+                require(window->close(), "Cannot save layout with the search panel open");
+                window.reset();
+                settings.sync();
+            } else {
+                require(active->isVisible() && inactive->isHidden(), "Startup restored the wrong search panel visibility");
+                require(qAbs(browser->width() - settings.value("windowLayoutTest/browserWidth").toInt()) <= 5,
+                        "Reopening with search and a wide Preview squeezed the Book Browser");
+                require(qAbs(preview->width() - settings.value("windowLayoutTest/previewWidth").toInt()) <= 5,
+                        "Reopening changed the saved Preview width");
+            }
+        } else if (scenario.startsWith("write-")) {
             window->showNormal();
             window->setGeometry(window->screen()->availableGeometry().adjusted(30, 40, -30, -40));
             window->addDockWidget(Qt::BottomDockWidgetArea, browser);

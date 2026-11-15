@@ -408,7 +408,7 @@ private slots:
 
 protected:
     virtual void showEvent(QShowEvent *event);
-    virtual void paintEvent(QPaintEvent* event);
+    virtual void initStyleOption(QStyleOptionDockWidget* options) const;
 
 private:
     /**

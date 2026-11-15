@@ -994,6 +994,12 @@ target_link_libraries(file_dialog_policy_test PRIVATE Qt6::Widgets)
 add_test(NAME file_dialog_policy COMMAND file_dialog_policy_test)
 set_tests_properties(file_dialog_policy PROPERTIES TIMEOUT 15)
 
+add_executable(search_panel_layout_test search_panel_layout_test.cpp)
+target_include_directories(search_panel_layout_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(search_panel_layout_test PRIVATE Qt6::Widgets)
+add_test(NAME search_panel_layout COMMAND search_panel_layout_test)
+set_tests_properties(search_panel_layout PROPERTIES TIMEOUT 15 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_test(NAME file_dialog_coverage_contract
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/file_dialog_coverage_contract_test.py
@@ -1728,6 +1734,11 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Ninja" AND CMAKE_BUILD_TYPE STREQUAL "Deb
                 ${CMAKE_BINARY_DIR}
     )
     set_tests_properties(main_window_layout_integration PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
+    add_test(NAME book_browser_replace_integration
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_book_browser_replace_integration.py
+                ${CMAKE_BINARY_DIR}
+    )
+    set_tests_properties(book_browser_replace_integration PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
     foreach(epub_version IN ITEMS epub2 epub3)
         add_test(NAME legacy_plugin_binary_${epub_version}_integration
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run_legacy_plugin_binary_integration.py

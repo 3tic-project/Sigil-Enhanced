@@ -31,7 +31,7 @@
 #include <QDir>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
-#include <QStylePainter>
+#include <QStyleOptionDockWidget>
 #include <QStyleOptionFrame>
 #include <QTimer>
 #include <QProgressBar>
@@ -231,33 +231,14 @@ void PreviewWindow::showEvent(QShowEvent * event)
 }
 
 
-void PreviewWindow::paintEvent(QPaintEvent *event)
+void PreviewWindow::initStyleOption(QStyleOptionDockWidget* options) const
 {
-    // Allow title text to be set independently of tab text
-    // (when QDockWidget is tabified).
-    QStylePainter painter(this);
-
-    if (isFloating()) {
-        QStyleOptionFrame options;
-        options.initFrom(this);
-
+    // Keep Qt's native title/frame painting and its decoration/visibility checks.
+    QDockWidget::initStyleOption(options);
+    options->title = titleText();
 #ifdef Q_OS_MAC
-        // This is needed for Qt6 but works on Qt5 as well
-        options.palette = QApplication::palette();
+    options->palette = QApplication::palette();
 #endif
-
-        painter.drawPrimitive(QStyle::PE_FrameDockWidget, options);
-    }
-    QStyleOptionDockWidget options;
-    initStyleOption(&options);
-    options.title = titleText();
-
-#ifdef Q_OS_MAC
-    // This is needed for Qt6 but works on Qt5 as well
-    options.palette = QApplication::palette();
-#endif
-
-    painter.drawControl(QStyle::CE_DockWidgetTitle, options);
 }
 
 bool PreviewWindow::IsVisible()
@@ -556,7 +537,7 @@ void PreviewWindow::setTitleText(const QString &text)
     repaint();
 }
 
-const QString PreviewWindow::titleText()
+const QString PreviewWindow::titleText() const
 {
     if (m_titleText.isEmpty()) {
         return windowTitle();

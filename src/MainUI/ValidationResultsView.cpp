@@ -27,7 +27,7 @@
 #include <QRegularExpression>
 #include <QFileDialog>
 #include <QPaintEvent>
-#include <QStylePainter>
+#include <QStyleOptionDockWidget>
 
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
@@ -155,33 +155,13 @@ void ValidationResultsView::showEvent(QShowEvent *event)
 }
 
 
-void ValidationResultsView::paintEvent(QPaintEvent *event)
+void ValidationResultsView::initStyleOption(QStyleOptionDockWidget* options) const
 {
-    // Allow title text to be set independently of tab text
-    // (when QDockWidget is tabified).
-    QStylePainter painter(this);
-
-    if (isFloating()) {
-        QStyleOptionFrame options;
-        options.initFrom(this);
-
+    // Keep Qt's native title/frame painting and its decoration/visibility checks.
+    QDockWidget::initStyleOption(options);
 #ifdef Q_OS_MAC
-        // This is needed for Qt6 but works on Qt5 as well
-        options.palette = QApplication::palette();
+    options->palette = QApplication::palette();
 #endif
-
-        painter.drawPrimitive(QStyle::PE_FrameDockWidget, options);
-    }
-    QStyleOptionDockWidget options;
-    initStyleOption(&options);
-    options.title = windowTitle();
-
-#ifdef Q_OS_MAC
-    // This is needed for Qt6 but works on Qt5 as well
-    options.palette = QApplication::palette();
-#endif
-
-    painter.drawControl(QStyle::CE_DockWidgetTitle, options);
 }
 
 

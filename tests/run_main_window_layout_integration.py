@@ -28,5 +28,7 @@ if __name__ == "__main__":
             "fresh", "write-normal", "read-normal", "legacy", "write-maximized", "read-maximized",
             "write-fullscreen", "read-fullscreen", "write-minimized", "read-normal",
             "disabled", "reenabled", "corrupt", "offscreen",
+            "search-write-original", "search-read-original", "search-write-plus", "search-read-plus",
+            "dock-paint",
         )],
     )

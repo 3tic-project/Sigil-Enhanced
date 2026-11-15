@@ -1751,6 +1751,10 @@ void FindReplace::ReadSettings(bool initialRead)
 
 void FindReplace::ShowHide()
 {
+    if (m_MainWindow->GetFindReplaceMode() != MainWindow::OriginalMode) {
+        hide();
+        return;
+    }
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
     QVariant show_find_replace = settings.value("visible");
